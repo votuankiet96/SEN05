@@ -1,0 +1,74 @@
+# =============================================================================
+# .gitignore  —  SEN 05 System - Combo
+# =============================================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Editable install artefacts
+*.pth
+sen05.egg-info/
+
+# Secrets & credentials — NEVER commit these
+.env
+*.env.local
+
+# IDE & OS artefacts
+.vs/
+.vscode/settings.json
+.idea/
+*.swp
+*~
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Log files (runtime output, not source)
+*.log
+logs/*.log
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Runtime-generated cache (không commit)
+cache/
+
+# Backtest / scanner output CSV (kết quả chạy, không phải source)
+output/
+
+# Temporary lint/tool output
+ruff_fix_output.txt
+
+# Research runtime logs (.txt — không phải .log)
+research/run_log.txt
+research/stage2_log.txt
+research/**_log.txt
+
+# Research temporary output files (không datestamp)
+strategies/combo/research/07_backtest_trades.csv
+strategies/combo/research/07_backtest_chart.png
+
+# Optimizer intermediate data (tự tạo lại khi chạy)
+strategies/combo/research/02_optimizer_train.csv
+strategies/combo/research/02_optimizer_test.csv
+
+# Claude local config
+**/.claude/settings.local.json

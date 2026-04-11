@@ -1,0 +1,27 @@
+# =============================================================================
+# requirements.txt  —  SEN 05 System - Combo
+# Generated: 2026-03-31
+# Install : pip install -r requirements.txt
+# =============================================================================
+
+# Database
+pyodbc>=5.3.0
+
+# TradingView data feed (historical + live)
+tvdatafeed @ git+https://github.com/rongardF/tvdatafeed.git
+websocket-client>=1.9.0
+
+# Data processing
+pandas>=2.3.3
+numpy>=2.4.3
+
+# Dashboards & charts
+plotly>=6.6.0
+dash>=4.0.0          # data_provider/04_chart.py
+streamlit>=1.55.0    # strategies/combo/05_signal_dashboard.py
+
+# HTTP / APIs
+requests>=2.32.5
+
+# Environment / config
+python-dotenv>=1.2.2

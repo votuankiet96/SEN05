@@ -1,0 +1,56 @@
+# =============================================================================
+# pyproject.toml  —  SEN 05 System - Combo
+# Run once after cloning:  pip install -e .
+# This makes all project imports work without manual sys.path manipulation.
+# =============================================================================
+
+[build-system]
+requires      = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name            = "sen05"
+version         = "0.1.0"
+description     = "SEN 05 Auto Trading System"
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+where   = ["."]
+include = ["modules*", "data_provider*", "strategies*"]
+exclude = ["tests*", "*.ipynb_checkpoints"]
+
+# =============================================================================
+# Ruff — linter + formatter (replaces flake8 + black + isort)
+# =============================================================================
+[tool.ruff]
+line-length    = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "W",   # pycodestyle warnings
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E402",  # module-level import not at top — intentional in pipeline scripts
+    "E501",  # line too long — handled by formatter
+    "E701",  # multiple statements on one line (colon)
+    "E702",  # multiple statements on one line (semicolon)
+    "F401",  # unused import — notebooks and __init__ may re-export
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["modules", "data_provider", "strategies", "config"]
+
+# =============================================================================
+# Pytest
+# =============================================================================
+[tool.pytest.ini_options]
+testpaths    = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts      = "-v --tb=short"
