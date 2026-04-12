@@ -7,7 +7,7 @@
 # Nếu muốn import trực tiếp từ module cụ thể, dùng:
 #   from strategies.combo.core.strategy_config import STRATEGY
 # =============================================================================
-from strategies.combo.core import (  # noqa: F401 — re-export intentional
+from .core import (  # noqa: F401 — re-export intentional
     backtest_engine,
     reversal_scanner,
     scan_pipeline,

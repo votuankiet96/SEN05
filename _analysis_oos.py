@@ -3,7 +3,9 @@ OOS 2025 analysis — tại sao kết quả yếu?
 Chạy: .venv\Scripts\python.exe _analysis_oos.py
 """
 import sys, warnings
+import os as _os
 sys.path.insert(0, '.')
+sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'core_python'))
 warnings.filterwarnings('ignore')
 
 from strategies.combo.core.backtest_engine import (

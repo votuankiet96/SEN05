@@ -23,10 +23,13 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-# Bootstrap: thêm project root vào path (harmless khi đã pip install -e .)
-_ROOT = Path(__file__).resolve().parents[3]   # deploy/ → combo/ → strategies/ → root
+# Bootstrap: thêm project root và core_python vào path
+_ROOT = Path(__file__).resolve().parents[4]   # deploy/ → combo/ → strategies/ → core_python/ → root
+_CORE = _ROOT / "core_python"
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
+if str(_CORE) not in sys.path:
+    sys.path.insert(0, str(_CORE))
 
 from modules.chart_builder import build_reversal_chart
 from strategies.combo.core.scan_pipeline import calc_reversal_stats, run_multi_reversal_scan

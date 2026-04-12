@@ -78,6 +78,7 @@
 import json  # Xử lý dữ liệu JSON — TradingView gửi/nhận lệnh dưới dạng JSON
 import logging  # Framework ghi log chuẩn của Python
 import math  # Hàm toán học — dùng math.ceil() để tính số nhóm WS cần tạo
+import re    # Regex — dùng để parse auth_token từ HTML khi refresh session
 import queue  # Hàng đợi thread-safe — dùng để truyền data từ WS thread sang DB thread
 import random  # Tạo chuỗi ngẫu nhiên — dùng để sinh tên session chart
 import string  # Bảng ký tự (a-z, 0-9) — kết hợp với random để tạo session ID
@@ -197,6 +198,11 @@ STATUS_INTERVAL_SEC   = 3600
 # Các từ khóa trong message lỗi cho biết token đã hết hạn / không hợp lệ
 TOKEN_EXPIRY_KEYWORDS = ("unauthorized", "auth_error", "not_authorized")
 
+# Số lần miss liên tiếp tối đa trước khi gửi cảnh báo Telegram
+# Nếu cặp (symbol, TF) nào không nhận được data trong MAX_MISS_RETRIES batch liên tiếp
+# → hệ thống cảnh báo ngay và reset đếm (tránh spam)
+MAX_MISS_RETRIES      = 5
+
 
 # Bảng ánh xạ: tên TF nội bộ → chuỗi interval theo chuẩn TradingView WebSocket API
 # TradingView dùng chuỗi riêng để chỉ interval: "1W", "1D", "240" (=H4), v.v.
@@ -216,6 +222,15 @@ WS_TF_INTERVAL = {
 # Bảng phụ thuộc TF phái sinh: dùng khi có nến mới trong bảng nguồn
 # Ví dụ: khi có nến M5 mới → tự động tính lại M10, M20
 _SOURCE_TO_COMPUTED = COMPUTED_TF_DEPS
+
+# Số lần retry tối đa khi HTTP trả về 429 hoặc 5xx
+HTTP_MAX_RETRIES    = 4
+
+# Thời gian chờ ban đầu giữa các lần retry (giây) — tăng gấp đôi mỗi lần retry
+HTTP_BASE_DELAY_SEC = 2.0
+
+# Thời gian chờ tối đa giữa các lần retry (giây) — giới hạn để không chờ quá lâu
+HTTP_MAX_DELAY_SEC  = 120.0
 
 
 # =============================================================================
@@ -257,6 +272,129 @@ _db_queue: queue.Queue = queue.Queue(maxsize=DB_QUEUE_MAXSIZE)
 _auth_token: str = "unauthorized_user_token"
 _auth_lock  = threading.Lock()  # Lock để đảm bảo chỉ 1 thread cập nhật token tại 1 thời điểm
 
+# Cookie TradingView (in-memory, có thể được cập nhật khi session được refresh)
+# Tách biệt với TV_COOKIE (import-time constant) để có thể thay đổi lúc runtime
+_tv_cookie: str = TV_COOKIE
+
+# Đường dẫn file .env — dùng để ghi lại credentials mới khi được refresh
+_ENV_FILE: Path = _PROJ / ".env"
+
+# Bộ đếm backfill miss: số lần LIÊN TIẾP không nhận được data cho mỗi cặp (symbol_id, tf_code)
+# Khi counter đạt MAX_MISS_RETRIES → cảnh báo Telegram ngay, reset counter (tránh spam)
+# Khi cặp đó nhận được data trở lại → counter tự động xóa
+_missed_pairs: dict[tuple[int, str], int] = {}
+_missed_lock  = threading.Lock()   # Lock riêng để không tranh chấp với _state_lock
+
+
+# =============================================================================
+# HTTP RETRY UTILITY
+# =============================================================================
+
+def _http_request_with_retry(
+    method: str,
+    url: str,
+    *,
+    max_retries: int = HTTP_MAX_RETRIES,
+    base_delay: float = HTTP_BASE_DELAY_SEC,
+    max_delay: float = HTTP_MAX_DELAY_SEC,
+    **kwargs,
+) -> requests.Response:
+    """
+    Gửi HTTP request với cơ chế retry tự động cho các lỗi tạm thời.
+
+    Phân biệt 3 loại lỗi:
+    ┌──────────┬────────────────────────────────────────────────────────────────┐
+    │ HTTP 429 │ Too Many Requests — đọc header Retry-After nếu có, nếu không  │
+    │          │ dùng exponential back-off + jitter để tránh thundering herd.   │
+    ├──────────┼────────────────────────────────────────────────────────────────┤
+    │ HTTP 5xx │ Server Error — retry ngay với jitter nhỏ.                      │
+    ├──────────┼────────────────────────────────────────────────────────────────┤
+    │ Network  │ Timeout / ConnectionError — retry với exponential back-off.    │
+    └──────────┴────────────────────────────────────────────────────────────────┘
+    HTTP 4xx khác (400/401/403/404 ...): KHÔNG retry — lỗi từ phía client.
+
+    Khi hết max_retries → raise exception gốc để caller xử lý.
+
+    Ví dụ dùng:
+        resp = _http_request_with_retry("POST", url, json=payload, timeout=15)
+        resp = _http_request_with_retry("GET",  url, headers=hdrs, timeout=20, max_retries=2)
+    """
+    last_exc: Exception = RuntimeError("No attempts made")
+
+    for attempt in range(max_retries + 1):   # attempt 0 = lần thử đầu tiên (không phải retry)
+        try:
+            resp = requests.request(method, url, **kwargs)
+
+            # ── Thành công (2xx hoặc 3xx redirect) ──
+            if resp.status_code < 400:
+                return resp
+
+            # ── HTTP 429: Too Many Requests ──
+            if resp.status_code == 429:
+                if attempt < max_retries:
+                    retry_after_hdr = resp.headers.get("Retry-After", "")
+                    try:
+                        # Telegram, TradingView đều dùng giá trị số giây trong header
+                        wait = float(retry_after_hdr)
+                        wait = min(wait, max_delay)   # Không chờ quá max_delay dù server yêu cầu
+                    except (ValueError, TypeError):
+                        # Không có Retry-After hợp lệ → tính theo exponential back-off
+                        wait = min(base_delay * (2 ** attempt), max_delay)
+                    # Thêm jitter [0.5, 2.0)s để tránh nhiều thread cùng retry một lúc
+                    wait += random.uniform(0.5, 2.0)
+                    logger.warning(
+                        "[HTTP] 429 Too Many Requests (%s) — retry %d/%d sau %.1fs.",
+                        url, attempt + 1, max_retries, wait,
+                    )
+                    time.sleep(wait)
+                    last_exc = requests.HTTPError(
+                        f"429 Too Many Requests (attempt {attempt + 1})", response=resp
+                    )
+                    continue
+                raise requests.HTTPError(
+                    f"429 Too Many Requests — đã hết {max_retries} lần retry ({url})", response=resp
+                )
+
+            # ── HTTP 5xx: Server Error ──
+            if resp.status_code >= 500:
+                if attempt < max_retries:
+                    wait = min(base_delay * (2 ** attempt), max_delay)
+                    wait += random.uniform(0.5, 2.0)
+                    logger.warning(
+                        "[HTTP] %d Server Error (%s) — retry %d/%d sau %.1fs.",
+                        resp.status_code, url, attempt + 1, max_retries, wait,
+                    )
+                    time.sleep(wait)
+                    last_exc = requests.HTTPError(
+                        f"{resp.status_code} Server Error (attempt {attempt + 1})", response=resp
+                    )
+                    continue
+                raise requests.HTTPError(
+                    f"{resp.status_code} Server Error — đã hết {max_retries} lần retry ({url})",
+                    response=resp,
+                )
+
+            # ── HTTP 4xx khác (400/401/403/404 ...): không retry ──
+            raise requests.HTTPError(
+                f"HTTP {resp.status_code} Client Error — không retry ({url})", response=resp
+            )
+
+        except (requests.ConnectionError, requests.Timeout) as exc:
+            # ── Lỗi mạng: retry với exponential back-off ──
+            last_exc = exc
+            if attempt < max_retries:
+                wait = min(base_delay * (2 ** attempt), max_delay)
+                wait += random.uniform(0.5, 2.0)
+                logger.warning(
+                    "[HTTP] Network error %s (%s) — retry %d/%d sau %.1fs.",
+                    type(exc).__name__, url, attempt + 1, max_retries, wait,
+                )
+                time.sleep(wait)
+                continue
+            raise   # Hết retry → re-raise exception gốc
+
+    raise last_exc  # Không bao giờ đến đây, nhưng giữ cho type-checker hài lòng
+
 
 # =============================================================================
 # CẢNH BÁO TELEGRAM
@@ -275,10 +413,13 @@ def _tg_send(message: str) -> None:
     def _send():
         try:
             # Gọi Telegram Bot API để gửi tin nhắn HTML
-            requests.post(
+            # max_retries=2: Telegram chỉ cần 2 retry (notification — không critical)
+            _http_request_with_retry(
+                "POST",
                 f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
                 json={"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "HTML"},
-                timeout=10,  # Chờ tối đa 10 giây, không để treo chương trình
+                timeout=10,
+                max_retries=2,
             )
         except Exception as exc:
             # Lỗi gửi Telegram chỉ cần ghi log, không cần crash chương trình
@@ -320,7 +461,8 @@ def _fetch_auth_token_from_credentials(username: str, password: str) -> str:
     Trả về token nếu thành công, hoặc chuỗi "unauthorized_user_token" nếu thất bại.
     """
     try:
-        r = requests.post(
+        r = _http_request_with_retry(
+            "POST",
             "https://www.tradingview.com/accounts/signin/",
             # Gửi form đăng nhập (giống như điền form trên web)
             data={"username": username, "password": password, "remember": "on"},
@@ -345,22 +487,44 @@ def _fetch_auth_token_from_credentials(username: str, password: str) -> str:
 
 def _resolve_auth_token() -> tuple[str, str]:
     """
-    Thử lần lượt 3 phương thức xác thực và trả về (token, tên_phương_thức).
-    Thứ tự ưu tiên: static token → username/password → guest.
+    Thử lần lượt 4 lớp xác thực và trả về (token, tên_phương_thức).
+
+    Lớp 1  : Static token từ .env                   — nhanh nhất, không cần network
+    Lớp 1.5: Refresh qua session cookie (HTTP GET)   — nhanh, không cần browser
+    Lớp 2  : HTTP POST username/password             — chỉ dùng được cho native TV account
+    Lớp 2.5: Headless Chromium với session cookie    — xử lý cả Google/social login
+    Lớp 3  : Guest token                             — cuối cùng, dữ liệu bị giới hạn
     """
-    # LỚP 1: Dùng token tĩnh từ .env nếu đã được cấu hình và hợp lệ
+    global _tv_cookie
+
+    # LỚP 1: Static token từ .env — dùng ngay nếu còn hợp lệ
     if TV_AUTH_TOKEN and TV_AUTH_TOKEN != "unauthorized_user_token":
         logger.info("[AUTH] Using static TV_AUTH_TOKEN from .env.")
         return TV_AUTH_TOKEN, "static_token"
 
-    # LỚP 2: Thử đăng nhập bằng username/password nếu đã cấu hình
+    # LỚP 1.5: Refresh token qua session cookie (HTTP GET — nhanh, không cần browser)
+    current_cookie = _tv_cookie or TV_COOKIE
+    if current_cookie:
+        token = _refresh_token_via_cookie(current_cookie)
+        if token != "unauthorized_user_token":
+            _save_credentials_to_env(token, current_cookie)
+            return token, "session_refresh"
+
+    # LỚP 2: Đăng nhập bằng username/password (HTTP POST — chỉ dùng cho native TV account)
     if TV_USERNAME and TV_PASSWORD:
         token = _fetch_auth_token_from_credentials(TV_USERNAME, TV_PASSWORD)
         if token != "unauthorized_user_token":
+            _save_credentials_to_env(token, current_cookie)
             return token, "username/password"
 
-    # LỚP 3: Fallback cuối cùng — dùng guest token
-    # Guest không cần xác thực nhưng bị giới hạn dữ liệu và dễ bị rate-limit
+    # LỚP 2.5: Headless Chromium — xử lý Google/social login khi HTTP không đủ
+    if current_cookie:
+        token, new_cookie = _headless_refresh(current_cookie)
+        if token != "unauthorized_user_token":
+            _save_credentials_to_env(token, new_cookie or current_cookie)
+            return token, "headless_chromium"
+
+    # LỚP 3: Guest — cuối cùng, bị giới hạn dữ liệu và dễ bị rate-limit
     logger.warning("[AUTH] Falling back to guest token — Premium data may be unavailable.")
     _tg_alert("WARNING", "Không thể xác thực TradingView — đang dùng guest token.")
     return "unauthorized_user_token", "guest"
@@ -368,9 +532,12 @@ def _resolve_auth_token() -> tuple[str, str]:
 
 def _renew_auth_token() -> None:
     """
-    Gia hạn token khi phát hiện token hiện tại đã hết hạn.
-    Được gọi tự động khi TradingView trả về lỗi xác thực trong khi đang chạy.
+    Gia hạn token khi TradingView báo lỗi xác thực trong lúc đang chạy.
     Dùng Lock để đảm bảo chỉ 1 thread thực hiện gia hạn, các thread khác chờ.
+
+    Thứ tự thử:
+        1. _bootstrap_credentials() — thử tất cả lớp (session refresh → headless → HTTP POST)
+        2. Nếu bootstrap thất bại → _resolve_auth_token() như thường
     """
     global _auth_token
     with _auth_lock:
@@ -378,11 +545,16 @@ def _renew_auth_token() -> None:
         if _auth_token != "unauthorized_user_token":
             return
 
-        logger.warning("[AUTH] Token expired — attempting renewal...")
+        logger.warning("[AUTH] Token expired mid-session — attempting renewal via bootstrap...")
         _tg_alert("WARNING", "Token TradingView hết hạn — đang tự động gia hạn...")
 
-        # Thử lấy token mới bằng 3 lớp dự phòng
-        new_token, source = _resolve_auth_token()
+        # Thử bootstrap trước (xử lý cả Google login qua headless Chromium)
+        new_token, source = _bootstrap_credentials()
+
+        # Nếu bootstrap thất bại → thử resolve bình thường (phòng trường hợp có static token mới)
+        if new_token == "unauthorized_user_token":
+            new_token, source = _resolve_auth_token()
+
         _auth_token = new_token  # Cập nhật token toàn cục
 
         if new_token != "unauthorized_user_token":
@@ -391,6 +563,226 @@ def _renew_auth_token() -> None:
         else:
             logger.error("[AUTH] Token renewal failed — all groups will use guest access.")
             _tg_alert("ERROR", "❌ Gia hạn token thất bại.\nHệ thống đang dùng guest access.")
+
+
+# =============================================================================
+# AUTH — CÁC HÀM HỖ TRỢ REFRESH CREDENTIALS TỰ ĐỘNG
+# =============================================================================
+
+def _refresh_token_via_cookie(cookie_str: str) -> str:
+    """
+    Lớp 1.5 — Làm mới auth_token bằng cách GET homepage TradingView với sessionid cookie.
+
+    TradingView nhúng auth_token hiện tại vào HTML của homepage khi user đã đăng nhập.
+    Cách này không cần trình duyệt — nhanh (~1-2s), không để lại dấu vết automation.
+
+    Trả về token mới, hoặc "unauthorized_user_token" nếu thất bại.
+    """
+    if not cookie_str:
+        return "unauthorized_user_token"
+    try:
+        resp = _http_request_with_retry(
+            "GET",
+            "https://www.tradingview.com/",
+            headers={
+                "Cookie":     cookie_str,
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                              "AppleWebKit/537.36 (KHTML, like Gecko) "
+                              "Chrome/124.0.0.0 Safari/537.36",
+                "Accept-Language": "en-US,en;q=0.9",
+            },
+            timeout=20,
+            allow_redirects=True,
+        )
+        # TradingView nhúng auth_token dạng JSON trong HTML của trang
+        # Tìm pattern: "auth_token":"eyJ..."
+        m = re.search(r'"auth_token"\s*:\s*"(eyJ[A-Za-z0-9._-]+)"', resp.text)
+        if m:
+            token = m.group(1)
+            logger.info("[AUTH] Token refreshed via session cookie (HTTP GET).")
+            return token
+        # Kiểm tra nếu server trả về redirect về login page → session hết hạn
+        if "sign-in" in resp.url or resp.status_code in (401, 403):
+            logger.warning("[AUTH] Session cookie expired (redirect to sign-in).")
+        else:
+            logger.warning("[AUTH] Cookie valid but auth_token not found in page HTML.")
+    except Exception as exc:
+        logger.warning("[AUTH] Cookie refresh via HTTP failed: %s", exc)
+    return "unauthorized_user_token"
+
+
+def _headless_refresh(cookie_str: str) -> tuple[str, str]:
+    """
+    Lớp 2.5 — Dùng headless Chromium (Playwright) để load TradingView và extract credentials.
+
+    Đáng tin cậy hơn HTTP GET vì Playwright thực thi JavaScript đầy đủ.
+    Phù hợp khi TV dùng JS để set token thay vì nhúng trong HTML server-side.
+
+    Trả về (token, cookie_str_mới) hoặc ("unauthorized_user_token", "") nếu thất bại.
+
+    CÀI ĐẶT (chỉ cần làm 1 lần):
+        pip install playwright
+        playwright install chromium
+    """
+    try:
+        from playwright.sync_api import sync_playwright  # type: ignore
+    except ImportError:
+        logger.warning("[AUTH] Playwright chưa được cài — bỏ qua headless refresh.")
+        logger.warning("[AUTH] Cài bằng: pip install playwright && playwright install chromium")
+        return "unauthorized_user_token", ""
+
+    def _parse_cookie_list(raw: str) -> list[dict]:
+        """Chuyển chuỗi 'name=val; name2=val2' sang list dict theo chuẩn Playwright."""
+        result = []
+        for part in raw.split(";"):
+            part = part.strip()
+            if "=" in part:
+                name, _, value = part.partition("=")
+                result.append({
+                    "name":   name.strip(),
+                    "value":  value.strip(),
+                    "domain": ".tradingview.com",
+                    "path":   "/",
+                    "secure": True,
+                })
+        return result
+
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=True, args=["--no-sandbox"])
+            ctx = browser.new_context(
+                user_agent=(
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/124.0.0.0 Safari/537.36"
+                ),
+                locale="en-US",
+            )
+
+            # Inject cookies hiện có trước khi load trang
+            if cookie_str:
+                ctx.add_cookies(_parse_cookie_list(cookie_str))
+
+            page = ctx.new_page()
+            page.goto("https://www.tradingview.com/", wait_until="networkidle", timeout=45_000)
+
+            # Thử lấy auth_token từ DOM (nhiều cách khác nhau để tăng độ tin cậy)
+            token: str = page.evaluate(
+                """() => {
+                    // Cách 1: tìm trong HTML source
+                    try {
+                        const m = document.documentElement.innerHTML.match(/"auth_token":"(eyJ[^"]+)"/);
+                        if (m) return m[1];
+                    } catch(e) {}
+                    // Cách 2: tìm trong __tv_initData (biến JS global của TV)
+                    try {
+                        if (window.__tv_initData && window.__tv_initData.auth_token)
+                            return window.__tv_initData.auth_token;
+                    } catch(e) {}
+                    // Cách 3: tìm trong initData (tên biến cũ hơn)
+                    try {
+                        if (window.initData && window.initData.auth_token)
+                            return window.initData.auth_token;
+                    } catch(e) {}
+                    return null;
+                }"""
+            ) or ""
+
+            # Lấy tất cả cookies hiện tại sau khi trang load (có thể được refresh)
+            all_cookies = ctx.cookies()
+            cookie_out = "; ".join(f"{c['name']}={c['value']}" for c in all_cookies)
+            browser.close()
+
+            if token:
+                logger.info("[AUTH] Token refreshed via headless Chromium.")
+                return token, cookie_out
+            logger.warning("[AUTH] Headless load xong nhưng không tìm thấy auth_token — session có thể đã hết hạn.")
+            return "unauthorized_user_token", cookie_out
+
+    except Exception as exc:
+        logger.warning("[AUTH] Headless refresh thất bại: %s", exc)
+        return "unauthorized_user_token", ""
+
+
+def _save_credentials_to_env(token: str, cookie: str) -> None:
+    """
+    Ghi TV_AUTH_TOKEN và TV_COOKIE mới vào file .env một cách an toàn.
+
+    - Chỉ thay đổi 2 dòng liên quan, KHÔNG động đến SQL_UID, Telegram, v.v.
+    - Nếu key chưa có → append vào cuối file
+    - Cập nhật cả biến in-memory _auth_token và _tv_cookie
+    """
+    global _auth_token, _tv_cookie
+
+    def _replace_or_append(text: str, key: str, value: str) -> str:
+        pattern = rf"^{re.escape(key)}\s*=.*$"
+        new_line = f"{key}={value}"
+        if re.search(pattern, text, flags=re.MULTILINE):
+            return re.sub(pattern, new_line, text, flags=re.MULTILINE)
+        return text.rstrip("\n") + f"\n{new_line}\n"
+
+    try:
+        original = _ENV_FILE.read_text(encoding="utf-8") if _ENV_FILE.exists() else ""
+    except OSError:
+        original = ""
+
+    updated = original
+    if token and token != "unauthorized_user_token":
+        updated = _replace_or_append(updated, "TV_AUTH_TOKEN", token)
+        _auth_token = token          # Cập nhật in-memory ngay lập tức
+    if cookie:
+        updated = _replace_or_append(updated, "TV_COOKIE", cookie)
+        _tv_cookie = cookie          # Cập nhật in-memory ngay lập tức
+
+    try:
+        _ENV_FILE.write_text(updated, encoding="utf-8")
+        logger.info("[AUTH] Credentials đã được lưu vào .env.")
+    except OSError as exc:
+        logger.warning("[AUTH] Không thể ghi .env: %s", exc)
+
+
+def _bootstrap_credentials() -> tuple[str, str]:
+    """
+    Đảm bảo credentials hợp lệ trước khi WebSocket khởi động.
+    Gọi lúc startup khi token trống hoặc hết hạn.
+
+    Thứ tự thử:
+        1. Refresh token qua HTTP GET (dùng sessionid cookie hiện có)
+        2. Refresh token qua headless Chromium (dùng sessionid cookie)
+        3. Đăng nhập bằng username/password qua HTTP POST (chỉ dùng được cho tài khoản native TV)
+
+    Lưu credentials mới vào .env để lần restart tiếp theo dùng được ngay.
+    Trả về (token, tên_phương_thức).
+    """
+    global _tv_cookie
+    logger.info("[AUTH] Bootstrapping credentials...")
+
+    # ── Bước 1: Refresh token từ session cookie hiện có (HTTP GET, không cần browser) ──
+    current_cookie = _tv_cookie or TV_COOKIE
+    if current_cookie:
+        token = _refresh_token_via_cookie(current_cookie)
+        if token != "unauthorized_user_token":
+            _save_credentials_to_env(token, current_cookie)
+            return token, "session_refresh"
+        logger.info("[AUTH] HTTP cookie refresh thất bại — thử headless Chromium...")
+
+    # ── Bước 2: Headless Chromium với session cookie hiện có ──
+    if current_cookie:
+        token, new_cookie = _headless_refresh(current_cookie)
+        if token != "unauthorized_user_token":
+            _save_credentials_to_env(token, new_cookie or current_cookie)
+            return token, "headless_chromium"
+
+    # ── Bước 3: Đăng nhập bằng user/password (HTTP POST — chỉ dùng cho native TV account) ──
+    if TV_USERNAME and TV_PASSWORD:
+        logger.info("[AUTH] Thử đăng nhập bằng username/password (HTTP POST)...")
+        token = _fetch_auth_token_from_credentials(TV_USERNAME, TV_PASSWORD)
+        if token != "unauthorized_user_token":
+            _save_credentials_to_env(token, current_cookie)
+            return token, "http_post_login"
+
+    logger.warning("[AUTH] Tất cả phương thức bootstrap đều thất bại.")
+    return "unauthorized_user_token", "guest"
 
 
 # =============================================================================
@@ -713,6 +1105,62 @@ def _is_token_error(msg_type: str, data: str) -> bool:
     return False
 
 
+def _update_missed_pairs(
+    received: set[tuple[int, str]],
+    missed:   set[tuple[int, str]],
+) -> None:
+    """
+    Cập nhật bộ đếm miss liên tiếp sau mỗi batch.
+
+    Logic:
+    ┌──────────────────────────────────────────────────────────────────────────┐
+    │ Cặp (symbol_id, tf_code) nhận được data  → xóa khỏi bộ đếm (reset = 0) │
+    │ Cặp bị miss lần này                      → tăng counter +1              │
+    │ Counter >= MAX_MISS_RETRIES               → cảnh báo Telegram, reset    │
+    └──────────────────────────────────────────────────────────────────────────┘
+
+    Tham số:
+        received : tập hợp (symbol_id, tf_code) đã nhận được response từ TradingView
+        missed   : tập hợp (symbol_id, tf_code) đã đăng ký nhưng không nhận được response
+    """
+    alerts: list[tuple[tuple[int, str], int]] = []
+
+    with _missed_lock:
+        # Xóa counter cho các cặp đã nhận được data — chúng đang hoạt động bình thường
+        for key in received:
+            _missed_pairs.pop(key, None)
+
+        # Tăng counter cho các cặp bị miss lần này
+        for key in missed:
+            count = _missed_pairs.get(key, 0) + 1
+            _missed_pairs[key] = count
+
+            if count >= MAX_MISS_RETRIES:
+                alerts.append((key, count))
+                # Reset về 0 để tránh spam: sẽ cảnh báo lại sau MAX_MISS_RETRIES lần tiếp theo
+                _missed_pairs[key] = 0
+
+    # Gửi cảnh báo ngoài lock để không block thread khác
+    for (symbol_id, tf_code), count in alerts:
+        # Tra tên symbol để thông báo dễ đọc hơn
+        sym_name = next(
+            (s["tv_symbol"] for s in WS_SYMBOLS if s["symbol_id"] == symbol_id),
+            str(symbol_id),
+        )
+        logger.warning(
+            "[MISS] %s [%s] missed %d batch(es) in a row — sending alert.",
+            sym_name, tf_code, count,
+        )
+        _tg_alert(
+            "WARNING",
+            f"⚠️ <b>Backfill miss liên tiếp!</b>\n"
+            f"Symbol : {sym_name}\n"
+            f"TF     : {tf_code}\n"
+            f"Số lần : {count} batch liên tiếp\n"
+            f"Kiểm tra kết nối TradingView hoặc symbol bị huỷ niêm yết.",
+        )
+
+
 # =============================================================================
 # CLASS BatchFetcher — Một kết nối WebSocket cho một nhóm symbol
 # =============================================================================
@@ -771,9 +1219,10 @@ class BatchFetcher:
                         "AppleWebKit/537.36 (KHTML, like Gecko) "
                         "Chrome/124.0.0.0 Safari/537.36",  # Giả lập Chrome 124
         ]
-        if TV_COOKIE:
+        active_cookie = _tv_cookie or TV_COOKIE   # Ưu tiên cookie đã được refresh
+        if active_cookie:
             # Đính kèm cookie để TradingView nhận ra đây là tài khoản Premium
-            headers.append(f"Cookie: {TV_COOKIE}")
+            headers.append(f"Cookie: {active_cookie}")
         return headers
 
     # ─── CÁC HÀM XỬ LÝ SỰ KIỆN WEBSOCKET ───────────────────────────────────
@@ -1101,6 +1550,28 @@ class BatchFetcher:
             "[G%d] Batch done — sessions=%d/%d  new_bars=%d | Symbols: [%s]",
             self.group_id, len(self._received), len(self._expected), self._new_bars_count, sym_names,
         )
+
+        # ─── BACKFILL SAFETY: cập nhật bộ đếm miss ──────────────────────────────
+        # Tính tập hợp (symbol_id, tf_code) đã nhận và bị miss trong batch này
+        # Snapshot _cs_map ngay tại đây — tránh race nếu thread khác đang reset
+        cs_map_snapshot = dict(self._cs_map)
+        received_pairs: set[tuple[int, str]] = {
+            cs_map_snapshot[cs][:2]                   # lấy (symbol_id, tf_code)
+            for cs in self._received
+            if cs in cs_map_snapshot
+        }
+        missed_pairs: set[tuple[int, str]] = {
+            cs_map_snapshot[cs][:2]
+            for cs in (self._expected - self._received)
+            if cs in cs_map_snapshot
+        }
+        if missed_pairs:
+            logger.warning(
+                "[G%d] %d pair(s) missed this batch — tracking for backfill safety.",
+                self.group_id, len(missed_pairs),
+            )
+        _update_missed_pairs(received_pairs, missed_pairs)
+
         return completed
 
 
@@ -1233,12 +1704,17 @@ def _status_reporter() -> None:
         with _overflow_lock:
             overflow = len(_overflow_buf)
 
+        # Đếm số cặp (symbol, TF) đang bị miss ít nhất 1 lần liên tiếp
+        with _missed_lock:
+            n_miss_active = sum(1 for v in _missed_pairs.values() if v > 0)
+
         now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
         # Ghi báo cáo vào file log
         logger.info(
-            "STATUS [%s]  bars=%d  errors=%d  events=%d  queue=%d  overflow=%d  batches=%d",
-            now, s["bars_inserted"], s["errors"], s["events"], s["queue_depth"], overflow, s["batches_run"],
+            "STATUS [%s]  bars=%d  errors=%d  events=%d  queue=%d  overflow=%d  batches=%d  miss_active=%d",
+            now, s["bars_inserted"], s["errors"], s["events"],
+            s["queue_depth"], overflow, s["batches_run"], n_miss_active,
         )
 
         # Gửi báo cáo lên Telegram (dạng HTML có emoji để dễ đọc)
@@ -1247,7 +1723,8 @@ def _status_reporter() -> None:
             f"✅ Nến đã lưu: {s['bars_inserted']}\n"
             f"❌ Lỗi: {s['errors']}\n"
             f"📥 Queue: {s['queue_depth']}  |  Buffer: {overflow}\n"
-            f"🔄 Batches: {s['batches_run']}"
+            f"🔄 Batches: {s['batches_run']}\n"
+            + (f"⚠️ Cặp đang miss: {n_miss_active}" if n_miss_active else "✅ Không có miss")
         )
 
 
@@ -1298,12 +1775,25 @@ def main() -> None:
 
     # -----------------------------------------------------------------------
     # BƯỚC 1: Xác thực TradingView
-    # Lấy token sẽ dùng cho tất cả kết nối WebSocket
+    # Lấy token sẽ dùng cho tất cả kết nối WebSocket.
+    # Nếu .env không có token hợp lệ → bootstrap tự động lấy token mới.
     # -----------------------------------------------------------------------
     print("\n[Step 1] Authenticating with TradingView...")
-    global _auth_token  # Cần khai báo global vì đang gán vào biến module-level
-    _auth_token, token_source = _resolve_auth_token()
+    global _auth_token, _tv_cookie  # Khai báo global vì sẽ được cập nhật
+
+    _creds_missing = not (TV_AUTH_TOKEN and TV_AUTH_TOKEN != "unauthorized_user_token")
+    if _creds_missing:
+        # Không có token tĩnh → bootstrap: thử session refresh → headless → HTTP POST
+        print("  [!] No valid static token in .env — bootstrapping credentials...")
+        _auth_token, token_source = _bootstrap_credentials()
+    else:
+        # Có token tĩnh → dùng luôn (fast path)
+        _auth_token, token_source = _resolve_auth_token()
+
     print(f"  Token source   : {token_source}")
+    if _auth_token == "unauthorized_user_token":
+        print("  [WARNING] Running as guest — data quality may be reduced.")
+        _tg_alert("WARNING", "Khởi động với guest token — dữ liệu có thể bị giới hạn.")
 
     # -----------------------------------------------------------------------
     # BƯỚC 2: Nạp watermark từ Database

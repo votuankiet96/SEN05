@@ -89,8 +89,8 @@ from config import (
 )
 from modules.db_connector import find_price_spikes, test_connection
 
-# File log riêng cho gap_fill (lưu vào logs/ ở root, tách biệt với pipeline log)
-LOG_FILE_GAP = os.path.join(_PROJ, "logs", "gap_fill.log")
+# File log riêng cho gap_fill (lưu vào data_provider/logs/)
+LOG_FILE_GAP = os.path.join(_PROJ, "data_provider", "logs", "gap_fill.log")
 logger = setup_logger("gap_fill", LOG_FILE_GAP)
 
 

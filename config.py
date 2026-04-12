@@ -238,7 +238,7 @@ def get_live_timeframes():
 # -----------------------------------------------------------------------------
 # 9. LOGGING
 # -----------------------------------------------------------------------------
-LOG_FILE  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs", "pipeline.log")
+LOG_FILE  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data_provider", "logs", "pipeline.log")
 LOG_LEVEL = "INFO"     # DEBUG | INFO | WARNING | ERROR
 
 

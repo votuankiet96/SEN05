@@ -16,7 +16,7 @@ requires-python = ">=3.10"
 
 [tool.setuptools.packages.find]
 where   = ["."]
-include = ["modules*", "data_provider*", "strategies*"]
+include = ["modules*", "data_provider*", "core_python*"]
 exclude = ["tests*", "*.ipynb_checkpoints"]
 
 # =============================================================================
@@ -43,7 +43,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["modules", "data_provider", "strategies", "config"]
+known-first-party = ["modules", "data_provider", "core_python", "config"]
 
 # =============================================================================
 # Pytest
