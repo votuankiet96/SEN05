@@ -1,3 +1,8 @@
+---
+name: backtest-review
+description: Đánh giá kết quả backtest có đáng tin không, cảnh báo nếu bị ảnh hưởng bởi bugs đã biết. TRIGGER khi user nói: "backtest", "kết quả backtest", "review backtest", "đánh giá backtest", "sharpe", "win rate", "profit factor", "drawdown", "strategy có tốt không", "strategy hoạt động không", "kết quả có tin được không", "backtest ra gì", "chạy backtest xong", "xem kết quả", "check results", "review results", "is the strategy good".
+---
+
 # Skill: /backtest-review
 
 Đánh giá kết quả backtest có đáng tin hay không. Cảnh báo nếu kết quả bị ảnh hưởng bởi bugs đã biết.

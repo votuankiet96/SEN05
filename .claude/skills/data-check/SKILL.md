@@ -1,3 +1,8 @@
+---
+name: data-check
+description: Kiểm tra chất lượng dữ liệu trong SQL Server trước khi backtest — kết nối DB, độ tươi mới, lỗ hổng data, OHLC hợp lệ, duplicate, completeness. TRIGGER khi user nói: "check data", "kiểm tra data", "kiểm tra dữ liệu", "data có ổn không", "dữ liệu có vấn đề", "data bị thiếu", "gap data", "dữ liệu cũ", "DB có kết nối không", "data freshness", "data quality", "trước khi backtest", "data sạch không", "check database", "data missing".
+---
+
 # Skill: /data-check
 
 Kiểm tra chất lượng dữ liệu trước khi backtest.

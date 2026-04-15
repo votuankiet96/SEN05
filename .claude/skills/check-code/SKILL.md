@@ -1,3 +1,8 @@
+---
+name: check-code
+description: Kiểm tra chất lượng code bằng Ruff lint và format, chạy tests nếu có, hướng dẫn tạo Pull Request. TRIGGER khi user nói: "check code", "kiểm tra code", "lint", "format code", "tạo PR", "tạo pull request", "commit", "push code", "lỗi code", "code có ổn không", "review code", "xong code rồi", "sửa xong rồi", "check lỗi", "create PR", "make PR", "push changes".
+---
+
 # Skill: /check-code
 
 Kiểm tra chất lượng code và hướng dẫn tạo Pull Request.

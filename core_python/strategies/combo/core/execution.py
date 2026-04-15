@@ -22,6 +22,81 @@ from .strategy_config import (
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# HELPER — ĐÓNG LỆNH
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _build_trade_record(
+    position: dict,
+    symbol: str,
+    exit_p: float,
+    exit_time,
+    exit_reason: str,
+    partial_frac: float,
+    swap_long_day: float,
+    swap_short_day: float,
+    current_equity: float,
+) -> tuple[dict, float]:
+    """Tính PnL và dựng trade dict khi đóng lệnh.
+
+    Dùng chung cho 3 tình huống: đóng bình thường (SL/TP), đảo chiều, force-close.
+
+    Returns
+    -------
+    (trade_dict, close_net) — close_net là phần equity thay đổi từ half-2 trừ swap.
+    """
+    d        = position['direction']
+    entry    = position['entry']
+    sl_dist  = position['sl_dist']
+    risk     = position['risk_usd']
+    comm     = position['commission']
+    half_frac = (1 - partial_frac) if position['partial_tp_hit'] else 1.0
+
+    r_h2     = (exit_p - entry) * d / sl_dist
+    gross_h2 = half_frac * r_h2 * risk
+    comm_h2  = half_frac * comm
+    net_h2   = gross_h2 - comm_h2
+
+    if position['partial_tp_hit']:
+        total_gross = position['half1_pnl_gross'] + gross_h2
+        total_comm  = position['half1_commission'] + comm_h2
+        r_h1   = (position['half1_exit'] - entry) * d / sl_dist
+        r_mult = partial_frac * r_h1 + (1 - partial_frac) * r_h2
+        tp_log = round(position['half1_exit'], 4)
+    else:
+        total_gross = gross_h2
+        total_comm  = comm_h2
+        r_mult = r_h2
+        tp_log = round(position['tp_at_entry'], 4)
+
+    holding_days = max((exit_time.date() - position['entry_time'].date()).days, 0)
+    if d == 1:
+        swap_cost = holding_days * swap_long_day * position.get('lot_size', 0.0)
+    else:
+        swap_cost = holding_days * swap_short_day * position.get('lot_size', 0.0)
+
+    total_net = total_gross - total_comm - swap_cost
+    close_net = net_h2 - swap_cost
+
+    trade = dict(
+        symbol=symbol,
+        direction='BUY' if d == 1 else 'SELL',
+        entry_time=position['entry_time'], exit_time=exit_time,
+        entry=round(entry, 4), exit=round(exit_p, 4),
+        sl_initial=round(position['sl_at_entry'], 4), tp=tp_log,
+        r_multiple=round(r_mult, 3),
+        pnl_gross=round(total_gross, 2),
+        commission=round(total_comm, 2),
+        swap_cost=round(swap_cost, 2),
+        pnl_usd=round(total_net, 2), equity=round(current_equity + close_net, 2),
+        exit_reason=exit_reason,
+        partial_tp_hit=position['partial_tp_hit'],
+        half1_exit=position['half1_exit'],
+        half1_exit_time=position['half1_exit_time'],
+    )
+    return trade, close_net
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # FULL BACKTEST ENGINE (trade log + equity curve)
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -194,52 +269,13 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
 
             # Phase 4 — Ghi nhận đóng lệnh và lưu trade log.
             if exit_p is not None:
-                half_frac = (1 - partial_frac) if position['partial_tp_hit'] else 1.0
-                r_h2      = (exit_p - entry) * d / sl_d
-                gross_h2  = half_frac * r_h2 * risk
-                comm_h2   = half_frac * comm
-                net_h2    = gross_h2 - comm_h2
-
-                if position['partial_tp_hit']:
-                    total_gross = position['half1_pnl_gross'] + gross_h2
-                    total_comm  = position['half1_commission'] + comm_h2
-                    r_h1        = (position['half1_exit'] - entry) * d / sl_d
-                    r_mult      = partial_frac * r_h1 + (1 - partial_frac) * r_h2
-                    tp_log      = round(position['half1_exit'], 4)
-                else:
-                    total_gross = gross_h2
-                    total_comm  = comm_h2
-                    r_mult      = r_h2
-                    tp_log      = round(position['tp_at_entry'], 4)
-
-                total_net  = total_gross - total_comm
-                holding_days = max((bar_dt.date() - position['entry_time'].date()).days, 0)
-                if d == 1:
-                    swap_cost = holding_days * swap_long_day * position.get('lot_size', 0.0)
-                else:
-                    swap_cost = holding_days * swap_short_day * position.get('lot_size', 0.0)
-
-                total_net  -= swap_cost
-                close_net = net_h2 - swap_cost
+                trade, close_net = _build_trade_record(
+                    position, symbol, exit_p, bar_dt, exit_r,
+                    partial_frac, swap_long_day, swap_short_day, equity,
+                )
                 equity    += close_net
                 daily_pnl += close_net
-
-                trades.append(dict(
-                    symbol=symbol,
-                    direction='BUY' if d == 1 else 'SELL',
-                    entry_time=position['entry_time'], exit_time=bar_dt,
-                    entry=round(entry, 4), exit=round(exit_p, 4),
-                    sl_initial=round(position['sl_at_entry'], 4), tp=tp_log,
-                    r_multiple=round(r_mult, 3),
-                    pnl_gross=round(total_gross, 2),
-                    commission=round(total_comm, 2),
-                    swap_cost=round(swap_cost, 2),
-                    pnl_usd=round(total_net, 2), equity=round(equity, 2),
-                    exit_reason=exit_r,
-                    partial_tp_hit=position['partial_tp_hit'],
-                    half1_exit=position['half1_exit'],
-                    half1_exit_time=position['half1_exit_time'],
-                ))
+                trades.append(trade)
                 position = None
                 if daily_pnl <= -(init_eq * daily_limit):
                     daily_stop = True
@@ -248,65 +284,22 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
         if position and not daily_stop:
             sig = int(bar['signal'])
             if sig != 0 and sig != position['direction']:
-                d         = position['direction']
-                half_frac = (1 - partial_frac) if position['partial_tp_hit'] else 1.0
-                ep_rev    = bar['close'] - d * slippage
-                comm      = position['commission']
-
-                r_h2      = (ep_rev - position['entry']) * d / position['sl_dist']
-                gross_h2  = half_frac * r_h2 * position['risk_usd']
-                comm_h2   = half_frac * comm
-                net_h2    = gross_h2 - comm_h2
-
-                if position['partial_tp_hit']:
-                    total_gross = position['half1_pnl_gross'] + gross_h2
-                    total_comm  = position['half1_commission'] + comm_h2
-                    r_h1        = (position['half1_exit'] - position['entry']) * d / position['sl_dist']
-                    r_mult      = partial_frac * r_h1 + (1 - partial_frac) * r_h2
-                    tp_log      = round(position['half1_exit'], 4)
-                else:
-                    total_gross = gross_h2
-                    total_comm  = comm_h2
-                    r_mult      = r_h2
-                    tp_log      = round(position['tp_at_entry'], 4)
-
-                total_net  = total_gross - total_comm
-                holding_days = max((bar_dt.date() - position['entry_time'].date()).days, 0)
-                if d == 1:
-                    swap_cost = holding_days * swap_long_day * position.get('lot_size', 0.0)
-                else:
-                    swap_cost = holding_days * swap_short_day * position.get('lot_size', 0.0)
-
-                total_net  -= swap_cost
-                close_net = net_h2 - swap_cost
+                ep_rev = bar['close'] - position['direction'] * slippage
+                trade, close_net = _build_trade_record(
+                    position, symbol, ep_rev, bar_dt, 'REVERSED',
+                    partial_frac, swap_long_day, swap_short_day, equity,
+                )
                 equity    += close_net
                 daily_pnl += close_net
-
-                trades.append(dict(
-                    symbol=symbol,
-                    direction='BUY' if d == 1 else 'SELL',
-                    entry_time=position['entry_time'], exit_time=bar_dt,
-                    entry=round(position['entry'], 4), exit=round(ep_rev, 4),
-                    sl_initial=round(position['sl_at_entry'], 4), tp=tp_log,
-                    r_multiple=round(r_mult, 3),
-                    pnl_gross=round(total_gross, 2),
-                    commission=round(total_comm, 2),
-                    swap_cost=round(swap_cost, 2),
-                    pnl_usd=round(total_net, 2), equity=round(equity, 2),
-                    exit_reason='REVERSED',
-                    partial_tp_hit=position['partial_tp_hit'],
-                    half1_exit=position['half1_exit'],
-                    half1_exit_time=position['half1_exit_time'],
-                ))
+                trades.append(trade)
                 position = None
                 if daily_pnl <= -(init_eq * daily_limit):
                     daily_stop = True
 
                 # Tạo pending mới theo hướng đảo chiều ngay tại bar hiện tại.
                 if not daily_stop and i + 1 < len(bars):
-                    new_d     = sig
-                    atr_v     = float(bar['atr'])
-                    pending = build_pending_order(bar, new_d, x, sym_ktp, atr_v, ttl)
+                    atr_v = float(bar['atr'])
+                    pending = build_pending_order(bar, sig, x, sym_ktp, atr_v, ttl)
 
         # ── Không có vị thế: nếu có signal thì tạo pending order mới ─────────
         if not position and not pending and not daily_stop:
@@ -320,56 +313,13 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
 
     # ── Hết dữ liệu nhưng vẫn còn vị thế: force-close tại bar cuối ───────────
     if position and len(bars):
-        bar       = bars.iloc[-1]
-        d         = position['direction']
-        ep        = bar['close']
-        comm      = position['commission']
-        half_frac = (1 - partial_frac) if position['partial_tp_hit'] else 1.0
-
-        r_h2     = (ep - position['entry']) * d / position['sl_dist']
-        gross_h2 = half_frac * r_h2 * position['risk_usd']
-        comm_h2  = half_frac * comm
-        net_h2   = gross_h2 - comm_h2
-
-        if position['partial_tp_hit']:
-            total_gross = position['half1_pnl_gross'] + gross_h2
-            total_comm  = position['half1_commission'] + comm_h2
-            r_h1        = (position['half1_exit'] - position['entry']) * d / position['sl_dist']
-            r_mult      = partial_frac * r_h1 + (1 - partial_frac) * r_h2
-            tp_log      = round(position['half1_exit'], 4)
-        else:
-            total_gross = gross_h2
-            total_comm  = comm_h2
-            r_mult      = r_h2
-            tp_log      = round(position['tp_at_entry'], 4)
-
-        total_net = total_gross - total_comm
-        holding_days = max((bar['BarTime'].date() - position['entry_time'].date()).days, 0)
-        if d == 1:
-            swap_cost = holding_days * swap_long_day * position.get('lot_size', 0.0)
-        else:
-            swap_cost = holding_days * swap_short_day * position.get('lot_size', 0.0)
-
-        total_net -= swap_cost
-        close_net = net_h2 - swap_cost
-        equity   += close_net
-
-        trades.append(dict(
-            symbol=symbol,
-            direction='BUY' if d == 1 else 'SELL',
-            entry_time=position['entry_time'], exit_time=bar['BarTime'],
-            entry=round(position['entry'], 4), exit=round(ep, 4),
-            sl_initial=round(position['sl_at_entry'], 4), tp=tp_log,
-            r_multiple=round(r_mult, 3),
-            pnl_gross=round(total_gross, 2),
-            commission=round(total_comm, 2),
-            swap_cost=round(swap_cost, 2),
-            pnl_usd=round(total_net, 2), equity=round(equity, 2),
-            exit_reason='FORCE_CLOSE',
-            partial_tp_hit=position['partial_tp_hit'],
-            half1_exit=position['half1_exit'],
-            half1_exit_time=position['half1_exit_time'],
-        ))
+        bar = bars.iloc[-1]
+        trade, close_net = _build_trade_record(
+            position, symbol, bar['close'], bar['BarTime'], 'FORCE_CLOSE',
+            partial_frac, swap_long_day, swap_short_day, equity,
+        )
+        equity += close_net
+        trades.append(trade)
         if eq_log:
             eq_log[-1] = (eq_log[-1][0], equity)
 

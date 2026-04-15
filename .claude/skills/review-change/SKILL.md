@@ -1,3 +1,8 @@
+---
+name: review-change
+description: Kiểm tra yêu cầu thay đổi có vi phạm nguyên tắc chiến lược không, đối chiếu với STRATEGY_PRINCIPLES.md, đưa ra đánh giá AN TOÀN / CẨN THẬN / KHÔNG NÊN. TRIGGER khi user nói: "muốn thay đổi", "thay đổi strategy", "đổi tham số", "tăng risk", "giảm risk", "đổi kTP", "đổi MA", "thêm indicator", "bỏ indicator", "đổi SL", "đổi TP", "thêm symbol", "bỏ symbol", "đổi entry", "đổi exit", "thay đổi logic", "muốn sửa strategy", "có nên thay đổi không", "change parameter", "modify strategy", "add filter".
+---
+
 # Skill: /review-change
 
 Kiểm tra xem yêu cầu thay đổi có phù hợp với nguyên tắc chiến lược hay không. Bảo vệ owner khỏi những thay đổi vô tình phá hỏng strategy.

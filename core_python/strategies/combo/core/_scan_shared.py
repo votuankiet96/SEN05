@@ -1,6 +1,3 @@
-import numpy as np
-import pandas as pd
-
 """
 Các hàm dùng chung cho scanner.
 
@@ -12,6 +9,9 @@ Tác động quản trị:
 - Nếu thay đổi điều kiện tín hiệu ở đây, cả scanner thường và scanner đảo chiều
     sẽ đổi kết quả cùng lúc.
 """
+
+import numpy as np
+import pandas as pd
 
 
 def build_raw_signal_masks(

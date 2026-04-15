@@ -1,3 +1,8 @@
+---
+name: diagnose
+description: Chẩn đoán lỗi và hướng dẫn sửa bằng tiếng Việt đơn giản. TRIGGER khi user nói: "bị lỗi", "lỗi", "error", "không chạy được", "chạy bị lỗi", "bị crash", "không hoạt động", "traceback", "exception", "dashboard không lên", "dữ liệu không cập nhật", "script lỗi", "tại sao lỗi", "fix lỗi", "sửa lỗi", "debug", "không kết nối được", "import error", "có lỗi xảy ra", user paste nội dung error message hoặc traceback Python.
+---
+
 # Skill: /diagnose
 
 Chẩn đoán lỗi khi script hoặc hệ thống gặp vấn đề. Giải thích nguyên nhân bằng tiếng Việt đơn giản và hướng dẫn cách sửa.
