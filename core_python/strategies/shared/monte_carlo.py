@@ -1,4 +1,8 @@
-"""Monte Carlo simulation utilities for trade-level robustness testing."""
+"""Monte Carlo simulation utilities for trade-level robustness testing.
+
+Module này không phụ thuộc vào bất kỳ strategy cụ thể nào.
+Chỉ cần list trade PnLs là đủ để chạy.
+"""
 
 import matplotlib.pyplot as plt
 import numpy as np

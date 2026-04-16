@@ -37,7 +37,8 @@
 # =============================================================================
 
 import json  # Đọc/ghi file JSON (verified_market_gaps.json)
-import logging  # Hệ thống logging của Python
+import logging          # Hệ thống logging của Python
+import logging.handlers  # RotatingFileHandler — dùng cho ws_live 24/7
 import math  # math.ceil() để làm tròn lên số bar cần pull
 import os  # Thao tác đường dẫn file
 import sys  # Thêm đường dẫn import
@@ -81,6 +82,7 @@ from modules.db_connector import (
     aggregate_from_fact,  # Tính TF phái sinh bằng GROUP BY trên Fact_OHLCV
     delete_fact_bars,  # Xóa rows Fact_OHLCV trước khi repull
     delete_staging_bars,  # Xóa rows staging trước khi repull
+    get_candle_count,  # Đếm số bar trong Fact_OHLCV (kiểm tra source TF có data chưa)
     get_internal_gaps,  # Chạy SQL LEAD() tìm khoảng gap trong Fact_OHLCV
     insert_staging_batch,  # Ghi DataFrame OHLCV vào bảng Staging (MERGE, chống duplicate)
     run_etl_direct,  # Gọi usp_LoadDirect: chuyển Staging → Fact_OHLCV
@@ -90,12 +92,17 @@ from modules.db_connector import (
 # Tạo logger — ghi log ra cả console lẫn file
 # ---------------------------------------------------------------------------
 
-def setup_logger(name: str, log_file: str) -> logging.Logger:
+def setup_logger(name: str, log_file: str, rotating: bool = False) -> logging.Logger:
     """
     Tạo (hoặc lấy lại) một logger có tên `name`.
     Logger sẽ ghi ra 2 nơi đồng thời:
       - Console (stdout) — để theo dõi realtime khi chạy
       - File log — để xem lại sau
+
+    Tham số:
+      rotating=False (mặc định) — FileHandler thường, phù hợp script chạy thủ công.
+      rotating=True             — RotatingFileHandler (10 MB × 5 files), phù hợp
+                                  tiến trình 24/7 như ws_live để tránh log phình vô hạn.
 
     Nếu logger đã được cấu hình rồi (gọi lần 2) → trả về ngay, không tạo lại.
     """
@@ -112,7 +119,13 @@ def setup_logger(name: str, log_file: str) -> logging.Logger:
     )
     sh = logging.StreamHandler(sys.stdout)   # Handler ghi ra console
     sh.setFormatter(fmt)
-    fh = logging.FileHandler(log_file, encoding="utf-8")  # Handler ghi ra file
+    if rotating:
+        # Tối đa 6 files × 10 MB = 60 MB — đủ giữ ~10-14 ngày log ws_live
+        fh = logging.handlers.RotatingFileHandler(
+            log_file, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8",
+        )
+    else:
+        fh = logging.FileHandler(log_file, encoding="utf-8")
     fh.setFormatter(fmt)
     logger.addHandler(sh)
     logger.addHandler(fh)
@@ -141,6 +154,9 @@ MIN_PULL_BARS  = 10
 # Return codes từ pull_and_store()
 RESULT_ERROR    = -1   # TV exception / lỗi nghiêm trọng
 RESULT_TV_EMPTY = -2   # TV trả về rỗng (không có data, không phải lỗi kỹ thuật)
+
+# Thời gian chờ (giây) giữa mỗi lần retry — tăng dần để tránh rate-limit
+RETRY_DELAYS    = [10, 30, 60]
 
 # Ngưỡng để phân biệt "gap được fill thật" vs "chỉ có vài bar mới ở rìa"
 # Nếu pull thành công mà chỉ insert < FILL_THRESHOLD bar mới vào Fact,
@@ -174,6 +190,15 @@ OVERNIGHT_GAP_MINUTES = {
 # (gap do thị trường đóng cửa, KHÔNG phải thiếu data → skip lần sau)
 # Lưu trong cache/ ở project root để tách biệt runtime data khỏi source code
 _VERIFIED_GAPS_FILE = os.path.join(_PROJ, "cache", "verified_market_gaps.json")
+
+# Source TF cho từng derived TF — dùng để kiểm tra source có data trước khi aggregate
+_SOURCE_TF = {
+    "M10": "M5",
+    "M20": "M5",
+    "M90": "M30",
+    "H6":  "H3",
+    "H8":  "H4",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -255,55 +280,146 @@ def sleep_for(tv_symbol: str) -> None:
     time.sleep(SLEEP_GOLD if tv_symbol == "GOLD" else SLEEP_NORMAL)
 
 
+def _validate_ohlcv_df(df, tv_symbol: str, tf_code: str,
+                       logger: logging.Logger):
+    """
+    Kiểm tra tính hợp lệ của DataFrame OHLCV trước khi ghi vào DB.
+
+    Các kiểm tra:
+      1. Null trong Open/High/Low/Close → loại bỏ row đó
+      2. High < Low (giá đảo ngược) → loại bỏ row đó
+      3. Timestamp trùng lặp → giữ lại row đầu tiên
+      4. Timestamp không tăng dần → sắp xếp lại
+
+    Trả về (cleaned_df, had_issues):
+      - cleaned_df  : DataFrame sau khi làm sạch (có thể empty nếu tất cả đều lỗi)
+      - had_issues  : True nếu có bất kỳ vấn đề nào được phát hiện
+    """
+    if df is None or df.empty:
+        return df, False
+
+    original_len = len(df)
+    had_issues   = False
+
+    # 1. Kiểm tra null trong các cột OHLC bắt buộc
+    ohlc_cols = [c for c in ("open", "high", "low", "close") if c in df.columns]
+    if ohlc_cols:
+        null_mask = df[ohlc_cols].isnull().any(axis=1)
+        if null_mask.any():
+            logger.warning("  VALIDATE %s %s: %d rows with null OHLC → dropped",
+                           tv_symbol, tf_code, int(null_mask.sum()))
+            df         = df[~null_mask]
+            had_issues = True
+
+    if df.empty:
+        return df, had_issues
+
+    # 2. Kiểm tra High >= Low (giá trị hợp lệ)
+    if "high" in df.columns and "low" in df.columns:
+        invalid_hl = df["high"] < df["low"]
+        if invalid_hl.any():
+            logger.warning("  VALIDATE %s %s: %d rows with High < Low → dropped",
+                           tv_symbol, tf_code, int(invalid_hl.sum()))
+            df         = df[~invalid_hl]
+            had_issues = True
+
+    if df.empty:
+        return df, had_issues
+
+    # 3. Kiểm tra timestamp trùng lặp
+    if df.index.duplicated().any():
+        n_dupes = int(df.index.duplicated().sum())
+        logger.warning("  VALIDATE %s %s: %d duplicate timestamps → kept first",
+                       tv_symbol, tf_code, n_dupes)
+        df         = df[~df.index.duplicated(keep="first")]
+        had_issues = True
+
+    # 4. Kiểm tra timestamp tăng dần (monotonic)
+    if not df.index.is_monotonic_increasing:
+        logger.warning("  VALIDATE %s %s: timestamps not monotonic → sorted",
+                       tv_symbol, tf_code)
+        df         = df.sort_index()
+        had_issues = True
+
+    if had_issues:
+        dropped = original_len - len(df)
+        if dropped > 0:
+            logger.warning("  VALIDATE %s %s: %d/%d rows removed total",
+                           tv_symbol, tf_code, dropped, original_len)
+
+    return df, had_issues
+
+
 # ---------------------------------------------------------------------------
 # Cache market gap đã xác nhận (dùng bởi gap_fill)
 # ---------------------------------------------------------------------------
 # Khi gap_fill pull dữ liệu TV cho 1 hole mà DB đã có đủ (0 bar mới),
 # nó xác nhận hole đó là "market gap" (thị trường đóng cửa, không phải thiếu data).
 # Lưu vào file JSON để lần chạy sau SKIP, không pull TV lãng phí.
-# File tự hết hạn sau 30 ngày hoặc khi đổi lookback_days.
+# File tự hết hạn sau 30 ngày.
+#
+# Format mới (v2): lưu theo gap window cụ thể (sym_id, tf_code, gap_start, gap_end)
+# thay vì chỉ lưu pair — tránh skip nhầm hole thật mới phát sinh sau gap cũ.
 # ---------------------------------------------------------------------------
 
-def load_verified_gaps() -> set:
+def load_verified_gaps() -> dict:
     """
-    Đọc danh sách cặp (symbol_id, tf_code) đã xác nhận là market gap
-    từ file verified_market_gaps.json.
+    Đọc các gap window đã xác nhận là market gap từ verified_market_gaps.json.
 
-    Trả về set rỗng nếu:
-      - File không tồn tại (chưa chạy gap_fill lần nào)
-      - File đã quá 30 ngày (cần quét lại từ đầu)
-      - lookback_days khác với lần lưu (cấu hình đã thay đổi)
-      - File bị lỗi JSON
+    Trả về:
+      dict: (symbol_id, tf_code) → list[(gap_start, gap_end)]
+      Mỗi entry là một khoảng thời gian cụ thể đã xác nhận là market gap.
+
+    Trả về {} nếu:
+      - File không tồn tại
+      - File đã quá 30 ngày
+      - File bị lỗi JSON / format cũ không tương thích
     """
     try:
         with open(_VERIFIED_GAPS_FILE) as f:
             data = json.load(f)
         saved = datetime.fromisoformat(data["verified_at"])
-        # Hết hạn sau 30 ngày → quét lại từ đầu để đảm bảo chính xác
+        # Hết hạn sau 30 ngày → quét lại từ đầu
         if (now_utc() - saved).days > 30:
-            return set()
-        return {(p[0], p[1]) for p in data.get("pairs", [])}
+            return {}
+        # Format mới: "windows" key
+        if "windows" not in data:
+            # File format cũ ("pairs") — treat as expired để force re-verify
+            return {}
+        result: dict = {}
+        for entry in data["windows"]:
+            key = (entry[0], entry[1])  # (sym_id, tf_code)
+            window = (
+                datetime.fromisoformat(entry[2]),
+                datetime.fromisoformat(entry[3]),
+            )
+            result.setdefault(key, []).append(window)
+        return result
     except (FileNotFoundError, json.JSONDecodeError, KeyError, ValueError):
-        return set()
+        return {}
 
 
-def save_verified_gaps(pairs: set, logger: logging.Logger) -> None:
+def save_verified_gaps(windows: set, logger: logging.Logger) -> None:
     """
-    Ghi danh sách cặp (symbol_id, tf_code) đã xác nhận là market gap
-    vào file verified_market_gaps.json.
+    Ghi các gap window đã xác nhận vào verified_market_gaps.json.
 
-    Lưu kèm:
-      - verified_at: thời điểm ghi (để kiểm tra hết hạn 30 ngày)
-      - lookback_days: cấu hình lúc chạy (để kiểm tra thay đổi)
+    Tham số:
+      windows — set of (symbol_id, tf_code, gap_start: datetime, gap_end: datetime)
     """
     data = {
         "verified_at": now_utc().isoformat(),
-        "pairs":       sorted([list(p) for p in pairs]),
+        "windows": sorted([
+            [sid, tfc, gs.isoformat(), ge.isoformat()]
+            for sid, tfc, gs, ge in windows
+        ]),
     }
     try:
+        os.makedirs(os.path.dirname(_VERIFIED_GAPS_FILE), exist_ok=True)
         with open(_VERIFIED_GAPS_FILE, "w") as f:
             json.dump(data, f, indent=2)
-        logger.info("Saved %d verified market-gap pairs.", len(pairs))
+        unique_pairs = {(s, t) for s, t, _, _ in windows}
+        logger.info("Saved %d verified gap windows (%d pairs).",
+                    len(windows), len(unique_pairs))
     except OSError as e:
         logger.warning("Could not save verified gaps: %s", e)
 
@@ -378,6 +494,12 @@ def pull_and_store(tv, sym: dict, tf_code: str,
         logger.warning("  Only 1 bar returned (open) — %s %s", tv_symbol, tf_code)
         return RESULT_TV_EMPTY
 
+    # ----- BƯỚC A2: Kiểm tra chất lượng dữ liệu trước khi ghi -----
+    df, _ = _validate_ohlcv_df(df, tv_symbol, tf_code, logger)
+    if df.empty:
+        logger.warning("  All bars failed validation — %s %s", tv_symbol, tf_code)
+        return RESULT_TV_EMPTY
+
     # ----- BƯỚC B: Ghi vào Staging (MERGE — chống duplicate) -----
     # insert_staging_batch() tạo temp table → bulk insert → MERGE vào staging
     # Nếu row đã tồn tại (cùng SymbolID + BarTime) → bỏ qua, chỉ insert row mới
@@ -386,7 +508,15 @@ def pull_and_store(tv, sym: dict, tf_code: str,
     # ----- BƯỚC C: Chuyển Staging → Fact_OHLCV (stored procedure) -----
     # run_etl_direct() gọi DWH.usp_LoadDirect → chuyển row từ staging sang Fact
     # Cũng dùng NOT EXISTS chống duplicate. Trả về số row mới insert vào Fact.
-    etl_inserted = run_etl_direct(symbol_id, tf_code, staging)
+    try:
+        etl_inserted = run_etl_direct(symbol_id, tf_code, staging)
+    except Exception as e:
+        logger.error("  ETL FAIL — %s %s: %s — cleaning staging", tv_symbol, tf_code, e)
+        try:
+            delete_staging_bars(symbol_id, staging)
+        except Exception as e2:
+            logger.warning("  Staging cleanup FAIL — %s %s: %s", tv_symbol, tf_code, e2)
+        return RESULT_ERROR
 
     # ----- Ghi log kết quả -----
     if etl_inserted > 0:
@@ -402,6 +532,35 @@ def pull_and_store(tv, sym: dict, tf_code: str,
         logger.info("  ○ %s %s: 0 new bars (already up to date)",
                     tv_symbol, tf_code)
     return etl_inserted
+
+
+def pull_with_retry(tv, sym: dict, tf_code: str, n_bars: int, interval,
+                    logger: logging.Logger, max_retries: int = 3) -> int:
+    """
+    Gọi pull_and_store() tối đa (1 + max_retries) lần.
+    Retry khi kết quả là RESULT_TV_EMPTY hoặc RESULT_ERROR (< 0).
+    Backoff tăng dần theo RETRY_DELAYS: 10s → 30s → 60s.
+    Trả về kết quả của lần thử cuối cùng.
+    """
+    result = pull_and_store(tv, sym, tf_code, n_bars, interval, logger)
+
+    for attempt in range(1, max_retries + 1):
+        if result >= 0:
+            break
+        delay = RETRY_DELAYS[min(attempt - 1, len(RETRY_DELAYS) - 1)]
+        logger.warning(
+            "  [Retry %d/%d] %s %s — waiting %ds...",
+            attempt, max_retries, sym["tv_symbol"], tf_code, delay,
+        )
+        time.sleep(delay)
+        result = pull_and_store(tv, sym, tf_code, n_bars, interval, logger)
+
+    if result < 0:
+        logger.error(
+            "  [FINAL FAIL] %s %s — failed after %d attempt(s).",
+            sym["tv_symbol"], tf_code, max_retries + 1,
+        )
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -439,11 +598,22 @@ def recompute_derived(updated_sym_ids: set,
     for sym in SYMBOLS:
         if sym["symbol_id"] not in updated_sym_ids:
             continue  # Symbol này không có bar mới → bỏ qua
+        sym_id   = sym["symbol_id"]
+        _src_cnt: dict = {}  # Cache số bar source TF để tránh query DB nhiều lần
         for target_tf in derived_list:
+            # Kiểm tra source TF có data trước khi aggregate
+            src_tf = _SOURCE_TF.get(target_tf)
+            if src_tf:
+                if src_tf not in _src_cnt:
+                    _src_cnt[src_tf] = get_candle_count(sym_id, src_tf)
+                if _src_cnt[src_tf] == 0:
+                    logger.warning("  derived SKIP %s %s: source %s has 0 bars",
+                                   sym["tv_symbol"], target_tf, src_tf)
+                    continue
             try:
                 # aggregate_from_fact() chạy SQL GROUP BY trên Fact_OHLCV
                 # để tạo nến TF lớn hơn từ TF nhỏ hơn (ví dụ M5 → M10)
-                rows = aggregate_from_fact(sym["symbol_id"], target_tf)
+                rows = aggregate_from_fact(sym_id, target_tf)
                 ok  += 1
                 if rows > 0:
                     logger.debug("  derived %s %s: +%d rows",
@@ -529,8 +699,8 @@ def find_hole_pairs(stale: list, logger: logging.Logger,
       stale          — danh sách pair đang chờ pull (từ backfill pipeline).
                        Nếu hole trùng pair đã có trong stale → nâng n_bars.
       logger         — logger để ghi log
-      verified_gaps  — set các (symbol_id, tf_code) đã xác nhận là market gap
-                       → bỏ qua, không xử lý lại
+      verified_gaps  — dict (symbol_id, tf_code) → list[(gap_start, gap_end)]
+                       đã xác nhận là market gap → bỏ qua gap window đó
 
     Trả về:
       Danh sách hole MỚI (không trùng stale) cần pull từ TradingView.
@@ -566,10 +736,8 @@ def find_hole_pairs(stale: list, logger: logging.Logger,
         if tf_mins is None or sym is None:
             continue  # TF hoặc symbol không hợp lệ → bỏ qua
 
-        # Nếu cặp này đã được xác nhận là market gap lần trước → SKIP
-        if verified_gaps and (sym_id, tf_code) in verified_gaps:
-            n_skip_verified += 1
-            continue
+        # Lấy danh sách gap window đã verified cho pair này (nếu có)
+        verified_windows = (verified_gaps or {}).get((sym_id, tf_code), [])
 
         # ----- BƯỚC 3: Tính ngưỡng (threshold) để phân biệt gap thật vs giả -----
         asset_type = sym["asset_type"]  # "Indice", "Metal", "FOREX", "Crypto"
@@ -591,6 +759,13 @@ def find_hole_pairs(stale: list, logger: logging.Logger,
         # ----- BƯỚC 4: Lọc từng gap — giữ lại chỉ hole thật -----
         real_gaps = []
         for gap_start, gap_end, gap_raw_min in gaps:
+            # Bỏ qua nếu gap window này đã được xác nhận là market gap trước đó
+            # (kiểm tra per-window thay vì skip cả pair — tránh bỏ sót hole thật mới)
+            if any(vs <= gap_start and gap_end <= ve
+                   for vs, ve in verified_windows):
+                n_skip_verified += 1
+                continue
+
             # Nếu asset nghỉ cuối tuần → trừ giờ Sat/Sun khỏi gap
             # (vì gap dài 60h nhưng 48h là cuối tuần → thực chỉ 12h)
             if asset_type in WEEKEND_CLOSED:
@@ -629,12 +804,13 @@ def find_hole_pairs(stale: list, logger: logging.Logger,
         else:
             # Cặp mới → thêm vào danh sách hole cần xử lý
             new_holes.append({
-                "sym":       sym,          # Thông tin symbol
-                "tf_code":   tf_code,      # Mã timeframe
-                "last_bar":  earliest_start,  # Bar ngay trước lỗ hổng
-                "gap_hours": round(hole_hours, 1),  # Khoảng cách (giờ)
-                "n_bars":    n_bars_needed,   # Số bar cần pull
-                "reason":    "HOLE",          # Lý do: lỗ hổng dữ liệu
+                "sym":         sym,          # Thông tin symbol
+                "tf_code":     tf_code,      # Mã timeframe
+                "last_bar":    earliest_start,  # Bar ngay trước lỗ hổng
+                "gap_hours":   round(hole_hours, 1),  # Khoảng cách (giờ)
+                "n_bars":      n_bars_needed,   # Số bar cần pull
+                "reason":      "HOLE",          # Lý do: lỗ hổng dữ liệu
+                "gap_windows": [(gs, ge) for gs, ge, _ in real_gaps],  # Danh sách gap windows cụ thể
             })
             n_new += 1
 

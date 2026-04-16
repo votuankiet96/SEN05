@@ -31,6 +31,12 @@ sen05.egg-info/
 .env
 *.env.local
 
+# Runtime token cache (tách khỏi .env, chứa JWT/cookie ngắn hạn)
+data_provider/.tv_token_cache
+
+# SQLite durable spool (tạm thời, tự tạo lại khi start)
+data_provider/.overflow_spool.db
+
 # IDE & OS artefacts
 .vs/
 .vscode/settings.json

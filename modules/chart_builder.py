@@ -282,8 +282,7 @@ def build_full_chart(df: pd.DataFrame, symbol: str, tf: str,
 # =============================================================================
 
 def build_signal_chart(df_plot: pd.DataFrame, signals_df: pd.DataFrame,
-                       cfg: dict, sym: str, p: dict,
-                       us_filtered_symbols: list = None) -> go.Figure:
+                       cfg: dict, sym: str, p: dict) -> go.Figure:
     """
         Tao chart scanner SAM: gia + marker signal + MACD + ATR.
 
@@ -306,12 +305,11 @@ def build_signal_chart(df_plot: pd.DataFrame, signals_df: pd.DataFrame,
 
     Parameters
     ----------
-    df_plot             : processed DataFrame (RangeIndex, lowercase cols + x_label)
-    signals_df          : output of scan_signals()
-    cfg                 : symbol config dict (label, x, …)
-    sym                 : symbol key (e.g. 'US30') — used for title note
-    p                   : params dict (KTP, MIN_RR, ENTRY_LINE_BARS, …)
-    us_filtered_symbols : list of symbol keys using US30 macro filter (for title)
+    df_plot    : processed DataFrame (RangeIndex, lowercase cols + x_label)
+    signals_df : output of scan_signals()
+    cfg        : symbol config dict (label, x, …)
+    sym        : symbol key (e.g. 'US30') — used for title note
+    p          : params dict (KTP, MIN_RR, ENTRY_LINE_BARS, …)
     """
     KTP        = p['KTP']
     MIN_RR     = p['MIN_RR']
@@ -447,12 +445,10 @@ def build_signal_chart(df_plot: pd.DataFrame, signals_df: pd.DataFrame,
     # ── Layout ───────────────────────────────────────────────────────────────
     n_pass  = int(signals_df['pass_rr'].sum()) if not signals_df.empty else 0
     n_rej   = len(signals_df) - n_pass
-    us_note = ('  ·  US30 Macro Filter ON'
-               if (us_filtered_symbols and sym in us_filtered_symbols) else '')
     title_str = (
         f'{cfg["label"]}  |  {len(df_plot)} bars H4  |  kTP={KTP}  |  '
         f'Signals: <span style="color:#00FF88"><b>{n_pass} pass</b></span>  '
-        f'<span style="color:#666">{n_rej} rejected</span>{us_note}'
+        f'<span style="color:#666">{n_rej} rejected</span>'
     )
 
     fig.update_layout(
@@ -497,8 +493,7 @@ def build_signal_chart(df_plot: pd.DataFrame, signals_df: pd.DataFrame,
 # =============================================================================
 
 def build_reversal_chart(df_plot: pd.DataFrame, signals_df: pd.DataFrame,
-                         cfg: dict, sym: str, p: dict,
-                         us_filtered_symbols: list = None) -> go.Figure:
+                         cfg: dict, sym: str, p: dict) -> go.Figure:
     """
     Tao chart cho tin hieu dao chieu (reversal).
 
@@ -690,13 +685,11 @@ def build_reversal_chart(df_plot: pd.DataFrame, signals_df: pd.DataFrame,
     n_pass = int(signals_df['pass_rr'].sum()) if not signals_df.empty else 0
     n_rej  = len(signals_df) - n_pass
     n_rev  = int(signals_df['is_reversal'].sum()) if (not signals_df.empty and 'is_reversal' in signals_df.columns) else 0
-    us_note = ('  ·  US30 Macro Filter ON'
-               if (us_filtered_symbols and sym in us_filtered_symbols) else '')
     title_str = (
         f'{cfg["label"]}  |  {len(df_plot)} bars H4  |  kTP={KTP}  |  '
         f'Signals: <span style="color:#00FF88"><b>{n_pass} pass</b></span>  '
         f'<span style="color:#FFB347"><b>{n_rev} reversal</b></span>  '
-        f'<span style="color:#666">{n_rej} rejected</span>{us_note}'
+        f'<span style="color:#666">{n_rej} rejected</span>'
     )
 
     fig.update_layout(

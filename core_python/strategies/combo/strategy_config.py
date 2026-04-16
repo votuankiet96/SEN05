@@ -29,7 +29,6 @@
 #   - Adjust x (breakout buffer in price points) per symbol
 #   - Adjust session_hours_utc (list of UTC bar-open hours to scan;
 #     empty list [] = scan all hours)
-#   - Set us_macro_filter=True for indices correlated with US30
 #   - Adjust indicator defaults in get_indicator_params()
 # =============================================================================
 
@@ -65,29 +64,23 @@ DEFAULT_COSTS = {
 
 
 # =============================================================================
-# 2. SYMBOLS — 4 indices scanned on H4: US30, UK100, HK50, J225
+# 2. SYMBOLS — 11 instruments scanned on H4
 #
-#   symbol_id        : must match SymbolID in DWH.Dim_Symbol / config.py
+#   symbol_id        : must match SymbolID in DWH.dbo.Symbol / config.py
 #   label            : display name for dashboard and Telegram messages
 #   x                : breakout buffer in price points
 #                      entry = bar_high + x  (BUY)  /  bar_low - x  (SELL)
-#                      x < 2 → displayed with 1 decimal in _fmt_num()
+#                      (*) = placeholder — will be optimized via walk-forward
 #   session_hours_utc: list of H4 bar-start UTC hours to scan for signals
 #                      ([] = no filter, scan all hours)
-#   us_macro_filter  : True = only take BUY when US30 is above its MA,
-#                      only take SELL when US30 is below its MA
 # =============================================================================
 SYMBOLS = {
     # ── US Markets ───────────────────────────────────────────────────────────
     "US30": {
         "symbol_id":         10,
         "label":             "US30 (Dow Jones)",
-        "x":                 13.0,
-        "ktp": 2.8,
-        "trailing_activation": 1.25,
-        "ma_period": 25,
-        "session_hours_utc": [],               # Session filter disabled — all H4 bars active
-        "us_macro_filter":   False,          # US30 IS the macro reference
+        "x":                 10.0,
+        "session_hours_utc": [],
         "group":             "US",
         "contract_value":    1.0,
         "point_size":        1.0,
@@ -97,35 +90,97 @@ SYMBOLS = {
         "swap_long_per_lot_per_day":  -3.5,
         "swap_short_per_lot_per_day": 1.2,
     },
+    "US500": {
+        "symbol_id":         8,
+        "label":             "US500 (S&P 500)",
+        "x":                 1.0,
+        "session_hours_utc": [],
+        "group":             "US",
+        "contract_value":    1.0,
+        "point_size":        1.0,
+        "spread_pts":        0.4,
+        "commission_per_lot": 3.5,
+        "slippage_pts":      0.1,
+        "swap_long_per_lot_per_day":  0.0,   # TODO: fill from broker
+        "swap_short_per_lot_per_day": 0.0,
+    },
+    "US100": {
+        "symbol_id":         9,
+        "label":             "US100 (NASDAQ 100)",
+        "x":                 5.0,
+        "session_hours_utc": [],
+        "group":             "US",
+        "contract_value":    1.0,
+        "point_size":        1.0,
+        "spread_pts":        1.5,
+        "commission_per_lot": 3.5,
+        "slippage_pts":      0.3,
+        "swap_long_per_lot_per_day":  0.0,   # TODO: fill from broker
+        "swap_short_per_lot_per_day": 0.0,
+    },
     # ── European Markets ─────────────────────────────────────────────────────
-    "UK100": {
-        "symbol_id":         7,
-        "label":             "UK100 (FTSE 100)",
-        "x":                 3.0,
-        "ktp": 1.8,
-        "trailing_activation": 0.5,
-        "ma_period": 15,
-        "session_hours_utc": [],               # Session filter disabled — all H4 bars active
-        "us_macro_filter":   False,
+    "DE40": {
+        "symbol_id":         3,
+        "label":             "DE40 (DAX 40)",
+        "x":                 5.0,
+        "session_hours_utc": [],
         "group":             "EU",
         "contract_value":    1.0,
         "point_size":        1.0,
-        "spread_pts":        1.0,
+        "spread_pts":        1.5,
         "commission_per_lot": 3.5,
-        "slippage_pts":      0.3,
-        "swap_long_per_lot_per_day":  -2.8,
-        "swap_short_per_lot_per_day": 0.9,
+        "slippage_pts":      0.5,
+        "swap_long_per_lot_per_day":  0.0,   # TODO: fill from broker
+        "swap_short_per_lot_per_day": 0.0,
+    },
+    "UK100": {
+        "symbol_id":         7,
+        "label":             "UK100 (FTSE 100)",
+        "x":                 5.0,
+        "session_hours_utc": [],
+        "group":             "EU",
+        "contract_value":    1.0,
+        "point_size":        1.0,
+        "spread_pts":        1.5,
+        "commission_per_lot": 3.5,
+        "slippage_pts":      0.5,
+        "swap_long_per_lot_per_day":  0.0,   # TODO: fill from broker
+        "swap_short_per_lot_per_day": 0.0,
+    },
+    "FR40": {
+        "symbol_id":         2,
+        "label":             "FR40 (CAC 40)",
+        "x":                 5.0,             # (*) placeholder
+        "session_hours_utc": [],
+        "group":             "EU",
+        "contract_value":    1.0,
+        "point_size":        1.0,
+        "spread_pts":        2.0,
+        "commission_per_lot": 3.5,
+        "slippage_pts":      0.5,
+        "swap_long_per_lot_per_day":  0.0,   # TODO: fill from broker
+        "swap_short_per_lot_per_day": 0.0,
+    },
+    "SP35": {
+        "symbol_id":         6,
+        "label":             "SP35 (IBEX 35)",
+        "x":                 5.0,             # (*) placeholder
+        "session_hours_utc": [],
+        "group":             "EU",
+        "contract_value":    1.0,
+        "point_size":        1.0,
+        "spread_pts":        8.0,
+        "commission_per_lot": 3.5,
+        "slippage_pts":      1.0,
+        "swap_long_per_lot_per_day":  0.0,   # TODO: fill from broker
+        "swap_short_per_lot_per_day": 0.0,
     },
     # ── Asian Markets ────────────────────────────────────────────────────────
     "HK50": {
         "symbol_id":         4,
         "label":             "HK50 (Hang Seng 50)",
-        "x":                 8.0,
-        "ktp": 2.2,
-        "trailing_activation": 1.5,
-        "ma_period": 25,
-        "session_hours_utc": [],               # Session filter disabled — all H4 bars active
-        "us_macro_filter":   False,
+        "x":                 15.0,
+        "session_hours_utc": [],
         "group":             "ASIA",
         "contract_value":    1.0,
         "point_size":        1.0,
@@ -138,12 +193,8 @@ SYMBOLS = {
     "J225": {
         "symbol_id":         5,
         "label":             "J225 (Nikkei 225)",
-        "x":                 8.0,
-        "ktp": 1.8,
-        "trailing_activation": 0.5,
-        "ma_period": 15,
-        "session_hours_utc": [],               # Session filter disabled — all H4 bars active
-        "us_macro_filter":   False,
+        "x":                 15.0,
+        "session_hours_utc": [],
         "group":             "ASIA",
         "contract_value":    1.0,
         "point_size":        1.0,
@@ -153,25 +204,41 @@ SYMBOLS = {
         "swap_long_per_lot_per_day":  0.8,
         "swap_short_per_lot_per_day": -2.1,
     },
+    # ── Metals ───────────────────────────────────────────────────────────────
+    "GOLD": {
+        "symbol_id":         56,
+        "label":             "GOLD (XAU/USD)",
+        "x":                 0.5,             # (*) placeholder
+        "session_hours_utc": [],
+        "group":             "METAL",
+        "contract_value":    1.0,
+        "point_size":        1.0,
+        "spread_pts":        0.3,
+        "commission_per_lot": 3.5,
+        "slippage_pts":      0.1,
+        "swap_long_per_lot_per_day":  0.0,   # TODO: fill from broker
+        "swap_short_per_lot_per_day": 0.0,
+    },
+    # ── Crypto ───────────────────────────────────────────────────────────────
+    "BTCUSD": {
+        "symbol_id":         81,
+        "label":             "BTCUSD (Bitcoin)",
+        "x":                 50.0,            # (*) placeholder
+        "session_hours_utc": [],
+        "group":             "CRYPTO",
+        "contract_value":    1.0,
+        "point_size":        1.0,
+        "spread_pts":        5.0,
+        "commission_per_lot": 3.5,
+        "slippage_pts":      2.0,
+        "swap_long_per_lot_per_day":  0.0,   # TODO: fill from broker
+        "swap_short_per_lot_per_day": 0.0,
+    },
 }
 
 
 # =============================================================================
-# 3. US30 REFERENCE — mốc tham chiếu cho macro trend filter
-# =============================================================================
-US30_KEY       = "US30"            # key in SYMBOLS dict
-US30_SYMBOL_ID = 10                # DWH.Dim_Symbol SymbolID for US30
-
-
-# =============================================================================
-# 4. SYMBOLS THAT USE THE US30 MACRO FILTER
-#    Auto-derived from SYMBOLS dict — do not edit manually.
-# =============================================================================
-US_FILTERED = [k for k, v in SYMBOLS.items() if v.get("us_macro_filter")]
-
-
-# =============================================================================
-# 5. INDICATOR DEFAULTS
+# 3. INDICATOR DEFAULTS
 #    get_indicator_params() returns a dict consumed by add_indicators(),
 #    scan_signals(), and the dashboard sidebar defaults.
 #    Dashboard sidebar sliders let users override these at runtime.
@@ -204,40 +271,11 @@ def get_indicator_params() -> dict:
 
 
 # =============================================================================
-# 6. PER-SYMBOL HELPERS
+# 4. PER-SYMBOL HELPERS
 # =============================================================================
 def get_symbol_ktp(sym_key: str) -> float:
     """Lấy kTP theo symbol: ưu tiên giá trị override của symbol, nếu không có thì dùng global."""
     return SYMBOLS.get(sym_key, {}).get('ktp', STRATEGY['ktp'])
-
-
-def calc_dynamic_slippage(base_slippage: float, atr: float, close: float,
-                          k: float = 50) -> float:
-    """Tính slippage động theo biến động ATR tương đối.
-
-    Parameters
-    ----------
-    base_slippage : float
-        Slippage nền (point) dùng khi biến động ở mức bình thường.
-    atr : float
-        Giá trị ATR tại thời điểm khớp lệnh.
-    close : float
-        Giá đóng cửa hiện tại, dùng để chuẩn hóa ATR theo tỷ lệ ATR/close.
-    k : float, default=50
-        Hệ số khuếch đại cho thành phần biến động.
-
-    Returns
-    -------
-    float
-        Slippage động theo công thức:
-        base_slippage * (1 + k * clip(atr / close, 0.0005, 0.01)).
-    """
-    if close is None or close == 0:
-        return float(base_slippage)
-
-    vol_ratio = atr / close
-    vol_ratio = min(max(vol_ratio, 0.0005), 0.01)
-    return float(base_slippage) * (1 + k * vol_ratio)
 
 
 def get_symbol_params(sym_key: str) -> dict:
@@ -256,7 +294,9 @@ def get_symbol_params(sym_key: str) -> dict:
         swap_long_per_lot_per_day  — phí/credit swap cho lệnh LONG theo mỗi lot mỗi ngày
         swap_short_per_lot_per_day — phí/credit swap cho lệnh SHORT theo mỗi lot mỗi ngày
     """
-    sym = SYMBOLS.get(sym_key, {})
+    if sym_key not in SYMBOLS:
+        raise KeyError(f"Symbol '{sym_key}' not found. Available: {list(SYMBOLS)}")
+    sym = SYMBOLS[sym_key]
     p   = get_indicator_params()
     return {
         'ktp':                 sym.get('ktp',                STRATEGY['ktp']),
@@ -270,7 +310,7 @@ def get_symbol_params(sym_key: str) -> dict:
 
 
 # =============================================================================
-# 7. SUMMARY — human-readable overview of current config
+# 5. SUMMARY — human-readable overview of current config
 # =============================================================================
 def summary() -> str:
     """Xuất chuỗi tóm tắt cấu hình hiện tại để kiểm tra nhanh trước khi chạy scan/backtest."""
@@ -278,7 +318,6 @@ def summary() -> str:
     lines = [
         f"Strategy     : {STRATEGY['name']} {STRATEGY['version']}",
         f"Symbols      : {', '.join(SYMBOLS.keys())}",
-        f"US30 filter  : {', '.join(US_FILTERED) if US_FILTERED else 'none'}",
         f"MA period    : {p['MA_PERIOD']}",
         f"MACD         : ({p['MACD_FAST']}, {p['MACD_SLOW']}, {p['MACD_SIGNAL']})",
         f"ATR period   : {p['ATR_PERIOD']}",

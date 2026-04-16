@@ -1,5 +1,5 @@
 # =============================================================================
-# strategies/combo/core/walk_forward.py  —  IS/OOS Walk-forward optimization
+# strategies/combo/walk_forward.py  —  IS/OOS Walk-forward optimization
 # =============================================================================
 """Kiểm định walk-forward out-of-sample (OOS) cho chiến lược Combo v2.
 
@@ -8,24 +8,19 @@ Các hàm chính:
                                ổn định hay chỉ là spike cô lập.
 - walk_forward_backtest()   : trượt cửa sổ IS→OOS, tối ưu trên IS, kiểm định
                                trên OOS, trả về thống kê tổng hợp.
-
-Lưu ý circular import:
-  walk_forward.py nhập add_backtest_indicators, session_mask, detect_signals
-  từ backtest_engine.py. backtest_engine.py re-export từ file này ở cuối
-  (sau khi đã định nghĩa các hàm đó) → Python xử lý được nhờ partial module
-  initialization.
 """
 import numpy as np
 import pandas as pd
 
-from .execution import backtest_fast, backtest_symbol
-from .metrics import calc_metrics
+from ..shared.execution_engine import backtest_fast, backtest_symbol
+from ..shared.metrics import calc_metrics
 from .strategy_config import (
     STRATEGY,
     SYMBOLS,
     get_indicator_params,
     get_symbol_params,
 )
+from .signal_logic import add_combo_indicators, detect_combo_signals, session_mask
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -54,7 +49,6 @@ def check_plateau_stability(
     if not param_grid_results or not best_params:
         return default
 
-    # Chuẩn hoá dữ liệu grid về map tuple(param) -> sharpe.
     sharpe_map = {}
     points = []
     for k, v in param_grid_results.items():
@@ -88,7 +82,6 @@ def check_plateau_stability(
     if not sharpe_map:
         return default
 
-    # Với mỗi tham số, lấy tập giá trị lân cận theo index ±radius quanh best value.
     neighbor_values = {}
     for k in keys:
         vals = sorted({float(p[k]) if k != 'ma_period' else int(p[k]) for p in points})
@@ -115,7 +108,7 @@ def check_plateau_stability(
     )
     min_sharpe = float(best_sharpe) * float(threshold_ratio)
     neighbors_checked = 0
-    neighbors_stable = 0
+    neighbors_stable  = 0
 
     for ktp_v in neighbor_values['ktp']:
         for x_v in neighbor_values['x']:
@@ -169,8 +162,8 @@ def walk_forward_backtest(
 
     Cách hoạt động:
     - Trượt cửa sổ qua dữ liệu lịch sử.
-    - Mỗi cửa sổ chỉ backtest đoạn OOS, không tối ưu lại theo từng cửa sổ.
-    - Mục tiêu là đo độ "bền" của bộ tham số qua nhiều pha thị trường.
+    - Mỗi cửa sổ: optimize trên IS (grid search nhỏ), validate trên OOS.
+    - Mục tiêu đo độ "bền" của bộ tham số qua nhiều pha thị trường.
 
     Parameters
     ----------
@@ -190,9 +183,6 @@ def walk_forward_backtest(
         oos_df  : một dòng cho mỗi cửa sổ OOS + các KPI.
         summary : thống kê tổng hợp toàn bộ cửa sổ.
     """
-    # Import late để tránh vòng tham chiếu circular tại module level.
-    from .backtest_engine import add_backtest_indicators, detect_signals, session_mask
-
     def _build_param_grid(sym_key: str, cfg_local: dict) -> dict:
         base = get_symbol_params(sym_key) if sym_key in SYMBOLS else {
             'ktp': STRATEGY['ktp'],
@@ -202,13 +192,13 @@ def walk_forward_backtest(
         }
 
         ktp0 = float(base['ktp'])
-        x0 = float(base['x'])
-        tr0 = float(base['trailing_activation'])
-        ma0 = int(base['ma_period'])
+        x0   = float(base['x'])
+        tr0  = float(base['trailing_activation'])
+        ma0  = int(base['ma_period'])
 
         return {
-            'ktp': sorted({round(ktp0 * 0.9, 2), round(ktp0, 2), round(ktp0 * 1.1, 2)}),
-            'x': sorted({round(max(0.1, x0 - 2.0), 2), round(x0, 2), round(x0 + 2.0, 2)}),
+            'ktp':     sorted({round(ktp0 * 0.9, 2), round(ktp0, 2), round(ktp0 * 1.1, 2)}),
+            'x':       sorted({round(max(0.1, x0 - 2.0), 2), round(x0, 2), round(x0 + 2.0, 2)}),
             'trailing': sorted({round(max(0.1, tr0 * 0.75), 2), round(tr0, 2), round(tr0 * 1.25, 2)}),
             'ma_period': sorted({max(5, ma0 - 5), ma0, ma0 + 5}),
         }
@@ -216,7 +206,7 @@ def walk_forward_backtest(
     n_bars  = len(df_ind)
     results = []
     step    = 0
-    is_profit_total = 0.0
+    is_profit_total  = 0.0
     oos_profit_total = 0.0
     best_params_per_window = []
 
@@ -230,8 +220,7 @@ def walk_forward_backtest(
         if oos_end > n_bars:
             break
 
-        # Step 1 — Tách IS slice
-        is_slice = df_ind.iloc[oos_start - is_bars:oos_start].copy()
+        is_slice  = df_ind.iloc[oos_start - is_bars:oos_start].copy()
         oos_slice = df_ind.iloc[oos_start:oos_end].copy()
         if len(is_slice) < 30 or len(oos_slice) < 10:
             break
@@ -239,16 +228,16 @@ def walk_forward_backtest(
         # Step 2 — Optimize trên IS bằng backtest_fast (maximize Sharpe)
         grid = _build_param_grid(symbol, cfg)
         best = None
-        best_sharpe = -np.inf
+        best_sharpe  = -np.inf
         grid_results = {}
 
         for ma_p in grid['ma_period']:
             is_raw = is_slice[['open', 'high', 'low', 'close']].copy()
             is_raw['volume'] = is_slice['volume'] if 'volume' in is_slice.columns else 0.0
-            is_ind_local = add_backtest_indicators(is_raw, {'MA_PERIOD': int(ma_p)})
+            is_ind_local = add_combo_indicators(is_raw, {'MA_PERIOD': int(ma_p)})
 
             date_from_is = str(is_ind_local.index[0])
-            date_to_is = str(is_ind_local.index[-1])
+            date_to_is   = str(is_ind_local.index[-1])
 
             for ktp_v in grid['ktp']:
                 for x_v in grid['x']:
@@ -314,12 +303,14 @@ def walk_forward_backtest(
         # Step 3 — Validate trên OOS với best_params từ IS
         oos_raw = oos_slice[['open', 'high', 'low', 'close']].copy()
         oos_raw['volume'] = oos_slice['volume'] if 'volume' in oos_slice.columns else 0.0
-        oos_ind_local = add_backtest_indicators(oos_raw, {'MA_PERIOD': int(best['ma_period'])})
-        oos_mask = session_mask(oos_ind_local, cfg.get('session_hours_utc', []))
+        oos_ind_local = add_combo_indicators(oos_raw, {'MA_PERIOD': int(best['ma_period'])})
+        oos_mask      = session_mask(oos_ind_local, cfg.get('session_hours_utc', []))
 
+        # FIX: truyền X optimized vào params để detect_combo_signals dùng đúng x
         p_local = get_indicator_params()
         p_local['KTP'] = best['ktp']
-        oos_sig = detect_signals(oos_ind_local, oos_mask, sym_key=symbol, params=p_local)
+        p_local['X']   = best['x']   # override breakout buffer cho RR filter
+        oos_sig = detect_combo_signals(oos_ind_local, oos_mask, sym_key=None, params=p_local)
 
         if len(oos_slice) < 10:
             break
@@ -327,7 +318,7 @@ def walk_forward_backtest(
         trades, eq_ts = backtest_symbol(
             symbol,
             oos_sig,
-            {**cfg, 'x': best['x']},
+            {**cfg, 'x': best['x'], 'ktp': best['ktp']},
             init_eq,
             strategy={**(strategy or {}), 'trailing_activation': best['trailing_activation']},
             costs=costs,
@@ -335,7 +326,7 @@ def walk_forward_backtest(
 
         metrics = calc_metrics(trades, eq_ts) if trades else {}
         oos_profit_total += float(metrics.get('total_pnl', 0.0)) if metrics else 0.0
-        row     = {
+        row = {
             'window':    step,
             'oos_start': oos_slice.index[0],
             'oos_end':   oos_slice.index[-1],
@@ -348,7 +339,7 @@ def walk_forward_backtest(
     if not results:
         return pd.DataFrame(), {}
 
-    oos_df             = pd.DataFrame(results)
+    oos_df = pd.DataFrame(results)
     oos_df['oos_start'] = pd.to_datetime(oos_df['oos_start'])
     oos_df['oos_end']   = pd.to_datetime(oos_df['oos_end'])
 
@@ -380,21 +371,26 @@ def walk_forward_backtest(
         else 'CHƯA ĐẠT (< 50%)'
     )
 
-    print("=" * 55)
-    print("  KẾT QUẢ WALK-FORWARD")
-    print("=" * 55)
-    print(f"  Số cửa sổ         : {summary['n_windows']}")
-    print(f"  Cửa sổ có lãi     : {summary['profitable_windows']} ({summary['pct_profitable'] / 100:.1%})")
-    print(f"  Tổng PnL IS        : {summary['is_profit_total']:+.2f}")
-    print(f"  Tổng PnL OOS       : {summary['oos_profit_total']:+.2f}")
-    print(f"  OOS/IS Efficiency  : {summary['oos_is_efficiency']:.1%} — {summary['efficiency_status']}")
-    print(f"  Cửa sổ plateau ổn định: {summary['plateau_stable_windows']}/{summary['n_windows']} ({summary['plateau_stable_pct']:.1%})")
-    print("=" * 55)
-
+    lines = [
+        "=" * 55,
+        "  KẾT QUẢ WALK-FORWARD",
+        "=" * 55,
+        f"  Số cửa sổ         : {summary['n_windows']}",
+        f"  Cửa sổ có lãi     : {summary['profitable_windows']} ({summary['pct_profitable'] / 100:.1%})",
+        f"  Tổng PnL IS        : {summary['is_profit_total']:+.2f}",
+        f"  Tổng PnL OOS       : {summary['oos_profit_total']:+.2f}",
+        f"  OOS/IS Efficiency  : {summary['oos_is_efficiency']:.1%} — {summary['efficiency_status']}",
+        f"  Cửa sổ plateau ổn định: {summary['plateau_stable_windows']}/{summary['n_windows']} ({summary['plateau_stable_pct']:.1%})",
+        "=" * 55,
+    ]
     if summary.get('oos_is_efficiency') and summary['oos_is_efficiency'] < 0.5:
-        print("  ⚠️  CẢNH BÁO: OOS/IS < 50% — hệ thống có dấu hiệu overfit")
-        print("  → Thử giảm số tham số optimize hoặc tăng IS window size")
-        print("=" * 55)
+        lines += [
+            "  ⚠️  CẢNH BÁO: OOS/IS < 50% — hệ thống có dấu hiệu overfit",
+            "  → Thử giảm số tham số optimize hoặc tăng IS window size",
+            "=" * 55,
+        ]
+    summary['report'] = "\n".join(lines)
+    print(summary['report'])
 
     for m in key_metrics:
         if m in oos_df.columns:

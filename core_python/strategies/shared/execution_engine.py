@@ -1,99 +1,98 @@
 # =============================================================================
-# strategies/combo/core/execution.py  —  Logic backtest từng bar
+# strategies/shared/execution_engine.py  —  Generic bar-by-bar execution engine
 # =============================================================================
-"""Mô phỏng giao dịch bar-by-bar cho Combo v2.
+"""Engine mô phỏng giao dịch bar-by-bar dùng chung cho mọi strategy.
+
+Module này không import bất kỳ strategy-specific config nào.
+Mọi tham số đều được truyền qua `strategy` / `costs` / `cfg` dict.
 
 Hai chế độ:
 - backtest_symbol(): backtest đầy đủ với trade log chi tiết.
 - backtest_fast()  : backtest rút gọn cho grid-search (chỉ trả KPI).
+
+Helper functions cũng được export:
+- build_pending_order(): tạo pending order từ bar data.
+- calc_dynamic_slippage(): tính slippage động theo ATR/close.
 """
 import numpy as np
 import pandas as pd
 
-from ._scan_shared import build_pending_order
 from .metrics import _bars_per_year
-from .strategy_config import (
-    DEFAULT_COSTS,
-    STRATEGY,
-    TIMEFRAME,
-    calc_dynamic_slippage,
-    get_symbol_ktp,
-)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# HELPER — ĐÓNG LỆNH
+# INTERNAL DEFAULTS
+# Strategy-specific configs sẽ override các giá trị này qua `strategy` param.
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _build_trade_record(
-    position: dict,
-    symbol: str,
-    exit_p: float,
-    exit_time,
-    exit_reason: str,
-    partial_frac: float,
-    swap_long_day: float,
-    swap_short_day: float,
-    current_equity: float,
-) -> tuple[dict, float]:
-    """Tính PnL và dựng trade dict khi đóng lệnh.
+_DEFAULT_STRATEGY = {
+    "risk_per_trade":       0.005,
+    "ftmo_daily_limit":     0.05,
+    "ftmo_max_dd":          0.10,
+    "trailing_activation":  1.0,
+    "pending_ttl_bars":     3,
+    "partial_tp_fraction":  0.5,
+}
 
-    Dùng chung cho 3 tình huống: đóng bình thường (SL/TP), đảo chiều, force-close.
+_DEFAULT_COSTS = {
+    "slippage_pts":       2,
+    "commission_per_lot": 3.5,
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ORDER UTILITIES
+# ─────────────────────────────────────────────────────────────────────────────
+
+def build_pending_order(bar, direction: int, x: float, ktp: float,
+                        atr: float, ttl: int) -> dict:
+    """Tạo cấu trúc pending order từ bar data.
+
+    Parameters
+    ----------
+    bar       : dòng dữ liệu chứa high/low.
+    direction : 1 (BUY) hoặc -1 (SELL).
+    x         : breakout buffer theo point.
+    ktp       : hệ số TP theo ATR.
+    atr       : ATR hiện tại.
+    ttl       : thời hạn pending tính theo số bar.
 
     Returns
     -------
-    (trade_dict, close_net) — close_net là phần equity thay đổi từ half-2 trừ swap.
+    dict gồm: direction, entry, sl, tp, atr, ttl.
     """
-    d        = position['direction']
-    entry    = position['entry']
-    sl_dist  = position['sl_dist']
-    risk     = position['risk_usd']
-    comm     = position['commission']
-    half_frac = (1 - partial_frac) if position['partial_tp_hit'] else 1.0
+    entry = float(bar['high']) + x if direction == 1 else float(bar['low']) - x
+    sl    = float(bar['low'])  - x if direction == 1 else float(bar['high']) + x
+    tp    = entry + direction * ktp * atr
+    return dict(direction=direction, entry=entry, sl=sl, tp=tp,
+                atr=atr, ttl=ttl)
 
-    r_h2     = (exit_p - entry) * d / sl_dist
-    gross_h2 = half_frac * r_h2 * risk
-    comm_h2  = half_frac * comm
-    net_h2   = gross_h2 - comm_h2
 
-    if position['partial_tp_hit']:
-        total_gross = position['half1_pnl_gross'] + gross_h2
-        total_comm  = position['half1_commission'] + comm_h2
-        r_h1   = (position['half1_exit'] - entry) * d / sl_dist
-        r_mult = partial_frac * r_h1 + (1 - partial_frac) * r_h2
-        tp_log = round(position['half1_exit'], 4)
-    else:
-        total_gross = gross_h2
-        total_comm  = comm_h2
-        r_mult = r_h2
-        tp_log = round(position['tp_at_entry'], 4)
+def calc_dynamic_slippage(base_slippage: float, atr: float, close: float,
+                          k: float = 50) -> float:
+    """Tính slippage động theo biến động ATR tương đối.
 
-    holding_days = max((exit_time.date() - position['entry_time'].date()).days, 0)
-    if d == 1:
-        swap_cost = holding_days * swap_long_day * position.get('lot_size', 0.0)
-    else:
-        swap_cost = holding_days * swap_short_day * position.get('lot_size', 0.0)
+    Parameters
+    ----------
+    base_slippage : float
+        Slippage nền (point) dùng khi biến động ở mức bình thường.
+    atr : float
+        Giá trị ATR tại thời điểm khớp lệnh.
+    close : float
+        Giá đóng cửa hiện tại, dùng để chuẩn hóa ATR theo tỷ lệ ATR/close.
+    k : float, default=50
+        Hệ số khuếch đại cho thành phần biến động.
 
-    total_net = total_gross - total_comm - swap_cost
-    close_net = net_h2 - swap_cost
-
-    trade = dict(
-        symbol=symbol,
-        direction='BUY' if d == 1 else 'SELL',
-        entry_time=position['entry_time'], exit_time=exit_time,
-        entry=round(entry, 4), exit=round(exit_p, 4),
-        sl_initial=round(position['sl_at_entry'], 4), tp=tp_log,
-        r_multiple=round(r_mult, 3),
-        pnl_gross=round(total_gross, 2),
-        commission=round(total_comm, 2),
-        swap_cost=round(swap_cost, 2),
-        pnl_usd=round(total_net, 2), equity=round(current_equity + close_net, 2),
-        exit_reason=exit_reason,
-        partial_tp_hit=position['partial_tp_hit'],
-        half1_exit=position['half1_exit'],
-        half1_exit_time=position['half1_exit_time'],
-    )
-    return trade, close_net
+    Returns
+    -------
+    float
+        base_slippage * (1 + k * clip(atr / close, 0.0005, 0.01)).
+    """
+    if close is None or close == 0:
+        return float(base_slippage)
+    vol_ratio = atr / close
+    vol_ratio = min(max(vol_ratio, 0.0005), 0.01)
+    return float(base_slippage) * (1 + k * vol_ratio)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -108,31 +107,30 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
     Backtest chi tiết theo từng bar cho 1 symbol, có trade log đầy đủ.
 
     Đặc tính mô phỏng:
-    - Partial TP: chốt 1 phần vị thế ở TP cố định.
+    - Partial TP: chốt 1 phần vị thế ở TP cố định (partial_tp_fraction).
     - Breakeven: sau partial TP, SL dời ngay về điểm vào.
-    - Trailing: kích hoạt theo luật cấu hình.
+    - Trailing: kích hoạt theo luật trailing_activation.
     - Reversal: đang giữ lệnh mà xuất hiện tín hiệu ngược thì đóng/mở đảo chiều.
-
-    Đây là hàm quan trọng nhất để audit chiến lược.
-    Mọi thay đổi tại đây có thể làm khác toàn bộ đường equity.
 
     Parameters
     ----------
-    symbol   : key symbol (vd: US30).
-    df       : dữ liệu đã có cột signal + chỉ báo.
-    cfg      : cấu hình riêng theo symbol.
+    symbol   : key symbol (vd: "US30") — dùng trong trade log, không tra cứu config.
+    df       : dữ liệu đã có cột signal (1/-1/0) + chỉ báo (ma, atr, high, low, close, open, BarTime).
+    cfg      : cấu hình symbol gồm:
+               x, contract_value, spread_pts, point_size,
+               swap_long_per_lot_per_day, swap_short_per_lot_per_day, ktp.
     init_eq  : vốn khởi điểm của symbol.
-    strategy : ghi đè tạm các tham số STRATEGY.
-    costs    : ghi đè tạm các tham số chi phí khớp lệnh.
+    strategy : ghi đè tạm các tham số strategy (risk_per_trade, trailing_activation, ...).
+    costs    : ghi đè tạm các tham số chi phí (slippage_pts, commission_per_lot, ...).
 
     Returns
     -------
     (trades, eq_ts)
     - trades: nhật ký giao dịch chi tiết từng lệnh.
-    - eq_ts : chuỗi equity theo thời gian để vẽ và tính KPI.
+    - eq_ts : chuỗi equity theo thời gian.
     """
-    s = {**STRATEGY, **(strategy or {})}
-    c = {**DEFAULT_COSTS, **(costs or {})}
+    s = {**_DEFAULT_STRATEGY, **(strategy or {})}
+    c = {**_DEFAULT_COSTS, **(costs or {})}
 
     x              = cfg['x']
     contract_val   = cfg.get('contract_value', 0)
@@ -140,11 +138,15 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
     point_size     = cfg.get('point_size', 1.0)
     swap_long_day  = cfg.get('swap_long_per_lot_per_day', 0.0)
     swap_short_day = cfg.get('swap_short_per_lot_per_day', 0.0)
-    risk_pct       = s['risk_per_trade']
-    daily_limit    = s['ftmo_daily_limit']
-    max_dd         = s['ftmo_max_dd']
-    trail_act      = s['trailing_activation']
-    ttl            = s['pending_ttl_bars']
+    sym_ktp        = cfg.get('ktp', s.get('ktp', 2.3))
+
+    risk_pct     = s['risk_per_trade']
+    daily_limit  = s['ftmo_daily_limit']
+    max_dd       = s['ftmo_max_dd']
+    trail_act    = s['trailing_activation']
+    ttl          = s['pending_ttl_bars']
+    partial_frac = s.get('partial_tp_fraction', 0.5)
+    comm_per_lot = c['commission_per_lot']
 
     def _dynamic_slippage(bar: pd.Series) -> float:
         return calc_dynamic_slippage(
@@ -153,10 +155,6 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
             close=bar['close'],
             k=c.get('slippage_k', 50),
         )
-
-    comm_per_lot   = c['commission_per_lot']
-    partial_frac   = s.get('partial_tp_fraction', 0.5)
-    sym_ktp        = get_symbol_ktp(symbol)
 
     trades, eq_log = [], []
     equity         = init_eq
@@ -201,15 +199,14 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
                             commission = 2 * lot_size * comm_per_lot
                         position = dict(
                             direction=d, entry=actual_entry,
-                            sl=pending['sl'],         # current SL (mutable)
-                            sl_at_entry=pending['sl'],# original SL for trade log
-                            tp=pending['tp'],         # current TP (mutable)
-                            tp_at_entry=pending['tp'],# original TP for trade log
+                            sl=pending['sl'],
+                            sl_at_entry=pending['sl'],
+                            tp=pending['tp'],
+                            tp_at_entry=pending['tp'],
                             atr=pending['atr'], risk_usd=risk_usd,
                             sl_dist=sl_dist, entry_time=bar_dt,
                             trail_active=False, commission=commission,
                             lot_size=lot_size,
-                            # partial TP state
                             partial_tp_hit=False,
                             half1_exit=None, half1_exit_time=None,
                             half1_pnl_gross=0.0, half1_commission=0.0,
@@ -227,11 +224,11 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
             comm  = position['commission']
             exit_p = exit_r = None
 
-            # Phase 1 — Ưu tiên SL trước: nếu quét trúng SL thì đóng toàn bộ.
+            # Phase 1 — SL ưu tiên: nếu quét trúng SL thì đóng toàn bộ.
             if   d == 1  and bar['low']  <= sl: exit_p, exit_r = sl - slippage, 'SL'
             elif d == -1 and bar['high'] >= sl: exit_p, exit_r = sl + slippage, 'SL'
 
-            # Phase 2 — TP một phần: chỉ chạy 1 lần đầu tiên khi chạm TP.
+            # Phase 2 — Partial TP (chỉ chạy 1 lần đầu tiên khi chạm TP).
             elif not position['partial_tp_hit']:
                 hit_tp = (d == 1 and bar['high'] >= tp) or \
                          (d == -1 and bar['low']  <= tp)
@@ -244,17 +241,16 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
                         partial_tp_hit=True,
                         half1_exit=tp, half1_exit_time=bar_dt,
                         half1_pnl_gross=gross_h1, half1_commission=comm_h1,
-                        sl=entry,             # breakeven immediately
-                        tp=float('inf') if d == 1 else float('-inf'),  # disable fixed TP
-                        trail_active=True,    # trail immediately, no 1R wait
+                        sl=entry,
+                        tp=float('inf') if d == 1 else float('-inf'),
+                        trail_active=True,
                     )
                     equity    += net_h1
                     daily_pnl += net_h1
                     if daily_pnl <= -(init_eq * daily_limit):
                         daily_stop = True
-                    # exit_p remains None → fall through to trailing
 
-            # Phase 3 — Trailing stop: cập nhật SL theo MA khi đủ điều kiện.
+            # Phase 3 — Trailing stop theo MA.
             if exit_p is None:
                 if not position['trail_active']:
                     unrealized = (bar['close'] - entry) * d
@@ -269,13 +265,51 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
 
             # Phase 4 — Ghi nhận đóng lệnh và lưu trade log.
             if exit_p is not None:
-                trade, close_net = _build_trade_record(
-                    position, symbol, exit_p, bar_dt, exit_r,
-                    partial_frac, swap_long_day, swap_short_day, equity,
-                )
-                equity    += close_net
-                daily_pnl += close_net
-                trades.append(trade)
+                half_frac = (1 - partial_frac) if position['partial_tp_hit'] else 1.0
+                r_h2      = (exit_p - entry) * d / sl_d
+                gross_h2  = half_frac * r_h2 * risk
+                comm_h2   = half_frac * comm
+                net_h2    = gross_h2 - comm_h2
+
+                if position['partial_tp_hit']:
+                    total_gross = position['half1_pnl_gross'] + gross_h2
+                    total_comm  = position['half1_commission'] + comm_h2
+                    r_h1        = (position['half1_exit'] - entry) * d / sl_d
+                    r_mult      = partial_frac * r_h1 + (1 - partial_frac) * r_h2
+                    tp_log      = round(position['half1_exit'], 4)
+                else:
+                    total_gross = gross_h2
+                    total_comm  = comm_h2
+                    r_mult      = r_h2
+                    tp_log      = round(position['tp_at_entry'], 4)
+
+                total_net  = total_gross - total_comm
+                holding_days = max((bar_dt.date() - position['entry_time'].date()).days, 0)
+                swap_cost = (holding_days * swap_long_day * position.get('lot_size', 0.0)
+                             if d == 1
+                             else holding_days * swap_short_day * position.get('lot_size', 0.0))
+
+                total_net  -= swap_cost
+                close_net   = net_h2 - swap_cost
+                equity     += close_net
+                daily_pnl  += close_net
+
+                trades.append(dict(
+                    symbol=symbol,
+                    direction='BUY' if d == 1 else 'SELL',
+                    entry_time=position['entry_time'], exit_time=bar_dt,
+                    entry=round(entry, 4), exit=round(exit_p, 4),
+                    sl_initial=round(position['sl_at_entry'], 4), tp=tp_log,
+                    r_multiple=round(r_mult, 3),
+                    pnl_gross=round(total_gross, 2),
+                    commission=round(total_comm, 2),
+                    swap_cost=round(swap_cost, 2),
+                    pnl_usd=round(total_net, 2), equity=round(equity, 2),
+                    exit_reason=exit_r,
+                    partial_tp_hit=position['partial_tp_hit'],
+                    half1_exit=position['half1_exit'],
+                    half1_exit_time=position['half1_exit_time'],
+                ))
                 position = None
                 if daily_pnl <= -(init_eq * daily_limit):
                     daily_stop = True
@@ -284,42 +318,123 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
         if position and not daily_stop:
             sig = int(bar['signal'])
             if sig != 0 and sig != position['direction']:
-                ep_rev = bar['close'] - position['direction'] * slippage
-                trade, close_net = _build_trade_record(
-                    position, symbol, ep_rev, bar_dt, 'REVERSED',
-                    partial_frac, swap_long_day, swap_short_day, equity,
-                )
-                equity    += close_net
-                daily_pnl += close_net
-                trades.append(trade)
+                d         = position['direction']
+                half_frac = (1 - partial_frac) if position['partial_tp_hit'] else 1.0
+                ep_rev    = bar['close'] - d * slippage
+                comm      = position['commission']
+
+                r_h2      = (ep_rev - position['entry']) * d / position['sl_dist']
+                gross_h2  = half_frac * r_h2 * position['risk_usd']
+                comm_h2   = half_frac * comm
+                net_h2    = gross_h2 - comm_h2
+
+                if position['partial_tp_hit']:
+                    total_gross = position['half1_pnl_gross'] + gross_h2
+                    total_comm  = position['half1_commission'] + comm_h2
+                    r_h1        = (position['half1_exit'] - position['entry']) * d / position['sl_dist']
+                    r_mult      = partial_frac * r_h1 + (1 - partial_frac) * r_h2
+                    tp_log      = round(position['half1_exit'], 4)
+                else:
+                    total_gross = gross_h2
+                    total_comm  = comm_h2
+                    r_mult      = r_h2
+                    tp_log      = round(position['tp_at_entry'], 4)
+
+                total_net  = total_gross - total_comm
+                holding_days = max((bar_dt.date() - position['entry_time'].date()).days, 0)
+                swap_cost = (holding_days * swap_long_day * position.get('lot_size', 0.0)
+                             if d == 1
+                             else holding_days * swap_short_day * position.get('lot_size', 0.0))
+
+                total_net  -= swap_cost
+                close_net   = net_h2 - swap_cost
+                equity     += close_net
+                daily_pnl  += close_net
+
+                trades.append(dict(
+                    symbol=symbol,
+                    direction='BUY' if d == 1 else 'SELL',
+                    entry_time=position['entry_time'], exit_time=bar_dt,
+                    entry=round(position['entry'], 4), exit=round(ep_rev, 4),
+                    sl_initial=round(position['sl_at_entry'], 4), tp=tp_log,
+                    r_multiple=round(r_mult, 3),
+                    pnl_gross=round(total_gross, 2),
+                    commission=round(total_comm, 2),
+                    swap_cost=round(swap_cost, 2),
+                    pnl_usd=round(total_net, 2), equity=round(equity, 2),
+                    exit_reason='REVERSED',
+                    partial_tp_hit=position['partial_tp_hit'],
+                    half1_exit=position['half1_exit'],
+                    half1_exit_time=position['half1_exit_time'],
+                ))
                 position = None
                 if daily_pnl <= -(init_eq * daily_limit):
                     daily_stop = True
 
-                # Tạo pending mới theo hướng đảo chiều ngay tại bar hiện tại.
                 if not daily_stop and i + 1 < len(bars):
-                    atr_v = float(bar['atr'])
+                    atr_v   = float(bar['atr'])
                     pending = build_pending_order(bar, sig, x, sym_ktp, atr_v, ttl)
 
         # ── Không có vị thế: nếu có signal thì tạo pending order mới ─────────
         if not position and not pending and not daily_stop:
             sig = int(bar['signal'])
             if sig != 0 and i + 1 < len(bars):
-                new_d     = sig
-                atr_v     = float(bar['atr'])
-                pending = build_pending_order(bar, new_d, x, sym_ktp, atr_v, ttl)
+                atr_v   = float(bar['atr'])
+                pending = build_pending_order(bar, sig, x, sym_ktp, atr_v, ttl)
 
         eq_log.append((bar_dt, equity))
 
     # ── Hết dữ liệu nhưng vẫn còn vị thế: force-close tại bar cuối ───────────
     if position and len(bars):
-        bar = bars.iloc[-1]
-        trade, close_net = _build_trade_record(
-            position, symbol, bar['close'], bar['BarTime'], 'FORCE_CLOSE',
-            partial_frac, swap_long_day, swap_short_day, equity,
-        )
-        equity += close_net
-        trades.append(trade)
+        bar       = bars.iloc[-1]
+        d         = position['direction']
+        ep        = bar['close']
+        comm      = position['commission']
+        half_frac = (1 - partial_frac) if position['partial_tp_hit'] else 1.0
+
+        r_h2     = (ep - position['entry']) * d / position['sl_dist']
+        gross_h2 = half_frac * r_h2 * position['risk_usd']
+        comm_h2  = half_frac * comm
+        net_h2   = gross_h2 - comm_h2
+
+        if position['partial_tp_hit']:
+            total_gross = position['half1_pnl_gross'] + gross_h2
+            total_comm  = position['half1_commission'] + comm_h2
+            r_h1        = (position['half1_exit'] - position['entry']) * d / position['sl_dist']
+            r_mult      = partial_frac * r_h1 + (1 - partial_frac) * r_h2
+            tp_log      = round(position['half1_exit'], 4)
+        else:
+            total_gross = gross_h2
+            total_comm  = comm_h2
+            r_mult      = r_h2
+            tp_log      = round(position['tp_at_entry'], 4)
+
+        total_net = total_gross - total_comm
+        holding_days = max((bar['BarTime'].date() - position['entry_time'].date()).days, 0)
+        swap_cost = (holding_days * swap_long_day * position.get('lot_size', 0.0)
+                     if d == 1
+                     else holding_days * swap_short_day * position.get('lot_size', 0.0))
+
+        total_net -= swap_cost
+        close_net  = net_h2 - swap_cost
+        equity    += close_net
+
+        trades.append(dict(
+            symbol=symbol,
+            direction='BUY' if d == 1 else 'SELL',
+            entry_time=position['entry_time'], exit_time=bar['BarTime'],
+            entry=round(position['entry'], 4), exit=round(ep, 4),
+            sl_initial=round(position['sl_at_entry'], 4), tp=tp_log,
+            r_multiple=round(r_mult, 3),
+            pnl_gross=round(total_gross, 2),
+            commission=round(total_comm, 2),
+            swap_cost=round(swap_cost, 2),
+            pnl_usd=round(total_net, 2), equity=round(equity, 2),
+            exit_reason='FORCE_CLOSE',
+            partial_tp_hit=position['partial_tp_hit'],
+            half1_exit=position['half1_exit'],
+            half1_exit_time=position['half1_exit_time'],
+        ))
         if eq_log:
             eq_log[-1] = (eq_log[-1][0], equity)
 
@@ -338,7 +453,8 @@ def backtest_fast(symbol: str, df_ind: pd.DataFrame, cfg: dict,
                   ktp: float, x_actual: float, trailing_act: float,
                   date_from: str, date_to: str, init_eq: float, *,
                   strategy: dict | None = None,
-                  costs: dict | None = None) -> dict:
+                  costs: dict | None = None,
+                  tf: str = 'H4') -> dict:
     """
     Backtest rút gọn để optimizer chạy nhanh (grid search).
 
@@ -347,15 +463,26 @@ def backtest_fast(symbol: str, df_ind: pd.DataFrame, cfg: dict,
     - Chỉ trả về các KPI lõi để chấm điểm tham số.
     - Signal được tính inline để giảm overhead.
 
-    Tác động quản trị:
-    - Nhanh hơn nhiều, nhưng ít khả năng audit nguyên nhân từng lệnh.
-    - Dùng để chọn tham số; dùng backtest_symbol để kiểm chứng cuối cùng.
+    Parameters
+    ----------
+    symbol      : key symbol (dùng cho log nếu cần).
+    df_ind      : dữ liệu đã có indicators + signal columns.
+    cfg         : cấu hình symbol.
+    ktp         : hệ số TP theo ATR (override cho optimizer).
+    x_actual    : breakout buffer (override cho optimizer).
+    trailing_act: trailing activation (override cho optimizer).
+    date_from   : mốc bắt đầu window test (inclusive).
+    date_to     : mốc kết thúc window test (inclusive).
+    init_eq     : vốn khởi điểm.
+    strategy    : override strategy params.
+    costs       : override cost params.
+    tf          : timeframe code để annualize Sharpe đúng cách.
     """
-    s = {**STRATEGY, **(strategy or {})}
-    c = {**DEFAULT_COSTS, **(costs or {})}
+    s = {**_DEFAULT_STRATEGY, **(strategy or {})}
+    c = {**_DEFAULT_COSTS, **(costs or {})}
 
-    hours        = cfg['session_hours_utc']
-    min_rr       = s['min_rr']
+    hours        = cfg.get('session_hours_utc', [])
+    min_rr       = s.get('min_rr', 1.25)
     risk_pct     = s['risk_per_trade']
     daily_limit  = s['ftmo_daily_limit']
     max_dd       = s['ftmo_max_dd']
@@ -405,9 +532,9 @@ def backtest_fast(symbol: str, df_ind: pd.DataFrame, cfg: dict,
     daily_pnl  = 0.0
     cur_day    = None
     d_stop     = False
-    peak_eq      = init_eq
+    peak_eq       = init_eq
     running_maxdd = 0.0
-    bars         = df_ind.reset_index()
+    bars          = df_ind.reset_index()
 
     for i, bar in bars.iterrows():
         bar_dt = bar['BarTime']
@@ -455,11 +582,9 @@ def backtest_fast(symbol: str, df_ind: pd.DataFrame, cfg: dict,
             tp  = position['tp']
             ep  = None
 
-            # Phase 1: SL — đóng full nếu chạm.
             if   d == 1  and bar['low']  <= sl: ep = sl - slippage
             elif d == -1 and bar['high'] >= sl: ep = sl + slippage
 
-            # Phase 2: TP — chốt một phần duy nhất.
             elif not position['partial_tp_hit']:
                 hit_tp = (d == 1 and bar['high'] >= tp) or \
                          (d == -1 and bar['low']  <= tp)
@@ -477,11 +602,11 @@ def backtest_fast(symbol: str, df_ind: pd.DataFrame, cfg: dict,
                     equity    += net_h1
                     daily_pnl += net_h1
                     peak_eq    = max(peak_eq, equity)
-                    running_maxdd = max(running_maxdd, (peak_eq - equity) / peak_eq * 100 if peak_eq > 0 else 0.0)
+                    running_maxdd = max(running_maxdd,
+                                        (peak_eq - equity) / peak_eq * 100 if peak_eq > 0 else 0.0)
                     if daily_pnl <= -(init_eq * daily_limit):
                         d_stop = True
 
-            # Phase 3: Trailing theo MA.
             if ep is None:
                 if not position['trail']:
                     unreal = (bar['close'] - position['entry']) * position['d']
@@ -494,7 +619,6 @@ def backtest_fast(symbol: str, df_ind: pd.DataFrame, cfg: dict,
                     elif d == -1 and new_sl < position['sl']:
                         position['sl'] = new_sl
 
-            # Phase 4: Ghi nhận đóng phần còn lại và cập nhật KPI tạm.
             if ep is not None:
                 half_frac = (1 - partial_frac) if position['partial_tp_hit'] else 1.0
                 r_h2      = (ep - position['entry']) * d / position['sl_dist']
@@ -506,7 +630,8 @@ def backtest_fast(symbol: str, df_ind: pd.DataFrame, cfg: dict,
                 equity    += net_h2
                 daily_pnl += net_h2
                 peak_eq    = max(peak_eq, equity)
-                running_maxdd = max(running_maxdd, (peak_eq - equity) / peak_eq * 100 if peak_eq > 0 else 0.0)
+                running_maxdd = max(running_maxdd,
+                                    (peak_eq - equity) / peak_eq * 100 if peak_eq > 0 else 0.0)
                 trades_pnl.append(combined)
                 position   = None
                 if daily_pnl <= -(init_eq * daily_limit):
@@ -528,23 +653,24 @@ def backtest_fast(symbol: str, df_ind: pd.DataFrame, cfg: dict,
                 equity    += net_h2
                 daily_pnl += net_h2
                 peak_eq    = max(peak_eq, equity)
-                running_maxdd = max(running_maxdd, (peak_eq - equity) / peak_eq * 100 if peak_eq > 0 else 0.0)
+                running_maxdd = max(running_maxdd,
+                                    (peak_eq - equity) / peak_eq * 100 if peak_eq > 0 else 0.0)
                 trades_pnl.append(combined)
                 position   = None
                 if daily_pnl <= -(init_eq * daily_limit):
                     d_stop = True
                 if not d_stop and i + 1 < len(bars):
-                    atr_v     = float(bar['atr'])
+                    atr_v   = float(bar['atr'])
                     pending = build_pending_order(bar, sig, x_actual, ktp, atr_v, ttl)
-                    pending['d'] = pending.pop('direction')  # Chuẩn hoá key trạng thái nội bộ fast.
+                    pending['d'] = pending.pop('direction')
 
         # ── Không có vị thế: tạo pending mới khi có tín hiệu ────────────────
         if not position and not pending and not d_stop and i + 1 < len(bars):
             sig = 1 if buy_raw.iloc[i] else (-1 if sell_raw.iloc[i] else 0)
             if sig != 0:
-                atr_v     = float(bar['atr'])
+                atr_v   = float(bar['atr'])
                 pending = build_pending_order(bar, sig, x_actual, ktp, atr_v, ttl)
-                pending['d'] = pending.pop('direction')  # Chuẩn hoá key trạng thái nội bộ fast.
+                pending['d'] = pending.pop('direction')
 
     # ── Tính KPI rút gọn cho optimizer ───────────────────────────────────────
     if not trades_pnl:
@@ -559,15 +685,21 @@ def backtest_fast(symbol: str, df_ind: pd.DataFrame, cfg: dict,
     maxdd = running_maxdd
     score = pf * np.sqrt(max(ret, 0)) / max(maxdd, 1) if pf > 1 and ret > 0 else 0
 
-    eq_fast = pd.Series([init_eq] + list(init_eq + np.cumsum(trades_pnl)))
+    # Sharpe annualized theo số lệnh/năm (không dùng bars_per_year)
+    eq_fast   = pd.Series([init_eq] + list(init_eq + np.cumsum(trades_pnl)))
     rets_fast = eq_fast.pct_change().dropna()
-    sharpe = (
-        rets_fast.mean() / rets_fast.std() * np.sqrt(_bars_per_year(TIMEFRAME))
-        if len(rets_fast) > 1 and rets_fast.std() > 0 else 0
-    )
+    if len(rets_fast) > 1 and rets_fast.std() > 0:
+        # Ước tính số lệnh mỗi năm từ độ dài df_ind
+        years_span = max(
+            (df_ind.index[-1] - df_ind.index[0]).days / 365.25, 0.1
+        ) if len(df_ind) > 1 else 1.0
+        n_per_year = len(trades_pnl) / years_span
+        sharpe = float(rets_fast.mean() / rets_fast.std() * np.sqrt(max(n_per_year, 1)))
+    else:
+        sharpe = 0.0
 
     return dict(
         trades=len(trades_pnl), pf=round(min(pf, 9.9), 2),
         ret=round(ret, 2), maxdd=round(maxdd, 2), score=round(score, 4),
-        sharpe=round(float(sharpe), 4),
+        sharpe=round(sharpe, 4),
     )

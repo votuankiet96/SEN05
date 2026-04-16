@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutoTrading Chart</title>
+
+  <!-- TradingView Lightweight Charts 4.2.1 -->
+  <script src="https://unpkg.com/lightweight-charts@4.2.1/dist/lightweight-charts.standalone.production.js"></script>
+
+  <style>
+    /* ── Reset & Base ───────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #131722;
+      --bg2:    #1e222d;
+      --bg3:    #2a2e39;
+      --border: #363a45;
+      --text:   #d1d4dc;
+      --text2:  #787b86;
+      --blue:   #2962ff;
+      --green:  #26a69a;
+      --red:    #ef5350;
+      --sidebar-w: 200px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 13px;
+      overflow: hidden;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────────── */
+    #app { display: flex; flex-direction: column; height: 100vh; }
+
+    /* Header */
+    #header {
+      display: flex; align-items: center; gap: 14px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 16px;
+      flex-shrink: 0;
+      min-height: 40px;
+    }
+    #header-title { color: var(--text); font-weight: 700; font-size: 14px; white-space: nowrap; }
+    #ohlc-bar     { margin-left: auto; font-family: monospace; font-size: 12px; color: var(--text2); }
+    #refresh-badge {
+      font-size: 11px; color: var(--text2);
+      background: var(--bg3); padding: 2px 8px;
+      border: 1px solid var(--border); border-radius: 10px;
+      white-space: nowrap;
+    }
+    #status-msg { font-size: 11px; color: var(--text2); }
+
+    /* Body row */
+    #body { display: flex; flex: 1; overflow: hidden; }
+
+    /* Sidebar */
+    #sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      overflow: hidden; flex-shrink: 0;
+    }
+    #sidebar-scroll { overflow-y: auto; flex: 1; padding: 10px 8px; }
+
+    /* Section labels */
+    .section-label {
+      color: var(--text2); font-size: 10px;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      margin: 10px 2px 4px; display: block;
+    }
+    .section-label:first-child { margin-top: 0; }
+
+    /* Symbol buttons */
+    .sym-group { margin-bottom: 6px; }
+    .sym-group-name {
+      color: var(--text2); font-size: 9px;
+      text-transform: uppercase; letter-spacing: 1px;
+      margin: 8px 2px 3px; display: block;
+    }
+    .sym-buttons { display: flex; flex-wrap: wrap; gap: 2px; }
+    .sym-btn {
+      background: var(--bg3); color: var(--text2);
+      border: 1px solid var(--border); border-radius: 3px;
+      padding: 4px 7px; font-size: 11px; cursor: pointer;
+      transition: all 0.12s; white-space: nowrap;
+    }
+    .sym-btn:hover  { border-color: var(--blue); color: var(--text); }
+    .sym-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); font-weight: 600; }
+
+    /* TF buttons */
+    #tf-buttons { display: flex; flex-wrap: wrap; gap: 2px; margin-bottom: 6px; }
+    .tf-btn {
+      background: var(--bg3); color: var(--text2);
+      border: 1px solid var(--border); border-radius: 3px;
+      padding: 5px 9px; font-size: 12px; cursor: pointer;
+      transition: all 0.12s; font-weight: 400;
+    }
+    .tf-btn:hover  { border-color: var(--blue); color: var(--text); }
+    .tf-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); font-weight: 700; }
+
+    /* Bars select */
+    #bars-select {
+      width: 100%; background: var(--bg3); color: var(--text);
+      border: 1px solid var(--border); border-radius: 3px;
+      padding: 4px 6px; font-size: 12px; cursor: pointer;
+      margin-bottom: 6px; appearance: none;
+    }
+    #bars-select:focus { outline: none; border-color: var(--blue); }
+
+    /* Chart area */
+    #chart-wrap { flex: 1; position: relative; overflow: hidden; }
+    #chart       { width: 100%; height: 100%; }
+
+    /* Loading overlay */
+    #loading {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(19,23,34,0.75);
+      color: var(--text2); font-size: 13px;
+      z-index: 10; pointer-events: none;
+    }
+    #loading.hidden { display: none; }
+
+    /* Scrollbar styling */
+    #sidebar-scroll::-webkit-scrollbar { width: 4px; }
+    #sidebar-scroll::-webkit-scrollbar-track { background: var(--bg2); }
+    #sidebar-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Header ─────────────────────────────────────────────────── -->
+  <div id="header">
+    <span id="header-title">📈 AutoTrading Chart</span>
+    <span id="status-msg"></span>
+    <span id="refresh-badge">—</span>
+    <div id="ohlc-bar"></div>
+  </div>
+
+  <!-- ── Body ───────────────────────────────────────────────────── -->
+  <div id="body">
+
+    <!-- Sidebar -->
+    <div id="sidebar">
+      <div id="sidebar-scroll">
+
+        <span class="section-label">Timeframe</span>
+        <div id="tf-buttons"><!-- populated by JS --></div>
+
+        <span class="section-label">Candles</span>
+        <select id="bars-select">
+          <option value="100">100</option>
+          <option value="200">200</option>
+          <option value="500" selected>500</option>
+          <option value="1000">1 000</option>
+          <option value="2000">2 000</option>
+        </select>
+
+        <span class="section-label">Symbol</span>
+        <div id="sym-panel"><!-- populated by JS --></div>
+
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div id="chart-wrap">
+      <div id="chart"></div>
+      <div id="loading">Loading…</div>
+    </div>
+
+  </div><!-- /#body -->
+</div><!-- /#app -->
+
+<script>
+// =============================================================================
+// AutoTrading Chart — Lightweight Charts 4.2.1
+// =============================================================================
+
+// ── Trạng thái ──────────────────────────────────────────────────────────────
+let currentSymbol  = 'EURUSD';
+let currentTf      = 'H1';
+let currentBars    = 500;
+let refreshTimer   = null;
+const REFRESH_MS   = 60_000;   // tự động tải lại mỗi 60 giây
+
+// ── Màu sắc ─────────────────────────────────────────────────────────────────
+const C = {
+  bg: '#131722', bg2: '#1e222d', bg3: '#2a2e39',
+  border: '#363a45', text: '#d1d4dc', text2: '#787b86',
+  blue: '#2962ff', green: '#26a69a', red: '#ef5350',
+};
+
+// =============================================================================
+// LIGHTWEIGHT CHARTS — khởi tạo
+// =============================================================================
+
+const chartEl = document.getElementById('chart');
+
+const chart = LightweightCharts.createChart(chartEl, {
+  layout: {
+    background: { type: 'solid', color: C.bg },
+    textColor: C.text,
+    fontFamily: 'Arial, Helvetica, sans-serif',
+    fontSize: 11,
+  },
+  grid: {
+    vertLines: { color: C.border },
+    horzLines: { color: C.border },
+  },
+  crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+  rightPriceScale: {
+    borderColor: C.border,
+    scaleMargins: { top: 0.08, bottom: 0.22 },
+  },
+  timeScale: {
+    borderColor: C.border,
+    timeVisible: true,
+    secondsVisible: false,
+    fixLeftEdge: true,
+    fixRightEdge: true,
+  },
+  handleScroll: { mouseWheel: true, pressedMouseMove: true },
+  handleScale: { mouseWheel: true, pinch: true },
+});
+
+// ── Series: nến (chính) ──────────────────────────────────────────────────────
+const candleSeries = chart.addCandlestickSeries({
+  upColor:        C.green,
+  downColor:      C.red,
+  borderUpColor:  C.green,
+  borderDownColor: C.red,
+  wickUpColor:    C.green,
+  wickDownColor:  C.red,
+});
+
+// ── Series: volume (histogram phụ) ──────────────────────────────────────────
+const volumeSeries = chart.addHistogramSeries({
+  priceFormat: { type: 'volume' },
+  priceScaleId: 'volume',
+  lastValueVisible: false,
+  priceLineVisible: false,
+});
+chart.priceScale('volume').applyOptions({
+  scaleMargins: { top: 0.82, bottom: 0 },
+  drawTicks: false,
+  visible: false,
+});
+
+// ── Resize chart khi cửa sổ thay đổi kích thước ─────────────────────────────
+const resizeObserver = new ResizeObserver(entries => {
+  const { width, height } = entries[0].contentRect;
+  chart.applyOptions({ width, height });
+});
+resizeObserver.observe(chartEl);
+
+// =============================================================================
+// LOAD DỮ LIỆU
+// =============================================================================
+
+async function loadCandles() {
+  setLoading(true);
+  const url = `/api/candles?symbol=${encodeURIComponent(currentSymbol)}&tf=${encodeURIComponent(currentTf)}&bars=${currentBars}`;
+
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+
+    if (!Array.isArray(data) || data.length === 0) {
+      setStatus(`Không có dữ liệu cho ${currentSymbol} ${currentTf}`);
+      clearOhlcBar();
+      return;
+    }
+
+    // ── Cập nhật nến ────────────────────────────────────────────────────────
+    candleSeries.setData(data);
+
+    // ── Cập nhật volume (màu theo hướng nến) ────────────────────────────────
+    volumeSeries.setData(data.map(d => ({
+      time:  d.time,
+      value: d.volume,
+      color: d.close >= d.open
+        ? 'rgba(38,166,154,0.35)'   // xanh lam (tăng)
+        : 'rgba(239,83,80,0.35)',   // đỏ (giảm)
+    })));
+
+    // Căn khung để hiển thị toàn bộ chuỗi nến
+    chart.timeScale().fitContent();
+
+    // Cập nhật OHLC bar với nến cuối cùng
+    updateOhlcBar(data[data.length - 1]);
+    setStatus('');
+
+  } catch (err) {
+    setStatus('Lỗi tải dữ liệu: ' + err.message);
+    console.error('[chart] loadCandles error:', err);
+  } finally {
+    setLoading(false);
+    document.getElementById('refresh-badge').textContent =
+      '~ ' + new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+}
+
+// =============================================================================
+// OHLC INFO BAR — hiển thị giá trị nến cuối hoặc nến đang hover
+// =============================================================================
+
+function fmtPrice(v) {
+  if (v == null) return '—';
+  // Tự động chọn số chữ số thập phân theo độ lớn giá trị
+  if (v >= 1000) return v.toFixed(2);
+  if (v >= 10)   return v.toFixed(3);
+  return v.toFixed(5);
+}
+
+function updateOhlcBar(bar) {
+  if (!bar) { clearOhlcBar(); return; }
+  const chg  = bar.close - bar.open;
+  const pct  = bar.open !== 0 ? (chg / bar.open * 100) : 0;
+  const sign = chg >= 0 ? '+' : '';
+  const col  = chg >= 0 ? C.green : C.red;
+
+  document.getElementById('ohlc-bar').innerHTML =
+    `<span style="color:${C.text2}">O </span><span>${fmtPrice(bar.open)}</span>  ` +
+    `<span style="color:${C.green}">H </span><span>${fmtPrice(bar.high)}</span>  ` +
+    `<span style="color:${C.red}">L </span><span>${fmtPrice(bar.low)}</span>  ` +
+    `<span style="color:${C.text2}">C </span><span>${fmtPrice(bar.close)}</span>  ` +
+    `<span style="color:${col};font-weight:600">${sign}${fmtPrice(chg)} (${sign}${pct.toFixed(2)}%)</span>`;
+}
+
+function clearOhlcBar() {
+  document.getElementById('ohlc-bar').innerHTML = '';
+}
+
+// Hover crosshair → cập nhật OHLC bar theo nến đang hover
+chart.subscribeCrosshairMove(param => {
+  if (!param.time || param.point === undefined || !param.seriesData.size) {
+    return;
+  }
+  const bar = param.seriesData.get(candleSeries);
+  if (bar) updateOhlcBar(bar);
+});
+
+// =============================================================================
+// UI HELPERS
+// =============================================================================
+
+function setLoading(on) {
+  document.getElementById('loading').classList.toggle('hidden', !on);
+}
+
+function setStatus(msg) {
+  document.getElementById('status-msg').textContent = msg;
+}
+
+function selectSymbol(sym) {
+  currentSymbol = sym;
+  document.querySelectorAll('.sym-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.sym === sym));
+  reloadWithReset();
+}
+
+function selectTf(tf) {
+  currentTf = tf;
+  document.querySelectorAll('.tf-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.tf === tf));
+  reloadWithReset();
+}
+
+function reloadWithReset() {
+  clearAutoRefresh();
+  loadCandles();
+  startAutoRefresh();
+}
+
+// ── Auto-refresh ─────────────────────────────────────────────────────────────
+function startAutoRefresh() {
+  clearAutoRefresh();
+  refreshTimer = setInterval(() => loadCandles(), REFRESH_MS);
+}
+function clearAutoRefresh() {
+  if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+}
+
+// =============================================================================
+// POPULATE SIDEBAR — gọi API để lấy symbols và timeframes
+// =============================================================================
+
+async function initSidebar() {
+  // ── Timeframes ──────────────────────────────────────────────────────────
+  try {
+    const tfs = await (await fetch('/api/timeframes')).json();
+    const tfWrap = document.getElementById('tf-buttons');
+    tfs.forEach(tf => {
+      const btn = document.createElement('button');
+      btn.className = 'tf-btn' + (tf === currentTf ? ' active' : '');
+      btn.textContent = tf;
+      btn.dataset.tf  = tf;
+      btn.onclick = () => selectTf(tf);
+      tfWrap.appendChild(btn);
+    });
+  } catch (err) {
+    console.error('[chart] Failed to load timeframes:', err);
+  }
+
+  // ── Symbols ─────────────────────────────────────────────────────────────
+  try {
+    const groups = await (await fetch('/api/symbols')).json();
+    const panel  = document.getElementById('sym-panel');
+
+    Object.entries(groups).forEach(([groupName, syms]) => {
+      const groupDiv = document.createElement('div');
+      groupDiv.className = 'sym-group';
+
+      const label = document.createElement('span');
+      label.className   = 'sym-group-name';
+      label.textContent = groupName;
+      groupDiv.appendChild(label);
+
+      const btnWrap = document.createElement('div');
+      btnWrap.className = 'sym-buttons';
+
+      syms.forEach(sym => {
+        const btn = document.createElement('button');
+        btn.className   = 'sym-btn' + (sym === currentSymbol ? ' active' : '');
+        btn.textContent = sym;
+        btn.dataset.sym = sym;
+        btn.onclick     = () => selectSymbol(sym);
+        btnWrap.appendChild(btn);
+      });
+
+      groupDiv.appendChild(btnWrap);
+      panel.appendChild(groupDiv);
+    });
+  } catch (err) {
+    console.error('[chart] Failed to load symbols:', err);
+  }
+}
+
+// ── Bars selector ─────────────────────────────────────────────────────────────
+document.getElementById('bars-select').addEventListener('change', e => {
+  currentBars = parseInt(e.target.value, 10);
+  reloadWithReset();
+});
+
+// =============================================================================
+// KHỞI ĐỘNG
+// =============================================================================
+
+(async function init() {
+  await initSidebar();
+  await loadCandles();
+  startAutoRefresh();
+})();
+</script>
+</body>
+</html>
