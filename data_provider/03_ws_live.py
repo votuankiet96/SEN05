@@ -78,9 +78,11 @@
 import json  # Xử lý dữ liệu JSON — TradingView gửi/nhận lệnh dưới dạng JSON
 import logging  # Framework ghi log chuẩn của Python
 import math  # Hàm toán học — dùng math.ceil() để tính số nhóm WS cần tạo
+import pickle  # Serialize DataFrame → BLOB để lưu vào SQLite spool
 import re    # Regex — dùng để parse auth_token từ HTML khi refresh session
 import queue  # Hàng đợi thread-safe — dùng để truyền data từ WS thread sang DB thread
 import random  # Tạo chuỗi ngẫu nhiên — dùng để sinh tên session chart
+import sqlite3  # SQLite local — dùng làm durable spool khi overflow buffer đầy
 import string  # Bảng ký tự (a-z, 0-9) — kết hợp với random để tạo session ID
 import sys  # Tương tác với Python runtime (thoát chương trình, thêm đường dẫn)
 import threading  # Chạy nhiều luồng song song — WS, ghi DB, scheduler đều chạy độc lập
@@ -106,6 +108,9 @@ import pandas as pd  # DataFrame — cấu trúc bảng dữ liệu dùng để 
 import requests  # Gửi HTTP request — dùng để đăng nhập TradingView và gửi tin Telegram
 import websocket  # Thư viện WebSocket client — kết nối và nhận data real-time từ TradingView
 from _helpers import setup_logger  # Hàm khởi tạo logger (ghi ra file + console)
+from _tg import tg_alert as _tg_alert, tg_send as _tg_send  # Telegram notifications (dùng chung)
+from _tg_bot import start_bot_listener  # Telegram bot command handler (/fix, /status, /pipeline)
+import _tv_auth  # TradingView auth module dùng chung (token cache, refresh, bootstrap)
 
 # =============================================================================
 # NHẬP CÁC MODULE NỘI BỘ CỦA PROJECT
@@ -115,8 +120,7 @@ from config import (
     COMPUTED_TIMEFRAMES,  # Danh sách TF phái sinh cần tính (M10, M20, M90, H6, H8)
     LOG_FILE,  # Đường dẫn file log
     SYMBOLS,  # Toàn bộ danh sách symbol theo dõi (37 cặp)
-    TELEGRAM_BOT_TOKEN,  # Token bot Telegram để gửi cảnh báo
-    TELEGRAM_CHAT_ID,  # ID nhóm/kênh Telegram nhận cảnh báo
+    TELEGRAM_BOT_TOKEN,  # Dùng để hiển thị trạng thái "Telegram: Enabled/Disabled"
     TF_STAGING,  # Bảng ánh xạ: tf_code → tên bảng staging trong DB
     TV_AUTH_TOKEN,  # Auth token TradingView đọc từ .env
     TV_COOKIE,  # Cookie TradingView đọc từ .env
@@ -145,8 +149,11 @@ WS_SYMBOLS = [s for s in SYMBOLS if s["asset_type"] in {"Indice", "Metal", "Cryp
 # KHỞI TẠO LOGGER
 # =============================================================================
 
-# Tạo logger tên "ws_live", ghi log vào file LOG_FILE và ra console
-logger = setup_logger("ws_live", LOG_FILE)
+# Log file riêng cho ws_live (tách khỏi pipeline.log của 01_data_pipeline.py)
+# rotating=True → RotatingFileHandler 10 MB × 5 files (~60 MB tối đa, đủ ~14 ngày)
+_LOG_DIR    = Path(__file__).resolve().parent / "logs"
+WS_LOG_FILE = str(_LOG_DIR / "ws_live.log")
+logger = setup_logger("ws_live", WS_LOG_FILE, rotating=True)
 
 
 # =============================================================================
@@ -161,14 +168,14 @@ TV_BASE_URL           = "wss://data.tradingview.com/socket.io/websocket"
 WS_SYMBOLS_PER_CONN   = 10
 
 # Số nến yêu cầu TradingView gửi về mỗi lần
-# 3 nến: 1 nến hiện tại (chưa đóng) + 2 nến đã đóng → chỉ lưu 2 nến đã đóng
-N_BARS_WS             = 3
+# 5 nến: 1 nến hiện tại (chưa đóng) + 4 nến đã đóng → chỉ lưu 4 nến đã đóng
+N_BARS_WS             = 5
 
 # Chu kỳ chạy batch: cứ mỗi 5 phút, hệ thống mở WS, lấy data, rồi đóng
 BATCH_INTERVAL_MIN    = 5
 
 # Timeout mỗi lần batch: nếu sau 90 giây vẫn chưa nhận đủ data → coi như thất bại
-BATCH_FETCH_TIMEOUT   = 90
+BATCH_FETCH_TIMEOUT   = 120
 
 # Số lần retry tối đa nếu batch thất bại trước khi bỏ qua batch đó
 BATCH_MAX_RETRIES     = 3
@@ -190,18 +197,26 @@ OVERFLOW_BUFFER_MAX   = 500
 
 # Độ trễ giữa mỗi lần đăng ký chart session trong cùng 1 kết nối WS
 # Cần thiết để tránh TradingView bị quá tải khi đăng ký nhiều session liên tiếp
-SESSION_THROTTLE      = 0.5
+SESSION_THROTTLE      = 0.15
 
 # Chu kỳ gửi báo cáo trạng thái lên Telegram (3600 giây = 1 giờ)
 STATUS_INTERVAL_SEC   = 3600
 
-# Các từ khóa trong message lỗi cho biết token đã hết hạn / không hợp lệ
-TOKEN_EXPIRY_KEYWORDS = ("unauthorized", "auth_error", "not_authorized")
+# Từ khóa nhận biết lỗi token — dùng chung với _tv_auth.py
+TOKEN_EXPIRY_KEYWORDS = _tv_auth.TOKEN_EXPIRY_KEYWORDS
 
 # Số lần miss liên tiếp tối đa trước khi gửi cảnh báo Telegram
 # Nếu cặp (symbol, TF) nào không nhận được data trong MAX_MISS_RETRIES batch liên tiếp
 # → hệ thống cảnh báo ngay và reset đếm (tránh spam)
 MAX_MISS_RETRIES      = 5
+
+# Số nến yêu cầu khi cặp (symbol, TF) đang trong backlog (đã bị miss ít nhất 1 batch)
+# Đủ để phủ khoảng trống: ví dụ M5 miss 1 batch = 5 phút → cần 30 nến = 150 phút buffer an toàn
+N_BARS_WS_BACKLOG     = 30
+
+# Số lần retry backlog tối đa trước khi coi khoảng trống là vĩnh viễn và dừng retry
+# 12 batch × 5 phút = 60 phút — nếu vẫn không lấy được sau 1 giờ → báo lỗi + bỏ
+MAX_BACKLOG_BATCHES   = 12
 
 
 # Bảng ánh xạ: tên TF nội bộ → chuỗi interval theo chuẩn TradingView WebSocket API
@@ -223,14 +238,10 @@ WS_TF_INTERVAL = {
 # Ví dụ: khi có nến M5 mới → tự động tính lại M10, M20
 _SOURCE_TO_COMPUTED = COMPUTED_TF_DEPS
 
-# Số lần retry tối đa khi HTTP trả về 429 hoặc 5xx
-HTTP_MAX_RETRIES    = 4
-
-# Thời gian chờ ban đầu giữa các lần retry (giây) — tăng gấp đôi mỗi lần retry
-HTTP_BASE_DELAY_SEC = 2.0
-
-# Thời gian chờ tối đa giữa các lần retry (giây) — giới hạn để không chờ quá lâu
-HTTP_MAX_DELAY_SEC  = 120.0
+# HTTP retry constants — dùng chung với _tv_auth.py
+HTTP_MAX_RETRIES    = _tv_auth.HTTP_MAX_RETRIES
+HTTP_BASE_DELAY_SEC = _tv_auth.HTTP_BASE_DELAY_SEC
+HTTP_MAX_DELAY_SEC  = _tv_auth.HTTP_MAX_DELAY_SEC
 
 
 # =============================================================================
@@ -267,17 +278,19 @@ _overflow_lock = threading.Lock()  # Lock riêng để bảo vệ _overflow_buf
 # maxsize=2000 → nếu DB worker ghi chậm, tối đa chứa 2000 nến chờ
 _db_queue: queue.Queue = queue.Queue(maxsize=DB_QUEUE_MAXSIZE)
 
-# Token xác thực TradingView (được chia sẻ giữa tất cả kết nối WS)
-# Mặc định là chuỗi đặc biệt "unauthorized_user_token" = chưa xác thực / guest
-_auth_token: str = "unauthorized_user_token"
-_auth_lock  = threading.Lock()  # Lock để đảm bảo chỉ 1 thread cập nhật token tại 1 thời điểm
+# Auth state — quản lý bởi _tv_auth.py (dùng _tv_auth._auth_token, _tv_auth._auth_lock, v.v.)
 
-# Cookie TradingView (in-memory, có thể được cập nhật khi session được refresh)
-# Tách biệt với TV_COOKIE (import-time constant) để có thể thay đổi lúc runtime
-_tv_cookie: str = TV_COOKIE
-
-# Đường dẫn file .env — dùng để ghi lại credentials mới khi được refresh
+# Đường dẫn file .env
 _ENV_FILE: Path = _PROJ / ".env"
+
+# Đường dẫn SQLite spool — durable buffer khi queue + overflow RAM đều đầy
+_SPOOL_DB   = Path(__file__).parent / ".overflow_spool.db"
+_spool_lock = threading.Lock()
+
+# Bộ đếm số batch liên tiếp đang chạy ở guest mode
+_consecutive_guest_batches = 0
+# Ngưỡng cảnh báo: sau bao nhiêu batch guest liên tiếp thì gửi alert nặng hơn
+_GUEST_ALERT_THRESHOLD     = 3
 
 # Bộ đếm backfill miss: số lần LIÊN TIẾP không nhận được data cho mỗi cặp (symbol_id, tf_code)
 # Khi counter đạt MAX_MISS_RETRIES → cảnh báo Telegram ngay, reset counter (tránh spam)
@@ -285,504 +298,53 @@ _ENV_FILE: Path = _PROJ / ".env"
 _missed_pairs: dict[tuple[int, str], int] = {}
 _missed_lock  = threading.Lock()   # Lock riêng để không tranh chấp với _state_lock
 
+# Backlog: các cặp (symbol_id, tf_code) bị miss ≥1 batch → lần sau yêu cầu N_BARS_WS_BACKLOG
+# Giá trị = số lần miss liên tiếp; xóa khi cặp đó nhận được data trở lại
+_backlog: dict[tuple[int, str], int] = {}
+_backlog_lock = threading.Lock()   # Lock riêng để bảo vệ _backlog
 
-# =============================================================================
-# HTTP RETRY UTILITY
-# =============================================================================
-
-def _http_request_with_retry(
-    method: str,
-    url: str,
-    *,
-    max_retries: int = HTTP_MAX_RETRIES,
-    base_delay: float = HTTP_BASE_DELAY_SEC,
-    max_delay: float = HTTP_MAX_DELAY_SEC,
-    **kwargs,
-) -> requests.Response:
-    """
-    Gửi HTTP request với cơ chế retry tự động cho các lỗi tạm thời.
-
-    Phân biệt 3 loại lỗi:
-    ┌──────────┬────────────────────────────────────────────────────────────────┐
-    │ HTTP 429 │ Too Many Requests — đọc header Retry-After nếu có, nếu không  │
-    │          │ dùng exponential back-off + jitter để tránh thundering herd.   │
-    ├──────────┼────────────────────────────────────────────────────────────────┤
-    │ HTTP 5xx │ Server Error — retry ngay với jitter nhỏ.                      │
-    ├──────────┼────────────────────────────────────────────────────────────────┤
-    │ Network  │ Timeout / ConnectionError — retry với exponential back-off.    │
-    └──────────┴────────────────────────────────────────────────────────────────┘
-    HTTP 4xx khác (400/401/403/404 ...): KHÔNG retry — lỗi từ phía client.
-
-    Khi hết max_retries → raise exception gốc để caller xử lý.
-
-    Ví dụ dùng:
-        resp = _http_request_with_retry("POST", url, json=payload, timeout=15)
-        resp = _http_request_with_retry("GET",  url, headers=hdrs, timeout=20, max_retries=2)
-    """
-    last_exc: Exception = RuntimeError("No attempts made")
-
-    for attempt in range(max_retries + 1):   # attempt 0 = lần thử đầu tiên (không phải retry)
-        try:
-            resp = requests.request(method, url, **kwargs)
-
-            # ── Thành công (2xx hoặc 3xx redirect) ──
-            if resp.status_code < 400:
-                return resp
-
-            # ── HTTP 429: Too Many Requests ──
-            if resp.status_code == 429:
-                if attempt < max_retries:
-                    retry_after_hdr = resp.headers.get("Retry-After", "")
-                    try:
-                        # Telegram, TradingView đều dùng giá trị số giây trong header
-                        wait = float(retry_after_hdr)
-                        wait = min(wait, max_delay)   # Không chờ quá max_delay dù server yêu cầu
-                    except (ValueError, TypeError):
-                        # Không có Retry-After hợp lệ → tính theo exponential back-off
-                        wait = min(base_delay * (2 ** attempt), max_delay)
-                    # Thêm jitter [0.5, 2.0)s để tránh nhiều thread cùng retry một lúc
-                    wait += random.uniform(0.5, 2.0)
-                    logger.warning(
-                        "[HTTP] 429 Too Many Requests (%s) — retry %d/%d sau %.1fs.",
-                        url, attempt + 1, max_retries, wait,
-                    )
-                    time.sleep(wait)
-                    last_exc = requests.HTTPError(
-                        f"429 Too Many Requests (attempt {attempt + 1})", response=resp
-                    )
-                    continue
-                raise requests.HTTPError(
-                    f"429 Too Many Requests — đã hết {max_retries} lần retry ({url})", response=resp
-                )
-
-            # ── HTTP 5xx: Server Error ──
-            if resp.status_code >= 500:
-                if attempt < max_retries:
-                    wait = min(base_delay * (2 ** attempt), max_delay)
-                    wait += random.uniform(0.5, 2.0)
-                    logger.warning(
-                        "[HTTP] %d Server Error (%s) — retry %d/%d sau %.1fs.",
-                        resp.status_code, url, attempt + 1, max_retries, wait,
-                    )
-                    time.sleep(wait)
-                    last_exc = requests.HTTPError(
-                        f"{resp.status_code} Server Error (attempt {attempt + 1})", response=resp
-                    )
-                    continue
-                raise requests.HTTPError(
-                    f"{resp.status_code} Server Error — đã hết {max_retries} lần retry ({url})",
-                    response=resp,
-                )
-
-            # ── HTTP 4xx khác (400/401/403/404 ...): không retry ──
-            raise requests.HTTPError(
-                f"HTTP {resp.status_code} Client Error — không retry ({url})", response=resp
-            )
-
-        except (requests.ConnectionError, requests.Timeout) as exc:
-            # ── Lỗi mạng: retry với exponential back-off ──
-            last_exc = exc
-            if attempt < max_retries:
-                wait = min(base_delay * (2 ** attempt), max_delay)
-                wait += random.uniform(0.5, 2.0)
-                logger.warning(
-                    "[HTTP] Network error %s (%s) — retry %d/%d sau %.1fs.",
-                    type(exc).__name__, url, attempt + 1, max_retries, wait,
-                )
-                time.sleep(wait)
-                continue
-            raise   # Hết retry → re-raise exception gốc
-
-    raise last_exc  # Không bao giờ đến đây, nhưng giữ cho type-checker hài lòng
+# Buffer aggregate: (symbol_id, target_tf, src_table, tv_symbol) chưa được flush
+# Được flush khi queue DB tạm rỗng — tránh gọi run_etl_aggregate per-bar
+_pending_agg: set[tuple[int, str, str, str]] = set()
 
 
 # =============================================================================
-# CẢNH BÁO TELEGRAM
+# AUTH FUNCTIONS — delegated to _tv_auth (shared auth module)
+# All TradingView authentication logic lives in data_provider/_tv_auth.py
 # =============================================================================
 
-def _tg_send(message: str) -> None:
-    """
-    Gửi tin nhắn lên Telegram bằng Bot API.
-    Nếu chưa cấu hình bot token hoặc chat ID thì bỏ qua.
-    Gửi trong thread riêng để không làm chậm luồng chính.
-    """
-    # Nếu chưa cấu hình Telegram thì thoát ngay, không làm gì
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        return
-
-    def _send():
-        try:
-            # Gọi Telegram Bot API để gửi tin nhắn HTML
-            # max_retries=2: Telegram chỉ cần 2 retry (notification — không critical)
-            _http_request_with_retry(
-                "POST",
-                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
-                json={"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "HTML"},
-                timeout=10,
-                max_retries=2,
-            )
-        except Exception as exc:
-            # Lỗi gửi Telegram chỉ cần ghi log, không cần crash chương trình
-            logger.warning("[TG] Failed to send Telegram alert: %s", exc)
-
-    # Chạy hàm gửi trong thread daemon riêng để không block luồng chính
-    threading.Thread(target=_send, daemon=True).start()
-
-
-def _tg_alert(level: str, text: str) -> None:
-    """
-    Tạo và gửi cảnh báo Telegram có định dạng chuẩn.
-    level: "INFO", "WARNING", hoặc "ERROR" → tương ứng với icon ℹ️ ⚠️ 🚨
-    """
-    icons = {"INFO": "ℹ️", "WARNING": "⚠️", "ERROR": "🚨"}
-    icon  = icons.get(level, "📌")  # Nếu level không khớp thì dùng icon mặc định
-
-    # Lấy thời điểm hiện tại để đính vào cuối tin nhắn
-    now   = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    # Định dạng tin nhắn HTML: icon + tiêu đề in đậm + nội dung + thời gian in nghiêng
-    msg   = f"{icon} <b>[AUTO TRADING — {level}]</b>\n{text}\n<i>{now}</i>"
-    _tg_send(msg)
-
-
-# =============================================================================
-# XÁC THỰC TRADINGVIEW — 3 LỚP DỰ PHÒNG
-# =============================================================================
-# Lý do cần 3 lớp: token TradingView có thể hết hạn, cookie có thể bị thu hồi.
-# Hệ thống tự động thử từng phương thức theo thứ tự ưu tiên:
-#   Lớp 1: Token tĩnh từ .env (tốt nhất — không cần gửi request)
-#   Lớp 2: Đăng nhập bằng Username/Password (cần gửi HTTP POST)
-#   Lớp 3: Guest token (ít data nhất, dễ bị rate-limit, chỉ dùng khi không còn cách nào)
-
-def _fetch_auth_token_from_credentials(username: str, password: str) -> str:
-    """
-    Đăng nhập TradingView bằng username/password để lấy auth token.
-    Mô phỏng hành vi trình duyệt khi đăng nhập (gửi POST form).
-    Trả về token nếu thành công, hoặc chuỗi "unauthorized_user_token" nếu thất bại.
-    """
-    try:
-        r = _http_request_with_retry(
-            "POST",
-            "https://www.tradingview.com/accounts/signin/",
-            # Gửi form đăng nhập (giống như điền form trên web)
-            data={"username": username, "password": password, "remember": "on"},
-            # Header giả lập trình duyệt Chrome để tránh bị từ chối
-            headers={
-                "Referer":    "https://www.tradingview.com",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                              "AppleWebKit/537.36 (KHTML, like Gecko) "
-                              "Chrome/124.0.0.0 Safari/537.36",
-            },
-            timeout=15,  # Chờ tối đa 15 giây
-        )
-        # TradingView trả về JSON có cấu trúc: { "user": { "auth_token": "..." } }
-        token = r.json()["user"]["auth_token"]
-        logger.info("[AUTH] Token obtained via username/password.")
-        return token
-    except Exception as exc:
-        # Đăng nhập thất bại (sai mật khẩu, mạng lỗi, API thay đổi, v.v.)
-        logger.warning("[AUTH] Credential login failed: %s", exc)
-        return "unauthorized_user_token"  # Giá trị đặc biệt báo hiệu thất bại
-
-
-def _resolve_auth_token() -> tuple[str, str]:
-    """
-    Thử lần lượt 4 lớp xác thực và trả về (token, tên_phương_thức).
-
-    Lớp 1  : Static token từ .env                   — nhanh nhất, không cần network
-    Lớp 1.5: Refresh qua session cookie (HTTP GET)   — nhanh, không cần browser
-    Lớp 2  : HTTP POST username/password             — chỉ dùng được cho native TV account
-    Lớp 2.5: Headless Chromium với session cookie    — xử lý cả Google/social login
-    Lớp 3  : Guest token                             — cuối cùng, dữ liệu bị giới hạn
-    """
-    global _tv_cookie
-
-    # LỚP 1: Static token từ .env — dùng ngay nếu còn hợp lệ
-    if TV_AUTH_TOKEN and TV_AUTH_TOKEN != "unauthorized_user_token":
-        logger.info("[AUTH] Using static TV_AUTH_TOKEN from .env.")
-        return TV_AUTH_TOKEN, "static_token"
-
-    # LỚP 1.5: Refresh token qua session cookie (HTTP GET — nhanh, không cần browser)
-    current_cookie = _tv_cookie or TV_COOKIE
-    if current_cookie:
-        token = _refresh_token_via_cookie(current_cookie)
-        if token != "unauthorized_user_token":
-            _save_credentials_to_env(token, current_cookie)
-            return token, "session_refresh"
-
-    # LỚP 2: Đăng nhập bằng username/password (HTTP POST — chỉ dùng cho native TV account)
-    if TV_USERNAME and TV_PASSWORD:
-        token = _fetch_auth_token_from_credentials(TV_USERNAME, TV_PASSWORD)
-        if token != "unauthorized_user_token":
-            _save_credentials_to_env(token, current_cookie)
-            return token, "username/password"
-
-    # LỚP 2.5: Headless Chromium — xử lý Google/social login khi HTTP không đủ
-    if current_cookie:
-        token, new_cookie = _headless_refresh(current_cookie)
-        if token != "unauthorized_user_token":
-            _save_credentials_to_env(token, new_cookie or current_cookie)
-            return token, "headless_chromium"
-
-    # LỚP 3: Guest — cuối cùng, bị giới hạn dữ liệu và dễ bị rate-limit
-    logger.warning("[AUTH] Falling back to guest token — Premium data may be unavailable.")
-    _tg_alert("WARNING", "Không thể xác thực TradingView — đang dùng guest token.")
-    return "unauthorized_user_token", "guest"
+def _http_request_with_retry(method, url, *, max_retries=HTTP_MAX_RETRIES,
+                              base_delay=HTTP_BASE_DELAY_SEC, max_delay=HTTP_MAX_DELAY_SEC,
+                              **kwargs):
+    """HTTP request với retry — proxy về _tv_auth._http_request_with_retry."""
+    return _tv_auth._http_request_with_retry(method, url, max_retries=max_retries,
+                                              base_delay=base_delay, max_delay=max_delay,
+                                              **kwargs)
 
 
 def _renew_auth_token() -> None:
-    """
-    Gia hạn token khi TradingView báo lỗi xác thực trong lúc đang chạy.
-    Dùng Lock để đảm bảo chỉ 1 thread thực hiện gia hạn, các thread khác chờ.
-
-    Thứ tự thử:
-        1. _bootstrap_credentials() — thử tất cả lớp (session refresh → headless → HTTP POST)
-        2. Nếu bootstrap thất bại → _resolve_auth_token() như thường
-    """
-    global _auth_token
-    with _auth_lock:
-        # Kiểm tra lại: nếu token đã được gia hạn bởi thread khác rồi thì bỏ qua
-        if _auth_token != "unauthorized_user_token":
-            return
-
-        logger.warning("[AUTH] Token expired mid-session — attempting renewal via bootstrap...")
-        _tg_alert("WARNING", "Token TradingView hết hạn — đang tự động gia hạn...")
-
-        # Thử bootstrap trước (xử lý cả Google login qua headless Chromium)
-        new_token, source = _bootstrap_credentials()
-
-        # Nếu bootstrap thất bại → thử resolve bình thường (phòng trường hợp có static token mới)
-        if new_token == "unauthorized_user_token":
-            new_token, source = _resolve_auth_token()
-
-        _auth_token = new_token  # Cập nhật token toàn cục
-
-        if new_token != "unauthorized_user_token":
-            logger.info("[AUTH] Token renewed successfully (source: %s).", source)
-            _tg_alert("INFO", f"✅ Token TradingView đã được gia hạn thành công.\nNguồn: {source}")
-        else:
-            logger.error("[AUTH] Token renewal failed — all groups will use guest access.")
-            _tg_alert("ERROR", "❌ Gia hạn token thất bại.\nHệ thống đang dùng guest access.")
+    """Gia hạn token giữa chừng — proxy về _tv_auth.renew()."""
+    _tv_auth.renew(logger)
 
 
-# =============================================================================
-# AUTH — CÁC HÀM HỖ TRỢ REFRESH CREDENTIALS TỰ ĐỘNG
-# =============================================================================
-
-def _refresh_token_via_cookie(cookie_str: str) -> str:
-    """
-    Lớp 1.5 — Làm mới auth_token bằng cách GET homepage TradingView với sessionid cookie.
-
-    TradingView nhúng auth_token hiện tại vào HTML của homepage khi user đã đăng nhập.
-    Cách này không cần trình duyệt — nhanh (~1-2s), không để lại dấu vết automation.
-
-    Trả về token mới, hoặc "unauthorized_user_token" nếu thất bại.
-    """
-    if not cookie_str:
-        return "unauthorized_user_token"
-    try:
-        resp = _http_request_with_retry(
-            "GET",
-            "https://www.tradingview.com/",
-            headers={
-                "Cookie":     cookie_str,
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                              "AppleWebKit/537.36 (KHTML, like Gecko) "
-                              "Chrome/124.0.0.0 Safari/537.36",
-                "Accept-Language": "en-US,en;q=0.9",
-            },
-            timeout=20,
-            allow_redirects=True,
-        )
-        # TradingView nhúng auth_token dạng JSON trong HTML của trang
-        # Tìm pattern: "auth_token":"eyJ..."
-        m = re.search(r'"auth_token"\s*:\s*"(eyJ[A-Za-z0-9._-]+)"', resp.text)
-        if m:
-            token = m.group(1)
-            logger.info("[AUTH] Token refreshed via session cookie (HTTP GET).")
-            return token
-        # Kiểm tra nếu server trả về redirect về login page → session hết hạn
-        if "sign-in" in resp.url or resp.status_code in (401, 403):
-            logger.warning("[AUTH] Session cookie expired (redirect to sign-in).")
-        else:
-            logger.warning("[AUTH] Cookie valid but auth_token not found in page HTML.")
-    except Exception as exc:
-        logger.warning("[AUTH] Cookie refresh via HTTP failed: %s", exc)
-    return "unauthorized_user_token"
+def _check_and_maybe_refresh_token() -> None:
+    """Chủ động làm mới token nếu sắp hết hạn — proxy về _tv_auth.check_and_refresh()."""
+    _tv_auth.check_and_refresh(logger)
 
 
-def _headless_refresh(cookie_str: str) -> tuple[str, str]:
-    """
-    Lớp 2.5 — Dùng headless Chromium (Playwright) để load TradingView và extract credentials.
-
-    Đáng tin cậy hơn HTTP GET vì Playwright thực thi JavaScript đầy đủ.
-    Phù hợp khi TV dùng JS để set token thay vì nhúng trong HTML server-side.
-
-    Trả về (token, cookie_str_mới) hoặc ("unauthorized_user_token", "") nếu thất bại.
-
-    CÀI ĐẶT (chỉ cần làm 1 lần):
-        pip install playwright
-        playwright install chromium
-    """
-    try:
-        from playwright.sync_api import sync_playwright  # type: ignore
-    except ImportError:
-        logger.warning("[AUTH] Playwright chưa được cài — bỏ qua headless refresh.")
-        logger.warning("[AUTH] Cài bằng: pip install playwright && playwright install chromium")
-        return "unauthorized_user_token", ""
-
-    def _parse_cookie_list(raw: str) -> list[dict]:
-        """Chuyển chuỗi 'name=val; name2=val2' sang list dict theo chuẩn Playwright."""
-        result = []
-        for part in raw.split(";"):
-            part = part.strip()
-            if "=" in part:
-                name, _, value = part.partition("=")
-                result.append({
-                    "name":   name.strip(),
-                    "value":  value.strip(),
-                    "domain": ".tradingview.com",
-                    "path":   "/",
-                    "secure": True,
-                })
-        return result
-
-    try:
-        with sync_playwright() as pw:
-            browser = pw.chromium.launch(headless=True, args=["--no-sandbox"])
-            ctx = browser.new_context(
-                user_agent=(
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/124.0.0.0 Safari/537.36"
-                ),
-                locale="en-US",
-            )
-
-            # Inject cookies hiện có trước khi load trang
-            if cookie_str:
-                ctx.add_cookies(_parse_cookie_list(cookie_str))
-
-            page = ctx.new_page()
-            page.goto("https://www.tradingview.com/", wait_until="networkidle", timeout=45_000)
-
-            # Thử lấy auth_token từ DOM (nhiều cách khác nhau để tăng độ tin cậy)
-            token: str = page.evaluate(
-                """() => {
-                    // Cách 1: tìm trong HTML source
-                    try {
-                        const m = document.documentElement.innerHTML.match(/"auth_token":"(eyJ[^"]+)"/);
-                        if (m) return m[1];
-                    } catch(e) {}
-                    // Cách 2: tìm trong __tv_initData (biến JS global của TV)
-                    try {
-                        if (window.__tv_initData && window.__tv_initData.auth_token)
-                            return window.__tv_initData.auth_token;
-                    } catch(e) {}
-                    // Cách 3: tìm trong initData (tên biến cũ hơn)
-                    try {
-                        if (window.initData && window.initData.auth_token)
-                            return window.initData.auth_token;
-                    } catch(e) {}
-                    return null;
-                }"""
-            ) or ""
-
-            # Lấy tất cả cookies hiện tại sau khi trang load (có thể được refresh)
-            all_cookies = ctx.cookies()
-            cookie_out = "; ".join(f"{c['name']}={c['value']}" for c in all_cookies)
-            browser.close()
-
-            if token:
-                logger.info("[AUTH] Token refreshed via headless Chromium.")
-                return token, cookie_out
-            logger.warning("[AUTH] Headless load xong nhưng không tìm thấy auth_token — session có thể đã hết hạn.")
-            return "unauthorized_user_token", cookie_out
-
-    except Exception as exc:
-        logger.warning("[AUTH] Headless refresh thất bại: %s", exc)
-        return "unauthorized_user_token", ""
+def _bootstrap_credentials() -> tuple:
+    """Bootstrap credentials lúc startup — proxy về _tv_auth.bootstrap()."""
+    return _tv_auth.bootstrap(logger)
 
 
-def _save_credentials_to_env(token: str, cookie: str) -> None:
-    """
-    Ghi TV_AUTH_TOKEN và TV_COOKIE mới vào file .env một cách an toàn.
-
-    - Chỉ thay đổi 2 dòng liên quan, KHÔNG động đến SQL_UID, Telegram, v.v.
-    - Nếu key chưa có → append vào cuối file
-    - Cập nhật cả biến in-memory _auth_token và _tv_cookie
-    """
-    global _auth_token, _tv_cookie
-
-    def _replace_or_append(text: str, key: str, value: str) -> str:
-        pattern = rf"^{re.escape(key)}\s*=.*$"
-        new_line = f"{key}={value}"
-        if re.search(pattern, text, flags=re.MULTILINE):
-            return re.sub(pattern, new_line, text, flags=re.MULTILINE)
-        return text.rstrip("\n") + f"\n{new_line}\n"
-
-    try:
-        original = _ENV_FILE.read_text(encoding="utf-8") if _ENV_FILE.exists() else ""
-    except OSError:
-        original = ""
-
-    updated = original
-    if token and token != "unauthorized_user_token":
-        updated = _replace_or_append(updated, "TV_AUTH_TOKEN", token)
-        _auth_token = token          # Cập nhật in-memory ngay lập tức
-    if cookie:
-        updated = _replace_or_append(updated, "TV_COOKIE", cookie)
-        _tv_cookie = cookie          # Cập nhật in-memory ngay lập tức
-
-    try:
-        _ENV_FILE.write_text(updated, encoding="utf-8")
-        logger.info("[AUTH] Credentials đã được lưu vào .env.")
-    except OSError as exc:
-        logger.warning("[AUTH] Không thể ghi .env: %s", exc)
+def _resolve_auth_token() -> tuple:
+    """Resolve auth token qua 4 lớp — proxy về _tv_auth._resolve_auth_token()."""
+    return _tv_auth._resolve_auth_token(logger)
 
 
-def _bootstrap_credentials() -> tuple[str, str]:
-    """
-    Đảm bảo credentials hợp lệ trước khi WebSocket khởi động.
-    Gọi lúc startup khi token trống hoặc hết hạn.
-
-    Thứ tự thử:
-        1. Refresh token qua HTTP GET (dùng sessionid cookie hiện có)
-        2. Refresh token qua headless Chromium (dùng sessionid cookie)
-        3. Đăng nhập bằng username/password qua HTTP POST (chỉ dùng được cho tài khoản native TV)
-
-    Lưu credentials mới vào .env để lần restart tiếp theo dùng được ngay.
-    Trả về (token, tên_phương_thức).
-    """
-    global _tv_cookie
-    logger.info("[AUTH] Bootstrapping credentials...")
-
-    # ── Bước 1: Refresh token từ session cookie hiện có (HTTP GET, không cần browser) ──
-    current_cookie = _tv_cookie or TV_COOKIE
-    if current_cookie:
-        token = _refresh_token_via_cookie(current_cookie)
-        if token != "unauthorized_user_token":
-            _save_credentials_to_env(token, current_cookie)
-            return token, "session_refresh"
-        logger.info("[AUTH] HTTP cookie refresh thất bại — thử headless Chromium...")
-
-    # ── Bước 2: Headless Chromium với session cookie hiện có ──
-    if current_cookie:
-        token, new_cookie = _headless_refresh(current_cookie)
-        if token != "unauthorized_user_token":
-            _save_credentials_to_env(token, new_cookie or current_cookie)
-            return token, "headless_chromium"
-
-    # ── Bước 3: Đăng nhập bằng user/password (HTTP POST — chỉ dùng cho native TV account) ──
-    if TV_USERNAME and TV_PASSWORD:
-        logger.info("[AUTH] Thử đăng nhập bằng username/password (HTTP POST)...")
-        token = _fetch_auth_token_from_credentials(TV_USERNAME, TV_PASSWORD)
-        if token != "unauthorized_user_token":
-            _save_credentials_to_env(token, current_cookie)
-            return token, "http_post_login"
-
-    logger.warning("[AUTH] Tất cả phương thức bootstrap đều thất bại.")
-    return "unauthorized_user_token", "guest"
+def _load_token_cache() -> dict:
+    """Đọc token cache file — proxy về _tv_auth._load_token_cache()."""
+    return _tv_auth._load_token_cache()
 
 
 # =============================================================================
@@ -802,28 +364,30 @@ def _load_watermarks() -> None:
         Khi chương trình restart, _last_bar_ts bị reset về rỗng.
         Nếu không nạp lại từ DB, hệ thống sẽ lưu lại toàn bộ nến cũ.
     """
-    logger.info("[INIT] Loading watermarks from staging tables...")
+    logger.info("[INIT] Loading watermarks from DWH.Fact_OHLCV...")
     loaded = 0
     try:
         conn   = get_connection()
         cursor = conn.cursor()
 
-        # Duyệt qua từng TF và bảng staging tương ứng
-        for tf_code, staging_table in TF_STAGING.items():
-            try:
-                # Lấy timestamp nến cuối cùng của từng symbol trong bảng staging này
-                cursor.execute(
-                    f"SELECT SymbolID, MAX(BarTime) FROM {staging_table} GROUP BY SymbolID"
-                )
-                for symbol_id, max_bt in cursor.fetchall():
-                    if max_bt is not None:
-                        # Chuyển datetime sang Unix timestamp (số giây từ 1970)
-                        # để dễ so sánh hơn với timestamp từ TradingView
-                        _last_bar_ts[(symbol_id, tf_code)] = max_bt.timestamp()
-                        loaded += 1
-            except Exception as exc:
-                # Nếu bảng chưa tồn tại hoặc có lỗi → bỏ qua bảng đó, tiếp tục
-                logger.warning("[INIT] Watermark skipped for %s: %s", staging_table, exc)
+        # 1 query trên Fact_OHLCV thay vì 10 query riêng trên staging tables.
+        # Lý do: staging bị purge sau 7 ngày → watermark về 0 khi restart nếu dùng staging.
+        # Fact_OHLCV lưu vĩnh viễn nên watermark luôn chính xác dù restart bao nhiêu lần.
+        ws_tf_codes  = list(WS_TF_INTERVAL.keys())   # 10 TF trực tiếp WS cần theo dõi
+        placeholders = ",".join("?" * len(ws_tf_codes))
+        cursor.execute(f"""
+            SELECT f.SymbolID, tf.Code, MAX(f.BarTime)
+            FROM DWH.Fact_OHLCV f
+            JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID
+            WHERE tf.Code IN ({placeholders})
+            GROUP BY f.SymbolID, tf.Code
+        """, ws_tf_codes)
+        for symbol_id, tf_code, max_bt in cursor.fetchall():
+            if max_bt is not None:
+                # Chuyển datetime sang Unix timestamp (số giây từ 1970)
+                # để dễ so sánh hơn với timestamp từ TradingView
+                _last_bar_ts[(symbol_id, tf_code)] = max_bt.timestamp()
+                loaded += 1
 
         conn.close()
     except Exception as exc:
@@ -831,6 +395,30 @@ def _load_watermarks() -> None:
         logger.warning("[INIT] Watermark load failed (starting from zero): %s", exc)
 
     logger.info("[INIT] Watermarks loaded: %d entries.", loaded)
+
+    # Kiểm tra watermark cũ — cảnh báo nếu có cặp dữ liệu stale khi khởi động.
+    # Stale = khoảng trống > 3× chu kỳ TF (ví dụ: H1 stale nếu data cũ hơn 3 giờ).
+    # Cảnh báo này không chặn startup, chỉ nhắc operator cân nhắc chạy backfill trước.
+    from _helpers import TF_MINUTES  # import cục bộ tránh circular ở module level
+    now_ts = datetime.now(timezone.utc).timestamp()
+    stale = [
+        (sym_id, tf_code, (now_ts - wm_ts) / 60)
+        for (sym_id, tf_code), wm_ts in _last_bar_ts.items()
+        if (now_ts - wm_ts) / 60 > TF_MINUTES.get(tf_code, 60) * 3
+    ]
+    if stale:
+        worst = max(stale, key=lambda x: x[2])
+        logger.warning(
+            "[INIT] %d stale pair(s) detected on startup — worst: SymbolID=%d %s (%.0f min old). "
+            "Consider running 01_data_pipeline.py --mode gap before starting live.",
+            len(stale), worst[0], worst[1], worst[2],
+        )
+        _tg_alert(
+            "WARNING",
+            f"⚠️ Khởi động: phát hiện {len(stale)} cặp dữ liệu cũ!\n"
+            f"Tệ nhất: SymbolID={worst[0]} {worst[1]} ({worst[2]:.0f} phút cũ)\n"
+            f"Cân nhắc chạy backfill trước khi bật live."
+        )
 
 
 # =============================================================================
@@ -865,6 +453,81 @@ def _flush_overflow_to_queue() -> None:
         if recharged:
             logger.info("[DB ] Recharged %d bar(s) from overflow buffer.", recharged)
 
+    # Flush thêm từ SQLite spool khi queue còn chỗ
+    if not _db_queue.full():
+        _spool_flush_to_queue()
+
+
+# =============================================================================
+# DURABLE SPOOL — SQLite backup khi cả queue lẫn overflow RAM đều đầy
+# =============================================================================
+
+def _init_spool_db() -> None:
+    """
+    Tạo bảng spool trong SQLite local (tạo file nếu chưa có).
+    Gọi một lần khi khởi động. An toàn khi gọi nhiều lần (CREATE IF NOT EXISTS).
+    """
+    with _spool_lock:
+        with sqlite3.connect(_SPOOL_DB) as con:
+            con.execute("""
+                CREATE TABLE IF NOT EXISTS spool (
+                    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                    symbol_id     INTEGER NOT NULL,
+                    tf_code       TEXT    NOT NULL,
+                    staging_table TEXT    NOT NULL,
+                    tv_symbol     TEXT    NOT NULL,
+                    bar_data      BLOB    NOT NULL,
+                    created_at    TEXT    DEFAULT (datetime('now'))
+                )
+            """)
+            con.commit()
+    logger.info("[SPOOL] Persistent spool ready: %s", _SPOOL_DB)
+
+
+def _spool_write(item: tuple) -> None:
+    """
+    Serialize 1 bar và ghi vào SQLite spool.
+    Được gọi khi cả DB queue lẫn overflow buffer RAM đều đầy.
+    Bar sẽ được đọc lại và đưa vào queue khi có chỗ trống.
+    """
+    symbol_id, tf_code, staging_table, tv_symbol, df = item
+    blob = pickle.dumps(df)
+    with _spool_lock:
+        with sqlite3.connect(_SPOOL_DB) as con:
+            con.execute(
+                "INSERT INTO spool (symbol_id,tf_code,staging_table,tv_symbol,bar_data) VALUES (?,?,?,?,?)",
+                (symbol_id, tf_code, staging_table, tv_symbol, blob),
+            )
+            con.commit()
+
+
+def _spool_flush_to_queue() -> int:
+    """
+    Đọc các bar từ SQLite spool và đưa vào DB queue khi có chỗ trống.
+    Xóa khỏi SQLite sau khi đưa vào queue thành công.
+    Trả về số bar đã chuyển được.
+    """
+    flushed = 0
+    with _spool_lock:
+        with sqlite3.connect(_SPOOL_DB) as con:
+            rows = con.execute(
+                "SELECT id,symbol_id,tf_code,staging_table,tv_symbol,bar_data "
+                "FROM spool ORDER BY id LIMIT 200"
+            ).fetchall()
+            for row_id, sym_id, tf_code, stg_tbl, tv_sym, blob in rows:
+                try:
+                    df   = pickle.loads(blob)
+                    item = (sym_id, tf_code, stg_tbl, tv_sym, df)
+                    _db_queue.put_nowait(item)
+                    con.execute("DELETE FROM spool WHERE id=?", (row_id,))
+                    flushed += 1
+                except queue.Full:
+                    break  # Queue vẫn đầy → giữ lại phần còn trong SQLite
+            con.commit()
+    if flushed:
+        logger.info("[SPOOL] Recovered %d bar(s) from persistent spool.", flushed)
+    return flushed
+
 
 def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str) -> None:
     """
@@ -880,24 +543,48 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
     except queue.Full:
         # Hàng đợi đầy → chuyển sang overflow buffer
         with _overflow_lock:
-            if len(_overflow_buf) < OVERFLOW_BUFFER_MAX:
+            buf_len = len(_overflow_buf)
+            if buf_len < OVERFLOW_BUFFER_MAX:
                 _overflow_buf.append(item)
+                new_len = buf_len + 1
                 logger.warning(
                     "[G%d] Queue full — buffered: %s %s (overflow: %d)",
-                    group_id, tv_symbol, tf_code, len(_overflow_buf),
+                    group_id, tv_symbol, tf_code, new_len,
                 )
+                # Cảnh báo sớm khi buffer đạt 80% dung lượng (tránh mất dữ liệu)
+                warn_threshold = int(OVERFLOW_BUFFER_MAX * 0.8)
+                if new_len >= warn_threshold and buf_len < warn_threshold:
+                    logger.error(
+                        "[OVERFLOW] Buffer reaching capacity: %d/%d (80%%) — DB worker may be stuck",
+                        new_len, OVERFLOW_BUFFER_MAX,
+                    )
+                    _tg_alert(
+                        "WARNING",
+                        f"⚠️ Overflow buffer gần đầy: {new_len}/{OVERFLOW_BUFFER_MAX}\n"
+                        f"DB worker có thể bị chậm. Kiểm tra kết nối DB."
+                    )
             else:
-                # Cả queue lẫn overflow đều đầy → nến bị mất
-                # Đây là tình huống nghiêm trọng cần kiểm tra ngay
-                logger.error("[G%d] Queue + overflow full — bar DROPPED: %s %s", group_id, tv_symbol, tf_code)
-                _tg_alert(
-                    "ERROR",
-                    f"Queue và overflow buffer đều đầy!\n"
-                    f"Nến bị mất: {tv_symbol} {tf_code}\n"
-                    f"Kiểm tra DB worker ngay."
-                )
-                with _state_lock:
-                    _stats["errors"] += 1
+                # Cả queue lẫn overflow RAM đều đầy → ghi vào SQLite spool (durable)
+                try:
+                    _spool_write(item)
+                    logger.warning(
+                        "[G%d] Queue+overflow full — spooled to disk: %s %s",
+                        group_id, tv_symbol, tf_code,
+                    )
+                except Exception as exc:
+                    # SQLite cũng fail → chỉ khi đĩa đầy hoặc quyền ghi bị chặn
+                    logger.error(
+                        "[G%d] Spool write FAILED — bar DROPPED: %s %s: %s",
+                        group_id, tv_symbol, tf_code, exc,
+                    )
+                    _tg_alert(
+                        "ERROR",
+                        f"Queue, overflow và SQLite spool đều thất bại!\n"
+                        f"Nến bị mất: {tv_symbol} {tf_code}\n"
+                        f"Kiểm tra DB worker và dung lượng đĩa ngay."
+                    )
+                    with _state_lock:
+                        _stats["errors"] += 1
 
 
 # =============================================================================
@@ -957,17 +644,12 @@ def _db_worker() -> None:
                 with _state_lock:
                     _stats["errors"] += 1
 
-            # BƯỚC C: Nếu TF vừa cập nhật là nguồn của TF phái sinh → tính lại TF phái sinh
-            # Ví dụ: M5 vừa có nến mới → tự động tính lại M10 (vì M10 = gộp 2 nến M5)
+            # BƯỚC C: Thêm vào _pending_agg thay vì tính ngay
+            # Tránh gọi run_etl_aggregate per-bar — flush khi queue tạm rỗng
+            # Lợi ích: nếu backlog gửi nhiều bars M5 cùng lúc, M10/M20 chỉ tính 1 lần
             if staging_table in _SOURCE_TO_COMPUTED:
                 for target_tf, src_table in _SOURCE_TO_COMPUTED[staging_table]:
-                    try:
-                        run_etl_aggregate(symbol_id, target_tf, src_table)
-                        logger.info("[DB ] %s → computed %s.", tv_symbol, target_tf)
-                    except Exception as exc:
-                        logger.error("[DB ] ETL aggregate error — %s %s: %s", tv_symbol, target_tf, exc)
-                        with _state_lock:
-                            _stats["errors"] += 1
+                    _pending_agg.add((symbol_id, target_tf, src_table, tv_symbol))
 
         # Báo cho queue biết đã xử lý xong item này (cần thiết cho queue.join())
         _db_queue.task_done()
@@ -975,6 +657,29 @@ def _db_worker() -> None:
         # Cập nhật thống kê số lượng nến còn đang chờ trong queue
         with _state_lock:
             _stats["queue_depth"] = _db_queue.qsize()
+
+        # Flush aggregates khi queue tạm rỗng — gộp tất cả cùng symbol/TF lại
+        if _pending_agg and _db_queue.empty():
+            for sym_id, tgt_tf, src_tbl, sym_name in list(_pending_agg):
+                try:
+                    run_etl_aggregate(sym_id, tgt_tf, src_tbl)
+                    logger.info("[DB ] %s → computed %s.", sym_name, tgt_tf)
+                except Exception as exc:
+                    logger.error("[DB ] ETL aggregate error — %s %s: %s", sym_name, tgt_tf, exc)
+                    with _state_lock:
+                        _stats["errors"] += 1
+            _pending_agg.clear()
+
+    # Flush các aggregate còn lại trước khi tắt (queue đã rỗng nhưng pending chưa chạy)
+    if _pending_agg:
+        logger.info("[DB ] Flushing %d pending aggregate(s) before shutdown...", len(_pending_agg))
+        for sym_id, tgt_tf, src_tbl, sym_name in list(_pending_agg):
+            try:
+                run_etl_aggregate(sym_id, tgt_tf, src_tbl)
+            except Exception as exc:
+                logger.error("[DB ] ETL aggregate error (shutdown flush) — %s %s: %s",
+                             sym_name, tgt_tf, exc)
+        _pending_agg.clear()
 
     logger.info("[DB ] Worker stopped.")
 
@@ -1195,6 +900,15 @@ class BatchFetcher:
         # Đếm số nến thực sự mới (chưa có trong DB) nhận được trong batch này
         self._new_bars_count = 0
 
+        # Số nến mới per cặp (symbol_id, tf_code) — dùng để in bảng tóm tắt cuối batch
+        self._pair_new_bars: dict[tuple[int, str], int] = {}
+
+        # Flag: True khi _on_open đang trong vòng đăng ký chart sessions
+        # Mục đích: chặn _on_message kích hoạt _done.set() sớm khi _expected chưa đầy đủ
+        # (Race condition: TV có thể gửi data về ngay session đầu tiên, trước khi
+        #  các session còn lại được đăng ký xong)
+        self._registering: bool = False
+
         # Event dùng để báo hiệu batch đã hoàn thành (nhận đủ data hoặc timeout)
         self._done     = threading.Event()
 
@@ -1219,7 +933,7 @@ class BatchFetcher:
                         "AppleWebKit/537.36 (KHTML, like Gecko) "
                         "Chrome/124.0.0.0 Safari/537.36",  # Giả lập Chrome 124
         ]
-        active_cookie = _tv_cookie or TV_COOKIE   # Ưu tiên cookie đã được refresh
+        active_cookie = _tv_auth._tv_cookie   # Ưu tiên cookie đã được refresh (từ _tv_auth)
         if active_cookie:
             # Đính kèm cookie để TradingView nhận ra đây là tài khoản Premium
             headers.append(f"Cookie: {active_cookie}")
@@ -1270,7 +984,7 @@ class BatchFetcher:
 
         # BƯỚC 1: Xác thực kết nối bằng auth token
         try:
-            _send(ws, ["set_auth_token", _auth_token])
+            _send(ws, ["set_auth_token", _tv_auth._auth_token])
         except Exception as exc:
             logger.warning("[G%d] Auth send failed: %s", self.group_id, exc)
             self._done.set()
@@ -1280,10 +994,17 @@ class BatchFetcher:
         time.sleep(0.5)
 
         # BƯỚC 2: Lặp qua từng symbol và từng TF để đăng ký chart session
+        # Đặt cờ _registering TRƯỚC khi bắt đầu vòng lặp để ngăn _on_message
+        # kích hoạt _done.set() sớm khi _expected chưa đầy đủ (race condition)
+        with self._lock:
+            self._registering = True
+
         for sym in self.symbols:
             for tf_code, interval in WS_TF_INTERVAL.items():
                 # Kiểm tra điều kiện dừng giữa chừng
                 if _shutdown.is_set() or not _ws_alive():
+                    with self._lock:
+                        self._registering = False
                     self._done.set()
                     return
 
@@ -1305,10 +1026,15 @@ class BatchFetcher:
                     _send(ws, ["resolve_symbol", cs, "sds_sym_1", f"={sym_json}"])
                     time.sleep(0.1)
 
-                    # Lệnh 3: Yêu cầu TradingView gửi N_BARS_WS nến mới nhất
-                    # "sds_1" là tên series — TradingView sẽ gửi data với ID này
+                    # Lệnh 3: Yêu cầu TradingView gửi nến mới nhất
+                    # Nếu cặp đang trong backlog (đã miss ≥1 batch) → yêu cầu nhiều hơn
+                    # để lấp khoảng trống dữ liệu bị thiếu; ngược lại chỉ cần N_BARS_WS
+                    with _backlog_lock:
+                        n_req = (N_BARS_WS_BACKLOG
+                                 if (sym["symbol_id"], tf_code) in _backlog
+                                 else N_BARS_WS)
                     _send(ws, ["create_series", cs, "sds_1", "sds_sym_1",
-                               "sds_sym_1", interval, N_BARS_WS, ""])
+                               "sds_sym_1", interval, n_req, ""])
 
                     # Lưu ánh xạ: session ID → thông tin symbol/TF
                     self._cs_map[cs] = (sym["symbol_id"], tf_code, staging_table, sym["tv_symbol"])
@@ -1322,8 +1048,27 @@ class BatchFetcher:
 
                 except Exception as exc:
                     logger.warning("[G%d] Session register error: %s", self.group_id, exc)
+                    with self._lock:
+                        self._registering = False
                     self._done.set()
                     return
+
+        # Đăng ký xong → tắt cờ và kiểm tra completion ngay
+        # (phòng trường hợp tất cả sessions đã nhận data trong khi đang đăng ký)
+        with self._lock:
+            self._registering = False
+            already_done = self._expected and self._received >= self._expected
+
+        if already_done:
+            logger.info(
+                "[G%d] All %d sessions received (post-registration check) — closing.",
+                self.group_id, len(self._expected),
+            )
+            self._done.set()
+            try:
+                ws.close()
+            except Exception:
+                pass
 
         # Log tóm tắt sau khi đăng ký xong tất cả sessions
         sym_names = ", ".join(s["tv_symbol"] for s in self.symbols)
@@ -1369,7 +1114,7 @@ class BatchFetcher:
             if _is_token_error(msg_type, data):
                 logger.warning("[G%d] Auth error detected — triggering token renewal.", self.group_id)
                 # Reset token về chuỗi đặc biệt để báo hiệu cần gia hạn
-                globals()["_auth_token"] = "unauthorized_user_token"
+                _tv_auth.set_current_token(_tv_auth.GUEST_TOKEN)
                 # Khởi động gia hạn token trong thread riêng (không block WS)
                 threading.Thread(target=_renew_auth_token, daemon=True).start()
                 self._done.set()
@@ -1435,16 +1180,19 @@ class BatchFetcher:
                     # Chuyển danh sách nến thành DataFrame
                     df = _bars_to_df(new_bars)
                     if not df.empty:
-                        # Cập nhật watermark: timestamp của nến mới nhất vừa lấy được
-                        with _state_lock:
-                            _last_bar_ts[key] = new_bars[-1]["v"][0]
-
-                        # Đưa vào hàng đợi để DB worker ghi vào database
+                        # Đưa vào hàng đợi TRƯỚC — đảm bảo bar được accept vào
+                        # queue/overflow/spool trước khi watermark nhảy lên.
+                        # Tránh tình huống watermark advance nhưng bar chưa persist.
                         item = (symbol_id, tf_code, staging_table, tv_symbol, df)
                         _enqueue_or_buffer(item, self.group_id, tv_symbol, tf_code)
 
+                        # Cập nhật watermark SAU khi bar đã được accept
+                        with _state_lock:
+                            _last_bar_ts[key] = new_bars[-1]["v"][0]
+
                         with self._lock:
                             self._new_bars_count += len(new_bars)
+                            self._pair_new_bars[(symbol_id, tf_code)] = len(new_bars)
                         _new_count = len(new_bars)
 
                         with _state_lock:
@@ -1458,7 +1206,9 @@ class BatchFetcher:
 
         # Kiểm tra điều kiện hoàn thành: đã nhận đủ data từ tất cả sessions chưa?
         with self._lock:
-            if self._expected and self._received >= self._expected:
+            # Guard: không đóng WS khi _on_open vẫn đang đăng ký sessions
+            # (_expected chưa đầy đủ → so sánh sẽ cho kết quả sai)
+            if not self._registering and self._expected and self._received >= self._expected:
                 # Tất cả sessions đều đã gửi data → đóng WS sớm, không cần chờ timeout
                 logger.info("[G%d] All %d sessions received — closing.", self.group_id, len(self._expected))
                 self._done.set()
@@ -1493,6 +1243,7 @@ class BatchFetcher:
         # Reset trạng thái từ batch trước
         self._done.clear()
         self._new_bars_count = 0
+        self._pair_new_bars.clear()
 
         # Tạo URL kết nối với timestamp hiện tại (TradingView yêu cầu tham số date)
         ts  = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
@@ -1544,13 +1295,6 @@ class BatchFetcher:
         ws_thread.join(timeout=5)
         self._ws = None  # Xóa tham chiếu để tránh memory leak
 
-        # Log tóm tắt batch: nhận được bao nhiêu session, có bao nhiêu nến mới
-        sym_names = ", ".join(s["tv_symbol"] for s in self.symbols)
-        logger.info(
-            "[G%d] Batch done — sessions=%d/%d  new_bars=%d | Symbols: [%s]",
-            self.group_id, len(self._received), len(self._expected), self._new_bars_count, sym_names,
-        )
-
         # ─── BACKFILL SAFETY: cập nhật bộ đếm miss ──────────────────────────────
         # Tính tập hợp (symbol_id, tf_code) đã nhận và bị miss trong batch này
         # Snapshot _cs_map ngay tại đây — tránh race nếu thread khác đang reset
@@ -1565,12 +1309,100 @@ class BatchFetcher:
             for cs in (self._expected - self._received)
             if cs in cs_map_snapshot
         }
-        if missed_pairs:
-            logger.warning(
-                "[G%d] %d pair(s) missed this batch — tracking for backfill safety.",
-                self.group_id, len(missed_pairs),
-            )
         _update_missed_pairs(received_pairs, missed_pairs)
+
+        # ─── BACKLOG: ghi nhớ pair bị miss, yêu cầu nhiều bars hơn ở batch tiếp theo ─
+        _sym_name = {s["symbol_id"]: s["tv_symbol"] for s in WS_SYMBOLS}
+        with _backlog_lock:
+            # Cặp đã nhận được data → xóa khỏi backlog (không cần retry nữa)
+            for pair in received_pairs:
+                if pair in _backlog:
+                    logger.info("[BACKLOG] %s [%s] data recovered — removed from backlog.",
+                                _sym_name.get(pair[0], str(pair[0])), pair[1])
+                _backlog.pop(pair, None)
+            # Cặp bị miss lần này → thêm/tăng counter trong backlog
+            for pair in missed_pairs:
+                count = _backlog.get(pair, 0) + 1
+                if count <= MAX_BACKLOG_BATCHES:
+                    _backlog[pair] = count
+                    logger.info("[BACKLOG] %s [%s] miss #%d — next batch requests %d bars.",
+                                _sym_name.get(pair[0], str(pair[0])), pair[1],
+                                count, N_BARS_WS_BACKLOG)
+                    logger.info("[AUDIT] miss sym=%s tf=%s count=%d",
+                                _sym_name.get(pair[0], str(pair[0])), pair[1], count)
+                else:
+                    # Đã miss quá nhiều lần liên tiếp → khoảng trống có thể là vĩnh viễn
+                    logger.error(
+                        "[BACKLOG] %s [%s] missed %d batches in a row — data gap permanent, removing from backlog.",
+                        _sym_name.get(pair[0], str(pair[0])), pair[1], count,
+                    )
+                    _tg_alert(
+                        "ERROR",
+                        f"Data gap vinh vien: {_sym_name.get(pair[0], str(pair[0]))} [{pair[1]}]\n"
+                        f"Da miss {count} batch lien tiep (~{count * 5} phut).\n"
+                        f"Chay 02_gap_fill.py de khoi phuc thu cong."
+                    )
+                    _backlog.pop(pair, None)
+
+        # ─── BẢNG TÓM TẮT BATCH ─────────────────────────────────────────────────
+        # Xây dựng danh sách tất cả (symbol, TF) trong nhóm này theo thứ tự đã đăng ký
+        # rồi in thành bảng: Symbol | TF | New bars | Latest bar | Status
+        with _backlog_lock:
+            backlog_snap = dict(_backlog)
+
+        pair_new_bars_snap: dict[tuple[int, str], int]
+        with self._lock:
+            pair_new_bars_snap = dict(self._pair_new_bars)
+
+        # Thu thập tất cả cặp (symbol_id, tf_code, tv_symbol) theo cs_map
+        all_pairs = []
+        seen: set[tuple[int, str]] = set()
+        for cs, (sym_id, tf_code, _, tv_sym) in cs_map_snapshot.items():
+            key = (sym_id, tf_code)
+            if key not in seen:
+                seen.add(key)
+                all_pairs.append((sym_id, tf_code, tv_sym))
+        # Sắp xếp: symbol trước, TF sau
+        all_pairs.sort(key=lambda x: (x[2], x[1]))
+
+        hdr = f"[G{self.group_id}] {'Symbol':<14} {'TF':<5} {'New':>4}  {'Latest bar UTC':<20}  Status"
+        sep = f"[G{self.group_id}] " + "-" * (len(hdr) - len(f"[G{self.group_id}] "))
+        logger.info(sep)
+        logger.info(hdr)
+        logger.info(sep)
+        for sym_id, tf_code, tv_sym in all_pairs:
+            key = (sym_id, tf_code)
+            new_bars = pair_new_bars_snap.get(key, 0)
+            with _state_lock:
+                wm_ts = _last_bar_ts.get(key)
+            if wm_ts:
+                latest = datetime.utcfromtimestamp(wm_ts).strftime("%Y-%m-%d %H:%M")
+            else:
+                latest = "—"
+            if key in missed_pairs:
+                miss_count = backlog_snap.get(key, 1)
+                status = f"MISS #{miss_count} -> retry {N_BARS_WS_BACKLOG}bars"
+            elif new_bars > 0:
+                status = f"OK  +{new_bars} bar{'s' if new_bars > 1 else ''}"
+            else:
+                status = "ok  (stale)"
+            logger.info(
+                "[G%d] %-14s %-5s %4d  %-20s  %s",
+                self.group_id, tv_sym, tf_code, new_bars, latest, status,
+            )
+        logger.info(sep)
+        logger.info(
+            "[G%d] sessions=%d/%d  new_bars=%d  missed=%d",
+            self.group_id, len(self._received), len(self._expected),
+            self._new_bars_count, len(missed_pairs),
+        )
+        logger.info(
+            "[AUDIT] G%d sessions=%d/%d new_bars=%d missed=%d ts=%s",
+            self.group_id, len(self._received), len(self._expected),
+            self._new_bars_count, len(missed_pairs),
+            datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M"),
+        )
+        logger.info(sep)
 
         return completed
 
@@ -1578,6 +1410,31 @@ class BatchFetcher:
 # =============================================================================
 # BATCH RUNNER — Chạy tất cả nhóm song song với cơ chế retry
 # =============================================================================
+
+def _update_guest_mode_counter(is_guest: bool) -> None:
+    """
+    Theo dõi số batch liên tiếp đang chạy ở guest mode.
+    Gửi cảnh báo nặng hơn khi vượt ngưỡng _GUEST_ALERT_THRESHOLD.
+    Reset về 0 khi auth phục hồi.
+    """
+    global _consecutive_guest_batches
+    if is_guest:
+        _consecutive_guest_batches += 1
+        if _consecutive_guest_batches >= _GUEST_ALERT_THRESHOLD:
+            logger.error(
+                "[AUTH] Guest mode for %d consecutive batch(es) — data quality degraded!",
+                _consecutive_guest_batches,
+            )
+            _tg_alert(
+                "WARNING",
+                f"⚠️ Đang ở GUEST MODE {_consecutive_guest_batches} batch liên tiếp!\n"
+                f"Dữ liệu có thể bị giới hạn hoặc thiếu. Kiểm tra auth ngay."
+            )
+    else:
+        if _consecutive_guest_batches >= _GUEST_ALERT_THRESHOLD:
+            logger.info("[AUTH] Auth recovered after %d guest batch(es).", _consecutive_guest_batches)
+        _consecutive_guest_batches = 0
+
 
 def _run_batch(groups: list[BatchFetcher]) -> None:
     """
@@ -1587,6 +1444,11 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
         - Lần 2 thất bại → chờ 60 giây → thử lại
         - Lần 3 thất bại → bỏ qua, chờ batch tiếp theo
     """
+    # Kiểm tra auth mode ngay đầu batch — theo dõi prolonged guest mode
+    with _tv_auth._auth_lock:
+        is_guest = (_tv_auth._auth_token == _tv_auth.GUEST_TOKEN)
+    _update_guest_mode_counter(is_guest)
+
     batch_start = datetime.now().strftime("%H:%M:%S")
     logger.info("[SCHED] === Batch start %s — %d groups ===", batch_start, len(groups))
 
@@ -1630,7 +1492,29 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
     with _state_lock:
         _stats["batches_run"] += 1
 
-    logger.info("[SCHED] === Batch done — total batches: %d ===", _stats["batches_run"])
+    # Tổng bars mới toàn bộ batch (gộp tất cả group)
+    total_new = sum(g._new_bars_count for g in groups)
+
+    # Backlog summary: danh sách cặp đang chờ retry
+    _sym_name = {s["symbol_id"]: s["tv_symbol"] for s in WS_SYMBOLS}
+    with _backlog_lock:
+        backlog_snap = dict(_backlog)
+
+    logger.info("[SCHED] === Batch #%d done — new_bars=%d  backlog=%d ===",
+                _stats["batches_run"], total_new, len(backlog_snap))
+    logger.info(
+        "[AUDIT] batch=%d new_bars=%d backlog=%d ts=%s",
+        _stats["batches_run"], total_new, len(backlog_snap),
+        datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M"),
+    )
+    if backlog_snap:
+        entries = ", ".join(
+            f"{_sym_name.get(sid, str(sid))}/{tf}(#{cnt})"
+            for (sid, tf), cnt in sorted(backlog_snap.items(), key=lambda x: -x[1])
+        )
+        logger.info("[SCHED] Backlog retry next batch (%d bars each): %s", N_BARS_WS_BACKLOG, entries)
+    else:
+        logger.info("[SCHED] No backlog — all pairs OK this batch.")
 
 
 # =============================================================================
@@ -1665,6 +1549,7 @@ def _scheduler_loop(groups: list[BatchFetcher]) -> None:
     """
     # Chạy ngay 1 lần đầu khi khởi động để có data sớm nhất có thể
     if not _shutdown.is_set():
+        _check_and_maybe_refresh_token()
         _run_batch(groups)
 
     # Lặp vô hạn cho đến khi có lệnh tắt
@@ -1679,6 +1564,8 @@ def _scheduler_loop(groups: list[BatchFetcher]) -> None:
         if _shutdown.is_set():
             break  # Có lệnh tắt → thoát vòng lặp
 
+        # Kiểm tra và làm mới token chủ động trước mỗi batch
+        _check_and_maybe_refresh_token()
         _run_batch(groups)
 
 
@@ -1708,23 +1595,88 @@ def _status_reporter() -> None:
         with _missed_lock:
             n_miss_active = sum(1 for v in _missed_pairs.values() if v > 0)
 
+        # Freshness metrics: độ "tươi" của dữ liệu theo từng cặp (symbol, TF)
+        # Dùng dict() copy nhanh — GIL của Python đảm bảo an toàn cho thao tác này
+        from _helpers import TF_MINUTES as _TF_MIN
+        now_ts       = datetime.now(timezone.utc).timestamp()
+        wm_snapshot  = dict(_last_bar_ts)
+        stale_count  = 0
+        max_age_h    = 0.0
+        for (_, tf_code), wm_ts in wm_snapshot.items():
+            age_h = (now_ts - wm_ts) / 3600
+            if age_h > _TF_MIN.get(tf_code, 60) * 3 / 60:
+                stale_count += 1
+            if age_h > max_age_h:
+                max_age_h = age_h
+
+        # Đếm số bar trong SQLite spool
+        try:
+            with sqlite3.connect(_SPOOL_DB) as _con:
+                spool_count = _con.execute("SELECT COUNT(*) FROM spool").fetchone()[0]
+        except Exception:
+            spool_count = 0
+
         now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
-        # Ghi báo cáo vào file log
+        # ── Auth info ────────────────────────────────────────────────────────
+        with _tv_auth._auth_lock:
+            current_token = _tv_auth._auth_token
+        is_guest = (current_token == _tv_auth.GUEST_TOKEN)
+        token_secs = _jwt_expires_in(current_token)
+        if is_guest:
+            auth_info = f"Guest ({_consecutive_guest_batches} batch liên tiếp)"
+        elif token_secs > 0:
+            th = int(token_secs) // 3600
+            tm = (int(token_secs) % 3600) // 60
+            auth_info = f"Premium | Token còn: {th}h{tm:02d}m"
+        else:
+            auth_info = "Premium (token TTL không xác định)"
+
+        # ── Health level (GREEN / YELLOW / RED) ──────────────────────────────
+        if s["errors"] > 0 or stale_count > 3 or spool_count > 0:
+            health_level = "RED"
+            health_emoji = "🔴"
+        elif n_miss_active > 0 or stale_count > 0 or is_guest:
+            health_level = "YELLOW"
+            health_emoji = "🟡"
+        else:
+            health_level = "GREEN"
+            health_emoji = "🟢"
+
+        # ── Top issues (max 3) ───────────────────────────────────────────────
+        issues = []
+        if spool_count:
+            issues.append(f"Spool {spool_count} bars — DB worker chậm?")
+        if stale_count > 3:
+            issues.append(f"{stale_count} cặp dữ liệu stale (data cũ)")
+        if n_miss_active:
+            issues.append(f"{n_miss_active} cặp đang miss data")
+        if is_guest:
+            issues.append(f"Guest mode ({_consecutive_guest_batches} batch)")
+        elif stale_count:
+            issues.append(f"{stale_count} cặp stale")
+
+        # ── Ghi log ──────────────────────────────────────────────────────────
         logger.info(
-            "STATUS [%s]  bars=%d  errors=%d  events=%d  queue=%d  overflow=%d  batches=%d  miss_active=%d",
-            now, s["bars_inserted"], s["errors"], s["events"],
-            s["queue_depth"], overflow, s["batches_run"], n_miss_active,
+            "HEALTH [%s] %s  auth=%s  bars=%d  errors=%d  batches=%d  "
+            "queue=%d  overflow=%d  spool=%d  miss=%d  stale=%d  max_age=%.1fh",
+            now, health_level, auth_info,
+            s["bars_inserted"], s["errors"], s["batches_run"],
+            s["queue_depth"], overflow, spool_count,
+            n_miss_active, stale_count, max_age_h,
         )
 
-        # Gửi báo cáo lên Telegram (dạng HTML có emoji để dễ đọc)
+        # ── Gửi Telegram ─────────────────────────────────────────────────────
+        issues_text = ("\n".join(f"  ⚠️ {x}" for x in issues[:3])
+                       if issues else "  ✅ Không có vấn đề")
         _tg_send(
-            f"📊 <b>Báo cáo hệ thống</b> [{now}]\n"
-            f"✅ Nến đã lưu: {s['bars_inserted']}\n"
-            f"❌ Lỗi: {s['errors']}\n"
-            f"📥 Queue: {s['queue_depth']}  |  Buffer: {overflow}\n"
-            f"🔄 Batches: {s['batches_run']}\n"
-            + (f"⚠️ Cặp đang miss: {n_miss_active}" if n_miss_active else "✅ Không có miss")
+            f"{health_emoji} <b>Hệ thống {health_level}</b> [{now}]\n"
+            f"🔑 Auth: {auth_info}\n"
+            f"📊 Nến: {s['bars_inserted']}  |  Batches: {s['batches_run']}  |  Lỗi: {s['errors']}\n"
+            f"📥 Queue: {s['queue_depth']}  Buffer: {overflow}  Spool: {spool_count}\n"
+            f"⏱️ Data age max: {max_age_h:.1f}h  |  Stale: {stale_count}  Miss: {n_miss_active}\n"
+            f"{'─' * 30}\n"
+            f"{issues_text}"
         )
 
 
@@ -1779,19 +1731,24 @@ def main() -> None:
     # Nếu .env không có token hợp lệ → bootstrap tự động lấy token mới.
     # -----------------------------------------------------------------------
     print("\n[Step 1] Authenticating with TradingView...")
-    global _auth_token, _tv_cookie  # Khai báo global vì sẽ được cập nhật
+    # auth state managed by _tv_auth module
 
-    _creds_missing = not (TV_AUTH_TOKEN and TV_AUTH_TOKEN != "unauthorized_user_token")
-    if _creds_missing:
-        # Không có token tĩnh → bootstrap: thử session refresh → headless → HTTP POST
-        print("  [!] No valid static token in .env — bootstrapping credentials...")
-        _auth_token, token_source = _bootstrap_credentials()
+    # Ưu tiên: token cache > .env static > bootstrap
+    _cache_token = _tv_auth._load_token_cache().get("TV_AUTH_TOKEN", "")
+    _has_valid_token = (
+        (_cache_token and _cache_token != _tv_auth.GUEST_TOKEN)
+        or (TV_AUTH_TOKEN and TV_AUTH_TOKEN != _tv_auth.GUEST_TOKEN)
+    )
+    if not _has_valid_token:
+        # Không có token nào hợp lệ → bootstrap: thử session refresh → headless → HTTP POST
+        print("  [!] No valid token found — bootstrapping credentials...")
+        _tv_auth._auth_token, token_source = _bootstrap_credentials()
     else:
-        # Có token tĩnh → dùng luôn (fast path)
-        _auth_token, token_source = _resolve_auth_token()
+        # Có token (cache hoặc .env) → _resolve_auth_token sẽ chọn đúng lớp
+        _tv_auth._auth_token, token_source = _resolve_auth_token()
 
     print(f"  Token source   : {token_source}")
-    if _auth_token == "unauthorized_user_token":
+    if _tv_auth._auth_token == _tv_auth.GUEST_TOKEN:
         print("  [WARNING] Running as guest — data quality may be reduced.")
         _tg_alert("WARNING", "Khởi động với guest token — dữ liệu có thể bị giới hạn.")
 
@@ -1801,6 +1758,15 @@ def main() -> None:
     # -----------------------------------------------------------------------
     print("\n[Step 2] Loading watermarks...")
     _load_watermarks()
+
+    # -----------------------------------------------------------------------
+    # BƯỚC 2b: Khởi tạo SQLite spool và phục hồi bars từ lần chạy trước
+    # -----------------------------------------------------------------------
+    print("\n[Step 2b] Initializing persistent spool...")
+    _init_spool_db()
+    recovered = _spool_flush_to_queue()
+    if recovered:
+        print(f"  [*] Recovered {recovered} bar(s) from previous run spool.")
 
     # -----------------------------------------------------------------------
     # BƯỚC 3: Tạo các nhóm BatchFetcher
@@ -1840,8 +1806,13 @@ def main() -> None:
         "INFO",
         f"🚀 Hệ thống đã khởi động (V5 — Batch Mode)\n"
         f"Symbols: {len(SYMBOLS)}  |  TFs: {len(WS_TF_INTERVAL)}\n"
-        f"Connections: {n_groups}  |  Interval: {BATCH_INTERVAL_MIN}min  |  Auth: {token_source}"
+        f"Connections: {n_groups}  |  Interval: {BATCH_INTERVAL_MIN}min  |  Auth: {token_source}\n"
+        f"🤖 Bot lệnh: gõ /help trong Telegram để điều khiển"
     )
+
+    # Khởi động bot command listener (lắng nghe /fix, /status, /pipeline)
+    start_bot_listener()
+    logger.info("[Bot] Telegram command listener started.")
 
     print("[Running] Press Ctrl+C to stop.\n")
 

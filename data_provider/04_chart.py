@@ -175,8 +175,8 @@ if __name__ == "__main__":
     print("  Database : OK")
 
     print(f"\nReady!")
-    print(f"  → Mở trình duyệt: http://127.0.0.1:{PORT}")
-    print(f"  → Dừng server   : Ctrl+C\n")
+    print(f"  -> Mo trinh duyet: http://127.0.0.1:{PORT}")
+    print(f"  -> Dung server   : Ctrl+C\n")
 
     # debug=False để không chạy reloader (không cần trong môi trường production)
     app.run(debug=False, host="127.0.0.1", port=PORT, use_reloader=False)

@@ -81,11 +81,14 @@ from _helpers import (
     calc_gap_n_bars,  # Hàm tính số bar cần kéo dựa trên khoảng thời gian bị thiếu
     fmt_gap,  # Hàm định dạng khoảng thời gian thiếu thành chuỗi dễ đọc (ví dụ: "2d 3h")
     now_utc,  # Hàm trả về thời điểm hiện tại theo múi giờ UTC (không có timezone info)
-    pull_and_store,  # Hàm chính: kéo dữ liệu từ TradingView và lưu vào DB
+    pull_with_retry,  # Kéo dữ liệu từ TradingView, tự retry tối đa 3 lần khi fail
     recompute_derived,  # Hàm tính lại tất cả TF phái sinh cho các symbol vừa được cập nhật
     setup_logger,  # Tạo logger để ghi log ra file và console
     sleep_for,  # Hàm tạm dừng giữa các request để tránh bị TradingView rate-limit
+    trading_hours_in_gap,  # Tính giờ trading thực (trừ Sat/Sun) trong một khoảng thời gian
 )
+from _tg import tg_alert, tg_flush  # Gửi thông báo kết quả pipeline lên Telegram
+from _tv_auth import get_valid_tv_connection, refresh_mid_run  # Auth module dùng chung
 
 from config import (
     COMPUTED_TIMEFRAMES,  # Danh sách cặp (TF đích, bảng nguồn) dùng để tính các TF phái sinh
@@ -97,7 +100,6 @@ from config import (
     WEEKEND_CLOSED,  # Danh sách loại tài sản đóng cửa cuối tuần (cổ phiếu, forex, v.v.)
     get_historical_timeframes,  # Hàm trả về danh sách TF cần kéo khi chạy full load (kèm số bar cần lấy)
     get_tf_interval_map,  # Hàm trả về bảng ánh xạ TF → interval dùng khi gọi API TradingView
-    get_tv_connection,  # Hàm tạo kết nối đến TradingView
 )
 
 # Nhập các hàm thao tác cơ sở dữ liệu từ file db_connector.py
@@ -224,8 +226,8 @@ def run_full_load(tv, dry_run: bool = False) -> int:
                   end="", flush=True)
 
             # Thực hiện kéo dữ liệu từ TradingView và lưu vào DB staging
-            # Trả về số bar đã lưu (≥0 = thành công, <0 = lỗi)
-            result = pull_and_store(tv, sym, tf_code, n_bars, interval, logger)
+            # Tự retry tối đa 3 lần (backoff 10s → 30s → 60s) nếu TV trả về lỗi hoặc rỗng
+            result = pull_with_retry(tv, sym, tf_code, n_bars, interval, logger)
 
             if result >= 0:
                 ok += 1
@@ -309,9 +311,6 @@ def find_stale_pairs(latest: dict) -> list:
     # Lấy thời điểm hiện tại theo UTC (không có timezone info để tiện so sánh)
     now     = now_utc()
 
-    # Lấy ngày trong tuần (0=Thứ Hai, 5=Thứ Bảy, 6=Chủ Nhật)
-    weekday = now.weekday()
-
     # Danh sách kết quả: các cặp cần được cập nhật
     stale   = []
 
@@ -349,21 +348,20 @@ def find_stale_pairs(latest: dict) -> list:
             gap_min   = (now - last_bar).total_seconds() / 60
             gap_hours = gap_min / 60
 
-            # --- XỬ LÝ GÓC CUỐI TUẦN ---
-            # Với các thị trường đóng cửa cuối tuần (forex, stock, v.v.):
-            # Gap thực sự cần trừ đi số giờ thị trường đóng cửa,
-            # vì không có nến mới trong thời gian đó là chuyện bình thường.
-            if asset_type in WEEKEND_CLOSED and weekday >= 5:
-                # Tính số giờ thị trường đã đóng kể từ 00:00 thứ Sáu
-                weekend_hours = (weekday - 4) * 24 + now.hour
-                # Trừ đi số giờ đóng cửa cuối tuần (không để âm)
-                gap_hours = max(0.0, gap_hours - weekend_hours)
-                gap_min   = gap_hours * 60
-
             # --- TRƯỜNG HỢP 2: Dữ liệu còn mới, không cần cập nhật ---
-            # Ngưỡng: gap ≤ 2 lần độ dài TF → bỏ qua
-            if gap_min <= tf_mins * 2:
-                continue
+            if asset_type in WEEKEND_CLOSED:
+                # Tính giờ trading thực (bỏ Sat/Sun) để tránh false positive khi
+                # pipeline chạy đầu tuần — gap Fri→Mon trông như 72h nhưng thực ra
+                # chỉ có vài giờ trading (thị trường chưa mở lại đủ 2 TF periods).
+                trading_h   = trading_hours_in_gap(last_bar, now)
+                # W bar = 5 ngày trading × 24h = 120h (khác 7×24=168h lịch)
+                threshold_h = (5 * 24.0 if tf_code == "W" else tf_mins / 60.0) * 2
+                if trading_h <= threshold_h:
+                    continue
+            else:
+                # Crypto và các asset giao dịch 24/7: dùng gap lịch thông thường
+                if gap_min <= tf_mins * 2:
+                    continue
 
             # --- TRƯỜNG HỢP 3: Dữ liệu cũ, cần bù thêm ---
             # Tính số bar cần kéo dựa trên khoảng thời gian bị thiếu
@@ -414,7 +412,8 @@ def run_backfill(tv, dry_run: bool = False) -> int:
     # Nếu tất cả đều mới → không cần làm gì, thoát sớm
     if not stale:
         logger.info("✓ All data is fresh — nothing to backfill.")
-        return 0
+        return {"fail": 0, "ok": 0, "total": 0, "bars_inserted": 0,
+                "miss_count": 0, "fail_pairs": []}
 
     # Tách riêng hai loại vấn đề để in log rõ ràng hơn
     miss_  = [x for x in stale if x["reason"] == "MISS"]   # Hoàn toàn không có dữ liệu
@@ -439,7 +438,8 @@ def run_backfill(tv, dry_run: bool = False) -> int:
     # Nếu đang chạy dry-run: in xong thì dừng, không kéo dữ liệu
     if dry_run:
         logger.info("[DRY RUN] No changes made.")
-        return 0
+        return {"fail": 0, "ok": 0, "total": len(stale), "bars_inserted": 0,
+                "miss_count": len(miss_), "fail_pairs": []}
 
     # -----------------------------------------------------------------------
     # BƯỚC 3: Kéo dữ liệu bổ sung cho tất cả các cặp bị stale
@@ -448,14 +448,18 @@ def run_backfill(tv, dry_run: bool = False) -> int:
     # Lấy bảng ánh xạ TF → interval (cần để gọi đúng API TradingView)
     TF_INTERVAL     = get_tf_interval_map()
 
-    # Bộ đếm thành công/thất bại
-    ok = fail       = 0
+    # Bộ đếm thành công/thất bại/bars mới
+    ok = fail = bars_inserted = 0
+    fail_pairs: list = []
 
     # Tập hợp symbol_id đã được cập nhật (cần để tính lại TF phái sinh sau)
     updated_sym_ids: set = set()
 
     # Biến ghi nhớ symbol trước để in dòng phân cách khi đổi symbol mới
     prev_sym        = None
+
+    # Đếm failures liên tiếp để phát hiện auth expired giữa chừng
+    consecutive_fail = 0
 
     # Lặp qua từng cặp cần cập nhật
     for i, item in enumerate(stale, 1):
@@ -477,18 +481,29 @@ def run_backfill(tv, dry_run: bool = False) -> int:
               end="  ", flush=True)
 
         # Thực hiện kéo và lưu dữ liệu
-        result = pull_and_store(tv, sym, tf_code, n_bars,
-                                TF_INTERVAL[tf_code], logger)
+        # Tự retry tối đa 3 lần (backoff 10s → 30s → 60s) nếu TV trả về lỗi hoặc rỗng
+        result = pull_with_retry(tv, sym, tf_code, n_bars,
+                                 TF_INTERVAL[tf_code], logger)
 
         if result >= 0:
             ok += 1
+            consecutive_fail = 0
+            bars_inserted += result  # result = số bar thực tế được thêm vào DB
             # Chỉ đánh dấu cần tính lại TF phái sinh nếu thực sự có bar mới (result > 0)
             if result > 0:
                 updated_sym_ids.add(sym["symbol_id"])
             print("✓")
         else:
             fail += 1
+            consecutive_fail += 1
+            fail_pairs.append(f"{sym['tv_symbol']} {tf_code}")
             print("✗")
+
+            # 3+ failures liên tiếp → nghi ngờ token hết hạn → thử refresh
+            if consecutive_fail == 3:
+                logger.warning("[AUTH] %d consecutive failures — trying mid-run token refresh...", consecutive_fail)
+                if refresh_mid_run(tv, logger):
+                    consecutive_fail = 0  # reset nếu refresh thành công
 
         # Nghỉ một chút trước khi gọi symbol tiếp theo (tránh rate limit)
         sleep_for(sym["tv_symbol"])
@@ -504,8 +519,15 @@ def run_backfill(tv, dry_run: bool = False) -> int:
         logger.info("Recomputing derived TFs...")
         recompute_derived(updated_sym_ids, logger)
 
-    # Trả về số lỗi (caller dùng để quyết định exit code)
-    return fail
+    # Trả về dict thống kê thay vì chỉ fail count
+    return {
+        "fail":          fail,
+        "ok":            ok,
+        "total":         len(stale),
+        "bars_inserted": bars_inserted,
+        "miss_count":    len(miss_),
+        "fail_pairs":    fail_pairs,
+    }
 
 
 # =============================================================================
@@ -559,7 +581,18 @@ def main() -> int:
     if not test_connection():
         # Không kết nối được DB → lỗi nghiêm trọng → thoát với exit code 1
         logger.error("ABORT: Cannot reach database.")
+        tg_alert("ERROR", "🚨 <b>Data Pipeline THẤT BẠI</b>\nKhông kết nối được SQL Server.\nKiểm tra dịch vụ database ngay.")
+        tg_flush()
         return 1
+
+    # Thông báo đã bắt đầu (gửi sau khi xác nhận DB OK để tránh noise khi DB lỗi)
+    dry_tag = " <i>[DRY RUN]</i>" if args.dry_run else ""
+    tg_alert(
+        "INFO",
+        f"🚀 <b>Data Pipeline KHỞI ĐỘNG</b>{dry_tag}\n"
+        f"📋 {len(SYMBOLS)} symbols × {len(DIRECT_TFS)} TF trực tiếp + {len(DERIVED_TFS)} TF phái sinh\n"
+        f"⏰ Bắt đầu: {started.strftime('%H:%M:%S')} UTC",
+    )
 
     # -----------------------------------------------------------------------
     # BƯỚC 1: Xác định chế độ chạy
@@ -580,9 +613,8 @@ def main() -> int:
     if not args.dry_run:
         logger.info("[Step 2] Connecting to TradingView...")
         try:
-            # get_tv_connection trả về cặp (tv_object, auth_mode)
-            # auth_mode có thể là "authenticated" hoặc "guest"
-            tv, auth_mode = get_tv_connection()
+            # get_valid_tv_connection: thử cache → .env token → cookie refresh → headless → guest
+            tv, auth_mode = get_valid_tv_connection(logger)
             logger.info("  [OK] Connected (%s).", auth_mode)
 
             # Cảnh báo nếu đang dùng tài khoản guest:
@@ -592,6 +624,7 @@ def main() -> int:
         except Exception as e:
             # Không kết nối được TradingView → không kéo được data → thoát
             logger.error("  TradingView connection failed: %s", e)
+            tg_alert("ERROR", f"🚨 <b>Data Pipeline THẤT BẠI</b>\nKhông kết nối được TradingView.\nLỗi: {e}")
             return 1
 
     # -----------------------------------------------------------------------
@@ -599,10 +632,15 @@ def main() -> int:
     # -----------------------------------------------------------------------
     if mode == "full":
         # Full load: kéo toàn bộ lịch sử (mất vài giờ, chỉ chạy lần đầu)
-        fail = run_full_load(tv, dry_run=args.dry_run)
+        raw = run_full_load(tv, dry_run=args.dry_run)
+        # run_full_load trả về int (số fail) — bọc thành dict để thống nhất
+        fail = raw if isinstance(raw, int) else raw.get("fail", 0)
+        run_stats = {"fail": fail, "ok": 0, "total": 0, "bars_inserted": 0,
+                     "miss_count": 0, "fail_pairs": []}
     else:
         # Backfill: chỉ bù phần thiếu (mất vài phút, chạy hàng ngày)
-        fail = run_backfill(tv, dry_run=args.dry_run)
+        run_stats = run_backfill(tv, dry_run=args.dry_run)
+        fail = run_stats["fail"]
 
     # -----------------------------------------------------------------------
     # BƯỚC 4: Dọn dẹp bảng staging
@@ -627,6 +665,58 @@ def main() -> int:
     logger.info("  DONE  |  mode=%s  |  %d failed  |  %.0fs elapsed",
                 mode.upper(), fail, elapsed)
     logger.info("=" * 65)
+
+    # -----------------------------------------------------------------------
+    # TELEGRAM: thông báo kết quả pipeline
+    # -----------------------------------------------------------------------
+    elapsed_str  = f"{int(elapsed // 60)}m {int(elapsed % 60)}s"
+    total_pairs  = run_stats["total"]
+    ok_pairs     = run_stats["ok"]
+    bars_new     = run_stats["bars_inserted"]
+    miss_count   = run_stats["miss_count"]
+    fail_pairs   = run_stats["fail_pairs"]
+    dry_tag      = " <i>[DRY RUN]</i>" if args.dry_run else ""
+
+    if fail == 0:
+        # Nội dung chi tiết khi thành công
+        if total_pairs == 0:
+            what_done = "Tất cả dữ liệu đã mới — không cần cập nhật."
+        else:
+            what_done = (f"📊 Pairs cập nhật: {ok_pairs:,}/{total_pairs:,}\n"
+                         f"📈 Bars mới thêm vào DB: {bars_new:,}")
+            if miss_count:
+                what_done += f"\n🔩 Pairs thiếu hoàn toàn đã vá: {miss_count}"
+        tg_alert(
+            "INFO",
+            f"✅ <b>Data Pipeline HOÀN TẤT</b> (chế độ: {mode.upper()}){dry_tag}\n"
+            f"{what_done}\n"
+            f"⏱ Thời gian chạy: {elapsed_str}\n"
+            f"─────────────────\n"
+            f"📌 <b>Tiếp theo:</b>\n"
+            f"  • ws_live đang giữ realtime (mỗi 5 phút)\n"
+            f"  • gap_fill chạy thứ Hai để vá lỗ hổng tuần\n"
+            f"  • reconcile kiểm tra chất lượng hàng ngày",
+        )
+    else:
+        # Liệt kê tối đa 5 cặp bị lỗi
+        fail_list = "\n".join(f"  ❌ {p}" for p in fail_pairs[:5])
+        if len(fail_pairs) > 5:
+            fail_list += f"\n  ... và {len(fail_pairs) - 5} cặp khác"
+        tg_alert(
+            "WARNING",
+            f"⚠️ <b>Data Pipeline HOÀN TẤT (có lỗi)</b> (chế độ: {mode.upper()})\n"
+            f"📊 Pairs: {ok_pairs:,} OK / {fail:,} thất bại\n"
+            f"📈 Bars mới thêm vào DB: {bars_new:,}\n"
+            f"─────────────────\n"
+            f"<b>Cặp bị lỗi:</b>\n{fail_list}\n"
+            f"─────────────────\n"
+            f"⏱ Thời gian chạy: {elapsed_str}\n"
+            f"🔧 <b>Kế hoạch sửa:</b>\n"
+            f"  • Hệ thống tự vá qua gap_fill vào thứ Hai\n"
+            f"  • Hoặc chạy ngay: <code>python 02_gap_fill.py</code>",
+        )
+
+    tg_flush()  # Đảm bảo tin Telegram được gửi trước khi process thoát
 
     # Quyết định exit code dựa trên số lỗi
     if fail > 0:

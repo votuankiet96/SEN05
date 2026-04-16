@@ -1,5 +1,5 @@
 # =============================================================================
-# strategies/combo/core/metrics.py  —  Tính toán và báo cáo kết quả backtest
+# strategies/shared/metrics.py  —  Tính toán và báo cáo kết quả backtest
 # =============================================================================
 """Tính bộ chỉ số hiệu suất và in báo cáo từ kết quả backtest.
 
@@ -7,6 +7,8 @@ Các hàm chính:
 - _bars_per_year(): helper nội bộ, dùng để annualize Sharpe/Sortino.
 - calc_metrics()  : tính toàn bộ KPI từ trade log + equity curve.
 - in_bao_cao()    : in metrics dạng bảng ASCII ra console.
+
+Module này không phụ thuộc vào bất kỳ strategy cụ thể nào.
 """
 import numpy as np
 import pandas as pd
@@ -51,7 +53,7 @@ def calc_metrics(trades: list, eq_ts: pd.Series, tf_code: str = 'H4') -> dict:
 
     Returns
     -------
-    dict gồm toàn bộ metric cũ và bổ sung:
+    dict gồm toàn bộ metric:
     - sortino
     - recovery_factor
     - max_drawdown_usd

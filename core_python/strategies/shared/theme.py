@@ -1,7 +1,5 @@
 # =============================================================================
-# strategy/theme.py  —  Shared visual theme for Combo v2
-# Used by: 09_scanner_research.ipynb, 10_signal_dashboard.py,
-#          07_backtest.ipynb, 08_wf_optimizer.ipynb
+# strategies/shared/theme.py  —  Shared visual theme cho tất cả strategies
 # =============================================================================
 # HƯỚNG DẪN QUẢN TRỊ NHANH
 # Chỉ là giao diện hiển thị (màu sắc, định dạng số, kiểu bảng).
@@ -12,6 +10,7 @@
 # - Định dạng số hiển thị
 #
 # File này không ảnh hưởng đến logic chiến lược hay hành vi ghi dữ liệu DB.
+# Zero coupling với bất kỳ strategy cụ thể nào.
 
 """
 Kho cấu hình giao diện dùng chung cho dashboard/notebook.
@@ -19,9 +18,6 @@ Kho cấu hình giao diện dùng chung cho dashboard/notebook.
 Mục tiêu quản trị:
 - Màu sắc, format số, style bảng, style chart nằm cùng một nơi.
 - Khi muốn đổi giao diện, sửa tại file này để toàn hệ thống đồng bộ.
-
-Lưu ý:
-- File này không đổi logic vào lệnh hay kết quả backtest.
 """
 
 # ─────────────────────────────────────────────────────────────────────────────

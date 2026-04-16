@@ -78,6 +78,8 @@ from _helpers import (
     setup_logger,  # Tạo logger ghi ra console + file
     sleep_for,  # Nghỉ giữa các request TV (rate-limit: 5s hoặc 10s cho GOLD)
 )
+from _tg import tg_alert, tg_flush  # Gửi thông báo kết quả gap fill lên Telegram
+from _tv_auth import get_valid_tv_connection, refresh_mid_run  # Auth module dùng chung
 
 from config import (
     DERIVED_TFS,  # Các timeframe phái sinh (M10, M20, M90, H6, H8)
@@ -85,7 +87,6 @@ from config import (
     SYMBOLS,  # Danh sách tất cả symbol cần xử lý (HK50, GOLD, EURUSD...)
     TF_MINUTES,  # Map tf_code → số phút: "H1" → 60, "M15" → 15
     get_tf_interval_map,  # Map tf_code → interval object mà TV API cần
-    get_tv_connection,  # Hàm tạo kết nối đến TradingView
 )
 from modules.db_connector import find_price_spikes, test_connection
 
@@ -159,11 +160,12 @@ def run_gap_fill(tv, lookback_days: int, dry_run: bool = False) -> int:
     # -----------------------------------------------------------------------
     # BƯỚC 3: Lần lượt kéo dữ liệu từ TradingView cho từng hole
     # -----------------------------------------------------------------------
-    TF_INTERVAL     = get_tf_interval_map()  # Map: "H1" → Interval.in_1_hour, v.v.
-    ok = fail       = 0                      # Đếm số thành công / thất bại
-    updated_sym_ids: set = set()             # Tập symbol đã nhận bar mới (cần recompute)
-    newly_verified:  set = set()             # Tập cặp (sym_id, tf) xác nhận là market gap
-    prev_sym        = None                   # Theo dõi symbol trước để in tiêu đề nhóm
+    TF_INTERVAL      = get_tf_interval_map()  # Map: "H1" → Interval.in_1_hour, v.v.
+    ok = fail        = 0                      # Đếm số thành công / thất bại
+    updated_sym_ids: set = set()              # Tập symbol đã nhận bar mới (cần recompute)
+    newly_verified:  set = set()              # Tập (sym_id, tf, gap_start, gap_end) xác nhận là market gap
+    prev_sym         = None                   # Theo dõi symbol trước để in tiêu đề nhóm
+    consecutive_fail = 0                      # Đếm failures liên tiếp để phát hiện auth expired
 
     for i, item in enumerate(hole_items, 1):
         sym     = item["sym"]       # Thông tin symbol (id, tên TV, sàn, loại asset...)
@@ -204,6 +206,7 @@ def run_gap_fill(tv, lookback_days: int, dry_run: bool = False) -> int:
         if result >= 0:
             # Pull thành công (không lỗi)
             ok += 1
+            consecutive_fail = 0
             if result > 0:
                 # CÓ bar mới được thêm vào Fact → ghi nhận symbol cần recompute TF phái sinh
                 updated_sym_ids.add(sym["symbol_id"])
@@ -213,8 +216,9 @@ def run_gap_fill(tv, lookback_days: int, dry_run: bool = False) -> int:
                 # Các bar mới (nếu có) chỉ là bar trading gần đây, KHÔNG phải bar
                 # nằm trong khoảng hole lịch sử.
                 # → Xác nhận đây là MARKET GAP (thị trường đóng cửa / nghỉ lễ)
-                # → Lưu lại để lần chạy sau SKIP, không pull TV lãng phí.
-                newly_verified.add((sym["symbol_id"], tf_code))
+                # → Lưu gap windows cụ thể để lần chạy sau chỉ skip đúng khoảng đó.
+                for gs, ge in item.get("gap_windows", []):
+                    newly_verified.add((sym["symbol_id"], tf_code, gs, ge))
                 if result == 0:
                     print("○ market gap")
                 else:
@@ -230,7 +234,8 @@ def run_gap_fill(tv, lookback_days: int, dry_run: bool = False) -> int:
             gap_age_days = (now_utc() - item["last_bar"]).days
             if gap_age_days > 7:
                 ok += 1
-                newly_verified.add((sym["symbol_id"], tf_code))
+                for gs, ge in item.get("gap_windows", []):
+                    newly_verified.add((sym["symbol_id"], tf_code, gs, ge))
                 print("○ market gap (TV no data)")
             else:
                 fail += 1
@@ -239,7 +244,14 @@ def run_gap_fill(tv, lookback_days: int, dry_run: bool = False) -> int:
         else:
             # Lỗi kỹ thuật thật (exception, timeout...) → thử lại lần sau
             fail += 1
+            consecutive_fail += 1
             print("✗")
+
+            # 3+ failures liên tiếp → nghi ngờ token hết hạn → thử refresh
+            if consecutive_fail == 3:
+                logger.warning("[AUTH] %d consecutive failures — trying mid-run token refresh...", consecutive_fail)
+                if refresh_mid_run(tv, logger):
+                    consecutive_fail = 0  # reset nếu refresh thành công
 
         # Nghỉ giữa các request để tránh bị TradingView rate-limit
         # GOLD nghỉ 10s (API nặng hơn), các mã khác nghỉ 5s
@@ -250,12 +262,18 @@ def run_gap_fill(tv, lookback_days: int, dry_run: bool = False) -> int:
     # -----------------------------------------------------------------------
     # BƯỚC 4: Lưu market gap mới xác nhận vào file JSON
     # -----------------------------------------------------------------------
-    # Gộp market gap mới + cũ → ghi đè verified_market_gaps.json
-    # Lần chạy sau, Step 2 sẽ đọc file này và SKIP các cặp đã verified
+    # Gộp gap windows mới + cũ → ghi đè verified_market_gaps.json
+    # Lần chạy sau, find_hole_pairs() sẽ chỉ skip đúng gap window đã verified,
+    # không skip cả pair (tránh bỏ sót hole thật mới phát sinh).
     if newly_verified:
-        all_verified = verified_gaps | newly_verified
-        save_verified_gaps(all_verified, logger)
-        logger.info("%d HOLE pairs confirmed as market gaps (will skip next run).",
+        # Chuyển verified_gaps dict cũ về set windows để merge
+        all_windows: set = set()
+        for (sid, tfc), wlist in (verified_gaps or {}).items():
+            for gs, ge in wlist:
+                all_windows.add((sid, tfc, gs, ge))
+        all_windows |= newly_verified
+        save_verified_gaps(all_windows, logger)
+        logger.info("%d gap windows confirmed as market gaps (will skip next run).",
                     len(newly_verified))
 
     # -----------------------------------------------------------------------
@@ -647,7 +665,25 @@ def main() -> int:
     logger.info("[Step 0] Checking SQL Server connection...")
     if not test_connection():
         logger.error("ABORT: Cannot reach database.")
+        tg_alert("ERROR", "🚨 <b>Gap Fill THẤT BẠI</b>\nKhông kết nối được SQL Server.\nKiểm tra dịch vụ database ngay.")
+        tg_flush()
         return 1  # Exit code 1 = lỗi kết nối
+
+    # Thông báo khởi động (sau khi DB OK)
+    if not args.dry_run:
+        if args.force_full:
+            _mode_label = f"Force Full ({args.force_full.upper()})"
+        elif args.price_check:
+            _mode_label = "Price Check (spike detection)"
+        else:
+            _mode_label = f"Gap Fill ({args.lookback} ngày lookback)"
+        tg_alert(
+            "INFO",
+            f"🔍 <b>Gap Fill KHỞI ĐỘNG</b>\n"
+            f"📋 Chế độ: {_mode_label}\n"
+            f"📋 {len(SYMBOLS)} symbols × {len(DIRECT_TFS)} TF trực tiếp\n"
+            f"⏰ Bắt đầu: {started.strftime('%H:%M:%S')} UTC",
+        )
 
     # -----------------------------------------------------------------------
     # BƯỚC 1: Kết nối TradingView (bỏ qua nếu dry-run)
@@ -672,7 +708,8 @@ def main() -> int:
     if needs_tv:
         logger.info("[Step 1] Connecting to TradingView...")
         try:
-            tv, auth_mode = get_tv_connection()
+            # get_valid_tv_connection: thử cache → .env token → cookie refresh → headless → guest
+            tv, auth_mode = get_valid_tv_connection(logger)
             logger.info("  [OK] Connected (%s).", auth_mode)
             if auth_mode == "guest":
                 logger.warning("  Guest mode — lower bar limits, higher timeout risk.")
@@ -724,9 +761,47 @@ def main() -> int:
     # KẾT THÚC: Tổng kết kết quả
     # -----------------------------------------------------------------------
     elapsed = (datetime.now() - started).total_seconds()
+    elapsed_str = f"{int(elapsed // 60)}m {int(elapsed % 60)}s"
     logger.info("=" * 65)
     logger.info("  DONE  |  %d failed  |  %.0fs elapsed", fail, elapsed)
     logger.info("=" * 65)
+
+    # -----------------------------------------------------------------------
+    # TELEGRAM: thông báo kết quả gap fill
+    # -----------------------------------------------------------------------
+    if not args.dry_run:
+        if args.force_full:
+            mode_label = f"Force Full ({args.force_full.upper()})"
+        elif args.price_check:
+            mode_label = "Price Check"
+        else:
+            mode_label = f"Gap Fill ({args.lookback} ngày)"
+
+        if fail == 0:
+            tg_alert(
+                "INFO",
+                f"✅ <b>{mode_label} HOÀN TẤT</b>\n"
+                f"Không có lỗi — dữ liệu đã sạch.\n"
+                f"⏱ Thời gian chạy: {elapsed_str}\n"
+                f"─────────────────\n"
+                f"📌 <b>Tiếp theo:</b>\n"
+                f"  • ws_live tiếp tục giữ realtime\n"
+                f"  • reconcile kiểm tra lại hàng ngày",
+            )
+        else:
+            tg_alert(
+                "WARNING",
+                f"⚠️ <b>{mode_label} HOÀN TẤT (có lỗi)</b>\n"
+                f"❌ Thất bại: {fail} cặp symbol/TF\n"
+                f"⏱ Thời gian chạy: {elapsed_str}\n"
+                f"─────────────────\n"
+                f"🔧 <b>Kế hoạch sửa:</b>\n"
+                f"  • Xem log chi tiết: <code>{LOG_FILE_GAP}</code>\n"
+                f"  • Chạy lại: <code>python 02_gap_fill.py</code>\n"
+                f"  • Hoặc dùng lệnh /fix qua Telegram bot",
+            )
+
+    tg_flush()  # Đảm bảo tin Telegram được gửi trước khi process thoát
 
     if fail > 0:
         logger.warning("%d pair(s) failed. Check %s for details.",

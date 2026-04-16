@@ -1,18 +1,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # signal_dashboard.py  —  Combo Signal Scanner  |  Streamlit + Plotly
-# Run :  streamlit run strategies/combo/deploy/signal_dashboard.py
+# Run :  streamlit run strategies/combo/signal_dashboard.py
 # ─────────────────────────────────────────────────────────────────────────────
-# HƯỚNG DẪN QUẢN TRỊ NHANH
-# Đây là giao diện tương tác để scan và xem xét tín hiệu.
-#
-# Có thể chỉnh an toàn:
-# - Giá trị mặc định trên sidebar
-# - Nhãn hiển thị và các tùy chọn hiển thị
-# - Trình bày chart/table
-#
-# Kết quả chiến lược hiển thị ở đây đến từ scan_pipeline + reversal_scanner.
-# Thay đổi UI không ảnh hưởng dữ liệu DB hay logic backtest.
-
 import sys
 import warnings
 
@@ -24,7 +13,14 @@ import pandas as pd
 import streamlit as st
 
 # Bootstrap: thêm project root và core_python vào path
-_ROOT = Path(__file__).resolve().parents[4]   # deploy/ → combo/ → strategies/ → core_python/ → root
+# Tìm root qua marker file 'config.py' thay vì hardcode parents[N]
+def _find_root(start: Path, marker: str = 'config.py') -> Path:
+    for p in [start, *start.parents]:
+        if (p / marker).exists():
+            return p
+    return start.parents[3]  # fallback an toàn
+
+_ROOT = _find_root(Path(__file__).resolve())
 _CORE = _ROOT / "core_python"
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
@@ -32,8 +28,8 @@ if str(_CORE) not in sys.path:
     sys.path.insert(0, str(_CORE))
 
 from modules.chart_builder import build_reversal_chart
-from strategies.combo.core.scan_pipeline import calc_reversal_stats, run_multi_reversal_scan
-from strategies.combo.core.theme import METRIC_CSS, NUM_FMT, style_combined_row, style_reversal_row
+from strategies.combo.scan_pipeline import calc_reversal_stats, run_multi_reversal_scan
+from strategies.shared.theme import METRIC_CSS, NUM_FMT, style_combined_row, style_reversal_row
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PAGE CONFIG
@@ -50,23 +46,13 @@ st.markdown(METRIC_CSS, unsafe_allow_html=True)
 # ─────────────────────────────────────────────────────────────────────────────
 # SYMBOL CONFIG
 # ─────────────────────────────────────────────────────────────────────────────
-from strategies.combo.core.strategy_config import (
+from strategies.combo.strategy_config import (
     STRATEGY,
+    SYMBOLS as TARGET_SYMBOLS,
     get_indicator_params,
 )
-from strategies.combo.core.strategy_config import (
-    SYMBOLS as TARGET_SYMBOLS,
-)
-from strategies.combo.core.strategy_config import (
-    US_FILTERED as US_FILTERED_SYMBOLS,
-)
 
-_DEFAULT_P = get_indicator_params()   # default params từ strategy_config
-
-# ─────────────────────────────────────────────────────────────────────────────
-# DATA + CHART  (scan_pipeline handles caching internally via modules/data_loader)
-# ─────────────────────────────────────────────────────────────────────────────
-
+_DEFAULT_P = get_indicator_params()
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SIDEBAR — PARAMETERS
@@ -90,15 +76,15 @@ with st.sidebar:
     st.markdown('#### Indicators')
     c1, c2 = st.columns(2)
     with c1:
-        ma_period   = st.number_input('MA',         min_value=5,  max_value=200, value=_DEFAULT_P["MA_PERIOD"], step=1)
-        atr_period  = st.number_input('ATR',        min_value=2,  max_value=30,  value=_DEFAULT_P["ATR_PERIOD"], step=1)
-        macd_fast   = st.number_input('MACD Fast',  min_value=2,  max_value=50,  value=_DEFAULT_P["MACD_FAST"], step=1)
+        ma_period  = st.number_input('MA',        min_value=5,  max_value=200, value=_DEFAULT_P["MA_PERIOD"],   step=1)
+        atr_period = st.number_input('ATR',       min_value=2,  max_value=30,  value=_DEFAULT_P["ATR_PERIOD"],  step=1)
+        macd_fast  = st.number_input('MACD Fast', min_value=2,  max_value=50,  value=_DEFAULT_P["MACD_FAST"],   step=1)
     with c2:
-        macd_slow   = st.number_input('MACD Slow',  min_value=5,  max_value=200, value=_DEFAULT_P["MACD_SLOW"], step=1)
-        macd_sig    = st.number_input('MACD Sig',   min_value=2,  max_value=30,  value=_DEFAULT_P["MACD_SIGNAL"], step=1)
+        macd_slow  = st.number_input('MACD Slow', min_value=5,  max_value=200, value=_DEFAULT_P["MACD_SLOW"],   step=1)
+        macd_sig   = st.number_input('MACD Sig',  min_value=2,  max_value=30,  value=_DEFAULT_P["MACD_SIGNAL"], step=1)
 
     st.markdown('#### Strategy')
-    ktp    = st.number_input('kTP (TP multiplier)', min_value=0.5, max_value=10.0, value=_DEFAULT_P["KTP"], step=0.1, format='%.1f')
+    ktp    = st.number_input('kTP (TP multiplier)', min_value=0.5, max_value=10.0, value=_DEFAULT_P["KTP"],    step=0.1, format='%.1f')
     min_rr = st.number_input('Min R:R',             min_value=0.5, max_value=5.0,  value=_DEFAULT_P["MIN_RR"], step=0.1, format='%.1f')
 
     st.markdown('#### Chart options')
@@ -130,13 +116,11 @@ P = {
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown('# 📡 SAM — Signal Scanner Dashboard')
 
-# ── Session state init ────────────────────────────────────────────────────────
-if 'results'    not in st.session_state:
+if 'results'     not in st.session_state:
     st.session_state.results    = None
 if 'scan_n_bars' not in st.session_state:
     st.session_state.scan_n_bars = None
 
-# ── Run scan ──────────────────────────────────────────────────────────────────
 if run_btn:
     if not selected_syms:
         st.warning('Vui lòng chọn ít nhất 1 symbol.')
@@ -159,13 +143,12 @@ if run_btn:
         st.error(f'Lỗi khi scan: {exc}')
         st.stop()
 
-# ── Guard: no results yet ─────────────────────────────────────────────────────
 if st.session_state.results is None:
     st.info('Chọn symbols và params ở sidebar, rồi nhấn **🔄 Run Scan**.')
     st.stop()
 
-results  = st.session_state.results
-scan_nb  = st.session_state.scan_n_bars
+results = st.session_state.results
+scan_nb = st.session_state.scan_n_bars
 
 # ─────────────────────────────────────────────────────────────────────────────
 # METRICS ROW
@@ -187,12 +170,11 @@ for idx, (sym, res) in enumerate(results.items()):
 st.markdown('---')
 
 # ─────────────────────────────────────────────────────────────────────────────
-# TABS:  All Signals  +  per-symbol charts
+# TABS
 # ─────────────────────────────────────────────────────────────────────────────
 tab_labels = ['📋 All Signals'] + [f'📈 {sym}' for sym in results]
 tabs       = st.tabs(tab_labels)
 
-# ── Tab 0: Combined signal table ─────────────────────────────────────────────
 with tabs[0]:
     pass_rows = []
     for sym, res in results.items():
@@ -204,8 +186,8 @@ with tabs[0]:
                 pass_rows.append(p_sub)
 
     if pass_rows:
-        combined  = pd.concat(pass_rows, ignore_index=True)
-        combined  = combined.sort_values('bar_time', ascending=False)
+        combined = pd.concat(pass_rows, ignore_index=True)
+        combined = combined.sort_values('bar_time', ascending=False)
 
         st.markdown(
             f'**{len(combined)} tín hiệu pass** trên {len(results)} symbols  '
@@ -235,7 +217,6 @@ with tabs[0]:
     else:
         st.info(f'Không có tín hiệu pass R:R ≥ {P["MIN_RR"]} trong {scan_nb} bars gần nhất.')
 
-# ── Tabs 1..N: per-symbol charts ─────────────────────────────────────────────
 for tab_idx, (sym, res) in enumerate(results.items(), start=1):
     with tabs[tab_idx]:
         sdf   = res['signals_df']
@@ -251,16 +232,13 @@ for tab_idx, (sym, res) in enumerate(results.items(), start=1):
                 f'Tổng: **{stats["n_total"]}**  |  Pass: **0**  |  Không có tín hiệu đạt R:R'
             )
 
-        # Plotly chart
-        fig = build_reversal_chart(res['df_scan'], sdf, res['cfg'], sym, P, US_FILTERED_SYMBOLS)
+        fig = build_reversal_chart(res['df_scan'], sdf, res['cfg'], sym, P)
         st.plotly_chart(fig, width='stretch')
 
-        # Signal detail table in expander
         if not sdf.empty:
             with st.expander('📄 Chi tiết tín hiệu', expanded=False):
                 detail_cols = ['bar_time', 'direction', 'outcome', 'entry', 'sl', 'tp',
-                               'rr', 'pass_rr', 'atr', 'sl_dist', 'tp_dist',
-                               'ma', 'macd_h']
+                               'rr', 'pass_rr', 'atr', 'sl_dist', 'tp_dist', 'ma', 'macd_h']
                 dtbl = sdf[detail_cols].copy()
                 dtbl['bar_time'] = dtbl['bar_time'].dt.strftime('%Y-%m-%d %H:%M')
                 st.dataframe(
@@ -273,7 +251,6 @@ for tab_idx, (sym, res) in enumerate(results.items(), start=1):
         else:
             st.info('Không có tín hiệu nào trong khoảng này.')
 
-# ─────────────────────────────────────────────────────────────────────────────
 st.markdown(
     '<br><center style="color:#444">SAM Signal Scanner  ·  Combo v2  ·  '
     'Data cached 5 min</center>',
