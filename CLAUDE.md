@@ -47,9 +47,10 @@ modules/                           # Thư viện dùng chung (imported bởi t�
 
 data_provider/                     # Pipeline dữ liệu
   01_data_pipeline.py              # Tải lịch sử (full) + backfill hàng ngày (gap)
-  02_gap_fill.py                   # Phát hiện & lấp lỗ hổng data
-  03_ws_live.py                    # WebSocket cập nhật realtime
-  04_chart.py                      # Dash server xem chart (http://localhost:8050)
+  02_ws_live.py                    # WebSocket cập nhật realtime 24/7 (mỗi 5 phút)
+  03_chart.py                      # Flask chart dashboard (http://localhost:8050)
+  04_checker.py                    # Kiểm tra & tự sửa dữ liệu so với TV (mỗi 3 ngày)
+  archive/                         # Script đã retire: 02_gap_fill.py, 05_reconcile.py
   00_sql/                          # Schema SQL Server + stored procedures
 
 core_python/strategies/combo/
@@ -200,14 +201,15 @@ python data_provider/01_data_pipeline.py --mode gap
 # Dry-run kiểm tra không ghi DB
 python data_provider/01_data_pipeline.py --mode dry-run
 
-# Lấp lỗ hổng data
-python data_provider/02_gap_fill.py
-
-# WebSocket cập nhật realtime
-python data_provider/03_ws_live.py
+# WebSocket cập nhật realtime 24/7
+python data_provider/02_ws_live.py
 
 # Xem chart tương tác
-python data_provider/04_chart.py           # http://localhost:8050
+python data_provider/03_chart.py           # http://localhost:8050
+
+# Kiểm tra & tự sửa dữ liệu (chạy mỗi 3 ngày hoặc thủ công)
+python data_provider/04_checker.py                    # full autonomous repair
+python data_provider/04_checker.py --dry-run          # scan only, không ghi DB
 
 # Signal dashboard
 streamlit run core_python/strategies/combo/deploy/signal_dashboard.py

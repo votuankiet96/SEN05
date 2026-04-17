@@ -1,5 +1,5 @@
 # =============================================================================
-# data_provider/_helpers.py  —  Shared helpers for data pipeline / gap fill
+# data_provider/_helpers.py  —  Shared helpers for data pipeline / ws_live / checker
 # =============================================================================
 # HƯỚNG DẪN QUẢN TRỊ NHANH
 # File này chứa các hàm tiện ích dùng chung cho nhiều script khác.
@@ -12,19 +12,18 @@
 #
 # Các thông số có thể điều chỉnh khi cần:
 # - SAFETY_FACTOR, MIN_PULL_BARS, cài đặt thời gian sleep
-# - FILL_THRESHOLD và SPIKE_ATR_THRESHOLD
 # - Ngưỡng gap qua đêm (overnight gap thresholds)
 #
 # Lưu ý:
-# - Thay đổi các ngưỡng sẽ ảnh hưởng đến việc hệ thống phân biệt "lỗ hổng thật"
-#   hay "thị trường đóng cửa bình thường", ảnh hưởng trực tiếp đến quá trình gap-fill.
+# - Thay đổi các ngưỡng sẽ ảnh hưởng đến việc hệ thống phân biệt khoảng trống thật
+#   hay thị trường đóng cửa bình thường, ảnh hưởng trực tiếp đến quá trình backfill.
 
 #
 # MỤC ĐÍCH:
-#   Chứa tất cả hàm dùng chung cho cả 3 script:
+#   Chứa tất cả hàm dùng chung cho cả 3 script chính:
 #     - 01_data_pipeline.py (backfill hàng ngày)
-#     - 01b_gap_fill.py (quét và lấp lỗ hổng)
 #     - 02_ws_live.py (cập nhật realtime qua WebSocket)
+#     - 04_checker.py (kiểm tra và tự sửa dữ liệu mỗi 3 ngày)
 #
 # CÁC NHÓM CHỨC NĂNG CHÍNH:
 #   1. setup_logger()        — Tạo logger ghi ra console + file

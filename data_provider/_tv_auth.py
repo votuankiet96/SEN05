@@ -1,18 +1,56 @@
 # =============================================================================
-# data_provider/_tv_auth.py  —  TradingView Authentication (shared module)
+# data_provider/_tv_auth.py  —  Xác thực TradingView (module dùng chung)
 # =============================================================================
-# Module dùng chung cho toàn bộ pipeline:
-#   03_ws_live.py       — WebSocket live (dùng bootstrap, get_current_token, renew)
-#   01_data_pipeline.py — Daily backfill  (dùng get_valid_tv_connection, refresh_mid_run)
-#   02_gap_fill.py      — Gap scanner     (dùng get_valid_tv_connection, refresh_mid_run)
 #
-# Hệ thống xác thực 4 lớp dự phòng (thử lần lượt):
-#   Lớp 0   : Runtime token cache (.tv_token_cache)     — nhanh nhất, không cần network
-#   Lớp 1   : Static token từ .env (TV_AUTH_TOKEN)      — không cần network
-#   Lớp 1.5 : Refresh qua session cookie (HTTP GET)     — ~1-2 giây
-#   Lớp 2   : Đăng nhập username/password (HTTP POST)   — chỉ cho native TV account
-#   Lớp 2.5 : Headless Chromium (Playwright)            — hỗ trợ Google/social login
-#   Lớp 3   : Guest token                               — cuối cùng, dữ liệu giới hạn
+# FILE NÀY LÀM GÌ?
+#   TradingView yêu cầu phải đăng nhập mới xem được dữ liệu đầy đủ.
+#   File này quản lý toàn bộ quá trình "lấy chứng minh đã đăng nhập" (auth token)
+#   và đảm bảo token luôn còn hiệu lực khi các script khác cần dùng.
+#
+# AUTH TOKEN LÀ GÌ?
+#   Sau khi đăng nhập TradingView, server cấp 1 chuỗi dài (JWT token) như:
+#     eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+#   Chuỗi này là "thẻ thông hành" — khi gửi kèm mỗi request, TradingView
+#   biết bạn là ai và cho phép tải đủ dữ liệu (không bị giới hạn như Guest).
+#
+# HỆ THỐNG DỰ PHÒNG 5 LỚP (thử lần lượt từ trên xuống):
+#
+#   Lớp 0 — Token cache (.tv_token_cache):
+#     Lần trước đã đăng nhập thành công → lưu token vào file cục bộ.
+#     Lần này dùng lại, không cần request mạng. Nhanh nhất.
+#
+#   Lớp 1 — Token tĩnh từ .env (TV_AUTH_TOKEN):
+#     Người dùng tự copy token từ trình duyệt và lưu vào file .env.
+#     Không cần mạng, nhưng token có thể hết hạn sau vài ngày.
+#
+#   Lớp 1.5 — Refresh qua cookie (HTTP GET):
+#     Gửi HTTP request đến TradingView kèm cookie (sessionid=...).
+#     TradingView nhúng token mới vào HTML trả về → extract ra.
+#     Nhanh (~1-2 giây) và đáng tin cậy nếu cookie còn hiệu lực.
+#
+#   Lớp 2 — Đăng nhập username/password (HTTP POST):
+#     Gửi POST form giả lập như đăng nhập trên trình duyệt.
+#     Chỉ hoạt động với tài khoản TradingView gốc (không phải Google login).
+#
+#   Lớp 2.5 — Headless Chromium (Playwright):
+#     Chạy trình duyệt Chrome ẩn (không có giao diện) để tải trang TV.
+#     Đáng tin nhất: hỗ trợ cả Google/social login, xử lý JavaScript đầy đủ.
+#     Chậm hơn (~5-10 giây) và cần cài thêm: pip install playwright.
+#
+#   Lớp 3 — Guest token:
+#     Dùng tài khoản khách — dữ liệu bị giới hạn (ít lịch sử hơn, chậm hơn).
+#     Là phương án cuối cùng, không nên chạy lâu với guest.
+#
+# CÁC SCRIPT DÙNG FILE NÀY:
+#   02_ws_live.py       — WebSocket live      (bootstrap, get_current_token, renew)
+#   01_data_pipeline.py — Backfill hàng ngày  (get_valid_tv_connection, refresh_mid_run)
+#   04_checker.py       — Kiểm tra dữ liệu   (get_valid_tv_connection, refresh_mid_run)
+#
+# CẤU HÌNH CẦN THIẾT TRONG FILE .env:
+#   TV_AUTH_TOKEN=eyJhbGci...   ← copy từ trình duyệt (F12 > Network > cookie)
+#   TV_COOKIE=sessionid=abc...  ← copy toàn bộ cookie header từ trình duyệt
+#   TV_USERNAME=your@email.com  ← chỉ cần nếu dùng username/password
+#   TV_PASSWORD=your_password   ← chỉ cần nếu dùng username/password
 # =============================================================================
 
 import json
@@ -262,14 +300,17 @@ def _fetch_auth_token_from_credentials(username: str, password: str) -> str:
 
 def _resolve_auth_token(lg: logging.Logger | None = None) -> tuple[str, str]:
     """
-    Thử lần lượt 4 lớp xác thực, trả về (token, tên_phương_thức).
+    Hàm nội bộ: thử lần lượt từng lớp xác thực, trả về (token, tên_phương_thức).
 
-    Lớp 0  : Runtime cache (.tv_token_cache)            — ưu tiên cao nhất
-    Lớp 1  : Static token từ .env (TV_AUTH_TOKEN)
-    Lớp 1.5: Refresh qua session cookie (HTTP GET)
-    Lớp 2  : HTTP POST username/password
-    Lớp 2.5: Headless Chromium với session cookie
-    Lớp 3  : Guest token
+    Đây là "dispatcher" — không tự xác thực mà gọi các hàm chuyên biệt.
+    Thứ tự thử được thiết kế để ưu tiên cách nhanh nhất trước, cách chậm nhất sau.
+
+    Lớp 0  : File cache .tv_token_cache (không cần mạng — nhanh nhất)
+    Lớp 1  : Token tĩnh từ .env (không cần mạng)
+    Lớp 1.5: Refresh qua HTTP GET + cookie (~1-2s)
+    Lớp 2  : Đăng nhập username/password qua HTTP POST (~2-5s)
+    Lớp 2.5: Headless Chromium (~5-10s, cần Playwright)
+    Lớp 3  : Guest token (luôn thành công nhưng dữ liệu hạn chế)
     """
     global _tv_cookie
     log = lg or _logger

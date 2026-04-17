@@ -108,7 +108,7 @@ import pandas as pd  # DataFrame — cấu trúc bảng dữ liệu dùng để 
 import requests  # Gửi HTTP request — dùng để đăng nhập TradingView và gửi tin Telegram
 import websocket  # Thư viện WebSocket client — kết nối và nhận data real-time từ TradingView
 from _helpers import setup_logger  # Hàm khởi tạo logger (ghi ra file + console)
-from _tg import tg_alert as _tg_alert, tg_send as _tg_send  # Telegram notifications (dùng chung)
+from _tg import tg_alert as _tg_alert, tg_send as _tg_send, QUICK_COMMANDS_HINT  # Telegram notifications
 from _tg_bot import start_bot_listener  # Telegram bot command handler (/fix, /status, /pipeline)
 import _tv_auth  # TradingView auth module dùng chung (token cache, refresh, bootstrap)
 
@@ -252,6 +252,14 @@ HTTP_MAX_DELAY_SEC  = _tv_auth.HTTP_MAX_DELAY_SEC
 
 # Lock dùng để bảo vệ _stats và _last_bar_ts khi nhiều thread cùng đọc/ghi
 _state_lock    = threading.Lock()
+
+# ── ETL deferral khi Checker đang repair ─────────────────────────────────────
+# Khi Checker giữ lock 'checker_repair', WS defer Steps B+C để tránh race condition.
+# Data vẫn an toàn trong staging — được xử lý sau khi lock released.
+_deferred_etl:  set  = set()          # (symbol_id, tf_code, staging_table, tv_symbol)
+_deferred_lock        = threading.Lock()
+_checker_lock_cache: dict = {"locked": False, "checked_at": 0.0}
+_CHECKER_LOCK_TTL     = 30.0           # giây — refresh cache mỗi 30s
 
 # Watermark: lưu timestamp của nến mới nhất đã lưu cho từng cặp (symbol_id, tf_code)
 # Dùng để lọc: chỉ lưu nến có timestamp > watermark (không lưu nến trùng)
@@ -582,6 +590,7 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
                         f"Queue, overflow và SQLite spool đều thất bại!\n"
                         f"Nến bị mất: {tv_symbol} {tf_code}\n"
                         f"Kiểm tra DB worker và dung lượng đĩa ngay."
+                        + QUICK_COMMANDS_HINT
                     )
                     with _state_lock:
                         _stats["errors"] += 1
@@ -590,6 +599,25 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
 # =============================================================================
 # THREAD GHI DATABASE (DB Worker)
 # =============================================================================
+
+def _checker_is_repairing() -> bool:
+    """
+    Kiểm tra Checker có đang giữ lock 'checker_repair' không.
+
+    Có cache 30 giây để tránh DB hammering trong _db_worker() tight loop.
+    Fail-open: nếu DB lỗi → trả về False (không defer vô hạn, ETL tiếp tục bình thường).
+    """
+    now = time.monotonic()
+    if now - _checker_lock_cache["checked_at"] < _CHECKER_LOCK_TTL:
+        return _checker_lock_cache["locked"]
+    try:
+        from _task_lock import is_locked
+        result = is_locked("checker_repair")
+    except Exception:
+        result = False   # fail-open
+    _checker_lock_cache.update({"locked": result, "checked_at": now})
+    return result
+
 
 def _db_worker() -> None:
     """
@@ -636,20 +664,37 @@ def _db_worker() -> None:
                 _stats["bars_inserted"] += inserted
             logger.info("[DB ] %s %s: +%d bar(s) committed.", tv_symbol, tf_code, inserted)
 
-            # BƯỚC B: Đẩy nến từ staging vào bảng chính Fact_OHLCV (ETL direct)
-            try:
-                run_etl_direct(symbol_id, tf_code, staging_table)
-            except Exception as exc:
-                logger.error("[DB ] ETL direct error — %s %s: %s", tv_symbol, tf_code, exc)
-                with _state_lock:
-                    _stats["errors"] += 1
+            # Kiểm tra Checker có đang repair không — nếu có thì defer Steps B+C
+            # Lý do: Checker đang xóa/re-pull bars → chạy ETL đồng thời có thể
+            #        làm bars mới vừa insert vào staging bị bỏ sót sau khi Checker
+            #        xóa staging. Defer giữ data an toàn trong staging cho đến khi xong.
+            if _checker_is_repairing():
+                with _deferred_lock:
+                    if len(_deferred_etl) < 500:   # cap 500 để tránh tràn memory
+                        _deferred_etl.add((symbol_id, tf_code, staging_table, tv_symbol))
+                    else:
+                        logger.warning(
+                            "[DB ] Deferred ETL set full (500) — dropping %s %s",
+                            tv_symbol, tf_code,
+                        )
+                logger.info(
+                    "[DB ] Checker lock active — deferred ETL for %s %s",
+                    tv_symbol, tf_code,
+                )
+            else:
+                # BƯỚC B: Đẩy nến từ staging vào bảng chính Fact_OHLCV (ETL direct)
+                try:
+                    run_etl_direct(symbol_id, tf_code, staging_table)
+                except Exception as exc:
+                    logger.error("[DB ] ETL direct error — %s %s: %s", tv_symbol, tf_code, exc)
+                    with _state_lock:
+                        _stats["errors"] += 1
 
-            # BƯỚC C: Thêm vào _pending_agg thay vì tính ngay
-            # Tránh gọi run_etl_aggregate per-bar — flush khi queue tạm rỗng
-            # Lợi ích: nếu backlog gửi nhiều bars M5 cùng lúc, M10/M20 chỉ tính 1 lần
-            if staging_table in _SOURCE_TO_COMPUTED:
-                for target_tf, src_table in _SOURCE_TO_COMPUTED[staging_table]:
-                    _pending_agg.add((symbol_id, target_tf, src_table, tv_symbol))
+                # BƯỚC C: Thêm vào _pending_agg thay vì tính ngay
+                # Tránh gọi run_etl_aggregate per-bar — flush khi queue tạm rỗng
+                if staging_table in _SOURCE_TO_COMPUTED:
+                    for target_tf, src_table in _SOURCE_TO_COMPUTED[staging_table]:
+                        _pending_agg.add((symbol_id, target_tf, src_table, tv_symbol))
 
         # Báo cho queue biết đã xử lý xong item này (cần thiết cho queue.join())
         _db_queue.task_done()
@@ -659,7 +704,8 @@ def _db_worker() -> None:
             _stats["queue_depth"] = _db_queue.qsize()
 
         # Flush aggregates khi queue tạm rỗng — gộp tất cả cùng symbol/TF lại
-        if _pending_agg and _db_queue.empty():
+        # Guard: không flush khi Checker đang repair (tránh race condition)
+        if _pending_agg and _db_queue.empty() and not _checker_is_repairing():
             for sym_id, tgt_tf, src_tbl, sym_name in list(_pending_agg):
                 try:
                     run_etl_aggregate(sym_id, tgt_tf, src_tbl)
@@ -669,6 +715,27 @@ def _db_worker() -> None:
                     with _state_lock:
                         _stats["errors"] += 1
             _pending_agg.clear()
+
+        # Retry deferred ETL khi Checker đã release lock
+        with _deferred_lock:
+            if _deferred_etl and not _checker_is_repairing():
+                logger.info("[DB ] Processing %d deferred ETL item(s)...", len(_deferred_etl))
+                # Invalidate cache để lần check tiếp theo query DB thật
+                _checker_lock_cache["checked_at"] = 0.0
+                for sym_id, tf_c, stg_tbl, sym_nm in list(_deferred_etl):
+                    try:
+                        run_etl_direct(sym_id, tf_c, stg_tbl)
+                        logger.info("[DB ] Deferred ETL done: %s %s", sym_nm, tf_c)
+                        if stg_tbl in _SOURCE_TO_COMPUTED:
+                            for tgt_tf, src_tbl in _SOURCE_TO_COMPUTED[stg_tbl]:
+                                _pending_agg.add((sym_id, tgt_tf, src_tbl, sym_nm))
+                    except Exception as exc:
+                        logger.error(
+                            "[DB ] Deferred ETL error — %s %s: %s", sym_nm, tf_c, exc
+                        )
+                        with _state_lock:
+                            _stats["errors"] += 1
+                _deferred_etl.clear()
 
     # Flush các aggregate còn lại trước khi tắt (queue đã rỗng nhưng pending chưa chạy)
     if _pending_agg:
@@ -1340,7 +1407,8 @@ class BatchFetcher:
                         "ERROR",
                         f"Data gap vinh vien: {_sym_name.get(pair[0], str(pair[0]))} [{pair[1]}]\n"
                         f"Da miss {count} batch lien tiep (~{count * 5} phut).\n"
-                        f"Chay 02_gap_fill.py de khoi phuc thu cong."
+                        f"Chay /fix tren Telegram hoac 04_checker.py de quet va sua."
+                        + QUICK_COMMANDS_HINT
                     )
                     _backlog.pop(pair, None)
 

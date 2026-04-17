@@ -82,6 +82,76 @@ def tg_flush(timeout: float = 12.0) -> None:
     _pending_threads.clear()
 
 
+# Hint gợi ý lệnh xử lý nhanh — append vào các tin báo lỗi
+QUICK_COMMANDS_HINT = (
+    "\n─────────────────\n"
+    "💡 <b>Lệnh xử lý nhanh:</b>\n"
+    "  /fix      — chạy Checker sửa dữ liệu\n"
+    "  /pipeline — chạy Pipeline backfill\n"
+    "  /status   — xem tình trạng hiện tại"
+)
+
+
+def tg_ask(
+    title: str,
+    problem_desc: str,
+    options: dict,
+    token: str,
+    timeout_min: int = 240,
+    affected_pairs: list | None = None,
+) -> None:
+    """
+    Gửi tin Telegram hỏi user chọn phương án xử lý.
+
+    KHÔNG block — chỉ gửi tin. Caller phải gọi tg_flush() ngay sau để đảm bảo
+    tin đến trước khi bắt đầu poll.
+
+    Tham số:
+      title          — tiêu đề tin nhắn (ví dụ: "[Checker] Phát hiện vấn đề")
+      problem_desc   — mô tả vấn đề, multiline string
+      options        — {"confirm": "Sửa tất cả X pairs", "skip": "Bỏ qua"}
+      token          — token 8 ký tự từ generate_token()
+      timeout_min    — số phút timeout (hiển thị cho user)
+      affected_pairs — danh sách pairs bị ảnh hưởng (hiển thị tối đa 8)
+    """
+    # Phần danh sách pairs bị ảnh hưởng
+    pairs_section = ""
+    if affected_pairs:
+        pair_lines = "\n".join(f"  • {p}" for p in affected_pairs[:8])
+        if len(affected_pairs) > 8:
+            pair_lines += f"\n  (... và {len(affected_pairs) - 8} pairs khác)"
+        pairs_section = f"\n\n📌 <b>Pairs bị ảnh hưởng:</b>\n{pair_lines}"
+
+    # Phần lựa chọn
+    options_lines = []
+    for key, desc in options.items():
+        if key == "confirm":
+            options_lines.append(f"  Gõ /confirm_{token} → {desc}")
+        elif key == "skip":
+            options_lines.append(f"  Gõ /skip_{token}    → {desc}")
+        else:
+            options_lines.append(f"  Gõ /{key}_{token}   → {desc}")
+
+    timeout_h = timeout_min // 60
+    timeout_m = timeout_min % 60
+    timeout_str = f"{timeout_h} giờ" if timeout_m == 0 else f"{timeout_h} giờ {timeout_m} phút"
+
+    msg = (
+        f"⚠️ <b>{title}</b>\n\n"
+        f"📋 <b>Tổng quan:</b>\n{problem_desc}"
+        f"{pairs_section}\n\n"
+        f"🔧 <b>Chọn phương án xử lý:</b>\n"
+        + "\n".join(options_lines)
+        + f"\n\n⏰ Hết hạn sau {timeout_str}. Nếu không phản hồi → tự động bỏ qua."
+    )
+
+    # Giới hạn 4096 ký tự (Telegram API limit)
+    if len(msg) > 4096:
+        msg = msg[:4090] + "\n[…]"
+
+    tg_send(msg)
+
+
 def tg_alert(level: str, text: str) -> None:
     """
     Gửi cảnh báo có định dạng chuẩn lên Telegram.

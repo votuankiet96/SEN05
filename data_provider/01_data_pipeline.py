@@ -87,7 +87,7 @@ from _helpers import (
     sleep_for,  # Hàm tạm dừng giữa các request để tránh bị TradingView rate-limit
     trading_hours_in_gap,  # Tính giờ trading thực (trừ Sat/Sun) trong một khoảng thời gian
 )
-from _tg import tg_alert, tg_flush  # Gửi thông báo kết quả pipeline lên Telegram
+from _tg import tg_alert, tg_flush, QUICK_COMMANDS_HINT  # Gửi thông báo kết quả pipeline lên Telegram
 from _tv_auth import get_valid_tv_connection, refresh_mid_run  # Auth module dùng chung
 
 from config import (
@@ -581,7 +581,7 @@ def main() -> int:
     if not test_connection():
         # Không kết nối được DB → lỗi nghiêm trọng → thoát với exit code 1
         logger.error("ABORT: Cannot reach database.")
-        tg_alert("ERROR", "🚨 <b>Data Pipeline THẤT BẠI</b>\nKhông kết nối được SQL Server.\nKiểm tra dịch vụ database ngay.")
+        tg_alert("ERROR", "🚨 <b>Data Pipeline THẤT BẠI</b>\nKhông kết nối được SQL Server.\nKiểm tra dịch vụ database ngay." + QUICK_COMMANDS_HINT)
         tg_flush()
         return 1
 
@@ -624,7 +624,7 @@ def main() -> int:
         except Exception as e:
             # Không kết nối được TradingView → không kéo được data → thoát
             logger.error("  TradingView connection failed: %s", e)
-            tg_alert("ERROR", f"🚨 <b>Data Pipeline THẤT BẠI</b>\nKhông kết nối được TradingView.\nLỗi: {e}")
+            tg_alert("ERROR", f"🚨 <b>Data Pipeline THẤT BẠI</b>\nKhông kết nối được TradingView.\nLỗi: {e}" + QUICK_COMMANDS_HINT)
             return 1
 
     # -----------------------------------------------------------------------
@@ -693,9 +693,8 @@ def main() -> int:
             f"⏱ Thời gian chạy: {elapsed_str}\n"
             f"─────────────────\n"
             f"📌 <b>Tiếp theo:</b>\n"
-            f"  • ws_live đang giữ realtime (mỗi 5 phút)\n"
-            f"  • gap_fill chạy thứ Hai để vá lỗ hổng tuần\n"
-            f"  • reconcile kiểm tra chất lượng hàng ngày",
+            f"  • 02_ws_live.py đang giữ realtime (mỗi 5 phút)\n"
+            f"  • 04_checker.py chạy mỗi 3 ngày để kiểm tra &amp; tự sửa dữ liệu",
         )
     else:
         # Liệt kê tối đa 5 cặp bị lỗi
@@ -710,10 +709,8 @@ def main() -> int:
             f"─────────────────\n"
             f"<b>Cặp bị lỗi:</b>\n{fail_list}\n"
             f"─────────────────\n"
-            f"⏱ Thời gian chạy: {elapsed_str}\n"
-            f"🔧 <b>Kế hoạch sửa:</b>\n"
-            f"  • Hệ thống tự vá qua gap_fill vào thứ Hai\n"
-            f"  • Hoặc chạy ngay: <code>python 02_gap_fill.py</code>",
+            f"⏱ Thời gian chạy: {elapsed_str}"
+            + QUICK_COMMANDS_HINT,
         )
 
     tg_flush()  # Đảm bảo tin Telegram được gửi trước khi process thoát
