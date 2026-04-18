@@ -170,7 +170,7 @@ def insert_staging_batch(df, symbol_id: int, staging_table: str) -> int:
     except Exception as e:
         conn.rollback()
         logger.error("INSERT FAIL %s SymbolID=%d: %s", staging_table, symbol_id, e)
-        return 0
+        return -1  # -1 = lỗi thật; 0 = thành công nhưng không có row mới (tất cả đã tồn tại)
     finally:
         conn.close()
 
@@ -224,7 +224,7 @@ def run_etl_direct(symbol_id: int, tf_code: str, staging_table: str) -> int:
         logger.error("ETL Direct FAIL: SymbolID=%d TF=%s — %s",
                      symbol_id, tf_code, e)
         conn.rollback()
-        return 0
+        return -1  # -1 = lỗi; 0 = ETL chạy xong nhưng không có row mới (đã tồn tại)
     finally:
         conn.close()
 
@@ -307,6 +307,9 @@ def aggregate_from_fact(symbol_id: int, target_tf_code: str) -> int:
 
         # CTE aggregation: align BarTime to interval boundary, then
         # pick Open from first bar and Close from last bar in each group.
+        # Dùng MERGE (upsert) thay vì INSERT WHERE NOT EXISTS để:
+        # - Sửa các bars đã tạo sớm (premature) khi source bar thứ 2 chưa load xong
+        # - Cập nhật TickCount và OHLCV mỗi lần source data đầy đủ hơn
         cursor.execute("""
             WITH src AS (
                 SELECT
@@ -330,37 +333,54 @@ def aggregate_from_fact(symbol_id: int, target_tf_code: str) -> int:
                     MAX(BarTime)   AS LastBarTime,
                     MAX(HighPrice) AS HighPrice,
                     MIN(LowPrice)  AS LowPrice,
-                    SUM(Volume)    AS Volume
+                    SUM(Volume)    AS Volume,
+                    COUNT(*)       AS SrcCount
                 FROM src
                 GROUP BY AggBarTime
             )
-            INSERT INTO DWH.Fact_OHLCV
-                (SymbolID, TimeframeID, DateKey, BarTime, OpenPrice, HighPrice, LowPrice, ClosePrice, Volume)
-            SELECT
-                ?,
-                ?,
-                CAST(CONVERT(VARCHAR(8), a.AggBarTime, 112) AS INT),
-                a.AggBarTime,
-                so.OpenPrice,
-                a.HighPrice,
-                a.LowPrice,
-                sc.ClosePrice,
-                a.Volume
-            FROM agg a
-            JOIN src so ON so.BarTime = a.FirstBarTime
-            JOIN src sc ON sc.BarTime = a.LastBarTime
-            WHERE NOT EXISTS (
-                SELECT 1 FROM DWH.Fact_OHLCV ex
-                WHERE ex.SymbolID    = ?
-                  AND ex.TimeframeID = ?
-                  AND ex.BarTime     = a.AggBarTime
-            )
+            MERGE DWH.Fact_OHLCV AS tgt
+            USING (
+                SELECT
+                    ? AS SymbolID,
+                    ? AS TimeframeID,
+                    CAST(CONVERT(VARCHAR(8), a.AggBarTime, 112) AS INT) AS DateKey,
+                    a.AggBarTime AS BarTime,
+                    so.OpenPrice,
+                    a.HighPrice,
+                    a.LowPrice,
+                    sc.ClosePrice,
+                    a.Volume,
+                    a.SrcCount
+                FROM agg a
+                JOIN src so ON so.BarTime = a.FirstBarTime
+                JOIN src sc ON sc.BarTime = a.LastBarTime
+            ) AS src_data
+            ON  tgt.SymbolID    = src_data.SymbolID
+            AND tgt.TimeframeID = src_data.TimeframeID
+            AND tgt.BarTime     = src_data.BarTime
+            WHEN MATCHED AND (
+                tgt.TickCount IS NULL OR tgt.TickCount < src_data.SrcCount
+            ) THEN UPDATE SET
+                tgt.OpenPrice  = src_data.OpenPrice,
+                tgt.HighPrice  = src_data.HighPrice,
+                tgt.LowPrice   = src_data.LowPrice,
+                tgt.ClosePrice = src_data.ClosePrice,
+                tgt.Volume     = src_data.Volume,
+                tgt.TickCount  = src_data.SrcCount
+            WHEN NOT MATCHED THEN INSERT
+                (SymbolID, TimeframeID, DateKey, BarTime,
+                 OpenPrice, HighPrice, LowPrice, ClosePrice, Volume, TickCount)
+            VALUES
+                (src_data.SymbolID, src_data.TimeframeID, src_data.DateKey,
+                 src_data.BarTime, src_data.OpenPrice, src_data.HighPrice,
+                 src_data.LowPrice, src_data.ClosePrice, src_data.Volume,
+                 src_data.SrcCount);
         """, (interval_minutes, interval_minutes, symbol_id, src_tf_id,
-              symbol_id, target_tf_id, symbol_id, target_tf_id))
+              symbol_id, target_tf_id))
 
         rows = cursor.rowcount
         conn.commit()
-        logger.info("aggregate_from_fact OK: %s→%s SymbolID=%d, %d rows inserted",
+        logger.info("aggregate_from_fact OK: %s->%s SymbolID=%d, %d rows upserted",
                     src_tf_code, target_tf_code, symbol_id, rows)
         return rows
     except Exception as e:
@@ -378,17 +398,18 @@ def aggregate_from_fact(symbol_id: int, target_tf_code: str) -> int:
 
 def get_candle_count(symbol_id: int, tf_code: str) -> int:
     """Dem so candle hien co trong Fact_OHLCV theo symbol + timeframe."""
-    conn   = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT COUNT(*)
-        FROM DWH.Fact_OHLCV f
-        JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID
-        WHERE f.SymbolID = ? AND tf.Code = ?
-    """, (symbol_id, tf_code))
-    count = cursor.fetchone()[0]
-    conn.close()
-    return count
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM DWH.Fact_OHLCV f
+            JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID
+            WHERE f.SymbolID = ? AND tf.Code = ?
+        """, (symbol_id, tf_code))
+        return cursor.fetchone()[0]
+    finally:
+        conn.close()
 
 
 _ALL_STAGING_TABLES = [
@@ -444,17 +465,18 @@ def get_latest_bars() -> dict:
     Muc dich:
     - Giup gap_fill/pipeline_status xac dinh cap nao dang thieu hoac tre du lieu.
     """
-    conn   = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT f.SymbolID, tf.Code, MAX(f.BarTime) AS LastBar
-        FROM DWH.Fact_OHLCV f
-        JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID
-        GROUP BY f.SymbolID, tf.Code
-    """)
-    result = {(row[0], row[1]): row[2] for row in cursor.fetchall()}
-    conn.close()
-    return result
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT f.SymbolID, tf.Code, MAX(f.BarTime) AS LastBar
+            FROM DWH.Fact_OHLCV f
+            JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID
+            GROUP BY f.SymbolID, tf.Code
+        """)
+        return {(row[0], row[1]): row[2] for row in cursor.fetchall()}
+    finally:
+        conn.close()
 
 
 def get_internal_gaps(tf_codes: list, lookback_days: int = 60) -> dict:

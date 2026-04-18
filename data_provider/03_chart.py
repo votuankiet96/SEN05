@@ -1,13 +1,13 @@
 # =============================================================================
-# data_provider/04_chart.py  —  Chart dashboard (Flask + Lightweight Charts 4.2.1)
+# data_provider/03_chart.py  —  Chart dashboard (Flask + Lightweight Charts 4.2.1)
 # Phiên bản : 4.0
 # =============================================================================
 # HƯỚNG DẪN QUẢN TRỊ NHANH
 # File này là REST API backend cho chart dashboard.
-# Frontend là file 04_chart.html (phục vụ tại http://127.0.0.1:8050)
+# Frontend là file 03_chart.html (phục vụ tại http://127.0.0.1:8050)
 #
 # Cấu trúc:
-#   GET /                                  → phục vụ 04_chart.html
+#   GET /                                  → phục vụ 03_chart.html
 #   GET /api/symbols                       → danh sách symbol theo nhóm
 #   GET /api/timeframes                    → danh sách timeframe code
 #   GET /api/candles?symbol=X&tf=Y&bars=N  → dữ liệu OHLCV dạng JSON
@@ -18,7 +18,7 @@
 #   - API thuần JSON → dễ mở rộng, dễ debug
 #
 # Cách chạy:
-#   python data_provider/04_chart.py
+#   python data_provider/03_chart.py
 #   Mở trình duyệt: http://127.0.0.1:8050
 #   Dừng server  : Ctrl+C
 # =============================================================================
@@ -62,8 +62,8 @@ app = Flask(__name__)
 
 @app.route("/")
 def index():
-    """Phục vụ file 04_chart.html — dashboard chính."""
-    return send_from_directory(_HERE, "04_chart.html")
+    """Phục vụ file 03_chart.html — dashboard chính."""
+    return send_from_directory(_HERE, "03_chart.html")
 
 
 # ─── API: DANH SÁCH SYMBOL ───────────────────────────────────────────────────
