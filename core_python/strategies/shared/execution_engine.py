@@ -147,10 +147,11 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
     ttl          = s['pending_ttl_bars']
     partial_frac = s.get('partial_tp_fraction', 0.5)
     comm_per_lot = c['commission_per_lot']
+    base_slip    = cfg.get('slippage_pts', c['slippage_pts'])
 
     def _dynamic_slippage(bar: pd.Series) -> float:
         return calc_dynamic_slippage(
-            base_slippage=c['slippage_pts'],
+            base_slippage=base_slip,
             atr=bar['atr'],
             close=bar['close'],
             k=c.get('slippage_k', 50),
@@ -488,9 +489,11 @@ def backtest_fast(symbol: str, df_ind: pd.DataFrame, cfg: dict,
     max_dd       = s['ftmo_max_dd']
     ttl          = s['pending_ttl_bars']
 
+    base_slip    = cfg.get('slippage_pts', c['slippage_pts'])
+
     def _dynamic_slippage(bar: pd.Series) -> float:
         return calc_dynamic_slippage(
-            base_slippage=c['slippage_pts'],
+            base_slippage=base_slip,
             atr=bar['atr'],
             close=bar['close'],
             k=c.get('slippage_k', 50),
