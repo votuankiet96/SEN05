@@ -364,6 +364,7 @@ BEGIN
         -- Because CandleOpen and CandleClose are identical across all rows in a BucketTime
         -- partition (set by the window functions above), MIN() simply returns that shared value.
         SELECT BucketTime,
+            MIN(BarTime)     AS FirstBarTime, -- actual timestamp of the first source bar in bucket
             MIN(CandleOpen)  AS [Open],   -- first bar''s open (all rows equal → MIN = that value)
             MAX(High)   AS High,   -- highest high across all source bars in the bucket
             MIN(Low)    AS Low,    -- lowest low across all source bars in the bucket
@@ -376,16 +377,18 @@ BEGIN
         (SymbolID, TimeframeID, DateKey, BarTime,
          [Open], High, Low, [Close], Volume, TickCount)
     SELECT @SymbolID, @TimeframeID,
-        -- Convert BucketTime date portion to YYYYMMDD integer for DateKey FK
-        CONVERT(INT, CONVERT(VARCHAR, CAST(BucketTime AS DATE), 112)),
-        BucketTime, [Open], High, Low, [Close], Volume, BarCount
+        -- Use FirstBarTime (not BucketTime) so BarTime matches the actual first source bar.
+        -- BucketTime is anchored to 2000-01-01 UTC midnight and can be 1-5h early when
+        -- source bars are offset (e.g. EURUSD H3 starts 01:00 UTC, XAU H4 starts 01:00 UTC).
+        CONVERT(INT, CONVERT(VARCHAR, CAST(FirstBarTime AS DATE), 112)),
+        FirstBarTime, [Open], High, Low, [Close], Volume, BarCount
     FROM Aggregated
     WHERE NOT EXISTS (
         -- Idempotency guard: skip candles already in the fact table.
         -- Prevents duplicate key errors on UQ_Fact_OHLCV when proc is re-run.
         SELECT 1 FROM DWH.Fact_OHLCV f
         WHERE f.SymbolID = @SymbolID AND f.TimeframeID = @TimeframeID
-          AND f.BarTime = BucketTime
+          AND f.BarTime = FirstBarTime
     );';
 
     -- Execute with all variable values as proper parameters (safe from injection).

@@ -343,8 +343,8 @@ def aggregate_from_fact(symbol_id: int, target_tf_code: str) -> int:
                 SELECT
                     ? AS SymbolID,
                     ? AS TimeframeID,
-                    CAST(CONVERT(VARCHAR(8), a.AggBarTime, 112) AS INT) AS DateKey,
-                    a.AggBarTime AS BarTime,
+                    CAST(CONVERT(VARCHAR(8), a.FirstBarTime, 112) AS INT) AS DateKey,
+                    a.FirstBarTime AS BarTime,
                     so.[Open],
                     a.High,
                     a.Low,
