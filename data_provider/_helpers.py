@@ -72,6 +72,7 @@ from config import (
     # Số bar tối đa cần pull cho mỗi TF (dùng khi cần FULL LOAD hoặc thiếu data)
     N_BARS_W,
     SYMBOL_OVERNIGHT_MINS,  # Per-symbol overnight gap threshold (phút)
+    FIXED_H_ALIGNMENT,  # DST alignment cố định: GOLD h%N==1, BTCUSD h%N==0
     SYMBOLS,  # Danh sách symbol: [{symbol_id, tv_symbol, tv_exchange, asset_type}, ...]
     TF_MINUTES,  # Map tf_code → số phút: "H1" → 60, "M15" → 15
     TF_STAGING,  # Map tf_code → tên bảng staging: "H1" → "Staging_H1"
@@ -339,6 +340,21 @@ def _validate_ohlcv_df(df, tv_symbol: str, tf_code: str,
                        tv_symbol, tf_code)
         df         = df.sort_index()
         had_issues = True
+
+    # 5. Kiểm tra DST alignment cho GOLD và BTCUSD (H2/H3/H4)
+    # Các symbol này có alignment cố định quanh năm — lọc bars lệch giờ trước khi insert.
+    if tf_code in FIXED_H_ALIGNMENT.get(tv_symbol, {}):
+        tf_hours    = int(tf_code[1:])  # H4→4, H3→3, H2→2
+        expected    = FIXED_H_ALIGNMENT[tv_symbol][tf_code]
+        wrong_align = df.index.hour % tf_hours != expected
+        if wrong_align.any():
+            n_bad = int(wrong_align.sum())
+            logger.warning(
+                "  VALIDATE %s %s: %d bars alignment sai (h%%%d != %d) → dropped",
+                tv_symbol, tf_code, n_bad, tf_hours, expected,
+            )
+            df         = df[~wrong_align]
+            had_issues = True
 
     if had_issues:
         dropped = original_len - len(df)

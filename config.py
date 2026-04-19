@@ -328,6 +328,15 @@ CROSS_TF_PAIRS = [
     ("H1",  "H4",  240),
 ]
 
+# DST alignment cố định cho 2 symbols đặc biệt.
+# GOLD: anchored NY winter (UTC+5) → bars H4 luôn ở 01/05/09/13/17/21h UTC → h%N == 1
+# BTCUSD: anchored UTC midnight → bars H4 luôn ở 00/04/08/12/16/20h UTC → h%N == 0
+# Các symbols khác KHÔNG cần entry này — alignment của họ thay đổi theo mùa DST.
+FIXED_H_ALIGNMENT: dict[str, dict[str, int]] = {
+    "GOLD":   {"H2": 1, "H3": 1, "H4": 1},
+    "BTCUSD": {"H2": 0, "H3": 0, "H4": 0},
+}
+
 
 # -----------------------------------------------------------------------------
 # 11. CENTRALIZED TRADINGVIEW CONNECTION
