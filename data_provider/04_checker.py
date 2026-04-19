@@ -805,8 +805,8 @@ _CO_SQL = """
     ),
     seq AS (
         SELECT f.SymbolID, f.TimeframeID,
-               f.BarTime, f.ClosePrice,
-               LEAD(f.OpenPrice) OVER (
+               f.BarTime, f.[Close],
+               LEAD(f.[Open]) OVER (
                    PARTITION BY f.SymbolID, f.TimeframeID ORDER BY f.BarTime
                ) AS NextOpen,
                LEAD(f.BarTime) OVER (
@@ -821,7 +821,7 @@ _CO_SQL = """
     )
     SELECT
         COUNT(*)  AS TotalChecked,
-        SUM(CASE WHEN ABS(NextOpen - ClosePrice) / NULLIF(ClosePrice, 0) * 100 > 0.5
+        SUM(CASE WHEN ABS(NextOpen - [Close]) / NULLIF([Close], 0) * 100 > 0.5
                  THEN 1 ELSE 0 END) AS Flagged
     FROM seq
     WHERE NextOpen IS NOT NULL
@@ -839,8 +839,8 @@ _CO_SQL_TOP = """
     ),
     seq AS (
         SELECT s.Symbol, tfm.Code AS TFCode,
-               f.BarTime, f.ClosePrice,
-               LEAD(f.OpenPrice) OVER (
+               f.BarTime, f.[Close],
+               LEAD(f.[Open]) OVER (
                    PARTITION BY f.SymbolID, f.TimeframeID ORDER BY f.BarTime
                ) AS NextOpen,
                LEAD(f.BarTime) OVER (
@@ -857,12 +857,12 @@ _CO_SQL_TOP = """
     SELECT TOP 10
         Symbol, TFCode,
         CONVERT(VARCHAR(19), BarTime, 120) AS BarTime,
-        ClosePrice, NextOpen,
-        ABS(NextOpen - ClosePrice) / NULLIF(ClosePrice, 0) * 100 AS DiffPct
+        [Close], NextOpen,
+        ABS(NextOpen - [Close]) / NULLIF([Close], 0) * 100 AS DiffPct
     FROM seq
     WHERE NextOpen IS NOT NULL
       AND DATEDIFF(MINUTE, BarTime, NextBarTime) = TFMinutes
-      AND ABS(NextOpen - ClosePrice) / NULLIF(ClosePrice, 0) * 100 > 0.5
+      AND ABS(NextOpen - [Close]) / NULLIF([Close], 0) * 100 > 0.5
     ORDER BY DiffPct DESC
 """
 

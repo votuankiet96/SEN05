@@ -71,10 +71,10 @@ def load_backtest_data(symbol_id: int, date_to: str | None = None,
         query = f'''
             SELECT TOP ({total})
                    f.BarTime,
-                   f.OpenPrice  AS [open],
-                   f.HighPrice  AS [high],
-                   f.LowPrice   AS [low],
-                   f.ClosePrice AS [close],
+                   f.[Open]  AS [open],
+                   f.High  AS [high],
+                   f.Low   AS [low],
+                   f.[Close] AS [close],
                    f.Volume     AS [volume]
             FROM   DWH.Fact_OHLCV f
             JOIN   DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID

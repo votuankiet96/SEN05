@@ -39,7 +39,7 @@
      RawID       — surrogate BIGINT PK; auto-increment; never exposed externally
      SymbolID    — FK to DWH.Dim_Symbol (not enforced here for insert speed; ETL validates)
      BarTime     — candle open timestamp in UTC; DATETIME2(0) = second precision
-     OpenPrice / HighPrice / LowPrice / ClosePrice — DECIMAL(18,8): 8 decimal places
+     [Open] / High / Low / [Close] — DECIMAL(18,8): 8 decimal places
      Volume      — nullable because some instruments (e.g. spot FOREX) have no true volume
      ReceivedAt  — UTC wall-clock time when the row was inserted; useful for latency monitoring
      IsProcessed — 0 = just inserted, not yet moved to Fact_OHLCV
@@ -80,10 +80,10 @@ BEGIN
         RawID       BIGINT        NOT NULL IDENTITY(1,1),  -- auto-increment surrogate PK; BIGINT handles years of high-frequency data
         SymbolID    INT           NOT NULL,                -- references DWH.Dim_Symbol.SymbolID
         BarTime     DATETIME2(0)  NOT NULL,                -- candle open time UTC; (0) = no sub-second precision needed
-        OpenPrice   DECIMAL(18,8) NOT NULL,                -- 8 decimal places for pip-level currency precision
-        HighPrice   DECIMAL(18,8) NOT NULL,
-        LowPrice    DECIMAL(18,8) NOT NULL,
-        ClosePrice  DECIMAL(18,8) NOT NULL,
+        [Open]   DECIMAL(18,8) NOT NULL,                -- 8 decimal places for pip-level currency precision
+        High   DECIMAL(18,8) NOT NULL,
+        Low    DECIMAL(18,8) NOT NULL,
+        [Close]  DECIMAL(18,8) NOT NULL,
         Volume      DECIMAL(20,4) NULL,                   -- NULL for instruments without volume (e.g. spot FOREX)
         ReceivedAt  DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(), -- UTC insert timestamp; useful for pipeline latency monitoring
         IsProcessed BIT           NOT NULL DEFAULT 0,     -- 0 = raw/unconfirmed; 1 = bar is complete and ready for ETL
@@ -93,7 +93,7 @@ BEGIN
     -- Covering index: ETL reads (SymbolID, BarTime) and needs OHLCV columns → no key lookup needed
     CREATE NONCLUSTERED INDEX IX_TF_M5_SBT
         ON SEN.TF_M5 (SymbolID, BarTime)
-        INCLUDE (OpenPrice, HighPrice, LowPrice, ClosePrice, Volume);
+        INCLUDE ([Open], High, Low, [Close], Volume);
     PRINT 'Table SEN.TF_M5 created.';
 END
 GO
@@ -106,10 +106,10 @@ BEGIN
         RawID       BIGINT        NOT NULL IDENTITY(1,1),
         SymbolID    INT           NOT NULL,
         BarTime     DATETIME2(0)  NOT NULL,
-        OpenPrice   DECIMAL(18,8) NOT NULL,
-        HighPrice   DECIMAL(18,8) NOT NULL,
-        LowPrice    DECIMAL(18,8) NOT NULL,
-        ClosePrice  DECIMAL(18,8) NOT NULL,
+        [Open]   DECIMAL(18,8) NOT NULL,
+        High   DECIMAL(18,8) NOT NULL,
+        Low    DECIMAL(18,8) NOT NULL,
+        [Close]  DECIMAL(18,8) NOT NULL,
         Volume      DECIMAL(20,4) NULL,
         ReceivedAt  DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
         IsProcessed BIT           NOT NULL DEFAULT 0,
@@ -118,7 +118,7 @@ BEGIN
     );
     CREATE NONCLUSTERED INDEX IX_TF_M10_SBT
         ON SEN.TF_M10 (SymbolID, BarTime)
-        INCLUDE (OpenPrice, HighPrice, LowPrice, ClosePrice, Volume);
+        INCLUDE ([Open], High, Low, [Close], Volume);
     PRINT 'Table SEN.TF_M10 created.';
 END
 GO
@@ -130,10 +130,10 @@ BEGIN
         RawID       BIGINT        NOT NULL IDENTITY(1,1),
         SymbolID    INT           NOT NULL,
         BarTime     DATETIME2(0)  NOT NULL,
-        OpenPrice   DECIMAL(18,8) NOT NULL,
-        HighPrice   DECIMAL(18,8) NOT NULL,
-        LowPrice    DECIMAL(18,8) NOT NULL,
-        ClosePrice  DECIMAL(18,8) NOT NULL,
+        [Open]   DECIMAL(18,8) NOT NULL,
+        High   DECIMAL(18,8) NOT NULL,
+        Low    DECIMAL(18,8) NOT NULL,
+        [Close]  DECIMAL(18,8) NOT NULL,
         Volume      DECIMAL(20,4) NULL,
         ReceivedAt  DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
         IsProcessed BIT           NOT NULL DEFAULT 0,
@@ -142,7 +142,7 @@ BEGIN
     );
     CREATE NONCLUSTERED INDEX IX_TF_M15_SBT
         ON SEN.TF_M15 (SymbolID, BarTime)
-        INCLUDE (OpenPrice, HighPrice, LowPrice, ClosePrice, Volume);
+        INCLUDE ([Open], High, Low, [Close], Volume);
     PRINT 'Table SEN.TF_M15 created.';
 END
 GO
@@ -155,10 +155,10 @@ BEGIN
         RawID       BIGINT        NOT NULL IDENTITY(1,1),
         SymbolID    INT           NOT NULL,
         BarTime     DATETIME2(0)  NOT NULL,
-        OpenPrice   DECIMAL(18,8) NOT NULL,
-        HighPrice   DECIMAL(18,8) NOT NULL,
-        LowPrice    DECIMAL(18,8) NOT NULL,
-        ClosePrice  DECIMAL(18,8) NOT NULL,
+        [Open]   DECIMAL(18,8) NOT NULL,
+        High   DECIMAL(18,8) NOT NULL,
+        Low    DECIMAL(18,8) NOT NULL,
+        [Close]  DECIMAL(18,8) NOT NULL,
         Volume      DECIMAL(20,4) NULL,
         ReceivedAt  DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
         IsProcessed BIT           NOT NULL DEFAULT 0,
@@ -167,7 +167,7 @@ BEGIN
     );
     CREATE NONCLUSTERED INDEX IX_TF_M20_SBT
         ON SEN.TF_M20 (SymbolID, BarTime)
-        INCLUDE (OpenPrice, HighPrice, LowPrice, ClosePrice, Volume);
+        INCLUDE ([Open], High, Low, [Close], Volume);
     PRINT 'Table SEN.TF_M20 created.';
 END
 GO
@@ -179,10 +179,10 @@ BEGIN
         RawID       BIGINT        NOT NULL IDENTITY(1,1),
         SymbolID    INT           NOT NULL,
         BarTime     DATETIME2(0)  NOT NULL,
-        OpenPrice   DECIMAL(18,8) NOT NULL,
-        HighPrice   DECIMAL(18,8) NOT NULL,
-        LowPrice    DECIMAL(18,8) NOT NULL,
-        ClosePrice  DECIMAL(18,8) NOT NULL,
+        [Open]   DECIMAL(18,8) NOT NULL,
+        High   DECIMAL(18,8) NOT NULL,
+        Low    DECIMAL(18,8) NOT NULL,
+        [Close]  DECIMAL(18,8) NOT NULL,
         Volume      DECIMAL(20,4) NULL,
         ReceivedAt  DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
         IsProcessed BIT           NOT NULL DEFAULT 0,
@@ -191,7 +191,7 @@ BEGIN
     );
     CREATE NONCLUSTERED INDEX IX_TF_M30_SBT
         ON SEN.TF_M30 (SymbolID, BarTime)
-        INCLUDE (OpenPrice, HighPrice, LowPrice, ClosePrice, Volume);
+        INCLUDE ([Open], High, Low, [Close], Volume);
     PRINT 'Table SEN.TF_M30 created.';
 END
 GO
@@ -203,10 +203,10 @@ BEGIN
         RawID       BIGINT        NOT NULL IDENTITY(1,1),
         SymbolID    INT           NOT NULL,
         BarTime     DATETIME2(0)  NOT NULL,
-        OpenPrice   DECIMAL(18,8) NOT NULL,
-        HighPrice   DECIMAL(18,8) NOT NULL,
-        LowPrice    DECIMAL(18,8) NOT NULL,
-        ClosePrice  DECIMAL(18,8) NOT NULL,
+        [Open]   DECIMAL(18,8) NOT NULL,
+        High   DECIMAL(18,8) NOT NULL,
+        Low    DECIMAL(18,8) NOT NULL,
+        [Close]  DECIMAL(18,8) NOT NULL,
         Volume      DECIMAL(20,4) NULL,
         ReceivedAt  DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
         IsProcessed BIT           NOT NULL DEFAULT 0,
@@ -215,7 +215,7 @@ BEGIN
     );
     CREATE NONCLUSTERED INDEX IX_TF_M45_SBT
         ON SEN.TF_M45 (SymbolID, BarTime)
-        INCLUDE (OpenPrice, HighPrice, LowPrice, ClosePrice, Volume);
+        INCLUDE ([Open], High, Low, [Close], Volume);
     PRINT 'Table SEN.TF_M45 created.';
 END
 GO
@@ -227,10 +227,10 @@ BEGIN
         RawID       BIGINT        NOT NULL IDENTITY(1,1),
         SymbolID    INT           NOT NULL,
         BarTime     DATETIME2(0)  NOT NULL,
-        OpenPrice   DECIMAL(18,8) NOT NULL,
-        HighPrice   DECIMAL(18,8) NOT NULL,
-        LowPrice    DECIMAL(18,8) NOT NULL,
-        ClosePrice  DECIMAL(18,8) NOT NULL,
+        [Open]   DECIMAL(18,8) NOT NULL,
+        High   DECIMAL(18,8) NOT NULL,
+        Low    DECIMAL(18,8) NOT NULL,
+        [Close]  DECIMAL(18,8) NOT NULL,
         Volume      DECIMAL(20,4) NULL,
         ReceivedAt  DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
         IsProcessed BIT           NOT NULL DEFAULT 0,
@@ -239,7 +239,7 @@ BEGIN
     );
     CREATE NONCLUSTERED INDEX IX_TF_H1_SBT
         ON SEN.TF_H1 (SymbolID, BarTime)
-        INCLUDE (OpenPrice, HighPrice, LowPrice, ClosePrice, Volume);
+        INCLUDE ([Open], High, Low, [Close], Volume);
     PRINT 'Table SEN.TF_H1 created.';
 END
 GO
@@ -252,10 +252,10 @@ BEGIN
         RawID       BIGINT        NOT NULL IDENTITY(1,1),
         SymbolID    INT           NOT NULL,
         BarTime     DATETIME2(0)  NOT NULL,
-        OpenPrice   DECIMAL(18,8) NOT NULL,
-        HighPrice   DECIMAL(18,8) NOT NULL,
-        LowPrice    DECIMAL(18,8) NOT NULL,
-        ClosePrice  DECIMAL(18,8) NOT NULL,
+        [Open]   DECIMAL(18,8) NOT NULL,
+        High   DECIMAL(18,8) NOT NULL,
+        Low    DECIMAL(18,8) NOT NULL,
+        [Close]  DECIMAL(18,8) NOT NULL,
         Volume      DECIMAL(20,4) NULL,
         ReceivedAt  DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
         IsProcessed BIT           NOT NULL DEFAULT 0,
@@ -264,7 +264,7 @@ BEGIN
     );
     CREATE NONCLUSTERED INDEX IX_TF_M90_SBT
         ON SEN.TF_M90 (SymbolID, BarTime)
-        INCLUDE (OpenPrice, HighPrice, LowPrice, ClosePrice, Volume);
+        INCLUDE ([Open], High, Low, [Close], Volume);
     PRINT 'Table SEN.TF_M90 created.';
 END
 GO
@@ -276,10 +276,10 @@ BEGIN
         RawID       BIGINT        NOT NULL IDENTITY(1,1),
         SymbolID    INT           NOT NULL,
         BarTime     DATETIME2(0)  NOT NULL,
-        OpenPrice   DECIMAL(18,8) NOT NULL,
-        HighPrice   DECIMAL(18,8) NOT NULL,
-        LowPrice    DECIMAL(18,8) NOT NULL,
-        ClosePrice  DECIMAL(18,8) NOT NULL,
+        [Open]   DECIMAL(18,8) NOT NULL,
+        High   DECIMAL(18,8) NOT NULL,
+        Low    DECIMAL(18,8) NOT NULL,
+        [Close]  DECIMAL(18,8) NOT NULL,
         Volume      DECIMAL(20,4) NULL,
         ReceivedAt  DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
         IsProcessed BIT           NOT NULL DEFAULT 0,
@@ -288,7 +288,7 @@ BEGIN
     );
     CREATE NONCLUSTERED INDEX IX_TF_H2_SBT
         ON SEN.TF_H2 (SymbolID, BarTime)
-        INCLUDE (OpenPrice, HighPrice, LowPrice, ClosePrice, Volume);
+        INCLUDE ([Open], High, Low, [Close], Volume);
     PRINT 'Table SEN.TF_H2 created.';
 END
 GO
@@ -301,10 +301,10 @@ BEGIN
         RawID       BIGINT        NOT NULL IDENTITY(1,1),
         SymbolID    INT           NOT NULL,
         BarTime     DATETIME2(0)  NOT NULL,
-        OpenPrice   DECIMAL(18,8) NOT NULL,
-        HighPrice   DECIMAL(18,8) NOT NULL,
-        LowPrice    DECIMAL(18,8) NOT NULL,
-        ClosePrice  DECIMAL(18,8) NOT NULL,
+        [Open]   DECIMAL(18,8) NOT NULL,
+        High   DECIMAL(18,8) NOT NULL,
+        Low    DECIMAL(18,8) NOT NULL,
+        [Close]  DECIMAL(18,8) NOT NULL,
         Volume      DECIMAL(20,4) NULL,
         ReceivedAt  DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
         IsProcessed BIT           NOT NULL DEFAULT 0,
@@ -313,7 +313,7 @@ BEGIN
     );
     CREATE NONCLUSTERED INDEX IX_TF_H3_SBT
         ON SEN.TF_H3 (SymbolID, BarTime)
-        INCLUDE (OpenPrice, HighPrice, LowPrice, ClosePrice, Volume);
+        INCLUDE ([Open], High, Low, [Close], Volume);
     PRINT 'Table SEN.TF_H3 created.';
 END
 GO
@@ -326,10 +326,10 @@ BEGIN
         RawID       BIGINT        NOT NULL IDENTITY(1,1),
         SymbolID    INT           NOT NULL,
         BarTime     DATETIME2(0)  NOT NULL,
-        OpenPrice   DECIMAL(18,8) NOT NULL,
-        HighPrice   DECIMAL(18,8) NOT NULL,
-        LowPrice    DECIMAL(18,8) NOT NULL,
-        ClosePrice  DECIMAL(18,8) NOT NULL,
+        [Open]   DECIMAL(18,8) NOT NULL,
+        High   DECIMAL(18,8) NOT NULL,
+        Low    DECIMAL(18,8) NOT NULL,
+        [Close]  DECIMAL(18,8) NOT NULL,
         Volume      DECIMAL(20,4) NULL,
         ReceivedAt  DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
         IsProcessed BIT           NOT NULL DEFAULT 0,
@@ -338,7 +338,7 @@ BEGIN
     );
     CREATE NONCLUSTERED INDEX IX_TF_H4_SBT
         ON SEN.TF_H4 (SymbolID, BarTime)
-        INCLUDE (OpenPrice, HighPrice, LowPrice, ClosePrice, Volume);
+        INCLUDE ([Open], High, Low, [Close], Volume);
     PRINT 'Table SEN.TF_H4 created.';
 END
 GO
@@ -351,10 +351,10 @@ BEGIN
         RawID       BIGINT        NOT NULL IDENTITY(1,1),
         SymbolID    INT           NOT NULL,
         BarTime     DATETIME2(0)  NOT NULL,
-        OpenPrice   DECIMAL(18,8) NOT NULL,
-        HighPrice   DECIMAL(18,8) NOT NULL,
-        LowPrice    DECIMAL(18,8) NOT NULL,
-        ClosePrice  DECIMAL(18,8) NOT NULL,
+        [Open]   DECIMAL(18,8) NOT NULL,
+        High   DECIMAL(18,8) NOT NULL,
+        Low    DECIMAL(18,8) NOT NULL,
+        [Close]  DECIMAL(18,8) NOT NULL,
         Volume      DECIMAL(20,4) NULL,
         ReceivedAt  DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
         IsProcessed BIT           NOT NULL DEFAULT 0,
@@ -363,7 +363,7 @@ BEGIN
     );
     CREATE NONCLUSTERED INDEX IX_TF_H6_SBT
         ON SEN.TF_H6 (SymbolID, BarTime)
-        INCLUDE (OpenPrice, HighPrice, LowPrice, ClosePrice, Volume);
+        INCLUDE ([Open], High, Low, [Close], Volume);
     PRINT 'Table SEN.TF_H6 created.';
 END
 GO
@@ -376,10 +376,10 @@ BEGIN
         RawID       BIGINT        NOT NULL IDENTITY(1,1),
         SymbolID    INT           NOT NULL,
         BarTime     DATETIME2(0)  NOT NULL,
-        OpenPrice   DECIMAL(18,8) NOT NULL,
-        HighPrice   DECIMAL(18,8) NOT NULL,
-        LowPrice    DECIMAL(18,8) NOT NULL,
-        ClosePrice  DECIMAL(18,8) NOT NULL,
+        [Open]   DECIMAL(18,8) NOT NULL,
+        High   DECIMAL(18,8) NOT NULL,
+        Low    DECIMAL(18,8) NOT NULL,
+        [Close]  DECIMAL(18,8) NOT NULL,
         Volume      DECIMAL(20,4) NULL,
         ReceivedAt  DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
         IsProcessed BIT           NOT NULL DEFAULT 0,
@@ -388,7 +388,7 @@ BEGIN
     );
     CREATE NONCLUSTERED INDEX IX_TF_H8_SBT
         ON SEN.TF_H8 (SymbolID, BarTime)
-        INCLUDE (OpenPrice, HighPrice, LowPrice, ClosePrice, Volume);
+        INCLUDE ([Open], High, Low, [Close], Volume);
     PRINT 'Table SEN.TF_H8 created.';
 END
 GO
@@ -400,10 +400,10 @@ BEGIN
         RawID       BIGINT        NOT NULL IDENTITY(1,1),
         SymbolID    INT           NOT NULL,
         BarTime     DATETIME2(0)  NOT NULL,
-        OpenPrice   DECIMAL(18,8) NOT NULL,
-        HighPrice   DECIMAL(18,8) NOT NULL,
-        LowPrice    DECIMAL(18,8) NOT NULL,
-        ClosePrice  DECIMAL(18,8) NOT NULL,
+        [Open]   DECIMAL(18,8) NOT NULL,
+        High   DECIMAL(18,8) NOT NULL,
+        Low    DECIMAL(18,8) NOT NULL,
+        [Close]  DECIMAL(18,8) NOT NULL,
         Volume      DECIMAL(20,4) NULL,
         ReceivedAt  DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
         IsProcessed BIT           NOT NULL DEFAULT 0,
@@ -412,7 +412,7 @@ BEGIN
     );
     CREATE NONCLUSTERED INDEX IX_TF_D1_SBT
         ON SEN.TF_D1 (SymbolID, BarTime)
-        INCLUDE (OpenPrice, HighPrice, LowPrice, ClosePrice, Volume);
+        INCLUDE ([Open], High, Low, [Close], Volume);
     PRINT 'Table SEN.TF_D1 created.';
 END
 GO
@@ -425,10 +425,10 @@ BEGIN
         RawID       BIGINT        NOT NULL IDENTITY(1,1),
         SymbolID    INT           NOT NULL,
         BarTime     DATETIME2(0)  NOT NULL,
-        OpenPrice   DECIMAL(18,8) NOT NULL,
-        HighPrice   DECIMAL(18,8) NOT NULL,
-        LowPrice    DECIMAL(18,8) NOT NULL,
-        ClosePrice  DECIMAL(18,8) NOT NULL,
+        [Open]   DECIMAL(18,8) NOT NULL,
+        High   DECIMAL(18,8) NOT NULL,
+        Low    DECIMAL(18,8) NOT NULL,
+        [Close]  DECIMAL(18,8) NOT NULL,
         Volume      DECIMAL(20,4) NULL,
         ReceivedAt  DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
         IsProcessed BIT           NOT NULL DEFAULT 0,
@@ -437,7 +437,7 @@ BEGIN
     );
     CREATE NONCLUSTERED INDEX IX_TF_W_SBT
         ON SEN.TF_W (SymbolID, BarTime)
-        INCLUDE (OpenPrice, HighPrice, LowPrice, ClosePrice, Volume);
+        INCLUDE ([Open], High, Low, [Close], Volume);
     PRINT 'Table SEN.TF_W created.';
 END
 GO

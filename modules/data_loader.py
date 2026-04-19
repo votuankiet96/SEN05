@@ -219,10 +219,10 @@ def load_ohlcv(symbol_id: int, n_bars: int, tf_code: str = 'H4',
         query = f'''
             SELECT TOP ({total})
                    f.BarTime,
-                   f.OpenPrice  AS [open],
-                   f.HighPrice  AS [high],
-                   f.LowPrice   AS [low],
-                   f.ClosePrice AS [close]
+                   f.[Open]  AS [open],
+                   f.High  AS [high],
+                   f.Low   AS [low],
+                   f.[Close] AS [close]
             FROM   DWH.Fact_OHLCV f
             JOIN   DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID
             WHERE  f.SymbolID = ?
@@ -274,8 +274,8 @@ def load_candles(symbol: str, tf: str, n_bars: int) -> pd.DataFrame:
         conn = get_connection()
         df   = _read_sql("""
             SELECT TOP (?) f.BarTime,
-                   f.OpenPrice  AS [Open],  f.HighPrice  AS [High],
-                   f.LowPrice   AS [Low],   f.ClosePrice AS [Close],
+                   f.[Open]  AS [Open],  f.High  AS [High],
+                   f.Low   AS [Low],   f.[Close] AS [Close],
                    f.Volume
             FROM DWH.Fact_OHLCV f
             JOIN DWH.Dim_Symbol     s  ON s.SymbolID     = f.SymbolID

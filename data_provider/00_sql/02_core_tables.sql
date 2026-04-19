@@ -227,7 +227,7 @@ GO
      TimeframeID — FK to DWH.Dim_Timeframe (1-byte TINYINT — there are only 15 TFs)
      DateKey     — INT YYYYMMDD, FK to DWH.Dim_Date; enables fast calendar-based filtering
      BarTime     — candle open time in UTC; DATETIME2(0) = second precision
-     OpenPrice / HighPrice / LowPrice / ClosePrice — DECIMAL(18,8) for pip-level accuracy
+     [Open] / High / Low / [Close] — DECIMAL(18,8) for pip-level accuracy
      Volume      — nullable (FOREX spot has no centralised volume)
      TickCount   — for direct pulls: always 1 (one bar = one raw candle from TradingView)
                    for aggregated candles: count of source bars merged into this candle
@@ -260,10 +260,10 @@ BEGIN
         TimeframeID TINYINT       NOT NULL,                  -- which timeframe (1–15)
         DateKey     INT           NOT NULL,                  -- YYYYMMDD integer; FK to Dim_Date for calendar joins
         BarTime     DATETIME2(0)  NOT NULL,                  -- candle open time (UTC); second precision is sufficient
-        OpenPrice   DECIMAL(18,8) NOT NULL,                  -- first tick price of the candle
-        HighPrice   DECIMAL(18,8) NOT NULL,                  -- highest tick during the candle period
-        LowPrice    DECIMAL(18,8) NOT NULL,                  -- lowest tick during the candle period
-        ClosePrice  DECIMAL(18,8) NOT NULL,                  -- last tick price of the candle
+        [Open]   DECIMAL(18,8) NOT NULL,                  -- first tick price of the candle
+        High   DECIMAL(18,8) NOT NULL,                  -- highest tick during the candle period
+        Low    DECIMAL(18,8) NOT NULL,                  -- lowest tick during the candle period
+        [Close]  DECIMAL(18,8) NOT NULL,                  -- last tick price of the candle
         Volume      DECIMAL(20,4) NULL,                     -- total traded volume; NULL for instruments without volume
         TickCount   INT           NULL,                     -- 1 for direct TF pulls; N for aggregated candles (N = number of source bars merged)
         CreatedAt   DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(), -- UTC time row was written to fact table
@@ -286,7 +286,7 @@ BEGIN
     -- INCLUDE avoids key lookups when fetching OHLCV price columns.
     CREATE NONCLUSTERED INDEX IX_Fact_Sym_TF_Time
         ON DWH.Fact_OHLCV (SymbolID, TimeframeID, BarTime DESC)
-        INCLUDE (OpenPrice, HighPrice, LowPrice, ClosePrice, Volume);
+        INCLUDE ([Open], High, Low, [Close], Volume);
 
     -- Secondary index for date-range analytical queries across symbols and timeframes.
     CREATE NONCLUSTERED INDEX IX_Fact_DateKey

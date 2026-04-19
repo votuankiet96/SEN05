@@ -72,10 +72,10 @@ SELECT
     s.AssetType,                -- category, e.g. 'FOREX'
     tf.Code      AS Timeframe,  -- timeframe code, e.g. 'M5', 'H1', 'W'
     f.BarTime,                  -- candle open time UTC
-    f.OpenPrice  AS [Open],
-    f.HighPrice  AS [High],
-    f.LowPrice   AS [Low],
-    f.ClosePrice AS [Close],
+    f.[Open]  AS [Open],
+    f.High  AS [High],
+    f.Low   AS [Low],
+    f.[Close] AS [Close],
     f.Volume,
     f.TickCount,                -- 1 for direct TF candles; >1 for aggregated candles
     f.SymbolID,                 -- numeric key retained for programmatic access if needed
@@ -108,10 +108,10 @@ BEGIN
     -- Trading strategies typically iterate from row 1 backward in time.
     SELECT TOP (@Rows)   -- TOP with a variable requires parentheses
         f.BarTime,
-        f.OpenPrice  AS [Open],
-        f.HighPrice  AS [High],
-        f.LowPrice   AS [Low],
-        f.ClosePrice AS [Close],
+        f.[Open]  AS [Open],
+        f.High  AS [High],
+        f.Low   AS [Low],
+        f.[Close] AS [Close],
         f.Volume,
         f.TickCount
     FROM DWH.Fact_OHLCV    f
@@ -206,12 +206,12 @@ BEGIN
     DECLARE @sql NVARCHAR(MAX) = N'
         INSERT INTO DWH.Fact_OHLCV
             (SymbolID, TimeframeID, DateKey, BarTime,
-             OpenPrice, HighPrice, LowPrice, ClosePrice, Volume, TickCount)
+             [Open], High, Low, [Close], Volume, TickCount)
         SELECT @SymbolID, @TimeframeID,
             -- DateKey: convert BarTime to DATE, format as YYYYMMDD string, cast to INT
             -- e.g. 2024-03-15 → ''20240315'' → 20240315
             CONVERT(INT, CONVERT(VARCHAR, CAST(BarTime AS DATE), 112)),
-            BarTime, OpenPrice, HighPrice, LowPrice, ClosePrice, Volume,
+            BarTime, [Open], High, Low, [Close], Volume,
             1   -- TickCount = 1 for all direct pulls (one staging row = one raw candle)
         FROM ' + @StagingTable + N'
         WHERE SymbolID    = @SymbolID    -- only load rows for the requested symbol
@@ -276,15 +276,15 @@ GO
    OHLCV AGGREGATION LOGIC (inside the CTE chain):
      CTE Bucketed    — assigns each source bar a BucketTime (the aligned candle start time)
      CTE WithOHLC    — uses window functions to find the correct Open and Close per bucket:
-                         FIRST_VALUE(OpenPrice) ORDER BY BarTime ASC  → first bar's open = candle open
-                         LAST_VALUE(ClosePrice)  ORDER BY BarTime ASC  → last bar's close = candle close
+                         FIRST_VALUE([Open]) ORDER BY BarTime ASC  → first bar's open = candle open
+                         LAST_VALUE([Close])  ORDER BY BarTime ASC  → last bar's close = candle close
                          ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
                          ensures the window covers ALL rows in the partition (not just preceding rows)
      CTE Aggregated  — groups by BucketTime to produce final OHLCV:
                          Open  = MIN(CandleOpen)  — all rows in the bucket share the same CandleOpen value
                                                     (set by FIRST_VALUE window), so MIN = that value
-                         High  = MAX(HighPrice)   — highest high across all source bars in the bucket
-                         Low   = MIN(LowPrice)    — lowest low across all source bars in the bucket
+                         High  = MAX(High)   — highest high across all source bars in the bucket
+                         Low   = MIN(Low)    — lowest low across all source bars in the bucket
                          Close = MIN(CandleClose) — all rows share the same CandleClose value
                                                     (set by LAST_VALUE window), so MIN = that value
                          Vol   = SUM(Volume)      — total volume across all source bars
@@ -335,7 +335,7 @@ BEGIN
         -- DATEDIFF(MINUTE, anchor, BarTime) gives total minutes since anchor.
         -- Integer division (/ @TFMinutes) floors to the nearest bucket boundary.
         -- DATEADD adds that many minutes back to the anchor to get the bucket start time.
-        SELECT BarTime, OpenPrice, HighPrice, LowPrice, ClosePrice, Volume,
+        SELECT BarTime, [Open], High, Low, [Close], Volume,
             DATEADD(MINUTE,
                 (DATEDIFF(MINUTE, ''2000-01-01'', BarTime) / @TFMinutes) * @TFMinutes,
                 ''2000-01-01'') AS BucketTime   -- aligned candle open time for the computed TF
@@ -344,16 +344,16 @@ BEGIN
     ),
     WithOHLC AS (
         -- Use window functions to tag every row with the correct Open and Close for its bucket.
-        -- FIRST_VALUE over all rows in the partition (ORDER BY BarTime ASC) = OpenPrice of the earliest bar.
-        -- LAST_VALUE  over all rows in the partition (ORDER BY BarTime ASC) = ClosePrice of the latest bar.
+        -- FIRST_VALUE over all rows in the partition (ORDER BY BarTime ASC) = [Open] of the earliest bar.
+        -- LAST_VALUE  over all rows in the partition (ORDER BY BarTime ASC) = [Close] of the latest bar.
         -- ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING is required for LAST_VALUE to
         -- correctly reach the final row (without it, the default frame stops at the current row).
-        SELECT BucketTime, BarTime, HighPrice, LowPrice, Volume,
-            FIRST_VALUE(OpenPrice) OVER (
+        SELECT BucketTime, BarTime, High, Low, Volume,
+            FIRST_VALUE([Open]) OVER (
                 PARTITION BY BucketTime ORDER BY BarTime ASC
                 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
             ) AS CandleOpen,    -- all rows in this bucket will have the same CandleOpen value
-            LAST_VALUE(ClosePrice) OVER (
+            LAST_VALUE([Close]) OVER (
                 PARTITION BY BucketTime ORDER BY BarTime ASC
                 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
             ) AS CandleClose    -- all rows in this bucket will have the same CandleClose value
@@ -364,21 +364,21 @@ BEGIN
         -- Because CandleOpen and CandleClose are identical across all rows in a BucketTime
         -- partition (set by the window functions above), MIN() simply returns that shared value.
         SELECT BucketTime,
-            MIN(CandleOpen)  AS OpenPrice,   -- first bar''s open (all rows equal → MIN = that value)
-            MAX(HighPrice)   AS HighPrice,   -- highest high across all source bars in the bucket
-            MIN(LowPrice)    AS LowPrice,    -- lowest low across all source bars in the bucket
-            MIN(CandleClose) AS ClosePrice,  -- last bar''s close (all rows equal → MIN = that value)
+            MIN(CandleOpen)  AS [Open],   -- first bar''s open (all rows equal → MIN = that value)
+            MAX(High)   AS High,   -- highest high across all source bars in the bucket
+            MIN(Low)    AS Low,    -- lowest low across all source bars in the bucket
+            MIN(CandleClose) AS [Close],  -- last bar''s close (all rows equal → MIN = that value)
             SUM(Volume)      AS Volume,      -- total volume over the bucket period
             COUNT(*)         AS BarCount     -- number of source bars merged (written to TickCount)
         FROM WithOHLC GROUP BY BucketTime
     )
     INSERT INTO DWH.Fact_OHLCV
         (SymbolID, TimeframeID, DateKey, BarTime,
-         OpenPrice, HighPrice, LowPrice, ClosePrice, Volume, TickCount)
+         [Open], High, Low, [Close], Volume, TickCount)
     SELECT @SymbolID, @TimeframeID,
         -- Convert BucketTime date portion to YYYYMMDD integer for DateKey FK
         CONVERT(INT, CONVERT(VARCHAR, CAST(BucketTime AS DATE), 112)),
-        BucketTime, OpenPrice, HighPrice, LowPrice, ClosePrice, Volume, BarCount
+        BucketTime, [Open], High, Low, [Close], Volume, BarCount
     FROM Aggregated
     WHERE NOT EXISTS (
         -- Idempotency guard: skip candles already in the fact table.

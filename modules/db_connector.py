@@ -135,8 +135,8 @@ def insert_staging_batch(df, symbol_id: int, staging_table: str) -> int:
         # 1. Create temp table with same schema (no constraints)
         cursor.execute(f"""
             SELECT TOP 0
-                SymbolID, BarTime, OpenPrice, HighPrice, LowPrice,
-                ClosePrice, Volume, IsProcessed
+                SymbolID, BarTime, [Open], High, Low,
+                [Close], Volume, IsProcessed
             INTO #tmp_staging
             FROM {staging_table}
         """)
@@ -144,8 +144,8 @@ def insert_staging_batch(df, symbol_id: int, staging_table: str) -> int:
         # 2. Bulk-insert into temp table (no unique constraint → no errors)
         cursor.executemany("""
             INSERT INTO #tmp_staging
-                (SymbolID, BarTime, OpenPrice, HighPrice, LowPrice,
-                 ClosePrice, Volume, IsProcessed)
+                (SymbolID, BarTime, [Open], High, Low,
+                 [Close], Volume, IsProcessed)
             VALUES (?, ?, ?, ?, ?, ?, ?, 1)
         """, rows)
 
@@ -155,10 +155,10 @@ def insert_staging_batch(df, symbol_id: int, staging_table: str) -> int:
             USING #tmp_staging AS src
                 ON tgt.SymbolID = src.SymbolID AND tgt.BarTime = src.BarTime
             WHEN NOT MATCHED THEN
-                INSERT (SymbolID, BarTime, OpenPrice, HighPrice, LowPrice,
-                        ClosePrice, Volume, IsProcessed)
-                VALUES (src.SymbolID, src.BarTime, src.OpenPrice, src.HighPrice,
-                        src.LowPrice, src.ClosePrice, src.Volume, src.IsProcessed);
+                INSERT (SymbolID, BarTime, [Open], High, Low,
+                        [Close], Volume, IsProcessed)
+                VALUES (src.SymbolID, src.BarTime, src.[Open], src.High,
+                        src.Low, src.[Close], src.Volume, src.IsProcessed);
         """)
         inserted = cursor.rowcount
 
@@ -314,10 +314,10 @@ def aggregate_from_fact(symbol_id: int, target_tf_code: str) -> int:
             WITH src AS (
                 SELECT
                     f.BarTime,
-                    f.OpenPrice,
-                    f.HighPrice,
-                    f.LowPrice,
-                    f.ClosePrice,
+                    f.[Open],
+                    f.High,
+                    f.Low,
+                    f.[Close],
                     f.Volume,
                     DATEADD(MINUTE,
                         (DATEDIFF(MINUTE, CAST('2000-01-01' AS DATETIME), f.BarTime) / ?) * ?,
@@ -331,8 +331,8 @@ def aggregate_from_fact(symbol_id: int, target_tf_code: str) -> int:
                     AggBarTime,
                     MIN(BarTime)   AS FirstBarTime,
                     MAX(BarTime)   AS LastBarTime,
-                    MAX(HighPrice) AS HighPrice,
-                    MIN(LowPrice)  AS LowPrice,
+                    MAX(High) AS High,
+                    MIN(Low)  AS Low,
                     SUM(Volume)    AS Volume,
                     COUNT(*)       AS SrcCount
                 FROM src
@@ -345,10 +345,10 @@ def aggregate_from_fact(symbol_id: int, target_tf_code: str) -> int:
                     ? AS TimeframeID,
                     CAST(CONVERT(VARCHAR(8), a.AggBarTime, 112) AS INT) AS DateKey,
                     a.AggBarTime AS BarTime,
-                    so.OpenPrice,
-                    a.HighPrice,
-                    a.LowPrice,
-                    sc.ClosePrice,
+                    so.[Open],
+                    a.High,
+                    a.Low,
+                    sc.[Close],
                     a.Volume,
                     a.SrcCount
                 FROM agg a
@@ -361,19 +361,19 @@ def aggregate_from_fact(symbol_id: int, target_tf_code: str) -> int:
             WHEN MATCHED AND (
                 tgt.TickCount IS NULL OR tgt.TickCount < src_data.SrcCount
             ) THEN UPDATE SET
-                tgt.OpenPrice  = src_data.OpenPrice,
-                tgt.HighPrice  = src_data.HighPrice,
-                tgt.LowPrice   = src_data.LowPrice,
-                tgt.ClosePrice = src_data.ClosePrice,
+                tgt.[Open]  = src_data.[Open],
+                tgt.High  = src_data.High,
+                tgt.Low   = src_data.Low,
+                tgt.[Close] = src_data.[Close],
                 tgt.Volume     = src_data.Volume,
                 tgt.TickCount  = src_data.SrcCount
             WHEN NOT MATCHED THEN INSERT
                 (SymbolID, TimeframeID, DateKey, BarTime,
-                 OpenPrice, HighPrice, LowPrice, ClosePrice, Volume, TickCount)
+                 [Open], High, Low, [Close], Volume, TickCount)
             VALUES
                 (src_data.SymbolID, src_data.TimeframeID, src_data.DateKey,
-                 src_data.BarTime, src_data.OpenPrice, src_data.HighPrice,
-                 src_data.LowPrice, src_data.ClosePrice, src_data.Volume,
+                 src_data.BarTime, src_data.[Open], src_data.High,
+                 src_data.Low, src_data.[Close], src_data.Volume,
                  src_data.SrcCount);
         """, (interval_minutes, interval_minutes, symbol_id, src_tf_id,
               symbol_id, target_tf_id))
@@ -568,8 +568,8 @@ def find_price_spikes(tf_codes: list, lookback_days: int,
                     f.SymbolID,
                     tf.Code                                           AS TFCode,
                     f.BarTime,
-                    f.ClosePrice,
-                    LEAD(f.OpenPrice) OVER (
+                    f.[Close],
+                    LEAD(f.[Open]) OVER (
                         PARTITION BY f.SymbolID, f.TimeframeID
                         ORDER BY f.BarTime
                     )                                                 AS NextOpen,
@@ -577,7 +577,7 @@ def find_price_spikes(tf_codes: list, lookback_days: int,
                         PARTITION BY f.SymbolID, f.TimeframeID
                         ORDER BY f.BarTime
                     )                                                 AS NextBarTime,
-                    AVG(f.HighPrice - f.LowPrice) OVER (
+                    AVG(f.High - f.Low) OVER (
                         PARTITION BY f.SymbolID, f.TimeframeID
                         ORDER BY f.BarTime
                         ROWS BETWEEN 13 PRECEDING AND CURRENT ROW
@@ -591,17 +591,17 @@ def find_price_spikes(tf_codes: list, lookback_days: int,
                 SymbolID,
                 TFCode,
                 BarTime,
-                ClosePrice,
+                [Close],
                 NextOpen,
                 NextBarTime,
                 ATR14,
-                ABS(ClosePrice - NextOpen)                           AS PriceJump,
-                ABS(ClosePrice - NextOpen) / NULLIF(ATR14, 0)       AS JumpATR,
+                ABS([Close] - NextOpen)                           AS PriceJump,
+                ABS([Close] - NextOpen) / NULLIF(ATR14, 0)       AS JumpATR,
                 DATEDIFF(MINUTE, BarTime, NextBarTime)               AS GapMinutes
             FROM bars
             WHERE NextBarTime IS NOT NULL
               AND ATR14 > 0
-              AND ABS(ClosePrice - NextOpen) / NULLIF(ATR14, 0) > ?
+              AND ABS([Close] - NextOpen) / NULLIF(ATR14, 0) > ?
             ORDER BY JumpATR DESC
         """, [lookback_days] + list(tf_codes) + [threshold_atr])
 
@@ -734,7 +734,7 @@ def upsert_ohlcv_bar(symbol_id: int, tf_code: str,
 
         # Check existing bar
         cursor.execute("""
-            SELECT OpenPrice, HighPrice, LowPrice, ClosePrice
+            SELECT [Open], High, Low, [Close]
             FROM DWH.Fact_OHLCV
             WHERE SymbolID = ? AND TimeframeID = ? AND BarTime = ?
         """, (symbol_id, tf_id, bar_time))
@@ -749,7 +749,7 @@ def upsert_ohlcv_bar(symbol_id: int, tf_code: str,
             cursor.execute("""
                 INSERT INTO DWH.Fact_OHLCV
                     (SymbolID, TimeframeID, DateKey, BarTime,
-                     OpenPrice, HighPrice, LowPrice, ClosePrice, Volume)
+                     [Open], High, Low, [Close], Volume)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (symbol_id, tf_id, date_key, bar_time,
                   open_p, high_p, low_p, close_p, volume))
@@ -764,10 +764,10 @@ def upsert_ohlcv_bar(symbol_id: int, tf_code: str,
         # Update
         cursor.execute("""
             UPDATE DWH.Fact_OHLCV
-               SET OpenPrice  = ?,
-                   HighPrice  = ?,
-                   LowPrice   = ?,
-                   ClosePrice = ?,
+               SET [Open]  = ?,
+                   High  = ?,
+                   Low   = ?,
+                   [Close] = ?,
                    Volume     = ?
              WHERE SymbolID = ? AND TimeframeID = ? AND BarTime = ?
         """, (open_p, high_p, low_p, close_p, volume,
