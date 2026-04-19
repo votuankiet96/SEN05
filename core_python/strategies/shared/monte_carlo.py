@@ -54,8 +54,14 @@ def run_monte_carlo(trade_pnls: list[float], n_iter: int = 1000,
     max_drawdowns = np.zeros(n_iter, dtype=float)
     sharpe_samples = np.zeros(n_iter, dtype=float)
 
+    # Block bootstrap: giữ nguyên serial correlation (streak thắng/thua liên tiếp).
+    block_size = max(1, int(np.sqrt(n_trades)))
+
     for i in range(n_iter):
-        shuffled = np.random.permutation(arr)
+        n_blocks = int(np.ceil(n_trades / block_size))
+        starts   = np.random.randint(0, n_trades, size=n_blocks)
+        blocks   = [arr[s:s + block_size] for s in starts]
+        shuffled = np.concatenate(blocks)[:n_trades]
         equity = np.cumsum(shuffled)
         equity_paths[i, :] = equity
 

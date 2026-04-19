@@ -72,18 +72,26 @@ def calc_metrics(trades: list, eq_ts: pd.Series, tf_code: str = 'H4') -> dict:
     dd_pct_ts = (eq_ts - peak) / peak
     dd_usd_ts = eq_ts - peak
 
-    bpy    = _bars_per_year(tf_code)
-    rets   = eq_ts.pct_change().dropna()
-    sharpe = (rets.mean() / rets.std() * np.sqrt(bpy)
-              if len(rets) > 1 and rets.std() > 0 else 0)
-
-    downside = rets[rets < 0]
-    sortino  = (rets.mean() / downside.std() * np.sqrt(bpy)
-                if len(downside) > 1 and downside.std() > 0 else 0)
-
     total_ret  = (eq_ts.iloc[-1] / eq_ts.iloc[0] - 1) * 100
     years      = (eq_ts.index[-1] - eq_ts.index[0]).days / 365.25
     annual_ret = ((eq_ts.iloc[-1] / eq_ts.iloc[0]) ** (1 / max(years, 0.01)) - 1) * 100
+
+    # Sharpe/Sortino tính trên trade-level returns để tránh inflate bởi các bar equity phẳng.
+    n_trades   = len(df)
+    eq0        = eq_ts.iloc[0] if eq_ts.iloc[0] != 0 else 1.0
+    trade_rets = df['pnl_usd'] / eq0
+    n_per_year = n_trades / max(years, 0.01)
+
+    if n_trades < 10 or trade_rets.std() == 0:
+        sharpe = 0.0
+    else:
+        sharpe = float(trade_rets.mean() / trade_rets.std() * np.sqrt(max(n_per_year, 1)))
+
+    neg_rets = trade_rets[trade_rets < 0]
+    if n_trades < 10 or len(neg_rets) < 2 or neg_rets.std() == 0:
+        sortino = 0.0
+    else:
+        sortino = float(trade_rets.mean() / neg_rets.std() * np.sqrt(max(n_per_year, 1)))
     max_dd     = dd_pct_ts.min() * 100
     max_dd_usd = dd_usd_ts.min()
     calmar     = annual_ret / abs(max_dd) if max_dd else 0

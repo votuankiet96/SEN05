@@ -331,7 +331,7 @@ def walk_forward_backtest(
             'oos_start': oos_slice.index[0],
             'oos_end':   oos_slice.index[-1],
         }
-        row.update(metrics)
+        row.update({k: v for k, v in metrics.items() if k != 'monthly_pnl_table'})
         row['plateau'] = plateau
         results.append(row)
         step += 1
@@ -367,7 +367,7 @@ def walk_forward_backtest(
     )
     summary['efficiency_status'] = (
         'ĐẠT (> 50%)'
-        if summary.get('oos_is_efficiency') and summary['oos_is_efficiency'] > 0.5
+        if summary['oos_is_efficiency'] is not None and summary['oos_is_efficiency'] > 0.5
         else 'CHƯA ĐẠT (< 50%)'
     )
 
@@ -383,7 +383,7 @@ def walk_forward_backtest(
         f"  Cửa sổ plateau ổn định: {summary['plateau_stable_windows']}/{summary['n_windows']} ({summary['plateau_stable_pct']:.1%})",
         "=" * 55,
     ]
-    if summary.get('oos_is_efficiency') and summary['oos_is_efficiency'] < 0.5:
+    if summary['oos_is_efficiency'] is not None and summary['oos_is_efficiency'] < 0.5:
         lines += [
             "  ⚠️  CẢNH BÁO: OOS/IS < 50% — hệ thống có dấu hiệu overfit",
             "  → Thử giảm số tham số optimize hoặc tăng IS window size",
