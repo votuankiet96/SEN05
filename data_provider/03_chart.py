@@ -140,9 +140,8 @@ def api_candles():
 
     records = []
     for _, row in df.iterrows():
-        # Chuyển datetime sang Unix timestamp (giây)
-        # BarTime từ DB là UTC (không có tzinfo) → dùng trực tiếp làm UTC
-        ts = int(pd.Timestamp(row["BarTime"]).timestamp())
+        # BarTime từ DB là UTC (naive) — phải localize trước khi convert sang Unix timestamp
+        ts = int(pd.Timestamp(row["BarTime"]).tz_localize('UTC').timestamp())
         volume = row.get("Volume")
         records.append({
             "time":   ts,

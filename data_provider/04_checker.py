@@ -65,7 +65,7 @@ _DATA = Path(__file__).resolve().parent
 if str(_PROJ) not in sys.path:
     sys.path.insert(0, str(_PROJ))
 
-from config import SYMBOLS, TF_STAGING
+from config import SYMBOLS, TF_STAGING, TF_MINUTES
 from _helpers import (
     setup_logger,
     recompute_derived,
@@ -608,8 +608,16 @@ def main() -> None:
         help=f"Check a single TF only (one of: {', '.join(TFS_TO_CHECK)})",
     )
     parser.add_argument(
-    "--threshold", type=float, default=DEFAULT_THRESHOLD, metavar="RATE",
-    help=f"Mismatch threshold (default {DEFAULT_THRESHOLD * 100:.0f}%%). E.g. 0.05 = 5%%.",
+        "--threshold", type=float, default=DEFAULT_THRESHOLD, metavar="RATE",
+        help=f"Mismatch threshold (default {DEFAULT_THRESHOLD * 100:.0f}%%). E.g. 0.05 = 5%%.",
+    )
+    parser.add_argument(
+        "--co-check", action="store_true",
+        help="Run C[T0]=O[T1] continuity check (DB-only, no TradingView). Can combine with --dry-run.",
+    )
+    parser.add_argument(
+        "--co-days", type=int, default=7, metavar="DAYS",
+        help="Lookback window in days for --co-check (default: 7)",
     )
     args = parser.parse_args()
 
@@ -640,6 +648,22 @@ def main() -> None:
             logger.error("TF '%s' not in TFS_TO_CHECK (%s).", tf, TFS_TO_CHECK)
             sys.exit(1)
         tfs = [tf]
+
+    # ── C-O continuity check (DB-only, runs before TradingView connection) ─────
+    if args.co_check:
+        sym_filter = [args.sym] if args.sym else None
+        co_clean, co_stats = check_co_continuity(
+            lookback_days=args.co_days,
+            sym_filter=sym_filter,
+        )
+        co_report = _format_co_report(co_stats, args.co_days)
+        logger.info("\n%s", co_report)
+        print("\n" + co_report + "\n")
+        tg_send(f"<b>[Checker] C-O Check</b>\n<pre>{co_report}</pre>")
+        tg_flush()
+        if not args.dry_run:
+            # standalone --co-check: exit after report
+            sys.exit(0 if co_clean else 1)
 
     # ── Build Interval map (deferred import) ─────────────────────────────────
     interval_map = _build_interval_map()
@@ -752,6 +776,182 @@ def main() -> None:
 
     tg_flush()
     sys.exit(exit_code)
+
+
+# =============================================================================
+# C[T0] = O[T1] CONTINUITY CHECK  (DB-only, no TradingView needed)
+# =============================================================================
+
+# D1, W excluded — overnight/weekend gaps are expected and do not violate C=O
+_CO_TF_MINUTES: dict[str, int] = {
+    "M5": 5, "M10": 10, "M15": 15, "M20": 20, "M30": 30, "M45": 45,
+    "M90": 90, "H1": 60, "H2": 120, "H3": 180, "H4": 240, "H6": 360, "H8": 480,
+}
+
+# Static CASE expression — safe, no user input
+_CO_TF_CASE = "\n               ".join(
+    f"WHEN '{code}' THEN {mins}"
+    for code, mins in _CO_TF_MINUTES.items()
+)
+
+_CO_SQL = """
+    WITH tf_mins AS (
+        SELECT tf.TimeframeID, tf.Code,
+               CASE tf.Code
+                   {tf_case}
+                   ELSE NULL
+               END AS TFMinutes
+        FROM DWH.Dim_Timeframe tf
+    ),
+    seq AS (
+        SELECT f.SymbolID, f.TimeframeID,
+               f.BarTime, f.ClosePrice,
+               LEAD(f.OpenPrice) OVER (
+                   PARTITION BY f.SymbolID, f.TimeframeID ORDER BY f.BarTime
+               ) AS NextOpen,
+               LEAD(f.BarTime) OVER (
+                   PARTITION BY f.SymbolID, f.TimeframeID ORDER BY f.BarTime
+               ) AS NextBarTime,
+               tfm.TFMinutes
+        FROM DWH.Fact_OHLCV f
+        JOIN tf_mins tfm ON tfm.TimeframeID = f.TimeframeID
+        WHERE tfm.TFMinutes IS NOT NULL
+          AND f.BarTime >= DATEADD(DAY, -?, GETUTCDATE())
+          AND f.SymbolID IN ({sym_phs})
+    )
+    SELECT
+        COUNT(*)  AS TotalChecked,
+        SUM(CASE WHEN ABS(NextOpen - ClosePrice) / NULLIF(ClosePrice, 0) * 100 > 0.5
+                 THEN 1 ELSE 0 END) AS Flagged
+    FROM seq
+    WHERE NextOpen IS NOT NULL
+      AND DATEDIFF(MINUTE, BarTime, NextBarTime) = TFMinutes
+"""
+
+_CO_SQL_TOP = """
+    WITH tf_mins AS (
+        SELECT tf.TimeframeID, tf.Code,
+               CASE tf.Code
+                   {tf_case}
+                   ELSE NULL
+               END AS TFMinutes
+        FROM DWH.Dim_Timeframe tf
+    ),
+    seq AS (
+        SELECT s.Symbol, tfm.Code AS TFCode,
+               f.BarTime, f.ClosePrice,
+               LEAD(f.OpenPrice) OVER (
+                   PARTITION BY f.SymbolID, f.TimeframeID ORDER BY f.BarTime
+               ) AS NextOpen,
+               LEAD(f.BarTime) OVER (
+                   PARTITION BY f.SymbolID, f.TimeframeID ORDER BY f.BarTime
+               ) AS NextBarTime,
+               tfm.TFMinutes
+        FROM DWH.Fact_OHLCV f
+        JOIN DWH.Dim_Symbol s ON s.SymbolID = f.SymbolID
+        JOIN tf_mins tfm      ON tfm.TimeframeID = f.TimeframeID
+        WHERE tfm.TFMinutes IS NOT NULL
+          AND f.BarTime >= DATEADD(DAY, -?, GETUTCDATE())
+          AND f.SymbolID IN ({sym_phs})
+    )
+    SELECT TOP 10
+        Symbol, TFCode,
+        CONVERT(VARCHAR(19), BarTime, 120) AS BarTime,
+        ClosePrice, NextOpen,
+        ABS(NextOpen - ClosePrice) / NULLIF(ClosePrice, 0) * 100 AS DiffPct
+    FROM seq
+    WHERE NextOpen IS NOT NULL
+      AND DATEDIFF(MINUTE, BarTime, NextBarTime) = TFMinutes
+      AND ABS(NextOpen - ClosePrice) / NULLIF(ClosePrice, 0) * 100 > 0.5
+    ORDER BY DiffPct DESC
+"""
+
+
+def check_co_continuity(
+    lookback_days: int = 7,
+    sym_filter: list | None = None,
+) -> tuple[bool, dict]:
+    """
+    Kiểm tra C[T0] = O[T1] cho các bar liên tiếp trong cùng session.
+
+    Chỉ kiểm tra TF M5..H8 (bỏ qua D1/W vì overnight gap là bình thường).
+    "Liên tiếp" = DATEDIFF(MINUTE) đúng bằng TF period.
+    Flag khi |O[T1] - C[T0]| / C[T0] > 0.5%.
+
+    Returns (is_clean, stats_dict). is_clean = True khi flag% < 1%.
+    """
+    symbols = list(SYMBOLS)
+    if sym_filter:
+        sym_upper = {s.upper() for s in sym_filter}
+        symbols = [s for s in symbols if s["tv_symbol"].upper() in sym_upper]
+
+    sym_ids = [s["symbol_id"] for s in symbols]
+    if not sym_ids:
+        return True, {"total": 0, "flagged": 0, "pct": 0.0, "top": []}
+
+    sym_phs = ",".join("?" * len(sym_ids))
+    params  = (lookback_days, *sym_ids)
+
+    conn   = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        _CO_SQL.format(tf_case=_CO_TF_CASE, sym_phs=sym_phs),
+        params,
+    )
+    row     = cursor.fetchone()
+    total   = int(row[0]) if row and row[0] else 0
+    flagged = int(row[1]) if row and row[1] else 0
+    pct     = flagged / total * 100 if total > 0 else 0.0
+
+    top: list[dict] = []
+    if flagged > 0:
+        cursor.execute(
+            _CO_SQL_TOP.format(tf_case=_CO_TF_CASE, sym_phs=sym_phs),
+            params,
+        )
+        for r in cursor.fetchall():
+            top.append({
+                "symbol":    r[0],
+                "tf":        r[1],
+                "time":      r[2],
+                "close":     float(r[3]),
+                "next_open": float(r[4]),
+                "diff_pct":  float(r[5]),
+            })
+
+    conn.close()
+    return pct < 1.0, {"total": total, "flagged": flagged, "pct": pct, "top": top}
+
+
+def _format_co_report(stats: dict, lookback_days: int) -> str:
+    """Trả về chuỗi báo cáo C-O continuity check (dùng cả cho log và Telegram)."""
+    total   = stats["total"]
+    flagged = stats["flagged"]
+    pct     = stats["pct"]
+    top     = stats["top"]
+
+    lines = [
+        f"=== C-O Continuity Check (lookback {lookback_days}d, TF M5..H8) ===",
+        f"Transitions checked: {total:,}",
+    ]
+    if total == 0:
+        lines.append("(no data)")
+        return "\n".join(lines)
+
+    if flagged == 0:
+        lines.append(f"Result: CLEAN — all {total:,} within-session C=O (diff < 0.5%)")
+    else:
+        level = "WARNING" if pct < 1.0 else "ERROR"
+        lines.append(f"Result: [{level}] {flagged:,} / {total:,} flagged ({pct:.3f}%)")
+        if top:
+            lines.append(f"Top {len(top)} worst:")
+            for r in top:
+                lines.append(
+                    f"  {r['symbol']} {r['tf']} {r['time']}  "
+                    f"C={r['close']:.5f} nextO={r['next_open']:.5f}  diff={r['diff_pct']:.3f}%"
+                )
+    return "\n".join(lines)
 
 
 def _log_report(report: str, logger: logging.Logger) -> None:
