@@ -96,7 +96,7 @@
     .sym-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); font-weight: 600; }
 
     /* TF buttons */
-    #tf-buttons { display: flex; flex-wrap: wrap; gap: 2px; margin-bottom: 6px; }
+    #tf-buttons { display: flex; flex-wrap: wrap; gap: 2px; margin-bottom: 6px; align-items: center; }
     .tf-btn {
       background: var(--bg3); color: var(--text2);
       border: 1px solid var(--border); border-radius: 3px;
@@ -105,6 +105,13 @@
     }
     .tf-btn:hover  { border-color: var(--blue); color: var(--text); }
     .tf-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); font-weight: 700; }
+    /* Nhãn phân tách nhóm TF */
+    .tf-group-label {
+      width: 100%; font-size: 9px; color: var(--text2);
+      text-transform: uppercase; letter-spacing: 1px;
+      margin: 5px 2px 2px; opacity: 0.7;
+    }
+    .tf-group-label:first-child { margin-top: 0; }
 
     /* Bars select */
     #bars-select {
@@ -115,9 +122,46 @@
     }
     #bars-select:focus { outline: none; border-color: var(--blue); }
 
-    /* Chart area */
-    #chart-wrap { flex: 1; position: relative; overflow: hidden; }
-    #chart       { width: 100%; height: 100%; }
+    /* ── Indicator controls ─────────────────────────────────────── */
+    #indicator-controls { display: flex; flex-direction: column; gap: 3px; margin-bottom: 4px; }
+    .ind-row {
+      display: flex; align-items: center; gap: 5px;
+      padding: 3px 2px; cursor: pointer;
+    }
+    .ind-row:hover .ind-label { color: var(--text); }
+    .ind-row input[type="checkbox"] { cursor: pointer; accent-color: var(--blue); flex-shrink: 0; }
+    .ind-label { font-size: 11px; color: var(--text2); min-width: 30px; }
+    .ind-param {
+      width: 32px; background: var(--bg3); color: var(--text);
+      border: 1px solid var(--border); border-radius: 3px;
+      padding: 2px 4px; font-size: 11px; text-align: center;
+    }
+    .ind-param:focus { outline: none; border-color: var(--blue); }
+    .ind-param-std { width: 28px; }
+
+    /* ── Chart area — flex column ───────────────────────────────── */
+    #chart-area {
+      flex: 1; display: flex; flex-direction: column;
+      overflow: hidden; position: relative;
+    }
+    #price-chart { flex: 1; min-height: 200px; }
+
+    /* Sub-panels */
+    .chart-panel {
+      flex-shrink: 0; display: flex; flex-direction: column;
+      border-top: 1px solid var(--border);
+    }
+    .panel-header {
+      height: 18px; display: flex; align-items: center;
+      padding: 0 8px; background: var(--bg2); flex-shrink: 0;
+    }
+    .panel-label-text {
+      font-size: 10px; color: var(--text2);
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .panel-chart-div { flex: 1; }
+    #macd-panel { height: 120px; }
+    #atr-panel  { height: 80px;  }
 
     /* Loading overlay */
     #loading {
@@ -140,7 +184,7 @@
 
   <!-- ── Header ─────────────────────────────────────────────────── -->
   <div id="header">
-    <span id="header-title">📈 AutoTrading Chart</span>
+    <span id="header-title">&#x1F4C8; AutoTrading Chart</span>
     <span id="status-msg"></span>
     <span id="refresh-badge">—</span>
     <div id="ohlc-bar"></div>
@@ -165,16 +209,58 @@
           <option value="2000">2 000</option>
         </select>
 
+        <span class="section-label">Indicators</span>
+        <div id="indicator-controls">
+          <!-- MA -->
+          <label class="ind-row">
+            <input type="checkbox" id="ind-ma" checked>
+            <span class="ind-label">MA</span>
+            <input type="number" id="ma-period" class="ind-param" value="20" min="2" max="500">
+          </label>
+          <!-- Bollinger Bands -->
+          <label class="ind-row">
+            <input type="checkbox" id="ind-bb">
+            <span class="ind-label">BB</span>
+            <input type="number" id="bb-period" class="ind-param" value="20" min="2" max="500">
+            <input type="number" id="bb-std" class="ind-param ind-param-std" value="2.0" min="0.5" max="5" step="0.5">
+          </label>
+          <!-- MACD -->
+          <label class="ind-row">
+            <input type="checkbox" id="ind-macd">
+            <span class="ind-label">MACD</span>
+          </label>
+          <!-- ATR -->
+          <label class="ind-row">
+            <input type="checkbox" id="ind-atr">
+            <span class="ind-label">ATR</span>
+            <input type="number" id="atr-period" class="ind-param" value="14" min="2" max="100">
+          </label>
+        </div>
+
         <span class="section-label">Symbol</span>
         <div id="sym-panel"><!-- populated by JS --></div>
 
       </div>
     </div>
 
-    <!-- Chart -->
-    <div id="chart-wrap">
-      <div id="chart"></div>
-      <div id="loading">Loading…</div>
+    <!-- Chart area -->
+    <div id="chart-area">
+      <div id="price-chart"></div>
+      <!-- MACD sub-panel (hidden by default) -->
+      <div id="macd-panel" class="chart-panel" style="display:none">
+        <div class="panel-header">
+          <span class="panel-label-text">MACD</span>
+        </div>
+        <div id="macd-chart" class="panel-chart-div"></div>
+      </div>
+      <!-- ATR sub-panel (hidden by default) -->
+      <div id="atr-panel" class="chart-panel" style="display:none">
+        <div class="panel-header">
+          <span class="panel-label-text">ATR</span>
+        </div>
+        <div id="atr-chart" class="panel-chart-div"></div>
+      </div>
+      <div id="loading">Loading&#x2026;</div>
     </div>
 
   </div><!-- /#body -->
@@ -182,15 +268,15 @@
 
 <script>
 // =============================================================================
-// AutoTrading Chart — Lightweight Charts 4.2.1
+// AutoTrading Chart v5.0 — Lightweight Charts 4.2.1
 // =============================================================================
 
 // ── Trạng thái ──────────────────────────────────────────────────────────────
-let currentSymbol  = 'EURUSD';
-let currentTf      = 'H1';
-let currentBars    = 500;
-let refreshTimer   = null;
-const REFRESH_MS   = 60_000;   // tự động tải lại mỗi 60 giây
+let currentSymbol = 'EURUSD';
+let currentTf     = 'H1';
+let currentBars   = 500;
+let refreshTimer  = null;
+const REFRESH_MS  = 60_000;
 
 // ── Màu sắc ─────────────────────────────────────────────────────────────────
 const C = {
@@ -199,13 +285,33 @@ const C = {
   blue: '#2962ff', green: '#26a69a', red: '#ef5350',
 };
 
+// ── Common sub-panel chart options ───────────────────────────────────────────
+const _subOpts = {
+  layout: {
+    background: { type: 'solid', color: C.bg },
+    textColor: C.text2,
+    fontFamily: 'Arial, Helvetica, sans-serif',
+    fontSize: 10,
+  },
+  grid: {
+    vertLines: { color: 'transparent' },
+    horzLines: { color: C.border },
+  },
+  crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+  rightPriceScale: { borderColor: C.border, scaleMargins: { top: 0.1, bottom: 0.1 } },
+  timeScale: { borderColor: C.border, visible: false },
+  handleScroll: { mouseWheel: true, pressedMouseMove: true },
+  handleScale: { mouseWheel: true, pinch: true },
+};
+
 // =============================================================================
-// LIGHTWEIGHT CHARTS — khởi tạo
+// KHỞI TẠO CHARTS
 // =============================================================================
 
-const chartEl = document.getElementById('chart');
+// ── Price chart (chính) ──────────────────────────────────────────────────────
+const priceChartEl = document.getElementById('price-chart');
 
-const chart = LightweightCharts.createChart(chartEl, {
+const chart = LightweightCharts.createChart(priceChartEl, {
   layout: {
     background: { type: 'solid', color: C.bg },
     textColor: C.text,
@@ -232,17 +338,12 @@ const chart = LightweightCharts.createChart(chartEl, {
   handleScale: { mouseWheel: true, pinch: true },
 });
 
-// ── Series: nến (chính) ──────────────────────────────────────────────────────
 const candleSeries = chart.addCandlestickSeries({
-  upColor:        C.green,
-  downColor:      C.red,
-  borderUpColor:  C.green,
-  borderDownColor: C.red,
-  wickUpColor:    C.green,
-  wickDownColor:  C.red,
+  upColor: C.green, downColor: C.red,
+  borderUpColor: C.green, borderDownColor: C.red,
+  wickUpColor: C.green, wickDownColor: C.red,
 });
 
-// ── Series: volume (histogram phụ) ──────────────────────────────────────────
 const volumeSeries = chart.addHistogramSeries({
   priceFormat: { type: 'volume' },
   priceScaleId: 'volume',
@@ -255,12 +356,152 @@ chart.priceScale('volume').applyOptions({
   visible: false,
 });
 
-// ── Resize chart khi cửa sổ thay đổi kích thước ─────────────────────────────
-const resizeObserver = new ResizeObserver(entries => {
-  const { width, height } = entries[0].contentRect;
-  chart.applyOptions({ width, height });
+// ── Overlay series (lazily created on first use) ─────────────────────────────
+let maSeries = null;
+let bbUpper  = null;
+let bbMid    = null;
+let bbLower  = null;
+
+// ── MACD sub-panel ───────────────────────────────────────────────────────────
+const macdPanelEl   = document.getElementById('macd-panel');
+const macdChartEl   = document.getElementById('macd-chart');
+const macdChart     = LightweightCharts.createChart(macdChartEl, _subOpts);
+const macdHistSeries   = macdChart.addHistogramSeries({
+  priceFormat: { type: 'price', precision: 6, minMove: 0.000001 },
+  priceLineVisible: false, lastValueVisible: false,
 });
-resizeObserver.observe(chartEl);
+const macdLineSeries   = macdChart.addLineSeries({
+  color: '#2196F3', lineWidth: 1, priceLineVisible: false, lastValueVisible: false,
+});
+const macdSignalSeries = macdChart.addLineSeries({
+  color: '#FF9800', lineWidth: 1, priceLineVisible: false, lastValueVisible: false,
+});
+
+// ── ATR sub-panel ────────────────────────────────────────────────────────────
+const atrPanelEl  = document.getElementById('atr-panel');
+const atrChartEl  = document.getElementById('atr-chart');
+const atrChart    = LightweightCharts.createChart(atrChartEl, _subOpts);
+const atrLineSeries = atrChart.addLineSeries({
+  color: '#9C27B0', lineWidth: 1, priceLineVisible: false, lastValueVisible: false,
+});
+
+// ── Resize observer — tất cả chart divs ─────────────────────────────────────
+const ro = new ResizeObserver(entries => {
+  for (const e of entries) {
+    const { width, height } = e.contentRect;
+    if (!width || !height) continue;
+    if (e.target === priceChartEl) chart.applyOptions({ width, height });
+    if (e.target === macdChartEl)  macdChart.applyOptions({ width, height });
+    if (e.target === atrChartEl)   atrChart.applyOptions({ width, height });
+  }
+});
+ro.observe(priceChartEl);
+ro.observe(macdChartEl);
+ro.observe(atrChartEl);
+
+// ── Đồng bộ time range giữa các charts ──────────────────────────────────────
+let _syncLock = false;
+
+function _syncFrom(src, targets) {
+  src.timeScale().subscribeVisibleLogicalRangeChange(range => {
+    if (_syncLock || !range) return;
+    _syncLock = true;
+    try {
+      targets.forEach(({ chart: tc, panel }) => {
+        if (!panel || panel.offsetParent !== null) {  // visible or no panel (price chart)
+          tc.timeScale().setVisibleLogicalRange(range);
+        }
+      });
+    } finally {
+      _syncLock = false;
+    }
+  });
+}
+
+_syncFrom(chart,     [{ chart: macdChart, panel: macdPanelEl },
+                      { chart: atrChart,  panel: atrPanelEl  }]);
+_syncFrom(macdChart, [{ chart: chart,     panel: null         },
+                      { chart: atrChart,  panel: atrPanelEl  }]);
+_syncFrom(atrChart,  [{ chart: chart,     panel: null         },
+                      { chart: macdChart, panel: macdPanelEl }]);
+
+// =============================================================================
+// INDICATOR SPEC
+// =============================================================================
+
+function buildIndSpec() {
+  const parts = [];
+  if (document.getElementById('ind-ma').checked)
+    parts.push('MA' + document.getElementById('ma-period').value);
+  if (document.getElementById('ind-bb').checked)
+    parts.push('BB' + document.getElementById('bb-period').value
+               + '-' + document.getElementById('bb-std').value);
+  if (document.getElementById('ind-macd').checked)
+    parts.push('MACD');
+  if (document.getElementById('ind-atr').checked)
+    parts.push('ATR' + document.getElementById('atr-period').value);
+  return parts.join(',');
+}
+
+// =============================================================================
+// APPLY INDICATORS — vẽ/xóa series và hiện/ẩn sub-panels
+// =============================================================================
+
+function applyIndicators(inds) {
+  // ── MA overlay ──────────────────────────────────────────────────────────
+  if (inds.ma && inds.ma.length) {
+    if (!maSeries) {
+      maSeries = chart.addLineSeries({
+        color: '#2196F3', lineWidth: 2,
+        priceLineVisible: false, lastValueVisible: false,
+      });
+    }
+    maSeries.setData(inds.ma);
+  } else if (maSeries) {
+    maSeries.setData([]);
+  }
+
+  // ── Bollinger Bands overlay ──────────────────────────────────────────────
+  if (inds.bb_upper && inds.bb_upper.length) {
+    if (!bbUpper) {
+      const baseOpts = { priceLineVisible: false, lastValueVisible: false };
+      bbUpper = chart.addLineSeries({ ...baseOpts, color: 'rgba(255,152,0,0.8)', lineWidth: 1, lineStyle: 1 });
+      bbMid   = chart.addLineSeries({ ...baseOpts, color: 'rgba(255,152,0,0.45)', lineWidth: 1 });
+      bbLower = chart.addLineSeries({ ...baseOpts, color: 'rgba(255,152,0,0.8)', lineWidth: 1, lineStyle: 1 });
+    }
+    bbUpper.setData(inds.bb_upper);
+    bbMid.setData(inds.bb_mid);
+    bbLower.setData(inds.bb_lower);
+  } else if (bbUpper) {
+    bbUpper.setData([]); bbMid.setData([]); bbLower.setData([]);
+  }
+
+  // ── MACD sub-panel ───────────────────────────────────────────────────────
+  const showMacd = !!(inds.macd_hist && inds.macd_hist.length);
+  macdPanelEl.style.display = showMacd ? 'flex' : 'none';
+  if (showMacd) {
+    macdHistSeries.setData(inds.macd_hist);
+    macdLineSeries.setData(inds.macd_line   || []);
+    macdSignalSeries.setData(inds.macd_signal || []);
+    requestAnimationFrame(() => {
+      macdChart.applyOptions({ width: macdChartEl.clientWidth, height: macdChartEl.clientHeight });
+    });
+  } else {
+    macdHistSeries.setData([]); macdLineSeries.setData([]); macdSignalSeries.setData([]);
+  }
+
+  // ── ATR sub-panel ────────────────────────────────────────────────────────
+  const showAtr = !!(inds.atr && inds.atr.length);
+  atrPanelEl.style.display = showAtr ? 'flex' : 'none';
+  if (showAtr) {
+    atrLineSeries.setData(inds.atr);
+    requestAnimationFrame(() => {
+      atrChart.applyOptions({ width: atrChartEl.clientWidth, height: atrChartEl.clientHeight });
+    });
+  } else {
+    atrLineSeries.setData([]);
+  }
+}
 
 // =============================================================================
 // LOAD DỮ LIỆU
@@ -268,40 +509,38 @@ resizeObserver.observe(chartEl);
 
 async function loadCandles() {
   setLoading(true);
-  const url = `/api/candles?symbol=${encodeURIComponent(currentSymbol)}&tf=${encodeURIComponent(currentTf)}&bars=${currentBars}`;
+  const indSpec = buildIndSpec();
+  const url = `/api/candles?symbol=${encodeURIComponent(currentSymbol)}`
+            + `&tf=${encodeURIComponent(currentTf)}&bars=${currentBars}`
+            + (indSpec ? `&ind=${encodeURIComponent(indSpec)}` : '');
 
   try {
     const resp = await fetch(url);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
 
-    if (!Array.isArray(data) || data.length === 0) {
-      setStatus(`Không có dữ liệu cho ${currentSymbol} ${currentTf}`);
+    // Hỗ trợ cả response mới {candles, indicators} và cũ (flat array)
+    const candles = Array.isArray(data) ? data : (data.candles ?? []);
+
+    if (!candles.length) {
+      setStatus(`Khong co du lieu cho ${currentSymbol} ${currentTf}`);
       clearOhlcBar();
       return;
     }
 
-    // ── Cập nhật nến ────────────────────────────────────────────────────────
-    candleSeries.setData(data);
-
-    // ── Cập nhật volume (màu theo hướng nến) ────────────────────────────────
-    volumeSeries.setData(data.map(d => ({
-      time:  d.time,
-      value: d.volume,
-      color: d.close >= d.open
-        ? 'rgba(38,166,154,0.35)'   // xanh lam (tăng)
-        : 'rgba(239,83,80,0.35)',   // đỏ (giảm)
+    candleSeries.setData(candles);
+    volumeSeries.setData(candles.map(d => ({
+      time: d.time, value: d.volume,
+      color: d.close >= d.open ? 'rgba(38,166,154,0.35)' : 'rgba(239,83,80,0.35)',
     })));
-
-    // Căn khung để hiển thị toàn bộ chuỗi nến
     chart.timeScale().fitContent();
-
-    // Cập nhật OHLC bar với nến cuối cùng
-    updateOhlcBar(data[data.length - 1]);
+    updateOhlcBar(candles[candles.length - 1]);
     setStatus('');
 
+    applyIndicators(data.indicators ?? {});
+
   } catch (err) {
-    setStatus('Lỗi tải dữ liệu: ' + err.message);
+    setStatus('Loi tai du lieu: ' + err.message);
     console.error('[chart] loadCandles error:', err);
   } finally {
     setLoading(false);
@@ -311,12 +550,11 @@ async function loadCandles() {
 }
 
 // =============================================================================
-// OHLC INFO BAR — hiển thị giá trị nến cuối hoặc nến đang hover
+// OHLC INFO BAR
 // =============================================================================
 
 function fmtPrice(v) {
   if (v == null) return '—';
-  // Tự động chọn số chữ số thập phân theo độ lớn giá trị
   if (v >= 1000) return v.toFixed(2);
   if (v >= 10)   return v.toFixed(3);
   return v.toFixed(5);
@@ -341,11 +579,8 @@ function clearOhlcBar() {
   document.getElementById('ohlc-bar').innerHTML = '';
 }
 
-// Hover crosshair → cập nhật OHLC bar theo nến đang hover
 chart.subscribeCrosshairMove(param => {
-  if (!param.time || param.point === undefined || !param.seriesData.size) {
-    return;
-  }
+  if (!param.time || param.point === undefined || !param.seriesData.size) return;
   const bar = param.seriesData.get(candleSeries);
   if (bar) updateOhlcBar(bar);
 });
@@ -382,7 +617,6 @@ function reloadWithReset() {
   startAutoRefresh();
 }
 
-// ── Auto-refresh ─────────────────────────────────────────────────────────────
 function startAutoRefresh() {
   clearAutoRefresh();
   refreshTimer = setInterval(() => loadCandles(), REFRESH_MS);
@@ -392,27 +626,38 @@ function clearAutoRefresh() {
 }
 
 // =============================================================================
-// POPULATE SIDEBAR — gọi API để lấy symbols và timeframes
+// POPULATE SIDEBAR
 // =============================================================================
 
 async function initSidebar() {
-  // ── Timeframes ──────────────────────────────────────────────────────────
+  // ── Timeframes — grouped ─────────────────────────────────────────────────
   try {
-    const tfs = await (await fetch('/api/timeframes')).json();
+    const tfData = await (await fetch('/api/timeframes')).json();
     const tfWrap = document.getElementById('tf-buttons');
-    tfs.forEach(tf => {
-      const btn = document.createElement('button');
-      btn.className = 'tf-btn' + (tf === currentTf ? ' active' : '');
-      btn.textContent = tf;
-      btn.dataset.tf  = tf;
-      btn.onclick = () => selectTf(tf);
-      tfWrap.appendChild(btn);
+
+    const groups = [
+      { label: 'Direct',   tfs: tfData.direct   ?? [] },
+      { label: 'Computed', tfs: tfData.computed  ?? [] },
+    ];
+    groups.forEach(({ label, tfs }) => {
+      const lbl = document.createElement('div');
+      lbl.className = 'tf-group-label';
+      lbl.textContent = label;
+      tfWrap.appendChild(lbl);
+      tfs.forEach(tf => {
+        const btn = document.createElement('button');
+        btn.className   = 'tf-btn' + (tf === currentTf ? ' active' : '');
+        btn.textContent = tf;
+        btn.dataset.tf  = tf;
+        btn.onclick = () => selectTf(tf);
+        tfWrap.appendChild(btn);
+      });
     });
   } catch (err) {
     console.error('[chart] Failed to load timeframes:', err);
   }
 
-  // ── Symbols ─────────────────────────────────────────────────────────────
+  // ── Symbols ──────────────────────────────────────────────────────────────
   try {
     const groups = await (await fetch('/api/symbols')).json();
     const panel  = document.getElementById('sym-panel');
@@ -450,6 +695,11 @@ async function initSidebar() {
 document.getElementById('bars-select').addEventListener('change', e => {
   currentBars = parseInt(e.target.value, 10);
   reloadWithReset();
+});
+
+// ── Indicator controls — bất kỳ thay đổi nào đều reload ─────────────────────
+document.querySelectorAll('#indicator-controls input').forEach(el => {
+  el.addEventListener('change', () => reloadWithReset());
 });
 
 // =============================================================================

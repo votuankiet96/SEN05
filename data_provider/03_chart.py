@@ -1,21 +1,22 @@
 # =============================================================================
 # data_provider/03_chart.py  —  Chart dashboard (Flask + Lightweight Charts 4.2.1)
-# Phiên bản : 4.0
+# Phiên bản : 5.0
 # =============================================================================
 # HƯỚNG DẪN QUẢN TRỊ NHANH
 # File này là REST API backend cho chart dashboard.
 # Frontend là file 03_chart.html (phục vụ tại http://127.0.0.1:8050)
 #
 # Cấu trúc:
-#   GET /                                  → phục vụ 03_chart.html
-#   GET /api/symbols                       → danh sách symbol theo nhóm
-#   GET /api/timeframes                    → danh sách timeframe code
-#   GET /api/candles?symbol=X&tf=Y&bars=N  → dữ liệu OHLCV dạng JSON
+#   GET /                                      → phục vụ 03_chart.html
+#   GET /api/symbols                           → danh sách symbol theo nhóm
+#   GET /api/timeframes                        → danh sách TF chia 2 nhóm direct/computed
+#   GET /api/candles?symbol=X&tf=Y&bars=N      → dữ liệu OHLCV dạng JSON
+#   GET /api/candles?...&ind=MA20,BB,MACD,ATR14 → OHLCV + indicator data
 #
-# Thay đổi từ v3.0 (Dash/Plotly):
-#   - Không cần dash/plotly — chỉ cần flask (pip install flask)
-#   - Frontend dùng TradingView Lightweight Charts 4.2.1 (CDN, không cần cài)
-#   - API thuần JSON → dễ mở rộng, dễ debug
+# Thay đổi từ v4.0:
+#   - /api/timeframes trả về {direct:[...], computed:[...]} thay vì flat list
+#   - /api/candles hỗ trợ tham số ?ind= để tính indicator trên server
+#   - Thêm _calc_indicators() cho MA, Bollinger Bands, MACD, ATR
 #
 # Cách chạy:
 #   python data_provider/03_chart.py
@@ -36,11 +37,11 @@ except ImportError:
     sys.exit(1)
 
 # Bootstrap: thêm project root vào path
-_ROOT = Path(__file__).resolve().parent.parent   # data_provider/ → project root
+_ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from modules.data_loader import load_candles, load_symbols, load_timeframes
+from modules.data_loader import load_candles, load_symbols
 from modules.db_connector import test_connection
 
 # =============================================================================
@@ -49,7 +50,11 @@ from modules.db_connector import test_connection
 
 PORT         = 8050
 DEFAULT_BARS = 500
-_HERE        = Path(__file__).resolve().parent   # Thư mục chứa file này (data_provider/)
+_HERE        = Path(__file__).resolve().parent
+
+# Nhóm timeframe — Direct: kéo thẳng từ TradingView; Computed: tổng hợp từ TF nguồn
+_TF_DIRECT   = ["M5", "M15", "M30", "M45", "H1", "H2", "H3", "H4", "D1", "W"]
+_TF_COMPUTED = ["M10", "M20", "M90", "H6", "H8"]
 
 # =============================================================================
 # FLASK APP
@@ -70,16 +75,6 @@ def index():
 
 @app.route("/api/symbols")
 def api_symbols():
-    """
-    Trả về danh sách symbol đã gom nhóm theo asset type.
-
-    Response:
-        {
-          "Indices": ["CAC40", "DAX40", ...],
-          "FOREX":   ["EURUSD", ...],
-          "Metal & Crypto": ["XAUUSD", "BTCUSD"]
-        }
-    """
     try:
         return jsonify(load_symbols())
     except Exception as exc:
@@ -91,14 +86,94 @@ def api_symbols():
 @app.route("/api/timeframes")
 def api_timeframes():
     """
-    Trả về danh sách timeframe code theo thứ tự TimeframeID.
+    Trả về timeframe chia 2 nhóm.
 
-    Response: ["M5", "M10", "M15", ..., "D1", "W"]
+    Response:
+        {
+          "direct":   ["M5", "M15", "M30", "M45", "H1", "H2", "H3", "H4", "D1", "W"],
+          "computed": ["M10", "M20", "M90", "H6", "H8"]
+        }
     """
-    try:
-        return jsonify(load_timeframes())
-    except Exception as exc:
-        return jsonify({"error": str(exc)}), 500
+    return jsonify({"direct": _TF_DIRECT, "computed": _TF_COMPUTED})
+
+
+# ─── HELPER: TIMESTAMP ───────────────────────────────────────────────────────
+
+def _ts(bar_time) -> int:
+    """Convert naive UTC BarTime → Unix seconds (integer)."""
+    return int(pd.Timestamp(bar_time).tz_localize("UTC").timestamp())
+
+
+# ─── HELPER: TÍNH INDICATOR ──────────────────────────────────────────────────
+
+def _calc_indicators(df: pd.DataFrame, ind_spec: str) -> dict:
+    """
+    Tính các indicator từ chuỗi ind_spec.
+
+    ind_spec format (comma-separated, case-insensitive):
+        MA<period>          e.g. MA20
+        BB<period>-<std>    e.g. BB20-2.0
+        MACD<f>-<s>-<sig>   e.g. MACD12-26-9  hoặc chỉ MACD (dùng mặc định)
+        ATR<period>         e.g. ATR14
+
+    df phải có Title-Case columns: Open, High, Low, Close, BarTime (sorted ascending).
+    Trả về dict chứa các series [{time, value}, ...] cho mỗi indicator.
+    """
+    # Deferred import để không làm chậm startup nếu indicators không được dùng
+    from modules.indicators import calc_sma, calc_bollinger, calc_macd, calc_atr
+
+    if df.empty:
+        return {}
+
+    times = [_ts(t) for t in df["BarTime"]]
+
+    def to_list(vals):
+        return [{"time": t, "value": float(v)}
+                for t, v in zip(times, vals)
+                if pd.notna(v)]
+
+    result = {}
+    for spec in ind_spec.split(","):
+        spec = spec.strip().upper()
+        if not spec:
+            continue
+        try:
+            if spec.startswith("MACD"):
+                parts  = spec[4:].split("-") if len(spec) > 4 else []
+                fast   = int(parts[0]) if len(parts) > 0 and parts[0].isdigit() else 12
+                slow   = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 26
+                signal = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 9
+                ml, sl, hist = calc_macd(df["Close"], fast, slow, signal)
+                result["macd_line"]   = to_list(ml)
+                result["macd_signal"] = to_list(sl)
+                result["macd_hist"]   = [
+                    {"time": t, "value": float(v),
+                     "color": "#26a69a" if v >= 0 else "#ef5350"}
+                    for t, v in zip(times, hist) if pd.notna(v)
+                ]
+
+            elif spec.startswith("MA"):
+                period = int(spec[2:]) if spec[2:].isdigit() else 20
+                result["ma"] = to_list(calc_sma(df["Close"], period))
+
+            elif spec.startswith("BB"):
+                raw   = spec[2:]
+                parts = raw.split("-") if raw else []
+                period = int(parts[0]) if parts and parts[0].isdigit() else 20
+                std    = float(parts[1]) if len(parts) > 1 else 2.0
+                mid, upper, lower = calc_bollinger(df, period, std)
+                result["bb_upper"] = to_list(upper)
+                result["bb_mid"]   = to_list(mid)
+                result["bb_lower"] = to_list(lower)
+
+            elif spec.startswith("ATR"):
+                period = int(spec[3:]) if len(spec) > 3 and spec[3:].isdigit() else 14
+                result["atr"] = to_list(calc_atr(df, period))
+
+        except Exception:
+            pass  # bỏ qua spec không hợp lệ
+
+    return result
 
 
 # ─── API: DỮ LIỆU NẾN ───────────────────────────────────────────────────────
@@ -106,27 +181,38 @@ def api_timeframes():
 @app.route("/api/candles")
 def api_candles():
     """
-    Trả về dữ liệu OHLCV dạng JSON cho Lightweight Charts.
+    Trả về dữ liệu OHLCV + indicators (tùy chọn).
 
     Query params:
         symbol : tên symbol (mặc định: EURUSD)
         tf     : timeframe code (mặc định: H1)
-        bars   : số nến tối đa (mặc định: 500)
+        bars   : số nến tối đa (mặc định: 500, range [50, 5000])
+        ind    : indicator specs, vd: "MA20,BB20-2.0,MACD,ATR14"
 
     Response:
-        [
-          { "time": 1704067200, "open": 1.1, "high": 1.2, "low": 1.0, "close": 1.15, "volume": 12345 },
-          ...
-        ]
-
-    Ghi chú:
-        "time" là Unix timestamp giây (UTC) — Lightweight Charts hiểu đúng múi giờ.
+        {
+          "candles": [
+            {"time": 1704067200, "open": 1.1, "high": 1.2, "low": 1.0,
+             "close": 1.15, "volume": 12345},
+            ...
+          ],
+          "indicators": {          // chỉ có khi ind= được truyền
+            "ma":          [{time, value}, ...],
+            "bb_upper":    [{time, value}, ...],
+            "bb_mid":      [{time, value}, ...],
+            "bb_lower":    [{time, value}, ...],
+            "macd_line":   [{time, value}, ...],
+            "macd_signal": [{time, value}, ...],
+            "macd_hist":   [{time, value, color}, ...],
+            "atr":         [{time, value}, ...]
+          }
+        }
     """
     symbol = request.args.get("symbol", "EURUSD").upper()
     tf     = request.args.get("tf", "H1").upper()
+    ind    = request.args.get("ind", "").strip()
     try:
-        bars = int(request.args.get("bars", DEFAULT_BARS))
-        bars = max(50, min(bars, 5000))   # Giới hạn hợp lý: [50, 5000]
+        bars = max(50, min(int(request.args.get("bars", DEFAULT_BARS)), 5000))
     except (ValueError, TypeError):
         bars = DEFAULT_BARS
 
@@ -136,23 +222,24 @@ def api_candles():
         return jsonify({"error": str(exc)}), 500
 
     if df.empty:
-        return jsonify([])
+        return jsonify({"candles": [], "indicators": {}})
 
-    records = []
+    candles = []
     for _, row in df.iterrows():
-        # BarTime từ DB là UTC (naive) — phải localize trước khi convert sang Unix timestamp
-        ts = int(pd.Timestamp(row["BarTime"]).tz_localize('UTC').timestamp())
-        volume = row.get("Volume")
-        records.append({
-            "time":   ts,
+        vol = row.get("Volume")
+        candles.append({
+            "time":   _ts(row["BarTime"]),
             "open":   float(row["Open"]),
             "high":   float(row["High"]),
             "low":    float(row["Low"]),
             "close":  float(row["Close"]),
-            "volume": float(volume) if pd.notna(volume) else 0.0,
+            "volume": float(vol) if pd.notna(vol) else 0.0,
         })
 
-    return jsonify(records)
+    response = {"candles": candles}
+    if ind:
+        response["indicators"] = _calc_indicators(df, ind)
+    return jsonify(response)
 
 
 # =============================================================================
@@ -161,7 +248,7 @@ def api_candles():
 
 if __name__ == "__main__":
     print("\n" + "=" * 60)
-    print("  AUTO TRADING — CHART DASHBOARD  (v4.0)")
+    print("  AUTO TRADING — CHART DASHBOARD  (v5.0)")
     print("  Backend  : Flask 3.x")
     print("  Frontend : TradingView Lightweight Charts 4.2.1")
     print(f"  Port     : {PORT}")
@@ -169,7 +256,7 @@ if __name__ == "__main__":
 
     print("\n[Checking SQL Server connection...]")
     if not test_connection():
-        print("ABORT: Không kết nối được SQL Server.")
+        print("ABORT: Khong ket noi duoc SQL Server.")
         sys.exit(1)
     print("  Database : OK")
 
@@ -177,5 +264,4 @@ if __name__ == "__main__":
     print(f"  -> Mo trinh duyet: http://127.0.0.1:{PORT}")
     print(f"  -> Dung server   : Ctrl+C\n")
 
-    # debug=False để không chạy reloader (không cần trong môi trường production)
     app.run(debug=False, host="127.0.0.1", port=PORT, use_reloader=False)
