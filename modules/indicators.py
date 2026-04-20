@@ -79,6 +79,34 @@ def calc_atr(df, period=14):
     return tr.ewm(alpha=1/period, min_periods=period, adjust=False).mean()
 
 
+def calc_adx(df, period=14):
+    """ADX (Wilder): do manh xu huong 0-100; ADX>25 = xu huong ro; tra ve adx, +DI, -DI."""
+    high  = df["High"]
+    low   = df["Low"]
+    close = df["Close"]
+
+    up   = high.diff()
+    down = -low.diff()  # prev_low - low
+
+    plus_dm  = pd.Series(np.where((up > down) & (up > 0), up, 0.0), index=df.index)
+    minus_dm = pd.Series(np.where((down > up) & (down > 0), down, 0.0), index=df.index)
+
+    tr = pd.concat([
+        high - low,
+        (high - close.shift(1)).abs(),
+        (low  - close.shift(1)).abs(),
+    ], axis=1).max(axis=1)
+
+    alpha = 1.0 / period
+    atr_s     = tr.ewm(alpha=alpha, min_periods=period, adjust=False).mean()
+    plus_di   = 100 * plus_dm.ewm(alpha=alpha, min_periods=period, adjust=False).mean() / atr_s
+    minus_di  = 100 * minus_dm.ewm(alpha=alpha, min_periods=period, adjust=False).mean() / atr_s
+    denom     = (plus_di + minus_di).replace(0, np.nan)
+    dx        = 100 * (plus_di - minus_di).abs() / denom
+    adx       = dx.ewm(alpha=alpha, min_periods=period, adjust=False).mean()
+    return adx, plus_di, minus_di
+
+
 def calc_obv(df):
     """OBV: dong tich luy volume theo huong gia, ho tro danh gia xac nhan dong tien."""
     sign = np.sign(df["Close"].diff()).fillna(0)

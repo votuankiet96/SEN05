@@ -119,8 +119,7 @@ def _calc_indicators(df: pd.DataFrame, ind_spec: str) -> dict:
     df phải có Title-Case columns: Open, High, Low, Close, BarTime (sorted ascending).
     Trả về dict chứa các series [{time, value}, ...] cho mỗi indicator.
     """
-    # Deferred import để không làm chậm startup nếu indicators không được dùng
-    from modules.indicators import calc_sma, calc_bollinger, calc_macd, calc_atr
+    from modules.indicators import calc_sma, calc_ema, calc_bollinger, calc_macd, calc_atr, calc_adx
 
     if df.empty:
         return {}
@@ -139,7 +138,8 @@ def _calc_indicators(df: pd.DataFrame, ind_spec: str) -> dict:
             continue
         try:
             if spec.startswith("MACD"):
-                parts  = spec[4:].split("-") if len(spec) > 4 else []
+                raw    = spec[4:]
+                parts  = raw.split("-") if raw else []
                 fast   = int(parts[0]) if len(parts) > 0 and parts[0].isdigit() else 12
                 slow   = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 26
                 signal = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 9
@@ -152,9 +152,13 @@ def _calc_indicators(df: pd.DataFrame, ind_spec: str) -> dict:
                     for t, v in zip(times, hist) if pd.notna(v)
                 ]
 
+            elif spec.startswith("EMA"):
+                period = int(spec[3:]) if len(spec) > 3 and spec[3:].isdigit() else 20
+                result[f"ema_{period}"] = to_list(calc_ema(df["Close"], period))
+
             elif spec.startswith("MA"):
-                period = int(spec[2:]) if spec[2:].isdigit() else 20
-                result["ma"] = to_list(calc_sma(df["Close"], period))
+                period = int(spec[2:]) if len(spec) > 2 and spec[2:].isdigit() else 20
+                result[f"ma_{period}"] = to_list(calc_sma(df["Close"], period))
 
             elif spec.startswith("BB"):
                 raw   = spec[2:]
@@ -169,6 +173,13 @@ def _calc_indicators(df: pd.DataFrame, ind_spec: str) -> dict:
             elif spec.startswith("ATR"):
                 period = int(spec[3:]) if len(spec) > 3 and spec[3:].isdigit() else 14
                 result["atr"] = to_list(calc_atr(df, period))
+
+            elif spec.startswith("ADX"):
+                period = int(spec[3:]) if len(spec) > 3 and spec[3:].isdigit() else 14
+                adx, pdi, mdi = calc_adx(df, period)
+                result["adx"]     = to_list(adx)
+                result["adx_pdi"] = to_list(pdi)
+                result["adx_mdi"] = to_list(mdi)
 
         except Exception:
             pass  # bỏ qua spec không hợp lệ

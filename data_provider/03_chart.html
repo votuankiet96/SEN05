@@ -22,7 +22,7 @@
       --blue:   #2962ff;
       --green:  #26a69a;
       --red:    #ef5350;
-      --sidebar-w: 200px;
+      --sidebar-w: 240px;
     }
 
     html, body {
@@ -123,21 +123,26 @@
     #bars-select:focus { outline: none; border-color: var(--blue); }
 
     /* ── Indicator controls ─────────────────────────────────────── */
-    #indicator-controls { display: flex; flex-direction: column; gap: 3px; margin-bottom: 4px; }
-    .ind-row {
-      display: flex; align-items: center; gap: 5px;
-      padding: 3px 2px; cursor: pointer;
+    #indicator-controls { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
+    .ind-block { background: var(--bg3); border-radius: 4px; padding: 5px 7px; }
+    .ind-header {
+      display: flex; align-items: center; gap: 6px; cursor: pointer; margin-bottom: 0;
     }
-    .ind-row:hover .ind-label { color: var(--text); }
-    .ind-row input[type="checkbox"] { cursor: pointer; accent-color: var(--blue); flex-shrink: 0; }
-    .ind-label { font-size: 11px; color: var(--text2); min-width: 30px; }
-    .ind-param {
-      width: 32px; background: var(--bg3); color: var(--text);
+    .ind-header input[type="checkbox"] { cursor: pointer; accent-color: var(--blue); flex-shrink: 0; }
+    .ind-label { font-size: 12px; color: var(--text); font-weight: 600; min-width: 38px; }
+    .ind-hint  { font-size: 10px; color: var(--text2); flex: 1; }
+    .ind-params {
+      display: flex; gap: 6px; margin-top: 5px; padding-left: 22px; flex-wrap: wrap;
+    }
+    .ind-p { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .ind-input {
+      width: 40px; background: var(--bg2); color: var(--text);
       border: 1px solid var(--border); border-radius: 3px;
-      padding: 2px 4px; font-size: 11px; text-align: center;
+      padding: 3px 4px; font-size: 11px; text-align: center;
     }
-    .ind-param:focus { outline: none; border-color: var(--blue); }
-    .ind-param-std { width: 28px; }
+    .ind-input:focus { outline: none; border-color: var(--blue); }
+    .ind-input-w56 { width: 56px; }
+    .ind-p-lbl { font-size: 9px; color: var(--text2); letter-spacing: 0.3px; }
 
     /* ── Chart area — flex column ───────────────────────────────── */
     #chart-area {
@@ -161,7 +166,8 @@
     }
     .panel-chart-div { flex: 1; }
     #macd-panel { height: 120px; }
-    #atr-panel  { height: 80px;  }
+    #atr-panel  { height: 80px; }
+    #adx-panel  { height: 100px; }
 
     /* Loading overlay */
     #loading {
@@ -211,30 +217,115 @@
 
         <span class="section-label">Indicators</span>
         <div id="indicator-controls">
-          <!-- MA -->
-          <label class="ind-row">
-            <input type="checkbox" id="ind-ma" checked>
-            <span class="ind-label">MA</span>
-            <input type="number" id="ma-period" class="ind-param" value="20" min="2" max="500">
-          </label>
+          <!-- SMA — 3 đường, period=0 → bỏ qua -->
+          <div class="ind-block">
+            <label class="ind-header">
+              <input type="checkbox" id="ind-ma" checked>
+              <span class="ind-label">SMA</span>
+              <span class="ind-hint">0 = ẩn</span>
+            </label>
+            <div class="ind-params">
+              <div class="ind-p">
+                <input class="ind-input" type="number" id="ma-p1" value="20" min="0" max="500">
+                <span class="ind-p-lbl" style="color:#2196F3">● p1</span>
+              </div>
+              <div class="ind-p">
+                <input class="ind-input" type="number" id="ma-p2" value="0" min="0" max="500">
+                <span class="ind-p-lbl" style="color:#FF9800">● p2</span>
+              </div>
+              <div class="ind-p">
+                <input class="ind-input" type="number" id="ma-p3" value="0" min="0" max="500">
+                <span class="ind-p-lbl" style="color:#9C27B0">● p3</span>
+              </div>
+            </div>
+          </div>
+          <!-- EMA — 3 đường -->
+          <div class="ind-block">
+            <label class="ind-header">
+              <input type="checkbox" id="ind-ema">
+              <span class="ind-label">EMA</span>
+              <span class="ind-hint">0 = ẩn</span>
+            </label>
+            <div class="ind-params">
+              <div class="ind-p">
+                <input class="ind-input" type="number" id="ema-p1" value="20" min="0" max="500">
+                <span class="ind-p-lbl" style="color:#00BCD4">● p1</span>
+              </div>
+              <div class="ind-p">
+                <input class="ind-input" type="number" id="ema-p2" value="0" min="0" max="500">
+                <span class="ind-p-lbl" style="color:#CDDC39">● p2</span>
+              </div>
+              <div class="ind-p">
+                <input class="ind-input" type="number" id="ema-p3" value="0" min="0" max="500">
+                <span class="ind-p-lbl" style="color:#F06292">● p3</span>
+              </div>
+            </div>
+          </div>
           <!-- Bollinger Bands -->
-          <label class="ind-row">
-            <input type="checkbox" id="ind-bb">
-            <span class="ind-label">BB</span>
-            <input type="number" id="bb-period" class="ind-param" value="20" min="2" max="500">
-            <input type="number" id="bb-std" class="ind-param ind-param-std" value="2.0" min="0.5" max="5" step="0.5">
-          </label>
+          <div class="ind-block">
+            <label class="ind-header">
+              <input type="checkbox" id="ind-bb">
+              <span class="ind-label">BB</span>
+            </label>
+            <div class="ind-params">
+              <div class="ind-p">
+                <input class="ind-input" type="number" id="bb-period" value="20" min="2" max="500">
+                <span class="ind-p-lbl">period</span>
+              </div>
+              <div class="ind-p">
+                <input class="ind-input" type="number" id="bb-std" value="2.0" min="0.5" max="5" step="0.5">
+                <span class="ind-p-lbl">std</span>
+              </div>
+            </div>
+          </div>
           <!-- MACD -->
-          <label class="ind-row">
-            <input type="checkbox" id="ind-macd">
-            <span class="ind-label">MACD</span>
-          </label>
+          <div class="ind-block">
+            <label class="ind-header">
+              <input type="checkbox" id="ind-macd">
+              <span class="ind-label">MACD</span>
+            </label>
+            <div class="ind-params">
+              <div class="ind-p">
+                <input class="ind-input" type="number" id="macd-fast" value="12" min="2" max="100">
+                <span class="ind-p-lbl">fast</span>
+              </div>
+              <div class="ind-p">
+                <input class="ind-input" type="number" id="macd-slow" value="26" min="2" max="200">
+                <span class="ind-p-lbl">slow</span>
+              </div>
+              <div class="ind-p">
+                <input class="ind-input" type="number" id="macd-sig" value="9" min="2" max="50">
+                <span class="ind-p-lbl">signal</span>
+              </div>
+            </div>
+          </div>
           <!-- ATR -->
-          <label class="ind-row">
-            <input type="checkbox" id="ind-atr">
-            <span class="ind-label">ATR</span>
-            <input type="number" id="atr-period" class="ind-param" value="14" min="2" max="100">
-          </label>
+          <div class="ind-block">
+            <label class="ind-header">
+              <input type="checkbox" id="ind-atr">
+              <span class="ind-label">ATR</span>
+            </label>
+            <div class="ind-params">
+              <div class="ind-p">
+                <input class="ind-input" type="number" id="atr-period" value="14" min="2" max="100">
+                <span class="ind-p-lbl">period</span>
+              </div>
+            </div>
+          </div>
+          <!-- ADX -->
+          <div class="ind-block">
+            <label class="ind-header">
+              <input type="checkbox" id="ind-adx">
+              <span class="ind-label">ADX</span>
+              <span class="ind-hint">+DI / −DI</span>
+            </label>
+            <div class="ind-params">
+              <div class="ind-p">
+                <input class="ind-input" type="number" id="adx-period" value="14" min="2" max="100">
+                <span class="ind-p-lbl">period</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <span class="section-label">Symbol</span>
@@ -259,6 +350,16 @@
           <span class="panel-label-text">ATR</span>
         </div>
         <div id="atr-chart" class="panel-chart-div"></div>
+      </div>
+      <!-- ADX sub-panel (hidden by default) -->
+      <div id="adx-panel" class="chart-panel" style="display:none">
+        <div class="panel-header">
+          <span class="panel-label-text">ADX</span>
+          <span style="font-size:9px;color:#26a69a;margin-left:8px">— ADX</span>
+          <span style="font-size:9px;color:#26a69a;opacity:0.6;margin-left:6px">- +DI</span>
+          <span style="font-size:9px;color:#ef5350;opacity:0.6;margin-left:6px">- −DI</span>
+        </div>
+        <div id="adx-chart" class="panel-chart-div"></div>
       </div>
       <div id="loading">Loading&#x2026;</div>
     </div>
@@ -356,11 +457,15 @@ chart.priceScale('volume').applyOptions({
   visible: false,
 });
 
-// ── Overlay series (lazily created on first use) ─────────────────────────────
-let maSeries = null;
-let bbUpper  = null;
-let bbMid    = null;
-let bbLower  = null;
+// ── Overlay series ────────────────────────────────────────────────────────────
+// SMA: 3 slots, tạo lazy khi dùng lần đầu
+const MA_COLORS  = ['#2196F3', '#FF9800', '#9C27B0'];
+const EMA_COLORS = ['#00BCD4', '#CDDC39', '#F06292'];
+let maSeries  = [null, null, null];
+let emaSeries = [null, null, null];
+let bbUpper   = null;
+let bbMid     = null;
+let bbLower   = null;
 
 // ── MACD sub-panel ───────────────────────────────────────────────────────────
 const macdPanelEl   = document.getElementById('macd-panel');
@@ -385,6 +490,22 @@ const atrLineSeries = atrChart.addLineSeries({
   color: '#9C27B0', lineWidth: 1, priceLineVisible: false, lastValueVisible: false,
 });
 
+// ── ADX sub-panel ────────────────────────────────────────────────────────────
+const adxPanelEl     = document.getElementById('adx-panel');
+const adxChartEl     = document.getElementById('adx-chart');
+const adxChart       = LightweightCharts.createChart(adxChartEl, _subOpts);
+const adxLineSeries  = adxChart.addLineSeries({
+  color: '#26a69a', lineWidth: 2, priceLineVisible: false, lastValueVisible: false,
+});
+const adxPlusSeries  = adxChart.addLineSeries({
+  color: '#26a69a', lineWidth: 1, lineStyle: 1,
+  priceLineVisible: false, lastValueVisible: false,
+});
+const adxMinusSeries = adxChart.addLineSeries({
+  color: '#ef5350', lineWidth: 1, lineStyle: 1,
+  priceLineVisible: false, lastValueVisible: false,
+});
+
 // ── Resize observer — tất cả chart divs ─────────────────────────────────────
 const ro = new ResizeObserver(entries => {
   for (const e of entries) {
@@ -393,11 +514,13 @@ const ro = new ResizeObserver(entries => {
     if (e.target === priceChartEl) chart.applyOptions({ width, height });
     if (e.target === macdChartEl)  macdChart.applyOptions({ width, height });
     if (e.target === atrChartEl)   atrChart.applyOptions({ width, height });
+    if (e.target === adxChartEl)   adxChart.applyOptions({ width, height });
   }
 });
 ro.observe(priceChartEl);
 ro.observe(macdChartEl);
 ro.observe(atrChartEl);
+ro.observe(adxChartEl);
 
 // ── Đồng bộ time range giữa các charts ──────────────────────────────────────
 let _syncLock = false;
@@ -408,7 +531,7 @@ function _syncFrom(src, targets) {
     _syncLock = true;
     try {
       targets.forEach(({ chart: tc, panel }) => {
-        if (!panel || panel.offsetParent !== null) {  // visible or no panel (price chart)
+        if (!panel || panel.offsetParent !== null) {
           tc.timeScale().setVisibleLogicalRange(range);
         }
       });
@@ -419,11 +542,17 @@ function _syncFrom(src, targets) {
 }
 
 _syncFrom(chart,     [{ chart: macdChart, panel: macdPanelEl },
-                      { chart: atrChart,  panel: atrPanelEl  }]);
+                      { chart: atrChart,  panel: atrPanelEl  },
+                      { chart: adxChart,  panel: adxPanelEl  }]);
 _syncFrom(macdChart, [{ chart: chart,     panel: null         },
-                      { chart: atrChart,  panel: atrPanelEl  }]);
+                      { chart: atrChart,  panel: atrPanelEl  },
+                      { chart: adxChart,  panel: adxPanelEl  }]);
 _syncFrom(atrChart,  [{ chart: chart,     panel: null         },
-                      { chart: macdChart, panel: macdPanelEl }]);
+                      { chart: macdChart, panel: macdPanelEl },
+                      { chart: adxChart,  panel: adxPanelEl  }]);
+_syncFrom(adxChart,  [{ chart: chart,     panel: null         },
+                      { chart: macdChart, panel: macdPanelEl },
+                      { chart: atrChart,  panel: atrPanelEl  }]);
 
 // =============================================================================
 // INDICATOR SPEC
@@ -431,15 +560,34 @@ _syncFrom(atrChart,  [{ chart: chart,     panel: null         },
 
 function buildIndSpec() {
   const parts = [];
+  // SMA — 3 periods (0 = bỏ qua)
   if (document.getElementById('ind-ma').checked)
-    parts.push('MA' + document.getElementById('ma-period').value);
+    [1,2,3].forEach(i => {
+      const v = parseInt(document.getElementById(`ma-p${i}`).value) || 0;
+      if (v > 0) parts.push('MA' + v);
+    });
+  // EMA — 3 periods (0 = bỏ qua)
+  if (document.getElementById('ind-ema').checked)
+    [1,2,3].forEach(i => {
+      const v = parseInt(document.getElementById(`ema-p${i}`).value) || 0;
+      if (v > 0) parts.push('EMA' + v);
+    });
+  // Bollinger Bands
   if (document.getElementById('ind-bb').checked)
     parts.push('BB' + document.getElementById('bb-period').value
                + '-' + document.getElementById('bb-std').value);
+  // MACD với tham số fast/slow/signal
   if (document.getElementById('ind-macd').checked)
-    parts.push('MACD');
+    parts.push('MACD'
+      + document.getElementById('macd-fast').value + '-'
+      + document.getElementById('macd-slow').value + '-'
+      + document.getElementById('macd-sig').value);
+  // ATR
   if (document.getElementById('ind-atr').checked)
     parts.push('ATR' + document.getElementById('atr-period').value);
+  // ADX
+  if (document.getElementById('ind-adx').checked)
+    parts.push('ADX' + document.getElementById('adx-period').value);
   return parts.join(',');
 }
 
@@ -448,17 +596,38 @@ function buildIndSpec() {
 // =============================================================================
 
 function applyIndicators(inds) {
-  // ── MA overlay ──────────────────────────────────────────────────────────
-  if (inds.ma && inds.ma.length) {
-    if (!maSeries) {
-      maSeries = chart.addLineSeries({
-        color: '#2196F3', lineWidth: 2,
+  // ── SMA overlay — tối đa 3 đường ────────────────────────────────────────
+  const maKeys = Object.keys(inds)
+    .filter(k => k.startsWith('ma_'))
+    .sort((a, b) => +a.slice(3) - +b.slice(3));
+  maKeys.forEach((key, i) => {
+    if (!maSeries[i]) {
+      maSeries[i] = chart.addLineSeries({
+        color: MA_COLORS[i], lineWidth: 2,
         priceLineVisible: false, lastValueVisible: false,
       });
     }
-    maSeries.setData(inds.ma);
-  } else if (maSeries) {
-    maSeries.setData([]);
+    maSeries[i].setData(inds[key]);
+  });
+  for (let i = maKeys.length; i < 3; i++) {
+    if (maSeries[i]) maSeries[i].setData([]);
+  }
+
+  // ── EMA overlay — tối đa 3 đường ────────────────────────────────────────
+  const emaKeys = Object.keys(inds)
+    .filter(k => k.startsWith('ema_'))
+    .sort((a, b) => +a.slice(4) - +b.slice(4));
+  emaKeys.forEach((key, i) => {
+    if (!emaSeries[i]) {
+      emaSeries[i] = chart.addLineSeries({
+        color: EMA_COLORS[i], lineWidth: 1, lineStyle: 2,
+        priceLineVisible: false, lastValueVisible: false,
+      });
+    }
+    emaSeries[i].setData(inds[key]);
+  });
+  for (let i = emaKeys.length; i < 3; i++) {
+    if (emaSeries[i]) emaSeries[i].setData([]);
   }
 
   // ── Bollinger Bands overlay ──────────────────────────────────────────────
@@ -481,7 +650,7 @@ function applyIndicators(inds) {
   macdPanelEl.style.display = showMacd ? 'flex' : 'none';
   if (showMacd) {
     macdHistSeries.setData(inds.macd_hist);
-    macdLineSeries.setData(inds.macd_line   || []);
+    macdLineSeries.setData(inds.macd_line    || []);
     macdSignalSeries.setData(inds.macd_signal || []);
     requestAnimationFrame(() => {
       macdChart.applyOptions({ width: macdChartEl.clientWidth, height: macdChartEl.clientHeight });
@@ -500,6 +669,20 @@ function applyIndicators(inds) {
     });
   } else {
     atrLineSeries.setData([]);
+  }
+
+  // ── ADX sub-panel ────────────────────────────────────────────────────────
+  const showAdx = !!(inds.adx && inds.adx.length);
+  adxPanelEl.style.display = showAdx ? 'flex' : 'none';
+  if (showAdx) {
+    adxLineSeries.setData(inds.adx);
+    adxPlusSeries.setData(inds.adx_pdi  || []);
+    adxMinusSeries.setData(inds.adx_mdi || []);
+    requestAnimationFrame(() => {
+      adxChart.applyOptions({ width: adxChartEl.clientWidth, height: adxChartEl.clientHeight });
+    });
+  } else {
+    adxLineSeries.setData([]); adxPlusSeries.setData([]); adxMinusSeries.setData([]);
   }
 }
 
