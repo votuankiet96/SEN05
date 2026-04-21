@@ -2,54 +2,99 @@
 # data_provider/01_data_pipeline.py  —  Data Pipeline (Full Load + Daily Backfill)
 # Version : 2.0
 # =============================================================================
-# HƯỚNG DẪN QUẢN TRỊ NHANH
-# Dùng script này để nạp dữ liệu lịch sử ban đầu và backfill hàng ngày.
-#
-# Các chế độ chạy:
-# - full    : nạp toàn bộ lịch sử (chỉ dùng lần đầu cài đặt hệ thống)
-# - gap     : bù phần còn thiếu so với hiện tại (chạy hàng ngày)
-# - dry-run : chỉ kiểm tra kế hoạch, không ghi gì vào DB
-#
-# Thao tác vận hành an toàn:
-# - Chọn chế độ chạy qua dòng lệnh (CLI)
-# - Lên lịch tự động qua Windows Task Scheduler
-#
-# Hạn chế: không nên sửa các vòng lặp bên trong vì script này điều phối
-# toàn bộ luồng dữ liệu từ symbol/timeframe cho đến tính lại derived TF.
-#
 #
 # FILE NÀY LÀ GÌ?
-#   Đây là "đường ống dữ liệu" (data pipeline) — nhiệm vụ duy nhất của nó là
-#   đảm bảo cơ sở dữ liệu (database) luôn có đủ dữ liệu nến (OHLCV bars) để
-#   các chiến lược giao dịch tự động có thể hoạt động.
+#   "Đường ống dữ liệu" — đảm bảo database luôn có đủ nến OHLCV để
+#   các chiến lược giao dịch tự động hoạt động. Kéo dữ liệu từ
+#   TradingView, lưu qua Staging → Fact_OHLCV, rồi tính lại TF phái sinh.
 #
-# HAI CHẾ ĐỘ HOẠT ĐỘNG:
+# ─────────────────────────────────────────────────────────────────────────────
+# CÁC CHẾ ĐỘ CHẠY (--mode)
+# ─────────────────────────────────────────────────────────────────────────────
 #
-#   ┌─ FULL LOAD (Tải lần đầu)
-#   │   Khi nào chạy: Database hoàn toàn trống (chưa có dữ liệu nào)
-#   │   Làm gì:       Kéo toàn bộ lịch sử giá từ TradingView
-#   │                 37 cặp tiền × 10 khung thời gian trực tiếp
-#   │                 + tính thêm 5 khung thời gian phái sinh (M10, M20, M90, H6, H8)
-#   │   Thời gian:    ~2–4 giờ (chỉ phải chạy đúng 1 lần duy nhất)
-#   │
-#   └─ BACKFILL (Bù dữ liệu thiếu — chạy hàng ngày)
-#       Khi nào chạy: Database đã có dữ liệu từ trước
-#       Làm gì:       Chỉ kéo phần bị thiếu kể từ lần chạy trước đến thời điểm hiện tại
-#       Thời gian:    ~3–8 phút
+#  auto  (mặc định) — tự phát hiện: Fact_OHLCV trống → full, có data → gap
+#  full             — kéo toàn bộ lịch sử (chỉ dùng lần đầu, mất 2–4 giờ)
+#                     37 symbol × 10 TF trực tiếp + 5 TF phái sinh
+#  gap              — chỉ bù phần bị thiếu kể từ lần chạy trước (~3–8 phút)
+#                     Đây là chế độ chạy hàng ngày thông thường
 #
-# CÁCH CHẠY THỦ CÔNG (gõ vào terminal):
-#   python 01_data_pipeline.py                # tự động phát hiện chế độ
-#   python 01_data_pipeline.py --mode full    # ép chạy full load
-#   python 01_data_pipeline.py --mode gap     # ép chạy backfill
-#   python 01_data_pipeline.py --dry-run      # chỉ kiểm tra, không kéo data
+# ─────────────────────────────────────────────────────────────────────────────
+# CÁC TÙY CHỌN BỘ LỌC (kết hợp được với nhau)
+# ─────────────────────────────────────────────────────────────────────────────
 #
-# LỊCH CHẠY TỰ ĐỘNG:
+#  --symbols US30,GOLD,EURUSD
+#      Chỉ chạy cho các symbol chỉ định (phân cách bằng dấu phẩy)
+#
+#  --timeframes M45,H1,H4
+#      Chỉ pull/reset các timeframe chỉ định (phân cách bằng dấu phẩy)
+#
+#  --asset-type Indice
+#  --asset-type FOREX,Metal
+#      Chỉ chạy cho symbols thuộc asset type chỉ định
+#      Các giá trị hợp lệ: Indice, FOREX, Metal, Crypto
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# CÁC TÙY CHỌN ĐẶC BIỆT
+# ─────────────────────────────────────────────────────────────────────────────
+#
+#  --dry-run
+#      Chỉ hiển thị kế hoạch (cặp nào cần kéo, bao nhiêu bar) — KHÔNG ghi DB.
+#      Dùng để kiểm tra trước khi chạy thật.
+#
+#  --reset
+#      Xóa data cũ trong Fact_OHLCV TRƯỚC khi pull lại.
+#      ⚠️ BẮT BUỘC kết hợp ít nhất 1 bộ lọc (--symbols / --timeframes / --asset-type)
+#         để tránh xóa nhầm toàn bộ database.
+#      Script sẽ hỏi xác nhận (y/N) trước khi xóa.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# VÍ DỤ SỬ DỤNG
+# ─────────────────────────────────────────────────────────────────────────────
+#
+#  python 01_data_pipeline.py
+#      → Tự phát hiện chế độ và chạy toàn bộ 37 symbol
+#
+#  python 01_data_pipeline.py --mode gap
+#      → Ép chạy backfill hàng ngày (không tự detect)
+#
+#  python 01_data_pipeline.py --mode full
+#      → Ép chạy full load (dùng khi cần rebuild từ đầu)
+#
+#  python 01_data_pipeline.py --dry-run
+#      → Xem kế hoạch, không ghi gì vào DB
+#
+#  python 01_data_pipeline.py --symbols GOLD,BTCUSD
+#      → Chỉ backfill cho GOLD và BTCUSD
+#
+#  python 01_data_pipeline.py --timeframes M45
+#      → Chỉ pull timeframe M45 cho tất cả symbol
+#
+#  python 01_data_pipeline.py --symbols EURUSD,GBPUSD --timeframes M45 --reset
+#      → Xóa M45 của EURUSD + GBPUSD rồi pull lại từ đầu
+#      (đây là lệnh dùng để sửa dữ liệu M45 bị hỏng cho một cặp cụ thể)
+#
+#  python 01_data_pipeline.py --asset-type Indice --timeframes M45 --reset
+#      → Xóa và pull lại M45 cho toàn bộ Indices (US30, DE40, J225, v.v.)
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# LỊCH CHẠY TỰ ĐỘNG
+# ─────────────────────────────────────────────────────────────────────────────
 #   Task Scheduler (Windows) tự động gọi file này mỗi ngày lúc 22:22 UTC
+#   (chạy ở chế độ auto, không có tham số đặc biệt)
 #
-# MÃ KẾT QUẢ (Exit codes):
+# ─────────────────────────────────────────────────────────────────────────────
+# MÃ KẾT QUẢ (Exit codes)
+# ─────────────────────────────────────────────────────────────────────────────
 #   0 = thành công hoàn toàn
 #   1 = lỗi nghiêm trọng (không kết nối được DB hoặc TradingView)
 #   2 = thành công một phần (có một số cặp kéo bị thất bại)
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# LƯU Ý VẬN HÀNH
+# ─────────────────────────────────────────────────────────────────────────────
+#   - Không sửa các vòng lặp bên trong — script điều phối toàn bộ luồng dữ liệu
+#   - Chạy 01_data_pipeline.py TRƯỚC, sau đó mới chạy 02_ws_live.py realtime
+#   - Sau --reset: pipeline tự fill lại data; staging cũ tự xóa sau 7 ngày
 # =============================================================================
 
 
@@ -114,6 +159,9 @@ from modules.db_connector import (
 # Tạo logger cho toàn bộ pipeline này (ghi log vào file LOG_FILE với tên "pipeline")
 logger = setup_logger("pipeline", LOG_FILE)
 
+# Bộ lọc TF — được set bởi --timeframes trong main(), đọc bởi run_full_load()
+_TF_FILTER: set = set()
+
 
 # =============================================================================
 # PHẦN 1: TỰ ĐỘNG PHÁT HIỆN CHẾ ĐỘ CHẠY
@@ -176,6 +224,10 @@ def run_full_load(tv, dry_run: bool = False) -> int:
 
     # Lấy danh sách đầy đủ các TF cần kéo (kèm số bar lịch sử cho mỗi TF)
     tf_configs = get_historical_timeframes()
+
+    # Lọc theo --timeframes nếu có
+    if _TF_FILTER:
+        tf_configs = [tc for tc in tf_configs if tc[1] in _TF_FILTER]
 
     # Đếm có bao nhiêu TF cần kéo (dùng để hiển thị tiến độ: [1/11], [2/11], ...)
     total_tfs  = len(tf_configs)
@@ -559,8 +611,119 @@ def main() -> int:
         help="Report only — do not pull from TradingView or write to DB",
     )
 
+    # Tham số --symbols: chỉ chạy cho một số symbol nhất định (phân cách bởi dấu phẩy)
+    parser.add_argument(
+        "--symbols",
+        type=str,
+        default=None,
+        help="Chỉ chạy cho các symbol này. VD: --symbols US30,GOLD,EURUSD",
+    )
+
+    # Tham số --reset: xóa sạch data trong Fact_OHLCV trước khi pull lại
+    parser.add_argument(
+        "--reset",
+        action="store_true",
+        default=False,
+        help="Xóa data trước khi pull lại. Phải dùng kèm ít nhất 1 trong: --symbols, --timeframes, --asset-type",
+    )
+
+    # Tham số --timeframes: chỉ chạy cho một số TF nhất định (phân cách bởi dấu phẩy)
+    parser.add_argument(
+        "--timeframes",
+        type=str,
+        default=None,
+        help="Chỉ pull/reset các TF này. VD: --timeframes M45 hoặc --timeframes M45,H1,H4",
+    )
+
+    # Tham số --asset-type: chỉ chạy cho symbols thuộc asset type chỉ định
+    parser.add_argument(
+        "--asset-type",
+        type=str,
+        default=None,
+        help="Chỉ chạy cho symbols thuộc asset type này. VD: --asset-type Indice hoặc --asset-type FOREX,Metal",
+    )
+
     # Phân tích các tham số từ dòng lệnh
     args    = parser.parse_args()
+
+    # -----------------------------------------------------------------------
+    # LỌC SYMBOLS theo --symbols / --asset-type (nếu có)
+    # Phải khai báo global để thay đổi có hiệu lực trong run_full_load / run_backfill
+    # -----------------------------------------------------------------------
+    global SYMBOLS, COMPUTED_TIMEFRAMES, _TF_FILTER  # noqa: PLW0603
+
+    if args.asset_type:
+        asset_filter = {a.strip() for a in args.asset_type.split(",")}
+        SYMBOLS = [s for s in SYMBOLS if s["asset_type"] in asset_filter]
+        if not SYMBOLS:
+            logger.error("--asset-type: không tìm thấy symbol nào khớp: %s", args.asset_type)
+            sys.exit(1)
+        logger.info("[FILTER] Asset type '%s': %d symbols", args.asset_type, len(SYMBOLS))
+
+    if args.symbols:
+        sym_filter = {s.strip().upper() for s in args.symbols.split(",")}
+        SYMBOLS = [s for s in SYMBOLS if s["tv_symbol"] in sym_filter]
+        if not SYMBOLS:
+            logger.error("--symbols: không tìm thấy symbol nào khớp: %s", args.symbols)
+            sys.exit(1)
+        logger.info("[FILTER] Chỉ chạy %d symbol: %s",
+                    len(SYMBOLS), [s["tv_symbol"] for s in SYMBOLS])
+
+    # -----------------------------------------------------------------------
+    # LỌC TIMEFRAMES theo --timeframes (nếu có)
+    # Ảnh hưởng cả pull (run_full_load đọc _TF_FILTER) lẫn reset (xóa đúng TF)
+    # -----------------------------------------------------------------------
+    if args.timeframes:
+        _TF_FILTER = {tf.strip().upper() for tf in args.timeframes.split(",")}
+        COMPUTED_TIMEFRAMES = [ct for ct in COMPUTED_TIMEFRAMES if ct[0] in _TF_FILTER]
+        logger.info("[FILTER] Chỉ pull TF: %s", sorted(_TF_FILTER))
+
+    # -----------------------------------------------------------------------
+    # XÓA DATA CŨ theo --reset (nếu có)
+    # Yêu cầu ít nhất 1 bộ lọc (--symbols, --asset-type, hoặc --timeframes)
+    # để tránh xóa nhầm toàn bộ DB
+    # -----------------------------------------------------------------------
+    if args.reset:
+        has_filter = args.symbols or args.asset_type or args.timeframes
+        if not has_filter:
+            logger.error("--reset yêu cầu ít nhất 1 bộ lọc: --symbols, --asset-type, hoặc --timeframes")
+            sys.exit(1)
+
+        tf_desc = f" | TF: {sorted(_TF_FILTER)}" if _TF_FILTER else " | TF: tất cả"
+        print(f"\n⚠️  Chuẩn bị XÓA data{tf_desc}")
+        print(f"   Symbols ({len(SYMBOLS)}): {[s['tv_symbol'] for s in SYMBOLS]}")
+        confirm = input("\nXác nhận xóa? (y/N): ").strip().lower()
+        if confirm != "y":
+            logger.info("Hủy bởi người dùng.")
+            sys.exit(0)
+
+        logger.info("[RESET] Đang xóa data...")
+        _conn = get_connection()
+        try:
+            _cur = _conn.cursor()
+            for sym in SYMBOLS:
+                if _TF_FILTER:
+                    # Xóa chỉ những TF được chỉ định
+                    for _tf in _TF_FILTER:
+                        _cur.execute(
+                            """DELETE FROM DWH.Fact_OHLCV
+                               WHERE SymbolID = ?
+                                 AND TimeframeID = (SELECT TimeframeID FROM DWH.Dim_Timeframe WHERE Code = ?)""",
+                            sym["symbol_id"], _tf,
+                        )
+                        logger.info("  Xóa %s %s: %d rows", sym["tv_symbol"], _tf, _cur.rowcount)
+                else:
+                    # Xóa tất cả TF của symbol này
+                    _cur.execute("DELETE FROM DWH.Fact_OHLCV WHERE SymbolID = ?", sym["symbol_id"])
+                    logger.info("  Xóa %s (all TF): %d rows", sym["tv_symbol"], _cur.rowcount)
+            _conn.commit()
+            logger.info("[RESET] Hoàn tất xóa data. Bắt đầu pull lại...")
+        except Exception as _e:
+            _conn.rollback()
+            logger.error("[RESET] Lỗi khi xóa: %s", _e)
+            sys.exit(1)
+        finally:
+            _conn.close()
 
     # Ghi lại thời điểm bắt đầu để tính tổng thời gian chạy ở cuối
     started = datetime.now()

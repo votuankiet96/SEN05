@@ -71,11 +71,12 @@ from _helpers import (
     recompute_derived,
     pull_and_store,
     now_utc,
+    sleep_for,
 )
 from _tv_auth import get_valid_tv_connection, refresh_mid_run
 from _tg import tg_send, tg_flush
 from _task_lock import acquire, release, cleanup_expired, request_confirm
-from modules.db_connector import get_connection, delete_ohlcv_bars, delete_staging_bars
+from modules.db_connector import get_connection, delete_ohlcv_bars, delete_staging_bars, run_etl_direct
 
 # =============================================================================
 # HẰNG SỐ CẤU HÌNH
@@ -127,6 +128,11 @@ TV_SLEEP_BETWEEN_CALLS = 0.5
 # Khả năng cao là đang bị rate-limit → nghỉ 60 giây để TV "nguội xuống".
 TV_THROTTLE_SLEEP = 60
 
+# Circuit breaker: nếu auth fail liên tiếp vượt ngưỡng này → ngừng checker.
+# Mục đích: tránh tiếp tục gọi TV khi IP đã bị block (HTTP 403), làm tệ hơn.
+# 5 lần ≈ ~40 giây (sau throttle) → đủ để phân biệt lỗi tạm thời vs. block thật.
+MAX_AUTH_CONSECUTIVE_FAIL = 5
+
 
 # ─── Helper: build Interval map (lazy import to avoid circular import) ───────
 
@@ -157,14 +163,20 @@ def _ohlcv_match(tv_vals: tuple, db_vals: tuple) -> bool:
     có sai số nhỏ do làm tròn. Thay vào đó dùng sai số tương đối:
       |giá_TV - giá_DB| / giá_TV < 0.01%  →  coi là khớp
 
+    Dùng floor 1e-6 để tránh false-positive khi giá TV = 0 (tránh divide-by-zero).
+    Không dùng max(OHLCV_REL_TOL, abs(a)*OHLCV_REL_TOL) vì với giá rất nhỏ
+    (VD: EURUSD nhỏ, crypto) tolerance tuyệt đối 1e-4 sẽ che khuất sai số 100%.
+
     Ví dụ:
-      TV = 1900.1234, DB = 1900.1235 → chênh 0.0001/1900 = 0.000005% → KHỚP
+      TV = 1900.1234, DB = 1900.1235 → chênh 0.0001/1900 ≈ 0% → KHỚP
       TV = 1900.0000, DB = 1902.0000 → chênh 2/1900 = 0.1% → KHÔNG KHỚP
+      TV = 0.00010,   DB = 0.00020   → chênh 100% → KHÔNG KHỚP (trường hợp cũ bỏ sót)
 
     Trả về True nếu tất cả 4 giá trị đều khớp, False nếu bất kỳ cái nào sai.
     """
     for a, b in zip(tv_vals, db_vals):
-        if abs(a - b) > max(OHLCV_REL_TOL, abs(a) * OHLCV_REL_TOL):
+        tol = max(abs(a) * OHLCV_REL_TOL, 1e-6)
+        if abs(a - b) > tol:
             return False
     return True
 
@@ -218,7 +230,7 @@ def _query_db_bars(symbol_id: int, tf_code: str,
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT f.BarTime, f.Open, f.High, f.Low, f.Close
+            SELECT f.BarTime, f.[Open], f.High, f.Low, f.[Close]
             FROM   DWH.Fact_OHLCV f
             JOIN   DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID
             WHERE  f.SymbolID = ?
@@ -230,6 +242,9 @@ def _query_db_bars(symbol_id: int, tf_code: str,
                          float(row[3]), float(row[4]))
                 for row in cursor.fetchall()}
     except Exception as e:
+        logging.getLogger("checker").error(
+            "_query_db_bars FAILED sym_id=%s tf=%s: %s", symbol_id, tf_code, e
+        )
         return {}
     finally:
         conn.close()
@@ -309,49 +324,71 @@ def _scan_pair(tv, sym: dict, tf_code: str, n_bars: int,
 def _repair_pair(tv, sym: dict, tf_code: str, scan: dict,
                  interval_map: dict, logger: logging.Logger) -> bool:
     """
-    Repair one (symbol, TF) pair:
-      1. Delete bars with wrong OHLCV values from Fact (so re-pull can insert correct ones)
-      2. Clear staging for this symbol (avoid stale merge collisions)
-      3. Re-pull N bars from TV via pull_and_store()
+    Repair one (symbol, TF) pair với thứ tự an toàn — tránh mất bar vĩnh viễn.
 
-    The pull_and_store MERGE will:
-      - Insert bars missing from DB (they weren't there before)
-      - Insert bars we just deleted (mismatched OHLCV, now fresh from TV)
-      - Skip bars that were already correct (untouched)
+    Thứ tự mới (safe):
+      1. Xóa staging cũ (tạm thời, an toàn — không ảnh hưởng Fact)
+      2. Kéo data mới từ TV vào Staging TRƯỚC (skip_etl=True — chưa đụng Fact)
+         → Nếu bước này thất bại: Fact vẫn nguyên vẹn, không mất bar nào
+      3. CHỈ sau khi staging thành công: xóa bars sai khỏi Fact
+         → Nếu bước này thất bại: staging vẫn có data đúng, có thể retry ETL
+      4. Chạy ETL staging → Fact để insert bars mới (missing + đã xóa ở bước 3)
 
-    Returns True if the re-pull succeeded (result >= 0).
+    Thứ tự cũ (nguy hiểm):
+      Xóa Fact trước → kéo TV sau → nếu TV fail: mất bar vĩnh viễn.
+
+    Returns True nếu toàn bộ quá trình thành công.
     """
     n_bars   = CHECKER_N_BARS[tf_code]
     interval = interval_map[tf_code]
     staging  = TF_STAGING.get(tf_code)
+    sym_id   = sym["symbol_id"]
+    label    = sym["tv_symbol"]
 
-    # Step 1: Delete mismatched bars so MERGE can re-insert them with correct values
+    # Bước 1: Xóa staging cũ để tránh stale rows gây MERGE collision
+    if staging:
+        delete_staging_bars(sym_id, staging)
+
+    # Bước 2: Kéo TV → Staging ONLY (chưa ETL sang Fact)
+    # Nếu TV thất bại ở đây → Fact hoàn toàn nguyên vẹn
+    staged = pull_and_store(tv, sym, tf_code, n_bars, interval, logger, skip_etl=True)
+    if staged < 0:
+        logger.error(
+            "  Re-pull FAILED for %s %s (staged=%d) — Fact untouched, no data loss",
+            label, tf_code, staged,
+        )
+        return False
+
+    # Bước 3: Staging đã có data đúng → giờ mới an toàn để xóa bars sai khỏi Fact
     if scan["mismatched"]:
         bar_times = list(scan["mismatched"].keys())
-        deleted = delete_ohlcv_bars(sym["symbol_id"], tf_code, bar_times)
-        logger.info("  Deleted %d mismatched bars — %s %s",
-                    deleted, sym["tv_symbol"], tf_code)
+        deleted = delete_ohlcv_bars(sym_id, tf_code, bar_times)
+        logger.info("  Deleted %d mismatched bars from Fact — %s %s", deleted, label, tf_code)
 
-    # Step 2: Clear staging for this symbol/TF to avoid stale rows
-    if staging:
-        delete_staging_bars(sym["symbol_id"], staging)
-
-    # Step 3: Re-pull from TV (inserts missing + re-deleted mismatched bars)
-    result = pull_and_store(tv, sym, tf_code, n_bars, interval, logger)
-    if result < 0:
-        logger.error("  Re-pull FAILED for %s %s (result=%d)",
-                     sym["tv_symbol"], tf_code, result)
+    # Bước 4: ETL staging → Fact (insert missing bars + bars vừa xóa ở bước 3)
+    try:
+        etl_inserted = run_etl_direct(sym_id, tf_code, staging)
+        logger.info("  ETL: +%d bars inserted into Fact — %s %s", etl_inserted, label, tf_code)
+    except Exception as e:
+        logger.error(
+            "  ETL FAILED after staging — %s %s: %s — data still in staging, can retry ETL",
+            label, tf_code, e,
+        )
         return False
     return True
 
 
 def _verify_pair(tv, sym: dict, tf_code: str,
-                 interval_map: dict, logger: logging.Logger) -> tuple[bool, float]:
+                 interval_map: dict, logger: logging.Logger,
+                 n_bars: int | None = None) -> tuple[bool, float]:
     """
-    Quick post-repair verification using VERIFY_N_BARS (faster than full scan).
+    Post-repair verification. Mặc định dùng CHECKER_N_BARS[tf_code] (cùng depth với scan)
+    để không bỏ sót lỗi cũ nằm ngoài VERIFY_N_BARS=200.
+    Truyền n_bars=VERIFY_N_BARS để dùng quick scan nếu cần tốc độ.
     Returns (is_clean, mismatch_rate).
     """
-    scan = _scan_pair(tv, sym, tf_code, VERIFY_N_BARS, interval_map, logger)
+    bars = n_bars if n_bars is not None else CHECKER_N_BARS.get(tf_code, VERIFY_N_BARS)
+    scan = _scan_pair(tv, sym, tf_code, bars, interval_map, logger)
     if scan is None:
         return False, 1.0
     return scan["rate"] == 0.0, scan["rate"]
@@ -383,6 +420,9 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
     tv_consecutive_fail = 0
     auth_consecutive_fail = 0
 
+    # Thu thập scan rate round 0 để phát hiện DST transition
+    round0_rates: dict[tuple, float] = {}   # {(tv_symbol, tf_code): rate}
+
     logger.info(
         "=== CHECKER START | %d pairs | dry=%s | threshold=%.1f%% ===",
         total_pairs, dry_run, threshold * 100,
@@ -403,12 +443,21 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
         logger.info("--- %s | %d pairs pending ---", round_name, len(pending))
 
         still_failing: list[tuple[dict, str]] = []
+        prev_symbol: str | None = None  # theo dõi symbol trước để thêm sleep khi đổi symbol
 
         for idx, (sym, tf_code) in enumerate(pending, 1):
             label = f"{sym['tv_symbol']}/{tf_code}"
 
             if idx % 50 == 1:
                 logger.info("[%d/%d] %s ...", idx, len(pending), label)
+
+            # Nghỉ giữa các symbol (không chỉ giữa TF) để giảm rate với TradingView.
+            # 0.5s giữa các TF là đủ, nhưng khi chuyển sang symbol mới thì dùng
+            # sleep_for() (5s hoặc 10s cho GOLD) để tránh bị phát hiện là bot.
+            if sym["tv_symbol"] != prev_symbol:
+                if prev_symbol is not None:
+                    sleep_for(sym["tv_symbol"])
+                prev_symbol = sym["tv_symbol"]
 
             # ── Pull & scan ──────────────────────────────────────────────────
             n_bars = CHECKER_N_BARS[tf_code]
@@ -428,11 +477,32 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
                     time.sleep(TV_THROTTLE_SLEEP)
                     tv_consecutive_fail = 0
 
-                # Auth: try mid-run refresh
+                # Auth: try mid-run refresh sau 3 lần fail
                 if auth_consecutive_fail >= 3 and not dry_run:
                     logger.warning("3+ auth-related failures — attempting mid-run refresh...")
                     if refresh_mid_run(tv, logger):
                         auth_consecutive_fail = 0
+
+                # Circuit breaker: dừng hẳn nếu auth fail liên tiếp quá nhiều
+                # Khả năng IP bị block (403) → tiếp tục request sẽ làm tình trạng tệ hơn
+                if auth_consecutive_fail >= MAX_AUTH_CONSECUTIVE_FAIL:
+                    logger.error(
+                        "[CIRCUIT BREAKER] %d auth/TV failures liên tiếp — "
+                        "khả năng IP bị block. Dừng checker.",
+                        auth_consecutive_fail,
+                    )
+                    tg_send(
+                        f"🚨 <b>[Checker]</b> {auth_consecutive_fail} lần TV thất bại "
+                        "liên tiếp — nghi IP bị block. Đã dừng tự động.\n"
+                        "Chờ 30 phút hoặc đổi kết nối internet rồi chạy lại."
+                    )
+                    return {
+                        "ok": ok_pairs, "repaired": repaired_pairs,
+                        "failed": len(persistent_fails),
+                        "persistent": persistent_fails,
+                        "dry_issues": dry_issues,
+                        "aborted": "circuit_breaker",
+                    }
 
                 if is_final_round:
                     persistent_fails.append(
@@ -451,6 +521,10 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
             rate   = scan["rate"]
             n_miss = len(scan["missing"])
             n_bad  = len(scan["mismatched"])
+
+            # Ghi lại rate round 0 để dùng cho DST detection sau khi loop kết thúc
+            if repair_round == 0:
+                round0_rates[(sym["tv_symbol"], tf_code)] = rate
 
             # ── Decision ─────────────────────────────────────────────────────
             if rate <= threshold:
@@ -512,12 +586,35 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
                     "tf":  tf_code,
                     "reason": f"{rate:.1%} mismatch ({n_miss} missing, {n_bad} wrong)",
                 })
-                # Vẫn đếm là "ok" cho mục đích thống kê (không có repair xảy ra)
-                ok_pairs += 1
+                # Không tăng ok_pairs — pair này có vấn đề, không phải "ok"
 
             time.sleep(TV_SLEEP_BETWEEN_CALLS)
 
         pending = still_failing
+
+        # ── DST detection sau round 0 ────────────────────────────────────────
+        # Nếu >30% cặp H2/H3/H4 đều báo rate > 50% → khả năng DST transition,
+        # không phải lỗi data thật → bỏ qua repair cho các TF đó hôm nay.
+        if repair_round == 0 and round0_rates:
+            h_tfs = {"H2", "H3", "H4"}
+            h_rates = [r for (_, tf), r in round0_rates.items() if tf in h_tfs]
+            if h_rates:
+                high_count = sum(1 for r in h_rates if r > 0.5)
+                dst_ratio  = high_count / len(h_rates)
+                if dst_ratio > 0.3:
+                    logger.warning(
+                        "[DST DETECT] %.0f%% cặp H2/H3/H4 có rate > 50%% — "
+                        "khả năng DST transition (tháng 3/11). "
+                        "Bỏ qua repair H2/H3/H4 để tránh sửa nhầm. Chạy lại sau 24h.",
+                        dst_ratio * 100,
+                    )
+                    tg_send(
+                        f"⚠️ <b>[Checker]</b> Phát hiện khả năng <b>DST transition</b> "
+                        f"({dst_ratio:.0%} cặp H2/H3/H4 báo rate >50%).\n"
+                        "Đã bỏ qua repair H2/H3/H4 hôm nay. Chạy lại sau 24h."
+                    )
+                    # Lọc các cặp H2/H3/H4 ra khỏi pending để không repair nhầm
+                    pending = [(s, tf) for s, tf in pending if tf not in h_tfs]
 
     # Any leftover pairs (shouldn't happen, but safety net)
     for sym, tf_code in pending:
@@ -619,15 +716,27 @@ def main() -> None:
         "--co-days", type=int, default=7, metavar="DAYS",
         help="Lookback window in days for --co-check (default: 7)",
     )
+    parser.add_argument(
+        "--tf-check", action="store_true",
+        help="Kiểm tra interval gaps giữa các bar liên tiếp (DB-only, no TradingView).",
+    )
+    parser.add_argument(
+        "--tf-check-full", action="store_true",
+        help="Dùng với --tf-check: hiển thị chi tiết short/long gap breakdown.",
+    )
+    parser.add_argument(
+        "--rebuild-computed", action="store_true",
+        help="Xoá và rebuild TF phái sinh (M10/M20/M90/H6/H8). Dùng --dry-run để xem preview.",
+    )
     args = parser.parse_args()
 
     # ── Setup logger ─────────────────────────────────────────────────────────
     log_dir = _DATA / "logs"
     log_dir.mkdir(exist_ok=True)
-    logger = setup_logger("checker", str(log_dir / "checker.log"))
+    logger = setup_logger("checker", str(log_dir / "checker.log"), rotating=True)
 
     logger.info(
-        "==== 06_checker.py START | dry=%s | sym=%s | tf=%s | threshold=%.1f%% ====",
+        "==== 04_checker.py START | dry=%s | sym=%s | tf=%s | threshold=%.1f%% ====",
         args.dry_run, args.sym or "ALL", args.tf or "ALL", args.threshold * 100,
     )
     start_time = now_utc()
@@ -641,10 +750,13 @@ def main() -> None:
             logger.error("Symbol '%s' not found in SYMBOLS list.", args.sym)
             sys.exit(1)
 
+    # --tf-check / --rebuild-computed operate across all 15 TFs, not just TFS_TO_CHECK
+    db_only_mode = args.tf_check or args.rebuild_computed
+
     tfs = list(TFS_TO_CHECK)
     if args.tf:
         tf = args.tf.upper()
-        if tf not in TFS_TO_CHECK:
+        if not db_only_mode and tf not in TFS_TO_CHECK:
             logger.error("TF '%s' not in TFS_TO_CHECK (%s).", tf, TFS_TO_CHECK)
             sys.exit(1)
         tfs = [tf]
@@ -665,6 +777,31 @@ def main() -> None:
             # standalone --co-check: exit after report
             sys.exit(0 if co_clean else 1)
 
+    # ── Interval gap check (DB-only) ─────────────────────────────────────────
+    if args.tf_check:
+        tf_report, has_issues = check_interval_gaps(
+            sym_filter=[args.sym] if args.sym else None,
+            tf_filter=args.tf.upper() if args.tf else None,
+            full=args.tf_check_full,
+        )
+        logger.info("\n%s", tf_report)
+        tg_send(f"<b>[Checker] TF Gap Check</b>\n<pre>{tf_report}</pre>")
+        tg_flush()
+        sys.exit(1 if has_issues else 0)
+
+    # ── Rebuild computed TFs (DB-only) ───────────────────────────────────────
+    if args.rebuild_computed:
+        rc_report = rebuild_computed_tfs(
+            dry_run=args.dry_run,
+            sym_filter=[args.sym] if args.sym else None,
+            tf_filter=args.tf.upper() if args.tf else None,
+            logger=logger,
+        )
+        logger.info("\n%s", rc_report)
+        tg_send(f"<b>[Checker] Rebuild Computed TFs</b>\n<pre>{rc_report}</pre>")
+        tg_flush()
+        sys.exit(0)
+
     # ── Build Interval map (deferred import) ─────────────────────────────────
     interval_map = _build_interval_map()
 
@@ -681,6 +818,22 @@ def main() -> None:
     )
     tv, auth_mode = get_valid_tv_connection(logger)
     logger.info("Auth mode: %s", auth_mode)
+
+    # ── Guard: không chạy nếu đang ở guest mode ──────────────────────────────
+    # Guest mode chỉ trả về ~500 bars thay vì 1000-2000 → checker sẽ thấy hàng trăm
+    # bar "missing" không có thật → kích hoạt sửa nhầm → PERSISTENT_FAILURE ảo.
+    if auth_mode == "guest":
+        msg = (
+            "⚠️ <b>[Checker]</b> Đang chạy ở <b>GUEST MODE</b> — bar limit bị giảm "
+            "xuống ~500 bars. Checker sẽ báo sai nhiều 'missing bars' không có thật "
+            "và có thể kích hoạt sửa nhầm.\n\n"
+            "Hãy cập nhật <code>TV_AUTH_TOKEN</code> hoặc <code>TV_COOKIE</code> "
+            "trong file <code>.env</code> rồi chạy lại."
+        )
+        logger.error("[CHECKER] Guest mode detected — aborting to prevent false repairs.")
+        tg_send(msg)
+        tg_flush()
+        sys.exit(2)
 
     # ── Chế độ dry-run: scan và báo cáo, không hỏi xác nhận ─────────────────
     if args.dry_run:
@@ -753,6 +906,7 @@ def main() -> None:
         tg_flush()
         sys.exit(1)
 
+    exit_code = 1  # default: failure — sẽ ghi đè sau khi repair hoàn tất
     try:
         tg_send(
             f"🔧 <b>[Checker]</b> Đang sửa {len(issues)} pairs (Phase 3/3)...\n"
@@ -773,8 +927,8 @@ def main() -> None:
     finally:
         release("checker_repair")
         logger.info("Lock released.")
+        tg_flush()  # luôn flush dù try thành công hay exception
 
-    tg_flush()
     sys.exit(exit_code)
 
 
@@ -960,6 +1114,257 @@ def _log_report(report: str, logger: logging.Logger) -> None:
              .replace("<b>", "").replace("</b>", "")
              .replace("<i>", "").replace("</i>", ""))
     logger.info("\n%s", clean)
+
+
+# =============================================================================
+# INTERVAL GAP CHECK  (DB-only, no TradingView)
+# =============================================================================
+
+_NORMAL_GAP_MAX = {
+    1440:  5760,   # D1: up to 4 ngay (weekend + DST)
+    10080: 12240,  # W:  up to 8.5 ngay
+}
+
+
+def check_interval_gaps(
+    sym_filter: list | None = None,
+    tf_filter: str | None = None,
+    full: bool = False,
+) -> tuple[str, bool]:
+    """
+    Kiem tra interval gaps giua cac bar lien tiep trong Fact_OHLCV.
+
+    Returns (report_str, has_issues).
+    has_issues = True neu bat ky cap (sym, tf) nao co > 1% gap sai.
+    """
+    from collections import Counter
+
+    conn   = get_connection()
+    cursor = conn.cursor()
+
+    if sym_filter:
+        needle_set = {s.upper() for s in sym_filter}
+        cursor.execute("SELECT SymbolID, Symbol FROM DWH.Dim_Symbol ORDER BY Symbol")
+        symbols = [(r[0], r[1]) for r in cursor.fetchall() if r[1].upper() in needle_set]
+    else:
+        cursor.execute("SELECT SymbolID, Symbol FROM DWH.Dim_Symbol ORDER BY Symbol")
+        symbols = cursor.fetchall()
+
+    cursor.execute("SELECT TimeframeID, Code, Minutes FROM DWH.Dim_Timeframe ORDER BY Minutes")
+    all_tfs = cursor.fetchall()
+    if tf_filter:
+        all_tfs = [(tid, code, mins) for tid, code, mins in all_tfs if code == tf_filter]
+
+    tf_order = ['M5', 'M10', 'M15', 'M20', 'M30', 'M45', 'H1', 'M90',
+                'H2', 'H3', 'H4', 'H6', 'H8', 'D1', 'W']
+
+    results: dict[tuple, dict] = {}
+
+    for sym_id, sym_code in symbols:
+        for tf_id, tf_code, tf_min in all_tfs:
+            cursor.execute("""
+                SELECT TOP 500 BarTime
+                FROM DWH.Fact_OHLCV
+                WHERE SymbolID = ? AND TimeframeID = ?
+                ORDER BY BarTime DESC
+            """, (sym_id, tf_id))
+            rows = sorted([r[0] for r in cursor.fetchall()])
+
+            if len(rows) < 2:
+                results[(sym_code, tf_code)] = {'status': 'empty', 'tf_min': tf_min}
+                continue
+
+            gaps = [int((rows[i] - rows[i-1]).total_seconds() / 60) for i in range(1, len(rows))]
+            max_gap    = _NORMAL_GAP_MAX.get(tf_min, tf_min * 3)
+            working    = [g for g in gaps if g <= max_gap]
+
+            if not working:
+                results[(sym_code, tf_code)] = {'status': 'ok', 'tf_min': tf_min,
+                                                'total': 0, 'wrong': 0, 'pct': 0.0}
+                continue
+
+            wrong  = [g for g in working if g != tf_min]
+            short  = [g for g in wrong if g < tf_min]
+            long_  = [g for g in wrong if g > tf_min]
+            pct    = len(wrong) / len(working) * 100
+            top5   = Counter(wrong).most_common(5)
+
+            results[(sym_code, tf_code)] = {
+                'status':     'issues' if wrong and pct > 1.0 else 'ok',
+                'tf_min':     tf_min,
+                'total':      len(working),
+                'wrong':      len(wrong),
+                'short_gaps': len(short),
+                'long_gaps':  len(long_),
+                'pct':        pct,
+                'top':        top5,
+            }
+
+    conn.close()
+
+    # ── Format report ─────────────────────────────────────────────────────────
+    sym_codes = [r[1] for r in symbols]
+    lines     = ["=== TF Interval Gap Check ==="]
+    has_issues = False
+
+    for tf_code in tf_order:
+        tf_res = [(sc, results[(sc, tf_code)]) for sc in sym_codes if (sc, tf_code) in results]
+        if not tf_res:
+            continue
+
+        ok_n    = sum(1 for _, r in tf_res if r['status'] == 'ok')
+        issue_n = sum(1 for _, r in tf_res if r['status'] == 'issues')
+        empty_n = sum(1 for _, r in tf_res if r['status'] == 'empty')
+        total_n = len(tf_res)
+
+        lines.append(f"\nTF: {tf_code:<6} | OK: {ok_n} | Van de: {issue_n} | Trong: {empty_n} / Tong: {total_n}")
+
+        if issue_n == 0:
+            lines.append(f"  [SACH] Tat ca {ok_n} symbols OK")
+            continue
+
+        has_issues = True
+        if full:
+            lines.append(f"  {'Symbol':<12} {'Sai/Tong':>10} {'%Sai':>7} {'Short':>7} {'Long':>7}  Top gaps sai")
+            for sc, r in sorted(tf_res, key=lambda x: -x[1].get('pct', 0)):
+                if r['status'] != 'issues':
+                    continue
+                top_str = ', '.join([f"{g}min*{c}" for g, c in r['top']])
+                flag = " ***SHORT***" if r['short_gaps'] > 0 else ""
+                lines.append(
+                    f"  {sc:<12} {r['wrong']:>5}/{r['total']:<5} {r['pct']:>6.1f}%"
+                    f" {r['short_gaps']:>7}  {r['long_gaps']:>6}   {top_str}{flag}"
+                )
+        else:
+            lines.append(f"  {'Symbol':<12} {'Sai/Tong':>10} {'%Sai':>7}  Top gaps sai")
+            for sc, r in sorted(tf_res, key=lambda x: -x[1].get('pct', 0)):
+                if r['status'] != 'issues':
+                    continue
+                top_str = ', '.join([f"{g}min*{c}" for g, c in r['top'][:3]])
+                lines.append(
+                    f"  {sc:<12} {r['wrong']:>5}/{r['total']:<5} {r['pct']:>6.1f}%   {top_str}"
+                )
+
+    total_ok     = sum(1 for r in results.values() if r['status'] == 'ok')
+    total_issues = sum(1 for r in results.values() if r['status'] == 'issues')
+    lines.append(f"\nTong ket: OK={total_ok} | Van de={total_issues} / {len(results)} cap")
+
+    return "\n".join(lines), has_issues
+
+
+# =============================================================================
+# REBUILD COMPUTED TFS  (DB-only, no TradingView)
+# =============================================================================
+
+_COMPUTED_TFS = ['M10', 'M20', 'M90', 'H6', 'H8']
+
+
+def rebuild_computed_tfs(
+    dry_run: bool = True,
+    sym_filter: list | None = None,
+    tf_filter: str | None = None,
+    logger: logging.Logger | None = None,
+) -> str:
+    """
+    Xoa va rebuild TF phai sinh (M10/M20/M90/H6/H8) tu Fact_OHLCV.
+
+    dry_run=True: chi hien thi so bars se xoa, khong thuc hien.
+    Returns report string.
+    """
+    from modules.db_connector import aggregate_from_fact
+
+    target_tfs = _COMPUTED_TFS
+    if tf_filter:
+        if tf_filter not in _COMPUTED_TFS:
+            return f"[Rebuild] TF '{tf_filter}' khong phai TF phai sinh. Ho tro: {_COMPUTED_TFS}"
+        target_tfs = [tf_filter]
+
+    conn   = get_connection()
+    cursor = conn.cursor()
+
+    if sym_filter:
+        needle_set = {s.upper() for s in sym_filter}
+        cursor.execute("SELECT SymbolID, Symbol FROM DWH.Dim_Symbol ORDER BY Symbol")
+        symbols = [(r[0], r[1]) for r in cursor.fetchall() if r[1].upper() in needle_set]
+    else:
+        cursor.execute("SELECT SymbolID, Symbol FROM DWH.Dim_Symbol ORDER BY Symbol")
+        symbols = cursor.fetchall()
+
+    cursor.execute(
+        f"SELECT Code, TimeframeID FROM DWH.Dim_Timeframe WHERE Code IN ({','.join('?' * len(target_tfs))})",
+        target_tfs,
+    )
+    tf_id_map = {r[0]: r[1] for r in cursor.fetchall()}
+    conn.close()
+
+    mode  = "DRY-RUN" if dry_run else "EXECUTE"
+    lines = [f"=== Rebuild Computed TFs [{mode}] ==="]
+    total_del = 0
+    total_ins = 0
+
+    for tf_code in target_tfs:
+        tf_id = tf_id_map.get(tf_code)
+        if tf_id is None:
+            continue
+        lines.append(f"\n--- TF={tf_code} ---")
+        tf_del = tf_ins = 0
+
+        for sym_id, sym_name in symbols:
+            # Count existing bars
+            conn2   = get_connection()
+            cur2    = conn2.cursor()
+            cur2.execute(
+                "SELECT COUNT(*) FROM DWH.Fact_OHLCV WHERE SymbolID = ? AND TimeframeID = ?",
+                (sym_id, tf_id),
+            )
+            n_exist = cur2.fetchone()[0]
+            conn2.close()
+
+            if n_exist == 0:
+                continue
+
+            if dry_run:
+                lines.append(f"  {sym_name:<12}  would delete {n_exist:>5} bars")
+                tf_del += n_exist
+            else:
+                conn3 = get_connection()
+                cur3  = conn3.cursor()
+                try:
+                    cur3.execute(
+                        "DELETE FROM DWH.Fact_OHLCV WHERE SymbolID = ? AND TimeframeID = ?",
+                        (sym_id, tf_id),
+                    )
+                    n_del = cur3.rowcount
+                    conn3.commit()
+                except Exception as exc:
+                    conn3.rollback()
+                    if logger:
+                        logger.warning("rebuild_computed_tfs DELETE fail %s %s: %s", sym_name, tf_code, exc)
+                    n_del = 0
+                finally:
+                    conn3.close()
+
+                n_ins = aggregate_from_fact(sym_id, tf_code)
+                lines.append(f"  {sym_name:<12}  deleted {n_del:>5}  re-aggregated {n_ins:>5}")
+                tf_del += n_del
+                tf_ins += n_ins
+
+        if dry_run:
+            lines.append(f"  -> Total would delete: {tf_del}")
+        else:
+            lines.append(f"  -> Total deleted: {tf_del}  inserted: {tf_ins}")
+
+        total_del += tf_del
+        total_ins += tf_ins
+
+    lines.append(f"\n{'Preview' if dry_run else 'Done'}:")
+    lines.append(f"  Total deleted : {total_del}")
+    if not dry_run:
+        lines.append(f"  Total inserted: {total_ins}")
+    if dry_run:
+        lines.append("Chay lai voi --rebuild-computed (khong co --dry-run) de thuc hien.")
+
+    return "\n".join(lines)
 
 
 if __name__ == "__main__":

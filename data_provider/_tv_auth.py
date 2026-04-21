@@ -116,6 +116,15 @@ def get_current_token() -> str:
         return _auth_token
 
 
+def get_auth_mode() -> str:
+    """
+    Trả về chế độ xác thực hiện tại: "guest" hoặc "authenticated".
+    Dùng để phát hiện guest mode trước khi chạy checker/pipeline.
+    """
+    with _auth_lock:
+        return "guest" if _auth_token == GUEST_TOKEN else "authenticated"
+
+
 def set_current_token(token: str) -> None:
     """Ghi token mới vào global state (thread-safe)."""
     global _auth_token

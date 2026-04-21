@@ -1,38 +1,64 @@
 # =============================================================================
 # data_provider/_helpers.py  —  Shared helpers for data pipeline / ws_live / checker
 # =============================================================================
-# HƯỚNG DẪN QUẢN TRỊ NHANH
-# File này chứa các hàm tiện ích dùng chung cho nhiều script khác.
-#
-# Hình dung đây là "kho hàm phục vụ" cho:
-# - Kéo dữ liệu từ TradingView và lưu vào DB
-# - Ước tính kích thước gap và số bar cần pull
-# - Tính lại các timeframe phái sinh
-# - Quản lý cache market gap đã xác nhận
-#
-# Các thông số có thể điều chỉnh khi cần:
-# - SAFETY_FACTOR, MIN_PULL_BARS, cài đặt thời gian sleep
-# - Ngưỡng gap qua đêm (overnight gap thresholds)
-#
-# Lưu ý:
-# - Thay đổi các ngưỡng sẽ ảnh hưởng đến việc hệ thống phân biệt khoảng trống thật
-#   hay thị trường đóng cửa bình thường, ảnh hưởng trực tiếp đến quá trình backfill.
-
 #
 # MỤC ĐÍCH:
-#   Chứa tất cả hàm dùng chung cho cả 3 script chính:
-#     - 01_data_pipeline.py (backfill hàng ngày)
-#     - 02_ws_live.py (cập nhật realtime qua WebSocket)
-#     - 04_checker.py (kiểm tra và tự sửa dữ liệu mỗi 3 ngày)
+#   Chứa tất cả hàm dùng chung cho 3 script chính của data_provider:
+#     - 01_data_pipeline.py  — backfill hàng ngày
+#     - 02_ws_live.py        — cập nhật realtime qua WebSocket (24/7)
+#     - 04_checker.py        — kiểm tra và tự sửa dữ liệu mỗi 3 ngày
 #
-# CÁC NHÓM CHỨC NĂNG CHÍNH:
-#   1. setup_logger()        — Tạo logger ghi ra console + file
-#   2. Hằng số cấu hình     — Số bar tối đa, thời gian nghỉ, ngưỡng gap...
-#   3. Hàm tiện ích          — now_utc(), fmt_gap(), calc_gap_n_bars()...
-#   4. Verified market gaps  — Đọc/ghi file JSON cache market gap đã xác nhận
-#   5. pull_and_store()      — Kéo OHLCV từ TradingView → ghi Staging → Fact
-#   6. recompute_derived()   — Tính lại TF phái sinh (M10, M20, M90, H6, H8)
-#   7. find_hole_pairs()     — Quét DB tìm lỗ hổng dữ liệu
+# ─────────────────────────────────────────────────────────────────────────────
+# CÁC NHÓM CHỨC NĂNG
+# ─────────────────────────────────────────────────────────────────────────────
+#
+#   setup_logger()        — Tạo logger ghi đồng thời ra console + file.
+#                           Hỗ trợ 2 chế độ: FileHandler (script thủ công) và
+#                           RotatingFileHandler (tiến trình 24/7 như ws_live).
+#
+#   Hằng số cấu hình      — FULL_N_BARS, SAFETY_FACTOR, MIN_PULL_BARS,
+#                           RETRY_DELAYS, FILL_THRESHOLD, SLEEP_GOLD/NORMAL,
+#                           OVERNIGHT_GAP_MINUTES — điều chỉnh tại đây khi cần
+#                           thay đổi hành vi pull/retry/gap-detection.
+#
+#   Hàm tiện ích nhỏ      — now_utc(), fmt_gap(), calc_gap_n_bars(),
+#                           trading_hours_in_gap(), sleep_for()
+#
+#   _validate_ohlcv_df()  — Làm sạch DataFrame OHLCV trước khi ghi DB:
+#                           lọc null, High<Low, duplicate timestamps, thứ tự
+#                           không tăng, DST alignment (GOLD/BTCUSD), M45 anchor.
+#
+#   Verified market gaps  — load_verified_gaps() / save_verified_gaps():
+#                           Đọc/ghi JSON cache những khoảng thị trường đóng cửa
+#                           đã được xác nhận → skip lần chạy sau, không pull lại.
+#
+#   pull_and_store()      — Kéo OHLCV từ TradingView API → validate → Staging
+#                           → Fact_OHLCV. Trả về số bar mới insert.
+#   pull_with_retry()     — Wrapper gọi pull_and_store() với retry + backoff.
+#
+#   recompute_derived()   — Tính lại 5 TF phái sinh (M10, M20, M90, H6, H8)
+#                           cho các symbol vừa nhận bar mới (GROUP BY trên Fact).
+#
+#   repull_full_symbol()  — Xóa Fact rows cũ và pull lại từ đầu cho 1 cặp
+#                           (symbol, TF). Direct TF: xóa staging + pull TV.
+#                           Derived TF: re-aggregate từ source TF.
+#
+#   find_hole_pairs()     — Quét Fact_OHLCV bằng SQL LEAD() để tìm lỗ hổng
+#                           dữ liệu bên trong timeline (không phải thiếu ở rìa).
+#                           Lọc bỏ gap qua đêm, cuối tuần, đã verified.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# THÔNG SỐ ĐIỀU CHỈNH ĐƯỢC
+# ─────────────────────────────────────────────────────────────────────────────
+#   SAFETY_FACTOR          — Pull dư bao nhiêu % so với cần (mặc định 1.5 = +50%)
+#   MIN_PULL_BARS          — Số bar tối thiểu dù gap nhỏ (mặc định 10)
+#   RETRY_DELAYS           — Thời gian chờ giữa các lần retry: [10, 30, 60] giây
+#   SLEEP_GOLD/NORMAL      — Nghỉ giữa request: GOLD=10s, còn lại=5s
+#   OVERNIGHT_GAP_MINUTES  — Ngưỡng gap qua đêm bình thường theo asset type
+#   HOLE_LOOKBACK_DAYS     — Quét lỗ hổng trong bao nhiêu ngày gần nhất (60)
+#
+#   ⚠️ Thay đổi các ngưỡng này ảnh hưởng trực tiếp đến cách hệ thống phân biệt
+#      "gap thật cần fill" vs "thị trường đóng cửa bình thường".
 # =============================================================================
 
 import json  # Đọc/ghi file JSON (verified_market_gaps.json)
@@ -80,6 +106,7 @@ from config import (
 )
 from modules.db_connector import (
     aggregate_from_fact,  # Tính TF phái sinh bằng GROUP BY trên Fact_OHLCV
+    clean_staging_transitions,  # Xóa transition bar do DST shift sau insert staging
     delete_fact_bars,  # Xóa rows Fact_OHLCV trước khi repull
     delete_staging_bars,  # Xóa rows staging trước khi repull
     get_candle_count,  # Đếm số bar trong Fact_OHLCV (kiểm tra source TF có data chưa)
@@ -285,11 +312,15 @@ def _validate_ohlcv_df(df, tv_symbol: str, tf_code: str,
     """
     Kiểm tra tính hợp lệ của DataFrame OHLCV trước khi ghi vào DB.
 
-    Các kiểm tra:
+    Các kiểm tra (theo thứ tự):
       1. Null trong Open/High/Low/Close → loại bỏ row đó
       2. High < Low (giá đảo ngược) → loại bỏ row đó
       3. Timestamp trùng lặp → giữ lại row đầu tiên
       4. Timestamp không tăng dần → sắp xếp lại
+      5. DST alignment cho GOLD/BTCUSD H2/H3/H4 — các symbol này có alignment cố
+         định quanh năm; bars lệch giờ do DST sẽ bị loại (xem FIXED_H_ALIGNMENT)
+      6. M45 alignment — tự phát hiện offset anchor từ bar đầu tiên; bars có
+         remainder % 45 khác anchor (DST-glitch) sẽ bị loại
 
     Trả về (cleaned_df, had_issues):
       - cleaned_df  : DataFrame sau khi làm sạch (có thể empty nếu tất cả đều lỗi)
@@ -352,6 +383,22 @@ def _validate_ohlcv_df(df, tv_symbol: str, tf_code: str,
             logger.warning(
                 "  VALIDATE %s %s: %d bars alignment sai (h%%%d != %d) → dropped",
                 tv_symbol, tf_code, n_bad, tf_hours, expected,
+            )
+            df         = df[~wrong_align]
+            had_issues = True
+
+    # 6. M45 alignment check — tự phát hiện anchor từ bar đầu tiên, không hardcode.
+    # TV M45 không nhất thiết bắt đầu tại bội số 45 từ UTC midnight.
+    # DST-glitch bars có remainder khác anchor → bị loại bỏ.
+    if tf_code == "M45":
+        total_min   = df.index.hour * 60 + df.index.minute
+        anchor      = int(total_min[0]) % 45
+        wrong_align = total_min % 45 != anchor
+        if wrong_align.any():
+            n_bad = int(wrong_align.sum())
+            logger.warning(
+                "  VALIDATE %s M45: %d bars alignment sai (anchor=%d, not consistent) → dropped",
+                tv_symbol, n_bad, anchor,
             )
             df         = df[~wrong_align]
             had_issues = True
@@ -449,24 +496,33 @@ def save_verified_gaps(windows: set, logger: logging.Logger) -> None:
 
 def pull_and_store(tv, sym: dict, tf_code: str,
                    n_bars: int, interval,
-                   logger: logging.Logger) -> int:
+                   logger: logging.Logger,
+                   skip_etl: bool = False) -> int:
     """
     Kéo n_bars nến OHLCV từ TradingView cho 1 cặp (symbol, timeframe),
     sau đó ghi vào database qua 2 bước: Staging → Fact.
 
     Tham số:
-      tv       — kết nối TradingView (tvDatafeed instance)
-      sym      — dict thông tin symbol: {symbol_id, tv_symbol, tv_exchange, asset_type}
-      tf_code  — mã timeframe: "H1", "M15", "M30"...
-      n_bars   — số bar cần kéo (đã nhân hệ số an toàn)
-      interval — interval object mà TV API cần (ví dụ: Interval.in_1_hour)
-      logger   — logger để ghi log
+      tv        — kết nối TradingView (tvDatafeed instance)
+      sym       — dict thông tin symbol: {symbol_id, tv_symbol, tv_exchange, asset_type}
+      tf_code   — mã timeframe: "H1", "M15", "M30"...
+      n_bars    — số bar cần kéo (đã nhân hệ số an toàn)
+      interval  — interval object mà TV API cần (ví dụ: Interval.in_1_hour)
+      logger    — logger để ghi log
+      skip_etl  — nếu True: chỉ pull vào Staging, KHÔNG chạy ETL sang Fact.
+                  Dùng trong _repair_pair() để đảm bảo data an toàn trong staging
+                  trước khi xóa bars sai trong Fact.
 
-    Trả về:
+    Trả về (skip_etl=False, mặc định):
       ≥ 1  — số bar MỚI được insert vào Fact_OHLCV (thành công, có data mới)
         0  — pull thành công nhưng 0 bar mới (DB đã có đủ = market gap)
        -1  — thất bại do exception (TV lỗi kỹ thuật, timeout...)
        -2  — TV trả về rỗng (không có data cho khoảng này)
+
+    Trả về (skip_etl=True):
+      ≥ 0  — số bar đã stage vào Staging (thành công; 0 = không có bar mới)
+       -1  — thất bại do exception
+       -2  — TV trả về rỗng
     """
     symbol_id   = sym["symbol_id"]
     tv_symbol   = sym["tv_symbol"]
@@ -495,10 +551,18 @@ def pull_and_store(tv, sym: dict, tf_code: str,
     # Cảnh báo nếu TV trả về < 50% số bar yêu cầu (có thể TV bị giới hạn)
     returned_bars = len(df)
     if returned_bars < n_bars * 0.5:
-        logger.warning("  TV returned only %d/%d bars (%.0f%%) — %s %s",
-                       returned_bars, n_bars,
-                       returned_bars / n_bars * 100,
-                       tv_symbol, tf_code)
+        try:
+            from _tv_auth import get_auth_mode as _get_auth_mode
+            _mode = _get_auth_mode()
+        except Exception:
+            _mode = "unknown"
+        _auth_hint = " — ⚠️ đang GUEST MODE (bar limit ~500)" if _mode == "guest" else ""
+        logger.warning(
+            "  TV returned only %d/%d bars (%.0f%%) — %s %s%s",
+            returned_bars, n_bars,
+            returned_bars / n_bars * 100,
+            tv_symbol, tf_code, _auth_hint,
+        )
 
     # ----- BỎ BAR CUỐI CÙNG -----
     # Bar cuối rất có thể ĐANG MỞ (chưa đóng xong) → dữ liệu OHLCV chưa chính xác.
@@ -520,7 +584,25 @@ def pull_and_store(tv, sym: dict, tf_code: str,
     # Nếu row đã tồn tại (cùng SymbolID + BarTime) → bỏ qua, chỉ insert row mới
     staged = insert_staging_batch(df, symbol_id, staging)
 
+    # ----- BƯỚC B2: Dọn transition bar DST / anchor drift khỏi staging -----
+    # M45/H2/H3/H4: Capital.com dịch chuyển UTC offset qua DST → bar anchor drift.
+    # Xoá ngay sau insert để Fact không nhận bar nhiễm.
+    if tf_code in ('M45', 'H2', 'H3', 'H4'):
+        from config import TF_MINUTES
+        n_cleaned = clean_staging_transitions(symbol_id, staging, TF_MINUTES[tf_code])
+        if n_cleaned > 0:
+            logger.info("  ANCHOR_CLEAN %s %s: removed %d transition bar(s) from staging",
+                        tv_symbol, tf_code, n_cleaned)
+
     # ----- BƯỚC C: Chuyển Staging → Fact_OHLCV (stored procedure) -----
+    # skip_etl=True: caller (VD: _repair_pair) sẽ tự gọi ETL sau khi đã xóa
+    # bars sai khỏi Fact. Đây là cơ chế đảm bảo không mất data: staging được
+    # điền trước, chỉ sau đó mới xóa Fact và chạy ETL.
+    if skip_etl:
+        logger.info("  ○ %s %s: %d staged (ETL deferred to caller)",
+                    tv_symbol, tf_code, staged)
+        return staged
+
     # run_etl_direct() gọi DWH.usp_LoadDirect → chuyển row từ staging sang Fact
     # Cũng dùng NOT EXISTS chống duplicate. Trả về số row mới insert vào Fact.
     try:

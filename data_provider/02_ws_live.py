@@ -2,72 +2,77 @@
 # data_provider/02_ws_live.py  —  Cập nhật dữ liệu thời gian thực qua WebSocket
 # Phiên bản     : V5 (Batch/Cron mode)
 # =============================================================================
-# HƯỚNG DẪN QUẢN TRỊ NHANH
-# Đây là module cập nhật real-time. Chạy liên tục và cập nhật các bar gần nhất.
-#
-# Các thông số vận hành có thể điều chỉnh:
-# - BATCH_INTERVAL_MIN    : chu kỳ chạy mỗi batch (tính bằng phút)
-# - BATCH_FETCH_TIMEOUT   : thời gian chờ tối đa trước khi retry/fail (giây)
-# - WS_SYMBOLS_PER_CONN  : số symbol trên mỗi kết nối WebSocket
-# - Giới hạn DB queue / overflow buffer
-#
-# Cảnh báo vận hành:
-# - Đặt tần suất quá cao có thể bị TradingView rate-limit
-# - Đặt tần suất quá thấp sẽ làm tăng độ trễ dữ liệu
-#
-# Thực hành tốt:
-# - Chỉ chạy sau khi đã nạp đủ dữ liệu lịch sử qua 01_data_pipeline.py
-# - Theo dõi log và cảnh báo Telegram khi có áp lực queue hoặc lỗi xác thực
-
 #
 # FILE NÀY LÀ GÌ?
-#   Đây là module cập nhật dữ liệu REAL-TIME — thay vì chờ đến 22:22 UTC mỗi
-#   ngày như file 01_data_pipeline.py, file này chạy liên tục 24/7 và cứ mỗi
-#   5 phút lại lấy giá mới nhất từ TradingView qua giao thức WebSocket rồi
-#   lưu ngay vào database.
+#   Module cập nhật dữ liệu REAL-TIME — chạy liên tục 24/7, cứ mỗi 5 phút lại
+#   mở WebSocket tới TradingView, lấy 3–5 nến mới nhất, lưu vào DB rồi đóng.
 #
-#   WebSocket là gì? Là kênh kết nối 2 chiều giữa máy tính và TradingView,
-#   giống như bạn đang mở tab TradingView trên trình duyệt — dữ liệu giá được
-#   đẩy về liên tục theo thời gian thực.
+#   Bổ sung cho 01_data_pipeline.py (chạy hàng ngày lúc 22:22 UTC):
+#   pipeline bù lịch sử → ws_live giữ dữ liệu luôn mới trong ngày.
 #
-# TẠI SAO DÙNG BATCH MODE (không kết nối liên tục)?
-#   - Giữ WebSocket mở 24/7 sẽ bị TradingView phát hiện và ban IP
-#   - Thay vào đó: mở kết nối → lấy 3 nến mới nhất → đóng kết nối → chờ 5 phút
-#   - Cách này an toàn hơn, ít tốn tài nguyên hơn, ít bị rate-limit hơn
+#   Phạm vi theo dõi: Indices, Metal, Crypto — KHÔNG theo dõi FOREX qua WS.
+#   (FOREX có lịch đóng/mở cửa phức tạp, được backfill bởi 01_data_pipeline.py)
 #
-# CÁC TÍNH NĂNG CHÍNH:
-#   1. BATCH MODE: mỗi 5 phút mở WS, lấy data, đóng — không giữ kết nối 24/7
-#   2. SCHEDULER tích hợp: tự tính giờ chạy batch tiếp theo theo đúng mốc phút
-#   3. COMPLETION TRACKING: biết khi nào đã nhận đủ data → đóng WS sớm
-#   4. XỬ LÝ LỖI 429/500: tự retry với thời gian chờ tăng dần (exponential back-off)
-#   5. XÁC THỰC 3 LỚP: Cookie → Username/Password → Guest (dự phòng từng bước)
-#   6. OVERFLOW BUFFER: nếu hàng đợi ghi DB đầy, tạm giữ vào buffer riêng
-#   7. GHI DB BẰNG THREAD RIÊNG: không để ghi DB chặn luồng nhận data
-#   8. CẢNH BÁO TELEGRAM: tự động gửi tin khi có lỗi hoặc sự kiện quan trọng
-#   9. BÁO CÁO MỖI GIỜ: gửi thống kê tình trạng hệ thống lên Telegram
-#   10. WATERMARK: chỉ lưu nến mới, không bao giờ lưu nến trùng lặp
+# ─────────────────────────────────────────────────────────────────────────────
+# TẠI SAO DÙNG BATCH MODE (mở rồi đóng, không giữ kết nối liên tục)?
+# ─────────────────────────────────────────────────────────────────────────────
+#   Giữ WebSocket mở 24/7 dễ bị TradingView phát hiện và ban IP.
+#   Thay vào đó: mở kết nối → nhận 3–5 nến → đóng → chờ 5 phút → lặp lại.
+#   An toàn hơn, ít tốn tài nguyên hơn, ít bị rate-limit hơn.
 #
-# CÁCH LẤY COOKIE VÀ AUTH TOKEN TỪ TRÌNH DUYỆT:
-#   1. Mở Chrome, đăng nhập TradingView
-#   2. Nhấn F12 → chọn tab "Network"
-#   3. Reload trang → click vào bất kỳ request nào đến tradingview.com
-#   4. Tìm phần "Request Headers" → copy toàn bộ giá trị "cookie"
-#   5. Trong chuỗi cookie, tìm "auth_token=..." → copy phần giá trị đó
-#   6. Dán vào file .env theo cấu trúc bên dưới
+# ─────────────────────────────────────────────────────────────────────────────
+# CÁCH CHẠY
+# ─────────────────────────────────────────────────────────────────────────────
+#   Bước 1: Chạy 01_data_pipeline.py trước để có đủ lịch sử trong DB
+#   Bước 2: python 02_ws_live.py   (chạy liên tục 24/7, không cần tham số)
+#   Dừng  : Ctrl + C  (thoát sạch — drain hết DB queue rồi mới dừng)
 #
-# CẤU HÌNH FILE .env CẦN CÓ:
-#   TV_COOKIE=sessionid=abc123; tv_ecuid=xyz; ...   ← toàn bộ cookie header
-#   TV_AUTH_TOKEN=eyJhbGci...                        ← chỉ giá trị auth_token
-#   TV_USERNAME=your_username                         ← fallback nếu không có cookie
-#   TV_PASSWORD=your_password                         ← fallback nếu không có cookie
-#   TELEGRAM_BOT_TOKEN=123456:ABC-xyz                ← token bot Telegram
-#   TELEGRAM_CHAT_ID=-100123456789                   ← ID nhóm/kênh nhận cảnh báo
+# ─────────────────────────────────────────────────────────────────────────────
+# CÁC TÍNH NĂNG CHÍNH
+# ─────────────────────────────────────────────────────────────────────────────
+#   1. BATCH MODE        — mỗi 5 phút mở WS, lấy data, đóng (không giữ 24/7)
+#   2. SCHEDULER         — tự tính thời điểm batch tiếp theo theo đúng mốc phút
+#   3. COMPLETION TRACK  — biết khi nào nhận đủ data → đóng WS sớm, không chờ timeout
+#   4. RETRY + BACKOFF   — lỗi 429/500 → retry với thời gian chờ tăng dần (30s→300s)
+#   5. XÁC THỰC 3 LỚP   — thứ tự: Auth Token → Cookie → Guest (fallback từng bước)
+#   6. OVERFLOW BUFFER   — queue DB đầy → giữ tạm trong RAM; RAM đầy → SQLite spool
+#   7. DB THREAD RIÊNG   — thread ghi DB song song, không chặn luồng nhận WS
+#   8. WATERMARK         — chỉ lưu nến timestamp > watermark, không bao giờ duplicate
+#   9. BACKLOG TRACKING  — cặp miss ≥1 batch → yêu cầu thêm bar (N_BARS_WS_BACKLOG)
+#                          để bù khoảng trống; miss > MAX_BACKLOG_BATCHES → cảnh báo
+#   10. ETL DEFER        — 04_checker.py đang repair → defer ghi Fact, giữ ở Staging
+#                          để tránh race condition giữa 2 tiến trình
+#   11. TELEGRAM ALERT   — cảnh báo khi lỗi, token hết hạn, queue áp lực
+#   12. BÁO CÁO MỖI GIỜ — gửi thống kê bars_inserted / errors / queue_depth
 #
-# THỨ TỰ SỬ DỤNG:
-#   Chạy file 01_data_pipeline.py TRƯỚC để load đủ lịch sử,
-#   SAU ĐÓ mới chạy file này để cập nhật real-time.
+# ─────────────────────────────────────────────────────────────────────────────
+# THÔNG SỐ VẬN HÀNH (điều chỉnh trong phần HẰNG SỐ CẤU HÌNH bên dưới)
+# ─────────────────────────────────────────────────────────────────────────────
+#   BATCH_INTERVAL_MIN    — chu kỳ batch (phút), mặc định 5
+#   BATCH_FETCH_TIMEOUT   — timeout mỗi batch (giây), mặc định 120
+#   WS_SYMBOLS_PER_CONN   — symbol tối đa / kết nối WS, mặc định 10
+#   DB_QUEUE_MAXSIZE      — giới hạn hàng đợi ghi DB, mặc định 2000
+#   MAX_MISS_RETRIES      — số batch miss liên tiếp trước khi cảnh báo, mặc định 5
 #
-# DỪNG CHƯƠNG TRÌNH: nhấn Ctrl + C (chương trình sẽ drain hết DB queue rồi mới tắt)
+#   ⚠️ Tần suất quá cao → bị TradingView rate-limit
+#      Tần suất quá thấp → data bị trễ trong ngày
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# CẤU HÌNH FILE .env (BẮT BUỘC)
+# ─────────────────────────────────────────────────────────────────────────────
+#   TV_AUTH_TOKEN=eyJhbGci...        ← auth_token lấy từ cookie TradingView
+#   TV_COOKIE=sessionid=abc; ...     ← toàn bộ cookie header (fallback)
+#   TV_USERNAME=your_username         ← fallback nếu không có cookie
+#   TV_PASSWORD=your_password         ← fallback nếu không có cookie
+#   TELEGRAM_BOT_TOKEN=123456:ABC    ← token bot Telegram (để nhận cảnh báo)
+#   TELEGRAM_CHAT_ID=-100123456789   ← ID nhóm/kênh nhận cảnh báo
+#
+# CÁCH LẤY AUTH TOKEN TỪ TRÌNH DUYỆT:
+#   1. Mở Chrome, đăng nhập TradingView → nhấn F12 → tab "Network"
+#   2. Reload trang → click request bất kỳ tới tradingview.com
+#   3. Trong "Request Headers" → copy toàn bộ giá trị "cookie"
+#   4. Tìm "auth_token=..." trong chuỗi → copy phần giá trị
+#   5. Dán vào .env: TV_AUTH_TOKEN=<giá trị vừa copy>
 # =============================================================================
 
 
@@ -107,7 +112,7 @@ if str(_PROJ) not in sys.path:
 import pandas as pd  # DataFrame — cấu trúc bảng dữ liệu dùng để lưu trữ nến trước khi ghi DB
 import requests  # Gửi HTTP request — dùng để đăng nhập TradingView và gửi tin Telegram
 import websocket  # Thư viện WebSocket client — kết nối và nhận data real-time từ TradingView
-from _helpers import setup_logger  # Hàm khởi tạo logger (ghi ra file + console)
+from _helpers import setup_logger, _validate_ohlcv_df  # Hàm khởi tạo logger + validate OHLCV
 from _tg import tg_alert as _tg_alert, tg_send as _tg_send, QUICK_COMMANDS_HINT  # Telegram notifications
 from _tg_bot import start_bot_listener  # Telegram bot command handler (/fix, /status, /pipeline)
 import _tv_auth  # TradingView auth module dùng chung (token cache, refresh, bootstrap)
@@ -128,6 +133,7 @@ from config import (
     TV_USERNAME,  # Tên đăng nhập TradingView (dùng khi không có cookie)
 )
 from modules.db_connector import (
+    clean_staging_transitions,  # Xóa transition bar DST / anchor drift sau insert staging
     get_connection,  # Mở kết nối tới SQL Server
     insert_staging_batch,  # Ghi batch nến vào bảng staging của DB
     run_etl_aggregate,  # Tính TF phái sinh bằng cách gộp nến từ TF nhỏ hơn
@@ -260,6 +266,8 @@ _deferred_etl:  set  = set()          # (symbol_id, tf_code, staging_table, tv_s
 _deferred_lock        = threading.Lock()
 _checker_lock_cache: dict = {"locked": False, "checked_at": 0.0}
 _CHECKER_LOCK_TTL     = 30.0           # giây — refresh cache mỗi 30s
+_DEFERRED_ETL_WARN    = 2000           # log WARNING khi set đạt ngưỡng này
+_DEFERRED_ETL_MAX     = 5000           # log ERROR + drop khi vượt ngưỡng này
 
 # Watermark: lưu timestamp của nến mới nhất đã lưu cho từng cặp (symbol_id, tf_code)
 # Dùng để lọc: chỉ lưu nến có timestamp > watermark (không lưu nến trùng)
@@ -648,6 +656,12 @@ def _db_worker() -> None:
         # Giải nén thông tin từ tuple
         symbol_id, tf_code, staging_table, tv_symbol, df = item
 
+        # Lọc bars sai alignment (DST artifact) — cùng logic với 01_data_pipeline
+        df, _ = _validate_ohlcv_df(df, tv_symbol, tf_code, logger)
+        if df.empty:
+            _db_queue.task_done()
+            continue
+
         # BƯỚC A: Ghi nến vào bảng staging trong DB
         try:
             inserted = insert_staging_batch(df, symbol_id, staging_table)
@@ -657,6 +671,14 @@ def _db_worker() -> None:
                 _stats["errors"] += 1
             _db_queue.task_done()  # Báo cho queue biết đã xử lý xong item này
             continue
+
+        # BƯỚC A2: Dọn transition bar DST / anchor drift khỏi staging
+        if tf_code in ('M45', 'H2', 'H3', 'H4'):
+            from config import TF_MINUTES
+            n_cleaned = clean_staging_transitions(symbol_id, staging_table, TF_MINUTES[tf_code])
+            if n_cleaned > 0:
+                logger.info("[DB ] ANCHOR_CLEAN %s %s: removed %d transition bar(s)",
+                            tv_symbol, tf_code, n_cleaned)
 
         # Chỉ xử lý tiếp nếu thực sự có nến mới được ghi (inserted > 0)
         if inserted > 0:
@@ -670,13 +692,20 @@ def _db_worker() -> None:
             #        xóa staging. Defer giữ data an toàn trong staging cho đến khi xong.
             if _checker_is_repairing():
                 with _deferred_lock:
-                    if len(_deferred_etl) < 500:   # cap 500 để tránh tràn memory
-                        _deferred_etl.add((symbol_id, tf_code, staging_table, tv_symbol))
-                    else:
-                        logger.warning(
-                            "[DB ] Deferred ETL set full (500) — dropping %s %s",
-                            tv_symbol, tf_code,
+                    n_deferred = len(_deferred_etl)
+                    if n_deferred >= _DEFERRED_ETL_MAX:
+                        logger.error(
+                            "[DB ] Deferred ETL set FULL (%d) — dropping %s %s. "
+                            "Checker đang chạy quá lâu hoặc lock chưa được giải phóng.",
+                            _DEFERRED_ETL_MAX, tv_symbol, tf_code,
                         )
+                    else:
+                        if n_deferred >= _DEFERRED_ETL_WARN:
+                            logger.warning(
+                                "[DB ] Deferred ETL set %d/%d — checker lock giữ lâu",
+                                n_deferred, _DEFERRED_ETL_MAX,
+                            )
+                        _deferred_etl.add((symbol_id, tf_code, staging_table, tv_symbol))
                 logger.info(
                     "[DB ] Checker lock active — deferred ETL for %s %s",
                     tv_symbol, tf_code,

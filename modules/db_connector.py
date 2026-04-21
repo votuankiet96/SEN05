@@ -343,8 +343,8 @@ def aggregate_from_fact(symbol_id: int, target_tf_code: str) -> int:
                 SELECT
                     ? AS SymbolID,
                     ? AS TimeframeID,
-                    CAST(CONVERT(VARCHAR(8), a.FirstBarTime, 112) AS INT) AS DateKey,
-                    a.FirstBarTime AS BarTime,
+                    CAST(CONVERT(VARCHAR(8), a.AggBarTime, 112) AS INT) AS DateKey,
+                    a.AggBarTime AS BarTime,
                     so.[Open],
                     a.High,
                     a.Low,
@@ -388,6 +388,71 @@ def aggregate_from_fact(symbol_id: int, target_tf_code: str) -> int:
         logger.error("aggregate_from_fact FAIL: %s→%s SymbolID=%d — %s",
                      src_tf_code, target_tf_code, symbol_id, e)
         raise
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Staging alignment cleanup — prevent DST-shift contamination
+# ---------------------------------------------------------------------------
+
+def clean_staging_transitions(symbol_id: int, staging_table: str, tf_min: int) -> int:
+    """
+    Xoa khoi staging cac bar co offset khong phai dominant VA tao khoang gap ngan.
+
+    Goi sau insert_staging_batch cho cac TF nay cay: M45, H2, H3, H4.
+    Nguyen nhan: Capital.com doi UTC offset khi chuyen DST, tao ra cac "transition bar"
+    lech offset so voi phan con lai cua du lieu.
+
+    Dieu kien xoa (2 dieu kien dong thoi, an toan):
+      1. rem != dominant_offset  (bar khong khop anchor chiem da so)
+      2. gap_to_prev < tf_min*0.8  (bar co gap ngan bao hieu nhiem)
+
+    Tra ve so dong da xoa.
+    """
+    threshold = int(tf_min * 0.8)
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        # Buoc 1: Tim dominant anchor hien tai
+        cursor.execute(f"""
+            SELECT TOP 1 DATEDIFF(MINUTE, '2000-01-01', BarTime) % {tf_min} AS rem
+            FROM {staging_table}
+            WHERE SymbolID = ?
+            GROUP BY DATEDIFF(MINUTE, '2000-01-01', BarTime) % {tf_min}
+            ORDER BY COUNT(*) DESC
+        """, (symbol_id,))
+        row = cursor.fetchone()
+        if row is None:
+            return 0
+        dom_anchor = int(row[0])
+
+        # Buoc 2: Xoa bar non-dominant co gap ngan
+        cursor.execute(f"""
+            DELETE FROM {staging_table}
+            WHERE SymbolID = ?
+            AND BarTime IN (
+                SELECT BarTime FROM (
+                    SELECT BarTime,
+                           DATEDIFF(MINUTE, LAG(BarTime) OVER (ORDER BY BarTime), BarTime) AS gap_prev,
+                           DATEDIFF(MINUTE, '2000-01-01', BarTime) % {tf_min} AS rem
+                    FROM {staging_table}
+                    WHERE SymbolID = ?
+                ) sub
+                WHERE sub.rem != {dom_anchor} AND sub.gap_prev > 0 AND sub.gap_prev < {threshold}
+            )
+        """, (symbol_id, symbol_id))
+        deleted = cursor.rowcount
+        conn.commit()
+        if deleted > 0:
+            logger.info("clean_staging_transitions: %s SymbolID=%d removed %d transition bar(s)",
+                        staging_table, symbol_id, deleted)
+        return deleted
+    except Exception as e:
+        conn.rollback()
+        logger.warning("clean_staging_transitions FAIL: %s SymbolID=%d — %s",
+                       staging_table, symbol_id, e)
+        return 0
     finally:
         conn.close()
 
