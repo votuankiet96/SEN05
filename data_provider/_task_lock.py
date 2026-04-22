@@ -135,6 +135,35 @@ def release(task_name: str) -> None:
         _lock_cache["checked_at"] = 0.0
 
 
+def renew(task_name: str, duration_min: int = 90) -> bool:
+    """
+    Gia hạn lock đang giữ bằng cách đẩy ExpiresAt ra xa hơn.
+    Dùng cho các task dài như checker repair để tránh TTL hết giữa chừng.
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            UPDATE SEN.ActiveTask
+            SET ExpiresAt = DATEADD(minute, ?, SYSUTCDATETIME())
+            WHERE TaskName = ? AND ExpiresAt > SYSUTCDATETIME()
+            """,
+            (duration_min, task_name),
+        )
+        conn.commit()
+        updated = cursor.rowcount > 0
+    except Exception:
+        updated = False
+    finally:
+        if conn is not None:
+            conn.close()
+    if _lock_cache["task_name"] == task_name:
+        _lock_cache["checked_at"] = 0.0
+    return updated
+
+
 def is_locked(task_name: str) -> bool:
     """
     Kiểm tra xem task_name có đang bị lock không (row tồn tại VÀ chưa expire).
@@ -328,14 +357,7 @@ def request_confirm(
     )
     tg_flush(timeout=15)  # chờ tối đa 15s để tin được giao
 
-    # Bước 3: Drain backlog — bỏ qua tin cũ trước khi bắt đầu đợi
-    try:
-        _get_updates()   # advances _last_update_id, bỏ backlog
-        time.sleep(2)    # nhỏ buffer
-    except Exception:
-        pass
-
-    # Bước 4: Poll loop
+    # Bước 3: Poll loop
     deadline = time.monotonic() + timeout_min * 60
     result   = None
 

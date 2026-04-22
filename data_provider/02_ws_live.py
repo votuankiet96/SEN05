@@ -80,6 +80,7 @@
 # NHẬP CÁC THƯ VIỆN CẦN THIẾT
 # =============================================================================
 
+import atexit
 import json  # Xử lý dữ liệu JSON — TradingView gửi/nhận lệnh dưới dạng JSON
 import logging  # Framework ghi log chuẩn của Python
 import math  # Hàm toán học — dùng math.ceil() để tính số nhóm WS cần tạo
@@ -115,6 +116,8 @@ import websocket  # Thư viện WebSocket client — kết nối và nhận data
 from _helpers import setup_logger, _validate_ohlcv_df  # Hàm khởi tạo logger + validate OHLCV
 from _tg import tg_alert as _tg_alert, tg_send as _tg_send, QUICK_COMMANDS_HINT  # Telegram notifications
 from _tg_bot import start_bot_listener  # Telegram bot command handler (/fix, /status, /pipeline)
+from _task_lock import acquire as _acquire_task_lock, release as _release_task_lock, renew as _renew_task_lock
+from _tv_coord import acquire_live_batch_window, release_live_batch_window
 import _tv_auth  # TradingView auth module dùng chung (token cache, refresh, bootstrap)
 
 # =============================================================================
@@ -261,17 +264,19 @@ _state_lock    = threading.Lock()
 
 # ── ETL deferral khi Checker đang repair ─────────────────────────────────────
 # Khi Checker giữ lock 'checker_repair', WS defer Steps B+C để tránh race condition.
-# Data vẫn an toàn trong staging — được xử lý sau khi lock released.
-_deferred_etl:  set  = set()          # (symbol_id, tf_code, staging_table, tv_symbol)
+# Value = committed watermark candidate (max bar ts của batch đã stage).
+_deferred_etl: dict[tuple[int, str, str, str], float] = {}
 _deferred_lock        = threading.Lock()
 _checker_lock_cache: dict = {"locked": False, "checked_at": 0.0}
 _CHECKER_LOCK_TTL     = 30.0           # giây — refresh cache mỗi 30s
 _DEFERRED_ETL_WARN    = 2000           # log WARNING khi set đạt ngưỡng này
-_DEFERRED_ETL_MAX     = 5000           # log ERROR + drop khi vượt ngưỡng này
+_DEFERRED_ETL_MAX     = 5000           # log ERROR nếu backlog defer tăng quá cao
+_WRITE_DEFER_LOCKS    = ("checker_repair", "warehouse_maintenance")
 
-# Watermark: lưu timestamp của nến mới nhất đã lưu cho từng cặp (symbol_id, tf_code)
-# Dùng để lọc: chỉ lưu nến có timestamp > watermark (không lưu nến trùng)
+# Committed watermark: chỉ nhảy lên sau khi ETL direct thành công vào Fact_OHLCV.
 _last_bar_ts: dict[tuple[int, str], float] = {}
+# Received watermark: bar mới nhất đã nhìn thấy/accept vào queue-spool, chỉ dùng quan sát.
+_received_bar_ts: dict[tuple[int, str], float] = {}
 
 # Bộ đếm thống kê hoạt động của hệ thống (hiển thị trong báo cáo định kỳ)
 _stats = {
@@ -396,6 +401,7 @@ def _load_watermarks() -> None:
             FROM DWH.Fact_OHLCV f
             JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID
             WHERE tf.Code IN ({placeholders})
+              AND f.BarTime < DATEADD(minute, 1, GETUTCDATE())
             GROUP BY f.SymbolID, tf.Code
         """, ws_tf_codes)
         for symbol_id, tf_code, max_bt in cursor.fetchall():
@@ -435,6 +441,23 @@ def _load_watermarks() -> None:
             f"Tệ nhất: SymbolID={worst[0]} {worst[1]} ({worst[2]:.0f} phút cũ)\n"
             f"Cân nhắc chạy backfill trước khi bật live."
         )
+
+
+def _future_cutoff_ts() -> float:
+    """Grace period nhỏ để tránh false-positive với bar vừa đóng."""
+    return datetime.now(timezone.utc).timestamp() + 60.0
+
+
+def _set_received_watermark(key: tuple[int, str], max_ts: float) -> None:
+    """Theo dõi bar mới nhất đã được accept vào queue/overflow/spool."""
+    with _state_lock:
+        _received_bar_ts[key] = max(max_ts, _received_bar_ts.get(key, 0.0))
+
+
+def _set_committed_watermark(key: tuple[int, str], max_ts: float) -> None:
+    """Chỉ cập nhật watermark filter sau khi Fact commit xong."""
+    with _state_lock:
+        _last_bar_ts[key] = max(max_ts, _last_bar_ts.get(key, 0.0))
 
 
 # =============================================================================
@@ -545,7 +568,7 @@ def _spool_flush_to_queue() -> int:
     return flushed
 
 
-def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str) -> None:
+def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str) -> bool:
     """
     Thêm 1 nến vào hàng đợi DB.
     Nếu hàng đợi đầy → chuyển sang overflow buffer.
@@ -556,6 +579,7 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
     try:
         # Thử thêm nến vào hàng đợi DB ngay lập tức
         _db_queue.put_nowait(item)
+        return True
     except queue.Full:
         # Hàng đợi đầy → chuyển sang overflow buffer
         with _overflow_lock:
@@ -579,6 +603,7 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
                         f"⚠️ Overflow buffer gần đầy: {new_len}/{OVERFLOW_BUFFER_MAX}\n"
                         f"DB worker có thể bị chậm. Kiểm tra kết nối DB."
                     )
+                return True
             else:
                 # Cả queue lẫn overflow RAM đều đầy → ghi vào SQLite spool (durable)
                 try:
@@ -587,6 +612,7 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
                         "[G%d] Queue+overflow full — spooled to disk: %s %s",
                         group_id, tv_symbol, tf_code,
                     )
+                    return True
                 except Exception as exc:
                     # SQLite cũng fail → chỉ khi đĩa đầy hoặc quyền ghi bị chặn
                     logger.error(
@@ -602,6 +628,7 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
                     )
                     with _state_lock:
                         _stats["errors"] += 1
+                    return False
 
 
 # =============================================================================
@@ -620,7 +647,7 @@ def _checker_is_repairing() -> bool:
         return _checker_lock_cache["locked"]
     try:
         from _task_lock import is_locked
-        result = is_locked("checker_repair")
+        result = any(is_locked(task_name) for task_name in _WRITE_DEFER_LOCKS)
     except Exception:
         result = False   # fail-open
     _checker_lock_cache.update({"locked": result, "checked_at": now})
@@ -655,6 +682,7 @@ def _db_worker() -> None:
 
         # Giải nén thông tin từ tuple
         symbol_id, tf_code, staging_table, tv_symbol, df = item
+        key = (symbol_id, tf_code)
 
         # Lọc bars sai alignment (DST artifact) — cùng logic với 01_data_pipeline
         df, _ = _validate_ohlcv_df(df, tv_symbol, tf_code, logger)
@@ -680,50 +708,59 @@ def _db_worker() -> None:
                 logger.info("[DB ] ANCHOR_CLEAN %s %s: removed %d transition bar(s)",
                             tv_symbol, tf_code, n_cleaned)
 
-        # Chỉ xử lý tiếp nếu thực sự có nến mới được ghi (inserted > 0)
         if inserted > 0:
             with _state_lock:
                 _stats["bars_inserted"] += inserted
-            logger.info("[DB ] %s %s: +%d bar(s) committed.", tv_symbol, tf_code, inserted)
+            logger.info("[DB ] %s %s: +%d bar(s) staged.", tv_symbol, tf_code, inserted)
 
-            # Kiểm tra Checker có đang repair không — nếu có thì defer Steps B+C
-            # Lý do: Checker đang xóa/re-pull bars → chạy ETL đồng thời có thể
-            #        làm bars mới vừa insert vào staging bị bỏ sót sau khi Checker
-            #        xóa staging. Defer giữ data an toàn trong staging cho đến khi xong.
-            if _checker_is_repairing():
-                with _deferred_lock:
-                    n_deferred = len(_deferred_etl)
-                    if n_deferred >= _DEFERRED_ETL_MAX:
-                        logger.error(
-                            "[DB ] Deferred ETL set FULL (%d) — dropping %s %s. "
-                            "Checker đang chạy quá lâu hoặc lock chưa được giải phóng.",
-                            _DEFERRED_ETL_MAX, tv_symbol, tf_code,
+        # Dù inserted=0 vẫn phải ETL/defer, vì bars có thể đã nằm sẵn ở staging
+        # từ lần fail trước và đang chờ được đẩy vào Fact.
+        max_committed_ts = max(ts.timestamp() for ts in df.index)
+
+        if _checker_is_repairing():
+            with _deferred_lock:
+                defer_key = (symbol_id, tf_code, staging_table, tv_symbol)
+                n_deferred = len(_deferred_etl)
+                if n_deferred >= _DEFERRED_ETL_MAX:
+                    logger.error(
+                        "[DB ] Deferred ETL backlog HIGH (%d/%d) — %s %s sẽ vẫn được giữ ở staging.",
+                        n_deferred, _DEFERRED_ETL_MAX, tv_symbol, tf_code,
+                    )
+                    _tg_alert(
+                        "WARNING",
+                        f"Deferred ETL backlog đang cao: {n_deferred}/{_DEFERRED_ETL_MAX}\n"
+                        f"Dữ liệu {tv_symbol} {tf_code} đã stage nhưng đang chờ checker release lock."
+                    )
+                else:
+                    if n_deferred >= _DEFERRED_ETL_WARN:
+                        logger.warning(
+                            "[DB ] Deferred ETL set %d/%d — checker lock giữ lâu",
+                            n_deferred, _DEFERRED_ETL_MAX,
                         )
-                    else:
-                        if n_deferred >= _DEFERRED_ETL_WARN:
-                            logger.warning(
-                                "[DB ] Deferred ETL set %d/%d — checker lock giữ lâu",
-                                n_deferred, _DEFERRED_ETL_MAX,
-                            )
-                        _deferred_etl.add((symbol_id, tf_code, staging_table, tv_symbol))
-                logger.info(
-                    "[DB ] Checker lock active — deferred ETL for %s %s",
-                    tv_symbol, tf_code,
+                _deferred_etl[defer_key] = max(
+                    max_committed_ts,
+                    _deferred_etl.get(defer_key, 0.0),
                 )
+            logger.info(
+                "[DB ] Checker lock active — deferred ETL for %s %s",
+                tv_symbol, tf_code,
+            )
+        else:
+            # BƯỚC B: Đẩy nến từ staging vào bảng chính Fact_OHLCV (ETL direct)
+            try:
+                run_etl_direct(symbol_id, tf_code, staging_table)
+            except Exception as exc:
+                logger.error("[DB ] ETL direct error — %s %s: %s", tv_symbol, tf_code, exc)
+                with _state_lock:
+                    _stats["errors"] += 1
             else:
-                # BƯỚC B: Đẩy nến từ staging vào bảng chính Fact_OHLCV (ETL direct)
-                try:
-                    run_etl_direct(symbol_id, tf_code, staging_table)
-                except Exception as exc:
-                    logger.error("[DB ] ETL direct error — %s %s: %s", tv_symbol, tf_code, exc)
-                    with _state_lock:
-                        _stats["errors"] += 1
+                _set_committed_watermark(key, max_committed_ts)
 
-                # BƯỚC C: Thêm vào _pending_agg thay vì tính ngay
-                # Tránh gọi run_etl_aggregate per-bar — flush khi queue tạm rỗng
-                if staging_table in _SOURCE_TO_COMPUTED:
-                    for target_tf, src_table in _SOURCE_TO_COMPUTED[staging_table]:
-                        _pending_agg.add((symbol_id, target_tf, src_table, tv_symbol))
+            # BƯỚC C: Thêm vào _pending_agg thay vì tính ngay
+            # Tránh gọi run_etl_aggregate per-bar — flush khi queue tạm rỗng
+            if staging_table in _SOURCE_TO_COMPUTED:
+                for target_tf, src_table in _SOURCE_TO_COMPUTED[staging_table]:
+                    _pending_agg.add((symbol_id, target_tf, src_table, tv_symbol))
 
         # Báo cho queue biết đã xử lý xong item này (cần thiết cho queue.join())
         _db_queue.task_done()
@@ -751,10 +788,12 @@ def _db_worker() -> None:
                 logger.info("[DB ] Processing %d deferred ETL item(s)...", len(_deferred_etl))
                 # Invalidate cache để lần check tiếp theo query DB thật
                 _checker_lock_cache["checked_at"] = 0.0
-                for sym_id, tf_c, stg_tbl, sym_nm in list(_deferred_etl):
+                still_deferred: dict[tuple[int, str, str, str], float] = {}
+                for (sym_id, tf_c, stg_tbl, sym_nm), max_ts in list(_deferred_etl.items()):
                     try:
                         run_etl_direct(sym_id, tf_c, stg_tbl)
                         logger.info("[DB ] Deferred ETL done: %s %s", sym_nm, tf_c)
+                        _set_committed_watermark((sym_id, tf_c), max_ts)
                         if stg_tbl in _SOURCE_TO_COMPUTED:
                             for tgt_tf, src_tbl in _SOURCE_TO_COMPUTED[stg_tbl]:
                                 _pending_agg.add((sym_id, tgt_tf, src_tbl, sym_nm))
@@ -764,7 +803,9 @@ def _db_worker() -> None:
                         )
                         with _state_lock:
                             _stats["errors"] += 1
+                        still_deferred[(sym_id, tf_c, stg_tbl, sym_nm)] = max_ts
                 _deferred_etl.clear()
+                _deferred_etl.update(still_deferred)
 
     # Flush các aggregate còn lại trước khi tắt (queue đã rỗng nhưng pending chưa chạy)
     if _pending_agg:
@@ -1276,20 +1317,41 @@ class BatchFetcher:
                     # Chuyển danh sách nến thành DataFrame
                     df = _bars_to_df(new_bars)
                     if not df.empty:
+                        future_cutoff = _future_cutoff_ts()
+                        safe_new_bars = [b for b in new_bars if b["v"][0] <= future_cutoff]
+                        if not safe_new_bars:
+                            logger.warning(
+                                "[G%d] %s [%s] only future bars received — ignored",
+                                self.group_id, tv_symbol, tf_code,
+                            )
+                            return
+                        if len(safe_new_bars) != len(new_bars):
+                            logger.warning(
+                                "[G%d] %s [%s] dropped %d future bar(s) before enqueue",
+                                self.group_id, tv_symbol, tf_code,
+                                len(new_bars) - len(safe_new_bars),
+                            )
+                            df = _bars_to_df(safe_new_bars)
+                            if df.empty:
+                                return
+
                         # Đưa vào hàng đợi TRƯỚC — đảm bảo bar được accept vào
                         # queue/overflow/spool trước khi watermark nhảy lên.
                         # Tránh tình huống watermark advance nhưng bar chưa persist.
                         item = (symbol_id, tf_code, staging_table, tv_symbol, df)
-                        _enqueue_or_buffer(item, self.group_id, tv_symbol, tf_code)
-
-                        # Cập nhật watermark SAU khi bar đã được accept
-                        with _state_lock:
-                            _last_bar_ts[key] = new_bars[-1]["v"][0]
+                        accepted = _enqueue_or_buffer(item, self.group_id, tv_symbol, tf_code)
+                        if not accepted:
+                            logger.error(
+                                "[G%d] %s [%s] queue/spool reject — watermark unchanged",
+                                self.group_id, tv_symbol, tf_code,
+                            )
+                            return
+                        _set_received_watermark(key, safe_new_bars[-1]["v"][0])
 
                         with self._lock:
-                            self._new_bars_count += len(new_bars)
-                            self._pair_new_bars[(symbol_id, tf_code)] = len(new_bars)
-                        _new_count = len(new_bars)
+                            self._new_bars_count += len(safe_new_bars)
+                            self._pair_new_bars[(symbol_id, tf_code)] = len(safe_new_bars)
+                        _new_count = len(safe_new_bars)
 
                         with _state_lock:
                             _stats["queue_depth"] = _db_queue.qsize()
@@ -1473,7 +1535,7 @@ class BatchFetcher:
             with _state_lock:
                 wm_ts = _last_bar_ts.get(key)
             if wm_ts:
-                latest = datetime.utcfromtimestamp(wm_ts).strftime("%Y-%m-%d %H:%M")
+                latest = datetime.fromtimestamp(wm_ts, tz=timezone.utc).strftime("%Y-%m-%d %H:%M")
             else:
                 latest = "—"
             if key in missed_pairs:
@@ -1548,6 +1610,7 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
 
     batch_start = datetime.now().strftime("%H:%M:%S")
     logger.info("[SCHED] === Batch start %s — %d groups ===", batch_start, len(groups))
+    live_batch_lock = acquire_live_batch_window(logger)
 
     def _fetch_with_retry(group: BatchFetcher) -> None:
         """Hàm fetch với retry — chạy trong thread riêng cho mỗi nhóm."""
@@ -1579,11 +1642,14 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
         threading.Thread(target=_fetch_with_retry, args=(g,), daemon=True, name=f"batch-g{g.group_id}")
         for g in groups
     ]
-    for t in threads:
-        t.start()  # Khởi động tất cả thread
+    try:
+        for t in threads:
+            t.start()  # Khởi động tất cả thread
 
-    for t in threads:
-        t.join()   # Chờ tất cả thread hoàn thành trước khi tiếp tục
+        for t in threads:
+            t.join()   # Chờ tất cả thread hoàn thành trước khi tiếp tục
+    finally:
+        release_live_batch_window(live_batch_lock)
 
     # Cập nhật bộ đếm tổng số batch đã chạy
     with _state_lock:
@@ -1822,6 +1888,28 @@ def main() -> None:
         print("ABORT: Cannot reach database.")
         sys.exit(1)  # Thoát với mã lỗi 1 (lỗi nghiêm trọng)
 
+    ws_lock = _acquire_task_lock("ws_live_runtime", duration_min=60)
+    if not ws_lock:
+        print("ABORT: ws_live_runtime lock is busy.")
+        _tg_alert(
+            "WARNING",
+            "⚠️ ws_live đang có instance khác chạy trên VPS.\n"
+            "Tiến trình mới sẽ không khởi động để tránh ghi chồng và kéo TradingView trùng lặp."
+            + QUICK_COMMANDS_HINT
+        )
+        sys.exit(1)
+    atexit.register(_release_task_lock, "ws_live_runtime")
+
+    ws_lock_stop = threading.Event()
+
+    def _ws_lock_heartbeat() -> None:
+        while not ws_lock_stop.wait(900):
+            renewed = _renew_task_lock("ws_live_runtime", duration_min=60)
+            if not renewed:
+                logger.warning("[LOCK] Could not renew ws_live_runtime lock.")
+
+    threading.Thread(target=_ws_lock_heartbeat, name="ws-live-lock-heartbeat", daemon=True).start()
+
     # -----------------------------------------------------------------------
     # BƯỚC 1: Xác thực TradingView
     # Lấy token sẽ dùng cho tất cả kết nối WebSocket.
@@ -1951,6 +2039,8 @@ def main() -> None:
         f"Nến đã lưu: {s['bars_inserted']}\n"
         f"Lỗi: {s['errors']}  |  Batches: {s['batches_run']}"
     )
+    ws_lock_stop.set()
+    _release_task_lock("ws_live_runtime")
 
     # In tóm tắt ra console
     print(f"\n  bars_inserted : {s['bars_inserted']}")

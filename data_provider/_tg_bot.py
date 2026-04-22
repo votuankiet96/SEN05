@@ -172,8 +172,12 @@ def _handle_command(text: str) -> None:
         return
 
     if cmd == "/status":
+        with _task_lock:
+            if _running_task:
+                _reply(f"⏳ <b>[Bot]</b> Đang chạy <b>{_running_task}</b>, vui lòng chờ xong.")
+                return
+            _running_task = "Checker Scan"
         _reply("🔍 <b>[Bot]</b> Đang scan chất lượng dữ liệu (dry-run)...")
-        # Checker dry-run: scan only, không ghi DB, không hỏi xác nhận
         t = threading.Thread(
             target=_run_task,
             args=("Checker Scan", [sys.executable, str(_DATA_DIR / "04_checker.py"), "--dry-run"]),

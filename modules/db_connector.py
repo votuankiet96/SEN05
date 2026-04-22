@@ -25,6 +25,10 @@ from config import SQL_DATABASE, SQL_DRIVER, SQL_PWD, SQL_SERVER, SQL_UID
 logger = logging.getLogger(__name__)
 
 
+class DatabaseWriteError(RuntimeError):
+    """Raised when a staging or ETL write fails and the caller must not continue silently."""
+
+
 # ---------------------------------------------------------------------------
 # Connection helpers
 # ---------------------------------------------------------------------------
@@ -170,7 +174,9 @@ def insert_staging_batch(df, symbol_id: int, staging_table: str) -> int:
     except Exception as e:
         conn.rollback()
         logger.error("INSERT FAIL %s SymbolID=%d: %s", staging_table, symbol_id, e)
-        return -1  # -1 = lỗi thật; 0 = thành công nhưng không có row mới (tất cả đã tồn tại)
+        raise DatabaseWriteError(
+            f"insert_staging_batch failed for {staging_table} SymbolID={symbol_id}"
+        ) from e
     finally:
         conn.close()
 
@@ -224,7 +230,9 @@ def run_etl_direct(symbol_id: int, tf_code: str, staging_table: str) -> int:
         logger.error("ETL Direct FAIL: SymbolID=%d TF=%s — %s",
                      symbol_id, tf_code, e)
         conn.rollback()
-        return -1  # -1 = lỗi; 0 = ETL chạy xong nhưng không có row mới (đã tồn tại)
+        raise DatabaseWriteError(
+            f"run_etl_direct failed for SymbolID={symbol_id} TF={tf_code}"
+        ) from e
     finally:
         conn.close()
 
@@ -256,6 +264,9 @@ def run_etl_aggregate(symbol_id: int, target_tf: str, source_staging_table: str)
         logger.error("ETL Aggregate FAIL: %s → %s SymbolID=%d — %s",
                      source_staging_table, target_tf, symbol_id, e)
         conn.rollback()
+        raise DatabaseWriteError(
+            f"run_etl_aggregate failed for SymbolID={symbol_id} target_tf={target_tf}"
+        ) from e
     finally:
         conn.close()
 
@@ -266,11 +277,11 @@ def run_etl_aggregate(symbol_id: int, target_tf: str, source_staging_table: str)
 
 # target_tf_code → (source_tf_code, interval_minutes)
 _DERIVED_TF_SPECS = {
-    'M10': ('M5',   10),
-    'M20': ('M5',   20),
-    'M90': ('M30',  90),
-    'H6':  ('H3',  360),
-    'H8':  ('H4',  480),
+    'M10': ('M5',   10, 2),
+    'M20': ('M5',   20, 4),
+    'M90': ('M30',  90, 3),
+    'H6':  ('H3',  360, 2),
+    'H8':  ('H4',  480, 2),
 }
 
 
@@ -291,7 +302,7 @@ def aggregate_from_fact(symbol_id: int, target_tf_code: str) -> int:
             f"aggregate_from_fact: unsupported target TF '{target_tf_code}'. "
             f"Supported: {list(_DERIVED_TF_SPECS)}"
         )
-    src_tf_code, interval_minutes = _DERIVED_TF_SPECS[target_tf_code]
+    src_tf_code, interval_minutes, expected_count = _DERIVED_TF_SPECS[target_tf_code]
 
     conn   = get_connection()
     cursor = conn.cursor()
@@ -343,8 +354,8 @@ def aggregate_from_fact(symbol_id: int, target_tf_code: str) -> int:
                 SELECT
                     ? AS SymbolID,
                     ? AS TimeframeID,
-                    CAST(CONVERT(VARCHAR(8), a.AggBarTime, 112) AS INT) AS DateKey,
-                    a.AggBarTime AS BarTime,
+                    CAST(CONVERT(VARCHAR(8), a.FirstBarTime, 112) AS INT) AS DateKey,
+                    a.FirstBarTime AS BarTime,
                     so.[Open],
                     a.High,
                     a.Low,
@@ -354,12 +365,18 @@ def aggregate_from_fact(symbol_id: int, target_tf_code: str) -> int:
                 FROM agg a
                 JOIN src so ON so.BarTime = a.FirstBarTime
                 JOIN src sc ON sc.BarTime = a.LastBarTime
+                WHERE a.SrcCount = ?
             ) AS src_data
             ON  tgt.SymbolID    = src_data.SymbolID
             AND tgt.TimeframeID = src_data.TimeframeID
             AND tgt.BarTime     = src_data.BarTime
             WHEN MATCHED AND (
-                tgt.TickCount IS NULL OR tgt.TickCount < src_data.SrcCount
+                ISNULL(tgt.[Open], 0) <> ISNULL(src_data.[Open], 0)
+                OR ISNULL(tgt.High, 0) <> ISNULL(src_data.High, 0)
+                OR ISNULL(tgt.Low, 0) <> ISNULL(src_data.Low, 0)
+                OR ISNULL(tgt.[Close], 0) <> ISNULL(src_data.[Close], 0)
+                OR ISNULL(tgt.Volume, 0) <> ISNULL(src_data.Volume, 0)
+                OR ISNULL(tgt.TickCount, -1) <> ISNULL(src_data.SrcCount, -1)
             ) THEN UPDATE SET
                 tgt.[Open]  = src_data.[Open],
                 tgt.High  = src_data.High,
@@ -376,7 +393,7 @@ def aggregate_from_fact(symbol_id: int, target_tf_code: str) -> int:
                  src_data.Low, src_data.[Close], src_data.Volume,
                  src_data.SrcCount);
         """, (interval_minutes, interval_minutes, symbol_id, src_tf_id,
-              symbol_id, target_tf_id))
+              symbol_id, target_tf_id, expected_count))
 
         rows = cursor.rowcount
         conn.commit()
@@ -894,4 +911,3 @@ def delete_ohlcv_bars(symbol_id: int, tf_code: str, bar_times: list) -> int:
         return 0
     finally:
         conn.close()
-
