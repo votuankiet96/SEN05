@@ -328,14 +328,12 @@ CROSS_TF_PAIRS = [
     ("H1",  "H4",  240),
 ]
 
-# DST alignment cố định cho 2 symbols đặc biệt.
-# GOLD: anchored NY winter (UTC+5) → bars H4 luôn ở 01/05/09/13/17/21h UTC → h%N == 1
-# BTCUSD: anchored UTC midnight → bars H4 luôn ở 00/04/08/12/16/20h UTC → h%N == 0
-# Các symbols khác KHÔNG cần entry này — alignment của họ thay đổi theo mùa DST.
-FIXED_H_ALIGNMENT: dict[str, dict[str, int]] = {
-    "GOLD":   {"H2": 1, "H3": 1, "H4": 1},
-    "BTCUSD": {"H2": 0, "H3": 0, "H4": 0},
-}
+# FIXED_H_ALIGNMENT — tạm thời xóa tất cả entries.
+# GOLD: winter anchor UTC+5 (h%N==1), nhưng sau DST spring 2026 dịch → UTC+4 (h%N==0).
+# BTCUSD: tương tự, DST spring 2026 làm lệch anchor từ 0 → 1.
+# Validation cứng theo mùa gây drop toàn bộ bars khi DST thay đổi.
+# clean_staging_transitions() trong _helpers.py vẫn bảo vệ tầng staging cho cả hai.
+FIXED_H_ALIGNMENT: dict[str, dict[str, int]] = {}
 
 
 # -----------------------------------------------------------------------------

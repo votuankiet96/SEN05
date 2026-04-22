@@ -66,6 +66,7 @@ import logging          # Hệ thống logging của Python
 import logging.handlers  # RotatingFileHandler — dùng cho ws_live 24/7
 import math  # math.ceil() để làm tròn lên số bar cần pull
 import os  # Thao tác đường dẫn file
+import re
 import sys  # Thêm đường dẫn import
 import time  # time.sleep() để rate-limit giữa các request TV
 from datetime import datetime, timedelta, timezone  # Xử lý thời gian UTC
@@ -97,6 +98,7 @@ from config import (
     N_BARS_M45,
     # Số bar tối đa cần pull cho mỗi TF (dùng khi cần FULL LOAD hoặc thiếu data)
     N_BARS_W,
+    ASSET_TYPE_MAP,  # Map tv_symbol -> asset_type
     SYMBOL_OVERNIGHT_MINS,  # Per-symbol overnight gap threshold (phút)
     FIXED_H_ALIGNMENT,  # DST alignment cố định: GOLD h%N==1, BTCUSD h%N==0
     SYMBOLS,  # Danh sách symbol: [{symbol_id, tv_symbol, tv_exchange, asset_type}, ...]
@@ -107,6 +109,7 @@ from config import (
 from modules.db_connector import (
     aggregate_from_fact,  # Tính TF phái sinh bằng GROUP BY trên Fact_OHLCV
     clean_staging_transitions,  # Xóa transition bar do DST shift sau insert staging
+    DatabaseWriteError,  # Lỗi ghi DB bắt buộc caller phải retry/abort
     delete_fact_bars,  # Xóa rows Fact_OHLCV trước khi repull
     delete_staging_bars,  # Xóa rows staging trước khi repull
     get_candle_count,  # Đếm số bar trong Fact_OHLCV (kiểm tra source TF có data chưa)
@@ -114,10 +117,147 @@ from modules.db_connector import (
     insert_staging_batch,  # Ghi DataFrame OHLCV vào bảng Staging (MERGE, chống duplicate)
     run_etl_direct,  # Gọi usp_LoadDirect: chuyển Staging → Fact_OHLCV
 )
+from _tv_coord import sleep_between_historical_requests, wait_for_live_batch_clear
 
 # ---------------------------------------------------------------------------
 # Tạo logger — ghi log ra cả console lẫn file
 # ---------------------------------------------------------------------------
+
+_CONSOLE_SANITIZE_MAP = {
+    "âœ“": "[OK]",
+    "✓": "[OK]",
+    "âœ—": "[ERR]",
+    "✗": "[ERR]",
+    "â†»": "[RETRY]",
+    "↻": "[RETRY]",
+    "â†’": "->",
+    "→": "->",
+    "â€”": "-",
+    "—": "-",
+    "â‰ˆ": "~",
+    "≈": "~",
+    "â€¢": "-",
+    "•": "-",
+    "â—‹": "[SKIP]",
+    "○": "[SKIP]",
+    "ðŸ”": "[CHECK]",
+    "🔍": "[CHECK]",
+    "ðŸ”§": "[FIX]",
+    "🔧": "[FIX]",
+    "âŒ": "[FAIL]",
+    "❌": "[FAIL]",
+    "âš ï¸": "[WARN]",
+    "⚠️": "[WARN]",
+}
+
+
+class ConsoleSanitizingFormatter(logging.Formatter):
+    """
+    Console-only formatter:
+    - keeps logs ASCII-friendly on Windows terminals
+    - normalizes mojibake / emoji markers into short status tags
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        text = super().format(record)
+        for src, dst in _CONSOLE_SANITIZE_MAP.items():
+            text = text.replace(src, dst)
+        if record.name == "checker":
+            text = self._normalize_checker_console(text)
+        return text
+
+    @staticmethod
+    def _status_line(tag: str, label: str, rate: str = "", miss: str = "",
+                     ohlc: str = "", extra: str = "", vol: str = "") -> str:
+        parts = [f"{tag:<7} {label:<12}"]
+        if rate:
+            parts.append(f"rate={rate:>5}")
+        if miss:
+            parts.append(f"miss={int(miss):>4}")
+        if ohlc:
+            parts.append(f"ohlc={int(ohlc):>4}")
+        if extra:
+            parts.append(f"extra={int(extra):>4}")
+        if vol:
+            parts.append(f"vol={int(vol):>4}")
+        return " | ".join(parts)
+
+    def _normalize_checker_console(self, text: str) -> str:
+        parts = text.split(" | ", 2)
+        if len(parts) != 3:
+            return text
+        prefix = " | ".join(parts[:2])
+        message = parts[2].strip()
+
+        patterns = [
+            (
+                r"^\[DRY\]\s+(\S+):\s+([\d.]+%) mismatch \(miss=(\d+) wrong=(\d+) extra=(\d+)\)$",
+                lambda m: self._status_line("ISSUE", m.group(1), m.group(2), m.group(3), m.group(4), m.group(5)),
+            ),
+            (
+                r"^\[ERR\]\s+(\S+):\s+([\d.]+%) mismatch \(miss=(\d+) wrong=(\d+) extra=(\d+)\)\s+- repairing\.\.\.$",
+                lambda m: self._status_line("REPAIR", m.group(1), m.group(2), m.group(3), m.group(4), m.group(5)),
+            ),
+            (
+                r"^\[OK\]\s+REPAIRED\s+(\S+)\s+\(verified clean\)$",
+                lambda m: self._status_line("FIXED", m.group(1)),
+            ),
+            (
+                r"^\[OK\]\s+RESOLVED\s+(\S+)\s+\(scan rate now ([\d.]+%)\)$",
+                lambda m: self._status_line("FIXED", m.group(1), m.group(2)),
+            ),
+            (
+                r"^clean on retry\s+(\S+)\s+\(scan rate now ([\d.]+%)\)$",
+                lambda m: self._status_line("CLEAN", m.group(1), m.group(2)),
+            ),
+            (
+                r"^\[ERR\]\s+PERSISTENT\s+(\S+):\s+([\d.]+%) mismatch$",
+                lambda m: self._status_line("FAILED", m.group(1), m.group(2)),
+            ),
+            (
+                r"^\[RETRY\]\s+(\S+):\s+([\d.]+%) still failing after repair\s+- will retry$",
+                lambda m: f"{'RETRY':<7} {m.group(1):<12} | verify_rate={m.group(2):>5}",
+            ),
+            (
+                r"^Focused repair\s+(\S+)\s+(\S+)\s+\(([^)]+)\): window=(.+) \| pull=(\d+) bars$",
+                lambda m: f"{'FOCUS':<7} {m.group(1)}/{m.group(2):<8} | reason={m.group(3)} | window={m.group(4)} | pull={m.group(5)}",
+            ),
+            (
+                r"^Focused re-pull recovered on attempt (\d+)/(\d+)\s+-\s+(\S+)\s+(\S+)\s+\(([^)]+)\)$",
+                lambda m: f"{'RECOVER':<7} {m.group(3)}/{m.group(4):<8} | attempt={m.group(1)}/{m.group(2)} | reason={m.group(5)}",
+            ),
+            (
+                r"^Focused re-pull FAILED for\s+(\S+)\s+(\S+)\s+\(([^)]+)\)\s+- Fact untouched$",
+                lambda m: f"{'FAILED':<7} {m.group(1)}/{m.group(2):<8} | reason={m.group(3)} | fact=untouched",
+            ),
+            (
+                r"^Deleted\s+(\d+) Fact bars in focused window\s+-\s+(\S+)\s+(\S+)\s+\(([^)]+)\)$",
+                lambda m: f"{'DELETE':<7} {m.group(2)}/{m.group(3):<8} | bars={m.group(1)} | reason={m.group(4)}",
+            ),
+            (
+                r"^ETL: \+(\d+) bars inserted into Fact\s+-\s+(\S+)\s+(\S+)\s+\(([^)]+)\)$",
+                lambda m: f"{'ETL':<7} {m.group(2)}/{m.group(3):<8} | inserted={m.group(1)} | reason={m.group(4)}",
+            ),
+            (
+                r"^Escalating\s+(\S+)\s+to SAFE FULL REPULL:\s+(.+)$",
+                lambda m: f"{'ESCAL.':<7} {m.group(1):<12} | {m.group(2)}",
+            ),
+            (
+                r"^SAFE FULL REPULL OK\s+(\S+): deleted=(\-?\d+) inserted=(\-?\d+)$",
+                lambda m: f"{'FULL OK':<7} {m.group(1):<12} | deleted={m.group(2)} | inserted={m.group(3)}",
+            ),
+            (
+                r"^SAFE FULL REPULL FAILED\s+(\S+): deleted=(\-?\d+) inserted=(\-?\d+)$",
+                lambda m: f"{'FULL NG':<7} {m.group(1):<12} | deleted={m.group(2)} | inserted={m.group(3)}",
+            ),
+        ]
+
+        for pattern, builder in patterns:
+            match = re.match(pattern, message)
+            if match:
+                return f"{prefix} | {builder(match)}"
+        return text
+
 
 def setup_logger(name: str, log_file: str, rotating: bool = False) -> logging.Logger:
     """
@@ -140,12 +280,17 @@ def setup_logger(name: str, log_file: str, rotating: bool = False) -> logging.Lo
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     logger.setLevel(getattr(logging, LOG_LEVEL, logging.INFO))
-    fmt = logging.Formatter(
+    logger.propagate = False
+    console_fmt = ConsoleSanitizingFormatter(
+        "%(asctime)s | %(levelname)-7s | %(message)s",
+        datefmt="%H:%M:%S",
+    )
+    file_fmt = logging.Formatter(
         "%(asctime)s [%(levelname)s] %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
     sh = logging.StreamHandler(sys.stdout)   # Handler ghi ra console
-    sh.setFormatter(fmt)
+    sh.setFormatter(console_fmt)
     if rotating:
         # Tối đa 6 files × 10 MB = 60 MB — đủ giữ ~10-14 ngày log ws_live
         fh = logging.handlers.RotatingFileHandler(
@@ -153,7 +298,7 @@ def setup_logger(name: str, log_file: str, rotating: bool = False) -> logging.Lo
         )
     else:
         fh = logging.FileHandler(log_file, encoding="utf-8")
-    fh.setFormatter(fmt)
+    fh.setFormatter(file_fmt)
     logger.addHandler(sh)
     logger.addHandler(fh)
     return logger
@@ -237,6 +382,44 @@ def now_utc() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+def normalize_tv_hist_df_to_utc(df):
+    """
+    Chuẩn hóa index lịch sử từ tvDatafeed về naive UTC.
+
+    tvDatafeed thường trả DatetimeIndex naive theo múi giờ local của máy chạy.
+    Warehouse của SEN05 lưu BarTime theo UTC, nên cần chuẩn hóa ngay ở đây để:
+      - không đánh nhầm bar hiện tại thành "future"
+      - so sánh checker đúng với Fact_OHLCV
+      - ghi DB nhất quán khi chạy ở máy local hay VPS
+
+    Returns (df, normalized):
+      normalized=True khi index đã được đổi sang UTC naive.
+    """
+    if df is None or df.empty:
+        return df, False
+
+    idx = getattr(df, "index", None)
+    if idx is None:
+        return df, False
+
+    try:
+        tz_attr = getattr(idx, "tz", None)
+        if tz_attr is not None:
+            normalized_idx = idx.tz_convert(timezone.utc).tz_localize(None)
+        else:
+            local_tz = datetime.now().astimezone().tzinfo or timezone.utc
+            normalized_idx = idx.tz_localize(local_tz).tz_convert(timezone.utc).tz_localize(None)
+    except Exception:
+        return df, False
+
+    if normalized_idx.equals(idx):
+        return df, False
+
+    df = df.copy()
+    df.index = normalized_idx
+    return df, True
+
+
 def fmt_gap(hours: float) -> str:
     """
     Format số giờ gap thành chuỗi dễ đọc:
@@ -304,7 +487,7 @@ def sleep_for(tv_symbol: str) -> None:
     Nghỉ giữa các request TradingView để tránh bị rate-limit.
     GOLD nghỉ 10 giây (API nặng hơn), các mã khác nghỉ 5 giây.
     """
-    time.sleep(SLEEP_GOLD if tv_symbol == "GOLD" else SLEEP_NORMAL)
+    sleep_between_historical_requests(tv_symbol)
 
 
 def _validate_ohlcv_df(df, tv_symbol: str, tf_code: str,
@@ -319,8 +502,9 @@ def _validate_ohlcv_df(df, tv_symbol: str, tf_code: str,
       4. Timestamp không tăng dần → sắp xếp lại
       5. DST alignment cho GOLD/BTCUSD H2/H3/H4 — các symbol này có alignment cố
          định quanh năm; bars lệch giờ do DST sẽ bị loại (xem FIXED_H_ALIGNMENT)
-      6. M45 alignment — tự phát hiện offset anchor từ bar đầu tiên; bars có
-         remainder % 45 khác anchor (DST-glitch) sẽ bị loại
+      6. M45 alignment — phát hiện dominant anchor. Nếu thấy anchor shift dạng
+         2 đoạn liên tục (ví dụ trước/ sau DST) thì giữ cả hai; chỉ loại các
+         lệch anchor rải rác như glitch.
 
     Trả về (cleaned_df, had_issues):
       - cleaned_df  : DataFrame sau khi làm sạch (có thể empty nếu tất cả đều lỗi)
@@ -328,6 +512,10 @@ def _validate_ohlcv_df(df, tv_symbol: str, tf_code: str,
     """
     if df is None or df.empty:
         return df, False
+
+    df, normalized = normalize_tv_hist_df_to_utc(df)
+    if normalized:
+        logger.debug("  VALIDATE %s %s: normalized tvDatafeed timestamps to UTC", tv_symbol, tf_code)
 
     original_len = len(df)
     had_issues   = False
@@ -372,6 +560,21 @@ def _validate_ohlcv_df(df, tv_symbol: str, tf_code: str,
         df         = df.sort_index()
         had_issues = True
 
+    # 4b. Chặn future bars để không làm kẹt watermark khi API trả sai thời gian.
+    now_cutoff = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=1)
+    future_mask = df.index > now_cutoff
+    if future_mask.any():
+        n_future = int(future_mask.sum())
+        logger.warning(
+            "  VALIDATE %s %s: %d future bar(s) beyond %s → dropped",
+            tv_symbol, tf_code, n_future, now_cutoff.strftime("%Y-%m-%d %H:%M:%S"),
+        )
+        df = df[~future_mask]
+        had_issues = True
+
+    if df.empty:
+        return df, had_issues
+
     # 5. Kiểm tra DST alignment cho GOLD và BTCUSD (H2/H3/H4)
     # Các symbol này có alignment cố định quanh năm — lọc bars lệch giờ trước khi insert.
     if tf_code in FIXED_H_ALIGNMENT.get(tv_symbol, {}):
@@ -387,21 +590,42 @@ def _validate_ohlcv_df(df, tv_symbol: str, tf_code: str,
             df         = df[~wrong_align]
             had_issues = True
 
-    # 6. M45 alignment check — tự phát hiện anchor từ bar đầu tiên, không hardcode.
-    # TV M45 không nhất thiết bắt đầu tại bội số 45 từ UTC midnight.
-    # DST-glitch bars có remainder khác anchor → bị loại bỏ.
+    # 6. M45 alignment check.
+    # Trường hợp bình thường: chỉ có 1 anchor remainder % 45.
+    # Trường hợp DST/session shift thật: TV có thể trả 2 anchor hợp lệ theo 2 đoạn liên tiếp
+    # (ví dụ toàn bộ đoạn cũ = 30, đoạn mới = 15). Khi đó giữ cả hai để checker/pipeline
+    # không tự tạo missing bars. Chỉ drop các lệch anchor rải rác như glitch.
     if tf_code == "M45":
-        total_min   = df.index.hour * 60 + df.index.minute
-        anchor      = int(total_min[0]) % 45
-        wrong_align = total_min % 45 != anchor
-        if wrong_align.any():
-            n_bad = int(wrong_align.sum())
-            logger.warning(
-                "  VALIDATE %s M45: %d bars alignment sai (anchor=%d, not consistent) → dropped",
-                tv_symbol, n_bad, anchor,
+        remainders = (df.index.hour * 60 + df.index.minute) % 45
+        counts = remainders.value_counts()
+        asset_type = ASSET_TYPE_MAP.get(tv_symbol)
+        if asset_type == "Indice":
+            logger.info(
+                "  VALIDATE %s M45: session-based index anchors %s -> keep raw anchors",
+                tv_symbol, ",".join(str(int(v)) for v in counts.index.tolist()),
             )
-            df         = df[~wrong_align]
-            had_issues = True
+        elif len(counts) > 1:
+            rem_values = [int(v) for v in remainders.tolist()]
+            run_remainders = []
+            for rem in rem_values:
+                if not run_remainders or rem != run_remainders[-1]:
+                    run_remainders.append(rem)
+            if len(counts) == 2 and len(run_remainders) <= 4:
+                logger.warning(
+                    "  VALIDATE %s M45: detected contiguous anchor shift %s → keeping both anchors",
+                    tv_symbol, " -> ".join(str(int(v)) for v in run_remainders),
+                )
+            else:
+                anchor = int(counts.idxmax())
+                wrong_align = remainders != anchor
+                if wrong_align.any():
+                    n_bad = int(wrong_align.sum())
+                    logger.warning(
+                        "  VALIDATE %s M45: %d bars alignment sai (anchor=%d, not consistent) → dropped",
+                        tv_symbol, n_bad, anchor,
+                    )
+                    df         = df[~wrong_align]
+                    had_issues = True
 
     if had_issues:
         dropped = original_len - len(df)
@@ -531,6 +755,7 @@ def pull_and_store(tv, sym: dict, tf_code: str,
 
     # ----- BƯỚC A: Kéo dữ liệu từ TradingView API -----
     # Pull thêm 5 bar dự phòng (n_bars + 5) vì bar cuối sẽ bị bỏ
+    wait_for_live_batch_clear("historical", logger)
     try:
         df = tv.get_hist(
             symbol   = tv_symbol,
@@ -582,12 +807,16 @@ def pull_and_store(tv, sym: dict, tf_code: str,
     # ----- BƯỚC B: Ghi vào Staging (MERGE — chống duplicate) -----
     # insert_staging_batch() tạo temp table → bulk insert → MERGE vào staging
     # Nếu row đã tồn tại (cùng SymbolID + BarTime) → bỏ qua, chỉ insert row mới
-    staged = insert_staging_batch(df, symbol_id, staging)
+    try:
+        staged = insert_staging_batch(df, symbol_id, staging)
+    except DatabaseWriteError as e:
+        logger.error("  STAGING FAIL — %s %s: %s", tv_symbol, tf_code, e)
+        return RESULT_ERROR
 
     # ----- BƯỚC B2: Dọn transition bar DST / anchor drift khỏi staging -----
     # M45/H2/H3/H4: Capital.com dịch chuyển UTC offset qua DST → bar anchor drift.
     # Xoá ngay sau insert để Fact không nhận bar nhiễm.
-    if tf_code in ('M45', 'H2', 'H3', 'H4'):
+    if tf_code in ('M45', 'H2', 'H3', 'H4') and ASSET_TYPE_MAP.get(tv_symbol) != "Indice":
         from config import TF_MINUTES
         n_cleaned = clean_staging_transitions(symbol_id, staging, TF_MINUTES[tf_code])
         if n_cleaned > 0:
@@ -743,17 +972,16 @@ def repull_full_symbol(tv, sym: dict, tf_code: str, interval,
       2. Re-aggregate từ source TF đang có trong Fact_OHLCV
 
     Trả về (n_deleted, n_inserted).
+      n_inserted < 0 nghĩa là repull thất bại.
     """
     symbol_id = sym["symbol_id"]
     tv_symbol = sym["tv_symbol"]
 
-    # ----- Bước 1: Xóa Fact rows cũ -----
-    n_deleted = delete_fact_bars(symbol_id, tf_code)
-    logger.info("  repull %s %s: deleted %d Fact rows",
-                tv_symbol, tf_code, n_deleted)
-
-    # ----- Bước 2a: DERIVED TF → re-aggregate từ source -----
+    # ----- Bước 1a: DERIVED TF → re-aggregate từ source -----
     if tf_code in DERIVED_TFS:
+        n_deleted = delete_fact_bars(symbol_id, tf_code)
+        logger.info("  repull %s %s: deleted %d Fact rows",
+                    tv_symbol, tf_code, n_deleted)
         try:
             n_inserted = aggregate_from_fact(symbol_id, tf_code)
             logger.info("  repull %s %s: re-aggregated %d bars",
@@ -762,16 +990,29 @@ def repull_full_symbol(tv, sym: dict, tf_code: str, interval,
         except Exception as e:
             logger.error("  repull %s %s re-aggregate FAIL: %s",
                          tv_symbol, tf_code, e)
-            return n_deleted, 0
+            return n_deleted, RESULT_ERROR
 
-    # ----- Bước 2b: DIRECT TF → xóa staging + pull từ TV -----
+    # ----- Bước 1b: DIRECT TF → stage mới trước, chỉ xóa Fact khi đã có data thay thế -----
     staging = TF_STAGING.get(tf_code)
     if staging:
         delete_staging_bars(symbol_id, staging)
 
     n_bars  = FULL_N_BARS.get(tf_code, 5000)
-    result  = pull_and_store(tv, sym, tf_code, n_bars, interval, logger)
-    n_inserted = result if result > 0 else 0
+    staged  = pull_and_store(tv, sym, tf_code, n_bars, interval, logger, skip_etl=True)
+    if staged < 0:
+        logger.error("  repull %s %s: staging replacement failed — keeping existing Fact data",
+                     tv_symbol, tf_code)
+        return 0, RESULT_ERROR
+
+    n_deleted = delete_fact_bars(symbol_id, tf_code)
+    logger.info("  repull %s %s: deleted %d Fact rows after staging replacement",
+                tv_symbol, tf_code, n_deleted)
+    try:
+        n_inserted = run_etl_direct(symbol_id, tf_code, staging)
+    except Exception as e:
+        logger.error("  repull %s %s ETL FAIL after safe staging: %s",
+                     tv_symbol, tf_code, e)
+        return n_deleted, RESULT_ERROR
     return n_deleted, n_inserted
 
 
