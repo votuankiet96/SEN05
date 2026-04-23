@@ -1,4 +1,10 @@
 /* ============================================================
+   UPDATED NOTE:
+     For a full runtime-ready installation, expect `SEN.ActiveTask` to exist.
+     That changes Query 1 from 19 rows to 20 rows in total.
+   ============================================================ */
+
+/* ============================================================
    05_verify.sql
    Project   : Auto Trading Data Warehouse
    Database  : SEN05_AutoTrading  (SQL Server 2022)
@@ -11,11 +17,11 @@
 
    WHAT TO EXPECT FROM EACH QUERY:
      Query 1 — All tables in SEN/DWH/MART schemas
-               Expected: 15 SEN + 4 DWH + 0 MART = 19 rows
+               Expected: 16 SEN + 4 DWH + 0 MART = 20 rows
                          (dbo.Symbol is in dbo schema and will not appear here)
 
      Query 2 — All procedures and views in DWH and MART schemas
-               Expected: 3 rows
+               Expected: 4 objects
                  DWH  | PROCEDURE | usp_AggregateFromStaging
                  DWH  | PROCEDURE | usp_LoadDirect
                  MART | PROCEDURE | usp_GetLatestCandles
@@ -46,7 +52,7 @@ GO
    BLOCK 10: VERIFICATION QUERIES
    ============================================================ */
 
--- Query 1: List all tables in SEN, DWH, MART schemas (expect 15 SEN + 4 DWH + 0 MART = 19 tables)
+-- Query 1: List all tables in SEN, DWH, MART schemas (expect 16 SEN + 4 DWH + 0 MART = 20 tables)
 SELECT TABLE_SCHEMA, TABLE_NAME
 FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_SCHEMA IN ('SEN','DWH','MART')
@@ -68,6 +74,12 @@ FROM DWH.Dim_Timeframe ORDER BY TimeframeID;
 -- Query 5: Confirm Dim_Date range and row count (expect 10,227 rows for 2008-01-01 to 2035-12-31)
 SELECT COUNT(*) AS TotalDays, MIN(FullDate) AS DateStart, MAX(FullDate) AS DateEnd
 FROM DWH.Dim_Date;
+
+-- Query 6: Confirm the operational coordination table exists (expect 1 row)
+SELECT TABLE_SCHEMA, TABLE_NAME
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_SCHEMA = 'SEN'
+  AND TABLE_NAME = 'ActiveTask';
 
 PRINT '=== SETUP COMPLETE — SEN05_AutoTrading is ready ===';
 GO

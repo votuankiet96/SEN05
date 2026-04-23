@@ -1,3 +1,20 @@
+"""
+Co che khoa phan tan va relay token xac nhan qua bang `SEN.ActiveTask`.
+
+Module nay giai quyet 2 bai toan van hanh:
+1. Advisory lock:
+   checker, pipeline va ws_live co nhung luc cung muon ghi vao kho du lieu.
+   `SEN.ActiveTask` duoc dung nhu mot "den giao thong" cap DB de ngan xung dot.
+2. Confirmation token relay:
+   Telegram bot listener va checker co the la 2 process khac nhau.
+   Ket qua `/confirm_TOKEN` va `/skip_TOKEN` duoc ghi vao DB de process dang cho van nhan duoc.
+
+Thiet ke uu tien an toan van hanh:
+- lock co TTL (dead-man switch) de tranh treo vo han neu process bi kill
+- `is_locked()` co cache ngan de giam tan suat hit DB trong vong lap chat
+- doc lock theo kieu fail-open: DB loi thi khong giam he thong trong trang thai defer vo thoi han
+"""
+
 # =============================================================================
 # data_provider/_task_lock.py  —  Khóa phân tán DB + Token xác nhận Telegram
 # =============================================================================
@@ -257,7 +274,7 @@ def _handle_token_command(text: str) -> bool:
         _pending_tokens[token] = action
         # Gửi xác nhận ngay lập tức
         try:
-            from _tg import tg_send
+            from _telegram import tg_send
             icon = "✅" if action == "confirm" else "⏭"
             tg_send(f"{icon} Đã nhận <b>/{action}_{token}</b> — đang xử lý...")
         except Exception:
@@ -265,7 +282,7 @@ def _handle_token_command(text: str) -> bool:
     else:
         # Đã nhận lệnh trước đó
         try:
-            from _tg import tg_send
+            from _telegram import tg_send
             tg_send(f"ℹ️ Token <code>{token}</code> đã được xử lý rồi.")
         except Exception:
             pass
@@ -339,8 +356,7 @@ def request_confirm(
     Trả về: 'confirm' | 'skip' | 'timeout'
     """
     # Import ở đây để tránh circular import khi module load
-    from _tg import tg_ask, tg_flush
-    from _tg_bot import _get_updates, _is_from_our_chat
+    from _telegram import _get_updates, _is_from_our_chat, tg_ask, tg_flush
 
     # Bước 1: Tạo và đăng ký token
     token = generate_token()
@@ -393,7 +409,7 @@ def request_confirm(
     if result is None:
         result = "timeout"
         try:
-            from _tg import tg_send
+            from _telegram import tg_send
             tg_send(
                 f"⏰ Hết thời gian chờ ({timeout_min // 60} giờ) — "
                 f"tự động bỏ qua.\n"

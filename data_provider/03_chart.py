@@ -1,3 +1,16 @@
+"""
+Backend Flask cho dashboard xem nen va indicator tu kho du lieu.
+
+File nay khong tao du lieu moi. No chi doc du lieu da sach tu layer doc/phan tich
+va phuc vu cho `03_chart.html` qua mot so API nho:
+- `/api/symbols`
+- `/api/timeframes`
+- `/api/candles`
+
+Muc tieu chinh la kiem tra nhanh chat luong data va quan sat logic indicator,
+khong phai mot web app giao dich production-facing.
+"""
+
 # =============================================================================
 # data_provider/03_chart.py  —  Chart dashboard (Flask + Lightweight Charts 4.2.1)
 # Phiên bản : 5.0

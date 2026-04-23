@@ -1,3 +1,23 @@
+"""
+Bo checker / repair cho chat luong du lieu OHLCV.
+
+File nay so sanh du lieu trong DB voi TradingView de tim:
+- nen bi thieu
+- nen du thua
+- OHLC sai so
+- volume lech bat thuong
+- continuity / interval gap issue o direct TF va computed TF
+
+Che do van hanh hien tai:
+- `--dry-run`: chi quet va bao cao, khong sua
+- mac dinh: uu tien auto-repair theo rollout an toan, co lock va co verify sau sua
+- `--manual-confirm`: chi khi bat co nay moi cho Telegram `/confirm_TOKEN`
+
+Nguong mac dinh hien tai la `0.001 = 0.1%`.
+Tuy nhien cac "core issue" nhu missing / wrong OHLC / extra bars co the bo qua nguong nay
+va duoc dua vao danh sach sua ngay, vi do la loi cau truc du lieu chinh.
+"""
+
 # =============================================================================
 # data_provider/04_checker.py  —  Kiểm tra & Tự sửa chất lượng dữ liệu
 # =============================================================================
@@ -7,9 +27,9 @@
 #   database của bạn với dữ liệu thực từ TradingView để phát hiện xem có nến
 #   nào bị sai số liệu (giá mở/đóng/cao/thấp không khớp) hay bị thiếu không.
 #
-#   Quan trọng: Script KHÔNG tự động sửa. Khi phát hiện vấn đề, nó sẽ gửi
-#   tin Telegram mô tả chi tiết và hỏi bạn có muốn sửa không.
-#   Bạn gõ /confirm_TOKEN để sửa, hoặc /skip_TOKEN để bỏ qua.
+#   Mặc định hiện nay script CÓ THỂ tự sửa theo chế độ auto-repair an toàn.
+#   Chỉ khi chạy với --manual-confirm thì Telegram mới được dùng để hỏi
+#   /confirm_TOKEN hoặc /skip_TOKEN trước khi sửa.
 #
 # TẠI SAO CẦN SCRIPT NÀY?
 #   Dữ liệu trong DB có thể bị lệch so với TradingView do nhiều lý do:
@@ -25,7 +45,7 @@
 #       - Kéo N nến mới nhất từ TradingView (nguồn dữ liệu gốc)
 #       - Truy vấn đúng N nến đó trong database
 #       - So sánh từng số liệu OHLCV: nếu chênh > 0.01% → đánh dấu sai
-#     Kết quả: danh sách cặp có vấn đề (rate > 2%)
+#     Kết quả: danh sách cặp có vấn đề theo core issue hoặc vượt ngưỡng mismatch hiện hành
 #
 #   Giai đoạn 2 — CONFIRM (hỏi user):
 #     Gửi Telegram mô tả chi tiết → đợi user gõ /confirm_TOKEN hoặc /skip_TOKEN
@@ -38,11 +58,12 @@
 #     - Gửi báo cáo kết quả lên Telegram
 #
 # CÁCH CHẠY THỦ CÔNG:
-#   python 04_checker.py                    # chạy đầy đủ (hỏi trước khi sửa)
+#   python 04_checker.py                    # chạy scan + auto-repair an toàn (mặc định)
 #   python 04_checker.py --dry-run          # chỉ scan + báo cáo, không hỏi, không sửa
-#   python 04_checker.py --sym XAUUSD       # chỉ kiểm tra 1 symbol
+#   python 04_checker.py --manual-confirm   # chỉ sửa khi Telegram xác nhận
+#   python 04_checker.py --sym GOLD         # chỉ kiểm tra 1 symbol
 #   python 04_checker.py --tf H4            # chỉ kiểm tra 1 khung thời gian
-#   python 04_checker.py --threshold 0.05   # nâng ngưỡng sai lên 5% (mặc định 2%)
+#   python 04_checker.py --threshold 0.05   # nâng ngưỡng sai lên 5% (mặc định 0.1%)
 #
 # LỊCH CHẠY TỰ ĐỘNG:
 #   Task Scheduler (Windows) tự động gọi file này mỗi 3 ngày lúc 03:00 UTC
@@ -81,9 +102,9 @@ from _helpers import (
     sleep_for,
 )
 from _tv_auth import get_valid_tv_connection, refresh_mid_run
-from _tv_coord import acquire_historical_job, release_historical_job, wait_for_live_batch_clear
-from _tg import tg_send, tg_flush
-from _task_lock import acquire, release, cleanup_expired, renew, request_confirm
+from _tv_coord import acquire_historical_job, release_historical_job, wait_for_historical_slot
+from _telegram import tg_send, tg_flush
+from _task_lock import acquire, release, cleanup_expired, renew, request_confirm, is_locked
 from modules.db_connector import (
     aggregate_from_fact,
     delete_fact_bars,
@@ -91,6 +112,7 @@ from modules.db_connector import (
     delete_staging_bars,
     get_connection,
     run_etl_direct,
+    test_connection,
 )
 
 # =============================================================================
@@ -123,9 +145,10 @@ SYSTEMIC_RESET_RATE = 0.20
 SYSTEMIC_RESET_MISSING_FLOOR = 50
 SYSTEMIC_RESET_EXTRA_FLOOR = 20
 
-# Ngưỡng tỷ lệ sai cho phép — nếu vượt ngưỡng này → hỏi user có sửa không.
-# 0.02 = 2%: tức nếu > 2% số nến bị sai/thiếu → báo cáo vấn đề.
+# Ngưỡng tỷ lệ sai cho phép cho nhóm mismatch tổng hợp.
+# 0.001 = 0.1%: tức nếu > 0.1% số nến trong cửa sổ kiểm tra bị mismatch thì cặp đó bị gắn cờ.
 DEFAULT_THRESHOLD = 0.001
+# Aggregate threshold only: core issues (missing / OHLC wrong / extra) bypass it.
 
 # Sai số tương đối cho phép khi so sánh giá OHLCV:
 # abs(giá_TV - giá_DB) / giá_TV phải < 0.01% thì mới coi là "khớp".
@@ -181,6 +204,17 @@ def _build_interval_map() -> dict:
 # =============================================================================
 # SO SÁNH DỮ LIỆU OHLCV — Trái tim của quá trình kiểm tra
 # =============================================================================
+
+def _configure_console_encoding() -> None:
+    """Best-effort UTF-8 console output to avoid Windows argparse crashes."""
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
+
 
 def _mismatch_flags(tv_vals: tuple, db_vals: tuple) -> tuple[bool, bool]:
     """
@@ -239,7 +273,7 @@ def _compare(tv_dict: dict, db_dict: dict) -> tuple[set, dict, dict, set, float]
     Ví dụ kết quả:
       missing = {datetime(2024,1,15,8,0), ...}  # 2 nến thiếu
       mismatched = {datetime(2024,1,14,16,0): ((1900.1, ...), (1890.2, ...))}  # 1 nến sai giá
-      rate = 3/1000 = 0.003 = 0.3%  → dưới ngưỡng 2% → không cần sửa
+      rate = 3/1000 = 0.003 = 0.3%  → cao hơn ngưỡng mặc định 0.1% → cần xem xét sửa
     """
     if not tv_dict:
         return set(), {}, {}, set(), 0.0
@@ -312,7 +346,7 @@ def _pull_tv_bars(tv, sym: dict, tf_code: str, n_bars: int,
     Returns None on TV error or empty response.
     """
     interval = interval_map[tf_code]
-    wait_for_live_batch_clear("checker", logger)
+    wait_for_historical_slot("checker", logger)
     try:
         df = tv.get_hist(
             symbol   = sym["tv_symbol"],
@@ -747,7 +781,8 @@ def _configure_checker_library_logs() -> None:
 
 def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
                 dry_run: bool, threshold: float,
-                logger: logging.Logger) -> dict:
+                logger: logging.Logger,
+                pending_pairs: list[tuple[dict, str]] | None = None) -> dict:
     """
     Full checker run.
 
@@ -757,13 +792,13 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
     Phase 3:   Recompute derived TFs (M10/M20/M90/H6/H8) for repaired symbols.
     Phase 4:   Return stats dict for report.
     """
-    total_pairs       = len(symbols) * len(tfs)
+    total_pairs       = len(pending_pairs) if pending_pairs is not None else len(symbols) * len(tfs)
     ok_pairs          = 0     # Clean on first scan
     repaired_pairs    = 0     # Fixed after repair
     persistent_fails: list[dict] = []
     volume_advisory_pairs = 0
     volume_advisory_bars = 0
-    dry_issues:       list[dict] = []  # Populated in dry_run mode: pairs có rate > threshold
+    dry_issues:       list[dict] = []  # Populated in dry_run mode: pairs có core issue hoặc rate > threshold
 
     repaired_sym_ids: set[int] = set()
 
@@ -781,7 +816,7 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
 
     # ── Repair loop ──────────────────────────────────────────────────────────
     # Start with all pairs; each round carries forward only the still-failing ones.
-    pending: list[tuple[dict, str]] = [
+    pending: list[tuple[dict, str]] = list(pending_pairs) if pending_pairs is not None else [
         (sym, tf) for sym in symbols for tf in tfs
     ]
 
@@ -848,9 +883,13 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
                         "Chờ 30 phút hoặc đổi kết nối internet rồi chạy lại."
                     )
                     return {
+                        "total": total_pairs,
                         "ok": ok_pairs, "repaired": repaired_pairs,
                         "failed": len(persistent_fails),
-                        "persistent": persistent_fails,
+                        "failures": persistent_fails,
+                        "dry_run": dry_run,
+                        "volume_advisory_pairs": volume_advisory_pairs,
+                        "volume_advisory_bars": volume_advisory_bars,
                         "dry_issues": dry_issues,
                         "aborted": "circuit_breaker",
                     }
@@ -883,8 +922,13 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
             if repair_round == 0:
                 round0_rates[(sym["tv_symbol"], tf_code)] = rate
 
+            # Missing bars / OHLC mismatch / DB-only extra bars are ground-truth
+            # issues, so repair them immediately even when the overall mismatch
+            # rate stays below the usual threshold. Volume-only remains advisory.
+            force_repair_for_core_issue = (n_miss > 0) or (n_bad > 0) or (n_extra > 0)
+
             # ── Decision ─────────────────────────────────────────────────────
-            if rate <= threshold:
+            if rate <= threshold and not force_repair_for_core_issue:
                 # Pair is clean
                 if repair_round == 0:
                     ok_pairs += 1
@@ -918,10 +962,16 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
 
             elif not dry_run:
                 # Attempt repair
-                logger.warning(
-                    "  ✗ %s: %.1f%% mismatch (miss=%d wrong=%d extra=%d) — repairing...",
-                    label, rate * 100, n_miss, n_bad, n_extra,
-                )
+                if force_repair_for_core_issue and rate <= threshold:
+                    logger.warning(
+                        "  ✗ %s: core data issue detected (miss=%d wrong=%d extra=%d, rate=%.1f%% <= threshold %.1f%%) — repairing immediately...",
+                        label, n_miss, n_bad, n_extra, rate * 100, threshold * 100,
+                    )
+                else:
+                    logger.warning(
+                        "  ✗ %s: %.1f%% mismatch (miss=%d wrong=%d extra=%d) — repairing...",
+                        label, rate * 100, n_miss, n_bad, n_extra,
+                    )
                 repair_ok = _repair_pair(
                     tv, sym, tf_code, scan, interval_map, logger,
                     repair_round=repair_round,
@@ -948,10 +998,16 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
 
             else:
                 # dry_run — ghi nhận vấn đề nhưng không sửa
-                logger.warning(
-                    "  [DRY] %s: %.1f%% mismatch (miss=%d wrong=%d extra=%d)",
-                    label, rate * 100, n_miss, n_bad, n_extra,
-                )
+                if force_repair_for_core_issue and rate <= threshold:
+                    logger.warning(
+                        "  [DRY] %s: core data issue detected (miss=%d wrong=%d extra=%d, rate=%.1f%% <= threshold %.1f%%)",
+                        label, n_miss, n_bad, n_extra, rate * 100, threshold * 100,
+                    )
+                else:
+                    logger.warning(
+                        "  [DRY] %s: %.1f%% mismatch (miss=%d wrong=%d extra=%d)",
+                        label, rate * 100, n_miss, n_bad, n_extra,
+                    )
                 # Thu thập vào dry_issues để main() có thể hỏi user sau
                 dry_issues.append({
                     "sym": sym["tv_symbol"],
@@ -1030,7 +1086,7 @@ def _build_problem_desc(issues: list[dict], threshold: float) -> str:
     wrong_count = sum(1 for f in issues if "wrong"   in f["reason"])
     extra_count = sum(1 for f in issues if "extra"   in f["reason"])
 
-    lines = [f"  • {n} pairs cần sửa (mismatch > {threshold:.0%})"]
+    lines = [f"  • {n} pairs cần sửa (missing / OHLC wrong / extra, hoặc mismatch > {threshold:.0%})"]
     if wrong_count:
         lines.append(f"  • {wrong_count} pairs: bars sai giá trị OHLCV")
     if miss_count:
@@ -1082,7 +1138,7 @@ def _build_problem_desc_clean(issues: list[dict], threshold: float) -> str:
     wrong_count = sum(1 for f in issues if "wrong" in f["reason"])
     extra_count = sum(1 for f in issues if "extra" in f["reason"])
 
-    lines = [f"  - {n} pairs can sua (mismatch > {threshold:.0%})"]
+    lines = [f"  - {n} pairs can sua (missing / OHLC wrong / extra, hoac mismatch > {threshold:.0%})"]
     if wrong_count:
         lines.append(f"  - {wrong_count} pairs: bars sai gia tri OHLC")
     if miss_count:
@@ -1121,10 +1177,199 @@ def _build_report_clean(stats: dict, start_time: datetime, auth_mode: str) -> st
             lines.append(f"  - {failure['sym']} / {failure['tf']}: {failure['reason']}")
         if len(stats["failures"]) > 10:
             lines.append(f"  ... va {len(stats['failures']) - 10} pair khac")
+    skipped_tfs = stats.get("skipped_tfs", [])
+    if skipped_tfs:
+        lines.append("")
+        lines.append(
+            f"Skipped TFs: {', '.join(skipped_tfs)} (DST safeguard - chay lai sau 24h)"
+        )
+    abort_reason = stats.get("aborted")
+    if abort_reason:
+        reason_map = {
+            "circuit_breaker": "tam dung sau nhieu TV/auth failures lien tiep",
+            "repair_lock": "khong lay duoc repair lock",
+        }
+        lines.append("")
+        lines.append(f"Status: PARTIAL - {reason_map.get(abort_reason, abort_reason)}")
     return "\n".join(lines)
 
 
+def _empty_checker_stats(total_pairs: int, *, dry_run: bool = False) -> dict:
+    """Create a stats dict compatible with _build_report_clean()."""
+    return {
+        "total": total_pairs,
+        "ok": 0,
+        "repaired": 0,
+        "failed": 0,
+        "failures": [],
+        "dry_run": dry_run,
+        "volume_advisory_pairs": 0,
+        "volume_advisory_bars": 0,
+        "dry_issues": [],
+        "skipped_tfs": [],
+    }
+
+
+def _merge_checker_stats(dest: dict, src: dict, *, include_advisory: bool = True) -> None:
+    """Merge compatible checker stats into dest."""
+    dest["ok"] += int(src.get("ok", 0) or 0)
+    dest["repaired"] += int(src.get("repaired", 0) or 0)
+    dest["failed"] += int(src.get("failed", 0) or 0)
+    dest["failures"].extend(list(src.get("failures", [])))
+    if include_advisory:
+        dest["volume_advisory_pairs"] += int(src.get("volume_advisory_pairs", 0) or 0)
+        dest["volume_advisory_bars"] += int(src.get("volume_advisory_bars", 0) or 0)
+    if src.get("aborted"):
+        dest["aborted"] = src["aborted"]
+
+
+def _detect_dst_transition_risk(
+    tv,
+    symbols: list[dict],
+    tfs: list[str],
+    interval_map: dict,
+    logger: logging.Logger,
+) -> set[str]:
+    """
+    Run a lightweight global precheck for H2/H3/H4 before auto-mode cuon chieu.
+
+    The existing DST heuristic only works when enough pairs are scanned together.
+    Auto mode now repairs symbol-by-symbol, so we preserve safety with a short
+    preflight over the hourly TFs only.
+    """
+    h_tfs = [tf for tf in tfs if tf in {"H2", "H3", "H4"}]
+    if not h_tfs or len(symbols) * len(h_tfs) < 15:
+        return set()
+
+    sample_symbols = symbols
+    if is_locked("ws_live_runtime"):
+        sample_count = min(len(symbols), max(5, math.ceil(18 / len(h_tfs))))
+        if sample_count < len(symbols):
+            sample_symbols = symbols[:sample_count]
+
+    _log_section(
+        logger,
+        "AUTO MODE PRECHECK | DST guard | "
+        f"pairs={len(sample_symbols) * len(h_tfs)}"
+        + (" | sampled_for_ws_live" if len(sample_symbols) < len(symbols) else ""),
+    )
+
+    rates: list[float] = []
+    for sym_idx, sym in enumerate(sample_symbols, 1):
+        if sym_idx > 1:
+            sleep_for(sym["tv_symbol"])
+        for tf_code in h_tfs:
+            scan = _scan_pair(tv, sym, tf_code, CHECKER_N_BARS[tf_code], interval_map, logger)
+            if scan is not None:
+                rates.append(scan["rate"])
+            time.sleep(TV_SLEEP_BETWEEN_CALLS)
+
+    if len(rates) < 15:
+        return set()
+
+    high_count = sum(1 for rate in rates if rate > 0.5)
+    dst_ratio = high_count / len(rates)
+    if dst_ratio <= 0.3:
+        return set()
+
+    logger.warning(
+        "[DST DETECT] %.0f%% cap H2/H3/H4 co rate > 50%% - kha nang DST transition. "
+        "Bo qua auto-repair cho cac TF nay hom nay.",
+        dst_ratio * 100,
+    )
+    tg_send(
+        f"\u26a0\ufe0f <b>[Checker]</b> Phat hien kha nang <b>DST transition</b> "
+        f"({dst_ratio:.0%} cap H2/H3/H4 bao rate >50%).\n"
+        "Se bo qua auto-repair H2/H3/H4 hom nay. Chay lai sau 24h."
+    )
+    return set(h_tfs)
+
+
+def _run_auto_mode_symbol_rollout(
+    tv,
+    symbols: list[dict],
+    tfs: list[str],
+    interval_map: dict,
+    threshold: float,
+    logger: logging.Logger,
+) -> dict:
+    """
+    Auto mode orchestration:
+      - scan từng symbol khi chưa giữ repair lock
+      - nếu symbol có vấn đề thì mới lấy lock
+      - rescan + repair + verify toàn bộ TF của symbol đó dưới lock
+    """
+    blocked_tfs = _detect_dst_transition_risk(tv, symbols, tfs, interval_map, logger)
+    active_tfs = [tf for tf in tfs if tf not in blocked_tfs]
+
+    overall = _empty_checker_stats(len(symbols) * len(active_tfs), dry_run=False)
+    if blocked_tfs:
+        overall["skipped_tfs"] = sorted(blocked_tfs)
+    if not active_tfs:
+        return overall
+
+    for sym_idx, sym in enumerate(symbols, 1):
+        if sym_idx > 1:
+            sleep_for(sym["tv_symbol"])
+
+        logger.info(
+            "AUTO SYMBOL %03d/%03d | %s | tfs=%d",
+            sym_idx, len(symbols), sym["tv_symbol"], len(active_tfs),
+        )
+        scan_stats = run_checker(
+            tv,
+            [sym],
+            active_tfs,
+            interval_map,
+            dry_run=True,
+            threshold=threshold,
+            logger=logger,
+        )
+        overall["volume_advisory_pairs"] += int(scan_stats.get("volume_advisory_pairs", 0) or 0)
+        overall["volume_advisory_bars"] += int(scan_stats.get("volume_advisory_bars", 0) or 0)
+
+        if scan_stats.get("aborted"):
+            overall["aborted"] = scan_stats["aborted"]
+            return overall
+
+        issues = scan_stats.get("dry_issues", []) or scan_stats.get("failures", [])
+        if not issues:
+            overall["ok"] += int(scan_stats.get("ok", 0) or 0)
+            continue
+
+        logger.info(
+            "AUTO SYMBOL %s | issues=%d | reacquiring repair locks for rescan+repair",
+            sym["tv_symbol"], len(issues),
+        )
+        heartbeat_stop = _acquire_repair_locks(logger)
+        if heartbeat_stop is None:
+            overall["aborted"] = "repair_lock"
+            return overall
+
+        try:
+            time.sleep(TV_SLEEP_BETWEEN_CALLS)
+            repair_stats = run_checker(
+                tv,
+                [sym],
+                active_tfs,
+                interval_map,
+                dry_run=False,
+                threshold=threshold,
+                logger=logger,
+            )
+        finally:
+            _release_repair_locks(heartbeat_stop, logger)
+
+        _merge_checker_stats(overall, repair_stats, include_advisory=False)
+        if overall.get("aborted"):
+            return overall
+
+    return overall
+
+
 def main() -> None:
+    _configure_console_encoding()
+
     parser = argparse.ArgumentParser(
         description="SEN05 — Ground-truth data integrity checker"
     )
@@ -1175,6 +1420,10 @@ def main() -> None:
     log_dir.mkdir(exist_ok=True)
     logger = setup_logger("checker", str(log_dir / "checker.log"), rotating=True)
     _configure_checker_library_logs()
+
+    if not test_connection():
+        logger.error("ABORT: Cannot reach database.")
+        sys.exit(1)
 
     _log_section(
         logger,
@@ -1236,16 +1485,43 @@ def main() -> None:
 
     # ── Rebuild computed TFs (DB-only) ───────────────────────────────────────
     if args.rebuild_computed:
-        rc_report = rebuild_computed_tfs(
-            dry_run=args.dry_run,
-            sym_filter=[args.sym] if args.sym else None,
-            tf_filter=args.tf.upper() if args.tf else None,
-            logger=logger,
-        )
-        logger.info("\n%s", rc_report)
-        tg_send(f"<b>[Checker] Rebuild Computed TFs</b>\n<pre>{rc_report}</pre>")
-        tg_flush()
-        sys.exit(0)
+        cleaned = cleanup_expired()
+        if cleaned:
+            logger.info("Cleaned up %d expired lock(s) before computed rebuild.", cleaned)
+
+        heartbeat_stop: threading.Event | None = None
+        try:
+            if not args.dry_run:
+                heartbeat_stop = _acquire_repair_locks(logger, duration_min=120)
+                if heartbeat_stop is None:
+                    sys.exit(1)
+                logger.info("Acquired maintenance locks for computed rebuild.")
+
+            rc_report = rebuild_computed_tfs(
+                dry_run=args.dry_run,
+                sym_filter=[args.sym] if args.sym else None,
+                tf_filter=args.tf.upper() if args.tf else None,
+                logger=logger,
+            )
+            logger.info("\n%s", rc_report)
+            print(rc_report)
+
+            if not args.dry_run:
+                tick_report = _format_derived_tickcount_summary()
+                continuity_report = _format_derived_continuity_summary()
+                logger.info("\n%s", tick_report)
+                logger.info("\n%s", continuity_report)
+                print("")
+                print(tick_report)
+                print("")
+                print(continuity_report)
+
+            tg_send(f"<b>[Checker] Rebuild Computed TFs</b>\n<pre>{rc_report}</pre>")
+            tg_flush()
+            sys.exit(0)
+        finally:
+            if not args.dry_run:
+                _release_repair_locks(heartbeat_stop, logger)
 
     # ── Build Interval map (deferred import) ─────────────────────────────────
     interval_map = _build_interval_map()
@@ -1314,6 +1590,7 @@ def main() -> None:
             stats["ok"], len(stats["dry_issues"]),
         )
         _exit(0)
+
 
     # ── Phase 1: Scan (dry_run=True) — tìm vấn đề mà không sửa ─────────────
     if args.tf_check and tf_gap_issues:
@@ -1388,50 +1665,28 @@ def main() -> None:
         _exit(exit_code)
 
     if not args.manual_confirm:
-        _log_section(logger, "PHASE 1 | Scan")
-        tg_send("[Checker] Dang scan du lieu (Phase 1/3)...")
-        scan_stats = run_checker(
-            tv, symbols, tfs, interval_map,
-            dry_run=True, threshold=args.threshold, logger=logger,
+        _log_section(logger, "AUTO MODE | Symbol Rollout Scan + Repair")
+        tg_send(
+            "<b>[Checker]</b> Dang scan cuon chieu theo tung symbol.\n"
+            "<i>Symbol nao co loi moi lay repair lock, rescan duoi lock, "
+            "sua ngay, verify ngay, roi release lock truoc khi sang symbol tiep theo.</i>"
         )
-
-        issues = scan_stats.get("dry_issues", []) or scan_stats.get("failures", [])
-        logger.info("Phase 1 done: %d issue(s) found.", len(issues))
-
-        if not issues:
-            report = _build_report_clean(scan_stats, start_time, auth_mode)
-            _log_report(report, logger)
-            tg_send(report)
-            tg_flush()
-            logger.info("==== DONE | all clean ====")
-            _exit(0)
-
-        heartbeat_stop = _acquire_repair_locks(logger)
-        if heartbeat_stop is None:
-            _exit(1)
-
-        exit_code = 1
-        try:
-            tg_send(
-                f"<b>[Checker]</b> Phat hien {len(issues)} issue pairs. "
-                "Dang tu dong repull cac bars bi missing/mismatch.\n"
-                "<i>WS Live tam hoan ETL de tranh xung dot. Se tu resume sau khi xong.</i>"
-            )
-            repair_stats = run_checker(
-                tv, symbols, tfs, interval_map,
-                dry_run=False, threshold=args.threshold, logger=logger,
-            )
-            report = _build_report_clean(repair_stats, start_time, auth_mode)
-            _log_report(report, logger)
-            tg_send(report)
-            logger.info(
-                "==== DONE | repaired=%d failed=%d ====",
-                repair_stats["repaired"], repair_stats["failed"],
-            )
-            exit_code = 1 if repair_stats["failed"] > 0 else 0
-        finally:
-            _release_repair_locks(heartbeat_stop, logger)
-
+        auto_stats = _run_auto_mode_symbol_rollout(
+            tv, symbols, tfs, interval_map,
+            threshold=args.threshold, logger=logger,
+        )
+        report = _build_report_clean(auto_stats, start_time, auth_mode)
+        _log_report(report, logger)
+        tg_send(report)
+        tg_flush()
+        logger.info(
+            "==== DONE | ok=%d repaired=%d failed=%d aborted=%s ====",
+            auto_stats["ok"], auto_stats["repaired"], auto_stats["failed"],
+            auto_stats.get("aborted", "no"),
+        )
+        exit_code = 1 if auto_stats["failed"] > 0 else 0
+        if auto_stats.get("aborted") in {"circuit_breaker", "repair_lock"}:
+            exit_code = 1
         _exit(exit_code)
 
     _log_section(logger, "PHASE 1 | Scan")
@@ -1480,6 +1735,15 @@ def main() -> None:
         _exit(0)
 
     # ── Phase 3: Acquire lock + repair ───────────────────────────────────────
+    pending_pairs = _issues_to_pending_pairs(issues, symbols)
+    if not pending_pairs:
+        report = _build_report_clean(scan_stats, start_time, auth_mode)
+        _log_report(report, logger)
+        tg_send(report)
+        tg_flush()
+        logger.error("Phase 3 aborted: could not map issues back to repair pairs.")
+        _exit(1)
+
     _log_section(logger, "PHASE 3 | Repair")
     if not acquire("checker_repair", duration_min=90):
         msg = "⚠️ <b>[Checker]</b> Lock đang bận — process khác đang sửa dữ liệu. Bỏ qua."
@@ -1512,6 +1776,7 @@ def main() -> None:
         repair_stats = run_checker(
             tv, symbols, tfs, interval_map,
             dry_run=False, threshold=args.threshold, logger=logger,
+            pending_pairs=pending_pairs,
         )
         report = _build_report_clean(repair_stats, start_time, auth_mode)
         _log_report(report, logger)
@@ -1718,15 +1983,18 @@ def _log_report(report: str, logger: logging.Logger) -> None:
     logger.info("-" * 72)
 
 
-def _acquire_repair_locks(logger: logging.Logger) -> threading.Event | None:
+def _acquire_repair_locks(
+    logger: logging.Logger,
+    duration_min: int = 90,
+) -> threading.Event | None:
     """Acquire checker locks and start heartbeat. Returns stop event or None on failure."""
-    if not acquire("checker_repair", duration_min=90):
+    if not acquire("checker_repair", duration_min=duration_min):
         msg = "⚠️ <b>[Checker]</b> Lock đang bận — process khác đang sửa dữ liệu. Bỏ qua."
         logger.warning("Could not acquire checker_repair lock.")
         tg_send(msg)
         tg_flush()
         return None
-    if not acquire("warehouse_maintenance", duration_min=90):
+    if not acquire("warehouse_maintenance", duration_min=duration_min):
         release("checker_repair")
         msg = "⚠️ <b>[Checker]</b> Warehouse đang bận — pipeline hoặc maintenance khác đang chạy. Bỏ qua."
         logger.warning("Could not acquire warehouse_maintenance lock.")
@@ -1738,8 +2006,8 @@ def _acquire_repair_locks(logger: logging.Logger) -> threading.Event | None:
 
     def _lock_heartbeat() -> None:
         while not heartbeat_stop.wait(900):
-            renew("checker_repair", duration_min=90)
-            renew("warehouse_maintenance", duration_min=90)
+            renew("checker_repair", duration_min=duration_min)
+            renew("warehouse_maintenance", duration_min=duration_min)
 
     threading.Thread(target=_lock_heartbeat, name="checker-lock-heartbeat", daemon=True).start()
     return heartbeat_stop
@@ -1753,6 +2021,112 @@ def _release_repair_locks(heartbeat_stop: threading.Event | None, logger: loggin
     release("warehouse_maintenance")
     logger.info("Lock released.")
     tg_flush()
+
+
+def _issues_to_pending_pairs(issues: list[dict], symbols: list[dict]) -> list[tuple[dict, str]]:
+    """Map issue rows back to concrete (symbol_dict, tf_code) pairs for targeted rescans."""
+    if not issues:
+        return []
+
+    symbol_map = {sym["tv_symbol"]: sym for sym in symbols}
+    pending: list[tuple[dict, str]] = []
+    seen: set[tuple[str, str]] = set()
+
+    for issue in issues:
+        tv_symbol = str(issue.get("sym", "")).strip()
+        tf_code = str(issue.get("tf", "")).strip().upper()
+        sym = symbol_map.get(tv_symbol)
+        key = (tv_symbol, tf_code)
+        if sym is None or not tf_code or key in seen:
+            continue
+        seen.add(key)
+        pending.append((sym, tf_code))
+    return pending
+
+
+def _format_derived_tickcount_summary() -> str:
+    """Return a compact summary of derived timeframe TickCount health."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            WITH exp AS (
+                SELECT 'M10' AS Code, 2 AS ExpectedCount UNION ALL
+                SELECT 'M20', 4 UNION ALL
+                SELECT 'M90', 3 UNION ALL
+                SELECT 'H6', 2 UNION ALL
+                SELECT 'H8', 2
+            )
+            SELECT
+                tf.Code,
+                COUNT(*) AS TotalRows,
+                SUM(
+                    CASE WHEN ISNULL(f.TickCount, -1) <> exp.ExpectedCount THEN 1 ELSE 0 END
+                ) AS BadTickRows
+            FROM DWH.Fact_OHLCV f
+            JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID
+            JOIN exp ON exp.Code = tf.Code
+            GROUP BY tf.Code
+            ORDER BY tf.Code;
+        """)
+        rows = cursor.fetchall()
+    finally:
+        conn.close()
+
+    lines = ["=== Derived TickCount Summary ==="]
+    for code, total_rows, bad_rows in rows:
+        lines.append(f"{code}: total={int(total_rows):,} bad_tick_rows={int(bad_rows):,}")
+    return "\n".join(lines)
+
+
+def _format_derived_continuity_summary() -> str:
+    """Return a compact summary of derived timeframe continuity health."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            WITH tf AS (
+                SELECT TimeframeID, Code, Minutes
+                FROM DWH.Dim_Timeframe
+                WHERE Code IN ('M10', 'M20', 'M90', 'H6', 'H8')
+            ),
+            seq AS (
+                SELECT
+                    tf.Code,
+                    tf.Minutes,
+                    f.SymbolID,
+                    f.BarTime,
+                    f.[Close],
+                    LEAD(f.[Open]) OVER (
+                        PARTITION BY f.SymbolID, f.TimeframeID ORDER BY f.BarTime
+                    ) AS NextOpen,
+                    LEAD(f.BarTime) OVER (
+                        PARTITION BY f.SymbolID, f.TimeframeID ORDER BY f.BarTime
+                    ) AS NextBarTime
+                FROM DWH.Fact_OHLCV f
+                JOIN tf ON tf.TimeframeID = f.TimeframeID
+            )
+            SELECT
+                Code,
+                COUNT(*) AS CheckedTransitions,
+                SUM(CASE
+                        WHEN ABS(NextOpen - [Close]) / NULLIF([Close], 0) * 100 > 0.5
+                        THEN 1 ELSE 0
+                    END) AS FlaggedTransitions
+            FROM seq
+            WHERE NextOpen IS NOT NULL
+              AND DATEDIFF(MINUTE, BarTime, NextBarTime) = Minutes
+            GROUP BY Code
+            ORDER BY Code;
+        """)
+        rows = cursor.fetchall()
+    finally:
+        conn.close()
+
+    lines = ["=== Derived Continuity Summary ==="]
+    for code, checked, flagged in rows:
+        lines.append(f"{code}: checked={int(checked):,} flagged={int(flagged):,}")
+    return "\n".join(lines)
 
 
 # =============================================================================

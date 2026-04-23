@@ -1,4 +1,13 @@
 /* ============================================================
+   UPDATED NOTE:
+   - This installer should include `06_active_task.sql` when you want the full
+     `data_provider` runtime, not only the warehouse core.
+   - `04_business_objects.sql` already ends with the safer patched definition of
+     `DWH.usp_AggregateFromStaging`; the standalone patch file is kept only for
+     maintenance / backport scenarios.
+   ============================================================ */
+
+/* ============================================================
    00_run_all.sql
    Project   : Auto Trading Data Warehouse
    Database  : SEN05_AutoTrading  (SQL Server 2022)
@@ -327,6 +336,7 @@
      03_staging_tables.sql  — All 15 SEN.TF_* staging tables
      04_business_objects.sql — Views, MART procs, ETL procs
      05_verify.sql          — Verification queries; prints SETUP COMPLETE
+     06_active_task.sql     — Runtime lock / token relay table used by Python scripts
 
    The :r paths below include each file in sequence.
    ============================================================ */
@@ -336,3 +346,4 @@
 :r "03_staging_tables.sql"
 :r "04_business_objects.sql"
 :r "05_verify.sql"
+:r "06_active_task.sql"

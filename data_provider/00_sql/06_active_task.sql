@@ -1,4 +1,10 @@
 -- =============================================================================
+-- UPDATED NOTE:
+--   `SEN.ActiveTask` is the operational coordination table of the runtime.
+--   It is separate from the candle warehouse itself and is used by ws_live,
+--   checker, pipeline and the Telegram bot to avoid write conflicts and to
+--   relay confirmation tokens across processes.
+-- =============================================================================
 -- data_provider/00_sql/06_active_task.sql
 -- Tạo bảng SEN.ActiveTask — dùng cho:
 --   1. DB-level distributed lock (ngăn Checker và WS ETL chạy đồng thời)

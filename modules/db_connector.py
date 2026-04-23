@@ -237,9 +237,9 @@ def run_etl_direct(symbol_id: int, tf_code: str, staging_table: str) -> int:
         conn.close()
 
 
-def run_etl_aggregate(symbol_id: int, target_tf: str, source_staging_table: str) -> None:
+def run_etl_aggregate(symbol_id: int, target_tf: str, source_staging_table: str) -> int:
     """
-        Goi DWH.usp_AggregateFromStaging de tong hop timeframe phai sinh.
+        Tong hop timeframe phai sinh.
 
         Quy tac tong hop:
         - M5 -> M10, M20
@@ -248,8 +248,17 @@ def run_etl_aggregate(symbol_id: int, target_tf: str, source_staging_table: str)
         - H4 -> H8
 
         Tac dong:
-        - Tao khung thoi gian khong co san tu nguon TV.
+        - Mac dinh dung duong an toan aggregate tu Fact_OHLCV cho 5 TF phai sinh.
+        - Giu source_staging_table de log/fallback cho nhung TF ngoai danh sach nay.
     """
+    if target_tf in _DERIVED_TF_SPECS:
+        rows = aggregate_from_fact(symbol_id, target_tf)
+        logger.info(
+            "ETL Aggregate SAFE OK: %s -> %s SymbolID=%d, %d rows rebuilt from Fact_OHLCV",
+            source_staging_table, target_tf, symbol_id, rows,
+        )
+        return rows
+
     conn   = get_connection()
     cursor = conn.cursor()
     try:
@@ -260,6 +269,7 @@ def run_etl_aggregate(symbol_id: int, target_tf: str, source_staging_table: str)
         conn.commit()
         logger.info("ETL Aggregate OK: %s → %s SymbolID=%d",
                     source_staging_table, target_tf, symbol_id)
+        return cursor.rowcount
     except Exception as e:
         logger.error("ETL Aggregate FAIL: %s → %s SymbolID=%d — %s",
                      source_staging_table, target_tf, symbol_id, e)
@@ -285,6 +295,56 @@ _DERIVED_TF_SPECS = {
 }
 
 
+def _resolve_timeframe_ids(cursor, *codes: str) -> dict[str, int]:
+    """Resolve timeframe codes to IDs and fail fast if any code is missing."""
+    placeholders = ", ".join("?" for _ in codes)
+    cursor.execute(
+        f"SELECT Code, TimeframeID FROM DWH.Dim_Timeframe WHERE Code IN ({placeholders})",
+        tuple(codes),
+    )
+    tf_map = {row[0]: row[1] for row in cursor.fetchall()}
+    missing = [code for code in codes if code not in tf_map]
+    if missing:
+        raise DatabaseWriteError(f"Missing timeframe IDs for: {missing}")
+    return tf_map
+
+
+def _count_tf_continuity_flags(
+    cursor,
+    symbol_id: int,
+    timeframe_id: int,
+    tf_minutes: int,
+    diff_threshold_pct: float = 0.5,
+) -> int:
+    """Count adjacent transitions that violate the C[T0] ~= O[T1] continuity rule."""
+    cursor.execute("""
+        WITH seq AS (
+            SELECT
+                f.BarTime,
+                f.[Close],
+                LEAD(f.[Open]) OVER (
+                    PARTITION BY f.SymbolID, f.TimeframeID ORDER BY f.BarTime
+                ) AS NextOpen,
+                LEAD(f.BarTime) OVER (
+                    PARTITION BY f.SymbolID, f.TimeframeID ORDER BY f.BarTime
+                ) AS NextBarTime
+            FROM DWH.Fact_OHLCV f
+            WHERE f.SymbolID = ? AND f.TimeframeID = ?
+        )
+        SELECT /* continuity_check */
+            SUM(CASE
+                    WHEN NextOpen IS NOT NULL
+                     AND DATEDIFF(MINUTE, BarTime, NextBarTime) = ?
+                     AND ABS(NextOpen - [Close]) / NULLIF([Close], 0) * 100 > ?
+                    THEN 1
+                    ELSE 0
+                END) AS Flagged
+        FROM seq;
+    """, (symbol_id, timeframe_id, tf_minutes, diff_threshold_pct))
+    row = cursor.fetchone()
+    return int(row[0]) if row and row[0] else 0
+
+
 def aggregate_from_fact(symbol_id: int, target_tf_code: str) -> int:
     """
     Tong hop timeframe phai sinh truc tiep tu DWH.Fact_OHLCV (khong qua staging).
@@ -308,13 +368,46 @@ def aggregate_from_fact(symbol_id: int, target_tf_code: str) -> int:
     cursor = conn.cursor()
     try:
         # Resolve TimeframeIDs
-        cursor.execute(
-            "SELECT Code, TimeframeID FROM DWH.Dim_Timeframe WHERE Code IN (?, ?)",
-            (src_tf_code, target_tf_code)
-        )
-        tf_map = {row[0]: row[1] for row in cursor.fetchall()}
+        tf_map = _resolve_timeframe_ids(cursor, src_tf_code, target_tf_code)
         src_tf_id    = tf_map[src_tf_code]
         target_tf_id = tf_map[target_tf_code]
+
+        # Xoa cac bars stale/partial khong con map den bucket hop le nao cua
+        # source hien tai. Neu bo qua buoc nay, anchor cu co the song song ton
+        # tai voi anchor moi sau cac lan drift/session shift.
+        cursor.execute("""
+            WITH src AS (
+                SELECT
+                    f.BarTime,
+                    DATEADD(MINUTE,
+                        (DATEDIFF(MINUTE, CAST('2000-01-01' AS DATETIME), f.BarTime) / ?) * ?,
+                        CAST('2000-01-01' AS DATETIME)
+                    ) AS AggBarTime
+                FROM DWH.Fact_OHLCV f
+                WHERE f.SymbolID = ? AND f.TimeframeID = ?
+            ),
+            agg AS (
+                SELECT
+                    AggBarTime,
+                    MIN(BarTime) AS FirstBarTime,
+                    COUNT(*)     AS SrcCount
+                FROM src
+                GROUP BY AggBarTime
+            )
+            DELETE tgt
+            FROM DWH.Fact_OHLCV tgt
+            WHERE tgt.SymbolID = ? AND tgt.TimeframeID = ?
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM agg a
+                  WHERE a.SrcCount = ?
+                    AND a.FirstBarTime = tgt.BarTime
+              );
+        """, (
+            interval_minutes, interval_minutes, symbol_id, src_tf_id,
+            symbol_id, target_tf_id, expected_count,
+        ))
+        stale_deleted = cursor.rowcount
 
         # CTE aggregation: align BarTime to interval boundary, then
         # pick Open from first bar and Close from last bar in each group.
@@ -396,9 +489,22 @@ def aggregate_from_fact(symbol_id: int, target_tf_code: str) -> int:
               symbol_id, target_tf_id, expected_count))
 
         rows = cursor.rowcount
+        continuity_flags = _count_tf_continuity_flags(
+            cursor,
+            symbol_id=symbol_id,
+            timeframe_id=target_tf_id,
+            tf_minutes=interval_minutes,
+        )
         conn.commit()
-        logger.info("aggregate_from_fact OK: %s->%s SymbolID=%d, %d rows upserted",
-                    src_tf_code, target_tf_code, symbol_id, rows)
+        if continuity_flags > 0:
+            logger.warning(
+                "aggregate_from_fact continuity WARN: %s SymbolID=%d, %d flagged transitions > 0.5%%",
+                target_tf_code, symbol_id, continuity_flags,
+            )
+        logger.info(
+            "aggregate_from_fact OK: %s->%s SymbolID=%d, %d stale rows deleted, %d rows upserted, %d continuity flags",
+            src_tf_code, target_tf_code, symbol_id, stale_deleted, rows, continuity_flags,
+        )
         return rows
     except Exception as e:
         conn.rollback()

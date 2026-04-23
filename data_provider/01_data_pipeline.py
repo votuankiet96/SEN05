@@ -1,3 +1,20 @@
+"""
+Orchestrator cho luong nap du lieu lich su vao kho du lieu.
+
+File nay phu trach:
+- che do `auto`: tu quyet dinh full load hay gap fill dua tren tinh trang Fact_OHLCV
+- che do `full`: tai lai lich su cho toan bo symbol / timeframe duoc chon
+- che do `gap`: bo sung phan du lieu con thieu ke tu lan chay truoc
+- bo loc theo `--symbols`, `--timeframes`, `--asset-type`
+- che do an toan `--dry-run` va `--reset`
+
+Nguyen tac van hanh:
+- data luon vao staging truoc, sau do moi ETL vao Fact_OHLCV
+- voi reset, script uu tien cach "nap du lieu thay the an toan" thay vi xoa rong truoc
+- pipeline nhuong quyen cho ws_live/checker thong qua task lock va TV coordination lock
+- guest mode van co the chay, nhung du lieu history co nguy co thieu nen can doc canh bao
+"""
+
 # =============================================================================
 # data_provider/01_data_pipeline.py  —  Data Pipeline (Full Load + Daily Backfill)
 # Version : 2.0
@@ -124,6 +141,7 @@ if _PROJ not in sys.path:
 # Nhập các hằng số và hàm cấu hình từ file config.py
 # Nhập các hàm tiện ích dùng chung từ file _helpers.py
 from _helpers import (
+    _acquire_short_write_lock,
     FULL_N_BARS,  # Hằng số: số bar cần kéo cho từng TF khi chạy full load
     calc_gap_n_bars,  # Hàm tính số bar cần kéo dựa trên khoảng thời gian bị thiếu
     fmt_gap,  # Hàm định dạng khoảng thời gian thiếu thành chuỗi dễ đọc (ví dụ: "2d 3h")
@@ -135,10 +153,10 @@ from _helpers import (
     sleep_for,  # Hàm tạm dừng giữa các request để tránh bị TradingView rate-limit
     trading_hours_in_gap,  # Tính giờ trading thực (trừ Sat/Sun) trong một khoảng thời gian
 )
-from _tg import tg_alert, tg_flush, QUICK_COMMANDS_HINT  # Gửi thông báo kết quả pipeline lên Telegram
+from _telegram import tg_alert, tg_flush, QUICK_COMMANDS_HINT  # Gửi thông báo kết quả pipeline lên Telegram
 from _tv_auth import get_valid_tv_connection, refresh_mid_run  # Auth module dùng chung
-from _task_lock import acquire, release, renew
-from _tv_coord import acquire_historical_job, release_historical_job
+from _task_lock import acquire, cleanup_expired, release, renew, is_locked
+from _tv_coord import acquire_historical_job, release_historical_job, wait_for_historical_slot
 
 from config import (
     COMPUTED_TIMEFRAMES,  # Danh sách cặp (TF đích, bảng nguồn) dùng để tính các TF phái sinh
@@ -443,7 +461,8 @@ def find_stale_pairs(latest: dict) -> list:
     return stale
 
 
-def run_backfill(tv, dry_run: bool = False) -> int:
+def run_backfill(tv, dry_run: bool = False,
+                 write_lock_name: str | None = None) -> int:
     """
     Chạy backfill hàng ngày: kiểm tra xem cặp nào bị thiếu dữ liệu
     rồi kéo bổ sung từ TradingView, sau đó tính lại TF phái sinh.
@@ -544,12 +563,32 @@ def run_backfill(tv, dry_run: bool = False) -> int:
 
         # Thực hiện kéo và lưu dữ liệu
         # Tự retry tối đa 3 lần (backoff 10s → 30s → 60s) nếu TV trả về lỗi hoặc rỗng
-        if _FORCE_RESET_REPULL:
-            _, inserted = repull_full_symbol(tv, sym, tf_code, TF_INTERVAL[tf_code], logger)
-            result = inserted
-        else:
-            result = pull_with_retry(tv, sym, tf_code, n_bars,
-                                     TF_INTERVAL[tf_code], logger)
+        lock_acquired = False
+        if write_lock_name:
+            wait_for_historical_slot("pipeline-maint", logger)
+            lock_acquired = _acquire_short_write_lock(
+                write_lock_name,
+                logger,
+                action=f"backfill {sym['tv_symbol']} {tf_code}",
+            )
+            if not lock_acquired:
+                fail += 1
+                consecutive_fail += 1
+                fail_pairs.append(f"{sym['tv_symbol']} {tf_code}")
+                print("âœ—")
+                sleep_for(sym["tv_symbol"])
+                continue
+
+        try:
+            if _FORCE_RESET_REPULL:
+                _, inserted = repull_full_symbol(tv, sym, tf_code, TF_INTERVAL[tf_code], logger)
+                result = inserted
+            else:
+                result = pull_with_retry(tv, sym, tf_code, n_bars,
+                                         TF_INTERVAL[tf_code], logger)
+        finally:
+            if lock_acquired:
+                release(write_lock_name)
 
         if result >= 0:
             ok += 1
@@ -583,7 +622,23 @@ def run_backfill(tv, dry_run: bool = False) -> int:
     # (tránh chạy ETL không cần thiết khi không có gì thay đổi)
     if updated_sym_ids:
         logger.info("Recomputing derived TFs...")
-        recompute_derived(updated_sym_ids, logger)
+        if write_lock_name:
+            wait_for_historical_slot("pipeline-maint", logger)
+            derived_lock = _acquire_short_write_lock(
+                write_lock_name,
+                logger,
+                action="recompute derived batch",
+            )
+            if not derived_lock:
+                fail += 1
+                fail_pairs.append("DERIVED_TFS")
+            else:
+                try:
+                    recompute_derived(updated_sym_ids, logger)
+                finally:
+                    release(write_lock_name)
+        else:
+            recompute_derived(updated_sym_ids, logger)
 
     # Trả về dict thống kê thay vì chỉ fail count
     return {
@@ -705,7 +760,11 @@ def main() -> int:
         COMPUTED_TIMEFRAMES = [ct for ct in COMPUTED_TIMEFRAMES if ct[0] in _TF_FILTER]
         logger.info("[FILTER] Chỉ pull TF: %s", sorted(_TF_FILTER))
 
-    if not args.dry_run:
+    if False and not args.dry_run:  # Legacy early-lock block kept disabled; lock is acquired later.
+        cleaned = cleanup_expired()
+        if cleaned:
+            logger.info("Cleaned up %d expired lock(s) before pipeline start.", cleaned)
+
         maintenance_locked = acquire("warehouse_maintenance", duration_min=240)
         if not maintenance_locked:
             logger.error("ABORT: warehouse_maintenance lock đang bận.")
@@ -731,6 +790,11 @@ def main() -> int:
             name="pipeline-lock-heartbeat",
             daemon=True,
         ).start()
+
+    if not args.dry_run:
+        cleaned = cleanup_expired()
+        if cleaned:
+            logger.info("Cleaned up %d expired lock(s) before pipeline start.", cleaned)
 
     # -----------------------------------------------------------------------
     # XÓA DATA CŨ theo --reset (nếu có)
@@ -799,6 +863,19 @@ def main() -> int:
         mode = args.mode
         logger.info("[MODE] Forced to: %s", mode.upper())
 
+    maintenance_scope = (mode == "full") or args.reset
+    if not args.dry_run and maintenance_scope and is_locked("ws_live_runtime"):
+        logger.error("ABORT: full/reset maintenance cannot run while ws_live is active.")
+        tg_alert(
+            "WARNING",
+            "âš ï¸ <b>Data Pipeline bá»‹ táº¡m cháº·n</b>\n"
+            "Cháº¿ Ä‘á»™ full/reset khÃ´ng Ä‘Æ°á»£c cháº¡y khi <b>ws_live</b> Ä‘ang online 24/7.\n"
+            "HÃ£y táº¡m dá»«ng ws_live rá»“i cháº¡y láº¡i lÃªnh maintenance nÃ y."
+            + QUICK_COMMANDS_HINT
+        )
+        tg_flush()
+        return _finish(1)
+
     if not args.dry_run:
         historical_job_stop = acquire_historical_job("pipeline", logger, duration_min=240)
         if historical_job_stop is None:
@@ -844,6 +921,39 @@ def main() -> int:
             tg_alert("ERROR", f"🚨 <b>Data Pipeline THẤT BẠI</b>\nKhông kết nối được TradingView.\nLỗi: {e}" + QUICK_COMMANDS_HINT)
             return _finish(1)
 
+        # Hold warehouse lock only once TradingView access is ready and the
+        # pipeline is about to start DB writes.
+        maintenance_locked = (
+            acquire("warehouse_maintenance", duration_min=240)
+            if maintenance_scope else False
+        )
+        if maintenance_scope and not maintenance_locked:
+            logger.error("ABORT: warehouse_maintenance lock is busy.")
+            tg_alert(
+                "WARNING",
+                "Data Pipeline blocked.\n"
+                "warehouse_maintenance is busy because another checker or maintenance task is running.\n"
+                "Wait for the current job to finish, then run the pipeline again."
+                + QUICK_COMMANDS_HINT
+            )
+            tg_flush()
+            return _finish(1)
+        if maintenance_locked:
+            logger.info("[LOCK] Acquired warehouse_maintenance lock.")
+            atexit.register(release, "warehouse_maintenance")
+
+            def _maintenance_heartbeat() -> None:
+                while not maintenance_heartbeat_stop.wait(1800):
+                    renewed = renew("warehouse_maintenance", duration_min=240)
+                    if not renewed:
+                        logger.warning("warehouse_maintenance heartbeat could not renew lock.")
+
+            threading.Thread(
+                target=_maintenance_heartbeat,
+                name="pipeline-lock-heartbeat",
+                daemon=True,
+            ).start()
+
     # -----------------------------------------------------------------------
     # BƯỚC 3: Chạy pipeline theo chế độ đã xác định
     # -----------------------------------------------------------------------
@@ -856,7 +966,11 @@ def main() -> int:
                      "miss_count": 0, "fail_pairs": []}
     else:
         # Backfill: chỉ bù phần thiếu (mất vài phút, chạy hàng ngày)
-        run_stats = run_backfill(tv, dry_run=args.dry_run)
+        run_stats = run_backfill(
+            tv,
+            dry_run=args.dry_run,
+            write_lock_name=None if (args.dry_run or maintenance_scope) else "warehouse_maintenance",
+        )
         fail = run_stats["fail"]
 
     # -----------------------------------------------------------------------

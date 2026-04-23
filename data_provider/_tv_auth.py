@@ -1,3 +1,21 @@
+"""
+Quan ly xac thuc TradingView dung chung cho pipeline, ws_live va checker.
+
+Thu tu fallback hien tai:
+1. runtime cache trong `.tv_token_cache`
+2. token / cookie co san trong `.env`
+3. refresh token qua cookie session
+4. dang nhap bang username/password
+5. headless browser refresh
+6. guest token nhu phuong an cuoi cung
+
+Muc tieu cua module nay khong chi la "dang nhap duoc", ma la:
+- tranh khoi dong batch voi token sap het han
+- co the refresh giua chung khi TradingView bao auth loi
+- giu trang thai auth nhat quan cho tat ca process dung chung
+- canh bao ro rang khi he thong bi roi xuong guest mode
+"""
+
 # =============================================================================
 # data_provider/_tv_auth.py  —  Xác thực TradingView (module dùng chung)
 # =============================================================================
@@ -71,7 +89,7 @@ if str(_PROJ) not in sys.path:
     sys.path.insert(0, str(_PROJ))
 
 from config import TV_AUTH_TOKEN, TV_COOKIE, TV_PASSWORD, TV_USERNAME  # noqa: E402
-from _tg import tg_alert as _tg_alert  # noqa: E402
+from _telegram import tg_alert as _tg_alert  # noqa: E402
 
 # Module-level logger (dùng khi caller không truyền logger vào)
 _logger = logging.getLogger("tv_auth")
@@ -90,6 +108,7 @@ TOKEN_EXPIRY_KEYWORDS = ("unauthorized", "auth_error", "not_authorized")
 HTTP_MAX_RETRIES    = 4
 HTTP_BASE_DELAY_SEC = 2.0
 HTTP_MAX_DELAY_SEC  = 120.0
+STARTUP_MIN_TOKEN_TTL_SEC = 10 * 60
 
 # =============================================================================
 # GLOBAL AUTH STATE
@@ -331,13 +350,15 @@ def _resolve_auth_token(lg: logging.Logger | None = None) -> tuple[str, str]:
         cached_cookie = cache.get("TV_COOKIE", "")
         if cached_cookie:
             _tv_cookie = cached_cookie
-        log.info("[AUTH] Using cached token from .tv_token_cache.")
-        return cached_token, "cached_token"
+        if _is_token_reusable_for_startup(cached_token, "cached_token", log):
+            log.info("[AUTH] Using cached token from .tv_token_cache.")
+            return cached_token, "cached_token"
 
     # LỚP 1: Static token từ .env
     if TV_AUTH_TOKEN and TV_AUTH_TOKEN != GUEST_TOKEN:
-        log.info("[AUTH] Using static TV_AUTH_TOKEN from .env.")
-        return TV_AUTH_TOKEN, "static_token"
+        if _is_token_reusable_for_startup(TV_AUTH_TOKEN, "static_token", log):
+            log.info("[AUTH] Using static TV_AUTH_TOKEN from .env.")
+            return TV_AUTH_TOKEN, "static_token"
 
     # LỚP 1.5: Refresh qua session cookie
     current_cookie = _tv_cookie or TV_COOKIE
@@ -408,6 +429,37 @@ def _jwt_expires_in(token: str) -> float:
         return float(payload["exp"]) - time.time()
     except Exception:
         return -1.0
+
+
+def _is_token_reusable_for_startup(
+    token: str,
+    source: str,
+    log: logging.Logger,
+    *,
+    min_remaining_sec: int = STARTUP_MIN_TOKEN_TTL_SEC,
+) -> bool:
+    """
+    Reject clearly expired or nearly-expired tokens at startup.
+
+    This prevents pipeline/checker from declaring the TradingView connection
+    ready with a cached/static token that will fail immediately on the first
+    historical pull.
+    """
+    remaining = _jwt_expires_in(token)
+    if remaining < 0:
+        log.info("[AUTH] Could not decode %s expiry; using token as-is.", source)
+        return True
+    if remaining <= 0:
+        log.warning("[AUTH] Ignoring expired %s (expired %.0fs ago).", source, abs(remaining))
+        return False
+    if remaining < min_remaining_sec:
+        log.info(
+            "[AUTH] Skipping %s because token expires in %.0fs; trying refresh paths.",
+            source,
+            remaining,
+        )
+        return False
+    return True
 
 
 def _check_and_maybe_refresh_token(lg: logging.Logger | None = None) -> None:

@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from datetime import datetime
 
 from _task_lock import acquire, is_locked, release, renew
 
@@ -25,6 +26,9 @@ _HEAVY_JOB_WAIT_SEC = 30 * 60.0
 _LIVE_BATCH_POLL_SEC = 5.0
 _LIVE_BATCH_WAIT_SEC = 3 * 60.0
 _HEARTBEAT_SEC = 15 * 60.0
+_WS_LIVE_BATCH_INTERVAL_MIN = 5.0
+_HISTORICAL_YIELD_BEFORE_BATCH_SEC = 20.0
+_HISTORICAL_HANDOFF_GRACE_SEC = 6.0
 
 
 def acquire_historical_job(
@@ -161,6 +165,63 @@ def wait_for_live_batch_clear(
             last_log = waited
         time.sleep(poll_sec)
     return True
+
+
+def _seconds_until_next_live_boundary(interval_minutes: float = _WS_LIVE_BATCH_INTERVAL_MIN) -> float:
+    """Return seconds until the next ws_live scheduler boundary."""
+    now = datetime.now()
+    elapsed = (now.minute % interval_minutes) * 60 + now.second + now.microsecond / 1_000_000
+    wait = interval_minutes * 60 - elapsed
+    return wait if wait > 5 else interval_minutes * 60
+
+
+def wait_for_historical_slot(
+    owner: str,
+    logger: logging.Logger,
+    *,
+    max_wait_sec: float = _LIVE_BATCH_WAIT_SEC,
+    poll_sec: float = _LIVE_BATCH_POLL_SEC,
+    yield_before_batch_sec: float = _HISTORICAL_YIELD_BEFORE_BATCH_SEC,
+    handoff_grace_sec: float = _HISTORICAL_HANDOFF_GRACE_SEC,
+) -> bool:
+    """
+    Wait for a safe historical-fetch slot while ws_live has top priority.
+
+    Behavior:
+    - If a live batch is active now, wait for it to clear.
+    - If ws_live is running and the next batch boundary is very close, pause
+      briefly so historical jobs do not start a new TV request right before
+      ws_live's next fetch window.
+    """
+    cleared = wait_for_live_batch_clear(
+        owner,
+        logger,
+        max_wait_sec=max_wait_sec,
+        poll_sec=poll_sec,
+    )
+    if not cleared:
+        return False
+
+    if not is_locked(WS_LIVE_RUNTIME_LOCK):
+        return True
+
+    until_boundary = _seconds_until_next_live_boundary()
+    if until_boundary > yield_before_batch_sec:
+        return True
+
+    sleep_sec = until_boundary + handoff_grace_sec
+    logger.info(
+        "[TV_COORD] %s yielding %.0fs for upcoming ws_live batch boundary...",
+        owner,
+        sleep_sec,
+    )
+    time.sleep(sleep_sec)
+    return wait_for_live_batch_clear(
+        owner,
+        logger,
+        max_wait_sec=max_wait_sec,
+        poll_sec=poll_sec,
+    )
 
 
 def sleep_between_historical_requests(tv_symbol: str) -> float:

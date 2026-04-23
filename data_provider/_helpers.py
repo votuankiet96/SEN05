@@ -1,3 +1,18 @@
+"""
+Tap helper dung chung cho pipeline, ws_live va checker.
+
+Nhom chuc nang chinh:
+- logging va console sanitizing de log doc duoc tren Windows terminal
+- validate / normalize OHLCV truoc khi ghi DB
+- retry, sleep, tinh so bar can pull va xu ly khoang trong du lieu
+- safe repull / recompute derived timeframe tu Fact_OHLCV
+- quet "internal gaps" va luu verified market gaps de tranh sua nham luc thi truong dong
+
+Day la noi gom cac quy tac xu ly nho nhung co tac dong lon den chat luong du lieu.
+Khi thay doi nguong, can doc ky vi no anh huong truc tiep den cach he thong phan biet:
+"gap that can sua" va "khoang dong cua binh thuong".
+"""
+
 # =============================================================================
 # data_provider/_helpers.py  —  Shared helpers for data pipeline / ws_live / checker
 # =============================================================================
@@ -117,7 +132,8 @@ from modules.db_connector import (
     insert_staging_batch,  # Ghi DataFrame OHLCV vào bảng Staging (MERGE, chống duplicate)
     run_etl_direct,  # Gọi usp_LoadDirect: chuyển Staging → Fact_OHLCV
 )
-from _tv_coord import sleep_between_historical_requests, wait_for_live_batch_clear
+from _task_lock import acquire, release
+from _tv_coord import sleep_between_historical_requests, wait_for_historical_slot
 
 # ---------------------------------------------------------------------------
 # Tạo logger — ghi log ra cả console lẫn file
@@ -490,6 +506,44 @@ def sleep_for(tv_symbol: str) -> None:
     sleep_between_historical_requests(tv_symbol)
 
 
+def _acquire_short_write_lock(
+    task_name: str,
+    logger: logging.Logger,
+    *,
+    action: str,
+    duration_min: int = 15,
+    wait_timeout_sec: float = 15 * 60.0,
+    poll_sec: float = 5.0,
+) -> bool:
+    """
+    Acquire a short-lived maintenance lock for a write chunk.
+
+    Used by cooperative historical jobs so ws_live is deferred only while a
+    concrete DB write is happening, not for the whole historical session.
+    """
+    start = time.monotonic()
+    last_log = -poll_sec
+    while True:
+        if acquire(task_name, duration_min=duration_min):
+            return True
+
+        waited = time.monotonic() - start
+        if waited >= wait_timeout_sec:
+            logger.error(
+                "  [LOCK TIMEOUT] %s could not acquire %s after %.0fs",
+                action, task_name, waited,
+            )
+            return False
+
+        if waited - last_log >= 60.0:
+            logger.info(
+                "  [LOCK WAIT] %s waiting %.0fs for %s...",
+                action, waited, task_name,
+            )
+            last_log = waited
+        time.sleep(poll_sec)
+
+
 def _validate_ohlcv_df(df, tv_symbol: str, tf_code: str,
                        logger: logging.Logger):
     """
@@ -721,7 +775,8 @@ def save_verified_gaps(windows: set, logger: logging.Logger) -> None:
 def pull_and_store(tv, sym: dict, tf_code: str,
                    n_bars: int, interval,
                    logger: logging.Logger,
-                   skip_etl: bool = False) -> int:
+                   skip_etl: bool = False,
+                   write_lock_name: str | None = None) -> int:
     """
     Kéo n_bars nến OHLCV từ TradingView cho 1 cặp (symbol, timeframe),
     sau đó ghi vào database qua 2 bước: Staging → Fact.
@@ -755,7 +810,7 @@ def pull_and_store(tv, sym: dict, tf_code: str,
 
     # ----- BƯỚC A: Kéo dữ liệu từ TradingView API -----
     # Pull thêm 5 bar dự phòng (n_bars + 5) vì bar cuối sẽ bị bỏ
-    wait_for_live_batch_clear("historical", logger)
+    wait_for_historical_slot("historical", logger)
     try:
         df = tv.get_hist(
             symbol   = tv_symbol,
@@ -808,8 +863,18 @@ def pull_and_store(tv, sym: dict, tf_code: str,
     # insert_staging_batch() tạo temp table → bulk insert → MERGE vào staging
     # Nếu row đã tồn tại (cùng SymbolID + BarTime) → bỏ qua, chỉ insert row mới
     try:
+        if write_lock_name:
+            wait_for_historical_slot("historical-db", logger)
+            if not _acquire_short_write_lock(
+                write_lock_name,
+                logger,
+                action=f"write {tv_symbol} {tf_code}",
+            ):
+                return RESULT_ERROR
         staged = insert_staging_batch(df, symbol_id, staging)
     except DatabaseWriteError as e:
+        if write_lock_name:
+            release(write_lock_name)
         logger.error("  STAGING FAIL — %s %s: %s", tv_symbol, tf_code, e)
         return RESULT_ERROR
 
@@ -830,6 +895,8 @@ def pull_and_store(tv, sym: dict, tf_code: str,
     if skip_etl:
         logger.info("  ○ %s %s: %d staged (ETL deferred to caller)",
                     tv_symbol, tf_code, staged)
+        if write_lock_name:
+            release(write_lock_name)
         return staged
 
     # run_etl_direct() gọi DWH.usp_LoadDirect → chuyển row từ staging sang Fact
@@ -840,7 +907,11 @@ def pull_and_store(tv, sym: dict, tf_code: str,
         logger.error("  ETL FAIL — %s %s: %s — cleaning staging", tv_symbol, tf_code, e)
         try:
             delete_staging_bars(symbol_id, staging)
+            if write_lock_name:
+                release(write_lock_name)
         except Exception as e2:
+            if write_lock_name:
+                release(write_lock_name)
             logger.warning("  Staging cleanup FAIL — %s %s: %s", tv_symbol, tf_code, e2)
         return RESULT_ERROR
 
@@ -857,6 +928,8 @@ def pull_and_store(tv, sym: dict, tf_code: str,
         # Cả staging lẫn Fact đều không có gì mới → đã up to date
         logger.info("  ○ %s %s: 0 new bars (already up to date)",
                     tv_symbol, tf_code)
+    if write_lock_name:
+        release(write_lock_name)
     return etl_inserted
 
 

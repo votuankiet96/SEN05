@@ -1,3 +1,21 @@
+"""
+Bo cap nhat du lieu gan realtime theo kieu batch WebSocket.
+
+File nay KHONG giu mot ket noi WS mo 24/7. Thay vao do, cu moi 5 phut no:
+- mo ket noi TradingView
+- dang ky nhom symbol live
+- nhan vai nen moi nhat
+- dua vao queue / overflow buffer / SQLite spool neu can
+- ghi staging, ETL vao Fact khi he thong cho phep, roi dong ket noi
+
+Nhung diem van hanh quan trong:
+- chi theo doi asset type Indice, Metal, Crypto; FOREX duoc de cho pipeline backfill
+- tach "received watermark" va "committed watermark" de tranh duplicate va theo doi backlog
+- neu checker dang repair, ETL vao Fact se duoc defer de tranh race condition
+- khi queue day, he thong lui dan: RAM buffer -> durable SQLite spool
+- auth co the roi xuong guest mode; day la trang thai can canh bao, khong nen de keo dai
+"""
+
 # =============================================================================
 # data_provider/02_ws_live.py  —  Cập nhật dữ liệu thời gian thực qua WebSocket
 # Phiên bản     : V5 (Batch/Cron mode)
@@ -114,8 +132,12 @@ import pandas as pd  # DataFrame — cấu trúc bảng dữ liệu dùng để 
 import requests  # Gửi HTTP request — dùng để đăng nhập TradingView và gửi tin Telegram
 import websocket  # Thư viện WebSocket client — kết nối và nhận data real-time từ TradingView
 from _helpers import setup_logger, _validate_ohlcv_df  # Hàm khởi tạo logger + validate OHLCV
-from _tg import tg_alert as _tg_alert, tg_send as _tg_send, QUICK_COMMANDS_HINT  # Telegram notifications
-from _tg_bot import start_bot_listener  # Telegram bot command handler (/fix, /status, /pipeline)
+from _telegram import (
+    QUICK_COMMANDS_HINT,
+    start_bot_listener,
+    tg_alert as _tg_alert,
+    tg_send as _tg_send,
+)
 from _task_lock import acquire as _acquire_task_lock, release as _release_task_lock, renew as _renew_task_lock
 from _tv_coord import acquire_live_batch_window, release_live_batch_window
 import _tv_auth  # TradingView auth module dùng chung (token cache, refresh, bootstrap)
@@ -565,10 +587,23 @@ def _spool_flush_to_queue() -> int:
             con.commit()
     if flushed:
         logger.info("[SPOOL] Recovered %d bar(s) from persistent spool.", flushed)
+    with _state_lock:
+        _stats["queue_depth"] = _db_queue.qsize()
     return flushed
 
 
-def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str) -> bool:
+def _safe_spool_count() -> int | None:
+    """Best-effort spool depth snapshot for diagnostics; never raise to callers."""
+    try:
+        with _spool_lock:
+            with sqlite3.connect(_SPOOL_DB) as con:
+                row = con.execute("SELECT COUNT(*) FROM spool").fetchone()
+        return int(row[0]) if row else 0
+    except Exception:
+        return None
+
+
+def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str) -> str:
     """
     Thêm 1 nến vào hàng đợi DB.
     Nếu hàng đợi đầy → chuyển sang overflow buffer.
@@ -579,7 +614,9 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
     try:
         # Thử thêm nến vào hàng đợi DB ngay lập tức
         _db_queue.put_nowait(item)
-        return True
+        with _state_lock:
+            _stats["queue_depth"] = _db_queue.qsize()
+        return "queued"
     except queue.Full:
         # Hàng đợi đầy → chuyển sang overflow buffer
         with _overflow_lock:
@@ -603,7 +640,9 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
                         f"⚠️ Overflow buffer gần đầy: {new_len}/{OVERFLOW_BUFFER_MAX}\n"
                         f"DB worker có thể bị chậm. Kiểm tra kết nối DB."
                     )
-                return True
+                with _state_lock:
+                    _stats["queue_depth"] = _db_queue.qsize()
+                return "buffered"
             else:
                 # Cả queue lẫn overflow RAM đều đầy → ghi vào SQLite spool (durable)
                 try:
@@ -612,7 +651,9 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
                         "[G%d] Queue+overflow full — spooled to disk: %s %s",
                         group_id, tv_symbol, tf_code,
                     )
-                    return True
+                    with _state_lock:
+                        _stats["queue_depth"] = _db_queue.qsize()
+                    return "spooled"
                 except Exception as exc:
                     # SQLite cũng fail → chỉ khi đĩa đầy hoặc quyền ghi bị chặn
                     logger.error(
@@ -628,7 +669,17 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
                     )
                     with _state_lock:
                         _stats["errors"] += 1
-                    return False
+                        _stats["queue_depth"] = _db_queue.qsize()
+                    return "rejected"
+    except Exception as exc:
+        logger.exception(
+            "[G%d] Unexpected enqueue failure — bar DROPPED: %s %s: %s",
+            group_id, tv_symbol, tf_code, exc,
+        )
+        with _state_lock:
+            _stats["errors"] += 1
+            _stats["queue_depth"] = _db_queue.qsize()
+        return "rejected"
 
 
 # =============================================================================
@@ -677,6 +728,8 @@ def _db_worker() -> None:
         # Nếu sau 1 giây queue vẫn rỗng → tiếp tục vòng lặp (không block mãi)
         try:
             item = _db_queue.get(timeout=1.0)
+            with _state_lock:
+                _stats["queue_depth"] = _db_queue.qsize()
         except queue.Empty:
             continue  # Queue rỗng → quay lại đầu vòng lặp
 
@@ -1339,11 +1392,22 @@ class BatchFetcher:
                         # queue/overflow/spool trước khi watermark nhảy lên.
                         # Tránh tình huống watermark advance nhưng bar chưa persist.
                         item = (symbol_id, tf_code, staging_table, tv_symbol, df)
-                        accepted = _enqueue_or_buffer(item, self.group_id, tv_symbol, tf_code)
-                        if not accepted:
+                        enqueue_status = _enqueue_or_buffer(
+                            item, self.group_id, tv_symbol, tf_code
+                        )
+                        if enqueue_status is False or enqueue_status == "rejected":
+                            with _overflow_lock:
+                                overflow_depth = len(_overflow_buf)
+                            spool_depth = _safe_spool_count()
                             logger.error(
-                                "[G%d] %s [%s] queue/spool reject — watermark unchanged",
-                                self.group_id, tv_symbol, tf_code,
+                                "[G%d] %s [%s] queue/spool reject — watermark unchanged "
+                                "(queue=%d overflow=%d spool=%s)",
+                                self.group_id,
+                                tv_symbol,
+                                tf_code,
+                                _db_queue.qsize(),
+                                overflow_depth,
+                                "n/a" if spool_depth is None else spool_depth,
                             )
                             return
                         _set_received_watermark(key, safe_new_bars[-1]["v"][0])
