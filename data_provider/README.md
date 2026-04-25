@@ -8,6 +8,10 @@ Tài liệu này mô tả lại toàn bộ thư mục `data_provider` theo góc 
 - từng file có các mode/chế độ nào
 - các rủi ro vận hành nằm ở đâu và hệ thống đang giảm thiểu chúng như thế nào
 
+Tài liệu bổ sung:
+
+- `RISK_AND_INCIDENT_HANDLING.md`: tài liệu chuyên sâu chỉ tập trung vào các vấn đề, rủi ro và cách hệ thống phản ứng khi sự cố xảy ra.
+
 ## 1. Bức tranh tổng thể
 
 `data_provider` là lớp thu thập, làm sạch, kiểm tra và phục vụ dữ liệu nến OHLCV cho toàn bộ hệ thống.

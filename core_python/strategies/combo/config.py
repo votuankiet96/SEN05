@@ -1,0 +1,649 @@
+# =============================================================================
+# strategies/combo/config.py  —  Combo v2 strategy source-of-truth
+# Version           : 1.0
+# =============================================================================
+# HƯỚNG DẪN QUẢN TRỊ NHANH
+# Đây là file điều chỉnh tham số chiến lược chính — chỉnh ở đây trước tiên.
+#
+# Các thông số quan trọng nhất:
+# - STRATEGY["ktp"]            : hệ số nhân khoảng cách TP (Take Profit)
+# - STRATEGY["min_rr"]         : ngưỡng lọc R:R tối thiểu
+# - STRATEGY["risk_per_trade"] : tỷ lệ rủi ro mỗi lệnh
+# - SYMBOLS[*]["x"]            : breakout buffer theo từng tài sản (4 chỉ số)
+# - SYMBOLS[*]["session_hours_utc"] : lọc giờ trading session
+#
+# Nguyên tắc thực hành:
+# - Ưu tiên điều chỉnh ở đây trước khi đụng vào code logic scanner/backtest.
+# - Mỗi lần chỉnh chỉ 1-2 tham số, ghi lại trước/sau để dễ audit KPI.
+
+# Single source of truth for all Combo strategy settings shared between:
+#   - strategies.combo.logic
+#   - strategies.combo.scanner
+#   - strategies.combo.symbol.*
+#   - strategies.combo.portfolio.*
+#   - notebooks / reports that analyze Combo
+#
+# HOW TO CUSTOMISE:
+#   - Add/remove symbols in SYMBOLS dict
+#   - Adjust x (breakout buffer in price points) per symbol
+#   - Adjust session_hours_utc (list of UTC bar-open hours to scan;
+#     empty list [] = scan all hours)
+#   - Adjust indicator defaults in get_indicator_params()
+# =============================================================================
+from shared.broker import audit_symbol_specs, merge_broker_profile
+
+# =============================================================================
+# 1. STRATEGY IDENTITY (tham số nền của toàn chiến lược)
+# =============================================================================
+STRATEGY = {
+    "name":    "Combo",
+    "version": "v2",
+    "ktp":     2.3,    # TP = kTP × ATR  (default — can be overridden per symbol)
+    "min_rr":  1.25,   # Minimum R:R ratio to pass
+    # ── Backtest & FTMO risk management ───────────────────────────────────
+    "risk_per_trade":       0.005,   # 0.5% equity per trade
+    "ftmo_daily_limit":     0.05,    # 5% daily loss limit
+    "ftmo_max_dd":          0.10,    # 10% max drawdown
+    "trailing_activation":  1.0,     # Activate trailing SL at 1.0 × ATR profit
+    "pending_ttl_bars":     3,       # Pending order TTL in bars
+    "partial_tp_fraction":  0.5,     # Close 50% at fixed TP; trail remaining 50%
+}
+
+
+ACCOUNT_MODES = {
+    "standard": {
+        "label": "Standard",
+        "account_model": "retail",
+        "risk_per_trade": STRATEGY["risk_per_trade"],
+        # Practical defaults for non-prop testing: effectively unbounded by FTMO rules.
+        "daily_loss_limit": 1.0,
+        "max_drawdown_limit": 1.0,
+        "max_drawdown_mode": "fixed_initial",
+        "pending_ttl_bars": STRATEGY["pending_ttl_bars"],
+        "partial_tp_fraction": STRATEGY["partial_tp_fraction"],
+        "trailing_activation": STRATEGY["trailing_activation"],
+    },
+    "ftmo": {
+        "label": "FTMO 2-Step",
+        "account_model": "ftmo_2step",
+        "risk_per_trade": STRATEGY["risk_per_trade"],
+        "daily_loss_limit": STRATEGY["ftmo_daily_limit"],
+        "max_drawdown_limit": STRATEGY["ftmo_max_dd"],
+        "max_drawdown_mode": "fixed_initial",
+        "pending_ttl_bars": STRATEGY["pending_ttl_bars"],
+        "partial_tp_fraction": STRATEGY["partial_tp_fraction"],
+        "trailing_activation": STRATEGY["trailing_activation"],
+    },
+}
+
+
+# =============================================================================
+# 1b. SCAN / BACKTEST DEFAULTS (mặc định chạy hệ thống)
+# =============================================================================
+TIMEFRAME      = 'H4'                     # Primary timeframe for all scans
+DEFAULT_N_BARS = 100                       # Default number of bars to scan
+INDICATOR_COLS = ['ma', 'atr', 'macd_h']   # Required indicator columns after warmup
+
+DEFAULT_COSTS = {
+    "slippage_pts":       2,       # Points slippage at fill
+    "commission_per_lot": 3.5,     # USD per lot per side
+}
+
+DEFAULT_BROKER_PROFILE = "ftmo_2step_mt5"
+
+BROKER_PROFILES = {
+    "ftmo_2step_mt5": {
+        "name": "ftmo_2step_mt5",
+        "label": "FTMO 2-Step MT5",
+        "platform": "MT5",
+        "account_type": "2-Step",
+        "verified": False,
+        "defaults": {
+            "lot_step": 0.01,
+            "spec_verified": False,
+        },
+        "symbols": {
+            "BTCUSD": {"lot_step": 0.001},
+        },
+    },
+    "windsor_prime_mt5": {
+        "name": "windsor_prime_mt5",
+        "label": "Windsor Brokers Prime MT5",
+        "platform": "MT5",
+        "account_type": "Prime",
+        "verified": False,
+        "defaults": {
+            "commission_per_lot": 0.0,
+            "lot_step": 0.01,
+            "spec_verified": False,
+        },
+        "symbols": {
+            "GOLD": {"broker_symbol": "XAUUSD"},
+            "BTCUSD": {"lot_step": 0.001},
+        },
+    },
+}
+
+
+OPTIMIZATION = {
+    "symbol": {
+        "ktp_multipliers": [0.9, 1.0, 1.1],
+        "x_offsets": [-2.0, 0.0, 2.0],
+        "trailing_multipliers": [0.75, 1.0, 1.25],
+        "ma_offsets": [-5, 0, 5],
+        "max_bars": 80000,
+        "score_column": "sharpe",
+    },
+    "portfolio": {
+        "top_k_per_symbol": 5,
+        "score_column": "score",
+    },
+}
+
+
+SCANNER_DEFAULTS = {
+    "timeframe": TIMEFRAME,
+    "n_bars": DEFAULT_N_BARS,
+    "entry_line_bars": 8,
+    "show_rejected": True,
+    "show_ma": True,
+    "show_entry_lines": True,
+}
+
+
+# =============================================================================
+# 2. SYMBOLS — 11 instruments scanned on H4
+#
+#   symbol_id        : must match SymbolID in DWH.dbo.Symbol / config.py
+#   label            : display name for dashboard and Telegram messages
+#   x                : breakout buffer in price points
+#                      entry = bar_high + x  (BUY)  /  bar_low - x  (SELL)
+#                      (*) = placeholder — will be optimized via walk-forward
+#   session_hours_utc: list of H4 bar-start UTC hours to scan for signals
+#                      ([] = no filter, scan all hours)
+# =============================================================================
+SYMBOLS = {
+    # ── US Markets ───────────────────────────────────────────────────────────
+    "US30": {
+        "symbol_id":         10,
+        "label":             "US30 (Dow Jones)",
+        "x":                 10.0,
+        "session_hours_utc": [],
+        "group":             "US",
+        "contract_value":    1.0,
+        "point_size":        1.0,
+        "spread_pts":        2.0,
+        "commission_per_lot": 3.5,
+        "slippage_pts":      0.5,
+        "min_lot_size":      0.01,
+        "max_lot_size":      50.0,
+        "swap_long_per_lot_per_day":  -3.5,   # verified from broker
+        "swap_short_per_lot_per_day": 1.2,
+    },
+    "US500": {
+        "symbol_id":         8,
+        "label":             "US500 (S&P 500)",
+        "x":                 1.0,
+        "session_hours_utc": [],
+        "group":             "US",
+        "contract_value":    1.0,
+        "point_size":        1.0,
+        "spread_pts":        0.4,
+        "commission_per_lot": 3.5,
+        "slippage_pts":      0.1,
+        "min_lot_size":      0.01,
+        "max_lot_size":      50.0,
+        "swap_long_per_lot_per_day":  0.0,   # TODO: verify from broker
+        "swap_short_per_lot_per_day": 0.0,
+    },
+    "US100": {
+        "symbol_id":         9,
+        "label":             "US100 (NASDAQ 100)",
+        "x":                 5.0,
+        "session_hours_utc": [],
+        "group":             "US",
+        "contract_value":    1.0,
+        "point_size":        1.0,
+        "spread_pts":        1.5,
+        "commission_per_lot": 3.5,
+        "slippage_pts":      0.3,
+        "min_lot_size":      0.01,
+        "max_lot_size":      50.0,
+        "swap_long_per_lot_per_day":  0.0,   # TODO: verify from broker
+        "swap_short_per_lot_per_day": 0.0,
+    },
+    # ── European Markets ─────────────────────────────────────────────────────
+    "DE40": {
+        "symbol_id":         3,
+        "label":             "DE40 (DAX 40)",
+        "x":                 5.0,
+        "session_hours_utc": [],
+        "group":             "EU",
+        "contract_value":    1.0,
+        "point_size":        1.0,
+        "spread_pts":        1.5,
+        "commission_per_lot": 3.5,
+        "slippage_pts":      0.5,
+        "min_lot_size":      0.01,
+        "max_lot_size":      50.0,
+        "swap_long_per_lot_per_day":  0.0,   # TODO: verify from broker
+        "swap_short_per_lot_per_day": 0.0,
+    },
+    "UK100": {
+        "symbol_id":         7,
+        "label":             "UK100 (FTSE 100)",
+        "x":                 5.0,
+        "session_hours_utc": [],
+        "group":             "EU",
+        "contract_value":    1.0,
+        "point_size":        1.0,
+        "spread_pts":        1.5,
+        "commission_per_lot": 3.5,
+        "slippage_pts":      0.5,
+        "min_lot_size":      0.01,
+        "max_lot_size":      50.0,
+        "swap_long_per_lot_per_day":  0.0,   # TODO: verify from broker
+        "swap_short_per_lot_per_day": 0.0,
+    },
+    "FR40": {
+        "symbol_id":         2,
+        "label":             "FR40 (CAC 40)",
+        "x":                 5.0,             # (*) placeholder — run optimizer
+        "session_hours_utc": [],
+        "group":             "EU",
+        "contract_value":    1.0,
+        "point_size":        1.0,
+        "spread_pts":        2.0,
+        "commission_per_lot": 3.5,
+        "slippage_pts":      0.5,
+        "min_lot_size":      0.01,
+        "max_lot_size":      50.0,
+        "swap_long_per_lot_per_day":  0.0,   # TODO: verify from broker
+        "swap_short_per_lot_per_day": 0.0,
+    },
+    "SP35": {
+        "symbol_id":         6,
+        "label":             "SP35 (IBEX 35)",
+        "x":                 5.0,             # (*) placeholder — run optimizer
+        "session_hours_utc": [],
+        "group":             "EU",
+        "contract_value":    1.0,
+        "point_size":        1.0,
+        "spread_pts":        8.0,
+        "commission_per_lot": 3.5,
+        "slippage_pts":      1.0,
+        "min_lot_size":      0.01,
+        "max_lot_size":      50.0,
+        "swap_long_per_lot_per_day":  0.0,   # TODO: verify from broker
+        "swap_short_per_lot_per_day": 0.0,
+    },
+    # ── Asian Markets ────────────────────────────────────────────────────────
+    "HK50": {
+        "symbol_id":         4,
+        "label":             "HK50 (Hang Seng 50)",
+        "x":                 15.0,
+        "session_hours_utc": [],
+        "group":             "ASIA",
+        "contract_value":    1.0,
+        "point_size":        1.0,
+        "spread_pts":        5.0,
+        "commission_per_lot": 3.5,
+        "slippage_pts":      1.0,
+        "min_lot_size":      0.01,
+        "max_lot_size":      20.0,
+        "swap_long_per_lot_per_day":  -4.2,  # verified from broker
+        "swap_short_per_lot_per_day": 1.5,
+    },
+    "J225": {
+        "symbol_id":         5,
+        "label":             "J225 (Nikkei 225)",
+        "x":                 15.0,
+        "session_hours_utc": [],
+        "group":             "ASIA",
+        "contract_value":    1.0,
+        "point_size":        1.0,
+        "spread_pts":        8.0,
+        "commission_per_lot": 3.5,
+        "slippage_pts":      1.5,
+        "min_lot_size":      0.01,
+        "max_lot_size":      20.0,
+        "swap_long_per_lot_per_day":  0.8,   # verified from broker
+        "swap_short_per_lot_per_day": -2.1,
+    },
+    # ── Metals ───────────────────────────────────────────────────────────────
+    "GOLD": {
+        "symbol_id":         56,
+        "label":             "GOLD (XAU/USD)",
+        "x":                 0.5,             # (*) placeholder — run optimizer
+        "session_hours_utc": [],
+        "group":             "METAL",
+        "contract_value":    1.0,
+        "point_size":        1.0,
+        "spread_pts":        0.3,
+        "commission_per_lot": 3.5,
+        "slippage_pts":      0.1,
+        "min_lot_size":      0.01,
+        "max_lot_size":      20.0,
+        "swap_long_per_lot_per_day":  0.0,   # TODO: verify from broker
+        "swap_short_per_lot_per_day": 0.0,
+    },
+    # ── Crypto ───────────────────────────────────────────────────────────────
+    "BTCUSD": {
+        "symbol_id":         81,
+        "label":             "BTCUSD (Bitcoin)",
+        "x":                 50.0,            # (*) placeholder — run optimizer
+        "session_hours_utc": [],
+        "group":             "CRYPTO",
+        "contract_value":    1.0,
+        "point_size":        1.0,
+        "spread_pts":        5.0,
+        "commission_per_lot": 3.5,
+        "slippage_pts":      2.0,
+        "min_lot_size":      0.001,           # BTC micro-lots
+        "max_lot_size":      5.0,
+        "swap_long_per_lot_per_day":  0.0,   # TODO: verify from broker (highly variable)
+        "swap_short_per_lot_per_day": 0.0,
+    },
+}
+
+
+# =============================================================================
+# 3. INDICATOR DEFAULTS
+#    get_indicator_params() returns a dict consumed by add_indicators(),
+#    scan_signals(), and the dashboard sidebar defaults.
+#    Dashboard sidebar sliders let users override these at runtime.
+# =============================================================================
+def get_indicator_params() -> dict:
+    """
+    Trả về bộ tham số chỉ báo mặc định cho Combo v2.
+
+    Đây là nguồn tham số mặc định cho scanner, dashboard và backtest.
+    Khi cần tinh chỉnh độ nhạy tín hiệu, chỉnh tại đây trước.
+    """
+    return {
+        # Trend MA (Simple Moving Average)
+        "MA_PERIOD":    20,
+
+        # MACD (Exponential Moving Averages)
+        "MACD_FAST":    5,
+        "MACD_SLOW":    25,
+        "MACD_SIGNAL":  5,
+
+        # ATR (Average True Range) — used for TP distance and R:R calculation
+        "ATR_PERIOD":   5,
+
+        # TP = KTP × ATR above/below entry price  — single source: STRATEGY dict
+        "KTP":          STRATEGY["ktp"],
+
+        # Minimum Risk:Reward ratio for a signal to "pass" and be alerted
+        "MIN_RR":       STRATEGY["min_rr"],
+    }
+
+
+def get_broker_profile(profile_key: str | None = None) -> dict:
+    """Resolve the broker profile used to translate strategy config to execution specs."""
+    key = profile_key or DEFAULT_BROKER_PROFILE
+    if key not in BROKER_PROFILES:
+        raise KeyError(f"Unknown broker profile '{key}'. Available: {list(BROKER_PROFILES)}")
+    return BROKER_PROFILES[key]
+
+
+def get_account_settings(mode: str = "standard", overrides: dict | None = None) -> dict:
+    """Resolve account-mode specific capital/risk controls.
+
+    Architecture note
+    -----------------
+    We model FTMO vs standard as configuration, not as separate engines. This
+    keeps execution logic single-sourced in `shared.execution`.
+    """
+    if mode not in ACCOUNT_MODES:
+        raise KeyError(f"Unknown account mode '{mode}'. Available: {list(ACCOUNT_MODES)}")
+
+    resolved = {
+        **STRATEGY,
+        **ACCOUNT_MODES[mode],
+    }
+    resolved["daily_loss_limit"] = resolved.get(
+        "daily_loss_limit",
+        resolved.get("ftmo_daily_limit", STRATEGY["ftmo_daily_limit"]),
+    )
+    resolved["max_drawdown_limit"] = resolved.get(
+        "max_drawdown_limit",
+        resolved.get("ftmo_max_dd", STRATEGY["ftmo_max_dd"]),
+    )
+    resolved["max_drawdown_mode"] = resolved.get("max_drawdown_mode", "fixed_initial")
+    # Keep legacy keys so old code paths still work.
+    resolved["ftmo_daily_limit"] = resolved["daily_loss_limit"]
+    resolved["ftmo_max_dd"] = resolved["max_drawdown_limit"]
+
+    if overrides:
+        resolved.update(overrides)
+        if "daily_loss_limit" in overrides:
+            resolved["ftmo_daily_limit"] = resolved["daily_loss_limit"]
+        if "max_drawdown_limit" in overrides:
+            resolved["ftmo_max_dd"] = resolved["max_drawdown_limit"]
+    return resolved
+
+
+# =============================================================================
+# 4. PER-SYMBOL HELPERS
+# =============================================================================
+def get_symbol_ktp(sym_key: str) -> float:
+    """Lấy kTP theo symbol: ưu tiên giá trị override của symbol, nếu không có thì dùng global."""
+    return SYMBOLS.get(sym_key, {}).get('ktp', STRATEGY['ktp'])
+
+
+def get_symbol_config(sym_key: str, broker_profile: str | None = None) -> dict:
+    """Return the raw symbol config merged with default cost fields."""
+    if sym_key not in SYMBOLS:
+        raise KeyError(f"Symbol '{sym_key}' not found. Available: {list(SYMBOLS)}")
+
+    sym = SYMBOLS[sym_key]
+    merged = {
+        **DEFAULT_COSTS,
+        **sym,
+    }
+    return merge_broker_profile(
+        merged,
+        get_broker_profile(broker_profile),
+        symbol_key=sym_key,
+    )
+
+
+def get_symbol_params(sym_key: str, broker_profile: str | None = None) -> dict:
+    """
+    Trả về bộ tham số tối ưu hoá đầy đủ cho một symbol.
+
+    Quy tắc ưu tiên:
+    - Nếu symbol có override riêng thì dùng override.
+    - Nếu không, fallback về STRATEGY hoặc indicator defaults.
+
+    Keys returned:
+        ktp                 — hệ số TP theo ATR
+        x                   — breakout buffer theo point
+        trailing_activation — ngưỡng kích hoạt trailing
+        ma_period           — chu kỳ MA xu hướng
+        swap_long_per_lot_per_day  — phí/credit swap cho lệnh LONG theo mỗi lot mỗi ngày
+        swap_short_per_lot_per_day — phí/credit swap cho lệnh SHORT theo mỗi lot mỗi ngày
+    """
+    sym = get_symbol_config(sym_key, broker_profile=broker_profile)
+    p   = get_indicator_params()
+    return {
+        'symbol_id':           sym['symbol_id'],
+        'label':               sym['label'],
+        'group':               sym.get('group', ''),
+        'broker_symbol':       sym.get('broker_symbol', sym_key),
+        'broker_profile':      sym.get('broker_profile', ''),
+        'broker_label':        sym.get('broker_label', ''),
+        'broker_platform':     sym.get('broker_platform', ''),
+        'spec_verified':       sym.get('spec_verified', False),
+        'ktp':                 sym.get('ktp',                STRATEGY['ktp']),
+        'x':                   sym['x'],
+        'trailing_activation': sym.get('trailing_activation', STRATEGY['trailing_activation']),
+        'ma_period':           sym.get('ma_period',           p['MA_PERIOD']),
+        'session_hours_utc':   sym.get('session_hours_utc',  []),
+        'contract_value':      sym.get('contract_value', 1.0),
+        'point_size':          sym.get('point_size', 1.0),
+        'spread_pts':          sym.get('spread_pts', 0.0),
+        'commission_per_lot':  sym.get('commission_per_lot', DEFAULT_COSTS['commission_per_lot']),
+        'slippage_pts':        sym.get('slippage_pts', DEFAULT_COSTS['slippage_pts']),
+        'min_lot_size':        sym.get('min_lot_size', 0.01),
+        'max_lot_size':        sym.get('max_lot_size', 100.0),
+        'lot_step':            sym.get('lot_step', sym.get('min_lot_size', 0.01)),
+        'swap_long_per_lot_per_day':  sym.get('swap_long_per_lot_per_day', 0.0),
+        'swap_short_per_lot_per_day': sym.get('swap_short_per_lot_per_day', 0.0),
+    }
+
+
+def get_cost_settings(
+    sym_key: str,
+    overrides: dict | None = None,
+    broker_profile: str | None = None,
+) -> dict:
+    """Resolve execution costs for one symbol.
+
+    This isolates broker-specific costs from strategy logic so signal rules do
+    not need to know anything about commission or slippage.
+    """
+    sym = get_symbol_config(sym_key, broker_profile=broker_profile)
+    costs = {
+        **DEFAULT_COSTS,
+        "slippage_pts": sym.get("slippage_pts", DEFAULT_COSTS["slippage_pts"]),
+        "commission_per_lot": sym.get("commission_per_lot", DEFAULT_COSTS["commission_per_lot"]),
+    }
+    if overrides:
+        costs.update(overrides)
+    return costs
+
+
+def get_symbol_search_space(
+    sym_key: str,
+    overrides: dict | None = None,
+    broker_profile: str | None = None,
+) -> dict:
+    """Build a compact per-symbol search space around the current config.
+
+    Search spaces are intentionally local around the current config to reduce the
+    chance of optimizer explosion and to favor regime-specific tuning over blind
+    brute force.
+    """
+    current = get_symbol_params(sym_key, broker_profile=broker_profile)
+    base = OPTIMIZATION["symbol"]
+
+    search = {
+        "ktp": sorted({
+            round(current["ktp"] * m, 2)
+            for m in base["ktp_multipliers"]
+        }),
+        "x": sorted({
+            round(max(0.1, current["x"] + offset), 2)
+            for offset in base["x_offsets"]
+        }),
+        "trailing_activation": sorted({
+            round(max(0.1, current["trailing_activation"] * m), 2)
+            for m in base["trailing_multipliers"]
+        }),
+        "ma_period": sorted({
+            max(5, int(current["ma_period"] + offset))
+            for offset in base["ma_offsets"]
+        }),
+    }
+    if overrides:
+        search.update(overrides)
+    return search
+
+
+# =============================================================================
+# 5. SUMMARY — human-readable overview of current config
+# =============================================================================
+def summary() -> str:
+    """Xuất chuỗi tóm tắt cấu hình hiện tại để kiểm tra nhanh trước khi chạy scan/backtest."""
+    p = get_indicator_params()
+    lines = [
+        f"Strategy     : {STRATEGY['name']} {STRATEGY['version']}",
+        f"Symbols      : {', '.join(SYMBOLS.keys())}",
+        f"MA period    : {p['MA_PERIOD']}",
+        f"MACD         : ({p['MACD_FAST']}, {p['MACD_SLOW']}, {p['MACD_SIGNAL']})",
+        f"ATR period   : {p['ATR_PERIOD']}",
+        f"kTP          : {p['KTP']}",
+        f"Min R:R      : {p['MIN_RR']}",
+        f"Account modes : {', '.join(ACCOUNT_MODES.keys())}",
+        f"Broker profiles: {', '.join(BROKER_PROFILES.keys())}",
+        f"Default broker : {DEFAULT_BROKER_PROFILE}",
+    ]
+    return "\n".join(lines)
+
+
+# =============================================================================
+# 6. CONFIG AUDIT — báo cáo các giá trị placeholder cần điền
+# =============================================================================
+def validate_config(broker_profile: str | None = None) -> dict:
+    """Kiểm tra config và báo cáo các trường chưa được điền đầy đủ.
+
+    Dùng trước khi chạy backtest thật để tránh kết quả sai vì
+    placeholder (swap=0, x quá nhỏ/lớn, lot bounds không hợp lệ).
+
+    Returns
+    -------
+    dict gồm:
+    - warnings : list[str] — các cảnh báo cần xem xét nhưng không chặn chạy
+    - errors   : list[str] — các lỗi nghiêm trọng cần sửa trước khi tin kết quả
+    - ok       : bool — True nếu không có errors
+    """
+    warnings: list[str] = []
+    errors:   list[str] = []
+
+    merged_symbols = {
+        sym_key: get_symbol_config(sym_key, broker_profile=broker_profile)
+        for sym_key in SYMBOLS
+    }
+    broker_audit = audit_symbol_specs(merged_symbols)
+    warnings.extend(broker_audit["warnings"])
+    errors.extend(broker_audit["errors"])
+
+    for sym_key, sym in merged_symbols.items():
+        # ── Swap values ─────────────────────────────────────────────────────
+        swap_long  = sym.get("swap_long_per_lot_per_day", 0.0)
+        swap_short = sym.get("swap_short_per_lot_per_day", 0.0)
+        if swap_long == 0.0 and swap_short == 0.0:
+            # Crypto (BTCUSD) có thể thực sự = 0; index thì không
+            if sym.get("group") in ("US", "EU", "ASIA", "METAL"):
+                warnings.append(
+                    f"{sym_key}: swap_long/short đều = 0.0 — "
+                    "cần verify từ broker (backtest sẽ bỏ qua swap cost)."
+                )
+
+        # ── Lot size bounds ─────────────────────────────────────────────────
+        min_lot = sym.get("min_lot_size")
+        max_lot = sym.get("max_lot_size")
+        if min_lot is None:
+            warnings.append(f"{sym_key}: thiếu min_lot_size — sẽ dùng default 0.01.")
+        if max_lot is None:
+            warnings.append(f"{sym_key}: thiếu max_lot_size — sẽ dùng default 100.0.")
+        if min_lot and max_lot and min_lot >= max_lot:
+            errors.append(
+                f"{sym_key}: min_lot_size ({min_lot}) >= max_lot_size ({max_lot})."
+            )
+        lot_step = sym.get("lot_step")
+        if lot_step and min_lot and lot_step > max_lot:
+            errors.append(
+                f"{sym_key}: lot_step ({lot_step}) > max_lot_size ({max_lot})."
+            )
+
+        # ── x (breakout buffer) ─────────────────────────────────────────────
+        x = sym.get("x", 0)
+        if x <= 0:
+            errors.append(f"{sym_key}: x = {x} — phải > 0 để tạo pending order hợp lệ.")
+
+        # ── contract_value ───────────────────────────────────────────────────
+        cv = sym.get("contract_value", 0)
+        if cv <= 0:
+            errors.append(
+                f"{sym_key}: contract_value = {cv} — lot sizing sẽ bị vô hiệu."
+            )
+
+    return {
+        "warnings": warnings,
+        "errors":   errors,
+        "ok":       len(errors) == 0,
+    }

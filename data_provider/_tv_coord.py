@@ -11,11 +11,17 @@ allowing `01_data_pipeline.py` and `04_checker.py` to run safely:
 from __future__ import annotations
 
 import logging
+import os
+import socket
 import threading
 import time
+import uuid
+from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
-from _task_lock import acquire, is_locked, release, renew
+from _task_lock import acquire, is_locked, release
+from modules.db_connector import get_connection
 
 TV_HISTORICAL_JOB_LOCK = "tv_historical_job"
 TV_LIVE_BATCH_LOCK = "tv_live_batch"
@@ -29,6 +35,272 @@ _HEARTBEAT_SEC = 15 * 60.0
 _WS_LIVE_BATCH_INTERVAL_MIN = 5.0
 _HISTORICAL_YIELD_BEFORE_BATCH_SEC = 20.0
 _HISTORICAL_HANDOFF_GRACE_SEC = 6.0
+_HISTORICAL_HANDOFF_REQUEST_AFTER_SEC = 15.0
+
+
+class HistoricalJobHandoffRequested(RuntimeError):
+    """Raised when the current historical job should yield to a newer run."""
+
+
+@dataclass
+class HistoricalJobLease:
+    stop_event: threading.Event
+    owner: str
+    run_id: str
+    owner_token: str
+    released: bool = False
+
+
+_LOCAL_HISTORICAL_LEASE: HistoricalJobLease | None = None
+
+
+def _serialize_historical_meta(meta: dict[str, str]) -> str:
+    ordered_keys = [
+        "run",
+        "owner",
+        "host",
+        "pid",
+        "heartbeat",
+        "handoff_run",
+        "handoff_owner",
+        "handoff_at",
+    ]
+    seen: set[str] = set()
+    parts: list[str] = []
+    for key in ordered_keys:
+        value = meta.get(key)
+        if value:
+            parts.append(f"{key}={value}")
+            seen.add(key)
+    for key in sorted(meta):
+        if key in seen:
+            continue
+        value = meta.get(key)
+        if value:
+            parts.append(f"{key}={value}")
+    return ";".join(parts)
+
+
+def _format_historical_payload(
+    owner: str,
+    run_id: str,
+    *,
+    handoff_run: str | None = None,
+    handoff_owner: str | None = None,
+    handoff_at: str | None = None,
+) -> str:
+    timestamp = datetime.utcnow().isoformat(timespec="seconds")
+    meta = {
+        "run": run_id,
+        "owner": owner,
+        "host": socket.gethostname(),
+        "pid": str(os.getpid()),
+        "heartbeat": timestamp,
+    }
+    if handoff_run:
+        meta["handoff_run"] = handoff_run
+    if handoff_owner:
+        meta["handoff_owner"] = handoff_owner
+    if handoff_at:
+        meta["handoff_at"] = handoff_at
+    return _serialize_historical_meta(meta)
+
+
+def _parse_historical_payload(payload: str | None) -> dict[str, str]:
+    if not payload:
+        return {}
+    parts: dict[str, str] = {}
+    for item in payload.split(";"):
+        if not item or "=" not in item:
+            continue
+        key, value = item.split("=", 1)
+        parts[key.strip()] = value.strip()
+    return parts
+
+
+def _is_pid_alive(pid_text: str | None, host: str | None) -> bool:
+    if not pid_text:
+        return True
+    if host and host.lower() != socket.gethostname().lower():
+        return True
+    try:
+        pid = int(pid_text)
+    except (TypeError, ValueError):
+        return True
+
+    if os.name == "nt":
+        try:
+            import ctypes
+
+            kernel32 = ctypes.windll.kernel32
+            handle = kernel32.OpenProcess(0x1000, False, pid)
+            if handle:
+                kernel32.CloseHandle(handle)
+                return True
+            return False
+        except Exception:
+            return True
+
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    return True
+
+
+def _fetch_historical_lock_row() -> dict[str, Any] | None:
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT StartedAt, ExpiresAt, Payload
+            FROM SEN.ActiveTask
+            WHERE TaskName = ?
+            """,
+            (TV_HISTORICAL_JOB_LOCK,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return {
+            "started_at": row[0],
+            "expires_at": row[1],
+            "payload": row[2],
+        }
+    except Exception:
+        return None
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def _insert_historical_lock(duration_min: int, payload: str) -> bool:
+    return acquire(TV_HISTORICAL_JOB_LOCK, duration_min=duration_min, payload=payload)
+
+
+def _renew_historical_lock(duration_min: int, owner_token: str, payload: str) -> bool:
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            UPDATE SEN.ActiveTask
+            SET ExpiresAt = DATEADD(minute, ?, SYSUTCDATETIME()),
+                Payload = ?
+            WHERE TaskName = ? AND ExpiresAt > SYSUTCDATETIME()
+              AND Payload LIKE ?
+            """,
+            (duration_min, payload, TV_HISTORICAL_JOB_LOCK, f"{owner_token}%"),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception:
+        return False
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def _release_historical_lock(owner_token: str) -> bool:
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM SEN.ActiveTask WHERE TaskName = ? AND Payload LIKE ?",
+            (TV_HISTORICAL_JOB_LOCK, f"{owner_token}%"),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception:
+        return False
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def _request_historical_handoff(
+    current_meta: dict[str, str],
+    requester_owner: str,
+    requester_run_id: str,
+) -> bool:
+    current_run = current_meta.get("run")
+    if not current_run:
+        return False
+    if current_meta.get("handoff_run") == requester_run_id:
+        return True
+
+    merged = dict(current_meta)
+    merged["handoff_run"] = requester_run_id
+    merged["handoff_owner"] = requester_owner
+    merged["handoff_at"] = datetime.utcnow().isoformat(timespec="seconds")
+    payload = _serialize_historical_meta(merged)
+
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            UPDATE SEN.ActiveTask
+            SET Payload = ?
+            WHERE TaskName = ? AND Payload LIKE ?
+            """,
+            (payload, TV_HISTORICAL_JOB_LOCK, f"run={current_run};%"),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception:
+        return False
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def _checkpoint_historical_handoff(owner: str, logger: logging.Logger) -> None:
+    global _LOCAL_HISTORICAL_LEASE
+
+    lease = _LOCAL_HISTORICAL_LEASE
+    if lease is None:
+        return
+
+    lock_row = _fetch_historical_lock_row()
+    if not lock_row:
+        lease.stop_event.set()
+        logger.warning(
+            "[TV_COORD] %s lost %s lock unexpectedly and will yield.",
+            owner,
+            TV_HISTORICAL_JOB_LOCK,
+        )
+        raise HistoricalJobHandoffRequested("historical lock disappeared")
+
+    meta = _parse_historical_payload(lock_row.get("payload"))
+    if meta.get("run") != lease.run_id:
+        lease.stop_event.set()
+        logger.warning(
+            "[TV_COORD] %s no longer owns %s lock and will yield.",
+            owner,
+            TV_HISTORICAL_JOB_LOCK,
+        )
+        raise HistoricalJobHandoffRequested("historical lock ownership changed")
+
+    handoff_run = meta.get("handoff_run")
+    if handoff_run and handoff_run != lease.run_id:
+        requester = meta.get("handoff_owner", "newer job")
+        lease.stop_event.set()
+        logger.info(
+            "[TV_COORD] %s yielding %s lock to newer %s run=%s at a safe checkpoint.",
+            owner,
+            TV_HISTORICAL_JOB_LOCK,
+            requester,
+            handoff_run,
+        )
+        raise HistoricalJobHandoffRequested(
+            f"yielding to newer historical job: {requester}/{handoff_run}"
+        )
 
 
 def acquire_historical_job(
@@ -38,7 +310,7 @@ def acquire_historical_job(
     duration_min: int = 240,
     wait_timeout_sec: float = _HEAVY_JOB_WAIT_SEC,
     poll_sec: float = _HEAVY_JOB_POLL_SEC,
-) -> threading.Event | None:
+) -> HistoricalJobLease | None:
     """
     Acquire the singleton lock for heavy TradingView history pulls.
 
@@ -47,13 +319,37 @@ def acquire_historical_job(
     """
     start = time.monotonic()
     last_log = -poll_sec
+    handoff_requested = False
+    run_id = uuid.uuid4().hex[:12]
+    owner_token = f"run={run_id};"
     while True:
-        if acquire(TV_HISTORICAL_JOB_LOCK, duration_min=duration_min):
-            stop = threading.Event()
+        payload = _format_historical_payload(owner, run_id)
+        if _insert_historical_lock(duration_min=duration_min, payload=payload):
+            global _LOCAL_HISTORICAL_LEASE
+            lease = HistoricalJobLease(
+                stop_event=threading.Event(),
+                owner=owner,
+                run_id=run_id,
+                owner_token=owner_token,
+            )
+            _LOCAL_HISTORICAL_LEASE = lease
 
             def _heartbeat() -> None:
-                while not stop.wait(_HEARTBEAT_SEC):
-                    if not renew(TV_HISTORICAL_JOB_LOCK, duration_min=duration_min):
+                while not lease.stop_event.wait(_HEARTBEAT_SEC):
+                    lock_row = _fetch_historical_lock_row()
+                    meta = _parse_historical_payload(lock_row.get("payload")) if lock_row else {}
+                    heartbeat_payload = _format_historical_payload(
+                        owner,
+                        run_id,
+                        handoff_run=meta.get("handoff_run"),
+                        handoff_owner=meta.get("handoff_owner"),
+                        handoff_at=meta.get("handoff_at"),
+                    )
+                    if not _renew_historical_lock(
+                        duration_min=duration_min,
+                        owner_token=owner_token,
+                        payload=heartbeat_payload,
+                    ):
                         logger.warning(
                             "[TV_COORD] %s could not renew %s lock.",
                             owner,
@@ -70,7 +366,39 @@ def acquire_historical_job(
                 owner,
                 TV_HISTORICAL_JOB_LOCK,
             )
-            return stop
+            return lease
+
+        lock_row = _fetch_historical_lock_row()
+        if lock_row:
+            meta = _parse_historical_payload(lock_row.get("payload"))
+            stale_run = meta.get("run")
+            if stale_run and not _is_pid_alive(meta.get("pid"), meta.get("host")):
+                stale_owner = meta.get("owner", "unknown")
+                logger.warning(
+                    "[TV_COORD] %s detected stale %s lock from %s pid=%s run=%s and is reclaiming it.",
+                    owner,
+                    TV_HISTORICAL_JOB_LOCK,
+                    stale_owner,
+                    meta.get("pid", "?"),
+                    stale_run,
+                )
+                _release_historical_lock(f"run={stale_run};")
+                time.sleep(1.0)
+                continue
+            waited = time.monotonic() - start
+            if (
+                stale_run
+                and waited >= _HISTORICAL_HANDOFF_REQUEST_AFTER_SEC
+                and not handoff_requested
+            ):
+                if _request_historical_handoff(meta, owner, run_id):
+                    logger.info(
+                        "[TV_COORD] %s requested a safe handoff from %s run=%s.",
+                        owner,
+                        meta.get("owner", "existing"),
+                        stale_run,
+                    )
+                    handoff_requested = True
 
         waited = time.monotonic() - start
         if waited >= wait_timeout_sec:
@@ -93,17 +421,29 @@ def acquire_historical_job(
 
 
 def release_historical_job(
-    stop_event: threading.Event | None,
+    lease: HistoricalJobLease | None,
     owner: str,
     logger: logging.Logger,
 ) -> None:
     """Release the singleton historical-job lock."""
-    if stop_event is not None and stop_event.is_set():
+    global _LOCAL_HISTORICAL_LEASE
+    if lease is not None and lease.released:
         return
-    if stop_event is not None:
-        stop_event.set()
-    release(TV_HISTORICAL_JOB_LOCK)
-    logger.info("[TV_COORD] %s released %s lock.", owner, TV_HISTORICAL_JOB_LOCK)
+    if lease is not None:
+        lease.stop_event.set()
+    released = _release_historical_lock(lease.owner_token) if lease is not None else False
+    if _LOCAL_HISTORICAL_LEASE is lease:
+        _LOCAL_HISTORICAL_LEASE = None
+    if lease is not None:
+        lease.released = True
+    if released:
+        logger.info("[TV_COORD] %s released %s lock.", owner, TV_HISTORICAL_JOB_LOCK)
+    else:
+        logger.info(
+            "[TV_COORD] %s left %s lock untouched because it had already been handed off or released.",
+            owner,
+            TV_HISTORICAL_JOB_LOCK,
+        )
 
 
 def acquire_live_batch_window(
@@ -145,9 +485,11 @@ def wait_for_live_batch_clear(
       True  -> live batch cleared before timeout
       False -> timeout reached; caller may continue cautiously
     """
+    _checkpoint_historical_handoff(owner, logger)
     start = time.monotonic()
     last_log = -poll_sec
     while is_locked(TV_LIVE_BATCH_LOCK):
+        _checkpoint_historical_handoff(owner, logger)
         waited = time.monotonic() - start
         if waited >= max_wait_sec:
             logger.warning(
@@ -231,8 +573,10 @@ def sleep_between_historical_requests(tv_symbol: str) -> float:
     When ws_live is active 24/7, add a small extra delay so heavy jobs yield
     bandwidth to the live updater instead of hammering TradingView.
     """
+    _checkpoint_historical_handoff("historical", logging.getLogger(__name__))
     base = 10.0 if tv_symbol == "GOLD" else 5.0
     if is_locked(WS_LIVE_RUNTIME_LOCK):
         base += 2.0 if tv_symbol == "GOLD" else 1.0
     time.sleep(base)
+    _checkpoint_historical_handoff("historical", logging.getLogger(__name__))
     return base

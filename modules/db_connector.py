@@ -20,7 +20,15 @@ import time
 
 import pyodbc
 
-from config import SQL_DATABASE, SQL_DRIVER, SQL_PWD, SQL_SERVER, SQL_UID
+from config import (
+    SQL_DATABASE,
+    SQL_DRIVER,
+    SQL_ENCRYPT,
+    SQL_PWD,
+    SQL_SERVER,
+    SQL_TRUST_SERVER_CERT,
+    SQL_UID,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +47,8 @@ def _build_conn_str() -> str:
         f"DRIVER={{{SQL_DRIVER}}};"
         f"SERVER={SQL_SERVER};"
         f"DATABASE={SQL_DATABASE};"
+        f"Encrypt={SQL_ENCRYPT};"
+        f"TrustServerCertificate={SQL_TRUST_SERVER_CERT};"
     )
     if SQL_UID and SQL_PWD:
         return base + f"UID={SQL_UID};PWD={SQL_PWD};"

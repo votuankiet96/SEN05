@@ -113,6 +113,173 @@ def calc_obv(df):
     return (sign * df["Volume"]).cumsum()
 
 
+def _calc_wma(s: pd.Series, period: int) -> pd.Series:
+    """Weighted moving average compatible with Pine ta.wma() directionally."""
+    period = max(1, int(period))
+    weights = np.arange(1, period + 1, dtype=float)
+    denom = weights.sum()
+    return s.astype(float).rolling(period, min_periods=period).apply(
+        lambda x: float(np.dot(x, weights) / denom),
+        raw=True,
+    )
+
+
+def _calc_rma(s: pd.Series, period: int) -> pd.Series:
+    """Wilder RMA, used by Pine ta.rma()."""
+    period = max(1, int(period))
+    return s.astype(float).ewm(alpha=1.0 / period, min_periods=period, adjust=False).mean()
+
+
+def _calc_hma(s: pd.Series, period: int) -> pd.Series:
+    """Hull moving average built from WMA."""
+    period = max(1, int(period))
+    half = max(1, period // 2)
+    root = max(1, int(np.sqrt(period)))
+    return _calc_wma(2 * _calc_wma(s, half) - _calc_wma(s, period), root)
+
+
+def _calc_vwap_source(df: pd.DataFrame, source: pd.Series) -> pd.Series:
+    """Cumulative VWAP for an arbitrary source series."""
+    vol = df["Volume"].replace(0, np.nan).fillna(1.0).astype(float)
+    src = source.astype(float)
+    return (src * vol).cumsum() / vol.cumsum()
+
+
+def _ai_trend_source(df: pd.DataFrame, kind: str, period: int) -> pd.Series:
+    kind = (kind or "hl2").strip().lower()
+    close = df["Close"].astype(float)
+    hl2 = (df["High"].astype(float) + df["Low"].astype(float)) / 2.0
+
+    if kind == "hl2":
+        return calc_sma(hl2, period)
+    if kind == "vwap":
+        return _calc_vwap_source(df, close.shift(period))
+    if kind == "sma":
+        return calc_sma(close, period)
+    if kind == "wma":
+        return _calc_wma(close, period)
+    if kind == "ema":
+        return calc_ema(close, period)
+    if kind == "hma":
+        return _calc_hma(close, period)
+    return calc_sma(hl2, period)
+
+
+def _ai_trend_target(df: pd.DataFrame, kind: str, period: int) -> pd.Series:
+    kind = (kind or "price action").strip().lower()
+    close = df["Close"].astype(float)
+
+    if kind == "price action":
+        return _calc_rma(close, period)
+    if kind == "vwap":
+        return _calc_vwap_source(df, close.shift(period))
+    if kind == "volatility":
+        return calc_atr(df, 14)
+    if kind == "sma":
+        return calc_sma(close, period)
+    if kind == "wma":
+        return _calc_wma(close, period)
+    if kind == "ema":
+        return calc_ema(close, period)
+    if kind == "hma":
+        return _calc_hma(close, period)
+    return _calc_rma(close, period)
+
+
+def calc_ai_trend_navigator(
+    df: pd.DataFrame,
+    price_value: str = "hl2",
+    ma_len: int = 5,
+    target_value: str = "Price Action",
+    target_len: int = 5,
+    number_of_closest_values: int = 3,
+    smoothing_period: int = 50,
+) -> pd.DataFrame:
+    """
+    AI Trend Navigator / KNN classifier line ported from Zeiierman's Pine script.
+
+    This is a deterministic nearest-neighbor smoother on recent OHLCV data, not
+    an offline-trained ML model. Defaults mirror the TradingView script:
+    PriceValue=hl2, TargetValue=Price Action, maLen=5, targetLen=5, k=3,
+    smoothingPeriod=50.
+    """
+    if df.empty:
+        return pd.DataFrame(index=df.index)
+
+    work = df.reset_index(drop=True).copy()
+    k = max(2, min(int(number_of_closest_values), 200))
+    ma_len = max(2, min(int(ma_len), 200))
+    target_len = max(2, min(int(target_len), 200))
+    smoothing_period = max(2, min(int(smoothing_period), 500))
+    window_size = max(k, 30)
+
+    value_in = _ai_trend_source(work, price_value, ma_len)
+    target_in = _ai_trend_target(work, target_value, target_len)
+    values = value_in.to_numpy(dtype=float)
+    targets = target_in.to_numpy(dtype=float)
+    close = work["Close"].astype(float).to_numpy()
+
+    n = len(work)
+    knn_ma = np.full(n, np.nan, dtype=float)
+    for idx in range(n):
+        target = targets[idx]
+        if np.isnan(target) or idx == 0:
+            continue
+        start = max(0, idx - window_size)
+        hist = values[start:idx]
+        valid = hist[~np.isnan(hist)]
+        if len(valid) < k:
+            continue
+        nearest = np.argsort(np.abs(valid - target))[:k]
+        knn_ma[idx] = float(valid[nearest].mean())
+
+    knn_ma_s = pd.Series(knn_ma)
+    price = (knn_ma + close) / 2.0
+    c_line = _calc_rma(knn_ma_s.shift(1), smoothing_period).to_numpy(dtype=float)
+    o_line = _calc_rma(knn_ma_s, smoothing_period).to_numpy(dtype=float)
+
+    raw_prediction = np.full(n, np.nan, dtype=float)
+    for idx in range(n):
+        current_price = price[idx]
+        if np.isnan(current_price):
+            continue
+        pos_count = 0
+        neg_count = 0
+        min_distance = np.inf
+        for j in range(1, 11):
+            hist_idx = idx - j
+            if hist_idx < 0:
+                break
+            hist_price = price[hist_idx]
+            if np.isnan(hist_price):
+                continue
+            distance = abs(hist_price - current_price)
+            if distance < min_distance:
+                min_distance = distance
+                if c_line[hist_idx] > o_line[hist_idx]:
+                    neg_count += 1
+                if c_line[hist_idx] < o_line[hist_idx]:
+                    pos_count += 1
+        if pos_count or neg_count:
+            raw_prediction[idx] = 1.0 if pos_count > neg_count else -1.0
+
+    prediction = _calc_wma(pd.Series(raw_prediction), 3)
+    knn_line = _calc_wma(knn_ma_s, 5)
+    avg_line = _calc_rma(knn_ma_s, smoothing_period)
+    direction = pd.Series(
+        np.where(knn_line > knn_line.shift(1), 1, np.where(knn_line < knn_line.shift(1), -1, 0))
+    )
+
+    out = pd.DataFrame({
+        "knn": knn_line,
+        "average": avg_line,
+        "prediction": prediction,
+        "direction": direction,
+    })
+    out.index = df.index
+    return out
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Strategy-level indicator bundle
 # Column convention: lowercase  (open, high, low, close)

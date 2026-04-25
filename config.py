@@ -64,6 +64,8 @@ SQL_DATABASE = "SEN05_AutoTrading"
 SQL_DRIVER   = "ODBC Driver 17 for SQL Server"
 SQL_UID      = os.environ.get("SQL_UID", "")   # empty = Windows Auth
 SQL_PWD      = os.environ.get("SQL_PWD", "")   # empty = Windows Auth
+SQL_ENCRYPT  = os.environ.get("SQL_ENCRYPT", "yes")
+SQL_TRUST_SERVER_CERT = os.environ.get("SQL_TRUST_SERVER_CERT", "yes")
 
 
 # -----------------------------------------------------------------------------
@@ -384,4 +386,3 @@ def get_tf_interval_map():
         "D1":  Interval.in_daily,
         "W":   Interval.in_weekly,
     }
-

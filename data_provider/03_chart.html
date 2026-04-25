@@ -326,6 +326,32 @@
               </div>
             </div>
           </div>
+          <!-- AI Trend Navigator / KNN -->
+          <div class="ind-block">
+            <label class="ind-header">
+              <input type="checkbox" id="ind-ai-trend">
+              <span class="ind-label">AI Trend</span>
+              <span class="ind-hint">KNN</span>
+            </label>
+            <div class="ind-params">
+              <div class="ind-p">
+                <input class="ind-input" type="number" id="ai-ma-len" value="5" min="2" max="200">
+                <span class="ind-p-lbl">ma</span>
+              </div>
+              <div class="ind-p">
+                <input class="ind-input" type="number" id="ai-target-len" value="5" min="2" max="200">
+                <span class="ind-p-lbl">target</span>
+              </div>
+              <div class="ind-p">
+                <input class="ind-input" type="number" id="ai-k" value="3" min="2" max="200">
+                <span class="ind-p-lbl">k</span>
+              </div>
+              <div class="ind-p">
+                <input class="ind-input" type="number" id="ai-smooth" value="50" min="2" max="500">
+                <span class="ind-p-lbl">smooth</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <span class="section-label">Symbol</span>
@@ -466,6 +492,8 @@ let emaSeries = [null, null, null];
 let bbUpper   = null;
 let bbMid     = null;
 let bbLower   = null;
+let aiTrendSeries    = null;
+let aiTrendAvgSeries = null;
 
 // ── MACD sub-panel ───────────────────────────────────────────────────────────
 const macdPanelEl   = document.getElementById('macd-panel');
@@ -588,6 +616,13 @@ function buildIndSpec() {
   // ADX
   if (document.getElementById('ind-adx').checked)
     parts.push('ADX' + document.getElementById('adx-period').value);
+  // AI Trend Navigator / KNN
+  if (document.getElementById('ind-ai-trend').checked)
+    parts.push('AITREND'
+      + document.getElementById('ai-ma-len').value + '-'
+      + document.getElementById('ai-target-len').value + '-'
+      + document.getElementById('ai-k').value + '-'
+      + document.getElementById('ai-smooth').value);
   return parts.join(',');
 }
 
@@ -645,7 +680,27 @@ function applyIndicators(inds) {
     bbUpper.setData([]); bbMid.setData([]); bbLower.setData([]);
   }
 
-  // ── MACD sub-panel ───────────────────────────────────────────────────────
+  // AI Trend Navigator / KNN overlay
+  const showAiTrend = !!(inds.ai_trend_knn && inds.ai_trend_knn.length);
+  if (showAiTrend) {
+    if (!aiTrendSeries) {
+      aiTrendSeries = chart.addLineSeries({
+        color: '#00e676', lineWidth: 2,
+        priceLineVisible: false, lastValueVisible: false,
+      });
+      aiTrendAvgSeries = chart.addLineSeries({
+        color: '#009688', lineWidth: 1, lineStyle: 1,
+        priceLineVisible: false, lastValueVisible: false,
+      });
+    }
+    aiTrendSeries.setData(inds.ai_trend_knn);
+    aiTrendAvgSeries.setData(inds.ai_trend_avg || []);
+  } else if (aiTrendSeries) {
+    aiTrendSeries.setData([]);
+    aiTrendAvgSeries.setData([]);
+  }
+
+  // MACD sub-panel
   const showMacd = !!(inds.macd_hist && inds.macd_hist.length);
   macdPanelEl.style.display = showMacd ? 'flex' : 'none';
   if (showMacd) {

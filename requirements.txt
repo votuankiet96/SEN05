@@ -16,6 +16,7 @@ pandas>=2.3.3
 numpy>=2.4.3
 
 # Dashboards & charts
+flask>=3.0.0
 plotly>=6.6.0
 dash>=4.0.0          # data_provider/04_chart.py
 streamlit>=1.55.0    # strategies/combo/05_signal_dashboard.py

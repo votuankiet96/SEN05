@@ -102,7 +102,12 @@ from _helpers import (
     sleep_for,
 )
 from _tv_auth import get_valid_tv_connection, refresh_mid_run
-from _tv_coord import acquire_historical_job, release_historical_job, wait_for_historical_slot
+from _tv_coord import (
+    HistoricalJobHandoffRequested,
+    acquire_historical_job,
+    release_historical_job,
+    wait_for_historical_slot,
+)
 from _telegram import tg_send, tg_flush
 from _task_lock import acquire, release, cleanup_expired, renew, request_confirm, is_locked
 from modules.db_connector import (
@@ -175,6 +180,11 @@ TV_SLEEP_BETWEEN_CALLS = 0.5
 # Thời gian nghỉ dài khi TradingView trả về rỗng 3 lần liên tiếp.
 # Khả năng cao là đang bị rate-limit → nghỉ 60 giây để TV "nguội xuống".
 TV_THROTTLE_SLEEP = 60
+
+# DST precheck chỉ cần một mẫu nhỏ nhưng phải đủ rộng để phát hiện drift hàng loạt.
+# Giữ mục tiêu quanh 18 pairs giúp checker khởi động nhanh hơn nhiều mà vẫn đạt
+# ngưỡng tối thiểu 15 pairs để heuristic còn ý nghĩa.
+DST_PRECHECK_TARGET_PAIRS = 18
 
 # Circuit breaker: nếu auth fail liên tiếp vượt ngưỡng này → ngừng checker.
 # Mục đích: tránh tiếp tục gọi TV khi IP đã bị block (HTTP 403), làm tệ hơn.
@@ -1241,24 +1251,65 @@ def _detect_dst_transition_risk(
     if not h_tfs or len(symbols) * len(h_tfs) < 15:
         return set()
 
-    sample_symbols = symbols
-    if is_locked("ws_live_runtime"):
-        sample_count = min(len(symbols), max(5, math.ceil(18 / len(h_tfs))))
-        if sample_count < len(symbols):
-            sample_symbols = symbols[:sample_count]
+    # Prefer a diversified sample across asset types so the DST heuristic stays
+    # representative even when SYMBOLS is grouped by market.
+    grouped_symbols: dict[str, list[dict]] = {}
+    asset_order: list[str] = []
+    for sym in symbols:
+        asset_type = str(sym.get("asset_type") or "unknown")
+        if asset_type not in grouped_symbols:
+            grouped_symbols[asset_type] = []
+            asset_order.append(asset_type)
+        grouped_symbols[asset_type].append(sym)
+
+    sample_count = min(
+        len(symbols),
+        max(5, math.ceil(DST_PRECHECK_TARGET_PAIRS / len(h_tfs))),
+    )
+    sample_symbols: list[dict] = []
+    while len(sample_symbols) < sample_count:
+        appended = False
+        for asset_type in asset_order:
+            bucket = grouped_symbols.get(asset_type) or []
+            if not bucket:
+                continue
+            sample_symbols.append(bucket.pop(0))
+            appended = True
+            if len(sample_symbols) >= sample_count:
+                break
+        if not appended:
+            break
+
+    sampled = len(sample_symbols) < len(symbols)
+    sampled_for_ws_live = sampled and is_locked("ws_live_runtime")
+    total_pairs = len(sample_symbols) * len(h_tfs)
+    sampled_assets = ",".join(
+        dict.fromkeys(str(sym.get("asset_type") or "unknown") for sym in sample_symbols)
+    )
 
     _log_section(
         logger,
         "AUTO MODE PRECHECK | DST guard | "
-        f"pairs={len(sample_symbols) * len(h_tfs)}"
-        + (" | sampled_for_ws_live" if len(sample_symbols) < len(symbols) else ""),
+        f"pairs={total_pairs}"
+        + (" | sampled_for_ws_live" if sampled_for_ws_live else "")
+        + (" | sampled" if sampled and not sampled_for_ws_live else "")
+        + f" | assets={sampled_assets}",
     )
 
     rates: list[float] = []
+    pair_idx = 0
     for sym_idx, sym in enumerate(sample_symbols, 1):
         if sym_idx > 1:
             sleep_for(sym["tv_symbol"])
         for tf_code in h_tfs:
+            pair_idx += 1
+            logger.info(
+                "AUTO MODE PRECHECK %03d/%03d | %s/%s",
+                pair_idx,
+                total_pairs,
+                sym["tv_symbol"],
+                tf_code,
+            )
             scan = _scan_pair(tv, sym, tf_code, CHECKER_N_BARS[tf_code], interval_map, logger)
             if scan is not None:
                 rates.append(scan["rate"])
@@ -1541,6 +1592,14 @@ def main() -> None:
         tg_flush()
         raise SystemExit(code)
 
+    def _yield_to_newer_historical_run(exc: HistoricalJobHandoffRequested) -> None:
+        logger.info("[HANDOFF] Checker yielded to a newer historical job: %s", exc)
+        tg_send(
+            "<b>[Checker]</b> Da nhuong slot TradingView lich su cho mot lan chay moi hon.\n"
+            "<i>Lan chay hien tai dung o checkpoint an toan de tranh xung dot / lock treo.</i>"
+        )
+        _exit(0)
+
     tv_job_stop = acquire_historical_job("checker", logger, duration_min=180)
     if tv_job_stop is None:
         tg_send(
@@ -1577,10 +1636,13 @@ def main() -> None:
 
     # ── Chế độ dry-run: scan và báo cáo, không hỏi xác nhận ─────────────────
     if args.dry_run:
-        stats = run_checker(
-            tv, symbols, tfs, interval_map,
-            dry_run=True, threshold=args.threshold, logger=logger,
-        )
+        try:
+            stats = run_checker(
+                tv, symbols, tfs, interval_map,
+                dry_run=True, threshold=args.threshold, logger=logger,
+            )
+        except HistoricalJobHandoffRequested as exc:
+            _yield_to_newer_historical_run(exc)
         report = _build_report_clean(stats, start_time, auth_mode)
         _log_report(report, logger)
         tg_send(report)
@@ -1632,14 +1694,17 @@ def main() -> None:
 
         exit_code = 1
         try:
-            gap_result = auto_repair_interval_gaps(
-                tv,
-                symbols,
-                tf_gap_issues,
-                interval_map,
-                logger,
-                tf_filter=args.tf.upper() if args.tf else None,
-            )
+            try:
+                gap_result = auto_repair_interval_gaps(
+                    tv,
+                    symbols,
+                    tf_gap_issues,
+                    interval_map,
+                    logger,
+                    tf_filter=args.tf.upper() if args.tf else None,
+                )
+            except HistoricalJobHandoffRequested as exc:
+                _yield_to_newer_historical_run(exc)
             failure_lines = [
                 f"{row['sym']}/{row['tf']}: {row['reason']}"
                 for row in gap_result["failures"][:10]
@@ -1671,10 +1736,13 @@ def main() -> None:
             "<i>Symbol nao co loi moi lay repair lock, rescan duoi lock, "
             "sua ngay, verify ngay, roi release lock truoc khi sang symbol tiep theo.</i>"
         )
-        auto_stats = _run_auto_mode_symbol_rollout(
-            tv, symbols, tfs, interval_map,
-            threshold=args.threshold, logger=logger,
-        )
+        try:
+            auto_stats = _run_auto_mode_symbol_rollout(
+                tv, symbols, tfs, interval_map,
+                threshold=args.threshold, logger=logger,
+            )
+        except HistoricalJobHandoffRequested as exc:
+            _yield_to_newer_historical_run(exc)
         report = _build_report_clean(auto_stats, start_time, auth_mode)
         _log_report(report, logger)
         tg_send(report)
@@ -1691,10 +1759,13 @@ def main() -> None:
 
     _log_section(logger, "PHASE 1 | Scan")
     tg_send("🔍 <b>[Checker]</b> Đang scan dữ liệu (Phase 1/3)...")
-    scan_stats = run_checker(
-        tv, symbols, tfs, interval_map,
-        dry_run=True, threshold=args.threshold, logger=logger,
-    )
+    try:
+        scan_stats = run_checker(
+            tv, symbols, tfs, interval_map,
+            dry_run=True, threshold=args.threshold, logger=logger,
+        )
+    except HistoricalJobHandoffRequested as exc:
+        _yield_to_newer_historical_run(exc)
 
     issues = scan_stats.get("dry_issues", []) or scan_stats.get("failures", [])
     logger.info("Phase 1 done: %d issue(s) found.", len(issues))
@@ -1773,11 +1844,14 @@ def main() -> None:
             f"🔧 <b>[Checker]</b> Đang sửa {len(issues)} pairs (Phase 3/3)...\n"
             "<i>WS Live đang tạm hoãn ETL để tránh xung đột. Sẽ tự resume sau khi xong.</i>"
         )
-        repair_stats = run_checker(
-            tv, symbols, tfs, interval_map,
-            dry_run=False, threshold=args.threshold, logger=logger,
-            pending_pairs=pending_pairs,
-        )
+        try:
+            repair_stats = run_checker(
+                tv, symbols, tfs, interval_map,
+                dry_run=False, threshold=args.threshold, logger=logger,
+                pending_pairs=pending_pairs,
+            )
+        except HistoricalJobHandoffRequested as exc:
+            _yield_to_newer_historical_run(exc)
         report = _build_report_clean(repair_stats, start_time, auth_mode)
         _log_report(report, logger)
         tg_send(report)

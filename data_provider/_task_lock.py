@@ -95,7 +95,7 @@ _LOCK_CACHE_TTL = 30.0   # giây — refresh mỗi 30s
 
 # ─── Advisory lock ───────────────────────────────────────────────────────────
 
-def acquire(task_name: str, duration_min: int = 90) -> bool:
+def acquire(task_name: str, duration_min: int = 90, payload: str | None = None) -> bool:
     """
     Cố gắng lấy lock cho task_name bằng cách INSERT vào SEN.ActiveTask.
 
@@ -109,13 +109,22 @@ def acquire(task_name: str, duration_min: int = 90) -> bool:
     try:
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute(
-            """
-            INSERT INTO SEN.ActiveTask (TaskName, ExpiresAt)
-            VALUES (?, DATEADD(minute, ?, SYSUTCDATETIME()))
-            """,
-            (task_name, duration_min),
-        )
+        if payload is None:
+            cursor.execute(
+                """
+                INSERT INTO SEN.ActiveTask (TaskName, ExpiresAt)
+                VALUES (?, DATEADD(minute, ?, SYSUTCDATETIME()))
+                """,
+                (task_name, duration_min),
+            )
+        else:
+            cursor.execute(
+                """
+                INSERT INTO SEN.ActiveTask (TaskName, ExpiresAt, Payload)
+                VALUES (?, DATEADD(minute, ?, SYSUTCDATETIME()), ?)
+                """,
+                (task_name, duration_min, payload),
+            )
         conn.commit()
         return True
     except pyodbc.IntegrityError:

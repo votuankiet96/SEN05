@@ -128,11 +128,22 @@ def _calc_indicators(df: pd.DataFrame, ind_spec: str) -> dict:
         BB<period>-<std>    e.g. BB20-2.0
         MACD<f>-<s>-<sig>   e.g. MACD12-26-9  hoặc chỉ MACD (dùng mặc định)
         ATR<period>         e.g. ATR14
+        ADX<period>         e.g. ADX14
+        AITREND<m>-<t>-<k>-<smooth>
+                            e.g. AITREND5-5-3-50
 
     df phải có Title-Case columns: Open, High, Low, Close, BarTime (sorted ascending).
     Trả về dict chứa các series [{time, value}, ...] cho mỗi indicator.
     """
-    from modules.indicators import calc_sma, calc_ema, calc_bollinger, calc_macd, calc_atr, calc_adx
+    from modules.indicators import (
+        calc_sma,
+        calc_ema,
+        calc_bollinger,
+        calc_macd,
+        calc_atr,
+        calc_adx,
+        calc_ai_trend_navigator,
+    )
 
     if df.empty:
         return {}
@@ -143,6 +154,13 @@ def _calc_indicators(df: pd.DataFrame, ind_spec: str) -> dict:
         return [{"time": t, "value": float(v)}
                 for t, v in zip(times, vals)
                 if pd.notna(v)]
+
+    def to_colored_list(vals, colors):
+        return [
+            {"time": t, "value": float(v), "color": str(c)}
+            for t, v, c in zip(times, vals, colors)
+            if pd.notna(v)
+        ]
 
     result = {}
     for spec in ind_spec.split(","):
@@ -193,6 +211,32 @@ def _calc_indicators(df: pd.DataFrame, ind_spec: str) -> dict:
                 result["adx"]     = to_list(adx)
                 result["adx_pdi"] = to_list(pdi)
                 result["adx_mdi"] = to_list(mdi)
+
+            elif spec.startswith("AITREND") or spec.startswith("KNN"):
+                raw = spec[7:] if spec.startswith("AITREND") else spec[3:]
+                parts = [p for p in raw.replace(":", "-").split("-") if p]
+                ma_len = int(parts[0]) if len(parts) > 0 and parts[0].isdigit() else 5
+                target_len = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 5
+                k = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 3
+                smooth = int(parts[3]) if len(parts) > 3 and parts[3].isdigit() else 50
+
+                ai = calc_ai_trend_navigator(
+                    df,
+                    price_value="hl2",
+                    ma_len=ma_len,
+                    target_value="Price Action",
+                    target_len=target_len,
+                    number_of_closest_values=k,
+                    smoothing_period=smooth,
+                )
+                colors = ai["direction"].map({
+                    1: "#00e676",
+                    -1: "#ff5252",
+                    0: "#ff9800",
+                }).fillna("#ff9800")
+                result["ai_trend_knn"] = to_colored_list(ai["knn"], colors)
+                result["ai_trend_avg"] = to_list(ai["average"])
+                result["ai_trend_prediction"] = to_list(ai["prediction"])
 
         except Exception:
             pass  # bỏ qua spec không hợp lệ

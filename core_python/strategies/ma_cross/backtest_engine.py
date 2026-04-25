@@ -17,9 +17,9 @@ import pandas as pd
 from modules.db_connector import get_connection
 
 # Shared execution + metrics
-from ..shared.execution_engine import backtest_symbol, backtest_fast
-from ..shared.metrics import calc_metrics, in_bao_cao
-from ..shared.monte_carlo import run_monte_carlo, plot_monte_carlo
+from shared.execution import backtest_symbol, backtest_fast
+from shared.metrics import calc_metrics, in_bao_cao
+from shared.monte_carlo import run_monte_carlo, plot_monte_carlo
 
 # Strategy-specific signal logic
 from .signal_logic import (

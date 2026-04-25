@@ -156,7 +156,12 @@ from _helpers import (
 from _telegram import tg_alert, tg_flush, QUICK_COMMANDS_HINT  # Gửi thông báo kết quả pipeline lên Telegram
 from _tv_auth import get_valid_tv_connection, refresh_mid_run  # Auth module dùng chung
 from _task_lock import acquire, cleanup_expired, release, renew, is_locked
-from _tv_coord import acquire_historical_job, release_historical_job, wait_for_historical_slot
+from _tv_coord import (
+    HistoricalJobHandoffRequested,
+    acquire_historical_job,
+    release_historical_job,
+    wait_for_historical_slot,
+)
 
 from config import (
     COMPUTED_TIMEFRAMES,  # Danh sách cặp (TF đích, bảng nguồn) dùng để tính các TF phái sinh
@@ -734,6 +739,17 @@ def main() -> int:
             release("warehouse_maintenance")
         return code
 
+    def _yield_to_newer_historical_run(exc: HistoricalJobHandoffRequested) -> int:
+        logger.info("[HANDOFF] Pipeline yielded to a newer historical job: %s", exc)
+        tg_alert(
+            "INFO",
+            "ℹ️ <b>Data Pipeline da nhuong slot lich su</b>\n"
+            "Mot lan chay moi hon da yeu cau tiep quan. "
+            "Lan chay hien tai dung o checkpoint an toan de tranh xung dot."
+        )
+        tg_flush()
+        return _finish(0)
+
     if args.asset_type:
         asset_filter = {a.strip() for a in args.asset_type.split(",")}
         SYMBOLS = [s for s in SYMBOLS if s["asset_type"] in asset_filter]
@@ -959,18 +975,24 @@ def main() -> int:
     # -----------------------------------------------------------------------
     if mode == "full":
         # Full load: kéo toàn bộ lịch sử (mất vài giờ, chỉ chạy lần đầu)
-        raw = run_full_load(tv, dry_run=args.dry_run)
+        try:
+            raw = run_full_load(tv, dry_run=args.dry_run)
+        except HistoricalJobHandoffRequested as exc:
+            return _yield_to_newer_historical_run(exc)
         # run_full_load trả về int (số fail) — bọc thành dict để thống nhất
         fail = raw if isinstance(raw, int) else raw.get("fail", 0)
         run_stats = {"fail": fail, "ok": 0, "total": 0, "bars_inserted": 0,
                      "miss_count": 0, "fail_pairs": []}
     else:
         # Backfill: chỉ bù phần thiếu (mất vài phút, chạy hàng ngày)
-        run_stats = run_backfill(
-            tv,
-            dry_run=args.dry_run,
-            write_lock_name=None if (args.dry_run or maintenance_scope) else "warehouse_maintenance",
-        )
+        try:
+            run_stats = run_backfill(
+                tv,
+                dry_run=args.dry_run,
+                write_lock_name=None if (args.dry_run or maintenance_scope) else "warehouse_maintenance",
+            )
+        except HistoricalJobHandoffRequested as exc:
+            return _yield_to_newer_historical_run(exc)
         fail = run_stats["fail"]
 
     # -----------------------------------------------------------------------
