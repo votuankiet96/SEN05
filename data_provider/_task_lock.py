@@ -281,18 +281,17 @@ def _handle_token_command(text: str) -> bool:
     if _pending_tokens[token] is None:
         # First-one-wins: chỉ set nếu chưa có kết quả
         _pending_tokens[token] = action
-        # Gửi xác nhận ngay lập tức
         try:
-            from _telegram import tg_send
+            from _discord import tg_send
             icon = "✅" if action == "confirm" else "⏭"
-            tg_send(f"{icon} Đã nhận <b>/{action}_{token}</b> — đang xử lý...")
+            tg_send(f"{icon} Đã nhận /{action}_{token} — đang xử lý...")
         except Exception:
             pass
     else:
         # Đã nhận lệnh trước đó
         try:
-            from _telegram import tg_send
-            tg_send(f"ℹ️ Token <code>{token}</code> đã được xử lý rồi.")
+            from _discord import tg_send
+            tg_send(f"ℹ️ Token {token} đã được xử lý rồi.")
         except Exception:
             pass
 
@@ -364,14 +363,13 @@ def request_confirm(
 
     Trả về: 'confirm' | 'skip' | 'timeout'
     """
-    # Import ở đây để tránh circular import khi module load
-    from _telegram import _get_updates, _is_from_our_chat, tg_ask, tg_flush
+    # Discord webhook là một chiều — không thể polling nhận lệnh phản hồi.
+    # Gửi thông báo 1 chiều rồi trả về 'timeout' ngay lập tức.
+    from _discord import tg_ask, tg_flush
 
-    # Bước 1: Tạo và đăng ký token
     token = generate_token()
     _pending_tokens[token] = None
 
-    # Bước 2: Gửi tin hỏi + đảm bảo đến trước khi poll
     tg_ask(
         title=title,
         problem_desc=problem_desc,
@@ -380,51 +378,7 @@ def request_confirm(
         timeout_min=timeout_min,
         affected_pairs=affected_pairs,
     )
-    tg_flush(timeout=15)  # chờ tối đa 15s để tin được giao
+    tg_flush(timeout=15)
 
-    # Bước 3: Poll loop
-    deadline = time.monotonic() + timeout_min * 60
-    result   = None
-
-    while time.monotonic() < deadline:
-        # a. Đọc Telegram updates (same process)
-        try:
-            updates = _get_updates()
-            for update in updates:
-                ok, text = _is_from_our_chat(update)
-                if ok:
-                    _handle_token_command(text)
-        except Exception:
-            pass
-
-        # Kiểm tra kết quả từ same-process handler
-        val = _pending_tokens.get(token)
-        if val is not None:
-            result = val
-            break
-
-        # b. Đọc DB relay (cross-process: WS bot có thể đã ghi vào đây)
-        relay = _read_db_relay(task_name, token)
-        if relay is not None:
-            result = relay
-            _pending_tokens[token] = relay  # đồng bộ vào dict
-            break
-
-        time.sleep(15)  # getUpdates long-polls 20s, poll mỗi 15s là đủ
-
-    # Bước 5: Dọn token + trả về kết quả
     _pending_tokens.pop(token, None)
-
-    if result is None:
-        result = "timeout"
-        try:
-            from _telegram import tg_send
-            tg_send(
-                f"⏰ Hết thời gian chờ ({timeout_min // 60} giờ) — "
-                f"tự động bỏ qua.\n"
-                f"Gõ /fix để chạy lại bất cứ lúc nào."
-            )
-        except Exception:
-            pass
-
-    return result
+    return "timeout"

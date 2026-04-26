@@ -108,7 +108,7 @@ from _tv_coord import (
     release_historical_job,
     wait_for_historical_slot,
 )
-from _telegram import tg_send, tg_flush
+from _discord import tg_send, tg_flush
 from _task_lock import acquire, release, cleanup_expired, renew, request_confirm, is_locked
 from modules.db_connector import (
     aggregate_from_fact,

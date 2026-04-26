@@ -132,7 +132,7 @@ import pandas as pd  # DataFrame — cấu trúc bảng dữ liệu dùng để 
 import requests  # Gửi HTTP request — dùng để đăng nhập TradingView và gửi tin Telegram
 import websocket  # Thư viện WebSocket client — kết nối và nhận data real-time từ TradingView
 from _helpers import setup_logger, _validate_ohlcv_df  # Hàm khởi tạo logger + validate OHLCV
-from _telegram import (
+from _discord import (
     QUICK_COMMANDS_HINT,
     start_bot_listener,
     tg_alert as _tg_alert,
@@ -150,7 +150,7 @@ from config import (
     COMPUTED_TIMEFRAMES,  # Danh sách TF phái sinh cần tính (M10, M20, M90, H6, H8)
     LOG_FILE,  # Đường dẫn file log
     SYMBOLS,  # Toàn bộ danh sách symbol theo dõi (37 cặp)
-    TELEGRAM_BOT_TOKEN,  # Dùng để hiển thị trạng thái "Telegram: Enabled/Disabled"
+    DISCORD_WEBHOOK_URL,  # Dùng để hiển thị trạng thái "Discord: Enabled/Disabled"
     TF_STAGING,  # Bảng ánh xạ: tf_code → tên bảng staging trong DB
     TV_AUTH_TOKEN,  # Auth token TradingView đọc từ .env
     TV_COOKIE,  # Cookie TradingView đọc từ .env
@@ -1939,7 +1939,7 @@ def main() -> None:
     print(f"  Batch interval : every {BATCH_INTERVAL_MIN} min (aligned to boundary)")
     print(f"  Fetch timeout  : {BATCH_FETCH_TIMEOUT}s per batch")
     print(f"  Auth method    : {'Cookie+Token' if TV_COOKIE else 'Username/Password'}")
-    print(f"  Telegram alert : {'Enabled' if TELEGRAM_BOT_TOKEN else 'Disabled'}")
+    print(f"  Discord alert  : {'Enabled' if DISCORD_WEBHOOK_URL else 'Disabled'}")
     print(f"  Started        : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 65)
 
