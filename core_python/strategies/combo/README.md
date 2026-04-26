@@ -14,9 +14,65 @@ combo/
 ├── config.py          Bảng tham số trung tâm — NGUỒN SỰ THẬT DUY NHẤT
 ├── logic.py           Luật tín hiệu — KHÔNG SỬA NẾU KHÔNG HIỂU RÕ
 ├── scanner.py         Nhìn tín hiệu trên chart (KHÔNG phải backtest)
+├── notebook_utils.py  Helper dashboard/bảng/chart dùng chung cho notebook
 ├── symbol/            Làm việc với 1 symbol
 └── portfolio/         Làm việc với cả danh mục
 ```
+
+---
+
+## Notebook workflow — Cách đọc các notebook mới
+
+Các notebook `01` → `06` đã được tổ chức lại theo cùng một nhịp:
+
+1. **Bootstrap path an toàn**  
+   Tự tìm repo root bằng `pyproject.toml` + `core_python/shared`, tránh nhận nhầm
+   `strategies/combo/config.py` là root.
+
+2. **Import + cấu hình hiển thị**  
+   Gọi `configure_notebook()` từ `notebook_utils.py` để thống nhất style bảng,
+   chart và pandas display.
+
+3. **`RUN_CONFIG`**  
+   Mọi tham số quan trọng của lần chạy nằm trong một dict duy nhất. Khi muốn đổi
+   symbol, account mode, date range, max bars, search space hoặc export report,
+   ưu tiên sửa tại `RUN_CONFIG`.
+
+4. **Run pipeline**  
+   Chạy backtest/optimize/portfolio/walk-forward/scanner.
+
+5. **Dashboard phân tích**  
+   Notebook không chỉ `display()` bảng thô nữa, mà dùng helper để hiển thị:
+   - KPI dashboard
+   - equity + drawdown
+   - trade explorer
+   - price chart kèm entry/exit
+   - optimizer heatmap
+   - portfolio contribution
+   - walk-forward stability
+
+6. **Export tùy chọn**  
+   Một số notebook có cell export CSV. Mặc định export tắt để tránh tạo file ngoài
+   ý muốn. Bật bằng cách đổi `RUN_CONFIG["export_report"] = True` hoặc
+   `EXPORT_REPORT = True`.
+
+### File `notebook_utils.py` dùng để làm gì?
+
+File này chỉ phục vụ giao diện notebook và phân tích hậu kỳ. Nó **không thay đổi**
+luật tín hiệu, execution engine, lot sizing, phí, swap hay logic quản trị rủi ro.
+
+Các helper chính:
+
+| Helper | Dùng để làm gì |
+|---|---|
+| `show_run_config()` | Hiển thị cấu hình lần chạy trước khi execute |
+| `show_kpi_dashboard()` | Hiển thị metrics theo thứ tự dễ đọc, có tô màu |
+| `plot_equity_dashboard()` | Vẽ equity, drawdown và cumulative trade PnL |
+| `plot_price_with_trades()` | Vẽ giá/MA kèm entry và exit của trade |
+| `show_trade_explorer()` | Soi trade log theo exit reason, direction, top win/loss |
+| `plot_optimization_dashboard()` | Vẽ top candidates, scatter và heatmap optimizer |
+| `plot_portfolio_dashboard()` | Vẽ combined equity, drawdown, per-symbol equity, PnL contribution |
+| `plot_walkforward_dashboard()` | Vẽ stability dashboard cho OOS windows |
 
 ---
 

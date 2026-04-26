@@ -39,7 +39,7 @@ def check_plateau_stability(
     threshold_ratio: float = 0.5,
 ) -> dict:
     """Đánh giá best params có nằm trên vùng plateau ổn định hay chỉ là spike."""
-    keys = ['ktp', 'x', 'trailing_activation', 'ma_period']
+    keys = ['ktp', 'x', 'min_rr']
     default = {
         'best_params': dict(best_params or {}),
         'best_sharpe': float(best_sharpe or 0.0),
@@ -58,28 +58,21 @@ def check_plateau_stability(
     for k, v in param_grid_results.items():
         if isinstance(k, tuple) and len(k) == len(keys):
             point = {
-                'ktp': float(k[0]),
-                'x': float(k[1]),
-                'trailing_activation': float(k[2]),
-                'ma_period': int(k[3]),
+                'ktp':    float(k[0]),
+                'x':      float(k[1]),
+                'min_rr': float(k[2]),
             }
         elif isinstance(k, dict):
             point = {
-                'ktp': float(k.get('ktp', 0.0)),
-                'x': float(k.get('x', 0.0)),
-                'trailing_activation': float(k.get('trailing_activation', 0.0)),
-                'ma_period': int(k.get('ma_period', 0)),
+                'ktp':    float(k.get('ktp', 0.0)),
+                'x':      float(k.get('x', 0.0)),
+                'min_rr': float(k.get('min_rr', 0.0)),
             }
         else:
             continue
 
         sharpe_v = float(v.get('sharpe', 0.0)) if isinstance(v, dict) else float(v)
-        key_t = (
-            float(point['ktp']),
-            float(point['x']),
-            float(point['trailing_activation']),
-            int(point['ma_period']),
-        )
+        key_t = (float(point['ktp']), float(point['x']), float(point['min_rr']))
         sharpe_map[key_t] = sharpe_v
         points.append(point)
 
@@ -88,14 +81,10 @@ def check_plateau_stability(
 
     neighbor_values = {}
     for k in keys:
-        vals = sorted({float(p[k]) if k != 'ma_period' else int(p[k]) for p in points})
+        vals = sorted({float(p[k]) for p in points})
         if not vals:
             return default
-        best_v = best_params.get(k)
-        if k == 'ma_period':
-            best_v = int(best_v)
-        else:
-            best_v = float(best_v)
+        best_v = float(best_params.get(k, 0.0))
         if best_v in vals:
             idx = vals.index(best_v)
         else:
@@ -107,8 +96,7 @@ def check_plateau_stability(
     best_key = (
         float(best_params['ktp']),
         float(best_params['x']),
-        float(best_params['trailing_activation']),
-        int(best_params['ma_period']),
+        float(best_params['min_rr']),
     )
     min_sharpe = float(best_sharpe) * float(threshold_ratio)
     neighbors_checked = 0
@@ -116,17 +104,16 @@ def check_plateau_stability(
 
     for ktp_v in neighbor_values['ktp']:
         for x_v in neighbor_values['x']:
-            for tr_v in neighbor_values['trailing_activation']:
-                for ma_v in neighbor_values['ma_period']:
-                    combo = (float(ktp_v), float(x_v), float(tr_v), int(ma_v))
-                    if combo == best_key:
-                        continue
-                    sh = sharpe_map.get(combo)
-                    if sh is None:
-                        continue
-                    neighbors_checked += 1
-                    if float(sh) > min_sharpe:
-                        neighbors_stable += 1
+            for rr_v in neighbor_values['min_rr']:
+                combo = (float(ktp_v), float(x_v), float(rr_v))
+                if combo == best_key:
+                    continue
+                sh = sharpe_map.get(combo)
+                if sh is None:
+                    continue
+                neighbors_checked += 1
+                if float(sh) > min_sharpe:
+                    neighbors_stable += 1
 
     stable_ratio = (
         float(neighbors_stable) / float(neighbors_checked)
@@ -191,10 +178,9 @@ def walk_forward_backtest(
     def _build_param_grid(sym_key: str) -> dict:
         base = get_symbol_search_space(sym_key, broker_profile=broker_profile)
         return {
-            'ktp': base['ktp'],
-            'x': base['x'],
-            'trailing': base['trailing_activation'],
-            'ma_period': base['ma_period'],
+            'ktp':    base['ktp'],
+            'x':      base['x'],
+            'min_rr': base['min_rr'],
         }
 
     n_bars  = len(df_ind)
@@ -233,51 +219,49 @@ def walk_forward_backtest(
         best_sharpe  = -np.inf
         grid_results = {}
 
-        for ma_p in grid['ma_period']:
-            is_raw = is_slice[['open', 'high', 'low', 'close']].copy()
-            is_raw['volume'] = is_slice['volume'] if 'volume' in is_slice.columns else 0.0
-            is_ind_local = add_combo_indicators(is_raw, {**base_ind_params, 'MA_PERIOD': int(ma_p)})
+        # MA cố định 20 — tính indicators một lần cho IS window
+        is_raw = is_slice[['open', 'high', 'low', 'close']].copy()
+        is_raw['volume'] = is_slice['volume'] if 'volume' in is_slice.columns else 0.0
+        is_ind_local = add_combo_indicators(is_raw, {**base_ind_params, 'MA_PERIOD': 20})
 
-            date_from_is = str(is_ind_local.index[0])
-            date_to_is   = str(is_ind_local.index[-1])
+        date_from_is = str(is_ind_local.index[0])
+        date_to_is   = str(is_ind_local.index[-1])
 
-            for ktp_v in grid['ktp']:
-                for x_v in grid['x']:
-                    for tr_v in grid['trailing']:
-                        cfg_is = {**cfg, 'x': x_v}
-                        fast_metrics = backtest_fast(
-                            symbol,
-                            is_ind_local,
-                            cfg_is,
-                            ktp=float(ktp_v),
-                            x_actual=float(x_v),
-                            trailing_act=float(tr_v),
-                            date_from=date_from_is,
-                            date_to=date_to_is,
-                            init_eq=init_eq,
-                            strategy={**strategy_cfg, 'trailing_activation': float(tr_v)},
-                            costs=cost_cfg,
-                        )
-                        sh = float(fast_metrics.get('sharpe', 0.0))
-                        grid_results[(float(ktp_v), float(x_v), float(tr_v), int(ma_p))] = sh
-                        if sh > best_sharpe:
-                            best_sharpe = sh
-                            best = {
-                                'ktp': float(ktp_v),
-                                'x': float(x_v),
-                                'trailing_activation': float(tr_v),
-                                'ma_period': int(ma_p),
-                                'is_fast': fast_metrics,
-                            }
+        for ktp_v in grid['ktp']:
+            for x_v in grid['x']:
+                for rr_v in grid['min_rr']:
+                    cfg_is = {**cfg, 'x': x_v}
+                    fast_metrics = backtest_fast(
+                        symbol,
+                        is_ind_local,
+                        cfg_is,
+                        ktp=float(ktp_v),
+                        x_actual=float(x_v),
+                        trailing_act=float(strategy_cfg.get('trailing_activation', 1.0)),
+                        date_from=date_from_is,
+                        date_to=date_to_is,
+                        init_eq=init_eq,
+                        strategy={**strategy_cfg, 'min_rr': float(rr_v)},
+                        costs=cost_cfg,
+                    )
+                    sh = float(fast_metrics.get('sharpe', 0.0))
+                    grid_results[(float(ktp_v), float(x_v), float(rr_v))] = sh
+                    if sh > best_sharpe:
+                        best_sharpe = sh
+                        best = {
+                            'ktp':    float(ktp_v),
+                            'x':      float(x_v),
+                            'min_rr': float(rr_v),
+                            'is_fast': fast_metrics,
+                        }
 
         if best is None:
             break
 
         best_params = {
-            'ktp': best['ktp'],
-            'x': best['x'],
-            'trailing_activation': best['trailing_activation'],
-            'ma_period': best['ma_period'],
+            'ktp':    best['ktp'],
+            'x':      best['x'],
+            'min_rr': best['min_rr'],
         }
         plateau = check_plateau_stability(
             param_grid_results=grid_results,
@@ -291,13 +275,12 @@ def walk_forward_backtest(
             print("      → Kết quả OOS cửa sổ này kém tin cậy")
 
         best_params_per_window.append({
-            'window': step,
-            'ktp': best['ktp'],
-            'x': best['x'],
-            'trailing_activation': best['trailing_activation'],
-            'ma_period': best['ma_period'],
+            'window':   step,
+            'ktp':      best['ktp'],
+            'x':        best['x'],
+            'min_rr':   best['min_rr'],
             'is_sharpe': best_sharpe,
-            'plateau': plateau,
+            'plateau':  plateau,
         })
 
         is_profit_total += init_eq * float(best['is_fast'].get('ret', 0.0)) / 100.0
@@ -306,7 +289,7 @@ def walk_forward_backtest(
         # Tính warmup cần thiết để indicator (đặc biệt EMA/MACD) có đủ state
         p_local = {
             **base_ind_params,
-            'MA_PERIOD': int(best['ma_period']),
+            'MA_PERIOD': 20,
             'KTP': best['ktp'],
             'X':   best['x'],
         }
@@ -339,7 +322,7 @@ def walk_forward_backtest(
             oos_sig,
             {**cfg, 'x': best['x'], 'ktp': best['ktp']},
             init_eq,
-            strategy={**strategy_cfg, 'trailing_activation': best['trailing_activation']},
+            strategy={**strategy_cfg, 'min_rr': best['min_rr']},
             costs=cost_cfg,
         )
 

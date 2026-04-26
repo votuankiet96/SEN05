@@ -127,12 +127,14 @@ BROKER_PROFILES = {
 
 OPTIMIZATION = {
     "symbol": {
-        "ktp_multipliers": [0.9, 1.0, 1.1],
-        "x_offsets": [-2.0, 0.0, 2.0],
-        "trailing_multipliers": [0.75, 1.0, 1.25],
-        "ma_offsets": [-5, 0, 5],
-        "max_bars": 80000,
-        "score_column": "sharpe",
+        # kTP — chuỗi Fibonacci trong safe range [1.5, 3.5]
+        "ktp_values":    [1.618, 2.0, 2.272, 2.618, 3.0, 3.382],
+        # min_rr — bước 0.1 từ 1.0 đến 2.0
+        "min_rr_values": [round(1.0 + i * 0.1, 1) for i in range(11)],
+        # x fallback offset (dùng khi chưa có fill-rate analysis per-symbol)
+        "x_offsets":     [-2.0, 0.0, 2.0],
+        "max_bars":      80000,
+        "score_column":  "sharpe",
     },
     "portfolio": {
         "top_k_per_symbol": 5,
@@ -521,32 +523,30 @@ def get_symbol_search_space(
     overrides: dict | None = None,
     broker_profile: str | None = None,
 ) -> dict:
-    """Build a compact per-symbol search space around the current config.
+    """Build the per-symbol search space for the optimizer.
 
-    Search spaces are intentionally local around the current config to reduce the
-    chance of optimizer explosion and to favor regime-specific tuning over blind
-    brute force.
+    ktp  : chuỗi Fibonacci cố định, không phụ thuộc vào giá trị hiện tại.
+    x    : fallback offset quanh giá trị hiện tại; nếu symbol có x_search_space
+           được set thì dùng đó (kết quả từ analyze_x_fill_rate).
+    min_rr: dãy cố định bước 0.1 từ 1.0–2.0.
     """
     current = get_symbol_params(sym_key, broker_profile=broker_profile)
     base = OPTIMIZATION["symbol"]
 
-    search = {
-        "ktp": sorted({
-            round(current["ktp"] * m, 2)
-            for m in base["ktp_multipliers"]
-        }),
-        "x": sorted({
+    # x: ưu tiên x_search_space per-symbol nếu có, fallback về offset-based
+    sym_raw = SYMBOLS.get(sym_key, {})
+    if sym_raw.get("x_search_space"):
+        x_values = sorted(float(v) for v in sym_raw["x_search_space"] if v > 0)
+    else:
+        x_values = sorted({
             round(max(0.1, current["x"] + offset), 2)
             for offset in base["x_offsets"]
-        }),
-        "trailing_activation": sorted({
-            round(max(0.1, current["trailing_activation"] * m), 2)
-            for m in base["trailing_multipliers"]
-        }),
-        "ma_period": sorted({
-            max(5, int(current["ma_period"] + offset))
-            for offset in base["ma_offsets"]
-        }),
+        })
+
+    search = {
+        "ktp":    list(base["ktp_values"]),
+        "x":      x_values,
+        "min_rr": list(base["min_rr_values"]),
     }
     if overrides:
         search.update(overrides)

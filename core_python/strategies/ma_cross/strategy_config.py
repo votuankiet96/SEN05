@@ -74,7 +74,12 @@ def get_indicator_params() -> dict:
 # =============================================================================
 def get_symbol_params(sym_key: str) -> dict:
     """Trả về bộ tham số tối ưu hoá đầy đủ cho một symbol."""
-    sym = SYMBOLS.get(sym_key, {})
+    if sym_key not in SYMBOLS:
+        raise KeyError(
+            f"MA Cross symbol '{sym_key}' is not configured. "
+            "Add it to strategies.ma_cross.strategy_config.SYMBOLS before backtesting."
+        )
+    sym = SYMBOLS[sym_key]
     p   = get_indicator_params()
     return {
         'ktp':                 sym.get('ktp', STRATEGY['ktp']),
