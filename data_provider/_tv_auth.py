@@ -89,7 +89,7 @@ if str(_PROJ) not in sys.path:
     sys.path.insert(0, str(_PROJ))
 
 from config import TV_AUTH_TOKEN, TV_COOKIE, TV_PASSWORD, TV_USERNAME  # noqa: E402
-from _telegram import tg_alert as _tg_alert  # noqa: E402
+from _discord import tg_alert as _tg_alert  # noqa: E402
 
 # Module-level logger (dùng khi caller không truyền logger vào)
 _logger = logging.getLogger("tv_auth")

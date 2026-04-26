@@ -86,9 +86,9 @@ TV_COOKIE     = os.environ.get("TV_COOKIE", "")      # full browser cookie strin
 TV_USERNAME   = os.environ.get("TV_USERNAME", "")    # fallback: native TV email
 TV_PASSWORD   = os.environ.get("TV_PASSWORD", "")    # fallback: native TV password
 
-# Telegram alert bot (optional — leave empty to disable)
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_CHAT_ID   = os.environ.get("TELEGRAM_CHAT_ID", "")
+# Discord webhook để nhận thông báo pipeline (để trống nếu không dùng)
+# Lấy URL từ: Server Settings → Integrations → Webhooks → Copy Webhook URL
+DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
 
 
 # -----------------------------------------------------------------------------

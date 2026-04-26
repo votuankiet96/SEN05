@@ -153,7 +153,7 @@ from _helpers import (
     sleep_for,  # Hàm tạm dừng giữa các request để tránh bị TradingView rate-limit
     trading_hours_in_gap,  # Tính giờ trading thực (trừ Sat/Sun) trong một khoảng thời gian
 )
-from _telegram import tg_alert, tg_flush, QUICK_COMMANDS_HINT  # Gửi thông báo kết quả pipeline lên Telegram
+from _discord import tg_alert, tg_flush, QUICK_COMMANDS_HINT  # Gửi thông báo kết quả pipeline lên Discord
 from _tv_auth import get_valid_tv_connection, refresh_mid_run  # Auth module dùng chung
 from _task_lock import acquire, cleanup_expired, release, renew, is_locked
 from _tv_coord import (
