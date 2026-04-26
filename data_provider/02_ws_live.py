@@ -60,7 +60,7 @@ Nhung diem van hanh quan trong:
 #                          để bù khoảng trống; miss > MAX_BACKLOG_BATCHES → cảnh báo
 #   10. ETL DEFER        — 04_checker.py đang repair → defer ghi Fact, giữ ở Staging
 #                          để tránh race condition giữa 2 tiến trình
-#   11. TELEGRAM ALERT   — cảnh báo khi lỗi, token hết hạn, queue áp lực
+#   11. DISCORD ALERT    — cảnh báo khi lỗi, token hết hạn, queue áp lực
 #   12. BÁO CÁO MỖI GIỜ — gửi thống kê bars_inserted / errors / queue_depth
 #
 # ─────────────────────────────────────────────────────────────────────────────
@@ -82,8 +82,7 @@ Nhung diem van hanh quan trong:
 #   TV_COOKIE=sessionid=abc; ...     ← toàn bộ cookie header (fallback)
 #   TV_USERNAME=your_username         ← fallback nếu không có cookie
 #   TV_PASSWORD=your_password         ← fallback nếu không có cookie
-#   TELEGRAM_BOT_TOKEN=123456:ABC    ← token bot Telegram (để nhận cảnh báo)
-#   TELEGRAM_CHAT_ID=-100123456789   ← ID nhóm/kênh nhận cảnh báo
+#   DISCORD_WEBHOOK_URL=https://discordapp.com/api/webhooks/...  ← webhook Discord (để nhận cảnh báo)
 #
 # CÁCH LẤY AUTH TOKEN TỪ TRÌNH DUYỆT:
 #   1. Mở Chrome, đăng nhập TradingView → nhấn F12 → tab "Network"
@@ -129,7 +128,7 @@ if str(_PROJ) not in sys.path:
 # =============================================================================
 
 import pandas as pd  # DataFrame — cấu trúc bảng dữ liệu dùng để lưu trữ nến trước khi ghi DB
-import requests  # Gửi HTTP request — dùng để đăng nhập TradingView và gửi tin Telegram
+import requests  # Gửi HTTP request — dùng để đăng nhập TradingView và gửi Discord webhook
 import websocket  # Thư viện WebSocket client — kết nối và nhận data real-time từ TradingView
 from _helpers import setup_logger, _validate_ohlcv_df  # Hàm khởi tạo logger + validate OHLCV
 from _discord import (
@@ -230,13 +229,13 @@ OVERFLOW_BUFFER_MAX   = 500
 # Cần thiết để tránh TradingView bị quá tải khi đăng ký nhiều session liên tiếp
 SESSION_THROTTLE      = 0.15
 
-# Chu kỳ gửi báo cáo trạng thái lên Telegram (3600 giây = 1 giờ)
+# Chu kỳ gửi báo cáo trạng thái lên Discord (3600 giây = 1 giờ)
 STATUS_INTERVAL_SEC   = 3600
 
 # Từ khóa nhận biết lỗi token — dùng chung với _tv_auth.py
 TOKEN_EXPIRY_KEYWORDS = _tv_auth.TOKEN_EXPIRY_KEYWORDS
 
-# Số lần miss liên tiếp tối đa trước khi gửi cảnh báo Telegram
+# Số lần miss liên tiếp tối đa trước khi gửi cảnh báo Discord
 # Nếu cặp (symbol, TF) nào không nhận được data trong MAX_MISS_RETRIES batch liên tiếp
 # → hệ thống cảnh báo ngay và reset đếm (tránh spam)
 MAX_MISS_RETRIES      = 5
@@ -336,7 +335,7 @@ _consecutive_guest_batches = 0
 _GUEST_ALERT_THRESHOLD     = 3
 
 # Bộ đếm backfill miss: số lần LIÊN TIẾP không nhận được data cho mỗi cặp (symbol_id, tf_code)
-# Khi counter đạt MAX_MISS_RETRIES → cảnh báo Telegram ngay, reset counter (tránh spam)
+# Khi counter đạt MAX_MISS_RETRIES → cảnh báo Discord ngay, reset counter (tránh spam)
 # Khi cặp đó nhận được data trở lại → counter tự động xóa
 _missed_pairs: dict[tuple[int, str], int] = {}
 _missed_lock  = threading.Lock()   # Lock riêng để không tranh chấp với _state_lock
@@ -1501,7 +1500,7 @@ class BatchFetcher:
                 self.group_id, timeout, len(self._received), len(self._expected),
                 ", ".join(missing) if missing else "none",
             )
-            # Gửi cảnh báo Telegram để người vận hành biết có vấn đề
+            # Gửi cảnh báo Discord để người vận hành biết có vấn đề
             _tg_alert(
                 "WARNING",
                 f"Batch nhóm {self.group_id} timeout sau {timeout}s.\n"
@@ -1562,7 +1561,7 @@ class BatchFetcher:
                         "ERROR",
                         f"Data gap vinh vien: {_sym_name.get(pair[0], str(pair[0]))} [{pair[1]}]\n"
                         f"Da miss {count} batch lien tiep (~{count * 5} phut).\n"
-                        f"Chay /fix tren Telegram hoac 04_checker.py de quet va sua."
+                        f"Chay 04_checker.py de quet va sua."
                         + QUICK_COMMANDS_HINT
                     )
                     _backlog.pop(pair, None)
@@ -1805,7 +1804,7 @@ def _status_reporter() -> None:
     Thread chạy liên tục, cứ mỗi STATUS_INTERVAL_SEC giây (1 giờ) thì:
         1. Thu thập số liệu thống kê hiện tại
         2. Ghi vào log
-        3. Gửi báo cáo lên Telegram
+        3. Gửi báo cáo lên Discord
 
     Dùng _shutdown.wait(timeout) thay vì sleep để có thể dừng ngay khi cần.
     """
@@ -1893,7 +1892,7 @@ def _status_reporter() -> None:
             n_miss_active, stale_count, max_age_h,
         )
 
-        # ── Gửi Telegram ─────────────────────────────────────────────────────
+        # ── Gửi Discord ──────────────────────────────────────────────────────
         issues_text = ("\n".join(f"  ⚠️ {x}" for x in issues[:3])
                        if issues else "  ✅ Không có vấn đề")
         _tg_send(
