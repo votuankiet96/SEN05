@@ -1,20 +1,19 @@
 """Configuration for the AI Trend / KNN + M30 EMA pullback strategy.
 
-The strategy is intentionally separate from Combo v2. It reuses Combo's symbol
-and broker metadata to avoid duplicating contract specs, but signal logic and
-indicator defaults live here.
+The strategy is intentionally separate from Combo v2. Shared instrument and
+broker metadata comes from ``shared.instruments``; signal logic and indicator
+defaults live here.
 """
 
 from __future__ import annotations
 
-from strategies.combo.config import (
-    ACCOUNT_MODES,
+from shared.instruments import (
     BROKER_PROFILES,
     DEFAULT_BROKER_PROFILE,
     DEFAULT_COSTS,
-    SYMBOLS as BASE_SYMBOLS,
-    get_cost_settings as _base_get_cost_settings,
-    get_symbol_params as _base_get_symbol_params,
+    SYMBOLS,
+    get_base_symbol_params,
+    get_cost_settings,
 )
 
 
@@ -36,15 +35,36 @@ STRATEGY = {
     "partial_tp_fraction": 0.5,
 }
 
+ACCOUNT_MODES = {
+    "standard": {
+        "label": "Standard",
+        "account_model": "retail",
+        "risk_per_trade": STRATEGY["risk_per_trade"],
+        "daily_loss_limit": 1.0,
+        "max_drawdown_limit": 1.0,
+        "max_drawdown_mode": "fixed_initial",
+        "pending_ttl_bars": STRATEGY["pending_ttl_bars"],
+        "partial_tp_fraction": STRATEGY["partial_tp_fraction"],
+        "trailing_activation": STRATEGY["trailing_activation"],
+    },
+    "ftmo": {
+        "label": "FTMO 2-Step",
+        "account_model": "ftmo_2step",
+        "risk_per_trade": STRATEGY["risk_per_trade"],
+        "daily_loss_limit": STRATEGY["ftmo_daily_limit"],
+        "max_drawdown_limit": STRATEGY["ftmo_max_dd"],
+        "max_drawdown_mode": "fixed_initial",
+        "pending_ttl_bars": STRATEGY["pending_ttl_bars"],
+        "partial_tp_fraction": STRATEGY["partial_tp_fraction"],
+        "trailing_activation": STRATEGY["trailing_activation"],
+    },
+}
+
 
 TREND_TIMEFRAME = STRATEGY["trend_timeframe"]
 ENTRY_TIMEFRAME = STRATEGY["entry_timeframe"]
 TIMEFRAME = ENTRY_TIMEFRAME
 DEFAULT_N_BARS = 500
-
-
-# Reuse known symbol ids, costs, lot specs, and broker metadata.
-SYMBOLS = BASE_SYMBOLS
 
 
 INDICATOR_COLS = [
@@ -116,25 +136,18 @@ def get_account_settings(mode: str = "standard", overrides: dict | None = None) 
 
 def get_symbol_params(sym_key: str, broker_profile: str | None = None) -> dict:
     """Resolve symbol execution config with AI Trend strategy defaults."""
-    cfg = _base_get_symbol_params(sym_key, broker_profile=broker_profile)
+    cfg = get_base_symbol_params(sym_key, broker_profile=broker_profile)
     raw = SYMBOLS[sym_key]
 
     if "ktp" not in raw:
         cfg["ktp"] = STRATEGY["ktp"]
+    cfg["x"] = raw.get("x", 0.0)
+    cfg["ma_period"] = raw.get("ma_period", 0)
     cfg["trailing_activation"] = raw.get(
         "ai_trend_trailing_activation",
         STRATEGY["trailing_activation"],
     )
     return cfg
-
-
-def get_cost_settings(
-    sym_key: str,
-    overrides: dict | None = None,
-    broker_profile: str | None = None,
-) -> dict:
-    """Resolve execution costs for one symbol."""
-    return _base_get_cost_settings(sym_key, overrides, broker_profile=broker_profile)
 
 
 def summary() -> str:
@@ -169,4 +182,3 @@ __all__ = [
     "get_symbol_params",
     "summary",
 ]
-

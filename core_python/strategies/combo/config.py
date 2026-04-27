@@ -30,7 +30,16 @@
 #     empty list [] = scan all hours)
 #   - Adjust indicator defaults in get_indicator_params()
 # =============================================================================
-from shared.broker import audit_symbol_specs, merge_broker_profile
+from shared.broker import audit_symbol_specs
+from shared.instruments import (
+    BROKER_PROFILES,
+    DEFAULT_BROKER_PROFILE,
+    DEFAULT_COSTS,
+    SYMBOLS,
+    get_broker_profile,
+    get_cost_settings,
+    get_symbol_config,
+)
 
 # =============================================================================
 # 1. STRATEGY IDENTITY (tham số nền của toàn chiến lược)
@@ -84,45 +93,7 @@ TIMEFRAME      = 'H4'                     # Primary timeframe for all scans
 DEFAULT_N_BARS = 100                       # Default number of bars to scan
 INDICATOR_COLS = ['ma', 'atr', 'macd_h']   # Required indicator columns after warmup
 
-DEFAULT_COSTS = {
-    "slippage_pts":       2,       # Points slippage at fill
-    "commission_per_lot": 3.5,     # USD per lot per side
-}
 
-DEFAULT_BROKER_PROFILE = "ftmo_2step_mt5"
-
-BROKER_PROFILES = {
-    "ftmo_2step_mt5": {
-        "name": "ftmo_2step_mt5",
-        "label": "FTMO 2-Step MT5",
-        "platform": "MT5",
-        "account_type": "2-Step",
-        "verified": False,
-        "defaults": {
-            "lot_step": 0.01,
-            "spec_verified": False,
-        },
-        "symbols": {
-            "BTCUSD": {"lot_step": 0.001},
-        },
-    },
-    "windsor_prime_mt5": {
-        "name": "windsor_prime_mt5",
-        "label": "Windsor Brokers Prime MT5",
-        "platform": "MT5",
-        "account_type": "Prime",
-        "verified": False,
-        "defaults": {
-            "commission_per_lot": 0.0,
-            "lot_step": 0.01,
-            "spec_verified": False,
-        },
-        "symbols": {
-            "GOLD": {"broker_symbol": "XAUUSD"},
-            "BTCUSD": {"lot_step": 0.001},
-        },
-    },
-}
 
 
 OPTIMIZATION = {
@@ -164,189 +135,7 @@ SCANNER_DEFAULTS = {
 #   session_hours_utc: list of H4 bar-start UTC hours to scan for signals
 #                      ([] = no filter, scan all hours)
 # =============================================================================
-SYMBOLS = {
-    # ── US Markets ───────────────────────────────────────────────────────────
-    "US30": {
-        "symbol_id":         10,
-        "label":             "US30 (Dow Jones)",
-        "x":                 10.0,
-        "session_hours_utc": [],
-        "group":             "US",
-        "contract_value":    1.0,
-        "point_size":        1.0,
-        "spread_pts":        2.0,
-        "commission_per_lot": 3.5,
-        "slippage_pts":      0.5,
-        "min_lot_size":      0.01,
-        "max_lot_size":      50.0,
-        "swap_long_per_lot_per_day":  -3.5,   # verified from broker
-        "swap_short_per_lot_per_day": 1.2,
-    },
-    "US500": {
-        "symbol_id":         8,
-        "label":             "US500 (S&P 500)",
-        "x":                 1.0,
-        "session_hours_utc": [],
-        "group":             "US",
-        "contract_value":    1.0,
-        "point_size":        1.0,
-        "spread_pts":        0.4,
-        "commission_per_lot": 3.5,
-        "slippage_pts":      0.1,
-        "min_lot_size":      0.01,
-        "max_lot_size":      50.0,
-        "swap_long_per_lot_per_day":  0.0,   # TODO: verify from broker
-        "swap_short_per_lot_per_day": 0.0,
-    },
-    "US100": {
-        "symbol_id":         9,
-        "label":             "US100 (NASDAQ 100)",
-        "x":                 5.0,
-        "session_hours_utc": [],
-        "group":             "US",
-        "contract_value":    1.0,
-        "point_size":        1.0,
-        "spread_pts":        1.5,
-        "commission_per_lot": 3.5,
-        "slippage_pts":      0.3,
-        "min_lot_size":      0.01,
-        "max_lot_size":      50.0,
-        "swap_long_per_lot_per_day":  0.0,   # TODO: verify from broker
-        "swap_short_per_lot_per_day": 0.0,
-    },
-    # ── European Markets ─────────────────────────────────────────────────────
-    "DE40": {
-        "symbol_id":         3,
-        "label":             "DE40 (DAX 40)",
-        "x":                 5.0,
-        "session_hours_utc": [],
-        "group":             "EU",
-        "contract_value":    1.0,
-        "point_size":        1.0,
-        "spread_pts":        1.5,
-        "commission_per_lot": 3.5,
-        "slippage_pts":      0.5,
-        "min_lot_size":      0.01,
-        "max_lot_size":      50.0,
-        "swap_long_per_lot_per_day":  0.0,   # TODO: verify from broker
-        "swap_short_per_lot_per_day": 0.0,
-    },
-    "UK100": {
-        "symbol_id":         7,
-        "label":             "UK100 (FTSE 100)",
-        "x":                 5.0,
-        "session_hours_utc": [],
-        "group":             "EU",
-        "contract_value":    1.0,
-        "point_size":        1.0,
-        "spread_pts":        1.5,
-        "commission_per_lot": 3.5,
-        "slippage_pts":      0.5,
-        "min_lot_size":      0.01,
-        "max_lot_size":      50.0,
-        "swap_long_per_lot_per_day":  0.0,   # TODO: verify from broker
-        "swap_short_per_lot_per_day": 0.0,
-    },
-    "FR40": {
-        "symbol_id":         2,
-        "label":             "FR40 (CAC 40)",
-        "x":                 5.0,             # (*) placeholder — run optimizer
-        "session_hours_utc": [],
-        "group":             "EU",
-        "contract_value":    1.0,
-        "point_size":        1.0,
-        "spread_pts":        2.0,
-        "commission_per_lot": 3.5,
-        "slippage_pts":      0.5,
-        "min_lot_size":      0.01,
-        "max_lot_size":      50.0,
-        "swap_long_per_lot_per_day":  0.0,   # TODO: verify from broker
-        "swap_short_per_lot_per_day": 0.0,
-    },
-    "SP35": {
-        "symbol_id":         6,
-        "label":             "SP35 (IBEX 35)",
-        "x":                 5.0,             # (*) placeholder — run optimizer
-        "session_hours_utc": [],
-        "group":             "EU",
-        "contract_value":    1.0,
-        "point_size":        1.0,
-        "spread_pts":        8.0,
-        "commission_per_lot": 3.5,
-        "slippage_pts":      1.0,
-        "min_lot_size":      0.01,
-        "max_lot_size":      50.0,
-        "swap_long_per_lot_per_day":  0.0,   # TODO: verify from broker
-        "swap_short_per_lot_per_day": 0.0,
-    },
-    # ── Asian Markets ────────────────────────────────────────────────────────
-    "HK50": {
-        "symbol_id":         4,
-        "label":             "HK50 (Hang Seng 50)",
-        "x":                 15.0,
-        "session_hours_utc": [],
-        "group":             "ASIA",
-        "contract_value":    1.0,
-        "point_size":        1.0,
-        "spread_pts":        5.0,
-        "commission_per_lot": 3.5,
-        "slippage_pts":      1.0,
-        "min_lot_size":      0.01,
-        "max_lot_size":      20.0,
-        "swap_long_per_lot_per_day":  -4.2,  # verified from broker
-        "swap_short_per_lot_per_day": 1.5,
-    },
-    "J225": {
-        "symbol_id":         5,
-        "label":             "J225 (Nikkei 225)",
-        "x":                 15.0,
-        "session_hours_utc": [],
-        "group":             "ASIA",
-        "contract_value":    1.0,
-        "point_size":        1.0,
-        "spread_pts":        8.0,
-        "commission_per_lot": 3.5,
-        "slippage_pts":      1.5,
-        "min_lot_size":      0.01,
-        "max_lot_size":      20.0,
-        "swap_long_per_lot_per_day":  0.8,   # verified from broker
-        "swap_short_per_lot_per_day": -2.1,
-    },
-    # ── Metals ───────────────────────────────────────────────────────────────
-    "GOLD": {
-        "symbol_id":         56,
-        "label":             "GOLD (XAU/USD)",
-        "x":                 0.5,             # (*) placeholder — run optimizer
-        "session_hours_utc": [],
-        "group":             "METAL",
-        "contract_value":    1.0,
-        "point_size":        1.0,
-        "spread_pts":        0.3,
-        "commission_per_lot": 3.5,
-        "slippage_pts":      0.1,
-        "min_lot_size":      0.01,
-        "max_lot_size":      20.0,
-        "swap_long_per_lot_per_day":  0.0,   # TODO: verify from broker
-        "swap_short_per_lot_per_day": 0.0,
-    },
-    # ── Crypto ───────────────────────────────────────────────────────────────
-    "BTCUSD": {
-        "symbol_id":         81,
-        "label":             "BTCUSD (Bitcoin)",
-        "x":                 50.0,            # (*) placeholder — run optimizer
-        "session_hours_utc": [],
-        "group":             "CRYPTO",
-        "contract_value":    1.0,
-        "point_size":        1.0,
-        "spread_pts":        5.0,
-        "commission_per_lot": 3.5,
-        "slippage_pts":      2.0,
-        "min_lot_size":      0.001,           # BTC micro-lots
-        "max_lot_size":      5.0,
-        "swap_long_per_lot_per_day":  0.0,   # TODO: verify from broker (highly variable)
-        "swap_short_per_lot_per_day": 0.0,
-    },
-}
+
 
 
 # =============================================================================
@@ -382,12 +171,6 @@ def get_indicator_params() -> dict:
     }
 
 
-def get_broker_profile(profile_key: str | None = None) -> dict:
-    """Resolve the broker profile used to translate strategy config to execution specs."""
-    key = profile_key or DEFAULT_BROKER_PROFILE
-    if key not in BROKER_PROFILES:
-        raise KeyError(f"Unknown broker profile '{key}'. Available: {list(BROKER_PROFILES)}")
-    return BROKER_PROFILES[key]
 
 
 def get_account_settings(mode: str = "standard", overrides: dict | None = None) -> dict:
@@ -435,21 +218,6 @@ def get_symbol_ktp(sym_key: str) -> float:
     return SYMBOLS.get(sym_key, {}).get('ktp', STRATEGY['ktp'])
 
 
-def get_symbol_config(sym_key: str, broker_profile: str | None = None) -> dict:
-    """Return the raw symbol config merged with default cost fields."""
-    if sym_key not in SYMBOLS:
-        raise KeyError(f"Symbol '{sym_key}' not found. Available: {list(SYMBOLS)}")
-
-    sym = SYMBOLS[sym_key]
-    merged = {
-        **DEFAULT_COSTS,
-        **sym,
-    }
-    return merge_broker_profile(
-        merged,
-        get_broker_profile(broker_profile),
-        symbol_key=sym_key,
-    )
 
 
 def get_symbol_params(sym_key: str, broker_profile: str | None = None) -> dict:
@@ -497,25 +265,6 @@ def get_symbol_params(sym_key: str, broker_profile: str | None = None) -> dict:
     }
 
 
-def get_cost_settings(
-    sym_key: str,
-    overrides: dict | None = None,
-    broker_profile: str | None = None,
-) -> dict:
-    """Resolve execution costs for one symbol.
-
-    This isolates broker-specific costs from strategy logic so signal rules do
-    not need to know anything about commission or slippage.
-    """
-    sym = get_symbol_config(sym_key, broker_profile=broker_profile)
-    costs = {
-        **DEFAULT_COSTS,
-        "slippage_pts": sym.get("slippage_pts", DEFAULT_COSTS["slippage_pts"]),
-        "commission_per_lot": sym.get("commission_per_lot", DEFAULT_COSTS["commission_per_lot"]),
-    }
-    if overrides:
-        costs.update(overrides)
-    return costs
 
 
 def get_symbol_search_space(
