@@ -60,6 +60,9 @@ cache/
 # Backtest / scanner output CSV (kết quả chạy, không phải source)
 output/
 
+# Generated HTML charts (output từ ma_chart.py, combo_chart, v.v.)
+*.html
+
 # Temporary lint/tool output
 ruff_fix_output.txt
 
