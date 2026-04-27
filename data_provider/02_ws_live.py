@@ -1848,51 +1848,6 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
     _on_batch_complete(_stats["batches_run"], total_new, backlog_snap)
 
 
-# =============================================================================
-# BATCH NOTIFICATION — Cập nhật thống kê giờ và alert khi batch bất thường
-# =============================================================================
-
-def _on_batch_complete(batch_num: int, total_new: int, backlog_snap: dict) -> None:
-    """Cập nhật _hourly_stats và gửi Discord alert nếu batch bất thường.
-
-    Chỉ gửi Discord trong 2 trường hợp:
-      1. Batch đầu tiên sau startup → xác nhận hệ thống đang sống và kéo được data.
-      2. total_new == 0 → không nhận được nến nào → khả năng mất kết nối TV.
-    Batch bình thường (có bars, không phải batch 1) → im lặng, chỉ ghi log.
-    """
-    backlog_n = len(backlog_snap)
-
-    with _hourly_lock:
-        _hourly_stats["batches"] += 1
-        _hourly_stats["bars"] += total_new
-        if total_new == 0:
-            _hourly_stats["zero_bar_batches"] += 1
-        if backlog_n > _hourly_stats["backlog_peak"]:
-            _hourly_stats["backlog_peak"] = backlog_n
-
-    # Batch đầu tiên sau startup: xác nhận kết nối và kéo data thành công
-    if batch_num == 1:
-        emoji = "✅" if total_new > 0 else "⚠️"
-        level = "INFO" if total_new > 0 else "WARNING"
-        backlog_line = f"📋 Backlog: {backlog_n} pairs" if backlog_n else "📋 Backlog: sạch"
-        _tg_alert(
-            level,
-            f"{emoji} <b>Batch đầu tiên hoàn tất</b>\n"
-            f"📊 Bars kéo được: {total_new}  |  Symbols: {len(WS_SYMBOLS)}\n"
-            f"{backlog_line}",
-        )
-        return
-
-    # Batch bất thường: 0 bars từ tất cả symbols (mất kết nối TV?)
-    if total_new == 0:
-        _tg_alert(
-            "WARNING",
-            f"⚠️ <b>Batch #{batch_num} — 0 bars</b>\n"
-            f"Không nhận được nến nào từ TradingView.\n"
-            f"Kiểm tra kết nối TV hoặc xem log.",
-        )
-
-
 def _on_batch_complete(
     batch_num: int,
     total_new: int,
