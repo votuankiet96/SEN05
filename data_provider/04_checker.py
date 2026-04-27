@@ -578,8 +578,9 @@ def _estimate_repair_n_bars(tf_code: str, start_dt: datetime) -> int:
 def _query_bar_times(symbol_id: int, tf_code: str,
                      from_dt: datetime, to_dt: datetime) -> list[datetime]:
     """Lấy danh sách BarTime trong Fact cho một cửa sổ repair cụ thể."""
-    conn = get_connection()
+    conn = None
     try:
+        conn = get_connection()
         cursor = conn.cursor()
         cursor.execute("""
             SELECT f.BarTime
@@ -591,8 +592,15 @@ def _query_bar_times(symbol_id: int, tf_code: str,
             ORDER BY f.BarTime
         """, (symbol_id, tf_code, from_dt, to_dt))
         return [row[0] for row in cursor.fetchall()]
+    except Exception as e:
+        logging.getLogger(__name__).error(
+            "_query_bar_times FAILED sym_id=%s tf=%s from=%s to=%s: %s",
+            symbol_id, tf_code, from_dt, to_dt, e,
+        )
+        return []
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 
 def _repair_direct_window(tv, sym: dict, tf_code: str, issue_times: list[datetime],
@@ -671,18 +679,36 @@ def _repair_direct_window(tv, sym: dict, tf_code: str, issue_times: list[datetim
         deleted, label, tf_code, reason,
     )
 
-    try:
-        etl_inserted = run_etl_direct(sym_id, tf_code, staging)
-        logger.info(
-            "  ETL: +%d bars inserted into Fact — %s %s (%s)",
-            etl_inserted, label, tf_code, reason,
-        )
-    except Exception as e:
-        logger.error(
-            "  ETL FAILED after focused staging — %s %s (%s): %s",
-            label, tf_code, reason, e,
-        )
-        return False
+    _MAX_ETL_RETRIES = 3
+    etl_inserted = -1
+    for etl_attempt in range(1, _MAX_ETL_RETRIES + 1):
+        try:
+            etl_inserted = run_etl_direct(sym_id, tf_code, staging)
+            logger.info(
+                "  ETL: +%d bars inserted into Fact — %s %s (%s)",
+                etl_inserted, label, tf_code, reason,
+            )
+            break
+        except Exception as e:
+            if etl_attempt == _MAX_ETL_RETRIES:
+                logger.critical(
+                    "  ETL FAILED sau %d lần thử — gap tồn tại trong Fact! %s %s (%s): %s",
+                    _MAX_ETL_RETRIES, label, tf_code, reason, e,
+                )
+                try:
+                    from _discord import tg_send
+                    tg_send(
+                        f"🚨 ETL FAILED {label}/{tf_code} sau {_MAX_ETL_RETRIES} retries "
+                        f"({reason}) — gap trong DB!\n`{e}`"
+                    )
+                except Exception:
+                    pass
+                return False
+            logger.warning(
+                "  ETL attempt %d/%d failed — retry... %s %s (%s): %s",
+                etl_attempt, _MAX_ETL_RETRIES, label, tf_code, reason, e,
+            )
+            time.sleep(2)
     return True
 
 
@@ -1757,6 +1783,22 @@ def main() -> None:
             exit_code = 1
         _exit(exit_code)
 
+    # --manual-confirm không còn hoạt động sau khi migrate sang Discord (one-way webhook).
+    # Tự động fall-through sang auto-repair và cảnh báo rõ để user biết.
+    logger.warning(
+        "--manual-confirm không còn hoạt động (Discord là one-way webhook). "
+        "Tự động chuyển sang auto-repair."
+    )
+    try:
+        tg_send(
+            "⚠️ <b>[Checker]</b> <code>--manual-confirm</code> không còn hoạt động "
+            "(Discord webhook là một chiều — không thể nhận phản hồi).\n"
+            "Đã tự động chuyển sang <b>auto-repair</b> (scan + sửa tự động)."
+        )
+        tg_flush()
+    except Exception:
+        pass
+
     _log_section(logger, "PHASE 1 | Scan")
     tg_send("🔍 <b>[Checker]</b> Đang scan dữ liệu (Phase 1/3)...")
     try:
@@ -1779,31 +1821,9 @@ def main() -> None:
         logger.info("==== DONE | all clean ====")
         _exit(0)
 
-    # ── Phase 2: Hỏi user trước khi repair ───────────────────────────────────
-    _log_section(logger, f"PHASE 2 | User confirmation | issues={len(issues)}")
-    choice = request_confirm(
-        title="[Checker] Phát hiện vấn đề dữ liệu",
-        problem_desc=_build_problem_desc_clean(issues, args.threshold),
-        options={
-            "confirm": f"Sửa tất cả {len(issues)} pairs",
-            "skip":    "Bỏ qua, chỉ lưu báo cáo",
-        },
-        timeout_min=240,
-        affected_pairs=[f"{f['sym']}/{f['tf']}: {f['reason']}" for f in issues[:8]],
-        task_name="checker_repair",
-    )
-
-    logger.info("User choice: %s", choice)
-
-    # ── User chọn skip hoặc timeout: chỉ gửi scan report ────────────────────
-    if choice != "confirm":
-        reason = "hết giờ (4h)" if choice == "timeout" else "người dùng bỏ qua"
-        report = _build_report_clean(scan_stats, start_time, auth_mode)
-        _log_report(report, logger)
-        tg_send(f"📋 <b>[Checker]</b> Scan report ({reason}):\n\n" + report)
-        tg_flush()
-        logger.info("==== DONE | repair skipped (%s) ====", reason)
-        _exit(0)
+    # ── Phase 2: Auto-confirm (manual-confirm không còn hỗ trợ) ─────────────
+    _log_section(logger, f"PHASE 2 | Auto-confirm | issues={len(issues)}")
+    logger.info("Auto-confirm: tiến hành repair %d pairs.", len(issues))
 
     # ── Phase 3: Acquire lock + repair ───────────────────────────────────────
     pending_pairs = _issues_to_pending_pairs(issues, symbols)

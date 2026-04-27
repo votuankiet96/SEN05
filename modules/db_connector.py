@@ -163,7 +163,7 @@ def insert_staging_batch(df, symbol_id: int, staging_table: str) -> int:
             VALUES (?, ?, ?, ?, ?, ?, ?, 1)
         """, rows)
 
-        # 3. MERGE into staging — skip existing (SymbolID + BarTime)
+        # 3. MERGE into staging — insert new rows, update existing if OHLCV changed
         cursor.execute(f"""
             MERGE {staging_table} AS tgt
             USING #tmp_staging AS src
@@ -172,14 +172,24 @@ def insert_staging_batch(df, symbol_id: int, staging_table: str) -> int:
                 INSERT (SymbolID, BarTime, [Open], High, Low,
                         [Close], Volume, IsProcessed)
                 VALUES (src.SymbolID, src.BarTime, src.[Open], src.High,
-                        src.Low, src.[Close], src.Volume, src.IsProcessed);
+                        src.Low, src.[Close], src.Volume, src.IsProcessed)
+            WHEN MATCHED AND (
+                tgt.[Open]  <> src.[Open]  OR tgt.High    <> src.High  OR
+                tgt.Low     <> src.Low     OR tgt.[Close] <> src.[Close] OR
+                ISNULL(tgt.Volume, -1) <> ISNULL(src.Volume, -1)
+            ) THEN UPDATE SET
+                tgt.[Open]  = src.[Open],
+                tgt.High    = src.High,
+                tgt.Low     = src.Low,
+                tgt.[Close] = src.[Close],
+                tgt.Volume  = src.Volume;
         """)
-        inserted = cursor.rowcount
+        affected = cursor.rowcount
 
         conn.commit()
-        logger.info("INSERT %s SymbolID=%d: %d new rows (MERGE).",
-                    staging_table, symbol_id, inserted)
-        return inserted
+        logger.info("MERGE %s SymbolID=%d: %d rows affected (insert+update).",
+                    staging_table, symbol_id, affected)
+        return affected
 
     except Exception as e:
         conn.rollback()
@@ -1009,12 +1019,16 @@ def delete_ohlcv_bars(symbol_id: int, tf_code: str, bar_times: list) -> int:
             return 0
         tf_id = row[0]
 
+        _BATCH = 100
         deleted = 0
-        for bt in bar_times:
-            cursor.execute("""
-                DELETE FROM DWH.Fact_OHLCV
-                WHERE SymbolID = ? AND TimeframeID = ? AND BarTime = ?
-            """, (symbol_id, tf_id, bt))
+        for i in range(0, len(bar_times), _BATCH):
+            batch = bar_times[i : i + _BATCH]
+            placeholders = ",".join("?" * len(batch))
+            cursor.execute(
+                f"DELETE FROM DWH.Fact_OHLCV "
+                f"WHERE SymbolID=? AND TimeframeID=? AND BarTime IN ({placeholders})",
+                [symbol_id, tf_id] + list(batch),
+            )
             deleted += cursor.rowcount
         conn.commit()
         logger.info("delete_ohlcv_bars: SymbolID=%d TF=%s — %d rows deleted",

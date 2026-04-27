@@ -249,6 +249,9 @@ N_BARS_WS_BACKLOG     = 30
 # 12 batch × 5 phút = 60 phút — nếu vẫn không lấy được sau 1 giờ → báo lỗi + bỏ
 MAX_BACKLOG_BATCHES   = 12
 
+# Số bar tối đa được phép lưu trong SQLite spool trước khi drop và alert
+MAX_SPOOL_ROWS        = 100_000
+
 
 # Bảng ánh xạ: tên TF nội bộ → chuỗi interval theo chuẩn TradingView WebSocket API
 # TradingView dùng chuỗi riêng để chỉ interval: "1W", "1D", "240" (=H4), v.v.
@@ -560,11 +563,27 @@ def _spool_write(item: tuple) -> None:
     Serialize 1 bar và ghi vào SQLite spool.
     Được gọi khi cả DB queue lẫn overflow buffer RAM đều đầy.
     Bar sẽ được đọc lại và đưa vào queue khi có chỗ trống.
+    Drop và alert khi spool vượt MAX_SPOOL_ROWS.
     """
     symbol_id, tf_code, staging_table, tv_symbol, df = item
     blob = pickle.dumps(df)
     with _spool_lock:
         with sqlite3.connect(_SPOOL_DB) as con:
+            count = con.execute("SELECT COUNT(*) FROM spool").fetchone()[0]
+            if count >= MAX_SPOOL_ROWS:
+                logger.error(
+                    "[SPOOL] Spool đầy (%d rows) — drop bar sym=%s tf=%s",
+                    MAX_SPOOL_ROWS, tv_symbol, tf_code,
+                )
+                try:
+                    _tg_alert(
+                        "CRITICAL",
+                        f"🚨 WS spool đầy ({MAX_SPOOL_ROWS} rows) — đang drop data!\n"
+                        f"Kiểm tra kết nối DB ngay. Bar bị bỏ: {tv_symbol}/{tf_code}",
+                    )
+                except Exception:
+                    pass
+                return
             con.execute(
                 "INSERT INTO spool (symbol_id,tf_code,staging_table,tv_symbol,bar_data) VALUES (?,?,?,?,?)",
                 (symbol_id, tf_code, staging_table, tv_symbol, blob),
@@ -611,6 +630,22 @@ def _safe_spool_count() -> int | None:
         return int(row[0]) if row else 0
     except Exception:
         return None
+
+
+def _spool_cleanup_old() -> int:
+    """Xóa entries trong spool cũ hơn 48 giờ. Gọi mỗi giờ từ _status_reporter."""
+    try:
+        with _spool_lock:
+            with sqlite3.connect(_SPOOL_DB) as con:
+                con.execute("DELETE FROM spool WHERE created_at < datetime('now', '-48 hours')")
+                deleted = con.total_changes
+                con.commit()
+        if deleted:
+            logger.info("[SPOOL] Cleaned up %d stale entries (>48h).", deleted)
+        return deleted
+    except Exception as exc:
+        logger.warning("[SPOOL] cleanup_old failed: %s", exc)
+        return 0
 
 
 def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str) -> str:
@@ -753,14 +788,36 @@ def _db_worker() -> None:
             _db_queue.task_done()
             continue
 
-        # BƯỚC A: Ghi nến vào bảng staging trong DB
-        try:
-            inserted = insert_staging_batch(df, symbol_id, staging_table)
-        except Exception as exc:
-            logger.error("[DB ] Staging error — %s %s: %s", tv_symbol, tf_code, exc)
-            with _state_lock:
-                _stats["errors"] += 1
-            _db_queue.task_done()  # Báo cho queue biết đã xử lý xong item này
+        # BƯỚC A: Ghi nến vào bảng staging trong DB (có retry 3 lần khi DB tạm lỗi)
+        _DB_WORKER_RETRIES = 3
+        inserted = 0
+        _staging_ok = False
+        for _attempt in range(1, _DB_WORKER_RETRIES + 1):
+            try:
+                inserted = insert_staging_batch(df, symbol_id, staging_table)
+                _staging_ok = True
+                break
+            except Exception as exc:
+                if _attempt == _DB_WORKER_RETRIES:
+                    logger.error(
+                        "[DB ] Staging FAILED sau %d lần thử — bar bị mất! %s %s: %s",
+                        _DB_WORKER_RETRIES, tv_symbol, tf_code, exc,
+                    )
+                    with _state_lock:
+                        _stats["errors"] += 1
+                    _tg_alert(
+                        "ERROR",
+                        f"🚨 DB worker: staging FAILED {tv_symbol}/{tf_code} sau "
+                        f"{_DB_WORKER_RETRIES} lần thử — bar bị mất!\n`{exc}`",
+                    )
+                else:
+                    logger.warning(
+                        "[DB ] Staging attempt %d/%d failed — retry in 5s... %s %s: %s",
+                        _attempt, _DB_WORKER_RETRIES, tv_symbol, tf_code, exc,
+                    )
+                    _shutdown.wait(5)
+        if not _staging_ok:
+            _db_queue.task_done()
             continue
 
         # BƯỚC A2: Dọn transition bar DST / anchor drift khỏi staging
@@ -1892,6 +1949,9 @@ def _status_reporter() -> None:
             if age_h > max_age_h:
                 max_age_h = age_h
 
+        # Dọn spool entries cũ >48h trước khi đếm
+        _spool_cleanup_old()
+
         # Đếm số bar trong SQLite spool
         try:
             with sqlite3.connect(_SPOOL_DB) as _con:
@@ -2152,7 +2212,7 @@ def main() -> None:
     # Ghi log và gửi Telegram thông báo hệ thống đã khởi động thành công
     logger.info(
         "V5 started — %d groups, %d sessions/batch, interval=%dmin, auth=%s.",
-        n_groups, len(SYMBOLS) * len(WS_TF_INTERVAL), BATCH_INTERVAL_MIN, token_source,
+        n_groups, len(WS_SYMBOLS) * len(WS_TF_INTERVAL), BATCH_INTERVAL_MIN, token_source,
     )
     _tg_alert(
         "INFO",

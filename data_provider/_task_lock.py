@@ -69,8 +69,8 @@ Thiet ke uu tien an toan van hanh:
 #   Cột Payload   = nơi WS ghi kết quả token (/confirm hay /skip)
 # =============================================================================
 
-import random
 import re
+import secrets
 import string
 import sys
 import time
@@ -253,7 +253,8 @@ def cleanup_expired() -> int:
 
 def generate_token() -> str:
     """Tạo token 8 ký tự (chữ hoa + số) để dùng trong lệnh /confirm_TOKEN."""
-    return "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+    alphabet = string.ascii_uppercase + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(8))
 
 
 # ─── Token command handler ───────────────────────────────────────────────────
