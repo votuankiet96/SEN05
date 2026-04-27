@@ -1371,8 +1371,25 @@ class BatchFetcher:
                     # Lấy watermark: timestamp của nến mới nhất đã lưu trong DB
                     last_ts = _last_bar_ts.get(key, 0.0)
 
-                # Lọc: chỉ giữ lại nến có timestamp SAU watermark (nến thực sự mới)
-                new_bars = [b for b in closed_bars if b["v"][0] > last_ts]
+                # Backlog mode: hạ watermark để phủ gap — staging MERGE + Fact NOT EXISTS chặn duplicate
+                with _backlog_lock:
+                    miss_count = _backlog.get(key, 0)
+
+                if miss_count > 0:
+                    from config import TF_MINUTES as _TF_MIN
+                    tf_min = _TF_MIN.get(tf_code, 5)
+                    effective_wm = max(0.0, last_ts - miss_count * tf_min * 60 * 2)
+                    logger.debug(
+                        "[G%d] %s [%s] backlog gap-fill — watermark lowered by %dm",
+                        self.group_id, tv_symbol, tf_code, miss_count * tf_min * 2,
+                    )
+                else:
+                    effective_wm = last_ts
+
+                # Lọc: chỉ giữ nến sau effective watermark
+                # Normal: effective_wm = last_ts (không thay đổi)
+                # Backlog: effective_wm thấp hơn để lấp gap bars bị bỏ lỡ
+                new_bars = [b for b in closed_bars if b["v"][0] > effective_wm]
 
                 if new_bars:
                     # Chuyển danh sách nến thành DataFrame
