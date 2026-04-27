@@ -1066,7 +1066,7 @@ def main() -> int:
             + QUICK_COMMANDS_HINT,
         )
 
-    tg_flush()  # Đảm bảo tin Telegram được gửi trước khi process thoát
+    tg_flush()  # Đảm bảo thông báo Discord được gửi trước khi process thoát
 
     # Quyết định exit code dựa trên số lỗi
     if fail > 0:
