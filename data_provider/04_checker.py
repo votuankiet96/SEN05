@@ -11,7 +11,7 @@ File nay so sanh du lieu trong DB voi TradingView de tim:
 Che do van hanh hien tai:
 - `--dry-run`: chi quet va bao cao, khong sua
 - mac dinh: uu tien auto-repair theo rollout an toan, co lock va co verify sau sua
-- `--manual-confirm`: chi khi bat co nay moi cho Telegram `/confirm_TOKEN`
+- `--manual-confirm`: chi khi bat co nay moi cho Discord xac nhan (one-way, khong nhan lenh nguoc)
 
 Nguong mac dinh hien tai la `0.001 = 0.1%`.
 Tuy nhien cac "core issue" nhu missing / wrong OHLC / extra bars co the bo qua nguong nay
@@ -28,8 +28,8 @@ va duoc dua vao danh sach sua ngay, vi do la loi cau truc du lieu chinh.
 #   nào bị sai số liệu (giá mở/đóng/cao/thấp không khớp) hay bị thiếu không.
 #
 #   Mặc định hiện nay script CÓ THỂ tự sửa theo chế độ auto-repair an toàn.
-#   Chỉ khi chạy với --manual-confirm thì Telegram mới được dùng để hỏi
-#   /confirm_TOKEN hoặc /skip_TOKEN trước khi sửa.
+#   Chỉ khi chạy với --manual-confirm thì Discord mới gửi thông báo chi tiết.
+#   Discord là one-way (không nhận lệnh ngược) — xác nhận tự động sau timeout.
 #
 # TẠI SAO CẦN SCRIPT NÀY?
 #   Dữ liệu trong DB có thể bị lệch so với TradingView do nhiều lý do:
@@ -48,19 +48,19 @@ va duoc dua vao danh sach sua ngay, vi do la loi cau truc du lieu chinh.
 #     Kết quả: danh sách cặp có vấn đề theo core issue hoặc vượt ngưỡng mismatch hiện hành
 #
 #   Giai đoạn 2 — CONFIRM (hỏi user):
-#     Gửi Telegram mô tả chi tiết → đợi user gõ /confirm_TOKEN hoặc /skip_TOKEN
+#     Gửi Discord mô tả chi tiết → đợi timeout (Discord one-way, không nhận phản hồi)
 #     Timeout 4 giờ, mặc định bỏ qua nếu không có phản hồi
 #
 #   Giai đoạn 3 — REPAIR (sửa nếu user đồng ý):
 #     - Acquire lock 'checker_repair' (ngăn WS chạy ETL đồng thời)
 #     - Xóa nến sai → kéo lại từ TradingView → kiểm tra sau khi sửa
 #     - Release lock → WS tự động resume ETL đã hoãn
-#     - Gửi báo cáo kết quả lên Telegram
+#     - Gửi báo cáo kết quả lên Discord
 #
 # CÁCH CHẠY THỦ CÔNG:
 #   python 04_checker.py                    # chạy scan + auto-repair an toàn (mặc định)
 #   python 04_checker.py --dry-run          # chỉ scan + báo cáo, không hỏi, không sửa
-#   python 04_checker.py --manual-confirm   # chỉ sửa khi Telegram xác nhận
+#   python 04_checker.py --manual-confirm   # chỉ sửa khi Discord xác nhận (không tương tác, auto-confirm)
 #   python 04_checker.py --sym GOLD         # chỉ kiểm tra 1 symbol
 #   python 04_checker.py --tf H4            # chỉ kiểm tra 1 khung thời gian
 #   python 04_checker.py --threshold 0.05   # nâng ngưỡng sai lên 5% (mặc định 0.1%)
@@ -1132,7 +1132,7 @@ def _build_problem_desc(issues: list[dict], threshold: float) -> str:
     return "\n".join(lines)
 
 
-# ─── Telegram report ─────────────────────────────────────────────────────────
+# ─── Discord notification / Report ───────────────────────────────────────────
 
 def _build_report(stats: dict, start_time: datetime, auth_mode: str) -> str:
     elapsed = max(1, int((now_utc() - start_time).total_seconds() / 60))
@@ -1186,7 +1186,7 @@ def _build_problem_desc_clean(issues: list[dict], threshold: float) -> str:
 
 def _build_report_clean(stats: dict, start_time: datetime, auth_mode: str) -> str:
     """
-    ASCII-safe Telegram/report body used by the main flow.
+    ASCII-safe Discord/report body used by the main flow.
     """
     elapsed = max(1, int((now_utc() - start_time).total_seconds() / 60))
     total = stats["total"]
@@ -1488,7 +1488,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--manual-confirm", action="store_true",
-        help="Giữ flow cũ: hỏi xác nhận Telegram trước khi repair. Mặc định checker sẽ auto-repair khi không dùng --dry-run.",
+        help="Giữ flow cũ: gửi Discord thông báo trước khi repair (one-way, không nhận lệnh ngược). Mặc định checker sẽ auto-repair khi không dùng --dry-run.",
     )
     args = parser.parse_args()
 
@@ -2037,7 +2037,7 @@ def check_co_continuity(
 
 
 def _format_co_report(stats: dict, lookback_days: int) -> str:
-    """Trả về chuỗi báo cáo C-O continuity check (dùng cả cho log và Telegram)."""
+    """Trả về chuỗi báo cáo C-O continuity check (dùng cả cho log và Discord)."""
     total   = stats["total"]
     flagged = stats["flagged"]
     pct     = stats["pct"]

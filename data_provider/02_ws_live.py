@@ -338,6 +338,15 @@ _consecutive_guest_batches = 0
 # Ngưỡng cảnh báo: sau bao nhiêu batch guest liên tiếp thì gửi alert nặng hơn
 _GUEST_ALERT_THRESHOLD     = 3
 
+# Thống kê theo giờ — reset mỗi lần gửi hourly digest lên Discord
+_hourly_stats: dict = {
+    "batches":          0,  # Số batch chạy trong giờ qua
+    "bars":             0,  # Tổng bars nhận được trong giờ qua
+    "zero_bar_batches": 0,  # Số batch nhận được 0 bar
+    "backlog_peak":     0,  # Backlog peak (số pairs) trong giờ qua
+}
+_hourly_lock = threading.Lock()
+
 # Bộ đếm backfill miss: số lần LIÊN TIẾP không nhận được data cho mỗi cặp (symbol_id, tf_code)
 # Khi counter đạt MAX_MISS_RETRIES → cảnh báo Discord ngay, reset counter (tránh spam)
 # Khi cặp đó nhận được data trở lại → counter tự động xóa
@@ -1078,7 +1087,7 @@ def _update_missed_pairs(
     ┌──────────────────────────────────────────────────────────────────────────┐
     │ Cặp (symbol_id, tf_code) nhận được data  → xóa khỏi bộ đếm (reset = 0) │
     │ Cặp bị miss lần này                      → tăng counter +1              │
-    │ Counter >= MAX_MISS_RETRIES               → cảnh báo Telegram, reset    │
+    │ Counter >= MAX_MISS_RETRIES               → cảnh báo Discord, reset     │
     └──────────────────────────────────────────────────────────────────────────┘
 
     Tham số:
@@ -1430,8 +1439,25 @@ class BatchFetcher:
                     # Lấy watermark: timestamp của nến mới nhất đã lưu trong DB
                     last_ts = _last_bar_ts.get(key, 0.0)
 
-                # Lọc: chỉ giữ lại nến có timestamp SAU watermark (nến thực sự mới)
-                new_bars = [b for b in closed_bars if b["v"][0] > last_ts]
+                # Backlog mode: hạ watermark để phủ gap — staging MERGE + Fact NOT EXISTS chặn duplicate
+                with _backlog_lock:
+                    miss_count = _backlog.get(key, 0)
+
+                if miss_count > 0:
+                    from config import TF_MINUTES as _TF_MIN
+                    tf_min = _TF_MIN.get(tf_code, 5)
+                    effective_wm = max(0.0, last_ts - miss_count * tf_min * 60 * 2)
+                    logger.debug(
+                        "[G%d] %s [%s] backlog gap-fill — watermark lowered by %dm",
+                        self.group_id, tv_symbol, tf_code, miss_count * tf_min * 2,
+                    )
+                else:
+                    effective_wm = last_ts
+
+                # Lọc: chỉ giữ nến sau effective watermark
+                # Normal: effective_wm = last_ts (không thay đổi)
+                # Backlog: effective_wm thấp hơn để lấp gap bars bị bỏ lỡ
+                new_bars = [b for b in closed_bars if b["v"][0] > effective_wm]
 
                 if new_bars:
                     # Chuyển danh sách nến thành DataFrame
@@ -1818,6 +1844,54 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
     else:
         logger.info("[SCHED] No backlog — all pairs OK this batch.")
 
+    # Cập nhật thống kê giờ và gửi alert nếu batch bất thường
+    _on_batch_complete(_stats["batches_run"], total_new, backlog_snap)
+
+
+# =============================================================================
+# BATCH NOTIFICATION — Cập nhật thống kê giờ và alert khi batch bất thường
+# =============================================================================
+
+def _on_batch_complete(batch_num: int, total_new: int, backlog_snap: dict) -> None:
+    """Cập nhật _hourly_stats và gửi Discord alert nếu batch bất thường.
+
+    Chỉ gửi Discord trong 2 trường hợp:
+      1. Batch đầu tiên sau startup → xác nhận hệ thống đang sống và kéo được data.
+      2. total_new == 0 → không nhận được nến nào → khả năng mất kết nối TV.
+    Batch bình thường (có bars, không phải batch 1) → im lặng, chỉ ghi log.
+    """
+    backlog_n = len(backlog_snap)
+
+    with _hourly_lock:
+        _hourly_stats["batches"] += 1
+        _hourly_stats["bars"] += total_new
+        if total_new == 0:
+            _hourly_stats["zero_bar_batches"] += 1
+        if backlog_n > _hourly_stats["backlog_peak"]:
+            _hourly_stats["backlog_peak"] = backlog_n
+
+    # Batch đầu tiên sau startup: xác nhận kết nối và kéo data thành công
+    if batch_num == 1:
+        emoji = "✅" if total_new > 0 else "⚠️"
+        level = "INFO" if total_new > 0 else "WARNING"
+        backlog_line = f"📋 Backlog: {backlog_n} pairs" if backlog_n else "📋 Backlog: sạch"
+        _tg_alert(
+            level,
+            f"{emoji} <b>Batch đầu tiên hoàn tất</b>\n"
+            f"📊 Bars kéo được: {total_new}  |  Symbols: {len(WS_SYMBOLS)}\n"
+            f"{backlog_line}",
+        )
+        return
+
+    # Batch bất thường: 0 bars từ tất cả symbols (mất kết nối TV?)
+    if total_new == 0:
+        _tg_alert(
+            "WARNING",
+            f"⚠️ <b>Batch #{batch_num} — 0 bars</b>\n"
+            f"Không nhận được nến nào từ TradingView.\n"
+            f"Kiểm tra kết nối TV hoặc xem log.",
+        )
+
 
 def _on_batch_complete(
     batch_num: int,
@@ -2035,13 +2109,26 @@ def _status_reporter() -> None:
             n_miss_active, stale_count, max_age_h,
         )
 
+        # ── Snapshot + reset hourly stats ────────────────────────────────────
+        with _hourly_lock:
+            h = dict(_hourly_stats)
+            _hourly_stats.update({"batches": 0, "bars": 0, "zero_bar_batches": 0, "backlog_peak": 0})
+
+        hourly_parts = [f"{h['batches']} batches  |  {h['bars']} bars"]
+        if h["zero_bar_batches"]:
+            hourly_parts.append(f"⚠️ {h['zero_bar_batches']} batch rỗng")
+        if h["backlog_peak"]:
+            hourly_parts.append(f"backlog peak: {h['backlog_peak']} pairs")
+        hourly_summary = "  |  ".join(hourly_parts)
+
         # ── Gửi Discord ──────────────────────────────────────────────────────
         issues_text = ("\n".join(f"  ⚠️ {x}" for x in issues[:3])
                        if issues else "  ✅ Không có vấn đề")
         _tg_send(
             f"{health_emoji} <b>Hệ thống {health_level}</b> [{now}]\n"
             f"🔑 Auth: {auth_info}\n"
-            f"📊 Nến: {s['bars_inserted']}  |  Batches: {s['batches_run']}  |  Lỗi: {s['errors']}\n"
+            f"📊 <b>Giờ qua:</b> {hourly_summary}\n"
+            f"📊 <b>Tổng:</b> {s['batches_run']} batches  |  {s['bars_inserted']} bars  |  {s['errors']} lỗi\n"
             f"📥 Queue: {s['queue_depth']}  Buffer: {overflow}  Spool: {spool_count}\n"
             f"⏱️ Data age max: {max_age_h:.1f}h  |  Stale: {stale_count}  Miss: {n_miss_active}\n"
             f"{'─' * 30}\n"
@@ -2209,7 +2296,7 @@ def main() -> None:
     )
     sched_thread.start()
 
-    # Ghi log và gửi Telegram thông báo hệ thống đã khởi động thành công
+    # Ghi log và gửi Discord thông báo hệ thống đã khởi động thành công
     logger.info(
         "V5 started — %d groups, %d sessions/batch, interval=%dmin, auth=%s.",
         n_groups, len(WS_SYMBOLS) * len(WS_TF_INTERVAL), BATCH_INTERVAL_MIN, token_source,
@@ -2219,12 +2306,12 @@ def main() -> None:
         f"🚀 Hệ thống đã khởi động (V5 — Batch Mode)\n"
         f"Symbols: {len(SYMBOLS)}  |  TFs: {len(WS_TF_INTERVAL)}\n"
         f"Connections: {n_groups}  |  Interval: {BATCH_INTERVAL_MIN}min  |  Auth: {token_source}\n"
-        f"🤖 Bot lệnh: gõ /help trong Telegram để điều khiển"
+        f"📡 Thông báo qua Discord — kiểm tra kênh Discord để theo dõi hệ thống"
     )
 
     # Khởi động bot command listener (lắng nghe /fix, /status, /pipeline)
     start_bot_listener()
-    logger.info("[Bot] Telegram command listener started.")
+    logger.info("[Notify] Discord webhook initialized (one-way, no command listener).")
 
     print("[Running] Press Ctrl+C to stop.\n")
 
@@ -2269,7 +2356,7 @@ def main() -> None:
         s["bars_inserted"], s["errors"], s["events"], s["batches_run"],
     )
 
-    # Gửi thông báo tắt lên Telegram
+    # Gửi thông báo tắt lên Discord
     _tg_alert(
         "INFO",
         f"🛑 Hệ thống đã tắt\n"
