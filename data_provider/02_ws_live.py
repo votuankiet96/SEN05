@@ -110,6 +110,7 @@ import string  # Bảng ký tự (a-z, 0-9) — kết hợp với random để t
 import sys  # Tương tác với Python runtime (thoát chương trình, thêm đường dẫn)
 import threading  # Chạy nhiều luồng song song — WS, ghi DB, scheduler đều chạy độc lập
 import time  # Hàm sleep và đo thời gian
+import traceback  # Format stack trace khi có exception trong thread
 from datetime import datetime, timezone  # Xử lý thời gian — ghi log, tính khoảng cách thời gian
 from pathlib import Path  # Xử lý đường dẫn file theo chuẩn hiện đại (thay os.path)
 
@@ -344,6 +345,16 @@ _missed_lock  = threading.Lock()   # Lock riêng để không tranh chấp với
 # Giá trị = số lần miss liên tiếp; xóa khi cặp đó nhận được data trở lại
 _backlog: dict[tuple[int, str], int] = {}
 _backlog_lock = threading.Lock()   # Lock riêng để bảo vệ _backlog
+
+# Thống kê hourly delta: reset mỗi giờ khi _status_reporter chạy
+_hourly_stats: dict = {
+    "batches":          0,
+    "bars":             0,
+    "zero_bar_batches": 0,
+    "backlog_peak":     0,
+    "pair_bars":        {},   # {(symbol_id, tf_code): tổng bars} trong giờ qua
+}
+_hourly_lock = threading.Lock()
 
 # Buffer aggregate: (symbol_id, target_tf, src_table, tv_symbol) chưa được flush
 # Được flush khi queue DB tạm rỗng — tránh gọi run_etl_aggregate per-bar
@@ -1721,10 +1732,18 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
     # Tổng bars mới toàn bộ batch (gộp tất cả group)
     total_new = sum(g._new_bars_count for g in groups)
 
+    # Gộp per-pair bars từ tất cả groups
+    batch_pair_bars: dict[tuple[int, str], int] = {}
+    for g in groups:
+        for key, cnt in g._pair_new_bars.items():
+            batch_pair_bars[key] = batch_pair_bars.get(key, 0) + cnt
+
     # Backlog summary: danh sách cặp đang chờ retry
     _sym_name = {s["symbol_id"]: s["tv_symbol"] for s in WS_SYMBOLS}
     with _backlog_lock:
         backlog_snap = dict(_backlog)
+
+    _on_batch_complete(_stats["batches_run"], total_new, backlog_snap, batch_pair_bars)
 
     logger.info("[SCHED] === Batch #%d done — new_bars=%d  backlog=%d ===",
                 _stats["batches_run"], total_new, len(backlog_snap))
@@ -1741,6 +1760,44 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
         logger.info("[SCHED] Backlog retry next batch (%d bars each): %s", N_BARS_WS_BACKLOG, entries)
     else:
         logger.info("[SCHED] No backlog — all pairs OK this batch.")
+
+
+def _on_batch_complete(
+    batch_num: int,
+    total_new: int,
+    backlog_snap: dict,
+    pair_bars: dict[tuple[int, str], int] | None = None,
+) -> None:
+    """
+    Gọi sau mỗi batch: cập nhật hourly stats, gửi Discord alert nếu bất thường.
+    - Batch #1: luôn gửi thông báo khởi động thành công.
+    - Batch 0-bar: gửi cảnh báo ngay.
+    - Batch bình thường: im lặng (digest mỗi giờ qua _status_reporter).
+    """
+    with _hourly_lock:
+        _hourly_stats["batches"] += 1
+        _hourly_stats["bars"]    += total_new
+        if total_new == 0:
+            _hourly_stats["zero_bar_batches"] += 1
+        bl = len(backlog_snap)
+        if bl > _hourly_stats["backlog_peak"]:
+            _hourly_stats["backlog_peak"] = bl
+        for key, cnt in (pair_bars or {}).items():
+            prev = _hourly_stats["pair_bars"].get(key, 0)
+            _hourly_stats["pair_bars"][key] = prev + cnt
+
+    if batch_num == 1:
+        _tg_alert(
+            "INFO",
+            f"✅ <b>Batch đầu tiên hoàn tất</b> — Batch #{batch_num}\n"
+            f"Nến mới: {total_new}  |  Backlog: {bl} cặp",
+        )
+    elif total_new == 0:
+        _tg_alert(
+            "WARNING",
+            f"⚠️ <b>Batch #{batch_num} không có nến mới</b>\n"
+            f"Backlog: {bl} cặp  |  Kiểm tra kết nối WS hoặc auth",
+        )
 
 
 # =============================================================================
@@ -1844,11 +1901,37 @@ def _status_reporter() -> None:
 
         now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
+        # ── Hourly delta snapshot + reset ─────────────────────────────────────
+        with _hourly_lock:
+            h = dict(_hourly_stats)
+            _hourly_stats["batches"]          = 0
+            _hourly_stats["bars"]             = 0
+            _hourly_stats["zero_bar_batches"] = 0
+            _hourly_stats["backlog_peak"]     = 0
+            _hourly_stats["pair_bars"]        = {}
+
+        # Per-symbol và per-TF breakdown từ hourly pair_bars
+        _sym_name = {s["symbol_id"]: s["tv_symbol"] for s in WS_SYMBOLS}
+        sym_totals: dict[int, int] = {}
+        tf_totals:  dict[str, int] = {}
+        for (sid, tf), cnt in h["pair_bars"].items():
+            sym_totals[sid] = sym_totals.get(sid, 0) + cnt
+            tf_totals[tf]   = tf_totals.get(tf, 0) + cnt
+
+        sym_line = "  ".join(
+            f"{_sym_name.get(sid, str(sid))}·{cnt}"
+            for sid, cnt in sorted(sym_totals.items())
+        ) or "—"
+        tf_order = ["M5", "M15", "M30", "M45", "H1", "H2", "H3", "H4", "D1", "W"]
+        tf_line = "  ".join(
+            f"{tf}·{tf_totals[tf]}" for tf in tf_order if tf in tf_totals
+        ) or "—"
+
         # ── Auth info ────────────────────────────────────────────────────────
         with _tv_auth._auth_lock:
             current_token = _tv_auth._auth_token
         is_guest = (current_token == _tv_auth.GUEST_TOKEN)
-        token_secs = _jwt_expires_in(current_token)
+        token_secs = _tv_auth._jwt_expires_in(current_token)
         if is_guest:
             auth_info = f"Guest ({_consecutive_guest_batches} batch liên tiếp)"
         elif token_secs > 0:
@@ -1901,6 +1984,11 @@ def _status_reporter() -> None:
             f"📊 Nến: {s['bars_inserted']}  |  Batches: {s['batches_run']}  |  Lỗi: {s['errors']}\n"
             f"📥 Queue: {s['queue_depth']}  Buffer: {overflow}  Spool: {spool_count}\n"
             f"⏱️ Data age max: {max_age_h:.1f}h  |  Stale: {stale_count}  Miss: {n_miss_active}\n"
+            f"{'─' * 30}\n"
+            f"📈 <b>1 giờ qua:</b> {h['batches']} batches  {h['bars']} nến"
+            f"  (0-bar: {h['zero_bar_batches']}  backlog_peak: {h['backlog_peak']})\n"
+            f"🗂 Symbol: {sym_line}\n"
+            f"📉 TF:     {tf_line}\n"
             f"{'─' * 30}\n"
             f"{issues_text}"
         )
@@ -2031,6 +2119,22 @@ def main() -> None:
     # -----------------------------------------------------------------------
     print("\n[Step 4] Starting DB worker and scheduler...\n")
 
+    # Bắt exception chưa xử lý trong bất kỳ thread nào → gửi Discord alert
+    def _thread_excepthook(args: threading.ExceptHookArgs) -> None:
+        if args.exc_type is SystemExit:
+            return
+        tb = "".join(traceback.format_exception(args.exc_type, args.exc_value, args.exc_tb))
+        tname = getattr(args.thread, "name", "unknown")
+        logger.critical("[THREAD CRASH] %s: %s\n%s", tname, args.exc_value, tb)
+        _tg_alert(
+            "ERROR",
+            f"🚨 <b>Thread crash: {tname}</b>\n"
+            f"{args.exc_type.__name__}: {args.exc_value}\n"
+            f"<pre>{tb[-800:]}</pre>",
+        )
+
+    threading.excepthook = _thread_excepthook
+
     # Thread ghi DB — daemon=False để chương trình chờ nó xử lý hết queue trước khi thoát
     db_thread = threading.Thread(target=_db_worker, name="db-worker", daemon=False)
     db_thread.start()
@@ -2074,6 +2178,16 @@ def main() -> None:
         # Người dùng nhấn Ctrl+C → bắt đầu shutdown
         print("\n\nStopping — draining DB queue (please wait)...")
         _shutdown.set()  # Ra hiệu cho tất cả thread: dừng lại
+    except Exception as exc:
+        tb = traceback.format_exc()
+        logger.critical("[MAIN CRASH] %s", exc)
+        _tg_alert(
+            "ERROR",
+            f"🚨 <b>ws_live CRASH (main thread)</b>\n"
+            f"{type(exc).__name__}: {exc}\n"
+            f"<pre>{tb[-800:]}</pre>",
+        )
+        _shutdown.set()
 
     # -----------------------------------------------------------------------
     # GRACEFUL SHUTDOWN — Chờ hết dữ liệu trong queue trước khi thoát
