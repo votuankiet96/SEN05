@@ -62,8 +62,8 @@ def test_monte_carlo_accepts_trade_frequency_for_sharpe_scaling():
 
 
 def test_ma_cross_unconfigured_symbol_fails_with_clear_error():
-    with pytest.raises(KeyError, match="not configured"):
-        get_symbol_params("US30")
+    with pytest.raises(KeyError, match="not found"):
+        get_symbol_params("__UNKNOWN_SYMBOL__")
 
 
 def test_backtest_fast_date_to_none_uses_data_end():
