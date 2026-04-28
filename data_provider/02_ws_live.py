@@ -2141,16 +2141,32 @@ def main() -> None:
         print("ABORT: Cannot reach database.")
         sys.exit(1)  # Thoát với mã lỗi 1 (lỗi nghiêm trọng)
 
+    # Dọn lock hết hạn trước (dead-man switch: process bị kill mà không release)
+    from _task_lock import cleanup_expired as _cleanup_expired
+    _cleanup_expired()
+
     ws_lock = _acquire_task_lock("ws_live_runtime", duration_min=60)
     if not ws_lock:
-        print("ABORT: ws_live_runtime lock is busy.")
-        _tg_alert(
-            "WARNING",
-            "⚠️ ws_live đang có instance khác chạy trên VPS.\n"
-            "Tiến trình mới sẽ không khởi động để tránh ghi chồng và kéo TradingView trùng lặp."
-            + QUICK_COMMANDS_HINT
-        )
-        sys.exit(1)
+        # Lock vẫn còn hiệu lực sau cleanup → có instance thật đang chạy
+        # Gửi cảnh báo nhưng KHÔNG abort — force release lock cũ và tiếp tục
+        # (trường hợp: task scheduler khởi động lại sau reboot khi instance cũ
+        #  vẫn còn trong DB do shutdown không sạch)
+        logger.warning("[LOCK] ws_live_runtime busy — force releasing stale lock and retrying...")
+        print("WARN: ws_live_runtime lock busy — force release stale lock, retrying...")
+        from _task_lock import release as _force_release
+        _force_release("ws_live_runtime")
+        ws_lock = _acquire_task_lock("ws_live_runtime", duration_min=60)
+        if not ws_lock:
+            # Vẫn fail lần 2 → thật sự có instance khác đang giữ lock (heartbeat đang renew)
+            print("ABORT: ws_live_runtime lock is busy — another live instance is running.")
+            _tg_alert(
+                "WARNING",
+                "⚠️ ws_live đang có instance khác thật sự đang chạy.\n"
+                "Tiến trình mới sẽ không khởi động để tránh ghi chồng."
+                + QUICK_COMMANDS_HINT
+            )
+            sys.exit(1)
+        logger.info("[LOCK] Stale lock cleared — ws_live_runtime acquired successfully.")
     atexit.register(_release_task_lock, "ws_live_runtime")
 
     ws_lock_stop = threading.Event()
