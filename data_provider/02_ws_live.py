@@ -475,8 +475,8 @@ def _load_watermarks() -> None:
     if stale:
         worst = max(stale, key=lambda x: x[2])
         logger.warning(
-            "[INIT] %d stale pair(s) detected on startup — worst: SymbolID=%d %s (%.0f min old). "
-            "Consider running 01_data_pipeline.py --mode gap before starting live.",
+            "[KHỞI ĐỘNG] Phát hiện %d cặp dữ liệu cũ — tệ nhất: SymbolID=%d %s (%.0f phút chưa cập nhật). "
+            "Khuyến nghị: chạy 01_data_pipeline.py --mode gap trước.",
             len(stale), worst[0], worst[1], worst[2],
         )
         _tg_alert(
@@ -581,7 +581,7 @@ def _spool_write(item: tuple) -> None:
             count = con.execute("SELECT COUNT(*) FROM spool").fetchone()[0]
             if count >= MAX_SPOOL_ROWS:
                 logger.error(
-                    "[SPOOL] Spool đầy (%d rows) — drop bar sym=%s tf=%s",
+                    "[SPOOL] Bộ đệm ngoại tuyến đầy (%d nến) — bỏ qua nến %s %s!",
                     MAX_SPOOL_ROWS, tv_symbol, tf_code,
                 )
                 try:
@@ -809,7 +809,7 @@ def _db_worker() -> None:
             except Exception as exc:
                 if _attempt == _DB_WORKER_RETRIES:
                     logger.error(
-                        "[DB ] Staging FAILED sau %d lần thử — bar bị mất! %s %s: %s",
+                        "[DB] Lưu nến vào staging THẤT BẠI sau %d lần thử — dữ liệu bị mất! %s %s: %s",
                         _DB_WORKER_RETRIES, tv_symbol, tf_code, exc,
                     )
                     with _state_lock:
@@ -821,7 +821,7 @@ def _db_worker() -> None:
                     )
                 else:
                     logger.warning(
-                        "[DB ] Staging attempt %d/%d failed — retry in 5s... %s %s: %s",
+                        "[DB] Lần thử %d/%d thất bại — thử lại sau 5s... %s %s: %s",
                         _attempt, _DB_WORKER_RETRIES, tv_symbol, tf_code, exc,
                     )
                     _shutdown.wait(5)
@@ -1738,7 +1738,7 @@ def _update_guest_mode_counter(is_guest: bool) -> None:
         _consecutive_guest_batches += 1
         if _consecutive_guest_batches >= _GUEST_ALERT_THRESHOLD:
             logger.error(
-                "[AUTH] Guest mode for %d consecutive batch(es) — data quality degraded!",
+                "[XÁC THỰC] Đang ở chế độ khách %d lượt liên tiếp — chất lượng dữ liệu bị giảm!",
                 _consecutive_guest_batches,
             )
             _tg_alert(
@@ -2027,8 +2027,12 @@ def _status_reporter() -> None:
             th = int(token_secs) // 3600
             tm = (int(token_secs) % 3600) // 60
             auth_info = f"Premium | Token còn: {th}h{tm:02d}m"
+        elif token_secs < 0:
+            # JWT không decode được (cached/opaque token) — vẫn đang hoạt động bình thường
+            auth_info = "Premium (active)"
         else:
-            auth_info = "Premium (token TTL không xác định)"
+            # token_secs == 0: token vừa hết hạn, chờ auto-renew
+            auth_info = "Premium (token hết hạn — đang gia hạn)"
 
         # ── Health level (GREEN / YELLOW / RED) ──────────────────────────────
         if s["errors"] > 0 or stale_count > 3 or spool_count > 0:
@@ -2044,15 +2048,15 @@ def _status_reporter() -> None:
         # ── Top issues (max 3) ───────────────────────────────────────────────
         issues = []
         if spool_count:
-            issues.append(f"Spool {spool_count} bars — DB worker chậm?")
+            issues.append(f"Bộ đệm ngoại tuyến có {spool_count} nến chờ — DB worker chậm?")
         if stale_count > 3:
-            issues.append(f"{stale_count} cặp dữ liệu stale (data cũ)")
+            issues.append(f"{stale_count} cặp dữ liệu chưa được cập nhật (data cũ)")
         if n_miss_active:
-            issues.append(f"{n_miss_active} cặp đang miss data")
+            issues.append(f"{n_miss_active} cặp đang bị thiếu dữ liệu")
         if is_guest:
-            issues.append(f"Guest mode ({_consecutive_guest_batches} batch)")
+            issues.append(f"Đang ở chế độ khách (guest) — {_consecutive_guest_batches} lượt liên tiếp")
         elif stale_count:
-            issues.append(f"{stale_count} cặp stale")
+            issues.append(f"{stale_count} cặp dữ liệu bị trễ")
 
         # ── Ghi log ──────────────────────────────────────────────────────────
         logger.info(
@@ -2069,28 +2073,28 @@ def _status_reporter() -> None:
             h = dict(_hourly_stats)
             _hourly_stats.update({"batches": 0, "bars": 0, "zero_bar_batches": 0, "backlog_peak": 0})
 
-        hourly_parts = [f"{h['batches']} batches  |  {h['bars']} bars"]
+        hourly_parts = [f"{h['batches']} lượt cập nhật  |  {h['bars']} nến mới"]
         if h["zero_bar_batches"]:
-            hourly_parts.append(f"⚠️ {h['zero_bar_batches']} batch rỗng")
+            hourly_parts.append(f"⚠️ {h['zero_bar_batches']} lượt trống (không có nến mới)")
         if h["backlog_peak"]:
-            hourly_parts.append(f"backlog peak: {h['backlog_peak']} pairs")
+            hourly_parts.append(f"đỉnh tồn đọng: {h['backlog_peak']} cặp")
         hourly_summary = "  |  ".join(hourly_parts)
 
         # ── Gửi Discord ──────────────────────────────────────────────────────
         issues_text = ("\n".join(f"  ⚠️ {x}" for x in issues[:3])
-                       if issues else "  ✅ Không có vấn đề")
+                       if issues else "  ✅ Mọi thứ bình thường.")
         _tg_send(
-            f"{health_emoji} <b>Hệ thống {health_level}</b> [{now}]\n"
-            f"🔑 Auth: {auth_info}\n"
-            f"📊 <b>Giờ qua:</b> {hourly_summary}\n"
-            f"📊 <b>Tổng:</b> {s['batches_run']} batches  |  {s['bars_inserted']} bars  |  {s['errors']} lỗi\n"
-            f"📥 Queue: {s['queue_depth']}  Buffer: {overflow}  Spool: {spool_count}\n"
-            f"⏱️ Data age max: {max_age_h:.1f}h  |  Stale: {stale_count}  Miss: {n_miss_active}\n"
+            f"{health_emoji} <b>Trạng thái hệ thống: {health_level}</b> [{now}]\n"
+            f"🔑 Đăng nhập: {auth_info}\n"
+            f"📊 <b>Giờ vừa qua:</b> {hourly_summary}\n"
+            f"📊 <b>Tổng cộng:</b> {s['batches_run']} lượt  |  {s['bars_inserted']:,} nến  |  {s['errors']} lỗi\n"
+            f"📬 Hàng chờ ghi DB: {s['queue_depth']}  |  Bộ đệm RAM: {overflow}  |  Bộ đệm ngoại tuyến: {spool_count}\n"
+            f"⏱️ Nến lâu nhất chưa cập nhật: {max_age_h:.1f}h  |  Cặp bị trễ: {stale_count}  |  Cặp đang thiếu: {n_miss_active}\n"
             f"{'─' * 30}\n"
-            f"📈 <b>1 giờ qua:</b> {h['batches']} batches  {h['bars']} nến"
-            f"  (0-bar: {h['zero_bar_batches']}  backlog_peak: {h['backlog_peak']})\n"
-            f"🗂 Symbol: {sym_line}\n"
-            f"📉 TF:     {tf_line}\n"
+            f"📈 <b>1 giờ qua:</b> {h['batches']} lượt cập nhật  |  {h['bars']:,} nến mới\n"
+            f"  (lượt trống: {h['zero_bar_batches']}  |  đỉnh tồn đọng: {h['backlog_peak']} cặp)\n"
+            f"🗂 Theo cặp: {sym_line}\n"
+            f"📉 Theo TF:  {tf_line}\n"
             f"{'─' * 30}\n"
             f"{issues_text}"
         )
@@ -2112,33 +2116,36 @@ def main() -> None:
         5. Chờ lệnh tắt (Ctrl+C)
         6. Graceful shutdown (xử lý hết queue trước khi thoát)
     """
+    # Đảm bảo stdout dùng UTF-8 để tiếng Việt hiển thị đúng trên mọi terminal
+    import sys as _sys
+    if hasattr(_sys.stdout, "reconfigure"):
+        _sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
     # Tính số nhóm WS cần tạo dựa trên tổng số symbol và giới hạn symbol/kết nối
     # math.ceil: làm tròn lên (ví dụ: 25 symbol / 10 = 3 nhóm, không phải 2.5)
     n_groups = math.ceil(len(WS_SYMBOLS) / WS_SYMBOLS_PER_CONN)
 
     # In banner thông tin tổng quan khi khởi động
     print("=" * 65)
-    print("  AUTO TRADING — WS LIVE UPDATER  (V5 — Batch/Cron Mode)")
-    print("  Batch mode  |  Multi-connection  |  Async DB writes")
-    print(f"  Symbols        : {len(WS_SYMBOLS)}")
-    print(f"  TFs (direct)   : {len(WS_TF_INTERVAL)}")
-    print(f"  TFs (computed) : {len(COMPUTED_TIMEFRAMES)}")
-    print(f"  WS connections : {n_groups}  (~{WS_SYMBOLS_PER_CONN} symbols/conn)")
-    print(f"  Chart sessions : {len(WS_SYMBOLS) * len(WS_TF_INTERVAL)}")
-    print(f"  Batch interval : every {BATCH_INTERVAL_MIN} min (aligned to boundary)")
-    print(f"  Fetch timeout  : {BATCH_FETCH_TIMEOUT}s per batch")
-    print(f"  Auth method    : {'Cookie+Token' if TV_COOKIE else 'Username/Password'}")
-    print(f"  Discord alert  : {'Enabled' if DISCORD_WEBHOOK_URL else 'Disabled'}")
-    print(f"  Started        : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("  HỆ THỐNG CẬP NHẬT GIÁ THỜI GIAN THỰC (WS Live)")
+    print("=" * 65)
+    print(f"  Số cặp theo dõi  : {len(WS_SYMBOLS)} cặp (index, kim loại, crypto)")
+    print(f"  Khung thời gian  : {len(WS_TF_INTERVAL)} trực tiếp + {len(COMPUTED_TIMEFRAMES)} tính toán")
+    print(f"  Nhóm kết nối     : {n_groups} nhóm (~{WS_SYMBOLS_PER_CONN} cặp/nhóm)")
+    print(f"  Tần suất cập nhật: mỗi {BATCH_INTERVAL_MIN} phút, căn chỉnh theo giờ")
+    print(f"  Thời gian chờ    : {BATCH_FETCH_TIMEOUT} giây/lần kết nối")
+    print(f"  Đăng nhập        : {'Cookie + Token' if TV_COOKIE else 'Tên đăng nhập / Mật khẩu'}")
+    print(f"  Thông báo Discord: {'Bật' if DISCORD_WEBHOOK_URL else 'Tắt'}")
+    print(f"  Khởi động lúc    : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 65)
 
     # -----------------------------------------------------------------------
     # BƯỚC 0: Kiểm tra kết nối Database
     # Làm điều này đầu tiên vì toàn bộ hệ thống vô nghĩa nếu không ghi được DB
     # -----------------------------------------------------------------------
-    print("\n[Step 0] Checking database connection...")
+    print("\n[Bước 1/4] Kiểm tra kết nối cơ sở dữ liệu...")
     if not test_connection():
-        print("ABORT: Cannot reach database.")
+        print("LỖI: Không thể kết nối cơ sở dữ liệu. Hệ thống không khởi động.")
         sys.exit(1)  # Thoát với mã lỗi 1 (lỗi nghiêm trọng)
 
     # Dọn lock hết hạn trước (dead-man switch: process bị kill mà không release)
@@ -2151,14 +2158,14 @@ def main() -> None:
         # Gửi cảnh báo nhưng KHÔNG abort — force release lock cũ và tiếp tục
         # (trường hợp: task scheduler khởi động lại sau reboot khi instance cũ
         #  vẫn còn trong DB do shutdown không sạch)
-        logger.warning("[LOCK] ws_live_runtime busy — force releasing stale lock and retrying...")
-        print("WARN: ws_live_runtime lock busy — force release stale lock, retrying...")
+        logger.warning("[LOCK] Phát hiện phiên cũ bị treo — đang dọn dẹp và khởi động lại...")
+        print("Phát hiện phiên cũ bị treo — đang dọn dẹp và khởi động lại...")
         from _task_lock import release as _force_release
         _force_release("ws_live_runtime")
         ws_lock = _acquire_task_lock("ws_live_runtime", duration_min=60)
         if not ws_lock:
             # Vẫn fail lần 2 → thật sự có instance khác đang giữ lock (heartbeat đang renew)
-            print("ABORT: ws_live_runtime lock is busy — another live instance is running.")
+            print("LỖI: Đã có một phiên WS Live đang chạy. Không khởi động thêm để tránh ghi trùng dữ liệu.")
             _tg_alert(
                 "WARNING",
                 "⚠️ ws_live đang có instance khác thật sự đang chạy.\n"
@@ -2175,7 +2182,7 @@ def main() -> None:
         while not ws_lock_stop.wait(900):
             renewed = _renew_task_lock("ws_live_runtime", duration_min=60)
             if not renewed:
-                logger.warning("[LOCK] Could not renew ws_live_runtime lock.")
+                logger.warning("[LOCK] Không thể gia hạn khóa phiên — hệ thống có thể bị coi là đã tắt.")
 
     threading.Thread(target=_ws_lock_heartbeat, name="ws-live-lock-heartbeat", daemon=True).start()
 
@@ -2184,7 +2191,7 @@ def main() -> None:
     # Lấy token sẽ dùng cho tất cả kết nối WebSocket.
     # Nếu .env không có token hợp lệ → bootstrap tự động lấy token mới.
     # -----------------------------------------------------------------------
-    print("\n[Step 1] Authenticating with TradingView...")
+    print("\n[Bước 2/4] Đăng nhập TradingView...")
     # auth state managed by _tv_auth module
 
     # Ưu tiên: token cache > .env static > bootstrap
@@ -2195,32 +2202,32 @@ def main() -> None:
     )
     if not _has_valid_token:
         # Không có token nào hợp lệ → bootstrap: thử session refresh → headless → HTTP POST
-        print("  [!] No valid token found — bootstrapping credentials...")
+        print("  Chưa có token hợp lệ — đang tự động lấy token mới...")
         _tv_auth._auth_token, token_source = _bootstrap_credentials()
     else:
         # Có token (cache hoặc .env) → _resolve_auth_token sẽ chọn đúng lớp
         _tv_auth._auth_token, token_source = _resolve_auth_token()
 
-    print(f"  Token source   : {token_source}")
+    print(f"  Nguồn đăng nhập : {token_source}")
     if _tv_auth._auth_token == _tv_auth.GUEST_TOKEN:
-        print("  [WARNING] Running as guest — data quality may be reduced.")
-        _tg_alert("WARNING", "Khởi động với guest token — dữ liệu có thể bị giới hạn.")
+        print("  CẢNH BÁO: Đang ở chế độ khách — dữ liệu có thể bị giới hạn.")
+        _tg_alert("WARNING", "⚠️ Khởi động ở chế độ khách (guest) — dữ liệu có thể bị giới hạn số nến. Kiểm tra lại đăng nhập TradingView.")
 
     # -----------------------------------------------------------------------
     # BƯỚC 2: Nạp watermark từ Database
     # Đọc timestamp nến mới nhất của từng (symbol, TF) để không lưu trùng
     # -----------------------------------------------------------------------
-    print("\n[Step 2] Loading watermarks...")
+    print("\n[Bước 3/4] Nạp mốc thời gian dữ liệu gần nhất...")
     _load_watermarks()
 
     # -----------------------------------------------------------------------
     # BƯỚC 2b: Khởi tạo SQLite spool và phục hồi bars từ lần chạy trước
     # -----------------------------------------------------------------------
-    print("\n[Step 2b] Initializing persistent spool...")
+    print("\n[Bước 3b] Khởi tạo bộ nhớ đệm dự phòng (offline buffer)...")
     _init_spool_db()
     recovered = _spool_flush_to_queue()
     if recovered:
-        print(f"  [*] Recovered {recovered} bar(s) from previous run spool.")
+        print(f"  Khôi phục {recovered} nến còn lại từ lần chạy trước.")
 
     # -----------------------------------------------------------------------
     # BƯỚC 3: Tạo các nhóm BatchFetcher
@@ -2235,7 +2242,7 @@ def main() -> None:
     # -----------------------------------------------------------------------
     # BƯỚC 4: Khởi động các thread nền
     # -----------------------------------------------------------------------
-    print("\n[Step 4] Starting DB worker and scheduler...\n")
+    print("\n[Bước 4/4] Khởi động các tiến trình nền...\n")
 
     # Bắt exception chưa xử lý trong bất kỳ thread nào → gửi Discord alert
     def _thread_excepthook(args: threading.ExceptHookArgs) -> None:
@@ -2274,17 +2281,17 @@ def main() -> None:
     )
     _tg_alert(
         "INFO",
-        f"🚀 Hệ thống đã khởi động (V5 — Batch Mode)\n"
-        f"Symbols: {len(SYMBOLS)}  |  TFs: {len(WS_TF_INTERVAL)}\n"
-        f"Connections: {n_groups}  |  Interval: {BATCH_INTERVAL_MIN}min  |  Auth: {token_source}\n"
-        f"📡 Thông báo qua Discord — kiểm tra kênh Discord để theo dõi hệ thống"
+        f"🚀 <b>WS Live đã khởi động</b>\n"
+        f"📊 {len(WS_SYMBOLS)} cặp theo dõi  |  {len(WS_TF_INTERVAL)} khung thời gian trực tiếp\n"
+        f"🔁 Cập nhật mỗi {BATCH_INTERVAL_MIN} phút  |  Đăng nhập: {token_source}\n"
+        f"📡 Báo cáo trạng thái sẽ gửi về Discord mỗi giờ"
     )
 
     # Khởi động bot command listener (lắng nghe /fix, /status, /pipeline)
     start_bot_listener()
-    logger.info("[Notify] Discord webhook initialized (one-way, no command listener).")
+    logger.info("[Thông báo] Discord webhook đã sẵn sàng (một chiều, không lắng nghe lệnh).")
 
-    print("[Running] Press Ctrl+C to stop.\n")
+    print("Hệ thống đang chạy. Nhấn Ctrl+C để tắt.\n")
 
     # -----------------------------------------------------------------------
     # VÒNG LẶP CHỜ — Giữ chương trình chạy, chờ lệnh tắt từ người dùng
@@ -2294,7 +2301,7 @@ def main() -> None:
             time.sleep(1)  # Ngủ 1 giây, lặp lại — chỉ để giữ main thread sống
     except KeyboardInterrupt:
         # Người dùng nhấn Ctrl+C → bắt đầu shutdown
-        print("\n\nStopping — draining DB queue (please wait)...")
+        print("\n\nĐang dừng — chờ ghi hết dữ liệu vào cơ sở dữ liệu (vui lòng đợi)...")
         _shutdown.set()  # Ra hiệu cho tất cả thread: dừng lại
     except Exception as exc:
         tb = traceback.format_exc()
@@ -2338,10 +2345,10 @@ def main() -> None:
     _release_task_lock("ws_live_runtime")
 
     # In tóm tắt ra console
-    print(f"\n  bars_inserted : {s['bars_inserted']}")
-    print(f"  errors        : {s['errors']}")
-    print(f"  events        : {s['events']}")
-    print(f"  batches_run   : {s['batches_run']}")
+    print(f"\n  Nến đã lưu   : {s['bars_inserted']:,}")
+    print(f"  Lỗi          : {s['errors']}")
+    print(f"  Sự kiện WS   : {s['events']:,}")
+    print(f"  Lượt cập nhật: {s['batches_run']}")
 
 
 # =============================================================================

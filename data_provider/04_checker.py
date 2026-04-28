@@ -893,7 +893,7 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
                 # Throttle: too many consecutive TV failures
                 if tv_consecutive_fail >= 3:
                     logger.warning(
-                        "3+ consecutive TV failures — sleeping %ds (throttle/rate-limit)",
+                        "TradingView lỗi liên tiếp 3+ lần — tạm dừng %ds để tránh bị giới hạn truy cập.",
                         TV_THROTTLE_SLEEP,
                     )
                     time.sleep(TV_THROTTLE_SLEEP)
@@ -909,8 +909,8 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
                 # Khả năng IP bị block (403) → tiếp tục request sẽ làm tình trạng tệ hơn
                 if auth_consecutive_fail >= MAX_AUTH_CONSECUTIVE_FAIL:
                     logger.error(
-                        "[CIRCUIT BREAKER] %d auth/TV failures liên tiếp — "
-                        "khả năng IP bị block. Dừng checker.",
+                        "[NGẮT TỰ ĐỘNG] %d lỗi liên tiếp — "
+                        "có thể IP đang bị TradingView chặn. Dừng checker.",
                         auth_consecutive_fail,
                     )
                     tg_send(
@@ -1350,14 +1350,15 @@ def _detect_dst_transition_risk(
         return set()
 
     logger.warning(
-        "[DST DETECT] %.0f%% cap H2/H3/H4 co rate > 50%% - kha nang DST transition. "
-        "Bo qua auto-repair cho cac TF nay hom nay.",
+        "[DST DETECT] %.0f%% c\u1eb7p H2/H3/H4 c\u00f3 mismatch >50%% \u2014 "
+        "c\u00f3 th\u1ec3 \u0111ang x\u1ea3y ra DST transition (\u0111\u1ed5i gi\u1edd m\u00f9a h\u00e8). "
+        "B\u1ecf qua auto-repair H2/H3/H4 h\u00f4m nay. Ch\u1ea1y l\u1ea1i sau 24h.",
         dst_ratio * 100,
     )
     tg_send(
-        f"\u26a0\ufe0f <b>[Checker]</b> Phat hien kha nang <b>DST transition</b> "
-        f"({dst_ratio:.0%} cap H2/H3/H4 bao rate >50%).\n"
-        "Se bo qua auto-repair H2/H3/H4 hom nay. Chay lai sau 24h."
+        f"\u26a0\ufe0f <b>[Checker]</b> Ph\u00e1t hi\u1ec7n kh\u1ea3 n\u0103ng <b>\u0111\u1ed5i gi\u1edd m\u00f9a h\u00e8 (DST)</b> \u2014 "
+        f"{dst_ratio:.0%} c\u1eb7p H2/H3/H4 b\u00e1o mismatch >50%.\n"
+        "\u0110\u00e3 b\u1ecf qua auto-repair H2/H3/H4 h\u00f4m nay. Ch\u1ea1y l\u1ea1i sau 24 gi\u1edd."
     )
     return set(h_tfs)
 
@@ -1499,7 +1500,7 @@ def main() -> None:
     _configure_checker_library_logs()
 
     if not test_connection():
-        logger.error("ABORT: Cannot reach database.")
+        logger.error("LỖI NGHIÊM TRỌNG: Không kết nối được cơ sở dữ liệu. Checker không khởi động.")
         sys.exit(1)
 
     _log_section(
@@ -1516,7 +1517,7 @@ def main() -> None:
         needle  = args.sym.upper()
         symbols = [s for s in SYMBOLS if s["tv_symbol"] == needle]
         if not symbols:
-            logger.error("Symbol '%s' not found in SYMBOLS list.", args.sym)
+            logger.error("Symbol '%s' không có trong danh sách theo dõi.", args.sym)
             sys.exit(1)
 
     # --tf-check / --rebuild-computed operate across all 15 TFs, not just TFS_TO_CHECK
@@ -1621,8 +1622,8 @@ def main() -> None:
     def _yield_to_newer_historical_run(exc: HistoricalJobHandoffRequested) -> None:
         logger.info("[HANDOFF] Checker yielded to a newer historical job: %s", exc)
         tg_send(
-            "<b>[Checker]</b> Da nhuong slot TradingView lich su cho mot lan chay moi hon.\n"
-            "<i>Lan chay hien tai dung o checkpoint an toan de tranh xung dot / lock treo.</i>"
+            "<b>[Checker]</b> Đã nhường slot TradingView lịch sử cho một lần chạy mới hơn.\n"
+            "<i>Lần chạy hiện tại dừng ở checkpoint an toàn để tránh xung đột.</i>"
         )
         _exit(0)
 
@@ -1638,8 +1639,10 @@ def main() -> None:
     # ── Auth + connection ─────────────────────────────────────────────────────
     dry_label = " (DRY-RUN)" if args.dry_run else ""
     tg_send(
-        f"🔍 <b>[Checker]</b> Khởi động{dry_label} "
-        f"| {len(symbols)} symbols × {len(tfs)} TFs"
+        f"🔍 <b>Checker khởi động</b>{dry_label}\n"
+        f"📊 Phạm vi: {len(symbols)} cặp × {len(tfs)} khung thời gian\n"
+        f"🎯 Ngưỡng sai lệch: {args.threshold * 100:.1f}%  |  "
+        f"Chế độ: {'Quét và báo cáo' if args.dry_run else 'Quét và tự sửa'}"
     )
     tv, auth_mode = get_valid_tv_connection(logger)
     logger.info("Auth mode: %s", auth_mode)
@@ -1758,9 +1761,9 @@ def main() -> None:
     if not args.manual_confirm:
         _log_section(logger, "AUTO MODE | Symbol Rollout Scan + Repair")
         tg_send(
-            "<b>[Checker]</b> Dang scan cuon chieu theo tung symbol.\n"
-            "<i>Symbol nao co loi moi lay repair lock, rescan duoi lock, "
-            "sua ngay, verify ngay, roi release lock truoc khi sang symbol tiep theo.</i>"
+            "<b>[Checker]</b> Đang quét và tự sửa lần lượt từng symbol.\n"
+            "<i>Mỗi symbol có lỗi sẽ được khóa riêng, quét lại, sửa, kiểm tra, "
+            "rồi mới chuyển sang symbol tiếp theo.</i>"
         )
         try:
             auto_stats = _run_auto_mode_symbol_rollout(
@@ -1800,7 +1803,10 @@ def main() -> None:
         pass
 
     _log_section(logger, "PHASE 1 | Scan")
-    tg_send("🔍 <b>[Checker]</b> Đang scan dữ liệu (Phase 1/3)...")
+    tg_send(
+        "🔍 <b>[Checker] Pha 1/3 — Đang quét dữ liệu</b>\n"
+        "Kiểm tra từng cặp, so sánh với TradingView để tìm lỗi..."
+    )
     try:
         scan_stats = run_checker(
             tv, symbols, tfs, interval_map,
@@ -1861,8 +1867,9 @@ def main() -> None:
     threading.Thread(target=_lock_heartbeat, name="checker-lock-heartbeat", daemon=True).start()
     try:
         tg_send(
-            f"🔧 <b>[Checker]</b> Đang sửa {len(issues)} pairs (Phase 3/3)...\n"
-            "<i>WS Live đang tạm hoãn ETL để tránh xung đột. Sẽ tự resume sau khi xong.</i>"
+            f"🔧 <b>[Checker] Pha 3/3 — Đang sửa {len(issues)} cặp bị lỗi</b>\n"
+            "<i>WS Live tạm dừng ghi vào cơ sở dữ liệu chính để tránh xung đột. "
+            "Sẽ tự tiếp tục sau khi sửa xong.</i>"
         )
         try:
             repair_stats = run_checker(

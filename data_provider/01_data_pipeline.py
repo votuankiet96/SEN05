@@ -224,14 +224,14 @@ def detect_mode() -> str:
         mode = "full" if total == 0 else "gap"
 
         # Ghi log để người dùng biết tại sao chọn chế độ này
-        logger.info("[AUTO-DETECT] Fact_OHLCV has %d bars → mode = %s",
+        logger.info("[TỰ PHÁT HIỆN] DB có %d nến → chọn chế độ: %s",
                     total, mode.upper())
         return mode
 
     except Exception as e:
         # Nếu không truy vấn được DB (ví dụ: DB chưa khởi động), mặc định dùng backfill
         # Lý do: an toàn hơn — backfill chỉ kéo thêm, không ghi đè toàn bộ
-        logger.error("[AUTO-DETECT] Failed to count bars: %s — defaulting to gap", e)
+        logger.error("[TỰ PHÁT HIỆN] Không đọc được DB: %s — mặc định dùng chế độ bổ sung (gap)", e)
         return "gap"
 
 
@@ -497,7 +497,7 @@ def run_backfill(tv, dry_run: bool = False,
 
     # Nếu tất cả đều mới → không cần làm gì, thoát sớm
     if not stale:
-        logger.info("✓ All data is fresh — nothing to backfill.")
+        logger.info("✓ Tất cả dữ liệu đã cập nhật — không cần bổ sung thêm.")
         return {"fail": 0, "ok": 0, "total": 0, "bars_inserted": 0,
                 "miss_count": 0, "fail_pairs": []}
 
@@ -611,7 +611,7 @@ def run_backfill(tv, dry_run: bool = False,
 
             # 3+ failures liên tiếp → nghi ngờ token hết hạn → thử refresh
             if consecutive_fail == 3:
-                logger.warning("[AUTH] %d consecutive failures — trying mid-run token refresh...", consecutive_fail)
+                logger.warning("[XÁC THỰC] %d lỗi liên tiếp — đang thử làm mới token TradingView giữa chừng...", consecutive_fail)
                 if refresh_mid_run(tv, logger):
                     consecutive_fail = 0  # reset nếu refresh thành công
 
@@ -884,9 +884,9 @@ def main() -> int:
         logger.error("ABORT: full/reset maintenance cannot run while ws_live is active.")
         tg_alert(
             "WARNING",
-            "âš ï¸ <b>Data Pipeline bá»‹ táº¡m cháº·n</b>\n"
-            "Cháº¿ Ä‘á»™ full/reset khÃ´ng Ä‘Æ°á»£c cháº¡y khi <b>ws_live</b> Ä‘ang online 24/7.\n"
-            "HÃ£y táº¡m dá»«ng ws_live rá»“i cháº¡y láº¡i lÃªnh maintenance nÃ y."
+            "⚠️ <b>Data Pipeline bị tạm chặn</b>\n"
+            "Chế độ full/reset không được chạy khi <b>ws_live</b> đang online 24/7.\n"
+            "Hãy tạm dừng ws_live rồi chạy lại lệnh này."
             + QUICK_COMMANDS_HINT
         )
         tg_flush()
@@ -947,9 +947,9 @@ def main() -> int:
             logger.error("ABORT: warehouse_maintenance lock is busy.")
             tg_alert(
                 "WARNING",
-                "Data Pipeline blocked.\n"
-                "warehouse_maintenance is busy because another checker or maintenance task is running.\n"
-                "Wait for the current job to finish, then run the pipeline again."
+                "⚠️ <b>Data Pipeline bị chặn</b>\n"
+                "Không lấy được khóa bảo trì vì một tác vụ checker/maintenance khác đang chạy.\n"
+                "Chờ tác vụ đó hoàn tất rồi chạy lại."
                 + QUICK_COMMANDS_HINT
             )
             tg_flush()
