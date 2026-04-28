@@ -365,7 +365,7 @@ def _pull_tv_bars(tv, sym: dict, tf_code: str, n_bars: int,
             n_bars   = n_bars + 5,  # extra buffer; last bar discarded
         )
     except Exception as e:
-        logger.error("TV FAIL %s %s: %s", sym["tv_symbol"], tf_code, e)
+        logger.error("Lỗi kéo dữ liệu TradingView %s %s: %s", sym["tv_symbol"], tf_code, e)
         return None
 
     if df is None or df.empty:
@@ -614,7 +614,7 @@ def _repair_direct_window(tv, sym: dict, tf_code: str, issue_times: list[datetim
       3. ETL từ staging vào Fact.
     """
     if not issue_times:
-        logger.warning("  No issue timestamps supplied for %s %s (%s)", sym["tv_symbol"], tf_code, reason)
+        logger.warning("  Không có thời điểm lỗi để sửa cho %s %s (%s)", sym["tv_symbol"], tf_code, reason)
         return True
 
     interval = interval_map[tf_code]
@@ -861,8 +861,8 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
             break
 
         is_final_round = (repair_round == MAX_REPAIR_ROUNDS - 1)
-        round_name = "INITIAL SCAN" if repair_round == 0 else f"RETRY {repair_round}"
-        logger.info("ROUND %-12s | pending=%d", round_name, len(pending))
+        round_name = "QUÉT LẦN ĐẦU" if repair_round == 0 else f"THỬ LẠI {repair_round}"
+        logger.info("VÒNG %-12s | đang chờ=%d", round_name, len(pending))
 
         still_failing: list[tuple[dict, str]] = []
         prev_symbol: str | None = None  # theo dõi symbol trước để thêm sleep khi đổi symbol
@@ -871,7 +871,7 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
             label = f"{sym['tv_symbol']}/{tf_code}"
 
             if idx % 50 == 1:
-                logger.info("PROGRESS %03d/%03d | %s", idx, len(pending), label)
+                logger.info("TIẾN ĐỘ %03d/%03d | %s", idx, len(pending), label)
 
             # Nghỉ giữa các symbol (không chỉ giữa TF) để giảm rate với TradingView.
             # 0.5s giữa các TF là đủ, nhưng khi chuyển sang symbol mới thì dùng
@@ -901,7 +901,7 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
 
                 # Auth: try mid-run refresh sau 3 lần fail
                 if auth_consecutive_fail >= 3 and not dry_run:
-                    logger.warning("3+ auth-related failures — attempting mid-run refresh...")
+                    logger.warning("3+ lỗi xác thực liên tiếp — đang thử làm mới token giữa chừng...")
                     if refresh_mid_run(tv, logger):
                         auth_consecutive_fail = 0
 
@@ -980,13 +980,13 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
                     if dry_run:
                         ok_pairs += 1
                         logger.info(
-                            "CLEAN   %s",
+                            "SẠCH    %s",
                             _fmt_pair_status(label, rate, n_miss, n_bad, n_extra, n_vol),
                         )
                         continue
                     repaired_pairs += 1
                     repaired_sym_ids.add(sym["symbol_id"])
-                    logger.info("  ✓ RESOLVED %s (scan rate now %.2f%%)", label, rate * 100)
+                    logger.info("  ✓ ĐÃ XỬ LÝ %s (tỷ lệ sai lệch hiện tại %.2f%%)", label, rate * 100)
 
             elif is_final_round:
                 # Last round: no more repair attempts
@@ -994,18 +994,18 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
                     {"sym": sym["tv_symbol"], "tf": tf_code,
                      "reason": f"{rate:.1%} mismatch ({n_miss} missing, {n_bad} OHLC wrong, {n_extra} extra)"}
                 )
-                logger.error("  ✗ PERSISTENT %s: %.1f%% mismatch", label, rate * 100)
+                logger.error("  ✗ LỖI CỐ ĐỊNH %s: sai lệch %.1f%% không thể sửa", label, rate * 100)
 
             elif not dry_run:
                 # Attempt repair
                 if force_repair_for_core_issue and rate <= threshold:
                     logger.warning(
-                        "  ✗ %s: core data issue detected (miss=%d wrong=%d extra=%d, rate=%.1f%% <= threshold %.1f%%) — repairing immediately...",
+                        "  ✗ %s: phát hiện lỗi dữ liệu gốc (thiếu=%d sai=%d thừa=%d, tỷ lệ=%.1f%% <= ngưỡng %.1f%%) — đang sửa ngay...",
                         label, n_miss, n_bad, n_extra, rate * 100, threshold * 100,
                     )
                 else:
                     logger.warning(
-                        "  ✗ %s: %.1f%% mismatch (miss=%d wrong=%d extra=%d) — repairing...",
+                        "  ✗ %s: sai lệch %.1f%% (thiếu=%d sai=%d thừa=%d) — đang sửa...",
                         label, rate * 100, n_miss, n_bad, n_extra,
                     )
                 repair_ok = _repair_pair(
@@ -1022,10 +1022,10 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
                     if is_clean:
                         repaired_pairs += 1
                         repaired_sym_ids.add(sym["symbol_id"])
-                        logger.info("  ✓ REPAIRED %s (verified clean)", label)
+                        logger.info("  ✓ ĐÃ SỬA %s (xác nhận sạch)", label)
                     else:
                         logger.warning(
-                            "  ↻ %s: %.1f%% still failing after repair — will retry",
+                            "  ↻ %s: vẫn còn %.1f%% sai lệch sau khi sửa — sẽ thử lại",
                             label, verify_rate * 100,
                         )
                         still_failing.append((sym, tf_code))
@@ -1036,12 +1036,12 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
                 # dry_run — ghi nhận vấn đề nhưng không sửa
                 if force_repair_for_core_issue and rate <= threshold:
                     logger.warning(
-                        "  [DRY] %s: core data issue detected (miss=%d wrong=%d extra=%d, rate=%.1f%% <= threshold %.1f%%)",
+                        "  [DRY] %s: lỗi dữ liệu gốc (thiếu=%d sai=%d thừa=%d, tỷ lệ=%.1f%% <= ngưỡng %.1f%%)",
                         label, n_miss, n_bad, n_extra, rate * 100, threshold * 100,
                     )
                 else:
                     logger.warning(
-                        "  [DRY] %s: %.1f%% mismatch (miss=%d wrong=%d extra=%d)",
+                        "  [DRY] %s: sai lệch %.1f%% (thiếu=%d sai=%d thừa=%d)",
                         label, rate * 100, n_miss, n_bad, n_extra,
                     )
                 # Thu thập vào dry_issues để main() có thể hỏi user sau
@@ -1527,7 +1527,7 @@ def main() -> None:
     if args.tf:
         tf = args.tf.upper()
         if not db_only_mode and tf not in TFS_TO_CHECK:
-            logger.error("TF '%s' not in TFS_TO_CHECK (%s).", tf, TFS_TO_CHECK)
+            logger.error("TF '%s' không có trong danh sách TF được kiểm tra (%s).", tf, TFS_TO_CHECK)
             sys.exit(1)
         tfs = [tf]
 
@@ -1565,7 +1565,7 @@ def main() -> None:
     if args.rebuild_computed:
         cleaned = cleanup_expired()
         if cleaned:
-            logger.info("Cleaned up %d expired lock(s) before computed rebuild.", cleaned)
+            logger.info("Dọn dẹp %d khóa cũ đã hết hạn trước khi rebuild TF phái sinh.", cleaned)
 
         heartbeat_stop: threading.Event | None = None
         try:
@@ -1573,7 +1573,7 @@ def main() -> None:
                 heartbeat_stop = _acquire_repair_locks(logger, duration_min=120)
                 if heartbeat_stop is None:
                     sys.exit(1)
-                logger.info("Acquired maintenance locks for computed rebuild.")
+                logger.info("Đã lấy khóa bảo trì để rebuild TF phái sinh.")
 
             rc_report = rebuild_computed_tfs(
                 dry_run=args.dry_run,
@@ -1607,7 +1607,7 @@ def main() -> None:
     # ── Dọn dẹp lock cũ từ các lần chạy bị crash trước đó ───────────────────
     cleaned = cleanup_expired()
     if cleaned:
-        logger.info("Cleaned up %d expired lock(s).", cleaned)
+        logger.info("Dọn dẹp %d khóa cũ đã hết hạn.", cleaned)
 
     tv_job_stop: threading.Event | None = None
 
@@ -1620,7 +1620,7 @@ def main() -> None:
         raise SystemExit(code)
 
     def _yield_to_newer_historical_run(exc: HistoricalJobHandoffRequested) -> None:
-        logger.info("[HANDOFF] Checker yielded to a newer historical job: %s", exc)
+        logger.info("[NHƯỜNG QUYỀN] Checker nhường slot lịch sử cho lần chạy mới hơn: %s", exc)
         tg_send(
             "<b>[Checker]</b> Đã nhường slot TradingView lịch sử cho một lần chạy mới hơn.\n"
             "<i>Lần chạy hiện tại dừng ở checkpoint an toàn để tránh xung đột.</i>"
@@ -1645,7 +1645,7 @@ def main() -> None:
         f"Chế độ: {'Quét và báo cáo' if args.dry_run else 'Quét và tự sửa'}"
     )
     tv, auth_mode = get_valid_tv_connection(logger)
-    logger.info("Auth mode: %s", auth_mode)
+    logger.info("Phương thức đăng nhập: %s", auth_mode)
 
     # ── Guard: không chạy nếu đang ở guest mode ──────────────────────────────
     # Guest mode chỉ trả về ~500 bars thay vì 1000-2000 → checker sẽ thấy hàng trăm
@@ -1658,7 +1658,7 @@ def main() -> None:
             "Hãy cập nhật <code>TV_AUTH_TOKEN</code> hoặc <code>TV_COOKIE</code> "
             "trong file <code>.env</code> rồi chạy lại."
         )
-        logger.error("[CHECKER] Guest mode detected — aborting to prevent false repairs.")
+        logger.error("[CHECKER] Phát hiện chế độ khách — dừng lại để tránh sửa nhầm dữ liệu.")
         tg_send(msg)
         tg_flush()
         _exit(2)
@@ -1677,7 +1677,7 @@ def main() -> None:
         tg_send(report)
         tg_flush()
         logger.info(
-            "==== DONE (dry-run) | ok=%d issues=%d ====",
+            "==== HOÀN TẤT (dry-run) | sạch=%d vấn_đề=%d ====",
             stats["ok"], len(stats["dry_issues"]),
         )
         _exit(0)
@@ -1685,18 +1685,18 @@ def main() -> None:
 
     # ── Phase 1: Scan (dry_run=True) — tìm vấn đề mà không sửa ─────────────
     if args.tf_check and tf_gap_issues:
-        logger.info("Interval-gap mode detected %d issue pair(s).", len(tf_gap_issues))
+        logger.info("Phát hiện %d cặp có khoảng trống interval trong DB.", len(tf_gap_issues))
         if args.manual_confirm:
             choice = request_confirm(
-                title="[Checker] Phat hien interval gaps",
+                title="[Checker] Phát hiện khoảng trống interval",
                 problem_desc=(
-                    f"Phat hien {len(tf_gap_issues)} pairs co interval gaps trong DB. "
-                    "Checker se auto repull dung cua so gap voi TF direct, "
-                    "va rebuild lai TF phai sinh neu can."
+                    f"Phát hiện {len(tf_gap_issues)} cặp có khoảng trống interval trong DB. "
+                    "Checker sẽ tự kéo lại đúng cửa sổ bị thiếu từ TradingView "
+                    "và rebuild lại TF phái sinh nếu cần."
                 ),
                 options={
-                    "confirm": f"Sua tat ca {len(tf_gap_issues)} pairs gap",
-                    "skip": "Bo qua, chi luu bao cao",
+                    "confirm": f"Sửa tất cả {len(tf_gap_issues)} cặp bị thiếu",
+                    "skip": "Bỏ qua, chỉ lưu báo cáo",
                 },
                 timeout_min=240,
                 affected_pairs=[
@@ -1705,16 +1705,16 @@ def main() -> None:
                 ],
                 task_name="checker_repair",
             )
-            logger.info("User choice for interval-gap repair: %s", choice)
+            logger.info("Lựa chọn của người dùng cho interval-gap repair: %s", choice)
             if choice != "confirm":
-                reason = "het gio (4h)" if choice == "timeout" else "nguoi dung bo qua"
-                tg_send(f"[Checker] TF gap report ({reason})\n\n<pre>{tf_report}</pre>")
+                reason = "hết giờ (4h)" if choice == "timeout" else "người dùng bỏ qua"
+                tg_send(f"<b>[Checker]</b> Báo cáo khoảng trống TF ({reason})\n\n<pre>{tf_report}</pre>")
                 tg_flush()
                 _exit(0)
         else:
             tg_send(
-                f"<b>[Checker]</b> Phat hien {len(tf_gap_issues)} pairs co interval gaps. "
-                "Dang tu dong repull/rebuild phan du lieu loi."
+                f"<b>[Checker]</b> Phát hiện {len(tf_gap_issues)} cặp có khoảng trống interval. "
+                "Đang tự động kéo lại và rebuild phần dữ liệu bị lỗi."
             )
 
         heartbeat_stop = _acquire_repair_locks(logger)
@@ -1739,17 +1739,17 @@ def main() -> None:
                 for row in gap_result["failures"][:10]
             ]
             summary_lines = [
-                "<b>[Checker]</b> TF gap auto-repair done",
-                f"Repaired: {gap_result['repaired']}",
-                f"Failed: {gap_result['failed']}",
-                f"Verify pending issues: {'YES' if gap_result['verify_has_issues'] else 'NO'}",
+                "<b>[Checker]</b> Tự sửa khoảng trống TF hoàn tất",
+                f"Đã sửa: {gap_result['repaired']}",
+                f"Thất bại: {gap_result['failed']}",
+                f"Còn vấn đề sau xác nhận: {'Có' if gap_result['verify_has_issues'] else 'Không'}",
             ]
             if failure_lines:
-                summary_lines.append("Failures:")
+                summary_lines.append("Các cặp lỗi:")
                 summary_lines.extend(failure_lines)
             tg_send("\n".join(summary_lines) + "\n\n<pre>" + gap_result["verify_report"] + "</pre>")
             logger.info(
-                "==== DONE | tf-gap repaired=%d failed=%d verify_has_issues=%s ====",
+                "==== HOÀN TẤT | tf-gap đã_sửa=%d thất_bại=%d còn_vấn_đề=%s ====",
                 gap_result["repaired"], gap_result["failed"], gap_result["verify_has_issues"],
             )
             exit_code = 1 if gap_result["failed"] > 0 or gap_result["verify_has_issues"] else 0
@@ -1816,7 +1816,7 @@ def main() -> None:
         _yield_to_newer_historical_run(exc)
 
     issues = scan_stats.get("dry_issues", []) or scan_stats.get("failures", [])
-    logger.info("Phase 1 done: %d issue(s) found.", len(issues))
+    logger.info("Pha 1 hoàn tất: phát hiện %d vấn đề.", len(issues))
 
     # ── Không có vấn đề gì: báo cáo và thoát ────────────────────────────────
     if not issues:
@@ -1824,12 +1824,12 @@ def main() -> None:
         _log_report(report, logger)
         tg_send(report)
         tg_flush()
-        logger.info("==== DONE | all clean ====")
+        logger.info("==== HOÀN TẤT | tất cả dữ liệu sạch ====")
         _exit(0)
 
     # ── Phase 2: Auto-confirm (manual-confirm không còn hỗ trợ) ─────────────
     _log_section(logger, f"PHASE 2 | Auto-confirm | issues={len(issues)}")
-    logger.info("Auto-confirm: tiến hành repair %d pairs.", len(issues))
+    logger.info("Tự xác nhận: tiến hành sửa %d cặp.", len(issues))
 
     # ── Phase 3: Acquire lock + repair ───────────────────────────────────────
     pending_pairs = _issues_to_pending_pairs(issues, symbols)
@@ -1838,20 +1838,20 @@ def main() -> None:
         _log_report(report, logger)
         tg_send(report)
         tg_flush()
-        logger.error("Phase 3 aborted: could not map issues back to repair pairs.")
+        logger.error("Pha 3 bị hủy: không thể ánh xạ vấn đề về các cặp cần sửa.")
         _exit(1)
 
     _log_section(logger, "PHASE 3 | Repair")
     if not acquire("checker_repair", duration_min=90):
         msg = "⚠️ <b>[Checker]</b> Lock đang bận — process khác đang sửa dữ liệu. Bỏ qua."
-        logger.warning("Could not acquire checker_repair lock.")
+        logger.warning("Không lấy được khóa checker_repair.")
         tg_send(msg)
         tg_flush()
         _exit(1)
     if not acquire("warehouse_maintenance", duration_min=90):
         release("checker_repair")
         msg = "⚠️ <b>[Checker]</b> Warehouse đang bận — pipeline hoặc maintenance khác đang chạy. Bỏ qua."
-        logger.warning("Could not acquire warehouse_maintenance lock.")
+        logger.warning("Không lấy được khóa warehouse_maintenance.")
         tg_send(msg)
         tg_flush()
         _exit(1)
@@ -1883,7 +1883,7 @@ def main() -> None:
         _log_report(report, logger)
         tg_send(report)
         logger.info(
-            "==== DONE | repaired=%d failed=%d ====",
+            "==== HOÀN TẤT | đã_sửa=%d thất_bại=%d ====",
             repair_stats["repaired"], repair_stats["failed"],
         )
         exit_code = 1 if repair_stats["failed"] > 0 else 0
@@ -1891,7 +1891,7 @@ def main() -> None:
         heartbeat_stop.set()
         release("checker_repair")
         release("warehouse_maintenance")
-        logger.info("Lock released.")
+        logger.info("Đã giải phóng khóa.")
         tg_flush()  # luôn flush dù try thành công hay exception
 
     _exit(exit_code)
@@ -2091,14 +2091,14 @@ def _acquire_repair_locks(
     """Acquire checker locks and start heartbeat. Returns stop event or None on failure."""
     if not acquire("checker_repair", duration_min=duration_min):
         msg = "⚠️ <b>[Checker]</b> Lock đang bận — process khác đang sửa dữ liệu. Bỏ qua."
-        logger.warning("Could not acquire checker_repair lock.")
+        logger.warning("Không lấy được khóa checker_repair.")
         tg_send(msg)
         tg_flush()
         return None
     if not acquire("warehouse_maintenance", duration_min=duration_min):
         release("checker_repair")
         msg = "⚠️ <b>[Checker]</b> Warehouse đang bận — pipeline hoặc maintenance khác đang chạy. Bỏ qua."
-        logger.warning("Could not acquire warehouse_maintenance lock.")
+        logger.warning("Không lấy được khóa warehouse_maintenance.")
         tg_send(msg)
         tg_flush()
         return None
@@ -2120,7 +2120,7 @@ def _release_repair_locks(heartbeat_stop: threading.Event | None, logger: loggin
         heartbeat_stop.set()
     release("checker_repair")
     release("warehouse_maintenance")
-    logger.info("Lock released.")
+    logger.info("Đã giải phóng khóa.")
     tg_flush()
 
 
@@ -2521,11 +2521,11 @@ def _repair_interval_gap_pair(tv, sym: dict, tf_code: str, gap_issue: dict,
             reason="interval-gap",
         )
 
-    logger.info("  Rebuild computed TF for interval-gap issue — %s %s", sym["tv_symbol"], tf_code)
+    logger.info("  Rebuild TF phái sinh do khoảng trống interval — %s %s", sym["tv_symbol"], tf_code)
     deleted = delete_fact_bars(sym["symbol_id"], tf_code)
     inserted = aggregate_from_fact(sym["symbol_id"], tf_code)
     logger.info(
-        "  Computed rebuild done — %s %s | deleted=%d inserted=%d",
+        "  Rebuild TF phái sinh hoàn tất — %s %s | đã_xóa=%d đã_thêm=%d",
         sym["tv_symbol"], tf_code, deleted, inserted,
     )
     return inserted >= 0
@@ -2564,7 +2564,7 @@ def auto_repair_interval_gaps(
 
     if repaired_sym_ids:
         logger.info(
-            "Recomputing derived TFs after interval-gap repair for %d symbol(s)...",
+            "Đang tính lại TF phái sinh sau khi sửa khoảng trống interval cho %d cặp...",
             len(repaired_sym_ids),
         )
         recompute_derived(repaired_sym_ids, logger)
@@ -2671,7 +2671,7 @@ def rebuild_computed_tfs(
                 except Exception as exc:
                     conn3.rollback()
                     if logger:
-                        logger.warning("rebuild_computed_tfs DELETE fail %s %s: %s", sym_name, tf_code, exc)
+                        logger.warning("Lỗi khi xóa dữ liệu để rebuild TF phái sinh %s %s: %s", sym_name, tf_code, exc)
                     n_del = 0
                 finally:
                     conn3.close()
