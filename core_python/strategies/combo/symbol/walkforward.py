@@ -12,9 +12,9 @@ Các hàm chính:
 import numpy as np
 import pandas as pd
 
-from shared.execution import backtest_fast, backtest_symbol
-from shared.metrics import calc_metrics
+from core_python.shared.analytics import calc_metrics
 
+from ..execution import backtest_fast, backtest_symbol
 from ..config import (
     OPTIMIZATION,
     SYMBOLS,
@@ -24,7 +24,8 @@ from ..config import (
     get_symbol_params,
     get_symbol_search_space,
 )
-from ..logic import add_combo_indicators, detect_combo_signals, session_mask
+from ..signals import add_combo_indicators
+from ..signals import detect_combo_signals, session_mask
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -151,6 +152,10 @@ def walk_forward_backtest(
 ) -> tuple[pd.DataFrame, dict]:
     """
     Chạy kiểm định walk-forward out-of-sample (OOS) với tham số cố định.
+
+    Safety note: pass raw OHLCV or a frame where OHLCV columns are authoritative.
+    Indicators are recomputed inside each IS/OOS window; precomputed full-history
+    indicator/signal columns are intentionally ignored to avoid lookahead.
 
     Cách hoạt động:
     - Trượt cửa sổ qua dữ liệu lịch sử.
@@ -326,7 +331,13 @@ def walk_forward_backtest(
             costs=cost_cfg,
         )
 
-        metrics = calc_metrics(trades, eq_ts) if trades else {}
+        metrics = calc_metrics(
+            trades,
+            eq_ts,
+            window_start=oos_slice.index[0],
+            window_end=oos_slice.index[-1],
+            initial_equity=init_eq,
+        ) if trades else {}
         oos_profit_total += float(metrics.get('total_pnl', 0.0)) if metrics else 0.0
         row = {
             'window':    step,
@@ -351,6 +362,7 @@ def walk_forward_backtest(
 
     summary = {
         'n_windows':         len(results),
+        'indicator_scope':   'window_local_recomputed',
         'total_trades':      int(oos_df.get('total_trades', pd.Series(0)).sum()),
         'profitable_windows': profitable,
         'pct_profitable':    round(profitable / len(results) * 100, 1),

@@ -60,6 +60,7 @@ import logging
 
 import pandas as pd
 
+from core_python.shared.sessions import detect_time_gaps, normalize_datetime_index_utc
 from modules.data_loader import (
     load_candles as _load_chart_candles,
     load_ohlcv as _load_scan_ohlcv,
@@ -178,6 +179,16 @@ def validate_backtest_data(
         _log.warning("[%s] Xóa %d hàng timestamp trùng lặp", label, n_dup)
         df_out = df_out[~df_out.index.duplicated(keep="first")]
 
+    gap_report = detect_time_gaps(df_out.index, tf=tf)
+    if gap_report["n_unexpected_time_gaps"]:
+        _log.warning(
+            "[%s] Phat hien %d khoang trong thoi gian bat thuong; gap dau tien: %s -> %s",
+            label,
+            gap_report["n_unexpected_time_gaps"],
+            gap_report["first_unexpected_gap_start"],
+            gap_report["first_unexpected_gap_end"],
+        )
+
     # Bước 4: tìm các dòng có NaN trong cột giá. `errors="coerce"` ở loader có
     # thể biến dữ liệu không đọc được thành NaN, nên check này bắt được cả lỗi
     # kiểu dữ liệu từ database.
@@ -194,6 +205,8 @@ def validate_backtest_data(
     n_invalid = 0
     if "high" in df_out.columns and "low" in df_out.columns:
         bad_bar = df_out["high"] < df_out["low"]
+        if "open" in df_out.columns:
+            bad_bar |= (df_out["open"] > df_out["high"]) | (df_out["open"] < df_out["low"])
         if "close" in df_out.columns:
             bad_bar |= (df_out["close"] > df_out["high"]) | (df_out["close"] < df_out["low"])
         n_invalid = int(bad_bar.sum())
@@ -215,6 +228,7 @@ def validate_backtest_data(
         "n_invalid_bars":  n_invalid,
         "n_final":         n_final,
         "quality_ok":      quality_ok,
+        **gap_report,
     }
 
     # Bước 7: nếu dữ liệu còn lại quá ít thì dừng hẳn. Đây là lỗi cần sửa ở data
@@ -322,6 +336,7 @@ def load_backtest_ohlcv(
     warmup: int = 200,
     validate: bool = True,
     min_bars: int = 100,
+    source_timezone: str | None = None,
 ) -> pd.DataFrame:
     """Load lịch sử OHLCV từ SQL theo format chuẩn cho backtest.
 
@@ -435,6 +450,13 @@ def load_backtest_ohlcv(
     # SQL lấy TOP theo thứ tự mới nhất trước để lấy đúng số bar gần nhất. Sau khi
     # đọc xong phải sort tăng dần để backtest chạy từ quá khứ đến hiện tại.
     df = df.sort_index()
+    if isinstance(df.index, pd.DatetimeIndex) and df.index.tz is None and source_timezone is None:
+        _log.warning(
+            "[symbol_id=%s, tf=%s] BarTime is timezone-naive and source timezone is unknown; assuming UTC.",
+            symbol_id,
+            tf,
+        )
+    df.index = normalize_datetime_index_utc(df.index, source_timezone=source_timezone)
 
     # Cổng chất lượng dữ liệu cuối cùng trước khi trả cho execution engine.
     if validate:

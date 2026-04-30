@@ -14,8 +14,6 @@ from typing import Any
 
 import pandas as pd
 
-from shared.execution import backtest_fast
-
 from ..config import (
     OPTIMIZATION,
     TIMEFRAME,
@@ -25,7 +23,8 @@ from ..config import (
     get_symbol_params,
     get_symbol_search_space,
 )
-from ..logic import add_combo_indicators
+from ..execution import backtest_fast
+from ..signals import add_combo_indicators
 from .backtest import load_backtest_full
 
 
@@ -133,5 +132,8 @@ def run_symbol_grid_search(
 
     score_col = OPTIMIZATION["symbol"]["score_column"]
     df_results = pd.DataFrame(results)
+    df_results["ranking_basis"] = "fast_approximation"
+    df_results["grid_search_data_start"] = pd.Timestamp(effective_date_from)
+    df_results["grid_search_data_end"] = pd.Timestamp(effective_date_to)
     sort_cols = [c for c in [score_col, "score", "pf", "ret"] if c in df_results.columns]
     return df_results.sort_values(by=sort_cols, ascending=False, ignore_index=True)

@@ -1,9 +1,10 @@
 # =============================================================================
-# strategies/combo/config.py  —  Combo v2 strategy source-of-truth
+# strategies/combo/parameters.py  —  Combo v2 strategy source-of-truth
 # Version           : 1.0
 # =============================================================================
 # HƯỚNG DẪN QUẢN TRỊ NHANH
 # Đây là file điều chỉnh tham số chiến lược chính — chỉnh ở đây trước tiên.
+# config.py chỉ là compatibility wrapper cho import cũ.
 #
 # Các thông số quan trọng nhất:
 # - STRATEGY["ktp"]            : hệ số nhân khoảng cách TP (Take Profit)
@@ -16,8 +17,11 @@
 # - Ưu tiên điều chỉnh ở đây trước khi đụng vào code logic scanner/backtest.
 # - Mỗi lần chỉnh chỉ 1-2 tham số, ghi lại trước/sau để dễ audit KPI.
 
-# Single source of truth for all Combo strategy settings shared between:
-#   - strategies.combo.logic
+# Canonical source of truth for all Combo strategy settings shared between:
+#   - strategies.combo.signals
+#   - strategies.combo.signals
+#   - strategies.combo.signals
+#   - strategies.combo.signals compatibility wrapper
 #   - strategies.combo.scanner
 #   - strategies.combo.symbol.*
 #   - strategies.combo.portfolio.*
@@ -30,16 +34,44 @@
 #     empty list [] = scan all hours)
 #   - Adjust indicator defaults in get_indicator_params()
 # =============================================================================
-from shared.broker import audit_symbol_specs
-from shared.instruments import (
+from core_python.shared.market import audit_symbol_specs
+from core_python.shared.market import (
     BROKER_PROFILES,
     DEFAULT_BROKER_PROFILE,
     DEFAULT_COSTS,
-    SYMBOLS,
     get_broker_profile,
     get_cost_settings,
-    get_symbol_config,
+    get_symbol_config as get_shared_symbol_config,
 )
+
+from .universe import COMBO_SYMBOL_KEYS, get_combo_universe_metadata
+
+__all__ = [
+    "ACCOUNT_MODES",
+    "BROKER_PROFILES",
+    "COMBO_SYMBOL_PARAMS",
+    "DEFAULT_BROKER_PROFILE",
+    "DEFAULT_COSTS",
+    "DEFAULT_N_BARS",
+    "INDICATOR_COLS",
+    "OPTIMIZATION",
+    "SCANNER_DEFAULTS",
+    "STRATEGY",
+    "SYMBOLS",
+    "TIMEFRAME",
+    "TIMEFRAMES",
+    "get_account_settings",
+    "get_broker_profile",
+    "get_combo_symbol_params",
+    "get_cost_settings",
+    "get_indicator_params",
+    "get_symbol_config",
+    "get_symbol_ktp",
+    "get_symbol_params",
+    "get_symbol_search_space",
+    "summary",
+    "validate_config",
+]
 
 # =============================================================================
 # 1. STRATEGY IDENTITY (tham số nền của toàn chiến lược)
@@ -89,7 +121,8 @@ ACCOUNT_MODES = {
 # =============================================================================
 # 1b. SCAN / BACKTEST DEFAULTS (mặc định chạy hệ thống)
 # =============================================================================
-TIMEFRAME      = 'H4'                     # Primary timeframe for all scans
+TIMEFRAMES     = ['H2', 'H3', 'H4']        # Combo-supported primary timeframes
+TIMEFRAME      = 'H4'                     # Default primary timeframe for all scans
 DEFAULT_N_BARS = 100                       # Default number of bars to scan
 INDICATOR_COLS = ['ma', 'atr', 'macd_h']   # Required indicator columns after warmup
 
@@ -135,6 +168,89 @@ SCANNER_DEFAULTS = {
 #   session_hours_utc: list of H4 bar-start UTC hours to scan for signals
 #                      ([] = no filter, scan all hours)
 # =============================================================================
+
+COMBO_SYMBOL_PARAMS = {
+    "US30": {
+        "x": 10.0,
+        "session_hours_utc": [],
+    },
+    "US500": {
+        "x": 1.0,
+        "session_hours_utc": [],
+    },
+    "US100": {
+        "x": 5.0,
+        "session_hours_utc": [],
+    },
+    "DE40": {
+        "x": 5.0,
+        "session_hours_utc": [],
+    },
+    "UK100": {
+        "x": 5.0,
+        "session_hours_utc": [],
+    },
+    "FR40": {
+        "x": 5.0,
+        "session_hours_utc": [],
+    },
+    "SP35": {
+        "x": 5.0,
+        "session_hours_utc": [],
+    },
+    "HK50": {
+        "x": 15.0,
+        "session_hours_utc": [],
+    },
+    "J225": {
+        "x": 15.0,
+        "session_hours_utc": [],
+    },
+    "GOLD": {
+        "x": 0.5,
+        "session_hours_utc": [],
+    },
+    "BTCUSD": {
+        "x": 50.0,
+        "session_hours_utc": [],
+    },
+}
+
+
+def get_combo_symbol_params(sym_key: str) -> dict:
+    """Return Combo-owned per-symbol strategy parameters without shared metadata."""
+    if sym_key not in COMBO_SYMBOL_PARAMS:
+        raise KeyError(f"Symbol '{sym_key}' not found. Available: {list(COMBO_SYMBOL_PARAMS)}")
+    params = COMBO_SYMBOL_PARAMS[sym_key]
+    return {
+        "x": params["x"],
+        "session_hours_utc": list(params.get("session_hours_utc", [])),
+    }
+
+
+def _build_combo_symbols() -> dict[str, dict]:
+    """Build the public Combo symbol universe with Combo-owned strategy params."""
+    metadata = get_combo_universe_metadata()
+    return {
+        symbol: {
+            **metadata[symbol],
+            **get_combo_symbol_params(symbol),
+        }
+        for symbol in COMBO_SYMBOL_KEYS
+    }
+
+
+SYMBOLS = _build_combo_symbols()
+
+
+def get_symbol_config(sym_key: str, broker_profile: str | None = None) -> dict:
+    """Return shared broker metadata overlaid with Combo-owned symbol params."""
+    if sym_key not in COMBO_SYMBOL_PARAMS:
+        raise KeyError(f"Symbol '{sym_key}' not found. Available: {list(COMBO_SYMBOL_PARAMS)}")
+    return {
+        **get_shared_symbol_config(sym_key, broker_profile=broker_profile),
+        **get_combo_symbol_params(sym_key),
+    }
 
 
 
@@ -237,6 +353,7 @@ def get_symbol_params(sym_key: str, broker_profile: str | None = None) -> dict:
         swap_short_per_lot_per_day — phí/credit swap cho lệnh SHORT theo mỗi lot mỗi ngày
     """
     sym = get_symbol_config(sym_key, broker_profile=broker_profile)
+    owned = get_combo_symbol_params(sym_key)
     p   = get_indicator_params()
     return {
         'symbol_id':           sym['symbol_id'],
@@ -248,10 +365,10 @@ def get_symbol_params(sym_key: str, broker_profile: str | None = None) -> dict:
         'broker_platform':     sym.get('broker_platform', ''),
         'spec_verified':       sym.get('spec_verified', False),
         'ktp':                 sym.get('ktp',                STRATEGY['ktp']),
-        'x':                   sym['x'],
+        'x':                   owned['x'],
         'trailing_activation': sym.get('trailing_activation', STRATEGY['trailing_activation']),
         'ma_period':           sym.get('ma_period',           p['MA_PERIOD']),
-        'session_hours_utc':   sym.get('session_hours_utc',  []),
+        'session_hours_utc':   owned['session_hours_utc'],
         'contract_value':      sym.get('contract_value', 1.0),
         'point_size':          sym.get('point_size', 1.0),
         'spread_pts':          sym.get('spread_pts', 0.0),
@@ -343,7 +460,7 @@ def validate_config(broker_profile: str | None = None) -> dict:
     errors:   list[str] = []
 
     merged_symbols = {
-        sym_key: get_symbol_config(sym_key, broker_profile=broker_profile)
+        sym_key: get_symbol_params(sym_key, broker_profile=broker_profile)
         for sym_key in SYMBOLS
     }
     broker_audit = audit_symbol_specs(merged_symbols)

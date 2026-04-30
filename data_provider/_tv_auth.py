@@ -5,9 +5,9 @@ Thu tu fallback hien tai:
 1. runtime cache trong `.tv_token_cache`
 2. token / cookie co san trong `.env`
 3. refresh token qua cookie session (HTTP GET)
-4. dang nhap bang username/password → lay token + cookie moi (Fix A)
+4. dang nhap bang username/password -> lay token + cookie moi (Fix A)
 5. headless browser refresh voi cookie cu
-6. headless browser dang nhap tu dau bang credentials → lay token + cookie moi (Fix B)
+6. headless browser dang nhap tu dau bang credentials -> lay token + cookie moi (Fix B)
 7. guest token nhu phuong an cuoi cung
 
 Muc tieu cua module nay khong chi la "dang nhap duoc", ma la:
@@ -19,58 +19,56 @@ Muc tieu cua module nay khong chi la "dang nhap duoc", ma la:
 """
 
 # =============================================================================
-# data_provider/_tv_auth.py  —  Xác thực TradingView (module dùng chung)
+# data_provider/_tv_auth.py  -  Xác thực TradingView (module dùng chung)
 # =============================================================================
 #
-# FILE NÀY LÀM GÌ?
+# FILE NÀY LÀM GÌ-
 #   TradingView yêu cầu phải đăng nhập mới xem được dữ liệu đầy đủ.
 #   File này quản lý toàn bộ quá trình "lấy chứng minh đã đăng nhập" (auth token)
 #   và đảm bảo token luôn còn hiệu lực khi các script khác cần dùng.
 #
-# AUTH TOKEN LÀ GÌ?
+# AUTH TOKEN LÀ GÌ-
 #   Sau khi đăng nhập TradingView, server cấp 1 chuỗi dài (JWT token) như:
 #     eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
-#   Chuỗi này là "thẻ thông hành" — khi gửi kèm mỗi request, TradingView
+#   Chuỗi này là "thẻ thông hành" - khi gửi kèm mỗi request, TradingView
 #   biết bạn là ai và cho phép tải đủ dữ liệu (không bị giới hạn như Guest).
 #
 # HỆ THỐNG DỰ PHÒNG 5 LỚP (thử lần lượt từ trên xuống):
 #
-#   Lớp 0 — Token cache (.tv_token_cache):
-#     Lần trước đã đăng nhập thành công → lưu token vào file cục bộ.
+#   Lớp 0 - Token cache (.tv_token_cache):
+#     Lần trước đã đăng nhập thành công -> lưu token vào file cục bộ.
 #     Lần này dùng lại, không cần request mạng. Nhanh nhất.
 #
-#   Lớp 1 — Token tĩnh từ .env (TV_AUTH_TOKEN):
+#   Lớp 1 - Token tĩnh từ .env (TV_AUTH_TOKEN):
 #     Người dùng tự copy token từ trình duyệt và lưu vào file .env.
 #     Không cần mạng, nhưng token có thể hết hạn sau vài ngày.
 #
-#   Lớp 1.5 — Refresh qua cookie (HTTP GET):
+#   Lớp 1.5 - Refresh qua cookie (HTTP GET):
 #     Gửi HTTP request đến TradingView kèm cookie (sessionid=...).
-#     TradingView nhúng token mới vào HTML trả về → extract ra.
+#     TradingView nhúng token mới vào HTML trả về -> extract ra.
 #     Nhanh (~1-2 giây) và đáng tin cậy nếu cookie còn hiệu lực.
 #
-#   Lớp 2 — Đăng nhập username/password (HTTP POST):
+#   Lớp 2 - Đăng nhập username/password (HTTP POST):
 #     Gửi POST form giả lập như đăng nhập trên trình duyệt.
-#     Lấy được cả token lẫn cookie mới từ Set-Cookie header trong response.
 #     Chỉ hoạt động với tài khoản TradingView gốc (không phải Google login).
 #
-#   Lớp 2.5 — Headless Chromium với cookie cũ (Playwright):
+#   Lớp 2.5 - Headless Chromium với cookie cũ (Playwright):
 #     Chạy trình duyệt Chrome ẩn để tải trang TV với session cookie hiện có.
 #     Hỗ trợ Google/social login. Lấy được token + cookie mới từ browser.
-#     Chậm hơn (~5-10 giây) và cần cài thêm: pip install playwright.
 #
-#   Lớp 2.6 — Headless Chromium đăng nhập từ đầu (Playwright):
+#   Lớp 2.6 - Headless Chromium đăng nhập từ đầu (Playwright):
 #     Điều hướng đến trang /signin/, điền username/password, submit form.
-#     Không cần cookie cũ — lấy token + cookie hoàn toàn mới sau khi login.
+#     Không cần cookie cũ - lấy token + cookie hoàn toàn mới sau khi login.
 #     Dùng khi cookie đã hết hạn hoàn toàn và lớp 2.5 không thể dùng.
 #
-#   Lớp 3 — Guest token:
-#     Dùng tài khoản khách — dữ liệu bị giới hạn (ít lịch sử hơn, chậm hơn).
+#   Lớp 3 - Guest token:
+#     Dùng tài khoản khách - dữ liệu bị giới hạn (ít lịch sử hơn, chậm hơn).
 #     Là phương án cuối cùng, không nên chạy lâu với guest.
 #
 # CÁC SCRIPT DÙNG FILE NÀY:
-#   02_ws_live.py       — WebSocket live      (bootstrap, get_current_token, renew)
-#   01_data_pipeline.py — Backfill hàng ngày  (get_valid_tv_connection, refresh_mid_run)
-#   04_checker.py       — Kiểm tra dữ liệu   (get_valid_tv_connection, refresh_mid_run)
+#   02_ws_live.py       - WebSocket live      (bootstrap, get_current_token, renew)
+#   01_data_pipeline.py - Backfill hàng ngày  (get_valid_tv_connection, refresh_mid_run)
+#   04_checker.py       - Kiểm tra dữ liệu   (get_valid_tv_connection, refresh_mid_run)
 #
 # CẤU HÌNH CẦN THIẾT TRONG FILE .env:
 #   TV_AUTH_TOKEN=eyJhbGci...   ← copy từ trình duyệt (F12 > Network > cookie)
@@ -134,7 +132,7 @@ _TOKEN_CACHE = Path(__file__).parent / ".tv_token_cache"
 
 
 # =============================================================================
-# PUBLIC API — dùng bởi ws_live.py
+# PUBLIC API - dùng bởi ws_live.py
 # =============================================================================
 
 def get_current_token() -> str:
@@ -181,7 +179,7 @@ def bootstrap(lg: logging.Logger | None = None) -> tuple[str, str]:
 
 
 # =============================================================================
-# PUBLIC API — dùng bởi pipeline / gap_fill
+# PUBLIC API - dùng bởi pipeline / gap_fill
 # =============================================================================
 
 def get_valid_tv_connection(lg: logging.Logger | None = None) -> tuple:
@@ -190,7 +188,7 @@ def get_valid_tv_connection(lg: logging.Logger | None = None) -> tuple:
     Thử toàn bộ 4 lớp xác thực, trả về (tv_object, auth_mode).
 
     Khác với get_tv_connection(): không dừng ở .env token mà còn
-    thử cache → cookie refresh → headless → username/password → guest.
+    thử cache -> cookie refresh -> headless -> username/password -> guest.
     """
     log = lg or _logger
     token, source = _resolve_auth_token(log)
@@ -225,12 +223,12 @@ def refresh_mid_run(tv, lg: logging.Logger | None = None) -> bool:
 
     if new_token != GUEST_TOKEN:
         tv.token = new_token
-        log.info("[AUTH] Mid-run refresh OK (source: %s) — updated tv.token.", source)
-        _tg_alert("INFO", f"✅ Token TradingView đã được làm mới giữa chừng.\nNguồn: {source}")
+        log.info("[AUTH] Mid-run refresh OK (source: %s) - updated tv.token.", source)
+        _tg_alert("INFO", f"[OK] TradingView token was refreshed during the run.\nSource: {source}")
         return True
     else:
-        log.error("[AUTH] Mid-run refresh FAILED — continuing with guest token.")
-        _tg_alert("ERROR", "❌ Làm mới token giữa chừng thất bại — đang dùng guest access.\nKiểm tra credentials trong .env")
+        log.error("[AUTH] Mid-run refresh FAILED - continuing with guest token.")
+        _tg_alert("ERROR", "[FAIL] Mid-run token refresh failed - using guest access.\nCheck credentials in .env")
         return False
 
 
@@ -257,8 +255,8 @@ def _http_request_with_retry(
 ) -> requests.Response:
     """
     Gửi HTTP request với cơ chế retry tự động cho các lỗi tạm thời.
-    HTTP 429 / 5xx → retry với exponential back-off + jitter.
-    HTTP 4xx khác (400/401/403/404) → không retry (lỗi từ client).
+    HTTP 429 / 5xx -> retry với exponential back-off + jitter.
+    HTTP 4xx khác (400/401/403/404) -> không retry (lỗi từ client).
     """
     last_exc: Exception = RuntimeError("No attempts made")
 
@@ -278,28 +276,28 @@ def _http_request_with_retry(
                     except (ValueError, TypeError):
                         wait = min(base_delay * (2 ** attempt), max_delay)
                     wait += random.uniform(0.5, 2.0)
-                    _logger.warning("[HTTP] 429 Too Many Requests — retry %d/%d in %.1fs.", attempt + 1, max_retries, wait)
+                    _logger.warning("[HTTP] 429 Too Many Requests - retry %d/%d in %.1fs.", attempt + 1, max_retries, wait)
                     time.sleep(wait)
                     last_exc = requests.HTTPError(f"429 Too Many Requests (attempt {attempt + 1})", response=resp)
                     continue
-                raise requests.HTTPError(f"429 Too Many Requests — đã hết {max_retries} lần retry ({url})", response=resp)
+                raise requests.HTTPError(f"429 Too Many Requests - đã hết {max_retries} lần retry ({url})", response=resp)
 
             if resp.status_code >= 500:
                 if attempt < max_retries:
                     wait = min(base_delay * (2 ** attempt), max_delay) + random.uniform(0.5, 2.0)
-                    _logger.warning("[HTTP] %d Server Error — retry %d/%d in %.1fs.", resp.status_code, attempt + 1, max_retries, wait)
+                    _logger.warning("[HTTP] %d Server Error - retry %d/%d in %.1fs.", resp.status_code, attempt + 1, max_retries, wait)
                     time.sleep(wait)
                     last_exc = requests.HTTPError(f"{resp.status_code} Server Error (attempt {attempt + 1})", response=resp)
                     continue
-                raise requests.HTTPError(f"{resp.status_code} Server Error — đã hết {max_retries} lần retry ({url})", response=resp)
+                raise requests.HTTPError(f"{resp.status_code} Server Error - đã hết {max_retries} lần retry ({url})", response=resp)
 
-            raise requests.HTTPError(f"HTTP {resp.status_code} Client Error — không retry ({url})", response=resp)
+            raise requests.HTTPError(f"HTTP {resp.status_code} Client Error - không retry ({url})", response=resp)
 
         except (requests.ConnectionError, requests.Timeout) as exc:
             last_exc = exc
             if attempt < max_retries:
                 wait = min(base_delay * (2 ** attempt), max_delay) + random.uniform(0.5, 2.0)
-                _logger.warning("[HTTP] Network error %s — retry %d/%d in %.1fs.", type(exc).__name__, attempt + 1, max_retries, wait)
+                _logger.warning("[HTTP] Network error %s - retry %d/%d in %.1fs.", type(exc).__name__, attempt + 1, max_retries, wait)
                 time.sleep(wait)
                 continue
             raise
@@ -312,7 +310,7 @@ def _fetch_auth_token_from_credentials(username: str, password: str) -> tuple[st
     Đăng nhập TradingView bằng username/password để lấy auth token và cookie mới.
     Mô phỏng hành vi trình duyệt Chrome (gửi POST form).
 
-    TradingView trả về token trong JSON body và cookie mới trong Set-Cookie header.
+    log.info("[AUTH] Cookie expired - trying headless fresh login...")
     Cả hai đều được extract và trả về để caller lưu vào cache.
 
     Trả về (token, cookie_str) hoặc (GUEST_TOKEN, "") nếu thất bại.
@@ -331,9 +329,8 @@ def _fetch_auth_token_from_credentials(username: str, password: str) -> tuple[st
             timeout=15,
         )
         token = r.json()["user"]["auth_token"]
-        # Lấy cookie mới từ Set-Cookie header trong response (sessionid, device_t, v.v.)
         new_cookie = "; ".join(f"{k}={v}" for k, v in r.cookies.items()) if r.cookies else ""
-        _logger.info("[AUTH] Token + cookie mới lấy được qua username/password.")
+        _logger.info("[AUTH] New token and cookie received through username/password.")
         return token, new_cookie
     except Exception as exc:
         _logger.warning("[AUTH] Credential login failed: %s", exc)
@@ -344,10 +341,10 @@ def _resolve_auth_token(lg: logging.Logger | None = None) -> tuple[str, str]:
     """
     Hàm nội bộ: thử lần lượt từng lớp xác thực, trả về (token, tên_phương_thức).
 
-    Đây là "dispatcher" — không tự xác thực mà gọi các hàm chuyên biệt.
+    Đây là "dispatcher" - không tự xác thực mà gọi các hàm chuyên biệt.
     Thứ tự thử được thiết kế để ưu tiên cách nhanh nhất trước, cách chậm nhất sau.
 
-    Lớp 0  : File cache .tv_token_cache (không cần mạng — nhanh nhất)
+    Lớp 0  : File cache .tv_token_cache (không cần mạng - nhanh nhất)
     Lớp 1  : Token tĩnh từ .env (không cần mạng)
     Lớp 1.5: Refresh qua HTTP GET + cookie (~1-2s)
     Lớp 2  : Đăng nhập username/password qua HTTP POST (~2-5s)
@@ -382,7 +379,7 @@ def _resolve_auth_token(lg: logging.Logger | None = None) -> tuple[str, str]:
             _save_credentials_to_env(token, current_cookie)
             return token, "session_refresh"
 
-    # LỚP 2: username/password — lấy token + cookie mới từ response HTTP POST
+    # LỚP 2: username/password - lấy token + cookie mới từ response HTTP POST
     if TV_USERNAME and TV_PASSWORD:
         token, new_cookie = _fetch_auth_token_from_credentials(TV_USERNAME, TV_PASSWORD)
         if token != GUEST_TOKEN:
@@ -397,17 +394,17 @@ def _resolve_auth_token(lg: logging.Logger | None = None) -> tuple[str, str]:
             return token, "headless_chromium"
 
     # LỚP 2.6: Headless Chromium đăng nhập từ đầu (không cần cookie cũ)
-    # Dùng khi cookie đã hết hạn hoàn toàn — lấy token + cookie hoàn toàn mới
+    # Dùng khi cookie đã hết hạn hoàn toàn - lấy token + cookie hoàn toàn mới
     if TV_USERNAME and TV_PASSWORD:
-        log.info("[AUTH] Cookie hết hạn — thử headless fresh login...")
+        log.info("[AUTH] Cookie expired - trying headless fresh login...")
         token, new_cookie = _headless_login_fresh(TV_USERNAME, TV_PASSWORD)
         if token != GUEST_TOKEN:
             _save_credentials_to_env(token, new_cookie)
             return token, "headless_fresh_login"
 
     # LỚP 3: Guest
-    log.warning("[AUTH] Falling back to guest token — Premium data may be unavailable.")
-    _tg_alert("WARNING", "Không thể xác thực TradingView — đang dùng guest token.")
+    log.warning("[AUTH] Falling back to guest token - Premium data may be unavailable.")
+    _tg_alert("WARNING", "Could not authenticate TradingView - using guest token.")
     return GUEST_TOKEN, "guest"
 
 
@@ -422,8 +419,8 @@ def _renew_auth_token(lg: logging.Logger | None = None) -> None:
         if _auth_token != GUEST_TOKEN:
             return  # Thread khác đã gia hạn xong
 
-        log.warning("[AUTH] Token expired mid-session — attempting renewal via bootstrap...")
-        _tg_alert("WARNING", "Token TradingView hết hạn — đang tự động gia hạn...")
+        log.warning("[AUTH] All bootstrap methods failed.")
+        _tg_alert("WARNING", "TradingView token expired - renewing automatically...")
 
         new_token, source = _bootstrap_credentials(log)
         if new_token == GUEST_TOKEN:
@@ -433,10 +430,10 @@ def _renew_auth_token(lg: logging.Logger | None = None) -> None:
 
         if new_token != GUEST_TOKEN:
             log.info("[AUTH] Token renewed successfully (source: %s).", source)
-            _tg_alert("INFO", f"✅ Token TradingView đã được gia hạn thành công.\nNguồn: {source}")
+            _tg_alert("INFO", f"[OK] TradingView token was refreshed during the run.\nSource: {source}")
         else:
-            log.error("[AUTH] Token renewal failed — all groups will use guest access.")
-            _tg_alert("ERROR", "❌ Gia hạn token thất bại.\nHệ thống đang dùng guest access.")
+            log.error("[AUTH] Token renewal failed - all groups will use guest access.")
+            _tg_alert("ERROR", "[FAIL] Token renewal failed.\nThe system is using guest access.")
 
 
 def _jwt_expires_in(token: str) -> float:
@@ -496,7 +493,7 @@ def _check_and_maybe_refresh_token(lg: logging.Logger | None = None) -> None:
     with _auth_lock:
         remaining = _jwt_expires_in(_auth_token)
         if 0 < remaining < 600:
-            log.info("[AUTH] Token expiring in %.0fs — proactive refresh.", remaining)
+            log.info("[AUTH] Token expiring in %.0fs - proactive refresh.", remaining)
             _auth_token = GUEST_TOKEN
             need_refresh = True
     if need_refresh:
@@ -505,7 +502,7 @@ def _check_and_maybe_refresh_token(lg: logging.Logger | None = None) -> None:
 
 def _refresh_token_via_cookie(cookie_str: str) -> str:
     """
-    Lớp 1.5 — Làm mới auth_token bằng HTTP GET homepage TradingView.
+    Lớp 1.5 - Làm mới auth_token bằng HTTP GET homepage TradingView.
     TradingView nhúng auth_token vào HTML khi user đã đăng nhập với sessionid cookie.
     Trả về token mới, hoặc GUEST_TOKEN nếu thất bại.
     """
@@ -541,7 +538,7 @@ def _refresh_token_via_cookie(cookie_str: str) -> str:
 
 def _headless_refresh(cookie_str: str) -> tuple[str, str]:
     """
-    Lớp 2.5 — Dùng headless Chromium (Playwright) để load TradingView và extract credentials.
+    Lớp 2.5 - Dùng headless Chromium (Playwright) để load TradingView và extract credentials.
     Đáng tin cậy hơn HTTP GET vì Playwright thực thi JavaScript đầy đủ.
     Hỗ trợ Google/social login khi HTTP GET không đủ.
 
@@ -554,8 +551,8 @@ def _headless_refresh(cookie_str: str) -> tuple[str, str]:
     try:
         from playwright.sync_api import sync_playwright  # type: ignore
     except ImportError:
-        _logger.warning("[AUTH] Playwright chưa được cài — bỏ qua headless refresh.")
-        _logger.warning("[AUTH] Cài bằng: pip install playwright && playwright install chromium")
+        _logger.warning("[AUTH] Playwright is not installed - skipping headless refresh.")
+        _logger.warning("[AUTH] Install with: pip install playwright && playwright install chromium")
         return GUEST_TOKEN, ""
 
     def _parse_cookie_list(raw: str) -> list[dict]:
@@ -615,26 +612,26 @@ def _headless_refresh(cookie_str: str) -> tuple[str, str]:
             if token:
                 _logger.info("[AUTH] Token refreshed via headless Chromium.")
                 return token, cookie_out
-            _logger.warning("[AUTH] Headless load xong nhưng không tìm thấy auth_token — session có thể đã hết hạn.")
+            _logger.warning("[AUTH] Headless load finished but auth_token was not found - session may be expired.")
             return GUEST_TOKEN, cookie_out
 
     except Exception as exc:
-        _logger.warning("[AUTH] Headless refresh thất bại: %s", exc)
+        _logger.warning("[AUTH] Headless refresh failed: %s", exc)
         return GUEST_TOKEN, ""
 
 
 def _headless_login_fresh(username: str, password: str) -> tuple[str, str]:
     """
-    Lớp 2.6 — Đăng nhập TradingView từ đầu bằng Playwright (không cần cookie cũ).
+    Lớp 2.6 - Đăng nhập TradingView từ đầu bằng Playwright (không cần cookie cũ).
 
     Khác với _headless_refresh() (chỉ load trang với cookie sẵn có):
     - Hàm này điều hướng đến trang /signin/, điền form username/password, submit.
-    - Không phụ thuộc vào cookie cũ — phù hợp khi cookie đã hết hạn hoàn toàn.
+    - Không phụ thuộc vào cookie cũ - phù hợp khi cookie đã hết hạn hoàn toàn.
     - Kết quả: token + cookie hoàn toàn mới, hệ thống hoạt động tiếp mà không cần
       người dùng vào trình duyệt copy cookie thủ công.
 
     Giới hạn: chỉ hoạt động với tài khoản TradingView gốc (email/password).
-    Không hỗ trợ Google login / SSO — dùng _headless_refresh() cho các loại đó.
+    Không hỗ trợ Google login / SSO - dùng _headless_refresh() cho các loại đó.
 
     Trả về (token, cookie_str) hoặc (GUEST_TOKEN, "") nếu thất bại.
 
@@ -643,8 +640,8 @@ def _headless_login_fresh(username: str, password: str) -> tuple[str, str]:
     try:
         from playwright.sync_api import sync_playwright  # type: ignore
     except ImportError:
-        _logger.warning("[AUTH] Playwright chưa cài — bỏ qua headless fresh login.")
-        _logger.warning("[AUTH] Cài bằng: pip install playwright && playwright install chromium")
+        _logger.warning("[AUTH] Playwright is not installed - skipping headless fresh login.")
+        _logger.warning("[AUTH] Install with: pip install playwright && playwright install chromium")
         return GUEST_TOKEN, ""
 
     try:
@@ -663,7 +660,7 @@ def _headless_login_fresh(username: str, password: str) -> tuple[str, str]:
             # Mở trang đăng nhập TradingView
             page.goto("https://www.tradingview.com/signin/", wait_until="domcontentloaded", timeout=45_000)
 
-            # Điền email — thử các selector phổ biến theo thứ tự
+            # Điền email - thử các selector phổ biến theo thứ tự
             filled = False
             for sel in ['input[name="username"]', 'input[type="email"]', 'input[name="email"]']:
                 try:
@@ -674,14 +671,14 @@ def _headless_login_fresh(username: str, password: str) -> tuple[str, str]:
                 except Exception:
                     continue
             if not filled:
-                _logger.warning("[AUTH] Headless fresh login: không tìm thấy input username/email.")
+                _logger.warning("[AUTH] Headless fresh login: username/email input was not found.")
                 browser.close()
                 return GUEST_TOKEN, ""
 
             # Điền password
             page.fill('input[type="password"]', password)
 
-            # Submit form — thử click button hoặc nhấn Enter
+            # Submit form - thử click button hoặc nhấn Enter
             try:
                 page.click('button[type="submit"]')
             except Exception:
@@ -692,7 +689,7 @@ def _headless_login_fresh(username: str, password: str) -> tuple[str, str]:
                 page.wait_for_url("**/tradingview.com/**", timeout=30_000)
                 page.wait_for_load_state("networkidle", timeout=20_000)
             except Exception:
-                pass  # Tiếp tục extract dù timeout — token có thể đã có
+                pass  # Tiếp tục extract dù timeout - token có thể đã có
 
             # Extract auth token từ HTML hoặc JS globals
             token: str = page.evaluate(
@@ -718,14 +715,14 @@ def _headless_login_fresh(username: str, password: str) -> tuple[str, str]:
             browser.close()
 
             if token:
-                _logger.info("[AUTH] Headless fresh login thành công — token + cookie mới đã lấy.")
+                _logger.info("[AUTH] Headless fresh login succeeded - new token and cookie received.")
                 return token, cookie_out
 
-            _logger.warning("[AUTH] Headless fresh login: đăng nhập xong nhưng không tìm thấy auth_token.")
+            _logger.warning("[AUTH] Headless fresh login finished but auth_token was not found.")
             return GUEST_TOKEN, cookie_out
 
     except Exception as exc:
-        _logger.warning("[AUTH] Headless fresh login thất bại: %s", exc)
+        _logger.warning("[AUTH] Headless fresh login failed: %s", exc)
         return GUEST_TOKEN, ""
 
 
@@ -749,7 +746,7 @@ def _save_token_cache(token: str, cookie: str) -> None:
     try:
         _TOKEN_CACHE.write_text(json.dumps(data, indent=2), encoding="utf-8")
     except Exception as exc:
-        _logger.warning("[AUTH] Không thể ghi token cache: %s", exc)
+        _logger.warning("[AUTH] Could not write token cache: %s", exc)
 
 
 def _save_credentials_to_env(token: str, cookie: str) -> None:
@@ -764,7 +761,7 @@ def _save_credentials_to_env(token: str, cookie: str) -> None:
     if cookie:
         _tv_cookie = cookie
     _save_token_cache(token, cookie)
-    _logger.info("[AUTH] Credentials đã được lưu vào .tv_token_cache.")
+    _logger.info("[AUTH] Credentials saved to .tv_token_cache.")
 
 
 def _bootstrap_credentials(lg: logging.Logger | None = None) -> tuple[str, str]:
@@ -775,7 +772,7 @@ def _bootstrap_credentials(lg: logging.Logger | None = None) -> tuple[str, str]:
     Thứ tự thử:
         1. Refresh token qua HTTP GET (dùng sessionid cookie hiện có)
         2. Refresh token qua headless Chromium (dùng sessionid cookie)
-        3. Đăng nhập bằng username/password (HTTP POST — chỉ cho native TV account)
+        3. Đăng nhập bằng username/password (HTTP POST - chỉ cho native TV account)
 
     Trả về (token, tên_phương_thức).
     """
@@ -791,7 +788,7 @@ def _bootstrap_credentials(lg: logging.Logger | None = None) -> tuple[str, str]:
         if token != GUEST_TOKEN:
             _save_credentials_to_env(token, current_cookie)
             return token, "session_refresh"
-        log.info("[AUTH] HTTP cookie refresh thất bại — thử headless Chromium...")
+        log.info("[AUTH] HTTP cookie refresh failed - trying headless Chromium...")
 
     # Bước 2: Headless Chromium
     if current_cookie:
@@ -800,21 +797,21 @@ def _bootstrap_credentials(lg: logging.Logger | None = None) -> tuple[str, str]:
             _save_credentials_to_env(token, new_cookie or current_cookie)
             return token, "headless_chromium"
 
-    # Bước 3: username/password (HTTP POST) — lấy token + cookie mới
+    # Bước 3: username/password (HTTP POST) - lấy token + cookie mới
     if TV_USERNAME and TV_PASSWORD:
-        log.info("[AUTH] Thử đăng nhập bằng username/password (HTTP POST)...")
+        log.info("[AUTH] Trying username/password login (HTTP POST)...")
         token, new_cookie = _fetch_auth_token_from_credentials(TV_USERNAME, TV_PASSWORD)
         if token != GUEST_TOKEN:
             _save_credentials_to_env(token, new_cookie or current_cookie)
             return token, "http_post_login"
 
-    # Bước 4: Headless fresh login (không cần cookie cũ) — lấy token + cookie hoàn toàn mới
+    # Bước 4: Headless fresh login (không cần cookie cũ) - lấy token + cookie hoàn toàn mới
     if TV_USERNAME and TV_PASSWORD:
-        log.info("[AUTH] Thử headless fresh login (Playwright đăng nhập từ đầu)...")
+        log.info("[AUTH] Trying headless fresh login (Playwright full login)...")
         token, new_cookie = _headless_login_fresh(TV_USERNAME, TV_PASSWORD)
         if token != GUEST_TOKEN:
             _save_credentials_to_env(token, new_cookie)
             return token, "headless_fresh_login"
 
-    log.warning("[AUTH] Tất cả phương thức bootstrap đều thất bại.")
+    log.warning("[AUTH] All bootstrap methods failed.")
     return GUEST_TOKEN, "guest"

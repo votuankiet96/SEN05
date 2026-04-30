@@ -14,6 +14,10 @@ dist/
 build/
 .eggs/
 .pytest_cache/
+pytest_tmp*/
+*pytest_tmp*/
+logs/pytest_tmp*/
+logs/pytest-tmp*/
 .mypy_cache/
 .ruff_cache/
 

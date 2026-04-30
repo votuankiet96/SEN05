@@ -303,6 +303,43 @@ def _checkpoint_historical_handoff(owner: str, logger: logging.Logger) -> None:
         )
 
 
+def _is_heartbeat_stale(
+    heartbeat_str: str | None,
+    started_at: Any | None = None,
+    *,
+    grace_sec: float = 120.0,
+) -> bool:
+    """
+    Trả về True nếu lock holder đã bỏ lỡ ít nhất một chu kỳ heartbeat renewal.
+
+    Một process còn sống luôn renew heartbeat mỗi _HEARTBEAT_SEC giây.
+    Nếu heartbeat cũ hơn _HEARTBEAT_SEC + grace_sec → process gần như chắc chắn đã chết.
+
+    Thứ tự kiểm tra:
+    1. Trường 'heartbeat' trong Payload (chính xác nhất).
+    2. Fallback: StartedAt từ DB nếu payload không có heartbeat (lock format cũ).
+    Trả về False nếu không đọc được timestamp — tránh false positive.
+    """
+    threshold = _HEARTBEAT_SEC + grace_sec
+
+    if heartbeat_str:
+        try:
+            age = (datetime.utcnow() - datetime.fromisoformat(heartbeat_str)).total_seconds()
+            return age > threshold
+        except Exception:
+            pass
+
+    # Fallback: dùng StartedAt từ DB khi payload không có heartbeat
+    if started_at is not None and isinstance(started_at, datetime):
+        try:
+            age = (datetime.utcnow() - started_at).total_seconds()
+            return age > threshold
+        except Exception:
+            pass
+
+    return False
+
+
 def acquire_historical_job(
     owner: str,
     logger: logging.Logger,
@@ -372,17 +409,28 @@ def acquire_historical_job(
         if lock_row:
             meta = _parse_historical_payload(lock_row.get("payload"))
             stale_run = meta.get("run")
-            if stale_run and not _is_pid_alive(meta.get("pid"), meta.get("host")):
+            pid_dead = stale_run and not _is_pid_alive(meta.get("pid"), meta.get("host"))
+            heartbeat_stale = _is_heartbeat_stale(meta.get("heartbeat"), lock_row.get("started_at"))
+            if pid_dead or heartbeat_stale:
                 stale_owner = meta.get("owner", "unknown")
+                reason = (
+                    "pid không tồn tại"
+                    if pid_dead
+                    else f"heartbeat quá hạn ({meta.get('heartbeat') or 'không có'})"
+                )
                 logger.warning(
-                    "[TV_COORD] %s detected stale %s lock from %s pid=%s run=%s and is reclaiming it.",
+                    "[TV_COORD] %s phát hiện lock %s cũ từ %s pid=%s run=%s (%s) — thu hồi lại.",
                     owner,
                     TV_HISTORICAL_JOB_LOCK,
                     stale_owner,
                     meta.get("pid", "?"),
-                    stale_run,
+                    stale_run or "?",
+                    reason,
                 )
-                _release_historical_lock(f"run={stale_run};")
+                if stale_run:
+                    _release_historical_lock(f"run={stale_run};")
+                else:
+                    release(TV_HISTORICAL_JOB_LOCK)  # payload không có run_id — force delete
                 time.sleep(1.0)
                 continue
             waited = time.monotonic() - start
@@ -580,3 +628,57 @@ def sleep_between_historical_requests(tv_symbol: str) -> float:
     time.sleep(base)
     _checkpoint_historical_handoff("historical", logging.getLogger(__name__))
     return base
+
+
+# ─── WS Live graceful shutdown signal ────────────────────────────────────────
+
+_WS_LIVE_SHUTDOWN_SIGNAL = "shutdown_requested=1"
+
+
+def request_ws_live_shutdown(logger: logging.Logger) -> bool:
+    """
+    Yêu cầu instance ws_live đang chạy tắt gracefully để nhường chỗ cho instance mới.
+    Ghi 'shutdown_requested=1' vào Payload của lock 'ws_live_runtime'.
+    Trả về True nếu tín hiệu được ghi thành công.
+    """
+    from _task_lock import update_payload
+    result = update_payload(WS_LIVE_RUNTIME_LOCK, _WS_LIVE_SHUTDOWN_SIGNAL)
+    if result:
+        logger.info(
+            "[TV_COORD] Shutdown signal written to %s lock — waiting for old instance to exit.",
+            WS_LIVE_RUNTIME_LOCK,
+        )
+    else:
+        logger.warning(
+            "[TV_COORD] Could not write shutdown signal to %s lock — lock may already be gone.",
+            WS_LIVE_RUNTIME_LOCK,
+        )
+    return result
+
+
+def is_ws_live_shutdown_requested() -> bool:
+    """
+    Được gọi bởi main loop của ws_live để kiểm tra xem instance mới có muốn tiếp quản không.
+    Trả về True nếu Payload chứa 'shutdown_requested=1'.
+    Fail-safe: trả về False khi DB lỗi — không bao giờ trigger shutdown nhầm.
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT Payload FROM SEN.ActiveTask
+            WHERE TaskName = ? AND ExpiresAt > SYSUTCDATETIME()
+            """,
+            (WS_LIVE_RUNTIME_LOCK,),
+        )
+        row = cursor.fetchone()
+        if row and row[0]:
+            return _WS_LIVE_SHUTDOWN_SIGNAL in str(row[0])
+        return False
+    except Exception:
+        return False  # fail-safe: DB lỗi không được tắt ws_live nhầm
+    finally:
+        if conn is not None:
+            conn.close()

@@ -8,8 +8,8 @@ import pandas as pd
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "core_python"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from shared.execution_market import backtest_market_symbol
-from strategies.ma_cross.logic import add_ma_cross_indicators, detect_ma_cross_signals, session_mask
+from core_python.shared.execution import backtest_market_symbol
+from core_python.strategies.ma_cross.model import add_ma_cross_indicators, detect_ma_cross_signals, session_mask
 
 
 def _market_cfg() -> dict:

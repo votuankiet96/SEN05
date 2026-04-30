@@ -224,14 +224,14 @@ def detect_mode() -> str:
         mode = "full" if total == 0 else "gap"
 
         # Ghi log để người dùng biết tại sao chọn chế độ này
-        logger.info("[TỰ PHÁT HIỆN] DB có %d nến → chọn chế độ: %s",
+        logger.info("[AUTO MODE] DB has %d bars -> selected mode: %s",
                     total, mode.upper())
         return mode
 
     except Exception as e:
         # Nếu không truy vấn được DB (ví dụ: DB chưa khởi động), mặc định dùng backfill
         # Lý do: an toàn hơn — backfill chỉ kéo thêm, không ghi đè toàn bộ
-        logger.error("[TỰ PHÁT HIỆN] Không đọc được DB: %s — mặc định dùng chế độ bổ sung (gap)", e)
+        logger.error("[AUTO MODE] Could not read DB: %s - using gap mode by default.", e)
         return "gap"
 
 
@@ -266,18 +266,18 @@ def run_full_load(tv, dry_run: bool = False) -> int:
 
     # In tiêu đề bắt đầu full load ra log
     logger.info("=" * 65)
-    logger.info("  TẢI DỮ LIỆU ĐẦY ĐỦ  —  %d khung thời gian × %d cặp", total_tfs, len(SYMBOLS))
+    logger.info("  FULL DATA LOAD  -  %d timeframes x %d pairs", total_tfs, len(SYMBOLS))
     logger.info("=" * 65)
 
     # --- CHẾ ĐỘ DRY RUN: chỉ in kế hoạch, không làm gì thực sự ---
     if dry_run:
-        logger.info("[DRY RUN] Kế hoạch kéo dữ liệu (chưa thực hiện):")
+        logger.info("[DRY RUN] Data load plan only. No data will be changed:")
         # Liệt kê từng TF sẽ kéo: tên TF, số bar, số symbol, tên bảng staging
         for interval, tf_code, staging, n_bars in tf_configs:
-            logger.info("  %s: %d nến × %d cặp → %s",
+            logger.info("  %s: %d bars x %d pairs -> %s",
                         tf_code, n_bars, len(SYMBOLS), staging)
         # Nhắc nhở sẽ còn bước tính TF phái sinh sau khi kéo xong
-        logger.info("  Sau đó tính TF phái sinh: M10, M20, M90, H6, H8")
+        logger.info("  Then rebuild computed TFs: M10, M20, M90, H6, H8")
         return 0
 
     # Tập hợp các symbol_id đã được cập nhật (dùng ở cuối để tính lại TF phái sinh)
@@ -295,7 +295,7 @@ def run_full_load(tv, dry_run: bool = False) -> int:
 
         # In dòng trống và tiêu đề cho TF đang xử lý
         logger.info("")
-        logger.info("[%d/%d] TF trực tiếp: %s  (%d nến × %d cặp)",
+        logger.info("[%d/%d] Direct TF: %s  (%d bars x %d pairs)",
                     step_idx, total_tfs + 1, tf_code, n_bars, len(SYMBOLS))
 
         # Lặp qua tất cả symbol, kéo dữ liệu cho từng cái
@@ -318,10 +318,10 @@ def run_full_load(tv, dry_run: bool = False) -> int:
                 ok += 1
                 # Ghi nhớ symbol này đã được cập nhật (sẽ cần tính lại TF phái sinh)
                 updated_sym_ids.add(sym["symbol_id"])
-                print("✓")
+                print("[OK]")
             else:
                 fail += 1
-                print("✗")
+                print("[FAIL]")
 
             # Dừng một chút giữa các request để tránh bị TradingView giới hạn tốc độ
             sleep_for(tv_symbol)
@@ -329,14 +329,14 @@ def run_full_load(tv, dry_run: bool = False) -> int:
         # Lưu kết quả của TF này vào dictionary để in summary ở cuối
         results[tf_code] = (ok, fail)
         total_fail += fail
-        logger.info("  %s: %d thành công, %d lỗi", tf_code, ok, fail)
+        logger.info("  %s: %d OK, %d failed", tf_code, ok, fail)
 
     # -----------------------------------------------------------------------
     # GIAI ĐOẠN 2: Tính 5 TF phái sinh từ dữ liệu vừa kéo về
     # (M10 = gộp 2 nến M5, M20 = gộp 2 nến M10, M90 = gộp 3 nến M30, v.v.)
     # -----------------------------------------------------------------------
     logger.info("")
-    logger.info("[%d/%d] TF phái sinh: M10, M20, M90, H6, H8",
+    logger.info("[%d/%d] Computed TFs: M10, M20, M90, H6, H8",
                 total_tfs + 1, total_tfs + 1)
 
     # Lặp qua từng TF phái sinh cần tính (cặp: TF đích, bảng nguồn)
@@ -351,23 +351,23 @@ def run_full_load(tv, dry_run: bool = False) -> int:
                 ok += 1
             except Exception as e:
                 # Ghi lại lỗi nhưng không dừng chương trình — tiếp tục với symbol tiếp theo
-                logger.error("  Tính TF phái sinh THẤT BẠI %s %s: %s",
+                logger.error("  Computed TF failed for %s %s: %s",
                              sym["tv_symbol"], target_tf, e)
                 fail += 1
 
         results[target_tf] = (ok, fail)
         total_fail += fail
-        logger.info("  %s: %d thành công, %d lỗi", target_tf, ok, fail)
+        logger.info("  %s: %d OK, %d failed", target_tf, ok, fail)
 
     # -----------------------------------------------------------------------
     # TÓM TẮT KẾT QUẢ FULL LOAD
     # -----------------------------------------------------------------------
     logger.info("")
-    logger.info("Tóm tắt tải dữ liệu đầy đủ:")
+    logger.info("Full load summary:")
     for tf, (ok, fail) in results.items():
         # Nếu không có lỗi: hiển thị ✓, ngược lại hiển thị số lỗi
-        mark = "✓" if fail == 0 else f"✗ {fail} lỗi"
-        logger.info("  %s: %d thành công  %s", tf, ok, mark)
+        mark = "[OK]" if fail == 0 else f"[FAIL] {fail} failed"
+        logger.info("  %s: %d OK  %s", tf, ok, mark)
 
     # Trả về tổng số lỗi (caller dùng để quyết định exit code)
     return total_fail
@@ -479,7 +479,7 @@ def run_backfill(tv, dry_run: bool = False,
     Trả về: số cặp bị thất bại (0 = thành công hoàn toàn)
     """
     logger.info("=" * 65)
-    logger.info("  BỔ SUNG DỮ LIỆU  —  đang truy vấn nến gần nhất...")
+    logger.info("  GAP FILL  -  reading the latest bars...")
     logger.info("=" * 65)
 
     # -----------------------------------------------------------------------
@@ -487,7 +487,7 @@ def run_backfill(tv, dry_run: bool = False,
     # -----------------------------------------------------------------------
     t0     = time.time()  # Ghi lại thời điểm bắt đầu query để đo hiệu năng
     latest = get_latest_bars()  # Trả về dict: { (symbol_id, tf_code): last_bar_datetime }
-    logger.info("Truy vấn hoàn tất sau %.1fs — %d cặp (symbol, TF) trong DB.",
+    logger.info("DB check finished in %.1fs - found %d symbol/TF pairs.",
                 time.time() - t0, len(latest))
 
     # -----------------------------------------------------------------------
@@ -497,7 +497,7 @@ def run_backfill(tv, dry_run: bool = False,
 
     # Nếu tất cả đều mới → không cần làm gì, thoát sớm
     if not stale:
-        logger.info("✓ Tất cả dữ liệu đã cập nhật — không cần bổ sung thêm.")
+        logger.info("[OK] All data is already up to date. No gap fill is needed.")
         return {"fail": 0, "ok": 0, "total": 0, "bars_inserted": 0,
                 "miss_count": 0, "fail_pairs": []}
 
@@ -507,23 +507,23 @@ def run_backfill(tv, dry_run: bool = False,
 
     # In danh sách các cặp bị MISS (cảnh báo vì đây là bất thường)
     if miss_:
-        logger.warning("THIẾU DỮ LIỆU HOÀN TOÀN (%d cặp):", len(miss_))
+        logger.warning("MISSING ALL DATA (%d pairs):", len(miss_))
         for x in miss_:
             logger.warning("  %-12s %s", x["sym"]["tv_symbol"], x["tf_code"])
 
     # In danh sách các cặp bị STALE (bình thường, xảy ra hàng ngày)
     if stale_:
-        logger.info("DỮ LIỆU CŨ (%d cặp):", len(stale_))
+        logger.info("OLD DATA (%d pairs):", len(stale_))
         for x in stale_:
-            logger.info("  %-12s %-5s  khoảng_trống=%-8s  cần_kéo=%d nến",
+            logger.info("  %-12s %-5s  gap=%-8s  need_pull=%d bars",
                         x["sym"]["tv_symbol"], x["tf_code"],
                         fmt_gap(x["gap_hours"]), x["n_bars"])
 
-    logger.info("Tổng cộng: %d cặp cần cập nhật.", len(stale))
+    logger.info("Total: %d pairs need an update.", len(stale))
 
     # Nếu đang chạy dry-run: in xong thì dừng, không kéo dữ liệu
     if dry_run:
-        logger.info("[DRY RUN] Không có thay đổi nào được thực hiện.")
+        logger.info("[DRY RUN] No changes were made.")
         return {"fail": 0, "ok": 0, "total": len(stale), "bars_inserted": 0,
                 "miss_count": len(miss_), "fail_pairs": []}
 
@@ -556,7 +556,7 @@ def run_backfill(tv, dry_run: bool = False,
 
         # Khi chuyển sang symbol mới, in dòng phân cách để log dễ đọc hơn
         if sym["tv_symbol"] != prev_sym:
-            logger.info("─── %s ───", sym["tv_symbol"])
+            logger.info("--- %s ---", sym["tv_symbol"])
             prev_sym = sym["tv_symbol"]
 
         # In tiến độ real-time ra console
@@ -580,7 +580,7 @@ def run_backfill(tv, dry_run: bool = False,
                 fail += 1
                 consecutive_fail += 1
                 fail_pairs.append(f"{sym['tv_symbol']} {tf_code}")
-                print("✗")
+                print("[FAIL]")
                 sleep_for(sym["tv_symbol"])
                 continue
 
@@ -602,23 +602,23 @@ def run_backfill(tv, dry_run: bool = False,
             # Chỉ đánh dấu cần tính lại TF phái sinh nếu thực sự có bar mới (result > 0)
             if result > 0:
                 updated_sym_ids.add(sym["symbol_id"])
-            print("✓")
+            print("[OK]")
         else:
             fail += 1
             consecutive_fail += 1
             fail_pairs.append(f"{sym['tv_symbol']} {tf_code}")
-            print("✗")
+            print("[FAIL]")
 
             # 3+ failures liên tiếp → nghi ngờ token hết hạn → thử refresh
             if consecutive_fail == 3:
-                logger.warning("[XÁC THỰC] %d lỗi liên tiếp — đang thử làm mới token TradingView giữa chừng...", consecutive_fail)
+                logger.warning("[AUTH] %d failures in a row - trying to refresh the TradingView token...", consecutive_fail)
                 if refresh_mid_run(tv, logger):
                     consecutive_fail = 0  # reset nếu refresh thành công
 
         # Nghỉ một chút trước khi gọi symbol tiếp theo (tránh rate limit)
         sleep_for(sym["tv_symbol"])
 
-    logger.info("Kéo dữ liệu hoàn tất: %d thành công, %d lỗi.", ok, fail)
+    logger.info("Data pull finished: %d OK, %d failed.", ok, fail)
 
     # -----------------------------------------------------------------------
     # BƯỚC 4: Tính lại TF phái sinh cho các symbol vừa có dữ liệu mới
@@ -626,7 +626,7 @@ def run_backfill(tv, dry_run: bool = False,
     # Chỉ tính lại nếu thực sự có symbol nào được cập nhật
     # (tránh chạy ETL không cần thiết khi không có gì thay đổi)
     if updated_sym_ids:
-        logger.info("Đang tính lại TF phái sinh...")
+        logger.info("Rebuilding computed TFs...")
         if write_lock_name:
             wait_for_historical_slot("pipeline-maint", logger)
             derived_lock = _acquire_short_write_lock(
@@ -720,6 +720,14 @@ def main() -> int:
         help="Chỉ chạy cho symbols thuộc asset type này. VD: --asset-type Indice hoặc --asset-type FOREX,Metal",
     )
 
+    # Tham số --force-unlock: xóa stale lock trước khi chạy
+    parser.add_argument(
+        "--force-unlock",
+        action="store_true",
+        default=False,
+        help="Xóa lock tv_historical_job cũ trước khi chạy. Dùng khi pipeline bị kẹt do stale lock.",
+    )
+
     # Phân tích các tham số từ dòng lệnh
     args    = parser.parse_args()
 
@@ -743,12 +751,12 @@ def main() -> int:
         return code
 
     def _yield_to_newer_historical_run(exc: HistoricalJobHandoffRequested) -> int:
-        logger.info("[NHƯỜNG QUYỀN] Pipeline nhường slot lịch sử cho lần chạy mới hơn: %s", exc)
+        logger.info("[HANDOFF] Pipeline gave the history slot to a newer run: %s", exc)
         tg_alert(
             "INFO",
-            "ℹ️ <b>Data Pipeline nhường slot TradingView lịch sử</b>\n"
-            "Một lần chạy mới hơn đã yêu cầu tiếp quản. "
-            "Lần chạy hiện tại dừng ở điểm an toàn để tránh xung đột."
+            "[INFO] <b>Data Pipeline gave up the TradingView history slot</b>\n"
+            "A newer run asked to take over. "
+            "This run stopped at a safe point to avoid a conflict."
         )
         tg_flush()
         return _finish(0)
@@ -757,7 +765,7 @@ def main() -> int:
         asset_filter = {a.strip() for a in args.asset_type.split(",")}
         SYMBOLS = [s for s in SYMBOLS if s["asset_type"] in asset_filter]
         if not SYMBOLS:
-            logger.error("--asset-type: không tìm thấy symbol nào khớp: %s", args.asset_type)
+            logger.error("--asset-type: no matching symbols found: %s", args.asset_type)
             sys.exit(1)
         logger.info("[FILTER] Asset type '%s': %d symbols", args.asset_type, len(SYMBOLS))
 
@@ -765,9 +773,9 @@ def main() -> int:
         sym_filter = {s.strip().upper() for s in args.symbols.split(",")}
         SYMBOLS = [s for s in SYMBOLS if s["tv_symbol"] in sym_filter]
         if not SYMBOLS:
-            logger.error("--symbols: không tìm thấy symbol nào khớp: %s", args.symbols)
+            logger.error("--symbols: no matching symbols found: %s", args.symbols)
             sys.exit(1)
-        logger.info("[FILTER] Chỉ chạy %d symbol: %s",
+        logger.info("[FILTER] Running only %d symbols: %s",
                     len(SYMBOLS), [s["tv_symbol"] for s in SYMBOLS])
 
     # -----------------------------------------------------------------------
@@ -777,21 +785,21 @@ def main() -> int:
     if args.timeframes:
         _TF_FILTER = {tf.strip().upper() for tf in args.timeframes.split(",")}
         COMPUTED_TIMEFRAMES = [ct for ct in COMPUTED_TIMEFRAMES if ct[0] in _TF_FILTER]
-        logger.info("[FILTER] Chỉ pull TF: %s", sorted(_TF_FILTER))
+        logger.info("[FILTER] Pulling only TFs: %s", sorted(_TF_FILTER))
 
     if False and not args.dry_run:  # Legacy early-lock block kept disabled; lock is acquired later.
         cleaned = cleanup_expired()
         if cleaned:
-            logger.info("Dọn dẹp %d khóa cũ đã hết hạn trước khi khởi động pipeline.", cleaned)
+            logger.info("Cleaned up %d expired locks before starting the pipeline.", cleaned)
 
         maintenance_locked = acquire("warehouse_maintenance", duration_min=240)
         if not maintenance_locked:
-            logger.error("LỖI: Không lấy được khóa warehouse_maintenance — đang bận.")
+            logger.error("ERROR: Could not get warehouse_maintenance lock - it is busy.")
             tg_alert(
                 "WARNING",
-                "⚠️ <b>Data Pipeline bị chặn</b>\n"
-                "Warehouse đang bận bởi checker hoặc maintenance khác.\n"
-                "Hãy chờ tiến trình hiện tại hoàn tất rồi chạy lại."
+                "[WARN] <b>Data Pipeline was blocked</b>\n"
+                "The warehouse is busy with checker or another maintenance job.\n"
+                "Wait for the current job to finish, then run this again."
                 + QUICK_COMMANDS_HINT
             )
             tg_flush()
@@ -802,7 +810,7 @@ def main() -> int:
             while not maintenance_heartbeat_stop.wait(1800):
                 renewed = renew("warehouse_maintenance", duration_min=240)
                 if not renewed:
-                    logger.warning("Không thể gia hạn khóa warehouse_maintenance — hệ thống có thể coi pipeline đã tắt.")
+                    logger.warning("Could not renew warehouse_maintenance lock - the system may think the pipeline stopped.")
 
         threading.Thread(
             target=_maintenance_heartbeat,
@@ -813,7 +821,7 @@ def main() -> int:
     if not args.dry_run:
         cleaned = cleanup_expired()
         if cleaned:
-            logger.info("Dọn dẹp %d khóa cũ đã hết hạn trước khi khởi động pipeline.", cleaned)
+            logger.info("Cleaned up %d expired locks before starting the pipeline.", cleaned)
 
     # -----------------------------------------------------------------------
     # XÓA DATA CŨ theo --reset (nếu có)
@@ -823,20 +831,20 @@ def main() -> int:
     if args.reset:
         has_filter = args.symbols or args.asset_type or args.timeframes
         if not has_filter:
-            logger.error("--reset yêu cầu ít nhất 1 bộ lọc: --symbols, --asset-type, hoặc --timeframes")
+            logger.error("--reset requires at least one filter: --symbols, --asset-type, or --timeframes")
             sys.exit(1)
 
-        tf_desc = f" | TF: {sorted(_TF_FILTER)}" if _TF_FILTER else " | TF: tất cả"
-        print(f"\n⚠️  Chuẩn bị XÓA data{tf_desc}")
+        tf_desc = f" | TF: {sorted(_TF_FILTER)}" if _TF_FILTER else " | TF: all"
+        print(f"\n[WARN] Preparing to delete data{tf_desc}")
         print(f"   Symbols ({len(SYMBOLS)}): {[s['tv_symbol'] for s in SYMBOLS]}")
-        confirm = input("\nXác nhận xóa? (y/N): ").strip().lower()
+        confirm = input("\nConfirm delete? (y/N): ").strip().lower()
         if confirm != "y":
-            logger.info("Hủy bởi người dùng.")
+            logger.info("Cancelled by user.")
             return _finish(0)
         _FORCE_RESET_REPULL = True
         logger.warning(
-            "[RESET] Safe reset mode enabled — từng pair sẽ stage replacement trước, "
-            "chỉ xóa Fact sau khi đã có data thay thế trong staging."
+            "[RESET] Safe reset mode enabled - each pair will stage replacement data first, "
+            "and Fact rows are deleted only after replacement data is ready in staging."
         )
 
     # Ghi lại thời điểm bắt đầu để tính tổng thời gian chạy ở cuối
@@ -844,21 +852,21 @@ def main() -> int:
 
     # In banner mở đầu với thông tin tổng quan
     logger.info("=" * 65)
-    logger.info("  HỆ THỐNG CẬP NHẬT DỮ LIỆU LỊCH SỬ  v2.0")
-    logger.info("  Số cặp   : %d  |  TF trực tiếp : %d  |  TF phái sinh : %d",
+    logger.info("  HISTORICAL DATA UPDATE SYSTEM  v2.0")
+    logger.info("  Pairs    : %d  |  Direct TFs : %d  |  Computed TFs : %d",
                 len(SYMBOLS), len(DIRECT_TFS), len(DERIVED_TFS))
-    logger.info("  Bắt đầu  : %s", started.strftime("%Y-%m-%d %H:%M:%S"))
+    logger.info("  Started  : %s", started.strftime("%Y-%m-%d %H:%M:%S"))
     logger.info("=" * 65)
 
     # -----------------------------------------------------------------------
     # BƯỚC 0: Kiểm tra kết nối Database
     # Làm điều này đầu tiên vì nếu DB không chạy, toàn bộ pipeline vô nghĩa
     # -----------------------------------------------------------------------
-    logger.info("[Bước 1/3] Kiểm tra kết nối cơ sở dữ liệu...")
+    logger.info("[Step 1/3] Checking database connection...")
     if not test_connection():
         # Không kết nối được DB → lỗi nghiêm trọng → thoát với exit code 1
-        logger.error("LỖI: Không thể kết nối cơ sở dữ liệu. Pipeline không khởi động.")
-        tg_alert("ERROR", "🚨 <b>Data Pipeline THẤT BẠI</b>\nKhông kết nối được SQL Server.\nKiểm tra dịch vụ database ngay." + QUICK_COMMANDS_HINT)
+        logger.error("ERROR: Could not connect to the database. Pipeline did not start.")
+        tg_alert("ERROR", "[ERROR] <b>Data Pipeline FAILED</b>\nCould not connect to SQL Server.\nCheck the database service now." + QUICK_COMMANDS_HINT)
         tg_flush()
         return _finish(1)
 
@@ -866,9 +874,9 @@ def main() -> int:
     dry_tag = " <i>[DRY RUN]</i>" if args.dry_run else ""
     tg_alert(
         "INFO",
-        f"🚀 <b>Data Pipeline KHỞI ĐỘNG</b>{dry_tag}\n"
-        f"📋 {len(SYMBOLS)} symbols × {len(DIRECT_TFS)} TF trực tiếp + {len(DERIVED_TFS)} TF phái sinh\n"
-        f"⏰ Bắt đầu: {started.strftime('%H:%M:%S')} UTC",
+        f"[START] <b>Data Pipeline started</b>{dry_tag}\n"
+        f"{len(SYMBOLS)} symbols x {len(DIRECT_TFS)} direct TFs + {len(DERIVED_TFS)} computed TFs\n"
+        f"Started: {started.strftime('%H:%M:%S')} UTC",
     )
 
     # -----------------------------------------------------------------------
@@ -880,29 +888,35 @@ def main() -> int:
     else:
         # Người dùng ép buộc chế độ cụ thể → dùng thẳng
         mode = args.mode
-        logger.info("[CHẾ ĐỘ] Ép buộc chạy chế độ: %s", mode.upper())
+        logger.info("[MODE] Forced mode: %s", mode.upper())
 
     maintenance_scope = (mode == "full") or args.reset
     if not args.dry_run and maintenance_scope and is_locked("ws_live_runtime"):
-        logger.error("LỖI: Chế độ full/reset không được chạy khi ws_live đang hoạt động.")
+        logger.error("ERROR: full/reset mode cannot run while ws_live is active.")
         tg_alert(
             "WARNING",
-            "⚠️ <b>Data Pipeline bị tạm chặn</b>\n"
-            "Chế độ full/reset không được chạy khi <b>ws_live</b> đang online 24/7.\n"
-            "Hãy tạm dừng ws_live rồi chạy lại lệnh này."
+            "[WARN] <b>Data Pipeline was blocked</b>\n"
+            "full/reset mode cannot run while <b>ws_live</b> is online 24/7.\n"
+            "Pause ws_live, then run this command again."
             + QUICK_COMMANDS_HINT
         )
         tg_flush()
         return _finish(1)
 
     if not args.dry_run:
-        historical_job_stop = acquire_historical_job("pipeline", logger, duration_min=240)
+        if args.force_unlock:
+            release("tv_historical_job")
+            logger.warning(
+                "[LOCK] --force-unlock: đã xóa lock tv_historical_job cũ. Tiếp tục khởi động..."
+            )
+        _lock_ttl = 300 if mode == "full" else 60
+        historical_job_stop = acquire_historical_job("pipeline", logger, duration_min=_lock_ttl)
         if historical_job_stop is None:
             tg_alert(
                 "WARNING",
-                "⚠️ <b>Data Pipeline bị chặn</b>\n"
-                "Không lấy được slot TradingView lịch sử vì checker/pipeline khác đang chạy.\n"
-                "Hãy chờ job kia hoàn tất rồi chạy lại."
+                "[WARN] <b>Data Pipeline was blocked</b>\n"
+                "Could not get the TradingView history slot because another checker/pipeline job is running.\n"
+                "Wait for that job to finish, then run this again."
                 + QUICK_COMMANDS_HINT
             )
             tg_flush()
@@ -915,21 +929,21 @@ def main() -> int:
     # -----------------------------------------------------------------------
     tv = None  # Khởi tạo biến tv = None phòng trường hợp dry-run không gán
     if not args.dry_run:
-        logger.info("[Bước 2/3] Đăng nhập TradingView...")
+        logger.info("[Step 2/3] Logging in to TradingView...")
         try:
             # get_valid_tv_connection: thử cache → .env token → cookie refresh → headless → guest
             tv, auth_mode = get_valid_tv_connection(logger)
-            logger.info("  Đăng nhập thành công (%s).", auth_mode)
+            logger.info("  Login OK (%s).", auth_mode)
 
             # Cảnh báo nếu đang dùng tài khoản guest:
             # Guest bị giới hạn số bar và dễ bị timeout hơn tài khoản đăng nhập
             if auth_mode == "guest":
-                logger.error("  Phát hiện chế độ khách — dừng lại để bảo vệ tính đầy đủ của dữ liệu.")
+                logger.error("  Guest mode detected - stopping to protect data completeness.")
                 tg_alert(
                     "ERROR",
-                    "🚨 <b>Data Pipeline THẤT BẠI</b>\n"
-                    "Đang ở guest mode nên bar history có thể bị thiếu.\n"
-                    "Hãy làm mới TradingView auth rồi chạy lại."
+                    "[ERROR] <b>Data Pipeline FAILED</b>\n"
+                    "TradingView is in guest mode, so history bars may be missing.\n"
+                    "Refresh TradingView auth, then run again."
                     + QUICK_COMMANDS_HINT
                 )
                 tg_flush()
@@ -937,7 +951,7 @@ def main() -> int:
         except Exception as e:
             # Không kết nối được TradingView → không kéo được data → thoát
             logger.error("  TradingView connection failed: %s", e)
-            tg_alert("ERROR", f"🚨 <b>Data Pipeline THẤT BẠI</b>\nKhông kết nối được TradingView.\nLỗi: {e}" + QUICK_COMMANDS_HINT)
+            tg_alert("ERROR", f"[ERROR] <b>Data Pipeline FAILED</b>\nCould not connect to TradingView.\nError: {e}" + QUICK_COMMANDS_HINT)
             return _finish(1)
 
         # Hold warehouse lock only once TradingView access is ready and the
@@ -947,25 +961,25 @@ def main() -> int:
             if maintenance_scope else False
         )
         if maintenance_scope and not maintenance_locked:
-            logger.error("LỖI: Không lấy được khóa bảo trì warehouse — đang bận.")
+            logger.error("ERROR: Could not get warehouse maintenance lock - it is busy.")
             tg_alert(
                 "WARNING",
-                "⚠️ <b>Data Pipeline bị chặn</b>\n"
-                "Không lấy được khóa bảo trì vì một tác vụ checker/maintenance khác đang chạy.\n"
-                "Chờ tác vụ đó hoàn tất rồi chạy lại."
+                "[WARN] <b>Data Pipeline was blocked</b>\n"
+                "Could not get the maintenance lock because another checker/maintenance job is running.\n"
+                "Wait for that job to finish, then run again."
                 + QUICK_COMMANDS_HINT
             )
             tg_flush()
             return _finish(1)
         if maintenance_locked:
-            logger.info("[KHÓA] Đã lấy được khóa warehouse_maintenance.")
+            logger.info("[LOCK] warehouse_maintenance lock acquired.")
             atexit.register(release, "warehouse_maintenance")
 
             def _maintenance_heartbeat() -> None:
                 while not maintenance_heartbeat_stop.wait(1800):
                     renewed = renew("warehouse_maintenance", duration_min=240)
                     if not renewed:
-                        logger.warning("Không thể gia hạn khóa warehouse_maintenance — hệ thống có thể coi pipeline đã tắt.")
+                        logger.warning("Could not renew warehouse_maintenance lock - the system may think the pipeline stopped.")
 
             threading.Thread(
                 target=_maintenance_heartbeat,
@@ -976,7 +990,7 @@ def main() -> int:
     # -----------------------------------------------------------------------
     # BƯỚC 3: Chạy pipeline theo chế độ đã xác định
     # -----------------------------------------------------------------------
-    logger.info("[Bước 3/3] Đang chạy pipeline chế độ: %s...", mode.upper())
+    logger.info("[Step 3/3] Running pipeline mode: %s...", mode.upper())
     if mode == "full":
         # Full load: kéo toàn bộ lịch sử (mất vài giờ, chỉ chạy lần đầu)
         try:
@@ -1005,12 +1019,12 @@ def main() -> int:
     # Bỏ qua nếu dry-run vì không có gì được ghi vào DB cả
     # -----------------------------------------------------------------------
     if not args.dry_run:
-        logger.info("[Dọn dẹp] Xóa dữ liệu staging cũ hơn 7 ngày...")
+        logger.info("[Cleanup] Deleting staging data older than 7 days...")
         # purge_staging trả về dict: { tên_bảng: số_hàng_đã_xóa }
         purged = purge_staging(days_to_keep=7)
         # Cộng tổng số hàng đã xóa từ tất cả các bảng
         total_purged = sum(purged.values())
-        logger.info("  Đã xóa %d dòng staging cũ.", total_purged)
+        logger.info("  Deleted %d old staging rows.", total_purged)
 
     # -----------------------------------------------------------------------
     # TÓM TẮT KẾT QUẢ TOÀN BỘ
@@ -1019,7 +1033,7 @@ def main() -> int:
     elapsed = (datetime.now() - started).total_seconds()
 
     logger.info("=" * 65)
-    logger.info("  HOÀN TẤT  |  chế độ=%s  |  %d lỗi  |  %.0f giây",
+    logger.info("  DONE  |  mode=%s  |  %d failed  |  %.0f seconds",
                 mode.upper(), fail, elapsed)
     logger.info("=" * 65)
 
@@ -1037,36 +1051,36 @@ def main() -> int:
     if fail == 0:
         # Nội dung chi tiết khi thành công
         if total_pairs == 0:
-            what_done = "Tất cả dữ liệu đã mới — không cần cập nhật."
+            what_done = "All data is already fresh. No update was needed."
         else:
-            what_done = (f"📊 Pairs cập nhật: {ok_pairs:,}/{total_pairs:,}\n"
-                         f"📈 Bars mới thêm vào DB: {bars_new:,}")
+            what_done = (f"Pairs updated: {ok_pairs:,}/{total_pairs:,}\n"
+                         f"New bars added to DB: {bars_new:,}")
             if miss_count:
-                what_done += f"\n🔩 Pairs thiếu hoàn toàn đã vá: {miss_count}"
+                what_done += f"\nPairs that had no data and were filled: {miss_count}"
         tg_alert(
             "INFO",
-            f"✅ <b>Data Pipeline HOÀN TẤT</b> (chế độ: {mode.upper()}){dry_tag}\n"
+            f"[OK] <b>Data Pipeline finished</b> (mode: {mode.upper()}){dry_tag}\n"
             f"{what_done}\n"
-            f"⏱ Thời gian chạy: {elapsed_str}\n"
-            f"─────────────────\n"
-            f"📌 <b>Tiếp theo:</b>\n"
-            f"  • 02_ws_live.py đang giữ realtime (mỗi 5 phút)\n"
-            f"  • 04_checker.py chạy mỗi 3 ngày để kiểm tra &amp; tự sửa dữ liệu",
+            f"Run time: {elapsed_str}\n"
+            f"-----------------\n"
+            f"<b>Next:</b>\n"
+            f"  - 02_ws_live.py keeps live data updated every 5 minutes\n"
+            f"  - 04_checker.py checks and repairs data every 3 days",
         )
     else:
         # Liệt kê tối đa 5 cặp bị lỗi
-        fail_list = "\n".join(f"  ❌ {p}" for p in fail_pairs[:5])
+        fail_list = "\n".join(f"  [FAIL] {p}" for p in fail_pairs[:5])
         if len(fail_pairs) > 5:
-            fail_list += f"\n  ... và {len(fail_pairs) - 5} cặp khác"
+            fail_list += f"\n  ... and {len(fail_pairs) - 5} more pairs"
         tg_alert(
             "WARNING",
-            f"⚠️ <b>Data Pipeline HOÀN TẤT (có lỗi)</b> (chế độ: {mode.upper()})\n"
-            f"📊 Pairs: {ok_pairs:,} OK / {fail:,} thất bại\n"
-            f"📈 Bars mới thêm vào DB: {bars_new:,}\n"
-            f"─────────────────\n"
-            f"<b>Cặp bị lỗi:</b>\n{fail_list}\n"
-            f"─────────────────\n"
-            f"⏱ Thời gian chạy: {elapsed_str}"
+            f"[WARN] <b>Data Pipeline finished with errors</b> (mode: {mode.upper()})\n"
+            f"Pairs: {ok_pairs:,} OK / {fail:,} failed\n"
+            f"New bars added to DB: {bars_new:,}\n"
+            f"-----------------\n"
+            f"<b>Failed pairs:</b>\n{fail_list}\n"
+            f"-----------------\n"
+            f"Run time: {elapsed_str}"
             + QUICK_COMMANDS_HINT,
         )
 
@@ -1075,7 +1089,7 @@ def main() -> int:
     # Quyết định exit code dựa trên số lỗi
     if fail > 0:
         # Có lỗi một phần: in cảnh báo và chỉ đường đến file log để xem chi tiết
-        logger.warning("%d cặp bị lỗi. Xem chi tiết tại file log: %s", fail, LOG_FILE)
+        logger.warning("%d pairs failed. See details in log file: %s", fail, LOG_FILE)
         return _finish(2)  # Exit code 2: thành công một phần
 
     return _finish(0)  # Exit code 0: thành công hoàn toàn
@@ -1089,4 +1103,23 @@ def main() -> int:
 # sys.exit() chuyển giá trị trả về của main() thành exit code của tiến trình,
 # cho phép Task Scheduler hoặc script bên ngoài biết kết quả thành công hay thất bại.
 if __name__ == "__main__":
-    sys.exit(main())
+    import traceback as _tb_mod
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        tg_alert(
+            "WARNING",
+            "[WARN] <b>Data Pipeline stopped</b>\nStopped manually (Ctrl+C).",
+        )
+        tg_flush()
+        sys.exit(130)
+    except Exception as _exc:
+        _tb = _tb_mod.format_exc()
+        tg_alert(
+            "ERROR",
+            f"[ERROR] <b>Data Pipeline crashed</b>\n"
+            f"{type(_exc).__name__}: {_exc}\n"
+            f"<pre>{_tb[-800:]}</pre>",
+        )
+        tg_flush()
+        sys.exit(1)

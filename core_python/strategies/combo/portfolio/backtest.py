@@ -21,18 +21,27 @@ from __future__ import annotations
 
 from typing import Any
 
-from shared.contracts import PortfolioBacktestResult, SymbolBacktestResult
-from shared.execution import backtest_portfolio
-from shared.metrics import calc_metrics
-from shared.portfolio import (
+from core_python.shared.contracts import PortfolioBacktestResult, SymbolBacktestResult
+from core_python.shared.analytics import calc_metrics
+from core_python.shared.analytics import (
     build_combined_equity,
-    calc_portfolio_metrics,
     check_portfolio_ftmo,
-    combine_trade_logs,
 )
 
 from ..config import SYMBOLS, get_account_settings, get_cost_settings
+from ..execution import backtest_portfolio
 from ..symbol.backtest import build_symbol_signal_frame, load_backtest_data
+
+
+def _normalized_allocations(symbols: list[str], allocations: dict[str, float] | None) -> dict[str, float]:
+    if not symbols:
+        return {}
+    if allocations is None:
+        return {sym: 1.0 / len(symbols) for sym in symbols}
+    raw_total = sum(float(allocations.get(sym, 0.0)) for sym in symbols)
+    if raw_total <= 0:
+        return {sym: 1.0 / len(symbols) for sym in symbols}
+    return {sym: float(allocations.get(sym, 0.0)) / raw_total for sym in symbols}
 
 
 def run_portfolio_backtest(
@@ -75,6 +84,7 @@ def run_portfolio_backtest(
     raw_frames:    dict[str, Any] = {}
     signal_frames: dict[str, Any] = {}
     symbol_configs: dict[str, dict] = {}
+    strategy_by_symbol: dict[str, dict[str, Any]] = {}
 
     for sym in symbols:
         sym_params = {
@@ -96,7 +106,7 @@ def run_portfolio_backtest(
             broker_profile=broker_profile,
         )
         # Ghi trailing_activation và min_rr vào strategy_cfg theo từng symbol
-        sym_strategy = {
+        strategy_by_symbol[sym] = {
             **strategy_cfg,
             "trailing_activation": float(cfg.get("trailing_activation",
                                                   strategy_cfg.get("trailing_activation", 1.0))),
@@ -112,19 +122,21 @@ def run_portfolio_backtest(
 
     # ── Bước 2: Chạy portfolio engine ──────────────────────────────────────
     all_trades, account_eq_series, sym_eq_series, trades_by_symbol = backtest_portfolio(
-        signal_frames=signal_frames,
+        symbol_frames=signal_frames,
         symbol_configs=symbol_configs,
         initial_balance=initial_balance,
         allocations=allocations,
-        strategy=sym_strategy,
+        strategy={**strategy_cfg, "_per_symbol": strategy_by_symbol},
         costs=None,  # costs đã được merge vào symbol_configs
     )
 
     # ── Bước 3: Build PortfolioBacktestResult ──────────────────────────────
-    equity_frame, combined_equity = build_combined_equity(
+    alloc = _normalized_allocations(symbols, allocations)
+    equity_frame, _ = build_combined_equity(
         sym_eq_series,
-        fill_value={sym: initial_balance / len(symbols) for sym in symbols},
+        fill_value={sym: initial_balance * alloc[sym] for sym in symbols},
     )
+    combined_equity = account_eq_series
 
     # Build SymbolBacktestResult cho từng symbol (dùng để drill-down phân tích)
     symbol_results: dict[str, SymbolBacktestResult] = {}
@@ -140,15 +152,20 @@ def run_portfolio_backtest(
             equity=sym_equity,
             metrics=sym_metrics,
             symbol_config=symbol_configs[sym],
-            strategy_settings=sym_strategy,
+            strategy_settings=strategy_by_symbol[sym],
             account_mode=account_mode,
         )
 
-    metrics = calc_portfolio_metrics(
-        trades_by_symbol,
-        sym_eq_series,
-        fill_value={sym: initial_balance / len(symbols) for sym in symbols},
-    )
+    metrics = calc_metrics(all_trades, combined_equity)
+    metrics.update({
+        key: combined_equity.attrs[key]
+        for key in (
+            "peak_concurrent_positions",
+            "peak_open_risk_usd",
+            "peak_open_risk_pct_of_equity",
+        )
+        if key in combined_equity.attrs
+    })
 
     # FTMO account-level check trên combined equity tổng
     if account_mode == "ftmo" and not combined_equity.empty:
@@ -169,6 +186,7 @@ def run_portfolio_backtest(
         metrics=metrics,
         account_mode=account_mode,
         symbol_keys=symbols,
+        portfolio_model="unified_account",
     )
 
 

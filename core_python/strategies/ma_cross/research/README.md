@@ -31,9 +31,9 @@ to the MA Cross market-order strategy.
 
 ## Research Rules
 
-- Signal logic must come from `strategies.ma_cross.logic`.
-- Strategy defaults and search space must come from `strategies.ma_cross.config`.
-- Execution must go through `shared.execution_market` via
+- Signal logic must come from `strategies.ma_cross.model`.
+- Strategy defaults and search space must come from `strategies.ma_cross.params`.
+- Execution must go through `core_python.shared.execution` via
   `strategies.ma_cross.symbol.backtest`.
 - Treat results as research until data quality, broker specs, OOS,
   walk-forward, and Monte Carlo have been reviewed.

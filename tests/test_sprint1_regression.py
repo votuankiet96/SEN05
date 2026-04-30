@@ -21,13 +21,14 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "core_python"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from strategies.combo.config import get_indicator_params
-from strategies.combo.logic import (
+from core_python.strategies.combo.params import get_indicator_params
+from core_python.strategies.combo.model import (
     add_combo_indicators,
     detect_combo_signals,
     session_mask,
 )
-from shared.execution import backtest_fast, backtest_symbol
+from core_python.strategies.combo.execution import backtest_fast, backtest_symbol
+from core_python.shared.analytics import calc_metrics
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -452,3 +453,157 @@ class TestBacktestFastParity:
             f"fast_pnl={fast_pnl:.0f}, full_pnl={full_pnl:.0f}, "
             f"n_fast={n_fast}, n_full={n_full}"
         )
+
+    def test_fast_full_sharpe_parity_with_warmup_window(self):
+        """Fast/full Sharpe must use the same fixed-equity denominator and IS window span."""
+        n_bars = 2700
+        idx = pd.date_range("2022-10-01", periods=n_bars, freq="4h", name="BarTime")
+        t = np.linspace(0, 80 * np.pi, n_bars)
+        close = 10_000.0 + 220.0 * np.sin(t)
+        high = close + 30.0
+        low = close - 30.0
+        open_ = np.concatenate([[close[0]], close[:-1]])
+        raw = pd.DataFrame(
+            {
+                "open": open_,
+                "high": high,
+                "low": low,
+                "close": close,
+                "volume": [1000.0] * n_bars,
+            },
+            index=idx,
+        )
+        df_ind = add_combo_indicators(raw, get_indicator_params())
+        date_from = "2023-01-01"
+        date_to = "2023-12-31"
+        init_eq = 100_000.0
+        cfg = {
+            **_CFG,
+            "x": 0.0,
+            "ktp": 1.5,
+            "spread_pts": 0.0,
+            "slippage_pts": 0.0,
+            "commission_per_lot": 0.0,
+            "max_lot_size": 100.0,
+        }
+        strategy = {
+            **_STRATEGY,
+            "min_rr": 0.5,
+            "partial_tp_fraction": 0.0,
+            "trailing_activation": 100.0,
+        }
+        costs = {"slippage_pts": 0.0, "commission_per_lot": 0.0, "slippage_k": 0.0}
+        params = {**get_indicator_params(), "KTP": 1.5, "MIN_RR": 0.5, "X": 0.0}
+
+        df_ind_windowed = df_ind.copy()
+        df_ind_windowed["in_window"] = (
+            (df_ind_windowed.index >= pd.Timestamp(date_from))
+            & (df_ind_windowed.index <= pd.Timestamp(date_to))
+        )
+        mask = session_mask(df_ind_windowed, [])
+        df_sig = detect_combo_signals(df_ind_windowed, mask, sym_key=None, params=params)
+        df_sig_warmup = df_sig[df_sig.index <= pd.Timestamp(date_to)].copy()
+        trades, eq_ts = backtest_symbol(
+            "TEST",
+            df_sig_warmup,
+            cfg,
+            init_eq,
+            strategy=strategy,
+            costs=costs,
+        )
+        full_metrics = calc_metrics(
+            trades,
+            eq_ts,
+            window_start=pd.Timestamp(date_from),
+            window_end=pd.Timestamp(date_to),
+            initial_equity=init_eq,
+        )
+        fast_metrics = backtest_fast(
+            "TEST",
+            df_ind,
+            cfg,
+            ktp=1.5,
+            x_actual=0.0,
+            trailing_act=100.0,
+            date_from=date_from,
+            date_to=date_to,
+            init_eq=init_eq,
+            strategy=strategy,
+            costs=costs,
+        )
+
+        assert len(trades) >= 10
+        assert fast_metrics["trades"] >= 10
+        assert full_metrics["sharpe_method"] == fast_metrics["sharpe_method"]
+        assert full_metrics["sharpe_years_span"] == pytest.approx(
+            fast_metrics["sharpe_years_span"],
+            abs=0.01,
+        )
+        assert abs(float(fast_metrics["sharpe"]) - float(full_metrics["sharpe"])) < 0.5
+
+    def test_fast_full_nonzero_swap_pnl_within_tolerance(self):
+        """Fast/full parity must also hold when swap is non-zero."""
+        idx = pd.date_range("2023-01-01", periods=9, freq="12h", name="BarTime")
+        df_ind = pd.DataFrame(
+            {
+                "open": [99.0, 100.0, 106.0, 107.0, 108.0, 109.0, 110.0, 111.0, 112.0],
+                "high": [100.0, 106.0, 107.0, 108.0, 109.0, 110.0, 111.0, 112.0, 113.0],
+                "low": [98.0, 94.0, 105.0, 106.0, 107.0, 108.0, 109.0, 110.0, 111.0],
+                "close": [99.0, 105.0, 106.5, 107.5, 108.5, 109.5, 110.5, 111.5, 112.5],
+                "volume": [1000.0] * 9,
+                "ma": [100.0] * 9,
+                "prev_ma": [np.nan, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0],
+                "prev_close": [np.nan, 99.0, 105.0, 106.5, 107.5, 108.5, 109.5, 110.5, 111.5],
+                "macd_h": [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                "atr": [10.0] * 9,
+            },
+            index=idx,
+        )
+        cfg = {
+            **_CFG,
+            "x": 0.0,
+            "ktp": 10.0,
+            "spread_pts": 0.0,
+            "slippage_pts": 0.0,
+            "commission_per_lot": 0.0,
+            "swap_long_per_lot_per_day": 2.5,
+            "max_lot_size": 100.0,
+        }
+        strategy = {
+            **_STRATEGY,
+            "partial_tp_fraction": 0.0,
+            "trailing_activation": 100.0,
+            "min_rr": 1.0,
+        }
+        params = {**get_indicator_params(), "KTP": 10.0, "MIN_RR": 1.0, "X": 0.0}
+
+        mask = session_mask(df_ind, [])
+        df_sig = detect_combo_signals(df_ind, mask, sym_key=None, params=params)
+        costs = {"slippage_pts": 0.0, "commission_per_lot": 0.0, "slippage_k": 0.0}
+        trades, eq_ts = backtest_symbol(
+            "TEST",
+            df_sig,
+            cfg,
+            100_000.0,
+            strategy=strategy,
+            costs=costs,
+        )
+        kpi_fast = backtest_fast(
+            "TEST",
+            df_ind,
+            cfg,
+            ktp=10.0,
+            x_actual=0.0,
+            trailing_act=100.0,
+            date_from=str(idx[0]),
+            date_to=str(idx[-1]),
+            init_eq=100_000.0,
+            strategy=strategy,
+            costs=costs,
+        )
+
+        assert len(trades) == 1
+        assert trades[0]["swap_cost"] > 0
+        full_pnl = float(eq_ts.iloc[-1]) - 100_000.0
+        fast_pnl = kpi_fast["ret"] / 100 * 100_000.0
+        assert fast_pnl == pytest.approx(full_pnl, abs=5.0)

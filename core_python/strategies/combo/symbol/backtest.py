@@ -10,8 +10,12 @@ Architecture role
 Upstream dependencies
 ---------------------
 - `shared.data` for DB-backed OHLCV loading
-- `strategies.combo.logic` for indicator + signal generation
-- `strategies.combo.config` for account/symbol/cost settings
+- `strategies.combo.config` for canonical Combo parameters and symbol config
+- `strategies.combo.universe` for the Combo-owned symbol universe
+- `strategies.combo.config` only as a compatibility wrapper for old imports
+- `strategies.combo.signals`, `strategies.combo.signals`, and
+  `strategies.combo.signals` for Combo-owned alpha/rule helpers
+- `strategies.combo.signals` only as the compatibility wrapper for old imports
 
 Downstream dependencies
 -----------------------
@@ -26,12 +30,12 @@ from typing import Any
 
 import pandas as pd
 
-from shared.contracts import SymbolBacktestResult
-from shared.data import load_backtest_ohlcv, load_backtest_ohlcv_full
-from shared.execution import backtest_fast, backtest_symbol
-from shared.metrics import calc_metrics, in_bao_cao
-from shared.monte_carlo import plot_monte_carlo, run_monte_carlo
+from core_python.shared.contracts import SymbolBacktestResult
+from core_python.shared.data import load_backtest_ohlcv, load_backtest_ohlcv_full
+from core_python.shared.analytics import calc_metrics, in_bao_cao
+from core_python.shared.analytics import plot_monte_carlo, run_monte_carlo
 
+from ..execution import backtest_fast, backtest_symbol
 from ..config import (
     TIMEFRAME,
     get_account_settings,
@@ -39,7 +43,21 @@ from ..config import (
     get_indicator_params,
     get_symbol_params,
 )
-from ..logic import add_combo_indicators, detect_combo_signals, session_mask
+from ..signals import add_combo_indicators
+from ..orders import create_order_intent_from_signal
+from ..signals import detect_combo_signals, session_mask
+
+
+def _timestamp_for_index(value: str | pd.Timestamp, index: pd.Index) -> pd.Timestamp:
+    ts = pd.Timestamp(value)
+    if isinstance(index, pd.DatetimeIndex):
+        if index.tz is not None and ts.tzinfo is None:
+            ts = ts.tz_localize(index.tz)
+        elif index.tz is None and ts.tzinfo is not None:
+            ts = ts.tz_convert("UTC").tz_localize(None)
+        elif index.tz is not None and ts.tzinfo is not None:
+            ts = ts.tz_convert(index.tz)
+    return ts
 
 
 def load_backtest_data(
@@ -119,9 +137,9 @@ def build_symbol_signal_frame(
     if date_from or date_to:
         mask = pd.Series(True, index=df_ind.index)
         if date_from:
-            mask &= df_ind.index >= pd.Timestamp(date_from)
+            mask &= df_ind.index >= _timestamp_for_index(date_from, df_ind.index)
         if date_to:
-            mask &= df_ind.index <= pd.Timestamp(date_to)
+            mask &= df_ind.index <= _timestamp_for_index(date_to, df_ind.index)
         df_ind["in_window"] = mask
 
     sess = session_mask(df_ind, cfg.get("session_hours_utc", []))
@@ -174,7 +192,13 @@ def run_symbol_backtest_on_frame(
         strategy=strategy_cfg,
         costs=get_cost_settings(symbol_key, costs, broker_profile=broker_profile),
     )
-    metrics = calc_metrics(trades, equity)
+    metrics = calc_metrics(
+        trades,
+        equity,
+        window_start=date_from,
+        window_end=date_to,
+        initial_equity=init_eq,
+    )
 
     return SymbolBacktestResult(
         symbol=symbol_key,

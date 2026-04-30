@@ -3,7 +3,7 @@
 ## Tổng quan
 
 Thư mục này chứa toàn bộ mọi thứ đặc thù của chiến lược Combo v2:
-- Tham số và cấu hình (`config.py`)
+- Tham số và cấu hình (`parameters.py`; `config.py` là wrapper tương thích)
 - Luật tín hiệu BUY/SELL (`logic.py`)
 - Công cụ nhìn tín hiệu trực quan (`scanner.py`)
 - Điều phối chạy 1 symbol (`symbol/`)
@@ -11,8 +11,13 @@ Thư mục này chứa toàn bộ mọi thứ đặc thù của chiến lược 
 
 ```
 combo/
-├── config.py          Bảng tham số trung tâm — NGUỒN SỰ THẬT DUY NHẤT
-├── logic.py           Luật tín hiệu — KHÔNG SỬA NẾU KHÔNG HIỂU RÕ
+├── parameters.py      Nguồn tham số Combo chính
+├── universe.py        Symbol universe riêng của Combo
+├── config.py          Wrapper tương thích cho import cũ
+├── indicators.py      Helper tính indicator riêng của Combo
+├── signals.py         Session mask và BUY/SELL signal generation
+├── rules.py           Scanner, record, hit resolver, reversal helpers
+├── logic.py           Wrapper tương thích cho import signal/rule cũ
 ├── scanner.py         Nhìn tín hiệu trên chart (KHÔNG phải backtest)
 ├── notebook_utils.py  Helper dashboard/bảng/chart dùng chung cho notebook
 ├── symbol/            Làm việc với 1 symbol
@@ -76,7 +81,16 @@ Các helper chính:
 
 ---
 
-## config.py — Bảng tham số trung tâm
+## parameters.py and config.py
+
+`parameters.py` is the canonical source-of-truth for Combo parameters. It owns
+Combo-specific strategy values such as `x`, `ktp`, `min_rr`, indicator defaults,
+account defaults, and optimization defaults.
+
+`config.py` is kept as a compatibility wrapper for existing imports and
+notebooks. New code should prefer `parameters.py`.
+
+### Legacy parameter notes
 
 ### Vai trò
 **Đây là nơi DUY NHẤT bạn được phép điều chỉnh tham số chiến lược.**  
@@ -216,7 +230,7 @@ OPTIMIZATION = {
 
 ---
 
-### Các hàm quan trọng trong config.py
+### Các hàm quan trọng trong parameters.py
 
 #### `get_indicator_params()` — Lấy tham số indicator
 
@@ -259,6 +273,10 @@ Chạy hàm này trước khi bắt đầu optimize để biết symbols nào c�
 ### Vai trò
 **Đây là nơi DUY NHẤT định nghĩa khi nào thì BUY, khi nào thì SELL.**  
 Scanner, backtest, optimizer, walk-forward đều gọi từ đây. Sửa ở đây → toàn bộ pipeline thay đổi.
+
+`logic.py` remains as a compatibility wrapper. The implementation now lives in
+`indicators.py`, `signals.py`, and `rules.py`, while old imports from
+`combo.model` continue to work.
 
 ### `add_combo_indicators()` — Tính chỉ báo
 
@@ -381,7 +399,7 @@ Scanner **KHÔNG phải backtest**. Nó:
 
 | Việc muốn làm | File cần dùng |
 |---|---|
-| Điều chỉnh tham số chiến lược | `config.py` |
+| Điều chỉnh tham số chiến lược | `parameters.py` (`config.py` vẫn là wrapper tương thích) |
 | Hiểu luật tín hiệu | `logic.py` |
 | Xem tín hiệu trên chart | `scanner.py` |
 | Chạy backtest 1 symbol | `symbol/` → xem README riêng |

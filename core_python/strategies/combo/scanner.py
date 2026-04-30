@@ -10,15 +10,21 @@ Vai trò chính:
 3) Tính thống kê kết quả scan theo schema nhất quán.
 
 Architecture note:
+- Current ownership: `strategies.combo.config` is the canonical Combo
+  parameter source; `strategies.combo.universe` owns the Combo symbol universe;
+  `strategies.combo.config` and `strategies.combo.signals` are compatibility
+  wrappers.
+- Indicator, signal, and rule helpers live in `indicators.py`, `signals.py`,
+  and `rules.py`.
 - File này không được tự định nghĩa lại signal rule.
-- Nó chỉ phối hợp dữ liệu từ `shared.data` với logic từ `strategies.combo.logic`.
+- Nó chỉ phối hợp dữ liệu từ `shared.data` với Combo-owned helpers.
 """
 import pandas as pd
 
 from modules.chart_builder import build_reversal_chart
-from shared.data import load_scan_ohlcv
+from core_python.shared.data import load_scan_ohlcv
 
-from .logic import add_combo_indicators, scan_signals_reversal
+from .signals import add_combo_indicators
 from .config import (
     DEFAULT_N_BARS,
     INDICATOR_COLS,
@@ -26,6 +32,7 @@ from .config import (
     SYMBOLS,
     TIMEFRAME,
 )
+from .signals import scan_signals_reversal
 
 
 def _run_scan_with_scanner(symbol_key: str, n_bars: int, params: dict,

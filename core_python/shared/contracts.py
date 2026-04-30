@@ -30,7 +30,7 @@ Khi CÓ file này:
 AI TẠO RA OBJECT NÀY, AI DÙNG NÓ?
 =======================================================================
 
-  Tạo ra bởi  →  shared.execution + các strategy runner (combo, ai_trend...)
+  Tạo ra bởi  →  shared.execution + các strategy runner (combo, ma_cross...)
   Dùng bởi    →  notebooks (.ipynb), dashboard (Streamlit), báo cáo,
                  walk-forward optimizer
 
@@ -46,9 +46,145 @@ cập nhật toàn bộ consumer trước khi đổi tên.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 import pandas as pd
+
+# ---------------------------------------------------------------------------
+# Order and position model types
+# ---------------------------------------------------------------------------
+# These types live here (alongside the result contracts) because they are
+# pure data containers with no execution logic.  The execution engine imports
+# them from here so that strategy packages can reference them without
+# importing the full engine module.
+
+Direction = Literal[-1, 1]
+OrderKind = Literal["market", "pending"]
+PendingKind = Literal["stop", "limit"]
+PortfolioModel = Literal["unified_account", "independent_sleeves"]
+
+
+@dataclass(slots=True)
+class OrderIntent:
+    symbol: str
+    direction: Direction
+    created_time: pd.Timestamp
+    order_type: OrderKind
+    strategy_name: str = ""
+    sl: float | None = None
+    tp: float | None = None
+    ttl_bars: int | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class MarketOrderIntent(OrderIntent):
+    execute_at: Literal["next_open", "current_open"] = "next_open"
+
+    def __init__(
+        self,
+        *,
+        symbol: str,
+        direction: Direction,
+        created_time: pd.Timestamp,
+        strategy_name: str = "",
+        sl: float | None = None,
+        tp: float | None = None,
+        ttl_bars: int | None = None,
+        metadata: dict[str, Any] | None = None,
+        execute_at: Literal["next_open", "current_open"] = "next_open",
+    ) -> None:
+        super().__init__(
+            symbol=symbol,
+            direction=direction,
+            created_time=created_time,
+            order_type="market",
+            strategy_name=strategy_name,
+            sl=sl,
+            tp=tp,
+            ttl_bars=ttl_bars,
+            metadata=metadata or {},
+        )
+        self.execute_at = execute_at
+
+
+@dataclass(slots=True)
+class PendingOrderIntent(OrderIntent):
+    entry: float = 0.0
+    pending_type: PendingKind = "stop"
+
+    def __init__(
+        self,
+        *,
+        symbol: str,
+        direction: Direction,
+        created_time: pd.Timestamp,
+        entry: float,
+        strategy_name: str = "",
+        sl: float | None = None,
+        tp: float | None = None,
+        ttl_bars: int | None = None,
+        metadata: dict[str, Any] | None = None,
+        pending_type: PendingKind = "stop",
+    ) -> None:
+        super().__init__(
+            symbol=symbol,
+            direction=direction,
+            created_time=created_time,
+            order_type="pending",
+            strategy_name=strategy_name,
+            sl=sl,
+            tp=tp,
+            ttl_bars=ttl_bars,
+            metadata=metadata or {},
+        )
+        self.entry = float(entry)
+        self.pending_type = pending_type
+
+
+@dataclass(slots=True)
+class Position:
+    symbol: str
+    direction: Direction
+    entry: float
+    sl: float | None
+    tp: float | None
+    lot_size: float
+    entry_time: pd.Timestamp
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class FillEvent:
+    symbol: str
+    direction: Direction
+    fill_time: pd.Timestamp
+    fill_price: float
+    order_type: OrderKind
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class TradeEvent:
+    symbol: str
+    direction: Direction
+    event_time: pd.Timestamp
+    event_type: str
+    price: float
+    pnl: float = 0.0
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+def intent_to_legacy_pending(intent: PendingOrderIntent) -> dict[str, Any]:
+    """Convert a strategy-owned pending intent to the legacy engine shape."""
+    return {
+        "direction": intent.direction,
+        "entry": intent.entry,
+        "sl": intent.sl,
+        "tp": intent.tp,
+        "atr": intent.metadata.get("atr"),
+        "ttl": intent.ttl_bars,
+    }
 
 
 @dataclass(slots=True)
@@ -203,6 +339,7 @@ class PortfolioBacktestResult:
     metrics: dict[str, Any]
     account_mode: str
     symbol_keys: list[str] = field(default_factory=list)
+    portfolio_model: PortfolioModel = "independent_sleeves"
 
 
 @dataclass(slots=True)

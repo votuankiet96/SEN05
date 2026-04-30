@@ -33,8 +33,8 @@ _COLORS = {
 
 # Thay thế QUICK_COMMANDS_HINT của Telegram — giờ là hướng dẫn xem log
 QUICK_COMMANDS_HINT = (
-    "\n─────────────────\n"
-    "Xem chi tiết: data_provider/logs/ hoặc chạy thủ công\n"
+    "\n-----------------\n"
+    "Details: check data_provider/logs/ or run manually\n"
     "  04_checker.py --dry-run\n"
     "  01_data_pipeline.py --mode gap"
 )
@@ -110,8 +110,8 @@ def tg_alert(level: str, text: str) -> None:
 
     import requests
 
-    icons = {"INFO": "ℹ️", "WARNING": "⚠️", "ERROR": "🚨"}
-    icon  = icons.get(level, "📌")
+    icons = {"INFO": "[INFO]", "WARNING": "[WARN]", "ERROR": "[ERROR]"}
+    icon  = icons.get(level, "[NOTE]")
     color = _COLORS.get(level, _COLORS["INFO"])
     now   = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -123,7 +123,7 @@ def tg_alert(level: str, text: str) -> None:
     def _send() -> None:
         payload = {
             "embeds": [{
-                "title":       f"{icon} AUTO TRADING — {level}",
+                "title":       f"{icon} AUTO TRADING - {level}",
                 "description": description,
                 "color":       color,
             }]
@@ -173,10 +173,10 @@ def tg_ask(
 
     pairs_section = ""
     if affected_pairs:
-        pair_lines = "\n".join(f"  • {p}" for p in affected_pairs[:8])
+        pair_lines = "\n".join(f"  - {p}" for p in affected_pairs[:8])
         if len(affected_pairs) > 8:
-            pair_lines += f"\n  (... và {len(affected_pairs) - 8} pairs khác)"
-        pairs_section = f"\n\n**Pairs bị ảnh hưởng:**\n{pair_lines}"
+            pair_lines += f"\n  (... and {len(affected_pairs) - 8} more pairs)"
+        pairs_section = f"\n\n**Affected pairs:**\n{pair_lines}"
 
     timeout_h = timeout_min // 60
     timeout_m = timeout_min % 60
@@ -185,8 +185,8 @@ def tg_ask(
     plain_desc = re.sub(r"<[^>]+>", "", problem_desc)
     body = (
         f"{plain_desc}{pairs_section}\n\n"
-        f"⚙️ Discord webhook là một chiều — hệ thống sẽ tự xử lý.\n"
-        f"(Trước đây sẽ đợi {timeout_str} để xác nhận qua Telegram.)"
+        f"[INFO] Discord webhook is one-way, so the system will handle this automatically.\n"
+        f"(This used to wait {timeout_str} for confirmation through Telegram.)"
     )[:4096]
 
     global _pending_threads
@@ -194,7 +194,7 @@ def tg_ask(
     def _send() -> None:
         payload = {
             "embeds": [{
-                "title":       f"⚠️ {title}",
+                "title":       f"[WARN] {title}",
                 "description": body,
                 "color":       _COLORS["WARNING"],
             }]

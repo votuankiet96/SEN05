@@ -8,7 +8,7 @@ import pandas as pd
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "core_python"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from shared.execution import backtest_symbol
+from core_python.strategies.combo.execution import backtest_symbol
 
 
 def _frame(rows: list[dict]) -> pd.DataFrame:

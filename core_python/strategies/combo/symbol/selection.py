@@ -159,7 +159,7 @@ def validate_symbol_candidates(
     if candidates is None or candidates.empty:
         return pd.DataFrame(), []
 
-    from strategies.combo.symbol.backtest import run_symbol_backtest
+    from core_python.strategies.combo.symbol.backtest import run_symbol_backtest
 
     rows: list[dict[str, Any]] = []
     results: list[Any] = []
@@ -192,7 +192,11 @@ def validate_symbol_candidates(
         results.append(result)
 
     frame = pd.DataFrame(rows)
-    return rank_optimizer_candidates(frame, mode=str(run_config.get("selection_mode", "robust"))), results
+    ranked = rank_optimizer_candidates(frame, mode=str(run_config.get("selection_mode", "robust")))
+    if not ranked.empty:
+        ranked.insert(0, "full_validation_rank", range(1, len(ranked) + 1))
+        ranked["ranking_basis"] = "full_backtest"
+    return ranked, results
 
 
 def summarize_candidate_validation(
@@ -272,7 +276,7 @@ def _summarize_plateau_from_points(
     radius: int,
     threshold_ratio: float,
 ) -> dict[str, Any]:
-    from strategies.combo.symbol.walkforward import check_plateau_stability
+    from core_python.strategies.combo.symbol.walkforward import check_plateau_stability
 
     best_params = _optimizer_params_from_row(best)
     best_score = float(best.get(score_col, best.get("sharpe", 0.0)) or 0.0)

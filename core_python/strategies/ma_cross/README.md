@@ -16,7 +16,7 @@ MA Cross owns only strategy-specific behavior:
 The strategy reuses shared infrastructure:
 
 - `shared.data` for OHLCV loading.
-- `shared.execution_market` for next-bar-open market execution.
+- `shared.execution` for next-bar-open market execution.
 - `shared.metrics` for performance metrics.
 - `shared.broker` for lot rounding.
 - `shared.instruments` for symbol, broker profile, and cost metadata.
@@ -37,7 +37,7 @@ The default MA type is SMA. EMA can be tested by passing
 
 ## Execution Rules
 
-MA Cross uses `shared.execution_market.backtest_market_symbol()`.
+MA Cross uses `shared.execution.backtest_market_symbol()`.
 
 - Entry is market at next bar open after signal confirmation.
 - Entry includes spread and dynamic slippage.
@@ -70,7 +70,7 @@ Do not trust a single beautiful backtest. Validate in this order:
 ## Example
 
 ```python
-from strategies.ma_cross import run_symbol_backtest
+from core_python.strategies.ma_cross import run_symbol_backtest
 
 result = run_symbol_backtest(
     "US30",
@@ -87,7 +87,7 @@ print(result.metrics)
 Run the interactive chart:
 
 ```powershell
-.\.venv\Scripts\python.exe core_python\strategies\ma_cross\ma_chart.py --port 8514
+.\.venv\Scripts\python.exe core_python\strategies\ma_cross\chart.py --port 8514
 ```
 
 Then open:

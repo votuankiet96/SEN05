@@ -21,12 +21,24 @@ from typing import Any
 
 import pandas as pd
 
-from shared.contracts import PortfolioWindowResult
-from shared.execution import backtest_portfolio
-from shared.portfolio import build_combined_equity, calc_portfolio_metrics
+from core_python.shared.contracts import PortfolioWindowResult
+from core_python.shared.analytics import calc_metrics
+from core_python.shared.analytics import build_combined_equity
 
 from ..config import SYMBOLS, get_account_settings, get_cost_settings, get_indicator_params
+from ..execution import backtest_portfolio
 from ..symbol.backtest import build_symbol_signal_frame, load_backtest_full
+
+
+def _normalized_allocations(symbols: list[str], allocations: dict[str, float] | None) -> dict[str, float]:
+    if not symbols:
+        return {}
+    if allocations is None:
+        return {sym: 1.0 / len(symbols) for sym in symbols}
+    raw_total = sum(float(allocations.get(sym, 0.0)) for sym in symbols)
+    if raw_total <= 0:
+        return {sym: 1.0 / len(symbols) for sym in symbols}
+    return {sym: float(allocations.get(sym, 0.0)) / raw_total for sym in symbols}
 
 
 def walk_forward_portfolio(
@@ -71,9 +83,19 @@ def walk_forward_portfolio(
         sym: load_backtest_full(SYMBOLS[sym]["symbol_id"], tf=tf, max_bars=max_bars)
         for sym in symbol_params
     }
-    common_n = min(len(df) for df in raw_cache.values())
+    common_index = None
+    for df in raw_cache.values():
+        idx = pd.DatetimeIndex(df.index).sort_values()
+        common_index = idx if common_index is None else common_index.intersection(idx)
+    common_index = pd.DatetimeIndex([]) if common_index is None else common_index.sort_values()
+    common_n = len(common_index)
     if common_n < is_bars + oos_bars:
         return pd.DataFrame(), {}
+
+    raw_cache = {
+        sym: df.loc[common_index].sort_index()
+        for sym, df in raw_cache.items()
+    }
 
     strategy_cfg = get_account_settings(account_mode, strategy_overrides)
 
@@ -97,12 +119,13 @@ def walk_forward_portfolio(
         # ── Build signal frames cho OOS window này ────────────────────────────
         signal_frames:  dict[str, pd.DataFrame] = {}
         symbol_configs: dict[str, dict]         = {}
+        strategy_by_symbol: dict[str, dict[str, Any]] = {}
         start_ts = end_ts = None
 
         for sym, params in symbol_params.items():
             # Lấy thêm warmup bars từ đuôi IS để indicator có đủ history
             warmup_from = max(0, oos_start - _warmup)
-            aligned     = raw_cache[sym].tail(common_n)
+            aligned     = raw_cache[sym]
             df_slice    = aligned.iloc[warmup_from:oos_end].copy()
             if df_slice.empty:
                 continue
@@ -125,12 +148,13 @@ def walk_forward_portfolio(
                 **get_cost_settings(sym, costs, broker_profile=broker_profile),
             }
             # Ghi trailing_activation và min_rr vào strategy_cfg theo symbol
-            strategy_cfg["trailing_activation"] = float(
-                cfg.get("trailing_activation", strategy_cfg.get("trailing_activation", 1.0))
-            )
-            strategy_cfg["min_rr"] = float(
-                ind_params.get("MIN_RR", strategy_cfg.get("min_rr", 1.25))
-            )
+            strategy_by_symbol[sym] = {
+                **strategy_cfg,
+                "trailing_activation": float(
+                    cfg.get("trailing_activation", strategy_cfg.get("trailing_activation", 1.0))
+                ),
+                "min_rr": float(ind_params.get("MIN_RR", strategy_cfg.get("min_rr", 1.25))),
+            }
 
             start_ts = oos_date_from if start_ts is None else min(start_ts, oos_date_from)
             end_ts   = oos_date_to   if end_ts   is None else max(end_ts,   oos_date_to)
@@ -139,24 +163,31 @@ def walk_forward_portfolio(
             break
 
         # ── Chạy portfolio engine cho OOS window này ──────────────────────────
-        _, _, sym_eq_series, trades_by_symbol = backtest_portfolio(
-            signal_frames=signal_frames,
+        all_trades, account_eq_series, sym_eq_series, trades_by_symbol = backtest_portfolio(
+            symbol_frames=signal_frames,
             symbol_configs=symbol_configs,
             initial_balance=initial_balance,
             allocations=allocations,
-            strategy=strategy_cfg,
+            strategy={**strategy_cfg, "_per_symbol": strategy_by_symbol},
             costs=None,
         )
 
-        _, combined_equity = build_combined_equity(
+        alloc = _normalized_allocations(list(signal_frames.keys()), allocations)
+        _, _ = build_combined_equity(
             sym_eq_series,
-            fill_value={sym: initial_balance / len(symbol_params) for sym in signal_frames},
+            fill_value={sym: initial_balance * alloc[sym] for sym in signal_frames},
         )
-        metrics = calc_portfolio_metrics(
-            trades_by_symbol,
-            sym_eq_series,
-            fill_value={sym: initial_balance / len(symbol_params) for sym in signal_frames},
-        )
+        combined_equity = account_eq_series
+        metrics = calc_metrics(all_trades, combined_equity)
+        metrics.update({
+            key: combined_equity.attrs[key]
+            for key in (
+                "peak_concurrent_positions",
+                "peak_open_risk_usd",
+                "peak_open_risk_pct_of_equity",
+            )
+            if key in combined_equity.attrs
+        })
 
         rows.append(PortfolioWindowResult(
             window=step,

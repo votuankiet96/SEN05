@@ -1,1 +1,5 @@
-# core_python — Core Python layer (strategies, backtest, signals)
+"""Core Python package for shared infrastructure and trading strategies."""
+
+from __future__ import annotations
+
+__all__ = ["shared", "strategies"]

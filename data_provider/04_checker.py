@@ -19,59 +19,59 @@ va duoc dua vao danh sach sua ngay, vi do la loi cau truc du lieu chinh.
 """
 
 # =============================================================================
-# data_provider/04_checker.py  —  Kiểm tra & Tự sửa chất lượng dữ liệu
+# data_provider/04_checker.py  â€"  Kiá»ƒm tra & Tá»± sá»­a cháº¥t lÆ°á»£ng dá»¯ liá»‡u
 # =============================================================================
 #
-# FILE NÀY LÀM GÌ?
-#   Đây là "thanh tra dữ liệu" — chạy mỗi 3 ngày, nó so sánh dữ liệu trong
-#   database của bạn với dữ liệu thực từ TradingView để phát hiện xem có nến
-#   nào bị sai số liệu (giá mở/đóng/cao/thấp không khớp) hay bị thiếu không.
+# FILE NÃ€Y LÃ€M GÃŒ-
+#   ÄÃ¢y lÃ  "thanh tra dá»¯ liá»‡u" â€" cháº¡y má»—i 3 ngÃ y, nÃ³ so sÃ¡nh dá»¯ liá»‡u trong
+#   database cá»§a báº¡n vá»›i dá»¯ liá»‡u thá»±c tá»« TradingView Ä‘á»ƒ phÃ¡t hiá»‡n xem cÃ³ náº¿n
+#   nÃ o bá»‹ sai sá»‘ liá»‡u (giÃ¡ má»Ÿ/Ä‘Ã³ng/cao/tháº¥p khÃ´ng khá»›p) hay bá»‹ thiáº¿u khÃ´ng.
 #
-#   Mặc định hiện nay script CÓ THỂ tự sửa theo chế độ auto-repair an toàn.
-#   Chỉ khi chạy với --manual-confirm thì Discord mới gửi thông báo chi tiết.
-#   Discord là one-way (không nhận lệnh ngược) — xác nhận tự động sau timeout.
+#   Máº·c Ä‘á»‹nh hiá»‡n nay script CÃ" THá»‚ tá»± sá»­a theo cháº¿ Ä‘á»™ auto-repair an toÃ n.
+#   Chá»‰ khi cháº¡y vá»›i --manual-confirm thÃ¬ Discord má»›i gá»­i thÃ´ng bÃ¡o chi tiáº¿t.
+#   Discord lÃ  one-way (khÃ´ng nháº­n lá»‡nh ngÆ°á»£c) â€" xÃ¡c nháº­n tá»± Ä‘á»™ng sau timeout.
 #
-# TẠI SAO CẦN SCRIPT NÀY?
-#   Dữ liệu trong DB có thể bị lệch so với TradingView do nhiều lý do:
-#     - Kết nối mạng bị gián đoạn giữa chừng → nến bị thiếu
-#     - TradingView thỉnh thoảng điều chỉnh lại giá lịch sử (restatement)
-#     - Pipeline ghi đúng nhưng có lỗi làm tròn số
-#   Nếu dữ liệu sai, chiến lược giao dịch sẽ tính toán sai signal → nguy hiểm.
+# Táº I SAO Cáº¦N SCRIPT NÃ€Y-
+#   Dá»¯ liá»‡u trong DB cÃ³ thá»ƒ bá»‹ lá»‡ch so vá»›i TradingView do nhiá»u lÃ½ do:
+#     - Káº¿t ná»‘i máº¡ng bá»‹ giÃ¡n Ä‘oáº¡n giá»¯a chá»«ng â†’ náº¿n bá»‹ thiáº¿u
+#     - TradingView thá»‰nh thoáº£ng Ä‘iá»u chá»‰nh láº¡i giÃ¡ lá»‹ch sá»­ (restatement)
+#     - Pipeline ghi Ä‘Ãºng nhÆ°ng cÃ³ lá»—i lÃ m trÃ²n sá»‘
+#   Náº¿u dá»¯ liá»‡u sai, chiáº¿n lÆ°á»£c giao dá»‹ch sáº½ tÃ­nh toÃ¡n sai signal â†’ nguy hiá»ƒm.
 #
-# QUY TRÌNH 3 GIAI ĐOẠN (chỉ khi chạy thường, không có --dry-run):
+# QUY TRÃŒNH 3 GIAI ÄOáº N (chá»‰ khi cháº¡y thÆ°á»ng, khÃ´ng cÃ³ --dry-run):
 #
-#   Giai đoạn 1 — SCAN (quét, không sửa):
-#     Với mỗi cặp (symbol, timeframe):
-#       - Kéo N nến mới nhất từ TradingView (nguồn dữ liệu gốc)
-#       - Truy vấn đúng N nến đó trong database
-#       - So sánh từng số liệu OHLCV: nếu chênh > 0.01% → đánh dấu sai
-#     Kết quả: danh sách cặp có vấn đề theo core issue hoặc vượt ngưỡng mismatch hiện hành
+#   Giai Ä‘oáº¡n 1 â€" SCAN (quÃ©t, khÃ´ng sá»­a):
+#     Vá»›i má»—i cáº·p (symbol, timeframe):
+#       - KÃ©o N náº¿n má»›i nháº¥t tá»« TradingView (nguá»"n dá»¯ liá»‡u gá»‘c)
+#       - Truy váº¥n Ä‘Ãºng N náº¿n Ä‘Ã³ trong database
+#       - So sÃ¡nh tá»«ng sá»‘ liá»‡u OHLCV: náº¿u chÃªnh > 0.01% â†’ Ä‘Ã¡nh dáº¥u sai
+#     Káº¿t quáº£: danh sÃ¡ch cáº·p cÃ³ váº¥n Ä‘á» theo core issue hoáº·c vÆ°á»£t ngÆ°á»¡ng mismatch hiá»‡n hÃ nh
 #
-#   Giai đoạn 2 — CONFIRM (hỏi user):
-#     Gửi Discord mô tả chi tiết → đợi timeout (Discord one-way, không nhận phản hồi)
-#     Timeout 4 giờ, mặc định bỏ qua nếu không có phản hồi
+#   Giai Ä‘oáº¡n 2 â€" CONFIRM (há»i user):
+#     Gá»­i Discord mÃ´ táº£ chi tiáº¿t â†’ Ä‘á»£i timeout (Discord one-way, khÃ´ng nháº­n pháº£n há»"i)
+#     Timeout 4 giá», máº·c Ä‘á»‹nh bá» qua náº¿u khÃ´ng cÃ³ pháº£n há»"i
 #
-#   Giai đoạn 3 — REPAIR (sửa nếu user đồng ý):
-#     - Acquire lock 'checker_repair' (ngăn WS chạy ETL đồng thời)
-#     - Xóa nến sai → kéo lại từ TradingView → kiểm tra sau khi sửa
-#     - Release lock → WS tự động resume ETL đã hoãn
-#     - Gửi báo cáo kết quả lên Discord
+#   Giai Ä‘oáº¡n 3 â€" REPAIR (sá»­a náº¿u user Ä‘á»"ng Ã½):
+#     - Acquire lock 'checker_repair' (ngÄƒn WS cháº¡y ETL Ä‘á»"ng thá»i)
+#     - XÃ³a náº¿n sai â†’ kÃ©o láº¡i tá»« TradingView â†’ kiá»ƒm tra sau khi sá»­a
+#     - Release lock â†’ WS tá»± Ä‘á»™ng resume ETL Ä‘Ã£ hoÃ£n
+#     - Gá»­i bÃ¡o cÃ¡o káº¿t quáº£ lÃªn Discord
 #
-# CÁCH CHẠY THỦ CÔNG:
-#   python 04_checker.py                    # chạy scan + auto-repair an toàn (mặc định)
-#   python 04_checker.py --dry-run          # chỉ scan + báo cáo, không hỏi, không sửa
-#   python 04_checker.py --manual-confirm   # chỉ sửa khi Discord xác nhận (không tương tác, auto-confirm)
-#   python 04_checker.py --sym GOLD         # chỉ kiểm tra 1 symbol
-#   python 04_checker.py --tf H4            # chỉ kiểm tra 1 khung thời gian
-#   python 04_checker.py --threshold 0.05   # nâng ngưỡng sai lên 5% (mặc định 0.1%)
+# CÃCH CHáº Y THá»¦ CÃ"NG:
+#   python 04_checker.py                    # cháº¡y scan + auto-repair an toÃ n (máº·c Ä‘á»‹nh)
+#   python 04_checker.py --dry-run          # chá»‰ scan + bÃ¡o cÃ¡o, khÃ´ng há»i, khÃ´ng sá»­a
+#   python 04_checker.py --manual-confirm   # chá»‰ sá»­a khi Discord xÃ¡c nháº­n (khÃ´ng tÆ°Æ¡ng tÃ¡c, auto-confirm)
+#   python 04_checker.py --sym GOLD         # chá»‰ kiá»ƒm tra 1 symbol
+#   python 04_checker.py --tf H4            # chá»‰ kiá»ƒm tra 1 khung thá»i gian
+#   python 04_checker.py --threshold 0.05   # nÃ¢ng ngÆ°á»¡ng sai lÃªn 5% (máº·c Ä‘á»‹nh 0.1%)
 #
-# LỊCH CHẠY TỰ ĐỘNG:
-#   Task Scheduler (Windows) tự động gọi file này mỗi 3 ngày lúc 03:00 UTC
+# Lá»ŠCH CHáº Y Tá»° Äá»˜NG:
+#   Task Scheduler (Windows) tá»± Ä‘á»™ng gá»i file nÃ y má»—i 3 ngÃ y lÃºc 03:00 UTC
 #
-# KẾT QUẢ GỬI LÊN TELEGRAM:
-#   - Nếu sạch: "✅ X pairs — tất cả dữ liệu khớp"
-#   - Nếu có vấn đề: gửi câu hỏi /confirm_TOKEN để sửa
-#   - Sau khi sửa: "🔧 X pairs đã sửa xong / Y pairs lỗi persistent"
+# Káº¾T QUáº¢ Gá»¬I LÃŠN TELEGRAM:
+#   - Náº¿u sáº¡ch: "âœ… X pairs â€" táº¥t cáº£ dá»¯ liá»‡u khá»›p"
+#   - Náº¿u cÃ³ váº¥n Ä‘á»: gá»­i cÃ¢u há»i /confirm_TOKEN Ä‘á»ƒ sá»­a
+#   - Sau khi sá»­a: "ðŸ"§ X pairs Ä‘Ã£ sá»­a xong / Y pairs lá»—i persistent"
 # =============================================================================
 
 import argparse
@@ -121,27 +121,27 @@ from modules.db_connector import (
 )
 
 # =============================================================================
-# HẰNG SỐ CẤU HÌNH
+# Háº°NG Sá» Cáº¤U HÃŒNH
 # =============================================================================
 
-# Số nến kiểm tra mỗi lần cho từng TF (mỗi symbol).
-# M5/M15 lớn hơn vì muốn bao phủ ~10 ngày giao dịch (để đảm bảo
-# khi chạy mỗi 3 ngày vẫn có vùng chồng lấp với lần chạy trước).
+# Sá»‘ náº¿n kiá»ƒm tra má»—i láº§n cho tá»«ng TF (má»—i symbol).
+# M5/M15 lá»›n hÆ¡n vÃ¬ muá»‘n bao phá»§ ~10 ngÃ y giao dá»‹ch (Ä‘á»ƒ Ä‘áº£m báº£o
+# khi cháº¡y má»—i 3 ngÃ y váº«n cÃ³ vÃ¹ng chá»"ng láº¥p vá»›i láº§n cháº¡y trÆ°á»›c).
 CHECKER_N_BARS: dict[str, int] = {
-    "M5":  2000,   # ~7 ngày nến 5 phút
-    "M15": 2000,   # ~21 ngày nến 15 phút
-    "M30": 1500,   # ~31 ngày nến 30 phút
-    "M45": 1000,   # ~31 ngày nến 45 phút
-    "H1":  1000,   # ~42 ngày nến 1 giờ
-    "H2":  1000,   # ~83 ngày nến 2 giờ
-    "H3":  1000,   # ~125 ngày nến 3 giờ
-    "H4":  1000,   # ~167 ngày nến 4 giờ
-    "D1":   400,   # ~400 ngày
-    "W":    200,   # ~200 tuần
+    "M5":  2000,   # ~7 ngÃ y náº¿n 5 phÃºt
+    "M15": 2000,   # ~21 ngÃ y náº¿n 15 phÃºt
+    "M30": 1500,   # ~31 ngÃ y náº¿n 30 phÃºt
+    "M45": 1000,   # ~31 ngÃ y náº¿n 45 phÃºt
+    "H1":  1000,   # ~42 ngÃ y náº¿n 1 giá»
+    "H2":  1000,   # ~83 ngÃ y náº¿n 2 giá»
+    "H3":  1000,   # ~125 ngÃ y náº¿n 3 giá»
+    "H4":  1000,   # ~167 ngÃ y náº¿n 4 giá»
+    "D1":   400,   # ~400 ngÃ y
+    "W":    200,   # ~200 tuáº§n
 }
 
-# Số nến kiểm tra lại SAU KHI SỬA (để xác nhận sửa thành công).
-# Nhỏ hơn CHECKER_N_BARS để nhanh hơn — chỉ cần kiểm tra ngắn gọn.
+# Sá»‘ náº¿n kiá»ƒm tra láº¡i SAU KHI Sá»¬A (Ä‘á»ƒ xÃ¡c nháº­n sá»­a thÃ nh cÃ´ng).
+# Nhá» hÆ¡n CHECKER_N_BARS Ä‘á»ƒ nhanh hÆ¡n â€" chá»‰ cáº§n kiá»ƒm tra ngáº¯n gá»n.
 VERIFY_N_BARS = 200
 
 # Khi mismatch lon theo kieu missing/extra timeline, focused repair thuong khong
@@ -150,52 +150,52 @@ SYSTEMIC_RESET_RATE = 0.20
 SYSTEMIC_RESET_MISSING_FLOOR = 50
 SYSTEMIC_RESET_EXTRA_FLOOR = 20
 
-# Ngưỡng tỷ lệ sai cho phép cho nhóm mismatch tổng hợp.
-# 0.001 = 0.1%: tức nếu > 0.1% số nến trong cửa sổ kiểm tra bị mismatch thì cặp đó bị gắn cờ.
+# NgÆ°á»¡ng tá»· lá»‡ sai cho phÃ©p cho nhÃ³m mismatch tá»•ng há»£p.
+# 0.001 = 0.1%: tá»©c náº¿u > 0.1% sá»‘ náº¿n trong cá»­a sá»• kiá»ƒm tra bá»‹ mismatch thÃ¬ cáº·p Ä‘Ã³ bá»‹ gáº¯n cá».
 DEFAULT_THRESHOLD = 0.001
 # Aggregate threshold only: core issues (missing / OHLC wrong / extra) bypass it.
 
-# Sai số tương đối cho phép khi so sánh giá OHLCV:
-# abs(giá_TV - giá_DB) / giá_TV phải < 0.01% thì mới coi là "khớp".
-# Cần thiết vì số thực trong máy tính không bao giờ hoàn toàn bằng nhau.
+# Sai sá»‘ tÆ°Æ¡ng Ä‘á»‘i cho phÃ©p khi so sÃ¡nh giÃ¡ OHLCV:
+# abs(giÃ¡_TV - giÃ¡_DB) / giÃ¡_TV pháº£i < 0.01% thÃ¬ má»›i coi lÃ  "khá»›p".
+# Cáº§n thiáº¿t vÃ¬ sá»‘ thá»±c trong mÃ¡y tÃ­nh khÃ´ng bao giá» hoÃ n toÃ n báº±ng nhau.
 OHLCV_REL_TOL = 1e-4   # 0.01%
 VOLUME_REL_TOL = 5e-3  # 0.5%
 VOLUME_ABS_TOL = 25.0  # TV volume co the dao dong nho giua 2 lan pull
 
-# Số vòng sửa tối đa trước khi kết luận cặp đó "lỗi cố định".
-# Vòng 0: quét + sửa lần 1.
-# Vòng 1: quét lại + sửa lần 2.
-# Vòng 2: quét lần cuối, nếu vẫn sai → đánh dấu PERSISTENT_FAILURE.
+# Sá»‘ vÃ²ng sá»­a tá»‘i Ä‘a trÆ°á»›c khi káº¿t luáº­n cáº·p Ä‘Ã³ "lá»—i cá»‘ Ä‘á»‹nh".
+# VÃ²ng 0: quÃ©t + sá»­a láº§n 1.
+# VÃ²ng 1: quÃ©t láº¡i + sá»­a láº§n 2.
+# VÃ²ng 2: quÃ©t láº§n cuá»‘i, náº¿u váº«n sai â†’ Ä‘Ã¡nh dáº¥u PERSISTENT_FAILURE.
 MAX_REPAIR_ROUNDS = 3
 
-# Danh sách khung thời gian cần kiểm tra (từ H4 xuống M5).
-# Không kiểm tra W và D1 vì chúng ít thay đổi và TradingView
-# rất hiếm khi điều chỉnh lại nến tuần/ngày.
+# Danh sÃ¡ch khung thá»i gian cáº§n kiá»ƒm tra (tá»« H4 xuá»‘ng M5).
+# KhÃ´ng kiá»ƒm tra W vÃ  D1 vÃ¬ chÃºng Ã­t thay Ä‘á»•i vÃ  TradingView
+# ráº¥t hiáº¿m khi Ä‘iá»u chá»‰nh láº¡i náº¿n tuáº§n/ngÃ y.
 TFS_TO_CHECK = ["W", "D1", "H4", "H3", "H2", "H1", "M45", "M30", "M15", "M5"]
 
-# Thời gian nghỉ giữa mỗi lần gọi API TradingView (giây).
-# Tránh bị TradingView phát hiện là bot và giới hạn tốc độ (rate-limit).
+# Thá»i gian nghá»‰ giá»¯a má»—i láº§n gá»i API TradingView (giÃ¢y).
+# TrÃ¡nh bá»‹ TradingView phÃ¡t hiá»‡n lÃ  bot vÃ  giá»›i háº¡n tá»‘c Ä‘á»™ (rate-limit).
 TV_SLEEP_BETWEEN_CALLS = 0.5
 
-# Thời gian nghỉ dài khi TradingView trả về rỗng 3 lần liên tiếp.
-# Khả năng cao là đang bị rate-limit → nghỉ 60 giây để TV "nguội xuống".
+# Thá»i gian nghá»‰ dÃ i khi TradingView tráº£ vá» rá»—ng 3 láº§n liÃªn tiáº¿p.
+# Kháº£ nÄƒng cao lÃ  Ä‘ang bá»‹ rate-limit â†’ nghá»‰ 60 giÃ¢y Ä‘á»ƒ TV "nguá»™i xuá»‘ng".
 TV_THROTTLE_SLEEP = 60
 
-# DST precheck chỉ cần một mẫu nhỏ nhưng phải đủ rộng để phát hiện drift hàng loạt.
-# Giữ mục tiêu quanh 18 pairs giúp checker khởi động nhanh hơn nhiều mà vẫn đạt
-# ngưỡng tối thiểu 15 pairs để heuristic còn ý nghĩa.
+# DST precheck chá»‰ cáº§n má»™t máº«u nhá» nhÆ°ng pháº£i Ä‘á»§ rá»™ng Ä‘á»ƒ phÃ¡t hiá»‡n drift hÃ ng loáº¡t.
+# Giá»¯ má»¥c tiÃªu quanh 18 pairs giÃºp checker khá»Ÿi Ä‘á»™ng nhanh hÆ¡n nhiá»u mÃ  váº«n Ä‘áº¡t
+# ngÆ°á»¡ng tá»‘i thiá»ƒu 15 pairs Ä‘á»ƒ heuristic cÃ²n Ã½ nghÄ©a.
 DST_PRECHECK_TARGET_PAIRS = 18
 
-# Circuit breaker: nếu auth fail liên tiếp vượt ngưỡng này → ngừng checker.
-# Mục đích: tránh tiếp tục gọi TV khi IP đã bị block (HTTP 403), làm tệ hơn.
-# 5 lần ≈ ~40 giây (sau throttle) → đủ để phân biệt lỗi tạm thời vs. block thật.
+# Circuit breaker: náº¿u auth fail liÃªn tiáº¿p vÆ°á»£t ngÆ°á»¡ng nÃ y â†’ ngá»«ng checker.
+# Má»¥c Ä‘Ã­ch: trÃ¡nh tiáº¿p tá»¥c gá»i TV khi IP Ä‘Ã£ bá»‹ block (HTTP 403), lÃ m tá»‡ hÆ¡n.
+# 5 láº§n â‰ˆ ~40 giÃ¢y (sau throttle) â†’ Ä‘á»§ Ä‘á»ƒ phÃ¢n biá»‡t lá»—i táº¡m thá»i vs. block tháº­t.
 MAX_AUTH_CONSECUTIVE_FAIL = 5
 
 
-# ─── Helper: build Interval map (lazy import to avoid circular import) ───────
+# â"€â"€â"€ Helper: build Interval map (lazy import to avoid circular import) â"€â"€â"€â"€â"€â"€â"€
 
 def _build_interval_map() -> dict:
-    """Build tf_code → tvDatafeed.Interval mapping. Called once in main()."""
+    """Build tf_code â†’ tvDatafeed.Interval mapping. Called once in main()."""
     from tvDatafeed import Interval
     return {
         "W":   Interval.in_weekly,
@@ -212,7 +212,7 @@ def _build_interval_map() -> dict:
 
 
 # =============================================================================
-# SO SÁNH DỮ LIỆU OHLCV — Trái tim của quá trình kiểm tra
+# SO SÃNH Dá»® LIá»†U OHLCV â€" TrÃ¡i tim cá»§a quÃ¡ trÃ¬nh kiá»ƒm tra
 # =============================================================================
 
 def _configure_console_encoding() -> None:
@@ -246,22 +246,22 @@ def _mismatch_flags(tv_vals: tuple, db_vals: tuple) -> tuple[bool, bool]:
 
 def _ohlcv_match(tv_vals: tuple, db_vals: tuple) -> bool:
     """
-    Kiểm tra tuple OHLCV có khớp nhau không.
+    Kiá»ƒm tra tuple OHLCV cÃ³ khá»›p nhau khÃ´ng.
 
-    Không so sánh bằng nhau tuyệt đối vì số thực trong máy tính có thể
-    có sai số nhỏ do làm tròn. Thay vào đó dùng sai số tương đối:
-      |giá_TV - giá_DB| / giá_TV < 0.01%  →  coi là khớp
+    KhÃ´ng so sÃ¡nh báº±ng nhau tuyá»‡t Ä‘á»‘i vÃ¬ sá»‘ thá»±c trong mÃ¡y tÃ­nh cÃ³ thá»ƒ
+    cÃ³ sai sá»‘ nhá» do lÃ m trÃ²n. Thay vÃ o Ä‘Ã³ dÃ¹ng sai sá»‘ tÆ°Æ¡ng Ä‘á»‘i:
+      |giÃ¡_TV - giÃ¡_DB| / giÃ¡_TV < 0.01%  â†’  coi lÃ  khá»›p
 
-    Dùng floor 1e-6 để tránh false-positive khi giá TV = 0 (tránh divide-by-zero).
-    Không dùng max(OHLCV_REL_TOL, abs(a)*OHLCV_REL_TOL) vì với giá rất nhỏ
-    (VD: EURUSD nhỏ, crypto) tolerance tuyệt đối 1e-4 sẽ che khuất sai số 100%.
+    DÃ¹ng floor 1e-6 Ä‘á»ƒ trÃ¡nh false-positive khi giÃ¡ TV = 0 (trÃ¡nh divide-by-zero).
+    KhÃ´ng dÃ¹ng max(OHLCV_REL_TOL, abs(a)*OHLCV_REL_TOL) vÃ¬ vá»›i giÃ¡ ráº¥t nhá»
+    (VD: EURUSD nhá», crypto) tolerance tuyá»‡t Ä‘á»‘i 1e-4 sáº½ che khuáº¥t sai sá»‘ 100%.
 
-    Ví dụ:
-      TV = 1900.1234, DB = 1900.1235 → chênh 0.0001/1900 ≈ 0% → KHỚP
-      TV = 1900.0000, DB = 1902.0000 → chênh 2/1900 = 0.1% → KHÔNG KHỚP
-      TV = 0.00010,   DB = 0.00020   → chênh 100% → KHÔNG KHỚP (trường hợp cũ bỏ sót)
+    VÃ­ dá»¥:
+      TV = 1900.1234, DB = 1900.1235 â†’ chÃªnh 0.0001/1900 â‰ˆ 0% â†’ KHá»šP
+      TV = 1900.0000, DB = 1902.0000 â†’ chÃªnh 2/1900 = 0.1% â†’ KHÃ"NG KHá»šP
+      TV = 0.00010,   DB = 0.00020   â†’ chÃªnh 100% â†’ KHÃ"NG KHá»šP (trÆ°á»ng há»£p cÅ© bá» sÃ³t)
 
-    Trả về True nếu tất cả 4 giá trị đều khớp, False nếu bất kỳ cái nào sai.
+    Tráº£ vá» True náº¿u táº¥t cáº£ 4 giÃ¡ trá»‹ Ä‘á»u khá»›p, False náº¿u báº¥t ká»³ cÃ¡i nÃ o sai.
     """
     ohlc_bad, volume_bad = _mismatch_flags(tv_vals, db_vals)
     return not (ohlc_bad or volume_bad)
@@ -269,32 +269,32 @@ def _ohlcv_match(tv_vals: tuple, db_vals: tuple) -> bool:
 
 def _compare(tv_dict: dict, db_dict: dict) -> tuple[set, dict, dict, set, float]:
     """
-    So sánh dữ liệu TradingView với dữ liệu trong DB cho một cặp (symbol, TF).
+    So sÃ¡nh dá»¯ liá»‡u TradingView vá»›i dá»¯ liá»‡u trong DB cho má»™t cáº·p (symbol, TF).
 
-    Tham số:
-      tv_dict — dữ liệu từ TradingView: {timestamp: (O, H, L, C, V)}
-      db_dict — dữ liệu từ DB:          {timestamp: (O, H, L, C, V)}
+    Tham sá»‘:
+      tv_dict â€" dá»¯ liá»‡u tá»« TradingView: {timestamp: (O, H, L, C, V)}
+      db_dict â€" dá»¯ liá»‡u tá»« DB:          {timestamp: (O, H, L, C, V)}
 
-    Trả về 3 giá trị:
-      missing       — set timestamp có trong TV nhưng KHÔNG có trong DB (thiếu nến)
-      mismatched    — dict {timestamp: (giá_TV, giá_DB)} nến có nhưng giá sai
-      mismatch_rate — tỷ lệ = (thiếu + sai) / tổng_nến_TV (0.0 = hoàn hảo, 1.0 = sai hết)
+    Tráº£ vá» 3 giÃ¡ trá»‹:
+      missing       â€" set timestamp cÃ³ trong TV nhÆ°ng KHÃ"NG cÃ³ trong DB (thiáº¿u náº¿n)
+      mismatched    â€" dict {timestamp: (giÃ¡_TV, giÃ¡_DB)} náº¿n cÃ³ nhÆ°ng giÃ¡ sai
+      mismatch_rate â€" tá»· lá»‡ = (thiáº¿u + sai) / tá»•ng_náº¿n_TV (0.0 = hoÃ n háº£o, 1.0 = sai háº¿t)
 
-    Ví dụ kết quả:
-      missing = {datetime(2024,1,15,8,0), ...}  # 2 nến thiếu
-      mismatched = {datetime(2024,1,14,16,0): ((1900.1, ...), (1890.2, ...))}  # 1 nến sai giá
-      rate = 3/1000 = 0.003 = 0.3%  → cao hơn ngưỡng mặc định 0.1% → cần xem xét sửa
+    VÃ­ dá»¥ káº¿t quáº£:
+      missing = {datetime(2024,1,15,8,0), ...}  # 2 náº¿n thiáº¿u
+      mismatched = {datetime(2024,1,14,16,0): ((1900.1, ...), (1890.2, ...))}  # 1 náº¿n sai giÃ¡
+      rate = 3/1000 = 0.003 = 0.3%  â†’ cao hÆ¡n ngÆ°á»¡ng máº·c Ä‘á»‹nh 0.1% â†’ cáº§n xem xÃ©t sá»­a
     """
     if not tv_dict:
         return set(), {}, {}, set(), 0.0
 
     tv_keys = set(tv_dict)
     db_keys = set(db_dict)
-    # Tìm nến có trong TV nhưng không có trong DB (thiếu)
+    # TÃ¬m náº¿n cÃ³ trong TV nhÆ°ng khÃ´ng cÃ³ trong DB (thiáº¿u)
     missing = tv_keys - db_keys
-    # Tìm nến có trong DB nhưng không có trong TV (thừa / sai timeline)
+    # TÃ¬m náº¿n cÃ³ trong DB nhÆ°ng khÃ´ng cÃ³ trong TV (thá»«a / sai timeline)
     extra = db_keys - tv_keys
-    # Tìm nến có ở cả 2 nơi nhưng giá trị không khớp (sai)
+    # TÃ¬m náº¿n cÃ³ á»Ÿ cáº£ 2 nÆ¡i nhÆ°ng giÃ¡ trá»‹ khÃ´ng khá»›p (sai)
     mismatched = {}
     volume_only = {}
     for dt in tv_keys & db_keys:
@@ -303,13 +303,13 @@ def _compare(tv_dict: dict, db_dict: dict) -> tuple[set, dict, dict, set, float]
             mismatched[dt] = (tv_dict[dt], db_dict[dt])
         elif volume_bad:
             volume_only[dt] = (tv_dict[dt], db_dict[dt])
-    # Tỷ lệ sai = (thiếu + sai + thừa) / max(TV, DB)
+    # Tá»· lá»‡ sai = (thiáº¿u + sai + thá»«a) / max(TV, DB)
     denom = max(len(tv_dict), len(db_dict), 1)
     rate = (len(missing) + len(mismatched) + len(extra)) / denom
     return missing, mismatched, volume_only, extra, rate
 
 
-# ─── DB helpers ──────────────────────────────────────────────────────────────
+# â"€â"€â"€ DB helpers â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 def _query_db_bars(symbol_id: int, tf_code: str,
                    from_dt: datetime, to_dt: datetime) -> dict:
@@ -343,7 +343,7 @@ def _query_db_bars(symbol_id: int, tf_code: str,
         conn.close()
 
 
-# ─── TV helpers ──────────────────────────────────────────────────────────────
+# â"€â"€â"€ TV helpers â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 def _pull_tv_bars(tv, sym: dict, tf_code: str, n_bars: int,
                   interval_map: dict,
@@ -365,7 +365,7 @@ def _pull_tv_bars(tv, sym: dict, tf_code: str, n_bars: int,
             n_bars   = n_bars + 5,  # extra buffer; last bar discarded
         )
     except Exception as e:
-        logger.error("Lỗi kéo dữ liệu TradingView %s %s: %s", sym["tv_symbol"], tf_code, e)
+        logger.error("TradingView pull failed for %s %s: %s", sym["tv_symbol"], tf_code, e)
         return None
 
     if df is None or df.empty:
@@ -387,7 +387,7 @@ def _pull_tv_bars(tv, sym: dict, tf_code: str, n_bars: int,
     future_cutoff = now_utc() + timedelta(minutes=1)
     dropped_future = 0
     for dt_idx, row in df.iterrows():
-        # Normalize: pandas Timestamp → naive Python datetime (UTC)
+        # Normalize: pandas Timestamp â†’ naive Python datetime (UTC)
         dt = dt_idx.to_pydatetime()
         if dt.tzinfo is not None:
             dt = dt.replace(tzinfo=None)
@@ -399,14 +399,14 @@ def _pull_tv_bars(tv, sym: dict, tf_code: str, n_bars: int,
                       float(row.get("volume", 0.0) or 0.0))
     if dropped_future:
         logger.warning(
-            "  TV scan %s %s: dropped %d future bar(s) beyond %s",
-            sym["tv_symbol"], tf_code, dropped_future,
+            "  Dropped %d future bars before close - %s %s (cutoff: %s)",
+            dropped_future, sym["tv_symbol"], tf_code,
             future_cutoff.strftime("%Y-%m-%d %H:%M:%S"),
         )
     return result if result else None
 
 
-# ─── Scan & Repair ───────────────────────────────────────────────────────────
+# â"€â"€â"€ Scan & Repair â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 def _scan_pair(tv, sym: dict, tf_code: str, n_bars: int,
                interval_map: dict, logger: logging.Logger) -> dict | None:
@@ -456,7 +456,7 @@ def _filter_unstable_volume_mismatches(tv, sym: dict, tf_code: str, n_bars: int,
     second_tv = _pull_tv_bars(tv, sym, tf_code, n_bars, interval_map, logger)
     if not second_tv:
         logger.warning(
-            "  %s/%s: second TV pull unavailable â€” ignoring %d volume-only mismatch(es)",
+            "  %s/%s: second fetch failed - skip %d volume-only bars",
             sym["tv_symbol"], tf_code, len(volume_only),
         )
         return {dt: pair for dt, pair in mismatched.items() if dt not in volume_only}
@@ -486,7 +486,7 @@ def _filter_unstable_volume_mismatches(tv, sym: dict, tf_code: str, n_bars: int,
 
     if unstable:
         logger.info(
-            "  %s/%s: filtered %d unstable volume-only mismatch(es); confirmed %d",
+            "  %s/%s: filtered %d unstable volume-only bars; confirmed %d bars are really wrong",
             sym["tv_symbol"], tf_code, unstable, confirmed,
         )
     return filtered
@@ -494,8 +494,8 @@ def _filter_unstable_volume_mismatches(tv, sym: dict, tf_code: str, n_bars: int,
 
 def _issue_window(tf_code: str, issue_times: list[datetime]) -> tuple[datetime, datetime]:
     """
-    Tạo cửa sổ repair hẹp quanh các điểm lỗi.
-    Mở rộng thêm 2 bar mỗi phía để tránh bỏ sót bar lân cận khi TV restate.
+    Táº¡o cá»­a sá»• repair háº¹p quanh cÃ¡c Ä‘iá»ƒm lá»—i.
+    Má»Ÿ rá»™ng thÃªm 2 bar má»—i phÃ­a Ä‘á»ƒ trÃ¡nh bá» sÃ³t bar lÃ¢n cáº­n khi TV restate.
     """
     tf_minutes = TF_MINUTES[tf_code]
     pad = timedelta(minutes=tf_minutes * 2)
@@ -565,8 +565,8 @@ def _choose_repair_strategy(sym: dict, tf_code: str, scan: dict) -> tuple[str, s
 
 def _estimate_repair_n_bars(tf_code: str, start_dt: datetime) -> int:
     """
-    Ước tính số bars cần pull từ TradingView để bao phủ cửa sổ lỗi.
-    TV API hiện chỉ hỗ trợ get_hist(n_bars), nên ta kéo đủ từ điểm lỗi sớm nhất tới hiện tại.
+    Æ¯á»›c tÃ­nh sá»‘ bars cáº§n pull tá»« TradingView Ä‘á»ƒ bao phá»§ cá»­a sá»• lá»—i.
+    TV API hiá»‡n chá»‰ há»— trá»£ get_hist(n_bars), nÃªn ta kÃ©o Ä‘á»§ tá»« Ä‘iá»ƒm lá»—i sá»›m nháº¥t tá»›i hiá»‡n táº¡i.
     """
     tf_minutes = max(TF_MINUTES[tf_code], 1)
     gap_minutes = max(0.0, (now_utc() - start_dt).total_seconds() / 60)
@@ -577,7 +577,7 @@ def _estimate_repair_n_bars(tf_code: str, start_dt: datetime) -> int:
 
 def _query_bar_times(symbol_id: int, tf_code: str,
                      from_dt: datetime, to_dt: datetime) -> list[datetime]:
-    """Lấy danh sách BarTime trong Fact cho một cửa sổ repair cụ thể."""
+    """Láº¥y danh sÃ¡ch BarTime trong Fact cho má»™t cá»­a sá»• repair cá»¥ thá»ƒ."""
     conn = None
     try:
         conn = get_connection()
@@ -608,13 +608,13 @@ def _repair_direct_window(tv, sym: dict, tf_code: str, issue_times: list[datetim
                           reason: str,
                           delete_times: list[datetime] | None = None) -> bool:
     """
-    Auto-repair direct TF bằng focused repull:
-      1. Stage lại đúng cửa sổ chứa điểm lỗi.
-      2. Xóa bars hiện có trong cửa sổ đó khỏi Fact.
-      3. ETL từ staging vào Fact.
+    Auto-repair direct TF báº±ng focused repull:
+      1. Stage láº¡i Ä‘Ãºng cá»­a sá»• chá»©a Ä‘iá»ƒm lá»—i.
+      2. XÃ³a bars hiá»‡n cÃ³ trong cá»­a sá»• Ä‘Ã³ khá»i Fact.
+      3. ETL tá»« staging vÃ o Fact.
     """
     if not issue_times:
-        logger.warning("  Không có thời điểm lỗi để sửa cho %s %s (%s)", sym["tv_symbol"], tf_code, reason)
+        logger.warning("  No issue time found to repair for %s %s (%s)", sym["tv_symbol"], tf_code, reason)
         return True
 
     interval = interval_map[tf_code]
@@ -625,13 +625,12 @@ def _repair_direct_window(tv, sym: dict, tf_code: str, issue_times: list[datetim
     n_bars = _estimate_repair_n_bars(tf_code, start_dt)
 
     logger.info(
-        "  Focused repair %s %s (%s): window=%s -> %s | pull=%d bars",
+        "  [FIX] %s %s (%s): window %s -> %s | pull %d bars",
         label, tf_code, reason,
         start_dt.strftime("%Y-%m-%d %H:%M:%S"),
         end_dt.strftime("%Y-%m-%d %H:%M:%S"),
         n_bars,
     )
-
     pull_attempts = [n_bars]
     full_pull_n_bars = FULL_N_BARS.get(tf_code)
     if full_pull_n_bars and full_pull_n_bars > n_bars:
@@ -652,14 +651,14 @@ def _repair_direct_window(tv, sym: dict, tf_code: str, issue_times: list[datetim
         if staged >= 0:
             if attempt_idx > 1:
                 logger.info(
-                    "  Focused re-pull recovered on attempt %d/%d — %s %s (%s)",
+                    "  Repull succeeded on attempt %d/%d - %s %s (%s)",
                     attempt_idx, len(pull_attempts), label, tf_code, reason,
                 )
             break
 
         if attempt_idx < len(pull_attempts):
             logger.warning(
-                "  Focused re-pull attempt %d/%d failed — widening pull to %d bars for %s %s (%s)",
+                "  Attempt %d/%d failed - expand pull window to %d bars for %s %s (%s)",
                 attempt_idx, len(pull_attempts), pull_attempts[attempt_idx],
                 label, tf_code, reason,
             )
@@ -667,7 +666,7 @@ def _repair_direct_window(tv, sym: dict, tf_code: str, issue_times: list[datetim
 
     if staged < 0:
         logger.error(
-            "  Focused re-pull FAILED for %s %s (%s) — Fact untouched",
+            "  Repull FAILED for %s %s (%s) - database unchanged",
             label, tf_code, reason,
         )
         return False
@@ -675,7 +674,7 @@ def _repair_direct_window(tv, sym: dict, tf_code: str, issue_times: list[datetim
     targeted_delete_times = sorted(set(delete_times or []))
     deleted = delete_ohlcv_bars(sym_id, tf_code, targeted_delete_times) if targeted_delete_times else 0
     logger.info(
-        "  Deleted %d Fact bars in focused window — %s %s (%s)",
+        "  [DELETE] %d mismatched bars in repair window - %s %s (%s)",
         deleted, label, tf_code, reason,
     )
 
@@ -685,27 +684,27 @@ def _repair_direct_window(tv, sym: dict, tf_code: str, issue_times: list[datetim
         try:
             etl_inserted = run_etl_direct(sym_id, tf_code, staging)
             logger.info(
-                "  ETL: +%d bars inserted into Fact — %s %s (%s)",
+                "  [ETL] +%d bars written to database - %s %s (%s)",
                 etl_inserted, label, tf_code, reason,
             )
             break
         except Exception as e:
             if etl_attempt == _MAX_ETL_RETRIES:
                 logger.critical(
-                    "  ETL FAILED sau %d lần thử — gap tồn tại trong Fact! %s %s (%s): %s",
+                    "  ETL FAILED after %d attempts - gap trong DB remains in Fact! %s %s (%s): %s",
                     _MAX_ETL_RETRIES, label, tf_code, reason, e,
                 )
                 try:
                     from _discord import tg_send
                     tg_send(
-                        f"🚨 ETL FAILED {label}/{tf_code} sau {_MAX_ETL_RETRIES} retries "
-                        f"({reason}) — gap trong DB!\n`{e}`"
+                        f"ETL FAILED {label}/{tf_code} after {_MAX_ETL_RETRIES} attempts "
+                        f"({reason}) - gap trong DB remains!\n<code>{e}</code>"
                     )
                 except Exception:
                     pass
                 return False
             logger.warning(
-                "  ETL attempt %d/%d failed — retry... %s %s (%s): %s",
+                "  ETL attempt %d/%d failed - retrying... %s %s (%s): %s",
                 etl_attempt, _MAX_ETL_RETRIES, label, tf_code, reason, e,
             )
             time.sleep(2)
@@ -716,41 +715,39 @@ def _repair_pair(tv, sym: dict, tf_code: str, scan: dict,
                  interval_map: dict, logger: logging.Logger,
                  repair_round: int = 0) -> bool:
     """
-    Repair one (symbol, TF) pair với thứ tự an toàn — tránh mất bar vĩnh viễn.
+    Repair one (symbol, TF) pair vá»›i thá»© tá»± an toÃ n â€" trÃ¡nh máº¥t bar vÄ©nh viá»…n.
 
-    Thứ tự mới (safe):
-      1. Xóa staging cũ (tạm thời, an toàn — không ảnh hưởng Fact)
-      2. Kéo data mới từ TV vào Staging TRƯỚC (skip_etl=True — chưa đụng Fact)
-         → Nếu bước này thất bại: Fact vẫn nguyên vẹn, không mất bar nào
-      3. CHỈ sau khi staging thành công: xóa bars sai khỏi Fact
-         → Nếu bước này thất bại: staging vẫn có data đúng, có thể retry ETL
-      4. Chạy ETL staging → Fact để insert bars mới (missing + đã xóa ở bước 3)
+    Thá»© tá»± má»›i (safe):
+      1. XÃ³a staging cÅ© (táº¡m thá»i, an toÃ n â€" khÃ´ng áº£nh hÆ°á»Ÿng Fact)
+      2. KÃ©o data má»›i tá»« TV vÃ o Staging TRÆ¯á»šC (skip_etl=True â€" chÆ°a Ä‘á»¥ng Fact)
+         â†’ Náº¿u bÆ°á»›c nÃ y tháº¥t báº¡i: Fact váº«n nguyÃªn váº¹n, khÃ´ng máº¥t bar nÃ o
+      3. CHá»ˆ sau khi staging thÃ nh cÃ´ng: xÃ³a bars sai khá»i Fact
+         â†’ Náº¿u bÆ°á»›c nÃ y tháº¥t báº¡i: staging váº«n cÃ³ data Ä‘Ãºng, cÃ³ thá»ƒ retry ETL
+      4. Cháº¡y ETL staging â†’ Fact Ä‘á»ƒ insert bars má»›i (missing + Ä‘Ã£ xÃ³a á»Ÿ bÆ°á»›c 3)
 
-    Thứ tự cũ (nguy hiểm):
-      Xóa Fact trước → kéo TV sau → nếu TV fail: mất bar vĩnh viễn.
+    Thá»© tá»± cÅ© (nguy hiá»ƒm):
+      XÃ³a Fact trÆ°á»›c â†’ kÃ©o TV sau â†’ náº¿u TV fail: máº¥t bar vÄ©nh viá»…n.
 
-    Returns True nếu toàn bộ quá trình thành công.
+    Returns True náº¿u toÃ n bá»™ quÃ¡ trÃ¬nh thÃ nh cÃ´ng.
     """
     strategy, why = _choose_repair_strategy(sym, tf_code, scan)
     if strategy == "focused" and repair_round >= 1:
         strategy = "full_repull"
-        why = f"focused repair failed verify in round {repair_round}; escalating to full repull"
+        why = f"narrow repair window did not pass confirmation at round {repair_round}; switching to full re-pull"
+
     if strategy == "full_repull":
-        logger.warning(
-            "  Escalating %s/%s to SAFE FULL REPULL: %s",
-            sym["tv_symbol"], tf_code, why,
-        )
+        logger.warning("  [ESCALATE] %s/%s -> safe full re-pull: %s", sym["tv_symbol"], tf_code, why)
         n_deleted, n_inserted = repull_full_symbol(
             tv, sym, tf_code, interval_map[tf_code], logger
         )
         if n_inserted < 0:
             logger.error(
-                "  SAFE FULL REPULL FAILED %s/%s: deleted=%d inserted=%d",
+                "  Full repull FAILED %s/%s: deleted=%d inserted=%d",
                 sym["tv_symbol"], tf_code, n_deleted, n_inserted,
             )
             return False
         logger.info(
-            "  SAFE FULL REPULL OK %s/%s: deleted=%d inserted=%d",
+            "  Full repull SUCCEEDED %s/%s: deleted=%d inserted=%d",
             sym["tv_symbol"], tf_code, n_deleted, n_inserted,
         )
         return True
@@ -769,9 +766,9 @@ def _verify_pair(tv, sym: dict, tf_code: str,
                  interval_map: dict, logger: logging.Logger,
                  n_bars: int | None = None) -> tuple[bool, float]:
     """
-    Post-repair verification. Mặc định dùng CHECKER_N_BARS[tf_code] (cùng depth với scan)
-    để không bỏ sót lỗi cũ nằm ngoài VERIFY_N_BARS=200.
-    Truyền n_bars=VERIFY_N_BARS để dùng quick scan nếu cần tốc độ.
+    Post-repair verification. Máº·c Ä‘á»‹nh dÃ¹ng CHECKER_N_BARS[tf_code] (cÃ¹ng depth vá»›i scan)
+    Ä‘á»ƒ khÃ´ng bá» sÃ³t lá»—i cÅ© náº±m ngoÃ i VERIFY_N_BARS=200.
+    Truyá»n n_bars=VERIFY_N_BARS Ä‘á»ƒ dÃ¹ng quick scan náº¿u cáº§n tá»‘c Ä‘á»™.
     Returns (is_clean, mismatch_rate).
     """
     bars = n_bars if n_bars is not None else CHECKER_N_BARS.get(tf_code, VERIFY_N_BARS)
@@ -781,7 +778,7 @@ def _verify_pair(tv, sym: dict, tf_code: str,
     return scan["rate"] == 0.0, scan["rate"]
 
 
-# ─── Main orchestrator ───────────────────────────────────────────────────────
+# â"€â"€â"€ Main orchestrator â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 def _log_section(logger: logging.Logger, title: str) -> None:
     logger.info("")
@@ -834,7 +831,7 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
     persistent_fails: list[dict] = []
     volume_advisory_pairs = 0
     volume_advisory_bars = 0
-    dry_issues:       list[dict] = []  # Populated in dry_run mode: pairs có core issue hoặc rate > threshold
+    dry_issues:       list[dict] = []  # Populated in dry_run mode: pairs cÃ³ core issue hoáº·c rate > threshold
 
     repaired_sym_ids: set[int] = set()
 
@@ -842,15 +839,16 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
     tv_consecutive_fail = 0
     auth_consecutive_fail = 0
 
-    # Thu thập scan rate round 0 để phát hiện DST transition
+    # Thu tháº­p scan rate round 0 Ä‘á»ƒ phÃ¡t hiá»‡n DST transition
     round0_rates: dict[tuple, float] = {}   # {(tv_symbol, tf_code): rate}
 
     _log_section(
         logger,
-        f"CHECKER START | pairs={total_pairs} | dry={dry_run} | threshold={threshold * 100:.1f}%",
+        f"START CHECKER | pairs={total_pairs} | dry_run={dry_run} | threshold={threshold * 100:.1f}%",
+
     )
 
-    # ── Repair loop ──────────────────────────────────────────────────────────
+    # â"€â"€ Repair loop â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     # Start with all pairs; each round carries forward only the still-failing ones.
     pending: list[tuple[dict, str]] = list(pending_pairs) if pending_pairs is not None else [
         (sym, tf) for sym in symbols for tf in tfs
@@ -861,27 +859,28 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
             break
 
         is_final_round = (repair_round == MAX_REPAIR_ROUNDS - 1)
-        round_name = "QUÉT LẦN ĐẦU" if repair_round == 0 else f"THỬ LẠI {repair_round}"
-        logger.info("VÒNG %-12s | đang chờ=%d", round_name, len(pending))
+        round_name = "INITIAL SCAN" if repair_round == 0 else f"RETRY {repair_round}"
+
+        logger.info("ROUND %-12s | pending=%d", round_name, len(pending))
 
         still_failing: list[tuple[dict, str]] = []
-        prev_symbol: str | None = None  # theo dõi symbol trước để thêm sleep khi đổi symbol
+        prev_symbol: str | None = None  # theo dÃµi symbol trÆ°á»›c Ä‘á»ƒ thÃªm sleep khi Ä‘á»•i symbol
 
         for idx, (sym, tf_code) in enumerate(pending, 1):
             label = f"{sym['tv_symbol']}/{tf_code}"
 
             if idx % 50 == 1:
-                logger.info("TIẾN ĐỘ %03d/%03d | %s", idx, len(pending), label)
+                logger.info("PROGRESS %03d/%03d | %s", idx, len(pending), label)
 
-            # Nghỉ giữa các symbol (không chỉ giữa TF) để giảm rate với TradingView.
-            # 0.5s giữa các TF là đủ, nhưng khi chuyển sang symbol mới thì dùng
-            # sleep_for() (5s hoặc 10s cho GOLD) để tránh bị phát hiện là bot.
+            # Nghá»‰ giá»¯a cÃ¡c symbol (khÃ´ng chá»‰ giá»¯a TF) Ä‘á»ƒ giáº£m rate vá»›i TradingView.
+            # 0.5s giá»¯a cÃ¡c TF lÃ  Ä‘á»§, nhÆ°ng khi chuyá»ƒn sang symbol má»›i thÃ¬ dÃ¹ng
+            # sleep_for() (5s hoáº·c 10s cho GOLD) Ä‘á»ƒ trÃ¡nh bá»‹ phÃ¡t hiá»‡n lÃ  bot.
             if sym["tv_symbol"] != prev_symbol:
                 if prev_symbol is not None:
                     sleep_for(sym["tv_symbol"])
                 prev_symbol = sym["tv_symbol"]
 
-            # ── Pull & scan ──────────────────────────────────────────────────
+            # â"€â"€ Pull & scan â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
             n_bars = CHECKER_N_BARS[tf_code]
             scan   = _scan_pair(tv, sym, tf_code, n_bars, interval_map, logger)
 
@@ -893,30 +892,30 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
                 # Throttle: too many consecutive TV failures
                 if tv_consecutive_fail >= 3:
                     logger.warning(
-                        "TradingView lỗi liên tiếp 3+ lần — tạm dừng %ds để tránh bị giới hạn truy cập.",
+                        "TradingView failed 3+ consecutive times - sleeping %ds to avoid rate limiting.",
                         TV_THROTTLE_SLEEP,
                     )
                     time.sleep(TV_THROTTLE_SLEEP)
                     tv_consecutive_fail = 0
 
-                # Auth: try mid-run refresh sau 3 lần fail
+                # Auth: try mid-run refresh sau 3 láº§n fail
                 if auth_consecutive_fail >= 3 and not dry_run:
-                    logger.warning("3+ lỗi xác thực liên tiếp — đang thử làm mới token giữa chừng...")
+                    logger.warning("3+ consecutive auth failures - trying mid-run token refresh...")
                     if refresh_mid_run(tv, logger):
                         auth_consecutive_fail = 0
 
-                # Circuit breaker: dừng hẳn nếu auth fail liên tiếp quá nhiều
-                # Khả năng IP bị block (403) → tiếp tục request sẽ làm tình trạng tệ hơn
+                # Circuit breaker: dá»«ng háº³n náº¿u auth fail liÃªn tiáº¿p quÃ¡ nhiá»u
+                # Kháº£ nÄƒng IP bá»‹ block (403) â†’ tiáº¿p tá»¥c request sáº½ lÃ m tÃ¬nh tráº¡ng tá»‡ hÆ¡n
                 if auth_consecutive_fail >= MAX_AUTH_CONSECUTIVE_FAIL:
                     logger.error(
-                        "[NGẮT TỰ ĐỘNG] %d lỗi liên tiếp — "
-                        "có thể IP đang bị TradingView chặn. Dừng checker.",
+                        "[CIRCUIT BREAKER] %d consecutive failures - "
+                        "TradingView may be blocking this IP. Stopping checker.",
                         auth_consecutive_fail,
                     )
                     tg_send(
-                        f"🚨 <b>[Checker]</b> {auth_consecutive_fail} lần TV thất bại "
-                        "liên tiếp — nghi IP bị block. Đã dừng tự động.\n"
-                        "Chờ 30 phút hoặc đổi kết nối internet rồi chạy lại."
+                        f"<b>[Checker]</b> {auth_consecutive_fail} consecutive TV failures "
+                        "may indicate an IP block. Stopped automatically.\n"
+                        "Wait 30 minutes or change internet connection before rerunning."
                     )
                     return {
                         "total": total_pairs,
@@ -954,7 +953,7 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
                 volume_advisory_pairs += 1
                 volume_advisory_bars += n_vol
 
-            # Ghi lại rate round 0 để dùng cho DST detection sau khi loop kết thúc
+            # Ghi láº¡i rate round 0 Ä‘á»ƒ dÃ¹ng cho DST detection sau khi loop káº¿t thÃºc
             if repair_round == 0:
                 round0_rates[(sym["tv_symbol"], tf_code)] = rate
 
@@ -963,7 +962,7 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
             # rate stays below the usual threshold. Volume-only remains advisory.
             force_repair_for_core_issue = (n_miss > 0) or (n_bad > 0) or (n_extra > 0)
 
-            # ── Decision ─────────────────────────────────────────────────────
+            # â"€â"€ Decision â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
             if rate <= threshold and not force_repair_for_core_issue:
                 # Pair is clean
                 if repair_round == 0:
@@ -974,19 +973,16 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
                             _fmt_pair_status(label, rate, n_miss, n_bad, n_extra, n_vol),
                         )
                     if rate > 0:
-                        logger.debug("  ≈ %s: %.2f%% below threshold (ok)", label, rate * 100)
+                        logger.debug("  ~ %s: %.2f%% below threshold (ok)", label, rate * 100)
                 else:
                     # Was failing in a previous round, now clean
                     if dry_run:
                         ok_pairs += 1
-                        logger.info(
-                            "SẠCH    %s",
-                            _fmt_pair_status(label, rate, n_miss, n_bad, n_extra, n_vol),
-                        )
+                        logger.info("CLEAN   %s", _fmt_pair_status(label, rate, n_miss, n_bad, n_extra, n_vol))
                         continue
                     repaired_pairs += 1
                     repaired_sym_ids.add(sym["symbol_id"])
-                    logger.info("  ✓ ĐÃ XỬ LÝ %s (tỷ lệ sai lệch hiện tại %.2f%%)", label, rate * 100)
+                    logger.info("  RESOLVED %s (current mismatch rate %.2f%%)", label, rate * 100)
 
             elif is_final_round:
                 # Last round: no more repair attempts
@@ -994,18 +990,18 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
                     {"sym": sym["tv_symbol"], "tf": tf_code,
                      "reason": f"{rate:.1%} mismatch ({n_miss} missing, {n_bad} OHLC wrong, {n_extra} extra)"}
                 )
-                logger.error("  ✗ LỖI CỐ ĐỊNH %s: sai lệch %.1f%% không thể sửa", label, rate * 100)
+                logger.error("  PERSISTENT ERROR %s: %.1f%% mismatch could not be repaired", label, rate * 100)
 
             elif not dry_run:
                 # Attempt repair
                 if force_repair_for_core_issue and rate <= threshold:
                     logger.warning(
-                        "  ✗ %s: phát hiện lỗi dữ liệu gốc (thiếu=%d sai=%d thừa=%d, tỷ lệ=%.1f%% <= ngưỡng %.1f%%) — đang sửa ngay...",
+                        "  %s: core data issue detected (missing=%d wrong=%d extra=%d, rate=%.1f%% <= threshold %.1f%%) - repairing now...",
                         label, n_miss, n_bad, n_extra, rate * 100, threshold * 100,
                     )
                 else:
                     logger.warning(
-                        "  ✗ %s: sai lệch %.1f%% (thiếu=%d sai=%d thừa=%d) — đang sửa...",
+                        "  %s: %.1f%% mismatch (missing=%d wrong=%d extra=%d) - repairing...",
                         label, rate * 100, n_miss, n_bad, n_extra,
                     )
                 repair_ok = _repair_pair(
@@ -1022,10 +1018,10 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
                     if is_clean:
                         repaired_pairs += 1
                         repaired_sym_ids.add(sym["symbol_id"])
-                        logger.info("  ✓ ĐÃ SỬA %s (xác nhận sạch)", label)
+                        logger.info("  REPAIRED %s (verified clean)", label)
                     else:
                         logger.warning(
-                            "  ↻ %s: vẫn còn %.1f%% sai lệch sau khi sửa — sẽ thử lại",
+                            "  %s: %.1f%% mismatch remains after repair - will retry",
                             label, verify_rate * 100,
                         )
                         still_failing.append((sym, tf_code))
@@ -1033,32 +1029,32 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
                     still_failing.append((sym, tf_code))
 
             else:
-                # dry_run — ghi nhận vấn đề nhưng không sửa
+                # dry_run â€" ghi nháº­n váº¥n Ä‘á» nhÆ°ng khÃ´ng sá»­a
                 if force_repair_for_core_issue and rate <= threshold:
                     logger.warning(
-                        "  [DRY] %s: lỗi dữ liệu gốc (thiếu=%d sai=%d thừa=%d, tỷ lệ=%.1f%% <= ngưỡng %.1f%%)",
+                        "  [DRY] %s: core data issue (missing=%d wrong=%d extra=%d, rate=%.1f%% <= limit %.1f%%)",
                         label, n_miss, n_bad, n_extra, rate * 100, threshold * 100,
                     )
                 else:
                     logger.warning(
-                        "  [DRY] %s: sai lệch %.1f%% (thiếu=%d sai=%d thừa=%d)",
+                        "  [DRY] %s: mismatch %.1f%% (missing=%d wrong=%d extra=%d)",
                         label, rate * 100, n_miss, n_bad, n_extra,
                     )
-                # Thu thập vào dry_issues để main() có thể hỏi user sau
+                # Thu tháº­p vÃ o dry_issues Ä‘á»ƒ main() cÃ³ thá»ƒ há»i user sau
                 dry_issues.append({
                     "sym": sym["tv_symbol"],
                     "tf":  tf_code,
                     "reason": f"{rate:.1%} mismatch ({n_miss} missing, {n_bad} OHLC wrong, {n_extra} extra)",
                 })
-                # Không tăng ok_pairs — pair này có vấn đề, không phải "ok"
+                # KhÃ´ng tÄƒng ok_pairs â€" pair nÃ y cÃ³ váº¥n Ä‘á», khÃ´ng pháº£i "ok"
 
             time.sleep(TV_SLEEP_BETWEEN_CALLS)
 
         pending = still_failing
 
-        # ── DST detection sau round 0 ────────────────────────────────────────
-        # Nếu >30% cặp H2/H3/H4 đều báo rate > 50% → khả năng DST transition,
-        # không phải lỗi data thật → bỏ qua repair cho các TF đó hôm nay.
+        # â"€â"€ DST detection sau round 0 â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+        # Náº¿u >30% cáº·p H2/H3/H4 Ä‘á»u bÃ¡o rate > 50% â†’ kháº£ nÄƒng DST transition,
+        # khÃ´ng pháº£i lá»—i data tháº­t â†’ bá» qua repair cho cÃ¡c TF Ä‘Ã³ hÃ´m nay.
         if repair_round == 0 and round0_rates:
             h_tfs = {"H2", "H3", "H4"}
             h_rates = [r for (_, tf), r in round0_rates.items() if tf in h_tfs]
@@ -1070,17 +1066,16 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
                 dst_ratio  = high_count / len(h_rates)
                 if dst_ratio > 0.3:
                     logger.warning(
-                        "[DST DETECT] %.0f%% cặp H2/H3/H4 có rate > 50%% — "
-                        "khả năng DST transition (tháng 3/11). "
-                        "Bỏ qua repair H2/H3/H4 để tránh sửa nhầm. Chạy lại sau 24h.",
+                        "[DST DETECT] %.0f%% of H2/H3/H4 pairs have rate > 50%% - "
+                        "possible DST transition. Skipping H2/H3/H4 repair today; rerun after 24h.",
                         dst_ratio * 100,
                     )
                     tg_send(
-                        f"⚠️ <b>[Checker]</b> Phát hiện khả năng <b>DST transition</b> "
-                        f"({dst_ratio:.0%} cặp H2/H3/H4 báo rate >50%).\n"
-                        "Đã bỏ qua repair H2/H3/H4 hôm nay. Chạy lại sau 24h."
+                        f"<b>[Checker]</b> Possible <b>DST transition</b> "
+                        f"({dst_ratio:.0%} H2/H3/H4 pairs report rate >50%).\n"
+                        "Skipped H2/H3/H4 repair today. Rerun after 24h."
                     )
-                    # Lọc các cặp H2/H3/H4 ra khỏi pending để không repair nhầm
+                    # Lá»c cÃ¡c cáº·p H2/H3/H4 ra khá»i pending Ä‘á»ƒ khÃ´ng repair nháº§m
                     pending = [(s, tf) for s, tf in pending if tf not in h_tfs]
 
     # Any leftover pairs (shouldn't happen, but safety net)
@@ -1090,10 +1085,10 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
              "reason": f"unresolved after {MAX_REPAIR_ROUNDS} rounds"}
         )
 
-    # ── Phase 3: Recompute derived TFs ───────────────────────────────────────
+    # â"€â"€ Phase 3: Recompute derived TFs â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     if repaired_sym_ids and not dry_run:
         logger.info(
-            "Recomputing derived TFs for %d repaired symbol(s)...",
+            "Recomputing derived TFs for %d repaired pairs...",
             len(repaired_sym_ids),
         )
         recompute_derived(repaired_sym_ids, logger)
@@ -1107,63 +1102,68 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
         "dry_run":    dry_run,
         "volume_advisory_pairs": volume_advisory_pairs,
         "volume_advisory_bars": volume_advisory_bars,
-        "dry_issues": dry_issues,  # populated khi dry_run=True, rỗng khi dry_run=False
+        "dry_issues": dry_issues,  # populated khi dry_run=True, rá»—ng khi dry_run=False
     }
 
 
-# ─── Problem description builder ─────────────────────────────────────────────
+# â"€â"€â"€ Problem description builder â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 def _build_problem_desc(issues: list[dict], threshold: float) -> str:
     """
-    Tạo mô tả vấn đề từ danh sách dry_issues để gửi vào tg_ask().
+    Build problem description from dry_issues list for tg_ask().
+
     """
     n = len(issues)
     miss_count  = sum(1 for f in issues if "missing" in f["reason"])
     wrong_count = sum(1 for f in issues if "wrong"   in f["reason"])
     extra_count = sum(1 for f in issues if "extra"   in f["reason"])
 
-    lines = [f"  • {n} pairs cần sửa (missing / OHLC wrong / extra, hoặc mismatch > {threshold:.0%})"]
+    lines = [f"  • {n} pairs need repair (missing / OHLC wrong / extra, or mismatch > {threshold:.0%})"]
+
     if wrong_count:
-        lines.append(f"  • {wrong_count} pairs: bars sai giá trị OHLCV")
+        lines.append(f"  • {wrong_count} pairs: bars with wrong OHLCV values")
+
     if miss_count:
-        lines.append(f"  • {miss_count} pairs: bars còn thiếu")
+        lines.append(f"  • {miss_count} pairs: missing bars")
+
     if extra_count:
-        lines.append(f"  • {extra_count} pairs: bars thừa / sai timeline")
+        lines.append(f"  • {extra_count} pairs: extra bars / wrong timeline")
+
     return "\n".join(lines)
 
 
-# ─── Discord notification / Report ───────────────────────────────────────────
+# â"€â"€â"€ Discord notification / Report â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 def _build_report(stats: dict, start_time: datetime, auth_mode: str) -> str:
     elapsed = max(1, int((now_utc() - start_time).total_seconds() / 60))
     total   = stats["total"]
     lines   = [
-        f"🔍 <b>[Checker] Hoàn tất {now_utc():%d/%m/%Y %H:%M}</b>",
+        f"<b>[Checker] Completed {now_utc():%d/%m/%Y %H:%M}</b>",
         "",
-        f"✅ OK:              {stats['ok']}/{total} pairs",
-        f"🔧 Đã sửa:          {stats['repaired']}/{total} pairs",
-        f"❌ Lỗi persistent:  {stats['failed']}/{total} pairs",
+        f"OK:              {stats['ok']}/{total} pairs",
+        f"Repaired:        {stats['repaired']}/{total} pairs",
+        f"Persistent fail: {stats['failed']}/{total} pairs",
         "",
-        f"Thời gian: {elapsed} phút | Auth: {auth_mode}",
+        f"Elapsed: {elapsed} minutes | Auth: {auth_mode}",
     ]
     if stats["dry_run"]:
-        lines.insert(1, "<i>(DRY-RUN — scan only, không ghi DB)</i>")
+        lines.insert(1, "<i>(DRY-RUN - scan only, no DB writes)</i>")
     if stats.get("volume_advisory_pairs", 0):
         lines.append(
-            f"â„¹ï¸ Volume advisory: {stats['volume_advisory_pairs']} pairs / "
-            f"{stats['volume_advisory_bars']} bars (khÃ´ng dÃ¹ng Ä‘á»ƒ repair)"
+            f"Volume advisory: {stats['volume_advisory_pairs']} pairs / "
+            f"{stats['volume_advisory_bars']} bars (not used for repair)"
         )
     if stats["failures"]:
         lines.append("")
-        lines.append("Pairs lỗi:")
+        lines.append("Failed pairs:")
         for f in stats["failures"][:10]:
-            lines.append(f"  • {f['sym']} / {f['tf']}: {f['reason']}")
+            lines.append(f"  - {f['sym']} / {f['tf']}: {f['reason']}")
         if len(stats["failures"]) > 10:
-            lines.append(f"  ... và {len(stats['failures']) - 10} pair khác")
+            lines.append(f"  ... and {len(stats['failures']) - 10} other pairs")
     return "\n".join(lines)
 
 
-# ─── Entry point ─────────────────────────────────────────────────────────────
+# â"€â"€â"€ Entry point â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 def _build_problem_desc_clean(issues: list[dict], threshold: float) -> str:
     """
@@ -1174,13 +1174,13 @@ def _build_problem_desc_clean(issues: list[dict], threshold: float) -> str:
     wrong_count = sum(1 for f in issues if "wrong" in f["reason"])
     extra_count = sum(1 for f in issues if "extra" in f["reason"])
 
-    lines = [f"  - {n} pairs can sua (missing / OHLC wrong / extra, hoac mismatch > {threshold:.0%})"]
+    lines = [f"  - {n} pairs need repair (missing / OHLC wrong / extra, or mismatch > {threshold:.0%})"]
     if wrong_count:
-        lines.append(f"  - {wrong_count} pairs: bars sai gia tri OHLC")
+        lines.append(f"  - {wrong_count} pairs: bars with wrong OHLCV values")
     if miss_count:
-        lines.append(f"  - {miss_count} pairs: bars con thieu")
+        lines.append(f"  - {miss_count} pairs: missing bars")
     if extra_count:
-        lines.append(f"  - {extra_count} pairs: bars thua / sai timeline")
+        lines.append(f"  - {extra_count} pairs: extra bars / wrong timeline")
     return "\n".join(lines)
 
 
@@ -1191,39 +1191,39 @@ def _build_report_clean(stats: dict, start_time: datetime, auth_mode: str) -> st
     elapsed = max(1, int((now_utc() - start_time).total_seconds() / 60))
     total = stats["total"]
     lines = [
-        f"<b>[Checker] Hoan tat {now_utc():%d/%m/%Y %H:%M}</b>",
+        f"<b>[Checker] Completed {now_utc():%d/%m/%Y %H:%M}</b>",
         "",
         f"OK: {stats['ok']}/{total} pairs",
-        f"Da sua: {stats['repaired']}/{total} pairs",
-        f"Loi persistent: {stats['failed']}/{total} pairs",
+        f"Repaired: {stats['repaired']}/{total} pairs",
+        f"Persistent fail: {stats['failed']}/{total} pairs",
         "",
-        f"Thoi gian: {elapsed} phut | Auth: {auth_mode}",
+        f"Elapsed: {elapsed} min | Auth: {auth_mode}",
     ]
     if stats["dry_run"]:
-        lines.insert(1, "<i>(DRY-RUN - scan only, khong ghi DB)</i>")
+        lines.insert(1, "<i>(DRY-RUN - scan only, no DB writes)</i>")
     if stats.get("volume_advisory_pairs", 0):
         lines.append(
             f"Volume advisory: {stats['volume_advisory_pairs']} pairs / "
-            f"{stats['volume_advisory_bars']} bars (khong dung de repair)"
+            f"{stats['volume_advisory_bars']} bars (not used for repair)"
         )
     if stats["failures"]:
         lines.append("")
-        lines.append("Pairs loi:")
+        lines.append("Failed pairs:")
         for failure in stats["failures"][:10]:
             lines.append(f"  - {failure['sym']} / {failure['tf']}: {failure['reason']}")
         if len(stats["failures"]) > 10:
-            lines.append(f"  ... va {len(stats['failures']) - 10} pair khac")
+            lines.append(f"  ... and {len(stats['failures']) - 10} other pairs")
     skipped_tfs = stats.get("skipped_tfs", [])
     if skipped_tfs:
         lines.append("")
         lines.append(
-            f"Skipped TFs: {', '.join(skipped_tfs)} (DST safeguard - chay lai sau 24h)"
+            f"Skipped TFs: {', '.join(skipped_tfs)} (DST safeguard - retry after 24h)"
         )
     abort_reason = stats.get("aborted")
     if abort_reason:
         reason_map = {
-            "circuit_breaker": "tam dung sau nhieu TV/auth failures lien tiep",
-            "repair_lock": "khong lay duoc repair lock",
+            "circuit_breaker": "paused after repeated TV/auth failures",
+            "repair_lock": "could not acquire repair lock",
         }
         lines.append("")
         lines.append(f"Status: PARTIAL - {reason_map.get(abort_reason, abort_reason)}")
@@ -1350,19 +1350,15 @@ def _detect_dst_transition_risk(
         return set()
 
     logger.warning(
-        "[DST DETECT] %.0f%% c\u1eb7p H2/H3/H4 c\u00f3 mismatch >50%% \u2014 "
-        "c\u00f3 th\u1ec3 \u0111ang x\u1ea3y ra DST transition (\u0111\u1ed5i gi\u1edd m\u00f9a h\u00e8). "
-        "B\u1ecf qua auto-repair H2/H3/H4 h\u00f4m nay. Ch\u1ea1y l\u1ea1i sau 24h.",
+        "[DST DETECT] %.0f%% of H2/H3/H4 pairs have mismatch >50%%. This may be a DST shift. Skipping H2/H3/H4 auto-repair today. Run again after 24h.",
         dst_ratio * 100,
     )
     tg_send(
-        f"\u26a0\ufe0f <b>[Checker]</b> Ph\u00e1t hi\u1ec7n kh\u1ea3 n\u0103ng <b>\u0111\u1ed5i gi\u1edd m\u00f9a h\u00e8 (DST)</b> \u2014 "
-        f"{dst_ratio:.0%} c\u1eb7p H2/H3/H4 b\u00e1o mismatch >50%.\n"
-        "\u0110\u00e3 b\u1ecf qua auto-repair H2/H3/H4 h\u00f4m nay. Ch\u1ea1y l\u1ea1i sau 24 gi\u1edd."
+        f"[WARN] <b>[Checker]</b> Possible <b>DST time shift</b> detected: "
+        f"{dst_ratio:.0%} of H2/H3/H4 pairs have mismatch >50%.\n"
+        "Auto-repair for H2/H3/H4 is skipped today to avoid wrong fixes. "
+        "Run checker again after 24h."
     )
-    return set(h_tfs)
-
-
 def _run_auto_mode_symbol_rollout(
     tv,
     symbols: list[dict],
@@ -1373,9 +1369,9 @@ def _run_auto_mode_symbol_rollout(
 ) -> dict:
     """
     Auto mode orchestration:
-      - scan từng symbol khi chưa giữ repair lock
-      - nếu symbol có vấn đề thì mới lấy lock
-      - rescan + repair + verify toàn bộ TF của symbol đó dưới lock
+      - scan tá»«ng symbol khi chÆ°a giá»¯ repair lock
+      - náº¿u symbol cÃ³ váº¥n Ä‘á» thÃ¬ má»›i láº¥y lock
+      - rescan + repair + verify toÃ n bá»™ TF cá»§a symbol Ä‘Ã³ dÆ°á»›i lock
     """
     blocked_tfs = _detect_dst_transition_risk(tv, symbols, tfs, interval_map, logger)
     active_tfs = [tf for tf in tfs if tf not in blocked_tfs]
@@ -1390,10 +1386,7 @@ def _run_auto_mode_symbol_rollout(
         if sym_idx > 1:
             sleep_for(sym["tv_symbol"])
 
-        logger.info(
-            "AUTO SYMBOL %03d/%03d | %s | tfs=%d",
-            sym_idx, len(symbols), sym["tv_symbol"], len(active_tfs),
-        )
+        logger.info("AUTO %03d/%03d | %s | tf=%d", sym_idx, len(symbols), sym["tv_symbol"], len(active_tfs))
         scan_stats = run_checker(
             tv,
             [sym],
@@ -1416,7 +1409,7 @@ def _run_auto_mode_symbol_rollout(
             continue
 
         logger.info(
-            "AUTO SYMBOL %s | issues=%d | reacquiring repair locks for rescan+repair",
+            "AUTO %s | %d issues | getting lock to scan and repair...",
             sym["tv_symbol"], len(issues),
         )
         heartbeat_stop = _acquire_repair_locks(logger)
@@ -1449,11 +1442,11 @@ def main() -> None:
     _configure_console_encoding()
 
     parser = argparse.ArgumentParser(
-        description="SEN05 — Ground-truth data integrity checker"
+        description="SEN05 - Ground-truth data integrity checker"
     )
     parser.add_argument(
         "--dry-run", action="store_true",
-        help="Scan only — no DB writes, no repairs",
+        help="Scan only - no DB writes, no repairs",
     )
     parser.add_argument(
         "--sym", default=None, metavar="SYMBOL",
@@ -1477,30 +1470,30 @@ def main() -> None:
     )
     parser.add_argument(
         "--tf-check", action="store_true",
-        help="Kiểm tra interval gaps giữa các bar liên tiếp (DB-only, no TradingView).",
+        help="Kiá»ƒm tra interval gaps giá»¯a cÃ¡c bar liÃªn tiáº¿p (DB-only, no TradingView).",
     )
     parser.add_argument(
         "--tf-check-full", action="store_true",
-        help="Dùng với --tf-check: hiển thị chi tiết short/long gap breakdown.",
+        help="DÃ¹ng vá»›i --tf-check: hiá»ƒn thá»‹ chi tiáº¿t short/long gap breakdown.",
     )
     parser.add_argument(
         "--rebuild-computed", action="store_true",
-        help="Xoá và rebuild TF phái sinh (M10/M20/M90/H6/H8). Dùng --dry-run để xem preview.",
+        help="XoÃ¡ vÃ  rebuild TF phÃ¡i sinh (M10/M20/M90/H6/H8). DÃ¹ng --dry-run Ä‘á»ƒ xem preview.",
     )
     parser.add_argument(
         "--manual-confirm", action="store_true",
-        help="Giữ flow cũ: gửi Discord thông báo trước khi repair (one-way, không nhận lệnh ngược). Mặc định checker sẽ auto-repair khi không dùng --dry-run.",
+        help="Giá»¯ flow cÅ©: gá»­i Discord thÃ´ng bÃ¡o trÆ°á»›c khi repair (one-way, khÃ´ng nháº­n lá»‡nh ngÆ°á»£c). Máº·c Ä‘á»‹nh checker sáº½ auto-repair khi khÃ´ng dÃ¹ng --dry-run.",
     )
     args = parser.parse_args()
 
-    # ── Setup logger ─────────────────────────────────────────────────────────
+    # â"€â"€ Setup logger â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     log_dir = _DATA / "logs"
     log_dir.mkdir(exist_ok=True)
     logger = setup_logger("checker", str(log_dir / "checker.log"), rotating=True)
     _configure_checker_library_logs()
 
     if not test_connection():
-        logger.error("LỖI NGHIÊM TRỌNG: Không kết nối được cơ sở dữ liệu. Checker không khởi động.")
+        logger.error("CRITICAL: Could not connect to the database. Checker did not start.")
         sys.exit(1)
 
     _log_section(
@@ -1511,13 +1504,13 @@ def main() -> None:
     )
     start_time = now_utc()
 
-    # ── Filter symbols / TFs ─────────────────────────────────────────────────
+    # â"€â"€ Filter symbols / TFs â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     symbols = list(SYMBOLS)
     if args.sym:
         needle  = args.sym.upper()
         symbols = [s for s in SYMBOLS if s["tv_symbol"] == needle]
         if not symbols:
-            logger.error("Symbol '%s' không có trong danh sách theo dõi.", args.sym)
+            logger.error("Symbol '%s' is not in the watch list.", args.sym)
             sys.exit(1)
 
     # --tf-check / --rebuild-computed operate across all 15 TFs, not just TFS_TO_CHECK
@@ -1527,11 +1520,11 @@ def main() -> None:
     if args.tf:
         tf = args.tf.upper()
         if not db_only_mode and tf not in TFS_TO_CHECK:
-            logger.error("TF '%s' không có trong danh sách TF được kiểm tra (%s).", tf, TFS_TO_CHECK)
+            logger.error("TF '%s' is not in the checker TF list (%s).", args.tf, ",".join(TFS_TO_CHECK))
             sys.exit(1)
         tfs = [tf]
 
-    # ── C-O continuity check (DB-only, runs before TradingView connection) ─────
+    # â"€â"€ C-O continuity check (DB-only, runs before TradingView connection) â"€â"€â"€â"€â"€
     if args.co_check:
         sym_filter = [args.sym] if args.sym else None
         co_clean, co_stats = check_co_continuity(
@@ -1547,7 +1540,7 @@ def main() -> None:
             # standalone --co-check: exit after report
             sys.exit(0 if co_clean else 1)
 
-    # ── Interval gap check (DB-only) ─────────────────────────────────────────
+    # â"€â"€ Interval gap check (DB-only) â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     tf_gap_issues: list[dict] = []
     if args.tf_check:
         tf_report, has_issues, tf_gap_issues = check_interval_gaps(
@@ -1561,11 +1554,11 @@ def main() -> None:
         if args.dry_run or not has_issues:
             sys.exit(1 if has_issues else 0)
 
-    # ── Rebuild computed TFs (DB-only) ───────────────────────────────────────
+    # â"€â"€ Rebuild computed TFs (DB-only) â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     if args.rebuild_computed:
         cleaned = cleanup_expired()
         if cleaned:
-            logger.info("Dọn dẹp %d khóa cũ đã hết hạn trước khi rebuild TF phái sinh.", cleaned)
+            logger.info("Cleaned up %d expired locks before rebuilding computed TFs.", cleaned)
 
         heartbeat_stop: threading.Event | None = None
         try:
@@ -1573,7 +1566,7 @@ def main() -> None:
                 heartbeat_stop = _acquire_repair_locks(logger, duration_min=120)
                 if heartbeat_stop is None:
                     sys.exit(1)
-                logger.info("Đã lấy khóa bảo trì để rebuild TF phái sinh.")
+                logger.info("Maintenance lock acquired for computed TF rebuild.")
 
             rc_report = rebuild_computed_tfs(
                 dry_run=args.dry_run,
@@ -1601,13 +1594,13 @@ def main() -> None:
             if not args.dry_run:
                 _release_repair_locks(heartbeat_stop, logger)
 
-    # ── Build Interval map (deferred import) ─────────────────────────────────
+    # â"€â"€ Build Interval map (deferred import) â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     interval_map = _build_interval_map()
 
-    # ── Dọn dẹp lock cũ từ các lần chạy bị crash trước đó ───────────────────
+    # â"€â"€ Dá»n dáº¹p lock cÅ© tá»« cÃ¡c láº§n cháº¡y bá»‹ crash trÆ°á»›c Ä‘Ã³ â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     cleaned = cleanup_expired()
     if cleaned:
-        logger.info("Dọn dẹp %d khóa cũ đã hết hạn.", cleaned)
+        logger.info("Cleaned up %d expired locks.", cleaned)
 
     tv_job_stop: threading.Event | None = None
 
@@ -1620,50 +1613,50 @@ def main() -> None:
         raise SystemExit(code)
 
     def _yield_to_newer_historical_run(exc: HistoricalJobHandoffRequested) -> None:
-        logger.info("[NHƯỜNG QUYỀN] Checker nhường slot lịch sử cho lần chạy mới hơn: %s", exc)
+        logger.info("[HANDOFF] Checker gave the history slot to a newer run: %s", exc)
         tg_send(
-            "<b>[Checker]</b> Đã nhường slot TradingView lịch sử cho một lần chạy mới hơn.\n"
-            "<i>Lần chạy hiện tại dừng ở checkpoint an toàn để tránh xung đột.</i>"
+            "<b>[Checker]</b> Gave the TradingView history slot to a newer run.\n"
+            "<i>This run stopped at a safe checkpoint to avoid a conflict.</i>"
         )
         _exit(0)
 
     tv_job_stop = acquire_historical_job("checker", logger, duration_min=180)
     if tv_job_stop is None:
         tg_send(
-            "⚠️ <b>[Checker]</b> Không lấy được slot TradingView lịch sử.\n"
-            "Một job nặng khác (pipeline/checker) đang chạy quá lâu hoặc chưa giải phóng khóa."
+            "[WARN] <b>[Checker]</b> Could not get the TradingView history slot.\n"
+            "Another heavy job (pipeline/checker) is still running or did not release the lock."
         )
         _exit(1)
     atexit.register(release_historical_job, tv_job_stop, "checker", logger)
 
-    # ── Auth + connection ─────────────────────────────────────────────────────
+    # â"€â"€ Auth + connection â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     dry_label = " (DRY-RUN)" if args.dry_run else ""
     tg_send(
-        f"🔍 <b>Checker khởi động</b>{dry_label}\n"
-        f"📊 Phạm vi: {len(symbols)} cặp × {len(tfs)} khung thời gian\n"
-        f"🎯 Ngưỡng sai lệch: {args.threshold * 100:.1f}%  |  "
-        f"Chế độ: {'Quét và báo cáo' if args.dry_run else 'Quét và tự sửa'}"
+        f"[START] <b>Checker started</b>{dry_label}\n"
+        f"Scope: {len(symbols)} pairs x {len(tfs)} timeframes\n"
+        f"Mismatch limit: {args.threshold * 100:.1f}%  |  "
+        f"Mode: {'Scan and report' if args.dry_run else 'Scan and auto-repair'}"
     )
     tv, auth_mode = get_valid_tv_connection(logger)
-    logger.info("Phương thức đăng nhập: %s", auth_mode)
+    logger.info("Login method: %s", auth_mode)
 
-    # ── Guard: không chạy nếu đang ở guest mode ──────────────────────────────
-    # Guest mode chỉ trả về ~500 bars thay vì 1000-2000 → checker sẽ thấy hàng trăm
-    # bar "missing" không có thật → kích hoạt sửa nhầm → PERSISTENT_FAILURE ảo.
+    # â"€â"€ Guard: khÃ´ng cháº¡y náº¿u Ä‘ang á»Ÿ guest mode â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+    # Guest mode chá»‰ tráº£ vá» ~500 bars thay vÃ¬ 1000-2000 â†’ checker sáº½ tháº¥y hÃ ng trÄƒm
+    # bar "missing" khÃ´ng cÃ³ tháº­t â†’ kÃ­ch hoáº¡t sá»­a nháº§m â†’ PERSISTENT_FAILURE áº£o.
     if auth_mode == "guest":
         msg = (
-            "⚠️ <b>[Checker]</b> Đang chạy ở <b>GUEST MODE</b> — bar limit bị giảm "
-            "xuống ~500 bars. Checker sẽ báo sai nhiều 'missing bars' không có thật "
-            "và có thể kích hoạt sửa nhầm.\n\n"
-            "Hãy cập nhật <code>TV_AUTH_TOKEN</code> hoặc <code>TV_COOKIE</code> "
-            "trong file <code>.env</code> rồi chạy lại."
+            "[WARN] <b>[Checker]</b> Running in <b>GUEST MODE</b>. The bar limit may be lower "
+            "(around 500 bars). Checker may report many false missing bars "
+            "and may repair data that is not actually wrong.\n\n"
+            "Update <code>TV_AUTH_TOKEN</code> or <code>TV_COOKIE</code> "
+            "in <code>.env</code>, then run checker again."
         )
-        logger.error("[CHECKER] Phát hiện chế độ khách — dừng lại để tránh sửa nhầm dữ liệu.")
+        logger.error("[CHECKER] Guest mode detected - stopping to avoid wrong data repair.")
         tg_send(msg)
         tg_flush()
         _exit(2)
 
-    # ── Chế độ dry-run: scan và báo cáo, không hỏi xác nhận ─────────────────
+    # â"€â"€ Cháº¿ Ä‘á»™ dry-run: scan vÃ  bÃ¡o cÃ¡o, khÃ´ng há»i xÃ¡c nháº­n â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     if args.dry_run:
         try:
             stats = run_checker(
@@ -1677,26 +1670,32 @@ def main() -> None:
         tg_send(report)
         tg_flush()
         logger.info(
-            "==== HOÀN TẤT (dry-run) | sạch=%d vấn_đề=%d ====",
+            "==== DONE (dry-run) | clean=%d issues=%d ====",
             stats["ok"], len(stats["dry_issues"]),
         )
         _exit(0)
 
 
-    # ── Phase 1: Scan (dry_run=True) — tìm vấn đề mà không sửa ─────────────
+    # â"€â"€ Phase 1: Scan (dry_run=True) â€" tÃ¬m váº¥n Ä‘á» mÃ  khÃ´ng sá»­a â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     if args.tf_check and tf_gap_issues:
-        logger.info("Phát hiện %d cặp có khoảng trống interval trong DB.", len(tf_gap_issues))
+        logger.info("Found %d pairs with interval gaps in DB.", len(tf_gap_issues))
         if args.manual_confirm:
             choice = request_confirm(
-                title="[Checker] Phát hiện khoảng trống interval",
+                title="[Checker] Interval gaps detected",
+
                 problem_desc=(
-                    f"Phát hiện {len(tf_gap_issues)} cặp có khoảng trống interval trong DB. "
-                    "Checker sẽ tự kéo lại đúng cửa sổ bị thiếu từ TradingView "
-                    "và rebuild lại TF phái sinh nếu cần."
+                    f"Found {len(tf_gap_issues)} pairs with interval gaps in DB. "
+
+                    "Checker will re-pull the missing windows from TradingView "
+
+                    "and rebuild computed TFs if needed."
+
                 ),
                 options={
-                    "confirm": f"Sửa tất cả {len(tf_gap_issues)} cặp bị thiếu",
-                    "skip": "Bỏ qua, chỉ lưu báo cáo",
+                    "confirm": f"Repair all {len(tf_gap_issues)} missing pairs",
+
+                    "skip": "Skip, report only",
+
                 },
                 timeout_min=240,
                 affected_pairs=[
@@ -1705,16 +1704,16 @@ def main() -> None:
                 ],
                 task_name="checker_repair",
             )
-            logger.info("Lựa chọn của người dùng cho interval-gap repair: %s", choice)
+            logger.info("User choice for interval-gap repair: %s", choice)
             if choice != "confirm":
-                reason = "hết giờ (4h)" if choice == "timeout" else "người dùng bỏ qua"
-                tg_send(f"<b>[Checker]</b> Báo cáo khoảng trống TF ({reason})\n\n<pre>{tf_report}</pre>")
+                reason = "timeout (4h)" if choice == "timeout" else "user skipped"
+                tg_send(f"<b>[Checker]</b> TF gap report ({reason})\n\n<pre>{tf_report}</pre>")
                 tg_flush()
                 _exit(0)
         else:
             tg_send(
-                f"<b>[Checker]</b> Phát hiện {len(tf_gap_issues)} cặp có khoảng trống interval. "
-                "Đang tự động kéo lại và rebuild phần dữ liệu bị lỗi."
+                f"<b>[Checker]</b> Found {len(tf_gap_issues)} pairs with interval gaps. "
+                "Auto re-pulling and rebuilding the broken data parts."
             )
 
         heartbeat_stop = _acquire_repair_locks(logger)
@@ -1739,17 +1738,16 @@ def main() -> None:
                 for row in gap_result["failures"][:10]
             ]
             summary_lines = [
-                "<b>[Checker]</b> Tự sửa khoảng trống TF hoàn tất",
-                f"Đã sửa: {gap_result['repaired']}",
-                f"Thất bại: {gap_result['failed']}",
-                f"Còn vấn đề sau xác nhận: {'Có' if gap_result['verify_has_issues'] else 'Không'}",
+                f"Repaired: {gap_result['repaired']}",
+                f"Failed: {gap_result['failed']}",
+                f"Issues still found after verify: {'Yes' if gap_result['verify_has_issues'] else 'No'}",
             ]
             if failure_lines:
-                summary_lines.append("Các cặp lỗi:")
+                summary_lines.append("Failed pairs:")
                 summary_lines.extend(failure_lines)
             tg_send("\n".join(summary_lines) + "\n\n<pre>" + gap_result["verify_report"] + "</pre>")
             logger.info(
-                "==== HOÀN TẤT | tf-gap đã_sửa=%d thất_bại=%d còn_vấn_đề=%s ====",
+                "==== DONE | tf_gap_repaired=%d failed=%d still_has_issues=%s ====",
                 gap_result["repaired"], gap_result["failed"], gap_result["verify_has_issues"],
             )
             exit_code = 1 if gap_result["failed"] > 0 or gap_result["verify_has_issues"] else 0
@@ -1761,9 +1759,9 @@ def main() -> None:
     if not args.manual_confirm:
         _log_section(logger, "AUTO MODE | Symbol Rollout Scan + Repair")
         tg_send(
-            "<b>[Checker]</b> Đang quét và tự sửa lần lượt từng symbol.\n"
-            "<i>Mỗi symbol có lỗi sẽ được khóa riêng, quét lại, sửa, kiểm tra, "
-            "rồi mới chuyển sang symbol tiếp theo.</i>"
+            "<b>[Checker]</b> Scanning and auto-repairing one symbol at a time.\n"
+            "<i>Each bad symbol gets its own lock, then scan, repair, verify, "
+            "and only then move to the next symbol.</i>"
         )
         try:
             auto_stats = _run_auto_mode_symbol_rollout(
@@ -1786,17 +1784,17 @@ def main() -> None:
             exit_code = 1
         _exit(exit_code)
 
-    # --manual-confirm không còn hoạt động sau khi migrate sang Discord (one-way webhook).
-    # Tự động fall-through sang auto-repair và cảnh báo rõ để user biết.
+    # --manual-confirm khÃ´ng cÃ²n hoáº¡t Ä‘á»™ng sau khi migrate sang Discord (one-way webhook).
+    # Tá»± Ä‘á»™ng fall-through sang auto-repair vÃ  cáº£nh bÃ¡o rÃµ Ä‘á»ƒ user biáº¿t.
     logger.warning(
-        "--manual-confirm không còn hoạt động (Discord là one-way webhook). "
-        "Tự động chuyển sang auto-repair."
+        "--manual-confirm no longer works because Discord webhook is one-way. "
+        "Switching to auto-repair."
     )
     try:
         tg_send(
-            "⚠️ <b>[Checker]</b> <code>--manual-confirm</code> không còn hoạt động "
-            "(Discord webhook là một chiều — không thể nhận phản hồi).\n"
-            "Đã tự động chuyển sang <b>auto-repair</b> (scan + sửa tự động)."
+            "[WARN] <b>[Checker]</b> <code>--manual-confirm</code> no longer works "
+            "because Discord webhook is one-way and cannot receive replies.\n"
+            "Switched to <b>auto-repair</b> automatically (scan + repair)."
         )
         tg_flush()
     except Exception:
@@ -1804,8 +1802,8 @@ def main() -> None:
 
     _log_section(logger, "PHASE 1 | Scan")
     tg_send(
-        "🔍 <b>[Checker] Pha 1/3 — Đang quét dữ liệu</b>\n"
-        "Kiểm tra từng cặp, so sánh với TradingView để tìm lỗi..."
+        "[SCAN] <b>[Checker] Phase 1/3 - Scanning data</b>\n"
+        "Checking each pair against TradingView to find data issues..."
     )
     try:
         scan_stats = run_checker(
@@ -1816,47 +1814,47 @@ def main() -> None:
         _yield_to_newer_historical_run(exc)
 
     issues = scan_stats.get("dry_issues", []) or scan_stats.get("failures", [])
-    logger.info("Pha 1 hoàn tất: phát hiện %d vấn đề.", len(issues))
+    logger.info("Phase 1 finished: found %d issues.", len(issues))
 
-    # ── Không có vấn đề gì: báo cáo và thoát ────────────────────────────────
+    # â"€â"€ KhÃ´ng cÃ³ váº¥n Ä‘á» gÃ¬: bÃ¡o cÃ¡o vÃ  thoÃ¡t â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     if not issues:
         report = _build_report_clean(scan_stats, start_time, auth_mode)
         _log_report(report, logger)
         tg_send(report)
         tg_flush()
-        logger.info("==== HOÀN TẤT | tất cả dữ liệu sạch ====")
+        logger.info("==== DONE | all data is clean ====")
         _exit(0)
-
-    # ── Phase 2: Auto-confirm (manual-confirm không còn hỗ trợ) ─────────────
+        logger.info("==== DONE | all data is clean ====")
+    # â"€â"€ Phase 2: Auto-confirm (manual-confirm khÃ´ng cÃ²n há»— trá»£) â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     _log_section(logger, f"PHASE 2 | Auto-confirm | issues={len(issues)}")
-    logger.info("Tự xác nhận: tiến hành sửa %d cặp.", len(issues))
+    logger.info("Auto-confirm: repairing %d pairs.", len(issues))
 
-    # ── Phase 3: Acquire lock + repair ───────────────────────────────────────
+    logger.info("Auto-confirm: repairing %d pairs.", len(issues))
     pending_pairs = _issues_to_pending_pairs(issues, symbols)
     if not pending_pairs:
         report = _build_report_clean(scan_stats, start_time, auth_mode)
         _log_report(report, logger)
         tg_send(report)
         tg_flush()
-        logger.error("Pha 3 bị hủy: không thể ánh xạ vấn đề về các cặp cần sửa.")
+        logger.error("Phase 3 cancelled: could not map issues to pairs that need repair.")
         _exit(1)
 
     _log_section(logger, "PHASE 3 | Repair")
     if not acquire("checker_repair", duration_min=90):
-        msg = "⚠️ <b>[Checker]</b> Lock đang bận — process khác đang sửa dữ liệu. Bỏ qua."
-        logger.warning("Không lấy được khóa checker_repair.")
+        msg = "[WARN] <b>[Checker]</b> Lock is busy. Another process is repairing data. Skipping."
+        logger.warning("Could not get checker_repair lock.")
         tg_send(msg)
         tg_flush()
         _exit(1)
     if not acquire("warehouse_maintenance", duration_min=90):
         release("checker_repair")
-        msg = "⚠️ <b>[Checker]</b> Warehouse đang bận — pipeline hoặc maintenance khác đang chạy. Bỏ qua."
-        logger.warning("Không lấy được khóa warehouse_maintenance.")
+        msg = "[WARN] <b>[Checker]</b> Warehouse is busy. Pipeline or another maintenance job is running. Skipping."
+        logger.warning("Could not get warehouse_maintenance lock.")
         tg_send(msg)
         tg_flush()
         _exit(1)
 
-    exit_code = 1  # default: failure — sẽ ghi đè sau khi repair hoàn tất
+    exit_code = 1  # default: failure â€" sáº½ ghi Ä‘Ã¨ sau khi repair hoÃ n táº¥t
     heartbeat_stop = threading.Event()
 
     def _lock_heartbeat() -> None:
@@ -1867,9 +1865,9 @@ def main() -> None:
     threading.Thread(target=_lock_heartbeat, name="checker-lock-heartbeat", daemon=True).start()
     try:
         tg_send(
-            f"🔧 <b>[Checker] Pha 3/3 — Đang sửa {len(issues)} cặp bị lỗi</b>\n"
-            "<i>WS Live tạm dừng ghi vào cơ sở dữ liệu chính để tránh xung đột. "
-            "Sẽ tự tiếp tục sau khi sửa xong.</i>"
+            f"[FIX] <b>[Checker] Phase 3/3 - Repairing {len(issues)} bad pairs</b>\n"
+            "<i>WS Live pauses writes to the main data table to avoid a conflict. "
+            "It will continue automatically after repair finishes.</i>"
         )
         try:
             repair_stats = run_checker(
@@ -1881,9 +1879,8 @@ def main() -> None:
             _yield_to_newer_historical_run(exc)
         report = _build_report_clean(repair_stats, start_time, auth_mode)
         _log_report(report, logger)
-        tg_send(report)
         logger.info(
-            "==== HOÀN TẤT | đã_sửa=%d thất_bại=%d ====",
+            "==== DONE | repaired=%d failed=%d ====",
             repair_stats["repaired"], repair_stats["failed"],
         )
         exit_code = 1 if repair_stats["failed"] > 0 else 0
@@ -1891,8 +1888,8 @@ def main() -> None:
         heartbeat_stop.set()
         release("checker_repair")
         release("warehouse_maintenance")
-        logger.info("Đã giải phóng khóa.")
-        tg_flush()  # luôn flush dù try thành công hay exception
+        logger.info("Released locks.")
+        tg_flush()  # always flush regardless of success or exception
 
     _exit(exit_code)
 
@@ -1901,13 +1898,13 @@ def main() -> None:
 # C[T0] = O[T1] CONTINUITY CHECK  (DB-only, no TradingView needed)
 # =============================================================================
 
-# D1, W excluded — overnight/weekend gaps are expected and do not violate C=O
+# D1, W excluded â€" overnight/weekend gaps are expected and do not violate C=O
 _CO_TF_MINUTES: dict[str, int] = {
     "M5": 5, "M10": 10, "M15": 15, "M20": 20, "M30": 30, "M45": 45,
     "M90": 90, "H1": 60, "H2": 120, "H3": 180, "H4": 240, "H6": 360, "H8": 480,
 }
 
-# Static CASE expression — safe, no user input
+# Static CASE expression â€" safe, no user input
 _CO_TF_CASE = "\n               ".join(
     f"WHEN '{code}' THEN {mins}"
     for code, mins in _CO_TF_MINUTES.items()
@@ -1935,7 +1932,7 @@ _CO_SQL = """
         FROM DWH.Fact_OHLCV f
         JOIN tf_mins tfm ON tfm.TimeframeID = f.TimeframeID
         WHERE tfm.TFMinutes IS NOT NULL
-          AND f.BarTime >= DATEADD(DAY, -?, GETUTCDATE())
+          AND f.BarTime >= DATEADD(DAY, --, GETUTCDATE())
           AND f.SymbolID IN ({sym_phs})
     )
     SELECT
@@ -1970,7 +1967,7 @@ _CO_SQL_TOP = """
         JOIN DWH.Dim_Symbol s ON s.SymbolID = f.SymbolID
         JOIN tf_mins tfm      ON tfm.TimeframeID = f.TimeframeID
         WHERE tfm.TFMinutes IS NOT NULL
-          AND f.BarTime >= DATEADD(DAY, -?, GETUTCDATE())
+          AND f.BarTime >= DATEADD(DAY, --, GETUTCDATE())
           AND f.SymbolID IN ({sym_phs})
     )
     SELECT TOP 10
@@ -1991,10 +1988,10 @@ def check_co_continuity(
     sym_filter: list | None = None,
 ) -> tuple[bool, dict]:
     """
-    Kiểm tra C[T0] = O[T1] cho các bar liên tiếp trong cùng session.
+    Kiá»ƒm tra C[T0] = O[T1] cho cÃ¡c bar liÃªn tiáº¿p trong cÃ¹ng session.
 
-    Chỉ kiểm tra TF M5..H8 (bỏ qua D1/W vì overnight gap là bình thường).
-    "Liên tiếp" = DATEDIFF(MINUTE) đúng bằng TF period.
+    Chá»‰ kiá»ƒm tra TF M5..H8 (bá» qua D1/W vÃ¬ overnight gap lÃ  bÃ¬nh thÆ°á»ng).
+    "LiÃªn tiáº¿p" = DATEDIFF(MINUTE) Ä‘Ãºng báº±ng TF period.
     Flag khi |O[T1] - C[T0]| / C[T0] > 0.5%.
 
     Returns (is_clean, stats_dict). is_clean = True khi flag% < 1%.
@@ -2008,7 +2005,7 @@ def check_co_continuity(
     if not sym_ids:
         return True, {"total": 0, "flagged": 0, "pct": 0.0, "top": []}
 
-    sym_phs = ",".join("?" * len(sym_ids))
+    sym_phs = ",".join("-" * len(sym_ids))
     params  = (lookback_days, *sym_ids)
 
     conn   = get_connection()
@@ -2044,7 +2041,7 @@ def check_co_continuity(
 
 
 def _format_co_report(stats: dict, lookback_days: int) -> str:
-    """Trả về chuỗi báo cáo C-O continuity check (dùng cả cho log và Discord)."""
+    """Tráº£ vá» chuá»—i bÃ¡o cÃ¡o C-O continuity check (dÃ¹ng cáº£ cho log vÃ  Discord)."""
     total   = stats["total"]
     flagged = stats["flagged"]
     pct     = stats["pct"]
@@ -2057,9 +2054,8 @@ def _format_co_report(stats: dict, lookback_days: int) -> str:
     if total == 0:
         lines.append("(no data)")
         return "\n".join(lines)
-
     if flagged == 0:
-        lines.append(f"Result: CLEAN — all {total:,} within-session C=O (diff < 0.5%)")
+        lines.append(f"Result: CLEAN - all {total:,} within-session C=O (diff < 0.5%)")
     else:
         level = "WARNING" if pct < 1.0 else "ERROR"
         lines.append(f"Result: [{level}] {flagged:,} / {total:,} flagged ({pct:.3f}%)")
@@ -2074,7 +2070,7 @@ def _format_co_report(stats: dict, lookback_days: int) -> str:
 
 
 def _log_report(report: str, logger: logging.Logger) -> None:
-    """Log report ra file (strip HTML tags cho dễ đọc)."""
+    """Log report ra file (strip HTML tags cho dá»… Ä‘á»c)."""
     clean = (report
              .replace("<b>", "").replace("</b>", "")
              .replace("<i>", "").replace("</i>", ""))
@@ -2090,15 +2086,15 @@ def _acquire_repair_locks(
 ) -> threading.Event | None:
     """Acquire checker locks and start heartbeat. Returns stop event or None on failure."""
     if not acquire("checker_repair", duration_min=duration_min):
-        msg = "⚠️ <b>[Checker]</b> Lock đang bận — process khác đang sửa dữ liệu. Bỏ qua."
-        logger.warning("Không lấy được khóa checker_repair.")
+        msg = "[WARN] <b>[Checker]</b> Lock is busy. Another process is repairing data. Skipping."
+        logger.warning("Could not get checker_repair lock.")
         tg_send(msg)
         tg_flush()
         return None
     if not acquire("warehouse_maintenance", duration_min=duration_min):
         release("checker_repair")
-        msg = "⚠️ <b>[Checker]</b> Warehouse đang bận — pipeline hoặc maintenance khác đang chạy. Bỏ qua."
-        logger.warning("Không lấy được khóa warehouse_maintenance.")
+        msg = "[WARN] <b>[Checker]</b> Warehouse is busy. Pipeline or another maintenance job is running. Skipping."
+        logger.warning("Could not get warehouse_maintenance lock.")
         tg_send(msg)
         tg_flush()
         return None
@@ -2120,7 +2116,7 @@ def _release_repair_locks(heartbeat_stop: threading.Event | None, logger: loggin
         heartbeat_stop.set()
     release("checker_repair")
     release("warehouse_maintenance")
-    logger.info("Đã giải phóng khóa.")
+    logger.info("Released locks.")
     tg_flush()
 
 
@@ -2429,7 +2425,7 @@ def check_interval_gaps(
 
     conn.close()
 
-    # ── Format report ─────────────────────────────────────────────────────────
+    # â"€â"€ Format report â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     sym_codes = [r[1] for r in symbols]
     lines     = ["=== TF Interval Gap Check ==="]
     has_issues = False
@@ -2446,24 +2442,24 @@ def check_interval_gaps(
         total_n = len(tf_res)
 
         lines.append(
-            f"\nTF: {tf_code:<6} | OK: {ok_n} | Van de: {issue_n} | Trong: {empty_n} | Bo qua: {skip_n} / Tong: {total_n}"
+            f"\nTF: {tf_code:<6} | OK: {ok_n} | Issues: {issue_n} | Empty: {empty_n} | Skipped: {skip_n} / Total: {total_n}"
         )
 
         if skip_n == total_n:
             reasons = {r.get('reason') for _, r in tf_res}
             if reasons == {"tv_validated_direct_tf"}:
-                lines.append("  [SKIP] Direct TF co session — default checker vs TradingView da bao phu gap/mismatch cho TF nay.")
+                lines.append("  [SKIP] Direct TF with sessions - default checker vs TradingView already covers gaps/mismatch for this TF.")
             else:
-                lines.append("  [SKIP] Session-based TF — default checker vs TradingView will cover these bars.")
+                lines.append("  [SKIP] Session-based TF - default checker vs TradingView will cover these bars.")
             continue
 
         if issue_n == 0:
-            lines.append(f"  [SACH] Tat ca {ok_n} symbols OK")
+            lines.append(f"  [CLEAN] All {ok_n} symbols OK")
             continue
 
         has_issues = True
         if full:
-            lines.append(f"  {'Symbol':<12} {'Sai/Tong':>10} {'%Sai':>7} {'Short':>7} {'Long':>7}  Top gaps sai")
+            lines.append(f"  {'Symbol':<12} {'Bad/Total':>10} {'%Bad':>7} {'Short':>7} {'Long':>7}  Top bad gaps")
             for sc, r in sorted(tf_res, key=lambda x: -x[1].get('pct', 0)):
                 if r['status'] != 'issues':
                     continue
@@ -2477,7 +2473,7 @@ def check_interval_gaps(
                     f" {r['short_gaps']:>7}  {r['long_gaps']:>6}   {top_str}{flag}"
                 )
         else:
-            lines.append(f"  {'Symbol':<12} {'Sai/Tong':>10} {'%Sai':>7}  Top gaps sai")
+            lines.append(f"  {'Symbol':<12} {'Bad/Total':>10} {'%Bad':>7}  Top bad gaps")
             for sc, r in sorted(tf_res, key=lambda x: -x[1].get('pct', 0)):
                 if r['status'] != 'issues':
                     continue
@@ -2491,7 +2487,7 @@ def check_interval_gaps(
 
     total_ok     = sum(1 for r in results.values() if r['status'] == 'ok')
     total_issues = sum(1 for r in results.values() if r['status'] == 'issues')
-    lines.append(f"\nTong ket: OK={total_ok} | Van de={total_issues} / {len(results)} cap")
+    lines.append(f"\nSummary: OK={total_ok} | Issues={total_issues} / {len(results)} pairs")
 
     issue_pairs = [
         {"sym": sc, "tf": tf_code, **results[(sc, tf_code)]}
@@ -2505,8 +2501,8 @@ def _repair_interval_gap_pair(tv, sym: dict, tf_code: str, gap_issue: dict,
                               interval_map: dict, logger: logging.Logger) -> bool:
     """
     Auto-repair cho interval gaps.
-    - Direct TF: focused repull quanh các đoạn gap sai.
-    - Computed TF: xóa và rebuild toàn bộ TF phái sinh của symbol đó.
+    - Direct TF: focused repull quanh cÃ¡c Ä‘oáº¡n gap sai.
+    - Computed TF: xÃ³a vÃ  rebuild toÃ n bá»™ TF phÃ¡i sinh cá»§a symbol Ä‘Ã³.
     """
     if tf_code in TF_STAGING:
         issue_times = sorted({
@@ -2521,11 +2517,11 @@ def _repair_interval_gap_pair(tv, sym: dict, tf_code: str, gap_issue: dict,
             reason="interval-gap",
         )
 
-    logger.info("  Rebuild TF phái sinh do khoảng trống interval — %s %s", sym["tv_symbol"], tf_code)
+    logger.info("  Rebuilding computed TF because of interval gaps - %s %s", sym["tv_symbol"], tf_code)
     deleted = delete_fact_bars(sym["symbol_id"], tf_code)
     inserted = aggregate_from_fact(sym["symbol_id"], tf_code)
     logger.info(
-        "  Rebuild TF phái sinh hoàn tất — %s %s | đã_xóa=%d đã_thêm=%d",
+        "  Computed TF rebuild finished - %s %s | deleted=%d inserted=%d",
         sym["tv_symbol"], tf_code, deleted, inserted,
     )
     return inserted >= 0
@@ -2539,7 +2535,7 @@ def auto_repair_interval_gaps(
     logger: logging.Logger,
     tf_filter: str | None = None,
 ) -> dict:
-    """Repair all interval-gap issues and verify lại bằng check_interval_gaps."""
+    """Repair all interval-gap issues and verify láº¡i báº±ng check_interval_gaps."""
     symbol_map = {sym["symbol_id"]: sym for sym in symbols}
     repaired = failed = 0
     repaired_sym_ids: set[int] = set()
@@ -2564,7 +2560,7 @@ def auto_repair_interval_gaps(
 
     if repaired_sym_ids:
         logger.info(
-            "Đang tính lại TF phái sinh sau khi sửa khoảng trống interval cho %d cặp...",
+            "Rebuilding computed TFs after interval-gap repair for %d pairs...",
             len(repaired_sym_ids),
         )
         recompute_derived(repaired_sym_ids, logger)
@@ -2608,7 +2604,7 @@ def rebuild_computed_tfs(
     target_tfs = _COMPUTED_TFS
     if tf_filter:
         if tf_filter not in _COMPUTED_TFS:
-            return f"[Rebuild] TF '{tf_filter}' khong phai TF phai sinh. Ho tro: {_COMPUTED_TFS}"
+            return f"[Rebuild] TF '{tf_filter}' is not a computed TF. Supported: {_COMPUTED_TFS}"
         target_tfs = [tf_filter]
 
     conn   = get_connection()
@@ -2623,7 +2619,7 @@ def rebuild_computed_tfs(
         symbols = cursor.fetchall()
 
     cursor.execute(
-        f"SELECT Code, TimeframeID FROM DWH.Dim_Timeframe WHERE Code IN ({','.join('?' * len(target_tfs))})",
+        f"SELECT Code, TimeframeID FROM DWH.Dim_Timeframe WHERE Code IN ({','.join('-' * len(target_tfs))})",
         target_tfs,
     )
     tf_id_map = {r[0]: r[1] for r in cursor.fetchall()}
@@ -2671,7 +2667,7 @@ def rebuild_computed_tfs(
                 except Exception as exc:
                     conn3.rollback()
                     if logger:
-                        logger.warning("Lỗi khi xóa dữ liệu để rebuild TF phái sinh %s %s: %s", sym_name, tf_code, exc)
+                        logger.warning("Error deleting data before computed TF rebuild %s %s: %s", sym_name, tf_code, exc)
                     n_del = 0
                 finally:
                     conn3.close()
@@ -2694,10 +2690,25 @@ def rebuild_computed_tfs(
     if not dry_run:
         lines.append(f"  Total inserted: {total_ins}")
     if dry_run:
-        lines.append("Chay lai voi --rebuild-computed (khong co --dry-run) de thuc hien.")
+        lines.append("Run again with --rebuild-computed (without --dry-run) to apply changes.")
 
     return "\n".join(lines)
 
 
 if __name__ == "__main__":
-    main()
+    import traceback as _tb_mod
+    try:
+        main()
+    except KeyboardInterrupt:
+        tg_send("[WARN] <b>[Checker] Stopped manually (Ctrl+C)</b>")
+        tg_flush()
+        sys.exit(130)
+    except Exception as _exc:
+        _tb = _tb_mod.format_exc()
+        tg_send(
+            f"[ERROR] <b>[Checker] Crashed unexpectedly</b>\n"
+            f"{type(_exc).__name__}: {_exc}\n"
+            f"<pre>{_tb[-800:]}</pre>"
+        )
+        tg_flush()
+        sys.exit(1)

@@ -20,10 +20,10 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "core_python"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from shared.data import DataQualityError, validate_backtest_data
-from shared.execution import backtest_fast
-from strategies.combo.config import SYMBOLS, get_indicator_params, validate_config
-from strategies.combo.logic import add_combo_indicators
+from core_python.shared.data import DataQualityError, validate_backtest_data
+from core_python.strategies.combo.params import SYMBOLS, get_indicator_params, validate_config
+from core_python.strategies.combo.execution import backtest_fast
+from core_python.strategies.combo.model import add_combo_indicators
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -38,7 +38,7 @@ def _make_clean_ohlcv(n: int = 200, seed: int = 0) -> pd.DataFrame:
     spread = rng.uniform(10, 30, n)
     return pd.DataFrame(
         {
-            "open":   np.concatenate([[close[0]], close[:-1]]),
+            "open":   close,
             "high":   close + spread,
             "low":    close - spread,
             "close":  close,

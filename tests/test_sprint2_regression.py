@@ -19,8 +19,8 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "core_python"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from shared.monte_carlo import run_monte_carlo
-from shared.portfolio import check_portfolio_ftmo
+from core_python.shared.monte_carlo import run_monte_carlo
+from core_python.shared.portfolio import check_portfolio_ftmo
 
 
 # ─────────────────────────────────────────────────────────────────────────────

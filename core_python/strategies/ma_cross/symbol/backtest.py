@@ -6,11 +6,11 @@ from typing import Any
 
 import pandas as pd
 
-from shared.contracts import SymbolBacktestResult
-from shared.data import load_backtest_ohlcv, load_backtest_ohlcv_full
-from shared.execution_market import backtest_market_symbol
-from shared.metrics import calc_metrics, in_bao_cao
-from shared.monte_carlo import plot_monte_carlo, run_monte_carlo
+from core_python.shared.contracts import SymbolBacktestResult
+from core_python.shared.data import load_backtest_ohlcv, load_backtest_ohlcv_full
+from core_python.shared.execution.engines.market import backtest_market_symbol
+from core_python.shared.analytics import calc_metrics, in_bao_cao
+from core_python.shared.analytics import plot_monte_carlo, run_monte_carlo
 
 from ..config import (
     TIMEFRAME,
@@ -20,7 +20,20 @@ from ..config import (
     get_indicator_params,
     get_symbol_params,
 )
-from ..logic import add_ma_cross_indicators, detect_ma_cross_signals, session_mask
+from ..signals import add_ma_cross_indicators
+from ..signals import detect_ma_cross_signals, session_mask
+
+
+def _timestamp_for_index(value: str | pd.Timestamp, index: pd.Index) -> pd.Timestamp:
+    ts = pd.Timestamp(value)
+    if isinstance(index, pd.DatetimeIndex):
+        if index.tz is not None and ts.tzinfo is None:
+            ts = ts.tz_localize(index.tz)
+        elif index.tz is None and ts.tzinfo is not None:
+            ts = ts.tz_convert("UTC").tz_localize(None)
+        elif index.tz is not None and ts.tzinfo is not None:
+            ts = ts.tz_convert(index.tz)
+    return ts
 
 
 def _default_warmup(params: dict[str, Any] | None = None) -> int:
@@ -95,9 +108,9 @@ def build_symbol_signal_frame(
     if date_from or date_to:
         mask = pd.Series(True, index=df_ind.index)
         if date_from:
-            mask &= df_ind.index >= pd.Timestamp(date_from)
+            mask &= df_ind.index >= _timestamp_for_index(date_from, df_ind.index)
         if date_to:
-            mask &= df_ind.index <= pd.Timestamp(date_to)
+            mask &= df_ind.index <= _timestamp_for_index(date_to, df_ind.index)
         df_ind["in_window"] = mask
 
     sess = session_mask(df_ind, cfg.get("session_hours_utc", []))

@@ -1,13 +1,13 @@
-"""Configuration source of truth for the MA Cross market-order strategy.
+"""Parameter source of truth for the MA Cross market-order strategy.
 
 MA Cross owns its signal/risk defaults in this module. Shared instrument,
-broker, and cost metadata comes from ``shared.instruments`` so this strategy
-does not depend on the Combo package.
+broker, and cost metadata comes from ``core_python.shared.market`` so this
+strategy does not depend on the Combo package.
 """
 
 from __future__ import annotations
 
-from shared.instruments import (
+from core_python.shared.market import (
     BROKER_PROFILES,
     DEFAULT_BROKER_PROFILE,
     DEFAULT_COSTS,
@@ -189,6 +189,7 @@ __all__ = [
     "TIMEFRAMES",
     "DEFAULT_N_BARS",
     "INDICATOR_COLS",
+    "OPTIMIZATION",
     "SYMBOLS",
     "get_account_settings",
     "get_cost_settings",
