@@ -17,7 +17,7 @@ if (-not $PythonExe) {
     }
 }
 
-$ChartPath = Join-Path $RepoRoot "core_python\strategies\combo\combo_chart.py"
+$ChartPath = Join-Path $RepoRoot "core_python\strategies\combo\chart.py"
 
 $PythonPathParts = @($RepoRoot, (Join-Path $RepoRoot "core_python"))
 if ($env:PYTHONPATH) {

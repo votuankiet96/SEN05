@@ -7,10 +7,9 @@ from .optimize import (
     candidate_grid,
     metric_row,
     metrics_frame,
-    rank_grid,
     run_symbol_grid_search,
-    select_top_candidates,
 )
+from .selection import rank_grid, select_top_candidates
 from .walkforward import simple_walkforward
 
 __all__ = [

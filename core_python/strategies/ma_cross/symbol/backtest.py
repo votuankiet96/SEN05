@@ -8,7 +8,7 @@ import pandas as pd
 
 from core_python.shared.contracts import SymbolBacktestResult
 from core_python.shared.data import load_backtest_ohlcv, load_backtest_ohlcv_full
-from core_python.shared.execution.engines.market import backtest_market_symbol
+from ..execution import backtest_basket_reversal_symbol, backtest_market_symbol
 from core_python.shared.analytics import calc_metrics, in_bao_cao
 from core_python.shared.analytics import plot_monte_carlo, run_monte_carlo
 
@@ -22,6 +22,7 @@ from ..config import (
 )
 from ..signals import add_ma_cross_indicators
 from ..signals import detect_ma_cross_signals, session_mask
+from ..filters import add_entry_filter_columns
 
 
 def _timestamp_for_index(value: str | pd.Timestamp, index: pd.Index) -> pd.Timestamp:
@@ -150,15 +151,37 @@ def run_symbol_backtest_on_frame(
     strategy_cfg["fast_ma"] = int(params["FAST_MA"])
     strategy_cfg["slow_ma"] = int(params["SLOW_MA"])
     strategy_cfg["atr_period"] = int(params["ATR_PERIOD"])
-
-    trades, equity = backtest_market_symbol(
-        symbol_key,
+    df_sig = add_entry_filter_columns(
         df_sig,
-        cfg,
-        init_eq,
-        strategy=strategy_cfg,
-        costs=get_cost_settings(symbol_key, costs, broker_profile=broker_profile),
+        symbol_config=cfg,
+        filter_overrides=strategy_cfg,
     )
+
+    execution_model = str(strategy_cfg.get("execution_model", "market_single")).lower()
+    resolved_costs = get_cost_settings(symbol_key, costs, broker_profile=broker_profile)
+    if execution_model == "basket_reversal":
+        trades, equity = backtest_basket_reversal_symbol(
+            symbol_key,
+            df_sig,
+            cfg,
+            init_eq,
+            strategy=strategy_cfg,
+            costs=resolved_costs,
+        )
+    elif execution_model == "market_single":
+        trades, equity = backtest_market_symbol(
+            symbol_key,
+            df_sig,
+            cfg,
+            init_eq,
+            strategy=strategy_cfg,
+            costs=resolved_costs,
+        )
+    else:
+        raise ValueError(
+            "Unsupported MA Cross execution_model "
+            f"'{execution_model}'. Use 'market_single' or 'basket_reversal'."
+        )
     metrics = calc_metrics(trades, equity, tf_code=tf)
 
     return SymbolBacktestResult(
@@ -221,6 +244,7 @@ def run_symbol_backtest(
 
 __all__ = [
     "add_ma_cross_indicators",
+    "backtest_basket_reversal_symbol",
     "backtest_market_symbol",
     "build_symbol_signal_frame",
     "detect_ma_cross_signals",

@@ -29,9 +29,11 @@ except ImportError:  # pragma: no cover - import guard for operator-friendly CLI
 _ROOT = Path(__file__).resolve().parents[3]
 _CORE = _ROOT / "core_python"
 _HERE = Path(__file__).resolve().parent
-for _path in (_ROOT, _CORE):
-    if str(_path) not in sys.path:
-        sys.path.insert(0, str(_path))
+for _path in (_CORE, _ROOT):
+    _path_str = str(_path)
+    if _path_str in sys.path:
+        sys.path.remove(_path_str)
+    sys.path.insert(0, _path_str)
 
 from modules.db_connector import test_connection
 from core_python.shared.data import load_scan_ohlcv  # noqa: E402
@@ -54,7 +56,6 @@ PORT = 8513
 HOST = "127.0.0.1"
 TF_DIRECT = ["M5", "M15", "M30", "M45", "H1", "H2", "H3", "H4", "D1", "W"]
 TF_COMPUTED = ["M10", "M20", "M90", "H6", "H8"]
-MAX_SIGNAL_ROWS = 80
 
 APP_DEFAULT_SYMBOL = next(iter(SYMBOLS))
 APP_DEFAULT_BARS = 500  # match 03_chart default
@@ -242,7 +243,7 @@ def _signals_json(signals: pd.DataFrame) -> list[dict]:
     """Build signals list with unix `time` field added (for Lightweight Charts markers)."""
     if signals.empty:
         return []
-    view = signals.tail(MAX_SIGNAL_ROWS).copy()
+    view = signals.copy()
     # Add unix timestamp for chart markers
     view["time"] = view["bar_time"].apply(_ts)
     # Format bar_time as human-readable string for the table
@@ -336,6 +337,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--port", type=int, default=PORT)
     parser.add_argument("--default-symbol", default=APP_DEFAULT_SYMBOL)
     parser.add_argument("--default-bars", type=int, default=APP_DEFAULT_BARS)
+    parser.add_argument("--check-db-startup", action="store_true")
     parser.add_argument("--debug", action="store_true")
     return parser.parse_args()
 
@@ -358,11 +360,14 @@ def main() -> int:
     print(f"  Port     : {args.port}")
     print("=" * 60)
 
-    print("\n[Checking SQL Server connection...]")
-    if not test_connection():
-        print("  Database : WARN - scan API will show the DB error until connection is fixed.")
+    if args.check_db_startup:
+        print("\n[Checking SQL Server connection...]")
+        if not test_connection():
+            print("  Database : WARN - scan API will show the DB error until connection is fixed.")
+        else:
+            print("  Database : OK")
     else:
-        print("  Database : OK")
+        print("\nDatabase : startup check skipped; scan API will report DB errors if any.")
     print(f"\nReady: http://{args.host}:{args.port}\n")
 
     app.run(debug=args.debug, host=args.host, port=args.port, use_reloader=False)

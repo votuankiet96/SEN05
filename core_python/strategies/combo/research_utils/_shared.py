@@ -29,6 +29,9 @@ except Exception:  # pragma: no cover
         print(obj)
 
 
+_ACTIVE_WIDGET_OUTPUT: Any | None = None
+
+
 @contextmanager
 def _widget_output_target(output: Any):
     """Route custom HTML helpers directly to a widget Output during callbacks."""

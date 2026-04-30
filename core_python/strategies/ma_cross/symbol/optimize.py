@@ -7,6 +7,7 @@ import pandas as pd
 
 from ..config import TIMEFRAMES, get_symbol_search_space
 from .backtest import run_symbol_backtest
+from .selection import rank_grid, select_top_candidates
 
 
 def candidate_grid(
@@ -96,13 +97,6 @@ def metrics_frame(rows: Iterable[Mapping[str, Any]]) -> pd.DataFrame:
     return df[preferred + rest]
 
 
-def rank_grid(df: pd.DataFrame, score_column: str = "sharpe") -> pd.DataFrame:
-    if df.empty:
-        return df
-    sort_cols = [c for c in [score_column, "profit_factor", "total_trades"] if c in df.columns]
-    return df.sort_values(sort_cols, ascending=[False] * len(sort_cols)).reset_index(drop=True)
-
-
 def run_symbol_grid_search(
     symbol: str,
     *,
@@ -151,33 +145,8 @@ def run_symbol_grid_search(
     return rank_grid(metrics_frame(rows))
 
 
-def select_top_candidates(
-    df: pd.DataFrame,
-    *,
-    top_n: int = 10,
-    min_trades: int = 30,
-    min_profit_factor: float = 1.0,
-    max_drawdown: float | None = None,
-    score_column: str = "sharpe",
-) -> pd.DataFrame:
-    if df.empty:
-        return df
-    out = df.copy()
-    if "total_trades" in out.columns:
-        out = out[out["total_trades"].fillna(0) >= min_trades]
-    if "profit_factor" in out.columns:
-        out = out[out["profit_factor"].fillna(0) >= min_profit_factor]
-    if max_drawdown is not None and "max_drawdown" in out.columns:
-        out = out[out["max_drawdown"].abs().fillna(999) <= max_drawdown]
-    return rank_grid(out, score_column=score_column).head(top_n).reset_index(drop=True)
-
-
-_candidate_grid = candidate_grid
-
-
 __all__ = [
     "candidate_grid",
-    "_candidate_grid",
     "metric_row",
     "metrics_frame",
     "rank_grid",
