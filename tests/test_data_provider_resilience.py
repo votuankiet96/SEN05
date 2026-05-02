@@ -368,6 +368,47 @@ class TestWsLiveSpoolCap:
         )
 
 
+    def test_sql_placeholders_are_parameterized(self):
+        """ws_live SQL must use real parameter placeholders, not '-' characters."""
+        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        assert '",".join("?" * len(ws_tf_codes))' in src, (
+            "Watermark query must build IN placeholders with '?'"
+        )
+        assert "VALUES (-,-,-,-,-)" not in src, (
+            "SQLite spool INSERT must not use '-' instead of parameter placeholders"
+        )
+        assert "WHERE id=-" not in src, (
+            "SQLite spool DELETE must not use '-' instead of a parameter placeholder"
+        )
+        assert "VALUES (?,?,?,?,?)" in src, (
+            "SQLite spool INSERT must use five parameter placeholders"
+        )
+        assert "WHERE id=?" in src, (
+            "SQLite spool DELETE must use a parameter placeholder"
+        )
+
+    def test_spool_write_reports_rejection_when_full(self):
+        """_spool_write() must tell the caller when the bar was not durably accepted."""
+        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        start = src.find("def _spool_write(")
+        end = src.find("\ndef ", start + 1)
+        fn_src = src[start:end]
+        assert "def _spool_write(item: tuple) -> bool:" in fn_src
+        assert "return False" in fn_src
+        assert "return True" in fn_src
+
+    def test_db_worker_shutdown_drains_overflow_and_spool(self):
+        """DB worker must wait for queue, RAM overflow, and SQLite spool before exit."""
+        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        start = src.find("def _db_worker()")
+        end = src.find("\ndef ", start + 1)
+        fn_src = src[start:end]
+        assert "while True:" in fn_src
+        assert "overflow_pending" in fn_src
+        assert "spool_pending" in fn_src
+        assert "overflow_pending == 0 and spool_pending == 0" in fn_src
+
+
 # =============================================================================
 # NHÓM 5: ws_live — Watermark & crash recovery
 # =============================================================================
@@ -411,6 +452,42 @@ class TestWsLiveWatermark:
         src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
         assert "_deferred_etl" in src, "_deferred_etl dict phải tồn tại"
         assert "still_deferred" in src, "Phải có logic giữ lại item ETL fail"
+
+
+    def test_batch_complete_called_once_per_batch(self):
+        """_run_batch should update hourly stats once per batch."""
+        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        start = src.find("def _run_batch(")
+        end = src.find("\ndef _on_batch_complete", start)
+        fn_src = src[start:end]
+        assert fn_src.count("_on_batch_complete(") == 1, (
+            "_run_batch must not call _on_batch_complete twice and double-count hourly stats"
+        )
+
+    def test_ws_live_handoff_does_not_force_release_active_lock(self):
+        """Startup must not force-delete the old instance lock when graceful handoff times out."""
+        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        handoff_start = src.find("if not ws_lock:")
+        handoff_end = src.find("atexit.register", handoff_start)
+        handoff_section = src[handoff_start:handoff_end]
+        assert "request_ws_live_shutdown" in handoff_section
+        assert "_release_task_lock(\"ws_live_runtime\")" not in handoff_section
+        assert "startup aborted" in handoff_section
+
+    def test_ws_url_uses_query_separator(self):
+        """TradingView closes the socket immediately when the from/date suffix uses '-'."""
+        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        assert '?from=chart%2F&date=' in src
+        assert '-from=chart%2F&date=' not in src
+
+    def test_fetch_requires_registered_sessions_for_success(self):
+        """A socket close before _on_open must be treated as a failed fetch and retried."""
+        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        start = src.find("def fetch(")
+        end = src.find("\n\n# =============================================================================", start)
+        fn_src = src[start:end]
+        assert "expected_count > 0" in fn_src
+        assert "received_count >= expected_count" in fn_src
 
 
 # =============================================================================

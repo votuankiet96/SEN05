@@ -449,7 +449,7 @@ def _load_watermarks() -> None:
         # Lý do: staging bị purge sau 7 ngày -> watermark về 0 khi restart nếu dùng staging.
         # Fact_OHLCV lưu vĩnh viễn nên watermark luôn chính xác dù restart bao nhiêu lần.
         ws_tf_codes  = list(WS_TF_INTERVAL.keys())   # 10 TF trực tiếp WS cần theo dõi
-        placeholders = ",".join("-" * len(ws_tf_codes))
+        placeholders = ",".join("?" * len(ws_tf_codes))
         cursor.execute(f"""
             SELECT f.SymbolID, tf.Code, MAX(f.BarTime)
             FROM DWH.Fact_OHLCV f
@@ -577,12 +577,13 @@ def _init_spool_db() -> None:
     logger.info("[SPOOL] Persistent spool ready: %s", _SPOOL_DB)
 
 
-def _spool_write(item: tuple) -> None:
+def _spool_write(item: tuple) -> bool:
     """
     Serialize 1 bar và ghi vào SQLite spool.
     Được gọi khi cả DB queue lẫn overflow buffer RAM đều đầy.
     Bar sẽ được đọc lại và đưa vào queue khi có chỗ trống.
     Drop và alert khi spool vượt MAX_SPOOL_ROWS.
+    Trả về True nếu ghi thành công, False nếu spool đã đầy và bar bị từ chối.
     """
     symbol_id, tf_code, staging_table, tv_symbol, df = item
     blob = pickle.dumps(df)
@@ -602,12 +603,13 @@ def _spool_write(item: tuple) -> None:
                     )
                 except Exception:
                     pass
-                return
+                return False
             con.execute(
-                "INSERT INTO spool (symbol_id,tf_code,staging_table,tv_symbol,bar_data) VALUES (-,-,-,-,-)",
+                "INSERT INTO spool (symbol_id,tf_code,staging_table,tv_symbol,bar_data) VALUES (?,?,?,?,?)",
                 (symbol_id, tf_code, staging_table, tv_symbol, blob),
             )
             con.commit()
+    return True
 
 
 def _spool_flush_to_queue() -> int:
@@ -628,7 +630,7 @@ def _spool_flush_to_queue() -> int:
                     df   = pickle.loads(blob)
                     item = (sym_id, tf_code, stg_tbl, tv_sym, df)
                     _db_queue.put_nowait(item)
-                    con.execute("DELETE FROM spool WHERE id=-", (row_id,))
+                    con.execute("DELETE FROM spool WHERE id=?", (row_id,))
                     flushed += 1
                 except queue.Full:
                     break  # Queue vẫn đầy -> giữ lại phần còn trong SQLite
@@ -710,7 +712,11 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
             else:
                 # Cả queue lẫn overflow RAM đều đầy -> ghi vào SQLite spool (durable)
                 try:
-                    _spool_write(item)
+                    if not _spool_write(item):
+                        with _state_lock:
+                            _stats["errors"] += 1
+                            _stats["queue_depth"] = _db_queue.qsize()
+                        return "rejected"
                     logger.warning(
                         "[G%d] Queue+overflow full - spooled to disk: %s %s",
                         group_id, tv_symbol, tf_code,
@@ -782,11 +788,17 @@ def _db_worker() -> None:
     """
     logger.info("[DB ] Worker started.")
 
-    # Vòng lặp: tiếp tục chạy cho đến khi _shutdown được set VÀ queue rỗng hoàn toàn
-    while not (_shutdown.is_set() and _db_queue.empty()):
-
-        # Tranh thủ mỗi vòng lặp: thử chuyển nến từ overflow buffer vào queue
+    # Vòng lặp: tiếp tục chạy cho đến khi _shutdown được set VÀ queue/overflow/spool đều rỗng.
+    while True:
+        # Tranh thủ mỗi vòng lặp: thử chuyển nến từ overflow buffer/spool vào queue.
         _flush_overflow_to_queue()
+
+        if _shutdown.is_set() and _db_queue.empty():
+            with _overflow_lock:
+                overflow_pending = len(_overflow_buf)
+            spool_pending = _safe_spool_count() or 0
+            if overflow_pending == 0 and spool_pending == 0:
+                break
 
         # Lấy 1 nến từ hàng đợi, chờ tối đa 1 giây
         # Nếu sau 1 giây queue vẫn rỗng -> tiếp tục vòng lặp (không block mãi)
@@ -946,8 +958,31 @@ def _db_worker() -> None:
                 _deferred_etl.clear()
                 _deferred_etl.update(still_deferred)
 
-    # Flush các aggregate còn lại trước khi tắt (queue đã rỗng nhưng pending chưa chạy)
-    if _pending_agg:
+    # Retry deferred ETL một lần cuối nếu checker đã release lock trong lúc shutdown.
+    with _deferred_lock:
+        if _deferred_etl and not _checker_is_repairing():
+            logger.info("[DB ] Processing %d deferred ETL item(s) before shutdown...", len(_deferred_etl))
+            still_deferred: dict[tuple[int, str, str, str], float] = {}
+            for (sym_id, tf_c, stg_tbl, sym_nm), max_ts in list(_deferred_etl.items()):
+                try:
+                    run_etl_direct(sym_id, tf_c, stg_tbl)
+                    logger.info("[DB ] Deferred ETL done before shutdown: %s %s", sym_nm, tf_c)
+                    _set_committed_watermark((sym_id, tf_c), max_ts)
+                    if stg_tbl in _SOURCE_TO_COMPUTED:
+                        for tgt_tf, src_tbl in _SOURCE_TO_COMPUTED[stg_tbl]:
+                            _pending_agg.add((sym_id, tgt_tf, src_tbl, sym_nm))
+                except Exception as exc:
+                    logger.error(
+                        "[DB ] Deferred ETL error (shutdown) - %s %s: %s", sym_nm, tf_c, exc
+                    )
+                    with _state_lock:
+                        _stats["errors"] += 1
+                    still_deferred[(sym_id, tf_c, stg_tbl, sym_nm)] = max_ts
+            _deferred_etl.clear()
+            _deferred_etl.update(still_deferred)
+
+    # Flush các aggregate còn lại trước khi tắt (queue đã rỗng nhưng pending chưa chạy).
+    if _pending_agg and not _checker_is_repairing():
         logger.info("[DB ] Flushing %d pending aggregate(s) before shutdown...", len(_pending_agg))
         for sym_id, tgt_tf, src_tbl, sym_name in list(_pending_agg):
             try:
@@ -956,6 +991,11 @@ def _db_worker() -> None:
                 logger.error("[DB ] ETL aggregate error (shutdown flush) - %s %s: %s",
                              sym_name, tgt_tf, exc)
         _pending_agg.clear()
+    elif _pending_agg:
+        logger.warning(
+            "[DB ] Skipping %d pending aggregate(s) on shutdown because checker lock is active.",
+            len(_pending_agg),
+        )
 
     logger.info("[DB ] Worker stopped.")
 
@@ -1572,7 +1612,7 @@ class BatchFetcher:
 
         # Tạo URL kết nối với timestamp hiện tại (TradingView yêu cầu tham số date)
         ts  = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
-        url = f"{TV_BASE_URL}-from=chart%2F&date={ts}"
+        url = f"{TV_BASE_URL}?from=chart%2F&date={ts}"
 
         # Tạo WebSocketApp với các handler sự kiện đã định nghĩa
         ws = websocket.WebSocketApp(
@@ -1730,7 +1770,10 @@ class BatchFetcher:
         )
         logger.info(sep)
 
-        return completed
+        with self._lock:
+            expected_count = len(self._expected)
+            received_count = len(self._received)
+        return completed and expected_count > 0 and received_count >= expected_count
 
 
 # =============================================================================
@@ -1851,11 +1894,10 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
             for (sid, tf), cnt in sorted(backlog_snap.items(), key=lambda x: -x[1])
         )
         logger.info("[SCHED] Backlog retry next batch (%d bars each): %s", N_BARS_WS_BACKLOG, entries)
+    elif total_new == 0:
+        logger.warning("[SCHED] No new bars and no backlog - check WebSocket/auth; sessions may not have registered.")
     else:
         logger.info("[SCHED] No backlog - all pairs OK this batch.")
-
-    # Cập nhật thống kê giờ và gửi alert nếu batch bất thường
-    _on_batch_complete(_stats["batches_run"], total_new, backlog_snap)
 
 
 def _on_batch_complete(
@@ -2174,12 +2216,14 @@ def main() -> None:
                 break
             time.sleep(1)
 
-        # Luôn xóa row cũ trước khi acquire — xử lý cả trường hợp expired-row race condition
-        # (lock đã hết hạn nhưng row vẫn còn trong DB, INSERT sẽ fail PK violation)
-        _release_task_lock("ws_live_runtime")
+        # Dọn lại lock hết hạn rồi thử acquire. Không force-delete lock còn hiệu lực:
+        # nếu instance cũ chưa thoát, startup phải abort để tránh chạy 2 ws_live song song.
+        _cleanup_expired()
         ws_lock = _acquire_task_lock("ws_live_runtime", duration_min=60)
         if not ws_lock:
-            logger.error("[LOCK] Could not acquire ws_live_runtime lock after handoff — startup aborted.")
+            logger.error(
+                "[LOCK] Existing ws_live_runtime lock is still active after handoff wait — startup aborted."
+            )
             sys.exit(1)
         logger.info("[LOCK] ws_live_runtime lock acquired successfully after handoff.")
     atexit.register(_release_task_lock, "ws_live_runtime")
