@@ -61,7 +61,7 @@ Nhung diem van hanh quan trong:
 #   10. ETL DEFER        - 04_checker.py đang repair -> defer ghi Fact, giữ ở Staging
 #                          để tránh race condition giữa 2 tiến trình
 #   11. DISCORD ALERT    - cảnh báo khi lỗi, token hết hạn, queue áp lực
-#   12. BÁO CÁO MỖI GIỜ - gửi thống kê bars_inserted / errors / queue_depth
+#   12. BÁO CÁO MỖI GIỜ - gửi thống kê accepted / Fact rows / errors / queue_depth
 #
 # ─────────────────────────────────────────────────────────────────────────────
 # THÔNG SỐ VẬN HÀNH (điều chỉnh trong phần HẰNG SỐ CẤU HÌNH bên dưới)
@@ -315,7 +315,10 @@ _received_bar_ts: dict[tuple[int, str], float] = {}
 
 # Bộ đếm thống kê hoạt động của hệ thống (hiển thị trong báo cáo định kỳ)
 _stats = {
-    "bars_inserted": 0,   # Tổng số nến đã lưu thành công vào DB
+    "bars_inserted": 0,   # Alias lịch sử: số nến mới đã vào Fact_OHLCV
+    "accepted_bars": 0,   # Nến mới vượt watermark và đã vào queue/overflow/spool
+    "staging_rows":  0,   # Rows staging affected (insert + update)
+    "fact_inserted": 0,   # Rows mới thật sự insert vào DWH.Fact_OHLCV
     "errors":        0,   # Tổng số lỗi phát sinh
     "events":        0,   # Tổng số gói tin WebSocket đã xử lý
     "queue_depth":   0,   # Số mục hiện đang chờ trong hàng đợi DB
@@ -351,8 +354,9 @@ _GUEST_ALERT_THRESHOLD     = 3
 # Thống kê theo giờ - reset mỗi lần gửi hourly digest lên Discord
 _hourly_stats: dict = {
     "batches":          0,  # Số batch chạy trong giờ qua
-    "bars":             0,  # Tổng bars nhận được trong giờ qua
-    "zero_bar_batches": 0,  # Số batch nhận được 0 bar
+    "accepted_bars":    0,  # Bars vượt watermark và đã được accept
+    "fact_bars":        0,  # Bars mới thật sự vào Fact_OHLCV
+    "zero_bar_batches": 0,  # Số batch accept 0 bar
     "backlog_peak":     0,  # Backlog peak (số pairs) trong giờ qua
 }
 _hourly_lock = threading.Lock()
@@ -371,12 +375,21 @@ _backlog_lock = threading.Lock()   # Lock riêng để bảo vệ _backlog
 # Thống kê hourly delta: reset mỗi giờ khi _status_reporter chạy
 _hourly_stats: dict = {
     "batches":          0,
-    "bars":             0,
+    "accepted_bars":    0,
+    "fact_bars":        0,
     "zero_bar_batches": 0,
     "backlog_peak":     0,
-    "pair_bars":        {},   # {(symbol_id, tf_code): tổng bars} trong giờ qua
+    "pair_bars":        {},   # {(symbol_id, tf_code): Fact rows mới trong giờ qua}
+    "pair_accepted":    {},   # {(symbol_id, tf_code): accepted bars trong giờ qua}
 }
 _hourly_lock = threading.Lock()
+
+# Per-batch DB metrics. Fetch threads only know "accepted"; DB worker later records
+# staging/Fact results for the same batch_id.
+_batch_metrics: dict[int, dict] = {}
+_batch_metrics_lock = threading.Lock()
+BATCH_DB_REPORT_WAIT_SEC = 60.0
+MAX_BATCH_METRIC_HISTORY = 288  # ~24h at 5-minute cadence
 
 # Buffer aggregate: (symbol_id, target_tf, src_table, tv_symbol) chưa được flush
 # Được flush khi queue DB tạm rỗng - tránh gọi run_etl_aggregate per-bar
@@ -460,9 +473,10 @@ def _load_watermarks() -> None:
         """, ws_tf_codes)
         for symbol_id, tf_code, max_bt in cursor.fetchall():
             if max_bt is not None:
-                # Chuyển datetime sang Unix timestamp (số giây từ 1970)
-                # để dễ so sánh hơn với timestamp từ TradingView
-                _last_bar_ts[(symbol_id, tf_code)] = max_bt.timestamp()
+                # SQL Server trả datetime naive nhưng dữ liệu là UTC. Không gọi
+                # .timestamp() trực tiếp trên host UTC+7, nếu không watermark sẽ
+                # bị lùi 7 giờ sau mỗi lần restart.
+                _last_bar_ts[(symbol_id, tf_code)] = _as_utc_timestamp(max_bt)
                 loaded += 1
 
         conn.close()
@@ -502,6 +516,15 @@ def _future_cutoff_ts() -> float:
     return datetime.now(timezone.utc).timestamp() + 60.0
 
 
+def _as_utc_timestamp(ts: datetime) -> float:
+    """Convert SQL/TV datetime to Unix timestamp, treating naive datetimes as UTC."""
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    else:
+        ts = ts.astimezone(timezone.utc)
+    return ts.timestamp()
+
+
 def _set_received_watermark(key: tuple[int, str], max_ts: float) -> None:
     """Theo dõi bar mới nhất đã được accept vào queue/overflow/spool."""
     with _state_lock:
@@ -512,6 +535,111 @@ def _set_committed_watermark(key: tuple[int, str], max_ts: float) -> None:
     """Chỉ cập nhật watermark filter sau khi Fact commit xong."""
     with _state_lock:
         _last_bar_ts[key] = max(max_ts, _last_bar_ts.get(key, 0.0))
+
+
+def _init_batch_metrics(batch_id: int) -> None:
+    with _batch_metrics_lock:
+        _batch_metrics[batch_id] = {
+            "accepted": 0,
+            "db_processed": 0,
+            "staging_rows": 0,
+            "fact_inserted": 0,
+            "deferred_items": 0,
+            "errors": 0,
+            "pair_accepted": {},
+            "pair_fact": {},
+        }
+        if len(_batch_metrics) > MAX_BATCH_METRIC_HISTORY:
+            for old_batch_id in sorted(_batch_metrics)[:-MAX_BATCH_METRIC_HISTORY]:
+                if old_batch_id != 0:
+                    _batch_metrics.pop(old_batch_id, None)
+
+
+def _record_batch_accepted(batch_id: int, key: tuple[int, str], count: int) -> None:
+    if count <= 0:
+        return
+    with _batch_metrics_lock:
+        metrics = _batch_metrics.setdefault(batch_id, {
+            "accepted": 0,
+            "db_processed": 0,
+            "staging_rows": 0,
+            "fact_inserted": 0,
+            "deferred_items": 0,
+            "errors": 0,
+            "pair_accepted": {},
+            "pair_fact": {},
+        })
+        metrics["accepted"] += count
+        metrics["pair_accepted"][key] = metrics["pair_accepted"].get(key, 0) + count
+    with _state_lock:
+        _stats["accepted_bars"] += count
+
+
+def _record_db_result(
+    batch_id: int,
+    key: tuple[int, str],
+    accepted_count: int,
+    staging_rows: int,
+    fact_inserted: int,
+    *,
+    deferred: bool = False,
+    error: bool = False,
+) -> None:
+    staging_rows = max(0, int(staging_rows or 0))
+    fact_inserted = max(0, int(fact_inserted or 0))
+
+    with _batch_metrics_lock:
+        metrics = _batch_metrics.setdefault(batch_id, {
+            "accepted": 0,
+            "db_processed": 0,
+            "staging_rows": 0,
+            "fact_inserted": 0,
+            "deferred_items": 0,
+            "errors": 0,
+            "pair_accepted": {},
+            "pair_fact": {},
+        })
+        metrics["db_processed"] += max(0, accepted_count)
+        metrics["staging_rows"] += staging_rows
+        metrics["fact_inserted"] += fact_inserted
+        if deferred:
+            metrics["deferred_items"] += 1
+        if error:
+            metrics["errors"] += 1
+        if fact_inserted:
+            metrics["pair_fact"][key] = metrics["pair_fact"].get(key, 0) + fact_inserted
+
+    if fact_inserted:
+        with _hourly_lock:
+            _hourly_stats["fact_bars"] += fact_inserted
+            _hourly_stats["pair_bars"][key] = _hourly_stats["pair_bars"].get(key, 0) + fact_inserted
+
+    if staging_rows or fact_inserted:
+        with _state_lock:
+            _stats["staging_rows"] += staging_rows
+            _stats["fact_inserted"] += fact_inserted
+            _stats["bars_inserted"] += fact_inserted
+
+
+def _snapshot_batch_metrics(batch_id: int) -> dict:
+    with _batch_metrics_lock:
+        metrics = dict(_batch_metrics.get(batch_id, {}))
+        metrics["pair_accepted"] = dict(metrics.get("pair_accepted", {}))
+        metrics["pair_fact"] = dict(metrics.get("pair_fact", {}))
+        return metrics
+
+
+def _wait_for_batch_db(batch_id: int, timeout_sec: float = BATCH_DB_REPORT_WAIT_SEC) -> dict:
+    deadline = time.monotonic() + timeout_sec
+    while True:
+        metrics = _snapshot_batch_metrics(batch_id)
+        accepted = int(metrics.get("accepted", 0))
+        processed = int(metrics.get("db_processed", 0))
+        if accepted == 0 or processed >= accepted or time.monotonic() >= deadline:
+            return metrics
+        _shutdown.wait(0.25)
+        if _shutdown.is_set():
+            return _snapshot_batch_metrics(batch_id)
 
 
 # =============================================================================
@@ -565,6 +693,7 @@ def _init_spool_db() -> None:
             con.execute("""
                 CREATE TABLE IF NOT EXISTS spool (
                     id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                    batch_id      INTEGER NOT NULL DEFAULT 0,
                     symbol_id     INTEGER NOT NULL,
                     tf_code       TEXT    NOT NULL,
                     staging_table TEXT    NOT NULL,
@@ -573,6 +702,9 @@ def _init_spool_db() -> None:
                     created_at    TEXT    DEFAULT (datetime('now'))
                 )
             """)
+            cols = {row[1] for row in con.execute("PRAGMA table_info(spool)").fetchall()}
+            if "batch_id" not in cols:
+                con.execute("ALTER TABLE spool ADD COLUMN batch_id INTEGER NOT NULL DEFAULT 0")
             con.commit()
     logger.info("[SPOOL] Persistent spool ready: %s", _SPOOL_DB)
 
@@ -585,7 +717,11 @@ def _spool_write(item: tuple) -> bool:
     Drop và alert khi spool vượt MAX_SPOOL_ROWS.
     Trả về True nếu ghi thành công, False nếu spool đã đầy và bar bị từ chối.
     """
-    symbol_id, tf_code, staging_table, tv_symbol, df = item
+    if len(item) == 6:
+        batch_id, symbol_id, tf_code, staging_table, tv_symbol, df = item
+    else:
+        batch_id = 0
+        symbol_id, tf_code, staging_table, tv_symbol, df = item
     blob = pickle.dumps(df)
     with _spool_lock:
         with sqlite3.connect(_SPOOL_DB) as con:
@@ -605,8 +741,8 @@ def _spool_write(item: tuple) -> bool:
                     pass
                 return False
             con.execute(
-                "INSERT INTO spool (symbol_id,tf_code,staging_table,tv_symbol,bar_data) VALUES (?,?,?,?,?)",
-                (symbol_id, tf_code, staging_table, tv_symbol, blob),
+                "INSERT INTO spool (batch_id,symbol_id,tf_code,staging_table,tv_symbol,bar_data) VALUES (?,?,?,?,?,?)",
+                (batch_id, symbol_id, tf_code, staging_table, tv_symbol, blob),
             )
             con.commit()
     return True
@@ -622,13 +758,13 @@ def _spool_flush_to_queue() -> int:
     with _spool_lock:
         with sqlite3.connect(_SPOOL_DB) as con:
             rows = con.execute(
-                "SELECT id,symbol_id,tf_code,staging_table,tv_symbol,bar_data "
+                "SELECT id,batch_id,symbol_id,tf_code,staging_table,tv_symbol,bar_data "
                 "FROM spool ORDER BY id LIMIT 200"
             ).fetchall()
-            for row_id, sym_id, tf_code, stg_tbl, tv_sym, blob in rows:
+            for row_id, batch_id, sym_id, tf_code, stg_tbl, tv_sym, blob in rows:
                 try:
                     df   = pickle.loads(blob)
-                    item = (sym_id, tf_code, stg_tbl, tv_sym, df)
+                    item = (batch_id, sym_id, tf_code, stg_tbl, tv_sym, df)
                     _db_queue.put_nowait(item)
                     con.execute("DELETE FROM spool WHERE id=?", (row_id,))
                     flushed += 1
@@ -675,7 +811,8 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
     Nếu hàng đợi đầy -> chuyển sang overflow buffer.
     Nếu cả 2 đều đầy -> nến bị mất hoàn toàn (cảnh báo ngay).
 
-    item: tuple gồm (symbol_id, tf_code, staging_table, tv_symbol, dataframe)
+    item: tuple gồm (batch_id, symbol_id, tf_code, staging_table, tv_symbol, dataframe)
+          Dạng cũ không có batch_id vẫn được hỗ trợ khi đọc spool cũ.
     """
     try:
         # Thử thêm nến vào hàng đợi DB ngay lập tức
@@ -809,13 +946,20 @@ def _db_worker() -> None:
         except queue.Empty:
             continue  # Queue rỗng -> quay lại đầu vòng lặp
 
-        # Giải nén thông tin từ tuple
-        symbol_id, tf_code, staging_table, tv_symbol, df = item
+        # Giải nén thông tin từ tuple. Dạng cũ không có batch_id vẫn được hỗ trợ
+        # để không làm hỏng các item đã nằm trong spool trước khi nâng cấp code.
+        if len(item) == 6:
+            batch_id, symbol_id, tf_code, staging_table, tv_symbol, df = item
+        else:
+            batch_id = 0
+            symbol_id, tf_code, staging_table, tv_symbol, df = item
         key = (symbol_id, tf_code)
+        accepted_count = len(df.index) if hasattr(df, "index") else 0
 
         # Lọc bars sai alignment (DST artifact) - cùng logic với 01_data_pipeline
         df, _ = _validate_ohlcv_df(df, tv_symbol, tf_code, logger)
         if df.empty:
+            _record_db_result(batch_id, key, accepted_count, 0, 0)
             _db_queue.task_done()
             continue
 
@@ -848,6 +992,7 @@ def _db_worker() -> None:
                     )
                     _shutdown.wait(5)
         if not _staging_ok:
+            _record_db_result(batch_id, key, accepted_count, 0, 0, error=True)
             _db_queue.task_done()
             continue
 
@@ -860,9 +1005,7 @@ def _db_worker() -> None:
                             tv_symbol, tf_code, n_cleaned)
 
         if inserted > 0:
-            with _state_lock:
-                _stats["bars_inserted"] += inserted
-            logger.info("[DB ] %s %s: +%d bar(s) staged.", tv_symbol, tf_code, inserted)
+            logger.info("[DB ] %s %s: +%d row(s) staged/updated.", tv_symbol, tf_code, inserted)
 
         # Dù inserted=0 vẫn phải ETL/defer, vì bars có thể đã nằm sẵn ở staging
         # từ lần fail trước và đang chờ được đẩy vào Fact.
@@ -871,7 +1014,7 @@ def _db_worker() -> None:
         # trả về giá trị thấp hơn UTC thực 7 tiếng → watermark không bao giờ advance.
         # Fix: .replace(tzinfo=timezone.utc) trước khi .timestamp() để đảm bảo đúng UTC.
         max_committed_ts = max(
-            ts.replace(tzinfo=timezone.utc).timestamp() for ts in df.index
+            _as_utc_timestamp(ts) for ts in df.index
         )
 
         if _checker_is_repairing():
@@ -902,20 +1045,35 @@ def _db_worker() -> None:
                 "[DB ] Checker lock active - deferred ETL for %s %s",
                 tv_symbol, tf_code,
             )
+            _record_db_result(
+                batch_id, key, accepted_count, inserted, 0,
+                deferred=True,
+            )
         else:
             # BƯỚC B: Đẩy nến từ staging vào bảng chính Fact_OHLCV (ETL direct)
+            fact_inserted = 0
+            etl_direct_ok = False
             try:
-                run_etl_direct(symbol_id, tf_code, staging_table)
+                fact_inserted = run_etl_direct(symbol_id, tf_code, staging_table)
             except Exception as exc:
                 logger.error("[DB ] ETL direct error - %s %s: %s", tv_symbol, tf_code, exc)
                 with _state_lock:
                     _stats["errors"] += 1
+                _record_db_result(
+                    batch_id, key, accepted_count, inserted, 0,
+                    error=True,
+                )
             else:
+                etl_direct_ok = True
                 _set_committed_watermark(key, max_committed_ts)
+                _record_db_result(
+                    batch_id, key, accepted_count, inserted, fact_inserted,
+                )
 
             # BƯỚC C: Thêm vào _pending_agg thay vì tính ngay
-            # Tránh gọi run_etl_aggregate per-bar - flush khi queue tạm rỗng
-            if staging_table in _SOURCE_TO_COMPUTED:
+            # Tránh gọi run_etl_aggregate per-bar - flush khi queue tạm rỗng.
+            # Chỉ cần recompute khi direct ETL thành công; fact_inserted có thể =0 nếu duplicate.
+            if etl_direct_ok and staging_table in _SOURCE_TO_COMPUTED:
                 for target_tf, src_table in _SOURCE_TO_COMPUTED[staging_table]:
                     _pending_agg.add((symbol_id, target_tf, src_table, tv_symbol))
 
@@ -948,9 +1106,10 @@ def _db_worker() -> None:
                 still_deferred: dict[tuple[int, str, str, str], float] = {}
                 for (sym_id, tf_c, stg_tbl, sym_nm), max_ts in list(_deferred_etl.items()):
                     try:
-                        run_etl_direct(sym_id, tf_c, stg_tbl)
+                        fact_inserted = run_etl_direct(sym_id, tf_c, stg_tbl)
                         logger.info("[DB ] Deferred ETL done: %s %s", sym_nm, tf_c)
                         _set_committed_watermark((sym_id, tf_c), max_ts)
+                        _record_db_result(0, (sym_id, tf_c), 0, 0, fact_inserted)
                         if stg_tbl in _SOURCE_TO_COMPUTED:
                             for tgt_tf, src_tbl in _SOURCE_TO_COMPUTED[stg_tbl]:
                                 _pending_agg.add((sym_id, tgt_tf, src_tbl, sym_nm))
@@ -971,9 +1130,10 @@ def _db_worker() -> None:
             still_deferred: dict[tuple[int, str, str, str], float] = {}
             for (sym_id, tf_c, stg_tbl, sym_nm), max_ts in list(_deferred_etl.items()):
                 try:
-                    run_etl_direct(sym_id, tf_c, stg_tbl)
+                    fact_inserted = run_etl_direct(sym_id, tf_c, stg_tbl)
                     logger.info("[DB ] Deferred ETL done before shutdown: %s %s", sym_nm, tf_c)
                     _set_committed_watermark((sym_id, tf_c), max_ts)
+                    _record_db_result(0, (sym_id, tf_c), 0, 0, fact_inserted)
                     if stg_tbl in _SOURCE_TO_COMPUTED:
                         for tgt_tf, src_tbl in _SOURCE_TO_COMPUTED[stg_tbl]:
                             _pending_agg.add((sym_id, tgt_tf, src_tbl, sym_nm))
@@ -1224,6 +1384,7 @@ class BatchFetcher:
 
         # Số nến mới per cặp (symbol_id, tf_code) - dùng để in bảng tóm tắt cuối batch
         self._pair_new_bars: dict[tuple[int, str], int] = {}
+        self._batch_id = 0
 
         # Flag: True khi _on_open đang trong vòng đăng ký chart sessions
         # Mục đích: chặn _on_message kích hoạt _done.set() sớm khi _expected chưa đầy đủ
@@ -1540,7 +1701,7 @@ class BatchFetcher:
                         # Đưa vào hàng đợi TRƯỚC - đảm bảo bar được accept vào
                         # queue/overflow/spool trước khi watermark nhảy lên.
                         # Tránh tình huống watermark advance nhưng bar chưa persist.
-                        item = (symbol_id, tf_code, staging_table, tv_symbol, df)
+                        item = (self._batch_id, symbol_id, tf_code, staging_table, tv_symbol, df)
                         enqueue_status = _enqueue_or_buffer(
                             item, self.group_id, tv_symbol, tf_code
                         )
@@ -1563,15 +1724,21 @@ class BatchFetcher:
 
                         with self._lock:
                             self._new_bars_count += len(safe_new_bars)
-                            self._pair_new_bars[(symbol_id, tf_code)] = len(safe_new_bars)
+                            self._pair_new_bars[(symbol_id, tf_code)] = (
+                                self._pair_new_bars.get((symbol_id, tf_code), 0)
+                                + len(safe_new_bars)
+                            )
                         _new_count = len(safe_new_bars)
+                        _record_batch_accepted(
+                            self._batch_id, key, len(safe_new_bars)
+                        )
 
                         with _state_lock:
                             _stats["queue_depth"] = _db_queue.qsize()
 
-        # Ghi log kết quả của session này: nhận bao nhiêu nến, có bao nhiêu cái mới
+        # Ghi log kết quả của session này: TradingView trả bao nhiêu nến, có bao nhiêu nến được accept.
         logger.info(
-            "[G%d] %s [%s] - %d bar(s) received, %d new",
+            "[G%d] %s [%s] - %d bar(s) received, %d accepted",
             self.group_id, tv_symbol, tf_code, len(bars), _new_count,
         )
 
@@ -1602,7 +1769,7 @@ class BatchFetcher:
 
     # ─── ĐIỂM VÀO CHÍNH - GỌI HÀM NÀY ĐỂ THỰC HIỆN 1 LẦN BATCH ─────────────
 
-    def fetch(self, timeout: int = BATCH_FETCH_TIMEOUT) -> bool:
+    def fetch(self, batch_id: int, timeout: int = BATCH_FETCH_TIMEOUT) -> bool:
         """
         Thực hiện 1 lần batch fetch đầy đủ:
             Mở WS -> xác thực -> đăng ký sessions -> chờ data -> đóng WS.
@@ -1615,6 +1782,7 @@ class BatchFetcher:
         self._done.clear()
         self._new_bars_count = 0
         self._pair_new_bars.clear()
+        self._batch_id = batch_id
 
         # Tạo URL kết nối với timestamp hiện tại (TradingView yêu cầu tham số date)
         ts  = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
@@ -1718,7 +1886,7 @@ class BatchFetcher:
 
         # ─── BẢNG TÓM TẮT BATCH ─────────────────────────────────────────────────
         # Xây dựng danh sách tất cả (symbol, TF) trong nhóm này theo thứ tự đã đăng ký
-        # rồi in thành bảng: Symbol | TF | New bars | Latest bar | Status
+        # rồi in thành bảng: Symbol | TF | Accepted bars | Latest bar | Status
         with _backlog_lock:
             backlog_snap = dict(_backlog)
 
@@ -1737,7 +1905,7 @@ class BatchFetcher:
         # Sắp xếp: symbol trước, TF sau
         all_pairs.sort(key=lambda x: (x[2], x[1]))
 
-        hdr = f"[G{self.group_id}] {'Symbol':<14} {'TF':<5} {'New':>4}  {'Latest bar UTC':<20}  Status"
+        hdr = f"[G{self.group_id}] {'Symbol':<14} {'TF':<5} {'Accept':>6}  {'Latest bar UTC':<20}  Status"
         sep = f"[G{self.group_id}] " + "-" * (len(hdr) - len(f"[G{self.group_id}] "))
         logger.info(sep)
         logger.info(hdr)
@@ -1759,17 +1927,17 @@ class BatchFetcher:
             else:
                 status = "ok  (stale)"
             logger.info(
-                "[G%d] %-14s %-5s %4d  %-20s  %s",
+                "[G%d] %-14s %-5s %6d  %-20s  %s",
                 self.group_id, tv_sym, tf_code, new_bars, latest, status,
             )
         logger.info(sep)
         logger.info(
-            "[G%d] sessions=%d/%d  new_bars=%d  missed=%d",
+            "[G%d] sessions=%d/%d  accepted=%d  missed=%d",
             self.group_id, len(self._received), len(self._expected),
             self._new_bars_count, len(missed_pairs),
         )
         logger.info(
-            "[AUDIT] G%d sessions=%d/%d new_bars=%d missed=%d ts=%s",
+            "[AUDIT] G%d sessions=%d/%d accepted=%d missed=%d ts=%s",
             self.group_id, len(self._received), len(self._expected),
             self._new_bars_count, len(missed_pairs),
             datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M"),
@@ -1824,8 +1992,13 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
         is_guest = (_tv_auth._auth_token == _tv_auth.GUEST_TOKEN)
     _update_guest_mode_counter(is_guest)
 
+    with _state_lock:
+        _stats["batches_run"] += 1
+        batch_id = _stats["batches_run"]
+    _init_batch_metrics(batch_id)
+
     batch_start = datetime.now().strftime("%H:%M:%S")
-    logger.info("[SCHED] === Batch start %s - %d groups ===", batch_start, len(groups))
+    logger.info("[SCHED] === Batch #%d start %s - %d groups ===", batch_id, batch_start, len(groups))
     live_batch_lock = acquire_live_batch_window(logger)
 
     def _fetch_with_retry(group: BatchFetcher) -> None:
@@ -1837,7 +2010,7 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
                 return  # Hệ thống đang tắt -> dừng ngay
 
             try:
-                success = group.fetch()
+                success = group.fetch(batch_id)
                 if success:
                     return  # Thành công -> không cần retry
                 logger.warning("[G%d] Fetch incomplete (attempt %d/%d).", group.group_id, attempt, BATCH_MAX_RETRIES)
@@ -1867,10 +2040,6 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
     finally:
         release_live_batch_window(live_batch_lock)
 
-    # Cập nhật bộ đếm tổng số batch đã chạy
-    with _state_lock:
-        _stats["batches_run"] += 1
-
     # Tổng bars mới toàn bộ batch (gộp tất cả group)
     total_new = sum(g._new_bars_count for g in groups)
 
@@ -1885,13 +2054,31 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
     with _backlog_lock:
         backlog_snap = dict(_backlog)
 
-    _on_batch_complete(_stats["batches_run"], total_new, backlog_snap, batch_pair_bars)
+    # Chờ DB worker xử lý batch trong giới hạn để summary phản ánh số row vào Fact thật.
+    db_metrics = _wait_for_batch_db(batch_id)
+    pending_db = max(0, int(db_metrics.get("accepted", 0)) - int(db_metrics.get("db_processed", 0)))
 
-    logger.info("[SCHED] === Batch #%d done - new_bars=%d  backlog=%d ===",
-                _stats["batches_run"], total_new, len(backlog_snap))
+    _on_batch_complete(batch_id, total_new, backlog_snap, batch_pair_bars, db_metrics)
+
     logger.info(
-        "[AUDIT] batch=%d new_bars=%d backlog=%d ts=%s",
-        _stats["batches_run"], total_new, len(backlog_snap),
+        "[SCHED] === Batch #%d done - accepted=%d  fact_inserted=%d  "
+        "staging_rows=%d  deferred=%d  db_pending=%d  backlog=%d ===",
+        batch_id,
+        total_new,
+        int(db_metrics.get("fact_inserted", 0)),
+        int(db_metrics.get("staging_rows", 0)),
+        int(db_metrics.get("deferred_items", 0)),
+        pending_db,
+        len(backlog_snap),
+    )
+    logger.info(
+        "[AUDIT] batch=%d accepted=%d fact_inserted=%d staging_rows=%d db_pending=%d backlog=%d ts=%s",
+        batch_id,
+        total_new,
+        int(db_metrics.get("fact_inserted", 0)),
+        int(db_metrics.get("staging_rows", 0)),
+        pending_db,
+        len(backlog_snap),
         datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M"),
     )
     if backlog_snap:
@@ -1901,16 +2088,17 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
         )
         logger.info("[SCHED] Backlog retry next batch (%d bars each): %s", N_BARS_WS_BACKLOG, entries)
     elif total_new == 0:
-        logger.warning("[SCHED] No new bars and no backlog - check WebSocket/auth; sessions may not have registered.")
+        logger.warning("[SCHED] No accepted bars and no backlog - check WebSocket/auth; sessions may not have registered.")
     else:
         logger.info("[SCHED] No backlog - all pairs OK this batch.")
 
 
 def _on_batch_complete(
     batch_num: int,
-    total_new: int,
+    total_accepted: int,
     backlog_snap: dict,
     pair_bars: dict[tuple[int, str], int] | None = None,
+    db_metrics: dict | None = None,
 ) -> None:
     """
     Gọi sau mỗi batch: cập nhật hourly stats, gửi Discord alert nếu bất thường.
@@ -1920,26 +2108,35 @@ def _on_batch_complete(
     """
     with _hourly_lock:
         _hourly_stats["batches"] += 1
-        _hourly_stats["bars"]    += total_new
-        if total_new == 0:
+        _hourly_stats["accepted_bars"] += total_accepted
+        if total_accepted == 0:
             _hourly_stats["zero_bar_batches"] += 1
         bl = len(backlog_snap)
         if bl > _hourly_stats["backlog_peak"]:
             _hourly_stats["backlog_peak"] = bl
         for key, cnt in (pair_bars or {}).items():
-            prev = _hourly_stats["pair_bars"].get(key, 0)
-            _hourly_stats["pair_bars"][key] = prev + cnt
+            prev = _hourly_stats["pair_accepted"].get(key, 0)
+            _hourly_stats["pair_accepted"][key] = prev + cnt
 
     if batch_num == 1:
+        db_metrics = db_metrics or {}
+        fact_inserted = int(db_metrics.get("fact_inserted", 0))
+        staging_rows = int(db_metrics.get("staging_rows", 0))
+        db_pending = max(
+            0,
+            int(db_metrics.get("accepted", 0)) - int(db_metrics.get("db_processed", 0)),
+        )
         _tg_alert(
             "INFO",
             f"[OK] <b>First batch finished</b> - Batch #{batch_num}\n"
-            f"New bars: {total_new}  |  Backlog: {bl} pairs",
+            f"Accepted: {total_accepted} bars  |  Fact inserted: {fact_inserted} rows\n"
+            f"Staging affected: {staging_rows} rows  |  DB pending: {db_pending}\n"
+            f"Backlog: {bl} pairs",
         )
-    elif total_new == 0:
+    elif total_accepted == 0:
         _tg_alert(
             "WARNING",
-            f"[WARN] <b>Batch #{batch_num} had no new bars</b>\n"
+            f"[WARN] <b>Batch #{batch_num} had no accepted bars</b>\n"
             f"Backlog: {bl} pairs  |  Check WebSocket connection or auth",
         )
 
@@ -2052,16 +2249,18 @@ def _status_reporter() -> None:
         with _hourly_lock:
             h = dict(_hourly_stats)
             _hourly_stats["batches"]          = 0
-            _hourly_stats["bars"]             = 0
+            _hourly_stats["accepted_bars"]     = 0
+            _hourly_stats["fact_bars"]         = 0
             _hourly_stats["zero_bar_batches"] = 0
             _hourly_stats["backlog_peak"]     = 0
             _hourly_stats["pair_bars"]        = {}
+            _hourly_stats["pair_accepted"]    = {}
 
-        # Per-symbol và per-TF breakdown từ hourly pair_bars
+        # Per-symbol và per-TF breakdown từ hourly Fact rows.
         _sym_name = {s["symbol_id"]: s["tv_symbol"] for s in WS_SYMBOLS}
         sym_totals: dict[int, int] = {}
         tf_totals:  dict[str, int] = {}
-        for (sid, tf), cnt in h["pair_bars"].items():
+        for (sid, tf), cnt in h.get("pair_bars", {}).items():
             sym_totals[sid] = sym_totals.get(sid, 0) + cnt
             tf_totals[tf]   = tf_totals.get(tf, 0) + cnt
 
@@ -2118,17 +2317,24 @@ def _status_reporter() -> None:
 
         # ── Ghi log ──────────────────────────────────────────────────────────
         logger.info(
-            "HEALTH [%s] %s  auth=%s  bars=%d  errors=%d  batches=%d  "
+            "HEALTH [%s] %s  auth=%s  accepted=%d  fact=%d  errors=%d  batches=%d  "
             "queue=%d  overflow=%d  spool=%d  miss=%d  stale=%d  max_age=%.1fh",
             now, health_level, auth_info,
-            s["bars_inserted"], s["errors"], s["batches_run"],
+            s.get("accepted_bars", 0), s.get("fact_inserted", s["bars_inserted"]),
+            s["errors"], s["batches_run"],
             s["queue_depth"], overflow, spool_count,
             n_miss_active, stale_count, max_age_h,
         )
 
         # h đã được snapshot và _hourly_stats đã được reset ở block đầu (line ~2046).
         # Không snapshot lại ở đây — làm vậy sẽ ghi đè h bằng dict toàn số 0.
-        hourly_parts = [f"{h['batches']} batches  |  {h['bars']} new bars"]
+        accepted_h = int(h.get("accepted_bars", h.get("bars", 0)))
+        fact_h = int(h.get("fact_bars", 0))
+        hourly_parts = [
+            f"{h['batches']} batches",
+            f"{accepted_h} accepted bars",
+            f"{fact_h} Fact rows",
+        ]
         if h["zero_bar_batches"]:
             hourly_parts.append(f"[WARN] {h['zero_bar_batches']} empty batches (no new bars)")
         if h["backlog_peak"]:
@@ -2142,14 +2348,15 @@ def _status_reporter() -> None:
             f"{health_emoji} <b>System status: {health_level}</b> [{now}]\n"
             f"Auth: {auth_info}\n"
             f"<b>Last hour:</b> {hourly_summary}\n"
-            f"<b>Total:</b> {s['batches_run']} batches  |  {s['bars_inserted']:,} bars  |  {s['errors']} errors\n"
+            f"<b>Total:</b> {s['batches_run']} batches  |  {s.get('accepted_bars', 0):,} accepted  |  "
+            f"{s.get('fact_inserted', s['bars_inserted']):,} Fact rows  |  {s['errors']} errors\n"
             f"DB queue: {s['queue_depth']}  |  RAM buffer: {overflow}  |  Offline spool: {spool_count}\n"
             f"Oldest not updated: {max_age_h:.1f}h  |  Late pairs: {stale_count}  |  Missing pairs: {n_miss_active}\n"
             f"{'-' * 30}\n"
-            f"<b>Last 1 hour:</b> {h['batches']} batches  |  {h['bars']:,} new bars\n"
+            f"<b>Last 1 hour:</b> {h['batches']} batches  |  {accepted_h:,} accepted  |  {fact_h:,} Fact rows\n"
             f"  (empty batches: {h['zero_bar_batches']}  |  backlog peak: {h['backlog_peak']} pairs)\n"
-            f"By pair: {sym_line}\n"
-            f"By TF:  {tf_line}\n"
+            f"Fact by pair: {sym_line}\n"
+            f"Fact by TF:  {tf_line}\n"
             f"{'-' * 30}\n"
             f"{issues_text}"
         )
@@ -2303,7 +2510,13 @@ def main() -> None:
     def _thread_excepthook(args: threading.ExceptHookArgs) -> None:
         if args.exc_type is SystemExit:
             return
-        tb = "".join(traceback.format_exception(args.exc_type, args.exc_value, args.exc_tb))
+        tb = "".join(
+            traceback.format_exception(
+                args.exc_type,
+                args.exc_value,
+                args.exc_traceback,
+            )
+        )
         tname = getattr(args.thread, "name", "unknown")
         logger.critical("[THREAD CRASH] %s: %s\n%s", tname, args.exc_value, tb)
         _tg_alert(
@@ -2395,22 +2608,27 @@ def main() -> None:
 
     # Ghi log tổng kết
     logger.info(
-        "Stopped cleanly. bars_inserted=%d  errors=%d  events=%d  batches=%d",
-        s["bars_inserted"], s["errors"], s["events"], s["batches_run"],
+        "Stopped cleanly. accepted=%d  fact_inserted=%d  staging_rows=%d  errors=%d  events=%d  batches=%d",
+        s.get("accepted_bars", 0), s.get("fact_inserted", s["bars_inserted"]),
+        s.get("staging_rows", 0), s["errors"], s["events"], s["batches_run"],
     )
 
     # Gửi thông báo tắt lên Discord
     _tg_alert(
         "INFO",
         f"[STOP] System stopped\n"
-        f"Bars saved: {s['bars_inserted']}\n"
+        f"Accepted bars: {s.get('accepted_bars', 0)}\n"
+        f"Fact rows inserted: {s.get('fact_inserted', s['bars_inserted'])}\n"
+        f"Staging affected: {s.get('staging_rows', 0)}\n"
         f"Errors: {s['errors']}  |  Batches: {s['batches_run']}"
     )
     ws_lock_stop.set()
     _release_task_lock("ws_live_runtime")
 
     # In tóm tắt ra console
-    print(f"\n  Bars saved    : {s['bars_inserted']:,}")
+    print(f"\n  Accepted bars : {s.get('accepted_bars', 0):,}")
+    print(f"  Fact inserted : {s.get('fact_inserted', s['bars_inserted']):,}")
+    print(f"  Staging rows  : {s.get('staging_rows', 0):,}")
     print(f"  Errors        : {s['errors']}")
     print(f"  WS events     : {s['events']:,}")
     print(f"  Batches run   : {s['batches_run']}")
