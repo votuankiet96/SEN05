@@ -79,8 +79,8 @@ __all__ = [
 STRATEGY = {
     "name":    "Combo",
     "version": "v2",
-    "ktp":     2.3,    # TP = kTP × ATR  (default — can be overridden per symbol)
-    "min_rr":  1.25,   # Minimum R:R ratio to pass
+    "ktp":     2.272,  # TP = kTP × ATR; default from the 5-step Fibonacci ladder
+    "min_rr":  None,   # None = do not filter signals by R:R unless overridden
     # ── Backtest & FTMO risk management ───────────────────────────────────
     "risk_per_trade":       0.005,   # 0.5% equity per trade
     "ftmo_daily_limit":     0.05,    # 5% daily loss limit
@@ -132,9 +132,10 @@ INDICATOR_COLS = ['ma', 'atr', 'macd_h']   # Required indicator columns after wa
 OPTIMIZATION = {
     "symbol": {
         # kTP — chuỗi Fibonacci trong safe range [1.5, 3.5]
-        "ktp_values":    [1.618, 2.0, 2.272, 2.618, 3.0, 3.382],
-        # min_rr — bước 0.1 từ 1.0 đến 2.0
-        "min_rr_values": [round(1.0 + i * 0.1, 1) for i in range(11)],
+        "ktp_values":    [1.618, 2.0, 2.272, 2.618, 3.0],
+        # None = RR filter off by default. Provide numeric values in overrides
+        # when an optimization run should search an explicit R:R threshold.
+        "min_rr_values": [None],
         # x fallback offset (dùng khi chưa có fill-rate analysis per-symbol)
         "x_offsets":     [-2.0, 0.0, 2.0],
         "max_bars":      80000,
@@ -394,7 +395,7 @@ def get_symbol_search_space(
     ktp  : chuỗi Fibonacci cố định, không phụ thuộc vào giá trị hiện tại.
     x    : fallback offset quanh giá trị hiện tại; nếu symbol có x_search_space
            được set thì dùng đó (kết quả từ analyze_x_fill_rate).
-    min_rr: dãy cố định bước 0.1 từ 1.0–2.0.
+    min_rr: mặc định [None] để tắt lọc RR; truyền override số nếu muốn lọc.
     """
     current = get_symbol_params(sym_key, broker_profile=broker_profile)
     base = OPTIMIZATION["symbol"]
@@ -432,7 +433,7 @@ def summary() -> str:
         f"MACD         : ({p['MACD_FAST']}, {p['MACD_SLOW']}, {p['MACD_SIGNAL']})",
         f"ATR period   : {p['ATR_PERIOD']}",
         f"kTP          : {p['KTP']}",
-        f"Min R:R      : {p['MIN_RR']}",
+        f"Min R:R      : {p['MIN_RR'] if p['MIN_RR'] is not None else 'off'}",
         f"Account modes : {', '.join(ACCOUNT_MODES.keys())}",
         f"Broker profiles: {', '.join(BROKER_PROFILES.keys())}",
         f"Default broker : {DEFAULT_BROKER_PROFILE}",

@@ -95,6 +95,20 @@ def _to_float(value: str | None, default: float, min_value: float, max_value: fl
     return max(min_value, min(parsed, max_value))
 
 
+def _to_optional_float(
+    value: str | None,
+    default: float | None,
+    min_value: float,
+    max_value: float,
+) -> float | None:
+    if value is None:
+        return default
+    raw = str(value).strip().lower()
+    if raw in {"", "none", "off", "null"}:
+        return None
+    return _to_float(raw, float(default if default is not None else min_value), min_value, max_value)
+
+
 def _parse_session_hours(value: str | None, default: list[int]) -> list[int]:
     if value is None:
         return list(default)
@@ -160,7 +174,7 @@ def _runtime_request() -> tuple[str, str, int, dict[str, Any], dict[str, Any]]:
         "MACD_SIGNAL": _to_int(request.args.get("macd_signal"), int(ind["MACD_SIGNAL"]), 1, 200),
         "ATR_PERIOD": _to_int(request.args.get("atr_period"), int(ind["ATR_PERIOD"]), 2, 200),
         "KTP": _to_float(request.args.get("ktp"), float(defaults["ktp"]), 0.1, 20.0),
-        "MIN_RR": _to_float(request.args.get("min_rr"), float(ind["MIN_RR"]), 0.0, 10.0),
+        "MIN_RR": _to_optional_float(request.args.get("min_rr"), ind["MIN_RR"], 0.0, 10.0),
         "ENTRY_LINE_BARS": _to_int(
             request.args.get("entry_line_bars"),
             int(scan_defaults["entry_line_bars"]),
@@ -190,7 +204,7 @@ def _meta(symbol: str, tf: str, bars: int, params: dict[str, Any], cfg: dict[str
     session = cfg.get("session_hours_utc") or "all"
     return (
         f"{symbol} {tf} | bars={bars} | x={cfg['x']} | "
-        f"KTP={params['KTP']} | minRR={params['MIN_RR']} | "
+        f"KTP={params['KTP']} | minRR={params['MIN_RR'] if params['MIN_RR'] is not None else 'off'} | "
         f"MA={params['MA_PERIOD']} | MACD={params['MACD_FAST']}/"
         f"{params['MACD_SLOW']}/{params['MACD_SIGNAL']} | "
         f"ATR={params['ATR_PERIOD']} | session={session}"

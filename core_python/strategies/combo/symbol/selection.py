@@ -11,6 +11,17 @@ import pandas as pd
 OPTIMIZER_PARAM_COLS = ["ktp", "x", "min_rr"]
 
 
+def _optional_float(value: Any, default: float | None = None) -> float | None:
+    if value is None:
+        return default
+    try:
+        if pd.isna(value):
+            return default
+    except Exception:
+        pass
+    return float(value)
+
+
 def filter_optimizer_candidates(
     grid: pd.DataFrame,
     rules: Mapping[str, Any] | None = None,
@@ -251,25 +262,25 @@ def _optimizer_params_from_row(row: Mapping[str, Any] | pd.Series) -> dict[str, 
     return {
         "ktp":    float(row["ktp"]),
         "x":      float(row["x"]),
-        "min_rr": float(row.get("min_rr", 0.0)),
+        "min_rr": _optional_float(row.get("min_rr"), None),
     }
 
 
 def _optimizer_points(
     grid: pd.DataFrame,
     score_col: str,
-) -> tuple[dict[tuple[float, float, float], dict[str, float]], str]:
+) -> tuple[dict[tuple[float, float, float | None], dict[str, float]], str]:
     resolved_score_col = _first_existing(grid, [score_col, "sharpe", "score", "pf", "ret"])
     required_cols = [c for c in OPTIMIZER_PARAM_COLS if c in grid.columns]
-    points: dict[tuple[float, float, float], dict[str, float]] = {}
-    for _, row in grid.dropna(subset=required_cols).iterrows():
-        key = (float(row["ktp"]), float(row["x"]), float(row.get("min_rr", 0.0)))
+    points: dict[tuple[float, float, float | None], dict[str, float]] = {}
+    for _, row in grid.dropna(subset=[c for c in required_cols if c != "min_rr"]).iterrows():
+        key = (float(row["ktp"]), float(row["x"]), _optional_float(row.get("min_rr"), None))
         points[key] = {"sharpe": float(row.get(resolved_score_col, row.get("sharpe", 0.0)) or 0.0)}
     return points, resolved_score_col
 
 
 def _summarize_plateau_from_points(
-    points: dict[tuple[float, float, float, int], dict[str, float]],
+    points: dict[tuple[float, float, float | None], dict[str, float]],
     best: Mapping[str, Any] | pd.Series,
     *,
     score_col: str,

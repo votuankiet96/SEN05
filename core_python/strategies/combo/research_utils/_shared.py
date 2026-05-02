@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+import json
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Mapping, MutableMapping
@@ -251,15 +252,15 @@ TRADE_COLUMN_LABELS = {
 }
 
 METRIC_EXPLANATIONS = [
-    ("total_trades", "Số lệnh đã đóng", "Mẫu càng ít thì kết luận càng kém chắc."),
-    ("win_rate", "Tỷ lệ thắng", "Không đủ để đánh giá một mình; cần đọc cùng avg win/loss và PF."),
-    ("profit_factor", "Tổng lời / tổng lỗ tuyệt đối", "> 1 là có lợi thế trong mẫu backtest; càng cao càng tốt nhưng quá cao bất thường cần kiểm tra overfit."),
-    ("total_return", "Lợi nhuận % trên vốn đầu kỳ", "Cho biết tăng trưởng tổng nhưng không nói rủi ro đi kèm."),
-    ("max_drawdown", "Mức sụt giảm sâu nhất từ đỉnh equity", "Số âm; càng gần 0 càng dễ chịu. Đây là metric rủi ro quan trọng nhất."),
-    ("sharpe", "Return điều chỉnh theo biến động", "Đọc tốt hơn khi số trade đủ lớn; > 1 thường đáng chú ý."),
-    ("sortino", "Giống Sharpe nhưng chỉ phạt biến động âm", "Hữu ích khi equity có nhiều nhịp tăng mạnh."),
-    ("avg_r", "R multiple trung bình", "Lãi/lỗ trung bình theo đơn vị rủi ro ban đầu mỗi trade."),
-    ("partial_tp_rate", "Tỷ lệ lệnh từng chạm partial TP", "Cho biết setup có thường đi đủ xa để dời SL về breakeven không."),
+    ("total_trades", "Closed trades", "Small samples are fragile; use this before trusting any quality metric."),
+    ("win_rate", "Win rate", "Not enough on its own; read it with average win/loss and profit factor."),
+    ("profit_factor", "Gross profit / gross loss", "Above 1.0 means the sample is net profitable before judging robustness; unusually high values need overfit checks."),
+    ("total_return", "Return on starting equity", "Shows total growth, but not the risk taken to get there."),
+    ("max_drawdown", "Largest peak-to-trough equity decline", "Negative value; closer to 0 is better. This is the primary risk metric."),
+    ("sharpe", "Return adjusted for volatility", "More useful when trade count is large enough; above 1.0 is usually worth investigating."),
+    ("sortino", "Sharpe-like metric using downside volatility", "Useful when the equity curve has large upside bursts."),
+    ("avg_r", "Average R multiple", "Average result per trade measured against initial risk."),
+    ("partial_tp_rate", "Partial TP hit rate", "Shows how often trades moved far enough to scale out and move risk down."),
 ]
 
 GOOD_HIGH = {
@@ -298,20 +299,24 @@ def _escape(value: Any) -> str:
 
 def _short_repr(value: Any) -> str:
     if isinstance(value, dict):
-        return "{}" if not value else str(value)
+        return "{}" if not value else json.dumps(value, ensure_ascii=True, sort_keys=True, default=str)
     if isinstance(value, list):
-        return ", ".join(map(str, value))
+        return json.dumps(value, ensure_ascii=True, default=str)
     if isinstance(value, (float, int, np.floating, np.integer)):
         return _format_table_number(value, decimals=2)
     return str(value)
 
 
-def _format_card_value(value: Any, suffix: str = "") -> str:
+def _format_card_value(value: Any, suffix: str = "", *, decimals: int | None = None) -> str:
     if value is None or (isinstance(value, float) and np.isnan(value)):
         return "-"
     if isinstance(value, (int, float, np.integer, np.floating)):
         v = float(value)
-        if abs(v) >= 1000:
+        if decimals is not None:
+            text = f"{v:,.{decimals}f}"
+        elif abs(v - round(v)) < 1e-10:
+            text = f"{int(round(v)):,}"
+        elif abs(v) >= 1000:
             text = f"{v:,.2f}"
         elif abs(v) >= 100:
             text = f"{v:,.1f}"
@@ -366,7 +371,7 @@ def _metric_card_color(label: str, value: Any) -> str:
     if not isinstance(value, (int, float, np.integer, np.floating)):
         return "#111827"
     v = float(value)
-    if label in {"Profit factor", "Sharpe"}:
+    if label in {"Profit factor", "Profit Factor", "Sharpe"}:
         return "#16A34A" if v >= 1 else "#DC2626"
     if label == "Return":
         return "#16A34A" if v > 0 else "#DC2626"
@@ -382,8 +387,8 @@ def _format_metric_value(value: Any) -> str:
 
 
 def _style_metric_row(row: pd.Series) -> list[str]:
-    metric = str(row.get("metric", ""))
-    value = row.get("value")
+    metric = str(row.get("metric", row.get("Metric", "")))
+    value = row.get("value", row.get("Value"))
     style = ""
     v = _coerce_float(value)
     if v is not None:
@@ -507,7 +512,7 @@ def _plot_pivot_heatmap(
     title: str,
 ) -> None:
     if not {index, columns, values}.issubset(frame.columns):
-        ax.set_title(f"Thiếu cột cho heatmap: {index}, {columns}, {values}")
+        ax.set_title(f"Missing columns for heatmap: {index}, {columns}, {values}")
         return
     pivot = frame.pivot_table(index=index, columns=columns, values=values, aggfunc="mean")
     im = ax.imshow(pivot.values, aspect="auto", cmap="viridis")
@@ -526,7 +531,7 @@ def _plot_pivot_heatmap(
 
 def _bar_if_exists(frame: pd.DataFrame, x: str | None, y: str, ax: Any, title: str, color: str) -> None:
     if y not in frame.columns:
-        ax.set_title(f"Thiếu cột {y}")
+        ax.set_title(f"Missing column: {y}")
         return
     frame.plot(x=x, y=y, kind="bar", ax=ax, color=color, legend=False, title=title)
 

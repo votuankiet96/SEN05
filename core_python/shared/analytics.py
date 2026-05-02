@@ -192,6 +192,7 @@ def calc_metrics(
 
     return dict(
         total_trades=len(df),
+        equity_model=eq_ts.attrs.get("equity_model", "unspecified"),
         wins=len(w_df), losses=len(l_df),
         win_rate=round(len(w_df) / len(df) * 100, 1),
         profit_factor=round(gp / gl if gl else float('inf'), 2),

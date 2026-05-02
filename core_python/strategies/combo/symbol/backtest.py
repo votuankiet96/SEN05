@@ -160,6 +160,7 @@ def run_symbol_backtest_on_frame(
     strategy_overrides: dict[str, Any] | None = None,
     costs: dict[str, Any] | None = None,
     broker_profile: str | None = None,
+    collect_events: bool = False,
 ) -> SymbolBacktestResult:
     """Run a complete symbol backtest on a preloaded raw OHLCV frame.
 
@@ -182,8 +183,10 @@ def run_symbol_backtest_on_frame(
     )
     if "trailing_activation" not in (strategy_overrides or {}):
         strategy_cfg["trailing_activation"] = float(cfg["trailing_activation"])
-    strategy_cfg["min_rr"] = float(params["MIN_RR"])
+    min_rr = params.get("MIN_RR")
+    strategy_cfg["min_rr"] = None if min_rr is None else float(min_rr)
 
+    replay_events = [] if collect_events else None
     trades, equity = backtest_symbol(
         symbol_key,
         df_sig,
@@ -191,6 +194,7 @@ def run_symbol_backtest_on_frame(
         init_eq,
         strategy=strategy_cfg,
         costs=get_cost_settings(symbol_key, costs, broker_profile=broker_profile),
+        event_sink=replay_events,
     )
     metrics = calc_metrics(
         trades,
@@ -210,6 +214,7 @@ def run_symbol_backtest_on_frame(
         symbol_config=cfg,
         strategy_settings=strategy_cfg,
         account_mode=account_mode,
+        replay_events=replay_events or [],
     )
 
 
@@ -228,6 +233,7 @@ def run_symbol_backtest(
     strategy_overrides: dict[str, Any] | None = None,
     costs: dict[str, Any] | None = None,
     broker_profile: str | None = None,
+    collect_events: bool = False,
 ) -> SymbolBacktestResult:
     """Load data from DB and run a complete symbol backtest."""
     cfg = {
@@ -253,4 +259,5 @@ def run_symbol_backtest(
         strategy_overrides=strategy_overrides,
         costs=costs,
         broker_profile=broker_profile,
+        collect_events=collect_events,
     )

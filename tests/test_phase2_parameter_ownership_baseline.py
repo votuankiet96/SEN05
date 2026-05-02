@@ -85,10 +85,10 @@ EXPECTED_SHARED_METADATA = {
 }
 
 EXPECTED_COMBO_STRATEGY_PARAMS = {
-    "US30": {"x": 10.0, "ktp": 2.3, "ma_period": 20, "trailing_activation": 1.0},
-    "US500": {"x": 1.0, "ktp": 2.3, "ma_period": 20, "trailing_activation": 1.0},
-    "GOLD": {"x": 0.5, "ktp": 2.3, "ma_period": 20, "trailing_activation": 1.0},
-    "BTCUSD": {"x": 50.0, "ktp": 2.3, "ma_period": 20, "trailing_activation": 1.0},
+    "US30": {"x": 10.0, "ktp": 2.272, "ma_period": 20, "trailing_activation": 1.0},
+    "US500": {"x": 1.0, "ktp": 2.272, "ma_period": 20, "trailing_activation": 1.0},
+    "GOLD": {"x": 0.5, "ktp": 2.272, "ma_period": 20, "trailing_activation": 1.0},
+    "BTCUSD": {"x": 50.0, "ktp": 2.272, "ma_period": 20, "trailing_activation": 1.0},
 }
 
 def _subset(source: dict, keys: set[str]) -> dict:
@@ -204,11 +204,11 @@ def test_combo_detect_signals_uses_combo_owned_x_not_shared_x(monkeypatch) -> No
         df,
         mask,
         sym_key="US30",
-        params=combo_config.get_indicator_params(),
+        params={**combo_config.get_indicator_params(), "MIN_RR": 1.25},
     )
 
     assert out["signal"].iloc[1] == 1
-    assert out["rr"].iloc[1] > combo_parameters.STRATEGY["min_rr"]
+    assert out["rr"].iloc[1] > 1.25
 
 
 def test_combo_detect_signals_prefers_optimizer_x_override() -> None:
@@ -219,11 +219,11 @@ def test_combo_detect_signals_prefers_optimizer_x_override() -> None:
         df,
         mask,
         sym_key="US30",
-        params={**combo_config.get_indicator_params(), "X": 999.0},
+        params={**combo_config.get_indicator_params(), "X": 999.0, "MIN_RR": 1.25},
     )
 
     assert out["signal"].iloc[1] == 0
-    assert out["rr"].iloc[1] < combo_parameters.STRATEGY["min_rr"]
+    assert out["rr"].iloc[1] < 1.25
 
 
 def test_combo_logic_split_import_compatibility() -> None:
@@ -376,8 +376,8 @@ def test_config_api_snapshots_remain_stable() -> None:
         "MACD_SLOW": 25,
         "MACD_SIGNAL": 5,
         "ATR_PERIOD": 5,
-        "KTP": 2.3,
-        "MIN_RR": 1.25,
+        "KTP": 2.272,
+        "MIN_RR": None,
     }
     assert _subset(
         combo_config.get_account_settings("standard"),
@@ -390,8 +390,8 @@ def test_config_api_snapshots_remain_stable() -> None:
         "pending_ttl_bars": 3,
         "partial_tp_fraction": 0.5,
         "trailing_activation": 1.0,
-        "min_rr": 1.25,
-        "ktp": 2.3,
+        "min_rr": None,
+        "ktp": 2.272,
     }
     assert _subset(
         combo_config.get_account_settings("ftmo"),
@@ -404,13 +404,13 @@ def test_config_api_snapshots_remain_stable() -> None:
         "pending_ttl_bars": 3,
         "partial_tp_fraction": 0.5,
         "trailing_activation": 1.0,
-        "min_rr": 1.25,
-        "ktp": 2.3,
+        "min_rr": None,
+        "ktp": 2.272,
     }
     assert combo_config.get_symbol_search_space("US30") == {
-        "ktp": [1.618, 2.0, 2.272, 2.618, 3.0, 3.382],
+        "ktp": [1.618, 2.0, 2.272, 2.618, 3.0],
         "x": [8.0, 10.0, 12.0],
-        "min_rr": [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        "min_rr": [None],
     }
     assert ma_cross_config.get_indicator_params() == {
         "MA_TYPE": "sma",

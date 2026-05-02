@@ -147,13 +147,14 @@ def walk_forward_portfolio(
                 **cfg,
                 **get_cost_settings(sym, costs, broker_profile=broker_profile),
             }
+            min_rr = ind_params.get("MIN_RR", strategy_cfg.get("min_rr"))
             # Ghi trailing_activation và min_rr vào strategy_cfg theo symbol
             strategy_by_symbol[sym] = {
                 **strategy_cfg,
                 "trailing_activation": float(
                     cfg.get("trailing_activation", strategy_cfg.get("trailing_activation", 1.0))
                 ),
-                "min_rr": float(ind_params.get("MIN_RR", strategy_cfg.get("min_rr", 1.25))),
+                "min_rr": None if min_rr is None else float(min_rr),
             }
 
             start_ts = oos_date_from if start_ts is None else min(start_ts, oos_date_from)

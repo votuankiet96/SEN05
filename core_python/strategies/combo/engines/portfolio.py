@@ -16,6 +16,7 @@ from core_python.strategies.combo.engines.common import (
     build_pending_order,
     make_full_position,
 )
+from core_python.strategies.combo.engines.replay_events import emit_replay_event
 
 
 def backtest_portfolio(
@@ -26,6 +27,7 @@ def backtest_portfolio(
     allocations: dict[str, float] | None = None,
     strategy: dict | None = None,
     costs: dict[str, dict] | None = None,
+    event_sink: list | None = None,
 ) -> tuple[list[dict], pd.Series, dict[str, pd.Series], dict[str, list]]:
     """Mô phỏng portfolio thực tế: một tài khoản, nhiều symbol, chia sẻ vốn chung.
 
@@ -165,6 +167,36 @@ def backtest_portfolio(
         over = (costs or {}).get(sym, {})
         return {**_DEFAULT_COSTS, **base, **over}
 
+    def _floating_close_net(sym: str, pos: dict | None, bar: dict) -> float:
+        if not pos:
+            return 0.0
+
+        d = pos["direction"]
+        half_frac = (1 - partial_frac) if pos["partial_tp_hit"] else 1.0
+        cfg = _sym_costs(sym)
+        spread = float(cfg.get("spread_pts", 0.0))
+        slippage = calc_dynamic_slippage(
+            float(cfg.get("slippage_pts", _DEFAULT_COSTS["slippage_pts"])),
+            float(bar.get("atr") or 0.0),
+            float(bar.get("close") or 0.0),
+            k=float(cfg.get("slippage_k", 50)),
+        )
+        ep = _adverse_exit_price(float(bar["close"]), d, spread, slippage)
+        r_h2 = (ep - pos["entry"]) * d / pos["sl_dist"]
+        gross_h2 = half_frac * r_h2 * pos["risk_usd"]
+        comm_h2 = half_frac * pos["commission"]
+        net_h2 = gross_h2 - comm_h2
+        exit_ts = pd.Timestamp(bar["BarTime"])
+        holding_days = max((exit_ts.date() - pos["entry_time"].date()).days, 0)
+        swap_fee = swap_cost(
+            holding_days,
+            pos.get("lot_size", 0.0),
+            d,
+            float(cfg.get("swap_long_per_lot_per_day", 0.0)),
+            float(cfg.get("swap_short_per_lot_per_day", 0.0)),
+        )
+        return float(net_h2 - swap_fee)
+
     def _update_open_risk_metrics() -> None:
         nonlocal peak_concurrent_positions
         nonlocal peak_open_risk_usd
@@ -218,6 +250,15 @@ def backtest_portfolio(
         # ── Kiểm tra max DD ở cấp account (dừng tất cả symbol) ──────────────
         if _max_drawdown_breached(account_equity, initial_balance,
                                    account_peak_eq, max_dd, max_dd_mode):
+            emit_replay_event(
+                event_sink,
+                time=ts,
+                symbol=sym,
+                event_type="MAX_DRAWDOWN_STOP",
+                equity=account_equity,
+                reason="portfolio_max_drawdown_limit",
+                metadata={"peak_equity": account_peak_eq, "max_drawdown_limit": max_dd},
+            )
             account_stopped = True
             symbol_eq_logs[sym].append((ts, sym_eq_seed + symbol_pnl[sym]))
             continue
@@ -248,6 +289,18 @@ def backtest_portfolio(
         if pendings[sym] and not positions[sym]:
             pendings[sym]["ttl"] -= 1
             if pendings[sym]["ttl"] < 0:
+                emit_replay_event(
+                    event_sink,
+                    time=ts,
+                    symbol=sym,
+                    event_type="PENDING_EXPIRED",
+                    direction=pendings[sym].get("direction"),
+                    entry=pendings[sym].get("entry"),
+                    sl=pendings[sym].get("sl"),
+                    tp=pendings[sym].get("tp"),
+                    equity=account_equity,
+                    reason="ttl_expired",
+                )
                 pendings[sym] = None
             else:
                 d        = pendings[sym]["direction"]
@@ -273,6 +326,18 @@ def backtest_portfolio(
                         )
                         commission = 2 * lot_size * comm_per_lot
                         if lot_size <= 0:
+                            emit_replay_event(
+                                event_sink,
+                                time=ts,
+                                symbol=sym,
+                                event_type="PENDING_REJECTED",
+                                direction=d,
+                                entry=entry_px,
+                                sl=pendings[sym].get("sl"),
+                                tp=pendings[sym].get("tp"),
+                                equity=account_equity,
+                                reason="lot_size_zero",
+                            )
                             pendings[sym] = None
                         else:
                             positions[sym] = make_full_position(
@@ -286,6 +351,34 @@ def backtest_portfolio(
                                 entry_time=ts,
                                 commission=commission,
                                 lot_size=lot_size,
+                            )
+                            emit_replay_event(
+                                event_sink,
+                                time=ts,
+                                symbol=sym,
+                                event_type="PENDING_FILLED",
+                                direction=d,
+                                price=actual_entry,
+                                entry=actual_entry,
+                                sl=positions[sym]["sl"],
+                                tp=positions[sym]["tp_at_entry"],
+                                lot_size=lot_size,
+                                equity=account_equity,
+                                reason="breakout_fill",
+                            )
+                            emit_replay_event(
+                                event_sink,
+                                time=ts,
+                                symbol=sym,
+                                event_type="POSITION_OPENED",
+                                direction=d,
+                                price=actual_entry,
+                                entry=actual_entry,
+                                sl=positions[sym]["sl"],
+                                tp=positions[sym]["tp_at_entry"],
+                                lot_size=lot_size,
+                                equity=account_equity,
+                                metadata={"risk_usd": risk_usd, "commission": commission},
                             )
                             pendings[sym] = None
                             _update_open_risk_metrics()
@@ -328,7 +421,46 @@ def backtest_portfolio(
                     account_peak_eq    = max(account_peak_eq, account_equity)
                     account_daily_pnl += net_h1
                     symbol_pnl[sym]   += net_h1
+                    emit_replay_event(
+                        event_sink,
+                        time=ts,
+                        symbol=sym,
+                        event_type="PARTIAL_TP_HIT",
+                        direction=d,
+                        price=half_exit,
+                        entry=entry,
+                        sl=pos["sl"],
+                        tp=pos["half1_exit"],
+                        lot_size=pos.get("lot_size"),
+                        equity=account_equity,
+                        pnl_usd=net_h1,
+                        reason="partial_tp",
+                    )
+                    emit_replay_event(
+                        event_sink,
+                        time=ts,
+                        symbol=sym,
+                        event_type="TRAILING_ACTIVATED",
+                        direction=d,
+                        price=bar["close"],
+                        entry=entry,
+                        sl=pos["sl"],
+                        tp=pos["tp"],
+                        lot_size=pos.get("lot_size"),
+                        equity=account_equity,
+                        reason="partial_tp_breakeven",
+                    )
                     if account_daily_pnl <= -(initial_balance * daily_limit):
+                        emit_replay_event(
+                            event_sink,
+                            time=ts,
+                            symbol=sym,
+                            event_type="DAILY_LOSS_STOP",
+                            direction=d,
+                            equity=account_equity,
+                            pnl_usd=account_daily_pnl,
+                            reason="daily_loss_limit",
+                        )
                         account_daily_stop = True
                     _update_open_risk_metrics()
 
@@ -337,11 +469,57 @@ def backtest_portfolio(
                 if not pos["trail_active"]:
                     if (float(bar["close"]) - entry) * d >= pos["atr"] * trail_act:
                         pos["trail_active"] = True
+                        emit_replay_event(
+                            event_sink,
+                            time=ts,
+                            symbol=sym,
+                            event_type="TRAILING_ACTIVATED",
+                            direction=d,
+                            price=bar["close"],
+                            entry=entry,
+                            sl=pos["sl"],
+                            tp=pos["tp"],
+                            lot_size=pos.get("lot_size"),
+                            equity=account_equity,
+                            reason="activation_threshold",
+                        )
                 ma_val = bar.get("ma")
                 if pos["trail_active"] and ma_val is not None and not np.isnan(float(ma_val)):
                     new_sl = float(ma_val)
-                    if   d ==  1 and new_sl > pos["sl"]: pos["sl"] = new_sl
-                    elif d == -1 and new_sl < pos["sl"]: pos["sl"] = new_sl
+                    if   d ==  1 and new_sl > pos["sl"]:
+                        old_sl = pos["sl"]
+                        pos["sl"] = new_sl
+                        emit_replay_event(
+                            event_sink,
+                            time=ts,
+                            symbol=sym,
+                            event_type="TRAILING_SL_MOVED",
+                            direction=d,
+                            price=bar["close"],
+                            entry=entry,
+                            sl=pos["sl"],
+                            tp=pos["tp"],
+                            lot_size=pos.get("lot_size"),
+                            equity=account_equity,
+                            metadata={"old_sl": old_sl, "new_sl": new_sl},
+                        )
+                    elif d == -1 and new_sl < pos["sl"]:
+                        old_sl = pos["sl"]
+                        pos["sl"] = new_sl
+                        emit_replay_event(
+                            event_sink,
+                            time=ts,
+                            symbol=sym,
+                            event_type="TRAILING_SL_MOVED",
+                            direction=d,
+                            price=bar["close"],
+                            entry=entry,
+                            sl=pos["sl"],
+                            tp=pos["tp"],
+                            lot_size=pos.get("lot_size"),
+                            equity=account_equity,
+                            metadata={"old_sl": old_sl, "new_sl": new_sl},
+                        )
 
             # Phase 4 — Đóng lệnh và ghi trade log
             if exit_p is not None:
@@ -391,9 +569,34 @@ def backtest_portfolio(
                     partial_tp_hit=pos["partial_tp_hit"],
                     half1_exit=pos["half1_exit"], half1_exit_time=pos["half1_exit_time"],
                 ))
+                emit_replay_event(
+                    event_sink,
+                    time=ts,
+                    symbol=sym,
+                    event_type="STOP_LOSS_HIT" if exit_r == "SL" else "TAKE_PROFIT_HIT",
+                    direction=d,
+                    price=exit_p,
+                    entry=entry,
+                    sl=pos["sl"],
+                    tp=tp_log,
+                    lot_size=pos.get("lot_size"),
+                    equity=account_equity,
+                    pnl_usd=total_net,
+                    reason=exit_r,
+                    metadata={"swap_cost": swap_fee, "commission": total_comm},
+                )
                 positions[sym] = None
                 _update_open_risk_metrics()
                 if account_daily_pnl <= -(initial_balance * daily_limit):
+                    emit_replay_event(
+                        event_sink,
+                        time=ts,
+                        symbol=sym,
+                        event_type="DAILY_LOSS_STOP",
+                        equity=account_equity,
+                        pnl_usd=account_daily_pnl,
+                        reason="daily_loss_limit",
+                    )
                     account_daily_stop = True
 
         # ── Reversal: tín hiệu ngược chiều khi đang giữ lệnh ─────────────────
@@ -467,24 +670,99 @@ def backtest_portfolio(
                     partial_tp_hit=pos["partial_tp_hit"],
                     half1_exit=pos["half1_exit"], half1_exit_time=pos["half1_exit_time"],
                 ))
+                emit_replay_event(
+                    event_sink,
+                    time=exit_ts_rev,
+                    symbol=sym,
+                    event_type="REVERSAL_CLOSE",
+                    direction=d,
+                    price=ep_rev,
+                    entry=pos["entry"],
+                    sl=pos["sl"],
+                    tp=tp_log,
+                    lot_size=pos.get("lot_size"),
+                    equity=account_equity if exit_ts_rev == ts else account_equity + close_net,
+                    pnl_usd=total_net,
+                    reason="REVERSED",
+                    metadata={"signal_time": ts, "swap_cost": swap_fee, "commission": total_comm},
+                )
                 positions[sym] = None
                 _update_open_risk_metrics()
                 if account_daily_pnl <= -(initial_balance * daily_limit):
+                    emit_replay_event(
+                        event_sink,
+                        time=exit_ts_rev,
+                        symbol=sym,
+                        event_type="DAILY_LOSS_STOP",
+                        equity=account_equity,
+                        pnl_usd=account_daily_pnl,
+                        reason="daily_loss_limit",
+                    )
                     account_daily_stop = True
                 # Tạo pending mới theo hướng ngược
                 if not account_daily_stop and idx + 1 < bar_count:
                     pendings[sym] = build_pending_order(bar, sig, x, sym_ktp, atr_val, ttl)
+                    emit_replay_event(
+                        event_sink,
+                        time=ts,
+                        symbol=sym,
+                        event_type="SIGNAL_DETECTED",
+                        direction=sig,
+                        price=bar["close"],
+                        equity=account_equity,
+                        reason="reversal_signal",
+                    )
+                    emit_replay_event(
+                        event_sink,
+                        time=ts,
+                        symbol=sym,
+                        event_type="PENDING_CREATED",
+                        direction=sig,
+                        entry=pendings[sym].get("entry"),
+                        sl=pendings[sym].get("sl"),
+                        tp=pendings[sym].get("tp"),
+                        equity=account_equity,
+                        reason="reversal_signal",
+                        metadata={"ttl": pendings[sym].get("ttl"), "atr": atr_val},
+                    )
 
         # ── Tín hiệu mới → tạo pending order ─────────────────────────────────
         if not positions[sym] and not pendings[sym] and not account_daily_stop:
             sig = int(bar.get("signal", 0))
             if sig != 0 and idx + 1 < bar_count:
                 pendings[sym] = build_pending_order(bar, sig, x, sym_ktp, atr_val, ttl)
+                emit_replay_event(
+                    event_sink,
+                    time=ts,
+                    symbol=sym,
+                    event_type="SIGNAL_DETECTED",
+                    direction=sig,
+                    price=bar["close"],
+                    equity=account_equity,
+                    reason="entry_signal",
+                )
+                emit_replay_event(
+                    event_sink,
+                    time=ts,
+                    symbol=sym,
+                    event_type="PENDING_CREATED",
+                    direction=sig,
+                    entry=pendings[sym].get("entry"),
+                    sl=pendings[sym].get("sl"),
+                    tp=pendings[sym].get("tp"),
+                    equity=account_equity,
+                    reason="entry_signal",
+                    metadata={"ttl": pendings[sym].get("ttl"), "atr": atr_val},
+                )
 
         # ── Ghi equity log cho symbol này tại bar này ─────────────────────────
         # eq_pre_close: dùng khi reversal — log equity TRƯỚC khi đóng lệnh,
         # vì thực sự lệnh đóng ở open của bar kế tiếp, không phải bar này.
-        logged_eq = eq_pre_close if eq_pre_close is not None else (sym_eq_seed + symbol_pnl[sym])
+        logged_eq = (
+            eq_pre_close
+            if eq_pre_close is not None
+            else sym_eq_seed + symbol_pnl[sym] + _floating_close_net(sym, positions[sym], bar)
+        )
         symbol_eq_logs[sym].append((ts, logged_eq))
 
     # ── Force-close các vị thế còn mở sau khi hết dữ liệu ────────────────────
@@ -552,6 +830,22 @@ def backtest_portfolio(
             partial_tp_hit=pos["partial_tp_hit"],
             half1_exit=pos["half1_exit"], half1_exit_time=pos["half1_exit_time"],
         ))
+        emit_replay_event(
+            event_sink,
+            time=exit_ts_fc,
+            symbol=sym,
+            event_type="FORCE_CLOSE_END_OF_DATA",
+            direction=d,
+            price=ep,
+            entry=pos["entry"],
+            sl=pos["sl"],
+            tp=tp_log,
+            lot_size=pos.get("lot_size"),
+            equity=account_equity,
+            pnl_usd=total_net,
+            reason="FORCE_CLOSE",
+            metadata={"swap_cost": swap_fee, "commission": total_comm},
+        )
         positions[sym] = None
         _update_open_risk_metrics()
         # Cập nhật điểm cuối của equity log để phản ánh PnL force-close
@@ -591,6 +885,8 @@ def backtest_portfolio(
         account_equity_series = pd.Series(dtype=float)
     account_equity_series.attrs.update(
         {
+            "equity_model": "mark_to_market",
+            "realized_equity_final": float(account_equity),
             "peak_concurrent_positions": int(peak_concurrent_positions),
             "peak_open_risk_usd": float(peak_open_risk_usd),
             "peak_open_risk_pct_of_equity": float(peak_open_risk_pct_of_equity),

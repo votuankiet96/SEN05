@@ -31,6 +31,17 @@ from .backtest import load_backtest_full
 PARAMETER_KEYS = ("ktp", "x", "min_rr")
 
 
+def _optional_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        if pd.isna(value):
+            return None
+    except Exception:
+        pass
+    return float(value)
+
+
 def build_parameter_grid(
     symbol_key: str,
     search_space: dict[str, list[Any]] | None = None,
@@ -64,6 +75,7 @@ def run_symbol_grid_search(
     costs: dict[str, Any] | None = None,
     search_space: dict[str, list[Any]] | None = None,
     broker_profile: str | None = None,
+    allow_full_history: bool = False,
 ) -> pd.DataFrame:
     """Run a compact grid search for one symbol using backtest_fast().
 
@@ -72,6 +84,13 @@ def run_symbol_grid_search(
     We precompute the grid once and group by `ma_period` so indicator generation
     is reused across candidates that share the same MA length.
     """
+    if date_from is None and date_to is None and not allow_full_history:
+        raise ValueError(
+            "run_symbol_grid_search() requires at least one explicit date bound. "
+            "Pass date_from/date_to for an in-sample window, or set "
+            "allow_full_history=True when a full-history sweep is intentional."
+        )
+
     symbol_cfg = get_symbol_params(symbol_key, broker_profile=broker_profile)
     raw_df = load_backtest_full(
         symbol_cfg["symbol_id"],
@@ -106,7 +125,7 @@ def run_symbol_grid_search(
         }
         local_strategy = {
             **strategy_cfg,
-            "min_rr": float(candidate["min_rr"]),
+            "min_rr": _optional_float(candidate["min_rr"]),
         }
         metrics = backtest_fast(
             symbol_key,

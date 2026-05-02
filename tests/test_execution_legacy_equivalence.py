@@ -126,6 +126,29 @@ def test_combo_partial_tp_then_force_close_golden_trade() -> None:
     assert equity.iloc[-1] == 100_244.13
 
 
+def test_combo_symbol_equity_marks_open_position_to_market() -> None:
+    df = _frame(
+        [
+            {"open": 95, "high": 100, "low": 90, "close": 99, "atr": 100, "ma": 90, "signal": 1},
+            {"open": 100, "high": 101, "low": 95, "close": 95, "atr": 100, "ma": 90, "signal": 0},
+            {"open": 95, "high": 101, "low": 95, "close": 100, "atr": 100, "ma": 90, "signal": 0},
+        ]
+    )
+
+    trades, equity = backtest_symbol(
+        "TEST",
+        df,
+        _combo_cfg(),
+        100_000.0,
+        strategy=_combo_strategy(partial_tp_fraction=0.0),
+        costs={"slippage_pts": 0.0, "commission_per_lot": 0.0},
+    )
+
+    assert len(trades) == 1
+    assert equity.loc[df.index[1]] == 99_750.0
+    assert equity.iloc[-1] == 100_000.0
+
+
 def test_portfolio_shared_account_golden_trade_and_equity() -> None:
     frames = {
         "A": _frame(
@@ -197,3 +220,37 @@ def test_ma_cross_next_open_and_end_of_data_golden_trade() -> None:
     assert trades[0]["exit"] == 101.0
     assert trades[0]["pnl_usd"] == -100.0
     assert equity.iloc[-1] == 99_900.0
+
+
+def test_ma_cross_market_equity_marks_open_position_to_market() -> None:
+    df = _frame(
+        [
+            {"open": 100, "high": 100, "low": 100, "close": 100, "atr": 10, "slow_ma": 90, "signal": 1},
+            {"open": 100, "high": 101, "low": 95, "close": 95, "atr": 10, "slow_ma": 90, "signal": 0},
+            {"open": 95, "high": 101, "low": 95, "close": 100, "atr": 10, "slow_ma": 90, "signal": 0},
+        ]
+    )
+
+    trades, equity = backtest_market_symbol(
+        "TEST",
+        df,
+        _combo_cfg(),
+        100_000.0,
+        strategy={
+            "risk_per_trade": 0.005,
+            "daily_loss_limit": 1.0,
+            "max_drawdown_limit": 1.0,
+            "atr_stop_mult": 2.0,
+            "atr_tp_mult": 0.0,
+            "partial_tp_fraction": 0.0,
+            "trailing_activation": 100.0,
+            "trailing_column": "slow_ma",
+            "reverse_on_opposite": True,
+            "allow_same_bar_exit": False,
+        },
+        costs={"slippage_pts": 0.0, "commission_per_lot": 0.0, "slippage_k": 0.0},
+    )
+
+    assert len(trades) == 1
+    assert equity.loc[df.index[1]] == 99_875.0
+    assert equity.iloc[-1] == 100_000.0

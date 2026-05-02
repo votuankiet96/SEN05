@@ -175,6 +175,25 @@ class TradeEvent:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass(slots=True)
+class BacktestReplayEvent:
+    """Detailed optional event emitted while a backtest engine is running."""
+
+    time: pd.Timestamp
+    symbol: str
+    event_type: str
+    side: str | None = None
+    price: float | None = None
+    entry: float | None = None
+    sl: float | None = None
+    tp: float | None = None
+    lot_size: float | None = None
+    equity: float | None = None
+    pnl_usd: float | None = None
+    reason: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
 def intent_to_legacy_pending(intent: PendingOrderIntent) -> dict[str, Any]:
     """Convert a strategy-owned pending intent to the legacy engine shape."""
     return {
@@ -273,6 +292,7 @@ class SymbolBacktestResult:
     symbol_config: dict[str, Any]
     strategy_settings: dict[str, Any]
     account_mode: str
+    replay_events: list[BacktestReplayEvent] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -340,6 +360,7 @@ class PortfolioBacktestResult:
     account_mode: str
     symbol_keys: list[str] = field(default_factory=list)
     portfolio_model: PortfolioModel = "independent_sleeves"
+    replay_events: list[BacktestReplayEvent] = field(default_factory=list)
 
 
 @dataclass(slots=True)

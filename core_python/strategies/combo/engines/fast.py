@@ -112,7 +112,7 @@ def backtest_fast(symbol: str, df_ind: pd.DataFrame, cfg: dict,
     c = {**_DEFAULT_COSTS, **(costs or {})}
 
     hours        = cfg.get('session_hours_utc', [])
-    min_rr       = s.get('min_rr', 1.25)
+    min_rr       = s.get('min_rr')
     risk_pct     = s['risk_per_trade']
     daily_limit, max_dd = _resolve_strategy_limits(s)
     max_dd_mode  = s.get('max_drawdown_mode', _DEFAULT_STRATEGY["max_drawdown_mode"])
@@ -168,7 +168,8 @@ def backtest_fast(symbol: str, df_ind: pd.DataFrame, cfg: dict,
     sl_dist_all = df_ind['high'] - df_ind['low'] + 2 * x_actual
     tp_dist_all = ktp * df_ind['atr']
     rr_all      = (tp_dist_all / sl_dist_all.replace(0, np.nan)).fillna(0)
-    rr_ok       = rr_all >= min_rr
+    rr_filter_enabled = min_rr is not None and not pd.isna(min_rr)
+    rr_ok       = pd.Series(True, index=df_ind.index) if not rr_filter_enabled else rr_all >= float(min_rr)
 
     # Điều kiện BUY/SELL thô:
     # - Giá cắt MA theo hướng tương ứng.

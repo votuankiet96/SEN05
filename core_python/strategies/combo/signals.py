@@ -11,6 +11,21 @@ from modules.indicators import add_indicators as _add_base_indicators
 from .config import STRATEGY, get_combo_symbol_params, get_indicator_params, get_symbol_ktp
 
 
+def _rr_filter_enabled(min_rr: object) -> bool:
+    if min_rr is None:
+        return False
+    try:
+        return not bool(pd.isna(min_rr))
+    except Exception:
+        return True
+
+
+def _rr_ok(rr: pd.Series, min_rr: object) -> pd.Series:
+    if not _rr_filter_enabled(min_rr):
+        return pd.Series(True, index=rr.index)
+    return rr >= float(min_rr)
+
+
 def add_combo_indicators(df: pd.DataFrame, params: dict) -> pd.DataFrame:
     defaults = get_indicator_params()
     full_p = {**defaults, **params} if isinstance(params, dict) else defaults
@@ -70,7 +85,7 @@ def detect_combo_signals(
     sl_dist = df["high"] - df["low"] + 2 * x
     tp_dist = ktp * df["atr"]
     rr = tp_dist / sl_dist.replace(0, np.nan)
-    rr_ok = rr >= min_rr
+    rr_ok = _rr_ok(rr, min_rr)
 
     df["signal"] = 0
     df.loc[buy_cond & rr_ok, "signal"] = 1
@@ -109,7 +124,7 @@ def build_fast_backtest_signal_masks(
     hours_utc: list,
     start_ts: pd.Timestamp,
     end_ts: pd.Timestamp,
-    min_rr: float,
+    min_rr: float | None,
     x_actual: float,
     ktp: float,
 ) -> tuple[pd.Series, pd.Series]:
@@ -136,7 +151,7 @@ def build_fast_backtest_signal_masks(
     sl_dist = df["high"] - df["low"] + 2 * x_actual
     tp_dist = ktp * df["atr"]
     rr = (tp_dist / sl_dist.replace(0, np.nan)).fillna(0)
-    rr_ok = rr >= min_rr
+    rr_ok = _rr_ok(rr, min_rr)
 
     buy_raw = valid & cross_up & (df["close"] > df["open"]) & (df["macd_h"] > 0) & rr_ok
     sell_raw = valid & cross_down & (df["close"] < df["open"]) & (df["macd_h"] < 0) & rr_ok
@@ -166,7 +181,7 @@ def build_signal_record(
     direction: int,
     x: float,
     ktp: float,
-    min_rr: float,
+    min_rr: float | None,
     *,
     extra: dict | None = None,
 ) -> dict:
@@ -176,7 +191,7 @@ def build_signal_record(
     entry = float(bar["high"]) + float(x) if direction == 1 else float(bar["low"]) - float(x)
     sl = float(bar["low"]) - float(x) if direction == 1 else float(bar["high"]) + float(x)
     tp = entry + direction * ktp * float(bar["atr"])
-    passes = rr >= min_rr
+    passes = True if not _rr_filter_enabled(min_rr) else rr >= float(min_rr)
 
     record = {
         "bar_time": bar["BarTime"],

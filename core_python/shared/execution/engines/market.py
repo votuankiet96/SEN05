@@ -18,6 +18,7 @@ from core_python.shared.execution.primitives import (
     round_turn_commission,
     swap_cost,
 )
+from core_python.shared.replay_events import emit_replay_event
 
 
 _DEFAULT_STRATEGY = {
@@ -122,6 +123,50 @@ def _close_position(
     }
 
 
+def _floating_pnl_at_mark(
+    position: dict[str, Any] | None,
+    *,
+    mark_time: pd.Timestamp,
+    mark_price: float,
+    cfg: dict[str, Any],
+    spread_pts: float,
+    slippage_pts: float,
+    commission_per_lot: float,
+) -> float:
+    if position is None:
+        return 0.0
+
+    lots = float(position["lot_size"])
+    remaining_fraction = (
+        1.0 - float(position["partial_tp_fraction"])
+        if position.get("partial_tp_hit")
+        else 1.0
+    )
+    exit_price = adverse_exit_price(
+        mark_price,
+        int(position["direction"]),
+        spread_pts,
+        slippage_pts,
+    )
+    gross = price_pnl(
+        float(position["entry"]),
+        exit_price,
+        int(position["direction"]),
+        lots * remaining_fraction,
+        cfg,
+    )
+    commission = round_turn_commission(lots, commission_per_lot, remaining_fraction)
+    holding_days = max((mark_time.date() - position["entry_time"].date()).days, 0)
+    swap = swap_cost(
+        holding_days,
+        lots,
+        int(position["direction"]),
+        float(cfg.get("swap_long_per_lot_per_day", 0.0)),
+        float(cfg.get("swap_short_per_lot_per_day", 0.0)),
+    ) * remaining_fraction
+    return float(gross - commission - swap)
+
+
 def backtest_market_symbol(
     symbol: str,
     df: pd.DataFrame,
@@ -130,6 +175,7 @@ def backtest_market_symbol(
     *,
     strategy: dict[str, Any] | None = None,
     costs: dict[str, Any] | None = None,
+    event_sink: list | None = None,
 ) -> tuple[list[dict[str, Any]], pd.Series]:
     """Backtest a market-order strategy using next-bar-open execution.
 
@@ -168,6 +214,8 @@ def backtest_market_symbol(
     equity_points: list[tuple[pd.Timestamp, float]] = []
     equity = float(init_eq)
     peak_eq = float(init_eq)
+    day_start_equity = float(init_eq)
+    last_mark_equity = float(init_eq)
     daily_pnl = 0.0
     cur_day = None
     daily_stop = False
@@ -180,10 +228,20 @@ def backtest_market_symbol(
         bdate = now.date()
         if bdate != cur_day:
             cur_day = bdate
+            day_start_equity = last_mark_equity
             daily_pnl = 0.0
             daily_stop = False
 
-        if max_drawdown_breached(equity, init_eq, peak_eq, max_dd, max_dd_mode):
+        if max_drawdown_breached(last_mark_equity, init_eq, peak_eq, max_dd, max_dd_mode):
+            emit_replay_event(
+                event_sink,
+                time=now,
+                symbol=symbol,
+                event_type="MAX_DRAWDOWN_STOP",
+                equity=last_mark_equity,
+                reason="max_drawdown_limit",
+                metadata={"peak_equity": peak_eq, "max_drawdown_limit": max_dd},
+            )
             break
 
         slippage = calc_dynamic_slippage(
@@ -213,9 +271,34 @@ def backtest_market_symbol(
                 equity += trade["pnl_usd"]
                 daily_pnl += trade["pnl_usd"]
                 peak_eq = max(peak_eq, equity)
+                emit_replay_event(
+                    event_sink,
+                    time=now,
+                    symbol=symbol,
+                    event_type="REVERSAL_CLOSE",
+                    direction=position["direction"],
+                    price=exit_price,
+                    entry=position["entry"],
+                    sl=position["sl"],
+                    tp=position["tp"],
+                    lot_size=position["lot_size"],
+                    equity=equity,
+                    pnl_usd=trade["pnl_usd"],
+                    reason="REVERSED",
+                    metadata={"commission": trade.get("commission"), "swap_cost": trade.get("swap_cost")},
+                )
                 position = None
                 if daily_pnl <= -(init_eq * daily_limit):
                     daily_stop = True
+                    emit_replay_event(
+                        event_sink,
+                        time=now,
+                        symbol=symbol,
+                        event_type="DAILY_LOSS_STOP",
+                        equity=equity,
+                        pnl_usd=daily_pnl,
+                        reason="daily_loss_limit",
+                    )
 
             if position is None and not daily_stop:
                 direction = int(pending_signal)
@@ -252,6 +335,21 @@ def backtest_market_symbol(
                             "half1_commission": 0.0,
                             "trail_active": False,
                         }
+                        emit_replay_event(
+                            event_sink,
+                            time=now,
+                            symbol=symbol,
+                            event_type="POSITION_OPENED",
+                            direction=direction,
+                            price=entry,
+                            entry=entry,
+                            sl=sl,
+                            tp=tp if np.isfinite(tp) else None,
+                            lot_size=lots,
+                            equity=equity,
+                            reason="market_next_open",
+                            metadata={"risk_usd": risk_usd, "sl_dist": sl_dist, "atr": atr},
+                        )
             pending_signal = 0
 
         if position and (allow_same_bar_exit or position["entry_time"] != now):
@@ -279,9 +377,34 @@ def backtest_market_symbol(
                 equity += trade["pnl_usd"]
                 daily_pnl += trade["pnl_usd"]
                 peak_eq = max(peak_eq, equity)
+                emit_replay_event(
+                    event_sink,
+                    time=now,
+                    symbol=symbol,
+                    event_type="STOP_LOSS_HIT",
+                    direction=direction,
+                    price=exit_price,
+                    entry=position["entry"],
+                    sl=sl,
+                    tp=position["tp"],
+                    lot_size=position["lot_size"],
+                    equity=equity,
+                    pnl_usd=trade["pnl_usd"],
+                    reason="SL",
+                    metadata={"commission": trade.get("commission"), "swap_cost": trade.get("swap_cost")},
+                )
                 position = None
                 if daily_pnl <= -(init_eq * daily_limit):
                     daily_stop = True
+                    emit_replay_event(
+                        event_sink,
+                        time=now,
+                        symbol=symbol,
+                        event_type="DAILY_LOSS_STOP",
+                        equity=equity,
+                        pnl_usd=daily_pnl,
+                        reason="daily_loss_limit",
+                    )
             elif hit_tp and position is not None:
                 if position["partial_tp_fraction"] > 0 and not position["partial_tp_hit"]:
                     half_frac = float(position["partial_tp_fraction"])
@@ -308,8 +431,47 @@ def backtest_market_symbol(
                         tp=np.inf * direction,
                         trail_active=True,
                     )
+                    emit_replay_event(
+                        event_sink,
+                        time=now,
+                        symbol=symbol,
+                        event_type="PARTIAL_TP_HIT",
+                        direction=direction,
+                        price=half_exit,
+                        entry=position["entry"],
+                        sl=position["sl"],
+                        tp=half_exit,
+                        lot_size=position["lot_size"],
+                        equity=equity,
+                        pnl_usd=net_h1,
+                        reason="partial_tp",
+                        metadata={"commission": comm_h1},
+                    )
+                    emit_replay_event(
+                        event_sink,
+                        time=now,
+                        symbol=symbol,
+                        event_type="TRAILING_ACTIVATED",
+                        direction=direction,
+                        price=float(bar["close"]),
+                        entry=position["entry"],
+                        sl=position["sl"],
+                        tp=position["tp"],
+                        lot_size=position["lot_size"],
+                        equity=equity,
+                        reason="partial_tp_breakeven",
+                    )
                     if daily_pnl <= -(init_eq * daily_limit):
                         daily_stop = True
+                        emit_replay_event(
+                            event_sink,
+                            time=now,
+                            symbol=symbol,
+                            event_type="DAILY_LOSS_STOP",
+                            equity=equity,
+                            pnl_usd=daily_pnl,
+                            reason="daily_loss_limit",
+                        )
                 else:
                     exit_price = adverse_exit_price(tp, direction, spread_pts, slippage)
                     trade = _close_position(
@@ -324,15 +486,54 @@ def backtest_market_symbol(
                     equity += trade["pnl_usd"]
                     daily_pnl += trade["pnl_usd"]
                     peak_eq = max(peak_eq, equity)
+                    emit_replay_event(
+                        event_sink,
+                        time=now,
+                        symbol=symbol,
+                        event_type="TAKE_PROFIT_HIT",
+                        direction=direction,
+                        price=exit_price,
+                        entry=position["entry"],
+                        sl=position["sl"],
+                        tp=tp,
+                        lot_size=position["lot_size"],
+                        equity=equity,
+                        pnl_usd=trade["pnl_usd"],
+                        reason="TP",
+                        metadata={"commission": trade.get("commission"), "swap_cost": trade.get("swap_cost")},
+                    )
                     position = None
                     if daily_pnl <= -(init_eq * daily_limit):
                         daily_stop = True
+                        emit_replay_event(
+                            event_sink,
+                            time=now,
+                            symbol=symbol,
+                            event_type="DAILY_LOSS_STOP",
+                            equity=equity,
+                            pnl_usd=daily_pnl,
+                            reason="daily_loss_limit",
+                        )
 
         if position:
             direction = position["direction"]
             unrealized = (float(bar["close"]) - float(position["entry"])) * direction
             if not position["trail_active"] and unrealized >= float(position["atr"]) * trailing_activation:
                 position["trail_active"] = True
+                emit_replay_event(
+                    event_sink,
+                    time=now,
+                    symbol=symbol,
+                    event_type="TRAILING_ACTIVATED",
+                    direction=direction,
+                    price=float(bar["close"]),
+                    entry=position["entry"],
+                    sl=position["sl"],
+                    tp=position["tp"],
+                    lot_size=position["lot_size"],
+                    equity=equity,
+                    reason="activation_threshold",
+                )
 
             trail_value = bar.get(trailing_column)
             if position["trail_active"] and trail_value is not None and pd.notna(trail_value):
@@ -345,15 +546,65 @@ def backtest_market_symbol(
                     new_sl = min(float(position["sl"]), trail_value)
                     if position["partial_tp_hit"]:
                         new_sl = min(new_sl, float(position["entry"]))
+                old_sl = position["sl"]
                 position["sl"] = new_sl
+                if float(new_sl) != float(old_sl):
+                    emit_replay_event(
+                        event_sink,
+                        time=now,
+                        symbol=symbol,
+                        event_type="TRAILING_SL_MOVED",
+                        direction=direction,
+                        price=float(bar["close"]),
+                        entry=position["entry"],
+                        sl=position["sl"],
+                        tp=position["tp"],
+                        lot_size=position["lot_size"],
+                        equity=equity,
+                        metadata={"old_sl": old_sl, "new_sl": new_sl},
+                    )
 
-        equity_points.append((now, equity))
+        floating_pnl = _floating_pnl_at_mark(
+            position,
+            mark_time=now,
+            mark_price=float(bar["close"]),
+            cfg=cfg,
+            spread_pts=spread_pts,
+            slippage_pts=slippage,
+            commission_per_lot=commission_per_lot,
+        )
+        mark_equity = float(equity) + floating_pnl
+        last_mark_equity = mark_equity
+        peak_eq = max(peak_eq, mark_equity)
+        if not daily_stop and (day_start_equity - mark_equity) >= init_eq * daily_limit:
+            daily_stop = True
+            emit_replay_event(
+                event_sink,
+                time=now,
+                symbol=symbol,
+                event_type="DAILY_LOSS_STOP",
+                equity=mark_equity,
+                pnl_usd=mark_equity - day_start_equity,
+                reason="daily_loss_limit_mtm",
+            )
+
+        equity_points.append((now, mark_equity))
 
         signal = int(bar.get("signal", 0) or 0)
         in_window = bool(bar.get("in_window", True))
         if signal and in_window and not daily_stop:
             if position is None or (reverse_on_opposite and signal != position["direction"]):
                 pending_signal = signal
+                emit_replay_event(
+                    event_sink,
+                    time=now,
+                    symbol=symbol,
+                    event_type="SIGNAL_DETECTED",
+                    direction=signal,
+                    price=float(bar["close"]),
+                    equity=equity,
+                    reason="entry_signal" if position is None else "reversal_signal",
+                )
 
     if position is not None:
         last = rows[-1][1]
@@ -380,7 +631,27 @@ def backtest_market_symbol(
         )
         trades.append(trade)
         equity += trade["pnl_usd"]
-        equity_points.append((now, equity))
+        last_mark_equity = equity
+        emit_replay_event(
+            event_sink,
+            time=now,
+            symbol=symbol,
+            event_type="FORCE_CLOSE_END_OF_DATA",
+            direction=position["direction"],
+            price=exit_price,
+            entry=position["entry"],
+            sl=position["sl"],
+            tp=position["tp"],
+            lot_size=position["lot_size"],
+            equity=equity,
+            pnl_usd=trade["pnl_usd"],
+            reason="END_OF_DATA",
+            metadata={"commission": trade.get("commission"), "swap_cost": trade.get("swap_cost")},
+        )
+        if equity_points and equity_points[-1][0] == now:
+            equity_points[-1] = (now, equity)
+        else:
+            equity_points.append((now, equity))
 
     equity_ts = pd.Series(
         [value for _, value in equity_points],
@@ -390,6 +661,8 @@ def backtest_market_symbol(
     if equity_ts.empty:
         first_ts = bar_time(rows[0][1])
         equity_ts = pd.Series([init_eq], index=pd.DatetimeIndex([first_ts], name="BarTime"))
+    equity_ts.attrs["equity_model"] = "mark_to_market"
+    equity_ts.attrs["realized_equity_final"] = float(equity)
     return trades, equity_ts
 
 

@@ -23,12 +23,18 @@ from core_python.strategies.combo.signals import (
     build_raw_signal_masks,
     scan_signals_reversal,
 )
+from core_python.strategies.combo.symbol.optimize import (
+    run_symbol_grid_search as run_combo_symbol_grid_search,
+)
 from core_python.strategies.combo.symbol.selection import (
     filter_optimizer_candidates,
     rank_optimizer_candidates,
     summarize_optimizer_plateau,
 )
 from core_python.strategies.ma_cross.params import get_symbol_params
+from core_python.strategies.ma_cross.symbol.optimize import (
+    run_symbol_grid_search as run_ma_cross_symbol_grid_search,
+)
 
 
 def _make_clean_ohlcv(n: int = 200) -> pd.DataFrame:
@@ -284,6 +290,14 @@ def test_backtest_fast_date_to_none_uses_data_end():
     )
 
     assert metrics["trades"] >= 1
+
+
+def test_symbol_grid_search_requires_explicit_sample_window():
+    with pytest.raises(ValueError, match="explicit date bound"):
+        run_combo_symbol_grid_search("US30", date_from=None, date_to=None)
+
+    with pytest.raises(ValueError, match="explicit date bound"):
+        run_ma_cross_symbol_grid_search("US30", date_from=None, date_to=None)
 
 
 def test_optimizer_candidate_filter_and_robust_ranking():

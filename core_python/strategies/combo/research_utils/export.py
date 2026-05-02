@@ -13,11 +13,7 @@ def export_result_bundle(
     equity: pd.Series | pd.DataFrame | None = None,
     base_dir: str | Path = "reports/combo",
 ) -> Path:
-    """Xuất metrics/trades/equity ra CSV để lưu lại một lần chạy.
-
-    Hàm này không tự chạy trong notebook; bạn gọi ở cell cuối khi muốn lưu kết
-    quả. Thư mục được tạo theo `base_dir/name`.
-    """
+    """Export metrics, trades, and equity CSV files for one research run."""
     out_dir = Path(base_dir) / _safe_name(name)
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -36,7 +32,7 @@ def export_result_bundle(
     elif isinstance(equity, pd.DataFrame) and not equity.empty:
         equity.to_csv(out_dir / "equity.csv", encoding="utf-8-sig")
 
-    print(f"Đã export kết quả vào: {out_dir}")
+    print(f"Exported result bundle to: {out_dir}")
     return out_dir
 
 

@@ -28,6 +28,21 @@ from ..signals import add_combo_indicators
 from ..signals import detect_combo_signals, session_mask
 
 
+def _optional_float(value, default=None):
+    if value is None:
+        return default
+    try:
+        if pd.isna(value):
+            return default
+    except Exception:
+        pass
+    return float(value)
+
+
+def _sort_optional(values):
+    return sorted(values, key=lambda v: float("-inf") if v is None else float(v))
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # PLATEAU STABILITY CHECK
 # ─────────────────────────────────────────────────────────────────────────────
@@ -61,19 +76,19 @@ def check_plateau_stability(
             point = {
                 'ktp':    float(k[0]),
                 'x':      float(k[1]),
-                'min_rr': float(k[2]),
+                'min_rr': _optional_float(k[2], None),
             }
         elif isinstance(k, dict):
             point = {
                 'ktp':    float(k.get('ktp', 0.0)),
                 'x':      float(k.get('x', 0.0)),
-                'min_rr': float(k.get('min_rr', 0.0)),
+                'min_rr': _optional_float(k.get('min_rr'), None),
             }
         else:
             continue
 
         sharpe_v = float(v.get('sharpe', 0.0)) if isinstance(v, dict) else float(v)
-        key_t = (float(point['ktp']), float(point['x']), float(point['min_rr']))
+        key_t = (float(point['ktp']), float(point['x']), point['min_rr'])
         sharpe_map[key_t] = sharpe_v
         points.append(point)
 
@@ -82,14 +97,15 @@ def check_plateau_stability(
 
     neighbor_values = {}
     for k in keys:
-        vals = sorted({float(p[k]) for p in points})
+        vals = _sort_optional({p[k] if k == "min_rr" else float(p[k]) for p in points})
         if not vals:
             return default
-        best_v = float(best_params.get(k, 0.0))
+        best_v = _optional_float(best_params.get(k), None) if k == "min_rr" else float(best_params.get(k, 0.0))
         if best_v in vals:
             idx = vals.index(best_v)
         else:
-            idx = min(range(len(vals)), key=lambda i: abs(vals[i] - best_v))
+            target = float("-inf") if best_v is None else float(best_v)
+            idx = min(range(len(vals)), key=lambda i: abs((float("-inf") if vals[i] is None else float(vals[i])) - target))
         lo = max(0, idx - max(1, int(radius)))
         hi = min(len(vals), idx + max(1, int(radius)) + 1)
         neighbor_values[k] = vals[lo:hi]
@@ -97,7 +113,7 @@ def check_plateau_stability(
     best_key = (
         float(best_params['ktp']),
         float(best_params['x']),
-        float(best_params['min_rr']),
+        _optional_float(best_params.get('min_rr'), None),
     )
     min_sharpe = float(best_sharpe) * float(threshold_ratio)
     neighbors_checked = 0
@@ -106,7 +122,7 @@ def check_plateau_stability(
     for ktp_v in neighbor_values['ktp']:
         for x_v in neighbor_values['x']:
             for rr_v in neighbor_values['min_rr']:
-                combo = (float(ktp_v), float(x_v), float(rr_v))
+                combo = (float(ktp_v), float(x_v), _optional_float(rr_v, None))
                 if combo == best_key:
                     continue
                 sh = sharpe_map.get(combo)
@@ -246,17 +262,17 @@ def walk_forward_backtest(
                         date_from=date_from_is,
                         date_to=date_to_is,
                         init_eq=init_eq,
-                        strategy={**strategy_cfg, 'min_rr': float(rr_v)},
+                        strategy={**strategy_cfg, 'min_rr': _optional_float(rr_v, None)},
                         costs=cost_cfg,
                     )
                     sh = float(fast_metrics.get('sharpe', 0.0))
-                    grid_results[(float(ktp_v), float(x_v), float(rr_v))] = sh
+                    grid_results[(float(ktp_v), float(x_v), _optional_float(rr_v, None))] = sh
                     if sh > best_sharpe:
                         best_sharpe = sh
                         best = {
                             'ktp':    float(ktp_v),
                             'x':      float(x_v),
-                            'min_rr': float(rr_v),
+                            'min_rr': _optional_float(rr_v, None),
                             'is_fast': fast_metrics,
                         }
 
@@ -297,6 +313,7 @@ def walk_forward_backtest(
             'MA_PERIOD': 20,
             'KTP': best['ktp'],
             'X':   best['x'],
+            'MIN_RR': best['min_rr'],
         }
         _warmup = max(
             int(p_local.get('MACD_SLOW', 25)),

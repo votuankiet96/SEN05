@@ -123,6 +123,47 @@ def test_portfolio_reversal_pnl_is_not_available_before_exit_timestamp():
     assert account_eq.index.is_unique
 
 
+def test_portfolio_equity_marks_open_positions_to_market_but_sizes_on_realized_equity():
+    a = _frame(
+        [
+            "2023-01-01 00:00",
+            "2023-01-01 04:00",
+            "2023-01-01 08:00",
+        ],
+        [
+            {"open": 95.0, "high": 100.0, "low": 90.0, "close": 99.0, "atr": 100.0, "ma": 95.0, "signal": 1},
+            {"open": 100.0, "high": 101.0, "low": 95.0, "close": 95.0, "atr": 100.0, "ma": 95.0, "signal": 0},
+            {"open": 95.0, "high": 101.0, "low": 95.0, "close": 100.0, "atr": 100.0, "ma": 95.0, "signal": 0},
+        ],
+    )
+    b = _frame(
+        [
+            "2023-01-01 00:00",
+            "2023-01-01 04:00",
+            "2023-01-01 08:00",
+        ],
+        [
+            {"open": 45.0, "high": 50.0, "low": 40.0, "close": 49.0, "atr": 100.0, "ma": 45.0, "signal": 1},
+            {"open": 50.0, "high": 51.0, "low": 49.0, "close": 50.0, "atr": 100.0, "ma": 45.0, "signal": 0},
+            {"open": 50.0, "high": 51.0, "low": 49.0, "close": 50.0, "atr": 100.0, "ma": 45.0, "signal": 0},
+        ],
+    )
+
+    trades, account_eq, symbol_eq, _ = backtest_portfolio(
+        {"AAA": a, "BBB": b},
+        {"AAA": _cfg(), "BBB": _cfg()},
+        100_000.0,
+        allocations={"AAA": 0.5, "BBB": 0.5},
+        strategy=_strategy(),
+    )
+
+    lots = {trade["symbol"]: trade["lot_size"] for trade in trades}
+    assert lots["BBB"] == 50.0
+    assert symbol_eq["AAA"].loc[pd.Timestamp("2023-01-01 04:00")] == 49_750.0
+    assert account_eq.loc[pd.Timestamp("2023-01-01 04:00")] == 99_750.0
+    assert account_eq.iloc[-1] == 100_000.0
+
+
 def test_portfolio_equity_preserves_initial_balance_when_symbol_histories_start_later():
     a = _frame(
         ["2023-01-01 00:00", "2023-01-01 04:00"],

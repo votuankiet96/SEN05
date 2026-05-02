@@ -108,7 +108,15 @@ def run_symbol_grid_search(
     search_space: Mapping[str, Iterable[Any]] | None = None,
     costs: Mapping[str, Any] | None = None,
     broker_profile: str | None = None,
+    allow_full_history: bool = False,
 ) -> pd.DataFrame:
+    if date_from is None and date_to is None and not allow_full_history:
+        raise ValueError(
+            "run_symbol_grid_search() requires at least one explicit date bound. "
+            "Pass date_from/date_to for an in-sample window, or set "
+            "allow_full_history=True when a full-history sweep is intentional."
+        )
+
     rows: list[dict[str, Any]] = []
     for candidate in candidate_grid(symbol, search_space):
         indicator = {

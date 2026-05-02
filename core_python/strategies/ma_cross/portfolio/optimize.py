@@ -29,6 +29,7 @@ def run_portfolio_grid_search(
     search_space: Mapping[str, Iterable[Any]] | None = None,
     costs: Mapping[str, Any] | None = None,
     broker_profile: str | None = None,
+    allow_full_history: bool = False,
 ) -> dict[str, pd.DataFrame]:
     """Chạy grid search độc lập cho từng symbol trong portfolio.
 
@@ -44,6 +45,7 @@ def run_portfolio_grid_search(
         search_space: Override search space (keys: fast_ma, slow_ma, atr_stop_mult, ...).
         costs: Override cost settings.
         broker_profile: Broker profile key.
+        allow_full_history: Set True only for intentional full-history sweeps.
 
     Returns:
         Dict {symbol_key: ranked_DataFrame} — một DataFrame grid results mỗi symbol.
@@ -63,6 +65,7 @@ def run_portfolio_grid_search(
             search_space=search_space,
             costs=costs,
             broker_profile=broker_profile,
+            allow_full_history=allow_full_history,
         )
         for s in syms
     }

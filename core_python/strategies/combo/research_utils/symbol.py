@@ -55,7 +55,7 @@ def build_symbol_backtest_widget(
     try:
         import ipywidgets as widgets
     except Exception as exc:  # pragma: no cover - chỉ xảy ra ngoài notebook.
-        return f"Không thể tạo dropdown vì ipywidgets chưa sẵn sàng: {exc}"
+        return f"Cannot create the dropdown because ipywidgets is not available: {exc}"
 
     ns = global_ns if global_ns is not None else {}
     previous_dashboard = ns.get("_combo_symbol_backtest_dashboard")
@@ -90,7 +90,7 @@ def build_symbol_backtest_widget(
     date_to_widget = widgets.Text(
         value="" if default_config.get("date_to") is None else str(default_config.get("date_to")),
         description="To:",
-        placeholder="YYYY-MM-DD hoặc để trống",
+        placeholder="YYYY-MM-DD or blank",
         layout=widgets.Layout(width="260px"),
     )
     balance_widget = widgets.FloatText(
@@ -126,6 +126,12 @@ def build_symbol_backtest_widget(
     compare_output = widgets.Output()
     state = {"run_active": False, "compare_active": False}
 
+    def append_output_line(target: Any, text: str) -> None:
+        if hasattr(target, "append_stdout"):
+            target.append_stdout(f"{text}\n")
+        else:
+            print(text)
+
     def current_config() -> dict[str, Any]:
         return {
             "symbol": symbol_widget.value,
@@ -136,6 +142,8 @@ def build_symbol_backtest_widget(
             "max_bars": int(max_bars_widget.value),
             "indicator_overrides": dict(default_config.get("indicator_overrides") or {}),
             "symbol_overrides": dict(default_config.get("symbol_overrides") or {}),
+            "collect_events": bool(default_config.get("collect_events", False)),
+            "replay": dict(default_config.get("replay") or {}),
             "export_report": bool(default_config.get("export_report", False)),
         }
 
@@ -146,17 +154,16 @@ def build_symbol_backtest_widget(
             return
         state["run_active"] = True
         run_button.disabled = True
-        run_button.description = "Đang chạy..."
+        run_button.description = "Running..."
         output.clear_output(wait=False)
         try:
-            with output, _widget_output_target(output):
+            with _widget_output_target(output):
                 cfg = current_config()
                 ns["RUN_CONFIG"] = cfg
-                show_run_config("Cấu hình đang chạy", cfg)
+                show_run_config("Active Run Configuration", cfg)
                 show_note(
-                    "Đang chạy backtest",
-                    "Notebook sẽ load dữ liệu, tính tín hiệu Combo, chạy execution engine "
-                    "và render báo cáo gọn ngay bên dưới.",
+                    "Running Backtest",
+                    "The notebook will load data, compute Combo signals, run the execution engine, and render the report below.",
                 )
                 result = run_symbol_backtest(
                     cfg["symbol"],
@@ -167,6 +174,7 @@ def build_symbol_backtest_widget(
                     max_bars=cfg["max_bars"],
                     indicator_overrides=cfg["indicator_overrides"] or None,
                     symbol_overrides=cfg["symbol_overrides"] or None,
+                    collect_events=cfg["collect_events"],
                 )
                 ns["result"] = result
                 ns["SYMBOL"] = cfg["symbol"]
@@ -175,10 +183,10 @@ def build_symbol_backtest_widget(
                 try:
                     render_symbol_backtest_report(result, cfg)
                 except Exception as exc:
-                    _display_html(f'<pre style="color:red">Lỗi khi render báo cáo:<br>{_escape(repr(exc))}</pre>')
+                    _display_html(f'<pre style="color:red">Report rendering failed:<br>{_escape(repr(exc))}</pre>')
         except Exception as exc:
-            with output, _widget_output_target(output):
-                _display_html(f'<pre style="color:red">Lỗi khi chạy backtest:<br>{_escape(repr(exc))}</pre>')
+            with _widget_output_target(output):
+                _display_html(f'<pre style="color:red">Backtest failed:<br>{_escape(repr(exc))}</pre>')
         finally:
             state["run_active"] = False
             run_button.disabled = False
@@ -191,21 +199,21 @@ def build_symbol_backtest_widget(
             return
         state["compare_active"] = True
         compare_button.disabled = True
-        compare_button.description = "Đang chạy..."
+        compare_button.description = "Running..."
         compare_output.clear_output(wait=False)
         try:
-            with compare_output, _widget_output_target(compare_output):
+            with _widget_output_target(compare_output):
                 cfg = current_config()
                 selected = list(compare_symbols_widget.value)
                 if not selected:
-                    print("Hãy chọn ít nhất một symbol để so sánh.")
+                    append_output_line(compare_output, "Select at least one symbol to compare.")
                     return
-                show_run_config("Cấu hình so sánh nhiều symbol", {**cfg, "symbols": selected})
+                show_run_config("Multi-Symbol Comparison Configuration", {**cfg, "symbols": selected})
                 _display_symbol_parameter_overview(symbols, selected)
                 rows = []
                 results = {}
                 for idx, sym in enumerate(selected, start=1):
-                    print(f"[{idx}/{len(selected)}] Đang chạy {sym}...")
+                    append_output_line(compare_output, f"[{idx}/{len(selected)}] Running {sym}...")
                     res = run_symbol_backtest(
                         sym,
                         init_eq=cfg["initial_balance"],
@@ -213,6 +221,7 @@ def build_symbol_backtest_widget(
                         date_from=cfg["date_from"],
                         date_to=cfg["date_to"],
                         max_bars=cfg["max_bars"],
+                        collect_events=cfg["collect_events"],
                     )
                     results[sym] = res
                     rows.append(symbol_result_row(sym, res))
@@ -221,8 +230,8 @@ def build_symbol_backtest_widget(
                 ns["symbol_compare_df"] = compare_df
                 render_symbol_comparison(compare_df)
         except Exception as exc:
-            with compare_output, _widget_output_target(compare_output):
-                _display_html(f'<pre style="color:red">Lỗi khi so sánh:<br>{_escape(repr(exc))}</pre>')
+            with _widget_output_target(compare_output):
+                _display_html(f'<pre style="color:red">Comparison failed:<br>{_escape(repr(exc))}</pre>')
         finally:
             state["compare_active"] = False
             compare_button.disabled = False
@@ -234,9 +243,9 @@ def build_symbol_backtest_widget(
     header = widgets.HTML(
         """
         <div style="padding:10px 12px;border:1px solid #30363D;border-radius:6px;background:#F8FAFC">
-          <b>Symbol backtest control</b><br>
+          <b>Symbol Backtest Control</b><br>
           <span style="font-size:12px;color:#374151">
-          Chọn symbol và khoảng thời gian, bấm Run để xem báo cáo. Phần Compare dùng cùng cấu hình hiện tại để so sánh nhiều symbol.
+          Select a symbol and date window, then run the report. Compare uses the same active configuration across multiple symbols.
           </span>
         </div>
         """
@@ -271,39 +280,39 @@ def render_symbol_backtest_report(result: Any, run_config: Mapping[str, Any] | N
     final_equity = float(equity.iloc[-1]) if len(equity) else np.nan
 
     _display_result_header(
-        title=f"{symbol} backtest result",
+        title=f"{symbol} Backtest Result",
         subtitle=f"Account mode: {mode} | Date: {(run_config or {}).get('date_from')} -> {(run_config or {}).get('date_to') or 'latest'}",
         items={
-            "Window rows": window_rows,
-            "Loaded rows": loaded_rows,
+            "Window Rows": window_rows,
+            "Loaded Rows": loaded_rows,
             "Signals": signals,
             "Trades": len(trades),
-            "Final equity": final_equity,
+            "Final Equity": final_equity,
         },
     )
-    _display_symbol_config_details(getattr(result, "symbol_config", {}), run_config or {}, title="Cấu hình giao dịch hiệu lực")
+    _display_symbol_config_details(getattr(result, "symbol_config", {}), run_config or {}, title="Effective Trading Configuration")
     _display_metric_cards(metrics)
     _display_metric_explanations(metrics)
     show_note(
-        "Cách đọc nhanh",
-        "Đầu tiên nhìn Profit Factor, Total Return, Max Drawdown và Sharpe. Sau đó xem equity/drawdown để biết lợi nhuận có mượt không, rồi mới soi trade log.",
+        "Quick Read",
+        "Start with Profit Factor, Total Return, Max Drawdown, and Sharpe. Then inspect equity, drawdown, and the trade log before drawing conclusions.",
     )
-    show_kpi_dashboard(metrics, title=f"{symbol} KPI chi tiết")
-    show_monthly_pnl(metrics, title=f"{symbol} monthly PnL")
-    plot_equity_dashboard(equity, trades, title=f"{symbol} equity / drawdown / trade PnL")
-    trade_frame = show_trade_summary_compact(trades, title=f"{symbol} trade summary")
+    show_kpi_dashboard(metrics, title=f"{symbol} KPI Details")
+    show_monthly_pnl(metrics, title=f"{symbol} Monthly PnL")
+    plot_equity_dashboard(equity, trades, title=f"{symbol} Equity / Drawdown / Trade PnL")
+    trade_frame = show_trade_summary_compact(trades, title=f"{symbol} Trade Summary")
     return trade_frame
 
 
 def render_symbol_comparison(compare_df: pd.DataFrame) -> pd.DataFrame:
     """Render bảng so sánh nhiều symbol sau khi chạy batch trong widget."""
     if compare_df is None or compare_df.empty:
-        print("Không có dữ liệu so sánh.")
+        print("No comparison data is available.")
         return pd.DataFrame()
 
     show_note(
-        "Bảng so sánh symbol",
-        "Tất cả symbol bên dưới được chạy cùng account mode, date range, initial balance và max_bars. Đây là cách nhìn nhanh config hiện tại hoạt động ra sao trên từng symbol.",
+        "Symbol Comparison",
+        "All symbols below use the same account mode, date range, initial balance, and max_bars. Use this as a quick cross-symbol read of the active configuration.",
     )
     preferred = [
         "symbol", "window_rows", "raw_rows", "trades", "signals", "total_return", "max_drawdown",
@@ -367,10 +376,10 @@ def show_trade_summary_compact(
     frame = trades_to_frame(trades)
     show_note(
         title,
-        "Phần này trả lời: lệnh gần đây ra sao, PnL phân phối thế nào, lệnh thường thoát vì lý do gì, BUY hay SELL đóng góp tốt hơn.",
+        "This section answers: how recent trades behaved, how PnL is distributed, why trades usually exit, and whether BUY or SELL contributes more.",
     )
     if frame.empty:
-        print("Không có trade để hiển thị.")
+        print("No trades to display.")
         return frame
 
     _display_trade_descriptive_stats(frame)
@@ -382,7 +391,7 @@ def show_trade_summary_compact(
     ]
     cols = [c for c in preferred if c in frame.columns]
     display_frame = _rename_columns_for_display(frame[cols].tail(tail))
-    show_note("Recent trades", f"{tail} lệnh gần nhất, đã đổi tên cột sang dạng dễ đọc hơn.")
+    show_note("Recent Trades", f"The latest {tail} trades, with display-friendly column names.")
     _display_obj(
         display_frame
         .style
@@ -393,13 +402,13 @@ def show_trade_summary_compact(
 
     if "exit_reason" in frame.columns:
         by_exit = frame.groupby("exit_reason").size().sort_values(ascending=False).to_frame("Count")
-        show_note("Exit reason breakdown", "Đếm lý do thoát lệnh. Nếu `SL` quá áp đảo, cần xem lại entry/SL hoặc điều kiện tín hiệu.")
+        show_note("Exit Reason Breakdown", "Counts exit reasons. If `SL` dominates, review entry quality, stop placement, or signal conditions.")
         _display_obj(by_exit)
     if {"direction", "pnl_usd"}.issubset(frame.columns):
         by_dir = frame.groupby("direction")["pnl_usd"].agg(["count", "sum", "mean", "median"]).rename(
             columns={"count": "Trades", "sum": "Total PnL", "mean": "Avg PnL", "median": "Median PnL"}
         )
-        show_note("PnL by side", "So sánh BUY và SELL để biết một chiều giao dịch có đang kéo kết quả xuống không.")
+        show_note("PnL By Side", "Compares BUY and SELL trades to identify whether one side is dragging results down.")
         _display_obj(by_dir.style.format(_table_formatters(by_dir)))
     return frame
 
@@ -408,7 +417,7 @@ def _display_symbol_config_details(
     symbol_config: Mapping[str, Any] | None,
     run_config: Mapping[str, Any] | None = None,
     *,
-    title: str = "Cấu hình giao dịch từ dropdown",
+    title: str = "Trading Configuration",
 ) -> pd.DataFrame:
     """Hiển thị cấu hình quan trọng và công thức entry/SL/TP."""
     cfg = dict(symbol_config or {})
@@ -425,37 +434,37 @@ def _display_symbol_config_details(
     lot_step = cfg.get("lot_step", "-")
 
     rows = [
-        ("x", _format_param_value(x), "Breakout buffer. BUY đặt entry cao hơn high thêm x; SELL đặt entry thấp hơn low trừ x."),
-        ("ktp", _format_param_value(ktp), "Hệ số TP theo ATR. TP cách entry một khoảng ktp × ATR."),
-        ("ma_period", _format_param_value(ma_period), "Chu kỳ MA dùng cho tín hiệu và trailing stop."),
-        ("point_size", _format_param_value(point_size), "Quy đổi khoảng giá sang point để tính lot/PnL."),
-        ("contract_value", _format_param_value(contract_value), "Giá trị mỗi point cho 1 lot."),
-        ("spread_pts", _format_param_value(spread), "Spread broker, cộng vào chi phí khớp lệnh."),
-        ("slippage_pts", _format_param_value(slippage), "Slippage nền; execution còn điều chỉnh động theo ATR/close."),
-        ("lot range", f"{_format_param_value(min_lot)} -> {_format_param_value(max_lot)}, step {_format_param_value(lot_step)}", "Giới hạn lot hợp lệ khi position sizing."),
+        ("x", _format_param_value(x), "Breakout buffer. BUY entry is high + x; SELL entry is low - x."),
+        ("ktp", _format_param_value(ktp), "ATR take-profit multiplier. TP distance is ktp * ATR from entry."),
+        ("ma_period", _format_param_value(ma_period), "Moving-average period used by signals and trailing stop logic."),
+        ("point_size", _format_param_value(point_size), "Price-to-point conversion used for lot sizing and PnL."),
+        ("contract_value", _format_param_value(contract_value), "Value of one point for one lot."),
+        ("spread_pts", _format_param_value(spread), "Broker spread included in simulated execution costs."),
+        ("slippage_pts", _format_param_value(slippage), "Base slippage; execution may adjust dynamically with ATR/close."),
+        ("lot range", f"{_format_param_value(min_lot)} -> {_format_param_value(max_lot)}, step {_format_param_value(lot_step)}", "Allowed lot-size range and rounding step."),
     ]
-    frame = pd.DataFrame(rows, columns=["Tham số", "Giá trị", "Ý nghĩa"])
+    frame = pd.DataFrame(rows, columns=["Parameter", "Value", "Description"])
 
     if HTML is not None:
         _display_html(f"""
         <div style="border:1px solid #D1D5DB;border-radius:8px;background:#FFFFFF;padding:14px 16px;margin:12px 0;">
           <div style="font-size:19px;font-weight:800;color:#111827;margin-bottom:8px;">{_escape(title)}</div>
           <div style="font-size:13px;color:#374151;line-height:1.5;margin-bottom:10px;">
-            Các giá trị dưới đây là phần quan trọng nhất quyết định cách engine đặt lệnh.
-            Trong backtest thật, giá khớp còn bị điều chỉnh bởi spread và slippage.
+            These values are the main inputs that determine how the engine places orders.
+            In the full backtest, fills are also adjusted by spread and slippage.
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;">
             <div style="padding:10px;border:1px solid #E5E7EB;border-radius:6px;background:#F9FAFB;">
               <b>BUY setup</b><br>
               Entry = bar high + x<br>
               Stop loss = bar low - x<br>
-              Take profit = entry + ktp × ATR
+              Take profit = entry + ktp * ATR
             </div>
             <div style="padding:10px;border:1px solid #E5E7EB;border-radius:6px;background:#F9FAFB;">
               <b>SELL setup</b><br>
               Entry = bar low - x<br>
               Stop loss = bar high + x<br>
-              Take profit = entry - ktp × ATR
+              Take profit = entry - ktp * ATR
             </div>
           </div>
         </div>
@@ -494,8 +503,8 @@ def _display_symbol_parameter_overview(symbols: Mapping[str, Any], selected: lis
         })
     frame = pd.DataFrame(rows)
     show_note(
-        "Tham số chính theo từng symbol",
-        "Khi compare nhiều symbol, mỗi symbol vẫn dùng `x`, `ktp`, spread, lot step riêng trong config hiện tại. Công thức chung: BUY entry = high + x, SL = low - x; SELL entry = low - x, SL = high + x.",
+        "Key Symbol Parameters",
+        "Each compared symbol still uses its own `x`, `ktp`, spread, and lot step from the active config. Generic formulas: BUY entry = high + x, SL = low - x; SELL entry = low - x, SL = high + x.",
     )
     _display_obj(frame.style.format(_table_formatters(frame)).hide(axis="index"))
     return frame
@@ -505,7 +514,7 @@ def _display_metric_explanations(metrics: Mapping[str, Any] | None) -> None:
     """Hiển thị chú giải ý nghĩa KPI chính."""
     available = set((metrics or {}).keys())
     rows = [
-        {"Metric": metric, "Ý nghĩa": meaning, "Cách đọc": note}
+        {"Metric": metric, "Meaning": meaning, "How To Read": note}
         for metric, meaning, note in METRIC_EXPLANATIONS
         if metric in available or metric in {"profit_factor", "max_drawdown", "sharpe"}
     ]
@@ -513,8 +522,8 @@ def _display_metric_explanations(metrics: Mapping[str, Any] | None) -> None:
         return
     frame = pd.DataFrame(rows)
     show_note(
-        "Ý nghĩa các KPI chính",
-        "Bảng này là chú giải nhanh để tránh đọc metric theo cảm tính. Không nên kết luận chỉ bằng một chỉ số đơn lẻ.",
+        "Key Metric Guide",
+        "Use this as a quick reference so metrics are not read in isolation. Avoid drawing conclusions from a single metric.",
     )
     _display_obj(frame.style.hide(axis="index"))
 
@@ -526,29 +535,29 @@ def _display_trade_descriptive_stats(frame: pd.DataFrame) -> pd.DataFrame:
         pnl = pd.to_numeric(frame["pnl_usd"], errors="coerce").dropna()
         if not pnl.empty:
             stats.extend([
-                {"Thống kê": "Tổng PnL", "Giá trị": pnl.sum(), "Ý nghĩa": "Tổng lợi nhuận ròng của toàn bộ trade log."},
-                {"Thống kê": "PnL trung bình", "Giá trị": pnl.mean(), "Ý nghĩa": "Kỳ vọng trung bình mỗi lệnh theo USD."},
-                {"Thống kê": "PnL trung vị", "Giá trị": pnl.median(), "Ý nghĩa": "Một lệnh điển hình lời/lỗ bao nhiêu, ít bị méo bởi outlier."},
-                {"Thống kê": "Lệnh tốt nhất", "Giá trị": pnl.max(), "Ý nghĩa": "Trade lời lớn nhất."},
-                {"Thống kê": "Lệnh xấu nhất", "Giá trị": pnl.min(), "Ý nghĩa": "Trade lỗ lớn nhất."},
-                {"Thống kê": "Độ lệch chuẩn PnL", "Giá trị": pnl.std(), "Ý nghĩa": "PnL từng lệnh biến động mạnh hay nhẹ."},
+                {"Statistic": "Total PnL", "Value": pnl.sum(), "Description": "Net profit across the full trade log."},
+                {"Statistic": "Average PnL", "Value": pnl.mean(), "Description": "Average USD result per trade."},
+                {"Statistic": "Median PnL", "Value": pnl.median(), "Description": "Typical trade outcome, less distorted by outliers."},
+                {"Statistic": "Best Trade", "Value": pnl.max(), "Description": "Largest winning trade."},
+                {"Statistic": "Worst Trade", "Value": pnl.min(), "Description": "Largest losing trade."},
+                {"Statistic": "PnL Std Dev", "Value": pnl.std(), "Description": "How volatile individual trade outcomes are."},
             ])
     if "r_multiple" in frame.columns:
         r_values = pd.to_numeric(frame["r_multiple"], errors="coerce").dropna()
         if not r_values.empty:
-            stats.append({"Thống kê": "Avg R", "Giá trị": r_values.mean(), "Ý nghĩa": "Lãi/lỗ trung bình theo đơn vị rủi ro ban đầu."})
+            stats.append({"Statistic": "Avg R", "Value": r_values.mean(), "Description": "Average result measured against initial risk."})
     if "partial_tp_hit" in frame.columns and len(frame):
         stats.append({
-            "Thống kê": "Partial TP rate",
-            "Giá trị": float(frame["partial_tp_hit"].astype(bool).mean() * 100),
-            "Ý nghĩa": "Tỷ lệ lệnh từng đi đủ xa để chốt một phần và dời SL.",
+            "Statistic": "Partial TP Rate",
+            "Value": float(frame["partial_tp_hit"].astype(bool).mean() * 100),
+            "Description": "Share of trades that moved far enough to scale out and reduce risk.",
         })
     if not stats:
         return pd.DataFrame()
     stats_df = pd.DataFrame(stats)
-    show_note("Thống kê mô tả trade log", "Phần này mô tả nhanh bản trade log đang nói gì trước khi đọc từng lệnh.")
+    show_note("Trade Log Descriptive Statistics", "This section summarizes the trade log before you inspect individual trades.")
     stats_display = stats_df.copy()
-    stats_display["Giá trị"] = stats_display["Giá trị"].map(lambda v: _format_table_number(v, decimals=2))
+    stats_display["Value"] = stats_display["Value"].map(lambda v: _format_table_number(v, decimals=2))
     _display_obj(
         stats_display.style
         .hide(axis="index")
@@ -570,7 +579,7 @@ def _display_result_header(title: str, subtitle: str, items: Mapping[str, Any]) 
         f"""
         <div style="min-width:130px;padding:10px 12px;border:1px solid #E5E7EB;border-radius:6px;background:#FFFFFF;">
           <div style="font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;">{_escape(str(k))}</div>
-          <div style="font-size:18px;font-weight:700;color:#111827;margin-top:2px;">{_escape(_format_card_value(v))}</div>
+          <div style="font-size:18px;font-weight:700;color:#111827;margin-top:2px;">{_escape(_format_card_value(v, decimals=0 if str(k).lower() in {'window rows', 'loaded rows', 'signals', 'trades'} else None))}</div>
         </div>
         """
         for k, v in items.items()
@@ -589,8 +598,8 @@ def _display_metric_cards(metrics: Mapping[str, Any] | None) -> None:
     metrics = metrics or {}
     selected = [
         ("Trades", metrics.get("total_trades")),
-        ("Win rate", metrics.get("win_rate"), "%"),
-        ("Profit factor", metrics.get("profit_factor")),
+        ("Win Rate", metrics.get("win_rate"), "%"),
+        ("Profit Factor", metrics.get("profit_factor")),
         ("Return", metrics.get("total_return"), "%"),
         ("Max DD", metrics.get("max_drawdown"), "%"),
         ("Sharpe", metrics.get("sharpe")),
@@ -623,15 +632,15 @@ def _display_compare_takeaways(compare_df: pd.DataFrame) -> None:
     lines = []
     if "sharpe" in compare_df.columns and compare_df["sharpe"].notna().any():
         best = compare_df.loc[compare_df["sharpe"].idxmax()]
-        lines.append(f"Sharpe tốt nhất: {best['symbol']} ({best['sharpe']}).")
+        lines.append(f"Best Sharpe: {best['symbol']} ({best['sharpe']}).")
     if "total_return" in compare_df.columns and compare_df["total_return"].notna().any():
         best = compare_df.loc[compare_df["total_return"].idxmax()]
-        lines.append(f"Return tốt nhất: {best['symbol']} ({best['total_return']}%).")
+        lines.append(f"Best return: {best['symbol']} ({best['total_return']}%).")
     if "max_drawdown" in compare_df.columns and compare_df["max_drawdown"].notna().any():
         worst = compare_df.loc[compare_df["max_drawdown"].idxmin()]
-        lines.append(f"Drawdown sâu nhất: {worst['symbol']} ({worst['max_drawdown']}%).")
+        lines.append(f"Deepest drawdown: {worst['symbol']} ({worst['max_drawdown']}%).")
     if lines:
-        show_note("Nhận xét nhanh", " ".join(lines))
+        show_note("Quick Takeaways", " ".join(lines))
 
 
 def _plot_symbol_compare_dashboard(compare_df: pd.DataFrame) -> None:

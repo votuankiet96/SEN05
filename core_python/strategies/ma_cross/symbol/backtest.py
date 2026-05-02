@@ -133,6 +133,7 @@ def run_symbol_backtest_on_frame(
     strategy_overrides: dict[str, Any] | None = None,
     costs: dict[str, Any] | None = None,
     broker_profile: str | None = None,
+    collect_events: bool = False,
 ) -> SymbolBacktestResult:
     """Run a complete MA Cross backtest on a preloaded frame."""
     tf = tf.upper()
@@ -159,6 +160,7 @@ def run_symbol_backtest_on_frame(
 
     execution_model = str(strategy_cfg.get("execution_model", "market_single")).lower()
     resolved_costs = get_cost_settings(symbol_key, costs, broker_profile=broker_profile)
+    replay_events = [] if collect_events else None
     if execution_model == "basket_reversal":
         trades, equity = backtest_basket_reversal_symbol(
             symbol_key,
@@ -167,6 +169,7 @@ def run_symbol_backtest_on_frame(
             init_eq,
             strategy=strategy_cfg,
             costs=resolved_costs,
+            event_sink=replay_events,
         )
     elif execution_model == "market_single":
         trades, equity = backtest_market_symbol(
@@ -176,6 +179,7 @@ def run_symbol_backtest_on_frame(
             init_eq,
             strategy=strategy_cfg,
             costs=resolved_costs,
+            event_sink=replay_events,
         )
     else:
         raise ValueError(
@@ -194,6 +198,7 @@ def run_symbol_backtest_on_frame(
         symbol_config={**cfg, "timeframe": tf},
         strategy_settings=strategy_cfg,
         account_mode=account_mode,
+        replay_events=replay_events or [],
     )
 
 
@@ -212,6 +217,7 @@ def run_symbol_backtest(
     strategy_overrides: dict[str, Any] | None = None,
     costs: dict[str, Any] | None = None,
     broker_profile: str | None = None,
+    collect_events: bool = False,
 ) -> SymbolBacktestResult:
     """Load data from DB and run a complete MA Cross symbol backtest."""
     cfg = {
@@ -239,6 +245,7 @@ def run_symbol_backtest(
         strategy_overrides=strategy_overrides,
         costs=costs,
         broker_profile=broker_profile,
+        collect_events=collect_events,
     )
 
 

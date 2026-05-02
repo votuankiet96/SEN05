@@ -58,6 +58,7 @@ def run_portfolio_backtest(
     broker_profile: str | None = None,
     max_bars: int = 60000,
     allocations: dict[str, float] | None = None,
+    collect_events: bool = False,
 ) -> PortfolioBacktestResult:
     """Chạy portfolio backtest với engine một tài khoản chung.
 
@@ -105,12 +106,13 @@ def run_portfolio_backtest(
             symbol_overrides=(symbol_overrides or {}).get(sym),
             broker_profile=broker_profile,
         )
+        min_rr = params.get("MIN_RR", strategy_cfg.get("min_rr"))
         # Ghi trailing_activation và min_rr vào strategy_cfg theo từng symbol
         strategy_by_symbol[sym] = {
             **strategy_cfg,
             "trailing_activation": float(cfg.get("trailing_activation",
                                                   strategy_cfg.get("trailing_activation", 1.0))),
-            "min_rr": float(params.get("MIN_RR", strategy_cfg.get("min_rr", 1.25))),
+            "min_rr": None if min_rr is None else float(min_rr),
         }
         raw_frames[sym]    = df_raw
         signal_frames[sym] = df_sig
@@ -121,13 +123,15 @@ def run_portfolio_backtest(
         }
 
     # ── Bước 2: Chạy portfolio engine ──────────────────────────────────────
+    replay_events = [] if collect_events else None
     all_trades, account_eq_series, sym_eq_series, trades_by_symbol = backtest_portfolio(
         symbol_frames=signal_frames,
         symbol_configs=symbol_configs,
         initial_balance=initial_balance,
         allocations=allocations,
         strategy={**strategy_cfg, "_per_symbol": strategy_by_symbol},
-        costs=None,  # costs đã được merge vào symbol_configs
+        costs=None,
+        event_sink=replay_events,
     )
 
     # ── Bước 3: Build PortfolioBacktestResult ──────────────────────────────
@@ -154,6 +158,7 @@ def run_portfolio_backtest(
             symbol_config=symbol_configs[sym],
             strategy_settings=strategy_by_symbol[sym],
             account_mode=account_mode,
+            replay_events=[event for event in (replay_events or []) if event.symbol == sym],
         )
 
     metrics = calc_metrics(all_trades, combined_equity)
@@ -187,6 +192,7 @@ def run_portfolio_backtest(
         account_mode=account_mode,
         symbol_keys=symbols,
         portfolio_model="unified_account",
+        replay_events=replay_events or [],
     )
 
 
@@ -203,6 +209,7 @@ def compare_account_modes(
     broker_profile: str | None = None,
     max_bars: int = 60000,
     allocations: dict[str, float] | None = None,
+    collect_events: bool = False,
 ) -> dict[str, PortfolioBacktestResult]:
     """Chạy cùng portfolio dưới chế độ standard và FTMO để so sánh."""
     return {
@@ -219,6 +226,7 @@ def compare_account_modes(
             broker_profile=broker_profile,
             max_bars=max_bars,
             allocations=allocations,
+            collect_events=collect_events,
         )
         for mode in ("standard", "ftmo")
     }

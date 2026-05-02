@@ -68,16 +68,19 @@ def show_note(title: str, body: str) -> None:
 
 
 def show_run_config(title: str, config: Mapping[str, Any]) -> pd.DataFrame:
-    """Hiển thị cấu hình lần chạy dưới dạng bảng 2 cột.
-
-    Đây là bước nhỏ nhưng quan trọng: trước khi chạy backtest/optimizer, người
-    dùng nhìn lại đúng symbol, account mode, khoảng ngày và số bar. Nó giúp tránh
-    nhầm lẫn khi chạy nhiều thí nghiệm liên tiếp.
-    """
-    rows = [{"tham_so": k, "gia_tri": _short_repr(v)} for k, v in config.items()]
+    """Display the effective run configuration as a compact two-column table."""
+    rows = [{"Parameter": k, "Value": _short_repr(v)} for k, v in config.items()]
     frame = pd.DataFrame(rows)
-    show_note(title, "Bảng dưới đây là cấu hình hiệu lực cho lần chạy hiện tại.")
-    _display_obj(frame)
+    show_note(title, "Effective configuration for this run.")
+    _display_obj(
+        frame.style
+        .hide(axis="index")
+        .set_properties(**{"text-align": "left", "white-space": "pre-wrap"})
+        .set_table_styles([
+            {"selector": "th", "props": [("text-align", "left")]},
+            {"selector": "td:nth-child(2)", "props": [("font-family", "Consolas, monospace")]},
+        ])
+    )
     return frame
 
 
@@ -116,11 +119,10 @@ def show_kpi_dashboard(metrics: Mapping[str, Any] | None, *, title: str = "KPI D
     frame = metrics_to_frame(metrics)
     show_note(
         title,
-        "Đọc nhanh từ trên xuống: số lượng mẫu trade, khả năng sinh lời, mức "
-        "drawdown, rồi các chỉ số chất lượng như Sharpe/Sortino/Avg R.",
+        "Read from top to bottom: sample size, profitability, drawdown, then quality metrics such as Sharpe, Sortino, and Avg R.",
     )
     if frame.empty:
-        print("Không có metrics để hiển thị.")
+        print("No metrics to display.")
         return frame
 
     display_frame = frame.copy()
@@ -128,6 +130,7 @@ def show_kpi_dashboard(metrics: Mapping[str, Any] | None, *, title: str = "KPI D
         lambda row: _format_metric_value_by_name(str(row["metric"]), row["value"]),
         axis=1,
     )
+    display_frame = display_frame.rename(columns={"metric": "Metric", "value": "Value"})
     styled = (
         display_frame.style
         .apply(_style_metric_row, axis=1)
@@ -143,7 +146,7 @@ def show_monthly_pnl(metrics: Mapping[str, Any] | None, *, title: str = "Monthly
     if isinstance(monthly, pd.DataFrame) and not monthly.empty:
         show_note(
             title,
-            "Hàng là năm, cột là tháng, giá trị là tổng PnL USD. Cột `Year Total` là tổng PnL của từng năm để đọc nhanh năm nào đóng góp chính.",
+            "Rows are years, columns are months, and values are total PnL in USD. `Year Total` shows the contribution of each year.",
         )
         monthly_view = monthly.copy()
         monthly_view["Year Total"] = monthly_view.sum(axis=1)
@@ -152,7 +155,7 @@ def show_monthly_pnl(metrics: Mapping[str, Any] | None, *, title: str = "Monthly
         monthly_view = pd.concat([monthly_view, total_row.to_frame().T])
         _display_obj(_style_dataframe_cells(monthly_view.style.format("{:,.2f}"), _style_pnl_cell))
         return monthly_view
-    print("Không có monthly_pnl_table để hiển thị.")
+    print("No monthly_pnl_table is available.")
     return pd.DataFrame()
 
 
@@ -183,11 +186,10 @@ def show_trade_explorer(
     frame = trades_to_frame(trades)
     show_note(
         title,
-        "Phần này dùng để soi chất lượng lệnh sau khi đã xem KPI tổng. Nếu KPI "
-        "xấu, hãy bắt đầu từ `exit_reason`, direction và top loss để tìm nguyên nhân.",
+        "Use this after the KPI table to inspect trade quality. If the headline metrics are weak, start with `exit_reason`, side, and the largest losses.",
     )
     if frame.empty:
-        print("Không có trade để hiển thị.")
+        print("No trades to display.")
         return frame
 
     preferred = [
@@ -199,16 +201,16 @@ def show_trade_explorer(
     _display_obj(frame[cols].tail(tail).style.format(_table_formatters(frame[cols])))
 
     if "exit_reason" in frame.columns:
-        show_note("Exit reason", "Đếm lý do thoát lệnh để biết chiến lược chủ yếu bị SL, reversal hay force-close.")
+        show_note("Exit Reason", "Counts how trades were closed, highlighting whether exits are mostly stop losses, reversals, or forced closes.")
         _display_obj(frame.groupby("exit_reason").size().sort_values(ascending=False).to_frame("count"))
 
     if {"direction", "pnl_usd"}.issubset(frame.columns):
-        show_note("PnL theo direction", "So sánh BUY và SELL để phát hiện một chiều giao dịch đang kéo kết quả xuống.")
+        show_note("PnL By Side", "Compares BUY and SELL trades to spot whether one side is dragging performance down.")
         by_dir = frame.groupby("direction")["pnl_usd"].agg(["count", "sum", "mean"])
         _display_obj(by_dir.style.format({"sum": "{:,.2f}", "mean": "{:,.2f}"}))
 
     if "pnl_usd" in frame.columns:
-        show_note("Top winners / losers", "Các lệnh cực trị thường tiết lộ điều kiện thị trường strategy thích hoặc ghét.")
+        show_note("Top Winners / Losers", "Extreme trades often reveal the market conditions the strategy likes or struggles with.")
         _display_obj(frame.nlargest(10, "pnl_usd")[cols].style.format(_table_formatters(frame[cols])))
         _display_obj(frame.nsmallest(10, "pnl_usd")[cols].style.format(_table_formatters(frame[cols])))
     return frame
@@ -238,8 +240,8 @@ def plot_equity_dashboard(
         axes[1].set_title("Drawdown (%)")
         axes[1].set_ylabel("%")
     else:
-        axes[0].set_title("Không có equity data")
-        axes[1].set_title("Không có drawdown data")
+        axes[0].set_title("No equity data")
+        axes[1].set_title("No drawdown data")
 
     trades_df = trades_to_frame(trades)
     if "pnl_usd" in trades_df.columns and not trades_df.empty:
@@ -250,7 +252,7 @@ def plot_equity_dashboard(
         axes[2].set_title("Cumulative trade PnL")
         axes[2].set_xlabel("Trade number")
     else:
-        axes[2].set_title("Không có trade PnL")
+        axes[2].set_title("No trade PnL")
 
     for ax in axes:
         ax.grid(alpha=0.25)
@@ -267,17 +269,17 @@ def plot_trade_distribution(trades: list[dict[str, Any]] | pd.DataFrame | None):
     fig, axes = plt.subplots(1, 2, figsize=(16, 5))
     if frame.empty:
         for ax in axes:
-            ax.set_title("Không có trade data")
+            ax.set_title("No trade data")
         return fig, axes
 
     if "pnl_usd" in frame.columns:
         frame["pnl_usd"].plot(kind="hist", bins=40, ax=axes[0], color="#00D4FF", alpha=0.8)
         axes[0].axvline(0, color="#FFFFFF", lw=1, alpha=0.8)
-        axes[0].set_title("Phân phối PnL USD")
+        axes[0].set_title("PnL USD Distribution")
     if "r_multiple" in frame.columns:
         frame["r_multiple"].plot(kind="hist", bins=40, ax=axes[1], color="#FFD93D", alpha=0.8)
         axes[1].axvline(0, color="#FFFFFF", lw=1, alpha=0.8)
-        axes[1].set_title("Phân phối R multiple")
+        axes[1].set_title("R Multiple Distribution")
     for ax in axes:
         ax.grid(alpha=0.25)
     plt.tight_layout()
@@ -300,7 +302,7 @@ def plot_price_with_trades(
     import matplotlib.pyplot as plt
 
     if signal_data is None or signal_data.empty:
-        print("Không có signal_data để vẽ.")
+        print("No signal_data to plot.")
         return None, None
 
     df = signal_data.copy()
@@ -353,11 +355,11 @@ def show_portfolio_summary(portfolio_result: Any) -> pd.DataFrame:
     show_kpi_dashboard(getattr(portfolio_result, "metrics", {}), title="Portfolio KPI")
     frame = per_symbol_metrics_frame(portfolio_result)
     if frame.empty:
-        print("Không có per-symbol metrics.")
+        print("No per-symbol metrics are available.")
         return frame
     show_note(
-        "Per-symbol contribution",
-        "Bảng này giúp thấy symbol nào có nhiều trade, lời/lỗ, drawdown hoặc Sharpe nổi bật.",
+        "Per-Symbol Contribution",
+        "This table shows which symbols contribute most by trade count, PnL, drawdown, or Sharpe.",
     )
     _display_obj(frame.style.format(_table_formatters(frame)))
     return frame
@@ -377,14 +379,14 @@ def plot_portfolio_dashboard(portfolio_result: Any):
         dd.plot(ax=axes[1], color="#FF6B6B", lw=1.3, title="Portfolio drawdown (%)")
         axes[1].fill_between(dd.index, dd.values, 0, color="#FF6B6B", alpha=0.20)
     else:
-        axes[0].set_title("Không có combined equity")
-        axes[1].set_title("Không có drawdown")
+        axes[0].set_title("No combined equity")
+        axes[1].set_title("No drawdown")
 
     eq_frame = getattr(portfolio_result, "equity_frame", pd.DataFrame())
     if isinstance(eq_frame, pd.DataFrame) and not eq_frame.empty:
         eq_frame.plot(ax=axes[2], lw=1.1, title="Per-symbol equity")
     else:
-        axes[2].set_title("Không có per-symbol equity")
+        axes[2].set_title("No per-symbol equity")
 
     sym_frame = per_symbol_metrics_frame(portfolio_result)
     pnl_col = "total_pnl" if "total_pnl" in sym_frame.columns else None
@@ -395,7 +397,7 @@ def plot_portfolio_dashboard(portfolio_result: Any):
         )
         axes[3].axvline(0, color="#FFFFFF", lw=0.8, alpha=0.8)
     else:
-        axes[3].set_title("Không có PnL contribution")
+        axes[3].set_title("No PnL contribution")
 
     for ax in axes:
         ax.grid(alpha=0.25)
@@ -408,12 +410,12 @@ def show_ftmo_check(metrics: Mapping[str, Any] | None) -> pd.DataFrame:
     """Hiển thị kết quả kiểm tra FTMO cấp portfolio nếu có."""
     check = (metrics or {}).get("ftmo_account_check")
     if not isinstance(check, Mapping):
-        print("Không có ftmo_account_check trong metrics.")
+        print("No ftmo_account_check is available in metrics.")
         return pd.DataFrame()
-    frame = pd.DataFrame([check]).T.rename(columns={0: "value"})
+    frame = pd.DataFrame([check]).T.rename(columns={0: "Value"})
     show_note(
-        "FTMO account check",
-        "Đây là kiểm tra ở cấp tổng portfolio, khác với giới hạn từng sleeve symbol.",
+        "FTMO Account Check",
+        "This is the account-level portfolio check, separate from each symbol sleeve's limits.",
     )
     _display_obj(frame)
     return frame
@@ -424,7 +426,7 @@ def plot_optimization_dashboard(grid: pd.DataFrame, *, score_col: str = "score",
     import matplotlib.pyplot as plt
 
     if grid is None or grid.empty:
-        print("Grid rỗng, không có gì để vẽ.")
+        print("Grid is empty; nothing to plot.")
         return None, None
 
     score_col = score_col if score_col in grid.columns else _first_existing(grid, ["sharpe", "profit_factor", "total_return"])
@@ -469,12 +471,11 @@ def plot_optimization_dashboard(grid: pd.DataFrame, *, score_col: str = "score",
 def show_best_candidate(grid: pd.DataFrame, *, top_n: int = 15) -> pd.Series:
     """Hiển thị best candidate và bảng top N sau optimize."""
     if grid is None or grid.empty:
-        raise RuntimeError("Grid search không trả candidate nào.")
+        raise RuntimeError("Grid search returned no candidates.")
     best = grid.iloc[0]
     show_note(
-        "Best candidate",
-        "Dòng đầu tiên là bộ tham số optimizer đang xếp hạng cao nhất. Hãy luôn "
-        "xác nhận lại bằng `run_symbol_backtest()` trước khi tin kết quả.",
+        "Best Candidate",
+        "The first row is the optimizer's highest-ranked parameter set. Always confirm it with `run_symbol_backtest()` before relying on it.",
     )
     _display_obj(best.to_frame("value"))
     _display_obj(grid.head(top_n))
@@ -484,12 +485,12 @@ def show_best_candidate(grid: pd.DataFrame, *, top_n: int = 15) -> pd.Series:
 def show_optimizer_filter_report(frame: pd.DataFrame, *, title: str = "Optimizer filter") -> pd.DataFrame:
     """Display pass/fail gates for optimizer candidates."""
     if frame is None or frame.empty:
-        print("Không có candidate để hiển thị.")
+        print("No candidates to display.")
         return pd.DataFrame()
     passed = int(frame.get("filter_pass", pd.Series(False, index=frame.index)).sum())
     show_note(
         title,
-        f"{passed}/{len(frame)} candidates vượt qua bộ lọc trước khi rank. Nếu quá ít candidate pass, hãy nới lỏng ngưỡng hoặc mở rộng data.",
+        f"{passed}/{len(frame)} candidates passed the pre-ranking filter. If too few pass, loosen the thresholds or expand the data window.",
     )
     cols = [
         c for c in [
@@ -506,11 +507,11 @@ def show_optimizer_filter_report(frame: pd.DataFrame, *, title: str = "Optimizer
 def show_candidate_validation_report(frame: pd.DataFrame, *, title: str = "Full validation candidates") -> pd.DataFrame:
     """Display full validation rows with fast-vs-full deltas when present."""
     if frame is None or frame.empty:
-        print("Không có validation result để hiển thị.")
+        print("No validation results to display.")
         return pd.DataFrame()
     show_note(
         title,
-        "Bảng này dùng full backtest. Chọn final params từ đây, không chọn trực tiếp từ fast grid.",
+        "This table uses the full backtest. Select final params from this validation table, not directly from the fast grid.",
     )
     cols = [
         c for c in [
@@ -530,8 +531,8 @@ def show_candidate_validation_report(frame: pd.DataFrame, *, title: str = "Full 
 
 def show_selected_params(params: Mapping[str, Any], *, title: str = "Selected params") -> pd.DataFrame:
     """Display the final parameter block for copy/export."""
-    frame = pd.DataFrame([{"param": k, "value": v} for k, v in params.items()])
-    show_note(title, "Đây là bộ tham số đã qua filter và full validation trong notebook hiện tại.")
+    frame = pd.DataFrame([{"Parameter": k, "Value": v} for k, v in params.items()])
+    show_note(title, "These parameters passed the current notebook's filter and full-validation steps.")
     _display_obj(
         frame.style
         .hide(axis="index")
@@ -546,7 +547,7 @@ def plot_walkforward_dashboard(wf_df: pd.DataFrame):
     import matplotlib.pyplot as plt
 
     if wf_df is None or wf_df.empty:
-        print("Walk-forward không có dòng kết quả.")
+        print("Walk-forward returned no result rows.")
         return None, None
 
     fig, axes = plt.subplots(2, 2, figsize=(18, 10))
@@ -578,8 +579,8 @@ def summarize_walkforward(wf_df: pd.DataFrame) -> pd.DataFrame:
         rows["worst_drawdown"] = round(float(wf_df["max_drawdown"].min()), 2)
     if "sharpe" in wf_df:
         rows["median_sharpe"] = round(float(wf_df["sharpe"].median()), 2)
-    frame = pd.DataFrame([rows]).T.rename(columns={0: "value"})
-    show_note("Walk-forward stability summary", "Tóm tắt này trả lời chiến lược có ổn định qua nhiều OOS window không.")
+    frame = pd.DataFrame([rows]).T.rename(columns={0: "Value"})
+    show_note("Walk-Forward Stability Summary", "This summary checks whether the strategy stays stable across out-of-sample windows.")
     _display_obj(frame)
     return frame
 
@@ -589,7 +590,7 @@ def plot_scan_summary(summary_df: pd.DataFrame):
     import matplotlib.pyplot as plt
 
     if summary_df is None or summary_df.empty:
-        print("Không có scanner summary.")
+        print("No scanner summary is available.")
         return None, None
     fig, axes = plt.subplots(1, 3, figsize=(18, 5))
     cols = [
@@ -601,7 +602,7 @@ def plot_scan_summary(summary_df: pd.DataFrame):
         if col in summary_df.columns:
             summary_df.sort_values(col).plot(x="symbol", y=col, kind="barh", ax=ax, color=color, legend=False, title=title)
         else:
-            ax.set_title(f"Thiếu cột {col}")
+            ax.set_title(f"Missing column: {col}")
         ax.grid(alpha=0.25)
     plt.tight_layout()
     _show_plot(fig)

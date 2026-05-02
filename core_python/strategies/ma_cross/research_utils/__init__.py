@@ -1,36 +1,103 @@
-"""Research utilities package cho MA Cross notebooks.
-
-Gom tất cả helper functions cần thiết cho Jupyter research workflow.
-"""
+"""Research utilities package for MA Cross notebooks."""
 
 from __future__ import annotations
 
 from ._shared import show_note
-from .dashboard import configure_notebook, show_run_config, show_strategy_summary
+from .dashboard import (
+    compare_metrics_frame,
+    configure_notebook,
+    metrics_to_frame,
+    plot_equity_dashboard,
+    plot_mode_comparison,
+    plot_optimization_dashboard,
+    plot_portfolio_dashboard,
+    plot_price_with_trades,
+    plot_scan_summary,
+    plot_walkforward_dashboard,
+    show_best_candidate,
+    show_ftmo_check,
+    show_kpi_dashboard,
+    show_monthly_pnl,
+    show_optimizer_filter_report,
+    show_portfolio_summary,
+    show_run_config,
+    show_selected_params,
+    show_strategy_summary,
+    show_trade_explorer,
+    summarize_walkforward,
+    trades_to_frame,
+)
 from .export import export_research_bundle
+from .ctrader_export import (
+    build_ctrader_orders_from_portfolio_result,
+    build_ctrader_orders_from_symbol_result,
+    export_ctrader_validation_bundle,
+)
+from .replay import (
+    build_symbol_replay_backtest_widget,
+    build_symbol_replay_events,
+    build_symbol_replay_widget,
+    plot_symbol_replay_frame,
+    replay_state_at,
+)
 from .symbol import (
+    build_symbol_backtest_widget,
     metric_row,
     metrics_frame,
     rank_grid,
+    render_symbol_backtest_report,
+    render_symbol_comparison,
     run_portfolio_backtest,
     run_symbol_grid_search,
     run_timeframe_matrix,
     select_top_candidates,
     simple_walkforward,
+    symbol_result_row,
 )
 
 __all__ = [
+    "build_symbol_backtest_widget",
+    "build_ctrader_orders_from_portfolio_result",
+    "build_ctrader_orders_from_symbol_result",
     "configure_notebook",
+    "build_symbol_replay_backtest_widget",
+    "build_symbol_replay_events",
+    "build_symbol_replay_widget",
+    "compare_metrics_frame",
     "export_research_bundle",
+    "export_ctrader_validation_bundle",
     "metric_row",
     "metrics_frame",
+    "metrics_to_frame",
+    "plot_equity_dashboard",
+    "plot_mode_comparison",
+    "plot_optimization_dashboard",
+    "plot_portfolio_dashboard",
+    "plot_price_with_trades",
+    "plot_scan_summary",
     "rank_grid",
+    "render_symbol_backtest_report",
+    "render_symbol_comparison",
     "run_portfolio_backtest",
     "run_symbol_grid_search",
     "run_timeframe_matrix",
     "select_top_candidates",
+    "show_best_candidate",
+    "show_ftmo_check",
+    "show_kpi_dashboard",
+    "show_monthly_pnl",
     "show_note",
+    "show_optimizer_filter_report",
+    "show_portfolio_summary",
     "show_run_config",
+    "show_selected_params",
     "show_strategy_summary",
+    "show_trade_explorer",
     "simple_walkforward",
+    "summarize_walkforward",
+    "plot_symbol_replay_frame",
+    "plot_walkforward_dashboard",
+    "replay_state_at",
+    "symbol_result_row",
+    "trades_to_frame",
 ]

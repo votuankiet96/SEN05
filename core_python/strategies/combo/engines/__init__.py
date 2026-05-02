@@ -3,6 +3,7 @@
 from core_python.strategies.combo.engines.common import build_pending_order
 from core_python.strategies.combo.engines.fast import backtest_fast
 from core_python.strategies.combo.engines.portfolio import backtest_portfolio
+from core_python.strategies.combo.engines.replay_events import emit_replay_event, replay_events_to_frame
 from core_python.strategies.combo.engines.symbol import backtest_symbol
 
 __all__ = [
@@ -10,4 +11,6 @@ __all__ = [
     "backtest_portfolio",
     "backtest_symbol",
     "build_pending_order",
+    "emit_replay_event",
+    "replay_events_to_frame",
 ]

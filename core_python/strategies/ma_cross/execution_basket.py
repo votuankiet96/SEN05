@@ -15,6 +15,7 @@ from core_python.shared.execution.primitives import (
     round_turn_commission,
     swap_cost,
 )
+from core_python.shared.replay_events import emit_replay_event
 from core_python.shared.market import DEFAULT_COSTS
 from .basket import BasketOrder, basket_snapshot, can_open_new_order, next_linear_lot
 from .config import get_basket_settings
@@ -158,6 +159,7 @@ def backtest_basket_reversal_symbol(
     *,
     strategy: dict[str, Any] | None = None,
     costs: dict[str, Any] | None = None,
+    event_sink: list | None = None,
 ) -> tuple[list[dict[str, Any]], pd.Series]:
     """Backtest MA Cross basket reversal with capped linear lot scaling.
 
@@ -272,9 +274,37 @@ def backtest_basket_reversal_symbol(
                         entry_slippage_pts=slippage,
                     )
                 )
+                emit_replay_event(
+                    event_sink,
+                    time=now,
+                    symbol=symbol,
+                    event_type="POSITION_OPENED",
+                    direction=int(pending_signal),
+                    price=entry,
+                    entry=entry,
+                    lot_size=lot,
+                    equity=mark_equity_open,
+                    reason="basket_reversal_next_open",
+                    metadata={
+                        "order_id": next_order_id,
+                        "order_index": open_snapshot.order_count,
+                        "floating_pnl": open_snapshot.floating_pnl,
+                    },
+                )
                 next_order_id += 1
             elif open_orders:
                 open_orders[-1].metadata["last_block_reason"] = block_reason
+                emit_replay_event(
+                    event_sink,
+                    time=now,
+                    symbol=symbol,
+                    event_type="ORDER_BLOCKED",
+                    direction=int(pending_signal),
+                    price=float(bar["open"]),
+                    equity=mark_equity_open,
+                    reason=str(block_reason),
+                    metadata={"order_count": open_snapshot.order_count},
+                )
             pending_signal = 0
 
         close_snapshot = basket_snapshot(
@@ -312,6 +342,24 @@ def backtest_basket_reversal_symbol(
             )
             trades.append(trade)
             equity += float(trade["pnl_usd"])
+            emit_replay_event(
+                event_sink,
+                time=now,
+                symbol=symbol,
+                event_type="TAKE_PROFIT_HIT" if close_reason == "BASKET_TP" else "STOP_LOSS_HIT",
+                direction=trade.get("direction"),
+                price=trade.get("exit"),
+                entry=trade.get("entry"),
+                lot_size=trade.get("lot_size"),
+                equity=equity,
+                pnl_usd=trade.get("pnl_usd"),
+                reason=close_reason,
+                metadata={
+                    "orders_closed": trade.get("orders_closed"),
+                    "gross_exposure": trade.get("gross_exposure"),
+                    "net_exposure": trade.get("net_exposure"),
+                },
+            )
             open_orders = []
             mark_equity_close = equity
             peak_eq = max(peak_eq, equity)
@@ -330,6 +378,17 @@ def backtest_basket_reversal_symbol(
             )
             if not reversal_only or basket_empty or net_neutral or reversal:
                 pending_signal = signal
+                emit_replay_event(
+                    event_sink,
+                    time=now,
+                    symbol=symbol,
+                    event_type="SIGNAL_DETECTED",
+                    direction=signal,
+                    price=float(bar["close"]),
+                    equity=mark_equity_close,
+                    reason="basket_reversal_signal" if reversal else "basket_entry_signal",
+                    metadata={"net_exposure": net_exposure},
+                )
 
     if open_orders:
         last = rows[-1][1]
@@ -352,6 +411,24 @@ def backtest_basket_reversal_symbol(
         )
         trades.append(trade)
         equity += float(trade["pnl_usd"])
+        emit_replay_event(
+            event_sink,
+            time=now,
+            symbol=symbol,
+            event_type="FORCE_CLOSE_END_OF_DATA",
+            direction=trade.get("direction"),
+            price=trade.get("exit"),
+            entry=trade.get("entry"),
+            lot_size=trade.get("lot_size"),
+            equity=equity,
+            pnl_usd=trade.get("pnl_usd"),
+            reason="END_OF_DATA",
+            metadata={
+                "orders_closed": trade.get("orders_closed"),
+                "gross_exposure": trade.get("gross_exposure"),
+                "net_exposure": trade.get("net_exposure"),
+            },
+        )
         equity_points.append((now, equity))
 
     equity_ts = pd.Series(

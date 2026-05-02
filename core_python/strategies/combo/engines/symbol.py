@@ -16,12 +16,14 @@ from core_python.strategies.combo.engines.common import (
     build_pending_order,
     make_full_position,
 )
+from core_python.strategies.combo.engines.replay_events import emit_replay_event
 
 
 def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
                     init_eq: float, *,
                     strategy: dict | None = None,
-                    costs: dict | None = None) -> tuple:
+                    costs: dict | None = None,
+                    event_sink: list | None = None) -> tuple:
     """Backtest chi tiết cho một symbol và trả trade log đầy đủ.
 
     Làm gì
@@ -123,9 +125,32 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
     # - `pending`: lệnh chờ chưa khớp, hoặc None.
     # - `daily_pnl`: PnL trong ngày hiện tại để áp daily loss limit.
     # - `peak_eq`: đỉnh equity để tính trailing drawdown nếu cần.
+    def _floating_close_net(pos: dict | None, bar: pd.Series, slippage_pts: float) -> float:
+        if not pos:
+            return 0.0
+
+        d = pos['direction']
+        half_frac = (1 - partial_frac) if pos['partial_tp_hit'] else 1.0
+        ep = _adverse_exit_price(float(bar['close']), d, spread_pts, slippage_pts)
+        r_h2 = (ep - pos['entry']) * d / pos['sl_dist']
+        gross_h2 = half_frac * r_h2 * pos['risk_usd']
+        comm_h2 = half_frac * pos['commission']
+        net_h2 = gross_h2 - comm_h2
+        holding_days = max((bar['BarTime'].date() - pos['entry_time'].date()).days, 0)
+        swap_fee = swap_cost(
+            holding_days,
+            pos.get('lot_size', 0.0),
+            d,
+            swap_long_day,
+            swap_short_day,
+        )
+        return float(net_h2 - swap_fee)
+
     trades, eq_log = [], []
     equity         = init_eq
     peak_eq        = init_eq
+    day_start_eq   = init_eq
+    last_mark_eq   = init_eq
     position       = None
     pending        = None
     daily_pnl      = 0.0
@@ -143,17 +168,39 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
         if bar_date != current_day:
             # Sang ngày mới thì reset daily PnL và cho phép giao dịch lại.
             current_day = bar_date
+            day_start_eq = last_mark_eq
             daily_pnl   = 0.0
             daily_stop  = False
-        if _max_drawdown_breached(equity, init_eq, peak_eq, max_dd, max_dd_mode):
+        if _max_drawdown_breached(last_mark_eq, init_eq, peak_eq, max_dd, max_dd_mode):
             # Vi phạm max drawdown thì ghi equity hiện tại và dừng backtest symbol.
-            eq_log.append((bar_dt, equity))
+            emit_replay_event(
+                event_sink,
+                time=bar_dt,
+                symbol=symbol,
+                event_type="MAX_DRAWDOWN_STOP",
+                equity=last_mark_eq,
+                reason="max_drawdown_limit",
+                metadata={"peak_equity": peak_eq, "max_drawdown_limit": max_dd},
+            )
+            eq_log.append((bar_dt, last_mark_eq))
             break
 
         # Khớp pending order nếu có. Pending chỉ khớp khi chưa có position.
         if pending and not position:
             pending['ttl'] -= 1
             if pending['ttl'] < 0:
+                emit_replay_event(
+                    event_sink,
+                    time=bar_dt,
+                    symbol=symbol,
+                    event_type="PENDING_EXPIRED",
+                    direction=pending.get("direction"),
+                    entry=pending.get("entry"),
+                    sl=pending.get("sl"),
+                    tp=pending.get("tp"),
+                    equity=equity,
+                    reason="ttl_expired",
+                )
                 pending = None
             else:
                 d, entry = pending['direction'], pending['entry']
@@ -180,6 +227,18 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
                         )
                         commission = 2 * lot_size * comm_per_lot
                         if lot_size <= 0:
+                            emit_replay_event(
+                                event_sink,
+                                time=bar_dt,
+                                symbol=symbol,
+                                event_type="PENDING_REJECTED",
+                                direction=d,
+                                entry=entry,
+                                sl=pending.get("sl"),
+                                tp=pending.get("tp"),
+                                equity=equity,
+                                reason="lot_size_zero",
+                            )
                             pending = None
                         else:
                             position = make_full_position(
@@ -193,6 +252,34 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
                                 entry_time=bar_dt,
                                 commission=commission,
                                 lot_size=lot_size,
+                            )
+                            emit_replay_event(
+                                event_sink,
+                                time=bar_dt,
+                                symbol=symbol,
+                                event_type="PENDING_FILLED",
+                                direction=d,
+                                price=actual_entry,
+                                entry=actual_entry,
+                                sl=position["sl"],
+                                tp=position["tp_at_entry"],
+                                lot_size=lot_size,
+                                equity=equity,
+                                reason="breakout_fill",
+                            )
+                            emit_replay_event(
+                                event_sink,
+                                time=bar_dt,
+                                symbol=symbol,
+                                event_type="POSITION_OPENED",
+                                direction=d,
+                                price=actual_entry,
+                                entry=actual_entry,
+                                sl=position["sl"],
+                                tp=position["tp_at_entry"],
+                                lot_size=lot_size,
+                                equity=equity,
+                                metadata={"risk_usd": risk_usd, "commission": commission},
                             )
                             pending = None
 
@@ -234,7 +321,46 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
                     equity    += net_h1
                     peak_eq    = max(peak_eq, equity)
                     daily_pnl += net_h1
+                    emit_replay_event(
+                        event_sink,
+                        time=bar_dt,
+                        symbol=symbol,
+                        event_type="PARTIAL_TP_HIT",
+                        direction=d,
+                        price=half_exit,
+                        entry=entry,
+                        sl=position["sl"],
+                        tp=position["half1_exit"],
+                        lot_size=position.get("lot_size"),
+                        equity=equity,
+                        pnl_usd=net_h1,
+                        reason="partial_tp",
+                    )
+                    emit_replay_event(
+                        event_sink,
+                        time=bar_dt,
+                        symbol=symbol,
+                        event_type="TRAILING_ACTIVATED",
+                        direction=d,
+                        price=bar["close"],
+                        entry=entry,
+                        sl=position["sl"],
+                        tp=position["tp"],
+                        lot_size=position.get("lot_size"),
+                        equity=equity,
+                        reason="partial_tp_breakeven",
+                    )
                     if daily_pnl <= -(init_eq * daily_limit):
+                        emit_replay_event(
+                            event_sink,
+                            time=bar_dt,
+                            symbol=symbol,
+                            event_type="DAILY_LOSS_STOP",
+                            direction=d,
+                            equity=equity,
+                            pnl_usd=daily_pnl,
+                            reason="daily_loss_limit",
+                        )
                         daily_stop = True
 
             # Phase 3 — Trailing stop theo MA.
@@ -243,14 +369,58 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
                     unrealized = (bar['close'] - entry) * d
                     if unrealized >= position['atr'] * trail_act:
                         position['trail_active'] = True
+                        emit_replay_event(
+                            event_sink,
+                            time=bar_dt,
+                            symbol=symbol,
+                            event_type="TRAILING_ACTIVATED",
+                            direction=d,
+                            price=bar["close"],
+                            entry=entry,
+                            sl=position["sl"],
+                            tp=position["tp"],
+                            lot_size=position.get("lot_size"),
+                            equity=equity,
+                            reason="activation_threshold",
+                        )
                 if position['trail_active'] and not np.isnan(bar['ma']):
                     # BUY chỉ nâng SL lên, SELL chỉ hạ SL xuống. Không bao giờ
                     # nới stop theo hướng bất lợi.
                     new_sl = bar['ma']
                     if   d == 1  and new_sl > position['sl']:
+                        old_sl = position['sl']
                         position['sl'] = new_sl
+                        emit_replay_event(
+                            event_sink,
+                            time=bar_dt,
+                            symbol=symbol,
+                            event_type="TRAILING_SL_MOVED",
+                            direction=d,
+                            price=bar["close"],
+                            entry=entry,
+                            sl=position["sl"],
+                            tp=position["tp"],
+                            lot_size=position.get("lot_size"),
+                            equity=equity,
+                            metadata={"old_sl": old_sl, "new_sl": new_sl},
+                        )
                     elif d == -1 and new_sl < position['sl']:
+                        old_sl = position['sl']
                         position['sl'] = new_sl
+                        emit_replay_event(
+                            event_sink,
+                            time=bar_dt,
+                            symbol=symbol,
+                            event_type="TRAILING_SL_MOVED",
+                            direction=d,
+                            price=bar["close"],
+                            entry=entry,
+                            sl=position["sl"],
+                            tp=position["tp"],
+                            lot_size=position.get("lot_size"),
+                            equity=equity,
+                            metadata={"old_sl": old_sl, "new_sl": new_sl},
+                        )
 
             # Phase 4 — Ghi nhận đóng lệnh và lưu trade log.
             if exit_p is not None:
@@ -309,8 +479,33 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
                     half1_exit=position['half1_exit'],
                     half1_exit_time=position['half1_exit_time'],
                 ))
+                emit_replay_event(
+                    event_sink,
+                    time=bar_dt,
+                    symbol=symbol,
+                    event_type="STOP_LOSS_HIT" if exit_r == "SL" else "TAKE_PROFIT_HIT",
+                    direction=d,
+                    price=exit_p,
+                    entry=entry,
+                    sl=position["sl"],
+                    tp=tp_log,
+                    lot_size=position.get("lot_size"),
+                    equity=equity,
+                    pnl_usd=total_net,
+                    reason=exit_r,
+                    metadata={"swap_cost": swap_fee, "commission": total_comm},
+                )
                 position = None
                 if daily_pnl <= -(init_eq * daily_limit):
+                    emit_replay_event(
+                        event_sink,
+                        time=bar_dt,
+                        symbol=symbol,
+                        event_type="DAILY_LOSS_STOP",
+                        equity=equity,
+                        pnl_usd=daily_pnl,
+                        reason="daily_loss_limit",
+                    )
                     daily_stop = True
 
         # ── Reversal: đang có lệnh mà xuất hiện tín hiệu ngược chiều ───────
@@ -380,8 +575,33 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
                     half1_exit=position['half1_exit'],
                     half1_exit_time=position['half1_exit_time'],
                 ))
+                emit_replay_event(
+                    event_sink,
+                    time=exit_time,
+                    symbol=symbol,
+                    event_type="REVERSAL_CLOSE",
+                    direction=d,
+                    price=ep_rev,
+                    entry=position["entry"],
+                    sl=position["sl"],
+                    tp=tp_log,
+                    lot_size=position.get("lot_size"),
+                    equity=equity,
+                    pnl_usd=total_net,
+                    reason="REVERSED",
+                    metadata={"signal_time": bar_dt, "swap_cost": swap_fee, "commission": total_comm},
+                )
                 position = None
                 if daily_pnl <= -(init_eq * daily_limit):
+                    emit_replay_event(
+                        event_sink,
+                        time=exit_time,
+                        symbol=symbol,
+                        event_type="DAILY_LOSS_STOP",
+                        equity=equity,
+                        pnl_usd=daily_pnl,
+                        reason="daily_loss_limit",
+                    )
                     daily_stop = True
 
                 if not daily_stop and i + 1 < len(bars):
@@ -389,6 +609,29 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
                     # hiệu ngược. Pending vẫn cần bar sau để khớp như bình thường.
                     atr_v   = float(bar['atr'])
                     pending = build_pending_order(bar, sig, x, sym_ktp, atr_v, ttl)
+                    emit_replay_event(
+                        event_sink,
+                        time=bar_dt,
+                        symbol=symbol,
+                        event_type="SIGNAL_DETECTED",
+                        direction=sig,
+                        price=bar["close"],
+                        equity=equity,
+                        reason="reversal_signal",
+                    )
+                    emit_replay_event(
+                        event_sink,
+                        time=bar_dt,
+                        symbol=symbol,
+                        event_type="PENDING_CREATED",
+                        direction=sig,
+                        entry=pending.get("entry"),
+                        sl=pending.get("sl"),
+                        tp=pending.get("tp"),
+                        equity=equity,
+                        reason="reversal_signal",
+                        metadata={"ttl": pending.get("ttl"), "atr": atr_v},
+                    )
 
         # ── Không có vị thế: nếu có signal thì tạo pending order mới ─────────
         if not position and not pending and not daily_stop:
@@ -396,8 +639,49 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
             if sig != 0 and i + 1 < len(bars):
                 atr_v   = float(bar['atr'])
                 pending = build_pending_order(bar, sig, x, sym_ktp, atr_v, ttl)
+                emit_replay_event(
+                    event_sink,
+                    time=bar_dt,
+                    symbol=symbol,
+                    event_type="SIGNAL_DETECTED",
+                    direction=sig,
+                    price=bar["close"],
+                    equity=equity,
+                    reason="entry_signal",
+                )
+                emit_replay_event(
+                    event_sink,
+                    time=bar_dt,
+                    symbol=symbol,
+                    event_type="PENDING_CREATED",
+                    direction=sig,
+                    entry=pending.get("entry"),
+                    sl=pending.get("sl"),
+                    tp=pending.get("tp"),
+                    equity=equity,
+                    reason="entry_signal",
+                    metadata={"ttl": pending.get("ttl"), "atr": atr_v},
+                )
 
-        eq_log.append((bar_dt, equity if eq_value_for_log is None else eq_value_for_log))
+        mark_eq = (
+            float(equity if eq_value_for_log is None else eq_value_for_log)
+            + _floating_close_net(position, bar, slippage)
+        )
+        last_mark_eq = mark_eq
+        peak_eq = max(peak_eq, mark_eq)
+        if not daily_stop and (day_start_eq - mark_eq) >= init_eq * daily_limit:
+            emit_replay_event(
+                event_sink,
+                time=bar_dt,
+                symbol=symbol,
+                event_type="DAILY_LOSS_STOP",
+                equity=mark_eq,
+                pnl_usd=mark_eq - day_start_eq,
+                reason="daily_loss_limit_mtm",
+            )
+            daily_stop = True
+
+        eq_log.append((bar_dt, mark_eq))
 
     # ── Hết dữ liệu nhưng vẫn còn vị thế: force-close tại bar cuối ───────────
     if position and len(bars):
@@ -441,6 +725,7 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
         close_net  = net_h2 - swap_fee
         equity    += close_net
         peak_eq    = max(peak_eq, equity)
+        last_mark_eq = equity
 
         trades.append(dict(
             symbol=symbol,
@@ -458,6 +743,22 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
             half1_exit=position['half1_exit'],
             half1_exit_time=position['half1_exit_time'],
         ))
+        emit_replay_event(
+            event_sink,
+            time=bar["BarTime"],
+            symbol=symbol,
+            event_type="FORCE_CLOSE_END_OF_DATA",
+            direction=d,
+            price=ep,
+            entry=position["entry"],
+            sl=position["sl"],
+            tp=tp_log,
+            lot_size=position.get("lot_size"),
+            equity=equity,
+            pnl_usd=total_net,
+            reason="FORCE_CLOSE",
+            metadata={"swap_cost": swap_fee, "commission": total_comm},
+        )
         if eq_log:
             eq_log[-1] = (eq_log[-1][0], equity)
 
@@ -467,6 +768,8 @@ def backtest_symbol(symbol: str, df: pd.DataFrame, cfg: dict,
         [v for _, v in eq_log],
         index=pd.DatetimeIndex([t for t, _ in eq_log]),
     )
+    eq_ts.attrs["equity_model"] = "mark_to_market"
+    eq_ts.attrs["realized_equity_final"] = float(equity)
     return trades, eq_ts
 
 
