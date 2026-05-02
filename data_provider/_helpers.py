@@ -836,7 +836,7 @@ def pull_and_store(tv, sym: dict, tf_code: str,
             _mode = _get_auth_mode()
         except Exception:
             _mode = "unknown"
-        _auth_hint = " - [WARN] đang GUEST MODE (bar limit ~500)" if _mode == "guest" else ""
+        _auth_hint = " - [WARN] guest mode is active (bar limit is about 500)" if _mode == "guest" else ""
         logger.warning(
             "  TV returned only %d/%d bars (%.0f%%) - %s %s%s",
             returned_bars, n_bars,

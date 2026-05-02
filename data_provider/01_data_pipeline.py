@@ -672,7 +672,7 @@ def main() -> int:
     # --- ĐỌC THAM SỐ DÒNG LỆNH ---
     # argparse tự động tạo --help và xử lý các lỗi tham số không hợp lệ
     parser = argparse.ArgumentParser(
-        description="AutoTrading Data Pipeline — Full Load + Daily Backfill"
+        description="AutoTrading Data Pipeline - full load and daily backfill"
     )
 
     # Tham số --mode: chọn chế độ chạy
@@ -685,7 +685,7 @@ def main() -> int:
     # Tham số --dry-run: chạy thử, chỉ xem báo cáo, không thay đổi gì trong DB
     parser.add_argument(
         "--dry-run", action="store_true",
-        help="Report only — do not pull from TradingView or write to DB",
+        help="Show the plan only. Do not pull from TradingView or write to the database.",
     )
 
     # Tham số --symbols: chỉ chạy cho một số symbol nhất định (phân cách bởi dấu phẩy)
@@ -693,7 +693,7 @@ def main() -> int:
         "--symbols",
         type=str,
         default=None,
-        help="Chỉ chạy cho các symbol này. VD: --symbols US30,GOLD,EURUSD",
+        help="Run only these symbols. Example: --symbols US30,GOLD,EURUSD",
     )
 
     # Tham số --reset: xóa sạch data trong Fact_OHLCV trước khi pull lại
@@ -701,7 +701,7 @@ def main() -> int:
         "--reset",
         action="store_true",
         default=False,
-        help="Xóa data trước khi pull lại. Phải dùng kèm ít nhất 1 trong: --symbols, --timeframes, --asset-type",
+        help="Reload selected data. Must be used with at least one filter: --symbols, --timeframes, or --asset-type.",
     )
 
     # Tham số --timeframes: chỉ chạy cho một số TF nhất định (phân cách bởi dấu phẩy)
@@ -709,7 +709,7 @@ def main() -> int:
         "--timeframes",
         type=str,
         default=None,
-        help="Chỉ pull/reset các TF này. VD: --timeframes M45 hoặc --timeframes M45,H1,H4",
+        help="Run only these timeframes. Example: --timeframes M45 or --timeframes M45,H1,H4",
     )
 
     # Tham số --asset-type: chỉ chạy cho symbols thuộc asset type chỉ định
@@ -717,7 +717,7 @@ def main() -> int:
         "--asset-type",
         type=str,
         default=None,
-        help="Chỉ chạy cho symbols thuộc asset type này. VD: --asset-type Indice hoặc --asset-type FOREX,Metal",
+        help="Run only symbols from these asset types. Example: --asset-type Indice or --asset-type FOREX,Metal",
     )
 
     # Tham số --force-unlock: xóa stale lock trước khi chạy
@@ -725,7 +725,7 @@ def main() -> int:
         "--force-unlock",
         action="store_true",
         default=False,
-        help="Xóa lock tv_historical_job cũ trước khi chạy. Dùng khi pipeline bị kẹt do stale lock.",
+        help="Clear an old tv_historical_job lock before starting. Use this only when a stale lock blocks the pipeline.",
     )
 
     # Phân tích các tham số từ dòng lệnh
@@ -907,7 +907,7 @@ def main() -> int:
         if args.force_unlock:
             release("tv_historical_job")
             logger.warning(
-                "[LOCK] --force-unlock: đã xóa lock tv_historical_job cũ. Tiếp tục khởi động..."
+                "[LOCK] --force-unlock cleared the old tv_historical_job lock. Starting now..."
             )
         _lock_ttl = 300 if mode == "full" else 60
         historical_job_stop = acquire_historical_job("pipeline", logger, duration_min=_lock_ttl)

@@ -311,7 +311,7 @@ def _handle_token_command(text: str) -> bool:
         _pending_tokens[token] = action
         try:
             from _discord import tg_send
-            icon = "[OK]" if action == "confirm" else "⏭"
+            icon = "[OK]" if action == "confirm" else "[SKIP]"
             tg_send(f"{icon} Received /{action}_{token} - processing...")
         except Exception:
             pass

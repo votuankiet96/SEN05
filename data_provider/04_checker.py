@@ -1118,16 +1118,16 @@ def _build_problem_desc(issues: list[dict], threshold: float) -> str:
     wrong_count = sum(1 for f in issues if "wrong"   in f["reason"])
     extra_count = sum(1 for f in issues if "extra"   in f["reason"])
 
-    lines = [f"  • {n} pairs need repair (missing / OHLC wrong / extra, or mismatch > {threshold:.0%})"]
+    lines = [f"  - {n} pairs need repair (missing / OHLC wrong / extra, or mismatch > {threshold:.0%})"]
 
     if wrong_count:
-        lines.append(f"  • {wrong_count} pairs: bars with wrong OHLCV values")
+        lines.append(f"  - {wrong_count} pairs: bars with wrong OHLCV values")
 
     if miss_count:
-        lines.append(f"  • {miss_count} pairs: missing bars")
+        lines.append(f"  - {miss_count} pairs: missing bars")
 
     if extra_count:
-        lines.append(f"  • {extra_count} pairs: extra bars / wrong timeline")
+        lines.append(f"  - {extra_count} pairs: extra bars / wrong timeline")
 
     return "\n".join(lines)
 
@@ -1470,19 +1470,19 @@ def main() -> None:
     )
     parser.add_argument(
         "--tf-check", action="store_true",
-        help="Kiá»ƒm tra interval gaps giá»¯a cÃ¡c bar liÃªn tiáº¿p (DB-only, no TradingView).",
+        help="Check time gaps between bars in the database only. Does not use TradingView.",
     )
     parser.add_argument(
         "--tf-check-full", action="store_true",
-        help="DÃ¹ng vá»›i --tf-check: hiá»ƒn thá»‹ chi tiáº¿t short/long gap breakdown.",
+        help="Use with --tf-check to show short and long gap details.",
     )
     parser.add_argument(
         "--rebuild-computed", action="store_true",
-        help="XoÃ¡ vÃ  rebuild TF phÃ¡i sinh (M10/M20/M90/H6/H8). DÃ¹ng --dry-run Ä‘á»ƒ xem preview.",
+        help="Delete and rebuild computed timeframes (M10/M20/M90/H6/H8). Use --dry-run to preview.",
     )
     parser.add_argument(
         "--manual-confirm", action="store_true",
-        help="Giá»¯ flow cÅ©: gá»­i Discord thÃ´ng bÃ¡o trÆ°á»›c khi repair (one-way, khÃ´ng nháº­n lá»‡nh ngÆ°á»£c). Máº·c Ä‘á»‹nh checker sáº½ auto-repair khi khÃ´ng dÃ¹ng --dry-run.",
+        help="Send a Discord notice before repair. Discord is one-way, so the checker will still auto-repair unless --dry-run is used.",
     )
     args = parser.parse_args()
 

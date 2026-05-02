@@ -280,7 +280,7 @@ def _http_request_with_retry(
                     time.sleep(wait)
                     last_exc = requests.HTTPError(f"429 Too Many Requests (attempt {attempt + 1})", response=resp)
                     continue
-                raise requests.HTTPError(f"429 Too Many Requests - đã hết {max_retries} lần retry ({url})", response=resp)
+                raise requests.HTTPError(f"429 Too Many Requests - retry limit reached after {max_retries} attempts ({url})", response=resp)
 
             if resp.status_code >= 500:
                 if attempt < max_retries:
@@ -289,9 +289,9 @@ def _http_request_with_retry(
                     time.sleep(wait)
                     last_exc = requests.HTTPError(f"{resp.status_code} Server Error (attempt {attempt + 1})", response=resp)
                     continue
-                raise requests.HTTPError(f"{resp.status_code} Server Error - đã hết {max_retries} lần retry ({url})", response=resp)
+                raise requests.HTTPError(f"{resp.status_code} Server Error - retry limit reached after {max_retries} attempts ({url})", response=resp)
 
-            raise requests.HTTPError(f"HTTP {resp.status_code} Client Error - không retry ({url})", response=resp)
+            raise requests.HTTPError(f"HTTP {resp.status_code} Client Error - not retrying ({url})", response=resp)
 
         except (requests.ConnectionError, requests.Timeout) as exc:
             last_exc = exc

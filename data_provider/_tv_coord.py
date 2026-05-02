@@ -414,12 +414,12 @@ def acquire_historical_job(
             if pid_dead or heartbeat_stale:
                 stale_owner = meta.get("owner", "unknown")
                 reason = (
-                    "pid không tồn tại"
+                    "process id is no longer running"
                     if pid_dead
-                    else f"heartbeat quá hạn ({meta.get('heartbeat') or 'không có'})"
+                    else f"heartbeat is too old ({meta.get('heartbeat') or 'missing'})"
                 )
                 logger.warning(
-                    "[TV_COORD] %s phát hiện lock %s cũ từ %s pid=%s run=%s (%s) — thu hồi lại.",
+                    "[TV_COORD] %s found an old %s lock from %s pid=%s run=%s (%s) - taking it back.",
                     owner,
                     TV_HISTORICAL_JOB_LOCK,
                     stale_owner,
@@ -645,12 +645,12 @@ def request_ws_live_shutdown(logger: logging.Logger) -> bool:
     result = update_payload(WS_LIVE_RUNTIME_LOCK, _WS_LIVE_SHUTDOWN_SIGNAL)
     if result:
         logger.info(
-            "[TV_COORD] Shutdown signal written to %s lock — waiting for old instance to exit.",
+            "[TV_COORD] Shutdown signal written to %s lock - waiting for old instance to exit.",
             WS_LIVE_RUNTIME_LOCK,
         )
     else:
         logger.warning(
-            "[TV_COORD] Could not write shutdown signal to %s lock — lock may already be gone.",
+            "[TV_COORD] Could not write shutdown signal to %s lock - lock may already be gone.",
             WS_LIVE_RUNTIME_LOCK,
         )
     return result

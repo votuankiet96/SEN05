@@ -2060,12 +2060,12 @@ def _status_reporter() -> None:
             tf_totals[tf]   = tf_totals.get(tf, 0) + cnt
 
         sym_line = "  ".join(
-            f"{_sym_name.get(sid, str(sid))}·{cnt}"
+            f"{_sym_name.get(sid, str(sid))}:{cnt}"
             for sid, cnt in sorted(sym_totals.items())
         ) or "-"
         tf_order = ["M5", "M15", "M30", "M45", "H1", "H2", "H3", "H4", "D1", "W"]
         tf_line = "  ".join(
-            f"{tf}·{tf_totals[tf]}" for tf in tf_order if tf in tf_totals
+            f"{tf}:{tf_totals[tf]}" for tf in tf_order if tf in tf_totals
         ) or "-"
 
         # ── Auth info ────────────────────────────────────────────────────────
@@ -2084,29 +2084,29 @@ def _status_reporter() -> None:
             auth_info = "Premium (active)"
         else:
             # token_secs == 0: token vừa hết hạn, chờ auto-renew
-            auth_info = "Premium (token expired — renewing)"
+            auth_info = "Premium (token expired - renewing)"
 
         # ── Health level (GREEN / YELLOW / RED) ──────────────────────────────
         if s["errors"] > 0 or stale_count > 3 or spool_count > 0:
             health_level = "RED"
-            health_emoji = "🔴"
+            health_emoji = "[RED]"
         elif n_miss_active > 0 or stale_count > 0 or is_guest:
             health_level = "YELLOW"
-            health_emoji = "🟡"
+            health_emoji = "[YELLOW]"
         else:
             health_level = "GREEN"
-            health_emoji = "🟢"
+            health_emoji = "[GREEN]"
 
         # ── Top issues (max 3) ───────────────────────────────────────────────
         issues = []
         if spool_count:
-            issues.append(f"Temporary buffer has {spool_count} bars waiting — database write is slow")
+            issues.append(f"Temporary buffer has {spool_count} bars waiting - database writes are slow")
         if stale_count > 3:
             issues.append(f"{stale_count} pairs have outdated data")
         if n_miss_active:
             issues.append(f"{n_miss_active} pairs are missing data")
         if is_guest:
-            issues.append(f"Running as guest — {_consecutive_guest_batches} batches in a row")
+            issues.append(f"Running as guest - {_consecutive_guest_batches} batches in a row")
         elif stale_count:
             issues.append(f"{stale_count} pairs are running behind")
 
@@ -2208,7 +2208,7 @@ def main() -> None:
     if not ws_lock:
         # Lock còn hiệu lực → có instance thật đang chạy.
         # Gửi tín hiệu tắt graceful; chờ tối đa 60 giây để instance cũ thoát.
-        logger.info("[LOCK] Old instance is running — sending shutdown signal...")
+        logger.info("[LOCK] Old instance is running - sending shutdown signal...")
         request_ws_live_shutdown(logger)
         logger.info("[LOCK] Waiting up to 60 seconds for old instance to exit...")
         for _wait_i in range(60):
@@ -2222,7 +2222,7 @@ def main() -> None:
         ws_lock = _acquire_task_lock("ws_live_runtime", duration_min=60)
         if not ws_lock:
             logger.error(
-                "[LOCK] Existing ws_live_runtime lock is still active after handoff wait — startup aborted."
+                "[LOCK] Existing ws_live_runtime lock is still active after handoff wait - startup aborted."
             )
             sys.exit(1)
         logger.info("[LOCK] ws_live_runtime lock acquired successfully after handoff.")
@@ -2357,7 +2357,7 @@ def main() -> None:
                 _shutdown_check_counter = 0
                 if is_ws_live_shutdown_requested():
                     logger.info(
-                        "[LIVE] Instance mới yêu cầu tắt graceful — đang dừng hệ thống."
+                        "[LIVE] A new instance requested a graceful shutdown. Stopping now."
                     )
                     _shutdown.set()
                     break
