@@ -2120,11 +2120,8 @@ def _status_reporter() -> None:
             n_miss_active, stale_count, max_age_h,
         )
 
-        # ── Snapshot + reset hourly stats ────────────────────────────────────
-        with _hourly_lock:
-            h = dict(_hourly_stats)
-            _hourly_stats.update({"batches": 0, "bars": 0, "zero_bar_batches": 0, "backlog_peak": 0})
-
+        # h đã được snapshot và _hourly_stats đã được reset ở block đầu (line ~2046).
+        # Không snapshot lại ở đây — làm vậy sẽ ghi đè h bằng dict toàn số 0.
         hourly_parts = [f"{h['batches']} batches  |  {h['bars']} new bars"]
         if h["zero_bar_batches"]:
             hourly_parts.append(f"[WARN] {h['zero_bar_batches']} empty batches (no new bars)")
