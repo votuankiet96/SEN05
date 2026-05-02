@@ -866,7 +866,13 @@ def _db_worker() -> None:
 
         # Dù inserted=0 vẫn phải ETL/defer, vì bars có thể đã nằm sẵn ở staging
         # từ lần fail trước và đang chờ được đẩy vào Fact.
-        max_committed_ts = max(ts.timestamp() for ts in df.index)
+        # BUG FIX: df.index chứa naive UTC datetime (tzinfo đã bị xóa trong _bars_to_df).
+        # Gọi .timestamp() trên naive datetime trên máy UTC+7 sẽ hiểu là giờ LOCAL,
+        # trả về giá trị thấp hơn UTC thực 7 tiếng → watermark không bao giờ advance.
+        # Fix: .replace(tzinfo=timezone.utc) trước khi .timestamp() để đảm bảo đúng UTC.
+        max_committed_ts = max(
+            ts.replace(tzinfo=timezone.utc).timestamp() for ts in df.index
+        )
 
         if _checker_is_repairing():
             with _deferred_lock:
