@@ -544,8 +544,14 @@ def _acquire_short_write_lock(
         time.sleep(poll_sec)
 
 
-def _validate_ohlcv_df(df, tv_symbol: str, tf_code: str,
-                       logger: logging.Logger):
+def _validate_ohlcv_df(
+    df,
+    tv_symbol: str,
+    tf_code: str,
+    logger: logging.Logger,
+    *,
+    normalize_timestamps: bool = True,
+):
     """
     Kiểm tra tính hợp lệ của DataFrame OHLCV trước khi ghi vào DB.
 
@@ -567,9 +573,10 @@ def _validate_ohlcv_df(df, tv_symbol: str, tf_code: str,
     if df is None or df.empty:
         return df, False
 
-    df, normalized = normalize_tv_hist_df_to_utc(df)
-    if normalized:
-        logger.debug("  VALIDATE %s %s: normalized tvDatafeed timestamps to UTC", tv_symbol, tf_code)
+    if normalize_timestamps:
+        df, normalized = normalize_tv_hist_df_to_utc(df)
+        if normalized:
+            logger.debug("  VALIDATE %s %s: normalized tvDatafeed timestamps to UTC", tv_symbol, tf_code)
 
     original_len = len(df)
     had_issues   = False

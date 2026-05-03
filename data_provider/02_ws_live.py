@@ -98,6 +98,7 @@ Nhung diem van hanh quan trong:
 # =============================================================================
 
 import atexit
+import os
 import json  # Xử lý dữ liệu JSON - TradingView gửi/nhận lệnh dưới dạng JSON
 import logging  # Framework ghi log chuẩn của Python
 import math  # Hàm toán học - dùng math.ceil() để tính số nhóm WS cần tạo
@@ -195,6 +196,7 @@ WS_SYMBOLS = [s for s in SYMBOLS if s["asset_type"] in {"Indice", "Metal", "Cryp
 _LOG_DIR    = Path(__file__).resolve().parent / "logs"
 WS_LOG_FILE = str(_LOG_DIR / "ws_live.log")
 logger = setup_logger("ws_live", WS_LOG_FILE, rotating=True)
+_LOCAL_RUNTIME_LOCK_FILE = _LOG_DIR / "ws_live_runtime.pid"
 
 
 # =============================================================================
@@ -278,6 +280,18 @@ WS_TF_INTERVAL = {
     "M5":  "5",    # 5 phút
 }
 
+WS_TF_CODES = tuple(WS_TF_INTERVAL.keys())
+WS_SYMBOL_IDS = tuple(s["symbol_id"] for s in WS_SYMBOLS)
+WS_WATCH_KEYS = frozenset(
+    (sid, tf_code) for sid in WS_SYMBOL_IDS for tf_code in WS_TF_CODES
+)
+_SYMBOL_META_BY_ID = {s["symbol_id"]: s for s in WS_SYMBOLS}
+_SYMBOL_NAME_BY_ID = {sid: s["tv_symbol"] for sid, s in _SYMBOL_META_BY_ID.items()}
+
+# TradingView chart sessions can otherwise emit timestamps in the UI/local
+# timezone while the value still looks like a Unix epoch. Force UTC at source.
+TV_WS_TIMEZONE = os.environ.get("TV_WS_TIMEZONE", "Etc/UTC")
+
 # Bảng phụ thuộc TF phái sinh: dùng khi có nến mới trong bảng nguồn
 # Ví dụ: khi có nến M5 mới -> tự động tính lại M10, M20
 _SOURCE_TO_COMPUTED = COMPUTED_TF_DEPS
@@ -312,6 +326,8 @@ _WRITE_DEFER_LOCKS    = ("checker_repair", "warehouse_maintenance")
 _last_bar_ts: dict[tuple[int, str], float] = {}
 # Received watermark: bar mới nhất đã nhìn thấy/accept vào queue-spool, chỉ dùng quan sát.
 _received_bar_ts: dict[tuple[int, str], float] = {}
+# Source watermark: latest closed bar returned by TradingView, even before DB commit.
+_source_bar_ts: dict[tuple[int, str], float] = {}
 
 # Bộ đếm thống kê hoạt động của hệ thống (hiển thị trong báo cáo định kỳ)
 _stats = {
@@ -351,16 +367,6 @@ _consecutive_guest_batches = 0
 # Ngưỡng cảnh báo: sau bao nhiêu batch guest liên tiếp thì gửi alert nặng hơn
 _GUEST_ALERT_THRESHOLD     = 3
 
-# Thống kê theo giờ - reset mỗi lần gửi hourly digest lên Discord
-_hourly_stats: dict = {
-    "batches":          0,  # Số batch chạy trong giờ qua
-    "accepted_bars":    0,  # Bars vượt watermark và đã được accept
-    "fact_bars":        0,  # Bars mới thật sự vào Fact_OHLCV
-    "zero_bar_batches": 0,  # Số batch accept 0 bar
-    "backlog_peak":     0,  # Backlog peak (số pairs) trong giờ qua
-}
-_hourly_lock = threading.Lock()
-
 # Bộ đếm backfill miss: số lần LIÊN TIẾP không nhận được data cho mỗi cặp (symbol_id, tf_code)
 # Khi counter đạt MAX_MISS_RETRIES -> cảnh báo Discord ngay, reset counter (tránh spam)
 # Khi cặp đó nhận được data trở lại -> counter tự động xóa
@@ -377,10 +383,12 @@ _hourly_stats: dict = {
     "batches":          0,
     "accepted_bars":    0,
     "fact_bars":        0,
+    "staging_rows":     0,
     "zero_bar_batches": 0,
     "backlog_peak":     0,
     "pair_bars":        {},   # {(symbol_id, tf_code): Fact rows mới trong giờ qua}
     "pair_accepted":    {},   # {(symbol_id, tf_code): accepted bars trong giờ qua}
+    "pair_staging":     {},   # {(symbol_id, tf_code): staging rows affected trong giờ qua}
 }
 _hourly_lock = threading.Lock()
 
@@ -439,6 +447,50 @@ def _load_token_cache() -> dict:
 # KHỞI ĐỘNG - NẠP WATERMARK TỪ DATABASE
 # =============================================================================
 
+def _refresh_watermarks_from_fact(reason: str = "refresh") -> int:
+    """Refresh committed watermarks for the exact WS watchlist from Fact_OHLCV."""
+    loaded = 0
+    if not WS_SYMBOL_IDS or not WS_TF_CODES:
+        return 0
+
+    sym_placeholders = ",".join("?" * len(WS_SYMBOL_IDS))
+    tf_placeholders = ",".join("?" * len(WS_TF_CODES))
+    params = [*WS_SYMBOL_IDS, *WS_TF_CODES]
+
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            SELECT f.SymbolID, tf.Code, MAX(f.BarTime)
+            FROM DWH.Fact_OHLCV f
+            JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID
+            WHERE f.SymbolID IN ({sym_placeholders})
+              AND tf.Code IN ({tf_placeholders})
+              AND f.BarTime < DATEADD(minute, 1, GETUTCDATE())
+            GROUP BY f.SymbolID, tf.Code
+        """, params)
+
+        updates: dict[tuple[int, str], float] = {}
+        for symbol_id, tf_code, max_bt in cursor.fetchall():
+            if max_bt is not None:
+                key = (int(symbol_id), str(tf_code))
+                if key in WS_WATCH_KEYS:
+                    updates[key] = _as_utc_timestamp(max_bt)
+
+        with _state_lock:
+            for key, max_ts in updates.items():
+                _last_bar_ts[key] = max(max_ts, _last_bar_ts.get(key, 0.0))
+        loaded = len(updates)
+        logger.info("[WM] Fact watermarks refreshed (%s): %d WS entries.", reason, loaded)
+    except Exception as exc:
+        logger.warning("[WM] Fact watermark refresh failed (%s): %s", reason, exc)
+    finally:
+        if conn is not None:
+            conn.close()
+    return loaded
+
+
 def _load_watermarks() -> None:
     """
     Đọc từ DB thời điểm nến mới nhất đã lưu của mỗi cặp (symbol, TF).
@@ -452,37 +504,8 @@ def _load_watermarks() -> None:
         Khi chương trình restart, _last_bar_ts bị reset về rỗng.
         Nếu không nạp lại từ DB, hệ thống sẽ lưu lại toàn bộ nến cũ.
     """
-    logger.info("[INIT] Loading watermarks from DWH.Fact_OHLCV...")
-    loaded = 0
-    try:
-        conn   = get_connection()
-        cursor = conn.cursor()
-
-        # 1 query trên Fact_OHLCV thay vì 10 query riêng trên staging tables.
-        # Lý do: staging bị purge sau 7 ngày -> watermark về 0 khi restart nếu dùng staging.
-        # Fact_OHLCV lưu vĩnh viễn nên watermark luôn chính xác dù restart bao nhiêu lần.
-        ws_tf_codes  = list(WS_TF_INTERVAL.keys())   # 10 TF trực tiếp WS cần theo dõi
-        placeholders = ",".join("?" * len(ws_tf_codes))
-        cursor.execute(f"""
-            SELECT f.SymbolID, tf.Code, MAX(f.BarTime)
-            FROM DWH.Fact_OHLCV f
-            JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID
-            WHERE tf.Code IN ({placeholders})
-              AND f.BarTime < DATEADD(minute, 1, GETUTCDATE())
-            GROUP BY f.SymbolID, tf.Code
-        """, ws_tf_codes)
-        for symbol_id, tf_code, max_bt in cursor.fetchall():
-            if max_bt is not None:
-                # SQL Server trả datetime naive nhưng dữ liệu là UTC. Không gọi
-                # .timestamp() trực tiếp trên host UTC+7, nếu không watermark sẽ
-                # bị lùi 7 giờ sau mỗi lần restart.
-                _last_bar_ts[(symbol_id, tf_code)] = _as_utc_timestamp(max_bt)
-                loaded += 1
-
-        conn.close()
-    except Exception as exc:
-        # Nếu không kết nối được DB -> bắt đầu từ watermark = 0 (không có gì)
-        logger.warning("[INIT] Watermark load failed (starting from zero): %s", exc)
+    logger.info("[INIT] Loading WS watermarks from DWH.Fact_OHLCV...")
+    loaded = _refresh_watermarks_from_fact("startup")
 
     logger.info("[INIT] Watermarks loaded: %d entries.", loaded)
 
@@ -490,10 +513,13 @@ def _load_watermarks() -> None:
     # Stale = khoảng trống > 3× chu kỳ TF (ví dụ: H1 stale nếu data cũ hơn 3 giờ).
     # Cảnh báo này không chặn startup, chỉ nhắc operator cân nhắc chạy backfill trước.
     from _helpers import TF_MINUTES  # import cục bộ tránh circular ở module level
-    now_ts = datetime.now(timezone.utc).timestamp()
+    now_dt = datetime.now(timezone.utc)
+    now_ts = now_dt.timestamp()
     stale = [
         (sym_id, tf_code, (now_ts - wm_ts) / 60)
         for (sym_id, tf_code), wm_ts in _last_bar_ts.items()
+        if (sym_id, tf_code) in WS_WATCH_KEYS
+        if _is_market_expected_live(sym_id, now_dt)
         if (now_ts - wm_ts) / 60 > TF_MINUTES.get(tf_code, 60) * 3
     ]
     if stale:
@@ -525,10 +551,35 @@ def _as_utc_timestamp(ts: datetime) -> float:
     return ts.timestamp()
 
 
+def _is_market_expected_live(symbol_id: int, now_utc: datetime) -> bool:
+    """Return True when stale data should be treated as an active live issue."""
+    meta = _SYMBOL_META_BY_ID.get(symbol_id, {})
+    asset_type = meta.get("asset_type")
+    if asset_type == "Crypto":
+        return True
+
+    # Conservative generic CFD schedule: closed after Friday 22:00 UTC and
+    # before Sunday 22:00 UTC. Exact exchange calendars are handled by backfill.
+    weekday = now_utc.weekday()  # Monday=0 ... Sunday=6
+    if weekday == 5:
+        return False
+    if weekday == 6 and now_utc.hour < 22:
+        return False
+    if weekday == 4 and now_utc.hour >= 22:
+        return False
+    return True
+
+
 def _set_received_watermark(key: tuple[int, str], max_ts: float) -> None:
     """Theo dõi bar mới nhất đã được accept vào queue/overflow/spool."""
     with _state_lock:
         _received_bar_ts[key] = max(max_ts, _received_bar_ts.get(key, 0.0))
+
+
+def _set_source_watermark(key: tuple[int, str], max_ts: float) -> None:
+    """Track the latest closed source bar returned by TradingView."""
+    with _state_lock:
+        _source_bar_ts[key] = max(max_ts, _source_bar_ts.get(key, 0.0))
 
 
 def _set_committed_watermark(key: tuple[int, str], max_ts: float) -> None:
@@ -619,6 +670,12 @@ def _record_db_result(
             _stats["staging_rows"] += staging_rows
             _stats["fact_inserted"] += fact_inserted
             _stats["bars_inserted"] += fact_inserted
+        if staging_rows:
+            with _hourly_lock:
+                _hourly_stats["staging_rows"] += staging_rows
+                _hourly_stats["pair_staging"][key] = (
+                    _hourly_stats["pair_staging"].get(key, 0) + staging_rows
+                )
 
 
 def _snapshot_batch_metrics(batch_id: int) -> dict:
@@ -957,7 +1014,13 @@ def _db_worker() -> None:
         accepted_count = len(df.index) if hasattr(df, "index") else 0
 
         # Lọc bars sai alignment (DST artifact) - cùng logic với 01_data_pipeline
-        df, _ = _validate_ohlcv_df(df, tv_symbol, tf_code, logger)
+        df, _ = _validate_ohlcv_df(
+            df,
+            tv_symbol,
+            tf_code,
+            logger,
+            normalize_timestamps=False,
+        )
         if df.empty:
             _record_db_result(batch_id, key, accepted_count, 0, 0)
             _db_queue.task_done()
@@ -1237,6 +1300,78 @@ def _parse_packets(raw: str) -> list[str]:
     return packets
 
 
+def _pid_is_alive(pid: int) -> bool:
+    """Best-effort local process liveness check for the ws_live singleton file."""
+    if pid <= 0:
+        return False
+    if os.name == "nt":
+        try:
+            import ctypes
+
+            handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, int(pid))
+            if handle:
+                ctypes.windll.kernel32.CloseHandle(handle)
+                return True
+            return False
+        except Exception:
+            return True
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
+def _acquire_local_runtime_lock() -> bool:
+    """
+    Atomically prevent two local ws_live processes from running together.
+
+    The DB lock is still the distributed guard, but this local file lock catches
+    races between supervisors and manually-started scripts on the same machine.
+    """
+    _LOG_DIR.mkdir(parents=True, exist_ok=True)
+    while True:
+        try:
+            fd = os.open(
+                str(_LOCAL_RUNTIME_LOCK_FILE),
+                os.O_CREAT | os.O_EXCL | os.O_WRONLY,
+            )
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(str(os.getpid()))
+            return True
+        except FileExistsError:
+            try:
+                existing_pid = int(_LOCAL_RUNTIME_LOCK_FILE.read_text(encoding="utf-8").strip())
+            except Exception:
+                existing_pid = 0
+            if existing_pid and _pid_is_alive(existing_pid):
+                logger.error(
+                    "[LOCK] Local ws_live process is already running (pid=%d). Startup aborted.",
+                    existing_pid,
+                )
+                return False
+            try:
+                _LOCAL_RUNTIME_LOCK_FILE.unlink()
+            except FileNotFoundError:
+                continue
+            except Exception as exc:
+                logger.error("[LOCK] Could not remove stale local runtime lock: %s", exc)
+                return False
+
+
+def _release_local_runtime_lock() -> None:
+    """Release the local singleton file only if this process owns it."""
+    try:
+        existing_pid = int(_LOCAL_RUNTIME_LOCK_FILE.read_text(encoding="utf-8").strip())
+    except Exception:
+        existing_pid = 0
+    if existing_pid == os.getpid():
+        try:
+            _LOCAL_RUNTIME_LOCK_FILE.unlink()
+        except FileNotFoundError:
+            pass
+
+
 def _bars_to_df(bars: list) -> pd.DataFrame:
     """
     Chuyển danh sách nến nhận từ TradingView sang DataFrame chuẩn.
@@ -1499,6 +1634,8 @@ class BatchFetcher:
                     # Lệnh 1: Tạo chart session với ID vừa tạo
                     _send(ws, ["chart_create_session", cs, ""])
                     time.sleep(0.1)
+                    _send(ws, ["switch_timezone", cs, TV_WS_TIMEZONE])
+                    time.sleep(0.05)
 
                     # Lệnh 2: Gắn symbol vào chart session
                     # sym_json chứa tên symbol và chế độ điều chỉnh (splits)
@@ -1652,6 +1789,7 @@ class BatchFetcher:
 
             if closed_bars:
                 key = (symbol_id, tf_code)
+                _set_source_watermark(key, closed_bars[-1]["v"][0])
                 with _state_lock:
                     # Lấy watermark: timestamp của nến mới nhất đã lưu trong DB
                     last_ts = _last_bar_ts.get(key, 0.0)
@@ -2174,6 +2312,7 @@ def _scheduler_loop(groups: list[BatchFetcher]) -> None:
     # Chạy ngay 1 lần đầu khi khởi động để có data sớm nhất có thể
     if not _shutdown.is_set():
         _check_and_maybe_refresh_token()
+        _refresh_watermarks_from_fact("pre-batch")
         _run_batch(groups)
 
     # Lặp vô hạn cho đến khi có lệnh tắt
@@ -2190,6 +2329,7 @@ def _scheduler_loop(groups: list[BatchFetcher]) -> None:
 
         # Kiểm tra và làm mới token chủ động trước mỗi batch
         _check_and_maybe_refresh_token()
+        _refresh_watermarks_from_fact("pre-batch")
         _run_batch(groups)
 
 
@@ -2207,6 +2347,8 @@ def _status_reporter() -> None:
     Dùng _shutdown.wait(timeout) thay vì sleep để có thể dừng ngay khi cần.
     """
     while not _shutdown.wait(STATUS_INTERVAL_SEC):
+        _refresh_watermarks_from_fact("status")
+
         # Thu thập snapshot của số liệu thống kê (copy để tránh race condition)
         with _state_lock:
             s = dict(_stats)
@@ -2222,16 +2364,40 @@ def _status_reporter() -> None:
         # Freshness metrics: độ "tươi" của dữ liệu theo từng cặp (symbol, TF)
         # Dùng dict() copy nhanh - GIL của Python đảm bảo an toàn cho thao tác này
         from _helpers import TF_MINUTES as _TF_MIN
-        now_ts       = datetime.now(timezone.utc).timestamp()
-        wm_snapshot  = dict(_last_bar_ts)
+        now_dt       = datetime.now(timezone.utc)
+        now_ts       = now_dt.timestamp()
+        with _state_lock:
+            wm_snapshot      = dict(_last_bar_ts)
+            source_snapshot  = dict(_source_bar_ts)
         stale_count  = 0
+        closed_stale_count = 0
+        source_lag_count = 0
         max_age_h    = 0.0
-        for (_, tf_code), wm_ts in wm_snapshot.items():
+        stale_entries = []
+        source_lag_entries = []
+        for sid, tf_code in WS_WATCH_KEYS:
+            wm_ts = wm_snapshot.get((sid, tf_code), 0.0)
+            if not wm_ts:
+                continue
             age_h = (now_ts - wm_ts) / 3600
-            if age_h > _TF_MIN.get(tf_code, 60) * 3 / 60:
+            stale_threshold_h = _TF_MIN.get(tf_code, 60) * 3 / 60
+            market_live = _is_market_expected_live(sid, now_dt)
+            if market_live and age_h > stale_threshold_h:
                 stale_count += 1
-            if age_h > max_age_h:
+                stale_entries.append((age_h, sid, tf_code, wm_ts))
+            elif not market_live and age_h > stale_threshold_h:
+                closed_stale_count += 1
+            if market_live and age_h > max_age_h:
                 max_age_h = age_h
+
+            src_ts = source_snapshot.get((sid, tf_code), 0.0)
+            if src_ts:
+                src_age_h = (now_ts - src_ts) / 3600
+                if market_live and src_age_h > stale_threshold_h:
+                    source_lag_count += 1
+                    source_lag_entries.append((src_age_h, sid, tf_code, src_ts))
+        stale_entries.sort(reverse=True)
+        source_lag_entries.sort(reverse=True)
 
         # Dọn spool entries cũ >48h trước khi đếm
         _spool_cleanup_old()
@@ -2251,13 +2417,15 @@ def _status_reporter() -> None:
             _hourly_stats["batches"]          = 0
             _hourly_stats["accepted_bars"]     = 0
             _hourly_stats["fact_bars"]         = 0
+            _hourly_stats["staging_rows"]      = 0
             _hourly_stats["zero_bar_batches"] = 0
             _hourly_stats["backlog_peak"]     = 0
             _hourly_stats["pair_bars"]        = {}
             _hourly_stats["pair_accepted"]    = {}
+            _hourly_stats["pair_staging"]     = {}
 
         # Per-symbol và per-TF breakdown từ hourly Fact rows.
-        _sym_name = {s["symbol_id"]: s["tv_symbol"] for s in WS_SYMBOLS}
+        _sym_name = _SYMBOL_NAME_BY_ID
         sym_totals: dict[int, int] = {}
         tf_totals:  dict[str, int] = {}
         for (sid, tf), cnt in h.get("pair_bars", {}).items():
@@ -2268,9 +2436,36 @@ def _status_reporter() -> None:
             f"{_sym_name.get(sid, str(sid))}:{cnt}"
             for sid, cnt in sorted(sym_totals.items())
         ) or "-"
-        tf_order = ["M5", "M15", "M30", "M45", "H1", "H2", "H3", "H4", "D1", "W"]
+        tf_order = ["M5", "M10", "M15", "M20", "M30", "M45",
+                    "H1", "M90", "H2", "H3", "H4", "H6", "H8", "D1", "W"]
         tf_line = "  ".join(
             f"{tf}:{tf_totals[tf]}" for tf in tf_order if tf in tf_totals
+        ) or "-"
+
+        acc_sym_totals: dict[int, int] = {}
+        acc_tf_totals: dict[str, int] = {}
+        for (sid, tf), cnt in h.get("pair_accepted", {}).items():
+            acc_sym_totals[sid] = acc_sym_totals.get(sid, 0) + cnt
+            acc_tf_totals[tf] = acc_tf_totals.get(tf, 0) + cnt
+        acc_sym_line = "  ".join(
+            f"{_sym_name.get(sid, str(sid))}:{cnt}"
+            for sid, cnt in sorted(acc_sym_totals.items())
+        ) or "-"
+        acc_tf_line = "  ".join(
+            f"{tf}:{acc_tf_totals[tf]}" for tf in tf_order if tf in acc_tf_totals
+        ) or "-"
+
+        stage_sym_totals: dict[int, int] = {}
+        stage_tf_totals: dict[str, int] = {}
+        for (sid, tf), cnt in h.get("pair_staging", {}).items():
+            stage_sym_totals[sid] = stage_sym_totals.get(sid, 0) + cnt
+            stage_tf_totals[tf] = stage_tf_totals.get(tf, 0) + cnt
+        stage_sym_line = "  ".join(
+            f"{_sym_name.get(sid, str(sid))}:{cnt}"
+            for sid, cnt in sorted(stage_sym_totals.items())
+        ) or "-"
+        stage_tf_line = "  ".join(
+            f"{tf}:{stage_tf_totals[tf]}" for tf in tf_order if tf in stage_tf_totals
         ) or "-"
 
         # ── Auth info ────────────────────────────────────────────────────────
@@ -2292,10 +2487,10 @@ def _status_reporter() -> None:
             auth_info = "Premium (token expired - renewing)"
 
         # ── Health level (GREEN / YELLOW / RED) ──────────────────────────────
-        if s["errors"] > 0 or stale_count > 3 or spool_count > 0:
+        if s["errors"] > 0 or stale_count > 3 or source_lag_count > 3 or spool_count > 0:
             health_level = "RED"
             health_emoji = "[RED]"
-        elif n_miss_active > 0 or stale_count > 0 or is_guest:
+        elif n_miss_active > 0 or stale_count > 0 or source_lag_count > 0 or is_guest:
             health_level = "YELLOW"
             health_emoji = "[YELLOW]"
         else:
@@ -2308,6 +2503,12 @@ def _status_reporter() -> None:
             issues.append(f"Temporary buffer has {spool_count} bars waiting - database writes are slow")
         if stale_count > 3:
             issues.append(f"{stale_count} pairs have outdated data")
+        if source_lag_count:
+            worst_src = source_lag_entries[0]
+            issues.append(
+                f"{source_lag_count} live feeds are behind "
+                f"(worst: {_sym_name.get(worst_src[1], worst_src[1])}/{worst_src[2]} {worst_src[0]:.1f}h)"
+            )
         if n_miss_active:
             issues.append(f"{n_miss_active} pairs are missing data")
         if is_guest:
@@ -2318,21 +2519,24 @@ def _status_reporter() -> None:
         # ── Ghi log ──────────────────────────────────────────────────────────
         logger.info(
             "HEALTH [%s] %s  auth=%s  accepted=%d  fact=%d  errors=%d  batches=%d  "
-            "queue=%d  overflow=%d  spool=%d  miss=%d  stale=%d  max_age=%.1fh",
+            "queue=%d  overflow=%d  spool=%d  miss=%d  stale=%d  source_lag=%d  "
+            "closed_stale=%d  max_age=%.1fh",
             now, health_level, auth_info,
             s.get("accepted_bars", 0), s.get("fact_inserted", s["bars_inserted"]),
             s["errors"], s["batches_run"],
             s["queue_depth"], overflow, spool_count,
-            n_miss_active, stale_count, max_age_h,
+            n_miss_active, stale_count, source_lag_count, closed_stale_count, max_age_h,
         )
 
         # h đã được snapshot và _hourly_stats đã được reset ở block đầu (line ~2046).
         # Không snapshot lại ở đây — làm vậy sẽ ghi đè h bằng dict toàn số 0.
         accepted_h = int(h.get("accepted_bars", h.get("bars", 0)))
         fact_h = int(h.get("fact_bars", 0))
+        staging_h = int(h.get("staging_rows", 0))
         hourly_parts = [
             f"{h['batches']} batches",
             f"{accepted_h} accepted bars",
+            f"{staging_h} staging rows",
             f"{fact_h} Fact rows",
         ]
         if h["zero_bar_batches"]:
@@ -2351,10 +2555,15 @@ def _status_reporter() -> None:
             f"<b>Total:</b> {s['batches_run']} batches  |  {s.get('accepted_bars', 0):,} accepted  |  "
             f"{s.get('fact_inserted', s['bars_inserted']):,} Fact rows  |  {s['errors']} errors\n"
             f"DB queue: {s['queue_depth']}  |  RAM buffer: {overflow}  |  Offline spool: {spool_count}\n"
-            f"Oldest not updated: {max_age_h:.1f}h  |  Late pairs: {stale_count}  |  Missing pairs: {n_miss_active}\n"
+            f"Oldest active: {max_age_h:.1f}h  |  Late active: {stale_count}  |  Source lag: {source_lag_count}  |  Missing: {n_miss_active}\n"
+            f"Closed-market stale: {closed_stale_count}\n"
             f"{'-' * 30}\n"
-            f"<b>Last 1 hour:</b> {h['batches']} batches  |  {accepted_h:,} accepted  |  {fact_h:,} Fact rows\n"
+            f"<b>Last 1 hour:</b> {h['batches']} batches  |  {accepted_h:,} accepted  |  {staging_h:,} staging  |  {fact_h:,} Fact rows\n"
             f"  (empty batches: {h['zero_bar_batches']}  |  backlog peak: {h['backlog_peak']} pairs)\n"
+            f"Accepted by pair: {acc_sym_line}\n"
+            f"Accepted by TF:  {acc_tf_line}\n"
+            f"Staging by pair: {stage_sym_line}\n"
+            f"Staging by TF:  {stage_tf_line}\n"
             f"Fact by pair: {sym_line}\n"
             f"Fact by TF:  {tf_line}\n"
             f"{'-' * 30}\n"
@@ -2437,6 +2646,11 @@ def main() -> None:
             sys.exit(1)
         logger.info("[LOCK] ws_live_runtime lock acquired successfully after handoff.")
     atexit.register(_release_task_lock, "ws_live_runtime")
+
+    if not _acquire_local_runtime_lock():
+        _release_task_lock("ws_live_runtime")
+        sys.exit(1)
+    atexit.register(_release_local_runtime_lock)
 
     ws_lock_stop = threading.Event()
 
