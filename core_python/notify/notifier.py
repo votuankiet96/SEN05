@@ -70,7 +70,10 @@ class Notifier:
             "parse_mode": "HTML",
             "disable_web_page_preview": True,
         }
-        response = requests.post(url, json=payload, timeout=15)
+        try:
+            response = requests.post(url, json=payload, timeout=15)
+        except requests.exceptions.RequestException as exc:
+            return NotifyResult("telegram", False, f"network error: {exc}")
         if response.ok:
             return NotifyResult("telegram", True, "sent")
         return NotifyResult("telegram", False, f"HTTP {response.status_code}: {response.text[:200]}")
@@ -81,7 +84,10 @@ class Notifier:
         # Strip HTML tags for Discord (plain text)
         import re
         plain = re.sub(r"<[^>]+>", "", message)
-        response = requests.post(self.discord_webhook, json={"content": plain[:2000]}, timeout=15)
+        try:
+            response = requests.post(self.discord_webhook, json={"content": plain[:2000]}, timeout=15)
+        except requests.exceptions.RequestException as exc:
+            return NotifyResult("discord", False, f"network error: {exc}")
         if response.status_code in {200, 204}:
             return NotifyResult("discord", True, "sent")
         return NotifyResult("discord", False, f"HTTP {response.status_code}: {response.text[:200]}")

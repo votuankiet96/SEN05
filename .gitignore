@@ -73,6 +73,13 @@ cache/
 # Backtest / scanner output CSV (kết quả chạy, không phải source)
 output/
 
+# Notify runtime state — tự tạo lại bằng --warm-up, không commit
+core_python/notify/state.json
+core_python/notify/state.json.tmp
+
+# Signal CSV exports — runtime output, không phải source
+core_python/exports/*.csv
+
 # Generated HTML charts (output từ ma_chart.py, combo_chart, v.v.)
 *.html
 # Exception: static source HTML files (not generated)
