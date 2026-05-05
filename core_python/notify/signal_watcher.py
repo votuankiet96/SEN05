@@ -145,7 +145,19 @@ def _drop_open_bar(df: pd.DataFrame, tf: str) -> pd.DataFrame:
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="24/7 signal watcher — Telegram notifier.")
+    parser = argparse.ArgumentParser(
+        description="24/7 signal watcher — Telegram notifier.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  # Use scan_config.py defaults (Indice, H1-H4)\n"
+            "  python -m core_python.notify.signal_watcher\n\n"
+            "  # Override: specific symbols and TFs\n"
+            "  python -m core_python.notify.signal_watcher --symbols US30,GOLD --tf H1,H4\n\n"
+            "  # Dry-run one-shot check\n"
+            "  python -m core_python.notify.signal_watcher --dry-run --once"
+        ),
+    )
     parser.add_argument("--backend", default="auto", choices=["auto", "telegram", "discord", "none"])
     parser.add_argument("--dry-run", action="store_true", help="Print messages instead of sending.")
     parser.add_argument("--once", action="store_true", help="Run one check per group and exit.")
@@ -154,7 +166,37 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--bars", type=int, default=config.N_BARS)
     parser.add_argument("--include-open-bar", action="store_true")
     parser.add_argument("--no-export", action="store_true", help="Skip CSV export on signal.")
+    parser.add_argument(
+        "--symbols",
+        default=None,
+        help="Comma-separated symbols to scan. Overrides scan_config.py groups.",
+    )
+    parser.add_argument(
+        "--tf",
+        default=None,
+        help="Comma-separated timeframes to scan. Overrides scan_config.py groups.",
+    )
+    parser.add_argument("--strategy", default="combo", choices=["combo", "ma_cross"])
     return parser.parse_args()
+
+
+def _build_groups_from_args(args: argparse.Namespace) -> list[dict]:
+    """Build scan groups from CLI --symbols and --tf overrides."""
+    from core_python.notify.scan_config import TF_POLL_SECONDS
+    symbols = [s.strip().upper() for s in args.symbols.replace(";", ",").split(",") if s.strip()]
+    tfs = [t.strip().upper() for t in args.tf.replace(";", ",").split(",") if t.strip()]
+    groups = []
+    for tf in tfs:
+        groups.append({
+            "strategy": args.strategy,
+            "symbols": symbols,
+            "tf": tf,
+            "bars": args.bars,
+            "poll_seconds": TF_POLL_SECONDS.get(tf, 300),
+            "chat_id": None,
+            "overrides": {},
+        })
+    return groups
 
 
 def main() -> int:
@@ -164,15 +206,23 @@ def main() -> int:
     except AttributeError:
         pass
 
-    from core_python.notify.scan_config import SCAN_GROUPS
-
     args = _parse_args()
+
+    # Build scan groups: CLI override or scan_config defaults
+    if args.symbols and args.tf:
+        scan_groups = _build_groups_from_args(args)
+        mode_desc = f"CLI override — symbols: {args.symbols} | TF: {args.tf}"
+    else:
+        from core_python.notify.scan_config import SCAN_GROUPS
+        scan_groups = SCAN_GROUPS
+        mode_desc = "scan_config.py defaults"
+
     state = SignalState(args.state_path)
     notifier = Notifier(backend=args.backend, dry_run=args.dry_run)
     closed_only = not args.include_open_bar
 
-    n_groups = len(SCAN_GROUPS)
-    total_slots = sum(len(g["symbols"]) for g in SCAN_GROUPS)
+    n_groups = len(scan_groups)
+    total_slots = sum(len(g["symbols"]) for g in scan_groups)
     startup_msg = (
         f"🚀 <b>SEN05 Watcher started</b>\n"
         f"{n_groups} groups · {total_slots} symbol-TF slots"
@@ -180,12 +230,13 @@ def main() -> int:
     )
     notifier.send(startup_msg)
     print(startup_msg.replace("<b>", "").replace("</b>", ""))
+    print(f"Mode: {mode_desc}")
 
     last_run: dict[int, float] = {}
 
     while True:
         now = time.monotonic()
-        for i, group in enumerate(SCAN_GROUPS):
+        for i, group in enumerate(scan_groups):
             if now - last_run.get(i, 0.0) < group["poll_seconds"]:
                 continue
             try:
