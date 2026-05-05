@@ -238,6 +238,59 @@ th {
   color: var(--muted);
 }
 
+.export-dialog {
+  border: 1px solid var(--grid);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  padding: 0;
+  min-width: 280px;
+}
+
+.export-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--grid);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.modal-x {
+  min-width: auto;
+  padding: 0 6px;
+  background: transparent;
+  border-color: transparent;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.modal-cols {
+  padding: 12px 14px;
+  display: grid;
+  gap: 6px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--grid);
+  justify-content: flex-end;
+}
+
+.modal-footer button:last-child {
+  background: var(--panel-2);
+  border-color: var(--grid);
+}
+
 @media (max-width: 900px) {
   .topbar {
     align-items: stretch;

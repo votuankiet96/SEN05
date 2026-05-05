@@ -62,6 +62,47 @@ def create_app() -> Flask:
             }
         )
 
+    @app.route("/api/export")
+    def api_export():
+        import pandas as pd
+        from flask import Response as _Response
+        try:
+            strategy_key = request.args.get("strategy", "combo")
+            spec = get_strategy(strategy_key)
+            symbol = request.args.get("symbol", config.DEFAULT_SYMBOL).upper()
+            tf = request.args.get("tf", config.DEFAULT_TF).upper()
+            bars = _to_int(request.args.get("bars"), config.N_BARS, 50, 20000)
+            overrides = _strategy_overrides(request.args.to_dict(), spec.param_fields)
+            params = spec.normalize_params(overrides, symbol)
+
+            raw = load(symbol, tf, bars)
+            enriched = spec.add_levels(
+                spec.detect_signals(spec.add_indicators(raw, params), symbol=symbol, params=params),
+                params,
+                symbol,
+            )
+            signals = enriched[enriched["signal"].fillna(0).astype(int).ne(0)].copy()
+
+            requested = [c.strip() for c in request.args.get("cols", "").split(",") if c.strip()]
+            out: dict = {}
+            for col in requested:
+                if col == "bartime":
+                    out["bartime"] = pd.to_datetime(signals["bartime"]).dt.strftime("%Y-%m-%d %H:%M")
+                elif col == "side":
+                    out["side"] = signals["signal"].map({1: "BUY", -1: "SELL"})
+                elif col in signals.columns:
+                    out[col] = signals[col].values
+
+            csv_data = pd.DataFrame(out).to_csv(index=False)
+            filename = f"{strategy_key}_{symbol}_{tf}_signals.csv"
+            return _Response(
+                csv_data,
+                mimetype="text/csv",
+                headers={"Content-Disposition": f"attachment; filename={filename}"},
+            )
+        except Exception as exc:
+            return jsonify({"error": str(exc)}), 500
+
     @app.route("/api/scan")
     def api_scan():
         try:

@@ -24,6 +24,12 @@ const el = {
   statLast: document.getElementById("stat-last"),
   signalsHead: document.getElementById("signals-head"),
   signalsBody: document.getElementById("signals-body"),
+  exportBtn: document.getElementById("export-btn"),
+  exportModal: document.getElementById("export-modal"),
+  exportCols: document.getElementById("export-cols"),
+  modalClose: document.getElementById("modal-close"),
+  modalCancel: document.getElementById("modal-cancel"),
+  modalExport: document.getElementById("modal-export"),
 };
 
 const chartTheme = {
@@ -65,6 +71,42 @@ const COLUMN_LABELS = {
 };
 
 const TEXT_COLS = new Set(["bartime", "side", "reason"]);
+
+const EXPORT_COLUMNS = {
+  combo: [
+    { key: "bartime", label: "Bar Time", checked: true },
+    { key: "side", label: "Side", checked: true },
+    { key: "signal_reason", label: "Reason", checked: true },
+    { key: "entry_price", label: "Entry", checked: true },
+    { key: "sl_price", label: "SL", checked: true },
+    { key: "tp_price", label: "TP", checked: true },
+    { key: "risk_reward", label: "R:R", checked: true },
+    { key: "atr", label: "ATR", checked: false },
+    { key: "open", label: "Open", checked: false },
+    { key: "high", label: "High", checked: false },
+    { key: "low", label: "Low", checked: false },
+    { key: "close", label: "Close", checked: false },
+    { key: "ma", label: "MA", checked: false },
+    { key: "macd_h", label: "MACD-H", checked: false },
+  ],
+  ma_cross: [
+    { key: "bartime", label: "Bar Time", checked: true },
+    { key: "side", label: "Side", checked: true },
+    { key: "signal_reason", label: "Reason", checked: true },
+    { key: "entry_price", label: "Entry", checked: true },
+    { key: "sl_price", label: "SL", checked: true },
+    { key: "tp_price", label: "TP", checked: true },
+    { key: "risk_reward", label: "R:R", checked: true },
+    { key: "atr", label: "ATR", checked: false },
+    { key: "open", label: "Open", checked: false },
+    { key: "high", label: "High", checked: false },
+    { key: "low", label: "Low", checked: false },
+    { key: "close", label: "Close", checked: false },
+    { key: "fast_ma", label: "Fast MA", checked: false },
+    { key: "slow_ma", label: "Slow MA", checked: false },
+    { key: "ma_gap_atr", label: "Gap/ATR", checked: false },
+  ],
+};
 
 function fmtNum(value) {
   if (value == null || value === "") return "";
@@ -144,6 +186,10 @@ async function init() {
   el.tf.addEventListener("change", loadScan);
   el.bars.addEventListener("change", loadScan);
   el.refresh.addEventListener("click", loadScan);
+  el.exportBtn.addEventListener("click", openExportModal);
+  el.modalClose.addEventListener("click", () => el.exportModal.close());
+  el.modalCancel.addEventListener("click", () => el.exportModal.close());
+  el.modalExport.addEventListener("click", doExport);
 
   renderParamControls();
   updateXDefault();
@@ -408,6 +454,39 @@ function renderSignalsTable(rows) {
     });
     el.signalsBody.appendChild(tr);
   });
+}
+
+function openExportModal() {
+  const cols = EXPORT_COLUMNS[el.strategy.value] || EXPORT_COLUMNS.combo;
+  el.exportCols.replaceChildren();
+  cols.forEach((col) => {
+    const label = document.createElement("label");
+    label.className = "check-row";
+    label.textContent = col.label;
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.dataset.col = col.key;
+    input.checked = col.checked;
+    label.appendChild(input);
+    el.exportCols.appendChild(label);
+  });
+  el.exportModal.showModal();
+}
+
+function doExport() {
+  const cols = [...el.exportCols.querySelectorAll("input[type=checkbox]:checked")]
+    .map((cb) => cb.dataset.col)
+    .join(",");
+  const query = new URLSearchParams({
+    strategy: el.strategy.value,
+    symbol: el.symbol.value,
+    tf: el.tf.value,
+    bars: el.bars.value,
+    cols,
+    ...collectParams(),
+  });
+  window.open(`/api/export?${query.toString()}`, "_blank");
+  el.exportModal.close();
 }
 
 function lineStyle(style) {

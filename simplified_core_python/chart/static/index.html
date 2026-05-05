@@ -34,6 +34,7 @@
           <input id="bars" type="number" min="50" max="20000" step="50" />
         </label>
         <button id="refresh" type="button">Refresh</button>
+        <button id="export-btn" type="button">Export CSV</button>
       </div>
     </header>
 
@@ -64,6 +65,17 @@
       </section>
     </main>
 
+    <dialog id="export-modal" class="export-dialog">
+      <div class="modal-header">
+        <span>Export Columns</span>
+        <button id="modal-close" class="modal-x" type="button">✕</button>
+      </div>
+      <div id="export-cols" class="modal-cols"></div>
+      <div class="modal-footer">
+        <button id="modal-export" type="button">Download CSV</button>
+        <button id="modal-cancel" type="button">Cancel</button>
+      </div>
+    </dialog>
     <script src="/assets/lightweight-charts.js"></script>
     <script src="/static/app.js"></script>
   </body>
