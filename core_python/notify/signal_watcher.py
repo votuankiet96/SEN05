@@ -161,6 +161,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--backend", default="auto", choices=["auto", "telegram", "discord", "none"])
     parser.add_argument("--dry-run", action="store_true", help="Print messages instead of sending.")
     parser.add_argument("--once", action="store_true", help="Run one check per group and exit.")
+    parser.add_argument(
+        "--warm-up",
+        action="store_true",
+        help="Mark all current signals as seen without sending. Run once before production start.",
+    )
     parser.add_argument("--state-path", default=None)
     parser.add_argument("--output-dir", default=None)
     parser.add_argument("--bars", type=int, default=config.N_BARS)
@@ -220,6 +225,33 @@ def main() -> int:
     state = SignalState(args.state_path)
     notifier = Notifier(backend=args.backend, dry_run=args.dry_run)
     closed_only = not args.include_open_bar
+
+    if args.warm_up:
+        print("Warm-up: marking all current signals as seen (no Telegram send)...")
+        total = 0
+        from core_python.notify.state import signal_key as _sk
+        for group in scan_groups:
+            for symbol in group["symbols"]:
+                try:
+                    frame, _spec, _params = run_strategy_frame(
+                        strategy=group["strategy"],
+                        symbol=symbol,
+                        tf=group["tf"],
+                        bars=group.get("bars", args.bars),
+                        overrides=group.get("overrides") or {},
+                        closed_only=closed_only,
+                    )
+                    if frame.empty or "signal" not in frame.columns:
+                        continue
+                    for _, row in frame[frame["signal"].fillna(0).astype(int).ne(0)].iterrows():
+                        key = _sk(group["strategy"], symbol, group["tf"], row["bartime"], int(row["signal"]))
+                        if not state.has(key):
+                            state.add(key)
+                            total += 1
+                except Exception as exc:
+                    print(f"  {symbol} {group['tf']}: skip — {exc}")
+        print(f"Warm-up complete: {total} signals marked as seen. Now run without --warm-up.")
+        return 0
 
     n_groups = len(scan_groups)
     total_slots = sum(len(g["symbols"]) for g in scan_groups)
