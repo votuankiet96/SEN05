@@ -134,9 +134,19 @@ button {
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(90px, 1fr));
+  grid-template-columns: repeat(4, minmax(90px, 1fr)) auto;
   gap: 8px;
   margin-bottom: 10px;
+}
+
+.stat-note {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: default;
+  white-space: nowrap;
 }
 
 .stats div {
