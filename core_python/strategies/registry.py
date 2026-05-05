@@ -1,4 +1,4 @@
-"""Strategy registry for the simplified chart server."""
+﻿"""Strategy registry for the simplified chart server."""
 
 from __future__ import annotations
 
@@ -7,15 +7,15 @@ from typing import Any, Callable
 
 import pandas as pd
 
-from simplified_core_python.strategies.combo import config as combo_config
-from simplified_core_python.strategies.combo.levels import add_combo_levels
-from simplified_core_python.strategies.combo.signals import (
+from core_python.strategies.combo import config as combo_config
+from core_python.strategies.combo.levels import add_combo_levels
+from core_python.strategies.combo.signals import (
     add_combo_indicators,
     detect_combo_signals,
 )
-from simplified_core_python.strategies.ma_cross import config as ma_cross_config
-from simplified_core_python.strategies.ma_cross.levels import add_ma_cross_levels
-from simplified_core_python.strategies.ma_cross.signals import (
+from core_python.strategies.ma_cross import config as ma_cross_config
+from core_python.strategies.ma_cross.levels import add_ma_cross_levels
+from core_python.strategies.ma_cross.signals import (
     add_ma_cross_indicators,
     detect_ma_cross_signals,
 )

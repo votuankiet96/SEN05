@@ -1,11 +1,11 @@
-"""Combo indicators and signal detection for DataFrame inputs."""
+﻿"""Combo indicators and signal detection for DataFrame inputs."""
 
 from __future__ import annotations
 
 import pandas as pd
 
-from simplified_core_python.indicators.core import atr, macd_hist, sma, safe_ratio
-from simplified_core_python.strategies.combo.config import (
+from core_python.indicators.core import atr, macd_hist, sma, safe_ratio
+from core_python.strategies.combo.config import (
     get_indicator_params,
 )
 

@@ -1,4 +1,4 @@
-"""Flask server for the simplified Lightweight Charts strategy scanner."""
+﻿"""Flask server for the simplified Lightweight Charts strategy scanner."""
 
 from __future__ import annotations
 
@@ -11,10 +11,10 @@ from flask import Flask, jsonify, request, send_from_directory
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from simplified_core_python import config
-from simplified_core_python.chart.payload import build_chart_payload
-from simplified_core_python.data.loader import load
-from simplified_core_python.strategies.registry import STRATEGIES, get_strategy
+from core_python import config
+from core_python.chart.payload import build_chart_payload
+from core_python.data.loader import load
+from core_python.strategies.registry import STRATEGIES, get_strategy
 
 
 ROOT = Path(__file__).resolve().parents[2]

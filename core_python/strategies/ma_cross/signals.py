@@ -1,11 +1,11 @@
-"""MA Cross indicators and signal detection for DataFrame inputs."""
+﻿"""MA Cross indicators and signal detection for DataFrame inputs."""
 
 from __future__ import annotations
 
 import pandas as pd
 
-from simplified_core_python.indicators.core import atr, ma, safe_ratio
-from simplified_core_python.strategies.ma_cross.config import (
+from core_python.indicators.core import atr, ma, safe_ratio
+from core_python.strategies.ma_cross.config import (
     SESSION_HOURS_UTC,
     get_indicator_params,
 )

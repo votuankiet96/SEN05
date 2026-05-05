@@ -1,11 +1,11 @@
-"""SQL Server OHLCV loader for the simplified dashboard."""
+﻿"""SQL Server OHLCV loader for the simplified dashboard."""
 
 from __future__ import annotations
 
 import pandas as pd
 
 from modules.db_connector import get_connection
-from simplified_core_python.config import get_symbol
+from core_python.config import get_symbol
 
 
 OHLCV_COLUMNS = ["bartime", "open", "high", "low", "close", "volume"]

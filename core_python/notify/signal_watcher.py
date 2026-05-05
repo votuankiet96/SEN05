@@ -1,8 +1,9 @@
-"""DB-backed signal export and notification watcher.
+"""24/7 signal watcher: polls DB bars, detects signals, sends Telegram alerts.
 
-This worker is intentionally read-only with respect to market data. It reads
-validated bars from DWH.Fact_OHLCV through simplified_core_python.data.loader,
-computes strategy signals, exports signal CSVs, and sends alerts.
+Run modes:
+  python -m core_python.notify.signal_watcher              # 24/7, reads scan_config.py
+  python -m core_python.notify.signal_watcher --once       # one-shot, then exit
+  python -m core_python.notify.signal_watcher --dry-run    # print messages, no send
 """
 
 from __future__ import annotations
@@ -14,13 +15,13 @@ from typing import Any
 
 import pandas as pd
 
-from simplified_core_python import config
-from simplified_core_python.data.loader import load
-from simplified_core_python.export.to_csv import export_signals
-from simplified_core_python.notify.formatter import format_signal_message
-from simplified_core_python.notify.notifier import Notifier
-from simplified_core_python.notify.state import SignalState, signal_key
-from simplified_core_python.strategies.registry import get_strategy
+from core_python import config
+from core_python.data.loader import load
+from core_python.export.to_csv import export_signals
+from core_python.notify.formatter import format_signal_message
+from core_python.notify.notifier import Notifier
+from core_python.notify.state import SignalState, signal_key
+from core_python.strategies.registry import get_strategy
 
 
 def run_strategy_frame(
@@ -44,14 +45,23 @@ def run_strategy_frame(
     return enriched, spec, params
 
 
-def latest_signal_row(df: pd.DataFrame) -> pd.Series | None:
-    """Return the latest non-zero signal row, if any."""
+def all_new_signal_rows(
+    df: pd.DataFrame,
+    state: SignalState,
+    strategy: str,
+    symbol: str,
+    tf: str,
+) -> list[pd.Series]:
+    """Return all unseen non-zero signal rows in chronological order."""
     if df.empty or "signal" not in df:
-        return None
+        return []
     signals = df[df["signal"].fillna(0).astype(int).ne(0)]
-    if signals.empty:
-        return None
-    return signals.iloc[-1]
+    result = []
+    for _, row in signals.iterrows():
+        key = signal_key(strategy, symbol, tf, row["bartime"], int(row["signal"]))
+        if not state.has(key):
+            result.append(row)
+    return result
 
 
 def check_once(
@@ -66,43 +76,51 @@ def check_once(
     overrides: dict[str, Any] | None = None,
     closed_only: bool = True,
     export_on_signal: bool = True,
+    chat_id: str | None = None,
 ) -> list[str]:
-    """Check symbols once, export new signal CSVs, notify, and return event summaries."""
+    """Check all symbols once; notify every new signal and return event summaries."""
     events: list[str] = []
     for symbol in symbols:
-        frame, spec, _params = run_strategy_frame(
-            strategy=strategy,
-            symbol=symbol,
-            tf=tf,
-            bars=bars,
-            overrides=overrides,
-            closed_only=closed_only,
-        )
-        row = latest_signal_row(frame)
-        if row is None:
-            events.append(f"{symbol} {tf}: no signal")
+        try:
+            frame, spec, _params = run_strategy_frame(
+                strategy=strategy,
+                symbol=symbol,
+                tf=tf,
+                bars=bars,
+                overrides=overrides,
+                closed_only=closed_only,
+            )
+        except Exception as exc:
+            events.append(f"{symbol} {tf}: load error — {exc}")
             continue
 
-        key = signal_key(strategy, symbol, tf, row["bartime"], int(row["signal"]))
-        if state.has(key):
-            events.append(f"{symbol} {tf}: duplicate signal skipped")
+        new_rows = all_new_signal_rows(frame, state, strategy, symbol, tf)
+        if not new_rows:
+            events.append(f"{symbol} {tf}: no new signal")
             continue
 
-        export_path = None
-        if export_on_signal:
-            export_path = export_signals(frame, symbol=symbol, strategy=strategy, output_dir=output_dir)
+        for row in new_rows:
+            key = signal_key(strategy, symbol, tf, row["bartime"], int(row["signal"]))
+            export_path = None
+            if export_on_signal:
+                try:
+                    export_path = export_signals(
+                        frame, symbol=symbol, strategy=strategy, output_dir=output_dir
+                    )
+                except Exception:
+                    pass
 
-        message = format_signal_message(row, strategy_label=spec.label, symbol=symbol, tf=tf)
-        if export_path:
-            message = f"{message}\n\nCSV: {export_path}"
-        result = notifier.send(message)
-        if result.sent and not notifier.dry_run:
-            state.add(key)
-            events.append(f"{symbol} {tf}: alerted via {result.backend}")
-        elif result.sent:
-            events.append(f"{symbol} {tf}: dry-run alert rendered")
-        else:
-            events.append(f"{symbol} {tf}: notify failed ({result.detail})")
+            message = format_signal_message(row, strategy_label=spec.label, symbol=symbol, tf=tf)
+            result = notifier.send(message, chat_id=chat_id)
+
+            if result.sent and not notifier.dry_run:
+                state.add(key)
+                events.append(f"{symbol} {tf}: ✓ alerted via {result.backend}")
+            elif result.sent:
+                events.append(f"{symbol} {tf}: dry-run OK")
+            else:
+                events.append(f"{symbol} {tf}: FAILED — {result.detail}")
+
     return events
 
 
@@ -126,72 +144,74 @@ def _drop_open_bar(df: pd.DataFrame, tf: str) -> pd.DataFrame:
     return df.loc[bar_times <= cutoff].reset_index(drop=True)
 
 
-def _parse_symbols(value: str) -> list[str]:
-    symbols = [part.strip().upper() for part in value.replace(";", ",").split(",") if part.strip()]
-    if not symbols:
-        raise ValueError("At least one symbol is required")
-    return symbols
-
-
-def _parse_overrides(values: list[str]) -> dict[str, Any]:
-    overrides: dict[str, Any] = {}
-    for value in values:
-        if "=" not in value:
-            raise ValueError(f"Invalid --param '{value}'. Use KEY=VALUE.")
-        key, raw = value.split("=", 1)
-        overrides[key.strip().upper()] = raw.strip()
-    return overrides
-
-
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Export and notify new strategy signals from DB data.")
-    parser.add_argument("--strategy", default="combo", choices=["combo", "ma_cross"])
-    parser.add_argument("--symbols", default=config.DEFAULT_SYMBOL, help="Comma-separated symbols.")
-    parser.add_argument("--tf", default=config.DEFAULT_TF)
-    parser.add_argument("--bars", type=int, default=config.N_BARS)
-    parser.add_argument("--poll-seconds", type=int, default=60)
-    parser.add_argument("--once", action="store_true", help="Run one check and exit.")
-    parser.add_argument("--state-path", default=None)
-    parser.add_argument("--output-dir", default=None)
+    parser = argparse.ArgumentParser(description="24/7 signal watcher — Telegram notifier.")
     parser.add_argument("--backend", default="auto", choices=["auto", "telegram", "discord", "none"])
     parser.add_argument("--dry-run", action="store_true", help="Print messages instead of sending.")
-    parser.add_argument("--include-open-bar", action="store_true", help="Allow latest not-yet-closed bar.")
-    parser.add_argument("--no-export", action="store_true", help="Do not export CSV on new signal.")
-    parser.add_argument(
-        "--param",
-        action="append",
-        default=[],
-        help="Strategy parameter override as KEY=VALUE. Can be repeated.",
-    )
+    parser.add_argument("--once", action="store_true", help="Run one check per group and exit.")
+    parser.add_argument("--state-path", default=None)
+    parser.add_argument("--output-dir", default=None)
+    parser.add_argument("--bars", type=int, default=config.N_BARS)
+    parser.add_argument("--include-open-bar", action="store_true")
+    parser.add_argument("--no-export", action="store_true", help="Skip CSV export on signal.")
     return parser.parse_args()
 
 
 def main() -> int:
+    import sys
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+    except AttributeError:
+        pass
+
+    from core_python.notify.scan_config import SCAN_GROUPS
+
     args = _parse_args()
-    symbols = _parse_symbols(args.symbols)
-    overrides = _parse_overrides(args.param)
     state = SignalState(args.state_path)
     notifier = Notifier(backend=args.backend, dry_run=args.dry_run)
     closed_only = not args.include_open_bar
 
+    n_groups = len(SCAN_GROUPS)
+    total_slots = sum(len(g["symbols"]) for g in SCAN_GROUPS)
+    startup_msg = (
+        f"🚀 <b>SEN05 Watcher started</b>\n"
+        f"{n_groups} groups · {total_slots} symbol-TF slots"
+        + (" · DRY RUN" if args.dry_run else "")
+    )
+    notifier.send(startup_msg)
+    print(startup_msg.replace("<b>", "").replace("</b>", ""))
+
+    last_run: dict[int, float] = {}
+
     while True:
-        events = check_once(
-            strategy=args.strategy,
-            symbols=symbols,
-            tf=args.tf,
-            bars=args.bars,
-            state=state,
-            notifier=notifier,
-            output_dir=args.output_dir,
-            overrides=overrides,
-            closed_only=closed_only,
-            export_on_signal=not args.no_export,
-        )
-        for event in events:
-            print(event)
+        now = time.monotonic()
+        for i, group in enumerate(SCAN_GROUPS):
+            if now - last_run.get(i, 0.0) < group["poll_seconds"]:
+                continue
+            try:
+                events = check_once(
+                    strategy=group["strategy"],
+                    symbols=group["symbols"],
+                    tf=group["tf"],
+                    bars=group.get("bars", args.bars),
+                    state=state,
+                    notifier=notifier,
+                    output_dir=args.output_dir,
+                    overrides=group.get("overrides") or {},
+                    closed_only=closed_only,
+                    export_on_signal=not args.no_export,
+                    chat_id=group.get("chat_id"),
+                )
+            except Exception as exc:
+                events = [f"[ERROR] group {i} {group['tf']}: {exc}"]
+            ts = pd.Timestamp.utcnow().strftime("%H:%M:%S")
+            for event in events:
+                print(f"[{ts}] {event}")
+            last_run[i] = time.monotonic()
+
         if args.once:
             return 0
-        time.sleep(max(5, int(args.poll_seconds)))
+        time.sleep(5)
 
 
 if __name__ == "__main__":

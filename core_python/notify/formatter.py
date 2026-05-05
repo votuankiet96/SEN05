@@ -1,4 +1,4 @@
-"""Format signal notification messages."""
+"""Format signal notification messages for Telegram (HTML parse mode)."""
 
 from __future__ import annotations
 
@@ -12,33 +12,28 @@ def format_signal_message(
     symbol: str,
     tf: str,
 ) -> str:
-    """Return a concise signal message suitable for Telegram/Discord."""
+    """Return an HTML-formatted signal message for Telegram."""
     direction = "BUY" if int(row["signal"]) == 1 else "SELL"
-    signal_time = pd.Timestamp(row["bartime"]).strftime("%Y-%m-%d %H:%M:%S")
-    entry_time = (
-        pd.Timestamp(row["entry_time"]).strftime("%Y-%m-%d %H:%M:%S")
-        if pd.notna(row.get("entry_time"))
-        else "-"
-    )
+    icon = "🟢" if direction == "BUY" else "🔴"
+    signal_time = pd.Timestamp(row["bartime"]).strftime("%Y-%m-%d %H:%M")
 
     lines = [
-        f"[SIGNAL] {strategy_label} {symbol.upper()} {tf.upper()}",
+        f"{icon} <b>{direction}</b> — {strategy_label} <b>{symbol.upper()}</b> {tf.upper()}",
         "",
-        f"Time: {signal_time} UTC",
-        f"Signal: {direction}",
-        f"ATR: {_fmt(row.get('atr'))}",
-        "",
-        f"Entry time: {entry_time} UTC",
-        f"Entry: {_fmt(row.get('entry_price'))}",
-        f"SL: {_fmt(row.get('sl_price'))}",
-        f"TP: {_fmt(row.get('tp_price'))}",
+        f"⏰ {signal_time} UTC",
+        f"📍 Entry: <code>{_fmt(row.get('entry_price'))}</code>",
+        f"🛑 SL:    <code>{_fmt(row.get('sl_price'))}</code>",
+        f"🎯 TP:    <code>{_fmt(row.get('tp_price'))}</code>",
     ]
     rr = row.get("risk_reward")
     if pd.notna(rr):
-        lines.append(f"RR: {_fmt(rr)}")
+        lines.append(f"⚖️ R:R:   <code>{_fmt(rr, 2)}</code>")
+    atr = row.get("atr")
+    if pd.notna(atr):
+        lines.append(f"📊 ATR:   <code>{_fmt(atr)}</code>")
     reason = str(row.get("signal_reason") or "").strip()
     if reason:
-        lines.extend(["", f"Reason: {reason}"])
+        lines.extend(["", f"💬 {reason}"])
     return "\n".join(lines)
 
 
@@ -46,4 +41,3 @@ def _fmt(value: object, digits: int = 5) -> str:
     if value is None or pd.isna(value):
         return "-"
     return f"{float(value):.{digits}f}".rstrip("0").rstrip(".")
-

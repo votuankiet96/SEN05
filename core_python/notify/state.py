@@ -6,28 +6,46 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
+
 
 DEFAULT_STATE_PATH = Path(__file__).resolve().parent / "state.json"
+TTL_DAYS = 30
 
 
 class SignalState:
-    """Persist sent signal keys in a local JSON file."""
+    """Persist sent signal keys in a local JSON file with TTL pruning."""
 
     def __init__(self, path: str | Path | None = None) -> None:
         self.path = Path(path) if path else DEFAULT_STATE_PATH
-        self.sent: set[str] = set()
+        self.sent: dict[str, str] = {}  # key → ISO timestamp of when it was sent
         self._load()
 
     def _load(self) -> None:
         if not self.path.exists():
-            self.sent = set()
+            self.sent = {}
             return
         try:
             data: dict[str, Any] = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            self.sent = set()
+            self.sent = {}
             return
-        self.sent = {str(item) for item in data.get("sent", [])}
+        raw_sent = data.get("sent", [])
+        if isinstance(raw_sent, list):
+            # migrate old list format → dict with current timestamp
+            now_str = pd.Timestamp.utcnow().isoformat()
+            self.sent = {str(k): now_str for k in raw_sent}
+        else:
+            self.sent = {str(k): str(v) for k, v in raw_sent.items()}
+        self._prune()
+
+    def _prune(self) -> None:
+        """Drop keys older than TTL_DAYS to keep state.json bounded."""
+        cutoff = pd.Timestamp.utcnow() - pd.Timedelta(days=TTL_DAYS)
+        self.sent = {
+            k: v for k, v in self.sent.items()
+            if _safe_ts(v) > cutoff
+        }
 
     def has(self, key: str) -> bool:
         """Return True if key was already recorded."""
@@ -35,15 +53,21 @@ class SignalState:
 
     def add(self, key: str) -> None:
         """Record a sent key and persist state atomically."""
-        self.sent.add(key)
+        self.sent[key] = pd.Timestamp.utcnow().isoformat()
         self.path.parent.mkdir(parents=True, exist_ok=True)
         tmp = self.path.with_suffix(self.path.suffix + ".tmp")
-        payload = {"sent": sorted(self.sent)}
+        payload = {"sent": self.sent}
         tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
         tmp.replace(self.path)
+
+
+def _safe_ts(value: str) -> pd.Timestamp:
+    try:
+        return pd.Timestamp(value)
+    except Exception:
+        return pd.Timestamp.utcnow()
 
 
 def signal_key(strategy: str, symbol: str, tf: str, bartime: object, signal: int) -> str:
     """Build a stable duplicate-prevention key for a signal row."""
     return f"{strategy}|{symbol.upper()}|{tf.upper()}|{bartime}|{int(signal)}"
-
