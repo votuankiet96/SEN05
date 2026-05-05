@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SEN05 Strategy Signals</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="title">SEN05 Signals</div>
+        <div id="meta" class="meta">Loading</div>
+      </div>
+      <div class="controls primary-controls">
+        <label>
+          Strategy
+          <select id="strategy"></select>
+        </label>
+        <label>
+          Asset Type
+          <select id="asset-type"></select>
+        </label>
+        <label>
+          Symbol
+          <select id="symbol"></select>
+        </label>
+        <label>
+          TF
+          <select id="tf"></select>
+        </label>
+        <label>
+          Bars
+          <input id="bars" type="number" min="50" max="20000" step="50" />
+        </label>
+        <button id="refresh" type="button">Refresh</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar">
+        <div class="panel-title">Parameters</div>
+        <div id="params" class="params-grid"></div>
+      </aside>
+
+      <section class="workspace">
+        <div class="stats">
+          <div><span>Total</span><strong id="stat-total">0</strong></div>
+          <div><span>Buy</span><strong id="stat-buy">0</strong></div>
+          <div><span>Sell</span><strong id="stat-sell">0</strong></div>
+          <div><span>Last</span><strong id="stat-last">-</strong></div>
+        </div>
+        <div id="error" class="error" hidden></div>
+        <div id="price-chart" class="chart price-chart">
+          <div id="chart-legend" class="chart-legend"></div>
+        </div>
+        <div id="panel-charts" class="panel-charts"></div>
+        <div class="table-wrap">
+          <table>
+            <thead id="signals-head"></thead>
+            <tbody id="signals-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="/assets/lightweight-charts.js"></script>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
+

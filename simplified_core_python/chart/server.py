@@ -51,7 +51,10 @@ def create_app() -> Flask:
             {
                 "strategies": strategies,
                 "defaultStrategy": "combo",
-                "symbols": config.symbol_names(),
+                "symbols": [
+                    {"name": sym, "asset_type": meta["asset_type"], "x": meta["x"]}
+                    for sym, meta in config.SYMBOLS.items()
+                ],
                 "timeframes": config.timeframe_codes(),
                 "defaultSymbol": config.DEFAULT_SYMBOL,
                 "defaultTf": config.DEFAULT_TF,

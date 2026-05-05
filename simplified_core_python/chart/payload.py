@@ -93,7 +93,7 @@ def _markers(signals: pd.DataFrame) -> list[dict[str, Any]]:
                 "text": "BUY" if is_buy else "SELL",
             }
         )
-        if pd.notna(row.get("entry_time")):
+        if pd.notna(row.get("entry_time")) and _ts(row["entry_time"]) != _ts(row["bartime"]):
             markers.append(
                 {
                     "time": _ts(row["entry_time"]),
@@ -152,24 +152,19 @@ def _signal_table(signals: pd.DataFrame, strategy: str) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for _, row in signals.tail(MAX_SIGNAL_ROWS).iterrows():
         direction = int(row["signal"])
-        item = {
-            "signal_time": pd.Timestamp(row["bartime"]).strftime("%Y-%m-%d %H:%M"),
-            "entry_time": (
-                pd.Timestamp(row["entry_time"]).strftime("%Y-%m-%d %H:%M")
-                if pd.notna(row.get("entry_time"))
-                else ""
-            ),
+        item: dict[str, Any] = {
+            "bartime": pd.Timestamp(row["bartime"]).strftime("%Y-%m-%d %H:%M"),
             "side": "BUY" if direction == 1 else "SELL",
+            "reason": row.get("signal_reason", ""),
             "entry": _num(row.get("entry_price"), 5),
             "sl": _num(row.get("sl_price"), 5),
             "tp": _num(row.get("tp_price"), 5),
+            "rr": _num(row.get("risk_reward"), 2),
             "atr": _num(row.get("atr"), 5),
-            "rr": _num(row.get("risk_reward"), 3),
-            "reason": row.get("signal_reason", ""),
         }
         if strategy == "combo":
             item["ma"] = _num(row.get("ma"), 5)
-            item["macd_h"] = _num(row.get("macd_h"), 6)
+            item["macd_h"] = _num(row.get("macd_h"), 5)
         elif strategy == "ma_cross":
             item["fast_ma"] = _num(row.get("fast_ma"), 5)
             item["slow_ma"] = _num(row.get("slow_ma"), 5)

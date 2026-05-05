@@ -6,6 +6,7 @@ const state = {
 
 const el = {
   strategy: document.getElementById("strategy"),
+  assetType: document.getElementById("asset-type"),
   symbol: document.getElementById("symbol"),
   tf: document.getElementById("tf"),
   bars: document.getElementById("bars"),
@@ -14,6 +15,7 @@ const el = {
   meta: document.getElementById("meta"),
   error: document.getElementById("error"),
   priceChart: document.getElementById("price-chart"),
+  chartLegend: document.getElementById("chart-legend"),
   panelCharts: document.getElementById("panel-charts"),
   statTotal: document.getElementById("stat-total"),
   statBuy: document.getElementById("stat-buy"),
@@ -45,12 +47,64 @@ const chartTheme = {
   },
 };
 
+const COLUMN_LABELS = {
+  bartime: "Bar Time",
+  side: "Side",
+  reason: "Reason",
+  entry: "Entry",
+  sl: "SL",
+  tp: "TP",
+  rr: "R:R",
+  atr: "ATR",
+  ma: "MA",
+  macd_h: "MACD-H",
+  fast_ma: "Fast MA",
+  slow_ma: "Slow MA",
+  ma_gap_atr: "Gap/ATR",
+};
+
+const TEXT_COLS = new Set(["bartime", "side", "reason"]);
+
+function fmtNum(value) {
+  if (value == null || value === "") return "";
+  const n = Number(value);
+  if (!isFinite(n)) return String(value);
+  const abs = Math.abs(n);
+  if (abs >= 1000) return new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+  if (abs >= 10) return n.toFixed(2);
+  if (abs >= 0.01) return n.toFixed(4);
+  return n.toFixed(5);
+}
+
+function fmtPrice(n) {
+  const abs = Math.abs(n);
+  if (abs >= 100) return new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+  return n.toFixed(5);
+}
+
 function createOption(parent, value, label, selectedValue) {
   const option = document.createElement("option");
   option.value = value;
   option.textContent = label ?? value;
   option.selected = value === selectedValue;
   parent.appendChild(option);
+}
+
+const symbolMeta = {};
+
+function populateSymbols(assetFilter) {
+  el.symbol.replaceChildren();
+  state.config.symbols
+    .filter((s) => !assetFilter || s.asset_type === assetFilter)
+    .forEach((s) => createOption(el.symbol, s.name, s.name, state.config.defaultSymbol));
+}
+
+function updateXDefault() {
+  if (el.strategy.value !== "combo") return;
+  const meta = symbolMeta[el.symbol.value];
+  if (!meta) return;
+  const xInput = el.params.querySelector('[data-param="X"]');
+  if (xInput && meta.x != null) xInput.value = meta.x > 0 ? meta.x : "";
 }
 
 async function init() {
@@ -60,19 +114,38 @@ async function init() {
   Object.entries(state.config.strategies).forEach(([key, spec]) => {
     createOption(el.strategy, key, spec.label, state.config.defaultStrategy);
   });
-  state.config.symbols.forEach((symbol) => createOption(el.symbol, symbol, symbol, state.config.defaultSymbol));
+
+  state.config.symbols.forEach((s) => { symbolMeta[s.name] = s; });
+
+  const assetTypes = [...new Set(state.config.symbols.map((s) => s.asset_type).filter(Boolean))].sort();
+  createOption(el.assetType, "", "All", "");
+  assetTypes.forEach((type) => createOption(el.assetType, type, type, ""));
+
+  populateSymbols("");
+
   state.config.timeframes.forEach((tf) => createOption(el.tf, tf, tf, state.config.defaultTf));
   el.bars.value = state.config.defaultBars;
 
   el.strategy.addEventListener("change", () => {
     renderParamControls();
+    updateXDefault();
     loadScan();
   });
-  [el.symbol, el.tf].forEach((node) => node.addEventListener("change", loadScan));
+  el.assetType.addEventListener("change", () => {
+    populateSymbols(el.assetType.value);
+    updateXDefault();
+    loadScan();
+  });
+  el.symbol.addEventListener("change", () => {
+    updateXDefault();
+    loadScan();
+  });
+  el.tf.addEventListener("change", loadScan);
   el.bars.addEventListener("change", loadScan);
   el.refresh.addEventListener("click", loadScan);
 
   renderParamControls();
+  updateXDefault();
   await loadScan();
 }
 
@@ -211,12 +284,43 @@ function renderPayload(payload) {
       lineStyle: lineStyle(level.style),
       priceLineVisible: false,
       lastValueVisible: false,
-      title: level.label,
+      title: "",
     });
     series.setData([
       { time: level.timeStart, value: level.price },
       { time: level.timeEnd, value: level.price },
     ]);
+  });
+
+  const indicatorByTime = {};
+  payload.overlays.forEach((line) => {
+    line.data.forEach((d) => {
+      if (!indicatorByTime[d.time]) indicatorByTime[d.time] = {};
+      indicatorByTime[d.time][line.key] = { value: d.value, label: line.label };
+    });
+  });
+  payload.panels.forEach((panel) => {
+    panel.data.forEach((d) => {
+      if (!indicatorByTime[d.time]) indicatorByTime[d.time] = {};
+      indicatorByTime[d.time][panel.key] = { value: d.value, label: panel.label };
+    });
+  });
+
+  el.chartLegend.textContent = "";
+  priceChart.subscribeCrosshairMove((param) => {
+    if (!param.time || !param.seriesData.has(candleSeries)) {
+      el.chartLegend.textContent = "";
+      return;
+    }
+    const ohlcv = param.seriesData.get(candleSeries);
+    const dateStr = new Date(param.time * 1000).toISOString().slice(0, 16).replace("T", " ");
+    const ind = indicatorByTime[param.time] || {};
+    const parts = [
+      dateStr,
+      `O:${fmtPrice(ohlcv.open)} H:${fmtPrice(ohlcv.high)} L:${fmtPrice(ohlcv.low)} C:${fmtPrice(ohlcv.close)}`,
+      ...Object.values(ind).map((v) => `${v.label}: ${fmtNum(v.value)}`),
+    ];
+    el.chartLegend.textContent = parts.join("   |   ");
   });
 
   renderPanels(payload.panels, priceChart);
@@ -270,7 +374,7 @@ function renderSignalsTable(rows) {
   const headRow = document.createElement("tr");
   keys.forEach((key) => {
     const th = document.createElement("th");
-    th.textContent = key;
+    th.textContent = COLUMN_LABELS[key] ?? key;
     headRow.appendChild(th);
   });
   el.signalsHead.appendChild(headRow);
@@ -279,7 +383,13 @@ function renderSignalsTable(rows) {
     const tr = document.createElement("tr");
     keys.forEach((key) => {
       const td = document.createElement("td");
-      td.textContent = row[key] ?? "";
+      const val = row[key];
+      if (TEXT_COLS.has(key)) {
+        td.textContent = val ?? "";
+      } else {
+        td.textContent = fmtNum(val);
+        td.className = "num";
+      }
       tr.appendChild(td);
     });
     el.signalsBody.appendChild(tr);
