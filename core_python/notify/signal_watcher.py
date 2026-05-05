@@ -132,7 +132,7 @@ def _drop_open_bar(df: pd.DataFrame, tf: str) -> pd.DataFrame:
     minutes = config.TF_MINUTES.get(tf_code)
     if not minutes:
         return df
-    now_utc = pd.Timestamp.utcnow()
+    now_utc = pd.Timestamp.now("UTC")
     if now_utc.tzinfo is None:
         now_utc = now_utc.tz_localize("UTC")
     cutoff = now_utc - pd.Timedelta(minutes=int(minutes))
@@ -155,7 +155,7 @@ def _next_bar_close_utc(tf: str) -> pd.Timestamp:
     has time to commit the just-closed bar before we query it.
     """
     minutes = config.TF_MINUTES.get(tf.upper())
-    now = pd.Timestamp.utcnow()
+    now = pd.Timestamp.now("UTC")
     if not minutes:
         return now + pd.Timedelta(seconds=300)
     period = pd.Timedelta(minutes=minutes)
@@ -290,7 +290,7 @@ def main() -> int:
     next_run_at: dict[int, pd.Timestamp | None] = {i: None for i in range(len(scan_groups))}
 
     while True:
-        now_ts = pd.Timestamp.utcnow()
+        now_ts = pd.Timestamp.now("UTC")
         for i, group in enumerate(scan_groups):
             scheduled = next_run_at[i]
             if scheduled is not None and now_ts < scheduled:

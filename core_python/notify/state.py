@@ -10,7 +10,11 @@ import pandas as pd
 
 
 DEFAULT_STATE_PATH = Path(__file__).resolve().parent / "state.json"
-TTL_DAYS = 30
+
+# Must exceed the longest scan window: H2=41.7d, H3=50d, H4=50d.
+# If TTL < window, keys for bars still within the load window get pruned and
+# those bars re-appear as "new" signals every TTL days.
+TTL_DAYS = 60
 
 
 class SignalState:
@@ -33,7 +37,7 @@ class SignalState:
         raw_sent = data.get("sent", [])
         if isinstance(raw_sent, list):
             # migrate old list format → dict with current timestamp
-            now_str = pd.Timestamp.utcnow().isoformat()
+            now_str = pd.Timestamp.now("UTC").isoformat()
             self.sent = {str(k): now_str for k in raw_sent}
         else:
             self.sent = {str(k): str(v) for k, v in raw_sent.items()}
@@ -41,7 +45,7 @@ class SignalState:
 
     def _prune(self) -> None:
         """Drop keys older than TTL_DAYS to keep state.json bounded."""
-        cutoff = pd.Timestamp.utcnow() - pd.Timedelta(days=TTL_DAYS)
+        cutoff = pd.Timestamp.now("UTC") - pd.Timedelta(days=TTL_DAYS)
         self.sent = {
             k: v for k, v in self.sent.items()
             if _safe_ts(v) > cutoff
@@ -53,7 +57,7 @@ class SignalState:
 
     def add(self, key: str) -> None:
         """Record a sent key and persist state atomically."""
-        self.sent[key] = pd.Timestamp.utcnow().isoformat()
+        self.sent[key] = pd.Timestamp.now("UTC").isoformat()
         self.path.parent.mkdir(parents=True, exist_ok=True)
         tmp = self.path.with_suffix(self.path.suffix + ".tmp")
         payload = {"sent": self.sent}
@@ -65,7 +69,7 @@ def _safe_ts(value: str) -> pd.Timestamp:
     try:
         return pd.Timestamp(value)
     except Exception:
-        return pd.Timestamp.utcnow()
+        return pd.Timestamp.now("UTC")
 
 
 def signal_key(strategy: str, symbol: str, tf: str, bartime: object, signal: int) -> str:
