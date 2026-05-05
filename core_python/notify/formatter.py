@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import html
+
 import pandas as pd
 
 
@@ -31,7 +33,7 @@ def format_signal_message(
     atr = row.get("atr")
     if pd.notna(atr):
         lines.append(f"📊 ATR:   <code>{_fmt(atr)}</code>")
-    reason = str(row.get("signal_reason") or "").strip()
+    reason = html.escape(str(row.get("signal_reason") or "").strip())
     if reason:
         lines.extend(["", f"💬 {reason}"])
     return "\n".join(lines)
