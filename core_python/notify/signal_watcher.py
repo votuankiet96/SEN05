@@ -144,6 +144,28 @@ def _drop_open_bar(df: pd.DataFrame, tf: str) -> pd.DataFrame:
     return df.loc[bar_times <= cutoff].reset_index(drop=True)
 
 
+_BAR_CLOSE_BUFFER_SECONDS = 30
+
+
+def _next_bar_close_utc(tf: str) -> pd.Timestamp:
+    """Return the UTC timestamp of the next bar close + buffer for the given TF.
+
+    Bars are assumed to be aligned to midnight UTC boundaries (standard broker
+    convention for H1, H2, H3, H4).  A 30-second buffer is added so the DB
+    has time to commit the just-closed bar before we query it.
+    """
+    minutes = config.TF_MINUTES.get(tf.upper())
+    now = pd.Timestamp.utcnow()
+    if not minutes:
+        return now + pd.Timedelta(seconds=300)
+    period = pd.Timedelta(minutes=minutes)
+    floored = now.floor(period)
+    next_close = floored + period + pd.Timedelta(seconds=_BAR_CLOSE_BUFFER_SECONDS)
+    if next_close <= now:
+        next_close += period
+    return next_close
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="24/7 signal watcher — Telegram notifier.",
@@ -264,12 +286,14 @@ def main() -> int:
     print(startup_msg.replace("<b>", "").replace("</b>", ""))
     print(f"Mode: {mode_desc}")
 
-    last_run: dict[int, float] = {}
+    # None → run immediately on first tick, then align to bar close boundaries
+    next_run_at: dict[int, pd.Timestamp | None] = {i: None for i in range(len(scan_groups))}
 
     while True:
-        now = time.monotonic()
+        now_ts = pd.Timestamp.utcnow()
         for i, group in enumerate(scan_groups):
-            if now - last_run.get(i, 0.0) < group["poll_seconds"]:
+            scheduled = next_run_at[i]
+            if scheduled is not None and now_ts < scheduled:
                 continue
             try:
                 events = check_once(
@@ -287,10 +311,12 @@ def main() -> int:
                 )
             except Exception as exc:
                 events = [f"[ERROR] group {i} {group['tf']}: {exc}"]
-            ts = pd.Timestamp.utcnow().strftime("%H:%M:%S")
+            next_at = _next_bar_close_utc(group["tf"])
+            next_run_at[i] = next_at
+            ts = now_ts.strftime("%H:%M:%S")
             for event in events:
                 print(f"[{ts}] {event}")
-            last_run[i] = time.monotonic()
+            print(f"[{ts}] [{group['tf']}] next check: {next_at.strftime('%H:%M:%S')} UTC")
 
         if args.once:
             return 0
