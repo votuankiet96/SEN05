@@ -76,7 +76,7 @@ output/
 # Generated HTML charts (output từ ma_chart.py, combo_chart, v.v.)
 *.html
 # Exception: static source HTML files (not generated)
-!simplified_core_python/chart/static/*.html
+!core_python/chart/static/*.html
 
 # Temporary lint/tool output
 ruff_fix_output.txt

@@ -1,1 +1,2 @@
-# strategies package — all trading strategy sub-packages
+"""Strategy registry for simplified visual charts."""
+

@@ -1,261 +1,138 @@
-"""Parameter source of truth for the MA Cross market-order strategy.
-
-MA Cross owns its signal/risk defaults in this module. Shared instrument,
-broker, and cost metadata comes from ``core_python.shared.market`` so this
-strategy does not depend on the Combo package.
-"""
+"""Config and adjustable visual-chart parameters for the MA Cross strategy."""
 
 from __future__ import annotations
 
-from core_python.shared.market import (
-    BROKER_PROFILES,
-    DEFAULT_BROKER_PROFILE,
-    DEFAULT_COSTS,
-    SYMBOLS,
-    get_base_symbol_params,
-    get_cost_settings,
-)
+from typing import Any
 
 
-STRATEGY = {
-    "name": "MA_Cross",
-    "version": "v1.0",
-    "order_type": "market",
-    "execution_model": "market_single",
-    "ma_type": "sma",
-    "fast_ma": 10,
-    "slow_ma": 20,
-    "atr_period": 14,
-    # Signal confirmed on bar close, order simulated at next bar open.
-    "entry_timing": "next_bar_open",
-    "reverse_on_opposite": True,
-    # Protective stop is mandatory for risk-based lot sizing.
-    "atr_stop_mult": 2.0,
-    "atr_tp_mult": 2.0,
-    "partial_tp_fraction": 0.5,
-    "trailing_activation": 1.0,
-    "trailing_column": "slow_ma",
-    "risk_per_trade": 0.005,
-    "ftmo_daily_limit": 0.05,
-    "ftmo_max_dd": 0.10,
+MA_TYPE = "sma"
+FAST_MA = 10
+SLOW_MA = 20
+ATR_PERIOD = 14
+ATR_STOP_MULT = 2.0
+ATR_TP_MULT = 2.0
+SPREAD_PTS = 0.0
+SLIPPAGE_PTS = 0.0
+SESSION_HOURS_UTC: list[int] = []
+ENTRY_LINE_BARS = 2
+SHOW_MA = True
+SHOW_ATR = True
+SHOW_LEVELS = True
+
+DEFAULT_PARAMS: dict[str, Any] = {
+    "MA_TYPE": MA_TYPE,
+    "FAST_MA": FAST_MA,
+    "SLOW_MA": SLOW_MA,
+    "ATR_PERIOD": ATR_PERIOD,
+    "ATR_STOP_MULT": ATR_STOP_MULT,
+    "ATR_TP_MULT": ATR_TP_MULT,
+    "SPREAD_PTS": SPREAD_PTS,
+    "SLIPPAGE_PTS": SLIPPAGE_PTS,
+    "SESSION_HOURS_UTC": [],
+    "ENTRY_LINE_BARS": 2,
+    "SHOW_MA": SHOW_MA,
+    "SHOW_ATR": SHOW_ATR,
+    "SHOW_LEVELS": SHOW_LEVELS,
 }
 
-BASKET = {
-    "lot_sizing_mode": "fixed_linear",
-    "initial_lot": 0.01,
-    "lot_step": 0.01,
-    "max_single_lot": 0.03,
-    "lot_step_ratio": 1.0,
-    "max_single_lot_mult": 3.0,
-    "max_total_lot_mult": 10.0,
-    "max_net_lot_mult": 6.0,
-    "max_orders": 5,
-    "max_total_lot": 0.10,
-    "max_net_lot": 0.06,
-    "basket_take_profit": 100.0,
-    "basket_stop_loss": 100.0,
-    "allow_same_bar_basket_close": False,
-    "reversal_only": True,
-}
-
-FILTERS = {
-    "ma20_slope_lookback": 3,
-    "min_ma20_slope": 0.0,
-    "min_ma_distance_atr": 0.0,
-    "min_atr": None,
-    "max_atr": None,
-    "max_spread_pts": None,
-    "use_session_filter": True,
-}
-
-ACCOUNT_MODES = {
-    "standard": {
-        "label": "Standard",
-        "account_model": "retail",
-        "risk_per_trade": STRATEGY["risk_per_trade"],
-        "daily_loss_limit": 1.0,
-        "max_drawdown_limit": 1.0,
-        "max_drawdown_mode": "fixed_initial",
-        "hedge_allowed": True,
-        "partial_tp_fraction": STRATEGY["partial_tp_fraction"],
-        "trailing_activation": STRATEGY["trailing_activation"],
-    },
-    "ftmo": {
-        "label": "FTMO 2-Step",
-        "account_model": "ftmo_2step",
-        "risk_per_trade": STRATEGY["risk_per_trade"],
-        "daily_loss_limit": STRATEGY["ftmo_daily_limit"],
-        "max_drawdown_limit": STRATEGY["ftmo_max_dd"],
-        "max_drawdown_mode": "fixed_initial",
-        "hedge_allowed": True,
-        "partial_tp_fraction": STRATEGY["partial_tp_fraction"],
-        "trailing_activation": STRATEGY["trailing_activation"],
-    },
-}
+PARAM_FIELDS: list[dict[str, Any]] = [
+    {"key": "MA_TYPE", "label": "MA Type", "type": "select", "options": ["sma", "ema"]},
+    {"key": "FAST_MA", "label": "Fast MA", "type": "number", "min": 1, "max": 300, "step": 1},
+    {"key": "SLOW_MA", "label": "Slow MA", "type": "number", "min": 2, "max": 500, "step": 1},
+    {"key": "ATR_PERIOD", "label": "ATR", "type": "number", "min": 2, "max": 300, "step": 1},
+    {"key": "ATR_STOP_MULT", "label": "SL ATR", "type": "number", "min": 0.1, "max": 20, "step": 0.1},
+    {"key": "ATR_TP_MULT", "label": "TP ATR", "type": "number", "min": 0, "max": 20, "step": 0.1},
+    {"key": "SPREAD_PTS", "label": "Spread", "type": "number", "min": 0, "max": 1_000_000, "step": 0.01},
+    {"key": "SLIPPAGE_PTS", "label": "Slippage", "type": "number", "min": 0, "max": 1_000_000, "step": 0.01},
+    {"key": "SESSION_HOURS_UTC", "label": "UTC Hours", "type": "text"},
+    {"key": "ENTRY_LINE_BARS", "label": "Level Bars", "type": "number", "min": 1, "max": 300, "step": 1},
+    {"key": "SHOW_MA", "label": "Show MA", "type": "bool"},
+    {"key": "SHOW_ATR", "label": "Show ATR", "type": "bool"},
+    {"key": "SHOW_LEVELS", "label": "Show Levels", "type": "bool"},
+]
 
 
-TIMEFRAMES = ["M20", "M30", "M45"]
-TIMEFRAME = "M30"
-DEFAULT_N_BARS = 1000
-INDICATOR_COLS = ["fast_ma", "slow_ma", "atr"]
+def _to_bool(value: object, default: bool) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
-OPTIMIZATION = {
-    "symbol": {
-        "fast_ma_values": [8, 10, 12],
-        "slow_ma_values": [18, 20, 24, 30],
-        "atr_stop_mult_values": [1.5, 2.0, 2.5],
-        "atr_tp_mult_values": [0.0, 2.0, 3.0],
-        "timeframes": TIMEFRAMES,
-        "max_bars": 80000,
-        "score_column": "sharpe",
-    },
-    "portfolio": {
-        "top_k_per_symbol": 3,
-        "score_column": "score",
-    },
-}
+def _to_int(value: object, default: int, min_value: int, max_value: int) -> int:
+    try:
+        parsed = int(float(value)) if value is not None else default
+    except (TypeError, ValueError):
+        parsed = default
+    return max(min_value, min(parsed, max_value))
+
+
+def _to_float(value: object, default: float, min_value: float, max_value: float) -> float:
+    try:
+        parsed = float(value) if value is not None else default
+    except (TypeError, ValueError):
+        parsed = default
+    return max(min_value, min(parsed, max_value))
+
+
+def _parse_session_hours(value: object, default: list[int]) -> list[int]:
+    if value is None:
+        return list(default)
+    if isinstance(value, (list, tuple, set)):
+        parts = value
+    else:
+        raw = str(value).strip()
+        if raw == "":
+            return []
+        parts = raw.replace(";", ",").replace(" ", ",").split(",")
+
+    hours: set[int] = set()
+    for part in parts:
+        if str(part).strip() == "":
+            continue
+        hour = int(part)
+        if hour < 0 or hour > 23:
+            raise ValueError("SESSION_HOURS_UTC must contain UTC hours in range 0..23")
+        hours.add(hour)
+    return sorted(hours)
 
 
 def get_indicator_params() -> dict:
-    """Return default indicator and signal parameters."""
+    """Return default indicator parameters consumed by MA Cross signals."""
     return {
-        "MA_TYPE": STRATEGY["ma_type"],
-        "FAST_MA": STRATEGY["fast_ma"],
-        "SLOW_MA": STRATEGY["slow_ma"],
-        "ATR_PERIOD": STRATEGY["atr_period"],
+        "MA_TYPE": MA_TYPE,
+        "FAST_MA": FAST_MA,
+        "SLOW_MA": SLOW_MA,
+        "ATR_PERIOD": ATR_PERIOD,
     }
 
 
-def get_basket_settings(overrides: dict | None = None) -> dict:
-    """Return controlled basket scaling and closure settings."""
-    settings = dict(BASKET)
-    if overrides:
-        nested = overrides.get("basket", {})
-        settings.update({k: overrides[k] for k in settings if k in overrides})
-        settings.update(nested)
-    return settings
+def normalize_params(overrides: dict[str, Any] | None = None, symbol: str | None = None) -> dict[str, Any]:
+    """Merge defaults and user overrides into validated MA Cross params."""
+    _ = symbol
+    raw = {**DEFAULT_PARAMS, **(overrides or {})}
+    ma_type = str(raw.get("MA_TYPE", MA_TYPE)).lower().strip()
+    if ma_type not in {"sma", "ema"}:
+        raise ValueError("MA_TYPE must be 'sma' or 'ema'")
 
+    fast = _to_int(raw.get("FAST_MA"), FAST_MA, 1, 300)
+    slow = _to_int(raw.get("SLOW_MA"), SLOW_MA, 2, 500)
+    if fast >= slow:
+        raise ValueError("FAST_MA must be smaller than SLOW_MA")
 
-def get_filter_settings(overrides: dict | None = None) -> dict:
-    """Return MA Cross entry filter settings."""
-    settings = dict(FILTERS)
-    if overrides:
-        nested = overrides.get("filters", {})
-        settings.update({k: overrides[k] for k in settings if k in overrides})
-        settings.update(nested)
-    return settings
-
-
-def get_account_settings(mode: str = "standard", overrides: dict | None = None) -> dict:
-    """Resolve account/risk settings for market-order execution."""
-    if mode not in ACCOUNT_MODES:
-        raise KeyError(f"Unknown account mode '{mode}'. Available: {list(ACCOUNT_MODES)}")
-
-    resolved = {
-        **STRATEGY,
-        **ACCOUNT_MODES[mode],
-        "execution_model": STRATEGY["execution_model"],
-        "risk_per_trade": STRATEGY["risk_per_trade"],
-        "reverse_on_opposite": STRATEGY["reverse_on_opposite"],
-        "atr_stop_mult": STRATEGY["atr_stop_mult"],
-        "atr_tp_mult": STRATEGY["atr_tp_mult"],
-        "partial_tp_fraction": STRATEGY["partial_tp_fraction"],
-        "trailing_activation": STRATEGY["trailing_activation"],
-        "trailing_column": STRATEGY["trailing_column"],
+    return {
+        "MA_TYPE": ma_type,
+        "FAST_MA": fast,
+        "SLOW_MA": slow,
+        "ATR_PERIOD": _to_int(raw.get("ATR_PERIOD"), ATR_PERIOD, 2, 300),
+        "ATR_STOP_MULT": _to_float(raw.get("ATR_STOP_MULT"), ATR_STOP_MULT, 0.1, 20.0),
+        "ATR_TP_MULT": _to_float(raw.get("ATR_TP_MULT"), ATR_TP_MULT, 0.0, 20.0),
+        "SPREAD_PTS": _to_float(raw.get("SPREAD_PTS"), SPREAD_PTS, 0.0, 1_000_000.0),
+        "SLIPPAGE_PTS": _to_float(raw.get("SLIPPAGE_PTS"), SLIPPAGE_PTS, 0.0, 1_000_000.0),
+        "SESSION_HOURS_UTC": _parse_session_hours(raw.get("SESSION_HOURS_UTC"), SESSION_HOURS_UTC),
+        "ENTRY_LINE_BARS": _to_int(raw.get("ENTRY_LINE_BARS"), ENTRY_LINE_BARS, 1, 300),
+        "SHOW_MA": _to_bool(raw.get("SHOW_MA"), SHOW_MA),
+        "SHOW_ATR": _to_bool(raw.get("SHOW_ATR"), SHOW_ATR),
+        "SHOW_LEVELS": _to_bool(raw.get("SHOW_LEVELS"), SHOW_LEVELS),
     }
-    resolved["daily_loss_limit"] = resolved.get(
-        "daily_loss_limit",
-        resolved.get("ftmo_daily_limit", STRATEGY["ftmo_daily_limit"]),
-    )
-    resolved["max_drawdown_limit"] = resolved.get(
-        "max_drawdown_limit",
-        resolved.get("ftmo_max_dd", STRATEGY["ftmo_max_dd"]),
-    )
-    resolved["max_drawdown_mode"] = resolved.get("max_drawdown_mode", "fixed_initial")
-    resolved["ftmo_daily_limit"] = resolved["daily_loss_limit"]
-    resolved["ftmo_max_dd"] = resolved["max_drawdown_limit"]
-    resolved["basket"] = get_basket_settings()
-    resolved["filters"] = get_filter_settings()
-
-    if overrides:
-        resolved.update(overrides)
-        resolved["basket"] = get_basket_settings(overrides)
-        resolved["filters"] = get_filter_settings(overrides)
-        if "daily_loss_limit" in overrides:
-            resolved["ftmo_daily_limit"] = resolved["daily_loss_limit"]
-        if "max_drawdown_limit" in overrides:
-            resolved["ftmo_max_dd"] = resolved["max_drawdown_limit"]
-    return resolved
-
-
-def get_symbol_params(sym_key: str, broker_profile: str | None = None) -> dict:
-    """Resolve symbol execution config for MA Cross."""
-    cfg = get_base_symbol_params(sym_key, broker_profile=broker_profile)
-    cfg["order_type"] = STRATEGY["order_type"]
-    return cfg
-
-
-def get_symbol_search_space(
-    sym_key: str,
-    overrides: dict | None = None,
-    broker_profile: str | None = None,
-) -> dict:
-    """Return a conservative optimizer search space."""
-    if sym_key not in SYMBOLS:
-        raise KeyError(f"Unknown symbol '{sym_key}'. Available: {list(SYMBOLS)}")
-    _ = broker_profile
-    search = {
-        "fast_ma": list(OPTIMIZATION["symbol"]["fast_ma_values"]),
-        "slow_ma": list(OPTIMIZATION["symbol"]["slow_ma_values"]),
-        "atr_stop_mult": list(OPTIMIZATION["symbol"]["atr_stop_mult_values"]),
-        "atr_tp_mult": list(OPTIMIZATION["symbol"]["atr_tp_mult_values"]),
-        "timeframe": list(OPTIMIZATION["symbol"]["timeframes"]),
-    }
-    if overrides:
-        search.update(overrides)
-    return search
-
-
-def summary() -> str:
-    p = get_indicator_params()
-    return "\n".join([
-        f"Strategy      : {STRATEGY['name']} {STRATEGY['version']}",
-        f"Order type    : {STRATEGY['order_type']} at {STRATEGY['entry_timing']}",
-        f"Execution     : {STRATEGY['execution_model']}",
-        f"MA            : {p['MA_TYPE'].upper()}{p['FAST_MA']}/{p['SLOW_MA']}",
-        f"ATR stop      : {STRATEGY['atr_stop_mult']} x ATR{p['ATR_PERIOD']}",
-        f"Partial TP    : {STRATEGY['partial_tp_fraction']:.0%} at "
-        f"{STRATEGY['atr_tp_mult']} x ATR",
-        f"Trailing      : {STRATEGY['trailing_column']} after "
-        f"{STRATEGY['trailing_activation']} x ATR",
-        f"Timeframes    : {', '.join(TIMEFRAMES)}",
-        f"Risk          : {STRATEGY['risk_per_trade']:.2%} per trade",
-        f"Symbols       : {', '.join(SYMBOLS.keys())}",
-        f"Default broker: {DEFAULT_BROKER_PROFILE}",
-    ])
-
-
-__all__ = [
-    "ACCOUNT_MODES",
-    "BASKET",
-    "BROKER_PROFILES",
-    "DEFAULT_BROKER_PROFILE",
-    "DEFAULT_COSTS",
-    "FILTERS",
-    "STRATEGY",
-    "TIMEFRAME",
-    "TIMEFRAMES",
-    "DEFAULT_N_BARS",
-    "INDICATOR_COLS",
-    "OPTIMIZATION",
-    "SYMBOLS",
-    "get_account_settings",
-    "get_basket_settings",
-    "get_cost_settings",
-    "get_filter_settings",
-    "get_indicator_params",
-    "get_symbol_params",
-    "get_symbol_search_space",
-    "summary",
-]

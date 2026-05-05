@@ -16,7 +16,7 @@ requires-python = ">=3.10"
 
 [tool.setuptools.packages.find]
 where   = ["."]
-include = ["modules*", "data_provider*", "core_python*", "simplified_core_python*"]
+include = ["modules*", "data_provider*", "core_python*"]
 exclude = ["tests*", "*.ipynb_checkpoints"]
 
 # =============================================================================
