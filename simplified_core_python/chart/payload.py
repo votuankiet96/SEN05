@@ -93,16 +93,6 @@ def _markers(signals: pd.DataFrame) -> list[dict[str, Any]]:
                 "text": "BUY" if is_buy else "SELL",
             }
         )
-        if pd.notna(row.get("entry_time")) and _ts(row["entry_time"]) != _ts(row["bartime"]):
-            markers.append(
-                {
-                    "time": _ts(row["entry_time"]),
-                    "position": "belowBar" if is_buy else "aboveBar",
-                    "color": "#2563eb",
-                    "shape": "circle",
-                    "text": "ENTRY",
-                }
-            )
     return markers
 
 

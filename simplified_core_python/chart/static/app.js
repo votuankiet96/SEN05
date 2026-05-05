@@ -2,6 +2,7 @@ const state = {
   config: null,
   priceChart: null,
   panelCharts: [],
+  panelSeries: [],
 };
 
 const el = {
@@ -237,6 +238,7 @@ function resetCharts() {
   }
   state.panelCharts.forEach((chart) => chart.remove());
   state.panelCharts = [];
+  state.panelSeries = [];
   el.panelCharts.replaceChildren();
 }
 
@@ -306,10 +308,13 @@ function renderPayload(payload) {
     });
   });
 
+  renderPanels(payload.panels, priceChart);
+
   el.chartLegend.textContent = "";
   priceChart.subscribeCrosshairMove((param) => {
     if (!param.time || !param.seriesData.has(candleSeries)) {
       el.chartLegend.textContent = "";
+      state.panelSeries.forEach(({ chart }) => chart.clearCrosshairPosition());
       return;
     }
     const ohlcv = param.seriesData.get(candleSeries);
@@ -321,9 +326,17 @@ function renderPayload(payload) {
       ...Object.values(ind).map((v) => `${v.label}: ${fmtNum(v.value)}`),
     ];
     el.chartLegend.textContent = parts.join("   |   ");
+
+    state.panelSeries.forEach(({ chart, series, key }) => {
+      const indVal = (indicatorByTime[param.time] || {})[key];
+      if (indVal != null) {
+        chart.setCrosshairPosition(indVal.value, param.time, series);
+      } else {
+        chart.clearCrosshairPosition();
+      }
+    });
   });
 
-  renderPanels(payload.panels, priceChart);
   renderSignalsTable(payload.signals);
   priceChart.timeScale().fitContent();
 }
@@ -341,23 +354,24 @@ function renderPanels(panels, priceChart) {
     });
     state.panelCharts.push(chart);
 
+    let series;
     if (panel.type === "histogram") {
-      const series = chart.addHistogramSeries({
+      series = chart.addHistogramSeries({
         priceFormat: { type: "price", precision: 5, minMove: 0.00001 },
         priceLineVisible: false,
         lastValueVisible: false,
       });
-      series.setData(panel.data);
     } else {
-      const series = chart.addLineSeries({
+      series = chart.addLineSeries({
         color: panel.color || "#a855f7",
         lineWidth: 2,
         priceLineVisible: false,
         lastValueVisible: false,
         title: panel.label,
       });
-      series.setData(panel.data);
     }
+    series.setData(panel.data);
+    state.panelSeries.push({ chart, series, key: panel.key });
 
     priceChart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
       if (range) chart.timeScale().setVisibleLogicalRange(range);
