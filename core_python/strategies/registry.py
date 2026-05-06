@@ -1,4 +1,18 @@
-﻿"""Strategy registry for the simplified chart server."""
+"""
+Registry (sổ đăng ký) các chiến lược giao dịch cho dashboard SEN05.
+
+Mô tả:
+    Mỗi chiến lược được mô tả bởi một StrategySpec — dataclass bất biến
+    chứa metadata (key, label, params mặc định) và 4 callable thực thi pipeline.
+
+    Thêm chiến lược mới:
+        1. Tạo module strategies/<tên>/ với config.py, signals.py, levels.py.
+        2. Đăng ký vào dict STRATEGIES bên dưới.
+
+Đầu ra:
+    STRATEGIES: dict[str, StrategySpec] — tra cứu theo key.
+    get_strategy(key): StrategySpec hoặc raise KeyError.
+"""
 
 from __future__ import annotations
 
@@ -23,6 +37,24 @@ from core_python.strategies.ma_cross.signals import (
 
 @dataclass(frozen=True)
 class StrategySpec:
+    """
+    Mô tả đầy đủ một chiến lược giao dịch — bất biến sau khi tạo.
+
+    Thuộc tính:
+        key:              Mã định danh duy nhất (ví dụ: "combo", "ma_cross").
+        label:            Tên hiển thị trên UI (ví dụ: "Combo", "MA Cross").
+        default_params:   Dict tham số mặc định khi không có override.
+        param_fields:     Định nghĩa UI fields (type, min, max...) cho sidebar params.
+        normalize_params: Callable(overrides, symbol) → dict tham số đã validate.
+        add_indicators:   Callable(df, params) → df với cột chỉ báo thêm vào.
+        detect_signals:   Callable(df, symbol, params, sess_mask) → df với cột signal.
+        add_levels:       Callable(df, params, symbol) → df với cột entry/SL/TP.
+
+    Invariant:
+        Pipeline phải gọi theo thứ tự:
+        normalize_params → add_indicators → detect_signals → add_levels.
+        Mỗi bước nhận output của bước trước làm input.
+    """
     key: str
     label: str
     default_params: dict[str, Any]
@@ -33,6 +65,7 @@ class StrategySpec:
     add_levels: Callable[[pd.DataFrame, dict[str, Any], str | None], pd.DataFrame]
 
 
+# Danh sách chiến lược được hỗ trợ. Key phải lowercase để match với query param.
 STRATEGIES: dict[str, StrategySpec] = {
     "combo": StrategySpec(
         key="combo",
@@ -58,9 +91,19 @@ STRATEGIES: dict[str, StrategySpec] = {
 
 
 def get_strategy(key: str) -> StrategySpec:
-    """Return a registered strategy by key."""
+    """
+    Tra cứu chiến lược theo key (không phân biệt hoa/thường).
+
+    Args:
+        key: Mã chiến lược (ví dụ: "combo", "COMBO", "ma_cross").
+
+    Returns:
+        StrategySpec tương ứng.
+
+    Raises:
+        KeyError: Nếu key không tồn tại trong STRATEGIES.
+    """
     normalized = str(key).strip().lower()
     if normalized not in STRATEGIES:
         raise KeyError(f"Unknown strategy '{key}'. Available: {', '.join(STRATEGIES)}")
     return STRATEGIES[normalized]
-

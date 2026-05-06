@@ -1,23 +1,43 @@
-"""Config and adjustable visual-chart parameters for the Combo strategy."""
+"""
+Tham số cấu hình và validation cho chiến lược Combo.
+
+Mô tả:
+    Định nghĩa tham số mặc định, giới hạn hợp lệ, và các hàm parse/validate
+    dùng cho chiến lược Combo (MA + MACD Histogram + ATR breakout).
+
+    Người dùng có thể override bất kỳ tham số nào qua UI hoặc CLI.
+    normalize_params() đảm bảo tất cả giá trị nằm trong giới hạn an toàn.
+
+Đầu ra:
+    DEFAULT_PARAMS: dict tham số mặc định.
+    PARAM_FIELDS: định nghĩa UI fields cho sidebar.
+    normalize_params(overrides, symbol): dict tham số đã validate và merge.
+"""
 
 from __future__ import annotations
 
 from typing import Any
 
 
-MA_PERIOD = 20
-MACD_FAST = 5
-MACD_SLOW = 25
-MACD_SIGNAL = 5
-ATR_PERIOD = 5
-KTP = 2.272
-MIN_RR = None
-ENTRY_LINE_BARS = 2
+# --- Tham số chỉ báo mặc định ---
+MA_PERIOD = 20       # Chu kỳ Simple Moving Average
+MACD_FAST = 5        # EMA nhanh của MACD
+MACD_SLOW = 25       # EMA chậm của MACD
+MACD_SIGNAL = 5      # EMA đường signal của MACD
+ATR_PERIOD = 5       # Chu kỳ Average True Range (Wilder)
+KTP = 2.272          # Hệ số nhân ATR để tính khoảng cách Take Profit
+MIN_RR = None        # Ngưỡng R:R tối thiểu (None = không lọc)
+ENTRY_LINE_BARS = 2  # Số bar kéo dài đường Entry/SL/TP trên biểu đồ
+
+# --- Toggle hiển thị trên biểu đồ ---
 SHOW_MA = True
 SHOW_MACD = True
 SHOW_ATR = True
 SHOW_LEVELS = True
 
+# Buffer X cho từng symbol (đơn vị: điểm).
+# X được cộng vào đỉnh/đáy bar khi xác định Entry và SL.
+# Giá trị nhỏ hơn cho symbol có spread hẹp, lớn hơn cho symbol biến động mạnh.
 SYMBOL_X = {
     "US30": 10.0,
     "US500": 1.0,
@@ -32,8 +52,12 @@ SYMBOL_X = {
     "BTCUSD": 50.0,
 }
 
+# Giờ UTC được phép giao dịch cho từng symbol.
+# Danh sách rỗng = giao dịch mọi giờ (không lọc theo session).
 SESSION_HOURS_UTC = {symbol: [] for symbol in SYMBOL_X}
 
+# Tham số mặc định gửi về frontend khi khởi tạo form.
+# X=None vì giá trị thực lấy từ SYMBOL_X theo symbol được chọn.
 DEFAULT_PARAMS: dict[str, Any] = {
     "MA_PERIOD": MA_PERIOD,
     "MACD_FAST": MACD_FAST,
@@ -51,6 +75,7 @@ DEFAULT_PARAMS: dict[str, Any] = {
     "SHOW_LEVELS": SHOW_LEVELS,
 }
 
+# Định nghĩa UI fields cho sidebar — frontend dùng để render input controls.
 PARAM_FIELDS: list[dict[str, Any]] = [
     {"key": "MA_PERIOD", "label": "MA", "type": "number", "min": 2, "max": 500, "step": 1},
     {"key": "MACD_FAST", "label": "MACD Fast", "type": "number", "min": 1, "max": 200, "step": 1},
@@ -70,6 +95,7 @@ PARAM_FIELDS: list[dict[str, Any]] = [
 
 
 def _to_bool(value: object, default: bool) -> bool:
+    """Parse bool từ string/int; trả về default nếu None."""
     if value is None:
         return default
     if isinstance(value, bool):
@@ -78,6 +104,7 @@ def _to_bool(value: object, default: bool) -> bool:
 
 
 def _to_int(value: object, default: int, min_value: int, max_value: int) -> int:
+    """Parse int, clamp vào [min_value, max_value], fallback về default nếu lỗi."""
     try:
         parsed = int(float(value)) if value is not None else default
     except (TypeError, ValueError):
@@ -86,6 +113,7 @@ def _to_int(value: object, default: int, min_value: int, max_value: int) -> int:
 
 
 def _to_float(value: object, default: float, min_value: float, max_value: float) -> float:
+    """Parse float, clamp vào [min_value, max_value], fallback về default nếu lỗi."""
     try:
         parsed = float(value) if value is not None else default
     except (TypeError, ValueError):
@@ -99,6 +127,11 @@ def _to_optional_float(
     min_value: float,
     max_value: float,
 ) -> float | None:
+    """
+    Parse float tùy chọn — trả về None nếu value là None/""/"none"/"null"/"off".
+
+    Dùng cho MIN_RR: người dùng có thể nhập "off" hoặc để trống để tắt filter R:R.
+    """
     if value is None:
         return default
     raw = str(value).strip().lower()
@@ -108,6 +141,24 @@ def _to_optional_float(
 
 
 def _parse_session_hours(value: object, default: list[int]) -> list[int]:
+    """
+    Parse danh sách giờ UTC từ chuỗi hoặc list.
+
+    Input có thể là:
+        - List/tuple/set số nguyên: [9, 10, 14, 15]
+        - Chuỗi phân cách bằng dấu phẩy, chấm phẩy, hoặc space: "9,10,14 15"
+        - Chuỗi rỗng: trả về []
+
+    Args:
+        value: Giá trị input từ user.
+        default: Giá trị mặc định nếu value là None.
+
+    Returns:
+        List giờ UTC đã sắp xếp tăng dần, không trùng.
+
+    Raises:
+        ValueError: Nếu có giờ ngoài phạm vi 0-23.
+    """
     if value is None:
         return list(default)
     if isinstance(value, (list, tuple, set)):
@@ -130,7 +181,12 @@ def _parse_session_hours(value: object, default: list[int]) -> list[int]:
 
 
 def get_indicator_params() -> dict:
-    """Return default indicator parameters consumed by Combo signals."""
+    """
+    Trả về tham số chỉ báo mặc định dùng cho add_combo_indicators().
+
+    Returns:
+        Dict gồm MA_PERIOD, MACD_FAST, MACD_SLOW, MACD_SIGNAL, ATR_PERIOD, KTP, MIN_RR.
+    """
     return {
         "MA_PERIOD": MA_PERIOD,
         "MACD_FAST": MACD_FAST,
@@ -143,7 +199,17 @@ def get_indicator_params() -> dict:
 
 
 def get_symbol_params(symbol: str | None) -> dict:
-    """Return signal-only per-symbol Combo parameters."""
+    """
+    Trả về tham số riêng theo symbol: buffer X và giờ giao dịch.
+
+    Symbol không có trong SYMBOL_X sẽ dùng X = 0.0.
+
+    Args:
+        symbol: Mã TradingView (không phân biệt hoa/thường).
+
+    Returns:
+        Dict: {"x": float, "session_hours_utc": list[int]}.
+    """
     key = str(symbol or "").strip().upper()
     return {
         "x": float(SYMBOL_X.get(key, 0.0)),
@@ -152,7 +218,20 @@ def get_symbol_params(symbol: str | None) -> dict:
 
 
 def normalize_params(overrides: dict[str, Any] | None = None, symbol: str | None = None) -> dict[str, Any]:
-    """Merge defaults, symbol defaults, and user overrides into validated params."""
+    """
+    Merge tham số mặc định, tham số theo symbol và override của người dùng thành dict hợp lệ.
+
+    Thứ tự ưu tiên: DEFAULT_PARAMS < symbol defaults < overrides.
+    Tất cả giá trị được validate và clamp vào giới hạn an toàn.
+
+    Args:
+        overrides: Dict tham số người dùng chỉ định (từ URL query hoặc CLI).
+                   Có thể là None — khi đó chỉ dùng defaults.
+        symbol: Mã symbol để lấy X và session_hours mặc định.
+
+    Returns:
+        Dict tham số đã validate đầy đủ — an toàn để truyền vào pipeline.
+    """
     raw = {**DEFAULT_PARAMS, **(overrides or {})}
     symbol_params = get_symbol_params(symbol)
     return {
@@ -163,6 +242,7 @@ def normalize_params(overrides: dict[str, Any] | None = None, symbol: str | None
         "ATR_PERIOD": _to_int(raw.get("ATR_PERIOD"), ATR_PERIOD, 2, 200),
         "KTP": _to_float(raw.get("KTP"), KTP, 0.1, 20.0),
         "MIN_RR": _to_optional_float(raw.get("MIN_RR"), MIN_RR, 0.0, 20.0),
+        # X: override > symbol default (từ SYMBOL_X) > 0.0
         "X": _to_float(raw.get("X"), symbol_params["x"], 0.0, 1_000_000.0),
         "SESSION_HOURS_UTC": _parse_session_hours(
             raw.get("SESSION_HOURS_UTC"),

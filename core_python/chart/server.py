@@ -1,4 +1,28 @@
-﻿"""Flask server for the simplified Lightweight Charts strategy scanner."""
+"""
+Flask server cho dashboard biểu đồ chiến lược SEN05.
+
+Mô tả:
+    Cung cấp 4 endpoint HTTP phục vụ giao diện web Lightweight Charts:
+    - GET /              → Trang index.html
+    - GET /assets/...    → Thư viện lightweight-charts.js
+    - GET /api/config    → Metadata chiến lược, symbol, khung thời gian
+    - GET /api/scan      → Chạy pipeline chiến lược, trả JSON payload biểu đồ
+    - GET /api/export    → Tải file CSV các tín hiệu theo cột được chọn
+
+Đầu vào:
+    Query params từ trình duyệt (strategy, symbol, tf, bars, overrides).
+
+Đầu ra:
+    JSON response hoặc file CSV.
+
+Phụ thuộc ngoài:
+    Flask, core_python.data.loader, core_python.strategies.registry,
+    core_python.chart.payload, data_provider/lightweight-charts.js (vendor lib).
+
+Giả định giao dịch:
+    Dashboard KHÔNG lọc bar đang mở — hiển thị cả bar chưa đóng.
+    Watcher lọc bar đang mở (closed_only=True).
+"""
 
 from __future__ import annotations
 
@@ -26,19 +50,36 @@ DEFAULT_PORT = 8515
 
 
 def create_app() -> Flask:
-    """Create the chart Flask app."""
+    """
+    Tạo và cấu hình Flask app với toàn bộ route handlers.
+
+    Returns:
+        Flask app instance sẵn sàng chạy.
+    """
     app = Flask(__name__, static_folder=str(STATIC_DIR), static_url_path="/static")
 
     @app.route("/")
     def index():
+        """Phục vụ trang web chính (index.html)."""
         return send_from_directory(STATIC_DIR, "index.html")
 
     @app.route("/assets/lightweight-charts.js")
     def lightweight_charts():
+        """Phục vụ thư viện charting vendor từ data_provider/."""
         return send_from_directory(VENDOR_DIR, "lightweight-charts.js")
 
     @app.route("/api/config")
     def api_config():
+        """
+        Trả về metadata cấu hình cho frontend khi khởi động.
+
+        Response JSON gồm:
+            strategies: dict chiến lược với label, defaults, fields (để render UI).
+            defaultStrategy: Chiến lược mặc định ("combo").
+            symbols: List symbol với name, asset_type, x (buffer Combo).
+            timeframes: List mã TF theo thứ tự hiển thị.
+            defaultSymbol, defaultTf, defaultBars: Giá trị mặc định cho dropdown.
+        """
         strategies = {
             key: {
                 "label": spec.label,
@@ -64,6 +105,16 @@ def create_app() -> Flask:
 
     @app.route("/api/export")
     def api_export():
+        """
+        Tạo và trả file CSV tín hiệu với các cột do người dùng chọn.
+
+        Query params:
+            strategy, symbol, tf, bars: Giống /api/scan.
+            cols: Danh sách cột cần xuất, phân cách bằng dấu phẩy.
+                  Cột đặc biệt: "bartime" (format chuỗi), "side" (BUY/SELL từ signal).
+
+        Response: File CSV attachment.
+        """
         import pandas as pd
         from flask import Response as _Response
         try:
@@ -81,6 +132,7 @@ def create_app() -> Flask:
                 params,
                 symbol,
             )
+            # Chỉ xuất dòng có tín hiệu thực (signal != 0)
             signals = enriched[enriched["signal"].fillna(0).astype(int).ne(0)].copy()
 
             requested = [c.strip() for c in request.args.get("cols", "").split(",") if c.strip()]
@@ -89,6 +141,7 @@ def create_app() -> Flask:
                 if col == "bartime":
                     out["bartime"] = pd.to_datetime(signals["bartime"]).dt.strftime("%Y-%m-%d %H:%M")
                 elif col == "side":
+                    # Chuyển signal số (+1/-1) thành chuỗi "BUY"/"SELL"
                     out["side"] = signals["signal"].map({1: "BUY", -1: "SELL"})
                 elif col in signals.columns:
                     out[col] = signals[col].values
@@ -105,12 +158,29 @@ def create_app() -> Flask:
 
     @app.route("/api/scan")
     def api_scan():
+        """
+        Chạy pipeline chiến lược và trả JSON payload cho Lightweight Charts.
+
+        Query params:
+            strategy: "combo" hoặc "ma_cross" (mặc định "combo").
+            symbol: Mã TradingView (mặc định DEFAULT_SYMBOL).
+            tf: Mã khung thời gian (mặc định DEFAULT_TF).
+            bars: Số bar cần tải (mặc định N_BARS, tối đa 20000).
+            [param overrides]: Các param của chiến lược (ví dụ: MA_PERIOD=30).
+
+        Response JSON gồm: candles, overlays, panels, markers, levels, signals, stats, meta, params.
+
+        Giả định giao dịch:
+            Bao gồm cả bar đang mở (chưa đóng) — bar cuối cùng trong kết quả
+            có thể chưa hình thành đầy đủ. Xem badge "includes live bar" trên UI.
+        """
         try:
             strategy_key = request.args.get("strategy", "combo")
             spec = get_strategy(strategy_key)
             symbol = request.args.get("symbol", config.DEFAULT_SYMBOL).upper()
             tf = request.args.get("tf", config.DEFAULT_TF).upper()
             bars = _to_int(request.args.get("bars"), config.N_BARS, 50, 20000)
+            # Lấy tham số override từ query string, lọc chỉ các key hợp lệ của chiến lược
             overrides = _strategy_overrides(request.args.to_dict(), spec.param_fields)
 
             params = spec.normalize_params(overrides, symbol)
@@ -137,6 +207,17 @@ def create_app() -> Flask:
 
 
 def _to_int(value: object, default: int, min_value: int, max_value: int) -> int:
+    """
+    Parse và giới hạn giá trị nguyên từ query string.
+
+    Args:
+        value: Giá trị thô từ request.args (có thể là None hoặc string).
+        default: Giá trị mặc định nếu parse thất bại.
+        min_value, max_value: Giới hạn cho phép.
+
+    Returns:
+        Số nguyên đã được clamp vào [min_value, max_value].
+    """
     try:
         parsed = int(float(value)) if value is not None else default
     except (TypeError, ValueError):
@@ -145,6 +226,19 @@ def _to_int(value: object, default: int, min_value: int, max_value: int) -> int:
 
 
 def _strategy_overrides(args: dict[str, str], fields: list[dict[str, Any]]) -> dict[str, Any]:
+    """
+    Trích xuất các tham số override của chiến lược từ query string.
+
+    Lọc chỉ lấy các key khớp với danh sách `fields` của chiến lược
+    (không phân biệt hoa/thường). Các key không liên quan (symbol, tf...) bị bỏ qua.
+
+    Args:
+        args: Toàn bộ query params từ request.args.to_dict().
+        fields: Danh sách field definition của chiến lược (từ StrategySpec.param_fields).
+
+    Returns:
+        Dict overrides với key đúng chuẩn (matching case với param name).
+    """
     keys = {field["key"] for field in fields}
     lower_to_key = {key.lower(): key for key in keys}
     overrides: dict[str, Any] = {}
@@ -156,7 +250,17 @@ def _strategy_overrides(args: dict[str, str], fields: list[dict[str, Any]]) -> d
 
 
 def run(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, debug: bool = False) -> None:
-    """Run the chart server."""
+    """
+    Khởi động Flask development server.
+
+    Args:
+        host: Địa chỉ IP lắng nghe (mặc định "127.0.0.1" — chỉ local).
+        port: Cổng lắng nghe (mặc định 8515).
+        debug: Bật Flask debug mode và hot reload.
+
+    Side Effects:
+        Chạy HTTP server — block tiến trình cho đến khi dừng.
+        use_reloader=False để tránh khởi động lại kép khi debug=True.
+    """
     app = create_app()
     app.run(host=host, port=port, debug=debug, use_reloader=False)
-

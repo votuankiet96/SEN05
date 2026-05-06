@@ -1,4 +1,23 @@
-"""SQL Server OHLCV loader for the simplified dashboard."""
+"""
+Tải dữ liệu OHLCV từ SQL Server cho dashboard và watcher.
+
+Mô tả:
+    Kết nối SQL Server qua modules.db_connector, truy vấn bảng DWH.Fact_OHLCV
+    lấy N bar gần nhất cho một symbol và khung thời gian, rồi trả về DataFrame
+    đã được làm sạch và sắp xếp tăng dần theo thời gian.
+
+Đầu ra:
+    pd.DataFrame với các cột: [bartime, open, high, low, close, volume].
+    bartime là UTC-naive (không có timezone info).
+
+Hợp đồng UTC (UTC Contract):
+    BarTime được lưu dạng UTC-naive trong DB theo chuẩn Capital.com / MT5.
+    Caller cần tự localize về UTC nếu cần so sánh với timestamp có timezone.
+    Xem _drop_open_bar() trong signal_watcher.py để biết cách xử lý đúng.
+
+Phụ thuộc ngoài:
+    modules.db_connector.get_connection() — kết nối pyodbc đến SQL Server.
+"""
 
 from __future__ import annotations
 
@@ -15,7 +34,20 @@ OHLCV_COLUMNS = ["bartime", "open", "high", "low", "close", "volume"]
 
 
 def _read_sql(query: str, conn, params: tuple) -> pd.DataFrame:
-    """Read SQL through a pyodbc cursor into a DataFrame."""
+    """
+    Thực thi câu SQL qua pyodbc cursor và trả về DataFrame.
+
+    Args:
+        query: Câu SQL có placeholder '?'.
+        conn: Kết nối pyodbc đang mở.
+        params: Tuple tham số truyền vào câu SQL theo thứ tự.
+
+    Returns:
+        DataFrame với tên cột lấy từ cursor.description.
+
+    Side Effects:
+        Mở và đóng cursor. Không đóng connection (caller chịu trách nhiệm).
+    """
     cursor = conn.cursor()
     try:
         cursor.execute(query, params)
@@ -27,19 +59,38 @@ def _read_sql(query: str, conn, params: tuple) -> pd.DataFrame:
 
 
 def _validate(df: pd.DataFrame, symbol: str, tf: str) -> pd.DataFrame:
-    """Drop clearly bad rows and warn; does not do full gap analysis."""
+    """
+    Loại bỏ các dòng dữ liệu rõ ràng là lỗi; không phân tích gap thời gian.
+
+    Các bước lọc (theo thứ tự):
+        1. Loại dòng có bartime không parse được (NaT).
+        2. Loại dòng có bất kỳ giá OHLC nào là NaN (volume được phép NaN).
+        3. Loại dòng trùng bartime — giữ lại dòng cuối (lần ghi mới nhất).
+        4. Sắp xếp tăng dần theo bartime.
+
+    Args:
+        df: DataFrame sau khi parse kiểu dữ liệu.
+        symbol: Dùng cho warning log.
+        tf: Dùng cho warning log.
+
+    Returns:
+        DataFrame đã làm sạch, reset index.
+
+    Side Effects:
+        Ghi warning log nếu có dòng bị loại.
+    """
     n_in = len(df)
 
-    # 1. Drop rows where bartime failed to parse
+    # Bước 1: Loại dòng bartime NaT (lỗi parse từ DB)
     df = df.dropna(subset=["bartime"])
 
-    # 2. Drop rows with any null OHLC (volume can legitimately be null)
+    # Bước 2: OHLC phải đầy đủ; volume có thể null (một số broker không cung cấp)
     df = df.dropna(subset=["open", "high", "low", "close"])
 
-    # 3. Drop duplicate bartimes (keep last = most recent write)
+    # Bước 3: Giữ lần ghi cuối nếu có nhiều dòng cùng bartime
     df = df.drop_duplicates(subset=["bartime"], keep="last")
 
-    # 4. Ensure sorted ascending (should already be, but guard)
+    # Bước 4: Đảm bảo thứ tự tăng dần (DB trả về DESC, đã reverse ở load())
     df = df.sort_values("bartime").reset_index(drop=True)
 
     n_dropped = n_in - len(df)
@@ -50,16 +101,35 @@ def _validate(df: pd.DataFrame, symbol: str, tf: str) -> pd.DataFrame:
 
 
 def load(symbol: str, tf: str, n_bars: int) -> pd.DataFrame:
-    """Load recent OHLCV bars from DWH.Fact_OHLCV.
+    """
+    Tải N bar OHLCV gần nhất từ DWH.Fact_OHLCV và trả về DataFrame sạch.
 
-    Contract: BarTime is stored as UTC-naive in the DB (Capital.com / MT5
-    convention).  Callers that need timezone-aware timestamps must localize
-    to UTC themselves — see _drop_open_bar() in signal_watcher.py.
+    Hợp đồng UTC: BarTime lưu UTC-naive trong DB (Capital.com / MT5).
+    Caller cần tự localize về UTC nếu cần so sánh timezone-aware.
+
+    Args:
+        symbol: Mã TradingView (ví dụ: "US30"). Phải có trong config.SYMBOLS.
+        tf: Mã khung thời gian (ví dụ: "H1", "M5"). Phải tồn tại trong DWH.Dim_Timeframe.
+        n_bars: Số bar tối đa. Query dùng TOP (n_bars) ORDER BY DESC.
+
+    Returns:
+        DataFrame với cột [bartime, open, high, low, close, volume], sắp xếp tăng dần.
+        Trả về DataFrame rỗng (cùng schema) nếu không có dữ liệu.
+
+    Side Effects:
+        Mở và đóng kết nối DB sau mỗi lần gọi.
+
+    Giả định giao dịch:
+        BarTime trong DB là thời điểm bar tương ứng — UTC-naive.
+        Bar cuối trong kết quả có thể là bar đang mở (chưa đóng).
+        Caller cần tự lọc bar đang mở nếu cần — xem _drop_open_bar() trong signal_watcher.py.
     """
     symbol_cfg = get_symbol(symbol)
     tf_code = str(tf).strip().upper()
     limit = max(1, int(n_bars))
 
+    # Lấy TOP N bars mới nhất bằng ORDER BY DESC, sau đó đảo lại thành tăng dần ở client.
+    # JOIN với Dim_Timeframe để lọc theo mã TF thay vì TimeframeID trực tiếp.
     query = """
         SELECT TOP (?)
                f.BarTime AS bartime,
@@ -84,6 +154,7 @@ def load(symbol: str, tf: str, n_bars: int) -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame(columns=OHLCV_COLUMNS)
 
+    # Parse kiểu dữ liệu: bartime → datetime UTC-naive, OHLCV → float
     df["bartime"] = pd.to_datetime(df["bartime"], errors="coerce")
     df = df.sort_values("bartime").reset_index(drop=True)
     for col in ("open", "high", "low", "close", "volume"):
