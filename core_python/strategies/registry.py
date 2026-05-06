@@ -27,6 +27,12 @@ from core_python.strategies.combo.signals import (
     add_combo_indicators,
     detect_combo_signals,
 )
+from core_python.strategies.ai_trend import config as ai_trend_config
+from core_python.strategies.ai_trend.levels import add_ai_trend_levels
+from core_python.strategies.ai_trend.signals import (
+    add_ai_trend_indicators,
+    detect_ai_trend_signals,
+)
 from core_python.strategies.ma_cross import config as ma_cross_config
 from core_python.strategies.ma_cross.levels import add_ma_cross_levels
 from core_python.strategies.ma_cross.signals import (
@@ -86,6 +92,16 @@ STRATEGIES: dict[str, StrategySpec] = {
         add_indicators=add_ma_cross_indicators,
         detect_signals=detect_ma_cross_signals,
         add_levels=add_ma_cross_levels,
+    ),
+    "ai_trend": StrategySpec(
+        key="ai_trend",
+        label="AI Trend",
+        default_params=ai_trend_config.DEFAULT_PARAMS,
+        param_fields=ai_trend_config.PARAM_FIELDS,
+        normalize_params=ai_trend_config.normalize_params,
+        add_indicators=add_ai_trend_indicators,
+        detect_signals=detect_ai_trend_signals,
+        add_levels=add_ai_trend_levels,
     ),
 }
 

@@ -38,6 +38,8 @@ if __package__ in {None, ""}:
 from core_python import config
 from core_python.chart.payload import build_chart_payload
 from core_python.data.loader import load
+from core_python.strategies.ai_trend.payload import build_ai_trend_payload
+from core_python.strategies.ai_trend.signals import build_ai_trend_frames
 from core_python.strategies.registry import STRATEGIES, get_strategy
 
 
@@ -124,6 +126,27 @@ def create_app() -> Flask:
             tf = request.args.get("tf", config.DEFAULT_TF).upper()
             bars = _to_int(request.args.get("bars"), config.N_BARS, 50, 20000)
             overrides = _strategy_overrides(request.args.to_dict(), spec.param_fields)
+            if spec.key == "ai_trend":
+                payload, enriched = _run_ai_trend_dashboard(spec, request.args.to_dict(), symbol, bars)
+                signals = enriched[enriched["signal"].fillna(0).astype(int).ne(0)].copy()
+
+                requested = [c.strip() for c in request.args.get("cols", "").split(",") if c.strip()]
+                out: dict = {}
+                for col in requested:
+                    if col == "bartime":
+                        out["bartime"] = pd.to_datetime(signals["bartime"]).dt.strftime("%Y-%m-%d %H:%M")
+                    elif col == "side":
+                        out["side"] = signals["signal"].map({1: "BUY", -1: "SELL"})
+                    elif col in signals.columns:
+                        out[col] = signals[col].values
+
+                csv_data = pd.DataFrame(out).to_csv(index=False)
+                filename = f"{strategy_key}_{payload['meta']['symbol']}_{payload['meta']['entryTf']}_signals.csv"
+                return _Response(
+                    csv_data,
+                    mimetype="text/csv",
+                    headers={"Content-Disposition": f"attachment; filename={filename}"},
+                )
             params = spec.normalize_params(overrides, symbol)
 
             raw = load(symbol, tf, bars)
@@ -182,6 +205,9 @@ def create_app() -> Flask:
             bars = _to_int(request.args.get("bars"), config.N_BARS, 50, 20000)
             # Lấy tham số override từ query string, lọc chỉ các key hợp lệ của chiến lược
             overrides = _strategy_overrides(request.args.to_dict(), spec.param_fields)
+            if spec.key == "ai_trend":
+                payload, _enriched = _run_ai_trend_dashboard(spec, request.args.to_dict(), symbol, bars)
+                return jsonify(payload)
 
             params = spec.normalize_params(overrides, symbol)
             raw = load(symbol, tf, bars)
@@ -204,6 +230,38 @@ def create_app() -> Flask:
             return jsonify({"error": str(exc)}), 500
 
     return app
+
+
+def _run_ai_trend_dashboard(
+    spec,
+    args: dict[str, str],
+    symbol: str,
+    bars: int,
+) -> tuple[dict[str, Any], Any]:
+    """
+    Run the AI Trend two-timeframe dashboard path.
+
+    The common StrategySpec callables stay registered for compatibility, but the
+    dashboard needs both H3 and M45 data at the same time.
+    """
+    overrides = _strategy_overrides(args, spec.param_fields)
+    overrides.setdefault("SYMBOL", symbol or "GOLD")
+    overrides.setdefault("ENTRY_BARS", bars)
+    params = spec.normalize_params(overrides, symbol)
+
+    trend_raw = load(params["SYMBOL"], params["TREND_TF"], int(params["TREND_BARS"]))
+    entry_raw = load(params["SYMBOL"], params["ENTRY_TF"], int(params["ENTRY_BARS"]))
+    trend_frame, entry_frame = build_ai_trend_frames(trend_raw, entry_raw, params)
+    enriched = spec.add_levels(entry_frame, params, params["SYMBOL"])
+    payload = build_ai_trend_payload(
+        trend_frame,
+        enriched,
+        strategy=spec.key,
+        strategy_label=spec.label,
+        symbol=params["SYMBOL"],
+        params=params,
+    )
+    return payload, enriched
 
 
 def _to_int(value: object, default: int, min_value: int, max_value: int) -> int:

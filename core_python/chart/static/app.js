@@ -3,6 +3,7 @@ const state = {
   priceChart: null,
   panelCharts: [],
   panelSeries: [],
+  markRefreshers: [],
 };
 
 const el = {
@@ -68,6 +69,12 @@ const COLUMN_LABELS = {
   fast_ma: "Fast MA",
   slow_ma: "Slow MA",
   ma_gap_atr: "Gap/ATR",
+  h3_bias: "H3 Bias",
+  h3_ai_knn: "H3 KNN",
+  h3_ai_avg: "H3 Avg",
+  ema_fast: "EMA Fast",
+  ema_slow: "EMA Slow",
+  close: "Close",
 };
 
 const TEXT_COLS = new Set(["bartime", "side", "reason"]);
@@ -106,6 +113,20 @@ const EXPORT_COLUMNS = {
     { key: "slow_ma", label: "Slow MA", checked: false },
     { key: "ma_gap_atr", label: "Gap/ATR", checked: false },
   ],
+  ai_trend: [
+    { key: "bartime", label: "Bar Time", checked: true },
+    { key: "side", label: "Side", checked: true },
+    { key: "signal_reason", label: "Reason", checked: true },
+    { key: "h3_bias", label: "H3 Bias", checked: true },
+    { key: "h3_ai_knn", label: "H3 KNN", checked: false },
+    { key: "h3_ai_avg", label: "H3 Avg", checked: false },
+    { key: "ema_fast", label: "EMA Fast", checked: false },
+    { key: "ema_slow", label: "EMA Slow", checked: false },
+    { key: "open", label: "Open", checked: false },
+    { key: "high", label: "High", checked: false },
+    { key: "low", label: "Low", checked: false },
+    { key: "close", label: "Close", checked: false },
+  ],
 };
 
 function fmtNum(value) {
@@ -123,6 +144,10 @@ function fmtPrice(n) {
   const abs = Math.abs(n);
   if (abs >= 100) return new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
   return n.toFixed(5);
+}
+
+function fmtUtcMinute(ts) {
+  return new Date(ts * 1000).toISOString().slice(0, 16).replace("T", " ");
 }
 
 function createOption(parent, value, label, selectedValue) {
@@ -171,6 +196,7 @@ async function init() {
 
   el.strategy.addEventListener("change", () => {
     renderParamControls();
+    applyStrategyDefaults();
     updateXDefault();
     loadScan();
   });
@@ -239,6 +265,21 @@ function renderParamControls() {
   });
 }
 
+function applyStrategyDefaults() {
+  if (el.strategy.value !== "ai_trend") return;
+  el.assetType.value = "";
+  populateSymbols("");
+  if ([...el.symbol.options].some((option) => option.value === "GOLD")) {
+    el.symbol.value = "GOLD";
+  }
+  if ([...el.tf.options].some((option) => option.value === "M45")) {
+    el.tf.value = "M45";
+  }
+  if (!el.bars.value || Number(el.bars.value) < 1000) {
+    el.bars.value = 1000;
+  }
+}
+
 function collectParams() {
   const params = {};
   el.params.querySelectorAll("[data-param]").forEach((input) => {
@@ -249,6 +290,7 @@ function collectParams() {
 
 async function loadScan() {
   clearError();
+  applyStrategyDefaults();
   const query = new URLSearchParams({
     strategy: el.strategy.value,
     symbol: el.symbol.value,
@@ -278,6 +320,7 @@ function clearError() {
 }
 
 function resetCharts() {
+  state.markRefreshers = [];
   if (state.priceChart) {
     state.priceChart.remove();
     state.priceChart = null;
@@ -286,9 +329,15 @@ function resetCharts() {
   state.panelCharts = [];
   state.panelSeries = [];
   el.panelCharts.replaceChildren();
+  el.priceChart.classList.remove("ai-trend-h3-chart");
+  el.chartLegend.textContent = "";
 }
 
 function renderPayload(payload) {
+  if (payload.layout === "ai_trend_mtf") {
+    renderAiTrendPayload(payload);
+    return;
+  }
   resetCharts();
   el.meta.textContent = `${payload.meta.strategyLabel} | ${payload.meta.symbol} ${payload.meta.tf} | ${payload.meta.bars} bars`;
   el.statTotal.textContent = payload.stats.total;
@@ -312,7 +361,7 @@ function renderPayload(payload) {
     wickDownColor: "#ef4444",
   });
   candleSeries.setData(payload.candles);
-  candleSeries.setMarkers(payload.markers.sort((a, b) => a.time - b.time));
+  setSeriesMarkers(candleSeries, payload.markers);
 
   payload.overlays.forEach((line) => {
     const series = priceChart.addLineSeries({
@@ -385,6 +434,236 @@ function renderPayload(payload) {
 
   renderSignalsTable(payload.signals);
   priceChart.timeScale().fitContent();
+}
+
+function renderAiTrendPayload(payload) {
+  resetCharts();
+  el.priceChart.classList.add("ai-trend-h3-chart");
+  el.meta.textContent = `${payload.meta.strategyLabel} | ${payload.meta.symbol} ${payload.meta.trendTf}/${payload.meta.entryTf} | H3 ${payload.meta.trendBars} bars, M45 ${payload.meta.entryBars} bars`;
+  el.statTotal.textContent = payload.stats.total;
+  el.statBuy.textContent = payload.stats.buy;
+  el.statSell.textContent = payload.stats.sell;
+  el.statLast.textContent = payload.stats.last;
+  el.chartLegend.textContent = payload.charts.trend.label;
+
+  const trendChart = createPriceChart(el.priceChart, payload.charts.trend);
+  state.priceChart = trendChart.chart;
+
+  const entryContainer = document.createElement("div");
+  entryContainer.className = "chart ai-entry-chart";
+  const entryLabel = document.createElement("div");
+  entryLabel.className = "ai-chart-label";
+  entryLabel.textContent = payload.charts.entry.label;
+  entryLabel.dataset.baseLabel = payload.charts.entry.label;
+  entryContainer.appendChild(entryLabel);
+  el.panelCharts.appendChild(entryContainer);
+
+  const entryChart = createPriceChart(entryContainer, payload.charts.entry);
+  state.panelCharts.push(entryChart.chart);
+  setupAiTrendLinking(payload, trendChart, entryChart, entryLabel);
+
+  trendChart.chart.timeScale().fitContent();
+  entryChart.chart.timeScale().fitContent();
+  renderSignalsTable(payload.signals);
+}
+
+function createPriceChart(container, chartPayload) {
+  const chart = LightweightCharts.createChart(container, {
+    ...chartTheme,
+    width: container.clientWidth,
+    height: container.clientHeight,
+  });
+  const candleSeries = chart.addCandlestickSeries({
+    upColor: "#22c55e",
+    downColor: "#ef4444",
+    borderUpColor: "#22c55e",
+    borderDownColor: "#ef4444",
+    wickUpColor: "#22c55e",
+    wickDownColor: "#ef4444",
+  });
+  candleSeries.setData(chartPayload.candles);
+  const baseMarkers = (chartPayload.markers || []).sort((a, b) => a.time - b.time);
+  setSeriesMarkers(candleSeries, baseMarkers);
+  const candleByTime = new Map((chartPayload.candles || []).map((candle) => [candle.time, candle]));
+  const candleTimes = (chartPayload.candles || []).map((candle) => candle.time).sort((a, b) => a - b);
+
+  (chartPayload.overlays || []).forEach((line) => {
+    const series = chart.addLineSeries({
+      color: line.color,
+      lineWidth: 2,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      title: line.label,
+    });
+    series.setData(line.data);
+  });
+  (chartPayload.segments || []).forEach((segment) => {
+    const series = chart.addLineSeries({
+      color: segment.color || "#e5e7eb",
+      lineWidth: segment.width || 2,
+      lineStyle: lineStyle(segment.style),
+      priceLineVisible: false,
+      lastValueVisible: false,
+      title: "",
+    });
+    series.setData(segment.data || []);
+  });
+  return { chart, container, candleSeries, candleByTime, candleTimes, baseMarkers };
+}
+
+function nearestChartTime(times, target) {
+  if (!times.length) return null;
+  if (times.includes(target)) return target;
+  let best = times[0];
+  let bestDist = Math.abs(best - target);
+  for (const t of times) {
+    const dist = Math.abs(t - target);
+    if (dist < bestDist) {
+      best = t;
+      bestDist = dist;
+    }
+  }
+  return best;
+}
+
+function firstChartTimeAtOrAfter(times, target) {
+  for (const time of times) {
+    if (time >= target) return time;
+  }
+  return null;
+}
+
+function sortedMarkers(markers) {
+  return (markers || []).slice().sort((a, b) => Number(a.time) - Number(b.time));
+}
+
+function setSeriesMarkers(series, markers) {
+  series.setMarkers(sortedMarkers(markers));
+}
+
+function createMarkLine(container) {
+  const line = document.createElement("div");
+  line.className = "ai-mark-line";
+  line.hidden = true;
+  container.appendChild(line);
+  return line;
+}
+
+function setMarkLine(view, line, time) {
+  if (time == null) {
+    line.hidden = true;
+    return;
+  }
+  const coordinate = view.chart.timeScale().timeToCoordinate(time);
+  if (coordinate == null) {
+    line.hidden = true;
+    return;
+  }
+  line.hidden = false;
+  line.style.left = `${Math.round(coordinate)}px`;
+}
+
+function setupAiTrendLinking(payload, trendView, entryView, entryLabel) {
+  const h3Seconds = 180 * 60;
+  const contextBars = Math.max(6, Number(payload.params?.M45_CONTEXT_BARS || 45));
+  const trendMarkLine = createMarkLine(trendView.container);
+  const entryMarkLine = createMarkLine(entryView.container);
+  let markedH3Time = null;
+  let markedEntryTime = null;
+
+  const refreshMarkLines = () => {
+    setMarkLine(trendView, trendMarkLine, markedH3Time);
+    setMarkLine(entryView, entryMarkLine, markedEntryTime);
+  };
+  state.markRefreshers.push(refreshMarkLines);
+  trendView.chart.timeScale().subscribeVisibleLogicalRangeChange(refreshMarkLines);
+  entryView.chart.timeScale().subscribeVisibleLogicalRangeChange(refreshMarkLines);
+
+  const setWindowAround = (focusTime) => {
+    const index = entryView.candleTimes.indexOf(focusTime);
+    if (index < 0) return;
+    const beforeBars = Math.max(1, Math.floor(contextBars / 3));
+    const maxFrom = Math.max(0, entryView.candleTimes.length - contextBars);
+    const fromIndex = Math.max(0, Math.min(index - beforeBars, maxFrom));
+    const toIndex = Math.min(entryView.candleTimes.length - 1, fromIndex + contextBars - 1);
+    entryView.chart.timeScale().setVisibleRange({
+      from: entryView.candleTimes[fromIndex],
+      to: entryView.candleTimes[toIndex],
+    });
+  };
+
+  const clearMark = () => {
+    markedH3Time = null;
+    markedEntryTime = null;
+    setSeriesMarkers(trendView.candleSeries, trendView.baseMarkers);
+    setSeriesMarkers(entryView.candleSeries, entryView.baseMarkers);
+    refreshMarkLines();
+    trendView.chart.clearCrosshairPosition();
+    entryView.chart.clearCrosshairPosition();
+    entryLabel.textContent = entryLabel.dataset.baseLabel;
+    el.chartLegend.textContent = payload.charts.trend.label;
+  };
+
+  const manualMarkers = (time, label) => ([
+    {
+      time,
+      position: "aboveBar",
+      color: "#facc15",
+      shape: "square",
+      text: label,
+    },
+    {
+      time,
+      position: "belowBar",
+      color: "#facc15",
+      shape: "circle",
+      text: "MARK",
+    },
+  ]);
+
+  const markH3Bar = (rawH3Time) => {
+    const h3Time = nearestChartTime(trendView.candleTimes, rawH3Time);
+    if (h3Time == null) return;
+    const trendCandle = trendView.candleByTime.get(h3Time);
+    if (!trendCandle) return;
+    const h3CloseTime = h3Time + h3Seconds;
+    const focusTime = firstChartTimeAtOrAfter(entryView.candleTimes, h3CloseTime);
+    const entryCandle = focusTime == null ? null : entryView.candleByTime.get(focusTime);
+    markedH3Time = h3Time;
+    markedEntryTime = focusTime;
+
+    setSeriesMarkers(trendView.candleSeries, [
+      ...trendView.baseMarkers,
+      ...manualMarkers(h3Time, "H3 MARK"),
+    ]);
+    trendView.chart.setCrosshairPosition(trendCandle.close, h3Time, trendView.candleSeries);
+
+    setSeriesMarkers(entryView.candleSeries, entryCandle ? [
+      ...entryView.baseMarkers,
+      ...manualMarkers(focusTime, "H3 close"),
+    ] : entryView.baseMarkers);
+
+    if (entryCandle) {
+      entryView.chart.setCrosshairPosition(entryCandle.close, focusTime, entryView.candleSeries);
+      setWindowAround(focusTime);
+    } else {
+      entryView.chart.clearCrosshairPosition();
+    }
+
+    const focusText = focusTime == null ? "no M45 bar" : fmtUtcMinute(focusTime);
+    entryLabel.textContent = `${entryLabel.dataset.baseLabel} | H3 mark ${fmtUtcMinute(h3Time)} -> M45 ${focusText} | ${contextBars} bars, 1/3 before`;
+    el.chartLegend.textContent = `${payload.charts.trend.label} | marked H3 ${fmtUtcMinute(h3Time)} | H3 close ${fmtUtcMinute(h3CloseTime)}`;
+    requestAnimationFrame(refreshMarkLines);
+  };
+
+  trendView.chart.subscribeClick((param) => {
+    if (!param || param.time == null) return;
+    markH3Bar(Number(param.time));
+  });
+  if (typeof trendView.chart.subscribeDblClick === "function") {
+    trendView.chart.subscribeDblClick(clearMark);
+  }
+  trendView.container.addEventListener("dblclick", clearMark);
 }
 
 function renderPanels(panels, priceChart) {
@@ -502,7 +781,7 @@ window.addEventListener("resize", () => {
   state.panelCharts.forEach((chart) => {
     chart.applyOptions({ width: chart.chartElement?.clientWidth || el.priceChart.clientWidth });
   });
+  state.markRefreshers.forEach((refresh) => refresh());
 });
 
 init().catch((error) => showError(error.message));
-
