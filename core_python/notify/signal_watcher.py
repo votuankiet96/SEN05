@@ -6,7 +6,7 @@ Mô tả:
     scan_config.py và gửi Telegram ngay khi có tín hiệu mới trên bar đã đóng.
 
     Lịch scan căn chỉnh theo bar-close: sau mỗi lần kiểm tra, lần tiếp theo
-    được lên lịch vào thời điểm bar close kế tiếp + 30s buffer.
+    được lên lịch vào thời điểm bar close kế tiếp + buffer cấu hình (mặc định 5s).
     Lần đầu tiên khi khởi động: chạy ngay lập tức.
 
 Chế độ chạy:
@@ -30,7 +30,13 @@ Phụ thuộc:
 from __future__ import annotations
 
 import argparse
+import hashlib
+import html
+import json
+import logging
+import os
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -61,6 +67,185 @@ _DEFAULT_BAR_CLOSE_BUFFER_SECONDS = 5
 _DEFAULT_POST_CLOSE_RETRY_SECONDS = 5
 _DEFAULT_POST_CLOSE_WATCH_SECONDS = 10
 _IDLE_SLEEP_SECONDS = 1.0
+_STALE_WARNING_LAG_MINUTES = 30
+_STALE_WARNING_THROTTLE_MINUTES = 30
+_HISTORICAL_ALERT_AGE_MULTIPLIER = 3
+_HISTORICAL_ALERT_MIN_AGE_MINUTES = 120
+
+logger = logging.getLogger(__name__)
+_DB_LOAD_COUNT = 0
+_LAST_STALE_LOGGED: dict[tuple[str, str], pd.Timestamp] = {}
+
+
+@dataclass(frozen=True)
+class SentSignalEvent:
+    """A production Telegram signal event used for hourly summaries."""
+
+    strategy: str
+    symbol: str
+    tf: str
+    side: str
+    event_time: pd.Timestamp
+    sent_at: pd.Timestamp
+    kind: str = "signal"
+
+
+def scan_fingerprint(scan_groups: list[dict], closed_only: bool) -> str:
+    """Return a stable hash of the scan universe covered by warm-up."""
+    universe = []
+    for group in scan_groups:
+        overrides = _canonical_json_value(group.get("overrides") or {})
+        symbols = sorted(str(symbol).strip().upper() for symbol in group.get("symbols", []) if str(symbol).strip())
+        item = {
+            "strategy": str(group.get("strategy", "")).strip().lower(),
+            "event_type": str(group.get("event_type") or "").strip().lower(),
+            "tf": str(group.get("tf", "")).strip().upper(),
+            "bars": int(group.get("bars", config.N_BARS)),
+            "symbols": symbols,
+            "overrides": overrides,
+            "closed_only": bool(closed_only),
+        }
+        universe.append(item)
+    universe.sort(key=lambda item: json.dumps(item, sort_keys=True, default=str))
+    payload = json.dumps(universe, sort_keys=True, default=str, separators=(",", ":"))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _canonical_json_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(k): _canonical_json_value(v) for k, v in sorted(value.items(), key=lambda item: str(item[0]))}
+    if isinstance(value, (list, tuple)):
+        return [_canonical_json_value(item) for item in value]
+    if isinstance(value, set):
+        return sorted((_canonical_json_value(item) for item in value), key=lambda item: json.dumps(item, sort_keys=True, default=str))
+    return value
+
+
+def _scan_fingerprint_error(state: SignalState, expected_fingerprint: str) -> str | None:
+    stored = state.get_scan_fingerprint()
+    if stored == expected_fingerprint:
+        return None
+    if not stored:
+        return (
+            "[ERROR] Watcher state file has no scan fingerprint. "
+            "Run warm-up before starting production:\n"
+            "  python -m core_python.notify.signal_watcher --warm-up\n"
+            f"  (expected state path: {state.path})"
+        )
+    return (
+        "[ERROR] Watcher scan config changed since warm-up. "
+        "Run warm-up again before starting production:\n"
+        "  python -m core_python.notify.signal_watcher --warm-up\n"
+        f"  stored fingerprint:  {stored}\n"
+        f"  current fingerprint: {expected_fingerprint}"
+    )
+
+
+def _load_ohlcv(symbol: str, tf: str, bars: int) -> pd.DataFrame:
+    global _DB_LOAD_COUNT
+    _DB_LOAD_COUNT += 1
+    return load(symbol, tf, bars)
+
+
+def _warn_if_stale_bar(
+    symbol: str,
+    tf: str,
+    latest_bartime: object,
+    *,
+    now_utc: pd.Timestamp | None = None,
+    allowed_lag_minutes: int = _STALE_WARNING_LAG_MINUTES,
+    throttle_minutes: int = _STALE_WARNING_THROTTLE_MINUTES,
+) -> bool:
+    """Log a throttled warning when the latest closed bar is too old."""
+    tf_code = str(tf).strip().upper()
+    minutes = config.TF_MINUTES.get(tf_code)
+    if latest_bartime is None or not minutes:
+        return False
+    latest = pd.Timestamp(latest_bartime)
+    if pd.isna(latest):
+        return False
+    if latest.tzinfo is None:
+        latest = latest.tz_localize("UTC")
+    else:
+        latest = latest.tz_convert("UTC")
+    now = pd.Timestamp.now("UTC") if now_utc is None else pd.Timestamp(now_utc)
+    if now.tzinfo is None:
+        now = now.tz_localize("UTC")
+    else:
+        now = now.tz_convert("UTC")
+
+    latest_close = latest + pd.Timedelta(minutes=int(minutes))
+    age = now - latest_close
+    key = (str(symbol).strip().upper(), tf_code)
+    if age <= pd.Timedelta(minutes=int(allowed_lag_minutes)):
+        _LAST_STALE_LOGGED.pop(key, None)
+        return False
+
+    last_logged = _LAST_STALE_LOGGED.get(key)
+    if last_logged is None or now - last_logged >= pd.Timedelta(minutes=int(throttle_minutes)):
+        logger.warning(
+            "stale data: %s %s latest_close=%s age=%s threshold=%sm",
+            key[0],
+            key[1],
+            latest_close.strftime("%Y-%m-%d %H:%M:%S UTC"),
+            _format_timedelta(age),
+            int(allowed_lag_minutes),
+        )
+        _LAST_STALE_LOGGED[key] = now
+    return True
+
+
+def _format_timedelta(delta: pd.Timedelta) -> str:
+    seconds = max(0, int(delta.total_seconds()))
+    days, rem = divmod(seconds, 86400)
+    hours, rem = divmod(rem, 3600)
+    minutes, seconds = divmod(rem, 60)
+    if days:
+        return f"{days}d {hours:02d}:{minutes:02d}:{seconds:02d}"
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+
+def _alert_age_limit(tf: str, max_alert_age_minutes: int | None = None) -> pd.Timedelta:
+    if max_alert_age_minutes is not None:
+        return pd.Timedelta(minutes=max(1, int(max_alert_age_minutes)))
+    minutes = config.TF_MINUTES.get(str(tf).strip().upper())
+    if not minutes:
+        return pd.Timedelta(minutes=_HISTORICAL_ALERT_MIN_AGE_MINUTES)
+    return pd.Timedelta(
+        minutes=max(
+            _HISTORICAL_ALERT_MIN_AGE_MINUTES,
+            _HISTORICAL_ALERT_AGE_MULTIPLIER * int(minutes),
+        )
+    )
+
+
+def _event_close_from_bar_open(bartime: object, tf: str) -> pd.Timestamp:
+    ts = _as_utc_ts(bartime)
+    minutes = config.TF_MINUTES.get(str(tf).strip().upper())
+    if not minutes:
+        return ts
+    return ts + pd.Timedelta(minutes=int(minutes))
+
+
+def _is_historical_alert(
+    event_time: object,
+    tf: str,
+    *,
+    now_utc: pd.Timestamp | None = None,
+    max_alert_age_minutes: int | None = None,
+) -> tuple[bool, pd.Timedelta, pd.Timedelta]:
+    now = pd.Timestamp.now("UTC") if now_utc is None else _as_utc_ts(now_utc)
+    event_ts = _as_utc_ts(event_time)
+    age = now - event_ts
+    limit = _alert_age_limit(tf, max_alert_age_minutes=max_alert_age_minutes)
+    return age > limit, age, limit
+
+
+def _mark_historical_seen(state: SignalState, key: str, *, dry_run: bool) -> str:
+    if dry_run:
+        return "dry-run; not marked seen"
+    state.add(key)
+    return "marked seen"
 
 
 def run_strategy_frame(
@@ -96,7 +281,7 @@ def run_strategy_frame(
     """
     spec = get_strategy(strategy)
     params = spec.normalize_params(overrides or {}, symbol)
-    raw = load(symbol, tf, bars)
+    raw = _load_ohlcv(symbol, tf, bars)
     if closed_only:
         raw = _drop_open_bar(raw, tf)
     with_indicators = spec.add_indicators(raw, params)
@@ -155,6 +340,8 @@ def check_once(
     chat_id: str | None = None,
     show_progress: bool = True,
     latest_bars: list[pd.Timestamp] | None = None,
+    sent_signals: list[SentSignalEvent] | None = None,
+    max_alert_age_minutes: int | None = None,
 ) -> list[str]:
     """
     Kiểm tra tất cả symbol trong một nhóm, gửi tín hiệu mới, trả về log events.
@@ -206,6 +393,8 @@ def check_once(
         latest_bar_ts = _latest_bar_ts(frame)
         if latest_bar_ts is not None and latest_bars is not None:
             latest_bars.append(latest_bar_ts)
+        if latest_bar_ts is not None:
+            _warn_if_stale_bar(symbol, tf, latest_bar_ts)
         latest_bar = _format_bar_ts(latest_bar_ts)
         new_rows = all_new_signal_rows(frame, state, strategy, symbol, tf)
         if not new_rows:
@@ -214,6 +403,22 @@ def check_once(
 
         for row in new_rows:
             key = signal_key(strategy, symbol, tf, row["bartime"], int(row["signal"]))
+            event_close = _event_close_from_bar_open(row["bartime"], tf)
+            is_historical, age, age_limit = _is_historical_alert(
+                event_close,
+                tf,
+                max_alert_age_minutes=max_alert_age_minutes,
+            )
+            side = "BUY" if int(row["signal"]) == 1 else "SELL"
+            signal_time = event_close.strftime("%Y-%m-%d %H:%M")
+            if is_historical:
+                mark_status = _mark_historical_seen(state, key, dry_run=notifier.dry_run)
+                events.append(
+                    f"{symbol} {tf}: skipped historical {side} {signal_time} UTC "
+                    f"age={_format_timedelta(age)} limit={_format_timedelta(age_limit)} ({mark_status})"
+                )
+                continue
+
             if export_on_signal:
                 try:
                     export_signals(frame, symbol=symbol, strategy=strategy, output_dir=output_dir)
@@ -222,11 +427,20 @@ def check_once(
 
             message = format_signal_message(row, strategy_label=spec.label, symbol=symbol, tf=tf)
             result = notifier.send(message, chat_id=chat_id)
-            side = "BUY" if int(row["signal"]) == 1 else "SELL"
-            signal_time = pd.Timestamp(row["bartime"]).strftime("%Y-%m-%d %H:%M")
 
             if result.sent and not notifier.dry_run:
                 state.add(key)
+                if sent_signals is not None:
+                    sent_signals.append(
+                        SentSignalEvent(
+                            strategy=strategy,
+                            symbol=symbol.upper(),
+                            tf=tf.upper(),
+                            side=side,
+                            event_time=event_close,
+                            sent_at=pd.Timestamp.now("UTC"),
+                        )
+                    )
                 events.append(f"{symbol} {tf}: alerted via {result.backend} {side} {signal_time} UTC")
             elif result.sent:
                 events.append(f"{symbol} {tf}: dry-run OK {side} {signal_time} UTC")
@@ -249,6 +463,8 @@ def check_ai_trend_once(
     chat_id: str | None = None,
     show_progress: bool = True,
     latest_bars: list[pd.Timestamp] | None = None,
+    sent_signals: list[SentSignalEvent] | None = None,
+    max_alert_age_minutes: int | None = None,
 ) -> list[str]:
     """Check AI Trend H3 trend-change or M45 entry alerts for one scan group."""
     normalized_event_type = _normalize_ai_trend_event_type(event_type, tf)
@@ -279,13 +495,49 @@ def check_ai_trend_once(
 
         for alert in new_alerts:
             key = ai_trend_alert_key(alert)
+            direction = _ai_trend_alert_side(alert.direction, alert.kind)
+            event_time = _as_utc_ts(alert.event_time)
+            signal_time = event_time.strftime("%Y-%m-%d %H:%M")
+            if not _ai_trend_m45_matches_h3(alert):
+                mark_status = _mark_historical_seen(state, key, dry_run=notifier.dry_run)
+                h3_bias = getattr(alert, "h3_bias", None)
+                events.append(
+                    f"{symbol} {tf}: skipped AI Trend M45 {direction} {signal_time} UTC "
+                    f"because H3 bias is {h3_bias} ({mark_status})"
+                )
+                continue
+
+            is_historical, age, age_limit = _is_historical_alert(
+                event_time,
+                tf,
+                max_alert_age_minutes=max_alert_age_minutes,
+            )
+            if is_historical:
+                mark_status = _mark_historical_seen(state, key, dry_run=notifier.dry_run)
+                events.append(
+                    f"{symbol} {tf}: skipped historical AI Trend {normalized_event_type} "
+                    f"{direction} {signal_time} UTC age={_format_timedelta(age)} "
+                    f"limit={_format_timedelta(age_limit)} ({mark_status})"
+                )
+                continue
+
             message = format_ai_trend_alert(alert)
             result = notifier.send(message, chat_id=chat_id)
-            direction = _ai_trend_alert_side(alert.direction, alert.kind)
-            signal_time = pd.Timestamp(alert.event_time).strftime("%Y-%m-%d %H:%M")
 
             if result.sent and not notifier.dry_run:
                 state.add(key)
+                if sent_signals is not None:
+                    sent_signals.append(
+                        SentSignalEvent(
+                            strategy="ai_trend",
+                            symbol=symbol.upper(),
+                            tf=tf.upper(),
+                            side=direction,
+                            event_time=event_time,
+                            sent_at=pd.Timestamp.now("UTC"),
+                            kind=normalized_event_type,
+                        )
+                    )
                 events.append(
                     f"{symbol} {tf}: alerted via {result.backend} "
                     f"{normalized_event_type} {direction} {signal_time} UTC"
@@ -322,24 +574,30 @@ def run_ai_trend_alerts(
     params = spec.normalize_params(local_overrides, symbol)
     selected_symbol = params["SYMBOL"]
 
-    trend_raw = load(selected_symbol, params["TREND_TF"], int(params["TREND_BARS"]))
+    trend_raw = _load_ohlcv(selected_symbol, params["TREND_TF"], int(params["TREND_BARS"]))
     if closed_only:
         trend_raw = _drop_open_bar(trend_raw, params["TREND_TF"])
+    trend_latest_ts = _latest_bar_ts(trend_raw)
+    if trend_latest_ts is not None:
+        _warn_if_stale_bar(selected_symbol, params["TREND_TF"], trend_latest_ts)
     if trend_raw.empty:
         raise ValueError(f"{selected_symbol} has no closed {params['TREND_TF']} data")
 
     if normalized_event_type == H3_TREND_CHANGE:
         trend_frame = prepare_trend_frame(trend_raw, params)
-        return extract_h3_trend_alerts(trend_frame, selected_symbol), _latest_bar_ts(trend_raw)
+        return extract_h3_trend_alerts(trend_frame, selected_symbol), trend_latest_ts
 
-    entry_raw = load(selected_symbol, params["ENTRY_TF"], int(params["ENTRY_BARS"]))
+    entry_raw = _load_ohlcv(selected_symbol, params["ENTRY_TF"], int(params["ENTRY_BARS"]))
     if closed_only:
         entry_raw = _drop_open_bar(entry_raw, params["ENTRY_TF"])
+    entry_latest_ts = _latest_bar_ts(entry_raw)
+    if entry_latest_ts is not None:
+        _warn_if_stale_bar(selected_symbol, params["ENTRY_TF"], entry_latest_ts)
     if entry_raw.empty:
         raise ValueError(f"{selected_symbol} has no closed {params['ENTRY_TF']} data")
 
     _trend_frame, entry_frame = build_ai_trend_frames(trend_raw, entry_raw, params)
-    return extract_m45_entry_alerts(entry_frame, selected_symbol), _latest_bar_ts(entry_raw)
+    return extract_m45_entry_alerts(entry_frame, selected_symbol), entry_latest_ts
 
 
 def _normalize_ai_trend_event_type(event_type: str | None, tf: str) -> str:
@@ -358,6 +616,15 @@ def _ai_trend_alert_side(direction: int, kind: str) -> str:
     if kind == H3_TREND_CHANGE:
         return "BULLISH" if int(direction) == 1 else "BEARISH"
     return "BUY" if int(direction) == 1 else "SELL"
+
+
+def _ai_trend_m45_matches_h3(alert: Any) -> bool:
+    if getattr(alert, "kind", None) != M45_ENTRY_SIGNAL:
+        return True
+    h3_bias = getattr(alert, "h3_bias", None)
+    if h3_bias is None or pd.isna(h3_bias):
+        return False
+    return int(h3_bias) == int(alert.direction)
 
 
 def _drop_open_bar(df: pd.DataFrame, tf: str) -> pd.DataFrame:
@@ -461,7 +728,7 @@ def _parse_args() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            "  # Use scan_config.py defaults (Indice, H1-H4)\n"
+            "  # Use scan_config.py defaults (AI Trend + Combo production groups)\n"
             "  python -m core_python.notify.signal_watcher\n\n"
             "  # Override: specific symbols and TFs\n"
             "  python -m core_python.notify.signal_watcher --symbols US30,GOLD --tf H1,H4\n\n"
@@ -522,6 +789,15 @@ def _parse_args() -> argparse.Namespace:
         default=60,
         help="Print a health summary every N minutes. Default: 60.",
     )
+    parser.add_argument(
+        "--max-alert-age-minutes",
+        type=int,
+        default=None,
+        help=(
+            "Do not send unseen signals older than this. "
+            "Default: max(3x timeframe, 120 minutes); skipped signals are marked seen."
+        ),
+    )
     parser.add_argument("--quiet", action="store_true", help="Hide per-symbol scan progress.")
     return parser.parse_args()
 
@@ -560,8 +836,70 @@ def _build_groups_from_args(args: argparse.Namespace) -> list[dict]:
     return groups
 
 
+class _WatcherLock:
+    """Best-effort single-instance lock for the production watcher process."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self._handle: Any | None = None
+
+    def acquire(self) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        handle = self.path.open("a+", encoding="utf-8")
+        try:
+            self._lock_handle(handle)
+        except OSError as exc:
+            handle.close()
+            raise RuntimeError(
+                f"another signal_watcher instance appears to be running (lock: {self.path})"
+            ) from exc
+        handle.seek(0)
+        handle.truncate()
+        handle.write(f"pid={os.getpid()}\nstarted_utc={pd.Timestamp.now('UTC').isoformat()}\n")
+        handle.flush()
+        self._handle = handle
+
+    def release(self) -> None:
+        handle = self._handle
+        if handle is None:
+            return
+        try:
+            self._unlock_handle(handle)
+        finally:
+            handle.close()
+            self._handle = None
+
+    @staticmethod
+    def _lock_handle(handle: Any) -> None:
+        if os.name == "nt":
+            import msvcrt
+
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            return
+        import fcntl
+
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+    @staticmethod
+    def _unlock_handle(handle: Any) -> None:
+        if os.name == "nt":
+            import msvcrt
+
+            handle.seek(0)
+            try:
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            except OSError:
+                pass
+            return
+        import fcntl
+
+        fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
 def main() -> int:
     import sys
+    import atexit
 
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
@@ -569,6 +907,7 @@ def main() -> int:
         pass
 
     args = _parse_args()
+
     if args.log_file:
         _tee_console_to_file(args.log_file)
 
@@ -584,10 +923,12 @@ def main() -> int:
     state = SignalState(args.state_path)
     notifier = Notifier(backend=args.backend, dry_run=args.dry_run)
     closed_only = not args.include_open_bar
+    current_scan_fingerprint = scan_fingerprint(scan_groups, closed_only)
 
     if args.warm_up:
         print("Warm-up: marking all current signals as seen (no Telegram send)...", flush=True)
         total = 0
+        n_errors = 0
         from core_python.notify.state import signal_key as _sk
 
         for group in scan_groups:
@@ -631,9 +972,43 @@ def main() -> int:
                             state.add(key)
                             total += 1
                 except Exception as exc:
-                    print(f"  {symbol} {group['tf']}: skip - {exc}", flush=True)
+                    n_errors += 1
+                    print(f"  [ERROR] {symbol} {group['tf']}: {exc}", flush=True)
+
+        if n_errors > 0:
+            print(
+                f"[WARNING] Warm-up had {n_errors} scan error(s). "
+                "State sentinel NOT written — DB may be unavailable or symbols incorrect. "
+                "Fix the errors and re-run warm-up before starting the watcher.",
+                flush=True,
+            )
+            return 1
+
+        state.set_scan_fingerprint(current_scan_fingerprint)
         print(f"Warm-up complete: {total} signals marked as seen. Now run without --warm-up.")
         return 0
+
+    if scan_groups and not state.path.exists():
+        print(
+            "[ERROR] Watcher state file not found. Run warm-up before starting production:\n"
+            f"  python -m core_python.notify.signal_watcher --warm-up\n"
+            f"  (expected state path: {state.path})",
+            flush=True,
+        )
+        return 1
+    if scan_groups:
+        fingerprint_error = _scan_fingerprint_error(state, current_scan_fingerprint)
+        if fingerprint_error:
+            print(fingerprint_error, flush=True)
+            return 1
+
+    watcher_lock = _WatcherLock(state.path.parent / "signal_watcher.lock")
+    try:
+        watcher_lock.acquire()
+    except RuntimeError as exc:
+        print(f"[ERROR] {exc}", flush=True)
+        return 1
+    atexit.register(watcher_lock.release)
 
     n_groups = len(scan_groups)
     total_slots = sum(len(g["symbols"]) for g in scan_groups)
@@ -656,6 +1031,7 @@ def main() -> int:
     # None -> run immediately on first tick, then align to bar close boundaries.
     next_run_at: dict[int, pd.Timestamp | None] = {i: None for i in range(len(scan_groups))}
     retry_until: dict[int, pd.Timestamp | None] = {i: None for i in range(len(scan_groups))}
+    sent_signal_events: list[SentSignalEvent] = []
     next_health_at = pd.Timestamp.now("UTC") + pd.Timedelta(
         minutes=max(1, int(args.health_interval_minutes))
     )
@@ -667,6 +1043,8 @@ def main() -> int:
             if scheduled is not None and now_ts < scheduled:
                 continue
             latest_bars: list[pd.Timestamp] = []
+            group_started = time.perf_counter()
+            db_loads_before = _DB_LOAD_COUNT
             try:
                 if group["strategy"] == "ai_trend":
                     events = check_ai_trend_once(
@@ -681,6 +1059,8 @@ def main() -> int:
                         chat_id=group.get("chat_id"),
                         show_progress=not args.quiet,
                         latest_bars=latest_bars,
+                        sent_signals=sent_signal_events,
+                        max_alert_age_minutes=args.max_alert_age_minutes,
                     )
                 else:
                     events = check_once(
@@ -697,9 +1077,13 @@ def main() -> int:
                         chat_id=group.get("chat_id"),
                         show_progress=not args.quiet,
                         latest_bars=latest_bars,
+                        sent_signals=sent_signal_events,
+                        max_alert_age_minutes=args.max_alert_age_minutes,
                     )
             except Exception as exc:
                 events = [f"[ERROR] group {i} {group['tf']}: {exc}"]
+            group_elapsed = time.perf_counter() - group_started
+            group_db_loads = _DB_LOAD_COUNT - db_loads_before
 
             schedule = _schedule_next_run(
                 tf=group["tf"],
@@ -718,6 +1102,12 @@ def main() -> int:
             for event in events:
                 print(f"[{ts}] {event}", flush=True)
             print(
+                f"[{ts}] [{group['tf']}] group done: "
+                f"symbols={len(group.get('symbols', []))}, db_loads={group_db_loads}, "
+                f"elapsed={group_elapsed:.2f}s",
+                flush=True,
+            )
+            print(
                 f"[{ts}] [{group['tf']}] next check: "
                 f"{next_run_at[i].strftime('%H:%M:%S')} UTC ({schedule['reason']})",
                 flush=True,
@@ -727,6 +1117,15 @@ def main() -> int:
             return 0
         if pd.Timestamp.now("UTC") >= next_health_at:
             print(_health_summary(state), flush=True)
+            summary = _format_hourly_symbol_summary(
+                sent_signal_events,
+                scan_groups,
+                minutes=max(1, int(args.health_interval_minutes)),
+            )
+            result = notifier.send(summary)
+            status = "sent" if result.sent else f"FAILED - {result.detail}"
+            print(f"[{pd.Timestamp.now('UTC').strftime('%H:%M:%S')}] hourly summary {status}", flush=True)
+            _prune_sent_signal_events(sent_signal_events)
             next_health_at = pd.Timestamp.now("UTC") + pd.Timedelta(
                 minutes=max(1, int(args.health_interval_minutes))
             )
@@ -874,6 +1273,94 @@ def _health_summary(state: SignalState, minutes: int = 60) -> str:
     )
 
 
+def _format_hourly_symbol_summary(
+    sent_events: list[SentSignalEvent],
+    scan_groups: list[dict],
+    minutes: int = 60,
+) -> str:
+    """Build a Telegram summary grouped by symbol for production-sent signals."""
+    now = pd.Timestamp.now("UTC")
+    cutoff = now - pd.Timedelta(minutes=int(minutes))
+    recent = [
+        event
+        for event in sent_events
+        if _as_utc_ts(event.sent_at) >= cutoff and _include_in_hourly_summary(event)
+    ]
+    symbols = _summary_symbols(scan_groups)
+    by_symbol: dict[str, list[SentSignalEvent]] = {symbol: [] for symbol in symbols}
+    for event in recent:
+        by_symbol.setdefault(event.symbol.upper(), []).append(event)
+
+    lines = [
+        "<b>SEN05 Hourly Signal Summary</b>",
+        "",
+        f"Window: <code>{_fmt_summary_time(cutoff)} - {_fmt_summary_time(now)} UTC</code>",
+        f"Signals: <b>{len(recent)}</b>",
+        "",
+        "<b>By symbol</b>",
+    ]
+    for symbol in sorted(by_symbol):
+        symbol_events = sorted(by_symbol[symbol], key=lambda item: item.sent_at)
+        if not symbol_events:
+            lines.append(f"{html.escape(symbol)}: <code>no new signal</code>")
+            continue
+        details = "; ".join(_summary_event_text(event) for event in symbol_events)
+        lines.append(f"{html.escape(symbol)}: {details}")
+    return "\n".join(lines)
+
+
+def _summary_symbols(scan_groups: list[dict]) -> list[str]:
+    symbols: list[str] = []
+    seen: set[str] = set()
+    for group in scan_groups:
+        for symbol in group.get("symbols", []):
+            normalized = str(symbol).upper()
+            if normalized in seen:
+                continue
+            seen.add(normalized)
+            symbols.append(normalized)
+    return symbols
+
+
+def _summary_event_text(event: SentSignalEvent) -> str:
+    strategy = "AI Trend" if event.strategy == "ai_trend" else event.strategy.title()
+    kind = ""
+    if event.strategy == "ai_trend":
+        if event.kind == H3_TREND_CHANGE:
+            kind = " H3"
+        elif event.kind == M45_ENTRY_SIGNAL:
+            kind = " M45"
+    else:
+        kind = f" {event.tf.upper()}"
+    return (
+        f"<code>{html.escape(strategy + kind)} "
+        f"{html.escape(event.side.upper())} "
+        f"{_fmt_summary_time(event.event_time)}</code>"
+    )
+
+
+def _include_in_hourly_summary(event: SentSignalEvent) -> bool:
+    if event.strategy != "ai_trend":
+        return True
+    return event.kind == M45_ENTRY_SIGNAL
+
+
+def _fmt_summary_time(value: object) -> str:
+    return _as_utc_ts(value).strftime("%Y-%m-%d %H:%M")
+
+
+def _as_utc_ts(value: object) -> pd.Timestamp:
+    ts = pd.Timestamp(value)
+    if ts.tzinfo is None:
+        return ts.tz_localize("UTC")
+    return ts.tz_convert("UTC")
+
+
+def _prune_sent_signal_events(sent_events: list[SentSignalEvent], hours: int = 24) -> None:
+    cutoff = pd.Timestamp.now("UTC") - pd.Timedelta(hours=int(hours))
+    sent_events[:] = [event for event in sent_events if _as_utc_ts(event.sent_at) >= cutoff]
+
+
 class _TeeStream:
     def __init__(self, stream: Any, log_file: Any) -> None:
         self.stream = stream
@@ -901,6 +1388,21 @@ def _tee_console_to_file(path: str | Path) -> None:
     log_file = log_path.open("a", encoding="utf-8", buffering=1)
     sys.stdout = _TeeStream(sys.stdout, log_file)  # type: ignore[assignment]
     sys.stderr = _TeeStream(sys.stderr, log_file)  # type: ignore[assignment]
+
+
+def _ensure_state_file(state: SignalState) -> None:
+    """Write an empty state file if none exists yet — serves as warm-up sentinel."""
+    import json
+
+    if state.path.exists():
+        return
+    state.path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = state.path.with_suffix(state.path.suffix + ".tmp")
+    tmp.write_text(
+        json.dumps({"sent": state.sent, "meta": state.meta}, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    tmp.replace(state.path)
 
 
 if __name__ == "__main__":

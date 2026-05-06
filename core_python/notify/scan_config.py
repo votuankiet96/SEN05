@@ -17,7 +17,6 @@ Mô tả:
 
 from __future__ import annotations
 
-
 # Khoảng thời gian poll (giây) mặc định cho từng khung thời gian.
 # Các giá trị này KHÔNG còn được dùng trong logic bar-close-aligned hiện tại
 # (signal_watcher.py dùng _next_bar_close_utc() thay vì fixed interval).
@@ -43,8 +42,20 @@ TF_POLL_SECONDS: dict[str, int] = {
 # Tất cả symbol Indice có trong DB hiện tại.
 INDICE_SYMBOLS = ["FR40", "DE40", "HK50", "J225", "SP35", "UK100", "US500", "US100", "US30"]
 
-# AI Trend watchlist. User-facing "HSK50" maps to the configured symbol "HK50".
-AI_TREND_SYMBOLS = ["GOLD", "BTCUSD", "US30", "UK100", "J225", "HK50", "DE40"]
+# AI Trend watchlist. User-facing HSK50 maps to the DB/configured symbol HK50.
+AI_TREND_SYMBOLS = [
+    "GOLD",
+    "BTCUSD",
+    "US30",
+    "UK100",
+    "J225",
+    "HK50",
+    "DE40",
+    "EURUSD",
+    "USDJPY",
+    "GBPUSD",
+    "AUDUSD",
+]
 
 # Mỗi dict trong SCAN_GROUPS định nghĩa một nhóm scan độc lập:
 #
@@ -62,7 +73,7 @@ AI_TREND_SYMBOLS = ["GOLD", "BTCUSD", "US30", "UK100", "J225", "HK50", "DE40"]
 #   H2: 500 bars × 120min = 41.7 ngày < TTL_DAYS=60 ✓
 #   H3: 400 bars × 180min = 50.0 ngày < TTL_DAYS=60 ✓
 #   H4: 300 bars × 240min = 50.0 ngày < TTL_DAYS=60 ✓
-#   AI Trend H3 alerts also use 400 bars to stay within TTL_DAYS=60.
+#   AI Trend H3 alerts use 400 bars and AI Trend M45 alerts use 1000 bars (~31.3 ngày).
 #   → TTL=60 đảm bảo không bao giờ prune key của bar còn trong cửa sổ.
 SCAN_GROUPS: list[dict] = [
     {
@@ -83,7 +94,7 @@ SCAN_GROUPS: list[dict] = [
         "bars": 1000,
         "poll_seconds": TF_POLL_SECONDS["M45"],
         "chat_id": None,
-        "overrides": {"TREND_BARS": 500, "ENTRY_BARS": 1000},
+        "overrides": {"TREND_BARS": 400, "ENTRY_BARS": 1000},
     },
     {
         "strategy": "combo",

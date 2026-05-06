@@ -45,6 +45,8 @@ def prepare_trend_frame(df: pd.DataFrame, params: dict) -> pd.DataFrame:
     out["h3_close_time"] = out["bartime"] + pd.Timedelta(minutes=trend_minutes)
     out["h3_window_start"] = out["bartime"]
     out["h3_window_end"] = out["h3_close_time"]
+    out["h3_bias_started_at"] = out.groupby("h3_bias_segment")["bartime"].transform("first")
+    out["h3_bias_started_close_time"] = out.groupby("h3_bias_segment")["h3_close_time"].transform("first")
 
     prev_knn = out["ai_knn"].shift(1)
     prev_avg = out["ai_avg"].shift(1)
@@ -95,16 +97,19 @@ def merge_trend_into_entry(entry_df: pd.DataFrame, trend_df: pd.DataFrame) -> pd
         "h3_close_time",
         "ai_knn",
         "ai_avg",
-        "ai_prediction",
         "ai_direction",
         "h3_bias",
         "h3_bias_segment",
     ]
+    trend_cols.extend(
+        col
+        for col in ("h3_bias_started_at", "h3_bias_started_close_time")
+        if col in trend_df.columns
+    )
     trend = trend_df[trend_cols].sort_values("h3_close_time").rename(
         columns={
             "ai_knn": "h3_ai_knn",
             "ai_avg": "h3_ai_avg",
-            "ai_prediction": "h3_ai_prediction",
             "ai_direction": "h3_ai_direction",
         }
     )

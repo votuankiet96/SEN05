@@ -1,76 +1,276 @@
 # AI Trend Strategy Architecture
 
-Scope: dashboard signal strategy for symbols with available trend and entry data.
-Default dashboard pairing is H3/M45. The dashboard allows Trend TF H1-H4 and
-Entry TF M45 or lower supported intraday frames.
+Tai lieu nay mo ta dung hanh vi hien tai cua chien luoc `ai_trend` theo code trong `core_python/strategies/ai_trend/` va luong notify production trong `core_python/notify/`.
+
+## 1. Muc Dich
+
+AI Trend la chien luoc multi-timeframe:
 
 ```text
-Selected symbol Trend TF candles
-  -> AI Trend Navigator / KNN
-  -> trend bias: bullish when KNN line is green, bearish when KNN line is red
-  -> no automatic markers on the trend chart
+Trend TF:
+  Xac dinh bias bullish / bearish bang AI Trend Navigator KNN.
 
-Selected symbol Entry TF candles
-  -> EMA 13 / EMA 34
-  -> optional Dow wave pivots: HH, HL, LH, LL
-  -> merge latest closed trend bias by entry open time
-  -> one BUY/SELL marker at the first entry bar in each trend segment
-     where EMA 13/34 are already aligned with the trend bias
-
-Dashboard
-  -> top chart: Trend TF candles + KNN classifier + average KNN
-  -> lower chart: Entry TF candles + EMA 13 + EMA 34 + Dow wave + BUY/SELL markers
-  -> click any trend bar to draw a vertical mark and focus the matching entry window
-  -> double-click the trend chart to clear the manual mark
+Entry TF:
+  Tim tin hieu BUY/SELL dau tien trong moi trend segment bang EMA 13/34.
 ```
 
-The merge uses trend close time `<=` entry bar open time. The final entry candle
-inside the just-closed trend candle is not eligible for a new entry signal,
-because its chart marker would appear before the trend confirmation.
-
-Linked marking uses:
+Dashboard cho phep chon:
 
 ```text
-Trend clicked time  = trend bar open time
-Trend confirmation  = trend bar close time
-Entry marker focus  = first entry bar with open time >= trend close time
-Entry visible range = M45_CONTEXT_BARS around the marker, default 45 bars
-                      with about 1/3 before and 2/3 after the marker
+Trend TF: H1, H2, H3, H4
+Entry TF: M45, M30, M20, M15, M10, M5
 ```
 
-Phase 1 intentionally does not calculate entry, stop-loss, or take-profit
-levels. Those columns remain empty to keep the common strategy contract stable.
-
-Signal rule:
+Production Telegram hien tai dung contract co dinh:
 
 ```text
-For each continuous trend green-line segment:
-  mark the first entry bar with open time >= trend close where EMA13 > EMA34.
-
-For each continuous trend red-line segment:
-  mark the first entry bar with open time >= trend close where EMA13 < EMA34.
-
-If the entry TF never aligns before trend bias changes, no signal is produced.
+Trend alert: H3
+Entry alert: M45
 ```
 
-Dow wave overlay:
+## 2. Production Symbols
+
+AI Trend production scan 11 symbol:
 
 ```text
-DOW_PIVOT_LEFT / DOW_PIVOT_RIGHT define swing high/low confirmation; default 3/5.
-DOW_MIN_ATR_MULT can filter out small swings; default 0.5 means half an ATR.
-SHOW_M45_DOW toggles the thin dashed zigzag wave.
-SHOW_M45_DOW_LABELS toggles HH/HL/LH/LL labels; default is off.
-
-Dow wave is visual-only in this phase and does not change BUY/SELL logic.
+GOLD
+BTCUSD
+US30
+UK100
+J225
+HK50
+DE40
+EURUSD
+USDJPY
+GBPUSD
+AUDUSD
 ```
 
-Telegram alerts currently use the production H3/M45 contract:
+Danh sach nay nam trong `core_python/notify/scan_config.py`, khong nam trong folder strategy. Ly do: `notify/scan_config.py` la cau hinh runtime chung cho tat ca chien luoc.
+
+## 3. File Ownership
 
 ```text
-H3 trend-change alert:
-  sent after a closed H3 bar changes KNN bias to bullish or bearish.
+strategies/ai_trend/config.py
+  Tham so strategy va dashboard: Trend TF, Entry TF, bars, KNN, EMA, Dow wave.
 
-M45 entry alert:
-  sent after the first closed M45 bar that starts at or after the H3 close
-  aligns with the H3 bias.
+strategies/ai_trend/signals.py
+  Build trend frame va entry frame.
+  Merge H3 da dong vao M45.
+  Detect M45 signal dau tien trong moi trend segment.
+
+strategies/ai_trend/alerts.py
+  Chuyen frame da tinh thanh alert domain:
+    - h3_trend_change
+    - m45_entry_signal
+  Format Telegram HTML rieng cho AI Trend.
+
+strategies/ai_trend/payload.py
+  Tao JSON payload hai chart cho dashboard.
+
+strategies/ai_trend/levels.py
+  Giu cac cot level theo contract chung.
+  Phase hien tai khong tinh entry_price, sl_price, tp_price cho AI Trend.
 ```
+
+Nhung phan sau la shared runtime, khong thuoc rieng AI Trend:
+
+```text
+notify/scan_config.py
+  Production symbols/groups.
+
+notify/signal_watcher.py
+  Scheduler, load DB, drop open bar, goi AI Trend alert extractor, gui Telegram.
+
+notify/state.py
+  Dedup state va warm-up.
+
+notify/notifier.py
+  Telegram/Discord backend.
+```
+
+## 4. Trend Frame
+
+`prepare_trend_frame()` nhan OHLC cua Trend TF va them:
+
+```text
+ai_knn
+ai_avg
+ai_direction
+h3_bias
+h3_bias_segment
+h3_close_time
+h3_window_start
+h3_window_end
+knn_cross_over_avg
+knn_cross_under_avg
+knn_switch_up
+knn_switch_down
+knn_neutral
+```
+
+Bias:
+
+```text
+ai_direction = 1  -> h3_bias = 1  -> bullish
+ai_direction = -1 -> h3_bias = -1 -> bearish
+ai_direction = 0  -> h3_bias = 0  -> neutral
+```
+
+`h3_bias_segment` tang khi bias thay doi. M45 entry chi lay signal dau tien trong moi segment co bias khac 0.
+
+## 5. Entry Frame
+
+`prepare_entry_frame()` nhan OHLC cua Entry TF va them:
+
+```text
+ema_fast = EMA(close, 13)
+ema_slow = EMA(close, 34)
+ema_gap
+ema_gap_pct
+m45_close_time
+dow wave columns
+```
+
+Dow wave hien tai chi phuc vu dashboard; khong tham gia dieu kien BUY/SELL.
+
+## 6. No-Lookahead Merge
+
+`merge_trend_into_entry()` dung `pd.merge_asof()`:
+
+```text
+left_on  = entry.bartime
+right_on = trend.h3_close_time
+direction = backward
+```
+
+Dieu kien thuc te:
+
+```text
+h3_close_time <= entry bartime
+```
+
+Nghia la M45 chi duoc dung H3 khi H3 da dong truoc luc M45 bat dau. Cay M45 cuoi nam ben trong H3 vua dong khong duoc dung de tao signal cho H3 do.
+
+Vi du:
+
+```text
+H3 close = 12:00 UTC
+
+M45 11:15 -> 12:00:
+  khong hop le cho trend H3 vua dong
+
+M45 12:00 -> 12:45:
+  la cay dau tien duoc xet
+```
+
+## 7. Signal Rule
+
+Trong moi H3 bias segment:
+
+```text
+Neu h3_bias = 1:
+  BUY tai cay Entry TF dau tien co EMA13 > EMA34
+
+Neu h3_bias = -1:
+  SELL tai cay Entry TF dau tien co EMA13 < EMA34
+
+Neu khong co cay nao align truoc khi bias doi:
+  Khong co M45 signal cho segment do
+```
+
+Moi segment chi co toi da mot signal entry.
+
+## 8. Telegram Alerts
+
+### H3 Trend Change
+
+Duoc tao boi `extract_h3_trend_alerts()` khi:
+
+```text
+h3_bias in [1, -1]
+AND h3_bias != previous h3_bias
+```
+
+Thong bao:
+
+```text
+AI Trend H3 Trend Change - SYMBOL
+Direction: BULLISH/BEARISH
+H3 close
+H3 open
+Close
+KNN
+Average
+Segment
+```
+
+### M45 Entry Signal
+
+Duoc tao boi `extract_m45_entry_alerts()` tu nhung dong `signal != 0` trong entry frame.
+
+Thong bao:
+
+```text
+AI Trend M45 BUY/SELL - SYMBOL
+M45 close
+M45 open
+H3 close
+Close
+EMA fast
+EMA slow
+H3 KNN
+H3 Avg
+Segment
+```
+
+## 9. State Key
+
+AI Trend dedup key:
+
+```text
+ai_trend|kind|SYMBOL|TF|event_time|direction
+```
+
+Vi du:
+
+```text
+ai_trend|h3_trend_change|BTCUSD|H3|2026-05-06 12:00:00|1
+ai_trend|m45_entry_signal|BTCUSD|M45|2026-05-06 14:15:00|-1
+```
+
+State duoc luu chung voi cac chien luoc khac:
+
+```text
+core_python/runtime/state.json
+```
+
+## 10. Dashboard vs Telegram
+
+Dashboard:
+
+```text
+Co the hien thi signal lich su theo so bars dang load.
+Khong dung state.json.
+Khong quyet dinh Telegram gui hay khong.
+```
+
+Telegram watcher:
+
+```text
+Chi scan bar da dong.
+Chi gui alert moi chua co trong state.
+Warm-up danh dau signal lich su ma khong gui.
+```
+
+Vi vay thay marker cu tren dashboard la binh thuong va khong co nghia Telegram se gui lai.
+
+## 11. Warm-Up Khi Doi Symbol/TF
+
+Sau khi them symbol, TF, bars hoac group notify moi, can chay:
+
+```powershell
+.venv\Scripts\python.exe -m core_python.notify.signal_watcher --warm-up
+```
+
+Warm-up se chay cung logic scan hien tai va ghi key vao `core_python/runtime/state.json` ma khong gui Telegram.

@@ -27,8 +27,11 @@ class AiTrendAlert:
     direction: int
     bar_time: pd.Timestamp
     event_time: pd.Timestamp
+    h3_bias: int | None = None
     h3_segment: int | None = None
     h3_close_time: pd.Timestamp | None = None
+    h3_bias_started_at: pd.Timestamp | None = None
+    h3_bias_started_close_time: pd.Timestamp | None = None
     ai_knn: float | None = None
     ai_avg: float | None = None
     ema_fast: float | None = None
@@ -59,8 +62,11 @@ def extract_h3_trend_alerts(trend_frame: pd.DataFrame, symbol: str) -> list[AiTr
                 direction=direction,
                 bar_time=pd.Timestamp(row["bartime"]),
                 event_time=pd.Timestamp(row["h3_close_time"]),
+                h3_bias=direction,
                 h3_segment=_to_int_or_none(row.get("h3_bias_segment")),
                 h3_close_time=pd.Timestamp(row["h3_close_time"]),
+                h3_bias_started_at=_to_timestamp_or_none(row.get("h3_bias_started_at")),
+                h3_bias_started_close_time=_to_timestamp_or_none(row.get("h3_bias_started_close_time")),
                 ai_knn=_to_float_or_none(row.get("ai_knn")),
                 ai_avg=_to_float_or_none(row.get("ai_avg")),
                 close=_to_float_or_none(row.get("close")),
@@ -89,8 +95,11 @@ def extract_m45_entry_alerts(entry_frame: pd.DataFrame, symbol: str) -> list[AiT
                 direction=direction,
                 bar_time=pd.Timestamp(row["bartime"]),
                 event_time=pd.Timestamp(row["m45_close_time"]),
+                h3_bias=_to_int_or_none(row.get("h3_bias")),
                 h3_segment=_to_int_or_none(row.get("h3_bias_segment")),
                 h3_close_time=_to_timestamp_or_none(row.get("h3_close_time")),
+                h3_bias_started_at=_to_timestamp_or_none(row.get("h3_bias_started_at")),
+                h3_bias_started_close_time=_to_timestamp_or_none(row.get("h3_bias_started_close_time")),
                 ai_knn=_to_float_or_none(row.get("h3_ai_knn")),
                 ai_avg=_to_float_or_none(row.get("h3_ai_avg")),
                 ema_fast=_to_float_or_none(row.get("ema_fast")),
@@ -140,14 +149,20 @@ def _format_h3_alert(alert: AiTrendAlert) -> str:
 
 def _format_m45_alert(alert: AiTrendAlert) -> str:
     side = "BUY" if alert.direction == 1 else "SELL"
+    h3_bias = alert.h3_bias if alert.h3_bias is not None else alert.direction
+    bias_text = "BULLISH" if int(h3_bias) == 1 else "BEARISH" if int(h3_bias) == -1 else "NEUTRAL"
     lines = [
         f"<b>AI Trend M45 {side}</b> - <b>{html.escape(alert.symbol.upper())}</b>",
         "",
         f"M45 close: <code>{_fmt_time(alert.event_time)} UTC</code>",
         f"M45 open:  <code>{_fmt_time(alert.bar_time)} UTC</code>",
+        "",
+        f"H3 bias:   <b>{bias_text}</b>",
     ]
-    if alert.h3_close_time is not None:
-        lines.append(f"H3 close:  <code>{_fmt_time(alert.h3_close_time)} UTC</code>")
+    if alert.h3_segment is not None:
+        lines.append(f"Segment:   <code>{alert.h3_segment}</code>")
+    if alert.h3_bias_started_at is not None:
+        lines.append(f"Bias turn: <code>{_fmt_time(alert.h3_bias_started_at)} UTC</code> H3 bartime")
     lines.extend(
         [
             f"Close:     <code>{_fmt(alert.close)}</code>",
@@ -157,8 +172,6 @@ def _format_m45_alert(alert: AiTrendAlert) -> str:
             f"H3 Avg:    <code>{_fmt(alert.ai_avg)}</code>",
         ]
     )
-    if alert.h3_segment is not None:
-        lines.append(f"Segment:   <code>{alert.h3_segment}</code>")
     if alert.reason:
         lines.extend(["", html.escape(alert.reason)])
     return "\n".join(lines)

@@ -49,6 +49,7 @@ def hma(series: pd.Series, period: int) -> pd.Series:
 
 
 def _vwap_source(df: pd.DataFrame, source: pd.Series) -> pd.Series:
+    # Cumulative over the loaded frame; changing history length changes VWAP values.
     volume = df["volume"].replace(0, np.nan).fillna(1.0).astype(float)
     src = source.astype(float)
     return (src * volume).cumsum() / volume.cumsum()
@@ -106,12 +107,11 @@ def calc_ai_trend_navigator(
     smoothing_period: int = 50,
 ) -> pd.DataFrame:
     """
-    Calculate the AI Trend Navigator KNN line and prediction series.
+    Calculate the AI Trend Navigator KNN line.
 
     Returns a DataFrame aligned to ``df.index`` with:
         ai_knn: WMA(knnMA, 5), the colored classifier line.
         ai_avg: RMA(knnMA, smoothing_period), the average KNN line.
-        ai_prediction: WMA(raw KNN prediction, 3).
         ai_direction: +1 when ai_knn rises, -1 when it falls, 0 otherwise.
     """
     if df.empty:
@@ -122,11 +122,12 @@ def calc_ai_trend_navigator(
     ma_len = max(2, min(int(ma_len), 200))
     target_len = max(2, min(int(target_len), 200))
     smoothing_period = max(2, min(int(smoothing_period), 500))
+    # Mirrors the Pine script's recent KNN search window. TREND_BARS warms
+    # smoothing/history but does not expand this neighbor lookback.
     window_size = max(k, 30)
 
     values = _price_source(work, price_value, ma_len).to_numpy(dtype=float)
     targets = _target_source(work, target_value, target_len).to_numpy(dtype=float)
-    close = work["close"].astype(float).to_numpy()
 
     n = len(work)
     knn_ma = np.full(n, np.nan, dtype=float)
@@ -143,38 +144,8 @@ def calc_ai_trend_navigator(
         knn_ma[idx] = float(valid[nearest].mean())
 
     knn_ma_s = pd.Series(knn_ma)
-    price = (knn_ma + close) / 2.0
-    c_line = rma(knn_ma_s.shift(1), smoothing_period).to_numpy(dtype=float)
-    o_line = rma(knn_ma_s, smoothing_period).to_numpy(dtype=float)
-
-    raw_prediction = np.full(n, np.nan, dtype=float)
-    for idx in range(n):
-        current_price = price[idx]
-        if np.isnan(current_price):
-            continue
-        pos_count = 0
-        neg_count = 0
-        min_distance = np.inf
-        for offset in range(1, 11):
-            hist_idx = idx - offset
-            if hist_idx < 0:
-                break
-            hist_price = price[hist_idx]
-            if np.isnan(hist_price):
-                continue
-            distance = abs(hist_price - current_price)
-            if distance < min_distance:
-                min_distance = distance
-                if c_line[hist_idx] > o_line[hist_idx]:
-                    neg_count += 1
-                if c_line[hist_idx] < o_line[hist_idx]:
-                    pos_count += 1
-        if pos_count or neg_count:
-            raw_prediction[idx] = 1.0 if pos_count > neg_count else -1.0
-
     ai_knn = wma(knn_ma_s, 5)
     ai_avg = rma(knn_ma_s, smoothing_period)
-    ai_prediction = wma(pd.Series(raw_prediction), 3)
     ai_direction = pd.Series(
         np.where(ai_knn > ai_knn.shift(1), 1, np.where(ai_knn < ai_knn.shift(1), -1, 0))
     )
@@ -183,10 +154,8 @@ def calc_ai_trend_navigator(
         {
             "ai_knn": ai_knn,
             "ai_avg": ai_avg,
-            "ai_prediction": ai_prediction,
             "ai_direction": ai_direction,
         },
         index=df.index,
     )
     return out
-

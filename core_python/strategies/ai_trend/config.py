@@ -43,7 +43,6 @@ DOW_PIVOT_LEFT = 3
 DOW_PIVOT_RIGHT = 5
 DOW_MIN_ATR_MULT = 0.5
 
-
 DEFAULT_PARAMS: dict[str, Any] = {
     "SYMBOL": SYMBOL,
     "TREND_TF": TREND_TF,
@@ -132,7 +131,7 @@ def _to_choice(value: object, default: str, allowed: Sequence[str]) -> str:
 
 def normalize_params(overrides: dict[str, Any] | None = None, symbol: str | None = None) -> dict[str, Any]:
     raw = {**DEFAULT_PARAMS, **(overrides or {})}
-    selected_symbol = str(raw.get("SYMBOL") or symbol or SYMBOL).strip().upper()
+    selected_symbol = str(symbol or raw.get("SYMBOL") or SYMBOL).strip().upper()
 
     fast = _to_int(raw.get("EMA_FAST"), EMA_FAST, 1, 300)
     slow = _to_int(raw.get("EMA_SLOW"), EMA_SLOW, 2, 500)

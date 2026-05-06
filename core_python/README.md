@@ -1,229 +1,398 @@
-# core_python — Hệ thống Tín hiệu Giao dịch SEN05
+# core_python - Dashboard va Telegram Signal Runtime
 
-## Mục đích
+Tai lieu nay mo ta hanh vi hien tai cua `core_python` theo code trong thu muc nay. Day la lop tinh tin hieu, hien thi dashboard va day canh bao Telegram cua SEN05.
 
-`core_python` là trái tim của hệ thống SEN05 — nơi toàn bộ logic tính toán tín hiệu giao dịch, hiển thị biểu đồ và gửi cảnh báo Telegram được tập trung.
+## 1. Muc Dich
 
-Module này phục vụ hai mục đích song song:
+`core_python` co hai luong chinh:
 
-| Mục đích | Thành phần |
-|----------|-----------|
-| **Xem biểu đồ tương tác** — tra cứu tín hiệu theo yêu cầu qua trình duyệt | `chart/`, `data/`, `strategies/`, `indicators/` |
-| **Giám sát 24/7** — tự động gửi tín hiệu mới lên Telegram khi bar đóng | `notify/`, `data/`, `strategies/` |
+| Luong | Muc dich | File chinh |
+|---|---|---|
+| Dashboard | Xem chart, indicator va signal lich su theo tham so nguoi dung chon | `main.py`, `chart/`, `strategies/`, `indicators/` |
+| Telegram watcher | Chay nen 24/7, quet nen da dong va gui signal moi len Telegram | `notify/signal_watcher.py`, `notify/scan_config.py`, `notify/state.py` |
 
----
+`core_python` khong dat lenh that, khong quan ly von, khong quan ly vi the va khong tinh PnL live. Telegram alert hien tai la canh bao tin hieu, khong phai execution engine.
 
-## Phạm vi
+## 2. Luong Du Lieu Tong The
 
-**Module này làm:**
-- Tải dữ liệu OHLCV từ SQL Server
-- Tính toán các chỉ báo kỹ thuật (MA, MACD, ATR)
-- Phát hiện tín hiệu BUY/SELL theo từng chiến lược
-- Tính mức Entry, Stop Loss, Take Profit để hiển thị
-- Render biểu đồ qua Flask + Lightweight Charts (trình duyệt)
-- Giám sát nhiều symbol × khung thời gian và gửi cảnh báo Telegram
-
-**Module này KHÔNG làm:**
-- Đặt lệnh thật (không kết nối broker)
-- Quản lý vốn hoặc rủi ro
-- Backtest (đây là công cụ forward-scan, không phải backtester)
-- Lưu trữ lịch sử tín hiệu dài hạn (state.json chỉ dùng để chống gửi trùng)
-
----
-
-## Kiến trúc — Luồng dữ liệu
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         SQL Server                              │
-│              DWH.Fact_OHLCV + DWH.Dim_Timeframe                 │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │ TOP N bars, ORDER BY BarTime DESC
-                            ▼
-                   data/loader.py
-             load(symbol, tf, n_bars)
-             → DataFrame [bartime, open, high, low, close, volume]
-                            │
-                            ▼
-              strategies/<tên_chiến_lược>/
-          ┌─────────────────────────────────┐
-          │ 1. add_indicators(df, params)   │  ← Thêm MA, MACD, ATR
-          │ 2. detect_signals(df, ...)      │  ← Tính signal (+1/-1/0)
-          │ 3. add_levels(df, params, sym)  │  ← Tính Entry, SL, TP
-          └─────────────────────────────────┘
-                            │
-               ┌────────────┴──────────────┐
-               │                           │
-               ▼                           ▼
-     [Dashboard - trình duyệt]   [Watcher - 24/7 Telegram]
-               │                           │
-     chart/payload.py             notify/formatter.py
-     → JSON payload               → Tin nhắn HTML
-               │                           │
-     chart/server.py              notify/notifier.py
-     Flask /api/scan              → Telegram / Discord
-               │
-     chart/static/app.js
-     Lightweight Charts
+```text
+SQL Server DWH.Fact_OHLCV
+  -> core_python/data/loader.py
+      -> DataFrame OHLCV: bartime, open, high, low, close, volume
+  -> core_python/strategies/<strategy>/
+      -> normalize_params()
+      -> add_indicators()
+      -> detect_signals()
+      -> add_levels()
+  -> hai noi dung khac nhau:
+      1. chart/server.py tra JSON ve dashboard
+      2. notify/signal_watcher.py gui Telegram neu signal moi
 ```
 
----
+Dashboard va Telegram watcher dung chung data loader, indicator va strategy logic. Diem khac biet quan trong:
 
-## Cấu trúc thư mục
+```text
+Dashboard:
+  - Doc theo request cua trinh duyet.
+  - Co the hien thi ca bar dang mo.
+  - Co the hien thi signal lich su theo so bars dang load.
+  - Khong dung state.json va khong quyet dinh Telegram co gui hay khong.
 
+Telegram watcher:
+  - Chay nen 24/7.
+  - Luon loc bo bar dang mo voi closed_only=True.
+  - Chi gui signal moi chua co trong state.
+  - Ghi key vao core_python/runtime/state.json sau khi gui thanh cong.
 ```
+
+## 3. Cau Truc Thu Muc
+
+```text
 core_python/
-├── README.md               ← File này
-├── __init__.py
-├── config.py               ← Metadata symbol, TF, kết nối SQL
-├── main.py                 ← Entry point khởi động Flask server
-│
-├── data/
-│   └── loader.py           ← Tải OHLCV từ SQL Server
-│
-├── indicators/
-│   └── core.py             ← SMA, EMA, MACD, ATR, safe_ratio
-│
-├── export/
-│   └── to_csv.py           ← Xuất tín hiệu ra CSV (cho backtest)
-│
-├── chart/
-│   ├── server.py           ← Flask app: /api/scan, /api/config, /api/export
-│   ├── payload.py          ← Xây JSON payload cho Lightweight Charts
-│   └── static/
-│       ├── index.html      ← Giao diện web
-│       ├── app.js          ← Logic frontend (vanilla JS)
-│       └── styles.css      ← Giao diện tối (dark mode)
-│
-├── strategies/
-│   ├── registry.py         ← StrategySpec — đăng ký chiến lược
-│   ├── combo/
-│   │   ├── config.py       ← Tham số mặc định và validation
-│   │   ├── signals.py      ← Chỉ báo và phát hiện tín hiệu
-│   │   └── levels.py       ← Tính Entry/SL/TP dạng breakout
-│   └── ma_cross/
-│       ├── config.py       ← Tham số mặc định và validation
-│       ├── signals.py      ← Chỉ báo và phát hiện tín hiệu MA cắt
-│       └── levels.py       ← Tính Entry/SL/TP dựa trên bar tiếp theo
-│
-└── notify/
-    ├── scan_config.py      ← Danh sách nhóm cần scan (symbol × TF)
-    ├── signal_watcher.py   ← Vòng lặp 24/7, canh bar đóng, gửi alert
-    ├── formatter.py        ← Định dạng tin nhắn HTML cho Telegram
-    ├── notifier.py         ← Backend gửi (Telegram / Discord / dry-run)
-    └── state.py            ← JSON store chống gửi tín hiệu trùng
+  config.py
+    Nap metadata symbol, timeframe va SQL config tu config.py goc.
+
+  data/
+    loader.py
+      Tai OHLCV tu SQL Server, tra DataFrame tang dan theo bartime.
+
+  indicators/
+    core.py
+      SMA, EMA, MACD histogram, ATR, safe_ratio.
+    ai_trend.py
+      AI Trend Navigator / KNN indicator.
+    dow_wave.py
+      Tinh swing/pivot Dow wave dung cho hien thi AI Trend.
+
+  strategies/
+    registry.py
+      Dang ky StrategySpec cho combo, ma_cross, ai_trend.
+
+    combo/
+      config.py
+        Tham so Combo, symbol-specific X/session, validation.
+      signals.py
+        Tinh MA, MACD, ATR va detect BUY/SELL.
+      levels.py
+        Tinh entry/SL/TP theo breakout cua bar signal.
+
+    ma_cross/
+      config.py
+      signals.py
+      levels.py
+        Strategy dang duoc dang ky cho dashboard/generic pipeline,
+        nhung khong nam trong production SCAN_GROUPS hien tai.
+
+    ai_trend/
+      config.py
+        Tham so dashboard/strategy: Trend TF, Entry TF, KNN, EMA, Dow wave.
+      signals.py
+        Build H3/Entry frames, merge trend da dong vao entry, detect M45 entry.
+      alerts.py
+        Tao alert H3 trend-change va M45 entry, format Telegram AI Trend.
+      payload.py
+        Tao JSON payload rieng cho dashboard hai chart.
+      levels.py
+        Giu contract level columns; AI Trend phase hien tai khong tinh entry/SL/TP.
+      ARCHITECTURE.md
+        Tai lieu chi tiet rule AI Trend.
+
+  chart/
+    server.py
+      Flask API: /, /api/config, /api/scan, /api/export.
+    payload.py
+      Payload chart chung cho combo/ma_cross.
+    static/
+      HTML, CSS, JS dashboard.
+
+  notify/
+    scan_config.py
+      Cau hinh production scan groups cho combo va AI Trend.
+    signal_watcher.py
+      Scheduler 24/7, canh bar close, goi strategy, gui Telegram.
+    state.py
+      Dedup key da gui, TTL 60 ngay, warm-up sentinel, migration legacy state.
+    notifier.py
+      Telegram/Discord/dry-run backend.
+    formatter.py
+      Format Telegram HTML cho signal chung nhu Combo.
+
+  export/
+    to_csv.py
+      Xuat signal ra CSV khi watcher gui signal, neu khong bi tat bang --no-export.
+
+  runtime/
+    state.json
+      File runtime local chong gui trung. Khong commit.
 ```
 
----
+## 4. Production Watcher Hien Tai
 
-## Mô tả từng submodule
+Production watcher doc `SCAN_GROUPS` trong `core_python/notify/scan_config.py`.
 
-### `config.py` — Cấu hình trung tâm
-Nạp metadata từ file `config.py` gốc ở thư mục cha (SEN05 root). Cung cấp:
-- `SYMBOLS`: dict mọi symbol được hỗ trợ với symbol_id DB, loại tài sản, buffer X
-- `TF_MINUTES`: ánh xạ mã khung thời gian ("H1", "M5") sang số phút
-- `get_symbol(symbol)`: tra cứu symbol_id và thông số để loader dùng
+### AI Trend
 
-### `data/loader.py` — Tải dữ liệu OHLCV
-Kết nối SQL Server, lấy N bar gần nhất cho một symbol và khung thời gian.  
-**Hợp đồng UTC:** `BarTime` trong DB lưu dạng UTC-naive (Capital.com/MT5). Caller phải tự localize nếu cần timezone-aware.
+AI Trend dang scan 11 symbol:
 
-### `indicators/core.py` — Chỉ báo kỹ thuật
-Các hàm thuần tính toán trên `pd.Series`/`pd.DataFrame`. Không có side effect.
-- `sma`, `ema`, `ma` — Trung bình động
-- `macd_hist` — MACD Histogram (MACD line − Signal line)
-- `atr` — Average True Range theo Wilder (ewm alpha=1/period)
-- `safe_ratio` — Chia có xử lý NaN và inf
-
-### `strategies/registry.py` — Đăng ký chiến lược
-`StrategySpec` là dataclass đóng gói 4 callable của một chiến lược:
-`normalize_params` → `add_indicators` → `detect_signals` → `add_levels`.  
-Thêm chiến lược mới: tạo module trong `strategies/`, đăng ký vào `STRATEGIES`.
-
-### `strategies/combo/` — Chiến lược Combo
-
-**Điều kiện BUY:**
-```
-close vượt lên trên MA (cross up)
-AND close > open (nến tăng)
-AND MACD histogram > 0
-AND R:R >= MIN_RR (nếu bật filter)
+```text
+GOLD
+BTCUSD
+US30
+UK100
+J225
+HK50
+DE40
+EURUSD
+USDJPY
+GBPUSD
+AUDUSD
 ```
 
-**Điều kiện SELL:** Ngược lại (cross down, nến giảm, MACD < 0).
+AI Trend co 2 group production:
 
-**Entry:** Breakout qua đỉnh/đáy bar tín hiệu + buffer X.  
-**SL:** Đáy/đỉnh bar tín hiệu − buffer X.  
-**TP:** Entry ± KTP × ATR.
+```text
+H3  -> h3_trend_change, TREND_BARS=400
+M45 -> m45_entry_signal, TREND_BARS=400, ENTRY_BARS=1000
+```
 
-### `strategies/ma_cross/` — Chiến lược MA Cross
+### Combo
 
-**Điều kiện BUY:** `fast_MA` cắt lên trên `slow_MA` (crossover).  
-**Điều kiện SELL:** `fast_MA` cắt xuống dưới `slow_MA` (crossunder).
+Combo dang scan 9 symbol indice:
 
-**Entry:** Giá mở cửa bar *tiếp theo* + spread + slippage.  
-**SL:** Entry ± ATR_STOP_MULT × ATR.  
-**TP:** Entry ± ATR_TP_MULT × ATR (nếu ATR_TP_MULT > 0).
+```text
+FR40
+DE40
+HK50
+J225
+SP35
+UK100
+US500
+US100
+US30
+```
 
-### `chart/` — Dashboard trình duyệt
-Flask server lắng nghe tại `127.0.0.1:8515`. Giao diện lấy dữ liệu qua REST API và render bằng thư viện [Lightweight Charts](https://tradingview.github.io/lightweight-charts/).  
-**Lưu ý:** Chart *có bao gồm bar đang mở* (chưa đóng). Watcher thì không.
+Combo co 4 group production:
 
-### `export/to_csv.py` — Xuất CSV
-Lọc các dòng có signal != 0 và xuất file CSV gồm `[bartime, atr, signal]` vào thư mục `core_python/exports/`. Phục vụ import vào cTrader hoặc công cụ backtest khác.
+```text
+H1 -> 500 bars
+H2 -> 500 bars
+H3 -> 400 bars
+H4 -> 300 bars
+```
 
-### `notify/` — Hệ thống cảnh báo 24/7
+## 5. Combo Signal Logic
 
-| File | Vai trò |
-|------|---------|
-| `scan_config.py` | Định nghĩa nhóm scan (symbol × TF × chiến lược) |
-| `signal_watcher.py` | Vòng lặp chính, canh bar đóng, gọi check_once() |
-| `formatter.py` | Chuyển signal row → tin nhắn HTML có emoji |
-| `notifier.py` | Gửi Telegram / Discord, retry khi rate-limit |
-| `state.py` | Lưu key đã gửi vào JSON, TTL 60 ngày, ghi atomic |
+Combo dung pipeline chung cua `StrategySpec`.
 
----
+```text
+load(symbol, tf, bars)
+  -> _drop_open_bar()
+  -> add_combo_indicators()
+      ma, macd_h, atr, prev_close, prev_ma
+  -> detect_combo_signals()
+      BUY khi close cross len MA, candle bullish, macd_h > 0, R:R dat filter neu bat
+      SELL khi close cross xuong MA, candle bearish, macd_h < 0, R:R dat filter neu bat
+  -> add_combo_levels()
+      BUY entry = high + X, SL = low - X, TP = entry + KTP * ATR
+      SELL entry = low - X, SL = high + X, TP = entry - KTP * ATR
+```
 
-## Giả định quan trọng
+Telegram key cua Combo:
 
-| Giả định | Chi tiết |
-|----------|----------|
-| **UTC-naive** | `BarTime` trong DB không có timezone. Tất cả so sánh thời gian phải localize về UTC trước. |
-| **Bar đóng** | Watcher chỉ phát tín hiệu trên bar đã đóng hoàn toàn (`closed_only=True`). Dashboard hiển thị cả bar đang mở. |
-| **Giá trị signal** | `+1` = BUY, `-1` = SELL, `0` = không có tín hiệu. |
-| **Không lookahead** | Tín hiệu được tính từ dữ liệu của bar hiện tại (đã đóng). Combo dùng entry breakout → không cần shift. MA Cross dùng giá open bar tiếp theo → shift(-1). |
-| **TTL state** | `state.json` TTL = 60 ngày phải > cửa sổ bars lớn nhất (H4: 300 bars × 4h = 50 ngày). |
+```text
+combo|SYMBOL|TF|bartime|direction
+```
 
----
+## 6. AI Trend Signal Logic
 
-## Cách chạy
+AI Trend la chien luoc multi-timeframe.
+
+```text
+Trend frame:
+  Trend TF mac dinh dashboard: H3
+  Production notify: H3
+  Indicator: AI Trend Navigator / KNN
+  Bias: 1 bullish, -1 bearish, 0 neutral
+
+Entry frame:
+  Entry TF mac dinh dashboard: M45
+  Production notify: M45
+  Indicator: EMA 13 va EMA 34
+```
+
+### H3 Trend Alert
+
+```text
+load(symbol, H3, 400)
+  -> drop open bar
+  -> prepare_trend_frame()
+  -> extract_h3_trend_alerts()
+      gui khi h3_bias doi sang bullish hoac bearish
+```
+
+### M45 Entry Alert
+
+```text
+load(symbol, H3, 400)
+load(symbol, M45, 1000)
+  -> drop open bar cho ca hai
+  -> prepare_trend_frame()
+  -> prepare_entry_frame()
+  -> merge_trend_into_entry()
+      chi dung H3 da dong:
+      h3_close_time <= M45 bartime
+  -> detect_ai_trend_signals()
+      moi H3 bias segment chi lay entry dau tien:
+        BUY neu H3 bullish va EMA13 > EMA34
+        SELL neu H3 bearish va EMA13 < EMA34
+```
+
+AI Trend khong cho M45 dung cay entry nam trong H3 chua xac nhan. Trend H3 phai dong truoc, M45 signal moi duoc xet sau do.
+
+Telegram key cua AI Trend:
+
+```text
+ai_trend|kind|SYMBOL|TF|event_time|direction
+```
+
+Vi du:
+
+```text
+ai_trend|h3_trend_change|BTCUSD|H3|2026-05-06 12:00:00|1
+ai_trend|m45_entry_signal|BTCUSD|M45|2026-05-06 14:15:00|-1
+```
+
+## 7. State, Warm-Up Va Dedup Telegram
+
+State file production:
+
+```text
+core_python/runtime/state.json
+```
+
+Watcher chi ghi key vao state sau khi Telegram/Discord gui thanh cong va khong phai dry-run.
+
+Warm-up:
 
 ```powershell
-# Dashboard biểu đồ tương tác
-.venv\Scripts\python.exe -m core_python.main
-# Mở trình duyệt: http://127.0.0.1:8515
-
-# Watcher Telegram — dry-run (in ra màn hình, không gửi)
-.venv\Scripts\python.exe -m core_python.notify.signal_watcher --dry-run --once
-
-# Watcher Telegram — seed state trước khi chạy lần đầu
 .venv\Scripts\python.exe -m core_python.notify.signal_watcher --warm-up
-
-# Watcher Telegram — chế độ production 24/7
-.venv\Scripts\python.exe -m core_python.notify.signal_watcher
 ```
 
-Yêu cầu file `.env` có:
+Warm-up chay cung logic scan hien tai, nhung khong gui Telegram. No danh dau cac signal lich su trong cua so scan hien tai la da thay. Muc dich la tranh flood Telegram khi khoi dong lan dau hoac khi them symbol/TF moi.
+
+Luu y van hanh:
+
+```text
+Neu them symbol, TF, bars hoac strategy group moi:
+  -> phai dung watcher
+  -> chay warm-up
+  -> khoi dong lai watcher
 ```
+
+## 8. Realtime Semantics
+
+Watcher la realtime theo bar close, khong phai tick-by-tick.
+
+```text
+bar close time
+  -> cho buffer 5 giay
+  -> load DB
+  -> neu DB chua co bar moi, retry moi 5 giay trong 10 giay
+  -> neu co signal moi, gui Telegram ngay trong vong scan
+```
+
+Do tre thuc te phu thuoc vao:
+
+```text
+1. Data provider ghi nen moi vao SQL Server nhanh hay cham.
+2. SQL Server tra data thanh cong.
+3. Telegram API gui thanh cong.
+```
+
+## 9. Hourly Telegram Summary
+
+Watcher co summary moi `--health-interval-minutes`, mac dinh 60 phut.
+
+Summary gui Telegram theo symbol, dua tren cac signal da gui that trong runtime hien tai:
+
+```text
+SEN05 Hourly Signal Summary
+
+Window: <last 60m>
+Signals: N
+
+By symbol
+GOLD: AI Trend M45 BUY ...
+US30: Combo H1 SELL ...
+BTCUSD: no new signal
+```
+
+Summary nay la in-memory. Neu watcher restart giua gio, summary chi tinh signal tu sau lan restart. Dedup signal that van nam trong `state.json`.
+
+## 10. Dashboard
+
+Chay dashboard:
+
+```powershell
+.venv\Scripts\python.exe -m core_python.main
+```
+
+Mac dinh:
+
+```text
+http://127.0.0.1:8515
+```
+
+Neu port khac duoc truyen qua CLI, vi du:
+
+```powershell
+.venv\Scripts\python.exe -m core_python.main --port 8516
+```
+
+Dashboard co the chon strategy, symbol, TF, bars va params. Voi AI Trend, dashboard dung path rieng de tai ca Trend TF va Entry TF cung luc.
+
+## 11. Chay Watcher
+
+Dry-run mot vong:
+
+```powershell
+.venv\Scripts\python.exe -m core_python.notify.signal_watcher --dry-run --once
+```
+
+Warm-up:
+
+```powershell
+.venv\Scripts\python.exe -m core_python.notify.signal_watcher --warm-up
+```
+
+Production:
+
+```powershell
+.venv\Scripts\python.exe -m core_python.notify.signal_watcher --log-file logs\watcher.log
+```
+
+Hoac dung repo-level:
+
+```powershell
+run_watcher.bat
+```
+
+Can `.env` co:
+
+```text
 TELEGRAM_BOT_TOKEN=<token>
 TELEGRAM_CHAT_ID=<chat_id>
 ```
 
----
+## 12. Gia Dinh Va Gioi Han Da Biet
 
-## Giới hạn đã biết
-
-- **Không có bar gap detection:** `_validate()` trong loader chỉ lọc NaN/duplicate, không kiểm tra khoảng trống thời gian bất thường.
-- **MA Cross: bar cuối thiếu entry:** `add_ma_cross_levels()` dùng `shift(-1)` nên bar tín hiệu cuối cùng trong DataFrame không có entry_price (NaN).
-- **Không retry DB:** Nếu SQL Server tạm thời ngắt, watcher log lỗi và tiếp tục — không có cơ chế retry với backoff.
-- **Single-process:** Không có multi-threading. Nếu một symbol mất nhiều thời gian truy vấn, các symbol trong cùng nhóm sẽ bị delay.
+| Hang muc | Hanh vi hien tai |
+|---|---|
+| BarTime | DB tra `bartime` UTC-naive. Code localize ve UTC khi can so sanh timezone-aware. |
+| Bar dang mo | Dashboard co the hien thi. Watcher loc bo bang `_drop_open_bar()`. |
+| State TTL | 60 ngay. TTL phai lon hon cua so bars dai nhat de tranh re-alert. |
+| Data gap | `loader.py` loc NaN/duplicate nhung khong phat hien gap thoi gian. |
+| DB retry | Loader mo ket noi theo tung request; retry/backoff DB khong nam trong `loader.py`. |
+| Execution | Khong co order placement, position sizing, kill switch hay risk limit live. |
+| Summary | Hourly summary la in-memory, khong hoi cuu tu log sau restart. |
+| Single process | Watcher quet tuan tu. Symbol cham co the lam tre cac group sau. |

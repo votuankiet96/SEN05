@@ -1,8 +1,10 @@
 # SEN05 — Hệ thống Auto Trading Research
 
-**Mục tiêu:** Thu thập dữ liệu thị trường tự động, lưu trữ vào kho dữ liệu SQL Server, và cung cấp nền tảng nghiên cứu/backtest cho các chiến lược giao dịch định lượng — hiện tại gồm **Combo** và **MA Cross**.
+**Mục tiêu:** Thu thập dữ liệu thị trường tự động, lưu trữ vào kho dữ liệu SQL Server, và cung cấp nền tảng nghiên cứu/backtest/tín hiệu cho các chiến lược giao dịch định lượng — hiện tại trong `core_python` gồm **Combo**, **MA Cross** và **AI Trend**.
 
 > Đây là hệ thống nghiên cứu (research-grade), chưa ở giai đoạn live trading.
+
+> Cập nhật vận hành `core_python`: hệ thống hiện có dashboard nội bộ và watcher Telegram 24/7 cho tín hiệu. Watcher chỉ gửi cảnh báo tín hiệu, không đặt lệnh thật, không quản lý vốn và không quản lý vị thế. Tài liệu chi tiết, sát code nhất nằm tại `core_python/README.md` và `core_python/strategies/ai_trend/ARCHITECTURE.md`.
 
 ---
 
