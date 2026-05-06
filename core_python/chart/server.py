@@ -176,6 +176,8 @@ def create_app() -> Flask:
                 mimetype="text/csv",
                 headers={"Content-Disposition": f"attachment; filename={filename}"},
             )
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
         except Exception as exc:
             return jsonify({"error": str(exc)}), 500
 
@@ -226,6 +228,8 @@ def create_app() -> Flask:
                     params=params,
                 )
             )
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
         except Exception as exc:
             return jsonify({"error": str(exc)}), 500
 
@@ -251,6 +255,16 @@ def _run_ai_trend_dashboard(
 
     trend_raw = load(params["SYMBOL"], params["TREND_TF"], int(params["TREND_BARS"]))
     entry_raw = load(params["SYMBOL"], params["ENTRY_TF"], int(params["ENTRY_BARS"]))
+    if trend_raw.empty or entry_raw.empty:
+        missing = []
+        if trend_raw.empty:
+            missing.append(params["TREND_TF"])
+        if entry_raw.empty:
+            missing.append(params["ENTRY_TF"])
+        raise ValueError(
+            f"AI Trend requires data for both {params['TREND_TF']} and {params['ENTRY_TF']}. "
+            f"{params['SYMBOL']} has no data for: {', '.join(missing)}."
+        )
     trend_frame, entry_frame = build_ai_trend_frames(trend_raw, entry_raw, params)
     enriched = spec.add_levels(entry_frame, params, params["SYMBOL"])
     payload = build_ai_trend_payload(

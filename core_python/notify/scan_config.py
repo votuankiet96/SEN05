@@ -43,9 +43,13 @@ TF_POLL_SECONDS: dict[str, int] = {
 # Tất cả symbol Indice có trong DB hiện tại.
 INDICE_SYMBOLS = ["FR40", "DE40", "HK50", "J225", "SP35", "UK100", "US500", "US100", "US30"]
 
+# AI Trend watchlist. User-facing "HSK50" maps to the configured symbol "HK50".
+AI_TREND_SYMBOLS = ["GOLD", "BTCUSD", "US30", "UK100", "J225", "HK50", "DE40"]
+
 # Mỗi dict trong SCAN_GROUPS định nghĩa một nhóm scan độc lập:
 #
-#   strategy:     Key chiến lược ("combo" hoặc "ma_cross").
+#   strategy:     Key chiến lược ("combo", "ma_cross", hoặc "ai_trend").
+#   event_type:   Riêng ai_trend: "h3_trend_change" hoặc "m45_entry_signal".
 #   symbols:      List symbol cần scan trong nhóm này.
 #   tf:           Mã khung thời gian ("H1", "H2", ...).
 #   bars:         Số bar tải về — phải đủ lớn cho warmup indicators + lịch sử cần thiết.
@@ -58,8 +62,29 @@ INDICE_SYMBOLS = ["FR40", "DE40", "HK50", "J225", "SP35", "UK100", "US500", "US1
 #   H2: 500 bars × 120min = 41.7 ngày < TTL_DAYS=60 ✓
 #   H3: 400 bars × 180min = 50.0 ngày < TTL_DAYS=60 ✓
 #   H4: 300 bars × 240min = 50.0 ngày < TTL_DAYS=60 ✓
+#   AI Trend H3 alerts also use 400 bars to stay within TTL_DAYS=60.
 #   → TTL=60 đảm bảo không bao giờ prune key của bar còn trong cửa sổ.
 SCAN_GROUPS: list[dict] = [
+    {
+        "strategy": "ai_trend",
+        "event_type": "h3_trend_change",
+        "symbols": AI_TREND_SYMBOLS,
+        "tf": "H3",
+        "bars": 400,
+        "poll_seconds": TF_POLL_SECONDS["H3"],
+        "chat_id": None,
+        "overrides": {"TREND_BARS": 400},
+    },
+    {
+        "strategy": "ai_trend",
+        "event_type": "m45_entry_signal",
+        "symbols": AI_TREND_SYMBOLS,
+        "tf": "M45",
+        "bars": 1000,
+        "poll_seconds": TF_POLL_SECONDS["M45"],
+        "chat_id": None,
+        "overrides": {"TREND_BARS": 500, "ENTRY_BARS": 1000},
+    },
     {
         "strategy": "combo",
         "symbols": INDICE_SYMBOLS,

@@ -1,9 +1,9 @@
 """
 Configuration and validation for the AI Trend signal strategy.
 
-The strategy is display-first in phase 1:
-    - GOLD H3 uses AI Trend Navigator / KNN as the trend chart.
-    - GOLD M45 uses EMA 13 and EMA 34 as the entry chart.
+The strategy is display-first:
+    - H3 uses AI Trend Navigator / KNN as the trend chart.
+    - M45 uses EMA 13 and EMA 34 as the entry chart.
     - Entry, stop-loss, and take-profit levels are intentionally empty.
 """
 
@@ -120,8 +120,6 @@ def _to_choice(value: object, default: str, allowed: set[str]) -> str:
 def normalize_params(overrides: dict[str, Any] | None = None, symbol: str | None = None) -> dict[str, Any]:
     raw = {**DEFAULT_PARAMS, **(overrides or {})}
     selected_symbol = str(raw.get("SYMBOL") or symbol or SYMBOL).strip().upper()
-    if selected_symbol != SYMBOL:
-        raise ValueError("AI Trend phase 1 is scoped to GOLD only")
 
     fast = _to_int(raw.get("EMA_FAST"), EMA_FAST, 1, 300)
     slow = _to_int(raw.get("EMA_SLOW"), EMA_SLOW, 2, 500)

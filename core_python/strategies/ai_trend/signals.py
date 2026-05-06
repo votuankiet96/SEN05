@@ -82,7 +82,8 @@ def merge_trend_into_entry(entry_df: pd.DataFrame, trend_df: pd.DataFrame) -> pd
     Attach the latest closed H3 trend row to every M45 bar.
 
     A H3 bar is considered usable only when its close time is <= the M45 bar
-    open time. This prevents the M45 signal from seeing an unfinished H3 bar.
+    open time. This ensures the H3 trend is confirmed before the entry-timeframe
+    candle starts, so M45 markers do not appear before the H3 confirmation.
     """
     if entry_df.empty:
         return entry_df.copy()

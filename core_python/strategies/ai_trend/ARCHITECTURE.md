@@ -1,17 +1,17 @@
 # AI Trend Strategy Architecture
 
-Scope: dashboard signal strategy for `GOLD`.
+Scope: dashboard signal strategy for symbols with available H3 and M45 data.
 
 ```text
-GOLD H3 candles
+Selected symbol H3 candles
   -> AI Trend Navigator / KNN
   -> h3_bias: bullish when KNN line is green, bearish when KNN line is red
   -> no automatic markers on the H3 chart
 
-GOLD M45 candles
+Selected symbol M45 candles
   -> EMA 13 / EMA 34
   -> optional Dow wave pivots: HH, HL, LH, LL
-  -> merge latest closed H3 bias by close time
+  -> merge latest closed H3 bias by M45 open time
   -> one BUY/SELL marker at the first M45 bar in each H3 trend segment
      where EMA 13/34 are already aligned with the H3 bias
 
@@ -22,8 +22,9 @@ Dashboard
   -> double-click the H3 chart to clear the manual mark
 ```
 
-The merge uses H3 close time `<=` M45 bar open time, so an unfinished H3 bar
-and the M45 bar that closed exactly with it are not used by the next signal.
+The merge uses H3 close time `<=` M45 bar open time. The final M45 candle inside
+the just-closed H3 candle is not eligible for a new entry signal, because its
+chart marker would appear before the H3 confirmation.
 
 Linked marking uses:
 
@@ -42,10 +43,10 @@ Signal rule:
 
 ```text
 For each continuous H3 green-line segment:
-  mark the first M45 bar since H3 close where EMA13 > EMA34.
+  mark the first M45 bar with open time >= H3 close where EMA13 > EMA34.
 
 For each continuous H3 red-line segment:
-  mark the first M45 bar since H3 close where EMA13 < EMA34.
+  mark the first M45 bar with open time >= H3 close where EMA13 < EMA34.
 
 If M45 never aligns before H3 bias changes, no signal is produced.
 ```
@@ -59,4 +60,15 @@ SHOW_M45_DOW toggles the thin dashed zigzag wave.
 SHOW_M45_DOW_LABELS toggles HH/HL/LH/LL labels; default is off.
 
 Dow wave is visual-only in this phase and does not change BUY/SELL logic.
+```
+
+Telegram alerts use the same contract:
+
+```text
+H3 trend-change alert:
+  sent after a closed H3 bar changes KNN bias to bullish or bearish.
+
+M45 entry alert:
+  sent after the first closed M45 bar that starts at or after the H3 close
+  aligns with the H3 bias.
 ```

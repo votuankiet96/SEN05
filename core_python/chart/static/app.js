@@ -160,11 +160,11 @@ function createOption(parent, value, label, selectedValue) {
 
 const symbolMeta = {};
 
-function populateSymbols(assetFilter) {
+function populateSymbols(assetFilter, selectedValue = el.symbol.value || state.config.defaultSymbol) {
   el.symbol.replaceChildren();
   state.config.symbols
     .filter((s) => !assetFilter || s.asset_type === assetFilter)
-    .forEach((s) => createOption(el.symbol, s.name, s.name, state.config.defaultSymbol));
+    .forEach((s) => createOption(el.symbol, s.name, s.name, selectedValue));
 }
 
 function updateXDefault() {
@@ -267,11 +267,6 @@ function renderParamControls() {
 
 function applyStrategyDefaults() {
   if (el.strategy.value !== "ai_trend") return;
-  el.assetType.value = "";
-  populateSymbols("");
-  if ([...el.symbol.options].some((option) => option.value === "GOLD")) {
-    el.symbol.value = "GOLD";
-  }
   if ([...el.tf.options].some((option) => option.value === "M45")) {
     el.tf.value = "M45";
   }
@@ -305,6 +300,13 @@ async function loadScan() {
     if (!response.ok) throw new Error(payload.error || "Scan failed");
     renderPayload(payload);
   } catch (error) {
+    resetCharts();
+    el.meta.textContent = `${el.strategy.options[el.strategy.selectedIndex]?.textContent || el.strategy.value} | ${el.symbol.value} | scan failed`;
+    el.statTotal.textContent = "0";
+    el.statBuy.textContent = "0";
+    el.statSell.textContent = "0";
+    el.statLast.textContent = "-";
+    renderSignalsTable([]);
     showError(error.message);
   }
 }

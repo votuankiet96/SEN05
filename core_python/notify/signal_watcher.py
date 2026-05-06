@@ -42,6 +42,18 @@ from core_python.export.to_csv import export_signals
 from core_python.notify.formatter import format_signal_message
 from core_python.notify.notifier import Notifier
 from core_python.notify.state import SignalState, signal_key
+from core_python.strategies.ai_trend.alerts import (
+    H3_TREND_CHANGE,
+    M45_ENTRY_SIGNAL,
+    ai_trend_alert_key,
+    extract_h3_trend_alerts,
+    extract_m45_entry_alerts,
+    format_ai_trend_alert,
+)
+from core_python.strategies.ai_trend.signals import (
+    build_ai_trend_frames,
+    prepare_trend_frame,
+)
 from core_python.strategies.registry import get_strategy
 
 
@@ -224,6 +236,130 @@ def check_once(
     return events
 
 
+def check_ai_trend_once(
+    *,
+    symbols: list[str],
+    tf: str,
+    bars: int,
+    state: SignalState,
+    notifier: Notifier,
+    event_type: str | None,
+    overrides: dict[str, Any] | None = None,
+    closed_only: bool = True,
+    chat_id: str | None = None,
+    show_progress: bool = True,
+    latest_bars: list[pd.Timestamp] | None = None,
+) -> list[str]:
+    """Check AI Trend H3 trend-change or M45 entry alerts for one scan group."""
+    normalized_event_type = _normalize_ai_trend_event_type(event_type, tf)
+    events: list[str] = []
+    for symbol in symbols:
+        if show_progress:
+            _print_status(f"scanning ai_trend {normalized_event_type} {symbol} {tf} ({bars} bars)")
+        try:
+            alerts, latest_bar_ts = run_ai_trend_alerts(
+                symbol=symbol,
+                tf=tf,
+                bars=bars,
+                event_type=normalized_event_type,
+                overrides=overrides,
+                closed_only=closed_only,
+            )
+        except Exception as exc:
+            events.append(f"{symbol} {tf}: AI Trend load error - {exc}")
+            continue
+
+        if latest_bar_ts is not None and latest_bars is not None:
+            latest_bars.append(latest_bar_ts)
+        latest_bar = _format_bar_ts(latest_bar_ts)
+        new_alerts = [alert for alert in alerts if not state.has(ai_trend_alert_key(alert))]
+        if not new_alerts:
+            events.append(f"{symbol} {tf}: no new AI Trend alert (latest bar {latest_bar})")
+            continue
+
+        for alert in new_alerts:
+            key = ai_trend_alert_key(alert)
+            message = format_ai_trend_alert(alert)
+            result = notifier.send(message, chat_id=chat_id)
+            direction = _ai_trend_alert_side(alert.direction, alert.kind)
+            signal_time = pd.Timestamp(alert.event_time).strftime("%Y-%m-%d %H:%M")
+
+            if result.sent and not notifier.dry_run:
+                state.add(key)
+                events.append(
+                    f"{symbol} {tf}: alerted via {result.backend} "
+                    f"{normalized_event_type} {direction} {signal_time} UTC"
+                )
+            elif result.sent:
+                events.append(
+                    f"{symbol} {tf}: dry-run OK {normalized_event_type} {direction} {signal_time} UTC"
+                )
+            else:
+                events.append(f"{symbol} {tf}: FAILED - {result.detail}")
+
+    return events
+
+
+def run_ai_trend_alerts(
+    *,
+    symbol: str,
+    tf: str,
+    bars: int,
+    event_type: str | None,
+    overrides: dict[str, Any] | None = None,
+    closed_only: bool = True,
+) -> tuple[list[Any], pd.Timestamp | None]:
+    """Build closed AI Trend frames and extract alerts for the requested event type."""
+    spec = get_strategy("ai_trend")
+    local_overrides = dict(overrides or {})
+    tf_code = str(tf).strip().upper()
+    normalized_event_type = _normalize_ai_trend_event_type(event_type, tf_code)
+    if normalized_event_type == H3_TREND_CHANGE:
+        local_overrides.setdefault("TREND_BARS", bars)
+    elif normalized_event_type == M45_ENTRY_SIGNAL:
+        local_overrides.setdefault("ENTRY_BARS", bars)
+
+    params = spec.normalize_params(local_overrides, symbol)
+    selected_symbol = params["SYMBOL"]
+
+    trend_raw = load(selected_symbol, params["TREND_TF"], int(params["TREND_BARS"]))
+    if closed_only:
+        trend_raw = _drop_open_bar(trend_raw, params["TREND_TF"])
+    if trend_raw.empty:
+        raise ValueError(f"{selected_symbol} has no closed {params['TREND_TF']} data")
+
+    if normalized_event_type == H3_TREND_CHANGE:
+        trend_frame = prepare_trend_frame(trend_raw, params)
+        return extract_h3_trend_alerts(trend_frame, selected_symbol), _latest_bar_ts(trend_raw)
+
+    entry_raw = load(selected_symbol, params["ENTRY_TF"], int(params["ENTRY_BARS"]))
+    if closed_only:
+        entry_raw = _drop_open_bar(entry_raw, params["ENTRY_TF"])
+    if entry_raw.empty:
+        raise ValueError(f"{selected_symbol} has no closed {params['ENTRY_TF']} data")
+
+    _trend_frame, entry_frame = build_ai_trend_frames(trend_raw, entry_raw, params)
+    return extract_m45_entry_alerts(entry_frame, selected_symbol), _latest_bar_ts(entry_raw)
+
+
+def _normalize_ai_trend_event_type(event_type: str | None, tf: str) -> str:
+    normalized = str(event_type or "").strip().lower()
+    if normalized in {H3_TREND_CHANGE, M45_ENTRY_SIGNAL}:
+        return normalized
+    tf_code = str(tf).strip().upper()
+    if tf_code == "H3":
+        return H3_TREND_CHANGE
+    if tf_code == "M45":
+        return M45_ENTRY_SIGNAL
+    raise ValueError("AI Trend notify supports only H3 trend-change and M45 entry-signal groups")
+
+
+def _ai_trend_alert_side(direction: int, kind: str) -> str:
+    if kind == H3_TREND_CHANGE:
+        return "BULLISH" if int(direction) == 1 else "BEARISH"
+    return "BUY" if int(direction) == 1 else "SELL"
+
+
 def _drop_open_bar(df: pd.DataFrame, tf: str) -> pd.DataFrame:
     """
     Loại bỏ bar cuối nếu nó có thể chưa đóng (đang mở).
@@ -356,7 +492,7 @@ def _parse_args() -> argparse.Namespace:
         default=None,
         help="Comma-separated timeframes to scan. Overrides scan_config.py groups.",
     )
-    parser.add_argument("--strategy", default="combo", choices=["combo", "ma_cross"])
+    parser.add_argument("--strategy", default="combo", choices=["combo", "ma_cross", "ai_trend"])
     parser.add_argument(
         "--bar-close-buffer-seconds",
         type=int,
@@ -398,15 +534,27 @@ def _build_groups_from_args(args: argparse.Namespace) -> list[dict]:
     tfs = [t.strip().upper() for t in args.tf.replace(";", ",").split(",") if t.strip()]
     groups = []
     for tf in tfs:
+        group_bars = args.bars
+        overrides: dict[str, Any] = {}
+        event_type = None
+        if args.strategy == "ai_trend":
+            event_type = _normalize_ai_trend_event_type(None, tf)
+            if event_type == H3_TREND_CHANGE:
+                group_bars = min(int(args.bars), 400)
+                overrides = {"TREND_BARS": group_bars}
+            elif event_type == M45_ENTRY_SIGNAL:
+                group_bars = int(args.bars)
+                overrides = {"TREND_BARS": 400, "ENTRY_BARS": group_bars}
         groups.append(
             {
                 "strategy": args.strategy,
                 "symbols": symbols,
                 "tf": tf,
-                "bars": args.bars,
+                "bars": group_bars,
                 "poll_seconds": TF_POLL_SECONDS.get(tf, 300),
                 "chat_id": None,
-                "overrides": {},
+                "overrides": overrides,
+                "event_type": event_type,
             }
         )
     return groups
@@ -445,6 +593,22 @@ def main() -> int:
         for group in scan_groups:
             for symbol in group["symbols"]:
                 try:
+                    if group["strategy"] == "ai_trend":
+                        alerts, _latest = run_ai_trend_alerts(
+                            symbol=symbol,
+                            tf=group["tf"],
+                            bars=group.get("bars", args.bars),
+                            event_type=group.get("event_type"),
+                            overrides=group.get("overrides") or {},
+                            closed_only=closed_only,
+                        )
+                        for alert in alerts:
+                            key = ai_trend_alert_key(alert)
+                            if not state.has(key):
+                                state.add(key)
+                                total += 1
+                        continue
+
                     frame, _spec, _params = run_strategy_frame(
                         strategy=group["strategy"],
                         symbol=symbol,
@@ -504,21 +668,36 @@ def main() -> int:
                 continue
             latest_bars: list[pd.Timestamp] = []
             try:
-                events = check_once(
-                    strategy=group["strategy"],
-                    symbols=group["symbols"],
-                    tf=group["tf"],
-                    bars=group.get("bars", args.bars),
-                    state=state,
-                    notifier=notifier,
-                    output_dir=args.output_dir,
-                    overrides=group.get("overrides") or {},
-                    closed_only=closed_only,
-                    export_on_signal=not args.no_export,
-                    chat_id=group.get("chat_id"),
-                    show_progress=not args.quiet,
-                    latest_bars=latest_bars,
-                )
+                if group["strategy"] == "ai_trend":
+                    events = check_ai_trend_once(
+                        symbols=group["symbols"],
+                        tf=group["tf"],
+                        bars=group.get("bars", args.bars),
+                        state=state,
+                        notifier=notifier,
+                        event_type=group.get("event_type"),
+                        overrides=group.get("overrides") or {},
+                        closed_only=closed_only,
+                        chat_id=group.get("chat_id"),
+                        show_progress=not args.quiet,
+                        latest_bars=latest_bars,
+                    )
+                else:
+                    events = check_once(
+                        strategy=group["strategy"],
+                        symbols=group["symbols"],
+                        tf=group["tf"],
+                        bars=group.get("bars", args.bars),
+                        state=state,
+                        notifier=notifier,
+                        output_dir=args.output_dir,
+                        overrides=group.get("overrides") or {},
+                        closed_only=closed_only,
+                        export_on_signal=not args.no_export,
+                        chat_id=group.get("chat_id"),
+                        show_progress=not args.quiet,
+                        latest_bars=latest_bars,
+                    )
             except Exception as exc:
                 events = [f"[ERROR] group {i} {group['tf']}: {exc}"]
 
