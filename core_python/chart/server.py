@@ -246,7 +246,7 @@ def _run_ai_trend_dashboard(
     Run the AI Trend two-timeframe dashboard path.
 
     The common StrategySpec callables stay registered for compatibility, but the
-    dashboard needs both H3 and M45 data at the same time.
+    dashboard needs trend-timeframe and entry-timeframe data at the same time.
     """
     overrides = _strategy_overrides(args, spec.param_fields)
     overrides.setdefault("SYMBOL", symbol or "GOLD")

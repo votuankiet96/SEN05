@@ -69,9 +69,9 @@ const COLUMN_LABELS = {
   fast_ma: "Fast MA",
   slow_ma: "Slow MA",
   ma_gap_atr: "Gap/ATR",
-  h3_bias: "H3 Bias",
-  h3_ai_knn: "H3 KNN",
-  h3_ai_avg: "H3 Avg",
+  h3_bias: "Trend Bias",
+  h3_ai_knn: "Trend KNN",
+  h3_ai_avg: "Trend Avg",
   ema_fast: "EMA Fast",
   ema_slow: "EMA Slow",
   close: "Close",
@@ -117,9 +117,9 @@ const EXPORT_COLUMNS = {
     { key: "bartime", label: "Bar Time", checked: true },
     { key: "side", label: "Side", checked: true },
     { key: "signal_reason", label: "Reason", checked: true },
-    { key: "h3_bias", label: "H3 Bias", checked: true },
-    { key: "h3_ai_knn", label: "H3 KNN", checked: false },
-    { key: "h3_ai_avg", label: "H3 Avg", checked: false },
+    { key: "h3_bias", label: "Trend Bias", checked: true },
+    { key: "h3_ai_knn", label: "Trend KNN", checked: false },
+    { key: "h3_ai_avg", label: "Trend Avg", checked: false },
     { key: "ema_fast", label: "EMA Fast", checked: false },
     { key: "ema_slow", label: "EMA Slow", checked: false },
     { key: "open", label: "Open", checked: false },
@@ -270,8 +270,8 @@ function applyStrategyDefaults() {
   if ([...el.tf.options].some((option) => option.value === "M45")) {
     el.tf.value = "M45";
   }
-  if (!el.bars.value || Number(el.bars.value) < 1000) {
-    el.bars.value = 1000;
+  if (!el.bars.value || Number(el.bars.value) < 2000) {
+    el.bars.value = 2000;
   }
 }
 
@@ -441,7 +441,7 @@ function renderPayload(payload) {
 function renderAiTrendPayload(payload) {
   resetCharts();
   el.priceChart.classList.add("ai-trend-h3-chart");
-  el.meta.textContent = `${payload.meta.strategyLabel} | ${payload.meta.symbol} ${payload.meta.trendTf}/${payload.meta.entryTf} | H3 ${payload.meta.trendBars} bars, M45 ${payload.meta.entryBars} bars`;
+  el.meta.textContent = `${payload.meta.strategyLabel} | ${payload.meta.symbol} ${payload.meta.trendTf}/${payload.meta.entryTf} | ${payload.meta.trendTf} ${payload.meta.trendBars} bars, ${payload.meta.entryTf} ${payload.meta.entryBars} bars`;
   el.statTotal.textContent = payload.stats.total;
   el.statBuy.textContent = payload.stats.buy;
   el.statSell.textContent = payload.stats.sell;
@@ -566,7 +566,9 @@ function setMarkLine(view, line, time) {
 }
 
 function setupAiTrendLinking(payload, trendView, entryView, entryLabel) {
-  const h3Seconds = 180 * 60;
+  const trendTf = payload.meta?.trendTf || "Trend";
+  const entryTf = payload.meta?.entryTf || "Entry";
+  const trendSeconds = Math.max(1, Number(payload.meta?.trendTfMinutes || 180)) * 60;
   const contextBars = Math.max(6, Number(payload.params?.M45_CONTEXT_BARS || 45));
   const trendMarkLine = createMarkLine(trendView.container);
   const entryMarkLine = createMarkLine(entryView.container);
@@ -628,21 +630,21 @@ function setupAiTrendLinking(payload, trendView, entryView, entryLabel) {
     if (h3Time == null) return;
     const trendCandle = trendView.candleByTime.get(h3Time);
     if (!trendCandle) return;
-    const h3CloseTime = h3Time + h3Seconds;
-    const focusTime = firstChartTimeAtOrAfter(entryView.candleTimes, h3CloseTime);
+    const trendCloseTime = h3Time + trendSeconds;
+    const focusTime = firstChartTimeAtOrAfter(entryView.candleTimes, trendCloseTime);
     const entryCandle = focusTime == null ? null : entryView.candleByTime.get(focusTime);
     markedH3Time = h3Time;
     markedEntryTime = focusTime;
 
     setSeriesMarkers(trendView.candleSeries, [
       ...trendView.baseMarkers,
-      ...manualMarkers(h3Time, "H3 MARK"),
+      ...manualMarkers(h3Time, `${trendTf} MARK`),
     ]);
     trendView.chart.setCrosshairPosition(trendCandle.close, h3Time, trendView.candleSeries);
 
     setSeriesMarkers(entryView.candleSeries, entryCandle ? [
       ...entryView.baseMarkers,
-      ...manualMarkers(focusTime, "H3 close"),
+      ...manualMarkers(focusTime, `${trendTf} close`),
     ] : entryView.baseMarkers);
 
     if (entryCandle) {
@@ -652,9 +654,9 @@ function setupAiTrendLinking(payload, trendView, entryView, entryLabel) {
       entryView.chart.clearCrosshairPosition();
     }
 
-    const focusText = focusTime == null ? "no M45 bar" : fmtUtcMinute(focusTime);
-    entryLabel.textContent = `${entryLabel.dataset.baseLabel} | H3 mark ${fmtUtcMinute(h3Time)} -> M45 ${focusText} | ${contextBars} bars, 1/3 before`;
-    el.chartLegend.textContent = `${payload.charts.trend.label} | marked H3 ${fmtUtcMinute(h3Time)} | H3 close ${fmtUtcMinute(h3CloseTime)}`;
+    const focusText = focusTime == null ? `no ${entryTf} bar` : fmtUtcMinute(focusTime);
+    entryLabel.textContent = `${entryLabel.dataset.baseLabel} | ${trendTf} mark ${fmtUtcMinute(h3Time)} -> ${entryTf} ${focusText} | ${contextBars} bars, 1/3 before`;
+    el.chartLegend.textContent = `${payload.charts.trend.label} | marked ${trendTf} ${fmtUtcMinute(h3Time)} | ${trendTf} close ${fmtUtcMinute(trendCloseTime)}`;
     requestAnimationFrame(refreshMarkLines);
   };
 

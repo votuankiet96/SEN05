@@ -2,22 +2,27 @@
 Configuration and validation for the AI Trend signal strategy.
 
 The strategy is display-first:
-    - H3 uses AI Trend Navigator / KNN as the trend chart.
-    - M45 uses EMA 13 and EMA 34 as the entry chart.
+    - Trend TF uses AI Trend Navigator / KNN as the trend chart.
+    - Entry TF uses EMA 13 and EMA 34 as the entry chart.
     - Entry, stop-loss, and take-profit levels are intentionally empty.
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
+
+from core_python.config import TF_MINUTES
 
 
 SYMBOL = "GOLD"
 TREND_TF = "H3"
 ENTRY_TF = "M45"
+TREND_TF_OPTIONS = ("H1", "H2", "H3", "H4")
+ENTRY_TF_OPTIONS = ("M45", "M30", "M20", "M15", "M10", "M5")
 
 TREND_BARS = 500
-ENTRY_BARS = 1000
+ENTRY_BARS = 2000
 
 PRICE_VALUE = "hl2"
 TARGET_VALUE = "Price Action"
@@ -65,23 +70,23 @@ DEFAULT_PARAMS: dict[str, Any] = {
 
 
 PARAM_FIELDS: list[dict[str, Any]] = [
-    {"key": "TREND_TF", "label": "Trend TF", "type": "select", "options": ["H3"]},
-    {"key": "ENTRY_TF", "label": "Entry TF", "type": "select", "options": ["M45"]},
-    {"key": "TREND_BARS", "label": "H3 Bars", "type": "number", "min": 50, "max": 20000, "step": 50},
-    {"key": "ENTRY_BARS", "label": "M45 Bars", "type": "number", "min": 50, "max": 20000, "step": 50},
+    {"key": "TREND_TF", "label": "Trend TF", "type": "select", "options": list(TREND_TF_OPTIONS)},
+    {"key": "ENTRY_TF", "label": "Entry TF", "type": "select", "options": list(ENTRY_TF_OPTIONS)},
+    {"key": "TREND_BARS", "label": "Trend Bars", "type": "number", "min": 50, "max": 20000, "step": 50},
+    {"key": "ENTRY_BARS", "label": "Entry Bars", "type": "number", "min": 50, "max": 20000, "step": 50},
     {"key": "AI_MA_LEN", "label": "KNN MA", "type": "number", "min": 2, "max": 200, "step": 1},
     {"key": "AI_TARGET_LEN", "label": "KNN Target", "type": "number", "min": 2, "max": 200, "step": 1},
     {"key": "AI_K", "label": "KNN K", "type": "number", "min": 2, "max": 200, "step": 1},
     {"key": "AI_SMOOTH", "label": "KNN Smooth", "type": "number", "min": 2, "max": 500, "step": 1},
     {"key": "EMA_FAST", "label": "EMA Fast", "type": "number", "min": 1, "max": 300, "step": 1},
     {"key": "EMA_SLOW", "label": "EMA Slow", "type": "number", "min": 2, "max": 500, "step": 1},
-    {"key": "M45_CONTEXT_BARS", "label": "M45 Context", "type": "number", "min": 6, "max": 200, "step": 1},
+    {"key": "M45_CONTEXT_BARS", "label": "Entry Context", "type": "number", "min": 6, "max": 200, "step": 1},
     {"key": "DOW_PIVOT_LEFT", "label": "Dow Left", "type": "number", "min": 1, "max": 20, "step": 1},
     {"key": "DOW_PIVOT_RIGHT", "label": "Dow Right", "type": "number", "min": 1, "max": 20, "step": 1},
     {"key": "DOW_MIN_ATR_MULT", "label": "Dow ATR Filter", "type": "number", "min": 0, "max": 10, "step": 0.1},
-    {"key": "SHOW_H3_KNN", "label": "Show H3 KNN", "type": "bool"},
-    {"key": "SHOW_M45_EMA", "label": "Show M45 EMA", "type": "bool"},
-    {"key": "SHOW_M45_DOW", "label": "Show M45 Dow", "type": "bool"},
+    {"key": "SHOW_H3_KNN", "label": "Show Trend KNN", "type": "bool"},
+    {"key": "SHOW_M45_EMA", "label": "Show Entry EMA", "type": "bool"},
+    {"key": "SHOW_M45_DOW", "label": "Show Entry Dow", "type": "bool"},
     {"key": "SHOW_M45_DOW_LABELS", "label": "Show Dow Labels", "type": "bool"},
 ]
 
@@ -110,10 +115,18 @@ def _to_float(value: object, default: float, min_value: float, max_value: float)
     return max(min_value, min(parsed, max_value))
 
 
-def _to_choice(value: object, default: str, allowed: set[str]) -> str:
+def timeframe_minutes(tf: object) -> int:
+    candidate = str(tf or "").strip().upper()
+    if candidate not in TF_MINUTES:
+        raise ValueError(f"Unsupported timeframe '{candidate}'.")
+    return int(TF_MINUTES[candidate])
+
+
+def _to_choice(value: object, default: str, allowed: Sequence[str]) -> str:
     candidate = str(value or default).strip().upper()
-    if candidate not in allowed:
-        raise ValueError(f"Unsupported timeframe '{candidate}'. Allowed: {', '.join(sorted(allowed))}")
+    allowed_values = tuple(str(item).upper() for item in allowed)
+    if candidate not in set(allowed_values):
+        raise ValueError(f"Unsupported timeframe '{candidate}'. Allowed: {', '.join(allowed_values)}")
     return candidate
 
 
@@ -128,8 +141,8 @@ def normalize_params(overrides: dict[str, Any] | None = None, symbol: str | None
 
     return {
         "SYMBOL": selected_symbol,
-        "TREND_TF": _to_choice(raw.get("TREND_TF"), TREND_TF, {"H3"}),
-        "ENTRY_TF": _to_choice(raw.get("ENTRY_TF"), ENTRY_TF, {"M45"}),
+        "TREND_TF": _to_choice(raw.get("TREND_TF"), TREND_TF, TREND_TF_OPTIONS),
+        "ENTRY_TF": _to_choice(raw.get("ENTRY_TF"), ENTRY_TF, ENTRY_TF_OPTIONS),
         "TREND_BARS": _to_int(raw.get("TREND_BARS"), TREND_BARS, 50, 20000),
         "ENTRY_BARS": _to_int(raw.get("ENTRY_BARS"), ENTRY_BARS, 50, 20000),
         "PRICE_VALUE": str(raw.get("PRICE_VALUE") or PRICE_VALUE),

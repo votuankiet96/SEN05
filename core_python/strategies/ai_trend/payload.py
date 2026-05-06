@@ -6,6 +6,8 @@ from typing import Any
 
 import pandas as pd
 
+from core_python.strategies.ai_trend.config import timeframe_minutes
+
 
 MAX_SIGNAL_ROWS = 120
 
@@ -256,6 +258,8 @@ def build_ai_trend_payload(
             "tf": f"{params['TREND_TF']} / {params['ENTRY_TF']}",
             "trendTf": params["TREND_TF"],
             "entryTf": params["ENTRY_TF"],
+            "trendTfMinutes": timeframe_minutes(params["TREND_TF"]),
+            "entryTfMinutes": timeframe_minutes(params["ENTRY_TF"]),
             "bars": int(params["ENTRY_BARS"]),
             "trendBars": int(params["TREND_BARS"]),
             "entryBars": int(params["ENTRY_BARS"]),

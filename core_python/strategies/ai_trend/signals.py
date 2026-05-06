@@ -7,14 +7,14 @@ import pandas as pd
 from core_python.indicators.ai_trend import calc_ai_trend_navigator
 from core_python.indicators.core import ema, safe_ratio
 from core_python.indicators.dow_wave import calc_dow_wave
-from core_python.strategies.ai_trend.config import normalize_params
+from core_python.strategies.ai_trend.config import normalize_params, timeframe_minutes
 
 
 def add_ai_trend_indicators(df: pd.DataFrame, params: dict | None = None) -> pd.DataFrame:
     """
     Add entry-timeframe indicators.
 
-    This callable keeps the generic StrategySpec contract valid. The full H3/M45
+    This callable keeps the generic StrategySpec contract valid. The full MTF
     strategy path uses ``build_ai_trend_frames`` below.
     """
     p = normalize_params(params)
@@ -22,8 +22,9 @@ def add_ai_trend_indicators(df: pd.DataFrame, params: dict | None = None) -> pd.
 
 
 def prepare_trend_frame(df: pd.DataFrame, params: dict) -> pd.DataFrame:
-    """Add H3 KNN fields and trend bias columns."""
+    """Add trend-timeframe KNN fields and bias columns."""
     out = df.copy()
+    trend_minutes = timeframe_minutes(params["TREND_TF"])
     ai = calc_ai_trend_navigator(
         out,
         price_value=str(params["PRICE_VALUE"]),
@@ -41,7 +42,7 @@ def prepare_trend_frame(df: pd.DataFrame, params: dict) -> pd.DataFrame:
     out.loc[bearish, "h3_bias"] = -1
     bias_change = out["h3_bias"].ne(out["h3_bias"].shift(1))
     out["h3_bias_segment"] = bias_change.cumsum().astype(int)
-    out["h3_close_time"] = out["bartime"] + pd.Timedelta(minutes=180)
+    out["h3_close_time"] = out["bartime"] + pd.Timedelta(minutes=trend_minutes)
     out["h3_window_start"] = out["bartime"]
     out["h3_window_end"] = out["h3_close_time"]
 
@@ -57,8 +58,9 @@ def prepare_trend_frame(df: pd.DataFrame, params: dict) -> pd.DataFrame:
 
 
 def prepare_entry_frame(df: pd.DataFrame, params: dict) -> pd.DataFrame:
-    """Add M45 EMA fields used for signal timing."""
+    """Add entry-timeframe EMA fields used for signal timing."""
     out = df.copy()
+    entry_minutes = timeframe_minutes(params["ENTRY_TF"])
     out["ema_fast"] = ema(out["close"], int(params["EMA_FAST"]))
     out["ema_slow"] = ema(out["close"], int(params["EMA_SLOW"]))
     out["prev_close"] = out["close"].shift(1)
@@ -66,7 +68,7 @@ def prepare_entry_frame(df: pd.DataFrame, params: dict) -> pd.DataFrame:
     out["prev_ema_slow"] = out["ema_slow"].shift(1)
     out["ema_gap"] = out["ema_fast"] - out["ema_slow"]
     out["ema_gap_pct"] = safe_ratio(out["ema_gap"], out["close"])
-    out["m45_close_time"] = out["bartime"] + pd.Timedelta(minutes=45)
+    out["m45_close_time"] = out["bartime"] + pd.Timedelta(minutes=entry_minutes)
     dow = calc_dow_wave(
         out,
         left=int(params["DOW_PIVOT_LEFT"]),
@@ -79,11 +81,11 @@ def prepare_entry_frame(df: pd.DataFrame, params: dict) -> pd.DataFrame:
 
 def merge_trend_into_entry(entry_df: pd.DataFrame, trend_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Attach the latest closed H3 trend row to every M45 bar.
+    Attach the latest closed trend row to every entry-timeframe bar.
 
-    A H3 bar is considered usable only when its close time is <= the M45 bar
-    open time. This ensures the H3 trend is confirmed before the entry-timeframe
-    candle starts, so M45 markers do not appear before the H3 confirmation.
+    A trend bar is considered usable only when its close time is <= the entry
+    bar open time. This ensures the trend is confirmed before the entry candle
+    starts, so entry markers do not appear before trend confirmation.
     """
     if entry_df.empty:
         return entry_df.copy()
@@ -122,10 +124,12 @@ def detect_ai_trend_signals(
     params: dict | None = None,
     sess_mask: pd.Series | None = None,
 ) -> pd.DataFrame:
-    """Detect the first M45 bar in each H3 trend segment that agrees with EMA order."""
+    """Detect the first entry bar in each trend segment that agrees with EMA order."""
     _ = symbol
-    _ = params
     _ = sess_mask
+    p = normalize_params(params)
+    trend_tf = p["TREND_TF"]
+    entry_tf = p["ENTRY_TF"]
     out = df.copy()
     out["signal"] = 0
     out["signal_reason"] = ""
@@ -160,8 +164,12 @@ def detect_ai_trend_signals(
 
     out.loc[buy, "signal"] = 1
     out.loc[sell, "signal"] = -1
-    out.loc[buy, "signal_reason"] = "First M45 bar after H3 close in bullish segment with EMA fast above EMA slow"
-    out.loc[sell, "signal_reason"] = "First M45 bar after H3 close in bearish segment with EMA fast below EMA slow"
+    out.loc[buy, "signal_reason"] = (
+        f"First {entry_tf} bar after {trend_tf} close in bullish segment with EMA fast above EMA slow"
+    )
+    out.loc[sell, "signal_reason"] = (
+        f"First {entry_tf} bar after {trend_tf} close in bearish segment with EMA fast below EMA slow"
+    )
     return out
 
 
@@ -170,7 +178,7 @@ def build_ai_trend_frames(
     entry_df: pd.DataFrame,
     params: dict,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Build the enriched H3 trend frame and M45 signal frame."""
+    """Build the enriched trend frame and entry signal frame."""
     trend = prepare_trend_frame(trend_df, params)
     entry = prepare_entry_frame(entry_df, params)
     merged = merge_trend_into_entry(entry, trend)
