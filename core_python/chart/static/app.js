@@ -26,11 +26,20 @@ const el = {
   signalsHead: document.getElementById("signals-head"),
   signalsBody: document.getElementById("signals-body"),
   exportBtn: document.getElementById("export-btn"),
+  bulkExportBtn: document.getElementById("bulk-export-btn"),
   exportModal: document.getElementById("export-modal"),
   exportCols: document.getElementById("export-cols"),
   modalClose: document.getElementById("modal-close"),
   modalCancel: document.getElementById("modal-cancel"),
   modalExport: document.getElementById("modal-export"),
+  bulkExportModal: document.getElementById("bulk-export-modal"),
+  bulkSymbols: document.getElementById("bulk-symbols"),
+  bulkCols: document.getElementById("bulk-cols"),
+  bulkSymbolsAll: document.getElementById("bulk-symbols-all"),
+  bulkSymbolsNone: document.getElementById("bulk-symbols-none"),
+  bulkModalClose: document.getElementById("bulk-modal-close"),
+  bulkModalCancel: document.getElementById("bulk-modal-cancel"),
+  bulkModalExport: document.getElementById("bulk-modal-export"),
 };
 
 const chartTheme = {
@@ -129,6 +138,42 @@ const EXPORT_COLUMNS = {
   ],
 };
 
+const BULK_EXPORT_COLUMNS = {
+  combo: [
+    { key: "atr", label: "ATR", checked: true },
+    { key: "ma", label: "MA", checked: false },
+    { key: "macd_h", label: "MACD-H", checked: false },
+    { key: "open", label: "Open", checked: false },
+    { key: "high", label: "High", checked: false },
+    { key: "low", label: "Low", checked: false },
+    { key: "close", label: "Close", checked: false },
+    { key: "signal_reason", label: "Reason", checked: false },
+  ],
+  ma_cross: [
+    { key: "atr", label: "ATR", checked: true },
+    { key: "fast_ma", label: "Fast MA", checked: false },
+    { key: "slow_ma", label: "Slow MA", checked: false },
+    { key: "ma_gap_atr", label: "Gap/ATR", checked: false },
+    { key: "open", label: "Open", checked: false },
+    { key: "high", label: "High", checked: false },
+    { key: "low", label: "Low", checked: false },
+    { key: "close", label: "Close", checked: false },
+    { key: "signal_reason", label: "Reason", checked: false },
+  ],
+  ai_trend: [
+    { key: "h3_bias", label: "Trend Bias", checked: true },
+    { key: "h3_ai_knn", label: "Trend KNN", checked: false },
+    { key: "h3_ai_avg", label: "Trend Avg", checked: false },
+    { key: "ema_fast", label: "EMA Fast", checked: false },
+    { key: "ema_slow", label: "EMA Slow", checked: false },
+    { key: "open", label: "Open", checked: false },
+    { key: "high", label: "High", checked: false },
+    { key: "low", label: "Low", checked: false },
+    { key: "close", label: "Close", checked: false },
+    { key: "signal_reason", label: "Reason", checked: false },
+  ],
+};
+
 function fmtNum(value) {
   if (value == null || value === "") return "";
   const n = Number(value);
@@ -213,9 +258,15 @@ async function init() {
   el.bars.addEventListener("change", loadScan);
   el.refresh.addEventListener("click", loadScan);
   el.exportBtn.addEventListener("click", openExportModal);
+  el.bulkExportBtn.addEventListener("click", openBulkExportModal);
   el.modalClose.addEventListener("click", () => el.exportModal.close());
   el.modalCancel.addEventListener("click", () => el.exportModal.close());
   el.modalExport.addEventListener("click", doExport);
+  el.bulkModalClose.addEventListener("click", () => el.bulkExportModal.close());
+  el.bulkModalCancel.addEventListener("click", () => el.bulkExportModal.close());
+  el.bulkModalExport.addEventListener("click", doBulkExport);
+  el.bulkSymbolsAll.addEventListener("click", () => setBulkSymbolsChecked(true));
+  el.bulkSymbolsNone.addEventListener("click", () => setBulkSymbolsChecked(false));
 
   renderParamControls();
   updateXDefault();
@@ -770,6 +821,80 @@ function doExport() {
   });
   window.open(`/api/export?${query.toString()}`, "_blank");
   el.exportModal.close();
+}
+
+function openBulkExportModal() {
+  renderBulkSymbols();
+  renderBulkColumns();
+  el.bulkExportModal.showModal();
+}
+
+function renderBulkSymbols() {
+  el.bulkSymbols.replaceChildren();
+  const assetFilter = el.assetType.value;
+  state.config.symbols
+    .filter((s) => !assetFilter || s.asset_type === assetFilter)
+    .forEach((symbol) => {
+      const label = document.createElement("label");
+      label.className = "check-row";
+      label.textContent = symbol.name;
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.dataset.symbol = symbol.name;
+      input.checked = symbol.name === el.symbol.value;
+      label.appendChild(input);
+      el.bulkSymbols.appendChild(label);
+    });
+}
+
+function renderBulkColumns() {
+  const cols = BULK_EXPORT_COLUMNS[el.strategy.value] || BULK_EXPORT_COLUMNS.combo;
+  el.bulkCols.replaceChildren();
+  cols.forEach((col) => {
+    const label = document.createElement("label");
+    label.className = "check-row";
+    label.textContent = col.label;
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.dataset.col = col.key;
+    input.checked = col.checked;
+    label.appendChild(input);
+    el.bulkCols.appendChild(label);
+  });
+}
+
+function setBulkSymbolsChecked(checked) {
+  el.bulkSymbols.querySelectorAll("input[type=checkbox]").forEach((input) => {
+    input.checked = checked;
+  });
+}
+
+function doBulkExport() {
+  const symbols = [...el.bulkSymbols.querySelectorAll("input[type=checkbox]:checked")]
+    .map((cb) => cb.dataset.symbol)
+    .join(",");
+  if (!symbols) {
+    showError("Select at least one symbol for bulk export.");
+    return;
+  }
+
+  const cols = [...el.bulkCols.querySelectorAll("input[type=checkbox]:checked")]
+    .map((cb) => cb.dataset.col)
+    .join(",");
+  const params = collectParams();
+  if (el.strategy.value === "combo") {
+    delete params.X;
+  }
+  const query = new URLSearchParams({
+    strategy: el.strategy.value,
+    tf: el.tf.value,
+    bars: el.bars.value,
+    symbols,
+    cols,
+    ...params,
+  });
+  window.open(`/api/export/bulk?${query.toString()}`, "_blank");
+  el.bulkExportModal.close();
 }
 
 function lineStyle(style) {

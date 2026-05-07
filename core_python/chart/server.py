@@ -30,7 +30,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, Response, jsonify, request, send_from_directory
 
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -181,6 +181,89 @@ def create_app() -> Flask:
         except Exception as exc:
             return jsonify({"error": str(exc)}), 500
 
+    @app.route("/api/export/bulk")
+    def api_export_bulk():
+        """
+        Export signal-only CSV for one strategy/timeframe across multiple symbols.
+
+        Required output columns are always: bartime, symbol, signal.
+        Optional cols query values are copied from the enriched strategy frame when present.
+        """
+        import pandas as pd
+
+        try:
+            strategy_key = request.args.get("strategy", "combo")
+            spec = get_strategy(strategy_key)
+            tf = request.args.get("tf", config.DEFAULT_TF).upper()
+            if tf not in config.TF_MINUTES:
+                raise ValueError(f"Unsupported timeframe '{tf}'.")
+
+            bars = _to_int(request.args.get("bars"), config.N_BARS, 50, 20000)
+            symbols = _parse_symbol_list(request.args.get("symbols") or request.args.get("symbol"))
+            if not symbols:
+                raise ValueError("Bulk export requires at least one symbol.")
+            for symbol in symbols:
+                config.get_symbol(symbol)
+
+            requested_cols = _parse_csv_list(request.args.get("cols"))
+            requested_cols = [col for col in requested_cols if col not in {"bartime", "symbol", "signal"}]
+            overrides = _strategy_overrides(request.args.to_dict(), spec.param_fields)
+
+            frames: list[pd.DataFrame] = []
+            for symbol in symbols:
+                if spec.key == "ai_trend":
+                    args = dict(request.args)
+                    args["SYMBOL"] = symbol
+                    args["ENTRY_TF"] = tf
+                    args["ENTRY_BARS"] = str(bars)
+                    _payload, enriched = _run_ai_trend_dashboard(spec, args, symbol, bars)
+                else:
+                    params = spec.normalize_params(overrides, symbol)
+                    raw = load(symbol, tf, bars)
+                    enriched = spec.add_levels(
+                        spec.detect_signals(spec.add_indicators(raw, params), symbol=symbol, params=params),
+                        params,
+                        symbol,
+                    )
+
+                signals = enriched[enriched["signal"].fillna(0).astype(int).ne(0)].copy()
+                if signals.empty:
+                    continue
+
+                out = pd.DataFrame(
+                    {
+                        "bartime": pd.to_datetime(signals["bartime"], errors="coerce").dt.strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        ),
+                        "symbol": symbol,
+                        "signal": signals["signal"].astype(int),
+                    }
+                )
+                for col in requested_cols:
+                    if col in signals.columns:
+                        out[col] = signals[col].values
+                frames.append(out)
+
+            columns = ["bartime", "symbol", "signal", *requested_cols]
+            if frames:
+                result = pd.concat(frames, ignore_index=True)
+                result = result.reindex(columns=[col for col in columns if col in result.columns])
+                result = result.sort_values(["bartime", "symbol"], kind="stable")
+            else:
+                result = pd.DataFrame(columns=columns)
+
+            csv_data = result.to_csv(index=False)
+            filename = f"{spec.key}_{tf}_bulk_signals.csv"
+            return Response(
+                csv_data,
+                mimetype="text/csv",
+                headers={"Content-Disposition": f"attachment; filename={filename}"},
+            )
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        except Exception as exc:
+            return jsonify({"error": str(exc)}), 500
+
     @app.route("/api/scan")
     def api_scan():
         """
@@ -295,6 +378,23 @@ def _to_int(value: object, default: int, min_value: int, max_value: int) -> int:
     except (TypeError, ValueError):
         parsed = default
     return max(min_value, min(parsed, max_value))
+
+
+def _parse_csv_list(value: object) -> list[str]:
+    if value is None:
+        return []
+    return [item.strip() for item in str(value).split(",") if item.strip()]
+
+
+def _parse_symbol_list(value: object) -> list[str]:
+    seen: set[str] = set()
+    symbols: list[str] = []
+    for item in _parse_csv_list(value):
+        symbol = item.upper()
+        if symbol and symbol not in seen:
+            symbols.append(symbol)
+            seen.add(symbol)
+    return symbols
 
 
 def _strategy_overrides(args: dict[str, str], fields: list[dict[str, Any]]) -> dict[str, Any]:

@@ -86,6 +86,93 @@ import sys  # Thêm đường dẫn import
 import time  # time.sleep() để rate-limit giữa các request TV
 from datetime import datetime, timedelta, timezone  # Xử lý thời gian UTC
 
+
+class ResilientRotatingFileHandler(logging.handlers.RotatingFileHandler):
+    """RotatingFileHandler variant that avoids stderr floods on Windows locks."""
+
+    def __init__(self, *args, rollover_retry_sec: int = 300, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._rollover_retry_sec = rollover_retry_sec
+        self._rollover_retry_at = 0.0
+        self._rollover_warned = False
+        self._primary_base_filename = self.baseFilename
+
+    def shouldRollover(self, record):
+        if self.maxBytes > 0 and time.monotonic() < self._rollover_retry_at:
+            return False
+        return super().shouldRollover(record)
+
+    def doRollover(self):
+        try:
+            super().doRollover()
+        except OSError as exc:
+            if not isinstance(exc, PermissionError) and getattr(exc, "winerror", None) != 32:
+                raise
+            fallback = self._switch_to_fallback_log()
+            if fallback:
+                self._rollover_retry_at = 0.0
+            else:
+                self._rollover_retry_at = time.monotonic() + self._rollover_retry_sec
+                self._reopen_after_rollover_failure()
+            self._write_rollover_warning(exc, fallback)
+        else:
+            self._rollover_retry_at = 0.0
+            self._rollover_warned = False
+
+    def _switch_to_fallback_log(self) -> str | None:
+        root, ext = os.path.splitext(self._primary_base_filename)
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        fallback = f"{root}.active.{os.getpid()}.{stamp}{ext or '.log'}"
+        if self.stream:
+            try:
+                self.stream.close()
+            except Exception:
+                pass
+            self.stream = None
+        try:
+            self.baseFilename = os.path.abspath(fallback)
+            self.mode = "a"
+            self.stream = self._open()
+            return self.baseFilename
+        except Exception:
+            self.baseFilename = self._primary_base_filename
+            self.stream = None
+            return None
+
+    def _reopen_after_rollover_failure(self) -> None:
+        if self.stream:
+            try:
+                self.stream.close()
+            except Exception:
+                pass
+            self.stream = None
+        if not self.delay:
+            try:
+                self.stream = self._open()
+            except Exception:
+                self.stream = None
+
+    def _write_rollover_warning(self, exc: OSError, fallback: str | None = None) -> None:
+        if self._rollover_warned:
+            return
+        self._rollover_warned = True
+        if fallback:
+            action = f"Switched current log file to {fallback}."
+        else:
+            action = f"Retrying in {self._rollover_retry_sec}s."
+        msg = (
+            f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} [WARNING] "
+            f"Log rollover delayed for {self._primary_base_filename}: {exc}. "
+            f"{action}\n"
+        )
+        try:
+            if self.stream is None:
+                self.stream = self._open()
+            self.stream.write(msg)
+            self.flush()
+        except Exception:
+            pass
+
 # ---------------------------------------------------------------------------
 # Bootstrap: thêm project root vào path (harmless khi đã pip install -e .)
 # ---------------------------------------------------------------------------
@@ -309,7 +396,7 @@ def setup_logger(name: str, log_file: str, rotating: bool = False) -> logging.Lo
     sh.setFormatter(console_fmt)
     if rotating:
         # Tối đa 6 files × 10 MB = 60 MB - đủ giữ ~10-14 ngày log ws_live
-        fh = logging.handlers.RotatingFileHandler(
+        fh = ResilientRotatingFileHandler(
             log_file, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8",
         )
     else:

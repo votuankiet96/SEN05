@@ -382,6 +382,7 @@ Can `.env` co:
 ```text
 TELEGRAM_BOT_TOKEN=<token>
 TELEGRAM_CHAT_ID=<chat_id>
+COMBO_DISCORD_WEBHOOK_URL=<discord_webhook_for_combo_raw_signals>
 ```
 
 ## 12. Gia Dinh Va Gioi Han Da Biet

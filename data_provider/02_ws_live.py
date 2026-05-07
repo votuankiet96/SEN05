@@ -160,6 +160,7 @@ from config import (
     COMPUTED_TF_DEPS,  # Bảng phụ thuộc: bảng nguồn nào -> tính TF phái sinh nào
     COMPUTED_TIMEFRAMES,  # Danh sách TF phái sinh cần tính (M10, M20, M90, H6, H8)
     LOG_FILE,  # Đường dẫn file log
+    SYMBOL_OVERNIGHT_MINS,  # Per-symbol overnight allowance used by health checks
     SYMBOLS,  # Toàn bộ danh sách symbol theo dõi (37 cặp)
     DISCORD_WEBHOOK_URL,  # Dùng để hiển thị trạng thái "Discord: Enabled/Disabled"
     TF_STAGING,  # Bảng ánh xạ: tf_code -> tên bảng staging trong DB
@@ -192,7 +193,7 @@ WS_SYMBOLS = [s for s in SYMBOLS if s["asset_type"] in {"Indice", "Metal", "Cryp
 # =============================================================================
 
 # Log file riêng cho ws_live (tách khỏi pipeline.log của 01_data_pipeline.py)
-# rotating=True -> RotatingFileHandler 10 MB × 5 files (~60 MB tối đa, đủ ~14 ngày)
+# rotating=True -> resilient rotating file log 10 MB × 5 files (~60 MB tối đa)
 _LOG_DIR    = Path(__file__).resolve().parent / "logs"
 WS_LOG_FILE = str(_LOG_DIR / "ws_live.log")
 logger = setup_logger("ws_live", WS_LOG_FILE, rotating=True)
@@ -512,7 +513,6 @@ def _load_watermarks() -> None:
     # Kiểm tra watermark cũ - cảnh báo nếu có cặp dữ liệu stale khi khởi động.
     # Stale = khoảng trống > 3× chu kỳ TF (ví dụ: H1 stale nếu data cũ hơn 3 giờ).
     # Cảnh báo này không chặn startup, chỉ nhắc operator cân nhắc chạy backfill trước.
-    from _helpers import TF_MINUTES  # import cục bộ tránh circular ở module level
     now_dt = datetime.now(timezone.utc)
     now_ts = now_dt.timestamp()
     stale = [
@@ -520,7 +520,7 @@ def _load_watermarks() -> None:
         for (sym_id, tf_code), wm_ts in _last_bar_ts.items()
         if (sym_id, tf_code) in WS_WATCH_KEYS
         if _is_market_expected_live(sym_id, now_dt)
-        if (now_ts - wm_ts) / 60 > TF_MINUTES.get(tf_code, 60) * 3
+        if (now_ts - wm_ts) / 60 > _freshness_threshold_minutes(sym_id, tf_code)
     ]
     if stale:
         worst = max(stale, key=lambda x: x[2])
@@ -568,6 +568,28 @@ def _is_market_expected_live(symbol_id: int, now_utc: datetime) -> bool:
     if weekday == 4 and now_utc.hour >= 22:
         return False
     return True
+
+
+def _freshness_threshold_minutes(symbol_id: int, tf_code: str) -> int:
+    """Return the stale threshold, including normal overnight market gaps."""
+    from _helpers import OVERNIGHT_GAP_MINUTES, TF_MINUTES
+
+    tf_min = int(TF_MINUTES.get(tf_code, 60))
+    threshold = tf_min * 3
+    meta = _SYMBOL_META_BY_ID.get(symbol_id, {})
+    asset_type = meta.get("asset_type")
+    tv_symbol = meta.get("tv_symbol")
+
+    if asset_type == "Crypto":
+        overnight_min = 0
+    elif tv_symbol in SYMBOL_OVERNIGHT_MINS:
+        overnight_min = int(SYMBOL_OVERNIGHT_MINS.get(tv_symbol, 0))
+    else:
+        overnight_min = int(OVERNIGHT_GAP_MINUTES.get(asset_type, 0))
+
+    if overnight_min > 0:
+        threshold = max(threshold, overnight_min + tf_min)
+    return threshold
 
 
 def _set_received_watermark(key: tuple[int, str], max_ts: float) -> None:
@@ -2063,7 +2085,7 @@ class BatchFetcher:
             elif new_bars > 0:
                 status = f"OK  +{new_bars} bar{'s' if new_bars > 1 else ''}"
             else:
-                status = "ok  (stale)"
+                status = "OK  no new closed bar"
             logger.info(
                 "[G%d] %-14s %-5s %6d  %-20s  %s",
                 self.group_id, tv_sym, tf_code, new_bars, latest, status,
@@ -2363,7 +2385,6 @@ def _status_reporter() -> None:
 
         # Freshness metrics: độ "tươi" của dữ liệu theo từng cặp (symbol, TF)
         # Dùng dict() copy nhanh - GIL của Python đảm bảo an toàn cho thao tác này
-        from _helpers import TF_MINUTES as _TF_MIN
         now_dt       = datetime.now(timezone.utc)
         now_ts       = now_dt.timestamp()
         with _state_lock:
@@ -2380,7 +2401,7 @@ def _status_reporter() -> None:
             if not wm_ts:
                 continue
             age_h = (now_ts - wm_ts) / 3600
-            stale_threshold_h = _TF_MIN.get(tf_code, 60) * 3 / 60
+            stale_threshold_h = _freshness_threshold_minutes(sid, tf_code) / 60
             market_live = _is_market_expected_live(sid, now_dt)
             if market_live and age_h > stale_threshold_h:
                 stale_count += 1

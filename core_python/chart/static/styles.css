@@ -295,6 +295,10 @@ th {
   min-width: 280px;
 }
 
+.bulk-export-dialog {
+  width: min(760px, calc(100vw - 28px));
+}
+
 .export-dialog::backdrop {
   background: rgba(0, 0, 0, 0.5);
 }
@@ -324,6 +328,37 @@ th {
   gap: 6px;
   max-height: 340px;
   overflow-y: auto;
+}
+
+.modal-section {
+  border-bottom: 1px solid var(--grid);
+}
+
+.modal-subtitle {
+  padding: 10px 14px 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px 14px 0;
+}
+
+.modal-actions button {
+  min-width: 64px;
+  height: 28px;
+  padding: 0 10px;
+  background: var(--panel-2);
+  border-color: var(--grid);
+}
+
+.bulk-symbol-grid {
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  max-height: 260px;
 }
 
 .modal-footer {

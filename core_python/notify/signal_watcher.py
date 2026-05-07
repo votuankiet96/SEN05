@@ -45,7 +45,7 @@ import pandas as pd
 from core_python import config
 from core_python.data.loader import load
 from core_python.export.to_csv import export_signals
-from core_python.notify.formatter import format_signal_message
+from core_python.notify.formatter import format_combo_raw_signal_message, format_signal_message
 from core_python.notify.notifier import Notifier
 from core_python.notify.state import SignalState, signal_key
 from core_python.strategies.ai_trend.alerts import (
@@ -425,8 +425,16 @@ def check_once(
                 except Exception:
                     pass
 
-            message = format_signal_message(row, strategy_label=spec.label, symbol=symbol, tf=tf)
-            result = notifier.send(message, chat_id=chat_id)
+            if strategy.lower() == "combo":
+                message = format_combo_raw_signal_message(row, strategy_label=spec.label, symbol=symbol, tf=tf)
+                result = notifier.send(
+                    message,
+                    backend="discord",
+                    discord_webhook=getattr(notifier, "combo_discord_webhook", None),
+                )
+            else:
+                message = format_signal_message(row, strategy_label=spec.label, symbol=symbol, tf=tf)
+                result = notifier.send(message, chat_id=chat_id, backend="telegram")
 
             if result.sent and not notifier.dry_run:
                 state.add(key)
@@ -522,7 +530,7 @@ def check_ai_trend_once(
                 continue
 
             message = format_ai_trend_alert(alert)
-            result = notifier.send(message, chat_id=chat_id)
+            result = notifier.send(message, chat_id=chat_id, backend="telegram")
 
             if result.sent and not notifier.dry_run:
                 state.add(key)
@@ -1017,7 +1025,7 @@ def main() -> int:
         f"{n_groups} groups / {total_slots} symbol-TF slots"
         + (" / DRY RUN" if args.dry_run else "")
     )
-    notifier.send(startup_msg)
+    notifier.send(startup_msg, backend="telegram")
     print(startup_msg.replace("<b>", "").replace("</b>", ""), flush=True)
     print(f"Mode: {mode_desc}", flush=True)
     print(
@@ -1122,7 +1130,7 @@ def main() -> int:
                 scan_groups,
                 minutes=max(1, int(args.health_interval_minutes)),
             )
-            result = notifier.send(summary)
+            result = notifier.send(summary, backend="telegram")
             status = "sent" if result.sent else f"FAILED - {result.detail}"
             print(f"[{pd.Timestamp.now('UTC').strftime('%H:%M:%S')}] hourly summary {status}", flush=True)
             _prune_sent_signal_events(sent_signal_events)

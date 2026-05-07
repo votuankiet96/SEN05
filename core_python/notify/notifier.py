@@ -85,9 +85,17 @@ class Notifier:
         self.telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
         self.telegram_chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
         self.discord_webhook = os.environ.get("DISCORD_WEBHOOK_URL", "")
+        self.combo_discord_webhook = os.environ.get("COMBO_DISCORD_WEBHOOK_URL", "") or self.discord_webhook
         self._last_telegram_send_at = 0.0
 
-    def send(self, message: str, chat_id: str | None = None) -> NotifyResult:
+    def send(
+        self,
+        message: str,
+        chat_id: str | None = None,
+        *,
+        backend: str | None = None,
+        discord_webhook: str | None = None,
+    ) -> NotifyResult:
         """
         Gửi thông báo hoặc in ra console trong chế độ dry-run.
 
@@ -108,14 +116,14 @@ class Notifier:
             print(message)
             return NotifyResult("dry-run", True, "printed")
 
-        backend = self._resolve_backend()
-        if backend == "telegram":
+        resolved_backend = self._resolve_backend(backend)
+        if resolved_backend == "telegram":
             return self._send_telegram(message, chat_id=chat_id)
-        if backend == "discord":
-            return self._send_discord(message)
+        if resolved_backend == "discord":
+            return self._send_discord(message, webhook_url=discord_webhook)
         return NotifyResult("none", False, "no notifier credentials configured")
 
-    def _resolve_backend(self) -> str:
+    def _resolve_backend(self, backend: str | None = None) -> str:
         """
         Xác định backend thực sự sẽ dùng.
 
@@ -124,8 +132,11 @@ class Notifier:
         Returns:
             "telegram", "discord", hoặc "none".
         """
-        if self.backend in {"telegram", "discord", "none"}:
-            return self.backend
+        selected = (backend or self.backend).lower().strip()
+        if self.backend == "none":
+            return "none"
+        if selected in {"telegram", "discord", "none"}:
+            return selected
         if self.telegram_token and self.telegram_chat_id:
             return "telegram"
         if self.discord_webhook:
@@ -195,7 +206,7 @@ class Notifier:
         if remaining > 0:
             time.sleep(remaining)
 
-    def _send_discord(self, message: str) -> NotifyResult:
+    def _send_discord(self, message: str, webhook_url: str | None = None) -> NotifyResult:
         """
         Gửi tin nhắn qua Discord Webhook (plain text, strip HTML).
 
@@ -211,13 +222,14 @@ class Notifier:
         Side Effects:
             Gửi HTTP POST đến Discord webhook URL. Timeout 15 giây.
         """
-        if not self.discord_webhook:
+        effective_webhook = webhook_url or self.discord_webhook
+        if not effective_webhook:
             return NotifyResult("discord", False, "missing DISCORD_WEBHOOK_URL")
         # Strip HTML tags để hiển thị đúng trên Discord
         import re
         plain = re.sub(r"<[^>]+>", "", message)
         try:
-            response = requests.post(self.discord_webhook, json={"content": plain[:2000]}, timeout=15)
+            response = requests.post(effective_webhook, json={"content": plain[:2000]}, timeout=15)
         except requests.exceptions.RequestException as exc:
             return NotifyResult("discord", False, f"network error: {exc}")
         if response.status_code in {200, 204}:

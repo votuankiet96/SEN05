@@ -86,6 +86,44 @@ def format_signal_message(
     return "\n".join(lines)
 
 
+def format_combo_raw_signal_message(
+    row: pd.Series,
+    *,
+    strategy_label: str,
+    symbol: str,
+    tf: str,
+) -> str:
+    """Format a Combo signal for Discord without pending entry/SL/TP levels."""
+    direction = "BUY" if int(row["signal"]) == 1 else "SELL"
+    signal_time = pd.Timestamp(row["bartime"]).strftime("%Y-%m-%d %H:%M")
+    lines = [
+        f"Combo RAW SIGNAL | {symbol.upper()} {tf.upper()} | {direction}",
+        f"Strategy: {strategy_label}",
+        f"Bartime: {signal_time} UTC",
+    ]
+
+    ohlc = []
+    for name in ("open", "high", "low", "close"):
+        value = row.get(name)
+        if pd.notna(value):
+            ohlc.append(f"{name.upper()}={_fmt(value)}")
+    if ohlc:
+        lines.append("OHLC: " + " | ".join(ohlc))
+
+    indicator_parts = []
+    for label, column in (("MA", "ma"), ("MACD_H", "macd_h"), ("ATR", "atr")):
+        value = row.get(column)
+        if pd.notna(value):
+            indicator_parts.append(f"{label}={_fmt(value)}")
+    if indicator_parts:
+        lines.append("Raw: " + " | ".join(indicator_parts))
+
+    reason = str(row.get("signal_reason") or "").strip()
+    if reason:
+        lines.append(f"Reason: {reason}")
+    return "\n".join(lines)
+
+
 def _fmt(value: object, digits: int = 5) -> str:
     """
     Định dạng số thập phân, bỏ trailing zeros và dấu chấm thừa.

@@ -371,7 +371,10 @@ class TestWsLiveSpoolCap:
     def test_sql_placeholders_are_parameterized(self):
         """ws_live SQL must use real parameter placeholders, not '-' characters."""
         src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
-        assert '",".join("?" * len(ws_tf_codes))' in src, (
+        assert '",".join("?" * len(WS_SYMBOL_IDS))' in src, (
+            "Watermark query must build symbol IN placeholders with '?'"
+        )
+        assert '",".join("?" * len(WS_TF_CODES))' in src, (
             "Watermark query must build IN placeholders with '?'"
         )
         assert "VALUES (-,-,-,-,-)" not in src, (
@@ -380,8 +383,8 @@ class TestWsLiveSpoolCap:
         assert "WHERE id=-" not in src, (
             "SQLite spool DELETE must not use '-' instead of a parameter placeholder"
         )
-        assert "VALUES (?,?,?,?,?)" in src, (
-            "SQLite spool INSERT must use five parameter placeholders"
+        assert "VALUES (?,?,?,?,?,?)" in src, (
+            "SQLite spool INSERT must use six parameter placeholders"
         )
         assert "WHERE id=?" in src, (
             "SQLite spool DELETE must use a parameter placeholder"
@@ -438,7 +441,7 @@ class TestWsLiveWatermark:
         # Kiểm tra: _set_committed_watermark phải nằm trong else block của try ETL
         etl_section_idx = src.find("run_etl_direct(symbol_id, tf_code, staging_table)")
         assert etl_section_idx > 0, "Phải có run_etl_direct trong db_worker"
-        context = src[etl_section_idx:etl_section_idx + 400]
+        context = src[etl_section_idx:etl_section_idx + 900]
         assert "_set_committed_watermark" in context, (
             "_set_committed_watermark phải được gọi sau ETL success"
         )
@@ -488,6 +491,28 @@ class TestWsLiveWatermark:
         fn_src = src[start:end]
         assert "expected_count > 0" in fn_src
         assert "received_count >= expected_count" in fn_src
+
+
+class TestWsLiveObservability:
+    """Guardrails for live logging and health-signal semantics."""
+
+    def test_rotating_logger_uses_resilient_handler(self):
+        src = (_ROOT / "data_provider" / "_helpers.py").read_text(encoding="utf-8")
+        assert "class ResilientRotatingFileHandler" in src
+        assert "ResilientRotatingFileHandler(" in src
+        assert "rollover_retry_sec" in src
+
+    def test_ws_live_health_uses_market_gap_allowance(self):
+        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        assert "SYMBOL_OVERNIGHT_MINS" in src
+        assert "def _freshness_threshold_minutes" in src
+        assert "_freshness_threshold_minutes(sym_id, tf_code)" in src
+        assert "_freshness_threshold_minutes(sid, tf_code)" in src
+
+    def test_batch_status_does_not_call_no_new_bar_stale(self):
+        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        assert "OK  no new closed bar" in src
+        assert "ok  (stale)" not in src
 
 
 # =============================================================================

@@ -35,6 +35,7 @@
         </label>
         <button id="refresh" type="button">Refresh</button>
         <button id="export-btn" type="button">Export CSV</button>
+        <button id="bulk-export-btn" type="button">Bulk Export</button>
       </div>
     </header>
 
@@ -77,8 +78,29 @@
         <button id="modal-cancel" type="button">Cancel</button>
       </div>
     </dialog>
+    <dialog id="bulk-export-modal" class="export-dialog bulk-export-dialog">
+      <div class="modal-header">
+        <span>Bulk Export</span>
+        <button id="bulk-modal-close" class="modal-x" type="button">x</button>
+      </div>
+      <div class="modal-section">
+        <div class="modal-subtitle">Symbols</div>
+        <div class="modal-actions">
+          <button id="bulk-symbols-all" type="button">All</button>
+          <button id="bulk-symbols-none" type="button">None</button>
+        </div>
+        <div id="bulk-symbols" class="modal-cols bulk-symbol-grid"></div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-subtitle">Optional Columns</div>
+        <div id="bulk-cols" class="modal-cols"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="bulk-modal-export" type="button">Download CSV</button>
+        <button id="bulk-modal-cancel" type="button">Cancel</button>
+      </div>
+    </dialog>
     <script src="/assets/lightweight-charts.js"></script>
     <script src="/static/app.js"></script>
   </body>
 </html>
-

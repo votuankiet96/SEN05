@@ -82,6 +82,7 @@ core_python/runtime/*.lock
 
 # Signal CSV exports — runtime output, không phải source
 core_python/csv_export/*.csv
+core_python/exports/*.csv
 
 # Generated HTML charts (output từ ma_chart.py, combo_chart, v.v.)
 *.html

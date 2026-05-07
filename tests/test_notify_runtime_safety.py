@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import pandas as pd
 
 import core_python.notify.signal_watcher as watcher
+from core_python.notify.formatter import format_combo_raw_signal_message
 from core_python.notify.signal_watcher import (
     _LAST_STALE_LOGGED,
     _drop_open_bar,
@@ -32,10 +33,27 @@ class _FakeNotifier:
 
     def __init__(self) -> None:
         self.messages: list[str] = []
+        self.calls: list[dict] = []
+        self.combo_discord_webhook = "https://discord.example/webhook"
 
-    def send(self, message: str, chat_id: str | None = None) -> SimpleNamespace:
+    def send(
+        self,
+        message: str,
+        chat_id: str | None = None,
+        *,
+        backend: str | None = None,
+        discord_webhook: str | None = None,
+    ) -> SimpleNamespace:
         self.messages.append(message)
-        return SimpleNamespace(sent=True, backend="fake", detail="")
+        self.calls.append(
+            {
+                "message": message,
+                "chat_id": chat_id,
+                "backend": backend,
+                "discord_webhook": discord_webhook,
+            }
+        )
+        return SimpleNamespace(sent=True, backend=backend or "fake", detail="")
 
 
 def test_scan_fingerprint_is_canonical_for_ordering() -> None:
@@ -165,6 +183,37 @@ def test_signal_key_format_stability() -> None:
     assert key == "combo|US30|H1|2026-05-06 12:00:00|1"
 
 
+def test_combo_raw_formatter_excludes_execution_levels() -> None:
+    row = pd.Series(
+        {
+            "bartime": pd.Timestamp("2026-05-06 12:00:00"),
+            "signal": 1,
+            "open": 100.0,
+            "high": 110.0,
+            "low": 95.0,
+            "close": 108.0,
+            "ma": 101.5,
+            "macd_h": 2.25,
+            "atr": 4.5,
+            "rr": 3.0,
+            "entry_price": 111.0,
+            "sl_price": 94.0,
+            "tp_price": 123.0,
+            "signal_reason": "close above MA, bullish candle, MACD histogram > 0",
+        }
+    )
+
+    message = format_combo_raw_signal_message(row, strategy_label="Combo", symbol="US30", tf="H1")
+
+    assert "Combo RAW SIGNAL | US30 H1 | BUY" in message
+    assert "OHLC:" in message
+    assert "Reason:" in message
+    assert "Entry" not in message
+    assert "SL" not in message
+    assert "TP" not in message
+    assert "RR_RAW" not in message
+
+
 def test_stale_check_uses_latest_close_not_bar_open() -> None:
     _LAST_STALE_LOGGED.clear()
     now = pd.Timestamp("2026-05-06 12:10:00", tz="UTC")
@@ -198,6 +247,55 @@ def test_check_once_skips_and_marks_historical_combo_signal(tmp_path, monkeypatc
     assert state.has(key)
     assert notifier.messages == []
     assert any("skipped historical" in event for event in events)
+
+
+def test_check_once_routes_combo_signal_to_discord_raw_message(tmp_path, monkeypatch) -> None:
+    bartime = pd.Timestamp.now("UTC").floor("h") - pd.Timedelta(hours=1)
+    frame = pd.DataFrame(
+        {
+            "bartime": [bartime.tz_localize(None)],
+            "signal": [1],
+            "open": [100.0],
+            "high": [110.0],
+            "low": [95.0],
+            "close": [108.0],
+            "ma": [101.5],
+            "macd_h": [2.25],
+            "atr": [4.5],
+            "rr": [3.0],
+            "entry_price": [111.0],
+            "sl_price": [94.0],
+            "tp_price": [123.0],
+            "signal_reason": ["close above MA, bullish candle, MACD histogram > 0"],
+        }
+    )
+
+    def fake_run_strategy_frame(**_kwargs):
+        return frame, SimpleNamespace(label="Combo"), {}
+
+    monkeypatch.setattr(watcher, "run_strategy_frame", fake_run_strategy_frame)
+    state = SignalState(tmp_path / "state.json")
+    notifier = _FakeNotifier()
+
+    events = check_once(
+        strategy="combo",
+        symbols=["US30"],
+        tf="H1",
+        bars=500,
+        state=state,
+        notifier=notifier,  # type: ignore[arg-type]
+        export_on_signal=False,
+        max_alert_age_minutes=240,
+    )
+
+    assert notifier.calls[0]["backend"] == "discord"
+    assert notifier.calls[0]["discord_webhook"] == notifier.combo_discord_webhook
+    assert "Combo RAW SIGNAL | US30 H1 | BUY" in notifier.messages[0]
+    assert "Entry" not in notifier.messages[0]
+    assert "SL" not in notifier.messages[0]
+    assert "TP" not in notifier.messages[0]
+    assert "RR_RAW" not in notifier.messages[0]
+    assert any("alerted via discord" in event for event in events)
 
 
 def test_check_ai_trend_once_skips_and_marks_historical_alert(tmp_path, monkeypatch) -> None:
