@@ -7,7 +7,7 @@ Mô tả:
     Định dạng CSV phù hợp để import vào cTrader hoặc công cụ backtest khác.
 
 Đầu ra:
-    File CSV gồm các cột [bartime, atr, signal] tại thư mục core_python/exports/
+    File CSV gồm các cột [bartime, atr, signal] tại thư mục core_python/csv_export/
     (hoặc output_dir tùy chỉnh).
 
 Phụ thuộc ngoài:
@@ -48,7 +48,7 @@ def export_signals(
         df: DataFrame đã enriched đầy đủ (phải có cột bartime, atr, signal).
         symbol: Tên symbol — dùng trong tên file (uppercase tự động).
         strategy: Tên chiến lược — dùng trong tên file.
-        output_dir: Thư mục đích. Mặc định: core_python/exports/.
+        output_dir: Thư mục đích. Mặc định: core_python/csv_export/.
 
     Returns:
         Path tới file CSV đã tạo.
@@ -65,7 +65,7 @@ def export_signals(
         ATR dùng để tính position size trong backtest/cTrader.
         Signal: 1 = BUY, -1 = SELL.
     """
-    base_dir = Path(output_dir) if output_dir else Path(__file__).resolve().parents[1] / "exports"
+    base_dir = Path(output_dir) if output_dir else Path(__file__).resolve().parents[1] / "csv_export"
     base_dir.mkdir(parents=True, exist_ok=True)
 
     missing = [col for col in EXPORT_COLUMNS if col not in df.columns]

@@ -340,13 +340,13 @@ Chay dashboard:
 Mac dinh:
 
 ```text
-http://127.0.0.1:8515
+http://127.0.0.1:8516
 ```
 
 Neu port khac duoc truyen qua CLI, vi du:
 
 ```powershell
-.venv\Scripts\python.exe -m core_python.main --port 8516
+.venv\Scripts\python.exe -m core_python.main --port 8517
 ```
 
 Dashboard co the chon strategy, symbol, TF, bars va params. Voi AI Trend, dashboard dung path rieng de tai ca Trend TF va Entry TF cung luc.

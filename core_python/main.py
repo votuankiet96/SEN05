@@ -3,7 +3,7 @@
 
 Mô tả:
     Phân tích tham số CLI rồi khởi động Flask server qua chart.server.run().
-    Server lắng nghe tại địa chỉ mặc định 127.0.0.1:8515.
+    Server lắng nghe tại địa chỉ mặc định 127.0.0.1:8516.
 
 Cách chạy:
     python -m core_python.main
@@ -56,4 +56,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

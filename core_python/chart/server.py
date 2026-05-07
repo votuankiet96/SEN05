@@ -48,7 +48,7 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 VENDOR_DIR = ROOT / "data_provider"
 
 DEFAULT_HOST = "127.0.0.1"
-DEFAULT_PORT = 8515
+DEFAULT_PORT = 8516
 
 
 def create_app() -> Flask:
@@ -327,7 +327,7 @@ def run(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, debug: bool = False)
 
     Args:
         host: Địa chỉ IP lắng nghe (mặc định "127.0.0.1" — chỉ local).
-        port: Cổng lắng nghe (mặc định 8515).
+        port: Cổng lắng nghe (mặc định 8516).
         debug: Bật Flask debug mode và hot reload.
 
     Side Effects:
