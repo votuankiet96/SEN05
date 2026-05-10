@@ -216,6 +216,7 @@ button {
 
 .indicator-chart {
   height: 170px;
+  position: relative;
 }
 
 .ai-entry-chart {

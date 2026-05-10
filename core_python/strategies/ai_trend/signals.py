@@ -5,7 +5,7 @@ from __future__ import annotations
 import pandas as pd
 
 from core_python.indicators.ai_trend import calc_ai_trend_navigator
-from core_python.indicators.core import ema, safe_ratio
+from core_python.indicators.core import ema, macd_hist, safe_ratio
 from core_python.indicators.dow_wave import calc_dow_wave
 from core_python.strategies.ai_trend.config import normalize_params, timeframe_minutes
 
@@ -70,6 +70,12 @@ def prepare_entry_frame(df: pd.DataFrame, params: dict) -> pd.DataFrame:
     out["prev_ema_slow"] = out["ema_slow"].shift(1)
     out["ema_gap"] = out["ema_fast"] - out["ema_slow"]
     out["ema_gap_pct"] = safe_ratio(out["ema_gap"], out["close"])
+    out["macd_h"] = macd_hist(
+        out["close"],
+        fast=int(params["MACD_FAST"]),
+        slow=int(params["MACD_SLOW"]),
+        signal=int(params["MACD_SIGNAL"]),
+    )
     out["m45_close_time"] = out["bartime"] + pd.Timedelta(minutes=entry_minutes)
     dow = calc_dow_wave(
         out,
@@ -129,7 +135,7 @@ def detect_ai_trend_signals(
     params: dict | None = None,
     sess_mask: pd.Series | None = None,
 ) -> pd.DataFrame:
-    """Detect the first entry bar in each trend segment that agrees with EMA order."""
+    """Detect the first entry bar in each trend segment confirmed by EMA and MACD."""
     _ = symbol
     _ = sess_mask
     p = normalize_params(params)
@@ -139,7 +145,7 @@ def detect_ai_trend_signals(
     out["signal"] = 0
     out["signal_reason"] = ""
 
-    required = {"h3_bias", "h3_bias_segment", "ema_fast", "ema_slow"}
+    required = {"h3_bias", "h3_bias_segment", "ema_fast", "ema_slow", "macd_h"}
     if not required.issubset(out.columns):
         return out
 
@@ -148,11 +154,22 @@ def detect_ai_trend_signals(
         & out["h3_bias_segment"].notna()
         & out["ema_fast"].notna()
         & out["ema_slow"].notna()
+        & out["macd_h"].notna()
     )
     if {"bartime", "h3_close_time"}.issubset(out.columns):
         valid &= out["bartime"].ge(out["h3_close_time"])
-    buy_candidate = valid & out["h3_bias"].eq(1) & out["ema_fast"].gt(out["ema_slow"])
-    sell_candidate = valid & out["h3_bias"].eq(-1) & out["ema_fast"].lt(out["ema_slow"])
+    buy_candidate = (
+        valid
+        & out["h3_bias"].eq(1)
+        & out["ema_fast"].gt(out["ema_slow"])
+        & out["macd_h"].gt(0)
+    )
+    sell_candidate = (
+        valid
+        & out["h3_bias"].eq(-1)
+        & out["ema_fast"].lt(out["ema_slow"])
+        & out["macd_h"].lt(0)
+    )
 
     buy = pd.Series(False, index=out.index)
     sell = pd.Series(False, index=out.index)
@@ -170,10 +187,10 @@ def detect_ai_trend_signals(
     out.loc[buy, "signal"] = 1
     out.loc[sell, "signal"] = -1
     out.loc[buy, "signal_reason"] = (
-        f"First {entry_tf} bar after {trend_tf} close in bullish segment with EMA fast above EMA slow"
+        f"First {entry_tf} bar after {trend_tf} close in bullish segment with EMA fast above EMA slow and MACD histogram > 0"
     )
     out.loc[sell, "signal_reason"] = (
-        f"First {entry_tf} bar after {trend_tf} close in bearish segment with EMA fast below EMA slow"
+        f"First {entry_tf} bar after {trend_tf} close in bearish segment with EMA fast below EMA slow and MACD histogram < 0"
     )
     return out
 

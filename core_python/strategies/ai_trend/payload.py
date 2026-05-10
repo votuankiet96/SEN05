@@ -53,6 +53,22 @@ def _series(df: pd.DataFrame, column: str, *, color: str | None = None) -> list[
     return rows
 
 
+def _histogram(df: pd.DataFrame, column: str) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for _, row in df.iterrows():
+        value = _num(row.get(column))
+        if value is None:
+            continue
+        rows.append(
+            {
+                "time": _ts(row["bartime"]),
+                "value": value,
+                "color": "#22c55e" if value >= 0 else "#ef4444",
+            }
+        )
+    return rows
+
+
 def _colored_knn(df: pd.DataFrame) -> list[dict[str, Any]]:
     colors = df["ai_direction"].map({1: "#00e676", -1: "#ff5252", 0: "#ff9800"}).fillna("#ff9800")
     rows: list[dict[str, Any]] = []
@@ -125,6 +141,62 @@ def _dow_segments(df: pd.DataFrame) -> list[dict[str, Any]]:
     return segments
 
 
+def _level_segments(df: pd.DataFrame, signals: pd.DataFrame, params: dict[str, Any]) -> list[dict[str, Any]]:
+    """Build horizontal Entry/SL/TP segments for the entry chart."""
+    if not bool(params.get("SHOW_LEVELS", True)):
+        return []
+    if signals.empty or "bartime" not in df.columns:
+        return []
+
+    index_by_time = {
+        _ts(row["bartime"]): pos
+        for pos, (_, row) in enumerate(df.iterrows())
+        if pd.notna(row.get("bartime"))
+    }
+    times = [_ts(value) for value in df["bartime"] if pd.notna(value)]
+    if not times:
+        return []
+
+    line_bars = int(params.get("ENTRY_LINE_BARS", 3))
+    segments: list[dict[str, Any]] = []
+    for _, row in signals.iterrows():
+        start_value = row.get("entry_time") if pd.notna(row.get("entry_time")) else row.get("bartime")
+        if pd.isna(start_value):
+            continue
+        start_time = _ts(start_value)
+        start_idx = index_by_time.get(start_time)
+        if start_idx is None:
+            start_idx = index_by_time.get(_ts(row["bartime"]))
+        if start_idx is None:
+            continue
+        end_time = times[min(start_idx + line_bars, len(times) - 1)]
+
+        direction = int(row["signal"])
+        prefix = "BUY" if direction == 1 else "SELL"
+        for column, kind, color, style in [
+            ("entry_price", "entry", "#e5e7eb", "dashed"),
+            ("sl_price", "sl", "#ef4444", "dotted"),
+            ("tp_price", "tp", "#22c55e", "dotted"),
+        ]:
+            price = _num(row.get(column))
+            if price is None:
+                continue
+            segments.append(
+                {
+                    "key": kind,
+                    "label": f"{prefix} {kind.upper()}",
+                    "color": color,
+                    "width": 1,
+                    "style": style,
+                    "data": [
+                        {"time": start_time, "value": price},
+                        {"time": end_time, "value": price},
+                    ],
+                }
+            )
+    return segments
+
+
 def _trend_events(df: pd.DataFrame) -> list[dict[str, Any]]:
     """Build H3 transition events used for markers and linked M45 navigation."""
     specs = [
@@ -187,8 +259,13 @@ def _signal_table(signals: pd.DataFrame) -> list[dict[str, Any]]:
                 "h3_bias": _num(row.get("h3_bias"), 0),
                 "h3_ai_knn": _num(row.get("h3_ai_knn"), 5),
                 "h3_ai_avg": _num(row.get("h3_ai_avg"), 5),
+                "entry": _num(row.get("entry_price"), 5),
+                "sl": _num(row.get("sl_price"), 5),
+                "tp": _num(row.get("tp_price"), 5),
+                "rr": _num(row.get("risk_reward"), 2),
                 "ema_fast": _num(row.get("ema_fast"), 5),
                 "ema_slow": _num(row.get("ema_slow"), 5),
+                "macd_h": _num(row.get("macd_h"), 5),
                 "close": _num(row.get("close"), 5),
             }
         )
@@ -244,10 +321,23 @@ def build_ai_trend_payload(
                 {"key": "ema_slow", "label": f"EMA {params['EMA_SLOW']}", "color": "#f59e0b", "data": _series(entry_df, "ema_slow")},
             ]
         )
-    entry_segments = _dow_segments(entry_df) if params.get("SHOW_M45_DOW", True) else []
+    entry_segments: list[dict[str, Any]] = []
+    if params.get("SHOW_M45_DOW", True):
+        entry_segments.extend(_dow_segments(entry_df))
+    entry_segments.extend(_level_segments(entry_df, signals, params))
     entry_markers = _markers(signals)
     if params.get("SHOW_M45_DOW", True) and params.get("SHOW_M45_DOW_LABELS", True):
         entry_markers.extend(_dow_markers(entry_df))
+    entry_panels: list[dict[str, Any]] = []
+    if params.get("SHOW_M45_MACD", True) and "macd_h" in entry_df:
+        entry_panels.append(
+            {
+                "key": "macd_h",
+                "label": f"MACD {params['MACD_FAST']}/{params['MACD_SLOW']}/{params['MACD_SIGNAL']} Histogram",
+                "type": "histogram",
+                "data": _histogram(entry_df, "macd_h"),
+            }
+        )
 
     return {
         "layout": "ai_trend_mtf",
@@ -282,6 +372,7 @@ def build_ai_trend_payload(
                 "overlays": entry_overlays,
                 "segments": entry_segments,
                 "markers": entry_markers,
+                "panels": entry_panels,
             },
         },
         "linkedEvents": linked_events,

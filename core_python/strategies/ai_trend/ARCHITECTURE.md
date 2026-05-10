@@ -52,12 +52,13 @@ Danh sach nay nam trong `core_python/notify/scan_config.py`, khong nam trong fol
 
 ```text
 strategies/ai_trend/config.py
-  Tham so strategy va dashboard: Trend TF, Entry TF, bars, KNN, EMA, Dow wave.
+  Tham so strategy va dashboard: Trend TF, Entry TF, bars, KNN, EMA, Dow wave,
+  MACD va level defaults.
 
 strategies/ai_trend/signals.py
   Build trend frame va entry frame.
   Merge H3 da dong vao M45.
-  Detect M45 signal dau tien trong moi trend segment.
+  Detect M45 signal dau tien trong moi trend segment voi EMA va MACD confirmation.
 
 strategies/ai_trend/alerts.py
   Chuyen frame da tinh thanh alert domain:
@@ -69,8 +70,10 @@ strategies/ai_trend/payload.py
   Tao JSON payload hai chart cho dashboard.
 
 strategies/ai_trend/levels.py
-  Giu cac cot level theo contract chung.
-  Phase hien tai khong tinh entry_price, sl_price, tp_price cho AI Trend.
+  Tinh entry_price, sl_price, tp_price, risk_reward cho AI Trend.
+  Entry = open cua cay Entry TF tiep theo.
+  SL = swing Dow gan nhat da xac nhan.
+  TP = fixed R:R mac dinh 1.5.
 ```
 
 Nhung phan sau la shared runtime, khong thuoc rieng AI Trend:
@@ -128,11 +131,12 @@ ema_fast = EMA(close, 13)
 ema_slow = EMA(close, 34)
 ema_gap
 ema_gap_pct
+macd_h = MACD histogram (5, 25, 5 mac dinh)
 m45_close_time
 dow wave columns
 ```
 
-Dow wave hien tai chi phuc vu dashboard; khong tham gia dieu kien BUY/SELL.
+Dow wave phuc vu dashboard va duoc dung de tim SL gan nhat sau khi pivot da xac nhan.
 
 ## 6. No-Lookahead Merge
 
@@ -170,10 +174,10 @@ Trong moi H3 bias segment:
 
 ```text
 Neu h3_bias = 1:
-  BUY tai cay Entry TF dau tien co EMA13 > EMA34
+  BUY tai cay Entry TF dau tien co EMA13 > EMA34 va macd_h > 0
 
 Neu h3_bias = -1:
-  SELL tai cay Entry TF dau tien co EMA13 < EMA34
+  SELL tai cay Entry TF dau tien co EMA13 < EMA34 va macd_h < 0
 
 Neu khong co cay nao align truoc khi bias doi:
   Khong co M45 signal cho segment do

@@ -4,7 +4,10 @@ Configuration and validation for the AI Trend signal strategy.
 The strategy is display-first:
     - Trend TF uses AI Trend Navigator / KNN as the trend chart.
     - Entry TF uses EMA 13 and EMA 34 as the entry chart.
-    - Entry, stop-loss, and take-profit levels are intentionally empty.
+    - Entry uses the next entry-timeframe open.
+    - Stop-loss uses the nearest confirmed Dow swing.
+    - Take-profit uses a configurable fixed R:R.
+    - Entry signals are confirmed by entry-timeframe MACD histogram.
 """
 
 from __future__ import annotations
@@ -42,6 +45,13 @@ SHOW_M45_DOW_LABELS = False
 DOW_PIVOT_LEFT = 3
 DOW_PIVOT_RIGHT = 5
 DOW_MIN_ATR_MULT = 0.5
+TP_RR = 1.5
+ENTRY_LINE_BARS = 3
+SHOW_LEVELS = True
+MACD_FAST = 5
+MACD_SLOW = 25
+MACD_SIGNAL = 5
+SHOW_M45_MACD = True
 
 DEFAULT_PARAMS: dict[str, Any] = {
     "SYMBOL": SYMBOL,
@@ -65,6 +75,13 @@ DEFAULT_PARAMS: dict[str, Any] = {
     "DOW_PIVOT_LEFT": DOW_PIVOT_LEFT,
     "DOW_PIVOT_RIGHT": DOW_PIVOT_RIGHT,
     "DOW_MIN_ATR_MULT": DOW_MIN_ATR_MULT,
+    "TP_RR": TP_RR,
+    "ENTRY_LINE_BARS": ENTRY_LINE_BARS,
+    "SHOW_LEVELS": SHOW_LEVELS,
+    "MACD_FAST": MACD_FAST,
+    "MACD_SLOW": MACD_SLOW,
+    "MACD_SIGNAL": MACD_SIGNAL,
+    "SHOW_M45_MACD": SHOW_M45_MACD,
 }
 
 
@@ -83,6 +100,7 @@ PARAM_FIELDS: list[dict[str, Any]] = [
     {"key": "DOW_PIVOT_LEFT", "label": "Dow Left", "type": "number", "min": 1, "max": 20, "step": 1},
     {"key": "DOW_PIVOT_RIGHT", "label": "Dow Right", "type": "number", "min": 1, "max": 20, "step": 1},
     {"key": "DOW_MIN_ATR_MULT", "label": "Dow ATR Filter", "type": "number", "min": 0, "max": 10, "step": 0.1},
+    {"key": "TP_RR", "label": "TP R:R", "type": "number", "min": 0.1, "max": 20, "step": 0.1},
     {"key": "SHOW_H3_KNN", "label": "Show Trend KNN", "type": "bool"},
     {"key": "SHOW_M45_EMA", "label": "Show Entry EMA", "type": "bool"},
     {"key": "SHOW_M45_DOW", "label": "Show Entry Dow", "type": "bool"},
@@ -137,6 +155,10 @@ def normalize_params(overrides: dict[str, Any] | None = None, symbol: str | None
     slow = _to_int(raw.get("EMA_SLOW"), EMA_SLOW, 2, 500)
     if fast >= slow:
         raise ValueError("EMA_FAST must be smaller than EMA_SLOW")
+    macd_fast = _to_int(raw.get("MACD_FAST"), MACD_FAST, 1, 300)
+    macd_slow = _to_int(raw.get("MACD_SLOW"), MACD_SLOW, 2, 500)
+    if macd_fast >= macd_slow:
+        raise ValueError("MACD_FAST must be smaller than MACD_SLOW")
 
     return {
         "SYMBOL": selected_symbol,
@@ -156,8 +178,15 @@ def normalize_params(overrides: dict[str, Any] | None = None, symbol: str | None
         "DOW_PIVOT_LEFT": _to_int(raw.get("DOW_PIVOT_LEFT"), DOW_PIVOT_LEFT, 1, 20),
         "DOW_PIVOT_RIGHT": _to_int(raw.get("DOW_PIVOT_RIGHT"), DOW_PIVOT_RIGHT, 1, 20),
         "DOW_MIN_ATR_MULT": _to_float(raw.get("DOW_MIN_ATR_MULT"), DOW_MIN_ATR_MULT, 0, 10),
+        "TP_RR": _to_float(raw.get("TP_RR"), TP_RR, 0.1, 20),
+        "ENTRY_LINE_BARS": _to_int(raw.get("ENTRY_LINE_BARS"), ENTRY_LINE_BARS, 1, 300),
+        "MACD_FAST": macd_fast,
+        "MACD_SLOW": macd_slow,
+        "MACD_SIGNAL": _to_int(raw.get("MACD_SIGNAL"), MACD_SIGNAL, 1, 300),
         "SHOW_H3_KNN": _to_bool(raw.get("SHOW_H3_KNN"), SHOW_H3_KNN),
         "SHOW_M45_EMA": _to_bool(raw.get("SHOW_M45_EMA"), SHOW_M45_EMA),
         "SHOW_M45_DOW": _to_bool(raw.get("SHOW_M45_DOW"), SHOW_M45_DOW),
         "SHOW_M45_DOW_LABELS": _to_bool(raw.get("SHOW_M45_DOW_LABELS"), SHOW_M45_DOW_LABELS),
+        "SHOW_LEVELS": _to_bool(raw.get("SHOW_LEVELS"), SHOW_LEVELS),
+        "SHOW_M45_MACD": _to_bool(raw.get("SHOW_M45_MACD"), SHOW_M45_MACD),
     }

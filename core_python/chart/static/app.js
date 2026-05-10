@@ -126,11 +126,16 @@ const EXPORT_COLUMNS = {
     { key: "bartime", label: "Bar Time", checked: true },
     { key: "side", label: "Side", checked: true },
     { key: "signal_reason", label: "Reason", checked: true },
+    { key: "entry_price", label: "Entry", checked: true },
+    { key: "sl_price", label: "SL", checked: true },
+    { key: "tp_price", label: "TP", checked: true },
+    { key: "risk_reward", label: "R:R", checked: true },
     { key: "h3_bias", label: "Trend Bias", checked: true },
     { key: "h3_ai_knn", label: "Trend KNN", checked: false },
     { key: "h3_ai_avg", label: "Trend Avg", checked: false },
     { key: "ema_fast", label: "EMA Fast", checked: false },
     { key: "ema_slow", label: "EMA Slow", checked: false },
+    { key: "macd_h", label: "MACD-H", checked: false },
     { key: "open", label: "Open", checked: false },
     { key: "high", label: "High", checked: false },
     { key: "low", label: "Low", checked: false },
@@ -161,11 +166,16 @@ const BULK_EXPORT_COLUMNS = {
     { key: "signal_reason", label: "Reason", checked: false },
   ],
   ai_trend: [
+    { key: "entry_price", label: "Entry", checked: true },
+    { key: "sl_price", label: "SL", checked: true },
+    { key: "tp_price", label: "TP", checked: true },
+    { key: "risk_reward", label: "R:R", checked: true },
     { key: "h3_bias", label: "Trend Bias", checked: true },
     { key: "h3_ai_knn", label: "Trend KNN", checked: false },
     { key: "h3_ai_avg", label: "Trend Avg", checked: false },
     { key: "ema_fast", label: "EMA Fast", checked: false },
     { key: "ema_slow", label: "EMA Slow", checked: false },
+    { key: "macd_h", label: "MACD-H", checked: false },
     { key: "open", label: "Open", checked: false },
     { key: "high", label: "High", checked: false },
     { key: "low", label: "Low", checked: false },
@@ -513,7 +523,8 @@ function renderAiTrendPayload(payload) {
 
   const entryChart = createPriceChart(entryContainer, payload.charts.entry);
   state.panelCharts.push(entryChart.chart);
-  setupAiTrendLinking(payload, trendChart, entryChart, entryLabel);
+  const entryPanelViews = renderIndicatorPanels(payload.charts.entry.panels || [], entryChart.chart);
+  setupAiTrendLinking(payload, trendChart, entryChart, entryLabel, entryPanelViews);
 
   trendChart.chart.timeScale().fitContent();
   entryChart.chart.timeScale().fitContent();
@@ -616,23 +627,41 @@ function setMarkLine(view, line, time) {
   line.style.left = `${Math.round(coordinate)}px`;
 }
 
-function setupAiTrendLinking(payload, trendView, entryView, entryLabel) {
+function setupAiTrendLinking(payload, trendView, entryView, entryLabel, entryPanels = []) {
   const trendTf = payload.meta?.trendTf || "Trend";
   const entryTf = payload.meta?.entryTf || "Entry";
   const trendSeconds = Math.max(1, Number(payload.meta?.trendTfMinutes || 180)) * 60;
   const contextBars = Math.max(6, Number(payload.params?.M45_CONTEXT_BARS || 45));
   const trendMarkLine = createMarkLine(trendView.container);
   const entryMarkLine = createMarkLine(entryView.container);
+  const entryPanelMarkLines = entryPanels.map((view) => createMarkLine(view.container));
   let markedH3Time = null;
   let markedEntryTime = null;
 
   const refreshMarkLines = () => {
     setMarkLine(trendView, trendMarkLine, markedH3Time);
     setMarkLine(entryView, entryMarkLine, markedEntryTime);
+    entryPanels.forEach((view, index) => setMarkLine(view, entryPanelMarkLines[index], markedEntryTime));
   };
   state.markRefreshers.push(refreshMarkLines);
   trendView.chart.timeScale().subscribeVisibleLogicalRangeChange(refreshMarkLines);
   entryView.chart.timeScale().subscribeVisibleLogicalRangeChange(refreshMarkLines);
+  entryPanels.forEach((view) => view.chart.timeScale().subscribeVisibleLogicalRangeChange(refreshMarkLines));
+
+  const setEntryPanelCrosshairs = (time) => {
+    entryPanels.forEach((view) => {
+      const point = view.dataByTime.get(time);
+      if (point) {
+        view.chart.setCrosshairPosition(point.value, time, view.series);
+      } else {
+        view.chart.clearCrosshairPosition();
+      }
+    });
+  };
+
+  const clearEntryPanelCrosshairs = () => {
+    entryPanels.forEach((view) => view.chart.clearCrosshairPosition());
+  };
 
   const setWindowAround = (focusTime) => {
     const index = entryView.candleTimes.indexOf(focusTime);
@@ -655,6 +684,7 @@ function setupAiTrendLinking(payload, trendView, entryView, entryLabel) {
     refreshMarkLines();
     trendView.chart.clearCrosshairPosition();
     entryView.chart.clearCrosshairPosition();
+    clearEntryPanelCrosshairs();
     entryLabel.textContent = entryLabel.dataset.baseLabel;
     el.chartLegend.textContent = payload.charts.trend.label;
   };
@@ -700,9 +730,11 @@ function setupAiTrendLinking(payload, trendView, entryView, entryLabel) {
 
     if (entryCandle) {
       entryView.chart.setCrosshairPosition(entryCandle.close, focusTime, entryView.candleSeries);
+      setEntryPanelCrosshairs(focusTime);
       setWindowAround(focusTime);
     } else {
       entryView.chart.clearCrosshairPosition();
+      clearEntryPanelCrosshairs();
     }
 
     const focusText = focusTime == null ? `no ${entryTf} bar` : fmtUtcMinute(focusTime);
@@ -711,17 +743,47 @@ function setupAiTrendLinking(payload, trendView, entryView, entryLabel) {
     requestAnimationFrame(refreshMarkLines);
   };
 
+  const markEntryBar = (rawEntryTime) => {
+    const focusTime = nearestChartTime(entryView.candleTimes, rawEntryTime);
+    if (focusTime == null) return;
+    const entryCandle = entryView.candleByTime.get(focusTime);
+    if (!entryCandle) return;
+
+    markedH3Time = null;
+    markedEntryTime = focusTime;
+    setSeriesMarkers(trendView.candleSeries, trendView.baseMarkers);
+    trendView.chart.clearCrosshairPosition();
+    setSeriesMarkers(entryView.candleSeries, [
+      ...entryView.baseMarkers,
+      ...manualMarkers(focusTime, `${entryTf} MARK`),
+    ]);
+    entryView.chart.setCrosshairPosition(entryCandle.close, focusTime, entryView.candleSeries);
+    setEntryPanelCrosshairs(focusTime);
+    entryLabel.textContent = `${entryLabel.dataset.baseLabel} | marked ${entryTf} ${fmtUtcMinute(focusTime)}`;
+    el.chartLegend.textContent = `${payload.charts.entry.label} | marked ${entryTf} ${fmtUtcMinute(focusTime)}`;
+    requestAnimationFrame(refreshMarkLines);
+  };
+
   trendView.chart.subscribeClick((param) => {
     if (!param || param.time == null) return;
     markH3Bar(Number(param.time));
   });
+  entryView.chart.subscribeClick((param) => {
+    if (!param || param.time == null) return;
+    markEntryBar(Number(param.time));
+  });
   if (typeof trendView.chart.subscribeDblClick === "function") {
     trendView.chart.subscribeDblClick(clearMark);
   }
+  if (typeof entryView.chart.subscribeDblClick === "function") {
+    entryView.chart.subscribeDblClick(clearMark);
+  }
   trendView.container.addEventListener("dblclick", clearMark);
+  entryView.container.addEventListener("dblclick", clearMark);
 }
 
-function renderPanels(panels, priceChart) {
+function renderIndicatorPanels(panels, priceChart) {
+  const views = [];
   panels.forEach((panel) => {
     const container = document.createElement("div");
     container.className = "chart indicator-chart";
@@ -751,12 +813,19 @@ function renderPanels(panels, priceChart) {
       });
     }
     series.setData(panel.data);
-    state.panelSeries.push({ chart, series, key: panel.key });
+    const dataByTime = new Map((panel.data || []).map((point) => [point.time, point]));
+    state.panelSeries.push({ chart, series, key: panel.key, dataByTime, container });
 
     priceChart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
       if (range) chart.timeScale().setVisibleLogicalRange(range);
     });
+    views.push({ chart, series, key: panel.key, dataByTime, container });
   });
+  return views;
+}
+
+function renderPanels(panels, priceChart) {
+  renderIndicatorPanels(panels, priceChart);
 }
 
 function renderSignalsTable(rows) {
