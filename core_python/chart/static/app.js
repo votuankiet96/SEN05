@@ -12,6 +12,9 @@ const el = {
   symbol: document.getElementById("symbol"),
   tf: document.getElementById("tf"),
   bars: document.getElementById("bars"),
+  barsCaption: document.getElementById("bars-caption"),
+  startDate: document.getElementById("start-date"),
+  endDate: document.getElementById("end-date"),
   params: document.getElementById("params"),
   refresh: document.getElementById("refresh"),
   meta: document.getElementById("meta"),
@@ -64,9 +67,28 @@ const chartTheme = {
   },
 };
 
+const TF_MINUTES = {
+  M5: 5,
+  M10: 10,
+  M15: 15,
+  M20: 20,
+  M30: 30,
+  M45: 45,
+  M90: 90,
+  H1: 60,
+  H2: 120,
+  H3: 180,
+  H4: 240,
+  H6: 360,
+  H8: 480,
+  D1: 1440,
+  W: 10080,
+};
+
 const COLUMN_LABELS = {
   bartime: "Bar Time",
   side: "Side",
+  signal: "Signal",
   reason: "Reason",
   entry: "Entry",
   sl: "SL",
@@ -78,25 +100,69 @@ const COLUMN_LABELS = {
   fast_ma: "Fast MA",
   slow_ma: "Slow MA",
   ma_gap_atr: "Gap/ATR",
+  raw_signal: "Raw",
+  filter_reason: "Filter",
+  htf_trend: "HTF Trend",
+  htf_slope: "HTF Slope",
+  htf_close: "HTF Close",
+  open: "Open",
+  high: "High",
+  low: "Low",
+  volume: "Volume",
+  signal_reason: "Reason",
+  entry_time: "Entry Time",
+  entry_price: "Entry",
+  sl_price: "SL",
+  tp_price: "TP",
+  risk_reward: "R:R",
   h3_bias: "Trend Bias",
+  h3_bias_segment: "Trend Segment",
+  h3_close_time: "H3 Close Time",
+  h3_bias_started_at: "Trend Started",
+  h3_bias_started_close_time: "Trend Start Close",
   h3_ai_knn: "Trend KNN",
   h3_ai_avg: "Trend Avg",
+  h3_ai_direction: "Trend Direction",
   ema_fast: "EMA Fast",
   ema_slow: "EMA Slow",
+  prev_close: "Prev Close",
+  prev_ema_fast: "Prev EMA Fast",
+  prev_ema_slow: "Prev EMA Slow",
+  ema_gap: "EMA Gap",
+  ema_gap_pct: "EMA Gap %",
   close: "Close",
+  m45_close_time: "M45 Close Time",
+  dow_pivot_type: "Dow Pivot Type",
+  dow_pivot_price: "Dow Pivot Price",
+  dow_label: "Dow Label",
 };
 
-const TEXT_COLS = new Set(["bartime", "side", "reason"]);
+const TEXT_COLS = new Set([
+  "bartime",
+  "side",
+  "reason",
+  "signal_reason",
+  "filter_reason",
+  "htf_trend",
+  "entry_time",
+  "m45_close_time",
+  "h3_close_time",
+  "h3_bias_started_at",
+  "h3_bias_started_close_time",
+  "dow_pivot_type",
+  "dow_label",
+]);
 
 const EXPORT_COLUMNS = {
   combo: [
     { key: "bartime", label: "Bar Time", checked: true },
     { key: "side", label: "Side", checked: true },
-    { key: "signal_reason", label: "Reason", checked: true },
-    { key: "entry_price", label: "Entry", checked: true },
-    { key: "sl_price", label: "SL", checked: true },
-    { key: "tp_price", label: "TP", checked: true },
-    { key: "risk_reward", label: "R:R", checked: true },
+    { key: "signal", label: "Signal", checked: false },
+    { key: "signal_reason", label: "Reason", checked: false },
+    { key: "entry_price", label: "Entry", checked: false },
+    { key: "sl_price", label: "SL", checked: false },
+    { key: "tp_price", label: "TP", checked: false },
+    { key: "risk_reward", label: "R:R", checked: false },
     { key: "atr", label: "ATR", checked: false },
     { key: "open", label: "Open", checked: false },
     { key: "high", label: "High", checked: false },
@@ -104,15 +170,20 @@ const EXPORT_COLUMNS = {
     { key: "close", label: "Close", checked: false },
     { key: "ma", label: "MA", checked: false },
     { key: "macd_h", label: "MACD-H", checked: false },
+    { key: "raw_signal", label: "Raw Signal", checked: false },
+    { key: "filter_reason", label: "Filter", checked: false },
+    { key: "htf_trend", label: "HTF Trend", checked: false },
+    { key: "htf_slow_slope", label: "HTF Slope", checked: false },
   ],
   ma_cross: [
     { key: "bartime", label: "Bar Time", checked: true },
     { key: "side", label: "Side", checked: true },
-    { key: "signal_reason", label: "Reason", checked: true },
-    { key: "entry_price", label: "Entry", checked: true },
-    { key: "sl_price", label: "SL", checked: true },
-    { key: "tp_price", label: "TP", checked: true },
-    { key: "risk_reward", label: "R:R", checked: true },
+    { key: "signal", label: "Signal", checked: false },
+    { key: "signal_reason", label: "Reason", checked: false },
+    { key: "entry_price", label: "Entry", checked: false },
+    { key: "sl_price", label: "SL", checked: false },
+    { key: "tp_price", label: "TP", checked: false },
+    { key: "risk_reward", label: "R:R", checked: false },
     { key: "atr", label: "ATR", checked: false },
     { key: "open", label: "Open", checked: false },
     { key: "high", label: "High", checked: false },
@@ -125,21 +196,38 @@ const EXPORT_COLUMNS = {
   ai_trend: [
     { key: "bartime", label: "Bar Time", checked: true },
     { key: "side", label: "Side", checked: true },
-    { key: "signal_reason", label: "Reason", checked: true },
-    { key: "entry_price", label: "Entry", checked: true },
-    { key: "sl_price", label: "SL", checked: true },
-    { key: "tp_price", label: "TP", checked: true },
-    { key: "risk_reward", label: "R:R", checked: true },
-    { key: "h3_bias", label: "Trend Bias", checked: true },
-    { key: "h3_ai_knn", label: "Trend KNN", checked: false },
-    { key: "h3_ai_avg", label: "Trend Avg", checked: false },
-    { key: "ema_fast", label: "EMA Fast", checked: false },
-    { key: "ema_slow", label: "EMA Slow", checked: false },
-    { key: "macd_h", label: "MACD-H", checked: false },
+    { key: "signal", label: "Signal", checked: false },
     { key: "open", label: "Open", checked: false },
     { key: "high", label: "High", checked: false },
     { key: "low", label: "Low", checked: false },
     { key: "close", label: "Close", checked: false },
+    { key: "volume", label: "Volume", checked: false },
+    { key: "ema_fast", label: "EMA Fast", checked: false },
+    { key: "ema_slow", label: "EMA Slow", checked: false },
+    { key: "prev_close", label: "Prev Close", checked: false },
+    { key: "prev_ema_fast", label: "Prev EMA Fast", checked: false },
+    { key: "prev_ema_slow", label: "Prev EMA Slow", checked: false },
+    { key: "ema_gap", label: "EMA Gap", checked: false },
+    { key: "ema_gap_pct", label: "EMA Gap %", checked: false },
+    { key: "macd_h", label: "MACD-H", checked: false },
+    { key: "m45_close_time", label: "M45 Close Time", checked: false },
+    { key: "dow_pivot_type", label: "Dow Pivot Type", checked: false },
+    { key: "dow_pivot_price", label: "Dow Pivot Price", checked: false },
+    { key: "dow_label", label: "Dow Label", checked: false },
+    { key: "h3_bias", label: "Trend Bias", checked: false },
+    { key: "h3_bias_segment", label: "Trend Segment", checked: false },
+    { key: "h3_close_time", label: "H3 Close Time", checked: false },
+    { key: "h3_bias_started_at", label: "Trend Started", checked: false },
+    { key: "h3_bias_started_close_time", label: "Trend Start Close", checked: false },
+    { key: "h3_ai_knn", label: "Trend KNN", checked: false },
+    { key: "h3_ai_avg", label: "Trend Avg", checked: false },
+    { key: "h3_ai_direction", label: "Trend Direction", checked: false },
+    { key: "signal_reason", label: "Reason", checked: false },
+    { key: "entry_time", label: "Entry Time", checked: false },
+    { key: "entry_price", label: "Entry", checked: false },
+    { key: "sl_price", label: "SL", checked: false },
+    { key: "tp_price", label: "TP", checked: false },
+    { key: "risk_reward", label: "R:R", checked: false },
   ],
 };
 
@@ -153,6 +241,9 @@ const BULK_EXPORT_COLUMNS = {
     { key: "low", label: "Low", checked: false },
     { key: "close", label: "Close", checked: false },
     { key: "signal_reason", label: "Reason", checked: false },
+    { key: "raw_signal", label: "Raw Signal", checked: false },
+    { key: "filter_reason", label: "Filter", checked: false },
+    { key: "htf_trend", label: "HTF Trend", checked: false },
   ],
   ma_cross: [
     { key: "atr", label: "ATR", checked: true },
@@ -205,6 +296,24 @@ function fmtUtcMinute(ts) {
   return new Date(ts * 1000).toISOString().slice(0, 16).replace("T", " ");
 }
 
+function twoDigits(value) {
+  return String(value).padStart(2, "0");
+}
+
+function displayDateFromDate(date) {
+  return `${twoDigits(date.getDate())}/${twoDigits(date.getMonth() + 1)}/${date.getFullYear()}`;
+}
+
+function defaultStartDate() {
+  const date = new Date();
+  date.setDate(date.getDate() - 60);
+  return displayDateFromDate(date);
+}
+
+function defaultEndDate() {
+  return displayDateFromDate(new Date());
+}
+
 function createOption(parent, value, label, selectedValue) {
   const option = document.createElement("option");
   option.value = value;
@@ -248,6 +357,8 @@ async function init() {
 
   state.config.timeframes.forEach((tf) => createOption(el.tf, tf, tf, state.config.defaultTf));
   el.bars.value = state.config.defaultBars;
+  el.startDate.value = defaultStartDate();
+  el.endDate.value = defaultEndDate();
 
   el.strategy.addEventListener("change", () => {
     renderParamControls();
@@ -266,6 +377,8 @@ async function init() {
   });
   el.tf.addEventListener("change", loadScan);
   el.bars.addEventListener("change", loadScan);
+  el.startDate.addEventListener("change", loadScan);
+  el.endDate.addEventListener("change", loadScan);
   el.refresh.addEventListener("click", loadScan);
   el.exportBtn.addEventListener("click", openExportModal);
   el.bulkExportBtn.addEventListener("click", openBulkExportModal);
@@ -289,6 +402,7 @@ function renderParamControls() {
   el.params.replaceChildren();
 
   spec.fields.forEach((field) => {
+    if (hiddenParamField(strategy, field.key)) return;
     const defaultValue = spec.defaults[field.key];
     if (field.type === "bool") {
       const row = document.createElement("label");
@@ -324,15 +438,65 @@ function renderParamControls() {
     label.appendChild(input);
     el.params.appendChild(label);
   });
+
+  if (strategy === "combo") {
+    const htfToggle = el.params.querySelector('[data-param="HTF_TREND_ENABLED"]');
+    if (htfToggle) htfToggle.checked = true;
+  }
+  applyBarsDefaultForStrategy(strategy, spec);
+}
+
+function hiddenParamField(strategy, key) {
+  if (strategy === "combo" && key === "HTF_BARS") return true;
+  if (strategy === "ai_trend" && (key === "TREND_BARS" || key === "ENTRY_BARS")) return true;
+  return false;
+}
+
+function updateBarsControlLabel() {
+  const params = collectParams();
+  if (el.strategy.value === "ai_trend") {
+    el.barsCaption.textContent = "Trend Bars";
+    return;
+  }
+  if (isComboHtfEnabled(params)) {
+    el.barsCaption.textContent = "HTF Bars";
+    return;
+  }
+  el.barsCaption.textContent = "Bars";
+}
+
+function applyBarsDefaultForStrategy(strategy, spec) {
+  if (strategy === "ai_trend") {
+    el.bars.value = spec.defaults.TREND_BARS || 500;
+  } else if (strategy === "combo") {
+    el.bars.value = spec.defaults.HTF_BARS || state.config.defaultBars;
+  } else {
+    el.bars.value = state.config.defaultBars;
+  }
+  updateBarsControlLabel();
 }
 
 function applyStrategyDefaults() {
+  if (el.strategy.value === "combo") {
+    const htfToggle = el.params.querySelector('[data-param="HTF_TREND_ENABLED"]');
+    if (htfToggle?.checked) {
+      el.barsCaption.textContent = "HTF Bars";
+      const allowedEntryTfs = new Set(["H1", "H2", "H3", "H4"]);
+      if (!allowedEntryTfs.has(el.tf.value) && [...el.tf.options].some((option) => option.value === "H4")) {
+        el.tf.value = "H4";
+      }
+    } else {
+      el.barsCaption.textContent = "Bars";
+    }
+    return;
+  }
   if (el.strategy.value !== "ai_trend") return;
+  el.barsCaption.textContent = "Trend Bars";
   if ([...el.tf.options].some((option) => option.value === "M45")) {
     el.tf.value = "M45";
   }
-  if (!el.bars.value || Number(el.bars.value) < 2000) {
-    el.bars.value = 2000;
+  if (!el.bars.value) {
+    el.bars.value = state.config.strategies.ai_trend?.defaults?.TREND_BARS || 500;
   }
 }
 
@@ -344,16 +508,69 @@ function collectParams() {
   return params;
 }
 
+function isComboHtfEnabled(params) {
+  return el.strategy.value === "combo" && String(params.HTF_TREND_ENABLED || "").toLowerCase() === "true";
+}
+
+function calcEntryBarsForHtfBars(htfBars, htfTf, entryTf) {
+  const trendMinutes = TF_MINUTES[String(htfTf || "D1").toUpperCase()] || TF_MINUTES.D1;
+  const entryMinutes = TF_MINUTES[String(entryTf || "").toUpperCase()] || trendMinutes;
+  const rawBars = Math.ceil(Number(htfBars || 50) * trendMinutes / entryMinutes);
+  return Math.max(50, Math.min(20000, rawBars));
+}
+
+function syncAiTrendEntryBars(params) {
+  if (el.strategy.value !== "ai_trend") return el.bars.value;
+  const trendBars = Math.max(50, Math.min(20000, Number(el.bars.value || params.TREND_BARS || 500)));
+  const entryBars = calcEntryBarsForHtfBars(trendBars, params.TREND_TF || "H3", params.ENTRY_TF || "M45");
+  params.TREND_BARS = String(trendBars);
+  params.ENTRY_BARS = String(entryBars);
+  params.AUTO_ENTRY_BARS = "true";
+  const trendInput = el.params.querySelector('[data-param="TREND_BARS"]');
+  const entryInput = el.params.querySelector('[data-param="ENTRY_BARS"]');
+  if (trendInput) trendInput.value = String(trendBars);
+  if (entryInput) entryInput.value = String(entryBars);
+  return entryBars;
+}
+
+function selectedRowMode(dialog, name) {
+  return dialog.querySelector(`input[name="${name}"]:checked`)?.value || "signals";
+}
+
+function appendDateRange(query) {
+  if (el.startDate.value && el.endDate.value) {
+    query.set("start_date", el.startDate.value);
+    query.set("end_date", el.endDate.value);
+  }
+}
+
+function metaWindowText(meta) {
+  if (meta?.rangeMode === "date") {
+    return `${meta.startDate} -> ${meta.endDate}`;
+  }
+  return `${meta?.bars ?? 0} bars`;
+}
+
 async function loadScan() {
   clearError();
   applyStrategyDefaults();
+  const params = collectParams();
+  let bars = el.bars.value;
+  if (isComboHtfEnabled(params)) {
+    const htfBars = Math.max(50, Math.min(20000, Number(el.bars.value || 100)));
+    params.HTF_BARS = String(htfBars);
+    bars = String(calcEntryBarsForHtfBars(htfBars, params.HTF_TF || "D1", el.tf.value));
+  } else if (el.strategy.value === "ai_trend") {
+    bars = String(syncAiTrendEntryBars(params));
+  }
   const query = new URLSearchParams({
     strategy: el.strategy.value,
     symbol: el.symbol.value,
     tf: el.tf.value,
-    bars: el.bars.value,
-    ...collectParams(),
+    bars,
+    ...params,
   });
+  appendDateRange(query);
 
   try {
     const response = await fetch(`/api/scan?${query.toString()}`);
@@ -393,16 +610,21 @@ function resetCharts() {
   state.panelSeries = [];
   el.panelCharts.replaceChildren();
   el.priceChart.classList.remove("ai-trend-h3-chart");
+  el.priceChart.classList.remove("combo-trend-chart");
   el.chartLegend.textContent = "";
 }
 
 function renderPayload(payload) {
+  if (payload.layout === "combo_mtf") {
+    renderComboMtfPayload(payload);
+    return;
+  }
   if (payload.layout === "ai_trend_mtf") {
     renderAiTrendPayload(payload);
     return;
   }
   resetCharts();
-  el.meta.textContent = `${payload.meta.strategyLabel} | ${payload.meta.symbol} ${payload.meta.tf} | ${payload.meta.bars} bars`;
+  el.meta.textContent = `${payload.meta.strategyLabel} | ${payload.meta.symbol} ${payload.meta.tf} | ${metaWindowText(payload.meta)}`;
   el.statTotal.textContent = payload.stats.total;
   el.statBuy.textContent = payload.stats.buy;
   el.statSell.textContent = payload.stats.sell;
@@ -499,10 +721,43 @@ function renderPayload(payload) {
   priceChart.timeScale().fitContent();
 }
 
+function renderComboMtfPayload(payload) {
+  resetCharts();
+  el.priceChart.classList.add("combo-trend-chart");
+  const stats = payload.stats || {};
+  el.meta.textContent = `${payload.meta.strategyLabel} | ${payload.meta.symbol} ${payload.meta.trendTf}/${payload.meta.entryTf} | ${metaWindowText(payload.meta)} | ${payload.meta.trendBars} ${payload.meta.trendTf} bars, ${payload.meta.entryBars} ${payload.meta.entryTf} bars | raw ${stats.rawTotal ?? 0}, valid ${stats.total ?? 0}, filtered ${stats.filteredTotal ?? 0}`;
+  el.statTotal.textContent = stats.total ?? 0;
+  el.statBuy.textContent = stats.buy ?? 0;
+  el.statSell.textContent = stats.sell ?? 0;
+  el.statLast.textContent = stats.last ?? "-";
+  el.chartLegend.textContent = payload.charts.trend.label;
+
+  const trendChart = createPriceChart(el.priceChart, payload.charts.trend);
+  state.priceChart = trendChart.chart;
+
+  const entryContainer = document.createElement("div");
+  entryContainer.className = "chart combo-entry-chart";
+  const entryLabel = document.createElement("div");
+  entryLabel.className = "ai-chart-label";
+  entryLabel.textContent = payload.charts.entry.label;
+  entryLabel.dataset.baseLabel = payload.charts.entry.label;
+  entryContainer.appendChild(entryLabel);
+  el.panelCharts.appendChild(entryContainer);
+
+  const entryChart = createPriceChart(entryContainer, payload.charts.entry);
+  state.panelCharts.push(entryChart.chart);
+  const entryPanelViews = renderIndicatorPanels(payload.charts.entry.panels || [], entryChart.chart);
+  setupComboMtfLinking(payload, trendChart, entryChart, entryLabel, entryPanelViews);
+
+  trendChart.chart.timeScale().fitContent();
+  entryChart.chart.timeScale().fitContent();
+  renderSignalsTable(payload.signals);
+}
+
 function renderAiTrendPayload(payload) {
   resetCharts();
   el.priceChart.classList.add("ai-trend-h3-chart");
-  el.meta.textContent = `${payload.meta.strategyLabel} | ${payload.meta.symbol} ${payload.meta.trendTf}/${payload.meta.entryTf} | ${payload.meta.trendTf} ${payload.meta.trendBars} bars, ${payload.meta.entryTf} ${payload.meta.entryBars} bars`;
+  el.meta.textContent = `${payload.meta.strategyLabel} | ${payload.meta.symbol} ${payload.meta.trendTf}/${payload.meta.entryTf} | ${metaWindowText(payload.meta)} | ${payload.meta.trendTf} ${payload.meta.trendBars} bars, ${payload.meta.entryTf} ${payload.meta.entryBars} bars`;
   el.statTotal.textContent = payload.stats.total;
   el.statBuy.textContent = payload.stats.buy;
   el.statSell.textContent = payload.stats.sell;
@@ -597,6 +852,13 @@ function firstChartTimeAtOrAfter(times, target) {
   return null;
 }
 
+function lastChartTimeAtOrBefore(times, target) {
+  for (let i = times.length - 1; i >= 0; i -= 1) {
+    if (times[i] <= target) return times[i];
+  }
+  return null;
+}
+
 function sortedMarkers(markers) {
   return (markers || []).slice().sort((a, b) => Number(a.time) - Number(b.time));
 }
@@ -631,6 +893,7 @@ function setupAiTrendLinking(payload, trendView, entryView, entryLabel, entryPan
   const trendTf = payload.meta?.trendTf || "Trend";
   const entryTf = payload.meta?.entryTf || "Entry";
   const trendSeconds = Math.max(1, Number(payload.meta?.trendTfMinutes || 180)) * 60;
+  const entrySeconds = Math.max(1, Number(payload.meta?.entryTfMinutes || 45)) * 60;
   const contextBars = Math.max(6, Number(payload.params?.M45_CONTEXT_BARS || 45));
   const trendMarkLine = createMarkLine(trendView.container);
   const entryMarkLine = createMarkLine(entryView.container);
@@ -712,7 +975,10 @@ function setupAiTrendLinking(payload, trendView, entryView, entryLabel, entryPan
     const trendCandle = trendView.candleByTime.get(h3Time);
     if (!trendCandle) return;
     const trendCloseTime = h3Time + trendSeconds;
-    const focusTime = firstChartTimeAtOrAfter(entryView.candleTimes, trendCloseTime);
+    const candidateFocusTime = firstChartTimeAtOrAfter(entryView.candleTimes, trendCloseTime);
+    const focusTime = candidateFocusTime != null && candidateFocusTime <= trendCloseTime + entrySeconds
+      ? candidateFocusTime
+      : null;
     const entryCandle = focusTime == null ? null : entryView.candleByTime.get(focusTime);
     markedH3Time = h3Time;
     markedEntryTime = focusTime;
@@ -780,6 +1046,231 @@ function setupAiTrendLinking(payload, trendView, entryView, entryLabel, entryPan
   }
   trendView.container.addEventListener("dblclick", clearMark);
   entryView.container.addEventListener("dblclick", clearMark);
+}
+
+function setupComboMtfLinking(payload, trendView, entryView, entryLabel, entryPanels = []) {
+  const trendTf = payload.meta?.trendTf || "HTF";
+  const entryTf = payload.meta?.entryTf || "Entry";
+  const trendSeconds = Math.max(1, Number(payload.meta?.trendTfMinutes || 1440)) * 60;
+  const trendByEntry = new Map((payload.entryTrendLinks || []).map((link) => [Number(link.entryTime), link]));
+  const entriesByTrend = new Map();
+  (payload.entryTrendLinks || []).forEach((link) => {
+    const key = Number(link.trendTime);
+    if (!entriesByTrend.has(key)) entriesByTrend.set(key, []);
+    entriesByTrend.get(key).push(Number(link.entryTime));
+  });
+
+  const trendMarkLine = createMarkLine(trendView.container);
+  const entryMarkLine = createMarkLine(entryView.container);
+  const entryPanelMarkLines = entryPanels.map((view) => createMarkLine(view.container));
+  const trendRangeStartLine = createMarkLine(trendView.container);
+  const trendRangeEndLine = createMarkLine(trendView.container);
+  const entryRangeStartLine = createMarkLine(entryView.container);
+  const entryRangeEndLine = createMarkLine(entryView.container);
+  const entryPanelRangeLines = entryPanels.map((view) => ({
+    start: createMarkLine(view.container),
+    end: createMarkLine(view.container),
+  }));
+  let markedTrendTime = null;
+  let markedEntryTime = null;
+  let rangeStartTrendTime = null;
+  let rangeEndTrendTime = null;
+  let rangeStartEntryTime = null;
+  let rangeEndEntryTime = null;
+  let syncing = false;
+
+  const refreshMarkLines = () => {
+    setMarkLine(trendView, trendMarkLine, markedTrendTime);
+    setMarkLine(entryView, entryMarkLine, markedEntryTime);
+    entryPanels.forEach((view, index) => setMarkLine(view, entryPanelMarkLines[index], markedEntryTime));
+    setMarkLine(trendView, trendRangeStartLine, rangeStartTrendTime);
+    setMarkLine(trendView, trendRangeEndLine, rangeEndTrendTime);
+    setMarkLine(entryView, entryRangeStartLine, rangeStartEntryTime);
+    setMarkLine(entryView, entryRangeEndLine, rangeEndEntryTime);
+    entryPanels.forEach((view, index) => {
+      setMarkLine(view, entryPanelRangeLines[index].start, rangeStartEntryTime);
+      setMarkLine(view, entryPanelRangeLines[index].end, rangeEndEntryTime);
+    });
+  };
+  state.markRefreshers.push(refreshMarkLines);
+  trendView.chart.timeScale().subscribeVisibleLogicalRangeChange(refreshMarkLines);
+  entryView.chart.timeScale().subscribeVisibleLogicalRangeChange(refreshMarkLines);
+  entryPanels.forEach((view) => view.chart.timeScale().subscribeVisibleLogicalRangeChange(refreshMarkLines));
+
+  const setEntryPanelCrosshairs = (time) => {
+    entryPanels.forEach((view) => {
+      const point = view.dataByTime.get(time);
+      if (point) {
+        view.chart.setCrosshairPosition(point.value, time, view.series);
+      } else {
+        view.chart.clearCrosshairPosition();
+      }
+    });
+  };
+
+  const trendRangeMarkers = () => {
+    const markers = [];
+    if (rangeStartTrendTime != null) {
+      markers.push({
+        time: rangeStartTrendTime,
+        position: "belowBar",
+        color: "#facc15",
+        shape: "circle",
+        text: "START",
+      });
+    }
+    if (rangeEndTrendTime != null) {
+      markers.push({
+        time: rangeEndTrendTime,
+        position: "aboveBar",
+        color: "#facc15",
+        shape: "square",
+        text: "END",
+      });
+    }
+    return markers;
+  };
+
+  const refreshTrendMarkers = () => {
+    setSeriesMarkers(trendView.candleSeries, [...trendView.baseMarkers, ...trendRangeMarkers()]);
+  };
+
+  const clearCrosshairs = () => {
+    markedTrendTime = null;
+    markedEntryTime = null;
+    trendView.chart.clearCrosshairPosition();
+    entryView.chart.clearCrosshairPosition();
+    entryPanels.forEach((view) => view.chart.clearCrosshairPosition());
+    refreshMarkLines();
+  };
+
+  const clearAll = () => {
+    clearCrosshairs();
+    rangeStartTrendTime = null;
+    rangeEndTrendTime = null;
+    rangeStartEntryTime = null;
+    rangeEndEntryTime = null;
+    refreshTrendMarkers();
+    entryLabel.textContent = entryLabel.dataset.baseLabel;
+    el.chartLegend.textContent = payload.charts.trend.label;
+    refreshMarkLines();
+  };
+
+  const showEntryTime = (entryTime) => {
+    const entryCandle = entryView.candleByTime.get(entryTime);
+    if (!entryCandle) return;
+    const link = trendByEntry.get(entryTime);
+    const trendTime = link ? Number(link.trendTime) : null;
+    const trendCandle = trendTime == null ? null : trendView.candleByTime.get(trendTime);
+
+    markedEntryTime = entryTime;
+    markedTrendTime = trendCandle ? trendTime : null;
+    entryView.chart.setCrosshairPosition(entryCandle.close, entryTime, entryView.candleSeries);
+    setEntryPanelCrosshairs(entryTime);
+    if (trendCandle && trendTime != null) {
+      trendView.chart.setCrosshairPosition(trendCandle.close, trendTime, trendView.candleSeries);
+    } else {
+      trendView.chart.clearCrosshairPosition();
+    }
+
+    const trendText = link ? `${trendTf} ${fmtUtcMinute(link.trendTime)} ${link.trendLabel || ""}` : `no closed ${trendTf}`;
+    entryLabel.textContent = `${entryLabel.dataset.baseLabel} | ${entryTf} ${fmtUtcMinute(entryTime)} | ${trendText}`;
+    el.chartLegend.textContent = trendCandle
+      ? `${payload.charts.trend.label} | ${trendText} | close ${fmtUtcMinute(link.trendCloseTime)}`
+      : `${payload.charts.trend.label} | ${trendText}`;
+    requestAnimationFrame(refreshMarkLines);
+  };
+
+  const showTrendTime = (trendTime) => {
+    const trendCandle = trendView.candleByTime.get(trendTime);
+    if (!trendCandle) return;
+    const entryTimes = entriesByTrend.get(trendTime) || [];
+    const entryTime = entryTimes.length ? entryTimes[0] : null;
+    const entryCandle = entryTime == null ? null : entryView.candleByTime.get(entryTime);
+
+    markedTrendTime = trendTime;
+    markedEntryTime = entryCandle ? entryTime : null;
+    trendView.chart.setCrosshairPosition(trendCandle.close, trendTime, trendView.candleSeries);
+    if (entryCandle && entryTime != null) {
+      entryView.chart.setCrosshairPosition(entryCandle.close, entryTime, entryView.candleSeries);
+      setEntryPanelCrosshairs(entryTime);
+      entryLabel.textContent = `${entryLabel.dataset.baseLabel} | ${trendTf} ${fmtUtcMinute(trendTime)} -> ${entryTf} ${fmtUtcMinute(entryTime)}`;
+    } else {
+      entryView.chart.clearCrosshairPosition();
+      entryPanels.forEach((view) => view.chart.clearCrosshairPosition());
+      entryLabel.textContent = `${entryLabel.dataset.baseLabel} | ${trendTf} ${fmtUtcMinute(trendTime)} has no entry bars`;
+    }
+    el.chartLegend.textContent = `${payload.charts.trend.label} | ${trendTf} ${fmtUtcMinute(trendTime)}`;
+    requestAnimationFrame(refreshMarkLines);
+  };
+
+  const applyTrendRange = () => {
+    if (rangeStartTrendTime == null) return;
+    const fromTrend = Math.min(rangeStartTrendTime, rangeEndTrendTime ?? rangeStartTrendTime);
+    const toTrendOpen = Math.max(rangeStartTrendTime, rangeEndTrendTime ?? rangeStartTrendTime);
+    const toTrend = toTrendOpen + trendSeconds;
+    const firstEntry = firstChartTimeAtOrAfter(entryView.candleTimes, fromTrend);
+    const lastEntry = lastChartTimeAtOrBefore(entryView.candleTimes, toTrend);
+    rangeStartEntryTime = firstEntry;
+    rangeEndEntryTime = lastEntry;
+
+    if (firstEntry != null && lastEntry != null && firstEntry <= lastEntry) {
+      entryView.chart.timeScale().setVisibleRange({ from: firstEntry, to: lastEntry });
+      const firstCandle = entryView.candleByTime.get(firstEntry);
+      if (firstCandle) {
+        entryView.chart.setCrosshairPosition(firstCandle.close, firstEntry, entryView.candleSeries);
+        setEntryPanelCrosshairs(firstEntry);
+      }
+      entryLabel.textContent = `${entryLabel.dataset.baseLabel} | ${trendTf} range ${fmtUtcMinute(fromTrend)} -> ${fmtUtcMinute(toTrendOpen)} | ${entryTf} ${fmtUtcMinute(firstEntry)} -> ${fmtUtcMinute(lastEntry)}`;
+    } else {
+      entryLabel.textContent = `${entryLabel.dataset.baseLabel} | ${trendTf} range has no loaded ${entryTf} bars`;
+    }
+    el.chartLegend.textContent = `${payload.charts.trend.label} | selected ${trendTf} ${fmtUtcMinute(fromTrend)} -> ${fmtUtcMinute(toTrendOpen)}`;
+    refreshTrendMarkers();
+    requestAnimationFrame(refreshMarkLines);
+  };
+
+  const markTrendRange = (rawTrendTime) => {
+    const trendTime = nearestChartTime(trendView.candleTimes, rawTrendTime);
+    if (trendTime == null) return;
+    if (rangeStartTrendTime == null || rangeEndTrendTime != null) {
+      rangeStartTrendTime = trendTime;
+      rangeEndTrendTime = null;
+    } else {
+      rangeEndTrendTime = trendTime;
+    }
+    applyTrendRange();
+  };
+
+  entryView.chart.subscribeCrosshairMove((param) => {
+    if (syncing) return;
+    if (!param.time || !param.seriesData.has(entryView.candleSeries)) {
+      clearCrosshairs();
+      return;
+    }
+    syncing = true;
+    showEntryTime(Number(param.time));
+    syncing = false;
+  });
+
+  trendView.chart.subscribeCrosshairMove((param) => {
+    if (syncing) return;
+    if (!param.time || !param.seriesData.has(trendView.candleSeries)) {
+      clearCrosshairs();
+      return;
+    }
+    syncing = true;
+    showTrendTime(Number(param.time));
+    syncing = false;
+  });
+
+  trendView.chart.subscribeClick((param) => {
+    if (!param || param.time == null) return;
+    markTrendRange(Number(param.time));
+  });
+
+  entryView.container.addEventListener("dblclick", clearAll);
+  trendView.container.addEventListener("dblclick", clearAll);
 }
 
 function renderIndicatorPanels(panels, priceChart) {
@@ -880,14 +1371,25 @@ function doExport() {
   const cols = [...el.exportCols.querySelectorAll("input[type=checkbox]:checked")]
     .map((cb) => cb.dataset.col)
     .join(",");
+  const params = collectParams();
+  let bars = el.bars.value;
+  if (isComboHtfEnabled(params)) {
+    const htfBars = Math.max(50, Math.min(20000, Number(el.bars.value || 100)));
+    params.HTF_BARS = String(htfBars);
+    bars = String(calcEntryBarsForHtfBars(htfBars, params.HTF_TF || "D1", el.tf.value));
+  } else if (el.strategy.value === "ai_trend") {
+    bars = String(syncAiTrendEntryBars(params));
+  }
   const query = new URLSearchParams({
     strategy: el.strategy.value,
     symbol: el.symbol.value,
     tf: el.tf.value,
-    bars: el.bars.value,
+    bars,
+    rows: selectedRowMode(el.exportModal, "export-rows"),
     cols,
-    ...collectParams(),
+    ...params,
   });
+  appendDateRange(query);
   window.open(`/api/export?${query.toString()}`, "_blank");
   el.exportModal.close();
 }
@@ -951,17 +1453,29 @@ function doBulkExport() {
     .map((cb) => cb.dataset.col)
     .join(",");
   const params = collectParams();
+  let bulkBars = el.bars.value;
+  let exportTf = el.tf.value;
   if (el.strategy.value === "combo") {
     delete params.X;
+    if (isComboHtfEnabled(params)) {
+      const htfBars = Math.max(50, Math.min(20000, Number(el.bars.value || 100)));
+      params.HTF_BARS = String(htfBars);
+      bulkBars = String(calcEntryBarsForHtfBars(htfBars, params.HTF_TF || "D1", el.tf.value));
+    }
+  } else if (el.strategy.value === "ai_trend") {
+    bulkBars = String(syncAiTrendEntryBars(params));
+    exportTf = params.ENTRY_TF || el.tf.value;
   }
   const query = new URLSearchParams({
     strategy: el.strategy.value,
-    tf: el.tf.value,
-    bars: el.bars.value,
+    tf: exportTf,
+    bars: bulkBars,
     symbols,
+    rows: selectedRowMode(el.bulkExportModal, "bulk-export-rows"),
     cols,
     ...params,
   });
+  appendDateRange(query);
   window.open(`/api/export/bulk?${query.toString()}`, "_blank");
   el.bulkExportModal.close();
 }

@@ -34,6 +34,7 @@ class _FakeNotifier:
     def __init__(self) -> None:
         self.messages: list[str] = []
         self.calls: list[dict] = []
+        self.discord_webhook = "https://discord.example/default"
         self.combo_discord_webhook = "https://discord.example/webhook"
 
     def send(
@@ -179,8 +180,18 @@ def test_signal_state_prunes_ttl_and_preserves_fingerprint(tmp_path) -> None:
 
 def test_signal_key_format_stability() -> None:
     key = signal_key("combo", "us30", "h1", pd.Timestamp("2026-05-06 12:00:00"), 1)
+    utc_key = signal_key("combo", "us30", "h1", pd.Timestamp("2026-05-06 12:00:00", tz="UTC"), 1)
+    bangkok_key = signal_key(
+        "combo",
+        "us30",
+        "h1",
+        pd.Timestamp("2026-05-06 19:00:00", tz="Asia/Bangkok"),
+        1,
+    )
 
     assert key == "combo|US30|H1|2026-05-06 12:00:00|1"
+    assert utc_key == key
+    assert bangkok_key == key
 
 
 def test_combo_raw_formatter_excludes_execution_levels() -> None:
@@ -298,6 +309,85 @@ def test_check_once_routes_combo_signal_to_discord_raw_message(tmp_path, monkeyp
     assert any("alerted via discord" in event for event in events)
 
 
+def test_check_once_routes_non_ai_strategy_away_from_telegram(tmp_path, monkeypatch) -> None:
+    bartime = pd.Timestamp.now("UTC").floor("h") - pd.Timedelta(hours=1)
+    frame = pd.DataFrame(
+        {
+            "bartime": [bartime.tz_localize(None)],
+            "signal": [1],
+            "entry_price": [111.0],
+            "sl_price": [94.0],
+            "tp_price": [123.0],
+            "signal_reason": ["test signal"],
+        }
+    )
+
+    def fake_run_strategy_frame(**_kwargs):
+        return frame, SimpleNamespace(label="MA Cross"), {}
+
+    monkeypatch.setattr(watcher, "run_strategy_frame", fake_run_strategy_frame)
+    state = SignalState(tmp_path / "state.json")
+    notifier = _FakeNotifier()
+
+    events = check_once(
+        strategy="ma_cross",
+        symbols=["US30"],
+        tf="H1",
+        bars=500,
+        state=state,
+        notifier=notifier,  # type: ignore[arg-type]
+        export_on_signal=False,
+        max_alert_age_minutes=240,
+    )
+
+    assert notifier.calls[0]["backend"] == "discord"
+    assert notifier.calls[0]["discord_webhook"] == notifier.discord_webhook
+    assert "MA Cross" in notifier.messages[0]
+    assert any("alerted via discord" in event for event in events)
+
+
+def test_check_once_logs_csv_export_failure_and_still_sends(tmp_path, monkeypatch, caplog) -> None:
+    bartime = pd.Timestamp.now("UTC").floor("h") - pd.Timedelta(hours=1)
+    frame = pd.DataFrame(
+        {
+            "bartime": [bartime.tz_localize(None)],
+            "signal": [1],
+            "entry_price": [111.0],
+            "sl_price": [94.0],
+            "tp_price": [123.0],
+            "signal_reason": ["test signal"],
+        }
+    )
+
+    def fake_run_strategy_frame(**_kwargs):
+        return frame, SimpleNamespace(label="MA Cross"), {}
+
+    def fake_export_signals(*_args, **_kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(watcher, "run_strategy_frame", fake_run_strategy_frame)
+    monkeypatch.setattr(watcher, "export_signals", fake_export_signals)
+    state = SignalState(tmp_path / "state.json")
+    notifier = _FakeNotifier()
+    caplog.set_level("WARNING", logger=watcher.__name__)
+
+    events = check_once(
+        strategy="ma_cross",
+        symbols=["US30"],
+        tf="H1",
+        bars=500,
+        state=state,
+        notifier=notifier,  # type: ignore[arg-type]
+        export_on_signal=True,
+        output_dir=tmp_path,
+        max_alert_age_minutes=240,
+    )
+
+    assert notifier.messages
+    assert any("alerted via discord" in event for event in events)
+    assert "CSV export failed for ma_cross US30 H1: disk full" in caplog.text
+
+
 def test_check_ai_trend_once_skips_and_marks_historical_alert(tmp_path, monkeypatch) -> None:
     alert = AiTrendAlert(
         kind=H3_TREND_CHANGE,
@@ -346,6 +436,11 @@ def test_m45_alert_report_includes_h3_bias_context() -> None:
             "ema_fast": [1.12],
             "ema_slow": [1.1],
             "close": [1.13],
+            "entry_time": [pd.Timestamp("2026-05-06 12:45:00")],
+            "entry_price": [1.131],
+            "sl_price": [1.121],
+            "tp_price": [1.146],
+            "risk_reward": [1.5],
             "signal_reason": ["First M45 bar after H3 close in bullish segment"],
         }
     )
@@ -358,14 +453,99 @@ def test_m45_alert_report_includes_h3_bias_context() -> None:
     assert alert.h3_bias == 1
     assert alert.h3_segment == 12
     assert alert.h3_bias_started_at == pd.Timestamp("2026-05-06 09:00:00")
+    assert alert.entry_price == 1.131
+    assert alert.sl_price == 1.121
+    assert alert.tp_price == 1.146
+    assert alert.risk_reward == 1.5
 
     message = format_ai_trend_alert(alert)
 
-    assert "H3 bias:   <b>BULLISH</b>" in message
+    assert "🟩 <b>AI Trend M45 LONG</b>" in message
+    assert "H3 bias:   🟢 <b>BULLISH</b>" in message
     assert "Segment:   <code>12</code>" in message
     assert "Bias turn: <code>2026-05-06 09:00 UTC</code> H3 bartime" in message
+    assert "Entry:     <code>1.131</code>" in message
+    assert "Stoploss:  <code>1.121</code>" in message
+    assert "Takeprofit:<code>1.146</code>" in message
+    assert "R:R:       <code>1.5</code>" in message
     assert "Turn close:" not in message
     assert "H3 close:" not in message
+
+
+def test_h3_alert_uses_round_bias_icon() -> None:
+    alert = AiTrendAlert(
+        kind=H3_TREND_CHANGE,
+        symbol="BTCUSD",
+        tf="H3",
+        direction=-1,
+        bar_time=pd.Timestamp("2026-05-06 09:00:00"),
+        event_time=pd.Timestamp("2026-05-06 12:00:00"),
+    )
+
+    message = format_ai_trend_alert(alert)
+
+    assert "H3 bias:  🔴 <b>BEARISH</b>" in message
+    assert "🟥 <b>AI Trend M45 SHORT</b>" not in message
+
+
+def test_run_ai_trend_alerts_applies_m45_levels_before_extract(monkeypatch) -> None:
+    trend_raw = pd.DataFrame({"bartime": [pd.Timestamp("2026-05-06 09:00:00")]})
+    entry_with_signal = pd.DataFrame(
+        {
+            "bartime": [pd.Timestamp("2026-05-06 12:00:00")],
+            "m45_close_time": [pd.Timestamp("2026-05-06 12:45:00")],
+            "signal": [1],
+            "h3_bias": [1],
+            "h3_bias_segment": [7],
+            "h3_close_time": [pd.Timestamp("2026-05-06 12:00:00")],
+            "h3_ai_knn": [2.4],
+            "h3_ai_avg": [1.7],
+            "ema_fast": [1.12],
+            "ema_slow": [1.1],
+            "close": [1.13],
+        }
+    )
+
+    class FakeSpec:
+        def normalize_params(self, _overrides, symbol):
+            return {
+                "SYMBOL": symbol,
+                "TREND_TF": "H3",
+                "ENTRY_TF": "M45",
+                "TREND_BARS": 400,
+                "ENTRY_BARS": 1000,
+            }
+
+        def add_levels(self, frame, _params, _symbol):
+            enriched = frame.copy()
+            enriched["entry_price"] = 1.131
+            enriched["sl_price"] = 1.121
+            enriched["tp_price"] = 1.146
+            enriched["risk_reward"] = 1.5
+            return enriched
+
+    def fake_load(symbol, tf, bars):
+        _ = symbol, bars
+        return trend_raw if tf == "H3" else entry_with_signal
+
+    monkeypatch.setattr(watcher, "get_strategy", lambda _name: FakeSpec())
+    monkeypatch.setattr(watcher, "_load_ohlcv", fake_load)
+    monkeypatch.setattr(watcher, "_drop_open_bar", lambda frame, _tf: frame)
+    monkeypatch.setattr(watcher, "_warn_if_stale_bar", lambda *_args, **_kwargs: False)
+    monkeypatch.setattr(watcher, "build_ai_trend_frames", lambda _trend, _entry, _params: (_trend, entry_with_signal))
+
+    alerts, _latest = watcher.run_ai_trend_alerts(
+        symbol="EURUSD",
+        tf="M45",
+        bars=1000,
+        event_type=M45_ENTRY_SIGNAL,
+    )
+
+    assert len(alerts) == 1
+    assert alerts[0].entry_price == 1.131
+    assert alerts[0].sl_price == 1.121
+    assert alerts[0].tp_price == 1.146
+    assert alerts[0].risk_reward == 1.5
 
 
 def test_check_ai_trend_once_skips_m45_that_does_not_match_h3_bias(tmp_path, monkeypatch) -> None:

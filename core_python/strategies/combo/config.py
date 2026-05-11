@@ -16,7 +16,10 @@ Mô tả:
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
+
+from core_python.config import TF_MINUTES
 
 
 # --- Tham số chỉ báo mặc định ---
@@ -30,6 +33,19 @@ MIN_RR = None        # Ngưỡng R:R tối thiểu (None = không lọc)
 ENTRY_LINE_BARS = 2  # Số bar kéo dài đường Entry/SL/TP trên biểu đồ
 
 # --- Toggle hiển thị trên biểu đồ ---
+# Higher-timeframe trend filter. Disabled by default to preserve current behavior.
+HTF_TREND_ENABLED = False
+HTF_TF = "D1"
+HTF_TF_OPTIONS = ("H4", "H6", "H8", "D1", "W")
+HTF_BARS = 300
+HTF_FAST_EMA = 20
+HTF_SLOW_EMA = 50
+HTF_SLOPE_LOOKBACK = 3
+HTF_SLOPE_MIN = 0.0
+HTF_NEUTRAL_BLOCK = True
+SHOW_HTF_TREND = True
+SHOW_FILTERED_SIGNALS = True
+
 SHOW_MA = True
 SHOW_MACD = True
 SHOW_ATR = True
@@ -69,6 +85,16 @@ DEFAULT_PARAMS: dict[str, Any] = {
     "X": None,
     "SESSION_HOURS_UTC": [],
     "ENTRY_LINE_BARS": 2,
+    "HTF_TREND_ENABLED": HTF_TREND_ENABLED,
+    "HTF_TF": HTF_TF,
+    "HTF_BARS": HTF_BARS,
+    "HTF_FAST_EMA": HTF_FAST_EMA,
+    "HTF_SLOW_EMA": HTF_SLOW_EMA,
+    "HTF_SLOPE_LOOKBACK": HTF_SLOPE_LOOKBACK,
+    "HTF_SLOPE_MIN": HTF_SLOPE_MIN,
+    "HTF_NEUTRAL_BLOCK": HTF_NEUTRAL_BLOCK,
+    "SHOW_HTF_TREND": SHOW_HTF_TREND,
+    "SHOW_FILTERED_SIGNALS": SHOW_FILTERED_SIGNALS,
     "SHOW_MA": SHOW_MA,
     "SHOW_MACD": SHOW_MACD,
     "SHOW_ATR": SHOW_ATR,
@@ -87,6 +113,16 @@ PARAM_FIELDS: list[dict[str, Any]] = [
     {"key": "MIN_RR", "label": "Min RR", "type": "optional_number", "min": 0, "max": 20, "step": 0.1},
     {"key": "SESSION_HOURS_UTC", "label": "UTC Hours", "type": "text"},
     {"key": "ENTRY_LINE_BARS", "label": "Level Bars", "type": "number", "min": 1, "max": 300, "step": 1},
+    {"key": "HTF_TREND_ENABLED", "label": "HTF Trend Filter", "type": "bool"},
+    {"key": "HTF_TF", "label": "HTF TF", "type": "select", "options": list(HTF_TF_OPTIONS)},
+    {"key": "HTF_BARS", "label": "HTF Bars", "type": "number", "min": 50, "max": 20000, "step": 50},
+    {"key": "HTF_FAST_EMA", "label": "HTF Fast EMA", "type": "number", "min": 1, "max": 500, "step": 1},
+    {"key": "HTF_SLOW_EMA", "label": "HTF Slow EMA", "type": "number", "min": 2, "max": 1000, "step": 1},
+    {"key": "HTF_SLOPE_LOOKBACK", "label": "HTF Slope Bars", "type": "number", "min": 1, "max": 100, "step": 1},
+    {"key": "HTF_SLOPE_MIN", "label": "HTF Min Slope", "type": "number", "min": 0, "max": 1_000_000, "step": 0.01},
+    {"key": "HTF_NEUTRAL_BLOCK", "label": "Block Neutral HTF", "type": "bool"},
+    {"key": "SHOW_HTF_TREND", "label": "Show HTF Trend", "type": "bool"},
+    {"key": "SHOW_FILTERED_SIGNALS", "label": "Show Filtered Raw", "type": "bool"},
     {"key": "SHOW_MA", "label": "Show MA", "type": "bool"},
     {"key": "SHOW_MACD", "label": "Show MACD", "type": "bool"},
     {"key": "SHOW_ATR", "label": "Show ATR", "type": "bool"},
@@ -119,6 +155,17 @@ def _to_float(value: object, default: float, min_value: float, max_value: float)
     except (TypeError, ValueError):
         parsed = default
     return max(min_value, min(parsed, max_value))
+
+
+def _to_choice(value: object, default: str, allowed: Sequence[str]) -> str:
+    """Parse an uppercase choice and reject unsupported values."""
+    candidate = str(value or default).strip().upper()
+    allowed_values = tuple(str(item).upper() for item in allowed)
+    if candidate not in set(allowed_values):
+        raise ValueError(f"Unsupported timeframe '{candidate}'. Allowed: {', '.join(allowed_values)}")
+    if candidate not in TF_MINUTES:
+        raise ValueError(f"Unsupported timeframe '{candidate}'.")
+    return candidate
 
 
 def _to_optional_float(
@@ -234,6 +281,10 @@ def normalize_params(overrides: dict[str, Any] | None = None, symbol: str | None
     """
     raw = {**DEFAULT_PARAMS, **(overrides or {})}
     symbol_params = get_symbol_params(symbol)
+    htf_fast = _to_int(raw.get("HTF_FAST_EMA"), HTF_FAST_EMA, 1, 500)
+    htf_slow = _to_int(raw.get("HTF_SLOW_EMA"), HTF_SLOW_EMA, 2, 1000)
+    if htf_fast >= htf_slow:
+        raise ValueError("HTF_FAST_EMA must be smaller than HTF_SLOW_EMA")
     return {
         "MA_PERIOD": _to_int(raw.get("MA_PERIOD"), MA_PERIOD, 2, 500),
         "MACD_FAST": _to_int(raw.get("MACD_FAST"), MACD_FAST, 1, 200),
@@ -249,6 +300,16 @@ def normalize_params(overrides: dict[str, Any] | None = None, symbol: str | None
             symbol_params["session_hours_utc"],
         ),
         "ENTRY_LINE_BARS": _to_int(raw.get("ENTRY_LINE_BARS"), ENTRY_LINE_BARS, 1, 300),
+        "HTF_TREND_ENABLED": _to_bool(raw.get("HTF_TREND_ENABLED"), HTF_TREND_ENABLED),
+        "HTF_TF": _to_choice(raw.get("HTF_TF"), HTF_TF, HTF_TF_OPTIONS),
+        "HTF_BARS": _to_int(raw.get("HTF_BARS"), HTF_BARS, 50, 20000),
+        "HTF_FAST_EMA": htf_fast,
+        "HTF_SLOW_EMA": htf_slow,
+        "HTF_SLOPE_LOOKBACK": _to_int(raw.get("HTF_SLOPE_LOOKBACK"), HTF_SLOPE_LOOKBACK, 1, 100),
+        "HTF_SLOPE_MIN": _to_float(raw.get("HTF_SLOPE_MIN"), HTF_SLOPE_MIN, 0.0, 1_000_000.0),
+        "HTF_NEUTRAL_BLOCK": _to_bool(raw.get("HTF_NEUTRAL_BLOCK"), HTF_NEUTRAL_BLOCK),
+        "SHOW_HTF_TREND": _to_bool(raw.get("SHOW_HTF_TREND"), SHOW_HTF_TREND),
+        "SHOW_FILTERED_SIGNALS": _to_bool(raw.get("SHOW_FILTERED_SIGNALS"), SHOW_FILTERED_SIGNALS),
         "SHOW_MA": _to_bool(raw.get("SHOW_MA"), SHOW_MA),
         "SHOW_MACD": _to_bool(raw.get("SHOW_MACD"), SHOW_MACD),
         "SHOW_ATR": _to_bool(raw.get("SHOW_ATR"), SHOW_ATR),

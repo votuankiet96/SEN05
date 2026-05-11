@@ -13,6 +13,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -75,6 +79,12 @@ input,
 select {
   min-width: 96px;
   padding: 0 8px;
+}
+
+input[type="date"],
+#start-date,
+#end-date {
+  min-width: 132px;
 }
 
 button {
@@ -192,6 +202,10 @@ button {
   height: 390px;
 }
 
+.price-chart.combo-trend-chart {
+  height: 340px;
+}
+
 .chart-legend {
   position: absolute;
   top: 8px;
@@ -221,6 +235,11 @@ button {
 
 .ai-entry-chart {
   height: 390px;
+  position: relative;
+}
+
+.combo-entry-chart {
+  height: 430px;
   position: relative;
 }
 
@@ -355,6 +374,21 @@ th {
   padding: 0 10px;
   background: var(--panel-2);
   border-color: var(--grid);
+}
+
+.modal-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 14px 12px;
+}
+
+.radio-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-size: 12px;
 }
 
 .bulk-symbol-grid {

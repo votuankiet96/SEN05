@@ -37,6 +37,11 @@ class AiTrendAlert:
     ema_fast: float | None = None
     ema_slow: float | None = None
     close: float | None = None
+    entry_time: pd.Timestamp | None = None
+    entry_price: float | None = None
+    sl_price: float | None = None
+    tp_price: float | None = None
+    risk_reward: float | None = None
     reason: str = ""
 
 
@@ -105,6 +110,11 @@ def extract_m45_entry_alerts(entry_frame: pd.DataFrame, symbol: str) -> list[AiT
                 ema_fast=_to_float_or_none(row.get("ema_fast")),
                 ema_slow=_to_float_or_none(row.get("ema_slow")),
                 close=_to_float_or_none(row.get("close")),
+                entry_time=_to_timestamp_or_none(row.get("entry_time")),
+                entry_price=_to_float_or_none(row.get("entry_price")),
+                sl_price=_to_float_or_none(row.get("sl_price")),
+                tp_price=_to_float_or_none(row.get("tp_price")),
+                risk_reward=_to_float_or_none(row.get("risk_reward")),
                 reason=str(row.get("signal_reason") or f"First aligned M45 {side} in H3 segment"),
             )
         )
@@ -130,10 +140,11 @@ def format_ai_trend_alert(alert: AiTrendAlert) -> str:
 
 def _format_h3_alert(alert: AiTrendAlert) -> str:
     direction = "BULLISH" if alert.direction == 1 else "BEARISH"
+    bias_icon = _direction_icon(alert.direction)
     lines = [
         f"<b>AI Trend H3 Trend Change</b> - <b>{html.escape(alert.symbol.upper())}</b>",
         "",
-        f"Direction: <b>{direction}</b>",
+        f"H3 bias:  {bias_icon} <b>{direction}</b>",
         f"H3 close: <code>{_fmt_time(alert.event_time)} UTC</code>",
         f"H3 open:  <code>{_fmt_time(alert.bar_time)} UTC</code>",
         f"Close:    <code>{_fmt(alert.close)}</code>",
@@ -148,16 +159,18 @@ def _format_h3_alert(alert: AiTrendAlert) -> str:
 
 
 def _format_m45_alert(alert: AiTrendAlert) -> str:
-    side = "BUY" if alert.direction == 1 else "SELL"
+    side = "LONG" if alert.direction == 1 else "SHORT"
+    entry_icon = "🟩" if alert.direction == 1 else "🟥"
     h3_bias = alert.h3_bias if alert.h3_bias is not None else alert.direction
     bias_text = "BULLISH" if int(h3_bias) == 1 else "BEARISH" if int(h3_bias) == -1 else "NEUTRAL"
+    bias_icon = _direction_icon(int(h3_bias)) if int(h3_bias) in {1, -1} else "⚪"
     lines = [
-        f"<b>AI Trend M45 {side}</b> - <b>{html.escape(alert.symbol.upper())}</b>",
+        f"{entry_icon} <b>AI Trend M45 {side}</b> - <b>{html.escape(alert.symbol.upper())}</b>",
         "",
         f"M45 close: <code>{_fmt_time(alert.event_time)} UTC</code>",
         f"M45 open:  <code>{_fmt_time(alert.bar_time)} UTC</code>",
         "",
-        f"H3 bias:   <b>{bias_text}</b>",
+        f"H3 bias:   {bias_icon} <b>{bias_text}</b>",
     ]
     if alert.h3_segment is not None:
         lines.append(f"Segment:   <code>{alert.h3_segment}</code>")
@@ -166,6 +179,10 @@ def _format_m45_alert(alert: AiTrendAlert) -> str:
     lines.extend(
         [
             f"Close:     <code>{_fmt(alert.close)}</code>",
+            f"Entry:     <code>{_fmt(alert.entry_price)}</code>",
+            f"Stoploss:  <code>{_fmt(alert.sl_price)}</code>",
+            f"Takeprofit:<code>{_fmt(alert.tp_price)}</code>",
+            f"R:R:       <code>{_fmt(alert.risk_reward, 2)}</code>",
             f"EMA fast:  <code>{_fmt(alert.ema_fast)}</code>",
             f"EMA slow:  <code>{_fmt(alert.ema_slow)}</code>",
             f"H3 KNN:    <code>{_fmt(alert.ai_knn)}</code>",
@@ -179,6 +196,10 @@ def _format_m45_alert(alert: AiTrendAlert) -> str:
 
 def _fmt_time(value: pd.Timestamp) -> str:
     return pd.Timestamp(value).strftime("%Y-%m-%d %H:%M")
+
+
+def _direction_icon(direction: int) -> str:
+    return "🟢" if int(direction) == 1 else "🔴"
 
 
 def _key_time(value: pd.Timestamp) -> str:

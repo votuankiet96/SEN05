@@ -30,7 +30,15 @@
           <select id="tf"></select>
         </label>
         <label>
-          Bars
+          Start Date
+          <input id="start-date" type="text" inputmode="numeric" placeholder="dd/mm/yyyy" autocomplete="off" />
+        </label>
+        <label>
+          End Date
+          <input id="end-date" type="text" inputmode="numeric" placeholder="dd/mm/yyyy" autocomplete="off" />
+        </label>
+        <label id="bars-control" hidden>
+          <span id="bars-caption">Bars</span>
           <input id="bars" type="number" min="50" max="20000" step="50" />
         </label>
         <button id="refresh" type="button">Refresh</button>
@@ -72,6 +80,13 @@
         <span>Export Columns</span>
         <button id="modal-close" class="modal-x" type="button">✕</button>
       </div>
+      <div class="modal-section">
+        <div class="modal-subtitle">Rows</div>
+        <div class="modal-options">
+          <label class="radio-row">Bars with signals<input type="radio" name="export-rows" value="signals" checked /></label>
+          <label class="radio-row">All loaded bars<input type="radio" name="export-rows" value="all" /></label>
+        </div>
+      </div>
       <div id="export-cols" class="modal-cols"></div>
       <div class="modal-footer">
         <button id="modal-export" type="button">Download CSV</button>
@@ -93,6 +108,10 @@
       </div>
       <div class="modal-section">
         <div class="modal-subtitle">Optional Columns</div>
+        <div class="modal-options">
+          <label class="radio-row">Bars with signals<input type="radio" name="bulk-export-rows" value="signals" checked /></label>
+          <label class="radio-row">All loaded bars<input type="radio" name="bulk-export-rows" value="all" /></label>
+        </div>
         <div id="bulk-cols" class="modal-cols"></div>
       </div>
       <div class="modal-footer">

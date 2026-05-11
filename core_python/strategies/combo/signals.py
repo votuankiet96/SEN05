@@ -30,6 +30,7 @@ from core_python.indicators.core import atr, macd_hist, sma, safe_ratio
 from core_python.strategies.combo.config import (
     get_indicator_params,
 )
+from core_python.strategies.combo.trend_filter import apply_combo_htf_filter
 
 
 def _rr_filter_enabled(min_rr: object) -> bool:
@@ -178,11 +179,16 @@ def detect_combo_signals(
         # Không lọc R:R — tất cả tín hiệu đều hợp lệ
         rr_ok = pd.Series(True, index=out.index)
 
-    out["signal"] = 0
-    out.loc[buy_cond & rr_ok, "signal"] = 1
-    out.loc[sell_cond & rr_ok, "signal"] = -1
+    out["raw_signal"] = 0
+    out.loc[buy_cond & rr_ok, "raw_signal"] = 1
+    out.loc[sell_cond & rr_ok, "raw_signal"] = -1
     out["rr"] = rr.round(2)
-    out["signal_reason"] = ""
-    out.loc[out["signal"].eq(1), "signal_reason"] = "close crossed above MA, bullish candle, MACD histogram > 0"
-    out.loc[out["signal"].eq(-1), "signal_reason"] = "close crossed below MA, bearish candle, MACD histogram < 0"
+    out["raw_signal_reason"] = ""
+    out.loc[out["raw_signal"].eq(1), "raw_signal_reason"] = "close crossed above MA, bullish candle, MACD histogram > 0"
+    out.loc[out["raw_signal"].eq(-1), "raw_signal_reason"] = "close crossed below MA, bearish candle, MACD histogram < 0"
+    out["signal"] = out["raw_signal"]
+    out["signal_reason"] = out["raw_signal_reason"]
+    out["filter_reason"] = ""
+    if bool(p.get("HTF_TREND_ENABLED", False)):
+        out = apply_combo_htf_filter(out, p)
     return out

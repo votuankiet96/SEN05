@@ -26,7 +26,7 @@ import logging
 import pandas as pd
 
 from modules.db_connector import get_connection
-from core_python.config import get_symbol
+from core_python.config import TF_MINUTES, get_symbol
 
 logger = logging.getLogger(__name__)
 
@@ -162,3 +162,86 @@ def load(symbol: str, tf: str, n_bars: int) -> pd.DataFrame:
 
     df = _validate(df, symbol, tf_code)
     return df[OHLCV_COLUMNS]
+
+
+def load_range(
+    symbol: str,
+    tf: str,
+    start: object,
+    end: object,
+    *,
+    warmup_bars: int = 0,
+    tail_bars: int = 0,
+) -> pd.DataFrame:
+    """
+    Load OHLCV rows from DWH.Fact_OHLCV for a UTC-naive half-open time range.
+
+    The caller-facing range is ``[start, end)``. ``warmup_bars`` extends the SQL
+    query before ``start`` so indicators and segment state are computed with
+    prehistory. ``tail_bars`` extends after ``end`` for level calculations that
+    require the next bar open. Callers should trim strategy outputs back to the
+    original range after indicator/signal/level computation.
+    """
+    symbol_cfg = get_symbol(symbol)
+    tf_code = str(tf).strip().upper()
+    if tf_code not in TF_MINUTES:
+        raise ValueError(f"Unsupported timeframe '{tf_code}'.")
+
+    start_ts = _to_utc_naive_timestamp(start, "start")
+    end_ts = _to_utc_naive_timestamp(end, "end")
+    if end_ts <= start_ts:
+        raise ValueError("end must be later than start.")
+
+    minutes = int(TF_MINUTES[tf_code])
+    query_start = start_ts - pd.Timedelta(minutes=max(0, int(warmup_bars)) * minutes)
+    query_end = end_ts + pd.Timedelta(minutes=max(0, int(tail_bars)) * minutes)
+
+    query = """
+        SELECT f.BarTime AS bartime,
+               f.[Open] AS [open],
+               f.High AS [high],
+               f.Low AS [low],
+               f.[Close] AS [close],
+               f.Volume AS [volume]
+        FROM DWH.Fact_OHLCV f
+        JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID
+        WHERE f.SymbolID = ?
+          AND tf.Code = ?
+          AND f.BarTime >= ?
+          AND f.BarTime < ?
+        ORDER BY f.BarTime ASC
+    """
+
+    conn = get_connection()
+    try:
+        df = _read_sql(
+            query,
+            conn,
+            params=(
+                symbol_cfg["symbol_id"],
+                tf_code,
+                query_start.to_pydatetime(),
+                query_end.to_pydatetime(),
+            ),
+        )
+    finally:
+        conn.close()
+
+    if df.empty:
+        return pd.DataFrame(columns=OHLCV_COLUMNS)
+
+    df["bartime"] = pd.to_datetime(df["bartime"], errors="coerce")
+    for col in ("open", "high", "low", "close", "volume"):
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    df = _validate(df, symbol, tf_code)
+    return df[OHLCV_COLUMNS]
+
+
+def _to_utc_naive_timestamp(value: object, label: str) -> pd.Timestamp:
+    ts = pd.Timestamp(value)
+    if pd.isna(ts):
+        raise ValueError(f"Invalid {label} datetime.")
+    if ts.tzinfo is not None:
+        ts = ts.tz_convert("UTC").tz_localize(None)
+    return ts

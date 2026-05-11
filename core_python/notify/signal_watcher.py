@@ -60,6 +60,7 @@ from core_python.strategies.ai_trend.signals import (
     build_ai_trend_frames,
     prepare_trend_frame,
 )
+from core_python.strategies.combo.pipeline import build_combo_mtf_frames
 from core_python.strategies.registry import get_strategy
 
 
@@ -284,6 +285,15 @@ def run_strategy_frame(
     raw = _load_ohlcv(symbol, tf, bars)
     if closed_only:
         raw = _drop_open_bar(raw, tf)
+    if spec.key == "combo" and params.get("HTF_TREND_ENABLED", False):
+        trend_raw = _load_ohlcv(symbol, params["HTF_TF"], int(params["HTF_BARS"]))
+        if closed_only:
+            trend_raw = _drop_open_bar(trend_raw, params["HTF_TF"])
+        if trend_raw.empty:
+            raise ValueError(f"{symbol} has no closed {params['HTF_TF']} data for Combo HTF trend")
+        trend_frame, enriched = build_combo_mtf_frames(trend_raw, raw, params, symbol)
+        _ = trend_frame
+        return enriched, spec, params
     with_indicators = spec.add_indicators(raw, params)
     with_signals = spec.detect_signals(with_indicators, symbol=symbol, params=params)
     enriched = spec.add_levels(with_signals, params, symbol)
@@ -422,8 +432,15 @@ def check_once(
             if export_on_signal:
                 try:
                     export_signals(frame, symbol=symbol, strategy=strategy, output_dir=output_dir)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning(
+                        "CSV export failed for %s %s %s: %s",
+                        strategy,
+                        symbol,
+                        tf,
+                        exc,
+                        exc_info=True,
+                    )
 
             if strategy.lower() == "combo":
                 message = format_combo_raw_signal_message(row, strategy_label=spec.label, symbol=symbol, tf=tf)
@@ -434,7 +451,11 @@ def check_once(
                 )
             else:
                 message = format_signal_message(row, strategy_label=spec.label, symbol=symbol, tf=tf)
-                result = notifier.send(message, chat_id=chat_id, backend="telegram")
+                result = notifier.send(
+                    message,
+                    backend="discord",
+                    discord_webhook=getattr(notifier, "discord_webhook", None),
+                )
 
             if result.sent and not notifier.dry_run:
                 state.add(key)
@@ -605,6 +626,7 @@ def run_ai_trend_alerts(
         raise ValueError(f"{selected_symbol} has no closed {params['ENTRY_TF']} data")
 
     _trend_frame, entry_frame = build_ai_trend_frames(trend_raw, entry_raw, params)
+    entry_frame = spec.add_levels(entry_frame, params, selected_symbol)
     return extract_m45_entry_alerts(entry_frame, selected_symbol), entry_latest_ts
 
 
@@ -732,7 +754,7 @@ def _print_status(message: str) -> None:
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="24/7 signal watcher - Telegram notifier.",
+        description="24/7 signal watcher - fixed-route notifier.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
@@ -744,7 +766,15 @@ def _parse_args() -> argparse.Namespace:
             "  python -m core_python.notify.signal_watcher --dry-run --once"
         ),
     )
-    parser.add_argument("--backend", default="auto", choices=["auto", "telegram", "discord", "none"])
+    parser.add_argument(
+        "--backend",
+        default="auto",
+        choices=["auto", "telegram", "discord", "none"],
+        help=(
+            "Compatibility option. Signal routing is fixed by strategy "
+            "(Combo/MA Cross -> Discord, AI Trend -> Telegram); use 'none' as a send kill switch."
+        ),
+    )
     parser.add_argument("--dry-run", action="store_true", help="Print messages instead of sending.")
     parser.add_argument("--once", action="store_true", help="Run one check per group and exit.")
     parser.add_argument(
@@ -795,7 +825,7 @@ def _parse_args() -> argparse.Namespace:
         "--health-interval-minutes",
         type=int,
         default=60,
-        help="Print a health summary every N minutes. Default: 60.",
+        help="Deprecated; hourly Telegram health summary is disabled.",
     )
     parser.add_argument(
         "--max-alert-age-minutes",
@@ -1025,7 +1055,6 @@ def main() -> int:
         f"{n_groups} groups / {total_slots} symbol-TF slots"
         + (" / DRY RUN" if args.dry_run else "")
     )
-    notifier.send(startup_msg, backend="telegram")
     print(startup_msg.replace("<b>", "").replace("</b>", ""), flush=True)
     print(f"Mode: {mode_desc}", flush=True)
     print(
@@ -1034,16 +1063,16 @@ def main() -> int:
         f"{args.post_close_retry_seconds}s for {args.post_close_watch_seconds}s",
         flush=True,
     )
+    print(
+        "Signal routing: Combo/MA Cross -> Discord, AI Trend -> Telegram; "
+        "--backend none disables sending.",
+        flush=True,
+    )
     print(_health_summary(state), flush=True)
 
     # None -> run immediately on first tick, then align to bar close boundaries.
     next_run_at: dict[int, pd.Timestamp | None] = {i: None for i in range(len(scan_groups))}
     retry_until: dict[int, pd.Timestamp | None] = {i: None for i in range(len(scan_groups))}
-    sent_signal_events: list[SentSignalEvent] = []
-    next_health_at = pd.Timestamp.now("UTC") + pd.Timedelta(
-        minutes=max(1, int(args.health_interval_minutes))
-    )
-
     while True:
         now_ts = pd.Timestamp.now("UTC")
         for i, group in enumerate(scan_groups):
@@ -1067,7 +1096,6 @@ def main() -> int:
                         chat_id=group.get("chat_id"),
                         show_progress=not args.quiet,
                         latest_bars=latest_bars,
-                        sent_signals=sent_signal_events,
                         max_alert_age_minutes=args.max_alert_age_minutes,
                     )
                 else:
@@ -1085,7 +1113,6 @@ def main() -> int:
                         chat_id=group.get("chat_id"),
                         show_progress=not args.quiet,
                         latest_bars=latest_bars,
-                        sent_signals=sent_signal_events,
                         max_alert_age_minutes=args.max_alert_age_minutes,
                     )
             except Exception as exc:
@@ -1123,20 +1150,6 @@ def main() -> int:
 
         if args.once:
             return 0
-        if pd.Timestamp.now("UTC") >= next_health_at:
-            print(_health_summary(state), flush=True)
-            summary = _format_hourly_symbol_summary(
-                sent_signal_events,
-                scan_groups,
-                minutes=max(1, int(args.health_interval_minutes)),
-            )
-            result = notifier.send(summary, backend="telegram")
-            status = "sent" if result.sent else f"FAILED - {result.detail}"
-            print(f"[{pd.Timestamp.now('UTC').strftime('%H:%M:%S')}] hourly summary {status}", flush=True)
-            _prune_sent_signal_events(sent_signal_events)
-            next_health_at = pd.Timestamp.now("UTC") + pd.Timedelta(
-                minutes=max(1, int(args.health_interval_minutes))
-            )
         time.sleep(_IDLE_SLEEP_SECONDS)
 
 

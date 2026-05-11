@@ -290,7 +290,7 @@ def signal_key(strategy: str, symbol: str, tf: str, bartime: object, signal: int
         strategy: Tên chiến lược ("combo", "ma_cross", "ai_trend", ...).
         symbol: Mã symbol (tự động uppercase).
         tf: Mã khung thời gian (tự động uppercase).
-        bartime: Thời gian bar — dùng str() trực tiếp (datetime hoặc string).
+        bartime: Thời gian bar. Timestamp timezone-aware được chuẩn hóa về UTC-naive.
         signal: +1 (BUY) hoặc -1 (SELL).
 
     Returns:
@@ -298,6 +298,16 @@ def signal_key(strategy: str, symbol: str, tf: str, bartime: object, signal: int
 
     Giả định giao dịch:
         Hai tín hiệu BUY và SELL trên cùng bar được coi là khác nhau (khác signal value).
-        bartime phải nhất quán — không localize giữa các lần gọi hoặc key sẽ không match.
+        bartime được format cố định "YYYY-MM-DD HH:MM:SS" để DB driver trả naive
+        hay UTC-aware đều tạo cùng key cho cùng thời điểm UTC.
     """
-    return f"{strategy}|{symbol.upper()}|{tf.upper()}|{bartime}|{int(signal)}"
+    return f"{strategy}|{symbol.upper()}|{tf.upper()}|{_key_time(bartime)}|{int(signal)}"
+
+
+def _key_time(value: object) -> str:
+    ts = pd.Timestamp(value)
+    if pd.isna(ts):
+        return str(value)
+    if ts.tzinfo is not None:
+        ts = ts.tz_convert("UTC").tz_localize(None)
+    return ts.strftime("%Y-%m-%d %H:%M:%S")
