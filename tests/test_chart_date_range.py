@@ -118,3 +118,28 @@ def test_trim_to_window_removes_warmup_and_tail_rows() -> None:
         pd.Timestamp("2026-01-01 00:00:00"),
         pd.Timestamp("2026-01-01 23:15:00"),
     ]
+
+
+def test_signal_export_rows_excludes_non_signal_bars() -> None:
+    frame = pd.DataFrame(
+        {
+            "bartime": pd.to_datetime(
+                [
+                    "2026-01-01 00:00:00",
+                    "2026-01-01 00:45:00",
+                    "2026-01-01 01:30:00",
+                    "2026-01-01 02:15:00",
+                ]
+            ),
+            "signal": [0, 1, -1, None],
+            "close": [100.0, 101.0, 99.0, 100.5],
+        }
+    )
+
+    out = server._signal_export_rows(frame)
+
+    assert out["signal"].tolist() == [1, -1]
+    assert out["bartime"].tolist() == [
+        pd.Timestamp("2026-01-01 00:45:00"),
+        pd.Timestamp("2026-01-01 01:30:00"),
+    ]

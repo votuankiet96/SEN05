@@ -71,7 +71,7 @@ strategies/ai_trend/payload.py
 
 strategies/ai_trend/levels.py
   Tinh entry_price, sl_price, tp_price, risk_reward cho AI Trend.
-  Entry = open cua cay Entry TF tiep theo.
+  Entry = market order tren close cua cay Entry TF co signal.
   SL = swing Dow gan nhat da xac nhan.
   TP = fixed R:R mac dinh 1.5.
 ```

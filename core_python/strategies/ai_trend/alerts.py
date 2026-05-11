@@ -179,7 +179,8 @@ def _format_m45_alert(alert: AiTrendAlert) -> str:
     lines.extend(
         [
             f"Close:     <code>{_fmt(alert.close)}</code>",
-            f"Entry:     <code>{_fmt(alert.entry_price)}</code>",
+            "Entry:     <code>Market Order</code>",
+            f"Entry ref: <code>{_fmt(alert.entry_price)}</code>",
             f"Stoploss:  <code>{_fmt(alert.sl_price)}</code>",
             f"Takeprofit:<code>{_fmt(alert.tp_price)}</code>",
             f"R:R:       <code>{_fmt(alert.risk_reward, 2)}</code>",

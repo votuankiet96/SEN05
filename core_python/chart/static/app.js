@@ -296,6 +296,15 @@ function fmtUtcMinute(ts) {
   return new Date(ts * 1000).toISOString().slice(0, 16).replace("T", " ");
 }
 
+function fmtOhlc(candle) {
+  if (!candle) return "";
+  return `O:${fmtPrice(candle.open)} H:${fmtPrice(candle.high)} L:${fmtPrice(candle.low)} C:${fmtPrice(candle.close)}`;
+}
+
+function fmtBarOhlc(label, time, candle) {
+  return `${label} ${fmtUtcMinute(time)} | ${fmtOhlc(candle)}`;
+}
+
 function twoDigits(value) {
   return String(value).padStart(2, "0");
 }
@@ -533,10 +542,6 @@ function syncAiTrendEntryBars(params) {
   return entryBars;
 }
 
-function selectedRowMode(dialog, name) {
-  return dialog.querySelector(`input[name="${name}"]:checked`)?.value || "signals";
-}
-
 function appendDateRange(query) {
   if (el.startDate.value && el.endDate.value) {
     query.set("start_date", el.startDate.value);
@@ -647,6 +652,7 @@ function renderPayload(payload) {
   });
   candleSeries.setData(payload.candles);
   setSeriesMarkers(candleSeries, payload.markers);
+  const candleByTime = new Map((payload.candles || []).map((candle) => [Number(candle.time), candle]));
 
   payload.overlays.forEach((line) => {
     const series = priceChart.addLineSeries({
@@ -691,9 +697,10 @@ function renderPayload(payload) {
   renderPanels(payload.panels, priceChart);
 
   el.chartLegend.textContent = "";
+  let selectedLegendText = "";
   priceChart.subscribeCrosshairMove((param) => {
     if (!param.time || !param.seriesData.has(candleSeries)) {
-      el.chartLegend.textContent = "";
+      el.chartLegend.textContent = selectedLegendText;
       state.panelSeries.forEach(({ chart }) => chart.clearCrosshairPosition());
       return;
     }
@@ -715,6 +722,15 @@ function renderPayload(payload) {
         chart.clearCrosshairPosition();
       }
     });
+  });
+
+  priceChart.subscribeClick((param) => {
+    if (!param || param.time == null) return;
+    const time = Number(param.time);
+    const candle = candleByTime.get(time);
+    if (!candle) return;
+    selectedLegendText = `${payload.meta.tf} ${fmtUtcMinute(time)} | ${fmtOhlc(candle)}`;
+    el.chartLegend.textContent = selectedLegendText;
   });
 
   renderSignalsTable(payload.signals);
@@ -1004,8 +1020,9 @@ function setupAiTrendLinking(payload, trendView, entryView, entryLabel, entryPan
     }
 
     const focusText = focusTime == null ? `no ${entryTf} bar` : fmtUtcMinute(focusTime);
-    entryLabel.textContent = `${entryLabel.dataset.baseLabel} | ${trendTf} mark ${fmtUtcMinute(h3Time)} -> ${entryTf} ${focusText} | ${contextBars} bars, 1/3 before`;
-    el.chartLegend.textContent = `${payload.charts.trend.label} | marked ${trendTf} ${fmtUtcMinute(h3Time)} | ${trendTf} close ${fmtUtcMinute(trendCloseTime)}`;
+    const entryOhlcText = entryCandle ? ` | ${fmtOhlc(entryCandle)}` : "";
+    entryLabel.textContent = `${entryLabel.dataset.baseLabel} | ${trendTf} mark ${fmtUtcMinute(h3Time)} -> ${entryTf} ${focusText}${entryOhlcText} | ${contextBars} bars, 1/3 before`;
+    el.chartLegend.textContent = `${payload.charts.trend.label} | marked ${fmtBarOhlc(trendTf, h3Time, trendCandle)} | ${trendTf} close ${fmtUtcMinute(trendCloseTime)}`;
     requestAnimationFrame(refreshMarkLines);
   };
 
@@ -1025,8 +1042,8 @@ function setupAiTrendLinking(payload, trendView, entryView, entryLabel, entryPan
     ]);
     entryView.chart.setCrosshairPosition(entryCandle.close, focusTime, entryView.candleSeries);
     setEntryPanelCrosshairs(focusTime);
-    entryLabel.textContent = `${entryLabel.dataset.baseLabel} | marked ${entryTf} ${fmtUtcMinute(focusTime)}`;
-    el.chartLegend.textContent = `${payload.charts.entry.label} | marked ${entryTf} ${fmtUtcMinute(focusTime)}`;
+    entryLabel.textContent = `${entryLabel.dataset.baseLabel} | marked ${fmtBarOhlc(entryTf, focusTime, entryCandle)}`;
+    el.chartLegend.textContent = `${payload.charts.entry.label} | marked ${fmtBarOhlc(entryTf, focusTime, entryCandle)}`;
     requestAnimationFrame(refreshMarkLines);
   };
 
@@ -1174,9 +1191,9 @@ function setupComboMtfLinking(payload, trendView, entryView, entryLabel, entryPa
     }
 
     const trendText = link ? `${trendTf} ${fmtUtcMinute(link.trendTime)} ${link.trendLabel || ""}` : `no closed ${trendTf}`;
-    entryLabel.textContent = `${entryLabel.dataset.baseLabel} | ${entryTf} ${fmtUtcMinute(entryTime)} | ${trendText}`;
+    entryLabel.textContent = `${entryLabel.dataset.baseLabel} | ${fmtBarOhlc(entryTf, entryTime, entryCandle)} | ${trendText}`;
     el.chartLegend.textContent = trendCandle
-      ? `${payload.charts.trend.label} | ${trendText} | close ${fmtUtcMinute(link.trendCloseTime)}`
+      ? `${payload.charts.trend.label} | ${fmtBarOhlc(trendTf, trendTime, trendCandle)} | ${trendText} | close ${fmtUtcMinute(link.trendCloseTime)}`
       : `${payload.charts.trend.label} | ${trendText}`;
     requestAnimationFrame(refreshMarkLines);
   };
@@ -1194,13 +1211,13 @@ function setupComboMtfLinking(payload, trendView, entryView, entryLabel, entryPa
     if (entryCandle && entryTime != null) {
       entryView.chart.setCrosshairPosition(entryCandle.close, entryTime, entryView.candleSeries);
       setEntryPanelCrosshairs(entryTime);
-      entryLabel.textContent = `${entryLabel.dataset.baseLabel} | ${trendTf} ${fmtUtcMinute(trendTime)} -> ${entryTf} ${fmtUtcMinute(entryTime)}`;
+      entryLabel.textContent = `${entryLabel.dataset.baseLabel} | ${trendTf} ${fmtUtcMinute(trendTime)} -> ${fmtBarOhlc(entryTf, entryTime, entryCandle)}`;
     } else {
       entryView.chart.clearCrosshairPosition();
       entryPanels.forEach((view) => view.chart.clearCrosshairPosition());
       entryLabel.textContent = `${entryLabel.dataset.baseLabel} | ${trendTf} ${fmtUtcMinute(trendTime)} has no entry bars`;
     }
-    el.chartLegend.textContent = `${payload.charts.trend.label} | ${trendTf} ${fmtUtcMinute(trendTime)}`;
+    el.chartLegend.textContent = `${payload.charts.trend.label} | ${fmtBarOhlc(trendTf, trendTime, trendCandle)}`;
     requestAnimationFrame(refreshMarkLines);
   };
 
@@ -1225,7 +1242,12 @@ function setupComboMtfLinking(payload, trendView, entryView, entryLabel, entryPa
     } else {
       entryLabel.textContent = `${entryLabel.dataset.baseLabel} | ${trendTf} range has no loaded ${entryTf} bars`;
     }
-    el.chartLegend.textContent = `${payload.charts.trend.label} | selected ${trendTf} ${fmtUtcMinute(fromTrend)} -> ${fmtUtcMinute(toTrendOpen)}`;
+    const fromCandle = trendView.candleByTime.get(fromTrend);
+    const toCandle = trendView.candleByTime.get(toTrendOpen);
+    const rangeOhlcText = toCandle && toTrendOpen !== fromTrend
+      ? `${fmtBarOhlc(trendTf, fromTrend, fromCandle)} -> ${fmtBarOhlc(trendTf, toTrendOpen, toCandle)}`
+      : fmtBarOhlc(trendTf, fromTrend, fromCandle);
+    el.chartLegend.textContent = `${payload.charts.trend.label} | selected ${rangeOhlcText}`;
     refreshTrendMarkers();
     requestAnimationFrame(refreshMarkLines);
   };
@@ -1267,6 +1289,10 @@ function setupComboMtfLinking(payload, trendView, entryView, entryLabel, entryPa
   trendView.chart.subscribeClick((param) => {
     if (!param || param.time == null) return;
     markTrendRange(Number(param.time));
+  });
+  entryView.chart.subscribeClick((param) => {
+    if (!param || param.time == null) return;
+    showEntryTime(Number(param.time));
   });
 
   entryView.container.addEventListener("dblclick", clearAll);
@@ -1385,7 +1411,6 @@ function doExport() {
     symbol: el.symbol.value,
     tf: el.tf.value,
     bars,
-    rows: selectedRowMode(el.exportModal, "export-rows"),
     cols,
     ...params,
   });
@@ -1471,7 +1496,6 @@ function doBulkExport() {
     tf: exportTf,
     bars: bulkBars,
     symbols,
-    rows: selectedRowMode(el.bulkExportModal, "bulk-export-rows"),
     cols,
     ...params,
   });

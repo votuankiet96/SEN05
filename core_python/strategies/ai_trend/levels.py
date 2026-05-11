@@ -10,9 +10,13 @@ def add_ai_trend_levels(df: pd.DataFrame, params: dict, symbol: str | None = Non
     """
     Add trade levels for AI Trend signals.
 
-    Entry uses the next entry-timeframe open after the signal bar. Dow swings
-    are only usable after their right-side confirmation bars are available, so
-    the stop-loss lookup requires ``pivot_index + DOW_PIVOT_RIGHT <= signal_index``.
+    AI Trend is a market-order signal on the entry bar close. The numeric
+    entry reference uses the signal bar close so a newly closed signal can have
+    SL/TP immediately. Stop-loss comes from the nearest confirmed Dow swing:
+    BUY uses the latest confirmed Dow low, SELL uses the latest confirmed Dow
+    high. Dow swings are only usable after their right-side confirmation bars
+    are available, so the lookup requires
+    ``pivot_index + DOW_PIVOT_RIGHT <= signal_index``.
     """
     _ = symbol
     out = df.copy()
@@ -22,7 +26,7 @@ def add_ai_trend_levels(df: pd.DataFrame, params: dict, symbol: str | None = Non
     out["tp_price"] = np.nan
     out["risk_reward"] = np.nan
 
-    required = {"signal", "bartime", "open", "dow_pivot_type", "dow_pivot_price"}
+    required = {"signal", "bartime", "close", "dow_pivot_type", "dow_pivot_price"}
     if out.empty or not required.issubset(out.columns):
         return out
 
@@ -35,16 +39,15 @@ def add_ai_trend_levels(df: pd.DataFrame, params: dict, symbol: str | None = Non
 
     for idx in out.index[signals.ne(0)]:
         pos = out.index.get_loc(idx)
-        next_pos = pos + 1
-        if next_pos >= len(out):
-            continue
 
         direction = int(out.at[idx, "signal"])
-        entry_idx = out.index[next_pos]
-        entry_price = out.at[entry_idx, "open"]
+        entry_price = out.at[idx, "close"]
         if pd.isna(entry_price):
             continue
         entry_price = float(entry_price)
+        entry_time = out.at[idx, "m45_close_time"] if "m45_close_time" in out.columns else out.at[idx, "bartime"]
+        out.at[idx, "entry_time"] = entry_time
+        out.at[idx, "entry_price"] = entry_price
 
         pivot_type = "low" if direction == 1 else "high"
         confirmed_positions = [
@@ -70,8 +73,6 @@ def add_ai_trend_levels(df: pd.DataFrame, params: dict, symbol: str | None = Non
                 continue
             tp_price = entry_price - rr * risk
 
-        out.at[idx, "entry_time"] = out.at[entry_idx, "bartime"]
-        out.at[idx, "entry_price"] = entry_price
         out.at[idx, "sl_price"] = sl_price
         out.at[idx, "tp_price"] = tp_price
         out.at[idx, "risk_reward"] = rr

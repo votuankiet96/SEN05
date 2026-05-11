@@ -4,7 +4,7 @@ Configuration and validation for the AI Trend signal strategy.
 The strategy is display-first:
     - Trend TF uses AI Trend Navigator / KNN as the trend chart.
     - Entry TF uses EMA 13 and EMA 34 as the entry chart.
-    - Entry uses the next entry-timeframe open.
+    - Entry is a market-order signal on the entry-timeframe close.
     - Stop-loss uses the nearest confirmed Dow swing.
     - Take-profit uses a configurable fixed R:R.
     - Entry signals are confirmed by entry-timeframe MACD histogram.

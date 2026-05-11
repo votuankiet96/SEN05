@@ -464,7 +464,8 @@ def test_m45_alert_report_includes_h3_bias_context() -> None:
     assert "H3 bias:   🟢 <b>BULLISH</b>" in message
     assert "Segment:   <code>12</code>" in message
     assert "Bias turn: <code>2026-05-06 09:00 UTC</code> H3 bartime" in message
-    assert "Entry:     <code>1.131</code>" in message
+    assert "Entry:     <code>Market Order</code>" in message
+    assert "Entry ref: <code>1.131</code>" in message
     assert "Stoploss:  <code>1.121</code>" in message
     assert "Takeprofit:<code>1.146</code>" in message
     assert "R:R:       <code>1.5</code>" in message

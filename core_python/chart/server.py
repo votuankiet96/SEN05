@@ -144,7 +144,6 @@ def create_app() -> Flask:
             bars = _to_int(request.args.get("bars"), config.N_BARS, 50, 20000)
             date_window = _date_window_from_args(request.args)
             overrides = _strategy_overrides(request.args.to_dict(), spec.param_fields)
-            row_mode = _export_row_mode(request.args.get("rows"))
             if spec.key == "ai_trend":
                 payload, enriched = _run_ai_trend_dashboard(
                     spec,
@@ -153,11 +152,10 @@ def create_app() -> Flask:
                     bars,
                     date_window=date_window,
                 )
-                rows = _select_export_rows(enriched, row_mode)
+                rows = _signal_export_rows(enriched)
                 requested = _parse_csv_list(request.args.get("cols"))
                 csv_data = _single_export_csv(rows, requested)
-                suffix = "bars" if row_mode == "all" else "signals"
-                filename = f"{strategy_key}_{payload['meta']['symbol']}_{payload['meta']['entryTf']}_{suffix}.csv"
+                filename = f"{strategy_key}_{payload['meta']['symbol']}_{payload['meta']['entryTf']}_signals.csv"
                 return _Response(
                     csv_data,
                     mimetype="text/csv",
@@ -191,8 +189,7 @@ def create_app() -> Flask:
                     symbol,
                 )
                 enriched = _trim_to_window(enriched_full, date_window)
-            # Default keeps signal-only export; rows=all returns the full entry-timeframe frame.
-            rows = _select_export_rows(enriched, row_mode)
+            rows = _signal_export_rows(enriched)
 
             requested = _parse_csv_list(request.args.get("cols"))
             out: dict = {}
@@ -206,8 +203,7 @@ def create_app() -> Flask:
                     out[col] = rows[col].values
 
             csv_data = pd.DataFrame(out).to_csv(index=False)
-            suffix = "bars" if row_mode == "all" else "signals"
-            filename = f"{strategy_key}_{symbol}_{tf}_{suffix}.csv"
+            filename = f"{strategy_key}_{symbol}_{tf}_signals.csv"
             return _Response(
                 csv_data,
                 mimetype="text/csv",
@@ -246,7 +242,6 @@ def create_app() -> Flask:
             requested_cols = _parse_csv_list(request.args.get("cols"))
             requested_cols = [col for col in requested_cols if col not in {"bartime", "symbol", "signal"}]
             overrides = _strategy_overrides(request.args.to_dict(), spec.param_fields)
-            row_mode = _export_row_mode(request.args.get("rows"))
 
             frames: list[pd.DataFrame] = []
             for symbol in symbols:
@@ -291,7 +286,7 @@ def create_app() -> Flask:
                         )
                         enriched = _trim_to_window(enriched_full, date_window)
 
-                rows = _select_export_rows(enriched, row_mode)
+                rows = _signal_export_rows(enriched)
                 if rows.empty:
                     continue
 
@@ -318,8 +313,7 @@ def create_app() -> Flask:
                 result = pd.DataFrame(columns=columns)
 
             csv_data = result.to_csv(index=False)
-            suffix = "bars" if row_mode == "all" else "signals"
-            filename = f"{spec.key}_{tf}_bulk_{suffix}.csv"
+            filename = f"{spec.key}_{tf}_bulk_signals.csv"
             return Response(
                 csv_data,
                 mimetype="text/csv",
@@ -738,14 +732,7 @@ def _corresponding_bars(
     return max(min_value, min(int(raw_bars), max_value))
 
 
-def _export_row_mode(value: object) -> str:
-    mode = str(value or "signals").strip().lower()
-    return "all" if mode in {"all", "bars", "full"} else "signals"
-
-
-def _select_export_rows(df, row_mode: str):
-    if row_mode == "all":
-        return df.copy()
+def _signal_export_rows(df):
     return df[df["signal"].fillna(0).astype(int).ne(0)].copy()
 
 
