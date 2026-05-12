@@ -13,12 +13,14 @@
 // === HOW IT WORKS ===
 // OnTimer() fires every PollIntervalSeconds (default 5s).
 // → GET /api/pending-signals from signal_server.py
-// → For each signal matching SymbolFilter:
+// → For each signal matching the chart symbol (SymbolName):
 //     1. Skip if signal is too old (> MaxSignalAgeMinutes)
 //     2. Validate SL and entry_ref are present
-//     3. Calculate volume via fixed-risk formula (see CalculateVolume())
-//     4. DryRun=true  → Print to Journal, ACK signal, NO order placed
-//     5. DryRun=false → ExecuteMarketOrder(), then ACK signal
+//     3. Validate SL is on the correct side of entry (BUY: SL < entry, SELL: SL > entry)
+//     4. Skip if MaxOpenPositions already reached
+//     5. Calculate volume via fixed-risk formula (see CalculateVolume())
+//     6. DryRun=true  → Print to Journal, ACK signal, NO order placed
+//     7. DryRun=false → ExecuteMarketOrder(), then ACK signal
 //
 // === LOT SIZING ===
 // volume_units = (Account.Balance * RiskPct/100) / (sl_pips * Symbol.PipValue)
@@ -26,13 +28,14 @@
 //
 // === EXPAND TO MORE SYMBOLS ===
 // Run a second cBot instance on another chart (e.g. EURUSD).
-// Set SymbolFilter = "EURUSD" on that instance.
+// The cBot uses SymbolName (the chart's symbol) automatically — no config change needed.
 // signal_server.py already serves all symbols — no Python changes needed.
 //
 // Requires: cTrader 4.7+ (.NET 6), AccessRights.FullAccess (for HTTP calls)
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -41,7 +44,7 @@ using cAlgo.API;
 
 namespace cAlgo.Robots
 {
-    [Robot(Name = "AI Trend Executor", Version = "1.0.0", AccessRights = AccessRights.FullAccess)]
+    [Robot(Name = "AI Trend Executor", Version = "1.1.0", AccessRights = AccessRights.FullAccess)]
     public class AiTrendExecutor : Robot
     {
         // ----------------------------------------------------------------
@@ -51,14 +54,21 @@ namespace cAlgo.Robots
         [Parameter("Signal Server URL", Group = "Connection", DefaultValue = "http://127.0.0.1:5050")]
         public string SignalServerUrl { get; set; }
 
+        [Parameter("HTTP Timeout (seconds)", Group = "Connection", DefaultValue = 5, MinValue = 2, MaxValue = 30)]
+        public int HttpTimeoutSeconds { get; set; }
+
         [Parameter("Poll Interval (seconds)", Group = "Connection", DefaultValue = 5, MinValue = 2, MaxValue = 60)]
         public int PollIntervalSeconds { get; set; }
 
-        [Parameter("Symbol Filter", Group = "Signal", DefaultValue = "BTCUSD")]
-        public string SymbolFilter { get; set; }
+        // Symbol is taken from the chart (SymbolName) — no separate filter parameter.
+        // Attach this cBot to the chart whose symbol you want to trade.
+        // Signals for other symbols are ACKed silently without placing an order.
 
         [Parameter("Max Signal Age (minutes)", Group = "Signal", DefaultValue = 90, MinValue = 10, MaxValue = 360)]
         public int MaxSignalAgeMinutes { get; set; }
+
+        [Parameter("Max Open Positions", Group = "Risk", DefaultValue = 1, MinValue = 1, MaxValue = 5)]
+        public int MaxOpenPositions { get; set; }
 
         [Parameter("Risk Per Trade %", Group = "Risk", DefaultValue = 1.0, MinValue = 0.1, MaxValue = 5.0, Step = 0.1)]
         public double RiskPerTradePct { get; set; }
@@ -76,16 +86,17 @@ namespace cAlgo.Robots
         protected override void OnStart()
         {
             Print("=== AI Trend Executor started ===");
-            Print($"Symbol filter : {SymbolFilter}");
+            Print($"Symbol        : {SymbolName}");
             Print($"Risk per trade: {RiskPerTradePct}%");
             Print($"Signal TTL    : {MaxSignalAgeMinutes} min");
             Print($"Poll interval : {PollIntervalSeconds}s");
+            Print($"HTTP timeout  : {HttpTimeoutSeconds}s");
             Print($"Signal server : {SignalServerUrl}");
 
             if (DryRun)
                 Print("*** DRY RUN MODE — monitoring only, no real orders will be placed ***");
             else
-                Print("*** LIVE MODE — real orders will be placed on DEMO account ***");
+                Print("*** LIVE MODE — real orders will be placed ***");
 
             Timer.Start(PollIntervalSeconds);
         }
@@ -138,15 +149,25 @@ namespace cAlgo.Robots
 
         private void ProcessSignal(SignalDto signal)
         {
-            // 1. Symbol filter — ACK silently if not for this cBot instance
+            // 0. Guard against a malformed signal with null id — BuildLabel would throw.
+            if (string.IsNullOrEmpty(signal.id))
+            {
+                Print("[SKIP] Signal with null/empty id — discarding without ACK (no id to ACK)");
+                return;
+            }
+
+            // 1. Symbol filter — ACK silently if not for this cBot instance.
+            //    Uses SymbolName (the chart's instrument) as the authoritative filter.
+            //    This eliminates the risk of a mis-configured separate SymbolFilter field
+            //    causing SL/TP from one instrument to be applied to a different one.
             if (string.IsNullOrEmpty(signal.symbol) ||
-                !signal.symbol.Equals(SymbolFilter, StringComparison.OrdinalIgnoreCase))
+                !signal.symbol.Equals(SymbolName, StringComparison.OrdinalIgnoreCase))
             {
                 AckSignal(signal.id);
                 return;
             }
 
-            // 2. Validate side EXPLICITLY — never infer direction from a default branch
+            // 2. Validate side EXPLICITLY — never infer direction from a default branch.
             //    An ambiguous side must be rejected, not silently treated as SELL.
             bool isBuy;
             if (signal.side != null && signal.side.Equals("BUY", StringComparison.OrdinalIgnoreCase))
@@ -161,7 +182,7 @@ namespace cAlgo.Robots
             }
             var tradeType = isBuy ? TradeType.Buy : TradeType.Sell;
 
-            // 3. Age check — stale signals must not be acted on
+            // 3. Age check — stale signals must not be acted on.
             if (!TryParseUtc(signal.created_at, out DateTime createdAt))
             {
                 Print($"[SKIP] {signal.id}: cannot parse created_at='{signal.created_at}'");
@@ -176,7 +197,7 @@ namespace cAlgo.Robots
                 return;
             }
 
-            // 4. Validate required numeric fields
+            // 4. Validate required numeric fields.
             if (signal.sl_price == null)
             {
                 Print($"[SKIP] {signal.id}: sl_price is null — cannot size risk");
@@ -190,10 +211,27 @@ namespace cAlgo.Robots
                 return;
             }
 
-            double entryRef        = signal.entry_ref.Value;
-            double slPrice         = signal.sl_price.Value;
-            double slDistancePrice = Math.Abs(entryRef - slPrice);
+            double entryRef = signal.entry_ref.Value;
+            double slPrice  = signal.sl_price.Value;
 
+            // 5. Validate SL is on the correct side of entry.
+            //    BUY: SL must be below entry. SELL: SL must be above entry.
+            //    An inverted SL (e.g., BUY signal with SL above entry) would produce
+            //    a nonsensical position — reject rather than guess.
+            if (isBuy && slPrice >= entryRef)
+            {
+                Print($"[SKIP] {signal.id}: BUY signal but SL ({slPrice:F5}) >= entry ({entryRef:F5}) — inverted SL");
+                AckSignal(signal.id);
+                return;
+            }
+            if (!isBuy && slPrice <= entryRef)
+            {
+                Print($"[SKIP] {signal.id}: SELL signal but SL ({slPrice:F5}) <= entry ({entryRef:F5}) — inverted SL");
+                AckSignal(signal.id);
+                return;
+            }
+
+            double slDistancePrice = Math.Abs(entryRef - slPrice);
             if (slDistancePrice <= 0)
             {
                 Print($"[SKIP] {signal.id}: SL distance = 0");
@@ -201,10 +239,19 @@ namespace cAlgo.Robots
                 return;
             }
 
-            // 5. Deterministic label — used for duplicate guard and position tracking
+            // 6. Max open positions check — count positions managed by this cBot.
+            int openCount = CountManagedPositions();
+            if (openCount >= MaxOpenPositions)
+            {
+                Print($"[SKIP] {signal.id}: {openCount}/{MaxOpenPositions} positions already open — limit reached");
+                AckSignal(signal.id);
+                return;
+            }
+
+            // 7. Deterministic label — used for duplicate guard and position tracking.
             string label = BuildLabel(signal.id);
 
-            // 6. Duplicate guard — if a position with this label already exists, a previous
+            // 8. Duplicate guard — if a position with this label already exists, a previous
             //    execution succeeded but the ACK HTTP call failed. Consuming the signal now
             //    prevents placing a second order for the same signal bar.
             var existingPosition = Positions.Find(label);
@@ -215,7 +262,7 @@ namespace cAlgo.Robots
                 return;
             }
 
-            // 7. Risk-based volume (warns if clamped to minimum)
+            // 9. Risk-based volume (warns if clamped to minimum).
             double volumeUnits = CalculateVolume(slDistancePrice);
             if (volumeUnits <= 0)
             {
@@ -224,18 +271,18 @@ namespace cAlgo.Robots
                 return;
             }
 
-            // 8. SL/TP in pips
+            // 10. SL/TP in pips.
             double slPips  = slDistancePrice / Symbol.PipSize;
             double? tpPips = signal.tp_price.HasValue
                 ? Math.Abs(entryRef - signal.tp_price.Value) / Symbol.PipSize
                 : (double?)null;
 
-            // 9. DryRun gate — default true, must be explicitly disabled
+            // 11. DryRun gate — default true, must be explicitly disabled.
             if (DryRun)
             {
                 double lots = volumeUnits / Symbol.LotSize;
                 Print(
-                    $"[DRY RUN] Would place: {tradeType} {lots:F3} lots {SymbolFilter} | " +
+                    $"[DRY RUN] Would place: {tradeType} {lots:F3} lots {SymbolName} | " +
                     $"SL={slPrice:F2} ({slPips:F1} pips) TP={signal.tp_price?.ToString("F2") ?? "-"} | " +
                     $"Risk={RiskPerTradePct}% = {Account.Balance * RiskPerTradePct / 100:F2} {Account.Currency} | " +
                     $"Label={label}"
@@ -244,12 +291,12 @@ namespace cAlgo.Robots
                 return;
             }
 
-            // 10. Margin pre-check (informational — broker is the final authority)
+            // 12. Margin pre-check (informational — broker is the final authority).
             double estMargin = (volumeUnits / Symbol.LotSize) * Symbol.InitialMargin;
             if (estMargin > Account.FreeMargin)
                 Print($"[WARN] {signal.id}: est. margin {estMargin:F2} > free margin {Account.FreeMargin:F2} — order may be rejected");
 
-            // 11. Place live market order.
+            // 13. Place live market order.
             //     ACK regardless of outcome — on failure, consuming the signal avoids
             //     infinite retry loops. The error is logged prominently for manual review.
             var result = ExecuteMarketOrder(tradeType, SymbolName, volumeUnits, label, slPips, tpPips);
@@ -276,6 +323,18 @@ namespace cAlgo.Robots
             // Last 12 chars of the signal id — stays within cTrader's label length limit.
             // Deterministic: same signal always produces the same label (used by duplicate guard).
             return $"{LabelPrefix}_{signalId.Substring(Math.Max(0, signalId.Length - 12))}";
+        }
+
+        private int CountManagedPositions()
+        {
+            int count = 0;
+            foreach (var pos in Positions)
+            {
+                if (pos.SymbolName.Equals(SymbolName, StringComparison.OrdinalIgnoreCase) &&
+                    pos.Label != null && pos.Label.StartsWith(LabelPrefix, StringComparison.OrdinalIgnoreCase))
+                    count++;
+            }
+            return count;
         }
 
         // ----------------------------------------------------------------
@@ -318,15 +377,23 @@ namespace cAlgo.Robots
         }
 
         // ----------------------------------------------------------------
-        // HTTP helpers
+        // HTTP helpers — use HttpWebRequest for explicit timeout control.
+        // WebClient.DownloadString has no timeout and can block OnTimer()
+        // indefinitely if the signal server hangs.
         // ----------------------------------------------------------------
 
         private string FetchPendingSignals()
         {
             try
             {
-                using var client = new WebClient { Encoding = Encoding.UTF8 };
-                return client.DownloadString($"{SignalServerUrl}/api/pending-signals");
+                var req = (HttpWebRequest)WebRequest.Create($"{SignalServerUrl}/api/pending-signals");
+                req.Method  = "GET";
+                req.Timeout = HttpTimeoutSeconds * 1000;
+                req.ReadWriteTimeout = HttpTimeoutSeconds * 1000;
+
+                using var resp   = (HttpWebResponse)req.GetResponse();
+                using var reader = new StreamReader(resp.GetResponseStream(), Encoding.UTF8);
+                return reader.ReadToEnd();
             }
             catch (WebException ex)
             {
@@ -339,13 +406,19 @@ namespace cAlgo.Robots
         {
             try
             {
-                using var client = new WebClient { Encoding = Encoding.UTF8 };
-                client.Headers[HttpRequestHeader.ContentType] = "application/json";
-                client.UploadString(
-                    $"{SignalServerUrl}/api/ack/{Uri.EscapeDataString(signalId)}",
-                    "POST",
-                    "{}"
-                );
+                var req = (HttpWebRequest)WebRequest.Create(
+                    $"{SignalServerUrl}/api/ack/{Uri.EscapeDataString(signalId)}");
+                req.Method      = "POST";
+                req.ContentType = "application/json";
+                req.Timeout     = HttpTimeoutSeconds * 1000;
+                req.ReadWriteTimeout = HttpTimeoutSeconds * 1000;
+
+                byte[] body = Encoding.UTF8.GetBytes("{}");
+                req.ContentLength = body.Length;
+                using var stream = req.GetRequestStream();
+                stream.Write(body, 0, body.Length);
+
+                using var resp = (HttpWebResponse)req.GetResponse();
             }
             catch (Exception ex)
             {

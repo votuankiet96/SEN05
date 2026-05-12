@@ -69,10 +69,17 @@ def ack_signal(signal_id: str):
 
 @app.get("/api/health")
 def health():
-    """Health check: returns queue size and uptime."""
-    pending = _get_queue().get_pending()
+    """Health check: returns queue size and uptime. Also runs periodic cleanup."""
+    q = _get_queue()
+    pending = q.get_pending()
     uptime_s = int((pd.Timestamp.now("UTC") - _STARTUP_UTC).total_seconds())
-    return jsonify({"ok": True, "pending": len(pending), "uptime_s": uptime_s})
+    cleaned = q.cleanup()
+    return jsonify({
+        "ok": True,
+        "pending": len(pending),
+        "uptime_s": uptime_s,
+        "cleaned": cleaned,
+    })
 
 
 # ------------------------------------------------------------------
