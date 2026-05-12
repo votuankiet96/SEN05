@@ -571,6 +571,7 @@ def check_ai_trend_once(
                     f"{symbol} {tf}: alerted via {result.backend} "
                     f"{normalized_event_type} {direction} {signal_time} UTC"
                 )
+                _try_push_execution_queue(alert, key)
             elif result.sent:
                 events.append(
                     f"{symbol} {tf}: dry-run OK {normalized_event_type} {direction} {signal_time} UTC"
@@ -579,6 +580,37 @@ def check_ai_trend_once(
                 events.append(f"{symbol} {tf}: FAILED - {result.detail}")
 
     return events
+
+
+def _try_push_execution_queue(alert: Any, state_key: str) -> None:
+    """Push a confirmed M45 entry signal to the cBot execution queue.
+
+    This is a non-fatal side-effect: any error here must not interrupt the
+    watcher loop or prevent the Telegram alert from being recorded in state.
+    Only M45 entry signals with valid SL are pushed (SL is required for lot sizing).
+    """
+    if getattr(alert, "kind", None) != M45_ENTRY_SIGNAL:
+        return
+    if getattr(alert, "sl_price", None) is None:
+        logger.debug("cbot_queue: skip %s — no SL price", state_key)
+        return
+    try:
+        from core_python.execution.signal_queue import PendingSignalQueue
+
+        queue = PendingSignalQueue()
+        signal_id = queue.push(
+            state_key=state_key,
+            symbol=alert.symbol,
+            side="BUY" if int(alert.direction) == 1 else "SELL",
+            entry_ref=getattr(alert, "entry_price", None),
+            sl_price=alert.sl_price,
+            tp_price=getattr(alert, "tp_price", None),
+            bar_time=pd.Timestamp(alert.event_time).isoformat(),
+        )
+        if signal_id:
+            logger.info("cbot_queue: pushed %s %s id=%s", alert.symbol, alert.direction, signal_id)
+    except Exception as exc:
+        logger.warning("cbot_queue: push failed (non-fatal): %s", exc, exc_info=True)
 
 
 def run_ai_trend_alerts(
