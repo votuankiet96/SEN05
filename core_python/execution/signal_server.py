@@ -123,7 +123,10 @@ def main() -> int:
     logger.info("  POST http://%s:%d/api/ack/<id>", args.host, args.port)
     logger.info("  GET  http://%s:%d/api/health", args.host, args.port)
 
-    app.run(host=args.host, port=args.port, debug=False, use_reloader=False)
+    # threaded=True: each request is handled in its own thread so a slow ack call
+    # does not block the next poll from the cBot. PendingSignalQueue uses
+    # threading.Lock internally so concurrent access is safe.
+    app.run(host=args.host, port=args.port, debug=False, use_reloader=False, threaded=True)
     return 0
 
 

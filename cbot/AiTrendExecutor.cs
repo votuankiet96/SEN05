@@ -138,14 +138,30 @@ namespace cAlgo.Robots
 
         private void ProcessSignal(SignalDto signal)
         {
-            // 1. Symbol filter — ACK silently if this instance is not for this symbol
-            if (!signal.symbol.Equals(SymbolFilter, StringComparison.OrdinalIgnoreCase))
+            // 1. Symbol filter — ACK silently if not for this cBot instance
+            if (string.IsNullOrEmpty(signal.symbol) ||
+                !signal.symbol.Equals(SymbolFilter, StringComparison.OrdinalIgnoreCase))
             {
                 AckSignal(signal.id);
                 return;
             }
 
-            // 2. Age check — stale signals must not be acted on
+            // 2. Validate side EXPLICITLY — never infer direction from a default branch
+            //    An ambiguous side must be rejected, not silently treated as SELL.
+            bool isBuy;
+            if (signal.side != null && signal.side.Equals("BUY", StringComparison.OrdinalIgnoreCase))
+                isBuy = true;
+            else if (signal.side != null && signal.side.Equals("SELL", StringComparison.OrdinalIgnoreCase))
+                isBuy = false;
+            else
+            {
+                Print($"[SKIP] {signal.id}: invalid side='{signal.side}' — expected BUY or SELL");
+                AckSignal(signal.id);
+                return;
+            }
+            var tradeType = isBuy ? TradeType.Buy : TradeType.Sell;
+
+            // 3. Age check — stale signals must not be acted on
             if (!TryParseUtc(signal.created_at, out DateTime createdAt))
             {
                 Print($"[SKIP] {signal.id}: cannot parse created_at='{signal.created_at}'");
@@ -155,12 +171,12 @@ namespace cAlgo.Robots
             double ageMinutes = (DateTime.UtcNow - createdAt).TotalMinutes;
             if (ageMinutes > MaxSignalAgeMinutes)
             {
-                Print($"[SKIP] {signal.id}: signal too old ({ageMinutes:F0} min > {MaxSignalAgeMinutes} min)");
+                Print($"[SKIP] {signal.id}: too old ({ageMinutes:F0} min > {MaxSignalAgeMinutes} min)");
                 AckSignal(signal.id);
                 return;
             }
 
-            // 3. Validate required fields
+            // 4. Validate required numeric fields
             if (signal.sl_price == null)
             {
                 Print($"[SKIP] {signal.id}: sl_price is null — cannot size risk");
@@ -174,8 +190,8 @@ namespace cAlgo.Robots
                 return;
             }
 
-            double entryRef  = signal.entry_ref.Value;
-            double slPrice   = signal.sl_price.Value;
+            double entryRef        = signal.entry_ref.Value;
+            double slPrice         = signal.sl_price.Value;
             double slDistancePrice = Math.Abs(entryRef - slPrice);
 
             if (slDistancePrice <= 0)
@@ -185,35 +201,41 @@ namespace cAlgo.Robots
                 return;
             }
 
-            // 4. Trade direction
-            var tradeType = signal.side.Equals("BUY", StringComparison.OrdinalIgnoreCase)
-                ? TradeType.Buy
-                : TradeType.Sell;
+            // 5. Deterministic label — used for duplicate guard and position tracking
+            string label = BuildLabel(signal.id);
 
-            // 5. Risk-based volume
-            double volumeUnits = CalculateVolume(slDistancePrice);
-            if (volumeUnits <= 0)
+            // 6. Duplicate guard — if a position with this label already exists, a previous
+            //    execution succeeded but the ACK HTTP call failed. Consuming the signal now
+            //    prevents placing a second order for the same signal bar.
+            var existingPosition = Positions.Find(label);
+            if (existingPosition != null)
             {
-                Print($"[SKIP] {signal.id}: calculated volume = 0 (balance too low or SL too wide?)");
+                Print($"[SKIP] {signal.id}: position '{label}' already open — duplicate guard, ACKing");
                 AckSignal(signal.id);
                 return;
             }
 
-            // 6. SL/TP in pips
-            double slPips = slDistancePrice / Symbol.PipSize;
-            double? tpPips = null;
-            if (signal.tp_price.HasValue)
-                tpPips = Math.Abs(entryRef - signal.tp_price.Value) / Symbol.PipSize;
+            // 7. Risk-based volume (warns if clamped to minimum)
+            double volumeUnits = CalculateVolume(slDistancePrice);
+            if (volumeUnits <= 0)
+            {
+                Print($"[SKIP] {signal.id}: volume = 0 (balance too low for this SL distance?)");
+                AckSignal(signal.id);
+                return;
+            }
 
-            // Unique label — last 12 chars of signal id to stay within cTrader label limit
-            string label = $"{LabelPrefix}_{signal.id.Substring(Math.Max(0, signal.id.Length - 12))}";
+            // 8. SL/TP in pips
+            double slPips  = slDistancePrice / Symbol.PipSize;
+            double? tpPips = signal.tp_price.HasValue
+                ? Math.Abs(entryRef - signal.tp_price.Value) / Symbol.PipSize
+                : (double?)null;
 
-            // 7. Execute or log (DryRun)
+            // 9. DryRun gate — default true, must be explicitly disabled
             if (DryRun)
             {
                 double lots = volumeUnits / Symbol.LotSize;
                 Print(
-                    $"[DRY RUN] Would place: {tradeType} {lots:F2} lots {SymbolFilter} | " +
+                    $"[DRY RUN] Would place: {tradeType} {lots:F3} lots {SymbolFilter} | " +
                     $"SL={slPrice:F2} ({slPips:F1} pips) TP={signal.tp_price?.ToString("F2") ?? "-"} | " +
                     $"Risk={RiskPerTradePct}% = {Account.Balance * RiskPerTradePct / 100:F2} {Account.Currency} | " +
                     $"Label={label}"
@@ -222,23 +244,38 @@ namespace cAlgo.Robots
                 return;
             }
 
-            // Live order
+            // 10. Margin pre-check (informational — broker is the final authority)
+            double estMargin = (volumeUnits / Symbol.LotSize) * Symbol.InitialMargin;
+            if (estMargin > Account.FreeMargin)
+                Print($"[WARN] {signal.id}: est. margin {estMargin:F2} > free margin {Account.FreeMargin:F2} — order may be rejected");
+
+            // 11. Place live market order.
+            //     ACK regardless of outcome — on failure, consuming the signal avoids
+            //     infinite retry loops. The error is logged prominently for manual review.
             var result = ExecuteMarketOrder(tradeType, SymbolName, volumeUnits, label, slPips, tpPips);
             if (result.IsSuccessful)
             {
                 double lots = volumeUnits / Symbol.LotSize;
                 Print(
-                    $"[ORDER] Placed {tradeType} {lots:F2} lots | " +
-                    $"Entry={result.Position?.EntryPrice:F5} SL={slPrice:F2} TP={signal.tp_price?.ToString("F2") ?? "-"} | " +
-                    $"Label={label}"
+                    $"[ORDER OK] {tradeType} {lots:F3} lots | " +
+                    $"Entry={result.Position?.EntryPrice:F5} SL={slPrice:F2} " +
+                    $"TP={signal.tp_price?.ToString("F2") ?? "-"} | Label={label}"
                 );
             }
             else
             {
-                Print($"[ERROR] Order failed: {result.Error} | Signal={signal.id}");
+                Print($"!!! [ORDER FAILED] {result.Error} | {tradeType} {SymbolName} | Signal={signal.id}");
+                Print($"!!! Signal ACKed (consumed). Verify account state manually — no automatic retry.");
             }
 
             AckSignal(signal.id);
+        }
+
+        private string BuildLabel(string signalId)
+        {
+            // Last 12 chars of the signal id — stays within cTrader's label length limit.
+            // Deterministic: same signal always produces the same label (used by duplicate guard).
+            return $"{LabelPrefix}_{signalId.Substring(Math.Max(0, signalId.Length - 12))}";
         }
 
         // ----------------------------------------------------------------
@@ -247,21 +284,36 @@ namespace cAlgo.Robots
 
         private double CalculateVolume(double slDistanceInPrice)
         {
-            double riskAmount   = Account.Balance * (RiskPerTradePct / 100.0);
-            double slPips       = slDistanceInPrice / Symbol.PipSize;
+            double riskAmount = Account.Balance * (RiskPerTradePct / 100.0);
+            double slPips     = slDistanceInPrice / Symbol.PipSize;
 
-            // Symbol.PipValue is value of 1 pip per 1 unit in account currency.
-            // Total pip value for N units = N * slPips * Symbol.PipValue
-            // We want: riskAmount = units * slPips * Symbol.PipValue
+            // Symbol.PipValue: value of 1 pip per 1 unit in account currency.
+            // riskAmount = units * slPips * Symbol.PipValue  →  units = riskAmount / (slPips * PipValue)
             if (slPips <= 0 || Symbol.PipValue <= 0)
                 return 0;
 
-            double rawUnits = riskAmount / (slPips * Symbol.PipValue);
-
-            // Normalise to valid step, clamp to broker min/max
+            double rawUnits   = riskAmount / (slPips * Symbol.PipValue);
             double normalised = Symbol.NormalizeVolumeInUnits(rawUnits, RoundingMode.Down);
-            normalised = Math.Max(Symbol.VolumeInUnitsMin,
-                         Math.Min(Symbol.VolumeInUnitsMax, normalised));
+
+            if (normalised < Symbol.VolumeInUnitsMin)
+            {
+                // Clamping to minimum means actual risk EXCEEDS configured risk %.
+                // Warn explicitly so operator knows the sizing is not as configured.
+                double actualRisk    = Symbol.VolumeInUnitsMin * slPips * Symbol.PipValue;
+                double actualRiskPct = Account.Balance > 0 ? (actualRisk / Account.Balance) * 100 : 0;
+                Print(
+                    $"[WARN] Calculated volume ({normalised / Symbol.LotSize:F4} lots) < minimum " +
+                    $"({Symbol.VolumeInUnitsMin / Symbol.LotSize:F4} lots). " +
+                    $"Clamped — actual risk = {actualRiskPct:F2}% ({actualRisk:F2} {Account.Currency}) " +
+                    $"vs configured {RiskPerTradePct:F2}%"
+                );
+                normalised = Symbol.VolumeInUnitsMin;
+            }
+            else
+            {
+                normalised = Math.Min(normalised, Symbol.VolumeInUnitsMax);
+            }
+
             return normalised;
         }
 

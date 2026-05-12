@@ -132,27 +132,38 @@ class PendingSignalQueue:
         return found
 
     def cleanup(self) -> int:
-        """Remove old acked signals to keep the file small.
+        """Remove stale entries to keep the file small.
+
+        Removes two categories:
+          - Acked signals older than _CLEANUP_AGE_SECONDS (24 h)
+          - Unacked signals that have already expired (older than ttl_seconds)
+            These will never be served to the cBot again, so keeping them is wasteful.
 
         Returns count of removed entries.
         """
-        cutoff = _utc_now() - pd.Timedelta(seconds=_CLEANUP_AGE_SECONDS)
+        now = _utc_now()
+        cutoff_acked   = now - pd.Timedelta(seconds=_CLEANUP_AGE_SECONDS)
+        cutoff_expired = now - pd.Timedelta(seconds=self.ttl_seconds)
         with self._lock:
             signals = self._load()
             before = len(signals)
             kept = []
             for s in signals:
-                if not s.get("acked"):
-                    kept.append(s)
-                    continue
-                acked_at = _parse_ts(s.get("acked_at"))
-                if acked_at is not None and acked_at >= cutoff:
-                    kept.append(s)
+                if s.get("acked"):
+                    acked_at = _parse_ts(s.get("acked_at"))
+                    if acked_at is not None and acked_at >= cutoff_acked:
+                        kept.append(s)
+                    # else: old acked → drop
+                else:
+                    created = _parse_ts(s.get("created_at"))
+                    if created is None or created >= cutoff_expired:
+                        kept.append(s)
+                    # else: unacked but expired → will never be served → drop
             removed = before - len(kept)
             if removed > 0:
                 self._save(kept)
         if removed:
-            logger.info("signal_queue: cleaned %d old entries", removed)
+            logger.info("signal_queue: cleaned %d stale entries", removed)
         return removed
 
     # ------------------------------------------------------------------
