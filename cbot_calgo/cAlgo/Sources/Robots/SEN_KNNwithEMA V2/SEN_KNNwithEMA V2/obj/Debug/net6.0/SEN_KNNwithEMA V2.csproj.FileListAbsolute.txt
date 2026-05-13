@@ -1,0 +1,12 @@
+C:\Users\Kiet Vo\Documents\cAlgo\Sources\Robots\SEN_KNNwithEMA V2\SEN_KNNwithEMA V2\bin\Debug\net6.0\SEN_KNNwithEMA V2.deps.json
+C:\Users\Kiet Vo\Documents\cAlgo\Sources\Robots\SEN_KNNwithEMA V2\SEN_KNNwithEMA V2\bin\Debug\net6.0\SEN_KNNwithEMA V2.dll
+C:\Users\Kiet Vo\Documents\cAlgo\Sources\Robots\SEN_KNNwithEMA V2\SEN_KNNwithEMA V2\bin\Debug\net6.0\SEN_KNNwithEMA V2.pdb
+C:\Users\Kiet Vo\Documents\cAlgo\Sources\Robots\SEN_KNNwithEMA V2\SEN_KNNwithEMA V2\obj\Debug\net6.0\SEN_KNNwithEMA V2.csproj.AssemblyReference.cache
+C:\Users\Kiet Vo\Documents\cAlgo\Sources\Robots\SEN_KNNwithEMA V2\SEN_KNNwithEMA V2\obj\Debug\net6.0\SEN_KNNwithEMA V2.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Kiet Vo\Documents\cAlgo\Sources\Robots\SEN_KNNwithEMA V2\SEN_KNNwithEMA V2\obj\Debug\net6.0\SEN_KNNwithEMA V2.AssemblyInfoInputs.cache
+C:\Users\Kiet Vo\Documents\cAlgo\Sources\Robots\SEN_KNNwithEMA V2\SEN_KNNwithEMA V2\obj\Debug\net6.0\SEN_KNNwithEMA V2.AssemblyInfo.cs
+C:\Users\Kiet Vo\Documents\cAlgo\Sources\Robots\SEN_KNNwithEMA V2\SEN_KNNwithEMA V2\obj\Debug\net6.0\SEN_KNNwithEMA V2.csproj.CoreCompileInputs.cache
+C:\Users\Kiet Vo\Documents\cAlgo\Sources\Robots\SEN_KNNwithEMA V2\SEN_KNNwithEMA V2\obj\Debug\net6.0\SEN_KNNwithEMA V2.dll
+C:\Users\Kiet Vo\Documents\cAlgo\Sources\Robots\SEN_KNNwithEMA V2\SEN_KNNwithEMA V2\obj\Debug\net6.0\refint\SEN_KNNwithEMA V2.dll
+C:\Users\Kiet Vo\Documents\cAlgo\Sources\Robots\SEN_KNNwithEMA V2\SEN_KNNwithEMA V2\obj\Debug\net6.0\SEN_KNNwithEMA V2.pdb
+C:\Users\Kiet Vo\Documents\cAlgo\Sources\Robots\SEN_KNNwithEMA V2\SEN_KNNwithEMA V2\obj\Debug\net6.0\ref\SEN_KNNwithEMA V2.dll
