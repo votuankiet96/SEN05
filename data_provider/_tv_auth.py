@@ -466,7 +466,7 @@ def _is_token_reusable_for_startup(
     historical pull.
     """
     remaining = _jwt_expires_in(token)
-    if remaining < 0:
+    if remaining == -1.0:
         log.info("[AUTH] Could not decode %s expiry; using token as-is.", source)
         return True
     if remaining <= 0:

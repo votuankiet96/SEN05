@@ -787,37 +787,6 @@ def main() -> int:
         COMPUTED_TIMEFRAMES = [ct for ct in COMPUTED_TIMEFRAMES if ct[0] in _TF_FILTER]
         logger.info("[FILTER] Pulling only TFs: %s", sorted(_TF_FILTER))
 
-    if False and not args.dry_run:  # Legacy early-lock block kept disabled; lock is acquired later.
-        cleaned = cleanup_expired()
-        if cleaned:
-            logger.info("Cleaned up %d expired locks before starting the pipeline.", cleaned)
-
-        maintenance_locked = acquire("warehouse_maintenance", duration_min=240)
-        if not maintenance_locked:
-            logger.error("ERROR: Could not get warehouse_maintenance lock - it is busy.")
-            tg_alert(
-                "WARNING",
-                "[WARN] <b>Data Pipeline was blocked</b>\n"
-                "The warehouse is busy with checker or another maintenance job.\n"
-                "Wait for the current job to finish, then run this again."
-                + QUICK_COMMANDS_HINT
-            )
-            tg_flush()
-            return 1
-        atexit.register(release, "warehouse_maintenance")
-
-        def _maintenance_heartbeat() -> None:
-            while not maintenance_heartbeat_stop.wait(1800):
-                renewed = renew("warehouse_maintenance", duration_min=240)
-                if not renewed:
-                    logger.warning("Could not renew warehouse_maintenance lock - the system may think the pipeline stopped.")
-
-        threading.Thread(
-            target=_maintenance_heartbeat,
-            name="pipeline-lock-heartbeat",
-            daemon=True,
-        ).start()
-
     if not args.dry_run:
         cleaned = cleanup_expired()
         if cleaned:

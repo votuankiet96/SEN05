@@ -238,6 +238,37 @@ def load_range(
     return df[OHLCV_COLUMNS]
 
 
+def load_bounds(symbol: str, tf: str) -> tuple[pd.Timestamp, pd.Timestamp] | None:
+    """Return the first and latest BarTime available for a symbol/timeframe."""
+    symbol_cfg = get_symbol(symbol)
+    tf_code = str(tf).strip().upper()
+    if tf_code not in TF_MINUTES:
+        raise ValueError(f"Unsupported timeframe '{tf_code}'.")
+
+    query = """
+        SELECT MIN(f.BarTime) AS start_time,
+               MAX(f.BarTime) AS end_time
+        FROM DWH.Fact_OHLCV f
+        JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID
+        WHERE f.SymbolID = ?
+          AND tf.Code = ?
+    """
+
+    conn = get_connection()
+    try:
+        df = _read_sql(query, conn, params=(symbol_cfg["symbol_id"], tf_code))
+    finally:
+        conn.close()
+
+    if df.empty:
+        return None
+    start = pd.to_datetime(df.loc[0, "start_time"], errors="coerce")
+    end = pd.to_datetime(df.loc[0, "end_time"], errors="coerce")
+    if pd.isna(start) or pd.isna(end):
+        return None
+    return pd.Timestamp(start), pd.Timestamp(end)
+
+
 def _to_utc_naive_timestamp(value: object, label: str) -> pd.Timestamp:
     ts = pd.Timestamp(value)
     if pd.isna(ts):

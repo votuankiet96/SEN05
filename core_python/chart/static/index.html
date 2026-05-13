@@ -37,6 +37,21 @@
           End Date
           <input id="end-date" type="text" inputmode="numeric" placeholder="dd/mm/yyyy" autocomplete="off" />
         </label>
+        <label>
+          Theme
+          <select id="theme-select">
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+        <label class="color-control">
+          Up
+          <input id="candle-up-color" type="color" value="#16a34a" />
+        </label>
+        <label class="color-control">
+          Down
+          <input id="candle-down-color" type="color" value="#dc2626" />
+        </label>
         <label id="bars-control" hidden>
           <span id="bars-caption">Bars</span>
           <input id="bars" type="number" min="50" max="20000" step="50" />
@@ -61,6 +76,7 @@
           <div><span>Last</span><strong id="stat-last">-</strong></div>
           <div class="stat-note" title="Chart includes the live (not yet closed) bar. Telegram watcher only alerts on fully closed bars.">&#9432; includes live bar</div>
         </div>
+        <div id="scan-warning" class="scan-warning" hidden></div>
         <div id="error" class="error" hidden></div>
         <div id="price-chart" class="chart price-chart">
           <div id="chart-legend" class="chart-legend"></div>
@@ -80,7 +96,24 @@
         <span>Export Columns</span>
         <button id="modal-close" class="modal-x" type="button">✕</button>
       </div>
-      <div id="export-cols" class="modal-cols"></div>
+      <div class="modal-section">
+        <div class="modal-subtitle">Export Range</div>
+        <div class="modal-range">
+          <label>
+            Start Date
+            <input id="export-start-date" type="text" inputmode="numeric" placeholder="dd/mm/yyyy" autocomplete="off" />
+          </label>
+          <label>
+            End Date
+            <input id="export-end-date" type="text" inputmode="numeric" placeholder="dd/mm/yyyy" autocomplete="off" />
+          </label>
+        </div>
+        <div id="export-range-note" class="modal-note">Loading available data range...</div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-subtitle">Columns</div>
+        <div id="export-cols" class="modal-cols"></div>
+      </div>
       <div class="modal-footer">
         <button id="modal-export" type="button">Download CSV</button>
         <button id="modal-cancel" type="button">Cancel</button>
@@ -90,6 +123,20 @@
       <div class="modal-header">
         <span>Bulk Export</span>
         <button id="bulk-modal-close" class="modal-x" type="button">x</button>
+      </div>
+      <div class="modal-section">
+        <div class="modal-subtitle">Export Range</div>
+        <div class="modal-range">
+          <label>
+            Start Date
+            <input id="bulk-export-start-date" type="text" inputmode="numeric" placeholder="dd/mm/yyyy" autocomplete="off" />
+          </label>
+          <label>
+            End Date
+            <input id="bulk-export-end-date" type="text" inputmode="numeric" placeholder="dd/mm/yyyy" autocomplete="off" />
+          </label>
+        </div>
+        <div id="bulk-export-range-note" class="modal-note">Loading available data range...</div>
       </div>
       <div class="modal-section">
         <div class="modal-subtitle">Symbols</div>

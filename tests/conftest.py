@@ -26,8 +26,23 @@ def pytest_ignore_collect(collection_path, config) -> bool:  # type: ignore[no-u
     """Skip stale legacy tests when their historical modules are not present."""
     _ = config
     path = Path(str(collection_path))
+    if "tests" in path.parts and "pytest" in path.parts:
+        return True
     if path.name not in _LEGACY_CORE_PYTHON_TESTS:
         return False
-    if importlib.util.find_spec("core_python.shared") is None:
+    required_legacy_modules = (
+        "core_python.shared.data",
+        "core_python.shared.contracts",
+        "core_python.strategies.combo.execution",
+        "core_python.strategies.ma_cross.execution",
+    )
+    if any(_missing_module(module) for module in required_legacy_modules):
         return True
     return False
+
+
+def _missing_module(module: str) -> bool:
+    try:
+        return importlib.util.find_spec(module) is None
+    except ModuleNotFoundError:
+        return True

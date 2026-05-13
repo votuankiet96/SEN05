@@ -454,9 +454,11 @@ def _refresh_watermarks_from_fact(reason: str = "refresh") -> int:
     if not WS_SYMBOL_IDS or not WS_TF_CODES:
         return 0
 
-    sym_placeholders = ",".join("?" * len(WS_SYMBOL_IDS))
-    tf_placeholders = ",".join("?" * len(WS_TF_CODES))
-    params = [*WS_SYMBOL_IDS, *WS_TF_CODES]
+    ws_symbol_ids = WS_SYMBOL_IDS
+    ws_tf_codes = WS_TF_CODES
+    sym_placeholders = ",".join("?" * len(ws_symbol_ids))
+    tf_placeholders = ",".join("?" * len(ws_tf_codes))
+    params = [*ws_symbol_ids, *ws_tf_codes]
 
     conn = None
     try:
@@ -698,6 +700,21 @@ def _record_db_result(
                 _hourly_stats["pair_staging"][key] = (
                     _hourly_stats["pair_staging"].get(key, 0) + staging_rows
                 )
+
+
+def _record_etl_direct_error(
+    batch_id: int,
+    key: tuple[int, str],
+    accepted_count: int,
+    inserted: int,
+    tv_symbol: str,
+    tf_code: str,
+    exc: Exception,
+) -> None:
+    logger.error("[DB ] ETL direct error - %s %s: %s", tv_symbol, tf_code, exc)
+    with _state_lock:
+        _stats["errors"] += 1
+    _record_db_result(batch_id, key, accepted_count, inserted, 0, error=True)
 
 
 def _snapshot_batch_metrics(batch_id: int) -> dict:
@@ -1141,13 +1158,7 @@ def _db_worker() -> None:
             try:
                 fact_inserted = run_etl_direct(symbol_id, tf_code, staging_table)
             except Exception as exc:
-                logger.error("[DB ] ETL direct error - %s %s: %s", tv_symbol, tf_code, exc)
-                with _state_lock:
-                    _stats["errors"] += 1
-                _record_db_result(
-                    batch_id, key, accepted_count, inserted, 0,
-                    error=True,
-                )
+                _record_etl_direct_error(batch_id, key, accepted_count, inserted, tv_symbol, tf_code, exc)
             else:
                 etl_direct_ok = True
                 _set_committed_watermark(key, max_committed_ts)

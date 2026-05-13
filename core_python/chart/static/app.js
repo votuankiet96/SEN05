@@ -4,6 +4,16 @@ const state = {
   panelCharts: [],
   panelSeries: [],
   markRefreshers: [],
+  lastPayload: null,
+  scanAbort: null,
+  scanRequestId: 0,
+  scanTimer: null,
+  isLoading: false,
+  isExporting: false,
+  pendingRefresh: false,
+  theme: "light",
+  candleUpColor: "#16a34a",
+  candleDownColor: "#dc2626",
 };
 
 const el = {
@@ -15,10 +25,14 @@ const el = {
   barsCaption: document.getElementById("bars-caption"),
   startDate: document.getElementById("start-date"),
   endDate: document.getElementById("end-date"),
+  themeSelect: document.getElementById("theme-select"),
+  candleUpColor: document.getElementById("candle-up-color"),
+  candleDownColor: document.getElementById("candle-down-color"),
   params: document.getElementById("params"),
   refresh: document.getElementById("refresh"),
   meta: document.getElementById("meta"),
   error: document.getElementById("error"),
+  scanWarning: document.getElementById("scan-warning"),
   priceChart: document.getElementById("price-chart"),
   chartLegend: document.getElementById("chart-legend"),
   panelCharts: document.getElementById("panel-charts"),
@@ -32,12 +46,18 @@ const el = {
   bulkExportBtn: document.getElementById("bulk-export-btn"),
   exportModal: document.getElementById("export-modal"),
   exportCols: document.getElementById("export-cols"),
+  exportStartDate: document.getElementById("export-start-date"),
+  exportEndDate: document.getElementById("export-end-date"),
+  exportRangeNote: document.getElementById("export-range-note"),
   modalClose: document.getElementById("modal-close"),
   modalCancel: document.getElementById("modal-cancel"),
   modalExport: document.getElementById("modal-export"),
   bulkExportModal: document.getElementById("bulk-export-modal"),
   bulkSymbols: document.getElementById("bulk-symbols"),
   bulkCols: document.getElementById("bulk-cols"),
+  bulkExportStartDate: document.getElementById("bulk-export-start-date"),
+  bulkExportEndDate: document.getElementById("bulk-export-end-date"),
+  bulkExportRangeNote: document.getElementById("bulk-export-range-note"),
   bulkSymbolsAll: document.getElementById("bulk-symbols-all"),
   bulkSymbolsNone: document.getElementById("bulk-symbols-none"),
   bulkModalClose: document.getElementById("bulk-modal-close"),
@@ -45,27 +65,137 @@ const el = {
   bulkModalExport: document.getElementById("bulk-modal-export"),
 };
 
-const chartTheme = {
-  layout: {
-    background: { color: "#161b22" },
-    textColor: "#e6edf3",
+const THEME_STORAGE_KEY = "sen05.chart.theme";
+const CANDLE_UP_STORAGE_KEY = "sen05.chart.candleUp";
+const CANDLE_DOWN_STORAGE_KEY = "sen05.chart.candleDown";
+
+const CHART_THEMES = {
+  light: {
+    background: "#ffffff",
+    text: "#334155",
+    grid: "#e2e8f0",
   },
-  grid: {
-    vertLines: { color: "#30363d" },
-    horzLines: { color: "#30363d" },
-  },
-  rightPriceScale: {
-    borderColor: "#30363d",
-  },
-  timeScale: {
-    borderColor: "#30363d",
-    timeVisible: true,
-    secondsVisible: false,
-  },
-  crosshair: {
-    mode: LightweightCharts.CrosshairMode.Normal,
+  dark: {
+    background: "#161b22",
+    text: "#e6edf3",
+    grid: "#30363d",
   },
 };
+
+function isHexColor(value) {
+  return /^#[0-9a-f]{6}$/i.test(String(value || ""));
+}
+
+function loadVisualPrefs() {
+  const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+  const storedUp = localStorage.getItem(CANDLE_UP_STORAGE_KEY);
+  const storedDown = localStorage.getItem(CANDLE_DOWN_STORAGE_KEY);
+  state.theme = storedTheme === "dark" ? "dark" : "light";
+  if (isHexColor(storedUp)) state.candleUpColor = storedUp;
+  if (isHexColor(storedDown)) state.candleDownColor = storedDown;
+}
+
+function applyVisualPrefs() {
+  document.documentElement.dataset.theme = state.theme;
+  el.themeSelect.value = state.theme;
+  el.candleUpColor.value = state.candleUpColor;
+  el.candleDownColor.value = state.candleDownColor;
+}
+
+function saveVisualPrefs() {
+  localStorage.setItem(THEME_STORAGE_KEY, state.theme);
+  localStorage.setItem(CANDLE_UP_STORAGE_KEY, state.candleUpColor);
+  localStorage.setItem(CANDLE_DOWN_STORAGE_KEY, state.candleDownColor);
+}
+
+function currentChartTheme() {
+  const colors = CHART_THEMES[state.theme] || CHART_THEMES.light;
+  return {
+    layout: {
+      background: { color: colors.background },
+      textColor: colors.text,
+    },
+    grid: {
+      vertLines: { color: colors.grid },
+      horzLines: { color: colors.grid },
+    },
+    rightPriceScale: {
+      borderColor: colors.grid,
+    },
+    timeScale: {
+      borderColor: colors.grid,
+      timeVisible: true,
+      secondsVisible: false,
+    },
+    crosshair: {
+      mode: LightweightCharts.CrosshairMode.Normal,
+    },
+  };
+}
+
+function currentCandleOptions() {
+  return {
+    upColor: state.candleUpColor,
+    downColor: state.candleDownColor,
+    borderUpColor: state.candleUpColor,
+    borderDownColor: state.candleDownColor,
+    wickUpColor: state.candleUpColor,
+    wickDownColor: state.candleDownColor,
+  };
+}
+
+function updateThemeFromControls() {
+  state.theme = el.themeSelect.value === "dark" ? "dark" : "light";
+  if (isHexColor(el.candleUpColor.value)) state.candleUpColor = el.candleUpColor.value;
+  if (isHexColor(el.candleDownColor.value)) state.candleDownColor = el.candleDownColor.value;
+  applyVisualPrefs();
+  saveVisualPrefs();
+  if (state.lastPayload) {
+    renderPayload(state.lastPayload);
+  } else if (state.config) {
+    loadScan();
+  }
+}
+
+function isAiTrend() {
+  return el.strategy.value === "ai_trend";
+}
+
+function updateRefreshButton() {
+  if (state.isLoading) {
+    el.refresh.textContent = "Loading...";
+    el.refresh.disabled = true;
+    return;
+  }
+  el.refresh.disabled = false;
+  el.refresh.textContent = state.pendingRefresh ? "Apply" : "Refresh";
+}
+
+function setLoading(loading) {
+  state.isLoading = loading;
+  updateRefreshButton();
+}
+
+function markPendingRefresh(message = "Settings changed. Click Apply to refresh the AI Trend preview.") {
+  state.pendingRefresh = true;
+  updateRefreshButton();
+  showWarning(message);
+}
+
+function scheduleLoadScan(delay = 300) {
+  clearTimeout(state.scanTimer);
+  state.scanTimer = setTimeout(() => {
+    loadScan();
+  }, delay);
+}
+
+function handleAutoScanChange(message) {
+  if (isAiTrend()) {
+    markPendingRefresh(message);
+    return;
+  }
+  scheduleLoadScan();
+}
 
 const TF_MINUTES = {
   M5: 5,
@@ -349,6 +479,9 @@ function updateXDefault() {
 }
 
 async function init() {
+  loadVisualPrefs();
+  applyVisualPrefs();
+
   const response = await fetch("/api/config");
   state.config = await response.json();
 
@@ -373,21 +506,34 @@ async function init() {
     renderParamControls();
     applyStrategyDefaults();
     updateXDefault();
+    if (isAiTrend()) {
+      if (state.scanAbort) state.scanAbort.abort();
+      state.lastPayload = null;
+      resetCharts();
+      resetStats();
+      clearError();
+      el.meta.textContent = `AI Trend | ${el.symbol.value} | click Apply to load preview`;
+      markPendingRefresh("AI Trend selected. Click Apply to load the preview.");
+      return;
+    }
     loadScan();
   });
   el.assetType.addEventListener("change", () => {
     populateSymbols(el.assetType.value);
     updateXDefault();
-    loadScan();
+    handleAutoScanChange("Asset filter changed. Click Apply to refresh the AI Trend preview.");
   });
   el.symbol.addEventListener("change", () => {
     updateXDefault();
-    loadScan();
+    handleAutoScanChange("Symbol changed. Click Apply to refresh the AI Trend preview.");
   });
-  el.tf.addEventListener("change", loadScan);
-  el.bars.addEventListener("change", loadScan);
-  el.startDate.addEventListener("change", loadScan);
-  el.endDate.addEventListener("change", loadScan);
+  el.tf.addEventListener("change", handleTopTfChange);
+  el.bars.addEventListener("change", () => handleAutoScanChange("Bar count changed. Click Apply to refresh the AI Trend preview."));
+  el.startDate.addEventListener("change", () => handleAutoScanChange("Date range changed. Click Apply to refresh the AI Trend preview."));
+  el.endDate.addEventListener("change", () => handleAutoScanChange("Date range changed. Click Apply to refresh the AI Trend preview."));
+  el.themeSelect.addEventListener("change", updateThemeFromControls);
+  el.candleUpColor.addEventListener("change", updateThemeFromControls);
+  el.candleDownColor.addEventListener("change", updateThemeFromControls);
   el.refresh.addEventListener("click", loadScan);
   el.exportBtn.addEventListener("click", openExportModal);
   el.bulkExportBtn.addEventListener("click", openBulkExportModal);
@@ -397,8 +543,14 @@ async function init() {
   el.bulkModalClose.addEventListener("click", () => el.bulkExportModal.close());
   el.bulkModalCancel.addEventListener("click", () => el.bulkExportModal.close());
   el.bulkModalExport.addEventListener("click", doBulkExport);
-  el.bulkSymbolsAll.addEventListener("click", () => setBulkSymbolsChecked(true));
-  el.bulkSymbolsNone.addEventListener("click", () => setBulkSymbolsChecked(false));
+  el.bulkSymbolsAll.addEventListener("click", () => {
+    setBulkSymbolsChecked(true);
+    loadExportRange("bulk");
+  });
+  el.bulkSymbolsNone.addEventListener("click", () => {
+    setBulkSymbolsChecked(false);
+    loadExportRange("bulk");
+  });
 
   renderParamControls();
   updateXDefault();
@@ -421,7 +573,7 @@ function renderParamControls() {
       input.type = "checkbox";
       input.dataset.param = field.key;
       input.checked = Boolean(defaultValue);
-      input.addEventListener("change", loadScan);
+      input.addEventListener("change", handleParamChange);
       row.appendChild(input);
       el.params.appendChild(row);
       return;
@@ -443,7 +595,7 @@ function renderParamControls() {
       if (field.type === "optional_number") input.placeholder = "off";
     }
     input.dataset.param = field.key;
-    input.addEventListener("change", loadScan);
+    input.addEventListener("change", handleParamChange);
     label.appendChild(input);
     el.params.appendChild(label);
   });
@@ -453,6 +605,52 @@ function renderParamControls() {
     if (htfToggle) htfToggle.checked = true;
   }
   applyBarsDefaultForStrategy(strategy, spec);
+}
+
+function handleParamChange(event) {
+  const key = event.currentTarget?.dataset?.param || "parameter";
+  if (isAiTrend()) {
+    if (key === "ENTRY_TF") syncTopTfWithAiEntryParam();
+    markPendingRefresh(`${paramLabel(key)} changed. Click Apply to refresh the AI Trend preview.`);
+    return;
+  }
+  updateBarsControlLabel();
+  scheduleLoadScan();
+}
+
+function handleTopTfChange() {
+  if (isAiTrend()) {
+    syncAiEntryParamWithTopTf();
+    markPendingRefresh("Entry TF changed. Click Apply to refresh the AI Trend preview.");
+    return;
+  }
+  scheduleLoadScan();
+}
+
+function paramLabel(key) {
+  const input = el.params.querySelector(`[data-param="${key}"]`);
+  const label = input?.closest("label");
+  return label?.childNodes?.[0]?.textContent?.trim() || key;
+}
+
+function syncTopTfWithAiEntryParam() {
+  if (!isAiTrend()) return;
+  const entryInput = el.params.querySelector('[data-param="ENTRY_TF"]');
+  const entryTf = entryInput?.value || state.config.strategies.ai_trend?.defaults?.ENTRY_TF || "M45";
+  if ([...el.tf.options].some((option) => option.value === entryTf)) {
+    el.tf.value = entryTf;
+  }
+}
+
+function syncAiEntryParamWithTopTf() {
+  const entryInput = el.params.querySelector('[data-param="ENTRY_TF"]');
+  if (!entryInput) return;
+  const allowed = [...entryInput.options].some((option) => option.value === el.tf.value);
+  if (allowed) {
+    entryInput.value = el.tf.value;
+  } else {
+    syncTopTfWithAiEntryParam();
+  }
 }
 
 function hiddenParamField(strategy, key) {
@@ -501,9 +699,7 @@ function applyStrategyDefaults() {
   }
   if (el.strategy.value !== "ai_trend") return;
   el.barsCaption.textContent = "Trend Bars";
-  if ([...el.tf.options].some((option) => option.value === "M45")) {
-    el.tf.value = "M45";
-  }
+  syncTopTfWithAiEntryParam();
   if (!el.bars.value) {
     el.bars.value = state.config.strategies.ai_trend?.defaults?.TREND_BARS || 500;
   }
@@ -549,6 +745,74 @@ function appendDateRange(query) {
   }
 }
 
+function appendDateRangeFromInputs(query, startInput, endInput) {
+  if (startInput.value && endInput.value) {
+    query.set("start_date", startInput.value);
+    query.set("end_date", endInput.value);
+  }
+}
+
+function currentExportParams() {
+  const params = collectParams();
+  let bars = el.bars.value;
+  let exportTf = el.tf.value;
+  if (isComboHtfEnabled(params)) {
+    const htfBars = Math.max(50, Math.min(20000, Number(el.bars.value || 100)));
+    params.HTF_BARS = String(htfBars);
+    bars = String(calcEntryBarsForHtfBars(htfBars, params.HTF_TF || "D1", el.tf.value));
+  } else if (el.strategy.value === "ai_trend") {
+    bars = String(syncAiTrendEntryBars(params));
+    exportTf = params.ENTRY_TF || el.tf.value;
+  }
+  return { params, bars, exportTf };
+}
+
+function setExportRangeFallback(kind, message) {
+  const startInput = kind === "bulk" ? el.bulkExportStartDate : el.exportStartDate;
+  const endInput = kind === "bulk" ? el.bulkExportEndDate : el.exportEndDate;
+  const note = kind === "bulk" ? el.bulkExportRangeNote : el.exportRangeNote;
+  startInput.value = el.startDate.value || defaultStartDate();
+  endInput.value = el.endDate.value || defaultEndDate();
+  note.textContent = message || "Using current chart range. You can edit it before export.";
+}
+
+async function loadExportRange(kind) {
+  const isBulk = kind === "bulk";
+  const startInput = isBulk ? el.bulkExportStartDate : el.exportStartDate;
+  const endInput = isBulk ? el.bulkExportEndDate : el.exportEndDate;
+  const note = isBulk ? el.bulkExportRangeNote : el.exportRangeNote;
+  const { params, bars, exportTf } = currentExportParams();
+  const query = new URLSearchParams({
+    strategy: el.strategy.value,
+    symbol: el.symbol.value,
+    tf: exportTf,
+    bars,
+    ...params,
+  });
+  if (isBulk) {
+    const symbols = [...el.bulkSymbols.querySelectorAll("input[type=checkbox]:checked")]
+      .map((cb) => cb.dataset.symbol)
+      .join(",");
+    if (symbols) query.set("symbols", symbols);
+  }
+
+  note.textContent = "Loading full available data range...";
+  try {
+    const response = await fetch(`/api/data-range?${query.toString()}`);
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "Could not load data range");
+    if (!payload.available) {
+      setExportRangeFallback(kind, "No complete DB range found. Using current chart range.");
+      return;
+    }
+    startInput.value = payload.startDate;
+    endInput.value = payload.endDate;
+    note.textContent = `Default full range from local DB: ${payload.startDate} -> ${payload.endDate}. You can edit it.`;
+  } catch (error) {
+    setExportRangeFallback(kind, `Could not load full DB range. Using current chart range. ${error.message}`);
+  }
+}
+
 function metaWindowText(meta) {
   if (meta?.rangeMode === "date") {
     return `${meta.startDate} -> ${meta.endDate}`;
@@ -557,7 +821,11 @@ function metaWindowText(meta) {
 }
 
 async function loadScan() {
+  clearTimeout(state.scanTimer);
   clearError();
+  clearWarning();
+  state.pendingRefresh = false;
+  updateRefreshButton();
   applyStrategyDefaults();
   const params = collectParams();
   let bars = el.bars.value;
@@ -577,20 +845,32 @@ async function loadScan() {
   });
   appendDateRange(query);
 
+  if (state.scanAbort) state.scanAbort.abort();
+  const controller = new AbortController();
+  state.scanAbort = controller;
+  const requestId = state.scanRequestId + 1;
+  state.scanRequestId = requestId;
+  setLoading(true);
+
   try {
-    const response = await fetch(`/api/scan?${query.toString()}`);
+    const response = await fetch(`/api/scan?${query.toString()}`, { signal: controller.signal });
     const payload = await response.json();
+    if (requestId !== state.scanRequestId) return;
     if (!response.ok) throw new Error(payload.error || "Scan failed");
     renderPayload(payload);
   } catch (error) {
+    if (error.name === "AbortError") return;
+    if (requestId !== state.scanRequestId) return;
+    state.lastPayload = null;
     resetCharts();
     el.meta.textContent = `${el.strategy.options[el.strategy.selectedIndex]?.textContent || el.strategy.value} | ${el.symbol.value} | scan failed`;
-    el.statTotal.textContent = "0";
-    el.statBuy.textContent = "0";
-    el.statSell.textContent = "0";
-    el.statLast.textContent = "-";
-    renderSignalsTable([]);
+    resetStats();
     showError(error.message);
+  } finally {
+    if (requestId === state.scanRequestId) {
+      state.scanAbort = null;
+      setLoading(false);
+    }
   }
 }
 
@@ -602,6 +882,24 @@ function showError(message) {
 function clearError() {
   el.error.hidden = true;
   el.error.textContent = "";
+}
+
+function showWarning(message) {
+  el.scanWarning.hidden = false;
+  el.scanWarning.textContent = message;
+}
+
+function clearWarning() {
+  el.scanWarning.hidden = true;
+  el.scanWarning.textContent = "";
+}
+
+function resetStats() {
+  el.statTotal.textContent = "0";
+  el.statBuy.textContent = "0";
+  el.statSell.textContent = "0";
+  el.statLast.textContent = "-";
+  renderSignalsTable([]);
 }
 
 function resetCharts() {
@@ -620,6 +918,12 @@ function resetCharts() {
 }
 
 function renderPayload(payload) {
+  state.lastPayload = payload;
+  if (payload.meta?.previewWarning) {
+    showWarning(payload.meta.previewWarning);
+  } else {
+    clearWarning();
+  }
   if (payload.layout === "combo_mtf") {
     renderComboMtfPayload(payload);
     return;
@@ -636,20 +940,13 @@ function renderPayload(payload) {
   el.statLast.textContent = payload.stats.last;
 
   const priceChart = LightweightCharts.createChart(el.priceChart, {
-    ...chartTheme,
+    ...currentChartTheme(),
     width: el.priceChart.clientWidth,
     height: el.priceChart.clientHeight,
   });
   state.priceChart = priceChart;
 
-  const candleSeries = priceChart.addCandlestickSeries({
-    upColor: "#22c55e",
-    downColor: "#ef4444",
-    borderUpColor: "#22c55e",
-    borderDownColor: "#ef4444",
-    wickUpColor: "#22c55e",
-    wickDownColor: "#ef4444",
-  });
+  const candleSeries = priceChart.addCandlestickSeries(currentCandleOptions());
   candleSeries.setData(payload.candles);
   setSeriesMarkers(candleSeries, payload.markers);
   const candleByTime = new Map((payload.candles || []).map((candle) => [Number(candle.time), candle]));
@@ -804,18 +1101,11 @@ function renderAiTrendPayload(payload) {
 
 function createPriceChart(container, chartPayload) {
   const chart = LightweightCharts.createChart(container, {
-    ...chartTheme,
+    ...currentChartTheme(),
     width: container.clientWidth,
     height: container.clientHeight,
   });
-  const candleSeries = chart.addCandlestickSeries({
-    upColor: "#22c55e",
-    downColor: "#ef4444",
-    borderUpColor: "#22c55e",
-    borderDownColor: "#ef4444",
-    wickUpColor: "#22c55e",
-    wickDownColor: "#ef4444",
-  });
+  const candleSeries = chart.addCandlestickSeries(currentCandleOptions());
   candleSeries.setData(chartPayload.candles);
   const baseMarkers = (chartPayload.markers || []).sort((a, b) => a.time - b.time);
   setSeriesMarkers(candleSeries, baseMarkers);
@@ -1307,7 +1597,7 @@ function renderIndicatorPanels(panels, priceChart) {
     el.panelCharts.appendChild(container);
 
     const chart = LightweightCharts.createChart(container, {
-      ...chartTheme,
+      ...currentChartTheme(),
       width: container.clientWidth,
       height: container.clientHeight,
     });
@@ -1376,6 +1666,48 @@ function renderSignalsTable(rows) {
   });
 }
 
+async function downloadCsv(url, button, idleText, modal) {
+  if (state.isExporting) return;
+  state.isExporting = true;
+  button.disabled = true;
+  button.textContent = "Exporting...";
+  clearError();
+  showWarning("Exporting CSV with the selected full range. Please wait...");
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      const errorPayload = await response.json().catch(() => null);
+      throw new Error(errorPayload?.error || "Export failed");
+    }
+    const blob = await response.blob();
+    const filename = filenameFromDisposition(response.headers.get("Content-Disposition")) || "signals.csv";
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(objectUrl);
+    if (modal?.open) modal.close();
+    showWarning(`Export downloaded: ${filename}`);
+  } catch (error) {
+    clearWarning();
+    showError(error.message);
+  } finally {
+    state.isExporting = false;
+    button.disabled = false;
+    button.textContent = idleText;
+  }
+}
+
+function filenameFromDisposition(disposition) {
+  const text = String(disposition || "");
+  const match = text.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i);
+  return match ? decodeURIComponent(match[1].replace(/"$/, "")) : "";
+}
+
 function openExportModal() {
   const cols = EXPORT_COLUMNS[el.strategy.value] || EXPORT_COLUMNS.combo;
   el.exportCols.replaceChildren();
@@ -1390,39 +1722,34 @@ function openExportModal() {
     label.appendChild(input);
     el.exportCols.appendChild(label);
   });
+  setExportRangeFallback("single", "Loading full available data range...");
   el.exportModal.showModal();
+  loadExportRange("single");
 }
 
-function doExport() {
+async function doExport() {
   const cols = [...el.exportCols.querySelectorAll("input[type=checkbox]:checked")]
     .map((cb) => cb.dataset.col)
     .join(",");
-  const params = collectParams();
-  let bars = el.bars.value;
-  if (isComboHtfEnabled(params)) {
-    const htfBars = Math.max(50, Math.min(20000, Number(el.bars.value || 100)));
-    params.HTF_BARS = String(htfBars);
-    bars = String(calcEntryBarsForHtfBars(htfBars, params.HTF_TF || "D1", el.tf.value));
-  } else if (el.strategy.value === "ai_trend") {
-    bars = String(syncAiTrendEntryBars(params));
-  }
+  const { params, bars, exportTf } = currentExportParams();
   const query = new URLSearchParams({
     strategy: el.strategy.value,
     symbol: el.symbol.value,
-    tf: el.tf.value,
+    tf: exportTf,
     bars,
     cols,
     ...params,
   });
-  appendDateRange(query);
-  window.open(`/api/export?${query.toString()}`, "_blank");
-  el.exportModal.close();
+  appendDateRangeFromInputs(query, el.exportStartDate, el.exportEndDate);
+  await downloadCsv(`/api/export?${query.toString()}`, el.modalExport, "Download CSV", el.exportModal);
 }
 
 function openBulkExportModal() {
   renderBulkSymbols();
   renderBulkColumns();
+  setExportRangeFallback("bulk", "Loading full available data range...");
   el.bulkExportModal.showModal();
+  loadExportRange("bulk");
 }
 
 function renderBulkSymbols() {
@@ -1438,6 +1765,7 @@ function renderBulkSymbols() {
       input.type = "checkbox";
       input.dataset.symbol = symbol.name;
       input.checked = symbol.name === el.symbol.value;
+      input.addEventListener("change", () => loadExportRange("bulk"));
       label.appendChild(input);
       el.bulkSymbols.appendChild(label);
     });
@@ -1465,7 +1793,7 @@ function setBulkSymbolsChecked(checked) {
   });
 }
 
-function doBulkExport() {
+async function doBulkExport() {
   const symbols = [...el.bulkSymbols.querySelectorAll("input[type=checkbox]:checked")]
     .map((cb) => cb.dataset.symbol)
     .join(",");
@@ -1477,19 +1805,10 @@ function doBulkExport() {
   const cols = [...el.bulkCols.querySelectorAll("input[type=checkbox]:checked")]
     .map((cb) => cb.dataset.col)
     .join(",");
-  const params = collectParams();
-  let bulkBars = el.bars.value;
-  let exportTf = el.tf.value;
+  const { params, bars, exportTf } = currentExportParams();
+  let bulkBars = bars;
   if (el.strategy.value === "combo") {
     delete params.X;
-    if (isComboHtfEnabled(params)) {
-      const htfBars = Math.max(50, Math.min(20000, Number(el.bars.value || 100)));
-      params.HTF_BARS = String(htfBars);
-      bulkBars = String(calcEntryBarsForHtfBars(htfBars, params.HTF_TF || "D1", el.tf.value));
-    }
-  } else if (el.strategy.value === "ai_trend") {
-    bulkBars = String(syncAiTrendEntryBars(params));
-    exportTf = params.ENTRY_TF || el.tf.value;
   }
   const query = new URLSearchParams({
     strategy: el.strategy.value,
@@ -1499,9 +1818,8 @@ function doBulkExport() {
     cols,
     ...params,
   });
-  appendDateRange(query);
-  window.open(`/api/export/bulk?${query.toString()}`, "_blank");
-  el.bulkExportModal.close();
+  appendDateRangeFromInputs(query, el.bulkExportStartDate, el.bulkExportEndDate);
+  await downloadCsv(`/api/export/bulk?${query.toString()}`, el.bulkModalExport, "Download CSV", el.bulkExportModal);
 }
 
 function lineStyle(style) {

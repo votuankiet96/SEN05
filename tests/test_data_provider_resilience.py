@@ -371,10 +371,16 @@ class TestWsLiveSpoolCap:
     def test_sql_placeholders_are_parameterized(self):
         """ws_live SQL must use real parameter placeholders, not '-' characters."""
         src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
-        assert '",".join("?" * len(WS_SYMBOL_IDS))' in src, (
+        assert (
+            '",".join("?" * len(WS_SYMBOL_IDS))' in src
+            or '",".join("?" * len(ws_symbol_ids))' in src
+        ), (
             "Watermark query must build symbol IN placeholders with '?'"
         )
-        assert '",".join("?" * len(WS_TF_CODES))' in src, (
+        assert (
+            '",".join("?" * len(WS_TF_CODES))' in src
+            or '",".join("?" * len(ws_tf_codes))' in src
+        ), (
             "Watermark query must build IN placeholders with '?'"
         )
         assert "VALUES (-,-,-,-,-)" not in src, (
@@ -384,7 +390,7 @@ class TestWsLiveSpoolCap:
             "SQLite spool DELETE must not use '-' instead of a parameter placeholder"
         )
         assert "VALUES (?,?,?,?,?,?)" in src, (
-            "SQLite spool INSERT must use six parameter placeholders"
+            "SQLite spool INSERT must use six parameter placeholders including batch_id"
         )
         assert "WHERE id=?" in src, (
             "SQLite spool DELETE must use a parameter placeholder"

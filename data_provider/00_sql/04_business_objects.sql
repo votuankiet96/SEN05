@@ -84,11 +84,20 @@ SELECT
     f.[Close] AS [Close],
     f.Volume,
     f.TickCount,                -- 1 for direct TF candles; >1 for aggregated candles
+    d.Year,
+    d.Quarter,
+    d.Month,
+    d.MonthName,
+    d.Week,
+    d.DayOfWeek,
+    d.DayName,
+    d.IsWeekend,
     f.SymbolID,                 -- numeric key retained for programmatic access if needed
     f.TimeframeID               -- numeric key retained for programmatic access if needed
 FROM DWH.Fact_OHLCV    f
-JOIN DWH.Dim_Symbol     s  ON s.SymbolID     = f.SymbolID      -- resolve symbol name
-JOIN DWH.Dim_Timeframe  tf ON tf.TimeframeID = f.TimeframeID;  -- resolve timeframe code
+JOIN DWH.Dim_Symbol     s  ON s.SymbolID     = f.SymbolID
+JOIN DWH.Dim_Timeframe  tf ON tf.TimeframeID = f.TimeframeID
+JOIN DWH.Dim_Date       d  ON d.DateKey      = f.DateKey;
 GO
 PRINT 'View MART.v_OHLCV created.';
 GO

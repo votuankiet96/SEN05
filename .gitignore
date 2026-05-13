@@ -18,6 +18,8 @@ pytest_tmp*/
 *pytest_tmp*/
 logs/pytest_tmp*/
 logs/pytest-tmp*/
+pytest-cache-files-*/
+tests/pytest/
 .mypy_cache/
 .ruff_cache/
 
@@ -81,7 +83,7 @@ core_python/runtime/*.json.tmp
 core_python/runtime/*.lock
 
 # Signal CSV exports — runtime output, không phải source
-core_python/csv_export/*.csv
+core_python/notify/recorded_signal/**/*.csv
 core_python/exports/*.csv
 
 # Generated HTML charts (output từ ma_chart.py, combo_chart, v.v.)

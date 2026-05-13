@@ -12,6 +12,8 @@ if (-not (Test-Path -LiteralPath $Python)) {
     $Python = "python"
 }
 
+$env:PYTHONDONTWRITEBYTECODE = "1"
+
 $RuntimeDir = Join-Path $ScriptDir "runtime"
 New-Item -ItemType Directory -Force -Path $RuntimeDir | Out-Null
 $OutLog = Join-Path $RuntimeDir "chart_server.out.log"

@@ -275,6 +275,121 @@ def _clean_params(params: dict[str, Any]) -> dict[str, Any]:
     return clean
 
 
+def attach_dow_trend_filter(
+    entry_df: pd.DataFrame,
+    dow_df: pd.DataFrame,
+    params: dict[str, Any],
+) -> pd.DataFrame:
+    """Attach a Dow-structure filter to raw Combo entry signals."""
+    out = entry_df.copy()
+    if out.empty:
+        return out
+
+    out["raw_signal"] = out.get("raw_signal", out.get("signal", 0)).fillna(0).astype(int)
+    out["signal"] = out["raw_signal"]
+    if "raw_signal_reason" not in out.columns:
+        out["raw_signal_reason"] = out.get("signal_reason", "")
+    if "signal_reason" not in out.columns:
+        out["signal_reason"] = out["raw_signal_reason"]
+
+    out["d_structure_label"] = ""
+    out["d_high_label"] = ""
+    out["d_low_label"] = ""
+    out["d_high_price"] = pd.NA
+    out["d_low_price"] = pd.NA
+    out["d_filter_status"] = ""
+
+    required = {"bartime", "dow_pivot_type", "dow_label", "dow_pivot_price"}
+    if dow_df.empty or not required.issubset(dow_df.columns):
+        active = out["raw_signal"].ne(0)
+        out.loc[active, "d_filter_status"] = "missing_structure"
+        return _apply_dow_filter_blocking(out, params)
+
+    dow = dow_df.copy()
+    dow["bartime"] = pd.to_datetime(dow["bartime"], errors="coerce")
+    dow["dow_pivot_price"] = pd.to_numeric(dow["dow_pivot_price"], errors="coerce")
+    dow = dow.dropna(subset=["bartime", "dow_pivot_type", "dow_label", "dow_pivot_price"]).sort_values("bartime")
+
+    tf_minutes = timeframe_minutes(params.get("DOW_TF", "D1"))
+    right = max(0, int(params.get("DOW_PIVOT_RIGHT", 0)))
+    dow["confirmed_time"] = dow["bartime"] + pd.Timedelta(minutes=tf_minutes * right)
+
+    for idx, row in out.iterrows():
+        raw_signal = int(row.get("raw_signal", 0) or 0)
+        if raw_signal == 0:
+            continue
+
+        entry_time = pd.Timestamp(row["bartime"])
+        usable = dow.loc[dow["confirmed_time"].le(entry_time)]
+        latest_high = _latest_dow_pivot(usable, "high")
+        latest_low = _latest_dow_pivot(usable, "low")
+        if latest_high is None or latest_low is None:
+            out.at[idx, "d_filter_status"] = "missing_structure"
+            continue
+
+        high_label = str(latest_high["dow_label"])
+        low_label = str(latest_low["dow_label"])
+        high_price = float(latest_high["dow_pivot_price"])
+        low_price = float(latest_low["dow_pivot_price"])
+
+        out.at[idx, "d_high_label"] = high_label
+        out.at[idx, "d_low_label"] = low_label
+        out.at[idx, "d_high_price"] = high_price
+        out.at[idx, "d_low_price"] = low_price
+        out.at[idx, "d_structure_label"] = f"{high_label}+{low_label}"
+
+        trend = _dow_structure_direction(high_label, low_label)
+        status = "aligned" if trend == raw_signal else "counter_trend" if trend == -raw_signal else "neutral_structure"
+        if status == "aligned" and _dow_level_is_broken(row, raw_signal, high_price, low_price):
+            status = "level_break"
+        out.at[idx, "d_filter_status"] = status
+
+    return _apply_dow_filter_blocking(out, params)
+
+
+def _latest_dow_pivot(df: pd.DataFrame, pivot_type: str) -> pd.Series | None:
+    pivots = df.loc[df["dow_pivot_type"].astype(str).str.lower().eq(pivot_type)]
+    if pivots.empty:
+        return None
+    return pivots.iloc[-1]
+
+
+def _dow_structure_direction(high_label: str, low_label: str) -> int:
+    if high_label == "HH" and low_label == "HL":
+        return 1
+    if high_label == "LH" and low_label == "LL":
+        return -1
+    return 0
+
+
+def _dow_level_is_broken(row: pd.Series, signal: int, high_price: float, low_price: float) -> bool:
+    price = pd.to_numeric(pd.Series([row.get("entry_price", row.get("close"))]), errors="coerce").iloc[0]
+    if pd.isna(price):
+        return False
+    if signal == 1:
+        return float(price) <= low_price
+    if signal == -1:
+        return float(price) >= high_price
+    return False
+
+
+def _apply_dow_filter_blocking(out: pd.DataFrame, params: dict[str, Any]) -> pd.DataFrame:
+    mode = str(params.get("DOW_TREND_FILTER_MODE", "warn_conflicts")).strip().lower()
+    if mode == "warn_conflicts":
+        return out
+
+    blocking_statuses = {"missing_structure", "neutral_structure", "counter_trend"}
+    if mode == "require_structure_level":
+        blocking_statuses.add("level_break")
+    blocked = out["raw_signal"].ne(0) & out["d_filter_status"].isin(blocking_statuses)
+    out.loc[blocked, "signal"] = 0
+    if blocked.any():
+        reason = out.loc[blocked, "signal_reason"].fillna("").astype(str)
+        suffix = "blocked by D structure filter"
+        out.loc[blocked, "signal_reason"] = reason.where(reason.eq(""), reason + " | ") + suffix
+    return out
+
+
 def build_combo_mtf_payload(
     trend_df: pd.DataFrame,
     entry_df: pd.DataFrame,
