@@ -23,7 +23,7 @@ namespace cAlgo.Robots;
 public class SEN_Combo : Robot
 {
     [Parameter("Signal CSV Path", Group = "File",
-        DefaultValue = @"D:\Auto Trading\SEN05\raw_signals\combo\combo_US30_H1_signals.csv")]
+        DefaultValue = @"D:\Auto Trading\SEN05\raw_signals\combo\combo_HK50_H4_20230103_20260512_signals.csv")]
     public string CsvPath { get; set; }
 
     [Parameter("CSV Time Offset Hours", Group = "File",
