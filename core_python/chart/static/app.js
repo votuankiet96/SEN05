@@ -8,6 +8,8 @@ const state = {
   scanAbort: null,
   scanRequestId: 0,
   scanTimer: null,
+  queuedScan: false,
+  viewVersion: 0,
   isLoading: false,
   isExporting: false,
   pendingRefresh: false,
@@ -33,6 +35,8 @@ const el = {
   meta: document.getElementById("meta"),
   error: document.getElementById("error"),
   scanWarning: document.getElementById("scan-warning"),
+  loadingOverlay: document.getElementById("loading-overlay"),
+  loadingText: document.getElementById("loading-text"),
   priceChart: document.getElementById("price-chart"),
   chartLegend: document.getElementById("chart-legend"),
   panelCharts: document.getElementById("panel-charts"),
@@ -163,7 +167,7 @@ function isAiTrend() {
 
 function updateRefreshButton() {
   if (state.isLoading) {
-    el.refresh.textContent = "Loading...";
+    el.refresh.textContent = state.queuedScan ? "Queued..." : "Loading...";
     el.refresh.disabled = true;
     return;
   }
@@ -171,9 +175,19 @@ function updateRefreshButton() {
   el.refresh.textContent = state.pendingRefresh ? "Apply" : "Refresh";
 }
 
-function setLoading(loading) {
+function setLoading(loading, message = "Loading chart data...") {
   state.isLoading = loading;
+  if (el.loadingOverlay) {
+    el.loadingOverlay.hidden = !loading;
+  }
+  if (loading && el.loadingText) {
+    el.loadingText.textContent = state.queuedScan ? "Current scan is finishing. Latest selection will load next..." : message;
+  }
   updateRefreshButton();
+}
+
+function markViewChanged() {
+  state.viewVersion += 1;
 }
 
 function markPendingRefresh(message = "Settings changed. Click Apply to refresh the AI Trend preview.") {
@@ -190,6 +204,7 @@ function scheduleLoadScan(delay = 300) {
 }
 
 function handleAutoScanChange(message) {
+  markViewChanged();
   if (isAiTrend()) {
     markPendingRefresh(message);
     return;
@@ -503,11 +518,11 @@ async function init() {
   el.endDate.value = defaultEndDate();
 
   el.strategy.addEventListener("change", () => {
+    markViewChanged();
     renderParamControls();
     applyStrategyDefaults();
     updateXDefault();
     if (isAiTrend()) {
-      if (state.scanAbort) state.scanAbort.abort();
       state.lastPayload = null;
       resetCharts();
       resetStats();
@@ -609,6 +624,7 @@ function renderParamControls() {
 
 function handleParamChange(event) {
   const key = event.currentTarget?.dataset?.param || "parameter";
+  markViewChanged();
   if (isAiTrend()) {
     if (key === "ENTRY_TF") syncTopTfWithAiEntryParam();
     markPendingRefresh(`${paramLabel(key)} changed. Click Apply to refresh the AI Trend preview.`);
@@ -619,6 +635,7 @@ function handleParamChange(event) {
 }
 
 function handleTopTfChange() {
+  markViewChanged();
   if (isAiTrend()) {
     syncAiEntryParamWithTopTf();
     markPendingRefresh("Entry TF changed. Click Apply to refresh the AI Trend preview.");
@@ -821,9 +838,17 @@ function metaWindowText(meta) {
 }
 
 async function loadScan() {
+  if (state.isLoading) {
+    state.queuedScan = true;
+    setLoading(true, "Current scan is finishing. Latest selection will load next...");
+    showWarning("A scan is already running. The dashboard will load the latest selection next.");
+    return;
+  }
+
   clearTimeout(state.scanTimer);
   clearError();
   clearWarning();
+  state.queuedScan = false;
   state.pendingRefresh = false;
   updateRefreshButton();
   applyStrategyDefaults();
@@ -845,22 +870,19 @@ async function loadScan() {
   });
   appendDateRange(query);
 
-  if (state.scanAbort) state.scanAbort.abort();
-  const controller = new AbortController();
-  state.scanAbort = controller;
   const requestId = state.scanRequestId + 1;
+  const requestVersion = state.viewVersion;
   state.scanRequestId = requestId;
   setLoading(true);
 
   try {
-    const response = await fetch(`/api/scan?${query.toString()}`, { signal: controller.signal });
+    const response = await fetch(`/api/scan?${query.toString()}`);
     const payload = await response.json();
-    if (requestId !== state.scanRequestId) return;
+    if (requestId !== state.scanRequestId || requestVersion !== state.viewVersion || state.queuedScan) return;
     if (!response.ok) throw new Error(payload.error || "Scan failed");
     renderPayload(payload);
   } catch (error) {
-    if (error.name === "AbortError") return;
-    if (requestId !== state.scanRequestId) return;
+    if (requestId !== state.scanRequestId || requestVersion !== state.viewVersion || state.queuedScan) return;
     state.lastPayload = null;
     resetCharts();
     el.meta.textContent = `${el.strategy.options[el.strategy.selectedIndex]?.textContent || el.strategy.value} | ${el.symbol.value} | scan failed`;
@@ -869,7 +891,12 @@ async function loadScan() {
   } finally {
     if (requestId === state.scanRequestId) {
       state.scanAbort = null;
+      const shouldRunQueued = state.queuedScan;
       setLoading(false);
+      if (shouldRunQueued) {
+        state.queuedScan = false;
+        window.setTimeout(() => loadScan(), 0);
+      }
     }
   }
 }

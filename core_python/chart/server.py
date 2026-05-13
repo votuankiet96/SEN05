@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Lock
 
 import pandas as pd
 from flask import Flask, Response, jsonify, request, send_from_directory
@@ -41,6 +42,7 @@ VENDOR_DIR = ROOT / "data_provider"
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8516
 AI_TREND_PREVIEW_ENTRY_BARS = 1500
+_DB_REQUEST_LOCK = Lock()
 
 
 @dataclass(frozen=True)
@@ -95,16 +97,17 @@ def create_app() -> Flask:
             tf = request.args.get("tf", config.DEFAULT_TF).upper()
             bars = _to_int(request.args.get("bars"), config.N_BARS, 50, 20000)
             date_window = _date_window_from_args(request.args)
-            scan = _scan_preview(strategy_key, request.args.to_dict(), bars, date_window)
-            result = run_strategy_request(
-                strategy_key,
-                symbol=symbol,
-                tf=tf,
-                bars=scan.bars,
-                args=scan.args,
-                date_window=scan.date_window,
-            )
-            payload = _build_scan_payload(result)
+            with _DB_REQUEST_LOCK:
+                scan = _scan_preview(strategy_key, request.args.to_dict(), bars, date_window)
+                result = run_strategy_request(
+                    strategy_key,
+                    symbol=symbol,
+                    tf=tf,
+                    bars=scan.bars,
+                    args=scan.args,
+                    date_window=scan.date_window,
+                )
+                payload = _build_scan_payload(result)
             if scan.warning:
                 payload.setdefault("meta", {})["previewWarning"] = scan.warning
                 if date_window:
@@ -124,14 +127,15 @@ def create_app() -> Flask:
             tf = request.args.get("tf", config.DEFAULT_TF).upper()
             bars = _to_int(request.args.get("bars"), config.N_BARS, 50, 20000)
             date_window = _date_window_from_args(request.args)
-            export = build_single_export(
-                strategy_key,
-                symbol=symbol,
-                tf=tf,
-                bars=bars,
-                args=request.args.to_dict(),
-                date_window=date_window,
-            )
+            with _DB_REQUEST_LOCK:
+                export = build_single_export(
+                    strategy_key,
+                    symbol=symbol,
+                    tf=tf,
+                    bars=bars,
+                    args=request.args.to_dict(),
+                    date_window=date_window,
+                )
             return _csv_response(export.data, export.filename)
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400
@@ -145,13 +149,14 @@ def create_app() -> Flask:
             tf = request.args.get("tf", config.DEFAULT_TF).upper()
             bars = _to_int(request.args.get("bars"), config.N_BARS, 50, 20000)
             date_window = _date_window_from_args(request.args)
-            export = build_bulk_export(
-                strategy_key,
-                tf=tf,
-                bars=bars,
-                args=request.args.to_dict(),
-                date_window=date_window,
-            )
+            with _DB_REQUEST_LOCK:
+                export = build_bulk_export(
+                    strategy_key,
+                    tf=tf,
+                    bars=bars,
+                    args=request.args.to_dict(),
+                    date_window=date_window,
+                )
             return _csv_response(export.data, export.filename)
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400
@@ -164,7 +169,8 @@ def create_app() -> Flask:
             strategy_key = request.args.get("strategy", "combo")
             symbol = request.args.get("symbol", config.DEFAULT_SYMBOL).upper()
             tf = request.args.get("tf", config.DEFAULT_TF).upper()
-            bounds = _strategy_data_bounds(strategy_key, request.args.to_dict(), symbol, tf)
+            with _DB_REQUEST_LOCK:
+                bounds = _strategy_data_bounds(strategy_key, request.args.to_dict(), symbol, tf)
             if bounds is None:
                 return jsonify({"available": False})
             start, end = bounds
