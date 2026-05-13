@@ -15,8 +15,15 @@ namespace cAlgo.Robots;
  *   bartime,symbol,side,atr
  *
  * Entry / SL / TP:
- *   BUY  -> Buy Stop  | Entry = High + X | SL = Low - X  | TP = Entry + KTP * ATR
- *   SELL -> Sell Stop | Entry = Low - X  | SL = High + X | TP = Entry - KTP * ATR
+ *   BaseRange = max(ATR, signal candle High - Low)
+ *   BUY  -> Buy Stop  | Entry = High + X | SL = Entry - KSL * BaseRange | TP = Entry + KTP * BaseRange
+ *   SELL -> Sell Stop | Entry = Low - X  | SL = Entry + KSL * BaseRange | TP = Entry - KTP * BaseRange
+ *
+ * Management:
+ *   Pending orders expire after N closed bars.
+ *   Opposite signals close current positions, then place the new signal order.
+ *   Same-direction exposure is capped by Max Same Direction Orders.
+ *   Daily drawdown protection halts trading and flattens bot exposure for the day.
  */
 
 [Robot(AccessRights = AccessRights.FullAccess, AddIndicators = true)]
@@ -37,28 +44,50 @@ public class SEN_Combo : Robot
         DefaultValue = 10.0, MinValue = 1, MaxValue = 50, Step = 0.5)]
     public double XOffset { get; set; }
 
+    [Parameter("KSL Fibonacci Level (1-5)", Group = "Execution",
+        DefaultValue = 2, MinValue = 1, MaxValue = 5, Step = 1)]
+    public int KslFibLevel { get; set; }
+
     [Parameter("KTP Fibonacci Level (1-5)", Group = "Execution",
-        DefaultValue = 3, MinValue = 1, MaxValue = 5, Step = 1)]
+        DefaultValue = 4, MinValue = 1, MaxValue = 5, Step = 1)]
     public int KtpFibLevel { get; set; }
 
-    [Parameter("Cancel Pending On New Signal", Group = "Execution", DefaultValue = true)]
+    [Parameter("Minimum RR", Group = "Execution",
+        DefaultValue = 1.5, MinValue = 1.0, MaxValue = 5.0, Step = 0.1)]
+    public double MinimumRiskReward { get; set; }
+
+    [Parameter("Cancel Pending On New Signal", Group = "Execution", DefaultValue = false)]
     public bool CancelPendingOnNewSignal { get; set; }
+
+    [Parameter("Cancel Pending After Bars", Group = "Execution",
+        DefaultValue = 3, MinValue = 1, MaxValue = 50, Step = 1)]
+    public int CancelPendingAfterBars { get; set; }
 
     [Parameter("Risk % per Trade", Group = "Risk",
         DefaultValue = 1.0, MinValue = 0.1, MaxValue = 3.0, Step = 0.1)]
     public double RiskPercent { get; set; }
 
-    [Parameter("Max Open Orders", Group = "Risk",
-        DefaultValue = 1, MinValue = 1, MaxValue = 20, Step = 1)]
+    [Parameter("Max Same Direction Orders", Group = "Risk",
+        DefaultValue = 3, MinValue = 1, MaxValue = 20, Step = 1)]
     public int MaxOpenOrders { get; set; }
 
+    [Parameter("Max Daily Drawdown %", Group = "Risk",
+        DefaultValue = 10.0, MinValue = 1.0, MaxValue = 100.0, Step = 0.5)]
+    public double MaxDailyDrawdownPercent { get; set; }
+
     private readonly Dictionary<DateTime, SignalInfo> _signals = new();
+    private readonly Dictionary<long, int> _pendingOrderCreatedBarCounts = new();
+    private DateTime _drawdownDay;
+    private double _dayStartEquity;
+    private bool _dailyDrawdownTriggered;
 
     protected override void OnStart()
     {
         PendingOrders.Filled += OnPendingOrderFilled;
         PendingOrders.Cancelled += OnPendingOrderCancelled;
         Positions.Closed += OnPositionClosed;
+
+        ResetDailyDrawdownBaseline();
 
         if (!ValidateParameters())
         {
@@ -73,10 +102,22 @@ public class SEN_Combo : Robot
             Print("[{0}] ERROR: no valid signals loaded. Stopping.", BotLabel);
             Stop();
         }
+
+        TrackExistingPendingOrders();
+    }
+
+    protected override void OnTick()
+    {
+        CheckDailyDrawdownLimit();
     }
 
     protected override void OnBarClosed()
     {
+        if (CheckDailyDrawdownLimit())
+            return;
+
+        CancelExpiredPendingOrders();
+
         if (_signals.Count == 0)
             return;
 
@@ -84,13 +125,20 @@ public class SEN_Combo : Robot
         if (!_signals.TryGetValue(barTime, out var signal))
             return;
 
+        var tradeType = GetTradeType(signal);
+
         if (CancelPendingOnNewSignal)
             CancelMyPendingOrders();
+        else
+            CancelOppositePendingOrders(tradeType);
 
-        var openOrderCount = GetMyOpenOrderCount();
+        if (!CloseOppositePositions(tradeType))
+            return;
+
+        var openOrderCount = GetMyOpenOrderCount(tradeType);
         if (openOrderCount >= MaxOpenOrders)
         {
-            Print("[{0}] {1} at {2:yyyy-MM-dd HH:mm} skipped: max open orders reached ({3}/{4}).",
+            Print("[{0}] {1} at {2:yyyy-MM-dd HH:mm} skipped: max same-direction orders reached ({3}/{4}).",
                 BotLabel, signal.Side, barTime, openOrderCount, MaxOpenOrders);
             return;
         }
@@ -117,6 +165,28 @@ public class SEN_Combo : Robot
             return false;
         }
 
+        if (KslFibLevel < 1 || KslFibLevel > 5)
+        {
+            Print("[{0}] ERROR: KSL Fibonacci level must be from 1 to 5.", BotLabel);
+            return false;
+        }
+
+        if (MinimumRiskReward < 1.0)
+        {
+            Print("[{0}] ERROR: Minimum RR must be at least 1.0.", BotLabel);
+            return false;
+        }
+
+        var kslMultiplier = GetKslMultiplier();
+        var ktpMultiplier = GetKtpMultiplier();
+        var riskReward = ktpMultiplier / kslMultiplier;
+        if (riskReward < MinimumRiskReward)
+        {
+            Print("[{0}] ERROR: KTP/KSL RR {1:F2} is below Minimum RR {2:F2}. KSL={3:F3}, KTP={4:F3}.",
+                BotLabel, riskReward, MinimumRiskReward, kslMultiplier, ktpMultiplier);
+            return false;
+        }
+
         if (RiskPercent <= 0 || RiskPercent > 3.0)
         {
             Print("[{0}] ERROR: Risk percent must be > 0 and <= 3.", BotLabel);
@@ -125,7 +195,19 @@ public class SEN_Combo : Robot
 
         if (MaxOpenOrders < 1)
         {
-            Print("[{0}] ERROR: Max open orders must be at least 1.", BotLabel);
+            Print("[{0}] ERROR: Max same-direction orders must be at least 1.", BotLabel);
+            return false;
+        }
+
+        if (CancelPendingAfterBars < 1)
+        {
+            Print("[{0}] ERROR: Cancel pending after bars must be at least 1.", BotLabel);
+            return false;
+        }
+
+        if (MaxDailyDrawdownPercent <= 0 || MaxDailyDrawdownPercent > 100)
+        {
+            Print("[{0}] ERROR: Max daily drawdown percent must be > 0 and <= 100.", BotLabel);
             return false;
         }
 
@@ -232,16 +314,29 @@ public class SEN_Combo : Robot
         var low = Bars.LowPrices.Last(1);
 
         var isBuy = signal.Side == "BUY";
+        var signalRange = high - low;
+        var baseRange = Math.Max(signal.Atr, signalRange);
+        var kslMultiplier = GetKslMultiplier();
         var ktpMultiplier = GetKtpMultiplier();
         var tradeType = isBuy ? TradeType.Buy : TradeType.Sell;
         var entryPrice = isBuy ? high + XOffset : low - XOffset;
-        var stopLossPrice = isBuy ? low - XOffset : high + XOffset;
+        var stopLossPrice = isBuy
+            ? entryPrice - kslMultiplier * baseRange
+            : entryPrice + kslMultiplier * baseRange;
         var takeProfitPrice = isBuy
-            ? entryPrice + ktpMultiplier * signal.Atr
-            : entryPrice - ktpMultiplier * signal.Atr;
+            ? entryPrice + ktpMultiplier * baseRange
+            : entryPrice - ktpMultiplier * baseRange;
 
         var stopLossPips = Math.Abs(entryPrice - stopLossPrice) / Symbol.PipSize;
         var takeProfitPips = Math.Abs(takeProfitPrice - entryPrice) / Symbol.PipSize;
+        var riskReward = takeProfitPips / stopLossPips;
+        if (riskReward < MinimumRiskReward)
+        {
+            Print("[{0}] {1} at {2:yyyy-MM-dd HH:mm} skipped: RR {3:F2} < Minimum RR {4:F2}. KSL={5:F3}, KTP={6:F3}.",
+                BotLabel, signal.Side, barTime, riskReward, MinimumRiskReward, kslMultiplier, ktpMultiplier);
+            return;
+        }
+
         var volume = CalculateRiskVolume(stopLossPips);
 
         if (volume < Symbol.VolumeInUnitsMin)
@@ -267,7 +362,10 @@ public class SEN_Combo : Robot
             return;
         }
 
-        Print("[{0}] {1} STOP placed | Bar: {2:yyyy-MM-dd HH:mm} | Entry: {3} | SL: {4} ({5:F1}p) | TP: {6} ({7:F1}p) | ATR: {8:F4} | KTP: {9:F3} | Risk: {10:F1}% | Lots: {11:F2}",
+        if (result.PendingOrder != null)
+            _pendingOrderCreatedBarCounts[result.PendingOrder.Id] = Bars.Count;
+
+        Print("[{0}] {1} STOP placed | Bar: {2:yyyy-MM-dd HH:mm} | Entry: {3} | SL: {4} ({5:F1}p) | TP: {6} ({7:F1}p) | ATR: {8:F4} | Range: {9:F4} | Base: {10:F4} | KSL: {11:F3} | KTP: {12:F3} | RR: {13:F2} | Risk: {14:F1}% | Lots: {15:F2}",
             BotLabel,
             signal.Side,
             barTime,
@@ -277,7 +375,11 @@ public class SEN_Combo : Robot
             takeProfitPrice,
             takeProfitPips,
             signal.Atr,
+            signalRange,
+            baseRange,
+            kslMultiplier,
             ktpMultiplier,
+            riskReward,
             RiskPercent,
             Symbol.VolumeInUnitsToQuantity(volume));
     }
@@ -305,6 +407,29 @@ public class SEN_Combo : Robot
         };
     }
 
+    private double GetKslMultiplier()
+    {
+        return KslFibLevel switch
+        {
+            1 => 1.000,
+            2 => 1.272,
+            3 => 1.618,
+            4 => 2.000,
+            5 => 2.618,
+            _ => 1.272
+        };
+    }
+
+    private TradeType GetTradeType(SignalInfo signal)
+    {
+        return signal.Side == "BUY" ? TradeType.Buy : TradeType.Sell;
+    }
+
+    private TradeType GetOppositeTradeType(TradeType tradeType)
+    {
+        return tradeType == TradeType.Buy ? TradeType.Sell : TradeType.Buy;
+    }
+
     private void CancelMyPendingOrders()
     {
         foreach (var order in GetMyPendingOrders())
@@ -312,6 +437,48 @@ public class SEN_Combo : Robot
             var result = CancelPendingOrder(order);
             if (!result.IsSuccessful)
                 Print("[{0}] ERROR cancelling pending order {1}: {2}", BotLabel, order.Id, result.Error);
+            else
+                _pendingOrderCreatedBarCounts.Remove(order.Id);
+        }
+    }
+
+    private void CancelOppositePendingOrders(TradeType tradeType)
+    {
+        var oppositeTradeType = GetOppositeTradeType(tradeType);
+        foreach (var order in GetMyPendingOrders().Where(order => order.TradeType == oppositeTradeType))
+        {
+            var result = CancelPendingOrder(order);
+            if (!result.IsSuccessful)
+                Print("[{0}] ERROR cancelling opposite pending order {1}: {2}", BotLabel, order.Id, result.Error);
+            else
+                _pendingOrderCreatedBarCounts.Remove(order.Id);
+        }
+    }
+
+    private void CancelExpiredPendingOrders()
+    {
+        foreach (var order in GetMyPendingOrders())
+        {
+            if (!_pendingOrderCreatedBarCounts.TryGetValue(order.Id, out var createdBarCount))
+            {
+                _pendingOrderCreatedBarCounts[order.Id] = Bars.Count;
+                continue;
+            }
+
+            var barsAlive = Bars.Count - createdBarCount;
+            if (barsAlive < CancelPendingAfterBars)
+                continue;
+
+            var result = CancelPendingOrder(order);
+            if (!result.IsSuccessful)
+            {
+                Print("[{0}] ERROR cancelling expired pending order {1}: {2}", BotLabel, order.Id, result.Error);
+                continue;
+            }
+
+            _pendingOrderCreatedBarCounts.Remove(order.Id);
+            Print("[{0}] PENDING EXPIRED {1} | Order: {2} | Bars alive: {3}/{4}",
+                BotLabel, order.TradeType, order.Id, barsAlive, CancelPendingAfterBars);
         }
     }
 
@@ -327,9 +494,87 @@ public class SEN_Combo : Robot
         return Positions.FindAll(BotLabel, SymbolName);
     }
 
-    private int GetMyOpenOrderCount()
+    private int GetMyOpenOrderCount(TradeType tradeType)
     {
-        return GetMyPositions().Length + GetMyPendingOrders().Length;
+        return GetMyPositions().Count(position => position.TradeType == tradeType)
+            + GetMyPendingOrders().Count(order => order.TradeType == tradeType);
+    }
+
+    private bool CloseOppositePositions(TradeType tradeType)
+    {
+        var oppositeTradeType = GetOppositeTradeType(tradeType);
+        var oppositePositions = GetMyPositions()
+            .Where(position => position.TradeType == oppositeTradeType)
+            .ToArray();
+
+        if (oppositePositions.Length == 0)
+            return true;
+
+        Print("[{0}] REVERSE SIGNAL {1}: closing {2} opposite position(s).",
+            BotLabel, tradeType, oppositePositions.Length);
+
+        var allClosed = true;
+        foreach (var position in oppositePositions)
+        {
+            var result = ClosePosition(position);
+            if (!result.IsSuccessful)
+            {
+                allClosed = false;
+                Print("[{0}] ERROR closing opposite position {1}: {2}", BotLabel, position.Id, result.Error);
+            }
+        }
+
+        return allClosed;
+    }
+
+    private void CloseMyPositions()
+    {
+        foreach (var position in GetMyPositions())
+        {
+            var result = ClosePosition(position);
+            if (!result.IsSuccessful)
+                Print("[{0}] ERROR closing position {1}: {2}", BotLabel, position.Id, result.Error);
+        }
+    }
+
+    private void TrackExistingPendingOrders()
+    {
+        foreach (var order in GetMyPendingOrders())
+            _pendingOrderCreatedBarCounts[order.Id] = Bars.Count;
+    }
+
+    private void ResetDailyDrawdownBaseline()
+    {
+        _drawdownDay = Server.Time.Date;
+        _dayStartEquity = Account.Equity;
+        _dailyDrawdownTriggered = false;
+
+        Print("[{0}] Daily drawdown baseline reset | Day: {1:yyyy-MM-dd} | Equity: {2:F2} | Limit: {3:F1}%",
+            BotLabel, _drawdownDay, _dayStartEquity, MaxDailyDrawdownPercent);
+    }
+
+    private bool CheckDailyDrawdownLimit()
+    {
+        if (Server.Time.Date != _drawdownDay)
+            ResetDailyDrawdownBaseline();
+
+        if (_dayStartEquity <= 0)
+            return false;
+
+        var drawdownPercent = (_dayStartEquity - Account.Equity) / _dayStartEquity * 100.0;
+        if (drawdownPercent < MaxDailyDrawdownPercent && !_dailyDrawdownTriggered)
+            return false;
+
+        if (!_dailyDrawdownTriggered)
+        {
+            _dailyDrawdownTriggered = true;
+            Print("[{0}] DAILY DRAWDOWN LIMIT HIT | DD: {1:F2}% | Equity: {2:F2} | Start Equity: {3:F2}. Trading halted until next day.",
+                BotLabel, drawdownPercent, Account.Equity, _dayStartEquity);
+        }
+
+        CancelMyPendingOrders();
+        CloseMyPositions();
+        return true;
     }
 
     private bool IsCurrentSymbol(string csvSymbol)
@@ -366,6 +611,8 @@ public class SEN_Combo : Robot
         if (position.Label != BotLabel || position.SymbolName != SymbolName)
             return;
 
+        _pendingOrderCreatedBarCounts.Remove(args.PendingOrder.Id);
+
         Print("[{0}] FILLED {1} | Entry: {2} | SL: {3} | TP: {4}",
             BotLabel, position.TradeType, position.EntryPrice, position.StopLoss, position.TakeProfit);
     }
@@ -375,6 +622,8 @@ public class SEN_Combo : Robot
         var order = args.PendingOrder;
         if (order.Label != BotLabel || order.SymbolName != SymbolName)
             return;
+
+        _pendingOrderCreatedBarCounts.Remove(order.Id);
 
         Print("[{0}] PENDING CANCELLED {1} | Reason: {2}", BotLabel, order.TradeType, args.Reason);
     }
