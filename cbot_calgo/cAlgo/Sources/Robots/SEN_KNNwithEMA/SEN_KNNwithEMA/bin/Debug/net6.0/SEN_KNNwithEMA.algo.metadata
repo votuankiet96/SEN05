@@ -1,0 +1,142 @@
+[
+  {
+    "Flags": "Robot",
+    "Guid": "00000000-0000-0000-0000-000000000000",
+    "Group": "Custom",
+    "FriendlyName": "SEN_KNNwithEMA",
+    "ShortName": null,
+    "TypeName": "cAlgo.Robots.SEN_KNNwithEMA",
+    "AssemblyName": "SEN_KNNwithEMA, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "TimeZone": "UTC",
+    "IsOverlay": false,
+    "IsPercentage": false,
+    "ScalePrecision": null,
+    "Levels": [],
+    "DefaultSymbolName": null,
+    "DefaultTimeFrame": null,
+    "Video": null,
+    "Lines": [],
+    "Clouds": [],
+    "Parameters": [
+      {
+        "DefaultValue": "SEN_KNNwithEMA_AI_M45",
+        "ParameterType": "String",
+        "PropertyName": "Label",
+        "FriendlyName": "Label",
+        "GroupName": null,
+        "IsValueVisibleInTitle": true,
+        "Description": ""
+      },
+      {
+        "DefaultValue": "D:\\Auto Trading\\SEN05\\raw_signal_exports\\ai_trend_GOLD_M45_signals.csv",
+        "ParameterType": "String",
+        "PropertyName": "SignalsCsvPath",
+        "FriendlyName": "Signals CSV Path",
+        "GroupName": null,
+        "IsValueVisibleInTitle": true,
+        "Description": ""
+      },
+      {
+        "MinValue": 0.1,
+        "MaxValue": 5.0,
+        "Step": 0.1,
+        "DefaultValue": 0.5,
+        "ParameterType": "Double",
+        "PropertyName": "RiskPercent",
+        "FriendlyName": "Risk % per Trade",
+        "GroupName": null,
+        "IsValueVisibleInTitle": true,
+        "Description": ""
+      },
+      {
+        "MinValue": 0.1,
+        "MaxValue": 10.0,
+        "Step": 0.1,
+        "DefaultValue": 1.5,
+        "ParameterType": "Double",
+        "PropertyName": "TakeProfitR",
+        "FriendlyName": "Take Profit (R)",
+        "GroupName": null,
+        "IsValueVisibleInTitle": true,
+        "Description": ""
+      },
+      {
+        "MinValue": 1,
+        "MaxValue": 20,
+        "Step": 1,
+        "DefaultValue": 1,
+        "ParameterType": "Integer",
+        "PropertyName": "MaxOpenPositions",
+        "FriendlyName": "Max Open Positions",
+        "GroupName": null,
+        "IsValueVisibleInTitle": true,
+        "Description": ""
+      },
+      {
+        "EnumValues": {
+          "BarCloseTime": 0,
+          "BarOpenTime": 1
+        },
+        "DefaultValue": 0,
+        "ParameterType": "Enum",
+        "PropertyName": "SignalTimeReference",
+        "FriendlyName": "Signal Time Reference",
+        "GroupName": null,
+        "IsValueVisibleInTitle": true,
+        "Description": ""
+      },
+      {
+        "MinValue": -24,
+        "MaxValue": 24,
+        "Step": 1,
+        "DefaultValue": 0,
+        "ParameterType": "Integer",
+        "PropertyName": "SignalTimeOffsetHours",
+        "FriendlyName": "Signal Time Offset Hours",
+        "GroupName": null,
+        "IsValueVisibleInTitle": true,
+        "Description": ""
+      },
+      {
+        "DefaultValue": true,
+        "ParameterType": "Boolean",
+        "PropertyName": "MatchSignalInsideClosedBar",
+        "FriendlyName": "Match Signal Inside Closed Bar",
+        "GroupName": null,
+        "IsValueVisibleInTitle": true,
+        "Description": ""
+      },
+      {
+        "DefaultValue": true,
+        "ParameterType": "Boolean",
+        "PropertyName": "SkipOppositeIfOpen",
+        "FriendlyName": "Skip Opposite If Open",
+        "GroupName": null,
+        "IsValueVisibleInTitle": true,
+        "Description": ""
+      },
+      {
+        "MinValue": 1.0,
+        "MaxValue": 90.0,
+        "Step": 1.0,
+        "DefaultValue": 30.0,
+        "ParameterType": "Double",
+        "PropertyName": "MaxAccountDrawdownPercent",
+        "FriendlyName": "Max Account DD %",
+        "GroupName": null,
+        "IsValueVisibleInTitle": true,
+        "Description": ""
+      }
+    ],
+    "Capabilities": [
+      {
+        "CapabilityType": "FullTrust"
+      }
+    ],
+    "CustomAttributes": [],
+    "Sets": [],
+    "AddIndicatorsToChart": true,
+    "AdditionalInfoUrl": null,
+    "Bars": []
+  }
+]

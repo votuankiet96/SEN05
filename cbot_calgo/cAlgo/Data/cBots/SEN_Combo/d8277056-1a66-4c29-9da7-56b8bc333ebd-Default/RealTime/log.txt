@@ -1,0 +1,5 @@
+13/05/2026 11:09:52.067 | Info | CBot instance [SEN_Combo, HONG KONG 50, h4] started.
+13/05/2026 11:09:55.020 | Info | [SEN_Combo] ERROR: CSV file not found: D:\Auto Trading\SEN05\raw_signals\combo\combo_US30_H1_signals.csv
+13/05/2026 11:09:55.036 | Info | [SEN_Combo] ERROR: no valid signals loaded. Stopping.
+13/05/2026 11:09:55.051 | Info | [SEN_Combo] Stopped. Signals loaded: 0
+13/05/2026 11:09:55.239 | Info | CBot instance [SEN_Combo, HONG KONG 50, h4] stopped.

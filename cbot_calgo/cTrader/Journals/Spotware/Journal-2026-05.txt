@@ -1,0 +1,25 @@
+2026.05.07 08:47:12.304 | cTrader started
+2026.05.07 09:47:36.793 | cBot "Sample Advanced Take Profit" process crashed.
+2026.05.08 05:57:58.260 | cTrader started
+2026.05.08 15:51:49.413 | cTrader started
+2026.05.08 23:58:02.708 | cTrader started
+2026.05.09 06:29:55.583 | cTrader started
+2026.05.09 08:22:24.532 | cTrader started
+2026.05.10 16:12:04.226 | cTrader started
+2026.05.10 16:13:02.554 | Demo account 5817742 successfully created
+2026.05.10 16:51:59.447 | cTrader started
+2026.05.10 16:54:23.520 | cBot "SEN_KNNwithEMA" process crashed.
+2026.05.10 23:00:05.142 | cTrader started
+2026.05.11 01:21:28.155 | cTrader started
+2026.05.11 09:19:59.074 | cTrader started
+2026.05.12 01:19:13.477 | cTrader started
+2026.05.12 01:29:34.280 | cTrader started
+2026.05.12 01:29:42.331 | cTrader started
+2026.05.12 01:42:39.434 | cTrader started
+2026.05.12 06:28:42.222 | cTrader started
+2026.05.12 07:52:54.047 | cTrader started
+2026.05.12 09:45:40.290 | cTrader started
+2026.05.12 09:50:00.759 | Request to Sell 0.01 Lots BTCUSD (SL: 12430.3, TP: 18087.4) is sent to server
+2026.05.12 09:50:01.134 | → Request to Sell 0.01 Lots BTCUSD (SL: 12430.3, TP: 18087.4) is ACCEPTED, order OID302479408 created (12/05/2026 09:50:00.908 UTC+0)
+2026.05.12 09:50:01.446 | → Order OID302479408 is FILLED at 80859.320, position PID259818015 (12/05/2026 09:50:01.167 UTC+0)
+2026.05.13 11:07:59.569 | cTrader started
