@@ -1,438 +1,316 @@
-# cTrader cBot — AI Context & Development Standards
+# cBot Development Rules — cTrader Backtest, Optimize & Trading Logic
 
-> **Dành cho AI assistant (Claude, Codex, Copilot, v.v.)**
-> Đọc file này trước khi hỗ trợ bất kỳ tác vụ nào: viết code, review, tư vấn chiến lược.
->
-> **Quan trọng:** Đây là chuẩn bắt buộc, không phải mô tả trạng thái code hiện tại.
-> Khi review hoặc sửa code trong repo, AI phải đối chiếu code thực tế với chuẩn này
-> và báo cáo rõ mọi sai lệch trước khi tiếp tục.
+> **Dành cho AI assistant.**
+> Đây là bộ quy tắc dựa trên cách cTrader hoạt động thực tế — không phải lý thuyết chung.
+> Trước khi hỗ trợ viết hoặc review bất kỳ cBot nào, đọc và áp dụng toàn bộ tài liệu này.
+> **Ưu tiên tuyệt đối: capital preservation trước, profit sau.**
 
 ---
 
-## 1. Bối cảnh & Mục tiêu dự án
+## 1. cTrader Backtester — Cách hoạt động thực tế
 
-### Nền tảng
+### 1.1 Hai chế độ dữ liệu
 
-| Thành phần        | Chi tiết                                              |
-|-------------------|-------------------------------------------------------|
-| Platform          | cTrader (Spotware)                                    |
-| Language          | C# (.NET 6+)                                          |
-| API               | `cAlgo.API`, `cAlgo.API.Indicators`, `cAlgo.API.Internals` |
-| Base class chính  | `Robot` (cBot), `Indicator`                           |
-| Execution model   | Event-driven: `OnStart → OnBar / OnTick → OnStop`     |
+| Chế độ | Độ chính xác | Tốc độ | Khi nào dùng |
+|--------|-------------|--------|--------------|
+| **Tick data** | Cao nhất — dùng historical spread thực, `OnTick()` fired đúng mỗi tick | Chậm | Validate cuối cùng trước deploy |
+| **1-min bar data** | Thấp hơn — chỉ có open price, spread cố định do user nhập, `OnTick()` chỉ fire 1 lần/phút tại bar close | Nhanh | Coarse scan ban đầu khi optimize |
 
-### Ba trục công việc chính
+**Hệ quả quan trọng khi dùng 1-min bar:**
+- `OnTick()` chỉ được gọi **một lần mỗi phút** (tại bar close) — code dựa vào tick frequency sẽ behave khác hoàn toàn so với live
+- Pending orders fill tại giá chính xác — không có gap simulation realistic
+- Spread là fixed value do người dùng nhập — nếu nhập thấp hơn thực tế, kết quả bị inflate
 
-1. **Backtest** — kiểm nghiệm chiến lược trên dữ liệu lịch sử trong cTrader; đo lường Net Profit, Max Drawdown, Sharpe Ratio, Win Rate, Profit Factor
-2. **Optimize** — tìm bộ tham số tốt qua cTrader Optimizer (genetic algorithm hoặc grid search)
-3. **Live autotrading** — triển khai cBot lên tài khoản demo hoặc live với kiểm soát rủi ro nghiêm ngặt
+### 1.2 Các tham số cấu hình backtest
 
----
+Backtester cho phép set: Starting Capital, Commission (per million), Spread (fixed hoặc range min/max), Date range.
 
-## 2. Vai trò của AI trong dự án này
+**Lưu ý khi code:**
+- Commission trong cTrader tính theo **per million** — không phải per lot. Kiểm tra đúng thông số broker trước khi backtest
+- Nếu cBot có parameter `MaxSpreadPercent` hoặc spread filter: phải đảm bảo spread trong backtest settings ≤ ngưỡng đó, nếu không bot sẽ không trade gì cả
 
-AI đóng **hai vai trò song song và cân bằng**:
+### 1.3 Report metrics có sẵn sau backtest
 
-### Vai trò A — cAlgo / C# Code Expert
-
-- Viết, review, debug code C# theo chuẩn cAlgo API
-- Hiểu và tôn trọng lifecycle của Robot
-- Sử dụng đúng API: `ExecuteMarketOrder`, `PlaceLimitOrder`, `ModifyPosition`, `ClosePosition`
-- Tính volume đúng cách qua `Symbol.QuantityToVolumeInUnits` + `NormalizeVolumeInUnits`
-- Thiết kế `[Parameter]` với `MinValue`, `MaxValue`, `Step` để Optimizer hoạt động
-- Viết code backtest-safe: không hardcode symbol/path, không side-effect ngoài cBot
-
-### Vai trò B — Trading Strategy Advisor
-
-- Đánh giá logic entry/exit: có look-ahead bias không? Edge thực hay curve-fit?
-- Phân tích risk profile: R:R ratio, position sizing, max drawdown scenario
-- Cảnh báo sớm các anti-pattern nguy hiểm
-- Đề xuất cải tiến với lý do rõ ràng, không chỉ "nên làm thế này"
-- Phân biệt rõ: backtest tốt ≠ live tốt (slippage, spread, market regime change)
+cTrader tạo HTML report với đầy đủ thông tin. Các metric chính:
+- Net Profit, Profit Factor, Sharpe Ratio, Sortino Ratio
+- Max Balance Drawdown (%), Max Equity Drawdown (%)
+- Winning Trades, Losing Trades, Total Trades, Average Trade
+- Swaps, Commissions (tổng phí)
+- Equity curve chart
 
 ---
 
-## 3. Kiến trúc cBot chuẩn
+## 2. cTrader Backtester — Giới hạn cụ thể (phải biết khi code)
 
-### 3.1 Template xương sống
+### 2.1 Những gì backtester KHÔNG simulate được
+
+| Giới hạn | Hệ quả với code |
+|----------|----------------|
+| **Không có slippage simulation** | Pending order (Buy Stop/Sell Stop) fill chính xác tại target price — trên live sẽ bị gap fill tệ hơn nhiều khi news |
+| **Không simulate partial fill** | Order lớn luôn fill 100% — thực tế không đúng với instrument liquidity thấp |
+| **`OnTick()` với 1-min data = 1 lần/phút** | Code dùng tick để trailing SL hoặc equity guard sẽ react chậm hơn thực tế |
+| **`LoadMoreHistory()` không hoạt động trong backtest** | Nếu code gọi `LoadMoreHistory()` trong backtest → có thể loop vô hạn; phải guard |
+| **Multi-symbol optimization không được hỗ trợ** | Bot dùng nhiều symbol không thể optimize qua Optimizer built-in |
+| **Load symbol phụ trong `OnStart()` khi optimize** | Gây crash (NullReferenceException) — phải handle null hoặc guard |
+
+### 2.2 Multi-Symbol Backtesting — Gotchas đặc thù
+
+- Chạy multi-symbol backtest trên cùng period có thể cho kết quả **khác nhau** tùy vào symbol nào được chọn làm base chart — đây là known bug/limitation của cTrader
+- Optimization không chạy được cho multi-symbol bot → nếu cần optimize bot multi-symbol: phải chạy từng symbol riêng lẻ và so sánh thủ công
+
+### 2.3 Visual Mode vs Normal Mode
+
+- **Visual mode**: Chạy từng tick/bar theo real-time simulation có thể slow down/speed up — dùng để debug, kiểm tra logic xử lý từng lệnh
+- **Normal mode**: Chạy hết toàn bộ period ngay lập tức — dùng để lấy kết quả thống kê
+
+---
+
+## 3. cTrader Optimizer — Cách hoạt động thực tế
+
+### 3.1 Hai mode optimize
+
+**Grid Search (Exhaustive):**
+- Tạo grid tất cả combination của các parameter và chạy tất cả
+- Thorough nhưng cực kỳ chậm với tick data và nhiều parameter
+- Với 5 parameter × 10 values mỗi cái = 100,000 backtests — có thể mất hàng ngày đến hàng tuần
+
+**Genetic Algorithm (mặc định, khuyến nghị):**
+- Mô phỏng natural selection: mỗi pass = một "cá thể", parameter = "gene"
+- Bắt đầu với population randomized, sau đó crossover + mutation qua nhiều iteration
+- Dừng khi fitness score **stagnate** (không cải thiện nữa)
+- **Heuristic** — không deterministic: chạy lại cho kết quả khác nhau mỗi lần
+- Internal parameters (population size, mutation rate, elite%, tournament size%) **không thể thay đổi**
+
+**Workflow đúng:**
+1. Dùng 1-min bar data cho coarse scan ban đầu (nhanh)
+2. Thu hẹp range → chạy lại với tick data để verify (chính xác)
+3. Validate kết quả trên out-of-sample period
+
+### 3.2 Fitness Criteria có sẵn trong Optimizer
+
+cTrader cung cấp các built-in criteria và tùy chọn Custom:
+
+| Criterion | Nên dùng khi nào |
+|-----------|-----------------|
+| Net Profit | Không nên dùng đơn lẻ — dễ bị inflate bởi vài trade may mắn |
+| Profit Factor | Tốt — cân bằng giữa tổng win và tổng loss |
+| Max Equity Drawdown % | Dùng để minimize risk — thường kết hợp với criterion khác |
+| Sharpe Ratio | Tốt cho risk-adjusted return |
+| Sortino Ratio | Tốt hơn Sharpe nếu distribution lệch (downside risk only) |
+| **Custom** | Viết `GetFitness()` khi muốn kết hợp nhiều tiêu chí |
+
+**Khuyến nghị:** Không optimize theo Net Profit đơn thuần — dễ overfit. Dùng Profit Factor hoặc Custom function kết hợp điều kiện tối thiểu (ví dụ: trade count > 50).
+
+### 3.3 Custom Fitness Function — Khi nào và cách dùng
+
+Khi built-in criteria không đủ, override `GetFitness()` trong code:
 
 ```csharp
-using cAlgo.API;
-using cAlgo.API.Indicators;
-using cAlgo.API.Internals;
-using System;
-
-namespace cAlgo.Robots
+protected override double GetFitness(GetFitnessArgs args)
 {
-    [Robot(AccessRights = AccessRights.None, AddIndicators = true)]
-    public class MyBot : Robot
-    {
-        // ── Parameters ──────────────────────────────────────────────
-        [Parameter("Label", DefaultValue = "MyBot")]
-        public string Label { get; set; }
+    // Guard: quá ít trade → kết quả không tin được, trả về giá trị thấp nhất
+    if (args.TotalTrades < 30)
+        return double.MinValue;
 
-        [Parameter("Volume (Lots)", DefaultValue = 0.01, MinValue = 0.01, MaxValue = 10, Step = 0.01)]
-        public double VolumeLots { get; set; }
+    // Ví dụ: tối đa hóa Profit Factor, nhưng chỉ khi drawdown chấp nhận được
+    if (args.MaxEquityDrawdownPercentages > 25)
+        return double.MinValue;
 
-        [Parameter("Stop Loss (pips)", DefaultValue = 30, MinValue = 5, MaxValue = 200, Step = 5)]
-        public double StopLossPips { get; set; }
-
-        [Parameter("Take Profit (pips)", DefaultValue = 60, MinValue = 10, MaxValue = 400, Step = 5)]
-        public double TakeProfitPips { get; set; }
-
-        [Parameter("Risk % per Trade", DefaultValue = 1.0, MinValue = 0.1, MaxValue = 5.0, Step = 0.1)]
-        public double RiskPercent { get; set; }
-
-        [Parameter("Max Open Positions", DefaultValue = 3, MinValue = 1, MaxValue = 10, Step = 1)]
-        public int MaxPositions { get; set; }
-
-        // ── Private state ────────────────────────────────────────────
-        private ExponentialMovingAverage _ema;
-
-        // ── Lifecycle ────────────────────────────────────────────────
-        protected override void OnStart()
-        {
-            _ema = Indicators.ExponentialMovingAverage(Bars.ClosePrices, 20);
-            ValidateParameters();
-        }
-
-        // OnBarClosed() là nơi xử lý entry signal — nến đã đóng hoàn toàn.
-        // Dùng thay cho OnBar() khi logic cần tín hiệu từ nến đã xác nhận.
-        protected override void OnBarClosed()
-        {
-            if (GetMyPositions().Length >= MaxPositions) return;
-            if (!IsSignal()) return;
-
-            OpenLong();
-        }
-
-        protected override void OnTick()
-        {
-            // Trailing stop, real-time equity guard.
-            // Không mở lệnh ở đây trừ khi thực sự cần tick precision.
-        }
-
-        protected override void OnStop()
-        {
-            Print($"[{Label}] Bot stopped.");
-        }
-
-        // ── Signal logic ─────────────────────────────────────────────
-        private bool IsSignal()
-        {
-            // Dùng index [1] (hoặc Last(1)) = giá trị của nến vừa đóng.
-            // KHÔNG dùng [0] hoặc Last(0) cho signal — đó là nến đang hình thành.
-            var prevClose = Bars.ClosePrices.Last(1);
-            var prevEma   = _ema.Result.Last(1);
-            return prevClose > prevEma;
-        }
-
-        // ── Trading helpers ──────────────────────────────────────────
-        private void OpenLong()
-        {
-            var volume = CalculateVolumeForRisk(StopLossPips);
-            var result = ExecuteMarketOrder(TradeType.Buy, SymbolName, volume, Label,
-                stopLossPips: StopLossPips, takeProfitPips: TakeProfitPips);
-
-            if (result.IsSuccessful)
-                Print($"[{Label}] OPEN Buy | Lots: {Symbol.VolumeInUnitsToQuantity(volume):F2} | SL: {StopLossPips}p | TP: {TakeProfitPips}p");
-            else
-                Print($"[{Label}] ERROR opening Buy: {result.Error}");
-        }
-
-        private void OpenShort()
-        {
-            var volume = CalculateVolumeForRisk(StopLossPips);
-            var result = ExecuteMarketOrder(TradeType.Sell, SymbolName, volume, Label,
-                stopLossPips: StopLossPips, takeProfitPips: TakeProfitPips);
-
-            if (result.IsSuccessful)
-                Print($"[{Label}] OPEN Sell | Lots: {Symbol.VolumeInUnitsToQuantity(volume):F2} | SL: {StopLossPips}p | TP: {TakeProfitPips}p");
-            else
-                Print($"[{Label}] ERROR opening Sell: {result.Error}");
-        }
-
-        private Position[] GetMyPositions() =>
-            Positions.FindAll(Label, SymbolName);
-
-        // ── Position sizing ──────────────────────────────────────────
-        private double CalculateVolumeForRisk(double stopLossPips)
-        {
-            // Dùng API chính thức — tránh tự tính pipValue vì sai với Gold/CFD/Crypto.
-            var riskAmount = Account.Balance * RiskPercent / 100.0;
-            var volume = Symbol.VolumeForFixedRisk(riskAmount, stopLossPips, RoundingMode.Down);
-            return Symbol.NormalizeVolumeInUnits(volume, RoundingMode.Down);
-        }
-
-        // ── Validation ───────────────────────────────────────────────
-        private void ValidateParameters()
-        {
-            var minVolume = Symbol.VolumeForFixedRisk(
-                Account.Balance * RiskPercent / 100.0, StopLossPips, RoundingMode.Down);
-
-            if (minVolume < Symbol.VolumeInUnitsMin)
-            {
-                Print($"[{Label}] ERROR: Risk {RiskPercent}% with SL {StopLossPips}p yields volume below minimum. Increase risk or reduce SL.");
-                Stop();
-            }
-        }
-    }
+    return args.ProfitFactor;
 }
 ```
 
-### 3.2 Quy tắc bắt buộc
+**Toàn bộ properties có trong `GetFitnessArgs`:**
 
-| # | Quy tắc | Lý do |
-|---|---|---|
-| 1 | Dùng `OnBarClosed()` hoặc `Bars.Last(1)` trong `OnBar()` cho signal | Tránh look-ahead bias — `Last(0)` là nến chưa đóng |
-| 2 | Tính volume qua `Symbol.VolumeForFixedRisk()` + `NormalizeVolumeInUnits()` | Đúng với Gold, CFD, Crypto, Indices — không tự viết công thức |
-| 3 | Kiểm tra `result.IsSuccessful` sau mỗi lệnh giao dịch | Broker có thể từ chối lệnh |
-| 4 | Dùng `SymbolName` thay vì hardcode tên symbol | Bot tái sử dụng được trên nhiều instrument |
-| 5 | Đặt `Label` unique cho mỗi bot | Filter đúng lệnh khi nhiều bot chạy đồng thời |
-| 6 | `[Parameter]` phải có `MinValue`, `MaxValue`, `Step` | Optimizer cần range để hoạt động |
-| 7 | Validate tham số trong `OnStart()`, gọi `Stop()` nếu invalid | Fail fast — không chạy sai thầm lặng |
-| 8 | Log đầy đủ: open, close, modify, error | Debug backtest và live |
-| 9 | Khởi tạo indicator **một lần** trong `OnStart()` | Tránh tạo lại mỗi tick/bar |
+| Property | Ý nghĩa |
+|----------|---------|
+| `NetProfit` | Tổng lợi nhuận ròng |
+| `ProfitFactor` | Tổng win / tổng loss |
+| `MaxBalanceDrawdown` | Max balance DD (absolute) |
+| `MaxBalanceDrawdownPercentages` | Max balance DD (%) |
+| `MaxEquityDrawdown` | Max equity DD (absolute) |
+| `MaxEquityDrawdownPercentages` | Max equity DD (%) |
+| `WinningTrades` | Số trade thắng |
+| `LosingTrades` | Số trade thua |
+| `TotalTrades` | Tổng số trade |
+| `AverageTrade` | Lợi nhuận trung bình mỗi trade |
+| `Swaps` | Tổng swap cost |
+| `Commissions` | Tổng commission |
+| `Equity` | Equity cuối kỳ |
+| `History` | Tất cả trade history |
+| `Positions` | Các vị thế đang mở cuối kỳ |
+| `PendingOrders` | Pending orders còn lại cuối kỳ |
 
----
-
-## 4. Tiêu chuẩn Risk Management
-
-### 4.1 Thành phần bắt buộc trong mọi cBot production
-
-- **Stop Loss**: mỗi lệnh phải có SL — không có ngoại lệ
-- **Max Positions**: giới hạn số lệnh đang mở (`GetMyPositions().Length < MaxPositions`)
-- **Equity Guard**: dừng bot nếu `Account.Equity` giảm quá ngưỡng
-- **Daily Loss Limit**: khuyến nghị cho live trading
-
-### 4.2 Position Sizing — thứ tự ưu tiên
-
-1. **Fixed Risk %** *(khuyến nghị)*: dùng `Symbol.VolumeForFixedRisk(riskAmount, slPips)`
-2. **Fixed Lot**: đơn giản, dùng trong giai đoạn testing ban đầu
-3. **Martingale / Hedging chain**: chỉ dùng khi có **hard cap** tổng exposure và hard equity stop
-
-### 4.3 Portfolio & Multi-Symbol Risk
-
-Khi chạy cùng bot trên nhiều symbol:
-
-- Mỗi instance phải có `Label` unique
-- Tổng open risk trên toàn account phải có cap
-- Phân nhóm symbol tương quan: metals, indices, FX, crypto — đừng giả định diversification khi market stress
-- `MaxPositions` phải tách biệt: per-symbol và per-account
-- Equity guard phải dựa trên `Account.Equity` tổng, không chỉ symbol hiện tại
+**Lưu ý:**
+- Không có Sharpe/Sortino trong `GetFitnessArgs` — phải tự tính từ `History` nếu cần
+- Luôn guard điều kiện tối thiểu (trade count, drawdown threshold) — trả về `double.MinValue` nếu không đạt để optimizer loại bỏ
 
 ---
 
-## 5. Tiêu chuẩn Backtest & Optimize
+## 4. Viết cBot code để hỗ trợ Optimization — Quy tắc cụ thể
 
-### 5.1 Backtest chuẩn
+### 4.1 Parameter types — Loại nào optimize được, loại nào không
 
-- **Data quality**: tick data hoặc 1-minute bar
-- **Spread**: variable spread thực tế, không dùng fixed 0
-- **Commission + Swap**: nhập đúng thông số của broker
-- **Period**: tối thiểu 2–3 năm; lý tưởng 5+ năm với nhiều market regime
+| Type | Optimize được? | Cần có |
+|------|---------------|--------|
+| `int` | Có | `MinValue`, `MaxValue`, `Step` |
+| `double` | Có | `MinValue`, `MaxValue`, `Step` |
+| `enum` | Có (iterate qua values) | — |
+| `bool` | **Không** | — |
+| `string` | **Không** | — |
+| `DataSeries` | **Không** | — |
+| `Symbol` | **Không** | — |
+| `TimeFrame` | **Không** (nhưng có thể được mặc định) | — |
+| `Color`, `DateTime` | **Không** | — |
 
-### 5.2 Chỉ số đánh giá — Reference benchmarks, không phải pass/fail cứng
+**Hệ quả:** Nếu muốn optimize một logic on/off: dùng `int` (0 = off, 1 = on) hoặc `enum` thay vì `bool`.
 
-| Chỉ số | Benchmark tham khảo | Cách đọc đúng |
-|---|---|---|
-| Profit Factor | > 1.5 (tốt > 2.0) | Chỉ có ý nghĩa khi đủ số lượng trade và qua nhiều regime |
-| Max Drawdown % | < 20% | Xét cả depth, duration, và recovery time |
-| Sharpe Ratio | > 1.0 (tốt > 1.5) | Dễ méo nếu return không phân phối chuẩn |
-| Win Rate | — | Không đánh giá độc lập — phải kết hợp average win/loss và R:R |
-| Net Profit | Dương | Ít quan trọng hơn risk-adjusted return và robustness |
-
-### 5.3 Chống overfitting
-
-- **Out-of-sample**: train 70% dữ liệu, test 30% còn lại không dùng để optimize
-- **Walk-forward test**: optimize từng window → test window tiếp theo → lặp lại
-- **Ít parameter hơn**: mỗi parameter thêm = thêm rủi ro overfit
-- **Robustness check**: thay đổi tham số ±10–20% — nếu kết quả sụp đổ → overfit
-
----
-
-## 6. cTrader-specific Events
-
-Đăng ký events thay vì chỉ poll trong `OnTick()` — sạch hơn và hiệu quả hơn:
+### 4.2 Khai báo Parameter đúng để Optimizer hoạt động
 
 ```csharp
-protected override void OnStart()
-{
-    Positions.Opened   += OnPositionOpened;
-    Positions.Closed   += OnPositionClosed;
-    Positions.Modified += OnPositionModified;
+// Đúng — optimizer có đủ thông tin để scan
+[Parameter("KSL Level", Group = "Execution", DefaultValue = 2, MinValue = 1, MaxValue = 4, Step = 1)]
+public int KslLevel { get; set; }
 
-    PendingOrders.Filled    += OnPendingOrderFilled;
-    PendingOrders.Cancelled += OnPendingOrderCancelled;
-}
+[Parameter("TP Multiplier", Group = "Execution", DefaultValue = 2.0, MinValue = 0.5, MaxValue = 5.0, Step = 0.5)]
+public double TpMultiplier { get; set; }
 
-private void OnPositionOpened(PositionOpenedEventArgs args)
-{
-    var pos = args.Position;
-    Print($"[{Label}] OPENED {pos.TradeType} | Volume: {pos.VolumeInUnits} | Entry: {pos.EntryPrice}");
-}
+// Sai — optimizer không thể scan bool, không có range
+[Parameter("Use Filter", DefaultValue = true)]
+public bool UseFilter { get; set; }  // convert sang int nếu muốn optimize
 
-private void OnPositionClosed(PositionClosedEventArgs args)
-{
-    var pos = args.Position;
-    Print($"[{Label}] CLOSED | PnL: {pos.NetProfit:F2} | Pips: {pos.Pips:F1} | Reason: {args.Reason}");
-}
-
-private void OnPositionModified(PositionModifiedEventArgs args)
-{
-    Print($"[{Label}] MODIFIED | SL: {args.Position.StopLoss} | TP: {args.Position.TakeProfit}");
-}
-
-private void OnPendingOrderFilled(PendingOrderFilledEventArgs args)
-{
-    Print($"[{Label}] PENDING FILLED | {args.Position.TradeType} | Entry: {args.Position.EntryPrice}");
-}
-
-private void OnPendingOrderCancelled(PendingOrderCancelledEventArgs args)
-{
-    Print($"[{Label}] PENDING CANCELLED | Reason: {args.Reason}");
-}
+// Sai — thiếu MinValue/MaxValue/Step → optimizer không biết scan range
+[Parameter("Period", DefaultValue = 14)]
+public int Period { get; set; }
 ```
 
----
+### 4.3 Những gì KHÔNG được làm trong cBot nếu cần optimize
 
-## 7. Strategy Specification Format
+| Không nên | Lý do |
+|-----------|-------|
+| Load symbol phụ trong `OnStart()` mà không guard null | Crash (NullReferenceException) khi optimizer chạy |
+| Đọc/ghi file ngoài (CSV, log) trong `OnBar()`/`OnTick()` | I/O nặng × hàng nghìn passes = optimization cực chậm hoặc crash |
+| Gọi `LoadMoreHistory()` mà không có max-retry guard | Infinite loop trong backtesting |
+| External API call hay HTTP request trong trading logic | Timeout + crash trong optimization environment |
+| Dùng `Server.Time.Now` làm seed cho random | Genetic algo đã xử lý diversity — seed cố định tốt hơn cho reproducibility |
+| Quá nhiều parameter optimize cùng lúc (> 5) | Genetic algo stagnate sớm, kết quả không tin được; grid search mất hàng tuần |
 
-**Trước khi viết bất kỳ dòng code nào**, AI phải yêu cầu user điền đủ thông tin sau:
+### 4.4 Thiết kế parameter để optimize có ý nghĩa
 
-```
-1.  Strategy name
-2.  Symbol / instrument
-3.  Timeframe
-4.  Entry signal logic
-5.  Exit logic (ngoài SL/TP)
-6.  Stop loss logic (fixed pips, ATR-based, structure-based?)
-7.  Take profit logic
-8.  Trailing stop logic (nếu có)
-9.  Position sizing method (Fixed Risk % / Fixed Lot / other)
-10. Max open positions
-11. Re-entry rule (có vào lại sau khi đóng lệnh không? Điều kiện?)
-12. Opposite signal handling (đảo chiều hay bỏ qua?)
-13. Trading session filter (nếu có)
-14. News / time filter (nếu có)
-15. Backtest period dự kiến
-16. Parameters cần optimize và range
-17. Deployment mode: backtest-only / demo / live / prop firm
-```
-
-Nếu thiếu bất kỳ mục nào ảnh hưởng đến logic core, AI **không được tự bịa** — phải hỏi lại.
+- **Step phải có economic meaning:** SL multiplier step = 0.5 (không phải 0.001); period step = 1 (không phải 0.1 vô nghĩa)
+- **Phân nhóm rõ:** Dùng `Group` attribute để tách signal parameters, risk parameters, execution parameters — giúp biết cái gì đang optimize cái gì
+- **Không optimize risk parameters cùng signal parameters:** `RiskPercent` thay đổi sẽ distort performance comparison giữa các passes
+- **Không optimize parameters không ảnh hưởng đến logic trading:** Path, Label, timezone offset, log level
 
 ---
 
-## 8. Acceptance Criteria
+## 5. Entry — Quy tắc và Lưu ý
 
-Một cBot chỉ được coi là **hoàn thành** khi đáp ứng toàn bộ:
+### 5.1 Timing — Không được dùng dữ liệu nến chưa đóng
 
-- [ ] Compile trong cTrader Automate không có error hoặc warning quan trọng
-- [ ] Không hardcode symbol name (dùng `SymbolName`)
-- [ ] Mọi lệnh market/pending đều có Stop Loss
-- [ ] Validate tham số critical trong `OnStart()`, gọi `Stop()` nếu invalid
-- [ ] Log đầy đủ: open, close, modify, error
-- [ ] Filter position bằng `Label` và `SymbolName`
-- [ ] Không dùng `Last(0)` cho signal confirmation trong `OnBar()`/`OnBarClosed()`
-- [ ] Không có external file dependency khi chạy backtest (trừ khi được duyệt)
-- [ ] Mọi `[Parameter]` có `MinValue`, `MaxValue`, `Step`
-- [ ] Đã xem xét và giải thích rủi ro chính của chiến lược
+- **Trong `OnBar()`:** Dùng `Last(1)`, `Bars.ClosePrices.Last(1)` — `Last(0)` là nến đang hình thành, chưa confirmed
+- **Tốt hơn:** Dùng `OnBarClosed()` — event fire sau khi nến đóng hoàn toàn, không nhầm lẫn được
+- **Với CSV signal:** Timestamp phải so sánh với bar **close time đã đóng** của nến signal, không phải bar open của nến tiếp theo; phải quy về cùng timezone với `Server.Time` trước khi so sánh
 
----
+### 5.2 Pending Order vs Market Order
 
-## 9. AI Output Format
+| | Market Order | Pending Order (Stop/Limit) |
+|---|-------------|--------------------------|
+| Fill | Ngay lập tức, theo bid/ask hiện tại | Khi giá chạm target |
+| Backtest accuracy | Tốt | Cẩn thận: fill đúng price, không có gap simulation |
+| Slippage risk live | Có | Cao hơn nếu market gap qua entry |
+| Expiry | N/A | **Phải set expiry** — không để pending vô hạn |
 
-Khi generate hoặc sửa code, AI **phải** trả về đủ các mục sau:
+### 5.3 Signal deduplication — Bắt buộc
 
-```
-1. Full C# cBot code (hoàn chỉnh, compile được)
-2. Tóm tắt logic trading (entry, exit, sizing)
-3. Danh sách parameters, default value, và range
-4. Các risk control đã tích hợp
-5. Known limitations và assumptions
-6. Hướng dẫn backtest / optimize (period, settings)
-7. Checklist đối chiếu Acceptance Criteria (Mục 8)
-```
+- Mỗi signal chỉ được trigger **một lần** cho một bar — phải đánh dấu signal đã xử lý
+- Không để `OnBar()` trigger lại cùng signal nếu logic check trùng bar
 
 ---
 
-## 10. No-Go Rules
+## 6. Stop Loss — Quy tắc
 
-AI **không được làm** những điều sau trừ khi user yêu cầu tường minh:
-
-| # | Điều cấm | Lý do |
-|---|---|---|
-| 1 | Thêm martingale, grid, averaging down, hoặc hedging chain | Rủi ro exposure tăng cấp số nhân |
-| 2 | Bỏ Stop Loss để cải thiện backtest | Che giấu rủi ro thực |
-| 3 | Thêm external file / database dependency trong backtest bot | Phá vỡ tính portable của backtest |
-| 4 | Dùng `Last(0)` hoặc nến đang hình thành cho signal | Look-ahead bias |
-| 5 | Optimize quá nhiều parameter mà không giải thích overfitting risk | Kết quả backtest ảo |
-| 6 | Thay đổi risk logic âm thầm không thông báo | Ảnh hưởng trực tiếp đến vốn |
-| 7 | Tự tính pipValue / lotValue thay vì dùng Symbol API | Sai với Gold, CFD, Crypto, Indices |
-| 8 | Hardcode account size, equity threshold, hoặc currency | Bot không portable |
+- **Bắt buộc:** Mọi lệnh — market order và pending order — đều phải có SL. Không có ngoại lệ
+- **Không nới SL sau khi vào lệnh:** Đây là vi phạm quản lý vốn cơ bản — tăng risk sau khi biết lệnh đang thua
+- **SL dựa trên market structure hoặc ATR** — không phải con số cảm tính
+- **SL ladder (multi-leg):** Chỉ dịch SL theo hướng có lợi (Buy: chỉ tăng; Sell: chỉ giảm) — không bao giờ dịch xa thêm
+- **SL distance phải đủ xa khỏi `Symbol.StopLevel`:** cTrader từ chối lệnh nếu SL quá gần entry
+- Khi dùng ATR-based SL: tính `SL = Entry ± ATR * Multiplier` từ **actual fill price**, không phải target entry
 
 ---
 
-## 11. Live Trading Safety Rules
+## 7. Take Profit — Quy tắc
 
-Trước khi deploy lên live/demo:
-
-- Chạy trên **demo** trước, tối thiểu 2–4 tuần với lot tối thiểu
-- Xác nhận: spread thực tế, commission, swap, trading hours, contract spec của symbol
-- Xác nhận timezone: cTrader server time (thường UTC hoặc UTC+2) vs. data source bên ngoài
-- Bật **max daily loss guard** và **max account drawdown guard**
-- Disable bot sau N lần lỗi execution liên tiếp
-- Không chạy nhiều instance cùng symbol nếu chưa kiểm tra aggregate exposure
-- Log tất cả execution result — không bao giờ silent fail
+- R:R tối thiểu 1:1 tính từ entry thực (actual fill) đến TP1
+- **Multi-leg TP:** Toàn bộ legs trong một cluster phải dùng cùng SL tại mỗi thời điểm
+- TP profile (multipliers) phải là **bảng cố định** trong code — không tính dynamic từ các điều kiện thay đổi
+- Không thay đổi TP profile khi cluster đang mở — SL ladder sẽ tính BaseRange sai
+- Log từng leg khi close: leg number, TP giá, PnL, SL mới của các leg còn lại
 
 ---
 
-## 12. Các Pattern & Anti-Pattern nhanh
+## 8. Capital Management — Quy tắc Code
 
-### ✅ Dùng
+### 8.1 Position sizing
 
 ```csharp
-// Signal từ nến đã đóng
-var prevClose = Bars.ClosePrices.Last(1);
+// Đúng — dùng Symbol API, đúng với mọi instrument
+var risk   = Account.Balance * RiskPercent / 100.0;  // Balance, không phải Equity
+var volume = Symbol.VolumeForFixedRisk(risk, slPips, RoundingMode.Down);
+volume     = Symbol.NormalizeVolumeInUnits(volume, RoundingMode.Down);
 
-// Guard clause trước entry
-if (GetMyPositions().Length >= MaxPositions) return;
-
-// Volume đúng
-var vol = Symbol.VolumeForFixedRisk(riskAmount, slPips, RoundingMode.Down);
-
-// Indicator khởi tạo 1 lần
-protected override void OnStart() { _ema = Indicators.ExponentialMovingAverage(...); }
+if (volume < Symbol.VolumeInUnitsMin)
+{
+    Print($"[{Label}] Volume below minimum — skip trade");
+    return;
+}
 ```
 
-### ❌ Tránh
+- Dùng **Balance** (không phải Equity) để tránh floating PnL ảnh hưởng đến sizing của lệnh tiếp theo
+- Không tự viết công thức `lots = risk / (slPips * pipValue)` — pip value khác nhau theo instrument, account currency, và leverage
+- Luôn check `volume >= Symbol.VolumeInUnitsMin` trước khi đặt lệnh
 
-```csharp
-// Look-ahead bias
-var curClose = Bars.ClosePrices.Last(0);  // nến chưa đóng
+### 8.2 Ba lớp bảo vệ vốn bắt buộc
 
-// Không có SL
-ExecuteMarketOrder(TradeType.Buy, SymbolName, volume, Label);  // thiếu SL
+| Lớp | Cơ chế | Lưu ý code |
+|-----|--------|-----------|
+| Per-trade SL | Stop Loss trên mỗi lệnh | Đã nói ở mục 6 |
+| Daily Loss Limit | Dừng trading trong ngày khi equity ngày giảm quá ngưỡng | Reset theo `Server.Time.Date`, không phải UTC cố định |
+| Account DD Limit | Dừng bot khi drawdown từ peak vượt ngưỡng | Dùng `Account.Equity`, không phải `Account.Balance` để detect floating loss |
 
-// Tự tính volume — sai với nhiều instrument
-var lots = riskAmount / (slPips * 10 * 100000);  // hardcode pip/lot value
+**Daily halt phải đóng hết:** Khi daily limit hit — cancel toàn bộ pending, close toàn bộ position của bot — không chỉ ngừng mở mới.
 
-// Hardcode symbol
-ExecuteMarketOrder(TradeType.Buy, "XAUUSD", volume, Label);
-```
+### 8.3 Position tracking
+
+- Mọi lệnh phải được gắn `Label` unique của bot → filter bằng `Positions.FindAll(Label, SymbolName)`
+- Không quản lý lệnh không có Label của mình — tránh can thiệp manual trade hoặc lệnh từ bot khác
+- Khi bot restart giữa chừng: phải reconstruct state từ các lệnh đang mở — không assume trạng thái clean
 
 ---
 
-## 13. Môi trường làm việc
+## 9. Checklist trước khi chạy Backtest
 
-- **OS**: Windows 11
-- **cTrader**: latest desktop version
-- **Target framework**: .NET 6 (`.csproj` mới)
-- **Instrument chính**: XAUUSD (Gold), có thể mở rộng sang Indices, FX, Crypto
-- **Timeframe chính**: M30, có thể kết hợp multi-timeframe
-- **External tool**: Python để phân tích dữ liệu và generate tín hiệu (export ra CSV)
+- [ ] Data type: tick data (validate) hoặc 1-min (initial scan) — ghi rõ loại dùng
+- [ ] Spread: variable spread thực tế, không phải fixed 0
+- [ ] Commission và swap: nhập đúng thông số broker
+- [ ] Timezone: `CsvTimeOffsetHours` (hoặc tương đương) canh đúng với `Server.Time`
+- [ ] Spread filter trong bot (nếu có) phải ≤ spread nhập trong backtest settings
+- [ ] Signal file cover đủ toàn bộ period backtest
+- [ ] Bot compile không lỗi
+- [ ] `LoadMoreHistory()` được guard nếu có dùng
+
+## 10. Checklist trước khi chạy Optimization
+
+- [ ] Parameters cần optimize đều là `int` hoặc `double` và có `MinValue`, `MaxValue`, `Step`
+- [ ] Không optimize quá 5 parameters cùng lúc
+- [ ] Risk parameters (`RiskPercent`, daily DD%) được fix riêng, không nằm trong optimize run
+- [ ] Không có file I/O nặng trong `OnBar()`/`OnTick()` (sẽ làm chậm nghiêm trọng)
+- [ ] Symbol phụ trong `OnStart()` được guard null nếu bot multi-symbol
+- [ ] Custom `GetFitness()` có guard `TotalTrades < N → double.MinValue` để loại bỏ sparse passes
+- [ ] Out-of-sample period đã được lock — không dùng để scan
+- [ ] Sau optimize: validate lại top parameters trên tick data trước khi kết luận
 
 ---
 
-*Tài liệu này là chuẩn sống. Cập nhật khi học được bài học mới từ thực tế hoặc khi chiến lược thay đổi đáng kể.*
+*Tài liệu này dựa trên cTrader Automate API documentation và platform behavior thực tế.*
+*Cập nhật khi cTrader API có thay đổi hoặc khi phát hiện behavior mới.*
