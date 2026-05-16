@@ -8,7 +8,7 @@ using cAlgo.API;
 namespace cAlgo.Robots;
 
 /*
- * SEN_Combo - simple CSV signal executor.
+ * SEN_ComboV1 - simple CSV signal executor.
  *
  * High-level workflow:
  *   1) OnStart loads external CSV signals into memory.
@@ -36,7 +36,7 @@ namespace cAlgo.Robots;
  */
 
 [Robot(AccessRights = AccessRights.FullAccess, AddIndicators = true)]
-public class SEN_Combo : Robot
+public class SEN_ComboV1 : Robot
 {
     // File inputs: where signals come from and how their timestamps are aligned to cTrader server time.
     [Parameter("Signal CSV Path", Group = "File",
@@ -47,7 +47,7 @@ public class SEN_Combo : Robot
         DefaultValue = 0, MinValue = -12, MaxValue = 14, Step = 1)]
     public int CsvTimeOffsetHours { get; set; }
 
-    [Parameter("Bot Label", Group = "Identity", DefaultValue = "SEN_Combo")]
+    [Parameter("Bot Label", Group = "Identity", DefaultValue = "SEN_ComboV1")]
     public string BotLabel { get; set; }
 
     // Execution inputs: define how entry, SL, TP and signal validity are calculated after a signal bar closes.
