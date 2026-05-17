@@ -1,6 +1,0 @@
-01/01/2023 00:00:00.000 | Info | CBot instance [SEN_Combo, HONG KONG 50, h4] started.
-03/01/2023 01:15:00.000 | Info | [SEN_Combo] CSV loaded: 489 signals | skipped: 0 | symbol: HONG KONG 50 | offset: 0h | D:\Auto Trading\SEN05\raw_signals\combo\combo_HK50_H4_20230103_20260512_signals.csv
-30/01/2023 14:00:00.000 | Trade | Placing Stop Order to Sell 2 HONG KONG 50 (Price: 21980.8, SL: 300, TP: 422.54)
-30/01/2023 14:00:00.000 | Trade | → Placing Stop Order to Sell 2 HONG KONG 50 (Price: 21980.8, SL: 300, TP: 422.54) SUCCEEDED, PendingOrder OID1
-30/01/2023 14:00:00.000 | Info | [SEN_Combo] SELL STOP placed | Bar: 2023-01-30 06:00 | Entry: 21980.8 | SL: 22280.8 (300.0p) | TP: 21558.258332618774 (422.5p) | ATR: 161.3987 | KTP: 2.618 | Risk: 1.0% | Lots: 2.00
-30/01/2023 14:00:00.000 | Error | CBot instance [SEN_Combo, HONG KONG 50, h4] aborted by timeout.
