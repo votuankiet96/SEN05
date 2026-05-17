@@ -507,7 +507,7 @@
     </member>
     <member name="F:cAlgo.API.AlgoParameterType.MultiEnum">
       <summary>
-            Represents a parameter of type <c>MultiEnum</c>.
+            Represents a parameter of type <c>Enum[]</c>.
             </summary>
       <signature>
         <code>public static AlgoParameterType MultiEnum;</code>
@@ -515,7 +515,7 @@
     </member>
     <member name="F:cAlgo.API.AlgoParameterType.MultiSymbol">
       <summary>
-            Represents a parameter of type <c>MultiSymbol</c>.
+            Represents a parameter of type <c>Symbol[]</c>.
             </summary>
       <signature>
         <code>public static AlgoParameterType MultiSymbol;</code>
@@ -523,10 +523,26 @@
     </member>
     <member name="F:cAlgo.API.AlgoParameterType.MultiTimeFrame">
       <summary>
-            Represents a parameter of type <c>MultiTimeFrame</c>.
+            Represents a parameter of type <c>TimeFrame[]</c>.
             </summary>
       <signature>
         <code>public static AlgoParameterType MultiTimeFrame;</code>
+      </signature>
+    </member>
+    <member name="F:cAlgo.API.AlgoParameterType.File">
+      <summary>
+            Represents a parameter of type <c>File</c>.
+            </summary>
+      <signature>
+        <code>public static AlgoParameterType File;</code>
+      </signature>
+    </member>
+    <member name="F:cAlgo.API.AlgoParameterType.MultiFile">
+      <summary>
+            Represents a parameter of type <c>MultiFile</c>.
+            </summary>
+      <signature>
+        <code>public static AlgoParameterType MultiFile;</code>
       </signature>
     </member>
     <member name="T:cAlgo.API.AlgoRegistry">
@@ -6085,6 +6101,462 @@
         <code>public ChartFibonacciFan DrawFibonacciFan(string name, int barIndex1, double y1, int barIndex2, double y2, Color color, int thickness, LineStyle lineStyle)</code>
       </signature>
     </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannFan(System.String,System.DateTime,System.Double,System.DateTime,System.Double,cAlgo.API.Color)">
+      <summary>
+                Draws a Gann fan.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="time1">The time value of the Gann fan start point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann fan start point location.</param>
+      <param name="time2">The time value of the Gann fan end point location on the X-axis.</param>
+      <param name="y2">The Y-axis value of the Gann fan end point location.</param>
+      <param name="color">The Gann fan lines color.</param>
+      <returns>ChartGannFan.</returns>
+      <signature>
+        <code>public ChartGannFan DrawGannFan(string name, DateTime time1, double y1, DateTime time2, double y2, Color color)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannFan(System.String,System.DateTime,System.Double,System.DateTime,System.Double,cAlgo.API.Color,System.Int32)">
+      <summary>
+                Draws a Gann fan.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="time1">The time value of the Gann fan start point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann fan start point location.</param>
+      <param name="time2">The time value of the Gann fan end point location on the X-axis.</param>
+      <param name="y2">The Y-axis value of the Gann fan end point location.</param>
+      <param name="color">The Gann fan lines color.</param>
+      <param name="thickness">The Gann fan lines thickness.</param>
+      <returns>ChartGannFan.</returns>
+      <signature>
+        <code>public ChartGannFan DrawGannFan(string name, DateTime time1, double y1, DateTime time2, double y2, Color color, int thickness)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannFan(System.String,System.DateTime,System.Double,System.DateTime,System.Double,cAlgo.API.Color,System.Int32,cAlgo.API.LineStyle)">
+      <summary>
+                Draws a Gann fan.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="time1">The time value of the Gann fan start point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann fan start point location.</param>
+      <param name="time2">The time value of the Gann fan end point location on the X-axis.</param>
+      <param name="y2">The Y-axis value of the Gann fan end point location.</param>
+      <param name="color">The Gann fan lines color.</param>
+      <param name="thickness">The Gann fan lines thickness.</param>
+      <param name="lineStyle">The Gann fan lines style.</param>
+      <returns>ChartGannFan.</returns>
+      <signature>
+        <code>public ChartGannFan DrawGannFan(string name, DateTime time1, double y1, DateTime time2, double y2, Color color, int thickness, LineStyle lineStyle)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannFan(System.String,System.Int32,System.Double,System.Int32,System.Double,cAlgo.API.Color)">
+      <summary>
+                Draws a Gann fan.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="barIndex1">The bar index of the Gann fan start point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann fan start point location.</param>
+      <param name="barIndex2">The Y-axis value of the Gann fan end point location.</param>
+      <param name="y2">The Y-axis value of the Gann fan end point location.</param>
+      <param name="color">The Gann fan lines color.</param>
+      <returns>ChartGannFan.</returns>
+      <signature>
+        <code>public ChartGannFan DrawGannFan(string name, int barIndex1, double y1, int barIndex2, double y2, Color color)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannFan(System.String,System.Int32,System.Double,System.Int32,System.Double,cAlgo.API.Color,System.Int32)">
+      <summary>
+                Draws a Gann fan.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="barIndex1">The bar index of the Gann fan start point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann fan start point location.</param>
+      <param name="barIndex2">The Y-axis value of the Gann fan end point location.</param>
+      <param name="y2">The Y-axis value of the Gann fan end point location.</param>
+      <param name="color">The Gann fan lines color.</param>
+      <param name="thickness">The Gann fan lines thickness.</param>
+      <returns>ChartGannFan.</returns>
+      <signature>
+        <code>public ChartGannFan DrawGannFan(string name, int barIndex1, double y1, int barIndex2, double y2, Color color, int thickness)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannFan(System.String,System.Int32,System.Double,System.Int32,System.Double,cAlgo.API.Color,System.Int32,cAlgo.API.LineStyle)">
+      <summary>
+                Draws a Gann fan.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="barIndex1">The bar index of the Gann fan start point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann fan start point location.</param>
+      <param name="barIndex2">The Y-axis value of the Gann fan end point location.</param>
+      <param name="y2">The Y-axis value of the Gann fan end point location.</param>
+      <param name="color">The Gann fan lines color.</param>
+      <param name="thickness">The Gann fan lines thickness.</param>
+      <param name="lineStyle">The Gann fan lines style.</param>
+      <returns>ChartGannFan.</returns>
+      <signature>
+        <code>public ChartGannFan DrawGannFan(string name, int barIndex1, double y1, int barIndex2, double y2, Color color, int thickness, LineStyle lineStyle)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannBox(System.String,System.DateTime,System.Double,System.DateTime,System.Double,cAlgo.API.Color)">
+      <summary>
+                Draws a Gann box.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="time1">The time value of the Gann box start point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann box start point location.</param>
+      <param name="time2">The time value of the Gann box end point location on the X-axis.</param>
+      <param name="y2">The Y-axis value of the Gann box end point location.</param>
+      <param name="color">The Gann box lines color.</param>
+      <returns>ChartGannBox.</returns>
+      <signature>
+        <code>public ChartGannBox DrawGannBox(string name, DateTime time1, double y1, DateTime time2, double y2, Color color)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannBox(System.String,System.DateTime,System.Double,System.DateTime,System.Double,cAlgo.API.Color,System.Int32)">
+      <summary>
+                Draws a Gann box.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="time1">The time value of the Gann box start point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann box start point location.</param>
+      <param name="time2">The time value of the Gann box end point location on the X-axis.</param>
+      <param name="y2">The Y-axis value of the Gann box end point location.</param>
+      <param name="color">The Gann box lines color.</param>
+      <param name="thickness">The Gann box lines thickness.</param>
+      <returns>ChartGannBox.</returns>
+      <signature>
+        <code>public ChartGannBox DrawGannBox(string name, DateTime time1, double y1, DateTime time2, double y2, Color color, int thickness)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannBox(System.String,System.DateTime,System.Double,System.DateTime,System.Double,cAlgo.API.Color,System.Int32,cAlgo.API.LineStyle)">
+      <summary>
+                Draws a Gann box.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="time1">The time value of the Gann box start point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann box start point location.</param>
+      <param name="time2">The time value of the Gann box end point location on the X-axis.</param>
+      <param name="y2">The Y-axis value of the Gann box end point location.</param>
+      <param name="color">The Gann box lines color.</param>
+      <param name="thickness">The Gann box lines thickness.</param>
+      <param name="lineStyle">The Gann box lines style.</param>
+      <returns>ChartGannBox.</returns>
+      <signature>
+        <code>public ChartGannBox DrawGannBox(string name, DateTime time1, double y1, DateTime time2, double y2, Color color, int thickness, LineStyle lineStyle)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannBox(System.String,System.Int32,System.Double,System.Int32,System.Double,cAlgo.API.Color)">
+      <summary>
+                Draws a Gann box.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="barIndex1">The bar index of the Gann box start point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann box start point location.</param>
+      <param name="barIndex2">The bar index of the Gann box end point location on the X-axis.</param>
+      <param name="y2">The Y-axis value of the Gann box end point location.</param>
+      <param name="color">The Gann box lines color.</param>
+      <returns>ChartGannBox.</returns>
+      <signature>
+        <code>public ChartGannBox DrawGannBox(string name, int barIndex1, double y1, int barIndex2, double y2, Color color)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannBox(System.String,System.Int32,System.Double,System.Int32,System.Double,cAlgo.API.Color,System.Int32)">
+      <summary>
+                Draws a Gann box.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="barIndex1">The bar index of the Gann box start point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann box start point location.</param>
+      <param name="barIndex2">The bar index of the Gann box end point location on the X-axis.</param>
+      <param name="y2">The Y-axis value of the Gann box end point location.</param>
+      <param name="color">The Gann box lines color.</param>
+      <param name="thickness">The Gann box lines thickness.</param>
+      <returns>ChartGannBox.</returns>
+      <signature>
+        <code>public ChartGannBox DrawGannBox(string name, int barIndex1, double y1, int barIndex2, double y2, Color color, int thickness)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannBox(System.String,System.Int32,System.Double,System.Int32,System.Double,cAlgo.API.Color,System.Int32,cAlgo.API.LineStyle)">
+      <summary>
+                Draws a Gann box.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="barIndex1">The bar index of the Gann box start point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann box start point location.</param>
+      <param name="barIndex2">The bar index of the Gann box end point location on the X-axis.</param>
+      <param name="y2">The Y-axis value of the Gann box end point location.</param>
+      <param name="color">The Gann box lines color.</param>
+      <param name="thickness">The Gann box lines thickness.</param>
+      <param name="lineStyle">The Gann box lines style.</param>
+      <returns>ChartGannBox.</returns>
+      <signature>
+        <code>public ChartGannBox DrawGannBox(string name, int barIndex1, double y1, int barIndex2, double y2, Color color, int thickness, LineStyle lineStyle)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannSquare(System.String,System.DateTime,System.Double,System.DateTime,System.Double,cAlgo.API.Color)">
+      <summary>
+                Draws a Gann square.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="time1">The time value of the Gann square start point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann square start point location.</param>
+      <param name="time2">The time value of the Gann square end point location on the X-axis.</param>
+      <param name="y2">The Y-axis value of the Gann square end point location.</param>
+      <param name="color">The Gann square lines color.</param>
+      <returns>ChartGannSquare.</returns>
+      <signature>
+        <code>public ChartGannSquare DrawGannSquare(string name, DateTime time1, double y1, DateTime time2, double y2, Color color)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannSquare(System.String,System.DateTime,System.Double,System.DateTime,System.Double,cAlgo.API.Color,System.Int32)">
+      <summary>
+                Draws a Gann square.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="time1">The time value of the Gann square start point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann square start point location.</param>
+      <param name="time2">The time value of the Gann square end point location on the X-axis.</param>
+      <param name="y2">The Y-axis value of the Gann square end point location.</param>
+      <param name="color">The Gann square lines color.</param>
+      <param name="thickness">The Gann square lines thickness.</param>
+      <returns>ChartGannSquare.</returns>
+      <signature>
+        <code>public ChartGannSquare DrawGannSquare(string name, DateTime time1, double y1, DateTime time2, double y2, Color color, int thickness)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannSquare(System.String,System.DateTime,System.Double,System.DateTime,System.Double,cAlgo.API.Color,System.Int32,cAlgo.API.LineStyle)">
+      <summary>
+                Draws a Gann square.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="time1">The time value of the Gann square start point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann square start point location.</param>
+      <param name="time2">The time value of the Gann square end point location on the X-axis.</param>
+      <param name="y2">The Y-axis value of the Gann square end point location.</param>
+      <param name="color">The Gann square lines color.</param>
+      <param name="thickness">The Gann square lines thickness.</param>
+      <param name="lineStyle">The Gann square lines style.</param>
+      <returns>ChartGannSquare.</returns>
+      <signature>
+        <code>public ChartGannSquare DrawGannSquare(string name, DateTime time1, double y1, DateTime time2, double y2, Color color, int thickness, LineStyle lineStyle)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannSquare(System.String,System.Int32,System.Double,System.Int32,System.Double,cAlgo.API.Color)">
+      <summary>
+                Draws a Gann square.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="barIndex1">The bar index of the Gann square start point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann square start point location.</param>
+      <param name="barIndex2">The bar index of the Gann square end point location on the X-axis.</param>
+      <param name="y2">The Y-axis value of the Gann square end point location.</param>
+      <param name="color">The Gann square lines color.</param>
+      <returns>ChartGannSquare.</returns>
+      <signature>
+        <code>public ChartGannSquare DrawGannSquare(string name, int barIndex1, double y1, int barIndex2, double y2, Color color)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannSquare(System.String,System.Int32,System.Double,System.Int32,System.Double,cAlgo.API.Color,System.Int32)">
+      <summary>
+                Draws a Gann square.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="barIndex1">The bar index of the Gann square start point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann square start point location.</param>
+      <param name="barIndex2">The bar index of the Gann square end point location on the X-axis.</param>
+      <param name="y2">The Y-axis value of the Gann square end point location.</param>
+      <param name="color">The Gann square lines color.</param>
+      <param name="thickness">The Gann square lines thickness.</param>
+      <returns>ChartGannSquare.</returns>
+      <signature>
+        <code>public ChartGannSquare DrawGannSquare(string name, int barIndex1, double y1, int barIndex2, double y2, Color color, int thickness)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannSquare(System.String,System.Int32,System.Double,System.Int32,System.Double,cAlgo.API.Color,System.Int32,cAlgo.API.LineStyle)">
+      <summary>
+                Draws a Gann square.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="barIndex1">The bar index of the Gann square start point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann square start point location.</param>
+      <param name="barIndex2">The bar index of the Gann square end point location on the X-axis.</param>
+      <param name="y2">The Y-axis value of the Gann square end point location.</param>
+      <param name="color">The Gann square lines color.</param>
+      <param name="thickness">The Gann square lines thickness.</param>
+      <param name="lineStyle">The Gann square lines style.</param>
+      <returns>ChartGannSquare.</returns>
+      <signature>
+        <code>public ChartGannSquare DrawGannSquare(string name, int barIndex1, double y1, int barIndex2, double y2, Color color, int thickness, LineStyle lineStyle)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannSquareFixed(System.String,System.DateTime,System.Double,System.DateTime,System.Double,cAlgo.API.Color)">
+      <summary>
+                Draws a Gann square fixed.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="time1">The time value of the Gann square fixed anchor point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann square fixed anchor point location.</param>
+      <param name="time2">The time value of the Gann square fixed control point location on the X-axis.</param>
+      <param name="y2">The Y-axis value of the Gann square fixed control point location.</param>
+      <param name="color">The Gann square fixed lines color.</param>
+      <returns>ChartGannSquareFixed.</returns>
+      <signature>
+        <code>public ChartGannSquareFixed DrawGannSquareFixed(string name, DateTime time1, double y1, DateTime time2, double y2, Color color)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannSquareFixed(System.String,System.DateTime,System.Double,System.DateTime,System.Double,cAlgo.API.Color,System.Int32)">
+      <summary>
+                Draws a Gann square fixed.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="time1">The time value of the Gann square fixed anchor point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann square fixed anchor point location.</param>
+      <param name="time2">The time value of the Gann square fixed control point location on the X-axis.</param>
+      <param name="y2">The Y-axis value of the Gann square fixed control point location.</param>
+      <param name="color">The Gann square fixed lines color.</param>
+      <param name="thickness">The Gann square fixed lines thickness.</param>
+      <returns>ChartGannSquareFixed.</returns>
+      <signature>
+        <code>public ChartGannSquareFixed DrawGannSquareFixed(string name, DateTime time1, double y1, DateTime time2, double y2, Color color, int thickness)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannSquareFixed(System.String,System.DateTime,System.Double,System.DateTime,System.Double,cAlgo.API.Color,System.Int32,cAlgo.API.LineStyle)">
+      <summary>
+                Draws a Gann square fixed.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="time1">The time value of the Gann square fixed anchor point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann square fixed anchor point location.</param>
+      <param name="time2">The time value of the Gann square fixed control point location on the X-axis.</param>
+      <param name="y2">The Y-axis value of the Gann square fixed control point location.</param>
+      <param name="color">The Gann square fixed lines color.</param>
+      <param name="thickness">The Gann square fixed lines thickness.</param>
+      <param name="lineStyle">The Gann square fixed lines style.</param>
+      <returns>ChartGannSquareFixed.</returns>
+      <signature>
+        <code>public ChartGannSquareFixed DrawGannSquareFixed(string name, DateTime time1, double y1, DateTime time2, double y2, Color color, int thickness, LineStyle lineStyle)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannSquareFixed(System.String,System.Int32,System.Double,System.Int32,System.Double,cAlgo.API.Color)">
+      <summary>
+                Draws a Gann square fixed.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="barIndex1">The bar index of the Gann square fixed anchor point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann square fixed anchor point location.</param>
+      <param name="barIndex2">The bar index of the Gann square fixed control point location on the X-axis.</param>
+      <param name="y2">The Y-axis value of the Gann square fixed control point location.</param>
+      <param name="color">The Gann square fixed lines color.</param>
+      <returns>ChartGannSquareFixed.</returns>
+      <signature>
+        <code>public ChartGannSquareFixed DrawGannSquareFixed(string name, int barIndex1, double y1, int barIndex2, double y2, Color color)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannSquareFixed(System.String,System.Int32,System.Double,System.Int32,System.Double,cAlgo.API.Color,System.Int32)">
+      <summary>
+                Draws a Gann square fixed.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="barIndex1">The bar index of the Gann square fixed anchor point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann square fixed anchor point location.</param>
+      <param name="barIndex2">The bar index of the Gann square fixed control point location on the X-axis.</param>
+      <param name="y2">The Y-axis value of the Gann square fixed control point location.</param>
+      <param name="color">The Gann square fixed lines color.</param>
+      <param name="thickness">The Gann square fixed lines thickness.</param>
+      <returns>ChartGannSquareFixed.</returns>
+      <signature>
+        <code>public ChartGannSquareFixed DrawGannSquareFixed(string name, int barIndex1, double y1, int barIndex2, double y2, Color color, int thickness)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.ChartArea.DrawGannSquareFixed(System.String,System.Int32,System.Double,System.Int32,System.Double,cAlgo.API.Color,System.Int32,cAlgo.API.LineStyle)">
+      <summary>
+                Draws a Gann square fixed.
+            </summary>
+      <param name="name">
+                The chart object name - a unique name that can be only used once for a chart area. If duplicated,
+                the chart object will be replaced with a new one of the same name.
+            </param>
+      <param name="barIndex1">The bar index of the Gann square fixed anchor point location on the X-axis.</param>
+      <param name="y1">The Y-axis value of the Gann square fixed anchor point location.</param>
+      <param name="barIndex2">The bar index of the Gann square fixed control point location on the X-axis.</param>
+      <param name="y2">The Y-axis value of the Gann square fixed control point location.</param>
+      <param name="color">The Gann square fixed lines color.</param>
+      <param name="thickness">The Gann square fixed lines thickness.</param>
+      <param name="lineStyle">The Gann square fixed lines style.</param>
+      <returns>ChartGannSquareFixed.</returns>
+      <signature>
+        <code>public ChartGannSquareFixed DrawGannSquareFixed(string name, int barIndex1, double y1, int barIndex2, double y2, Color color, int thickness, LineStyle lineStyle)</code>
+      </signature>
+    </member>
     <member name="M:cAlgo.API.ChartArea.DrawFibonacciTimezones(System.String,System.DateTime,System.Double,System.DateTime,System.Double,cAlgo.API.Color)">
       <summary>
                 Draws a Fibonacci timezones.
@@ -8300,6 +8772,216 @@
         <code>public double Y2 { get; set; }</code>
       </signature>
     </member>
+    <member name="T:cAlgo.API.ChartGannBase">
+      <summary>
+            Represents the Gann tools options.
+            </summary>
+      <seealso cref="T:cAlgo.API.ChartObject" />
+      <group cref="F:cAlgo.API.Internals.ApiReferenceGroup.ChartDrawingsGann" />
+      <signature>
+        <code>public interface ChartGannBase</code>
+      </signature>
+    </member>
+    <member name="P:cAlgo.API.ChartGannBase.GannLevels">
+      <summary>
+            Gets the Gann levels.
+            </summary>
+      <signature>
+        <code>public IReadonlyList&lt;GannLevel&gt; GannLevels { get; }</code>
+      </signature>
+    </member>
+    <member name="P:cAlgo.API.ChartGannBase.DisplayPrices">
+      <summary>
+            Defines if the Gann levels display the prices
+            </summary>
+      <signature>
+        <code>public bool DisplayPrices { get; set; }</code>
+      </signature>
+    </member>
+    <member name="P:cAlgo.API.ChartGannBase.Thickness">
+      <summary>
+            Gets or sets the lines thickness.
+            </summary>
+      <signature>
+        <code>public int Thickness { get; set; }</code>
+      </signature>
+    </member>
+    <member name="P:cAlgo.API.ChartGannBase.Color">
+      <summary>
+            Gets or sets the lines color.
+            </summary>
+      <signature>
+        <code>public Color Color { get; set; }</code>
+      </signature>
+    </member>
+    <member name="P:cAlgo.API.ChartGannBase.LineStyle">
+      <summary>
+            Gets or sets the lines style.
+            </summary>
+      <signature>
+        <code>public LineStyle LineStyle { get; set; }</code>
+      </signature>
+    </member>
+    <member name="P:cAlgo.API.ChartGannBase.Time1">
+      <summary>
+            Gets or sets the first point time value on the Time line.
+            </summary>
+      <signature>
+        <code>public DateTime Time1 { get; set; }</code>
+      </signature>
+    </member>
+    <member name="P:cAlgo.API.ChartGannBase.Time2">
+      <summary>
+            Gets or sets the second point time value on the Time line.
+            </summary>
+      <signature>
+        <code>public DateTime Time2 { get; set; }</code>
+      </signature>
+    </member>
+    <member name="P:cAlgo.API.ChartGannBase.Y1">
+      <summary>
+            Gets or sets the first point value on the Y-axis.
+            </summary>
+      <signature>
+        <code>public double Y1 { get; set; }</code>
+      </signature>
+    </member>
+    <member name="P:cAlgo.API.ChartGannBase.Y2">
+      <summary>
+            Gets or sets the second point value on the Y-axis.
+            </summary>
+      <signature>
+        <code>public double Y2 { get; set; }</code>
+      </signature>
+    </member>
+    <member name="T:cAlgo.API.ChartGannBox">
+      <summary>
+             Represents the Gann Box chart object.
+             </summary>
+      <seealso cref="T:cAlgo.API.ChartGannBase" />
+      <example>
+        <code>
+             using cAlgo.API;
+            
+             namespace cAlgo
+             {
+                 // This sample shows how to use Chart.DrawGannBox method to draw a Gann Box
+                 [Indicator(IsOverlay = true, TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]
+                 public class GannBoxSample : Indicator
+                 {
+                     protected override void Initialize()
+                     {
+                         Chart.DrawGannBox("GannBox", Chart.FirstVisibleBarIndex, Bars.ClosePrices[Chart.FirstVisibleBarIndex], Chart.LastVisibleBarIndex, Bars.ClosePrices[Chart.LastVisibleBarIndex], Color.Blue);
+                     }
+            
+                     public override void Calculate(int index)
+                     {
+                     }
+                 }
+             }
+             </code>
+      </example>
+      <group cref="F:cAlgo.API.Internals.ApiReferenceGroup.ChartDrawingsGann" />
+      <signature>
+        <code>public interface ChartGannBox</code>
+      </signature>
+    </member>
+    <member name="T:cAlgo.API.ChartGannFan">
+      <summary>
+             Represents the Gann Fan chart object.
+             </summary>
+      <seealso cref="T:cAlgo.API.ChartGannBase" />
+      <example>
+        <code>
+             using cAlgo.API;
+            
+             namespace cAlgo
+             {
+                 // This sample shows how to use Chart.DrawGannFan method to draw a Gann Fan
+                 [Indicator(IsOverlay = true, TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]
+                 public class GannFanSample : Indicator
+                 {
+                     protected override void Initialize()
+                     {
+                         Chart.DrawGannFan("GannFan", Chart.FirstVisibleBarIndex, Bars.ClosePrices[Chart.FirstVisibleBarIndex], Chart.LastVisibleBarIndex, Bars.ClosePrices[Chart.LastVisibleBarIndex], Color.Blue);
+                     }
+            
+                     public override void Calculate(int index)
+                     {
+                     }
+                 }
+             }
+             </code>
+      </example>
+      <group cref="F:cAlgo.API.Internals.ApiReferenceGroup.ChartDrawingsGann" />
+      <signature>
+        <code>public interface ChartGannFan</code>
+      </signature>
+    </member>
+    <member name="T:cAlgo.API.ChartGannSquare">
+      <summary>
+             Represents the Gann Square chart object.
+             </summary>
+      <seealso cref="T:cAlgo.API.ChartGannBase" />
+      <example>
+        <code>
+             using cAlgo.API;
+            
+             namespace cAlgo
+             {
+                 // This sample shows how to use Chart.DrawGannSquare method to draw a Gann Square
+                 [Indicator(IsOverlay = true, TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]
+                 public class GannSquareSample : Indicator
+                 {
+                     protected override void Initialize()
+                     {
+                         Chart.DrawGannSquare("GannSquare", Chart.FirstVisibleBarIndex, Bars.ClosePrices[Chart.FirstVisibleBarIndex], Chart.LastVisibleBarIndex, Bars.ClosePrices[Chart.LastVisibleBarIndex], Color.Blue);
+                     }
+            
+                     public override void Calculate(int index)
+                     {
+                     }
+                 }
+             }
+             </code>
+      </example>
+      <group cref="F:cAlgo.API.Internals.ApiReferenceGroup.ChartDrawingsGann" />
+      <signature>
+        <code>public interface ChartGannSquare</code>
+      </signature>
+    </member>
+    <member name="T:cAlgo.API.ChartGannSquareFixed">
+      <summary>
+             Represents the Gann Square Fixed chart object with screen-space rendering.
+             </summary>
+      <seealso cref="T:cAlgo.API.ChartGannBase" />
+      <example>
+        <code>
+             using cAlgo.API;
+            
+             namespace cAlgo
+             {
+                 // This sample shows how to use Chart.DrawGannSquareFixed method to draw a Gann Square Fixed
+                 [Indicator(IsOverlay = true, TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]
+                 public class GannSquareFixedSample : Indicator
+                 {
+                     protected override void Initialize()
+                     {
+                         Chart.DrawGannSquareFixed("GannSquareFixed", Chart.FirstVisibleBarIndex, Bars.ClosePrices[Chart.FirstVisibleBarIndex], Chart.LastVisibleBarIndex, Bars.ClosePrices[Chart.LastVisibleBarIndex], Color.Blue);
+                     }
+            
+                     public override void Calculate(int index)
+                     {
+                     }
+                 }
+             }
+             </code>
+      </example>
+      <group cref="F:cAlgo.API.Internals.ApiReferenceGroup.ChartDrawingsGann" />
+      <signature>
+        <code>public interface ChartGannSquareFixed</code>
+      </signature>
+    </member>
     <member name="T:cAlgo.API.ChartHorizontalLine">
       <summary>
              Represents the Horizontal Line chart object. Used to mark a certain value on the Y-axis throughout the whole chart.
@@ -8737,6 +9419,38 @@
             </summary>
       <signature>
         <code>public static ChartObjectType AndrewsPitchfork;</code>
+      </signature>
+    </member>
+    <member name="F:cAlgo.API.ChartObjectType.GannFan">
+      <summary>
+            The Gann Fan that can be placed directly in the chart, bound to X-Y axises. A charting technique used to estimate support and resistance levels by drawing trend lines at different Gann angles (1x1, 2x1, 1x2, etc.).
+            </summary>
+      <signature>
+        <code>public static ChartObjectType GannFan;</code>
+      </signature>
+    </member>
+    <member name="F:cAlgo.API.ChartObjectType.GannBox">
+      <summary>
+            The Gann Box that can be placed directly in the chart, bound to X-Y axises. A charting technique that combines Gann angles with horizontal and vertical lines to create a box structure for analyzing support and resistance levels.
+            </summary>
+      <signature>
+        <code>public static ChartObjectType GannBox;</code>
+      </signature>
+    </member>
+    <member name="F:cAlgo.API.ChartObjectType.GannSquare">
+      <summary>
+            The Gann Square that can be placed directly in the chart, bound to X-Y axises. A charting technique that combines Gann box grid, fan rays from the start point, and arcs at level intersections for comprehensive market geometry analysis.
+            </summary>
+      <signature>
+        <code>public static ChartObjectType GannSquare;</code>
+      </signature>
+    </member>
+    <member name="F:cAlgo.API.ChartObjectType.GannSquareFixed">
+      <summary>
+            The Gann Square Fixed that can be placed directly in the chart with fixed screen-space size. A charting technique with a single anchor point and control point that renders a 5x5 grid, Gann fan rays, and circular arcs independent of zoom level.
+            </summary>
+      <signature>
+        <code>public static ChartObjectType GannSquareFixed;</code>
       </signature>
     </member>
     <member name="F:cAlgo.API.ChartObjectType.Rectangle">
@@ -10027,6 +10741,60 @@
     <member name="P:cAlgo.API.FibonacciLevel.IsVisible">
       <summary>
                 Defines if the level is visible.
+            </summary>
+      <signature>
+        <code>public bool IsVisible { get; set; }</code>
+      </signature>
+    </member>
+    <member name="T:cAlgo.API.GannLevel">
+      <summary>
+             Represents a Gann Level.
+             </summary>
+      <example>
+        <code>
+             using cAlgo.API;
+            
+             namespace cAlgo
+             {
+                 // This sample shows how to use a chart Gann Fan levels property to modify the gann levels
+                 [Indicator(IsOverlay = true, TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]
+                 public class GannLevelSample : Indicator
+                 {
+                     protected override void Initialize()
+                     {
+                         var gannFan = Chart.DrawGannFan("GannFan", Chart.FirstVisibleBarIndex, Bars.ClosePrices[Chart.FirstVisibleBarIndex], Chart.LastVisibleBarIndex, Bars.ClosePrices[Chart.LastVisibleBarIndex], Color.Blue);
+            
+                         foreach (var level in gannFan.GannLevels)
+                         {
+                             Print(level.Ratio);
+            
+                             if (level.Ratio &gt; 4) level.IsVisible = false;
+                         }
+                     }
+            
+                     public override void Calculate(int index)
+                     {
+                     }
+                 }
+             }
+             </code>
+      </example>
+      <group cref="F:cAlgo.API.Internals.ApiReferenceGroup.ChartDrawingsGann" />
+      <signature>
+        <code>public interface GannLevel</code>
+      </signature>
+    </member>
+    <member name="P:cAlgo.API.GannLevel.Ratio">
+      <summary>
+            Gets or sets the level ratio (e.g., 1.0 for 1x1, 2.0 for 2x1, 0.5 for 1x2).
+            </summary>
+      <signature>
+        <code>public double Ratio { get; set; }</code>
+      </signature>
+    </member>
+    <member name="P:cAlgo.API.GannLevel.IsVisible">
+      <summary>
+            Defines if the level is visible.
             </summary>
       <signature>
         <code>public bool IsVisible { get; set; }</code>
@@ -47195,6 +47963,11 @@
                 Chart/Drawings/Fibonacci
             </summary>
     </member>
+    <member name="F:cAlgo.API.Internals.ApiReferenceGroup.ChartDrawingsGann">
+      <summary>
+                Chart/Drawings/Gann
+            </summary>
+    </member>
     <member name="F:cAlgo.API.Internals.ApiReferenceGroup.ChartIndicators">
       <summary>
                 Chart/Indicators
@@ -61277,6 +62050,11 @@
             Free chart mode.
             </summary>
     </member>
+    <member name="F:cAlgo.API.ChartMode.Floating">
+      <summary>
+            Floating chart mode.
+            </summary>
+    </member>
     <member name="T:cAlgo.API.CustomFrame">
       <summary>
             Represents a custom frame.
@@ -71638,6 +72416,263 @@
             </summary>
       <signature>
         <code>public event Action&lt;PriceAlertTriggeredEventArgs&gt; Triggered;</code>
+      </signature>
+    </member>
+    <member name="T:cAlgo.API.EncodingType">
+      <summary>
+            Represents different character encoding types.
+            </summary>
+      <group cref="F:cAlgo.API.Internals.ApiReferenceGroup.Utility" />
+      <signature>
+        <code>public enum EncodingType</code>
+      </signature>
+    </member>
+    <member name="F:cAlgo.API.EncodingType.Ascii">
+      <summary>
+            ASCII character set encoding.
+            </summary>
+      <signature>
+        <code>public static EncodingType Ascii;</code>
+      </signature>
+    </member>
+    <member name="F:cAlgo.API.EncodingType.BigEndianUnicode">
+      <summary>
+            Unicode character set encoding in big endian byte order.
+            </summary>
+      <signature>
+        <code>public static EncodingType BigEndianUnicode;</code>
+      </signature>
+    </member>
+    <member name="F:cAlgo.API.EncodingType.Latin1">
+      <summary>
+            Latin1 character set (ISO-8859-1) encoding.
+            </summary>
+      <signature>
+        <code>public static EncodingType Latin1;</code>
+      </signature>
+    </member>
+    <member name="F:cAlgo.API.EncodingType.Unicode">
+      <summary>
+            Unicode character set encoding in little endian byte order.
+            </summary>
+      <signature>
+        <code>public static EncodingType Unicode;</code>
+      </signature>
+    </member>
+    <member name="F:cAlgo.API.EncodingType.Utf8">
+      <summary>
+            UTF-8 format character set encoding.
+            </summary>
+      <signature>
+        <code>public static EncodingType Utf8;</code>
+      </signature>
+    </member>
+    <member name="F:cAlgo.API.EncodingType.Utf32">
+      <summary>
+            UTF-32 format character set encoding.
+            </summary>
+      <signature>
+        <code>public static EncodingType Utf32;</code>
+      </signature>
+    </member>
+    <member name="T:cAlgo.API.File">
+      <summary>
+            Represents a file.
+            </summary>
+      <remarks>You can use this as a parameter type to get direct read and write access to a file.</remarks>
+      <group cref="F:cAlgo.API.Internals.ApiReferenceGroup.Utility" />
+      <signature>
+        <code>public interface File</code>
+      </signature>
+    </member>
+    <member name="P:cAlgo.API.File.Name">
+      <summary>
+            Gets file name without path.
+            </summary>
+      <signature>
+        <code>public string Name { get; }</code>
+      </signature>
+    </member>
+    <member name="P:cAlgo.API.File.Extension">
+      <summary>
+            Gets the extension part of the file name, including the leading dot '.' even if it is the entire file name, or an empty string if no extension is present.
+            </summary>
+      <signature>
+        <code>public string Extension { get; }</code>
+      </signature>
+    </member>
+    <member name="P:cAlgo.API.File.Size">
+      <summary>
+            Gets file size in bytes.
+            </summary>
+      <signature>
+        <code>public long Size { get; }</code>
+      </signature>
+    </member>
+    <member name="P:cAlgo.API.File.CreationTime">
+      <summary>
+            Gets the creation time of the file.
+            </summary>
+      <signature>
+        <code>public DateTime CreationTime { get; }</code>
+      </signature>
+    </member>
+    <member name="P:cAlgo.API.File.LastAccessTime">
+      <summary>
+            Gets the time the current file was last accessed.
+            </summary>
+      <signature>
+        <code>public DateTime LastAccessTime { get; }</code>
+      </signature>
+    </member>
+    <member name="P:cAlgo.API.File.LastWriteTime">
+      <summary>
+            Gets the time when the current file was last written to.
+            </summary>
+      <signature>
+        <code>public DateTime LastWriteTime { get; }</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.File.Exists">
+      <summary>
+            Returns True if File exists otherwise False.
+            </summary>
+      <returns>bool</returns>
+      <signature>
+        <code>public bool Exists()</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.File.WriteAllBytes(System.Byte[])">
+      <summary>
+            Overwrites file content with passed bytes.
+            </summary>
+      <param name="bytes">Bytes to write</param>
+      <signature>
+        <code>public void WriteAllBytes(byte[] bytes)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.File.WriteBytes(System.Byte[],System.Int32,System.Int32)">
+      <summary>
+            Writes a chunk of data to file specific position.
+            </summary>
+      <param name="bytes">Bytes to write</param>
+      <param name="offset">File byte offset</param>
+      <param name="count">Count of bytes to write</param>
+      <signature>
+        <code>public void WriteBytes(byte[] bytes, int offset, int count)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.File.WriteAllText(System.String)">
+      <summary>
+            Overwrites file content with passed text content.
+            </summary>
+      <param name="contents">The string to write to the file.</param>
+      <signature>
+        <code>public void WriteAllText(string contents)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.File.WriteAllText(System.String,cAlgo.API.EncodingType)">
+      <summary>
+            Overwrites file content with passed text content that has a specified encoding.
+            </summary>
+      <param name="contents">The string to write to the file.</param>
+      <param name="encodingType">Encoding type</param>
+      <signature>
+        <code>public void WriteAllText(string contents, EncodingType encodingType)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.File.ReadLines">
+      <summary>
+            Reads the lines of file.
+            </summary>
+      <signature>
+        <code>public string[] ReadLines()</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.File.ReadLines(cAlgo.API.EncodingType)">
+      <summary>
+            Reads the lines of file that has a specified encoding.
+            </summary>
+      <param name="encodingType">Encoding type</param>
+      <signature>
+        <code>public string[] ReadLines(EncodingType encodingType)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.File.ReadAllText">
+      <summary>
+            Reads all the text in the file.
+            </summary>
+      <returns>string</returns>
+      <signature>
+        <code>public string ReadAllText()</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.File.ReadAllText(cAlgo.API.EncodingType)">
+      <summary>
+            Reads all the text in the file that has a specified encoding.
+            </summary>
+      <param name="encodingType">Encoding type</param>
+      <returns>string</returns>
+      <signature>
+        <code>public string ReadAllText(EncodingType encodingType)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.File.ReadAllBytes">
+      <summary>
+            Reads the contents of the file into a byte array.
+            </summary>
+      <returns>byte[]</returns>
+      <signature>
+        <code>public byte[] ReadAllBytes()</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.File.ReadBytes(System.Int32,System.Int32)">
+      <summary>
+            Reads a sequence of bytes from the file.
+            </summary>
+      <param name="offset">File byte offset</param>
+      <param name="count">Count of bytes to read</param>
+      <returns>byte[]</returns>
+      <signature>
+        <code>public byte[] ReadBytes(int offset, int count)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.File.AppendAllText(System.String)">
+      <summary>
+            Append text to file.
+            </summary>
+      <param name="contents">The string to append to the file.</param>
+      <signature>
+        <code>public void AppendAllText(string contents)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.File.AppendAllText(System.String,cAlgo.API.EncodingType)">
+      <summary>
+            Appends text to file that has a specified encoding.
+            </summary>
+      <param name="contents">The string to append to the file.</param>
+      <param name="encodingType">Encoding type</param>
+      <signature>
+        <code>public void AppendAllText(string contents, EncodingType encodingType)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.File.AppendAllLines(System.String[])">
+      <summary>
+            Appends lines to file.
+            </summary>
+      <param name="contents">The string lines to append to the file.</param>
+      <signature>
+        <code>public void AppendAllLines(string[] contents)</code>
+      </signature>
+    </member>
+    <member name="M:cAlgo.API.File.AppendAllLines(System.String[],cAlgo.API.EncodingType)">
+      <summary>
+            Appends lines to file that has a specified encoding.
+            </summary>
+      <param name="contents">The string lines to append to the file.</param>
+      <param name="encodingType">Encoding type</param>
+      <signature>
+        <code>public void AppendAllLines(string[] contents, EncodingType encodingType)</code>
       </signature>
     </member>
     <member name="T:cAlgo.API.Key">
