@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from core_python.strategies.combo.config import normalize_params
+from core_python.strategies.combo.config import PARAM_FIELDS, normalize_params
 from core_python.strategies.combo.signals import detect_combo_signals
 from core_python.strategies.combo.trend_filter import (
     merge_combo_trend_into_entry,
@@ -25,6 +25,104 @@ def _probe_frame() -> pd.DataFrame:
             "atr": [2.0, 2.0],
         }
     )
+
+
+def test_combo_v0_buy_does_not_require_ma_crossover() -> None:
+    params = normalize_params({"HTF_TREND_ENABLED": False, "X": 0}, "US30")
+    frame = pd.DataFrame(
+        {
+            "bartime": pd.to_datetime(["2026-01-03 00:00:00"]),
+            "open": [11.0],
+            "high": [13.0],
+            "low": [10.0],
+            "close": [12.0],
+            "ma": [10.0],
+            "prev_close": [11.0],
+            "prev_ma": [10.0],
+            "macd_h": [1.0],
+            "atr": [2.0],
+        }
+    )
+
+    out = detect_combo_signals(frame, symbol="US30", params=params)
+
+    assert out["raw_signal"].tolist() == [1]
+    assert "first Combo BUY state" in out.loc[0, "signal_reason"]
+
+
+def test_combo_v0_signals_are_alternating_first_setup_only() -> None:
+    params = normalize_params({"HTF_TREND_ENABLED": False, "X": 0}, "US30")
+    frame = pd.DataFrame(
+        {
+            "bartime": pd.date_range("2026-01-03 00:00:00", periods=7, freq="h"),
+            "open": [10.0, 11.0, 10.0, 12.0, 12.0, 11.0, 10.0],
+            "high": [13.0, 14.0, 12.0, 14.0, 13.0, 12.0, 13.0],
+            "low": [9.0, 10.0, 9.0, 11.0, 8.0, 8.0, 9.0],
+            "close": [12.0, 13.0, 11.0, 13.0, 9.0, 8.0, 12.0],
+            "ma": [10.0] * 7,
+            "prev_close": [9.0, 12.0, 13.0, 11.0, 13.0, 9.0, 8.0],
+            "prev_ma": [10.0] * 7,
+            "macd_h": [1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0],
+            "atr": [2.0] * 7,
+        }
+    )
+
+    out = detect_combo_signals(frame, symbol="US30", params=params)
+
+    assert out["raw_signal"].tolist() == [1, 0, 0, 0, -1, 0, 1]
+
+
+def test_combo_v0_sell_requires_close_strictly_below_ma() -> None:
+    params = normalize_params({"HTF_TREND_ENABLED": False, "X": 0}, "US30")
+    frame = pd.DataFrame(
+        {
+            "bartime": pd.to_datetime(["2026-01-03 00:00:00"]),
+            "open": [11.0],
+            "high": [12.0],
+            "low": [9.0],
+            "close": [10.0],
+            "ma": [10.0],
+            "prev_close": [11.0],
+            "prev_ma": [10.0],
+            "macd_h": [-1.0],
+            "atr": [2.0],
+        }
+    )
+
+    out = detect_combo_signals(frame, symbol="US30", params=params)
+
+    assert out["raw_signal"].tolist() == [0]
+
+
+def test_combo_v0_min_rr_does_not_gate_raw_signal() -> None:
+    params = normalize_params({"HTF_TREND_ENABLED": False, "X": 0, "KTP": 0.1, "MIN_RR": 20}, "US30")
+    frame = pd.DataFrame(
+        {
+            "bartime": pd.to_datetime(["2026-01-03 00:00:00"]),
+            "open": [11.0],
+            "high": [20.0],
+            "low": [10.0],
+            "close": [12.0],
+            "ma": [10.0],
+            "prev_close": [11.0],
+            "prev_ma": [10.0],
+            "macd_h": [1.0],
+            "atr": [1.0],
+        }
+    )
+
+    out = detect_combo_signals(frame, symbol="US30", params=params)
+
+    assert out["raw_signal"].tolist() == [1]
+    assert out.loc[0, "rr"] < 20
+
+
+def test_combo_v0_dashboard_hides_htf_trend_fields() -> None:
+    field_keys = {field["key"] for field in PARAM_FIELDS}
+
+    assert "HTF_TREND_ENABLED" not in field_keys
+    assert "HTF_TF" not in field_keys
+    assert "SHOW_HTF_TREND" not in field_keys
 
 
 def test_combo_htf_filter_disabled_preserves_raw_signals() -> None:

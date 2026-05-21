@@ -4,43 +4,57 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using cAlgo.API;
+using cAlgo.API.Indicators;
 
 namespace cAlgo.Robots;
 
 /*
- * SEN_Combo_V0 - simple CSV signal executor.
+ * SEN_Combo_V0 - CSV signal executor implementing the original Combo strategy.
  *
  * High-level workflow:
  *   1) OnStart loads external CSV signals into memory.
- *   2) On every closed cTrader bar, the bot checks whether the closed bar contains a CSV signal.
- *   3) If the signal is opposite to existing exposure, opposite pending orders are cancelled and opposite positions are closed.
+ *   2) On every closed bar, the bot checks whether the closed bar contains a CSV signal.
+ *   3) If the signal is opposite to existing exposure, opposite pending orders are cancelled
+ *      and opposite positions are closed.
  *   4) If exposure already exists in the same direction, the new same-direction signal is ignored.
- *   5) If the signal is tradable, the bot opens a TP-leg cluster: 1 to 4 child orders with shared Entry/SL and separate TP levels.
- *   6) When a lower TP leg closes by TakeProfit, remaining higher legs have their SL moved up/down to lock the previous milestone.
+ *   5) The bot places a stop-order cluster based on ExitMode:
+ *        FixedOnly: one leg with fixed TP = Entry ± KTP × ATR.
+ *        TwoLegs:   leg 1 = fixed TP; leg 2 = no TP, SL trailed via SMA20 each bar.
  *
  * Supported CSV formats:
  *   bartime,side,atr
  *   bartime,symbol,side,atr
  *
- * Entry / SL / TP:
- *   BaseRange = max(ATR, signal candle High - Low)
- *   BUY  -> up to 4 Buy Stops  | Entry = High + offset | SL = Entry - KSL * BaseRange | TP legs = Entry + KTP * BaseRange
- *   SELL -> up to 4 Sell Stops | Entry = Low - offset  | SL = Entry + KSL * BaseRange | TP legs = Entry - KTP * BaseRange
- *   Entry offset is a percentage of BaseRange.
+ * Entry / SL / TP (original Combo lecture formulas):
+ *   BUY  -> Buy Stop  | Entry = High + X  | SL = Low  - X  | TP = Entry + KTP × ATR
+ *   SELL -> Sell Stop | Entry = Low  - X  | SL = High + X  | TP = Entry - KTP × ATR
+ *   X is a fixed price-unit offset per symbol (not a % of range).
+ *   High and Low are from the signal bar (just-closed bar, Last(1)).
+ *
+ * SMA20 trailing (Leg 2, TwoLegs mode only):
+ *   BUY leg 2:  each bar close → New SL = max(Current SL, SMA20)
+ *   SELL leg 2: each bar close → New SL = min(Current SL, SMA20)
+ *   SL only moves in the profitable direction, never loosens.
  *
  * Management:
  *   Pending orders expire after N closed bars.
- *   Opposite signals close current positions, then place the new signal order.
- *   Same-direction signals are ignored while bot exposure already exists in that direction.
+ *   Opposite signals close current positions and pending orders, then place the new cluster.
+ *   Same-direction signals are ignored while any same-direction exposure exists.
  *   Daily drawdown protection halts trading and flattens bot exposure for the day.
  */
+
+public enum ExitModeOption
+{
+    FixedOnly = 1,
+    TwoLegs   = 2,
+}
 
 [Robot(AccessRights = AccessRights.FullAccess, AddIndicators = true)]
 public class SEN_Combo_V0 : Robot
 {
-    // File inputs: where signals come from and how their timestamps are aligned to cTrader server time.
+    // ── File ────────────────────────────────────────────────────────────────
     [Parameter("Signal CSV Path", Group = "File",
-        DefaultValue = @"D:\Auto Trading\SEN05\raw_signals\combo\combo_HK50_H4_20230103_20260512_signals.csv")]
+        DefaultValue = @"D:\Auto Trading\SEN05\raw_signals\combo\combo_US30_H4_20170430_20260519_signals.csv")]
     public string CsvPath { get; set; }
 
     [Parameter("CSV Time Offset Hours", Group = "File",
@@ -50,18 +64,21 @@ public class SEN_Combo_V0 : Robot
     [Parameter("Bot Label", Group = "Identity", DefaultValue = "SEN_Combo_V0")]
     public string BotLabel { get; set; }
 
-    // Execution inputs: define how entry, SL, TP and signal validity are calculated after a signal bar closes.
-    [Parameter("X Offset (% BaseRange)", Group = "Execution",
-        DefaultValue = 5.0, MinValue = 0.1, MaxValue = 20.0, Step = 0.1)]
-    public double XOffsetBaseRangePercent { get; set; }
+    // ── Execution ────────────────────────────────────────────────────────────
+    // X is a fixed price-unit offset specific to each symbol/index.
+    // Example values: US30=10, HK50=15, J225=15, US100/DE40/UK100=5, US500=1.
+    [Parameter("X Offset (price units)", Group = "Execution",
+        DefaultValue = 10.0, MinValue = 0, MaxValue = 50.0, Step = 0.5)]
+    public double XOffset { get; set; }
 
-    [Parameter("KSL Fibonacci Level (1-4)", Group = "Execution",
-        DefaultValue = 2, MinValue = 1, MaxValue = 4, Step = 1)]
-    public int KslFibLevel { get; set; }
+    // KTP selects one of 6 Fibonacci extension levels for the fixed-TP leg.
+    // Level 4 = 2.272 ≈ 2.3 as specified in the Combo lecture.
+    [Parameter("KTP Fibonacci Level (1-6)", Group = "Execution",
+        DefaultValue = 4, MinValue = 1, MaxValue = 6, Step = 1)]
+    public int KtpFibLevel { get; set; }
 
-    [Parameter("TP Profile (1-15)", Group = "Execution",
-        DefaultValue = 15, MinValue = 1, MaxValue = 15, Step = 1)]
-    public int TpProfile { get; set; }
+    [Parameter("Exit Mode", Group = "Execution", DefaultValue = ExitModeOption.FixedOnly)]
+    public ExitModeOption ExitMode { get; set; }
 
     [Parameter("Max Spread / SL % (0=off)", Group = "Execution",
         DefaultValue = 0.0, MinValue = 0.0, MaxValue = 25.0, Step = 2.5)]
@@ -75,7 +92,8 @@ public class SEN_Combo_V0 : Robot
         DefaultValue = 0, MinValue = 0, MaxValue = 168, Step = 1)]
     public double MaxSignalBarClockHours { get; set; }
 
-    // Risk inputs: RiskPercent is the total cluster risk, then split evenly across active TP legs.
+    // ── Risk ─────────────────────────────────────────────────────────────────
+    // RiskPercent is total cluster risk, split evenly across active legs.
     [Parameter("Risk % per Trade", Group = "Risk",
         DefaultValue = 1.0, MinValue = 0.1, MaxValue = 3.0, Step = 0.1)]
     public double RiskPercent { get; set; }
@@ -84,18 +102,19 @@ public class SEN_Combo_V0 : Robot
         DefaultValue = 10.0, MinValue = 1.0, MaxValue = 100.0, Step = 0.5)]
     public double MaxDailyDrawdownPercent { get; set; }
 
-    // Runtime state: loaded signals and pending-order birth bars are kept in memory for fast bar-by-bar checks.
+    // ── Runtime state ────────────────────────────────────────────────────────
     private readonly Dictionary<DateTime, SignalInfo> _signals = new();
     private readonly Dictionary<long, int> _pendingOrderCreatedBarCounts = new();
 
-    // Daily drawdown state: reset once per server date and measured from account equity.
-    // Risk sizing uses balance elsewhere; this guard uses equity because it is an emergency protection
-    // layer that must include floating PnL.
-    private DateTime _drawdownDay;
-    private double _dayStartEquity;
-    private bool _dailyDrawdownTriggered;
+    // SMA20 is used to trail the SL for Leg 2 in TwoLegs mode.
+    private MovingAverage _sma20;
 
-    // Counters printed in OnStop. They are intentionally simple diagnostics, not trading logic.
+    // Daily drawdown guard — measured from account equity to include floating PnL.
+    private DateTime _drawdownDay;
+    private double   _dayStartEquity;
+    private bool     _dailyDrawdownTriggered;
+
+    // Diagnostic counters — not trading logic.
     private int _barsWithoutSignal;
     private int _matchedSignalCount;
     private int _multiSignalBarCount;
@@ -110,40 +129,32 @@ public class SEN_Combo_V0 : Robot
     private int _skipLongSignalBarCount;
     private int _placeOrderErrorCount;
 
+    // ── Lifecycle ────────────────────────────────────────────────────────────
+
     protected override void OnStart()
     {
-        // Subscribe once at startup so order/position events can update counters and trigger SL ladder.
-        PendingOrders.Filled += OnPendingOrderFilled;
+        PendingOrders.Filled    += OnPendingOrderFilled;
         PendingOrders.Cancelled += OnPendingOrderCancelled;
-        Positions.Closed += OnPositionClosed;
+        Positions.Closed        += OnPositionClosed;
 
-        // Store the first daily equity baseline before any trading decision is made.
         ResetDailyDrawdownBaseline();
 
-        // Fail fast on invalid settings. This avoids running a bot that can place inconsistent TP/SL levels.
         if (!ValidateParameters())
         {
             Stop();
             return;
         }
 
-        var offsetDescription = string.Format(CultureInfo.InvariantCulture, "{0:F1}% BaseRange", XOffsetBaseRangePercent);
-        var tpLevels = GetTpLevels();
-        var tpMultipliers = GetTpMultipliers();
-        var tpProfileDescription = $"Profile {TpProfile} -> Levels [{FormatLevels(tpLevels)}] -> Multipliers [{FormatMultipliers(tpMultipliers)}]";
+        // SMA20 trailing is always initialised; it is only applied when ExitMode = TwoLegs.
+        _sma20 = Indicators.SimpleMovingAverage(Bars.ClosePrices, 20);
 
-        Print("[{0}] Symbol info | Symbol: {1} | PipSize: {2} | TickSize: {3} | Digits: {4} | VolumeMin: {5} | Offset: {6} | TP Profile: {7} | Execution: StopOrderOnly | SignalBarMode: ClosedBarContainsSignal | MaxSignalBarClockHours: {8:F1}",
-            BotLabel,
-            SymbolName,
-            Symbol.PipSize,
-            Symbol.TickSize,
-            Symbol.Digits,
-            Symbol.VolumeInUnitsMin,
-            offsetDescription,
-            tpProfileDescription,
+        var ktpMultiplier = GetKtpMultiplier(KtpFibLevel);
+        Print("[{0}] Symbol info | Symbol: {1} | PipSize: {2} | TickSize: {3} | Digits: {4} | VolumeMin: {5} | X: {6} | KTP: {7:F3} (Level {8}) | ExitMode: {9} | Execution: StopOrderOnly | MaxSignalBarClockHours: {10:F1}",
+            BotLabel, SymbolName,
+            Symbol.PipSize, Symbol.TickSize, Symbol.Digits, Symbol.VolumeInUnitsMin,
+            XOffset, ktpMultiplier, KtpFibLevel, ExitMode,
             MaxSignalBarClockHours);
 
-        // CSV signals are static for this run; LoadSignals parses and filters them by symbol if a symbol column exists.
         LoadSignals();
 
         if (_signals.Count == 0)
@@ -152,33 +163,31 @@ public class SEN_Combo_V0 : Robot
             Stop();
         }
 
-        // If cTrader restarts with pending orders already present, track them from the current bar.
         TrackExistingPendingOrders();
     }
 
     protected override void OnTick()
     {
-        // Daily drawdown is checked on every tick so protection does not wait until the next bar close.
+        // Daily drawdown guard is checked every tick for fast response.
         CheckDailyDrawdownLimit();
     }
 
     protected override void OnBarClosed()
     {
-        // If daily DD has triggered, CheckDailyDrawdownLimit also flattens exposure and blocks new trades.
         if (CheckDailyDrawdownLimit())
             return;
 
-        // Pending expiry is bar-based, so it belongs in OnBarClosed rather than OnTick.
+        // Trail Leg 2 SL before checking for a new signal so trailing is always up-to-date.
+        ApplySma20Trailing();
+
         CancelExpiredPendingOrders();
 
         if (_signals.Count == 0)
             return;
 
-        // Last(1) is the just-closed signal bar; Last(0) is the new live bar that has just opened.
-        var barTime = TrimToMinute(Bars.OpenTimes.Last(1));
+        var barTime     = TrimToMinute(Bars.OpenTimes.Last(1));
         var nextBarTime = TrimToMinute(Bars.OpenTimes.Last(0));
 
-        // Find a CSV signal whose timestamp is inside the closed bar interval [barTime, nextBarTime).
         if (!TryGetSignalForClosedBar(barTime, nextBarTime, out var signal, out var signalsInBar))
         {
             _barsWithoutSignal++;
@@ -189,32 +198,17 @@ public class SEN_Combo_V0 : Robot
         if (signalsInBar > 1)
             _multiSignalBarCount++;
 
-        // Optional guard for abnormal bars, weekend/session gaps, or bad historical data spacing.
         var signalBarClockHours = (nextBarTime - barTime).TotalHours;
         if (MaxSignalBarClockHours > 0 && signalBarClockHours > MaxSignalBarClockHours)
         {
             _skipLongSignalBarCount++;
-            Print("[{0}] {1} at {2:yyyy-MM-dd HH:mm} skipped: signal bar clock span {3:F2}h > MaxSignalBarClockHours {4:F2}h. NextBar: {5:yyyy-MM-dd HH:mm} | SignalTime: {6:yyyy-MM-dd HH:mm}",
-                BotLabel,
-                signal.Side,
-                barTime,
-                signalBarClockHours,
-                MaxSignalBarClockHours,
-                nextBarTime,
-                signal.Time);
+            Print("[{0}] {1} at {2:yyyy-MM-dd HH:mm} skipped: bar clock {3:F2}h > MaxSignalBarClockHours {4:F2}h. NextBar: {5:yyyy-MM-dd HH:mm}",
+                BotLabel, signal.Side, barTime, signalBarClockHours, MaxSignalBarClockHours, nextBarTime);
             return;
         }
 
-        // Design note:
-        // There is intentionally no session/time-of-day filter here. This executor treats the CSV signal
-        // source as the authority on when a setup exists, then applies execution/risk guards only. A future
-        // research option is to add optional session windows after reviewing per-symbol and per-hour
-        // expectancy, but it should default to off so it does not override the signal model prematurely.
-
-        // Convert CSV BUY/SELL into cTrader TradeType so order, pending and position APIs use the same direction.
         var tradeType = GetTradeType(signal);
 
-        // Reverse rule: before placing a new signal, remove any old pending/position in the opposite direction.
         CancelOppositePendingOrders(tradeType);
         if (!CloseOppositePositions(tradeType))
         {
@@ -222,92 +216,57 @@ public class SEN_Combo_V0 : Robot
             return;
         }
 
-        // Same-direction rule: do not stack another cluster while any same-direction child leg is still alive.
-        //
-        // Design note:
-        // This is intentionally conservative: one symbol/direction can have only one active cluster at a
-        // time. Even if the current cluster has already reached TP1 and its remaining legs are protected
-        // at break-even, the bot skips new same-direction signals instead of pyramiding. A future optional
-        // re-entry mode could allow new clusters only after existing same-direction exposure is risk-free,
-        // but that changes exposure, margin usage and trend-stacking behavior, so it should be tested as
-        // a separate strategy variant.
-        var sameDirectionExposureCount = GetMyOpenOrderCount(tradeType);
-        if (sameDirectionExposureCount > 0)
+        var sameDirectionCount = GetMyOpenOrderCount(tradeType);
+        if (sameDirectionCount > 0)
         {
             _skipSameDirectionSignalCount++;
-            Print("[{0}] {1} at {2:yyyy-MM-dd HH:mm} skipped: same-direction exposure already exists ({3} position/pending order(s)).",
-                BotLabel, signal.Side, barTime, sameDirectionExposureCount);
+            Print("[{0}] {1} at {2:yyyy-MM-dd HH:mm} skipped: same-direction exposure exists ({3} order/position).",
+                BotLabel, signal.Side, barTime, sameDirectionCount);
             return;
         }
 
-        // At this point the signal is clean: no opposite exposure remains and no same-direction cluster exists.
         PlaceSignalOrder(signal, barTime, nextBarTime, signalBarClockHours, signalsInBar);
     }
 
     protected override void OnStop()
     {
         Print("[{0}] Stopped. Signals loaded: {1}", BotLabel, _signals.Count);
-        Print("[{0}] Summary | Signals matched: {1} | Multi-signal bars: {2} | Bars without signal: {3} | Stop orders placed: {4} | Stop fills: {5} | Pending cancelled: {6} | Pending expired: {7} | Skip SameDirection: {8} | Skip Spread: {9} | Skip Volume: {10} | Skip CloseOpposite: {11} | Skip LongBar: {12} | Place errors: {13}",
+        Print("[{0}] Summary | Matched: {1} | MultiBar: {2} | NoSignal: {3} | Placed: {4} | Filled: {5} | Cancelled: {6} | Expired: {7} | SkipSameDir: {8} | SkipSpread: {9} | SkipVol: {10} | SkipCloseOpp: {11} | SkipLongBar: {12} | Errors: {13}",
             BotLabel,
-            _matchedSignalCount,
-            _multiSignalBarCount,
-            _barsWithoutSignal,
-            _stopOrdersPlacedCount,
-            _pendingFilledCount,
-            _pendingCancelledCount,
-            _pendingExpiredCount,
-            _skipSameDirectionSignalCount,
-            _skipSpreadFilterCount,
-            _skipVolumeCount,
-            _skipCloseOppositeCount,
-            _skipLongSignalBarCount,
-            _placeOrderErrorCount);
+            _matchedSignalCount, _multiSignalBarCount, _barsWithoutSignal,
+            _stopOrdersPlacedCount, _pendingFilledCount, _pendingCancelledCount, _pendingExpiredCount,
+            _skipSameDirectionSignalCount, _skipSpreadFilterCount, _skipVolumeCount,
+            _skipCloseOppositeCount, _skipLongSignalBarCount, _placeOrderErrorCount);
     }
+
+    // ── Validation ───────────────────────────────────────────────────────────
 
     private bool ValidateParameters()
     {
-        // Empty path means there is no signal source, so the bot cannot make any trading decision.
         if (string.IsNullOrWhiteSpace(CsvPath))
         {
             Print("[{0}] ERROR: CSV path is empty.", BotLabel);
             return false;
         }
 
-        // KSL uses a separate 1-4 Fibonacci table because SL levels are intentionally closer than TP extensions.
-        if (KslFibLevel < 1 || KslFibLevel > 4)
+        if (XOffset <= 0 || XOffset > 200.0)
         {
-            Print("[{0}] ERROR: KSL Fibonacci level must be from 1 to 4.", BotLabel);
+            Print("[{0}] ERROR: X Offset must be > 0 and <= 200 price units.", BotLabel);
             return false;
         }
 
-        // TP Profile encodes only valid, strictly increasing TP level combinations for optimizer cleanliness.
-        if (TpProfile < 1 || TpProfile > 15)
+        if (KtpFibLevel < 1 || KtpFibLevel > 6)
         {
-            Print("[{0}] ERROR: TP Profile must be from 1 to 15.", BotLabel);
-            return false;
-        }
-
-        // GetTpLevelsByProfile maps the selected profile into its active Fibonacci TP levels.
-        var tpLevels = GetTpLevels();
-        if (tpLevels.Any(level => !IsValidFibLevel(level)))
-        {
-            Print("[{0}] ERROR: TP Fibonacci levels must be from 1 to 4.", BotLabel);
-            return false;
-        }
-
-        if (XOffsetBaseRangePercent <= 0 || XOffsetBaseRangePercent > 20.0)
-        {
-            Print("[{0}] ERROR: X Offset % BaseRange must be from 1 to 20.", BotLabel);
+            Print("[{0}] ERROR: KTP Fibonacci level must be 1 to 6.", BotLabel);
             return false;
         }
 
         if (MaxSpreadToStopLossPercent < 0 || MaxSpreadToStopLossPercent > 25.0)
         {
-            Print("[{0}] ERROR: Max Spread / SL % must be from 0 to 25. Use 0 to disable the filter.", BotLabel);
+            Print("[{0}] ERROR: Max Spread / SL % must be 0 to 25. Use 0 to disable.", BotLabel);
             return false;
         }
 
-        // RiskPercent is total cluster risk, not per leg; code later splits it by active TP leg count.
         if (RiskPercent <= 0 || RiskPercent > 3.0)
         {
             Print("[{0}] ERROR: Risk percent must be > 0 and <= 3.", BotLabel);
@@ -316,7 +275,7 @@ public class SEN_Combo_V0 : Robot
 
         if (CancelPendingAfterBars < 1)
         {
-            Print("[{0}] ERROR: Cancel pending after bars must be at least 1.", BotLabel);
+            Print("[{0}] ERROR: Cancel pending after bars must be >= 1.", BotLabel);
             return false;
         }
 
@@ -329,9 +288,47 @@ public class SEN_Combo_V0 : Robot
         return true;
     }
 
+    // ── SMA20 trailing (Leg 2, TwoLegs mode) ────────────────────────────────
+
+    private void ApplySma20Trailing()
+    {
+        if (ExitMode != ExitModeOption.TwoLegs)
+            return;
+
+        var sma20Value = _sma20.Result.Last(1);
+        if (double.IsNaN(sma20Value))
+            return;
+
+        foreach (var position in GetMyPositions())
+        {
+            if (!IsTrailingLeg(position.Label))
+                continue;
+
+            var newSl = position.TradeType == TradeType.Buy
+                ? Math.Max(position.StopLoss ?? double.MinValue, sma20Value)
+                : Math.Min(position.StopLoss ?? double.MaxValue, sma20Value);
+
+            newSl = Math.Round(newSl, Symbol.Digits);
+
+            if (!ShouldImproveStopLoss(position, newSl))
+                continue;
+
+            var oldSl  = position.StopLoss;
+            var result = ModifyPosition(position, newSl, position.TakeProfit, ProtectionType.Absolute);
+            if (!result.IsSuccessful)
+                Print("[{0}] SMA20 TRAIL ERROR | {1} | Label: {2} | SL {3} -> {4} failed: {5}",
+                    BotLabel, position.TradeType, position.Label, oldSl, newSl, result.Error);
+            else
+                Print("[{0}] SMA20 TRAIL | {1} | Label: {2} | SL: {3} -> {4} | SMA20: {5}",
+                    BotLabel, position.TradeType, position.Label, oldSl, newSl,
+                    sma20Value.ToString("F" + Symbol.Digits, CultureInfo.InvariantCulture));
+        }
+    }
+
+    // ── CSV loading ──────────────────────────────────────────────────────────
+
     private void LoadSignals()
     {
-        // Reload from scratch to avoid stale signals if this method is ever reused in a future refresh flow.
         _signals.Clear();
 
         if (!System.IO.File.Exists(CsvPath))
@@ -344,15 +341,13 @@ public class SEN_Combo_V0 : Robot
         if (lines.Length == 0)
             return;
 
-        // Header is optional. If present, columns are matched by name; otherwise fixed order is assumed.
-        var header = SplitCsvLine(lines[0]);
+        var header    = SplitCsvLine(lines[0]);
         var hasHeader = header.Any(cell => cell.Equals("bartime", StringComparison.OrdinalIgnoreCase));
 
-        // Supported header aliases make the loader a little more tolerant of exported signal files.
-        var timeIndex = hasHeader ? FindColumn(header, "bartime", "time", "date") : 0;
-        var symbolIndex = hasHeader ? FindColumn(header, "symbol", "symbolname") : -1;
-        var sideIndex = hasHeader ? FindColumn(header, "side", "signal", "direction") : 1;
-        var atrIndex = hasHeader ? FindColumn(header, "atr") : 2;
+        var timeIndex   = hasHeader ? FindColumn(header, "bartime", "time", "date") : 0;
+        var symbolIndex = hasHeader ? FindColumn(header, "symbol", "symbolname")     : -1;
+        var sideIndex   = hasHeader ? FindColumn(header, "side", "signal", "direction") : 1;
+        var atrIndex    = hasHeader ? FindColumn(header, "atr")                      : 2;
 
         if (timeIndex < 0 || sideIndex < 0 || atrIndex < 0)
         {
@@ -360,18 +355,17 @@ public class SEN_Combo_V0 : Robot
             return;
         }
 
-        var loaded = 0;
-        var skipped = 0;
+        var loaded    = 0;
+        var skipped   = 0;
         var startLine = hasHeader ? 1 : 0;
 
-        // Parse each CSV row into a normalized SignalInfo keyed by signal time.
         for (var i = startLine; i < lines.Length; i++)
         {
             var rawLine = lines[i];
             if (string.IsNullOrWhiteSpace(rawLine))
                 continue;
 
-            var parts = SplitCsvLine(rawLine);
+            var parts         = SplitCsvLine(rawLine);
             var requiredIndex = Math.Max(timeIndex, Math.Max(sideIndex, atrIndex));
             if (parts.Length <= requiredIndex)
             {
@@ -379,7 +373,6 @@ public class SEN_Combo_V0 : Robot
                 continue;
             }
 
-            // If CSV has a symbol column, this bot only imports rows for the current chart symbol.
             if (symbolIndex >= 0)
             {
                 if (parts.Length <= symbolIndex || !IsCurrentSymbol(parts[symbolIndex]))
@@ -392,7 +385,6 @@ public class SEN_Combo_V0 : Robot
                 continue;
             }
 
-            // Same timestamp collision: the later CSV row overwrites the earlier row by design.
             _signals[signal.Time] = signal;
             loaded++;
         }
@@ -405,23 +397,17 @@ public class SEN_Combo_V0 : Robot
     {
         signal = default;
 
-        // Signal time must match the supported export formats exactly to avoid timezone/date ambiguity.
         if (!TryParseTime(timeText.Trim(), out var sourceTime))
             return false;
 
-        // Normalize multiple possible signal encodings into BUY/SELL.
         var side = sideText.Trim().ToUpperInvariant();
-        if (side is "1" or "BUY" or "LONG")
-            side = "BUY";
-        else if (side is "-1" or "SELL" or "SHORT")
-            side = "SELL";
-        else
-            return false;
+        if      (side is "1" or "BUY"  or "LONG")  side = "BUY";
+        else if (side is "-1" or "SELL" or "SHORT") side = "SELL";
+        else    return false;
 
         if (!double.TryParse(atrText.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var atr) || atr <= 0)
             return false;
 
-        // Apply CSV time offset here so all later matching uses cTrader/server-aligned signal time.
         signal = new SignalInfo(TrimToMinute(sourceTime.AddHours(CsvTimeOffsetHours)), side, atr);
         return true;
     }
@@ -429,465 +415,230 @@ public class SEN_Combo_V0 : Robot
     private bool TryParseTime(string text, out DateTime time)
     {
         return DateTime.TryParseExact(text, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out time)
-            || DateTime.TryParseExact(text, "yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out time);
+            || DateTime.TryParseExact(text, "yyyy-MM-dd HH:mm",    CultureInfo.InvariantCulture, DateTimeStyles.None, out time);
     }
 
-    private void PlaceSignalOrder(SignalInfo signal, DateTime barTime, DateTime nextBarTime, double signalBarClockHours, int signalsInBar)
+    // ── Order placement ──────────────────────────────────────────────────────
+
+    private void PlaceSignalOrder(SignalInfo signal, DateTime barTime, DateTime nextBarTime,
+        double signalBarClockHours, int signalsInBar)
     {
-        // The signal bar is the just-closed bar. Entry/SL/TP are all derived from that completed bar.
-        var high = Bars.HighPrices.Last(1);
-        var low = Bars.LowPrices.Last(1);
-
-        // BUY and SELL share the same distance formulas but mirror direction around entry.
+        // High and Low of the just-closed signal bar (Last(1) in OnBarClosed).
+        var high  = Bars.HighPrices.Last(1);
+        var low   = Bars.LowPrices.Last(1);
         var isBuy = signal.Side == "BUY";
-        var signalRange = high - low;
 
-        // BaseRange is the common scale for SL and TP: use the larger value between CSV ATR and candle range.
-        //
-        // Design note:
-        // The strategy intentionally does not cap BaseRange here. Large signal bars can be valid breakout
-        // conditions, and risk sizing naturally scales volume down when SL distance expands. This preserves
-        // the original signal-following behavior across H1-H4 tests. A future research option is to add
-        // optional range-quality filters, such as MinBaseRangePips, MaxBaseRangePips, or
-        // MaxSignalRangeAtrMultiple, but they should default to off and be validated by symbol/timeframe
-        // backtests before being used live.
-        var baseRange = Math.Max(signal.Atr, signalRange);
-        var kslMultiplier = GetKslMultiplier();
-        var tpMultipliers = GetTpMultipliers();
-        var tradeType = isBuy ? TradeType.Buy : TradeType.Sell;
+        var tradeType    = isBuy ? TradeType.Buy : TradeType.Sell;
+        var ktpMultiplier = GetKtpMultiplier(KtpFibLevel);
 
-        // Entry offset controls how far price must break beyond the signal candle before the bot enters.
-        // It uses the same volatility-aware BaseRange scale as SL/TP, which avoids hard-coded pip distances
-        // across forex, metals, crypto and indices.
-        var entryOffset = GetEntryOffset(baseRange);
-        var entryOffsetPips = entryOffset / Symbol.PipSize;
-        var entryPrice = isBuy ? high + entryOffset : low - entryOffset;
+        // Entry: breakout beyond signal candle by X price units.
+        var entryPrice = isBuy ? high + XOffset : low - XOffset;
 
-        // Initial SL is shared by every leg in the cluster.
-        var stopLossPrice = isBuy
-            ? entryPrice - kslMultiplier * baseRange
-            : entryPrice + kslMultiplier * baseRange;
+        // SL: anchored to the opposite side of the signal candle, extended by X.
+        // This places SL outside the full candle structure, not relative to entry.
+        var slPrice = isBuy ? low - XOffset : high + XOffset;
 
-        // cTrader order APIs expect SL/TP distances in pips when using relative protection.
-        var stopLossPips = Math.Abs(entryPrice - stopLossPrice) / Symbol.PipSize;
-        var firstTakeProfitPips = tpMultipliers[0] * baseRange / Symbol.PipSize;
-        var spreadPips = (Symbol.Ask - Symbol.Bid) / Symbol.PipSize;
-        var spreadToStopLossPercent = stopLossPips > 0
-            ? spreadPips / stopLossPips * 100.0
-            : 0;
-        var spreadToFirstTakeProfitPercent = firstTakeProfitPips > 0
-            ? spreadPips / firstTakeProfitPips * 100.0
-            : 0;
+        // SL distance spans the entire candle range plus X on both sides.
+        var slDist = Math.Abs(entryPrice - slPrice);   // = (High - Low) + 2 * X
+        var slPips = slDist / Symbol.PipSize;
 
-        // Optional spread filter scaled to the setup's own SL distance rather than fixed pips.
-        // MaxSpreadToStopLossPercent = 0 keeps the original behavior. When enabled, it avoids
-        // placing a cluster when the current trading cost is too large relative to the planned risk.
-        if (MaxSpreadToStopLossPercent > 0 && spreadToStopLossPercent > MaxSpreadToStopLossPercent)
+        // TP: fixed extension from entry using ATR from the CSV signal bar.
+        var tpDist   = ktpMultiplier * signal.Atr;
+        var tpPrice1 = isBuy ? entryPrice + tpDist : entryPrice - tpDist;
+        var tpPips1  = tpDist / Symbol.PipSize;
+
+        var spreadPips          = (Symbol.Ask - Symbol.Bid) / Symbol.PipSize;
+        var spreadToSlPercent   = slPips  > 0 ? spreadPips / slPips  * 100.0 : 0;
+        var spreadToTpPercent   = tpPips1 > 0 ? spreadPips / tpPips1 * 100.0 : 0;
+
+        if (MaxSpreadToStopLossPercent > 0 && spreadToSlPercent > MaxSpreadToStopLossPercent)
         {
             _skipSpreadFilterCount++;
-            Print("[{0}] {1} at {2:yyyy-MM-dd HH:mm} skipped: spread {3:F1}p is {4:F2}% of SL, above Max Spread / SL {5:F2}%. SL: {6:F1}p | TP1: {7:F1}p | Spread/TP1: {8:F2}%",
-                BotLabel,
-                signal.Side,
-                barTime,
-                spreadPips,
-                spreadToStopLossPercent,
-                MaxSpreadToStopLossPercent,
-                stopLossPips,
-                firstTakeProfitPips,
-                spreadToFirstTakeProfitPercent);
+            Print("[{0}] {1} at {2:yyyy-MM-dd HH:mm} skipped: spread {3:F1}p is {4:F2}% of SL ({5:F2}%), above limit {6:F2}%.",
+                BotLabel, signal.Side, barTime,
+                spreadPips, spreadToSlPercent, slPips, MaxSpreadToStopLossPercent);
             return;
         }
 
-        // RiskPercent is total cluster risk. Divide it evenly across active TP legs.
-        var legRiskPercent = RiskPercent / tpMultipliers.Length;
-        var legVolume = CalculateRiskVolume(stopLossPips, legRiskPercent);
+        var legCount      = ExitMode == ExitModeOption.TwoLegs ? 2 : 1;
+        var legRiskPercent = RiskPercent / legCount;
+        var legVolume     = CalculateRiskVolume(slPips, legRiskPercent);
 
-        // If the split leg volume is below broker minimum, placing tiny child orders would fail or distort risk.
         if (legVolume < Symbol.VolumeInUnitsMin)
         {
             _skipVolumeCount++;
-            Print("[{0}] ERROR: total risk {1:F1}% split into {2} TP legs gives leg risk {3:F3}% and volume {4}, below symbol minimum {5}. SL: {6:F1}p.",
-                BotLabel, RiskPercent, tpMultipliers.Length, legRiskPercent, legVolume, Symbol.VolumeInUnitsMin, stopLossPips);
+            Print("[{0}] ERROR: {1}% risk / {2} leg(s) = {3:F3}% leg risk → volume {4} below minimum {5}. SL: {6:F1}p.",
+                BotLabel, RiskPercent, legCount, legRiskPercent, legVolume, Symbol.VolumeInUnitsMin, slPips);
             return;
         }
 
-        // Create one child order per active TP multiplier. All legs share entry/SL and differ only by TP.
-        //
-        // Partial cluster policy:
-        // If one or more legs fail to place, keep any legs that were already placed successfully.
-        // This is intentional. A partial cluster usually carries less total risk than planned because
-        // each leg is sized independently, and it preserves some participation in the signal instead
-        // of discarding the entire trade opportunity. The trade-off is that live results may differ
-        // from the ideal full-leg structure: missing middle legs can remove intermediate profit-taking
-        // and SL-ladder milestones. The summary log below makes that visible for review.
-        var requestedLegCount = tpMultipliers.Length;
-        var placedLegCount = 0;
-        for (var i = 0; i < tpMultipliers.Length; i++)
+        var placedCount = 0;
+
+        // Leg 1: fixed TP at Entry ± KTP × ATR.
+        if (PlaceOneLeg(signal, barTime, nextBarTime, signalBarClockHours, signalsInBar,
+            tradeType, 1, legCount, legVolume, legRiskPercent,
+            entryPrice, slPrice, tpPrice1, high, low, ktpMultiplier))
+            placedCount++;
+
+        // Leg 2 (TwoLegs only): no fixed TP — SL trailed via SMA20 each bar close.
+        if (ExitMode == ExitModeOption.TwoLegs)
         {
-            var legNumber = i + 1;
-            var tpMultiplier = tpMultipliers[i];
-
-            // TP price mirrors around entry: above entry for BUY, below entry for SELL.
-            var takeProfitPrice = isBuy
-                ? entryPrice + tpMultiplier * baseRange
-                : entryPrice - tpMultiplier * baseRange;
-            var takeProfitPips = Math.Abs(takeProfitPrice - entryPrice) / Symbol.PipSize;
-            var riskReward = takeProfitPips / stopLossPips;
-
-            // Stop-order-only execution waits for breakout confirmation beyond the signal candle.
-            if (PlaceSignalStopOrder(signal, barTime, nextBarTime, signalBarClockHours, signalsInBar, tradeType, legNumber, requestedLegCount, legVolume, legRiskPercent, entryPrice, entryOffset, stopLossPrice, takeProfitPrice, stopLossPips, takeProfitPips, signalRange, baseRange, kslMultiplier, tpMultiplier, riskReward))
-                placedLegCount++;
+            if (PlaceOneLeg(signal, barTime, nextBarTime, signalBarClockHours, signalsInBar,
+                tradeType, 2, legCount, legVolume, legRiskPercent,
+                entryPrice, slPrice, null, high, low, ktpMultiplier))
+                placedCount++;
         }
 
-        var summaryLevel = placedLegCount == requestedLegCount ? "SIGNAL CLUSTER COMPLETE" : "SIGNAL CLUSTER PARTIAL";
-        var tpLevels = GetTpLevels();
-        Print("[{0}] {1} | {2} at {3:yyyy-MM-dd HH:mm} | Mode: {4} | TP Profile: {5} -> Levels [{6}] -> Multipliers [{7}] | Legs placed: {8}/{9} | TotalRisk planned: {10:F1}% | TotalRisk placed approx: {11:F3}% | LegRisk: {12:F3}% | Offset: {13:F1}% BaseRange ({14:F1}p) | Spread: {15:F1}p | Spread/SL: {16:F2}% | Spread/TP1: {17:F2}% | Max Spread/SL: {18}",
-            BotLabel,
-            summaryLevel,
-            signal.Side,
-            barTime,
-            "StopOrder",
-            TpProfile,
-            FormatLevels(tpLevels),
-            FormatMultipliers(tpMultipliers),
-            placedLegCount,
-            requestedLegCount,
-            RiskPercent,
-            legRiskPercent * placedLegCount,
-            legRiskPercent,
-            XOffsetBaseRangePercent,
-            entryOffsetPips,
-            spreadPips,
-            spreadToStopLossPercent,
-            spreadToFirstTakeProfitPercent,
-            MaxSpreadToStopLossPercent > 0 ? MaxSpreadToStopLossPercent.ToString("F2", CultureInfo.InvariantCulture) + "%" : "off");
+        var summary  = placedCount == legCount ? "SIGNAL CLUSTER COMPLETE" : "SIGNAL CLUSTER PARTIAL";
+        var rr       = slPips > 0 ? tpPips1 / slPips : 0;
+        Print("[{0}] {1} | {2} at {3:yyyy-MM-dd HH:mm} | Mode: {4} | KTP: {5:F3} (L{6}) | Legs: {7}/{8} | TotalRisk: {9:F1}% | LegRisk: {10:F3}% | X: {11} | Entry: {12} | SL: {13} ({14:F1}p) | TP1: {15} ({16:F1}p) | RR: {17:F2} | ATR: {18:F4} | High: {19} | Low: {20} | Spread/SL: {21:F2}% | Spread/TP: {22:F2}%",
+            BotLabel, summary, signal.Side, barTime,
+            ExitMode, ktpMultiplier, KtpFibLevel,
+            placedCount, legCount,
+            RiskPercent, legRiskPercent,
+            XOffset, entryPrice, slPrice, slPips,
+            tpPrice1, tpPips1, rr,
+            signal.Atr, high, low,
+            spreadToSlPercent, spreadToTpPercent);
     }
 
-    private bool PlaceSignalStopOrder(SignalInfo signal, DateTime barTime, DateTime nextBarTime, double signalBarClockHours, int signalsInBar, TradeType tradeType, int legNumber, int legCount, double volume, double legRiskPercent, double entryPrice, double entryOffset, double stopLossPrice, double takeProfitPrice, double stopLossPips, double takeProfitPips, double signalRange, double baseRange, double kslMultiplier, double tpMultiplier, double riskReward)
+    private bool PlaceOneLeg(SignalInfo signal, DateTime barTime, DateTime nextBarTime,
+        double signalBarClockHours, int signalsInBar,
+        TradeType tradeType, int legNumber, int legCount,
+        double volume, double legRiskPercent,
+        double entryPrice, double slPrice, double? tpPrice,
+        double high, double low, double ktpMultiplier)
     {
-        // Stop order mode places pending child orders at the breakout price.
+        var slPips = Math.Abs(entryPrice - slPrice) / Symbol.PipSize;
+        double? tpPips = tpPrice.HasValue
+            ? (double?)(Math.Abs(tpPrice.Value - entryPrice) / Symbol.PipSize)
+            : null;
+
         var result = PlaceStopOrder(
             tradeType,
             SymbolName,
             volume,
             entryPrice,
             GetLegLabel(legNumber),
-            stopLossPips,
-            takeProfitPips,
+            slPips,
+            tpPips,
             ProtectionType.Relative);
 
-        // Stop order placement can fail due to invalid price distance, broker limits, market state, etc.
         if (!result.IsSuccessful)
         {
             _placeOrderErrorCount++;
-            Print("[{0}] ERROR placing {1} stop at {2}: {3}", BotLabel, signal.Side, entryPrice, result.Error);
+            Print("[{0}] ERROR placing {1} leg {2} stop at {3}: {4}",
+                BotLabel, signal.Side, legNumber, entryPrice, result.Error);
             return false;
         }
 
         _stopOrdersPlacedCount++;
 
-        // Track birth bar for Cancel Pending After Bars.
         if (result.PendingOrder != null)
             _pendingOrderCreatedBarCounts[result.PendingOrder.Id] = Bars.Count;
 
-        Print("[{0}] {1} STOP leg {2}/{3} placed | Bar: {4:yyyy-MM-dd HH:mm} -> {5:yyyy-MM-dd HH:mm} ({6:F2}h) | SignalTime: {7:yyyy-MM-dd HH:mm} | SignalsInBar: {8} | Entry: {9} | Offset: {10:F1}% BaseRange = {11:F1}p ({12} price) | SL: {13} ({14:F1}p) | TP: {15} ({16:F1}p) | ATR: {17:F4} | Range: {18:F4} | Base: {19:F4} | KSL: {20:F3} | KTP: {21:F3} | RR: {22:F2} | TotalRisk: {23:F1}% | LegRisk: {24:F3}% | Lots: {25:F2} | PipSize: {26}",
-            BotLabel,
-            signal.Side,
-            legNumber,
-            legCount,
-            barTime,
-            nextBarTime,
-            signalBarClockHours,
-            signal.Time,
-            signalsInBar,
-            entryPrice,
-            XOffsetBaseRangePercent,
-            entryOffset / Symbol.PipSize,
-            entryOffset,
-            stopLossPrice,
-            stopLossPips,
-            takeProfitPrice,
-            takeProfitPips,
-            signal.Atr,
-            signalRange,
-            baseRange,
-            kslMultiplier,
-            tpMultiplier,
-            riskReward,
-            RiskPercent,
+        var legType  = legNumber == 2 && ExitMode == ExitModeOption.TwoLegs ? "TRAIL" : "FIXED";
+        var tpLabel  = tpPrice.HasValue
+            ? tpPrice.Value.ToString(CultureInfo.InvariantCulture) + " (" + (tpPips ?? 0).ToString("F1", CultureInfo.InvariantCulture) + "p)"
+            : "none (SMA20 trailing)";
+        Print("[{0}] {1} STOP leg {2}/{3} [{4}] | Bar: {5:yyyy-MM-dd HH:mm}->{6:yyyy-MM-dd HH:mm} ({7:F2}h) | SigTime: {8:yyyy-MM-dd HH:mm} | SigInBar: {9} | Entry: {10} | SL: {11} ({12:F1}p) | TP: {13} | KTP: {14:F3} | ATR: {15:F4} | High: {16} | Low: {17} | X: {18} | LegRisk: {19:F3}% | Lots: {20:F2} | PipSize: {21}",
+            BotLabel, signal.Side,
+            legNumber, legCount, legType,
+            barTime, nextBarTime, signalBarClockHours,
+            signal.Time, signalsInBar,
+            entryPrice, slPrice, slPips,
+            tpLabel, ktpMultiplier,
+            signal.Atr, high, low, XOffset,
             legRiskPercent,
             Symbol.VolumeInUnitsToQuantity(volume),
             Symbol.PipSize);
         return true;
     }
 
+    // ── Risk sizing ──────────────────────────────────────────────────────────
+
     private double CalculateRiskVolume(double stopLossPips, double riskPercent)
     {
-        // A non-positive SL distance is invalid and would make risk sizing undefined.
         if (stopLossPips <= 0)
             return 0;
 
-        // Use realized account balance so floating PnL does not resize the next cluster.
         var riskAmount = Account.Balance * riskPercent / 100.0;
-
-        // Let cTrader convert fixed cash risk + SL pips into symbol-specific volume units.
-        var volume = Symbol.VolumeForFixedRisk(riskAmount, stopLossPips, RoundingMode.Down);
-
-        // Normalize down to avoid accidentally exceeding the intended risk after broker volume rounding.
+        var volume     = Symbol.VolumeForFixedRisk(riskAmount, stopLossPips, RoundingMode.Down);
         return Symbol.NormalizeVolumeInUnits(volume, RoundingMode.Down);
     }
 
-    private double GetEntryOffset(double baseRange)
-    {
-        return baseRange * XOffsetBaseRangePercent / 100.0;
-    }
+    // ── KTP Fibonacci table ──────────────────────────────────────────────────
 
-    private double[] GetTpMultipliers()
+    private static double GetKtpMultiplier(int level) => level switch
     {
-        // Convert active TP level numbers into the actual Fibonacci multipliers used by price formulas.
-        return GetTpLevels()
-            .Select(GetFibMultiplier)
-            .ToArray();
-    }
+        1 => 1.272,
+        2 => 1.618,
+        3 => 2.000,
+        4 => 2.272,   // ≈ 2.3, default per Combo lecture
+        5 => 2.618,
+        6 => 3.618,
+        _ => 2.272,
+    };
 
-    private int[] GetTpLevels()
-    {
-        return GetTpLevelsByProfile(TpProfile);
-    }
+    // ── Label helpers ────────────────────────────────────────────────────────
 
-    private static int[] GetTpLevelsByProfile(int profile)
-    {
-        // TP Profile compresses the valid combinations C(4,1)+C(4,2)+C(4,3)+C(4,4) into 15 optimizer-safe choices.
-        // This prevents invalid heatmap holes such as TP1 >= TP2 and removes duplicate no-op parameters.
-        return profile switch
-        {
-            1 => new[] { 1 },
-            2 => new[] { 2 },
-            3 => new[] { 3 },
-            4 => new[] { 4 },
-            5 => new[] { 1, 2 },
-            6 => new[] { 1, 3 },
-            7 => new[] { 1, 4 },
-            8 => new[] { 2, 3 },
-            9 => new[] { 2, 4 },
-            10 => new[] { 3, 4 },
-            11 => new[] { 1, 2, 3 },
-            12 => new[] { 1, 2, 4 },
-            13 => new[] { 1, 3, 4 },
-            14 => new[] { 2, 3, 4 },
-            15 => new[] { 1, 2, 3, 4 },
-            _ => Array.Empty<int>()
-        };
-    }
-
-    private double GetKslMultiplier()
-    {
-        // SL levels intentionally use a more conservative table than TP extensions.
-        return KslFibLevel switch
-        {
-            1 => 1.000,
-            2 => 1.272,
-            3 => 1.618,
-            4 => 2.000,
-            _ => 1.272
-        };
-    }
-
-    private static double GetFibMultiplier(int fibLevel)
-    {
-        // TP Fibonacci extension table. Level 5 is intentionally not supported in this strategy version.
-        return fibLevel switch
-        {
-            1 => 1.272,
-            2 => 1.618,
-            3 => 2.272,
-            4 => 2.618,
-            _ => 2.272
-        };
-    }
-
-    private static bool IsValidFibLevel(int fibLevel)
-    {
-        return fibLevel >= 1 && fibLevel <= 4;
-    }
-
-    private string GetLegLabel(int legNumber)
-    {
-        // Leg-specific labels let events identify which TP milestone has closed.
-        return $"{BotLabel}_L{legNumber}";
-    }
+    private string GetLegLabel(int legNumber) => $"{BotLabel}_L{legNumber}";
 
     private bool IsMyBotLabel(string label)
     {
-        // Manage both legacy positions labelled exactly BotLabel and new leg-labelled positions.
         if (string.IsNullOrWhiteSpace(label))
             return false;
-
         return label == BotLabel || label.StartsWith($"{BotLabel}_L", StringComparison.Ordinal);
     }
 
+    // Trailing legs are always Leg 2, identified by label suffix _L2.
+    private bool IsTrailingLeg(string label) => label == GetLegLabel(2);
+
     private int GetLegNumber(string label)
     {
-        // Legacy positions without _L suffix return 0, so they are managed but excluded from SL ladder.
         var prefix = $"{BotLabel}_L";
         if (!label.StartsWith(prefix, StringComparison.Ordinal))
             return 0;
-
-        return int.TryParse(label[prefix.Length..], NumberStyles.Integer, CultureInfo.InvariantCulture, out var legNumber)
-            ? legNumber
-            : 0;
+        return int.TryParse(label[prefix.Length..], NumberStyles.Integer, CultureInfo.InvariantCulture, out var n)
+            ? n : 0;
     }
 
-    private static string FormatMultipliers(double[] values)
+    // ── Position helpers ─────────────────────────────────────────────────────
+
+    private static bool ShouldImproveStopLoss(Position position, double newSl)
     {
-        return string.Join(", ", values.Select(value => value.ToString("F3", CultureInfo.InvariantCulture)));
-    }
-
-    private static string FormatLevels(int[] values)
-    {
-        return string.Join(",", values);
-    }
-
-    private static bool IsTakeProfitClose(PositionClosedEventArgs args)
-    {
-        // Use string matching to stay tolerant of cTrader enum naming while still detecting TP closures.
-        return args.Reason.ToString().IndexOf("TakeProfit", StringComparison.OrdinalIgnoreCase) >= 0;
-    }
-
-    private void ApplyStopLossLadder(Position closedPosition)
-    {
-        // reachedLeg is the leg that has just closed by TP, e.g. L1/L2/L3.
-        var reachedLeg = GetLegNumber(closedPosition.Label);
-
-        // Active TP multipliers are needed to reconstruct previous TP prices from remaining positions.
-        var activeTpMultipliers = GetTpMultipliers();
-
-        // No ladder after the final leg, and legacy non-leg positions cannot drive ladder movement.
-        if (reachedLeg <= 0 || reachedLeg >= activeTpMultipliers.Length)
-            return;
-
-        // Only higher-numbered legs remain eligible. Lower/equal legs already hit TP or should not be moved.
-        var remainingPositions = GetMyPositions()
-            .Where(position => position.TradeType == closedPosition.TradeType)
-            .Select(position => new
-            {
-                Position = position,
-                LegNumber = GetLegNumber(position.Label)
-            })
-            .Where(item => item.LegNumber > reachedLeg)
-            .OrderBy(item => item.LegNumber)
-            .ToArray();
-
-        if (remainingPositions.Length == 0)
-        {
-            // Useful log for gap cases where other legs closed before this event was processed.
-            Print("[{0}] SL LADDER | TP leg {1} hit but no higher leg remains open.",
-                BotLabel, reachedLeg);
-            return;
-        }
-
-        foreach (var item in remainingPositions)
-        {
-            // Calculate the new protective SL: after TP1 -> Entry, after TP2 -> TP1, after TP3 -> TP2.
-            if (!TryGetLadderStopLossPrice(item.Position, item.LegNumber, reachedLeg, activeTpMultipliers, out var newStopLossPrice))
-            {
-                Print("[{0}] SL LADDER SKIP | TP leg {1} hit | Remaining label: {2} | Could not calculate new SL.",
-                    BotLabel, reachedLeg, item.Position.Label);
-                continue;
-            }
-
-            // Round to symbol digits so modification requests use a broker-valid price precision.
-            newStopLossPrice = Math.Round(newStopLossPrice, Symbol.Digits);
-
-            // Never loosen protection. BUY SL only moves up; SELL SL only moves down.
-            if (!ShouldImproveStopLoss(item.Position, newStopLossPrice))
-            {
-                Print("[{0}] SL LADDER SKIP | TP leg {1} hit | Remaining leg {2} | Current SL: {3} already protects better/equal than target SL: {4}.",
-                    BotLabel, reachedLeg, item.LegNumber, item.Position.StopLoss, newStopLossPrice);
-                continue;
-            }
-
-            var oldStopLoss = item.Position.StopLoss;
-
-            // ProtectionType.Absolute because newStopLossPrice is a real price, not a pip distance.
-            var result = ModifyPosition(item.Position, newStopLossPrice, item.Position.TakeProfit, ProtectionType.Absolute);
-            if (!result.IsSuccessful)
-            {
-                Print("[{0}] SL LADDER ERROR | TP leg {1} hit | Remaining leg {2} | Failed moving SL {3} -> {4}: {5}",
-                    BotLabel, reachedLeg, item.LegNumber, oldStopLoss, newStopLossPrice, result.Error);
-                continue;
-            }
-
-            Print("[{0}] SL LADDER MOVED | TP leg {1} hit | Remaining leg {2} | SL: {3} -> {4} | TP: {5}",
-                BotLabel, reachedLeg, item.LegNumber, oldStopLoss, newStopLossPrice, item.Position.TakeProfit);
-        }
-    }
-
-    private bool TryGetLadderStopLossPrice(Position position, int positionLegNumber, int reachedLeg, double[] activeTpMultipliers, out double stopLossPrice)
-    {
-        stopLossPrice = 0;
-
-        // First target reached: protect all remaining legs at break-even.
-        if (reachedLeg == 1)
-        {
-            stopLossPrice = position.EntryPrice;
-            return true;
-        }
-
-        // For later targets, TakeProfit is required to infer the BaseRange used when the leg was created.
-        if (positionLegNumber <= 0 || positionLegNumber > activeTpMultipliers.Length || !position.TakeProfit.HasValue)
-            return false;
-
-        // Remaining leg TP distance = BaseRange * that leg's TP multiplier.
-        var positionTpMultiplier = activeTpMultipliers[positionLegNumber - 1];
-
-        // After TP2 lock to TP1; after TP3 lock to TP2.
-        var lockTpMultiplier = activeTpMultipliers[reachedLeg - 2];
-        if (positionTpMultiplier <= 0)
-            return false;
-
-        // Reconstruct BaseRange from this remaining position's actual entry and TP price.
-        var baseDistance = Math.Abs(position.TakeProfit.Value - position.EntryPrice) / positionTpMultiplier;
-
-        // BUY lock price is above entry; SELL lock price is below entry.
-        stopLossPrice = position.TradeType == TradeType.Buy
-            ? position.EntryPrice + lockTpMultiplier * baseDistance
-            : position.EntryPrice - lockTpMultiplier * baseDistance;
-        return true;
-    }
-
-    private static bool ShouldImproveStopLoss(Position position, double newStopLossPrice)
-    {
-        // If no SL exists for any reason, adding one is always an improvement.
         if (!position.StopLoss.HasValue)
             return true;
-
-        // Improvement direction is trade-specific: BUY wants higher SL, SELL wants lower SL.
         return position.TradeType == TradeType.Buy
-            ? newStopLossPrice > position.StopLoss.Value
-            : newStopLossPrice < position.StopLoss.Value;
+            ? newSl > position.StopLoss.Value
+            : newSl < position.StopLoss.Value;
     }
 
-    private TradeType GetTradeType(SignalInfo signal)
-    {
-        // Convert normalized signal side into the enum cTrader order APIs require.
-        return signal.Side == "BUY" ? TradeType.Buy : TradeType.Sell;
-    }
+    private TradeType GetTradeType(SignalInfo signal) =>
+        signal.Side == "BUY" ? TradeType.Buy : TradeType.Sell;
 
-    private TradeType GetOppositeTradeType(TradeType tradeType)
-    {
-        // Used by reverse-signal cleanup.
-        return tradeType == TradeType.Buy ? TradeType.Sell : TradeType.Buy;
-    }
+    private static TradeType GetOppositeTradeType(TradeType t) =>
+        t == TradeType.Buy ? TradeType.Sell : TradeType.Buy;
+
+    private PendingOrder[] GetMyPendingOrders() =>
+        PendingOrders.Where(o => IsMyBotLabel(o.Label) && o.SymbolName == SymbolName).ToArray();
+
+    private Position[] GetMyPositions() =>
+        Positions.Where(p => IsMyBotLabel(p.Label) && p.SymbolName == SymbolName).ToArray();
+
+    private int GetMyOpenOrderCount(TradeType t) =>
+        GetMyPositions().Count(p => p.TradeType == t)
+        + GetMyPendingOrders().Count(o => o.TradeType == t);
+
+    // ── Order management ─────────────────────────────────────────────────────
 
     private void CancelMyPendingOrders()
     {
-        // Cancel every pending child order belonging to this bot, used by daily drawdown protection.
         foreach (var order in GetMyPendingOrders())
         {
-            var result = CancelPendingOrder(order);
-            if (!result.IsSuccessful)
-                Print("[{0}] ERROR cancelling pending order {1}: {2}", BotLabel, order.Id, result.Error);
+            var r = CancelPendingOrder(order);
+            if (!r.IsSuccessful)
+                Print("[{0}] ERROR cancelling pending {1}: {2}", BotLabel, order.Id, r.Error);
             else
                 _pendingOrderCreatedBarCounts.Remove(order.Id);
         }
@@ -895,13 +646,12 @@ public class SEN_Combo_V0 : Robot
 
     private void CancelOppositePendingOrders(TradeType tradeType)
     {
-        // Reverse signal rule: pending orders in the old direction are invalid once a new opposite signal appears.
-        var oppositeTradeType = GetOppositeTradeType(tradeType);
-        foreach (var order in GetMyPendingOrders().Where(order => order.TradeType == oppositeTradeType))
+        var opp = GetOppositeTradeType(tradeType);
+        foreach (var order in GetMyPendingOrders().Where(o => o.TradeType == opp))
         {
-            var result = CancelPendingOrder(order);
-            if (!result.IsSuccessful)
-                Print("[{0}] ERROR cancelling opposite pending order {1}: {2}", BotLabel, order.Id, result.Error);
+            var r = CancelPendingOrder(order);
+            if (!r.IsSuccessful)
+                Print("[{0}] ERROR cancelling opposite pending {1}: {2}", BotLabel, order.Id, r.Error);
             else
                 _pendingOrderCreatedBarCounts.Remove(order.Id);
         }
@@ -909,280 +659,218 @@ public class SEN_Combo_V0 : Robot
 
     private void CancelExpiredPendingOrders()
     {
-        // Expiry is tracked per pending order by comparing current Bars.Count to the order's creation Bars.Count.
         foreach (var order in GetMyPendingOrders())
         {
-            // Existing pending orders found after restart are tracked from the first observed bar.
-            if (!_pendingOrderCreatedBarCounts.TryGetValue(order.Id, out var createdBarCount))
+            if (!_pendingOrderCreatedBarCounts.TryGetValue(order.Id, out var createdAt))
             {
                 _pendingOrderCreatedBarCounts[order.Id] = Bars.Count;
                 continue;
             }
 
-            var barsAlive = Bars.Count - createdBarCount;
-            if (barsAlive < CancelPendingAfterBars)
+            var age = Bars.Count - createdAt;
+            if (age < CancelPendingAfterBars)
                 continue;
 
-            // Once a pending leg is too old, cancel it. Usually all same-entry legs expire together.
-            var result = CancelPendingOrder(order);
-            if (!result.IsSuccessful)
+            var r = CancelPendingOrder(order);
+            if (!r.IsSuccessful)
             {
-                Print("[{0}] ERROR cancelling expired pending order {1}: {2}", BotLabel, order.Id, result.Error);
+                Print("[{0}] ERROR cancelling expired pending {1}: {2}", BotLabel, order.Id, r.Error);
                 continue;
             }
 
             _pendingOrderCreatedBarCounts.Remove(order.Id);
             _pendingExpiredCount++;
-            Print("[{0}] PENDING EXPIRED {1} | Order: {2} | Bars alive: {3}/{4}",
-                BotLabel, order.TradeType, order.Id, barsAlive, CancelPendingAfterBars);
+            Print("[{0}] PENDING EXPIRED {1} | Order: {2} | Age: {3}/{4} bars",
+                BotLabel, order.TradeType, order.Id, age, CancelPendingAfterBars);
         }
-    }
-
-    private PendingOrder[] GetMyPendingOrders()
-    {
-        // Prefix-aware label matching includes SEN_Combo_V0_L1..L4 as one logical bot cluster.
-        return PendingOrders
-            .Where(order => IsMyBotLabel(order.Label) && order.SymbolName == SymbolName)
-            .ToArray();
-    }
-
-    private Position[] GetMyPositions()
-    {
-        // Prefix-aware label matching keeps reverse cleanup and daily drawdown aware of every child leg.
-        return Positions
-            .Where(position => IsMyBotLabel(position.Label) && position.SymbolName == SymbolName)
-            .ToArray();
-    }
-
-    private int GetMyOpenOrderCount(TradeType tradeType)
-    {
-        // Same-direction exposure means both filled positions and still-pending child orders.
-        return GetMyPositions().Count(position => position.TradeType == tradeType)
-            + GetMyPendingOrders().Count(order => order.TradeType == tradeType);
     }
 
     private bool CloseOppositePositions(TradeType tradeType)
     {
-        // Reverse signal rule: if new signal is BUY, close SELL positions; if SELL, close BUY positions.
-        var oppositeTradeType = GetOppositeTradeType(tradeType);
-        var oppositePositions = GetMyPositions()
-            .Where(position => position.TradeType == oppositeTradeType)
-            .ToArray();
+        var opp       = GetOppositeTradeType(tradeType);
+        var positions = GetMyPositions().Where(p => p.TradeType == opp).ToArray();
 
-        if (oppositePositions.Length == 0)
+        if (positions.Length == 0)
             return true;
 
         Print("[{0}] REVERSE SIGNAL {1}: closing {2} opposite position(s).",
-            BotLabel, tradeType, oppositePositions.Length);
+            BotLabel, tradeType, positions.Length);
 
         var allClosed = true;
-        foreach (var position in oppositePositions)
+        foreach (var p in positions)
         {
-            // If any close fails, block the new signal to avoid holding both directions at once.
-            var result = ClosePosition(position);
-            if (!result.IsSuccessful)
+            var r = ClosePosition(p);
+            if (!r.IsSuccessful)
             {
                 allClosed = false;
-                Print("[{0}] ERROR closing opposite position {1}: {2}", BotLabel, position.Id, result.Error);
+                Print("[{0}] ERROR closing opposite position {1}: {2}", BotLabel, p.Id, r.Error);
             }
         }
-
         return allClosed;
     }
 
     private void CloseMyPositions()
     {
-        // Used by daily drawdown protection to flatten all live bot exposure.
-        foreach (var position in GetMyPositions())
+        foreach (var p in GetMyPositions())
         {
-            var result = ClosePosition(position);
-            if (!result.IsSuccessful)
-                Print("[{0}] ERROR closing position {1}: {2}", BotLabel, position.Id, result.Error);
+            var r = ClosePosition(p);
+            if (!r.IsSuccessful)
+                Print("[{0}] ERROR closing position {1}: {2}", BotLabel, p.Id, r.Error);
         }
     }
 
     private void TrackExistingPendingOrders()
     {
-        // Rebuild minimal expiry tracking for pending orders that already existed before OnStart.
         foreach (var order in GetMyPendingOrders())
             _pendingOrderCreatedBarCounts[order.Id] = Bars.Count;
     }
 
+    // ── Daily drawdown ───────────────────────────────────────────────────────
+
     private void ResetDailyDrawdownBaseline()
     {
-        // Daily DD guard is measured from server-date equity, including floating PnL.
-        // This is separate from risk sizing, which intentionally uses realized balance.
-        _drawdownDay = Server.Time.Date;
-        _dayStartEquity = Account.Equity;
+        _drawdownDay           = Server.Time.Date;
+        _dayStartEquity        = Account.Equity;
         _dailyDrawdownTriggered = false;
 
-        Print("[{0}] Daily drawdown baseline reset | Day: {1:yyyy-MM-dd} | Start Equity: {2:F2} | Balance: {3:F2} | Limit: {4:F1}%",
+        Print("[{0}] DD baseline reset | Day: {1:yyyy-MM-dd} | StartEquity: {2:F2} | Balance: {3:F2} | Limit: {4:F1}%",
             BotLabel, _drawdownDay, _dayStartEquity, Account.Balance, MaxDailyDrawdownPercent);
     }
 
     private bool CheckDailyDrawdownLimit()
     {
-        // New server date means the bot may trade again with a fresh equity baseline.
         if (Server.Time.Date != _drawdownDay)
             ResetDailyDrawdownBaseline();
 
         if (_dayStartEquity <= 0)
             return false;
 
-        var drawdownPercent = (_dayStartEquity - Account.Equity) / _dayStartEquity * 100.0;
-        if (drawdownPercent < MaxDailyDrawdownPercent && !_dailyDrawdownTriggered)
+        var dd = (_dayStartEquity - Account.Equity) / _dayStartEquity * 100.0;
+        if (dd < MaxDailyDrawdownPercent && !_dailyDrawdownTriggered)
             return false;
 
-        // Once triggered, keep enforcing flattening until the next server date resets the flag.
         if (!_dailyDrawdownTriggered)
         {
             _dailyDrawdownTriggered = true;
-            Print("[{0}] DAILY DRAWDOWN LIMIT HIT | DD: {1:F2}% | Equity: {2:F2} | Start Equity: {3:F2} | Balance: {4:F2}. Trading halted until next day.",
-                BotLabel, drawdownPercent, Account.Equity, _dayStartEquity, Account.Balance);
+            Print("[{0}] DAILY DD LIMIT HIT | DD: {1:F2}% | Equity: {2:F2} | StartEquity: {3:F2}. Halted until next day.",
+                BotLabel, dd, Account.Equity, _dayStartEquity);
         }
 
-        // Protection action: remove pending exposure and close all bot positions.
         CancelMyPendingOrders();
         CloseMyPositions();
         return true;
     }
 
-    private bool IsCurrentSymbol(string csvSymbol)
+    // ── Event handlers ───────────────────────────────────────────────────────
+
+    private void OnPendingOrderFilled(PendingOrderFilledEventArgs args)
     {
-        // Accept both cTrader SymbolName and Symbol.Name because brokers may expose either in exports.
-        return csvSymbol.Trim().Equals(SymbolName, StringComparison.OrdinalIgnoreCase)
-            || csvSymbol.Trim().Equals(Symbol.Name, StringComparison.OrdinalIgnoreCase);
+        var pos = args.Position;
+        if (!IsMyBotLabel(pos.Label) || pos.SymbolName != SymbolName)
+            return;
+
+        _pendingOrderCreatedBarCounts.Remove(args.PendingOrder.Id);
+        _pendingFilledCount++;
+
+        Print("[{0}] FILLED {1} | Label: {2} | Leg: {3} | Entry: {4} | SL: {5} | TP: {6}",
+            BotLabel, pos.TradeType, pos.Label, GetLegNumber(pos.Label),
+            pos.EntryPrice, pos.StopLoss, pos.TakeProfit);
     }
 
-    private static int FindColumn(string[] header, params string[] names)
+    private void OnPendingOrderCancelled(PendingOrderCancelledEventArgs args)
     {
-        // Return the first header index that matches any accepted alias.
-        for (var i = 0; i < header.Length; i++)
-        {
-            var column = header[i].Trim();
-            if (names.Any(name => column.Equals(name, StringComparison.OrdinalIgnoreCase)))
-                return i;
-        }
+        var order = args.PendingOrder;
+        if (!IsMyBotLabel(order.Label) || order.SymbolName != SymbolName)
+            return;
 
-        return -1;
+        _pendingOrderCreatedBarCounts.Remove(order.Id);
+        _pendingCancelledCount++;
+
+        Print("[{0}] PENDING CANCELLED {1} | Label: {2} | Reason: {3}",
+            BotLabel, order.TradeType, order.Label, args.Reason);
     }
 
-    private static string[] SplitCsvLine(string line)
+    private void OnPositionClosed(PositionClosedEventArgs args)
     {
-        // Signals are expected to be simple comma-separated rows without quoted commas.
-        return line.Split(',').Select(part => part.Trim()).ToArray();
+        var pos = args.Position;
+        if (!IsMyBotLabel(pos.Label) || pos.SymbolName != SymbolName)
+            return;
+
+        Print("[{0}] CLOSED {1} | Label: {2} | Leg: {3} | NetPnL: {4:F2} | Pips: {5:F1} | Reason: {6}",
+            BotLabel, pos.TradeType, pos.Label, GetLegNumber(pos.Label),
+            pos.NetProfit, pos.Pips, args.Reason);
     }
 
-    private static DateTime TrimToMinute(DateTime value)
-    {
-        // CSV matching is minute-level; seconds are intentionally removed to avoid tiny timestamp mismatches.
-        return new DateTime(value.Year, value.Month, value.Day, value.Hour, value.Minute, 0, value.Kind);
-    }
+    // ── CSV helpers ──────────────────────────────────────────────────────────
 
-    private bool TryGetSignalForClosedBar(DateTime barTime, DateTime nextBarTime, out SignalInfo signal, out int signalsInBar)
+    private bool TryGetSignalForClosedBar(DateTime barTime, DateTime nextBarTime,
+        out SignalInfo signal, out int signalsInBar)
     {
-        signal = default;
+        signal      = default;
         signalsInBar = 0;
 
-        // If multiple CSV signals fall inside one cTrader bar, use the latest timestamp in that bar.
-        SignalInfo latestSignal = default;
-        var hasSignal = false;
+        SignalInfo latest   = default;
+        var        hasSignal = false;
 
         foreach (var candidate in _signals.Values)
         {
-            // Closed-bar interval rule: include barTime, exclude nextBarTime.
             if (candidate.Time < barTime || candidate.Time >= nextBarTime)
                 continue;
 
             signalsInBar++;
-            // Keep the latest signal time only.
-            if (hasSignal && candidate.Time <= latestSignal.Time)
+            if (hasSignal && candidate.Time <= latest.Time)
                 continue;
 
-            latestSignal = candidate;
+            latest    = candidate;
             hasSignal = true;
         }
 
         if (!hasSignal)
             return false;
 
-        // Output the signal selected for this closed bar.
-        signal = latestSignal;
+        signal = latest;
 
         if (signalsInBar > 1)
-        {
-            Print("[{0}] Multiple signals in cTrader bar | Bar: {1:yyyy-MM-dd HH:mm} -> {2:yyyy-MM-dd HH:mm} | Count: {3} | Using latest: {4:yyyy-MM-dd HH:mm} {5}",
-                BotLabel,
-                barTime,
-                nextBarTime,
-                signalsInBar,
-                signal.Time,
-                signal.Side);
-        }
+            Print("[{0}] Multiple signals in bar | {1:yyyy-MM-dd HH:mm}->{2:yyyy-MM-dd HH:mm} | Count: {3} | Using: {4:yyyy-MM-dd HH:mm} {5}",
+                BotLabel, barTime, nextBarTime, signalsInBar, signal.Time, signal.Side);
 
         return true;
     }
 
-    private void OnPendingOrderFilled(PendingOrderFilledEventArgs args)
+    private bool IsCurrentSymbol(string csvSymbol) =>
+        csvSymbol.Trim().Equals(SymbolName,    StringComparison.OrdinalIgnoreCase)
+        || csvSymbol.Trim().Equals(Symbol.Name, StringComparison.OrdinalIgnoreCase);
+
+    private static int FindColumn(string[] header, params string[] names)
     {
-        var position = args.Position;
-
-        // Ignore fills from other bots, manual orders, or other symbols.
-        if (!IsMyBotLabel(position.Label) || position.SymbolName != SymbolName)
-            return;
-
-        // Once filled, the order no longer needs pending-expiry tracking.
-        _pendingOrderCreatedBarCounts.Remove(args.PendingOrder.Id);
-        _pendingFilledCount++;
-
-        Print("[{0}] FILLED {1} | Label: {2} | Leg: {3} | Entry: {4} | SL: {5} | TP: {6}",
-            BotLabel, position.TradeType, position.Label, GetLegNumber(position.Label), position.EntryPrice, position.StopLoss, position.TakeProfit);
+        for (var i = 0; i < header.Length; i++)
+        {
+            var col = header[i].Trim();
+            if (names.Any(n => col.Equals(n, StringComparison.OrdinalIgnoreCase)))
+                return i;
+        }
+        return -1;
     }
 
-    private void OnPendingOrderCancelled(PendingOrderCancelledEventArgs args)
-    {
-        var order = args.PendingOrder;
+    private static string[] SplitCsvLine(string line) =>
+        line.Split(',').Select(p => p.Trim()).ToArray();
 
-        // Ignore cancelled orders that do not belong to this bot/symbol.
-        if (!IsMyBotLabel(order.Label) || order.SymbolName != SymbolName)
-            return;
+    private static DateTime TrimToMinute(DateTime value) =>
+        new(value.Year, value.Month, value.Day, value.Hour, value.Minute, 0, value.Kind);
 
-        // Remove tracking entry regardless of cancellation reason.
-        _pendingOrderCreatedBarCounts.Remove(order.Id);
-        _pendingCancelledCount++;
-
-        Print("[{0}] PENDING CANCELLED {1} | Label: {2} | Reason: {3}", BotLabel, order.TradeType, order.Label, args.Reason);
-    }
-
-    private void OnPositionClosed(PositionClosedEventArgs args)
-    {
-        var position = args.Position;
-
-        // Ignore closed positions outside this bot/symbol namespace.
-        if (!IsMyBotLabel(position.Label) || position.SymbolName != SymbolName)
-            return;
-
-        Print("[{0}] CLOSED {1} | Label: {2} | Leg: {3} | Net PnL: {4:F2} | Pips: {5:F1} | Reason: {6}",
-            BotLabel, position.TradeType, position.Label, GetLegNumber(position.Label), position.NetProfit, position.Pips, args.Reason);
-
-        // Only TP closes advance the SL ladder. SL/reverse/manual/DD closes must not move remaining stops.
-        if (IsTakeProfitClose(args))
-            ApplyStopLossLadder(position);
-    }
+    // ── Signal data ──────────────────────────────────────────────────────────
 
     private readonly struct SignalInfo
     {
-        // Immutable normalized signal row after CSV parsing and time offset alignment.
         public SignalInfo(DateTime time, string side, double atr)
         {
             Time = time;
             Side = side;
-            Atr = atr;
+            Atr  = atr;
         }
 
         public DateTime Time { get; }
-        public string Side { get; }
-        public double Atr { get; }
+        public string   Side { get; }
+        public double   Atr  { get; }
     }
-
 }

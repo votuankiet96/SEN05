@@ -29,11 +29,12 @@ MACD_SLOW = 25       # EMA chậm của MACD
 MACD_SIGNAL = 5      # EMA đường signal của MACD
 ATR_PERIOD = 5       # Chu kỳ Average True Range (Wilder)
 KTP = 2.272          # Hệ số nhân ATR để tính khoảng cách Take Profit
-MIN_RR = None        # Ngưỡng R:R tối thiểu (None = không lọc)
+MIN_RR = None        # Legacy/report param; not a Combo V0 raw-signal condition
 ENTRY_LINE_BARS = 2  # Số bar kéo dài đường Entry/SL/TP trên biểu đồ
 
 # --- Toggle hiển thị trên biểu đồ ---
-# Higher-timeframe trend filter. Disabled by default to preserve current behavior.
+# HTF settings are retained for backward-compatible code paths, but hidden from
+# the Combo V0 dashboard while the original lecture logic is being used.
 HTF_TREND_ENABLED = False
 HTF_TF = "D1"
 HTF_TF_OPTIONS = ("H4", "H6", "H8", "D1", "W")
@@ -110,19 +111,8 @@ PARAM_FIELDS: list[dict[str, Any]] = [
     {"key": "ATR_PERIOD", "label": "ATR", "type": "number", "min": 2, "max": 200, "step": 1},
     {"key": "X", "label": "X Buffer", "type": "number", "min": 0, "max": 1_000_000, "step": 0.01},
     {"key": "KTP", "label": "KTP", "type": "number", "min": 0.1, "max": 20, "step": 0.001},
-    {"key": "MIN_RR", "label": "Min RR", "type": "optional_number", "min": 0, "max": 20, "step": 0.1},
     {"key": "SESSION_HOURS_UTC", "label": "UTC Hours", "type": "text"},
     {"key": "ENTRY_LINE_BARS", "label": "Level Bars", "type": "number", "min": 1, "max": 300, "step": 1},
-    {"key": "HTF_TREND_ENABLED", "label": "HTF Trend Filter", "type": "bool"},
-    {"key": "HTF_TF", "label": "HTF TF", "type": "select", "options": list(HTF_TF_OPTIONS)},
-    {"key": "HTF_BARS", "label": "HTF Bars", "type": "number", "min": 50, "max": 20000, "step": 50},
-    {"key": "HTF_FAST_EMA", "label": "HTF Fast EMA", "type": "number", "min": 1, "max": 500, "step": 1},
-    {"key": "HTF_SLOW_EMA", "label": "HTF Slow EMA", "type": "number", "min": 2, "max": 1000, "step": 1},
-    {"key": "HTF_SLOPE_LOOKBACK", "label": "HTF Slope Bars", "type": "number", "min": 1, "max": 100, "step": 1},
-    {"key": "HTF_SLOPE_MIN", "label": "HTF Min Slope", "type": "number", "min": 0, "max": 1_000_000, "step": 0.01},
-    {"key": "HTF_NEUTRAL_BLOCK", "label": "Block Neutral HTF", "type": "bool"},
-    {"key": "SHOW_HTF_TREND", "label": "Show HTF Trend", "type": "bool"},
-    {"key": "SHOW_FILTERED_SIGNALS", "label": "Show Filtered Raw", "type": "bool"},
     {"key": "SHOW_MA", "label": "Show MA", "type": "bool"},
     {"key": "SHOW_MACD", "label": "Show MACD", "type": "bool"},
     {"key": "SHOW_ATR", "label": "Show ATR", "type": "bool"},
@@ -177,7 +167,7 @@ def _to_optional_float(
     """
     Parse float tùy chọn — trả về None nếu value là None/""/"none"/"null"/"off".
 
-    Dùng cho MIN_RR: người dùng có thể nhập "off" hoặc để trống để tắt filter R:R.
+    Dùng cho legacy MIN_RR/report params. MIN_RR không gate raw signal Combo V0.
     """
     if value is None:
         return default
@@ -233,6 +223,7 @@ def get_indicator_params() -> dict:
 
     Returns:
         Dict gồm MA_PERIOD, MACD_FAST, MACD_SLOW, MACD_SIGNAL, ATR_PERIOD, KTP, MIN_RR.
+        MIN_RR được giữ để tương thích, không phải điều kiện raw signal Combo V0.
     """
     return {
         "MA_PERIOD": MA_PERIOD,

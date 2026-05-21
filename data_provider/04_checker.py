@@ -90,7 +90,7 @@ _DATA = Path(__file__).resolve().parent
 if str(_PROJ) not in sys.path:
     sys.path.insert(0, str(_PROJ))
 
-from config import SYMBOL_OVERNIGHT_MINS, SYMBOLS, TF_STAGING, TF_MINUTES
+from config import COMPUTED_TIMEFRAMES, SYMBOL_OVERNIGHT_MINS, SYMBOLS, TF_STAGING, TF_MINUTES
 from _helpers import (
     FULL_N_BARS,
     normalize_tv_hist_df_to_utc,
@@ -102,6 +102,7 @@ from _helpers import (
     sleep_for,
 )
 from _tv_auth import get_valid_tv_connection, refresh_mid_run
+import _tv_ws_history
 from _tv_coord import (
     HistoricalJobHandoffRequested,
     acquire_historical_job,
@@ -128,16 +129,21 @@ from modules.db_connector import (
 # M5/M15 lá»›n hÆ¡n vÃ¬ muá»‘n bao phá»§ ~10 ngÃ y giao dá»‹ch (Ä‘á»ƒ Ä‘áº£m báº£o
 # khi cháº¡y má»—i 3 ngÃ y váº«n cÃ³ vÃ¹ng chá»"ng láº¥p vá»›i láº§n cháº¡y trÆ°á»›c).
 CHECKER_N_BARS: dict[str, int] = {
-    "M5":  2000,   # ~7 ngÃ y náº¿n 5 phÃºt
-    "M15": 2000,   # ~21 ngÃ y náº¿n 15 phÃºt
-    "M30": 1500,   # ~31 ngÃ y náº¿n 30 phÃºt
-    "M45": 1000,   # ~31 ngÃ y náº¿n 45 phÃºt
-    "H1":  1000,   # ~42 ngÃ y náº¿n 1 giá»
-    "H2":  1000,   # ~83 ngÃ y náº¿n 2 giá»
-    "H3":  1000,   # ~125 ngÃ y náº¿n 3 giá»
-    "H4":  1000,   # ~167 ngÃ y náº¿n 4 giá»
-    "D1":   400,   # ~400 ngÃ y
-    "W":    200,   # ~200 tuáº§n
+    "M5":  2000,
+    "M10": 2000,
+    "M15": 2000,
+    "M20": 2000,
+    "M30": 1500,
+    "M45": 1000,
+    "H1":  1000,
+    "M90": 1000,
+    "H2":  1000,
+    "H3":  1000,
+    "H4":  1000,
+    "H6":  1000,
+    "H8":  1000,
+    "D1":   400,
+    "W":    200,
 }
 
 # Sá»‘ náº¿n kiá»ƒm tra láº¡i SAU KHI Sá»¬A (Ä‘á»ƒ xÃ¡c nháº­n sá»­a thÃ nh cÃ´ng).
@@ -171,7 +177,8 @@ MAX_REPAIR_ROUNDS = 3
 # Danh sÃ¡ch khung thá»i gian cáº§n kiá»ƒm tra (tá»« H4 xuá»‘ng M5).
 # KhÃ´ng kiá»ƒm tra W vÃ  D1 vÃ¬ chÃºng Ã­t thay Ä‘á»•i vÃ  TradingView
 # ráº¥t hiáº¿m khi Ä‘iá»u chá»‰nh láº¡i náº¿n tuáº§n/ngÃ y.
-TFS_TO_CHECK = ["W", "D1", "H4", "H3", "H2", "H1", "M45", "M30", "M15", "M5"]
+TFS_TO_CHECK = ["W", "D1", "H8", "H6", "H4", "H3", "H2", "H1",
+                "M90", "M45", "M30", "M20", "M15", "M10", "M5"]
 
 # Thá»i gian nghá»‰ giá»¯a má»—i láº§n gá»i API TradingView (giÃ¢y).
 # TrÃ¡nh bá»‹ TradingView phÃ¡t hiá»‡n lÃ  bot vÃ  giá»›i háº¡n tá»‘c Ä‘á»™ (rate-limit).
@@ -195,20 +202,8 @@ MAX_AUTH_CONSECUTIVE_FAIL = 5
 # â"€â"€â"€ Helper: build Interval map (lazy import to avoid circular import) â"€â"€â"€â"€â"€â"€â"€
 
 def _build_interval_map() -> dict:
-    """Build tf_code â†’ tvDatafeed.Interval mapping. Called once in main()."""
-    from tvDatafeed import Interval
-    return {
-        "W":   Interval.in_weekly,
-        "D1":  Interval.in_daily,
-        "H4":  Interval.in_4_hour,
-        "H3":  Interval.in_3_hour,
-        "H2":  Interval.in_2_hour,
-        "H1":  Interval.in_1_hour,
-        "M45": Interval.in_45_minute,
-        "M30": Interval.in_30_minute,
-        "M15": Interval.in_15_minute,
-        "M5":  Interval.in_5_minute,
-    }
+    """Build tf_code -> TradingView WebSocket interval mapping."""
+    return _tv_ws_history.get_ws_interval_map()
 
 
 # =============================================================================
@@ -355,17 +350,27 @@ def _pull_tv_bars(tv, sym: dict, tf_code: str, n_bars: int,
     Returns dict {datetime: (O, H, L, C, V)}.
     Returns None on TV error or empty response.
     """
-    interval = interval_map[tf_code]
+    if tf_code not in interval_map:
+        logger.error("Unsupported TradingView WebSocket timeframe for checker: %s", tf_code)
+        return None
+
     wait_for_historical_slot("checker", logger)
     try:
-        df = tv.get_hist(
-            symbol   = sym["tv_symbol"],
-            exchange = sym["tv_exchange"],
-            interval = interval,
-            n_bars   = n_bars + 5,  # extra buffer; last bar discarded
+        ws_result = _tv_ws_history.fetch_history(
+            symbol=sym["tv_symbol"],
+            exchange=sym["tv_exchange"],
+            tf_code=tf_code,
+            n_bars=n_bars + 5,
+            logger=logger,
         )
+        df = ws_result.df
+        if ws_result.status not in ("completed", "partial_timeout"):
+            logger.warning(
+                "TradingView WS pull status for %s %s: %s %s",
+                sym["tv_symbol"], tf_code, ws_result.status, ws_result.error,
+            )
     except Exception as e:
-        logger.error("TradingView pull failed for %s %s: %s", sym["tv_symbol"], tf_code, e)
+        logger.error("TradingView WS pull failed for %s %s: %s", sym["tv_symbol"], tf_code, e)
         return None
 
     if df is None or df.empty:
@@ -378,7 +383,6 @@ def _pull_tv_bars(tv, sym: dict, tf_code: str, n_bars: int,
             sym["tv_symbol"], tf_code,
         )
 
-    # Discard last bar (potentially still open)
     df = df.iloc[:-1]
     if df.empty:
         return None
@@ -387,7 +391,6 @@ def _pull_tv_bars(tv, sym: dict, tf_code: str, n_bars: int,
     future_cutoff = now_utc() + timedelta(minutes=1)
     dropped_future = 0
     for dt_idx, row in df.iterrows():
-        # Normalize: pandas Timestamp â†’ naive Python datetime (UTC)
         dt = dt_idx.to_pydatetime()
         if dt.tzinfo is not None:
             dt = dt.replace(tzinfo=None)
@@ -1086,7 +1089,7 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
         )
 
     # â"€â"€ Phase 3: Recompute derived TFs â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
-    if repaired_sym_ids and not dry_run:
+    if repaired_sym_ids and COMPUTED_TIMEFRAMES and not dry_run:
         logger.info(
             "Recomputing derived TFs for %d repaired pairs...",
             len(repaired_sym_ids),
@@ -1478,7 +1481,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--rebuild-computed", action="store_true",
-        help="Delete and rebuild computed timeframes (M10/M20/M90/H6/H8). Use --dry-run to preview.",
+        help="Delete and rebuild computed fallback timeframes when ENABLE_COMPUTED_TIMEFRAMES=1. Use --dry-run to preview.",
     )
     parser.add_argument(
         "--manual-confirm", action="store_true",
@@ -2558,7 +2561,7 @@ def auto_repair_interval_gaps(
 
         time.sleep(TV_SLEEP_BETWEEN_CALLS)
 
-    if repaired_sym_ids:
+    if repaired_sym_ids and COMPUTED_TIMEFRAMES:
         logger.info(
             "Rebuilding computed TFs after interval-gap repair for %d pairs...",
             len(repaired_sym_ids),
@@ -2584,7 +2587,7 @@ def auto_repair_interval_gaps(
 # REBUILD COMPUTED TFS  (DB-only, no TradingView)
 # =============================================================================
 
-_COMPUTED_TFS = ['M10', 'M20', 'M90', 'H6', 'H8']
+_COMPUTED_TFS = [tf_code for tf_code, _source_table in COMPUTED_TIMEFRAMES]
 
 
 def rebuild_computed_tfs(
@@ -2600,6 +2603,12 @@ def rebuild_computed_tfs(
     Returns report string.
     """
     from modules.db_connector import aggregate_from_fact
+
+    if not _COMPUTED_TFS:
+        return (
+            "[Rebuild] Computed timeframe fallback is disabled "
+            "(ENABLE_COMPUTED_TIMEFRAMES=0). All 15 timeframes are configured as direct TradingView pulls."
+        )
 
     target_tfs = _COMPUTED_TFS
     if tf_filter:

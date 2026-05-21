@@ -152,6 +152,7 @@ from _tv_coord import (
     request_ws_live_shutdown,
 )
 import _tv_auth  # TradingView auth module dùng chung (token cache, refresh, bootstrap)
+import _tv_ws_history
 
 # =============================================================================
 # NHẬP CÁC MODULE NỘI BỘ CỦA PROJECT
@@ -266,22 +267,12 @@ MAX_BACKLOG_BATCHES   = 12
 MAX_SPOOL_ROWS        = 100_000
 
 
-# Bảng ánh xạ: tên TF nội bộ -> chuỗi interval theo chuẩn TradingView WebSocket API
-# TradingView dùng chuỗi riêng để chỉ interval: "1W", "1D", "240" (=H4), v.v.
-WS_TF_INTERVAL = {
-    "W":   "1W",   # Tuần
-    "D1":  "1D",   # Ngày
-    "H4":  "240",  # 4 giờ = 240 phút
-    "H3":  "180",  # 3 giờ = 180 phút
-    "H2":  "120",  # 2 giờ = 120 phút
-    "H1":  "60",   # 1 giờ = 60 phút
-    "M45": "45",   # 45 phút
-    "M30": "30",   # 30 phút
-    "M15": "15",   # 15 phút
-    "M5":  "5",    # 5 phút
-}
-
+# Shared 15-TF WebSocket interval map used by historical pipeline/checker/live.
+WS_TF_INTERVAL = _tv_ws_history.get_ws_interval_map()
 WS_TF_CODES = tuple(WS_TF_INTERVAL.keys())
+# Keep each TradingView socket below a conservative chart-session count after
+# expanding from 10 to 15 direct TFs. More groups is safer than one oversized WS.
+WS_SYMBOLS_PER_CONN = min(WS_SYMBOLS_PER_CONN, max(1, 90 // max(1, len(WS_TF_CODES))))
 WS_SYMBOL_IDS = tuple(s["symbol_id"] for s in WS_SYMBOLS)
 WS_WATCH_KEYS = frozenset(
     (sid, tf_code) for sid in WS_SYMBOL_IDS for tf_code in WS_TF_CODES

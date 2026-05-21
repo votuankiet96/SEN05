@@ -165,6 +165,10 @@ function isAiTrend() {
   return el.strategy.value === "ai_trend";
 }
 
+function isTrendEntryStrategy() {
+  return ["ai_trend", "knn_combo"].includes(el.strategy.value);
+}
+
 function updateRefreshButton() {
   if (state.isLoading) {
     el.refresh.textContent = state.queuedScan ? "Queued..." : "Loading...";
@@ -190,7 +194,7 @@ function markViewChanged() {
   state.viewVersion += 1;
 }
 
-function markPendingRefresh(message = "Settings changed. Click Apply to refresh the AI Trend preview.") {
+function markPendingRefresh(message = "Settings changed. Click Apply to refresh the preview.") {
   state.pendingRefresh = true;
   updateRefreshButton();
   showWarning(message);
@@ -205,7 +209,7 @@ function scheduleLoadScan(delay = 300) {
 
 function handleAutoScanChange(message) {
   markViewChanged();
-  if (isAiTrend()) {
+  if (isTrendEntryStrategy()) {
     markPendingRefresh(message);
     return;
   }
@@ -250,6 +254,12 @@ const COLUMN_LABELS = {
   htf_trend: "HTF Trend",
   htf_slope: "HTF Slope",
   htf_close: "HTF Close",
+  trend_bias: "KNN Bias",
+  trend_bias_label: "KNN Trend",
+  trend_close_time: "Trend Close",
+  trend_ai_knn: "Trend KNN",
+  trend_ai_avg: "Trend Avg",
+  trend_ai_direction: "Trend Direction",
   open: "Open",
   high: "High",
   low: "Low",
@@ -289,6 +299,8 @@ const TEXT_COLS = new Set([
   "signal_reason",
   "filter_reason",
   "htf_trend",
+  "trend_bias_label",
+  "trend_close_time",
   "entry_time",
   "m45_close_time",
   "h3_close_time",
@@ -317,8 +329,6 @@ const EXPORT_COLUMNS = {
     { key: "macd_h", label: "MACD-H", checked: false },
     { key: "raw_signal", label: "Raw Signal", checked: false },
     { key: "filter_reason", label: "Filter", checked: false },
-    { key: "htf_trend", label: "HTF Trend", checked: false },
-    { key: "htf_slow_slope", label: "HTF Slope", checked: false },
   ],
   ma_cross: [
     { key: "bartime", label: "Bar Time", checked: true },
@@ -374,6 +384,26 @@ const EXPORT_COLUMNS = {
     { key: "tp_price", label: "TP", checked: false },
     { key: "risk_reward", label: "R:R", checked: false },
   ],
+  knn_combo: [
+    { key: "bartime", label: "Bar Time", checked: true },
+    { key: "side", label: "Side", checked: true },
+    { key: "signal", label: "Signal", checked: false },
+    { key: "signal_reason", label: "Reason", checked: false },
+    { key: "raw_signal", label: "Raw Signal", checked: false },
+    { key: "filter_reason", label: "Filter", checked: false },
+    { key: "trend_bias", label: "KNN Bias", checked: false },
+    { key: "trend_bias_label", label: "KNN Trend", checked: false },
+    { key: "trend_close_time", label: "Trend Close", checked: false },
+    { key: "trend_ai_knn", label: "Trend KNN", checked: false },
+    { key: "trend_ai_avg", label: "Trend Avg", checked: false },
+    { key: "ma", label: "MA", checked: false },
+    { key: "macd_h", label: "MACD-H", checked: false },
+    { key: "atr", label: "ATR", checked: false },
+    { key: "open", label: "Open", checked: false },
+    { key: "high", label: "High", checked: false },
+    { key: "low", label: "Low", checked: false },
+    { key: "close", label: "Close", checked: false },
+  ],
 };
 
 const BULK_EXPORT_COLUMNS = {
@@ -388,7 +418,6 @@ const BULK_EXPORT_COLUMNS = {
     { key: "signal_reason", label: "Reason", checked: false },
     { key: "raw_signal", label: "Raw Signal", checked: false },
     { key: "filter_reason", label: "Filter", checked: false },
-    { key: "htf_trend", label: "HTF Trend", checked: false },
   ],
   ma_cross: [
     { key: "atr", label: "ATR", checked: true },
@@ -417,6 +446,20 @@ const BULK_EXPORT_COLUMNS = {
     { key: "low", label: "Low", checked: false },
     { key: "close", label: "Close", checked: false },
     { key: "signal_reason", label: "Reason", checked: false },
+  ],
+  knn_combo: [
+    { key: "trend_bias", label: "KNN Bias", checked: true },
+    { key: "trend_ai_knn", label: "Trend KNN", checked: false },
+    { key: "trend_ai_avg", label: "Trend Avg", checked: false },
+    { key: "ma", label: "MA", checked: false },
+    { key: "macd_h", label: "MACD-H", checked: false },
+    { key: "atr", label: "ATR", checked: true },
+    { key: "open", label: "Open", checked: false },
+    { key: "high", label: "High", checked: false },
+    { key: "low", label: "Low", checked: false },
+    { key: "close", label: "Close", checked: false },
+    { key: "signal_reason", label: "Reason", checked: false },
+    { key: "filter_reason", label: "Filter", checked: false },
   ],
 };
 
@@ -478,7 +521,34 @@ function createOption(parent, value, label, selectedValue) {
 
 const symbolMeta = {};
 
-function populateSymbols(assetFilter, selectedValue = el.symbol.value || state.config.defaultSymbol) {
+function strategyDefaults(strategy = el.strategy.value) {
+  const defaults = state.config?.strategyDefaults?.[strategy] || {};
+  return {
+    symbol: defaults.symbol || state.config.defaultSymbol,
+    tf: defaults.tf || state.config.defaultTf,
+  };
+}
+
+function selectOptionIfPresent(selectEl, value) {
+  if (!value) return false;
+  const exists = [...selectEl.options].some((option) => option.value === value);
+  if (exists) {
+    selectEl.value = value;
+  }
+  return exists;
+}
+
+function applyStrategySelectionDefaults(strategy = el.strategy.value) {
+  const defaults = strategyDefaults(strategy);
+  if (defaults.symbol && symbolMeta[defaults.symbol] && ![...el.symbol.options].some((option) => option.value === defaults.symbol)) {
+    el.assetType.value = "";
+    populateSymbols("", defaults.symbol);
+  }
+  selectOptionIfPresent(el.symbol, defaults.symbol);
+  selectOptionIfPresent(el.tf, defaults.tf);
+}
+
+function populateSymbols(assetFilter, selectedValue = el.symbol.value || strategyDefaults().symbol) {
   el.symbol.replaceChildren();
   state.config.symbols
     .filter((s) => !assetFilter || s.asset_type === assetFilter)
@@ -512,7 +582,7 @@ async function init() {
 
   populateSymbols("");
 
-  state.config.timeframes.forEach((tf) => createOption(el.tf, tf, tf, state.config.defaultTf));
+  state.config.timeframes.forEach((tf) => createOption(el.tf, tf, tf, strategyDefaults().tf));
   el.bars.value = state.config.defaultBars;
   el.startDate.value = defaultStartDate();
   el.endDate.value = defaultEndDate();
@@ -520,15 +590,16 @@ async function init() {
   el.strategy.addEventListener("change", () => {
     markViewChanged();
     renderParamControls();
-    applyStrategyDefaults();
+    applyStrategyDefaults({ resetSelection: true });
     updateXDefault();
-    if (isAiTrend()) {
+    if (isTrendEntryStrategy()) {
       state.lastPayload = null;
       resetCharts();
       resetStats();
       clearError();
-      el.meta.textContent = `AI Trend | ${el.symbol.value} | click Apply to load preview`;
-      markPendingRefresh("AI Trend selected. Click Apply to load the preview.");
+      const label = state.config.strategies[el.strategy.value]?.label || el.strategy.value;
+      el.meta.textContent = `${label} | ${el.symbol.value} | click Apply to load preview`;
+      markPendingRefresh(`${label} selected. Click Apply to load the preview.`);
       return;
     }
     loadScan();
@@ -536,16 +607,16 @@ async function init() {
   el.assetType.addEventListener("change", () => {
     populateSymbols(el.assetType.value);
     updateXDefault();
-    handleAutoScanChange("Asset filter changed. Click Apply to refresh the AI Trend preview.");
+    handleAutoScanChange("Asset filter changed. Click Apply to refresh the preview.");
   });
   el.symbol.addEventListener("change", () => {
     updateXDefault();
-    handleAutoScanChange("Symbol changed. Click Apply to refresh the AI Trend preview.");
+    handleAutoScanChange("Symbol changed. Click Apply to refresh the preview.");
   });
   el.tf.addEventListener("change", handleTopTfChange);
-  el.bars.addEventListener("change", () => handleAutoScanChange("Bar count changed. Click Apply to refresh the AI Trend preview."));
-  el.startDate.addEventListener("change", () => handleAutoScanChange("Date range changed. Click Apply to refresh the AI Trend preview."));
-  el.endDate.addEventListener("change", () => handleAutoScanChange("Date range changed. Click Apply to refresh the AI Trend preview."));
+  el.bars.addEventListener("change", () => handleAutoScanChange("Bar count changed. Click Apply to refresh the preview."));
+  el.startDate.addEventListener("change", () => handleAutoScanChange("Date range changed. Click Apply to refresh the preview."));
+  el.endDate.addEventListener("change", () => handleAutoScanChange("Date range changed. Click Apply to refresh the preview."));
   el.themeSelect.addEventListener("change", updateThemeFromControls);
   el.candleUpColor.addEventListener("change", updateThemeFromControls);
   el.candleDownColor.addEventListener("change", updateThemeFromControls);
@@ -568,6 +639,7 @@ async function init() {
   });
 
   renderParamControls();
+  applyStrategyDefaults({ resetSelection: true });
   updateXDefault();
   await loadScan();
 }
@@ -615,19 +687,15 @@ function renderParamControls() {
     el.params.appendChild(label);
   });
 
-  if (strategy === "combo") {
-    const htfToggle = el.params.querySelector('[data-param="HTF_TREND_ENABLED"]');
-    if (htfToggle) htfToggle.checked = true;
-  }
   applyBarsDefaultForStrategy(strategy, spec);
 }
 
 function handleParamChange(event) {
   const key = event.currentTarget?.dataset?.param || "parameter";
   markViewChanged();
-  if (isAiTrend()) {
+  if (isTrendEntryStrategy()) {
     if (key === "ENTRY_TF") syncTopTfWithAiEntryParam();
-    markPendingRefresh(`${paramLabel(key)} changed. Click Apply to refresh the AI Trend preview.`);
+    markPendingRefresh(`${paramLabel(key)} changed. Click Apply to refresh the preview.`);
     return;
   }
   updateBarsControlLabel();
@@ -636,9 +704,9 @@ function handleParamChange(event) {
 
 function handleTopTfChange() {
   markViewChanged();
-  if (isAiTrend()) {
+  if (isTrendEntryStrategy()) {
     syncAiEntryParamWithTopTf();
-    markPendingRefresh("Entry TF changed. Click Apply to refresh the AI Trend preview.");
+    markPendingRefresh("Entry TF changed. Click Apply to refresh the preview.");
     return;
   }
   scheduleLoadScan();
@@ -651,9 +719,10 @@ function paramLabel(key) {
 }
 
 function syncTopTfWithAiEntryParam() {
-  if (!isAiTrend()) return;
+  if (!isTrendEntryStrategy()) return;
   const entryInput = el.params.querySelector('[data-param="ENTRY_TF"]');
-  const entryTf = entryInput?.value || state.config.strategies.ai_trend?.defaults?.ENTRY_TF || "M45";
+  const spec = state.config.strategies[el.strategy.value];
+  const entryTf = entryInput?.value || spec?.defaults?.ENTRY_TF || "M45";
   if ([...el.tf.options].some((option) => option.value === entryTf)) {
     el.tf.value = entryTf;
   }
@@ -671,14 +740,14 @@ function syncAiEntryParamWithTopTf() {
 }
 
 function hiddenParamField(strategy, key) {
-  if (strategy === "combo" && key === "HTF_BARS") return true;
-  if (strategy === "ai_trend" && (key === "TREND_BARS" || key === "ENTRY_BARS")) return true;
+  if (strategy === "combo" && (key.startsWith("HTF_") || key === "SHOW_HTF_TREND" || key === "SHOW_FILTERED_SIGNALS")) return true;
+  if (["ai_trend", "knn_combo"].includes(strategy) && (key === "TREND_BARS" || key === "ENTRY_BARS")) return true;
   return false;
 }
 
 function updateBarsControlLabel() {
   const params = collectParams();
-  if (el.strategy.value === "ai_trend") {
+  if (isTrendEntryStrategy()) {
     el.barsCaption.textContent = "Trend Bars";
     return;
   }
@@ -690,35 +759,29 @@ function updateBarsControlLabel() {
 }
 
 function applyBarsDefaultForStrategy(strategy, spec) {
-  if (strategy === "ai_trend") {
+  if (["ai_trend", "knn_combo"].includes(strategy)) {
     el.bars.value = spec.defaults.TREND_BARS || 500;
   } else if (strategy === "combo") {
-    el.bars.value = spec.defaults.HTF_BARS || state.config.defaultBars;
+    el.bars.value = spec.defaults.HTF_TREND_ENABLED
+      ? spec.defaults.HTF_BARS || state.config.defaultBars
+      : state.config.defaultBars;
   } else {
     el.bars.value = state.config.defaultBars;
   }
   updateBarsControlLabel();
 }
 
-function applyStrategyDefaults() {
+function applyStrategyDefaults({ resetSelection = false } = {}) {
   if (el.strategy.value === "combo") {
-    const htfToggle = el.params.querySelector('[data-param="HTF_TREND_ENABLED"]');
-    if (htfToggle?.checked) {
-      el.barsCaption.textContent = "HTF Bars";
-      const allowedEntryTfs = new Set(["H1", "H2", "H3", "H4"]);
-      if (!allowedEntryTfs.has(el.tf.value) && [...el.tf.options].some((option) => option.value === "H4")) {
-        el.tf.value = "H4";
-      }
-    } else {
-      el.barsCaption.textContent = "Bars";
-    }
+    if (resetSelection) applyStrategySelectionDefaults("combo");
+    el.barsCaption.textContent = "Bars";
     return;
   }
-  if (el.strategy.value !== "ai_trend") return;
+  if (!isTrendEntryStrategy()) return;
   el.barsCaption.textContent = "Trend Bars";
   syncTopTfWithAiEntryParam();
   if (!el.bars.value) {
-    el.bars.value = state.config.strategies.ai_trend?.defaults?.TREND_BARS || 500;
+    el.bars.value = state.config.strategies[el.strategy.value]?.defaults?.TREND_BARS || 500;
   }
 }
 
@@ -731,7 +794,7 @@ function collectParams() {
 }
 
 function isComboHtfEnabled(params) {
-  return el.strategy.value === "combo" && String(params.HTF_TREND_ENABLED || "").toLowerCase() === "true";
+  return false;
 }
 
 function calcEntryBarsForHtfBars(htfBars, htfTf, entryTf) {
@@ -742,9 +805,10 @@ function calcEntryBarsForHtfBars(htfBars, htfTf, entryTf) {
 }
 
 function syncAiTrendEntryBars(params) {
-  if (el.strategy.value !== "ai_trend") return el.bars.value;
-  const trendBars = Math.max(50, Math.min(20000, Number(el.bars.value || params.TREND_BARS || 500)));
-  const entryBars = calcEntryBarsForHtfBars(trendBars, params.TREND_TF || "H3", params.ENTRY_TF || "M45");
+  if (!isTrendEntryStrategy()) return el.bars.value;
+  const spec = state.config.strategies[el.strategy.value];
+  const trendBars = Math.max(50, Math.min(20000, Number(el.bars.value || params.TREND_BARS || spec?.defaults?.TREND_BARS || 500)));
+  const entryBars = calcEntryBarsForHtfBars(trendBars, params.TREND_TF || "H3", params.ENTRY_TF || spec?.defaults?.ENTRY_TF || "M45");
   params.TREND_BARS = String(trendBars);
   params.ENTRY_BARS = String(entryBars);
   params.AUTO_ENTRY_BARS = "true";
@@ -777,7 +841,7 @@ function currentExportParams() {
     const htfBars = Math.max(50, Math.min(20000, Number(el.bars.value || 100)));
     params.HTF_BARS = String(htfBars);
     bars = String(calcEntryBarsForHtfBars(htfBars, params.HTF_TF || "D1", el.tf.value));
-  } else if (el.strategy.value === "ai_trend") {
+  } else if (isTrendEntryStrategy()) {
     bars = String(syncAiTrendEntryBars(params));
     exportTf = params.ENTRY_TF || el.tf.value;
   }
@@ -858,7 +922,7 @@ async function loadScan() {
     const htfBars = Math.max(50, Math.min(20000, Number(el.bars.value || 100)));
     params.HTF_BARS = String(htfBars);
     bars = String(calcEntryBarsForHtfBars(htfBars, params.HTF_TF || "D1", el.tf.value));
-  } else if (el.strategy.value === "ai_trend") {
+  } else if (isTrendEntryStrategy()) {
     bars = String(syncAiTrendEntryBars(params));
   }
   const query = new URLSearchParams({
@@ -957,6 +1021,10 @@ function renderPayload(payload) {
   }
   if (payload.layout === "ai_trend_mtf") {
     renderAiTrendPayload(payload);
+    return;
+  }
+  if (payload.layout === "knn_combo_mtf") {
+    renderKnnComboPayload(payload);
     return;
   }
   resetCharts();
@@ -1092,6 +1160,10 @@ function renderComboMtfPayload(payload) {
   trendChart.chart.timeScale().fitContent();
   entryChart.chart.timeScale().fitContent();
   renderSignalsTable(payload.signals);
+}
+
+function renderKnnComboPayload(payload) {
+  renderComboMtfPayload(payload);
 }
 
 function renderAiTrendPayload(payload) {

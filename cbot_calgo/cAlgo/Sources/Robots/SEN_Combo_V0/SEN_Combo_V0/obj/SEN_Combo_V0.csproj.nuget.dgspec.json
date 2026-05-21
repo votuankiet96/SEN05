@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Auto Trading\\SEN05\\cbot_calgo\\cAlgo\\Sources\\Robots\\SEN_Combo_V0\\SEN_Combo_V0\\SEN_Combo_V0.csproj": {}
+    "C:\\Users\\Kiet Vo\\Documents\\cAlgo\\Sources\\Robots\\SEN_Combo_V0\\SEN_Combo_V0\\SEN_Combo_V0.csproj": {}
   },
   "projects": {
-    "D:\\Auto Trading\\SEN05\\cbot_calgo\\cAlgo\\Sources\\Robots\\SEN_Combo_V0\\SEN_Combo_V0\\SEN_Combo_V0.csproj": {
+    "C:\\Users\\Kiet Vo\\Documents\\cAlgo\\Sources\\Robots\\SEN_Combo_V0\\SEN_Combo_V0\\SEN_Combo_V0.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Auto Trading\\SEN05\\cbot_calgo\\cAlgo\\Sources\\Robots\\SEN_Combo_V0\\SEN_Combo_V0\\SEN_Combo_V0.csproj",
+        "projectUniqueName": "C:\\Users\\Kiet Vo\\Documents\\cAlgo\\Sources\\Robots\\SEN_Combo_V0\\SEN_Combo_V0\\SEN_Combo_V0.csproj",
         "projectName": "SEN_Combo_V0",
-        "projectPath": "D:\\Auto Trading\\SEN05\\cbot_calgo\\cAlgo\\Sources\\Robots\\SEN_Combo_V0\\SEN_Combo_V0\\SEN_Combo_V0.csproj",
+        "projectPath": "C:\\Users\\Kiet Vo\\Documents\\cAlgo\\Sources\\Robots\\SEN_Combo_V0\\SEN_Combo_V0\\SEN_Combo_V0.csproj",
         "packagesPath": "C:\\Users\\Kiet Vo\\.nuget\\packages\\",
-        "outputPath": "D:\\Auto Trading\\SEN05\\cbot_calgo\\cAlgo\\Sources\\Robots\\SEN_Combo_V0\\SEN_Combo_V0\\obj\\",
+        "outputPath": "C:\\Users\\Kiet Vo\\Documents\\cAlgo\\Sources\\Robots\\SEN_Combo_V0\\SEN_Combo_V0\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Kiet Vo\\AppData\\Roaming\\NuGet\\NuGet.Config"

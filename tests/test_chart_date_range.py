@@ -256,3 +256,11 @@ def test_ai_trend_data_range_requires_both_trend_and_entry_timeframes() -> None:
         ("BTCUSD", "M30"),
         ("J225", "M30"),
     ]
+
+
+def test_combo_dashboard_defaults_to_us30_h4() -> None:
+    assert server._strategy_defaults("combo") == {"symbol": "US30", "tf": "H4"}
+
+
+def test_other_dashboard_defaults_keep_global_config() -> None:
+    assert server._strategy_defaults("ma_cross") == {"symbol": "BTCUSD", "tf": "M5"}

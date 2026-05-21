@@ -55,6 +55,15 @@
       white-space: nowrap;
     }
     #status-msg { font-size: 11px; color: var(--text2); }
+    #view-tabs { display: flex; gap: 4px; }
+    .view-tab {
+      background: var(--bg3); color: var(--text2);
+      border: 1px solid var(--border); border-radius: 3px;
+      padding: 4px 9px; font-size: 12px; cursor: pointer;
+    }
+    .view-tab:hover { color: var(--text); border-color: var(--blue); }
+    .view-tab.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .hidden { display: none !important; }
 
     /* Body row */
     #body { display: flex; flex: 1; overflow: hidden; }
@@ -179,6 +188,97 @@
     }
     #loading.hidden { display: none; }
 
+    /* Data Health */
+    #health-view {
+      flex: 1; min-height: 0; overflow: hidden;
+      background: var(--bg); display: flex; flex-direction: column;
+    }
+    #health-toolbar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px; border-bottom: 1px solid var(--border);
+      background: var(--bg2); flex-shrink: 0;
+    }
+    #health-refresh {
+      background: var(--bg3); color: var(--text);
+      border: 1px solid var(--border); border-radius: 3px;
+      padding: 4px 10px; cursor: pointer; font-size: 12px;
+    }
+    #health-refresh:hover { border-color: var(--blue); }
+    #health-status { color: var(--text2); font-size: 11px; }
+    #health-summary {
+      display: grid; grid-template-columns: repeat(8, minmax(110px, 1fr));
+      gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border);
+    }
+    .health-metric {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 4px;
+      padding: 8px 9px; min-width: 0;
+    }
+    .health-metric-label {
+      color: var(--text2); font-size: 9px; text-transform: uppercase;
+      letter-spacing: 0.6px; margin-bottom: 5px;
+    }
+    .health-metric-value {
+      color: var(--text); font-size: 15px; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    #health-main {
+      flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 10px; padding: 10px 12px; overflow: hidden;
+    }
+    .health-panel {
+      min-height: 0; background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 4px; display: flex; flex-direction: column; overflow: hidden;
+    }
+    .health-panel-header {
+      display: flex; align-items: center; gap: 8px; min-height: 34px;
+      padding: 7px 9px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .health-panel-title { font-size: 12px; font-weight: 700; color: var(--text); }
+    .health-panel-subtitle { font-size: 11px; color: var(--text2); margin-left: auto; }
+    #health-matrix-wrap { flex: 1; overflow: auto; }
+    .health-matrix {
+      width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px;
+    }
+    .health-matrix th, .health-matrix td {
+      border-bottom: 1px solid var(--border); border-right: 1px solid var(--border);
+      padding: 3px 4px; text-align: center; vertical-align: middle;
+    }
+    .health-matrix th {
+      position: sticky; top: 0; z-index: 2; background: var(--bg3);
+      color: var(--text2); font-weight: 700;
+    }
+    .health-matrix th:first-child {
+      left: 0; z-index: 3; text-align: left; width: 86px;
+    }
+    .health-symbol-cell {
+      position: sticky; left: 0; z-index: 1; background: var(--bg2);
+      color: var(--text); font-weight: 700; text-align: left !important;
+    }
+    .health-cell { cursor: pointer; min-width: 68px; }
+    .health-cell:hover { outline: 1px solid var(--blue); outline-offset: -1px; }
+    .health-cell.ok { background: rgba(38,166,154,0.18); }
+    .health-cell.warn { background: rgba(255,152,0,0.20); }
+    .health-cell.stale { background: rgba(239,83,80,0.22); }
+    .health-cell.empty { background: rgba(120,123,134,0.13); color: var(--text2); }
+    .health-cell.unknown { background: rgba(41,98,255,0.13); }
+    .health-cell-main { display: block; font-weight: 700; line-height: 14px; }
+    .health-cell-sub { display: block; color: var(--text2); font-size: 9px; line-height: 12px; }
+    #health-side { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+    .health-list { overflow: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+    .health-row {
+      display: grid; grid-template-columns: 72px 1fr; gap: 6px;
+      border-bottom: 1px solid var(--border); padding-bottom: 6px; font-size: 11px;
+    }
+    .health-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .health-row-name { color: var(--text); font-weight: 700; overflow-wrap: anywhere; }
+    .health-row-meta { color: var(--text2); overflow-wrap: anywhere; }
+    .health-pill {
+      display: inline-block; padding: 1px 5px; border-radius: 999px;
+      font-size: 10px; border: 1px solid var(--border); color: var(--text2);
+    }
+    .health-pill.active { color: var(--green); border-color: rgba(38,166,154,0.55); }
+    .health-pill.pending { color: #ff9800; border-color: rgba(255,152,0,0.55); }
+
     /* Scrollbar styling */
     #sidebar-scroll::-webkit-scrollbar { width: 4px; }
     #sidebar-scroll::-webkit-scrollbar-track { background: var(--bg2); }
@@ -191,6 +291,10 @@
   <!-- ── Header ─────────────────────────────────────────────────── -->
   <div id="header">
     <span id="header-title">&#x1F4C8; AutoTrading Chart</span>
+    <div id="view-tabs">
+      <button class="view-tab active" data-view="chart">Chart</button>
+      <button class="view-tab" data-view="health">Data Health</button>
+    </div>
     <span id="status-msg"></span>
     <span id="refresh-badge">—</span>
     <div id="ohlc-bar"></div>
@@ -391,6 +495,37 @@
     </div>
 
   </div><!-- /#body -->
+
+  <div id="health-view" class="hidden">
+    <div id="health-toolbar">
+      <button id="health-refresh">Refresh</button>
+      <span id="health-status">Data health not loaded</span>
+    </div>
+    <div id="health-summary"></div>
+    <div id="health-main">
+      <section class="health-panel">
+        <div class="health-panel-header">
+          <span class="health-panel-title">Symbol x Timeframe Matrix</span>
+          <span class="health-panel-subtitle" id="health-matrix-totals"></span>
+        </div>
+        <div id="health-matrix-wrap"></div>
+      </section>
+      <aside id="health-side">
+        <section class="health-panel" style="flex: 1">
+          <div class="health-panel-header">
+            <span class="health-panel-title">ActiveTask Locks</span>
+          </div>
+          <div id="health-locks" class="health-list"></div>
+        </section>
+        <section class="health-panel" style="flex: 1">
+          <div class="health-panel-header">
+            <span class="health-panel-title">Staging Backlog</span>
+          </div>
+          <div id="health-staging" class="health-list"></div>
+        </section>
+      </aside>
+    </div>
+  </div>
 </div><!-- /#app -->
 
 <script>
@@ -403,6 +538,8 @@ let currentSymbol = 'EURUSD';
 let currentTf     = 'H1';
 let currentBars   = 500;
 let refreshTimer  = null;
+let healthTimer   = null;
+let currentView   = 'chart';
 const REFRESH_MS  = 60_000;
 
 // ── Màu sắc ─────────────────────────────────────────────────────────────────
@@ -788,6 +925,204 @@ async function loadCandles() {
 }
 
 // =============================================================================
+// DATA HEALTH DASHBOARD
+// =============================================================================
+
+function fmtInt(v) {
+  if (v == null || Number.isNaN(Number(v))) return '-';
+  return Number(v).toLocaleString('en-US');
+}
+
+function esc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[ch]));
+}
+
+function fmtDateTime(v) {
+  if (!v) return '-';
+  const d = new Date(v + (String(v).endsWith('Z') ? '' : 'Z'));
+  if (Number.isNaN(d.getTime())) return String(v);
+  return d.toLocaleString('vi-VN', {
+    month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
+function fmtLag(minutes) {
+  if (minutes == null) return '-';
+  const m = Number(minutes);
+  if (m < 0) return 'future';
+  if (m < 60) return `${m}m`;
+  if (m < 1440) return `${Math.round(m / 60)}h`;
+  return `${Math.round(m / 1440)}d`;
+}
+
+function compactRows(v) {
+  const n = Number(v || 0);
+  if (!n) return '0';
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'm';
+  if (n >= 10_000) return Math.round(n / 1000) + 'k';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+  return String(n);
+}
+
+function setHealthStatus(msg) {
+  document.getElementById('health-status').textContent = msg;
+}
+
+function renderHealthSummary(summary) {
+  const items = [
+    ['Fact Rows', fmtInt(summary.TotalRows)],
+    ['Rows 24h', fmtInt(summary.RowsCreatedLast24h)],
+    ['Rows Today UTC', fmtInt(summary.RowsCreatedTodayUtc)],
+    ['Symbols', `${fmtInt(summary.SymbolsWithData)} / ${fmtInt(summary.TotalSymbols)}`],
+    ['Timeframes', `${fmtInt(summary.TimeframesWithData)} / ${fmtInt(summary.TotalTimeframes)}`],
+    ['Oldest Bar', fmtDateTime(summary.OldestBarTime)],
+    ['Latest Bar', fmtDateTime(summary.LatestBarTime)],
+    ['Latest Write', fmtDateTime(summary.LatestCreatedAt)],
+  ];
+  document.getElementById('health-summary').innerHTML = items.map(([label, value]) => `
+    <div class="health-metric">
+      <div class="health-metric-label">${esc(label)}</div>
+      <div class="health-metric-value" title="${esc(value)}">${esc(value)}</div>
+    </div>
+  `).join('');
+}
+
+function renderHealthMatrix(matrix) {
+  const wrap = document.getElementById('health-matrix-wrap');
+  const tfs = matrix.timeframes || [];
+  const totals = matrix.totals || {};
+  document.getElementById('health-matrix-totals').textContent =
+    `OK ${fmtInt(totals.ok)} | Warn ${fmtInt(totals.warn)} | Stale ${fmtInt(totals.stale)} | Empty ${fmtInt(totals.empty)}`;
+
+  const head = `<thead><tr><th>Symbol</th>${tfs.map(tf => `<th>${tf}</th>`).join('')}</tr></thead>`;
+  const rows = (matrix.symbols || []).map(item => {
+    const cells = tfs.map(tf => {
+      const c = (item.cells || {})[tf] || { state: 'empty', RowCount: 0 };
+      const state = c.state || 'unknown';
+      const title = [
+        `${item.symbol} ${tf}`,
+        `Rows: ${fmtInt(c.RowCount)}`,
+        `Oldest: ${fmtDateTime(c.OldestBarTime)}`,
+        `Latest: ${fmtDateTime(c.LatestBarTime)}`,
+        `Lag: ${fmtLag(c.LatestLagMinutes)}`,
+        `Latest write: ${fmtDateTime(c.LatestCreatedAt)}`,
+      ].join('\n');
+      return `<td class="health-cell ${state}" title="${esc(title)}" data-symbol="${esc(item.symbol)}" data-tf="${esc(tf)}">
+        <span class="health-cell-main">${compactRows(c.RowCount)}</span>
+        <span class="health-cell-sub">${fmtLag(c.LatestLagMinutes)}</span>
+      </td>`;
+    }).join('');
+    return `<tr><td class="health-symbol-cell">${esc(item.symbol)}</td>${cells}</tr>`;
+  }).join('');
+  wrap.innerHTML = `<table class="health-matrix">${head}<tbody>${rows}</tbody></table>`;
+
+  wrap.querySelectorAll('.health-cell').forEach(cell => {
+    cell.addEventListener('click', () => {
+      const sym = cell.dataset.symbol;
+      const tf = cell.dataset.tf;
+      if (sym && tf) {
+        selectSymbol(sym);
+        selectTf(tf);
+        switchView('chart');
+      }
+    });
+  });
+}
+
+function renderLocks(data) {
+  const items = data.items || [];
+  const el = document.getElementById('health-locks');
+  if (!items.length) {
+    el.innerHTML = '<div class="health-row-meta">No ActiveTask rows.</div>';
+    return;
+  }
+  el.innerHTML = items.map(item => {
+    const active = Number(item.IsActive) === 1;
+    return `<div class="health-row">
+      <div class="health-row-name">${esc(item.TaskName)}</div>
+      <div class="health-row-meta">
+        <span class="health-pill ${active ? 'active' : ''}">${active ? 'active' : 'expired'}</span>
+        expires ${fmtDateTime(item.ExpiresAt)}<br>
+        started ${fmtDateTime(item.StartedAt)}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderStaging(data) {
+  const items = data.items || [];
+  const el = document.getElementById('health-staging');
+  if (!items.length) {
+    el.innerHTML = '<div class="health-row-meta">No staging data.</div>';
+    return;
+  }
+  el.innerHTML = items.map(item => {
+    const pending = Number(item.PendingRows || 0);
+    const hasPending = pending > 0;
+    const meta = item.error
+      ? `<span style="color:${C.red}">${esc(item.error)}</span>`
+      : `<span class="health-pill ${hasPending ? 'pending' : ''}">${fmtInt(pending)} pending</span>
+         total ${fmtInt(item.TotalRows)}<br>latest ${fmtDateTime(item.LatestBarTime)}`;
+    return `<div class="health-row">
+      <div class="health-row-name">${esc(item.TFCode)}</div>
+      <div class="health-row-meta">${meta}</div>
+    </div>`;
+  }).join('');
+}
+
+async function loadHealth() {
+  setHealthStatus('Loading data health...');
+  try {
+    const fetchJson = async (url) => {
+      const resp = await fetch(url, { cache: 'no-store' });
+      if (!resp.ok) throw new Error(`${url} HTTP ${resp.status}`);
+      return resp.json();
+    };
+    const summary = await fetchJson('/api/health/summary');
+    renderHealthSummary(summary);
+    const matrix = await fetchJson('/api/health/matrix');
+    renderHealthMatrix(matrix);
+    const locks = await fetchJson('/api/health/locks');
+    renderLocks(locks);
+    const staging = await fetchJson('/api/health/staging');
+    renderStaging(staging);
+    setHealthStatus('Updated ' + new Date().toLocaleTimeString('vi-VN'));
+  } catch (err) {
+    console.error('[health] load error:', err);
+    setHealthStatus('Data health error: ' + err.message);
+  }
+}
+
+function startHealthRefresh() {
+  clearHealthRefresh();
+  loadHealth();
+  healthTimer = setInterval(loadHealth, REFRESH_MS);
+}
+
+function clearHealthRefresh() {
+  if (healthTimer) { clearInterval(healthTimer); healthTimer = null; }
+}
+
+function switchView(view) {
+  currentView = view;
+  document.querySelectorAll('.view-tab').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.view === view));
+  document.getElementById('body').classList.toggle('hidden', view !== 'chart');
+  document.getElementById('health-view').classList.toggle('hidden', view !== 'health');
+  if (view === 'health') {
+    clearAutoRefresh();
+    startHealthRefresh();
+  } else {
+    clearHealthRefresh();
+    chart.applyOptions({ width: priceChartEl.clientWidth, height: priceChartEl.clientHeight });
+    startAutoRefresh();
+  }
+}
+
+// =============================================================================
 // OHLC INFO BAR
 // =============================================================================
 
@@ -939,6 +1274,11 @@ document.getElementById('bars-select').addEventListener('change', e => {
 document.querySelectorAll('#indicator-controls input').forEach(el => {
   el.addEventListener('change', () => reloadWithReset());
 });
+
+document.querySelectorAll('.view-tab').forEach(btn => {
+  btn.addEventListener('click', () => switchView(btn.dataset.view));
+});
+document.getElementById('health-refresh').addEventListener('click', loadHealth);
 
 // =============================================================================
 // KHỞI ĐỘNG

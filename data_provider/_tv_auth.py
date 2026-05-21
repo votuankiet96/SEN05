@@ -81,11 +81,13 @@ import json
 import logging
 import random
 import re
+import ssl
 import threading
 import time
 from pathlib import Path
 
 import requests
+from requests.adapters import HTTPAdapter
 
 # Bootstrap: thêm project root vào path
 import os
@@ -123,6 +125,8 @@ STARTUP_MIN_TOKEN_TTL_SEC = 10 * 60
 # Token xác thực TradingView (chia sẻ giữa tất cả kết nối)
 _auth_token: str = GUEST_TOKEN
 _auth_lock  = threading.Lock()
+_http_session: requests.Session | None = None
+_http_session_lock = threading.Lock()
 
 # Cookie TradingView (runtime, có thể được cập nhật khi refresh)
 _tv_cookie: str = TV_COOKIE
@@ -194,8 +198,13 @@ def get_valid_tv_connection(lg: logging.Logger | None = None) -> tuple:
     token, source = _resolve_auth_token(log)
     _update_global_token(token)
 
-    from tvDatafeed import TvDatafeed  # type: ignore
-    tv = TvDatafeed()
+    from config import HISTORICAL_PROVIDER
+    if HISTORICAL_PROVIDER == "websocket":
+        from types import SimpleNamespace
+        tv = SimpleNamespace(token=token)
+    else:
+        from tvDatafeed import TvDatafeed  # type: ignore
+        tv = TvDatafeed()
     tv.token = token
     log.info("[AUTH] TV connection ready (source: %s).", source)
     return tv, source
@@ -236,6 +245,32 @@ def refresh_mid_run(tv, lg: logging.Logger | None = None) -> bool:
 # INTERNAL HELPERS
 # =============================================================================
 
+class _TradingViewHTTPAdapter(HTTPAdapter):
+    """Requests adapter compatible with Python/OpenSSL strict chain checks."""
+
+    def init_poolmanager(self, *args, **kwargs):
+        ctx = ssl.create_default_context()
+        # Python 3.14/OpenSSL 3 can reject TradingView's served chain on some
+        # Windows installs with "Basic Constraints of CA cert not marked
+        # critical". Keep certificate verification on, but avoid that stricter
+        # OpenSSL policy so auth refresh can use the same chain browsers accept.
+        if hasattr(ssl, "VERIFY_X509_STRICT"):
+            ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
+        kwargs["ssl_context"] = ctx
+        return super().init_poolmanager(*args, **kwargs)
+
+
+def _get_http_session() -> requests.Session:
+    """Return the shared HTTP session used for TradingView auth refresh."""
+    global _http_session
+    if _http_session is None:
+        with _http_session_lock:
+            if _http_session is None:
+                sess = requests.Session()
+                sess.mount("https://", _TradingViewHTTPAdapter())
+                _http_session = sess
+    return _http_session
+
 def _update_global_token(token: str) -> None:
     """Cập nhật _auth_token global nếu token hợp lệ."""
     global _auth_token
@@ -262,7 +297,7 @@ def _http_request_with_retry(
 
     for attempt in range(max_retries + 1):
         try:
-            resp = requests.request(method, url, **kwargs)
+            resp = _get_http_session().request(method, url, **kwargs)
 
             if resp.status_code < 400:
                 return resp

@@ -10,3 +10,16 @@ C:\Users\Kiet Vo\Documents\cAlgo\Sources\Robots\SEN_Combo_V0\SEN_Combo_V0\obj\De
 C:\Users\Kiet Vo\Documents\cAlgo\Sources\Robots\SEN_Combo_V0\SEN_Combo_V0\obj\Debug\net6.0\refint\SEN_Combo_V0.dll
 C:\Users\Kiet Vo\Documents\cAlgo\Sources\Robots\SEN_Combo_V0\SEN_Combo_V0\obj\Debug\net6.0\SEN_Combo_V0.pdb
 C:\Users\Kiet Vo\Documents\cAlgo\Sources\Robots\SEN_Combo_V0\SEN_Combo_V0\obj\Debug\net6.0\ref\SEN_Combo_V0.dll
+D:\Auto Trading\SEN05\cbot_calgo\cAlgo\Sources\Robots\SEN_Combo_V0\SEN_Combo_V0\bin\Debug\net6.0\SEN_Combo_V0.deps.json
+D:\Auto Trading\SEN05\cbot_calgo\cAlgo\Sources\Robots\SEN_Combo_V0\SEN_Combo_V0\bin\Debug\net6.0\SEN_Combo_V0.dll
+D:\Auto Trading\SEN05\cbot_calgo\cAlgo\Sources\Robots\SEN_Combo_V0\SEN_Combo_V0\bin\Debug\net6.0\SEN_Combo_V0.pdb
+D:\Auto Trading\SEN05\cbot_calgo\cAlgo\Sources\Robots\SEN_Combo_V0\SEN_Combo_V0\obj\Debug\net6.0\SEN_Combo_V0.csproj.AssemblyReference.cache
+D:\Auto Trading\SEN05\cbot_calgo\cAlgo\Sources\Robots\SEN_Combo_V0\SEN_Combo_V0\obj\Debug\net6.0\SEN_Combo_V0.GeneratedMSBuildEditorConfig.editorconfig
+D:\Auto Trading\SEN05\cbot_calgo\cAlgo\Sources\Robots\SEN_Combo_V0\SEN_Combo_V0\obj\Debug\net6.0\SEN_Combo_V0.AssemblyInfoInputs.cache
+D:\Auto Trading\SEN05\cbot_calgo\cAlgo\Sources\Robots\SEN_Combo_V0\SEN_Combo_V0\obj\Debug\net6.0\SEN_Combo_V0.AssemblyInfo.cs
+D:\Auto Trading\SEN05\cbot_calgo\cAlgo\Sources\Robots\SEN_Combo_V0\SEN_Combo_V0\obj\Debug\net6.0\SEN_Combo_V0.csproj.CoreCompileInputs.cache
+D:\Auto Trading\SEN05\cbot_calgo\cAlgo\Sources\Robots\SEN_Combo_V0\SEN_Combo_V0\obj\Debug\net6.0\SEN_Combo_V0.sourcelink.json
+D:\Auto Trading\SEN05\cbot_calgo\cAlgo\Sources\Robots\SEN_Combo_V0\SEN_Combo_V0\obj\Debug\net6.0\SEN_Combo_V0.dll
+D:\Auto Trading\SEN05\cbot_calgo\cAlgo\Sources\Robots\SEN_Combo_V0\SEN_Combo_V0\obj\Debug\net6.0\refint\SEN_Combo_V0.dll
+D:\Auto Trading\SEN05\cbot_calgo\cAlgo\Sources\Robots\SEN_Combo_V0\SEN_Combo_V0\obj\Debug\net6.0\SEN_Combo_V0.pdb
+D:\Auto Trading\SEN05\cbot_calgo\cAlgo\Sources\Robots\SEN_Combo_V0\SEN_Combo_V0\obj\Debug\net6.0\ref\SEN_Combo_V0.dll

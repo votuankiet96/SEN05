@@ -8,9 +8,10 @@ strategy engine without putting export loops inside Flask route handlers.
 from __future__ import annotations
 
 from collections import OrderedDict
+from collections.abc import Mapping
 from dataclasses import dataclass
 from time import monotonic
-from typing import Any, Mapping
+from typing import Any
 
 import pandas as pd
 
@@ -95,7 +96,7 @@ def build_bulk_export(
     frames: list[pd.DataFrame] = []
     for symbol in symbols:
         run_args = dict(args)
-        if spec.key == "ai_trend":
+        if spec.key in {"ai_trend", "knn_combo"}:
             run_args["SYMBOL"] = symbol
             run_args["ENTRY_TF"] = tf_code
             run_args["ENTRY_BARS"] = str(bars)

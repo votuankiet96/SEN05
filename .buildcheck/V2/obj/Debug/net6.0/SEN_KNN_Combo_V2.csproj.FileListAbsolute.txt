@@ -1,0 +1,6 @@
+D:\Auto Trading\SEN05\.buildcheck\V2\obj\Debug\net6.0\SEN_KNN_Combo_V2.csproj.AssemblyReference.cache
+D:\Auto Trading\SEN05\.buildcheck\V2\obj\Debug\net6.0\SEN_KNN_Combo_V2.GeneratedMSBuildEditorConfig.editorconfig
+D:\Auto Trading\SEN05\.buildcheck\V2\obj\Debug\net6.0\SEN_KNN_Combo_V2.AssemblyInfoInputs.cache
+D:\Auto Trading\SEN05\.buildcheck\V2\obj\Debug\net6.0\SEN_KNN_Combo_V2.AssemblyInfo.cs
+D:\Auto Trading\SEN05\.buildcheck\V2\obj\Debug\net6.0\SEN_KNN_Combo_V2.csproj.CoreCompileInputs.cache
+D:\Auto Trading\SEN05\.buildcheck\V2\obj\Debug\net6.0\SEN_KNN_Combo_V2.sourcelink.json

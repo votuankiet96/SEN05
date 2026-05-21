@@ -1,0 +1,13 @@
+D:\Auto Trading\SEN05\.buildcheck\V2\bin\SEN_KNN_Combo_V2.deps.json
+D:\Auto Trading\SEN05\.buildcheck\V2\bin\SEN_KNN_Combo_V2.dll
+D:\Auto Trading\SEN05\.buildcheck\V2\bin\SEN_KNN_Combo_V2.pdb
+D:\Auto Trading\SEN05\.buildcheck\V2\obj\SEN_KNN_Combo_V2.csproj.AssemblyReference.cache
+D:\Auto Trading\SEN05\.buildcheck\V2\obj\SEN_KNN_Combo_V2.GeneratedMSBuildEditorConfig.editorconfig
+D:\Auto Trading\SEN05\.buildcheck\V2\obj\SEN_KNN_Combo_V2.AssemblyInfoInputs.cache
+D:\Auto Trading\SEN05\.buildcheck\V2\obj\SEN_KNN_Combo_V2.AssemblyInfo.cs
+D:\Auto Trading\SEN05\.buildcheck\V2\obj\SEN_KNN_Combo_V2.csproj.CoreCompileInputs.cache
+D:\Auto Trading\SEN05\.buildcheck\V2\obj\SEN_KNN_Combo_V2.sourcelink.json
+D:\Auto Trading\SEN05\.buildcheck\V2\obj\SEN_KNN_Combo_V2.dll
+D:\Auto Trading\SEN05\.buildcheck\V2\obj\refint\SEN_KNN_Combo_V2.dll
+D:\Auto Trading\SEN05\.buildcheck\V2\obj\SEN_KNN_Combo_V2.pdb
+D:\Auto Trading\SEN05\.buildcheck\V2\obj\ref\SEN_KNN_Combo_V2.dll
