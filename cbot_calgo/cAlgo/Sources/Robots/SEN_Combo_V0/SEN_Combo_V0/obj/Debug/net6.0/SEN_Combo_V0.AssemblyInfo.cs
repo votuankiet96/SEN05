@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SEN_Combo_V0")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4a77b0761a12e45a5f9461c2573704efb41eb5a8")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
 [assembly: System.Reflection.AssemblyProductAttribute("SEN_Combo_V0")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SEN_Combo_V0")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -272,20 +272,26 @@ Tất cả engine bar-by-bar đều dùng **Mark-to-Market (MTM)**:
 
 ### Ý tưởng giao dịch
 
-Chờ giá break out khỏi vùng MA crossover, vào lệnh pending order tại đỉnh/đáy của nến tín hiệu. Dùng ATR để định vị SL/TP. Có partial TP và trailing stop theo MA.
+Chờ nến đầu tiên cùng hướng đóng cửa đúng phía MA20 và được MACD Histogram xác nhận, rồi vào lệnh pending order tại đỉnh/đáy của nến tín hiệu. Dùng ATR để định vị SL/TP. Có partial TP và trailing stop theo MA.
 
 ### Signal Generation (`signals.py`)
 
 ```
-Điều kiện BUY:  MA(20) cross up (prev_close ≤ MA, close > MA)
+Điều kiện BUY:  Nến hiện tại tăng (close > open)
+                + Close > MA20
                 + MACD histogram dương
-                + Nến hiện tại tăng
+                + Trạng thái Combo trước đó không phải BUY
                 + Trong session giao dịch (nếu bật filter)
 
-Điều kiện SELL: MA(20) cross down
+Điều kiện SELL: Nến hiện tại giảm (close < open)
+                + Close < MA20
                 + MACD histogram âm
-                + Nến hiện tại giảm
+                + Trạng thái Combo trước đó không phải SELL
 ```
+
+Raw signal Combo V0 không bắt buộc MA crossover. Tín hiệu luân phiên theo state
+`BUY → SELL → BUY`; X, ATR, KTP và MIN_RR không phải điều kiện nhận dạng raw
+Buy/Sell, mà thuộc phần level/report sau tín hiệu.
 
 Không có look-ahead bias: signal xác nhận tại close bar T → pending order đặt tại đỉnh/đáy bar T → khớp từ bar T+1 trở đi.
 

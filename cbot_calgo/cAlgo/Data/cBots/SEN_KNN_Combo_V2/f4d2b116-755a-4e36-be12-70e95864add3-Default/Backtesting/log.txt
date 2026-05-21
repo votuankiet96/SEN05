@@ -1,0 +1,96 @@
+01/01/2025 00:00:00.000 | Info | CBot instance [SEN_KNN_Combo_V2, US 30, h1] started.
+01/01/2025 23:00:15.211 | Info | [SEN_KNN_Combo_V2] FTMO daily baseline reset | FTMO Day: 2025-01-01 | Start Balance: 10000.00 | Guard Floor: 9650.00 | Current Equity: 10000.00 | Equity Room: 350.00 | Rule/Buffer/Guard: 5.0%/1.5%/3.5%
+01/01/2025 23:00:15.211 | Info | [SEN_KNN_Combo_V2] FTMO maximum loss state restored | Equity Floor: 9300.00 | Current Equity: 10000.00 | Triggered: False | Rule/Buffer/Guard: 10.0%/3.0%/7.0%
+01/01/2025 23:00:15.211 | Info | [SEN_KNN_Combo_V2] CSV loaded: 359 signals | skipped: 0 | symbol: US 30 | offset: 0h | D:\Auto Trading\SEN05\raw_signals\knn_combo\knn_combo_US30_H1_20250101_20260514_signals.csv
+01/01/2025 23:00:15.211 | Info | [SEN_KNN_Combo_V2] Started | Symbol: US 30 | TF: Hour | Mode: MarketOrderOnNextBar | KSL: 2 (1.272) | TP Profile: 15 -> Levels [1,2,3,4] -> Multipliers [1.272, 1.618, 2.272, 2.618] | Risk: 1.0%
+01/01/2025 23:00:15.211 | Info | [SEN_KNN_Combo_V2] FTMO guard | Initial: 10000.00 | Daily rule/buffer/guard: 5.0%/1.5%/3.5% | Max loss rule/buffer/guard: 10.0%/3.0%/7.0% | Day offset: 0h | Daily floor: 9650.00 | Total floor: 9300.00 | Current equity: 10000.00
+02/01/2025 00:00:01.006 | Info | [SEN_KNN_Combo_V2] FTMO daily baseline reset | FTMO Day: 2025-01-02 | Start Balance: 10000.00 | Guard Floor: 9650.00 | Current Equity: 10000.00 | Equity Room: 350.00 | Rule/Buffer/Guard: 5.0%/1.5%/3.5%
+03/01/2025 00:00:00.512 | Info | [SEN_KNN_Combo_V2] FTMO daily baseline reset | FTMO Day: 2025-01-03 | Start Balance: 10000.00 | Guard Floor: 9650.00 | Current Equity: 10000.00 | Equity Room: 350.00 | Rule/Buffer/Guard: 5.0%/1.5%/3.5%
+03/01/2025 01:00:00.014 | Trade | Executing Market Order to Sell 1 US 30 (SL: 194.28, TP: 194.28)
+03/01/2025 01:00:00.014 | Trade | → Executing Market Order to Sell 1 US 30 (SL: 194.28, TP: 194.28) SUCCEEDED, Position PID1
+03/01/2025 01:00:00.014 | Trade | Modifying position PID1 (SL: 42607.88, TP: 42219.32)
+03/01/2025 01:00:00.014 | Trade | → Modifying position PID1 (SL: 42607.88, TP: 42219.32) SUCCEEDED, Position PID1
+03/01/2025 01:00:00.014 | Info | [SEN_KNN_Combo_V2] SELL MARKET leg 1/4 opened | Bar: 2025-01-02 23:00 -> 2025-01-03 00:00 (1.00h) | SignalTime: 2025-01-02 23:00 | SignalsInBar: 1 | Entry: 42413.6 | SL: 42607.88483849724 (194.3p) | TP: 42219.31516150276 (194.3p) | ATR: 152.7397 | Range: 52.0000 | Base: 152.7397 | KSL: 1.272 | KTP: 1.272 | RR: 1.00 | TotalRisk: 1.0% | LegRisk: 0.250% | Lots: 1.00
+03/01/2025 01:00:00.014 | Trade | Executing Market Order to Sell 1 US 30 (SL: 194.28, TP: 247.13)
+03/01/2025 01:00:00.014 | Trade | → Executing Market Order to Sell 1 US 30 (SL: 194.28, TP: 247.13) SUCCEEDED, Position PID2
+03/01/2025 01:00:00.014 | Trade | Modifying position PID2 (SL: 42607.88, TP: 42166.47)
+03/01/2025 01:00:00.014 | Trade | → Modifying position PID2 (SL: 42607.88, TP: 42166.47) SUCCEEDED, Position PID2
+03/01/2025 01:00:00.014 | Info | [SEN_KNN_Combo_V2] SELL MARKET leg 2/4 opened | Bar: 2025-01-02 23:00 -> 2025-01-03 00:00 (1.00h) | SignalTime: 2025-01-02 23:00 | SignalsInBar: 1 | Entry: 42413.6 | SL: 42607.88483849724 (194.3p) | TP: 42166.46724159706 (247.1p) | ATR: 152.7397 | Range: 52.0000 | Base: 152.7397 | KSL: 1.272 | KTP: 1.618 | RR: 1.27 | TotalRisk: 1.0% | LegRisk: 0.250% | Lots: 1.00
+03/01/2025 01:00:00.014 | Trade | Executing Market Order to Sell 1 US 30 (SL: 194.28, TP: 347.02)
+03/01/2025 01:00:00.014 | Trade | → Executing Market Order to Sell 1 US 30 (SL: 194.28, TP: 347.02) SUCCEEDED, Position PID3
+03/01/2025 01:00:00.014 | Trade | Modifying position PID3 (SL: 42607.88, TP: 42066.58)
+03/01/2025 01:00:00.014 | Trade | → Modifying position PID3 (SL: 42607.88, TP: 42066.58) SUCCEEDED, Position PID3
+03/01/2025 01:00:00.014 | Info | [SEN_KNN_Combo_V2] SELL MARKET leg 3/4 opened | Bar: 2025-01-02 23:00 -> 2025-01-03 00:00 (1.00h) | SignalTime: 2025-01-02 23:00 | SignalsInBar: 1 | Entry: 42413.6 | SL: 42607.88483849724 (194.3p) | TP: 42066.57550859612 (347.0p) | ATR: 152.7397 | Range: 52.0000 | Base: 152.7397 | KSL: 1.272 | KTP: 2.272 | RR: 1.79 | TotalRisk: 1.0% | LegRisk: 0.250% | Lots: 1.00
+03/01/2025 01:00:00.014 | Trade | Executing Market Order to Sell 1 US 30 (SL: 194.28, TP: 399.87)
+03/01/2025 01:00:00.014 | Trade | → Executing Market Order to Sell 1 US 30 (SL: 194.28, TP: 399.87) SUCCEEDED, Position PID4
+03/01/2025 01:00:00.014 | Trade | Modifying position PID4 (SL: 42607.88, TP: 42013.73)
+03/01/2025 01:00:00.014 | Trade | → Modifying position PID4 (SL: 42607.88, TP: 42013.73) SUCCEEDED, Position PID4
+03/01/2025 01:00:00.014 | Info | [SEN_KNN_Combo_V2] SELL MARKET leg 4/4 opened | Bar: 2025-01-02 23:00 -> 2025-01-03 00:00 (1.00h) | SignalTime: 2025-01-02 23:00 | SignalsInBar: 1 | Entry: 42413.6 | SL: 42607.88483849724 (194.3p) | TP: 42013.727588690424 (399.9p) | ATR: 152.7397 | Range: 52.0000 | Base: 152.7397 | KSL: 1.272 | KTP: 2.618 | RR: 2.06 | TotalRisk: 1.0% | LegRisk: 0.250% | Lots: 1.00
+03/01/2025 01:00:00.014 | Info | [SEN_KNN_Combo_V2] MARKET CLUSTER COMPLETE | SELL at 2025-01-02 23:00 -> entry bar 2025-01-03 00:00 | TP Profile: 15 -> Levels [1,2,3,4] -> Multipliers [1.272, 1.618, 2.272, 2.618] | Legs placed: 4/4 | TotalRisk planned: 1.0% | LegRisk: 0.250% | ATR: 152.7397 | Range: 52.0000 | Base: 152.7397 | KSL: 1.272 | Spread: 1.1p | Spread/SL: 0.57% | Spread/TP1: 0.57%
+03/01/2025 01:00:00.014 | Info | [SEN_KNN_Combo_V2] OPENED Sell | Label: SEN_KNN_Combo_V2_C2_L1 | Entry: 42413.6 | SL: 42607.88 | TP: 42219.32 | Lots: 1.00
+03/01/2025 01:00:00.014 | Info | [SEN_KNN_Combo_V2] OPENED Sell | Label: SEN_KNN_Combo_V2_C2_L2 | Entry: 42413.6 | SL: 42607.88 | TP: 42166.47 | Lots: 1.00
+03/01/2025 01:00:00.014 | Info | [SEN_KNN_Combo_V2] OPENED Sell | Label: SEN_KNN_Combo_V2_C2_L3 | Entry: 42413.6 | SL: 42607.88 | TP: 42066.58 | Lots: 1.00
+03/01/2025 01:00:00.014 | Info | [SEN_KNN_Combo_V2] OPENED Sell | Label: SEN_KNN_Combo_V2_C2_L4 | Entry: 42413.6 | SL: 42607.88 | TP: 42013.73 | Lots: 1.00
+03/01/2025 01:00:00.014 | Info | [SEN_KNN_Combo_V2] MODIFIED Sell | Label: SEN_KNN_Combo_V2_C2_L4 | SL: 42607.88 | TP: 42013.73
+03/01/2025 09:16:22.610 | Info | [SEN_KNN_Combo_V2] FTMO DAILY LOSS GUARD HIT | Equity: 9648.72 <= Guard Floor: 9650.00 | Day Start Balance: 10000.00 | Initial: 10000.00 | Rule/Buffer/Guard: 5.0%/1.5%/3.5%. Trading halted until next FTMO reset day.
+03/01/2025 09:16:22.610 | Trade | Closing position PID1 (Volume: 1)
+03/01/2025 09:16:22.610 | Trade | → Closing position PID1 (Volume: 1) SUCCEEDED
+03/01/2025 09:16:22.610 | Trade | Closing position PID2 (Volume: 1)
+03/01/2025 09:16:22.610 | Trade | → Closing position PID2 (Volume: 1) SUCCEEDED
+03/01/2025 09:16:22.610 | Trade | Closing position PID3 (Volume: 1)
+03/01/2025 09:16:22.610 | Trade | → Closing position PID3 (Volume: 1) SUCCEEDED
+03/01/2025 09:16:22.610 | Trade | Closing position PID4 (Volume: 1)
+03/01/2025 09:16:22.610 | Trade | → Closing position PID4 (Volume: 1) SUCCEEDED
+03/01/2025 09:16:22.610 | Info | [SEN_KNN_Combo_V2] CLOSED Sell | Label: SEN_KNN_Combo_V2_C2_L1 | Cluster: 2 | Leg: 1 | Net PnL: -87.82 | Pips: -81.9 | Reason: Closed
+03/01/2025 09:16:22.610 | Info | [SEN_KNN_Combo_V2] CLOSED Sell | Label: SEN_KNN_Combo_V2_C2_L2 | Cluster: 2 | Leg: 2 | Net PnL: -87.82 | Pips: -81.9 | Reason: Closed
+03/01/2025 09:16:22.610 | Info | [SEN_KNN_Combo_V2] CLOSED Sell | Label: SEN_KNN_Combo_V2_C2_L3 | Cluster: 2 | Leg: 3 | Net PnL: -87.82 | Pips: -81.9 | Reason: Closed
+03/01/2025 09:16:22.610 | Info | [SEN_KNN_Combo_V2] CLOSED Sell | Label: SEN_KNN_Combo_V2_C2_L4 | Cluster: 2 | Leg: 4 | Net PnL: -87.82 | Pips: -81.9 | Reason: Closed
+05/01/2025 23:00:15.042 | Info | [SEN_KNN_Combo_V2] FTMO daily baseline reset | FTMO Day: 2025-01-05 | Start Balance: 9648.72 | Guard Floor: 9298.72 | Current Equity: 9648.72 | Equity Room: 350.00 | Rule/Buffer/Guard: 5.0%/1.5%/3.5%
+06/01/2025 00:00:00.149 | Info | [SEN_KNN_Combo_V2] FTMO daily baseline reset | FTMO Day: 2025-01-06 | Start Balance: 9648.72 | Guard Floor: 9298.72 | Current Equity: 9648.72 | Equity Room: 350.00 | Rule/Buffer/Guard: 5.0%/1.5%/3.5%
+07/01/2025 00:00:00.352 | Info | [SEN_KNN_Combo_V2] FTMO daily baseline reset | FTMO Day: 2025-01-07 | Start Balance: 9648.72 | Guard Floor: 9298.72 | Current Equity: 9648.72 | Equity Room: 350.00 | Rule/Buffer/Guard: 5.0%/1.5%/3.5%
+07/01/2025 21:00:00.305 | Trade | Executing Market Order to Sell 1 US 30 (SL: 168.09, TP: 168.09)
+07/01/2025 21:00:00.305 | Trade | → Executing Market Order to Sell 1 US 30 (SL: 168.09, TP: 168.09) SUCCEEDED, Position PID5
+07/01/2025 21:00:00.305 | Trade | Modifying position PID5 (SL: 42690.19, TP: 42354.01)
+07/01/2025 21:00:00.305 | Trade | → Modifying position PID5 (SL: 42690.19, TP: 42354.01) SUCCEEDED, Position PID5
+07/01/2025 21:00:00.305 | Info | [SEN_KNN_Combo_V2] SELL MARKET leg 1/4 opened | Bar: 2025-01-07 19:00 -> 2025-01-07 20:00 (1.00h) | SignalTime: 2025-01-07 19:00 | SignalsInBar: 1 | Entry: 42522.1 | SL: 42690.18620784013 (168.1p) | TP: 42354.013792159865 (168.1p) | ATR: 132.1432 | Range: 117.0000 | Base: 132.1432 | KSL: 1.272 | KTP: 1.272 | RR: 1.00 | TotalRisk: 1.0% | LegRisk: 0.250% | Lots: 1.00
+07/01/2025 21:00:00.305 | Trade | Executing Market Order to Sell 1 US 30 (SL: 168.09, TP: 213.81)
+07/01/2025 21:00:00.305 | Trade | → Executing Market Order to Sell 1 US 30 (SL: 168.09, TP: 213.81) SUCCEEDED, Position PID6
+07/01/2025 21:00:00.305 | Trade | Modifying position PID6 (SL: 42690.19, TP: 42308.29)
+07/01/2025 21:00:00.305 | Trade | → Modifying position PID6 (SL: 42690.19, TP: 42308.29) SUCCEEDED, Position PID6
+07/01/2025 21:00:00.305 | Info | [SEN_KNN_Combo_V2] SELL MARKET leg 2/4 opened | Bar: 2025-01-07 19:00 -> 2025-01-07 20:00 (1.00h) | SignalTime: 2025-01-07 19:00 | SignalsInBar: 1 | Entry: 42522.1 | SL: 42690.18620784013 (168.1p) | TP: 42308.29222933543 (213.8p) | ATR: 132.1432 | Range: 117.0000 | Base: 132.1432 | KSL: 1.272 | KTP: 1.618 | RR: 1.27 | TotalRisk: 1.0% | LegRisk: 0.250% | Lots: 1.00
+07/01/2025 21:00:00.305 | Trade | Executing Market Order to Sell 1 US 30 (SL: 168.09, TP: 300.23)
+07/01/2025 21:00:00.305 | Trade | → Executing Market Order to Sell 1 US 30 (SL: 168.09, TP: 300.23) SUCCEEDED, Position PID7
+07/01/2025 21:00:00.305 | Trade | Modifying position PID7 (SL: 42690.19, TP: 42221.87)
+07/01/2025 21:00:00.305 | Trade | → Modifying position PID7 (SL: 42690.19, TP: 42221.87) SUCCEEDED, Position PID7
+07/01/2025 21:00:00.305 | Info | [SEN_KNN_Combo_V2] SELL MARKET leg 3/4 opened | Bar: 2025-01-07 19:00 -> 2025-01-07 20:00 (1.00h) | SignalTime: 2025-01-07 19:00 | SignalsInBar: 1 | Entry: 42522.1 | SL: 42690.18620784013 (168.1p) | TP: 42221.87054700253 (300.2p) | ATR: 132.1432 | Range: 117.0000 | Base: 132.1432 | KSL: 1.272 | KTP: 2.272 | RR: 1.79 | TotalRisk: 1.0% | LegRisk: 0.250% | Lots: 1.00
+07/01/2025 21:00:00.305 | Trade | Executing Market Order to Sell 1 US 30 (SL: 168.09, TP: 345.95)
+07/01/2025 21:00:00.305 | Trade | → Executing Market Order to Sell 1 US 30 (SL: 168.09, TP: 345.95) SUCCEEDED, Position PID8
+07/01/2025 21:00:00.305 | Trade | Modifying position PID8 (SL: 42690.19, TP: 42176.15)
+07/01/2025 21:00:00.305 | Trade | → Modifying position PID8 (SL: 42690.19, TP: 42176.15) SUCCEEDED, Position PID8
+07/01/2025 21:00:00.305 | Info | [SEN_KNN_Combo_V2] SELL MARKET leg 4/4 opened | Bar: 2025-01-07 19:00 -> 2025-01-07 20:00 (1.00h) | SignalTime: 2025-01-07 19:00 | SignalsInBar: 1 | Entry: 42522.1 | SL: 42690.18620784013 (168.1p) | TP: 42176.14898417809 (346.0p) | ATR: 132.1432 | Range: 117.0000 | Base: 132.1432 | KSL: 1.272 | KTP: 2.618 | RR: 2.06 | TotalRisk: 1.0% | LegRisk: 0.250% | Lots: 1.00
+07/01/2025 21:00:00.305 | Info | [SEN_KNN_Combo_V2] MARKET CLUSTER COMPLETE | SELL at 2025-01-07 19:00 -> entry bar 2025-01-07 20:00 | TP Profile: 15 -> Levels [1,2,3,4] -> Multipliers [1.272, 1.618, 2.272, 2.618] | Legs placed: 4/4 | TotalRisk planned: 1.0% | LegRisk: 0.250% | ATR: 132.1432 | Range: 117.0000 | Base: 132.1432 | KSL: 1.272 | Spread: 0.7p | Spread/SL: 0.42% | Spread/TP1: 0.42%
+07/01/2025 21:00:00.305 | Info | [SEN_KNN_Combo_V2] OPENED Sell | Label: SEN_KNN_Combo_V2_C4_L1 | Entry: 42522.1 | SL: 42690.19 | TP: 42354.01 | Lots: 1.00
+07/01/2025 21:00:00.305 | Info | [SEN_KNN_Combo_V2] MODIFIED Sell | Label: SEN_KNN_Combo_V2_C4_L1 | SL: 42690.19 | TP: 42354.01
+07/01/2025 21:00:00.305 | Info | [SEN_KNN_Combo_V2] OPENED Sell | Label: SEN_KNN_Combo_V2_C4_L2 | Entry: 42522.1 | SL: 42690.19 | TP: 42308.29 | Lots: 1.00
+07/01/2025 21:00:00.305 | Info | [SEN_KNN_Combo_V2] MODIFIED Sell | Label: SEN_KNN_Combo_V2_C4_L2 | SL: 42690.19 | TP: 42308.29
+07/01/2025 21:00:00.305 | Info | [SEN_KNN_Combo_V2] OPENED Sell | Label: SEN_KNN_Combo_V2_C4_L3 | Entry: 42522.1 | SL: 42690.19 | TP: 42221.87 | Lots: 1.00
+07/01/2025 21:00:00.305 | Info | [SEN_KNN_Combo_V2] MODIFIED Sell | Label: SEN_KNN_Combo_V2_C4_L3 | SL: 42690.19 | TP: 42221.87
+07/01/2025 21:00:00.305 | Info | [SEN_KNN_Combo_V2] OPENED Sell | Label: SEN_KNN_Combo_V2_C4_L4 | Entry: 42522.1 | SL: 42690.19 | TP: 42176.15 | Lots: 1.00
+07/01/2025 21:00:00.305 | Info | [SEN_KNN_Combo_V2] MODIFIED Sell | Label: SEN_KNN_Combo_V2_C4_L4 | SL: 42690.19 | TP: 42176.15
+08/01/2025 00:00:00.148 | Info | [SEN_KNN_Combo_V2] FTMO daily baseline reset | FTMO Day: 2025-01-08 | Start Balance: 9648.72 | Guard Floor: 9298.72 | Current Equity: 9575.61 | Equity Room: 276.89 | Rule/Buffer/Guard: 5.0%/1.5%/3.5%
+08/01/2025 02:06:57.343 | Info | [SEN_KNN_Combo_V2] FTMO MAXIMUM LOSS GUARD HIT | Equity: 9299.44 <= Guard Floor: 9300.00 | Initial: 10000.00 | Rule/Buffer/Guard: 10.0%/3.0%/7.0%. Trading halted until storage/label is reset after review.
+08/01/2025 02:06:57.343 | Trade | Closing position PID5 (Volume: 1)
+08/01/2025 02:06:57.343 | Trade | → Closing position PID5 (Volume: 1) SUCCEEDED
+08/01/2025 02:06:57.343 | Trade | Closing position PID6 (Volume: 1)
+08/01/2025 02:06:57.343 | Trade | → Closing position PID6 (Volume: 1) SUCCEEDED
+08/01/2025 02:06:57.343 | Trade | Closing position PID7 (Volume: 1)
+08/01/2025 02:06:57.343 | Trade | → Closing position PID7 (Volume: 1) SUCCEEDED
+08/01/2025 02:06:57.343 | Trade | Closing position PID8 (Volume: 1)
+08/01/2025 02:06:57.343 | Trade | → Closing position PID8 (Volume: 1) SUCCEEDED
+08/01/2025 02:06:57.343 | Info | [SEN_KNN_Combo_V2] CLOSED Sell | Label: SEN_KNN_Combo_V2_C4_L1 | Cluster: 4 | Leg: 1 | Net PnL: -87.32 | Pips: -81.9 | Reason: Closed
+08/01/2025 02:06:57.343 | Info | [SEN_KNN_Combo_V2] CLOSED Sell | Label: SEN_KNN_Combo_V2_C4_L2 | Cluster: 4 | Leg: 2 | Net PnL: -87.32 | Pips: -81.9 | Reason: Closed
+08/01/2025 02:06:57.343 | Info | [SEN_KNN_Combo_V2] CLOSED Sell | Label: SEN_KNN_Combo_V2_C4_L3 | Cluster: 4 | Leg: 3 | Net PnL: -87.32 | Pips: -81.9 | Reason: Closed
+08/01/2025 02:06:57.343 | Info | [SEN_KNN_Combo_V2] CLOSED Sell | Label: SEN_KNN_Combo_V2_C4_L4 | Cluster: 4 | Leg: 4 | Net PnL: -87.32 | Pips: -81.9 | Reason: Closed
+31/12/2025 19:43:09.232 | Info | [SEN_KNN_Combo_V2] Stopped | Signals loaded: 359 | Signals matched: 2 | Multi-signal bars: 0 | Bars without signal: 81
+31/12/2025 19:43:09.232 | Info | [SEN_KNN_Combo_V2] Summary | ClustersOpened: 2 | Partial: 0 | Failed: 0 | LegsPlaced: 8 | LegsFailed: 0 | Skip LongBar: 0 | Skip Spread: 0 | Skip BrokerDistance: 0 | Skip Volume: 0 | Skip InvalidRange: 0 | Place errors: 0 | SLLadderMoves: 0 | FTMODailyHits: 1 | FTMOMaxHits: 1
+31/12/2025 19:43:09.232 | Info | CBot instance [SEN_KNN_Combo_V2, US 30, h1] stopped by user.

@@ -54,6 +54,13 @@ _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+from config import DERIVED_TFS, DIRECT_TFS, TF_DISPLAY_ORDER
+from modules.data_health_loader import (
+    load_active_locks,
+    load_health_matrix,
+    load_health_summary,
+    load_staging_health,
+)
 from modules.data_loader import load_candles, load_symbols
 from modules.db_connector import test_connection
 
@@ -65,9 +72,9 @@ PORT         = 8050
 DEFAULT_BARS = 500
 _HERE        = Path(__file__).resolve().parent
 
-# Nhóm timeframe — Direct: kéo thẳng từ TradingView; Computed: tổng hợp từ TF nguồn
-_TF_DIRECT   = ["M5", "M15", "M30", "M45", "H1", "H2", "H3", "H4", "D1", "W"]
-_TF_COMPUTED = ["M10", "M20", "M90", "H6", "H8"]
+# Timeframe groups come from config.py so the UI matches the active ingestion mode.
+_TF_DIRECT = [tf for tf in TF_DISPLAY_ORDER if tf in DIRECT_TFS]
+_TF_COMPUTED = [tf for tf in TF_DISPLAY_ORDER if tf in DERIVED_TFS]
 
 # =============================================================================
 # FLASK APP
@@ -108,6 +115,38 @@ def api_timeframes():
         }
     """
     return jsonify({"direct": _TF_DIRECT, "computed": _TF_COMPUTED})
+
+
+@app.route("/api/health/summary")
+def api_health_summary():
+    try:
+        return jsonify(load_health_summary())
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/health/matrix")
+def api_health_matrix():
+    try:
+        return jsonify(load_health_matrix())
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/health/staging")
+def api_health_staging():
+    try:
+        return jsonify(load_staging_health())
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/health/locks")
+def api_health_locks():
+    try:
+        return jsonify(load_active_locks())
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
 
 
 # ─── HELPER: TIMESTAMP ───────────────────────────────────────────────────────
@@ -332,4 +371,4 @@ if __name__ == "__main__":
     print(f"  -> Mo trinh duyet: http://127.0.0.1:{PORT}")
     print(f"  -> Dung server   : Ctrl+C\n")
 
-    app.run(debug=False, host="127.0.0.1", port=PORT, use_reloader=False)
+    app.run(debug=False, host="127.0.0.1", port=PORT, use_reloader=False, threaded=True)

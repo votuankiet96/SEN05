@@ -18,22 +18,32 @@ from core_python.chart.payload import build_chart_payload
 from core_python.data.loader import load_bounds
 from core_python.engine import (
     DateWindow,
-    attach_window_meta as _attach_window_meta,
-    date_window_from_args as _date_window_from_args,
     run_strategy_request,
+)
+from core_python.engine import (
+    attach_window_meta as _attach_window_meta,
+)
+from core_python.engine import (
+    date_window_from_args as _date_window_from_args,
+)
+from core_python.engine import (
     to_int as _to_int,
+)
+from core_python.engine import (
     trim_to_window as _trim_to_window,
 )
 from core_python.export.service import (
     build_bulk_export,
     build_single_export,
     parse_symbol_list,
+)
+from core_python.export.service import (
     signal_export_rows as _signal_export_rows,
 )
 from core_python.strategies.ai_trend.payload import build_ai_trend_payload
 from core_python.strategies.combo.payload import build_combo_mtf_payload
+from core_python.strategies.knn_combo.payload import build_knn_combo_payload
 from core_python.strategies.registry import STRATEGIES
-
 
 ROOT = Path(__file__).resolve().parents[2]
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -43,6 +53,12 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8516
 AI_TREND_PREVIEW_ENTRY_BARS = 1500
 _DB_REQUEST_LOCK = Lock()
+STRATEGY_DEFAULTS = {
+    "combo": {
+        "symbol": "US30",
+        "tf": "H4",
+    },
+}
 
 
 @dataclass(frozen=True)
@@ -85,6 +101,7 @@ def create_app() -> Flask:
                 "timeframes": config.timeframe_codes(),
                 "defaultSymbol": config.DEFAULT_SYMBOL,
                 "defaultTf": config.DEFAULT_TF,
+                "strategyDefaults": STRATEGY_DEFAULTS,
                 "defaultBars": config.N_BARS,
             }
         )
@@ -93,8 +110,9 @@ def create_app() -> Flask:
     def api_scan():
         try:
             strategy_key = request.args.get("strategy", "combo")
-            symbol = request.args.get("symbol", config.DEFAULT_SYMBOL).upper()
-            tf = request.args.get("tf", config.DEFAULT_TF).upper()
+            defaults = _strategy_defaults(strategy_key)
+            symbol = request.args.get("symbol", defaults["symbol"]).upper()
+            tf = request.args.get("tf", defaults["tf"]).upper()
             bars = _to_int(request.args.get("bars"), config.N_BARS, 50, 20000)
             date_window = _date_window_from_args(request.args)
             with _DB_REQUEST_LOCK:
@@ -123,8 +141,9 @@ def create_app() -> Flask:
     def api_export():
         try:
             strategy_key = request.args.get("strategy", "combo")
-            symbol = request.args.get("symbol", config.DEFAULT_SYMBOL).upper()
-            tf = request.args.get("tf", config.DEFAULT_TF).upper()
+            defaults = _strategy_defaults(strategy_key)
+            symbol = request.args.get("symbol", defaults["symbol"]).upper()
+            tf = request.args.get("tf", defaults["tf"]).upper()
             bars = _to_int(request.args.get("bars"), config.N_BARS, 50, 20000)
             date_window = _date_window_from_args(request.args)
             with _DB_REQUEST_LOCK:
@@ -146,7 +165,8 @@ def create_app() -> Flask:
     def api_export_bulk():
         try:
             strategy_key = request.args.get("strategy", "combo")
-            tf = request.args.get("tf", config.DEFAULT_TF).upper()
+            defaults = _strategy_defaults(strategy_key)
+            tf = request.args.get("tf", defaults["tf"]).upper()
             bars = _to_int(request.args.get("bars"), config.N_BARS, 50, 20000)
             date_window = _date_window_from_args(request.args)
             with _DB_REQUEST_LOCK:
@@ -167,8 +187,9 @@ def create_app() -> Flask:
     def api_data_range():
         try:
             strategy_key = request.args.get("strategy", "combo")
-            symbol = request.args.get("symbol", config.DEFAULT_SYMBOL).upper()
-            tf = request.args.get("tf", config.DEFAULT_TF).upper()
+            defaults = _strategy_defaults(strategy_key)
+            symbol = request.args.get("symbol", defaults["symbol"]).upper()
+            tf = request.args.get("tf", defaults["tf"]).upper()
             with _DB_REQUEST_LOCK:
                 bounds = _strategy_data_bounds(strategy_key, request.args.to_dict(), symbol, tf)
             if bounds is None:
@@ -191,6 +212,14 @@ def create_app() -> Flask:
     return app
 
 
+def _strategy_defaults(strategy_key: str | None) -> dict[str, str]:
+    defaults = STRATEGY_DEFAULTS.get(str(strategy_key or "").strip().lower(), {})
+    return {
+        "symbol": str(defaults.get("symbol") or config.DEFAULT_SYMBOL).upper(),
+        "tf": str(defaults.get("tf") or config.DEFAULT_TF).upper(),
+    }
+
+
 def _csv_response(csv_data: str, filename: str) -> Response:
     return Response(
         csv_data,
@@ -205,17 +234,19 @@ def _scan_preview(
     bars: int,
     date_window: DateWindow | None,
 ) -> _ScanPreview:
-    if str(strategy_key).lower() != "ai_trend":
+    strategy = str(strategy_key).lower()
+    if strategy not in {"ai_trend", "knn_combo"}:
         return _ScanPreview(args=args, bars=bars, date_window=date_window)
 
     trend_tf = str(args.get("TREND_TF") or "H3").upper()
-    entry_tf = str(args.get("ENTRY_TF") or "M45").upper()
+    entry_tf = str(args.get("ENTRY_TF") or ("H1" if strategy == "knn_combo" else "M45")).upper()
     trend_minutes = config.TF_MINUTES.get(trend_tf)
     entry_minutes = config.TF_MINUTES.get(entry_tf)
     if not trend_minutes or not entry_minutes:
         return _ScanPreview(args=args, bars=bars, date_window=date_window)
 
     scan_args = dict(args)
+    label = STRATEGIES.get(strategy).label if strategy in STRATEGIES else strategy_key
     if date_window is not None:
         estimated_entry_bars = _estimate_window_bars(date_window, entry_minutes)
         if estimated_entry_bars <= AI_TREND_PREVIEW_ENTRY_BARS:
@@ -233,7 +264,7 @@ def _scan_preview(
             end_label=(date_window.end - pd.Timedelta(microseconds=1)).strftime("%d/%m/%Y"),
         )
         warning = (
-            f"AI Trend chart preview is capped to the latest {AI_TREND_PREVIEW_ENTRY_BARS} {entry_tf} bars "
+            f"{label} chart preview is capped to the latest {AI_TREND_PREVIEW_ENTRY_BARS} {entry_tf} bars "
             f"inside the selected range. CSV export still uses the full {date_window.start_label} -> "
             f"{date_window.end_label} range."
         )
@@ -261,7 +292,7 @@ def _scan_preview(
     scan_args["ENTRY_BARS"] = str(capped_entry_bars)
     scan_args["AUTO_ENTRY_BARS"] = "true"
     warning = (
-        f"AI Trend chart preview is capped to {capped_entry_bars} {entry_tf} bars. "
+        f"{label} chart preview is capped to {capped_entry_bars} {entry_tf} bars. "
         "CSV export can still use the full requested range."
     )
     return _ScanPreview(args=scan_args, bars=capped_entry_bars, date_window=None, warning=warning)
@@ -317,7 +348,7 @@ def _strategy_data_requirements(
     strategy = str(strategy_key or "").strip().lower()
     selected_tf = str(tf or config.DEFAULT_TF).strip().upper()
 
-    if strategy == "ai_trend":
+    if strategy in {"ai_trend", "knn_combo"}:
         trend_tf = str(args.get("TREND_TF") or "H3").strip().upper()
         entry_tf = str(args.get("ENTRY_TF") or selected_tf).strip().upper()
         return [(sym, trend_tf) for sym in symbols] + [(sym, entry_tf) for sym in symbols]
@@ -350,6 +381,24 @@ def _build_scan_payload(result):
         if result.trend_frame is None:
             raise ValueError("AI Trend result is missing trend frame.")
         payload = build_ai_trend_payload(
+            result.trend_frame,
+            result.enriched,
+            strategy=result.strategy,
+            strategy_label=result.strategy_label,
+            symbol=result.symbol,
+            params=result.params,
+        )
+        if result.date_window:
+            payload["meta"]["bars"] = len(result.enriched)
+            payload["meta"]["trendBars"] = len(result.trend_frame)
+            payload["meta"]["entryBars"] = len(result.enriched)
+        _attach_window_meta(payload, result.date_window)
+        return payload
+
+    if result.layout == "knn_combo_mtf":
+        if result.trend_frame is None:
+            raise ValueError("KNN Combo result is missing trend frame.")
+        payload = build_knn_combo_payload(
             result.trend_frame,
             result.enriched,
             strategy=result.strategy,

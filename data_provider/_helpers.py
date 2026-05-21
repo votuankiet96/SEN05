@@ -82,6 +82,7 @@ import logging.handlers  # RotatingFileHandler - dùng cho ws_live 24/7
 import math  # math.ceil() để làm tròn lên số bar cần pull
 import os  # Thao tác đường dẫn file
 import re
+import pandas as pd
 import sys  # Thêm đường dẫn import
 import time  # time.sleep() để rate-limit giữa các request TV
 from datetime import datetime, timedelta, timezone  # Xử lý thời gian UTC
@@ -188,22 +189,43 @@ from config import (
     COMPUTED_TIMEFRAMES,  # Tất cả TF (direct + derived)
     DERIVED_TFS,  # Các TF phái sinh (tính từ TF gốc): {"M10","M20","M90","H6","H8"}
     DIRECT_TFS,  # Các TF kéo trực tiếp từ TV: {"M5","M15","M30","M45","H1","H2","H3","H4","D1","W"}
+    HISTORICAL_PROVIDER,
+    TV_WS_HISTORY_ENDPOINT,
+    TV_WS_HISTORY_FALLBACK_ENDPOINTS,
+    TV_WS_HISTORY_REQUEST_MORE_BARS,
+    TV_WS_HISTORY_REQUEST_MORE_ROUNDS,
+    TV_WS_HISTORY_TIMEOUT_SEC,
+    TV_WS_REPLAY_ADVANCE_FACTOR,
+    TV_WS_REPLAY_ENABLED,
+    TV_WS_REPLAY_ENDPOINT,
+    TV_WS_REPLAY_MAX_WINDOWS_PER_PAIR,
+    TV_WS_REPLAY_START_DATE,
+    TV_WS_REPLAY_STEP_BARS,
+    TV_WS_REPLAY_TFS,
+    TV_WS_REPLAY_TIMEOUT_SEC,
+    TV_WS_REPLAY_WINDOW_BARS,
     LOG_LEVEL,  # Mức log: "INFO", "DEBUG", "WARNING"...
     N_BARS_D1,
     N_BARS_H1,
     N_BARS_H2,
     N_BARS_H3,
     N_BARS_H4,
+    N_BARS_H6,
+    N_BARS_H8,
     N_BARS_M5,
+    N_BARS_M10,
     N_BARS_M15,
+    N_BARS_M20,
     N_BARS_M30,
     N_BARS_M45,
+    N_BARS_M90,
     # Số bar tối đa cần pull cho mỗi TF (dùng khi cần FULL LOAD hoặc thiếu data)
     N_BARS_W,
     ASSET_TYPE_MAP,  # Map tv_symbol -> asset_type
     SYMBOL_OVERNIGHT_MINS,  # Per-symbol overnight gap threshold (phút)
     FIXED_H_ALIGNMENT,  # DST alignment cố định: GOLD h%N==1, BTCUSD h%N==0
     SYMBOLS,  # Danh sách symbol: [{symbol_id, tv_symbol, tv_exchange, asset_type}, ...]
+    STAGING_INSERT_CHUNK_ROWS,
     TF_MINUTES,  # Map tf_code -> số phút: "H1" -> 60, "M15" -> 15
     TF_STAGING,  # Map tf_code -> tên bảng staging: "H1" -> "Staging_H1"
     WEEKEND_CLOSED,  # Set các asset_type nghỉ cuối tuần: {"Indice","Metal","FOREX"}
@@ -221,6 +243,9 @@ from modules.db_connector import (
 )
 from _task_lock import acquire, release
 from _tv_coord import sleep_between_historical_requests, wait_for_historical_slot
+import _tv_ws_history
+import _tv_ws_replay
+import _logfmt
 
 # ---------------------------------------------------------------------------
 # Tạo logger - ghi log ra cả console lẫn file
@@ -415,12 +440,71 @@ def setup_logger(name: str, log_file: str, rotating: bool = False) -> logging.Lo
 # Ví dụ: H1 = 5000 bar ≈ 208 ngày dữ liệu 1 giờ
 FULL_N_BARS = {
     "W":   N_BARS_W,   "D1":  N_BARS_D1,
+    "H8":  N_BARS_H8,  "H6":  N_BARS_H6,
     "H4":  N_BARS_H4,  "H3":  N_BARS_H3,  "H2":  N_BARS_H2,
-    "H1":  N_BARS_H1,  "M45": N_BARS_M45,
-    "M30": N_BARS_M30, "M15": N_BARS_M15, "M5":  N_BARS_M5,
+    "H1":  N_BARS_H1,  "M90": N_BARS_M90,
+    "M45": N_BARS_M45, "M30": N_BARS_M30,
+    "M20": N_BARS_M20, "M15": N_BARS_M15,
+    "M10": N_BARS_M10, "M5":  N_BARS_M5,
 }
 
 # Hệ số an toàn: pull thêm 50% so với cần thiết để đảm bảo đủ data
+def _ws_endpoint_order() -> list[str]:
+    """Return primary + fallback TradingView WS endpoints without duplicates."""
+    ordered: list[str] = []
+    for endpoint in [TV_WS_HISTORY_ENDPOINT, *TV_WS_HISTORY_FALLBACK_ENDPOINTS]:
+        endpoint = (endpoint or "").strip().lower()
+        if endpoint and endpoint not in ordered:
+            ordered.append(endpoint)
+    return ordered or ["data"]
+
+
+def _is_deep_history_load(tf_code: str, n_bars: int) -> bool:
+    """True for full/reset/MISS-sized loads, false for small daily fills."""
+    full_target = FULL_N_BARS.get(tf_code, 0)
+    if full_target <= 0:
+        return False
+    return n_bars >= int(full_target * 0.8)
+
+
+def _should_request_more_history(tf_code: str, n_bars: int) -> bool:
+    """Use request_more_data for deep loads, not for tiny daily stale fills."""
+    if TV_WS_HISTORY_REQUEST_MORE_ROUNDS <= 0 or TV_WS_HISTORY_REQUEST_MORE_BARS <= 0:
+        return False
+    return _is_deep_history_load(tf_code, n_bars)
+
+
+def _should_replay_history(tf_code: str, n_bars: int) -> bool:
+    """Replay is the max-depth phase for full/reset/MISS style deep loads."""
+    if not TV_WS_REPLAY_ENABLED:
+        return False
+    if tf_code.upper() not in TV_WS_REPLAY_TFS:
+        return False
+    return _is_deep_history_load(tf_code, n_bars)
+
+
+def _combine_history_frames(replay_df, series_df):
+    frames = [df for df in (replay_df, series_df) if df is not None and not df.empty]
+    if not frames:
+        return None
+    combined = pd.concat(frames).sort_index()
+    combined = combined[~combined.index.duplicated(keep="last")]
+    return combined
+
+
+def _fmt_log_ts(value) -> str:
+    """Compact UTC timestamp for readable one-line console logs."""
+    if value is None:
+        return "-"
+    try:
+        ts = pd.Timestamp(value)
+        if ts.tzinfo is not None:
+            ts = ts.tz_convert("UTC")
+        return ts.strftime("%Y-%m-%d %H:%M")
+    except Exception:
+        return str(value)
+
+
 SAFETY_FACTOR  = 1.5
 
 # Số bar tối thiểu - dù gap nhỏ vẫn pull ít nhất 10 bar
@@ -591,6 +675,26 @@ def sleep_for(tv_symbol: str) -> None:
     GOLD nghỉ 10 giây (API nặng hơn), các mã khác nghỉ 5 giây.
     """
     sleep_between_historical_requests(tv_symbol)
+
+
+def _build_tvdatafeed_interval(tf_code: str):
+    """Legacy tvDatafeed interval map. Custom 10/20/90/6H/8H TFs are unsupported."""
+    try:
+        from tvDatafeed import Interval
+    except Exception:
+        return None
+    return {
+        "W": Interval.in_weekly,
+        "D1": Interval.in_daily,
+        "H4": Interval.in_4_hour,
+        "H3": Interval.in_3_hour,
+        "H2": Interval.in_2_hour,
+        "H1": Interval.in_1_hour,
+        "M45": Interval.in_45_minute,
+        "M30": Interval.in_30_minute,
+        "M15": Interval.in_15_minute,
+        "M5": Interval.in_5_minute,
+    }.get(tf_code)
 
 
 def _acquire_short_write_lock(
@@ -905,21 +1009,143 @@ def pull_and_store(tv, sym: dict, tf_code: str,
     # ----- BƯỚC A: Kéo dữ liệu từ TradingView API -----
     # Pull thêm 5 bar dự phòng (n_bars + 5) vì bar cuối sẽ bị bỏ
     wait_for_historical_slot("historical", logger)
-    try:
-        df = tv.get_hist(
-            symbol   = tv_symbol,
-            exchange = tv_exchange,
-            interval = interval,
-            n_bars   = n_bars + 5,
-        )
-    except Exception as e:
-        logger.error("  TV pull FAIL - %s %s: %s", tv_symbol, tf_code, e)
-        return RESULT_ERROR
+    if HISTORICAL_PROVIDER == "websocket":
+        try:
+            request_more_rounds = (
+                TV_WS_HISTORY_REQUEST_MORE_ROUNDS
+                if _should_request_more_history(tf_code, n_bars)
+                else 0
+            )
+            df = None
+            ws_result = None
+            for endpoint in _ws_endpoint_order():
+                ws_result = _tv_ws_history.fetch_history(
+                    symbol=tv_symbol,
+                    exchange=tv_exchange,
+                    tf_code=tf_code,
+                    n_bars=n_bars + 5,
+                    logger=logger,
+                    timeout_sec=TV_WS_HISTORY_TIMEOUT_SEC,
+                    endpoint=endpoint,
+                    request_more_rounds=request_more_rounds,
+                    request_more_bars=TV_WS_HISTORY_REQUEST_MORE_BARS,
+                )
+                df = ws_result.df
+                if df is not None and not df.empty:
+                    break
+                _logfmt.log(
+                    logger,
+                    "WS_WARN",
+                    symbol=tv_symbol,
+                    tf=tf_code,
+                    action="history_empty",
+                    amount=f"endpoint {ws_result.endpoint}",
+                    status=f"{_logfmt.tv_status(ws_result.status)} {ws_result.error or ''}".strip(),
+                    level=logging.WARNING,
+                )
+
+            if ws_result is not None:
+                if df is not None and not df.empty:
+                    first_bar = df.index.min()
+                    last_bar = df.index.max()
+                    _logfmt.log(
+                        logger,
+                        "WS",
+                        symbol=tv_symbol,
+                        tf=tf_code,
+                        action=f"history via {ws_result.endpoint}",
+                        amount=f"got {_logfmt.num(ws_result.returned)} / asked {_logfmt.num(ws_result.requested)}",
+                        range_=_logfmt.window(first_bar, last_bar),
+                        status=_logfmt.tv_status(ws_result.status),
+                    )
+                if not (
+                    ws_result.status.startswith("completed")
+                    or ws_result.status.startswith("partial_timeout")
+                ):
+                    _logfmt.log(
+                        logger,
+                        "WS_WARN",
+                        symbol=tv_symbol,
+                        tf=tf_code,
+                        action=f"history via {ws_result.endpoint}",
+                        status=f"{_logfmt.tv_status(ws_result.status)} {ws_result.error or ''}".strip(),
+                        level=logging.WARNING,
+                    )
+
+            if df is not None and not df.empty and _should_replay_history(tf_code, n_bars):
+                series_first = df.index.min()
+                _logfmt.log(
+                    logger,
+                    "REPLAY",
+                    symbol=tv_symbol,
+                    tf=tf_code,
+                    action="older_history",
+                    amount=f"from {TV_WS_REPLAY_START_DATE}",
+                    range_=f"before {_fmt_log_ts(series_first)}",
+                    status=f"endpoint {TV_WS_REPLAY_ENDPOINT}",
+                )
+                replay_result = _tv_ws_replay.crawl_replay_history(
+                    symbol=tv_symbol,
+                    exchange=tv_exchange,
+                    tf_code=tf_code,
+                    start_utc=TV_WS_REPLAY_START_DATE,
+                    end_before_utc=series_first,
+                    endpoint=TV_WS_REPLAY_ENDPOINT,
+                    window_bars=TV_WS_REPLAY_WINDOW_BARS,
+                    step_bars=TV_WS_REPLAY_STEP_BARS,
+                    max_windows=TV_WS_REPLAY_MAX_WINDOWS_PER_PAIR,
+                    advance_factor=TV_WS_REPLAY_ADVANCE_FACTOR,
+                    timeout_sec=TV_WS_REPLAY_TIMEOUT_SEC,
+                    logger=logger,
+                )
+                if replay_result.df is not None and not replay_result.df.empty:
+                    before_rows = len(df)
+                    df = _combine_history_frames(replay_result.df, df)
+                    _logfmt.log(
+                        logger,
+                        "REPLAY",
+                        symbol=tv_symbol,
+                        tf=tf_code,
+                        action="merged_history",
+                        amount=f"older {_logfmt.num(replay_result.returned)} + recent {_logfmt.num(before_rows)}",
+                        range_=_logfmt.window(df.index.min(), df.index.max()),
+                        status=f"total {_logfmt.num(len(df))}; windows {replay_result.windows}",
+                    )
+                else:
+                    _logfmt.log(
+                        logger,
+                        "REPLAY",
+                        symbol=tv_symbol,
+                        tf=tf_code,
+                        action="older_history",
+                        amount=f"windows {replay_result.windows}",
+                        status=f"no older bars; {_logfmt.tv_status(replay_result.status)}",
+                    )
+        except Exception as e:
+            _logfmt.log(logger, "ERROR", symbol=tv_symbol, tf=tf_code, action="ws_pull", status=str(e), level=logging.ERROR)
+            return RESULT_ERROR
+    else:
+        try:
+            tvdf_interval = interval
+            if isinstance(interval, str):
+                tvdf_interval = _build_tvdatafeed_interval(tf_code)
+            if tvdf_interval is None:
+                _logfmt.log(logger, "ERROR", symbol=tv_symbol, tf=tf_code, action="tvdatafeed_tf", status="unsupported", level=logging.ERROR)
+                return RESULT_TV_EMPTY
+            df = tv.get_hist(
+                symbol   = tv_symbol,
+                exchange = tv_exchange,
+                interval = tvdf_interval,
+                n_bars   = n_bars + 5,
+            )
+        except Exception as e:
+            _logfmt.log(logger, "ERROR", symbol=tv_symbol, tf=tf_code, action="tv_pull", status=str(e), level=logging.ERROR)
+            return RESULT_ERROR
 
     # Nếu TV trả về rỗng -> TV không có data cho khoảng thời gian này
     # (khác với lỗi kỹ thuật - đây có thể là market gap thật)
     if df is None or df.empty:
-        logger.warning("  TV returned empty - %s %s", tv_symbol, tf_code)
+        _logfmt.log(logger, "WARN", symbol=tv_symbol, tf=tf_code, action="tv_returned", status="empty", level=logging.WARNING)
         return RESULT_TV_EMPTY
 
     # Cảnh báo nếu TV trả về < 50% số bar yêu cầu (có thể TV bị giới hạn)
@@ -930,12 +1156,16 @@ def pull_and_store(tv, sym: dict, tf_code: str,
             _mode = _get_auth_mode()
         except Exception:
             _mode = "unknown"
-        _auth_hint = " - [WARN] guest mode is active (bar limit is about 500)" if _mode == "guest" else ""
-        logger.warning(
-            "  TV returned only %d/%d bars (%.0f%%) - %s %s%s",
-            returned_bars, n_bars,
-            returned_bars / n_bars * 100,
-            tv_symbol, tf_code, _auth_hint,
+        _auth_hint = " auth=guest bar_limit_hint=500" if _mode == "guest" else ""
+        _logfmt.log(
+            logger,
+            "WARN",
+            symbol=tv_symbol,
+            tf=tf_code,
+            action="short_history",
+            amount=f"got {_logfmt.num(returned_bars)} / wanted {_logfmt.num(n_bars)}",
+            status=f"{returned_bars / n_bars * 100:.0f}% returned{_auth_hint}",
+            level=logging.WARNING,
         )
 
     # ----- BỎ BAR CUỐI CÙNG -----
@@ -944,13 +1174,13 @@ def pull_and_store(tv, sym: dict, tf_code: str,
     # -> Bỏ đi để chỉ giữ các bar đã đóng hoàn toàn.
     df = df.iloc[:-1]
     if df.empty:
-        logger.warning("  Only 1 bar returned (open) - %s %s", tv_symbol, tf_code)
+        _logfmt.log(logger, "WARN", symbol=tv_symbol, tf=tf_code, action="closed_bars", status="none; only open bar returned", level=logging.WARNING)
         return RESULT_TV_EMPTY
 
     # ----- BƯỚC A2: Kiểm tra chất lượng dữ liệu trước khi ghi -----
     df, _ = _validate_ohlcv_df(df, tv_symbol, tf_code, logger)
     if df.empty:
-        logger.warning("  All bars failed validation - %s %s", tv_symbol, tf_code)
+        _logfmt.log(logger, "WARN", symbol=tv_symbol, tf=tf_code, action="validation", status="all rows removed", level=logging.WARNING)
         return RESULT_TV_EMPTY
 
     # ----- BƯỚC B: Ghi vào Staging (MERGE - chống duplicate) -----
@@ -965,11 +1195,27 @@ def pull_and_store(tv, sym: dict, tf_code: str,
                 action=f"write {tv_symbol} {tf_code}",
             ):
                 return RESULT_ERROR
-        staged = insert_staging_batch(df, symbol_id, staging)
+        if STAGING_INSERT_CHUNK_ROWS > 0 and len(df) > STAGING_INSERT_CHUNK_ROWS:
+            staged = 0
+            for start in range(0, len(df), STAGING_INSERT_CHUNK_ROWS):
+                chunk = df.iloc[start:start + STAGING_INSERT_CHUNK_ROWS]
+                staged += insert_staging_batch(chunk, symbol_id, staging)
+            _logfmt.log(
+                logger,
+                "STAGE",
+                symbol=tv_symbol,
+                tf=tf_code,
+                action="write_chunks",
+                amount=f"rows {_logfmt.num(len(df))}",
+                range_=f"chunk {_logfmt.num(STAGING_INSERT_CHUNK_ROWS)}",
+                status=f"affected {_logfmt.num(staged)}",
+            )
+        else:
+            staged = insert_staging_batch(df, symbol_id, staging)
     except DatabaseWriteError as e:
         if write_lock_name:
             release(write_lock_name)
-        logger.error("  STAGING FAIL - %s %s: %s", tv_symbol, tf_code, e)
+        _logfmt.log(logger, "ERROR", symbol=tv_symbol, tf=tf_code, action="stage_write", status=str(e), level=logging.ERROR)
         return RESULT_ERROR
 
     # ----- BƯỚC B2: Dọn transition bar DST / anchor drift khỏi staging -----
@@ -979,16 +1225,14 @@ def pull_and_store(tv, sym: dict, tf_code: str,
         from config import TF_MINUTES
         n_cleaned = clean_staging_transitions(symbol_id, staging, TF_MINUTES[tf_code])
         if n_cleaned > 0:
-            logger.info("  ANCHOR_CLEAN %s %s: removed %d transition bar(s) from staging",
-                        tv_symbol, tf_code, n_cleaned)
+            _logfmt.log(logger, "CLEAN", symbol=tv_symbol, tf=tf_code, action="anchor_transition", amount=f"removed {_logfmt.num(n_cleaned)}")
 
     # ----- BƯỚC C: Chuyển Staging -> Fact_OHLCV (stored procedure) -----
     # skip_etl=True: caller (VD: _repair_pair) sẽ tự gọi ETL sau khi đã xóa
     # bars sai khỏi Fact. Đây là cơ chế đảm bảo không mất data: staging được
     # điền trước, chỉ sau đó mới xóa Fact và chạy ETL.
     if skip_etl:
-        logger.info("  [SKIP] %s %s: %d staged (ETL deferred to caller)",
-                    tv_symbol, tf_code, staged)
+        _logfmt.log(logger, "DB", symbol=tv_symbol, tf=tf_code, action="stage_only", amount=f"staged {_logfmt.num(staged)}", status="fact unchanged")
         if write_lock_name:
             release(write_lock_name)
         return staged
@@ -998,7 +1242,7 @@ def pull_and_store(tv, sym: dict, tf_code: str,
     try:
         etl_inserted = run_etl_direct(symbol_id, tf_code, staging)
     except Exception as e:
-        logger.error("  ETL FAIL - %s %s: %s - cleaning staging", tv_symbol, tf_code, e)
+        _logfmt.log(logger, "ERROR", symbol=tv_symbol, tf=tf_code, action="fact_load", status=f"{e}; cleaning staging", level=logging.ERROR)
         try:
             delete_staging_bars(symbol_id, staging)
             if write_lock_name:
@@ -1006,22 +1250,19 @@ def pull_and_store(tv, sym: dict, tf_code: str,
         except Exception as e2:
             if write_lock_name:
                 release(write_lock_name)
-            logger.warning("  Staging cleanup FAIL - %s %s: %s", tv_symbol, tf_code, e2)
+            _logfmt.log(logger, "WARN", symbol=tv_symbol, tf=tf_code, action="stage_cleanup", status=str(e2), level=logging.WARNING)
         return RESULT_ERROR
 
     # ----- Ghi log kết quả -----
     if etl_inserted > 0:
         # CÓ bar mới -> ghi [OK]
-        logger.info("  [OK] %s %s: +%d bars -> Fact_OHLCV (staged %d)",
-                    tv_symbol, tf_code, etl_inserted, staged)
+        _logfmt.log(logger, "DB", symbol=tv_symbol, tf=tf_code, action="fact_loaded", amount=f"inserted {_logfmt.num(etl_inserted)}", range_=f"staged {_logfmt.num(staged)}", status="Fact_OHLCV")
     elif staged > 0:
         # Staging có row mới nhưng Fact đã có đủ -> [SKIP] (market gap)
-        logger.info("  [SKIP] %s %s: %d staged, 0 new in Fact (already existed)",
-                    tv_symbol, tf_code, staged)
+        _logfmt.log(logger, "DB", symbol=tv_symbol, tf=tf_code, action="fact_loaded", amount="inserted 0", range_=f"staged {_logfmt.num(staged)}", status="already in Fact")
     else:
         # Cả staging lẫn Fact đều không có gì mới -> đã up to date
-        logger.info("  [SKIP] %s %s: 0 new bars (already up to date)",
-                    tv_symbol, tf_code)
+        _logfmt.log(logger, "DB", symbol=tv_symbol, tf=tf_code, action="fact_loaded", amount="inserted 0", range_="staged 0", status="already up to date")
     if write_lock_name:
         release(write_lock_name)
     return etl_inserted

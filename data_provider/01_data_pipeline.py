@@ -119,6 +119,8 @@ Nguyen tac van hanh:
 
 import argparse  # Thư viện đọc tham số dòng lệnh (--mode, --dry-run, v.v.)
 import atexit
+import json
+import logging
 import os  # Thư viện làm việc với hệ thống file/thư mục (đường dẫn, tồn tại không, v.v.)
 import sys  # Thư viện tương tác với Python runtime (thoát chương trình, thêm đường dẫn, v.v.)
 import time  # Thư viện đo thời gian (tính xem query mất bao lâu)
@@ -162,14 +164,23 @@ from _tv_coord import (
     release_historical_job,
     wait_for_historical_slot,
 )
+import _logfmt
 
 from config import (
     COMPUTED_TIMEFRAMES,  # Danh sách cặp (TF đích, bảng nguồn) dùng để tính các TF phái sinh
     DERIVED_TFS,  # Danh sách 5 khung TF tính toán từ dữ liệu đã có (M10, M20, M90, H6, H8)
     DIRECT_TFS,  # Danh sách 10 khung TF kéo trực tiếp từ TradingView (M1, M5, M15, ...)
+    HISTORICAL_PROVIDER,
     LOG_FILE,  # Đường dẫn file log (để ghi lại mọi hoạt động của pipeline)
     SYMBOLS,  # Danh sách 37 cặp tiền cần theo dõi (tên, loại tài sản, ID, v.v.)
     TF_MINUTES,  # Bảng quy đổi: tên khung thời gian → số phút (ví dụ: "H1" → 60)
+    TV_WS_HISTORY_ENDPOINT,
+    TV_WS_HISTORY_FALLBACK_ENDPOINTS,
+    TV_WS_HISTORY_REQUEST_MORE_BARS,
+    TV_WS_HISTORY_REQUEST_MORE_ROUNDS,
+    TV_WS_REPLAY_ENABLED,
+    TV_WS_REPLAY_ENDPOINT,
+    TV_WS_REPLAY_TFS,
     WEEKEND_CLOSED,  # Danh sách loại tài sản đóng cửa cuối tuần (cổ phiếu, forex, v.v.)
     get_historical_timeframes,  # Hàm trả về danh sách TF cần kéo khi chạy full load (kèm số bar cần lấy)
     get_tf_interval_map,  # Hàm trả về bảng ánh xạ TF → interval dùng khi gọi API TradingView
@@ -190,6 +201,120 @@ logger = setup_logger("pipeline", LOG_FILE)
 # Bộ lọc TF — được set bởi --timeframes trong main(), đọc bởi run_full_load()
 _TF_FILTER: set = set()
 _FORCE_RESET_REPULL = False
+RUN_SUMMARY_FILE = os.path.join(os.path.dirname(LOG_FILE), "pipeline_run_summary.jsonl")
+
+
+def _fmt_int(value: int | float | None) -> str:
+    if value is None:
+        return "-"
+    try:
+        return f"{int(value):,}"
+    except Exception:
+        return str(value)
+
+
+def _log_rule(label: str, detail: str = "") -> None:
+    """Write a compact section divider that stays readable in PowerShell."""
+    _logfmt.log(logger, "SECTION", action=label, amount=detail)
+
+
+def _log_pair_start(
+    index: int,
+    total: int,
+    symbol: str,
+    tf_code: str,
+    amount: str,
+    range_: str = "-",
+    status: str = "-",
+) -> None:
+    _logfmt.log(
+        logger,
+        "PAIR",
+        progress=f"{index:03d}/{total:03d}",
+        symbol=symbol,
+        tf=tf_code,
+        action="pull_start",
+        amount=amount,
+        range_=range_,
+        status=status,
+    )
+
+
+def _log_pair_result(index: int, total: int, symbol: str, tf_code: str, result: int) -> None:
+    if result > 0:
+        amount = f"inserted {_fmt_int(result)}"
+        status = "ok"
+    elif result == 0:
+        amount = "inserted 0"
+        status = "ok/no_new_rows"
+    else:
+        amount = "-"
+        status = "fail/tv_empty" if result == -2 else "fail/error"
+    _logfmt.log(
+        logger,
+        "RESULT",
+        progress=f"{index:03d}/{total:03d}",
+        symbol=symbol,
+        tf=tf_code,
+        action="pair_done",
+        amount=amount,
+        status=status,
+    )
+
+
+def _log_tf_header(step_idx: int, total_tfs: int, tf_code: str, n_bars: int, pairs: int, staging: str) -> None:
+    replay_hint = "on" if TV_WS_REPLAY_ENABLED and tf_code.upper() in TV_WS_REPLAY_TFS else "off"
+    _logfmt.log(
+        logger,
+        "TF",
+        progress=f"{step_idx:02d}/{total_tfs:02d}",
+        tf=tf_code,
+        action="full_load",
+        amount=f"target {_fmt_int(n_bars)}",
+        range_=f"pairs {pairs} replay {replay_hint}",
+        status=staging,
+    )
+
+
+def _log_tf_summary(tf_code: str, ok: int, fail: int, inserted: int | None = None) -> None:
+    _logfmt.log(
+        logger,
+        "TF_SUM",
+        tf=tf_code,
+        action="tf_done",
+        amount=f"ok {ok} fail {fail}",
+        status=f"inserted {_fmt_int(inserted)}",
+    )
+
+
+def _write_run_summary(mode: str, started: datetime, elapsed: float, stats: dict) -> None:
+    payload = {
+        "started": started.isoformat(timespec="seconds"),
+        "finished": datetime.now().isoformat(timespec="seconds"),
+        "mode": mode.upper(),
+        "elapsed_sec": round(elapsed, 3),
+        "fail": int(stats.get("fail", 0) or 0),
+        "ok": int(stats.get("ok", 0) or 0),
+        "total": int(stats.get("total", 0) or 0),
+        "bars_inserted": int(stats.get("bars_inserted", 0) or 0),
+        "miss_count": int(stats.get("miss_count", 0) or 0),
+        "fail_pairs": list(stats.get("fail_pairs", []) or []),
+        "tf_summary": list(stats.get("tf_summary", []) or []),
+        "dry_run": "--dry-run" in sys.argv[1:],
+        "argv": sys.argv[1:],
+    }
+    try:
+        os.makedirs(os.path.dirname(RUN_SUMMARY_FILE), exist_ok=True)
+        with open(RUN_SUMMARY_FILE, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(payload, ensure_ascii=False, default=str) + "\n")
+    except Exception as exc:
+        _logfmt.log(
+            logger,
+            "SUMMARY",
+            action="jsonl_failed",
+            status=f"could not write summary file: {exc}",
+            level=logging.WARNING,
+        )
 
 
 # =============================================================================
@@ -224,14 +349,13 @@ def detect_mode() -> str:
         mode = "full" if total == 0 else "gap"
 
         # Ghi log để người dùng biết tại sao chọn chế độ này
-        logger.info("[AUTO MODE] DB has %d bars -> selected mode: %s",
-                    total, mode.upper())
+        _logfmt.log(logger, "AUTO", action="mode_detect", amount=f"db_rows {_fmt_int(total)}", status=mode.upper())
         return mode
 
     except Exception as e:
         # Nếu không truy vấn được DB (ví dụ: DB chưa khởi động), mặc định dùng backfill
         # Lý do: an toàn hơn — backfill chỉ kéo thêm, không ghi đè toàn bộ
-        logger.error("[AUTO MODE] Could not read DB: %s - using gap mode by default.", e)
+        _logfmt.log(logger, "AUTO", action="db_read_failed", amount="fallback GAP", status=str(e), level=logging.ERROR)
         return "gap"
 
 
@@ -239,7 +363,7 @@ def detect_mode() -> str:
 # PHẦN 2: CHẾ ĐỘ A — FULL LOAD (Tải toàn bộ lịch sử lần đầu)
 # =============================================================================
 
-def run_full_load(tv, dry_run: bool = False) -> int:
+def run_full_load(tv, dry_run: bool = False) -> dict | int:
     """
     Kéo toàn bộ dữ liệu lịch sử từ TradingView về database.
     Hàm này chỉ nên chạy đúng 1 lần khi cài đặt hệ thống lần đầu.
@@ -261,50 +385,93 @@ def run_full_load(tv, dry_run: bool = False) -> int:
     # Đếm có bao nhiêu TF cần kéo (dùng để hiển thị tiến độ: [1/11], [2/11], ...)
     total_tfs  = len(tf_configs)
 
-    # Dictionary lưu kết quả: { "M1": (ok_count, fail_count), "M5": (...), ... }
+    # Dictionary lưu kết quả: { "M1": (ok_count, fail_count, inserted_count), ... }
     results    = {}
+    tf_summary = []
 
     # In tiêu đề bắt đầu full load ra log
-    logger.info("=" * 65)
-    logger.info("  FULL DATA LOAD  -  %d timeframes x %d pairs", total_tfs, len(SYMBOLS))
-    logger.info("=" * 65)
+    _log_rule(
+        "FULL DATA LOAD",
+        f"direct_tfs={total_tfs} pairs={len(SYMBOLS)} computed_tfs={len(COMPUTED_TIMEFRAMES)}",
+    )
+    logger.info(_logfmt.header())
 
     # --- CHẾ ĐỘ DRY RUN: chỉ in kế hoạch, không làm gì thực sự ---
     if dry_run:
-        logger.info("[DRY RUN] Data load plan only. No data will be changed:")
+        _logfmt.log(logger, "DRYRUN", action="plan_only", status="writes=no")
+        planned = []
         # Liệt kê từng TF sẽ kéo: tên TF, số bar, số symbol, tên bảng staging
         for interval, tf_code, staging, n_bars in tf_configs:
-            logger.info("  %s: %d bars x %d pairs -> %s",
-                        tf_code, n_bars, len(SYMBOLS), staging)
+            replay_hint = "yes" if TV_WS_REPLAY_ENABLED and tf_code.upper() in TV_WS_REPLAY_TFS else "no"
+            _logfmt.log(
+                logger,
+                "PLAN",
+                tf=tf_code,
+                action="full_load",
+                amount=f"target {_fmt_int(n_bars)}",
+                range_=f"pairs {len(SYMBOLS)} replay {replay_hint}",
+                status=staging,
+            )
+            planned.append({
+                "tf": tf_code,
+                "kind": "direct_plan",
+                "target_bars": n_bars,
+                "pairs": len(SYMBOLS),
+                "replay": replay_hint,
+                "staging": staging,
+            })
         # Nhắc nhở sẽ còn bước tính TF phái sinh sau khi kéo xong
-        logger.info("  Then rebuild computed TFs: M10, M20, M90, H6, H8")
-        return 0
+        if COMPUTED_TIMEFRAMES:
+            _logfmt.log(
+                logger,
+                "PLAN",
+                action="computed_tfs",
+                amount="enabled",
+                status=",".join(tf for tf, _ in COMPUTED_TIMEFRAMES),
+            )
+        else:
+            _logfmt.log(logger, "PLAN", action="computed_tfs", amount="disabled", status="direct_tradingview")
+        return {
+            "fail": 0,
+            "ok": 0,
+            "total": len(SYMBOLS) * total_tfs,
+            "bars_inserted": 0,
+            "miss_count": 0,
+            "fail_pairs": [],
+            "tf_summary": planned,
+        }
 
     # Tập hợp các symbol_id đã được cập nhật (dùng ở cuối để tính lại TF phái sinh)
     updated_sym_ids: set = set()
 
     # Đếm tổng số lỗi trong toàn bộ quá trình
     total_fail = 0
+    total_ok = 0
+    total_inserted = 0
+    fail_pairs: list[str] = []
 
     # -----------------------------------------------------------------------
     # GIAI ĐOẠN 1: Kéo 10 TF trực tiếp từ TradingView
     # -----------------------------------------------------------------------
     for step_idx, (interval, tf_code, staging, n_bars) in enumerate(tf_configs, 1):
         # Đếm riêng số thành công/thất bại cho TF hiện tại
-        ok = fail = 0
+        ok = fail = tf_inserted = 0
 
-        # In dòng trống và tiêu đề cho TF đang xử lý
-        logger.info("")
-        logger.info("[%d/%d] Direct TF: %s  (%d bars x %d pairs)",
-                    step_idx, total_tfs + 1, tf_code, n_bars, len(SYMBOLS))
+        _log_tf_header(step_idx, total_tfs, tf_code, n_bars, len(SYMBOLS), staging)
 
         # Lặp qua tất cả symbol, kéo dữ liệu cho từng cái
         for i, sym in enumerate(SYMBOLS, 1):
             tv_symbol = sym["tv_symbol"]  # Tên symbol theo chuẩn TradingView (ví dụ: "BINANCE:BTCUSDT")
 
             # In tiến độ real-time ra console (không xuống dòng ngay để thêm ✓ hoặc ✗ sau)
-            print(f"  [{i:02d}/{len(SYMBOLS)}] {tv_symbol:<12} {tf_code:<5}  ",
-                  end="", flush=True)
+            _log_pair_start(
+                i,
+                len(SYMBOLS),
+                tv_symbol,
+                tf_code,
+                f"target {_fmt_int(n_bars)}",
+                staging,
+            )
 
             # Thực hiện kéo dữ liệu từ TradingView và lưu vào DB staging
             # Tự retry tối đa 3 lần (backoff 10s → 30s → 60s) nếu TV trả về lỗi hoặc rỗng
@@ -316,28 +483,42 @@ def run_full_load(tv, dry_run: bool = False) -> int:
 
             if result >= 0:
                 ok += 1
+                tf_inserted += result
                 # Ghi nhớ symbol này đã được cập nhật (sẽ cần tính lại TF phái sinh)
                 updated_sym_ids.add(sym["symbol_id"])
-                print("[OK]")
             else:
                 fail += 1
-                print("[FAIL]")
+                fail_pairs.append(f"{tv_symbol} {tf_code}")
+            _log_pair_result(i, len(SYMBOLS), tv_symbol, tf_code, result)
 
             # Dừng một chút giữa các request để tránh bị TradingView giới hạn tốc độ
             sleep_for(tv_symbol)
 
         # Lưu kết quả của TF này vào dictionary để in summary ở cuối
-        results[tf_code] = (ok, fail)
+        results[tf_code] = (ok, fail, tf_inserted)
+        tf_summary.append({
+            "tf": tf_code,
+            "kind": "direct",
+            "ok": ok,
+            "fail": fail,
+            "inserted": tf_inserted,
+        })
         total_fail += fail
-        logger.info("  %s: %d OK, %d failed", tf_code, ok, fail)
+        total_ok += ok
+        total_inserted += tf_inserted
+        _log_tf_summary(tf_code, ok, fail, tf_inserted)
 
     # -----------------------------------------------------------------------
     # GIAI ĐOẠN 2: Tính 5 TF phái sinh từ dữ liệu vừa kéo về
     # (M10 = gộp 2 nến M5, M20 = gộp 2 nến M10, M90 = gộp 3 nến M30, v.v.)
     # -----------------------------------------------------------------------
-    logger.info("")
-    logger.info("[%d/%d] Computed TFs: M10, M20, M90, H6, H8",
-                total_tfs + 1, total_tfs + 1)
+    if COMPUTED_TIMEFRAMES:
+        _log_rule(
+            "COMPUTED TFS",
+            "targets=" + ",".join(tf for tf, _ in COMPUTED_TIMEFRAMES),
+        )
+    else:
+        _logfmt.log(logger, "TF_SUM", action="computed_tfs", amount="disabled", status="direct_tradingview")
 
     # Lặp qua từng TF phái sinh cần tính (cặp: TF đích, bảng nguồn)
     for target_tf, source_table in COMPUTED_TIMEFRAMES:
@@ -351,26 +532,55 @@ def run_full_load(tv, dry_run: bool = False) -> int:
                 ok += 1
             except Exception as e:
                 # Ghi lại lỗi nhưng không dừng chương trình — tiếp tục với symbol tiếp theo
-                logger.error("  Computed TF failed for %s %s: %s",
-                             sym["tv_symbol"], target_tf, e)
+                _logfmt.log(
+                    logger,
+                    "ERROR",
+                    symbol=sym["tv_symbol"],
+                    tf=target_tf,
+                    action="computed_failed",
+                    status=str(e),
+                    level=logging.ERROR,
+                )
                 fail += 1
 
-        results[target_tf] = (ok, fail)
+        results[target_tf] = (ok, fail, None)
+        tf_summary.append({
+            "tf": target_tf,
+            "kind": "computed",
+            "ok": ok,
+            "fail": fail,
+            "inserted": None,
+        })
         total_fail += fail
-        logger.info("  %s: %d OK, %d failed", target_tf, ok, fail)
+        total_ok += ok
+        _log_tf_summary(target_tf, ok, fail, None)
 
     # -----------------------------------------------------------------------
     # TÓM TẮT KẾT QUẢ FULL LOAD
     # -----------------------------------------------------------------------
-    logger.info("")
-    logger.info("Full load summary:")
-    for tf, (ok, fail) in results.items():
+    _log_rule("FULL LOAD SUMMARY")
+    for tf, (ok, fail, inserted) in results.items():
         # Nếu không có lỗi: hiển thị ✓, ngược lại hiển thị số lỗi
         mark = "[OK]" if fail == 0 else f"[FAIL] {fail} failed"
-        logger.info("  %s: %d OK  %s", tf, ok, mark)
+        _logfmt.log(
+            logger,
+            "SUMMARY",
+            tf=tf,
+            action="tf_summary",
+            amount=f"ok {ok} fail {fail}",
+            status=f"{mark} inserted {_fmt_int(inserted)}",
+        )
 
-    # Trả về tổng số lỗi (caller dùng để quyết định exit code)
-    return total_fail
+    total_pairs = sum((row["ok"] or 0) + (row["fail"] or 0) for row in tf_summary)
+    return {
+        "fail": total_fail,
+        "ok": total_ok,
+        "total": total_pairs,
+        "bars_inserted": total_inserted,
+        "miss_count": 0,
+        "fail_pairs": fail_pairs,
+        "tf_summary": tf_summary,
+    }
 
 
 # =============================================================================
@@ -467,7 +677,7 @@ def find_stale_pairs(latest: dict) -> list:
 
 
 def run_backfill(tv, dry_run: bool = False,
-                 write_lock_name: str | None = None) -> int:
+                 write_lock_name: str | None = None) -> dict:
     """
     Chạy backfill hàng ngày: kiểm tra xem cặp nào bị thiếu dữ liệu
     rồi kéo bổ sung từ TradingView, sau đó tính lại TF phái sinh.
@@ -478,17 +688,14 @@ def run_backfill(tv, dry_run: bool = False,
 
     Trả về: số cặp bị thất bại (0 = thành công hoàn toàn)
     """
-    logger.info("=" * 65)
-    logger.info("  GAP FILL  -  reading the latest bars...")
-    logger.info("=" * 65)
+    _log_rule("GAP FILL", "checking latest bars and stale pairs")
 
     # -----------------------------------------------------------------------
     # BƯỚC 1: Truy vấn DB để biết nến cuối cùng của mỗi cặp là khi nào
     # -----------------------------------------------------------------------
     t0     = time.time()  # Ghi lại thời điểm bắt đầu query để đo hiệu năng
     latest = get_latest_bars()  # Trả về dict: { (symbol_id, tf_code): last_bar_datetime }
-    logger.info("DB check finished in %.1fs - found %d symbol/TF pairs.",
-                time.time() - t0, len(latest))
+    _logfmt.log(logger, "DB", action="latest_scan", amount=f"pairs {_fmt_int(len(latest))}", status=f"{time.time() - t0:.1f}s")
 
     # -----------------------------------------------------------------------
     # BƯỚC 2: So sánh với NOW để tìm ra cặp nào bị thiếu/lỗi thời
@@ -497,9 +704,9 @@ def run_backfill(tv, dry_run: bool = False,
 
     # Nếu tất cả đều mới → không cần làm gì, thoát sớm
     if not stale:
-        logger.info("[OK] All data is already up to date. No gap fill is needed.")
+        _logfmt.log(logger, "GAP", action="fresh_check", amount="stale 0", status="fresh")
         return {"fail": 0, "ok": 0, "total": 0, "bars_inserted": 0,
-                "miss_count": 0, "fail_pairs": []}
+                "miss_count": 0, "fail_pairs": [], "tf_summary": []}
 
     # Tách riêng hai loại vấn đề để in log rõ ràng hơn
     miss_  = [x for x in stale if x["reason"] == "MISS"]   # Hoàn toàn không có dữ liệu
@@ -507,25 +714,39 @@ def run_backfill(tv, dry_run: bool = False,
 
     # In danh sách các cặp bị MISS (cảnh báo vì đây là bất thường)
     if miss_:
-        logger.warning("MISSING ALL DATA (%d pairs):", len(miss_))
+        _logfmt.log(logger, "GAP", action="missing_all", amount=f"pairs {_fmt_int(len(miss_))}", level=logging.WARNING)
         for x in miss_:
-            logger.warning("  %-12s %s", x["sym"]["tv_symbol"], x["tf_code"])
+            _logfmt.log(
+                logger,
+                "MISS",
+                symbol=x["sym"]["tv_symbol"],
+                tf=x["tf_code"],
+                action="needs_full_pull",
+                status="MISS",
+                level=logging.WARNING,
+            )
 
     # In danh sách các cặp bị STALE (bình thường, xảy ra hàng ngày)
     if stale_:
-        logger.info("OLD DATA (%d pairs):", len(stale_))
+        _logfmt.log(logger, "GAP", action="stale", amount=f"pairs {_fmt_int(len(stale_))}")
         for x in stale_:
-            logger.info("  %-12s %-5s  gap=%-8s  need_pull=%d bars",
-                        x["sym"]["tv_symbol"], x["tf_code"],
-                        fmt_gap(x["gap_hours"]), x["n_bars"])
+            _logfmt.log(
+                logger,
+                "STALE",
+                symbol=x["sym"]["tv_symbol"],
+                tf=x["tf_code"],
+                action="needs_backfill",
+                amount=f"pull {_fmt_int(x['n_bars'])}",
+                range_=f"gap {fmt_gap(x['gap_hours'])}",
+            )
 
-    logger.info("Total: %d pairs need an update.", len(stale))
+    _logfmt.log(logger, "GAP", action="update_plan", amount=f"pairs {_fmt_int(len(stale))}")
 
     # Nếu đang chạy dry-run: in xong thì dừng, không kéo dữ liệu
     if dry_run:
-        logger.info("[DRY RUN] No changes were made.")
+        _logfmt.log(logger, "DRYRUN", action="plan_only", status="writes=no")
         return {"fail": 0, "ok": 0, "total": len(stale), "bars_inserted": 0,
-                "miss_count": len(miss_), "fail_pairs": []}
+                "miss_count": len(miss_), "fail_pairs": [], "tf_summary": []}
 
     # -----------------------------------------------------------------------
     # BƯỚC 3: Kéo dữ liệu bổ sung cho tất cả các cặp bị stale
@@ -556,15 +777,19 @@ def run_backfill(tv, dry_run: bool = False,
 
         # Khi chuyển sang symbol mới, in dòng phân cách để log dễ đọc hơn
         if sym["tv_symbol"] != prev_sym:
-            logger.info("--- %s ---", sym["tv_symbol"])
+            _logfmt.log(logger, "SYMBOL", symbol=sym["tv_symbol"], action="gap_batch")
             prev_sym = sym["tv_symbol"]
 
         # In tiến độ real-time ra console
-        print(f"  [{i:03d}/{len(stale)}] "
-              f"{sym['tv_symbol']:<12} {tf_code:<5}  "
-              f"gap={fmt_gap(item['gap_hours']):>7}  "
-              f"pull={n_bars:>6,}  ({reason})",
-              end="  ", flush=True)
+        _log_pair_start(
+            i,
+            len(stale),
+            sym["tv_symbol"],
+            tf_code,
+            f"pull {_fmt_int(n_bars)}",
+            f"gap {fmt_gap(item['gap_hours'])}",
+            reason,
+        )
 
         # Thực hiện kéo và lưu dữ liệu
         # Tự retry tối đa 3 lần (backoff 10s → 30s → 60s) nếu TV trả về lỗi hoặc rỗng
@@ -580,7 +805,7 @@ def run_backfill(tv, dry_run: bool = False,
                 fail += 1
                 consecutive_fail += 1
                 fail_pairs.append(f"{sym['tv_symbol']} {tf_code}")
-                print("[FAIL]")
+                _log_pair_result(i, len(stale), sym["tv_symbol"], tf_code, -1)
                 sleep_for(sym["tv_symbol"])
                 continue
 
@@ -602,31 +827,36 @@ def run_backfill(tv, dry_run: bool = False,
             # Chỉ đánh dấu cần tính lại TF phái sinh nếu thực sự có bar mới (result > 0)
             if result > 0:
                 updated_sym_ids.add(sym["symbol_id"])
-            print("[OK]")
         else:
             fail += 1
             consecutive_fail += 1
             fail_pairs.append(f"{sym['tv_symbol']} {tf_code}")
-            print("[FAIL]")
 
             # 3+ failures liên tiếp → nghi ngờ token hết hạn → thử refresh
             if consecutive_fail == 3:
-                logger.warning("[AUTH] %d failures in a row - trying to refresh the TradingView token...", consecutive_fail)
+                _logfmt.log(
+                    logger,
+                    "AUTH",
+                    action="refresh_token",
+                    amount=f"consecutive_fail {consecutive_fail}",
+                    level=logging.WARNING,
+                )
                 if refresh_mid_run(tv, logger):
                     consecutive_fail = 0  # reset nếu refresh thành công
 
         # Nghỉ một chút trước khi gọi symbol tiếp theo (tránh rate limit)
+        _log_pair_result(i, len(stale), sym["tv_symbol"], tf_code, result)
         sleep_for(sym["tv_symbol"])
 
-    logger.info("Data pull finished: %d OK, %d failed.", ok, fail)
+    _logfmt.log(logger, "SUMMARY", action="gap_done", amount=f"ok {ok} fail {fail}", status=f"inserted {_fmt_int(bars_inserted)}")
 
     # -----------------------------------------------------------------------
     # BƯỚC 4: Tính lại TF phái sinh cho các symbol vừa có dữ liệu mới
     # -----------------------------------------------------------------------
     # Chỉ tính lại nếu thực sự có symbol nào được cập nhật
     # (tránh chạy ETL không cần thiết khi không có gì thay đổi)
-    if updated_sym_ids:
-        logger.info("Rebuilding computed TFs...")
+    if updated_sym_ids and COMPUTED_TIMEFRAMES:
+        _logfmt.log(logger, "ETL", action="computed_tfs", amount=f"symbols {_fmt_int(len(updated_sym_ids))}")
         if write_lock_name:
             wait_for_historical_slot("pipeline-maint", logger)
             derived_lock = _acquire_short_write_lock(
@@ -653,6 +883,7 @@ def run_backfill(tv, dry_run: bool = False,
         "bars_inserted": bars_inserted,
         "miss_count":    len(miss_),
         "fail_pairs":    fail_pairs,
+        "tf_summary":     [],
     }
 
 
@@ -751,7 +982,7 @@ def main() -> int:
         return code
 
     def _yield_to_newer_historical_run(exc: HistoricalJobHandoffRequested) -> int:
-        logger.info("[HANDOFF] Pipeline gave the history slot to a newer run: %s", exc)
+        _logfmt.log(logger, "HANDOFF", action="historical_slot", status=str(exc))
         tg_alert(
             "INFO",
             "[INFO] <b>Data Pipeline gave up the TradingView history slot</b>\n"
@@ -765,18 +996,23 @@ def main() -> int:
         asset_filter = {a.strip() for a in args.asset_type.split(",")}
         SYMBOLS = [s for s in SYMBOLS if s["asset_type"] in asset_filter]
         if not SYMBOLS:
-            logger.error("--asset-type: no matching symbols found: %s", args.asset_type)
+            _logfmt.log(logger, "ERROR", action="asset_filter", amount=args.asset_type, status="no_matching_symbols", level=logging.ERROR)
             sys.exit(1)
-        logger.info("[FILTER] Asset type '%s': %d symbols", args.asset_type, len(SYMBOLS))
+        _logfmt.log(logger, "FILTER", action="asset_type", amount=args.asset_type, status=f"symbols {_fmt_int(len(SYMBOLS))}")
 
     if args.symbols:
         sym_filter = {s.strip().upper() for s in args.symbols.split(",")}
         SYMBOLS = [s for s in SYMBOLS if s["tv_symbol"] in sym_filter]
         if not SYMBOLS:
-            logger.error("--symbols: no matching symbols found: %s", args.symbols)
+            _logfmt.log(logger, "ERROR", action="symbol_filter", amount=args.symbols, status="no_matching_symbols", level=logging.ERROR)
             sys.exit(1)
-        logger.info("[FILTER] Running only %d symbols: %s",
-                    len(SYMBOLS), [s["tv_symbol"] for s in SYMBOLS])
+        _logfmt.log(
+            logger,
+            "FILTER",
+            action="symbols",
+            amount=f"count {_fmt_int(len(SYMBOLS))}",
+            status=",".join(s["tv_symbol"] for s in SYMBOLS),
+        )
 
     # -----------------------------------------------------------------------
     # LỌC TIMEFRAMES theo --timeframes (nếu có)
@@ -785,12 +1021,12 @@ def main() -> int:
     if args.timeframes:
         _TF_FILTER = {tf.strip().upper() for tf in args.timeframes.split(",")}
         COMPUTED_TIMEFRAMES = [ct for ct in COMPUTED_TIMEFRAMES if ct[0] in _TF_FILTER]
-        logger.info("[FILTER] Pulling only TFs: %s", sorted(_TF_FILTER))
+        _logfmt.log(logger, "FILTER", action="timeframes", status=",".join(sorted(_TF_FILTER)))
 
     if not args.dry_run:
         cleaned = cleanup_expired()
         if cleaned:
-            logger.info("Cleaned up %d expired locks before starting the pipeline.", cleaned)
+            _logfmt.log(logger, "LOCK", action="cleanup_expired", amount=f"locks {_fmt_int(cleaned)}")
 
     # -----------------------------------------------------------------------
     # XÓA DATA CŨ theo --reset (nếu có)
@@ -800,41 +1036,80 @@ def main() -> int:
     if args.reset:
         has_filter = args.symbols or args.asset_type or args.timeframes
         if not has_filter:
-            logger.error("--reset requires at least one filter: --symbols, --asset-type, or --timeframes")
+            _logfmt.log(logger, "ERROR", action="reset_filter", status="required", level=logging.ERROR)
             sys.exit(1)
 
-        tf_desc = f" | TF: {sorted(_TF_FILTER)}" if _TF_FILTER else " | TF: all"
-        print(f"\n[WARN] Preparing to delete data{tf_desc}")
-        print(f"   Symbols ({len(SYMBOLS)}): {[s['tv_symbol'] for s in SYMBOLS]}")
+        tf_desc = ",".join(sorted(_TF_FILTER)) if _TF_FILTER else "all"
+        _logfmt.log(
+            logger,
+            "RESET",
+            action="prepare_delete",
+            amount=f"symbols {_fmt_int(len(SYMBOLS))}",
+            range_=f"tf {tf_desc}",
+            status="confirm_required",
+            level=logging.WARNING,
+        )
+        _logfmt.log(
+            logger,
+            "RESET",
+            action="symbol_list",
+            status=",".join(s["tv_symbol"] for s in SYMBOLS),
+            level=logging.WARNING,
+        )
         confirm = input("\nConfirm delete? (y/N): ").strip().lower()
         if confirm != "y":
-            logger.info("Cancelled by user.")
+            _logfmt.log(logger, "RESET", action="cancelled", status="by_user")
             return _finish(0)
         _FORCE_RESET_REPULL = True
-        logger.warning(
-            "[RESET] Safe reset mode enabled - each pair will stage replacement data first, "
-            "and Fact rows are deleted only after replacement data is ready in staging."
+        _logfmt.log(
+            logger,
+            "RESET",
+            action="safe_reset",
+            amount="enabled",
+            status="delete_after_replacement_ready",
+            level=logging.WARNING,
         )
 
     # Ghi lại thời điểm bắt đầu để tính tổng thời gian chạy ở cuối
     started = datetime.now()
 
     # In banner mở đầu với thông tin tổng quan
-    logger.info("=" * 65)
-    logger.info("  HISTORICAL DATA UPDATE SYSTEM  v2.0")
-    logger.info("  Pairs    : %d  |  Direct TFs : %d  |  Computed TFs : %d",
-                len(SYMBOLS), len(DIRECT_TFS), len(DERIVED_TFS))
-    logger.info("  Started  : %s", started.strftime("%Y-%m-%d %H:%M:%S"))
-    logger.info("=" * 65)
+    _log_rule("HISTORICAL DATA UPDATE SYSTEM v2.0")
+    _logfmt.log(
+        logger,
+        "CONFIG",
+        action="dataset",
+        amount=f"pairs {len(SYMBOLS)}",
+        range_=f"direct {len(DIRECT_TFS)} computed {len(DERIVED_TFS)}",
+        status=f"provider {HISTORICAL_PROVIDER}",
+    )
+    if HISTORICAL_PROVIDER == "websocket":
+        _logfmt.log(
+            logger,
+            "CONFIG",
+            action="tv_ws",
+            amount=f"main {TV_WS_HISTORY_ENDPOINT}",
+            range_=f"fallback {','.join(TV_WS_HISTORY_FALLBACK_ENDPOINTS) or '-'}",
+            status=f"request_more {TV_WS_HISTORY_REQUEST_MORE_ROUNDS}x{_fmt_int(TV_WS_HISTORY_REQUEST_MORE_BARS)}",
+        )
+        _logfmt.log(
+            logger,
+            "CONFIG",
+            action="replay",
+            amount="enabled yes" if TV_WS_REPLAY_ENABLED else "enabled no",
+            range_=f"endpoint {TV_WS_REPLAY_ENDPOINT}",
+            status="tfs " + (",".join(sorted(TV_WS_REPLAY_TFS)) if TV_WS_REPLAY_TFS else "-"),
+        )
+    _logfmt.log(logger, "CONFIG", action="started", status=started.strftime("%Y-%m-%d %H:%M:%S"))
 
     # -----------------------------------------------------------------------
     # BƯỚC 0: Kiểm tra kết nối Database
     # Làm điều này đầu tiên vì nếu DB không chạy, toàn bộ pipeline vô nghĩa
     # -----------------------------------------------------------------------
-    logger.info("[Step 1/3] Checking database connection...")
+    _logfmt.log(logger, "STEP", progress="1/3", action="database_connect")
     if not test_connection():
         # Không kết nối được DB → lỗi nghiêm trọng → thoát với exit code 1
-        logger.error("ERROR: Could not connect to the database. Pipeline did not start.")
+        _logfmt.log(logger, "ERROR", progress="1/3", action="database_connect", status="failed_stop", level=logging.ERROR)
         tg_alert("ERROR", "[ERROR] <b>Data Pipeline FAILED</b>\nCould not connect to SQL Server.\nCheck the database service now." + QUICK_COMMANDS_HINT)
         tg_flush()
         return _finish(1)
@@ -857,11 +1132,11 @@ def main() -> int:
     else:
         # Người dùng ép buộc chế độ cụ thể → dùng thẳng
         mode = args.mode
-        logger.info("[MODE] Forced mode: %s", mode.upper())
+        _logfmt.log(logger, "MODE", action="forced", status=mode.upper())
 
     maintenance_scope = (mode == "full") or args.reset
     if not args.dry_run and maintenance_scope and is_locked("ws_live_runtime"):
-        logger.error("ERROR: full/reset mode cannot run while ws_live is active.")
+        _logfmt.log(logger, "ERROR", action="ws_live_active", amount="full/reset blocked", status="pause_ws_live", level=logging.ERROR)
         tg_alert(
             "WARNING",
             "[WARN] <b>Data Pipeline was blocked</b>\n"
@@ -875,9 +1150,7 @@ def main() -> int:
     if not args.dry_run:
         if args.force_unlock:
             release("tv_historical_job")
-            logger.warning(
-                "[LOCK] --force-unlock cleared the old tv_historical_job lock. Starting now..."
-            )
+            _logfmt.log(logger, "LOCK", action="force_unlock", amount="tv_historical_job", status="cleared", level=logging.WARNING)
         _lock_ttl = 300 if mode == "full" else 60
         historical_job_stop = acquire_historical_job("pipeline", logger, duration_min=_lock_ttl)
         if historical_job_stop is None:
@@ -898,16 +1171,16 @@ def main() -> int:
     # -----------------------------------------------------------------------
     tv = None  # Khởi tạo biến tv = None phòng trường hợp dry-run không gán
     if not args.dry_run:
-        logger.info("[Step 2/3] Logging in to TradingView...")
+        _logfmt.log(logger, "STEP", progress="2/3", action="tradingview_login")
         try:
             # get_valid_tv_connection: thử cache → .env token → cookie refresh → headless → guest
             tv, auth_mode = get_valid_tv_connection(logger)
-            logger.info("  Login OK (%s).", auth_mode)
+            _logfmt.log(logger, "AUTH", action="login_ready", amount=f"mode {auth_mode}", status="ready")
 
             # Cảnh báo nếu đang dùng tài khoản guest:
             # Guest bị giới hạn số bar và dễ bị timeout hơn tài khoản đăng nhập
             if auth_mode == "guest":
-                logger.error("  Guest mode detected - stopping to protect data completeness.")
+                _logfmt.log(logger, "AUTH", action="guest_mode", amount="action stop", status="data_completeness", level=logging.ERROR)
                 tg_alert(
                     "ERROR",
                     "[ERROR] <b>Data Pipeline FAILED</b>\n"
@@ -919,7 +1192,7 @@ def main() -> int:
                 return _finish(1)
         except Exception as e:
             # Không kết nối được TradingView → không kéo được data → thoát
-            logger.error("  TradingView connection failed: %s", e)
+            _logfmt.log(logger, "AUTH", action="login_failed", status=str(e), level=logging.ERROR)
             tg_alert("ERROR", f"[ERROR] <b>Data Pipeline FAILED</b>\nCould not connect to TradingView.\nError: {e}" + QUICK_COMMANDS_HINT)
             return _finish(1)
 
@@ -930,7 +1203,7 @@ def main() -> int:
             if maintenance_scope else False
         )
         if maintenance_scope and not maintenance_locked:
-            logger.error("ERROR: Could not get warehouse maintenance lock - it is busy.")
+            _logfmt.log(logger, "ERROR", action="warehouse_lock", status="busy", level=logging.ERROR)
             tg_alert(
                 "WARNING",
                 "[WARN] <b>Data Pipeline was blocked</b>\n"
@@ -941,14 +1214,14 @@ def main() -> int:
             tg_flush()
             return _finish(1)
         if maintenance_locked:
-            logger.info("[LOCK] warehouse_maintenance lock acquired.")
+            _logfmt.log(logger, "LOCK", action="warehouse", status="acquired")
             atexit.register(release, "warehouse_maintenance")
 
             def _maintenance_heartbeat() -> None:
                 while not maintenance_heartbeat_stop.wait(1800):
                     renewed = renew("warehouse_maintenance", duration_min=240)
                     if not renewed:
-                        logger.warning("Could not renew warehouse_maintenance lock - the system may think the pipeline stopped.")
+                        _logfmt.log(logger, "LOCK", action="warehouse", status="renew_failed", level=logging.WARNING)
 
             threading.Thread(
                 target=_maintenance_heartbeat,
@@ -959,7 +1232,7 @@ def main() -> int:
     # -----------------------------------------------------------------------
     # BƯỚC 3: Chạy pipeline theo chế độ đã xác định
     # -----------------------------------------------------------------------
-    logger.info("[Step 3/3] Running pipeline mode: %s...", mode.upper())
+    _logfmt.log(logger, "STEP", progress="3/3", action="run_mode", status=mode.upper())
     if mode == "full":
         # Full load: kéo toàn bộ lịch sử (mất vài giờ, chỉ chạy lần đầu)
         try:
@@ -967,9 +1240,20 @@ def main() -> int:
         except HistoricalJobHandoffRequested as exc:
             return _yield_to_newer_historical_run(exc)
         # run_full_load trả về int (số fail) — bọc thành dict để thống nhất
-        fail = raw if isinstance(raw, int) else raw.get("fail", 0)
-        run_stats = {"fail": fail, "ok": 0, "total": 0, "bars_inserted": 0,
-                     "miss_count": 0, "fail_pairs": []}
+        if isinstance(raw, dict):
+            run_stats = raw
+            fail = int(run_stats.get("fail", 0) or 0)
+        else:
+            fail = int(raw)
+            run_stats = {
+                "fail": fail,
+                "ok": 0,
+                "total": 0,
+                "bars_inserted": 0,
+                "miss_count": 0,
+                "fail_pairs": [],
+                "tf_summary": [],
+            }
     else:
         # Backfill: chỉ bù phần thiếu (mất vài phút, chạy hàng ngày)
         try:
@@ -988,12 +1272,12 @@ def main() -> int:
     # Bỏ qua nếu dry-run vì không có gì được ghi vào DB cả
     # -----------------------------------------------------------------------
     if not args.dry_run:
-        logger.info("[Cleanup] Deleting staging data older than 7 days...")
+        _logfmt.log(logger, "CLEANUP", action="staging", amount="older_than 7d")
         # purge_staging trả về dict: { tên_bảng: số_hàng_đã_xóa }
         purged = purge_staging(days_to_keep=7)
         # Cộng tổng số hàng đã xóa từ tất cả các bảng
         total_purged = sum(purged.values())
-        logger.info("  Deleted %d old staging rows.", total_purged)
+        _logfmt.log(logger, "CLEANUP", action="staging", amount=f"deleted {_fmt_int(total_purged)}", status="ok")
 
     # -----------------------------------------------------------------------
     # TÓM TẮT KẾT QUẢ TOÀN BỘ
@@ -1001,10 +1285,16 @@ def main() -> int:
     # Tính thời gian chạy tổng cộng (tính từ lúc bắt đầu đến bây giờ)
     elapsed = (datetime.now() - started).total_seconds()
 
-    logger.info("=" * 65)
-    logger.info("  DONE  |  mode=%s  |  %d failed  |  %.0f seconds",
-                mode.upper(), fail, elapsed)
-    logger.info("=" * 65)
+    _logfmt.log(
+        logger,
+        "RUN_SUM",
+        action=f"mode {mode.upper()}",
+        amount=f"ok {_fmt_int(run_stats.get('ok', 0))} fail {fail}",
+        range_=f"inserted {_fmt_int(run_stats.get('bars_inserted', 0))}",
+        status=f"elapsed {elapsed:.0f}s",
+    )
+    _write_run_summary(mode, started, elapsed, run_stats)
+    _log_rule("DONE", f"mode={mode.upper()} failed={fail} elapsed_sec={elapsed:.0f}")
 
     # -----------------------------------------------------------------------
     # TELEGRAM: thông báo kết quả pipeline
@@ -1058,7 +1348,7 @@ def main() -> int:
     # Quyết định exit code dựa trên số lỗi
     if fail > 0:
         # Có lỗi một phần: in cảnh báo và chỉ đường đến file log để xem chi tiết
-        logger.warning("%d pairs failed. See details in log file: %s", fail, LOG_FILE)
+        _logfmt.log(logger, "SUMMARY", action="failed_pairs", amount=f"count {fail}", status="see pipeline.log", level=logging.WARNING)
         return _finish(2)  # Exit code 2: thành công một phần
 
     return _finish(0)  # Exit code 0: thành công hoàn toàn

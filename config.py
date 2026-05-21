@@ -24,17 +24,13 @@
 # Never hard-code passwords here.  See .env for the values to set.
 #
 # Pipeline design:
-#   Historical load (run once):
-#       Pull 10 TFs directly from TradingView → SEN.TF_*
-#       → usp_LoadDirect → Fact_OHLCV (1:1, no aggregation)
-#       Then compute 5 derived TFs via usp_AggregateFromStaging:
-#         M10 (from M5), M20 (from M5), M90 (from M30),
-#         H6  (from H3), H8  (from H4)
+#   Historical load:
+#       Pull 15 TFs directly from TradingView WebSocket -> SEN.TF_*
+#       -> usp_LoadDirect -> Fact_OHLCV (1:1, no aggregation)
 #
-#   Live scheduler (run forever):
-#       Every 1 minute: pull latest N bars for each of 10 direct TFs
-#       → insert staging → usp_LoadDirect → Fact_OHLCV
-#       Then re-aggregate the 5 derived TFs for symbols that had new bars.
+#   Live scheduler:
+#       Pull latest N bars for each of 15 direct TFs via TradingView WebSocket
+#       -> insert staging -> usp_LoadDirect -> Fact_OHLCV
 #
 # Scripts:
 #   data_provider/01_data_pipeline.py      — historical load + daily gap fill
@@ -93,9 +89,9 @@ DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
 
 # -----------------------------------------------------------------------------
 # 3. BAR COUNTS — HISTORICAL BULK LOAD  (data_provider/01_data_pipeline.py)
-#    10 TFs pulled directly from TradingView. 5 computed TFs (M10/M20/M90/H6/H8)
-#    dùng lại staging của source TF → không cần bar count riêng.
-#    TV Premium intraday limit: ~20,000 bars per request.
+#    15 TFs pulled directly from TradingView WebSocket.
+#    Request counts are high on purpose; TradingView may return fewer rows when
+#    the symbol/exchange/timeframe reaches its real history plateau.
 #    Approximate history:
 #      M5   ≈  69 days    M15  ≈ 208 days   M30  ≈ 416 days
 #      M45  ≈ 625 days    H1   ≈ 2.3 yrs    H2   ≈ 4.5 yrs
@@ -105,13 +101,65 @@ DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
 N_BARS_W    =  1000   # Weekly  — ~19 years
 N_BARS_D1   =  5000   # Daily   — ~14 years
 N_BARS_H4   = 10000   # 4-hour  — ~6.8 years  (source for H8)
+N_BARS_H8   = 10000   # 8-hour  — requested direct from TradingView WS
 N_BARS_H3   = 10000   # 3-hour  — ~6.8 years  (source for H6)
+N_BARS_H6   = 10000   # 6-hour  — requested direct from TradingView WS
 N_BARS_H2   = 10000   # 2-hour  — ~4.5 years
 N_BARS_H1   = 20000   # 1-hour  — ~2.3 years
+N_BARS_M90  = 10000   # 90-min  — requested direct from TradingView WS
 N_BARS_M45  = 10000   # 45-min  — ~1.4 years
 N_BARS_M30  = 20000   # 30-min  — ~416 days   (source for M90)
+N_BARS_M20  = 20000   # 20-min  — requested direct from TradingView WS
 N_BARS_M15  = 20000   # 15-min  — ~208 days
+N_BARS_M10  = 20000   # 10-min  — requested direct from TradingView WS
 N_BARS_M5   = 20000   # 5-min   — ~69 days    (source for M10, M20)
+
+HISTORICAL_PROVIDER = os.environ.get("HISTORICAL_PROVIDER", "websocket").lower()
+ENABLE_COMPUTED_TIMEFRAMES = os.environ.get("ENABLE_COMPUTED_TIMEFRAMES", "0") == "1"
+
+# TradingView WebSocket historical endpoint.
+# - data: conservative public chart endpoint, shorter intraday history.
+# - prodata: authenticated/pro chart endpoint, deeper history for premium accounts.
+# Keep data as a fallback so the pipeline can continue if prodata is unavailable.
+TV_WS_HISTORY_ENDPOINT = os.environ.get("TV_WS_HISTORY_ENDPOINT", "prodata").lower()
+TV_WS_HISTORY_FALLBACK_ENDPOINTS = [
+    x.strip().lower()
+    for x in os.environ.get("TV_WS_HISTORY_FALLBACK_ENDPOINTS", "data").split(",")
+    if x.strip()
+]
+
+# request_more_data is only used for deep pulls (full/MISS/reset), not for tiny
+# daily stale fills. This lets full loads reach TradingView's plateau while
+# keeping normal daily backfills light.
+TV_WS_HISTORY_REQUEST_MORE_ROUNDS = int(os.environ.get("TV_WS_HISTORY_REQUEST_MORE_ROUNDS", "5"))
+TV_WS_HISTORY_REQUEST_MORE_BARS = int(os.environ.get("TV_WS_HISTORY_REQUEST_MORE_BARS", "50000"))
+TV_WS_HISTORY_TIMEOUT_SEC = float(os.environ.get("TV_WS_HISTORY_TIMEOUT_SEC", "45"))
+
+# Replay bootstrap is the max-depth phase for first-time full/reset loads. It
+# can reach older intraday windows that create_series/request_more cannot return.
+# It is intentionally limited to historical deep pulls; daily backfill remains
+# on the lighter series path unless a deep MISS/gap requests near-full history.
+TV_WS_REPLAY_ENABLED = os.environ.get("TV_WS_REPLAY_ENABLED", "1") == "1"
+TV_WS_REPLAY_ENDPOINT = os.environ.get("TV_WS_REPLAY_ENDPOINT", "prodata").lower()
+TV_WS_REPLAY_START_DATE = os.environ.get("TV_WS_REPLAY_START_DATE", "1970-01-01")
+TV_WS_REPLAY_TFS = {
+    x.strip().upper()
+    for x in os.environ.get(
+        "TV_WS_REPLAY_TFS",
+        "M5,M10,M15,M20,M30,M45,H1",
+    ).split(",")
+    if x.strip()
+}
+TV_WS_REPLAY_WINDOW_BARS = int(os.environ.get("TV_WS_REPLAY_WINDOW_BARS", "5000"))
+TV_WS_REPLAY_STEP_BARS = int(os.environ.get("TV_WS_REPLAY_STEP_BARS", "5000"))
+TV_WS_REPLAY_MAX_WINDOWS_PER_PAIR = int(os.environ.get("TV_WS_REPLAY_MAX_WINDOWS_PER_PAIR", "1000"))
+TV_WS_REPLAY_ADVANCE_FACTOR = float(os.environ.get("TV_WS_REPLAY_ADVANCE_FACTOR", "1.25"))
+TV_WS_REPLAY_TIMEOUT_SEC = float(os.environ.get("TV_WS_REPLAY_TIMEOUT_SEC", "30"))
+
+# Large replay bootstraps can produce hundreds of thousands of rows per
+# symbol/timeframe. Chunk staging MERGEs to keep memory and SQL tempdb pressure
+# controlled without changing the table schema.
+STAGING_INSERT_CHUNK_ROWS = int(os.environ.get("STAGING_INSERT_CHUNK_ROWS", "50000"))
 
 
 # -----------------------------------------------------------------------------
@@ -185,19 +233,23 @@ SYMBOLS = [
 #    Import deferred để tránh circular import lúc load module.
 # -----------------------------------------------------------------------------
 def get_historical_timeframes():
-    from tvDatafeed import Interval
     return [
-        # (tv Interval,            TF code,  staging table,       n_bars)
-        (Interval.in_weekly,      "W",    "SEN.TF_W",    N_BARS_W),
-        (Interval.in_daily,       "D1",   "SEN.TF_D1",   N_BARS_D1),
-        (Interval.in_4_hour,      "H4",   "SEN.TF_H4",   N_BARS_H4),
-        (Interval.in_3_hour,      "H3",   "SEN.TF_H3",   N_BARS_H3),
-        (Interval.in_2_hour,      "H2",   "SEN.TF_H2",   N_BARS_H2),
-        (Interval.in_1_hour,      "H1",   "SEN.TF_H1",   N_BARS_H1),
-        (Interval.in_45_minute,   "M45",  "SEN.TF_M45",  N_BARS_M45),
-        (Interval.in_30_minute,   "M30",  "SEN.TF_M30",  N_BARS_M30),
-        (Interval.in_15_minute,   "M15",  "SEN.TF_M15",  N_BARS_M15),
-        (Interval.in_5_minute,    "M5",   "SEN.TF_M5",   N_BARS_M5),
+        # (provider interval placeholder, TF code, staging table, n_bars)
+        ("1W",  "W",   "SEN.TF_W",   N_BARS_W),
+        ("1D",  "D1",  "SEN.TF_D1",  N_BARS_D1),
+        ("480", "H8",  "SEN.TF_H8",  N_BARS_H8),
+        ("360", "H6",  "SEN.TF_H6",  N_BARS_H6),
+        ("240", "H4",  "SEN.TF_H4",  N_BARS_H4),
+        ("180", "H3",  "SEN.TF_H3",  N_BARS_H3),
+        ("120", "H2",  "SEN.TF_H2",  N_BARS_H2),
+        ("60",  "H1",  "SEN.TF_H1",  N_BARS_H1),
+        ("90",  "M90", "SEN.TF_M90", N_BARS_M90),
+        ("45",  "M45", "SEN.TF_M45", N_BARS_M45),
+        ("30",  "M30", "SEN.TF_M30", N_BARS_M30),
+        ("20",  "M20", "SEN.TF_M20", N_BARS_M20),
+        ("15",  "M15", "SEN.TF_M15", N_BARS_M15),
+        ("10",  "M10", "SEN.TF_M10", N_BARS_M10),
+        ("5",   "M5",  "SEN.TF_M5",  N_BARS_M5),
     ]
 
 
@@ -206,7 +258,7 @@ def get_historical_timeframes():
 #    tvDatafeed không hỗ trợ M10/M20/M90/H6/H8 natively.
 #    Chạy SAU KHI source TF đã được load vào staging.
 # -----------------------------------------------------------------------------
-COMPUTED_TIMEFRAMES = [
+_COMPUTED_TIMEFRAMES_FALLBACK = [
     # (target_tf_code, source_staging_table)
     ("M10", "SEN.TF_M5"),    # 2 × M5
     ("M20", "SEN.TF_M5"),    # 4 × M5
@@ -215,25 +267,30 @@ COMPUTED_TIMEFRAMES = [
     ("H8",  "SEN.TF_H4"),    # 2 × H4
 ]
 
+COMPUTED_TIMEFRAMES = _COMPUTED_TIMEFRAMES_FALLBACK if ENABLE_COMPUTED_TIMEFRAMES else []
+
 
 # -----------------------------------------------------------------------------
 # 8. LIVE SCHEDULER — 10 TF pull trực tiếp  (data_provider/02_ws_live.py)
 #    Cùng danh sách với historical, nhưng chỉ lấy N_BARS_LIVE bar gần nhất.
 # -----------------------------------------------------------------------------
 def get_live_timeframes():
-    from tvDatafeed import Interval
     return [
-        # (tv Interval,            TF code,  staging table,       n_bars)
-        (Interval.in_weekly,      "W",    "SEN.TF_W",    N_BARS_LIVE),
-        (Interval.in_daily,       "D1",   "SEN.TF_D1",   N_BARS_LIVE),
-        (Interval.in_4_hour,      "H4",   "SEN.TF_H4",   N_BARS_LIVE),
-        (Interval.in_3_hour,      "H3",   "SEN.TF_H3",   N_BARS_LIVE),
-        (Interval.in_2_hour,      "H2",   "SEN.TF_H2",   N_BARS_LIVE),
-        (Interval.in_1_hour,      "H1",   "SEN.TF_H1",   N_BARS_LIVE),
-        (Interval.in_45_minute,   "M45",  "SEN.TF_M45",  N_BARS_LIVE),
-        (Interval.in_30_minute,   "M30",  "SEN.TF_M30",  N_BARS_LIVE),
-        (Interval.in_15_minute,   "M15",  "SEN.TF_M15",  N_BARS_LIVE),
-        (Interval.in_5_minute,    "M5",   "SEN.TF_M5",   N_BARS_LIVE),
+        ("1W",  "W",   "SEN.TF_W",   N_BARS_LIVE),
+        ("1D",  "D1",  "SEN.TF_D1",  N_BARS_LIVE),
+        ("480", "H8",  "SEN.TF_H8",  N_BARS_LIVE),
+        ("360", "H6",  "SEN.TF_H6",  N_BARS_LIVE),
+        ("240", "H4",  "SEN.TF_H4",  N_BARS_LIVE),
+        ("180", "H3",  "SEN.TF_H3",  N_BARS_LIVE),
+        ("120", "H2",  "SEN.TF_H2",  N_BARS_LIVE),
+        ("60",  "H1",  "SEN.TF_H1",  N_BARS_LIVE),
+        ("90",  "M90", "SEN.TF_M90", N_BARS_LIVE),
+        ("45",  "M45", "SEN.TF_M45", N_BARS_LIVE),
+        ("30",  "M30", "SEN.TF_M30", N_BARS_LIVE),
+        ("20",  "M20", "SEN.TF_M20", N_BARS_LIVE),
+        ("15",  "M15", "SEN.TF_M15", N_BARS_LIVE),
+        ("10",  "M10", "SEN.TF_M10", N_BARS_LIVE),
+        ("5",   "M5",  "SEN.TF_M5",  N_BARS_LIVE),
     ]
 
 
@@ -248,11 +305,15 @@ LOG_LEVEL = "INFO"     # DEBUG | INFO | WARNING | ERROR
 # 10. CENTRALIZED TF CONSTANTS — single source of truth for all scripts
 # -----------------------------------------------------------------------------
 
-# 10 direct TFs (pulled from TradingView)
-DIRECT_TFS  = {"W", "D1", "H4", "H3", "H2", "H1", "M45", "M30", "M15", "M5"}
+# 15 direct TFs (pulled from TradingView WebSocket)
+DIRECT_TFS  = {
+    "W", "D1", "H8", "H6", "H4", "H3", "H2", "H1",
+    "M90", "M45", "M30", "M20", "M15", "M10", "M5",
+}
 
-# 5 derived TFs (computed from direct TF data)
-DERIVED_TFS = {"M10", "M20", "M90", "H6", "H8"}
+# Computed TFs are disabled by default. They remain available only when
+# ENABLE_COMPUTED_TIMEFRAMES=1 is set for emergency fallback/rebuild tasks.
+DERIVED_TFS = {"M10", "M20", "M90", "H6", "H8"} if ENABLE_COMPUTED_TIMEFRAMES else set()
 
 # Display order for all 15 TFs
 TF_DISPLAY_ORDER = [
@@ -302,10 +363,13 @@ SYMBOL_OVERNIGHT_MINS = {
 # TF code → staging table
 TF_STAGING = {
     "W":   "SEN.TF_W",   "D1":  "SEN.TF_D1",
+    "H8":  "SEN.TF_H8",  "H6":  "SEN.TF_H6",
     "H4":  "SEN.TF_H4",  "H3":  "SEN.TF_H3",
     "H2":  "SEN.TF_H2",  "H1":  "SEN.TF_H1",
-    "M45": "SEN.TF_M45", "M30": "SEN.TF_M30",
-    "M15": "SEN.TF_M15", "M5":  "SEN.TF_M5",
+    "M90": "SEN.TF_M90", "M45": "SEN.TF_M45",
+    "M30": "SEN.TF_M30", "M20": "SEN.TF_M20",
+    "M15": "SEN.TF_M15", "M10": "SEN.TF_M10",
+    "M5":  "SEN.TF_M5",
 }
 
 # Computed TF dependency: source staging table → list of (computed_tf, staging_table)
@@ -372,17 +436,10 @@ WEEKEND_CLOSED = {"FOREX", "Metal", "Indice"}
 #     Import deferred to avoid circular / heavy import at module load.
 # -----------------------------------------------------------------------------
 def get_tf_interval_map():
-    """Return dict {tf_code: tvDatafeed.Interval} for all 10 direct TFs."""
-    from tvDatafeed import Interval
+    """Return dict {tf_code: TradingView WebSocket interval} for all 15 direct TFs."""
     return {
-        "M5":  Interval.in_5_minute,
-        "M15": Interval.in_15_minute,
-        "M30": Interval.in_30_minute,
-        "M45": Interval.in_45_minute,
-        "H1":  Interval.in_1_hour,
-        "H2":  Interval.in_2_hour,
-        "H3":  Interval.in_3_hour,
-        "H4":  Interval.in_4_hour,
-        "D1":  Interval.in_daily,
-        "W":   Interval.in_weekly,
+        "M5": "5", "M10": "10", "M15": "15", "M20": "20",
+        "M30": "30", "M45": "45", "H1": "60", "M90": "90",
+        "H2": "120", "H3": "180", "H4": "240", "H6": "360",
+        "H8": "480", "D1": "1D", "W": "1W",
     }

@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Kiet Vo\\Documents\\cAlgo\\Sources\\Robots\\SEN_EMA_One\\SEN_EMA_One\\SEN_EMA_One.csproj": {}
+    "D:\\Auto Trading\\SEN05\\cbot_calgo\\cAlgo\\Sources\\Robots\\SEN_EMA_One\\SEN_EMA_One\\SEN_EMA_One.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Kiet Vo\\Documents\\cAlgo\\Sources\\Robots\\SEN_EMA_One\\SEN_EMA_One\\SEN_EMA_One.csproj": {
+    "D:\\Auto Trading\\SEN05\\cbot_calgo\\cAlgo\\Sources\\Robots\\SEN_EMA_One\\SEN_EMA_One\\SEN_EMA_One.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Kiet Vo\\Documents\\cAlgo\\Sources\\Robots\\SEN_EMA_One\\SEN_EMA_One\\SEN_EMA_One.csproj",
+        "projectUniqueName": "D:\\Auto Trading\\SEN05\\cbot_calgo\\cAlgo\\Sources\\Robots\\SEN_EMA_One\\SEN_EMA_One\\SEN_EMA_One.csproj",
         "projectName": "SEN_EMA_One",
-        "projectPath": "C:\\Users\\Kiet Vo\\Documents\\cAlgo\\Sources\\Robots\\SEN_EMA_One\\SEN_EMA_One\\SEN_EMA_One.csproj",
+        "projectPath": "D:\\Auto Trading\\SEN05\\cbot_calgo\\cAlgo\\Sources\\Robots\\SEN_EMA_One\\SEN_EMA_One\\SEN_EMA_One.csproj",
         "packagesPath": "C:\\Users\\Kiet Vo\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Kiet Vo\\Documents\\cAlgo\\Sources\\Robots\\SEN_EMA_One\\SEN_EMA_One\\obj\\",
+        "outputPath": "D:\\Auto Trading\\SEN05\\cbot_calgo\\cAlgo\\Sources\\Robots\\SEN_EMA_One\\SEN_EMA_One\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Kiet Vo\\AppData\\Roaming\\NuGet\\NuGet.Config"

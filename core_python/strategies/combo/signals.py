@@ -2,12 +2,14 @@
 Tính toán chỉ báo và phát hiện tín hiệu cho chiến lược Combo.
 
 Mô tả:
-    Chiến lược Combo kết hợp 3 điều kiện để xác nhận tín hiệu:
-    1. MA crossover (giá đóng cửa vượt qua đường MA)
-    2. Nến xác nhận hướng (bullish hoặc bearish candle)
+    Chiến lược Combo V0 kết hợp 3 điều kiện để xác nhận tín hiệu:
+    1. Nến xác nhận hướng (bullish hoặc bearish candle)
+    2. Vị trí close so với MA20
     3. MACD Histogram xác nhận momentum
 
-    Tùy chọn: lọc theo R:R tối thiểu (MIN_RR) và giờ giao dịch (SESSION_HOURS_UTC).
+    Raw signal chỉ phát ở lần đầu của trạng thái BUY/SELL và luân phiên
+    BUY -> SELL -> BUY. X, ATR, KTP và MIN_RR không gate raw signal V0.
+    SESSION_HOURS_UTC vẫn là filter vận hành trước khi xét tín hiệu.
 
 Đầu vào:
     DataFrame OHLCV đã load (từ data/loader.py).
@@ -19,7 +21,7 @@ Mô tả:
 
 Giả định giao dịch:
     Tín hiệu được tính từ bar đã đóng hoàn toàn.
-    Không có lookahead — chỉ dùng dữ liệu của bar hiện tại và bar trước (shift(1)).
+    Không có lookahead — tín hiệu dùng dữ liệu của bar hiện tại đã đóng.
 """
 
 from __future__ import annotations
@@ -31,16 +33,6 @@ from core_python.strategies.combo.config import (
     get_indicator_params,
 )
 from core_python.strategies.combo.trend_filter import apply_combo_htf_filter
-
-
-def _rr_filter_enabled(min_rr: object) -> bool:
-    """Trả về True nếu filter R:R đang bật (MIN_RR không phải None hoặc NaN)."""
-    if min_rr is None:
-        return False
-    try:
-        return not bool(pd.isna(min_rr))
-    except Exception:
-        return True
 
 
 def _session_mask(df: pd.DataFrame, hours_utc: list[int] | None) -> pd.Series:
@@ -61,6 +53,24 @@ def _session_mask(df: pd.DataFrame, hours_utc: list[int] | None) -> pd.Series:
         return pd.Series(True, index=df.index)
     bar_hours = pd.to_datetime(df["bartime"], errors="coerce").dt.hour
     return bar_hours.isin({int(hour) for hour in hours_utc})
+
+
+def _alternating_combo_signals(buy_setup: pd.Series, sell_setup: pd.Series) -> pd.Series:
+    """Emit only the first setup in each Combo V0 state."""
+    buy_flags = pd.Series(buy_setup, index=buy_setup.index).fillna(False).astype(bool).tolist()
+    sell_flags = pd.Series(sell_setup, index=sell_setup.index).fillna(False).astype(bool).tolist()
+    state = 0
+    values: list[int] = []
+    for is_buy, is_sell in zip(buy_flags, sell_flags):
+        signal = 0
+        if is_buy and state != 1:
+            signal = 1
+            state = 1
+        elif is_sell and state != -1:
+            signal = -1
+            state = -1
+        values.append(signal)
+    return pd.Series(values, index=buy_setup.index, dtype="int64")
 
 
 def add_combo_indicators(df: pd.DataFrame, params: dict | None = None) -> pd.DataFrame:
@@ -109,16 +119,16 @@ def detect_combo_signals(
     Phát hiện tín hiệu BUY/SELL theo logic chiến lược Combo.
 
     Điều kiện BUY (signal = +1):
-        1. prev_close <= prev_ma AND close > ma   ← MA crossover (vượt lên)
-        2. close > open                           ← Nến tăng (bullish candle)
+        1. close > open                           ← Nến tăng (bullish candle)
+        2. close > ma                             ← Close nằm trên MA20
         3. macd_h > 0                             ← MACD histogram dương
-        4. rr >= MIN_RR (nếu filter bật)         ← R:R đủ tốt
+        4. Trạng thái Combo trước đó không phải BUY
 
     Điều kiện SELL (signal = -1): ngược lại với BUY.
-        1. prev_close >= prev_ma AND close <= ma  ← MA crossover (xuống)
-        2. close < open                           ← Nến giảm (bearish candle)
+        1. close < open                           ← Nến giảm (bearish candle)
+        2. close < ma                             ← Close nằm dưới MA20
         3. macd_h < 0                             ← MACD histogram âm
-        4. rr >= MIN_RR (nếu filter bật)
+        4. Trạng thái Combo trước đó không phải SELL
 
     Điều kiện tiên quyết (valid mask):
         - Tất cả chỉ báo không phải NaN (qua warmup period).
@@ -127,7 +137,7 @@ def detect_combo_signals(
     Args:
         df: DataFrame đã qua add_combo_indicators().
         symbol: Không dùng trực tiếp — symbol params đã merged vào params từ normalize_params().
-        params: Dict tham số đã validate (cần X, KTP, MIN_RR, SESSION_HOURS_UTC).
+        params: Dict tham số đã validate (X, KTP dùng cho downstream rr/levels).
         sess_mask: Boolean mask session tùy chỉnh (None = tính lại từ params).
 
     Returns:
@@ -137,15 +147,13 @@ def detect_combo_signals(
             signal_reason: Chuỗi mô tả lý do tín hiệu (chỉ set khi signal != 0).
 
     Giả định giao dịch:
-        sl_dist = high - low + 2*X (khoảng cách SL dựa trên range bar + buffer).
-        tp_dist = KTP * ATR.
-        rr = tp_dist / sl_dist (dùng safe_ratio để tránh chia 0).
+        X, ATR, KTP và MIN_RR không phải điều kiện tạo raw signal Combo V0.
+        rr vẫn được tính để giữ contract cho levels/payload/report downstream.
     """
     out = df.copy()
     p = {**get_indicator_params(), **(params or {})}
     x = float(p.get("X", 0.0) or 0.0)
     ktp = float(p["KTP"])
-    min_rr = p.get("MIN_RR")
 
     if sess_mask is None:
         sess_mask = _session_mask(out, p.get("SESSION_HOURS_UTC", []))
@@ -155,37 +163,30 @@ def detect_combo_signals(
     valid = (
         sess_mask
         & out["ma"].notna()
-        & out["prev_ma"].notna()
         & out["macd_h"].notna()
-        & out["atr"].notna()
+        & out["open"].notna()
+        & out["close"].notna()
     )
 
-    # Crossover lên: close vượt MA từ dưới (bar trước close <= MA, bar này close > MA)
-    cross_up = (out["prev_close"] <= out["prev_ma"]) & (out["close"] > out["ma"])
-    # Crossover xuống: close xuống dưới MA (bar trước close >= MA, bar này close <= MA)
-    cross_down = (out["prev_close"] >= out["prev_ma"]) & ~(out["close"] > out["ma"])
-
-    buy_cond = valid & cross_up & (out["close"] > out["open"]) & (out["macd_h"] > 0)
-    sell_cond = valid & cross_down & (out["close"] < out["open"]) & (out["macd_h"] < 0)
+    # Combo V0 BUY setup: bullish candle, close above MA20, positive MACD histogram.
+    buy_cond = valid & (out["close"] > out["open"]) & (out["close"] > out["ma"]) & (out["macd_h"] > 0)
+    # Combo V0 SELL setup: bearish candle, close below MA20, negative MACD histogram.
+    sell_cond = valid & (out["close"] < out["open"]) & (out["close"] < out["ma"]) & (out["macd_h"] < 0)
 
     # sl_dist: khoảng cách từ entry đến SL = range bar + 2*buffer (cả hai phía)
     sl_dist = out["high"] - out["low"] + 2 * x
     tp_dist = ktp * out["atr"]
     rr = safe_ratio(tp_dist, sl_dist)
 
-    if _rr_filter_enabled(min_rr):
-        rr_ok = rr >= float(min_rr)
-    else:
-        # Không lọc R:R — tất cả tín hiệu đều hợp lệ
-        rr_ok = pd.Series(True, index=out.index)
-
-    out["raw_signal"] = 0
-    out.loc[buy_cond & rr_ok, "raw_signal"] = 1
-    out.loc[sell_cond & rr_ok, "raw_signal"] = -1
+    out["raw_signal"] = _alternating_combo_signals(buy_cond, sell_cond)
     out["rr"] = rr.round(2)
     out["raw_signal_reason"] = ""
-    out.loc[out["raw_signal"].eq(1), "raw_signal_reason"] = "close crossed above MA, bullish candle, MACD histogram > 0"
-    out.loc[out["raw_signal"].eq(-1), "raw_signal_reason"] = "close crossed below MA, bearish candle, MACD histogram < 0"
+    out.loc[out["raw_signal"].eq(1), "raw_signal_reason"] = (
+        "first Combo BUY state: bullish candle, close above MA, MACD histogram > 0"
+    )
+    out.loc[out["raw_signal"].eq(-1), "raw_signal_reason"] = (
+        "first Combo SELL state: bearish candle, close below MA, MACD histogram < 0"
+    )
     out["signal"] = out["raw_signal"]
     out["signal_reason"] = out["raw_signal_reason"]
     out["filter_reason"] = ""

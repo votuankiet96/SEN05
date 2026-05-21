@@ -61,6 +61,7 @@ from core_python.strategies.ai_trend.signals import (
     prepare_trend_frame,
 )
 from core_python.strategies.combo.pipeline import build_combo_mtf_frames
+from core_python.strategies.knn_combo.pipeline import build_knn_combo_strategy_frames
 from core_python.strategies.registry import get_strategy
 
 
@@ -264,7 +265,7 @@ def run_strategy_frame(
     Pipeline: load → (lọc bar mở) → add_indicators → detect_signals → add_levels.
 
     Args:
-        strategy: Key chiến lược ("combo", "ma_cross").
+        strategy: Key chiến lược ("combo", "ma_cross", "knn_combo").
         symbol: Mã symbol (ví dụ: "US30").
         tf: Mã khung thời gian (ví dụ: "H1").
         bars: Số bar tải về từ DB.
@@ -281,6 +282,25 @@ def run_strategy_frame(
         closed_only=True (mặc định) đảm bảo không phát tín hiệu sớm trên bar chưa hoàn thành.
     """
     spec = get_strategy(strategy)
+    if spec.key == "knn_combo":
+        local_overrides = dict(overrides or {})
+        local_overrides.setdefault("ENTRY_TF", tf)
+        local_overrides.setdefault("ENTRY_BARS", bars)
+        params = spec.normalize_params(local_overrides, symbol)
+        selected_symbol = params["SYMBOL"]
+        trend_raw = _load_ohlcv(selected_symbol, params["TREND_TF"], int(params["TREND_BARS"]))
+        entry_raw = _load_ohlcv(selected_symbol, params["ENTRY_TF"], int(params["ENTRY_BARS"]))
+        if closed_only:
+            trend_raw = _drop_open_bar(trend_raw, params["TREND_TF"])
+            entry_raw = _drop_open_bar(entry_raw, params["ENTRY_TF"])
+        if trend_raw.empty:
+            raise ValueError(f"{selected_symbol} has no closed {params['TREND_TF']} data for KNN Combo trend")
+        if entry_raw.empty:
+            raise ValueError(f"{selected_symbol} has no closed {params['ENTRY_TF']} data for KNN Combo entry")
+        trend_frame, enriched = build_knn_combo_strategy_frames(trend_raw, entry_raw, params, selected_symbol)
+        _ = trend_frame
+        return enriched, spec, params
+
     params = spec.normalize_params(overrides or {}, symbol)
     raw = _load_ohlcv(symbol, tf, bars)
     if closed_only:

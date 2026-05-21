@@ -7,8 +7,9 @@ build chart JSON, CSV files, or notification messages.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any
 
 import pandas as pd
 
@@ -17,8 +18,8 @@ from core_python.data.loader import load, load_range
 from core_python.strategies.ai_trend.signals import build_ai_trend_frames
 from core_python.strategies.combo.pipeline import build_combo_mtf_frames
 from core_python.strategies.combo.trend_filter import drop_open_bar as drop_combo_open_bar
+from core_python.strategies.knn_combo.pipeline import build_knn_combo_strategy_frames
 from core_python.strategies.registry import get_strategy
-
 
 DEFAULT_RANGE_WARMUP_BARS = 600
 
@@ -69,6 +70,15 @@ def run_strategy_request(
 
     if spec.key == "ai_trend":
         return run_ai_trend_strategy(
+            spec,
+            request_args,
+            selected_symbol,
+            int(bars),
+            date_window=date_window,
+        )
+
+    if spec.key == "knn_combo":
+        return run_knn_combo_strategy(
             spec,
             request_args,
             selected_symbol,
@@ -267,6 +277,78 @@ def run_ai_trend_strategy(
     )
 
 
+def run_knn_combo_strategy(
+    spec: Any,
+    args: Mapping[str, Any],
+    symbol: str,
+    bars: int,
+    *,
+    date_window: DateWindow | None = None,
+) -> StrategyRunResult:
+    """Run the KNN Combo two-timeframe path."""
+
+    overrides = strategy_overrides(dict(args), spec.param_fields)
+    overrides.setdefault("SYMBOL", symbol or "US30")
+    if to_bool(args.get("AUTO_ENTRY_BARS"), False):
+        trend_bars = overrides.get("TREND_BARS", spec.default_params.get("TREND_BARS", bars))
+        trend_tf = overrides.get("TREND_TF", spec.default_params.get("TREND_TF", "H3"))
+        entry_tf = overrides.get("ENTRY_TF", spec.default_params.get("ENTRY_TF", "H1"))
+        overrides["ENTRY_BARS"] = corresponding_bars(trend_bars, trend_tf, entry_tf)
+    else:
+        overrides.setdefault("ENTRY_BARS", bars)
+    params = spec.normalize_params(overrides, symbol)
+
+    trend_raw = load_request_frame(
+        params["SYMBOL"],
+        params["TREND_TF"],
+        int(params["TREND_BARS"]),
+        date_window,
+        spec.key,
+        params,
+        role="trend",
+    )
+    entry_raw = load_request_frame(
+        params["SYMBOL"],
+        params["ENTRY_TF"],
+        int(params["ENTRY_BARS"]),
+        date_window,
+        spec.key,
+        params,
+        role="entry",
+        tail_bars=1,
+    )
+    if trend_raw.empty or entry_raw.empty:
+        missing = []
+        if trend_raw.empty:
+            missing.append(params["TREND_TF"])
+        if entry_raw.empty:
+            missing.append(params["ENTRY_TF"])
+        raise ValueError(
+            f"KNN Combo requires data for both {params['TREND_TF']} and {params['ENTRY_TF']}. "
+            f"{params['SYMBOL']} has no data for: {', '.join(missing)}."
+        )
+
+    trend_full, enriched_full = build_knn_combo_strategy_frames(trend_raw, entry_raw, params, params["SYMBOL"])
+    trend_frame = trim_to_window(trend_full, date_window)
+    enriched = trim_to_window(enriched_full, date_window)
+    if date_window and enriched.empty:
+        raise ValueError(f"{params['SYMBOL']} has no {params['ENTRY_TF']} data in the selected date range.")
+
+    return StrategyRunResult(
+        strategy=spec.key,
+        strategy_label=spec.label,
+        symbol=params["SYMBOL"],
+        tf=params["ENTRY_TF"],
+        bars=len(enriched) if date_window else int(params["ENTRY_BARS"]),
+        params=params,
+        enriched=enriched,
+        date_window=date_window,
+        layout="knn_combo_mtf",
+        trend_frame=trend_frame,
+        trend_tf=params["TREND_TF"],
+    )
+
+
 def date_window_from_args(args: Mapping[str, Any]) -> DateWindow | None:
     start_raw = args.get("start_date") or args.get("start")
     end_raw = args.get("end_date") or args.get("end")
@@ -378,6 +460,20 @@ def range_warmup_bars(strategy_key: str, params: dict[str, Any], role: str) -> i
             + param_int(params, "MACD_SIGNAL")
             + param_int(params, "DOW_PIVOT_LEFT")
             + param_int(params, "DOW_PIVOT_RIGHT")
+            + 50,
+        )
+    if strategy_key == "knn_combo":
+        if role == "trend":
+            return max(
+                DEFAULT_RANGE_WARMUP_BARS,
+                param_int(params, "AI_SMOOTH") + param_int(params, "AI_TARGET_LEN") + 50,
+            )
+        return max(
+            DEFAULT_RANGE_WARMUP_BARS,
+            param_int(params, "MA_PERIOD")
+            + param_int(params, "MACD_SLOW")
+            + param_int(params, "MACD_SIGNAL")
+            + param_int(params, "ATR_PERIOD")
             + 50,
         )
     if strategy_key == "combo":

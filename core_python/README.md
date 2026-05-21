@@ -66,7 +66,7 @@ core_python/
 
   strategies/
     registry.py
-      Dang ky StrategySpec cho combo, ma_cross, ai_trend.
+      Dang ky StrategySpec cho combo, ma_cross, ai_trend, knn_combo.
 
     combo/
       config.py
@@ -96,6 +96,18 @@ core_python/
         Giu contract level columns; AI Trend phase hien tai khong tinh entry/SL/TP.
       ARCHITECTURE.md
         Tai lieu chi tiet rule AI Trend.
+
+    knn_combo/
+      config.py
+        Tham so dashboard/strategy: Trend TF, Entry TF, KNN, Combo raw signal.
+      signals.py
+        Build HTF KNN trend da dong, merge vao entry TF, loc Combo-style signals.
+      levels.py
+        Giu level columns rong; strategy nay chi canh bao tin hieu visual.
+      payload.py
+        Tao JSON payload hai chart cho dashboard.
+      ARCHITECTURE.md
+        Tai lieu chi tiet rule KNN Combo.
 
   chart/
     server.py
@@ -180,6 +192,13 @@ H3 -> 400 bars
 H4 -> 300 bars
 ```
 
+### KNN Combo
+
+`knn_combo` da duoc dang ky cho dashboard/export va co duong chay watcher generic,
+nhung khong nam trong `SCAN_GROUPS` production mac dinh. Strategy nay chi tao
+tin hieu visual: HTF KNN trend gate + entry TF Combo-style raw signal, khong tinh
+entry/SL/TP/position sizing.
+
 ## 5. Combo Signal Logic
 
 Combo dung pipeline chung cua `StrategySpec`.
@@ -190,8 +209,10 @@ load(symbol, tf, bars)
   -> add_combo_indicators()
       ma, macd_h, atr, prev_close, prev_ma
   -> detect_combo_signals()
-      BUY khi close cross len MA, candle bullish, macd_h > 0, R:R dat filter neu bat
-      SELL khi close cross xuong MA, candle bearish, macd_h < 0, R:R dat filter neu bat
+      BUY khi candle bullish, close > MA20, macd_h > 0 va state truoc khong phai BUY
+      SELL khi candle bearish, close < MA20, macd_h < 0 va state truoc khong phai SELL
+      Raw Combo V0 signal luan phien BUY -> SELL -> BUY.
+      X, ATR, KTP va MIN_RR khong phai dieu kien tao raw signal.
   -> add_combo_levels()
       BUY entry = high + X, SL = low - X, TP = entry + KTP * ATR
       SELL entry = low - X, SL = high + X, TP = entry - KTP * ATR
@@ -201,6 +222,27 @@ Telegram key cua Combo:
 
 ```text
 combo|SYMBOL|TF|bartime|direction
+```
+
+### KNN Combo Visual Variant
+
+KNN Combo dung pipeline hai timeframe:
+
+```text
+load(symbol, TREND_TF, TREND_BARS)
+  -> prepare_trend_frame()
+      ai_knn, ai_avg, trend_bias, trend_close_time
+load(symbol, ENTRY_TF, ENTRY_BARS)
+  -> prepare_entry_frame()
+      ma, macd_h, atr, prev_close, prev_ma
+  -> merge_trend_into_entry()
+      chi dung trend bar da dong: trend_close_time <= entry bartime
+  -> detect_knn_combo_signals()
+      raw BUY/SELL theo Combo-style MA/MACD/candle
+      allow BUY khi KNN bullish, allow SELL khi KNN bearish
+      neutral hoac missing closed trend bi block mac dinh
+  -> add_knn_combo_levels()
+      level columns rong vi chua co trade model
 ```
 
 ## 6. AI Trend Signal Logic

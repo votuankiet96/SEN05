@@ -33,6 +33,12 @@ from core_python.strategies.ai_trend.signals import (
     add_ai_trend_indicators,
     detect_ai_trend_signals,
 )
+from core_python.strategies.knn_combo import config as knn_combo_config
+from core_python.strategies.knn_combo.levels import add_knn_combo_levels
+from core_python.strategies.knn_combo.signals import (
+    add_knn_combo_indicators,
+    detect_knn_combo_signals,
+)
 from core_python.strategies.ma_cross import config as ma_cross_config
 from core_python.strategies.ma_cross.levels import add_ma_cross_levels
 from core_python.strategies.ma_cross.signals import (
@@ -102,6 +108,16 @@ STRATEGIES: dict[str, StrategySpec] = {
         add_indicators=add_ai_trend_indicators,
         detect_signals=detect_ai_trend_signals,
         add_levels=add_ai_trend_levels,
+    ),
+    "knn_combo": StrategySpec(
+        key="knn_combo",
+        label="KNN Combo",
+        default_params=knn_combo_config.DEFAULT_PARAMS,
+        param_fields=knn_combo_config.PARAM_FIELDS,
+        normalize_params=knn_combo_config.normalize_params,
+        add_indicators=add_knn_combo_indicators,
+        detect_signals=detect_knn_combo_signals,
+        add_levels=add_knn_combo_levels,
     ),
 }
 

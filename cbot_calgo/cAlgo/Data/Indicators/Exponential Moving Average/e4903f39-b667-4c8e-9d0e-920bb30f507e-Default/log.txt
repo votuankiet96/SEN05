@@ -1,1 +1,1 @@
-13/05/2026 11:17:56.790 | Info | Indicator instance [Exponential Moving Average, BTCUSD, m45] loaded.
+13/05/2026 15:54:17.065 | Info | Indicator instance [Exponential Moving Average, BTCUSD, m45] unloaded.
