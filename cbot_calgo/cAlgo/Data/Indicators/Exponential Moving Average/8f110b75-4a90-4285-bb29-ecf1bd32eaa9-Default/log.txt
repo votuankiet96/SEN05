@@ -1,1 +1,0 @@
-11/05/2026 03:14:23.926 | Info | Indicator instance [Exponential Moving Average (2), XAUUSD, m45] unloaded.

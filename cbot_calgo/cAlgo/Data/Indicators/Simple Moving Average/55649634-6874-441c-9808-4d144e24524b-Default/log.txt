@@ -1,2 +1,0 @@
-15/05/2026 20:59:00.000 | Info | Indicator instance [Simple Moving Average, US 30, h4] loaded.
-15/05/2026 20:59:00.000 | Info | Indicator instance [Simple Moving Average, US 30, h4] unloaded.
