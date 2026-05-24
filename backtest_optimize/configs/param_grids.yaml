@@ -1,0 +1,17 @@
+# Example parameter grid for stability-map notebooks.
+
+sl:
+  method: atr_multiple
+  atr_mult: [1.0, 1.25, 1.5, 1.75, 2.0]
+
+tp:
+  method: risk_multiple
+  r_multiples:
+    - [1.0, 2.0]
+    - [1.0, 2.0, 3.0]
+    - [1.0, 1.5, 2.5]
+
+management:
+  sl_move_rule:
+    - none
+    - breakeven_after_tp1

@@ -1,0 +1,38 @@
+# Default config for backtest_optimize.
+# This file is documentation-friendly YAML. Runtime loaders may use notebooks or
+# plain Python dictionaries; PyYAML is intentionally not required by the package.
+
+run:
+  ambiguity_policy: conservative
+  ohlcv_source: core_python.data.loader
+  signal_source: raw_signals
+  time_convention: UTC-naive bar-open timestamps
+
+execution:
+  entry: next_bar_open
+  same_bar_processing_order: close_existing_cluster_before_new_signal
+  conflict_policy: skip_when_cluster_open
+  sl_method: atr_multiple
+  sl_params:
+    atr_mult: 1.5
+  tp_method: risk_multiple
+  tp_params:
+    r_multiples: [1.0, 2.0, 3.0]
+  management:
+    sl_move_rule: breakeven_after_tp1
+
+sizing:
+  account_size: 10000
+  risk_per_cluster: 0.01
+  leg_weights: null
+
+market_spec:
+  pip_size: 0.0001
+  pip_value_per_lot: 10.0
+  min_lot: 0.01
+  lot_step: 0.01
+  commission_per_lot_per_side: 0.0
+  spread_buffer_pips: 0.0
+  slippage_buffer_pips: 0.0
+
+per_symbol_market_spec: {}
