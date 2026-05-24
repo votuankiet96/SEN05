@@ -1,3 +1,8 @@
+-- Standalone maintenance/backport patch.
+-- 04_business_objects.sql already includes this patched procedure for fresh installs.
+USE SEN05_AutoTrading;
+GO
+
 CREATE OR ALTER PROCEDURE DWH.usp_AggregateFromStaging
     @SymbolID        INT,
     @SourceTable     VARCHAR(50),

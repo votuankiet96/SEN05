@@ -241,6 +241,26 @@ class TestDbConnectorBatchDelete:
 # NHÓM 3: ws_live — DB worker retry khi staging fail
 # =============================================================================
 
+class TestDbConnectorStagingPurgeCoverage:
+    """Kiem tra purge_staging bao phu du 15 staging tables."""
+
+    def test_all_staging_tables_include_all_direct_timeframes(self):
+        from modules.db_connector import _ALL_STAGING_TABLES
+
+        previously_missing = {
+            "SEN.TF_M10",
+            "SEN.TF_M20",
+            "SEN.TF_M90",
+            "SEN.TF_H6",
+            "SEN.TF_H8",
+        }
+
+        assert len(_ALL_STAGING_TABLES) == 15
+        assert len(set(_ALL_STAGING_TABLES)) == 15
+        assert previously_missing.issubset(set(_ALL_STAGING_TABLES))
+        assert all(table.startswith("SEN.TF_") for table in _ALL_STAGING_TABLES)
+
+
 class TestWsLiveDbWorkerRetry:
     """Kiểm tra DB worker retry 3 lần khi insert_staging_batch thất bại."""
 

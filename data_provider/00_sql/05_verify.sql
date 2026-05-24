@@ -1,10 +1,4 @@
 /* ============================================================
-   UPDATED NOTE:
-     For a full runtime-ready installation, expect `SEN.ActiveTask` to exist.
-     That changes Query 1 from 19 rows to 20 rows in total.
-   ============================================================ */
-
-/* ============================================================
    05_verify.sql
    Project   : Auto Trading Data Warehouse
    Database  : SEN05_AutoTrading  (SQL Server 2022)
@@ -35,6 +29,21 @@
 
      Query 5 — Calendar dimension range and row count
                Expected: 10,227 rows, 2008-01-01 to 2035-12-31
+
+     Query 6 — Operational coordination table
+               Expected: SEN.ActiveTask exists
+
+     Query 7 — Staging table count
+               Expected: 15 SEN.TF_* tables
+
+     Query 8 — Runtime Capital.com symbols
+               Expected: 10 rows for renamed index/metal symbols
+
+     Query 9 — Legacy names are no longer primary symbols
+               Expected: 0 rows
+
+     Query 10 — Former computed TF descriptions
+               Expected: 0 rows containing the old COMPUTED wording
 
    RUN ORDER:
      01_setup_database.sql
@@ -80,6 +89,30 @@ SELECT TABLE_SCHEMA, TABLE_NAME
 FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_SCHEMA = 'SEN'
   AND TABLE_NAME = 'ActiveTask';
+
+-- Query 7: Confirm all 15 timeframe staging tables exist (expect 15)
+SELECT COUNT(*) AS StagingTFCount
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_SCHEMA = 'SEN'
+  AND TABLE_NAME LIKE 'TF_%';
+
+-- Query 8: Confirm runtime Capital.com symbols are primary symbols (expect 10 rows)
+SELECT SymbolID, Symbol, RefName, AssetType
+FROM DWH.Dim_Symbol
+WHERE Symbol IN ('FR40','DE40','HK50','J225','SP35','UK100','US500','US100','US30','GOLD')
+ORDER BY SymbolID;
+
+-- Query 9: Confirm legacy names are not primary symbols anymore (expect 0 rows)
+SELECT SymbolID, Symbol, RefName, AssetType
+FROM DWH.Dim_Symbol
+WHERE Symbol IN ('CAC40','DAX','HSI','NI225','IBEX35','UKX','SPX','NDX','DJI','XAU')
+ORDER BY SymbolID;
+
+-- Query 10: Confirm former computed TF descriptions no longer use old wording (expect 0 rows)
+SELECT Code, Description
+FROM DWH.Dim_Timeframe
+WHERE Code IN ('M10','M20','M90','H6','H8')
+  AND Description LIKE '%COMPUTED%';
 
 PRINT '=== SETUP COMPLETE — SEN05_AutoTrading is ready ===';
 GO

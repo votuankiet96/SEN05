@@ -1060,11 +1060,11 @@ function renderStaging(data) {
     return;
   }
   el.innerHTML = items.map(item => {
-    const pending = Number(item.PendingRows || 0);
-    const hasPending = pending > 0;
+    const notLoaded = Number(item.NotLoadedRows ?? item.PendingRows ?? 0);
+    const hasNotLoaded = notLoaded > 0;
     const meta = item.error
       ? `<span style="color:${C.red}">${esc(item.error)}</span>`
-      : `<span class="health-pill ${hasPending ? 'pending' : ''}">${fmtInt(pending)} pending</span>
+      : `<span class="health-pill ${hasNotLoaded ? 'pending' : ''}">${fmtInt(notLoaded)} not in Fact</span>
          total ${fmtInt(item.TotalRows)}<br>latest ${fmtDateTime(item.LatestBarTime)}`;
     return `<div class="health-row">
       <div class="health-row-name">${esc(item.TFCode)}</div>

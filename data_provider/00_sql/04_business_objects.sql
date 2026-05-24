@@ -17,12 +17,12 @@
      Block 9B — DWH.usp_AggregateFromStaging (ETL: bucket + aggregate → Fact_OHLCV)
 
    ARCHITECTURE:
-     TradingView (tvDatafeed)
+     TradingView/Capital.com WebSocket
          │  Python 01_data_pipeline.py
          ▼
-     SEN.TF_*  (staging tables)
-         │  usp_LoadDirect          (10 native TFs: direct copy)
-         │  usp_AggregateFromStaging (5 computed TFs: bucket + aggregate)
+     SEN.TF_*  (15 staging tables)
+         │  usp_LoadDirect          (normal path: direct copy for all 15 TFs)
+         │  usp_AggregateFromStaging (fallback path: bucket + aggregate)
          ▼
      DWH.Fact_OHLCV
          │  MART.v_OHLCV            (human-readable joined view)
@@ -32,12 +32,6 @@
 
    SAFE TO RE-RUN:
      CREATE OR ALTER is used for all views and procedures.
-
-   IMPORTANT NOTE:
-     The final `CREATE OR ALTER PROCEDURE DWH.usp_AggregateFromStaging`
-     later in this file is the safer patched version.
-     In SQL Server the last definition wins, so that is the effective
-     runtime behavior.
 
    RUN ORDER:
      01_setup_database.sql
@@ -54,9 +48,9 @@ GO
 /* ============================================================
    BLOCK 8: DATA MART — Views and Stored Procedures
 
-   The trading engine and strategy code read EXCLUSIVELY from the MART schema.
-   They never touch SEN or DWH tables directly.
-   This abstraction lets us restructure the warehouse without breaking consumers.
+   MART is a SQL-facing convenience layer for human-readable reads.
+   Current Python runtime loaders read DWH.Fact_OHLCV directly, while checker
+   and maintenance tools intentionally touch DWH for repair workflows.
    ============================================================ */
 
 -- -------------------------------------------------------
@@ -147,7 +141,7 @@ GO
    PURPOSE:
      Moves completed (IsProcessed=1) raw rows from a SEN staging table
      directly into DWH.Fact_OHLCV without any transformation.
-     Used for the 10 timeframes that are pulled natively from TradingView.
+     Used for all 15 timeframes pulled directly from TradingView/Capital.com.
 
    CALL PATTERN (from Python pipeline):
      EXEC DWH.usp_LoadDirect
@@ -257,12 +251,14 @@ GO
 
 
 /* ============================================================
-   BLOCK 9B: ETL PROCEDURE — DWH.usp_AggregateFromStaging
+   BLOCK 9B: FALLBACK ETL PROCEDURE — DWH.usp_AggregateFromStaging
 
    PURPOSE:
      Computes larger-timeframe candles by bucketing source staging rows,
      then inserts the aggregated candles into DWH.Fact_OHLCV.
-     Used for the 5 timeframes not natively available in tvDatafeed:
+     Current normal operation pulls all 15 timeframes directly from
+     TradingView/Capital.com. This procedure remains available only for
+     fallback/rebuild scenarios when ENABLE_COMPUTED_TIMEFRAMES=1:
        M10  ← SEN.TF_M5   (group every 2 consecutive M5 bars)
        M20  ← SEN.TF_M5   (group every 4 consecutive M5 bars)
        M90  ← SEN.TF_M30  (group every 3 consecutive M30 bars)
@@ -270,9 +266,8 @@ GO
        H8   ← SEN.TF_H4   (group every 2 consecutive H4 bars)
 
      NOTE: This procedure inserts only into DWH.Fact_OHLCV.
-     The 5 computed SEN.TF_* staging tables (TF_M10, TF_M20, TF_M90, TF_H6, TF_H8)
-     are NOT populated by this procedure — they remain available for manual inspection
-     or future use if a direct data source becomes available.
+     The target SEN.TF_* staging tables (TF_M10, TF_M20, TF_M90, TF_H6, TF_H8)
+     are not populated by this procedure.
 
    CALL PATTERN (from Python pipeline):
      EXEC DWH.usp_AggregateFromStaging
@@ -309,121 +304,6 @@ GO
    ============================================================ */
 
 GO
-CREATE OR ALTER PROCEDURE DWH.usp_AggregateFromStaging
-    @SymbolID        INT,              -- target symbol; must exist in DWH.Dim_Symbol
-    @SourceTable     VARCHAR(50),      -- source staging table, e.g. 'SEN.TF_M5'
-    @TargetTFCode    VARCHAR(5),       -- target timeframe code, e.g. 'M10'
-    @FromTime        DATETIME2 = NULL  -- optional lower bound; defaults to 2008-01-01
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    -- Step 1: Resolve target TimeframeID and its duration in minutes.
-    -- @TFMinutes drives the bucket formula — how many minutes wide each computed candle is.
-    DECLARE @TFMinutes   INT;
-    DECLARE @TimeframeID TINYINT;
-    SELECT @TFMinutes = Minutes, @TimeframeID = TimeframeID
-    FROM DWH.Dim_Timeframe WHERE Code = @TargetTFCode;
-
-    IF @TimeframeID IS NULL
-    BEGIN
-        RAISERROR('usp_AggregateFromStaging: TFCode [%s] not found.', 16, 1, @TargetTFCode);
-        RETURN;
-    END
-
-    -- Step 2: Default @FromTime if not supplied.
-    IF @FromTime IS NULL SET @FromTime = '2008-01-01';
-
-    -- Step 3: Whitelist validation — only the 4 tables that act as aggregation sources.
-    -- (TF_M5 → M10/M20,  TF_M30 → M90,  TF_H3 → H6,  TF_H4 → H8)
-    IF @SourceTable NOT IN ('SEN.TF_M5','SEN.TF_M30','SEN.TF_H3','SEN.TF_H4')
-    BEGIN
-        RAISERROR('usp_AggregateFromStaging: Invalid source table [%s].', 16, 1, @SourceTable);
-        RETURN;
-    END
-
-    -- Step 4: Build and execute dynamic SQL.
-    -- Three-CTE pipeline: Bucketed → WithOHLC → Aggregated → INSERT
-    DECLARE @sql NVARCHAR(MAX) = N'
-    ;WITH Bucketed AS (
-        -- Assign each source bar to a fixed-width time bucket.
-        -- DATEDIFF(MINUTE, anchor, BarTime) gives total minutes since anchor.
-        -- Integer division (/ @TFMinutes) floors to the nearest bucket boundary.
-        -- DATEADD adds that many minutes back to the anchor to get the bucket start time.
-        SELECT BarTime, [Open], High, Low, [Close], Volume,
-            DATEADD(MINUTE,
-                (DATEDIFF(MINUTE, ''2000-01-01'', BarTime) / @TFMinutes) * @TFMinutes,
-                ''2000-01-01'') AS BucketTime   -- aligned candle open time for the computed TF
-        FROM ' + @SourceTable + N'
-        WHERE SymbolID = @SymbolID AND BarTime >= @FromTime AND IsProcessed = 1
-    ),
-    WithOHLC AS (
-        -- Use window functions to tag every row with the correct Open and Close for its bucket.
-        -- FIRST_VALUE over all rows in the partition (ORDER BY BarTime ASC) = [Open] of the earliest bar.
-        -- LAST_VALUE  over all rows in the partition (ORDER BY BarTime ASC) = [Close] of the latest bar.
-        -- ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING is required for LAST_VALUE to
-        -- correctly reach the final row (without it, the default frame stops at the current row).
-        SELECT BucketTime, BarTime, High, Low, Volume,
-            FIRST_VALUE([Open]) OVER (
-                PARTITION BY BucketTime ORDER BY BarTime ASC
-                ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
-            ) AS CandleOpen,    -- all rows in this bucket will have the same CandleOpen value
-            LAST_VALUE([Close]) OVER (
-                PARTITION BY BucketTime ORDER BY BarTime ASC
-                ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
-            ) AS CandleClose    -- all rows in this bucket will have the same CandleClose value
-        FROM Bucketed
-    ),
-    Aggregated AS (
-        -- Collapse each bucket into a single OHLCV candle row.
-        -- Because CandleOpen and CandleClose are identical across all rows in a BucketTime
-        -- partition (set by the window functions above), MIN() simply returns that shared value.
-        SELECT BucketTime,
-            MIN(BarTime)     AS FirstBarTime, -- actual timestamp of the first source bar in bucket
-            MIN(CandleOpen)  AS [Open],   -- first bar''s open (all rows equal → MIN = that value)
-            MAX(High)   AS High,   -- highest high across all source bars in the bucket
-            MIN(Low)    AS Low,    -- lowest low across all source bars in the bucket
-            MIN(CandleClose) AS [Close],  -- last bar''s close (all rows equal → MIN = that value)
-            SUM(Volume)      AS Volume,      -- total volume over the bucket period
-            COUNT(*)         AS BarCount     -- number of source bars merged (written to TickCount)
-        FROM WithOHLC GROUP BY BucketTime
-    )
-    INSERT INTO DWH.Fact_OHLCV
-        (SymbolID, TimeframeID, DateKey, BarTime,
-         [Open], High, Low, [Close], Volume, TickCount)
-    SELECT @SymbolID, @TimeframeID,
-        -- Use FirstBarTime (not BucketTime) so BarTime matches the actual first source bar.
-        -- BucketTime is anchored to 2000-01-01 UTC midnight and can be 1-5h early when
-        -- source bars are offset (e.g. EURUSD H3 starts 01:00 UTC, XAU H4 starts 01:00 UTC).
-        CONVERT(INT, CONVERT(VARCHAR, CAST(FirstBarTime AS DATE), 112)),
-        FirstBarTime, [Open], High, Low, [Close], Volume, BarCount
-    FROM Aggregated
-    WHERE NOT EXISTS (
-        -- Idempotency guard: skip candles already in the fact table.
-        -- Prevents duplicate key errors on UQ_Fact_OHLCV when proc is re-run.
-        SELECT 1 FROM DWH.Fact_OHLCV f
-        WHERE f.SymbolID = @SymbolID AND f.TimeframeID = @TimeframeID
-          AND f.BarTime = FirstBarTime
-    );';
-
-    -- Execute with all variable values as proper parameters (safe from injection).
-    EXEC sp_executesql @sql,
-        N'@SymbolID INT, @TimeframeID TINYINT, @TFMinutes INT, @FromTime DATETIME2',
-        @SymbolID, @TimeframeID, @TFMinutes, @FromTime;
-
-    PRINT 'usp_AggregateFromStaging OK: ' + @SourceTable + ' → ' + @TargetTFCode
-          + ' SymbolID=' + CAST(@SymbolID AS VARCHAR);
-END
-GO
-PRINT 'Procedure DWH.usp_AggregateFromStaging created.';
-GO
-
-/* ---------------------------------------------------------------------------
-   PATCH: safer aggregate proc for computed TFs
-   - only writes fully formed buckets
-   - updates existing rows instead of insert-only behavior
-   - keeps DB-level callers aligned with the Python safe path
---------------------------------------------------------------------------- */
 CREATE OR ALTER PROCEDURE DWH.usp_AggregateFromStaging
     @SymbolID        INT,
     @SourceTable     VARCHAR(50),
@@ -583,10 +463,10 @@ BEGIN
         N'@SymbolID INT, @TimeframeID TINYINT, @TFMinutes INT, @ExpectedCount INT, @FromTime DATETIME2',
         @SymbolID, @TimeframeID, @TFMinutes, @ExpectedCount, @FromTime;
 
-    PRINT 'usp_AggregateFromStaging PATCHED OK: ' + @SourceTable + ' -> ' + @TargetTFCode
+    PRINT 'usp_AggregateFromStaging OK: ' + @SourceTable + ' -> ' + @TargetTFCode
           + ' SymbolID=' + CAST(@SymbolID AS VARCHAR);
 END
 GO
 
-PRINT 'Procedure DWH.usp_AggregateFromStaging patched with full-bucket MERGE logic.';
+PRINT 'Procedure DWH.usp_AggregateFromStaging created/updated with full-bucket MERGE logic.';
 GO

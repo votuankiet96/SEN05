@@ -218,26 +218,41 @@ def load_staging_health() -> dict[str, Any]:
                 row = _read_sql(
                     f"""
                     SELECT
-                        '{tf_code}' AS TFCode,
-                        '{table_name}' AS StagingTable,
+                        ? AS TFCode,
+                        ? AS StagingTable,
                         COUNT_BIG(*) AS TotalRows,
-                        SUM(CASE WHEN IsProcessed = 0 THEN 1 ELSE 0 END) AS PendingRows,
-                        SUM(CASE WHEN IsProcessed = 1 THEN 1 ELSE 0 END) AS ProcessedRows,
-                        MIN(BarTime) AS OldestBarTime,
-                        MAX(BarTime) AS LatestBarTime,
-                        MAX(ReceivedAt) AS LatestReceivedAt
-                    FROM {table_name} WITH (NOLOCK)
-                    """
-                    ,
+                        COALESCE(SUM(CASE WHEN fk.BarTime IS NULL THEN 1 ELSE 0 END), 0) AS NotLoadedRows,
+                        COALESCE(SUM(CASE WHEN fk.BarTime IS NOT NULL THEN 1 ELSE 0 END), 0) AS LoadedRows,
+                        MIN(s.BarTime) AS OldestBarTime,
+                        MAX(s.BarTime) AS LatestBarTime,
+                        MAX(s.ReceivedAt) AS LatestReceivedAt
+                    FROM {table_name} s WITH (NOLOCK)
+                    LEFT JOIN (
+                        SELECT f.SymbolID, f.BarTime
+                        FROM DWH.Fact_OHLCV f WITH (NOLOCK)
+                        WHERE f.TimeframeID = (
+                            SELECT TimeframeID
+                            FROM DWH.Dim_Timeframe WITH (NOLOCK)
+                            WHERE Code = ?
+                        )
+                    ) fk
+                      ON fk.SymbolID = s.SymbolID
+                     AND fk.BarTime = s.BarTime
+                    """,
                     conn,
+                    (tf_code, table_name, tf_code),
                 )[0]
                 item = _json_row(row)
+                item["PendingRows"] = item.get("NotLoadedRows")
+                item["ProcessedRows"] = item.get("LoadedRows")
                 item["error"] = None
             except Exception as exc:
                 item = {
                     "TFCode": tf_code,
                     "StagingTable": table_name,
                     "TotalRows": None,
+                    "LoadedRows": None,
+                    "NotLoadedRows": None,
                     "PendingRows": None,
                     "ProcessedRows": None,
                     "OldestBarTime": None,

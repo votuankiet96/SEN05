@@ -5,9 +5,11 @@ Module nay giai quyet 2 bai toan van hanh:
 1. Advisory lock:
    checker, pipeline va ws_live co nhung luc cung muon ghi vao kho du lieu.
    `SEN.ActiveTask` duoc dung nhu mot "den giao thong" cap DB de ngan xung dot.
-2. Confirmation token relay:
-   Telegram bot listener va checker co the la 2 process khac nhau.
-   Ket qua `/confirm_TOKEN` va `/skip_TOKEN` duoc ghi vao DB de process dang cho van nhan duoc.
+2. Payload / legacy token relay:
+   Payload can still carry cross-process signals. Older Telegram confirmation
+   tokens used `/confirm_TOKEN` and `/skip_TOKEN`; the current Discord webhook
+   path is one-way, so checker confirmation requests auto-timeout instead of
+   waiting for inbound commands.
 
 Thiet ke uu tien an toan van hanh:
 - lock co TTL (dead-man switch) de tranh treo vo han neu process bi kill
@@ -16,7 +18,7 @@ Thiet ke uu tien an toan van hanh:
 """
 
 # =============================================================================
-# data_provider/_task_lock.py  -  Khóa phân tán DB + Token xác nhận Telegram
+# data_provider/_task_lock.py  -  Khóa phân tán DB + payload / legacy token relay
 # =============================================================================
 #
 # FILE NÀY LÀM GÌ-
@@ -41,32 +43,19 @@ Thiet ke uu tien an toan van hanh:
 #     Không bao giờ bị treo vô hạn.
 #
 #   ─────────────────────────────────────────────────────────────────────────
-#   CƠ CHẾ 2: TOKEN XÁC NHẬN (Confirmation Token)
+#   CƠ CHẾ 2: PAYLOAD / LEGACY TOKEN RELAY
 #   ─────────────────────────────────────────────────────────────────────────
-#   Khi Checker phát hiện vấn đề, nó tạo 1 mã token 8 ký tự ngẫu nhiên
-#   (ví dụ: A1B2C3D4) và gửi Telegram:
-#     "Gõ /confirm_A1B2C3D4 -> Sửa tất cả"
-#     "Gõ /skip_A1B2C3D4   -> Bỏ qua"
-#
-#   Checker sau đó đợi (tối đa 4 giờ) cho đến khi user gõ lệnh.
-#   Token đảm bảo: dù gõ nhầm hay gõ trùng, chỉ lần đầu hợp lệ được tính.
-#
-#   Vấn đề kỹ thuật - 2 process cùng nghe Telegram:
-#     WS Live chạy bot listener 24/7 (để nhận /fix, /status...).
-#     Checker cũng lắng nghe Telegram khi đang đợi phản hồi.
-#     Telegram chỉ giao mỗi tin nhắn cho 1 process -> có thể WS "ăn" mất lệnh
-#     /confirm mà Checker đang chờ.
-#
-#   Giải pháp - DB relay:
-#     Khi WS nhận /confirm_TOKEN -> ghi vào SEN.ActiveTask.Payload.
-#     Checker song song với đọc Telegram còn đọc cả DB.Payload mỗi 15 giây.
-#     Dù ai nhận lệnh trước, kết quả đều đến được Checker.
+#   Cột Payload vẫn tồn tại để mang tín hiệu vận hành giữa các process.
+#   Luồng Telegram tương tác cũ từng dùng Payload để relay /confirm_TOKEN hoặc
+#   /skip_TOKEN. Runtime hiện tại dùng Discord webhook một chiều, không có
+#   inbound bot listener, nên request_confirm() gửi cảnh báo rồi trả về
+#   "timeout" ngay để checker tự xử lý theo logic hiện hành.
 #
 # BẢNG DATABASE LIÊN QUAN:
 #   SEN.ActiveTask - xem file 00_sql/06_active_task.sql
 #   Cột TaskName (PRIMARY KEY) = tên khoá (ví dụ: 'checker_repair')
 #   Cột ExpiresAt = thời điểm khoá tự hết hạn
-#   Cột Payload   = nơi WS ghi kết quả token (/confirm hay /skip)
+#   Cột Payload   = nơi ghi tín hiệu vận hành hoặc legacy token relay
 # =============================================================================
 
 import re
@@ -279,7 +268,7 @@ def cleanup_expired() -> int:
 # ─── Token generation ────────────────────────────────────────────────────────
 
 def generate_token() -> str:
-    """Tạo token 8 ký tự (chữ hoa + số) để dùng trong lệnh /confirm_TOKEN."""
+    """Tạo token 8 ký tự cho luồng legacy /confirm_TOKEN."""
     alphabet = string.ascii_uppercase + string.digits
     return "".join(secrets.choice(alphabet) for _ in range(8))
 
@@ -288,10 +277,10 @@ def generate_token() -> str:
 
 def _handle_token_command(text: str) -> bool:
     """
-    Parse lệnh /confirm_TOKEN hoặc /skip_TOKEN và cập nhật _pending_tokens.
+    Parse lệnh legacy /confirm_TOKEN hoặc /skip_TOKEN và cập nhật _pending_tokens.
 
     First-one-wins: chỉ set nếu token đang chờ (value = None).
-    Gửi tin xác nhận về Telegram để user biết lệnh đã được nhận.
+    Gửi thông báo Discord tương thích để user biết lệnh đã được nhận.
 
     Trả về True nếu token hợp lệ và được xử lý, False nếu không.
     """
@@ -330,8 +319,8 @@ def _handle_token_command(text: str) -> bool:
 
 def _read_db_relay(task_name: str, token: str) -> str | None:
     """
-    Đọc kết quả token từ DB relay (SEN.ActiveTask.Payload).
-    WS bot ghi vào đây khi nhận /confirm hoặc /skip ở process khác.
+    Đọc kết quả token legacy từ DB relay (SEN.ActiveTask.Payload).
+    Legacy inbound bot từng ghi vào đây khi nhận /confirm hoặc /skip ở process khác.
 
     Trả về 'confirm', 'skip', hoặc None nếu chưa có kết quả.
     """
@@ -369,17 +358,12 @@ def request_confirm(
     task_name: str = "checker_repair",
 ) -> str:
     """
-    Gửi tin Telegram hỏi user và đợi phản hồi.
+    Gửi cảnh báo Discord một chiều và trả về timeout ngay.
 
     Flow:
       1. Tạo token + đăng ký vào _pending_tokens
-      2. Gửi tg_ask() + tg_flush() (đảm bảo tin đến trước khi poll)
-      3. Drain backlog getUpdates (bỏ qua tin cũ)
-      4. Poll loop mỗi 15 giây:
-         a. getUpdates -> _handle_token_command() (same process)
-         b. Đọc DB relay (cross-process: WS bot có thể đã ghi vào đây)
-         c. Break khi có kết quả
-      5. Dọn token + trả về 'confirm' | 'skip' | 'timeout'
+      2. Gửi tg_ask() qua Discord webhook + tg_flush()
+      3. Dọn token + trả về 'timeout' vì Discord không có kênh nhận lệnh ngược
 
     Tham số:
       title          - tiêu đề tin nhắn
@@ -389,7 +373,7 @@ def request_confirm(
       affected_pairs - danh sách pairs bị ảnh hưởng (hiển thị tối đa 8)
       task_name      - tên task trong SEN.ActiveTask (để đọc DB relay)
 
-    Trả về: 'confirm' | 'skip' | 'timeout'
+    Trả về: 'timeout' trong runtime Discord hiện tại.
     """
     # Discord webhook là một chiều - không thể polling nhận lệnh phản hồi.
     # Gửi thông báo 1 chiều rồi trả về 'timeout' ngay lập tức.

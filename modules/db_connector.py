@@ -28,6 +28,8 @@ from config import (
     SQL_SERVER,
     SQL_TRUST_SERVER_CERT,
     SQL_UID,
+    TF_DISPLAY_ORDER,
+    TF_STAGING,
 )
 
 logger = logging.getLogger(__name__)
@@ -621,9 +623,9 @@ def get_candle_count(symbol_id: int, tf_code: str) -> int:
 
 
 _ALL_STAGING_TABLES = [
-    "SEN.TF_W",   "SEN.TF_D1",  "SEN.TF_H4",
-    "SEN.TF_H3",  "SEN.TF_H2",  "SEN.TF_H1",
-    "SEN.TF_M45", "SEN.TF_M30", "SEN.TF_M15", "SEN.TF_M5",
+    TF_STAGING[tf_code]
+    for tf_code in TF_DISPLAY_ORDER
+    if tf_code in TF_STAGING
 ]
 
 

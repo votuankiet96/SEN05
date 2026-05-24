@@ -10,30 +10,29 @@
      PREREQUISITE: 01_setup_database.sql must have been run first.
 
    CONTAINS:
-     Block 4-01 — SEN.TF_M5   (5 min  — direct from TradingView)
-     Block 4-02 — SEN.TF_M10  (10 min — COMPUTED from M5)
-     Block 4-03 — SEN.TF_M15  (15 min — direct from TradingView)
-     Block 4-04 — SEN.TF_M20  (20 min — COMPUTED from M5)
-     Block 4-05 — SEN.TF_M30  (30 min — direct from TradingView)
-     Block 4-06 — SEN.TF_M45  (45 min — direct from TradingView)
-     Block 4-07 — SEN.TF_H1   (1 hour — direct from TradingView)
-     Block 4-08 — SEN.TF_M90  (90 min — COMPUTED from M30)
-     Block 4-09 — SEN.TF_H2   (2 hour — direct from TradingView)
-     Block 4-10 — SEN.TF_H3   (3 hour — direct from TradingView)
-     Block 4-11 — SEN.TF_H4   (4 hour — direct from TradingView)
-     Block 4-12 — SEN.TF_H6   (6 hour — COMPUTED from H3)
-     Block 4-13 — SEN.TF_H8   (8 hour — COMPUTED from H4)
-     Block 4-14 — SEN.TF_D1   (1 day  — direct from TradingView)
-     Block 4-15 — SEN.TF_W    (1 week — direct from TradingView)
+     Block 4-01 — SEN.TF_M5   (5 min  — direct from TradingView/Capital.com)
+     Block 4-02 — SEN.TF_M10  (10 min — direct by default; fallback from M5)
+     Block 4-03 — SEN.TF_M15  (15 min — direct from TradingView/Capital.com)
+     Block 4-04 — SEN.TF_M20  (20 min — direct by default; fallback from M5)
+     Block 4-05 — SEN.TF_M30  (30 min — direct from TradingView/Capital.com)
+     Block 4-06 — SEN.TF_M45  (45 min — direct from TradingView/Capital.com)
+     Block 4-07 — SEN.TF_H1   (1 hour — direct from TradingView/Capital.com)
+     Block 4-08 — SEN.TF_M90  (90 min — direct by default; fallback from M30)
+     Block 4-09 — SEN.TF_H2   (2 hour — direct from TradingView/Capital.com)
+     Block 4-10 — SEN.TF_H3   (3 hour — direct from TradingView/Capital.com)
+     Block 4-11 — SEN.TF_H4   (4 hour — direct from TradingView/Capital.com)
+     Block 4-12 — SEN.TF_H6   (6 hour — direct by default; fallback from H3)
+     Block 4-13 — SEN.TF_H8   (8 hour — direct by default; fallback from H4)
+     Block 4-14 — SEN.TF_D1   (1 day  — direct from TradingView/Capital.com)
+     Block 4-15 — SEN.TF_W    (1 week — direct from TradingView/Capital.com)
 
    STAGING TABLE DESIGN NOTE:
-     All 15 SEN.TF_* tables exist, including the 5 computed timeframes
-     (TF_M10, TF_M20, TF_M90, TF_H6, TF_H8).
-     These 5 tables are NOT populated by direct TradingView pulls.
-     They are populated by back-calculating from already-loaded source TF data
-     (e.g. after M5 staging is filled, M10/M20 are derived from it).
-     Keeping them as staging tables allows inspection, re-processing, and
-     future use if a direct data source becomes available.
+     All 15 SEN.TF_* tables exist and are used by the current direct-pull
+     TradingView/Capital.com runtime.
+     Optional fallback aggregation can still derive M10/M20/M90/H6/H8 when
+     ENABLE_COMPUTED_TIMEFRAMES=1.
+     Keeping one table per timeframe allows inspection and re-processing with
+     the same ETL path for both direct pulls and fallback rebuilds.
 
    COLUMN NOTES (all tables share the same structure):
      RawID       — surrogate BIGINT PK; auto-increment; never exposed externally
@@ -48,7 +47,7 @@
 
    UNIQUE CONSTRAINT UQ_TF_*:
      Prevents the same (SymbolID, BarTime) from being inserted twice.
-     Acts as the first line of defence against duplicate data from TradingView retransmissions.
+     Acts as the first line of defence against duplicate data from TradingView/Capital.com retransmissions.
 
    NONCLUSTERED INDEX IX_TF_*_SBT (SymbolID, BarTime) INCLUDE (OHLCV columns):
      - Covers the exact columns read by ETL procedures: filter on SymbolID+BarTime, return OHLCV.
@@ -73,7 +72,7 @@ GO
    BLOCK 4: STAGING TABLES  (SEN schema)
    ============================================================ */
 
--- ---- 4-01. SEN.TF_M5  (5-minute — pulled directly from TradingView) ----
+-- ---- 4-01. SEN.TF_M5  (5-minute — pulled directly from TradingView/Capital.com) ----
 IF OBJECT_ID('SEN.TF_M5', 'U') IS NULL
 BEGIN
     CREATE TABLE SEN.TF_M5 (
@@ -98,8 +97,8 @@ BEGIN
 END
 GO
 
--- ---- 4-02. SEN.TF_M10  (10-minute — COMPUTED from M5; not available in tvDatafeed) ----
--- Populated by back-calculating from SEN.TF_M5 (2 consecutive M5 bars = 1 M10 bar).
+-- ---- 4-02. SEN.TF_M10  (10-minute — pulled directly by default) ----
+-- Fallback rebuild can derive M10 from SEN.TF_M5 when ENABLE_COMPUTED_TIMEFRAMES=1.
 IF OBJECT_ID('SEN.TF_M10', 'U') IS NULL
 BEGIN
     CREATE TABLE SEN.TF_M10 (
@@ -123,7 +122,7 @@ BEGIN
 END
 GO
 
--- ---- 4-03. SEN.TF_M15  (15-minute — pulled directly from TradingView) ----
+-- ---- 4-03. SEN.TF_M15  (15-minute — pulled directly from TradingView/Capital.com) ----
 IF OBJECT_ID('SEN.TF_M15', 'U') IS NULL
 BEGIN
     CREATE TABLE SEN.TF_M15 (
@@ -147,8 +146,8 @@ BEGIN
 END
 GO
 
--- ---- 4-04. SEN.TF_M20  (20-minute — COMPUTED from M5; not available in tvDatafeed) ----
--- Populated by back-calculating from SEN.TF_M5 (4 consecutive M5 bars = 1 M20 bar).
+-- ---- 4-04. SEN.TF_M20  (20-minute — pulled directly by default) ----
+-- Fallback rebuild can derive M20 from SEN.TF_M5 when ENABLE_COMPUTED_TIMEFRAMES=1.
 IF OBJECT_ID('SEN.TF_M20', 'U') IS NULL
 BEGIN
     CREATE TABLE SEN.TF_M20 (
@@ -172,7 +171,7 @@ BEGIN
 END
 GO
 
--- ---- 4-05. SEN.TF_M30  (30-minute — pulled directly from TradingView) ----
+-- ---- 4-05. SEN.TF_M30  (30-minute — pulled directly from TradingView/Capital.com) ----
 IF OBJECT_ID('SEN.TF_M30', 'U') IS NULL
 BEGIN
     CREATE TABLE SEN.TF_M30 (
@@ -196,7 +195,7 @@ BEGIN
 END
 GO
 
--- ---- 4-06. SEN.TF_M45  (45-minute — pulled directly from TradingView) ----
+-- ---- 4-06. SEN.TF_M45  (45-minute — pulled directly from TradingView/Capital.com) ----
 IF OBJECT_ID('SEN.TF_M45', 'U') IS NULL
 BEGIN
     CREATE TABLE SEN.TF_M45 (
@@ -220,7 +219,7 @@ BEGIN
 END
 GO
 
--- ---- 4-07. SEN.TF_H1  (1-hour — pulled directly from TradingView) ----
+-- ---- 4-07. SEN.TF_H1  (1-hour — pulled directly from TradingView/Capital.com) ----
 IF OBJECT_ID('SEN.TF_H1', 'U') IS NULL
 BEGIN
     CREATE TABLE SEN.TF_H1 (
@@ -244,8 +243,8 @@ BEGIN
 END
 GO
 
--- ---- 4-08. SEN.TF_M90  (90-minute — COMPUTED from M30; not available in tvDatafeed) ----
--- Populated by back-calculating from SEN.TF_M30 (3 consecutive M30 bars = 1 M90 bar).
+-- ---- 4-08. SEN.TF_M90  (90-minute — pulled directly by default) ----
+-- Fallback rebuild can derive M90 from SEN.TF_M30 when ENABLE_COMPUTED_TIMEFRAMES=1.
 IF OBJECT_ID('SEN.TF_M90', 'U') IS NULL
 BEGIN
     CREATE TABLE SEN.TF_M90 (
@@ -269,7 +268,7 @@ BEGIN
 END
 GO
 
--- ---- 4-09. SEN.TF_H2  (2-hour — pulled directly from TradingView) ----
+-- ---- 4-09. SEN.TF_H2  (2-hour — pulled directly from TradingView/Capital.com) ----
 IF OBJECT_ID('SEN.TF_H2', 'U') IS NULL
 BEGIN
     CREATE TABLE SEN.TF_H2 (
@@ -293,7 +292,7 @@ BEGIN
 END
 GO
 
--- ---- 4-10. SEN.TF_H3  (3-hour — pulled directly from TradingView) ----
+-- ---- 4-10. SEN.TF_H3  (3-hour — pulled directly from TradingView/Capital.com) ----
 -- Also serves as the source for H6 aggregation (2 × H3 = 1 H6 bar).
 IF OBJECT_ID('SEN.TF_H3', 'U') IS NULL
 BEGIN
@@ -318,7 +317,7 @@ BEGIN
 END
 GO
 
--- ---- 4-11. SEN.TF_H4  (4-hour — pulled directly from TradingView) ----
+-- ---- 4-11. SEN.TF_H4  (4-hour — pulled directly from TradingView/Capital.com) ----
 -- Also serves as the source for H8 aggregation (2 × H4 = 1 H8 bar).
 IF OBJECT_ID('SEN.TF_H4', 'U') IS NULL
 BEGIN
@@ -343,8 +342,8 @@ BEGIN
 END
 GO
 
--- ---- 4-12. SEN.TF_H6  (6-hour — COMPUTED from H3; not available in tvDatafeed) ----
--- Populated by back-calculating from SEN.TF_H3 (2 consecutive H3 bars = 1 H6 bar).
+-- ---- 4-12. SEN.TF_H6  (6-hour — pulled directly by default) ----
+-- Fallback rebuild can derive H6 from SEN.TF_H3 when ENABLE_COMPUTED_TIMEFRAMES=1.
 IF OBJECT_ID('SEN.TF_H6', 'U') IS NULL
 BEGIN
     CREATE TABLE SEN.TF_H6 (
@@ -368,8 +367,8 @@ BEGIN
 END
 GO
 
--- ---- 4-13. SEN.TF_H8  (8-hour — COMPUTED from H4; not available in tvDatafeed) ----
--- Populated by back-calculating from SEN.TF_H4 (2 consecutive H4 bars = 1 H8 bar).
+-- ---- 4-13. SEN.TF_H8  (8-hour — pulled directly by default) ----
+-- Fallback rebuild can derive H8 from SEN.TF_H4 when ENABLE_COMPUTED_TIMEFRAMES=1.
 IF OBJECT_ID('SEN.TF_H8', 'U') IS NULL
 BEGIN
     CREATE TABLE SEN.TF_H8 (
@@ -393,7 +392,7 @@ BEGIN
 END
 GO
 
--- ---- 4-14. SEN.TF_D1  (1-day — pulled directly from TradingView) ----
+-- ---- 4-14. SEN.TF_D1  (1-day — pulled directly from TradingView/Capital.com) ----
 IF OBJECT_ID('SEN.TF_D1', 'U') IS NULL
 BEGIN
     CREATE TABLE SEN.TF_D1 (
@@ -417,7 +416,7 @@ BEGIN
 END
 GO
 
--- ---- 4-15. SEN.TF_W  (1-week — pulled directly from TradingView) ----
+-- ---- 4-15. SEN.TF_W  (1-week — pulled directly from TradingView/Capital.com) ----
 -- BarTime for weekly candles is anchored to Monday 00:00 UTC (ISO 8601 convention).
 IF OBJECT_ID('SEN.TF_W', 'U') IS NULL
 BEGIN

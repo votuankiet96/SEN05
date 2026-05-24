@@ -66,15 +66,14 @@ GO
 -- 3A. DWH.Dim_Symbol — "Which instrument is this candle for?"
 --
 --     One row per tradable instrument (37 total).
---     Examples: EURUSD, Gold (XAU), S&P 500 (SPX), Bitcoin (BTCUSD)
+--     Examples: EURUSD, Gold (GOLD), S&P 500 CFD (US500), Bitcoin (BTCUSD)
 --
 --     KEY COLUMNS:
 --       SymbolID  — A stable number (e.g. 33) used in every candle row.
 --                   This number NEVER changes, even if the name changes.
---       Symbol    — The TradingView ticker name used by the Python pipeline.
---       RefName   — The broker's name for the same instrument.
---                   e.g. TradingView calls it "CAC40" but your broker
---                   might call it "FRA40". Can be NULL if not applicable.
+--       Symbol    — The runtime TradingView/Capital.com ticker used by Python.
+--       RefName   — Legacy or common reference ticker for the same instrument.
+--                   e.g. RefName stores "CAC40" while runtime Symbol is "FR40".
 --       AssetType — Category: "FOREX", "Indice", "Metal", or "Crypto".
 --       IsActive  — 1 = currently traded; 0 = retired/removed.
 -- -------------------------------------------------------
@@ -82,8 +81,8 @@ IF OBJECT_ID('DWH.Dim_Symbol', 'U') IS NULL  -- 'U' = user table; only create if
 BEGIN
     CREATE TABLE DWH.Dim_Symbol (
         SymbolID    INT          NOT NULL,   -- stable numeric PK; matches Id in dbo.Symbol
-        Symbol      NVARCHAR(20) NOT NULL,   -- TradingView ticker used by the Python pipeline
-        RefName     NVARCHAR(20) NULL,       -- broker / alternative name (nullable — not all symbols have one)
+        Symbol      NVARCHAR(20) NOT NULL,   -- runtime TradingView/Capital.com ticker used by Python
+        RefName     NVARCHAR(20) NULL,       -- legacy / alternative name (nullable — not all symbols have one)
         AssetType   NVARCHAR(20) NOT NULL,   -- category: FOREX | Indice | Metal | Crypto
         IsActive    BIT          NOT NULL DEFAULT 1,              -- 1 = currently traded; 0 = retired symbol
         CreatedAt   DATETIME2    NOT NULL DEFAULT SYSUTCDATETIME(), -- UTC timestamp of row insert
@@ -97,13 +96,14 @@ GO
 -- -------------------------------------------------------
 -- 3B. DWH.Dim_Timeframe
 --     One row per timeframe supported by the pipeline.
---     15 timeframes total, split into two groups:
+--     15 timeframes total. Current runtime pulls all 15 directly from
+--     TradingView/Capital.com WebSocket:
 --
---     DIRECT (10) — pulled natively from TradingView via tvDatafeed:
---       M5, M15, M30, M45, H1, H2, H3, H4, D1, W
+--       M5, M10, M15, M20, M30, M45, H1, M90,
+--       H2, H3, H4, H6, H8, D1, W
 --
---     COMPUTED (5) — tvDatafeed does not offer these, so the pipeline
---       derives them by bucketing a finer-grained source timeframe:
+--     The former computed timeframes remain available as fallback/rebuild
+--     targets when ENABLE_COMPUTED_TIMEFRAMES=1:
 --       M10 (2×M5)  M20 (4×M5)  M90 (3×M30)  H6 (2×H3)  H8 (2×H4)
 --
 --     Minutes column drives the bucket formula in usp_AggregateFromStaging.
@@ -116,7 +116,7 @@ BEGIN
         Code         VARCHAR(5)   NOT NULL,  -- short code used in procedure calls and Python config, e.g. 'M5', 'H4', 'W'
         Minutes      INT          NOT NULL,  -- candle duration in minutes; used in bucket arithmetic by usp_AggregateFromStaging
         SourceTable  VARCHAR(15)  NOT NULL,  -- short staging table name (schema not included), e.g. 'TF_M5'
-        Description  NVARCHAR(60) NULL,      -- human-readable note: source type and computation method
+        Description  NVARCHAR(160) NULL,     -- human-readable note: source type and computation method
         CONSTRAINT PK_Dim_Timeframe PRIMARY KEY CLUSTERED (TimeframeID),
         CONSTRAINT UQ_Dim_Timeframe_Code UNIQUE (Code)  -- one row per timeframe code
     );
@@ -126,24 +126,79 @@ BEGIN
     INSERT INTO DWH.Dim_Timeframe
         (TimeframeID, Code, Minutes, SourceTable, Description)
     VALUES
-        ( 1, 'M5',  5,     'TF_M5',  '5 min   — pulled directly from TradingView'),
-        ( 2, 'M10', 10,    'TF_M10', '10 min  — COMPUTED: 2×M5  via usp_AggregateFromStaging'),
-        ( 3, 'M15', 15,    'TF_M15', '15 min  — pulled directly from TradingView'),
-        ( 4, 'M20', 20,    'TF_M20', '20 min  — COMPUTED: 4×M5  via usp_AggregateFromStaging'),
-        ( 5, 'M30', 30,    'TF_M30', '30 min  — pulled directly from TradingView'),
-        ( 6, 'M45', 45,    'TF_M45', '45 min  — pulled directly from TradingView'),
-        ( 7, 'H1',  60,    'TF_H1',  '1 hour  — pulled directly from TradingView'),
-        ( 8, 'M90', 90,    'TF_M90', '90 min  — COMPUTED: 3×M30 via usp_AggregateFromStaging'),
-        ( 9, 'H2',  120,   'TF_H2',  '2 hour  — pulled directly from TradingView'),
-        (10, 'H3',  180,   'TF_H3',  '3 hour  — pulled directly from TradingView'),
-        (11, 'H4',  240,   'TF_H4',  '4 hour  — pulled directly from TradingView'),
-        (12, 'H6',  360,   'TF_H6',  '6 hour  — COMPUTED: 2×H3  via usp_AggregateFromStaging'),
-        (13, 'H8',  480,   'TF_H8',  '8 hour  — COMPUTED: 2×H4  via usp_AggregateFromStaging'),
-        (14, 'D1',  1440,  'TF_D1',  '1 day   — pulled directly from TradingView'),
-        (15, 'W',   10080, 'TF_W',   '1 week  — pulled directly from TradingView');
+        ( 1, 'M5',  5,     'TF_M5',  '5 min - direct TradingView/Capital.com'),
+        ( 2, 'M10', 10,    'TF_M10', '10 min - direct TradingView/Capital.com; fallback M5 aggregate'),
+        ( 3, 'M15', 15,    'TF_M15', '15 min - direct TradingView/Capital.com'),
+        ( 4, 'M20', 20,    'TF_M20', '20 min - direct TradingView/Capital.com; fallback M5 aggregate'),
+        ( 5, 'M30', 30,    'TF_M30', '30 min - direct TradingView/Capital.com'),
+        ( 6, 'M45', 45,    'TF_M45', '45 min - direct TradingView/Capital.com'),
+        ( 7, 'H1',  60,    'TF_H1',  '1 hour - direct TradingView/Capital.com'),
+        ( 8, 'M90', 90,    'TF_M90', '90 min - direct TradingView/Capital.com; fallback M30 aggregate'),
+        ( 9, 'H2',  120,   'TF_H2',  '2 hour - direct TradingView/Capital.com'),
+        (10, 'H3',  180,   'TF_H3',  '3 hour - direct TradingView/Capital.com'),
+        (11, 'H4',  240,   'TF_H4',  '4 hour - direct TradingView/Capital.com'),
+        (12, 'H6',  360,   'TF_H6',  '6 hour - direct TradingView/Capital.com; fallback H3 aggregate'),
+        (13, 'H8',  480,   'TF_H8',  '8 hour - direct TradingView/Capital.com; fallback H4 aggregate'),
+        (14, 'D1',  1440,  'TF_D1',  '1 day - direct TradingView/Capital.com'),
+        (15, 'W',   10080, 'TF_W',   '1 week - direct TradingView/Capital.com');
 
     PRINT 'Table DWH.Dim_Timeframe created (15 timeframes).';
 END
+GO
+
+-- Keep existing installations aligned with the current runtime metadata.
+-- This is safe to re-run and only widens the description column when needed.
+IF EXISTS (
+    SELECT 1
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'DWH'
+      AND TABLE_NAME = 'Dim_Timeframe'
+      AND COLUMN_NAME = 'Description'
+      AND CHARACTER_MAXIMUM_LENGTH < 160
+)
+BEGIN
+    ALTER TABLE DWH.Dim_Timeframe
+        ALTER COLUMN Description NVARCHAR(160) NULL;
+    PRINT 'Column DWH.Dim_Timeframe.Description widened to NVARCHAR(160).';
+END
+GO
+
+-- Upsert all 15 timeframes so fresh installs and reruns share the same metadata.
+-- TimeframeIDs are fixed and must never change because Fact_OHLCV stores them.
+MERGE DWH.Dim_Timeframe AS target
+USING (VALUES
+    ( 1, 'M5',  5,     'TF_M5',  '5 min - direct TradingView/Capital.com'),
+    ( 2, 'M10', 10,    'TF_M10', '10 min - direct TradingView/Capital.com; fallback M5 aggregate'),
+    ( 3, 'M15', 15,    'TF_M15', '15 min - direct TradingView/Capital.com'),
+    ( 4, 'M20', 20,    'TF_M20', '20 min - direct TradingView/Capital.com; fallback M5 aggregate'),
+    ( 5, 'M30', 30,    'TF_M30', '30 min - direct TradingView/Capital.com'),
+    ( 6, 'M45', 45,    'TF_M45', '45 min - direct TradingView/Capital.com'),
+    ( 7, 'H1',  60,    'TF_H1',  '1 hour - direct TradingView/Capital.com'),
+    ( 8, 'M90', 90,    'TF_M90', '90 min - direct TradingView/Capital.com; fallback M30 aggregate'),
+    ( 9, 'H2',  120,   'TF_H2',  '2 hour - direct TradingView/Capital.com'),
+    (10, 'H3',  180,   'TF_H3',  '3 hour - direct TradingView/Capital.com'),
+    (11, 'H4',  240,   'TF_H4',  '4 hour - direct TradingView/Capital.com'),
+    (12, 'H6',  360,   'TF_H6',  '6 hour - direct TradingView/Capital.com; fallback H3 aggregate'),
+    (13, 'H8',  480,   'TF_H8',  '8 hour - direct TradingView/Capital.com; fallback H4 aggregate'),
+    (14, 'D1',  1440,  'TF_D1',  '1 day - direct TradingView/Capital.com'),
+    (15, 'W',   10080, 'TF_W',   '1 week - direct TradingView/Capital.com')
+) AS src (TimeframeID, Code, Minutes, SourceTable, Description)
+ON target.TimeframeID = src.TimeframeID
+WHEN NOT MATCHED THEN
+    INSERT (TimeframeID, Code, Minutes, SourceTable, Description)
+    VALUES (src.TimeframeID, src.Code, src.Minutes, src.SourceTable, src.Description)
+WHEN MATCHED AND EXISTS (
+    SELECT target.Code, target.Minutes, target.SourceTable, target.Description
+    EXCEPT
+    SELECT src.Code, src.Minutes, src.SourceTable, src.Description
+) THEN
+    UPDATE SET
+        Code = src.Code,
+        Minutes = src.Minutes,
+        SourceTable = src.SourceTable,
+        Description = src.Description;
+
+PRINT 'DWH.Dim_Timeframe metadata merged (15 timeframes).';
 GO
 
 -- -------------------------------------------------------
@@ -219,7 +274,8 @@ GO
 
    This is the central table of the data warehouse.
    One row = one fully processed OHLCV candle for a specific symbol and timeframe.
-   ALL 15 timeframes converge here — both directly pulled and computed candles.
+   ALL 15 timeframes converge here. They are pulled directly by default; fallback
+   rebuild jobs may also write derived candles when explicitly enabled.
 
    COLUMN NOTES:
      FactID      — surrogate BIGINT PK; never reused or exposed externally
@@ -229,7 +285,7 @@ GO
      BarTime     — candle open time in UTC; DATETIME2(0) = second precision
      [Open] / High / Low / [Close] — DECIMAL(18,8) for pip-level accuracy
      Volume      — nullable (FOREX spot has no centralised volume)
-     TickCount   — for direct pulls: always 1 (one bar = one raw candle from TradingView)
+     TickCount   — for direct pulls: always 1 (one bar = one raw candle from TradingView/Capital.com)
                    for aggregated candles: count of source bars merged into this candle
      CreatedAt   — UTC timestamp when the row was written to Fact_OHLCV
 
@@ -322,7 +378,7 @@ IF OBJECT_ID('dbo.Symbol', 'U') IS NULL
 BEGIN
     CREATE TABLE dbo.Symbol (
         Id      INT          NOT NULL,           -- stable numeric ID; used as SymbolID throughout the DWH
-        Symbol  NVARCHAR(20) NOT NULL,           -- TradingView ticker string used in Python data pull calls
+        Symbol  NVARCHAR(20) NOT NULL,           -- runtime TradingView/Capital.com ticker used in Python data pull calls
         RefName NVARCHAR(20) NULL,               -- broker or common alternative name (nullable — not all instruments have one)
         Type    NVARCHAR(20) NOT NULL,           -- instrument category: FOREX | Indice | Metal | Crypto
         CONSTRAINT PK_Symbol PRIMARY KEY CLUSTERED (Id)
@@ -335,19 +391,19 @@ GO
 MERGE dbo.Symbol AS target
 USING (VALUES
     -- ── Indices ──────────────────────────────────────────────────────────────
-    -- Symbol = TradingView ticker used in tvDatafeed API calls
-    -- RefName = common broker name (for reference / display)
-    ( 2, 'CAC40',  'FRA40',  'Indice'),   -- CAC 40 — France benchmark index     (TVC:CAC40)
-    ( 3, 'DAX',    'GER30',  'Indice'),   -- DAX 40 — Germany benchmark index    (XETR:DAX)
-    ( 4, 'HSI',    'HKG33',  'Indice'),   -- Hang Seng — Hong Kong index         (TVC:HSI)
-    ( 5, 'NI225',  'JPN225', 'Indice'),   -- Nikkei 225 — Japan index            (TVC:NI225)
-    ( 6, 'IBEX35', 'ESP35',  'Indice'),   -- IBEX 35 — Spain index               (TVC:IBEX35)
-    ( 7, 'UKX',    'UK100',  'Indice'),   -- FTSE 100 — United Kingdom index      (TVC:UKX)
-    ( 8, 'SPX',    'SPX500', 'Indice'),   -- S&P 500 — US large-cap index         (SP:SPX)
-    ( 9, 'NDX',    'NAS100', 'Indice'),   -- Nasdaq 100 — US tech index           (NASDAQ:NDX)
-    (10, 'DJI',    'US30',   'Indice'),   -- Dow Jones Industrial Average — US    (TVC:DJI)
+    -- Symbol = runtime TradingView/Capital.com ticker used by config.py
+    -- RefName = legacy/common ticker kept for reference / display
+    ( 2, 'FR40',  'CAC40',  'Indice'),   -- CAC 40 — Capital.com CFD ticker
+    ( 3, 'DE40',  'DAX',    'Indice'),   -- DAX 40 — Capital.com CFD ticker
+    ( 4, 'HK50',  'HSI',    'Indice'),   -- Hang Seng 50 — Capital.com CFD ticker
+    ( 5, 'J225',  'NI225',  'Indice'),   -- Nikkei 225 — Capital.com CFD ticker
+    ( 6, 'SP35',  'IBEX35', 'Indice'),   -- IBEX 35 — Capital.com CFD ticker
+    ( 7, 'UK100', 'UKX',    'Indice'),   -- FTSE 100 — Capital.com CFD ticker
+    ( 8, 'US500', 'SPX',    'Indice'),   -- S&P 500 — Capital.com CFD ticker
+    ( 9, 'US100', 'NDX',    'Indice'),   -- Nasdaq 100 — Capital.com CFD ticker
+    (10, 'US30',  'DJI',    'Indice'),   -- Dow Jones 30 — Capital.com CFD ticker
     -- ── FOREX pairs ──────────────────────────────────────────────────────────
-    -- All pulled from FX_IDC exchange via tvDatafeed
+    -- All pulled from Capital.com via TradingView WebSocket
     (11, 'AUDCAD', 'AUDCAD', 'FOREX'),
     (12, 'AUDJPY', 'AUDJPY', 'FOREX'),
     (13, 'AUDNZD', 'AUDNZD', 'FOREX'),
@@ -378,8 +434,8 @@ USING (VALUES
     -- IDs 42–47 intentionally skipped
     (48, 'USDCHF', 'USDCHF', 'FOREX'),
     -- ── Metal & Crypto ───────────────────────────────────────────────────────
-    (56, 'XAU',    'XAUUSD', 'Metal'),   -- Gold Spot (XAU/USD)   — TVC:GOLD
-    (81, 'BTCUSD', 'BTCUSD', 'Crypto')   -- Bitcoin / USD         — BINANCE:BTCUSD
+    (56, 'GOLD',   'XAU',    'Metal'),   -- Gold CFD — Capital.com ticker
+    (81, 'BTCUSD', 'BTCUSD', 'Crypto')   -- Bitcoin / USD — Capital.com ticker
 ) AS src (Id, Symbol, RefName, Type)
 ON target.Id = src.Id   -- match on stable numeric ID (never changes)
 -- Insert row if it doesn't exist yet

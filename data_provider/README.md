@@ -23,7 +23,7 @@ Nói ngắn gọn:
 3. `04_checker.py` kiểm tra chất lượng dữ liệu, sửa dữ liệu khi cần và xác minh sau sửa.
 4. `03_chart.py` + `03_chart.html` cho phép xem nhanh dữ liệu và indicator trên dashboard.
 5. Toàn bộ dữ liệu đi vào SQL Server theo mô hình `SEN -> DWH -> MART`.
-6. `SEN.ActiveTask` là bảng điều phối vận hành, dùng để khóa tạm và relay token xác nhận qua Telegram.
+6. `SEN.ActiveTask` là bảng điều phối vận hành, dùng để khóa tạm và relay payload/tín hiệu vận hành.
 
 ## 2. Giải thích nhanh cho người không code
 
@@ -55,9 +55,9 @@ Là khu vực chứa dữ liệu mới tải về nhưng chưa coi là “đã s
 
 Là bảng dữ liệu trung tâm. Khi một nến đã đi vào `DWH.Fact_OHLCV`, hệ thống coi đó là dữ liệu chuẩn để đọc và phân tích.
 
-### Timeframe phái sinh / computed timeframe là gì?
+### Timeframe phái sinh / computed fallback là gì?
 
-Một số khung không kéo trực tiếp từ TradingView mà được gộp từ khung nhỏ hơn:
+Runtime hiện tại kéo trực tiếp cả 15 timeframe từ TradingView/Capital.com. Các khung dưới đây chỉ còn là fallback/rebuild khi bật `ENABLE_COMPUTED_TIMEFRAMES=1`:
 
 - `M10` từ `M5`
 - `M20` từ `M5`
@@ -77,7 +77,7 @@ TradingView / tvDatafeed / WebSocket
                             |            |
 04_checker.py --------------+            v
                                          DWH.usp_LoadDirect
-                                         DWH.usp_AggregateFromStaging
+                                         DWH.usp_AggregateFromStaging (fallback)
                                                   |
                                                   v
                                            DWH.Fact_OHLCV
@@ -91,7 +91,7 @@ TradingView / tvDatafeed / WebSocket
 
 SEN.ActiveTask
   - lock vận hành
-  - relay token Telegram
+  - relay payload / legacy token
   - điều phối giữa checker / ws_live / pipeline
 ```
 
@@ -133,7 +133,7 @@ Các đối tượng chính:
 
 ### 4.3. Tầng `MART`
 
-Đây là lớp đọc dữ liệu thân thiện cho ứng dụng tiêu thụ.
+Đây là lớp đọc dữ liệu thân thiện cho truy vấn SQL và các consumer nhẹ. Runtime Python hiện tại vẫn đọc trực tiếp `DWH.Fact_OHLCV` thông qua các loader trong `modules` và `core_python`.
 
 Các đối tượng chính:
 
@@ -143,7 +143,7 @@ Các đối tượng chính:
 Ý nghĩa:
 
 - `v_OHLCV` nối dữ liệu fact với dimension để dễ đọc.
-- `usp_GetLatestCandles` là API SQL đơn giản cho dashboard hoặc strategy lấy N nến gần nhất.
+- `usp_GetLatestCandles` là API SQL đơn giản để lấy N nến gần nhất theo symbol/timeframe.
 
 ### 4.4. Điều phối vận hành bằng `SEN.ActiveTask`
 
@@ -151,7 +151,7 @@ Các đối tượng chính:
 
 1. Giữ lock khi một tiến trình đang làm việc nhạy cảm.
 2. Có TTL qua `ExpiresAt` để tránh khóa treo vô hạn nếu process bị kill.
-3. Dùng `Payload` để ghi nhận `/confirm_TOKEN` hoặc `/skip_TOKEN` từ Telegram.
+3. Dùng `Payload` cho tín hiệu vận hành hoặc legacy token relay. Runtime Discord hiện tại là một chiều nên không nhận lệnh `/confirm_TOKEN` hoặc `/skip_TOKEN` trong luồng mặc định.
 
 Đây là lý do file `06_active_task.sql` rất quan trọng cho runtime, dù nó không liên quan trực tiếp đến dữ liệu nến.
 
@@ -166,7 +166,7 @@ Luồng này do `01_data_pipeline.py` điều phối.
 3. Chuẩn hóa DataFrame, lọc dữ liệu lỗi.
 4. Ghi vào `SEN.TF_*`.
 5. Chạy ETL sang `DWH.Fact_OHLCV`.
-6. Tính lại timeframe phái sinh nếu cần.
+6. Tính lại timeframe phái sinh chỉ khi bật fallback computed timeframe.
 
 ### 5.2. Live / intra-day
 
@@ -188,7 +188,7 @@ Luồng này do `04_checker.py` điều phối.
 3. So sánh thiếu/dư/sai OHLC/volume.
 4. Nếu là lỗi lõi hoặc mismatch vượt ngưỡng thì đưa vào danh sách cần xử lý.
 5. Mặc định có thể auto-repair theo lô an toàn.
-6. Nếu bật `--manual-confirm` thì mới chờ Telegram xác nhận.
+6. Nếu bật `--manual-confirm`, checker chỉ gửi thông báo Discord; Discord webhook là một chiều nên runtime hiện tại không chờ phản hồi tương tác.
 7. Sau sửa phải verify lại.
 
 ### 5.4. Dashboard
@@ -210,7 +210,7 @@ Nó:
 
 ### `DWH.usp_AggregateFromStaging`
 
-Dùng cho timeframe phái sinh.
+Dùng cho fallback/rebuild timeframe phái sinh, không phải luồng mặc định khi hệ thống đang kéo trực tiếp đủ 15 timeframe.
 
 Lưu ý quan trọng:
 
@@ -239,7 +239,7 @@ Dùng để lấy nhanh N nến gần nhất theo symbol/timeframe.
 
 - `_helpers.py`: helper chung cho logging, validate, retry, gap detection, repull an toàn, recompute TF phái sinh.
 - `_task_lock.py`: lock phân tán và token relay qua DB.
-- `_telegram.py`: gửi cảnh báo Telegram, nghe bot command, relay kết quả xác nhận.
+- `_discord.py`: gửi cảnh báo qua webhook/notification channel đang dùng bởi runtime.
 - `_tv_auth.py`: quản lý auth TradingView, refresh token, guest fallback.
 - `_tv_coord.py`: điều phối để historical job và live batch không đè nhau ở thời điểm nhạy cảm.
 - `__init__.py`: package marker.
@@ -248,7 +248,7 @@ Dùng để lấy nhanh N nến gần nhất theo symbol/timeframe.
 
 - `01_data_pipeline.py`: historical load và daily backfill.
 - `02_ws_live.py`: live updater dạng batch WebSocket.
-- `04_checker.py`: checker, repair, continuity check, rebuild computed TF.
+- `04_checker.py`: checker, repair, continuity check, rebuild computed TF khi fallback được bật.
 
 ### 7.4. Quan sát dữ liệu
 
@@ -300,7 +300,7 @@ Chế độ chính:
 
 - `--dry-run`: chỉ quét
 - mặc định: auto-repair an toàn
-- `--manual-confirm`: cần Telegram xác nhận trước khi sửa
+- `--manual-confirm`: gửi cảnh báo Discord trước khi sửa; webhook một chiều nên không nhận phản hồi tương tác
 
 Khả năng mở rộng sẵn trong file:
 
@@ -314,7 +314,7 @@ Khả năng mở rộng sẵn trong file:
 Đây là mode read-only phục vụ kiểm tra dữ liệu bằng mắt:
 
 - liệt kê symbol
-- liệt kê timeframe direct/computed
+- liệt kê timeframe theo nhóm direct/fallback computed
 - trả OHLCV
 - tính indicator server-side
 
@@ -343,7 +343,7 @@ Giảm thiểu hiện có:
 - `_tv_auth.py` có nhiều tầng fallback
 - refresh token trước batch
 - refresh mid-run khi auth lỗi
-- cảnh báo Telegram nếu guest mode kéo dài
+- cảnh báo Discord nếu guest mode kéo dài
 
 ### 10.2. Race condition giữa ws_live và checker
 
@@ -372,7 +372,7 @@ Giảm thiểu hiện có:
 - queue riêng cho DB worker
 - overflow buffer trong RAM
 - SQLite spool bền hơn RAM
-- backlog tracking và Telegram alert
+- backlog tracking và Discord alert
 
 ### 10.4. Sửa nhầm do false positive
 
@@ -464,4 +464,4 @@ Trình tự chạy điển hình:
 - live và repair phải được điều phối
 - auth TradingView là một rủi ro vận hành thực sự
 - `SEN.ActiveTask` là hạ tầng điều phối, không phải bảng dữ liệu nến
-- checker mặc định hiện có thể auto-repair, không còn là “chỉ hỏi Telegram” như mô tả cũ
+- checker mặc định hiện có thể auto-repair, không còn là luồng hỏi xác nhận tương tác như mô tả cũ

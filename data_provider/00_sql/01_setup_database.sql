@@ -94,9 +94,8 @@ GO
 
      MART (Data MARt)
        The "display case." Pre-built views and stored procedures that
-       make the data easy to consume. The trading engine and strategy
-       code read ONLY from MART — they never touch SEN or DWH directly.
-       This means we can reorganize the warehouse without breaking anything.
+       make the data easy to consume. Current Python runtime loaders read
+       DWH.Fact_OHLCV directly; MART remains a convenient SQL-facing read API.
 
    WHY IS CREATE SCHEMA WRAPPED IN EXEC()?
      SQL Server has a quirk: CREATE SCHEMA must be the ONLY statement

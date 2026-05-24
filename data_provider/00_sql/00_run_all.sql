@@ -1,10 +1,10 @@
 /* ============================================================
-   UPDATED NOTE:
-   - This installer should include `06_active_task.sql` when you want the full
-     `data_provider` runtime, not only the warehouse core.
-   - `04_business_objects.sql` already ends with the safer patched definition of
-     `DWH.usp_AggregateFromStaging`; the standalone patch file is kept only for
-     maintenance / backport scenarios.
+   INSTALLER NOTE:
+   - This file includes the full data_provider runtime schema, including
+     `06_active_task.sql`.
+   - The current runtime pulls all 15 timeframes directly from
+     TradingView/Capital.com by default. Computed timeframe aggregation remains
+     available only as a fallback/maintenance path.
    ============================================================ */
 
 /* ============================================================
@@ -52,16 +52,17 @@
        D1  = 1-day candle      (zoomed out, for big-picture trends)
        W   = 1-week candle     (very zoomed out)
 
-     This database supports 15 timeframes:
-       10 are pulled directly from TradingView (a free data source)
-       5 are computed by combining smaller candles (e.g. two 5-min bars = one 10-min bar)
+     This database supports 15 timeframes. The current runtime pulls all 15
+     directly from TradingView/Capital.com by default. The former computed
+     timeframes (M10, M20, M90, H6, H8) can still be rebuilt from smaller
+     bars only when the fallback mode is explicitly enabled.
 
    WHAT ARE THE 37 INSTRUMENTS?
-       9 Stock Indices : CAC40 (France), DAX (Germany), Hang Seng (HK),
-                         Nikkei (Japan), IBEX (Spain), FTSE (UK),
-                         S&P 500, Nasdaq 100, Dow Jones (US)
+       9 Stock Indices : FR40 (France), DE40 (Germany), HK50 (HK),
+                         J225 (Japan), SP35 (Spain), UK100 (UK),
+                         US500, US100, US30 (US)
       26 FOREX Pairs   : EURUSD, GBPUSD, USDJPY, etc. (currency exchanges)
-       1 Metal          : Gold (XAU/USD)
+       1 Metal          : Gold (GOLD)
        1 Crypto         : Bitcoin (BTC/USD)
 
    TOTAL DATA VOLUME:
@@ -82,7 +83,7 @@
    │  e.g. SEN.TF_M5, SEN.TF_H1, SEN.TF_D1, etc.          │
    │                                                         │
    │  PURPOSE: Temporary landing zone for raw data.          │
-   │  The Python pipeline downloads candles from TradingView │
+   │  The Python pipeline downloads candles from TV/Capital  │
    │  and dumps them here FIRST. Data may be incomplete or   │
    │  contain duplicates at this stage — that's OK.          │
    │                                                         │
@@ -122,9 +123,9 @@
    │  - v_OHLCV view: human-readable candle data             │
    │  - usp_GetLatestCandles: "give me the last 200 bars"   │
    │                                                         │
-   │  PURPOSE: Easy-to-use interface for the trading engine. │
-   │  The strategy code and dashboards read from here.       │
-   │  They NEVER touch SEN or DWH tables directly.           │
+   │  PURPOSE: Easy-to-use SQL-facing read interface.        │
+   │  Current Python loaders read DWH.Fact_OHLCV directly;  │
+   │  MART remains useful for manual SQL and light consumers.│
    │                                                         │
    │  Think of it like a library's search catalog:           │
    │  you don't go into the storage room — you use the       │
@@ -138,7 +139,7 @@
 
    Step 1: PULL DATA
      The Python pipeline (01_data_pipeline.py) connects to TradingView
-     and downloads candles for all 37 symbols × 10 direct timeframes.
+     and downloads candles for all 37 symbols × 15 direct timeframes.
 
    Step 2: INSERT INTO STAGING
      Raw candles land in the matching SEN.TF_* staging table.
@@ -151,9 +152,9 @@
      It checks "does this candle already exist?" before inserting — so it's
      safe to run multiple times without creating duplicates.
 
-   Step 4: COMPUTE DERIVED TIMEFRAMES
-     Stored procedure DWH.usp_AggregateFromStaging creates the 5 timeframes
-     that TradingView doesn't provide:
+   Step 4: OPTIONAL FALLBACK DERIVED TIMEFRAMES
+     Stored procedure DWH.usp_AggregateFromStaging can rebuild the former
+     computed timeframes when fallback mode is explicitly enabled:
        - Takes M5 candles and merges every 2 into M10, every 4 into M20
        - Takes M30 candles and merges every 3 into M90
        - Takes H3 candles and merges every 2 into H6
@@ -161,9 +162,10 @@
      The "merging" means: Open = first bar's open, Close = last bar's close,
      High = highest high, Low = lowest low, Volume = sum of all volumes.
 
-   Step 5: READ BY TRADING ENGINE
-     The strategy code calls MART.usp_GetLatestCandles or queries MART.v_OHLCV
-     to get clean, ready-to-use candle data for analysis and trade signals.
+   Step 5: READ BY RUNTIME AND TOOLS
+     Current Python loaders query DWH.Fact_OHLCV directly for speed and repair
+     workflows. MART.usp_GetLatestCandles and MART.v_OHLCV remain available as
+     SQL-facing convenience APIs.
 
 
    ============================================================
@@ -209,7 +211,7 @@
 
      e) dbo.Symbol (37 rows — master list)
         The "source of truth" for instrument definitions.
-        Contains: ID, TradingView ticker name, broker name, asset type.
+        Contains: ID, runtime Capital.com ticker, legacy/reference name, asset type.
         Changes here propagate to DWH.Dim_Symbol automatically.
 
    WHY IT'S NEEDED:
@@ -252,18 +254,18 @@
 
      b) MART.usp_GetLatestCandles (Stored Procedure)
         A reusable query: "Give me the latest 500 candles for EURUSD H1."
-        The trading engine calls this instead of writing raw SQL.
+        SQL tools can call this instead of writing raw joins.
         Returns newest candles first (most recent = row 1).
 
      c) DWH.usp_LoadDirect (ETL Procedure)
         The "conveyor belt" that moves data from staging → Fact_OHLCV.
-        Used for the 10 timeframes pulled directly from TradingView.
+        Used for the 15 timeframes pulled directly from TradingView/Capital.com.
         Checks for duplicates before inserting (safe to run repeatedly).
         Has a security whitelist: only accepts the 15 known table names
         to prevent SQL injection attacks.
 
-     d) DWH.usp_AggregateFromStaging (ETL Procedure)
-        The "calculator" that creates the 5 computed timeframes.
+     d) DWH.usp_AggregateFromStaging (Fallback ETL Procedure)
+        The "calculator" that can rebuild the 5 fallback computed timeframes.
         Takes smaller candles, groups them into time buckets, and
         merges them into larger candles using OHLCV aggregation rules.
         Also has whitelist security and idempotency (safe to re-run).
@@ -276,7 +278,7 @@
    ─────────────────────────────
    WHAT IT DOES:
      Runs 5 check queries to confirm everything was created correctly:
-       1. Lists all tables (expect 19: 15 staging + 4 DWH)
+       1. Lists all tables (expect 20: 15 staging + ActiveTask + 4 DWH)
        2. Lists all procedures and views (expect 4)
        3. Shows all 37 symbols
        4. Shows all 15 timeframes
@@ -295,14 +297,13 @@
    A: Safety. If TradingView sends corrupted data, it stays in staging.
       The fact table only gets data that passes validation.
       If ETL fails mid-way, you can fix the issue and re-run without
-      pulling from TradingView again — the raw data is still in staging.
+      pulling from TradingView/Capital.com again — the raw data is still in staging.
 
    Q: Why 3 schemas instead of putting everything in one place?
-   A: Separation of concerns. The Python pipeline only writes to SEN.
-      The ETL procedures move data from SEN → DWH. The trading engine
-      only reads from MART. No component touches another's tables.
-      This means you can change the warehouse structure without
-      breaking the pipeline or the trading engine.
+   A: Separation of concerns. The Python pipeline writes to SEN staging,
+      then ETL moves data from SEN → DWH. Runtime loaders currently read
+      DWH.Fact_OHLCV directly, while MART provides a stable SQL-facing
+      convenience layer.
 
    Q: Why dimension tables instead of just storing "EURUSD" as text?
    A: Efficiency and consistency. "EURUSD" is 6 characters × millions
@@ -335,8 +336,8 @@
      02_core_tables.sql     — Dimension tables, Fact table, Symbol master
      03_staging_tables.sql  — All 15 SEN.TF_* staging tables
      04_business_objects.sql — Views, MART procs, ETL procs
-     05_verify.sql          — Verification queries; prints SETUP COMPLETE
      06_active_task.sql     — Runtime lock / token relay table used by Python scripts
+     05_verify.sql          — Verification queries; prints SETUP COMPLETE
 
    The :r paths below include each file in sequence.
    ============================================================ */
@@ -345,5 +346,5 @@
 :r "02_core_tables.sql"
 :r "03_staging_tables.sql"
 :r "04_business_objects.sql"
-:r "05_verify.sql"
 :r "06_active_task.sql"
+:r "05_verify.sql"
