@@ -47,5 +47,4 @@ output.
 
 ## Files intentionally kept
 
-- `open_chart.ps1` and `open_chart.bat`: core Python chart launcher.
-- `run_combo_chart.ps1`: combo strategy chart launcher.
+- `open_chart.ps1` and `open_chart.bat`: core Python strategy/export dashboard launcher.
