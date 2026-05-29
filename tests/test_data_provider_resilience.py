@@ -5,7 +5,7 @@ Phạm vi test:
   - ws_live: DB worker retry, spool cap, deferred ETL, watermark, startup
   - db_connector: insert_staging_batch MERGE upsert, delete_ohlcv_bars batch
   - _task_lock: token generation, advisory lock, is_locked cache
-  - 04_checker: _query_bar_times exception safety, _repair_direct_window ETL retry
+  - checker app: _query_bar_times exception safety, _repair_direct_window ETL retry
   - _helpers / validate logic
 
 Chạy:
@@ -34,8 +34,10 @@ import pytest
 _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
-if str(_ROOT / "data_provider") not in sys.path:
-    sys.path.insert(0, str(_ROOT / "data_provider"))
+
+WS_LIVE_SRC = _ROOT / "data_provider" / "apps" / "ws_live.py"
+CHECKER_SRC = _ROOT / "data_provider" / "apps" / "checker.py"
+HELPERS_SRC = _ROOT / "data_provider" / "common" / "helpers.py"
 
 
 # =============================================================================
@@ -62,18 +64,18 @@ def _make_ohlcv_df(n: int = 5, start: str = "2024-01-01") -> pd.DataFrame:
 # =============================================================================
 
 class TestTaskLock:
-    """Kiểm tra _task_lock.py sau khi đổi sang secrets."""
+    """Kiểm tra data_provider.common.locks sau khi đổi sang secrets."""
 
     def test_generate_token_length(self):
         """Token phải đúng 8 ký tự."""
-        from data_provider._task_lock import generate_token
+        from data_provider.common.locks import generate_token
         tok = generate_token()
         assert len(tok) == 8, f"Expected 8 chars, got {len(tok)}"
 
     def test_generate_token_charset(self):
         """Token chỉ gồm chữ hoa A-Z và số 0-9."""
         import string
-        from data_provider._task_lock import generate_token
+        from data_provider.common.locks import generate_token
         allowed = set(string.ascii_uppercase + string.digits)
         for _ in range(20):
             tok = generate_token()
@@ -81,7 +83,7 @@ class TestTaskLock:
 
     def test_generate_token_uses_secrets(self):
         """generate_token() phải dùng secrets.choice, không phải random.choices."""
-        import data_provider._task_lock as tl
+        import data_provider.common.locks as tl
         import inspect
         src = inspect.getsource(tl.generate_token)
         assert "secrets" in src, "generate_token phải dùng secrets module"
@@ -89,13 +91,13 @@ class TestTaskLock:
 
     def test_generate_token_uniqueness(self):
         """1000 token phải không trùng nhau (xác suất lý thuyết cực thấp)."""
-        from data_provider._task_lock import generate_token
+        from data_provider.common.locks import generate_token
         tokens = [generate_token() for _ in range(1000)]
         assert len(set(tokens)) == 1000, "Token collision detected in 1000 samples"
 
     def test_is_locked_cache_ttl(self):
         """is_locked() phải cache kết quả trong vòng 30 giây."""
-        from data_provider import _task_lock as tl
+        from data_provider.common import locks as tl
 
         call_count = 0
 
@@ -108,7 +110,7 @@ class TestTaskLock:
             conn.cursor.return_value = cursor
             return conn
 
-        with patch("data_provider._task_lock.get_connection", side_effect=mock_conn):
+        with patch("data_provider.common.locks.get_connection", side_effect=mock_conn):
             tl._lock_cache["checked_at"] = 0.0  # Invalidate cache
             tl.is_locked("test_task")
             first_count = call_count
@@ -120,7 +122,7 @@ class TestTaskLock:
     def test_request_confirm_returns_timeout_immediately(self):
         """request_confirm() phải trả về 'timeout' ngay lập tức (Discord stub)."""
         import inspect
-        from data_provider._task_lock import request_confirm
+        from data_provider.common.locks import request_confirm
 
         src = inspect.getsource(request_confirm)
         # Phải trả về 'timeout' — không có polling loop
@@ -266,26 +268,26 @@ class TestWsLiveDbWorkerRetry:
 
     def test_db_worker_retry_logic_in_source(self):
         """Source code phải có vòng retry cho BƯỚC A (staging)."""
-        src_path = _ROOT / "data_provider" / "02_ws_live.py"
+        src_path = WS_LIVE_SRC
         src = src_path.read_text(encoding="utf-8")
         assert "_DB_WORKER_RETRIES" in src, "DB worker phải có _DB_WORKER_RETRIES constant"
         assert "_staging_ok" in src, "DB worker phải có flag _staging_ok"
 
     def test_db_worker_retry_count_is_3(self):
         """Số lần retry phải là 3."""
-        src_path = _ROOT / "data_provider" / "02_ws_live.py"
+        src_path = WS_LIVE_SRC
         src = src_path.read_text(encoding="utf-8")
         assert "_DB_WORKER_RETRIES = 3" in src, "Retry count phải là 3"
 
     def test_db_worker_retry_waits_5s(self):
         """Retry phải chờ 5 giây giữa các lần thử."""
-        src_path = _ROOT / "data_provider" / "02_ws_live.py"
+        src_path = WS_LIVE_SRC
         src = src_path.read_text(encoding="utf-8")
         assert "_shutdown.wait(5)" in src, "DB worker retry phải wait 5s giữa các lần thử"
 
     def test_db_worker_retry_alerts_discord_on_final_fail(self):
         """Sau 3 lần thất bại, phải gọi _tg_alert với mức ERROR."""
-        src_path = _ROOT / "data_provider" / "02_ws_live.py"
+        src_path = WS_LIVE_SRC
         src = src_path.read_text(encoding="utf-8")
         # Tìm đoạn code sau "Staging FAILED"
         assert "Staging FAILED" in src, "Phải có error message 'Staging FAILED'"
@@ -372,14 +374,14 @@ class TestWsLiveSpoolCap:
         assert count_after == 2, f"Phải còn 2 entries mới, còn {count_after}"
 
     def test_max_spool_rows_constant_exists(self):
-        """MAX_SPOOL_ROWS phải được định nghĩa trong 02_ws_live.py."""
-        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        """MAX_SPOOL_ROWS phải được định nghĩa trong apps/ws_live.py."""
+        src = (WS_LIVE_SRC).read_text(encoding="utf-8")
         assert "MAX_SPOOL_ROWS" in src, "MAX_SPOOL_ROWS phải được định nghĩa"
         assert "100_000" in src or "100000" in src, "MAX_SPOOL_ROWS phải là 100_000"
 
     def test_spool_cleanup_called_in_status_reporter(self):
         """_spool_cleanup_old() phải được gọi từ _status_reporter."""
-        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        src = (WS_LIVE_SRC).read_text(encoding="utf-8")
         # Tìm trong _status_reporter function
         reporter_start = src.find("def _status_reporter()")
         reporter_section = src[reporter_start:reporter_start + 3000]
@@ -390,7 +392,7 @@ class TestWsLiveSpoolCap:
 
     def test_sql_placeholders_are_parameterized(self):
         """ws_live SQL must use real parameter placeholders, not '-' characters."""
-        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        src = (WS_LIVE_SRC).read_text(encoding="utf-8")
         assert (
             '",".join("?" * len(WS_SYMBOL_IDS))' in src
             or '",".join("?" * len(ws_symbol_ids))' in src
@@ -418,7 +420,7 @@ class TestWsLiveSpoolCap:
 
     def test_spool_write_reports_rejection_when_full(self):
         """_spool_write() must tell the caller when the bar was not durably accepted."""
-        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        src = (WS_LIVE_SRC).read_text(encoding="utf-8")
         start = src.find("def _spool_write(")
         end = src.find("\ndef ", start + 1)
         fn_src = src[start:end]
@@ -428,7 +430,7 @@ class TestWsLiveSpoolCap:
 
     def test_db_worker_shutdown_drains_overflow_and_spool(self):
         """DB worker must wait for queue, RAM overflow, and SQLite spool before exit."""
-        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        src = (WS_LIVE_SRC).read_text(encoding="utf-8")
         start = src.find("def _db_worker()")
         end = src.find("\ndef ", start + 1)
         fn_src = src[start:end]
@@ -447,7 +449,7 @@ class TestWsLiveWatermark:
 
     def test_startup_log_uses_ws_symbols(self):
         """Startup log phải dùng len(WS_SYMBOLS), không phải len(SYMBOLS) * len(WS_TF_INTERVAL)."""
-        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        src = (WS_LIVE_SRC).read_text(encoding="utf-8")
         # Tìm block chứa "V5 started" trong logger.info
         v5_idx = src.find('"V5 started')
         assert v5_idx > 0, "Phải có format string 'V5 started' trong logger.info"
@@ -462,7 +464,7 @@ class TestWsLiveWatermark:
 
     def test_committed_watermark_not_updated_on_etl_fail(self):
         """Nếu ETL fail, committed watermark không được thay đổi."""
-        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        src = (WS_LIVE_SRC).read_text(encoding="utf-8")
         # Pattern an toàn: _set_committed_watermark chỉ gọi trong `else` của try/except ETL
         # Kiểm tra: _set_committed_watermark phải nằm trong else block của try ETL
         etl_section_idx = src.find("run_etl_direct(symbol_id, tf_code, staging_table)")
@@ -478,14 +480,14 @@ class TestWsLiveWatermark:
 
     def test_deferred_etl_retry_when_checker_releases(self):
         """Deferred ETL phải được retry khi checker release lock."""
-        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        src = (WS_LIVE_SRC).read_text(encoding="utf-8")
         assert "_deferred_etl" in src, "_deferred_etl dict phải tồn tại"
         assert "still_deferred" in src, "Phải có logic giữ lại item ETL fail"
 
 
     def test_batch_complete_called_once_per_batch(self):
         """_run_batch should update hourly stats once per batch."""
-        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        src = (WS_LIVE_SRC).read_text(encoding="utf-8")
         start = src.find("def _run_batch(")
         end = src.find("\ndef _on_batch_complete", start)
         fn_src = src[start:end]
@@ -495,7 +497,7 @@ class TestWsLiveWatermark:
 
     def test_ws_live_handoff_does_not_force_release_active_lock(self):
         """Startup must not force-delete the old instance lock when graceful handoff times out."""
-        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        src = (WS_LIVE_SRC).read_text(encoding="utf-8")
         handoff_start = src.find("if not ws_lock:")
         handoff_end = src.find("atexit.register", handoff_start)
         handoff_section = src[handoff_start:handoff_end]
@@ -505,13 +507,13 @@ class TestWsLiveWatermark:
 
     def test_ws_url_uses_query_separator(self):
         """TradingView closes the socket immediately when the from/date suffix uses '-'."""
-        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        src = (WS_LIVE_SRC).read_text(encoding="utf-8")
         assert '?from=chart%2F&date=' in src
         assert '-from=chart%2F&date=' not in src
 
     def test_fetch_requires_registered_sessions_for_success(self):
         """A socket close before _on_open must be treated as a failed fetch and retried."""
-        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        src = (WS_LIVE_SRC).read_text(encoding="utf-8")
         start = src.find("def fetch(")
         end = src.find("\n\n# =============================================================================", start)
         fn_src = src[start:end]
@@ -523,36 +525,36 @@ class TestWsLiveObservability:
     """Guardrails for live logging and health-signal semantics."""
 
     def test_rotating_logger_uses_resilient_handler(self):
-        src = (_ROOT / "data_provider" / "_helpers.py").read_text(encoding="utf-8")
+        src = (HELPERS_SRC).read_text(encoding="utf-8")
         assert "class ResilientRotatingFileHandler" in src
         assert "ResilientRotatingFileHandler(" in src
         assert "rollover_retry_sec" in src
 
     def test_ws_live_health_uses_market_gap_allowance(self):
-        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        src = (WS_LIVE_SRC).read_text(encoding="utf-8")
         assert "SYMBOL_OVERNIGHT_MINS" in src
         assert "def _freshness_threshold_minutes" in src
         assert "_freshness_threshold_minutes(sym_id, tf_code)" in src
         assert "_freshness_threshold_minutes(sid, tf_code)" in src
 
     def test_batch_status_does_not_call_no_new_bar_stale(self):
-        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        src = (WS_LIVE_SRC).read_text(encoding="utf-8")
         assert "OK  no new closed bar" in src
         assert "ok  (stale)" not in src
 
 
 # =============================================================================
-# NHÓM 6: 04_checker — Exception safety
+# NHÓM 6: checker app - Exception safety
 # =============================================================================
 
 class TestCheckerExceptionSafety:
-    """Kiểm tra 04_checker.py không crash khi gặp lỗi DB."""
+    """Kiểm tra apps/checker.py không crash khi gặp lỗi DB."""
 
     def test_query_bar_times_has_except_block(self):
         """_query_bar_times phải có except block trả về []."""
         import inspect
         # Import module checker
-        src = (_ROOT / "data_provider" / "04_checker.py").read_text(encoding="utf-8")
+        src = (CHECKER_SRC).read_text(encoding="utf-8")
         # Tìm function _query_bar_times
         start = src.find("def _query_bar_times(")
         end = src.find("\ndef ", start + 1)
@@ -562,7 +564,7 @@ class TestCheckerExceptionSafety:
 
     def test_repair_direct_window_has_etl_retry(self):
         """_repair_direct_window phải có retry loop cho run_etl_direct."""
-        src = (_ROOT / "data_provider" / "04_checker.py").read_text(encoding="utf-8")
+        src = (CHECKER_SRC).read_text(encoding="utf-8")
         start = src.find("def _repair_direct_window(")
         end = src.find("\ndef ", start + 1)
         fn_src = src[start:end]
@@ -572,7 +574,7 @@ class TestCheckerExceptionSafety:
 
     def test_manual_confirm_warning_in_source(self):
         """--manual-confirm path phải có warning và fall-through sang auto-repair."""
-        src = (_ROOT / "data_provider" / "04_checker.py").read_text(encoding="utf-8")
+        src = (CHECKER_SRC).read_text(encoding="utf-8")
         assert "manual-confirm không còn hoạt động" in src or \
                "manual_confirm" in src and "auto-repair" in src, (
             "--manual-confirm phải có warning message"
@@ -587,7 +589,7 @@ class TestCheckerExceptionSafety:
         Kiểm tra cấu trúc code: conn phải được khởi tạo trong try block
         để except bắt được khi get_connection() fail.
         """
-        src = (_ROOT / "data_provider" / "04_checker.py").read_text(encoding="utf-8")
+        src = (CHECKER_SRC).read_text(encoding="utf-8")
         fn_start = src.find("def _query_bar_times(")
         fn_end = src.find("\ndef ", fn_start + 1)
         fn_src = src[fn_start:fn_end]
@@ -631,7 +633,7 @@ class TestEndToEndFailureSimulation:
             return len(df)
 
         # Kiểm tra logic retry source
-        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        src = (WS_LIVE_SRC).read_text(encoding="utf-8")
         assert "_DB_WORKER_RETRIES = 3" in src, "Phải có 3 retries"
 
         # Simulate retry logic directly
@@ -767,7 +769,7 @@ class TestEndToEndFailureSimulation:
         Kịch bản: --manual-confirm được dùng.
         Phải có warning, không gọi request_confirm() (stub Discord).
         """
-        src = (_ROOT / "data_provider" / "04_checker.py").read_text(encoding="utf-8")
+        src = (CHECKER_SRC).read_text(encoding="utf-8")
 
         # Tìm đoạn sau `if not args.manual_confirm:` → đây là phần manual_confirm path
         # (elif/else sau if not args.manual_confirm)
@@ -798,7 +800,7 @@ class TestEndToEndFailureSimulation:
 
     def test_sim_token_generation_security(self):
         """Kiểm tra generate_token() không thể bị dự đoán với seed cố định."""
-        from data_provider._task_lock import generate_token
+        from data_provider.common.locks import generate_token
 
         # Nếu dùng random.seed() để fix seed → token vẫn phải khác nhau
         import random
@@ -939,7 +941,7 @@ class TestSystemSafetyStructure:
 
     def test_task_lock_acquire_release_symmetric(self):
         """acquire() và release() phải symmetric — release không raise khi task không tồn tại."""
-        from data_provider._task_lock import release
+        from data_provider.common.locks import release
 
         # release() với task không tồn tại phải là no-op (không raise)
         mock_conn = MagicMock()
@@ -947,7 +949,7 @@ class TestSystemSafetyStructure:
         mock_cursor.rowcount = 0  # Row không tồn tại
         mock_conn.cursor.return_value = mock_cursor
 
-        with patch("data_provider._task_lock.get_connection", return_value=mock_conn):
+        with patch("data_provider.common.locks.get_connection", return_value=mock_conn):
             try:
                 release("nonexistent_task_12345")
             except Exception as e:
@@ -955,19 +957,19 @@ class TestSystemSafetyStructure:
 
     def test_checker_etl_retry_count(self):
         """ETL retry trong checker phải là 3 lần."""
-        src = (_ROOT / "data_provider" / "04_checker.py").read_text(encoding="utf-8")
+        src = (CHECKER_SRC).read_text(encoding="utf-8")
         assert "_MAX_ETL_RETRIES = 3" in src, "Checker ETL retry phải là 3"
 
     def test_checker_etl_discord_alert_on_final_fail(self):
         """Checker phải gửi Discord alert khi ETL fail hết retry."""
-        src = (_ROOT / "data_provider" / "04_checker.py").read_text(encoding="utf-8")
+        src = (CHECKER_SRC).read_text(encoding="utf-8")
         assert "gap trong DB" in src or "gap tồn tại" in src, (
             "Phải có alert message về gap trong DB khi ETL fail"
         )
 
     def test_spool_write_cap_check_before_insert(self):
         """_spool_write phải kiểm tra COUNT trước khi INSERT."""
-        src = (_ROOT / "data_provider" / "02_ws_live.py").read_text(encoding="utf-8")
+        src = (WS_LIVE_SRC).read_text(encoding="utf-8")
         spool_write_start = src.find("def _spool_write(")
         spool_write_end = src.find("\ndef ", spool_write_start + 1)
         fn_src = src[spool_write_start:spool_write_end]

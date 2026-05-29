@@ -2,7 +2,7 @@
 Backend Flask cho dashboard xem nen va indicator tu kho du lieu.
 
 File nay khong tao du lieu moi. No chi doc du lieu da sach tu layer doc/phan tich
-va phuc vu cho `03_chart.html` qua mot so API nho:
+va phuc vu cho `dashboard/chart.html` qua mot so API nho:
 - `/api/symbols`
 - `/api/timeframes`
 - `/api/candles`
@@ -12,15 +12,15 @@ khong phai mot web app giao dich production-facing.
 """
 
 # =============================================================================
-# data_provider/03_chart.py  —  Chart dashboard (Flask + Lightweight Charts 4.2.1)
+# data_provider/apps/chart_server.py  —  Chart dashboard (Flask + Lightweight Charts 4.2.1)
 # Phiên bản : 5.0
 # =============================================================================
 # HƯỚNG DẪN QUẢN TRỊ NHANH
 # File này là REST API backend cho chart dashboard.
-# Frontend là file 03_chart.html (phục vụ tại http://127.0.0.1:8050)
+# Frontend là file dashboard/chart.html (phục vụ tại http://127.0.0.1:8050)
 #
 # Cấu trúc:
-#   GET /                                      → phục vụ 03_chart.html
+#   GET /                                      → phục vụ dashboard/chart.html
 #   GET /api/symbols                           → danh sách symbol theo nhóm
 #   GET /api/timeframes                        → danh sách TF chia 2 nhóm direct/computed
 #   GET /api/candles?symbol=X&tf=Y&bars=N      → dữ liệu OHLCV dạng JSON
@@ -32,7 +32,7 @@ khong phai mot web app giao dich production-facing.
 #   - Thêm _calc_indicators() cho MA, Bollinger Bands, MACD, ATR
 #
 # Cách chạy:
-#   python data_provider/03_chart.py
+#   python data_provider/apps/chart_server.py
 #   Mở trình duyệt: http://127.0.0.1:8050
 #   Dừng server  : Ctrl+C
 # =============================================================================
@@ -50,10 +50,11 @@ except ImportError:
     sys.exit(1)
 
 # Bootstrap: thêm project root vào path
-_ROOT = Path(__file__).resolve().parent.parent
+_ROOT = Path(__file__).resolve().parents[2]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+from data_provider.paths import DASHBOARD_DIR
 from config import DERIVED_TFS, DIRECT_TFS, TF_DISPLAY_ORDER
 from modules.data_health_loader import (
     load_active_locks,
@@ -70,7 +71,7 @@ from modules.db_connector import test_connection
 
 PORT         = 8050
 DEFAULT_BARS = 500
-_HERE        = Path(__file__).resolve().parent
+_HERE        = DASHBOARD_DIR
 
 # Timeframe groups come from config.py so the UI matches the active ingestion mode.
 _TF_DIRECT = [tf for tf in TF_DISPLAY_ORDER if tf in DIRECT_TFS]
@@ -87,8 +88,8 @@ app = Flask(__name__)
 
 @app.route("/")
 def index():
-    """Phục vụ file 03_chart.html — dashboard chính."""
-    return send_from_directory(_HERE, "03_chart.html")
+    """Phục vụ dashboard chính."""
+    return send_from_directory(_HERE, "chart.html")
 
 
 # ─── API: DANH SÁCH SYMBOL ───────────────────────────────────────────────────

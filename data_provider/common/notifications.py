@@ -16,7 +16,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-_PROJ = Path(__file__).resolve().parent.parent
+_PROJ = Path(__file__).resolve().parents[2]
 if str(_PROJ) not in sys.path:
     sys.path.insert(0, str(_PROJ))
 
@@ -34,9 +34,9 @@ _COLORS = {
 # Thay thế QUICK_COMMANDS_HINT của Telegram — giờ là hướng dẫn xem log
 QUICK_COMMANDS_HINT = (
     "\n-----------------\n"
-    "Details: check data_provider/logs/ or run manually\n"
-    "  04_checker.py --dry-run\n"
-    "  01_data_pipeline.py --mode gap"
+    "Details: check data_provider/runtime/logs/ or run manually\n"
+    "  python -m data_provider.apps.checker --dry-run\n"
+    "  python -m data_provider.apps.pipeline --mode gap"
 )
 
 
@@ -225,7 +225,7 @@ def tg_ask(
 def start_bot_listener() -> None:
     """No-op: Discord webhook không có kênh nhận lệnh ngược lại.
 
-    Giữ hàm này để 02_ws_live.py gọi mà không lỗi.
+    Giữ hàm này để ws_live.py gọi mà không lỗi.
     Trả về None thay vì Thread — ws_live không join thread này nên an toàn.
     """
     return None

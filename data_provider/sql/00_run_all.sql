@@ -138,7 +138,7 @@
    ============================================================
 
    Step 1: PULL DATA
-     The Python pipeline (01_data_pipeline.py) connects to TradingView
+     The Python pipeline (pipeline.py) connects to TradingView
      and downloads candles for all 37 symbols × 15 direct timeframes.
 
    Step 2: INSERT INTO STAGING

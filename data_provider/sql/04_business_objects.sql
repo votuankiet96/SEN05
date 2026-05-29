@@ -18,7 +18,7 @@
 
    ARCHITECTURE:
      TradingView/Capital.com WebSocket
-         │  Python 01_data_pipeline.py
+         │  Python pipeline.py
          ▼
      SEN.TF_*  (15 staging tables)
          │  usp_LoadDirect          (normal path: direct copy for all 15 TFs)

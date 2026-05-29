@@ -47,7 +47,7 @@ from core_python.strategies.registry import STRATEGIES
 
 ROOT = Path(__file__).resolve().parents[2]
 STATIC_DIR = Path(__file__).resolve().parent / "static"
-VENDOR_DIR = ROOT / "data_provider"
+VENDOR_DIR = ROOT / "data_provider" / "dashboard" / "static"
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8516

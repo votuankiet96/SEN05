@@ -19,9 +19,9 @@ from typing import Any
 import pandas as pd
 import websocket
 
-import _tv_auth
-import _logfmt
-from _tv_ws_history import (
+from data_provider.tv import auth as _tv_auth
+from data_provider.common import logfmt as _logfmt
+from data_provider.tv.ws_history import (
     TV_WS_TIMEZONE,
     WS_INTERVALS,
     _current_auth,

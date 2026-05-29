@@ -6,7 +6,7 @@ This script is intentionally read-only:
 - no staging/Fact ETL
 - no production config changes
 
-It resolves the current TradingView auth through data_provider/_tv_auth.py, opens a
+It resolves the current TradingView auth through data_provider/tv/auth.py, opens a
 raw TradingView WebSocket, requests increasingly large series for each timeframe,
 and reports how many bars TradingView actually returns.
 """
@@ -28,13 +28,11 @@ from typing import Any
 import websocket
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-if str(Path(__file__).resolve().parent) not in sys.path:
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import _tv_auth  # noqa: E402
+from data_provider.tv import auth as _tv_auth  # noqa: E402
 from config import SYMBOLS, TV_COOKIE, TF_DISPLAY_ORDER  # noqa: E402
 
 

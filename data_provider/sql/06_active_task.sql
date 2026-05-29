@@ -9,7 +9,7 @@
 --   Discord webhooks, so normal checker confirmations do not rely on an
 --   inbound bot listener.
 -- =============================================================================
--- data_provider/00_sql/06_active_task.sql
+-- data_provider/sql/06_active_task.sql
 -- Tạo bảng SEN.ActiveTask — dùng cho:
 --   1. DB-level distributed lock (ngăn Checker và WS ETL chạy đồng thời)
 --   2. Cross-process payload relay (legacy token result / runtime signal)

@@ -8,7 +8,6 @@
 pyodbc>=5.3.0
 
 # TradingView data feed (historical + live)
-tvdatafeed @ git+https://github.com/rongardF/tvdatafeed.git
 websocket-client>=1.9.0
 
 # Data processing

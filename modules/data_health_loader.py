@@ -1,7 +1,7 @@
 # =============================================================================
 # modules/data_health_loader.py - Read-only data health queries
 # =============================================================================
-# This module is intentionally read-only. It is used by data_provider/03_chart.py
+# This module is intentionally read-only. It is used by data_provider/apps/chart_server.py
 # to show database freshness, coverage, runtime locks, and staging backlog.
 
 from __future__ import annotations

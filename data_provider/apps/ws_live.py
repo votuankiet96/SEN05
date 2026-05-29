@@ -17,7 +17,7 @@ Nhung diem van hanh quan trong:
 """
 
 # =============================================================================
-# data_provider/02_ws_live.py  -  Cập nhật dữ liệu thời gian thực qua WebSocket
+# data_provider/apps/ws_live.py  -  Cập nhật dữ liệu thời gian thực qua WebSocket
 # Phiên bản     : V5 (Batch/Cron mode)
 # =============================================================================
 #
@@ -25,11 +25,11 @@ Nhung diem van hanh quan trong:
 #   Module cập nhật dữ liệu REAL-TIME - chạy liên tục 24/7, cứ mỗi 5 phút lại
 #   mở WebSocket tới TradingView, lấy 3–5 nến mới nhất, lưu vào DB rồi đóng.
 #
-#   Bổ sung cho 01_data_pipeline.py (chạy hàng ngày lúc 22:22 UTC):
+#   Bổ sung cho pipeline.py (chạy hàng ngày lúc 22:22 UTC):
 #   pipeline bù lịch sử -> ws_live giữ dữ liệu luôn mới trong ngày.
 #
 #   Phạm vi theo dõi: Indices, Metal, Crypto - KHÔNG theo dõi FOREX qua WS.
-#   (FOREX có lịch đóng/mở cửa phức tạp, được backfill bởi 01_data_pipeline.py)
+#   (FOREX có lịch đóng/mở cửa phức tạp, được backfill bởi pipeline.py)
 #
 # ─────────────────────────────────────────────────────────────────────────────
 # TẠI SAO DÙNG BATCH MODE (mở rồi đóng, không giữ kết nối liên tục)-
@@ -41,8 +41,8 @@ Nhung diem van hanh quan trong:
 # ─────────────────────────────────────────────────────────────────────────────
 # CÁCH CHẠY
 # ─────────────────────────────────────────────────────────────────────────────
-#   Bước 1: Chạy 01_data_pipeline.py trước để có đủ lịch sử trong DB
-#   Bước 2: python 02_ws_live.py   (chạy liên tục 24/7, không cần tham số)
+#   Bước 1: Chạy pipeline.py trước để có đủ lịch sử trong DB
+#   Bước 2: python ws_live.py   (chạy liên tục 24/7, không cần tham số)
 #   Dừng  : Ctrl + C  (thoát sạch - drain hết DB queue rồi mới dừng)
 #
 # ─────────────────────────────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ Nhung diem van hanh quan trong:
 #   8. WATERMARK         - chỉ lưu nến timestamp > watermark, không bao giờ duplicate
 #   9. BACKLOG TRACKING  - cặp miss ≥1 batch -> yêu cầu thêm bar (N_BARS_WS_BACKLOG)
 #                          để bù khoảng trống; miss > MAX_BACKLOG_BATCHES -> cảnh báo
-#   10. ETL DEFER        - 04_checker.py đang repair -> defer ghi Fact, giữ ở Staging
+#   10. ETL DEFER        - checker.py đang repair -> defer ghi Fact, giữ ở Staging
 #                          để tránh race condition giữa 2 tiến trình
 #   11. DISCORD ALERT    - cảnh báo khi lỗi, token hết hạn, queue áp lực
 #   12. BÁO CÁO MỖI GIỜ - gửi thống kê accepted / Fact rows / errors / queue_depth
@@ -120,7 +120,7 @@ from pathlib import Path  # Xử lý đường dẫn file theo chuẩn hiện đ
 # =============================================================================
 
 # Bootstrap: thêm project root vào path (harmless khi đã pip install -e .)
-_PROJ = Path(__file__).resolve().parent.parent   # data_provider/ -> project root
+_PROJ = Path(__file__).resolve().parents[2]
 if str(_PROJ) not in sys.path:
     sys.path.insert(0, str(_PROJ))
 
@@ -132,27 +132,28 @@ if str(_PROJ) not in sys.path:
 import pandas as pd  # DataFrame - cấu trúc bảng dữ liệu dùng để lưu trữ nến trước khi ghi DB
 import requests  # Gửi HTTP request - dùng để đăng nhập TradingView và gửi Discord webhook
 import websocket  # Thư viện WebSocket client - kết nối và nhận data real-time từ TradingView
-from _helpers import setup_logger, _validate_ohlcv_df  # Hàm khởi tạo logger + validate OHLCV
-from _discord import (
+from data_provider.common.helpers import setup_logger, _validate_ohlcv_df  # Hàm khởi tạo logger + validate OHLCV
+from data_provider.common.notifications import (
     QUICK_COMMANDS_HINT,
     start_bot_listener,
     tg_alert as _tg_alert,
     tg_send as _tg_send,
 )
-from _task_lock import (
+from data_provider.common.locks import (
     acquire as _acquire_task_lock,
     is_locked as _is_task_locked,
     release as _release_task_lock,
     renew as _renew_task_lock,
 )
-from _tv_coord import (
+from data_provider.tv.coord import (
     acquire_live_batch_window,
     is_ws_live_shutdown_requested,
     release_live_batch_window,
     request_ws_live_shutdown,
 )
-import _tv_auth  # TradingView auth module dùng chung (token cache, refresh, bootstrap)
-import _tv_ws_history
+from data_provider.tv import auth as _tv_auth  # TradingView auth module dùng chung (token cache, refresh, bootstrap)
+from data_provider.tv import ws_history as _tv_ws_history
+from data_provider.paths import LOG_DIR, WS_LIVE_LOG, WS_LIVE_PID, WS_OVERFLOW_SPOOL
 
 # =============================================================================
 # NHẬP CÁC MODULE NỘI BỘ CỦA PROJECT
@@ -193,12 +194,12 @@ WS_SYMBOLS = [s for s in SYMBOLS if s["asset_type"] in {"Indice", "Metal", "Cryp
 # KHỞI TẠO LOGGER
 # =============================================================================
 
-# Log file riêng cho ws_live (tách khỏi pipeline.log của 01_data_pipeline.py)
+# Log file riêng cho ws_live (tách khỏi pipeline.log của pipeline.py)
 # rotating=True -> resilient rotating file log 10 MB × 5 files (~60 MB tối đa)
-_LOG_DIR    = Path(__file__).resolve().parent / "logs"
-WS_LOG_FILE = str(_LOG_DIR / "ws_live.log")
+_LOG_DIR    = LOG_DIR
+WS_LOG_FILE = str(WS_LIVE_LOG)
 logger = setup_logger("ws_live", WS_LOG_FILE, rotating=True)
-_LOCAL_RUNTIME_LOCK_FILE = _LOG_DIR / "ws_live_runtime.pid"
+_LOCAL_RUNTIME_LOCK_FILE = WS_LIVE_PID
 
 
 # =============================================================================
@@ -247,7 +248,7 @@ SESSION_THROTTLE      = 0.15
 # Chu kỳ gửi báo cáo trạng thái lên Discord (3600 giây = 1 giờ)
 STATUS_INTERVAL_SEC   = 3600
 
-# Từ khóa nhận biết lỗi token - dùng chung với _tv_auth.py
+# Từ khóa nhận biết lỗi token - dùng chung với tv/auth.py
 TOKEN_EXPIRY_KEYWORDS = _tv_auth.TOKEN_EXPIRY_KEYWORDS
 
 # Số lần miss liên tiếp tối đa trước khi gửi cảnh báo Discord
@@ -288,7 +289,7 @@ TV_WS_TIMEZONE = os.environ.get("TV_WS_TIMEZONE", "Etc/UTC")
 # Ví dụ: khi có nến M5 mới -> tự động tính lại M10, M20
 _SOURCE_TO_COMPUTED = COMPUTED_TF_DEPS
 
-# HTTP retry constants - dùng chung với _tv_auth.py
+# HTTP retry constants - dùng chung với tv/auth.py
 HTTP_MAX_RETRIES    = _tv_auth.HTTP_MAX_RETRIES
 HTTP_BASE_DELAY_SEC = _tv_auth.HTTP_BASE_DELAY_SEC
 HTTP_MAX_DELAY_SEC  = _tv_auth.HTTP_MAX_DELAY_SEC
@@ -345,13 +346,13 @@ _overflow_lock = threading.Lock()  # Lock riêng để bảo vệ _overflow_buf
 # maxsize=2000 -> nếu DB worker ghi chậm, tối đa chứa 2000 nến chờ
 _db_queue: queue.Queue = queue.Queue(maxsize=DB_QUEUE_MAXSIZE)
 
-# Auth state - quản lý bởi _tv_auth.py (dùng _tv_auth._auth_token, _tv_auth._auth_lock, v.v.)
+# Auth state - quản lý bởi tv/auth.py (dùng _tv_auth._auth_token, _tv_auth._auth_lock, v.v.)
 
 # Đường dẫn file .env
 _ENV_FILE: Path = _PROJ / ".env"
 
 # Đường dẫn SQLite spool - durable buffer khi queue + overflow RAM đều đầy
-_SPOOL_DB   = Path(__file__).parent / ".overflow_spool.db"
+_SPOOL_DB   = WS_OVERFLOW_SPOOL
 _spool_lock = threading.Lock()
 
 # Bộ đếm số batch liên tiếp đang chạy ở guest mode
@@ -398,7 +399,7 @@ _pending_agg: set[tuple[int, str, str, str]] = set()
 
 # =============================================================================
 # AUTH FUNCTIONS - delegated to _tv_auth (shared auth module)
-# All TradingView authentication logic lives in data_provider/_tv_auth.py
+# All TradingView authentication logic lives in data_provider/tv/auth.py
 # =============================================================================
 
 def _http_request_with_retry(method, url, *, max_retries=HTTP_MAX_RETRIES,
@@ -519,7 +520,7 @@ def _load_watermarks() -> None:
         worst = max(stale, key=lambda x: x[2])
         logger.warning(
             "[STARTUP] Found %d old data pairs - worst: SymbolID=%d %s (%.0f minutes old). "
-            "Suggested fix: run 01_data_pipeline.py --mode gap first.",
+            "Suggested fix: run pipeline.py --mode gap first.",
             len(stale), worst[0], worst[1], worst[2],
         )
         _tg_alert(
@@ -565,7 +566,7 @@ def _is_market_expected_live(symbol_id: int, now_utc: datetime) -> bool:
 
 def _freshness_threshold_minutes(symbol_id: int, tf_code: str) -> int:
     """Return the stale threshold, including normal overnight market gaps."""
-    from _helpers import OVERNIGHT_GAP_MINUTES, TF_MINUTES
+    from data_provider.common.helpers import OVERNIGHT_GAP_MINUTES, TF_MINUTES
 
     tf_min = int(TF_MINUTES.get(tf_code, 60))
     threshold = tf_min * 3
@@ -991,7 +992,7 @@ def _checker_is_repairing() -> bool:
     if now - _checker_lock_cache["checked_at"] < _CHECKER_LOCK_TTL:
         return _checker_lock_cache["locked"]
     try:
-        from _task_lock import is_locked
+        from data_provider.common.locks import is_locked
         result = any(is_locked(task_name) for task_name in _WRITE_DEFER_LOCKS)
     except Exception:
         result = False   # fail-open
@@ -1043,7 +1044,7 @@ def _db_worker() -> None:
         key = (symbol_id, tf_code)
         accepted_count = len(df.index) if hasattr(df, "index") else 0
 
-        # Lọc bars sai alignment (DST artifact) - cùng logic với 01_data_pipeline
+        # Lọc bars sai alignment (DST artifact) - cùng logic với pipeline.
         df, _ = _validate_ohlcv_df(
             df,
             tv_symbol,
@@ -1353,7 +1354,7 @@ def _acquire_local_runtime_lock() -> bool:
     The DB lock is still the distributed guard, but this local file lock catches
     races between supervisors and manually-started scripts on the same machine.
     """
-    _LOG_DIR.mkdir(parents=True, exist_ok=True)
+    _LOCAL_RUNTIME_LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
     while True:
         try:
             fd = os.open(
@@ -2041,7 +2042,7 @@ class BatchFetcher:
                         "ERROR",
                         f"Data gap vinh vien: {_sym_name.get(pair[0], str(pair[0]))} [{pair[1]}]\n"
                         f"Da miss {count} batch lien tiep (~{count * 5} phut).\n"
-                        f"Chay 04_checker.py de quet va sua."
+                        f"Chay checker.py de quet va sua."
                         + QUICK_COMMANDS_HINT
                     )
                     _backlog.pop(pair, None)
@@ -2643,7 +2644,7 @@ def main() -> None:
         sys.exit(1)  # Thoát với mã lỗi 1 (lỗi nghiêm trọng)
 
     # Dọn lock hết hạn trước (dead-man switch: process bị kill mà không release)
-    from _task_lock import cleanup_expired as _cleanup_expired
+    from data_provider.common.locks import cleanup_expired as _cleanup_expired
     _cleanup_expired()
 
     ws_lock = _acquire_task_lock("ws_live_runtime", duration_min=60)

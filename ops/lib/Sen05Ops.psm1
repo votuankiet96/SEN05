@@ -26,11 +26,11 @@ function Get-Sen05Python {
 function Get-Sen05DataProviderCommandMap {
     $repoRoot = Get-Sen05RepoRoot
     return [ordered]@{
-        Pipeline = Join-Path $repoRoot "data_provider\01_data_pipeline.py"
-        WsLive   = Join-Path $repoRoot "data_provider\02_ws_live.py"
-        Checker  = Join-Path $repoRoot "data_provider\04_checker.py"
-        Chart    = Join-Path $repoRoot "data_provider\03_chart.py"
-        Probe    = Join-Path $repoRoot "data_provider\probe_ws_history_depth.py"
+        Pipeline = Join-Path $repoRoot "data_provider\apps\pipeline.py"
+        WsLive   = Join-Path $repoRoot "data_provider\apps\ws_live.py"
+        Checker  = Join-Path $repoRoot "data_provider\apps\checker.py"
+        Chart    = Join-Path $repoRoot "data_provider\apps\chart_server.py"
+        Probe    = Join-Path $repoRoot "data_provider\tools\probe_ws_history_depth.py"
     }
 }
 
@@ -39,7 +39,7 @@ function Get-Sen05OpsPaths {
     [pscustomobject]@{
         RepoRoot         = $repoRoot
         DataProviderRoot = Join-Path $repoRoot "data_provider"
-        DataProviderLogs = Join-Path $repoRoot "data_provider\logs"
+        DataProviderLogs = Join-Path $repoRoot "data_provider\runtime\logs"
         OpsRoot          = Join-Path $repoRoot "ops"
         OpsRuntime       = Join-Path $repoRoot "ops\runtime"
         Commands         = Get-Sen05DataProviderCommandMap
@@ -63,12 +63,50 @@ function Confirm-Sen05Action {
     return ($answer -ceq "YES")
 }
 
+function Start-Sen05LogFollow {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$LogName,
+        [string]$Title = ""
+    )
+
+    $paths = Get-Sen05OpsPaths
+    New-Item -ItemType Directory -Force -Path $paths.DataProviderLogs | Out-Null
+
+    $logPath = if ([System.IO.Path]::IsPathRooted($LogName)) {
+        $LogName
+    }
+    else {
+        Join-Path $paths.DataProviderLogs $LogName
+    }
+
+    if (-not (Test-Path -LiteralPath $logPath)) {
+        New-Item -ItemType File -Force -Path $logPath | Out-Null
+    }
+
+    $displayTitle = if ($Title) { $Title } else { "SEN05 log: $LogName" }
+    $escapedPath = $logPath.Replace("'", "''")
+    $escapedTitle = $displayTitle.Replace("'", "''")
+    $command = @"
+`$host.UI.RawUI.WindowTitle = '$escapedTitle'
+Write-Host 'Following: $escapedPath' -ForegroundColor Cyan
+Write-Host 'Press Ctrl+C in this window to stop following the log.' -ForegroundColor DarkGray
+Get-Content -LiteralPath '$escapedPath' -Tail 80 -Wait
+"@
+
+    Start-Process `
+        -FilePath "powershell.exe" `
+        -ArgumentList @("-NoProfile", "-NoExit", "-ExecutionPolicy", "Bypass", "-Command", $command) `
+        -WindowStyle Normal | Out-Null
+}
+
 function Invoke-Sen05PythonScript {
     param(
         [Parameter(Mandatory = $true)]
         [ValidateSet("Pipeline", "WsLive", "Checker", "Chart", "Probe")]
         [string]$ScriptKey,
         [string[]]$Arguments = @(),
+        [string]$FollowLogName = "",
         [string]$PythonExe = ""
     )
 
@@ -87,6 +125,10 @@ function Invoke-Sen05PythonScript {
     Write-Host ("Script : {0}" -f $scriptPath)
     if ($Arguments.Count -gt 0) {
         Write-Host ("Args   : {0}" -f ($Arguments -join " "))
+    }
+    if ($FollowLogName) {
+        Write-Host ("Log    : {0}" -f $FollowLogName)
+        Start-Sen05LogFollow -LogName $FollowLogName -Title "SEN05 $ScriptKey log"
     }
     Write-Host ""
 
@@ -113,6 +155,17 @@ function Invoke-Sen05Pipeline {
         [string]$AssetType = "",
         [switch]$Reset,
         [switch]$ForceUnlock,
+        [switch]$Yes,
+        [switch]$FollowLog,
+        [ValidateSet("config", "on", "off")]
+        [string]$Replay = "config",
+        [string]$ReplayTfs = "",
+        [string]$ReplayEndpoint = "",
+        [string]$ReplayStartDate = "",
+        [int]$ReplayMaxWindows = -1,
+        [int]$ReplayWindowBars = -1,
+        [int]$ReplayStepBars = -1,
+        [double]$ReplayTimeoutSec = 0,
         [string]$PythonExe = ""
     )
 
@@ -122,9 +175,19 @@ function Invoke-Sen05Pipeline {
     if ($Timeframes) { $args += @("--timeframes", $Timeframes) }
     if ($AssetType) { $args += @("--asset-type", $AssetType) }
     if ($Reset) { $args += "--reset" }
+    if ($Reset -and $Yes) { $args += "--yes" }
     if ($ForceUnlock) { $args += "--force-unlock" }
+    if ($Replay -ne "config") { $args += @("--replay", $Replay) }
+    if ($ReplayTfs) { $args += @("--replay-tfs", $ReplayTfs) }
+    if ($ReplayEndpoint) { $args += @("--replay-endpoint", $ReplayEndpoint) }
+    if ($ReplayStartDate) { $args += @("--replay-start-date", $ReplayStartDate) }
+    if ($ReplayMaxWindows -gt 0) { $args += @("--replay-max-windows", ([string]$ReplayMaxWindows)) }
+    if ($ReplayWindowBars -gt 0) { $args += @("--replay-window-bars", ([string]$ReplayWindowBars)) }
+    if ($ReplayStepBars -gt 0) { $args += @("--replay-step-bars", ([string]$ReplayStepBars)) }
+    if ($ReplayTimeoutSec -gt 0) { $args += @("--replay-timeout-sec", ([string]$ReplayTimeoutSec)) }
 
-    return Invoke-Sen05PythonScript -ScriptKey Pipeline -Arguments $args -PythonExe $PythonExe
+    $follow = if ($FollowLog) { "pipeline.log" } else { "" }
+    return Invoke-Sen05PythonScript -ScriptKey Pipeline -Arguments $args -FollowLogName $follow -PythonExe $PythonExe
 }
 
 function Invoke-Sen05Checker {
@@ -139,6 +202,7 @@ function Invoke-Sen05Checker {
         [switch]$TfCheckFull,
         [switch]$RebuildComputed,
         [switch]$ManualConfirm,
+        [switch]$FollowLog,
         [string]$PythonExe = ""
     )
 
@@ -153,7 +217,8 @@ function Invoke-Sen05Checker {
     if ($RebuildComputed) { $args += "--rebuild-computed" }
     if ($ManualConfirm) { $args += "--manual-confirm" }
 
-    return Invoke-Sen05PythonScript -ScriptKey Checker -Arguments $args -PythonExe $PythonExe
+    $follow = if ($FollowLog) { "checker.log" } else { "" }
+    return Invoke-Sen05PythonScript -ScriptKey Checker -Arguments $args -FollowLogName $follow -PythonExe $PythonExe
 }
 
 function Invoke-Sen05Probe {
@@ -164,6 +229,7 @@ function Invoke-Sen05Probe {
         [double]$TimeoutSec = 0,
         [int]$MoreRounds = -1,
         [int]$MoreBars = -1,
+        [switch]$FollowLog,
         [string]$PythonExe = ""
     )
 
@@ -197,6 +263,7 @@ function Start-Sen05DataChart {
     param(
         [switch]$Foreground,
         [switch]$NoBrowser,
+        [switch]$FollowLog,
         [string]$PythonExe = ""
     )
 
@@ -207,7 +274,8 @@ function Start-Sen05DataChart {
     }
 
     if ($Foreground) {
-        return Invoke-Sen05PythonScript -ScriptKey Chart -Arguments @() -PythonExe $PythonExe
+        $follow = if ($FollowLog) { "data_chart.out.log" } else { "" }
+        return Invoke-Sen05PythonScript -ScriptKey Chart -Arguments @() -FollowLogName $follow -PythonExe $PythonExe
     }
 
     $url = "http://127.0.0.1:8050/"
@@ -236,6 +304,10 @@ function Start-Sen05DataChart {
     }
 
     $isReady = Test-Sen05HttpEndpoint -Url $configUrl
+    if ($FollowLog) {
+        Start-Sen05LogFollow -LogName "data_chart.out.log" -Title "SEN05 data chart log"
+    }
+
     if ($isReady -and -not $NoBrowser) {
         Start-Process $url
     }
@@ -269,11 +341,11 @@ function Show-Sen05LogSummary {
 
 function Show-Sen05ProcessStatus {
     $patterns = @(
-        "data_provider\01_data_pipeline.py",
-        "data_provider\02_ws_live.py",
-        "data_provider\03_chart.py",
-        "data_provider\04_checker.py",
-        "probe_ws_history_depth.py"
+        "data_provider\apps\pipeline.py",
+        "data_provider\apps\ws_live.py",
+        "data_provider\apps\chart_server.py",
+        "data_provider\apps\checker.py",
+        "data_provider\tools\probe_ws_history_depth.py"
     )
 
     Write-Host ""
@@ -294,7 +366,17 @@ function Show-Sen05ProcessStatus {
         }
     }
     catch {
-        Write-Host ("  status unavailable: {0}" -f $_.Exception.Message)
+        Write-Host ("  detailed command-line status unavailable: {0}" -f $_.Exception.Message) -ForegroundColor Yellow
+        $fallback = @(
+            Get-Process python -ErrorAction SilentlyContinue |
+                Select-Object Id, ProcessName, CPU, StartTime, Path
+        )
+        if ($fallback.Count -eq 0) {
+            Write-Host "  (no python.exe processes visible)"
+        }
+        else {
+            $fallback | Format-Table -AutoSize
+        }
     }
 }
 
@@ -304,6 +386,7 @@ Export-ModuleMember -Function `
     Get-Sen05DataProviderCommandMap, `
     Get-Sen05OpsPaths, `
     Confirm-Sen05Action, `
+    Start-Sen05LogFollow, `
     Invoke-Sen05PythonScript, `
     Invoke-Sen05Pipeline, `
     Invoke-Sen05Checker, `

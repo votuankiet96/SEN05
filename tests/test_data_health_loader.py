@@ -58,7 +58,7 @@ def test_load_staging_health_reports_fact_backlog_with_legacy_aliases(monkeypatc
 
 
 def test_chart_staging_backlog_label_matches_fact_backlog():
-    text = (ROOT / "data_provider" / "03_chart.html").read_text(encoding="utf-8")
+    text = (ROOT / "data_provider" / "dashboard" / "chart.html").read_text(encoding="utf-8")
 
     assert "not in Fact</span>" in text
     assert " pending</span>" not in text

@@ -37,10 +37,10 @@
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                     DATA PROVIDER LAYER                         │
-│  01_data_pipeline.py   — Historical load + daily gap fill       │
-│  02_ws_live.py         — Near-realtime batch WebSocket (5 min)  │
-│  04_checker.py         — Data quality scan & auto-repair        │
-│  03_chart.py           — Flask chart dashboard (nội bộ)         │
+│  apps/pipeline.py      — Historical load + daily gap fill       │
+│  apps/ws_live.py       — Near-realtime batch WebSocket (5 min)  │
+│  apps/checker.py       — Data quality scan & auto-repair        │
+│  apps/chart_server.py  — Flask chart dashboard (nội bộ)         │
 └────────────────────────────┬────────────────────────────────────┘
                              │  pyodbc → SQL Server
                              ▼
@@ -111,7 +111,7 @@ DISCORD_WEBHOOK_URL=
 ### Khởi tạo database
 
 ```sql
--- Chạy theo thứ tự trong data_provider/00_sql/
+-- Chạy theo thứ tự trong data_provider/sql/
 -- 00_run_all.sql  — chạy toàn bộ một lần
 ```
 
@@ -123,13 +123,13 @@ DISCORD_WEBHOOK_URL=
 TradingView
     │
     │  1. Historical load (chạy một lần, mất 2–4 giờ)
-    │     python data_provider/01_data_pipeline.py --mode full
+    │     python data_provider/apps/pipeline.py --mode full
     │
     │  2. Daily gap fill (chạy hàng ngày lúc 22:22 UTC)
-    │     python data_provider/01_data_pipeline.py --mode gap
+    │     python data_provider/apps/pipeline.py --mode gap
     │
     │  3. Near-realtime (chạy 24/7, cứ 5 phút một lần)
-    │     python data_provider/02_ws_live.py
+    │     python data_provider/apps/ws_live.py
     │
     ▼
 SQL Server (DWH.Fact_OHLCV)
@@ -140,7 +140,7 @@ SQL Server (DWH.Fact_OHLCV)
     │    H6  ← H3×2    H8  ← H4×2
     │
     │  4. Data quality check (chạy mỗi 3 ngày)
-    │     python data_provider/04_checker.py
+    │     python data_provider/apps/checker.py
     │
     ▼
 core_python/shared/data.py  (data access layer)
@@ -154,7 +154,7 @@ core_python/shared/data.py  (data access layer)
 
 Ba scripts (pipeline, ws_live, checker) chạy song song. Để tránh ghi đè nhau:
 - `SEN.ActiveTask` — lock table trong SQL Server
-- `data_provider/_task_lock.py` — acquire/release lock từ Python
+- `data_provider/common/locks.py` — acquire/release lock từ Python
 - Khi checker đang repair: ws_live dừng ETL, pipeline nhường quyền
 
 ---
@@ -173,20 +173,20 @@ File duy nhất cần chỉnh khi vận hành. Không sửa các script khác.
 | Symbol list | 37 symbols: 9 Indices + 25 Forex + 2 Metal/Crypto |
 | TF mapping | 10 direct TF + 5 derived TF + display order |
 
-### `01_data_pipeline.py` — Historical Load & Daily Backfill
+### `pipeline.py` — Historical Load & Daily Backfill
 
 ```bash
-python data_provider/01_data_pipeline.py              # auto-detect mode
-python data_provider/01_data_pipeline.py --mode full  # full load từ đầu
-python data_provider/01_data_pipeline.py --mode gap   # chỉ bù phần thiếu
-python data_provider/01_data_pipeline.py --dry-run    # xem kế hoạch, không ghi
-python data_provider/01_data_pipeline.py --symbols US30,GOLD --mode gap
-python data_provider/01_data_pipeline.py --asset-type Indice
+python data_provider/apps/pipeline.py              # auto-detect mode
+python data_provider/apps/pipeline.py --mode full  # full load từ đầu
+python data_provider/apps/pipeline.py --mode gap   # chỉ bù phần thiếu
+python data_provider/apps/pipeline.py --dry-run    # xem kế hoạch, không ghi
+python data_provider/apps/pipeline.py --symbols US30,GOLD --mode gap
+python data_provider/apps/pipeline.py --asset-type Indice
 ```
 
 Luồng xử lý: TradingView → Staging table (`SEN.TF_*`) → `usp_LoadDirect` → `Fact_OHLCV` → `usp_AggregateFromStaging` (tính TF phái sinh).
 
-### `02_ws_live.py` — Near-Realtime Updater (V5 Batch Mode)
+### `ws_live.py` — Near-Realtime Updater (V5 Batch Mode)
 
 Chạy 24/7. Cứ mỗi 5 phút: mở WebSocket → nhận 3–5 nến mới nhất → ghi staging → ETL → đóng.
 
@@ -200,7 +200,7 @@ Tính năng chính:
 - Auth fallback: Token → Cookie → Guest (cảnh báo nếu rơi xuống Guest)
 - Backlog tracking: nếu miss nhiều batch → yêu cầu thêm bar để bù khoảng trống
 
-### `04_checker.py` — Data Quality & Auto-Repair
+### `checker.py` — Data Quality & Auto-Repair
 
 Chạy mỗi 3 ngày. So sánh dữ liệu DB với TradingView (nguồn gốc).
 
@@ -212,12 +212,12 @@ Phát hiện:
 
 Quy trình 3 giai đoạn: **Scan** → **Confirm** (Discord, one-way) → **Repair** (xóa sai → kéo lại → verify).
 
-### `03_chart.py` — Chart Dashboard nội bộ
+### `chart_server.py` — Chart Dashboard nội bộ
 
 Flask REST API + HTML frontend. Dùng để kiểm tra nhanh chất lượng dữ liệu và xem indicator.
 
 ```bash
-python data_provider/03_chart.py
+python data_provider/apps/chart_server.py
 # Mở: http://127.0.0.1:8050
 ```
 
@@ -447,9 +447,9 @@ core_python/strategies/{combo,ma_cross}/research/
 
 | Script | Mục đích | Lịch chạy |
 |--------|---------|-----------|
-| `run_ws_live_forever.ps1` | Khởi động `02_ws_live.py`, tự restart nếu crash | Boot/logon, chạy mãi |
-| `run_pipeline_daily.ps1` | Chạy `01_data_pipeline.py --mode gap` | Hàng ngày, 22:22 UTC |
-| `run_checker_cycle.ps1` | Chạy `04_checker.py` | Mỗi 3 ngày |
+| `run_ws_live_forever.ps1` | Khởi động `ws_live.py`, tự restart nếu crash | Boot/logon, chạy mãi |
+| `run_pipeline_daily.ps1` | Chạy `pipeline.py --mode gap` | Hàng ngày, 22:22 UTC |
+| `run_checker_cycle.ps1` | Chạy `checker.py` | Mỗi 3 ngày |
 
 ### Thiết lập Windows Task Scheduler
 
@@ -467,9 +467,9 @@ powershell -ExecutionPolicy Bypass -File ops\run_checker_cycle.ps1
 ### Kiểm tra nhanh hệ thống đang hoạt động tốt
 
 ```
-✓ data_provider/logs/ws_live.log    — cập nhật liên tục?
-✓ data_provider/logs/pipeline.log  — entry mới nhất < 24h?
-✓ data_provider/logs/checker.log   — không có REPAIR FAILED?
+✓ data_provider/runtime/logs/ws_live.log    — cập nhật liên tục?
+✓ data_provider/runtime/logs/pipeline.log  — entry mới nhất < 24h?
+✓ data_provider/runtime/logs/checker.log   — không có REPAIR FAILED?
 ✓ SEN.ActiveTask (SQL)              — không có lock expired?
 ```
 
@@ -509,22 +509,25 @@ SEN05/
 ├── .env                               ← Credentials (KHÔNG commit — thêm vào .gitignore)
 │
 ├── data_provider/
-│   ├── 00_sql/                        ← SQL scripts khởi tạo database
+│   ├── sql/                        ← SQL scripts khởi tạo database
 │   │   ├── 00_run_all.sql             ← Chạy toàn bộ 1 lần
 │   │   ├── 01_setup_database.sql      ← Tạo database
 │   │   ├── 02_core_tables.sql         ← Fact_OHLCV, Symbol, Timeframe
 │   │   ├── 03_staging_tables.sql      ← SEN.TF_* staging
 │   │   ├── 04_business_objects.sql    ← Stored procedures (usp_LoadDirect, usp_AggregateFromStaging)
 │   │   └── 05_verify.sql             ← Kiểm tra sau setup
-│   ├── 01_data_pipeline.py            ← Historical load + daily gap fill
-│   ├── 02_ws_live.py                  ← Near-realtime updater (chạy 24/7)
-│   ├── 03_chart.py                    ← Chart dashboard (Flask)
-│   ├── 04_checker.py                  ← Data quality scan & repair
-│   ├── _discord.py                    ← Discord notification helper
-│   ├── _helpers.py                    ← Staging transition cleaner, gap utils
-│   ├── _task_lock.py                  ← Distributed lock (SEN.ActiveTask)
-│   ├── _tv_auth.py                    ← TradingView auth helper
-│   └── _tv_coord.py                   ← TV connection coordination
+│   ├── apps/
+│   │   ├── pipeline.py             ← Historical load + daily gap fill
+│   │   ├── ws_live.py              ← Near-realtime updater (chạy 24/7)
+│   │   ├── chart_server.py         ← Chart dashboard (Flask)
+│   │   └── checker.py              ← Data quality scan & repair
+│   ├── common/
+│   │   ├── notifications.py        ← Discord notification helper
+│   │   ├── helpers.py              ← Staging transition cleaner, gap utils
+│   │   └── locks.py                ← Distributed lock (SEN.ActiveTask)
+│   ├── tv/
+│   │   ├── auth.py                 ← TradingView auth helper
+│   │   └── coord.py                ← TV connection coordination
 │
 ├── modules/                           ← Shared library (legacy, dùng bởi data_provider)
 │   ├── db_connector.py                ← SQL connection, staging insert, ETL
@@ -615,11 +618,11 @@ SEN05/
 
 | Muốn làm gì | Chạy / Mở |
 |------------|-----------|
-| Load lịch sử lần đầu | `python data_provider/01_data_pipeline.py --mode full` |
-| Gap fill hàng ngày | `python data_provider/01_data_pipeline.py --mode gap` |
-| Bật live updater | `python data_provider/02_ws_live.py` |
-| Kiểm tra data | `python data_provider/04_checker.py --dry-run` |
-| Xem chart nến | `python data_provider/03_chart.py` → http://127.0.0.1:8050 |
+| Load lịch sử lần đầu | `python data_provider/apps/pipeline.py --mode full` |
+| Gap fill hàng ngày | `python data_provider/apps/pipeline.py --mode gap` |
+| Bật live updater | `python data_provider/apps/ws_live.py` |
+| Kiểm tra data | `python data_provider/apps/checker.py --dry-run` |
+| Xem chart nến | `python data_provider/apps/chart_server.py` → http://127.0.0.1:8050 |
 | Backtest Combo | Mở `combo/research/01_symbol_backtest.ipynb` |
 | Tối ưu tham số Combo | Mở `combo/research/02_symbol_optimize.ipynb` |
 | Walk-forward Combo | Mở `combo/research/04_portfolio_walkforward.ipynb` |

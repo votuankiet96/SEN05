@@ -16,7 +16,7 @@ Nguyen tac van hanh:
 """
 
 # =============================================================================
-# data_provider/01_data_pipeline.py  —  Data Pipeline (Full Load + Daily Backfill)
+# data_provider/apps/pipeline.py  —  Data Pipeline (Full Load + Daily Backfill)
 # Version : 2.0
 # =============================================================================
 #
@@ -31,7 +31,7 @@ Nguyen tac van hanh:
 #
 #  auto  (mặc định) — tự phát hiện: Fact_OHLCV trống → full, có data → gap
 #  full             — kéo toàn bộ lịch sử (chỉ dùng lần đầu, mất 2–4 giờ)
-#                     37 symbol × 10 TF trực tiếp + 5 TF phái sinh
+#                     37 symbol × 15 TF trực tiếp (không có TF phái sinh mặc định)
 #  gap              — chỉ bù phần bị thiếu kể từ lần chạy trước (~3–8 phút)
 #                     Đây là chế độ chạy hàng ngày thông thường
 #
@@ -68,29 +68,29 @@ Nguyen tac van hanh:
 # VÍ DỤ SỬ DỤNG
 # ─────────────────────────────────────────────────────────────────────────────
 #
-#  python 01_data_pipeline.py
+#  python pipeline.py
 #      → Tự phát hiện chế độ và chạy toàn bộ 37 symbol
 #
-#  python 01_data_pipeline.py --mode gap
+#  python pipeline.py --mode gap
 #      → Ép chạy backfill hàng ngày (không tự detect)
 #
-#  python 01_data_pipeline.py --mode full
+#  python pipeline.py --mode full
 #      → Ép chạy full load (dùng khi cần rebuild từ đầu)
 #
-#  python 01_data_pipeline.py --dry-run
+#  python pipeline.py --dry-run
 #      → Xem kế hoạch, không ghi gì vào DB
 #
-#  python 01_data_pipeline.py --symbols GOLD,BTCUSD
+#  python pipeline.py --symbols GOLD,BTCUSD
 #      → Chỉ backfill cho GOLD và BTCUSD
 #
-#  python 01_data_pipeline.py --timeframes M45
+#  python pipeline.py --timeframes M45
 #      → Chỉ pull timeframe M45 cho tất cả symbol
 #
-#  python 01_data_pipeline.py --symbols EURUSD,GBPUSD --timeframes M45 --reset
+#  python pipeline.py --symbols EURUSD,GBPUSD --timeframes M45 --reset
 #      → Xóa M45 của EURUSD + GBPUSD rồi pull lại từ đầu
 #      (đây là lệnh dùng để sửa dữ liệu M45 bị hỏng cho một cặp cụ thể)
 #
-#  python 01_data_pipeline.py --asset-type Indice --timeframes M45 --reset
+#  python pipeline.py --asset-type Indice --timeframes M45 --reset
 #      → Xóa và pull lại M45 cho toàn bộ Indices (US30, DE40, J225, v.v.)
 #
 # ─────────────────────────────────────────────────────────────────────────────
@@ -110,7 +110,7 @@ Nguyen tac van hanh:
 # LƯU Ý VẬN HÀNH
 # ─────────────────────────────────────────────────────────────────────────────
 #   - Không sửa các vòng lặp bên trong — script điều phối toàn bộ luồng dữ liệu
-#   - Chạy 01_data_pipeline.py TRƯỚC, sau đó mới chạy 02_ws_live.py realtime
+#   - Chạy pipeline.py TRƯỚC, sau đó mới chạy ws_live.py realtime
 #   - Sau --reset: pipeline tự fill lại data; staging cũ tự xóa sau 7 ngày
 # =============================================================================
 
@@ -133,7 +133,7 @@ from datetime import datetime  # Dùng để ghi lại thời điểm bắt đ�
 
 # Lấy đường dẫn tuyệt đối đến thư mục gốc của project (2 cấp lên từ file này)
 # Bootstrap: thêm project root vào path (harmless khi đã pip install -e .)
-_PROJ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_PROJ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if _PROJ not in sys.path:
     sys.path.insert(0, _PROJ)
 
@@ -141,8 +141,8 @@ if _PROJ not in sys.path:
 # --- NHẬP CÁC MODULE NỘI BỘ CỦA PROJECT ---
 
 # Nhập các hằng số và hàm cấu hình từ file config.py
-# Nhập các hàm tiện ích dùng chung từ file _helpers.py
-from _helpers import (
+# Nhập các hàm tiện ích dùng chung từ file common/helpers.py
+from data_provider.common.helpers import (
     _acquire_short_write_lock,
     FULL_N_BARS,  # Hằng số: số bar cần kéo cho từng TF khi chạy full load
     calc_gap_n_bars,  # Hàm tính số bar cần kéo dựa trên khoảng thời gian bị thiếu
@@ -155,16 +155,18 @@ from _helpers import (
     sleep_for,  # Hàm tạm dừng giữa các request để tránh bị TradingView rate-limit
     trading_hours_in_gap,  # Tính giờ trading thực (trừ Sat/Sun) trong một khoảng thời gian
 )
-from _discord import tg_alert, tg_flush, QUICK_COMMANDS_HINT  # Gửi thông báo kết quả pipeline lên Discord
-from _tv_auth import get_valid_tv_connection, refresh_mid_run  # Auth module dùng chung
-from _task_lock import acquire, cleanup_expired, release, renew, is_locked
-from _tv_coord import (
+import data_provider.common.helpers as _helpers_runtime
+from data_provider.common.notifications import tg_alert, tg_flush, QUICK_COMMANDS_HINT  # Gửi thông báo kết quả pipeline lên Discord
+from data_provider.tv.auth import get_valid_tv_connection, refresh_mid_run  # Auth module dùng chung
+from data_provider.common.locks import acquire, cleanup_expired, release, renew, is_locked
+from data_provider.tv.coord import (
     HistoricalJobHandoffRequested,
     acquire_historical_job,
     release_historical_job,
     wait_for_historical_slot,
 )
-import _logfmt
+from data_provider.common import logfmt as _logfmt
+import config as _runtime_config
 
 from config import (
     COMPUTED_TIMEFRAMES,  # Danh sách cặp (TF đích, bảng nguồn) dùng để tính các TF phái sinh
@@ -202,6 +204,79 @@ logger = setup_logger("pipeline", LOG_FILE)
 _TF_FILTER: set = set()
 _FORCE_RESET_REPULL = False
 RUN_SUMMARY_FILE = os.path.join(os.path.dirname(LOG_FILE), "pipeline_run_summary.jsonl")
+
+
+def _csv_set(value: str | None) -> set[str]:
+    if value is None:
+        return set()
+    if value.strip().lower() in {"", "-", "none", "off", "no"}:
+        return set()
+    return {item.strip().upper() for item in value.split(",") if item.strip()}
+
+
+def _set_replay_runtime(name: str, value) -> None:
+    """Keep pipeline logs and helper runtime replay behavior in sync."""
+    globals()[name] = value
+    setattr(_runtime_config, name, value)
+    if hasattr(_helpers_runtime, name):
+        setattr(_helpers_runtime, name, value)
+
+
+def _apply_replay_cli_options(args: argparse.Namespace) -> list[str]:
+    changes: list[str] = []
+
+    if args.replay != "config":
+        enabled = args.replay == "on"
+        _set_replay_runtime("TV_WS_REPLAY_ENABLED", enabled)
+        changes.append(f"enabled={'yes' if enabled else 'no'}")
+
+    if args.replay_tfs is not None:
+        replay_tfs = _csv_set(args.replay_tfs)
+        valid_tfs = {tf for _, tf, _, _ in get_historical_timeframes()}
+        invalid = sorted(replay_tfs - valid_tfs)
+        if invalid:
+            raise ValueError(
+                "Invalid --replay-tfs value(s): "
+                + ",".join(invalid)
+                + ". Valid values: "
+                + ",".join(sorted(valid_tfs))
+            )
+        _set_replay_runtime("TV_WS_REPLAY_TFS", replay_tfs)
+        changes.append("tfs=" + (",".join(sorted(replay_tfs)) if replay_tfs else "-"))
+
+    if args.replay_endpoint:
+        _set_replay_runtime("TV_WS_REPLAY_ENDPOINT", args.replay_endpoint.lower())
+        changes.append(f"endpoint={args.replay_endpoint.lower()}")
+
+    if args.replay_start_date:
+        _set_replay_runtime("TV_WS_REPLAY_START_DATE", args.replay_start_date)
+        changes.append(f"start={args.replay_start_date}")
+
+    if args.replay_max_windows is not None:
+        if args.replay_max_windows <= 0:
+            raise ValueError("--replay-max-windows must be greater than 0")
+        _set_replay_runtime("TV_WS_REPLAY_MAX_WINDOWS_PER_PAIR", args.replay_max_windows)
+        changes.append(f"max_windows={args.replay_max_windows}")
+
+    if args.replay_window_bars is not None:
+        if args.replay_window_bars <= 0:
+            raise ValueError("--replay-window-bars must be greater than 0")
+        _set_replay_runtime("TV_WS_REPLAY_WINDOW_BARS", args.replay_window_bars)
+        changes.append(f"window_bars={args.replay_window_bars}")
+
+    if args.replay_step_bars is not None:
+        if args.replay_step_bars <= 0:
+            raise ValueError("--replay-step-bars must be greater than 0")
+        _set_replay_runtime("TV_WS_REPLAY_STEP_BARS", args.replay_step_bars)
+        changes.append(f"step_bars={args.replay_step_bars}")
+
+    if args.replay_timeout_sec is not None:
+        if args.replay_timeout_sec <= 0:
+            raise ValueError("--replay-timeout-sec must be greater than 0")
+        _set_replay_runtime("TV_WS_REPLAY_TIMEOUT_SEC", args.replay_timeout_sec)
+        changes.append(f"timeout_sec={args.replay_timeout_sec:g}")
+
+    return changes
 
 
 def _fmt_int(value: int | float | None) -> str:
@@ -451,7 +526,7 @@ def run_full_load(tv, dry_run: bool = False) -> dict | int:
     fail_pairs: list[str] = []
 
     # -----------------------------------------------------------------------
-    # GIAI ĐOẠN 1: Kéo 10 TF trực tiếp từ TradingView
+    # GIAI ĐOẠN 1: Kéo 15 TF trực tiếp từ TradingView
     # -----------------------------------------------------------------------
     for step_idx, (interval, tf_code, staging, n_bars) in enumerate(tf_configs, 1):
         # Đếm riêng số thành công/thất bại cho TF hiện tại
@@ -509,8 +584,9 @@ def run_full_load(tv, dry_run: bool = False) -> dict | int:
         _log_tf_summary(tf_code, ok, fail, tf_inserted)
 
     # -----------------------------------------------------------------------
-    # GIAI ĐOẠN 2: Tính 5 TF phái sinh từ dữ liệu vừa kéo về
-    # (M10 = gộp 2 nến M5, M20 = gộp 2 nến M10, M90 = gộp 3 nến M30, v.v.)
+    # GIAI ĐOẠN 2: Tính TF phái sinh (chỉ chạy khi ENABLE_COMPUTED_TIMEFRAMES=1)
+    # Mặc định COMPUTED_TIMEFRAMES=[] nên block này bị bỏ qua.
+    # Khi bật: M10=2×M5, M20=4×M5, M90=3×M30, H6=2×H3, H8=2×H4
     # -----------------------------------------------------------------------
     if COMPUTED_TIMEFRAMES:
         _log_rule(
@@ -935,6 +1011,13 @@ def main() -> int:
         help="Reload selected data. Must be used with at least one filter: --symbols, --timeframes, or --asset-type.",
     )
 
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        default=False,
+        help="Confirm reset prompts non-interactively. Intended for ops automation.",
+    )
+
     # Tham số --timeframes: chỉ chạy cho một số TF nhất định (phân cách bởi dấu phẩy)
     parser.add_argument(
         "--timeframes",
@@ -959,8 +1042,62 @@ def main() -> int:
         help="Clear an old tv_historical_job lock before starting. Use this only when a stale lock blocks the pipeline.",
     )
 
+    parser.add_argument(
+        "--replay",
+        choices=["config", "on", "off"],
+        default="config",
+        help="Override replay bootstrap for this run. Default keeps config.py/env behavior.",
+    )
+    parser.add_argument(
+        "--replay-tfs",
+        type=str,
+        default=None,
+        help="Override replay timeframes for this run. Example: --replay-tfs H1,M45,M30. Use 'none' to clear.",
+    )
+    parser.add_argument(
+        "--replay-endpoint",
+        choices=["data", "prodata"],
+        default=None,
+        help="Override TradingView replay endpoint for this run.",
+    )
+    parser.add_argument(
+        "--replay-start-date",
+        type=str,
+        default=None,
+        help="Override replay start date for this run. Example: 1970-01-01.",
+    )
+    parser.add_argument(
+        "--replay-max-windows",
+        type=int,
+        default=None,
+        help="Override max replay windows per symbol/timeframe for this run.",
+    )
+    parser.add_argument(
+        "--replay-window-bars",
+        type=int,
+        default=None,
+        help="Override bars requested per replay window for this run.",
+    )
+    parser.add_argument(
+        "--replay-step-bars",
+        type=int,
+        default=None,
+        help="Override replay step size in bars for this run.",
+    )
+    parser.add_argument(
+        "--replay-timeout-sec",
+        type=float,
+        default=None,
+        help="Override replay websocket timeout per window for this run.",
+    )
+
     # Phân tích các tham số từ dòng lệnh
     args    = parser.parse_args()
+
+    try:
+        replay_overrides = _apply_replay_cli_options(args)
+    except ValueError as exc:
+        parser.error(str(exc))
 
     # -----------------------------------------------------------------------
     # LỌC SYMBOLS theo --symbols / --asset-type (nếu có)
@@ -1046,7 +1183,7 @@ def main() -> int:
             action="prepare_delete",
             amount=f"symbols {_fmt_int(len(SYMBOLS))}",
             range_=f"tf {tf_desc}",
-            status="confirm_required",
+            status="auto_confirmed" if args.yes else "confirm_required",
             level=logging.WARNING,
         )
         _logfmt.log(
@@ -1056,10 +1193,13 @@ def main() -> int:
             status=",".join(s["tv_symbol"] for s in SYMBOLS),
             level=logging.WARNING,
         )
-        confirm = input("\nConfirm delete? (y/N): ").strip().lower()
-        if confirm != "y":
-            _logfmt.log(logger, "RESET", action="cancelled", status="by_user")
-            return _finish(0)
+        if args.yes:
+            _logfmt.log(logger, "RESET", action="confirm", status="auto_yes")
+        else:
+            confirm = input("\nConfirm delete? (y/N): ").strip().lower()
+            if confirm != "y":
+                _logfmt.log(logger, "RESET", action="cancelled", status="by_user")
+                return _finish(0)
         _FORCE_RESET_REPULL = True
         _logfmt.log(
             logger,
@@ -1100,6 +1240,13 @@ def main() -> int:
             range_=f"endpoint {TV_WS_REPLAY_ENDPOINT}",
             status="tfs " + (",".join(sorted(TV_WS_REPLAY_TFS)) if TV_WS_REPLAY_TFS else "-"),
         )
+        if replay_overrides:
+            _logfmt.log(
+                logger,
+                "CONFIG",
+                action="replay_override",
+                status="; ".join(replay_overrides),
+            )
     _logfmt.log(logger, "CONFIG", action="started", status=started.strftime("%Y-%m-%d %H:%M:%S"))
 
     # -----------------------------------------------------------------------
@@ -1323,8 +1470,8 @@ def main() -> int:
             f"Run time: {elapsed_str}\n"
             f"-----------------\n"
             f"<b>Next:</b>\n"
-            f"  - 02_ws_live.py keeps live data updated every 5 minutes\n"
-            f"  - 04_checker.py checks and repairs data every 3 days",
+            f"  - ws_live.py keeps live data updated every 5 minutes\n"
+            f"  - checker.py checks and repairs data every 3 days",
         )
     else:
         # Liệt kê tối đa 5 cặp bị lỗi

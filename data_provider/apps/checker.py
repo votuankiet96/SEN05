@@ -19,7 +19,7 @@ va duoc dua vao danh sach sua ngay, vi do la loi cau truc du lieu chinh.
 """
 
 # =============================================================================
-# data_provider/04_checker.py  â€"  Kiá»ƒm tra & Tá»± sá»­a cháº¥t lÆ°á»£ng dá»¯ liá»‡u
+# data_provider/apps/checker.py  â€"  Kiá»ƒm tra & Tá»± sá»­a cháº¥t lÆ°á»£ng dá»¯ liá»‡u
 # =============================================================================
 #
 # FILE NÃ€Y LÃ€M GÃŒ-
@@ -58,12 +58,12 @@ va duoc dua vao danh sach sua ngay, vi do la loi cau truc du lieu chinh.
 #     - Gá»­i bÃ¡o cÃ¡o káº¿t quáº£ lÃªn Discord
 #
 # CÃCH CHáº Y THá»¦ CÃ"NG:
-#   python 04_checker.py                    # cháº¡y scan + auto-repair an toÃ n (máº·c Ä‘á»‹nh)
-#   python 04_checker.py --dry-run          # chá»‰ scan + bÃ¡o cÃ¡o, khÃ´ng há»i, khÃ´ng sá»­a
-#   python 04_checker.py --manual-confirm   # chá»‰ sá»­a khi Discord xÃ¡c nháº­n (khÃ´ng tÆ°Æ¡ng tÃ¡c, auto-confirm)
-#   python 04_checker.py --sym GOLD         # chá»‰ kiá»ƒm tra 1 symbol
-#   python 04_checker.py --tf H4            # chá»‰ kiá»ƒm tra 1 khung thá»i gian
-#   python 04_checker.py --threshold 0.05   # nÃ¢ng ngÆ°á»¡ng sai lÃªn 5% (máº·c Ä‘á»‹nh 0.1%)
+#   python checker.py                    # cháº¡y scan + auto-repair an toÃ n (máº·c Ä‘á»‹nh)
+#   python checker.py --dry-run          # chá»‰ scan + bÃ¡o cÃ¡o, khÃ´ng há»i, khÃ´ng sá»­a
+#   python checker.py --manual-confirm   # chá»‰ sá»­a khi Discord xÃ¡c nháº­n (khÃ´ng tÆ°Æ¡ng tÃ¡c, auto-confirm)
+#   python checker.py --sym GOLD         # chá»‰ kiá»ƒm tra 1 symbol
+#   python checker.py --tf H4            # chá»‰ kiá»ƒm tra 1 khung thá»i gian
+#   python checker.py --threshold 0.05   # nÃ¢ng ngÆ°á»¡ng sai lÃªn 5% (máº·c Ä‘á»‹nh 0.1%)
 #
 # Lá»ŠCH CHáº Y Tá»° Äá»˜NG:
 #   Task Scheduler (Windows) tá»± Ä‘á»™ng gá»i file nÃ y má»—i 3 ngÃ y lÃºc 03:00 UTC
@@ -85,13 +85,13 @@ from collections import Counter
 from datetime import datetime, timedelta
 from pathlib import Path
 
-_PROJ = Path(__file__).resolve().parent.parent
-_DATA = Path(__file__).resolve().parent
+_PROJ = Path(__file__).resolve().parents[2]
+_DATA = Path(__file__).resolve().parents[1]
 if str(_PROJ) not in sys.path:
     sys.path.insert(0, str(_PROJ))
 
 from config import COMPUTED_TIMEFRAMES, SYMBOL_OVERNIGHT_MINS, SYMBOLS, TF_STAGING, TF_MINUTES
-from _helpers import (
+from data_provider.common.helpers import (
     FULL_N_BARS,
     normalize_tv_hist_df_to_utc,
     setup_logger,
@@ -101,16 +101,17 @@ from _helpers import (
     now_utc,
     sleep_for,
 )
-from _tv_auth import get_valid_tv_connection, refresh_mid_run
-import _tv_ws_history
-from _tv_coord import (
+from data_provider.tv.auth import get_valid_tv_connection, refresh_mid_run
+from data_provider.tv import ws_history as _tv_ws_history
+from data_provider.tv.coord import (
     HistoricalJobHandoffRequested,
     acquire_historical_job,
     release_historical_job,
     wait_for_historical_slot,
 )
-from _discord import tg_send, tg_flush
-from _task_lock import acquire, release, cleanup_expired, renew, request_confirm, is_locked
+from data_provider.common.notifications import tg_send, tg_flush
+from data_provider.common.locks import acquire, release, cleanup_expired, renew, request_confirm, is_locked
+from data_provider.paths import LOG_DIR
 from modules.db_connector import (
     aggregate_from_fact,
     delete_fact_bars,
@@ -698,7 +699,7 @@ def _repair_direct_window(tv, sym: dict, tf_code: str, issue_times: list[datetim
                     _MAX_ETL_RETRIES, label, tf_code, reason, e,
                 )
                 try:
-                    from _discord import tg_send
+                    from data_provider.common.notifications import tg_send
                     tg_send(
                         f"ETL FAILED {label}/{tf_code} after {_MAX_ETL_RETRIES} attempts "
                         f"({reason}) - gap trong DB remains!\n<code>{e}</code>"
@@ -1490,7 +1491,7 @@ def main() -> None:
     args = parser.parse_args()
 
     # â"€â"€ Setup logger â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
-    log_dir = _DATA / "logs"
+    log_dir = LOG_DIR
     log_dir.mkdir(exist_ok=True)
     logger = setup_logger("checker", str(log_dir / "checker.log"), rotating=True)
     _configure_checker_library_logs()

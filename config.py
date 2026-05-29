@@ -33,10 +33,10 @@
 #       -> insert staging -> usp_LoadDirect -> Fact_OHLCV
 #
 # Scripts:
-#   data_provider/01_data_pipeline.py      — historical load + daily gap fill
-#   data_provider/02_gap_fill.py           — internal hole scanner & filler
-#   data_provider/03_ws_live.py            — WebSocket live updater (V5 Batch mode)
-#   data_provider/04_chart.py             — interactive Dash chart
+#   data_provider/apps/pipeline.py         — historical load + daily gap fill
+#   data_provider/apps/ws_live.py          — WebSocket live updater (V5 Batch mode)
+#   data_provider/apps/checker.py          — data quality scan and repair
+#   data_provider/apps/chart_server.py     — internal data dashboard
 #   strategies/combo/05_signal_dashboard.py — Combo signal scanner (Streamlit)
 # =============================================================================
 
@@ -55,9 +55,9 @@ except ImportError:
 #    SQL Server Authentication:
 #      Fill in SQL_UID and SQL_PWD.
 # -----------------------------------------------------------------------------
-SQL_SERVER   = "localhost"              # or '.' or your machine name
+SQL_SERVER   = "10.11.12.6"             # DP6 — Data Provider server
 SQL_DATABASE = "SEN05_AutoTrading"
-SQL_DRIVER   = "ODBC Driver 17 for SQL Server"
+SQL_DRIVER   = "ODBC Driver 18 for SQL Server"
 SQL_UID      = os.environ.get("SQL_UID", "")   # empty = Windows Auth
 SQL_PWD      = os.environ.get("SQL_PWD", "")   # empty = Windows Auth
 SQL_ENCRYPT  = os.environ.get("SQL_ENCRYPT", "no")   # local SQL Server default
@@ -88,7 +88,7 @@ DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
 
 
 # -----------------------------------------------------------------------------
-# 3. BAR COUNTS — HISTORICAL BULK LOAD  (data_provider/01_data_pipeline.py)
+# 3. BAR COUNTS — HISTORICAL BULK LOAD  (data_provider/apps/pipeline.py)
 #    15 TFs pulled directly from TradingView WebSocket.
 #    Request counts are high on purpose; TradingView may return fewer rows when
 #    the symbol/exchange/timeframe reaches its real history plateau.
@@ -163,7 +163,7 @@ STAGING_INSERT_CHUNK_ROWS = int(os.environ.get("STAGING_INSERT_CHUNK_ROWS", "500
 
 
 # -----------------------------------------------------------------------------
-# 4. BAR COUNTS — LIVE UPDATE  (data_provider/02_ws_live.py)
+# 4. BAR COUNTS — LIVE UPDATE  (data_provider/apps/ws_live.py)
 #    Pull chỉ N bar gần nhất per TF per minute.
 #    5 bar là đủ — bar mới xuất hiện tối đa 1 lần mỗi TF period.
 # -----------------------------------------------------------------------------
@@ -271,7 +271,7 @@ COMPUTED_TIMEFRAMES = _COMPUTED_TIMEFRAMES_FALLBACK if ENABLE_COMPUTED_TIMEFRAME
 
 
 # -----------------------------------------------------------------------------
-# 8. LIVE SCHEDULER — 10 TF pull trực tiếp  (data_provider/02_ws_live.py)
+# 8. LIVE SCHEDULER — 10 TF pull trực tiếp  (data_provider/apps/ws_live.py)
 #    Cùng danh sách với historical, nhưng chỉ lấy N_BARS_LIVE bar gần nhất.
 # -----------------------------------------------------------------------------
 def get_live_timeframes():
@@ -297,7 +297,7 @@ def get_live_timeframes():
 # -----------------------------------------------------------------------------
 # 9. LOGGING
 # -----------------------------------------------------------------------------
-LOG_FILE  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data_provider", "logs", "pipeline.log")
+LOG_FILE  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data_provider", "runtime", "logs", "pipeline.log")
 LOG_LEVEL = "INFO"     # DEBUG | INFO | WARNING | ERROR
 
 
@@ -398,7 +398,7 @@ CROSS_TF_PAIRS = [
 # GOLD: winter anchor UTC+5 (h%N==1), nhưng sau DST spring 2026 dịch → UTC+4 (h%N==0).
 # BTCUSD: tương tự, DST spring 2026 làm lệch anchor từ 0 → 1.
 # Validation cứng theo mùa gây drop toàn bộ bars khi DST thay đổi.
-# clean_staging_transitions() trong _helpers.py vẫn bảo vệ tầng staging cho cả hai.
+# clean_staging_transitions() trong data_provider/common/helpers.py vẫn bảo vệ tầng staging cho cả hai.
 FIXED_H_ALIGNMENT: dict[str, dict[str, int]] = {}
 
 

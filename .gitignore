@@ -38,10 +38,12 @@ sen05.egg-info/
 *.env.local
 
 # Runtime token cache (tách khỏi .env, chứa JWT/cookie ngắn hạn)
-data_provider/.tv_token_cache
+data_provider/runtime/cache/*
+!data_provider/runtime/cache/.gitkeep
 
 # SQLite durable spool (tạm thời, tự tạo lại khi start)
-data_provider/.overflow_spool.db
+data_provider/runtime/spool/*
+!data_provider/runtime/spool/.gitkeep
 
 # IDE & OS artefacts
 .vs/
@@ -59,8 +61,10 @@ logs/*.log
 logs/*.err
 logs/*.out
 logs/*.txt
-data_provider/logs/*
-!data_provider/logs/.gitkeep
+data_provider/runtime/logs/*
+!data_provider/runtime/logs/.gitkeep
+data_provider/runtime/run/*
+!data_provider/runtime/run/.gitkeep
 
 # cAlgo/cTrader build and runtime output
 .buildcheck/
@@ -81,7 +85,7 @@ watcher.pid
 .ipynb_checkpoints/
 
 # Runtime-generated cache (không commit)
-cache/
+/cache/
 
 # Backtest / scanner output CSV (kết quả chạy, không phải source)
 output/
@@ -100,7 +104,7 @@ core_python/exports/*.csv
 # Generated HTML charts (output từ ma_chart.py, combo_chart, v.v.)
 *.html
 # Exception: static source HTML files (not generated)
-!data_provider/03_chart.html
+!data_provider/dashboard/chart.html
 !core_python/chart/static/*.html
 
 # Temporary lint/tool output

@@ -1,7 +1,7 @@
 """Shared TradingView fetch coordination for live + historical jobs.
 
 This module keeps 24/7 `ws_live` as the highest-priority consumer while
-allowing `01_data_pipeline.py` and `04_checker.py` to run safely:
+allowing `pipeline.py` and `checker.py` to run safely:
 
 - only one heavy historical job may pull TradingView at a time
 - historical pulls wait for the current live batch window when possible
@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from _task_lock import acquire, is_locked, release
+from data_provider.common.locks import acquire, is_locked, release
 from modules.db_connector import get_connection
 
 TV_HISTORICAL_JOB_LOCK = "tv_historical_job"
@@ -641,7 +641,7 @@ def request_ws_live_shutdown(logger: logging.Logger) -> bool:
     Ghi 'shutdown_requested=1' vào Payload của lock 'ws_live_runtime'.
     Trả về True nếu tín hiệu được ghi thành công.
     """
-    from _task_lock import update_payload
+    from data_provider.common.locks import update_payload
     result = update_payload(WS_LIVE_RUNTIME_LOCK, _WS_LIVE_SHUTDOWN_SIGNAL)
     if result:
         logger.info(

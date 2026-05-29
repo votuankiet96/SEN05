@@ -25,7 +25,7 @@ from typing import Any
 import pandas as pd
 import websocket
 
-import _tv_auth
+from data_provider.tv import auth as _tv_auth
 from config import TV_COOKIE, TV_WS_HISTORY_ENDPOINT
 
 

@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SQL_DIR = ROOT / "data_provider" / "00_sql"
+SQL_DIR = ROOT / "data_provider" / "sql"
 
 
 def _read_sql(name: str) -> str:
@@ -110,8 +110,5 @@ def test_verify_sql_checks_runtime_drift_guards():
     assert "Description LIKE '%COMPUTED%'" in sql
 
 
-def test_standalone_aggregate_patch_sets_database_context():
-    sql = _read_sql("patch_usp_AggregateFromStaging_safe.sql")
-
-    assert sql.startswith("-- Standalone maintenance/backport patch.")
-    assert "USE SEN05_AutoTrading;" in sql.splitlines()[:5]
+def test_no_legacy_standalone_aggregate_patch_in_runtime_sql():
+    assert not (SQL_DIR / "patch_usp_AggregateFromStaging_safe.sql").exists()

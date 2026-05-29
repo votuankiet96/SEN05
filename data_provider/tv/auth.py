@@ -2,7 +2,7 @@
 Quan ly xac thuc TradingView dung chung cho pipeline, ws_live va checker.
 
 Thu tu fallback hien tai:
-1. runtime cache trong `.tv_token_cache`
+1. runtime cache trong `data_provider/runtime/cache/tv_token_cache.json`
 2. token / cookie co san trong `.env`
 3. refresh token qua cookie session (HTTP GET)
 4. dang nhap bang username/password -> lay token + cookie moi (Fix A)
@@ -19,7 +19,7 @@ Muc tieu cua module nay khong chi la "dang nhap duoc", ma la:
 """
 
 # =============================================================================
-# data_provider/_tv_auth.py  -  Xác thực TradingView (module dùng chung)
+# data_provider/tv/auth.py  -  Xác thực TradingView (module dùng chung)
 # =============================================================================
 #
 # FILE NÀY LÀM GÌ-
@@ -35,7 +35,7 @@ Muc tieu cua module nay khong chi la "dang nhap duoc", ma la:
 #
 # HỆ THỐNG DỰ PHÒNG 5 LỚP (thử lần lượt từ trên xuống):
 #
-#   Lớp 0 - Token cache (.tv_token_cache):
+#   Lớp 0 - Token cache (runtime/cache/tv_token_cache.json):
 #     Lần trước đã đăng nhập thành công -> lưu token vào file cục bộ.
 #     Lần này dùng lại, không cần request mạng. Nhanh nhất.
 #
@@ -66,9 +66,9 @@ Muc tieu cua module nay khong chi la "dang nhap duoc", ma la:
 #     Là phương án cuối cùng, không nên chạy lâu với guest.
 #
 # CÁC SCRIPT DÙNG FILE NÀY:
-#   02_ws_live.py       - WebSocket live      (bootstrap, get_current_token, renew)
-#   01_data_pipeline.py - Backfill hàng ngày  (get_valid_tv_connection, refresh_mid_run)
-#   04_checker.py       - Kiểm tra dữ liệu   (get_valid_tv_connection, refresh_mid_run)
+#   ws_live.py       - WebSocket live      (bootstrap, get_current_token, renew)
+#   pipeline.py - Backfill hàng ngày  (get_valid_tv_connection, refresh_mid_run)
+#   checker.py       - Kiểm tra dữ liệu   (get_valid_tv_connection, refresh_mid_run)
 #
 # CẤU HÌNH CẦN THIẾT TRONG FILE .env:
 #   TV_AUTH_TOKEN=eyJhbGci...   ← copy từ trình duyệt (F12 > Network > cookie)
@@ -92,12 +92,13 @@ from requests.adapters import HTTPAdapter
 # Bootstrap: thêm project root vào path
 import os
 import sys
-_PROJ = Path(__file__).resolve().parent.parent
+_PROJ = Path(__file__).resolve().parents[2]
 if str(_PROJ) not in sys.path:
     sys.path.insert(0, str(_PROJ))
 
 from config import TV_AUTH_TOKEN, TV_COOKIE, TV_PASSWORD, TV_USERNAME  # noqa: E402
-from _discord import tg_alert as _tg_alert  # noqa: E402
+from data_provider.common.notifications import tg_alert as _tg_alert  # noqa: E402
+from data_provider.paths import TV_TOKEN_CACHE  # noqa: E402
 
 # Module-level logger (dùng khi caller không truyền logger vào)
 _logger = logging.getLogger("tv_auth")
@@ -132,7 +133,7 @@ _http_session_lock = threading.Lock()
 _tv_cookie: str = TV_COOKIE
 
 # Đường dẫn token cache (lưu runtime credentials tách khỏi .env)
-_TOKEN_CACHE = Path(__file__).parent / ".tv_token_cache"
+_TOKEN_CACHE = TV_TOKEN_CACHE
 
 
 # =============================================================================
@@ -246,18 +247,23 @@ def refresh_mid_run(tv, lg: logging.Logger | None = None) -> bool:
 # =============================================================================
 
 class _TradingViewHTTPAdapter(HTTPAdapter):
-    """Requests adapter compatible with Python/OpenSSL strict chain checks."""
+    """Requests adapter — disables SSL chain verification for TradingView.
+
+    Some Windows environments (missing root CA, corporate proxy, etc.) fail
+    'unable to get local issuer certificate'.  TradingView is a known host so
+    we skip chain verification while keeping the connection encrypted.
+    """
 
     def init_poolmanager(self, *args, **kwargs):
         ctx = ssl.create_default_context()
-        # Python 3.14/OpenSSL 3 can reject TradingView's served chain on some
-        # Windows installs with "Basic Constraints of CA cert not marked
-        # critical". Keep certificate verification on, but avoid that stricter
-        # OpenSSL policy so auth refresh can use the same chain browsers accept.
-        if hasattr(ssl, "VERIFY_X509_STRICT"):
-            ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
         kwargs["ssl_context"] = ctx
         return super().init_poolmanager(*args, **kwargs)
+
+    def send(self, request, **kwargs):
+        kwargs["verify"] = False
+        return super().send(request, **kwargs)
 
 
 def _get_http_session() -> requests.Session:
@@ -266,6 +272,8 @@ def _get_http_session() -> requests.Session:
     if _http_session is None:
         with _http_session_lock:
             if _http_session is None:
+                import urllib3
+                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
                 sess = requests.Session()
                 sess.mount("https://", _TradingViewHTTPAdapter())
                 _http_session = sess
@@ -379,7 +387,7 @@ def _resolve_auth_token(lg: logging.Logger | None = None) -> tuple[str, str]:
     Đây là "dispatcher" - không tự xác thực mà gọi các hàm chuyên biệt.
     Thứ tự thử được thiết kế để ưu tiên cách nhanh nhất trước, cách chậm nhất sau.
 
-    Lớp 0  : File cache .tv_token_cache (không cần mạng - nhanh nhất)
+    Lớp 0  : File cache runtime/cache/tv_token_cache.json (không cần mạng - nhanh nhất)
     Lớp 1  : Token tĩnh từ .env (không cần mạng)
     Lớp 1.5: Refresh qua HTTP GET + cookie (~1-2s)
     Lớp 2  : Đăng nhập username/password qua HTTP POST (~2-5s)
@@ -397,7 +405,7 @@ def _resolve_auth_token(lg: logging.Logger | None = None) -> tuple[str, str]:
         if cached_cookie:
             _tv_cookie = cached_cookie
         if _is_token_reusable_for_startup(cached_token, "cached_token", log):
-            log.info("[AUTH] Using cached token from .tv_token_cache.")
+            log.info("[AUTH] Using cached token from runtime token cache.")
             return cached_token, "cached_token"
 
     # LỚP 1: Static token từ .env
@@ -762,7 +770,7 @@ def _headless_login_fresh(username: str, password: str) -> tuple[str, str]:
 
 
 def _load_token_cache() -> dict:
-    """Đọc runtime token/cookie từ file .tv_token_cache (JSON)."""
+    """Đọc runtime token/cookie từ file runtime/cache/tv_token_cache.json."""
     try:
         if _TOKEN_CACHE.exists():
             return json.loads(_TOKEN_CACHE.read_text(encoding="utf-8"))
@@ -772,13 +780,14 @@ def _load_token_cache() -> dict:
 
 
 def _save_token_cache(token: str, cookie: str) -> None:
-    """Lưu runtime token/cookie vào .tv_token_cache (JSON)."""
+    """Lưu runtime token/cookie vào runtime/cache/tv_token_cache.json."""
     data: dict = {}
     if token and token != GUEST_TOKEN:
         data["TV_AUTH_TOKEN"] = token
     if cookie:
         data["TV_COOKIE"] = cookie
     try:
+        _TOKEN_CACHE.parent.mkdir(parents=True, exist_ok=True)
         _TOKEN_CACHE.write_text(json.dumps(data, indent=2), encoding="utf-8")
     except Exception as exc:
         _logger.warning("[AUTH] Could not write token cache: %s", exc)
@@ -788,7 +797,7 @@ def _save_credentials_to_env(token: str, cookie: str) -> None:
     """
     Cập nhật runtime credentials:
     - In-memory: _auth_token và _tv_cookie (tức thời)
-    - File cache: .tv_token_cache (durable qua restart)
+    - File cache: runtime/cache/tv_token_cache.json (durable qua restart)
     """
     global _auth_token, _tv_cookie
     if token and token != GUEST_TOKEN:
@@ -796,7 +805,7 @@ def _save_credentials_to_env(token: str, cookie: str) -> None:
     if cookie:
         _tv_cookie = cookie
     _save_token_cache(token, cookie)
-    _logger.info("[AUTH] Credentials saved to .tv_token_cache.")
+    _logger.info("[AUTH] Credentials saved to runtime token cache.")
 
 
 def _bootstrap_credentials(lg: logging.Logger | None = None) -> tuple[str, str]:

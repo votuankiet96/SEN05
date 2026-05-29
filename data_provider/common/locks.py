@@ -18,7 +18,7 @@ Thiet ke uu tien an toan van hanh:
 """
 
 # =============================================================================
-# data_provider/_task_lock.py  -  Khóa phân tán DB + payload / legacy token relay
+# data_provider/common/locks.py  -  Khóa phân tán DB + payload / legacy token relay
 # =============================================================================
 #
 # FILE NÀY LÀM GÌ-
@@ -52,7 +52,7 @@ Thiet ke uu tien an toan van hanh:
 #   "timeout" ngay để checker tự xử lý theo logic hiện hành.
 #
 # BẢNG DATABASE LIÊN QUAN:
-#   SEN.ActiveTask - xem file 00_sql/06_active_task.sql
+#   SEN.ActiveTask - xem file data_provider/sql/06_active_task.sql
 #   Cột TaskName (PRIMARY KEY) = tên khoá (ví dụ: 'checker_repair')
 #   Cột ExpiresAt = thời điểm khoá tự hết hạn
 #   Cột Payload   = nơi ghi tín hiệu vận hành hoặc legacy token relay
@@ -66,7 +66,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-_PROJ = Path(__file__).resolve().parent.parent
+_PROJ = Path(__file__).resolve().parents[2]
 if str(_PROJ) not in sys.path:
     sys.path.insert(0, str(_PROJ))
 
@@ -299,7 +299,7 @@ def _handle_token_command(text: str) -> bool:
         # First-one-wins: chỉ set nếu chưa có kết quả
         _pending_tokens[token] = action
         try:
-            from _discord import tg_send
+            from data_provider.common.notifications import tg_send
             icon = "[OK]" if action == "confirm" else "[SKIP]"
             tg_send(f"{icon} Received /{action}_{token} - processing...")
         except Exception:
@@ -307,7 +307,7 @@ def _handle_token_command(text: str) -> bool:
     else:
         # Đã nhận lệnh trước đó
         try:
-            from _discord import tg_send
+            from data_provider.common.notifications import tg_send
             tg_send(f"[INFO] Token {token} has already been processed.")
         except Exception:
             pass
@@ -377,7 +377,7 @@ def request_confirm(
     """
     # Discord webhook là một chiều - không thể polling nhận lệnh phản hồi.
     # Gửi thông báo 1 chiều rồi trả về 'timeout' ngay lập tức.
-    from _discord import tg_ask, tg_flush
+    from data_provider.common.notifications import tg_ask, tg_flush
 
     token = generate_token()
     _pending_tokens[token] = None

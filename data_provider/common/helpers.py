@@ -14,14 +14,14 @@ Khi thay doi nguong, can doc ky vi no anh huong truc tiep den cach he thong phan
 """
 
 # =============================================================================
-# data_provider/_helpers.py  -  Shared helpers for data pipeline / ws_live / checker
+# data_provider/common/helpers.py  -  Shared helpers for data pipeline / ws_live / checker
 # =============================================================================
 #
 # MỤC ĐÍCH:
 #   Chứa tất cả hàm dùng chung cho 3 script chính của data_provider:
-#     - 01_data_pipeline.py  - backfill hàng ngày
-#     - 02_ws_live.py        - cập nhật realtime qua WebSocket (24/7)
-#     - 04_checker.py        - kiểm tra và tự sửa dữ liệu mỗi 3 ngày
+#     - pipeline.py  - backfill hàng ngày
+#     - ws_live.py        - cập nhật realtime qua WebSocket (24/7)
+#     - checker.py        - kiểm tra và tự sửa dữ liệu mỗi 3 ngày
 #
 # ─────────────────────────────────────────────────────────────────────────────
 # CÁC NHÓM CHỨC NĂNG
@@ -177,8 +177,8 @@ class ResilientRotatingFileHandler(logging.handlers.RotatingFileHandler):
 # ---------------------------------------------------------------------------
 # Bootstrap: thêm project root vào path (harmless khi đã pip install -e .)
 # ---------------------------------------------------------------------------
-_PROJ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_DATA = os.path.dirname(os.path.abspath(__file__))   # data_provider/ directory
+_DATA = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # data_provider/ directory
+_PROJ = os.path.dirname(_DATA)
 if _PROJ not in sys.path:
     sys.path.insert(0, _PROJ)
 
@@ -241,11 +241,12 @@ from modules.db_connector import (
     insert_staging_batch,  # Ghi DataFrame OHLCV vào bảng Staging (MERGE, chống duplicate)
     run_etl_direct,  # Gọi usp_LoadDirect: chuyển Staging -> Fact_OHLCV
 )
-from _task_lock import acquire, release
-from _tv_coord import sleep_between_historical_requests, wait_for_historical_slot
-import _tv_ws_history
-import _tv_ws_replay
-import _logfmt
+from data_provider.common.locks import acquire, release
+from data_provider.tv.coord import sleep_between_historical_requests, wait_for_historical_slot
+from data_provider.tv import ws_history as _tv_ws_history
+from data_provider.tv import ws_replay as _tv_ws_replay
+from data_provider.common import logfmt as _logfmt
+from data_provider.paths import VERIFIED_MARKET_GAPS
 
 # ---------------------------------------------------------------------------
 # Tạo logger - ghi log ra cả console lẫn file
@@ -409,6 +410,9 @@ def setup_logger(name: str, log_file: str, rotating: bool = False) -> logging.Lo
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     logger.setLevel(getattr(logging, LOG_LEVEL, logging.INFO))
     logger.propagate = False
+    log_dir = os.path.dirname(os.path.abspath(log_file))
+    if log_dir:
+        os.makedirs(log_dir, exist_ok=True)
     console_fmt = ConsoleSanitizingFormatter(
         "%(asctime)s | %(levelname)-7s | %(message)s",
         datefmt="%H:%M:%S",
@@ -547,8 +551,8 @@ OVERNIGHT_GAP_MINUTES = {
 
 # Đường dẫn file JSON lưu market gap đã xác nhận
 # (gap do thị trường đóng cửa, KHÔNG phải thiếu data -> skip lần sau)
-# Lưu trong cache/ ở project root để tách biệt runtime data khỏi source code
-_VERIFIED_GAPS_FILE = os.path.join(_PROJ, "cache", "verified_market_gaps.json")
+# Runtime cache is kept out of source directories.
+_VERIFIED_GAPS_FILE = str(VERIFIED_MARKET_GAPS)
 
 # Source TF cho từng derived TF - dùng để kiểm tra source có data trước khi aggregate
 _SOURCE_TF = {
@@ -1152,7 +1156,7 @@ def pull_and_store(tv, sym: dict, tf_code: str,
     returned_bars = len(df)
     if returned_bars < n_bars * 0.5:
         try:
-            from _tv_auth import get_auth_mode as _get_auth_mode
+            from data_provider.tv.auth import get_auth_mode as _get_auth_mode
             _mode = _get_auth_mode()
         except Exception:
             _mode = "unknown"
