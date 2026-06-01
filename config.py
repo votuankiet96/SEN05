@@ -37,7 +37,8 @@
 #   data_provider/apps/ws_live.py          — WebSocket live updater (V5 Batch mode)
 #   data_provider/apps/checker.py          — data quality scan and repair
 #   data_provider/apps/chart_server.py     — internal data dashboard
-#   strategies/combo/05_signal_dashboard.py — Combo signal scanner (Streamlit)
+#   core_python/main.py                    — strategy chart dashboard
+#   core_python/notify/signal_watcher.py   — strategy signal watcher/notifier
 # =============================================================================
 
 import os

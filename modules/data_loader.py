@@ -180,7 +180,7 @@ def load_timeframes() -> list:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# load_ohlcv   —  by SymbolID  (09_signal_scanner, 10_SAM_dashboard)
+# load_ohlcv   —  by SymbolID  (legacy helper API)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def load_ohlcv(symbol_id: int, n_bars: int, tf_code: str = 'H4',

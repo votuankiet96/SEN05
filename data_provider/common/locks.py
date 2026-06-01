@@ -1,15 +1,14 @@
 """
-Co che khoa phan tan va relay token xac nhan qua bang `SEN.ActiveTask`.
+Co che khoa phan tan qua bang `SEN.ActiveTask`.
 
 Module nay giai quyet 2 bai toan van hanh:
 1. Advisory lock:
    checker, pipeline va ws_live co nhung luc cung muon ghi vao kho du lieu.
    `SEN.ActiveTask` duoc dung nhu mot "den giao thong" cap DB de ngan xung dot.
-2. Payload / legacy token relay:
-   Payload can still carry cross-process signals. Older Telegram confirmation
-   tokens used `/confirm_TOKEN` and `/skip_TOKEN`; the current Discord webhook
-   path is one-way, so checker confirmation requests auto-timeout instead of
-   waiting for inbound commands.
+2. Payload signal:
+   Payload can carry small runtime signals between processes, for example
+   ws_live shutdown requests and heartbeat metadata. Interactive confirmation
+   tokens are intentionally not supported in the current one-way notifier path.
 
 Thiet ke uu tien an toan van hanh:
 - lock co TTL (dead-man switch) de tranh treo vo han neu process bi kill
@@ -18,7 +17,7 @@ Thiet ke uu tien an toan van hanh:
 """
 
 # =============================================================================
-# data_provider/common/locks.py  -  Khóa phân tán DB + payload / legacy token relay
+# data_provider/common/locks.py  -  Khóa phân tán DB + runtime payload signal
 # =============================================================================
 #
 # FILE NÀY LÀM GÌ-
@@ -43,27 +42,21 @@ Thiet ke uu tien an toan van hanh:
 #     Không bao giờ bị treo vô hạn.
 #
 #   ─────────────────────────────────────────────────────────────────────────
-#   CƠ CHẾ 2: PAYLOAD / LEGACY TOKEN RELAY
+#   CƠ CHẾ 2: PAYLOAD / RUNTIME SIGNAL
 #   ─────────────────────────────────────────────────────────────────────────
-#   Cột Payload vẫn tồn tại để mang tín hiệu vận hành giữa các process.
-#   Luồng Telegram tương tác cũ từng dùng Payload để relay /confirm_TOKEN hoặc
-#   /skip_TOKEN. Runtime hiện tại dùng Discord webhook một chiều, không có
-#   inbound bot listener, nên request_confirm() gửi cảnh báo rồi trả về
-#   "timeout" ngay để checker tự xử lý theo logic hiện hành.
+#   Cột Payload tồn tại để mang tín hiệu vận hành nhỏ giữa các process, ví dụ
+#   heartbeat metadata hoặc shutdown_requested=1 cho ws_live. Luồng confirm
+#   tương tác cũ đã bị loại bỏ vì notifier hiện tại là webhook một chiều.
 #
 # BẢNG DATABASE LIÊN QUAN:
 #   SEN.ActiveTask - xem file data_provider/sql/06_active_task.sql
 #   Cột TaskName (PRIMARY KEY) = tên khoá (ví dụ: 'checker_repair')
 #   Cột ExpiresAt = thời điểm khoá tự hết hạn
-#   Cột Payload   = nơi ghi tín hiệu vận hành hoặc legacy token relay
+#   Cột Payload   = nơi ghi tín hiệu vận hành nhỏ giữa các process
 # =============================================================================
 
-import re
-import secrets
-import string
 import sys
 import time
-from datetime import datetime
 from pathlib import Path
 
 _PROJ = Path(__file__).resolve().parents[2]
@@ -74,9 +67,6 @@ import pyodbc  # noqa: E402
 from modules.db_connector import get_connection  # noqa: E402
 
 # ─── Module-level state ──────────────────────────────────────────────────────
-
-# Token registry: key = token string, value = None (chờ) | 'confirm' | 'skip'
-_pending_tokens: dict[str, str | None] = {}
 
 # Cache is_locked() để tránh query DB mỗi lần trong _db_worker() tight loop
 _lock_cache: dict = {"task_name": None, "locked": False, "checked_at": 0.0}
@@ -265,132 +255,3 @@ def cleanup_expired() -> int:
             conn.close()
 
 
-# ─── Token generation ────────────────────────────────────────────────────────
-
-def generate_token() -> str:
-    """Tạo token 8 ký tự cho luồng legacy /confirm_TOKEN."""
-    alphabet = string.ascii_uppercase + string.digits
-    return "".join(secrets.choice(alphabet) for _ in range(8))
-
-
-# ─── Token command handler ───────────────────────────────────────────────────
-
-def _handle_token_command(text: str) -> bool:
-    """
-    Parse lệnh legacy /confirm_TOKEN hoặc /skip_TOKEN và cập nhật _pending_tokens.
-
-    First-one-wins: chỉ set nếu token đang chờ (value = None).
-    Gửi thông báo Discord tương thích để user biết lệnh đã được nhận.
-
-    Trả về True nếu token hợp lệ và được xử lý, False nếu không.
-    """
-    m = re.match(r"^/(confirm|skip)_([A-Za-z0-9]{8})\b", text.strip(), re.IGNORECASE)
-    if not m:
-        return False
-
-    action = m.group(1).lower()    # chuẩn hóa về 'confirm' hoặc 'skip'
-    token  = m.group(2).upper()    # chuẩn hóa về uppercase để khớp generate_token()
-
-    if token not in _pending_tokens:
-        # Token không có trong registry của process này -> thử DB relay
-        return False
-
-    if _pending_tokens[token] is None:
-        # First-one-wins: chỉ set nếu chưa có kết quả
-        _pending_tokens[token] = action
-        try:
-            from data_provider.common.notifications import tg_send
-            icon = "[OK]" if action == "confirm" else "[SKIP]"
-            tg_send(f"{icon} Received /{action}_{token} - processing...")
-        except Exception:
-            pass
-    else:
-        # Đã nhận lệnh trước đó
-        try:
-            from data_provider.common.notifications import tg_send
-            tg_send(f"[INFO] Token {token} has already been processed.")
-        except Exception:
-            pass
-
-    return True
-
-
-# ─── Cross-process DB relay reader ───────────────────────────────────────────
-
-def _read_db_relay(task_name: str, token: str) -> str | None:
-    """
-    Đọc kết quả token legacy từ DB relay (SEN.ActiveTask.Payload).
-    Legacy inbound bot từng ghi vào đây khi nhận /confirm hoặc /skip ở process khác.
-
-    Trả về 'confirm', 'skip', hoặc None nếu chưa có kết quả.
-    """
-    conn = None
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT Payload FROM SEN.ActiveTask WHERE TaskName = ?",
-            (task_name,),
-        )
-        row = cursor.fetchone()
-        if row and row[0]:
-            payload = str(row[0])
-            if payload.startswith(f"confirm:{token}"):
-                return "confirm"
-            if payload.startswith(f"skip:{token}"):
-                return "skip"
-        return None
-    except Exception:
-        return None
-    finally:
-        if conn is not None:
-            conn.close()
-
-
-# ─── Interactive confirmation ─────────────────────────────────────────────────
-
-def request_confirm(
-    title: str,
-    problem_desc: str,
-    options: dict[str, str],
-    timeout_min: int = 240,
-    affected_pairs: list[str] | None = None,
-    task_name: str = "checker_repair",
-) -> str:
-    """
-    Gửi cảnh báo Discord một chiều và trả về timeout ngay.
-
-    Flow:
-      1. Tạo token + đăng ký vào _pending_tokens
-      2. Gửi tg_ask() qua Discord webhook + tg_flush()
-      3. Dọn token + trả về 'timeout' vì Discord không có kênh nhận lệnh ngược
-
-    Tham số:
-      title          - tiêu đề tin nhắn
-      problem_desc   - mô tả vấn đề (multiline string)
-      options        - dict {"confirm": "...", "skip": "..."} mô tả các lựa chọn
-      timeout_min    - thời gian chờ tối đa (phút), mặc định 240 (4 giờ)
-      affected_pairs - danh sách pairs bị ảnh hưởng (hiển thị tối đa 8)
-      task_name      - tên task trong SEN.ActiveTask (để đọc DB relay)
-
-    Trả về: 'timeout' trong runtime Discord hiện tại.
-    """
-    # Discord webhook là một chiều - không thể polling nhận lệnh phản hồi.
-    # Gửi thông báo 1 chiều rồi trả về 'timeout' ngay lập tức.
-    from data_provider.common.notifications import tg_ask, tg_flush
-
-    token = generate_token()
-    _pending_tokens[token] = None
-
-    tg_ask(
-        title=title,
-        problem_desc=problem_desc,
-        options=options,
-        token=token,
-        timeout_min=timeout_min,
-        affected_pairs=affected_pairs,
-    )
-    tg_flush(timeout=15)
-
-    _pending_tokens.pop(token, None)
-    return "timeout"

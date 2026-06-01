@@ -1,8 +1,7 @@
 """Discord webhook notifications cho data_provider.
 
-Thay thế _telegram.py — tên hàm giữ nguyên (tg_send, tg_alert, tg_flush,
-tg_ask, start_bot_listener, QUICK_COMMANDS_HINT) để các file chỉ cần đổi
-đúng 1 dòng import.
+Thay thế _telegram.py — tên hàm giữ nguyên cho các entrypoint đang import
+tg_send, tg_alert, tg_flush, start_bot_listener và QUICK_COMMANDS_HINT.
 
 Discord webhook là một chiều (outbound only) — không thể nhận lệnh ngược lại.
 """
@@ -126,77 +125,6 @@ def tg_alert(level: str, text: str) -> None:
                 "title":       f"{icon} AUTO TRADING - {level}",
                 "description": description,
                 "color":       color,
-            }]
-        }
-        for attempt in range(3):
-            try:
-                resp = requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=10)
-                if resp.status_code in (200, 204):
-                    return
-                if resp.status_code == 429:
-                    try:
-                        wait = float(resp.json().get("retry_after", 5))
-                    except Exception:
-                        wait = 5.0
-                    time.sleep(min(wait, 30))
-                elif attempt < 2:
-                    time.sleep(3)
-            except Exception:
-                if attempt < 2:
-                    time.sleep(3)
-
-    thread = threading.Thread(target=_send, daemon=False)
-    thread.start()
-    _pending_threads = [t for t in _pending_threads if t.is_alive()]
-    _pending_threads.append(thread)
-
-
-def tg_ask(
-    title: str,
-    problem_desc: str,
-    options: dict,
-    token: str,
-    timeout_min: int = 240,
-    affected_pairs: list | None = None,
-) -> None:
-    """Gửi thông báo một chiều thay thế cho tg_ask tương tác của Telegram.
-
-    Discord webhook không thể nhận lệnh phản hồi — hàm chỉ gửi thông báo
-    cho biết hệ thống sắp tự xử lý (auto-repair hoặc auto-skip).
-    Caller trong _task_lock.request_confirm() sẽ trả về 'timeout' ngay sau khi
-    hàm này trả về.
-    """
-    if not DISCORD_WEBHOOK_URL:
-        return
-
-    import requests
-
-    pairs_section = ""
-    if affected_pairs:
-        pair_lines = "\n".join(f"  - {p}" for p in affected_pairs[:8])
-        if len(affected_pairs) > 8:
-            pair_lines += f"\n  (... and {len(affected_pairs) - 8} more pairs)"
-        pairs_section = f"\n\n**Affected pairs:**\n{pair_lines}"
-
-    timeout_h = timeout_min // 60
-    timeout_m = timeout_min % 60
-    timeout_str = f"{timeout_h}h" if timeout_m == 0 else f"{timeout_h}h {timeout_m}m"
-
-    plain_desc = re.sub(r"<[^>]+>", "", problem_desc)
-    body = (
-        f"{plain_desc}{pairs_section}\n\n"
-        f"[INFO] Discord webhook is one-way, so the system will handle this automatically.\n"
-        f"(This used to wait {timeout_str} for confirmation through Telegram.)"
-    )[:4096]
-
-    global _pending_threads
-
-    def _send() -> None:
-        payload = {
-            "embeds": [{
-                "title":       f"[WARN] {title}",
-                "description": body,
-                "color":       _COLORS["WARNING"],
             }]
         }
         for attempt in range(3):

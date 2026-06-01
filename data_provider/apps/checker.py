@@ -11,7 +11,7 @@ File nay so sanh du lieu trong DB voi TradingView de tim:
 Che do van hanh hien tai:
 - `--dry-run`: chi quet va bao cao, khong sua
 - mac dinh: uu tien auto-repair theo rollout an toan, co lock va co verify sau sua
-- `--manual-confirm`: chi khi bat co nay moi cho Discord xac nhan (one-way, khong nhan lenh nguoc)
+- `--manual-confirm`: deprecated; chi gui thong bao Discord roi van auto-repair
 
 Nguong mac dinh hien tai la `0.001 = 0.1%`.
 Tuy nhien cac "core issue" nhu missing / wrong OHLC / extra bars co the bo qua nguong nay
@@ -47,9 +47,8 @@ va duoc dua vao danh sach sua ngay, vi do la loi cau truc du lieu chinh.
 #       - So sÃ¡nh tá»«ng sá»‘ liá»‡u OHLCV: náº¿u chÃªnh > 0.01% â†’ Ä‘Ã¡nh dáº¥u sai
 #     Káº¿t quáº£: danh sÃ¡ch cáº·p cÃ³ váº¥n Ä‘á» theo core issue hoáº·c vÆ°á»£t ngÆ°á»¡ng mismatch hiá»‡n hÃ nh
 #
-#   Giai Ä‘oáº¡n 2 â€" CONFIRM (há»i user):
-#     Gá»­i Discord mÃ´ táº£ chi tiáº¿t â†’ Ä‘á»£i timeout (Discord one-way, khÃ´ng nháº­n pháº£n há»"i)
-#     Timeout 4 giá», máº·c Ä‘á»‹nh bá» qua náº¿u khÃ´ng cÃ³ pháº£n há»"i
+#   Giai Ä‘oáº¡n 2 â€" AUTO-CONFIRM:
+#     Discord webhook lÃ  one-way, nÃªn checker chá»‰ gá»­i notice rá»“i tiáº¿p tá»¥c auto-repair.
 #
 #   Giai Ä‘oáº¡n 3 â€" REPAIR (sá»­a náº¿u user Ä‘á»"ng Ã½):
 #     - Acquire lock 'checker_repair' (ngÄƒn WS cháº¡y ETL Ä‘á»"ng thá»i)
@@ -60,7 +59,7 @@ va duoc dua vao danh sach sua ngay, vi do la loi cau truc du lieu chinh.
 # CÃCH CHáº Y THá»¦ CÃ"NG:
 #   python checker.py                    # cháº¡y scan + auto-repair an toÃ n (máº·c Ä‘á»‹nh)
 #   python checker.py --dry-run          # chá»‰ scan + bÃ¡o cÃ¡o, khÃ´ng há»i, khÃ´ng sá»­a
-#   python checker.py --manual-confirm   # chá»‰ sá»­a khi Discord xÃ¡c nháº­n (khÃ´ng tÆ°Æ¡ng tÃ¡c, auto-confirm)
+#   python checker.py --manual-confirm   # deprecated; gá»­i notice rá»“i váº«n auto-repair
 #   python checker.py --sym GOLD         # chá»‰ kiá»ƒm tra 1 symbol
 #   python checker.py --tf H4            # chá»‰ kiá»ƒm tra 1 khung thá»i gian
 #   python checker.py --threshold 0.05   # nÃ¢ng ngÆ°á»¡ng sai lÃªn 5% (máº·c Ä‘á»‹nh 0.1%)
@@ -70,7 +69,7 @@ va duoc dua vao danh sach sua ngay, vi do la loi cau truc du lieu chinh.
 #
 # Káº¾T QUáº¢ Gá»¬I LÃŠN TELEGRAM:
 #   - Náº¿u sáº¡ch: "âœ… X pairs â€" táº¥t cáº£ dá»¯ liá»‡u khá»›p"
-#   - Náº¿u cÃ³ váº¥n Ä‘á»: gá»­i cÃ¢u há»i /confirm_TOKEN Ä‘á»ƒ sá»­a
+#   - Náº¿u cÃ³ váº¥n Ä‘á»: gá»­i notice vÃ  auto-repair theo lock/verify
 #   - Sau khi sá»­a: "ðŸ"§ X pairs Ä‘Ã£ sá»­a xong / Y pairs lá»—i persistent"
 # =============================================================================
 
@@ -110,7 +109,7 @@ from data_provider.tv.coord import (
     wait_for_historical_slot,
 )
 from data_provider.common.notifications import tg_send, tg_flush
-from data_provider.common.locks import acquire, release, cleanup_expired, renew, request_confirm, is_locked
+from data_provider.common.locks import acquire, release, cleanup_expired, renew, is_locked
 from data_provider.paths import LOG_DIR
 from modules.db_connector import (
     aggregate_from_fact,
@@ -1114,7 +1113,7 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
 
 def _build_problem_desc(issues: list[dict], threshold: float) -> str:
     """
-    Build problem description from dry_issues list for tg_ask().
+    Build a concise repair notice from the dry_issues list.
 
     """
     n = len(issues)
@@ -1684,36 +1683,17 @@ def main() -> None:
     if args.tf_check and tf_gap_issues:
         logger.info("Found %d pairs with interval gaps in DB.", len(tf_gap_issues))
         if args.manual_confirm:
-            choice = request_confirm(
-                title="[Checker] Interval gaps detected",
-
-                problem_desc=(
-                    f"Found {len(tf_gap_issues)} pairs with interval gaps in DB. "
-
-                    "Checker will re-pull the missing windows from TradingView "
-
-                    "and rebuild computed TFs if needed."
-
-                ),
-                options={
-                    "confirm": f"Repair all {len(tf_gap_issues)} missing pairs",
-
-                    "skip": "Skip, report only",
-
-                },
-                timeout_min=240,
-                affected_pairs=[
-                    f"{issue['sym']}/{issue['tf']}: {len(issue.get('issue_rows', []))} gap(s)"
-                    for issue in tf_gap_issues[:8]
-                ],
-                task_name="checker_repair",
+            logger.warning(
+                "--manual-confirm no longer works because Discord webhook is one-way. "
+                "Continuing with auto-repair for interval gaps."
             )
-            logger.info("User choice for interval-gap repair: %s", choice)
-            if choice != "confirm":
-                reason = "timeout (4h)" if choice == "timeout" else "user skipped"
-                tg_send(f"<b>[Checker]</b> TF gap report ({reason})\n\n<pre>{tf_report}</pre>")
-                tg_flush()
-                _exit(0)
+            tg_send(
+                "[WARN] <b>[Checker]</b> <code>--manual-confirm</code> no longer works "
+                "because Discord webhook is one-way.\n"
+                f"Found {len(tf_gap_issues)} pairs with interval gaps. "
+                "Continuing with <b>auto-repair</b>."
+            )
+            tg_flush()
         else:
             tg_send(
                 f"<b>[Checker]</b> Found {len(tf_gap_issues)} pairs with interval gaps. "

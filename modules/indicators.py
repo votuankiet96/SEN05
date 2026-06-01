@@ -15,7 +15,7 @@ import pandas as pd
 # ─────────────────────────────────────────────────────────────────────────────
 # Low-level Series / DataFrame calculations
 # Column convention: Title-Case  (Open, High, Low, Close, Volume)
-# Used by: dashboards/06_chart_v3  (full indicator suite)
+# Used by: data_provider chart indicators and legacy helper callers.
 # ─────────────────────────────────────────────────────────────────────────────
 
 def calc_sma(s, period):
@@ -284,7 +284,7 @@ def calc_ai_trend_navigator(
 # Strategy-level indicator bundle
 # Column convention: lowercase  (open, high, low, close)
 # BarTime must be a plain column (not index)
-# Used by: research/09_signal_scanner, dashboards/10_SAM_dashboard
+# Used by: legacy callers that still expect the combined indicator frame.
 # ─────────────────────────────────────────────────────────────────────────────
 
 def add_indicators(df: pd.DataFrame, p: dict) -> pd.DataFrame:

@@ -60,40 +60,20 @@ def _make_ohlcv_df(n: int = 5, start: str = "2024-01-01") -> pd.DataFrame:
 
 
 # =============================================================================
-# NHÓM 1: _task_lock — Token generation & Advisory lock
+# NHÓM 1: _task_lock — Advisory lock
 # =============================================================================
 
 class TestTaskLock:
-    """Kiểm tra data_provider.common.locks sau khi đổi sang secrets."""
+    """Kiểm tra data_provider.common.locks chỉ còn advisory lock runtime."""
 
-    def test_generate_token_length(self):
-        """Token phải đúng 8 ký tự."""
-        from data_provider.common.locks import generate_token
-        tok = generate_token()
-        assert len(tok) == 8, f"Expected 8 chars, got {len(tok)}"
-
-    def test_generate_token_charset(self):
-        """Token chỉ gồm chữ hoa A-Z và số 0-9."""
-        import string
-        from data_provider.common.locks import generate_token
-        allowed = set(string.ascii_uppercase + string.digits)
-        for _ in range(20):
-            tok = generate_token()
-            assert all(c in allowed for c in tok), f"Invalid chars in token: {tok!r}"
-
-    def test_generate_token_uses_secrets(self):
-        """generate_token() phải dùng secrets.choice, không phải random.choices."""
+    def test_legacy_confirm_api_removed(self):
+        """Interactive confirm token flow đã bị loại khỏi runtime hiện tại."""
         import data_provider.common.locks as tl
-        import inspect
-        src = inspect.getsource(tl.generate_token)
-        assert "secrets" in src, "generate_token phải dùng secrets module"
-        assert "random" not in src, "generate_token không được dùng random module"
 
-    def test_generate_token_uniqueness(self):
-        """1000 token phải không trùng nhau (xác suất lý thuyết cực thấp)."""
-        from data_provider.common.locks import generate_token
-        tokens = [generate_token() for _ in range(1000)]
-        assert len(set(tokens)) == 1000, "Token collision detected in 1000 samples"
+        assert not hasattr(tl, "generate_token")
+        assert not hasattr(tl, "request_confirm")
+        assert not hasattr(tl, "_handle_token_command")
+        assert not hasattr(tl, "_read_db_relay")
 
     def test_is_locked_cache_ttl(self):
         """is_locked() phải cache kết quả trong vòng 30 giây."""
@@ -118,21 +98,6 @@ class TestTaskLock:
             assert call_count == first_count, (
                 "is_locked() phải cache kết quả — không query DB liên tiếp trong TTL"
             )
-
-    def test_request_confirm_returns_timeout_immediately(self):
-        """request_confirm() phải trả về 'timeout' ngay lập tức (Discord stub)."""
-        import inspect
-        from data_provider.common.locks import request_confirm
-
-        src = inspect.getsource(request_confirm)
-        # Phải trả về 'timeout' — không có polling loop
-        assert "return \"timeout\"" in src or "return 'timeout'" in src, (
-            "request_confirm() phải return 'timeout' (Discord là one-way)"
-        )
-        # Không được có while loop (polling)
-        assert "while " not in src, (
-            "request_confirm() không được có polling loop sau khi migrate sang Discord"
-        )
 
 
 # =============================================================================
@@ -579,8 +544,7 @@ class TestCheckerExceptionSafety:
                "manual_confirm" in src and "auto-repair" in src, (
             "--manual-confirm phải có warning message"
         )
-        # request_confirm() không được gọi từ manual_confirm path
-        # (đã bị thay bằng auto-confirm)
+        # Interactive confirmation không được xuất hiện trong manual_confirm path.
         assert "Auto-confirm" in src, "Phải có comment Phase 2: Auto-confirm"
 
     def test_query_bar_times_returns_empty_on_db_error(self):
@@ -767,7 +731,7 @@ class TestEndToEndFailureSimulation:
     def test_sim_checker_manual_confirm_fallthrough(self):
         """
         Kịch bản: --manual-confirm được dùng.
-        Phải có warning, không gọi request_confirm() (stub Discord).
+        Phải có warning và không gọi interactive confirmation.
         """
         src = (CHECKER_SRC).read_text(encoding="utf-8")
 
@@ -784,11 +748,11 @@ class TestEndToEndFailureSimulation:
         # Lấy đoạn từ Phase 1 đến Phase 3 (khoảng 3000 chars)
         section = src[phase1_idx:phase1_idx + 3000]
 
-        # Phase 2 phải là Auto-confirm, không gọi request_confirm()
+        # Phase 2 phải là Auto-confirm, không gọi interactive confirmation.
         assert "Auto-confirm" in section, (
-            "Phase 2 phải đổi thành Auto-confirm, không còn gọi request_confirm()"
+            "Phase 2 phải đổi thành Auto-confirm, không còn gọi interactive confirmation"
         )
-        # request_confirm() không được xuất hiện trong section này
+        # request_confirm() không được xuất hiện trong section này.
         assert "request_confirm(" not in section, (
             "request_confirm() không được gọi trong manual_confirm path"
         )
@@ -797,26 +761,6 @@ class TestEndToEndFailureSimulation:
                "manual_confirm" in src[mc_idx:mc_idx + 5000], (
             "Phải có warning về --manual-confirm"
         )
-
-    def test_sim_token_generation_security(self):
-        """Kiểm tra generate_token() không thể bị dự đoán với seed cố định."""
-        from data_provider.common.locks import generate_token
-
-        # Nếu dùng random.seed() để fix seed → token vẫn phải khác nhau
-        import random
-        random.seed(42)
-        tokens_with_fixed_seed = [generate_token() for _ in range(5)]
-
-        random.seed(42)
-        tokens_same_seed = [generate_token() for _ in range(5)]
-
-        # Vì dùng secrets, seed của random không ảnh hưởng
-        # Hai set phải KHÔNG giống nhau (secrets không bị ảnh hưởng bởi random.seed)
-        # (xác suất trùng 8 chars từ 36 ký tự = cực thấp)
-        # Test đơn giản hơn: tokens phải không giống nhau giữa 2 lần chạy
-        # (secrets là non-deterministic)
-        # Thay vào đó, verify rằng tokens dùng secrets (đã test trong test khác)
-        assert all(len(t) == 8 for t in tokens_with_fixed_seed), "Mọi token phải dài 8 ký tự"
 
     def test_sim_watermark_prevents_duplicate(self):
         """
