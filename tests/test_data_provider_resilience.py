@@ -537,6 +537,143 @@ class TestCheckerExceptionSafety:
         assert "etl_attempt" in fn_src, "_repair_direct_window phải có retry loop"
         assert "time.sleep(2)" in fn_src, "Phải chờ 2s giữa các ETL retry"
 
+    def test_repair_direct_window_caps_pull_attempts_for_checker(self, monkeypatch):
+        """Checker repair có cap thì không được leo thang lên FULL_N_BARS/Replay."""
+        from data_provider.apps import checker
+
+        attempts: list[int] = []
+        logger = MagicMock()
+        issue_times = [datetime(2026, 1, 1, 0, 0)]
+        sym = {"symbol_id": 1, "tv_symbol": "US30"}
+
+        monkeypatch.setattr(checker, "_estimate_repair_n_bars", lambda *_args: 900)
+        monkeypatch.setattr(checker, "delete_staging_bars", lambda *_args, **_kwargs: None)
+        monkeypatch.setattr(checker.time, "sleep", lambda *_args, **_kwargs: None)
+
+        def fake_pull_and_store(_tv, _sym, _tf_code, n_bars, _interval, _logger, *, skip_etl):
+            assert skip_etl is True
+            attempts.append(n_bars)
+            return -1
+
+        monkeypatch.setattr(checker, "pull_and_store", fake_pull_and_store)
+
+        ok = checker._repair_direct_window(
+            None,
+            sym,
+            "H1",
+            issue_times,
+            {"H1": "H1"},
+            logger,
+            reason="unit-test",
+            max_pull_bars=1000,
+        )
+
+        assert ok is False
+        assert attempts == [900, 1000]
+        assert checker.FULL_N_BARS["H1"] not in attempts
+
+    def test_repair_pair_full_repull_is_scoped_to_checked_window(self, monkeypatch):
+        """Systemic checker repair phải sửa trong checked window, không gọi full replay path."""
+        from data_provider.apps import checker
+
+        tv_time = datetime(2026, 1, 1, 0, 0)
+        tv_time_2 = datetime(2026, 1, 1, 1, 0)
+        db_time = datetime(2026, 1, 1, 2, 0)
+        captured: dict = {}
+
+        monkeypatch.setattr(
+            checker,
+            "_choose_repair_strategy",
+            lambda *_args: ("full_repull", "systemic timeline drift"),
+        )
+
+        def fake_repair_direct_window(_tv, _sym, _tf_code, issue_times, _interval_map, _logger, **kwargs):
+            captured["issue_times"] = issue_times
+            captured.update(kwargs)
+            return True
+
+        monkeypatch.setattr(checker, "_repair_direct_window", fake_repair_direct_window)
+
+        ok = checker._repair_pair(
+            None,
+            {"symbol_id": 1, "tv_symbol": "US30"},
+            "H1",
+            {
+                "tv_bars": {tv_time: (1, 1, 1, 1, 1), tv_time_2: (2, 2, 2, 2, 2)},
+                "db_bars": {tv_time: (1, 1, 1, 1, 1), db_time: (3, 3, 3, 3, 3)},
+                "missing": set(),
+                "mismatched": {},
+                "extra": set(),
+                "rate": 0.5,
+            },
+            {"H1": "H1"},
+            MagicMock(),
+        )
+
+        assert ok is True
+        assert not hasattr(checker, "repull_full_symbol")
+        assert captured["max_pull_bars"] == checker.CHECKER_N_BARS["H1"]
+        assert set(captured["expected_times"]) == {tv_time, tv_time_2}
+        assert set(captured["delete_times"]) == {tv_time, db_time}
+        assert set(captured["issue_times"]) == {tv_time, tv_time_2, db_time}
+        assert "checked-window repair" in captured["reason"]
+
+    def test_repair_pair_retry_stays_focused(self, monkeypatch):
+        """Retry round không được tự động leo thang sang full_repull."""
+        from data_provider.apps import checker
+
+        missing_time = datetime(2026, 1, 1, 0, 0)
+        mismatch_time = datetime(2026, 1, 1, 1, 0)
+        extra_time = datetime(2026, 1, 1, 2, 0)
+        captured: dict = {}
+
+        monkeypatch.setattr(
+            checker,
+            "_choose_repair_strategy",
+            lambda *_args: ("focused", "localized mismatch"),
+        )
+
+        def fake_repair_direct_window(_tv, _sym, _tf_code, issue_times, _interval_map, _logger, **kwargs):
+            captured["issue_times"] = issue_times
+            captured.update(kwargs)
+            return True
+
+        monkeypatch.setattr(checker, "_repair_direct_window", fake_repair_direct_window)
+
+        ok = checker._repair_pair(
+            None,
+            {"symbol_id": 1, "tv_symbol": "US30"},
+            "H1",
+            {
+                "tv_bars": {missing_time: (1, 1, 1, 1, 1), mismatch_time: (2, 2, 2, 2, 2)},
+                "db_bars": {mismatch_time: (3, 3, 3, 3, 3), extra_time: (4, 4, 4, 4, 4)},
+                "missing": {missing_time},
+                "mismatched": {mismatch_time: ((2, 2, 2, 2, 2), (3, 3, 3, 3, 3))},
+                "extra": {extra_time},
+                "rate": 0.1,
+            },
+            {"H1": "H1"},
+            MagicMock(),
+            repair_round=1,
+        )
+
+        assert ok is True
+        assert captured["reason"] == "missing/mismatch"
+        assert captured["max_pull_bars"] == checker.CHECKER_N_BARS["H1"]
+        assert set(captured["expected_times"]) == {missing_time, mismatch_time}
+        assert set(captured["delete_times"]) == {mismatch_time, extra_time}
+        assert set(captured["issue_times"]) == {missing_time, mismatch_time, extra_time}
+
+    def test_repair_direct_window_checks_staging_before_delete(self):
+        """Không được xóa Fact nếu staging thiếu dữ liệu thay thế đã kiểm tra."""
+        src = (CHECKER_SRC).read_text(encoding="utf-8")
+        start = src.find("def _repair_direct_window(")
+        end = src.find("\ndef ", start + 1)
+        fn_src = src[start:end]
+        assert "_query_staging_bar_times" in fn_src
+        assert "Repair stopped before deleting database rows" in fn_src
+        assert "Existing database data was kept" in fn_src
+
     def test_manual_confirm_warning_in_source(self):
         """--manual-confirm path phải có warning và fall-through sang auto-repair."""
         src = (CHECKER_SRC).read_text(encoding="utf-8")

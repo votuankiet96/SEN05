@@ -236,6 +236,10 @@ Các option trực tiếp khác của `checker.py`:
 - `--tf-check-full`
 - `--manual-confirm` deprecated: chỉ gửi notice qua Discord rồi vẫn auto-repair vì webhook là một chiều.
 
+Checker chỉ sửa trong phạm vi dữ liệu nó vừa kiểm tra. Nếu phát hiện drift mang
+tính hệ thống, checker sẽ repair checked window và log rõ rằng deep history/full
+reload thuộc trách nhiệm của `pipeline.py`; nó không tự kích hoạt Replay lịch sử sâu.
+
 ### Data Chart
 
 `data_provider/apps/chart_server.py` là Flask dashboard để xem warehouse data,

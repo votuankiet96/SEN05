@@ -96,7 +96,6 @@ from data_provider.common.helpers import (
     setup_logger,
     recompute_derived,
     pull_and_store,
-    repull_full_symbol,
     now_utc,
     sleep_for,
 )
@@ -606,15 +605,57 @@ def _query_bar_times(symbol_id: int, tf_code: str,
             conn.close()
 
 
+def _query_staging_bar_times(symbol_id: int, staging_table: str,
+                             bar_times: list[datetime]) -> set[datetime]:
+    """Return staged BarTime values for a controlled staging table and symbol."""
+    unique_times = sorted(set(bar_times))
+    if not unique_times:
+        return set()
+
+    found: set[datetime] = set()
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        for i in range(0, len(unique_times), 500):
+            chunk = unique_times[i:i + 500]
+            placeholders = ",".join("?" for _ in chunk)
+            cursor.execute(
+                f"""
+                SELECT BarTime
+                FROM {staging_table}
+                WHERE SymbolID = ?
+                  AND BarTime IN ({placeholders})
+                """,
+                [symbol_id, *chunk],
+            )
+            found.update(row[0] for row in cursor.fetchall())
+    except Exception as e:
+        logging.getLogger(__name__).error(
+            "_query_staging_bar_times FAILED sym_id=%s staging=%s: %s",
+            symbol_id, staging_table, e,
+        )
+        return set()
+    finally:
+        if conn is not None:
+            conn.close()
+    return found
+
+
 def _repair_direct_window(tv, sym: dict, tf_code: str, issue_times: list[datetime],
                           interval_map: dict, logger: logging.Logger,
                           reason: str,
-                          delete_times: list[datetime] | None = None) -> bool:
+                          delete_times: list[datetime] | None = None,
+                          max_pull_bars: int | None = None,
+                          expected_times: list[datetime] | None = None) -> bool:
     """
     Auto-repair direct TF báº±ng focused repull:
       1. Stage láº¡i Ä‘Ãºng cá»­a sá»• chá»©a Ä‘iá»ƒm lá»—i.
       2. XÃ³a bars hiá»‡n cÃ³ trong cá»­a sá»• Ä‘Ã³ khá»i Fact.
       3. ETL tá»« staging vÃ o Fact.
+
+    max_pull_bars caps checker repair inside the already checked window. When it
+    is set, this function must not fall back to FULL_N_BARS or trigger Replay.
     """
     if not issue_times:
         logger.warning("  No issue time found to repair for %s %s (%s)", sym["tv_symbol"], tf_code, reason)
@@ -626,28 +667,47 @@ def _repair_direct_window(tv, sym: dict, tf_code: str, issue_times: list[datetim
     label    = sym["tv_symbol"]
     start_dt, end_dt = _issue_window(tf_code, issue_times)
     n_bars = _estimate_repair_n_bars(tf_code, start_dt)
+    if max_pull_bars is not None:
+        max_pull_bars = max(1, int(max_pull_bars))
+        n_bars = min(n_bars, max_pull_bars)
 
-    logger.info(
-        "  [FIX] %s %s (%s): window %s -> %s | pull %d bars",
-        label, tf_code, reason,
-        start_dt.strftime("%Y-%m-%d %H:%M:%S"),
-        end_dt.strftime("%Y-%m-%d %H:%M:%S"),
-        n_bars,
-    )
     pull_attempts = [n_bars]
-    full_pull_n_bars = FULL_N_BARS.get(tf_code)
-    if full_pull_n_bars and full_pull_n_bars > n_bars:
-        widened = min(full_pull_n_bars, max(n_bars * 2, n_bars + 50))
-        if widened not in pull_attempts:
+    if max_pull_bars is not None:
+        widened = min(max_pull_bars, max(n_bars * 2, n_bars + 50))
+        if widened > n_bars and widened not in pull_attempts:
             pull_attempts.append(widened)
-        if full_pull_n_bars not in pull_attempts:
-            pull_attempts.append(full_pull_n_bars)
+        logger.info(
+            "  [CHECKED WINDOW REPAIR] %s %s: %s | window %s -> %s | pull up to %d checked bars; deep history Replay is not used.",
+            label, tf_code, reason,
+            start_dt.strftime("%Y-%m-%d %H:%M:%S"),
+            end_dt.strftime("%Y-%m-%d %H:%M:%S"),
+            max_pull_bars,
+        )
+    else:
+        full_pull_n_bars = FULL_N_BARS.get(tf_code)
+        if full_pull_n_bars and full_pull_n_bars > n_bars:
+            widened = min(full_pull_n_bars, max(n_bars * 2, n_bars + 50))
+            if widened not in pull_attempts:
+                pull_attempts.append(widened)
+            if full_pull_n_bars not in pull_attempts:
+                pull_attempts.append(full_pull_n_bars)
+        logger.info(
+            "  [FIX] %s %s (%s): window %s -> %s | pull %d bars",
+            label, tf_code, reason,
+            start_dt.strftime("%Y-%m-%d %H:%M:%S"),
+            end_dt.strftime("%Y-%m-%d %H:%M:%S"),
+            n_bars,
+        )
 
     staged = -1
     for attempt_idx, attempt_n_bars in enumerate(pull_attempts, 1):
         if staging:
             delete_staging_bars(sym_id, staging)
 
+        logger.info(
+            "  Pull attempt %d/%d for %s %s: requesting %d bars",
+            attempt_idx, len(pull_attempts), label, tf_code, attempt_n_bars,
+        )
         staged = pull_and_store(
             tv, sym, tf_code, attempt_n_bars, interval, logger, skip_etl=True
         )
@@ -673,6 +733,18 @@ def _repair_direct_window(tv, sym: dict, tf_code: str, issue_times: list[datetim
             label, tf_code, reason,
         )
         return False
+
+    expected_replacements = sorted(set(expected_times or []))
+    if expected_replacements and staging:
+        staged_times = _query_staging_bar_times(sym_id, staging, expected_replacements)
+        missing_replacements = [dt for dt in expected_replacements if dt not in staged_times]
+        if missing_replacements:
+            logger.error(
+                "  Repair stopped before deleting database rows - replacement data is incomplete for %s %s. Missing %d checked bars in staging; first missing bar: %s. Existing database data was kept. If this keeps happening, run pipeline full/scoped reload for this pair.",
+                label, tf_code, len(missing_replacements),
+                missing_replacements[0].strftime("%Y-%m-%d %H:%M:%S"),
+            )
+            return False
 
     targeted_delete_times = sorted(set(delete_times or []))
     deleted = delete_ohlcv_bars(sym_id, tf_code, targeted_delete_times) if targeted_delete_times else 0
@@ -734,26 +806,29 @@ def _repair_pair(tv, sym: dict, tf_code: str, scan: dict,
     Returns True náº¿u toÃ n bá»™ quÃ¡ trÃ¬nh thÃ nh cÃ´ng.
     """
     strategy, why = _choose_repair_strategy(sym, tf_code, scan)
-    if strategy == "focused" and repair_round >= 1:
-        strategy = "full_repull"
-        why = f"narrow repair window did not pass confirmation at round {repair_round}; switching to full re-pull"
+    checker_n_bars = CHECKER_N_BARS.get(tf_code, VERIFY_N_BARS)
 
     if strategy == "full_repull":
-        logger.warning("  [ESCALATE] %s/%s -> safe full re-pull: %s", sym["tv_symbol"], tf_code, why)
-        n_deleted, n_inserted = repull_full_symbol(
-            tv, sym, tf_code, interval_map[tf_code], logger
+        logger.warning(
+            "  [CHECKED WINDOW REPAIR] %s/%s: %s. Checker will repair only the latest %d bars it checked. It will not reload older history or run Replay. If verification still fails, run pipeline full/scoped reload for this pair.",
+            sym["tv_symbol"], tf_code, why, checker_n_bars,
         )
-        if n_inserted < 0:
-            logger.error(
-                "  Full repull FAILED %s/%s: deleted=%d inserted=%d",
-                sym["tv_symbol"], tf_code, n_deleted, n_inserted,
-            )
-            return False
-        logger.info(
-            "  Full repull SUCCEEDED %s/%s: deleted=%d inserted=%d",
-            sym["tv_symbol"], tf_code, n_deleted, n_inserted,
+        checked_window_times = sorted(
+            set(scan.get("tv_bars", {}).keys()) | set(scan.get("db_bars", {}).keys())
         )
-        return True
+        return _repair_direct_window(
+            tv, sym, tf_code, checked_window_times, interval_map, logger,
+            reason=f"checked-window repair ({why})",
+            delete_times=list(scan.get("db_bars", {}).keys()),
+            max_pull_bars=checker_n_bars,
+            expected_times=list(scan.get("tv_bars", {}).keys()),
+        )
+
+    if repair_round >= 1:
+        logger.warning(
+            "  Retry %d for %s/%s: previous repair did not verify clean. Checker will retry inside the checked window only; deep history Replay is not used.",
+            repair_round, sym["tv_symbol"], tf_code,
+        )
 
     issue_times = sorted(
         set(scan["missing"]) | set(scan["mismatched"].keys()) | set(scan.get("extra", set()))
@@ -762,6 +837,8 @@ def _repair_pair(tv, sym: dict, tf_code: str, scan: dict,
         tv, sym, tf_code, issue_times, interval_map, logger,
         reason="missing/mismatch",
         delete_times=list(set(scan["mismatched"].keys()) | set(scan.get("extra", set()))),
+        max_pull_bars=checker_n_bars,
+        expected_times=list(set(scan["missing"]) | set(scan["mismatched"].keys())),
     )
 
 
