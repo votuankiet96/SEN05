@@ -80,7 +80,6 @@ import math
 import sys
 import threading
 import time
-from collections import Counter
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -506,13 +505,6 @@ def _issue_window(tf_code: str, issue_times: list[datetime]) -> tuple[datetime, 
     return start_dt, end_dt
 
 
-def _dominant_remainder(bar_times: set[datetime], tf_code: str) -> int | None:
-    if not bar_times or tf_code != "M45":
-        return None
-    counts = Counter(((dt.hour * 60 + dt.minute) % 45) for dt in bar_times)
-    return int(counts.most_common(1)[0][0]) if counts else None
-
-
 def _choose_repair_strategy(sym: dict, tf_code: str, scan: dict) -> tuple[str, str]:
     """
     Focused repair cho loi cuc bo; safe full repull cho loi lech timeline/anchor.
@@ -528,23 +520,6 @@ def _choose_repair_strategy(sym: dict, tf_code: str, scan: dict) -> tuple[str, s
             "full_repull",
             f"systemic DB-only timeline contamination (miss={n_miss}, wrong={n_bad}, extra={n_extra}, rate={rate:.1%})",
         )
-
-    if tf_code == "M45":
-        tv_anchor = _dominant_remainder(set(scan.get("tv_bars", {})), tf_code)
-        db_anchor = _dominant_remainder(set(scan.get("db_bars", {})), tf_code)
-        if (
-            tv_anchor is not None
-            and db_anchor is not None
-            and tv_anchor != db_anchor
-            and (
-                n_miss >= max(SYSTEMIC_RESET_MISSING_FLOOR, int(tv_count * 0.05))
-                or n_extra >= SYSTEMIC_RESET_EXTRA_FLOOR
-            )
-        ):
-            return (
-                "full_repull",
-                f"M45 anchor drift (TV={tv_anchor}, DB={db_anchor}, miss={n_miss}, extra={n_extra})",
-            )
 
     if rate >= SYSTEMIC_RESET_RATE and n_miss >= max(SYSTEMIC_RESET_MISSING_FLOOR, int(tv_count * 0.15)):
         if n_extra >= max(SYSTEMIC_RESET_EXTRA_FLOOR, int(tv_count * 0.05)) or n_bad <= max(20, int(tv_count * 0.02)):
@@ -709,7 +684,9 @@ def _repair_direct_window(tv, sym: dict, tf_code: str, issue_times: list[datetim
             attempt_idx, len(pull_attempts), label, tf_code, attempt_n_bars,
         )
         staged = pull_and_store(
-            tv, sym, tf_code, attempt_n_bars, interval, logger, skip_etl=True
+            tv, sym, tf_code, attempt_n_bars, interval, logger,
+            skip_etl=True,
+            allow_replay=False,
         )
         if staged >= 0:
             if attempt_idx > 1:
@@ -2372,7 +2349,7 @@ def check_interval_gaps(
                 }
                 continue
 
-            if tf_code in _DERIVED_EXPECTED_TICKS:
+            if COMPUTED_TIMEFRAMES and tf_code in _DERIVED_EXPECTED_TICKS:
                 expected_ticks = _DERIVED_EXPECTED_TICKS[tf_code]
                 cursor.execute("""
                     SELECT TOP 500 BarTime, TickCount

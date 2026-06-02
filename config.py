@@ -399,7 +399,7 @@ CROSS_TF_PAIRS = [
 # GOLD: winter anchor UTC+5 (h%N==1), nhưng sau DST spring 2026 dịch → UTC+4 (h%N==0).
 # BTCUSD: tương tự, DST spring 2026 làm lệch anchor từ 0 → 1.
 # Validation cứng theo mùa gây drop toàn bộ bars khi DST thay đổi.
-# clean_staging_transitions() trong data_provider/common/helpers.py vẫn bảo vệ tầng staging cho cả hai.
+# Direct TradingView TFs giữ raw UTC anchors; staging anchor cleanup hiện là legacy dormant.
 FIXED_H_ALIGNMENT: dict[str, dict[str, int]] = {}
 
 

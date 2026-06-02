@@ -41,7 +41,7 @@ Khi thay doi nguong, can doc ky vi no anh huong truc tiep den cach he thong phan
 #
 #   _validate_ohlcv_df()  - Làm sạch DataFrame OHLCV trước khi ghi DB:
 #                           lọc null, High<Low, duplicate timestamps, thứ tự
-#                           không tăng, DST alignment (GOLD/BTCUSD), M45 anchor.
+#                           không tăng, optional fixed alignment.
 #
 #   Verified market gaps  - load_verified_gaps() / save_verified_gaps():
 #                           Đọc/ghi JSON cache những khoảng thị trường đóng cửa
@@ -232,12 +232,14 @@ from config import (
 )
 from modules.db_connector import (
     aggregate_from_fact,  # Tính TF phái sinh bằng GROUP BY trên Fact_OHLCV
-    clean_staging_transitions,  # Xóa transition bar do DST shift sau insert staging
     DatabaseWriteError,  # Lỗi ghi DB bắt buộc caller phải retry/abort
     delete_fact_bars,  # Xóa rows Fact_OHLCV trước khi repull
+    delete_fact_bars_range,  # Xóa Fact theo replacement window khi repull direct
     delete_staging_bars,  # Xóa rows staging trước khi repull
+    get_fact_bar_window_context,  # Lấy prev/next Fact quanh replacement window
     get_candle_count,  # Đếm số bar trong Fact_OHLCV (kiểm tra source TF có data chưa)
     get_internal_gaps,  # Chạy SQL LEAD() tìm khoảng gap trong Fact_OHLCV
+    get_staging_bar_window,  # Lấy min/max/count staging sau khi stage replacement
     insert_staging_batch,  # Ghi DataFrame OHLCV vào bảng Staging (MERGE, chống duplicate)
     run_etl_direct,  # Gọi usp_LoadDirect: chuyển Staging -> Fact_OHLCV
 )
@@ -509,6 +511,75 @@ def _fmt_log_ts(value) -> str:
         return str(value)
 
 
+def _boundary_gap_minutes(left, right) -> int | None:
+    if left is None or right is None:
+        return None
+    try:
+        return int((right - left).total_seconds() / 60)
+    except Exception:
+        return None
+
+
+def _boundary_gap_threshold(sym: dict, tf_code: str) -> int:
+    tf_mins = TF_MINUTES.get(tf_code, 0)
+    if tf_code == "D1":
+        return 5760
+    if tf_code == "W":
+        return 12240
+    threshold = tf_mins * 3
+    asset_type = sym.get("asset_type") or ASSET_TYPE_MAP.get(sym.get("tv_symbol"), "")
+    overnight = SYMBOL_OVERNIGHT_MINS.get(sym.get("tv_symbol"), 0)
+    if overnight > 0:
+        threshold = max(threshold, overnight + tf_mins)
+    return threshold
+
+
+def _boundary_trading_minutes(sym: dict, left, right) -> int | None:
+    raw_gap = _boundary_gap_minutes(left, right)
+    if raw_gap is None:
+        return None
+    asset_type = sym.get("asset_type") or ASSET_TYPE_MAP.get(sym.get("tv_symbol"), "")
+    if asset_type in WEEKEND_CLOSED:
+        return int(trading_hours_in_gap(left, right) * 60)
+    return raw_gap
+
+
+def _log_replacement_boundaries(
+    logger: logging.Logger,
+    *,
+    sym: dict,
+    tf_code: str,
+    stage_first,
+    stage_last,
+    context: dict,
+    phase: str,
+) -> None:
+    label = sym.get("tv_symbol", f"SymbolID={sym.get('symbol_id')}")
+    threshold = _boundary_gap_threshold(sym, tf_code)
+    checks = [
+        ("pre", context.get("prev_bar"), stage_first),
+        ("post", stage_last, context.get("next_bar")),
+    ]
+    for side, left, right in checks:
+        raw_gap = _boundary_gap_minutes(left, right)
+        if raw_gap is None:
+            continue
+        trading_gap = _boundary_trading_minutes(sym, left, right)
+        if trading_gap is not None and trading_gap > threshold:
+            logger.warning(
+                "  repull %s %s: %s boundary seam %s gap raw=%dm trading=%dm threshold=%dm (%s -> %s). Out-of-window history is kept; run replay/bootstrap intentionally if this seam must be filled.",
+                label, tf_code, phase, side, raw_gap, trading_gap, threshold,
+                _fmt_log_ts(left), _fmt_log_ts(right),
+            )
+        else:
+            logger.info(
+                "  repull %s %s: %s boundary %s OK raw=%dm trading=%sm (%s -> %s)",
+                label, tf_code, phase, side, raw_gap,
+                "-" if trading_gap is None else str(trading_gap),
+                _fmt_log_ts(left), _fmt_log_ts(right),
+            )
+
+
 SAFETY_FACTOR  = 1.5
 
 # Số bar tối thiểu - dù gap nhỏ vẫn pull ít nhất 10 bar
@@ -755,11 +826,10 @@ def _validate_ohlcv_df(
       2. High < Low (giá đảo ngược) -> loại bỏ row đó
       3. Timestamp trùng lặp -> giữ lại row đầu tiên
       4. Timestamp không tăng dần -> sắp xếp lại
-      5. DST alignment cho GOLD/BTCUSD H2/H3/H4 - các symbol này có alignment cố
-         định quanh năm; bars lệch giờ do DST sẽ bị loại (xem FIXED_H_ALIGNMENT)
-      6. M45 alignment - phát hiện dominant anchor. Nếu thấy anchor shift dạng
-         2 đoạn liên tục (ví dụ trước/ sau DST) thì giữ cả hai; chỉ loại các
-         lệch anchor rải rác như glitch.
+      5. Optional fixed alignment checks from FIXED_H_ALIGNMENT.
+
+    Lưu ý: M45/H2/H3/H4 hiện đều là direct TradingView TF. Không drop anchor
+    riêng ở đây để pipeline, ws_live và checker cùng dùng raw TV source-of-truth.
 
     Trả về (cleaned_df, had_issues):
       - cleaned_df  : DataFrame sau khi làm sạch (có thể empty nếu tất cả đều lỗi)
@@ -831,8 +901,8 @@ def _validate_ohlcv_df(
     if df.empty:
         return df, had_issues
 
-    # 5. Kiểm tra DST alignment cho GOLD và BTCUSD (H2/H3/H4)
-    # Các symbol này có alignment cố định quanh năm - lọc bars lệch giờ trước khi insert.
+    # 5. Optional fixed alignment checks. FIXED_H_ALIGNMENT currently defaults
+    # to empty because all 15 TFs are direct TradingView pulls.
     if tf_code in FIXED_H_ALIGNMENT.get(tv_symbol, {}):
         tf_hours    = int(tf_code[1:])  # H4->4, H3->3, H2->2
         expected    = FIXED_H_ALIGNMENT[tv_symbol][tf_code]
@@ -845,43 +915,6 @@ def _validate_ohlcv_df(
             )
             df         = df[~wrong_align]
             had_issues = True
-
-    # 6. M45 alignment check.
-    # Trường hợp bình thường: chỉ có 1 anchor remainder % 45.
-    # Trường hợp DST/session shift thật: TV có thể trả 2 anchor hợp lệ theo 2 đoạn liên tiếp
-    # (ví dụ toàn bộ đoạn cũ = 30, đoạn mới = 15). Khi đó giữ cả hai để checker/pipeline
-    # không tự tạo missing bars. Chỉ drop các lệch anchor rải rác như glitch.
-    if tf_code == "M45":
-        remainders = (df.index.hour * 60 + df.index.minute) % 45
-        counts = remainders.value_counts()
-        asset_type = ASSET_TYPE_MAP.get(tv_symbol)
-        if asset_type == "Indice":
-            logger.info(
-                "  VALIDATE %s M45: session-based index anchors %s -> keep raw anchors",
-                tv_symbol, ",".join(str(int(v)) for v in counts.index.tolist()),
-            )
-        elif len(counts) > 1:
-            rem_values = [int(v) for v in remainders.tolist()]
-            run_remainders = []
-            for rem in rem_values:
-                if not run_remainders or rem != run_remainders[-1]:
-                    run_remainders.append(rem)
-            if len(counts) == 2 and len(run_remainders) <= 4:
-                logger.warning(
-                    "  VALIDATE %s M45: detected contiguous anchor shift %s -> keeping both anchors",
-                    tv_symbol, " -> ".join(str(int(v)) for v in run_remainders),
-                )
-            else:
-                anchor = int(counts.idxmax())
-                wrong_align = remainders != anchor
-                if wrong_align.any():
-                    n_bad = int(wrong_align.sum())
-                    logger.warning(
-                        "  VALIDATE %s M45: %d bars alignment sai (anchor=%d, not consistent) -> dropped",
-                        tv_symbol, n_bad, anchor,
-                    )
-                    df         = df[~wrong_align]
-                    had_issues = True
 
     if had_issues:
         dropped = original_len - len(df)
@@ -978,7 +1011,8 @@ def pull_and_store(tv, sym: dict, tf_code: str,
                    n_bars: int, interval,
                    logger: logging.Logger,
                    skip_etl: bool = False,
-                   write_lock_name: str | None = None) -> int:
+                   write_lock_name: str | None = None,
+                   allow_replay: bool = True) -> int:
     """
     Kéo n_bars nến OHLCV từ TradingView cho 1 cặp (symbol, timeframe),
     sau đó ghi vào database qua 2 bước: Staging -> Fact.
@@ -993,6 +1027,8 @@ def pull_and_store(tv, sym: dict, tf_code: str,
       skip_etl  - nếu True: chỉ pull vào Staging, KHÔNG chạy ETL sang Fact.
                   Dùng trong _repair_pair() để đảm bảo data an toàn trong staging
                   trước khi xóa bars sai trong Fact.
+      allow_replay - nếu False: chỉ dùng normal TradingView history websocket,
+                  không bootstrap thêm older history bằng replay.
 
     Trả về (skip_etl=False, mặc định):
       ≥ 1  - số bar MỚI được insert vào Fact_OHLCV (thành công, có data mới)
@@ -1076,7 +1112,7 @@ def pull_and_store(tv, sym: dict, tf_code: str,
                         level=logging.WARNING,
                     )
 
-            if df is not None and not df.empty and _should_replay_history(tf_code, n_bars):
+            if df is not None and not df.empty and allow_replay and _should_replay_history(tf_code, n_bars):
                 series_first = df.index.min()
                 _logfmt.log(
                     logger,
@@ -1222,15 +1258,6 @@ def pull_and_store(tv, sym: dict, tf_code: str,
         _logfmt.log(logger, "ERROR", symbol=tv_symbol, tf=tf_code, action="stage_write", status=str(e), level=logging.ERROR)
         return RESULT_ERROR
 
-    # ----- BƯỚC B2: Dọn transition bar DST / anchor drift khỏi staging -----
-    # M45/H2/H3/H4: Capital.com dịch chuyển UTC offset qua DST -> bar anchor drift.
-    # Xoá ngay sau insert để Fact không nhận bar nhiễm.
-    if tf_code in ('M45', 'H2', 'H3', 'H4') and ASSET_TYPE_MAP.get(tv_symbol) != "Indice":
-        from config import TF_MINUTES
-        n_cleaned = clean_staging_transitions(symbol_id, staging, TF_MINUTES[tf_code])
-        if n_cleaned > 0:
-            _logfmt.log(logger, "CLEAN", symbol=tv_symbol, tf=tf_code, action="anchor_transition", amount=f"removed {_logfmt.num(n_cleaned)}")
-
     # ----- BƯỚC C: Chuyển Staging -> Fact_OHLCV (stored procedure) -----
     # skip_etl=True: caller (VD: _repair_pair) sẽ tự gọi ETL sau khi đã xóa
     # bars sai khỏi Fact. Đây là cơ chế đảm bảo không mất data: staging được
@@ -1372,12 +1399,14 @@ def recompute_derived(updated_sym_ids: set,
 def repull_full_symbol(tv, sym: dict, tf_code: str, interval,
                        logger: logging.Logger) -> tuple[int, int]:
     """
-    Xóa toàn bộ dữ liệu Fact_OHLCV cho (symbol, TF) và lấy lại từ đầu.
+    Repull an toàn cho một (symbol, TF).
 
-    DIRECT TFs (M5, M15, M30, M45, H1, H2, H3, H4, D1, W):
+    DIRECT TFs:
       1. Xóa staging cũ (tránh MERGE giữ lại giá trị sai cũ)
-      2. Xóa Fact_OHLCV
-      3. Pull FULL_N_BARS từ TradingView -> Staging -> Fact
+      2. Pull FULL_N_BARS từ normal TradingView history websocket, không replay
+      3. Lấy min/max BarTime trong staging làm replacement window
+      4. Cảnh báo seam trước/sau window nếu còn gap lớn ngoài phần thay thế
+      5. Xóa Fact_OHLCV chỉ trong window đó rồi ETL staging -> Fact
 
     DERIVED TFs (M10, M20, M90, H6, H8):
       1. Xóa Fact_OHLCV (không có staging cho derived TFs)
@@ -1404,20 +1433,51 @@ def repull_full_symbol(tv, sym: dict, tf_code: str, interval,
                          tv_symbol, tf_code, e)
             return n_deleted, RESULT_ERROR
 
-    # ----- Bước 1b: DIRECT TF -> stage mới trước, chỉ xóa Fact khi đã có data thay thế -----
+    # ----- Bước 1b: DIRECT TF -> stage mới trước, chỉ xóa Fact trong replacement window -----
     staging = TF_STAGING.get(tf_code)
-    if staging:
-        delete_staging_bars(symbol_id, staging)
+    if not staging:
+        logger.error("  repull %s %s: no staging table configured", tv_symbol, tf_code)
+        return 0, RESULT_ERROR
+
+    delete_staging_bars(symbol_id, staging)
 
     n_bars  = FULL_N_BARS.get(tf_code, 5000)
-    staged  = pull_and_store(tv, sym, tf_code, n_bars, interval, logger, skip_etl=True)
+    staged  = pull_and_store(
+        tv, sym, tf_code, n_bars, interval, logger,
+        skip_etl=True,
+        allow_replay=False,
+    )
     if staged < 0:
         logger.error("  repull %s %s: staging replacement failed - keeping existing Fact data",
                      tv_symbol, tf_code)
         return 0, RESULT_ERROR
 
-    n_deleted = delete_fact_bars(symbol_id, tf_code)
-    logger.info("  repull %s %s: deleted %d Fact rows after staging replacement",
+    stage_first, stage_last, stage_count = get_staging_bar_window(symbol_id, staging)
+    if stage_count <= 0 or stage_first is None or stage_last is None:
+        logger.error(
+            "  repull %s %s: staging replacement produced no rows - keeping existing Fact data",
+            tv_symbol, tf_code,
+        )
+        return 0, RESULT_TV_EMPTY
+
+    before_context = get_fact_bar_window_context(symbol_id, tf_code, stage_first, stage_last)
+    logger.info(
+        "  repull %s %s: replacement window %s -> %s (%d staged row(s), %d existing Fact row(s)); replay disabled",
+        tv_symbol, tf_code, _fmt_log_ts(stage_first), _fmt_log_ts(stage_last),
+        stage_count, before_context.get("window_count", 0),
+    )
+    _log_replacement_boundaries(
+        logger,
+        sym=sym,
+        tf_code=tf_code,
+        stage_first=stage_first,
+        stage_last=stage_last,
+        context=before_context,
+        phase="pre",
+    )
+
+    n_deleted = delete_fact_bars_range(symbol_id, tf_code, stage_first, stage_last)
+    logger.info("  repull %s %s: deleted %d Fact rows inside replacement window",
                 tv_symbol, tf_code, n_deleted)
     try:
         n_inserted = run_etl_direct(symbol_id, tf_code, staging)
@@ -1425,6 +1485,16 @@ def repull_full_symbol(tv, sym: dict, tf_code: str, interval,
         logger.error("  repull %s %s ETL FAIL after safe staging: %s",
                      tv_symbol, tf_code, e)
         return n_deleted, RESULT_ERROR
+    after_context = get_fact_bar_window_context(symbol_id, tf_code, stage_first, stage_last)
+    _log_replacement_boundaries(
+        logger,
+        sym=sym,
+        tf_code=tf_code,
+        stage_first=stage_first,
+        stage_last=stage_last,
+        context=after_context,
+        phase="post",
+    )
     return n_deleted, n_inserted
 
 

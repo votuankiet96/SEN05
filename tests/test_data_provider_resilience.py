@@ -550,8 +550,11 @@ class TestCheckerExceptionSafety:
         monkeypatch.setattr(checker, "delete_staging_bars", lambda *_args, **_kwargs: None)
         monkeypatch.setattr(checker.time, "sleep", lambda *_args, **_kwargs: None)
 
-        def fake_pull_and_store(_tv, _sym, _tf_code, n_bars, _interval, _logger, *, skip_etl):
+        def fake_pull_and_store(
+            _tv, _sym, _tf_code, n_bars, _interval, _logger, *, skip_etl, allow_replay=True
+        ):
             assert skip_etl is True
+            assert allow_replay is False
             attempts.append(n_bars)
             return -1
 

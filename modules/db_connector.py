@@ -880,6 +880,168 @@ def delete_fact_bars(symbol_id: int, tf_code: str) -> int:
         conn.close()
 
 
+def delete_fact_bars_range(symbol_id: int, tf_code: str, from_dt, to_dt) -> int:
+    """
+    Xoa Fact_OHLCV trong dung cua so BarTime [from_dt, to_dt].
+
+    Dung cho windowed replacement: staging da co data thay the, chi xoa
+    phan Fact nam trong cua so vua pull lai de giu nguyen lich su ngoai window.
+    """
+    if from_dt is None or to_dt is None or from_dt > to_dt:
+        logger.warning(
+            "delete_fact_bars_range: invalid window SymbolID=%d TF=%s from=%s to=%s",
+            symbol_id, tf_code, from_dt, to_dt,
+        )
+        return 0
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT TimeframeID FROM DWH.Dim_Timeframe WHERE Code = ?", (tf_code,)
+        )
+        row = cursor.fetchone()
+        if not row:
+            logger.warning("delete_fact_bars_range: unknown TF code '%s'", tf_code)
+            return 0
+        tf_id = row[0]
+        cursor.execute(
+            """
+            DELETE FROM DWH.Fact_OHLCV
+            WHERE SymbolID = ?
+              AND TimeframeID = ?
+              AND BarTime >= ?
+              AND BarTime <= ?
+            """,
+            (symbol_id, tf_id, from_dt, to_dt),
+        )
+        deleted = cursor.rowcount
+        conn.commit()
+        logger.info(
+            "delete_fact_bars_range: SymbolID=%d TF=%s %s -> %s, %d rows deleted.",
+            symbol_id, tf_code, from_dt, to_dt, deleted,
+        )
+        return deleted
+    except Exception as e:
+        conn.rollback()
+        logger.error(
+            "delete_fact_bars_range FAIL: SymbolID=%d TF=%s %s -> %s — %s",
+            symbol_id, tf_code, from_dt, to_dt, e,
+        )
+        return 0
+    finally:
+        conn.close()
+
+
+def get_staging_bar_window(symbol_id: int, staging_table: str) -> tuple:
+    """
+    Tra ve (first_bar, last_bar, row_count) cua staging cho symbol.
+
+    staging_table den tu config.TF_STAGING; cac ham staging hien co cung dung
+    table name controlled nay trong SQL dynamic.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            f"""
+            SELECT MIN(BarTime), MAX(BarTime), COUNT(*)
+            FROM {staging_table}
+            WHERE SymbolID = ?
+            """,
+            (symbol_id,),
+        )
+        first_bar, last_bar, row_count = cursor.fetchone()
+        return first_bar, last_bar, int(row_count or 0)
+    except Exception as e:
+        logger.error(
+            "get_staging_bar_window FAIL: %s SymbolID=%d — %s",
+            staging_table, symbol_id, e,
+        )
+        return None, None, 0
+    finally:
+        conn.close()
+
+
+def get_fact_bar_window_context(symbol_id: int, tf_code: str, from_dt, to_dt) -> dict:
+    """
+    Lay context quanh replacement window trong Fact.
+
+    Tra ve:
+      - window_count: so row Fact hien co trong [from_dt, to_dt]
+      - prev_bar: row gan nhat truoc from_dt
+      - next_bar: row gan nhat sau to_dt
+    """
+    result = {"window_count": 0, "prev_bar": None, "next_bar": None}
+    if from_dt is None or to_dt is None or from_dt > to_dt:
+        return result
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT TimeframeID FROM DWH.Dim_Timeframe WHERE Code = ?", (tf_code,)
+        )
+        row = cursor.fetchone()
+        if not row:
+            logger.warning("get_fact_bar_window_context: unknown TF code '%s'", tf_code)
+            return result
+        tf_id = row[0]
+
+        cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM DWH.Fact_OHLCV
+            WHERE SymbolID = ?
+              AND TimeframeID = ?
+              AND BarTime >= ?
+              AND BarTime <= ?
+            """,
+            (symbol_id, tf_id, from_dt, to_dt),
+        )
+        result["window_count"] = int(cursor.fetchone()[0] or 0)
+
+        cursor.execute(
+            """
+            SELECT TOP 1 BarTime
+            FROM DWH.Fact_OHLCV
+            WHERE SymbolID = ?
+              AND TimeframeID = ?
+              AND BarTime < ?
+            ORDER BY BarTime DESC
+            """,
+            (symbol_id, tf_id, from_dt),
+        )
+        row = cursor.fetchone()
+        if row:
+            result["prev_bar"] = row[0]
+
+        cursor.execute(
+            """
+            SELECT TOP 1 BarTime
+            FROM DWH.Fact_OHLCV
+            WHERE SymbolID = ?
+              AND TimeframeID = ?
+              AND BarTime > ?
+            ORDER BY BarTime ASC
+            """,
+            (symbol_id, tf_id, to_dt),
+        )
+        row = cursor.fetchone()
+        if row:
+            result["next_bar"] = row[0]
+
+        return result
+    except Exception as e:
+        logger.error(
+            "get_fact_bar_window_context FAIL: SymbolID=%d TF=%s %s -> %s — %s",
+            symbol_id, tf_code, from_dt, to_dt, e,
+        )
+        return result
+    finally:
+        conn.close()
+
+
 def delete_staging_bars(symbol_id: int, staging_table: str) -> int:
     """
     Xoa toan bo bar cua symbol trong mot staging table.

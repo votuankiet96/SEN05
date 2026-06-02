@@ -172,7 +172,6 @@ from config import (
     TV_USERNAME,  # Tên đăng nhập TradingView (dùng khi không có cookie)
 )
 from modules.db_connector import (
-    clean_staging_transitions,  # Xóa transition bar DST / anchor drift sau insert staging
     get_connection,  # Mở kết nối tới SQL Server
     insert_staging_batch,  # Ghi batch nến vào bảng staging của DB
     run_etl_aggregate,  # Tính TF phái sinh bằng cách gộp nến từ TF nhỏ hơn
@@ -1044,7 +1043,8 @@ def _db_worker() -> None:
         key = (symbol_id, tf_code)
         accepted_count = len(df.index) if hasattr(df, "index") else 0
 
-        # Lọc bars sai alignment (DST artifact) - cùng logic với pipeline.
+        # Validate generic OHLC/timestamp quality. Anchor-specific filtering is
+        # disabled because all 15 TFs are direct TradingView source-of-truth.
         df, _ = _validate_ohlcv_df(
             df,
             tv_symbol,
@@ -1089,14 +1089,6 @@ def _db_worker() -> None:
             _record_db_result(batch_id, key, accepted_count, 0, 0, error=True)
             _db_queue.task_done()
             continue
-
-        # BƯỚC A2: Dọn transition bar DST / anchor drift khỏi staging
-        if tf_code in ('M45', 'H2', 'H3', 'H4'):
-            from config import TF_MINUTES
-            n_cleaned = clean_staging_transitions(symbol_id, staging_table, TF_MINUTES[tf_code])
-            if n_cleaned > 0:
-                logger.info("[DB ] ANCHOR_CLEAN %s %s: removed %d transition bar(s)",
-                            tv_symbol, tf_code, n_cleaned)
 
         if inserted > 0:
             logger.info("[DB ] %s %s: +%d row(s) staged/updated.", tv_symbol, tf_code, inserted)
