@@ -54,7 +54,7 @@ public class SEN_Combo_V0 : Robot
 {
     // ── File ────────────────────────────────────────────────────────────────
     [Parameter("Signal CSV Path", Group = "File",
-        DefaultValue = @"D:\Auto Trading\SEN05\raw_signals\combo\combo_US30_H4_20170430_20260519_signals.csv")]
+        DefaultValue = @"Z:\SEN05_Autotrading\raw_signals\combo\combo_US30_H4_20170430_20260602_signals.csv")]
     public string CsvPath { get; set; }
 
     [Parameter("CSV Time Offset Hours", Group = "File",

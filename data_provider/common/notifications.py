@@ -13,6 +13,7 @@ import sys
 import threading
 import time
 from datetime import datetime
+from html import unescape
 from pathlib import Path
 
 _PROJ = Path(__file__).resolve().parents[2]
@@ -28,15 +29,55 @@ _COLORS = {
     "INFO":    3447003,   # xanh dương
     "WARNING": 16776960,  # vàng
     "ERROR":   15158332,  # đỏ
+    "CRITICAL": 10038562,
+}
+
+_ICONS = {
+    "INFO": "[INFO]",
+    "WARNING": "[WARN]",
+    "ERROR": "[ERROR]",
+    "CRITICAL": "[CRIT]",
 }
 
 # Thay thế QUICK_COMMANDS_HINT của Telegram — giờ là hướng dẫn xem log
 QUICK_COMMANDS_HINT = (
-    "\n-----------------\n"
-    "Details: check data_provider/runtime/logs/ or run manually\n"
-    "  python -m data_provider.apps.checker --dry-run\n"
-    "  python -m data_provider.apps.pipeline --mode gap"
+    "\n\n---\n"
+    "Details:\n"
+    "- Logs: `data_provider/runtime/logs/`\n"
+    "- Checker: `python -m data_provider.apps.checker --dry-run`\n"
+    "- Pipeline: `python -m data_provider.apps.pipeline --mode gap`"
 )
+
+
+def _format_discord_text(message: str) -> str:
+    """Convert legacy Telegram-style HTML into Discord Markdown."""
+    text = unescape(str(message)).replace("\r\n", "\n").replace("\r", "\n")
+
+    def _pre(match: re.Match[str]) -> str:
+        body = match.group(1).strip("\n")
+        return f"```\n{body}\n```"
+
+    text = re.sub(r"<pre>(.*?)</pre>", _pre, text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"<code>(.*?)</code>", r"`\1`", text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"</?(b|strong)>", "**", text, flags=re.IGNORECASE)
+    text = re.sub(r"</?(i|em)>", "*", text, flags=re.IGNORECASE)
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", "", text)
+
+    lines = [line.rstrip() for line in text.split("\n")]
+    return "\n".join(lines).strip()
+
+
+def _truncate_discord_text(text: str, limit: int) -> str:
+    """Trim text to Discord limits while keeping code fences readable."""
+    if len(text) <= limit:
+        return text
+    suffix = "\n...[truncated]"
+    head = text[: max(0, limit - len(suffix))].rstrip()
+    if head.count("```") % 2:
+        suffix = "\n```\n...[truncated]"
+        head = text[: max(0, limit - len(suffix))].rstrip()
+    return head + suffix
 
 
 # =============================================================================
@@ -52,8 +93,8 @@ def tg_send(message: str) -> None:
     if not DISCORD_WEBHOOK_URL:
         return
 
-    # Strip HTML tags mà Telegram dùng
-    plain = re.sub(r"<[^>]+>", "", message)
+    # Convert legacy Telegram markup to Discord-native Markdown.
+    plain = _truncate_discord_text(_format_discord_text(message), 2000)
 
     global _pending_threads
 
@@ -109,13 +150,13 @@ def tg_alert(level: str, text: str) -> None:
 
     import requests
 
-    icons = {"INFO": "[INFO]", "WARNING": "[WARN]", "ERROR": "[ERROR]"}
-    icon  = icons.get(level, "[NOTE]")
+    level = str(level or "INFO").upper()
+    icon  = _ICONS.get(level, "[NOTE]")
     color = _COLORS.get(level, _COLORS["INFO"])
     now   = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    plain = re.sub(r"<[^>]+>", "", text)
-    description = f"{plain}\n\n*{now}*"[:4096]
+    plain = _format_discord_text(text)
+    description = _truncate_discord_text(f"{plain}\n\n*{now}*", 4096)
 
     global _pending_threads
 

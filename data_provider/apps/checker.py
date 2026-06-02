@@ -651,13 +651,6 @@ def _repair_direct_window(tv, sym: dict, tf_code: str, issue_times: list[datetim
         widened = min(max_pull_bars, max(n_bars * 2, n_bars + 50))
         if widened > n_bars and widened not in pull_attempts:
             pull_attempts.append(widened)
-        logger.info(
-            "  [CHECKED WINDOW REPAIR] %s %s: %s | window %s -> %s | pull up to %d checked bars; deep history Replay is not used.",
-            label, tf_code, reason,
-            start_dt.strftime("%Y-%m-%d %H:%M:%S"),
-            end_dt.strftime("%Y-%m-%d %H:%M:%S"),
-            max_pull_bars,
-        )
     else:
         full_pull_n_bars = FULL_N_BARS.get(tf_code)
         if full_pull_n_bars and full_pull_n_bars > n_bars:
@@ -666,49 +659,38 @@ def _repair_direct_window(tv, sym: dict, tf_code: str, issue_times: list[datetim
                 pull_attempts.append(widened)
             if full_pull_n_bars not in pull_attempts:
                 pull_attempts.append(full_pull_n_bars)
-        logger.info(
-            "  [FIX] %s %s (%s): window %s -> %s | pull %d bars",
-            label, tf_code, reason,
-            start_dt.strftime("%Y-%m-%d %H:%M:%S"),
-            end_dt.strftime("%Y-%m-%d %H:%M:%S"),
-            n_bars,
-        )
 
+    pull_logger = _make_pull_logger(logger)
     staged = -1
+    actual_pull_bars = pull_attempts[0]
     for attempt_idx, attempt_n_bars in enumerate(pull_attempts, 1):
         if staging:
             delete_staging_bars(sym_id, staging)
 
-        logger.info(
-            "  Pull attempt %d/%d for %s %s: requesting %d bars",
-            attempt_idx, len(pull_attempts), label, tf_code, attempt_n_bars,
-        )
         staged = pull_and_store(
-            tv, sym, tf_code, attempt_n_bars, interval, logger,
+            tv, sym, tf_code, attempt_n_bars, interval, pull_logger,
             skip_etl=True,
             allow_replay=False,
         )
         if staged >= 0:
-            if attempt_idx > 1:
-                logger.info(
-                    "  Repull succeeded on attempt %d/%d - %s %s (%s)",
-                    attempt_idx, len(pull_attempts), label, tf_code, reason,
-                )
+            actual_pull_bars = attempt_n_bars
             break
 
         if attempt_idx < len(pull_attempts):
             logger.warning(
-                "  Attempt %d/%d failed - expand pull window to %d bars for %s %s (%s)",
-                attempt_idx, len(pull_attempts), pull_attempts[attempt_idx],
-                label, tf_code, reason,
+                "           Pull attempt %d/%d failed (%d bars) -- expanding to %d bars",
+                attempt_idx, len(pull_attempts), attempt_n_bars, pull_attempts[attempt_idx],
             )
             time.sleep(TV_SLEEP_BETWEEN_CALLS)
 
+    window_str = f"{start_dt:%H:%M}->{end_dt:%H:%M}"
+    logger.info(
+        "           Fix: window %s  |  pull %d bars  |  staged=%d",
+        window_str, actual_pull_bars, max(staged, 0),
+    )
+
     if staged < 0:
-        logger.error(
-            "  Repull FAILED for %s %s (%s) - database unchanged",
-            label, tf_code, reason,
-        )
+        logger.error("           Result: pull FAILED -- database unchanged")
         return False
 
     expected_replacements = sorted(set(expected_times or []))
@@ -717,34 +699,28 @@ def _repair_direct_window(tv, sym: dict, tf_code: str, issue_times: list[datetim
         missing_replacements = [dt for dt in expected_replacements if dt not in staged_times]
         if missing_replacements:
             logger.error(
-                "  Repair stopped before deleting database rows - replacement data is incomplete for %s %s. Missing %d checked bars in staging; first missing bar: %s. Existing database data was kept. If this keeps happening, run pipeline full/scoped reload for this pair.",
-                label, tf_code, len(missing_replacements),
-                missing_replacements[0].strftime("%Y-%m-%d %H:%M:%S"),
+                "           Result: ABORTED -- Repair stopped before deleting database rows; "
+                "replacement data incomplete (%d bars missing in staging; first: %s). "
+                "Existing database data was kept. Run pipeline reload if this persists.",
+                len(missing_replacements),
+                missing_replacements[0].strftime("%Y-%m-%d %H:%M"),
             )
             return False
 
     targeted_delete_times = sorted(set(delete_times or []))
     deleted = delete_ohlcv_bars(sym_id, tf_code, targeted_delete_times) if targeted_delete_times else 0
-    logger.info(
-        "  [DELETE] %d mismatched bars in repair window - %s %s (%s)",
-        deleted, label, tf_code, reason,
-    )
 
     _MAX_ETL_RETRIES = 3
     etl_inserted = -1
     for etl_attempt in range(1, _MAX_ETL_RETRIES + 1):
         try:
             etl_inserted = run_etl_direct(sym_id, tf_code, staging)
-            logger.info(
-                "  [ETL] +%d bars written to database - %s %s (%s)",
-                etl_inserted, label, tf_code, reason,
-            )
             break
         except Exception as e:
             if etl_attempt == _MAX_ETL_RETRIES:
                 logger.critical(
-                    "  ETL FAILED after %d attempts - gap trong DB remains in Fact! %s %s (%s): %s",
-                    _MAX_ETL_RETRIES, label, tf_code, reason, e,
+                    "           Result: ETL FAILED after %d attempts -- gap trong DB remains in Fact! %s %s: %s",
+                    _MAX_ETL_RETRIES, label, tf_code, e,
                 )
                 try:
                     from data_provider.common.notifications import tg_send
@@ -756,10 +732,15 @@ def _repair_direct_window(tv, sym: dict, tf_code: str, issue_times: list[datetim
                     pass
                 return False
             logger.warning(
-                "  ETL attempt %d/%d failed - retrying... %s %s (%s): %s",
-                etl_attempt, _MAX_ETL_RETRIES, label, tf_code, reason, e,
+                "           ETL attempt %d/%d failed -- retrying: %s",
+                etl_attempt, _MAX_ETL_RETRIES, e,
             )
             time.sleep(2)
+
+    logger.info(
+        "           Result: deleted=%-3d  inserted=+%-3d",
+        deleted, max(etl_inserted, 0),
+    )
     return True
 
 
@@ -837,11 +818,76 @@ def _verify_pair(tv, sym: dict, tf_code: str,
 
 # â"€â"€â"€ Main orchestrator â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
+_BOX_W = 68
+
+
+def _fmt_box(lines: list[str]) -> list[str]:
+    w = _BOX_W
+    out = ["+" + "=" * (w - 2) + "+"]
+    for ln in lines:
+        body = "  " + ln
+        out.append("|" + body.ljust(w - 2)[:w - 2] + "|")
+    out.append("+" + "=" * (w - 2) + "+")
+    return out
+
+
+def _fmt_section(title: str) -> list[str]:
+    w = _BOX_W
+    bar = "-" * (w - 2)
+    body = "  " + title
+    return ["+" + bar + "+", "|" + body.ljust(w - 2)[:w - 2] + "|", "+" + bar + "+"]
+
+
+def _log_box(logger: logging.Logger, lines: list[str]) -> None:
+    logger.info("")
+    for ln in _fmt_box(lines):
+        logger.info("%s", ln)
+
+
+def _log_report_block(
+    logger: logging.Logger,
+    title: str,
+    lines: list[str],
+    level: int = logging.INFO,
+) -> None:
+    """Write a compact operator-facing report block to checker.log."""
+    logger.log(level, "")
+    for ln in _fmt_section(title):
+        logger.log(level, "%s", ln)
+    for line in lines:
+        logger.log(level, "  %s", line)
+
+
+def _fmt_item_list(items: list[str], *, limit: int = 8) -> str:
+    if not items:
+        return "-"
+    shown = items[:limit]
+    text = "; ".join(shown)
+    if len(items) > limit:
+        text += f"; ... +{len(items) - limit} more"
+    return text
+
+
+def _fmt_issue_item(issue: dict) -> str:
+    label = f"{issue.get('sym', '?')}/{issue.get('tf', '?')}"
+    reason = issue.get("reason", "-")
+    return f"{label}: {reason}"
+
+
+def _make_pull_logger(logger: logging.Logger) -> logging.Logger:
+    """Return a logger that suppresses INFO from pull_and_store (WS/DB detail lines)."""
+    base_name = getattr(logger, "name", "checker")
+    if not isinstance(base_name, str) or not base_name:
+        base_name = "checker"
+    quiet = logging.getLogger(base_name + "._pull")
+    quiet.setLevel(logging.WARNING)
+    return quiet
+
+
 def _log_section(logger: logging.Logger, title: str) -> None:
     logger.info("")
-    logger.info("=" * 72)
-    logger.info(title)
-    logger.info("=" * 72)
+    for ln in _fmt_section(title):
+        logger.info("%s", ln)
 
 
 def _fmt_pair_status(label: str, rate: float, n_miss: int, n_bad: int, n_extra: int,
@@ -899,10 +945,15 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
     # Thu tháº­p scan rate round 0 Ä‘á»ƒ phÃ¡t hiá»‡n DST transition
     round0_rates: dict[tuple, float] = {}   # {(tv_symbol, tf_code): rate}
 
-    _log_section(
+    _log_report_block(
         logger,
-        f"START CHECKER | pairs={total_pairs} | dry_run={dry_run} | threshold={threshold * 100:.1f}%",
-
+        "CHECKER RUN CONTEXT",
+        [
+            f"Mode     : {'DRY RUN - scan only' if dry_run else 'LIVE REPAIR - scan, repair, verify'}",
+            f"Scope    : {total_pairs} pair(s)",
+            f"Threshold: {threshold * 100:.1f}%",
+            f"Rounds   : up to {MAX_REPAIR_ROUNDS}",
+        ],
     )
 
     # â"€â"€ Repair loop â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
@@ -917,17 +968,28 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
 
         is_final_round = (repair_round == MAX_REPAIR_ROUNDS - 1)
         round_name = "INITIAL SCAN" if repair_round == 0 else f"RETRY {repair_round}"
+        round_pending = len(pending)
 
-        logger.info("ROUND %-12s | pending=%d", round_name, len(pending))
+        _log_section(logger, f"SCAN  Round {repair_round + 1}/{MAX_REPAIR_ROUNDS}  |  {len(pending)} pairs pending")
 
         still_failing: list[tuple[dict, str]] = []
         prev_symbol: str | None = None  # theo dÃµi symbol trÆ°á»›c Ä‘á»ƒ thÃªm sleep khi Ä‘á»•i symbol
+        round_clean = 0
+        round_issues = 0
+        round_repaired = 0
+        round_resolved = 0
+        round_retry = 0
+        round_failed = 0
+        round_tv_empty = 0
+        round_issue_labels: list[str] = []
+        round_retry_labels: list[str] = []
+        round_failed_labels: list[str] = []
 
         for idx, (sym, tf_code) in enumerate(pending, 1):
             label = f"{sym['tv_symbol']}/{tf_code}"
 
             if idx % 50 == 1:
-                logger.info("PROGRESS %03d/%03d | %s", idx, len(pending), label)
+                logger.info("  [%03d/%03d] %s ...", idx, len(pending), label)
 
             # Nghá»‰ giá»¯a cÃ¡c symbol (khÃ´ng chá»‰ giá»¯a TF) Ä‘á»ƒ giáº£m rate vá»›i TradingView.
             # 0.5s giá»¯a cÃ¡c TF lÃ  Ä‘á»§, nhÆ°ng khi chuyá»ƒn sang symbol má»›i thÃ¬ dÃ¹ng
@@ -943,6 +1005,7 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
 
             if scan is None:
                 # TV returned nothing (error or empty)
+                round_tv_empty += 1
                 tv_consecutive_fail   += 1
                 auth_consecutive_fail += 1
 
@@ -987,12 +1050,18 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
                     }
 
                 if is_final_round:
-                    persistent_fails.append(
-                        {"sym": sym["tv_symbol"], "tf": tf_code,
-                         "reason": "TV empty/error (could not verify)"}
-                    )
+                    fail_item = {
+                        "sym": sym["tv_symbol"],
+                        "tf": tf_code,
+                        "reason": "TV empty/error (could not verify)",
+                    }
+                    persistent_fails.append(fail_item)
+                    round_failed += 1
+                    round_failed_labels.append(_fmt_issue_item(fail_item))
                 else:
                     still_failing.append((sym, tf_code))
+                    round_retry += 1
+                    round_retry_labels.append(f"{label}: TV empty/error")
                 time.sleep(TV_SLEEP_BETWEEN_CALLS)
                 continue
 
@@ -1022,6 +1091,7 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
             # â"€â"€ Decision â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
             if rate <= threshold and not force_repair_for_core_issue:
                 # Pair is clean
+                round_clean += 1
                 if repair_round == 0:
                     ok_pairs += 1
                     if rate <= 0 and n_vol > 0:
@@ -1038,29 +1108,37 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
                         logger.info("CLEAN   %s", _fmt_pair_status(label, rate, n_miss, n_bad, n_extra, n_vol))
                         continue
                     repaired_pairs += 1
+                    round_resolved += 1
                     repaired_sym_ids.add(sym["symbol_id"])
-                    logger.info("  RESOLVED %s (current mismatch rate %.2f%%)", label, rate * 100)
+                    logger.info("  [DONE ]  %s  >> RESOLVED (rate now %.2f%%)", label, rate * 100)
 
             elif is_final_round:
                 # Last round: no more repair attempts
-                persistent_fails.append(
-                    {"sym": sym["tv_symbol"], "tf": tf_code,
-                     "reason": f"{rate:.1%} mismatch ({n_miss} missing, {n_bad} OHLC wrong, {n_extra} extra)"}
-                )
-                logger.error("  PERSISTENT ERROR %s: %.1f%% mismatch could not be repaired", label, rate * 100)
+                round_issues += 1
+                fail_item = {
+                    "sym": sym["tv_symbol"],
+                    "tf": tf_code,
+                    "reason": f"{rate:.1%} mismatch ({n_miss} missing, {n_bad} OHLC wrong, {n_extra} extra)",
+                    "missing": n_miss,
+                    "ohlc": n_bad,
+                    "extra": n_extra,
+                    "rate": rate,
+                }
+                persistent_fails.append(fail_item)
+                round_failed += 1
+                round_failed_labels.append(_fmt_issue_item(fail_item))
+                logger.error("  [FAIL ]  %s  %.1f%% mismatch -- could not be repaired after %d rounds", label, rate * 100, MAX_REPAIR_ROUNDS)
 
             elif not dry_run:
                 # Attempt repair
-                if force_repair_for_core_issue and rate <= threshold:
-                    logger.warning(
-                        "  %s: core data issue detected (missing=%d wrong=%d extra=%d, rate=%.1f%% <= threshold %.1f%%) - repairing now...",
-                        label, n_miss, n_bad, n_extra, rate * 100, threshold * 100,
-                    )
-                else:
-                    logger.warning(
-                        "  %s: %.1f%% mismatch (missing=%d wrong=%d extra=%d) - repairing...",
-                        label, rate * 100, n_miss, n_bad, n_extra,
-                    )
+                round_issues += 1
+                round_issue_labels.append(
+                    f"{label}: miss={n_miss}, ohlc={n_bad}, extra={n_extra}, rate={rate * 100:.2f}%"
+                )
+                logger.warning(
+                    "  [ISSUE]  %-12s  miss=%-3d  ohlc=%-3d  extra=%-3d  rate=%.2f%%",
+                    label, n_miss, n_bad, n_extra, rate * 100,
+                )
                 repair_ok = _repair_pair(
                     tv, sym, tf_code, scan, interval_map, logger,
                     repair_round=repair_round,
@@ -1074,38 +1152,76 @@ def run_checker(tv, symbols: list, tfs: list, interval_map: dict,
                     )
                     if is_clean:
                         repaired_pairs += 1
+                        round_repaired += 1
                         repaired_sym_ids.add(sym["symbol_id"])
-                        logger.info("  REPAIRED %s (verified clean)", label)
+                        logger.info("  [DONE ]  %s  >> REPAIRED", label)
                     else:
-                        logger.warning(
-                            "  %s: %.1f%% mismatch remains after repair - will retry",
-                            label, verify_rate * 100,
-                        )
+                        logger.warning("  [RETRY]  %s  %.1f%% mismatch remains -- will retry", label, verify_rate * 100)
                         still_failing.append((sym, tf_code))
+                        round_retry += 1
+                        round_retry_labels.append(f"{label}: verify rate {verify_rate * 100:.2f}%")
                 else:
                     still_failing.append((sym, tf_code))
+                    round_retry += 1
+                    round_retry_labels.append(f"{label}: repair attempt failed")
 
             else:
                 # dry_run â€" ghi nháº­n váº¥n Ä‘á» nhÆ°ng khÃ´ng sá»­a
-                if force_repair_for_core_issue and rate <= threshold:
-                    logger.warning(
-                        "  [DRY] %s: core data issue (missing=%d wrong=%d extra=%d, rate=%.1f%% <= limit %.1f%%)",
-                        label, n_miss, n_bad, n_extra, rate * 100, threshold * 100,
-                    )
-                else:
-                    logger.warning(
-                        "  [DRY] %s: mismatch %.1f%% (missing=%d wrong=%d extra=%d)",
-                        label, rate * 100, n_miss, n_bad, n_extra,
-                    )
+                round_issues += 1
+                round_issue_labels.append(
+                    f"{label}: miss={n_miss}, ohlc={n_bad}, extra={n_extra}, rate={rate * 100:.2f}%"
+                )
+                logger.warning(
+                    "  [DRY  ]  %-12s  miss=%-3d  ohlc=%-3d  extra=%-3d  rate=%.2f%%  (not repaired)",
+                    label, n_miss, n_bad, n_extra, rate * 100,
+                )
                 # Thu tháº­p vÃ o dry_issues Ä‘á»ƒ main() cÃ³ thá»ƒ há»i user sau
                 dry_issues.append({
                     "sym": sym["tv_symbol"],
                     "tf":  tf_code,
                     "reason": f"{rate:.1%} mismatch ({n_miss} missing, {n_bad} OHLC wrong, {n_extra} extra)",
+                    "missing": n_miss,
+                    "ohlc": n_bad,
+                    "extra": n_extra,
+                    "rate": rate,
                 })
                 # KhÃ´ng tÄƒng ok_pairs â€" pair nÃ y cÃ³ váº¥n Ä‘á», khÃ´ng pháº£i "ok"
 
             time.sleep(TV_SLEEP_BETWEEN_CALLS)
+
+        if round_failed:
+            analysis = "Final verification still has unresolved pairs; review Failed list before rerunning."
+        elif round_retry:
+            analysis = "Some pairs need another pass; next round will scan only those pending pairs."
+        elif dry_run and round_issues:
+            analysis = "Dry-run found repair candidates; no database rows were changed."
+        elif round_repaired or round_resolved:
+            analysis = "Repair pass completed and verified clean for repaired/resolved pairs."
+        else:
+            analysis = "Round is clean; no repair action needed."
+
+        report_level = (
+            logging.ERROR if round_failed
+            else logging.WARNING if round_retry or (dry_run and round_issues)
+            else logging.INFO
+        )
+        _log_report_block(
+            logger,
+            f"CHECKER ROUND REPORT {repair_round + 1}/{MAX_REPAIR_ROUNDS}",
+            [
+                f"Round    : {round_name}",
+                f"Mode     : {'DRY RUN - scan only' if dry_run else 'LIVE REPAIR - scan, repair, verify'}",
+                f"Scanned  : {round_pending} pair(s)",
+                f"Clean    : {round_clean} pair(s)",
+                f"Issues   : {round_issues} pair(s) | {_fmt_item_list(round_issue_labels)}",
+                f"Repaired : {round_repaired} pair(s) | resolved without DB write={round_resolved}",
+                f"Retry    : {round_retry} pair(s) | next round={len(still_failing)} | {_fmt_item_list(round_retry_labels)}",
+                f"Failed   : {round_failed} pair(s) | {_fmt_item_list(round_failed_labels)}",
+                f"TV empty : {round_tv_empty} pair(s)",
+                f"Analysis : {analysis}",
+            ],
+            level=report_level,
+        )
 
         pending = still_failing
 
@@ -1242,49 +1358,91 @@ def _build_problem_desc_clean(issues: list[dict], threshold: float) -> str:
 
 
 def _build_report_clean(stats: dict, start_time: datetime, auth_mode: str) -> str:
-    """
-    ASCII-safe Discord/report body used by the main flow.
-    """
+    """Build the final report body (used for both log and Discord)."""
     elapsed = max(1, int((now_utc() - start_time).total_seconds() / 60))
-    total = stats["total"]
-    lines = [
-        f"<b>[Checker] Completed {now_utc():%d/%m/%Y %H:%M}</b>",
-        "",
-        f"OK: {stats['ok']}/{total} pairs",
-        f"Repaired: {stats['repaired']}/{total} pairs",
-        f"Persistent fail: {stats['failed']}/{total} pairs",
-        "",
-        f"Elapsed: {elapsed} min | Auth: {auth_mode}",
-    ]
-    if stats["dry_run"]:
-        lines.insert(1, "<i>(DRY-RUN - scan only, no DB writes)</i>")
-    if stats.get("volume_advisory_pairs", 0):
-        lines.append(
-            f"Volume advisory: {stats['volume_advisory_pairs']} pairs / "
-            f"{stats['volume_advisory_bars']} bars (not used for repair)"
-        )
-    if stats["failures"]:
-        lines.append("")
-        lines.append("Failed pairs:")
-        for failure in stats["failures"][:10]:
-            lines.append(f"  - {failure['sym']} / {failure['tf']}: {failure['reason']}")
-        if len(stats["failures"]) > 10:
-            lines.append(f"  ... and {len(stats['failures']) - 10} other pairs")
-    skipped_tfs = stats.get("skipped_tfs", [])
-    if skipped_tfs:
-        lines.append("")
-        lines.append(
-            f"Skipped TFs: {', '.join(skipped_tfs)} (DST safeguard - retry after 24h)"
-        )
+    total   = stats["total"]
+    ok      = stats["ok"]
+    repaired = stats["repaired"]
+    failed   = stats["failed"]
+
+    dry_tag  = " (DRY-RUN)" if stats["dry_run"] else ""
+    pct      = lambda n: f"{n / total * 100:.1f}%" if total else "0.0%"
+
     abort_reason = stats.get("aborted")
+    skipped_tfs  = stats.get("skipped_tfs", [])
+    vol_pairs    = stats.get("volume_advisory_pairs", 0)
+    vol_bars     = stats.get("volume_advisory_bars", 0)
+
     if abort_reason:
         reason_map = {
-            "circuit_breaker": "paused after repeated TV/auth failures",
-            "repair_lock": "could not acquire repair lock",
+            "circuit_breaker": "PARTIAL -- stopped after repeated TV/auth failures",
+            "repair_lock":     "PARTIAL -- could not acquire repair lock",
         }
-        lines.append("")
-        lines.append(f"Status: PARTIAL - {reason_map.get(abort_reason, abort_reason)}")
-    return "\n".join(lines)
+        status = reason_map.get(abort_reason, f"PARTIAL -- {abort_reason}")
+    elif failed > 0:
+        status = f"ATTENTION -- {failed} pair(s) could not be repaired"
+    else:
+        status = "ALL CLEAR"
+
+    box_lines = [
+        f"REPORT{dry_tag}  |  {now_utc():%Y-%m-%d %H:%M}  |  Elapsed: {elapsed} min",
+        "",
+        f"Total scanned  :  {total} pairs",
+        f"Clean          :  {ok:4d} pairs  ({pct(ok)})",
+        f"Repaired       :  {repaired:4d} pairs  ({pct(repaired)})",
+        f"Failed         :  {failed:4d} pairs  ({pct(failed)})",
+    ]
+
+    dry_issues = stats.get("dry_issues", [])
+    if stats["dry_run"] and dry_issues:
+        miss_c  = sum(1 for f in dry_issues if "missing" in f.get("reason", ""))
+        ohlc_c  = sum(1 for f in dry_issues if "wrong"   in f.get("reason", ""))
+        extra_c = sum(1 for f in dry_issues if "extra"   in f.get("reason", ""))
+        box_lines += [
+            "",
+            "Issue breakdown (dry-run, not repaired):",
+            f"  Missing bars    :  {miss_c} pairs",
+            f"  OHLCV mismatch  :  {ohlc_c} pairs",
+            f"  Extra bars      :  {extra_c} pairs",
+        ]
+    elif stats["failures"]:
+        miss_c  = sum(1 for f in stats["failures"] if "missing" in f.get("reason", ""))
+        ohlc_c  = sum(1 for f in stats["failures"] if "wrong"   in f.get("reason", ""))
+        extra_c = sum(1 for f in stats["failures"] if "extra"   in f.get("reason", ""))
+        box_lines += [
+            "",
+            "Issue breakdown:",
+            f"  Missing bars    :  {miss_c} pairs",
+            f"  OHLCV mismatch  :  {ohlc_c} pairs",
+            f"  Extra bars      :  {extra_c} pairs",
+        ]
+
+    if vol_pairs:
+        box_lines.append(f"Volume advisory :  {vol_pairs} pairs / {vol_bars} bars  (info only)")
+
+    if skipped_tfs:
+        box_lines.append(f"Skipped TFs     :  {', '.join(skipped_tfs)}  (DST safeguard -- retry after 24h)")
+
+    if stats["failures"]:
+        box_lines.append("")
+        box_lines.append("Persistent failures:")
+        for f in stats["failures"][:8]:
+            box_lines.append(f"  [FAIL]  {f['sym']}/{f['tf']}  {f['reason']}")
+        if len(stats["failures"]) > 8:
+            box_lines.append(f"  ... and {len(stats['failures']) - 8} more")
+
+    box_lines += ["", f"Auth: {auth_mode}   |   Status: {status}"]
+
+    # Plain-text version (used in log file)
+    plain = "\n".join(box_lines)
+
+    # Discord version wraps key fields in bold
+    discord = plain.replace("ALL CLEAR", "<b>ALL CLEAR</b>").replace("ATTENTION", "<b>ATTENTION</b>")
+    discord = f"<b>[Checker]</b>\n" + discord
+
+    # Store both versions; callers use plain via _log_report and discord via tg_send
+    # We return the Discord version for tg_send; _log_report strips HTML.
+    return discord
 
 
 def _empty_checker_stats(total_pairs: int, *, dry_run: bool = False) -> dict:
@@ -1381,22 +1539,18 @@ def _detect_dst_transition_risk(
 
     rates: list[float] = []
     pair_idx = 0
+    sampled_labels: list[str] = []
     for sym_idx, sym in enumerate(sample_symbols, 1):
         if sym_idx > 1:
             sleep_for(sym["tv_symbol"])
         for tf_code in h_tfs:
             pair_idx += 1
-            logger.info(
-                "AUTO MODE PRECHECK %03d/%03d | %s/%s",
-                pair_idx,
-                total_pairs,
-                sym["tv_symbol"],
-                tf_code,
-            )
+            sampled_labels.append(f"{sym['tv_symbol']}/{tf_code}")
             scan = _scan_pair(tv, sym, tf_code, CHECKER_N_BARS[tf_code], interval_map, logger)
             if scan is not None:
                 rates.append(scan["rate"])
             time.sleep(TV_SLEEP_BETWEEN_CALLS)
+    logger.info("  Sampled: %s", "  ".join(sampled_labels))
 
     if len(rates) < 15:
         return set()
@@ -1407,7 +1561,8 @@ def _detect_dst_transition_risk(
         return set()
 
     logger.warning(
-        "[DST DETECT] %.0f%% of H2/H3/H4 pairs have mismatch >50%%. This may be a DST shift. Skipping H2/H3/H4 auto-repair today. Run again after 24h.",
+        "[DST DETECT] %.0f%% of H2/H3/H4 pairs have mismatch >50%% -- possible DST shift."
+        " H2/H3/H4 repair skipped today. Re-run after 24h.",
         dst_ratio * 100,
     )
     tg_send(
@@ -1443,7 +1598,18 @@ def _run_auto_mode_symbol_rollout(
         if sym_idx > 1:
             sleep_for(sym["tv_symbol"])
 
-        logger.info("AUTO %03d/%03d | %s | tf=%d", sym_idx, len(symbols), sym["tv_symbol"], len(active_tfs))
+        symbol_label = sym["tv_symbol"]
+        _log_report_block(
+            logger,
+            f"CHECKER SYMBOL SCAN: {symbol_label}",
+            [
+                f"Progress : {sym_idx}/{len(symbols)}",
+                f"Scope    : {len(active_tfs)} TF(s)",
+                "Mode     : pre-scan without repair lock",
+                "Action   : scan first; acquire repair locks only if issues are found",
+            ],
+        )
+        logger.info("  [%03d/%03d] %s", sym_idx, len(symbols), sym["tv_symbol"])
         scan_stats = run_checker(
             tv,
             [sym],
@@ -1463,14 +1629,41 @@ def _run_auto_mode_symbol_rollout(
         issues = scan_stats.get("dry_issues", []) or scan_stats.get("failures", [])
         if not issues:
             overall["ok"] += int(scan_stats.get("ok", 0) or 0)
+            _log_report_block(
+                logger,
+                f"CHECKER SYMBOL SUMMARY: {symbol_label}",
+                [
+                    "Status   : CLEAN",
+                    f"Clean    : {scan_stats.get('ok', 0)}/{len(active_tfs)} TF(s)",
+                    "Action   : move to next symbol",
+                ],
+            )
             continue
 
-        logger.info(
-            "AUTO %s | %d issues | getting lock to scan and repair...",
-            sym["tv_symbol"], len(issues),
+        _log_report_block(
+            logger,
+            f"CHECKER SYMBOL SUMMARY: {symbol_label}",
+            [
+                "Status   : ATTENTION",
+                f"Issues   : {len(issues)} TF(s)",
+                f"Top      : {_fmt_item_list([_fmt_issue_item(issue) for issue in issues], limit=8)}",
+                "Action   : acquire checker_repair + warehouse_maintenance locks, then repair",
+            ],
+            level=logging.WARNING,
         )
+        logger.info("  [ISSUES] %s: %d pair(s) need repair -- acquiring lock", sym["tv_symbol"], len(issues))
         heartbeat_stop = _acquire_repair_locks(logger)
         if heartbeat_stop is None:
+            _log_report_block(
+                logger,
+                f"CHECKER SYMBOL REPAIR REPORT: {symbol_label}",
+                [
+                    "Status   : ABORTED",
+                    "Reason   : could not acquire checker repair locks",
+                    "Action   : no database rows were changed for this symbol",
+                ],
+                level=logging.ERROR,
+            )
             overall["aborted"] = "repair_lock"
             return overall
 
@@ -1487,6 +1680,30 @@ def _run_auto_mode_symbol_rollout(
             )
         finally:
             _release_repair_locks(heartbeat_stop, logger)
+
+        repair_failures = repair_stats.get("failures", [])
+        if repair_stats.get("aborted"):
+            repair_status = f"ABORTED - {repair_stats.get('aborted')}"
+            repair_level = logging.ERROR
+        elif repair_failures:
+            repair_status = "ATTENTION"
+            repair_level = logging.ERROR
+        else:
+            repair_status = "OK"
+            repair_level = logging.INFO
+        _log_report_block(
+            logger,
+            f"CHECKER SYMBOL REPAIR REPORT: {symbol_label}",
+            [
+                f"Status   : {repair_status}",
+                f"Clean    : {repair_stats.get('ok', 0)} TF(s)",
+                f"Repaired : {repair_stats.get('repaired', 0)} TF(s)",
+                f"Failed   : {repair_stats.get('failed', 0)} TF(s)",
+                f"Failures : {_fmt_item_list([_fmt_issue_item(item) for item in repair_failures], limit=8)}",
+                "Analysis : repair locks were released; ws_live can resume deferred ETL work",
+            ],
+            level=repair_level,
+        )
 
         _merge_checker_stats(overall, repair_stats, include_advisory=False)
         if overall.get("aborted"):
@@ -1553,12 +1770,6 @@ def main() -> None:
         logger.error("CRITICAL: Could not connect to the database. Checker did not start.")
         sys.exit(1)
 
-    _log_section(
-        logger,
-        "CHECKER CLI | "
-        f"dry={args.dry_run} | sym={args.sym or 'ALL'} | tf={args.tf or 'ALL'} "
-        f"| threshold={args.threshold * 100:.1f}%",
-    )
     start_time = now_utc()
 
     # â"€â"€ Filter symbols / TFs â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
@@ -1695,7 +1906,12 @@ def main() -> None:
         f"Mode: {'Scan and report' if args.dry_run else 'Scan and auto-repair'}"
     )
     tv, auth_mode = get_valid_tv_connection(logger)
-    logger.info("Login method: %s", auth_mode)
+    mode_label = "SCAN ONLY (dry-run)" if args.dry_run else "LIVE REPAIR"
+    _log_box(logger, [
+        f"CHECKER  |  {start_time:%Y-%m-%d %H:%M}  |  {len(symbols)} symbols x {len(tfs)} TFs",
+        f"Mode: {mode_label}  |  Threshold: {args.threshold * 100:.1f}%  |  Auth: {auth_mode}",
+        f"Scope: sym={args.sym or 'ALL'}  tf={args.tf or 'ALL'}",
+    ])
 
     # â"€â"€ Guard: khÃ´ng cháº¡y náº¿u Ä‘ang á»Ÿ guest mode â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     # Guest mode chá»‰ tráº£ vá» ~500 bars thay vÃ¬ 1000-2000 â†’ checker sáº½ tháº¥y hÃ ng trÄƒm
@@ -1727,7 +1943,7 @@ def main() -> None:
         tg_send(report)
         tg_flush()
         logger.info(
-            "==== DONE (dry-run) | clean=%d issues=%d ====",
+            "DONE (dry-run) | clean=%d  issues=%d",
             stats["ok"], len(stats["dry_issues"]),
         )
         _exit(0)
@@ -1813,7 +2029,7 @@ def main() -> None:
         tg_send(report)
         tg_flush()
         logger.info(
-            "==== DONE | ok=%d repaired=%d failed=%d aborted=%s ====",
+            "DONE | ok=%d  repaired=%d  failed=%d  aborted=%s",
             auto_stats["ok"], auto_stats["repaired"], auto_stats["failed"],
             auto_stats.get("aborted", "no"),
         )
@@ -1860,9 +2076,9 @@ def main() -> None:
         _log_report(report, logger)
         tg_send(report)
         tg_flush()
-        logger.info("==== DONE | all data is clean ====")
+        logger.info("DONE | all data is clean")
         _exit(0)
-        logger.info("==== DONE | all data is clean ====")
+        logger.info("DONE | all data is clean")
     # â"€â"€ Phase 2: Auto-confirm (manual-confirm khÃ´ng cÃ²n há»— trá»£) â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
     _log_section(logger, f"PHASE 2 | Auto-confirm | issues={len(issues)}")
     logger.info("Auto-confirm: repairing %d pairs.", len(issues))
@@ -2109,13 +2325,9 @@ def _format_co_report(stats: dict, lookback_days: int) -> str:
 
 def _log_report(report: str, logger: logging.Logger) -> None:
     """Log report ra file (strip HTML tags cho dá»… Ä‘á»c)."""
-    clean = (report
-             .replace("<b>", "").replace("</b>", "")
-             .replace("<i>", "").replace("</i>", ""))
-    logger.info("")
-    logger.info("-" * 72)
-    logger.info("%s", clean)
-    logger.info("-" * 72)
+    import re
+    clean = re.sub(r"<[^>]+>", "", report)
+    _log_box(logger, clean.splitlines())
 
 
 def _acquire_repair_locks(

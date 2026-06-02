@@ -280,6 +280,74 @@ WS_WATCH_KEYS = frozenset(
 _SYMBOL_META_BY_ID = {s["symbol_id"]: s for s in WS_SYMBOLS}
 _SYMBOL_NAME_BY_ID = {sid: s["tv_symbol"] for sid, s in _SYMBOL_META_BY_ID.items()}
 
+_REPORT_WIDTH = 96
+_TF_ORDER = ["M5", "M10", "M15", "M20", "M30", "M45",
+             "H1", "M90", "H2", "H3", "H4", "H6", "H8", "D1", "W"]
+
+
+def _log_report_block(title: str, lines: list[str], level: int = logging.INFO) -> None:
+    """Write a compact operator report block to ws_live.log."""
+    border = "-" * _REPORT_WIDTH
+    logger.log(level, border)
+    logger.log(level, "%s", title)
+    logger.log(level, border)
+    for line in lines:
+        logger.log(level, "  %s", line)
+    logger.log(level, border)
+
+
+def _fmt_pair_label(key: tuple[int, str]) -> str:
+    sid, tf_code = key
+    return f"{_SYMBOL_NAME_BY_ID.get(sid, sid)}/{tf_code}"
+
+
+def _fmt_count_items(items: list[tuple[str, int]], *, limit: int = 12) -> str:
+    if not items:
+        return "-"
+    trimmed = items[:limit]
+    text = "  ".join(f"{name}:{value:,}" for name, value in trimmed)
+    if len(items) > limit:
+        text += f"  ... +{len(items) - limit} more"
+    return text
+
+
+def _summarize_pair_counts(pair_counts: dict[tuple[int, str], int], *, limit: int = 12) -> str:
+    items = [
+        (_fmt_pair_label(key), int(value))
+        for key, value in pair_counts.items()
+        if int(value or 0) > 0
+    ]
+    items.sort(key=lambda item: (-item[1], item[0]))
+    return _fmt_count_items(items, limit=limit)
+
+
+def _summarize_counts_by_symbol(pair_counts: dict[tuple[int, str], int], *, limit: int = 12) -> str:
+    totals: dict[str, int] = {}
+    for (sid, _tf), value in pair_counts.items():
+        if int(value or 0) <= 0:
+            continue
+        name = _SYMBOL_NAME_BY_ID.get(sid, str(sid))
+        totals[name] = totals.get(name, 0) + int(value)
+    items = sorted(totals.items(), key=lambda item: (-item[1], item[0]))
+    return _fmt_count_items(items, limit=limit)
+
+
+def _summarize_counts_by_tf(pair_counts: dict[tuple[int, str], int], *, limit: int = 15) -> str:
+    totals: dict[str, int] = {}
+    for (_sid, tf_code), value in pair_counts.items():
+        if int(value or 0) <= 0:
+            continue
+        totals[tf_code] = totals.get(tf_code, 0) + int(value)
+    items = [(tf, totals[tf]) for tf in _TF_ORDER if tf in totals]
+    items.extend(sorted((tf, cnt) for tf, cnt in totals.items() if tf not in _TF_ORDER))
+    return _fmt_count_items(items, limit=limit)
+
+
+def _summarize_backlog(backlog: dict[tuple[int, str], int], *, limit: int = 12) -> str:
+    items = [(_fmt_pair_label(key), int(count)) for key, count in backlog.items()]
+    items.sort(key=lambda item: (-item[1], item[0]))
+    return _fmt_count_items(items, limit=limit)
+
 # TradingView chart sessions can otherwise emit timestamps in the UI/local
 # timezone while the value still looks like a Unix epoch. Force UTC at source.
 TV_WS_TIMEZONE = os.environ.get("TV_WS_TIMEZONE", "Etc/UTC")
@@ -1892,8 +1960,10 @@ class BatchFetcher:
                             _stats["queue_depth"] = _db_queue.qsize()
 
         # Ghi log kết quả của session này: TradingView trả bao nhiêu nến, có bao nhiêu nến được accept.
-        logger.info(
-            "[G%d] %s [%s] - %d bar(s) received, %d accepted",
+        log_level = logging.INFO if _new_count else logging.DEBUG
+        logger.log(
+            log_level,
+            "[G%d] DATA %-8s %-4s received=%d accepted=%d",
             self.group_id, tv_symbol, tf_code, len(bars), _new_count,
         )
 
@@ -1901,7 +1971,12 @@ class BatchFetcher:
         with self._lock:
             # Guard: không đóng WS khi _on_open vẫn đang đăng ký sessions
             # (_expected chưa đầy đủ -> so sánh sẽ cho kết quả sai)
-            if not self._registering and self._expected and self._received >= self._expected:
+            if (
+                not self._registering
+                and self._expected
+                and self._received >= self._expected
+                and not self._done.is_set()
+            ):
                 # Tất cả sessions đều đã gửi data -> đóng WS sớm, không cần chờ timeout
                 logger.info("[G%d] All %d sessions received - closing.", self.group_id, len(self._expected))
                 self._done.set()
@@ -2049,59 +2124,62 @@ class BatchFetcher:
         with self._lock:
             pair_new_bars_snap = dict(self._pair_new_bars)
 
-        # Thu thập tất cả cặp (symbol_id, tf_code, tv_symbol) theo cs_map
-        all_pairs = []
-        seen: set[tuple[int, str]] = set()
-        for cs, (sym_id, tf_code, _, tv_sym) in cs_map_snapshot.items():
-            key = (sym_id, tf_code)
-            if key not in seen:
-                seen.add(key)
-                all_pairs.append((sym_id, tf_code, tv_sym))
-        # Sắp xếp: symbol trước, TF sau
-        all_pairs.sort(key=lambda x: (x[2], x[1]))
-
-        hdr = f"[G{self.group_id}] {'Symbol':<14} {'TF':<5} {'Accept':>6}  {'Latest bar UTC':<20}  Status"
-        sep = f"[G{self.group_id}] " + "-" * (len(hdr) - len(f"[G{self.group_id}] "))
-        logger.info(sep)
-        logger.info(hdr)
-        logger.info(sep)
-        for sym_id, tf_code, tv_sym in all_pairs:
-            key = (sym_id, tf_code)
-            new_bars = pair_new_bars_snap.get(key, 0)
-            with _state_lock:
-                wm_ts = _last_bar_ts.get(key)
-            if wm_ts:
-                latest = datetime.fromtimestamp(wm_ts, tz=timezone.utc).strftime("%Y-%m-%d %H:%M")
-            else:
-                latest = "-"
-            if key in missed_pairs:
-                miss_count = backlog_snap.get(key, 1)
-                status = f"MISS #{miss_count} -> retry {N_BARS_WS_BACKLOG}bars"
-            elif new_bars > 0:
-                status = f"OK  +{new_bars} bar{'s' if new_bars > 1 else ''}"
-            else:
-                status = "OK  no new closed bar"
-            logger.info(
-                "[G%d] %-14s %-5s %6d  %-20s  %s",
-                self.group_id, tv_sym, tf_code, new_bars, latest, status,
-            )
-        logger.info(sep)
-        logger.info(
-            "[G%d] sessions=%d/%d  accepted=%d  missed=%d",
-            self.group_id, len(self._received), len(self._expected),
-            self._new_bars_count, len(missed_pairs),
-        )
-        logger.info(
-            "[AUDIT] G%d sessions=%d/%d accepted=%d missed=%d ts=%s",
-            self.group_id, len(self._received), len(self._expected),
-            self._new_bars_count, len(missed_pairs),
-            datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M"),
-        )
-        logger.info(sep)
-
         with self._lock:
             expected_count = len(self._expected)
             received_count = len(self._received)
+        changed_pairs = [
+            key for key, count in pair_new_bars_snap.items()
+            if int(count or 0) > 0
+        ]
+        changed_pairs.sort(key=lambda key: (-pair_new_bars_snap[key], _fmt_pair_label(key)))
+
+        changed_text = []
+        for key in changed_pairs[:12]:
+            with _state_lock:
+                wm_ts = _last_bar_ts.get(key)
+            latest = (
+                datetime.fromtimestamp(wm_ts, tz=timezone.utc).strftime("%H:%M UTC")
+                if wm_ts else "-"
+            )
+            changed_text.append(f"{_fmt_pair_label(key)} +{pair_new_bars_snap[key]} ({latest})")
+
+        missed_sorted = sorted(missed_pairs, key=_fmt_pair_label)
+        missed_text = ", ".join(_fmt_pair_label(key) for key in missed_sorted[:12]) or "none"
+        if len(missed_sorted) > 12:
+            missed_text += f", ... +{len(missed_sorted) - 12} more"
+
+        if missed_pairs:
+            analysis = (
+                f"{len(missed_pairs)} pair(s) did not answer; next batch requests "
+                f"{N_BARS_WS_BACKLOG} bars for backlog recovery."
+            )
+        elif self._new_bars_count == 0:
+            analysis = "OK  no new closed bar - all sessions answered; no new closed bars were available."
+        else:
+            analysis = "Group is healthy; accepted bars were queued for database writes."
+
+        report_lines = [
+            f"Sessions : {received_count}/{expected_count} answered",
+            f"Accepted : {self._new_bars_count:,} bars across {len(changed_pairs)} pair(s)",
+            f"Symbols  : {_summarize_counts_by_symbol(pair_new_bars_snap)}",
+            f"TFs      : {_summarize_counts_by_tf(pair_new_bars_snap)}",
+            f"Changed  : {'; '.join(changed_text) if changed_text else '-'}",
+            f"Missing  : {missed_text}",
+        ]
+        if backlog_snap:
+            report_lines.append(f"Backlog  : {_summarize_backlog(backlog_snap)}")
+        report_lines.append(f"Analysis : {analysis}")
+        _log_report_block(
+            f"WS LIVE GROUP G{self.group_id} REPORT",
+            report_lines,
+            logging.WARNING if missed_pairs else logging.INFO,
+        )
+        logger.info(
+            "[AUDIT] G%d sessions=%d/%d accepted=%d missed=%d ts=%s",
+            self.group_id, received_count, expected_count,
+            self._new_bars_count, len(missed_pairs),
+            datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M"),
+        )
         return completed and expected_count > 0 and received_count >= expected_count
 
 
@@ -2215,16 +2293,55 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
 
     _on_batch_complete(batch_id, total_new, backlog_snap, batch_pair_bars, db_metrics)
 
-    logger.info(
-        "[SCHED] === Batch #%d done - accepted=%d  fact_inserted=%d  "
-        "staging_rows=%d  deferred=%d  db_pending=%d  backlog=%d ===",
-        batch_id,
-        total_new,
-        int(db_metrics.get("fact_inserted", 0)),
-        int(db_metrics.get("staging_rows", 0)),
-        int(db_metrics.get("deferred_items", 0)),
-        pending_db,
-        len(backlog_snap),
+    with _overflow_lock:
+        overflow_depth = len(_overflow_buf)
+    spool_depth = _safe_spool_count()
+    queue_depth = _db_queue.qsize()
+    fact_inserted = int(db_metrics.get("fact_inserted", 0))
+    staging_rows = int(db_metrics.get("staging_rows", 0))
+    deferred_items = int(db_metrics.get("deferred_items", 0))
+    db_processed = int(db_metrics.get("db_processed", 0))
+
+    expected_sessions = 0
+    received_sessions = 0
+    for group in groups:
+        with group._lock:
+            expected_sessions += len(group._expected)
+            received_sessions += len(group._received)
+    missed_sessions = max(0, expected_sessions - received_sessions)
+
+    if missed_sessions:
+        analysis = (
+            f"{missed_sessions} session(s) did not answer; affected pairs are tracked in backlog."
+        )
+    elif pending_db:
+        analysis = (
+            f"{pending_db} accepted bar(s) are still waiting for DB worker confirmation."
+        )
+    elif deferred_items:
+        analysis = (
+            f"{deferred_items} item(s) were staged but deferred because a repair/maintenance lock is active."
+        )
+    elif total_new == 0 and not backlog_snap:
+        analysis = "No new closed bars in this cycle; WebSocket sessions answered normally."
+    else:
+        analysis = "Batch flow is healthy; data moved from WebSocket to staging/Fact as expected."
+
+    batch_level = logging.WARNING if (missed_sessions or pending_db or backlog_snap) else logging.INFO
+    _log_report_block(
+        f"WS LIVE BATCH REPORT #{batch_id}",
+        [
+            f"Window   : started {batch_start} UTC | groups={len(groups)} | sessions={received_sessions}/{expected_sessions}",
+            f"Accepted : {total_new:,} bars from WebSocket | DB processed={db_processed:,} | pending={pending_db:,}",
+            f"Database : staging affected={staging_rows:,} rows | Fact inserted={fact_inserted:,} rows | deferred={deferred_items:,}",
+            f"Buffers  : queue={queue_depth:,} | RAM overflow={overflow_depth:,} | SQLite spool={spool_depth if spool_depth is not None else 'n/a'}",
+            f"Backlog  : {len(backlog_snap)} pair(s) | {_summarize_backlog(backlog_snap)}",
+            f"By symbol: {_summarize_counts_by_symbol(batch_pair_bars)}",
+            f"By TF    : {_summarize_counts_by_tf(batch_pair_bars)}",
+            f"Top pairs: {_summarize_pair_counts(batch_pair_bars)}",
+            f"Analysis : {analysis}",
+        ],
+        batch_level,
     )
     logger.info(
         "[AUDIT] batch=%d accepted=%d fact_inserted=%d staging_rows=%d db_pending=%d backlog=%d ts=%s",
@@ -2236,16 +2353,6 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
         len(backlog_snap),
         datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M"),
     )
-    if backlog_snap:
-        entries = ", ".join(
-            f"{_sym_name.get(sid, str(sid))}/{tf}(#{cnt})"
-            for (sid, tf), cnt in sorted(backlog_snap.items(), key=lambda x: -x[1])
-        )
-        logger.info("[SCHED] Backlog retry next batch (%d bars each): %s", N_BARS_WS_BACKLOG, entries)
-    elif total_new == 0:
-        logger.warning("[SCHED] No accepted bars and no backlog - check WebSocket/auth; sessions may not have registered.")
-    else:
-        logger.info("[SCHED] No backlog - all pairs OK this batch.")
 
 
 def _on_batch_complete(
@@ -2283,16 +2390,22 @@ def _on_batch_complete(
         )
         _tg_alert(
             "INFO",
-            f"[OK] <b>First batch finished</b> - Batch #{batch_num}\n"
-            f"Accepted: {total_accepted} bars  |  Fact inserted: {fact_inserted} rows\n"
-            f"Staging affected: {staging_rows} rows  |  DB pending: {db_pending}\n"
+            f"[OK] <b>WS first batch finished</b>\n"
+            f"Batch: #{batch_num}\n"
+            f"Accepted: {total_accepted:,} bars\n"
+            f"Staging: {staging_rows:,} rows\n"
+            f"Fact: {fact_inserted:,} rows\n"
+            f"DB pending: {db_pending:,}\n"
             f"Backlog: {bl} pairs",
         )
     elif total_accepted == 0:
         _tg_alert(
             "WARNING",
-            f"[WARN] <b>Batch #{batch_num} had no accepted bars</b>\n"
-            f"Backlog: {bl} pairs  |  Check WebSocket connection or auth",
+            f"[WARN] <b>WS batch had no accepted bars</b>\n"
+            f"Batch: #{batch_num}\n"
+            f"Accepted: 0 bars\n"
+            f"Backlog: {bl} pairs\n"
+            f"Meaning: no new closed bars were queued. If this repeats while markets are open, check WebSocket/auth.",
         )
 
 
@@ -2562,28 +2675,59 @@ def _status_reporter() -> None:
         hourly_summary = "  |  ".join(hourly_parts)
 
         # ── Gửi Discord ──────────────────────────────────────────────────────
-        issues_text = ("\n".join(f"  [WARN] {x}" for x in issues[:3])
-                       if issues else "  [OK] Everything looks normal.")
+        issue_lines = issues[:3] if issues else ["Everything looks normal."]
+        issue_text = " | ".join(issue_lines)
+        health_lines = [
+            f"Status   : {health_level} | {now}",
+            f"Auth     : {auth_info}",
+            f"Last hour: {hourly_summary}",
+            f"Total    : {s['batches_run']} batches | {s.get('accepted_bars', 0):,} accepted | "
+            f"{s.get('fact_inserted', s['bars_inserted']):,} Fact rows | {s['errors']} errors",
+            f"Buffers  : DB queue={s['queue_depth']:,} | RAM overflow={overflow:,} | SQLite spool={spool_count:,}",
+            f"Freshness: oldest active={max_age_h:.1f}h | late active={stale_count} | "
+            f"source lag={source_lag_count} | missing={n_miss_active} | closed stale={closed_stale_count}",
+            f"Accepted : symbols {acc_sym_line}",
+            f"Accepted : TFs {acc_tf_line}",
+            f"Staging  : symbols {stage_sym_line}",
+            f"Staging  : TFs {stage_tf_line}",
+            f"Fact     : symbols {sym_line}",
+            f"Fact     : TFs {tf_line}",
+            f"Analysis : {issue_text}",
+        ]
+        _log_report_block(
+            "WS LIVE HEALTH REPORT",
+            health_lines,
+            logging.ERROR if health_level == "RED" else logging.WARNING if health_level == "YELLOW" else logging.INFO,
+        )
         _tg_send(
-            f"{health_emoji} <b>System status: {health_level}</b> [{now}]\n"
-            f"Auth: {auth_info}\n"
-            f"<b>Last hour:</b> {hourly_summary}\n"
-            f"<b>Total:</b> {s['batches_run']} batches  |  {s.get('accepted_bars', 0):,} accepted  |  "
-            f"{s.get('fact_inserted', s['bars_inserted']):,} Fact rows  |  {s['errors']} errors\n"
-            f"DB queue: {s['queue_depth']}  |  RAM buffer: {overflow}  |  Offline spool: {spool_count}\n"
-            f"Oldest active: {max_age_h:.1f}h  |  Late active: {stale_count}  |  Source lag: {source_lag_count}  |  Missing: {n_miss_active}\n"
-            f"Closed-market stale: {closed_stale_count}\n"
-            f"{'-' * 30}\n"
-            f"<b>Last 1 hour:</b> {h['batches']} batches  |  {accepted_h:,} accepted  |  {staging_h:,} staging  |  {fact_h:,} Fact rows\n"
-            f"  (empty batches: {h['zero_bar_batches']}  |  backlog peak: {h['backlog_peak']} pairs)\n"
-            f"Accepted by pair: {acc_sym_line}\n"
-            f"Accepted by TF:  {acc_tf_line}\n"
-            f"Staging by pair: {stage_sym_line}\n"
-            f"Staging by TF:  {stage_tf_line}\n"
-            f"Fact by pair: {sym_line}\n"
-            f"Fact by TF:  {tf_line}\n"
-            f"{'-' * 30}\n"
-            f"{issues_text}"
+            "\n".join([
+                f"{health_emoji} **WS Live Health: {health_level}** [{now}]",
+                f"Auth: {auth_info}",
+                "",
+                "**Last hour**",
+                f"- {hourly_summary}",
+                f"- Empty batches: {h['zero_bar_batches']} | Backlog peak: {h['backlog_peak']} pairs",
+                "",
+                "**Total**",
+                f"- Batches: {s['batches_run']} | Accepted: {s.get('accepted_bars', 0):,} | "
+                f"Fact rows: {s.get('fact_inserted', s['bars_inserted']):,} | Errors: {s['errors']}",
+                f"- DB queue: {s['queue_depth']} | RAM overflow: {overflow} | SQLite spool: {spool_count}",
+                "",
+                "**Freshness**",
+                f"- Oldest active: {max_age_h:.1f}h | Late active: {stale_count} | Source lag: {source_lag_count}",
+                f"- Missing: {n_miss_active} | Closed-market stale: {closed_stale_count}",
+                "",
+                "**Breakdown**",
+                f"- Accepted by symbol: {acc_sym_line}",
+                f"- Accepted by TF: {acc_tf_line}",
+                f"- Staging by symbol: {stage_sym_line}",
+                f"- Staging by TF: {stage_tf_line}",
+                f"- Fact by symbol: {sym_line}",
+                f"- Fact by TF: {tf_line}",
+                "",
+                "**Analysis**",
+                "\n".join(f"- {line}" for line in issue_lines),
+            ])
         )
 
 
