@@ -1,0 +1,2 @@
+signal_count,accepted_count,skipped_count,open_at_end_count,r_eligible_count,open_at_end_excluded_from_r,skip_rate,expectancy_r,std_r,sqn,ambiguity_rate,sl_hit_rate,mean_bar_mae_r,mean_bar_mfe_r,mean_holding_bars,total_cost_r,tp1_hit_rate
+1075,729,346,0,729,True,0.3218604651162791,-0.01732114845525182,1.564978113511027,-0.29883549440993756,0.00823045267489712,0.6694101508916324,1.3092606953929766,1.4437517606088839,8.858710562414267,0.0,0.33058984910836764

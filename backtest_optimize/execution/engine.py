@@ -13,6 +13,7 @@ from backtest_optimize.contracts import (
     BacktestResult,
     ClusterResult,
     ClusterStatus,
+    Direction,
     MarketSpec,
     RunAssumptions,
     SignalRow,
@@ -55,6 +56,38 @@ def _coerce_signals(signals: pd.DataFrame | Sequence[SignalRow]) -> list[SignalR
     return list(signals)
 
 
+def _coerce_position_policy(value: dict[str, Any] | None) -> dict[str, str]:
+    policy = {
+        "same_direction": "skip",
+        "opposite_direction": "skip",
+        "reverse_exit_model": "next_open",
+    }
+    policy.update({str(key): str(item) for key, item in (value or {}).items()})
+
+    if policy["same_direction"] != "skip":
+        raise ValueError("position_policy.same_direction currently supports only 'skip'.")
+    if policy["opposite_direction"] not in {"skip", "reverse"}:
+        raise ValueError("position_policy.opposite_direction must be 'skip' or 'reverse'.")
+    if policy["reverse_exit_model"] != "next_open":
+        raise ValueError("position_policy.reverse_exit_model currently supports only 'next_open'.")
+    return policy
+
+
+def _opposite(direction: Direction) -> Direction:
+    return Direction.SELL if direction == Direction.BUY else Direction.BUY
+
+
+def _next_signal(
+    signal_rows: Sequence[SignalRow],
+    start_idx: int,
+    direction: Direction,
+) -> SignalRow | None:
+    for signal in signal_rows[start_idx + 1 :]:
+        if signal.direction == direction:
+            return signal
+    return None
+
+
 def run_single(
     *,
     signals: pd.DataFrame | Sequence[SignalRow],
@@ -71,6 +104,7 @@ def run_single(
     leg_weights: Sequence[float] | None = None,
     ambiguity_policy: AmbiguityPolicy | str | None = None,
     management: dict[str, Any] | None = None,
+    position_policy: dict[str, Any] | None = None,
     config: dict[str, Any] | None = None,
     raise_on_error: bool = False,
 ) -> BacktestResult:
@@ -78,6 +112,7 @@ def run_single(
     symbol = symbol.strip().upper()
     timeframe = timeframe.strip().upper()
     policy = _coerce_ambiguity_policy(ambiguity_policy)
+    exposure_policy = _coerce_position_policy(position_policy)
     spec = _coerce_market_spec(symbol, market_spec)
     normalized_bars = normalize_ohlcv_frame(bars)
 
@@ -93,13 +128,23 @@ def run_single(
     position_manager = PositionManager()
     results: list[ClusterResult] = []
 
-    for signal in signal_rows:
-        if position_manager.is_cluster_open(signal.symbol, signal.timeframe, signal.bartime):
+    for idx, signal in enumerate(signal_rows):
+        active_direction = position_manager.open_direction(signal.symbol, signal.timeframe, signal.bartime)
+        if active_direction == signal.direction:
             results.append(
                 ClusterResult(
                     signal=signal,
                     status=ClusterStatus.SKIPPED,
-                    skip_reason="cluster_open",
+                    skip_reason="same_direction_open",
+                )
+            )
+            continue
+        if active_direction is not None and exposure_policy["opposite_direction"] != "reverse":
+            results.append(
+                ClusterResult(
+                    signal=signal,
+                    status=ClusterStatus.SKIPPED,
+                    skip_reason="opposite_direction_open",
                 )
             )
             continue
@@ -107,6 +152,15 @@ def run_single(
         try:
             entry_bar = get_next_open_bar(signal, normalized_bars)
             entry_price = apply_entry_slippage(entry_bar.open, signal.direction, spec)
+            force_exit_at = None
+            force_exit_price = None
+            if exposure_policy["opposite_direction"] == "reverse":
+                reverse_signal = _next_signal(signal_rows, idx, _opposite(signal.direction))
+                if reverse_signal is not None:
+                    reverse_entry_bar = get_next_open_bar(reverse_signal, normalized_bars)
+                    force_exit_at = reverse_entry_bar.bartime
+                    force_exit_price = reverse_entry_bar.open
+
             sl_result = calculate_sl(sl_method, signal, entry_price, normalized_bars, sl_params)
             tp_levels = calculate_tp_levels(
                 tp_method,
@@ -137,6 +191,8 @@ def run_single(
                 market_spec=spec,
                 ambiguity_policy=policy,
                 management=management,
+                force_exit_at=force_exit_at,
+                force_exit_price=force_exit_price,
             )
         except Exception as exc:
             logger.warning(
@@ -168,6 +224,7 @@ def run_single(
         "leg_weights": list(leg_weights) if leg_weights is not None else None,
         "ambiguity_policy": policy.value,
         "management": management or {},
+        "position_policy": exposure_policy,
         "raise_on_error": raise_on_error,
     }
     if config:

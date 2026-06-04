@@ -12,6 +12,7 @@ from backtest_optimize.io.market_data import normalize_ohlcv_frame
 
 SLFunction = Callable[[SignalRow, float, pd.DataFrame, dict[str, Any]], SLResult]
 SL_REGISTRY: dict[str, SLFunction] = {}
+DEFAULT_COMBO_X_BUFFER = 10.0
 
 
 def register_sl_method(name: str, fn: SLFunction | None = None):
@@ -42,6 +43,14 @@ def calculate_sl(
 ) -> SLResult:
     """Dispatch an SL calculation."""
     return get_sl_method(method)(signal, float(entry_price), bars, params or {})
+
+
+def _signal_bar(signal: SignalRow, bars: pd.DataFrame, method: str) -> pd.Series:
+    normalized = normalize_ohlcv_frame(bars)
+    matches = normalized[normalized["bartime"] == signal.bartime]
+    if matches.empty:
+        raise ValueError(f"{method} requires the signal bartime to exist in bars.")
+    return matches.iloc[-1]
 
 
 @register_sl_method("signal_sl")
@@ -90,6 +99,45 @@ def fixed_distance(
         raise ValueError("fixed_distance requires distance > 0.")
     price = entry_price - distance if signal.direction == Direction.BUY else entry_price + distance
     return SLResult(price=float(price), method="fixed_distance", params=dict(params))
+
+
+@register_sl_method("combo_signal_bar")
+def combo_signal_bar(
+    signal: SignalRow,
+    entry_price: float,
+    bars: pd.DataFrame,
+    params: dict[str, Any],
+) -> SLResult:
+    """Place Combo-style SL beyond the signal bar high/low plus X buffer.
+
+    Entry remains controlled by the execution engine. This method only anchors
+    risk to the original signal bar:
+
+    - BUY:  signal bar low - x_buffer
+    - SELL: signal bar high + x_buffer
+    """
+    bar = _signal_bar(signal, bars, "combo_signal_bar")
+    x_buffer = float(params.get("x_buffer", params.get("X", DEFAULT_COMBO_X_BUFFER)))
+    if x_buffer < 0:
+        raise ValueError("combo_signal_bar requires x_buffer >= 0.")
+
+    if signal.direction == Direction.BUY:
+        price = float(bar["low"]) - x_buffer
+        if price >= entry_price:
+            raise ValueError("Calculated BUY combo SL is not below entry.")
+    else:
+        price = float(bar["high"]) + x_buffer
+        if price <= entry_price:
+            raise ValueError("Calculated SELL combo SL is not above entry.")
+
+    resolved_params = dict(params)
+    resolved_params["x_buffer"] = x_buffer
+    return SLResult(
+        price=float(price),
+        method="combo_signal_bar",
+        params=resolved_params,
+        source="signal_bar",
+    )
 
 
 @register_sl_method("swing_extreme")

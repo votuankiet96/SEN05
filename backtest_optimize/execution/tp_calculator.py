@@ -11,6 +11,16 @@ from backtest_optimize.contracts import Direction, SignalRow, TPLevel
 
 TPFunction = Callable[[SignalRow, float, float, pd.DataFrame, dict[str, Any]], tuple[TPLevel, ...]]
 TP_REGISTRY: dict[str, TPFunction] = {}
+KTP_FIB_LEVELS: dict[int, float] = {
+    1: 1.272,
+    2: 1.618,
+    3: 2.000,
+    4: 2.272,
+    5: 2.618,
+    6: 3.618,
+}
+DEFAULT_KTP_LEVEL = 4
+DEFAULT_KTP = KTP_FIB_LEVELS[DEFAULT_KTP_LEVEL]
 
 
 def register_tp_method(name: str, fn: TPFunction | None = None):
@@ -54,6 +64,25 @@ def _weights(params: dict[str, Any], count: int) -> list[float]:
     if len(raw) != count:
         raise ValueError("weights length must match TP level count.")
     return [float(value) for value in raw]
+
+
+def _combo_ktp(params: dict[str, Any]) -> tuple[int, float]:
+    level_value = params.get("ktp_level", params.get("fib_level", params.get("level")))
+    if level_value is not None:
+        level = int(level_value)
+        if level not in KTP_FIB_LEVELS:
+            raise ValueError("combo_fib_atr ktp_level must be between 1 and 6.")
+        return level, KTP_FIB_LEVELS[level]
+
+    if params.get("ktp") is not None:
+        ktp = float(params["ktp"])
+        for level, multiplier in KTP_FIB_LEVELS.items():
+            if abs(ktp - multiplier) <= 1e-9:
+                return level, multiplier
+        allowed = ", ".join(str(value) for value in KTP_FIB_LEVELS.values())
+        raise ValueError(f"combo_fib_atr ktp must be one of: {allowed}.")
+
+    return DEFAULT_KTP_LEVEL, DEFAULT_KTP
 
 
 @register_tp_method("risk_multiple")
@@ -108,6 +137,33 @@ def atr_multiple(
         price = entry_price + distance if signal.direction == Direction.BUY else entry_price - distance
         levels.append(TPLevel(level=idx, price=float(price), weight=weight, label=f"TP{idx}"))
     return tuple(levels)
+
+
+@register_tp_method("combo_fib_atr")
+def combo_fib_atr(
+    signal: SignalRow,
+    entry_price: float,
+    sl_price: float,
+    bars: pd.DataFrame,
+    params: dict[str, Any],
+) -> tuple[TPLevel, ...]:
+    """Create one Combo-style TP at Entry +/- Fibonacci KTP level * ATR."""
+    del sl_price, bars
+    if signal.atr is None or signal.atr <= 0:
+        raise ValueError("combo_fib_atr requires signal.atr > 0.")
+
+    ktp_level, ktp = _combo_ktp(params)
+    distance = float(signal.atr) * ktp
+    price = entry_price + distance if signal.direction == Direction.BUY else entry_price - distance
+    weight = float(params.get("weight", 1.0))
+    return (
+        TPLevel(
+            level=1,
+            price=float(price),
+            weight=weight,
+            label=f"KTP_L{ktp_level}_{ktp:g}",
+        ),
+    )
 
 
 @register_tp_method("fixed_distance")

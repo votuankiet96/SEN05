@@ -54,6 +54,7 @@ class ExitReason(str, Enum):
     END_OF_DATA = "end_of_data"
     AMBIGUOUS = "ambiguous"
     SKIPPED = "skipped"
+    REVERSE_SIGNAL = "reverse_signal"
 
 
 class ClusterStatus(str, Enum):
@@ -64,6 +65,7 @@ class ClusterStatus(str, Enum):
     OPEN_AT_END = "open_at_end"
     CLOSED = "closed"
     AMBIGUOUS = "ambiguous"
+    REVERSED = "reversed"
 
 
 @dataclass(frozen=True)

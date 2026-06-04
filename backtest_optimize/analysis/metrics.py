@@ -34,6 +34,14 @@ def clusters_to_frame(value: BacktestResult | Iterable[ClusterResult]) -> pd.Dat
             if leg.exit_reason == ExitReason.TP
         )
         sl_hits = sum(1 for leg in cluster.legs if leg.exit_reason == ExitReason.SL)
+        reverse_hits = sum(1 for leg in cluster.legs if leg.exit_reason == ExitReason.REVERSE_SIGNAL)
+        exit_reasons = sorted(
+            {
+                leg.exit_reason.value
+                for leg in cluster.legs
+                if leg.exit_reason is not None
+            }
+        )
         rows.append(
             {
                 "symbol": cluster.signal.symbol,
@@ -55,6 +63,8 @@ def clusters_to_frame(value: BacktestResult | Iterable[ClusterResult]) -> pd.Dat
                 "ambiguous_bars": cluster.ambiguous_bars,
                 "tp_hits": tp_hits,
                 "sl_leg_hits": sl_hits,
+                "reverse_leg_hits": reverse_hits,
+                "exit_reasons": exit_reasons,
                 "leg_count": len(cluster.legs),
             }
         )
@@ -91,15 +101,34 @@ def summarize(value: BacktestResult | Iterable[ClusterResult]) -> dict[str, Any]
     skipped_clusters = [c for c in clusters if c.status == ClusterStatus.SKIPPED]
     accepted = [c for c in clusters if c.status != ClusterStatus.SKIPPED]
     open_at_end = [c for c in clusters if c.status == ClusterStatus.OPEN_AT_END]
+    reversed_clusters = [
+        c
+        for c in accepted
+        if c.status == ClusterStatus.REVERSED
+        or any(leg.exit_reason == ExitReason.REVERSE_SIGNAL for leg in c.legs)
+    ]
+    same_direction_skips = [c for c in skipped_clusters if c.skip_reason == "same_direction_open"]
+    opposite_direction_skips = [c for c in skipped_clusters if c.skip_reason == "opposite_direction_open"]
+    legacy_cluster_open_skips = [c for c in skipped_clusters if c.skip_reason == "cluster_open"]
+    execution_error_skips = [
+        c
+        for c in skipped_clusters
+        if str(c.skip_reason or "").startswith("execution_error:")
+    ]
     r_eligible = [
         c
         for c in accepted
         if c.status != ClusterStatus.OPEN_AT_END
     ]
     r_values = np.array([c.r_result for c in r_eligible], dtype=float)
+    reversed_r_values = np.array([c.r_result for c in reversed_clusters], dtype=float)
 
     expectancy = float(np.mean(r_values)) if len(r_values) else None
     std_r = float(np.std(r_values, ddof=1)) if len(r_values) > 1 else None
+    reversed_avg_r = float(np.mean(reversed_r_values)) if len(reversed_r_values) else None
+    reversed_profit_count = int(np.sum(reversed_r_values > 0)) if len(reversed_r_values) else 0
+    reversed_loss_count = int(np.sum(reversed_r_values < 0)) if len(reversed_r_values) else 0
+    reversed_flat_count = int(np.sum(reversed_r_values == 0)) if len(reversed_r_values) else 0
     sqn = None
     if len(r_values) >= 30 and std_r and std_r > 0:
         sqn = expectancy / std_r * sqrt(len(r_values))
@@ -115,10 +144,22 @@ def summarize(value: BacktestResult | Iterable[ClusterResult]) -> dict[str, Any]
         "signal_count": total,
         "accepted_count": len(accepted),
         "skipped_count": len(skipped_clusters),
+        "reversed_count": len(reversed_clusters),
+        "reversed_profit_count": reversed_profit_count,
+        "reversed_loss_count": reversed_loss_count,
+        "reversed_flat_count": reversed_flat_count,
         "open_at_end_count": len(open_at_end),
         "r_eligible_count": len(r_eligible),
         "open_at_end_excluded_from_r": True,
         "skip_rate": len(skipped_clusters) / total if total else None,
+        "reversed_rate": len(reversed_clusters) / len(accepted) if accepted else None,
+        "reversed_win_rate": reversed_profit_count / len(reversed_clusters) if reversed_clusters else None,
+        "reversed_loss_rate": reversed_loss_count / len(reversed_clusters) if reversed_clusters else None,
+        "reversed_avg_r": reversed_avg_r,
+        "same_direction_skip_count": len(same_direction_skips),
+        "opposite_direction_skip_count": len(opposite_direction_skips),
+        "legacy_cluster_open_skip_count": len(legacy_cluster_open_skips),
+        "execution_error_count": len(execution_error_skips),
         "expectancy_r": expectancy,
         "std_r": std_r,
         "sqn": sqn,

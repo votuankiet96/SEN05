@@ -1,0 +1,71 @@
+{
+  "assumptions": {
+    "ambiguity_policy": "conservative",
+    "notes": [],
+    "ohlcv_source": "core_python.data.loader",
+    "processing_order": "For each bar, update/close existing clusters before evaluating new signals on that same bar.",
+    "signal_source": "raw_signals",
+    "time_convention": "UTC-naive bar-open timestamps"
+  },
+  "config": {
+    "account_size": 10000.0,
+    "ambiguity_policy": "conservative",
+    "management": {
+      "sl_move_rule": "breakeven_after_tp1"
+    },
+    "market_spec": {
+      "commission_per_lot_per_side": 0.0,
+      "lot_step": 0.01,
+      "min_lot": 0.01,
+      "pip_size": 1.0,
+      "pip_value_per_lot": 1.0,
+      "slippage_buffer_pips": 0.0,
+      "spread_buffer_pips": 0.0,
+      "symbol": "US30"
+    },
+    "risk_per_cluster": 0.01,
+    "sl_method": "atr_multiple",
+    "sl_params": {
+      "atr_mult": 1.5
+    },
+    "symbol": "US30",
+    "timeframe": "H4",
+    "tp_method": "risk_multiple",
+    "tp_params": {
+      "r_multiples": [
+        1.0,
+        2.0,
+        3.0
+      ]
+    }
+  },
+  "config_hash": "07268008c40ccfe62cc791dba328bf47",
+  "created_at": "2026-06-03T06:15:37.177293",
+  "git_commit": "4a0516ee46e8c0f5babf3e48507de4f2eb31724e",
+  "market_data_source_id": "core_python.data.loader",
+  "name": "single_US30_H4_20260603_061537",
+  "result_summary": {
+    "accepted_count": 605,
+    "ambiguity_rate": 0.013223140495867768,
+    "expectancy_r": 0.06788079470198675,
+    "mean_bar_mae_r": 0.9559788960102147,
+    "mean_bar_mfe_r": 1.3848916687319663,
+    "mean_holding_bars": 13.961920529801324,
+    "open_at_end_count": 1,
+    "open_at_end_excluded_from_r": true,
+    "r_eligible_count": 604,
+    "signal_count": 1075,
+    "skip_rate": 0.4372093023255814,
+    "skipped_count": 470,
+    "sl_hit_rate": 0.8016528925619835,
+    "sqn": 1.4082611532156115,
+    "std_r": 1.1846285304906492,
+    "total_cost_r": 0.0,
+    "tp1_hit_rate": 0.5049668874172185,
+    "tp2_hit_rate": 0.29635761589403975,
+    "tp3_hit_rate": 0.19701986754966888
+  },
+  "signal_file": "\\\\10.11.12.6\\Share\\SEN05_Autotrading\\raw_signals\\combo\\combo_US30_H4_20170430_20260602_signals.csv",
+  "signal_file_md5": "2b2fc9445f2146b711b0849aab1a1cf8",
+  "snapshot_hash": "95d616b23bf95cf46731bfa70622056d"
+}

@@ -32,7 +32,7 @@ class PositionManager:
     """Track cluster state by `(symbol, timeframe)`."""
 
     def __init__(self) -> None:
-        self._open_until: dict[tuple[str, str], pd.Timestamp] = {}
+        self._open_until: dict[tuple[str, str], tuple[pd.Timestamp, Direction]] = {}
 
     def is_cluster_open(self, symbol: str, timeframe: str, at_time: pd.Timestamp) -> bool:
         """Return True when a cluster is still open after `at_time`.
@@ -41,15 +41,29 @@ class PositionManager:
         the new signal is evaluated on that same bar.
         """
         key = (symbol.upper(), timeframe.upper())
-        exit_time = self._open_until.get(key)
+        state = self._open_until.get(key)
+        if state is None:
+            return False
+        exit_time, _ = state
         return exit_time is not None and exit_time > at_time
+
+    def open_direction(self, symbol: str, timeframe: str, at_time: pd.Timestamp) -> Direction | None:
+        """Return the active direction at `at_time`, if a cluster is open."""
+        key = (symbol.upper(), timeframe.upper())
+        state = self._open_until.get(key)
+        if state is None:
+            return None
+        exit_time, direction = state
+        if exit_time is not None and exit_time > at_time:
+            return direction
+        return None
 
     def record_cluster(self, result: ClusterResult) -> None:
         """Record the cluster exit time for conflict detection."""
         if result.status == ClusterStatus.SKIPPED or result.exit_time is None:
             return
         key = (result.signal.symbol.upper(), result.signal.timeframe.upper())
-        self._open_until[key] = result.exit_time
+        self._open_until[key] = (result.exit_time, result.signal.direction)
 
 
 def _hit_flags(direction: Direction, bar: pd.Series, sl_price: float, tp_price: float) -> tuple[bool, bool]:
@@ -160,11 +174,15 @@ def simulate_cluster(
     market_spec: MarketSpec,
     ambiguity_policy: AmbiguityPolicy = AmbiguityPolicy.CONSERVATIVE,
     management: dict | None = None,
+    force_exit_at: pd.Timestamp | None = None,
+    force_exit_price: float | None = None,
+    force_exit_reason: ExitReason = ExitReason.REVERSE_SIGNAL,
 ) -> ClusterResult:
     """Simulate one signal cluster using OHLC bar ranges."""
     management = management or {}
     normalized = normalize_ohlcv_frame(future_bars)
     normalized = normalized[normalized["bartime"] >= entry_time].reset_index(drop=True)
+    force_exit_at = None if force_exit_at is None else pd.Timestamp(force_exit_at)
     if normalized.empty:
         return ClusterResult(
             signal=signal,
@@ -221,6 +239,21 @@ def simulate_cluster(
     sl_move_rule = str(management.get("sl_move_rule", "none"))
 
     for idx, bar in normalized.iterrows():
+        if force_exit_at is not None and pd.Timestamp(bar["bartime"]) >= force_exit_at:
+            path_end_idx = max(0, int(idx) - 1)
+            exit_price = float(bar["open"] if force_exit_price is None else force_exit_price)
+            for leg in legs:
+                if leg.exit_time is not None:
+                    continue
+                _close_leg(
+                    leg,
+                    exit_time=force_exit_at,
+                    exit_price=exit_price,
+                    exit_reason=force_exit_reason,
+                    market_spec=market_spec,
+                )
+            break
+
         path_end_idx = int(idx)
         for leg in legs:
             if leg.exit_time is not None:
@@ -314,11 +347,14 @@ def simulate_cluster(
     exit_time = max(leg.exit_time for leg in legs if leg.exit_time is not None)
     has_end = any(leg.exit_reason == ExitReason.END_OF_DATA for leg in legs)
     has_marked_ambiguous = any(leg.exit_reason == ExitReason.AMBIGUOUS for leg in legs)
+    has_reverse = any(leg.exit_reason == ExitReason.REVERSE_SIGNAL for leg in legs)
 
     if has_end:
         status = ClusterStatus.OPEN_AT_END
     elif has_marked_ambiguous:
         status = ClusterStatus.AMBIGUOUS
+    elif has_reverse:
+        status = ClusterStatus.REVERSED
     else:
         status = ClusterStatus.CLOSED
 
@@ -342,5 +378,7 @@ def simulate_cluster(
             "sl_method": sl_result.method,
             "sl_params": sl_result.params,
             "management": dict(management),
+            "force_exit_at": force_exit_at,
+            "force_exit_reason": force_exit_reason.value if force_exit_at is not None else None,
         },
     )
