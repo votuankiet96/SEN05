@@ -48,7 +48,33 @@ def normalize_ohlcv_frame(df: pd.DataFrame) -> pd.DataFrame:
         sample = out.loc[bad_range, ["bartime", "open", "high", "low", "close"]].head(5)
         raise ValueError(f"Invalid OHLC ranges detected: {sample.to_dict('records')}")
 
-    return out[OHLCV_COLUMNS]
+    normalized = out[OHLCV_COLUMNS]
+    normalized.attrs["_ohlcv_normalized"] = True
+    return normalized
+
+
+def ensure_normalized_ohlcv(df: pd.DataFrame) -> pd.DataFrame:
+    """Return an already-normalized frame unchanged, otherwise normalize it."""
+    if df.attrs.get("_ohlcv_normalized") is True:
+        return df
+    if _is_normalized_ohlcv(df):
+        df.attrs["_ohlcv_normalized"] = True
+        return df
+    return normalize_ohlcv_frame(df)
+
+
+def get_bar_row(bars: pd.DataFrame, bartime: object) -> pd.Series:
+    """Return one normalized OHLCV row using a cached bartime lookup."""
+    normalized = ensure_normalized_ohlcv(bars)
+    lookup = normalized.attrs.get("_bartime_row_lookup")
+    if not isinstance(lookup, dict) or len(lookup) != len(normalized):
+        lookup = {pd.Timestamp(value): idx for idx, value in enumerate(normalized["bartime"])}
+        normalized.attrs["_bartime_row_lookup"] = lookup
+    ts = normalize_timestamp(bartime)
+    index = lookup.get(ts)
+    if index is None:
+        raise ValueError(f"Bar time not found in OHLCV: {ts}")
+    return normalized.iloc[int(index)]
 
 
 def load_ohlcv_from_core(
@@ -83,7 +109,7 @@ def load_ohlcv_from_core(
 
 def assert_signal_bartimes_exist(signals: Iterable[SignalRow], bars: pd.DataFrame) -> None:
     """Raise if any signal bartime is missing from the OHLCV index."""
-    index = set(bars["bartime"] if _is_normalized_ohlcv(bars) else normalize_ohlcv_frame(bars)["bartime"])
+    index = set(ensure_normalized_ohlcv(bars)["bartime"])
     missing = [signal for signal in signals if signal.bartime not in index]
     if missing:
         preview = [
@@ -99,7 +125,7 @@ def assert_signal_bartimes_exist(signals: Iterable[SignalRow], bars: pd.DataFram
 
 def find_bar_index(bars: pd.DataFrame, bartime: object) -> int:
     """Return the integer row index for a bar time."""
-    normalized = bars if _is_normalized_ohlcv(bars) else normalize_ohlcv_frame(bars)
+    normalized = ensure_normalized_ohlcv(bars)
     ts = normalize_timestamp(bartime)
     matches = normalized.index[normalized["bartime"] == ts].tolist()
     if not matches:
@@ -109,7 +135,7 @@ def find_bar_index(bars: pd.DataFrame, bartime: object) -> int:
 
 def get_next_open_bar(signal: SignalRow, bars: pd.DataFrame) -> Bar:
     """Return the entry bar for a signal, i.e. bar after signal.bartime."""
-    normalized = bars if _is_normalized_ohlcv(bars) else normalize_ohlcv_frame(bars)
+    normalized = ensure_normalized_ohlcv(bars)
     idx = find_bar_index(normalized, signal.bartime)
     next_idx = idx + 1
     if next_idx >= len(normalized):
@@ -119,7 +145,7 @@ def get_next_open_bar(signal: SignalRow, bars: pd.DataFrame) -> Bar:
 
 def bars_from_time(bars: pd.DataFrame, start_time: object) -> pd.DataFrame:
     """Return bars from `start_time` inclusive."""
-    normalized = bars if _is_normalized_ohlcv(bars) else normalize_ohlcv_frame(bars)
+    normalized = ensure_normalized_ohlcv(bars)
     ts = normalize_timestamp(start_time)
     return normalized[normalized["bartime"] >= ts].reset_index(drop=True)
 
@@ -146,6 +172,8 @@ def _is_normalized_ohlcv(df: pd.DataFrame) -> bool:
     """Best-effort check to avoid repeated normalization in hot paths."""
     return (
         list(df.columns[: len(OHLCV_COLUMNS)]) == OHLCV_COLUMNS
+        and pd.api.types.is_datetime64_any_dtype(df["bartime"])
         and df["bartime"].is_monotonic_increasing
         and not df["bartime"].duplicated().any()
+        and all(pd.api.types.is_numeric_dtype(df[col]) for col in ("open", "high", "low", "close"))
     )

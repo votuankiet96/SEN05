@@ -1,30 +1,36 @@
-# Default config for backtest_optimize.
-# This file is documentation-friendly YAML. Runtime loaders may use notebooks or
-# plain Python dictionaries; PyYAML is intentionally not required by the package.
+# Default manifest for backtest_optimize.
+# Strategy configs select signal context. Presets select reusable execution
+# components such as entry, stoploss, takeprofit, order, sizing, and exits.
+# Runtime loaders may use notebooks or plain Python dictionaries; PyYAML is
+# intentionally not required by the package.
 
 run:
+  active_strategy: combo
+  active_preset: combo_ctrader_v0
   ambiguity_policy: conservative
   ohlcv_source: core_python.data.loader
   signal_source: raw_signals
   time_convention: UTC-naive bar-open timestamps
 
-execution:
-  entry: next_bar_open
-  same_bar_processing_order: close_existing_cluster_before_new_signal
-  conflict_policy: skip_when_cluster_open
-  sl_method: atr_multiple
-  sl_params:
-    atr_mult: 1.5
-  tp_method: risk_multiple
-  tp_params:
-    r_multiples: [1.0, 2.0, 3.0]
-  management:
-    sl_move_rule: breakeven_after_tp1
+config_paths:
+  strategies: configs/strategies
+  presets: configs/presets
+  generic_research_grid: configs/param_grids.yaml
 
-sizing:
-  account_size: 10000
-  risk_per_cluster: 0.01
-  leg_weights: null
+available_strategies:
+  combo: configs/strategies/combo.yaml
+  ma_cross: configs/strategies/ma_cross.yaml
+  ai_trend: configs/strategies/ai_trend.yaml
+
+available_presets:
+  combo_ctrader_v0: configs/presets/combo_ctrader_v0.yaml
+  combo_research: configs/presets/combo_research.yaml
+  ma_cross_research: configs/presets/ma_cross_research.yaml
+  ai_trend_research: configs/presets/ai_trend_research.yaml
+
+available_grids:
+  combo_ctrader_v0: configs/presets/combo_ctrader_v0_grid.yaml
+  generic_research: configs/param_grids.yaml
 
 market_spec:
   pip_size: 0.0001

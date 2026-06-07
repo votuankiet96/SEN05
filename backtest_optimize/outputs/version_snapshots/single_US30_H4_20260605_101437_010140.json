@@ -1,0 +1,129 @@
+{
+  "assumptions": {
+    "ambiguity_policy": "conservative",
+    "notes": [],
+    "ohlcv_source": "core_python.data.loader",
+    "processing_order": "For each bar, update/close existing clusters before evaluating new signals on that same bar.",
+    "signal_source": "raw_signals",
+    "time_convention": "UTC-naive bar-open timestamps"
+  },
+  "config": {
+    "market_spec": {
+      "commission_per_lot_per_side": 0.0,
+      "lot_step": 0.01,
+      "min_lot": 0.01,
+      "pip_size": 1.0,
+      "pip_value_per_lot": 1.0,
+      "slippage_buffer_pips": 0.0,
+      "spread_buffer_pips": 0.0,
+      "symbol": "US30"
+    },
+    "run_config": {
+      "account_size": 10000.0,
+      "ambiguity_policy": "conservative",
+      "config": {
+        "cancel_after_bars": 3,
+        "engine_profile": "combo_ctrader_v0",
+        "entry_model": "stop_breakout_signal_bar",
+        "exit_mode": "fixed_only",
+        "exit_model": "fixed_only",
+        "ksl_level": 2,
+        "ktp": 2.618,
+        "ktp_level": 6,
+        "opposite_direction_policy": "reverse",
+        "order_model": "stop_order",
+        "reverse_exit_model": "next_open",
+        "same_direction_policy": "skip",
+        "sl_profile": "signal_bar_atr_buffer",
+        "tp_profile": "fib_atr_ctrader_v0",
+        "x_offset": 10.0
+      },
+      "engine": "component",
+      "entry_model": "stop_breakout_signal_bar",
+      "entry_params": {
+        "x_offset": 10.0
+      },
+      "exit_model": "fixed_only",
+      "exit_params": {
+        "sma_period": 20
+      },
+      "leg_weights": null,
+      "order_model": "stop_order",
+      "order_params": {
+        "cancel_after_bars": 3
+      },
+      "position_policy": {
+        "opposite_direction": "reverse",
+        "reverse_exit_model": "next_open",
+        "same_direction": "skip"
+      },
+      "risk_per_cluster": 0.01,
+      "sl_method": "signal_bar_atr_buffer",
+      "sl_params": {
+        "ksl_level": 2
+      },
+      "tp_method": "fib_atr_ctrader_v0",
+      "tp_params": {
+        "exit_mode": "fixed_only",
+        "ktp_level": 6
+      }
+    },
+    "strategy": "combo",
+    "symbol": "US30",
+    "timeframe": "H4"
+  },
+  "config_hash": "0690ec914e55e0c15395d60871da4e96",
+  "created_at": "2026-06-05T10:14:37.152497",
+  "git_commit": "27c729b1d95e0d1e285ea66a92039987eebcbc39",
+  "market_data_source_id": "core_python.data.loader",
+  "name": "single_US30_H4_20260605_101437_010140",
+  "outputs": {
+    "clusters": "\\\\10.11.12.6\\Share\\SEN05_Autotrading\\backtest_optimize\\outputs\\single_runs\\single_US30_H4_20260605_101437_010140_clusters.csv",
+    "summary": "\\\\10.11.12.6\\Share\\SEN05_Autotrading\\backtest_optimize\\outputs\\single_runs\\single_US30_H4_20260605_101437_010140_summary.csv"
+  },
+  "parent_run_id": null,
+  "result_summary": {
+    "accepted_count": 1075,
+    "ambiguity_rate": 0.0012610340479192938,
+    "execution_error_count": 0,
+    "expectancy_r": 0.002242482921035236,
+    "fill_rate": 0.7376744186046512,
+    "filled_count": 793,
+    "legacy_cluster_open_skip_count": 0,
+    "mean_bar_mae_r": 0.7318514088590931,
+    "mean_bar_mfe_r": 0.870821850198241,
+    "mean_holding_bars": 8.12484237074401,
+    "open_at_end_count": 0,
+    "open_at_end_excluded_from_r": true,
+    "opposite_direction_skip_count": 0,
+    "pending_cancelled_count": 71,
+    "pending_cancelled_rate": 0.06604651162790698,
+    "pending_expired_count": 211,
+    "pending_expired_rate": 0.19627906976744186,
+    "pending_unfilled_count": 0,
+    "pending_unfilled_rate": 0.0,
+    "r_eligible_count": 793,
+    "reversed_avg_r": -0.4151630476552184,
+    "reversed_count": 357,
+    "reversed_flat_count": 0,
+    "reversed_loss_count": 310,
+    "reversed_loss_rate": 0.8683473389355743,
+    "reversed_profit_count": 47,
+    "reversed_rate": 0.4501891551071879,
+    "reversed_win_rate": 0.13165266106442577,
+    "same_direction_skip_count": 0,
+    "signal_count": 1075,
+    "skip_rate": 0.0,
+    "skipped_count": 0,
+    "sl_hit_rate": 0.23455233291298866,
+    "sqn": 0.06334741468187537,
+    "std_r": 0.996866134679489,
+    "total_cost_r": 0.0,
+    "tp1_hit_rate": 0.31525851197982346
+  },
+  "run_id": "single_US30_H4_20260605_101437_010140",
+  "run_type": "single",
+  "signal_file": "\\\\10.11.12.6\\Share\\SEN05_Autotrading\\raw_signals\\combo\\combo_US30_H4_20170430_20260602_signals.csv",
+  "signal_file_md5": "2b2fc9445f2146b711b0849aab1a1cf8",
+  "snapshot_hash": "7c5841718a91d3d8f77ac5278a754edb"
+}

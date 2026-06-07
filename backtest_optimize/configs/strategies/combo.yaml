@@ -1,0 +1,8 @@
+# Strategy-level defaults for Combo signal files.
+# Strategy configs select signal context only; execution behavior lives in presets.
+
+strategy: combo
+signal_source: raw_signals/combo
+default_symbol: US30
+default_timeframe: H4
+default_preset: combo_ctrader_v0

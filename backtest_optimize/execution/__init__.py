@@ -1,1 +1,1 @@
-"""Execution logic modules for SL/TP, sizing, costs, and cluster simulation."""
+"""Execution components for entry, orders, SL/TP, sizing, exits, and costs."""

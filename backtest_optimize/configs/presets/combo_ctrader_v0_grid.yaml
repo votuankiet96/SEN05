@@ -1,0 +1,22 @@
+# Coarse-to-fine grid used by notebook 02.
+
+search_mode: coarse_to_fine
+
+coarse_grid:
+  entry.x_offset: [1.0, 10.0, 20.0, 30.0, 40.0]
+  stoploss.ksl_level: [1, 2, 3, 4]
+  takeprofit.ktp_level: [2, 4, 6, 8, 10, 12]
+  orders.cancel_after_bars: [2, 3, 4]
+  takeprofit.exit_mode: [fixed_only]
+
+refinement_values:
+  entry.x_offset: [1.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0]
+  stoploss.ksl_level: [1, 2, 3, 4]
+  takeprofit.ktp_level: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+  orders.cancel_after_bars: [2, 3, 4]
+  takeprofit.exit_mode: [fixed_only]
+
+fine_search:
+  top_n: 3
+  neighbor_steps: 1
+  max_combinations: 250

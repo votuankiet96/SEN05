@@ -25,7 +25,7 @@ from backtest_optimize.execution.cost_model import (
     price_exit_r,
     round_turn_cost_currency,
 )
-from backtest_optimize.io.market_data import normalize_ohlcv_frame
+from backtest_optimize.io.market_data import ensure_normalized_ohlcv
 
 
 class PositionManager:
@@ -180,7 +180,7 @@ def simulate_cluster(
 ) -> ClusterResult:
     """Simulate one signal cluster using OHLC bar ranges."""
     management = management or {}
-    normalized = normalize_ohlcv_frame(future_bars)
+    normalized = ensure_normalized_ohlcv(future_bars)
     normalized = normalized[normalized["bartime"] >= entry_time].reset_index(drop=True)
     force_exit_at = None if force_exit_at is None else pd.Timestamp(force_exit_at)
     if normalized.empty:

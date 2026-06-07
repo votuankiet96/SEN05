@@ -5,7 +5,7 @@ from __future__ import annotations
 import pandas as pd
 
 from core_python.indicators.ai_trend import calc_ai_trend_navigator
-from core_python.indicators.core import ema, macd_hist, safe_ratio
+from core_python.indicators.core import atr, ema, macd_hist, safe_ratio
 from core_python.indicators.dow_wave import calc_dow_wave
 from core_python.strategies.ai_trend.config import normalize_params, timeframe_minutes
 
@@ -70,6 +70,10 @@ def prepare_entry_frame(df: pd.DataFrame, params: dict) -> pd.DataFrame:
     out["prev_ema_slow"] = out["ema_slow"].shift(1)
     out["ema_gap"] = out["ema_fast"] - out["ema_slow"]
     out["ema_gap_pct"] = safe_ratio(out["ema_gap"], out["close"])
+    out["atr5"] = atr(out, 5)
+    out["atr14"] = atr(out, 14)
+    atr_period = int(params["ATR_PERIOD"])
+    out["atr"] = out["atr5"] if atr_period == 5 else atr(out, atr_period)
     out["macd_h"] = macd_hist(
         out["close"],
         fast=int(params["MACD_FAST"]),

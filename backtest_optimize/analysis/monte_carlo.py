@@ -5,8 +5,33 @@ from __future__ import annotations
 from typing import Literal
 
 import numpy as np
+import pandas as pd
 
 MonteCarloMethod = Literal["shuffle", "bootstrap", "block_bootstrap"]
+EXCLUDED_CLUSTER_STATUSES = {
+    "skipped",
+    "open_at_end",
+    "pending_expired",
+    "pending_cancelled",
+    "pending_unfilled_at_end",
+}
+
+
+def eligible_r_values(clusters: pd.DataFrame) -> np.ndarray:
+    """Return closed-trade R values suitable for Monte Carlo simulation."""
+    required = {"status", "r_result"}
+    missing = required - set(clusters.columns)
+    if missing:
+        raise ValueError(f"Cluster data is missing columns: {sorted(missing)}")
+    statuses = clusters["status"].astype(str).str.lower()
+    return (
+        pd.to_numeric(
+            clusters.loc[~statuses.isin(EXCLUDED_CLUSTER_STATUSES), "r_result"],
+            errors="coerce",
+        )
+        .dropna()
+        .to_numpy(dtype=float)
+    )
 
 
 def simulate_paths(

@@ -1,0 +1,7 @@
+# Strategy-level defaults for MA Cross signal files.
+
+strategy: ma_cross
+signal_source: raw_signals/ma_cross
+default_symbol: US30
+default_timeframe: H1
+default_preset: ma_cross_research

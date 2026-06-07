@@ -11,7 +11,15 @@ from typing import Any
 import pandas as pd
 
 from backtest_optimize.contracts import MarketSpec
-from backtest_optimize.execution.tp_calculator import DEFAULT_KTP_LEVEL, KTP_FIB_LEVELS
+from backtest_optimize.execution.entry import ENTRY_REGISTRY
+from backtest_optimize.execution.exits import EXIT_REGISTRY
+from backtest_optimize.execution.sl_calculator import SL_REGISTRY
+from backtest_optimize.execution.tp_calculator import (
+    CBOT_V0_KTP_LEVELS,
+    DEFAULT_KTP_LEVEL,
+    KTP_FIB_LEVELS,
+    TP_REGISTRY,
+)
 
 
 SIGNAL_FILENAME_RE = re.compile(
@@ -94,19 +102,187 @@ def select_signal(
     )
 
 
+def component_catalog_frame() -> pd.DataFrame:
+    """Return execution components currently available to notebook controls."""
+    rows = []
+    for component_type, names in (
+        ("entry", ENTRY_REGISTRY),
+        ("stoploss", SL_REGISTRY),
+        ("takeprofit", TP_REGISTRY),
+        ("exit", EXIT_REGISTRY),
+    ):
+        rows.extend((component_type, name) for name in sorted(names))
+    rows.extend(("order", name) for name in ("market", "stop_order"))
+    rows.extend(("sizing", name) for name in ("fixed_risk_percent",))
+    return pd.DataFrame(rows, columns=["component", "name"])
+
+
+def discover_run_artifacts(
+    output_dir: str | Path,
+    *,
+    pattern: str = "*.csv",
+) -> pd.DataFrame:
+    """Return newest-first output files for notebook parent-run selection."""
+    folder = Path(output_dir)
+    rows = []
+    for path in sorted(folder.glob(pattern), key=lambda item: item.stat().st_mtime, reverse=True):
+        rows.append(
+            {
+                "name": path.name,
+                "path": path,
+                "modified_at": pd.Timestamp(path.stat().st_mtime, unit="s"),
+                "size_bytes": path.stat().st_size,
+            }
+        )
+    return pd.DataFrame(rows, columns=["name", "path", "modified_at", "size_bytes"])
+
+
+def build_execution_config(
+    *,
+    engine: str,
+    account_size: float,
+    risk_per_cluster: float,
+    ambiguity_policy: Any,
+    entry_model: str = "next_open",
+    entry_params: dict[str, Any] | None = None,
+    sl_method: str = "atr_multiple",
+    sl_params: dict[str, Any] | None = None,
+    tp_method: str = "risk_multiple",
+    tp_params: dict[str, Any] | None = None,
+    order_model: str = "market",
+    order_params: dict[str, Any] | None = None,
+    exit_model: str = "none",
+    exit_params: dict[str, Any] | None = None,
+    leg_weights: list[float] | None = None,
+    position_policy: dict[str, str] | None = None,
+    profile_name: str = "custom",
+) -> dict[str, Any]:
+    """Build one strategy-neutral execution config from dashboard controls."""
+    engine = str(engine).strip().lower()
+    entry_params = dict(entry_params or {})
+    sl_params = dict(sl_params or {})
+    tp_params = dict(tp_params or {})
+    order_params = dict(order_params or {})
+    exit_params = dict(exit_params or {})
+    policy = position_policy or {
+        "same_direction": "skip",
+        "opposite_direction": "reverse",
+        "reverse_exit_model": "next_open",
+    }
+    metadata = {
+        "engine_profile": profile_name,
+        "entry_model": entry_model,
+        "sl_profile": sl_method,
+        "tp_profile": tp_method,
+        "order_model": order_model,
+        "exit_model": exit_model,
+        "same_direction_policy": policy["same_direction"],
+        "opposite_direction_policy": policy["opposite_direction"],
+        "reverse_exit_model": policy["reverse_exit_model"],
+    }
+    for key in ("x_offset", "x_buffer"):
+        if key in entry_params or key in sl_params:
+            metadata[key] = entry_params.get(key, sl_params.get(key))
+    for key in ("ksl_level", "ktp_level", "r_multiples", "exit_mode"):
+        if key in sl_params or key in tp_params:
+            metadata[key] = sl_params.get(key, tp_params.get(key))
+    if "cancel_after_bars" in order_params:
+        metadata["cancel_after_bars"] = order_params["cancel_after_bars"]
+    if tp_method == "fib_atr_ctrader_v0" and "ktp_level" in tp_params:
+        metadata["ktp"] = CBOT_V0_KTP_LEVELS.get(int(tp_params["ktp_level"]))
+    elif tp_method == "combo_fib_atr" and "ktp_level" in tp_params:
+        metadata["ktp"] = KTP_FIB_LEVELS.get(int(tp_params["ktp_level"]))
+    common = {
+        "engine": engine,
+        "account_size": float(account_size),
+        "risk_per_cluster": float(risk_per_cluster),
+        "sl_method": sl_method,
+        "sl_params": sl_params,
+        "tp_method": tp_method,
+        "tp_params": tp_params,
+        "leg_weights": leg_weights,
+        "ambiguity_policy": ambiguity_policy,
+        "position_policy": dict(policy),
+        "config": metadata,
+    }
+    if engine == "single":
+        if entry_model != "next_open" or order_model != "market":
+            raise ValueError("single engine supports entry_model='next_open' and order_model='market'.")
+        common["management"] = exit_params
+        return common
+    if engine != "component":
+        raise ValueError("engine must be 'single' or 'component'.")
+    common.update(
+        {
+            "entry_model": entry_model,
+            "entry_params": entry_params,
+            "order_model": order_model,
+            "order_params": order_params,
+            "exit_model": exit_model,
+            "exit_params": exit_params,
+        }
+    )
+    return common
+
+
 def build_run_config(
     *,
     account_size: float,
     risk_per_cluster: float,
     x_buffer: float = 10.0,
+    engine_profile: str = "combo_research",
     tp_profile: str = "combo_fib_atr",
     ktp_level: int = DEFAULT_KTP_LEVEL,
+    ksl_level: int = 2,
+    cancel_after_bars: int = 3,
     r_multiples: list[float] | None = None,
     ambiguity_policy: Any,
     sl_move_rule: str = "none",
 ) -> dict[str, Any]:
     """Build the run_single config from dashboard controls."""
     r_multiples = list(r_multiples or [1.0, 2.0, 3.0])
+    engine_profile = str(engine_profile)
+
+    if engine_profile == "combo_ctrader_v0":
+        if ktp_level not in CBOT_V0_KTP_LEVELS:
+            raise ValueError("ktp_level must be between 1 and 12 for combo_ctrader_v0.")
+        return {
+            "engine": "component",
+            "account_size": float(account_size),
+            "risk_per_cluster": float(risk_per_cluster),
+            "entry_model": "stop_breakout_signal_bar",
+            "entry_params": {"x_offset": float(x_buffer)},
+            "sl_method": "signal_bar_atr_buffer",
+            "sl_params": {"ksl_level": int(ksl_level)},
+            "tp_method": "fib_atr_ctrader_v0",
+            "tp_params": {"ktp_level": int(ktp_level), "exit_mode": tp_profile},
+            "order_model": "stop_order",
+            "order_params": {"cancel_after_bars": int(cancel_after_bars)},
+            "exit_model": "two_legs_sma20" if str(tp_profile) == "two_legs" else "fixed_only",
+            "exit_params": {"sma_period": 20},
+            "ambiguity_policy": ambiguity_policy,
+            "position_policy": {
+                "same_direction": "skip",
+                "opposite_direction": "reverse",
+                "reverse_exit_model": "next_open",
+            },
+            "config": {
+                "engine_profile": engine_profile,
+                "entry_model": "stop_breakout_signal_bar",
+                "sl_profile": "signal_bar_atr_buffer",
+                "tp_profile": "fib_atr_ctrader_v0",
+                "order_model": "stop_order",
+                "same_direction_policy": "skip",
+                "opposite_direction_policy": "reverse",
+                "reverse_exit_model": "next_open",
+                "x_offset": float(x_buffer),
+                "ksl_level": int(ksl_level),
+                "ktp_level": int(ktp_level),
+                "ktp": CBOT_V0_KTP_LEVELS.get(int(ktp_level)),
+                "cancel_after_bars": int(cancel_after_bars),
+                "exit_mode": tp_profile,
+            },
+        }
 
     if tp_profile == "combo_fib_atr":
         if ktp_level not in KTP_FIB_LEVELS:
@@ -134,6 +310,7 @@ def build_run_config(
             "reverse_exit_model": "next_open",
         },
         "config": {
+            "engine_profile": engine_profile,
             "entry_model": "next_open",
             "sl_profile": "combo_signal_bar",
             "tp_profile": tp_profile,
@@ -163,16 +340,24 @@ def control_panel_frame(
         ("Signal", "symbol/timeframe", f"{selection.symbol} {selection.timeframe}"),
         ("Signal", "signal range", f"{selection.start_date or '?'} -> {selection.end_date or '?'}"),
         ("Data", "warmup bars", warmup_bars),
+        ("Execution", "engine", run_config.get("engine", "single")),
         ("Execution", "entry model", metadata.get("entry_model", "next_open")),
         ("Execution", "SL method", run_config.get("sl_method")),
-        ("Execution", "x_buffer", metadata.get("x_buffer")),
+        ("Execution", "x_offset", metadata.get("x_offset", metadata.get("x_buffer"))),
+        ("Execution", "KSL level", metadata.get("ksl_level")),
         ("Execution", "TP profile", metadata.get("tp_profile")),
+        ("Execution", "exit mode", metadata.get("exit_mode")),
+        ("Execution", "order model", run_config.get("order_model", "market")),
+        ("Execution", "cancel after bars", metadata.get("cancel_after_bars")),
+        ("Execution", "exit model", run_config.get("exit_model", metadata.get("exit_model", "none"))),
         ("Execution", "same direction", metadata.get("same_direction_policy")),
         ("Execution", "opposite direction", metadata.get("opposite_direction_policy")),
         ("Execution", "KTP", _ktp_label(metadata)),
         ("Execution", "R multiples", metadata.get("r_multiples")),
         ("Execution", "ambiguity", getattr(run_config.get("ambiguity_policy"), "value", run_config.get("ambiguity_policy"))),
         ("Execution", "SL move rule", run_config.get("management", {}).get("sl_move_rule")),
+        ("Risk", "account size", run_config.get("account_size")),
+        ("Risk", "risk per cluster", run_config.get("risk_per_cluster")),
         ("Market", "pip size/value", f"{market_spec.pip_size} / {market_spec.pip_value_per_lot}"),
         ("Market", "commission/spread/slippage", _cost_label(market_spec)),
     ]
@@ -193,7 +378,7 @@ def run_context_frame(
         ("OHLCV bars", f"{len(bars):,}", "Bars loaded from core data for simulation."),
         ("OHLCV period", _range_label(bars.get("bartime")), "Market data min/max."),
         ("Selected file", selection.choice, "Current signal source."),
-        ("Entry assumption", run_config.get("config", {}).get("entry_model", "next_open"), "Signal enters at next bar open."),
+        ("Entry model", run_config.get("config", {}).get("entry_model", "next_open"), "Entry component selected for this run."),
     ]
     return pd.DataFrame(rows, columns=["metric", "value", "meaning"])
 
@@ -249,6 +434,8 @@ def warning_notes_frame(summary: dict[str, Any], run_config: dict[str, Any], mar
         notes.append(("Caution", "Some bars are ambiguous; current policy controls TP/SL ordering."))
     if run_config.get("tp_method") == "combo_fib_atr":
         notes.append(("Info", "TP is Combo Fibonacci ATR; ktp_level maps directly to cTrader."))
+    if run_config.get("tp_method") == "fib_atr_ctrader_v0":
+        notes.append(("Info", "Preset uses cBot Combo V0 KTP/KSL tables with OHLC stop-order fill rules."))
     if run_config.get("tp_method") == "risk_multiple":
         notes.append(("Info", "TP is R-multiple mode; use this for A/B testing against Combo TP."))
 
@@ -441,6 +628,12 @@ def dashboard_metric_frame(summary: dict[str, Any]) -> pd.DataFrame:
     specs = [
         ("Sample", "Total signals", "signal_count", "All signal rows considered by this run.", "int"),
         ("Sample", "Accepted clusters", "accepted_count", "Signals converted into simulated clusters.", "int"),
+        ("Sample", "Filled clusters", "filled_count", "Orders that became simulated positions.", "int"),
+        ("Sample", "Fill rate", "fill_rate", "Filled positions / accepted non-skipped signals.", "pct"),
+        ("Sample", "Pending expired", "pending_expired_count", "Pending orders that expired before fill.", "int"),
+        ("Sample", "Pending expired rate", "pending_expired_rate", "Expired pending orders / accepted signals.", "pct"),
+        ("Sample", "Pending cancelled", "pending_cancelled_count", "Pending orders cancelled by lifecycle rules.", "int"),
+        ("Sample", "Pending unfilled", "pending_unfilled_count", "Pending orders still unfilled at data end.", "int"),
         ("Sample", "Reversed clusters", "reversed_count", "Clusters closed by an opposite-direction signal.", "int"),
         ("Sample", "Reversed rate", "reversed_rate", "Reversed clusters / accepted clusters.", "pct"),
         ("Sample", "Reversed profit", "reversed_profit_count", "Reversed clusters closed with r_result > 0.", "int"),

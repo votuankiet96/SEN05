@@ -1,0 +1,50 @@
+# OHLC research preset aligned to SEN_Combo_V0 cBot execution logic.
+# This does not emulate cTrader ticks; it keeps the same entry/SL/TP/order
+# component definitions so local optimize searches the deployable parameter
+# space.
+
+engine: component
+
+entry:
+  model: stop_breakout_signal_bar
+  params:
+    x_offset: 10.0
+
+stoploss:
+  model: signal_bar_atr_buffer
+  params:
+    ksl_level: 2
+
+takeprofit:
+  model: fib_atr_ctrader_v0
+  params:
+    ktp_level: 6
+    exit_mode: fixed_only
+
+orders:
+  model: stop_order
+  params:
+    cancel_after_bars: 3
+    max_signal_bar_clock_hours: 0
+
+sizing:
+  model: fixed_risk_percent
+  params:
+    account_size: 10000
+    risk_per_cluster: 0.01
+
+exits:
+  model: fixed_only
+  params: {}
+
+run:
+  ambiguity_policy: conservative
+
+market_spec:
+  pip_size: 1.0
+  pip_value_per_lot: 1.0
+  min_lot: 0.01
+  lot_step: 0.01
+  commission_per_lot_per_side: 0.0
+  spread_buffer_pips: 0.0
+  slippage_buffer_pips: 0.0

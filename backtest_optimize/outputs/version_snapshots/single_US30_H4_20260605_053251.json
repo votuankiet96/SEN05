@@ -1,0 +1,107 @@
+{
+  "assumptions": {
+    "ambiguity_policy": "conservative",
+    "notes": [],
+    "ohlcv_source": "core_python.data.loader",
+    "processing_order": "For each bar, update/close existing clusters before evaluating new signals on that same bar.",
+    "signal_source": "raw_signals",
+    "time_convention": "UTC-naive bar-open timestamps"
+  },
+  "config": {
+    "account_size": 10000.0,
+    "ambiguity_policy": "conservative",
+    "config": {
+      "engine_profile": "combo_research",
+      "entry_model": "next_open",
+      "ktp": 2.272,
+      "ktp_level": 4,
+      "opposite_direction_policy": "reverse",
+      "r_multiples": [
+        1.0,
+        2.0,
+        3.0
+      ],
+      "reverse_exit_model": "next_open",
+      "same_direction_policy": "skip",
+      "sl_profile": "combo_signal_bar",
+      "tp_profile": "combo_fib_atr",
+      "x_buffer": 10.0
+    },
+    "management": {
+      "sl_move_rule": "none"
+    },
+    "market_spec": {
+      "commission_per_lot_per_side": 0.0,
+      "lot_step": 0.01,
+      "min_lot": 0.01,
+      "pip_size": 1.0,
+      "pip_value_per_lot": 1.0,
+      "slippage_buffer_pips": 0.0,
+      "spread_buffer_pips": 0.0,
+      "symbol": "US30"
+    },
+    "position_policy": {
+      "opposite_direction": "reverse",
+      "reverse_exit_model": "next_open",
+      "same_direction": "skip"
+    },
+    "risk_per_cluster": 0.01,
+    "sl_method": "combo_signal_bar",
+    "sl_params": {
+      "x_buffer": 10.0
+    },
+    "symbol": "US30",
+    "timeframe": "H4",
+    "tp_method": "combo_fib_atr",
+    "tp_params": {
+      "ktp_level": 4
+    }
+  },
+  "config_hash": "33fe1e67a27554633927f86d041cef7c",
+  "created_at": "2026-06-05T05:32:51.311364",
+  "git_commit": "27c729b1d95e0d1e285ea66a92039987eebcbc39",
+  "market_data_source_id": "core_python.data.loader",
+  "name": "single_US30_H4_20260605_053251",
+  "result_summary": {
+    "accepted_count": 1072,
+    "ambiguity_rate": 0.0065298507462686565,
+    "execution_error_count": 3,
+    "expectancy_r": -0.008980503887075745,
+    "fill_rate": 1.0,
+    "filled_count": 1072,
+    "legacy_cluster_open_skip_count": 0,
+    "mean_bar_mae_r": 1.1333181551014544,
+    "mean_bar_mfe_r": 1.324346495962103,
+    "mean_holding_bars": 6.1184701492537314,
+    "open_at_end_count": 0,
+    "open_at_end_excluded_from_r": true,
+    "opposite_direction_skip_count": 0,
+    "pending_cancelled_count": 0,
+    "pending_cancelled_rate": 0.0,
+    "pending_expired_count": 0,
+    "pending_expired_rate": 0.0,
+    "pending_unfilled_count": 0,
+    "pending_unfilled_rate": 0.0,
+    "r_eligible_count": 1072,
+    "reversed_avg_r": -0.404693544578857,
+    "reversed_count": 255,
+    "reversed_flat_count": 0,
+    "reversed_loss_count": 216,
+    "reversed_loss_rate": 0.8470588235294118,
+    "reversed_profit_count": 39,
+    "reversed_rate": 0.23787313432835822,
+    "reversed_win_rate": 0.15294117647058825,
+    "same_direction_skip_count": 0,
+    "signal_count": 1075,
+    "skip_rate": 0.0027906976744186047,
+    "skipped_count": 3,
+    "sl_hit_rate": 0.4832089552238806,
+    "sqn": -0.2025046586673015,
+    "std_r": 1.4519881738751568,
+    "total_cost_r": 0.0,
+    "tp1_hit_rate": 0.2789179104477612
+  },
+  "signal_file": "\\\\10.11.12.6\\Share\\SEN05_Autotrading\\raw_signals\\combo\\combo_US30_H4_20170430_20260602_signals.csv",
+  "signal_file_md5": "2b2fc9445f2146b711b0849aab1a1cf8",
+  "snapshot_hash": "5735e53094e9ffa6342d22a27a91693e"
+}

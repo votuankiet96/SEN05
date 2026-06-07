@@ -1,0 +1,36 @@
+# Generic Combo research preset. Useful for A/B tests that intentionally differ
+# from cBot execution.
+
+engine: single
+
+entry:
+  model: next_open
+  params: {}
+
+stoploss:
+  model: atr_multiple
+  params:
+    atr_mult: 1.5
+
+takeprofit:
+  model: risk_multiple
+  params:
+    r_multiples: [1.0, 2.0, 3.0]
+
+orders:
+  model: market
+  params: {}
+
+sizing:
+  model: fixed_risk_percent
+  params:
+    account_size: 10000
+    risk_per_cluster: 0.01
+
+exits:
+  model: breakeven_after_tp1
+  params:
+    sl_move_rule: breakeven_after_tp1
+
+run:
+  ambiguity_policy: conservative

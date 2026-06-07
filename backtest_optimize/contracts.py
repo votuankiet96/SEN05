@@ -55,6 +55,8 @@ class ExitReason(str, Enum):
     AMBIGUOUS = "ambiguous"
     SKIPPED = "skipped"
     REVERSE_SIGNAL = "reverse_signal"
+    PENDING_EXPIRED = "pending_expired"
+    PENDING_CANCELLED = "pending_cancelled"
 
 
 class ClusterStatus(str, Enum):
@@ -66,6 +68,18 @@ class ClusterStatus(str, Enum):
     CLOSED = "closed"
     AMBIGUOUS = "ambiguous"
     REVERSED = "reversed"
+    PENDING_EXPIRED = "pending_expired"
+    PENDING_CANCELLED = "pending_cancelled"
+    PENDING_UNFILLED_AT_END = "pending_unfilled_at_end"
+
+
+class OrderStatus(str, Enum):
+    """Lifecycle state for simulated orders."""
+
+    PENDING = "pending"
+    FILLED = "filled"
+    EXPIRED = "expired"
+    CANCELLED = "cancelled"
 
 
 @dataclass(frozen=True)

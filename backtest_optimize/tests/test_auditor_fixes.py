@@ -5,7 +5,7 @@ import unittest
 import pandas as pd
 
 from backtest_optimize.analysis.metrics import summarize
-from backtest_optimize.analysis.optimize import add_stability_scores
+from backtest_optimize.analysis.optimize import add_stability_scores, build_refined_grid, grid_size
 from backtest_optimize.contracts import (
     AmbiguityPolicy,
     ClusterResult,
@@ -24,6 +24,44 @@ from backtest_optimize.io.signal_loader import normalize_signal_frame
 
 
 class AuditorFixTests(unittest.TestCase):
+    def test_refined_grid_is_bounded_around_top_candidates(self) -> None:
+        candidates = pd.DataFrame(
+            [
+                {
+                    "entry.x_offset": 10.0,
+                    "stoploss.ksl_level": 2,
+                    "takeprofit.ktp_level": 6,
+                    "orders.cancel_after_bars": 3,
+                    "candidate_eligible": True,
+                },
+                {
+                    "entry.x_offset": 30.0,
+                    "stoploss.ksl_level": 4,
+                    "takeprofit.ktp_level": 12,
+                    "orders.cancel_after_bars": 4,
+                    "candidate_eligible": True,
+                },
+            ]
+        )
+        values = {
+            "entry.x_offset": [1.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0],
+            "stoploss.ksl_level": [1, 2, 3, 4],
+            "takeprofit.ktp_level": list(range(1, 13)),
+            "orders.cancel_after_bars": [2, 3, 4],
+        }
+
+        refined = build_refined_grid(
+            candidates,
+            values,
+            top_n=2,
+            neighbor_steps=1,
+            max_combinations=100,
+        )
+
+        self.assertEqual(refined["entry.x_offset"], [5.0, 10.0, 15.0])
+        self.assertEqual(refined["takeprofit.ktp_level"], [5, 6, 7])
+        self.assertLessEqual(grid_size(refined), 100)
+
     def test_stability_scores_require_explicit_param_cols(self) -> None:
         results = pd.DataFrame(
             {
@@ -39,7 +77,7 @@ class AuditorFixTests(unittest.TestCase):
         scored = add_stability_scores(
             results,
             param_cols=["atr_mult"],
-            neighborhood_pct=0.25,
+            neighborhood_steps=1,
         )
         self.assertGreater(scored["expectancy_r_local_count"].max(), 1)
 

@@ -1,0 +1,7 @@
+# Strategy-level defaults for AI Trend signal files.
+
+strategy: ai_trend
+signal_source: raw_signals/ai_trend
+default_symbol: US30
+default_timeframe: M45
+default_preset: ai_trend_research

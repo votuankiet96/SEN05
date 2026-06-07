@@ -21,6 +21,22 @@ KTP_FIB_LEVELS: dict[int, float] = {
 }
 DEFAULT_KTP_LEVEL = 4
 DEFAULT_KTP = KTP_FIB_LEVELS[DEFAULT_KTP_LEVEL]
+CBOT_V0_KTP_LEVELS: dict[int, float] = {
+    1: 1.272,
+    2: 1.541,
+    3: 1.811,
+    4: 2.080,
+    5: 2.349,
+    6: 2.618,
+    7: 2.888,
+    8: 3.158,
+    9: 3.427,
+    10: 3.696,
+    11: 3.966,
+    12: 4.236,
+}
+DEFAULT_CBOT_V0_KTP_LEVEL = 6
+DEFAULT_CBOT_V0_KTP = CBOT_V0_KTP_LEVELS[DEFAULT_CBOT_V0_KTP_LEVEL]
 
 
 def register_tp_method(name: str, fn: TPFunction | None = None):
@@ -83,6 +99,25 @@ def _combo_ktp(params: dict[str, Any]) -> tuple[int, float]:
         raise ValueError(f"combo_fib_atr ktp must be one of: {allowed}.")
 
     return DEFAULT_KTP_LEVEL, DEFAULT_KTP
+
+
+def _ctrader_v0_ktp(params: dict[str, Any]) -> tuple[int, float]:
+    level_value = params.get("ktp_level", params.get("fib_level", params.get("level")))
+    if level_value is not None:
+        level = int(level_value)
+        if level not in CBOT_V0_KTP_LEVELS:
+            raise ValueError("fib_atr_ctrader_v0 ktp_level must be between 1 and 12.")
+        return level, CBOT_V0_KTP_LEVELS[level]
+
+    if params.get("ktp") is not None:
+        ktp = float(params["ktp"])
+        for level, multiplier in CBOT_V0_KTP_LEVELS.items():
+            if abs(ktp - multiplier) <= 1e-9:
+                return level, multiplier
+        allowed = ", ".join(str(value) for value in CBOT_V0_KTP_LEVELS.values())
+        raise ValueError(f"fib_atr_ctrader_v0 ktp must be one of: {allowed}.")
+
+    return DEFAULT_CBOT_V0_KTP_LEVEL, DEFAULT_CBOT_V0_KTP
 
 
 @register_tp_method("risk_multiple")
@@ -164,6 +199,44 @@ def combo_fib_atr(
             label=f"KTP_L{ktp_level}_{ktp:g}",
         ),
     )
+
+
+@register_tp_method("fib_atr_ctrader_v0")
+def fib_atr_ctrader_v0(
+    signal: SignalRow,
+    entry_price: float,
+    sl_price: float,
+    bars: pd.DataFrame,
+    params: dict[str, Any],
+) -> tuple[TPLevel, ...]:
+    """Create cBot Combo V0 TP levels at Entry +/- KTP * ATR.
+
+    `exit_mode=fixed_only` returns one TP level. `exit_mode=two_legs` returns
+    leg 1 with the fixed TP and leg 2 as a no-fixed-TP trailing leg.
+    """
+    del sl_price, bars
+    if signal.atr is None or signal.atr <= 0:
+        raise ValueError("fib_atr_ctrader_v0 requires signal.atr > 0.")
+
+    ktp_level, ktp = _ctrader_v0_ktp(params)
+    distance = float(signal.atr) * ktp
+    price = entry_price + distance if signal.direction == Direction.BUY else entry_price - distance
+    exit_mode = str(params.get("exit_mode", "fixed_only")).strip().lower()
+    fixed = TPLevel(
+        level=1,
+        price=float(price),
+        weight=1.0,
+        label=f"CBOT_V0_L{ktp_level}_{ktp:g}",
+    )
+    if exit_mode in {"fixed_only", "fixedonly", "1"}:
+        return (fixed,)
+    if exit_mode in {"two_legs", "twolegs", "2"}:
+        trailing_weight = float(params.get("trailing_weight", fixed.weight))
+        return (
+            TPLevel(level=1, price=float(price), weight=float(params.get("fixed_weight", 1.0)), label=fixed.label),
+            TPLevel(level=2, price=float("inf"), weight=trailing_weight, label="NO_TP_SMA20_TRAIL"),
+        )
+    raise ValueError("fib_atr_ctrader_v0 exit_mode must be fixed_only or two_legs.")
 
 
 @register_tp_method("fixed_distance")

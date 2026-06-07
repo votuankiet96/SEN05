@@ -7,6 +7,7 @@ import unittest
 import pandas as pd
 
 from backtest_optimize.analysis.notebook_dashboard import (
+    build_execution_config,
     build_run_config,
     cluster_review_frame,
     cluster_review_html,
@@ -22,6 +23,30 @@ from backtest_optimize.contracts import AmbiguityPolicy, MarketSpec
 
 
 class NotebookDashboardTests(unittest.TestCase):
+    def test_build_execution_config_exposes_component_controls(self) -> None:
+        config = build_execution_config(
+            engine="component",
+            profile_name="combo_ctrader_v0",
+            account_size=10_000,
+            risk_per_cluster=0.01,
+            ambiguity_policy=AmbiguityPolicy.CONSERVATIVE,
+            entry_model="stop_breakout_signal_bar",
+            entry_params={"x_offset": 10.0},
+            sl_method="signal_bar_atr_buffer",
+            sl_params={"ksl_level": 2},
+            tp_method="fib_atr_ctrader_v0",
+            tp_params={"ktp_level": 6, "exit_mode": "fixed_only"},
+            order_model="stop_order",
+            order_params={"cancel_after_bars": 3},
+            exit_model="fixed_only",
+        )
+
+        self.assertEqual(config["engine"], "component")
+        self.assertEqual(config["config"]["x_offset"], 10.0)
+        self.assertEqual(config["config"]["ksl_level"], 2)
+        self.assertEqual(config["config"]["ktp"], 2.618)
+        self.assertEqual(config["config"]["cancel_after_bars"], 3)
+
     def test_signal_catalog_and_auto_selection(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -62,6 +87,26 @@ class NotebookDashboardTests(unittest.TestCase):
         self.assertEqual(combo["config"]["ktp"], 2.272)
         self.assertEqual(current["tp_method"], "risk_multiple")
         self.assertEqual(current["tp_params"]["r_multiples"], [1, 2, 3])
+
+    def test_build_run_config_supports_component_combo_ctrader_v0_profile(self) -> None:
+        config = build_run_config(
+            account_size=10_000,
+            risk_per_cluster=0.01,
+            x_buffer=10,
+            engine_profile="combo_ctrader_v0",
+            tp_profile="fixed_only",
+            ktp_level=12,
+            ksl_level=2,
+            cancel_after_bars=3,
+            ambiguity_policy=AmbiguityPolicy.CONSERVATIVE,
+        )
+
+        self.assertEqual(config["engine"], "component")
+        self.assertEqual(config["entry_model"], "stop_breakout_signal_bar")
+        self.assertEqual(config["sl_method"], "signal_bar_atr_buffer")
+        self.assertEqual(config["tp_method"], "fib_atr_ctrader_v0")
+        self.assertEqual(config["order_model"], "stop_order")
+        self.assertEqual(config["config"]["ktp"], 4.236)
 
     def test_warning_notes_flag_zero_cost_and_tp_profile(self) -> None:
         run_config = build_run_config(

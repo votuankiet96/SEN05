@@ -8,11 +8,18 @@ from typing import Any
 import pandas as pd
 
 from backtest_optimize.contracts import Direction, SLResult, SignalRow
-from backtest_optimize.io.market_data import normalize_ohlcv_frame
+from backtest_optimize.io.market_data import ensure_normalized_ohlcv, get_bar_row
 
 SLFunction = Callable[[SignalRow, float, pd.DataFrame, dict[str, Any]], SLResult]
 SL_REGISTRY: dict[str, SLFunction] = {}
 DEFAULT_COMBO_X_BUFFER = 10.0
+CBOT_V0_KSL_LEVELS: dict[int, float] = {
+    1: 0.382,
+    2: 0.618,
+    3: 1.000,
+    4: 1.272,
+}
+DEFAULT_CBOT_V0_KSL_LEVEL = 2
 
 
 def register_sl_method(name: str, fn: SLFunction | None = None):
@@ -46,11 +53,10 @@ def calculate_sl(
 
 
 def _signal_bar(signal: SignalRow, bars: pd.DataFrame, method: str) -> pd.Series:
-    normalized = normalize_ohlcv_frame(bars)
-    matches = normalized[normalized["bartime"] == signal.bartime]
-    if matches.empty:
-        raise ValueError(f"{method} requires the signal bartime to exist in bars.")
-    return matches.iloc[-1]
+    try:
+        return get_bar_row(bars, signal.bartime)
+    except ValueError as exc:
+        raise ValueError(f"{method} requires the signal bartime to exist in bars.") from exc
 
 
 @register_sl_method("signal_sl")
@@ -140,6 +146,62 @@ def combo_signal_bar(
     )
 
 
+def _combo_ksl(params: dict[str, Any]) -> tuple[int, float]:
+    level_value = params.get("ksl_level", params.get("fib_level", params.get("level")))
+    if level_value is not None:
+        level = int(level_value)
+        if level not in CBOT_V0_KSL_LEVELS:
+            raise ValueError("signal_bar_atr_buffer ksl_level must be between 1 and 4.")
+        return level, CBOT_V0_KSL_LEVELS[level]
+
+    if params.get("ksl") is not None:
+        ksl = float(params["ksl"])
+        for level, multiplier in CBOT_V0_KSL_LEVELS.items():
+            if abs(ksl - multiplier) <= 1e-9:
+                return level, multiplier
+        allowed = ", ".join(str(value) for value in CBOT_V0_KSL_LEVELS.values())
+        raise ValueError(f"signal_bar_atr_buffer ksl must be one of: {allowed}.")
+
+    return DEFAULT_CBOT_V0_KSL_LEVEL, CBOT_V0_KSL_LEVELS[DEFAULT_CBOT_V0_KSL_LEVEL]
+
+
+@register_sl_method("signal_bar_atr_buffer")
+def signal_bar_atr_buffer(
+    signal: SignalRow,
+    entry_price: float,
+    bars: pd.DataFrame,
+    params: dict[str, Any],
+) -> SLResult:
+    """Place SL outside the signal bar using a cBot-style KSL * ATR buffer.
+
+    BUY: signal low - KSL * ATR.
+    SELL: signal high + KSL * ATR.
+    """
+    bar = _signal_bar(signal, bars, "signal_bar_atr_buffer")
+    if signal.atr is None or signal.atr <= 0:
+        raise ValueError("signal_bar_atr_buffer requires signal.atr > 0.")
+    ksl_level, ksl = _combo_ksl(params)
+
+    if signal.direction == Direction.BUY:
+        price = float(bar["low"]) - ksl * float(signal.atr)
+        if price >= entry_price:
+            raise ValueError("Calculated BUY signal-bar ATR SL is not below entry.")
+    else:
+        price = float(bar["high"]) + ksl * float(signal.atr)
+        if price <= entry_price:
+            raise ValueError("Calculated SELL signal-bar ATR SL is not above entry.")
+
+    resolved = dict(params)
+    resolved["ksl_level"] = ksl_level
+    resolved["ksl"] = ksl
+    return SLResult(
+        price=float(price),
+        method="signal_bar_atr_buffer",
+        params=resolved,
+        source="signal_bar",
+    )
+
+
 @register_sl_method("swing_extreme")
 def swing_extreme(
     signal: SignalRow,
@@ -148,7 +210,7 @@ def swing_extreme(
     params: dict[str, Any],
 ) -> SLResult:
     """Place SL beyond recent bar-level swing extreme."""
-    normalized = normalize_ohlcv_frame(bars)
+    normalized = ensure_normalized_ohlcv(bars)
     lookback = int(params.get("lookback", 10))
     if lookback <= 0:
         raise ValueError("lookback must be positive.")

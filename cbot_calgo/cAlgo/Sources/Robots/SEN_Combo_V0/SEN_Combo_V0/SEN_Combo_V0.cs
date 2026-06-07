@@ -31,10 +31,12 @@ namespace cAlgo.Robots;
  *   bartime,side,atr                   ← 3 cột (dùng cho 1 symbol)
  *   bartime,symbol,side,atr            ← 4 cột (dùng cho nhiều symbol trong 1 file)
  *
- * Công thức Entry / SL / TP (theo giáo trình Combo gốc):
- *   BUY  -> Buy Stop  | Entry = High + X  | SL = Low  - X  | TP = Entry + KTP × ATR
- *   SELL -> Sell Stop | Entry = Low  - X  | SL = High + X  | TP = Entry - KTP × ATR
- *   X là khoảng dịch cố định tính bằng đơn vị giá, khác nhau theo từng symbol.
+ * Công thức Entry / SL / TP:
+ *   BUY  -> Buy Stop  | Entry = High + X          | SL = Low  - kSL × ATR | TP = Entry + kTP × ATR
+ *   SELL -> Sell Stop | Entry = Low  - X          | SL = High + kSL × ATR | TP = Entry - kTP × ATR
+ *   X    = khoảng dịch entry cố định (đơn vị giá), khác nhau theo từng symbol.
+ *   kTP  = hệ số Fibonacci nhân ATR để tính TP distance (12 mức: L1=1.272 → L12=4.236).
+ *   kSL  = hệ số Fibonacci nhân ATR để tính SL distance từ High/Low (4 mức: S1=0.382 → S4=1.272).
  *   High và Low lấy từ bar tín hiệu (bar vừa đóng, Last(1)).
  *
  * Trail SMA20 (chỉ dùng cho Leg 2 khi ExitMode = TwoLegs):
@@ -93,21 +95,31 @@ public class SEN_Combo_V0 : Robot   // Bot này kế thừa từ lớp Robot c�
     // NHÓM THAM SỐ: EXECUTION — cấu hình cách vào lệnh
     // ============================================================
 
-    // X: khoảng dịch entry và SL so với đỉnh/đáy của bar tín hiệu, tính bằng đơn vị giá
+    // X: khoảng dịch ENTRY so với đỉnh/đáy của bar tín hiệu, tính bằng đơn vị giá
+    // Chỉ ảnh hưởng đến giá entry, KHÔNG ảnh hưởng đến SL (SL dùng kSL × ATR)
     // Mỗi symbol có giá trị X khác nhau: US30=10, HK50=15, J225=15, US100/DE40/UK100=5, US500=1
-    // BUY:  Entry = High + X  |  SL = Low - X
-    // SELL: Entry = Low  - X  |  SL = High + X
+    // BUY:  Entry = High + X  |  SL = Low  - kSL × ATR
+    // SELL: Entry = Low  - X  |  SL = High + kSL × ATR
     [Parameter("X Offset (price units)", Group = "Execution",
         DefaultValue = 10.0, MinValue = 0, MaxValue = 50.0, Step = 0.5)]
     public double XOffset { get; set; }
 
     // Chọn mức Fibonacci để tính khoảng cách TP (Take Profit)
-    // Có 6 mức: 1.272 / 1.618 / 2.000 / 2.272 / 2.618 / 3.618
-    // Level 4 = 2.272 ≈ 2.3 là mặc định theo giáo trình Combo
-    // TP = Entry ± KTP × ATR
-    [Parameter("KTP Fibonacci Level (1-6)", Group = "Execution",
-        DefaultValue = 4, MinValue = 1, MaxValue = 6, Step = 1)]
+    // 12 mức phân bố đều trong [1.272, 4.236], bước ≈ 0.269:
+    //   L1=1.272 | L2=1.541 | L3=1.811 | L4=2.080 | L5=2.349 | L6=2.618 (default)
+    //   L7=2.888 | L8=3.158 | L9=3.427 | L10=3.696 | L11=3.966 | L12=4.236
+    // Level 6 = 2.618 (Fibonacci φ²) là mặc định — R:R ≈ 1.62 với kSL=S2
+    // TP distance = kTP × ATR
+    [Parameter("KTP Fibonacci Level (1-12)", Group = "Execution",
+        DefaultValue = 6, MinValue = 1, MaxValue = 12, Step = 1)]
     public int KtpFibLevel { get; set; }
+
+    // kSL Fibonacci level — chọn hệ số nhân ATR để tính khoảng cách SL từ High/Low
+    // SL = Low - kSL × ATR (BUY) | SL = High + kSL × ATR (SELL)
+    // 4 mức: S1=0.382 (tight) | S2=0.618 (normal) | S3=1.000 (wide) | S4=1.272 (very wide)
+    [Parameter("KSL Fibonacci Level (1-4)", Group = "Execution",
+        DefaultValue = 2, MinValue = 1, MaxValue = 4, Step = 1)]
+    public int KslFibLevel { get; set; }
 
     // Chế độ thoát lệnh: FixedOnly (1 leg) hoặc TwoLegs (2 leg)
     [Parameter("Exit Mode", Group = "Execution", DefaultValue = ExitModeOption.FixedOnly)]
@@ -192,6 +204,8 @@ public class SEN_Combo_V0 : Robot   // Bot này kế thừa từ lớp Robot c�
     private int _skipSpreadFilterCount;       // Số tín hiệu bỏ qua vì spread quá rộng
     private int _skipVolumeCount;             // Số tín hiệu bỏ qua vì volume tính ra dưới mức tối thiểu
     private int _skipCloseOppositeCount;      // Số tín hiệu bỏ qua vì không đóng được lệnh ngược chiều
+    private int _skipCancelOppositePendingCount; // Skip because opposite pending orders still remain
+    private int _skipInvalidPriceCount;          // Skip because entry/SL/TP is invalid at broker send time
     private int _skipLongSignalBarCount;      // Số tín hiệu bỏ qua vì bar dài hơn MaxSignalBarClockHours
     private int _placeOrderErrorCount;        // Số lần đặt lệnh bị lỗi (từ broker)
 
@@ -223,14 +237,17 @@ public class SEN_Combo_V0 : Robot   // Bot này kế thừa từ lớp Robot c�
         // Luôn tạo dù đang dùng FixedOnly, vì cần sẵn sàng nếu người dùng đổi sang TwoLegs
         _sma20 = Indicators.SimpleMovingAverage(Bars.ClosePrices, 20);
 
-        // Lấy hệ số KTP từ bảng Fibonacci (ví dụ level 4 → 2.272)
+        // Lấy hệ số KTP từ bảng 12 mức Fibonacci
         var ktpMultiplier = GetKtpMultiplier(KtpFibLevel);
 
+        // Lấy hệ số KSL từ bảng 4 mức Fibonacci
+        var kslMultiplier = GetKslMultiplier(KslFibLevel);
+
         // In thông tin cài đặt ban đầu ra cửa sổ log để kiểm tra trước khi chạy
-        Print("[{0}] Symbol info | Symbol: {1} | PipSize: {2} | TickSize: {3} | Digits: {4} | VolumeMin: {5} | X: {6} | KTP: {7:F3} (Level {8}) | ExitMode: {9} | Execution: StopOrderOnly | MaxSignalBarClockHours: {10:F1}",
+        Print("[{0}] Symbol info | Symbol: {1} | PipSize: {2} | TickSize: {3} | Digits: {4} | VolumeMin: {5} | X: {6} | KTP: {7:F3} (L{8}/12) | KSL: {9:F3} (S{10}/4) | ExitMode: {11} | Execution: StopOrderOnly | MaxSignalBarClockHours: {12:F1}",
             BotLabel, SymbolName,
             Symbol.PipSize, Symbol.TickSize, Symbol.Digits, Symbol.VolumeInUnitsMin,
-            XOffset, ktpMultiplier, KtpFibLevel, ExitMode,
+            XOffset, ktpMultiplier, KtpFibLevel, kslMultiplier, KslFibLevel, ExitMode,
             MaxSignalBarClockHours);
 
         // Đọc toàn bộ file CSV vào Dictionary _signals trong bộ nhớ
@@ -324,7 +341,11 @@ public class SEN_Combo_V0 : Robot   // Bot này kế thừa từ lớp Robot c�
 
         // Bước 8: Hủy tất cả pending orders NGƯỢC chiều với tín hiệu mới
         // Ví dụ: tín hiệu BUY → hủy tất cả Sell Stop orders đang chờ
-        CancelOppositePendingOrders(tradeType);
+        if (!CancelOppositePendingOrders(tradeType))
+        {
+            _skipCancelOppositePendingCount++;
+            return;
+        }
 
         // Bước 9: Đóng tất cả positions NGƯỢC chiều với tín hiệu mới
         // Ví dụ: tín hiệu BUY → đóng tất cả SELL positions đang mở
@@ -368,12 +389,13 @@ public class SEN_Combo_V0 : Robot   // Bot này kế thừa từ lớp Robot c�
         // SkipSameDir=bỏ qua cùng chiều | SkipSpread=bỏ qua vì spread | SkipVol=bỏ qua vì volume thấp
         // SkipCloseOpp=bỏ qua vì không đóng được ngược chiều | SkipLongBar=bỏ qua vì bar dài
         // Errors=số lần đặt lệnh bị lỗi
-        Print("[{0}] Summary | Matched: {1} | MultiBar: {2} | NoSignal: {3} | Placed: {4} | Filled: {5} | Cancelled: {6} | Expired: {7} | SkipSameDir: {8} | SkipSpread: {9} | SkipVol: {10} | SkipCloseOpp: {11} | SkipLongBar: {12} | Errors: {13}",
+        Print("[{0}] Summary | Matched: {1} | MultiBar: {2} | NoSignal: {3} | Placed: {4} | Filled: {5} | Cancelled: {6} | Expired: {7} | SkipSameDir: {8} | SkipSpread: {9} | SkipVol: {10} | SkipCloseOpp: {11} | SkipCancelOppPending: {12} | SkipInvalidPrice: {13} | SkipLongBar: {14} | Errors: {15}",
             BotLabel,
             _matchedSignalCount, _multiSignalBarCount, _barsWithoutSignal,
             _stopOrdersPlacedCount, _pendingFilledCount, _pendingCancelledCount, _pendingExpiredCount,
             _skipSameDirectionSignalCount, _skipSpreadFilterCount, _skipVolumeCount,
-            _skipCloseOppositeCount, _skipLongSignalBarCount, _placeOrderErrorCount);
+            _skipCloseOppositeCount, _skipCancelOppositePendingCount, _skipInvalidPriceCount,
+            _skipLongSignalBarCount, _placeOrderErrorCount);
     }
 
     // ============================================================
@@ -397,10 +419,17 @@ public class SEN_Combo_V0 : Robot   // Bot này kế thừa từ lớp Robot c�
             return false;
         }
 
-        // Level KTP phải nằm trong bảng Fibonacci đã định nghĩa (1 đến 6)
-        if (KtpFibLevel < 1 || KtpFibLevel > 6)
+        // Level KTP phải nằm trong bảng Fibonacci đã định nghĩa (1 đến 12)
+        if (KtpFibLevel < 1 || KtpFibLevel > 12)
         {
-            Print("[{0}] ERROR: KTP Fibonacci level must be 1 to 6.", BotLabel);
+            Print("[{0}] ERROR: KTP Fibonacci level must be 1 to 12.", BotLabel);
+            return false;
+        }
+
+        // Level KSL phải nằm trong bảng 4 mức (0.382 / 0.618 / 1.000 / 1.272)
+        if (KslFibLevel < 1 || KslFibLevel > 4)
+        {
+            Print("[{0}] ERROR: KSL Fibonacci level must be 1 to 4.", BotLabel);
             return false;
         }
 
@@ -480,6 +509,13 @@ public class SEN_Combo_V0 : Robot   // Bot này kế thừa từ lớp Robot c�
             // Tránh gửi lệnh thừa hoặc nới rộng SL
             if (!ShouldImproveStopLoss(position, newSl))
                 continue;  // SL mới không tốt hơn → bỏ qua
+
+            if (!IsValidTrailingStopLoss(position, newSl))
+            {
+                Print("[{0}] SMA20 TRAIL SKIP | {1} | Label: {2} | SL {3} invalid for market Bid/Ask {4}/{5}.",
+                    BotLabel, position.TradeType, position.Label, newSl, Symbol.Bid, Symbol.Ask);
+                continue;
+            }
 
             // Lưu lại SL cũ để in log so sánh
             var oldSl  = position.StopLoss;
@@ -669,8 +705,11 @@ public class SEN_Combo_V0 : Robot   // Bot này kế thừa từ lớp Robot c�
         // Xác định TradeType (Buy hoặc Sell) cho lệnh sẽ đặt
         var tradeType    = isBuy ? TradeType.Buy : TradeType.Sell;
 
-        // Lấy hệ số KTP từ bảng Fibonacci theo level đã chọn
+        // Lấy hệ số KTP từ bảng 12 mức Fibonacci theo level đã chọn
         var ktpMultiplier = GetKtpMultiplier(KtpFibLevel);
+
+        // Lấy hệ số KSL từ bảng 4 mức Fibonacci theo level đã chọn
+        var kslMultiplier = GetKslMultiplier(KslFibLevel);
 
         // ── TÍNH GIÁ ENTRY ──────────────────────────────────────────────────
         // BUY:  Entry = High của bar tín hiệu + X  → đặt lệnh breakout phía TRÊN bar
@@ -679,15 +718,16 @@ public class SEN_Combo_V0 : Robot   // Bot này kế thừa từ lớp Robot c�
         var entryPrice = isBuy ? high + XOffset : low - XOffset;
 
         // ── TÍNH GIÁ STOP LOSS ──────────────────────────────────────────────
-        // BUY:  SL = Low  của bar tín hiệu - X  → bên DƯỚI toàn bộ bar + buffer X
-        // SELL: SL = High của bar tín hiệu + X  → bên TRÊN toàn bộ bar + buffer X
-        // Lý do: SL được đặt bên ngoài cấu trúc cây nến, không dễ bị quét bởi noise
-        var slPrice = isBuy ? low - XOffset : high + XOffset;
+        // BUY:  SL = Low  - kSL × ATR  → bên DƯỚI đáy bar, buffer linh động theo ATR
+        // SELL: SL = High + kSL × ATR  → bên TRÊN đỉnh bar, buffer linh động theo ATR
+        // Lý do: SL bám cấu trúc bar nhưng buffer co giãn theo biến động thực tế (ATR)
+        var slPrice = isBuy ? low  - kslMultiplier * signal.Atr
+                            : high + kslMultiplier * signal.Atr;
 
         // ── TÍNH KHOẢNG CÁCH SL ─────────────────────────────────────────────
-        // slDist = |Entry - SL| = (High - Low) + 2×X
-        // (khoảng cách từ entry đến SL = toàn bộ thân nến + X cả 2 phía)
-        var slDist = Math.Abs(entryPrice - slPrice);   // = (High - Low) + 2 * X
+        // slDist = Entry - SL (BUY) = (High + X) - (Low - kSL×ATR) = (High-Low) + X + kSL×ATR
+        // X xuất hiện vì Entry có offset X, không phải từ công thức SL
+        var slDist = Math.Abs(entryPrice - slPrice);
 
         // Chuyển khoảng cách SL từ đơn vị giá sang pips (để tính volume)
         var slPips = slDist / Symbol.PipSize;
@@ -700,8 +740,21 @@ public class SEN_Combo_V0 : Robot   // Bot này kế thừa từ lớp Robot c�
         // SELL: TP1 = Entry - tpDist  → phía DƯỚI entry
         var tpPrice1 = isBuy ? entryPrice + tpDist : entryPrice - tpDist;
 
+        entryPrice = NormalizePrice(entryPrice);
+        slPrice    = NormalizePrice(slPrice);
+        tpPrice1   = NormalizePrice(tpPrice1);
+
+        slDist = Math.Abs(entryPrice - slPrice);
+        slPips = slDist / Symbol.PipSize;
+
+        if (!ValidateStopOrderPrices(tradeType, signal.Side, barTime, entryPrice, slPrice, tpPrice1))
+        {
+            _skipInvalidPriceCount++;
+            return;
+        }
+
         // Chuyển khoảng cách TP sang pips (để log và tính RR)
-        var tpPips1  = tpDist / Symbol.PipSize;
+        var tpPips1  = Math.Abs(tpPrice1 - entryPrice) / Symbol.PipSize;
 
         // ── TÍNH SPREAD VÀ BỘ LỌC SPREAD ───────────────────────────────────
         // Tính spread hiện tại (Ask - Bid) đổi sang pips
@@ -748,12 +801,13 @@ public class SEN_Combo_V0 : Robot   // Bot này kế thừa từ lớp Robot c�
 
         // Bộ đếm số leg đã đặt thành công trong cụm này
         var placedCount = 0;
+        var pendingExpirationTime = nextBarTime.AddTicks((nextBarTime - barTime).Ticks * CancelPendingAfterBars);
 
         // ── ĐẶT LEG 1: có TP cố định ────────────────────────────────────────
         // Leg 1 luôn có TP cố định = Entry ± KTP × ATR
         if (PlaceOneLeg(signal, barTime, nextBarTime, signalBarClockHours, signalsInBar,
             tradeType, 1, legCount, legVolume, legRiskPercent,
-            entryPrice, slPrice, tpPrice1, high, low, ktpMultiplier))
+            entryPrice, slPrice, tpPrice1, high, low, ktpMultiplier, kslMultiplier, pendingExpirationTime))
             placedCount++;  // Nếu đặt thành công → tăng bộ đếm
 
         // ── ĐẶT LEG 2: chỉ khi ExitMode = TwoLegs, không có TP ─────────────
@@ -762,7 +816,7 @@ public class SEN_Combo_V0 : Robot   // Bot này kế thừa từ lớp Robot c�
         {
             if (PlaceOneLeg(signal, barTime, nextBarTime, signalBarClockHours, signalsInBar,
                 tradeType, 2, legCount, legVolume, legRiskPercent,
-                entryPrice, slPrice, null, high, low, ktpMultiplier))  // null = không có TP
+                entryPrice, slPrice, null, high, low, ktpMultiplier, kslMultiplier, pendingExpirationTime))  // null = không có TP
                 placedCount++;
         }
 
@@ -773,9 +827,9 @@ public class SEN_Combo_V0 : Robot   // Bot này kế thừa từ lớp Robot c�
         var rr       = slPips > 0 ? tpPips1 / slPips : 0;
 
         // In tóm tắt toàn bộ thông tin cụm lệnh vừa đặt
-        Print("[{0}] {1} | {2} at {3:yyyy-MM-dd HH:mm} | Mode: {4} | KTP: {5:F3} (L{6}) | Legs: {7}/{8} | TotalRisk: {9:F1}% | LegRisk: {10:F3}% | X: {11} | Entry: {12} | SL: {13} ({14:F1}p) | TP1: {15} ({16:F1}p) | RR: {17:F2} | ATR: {18:F4} | High: {19} | Low: {20} | Spread/SL: {21:F2}% | Spread/TP: {22:F2}%",
+        Print("[{0}] {1} | {2} at {3:yyyy-MM-dd HH:mm} | Mode: {4} | KTP: {5:F3} (L{6}) | KSL: {7:F3} (S{8}) | Legs: {9}/{10} | TotalRisk: {11:F1}% | LegRisk: {12:F3}% | X: {13} | Entry: {14} | SL: {15} ({16:F1}p) | TP1: {17} ({18:F1}p) | RR: {19:F2} | ATR: {20:F4} | High: {21} | Low: {22} | Spread/SL: {23:F2}% | Spread/TP: {24:F2}%",
             BotLabel, summary, signal.Side, barTime,
-            ExitMode, ktpMultiplier, KtpFibLevel,
+            ExitMode, ktpMultiplier, KtpFibLevel, kslMultiplier, KslFibLevel,
             placedCount, legCount,
             RiskPercent, legRiskPercent,
             XOffset, entryPrice, slPrice, slPips,
@@ -793,7 +847,8 @@ public class SEN_Combo_V0 : Robot   // Bot này kế thừa từ lớp Robot c�
         TradeType tradeType, int legNumber, int legCount,
         double volume, double legRiskPercent,
         double entryPrice, double slPrice, double? tpPrice,
-        double high, double low, double ktpMultiplier)
+        double high, double low, double ktpMultiplier, double kslMultiplier,
+        DateTime pendingExpirationTime)
     {
         // Tính lại khoảng cách SL bằng pips cho lệnh này
         var slPips = Math.Abs(entryPrice - slPrice) / Symbol.PipSize;
@@ -815,7 +870,8 @@ public class SEN_Combo_V0 : Robot   // Bot này kế thừa từ lớp Robot c�
             GetLegLabel(legNumber),  // Nhãn: "SEN_Combo_V0_L1" hoặc "_L2"
             slPips,                  // Khoảng cách SL tính bằng pips (tương đối so với entry)
             tpPips,                  // Khoảng cách TP tính bằng pips (null = không có TP)
-            ProtectionType.Relative);// SL/TP tính tương đối từ entry (pips), không phải giá tuyệt đối
+            ProtectionType.Relative, // SL/TP tính tương đối từ entry (pips), không phải giá tuyệt đối
+            pendingExpirationTime);  // Expiration broker-side: pending tự hết hạn kể cả khi cBot/VPS tắt
 
         // Nếu broker trả về lỗi → tăng bộ đếm lỗi và trả về false
         if (!result.IsSuccessful)
@@ -844,13 +900,14 @@ public class SEN_Combo_V0 : Robot   // Bot này kế thừa từ lớp Robot c�
             : "none (SMA20 trailing)";
 
         // In đầy đủ thông tin của lệnh vừa đặt
-        Print("[{0}] {1} STOP leg {2}/{3} [{4}] | Bar: {5:yyyy-MM-dd HH:mm}->{6:yyyy-MM-dd HH:mm} ({7:F2}h) | SigTime: {8:yyyy-MM-dd HH:mm} | SigInBar: {9} | Entry: {10} | SL: {11} ({12:F1}p) | TP: {13} | KTP: {14:F3} | ATR: {15:F4} | High: {16} | Low: {17} | X: {18} | LegRisk: {19:F3}% | Lots: {20:F2} | PipSize: {21}",
+        Print("[{0}] {1} STOP leg {2}/{3} [{4}] | Bar: {5:yyyy-MM-dd HH:mm}->{6:yyyy-MM-dd HH:mm} ({7:F2}h) | Expires: {8:yyyy-MM-dd HH:mm} | SigTime: {9:yyyy-MM-dd HH:mm} | SigInBar: {10} | Entry: {11} | SL: {12} ({13:F1}p) | TP: {14} | KTP: {15:F3} | KSL: {16:F3} | ATR: {17:F4} | High: {18} | Low: {19} | X: {20} | LegRisk: {21:F3}% | Lots: {22:F2} | PipSize: {23}",
             BotLabel, signal.Side,
             legNumber, legCount, legType,
             barTime, nextBarTime, signalBarClockHours,
+            pendingExpirationTime,
             signal.Time, signalsInBar,
             entryPrice, slPrice, slPips,
-            tpLabel, ktpMultiplier,
+            tpLabel, ktpMultiplier, kslMultiplier,
             signal.Atr, high, low, XOffset,
             legRiskPercent,
             Symbol.VolumeInUnitsToQuantity(volume),   // Chuyển volume đơn vị sang lots để dễ đọc
@@ -883,17 +940,41 @@ public class SEN_Combo_V0 : Robot   // Bot này kế thừa từ lớp Robot c�
     }
 
     // ============================================================
-    // GetKtpMultiplier — Tra bảng Fibonacci để lấy hệ số KTP theo level
+    // GetKtpMultiplier — Tra bảng 12 mức kTP để lấy hệ số nhân ATR cho TP
+    // Phân bố đều trong khoảng [1.272, 4.236], bước nhảy ≈ 0.269
+    // L1 = 1.272 (Fib 127.2%) | L6 = 2.618 (φ², default) | L12 = 4.236 (φ³)
+    // TP distance = kTP × ATR
     // ============================================================
     private static double GetKtpMultiplier(int level) => level switch
     {
-        1 => 1.272,   // Fibonacci 127.2%
-        2 => 1.618,   // Tỷ lệ vàng
-        3 => 2.000,   // 200%
-        4 => 2.272,   // ≈ 2.3 — mặc định theo giáo trình Combo
-        5 => 2.618,   // Fibonacci 261.8%
-        6 => 3.618,   // Fibonacci 361.8%
-        _ => 2.272,   // Fallback nếu level không hợp lệ → dùng level 4
+        1  => 1.272,   // Fibonacci 127.2% — anchor dưới
+        2  => 1.541,
+        3  => 1.811,
+        4  => 2.080,
+        5  => 2.349,
+        6  => 2.618,   // Fibonacci φ² = 261.8% — anchor giữa (default)
+        7  => 2.888,
+        8  => 3.158,
+        9  => 3.427,
+        10 => 3.696,
+        11 => 3.966,
+        12 => 4.236,   // Fibonacci φ³ = 423.6% — anchor trên
+        _  => 2.618,   // Fallback → dùng L6
+    };
+
+    // ============================================================
+    // GetKslMultiplier — Tra bảng 4 mức kSL để lấy hệ số nhân ATR cho SL
+    // SL distance = kSL × ATR, đo từ High/Low của bar tín hiệu ra phía ngoài
+    // S1=0.382 (tight) | S2=0.618 (normal, default) | S3=1.000 (wide) | S4=1.272 (very wide)
+    // kSL thấp → SL hẹp → R:R cao hơn nhưng dễ bị quét hơn
+    // ============================================================
+    private static double GetKslMultiplier(int level) => level switch
+    {
+        1 => 0.382,   // Fibonacci 38.2% — tight, R:R cao nhất
+        2 => 0.618,   // Fibonacci 61.8% (tỷ lệ vàng) — cân bằng (default)
+        3 => 1.000,   // 100% ATR — wide, SL = 1 ATR
+        4 => 1.272,   // Fibonacci 127.2% — very wide, ít bị quét nhất
+        _ => 0.618,   // Fallback → dùng S2
     };
 
     // ============================================================
@@ -943,6 +1024,67 @@ public class SEN_Combo_V0 : Robot   // Bot này kế thừa từ lớp Robot c�
             ? n : 0;
     }
 
+    private double NormalizePrice(double price)
+    {
+        if (Symbol.TickSize > 0)
+            price = Math.Round(price / Symbol.TickSize, MidpointRounding.AwayFromZero) * Symbol.TickSize;
+
+        return Math.Round(price, Symbol.Digits);
+    }
+
+    private bool ValidateStopOrderPrices(TradeType tradeType, string signalSide, DateTime barTime,
+        double entryPrice, double slPrice, double? tpPrice)
+    {
+        if (tradeType == TradeType.Buy)
+        {
+            if (entryPrice <= Symbol.Ask)
+            {
+                Print("[{0}] {1} at {2:yyyy-MM-dd HH:mm} skipped: Buy Stop entry {3} <= current Ask {4}.",
+                    BotLabel, signalSide, barTime, entryPrice, Symbol.Ask);
+                return false;
+            }
+
+            if (slPrice >= entryPrice)
+            {
+                Print("[{0}] {1} at {2:yyyy-MM-dd HH:mm} skipped: BUY SL {3} must be below entry {4}.",
+                    BotLabel, signalSide, barTime, slPrice, entryPrice);
+                return false;
+            }
+
+            if (tpPrice.HasValue && tpPrice.Value <= entryPrice)
+            {
+                Print("[{0}] {1} at {2:yyyy-MM-dd HH:mm} skipped: BUY TP {3} must be above entry {4}.",
+                    BotLabel, signalSide, barTime, tpPrice.Value, entryPrice);
+                return false;
+            }
+        }
+        else
+        {
+            if (entryPrice >= Symbol.Bid)
+            {
+                Print("[{0}] {1} at {2:yyyy-MM-dd HH:mm} skipped: Sell Stop entry {3} >= current Bid {4}.",
+                    BotLabel, signalSide, barTime, entryPrice, Symbol.Bid);
+                return false;
+            }
+
+            if (slPrice <= entryPrice)
+            {
+                Print("[{0}] {1} at {2:yyyy-MM-dd HH:mm} skipped: SELL SL {3} must be above entry {4}.",
+                    BotLabel, signalSide, barTime, slPrice, entryPrice);
+                return false;
+            }
+
+            if (tpPrice.HasValue && tpPrice.Value >= entryPrice)
+            {
+                Print("[{0}] {1} at {2:yyyy-MM-dd HH:mm} skipped: SELL TP {3} must be below entry {4}.",
+                    BotLabel, signalSide, barTime, tpPrice.Value, entryPrice);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     // ============================================================
     // ShouldImproveStopLoss — Kiểm tra SL mới có tốt hơn SL cũ không
     // "Tốt hơn" = dịch về phía giảm rủi ro (chỉ được cải thiện, không được nới rộng)
@@ -958,6 +1100,13 @@ public class SEN_Combo_V0 : Robot   // Bot này kế thừa từ lớp Robot c�
         return position.TradeType == TradeType.Buy
             ? newSl > position.StopLoss.Value
             : newSl < position.StopLoss.Value;
+    }
+
+    private bool IsValidTrailingStopLoss(Position position, double newSl)
+    {
+        return position.TradeType == TradeType.Buy
+            ? newSl < Symbol.Bid
+            : newSl > Symbol.Ask;
     }
 
     // ============================================================
@@ -1021,7 +1170,7 @@ public class SEN_Combo_V0 : Robot   // Bot này kế thừa từ lớp Robot c�
     // CancelOppositePendingOrders — Hủy các pending orders NGƯỢC chiều với tín hiệu mới
     // Được gọi khi có tín hiệu đảo chiều: tín hiệu BUY → hủy Sell Stop orders
     // ============================================================
-    private void CancelOppositePendingOrders(TradeType tradeType)
+    private bool CancelOppositePendingOrders(TradeType tradeType)
     {
         // Xác định chiều ngược lại (nếu tín hiệu = Buy thì ngược = Sell)
         var opp = GetOppositeTradeType(tradeType);
@@ -1031,11 +1180,23 @@ public class SEN_Combo_V0 : Robot   // Bot này kế thừa từ lớp Robot c�
         {
             var r = CancelPendingOrder(order);
             if (!r.IsSuccessful)
+            {
                 Print("[{0}] ERROR cancelling opposite pending {1}: {2}", BotLabel, order.Id, r.Error);
+            }
             else
                 // Hủy thành công → xóa khỏi bảng theo dõi tuổi lệnh
                 _pendingOrderCreatedBarCounts.Remove(order.Id);
         }
+
+        var remainingOppositeCount = GetMyPendingOrders().Count(o => o.TradeType == opp);
+        if (remainingOppositeCount > 0)
+        {
+            Print("[{0}] REVERSE SIGNAL blocked: {1} opposite pending order(s) still remain after cancel attempt.",
+                BotLabel, remainingOppositeCount);
+            return false;
+        }
+
+        return true;
     }
 
     // ============================================================

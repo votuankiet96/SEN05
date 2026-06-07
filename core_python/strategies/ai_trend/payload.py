@@ -338,6 +338,16 @@ def build_ai_trend_payload(
                 "data": _histogram(entry_df, "macd_h"),
             }
         )
+    if params.get("SHOW_M45_ATR", True) and "atr" in entry_df:
+        entry_panels.append(
+            {
+                "key": "atr",
+                "label": f"ATR {params['ATR_PERIOD']}",
+                "type": "line",
+                "color": "#a855f7",
+                "data": _series(entry_df, "atr"),
+            }
+        )
 
     return {
         "layout": "ai_trend_mtf",

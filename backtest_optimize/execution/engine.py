@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
+from copy import deepcopy
 from typing import Any
 
 import pandas as pd
@@ -19,6 +20,7 @@ from backtest_optimize.contracts import (
     SignalRow,
 )
 from backtest_optimize.execution.cost_model import apply_entry_slippage
+from backtest_optimize.execution.orders import simulate_stop_order_components
 from backtest_optimize.execution.position_manager import PositionManager, simulate_cluster
 from backtest_optimize.execution.sizing import calculate_leg_sizing
 from backtest_optimize.execution.sl_calculator import calculate_sl
@@ -26,12 +28,113 @@ from backtest_optimize.execution.tp_calculator import calculate_tp_levels
 from backtest_optimize.io.market_data import (
     assert_signal_bartimes_exist,
     bars_from_time,
+    ensure_normalized_ohlcv,
     get_next_open_bar,
-    normalize_ohlcv_frame,
 )
 from backtest_optimize.io.signal_loader import to_signal_rows
 
 logger = logging.getLogger(__name__)
+
+
+def _flatten_execution_config(value: dict[str, Any]) -> dict[str, Any]:
+    """Normalize flat notebook configs and nested YAML preset configs."""
+    config = deepcopy(value)
+    section_map = {
+        "entry": ("entry_model", "entry_params"),
+        "stoploss": ("sl_method", "sl_params"),
+        "takeprofit": ("tp_method", "tp_params"),
+        "orders": ("order_model", "order_params"),
+        "exits": ("exit_model", "exit_params"),
+    }
+    for section, (model_key, params_key) in section_map.items():
+        section_value = config.pop(section, None)
+        if not isinstance(section_value, dict):
+            continue
+        config.setdefault(model_key, section_value.get("model"))
+        config.setdefault(params_key, dict(section_value.get("params") or {}))
+
+    sizing = config.pop("sizing", None)
+    if isinstance(sizing, dict):
+        sizing_params = dict(sizing.get("params") or {})
+        for key in ("account_size", "risk_per_cluster", "leg_weights"):
+            if key in sizing_params:
+                config.setdefault(key, sizing_params[key])
+
+    run = config.pop("run", None)
+    if isinstance(run, dict) and "ambiguity_policy" in run:
+        config.setdefault("ambiguity_policy", run["ambiguity_policy"])
+    return {key: item for key, item in config.items() if item is not None}
+
+
+def run_configured_backtest(
+    *,
+    signals: pd.DataFrame | Sequence[SignalRow],
+    bars: pd.DataFrame,
+    symbol: str,
+    timeframe: str,
+    market_spec: MarketSpec | dict[str, Any] | None = None,
+    run_config: dict[str, Any] | None = None,
+) -> BacktestResult:
+    """Route one normalized execution config to the matching engine."""
+    config = _flatten_execution_config(dict(run_config or {}))
+    engine = str(config.pop("engine", "single")).strip().lower()
+
+    if engine == "single":
+        allowed = {
+            "account_size",
+            "risk_per_cluster",
+            "sl_method",
+            "sl_params",
+            "tp_method",
+            "tp_params",
+            "leg_weights",
+            "ambiguity_policy",
+            "management",
+            "position_policy",
+            "config",
+            "raise_on_error",
+        }
+        kwargs = {key: item for key, item in config.items() if key in allowed}
+        return run_single(
+            signals=signals,
+            bars=bars,
+            symbol=symbol,
+            timeframe=timeframe,
+            market_spec=market_spec,
+            **kwargs,
+        )
+
+    if engine == "component":
+        allowed = {
+            "account_size",
+            "risk_per_cluster",
+            "entry_model",
+            "entry_params",
+            "sl_method",
+            "sl_params",
+            "tp_method",
+            "tp_params",
+            "leg_weights",
+            "order_model",
+            "order_params",
+            "exit_model",
+            "exit_params",
+            "ambiguity_policy",
+            "position_policy",
+            "config",
+            "raise_on_error",
+        }
+        kwargs = {key: item for key, item in config.items() if key in allowed}
+        return run_component_backtest(
+            signals=signals,
+            bars=bars,
+            symbol=symbol,
+            timeframe=timeframe,
+            market_spec=market_spec,
+            **kwargs,
+        )
+
+    raise ValueError("run_config.engine must be 'single' or 'component'.")
 
 
 def _coerce_market_spec(symbol: str, value: MarketSpec | dict[str, Any] | None) -> MarketSpec:
@@ -88,6 +191,22 @@ def _next_signal(
     return None
 
 
+def _assert_signal_times_covered(signals: Sequence[SignalRow], bars: pd.DataFrame) -> None:
+    """Raise when a signal falls outside the available OHLCV bar intervals."""
+    if not signals:
+        return
+    normalized = ensure_normalized_ohlcv(bars)
+    start = pd.Timestamp(normalized.iloc[0]["bartime"])
+    end = pd.Timestamp(normalized.iloc[-1]["bartime"])
+    missing = [signal for signal in signals if signal.bartime < start or signal.bartime >= end]
+    if missing:
+        preview = [
+            {"symbol": item.symbol, "timeframe": item.timeframe, "bartime": str(item.bartime)}
+            for item in missing[:10]
+        ]
+        raise ValueError(f"{len(missing)} signal times are outside the OHLCV range: {preview}")
+
+
 def run_single(
     *,
     signals: pd.DataFrame | Sequence[SignalRow],
@@ -114,7 +233,7 @@ def run_single(
     policy = _coerce_ambiguity_policy(ambiguity_policy)
     exposure_policy = _coerce_position_policy(position_policy)
     spec = _coerce_market_spec(symbol, market_spec)
-    normalized_bars = normalize_ohlcv_frame(bars)
+    normalized_bars = ensure_normalized_ohlcv(bars)
 
     signal_rows = [
         signal
@@ -236,5 +355,134 @@ def run_single(
         assumptions=assumptions,
         market_spec=spec,
         clusters=tuple(results),
+        config=run_config,
+    )
+
+
+def run_component_backtest(
+    *,
+    signals: pd.DataFrame | Sequence[SignalRow],
+    bars: pd.DataFrame,
+    symbol: str,
+    timeframe: str,
+    market_spec: MarketSpec | dict[str, Any] | None = None,
+    account_size: float = 10_000.0,
+    risk_per_cluster: float = 0.01,
+    entry_model: str = "stop_breakout_signal_bar",
+    entry_params: dict[str, Any] | None = None,
+    sl_method: str = "signal_bar_atr_buffer",
+    sl_params: dict[str, Any] | None = None,
+    tp_method: str = "fib_atr_ctrader_v0",
+    tp_params: dict[str, Any] | None = None,
+    leg_weights: Sequence[float] | None = None,
+    order_model: str = "stop_order",
+    order_params: dict[str, Any] | None = None,
+    exit_model: str = "fixed_only",
+    exit_params: dict[str, Any] | None = None,
+    ambiguity_policy: AmbiguityPolicy | str | None = None,
+    position_policy: dict[str, Any] | None = None,
+    config: dict[str, Any] | None = None,
+    raise_on_error: bool = False,
+) -> BacktestResult:
+    """Run a component-based OHLC backtest.
+
+    `strategy` is intentionally absent from this execution path. A caller may
+    use a strategy name to choose signal files or presets, but the simulation is
+    defined by reusable entry/SL/TP/order/sizing/exit components.
+    """
+    symbol = symbol.strip().upper()
+    timeframe = timeframe.strip().upper()
+    policy = _coerce_ambiguity_policy(ambiguity_policy)
+    exposure_policy = _coerce_position_policy(position_policy)
+    spec = _coerce_market_spec(symbol, market_spec)
+    normalized_bars = ensure_normalized_ohlcv(bars)
+    if normalized_bars.empty:
+        raise ValueError("OHLCV DataFrame is empty.")
+
+    signal_rows = [
+        signal
+        for signal in _coerce_signals(signals)
+        if signal.symbol.upper() == symbol and signal.timeframe.upper() == timeframe
+    ]
+    signal_rows.sort(key=lambda item: item.bartime)
+    _assert_signal_times_covered(signal_rows, normalized_bars)
+
+    order_params = dict(order_params or {})
+    entry_params = dict(entry_params or {})
+    sl_params = dict(sl_params or {})
+    tp_params = dict(tp_params or {})
+    exit_params = dict(exit_params or {})
+
+    if order_model != "stop_order":
+        return run_single(
+            signals=signal_rows,
+            bars=normalized_bars,
+            symbol=symbol,
+            timeframe=timeframe,
+            market_spec=spec,
+            account_size=account_size,
+            risk_per_cluster=risk_per_cluster,
+            sl_method=sl_method,
+            sl_params=sl_params,
+            tp_method=tp_method,
+            tp_params=tp_params,
+            leg_weights=leg_weights,
+            ambiguity_policy=policy,
+            management={"sl_move_rule": exit_params.get("sl_move_rule", "none")},
+            position_policy=position_policy,
+            config=config,
+            raise_on_error=raise_on_error,
+        )
+
+    assumptions = RunAssumptions(ambiguity_policy=policy)
+    clusters = simulate_stop_order_components(
+        signal_rows=signal_rows,
+        bars=normalized_bars,
+        market_spec=spec,
+        account_size=account_size,
+        risk_per_cluster=risk_per_cluster,
+        entry_model=entry_model,
+        entry_params=entry_params,
+        sl_method=sl_method,
+        sl_params=sl_params,
+        tp_method=tp_method,
+        tp_params=tp_params,
+        leg_weights=leg_weights,
+        order_model=order_model,
+        order_params=order_params,
+        exit_model=exit_model,
+        exit_params=exit_params,
+        ambiguity_policy=policy,
+        raise_on_error=raise_on_error,
+    )
+
+    run_config = {
+        "engine": "component",
+        "account_size": account_size,
+        "risk_per_cluster": risk_per_cluster,
+        "entry_model": entry_model,
+        "entry_params": entry_params,
+        "sl_method": sl_method,
+        "sl_params": sl_params,
+        "tp_method": tp_method,
+        "tp_params": tp_params,
+        "leg_weights": list(leg_weights) if leg_weights is not None else None,
+        "order_model": order_model,
+        "order_params": order_params,
+        "exit_model": exit_model,
+        "exit_params": exit_params,
+        "ambiguity_policy": policy.value,
+        "position_policy": exposure_policy,
+        "raise_on_error": raise_on_error,
+    }
+    if config:
+        run_config.update(config)
+
+    return BacktestResult(
+        symbol=symbol,
+        timeframe=timeframe,
+        assumptions=assumptions,
+        market_spec=spec,
+        clusters=clusters,
         config=run_config,
     )
