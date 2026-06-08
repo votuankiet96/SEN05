@@ -56,7 +56,7 @@ except ImportError:
 #    SQL Server Authentication:
 #      Fill in SQL_UID and SQL_PWD.
 # -----------------------------------------------------------------------------
-SQL_SERVER   = "10.11.12.6"             # DP6 — Data Provider server
+SQL_SERVER   = os.environ.get("SQL_SERVER", "localhost")  # Local SQL Server default instance; override via .env
 SQL_DATABASE = "SEN05_AutoTrading"
 SQL_DRIVER   = "ODBC Driver 18 for SQL Server"
 SQL_UID      = os.environ.get("SQL_UID", "")   # empty = Windows Auth
@@ -433,7 +433,52 @@ WEEKEND_CLOSED = {"FOREX", "Metal", "Indice"}
 
 
 # -----------------------------------------------------------------------------
-# 13. TF → tvDatafeed Interval MAP  — centralised, no per-script redefinition
+# 13. cTrader FTMO tick data - independent tick provider branch
+# -----------------------------------------------------------------------------
+
+# cTrader Open API environment. FTMO challenge/demo accounts should use demo.
+CTRADER_FTMO_ENV = os.environ.get("CTRADER_FTMO_ENV", "demo").strip().lower()
+CTRADER_FTMO_TICK_SCHEMA = os.environ.get("CTRADER_FTMO_TICK_SCHEMA", "tick").strip() or "tick"
+
+# Open API credentials/tokens are intentionally read from environment only.
+# Do not hard-code cTrader passwords or tokens in this file.
+CTRADER_CLIENT_ID = os.environ.get("CTRADER_CLIENT_ID", "")
+CTRADER_CLIENT_SECRET = os.environ.get("CTRADER_CLIENT_SECRET", "")
+CTRADER_ACCESS_TOKEN = os.environ.get("CTRADER_ACCESS_TOKEN", "")
+CTRADER_REFRESH_TOKEN = os.environ.get("CTRADER_REFRESH_TOKEN", "")
+CTRADER_ACCOUNT_ID = os.environ.get("CTRADER_ACCOUNT_ID", "")  # ctidTraderAccountId, not broker login
+CTRADER_TRADER_LOGIN = os.environ.get("CTRADER_TRADER_LOGIN", "")  # broker/platform login shown in cTrader UI
+CTRADER_REDIRECT_URI = os.environ.get("CTRADER_REDIRECT_URI", "http://localhost:8765/callback")
+CTRADER_OAUTH_SCOPE = os.environ.get("CTRADER_OAUTH_SCOPE", "accounts")
+
+# Initial tick universe: all indices plus GOLD and BTCUSD. Symbol names here are
+# SEN05 symbols; cTrader/FTMO names are discovered via Open API and stored in
+# tick.SymbolMap before live subscription starts.
+CTRADER_FTMO_TICK_ASSET_TYPES = {"Indice", "Metal", "Crypto"}
+CTRADER_FTMO_TICK_SYMBOLS = [
+    {
+        "symbol_id": s["symbol_id"],
+        "symbol": s["tv_symbol"],
+        "asset_type": s["asset_type"],
+        "table": f"{CTRADER_FTMO_TICK_SCHEMA}.{s['tv_symbol']}",
+    }
+    for s in SYMBOLS
+    if s["asset_type"] in CTRADER_FTMO_TICK_ASSET_TYPES
+]
+CTRADER_FTMO_TICK_SYMBOL_CODES = [s["symbol"] for s in CTRADER_FTMO_TICK_SYMBOLS]
+
+# Operational defaults for 24/7 tick ingest.
+CTRADER_FTMO_TICK_BATCH_SIZE = int(os.environ.get("CTRADER_FTMO_TICK_BATCH_SIZE", "500"))
+CTRADER_FTMO_TICK_FLUSH_SECONDS = float(os.environ.get("CTRADER_FTMO_TICK_FLUSH_SECONDS", "1.0"))
+CTRADER_FTMO_TICK_QUEUE_MAXSIZE = int(os.environ.get("CTRADER_FTMO_TICK_QUEUE_MAXSIZE", "50000"))
+CTRADER_FTMO_TICK_RECONNECT_MIN_SECONDS = float(os.environ.get("CTRADER_FTMO_TICK_RECONNECT_MIN_SECONDS", "5"))
+CTRADER_FTMO_TICK_RECONNECT_MAX_SECONDS = float(os.environ.get("CTRADER_FTMO_TICK_RECONNECT_MAX_SECONDS", "300"))
+CTRADER_FTMO_TICK_STALE_SECONDS_BTC = int(os.environ.get("CTRADER_FTMO_TICK_STALE_SECONDS_BTC", "120"))
+CTRADER_FTMO_TICK_STALE_SECONDS_MARKET = int(os.environ.get("CTRADER_FTMO_TICK_STALE_SECONDS_MARKET", "600"))
+
+
+# -----------------------------------------------------------------------------
+# 14. TF → tvDatafeed Interval MAP  — centralised, no per-script redefinition
 #     Import deferred to avoid circular / heavy import at module load.
 # -----------------------------------------------------------------------------
 def get_tf_interval_map():

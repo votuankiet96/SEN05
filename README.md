@@ -77,6 +77,7 @@ Repo đọc `.env` qua `python-dotenv` nếu có. Không hard-code credential v�
 
 ```env
 # SQL Server
+SQL_SERVER=localhost
 SQL_UID=
 SQL_PWD=
 SQL_ENCRYPT=no
@@ -121,7 +122,7 @@ Một số env nâng cao được `config.py` dùng:
 
 `config.py` là bảng điều khiển runtime chính cho data provider:
 
-- SQL: server `10.11.12.6`, database `SEN05_AutoTrading`, driver `ODBC Driver 18 for SQL Server`.
+- SQL: server mặc định `localhost` qua `SQL_SERVER`, database `SEN05_AutoTrading`, driver `ODBC Driver 18 for SQL Server`.
 - Symbols: 37 instrument từ Capital.com gồm Indice, FOREX, Metal, Crypto.
 - Timeframes trực tiếp: 15 TF `M5, M10, M15, M20, M30, M45, H1, M90, H2, H3, H4, H6, H8, D1, W`.
 - Historical bar counts: cấu hình riêng từng TF, ví dụ `H1=20000`, `M5=20000`, `D1=5000`.
@@ -144,6 +145,7 @@ Khởi tạo database bằng các script trong `data_provider/sql/`:
 04_business_objects.sql
 05_verify.sql
 06_active_task.sql
+07_ctrader_ftmo_tick.sql
 ```
 
 Các object chính:
@@ -155,6 +157,7 @@ Các object chính:
 - `DWH.Fact_OHLCV`: bảng nến trung tâm, unique theo `SymbolID, TimeframeID, BarTime`.
 - `SEN.TF_*`: 15 staging table, mỗi TF một bảng, unique theo `SymbolID, BarTime`.
 - `SEN.ActiveTask`: lock runtime cho pipeline, checker, ws live và watcher.
+- `tick.*`: schema riêng cho cTrader/FTMO tick data, gồm `tick.SymbolMap`, `tick.IngestRun`, `tick.IngestState` và 11 bảng tick theo symbol.
 - `DWH.usp_LoadDirect`: nạp staging vào `Fact_OHLCV`.
 - `DWH.usp_AggregateFromStaging`: aggregate fallback/rebuild.
 - `MART.v_OHLCV`, `MART.usp_GetLatestCandles`: read API thân thiện cho SQL/manual usage.

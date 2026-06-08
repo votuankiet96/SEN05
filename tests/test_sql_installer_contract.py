@@ -1,7 +1,6 @@
 import re
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SQL_DIR = ROOT / "data_provider" / "sql"
 
@@ -74,7 +73,9 @@ def test_run_all_includes_runtime_lock_table_and_current_lineage():
     sql = _read_sql("00_run_all.sql")
 
     assert ':r "06_active_task.sql"' in sql
+    assert ':r "07_ctrader_ftmo_tick.sql"' in sql
     assert sql.index(':r "06_active_task.sql"') < sql.index(':r "05_verify.sql"')
+    assert sql.index(':r "07_ctrader_ftmo_tick.sql"') < sql.index(':r "05_verify.sql"')
     assert "pulls all 15 timeframes directly" in sql
     assert "10 direct timeframes" not in sql
     assert "only reads from MART" not in sql

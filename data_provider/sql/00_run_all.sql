@@ -1,7 +1,7 @@
 /* ============================================================
    INSTALLER NOTE:
    - This file includes the full data_provider runtime schema, including
-     `06_active_task.sql`.
+     `06_active_task.sql` and `07_ctrader_ftmo_tick.sql`.
    - The current runtime pulls all 15 timeframes directly from
      TradingView/Capital.com by default. Computed timeframe aggregation remains
      available only as a fallback/maintenance path.
@@ -337,6 +337,7 @@
      03_staging_tables.sql  — All 15 SEN.TF_* staging tables
      04_business_objects.sql — Views, MART procs, ETL procs
      06_active_task.sql     — Runtime lock / token relay table used by Python scripts
+     07_ctrader_ftmo_tick.sql — cTrader/FTMO tick schema under tick
      05_verify.sql          — Verification queries; prints SETUP COMPLETE
 
    The :r paths below include each file in sequence.
@@ -347,4 +348,5 @@
 :r "03_staging_tables.sql"
 :r "04_business_objects.sql"
 :r "06_active_task.sql"
+:r "07_ctrader_ftmo_tick.sql"
 :r "05_verify.sql"
