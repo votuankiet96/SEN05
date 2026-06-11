@@ -1,12 +1,18 @@
-"""Local token cache for cTrader OAuth secrets.
+"""Local OAuth token cache for the standalone cTrader/FTMO tick provider.
 
-The cache lives under data_provider/runtime/cache, which is already ignored by
-git in this repository. Environment variables still win over cached values.
+This module deliberately has no dependency on the TradingView/OHLCV runtime.
+It owns only the cTrader OAuth material used by
+``data_provider.tick_data``.
+
+The cache lives under ``data_provider/runtime/cache`` which is ignored by git.
+The file may contain client secrets, access tokens and refresh tokens, so
+callers should print only the redacted status returned by :func:`token_status`.
 """
 
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -15,6 +21,7 @@ from data_provider.paths import CACHE_DIR, ensure_runtime_dirs
 
 DEFAULT_TOKEN_CACHE = CACHE_DIR / "ctrader_ftmo_oauth.json"
 UTC = timezone.utc
+DEFAULT_REFRESH_SAFETY_SECONDS = 24 * 60 * 60
 
 TOKEN_KEYS = {
     "accessToken",
@@ -28,6 +35,46 @@ TOKEN_KEYS = {
 
 def utc_now_iso() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def parse_utc_datetime(value: Any) -> datetime | None:
+    """Parse an ISO timestamp into UTC, returning ``None`` for empty values."""
+    if value in (None, ""):
+        return None
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC)
+
+
+def seconds_until_expiry(expires_at: Any) -> int | None:
+    """Return whole seconds until an OAuth token expires."""
+    expiry = parse_utc_datetime(expires_at)
+    if expiry is None:
+        return None
+    return int((expiry - datetime.now(UTC)).total_seconds())
+
+
+def token_refresh_recommended(
+    cache_or_expires_at: dict[str, Any] | Any,
+    safety_seconds: int = DEFAULT_REFRESH_SAFETY_SECONDS,
+) -> bool:
+    """Return whether a token should be refreshed before the next API call.
+
+    cTrader access tokens can be long-lived, but this provider is intended to
+    run unattended. Refreshing while there is still a safety window avoids a
+    live ingest dying in the middle of a market session.
+    """
+    expires_at = (
+        cache_or_expires_at.get("expires_at_utc")
+        if isinstance(cache_or_expires_at, dict)
+        else cache_or_expires_at
+    )
+    remaining = seconds_until_expiry(expires_at)
+    return remaining is not None and remaining <= int(safety_seconds)
 
 
 def load_token_cache(path: Path | str = DEFAULT_TOKEN_CACHE) -> dict[str, Any]:
@@ -107,7 +154,9 @@ def save_token_cache(
         account_id=account_id,
         trader_login=trader_login,
     )
-    token_path.write_text(json.dumps(merged, indent=2, sort_keys=True), encoding="utf-8")
+    tmp_path = token_path.with_name(f"{token_path.name}.tmp")
+    tmp_path.write_text(json.dumps(merged, indent=2, sort_keys=True), encoding="utf-8")
+    os.replace(tmp_path, token_path)
     try:
         token_path.chmod(0o600)
     except OSError:
@@ -138,8 +187,9 @@ def token_status(path: Path | str = DEFAULT_TOKEN_CACHE) -> dict[str, Any]:
     cache = load_token_cache(token_path)
     expires_at = cache.get("expires_at_utc")
     is_expired = None
+    seconds_remaining = seconds_until_expiry(expires_at)
     if expires_at:
-        is_expired = datetime.fromisoformat(expires_at).astimezone(UTC) <= datetime.now(UTC)
+        is_expired = seconds_remaining is not None and seconds_remaining <= 0
     return {
         "path": str(token_path),
         "exists": token_path.exists(),
@@ -152,5 +202,7 @@ def token_status(path: Path | str = DEFAULT_TOKEN_CACHE) -> dict[str, Any]:
         "redirect_uri": cache.get("redirect_uri"),
         "scope": cache.get("scope"),
         "expires_at_utc": expires_at,
+        "seconds_until_expiry": seconds_remaining,
         "is_expired": is_expired,
+        "refresh_recommended": token_refresh_recommended(cache),
     }

@@ -178,6 +178,9 @@ from modules.db_connector import (
     run_etl_direct,  # Đẩy dữ liệu từ staging vào bảng chính Fact_OHLCV
     test_connection,  # Kiểm tra kết nối DB có hoạt động không
 )
+# Redis publisher (import-light: stdlib + lazy redis). Dùng để PUBLISH bar_ready
+# sang VM-OG sau mỗi lần watermark commit — xem _notify_bar_ready bên dưới.
+from core_python.notify import redis_publisher as _redis_publisher
 
 # =============================================================================
 # LỌC DANH SÁCH SYMBOL CHO WEBSOCKET
@@ -199,6 +202,27 @@ _LOG_DIR    = LOG_DIR
 WS_LOG_FILE = str(WS_LIVE_LOG)
 logger = setup_logger("ws_live", WS_LOG_FILE, rotating=True)
 _LOCAL_RUNTIME_LOCK_FILE = WS_LIVE_PID
+
+
+# =============================================================================
+# REDIS SIGNAL PIPELINE — bar_ready publish (DP → OG)
+# =============================================================================
+# Sau MỖI lần _set_committed_watermark() (bar mới đã commit vào Fact_OHLCV),
+# publish event "bar_ready:{symbol}:{tf}" để signal_watcher (VM-OG) detect tức thì
+# thay vì đợi poll định kỳ. Đọc REDIS_ENABLED 1 lần lúc khởi động (đã nạp .env qua
+# redis_publisher). Mọi lỗi Redis được nuốt → KHÔNG bao giờ làm gãy vòng ETL.
+_REDIS_ENABLED = _redis_publisher._enabled()
+
+
+def _notify_bar_ready(symbol: str, tf: str, bartime_ts: float) -> None:
+    """PUBLISH bar_ready với bartime (bar OPEN, Unix epoch giây UTC) → ISO-UTC. Never raises."""
+    if not _REDIS_ENABLED:
+        return
+    try:
+        bartime_iso = datetime.fromtimestamp(float(bartime_ts), tz=timezone.utc).isoformat()
+        _redis_publisher.publish_bar_ready(symbol, tf, bartime_iso)
+    except Exception as exc:  # noqa: BLE001 — bar_ready là best-effort, không chặn ETL
+        logger.warning("[Redis] bar_ready publish failed (%s %s): %s", symbol, tf, exc)
 
 
 # =============================================================================
@@ -231,6 +255,19 @@ RECONNECT_BASE_SEC    = 30
 # Giới hạn tối đa thời gian chờ giữa các lần retry (5 phút)
 # Áp dụng exponential back-off: 30s -> 60s -> 120s -> ... -> tối đa 300s
 RECONNECT_MAX_SEC     = 300
+
+# WebSocket auth/rate-limit safety policy.
+# allow: keep running in guest mode; pause: skip live pulls until auth recovers;
+# abort: stop the process when guest mode is detected.
+TV_WS_GUEST_POLICY = os.environ.get("TV_WS_GUEST_POLICY", "pause").strip().lower()
+if TV_WS_GUEST_POLICY not in {"allow", "pause", "abort"}:
+    TV_WS_GUEST_POLICY = "pause"
+TV_WS_GUEST_PAUSE_SEC = int(os.environ.get("TV_WS_GUEST_PAUSE_SEC", "300"))
+TV_WS_RATE_LIMIT_COOLDOWN_SEC = int(os.environ.get("TV_WS_RATE_LIMIT_COOLDOWN_SEC", "300"))
+TV_WS_FORBIDDEN_COOLDOWN_SEC = int(os.environ.get("TV_WS_FORBIDDEN_COOLDOWN_SEC", "900"))
+TV_WS_PREFLIGHT_REQUIRE_HEADLESS = os.environ.get(
+    "TV_WS_PREFLIGHT_REQUIRE_HEADLESS", "0"
+).strip().lower() in {"1", "true", "yes", "on"}
 
 # Giới hạn kích thước hàng đợi ghi DB
 # Nếu hàng đợi đầy (>2000 mục chưa ghi xong) -> chuyển sang overflow buffer
@@ -395,7 +432,11 @@ _stats = {
     "accepted_bars": 0,   # Nến mới vượt watermark và đã vào queue/overflow/spool
     "staging_rows":  0,   # Rows staging affected (insert + update)
     "fact_inserted": 0,   # Rows mới thật sự insert vào DWH.Fact_OHLCV
-    "errors":        0,   # Tổng số lỗi phát sinh
+    "errors":        0,   # Lỗi nghiêm trọng: DB/ETL/staging thất bại (mất dữ liệu)
+    "ws_errors":     0,   # WS reconnect events (opcode=8 token refresh, không mất data)
+    "ws_auth_errors": 0,  # WS auth/forbidden handshake or message failures
+    "ws_rate_limits": 0,  # WS 429 handshake failures
+    "ws_server_errors": 0, # WS 5xx handshake failures
     "events":        0,   # Tổng số gói tin WebSocket đã xử lý
     "queue_depth":   0,   # Số mục hiện đang chờ trong hàng đợi DB
     "batches_run":   0,   # Tổng số lần batch đã chạy
@@ -426,6 +467,11 @@ _spool_lock = threading.Lock()
 _consecutive_guest_batches = 0
 # Ngưỡng cảnh báo: sau bao nhiêu batch guest liên tiếp thì gửi alert nặng hơn
 _GUEST_ALERT_THRESHOLD     = 3
+
+# Global WS cooldown shared by all groups after 429/403 handshake failures.
+_ws_cooldown_lock = threading.Lock()
+_ws_cooldown_until = 0.0
+_ws_cooldown_reason = ""
 
 # Bộ đếm backfill miss: số lần LIÊN TIẾP không nhận được data cho mỗi cặp (symbol_id, tf_code)
 # Khi counter đạt MAX_MISS_RETRIES -> cảnh báo Discord ngay, reset counter (tránh spam)
@@ -501,6 +547,206 @@ def _resolve_auth_token() -> tuple:
 def _load_token_cache() -> dict:
     """Đọc token cache file - proxy về _tv_auth._load_token_cache()."""
     return _tv_auth._load_token_cache()
+
+
+def _ensure_cookie_fresh() -> None:
+    """Probe và gia hạn cookie TradingView nếu cần - proxy về _tv_auth.ensure_cookie_fresh."""
+    _tv_auth.ensure_cookie_fresh(logger)
+
+
+def _headers_get(headers, name: str) -> str | None:
+    """Case-insensitive header lookup for websocket-client error objects."""
+    if not headers:
+        return None
+    target = name.lower()
+    if hasattr(headers, "items"):
+        try:
+            for key, value in headers.items():
+                if str(key).lower() == target:
+                    return str(value)
+        except Exception:
+            return None
+    if isinstance(headers, (list, tuple)):
+        for item in headers:
+            raw = str(item)
+            if ":" not in raw:
+                continue
+            key, _, value = raw.partition(":")
+            if key.strip().lower() == target:
+                return value.strip()
+    return None
+
+
+def _retry_after_seconds(headers, default_seconds: int) -> int:
+    raw = _headers_get(headers, "Retry-After")
+    if not raw:
+        return default_seconds
+    try:
+        return max(1, min(int(float(raw)), RECONNECT_MAX_SEC))
+    except (TypeError, ValueError):
+        pass
+    try:
+        from email.utils import parsedate_to_datetime
+
+        dt = parsedate_to_datetime(raw)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        wait = int((dt.astimezone(timezone.utc) - datetime.now(timezone.utc)).total_seconds())
+        return max(1, min(wait, RECONNECT_MAX_SEC))
+    except Exception:
+        return default_seconds
+
+
+def _extract_ws_status(error) -> tuple[int | None, object | None]:
+    """Return (HTTP status, response headers) from websocket-client errors."""
+    status = getattr(error, "status_code", None)
+    headers = getattr(error, "resp_headers", None)
+    if status is None:
+        status = getattr(error, "status", None)
+    if status is None:
+        match = re.search(r"(?:Handshake status|HTTP|status(?:_code)?=?)\s*[:=]?\s*(\d{3})", str(error))
+        if match:
+            status = match.group(1)
+    try:
+        return (int(status) if status is not None else None), headers
+    except (TypeError, ValueError):
+        return None, headers
+
+
+def _classify_ws_error(error) -> tuple[str, int | None, int]:
+    """
+    Classify transport/handshake errors so retry behavior matches the failure.
+
+    Returns (kind, status_code, cooldown_seconds).  Message-level auth errors are
+    handled separately by _is_token_error().
+    """
+    status, headers = _extract_ws_status(error)
+    text = str(error).lower()
+    if status == 429:
+        return "rate_limit", status, _retry_after_seconds(headers, TV_WS_RATE_LIMIT_COOLDOWN_SEC)
+    if status in (401, 403):
+        cooldown = TV_WS_FORBIDDEN_COOLDOWN_SEC if status == 403 else 0
+        return "auth", status, cooldown
+    if status is not None and status >= 500:
+        return "server", status, 0
+    if any(keyword in text for keyword in TOKEN_EXPIRY_KEYWORDS):
+        return "auth", status, 0
+    if "too many" in text or "rate limit" in text:
+        return "rate_limit", status, TV_WS_RATE_LIMIT_COOLDOWN_SEC
+    return "network", status, 0
+
+
+def _set_ws_cooldown(seconds: int, reason: str) -> None:
+    """Activate a process-wide WS cooldown after 429/403 style failures."""
+    global _ws_cooldown_until, _ws_cooldown_reason
+    if seconds <= 0:
+        return
+    until = time.time() + seconds
+    notify = False
+    with _ws_cooldown_lock:
+        if until > _ws_cooldown_until + 5:
+            _ws_cooldown_until = until
+            _ws_cooldown_reason = reason
+            notify = True
+    if notify:
+        logger.warning("[WS] Cooldown activated for %ds: %s", seconds, reason)
+        _tg_alert("WARNING", f"[WARN] WS cooldown {seconds}s\nReason: {reason}")
+
+
+def _wait_for_ws_cooldown(label: str) -> None:
+    with _ws_cooldown_lock:
+        remaining = max(0.0, _ws_cooldown_until - time.time())
+        reason = _ws_cooldown_reason
+    if remaining <= 0:
+        return
+    logger.warning("[%s] WS cooldown active for %.0fs (%s).", label, remaining, reason)
+    _shutdown.wait(remaining)
+
+
+def _handle_ws_transport_error(group_id: int, error) -> tuple[str, int | None]:
+    kind, status, cooldown = _classify_ws_error(error)
+    logger.error("[G%d] WS error kind=%s status=%s: %s", group_id, kind, status or "n/a", error)
+    with _state_lock:
+        _stats["ws_errors"] += 1
+        if kind == "auth":
+            _stats["ws_auth_errors"] += 1
+        elif kind == "rate_limit":
+            _stats["ws_rate_limits"] += 1
+        elif kind == "server":
+            _stats["ws_server_errors"] += 1
+
+    if kind == "auth":
+        _tv_auth.set_current_token(_tv_auth.GUEST_TOKEN)
+        threading.Thread(target=_renew_auth_token, daemon=True, name="ws-auth-renew").start()
+        if cooldown:
+            _set_ws_cooldown(cooldown, f"TradingView WS auth/forbidden status={status}")
+    elif kind == "rate_limit":
+        _set_ws_cooldown(cooldown, f"TradingView WS rate limit status={status or 'unknown'}")
+
+    return kind, status
+
+
+def _playwright_browser_status() -> tuple[bool, str]:
+    try:
+        from playwright.sync_api import sync_playwright  # type: ignore
+    except ImportError:
+        return False, "playwright package is not installed"
+    try:
+        with sync_playwright() as pw:
+            executable = Path(pw.chromium.executable_path)
+            if executable.exists():
+                return True, str(executable)
+            return False, f"chromium executable missing: {executable}"
+    except Exception as exc:
+        return False, str(exc)
+
+
+def _run_auth_preflight(token_source: str) -> bool:
+    """Log auth readiness before live batches start; never prints secrets."""
+    cache = _tv_auth._load_token_cache()
+    with _tv_auth._auth_lock:
+        current_token = _tv_auth._auth_token
+    ttl = _tv_auth._jwt_expires_in(current_token)
+    ttl_text = "unknown" if ttl < 0 else f"{int(ttl)}s"
+    has_cookie = bool(_tv_auth._tv_cookie or TV_COOKIE or cache.get("TV_COOKIE"))
+    has_userpass = bool(TV_USERNAME and TV_PASSWORD)
+    headless_ok, headless_detail = _playwright_browser_status()
+
+    logger.info(
+        "[PREFLIGHT] auth_source=%s token=%s ttl=%s cookie=%s userpass=%s "
+        "headless=%s guest_policy=%s",
+        token_source,
+        "guest" if current_token == _tv_auth.GUEST_TOKEN else "authenticated",
+        ttl_text,
+        "yes" if has_cookie else "no",
+        "yes" if has_userpass else "no",
+        "ready" if headless_ok else "not-ready",
+        TV_WS_GUEST_POLICY,
+    )
+    if not headless_ok:
+        logger.warning(
+            "[PREFLIGHT] Headless TradingView renewal is not ready: %s. "
+            "Run `.venv\\Scripts\\python.exe -m playwright install chromium` if full auto-login is required.",
+            headless_detail,
+        )
+        if TV_WS_PREFLIGHT_REQUIRE_HEADLESS:
+            _tg_alert(
+                "ERROR",
+                "[ERROR] WS auth preflight failed: Playwright Chromium is not ready.\n"
+                "Run .venv\\Scripts\\python.exe -m playwright install chromium",
+            )
+            return False
+
+    if getattr(_tv_auth, "TV_2FA_SECRET", ""):
+        try:
+            import pyotp  # noqa: F401
+        except ImportError:
+            logger.warning("[PREFLIGHT] TV_2FA_SECRET is set but pyotp is not installed.")
+
+    if current_token == _tv_auth.GUEST_TOKEN and TV_WS_GUEST_POLICY == "abort":
+        _tg_alert("ERROR", "[ERROR] WS auth preflight failed: TradingView is in guest mode.")
+        return False
+    return True
 
 
 # =============================================================================
@@ -1214,6 +1460,7 @@ def _db_worker() -> None:
             else:
                 etl_direct_ok = True
                 _set_committed_watermark(key, max_committed_ts)
+                _notify_bar_ready(tv_symbol, tf_code, max_committed_ts)  # Hook 1: direct ETL
                 _record_db_result(
                     batch_id, key, accepted_count, inserted, fact_inserted,
                 )
@@ -1257,6 +1504,7 @@ def _db_worker() -> None:
                         fact_inserted = run_etl_direct(sym_id, tf_c, stg_tbl)
                         logger.info("[DB ] Deferred ETL done: %s %s", sym_nm, tf_c)
                         _set_committed_watermark((sym_id, tf_c), max_ts)
+                        _notify_bar_ready(sym_nm, tf_c, max_ts)  # Hook 2: deferred ETL (main loop)
                         _record_db_result(0, (sym_id, tf_c), 0, 0, fact_inserted)
                         if stg_tbl in _SOURCE_TO_COMPUTED:
                             for tgt_tf, src_tbl in _SOURCE_TO_COMPUTED[stg_tbl]:
@@ -1281,6 +1529,7 @@ def _db_worker() -> None:
                     fact_inserted = run_etl_direct(sym_id, tf_c, stg_tbl)
                     logger.info("[DB ] Deferred ETL done before shutdown: %s %s", sym_nm, tf_c)
                     _set_committed_watermark((sym_id, tf_c), max_ts)
+                    _notify_bar_ready(sym_nm, tf_c, max_ts)  # Hook 3: deferred ETL (shutdown drain)
                     _record_db_result(0, (sym_id, tf_c), 0, 0, fact_inserted)
                     if stg_tbl in _SOURCE_TO_COMPUTED:
                         for tgt_tf, src_tbl in _SOURCE_TO_COMPUTED[stg_tbl]:
@@ -1818,10 +2067,12 @@ class BatchFetcher:
             # TRƯỜNG HỢP 2: Lỗi xác thực - token hết hạn hoặc bị thu hồi
             if _is_token_error(msg_type, data):
                 logger.warning("[G%d] Auth error detected - triggering token renewal.", self.group_id)
+                with _state_lock:
+                    _stats["ws_auth_errors"] += 1
                 # Reset token về chuỗi đặc biệt để báo hiệu cần gia hạn
                 _tv_auth.set_current_token(_tv_auth.GUEST_TOKEN)
                 # Khởi động gia hạn token trong thread riêng (không block WS)
-                threading.Thread(target=_renew_auth_token, daemon=True).start()
+                threading.Thread(target=_renew_auth_token, daemon=True, name="ws-auth-renew").start()
                 self._done.set()
                 try:
                     ws.close()
@@ -1987,9 +2238,7 @@ class BatchFetcher:
 
     def _on_error(self, _ws, error) -> None:
         """Được gọi TỰ ĐỘNG khi có lỗi WebSocket (kết nối bị ngắt đột ngột, v.v.)."""
-        logger.error("[G%d] WS error: %s", self.group_id, error)
-        with _state_lock:
-            _stats["errors"] += 1
+        _handle_ws_transport_error(self.group_id, error)
         self._done.set()  # Báo hiệu batch đã kết thúc (dù là kết thúc do lỗi)
 
     def _on_close(self, _ws, status_code, _msg) -> None:
@@ -2212,6 +2461,47 @@ def _update_guest_mode_counter(is_guest: bool) -> None:
         _consecutive_guest_batches = 0
 
 
+def _guest_mode_blocks_batch() -> bool:
+    """
+    Apply the configured guest-mode safety policy.
+
+    pause (default) keeps the process alive but avoids accepting limited guest
+    data.  Each paused cycle tries one auth recovery before waiting.
+    """
+    with _tv_auth._auth_lock:
+        is_guest = (_tv_auth._auth_token == _tv_auth.GUEST_TOKEN)
+    _update_guest_mode_counter(is_guest)
+    if not is_guest:
+        return False
+    if TV_WS_GUEST_POLICY == "allow":
+        return False
+
+    logger.warning("[AUTH] Guest mode active - attempting auth recovery before live batch.")
+    _tv_auth.renew(logger)
+    with _tv_auth._auth_lock:
+        recovered = (_tv_auth._auth_token != _tv_auth.GUEST_TOKEN)
+    if recovered:
+        _update_guest_mode_counter(False)
+        return False
+
+    if TV_WS_GUEST_POLICY == "abort":
+        logger.error("[AUTH] Guest mode is blocked by policy=abort. Stopping ws_live.")
+        _tg_alert(
+            "ERROR",
+            "[ERROR] WS Live stopped because TradingView auth is guest and "
+            "TV_WS_GUEST_POLICY=abort.",
+        )
+        _shutdown.set()
+        return True
+
+    logger.warning(
+        "[AUTH] Guest mode is blocked by policy=pause. Skipping live batch for %ds.",
+        TV_WS_GUEST_PAUSE_SEC,
+    )
+    _shutdown.wait(max(1, TV_WS_GUEST_PAUSE_SEC))
+    return True
+
+
 def _run_batch(groups: list[BatchFetcher]) -> None:
     """
     Chạy fetch() cho TẤT CẢ nhóm CÙNG LÚC (song song).
@@ -2220,10 +2510,9 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
         - Lần 2 thất bại -> chờ 60 giây -> thử lại
         - Lần 3 thất bại -> bỏ qua, chờ batch tiếp theo
     """
-    # Kiểm tra auth mode ngay đầu batch - theo dõi prolonged guest mode
-    with _tv_auth._auth_lock:
-        is_guest = (_tv_auth._auth_token == _tv_auth.GUEST_TOKEN)
-    _update_guest_mode_counter(is_guest)
+    # Guest data can be incomplete; apply the configured safety policy first.
+    if _guest_mode_blocks_batch():
+        return
 
     with _state_lock:
         _stats["batches_run"] += 1
@@ -2243,6 +2532,9 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
                 return  # Hệ thống đang tắt -> dừng ngay
 
             try:
+                _wait_for_ws_cooldown(f"G{group.group_id}")
+                if _shutdown.is_set():
+                    return
                 success = group.fetch(batch_id)
                 if success:
                     return  # Thành công -> không cần retry
@@ -2442,6 +2734,7 @@ def _scheduler_loop(groups: list[BatchFetcher]) -> None:
     # Chạy ngay 1 lần đầu khi khởi động để có data sớm nhất có thể
     if not _shutdown.is_set():
         _check_and_maybe_refresh_token()
+        _ensure_cookie_fresh()
         _refresh_watermarks_from_fact("pre-batch")
         _run_batch(groups)
 
@@ -2457,8 +2750,9 @@ def _scheduler_loop(groups: list[BatchFetcher]) -> None:
         if _shutdown.is_set():
             break  # Có lệnh tắt -> thoát vòng lặp
 
-        # Kiểm tra và làm mới token chủ động trước mỗi batch
+        # Kiểm tra và làm mới token + cookie chủ động trước mỗi batch
         _check_and_maybe_refresh_token()
+        _ensure_cookie_fresh()
         _refresh_watermarks_from_fact("pre-batch")
         _run_batch(groups)
 
@@ -2616,10 +2910,17 @@ def _status_reporter() -> None:
             auth_info = "Premium (token expired - renewing)"
 
         # ── Health level (GREEN / YELLOW / RED) ──────────────────────────────
-        if s["errors"] > 0 or stale_count > 3 or source_lag_count > 3 or spool_count > 0:
+        # errors   = DB/ETL failures chỉ (không tính WS reconnects)
+        # ws_errors= WS reconnects (opcode=8 token refresh) - chỉ RED nếu > 20/session
+        # stale > 15 → RED  (> 3 là YELLOW). Cho phép:
+        #   - Sunday market open: ~30-90 pairs stale → YELLOW đến RED trong ~2 tiếng đầu
+        #   - Monday morning (trước US open): ~12-14 D1 pairs stale → YELLOW
+        #   - RED chỉ khi >15 pairs thực sự chậm = có vấn đề nghiêm trọng
+        ws_err = s.get("ws_errors", 0)
+        if s["errors"] > 0 or stale_count > 15 or source_lag_count > 15 or spool_count > 0 or ws_err > 20:
             health_level = "RED"
             health_emoji = "[RED]"
-        elif n_miss_active > 0 or stale_count > 0 or source_lag_count > 0 or is_guest:
+        elif n_miss_active > 0 or stale_count > 0 or source_lag_count > 0 or is_guest or ws_err > 0:
             health_level = "YELLOW"
             health_emoji = "[YELLOW]"
         else:
@@ -2647,12 +2948,12 @@ def _status_reporter() -> None:
 
         # ── Ghi log ──────────────────────────────────────────────────────────
         logger.info(
-            "HEALTH [%s] %s  auth=%s  accepted=%d  fact=%d  errors=%d  batches=%d  "
+            "HEALTH [%s] %s  auth=%s  accepted=%d  fact=%d  errors=%d  ws_errors=%d  batches=%d  "
             "queue=%d  overflow=%d  spool=%d  miss=%d  stale=%d  source_lag=%d  "
             "closed_stale=%d  max_age=%.1fh",
             now, health_level, auth_info,
             s.get("accepted_bars", 0), s.get("fact_inserted", s["bars_inserted"]),
-            s["errors"], s["batches_run"],
+            s["errors"], s.get("ws_errors", 0), s["batches_run"],
             s["queue_depth"], overflow, spool_count,
             n_miss_active, stale_count, source_lag_count, closed_stale_count, max_age_h,
         )
@@ -2710,7 +3011,8 @@ def _status_reporter() -> None:
                 "",
                 "**Total**",
                 f"- Batches: {s['batches_run']} | Accepted: {s.get('accepted_bars', 0):,} | "
-                f"Fact rows: {s.get('fact_inserted', s['bars_inserted']):,} | Errors: {s['errors']}",
+                f"Fact rows: {s.get('fact_inserted', s['bars_inserted']):,} | "
+                f"DB Errors: {s['errors']} | WS Reconnects: {s.get('ws_errors', 0)}",
                 f"- DB queue: {s['queue_depth']} | RAM overflow: {overflow} | SQLite spool: {spool_count}",
                 "",
                 "**Freshness**",
@@ -2831,7 +3133,16 @@ def main() -> None:
     # auth state managed by _tv_auth module
 
     # Ưu tiên: token cache > .env static > bootstrap
-    _cache_token = _tv_auth._load_token_cache().get("TV_AUTH_TOKEN", "")
+    _cache = _tv_auth._load_token_cache()
+    _cache_token = _cache.get("TV_AUTH_TOKEN", "")
+
+    # Restore cookie từ cache nếu TV_COOKIE trong .env rỗng
+    # (cookie được Playwright renewal cập nhật vào cache, nhưng .env không tự cập nhật)
+    _cached_cookie = _cache.get("TV_COOKIE", "")
+    if _cached_cookie and not _tv_auth._tv_cookie:
+        _tv_auth._tv_cookie = _cached_cookie
+        logger.info("[AUTH] Session cookie restored from cache (length=%d).", len(_cached_cookie))
+
     _has_valid_token = (
         (_cache_token and _cache_token != _tv_auth.GUEST_TOKEN)
         or (TV_AUTH_TOKEN and TV_AUTH_TOKEN != _tv_auth.GUEST_TOKEN)
@@ -2845,6 +3156,9 @@ def main() -> None:
         _tv_auth._auth_token, token_source = _resolve_auth_token()
 
     print(f"  Login source    : {token_source}")
+    if not _run_auth_preflight(token_source):
+        print("  ERROR: Auth preflight failed. See ws_live.log for details.")
+        sys.exit(1)
     if _tv_auth._auth_token == _tv_auth.GUEST_TOKEN:
         print("  WARNING: Guest mode is active - data may be limited.")
         _tg_alert("WARNING", "[WARN] Started in guest mode. Data may have fewer bars. Check TradingView login.")
@@ -2982,9 +3296,9 @@ def main() -> None:
 
     # Ghi log tổng kết
     logger.info(
-        "Stopped cleanly. accepted=%d  fact_inserted=%d  staging_rows=%d  errors=%d  events=%d  batches=%d",
+        "Stopped cleanly. accepted=%d  fact_inserted=%d  staging_rows=%d  errors=%d  ws_errors=%d  events=%d  batches=%d",
         s.get("accepted_bars", 0), s.get("fact_inserted", s["bars_inserted"]),
-        s.get("staging_rows", 0), s["errors"], s["events"], s["batches_run"],
+        s.get("staging_rows", 0), s["errors"], s.get("ws_errors", 0), s["events"], s["batches_run"],
     )
 
     # Gửi thông báo tắt lên Discord

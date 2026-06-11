@@ -6,27 +6,29 @@ from types import SimpleNamespace
 
 import pytest
 
-from data_provider.tickdata_ctrader_ftmo.auth import build_authorization_url
-from data_provider.tickdata_ctrader_ftmo.cli import build_parser
-from data_provider.tickdata_ctrader_ftmo.history import (
+from data_provider.tick_data.auth import build_authorization_url
+from data_provider.tick_data.cli import build_parser
+from data_provider.tick_data.ticks import (
     MAX_TICK_REQUEST_MS,
+    TickRecord,
     decode_delta_ticks,
     iter_tick_windows,
-)
-from data_provider.tickdata_ctrader_ftmo.models import (
-    RemoteSymbol,
-    TargetSymbol,
-    TickRecord,
     price_from_raw,
 )
-from data_provider.tickdata_ctrader_ftmo.sdk import remote_symbol_from_proto
-from data_provider.tickdata_ctrader_ftmo.settings import load_settings
-from data_provider.tickdata_ctrader_ftmo.spool_sqlite import TickSpool
-from data_provider.tickdata_ctrader_ftmo.store_sql import qualified_tick_table, quote_ident
-from data_provider.tickdata_ctrader_ftmo.symbol_matcher import build_symbol_matches
-from data_provider.tickdata_ctrader_ftmo.token_store import (
+from data_provider.tick_data.symbols import RemoteSymbol, TargetSymbol, build_symbol_matches
+from data_provider.tick_data.runtime import load_settings, remote_symbol_from_proto
+from data_provider.tick_data.service_live import reconnect_delay_seconds
+from data_provider.tick_data.spool import TickBatcher, TickSpool
+from data_provider.tick_data.store_sql import (
+    MAX_STOP_REASON_CHARS,
+    qualified_tick_table,
+    quote_ident,
+    truncate_stop_reason,
+)
+from data_provider.tick_data.token_store import (
     load_token_cache,
     save_token_cache,
+    token_refresh_recommended,
     token_status,
     update_cached_account,
 )
@@ -62,6 +64,9 @@ def test_settings_uses_initial_11_symbol_universe_from_config():
     assert settings.env == "demo"
     assert settings.schema == "tick"
     assert settings.endpoint_label == "demo.ctraderapi.com:5035"
+    assert settings.response_timeout_seconds == 60
+    assert settings.heartbeat_log_seconds == 300
+    assert settings.discord_report_seconds == 3600
 
 
 def test_price_from_raw_uses_ctrader_scale_and_optional_digits():
@@ -118,6 +123,60 @@ def test_live_spot_record_keeps_bid_ask_and_timestamp():
     assert record.tick_time_utc == datetime.fromtimestamp(1700000000.123, tz=timezone.utc)
 
 
+def test_live_spot_updates_split_both_sides_for_history_idempotency():
+    target = _target()
+    remote = _remote()
+    timestamp_ms = 1700000000123
+    raw_bid = 400001234
+    raw_ask = 400001777
+    event = SimpleNamespace(
+        symbolId=remote.ctrader_symbol_id,
+        bid=raw_bid,
+        ask=raw_ask,
+        timestamp=timestamp_ms,
+    )
+
+    live_records = TickRecord.from_live_spot_updates(target, remote, event)
+    historical_bid = TickRecord.from_historical_tick(target, remote, "BID", timestamp_ms, raw_bid)
+    historical_ask = TickRecord.from_historical_tick(target, remote, "ASK", timestamp_ms, raw_ask)
+
+    assert [record.quote_type for record in live_records] == ["BID", "ASK"]
+    assert live_records[0].event_hash == historical_bid.event_hash
+    assert live_records[1].event_hash == historical_ask.event_hash
+    assert live_records[0].ask is None
+    assert live_records[1].bid is None
+
+
+def test_live_spot_updates_drop_zero_price_sides():
+    target = _target()
+    remote = _remote()
+    timestamp_ms = 1700000000123
+
+    ask_only = TickRecord.from_live_spot_updates(
+        target,
+        remote,
+        SimpleNamespace(symbolId=remote.ctrader_symbol_id, bid=0, ask=400001777, timestamp=timestamp_ms),
+    )
+    bid_only = TickRecord.from_live_spot_updates(
+        target,
+        remote,
+        SimpleNamespace(symbolId=remote.ctrader_symbol_id, bid=400001234, ask=0, timestamp=timestamp_ms),
+    )
+    no_records = TickRecord.from_live_spot_updates(
+        target,
+        remote,
+        SimpleNamespace(symbolId=remote.ctrader_symbol_id, bid=0, ask=0, timestamp=timestamp_ms),
+    )
+
+    assert [record.quote_type for record in ask_only] == ["ASK"]
+    assert ask_only[0].bid is None
+    assert ask_only[0].ask == Decimal("4000.01777")
+    assert [record.quote_type for record in bid_only] == ["BID"]
+    assert bid_only[0].bid == Decimal("4000.01234")
+    assert bid_only[0].ask is None
+    assert no_records == []
+
+
 def test_tick_windows_never_exceed_one_week_limit():
     start = 1700000000000
     end = start + (15 * 24 * 60 * 60 * 1000)
@@ -146,6 +205,26 @@ def test_decode_delta_ticks_newest_first():
     ]
     assert [tick.raw_price for tick in decoded] == [100000001, 100000002, 100000003]
     assert {tick.quote_type for tick in decoded} == {"ASK"}
+
+
+def test_historical_zero_tick_prices_are_rejected():
+    target = _target()
+    remote = _remote()
+
+    with pytest.raises(ValueError, match="invalid BID historical tick price"):
+        TickRecord.from_historical_tick(target, remote, "BID", 1700000000000, 0)
+
+    decoded = decode_delta_ticks(
+        [
+            SimpleNamespace(timestamp=1700000000000, tick=0),
+            SimpleNamespace(timestamp=250, tick=100000002),
+        ],
+        "BID",
+    )
+
+    assert len(decoded) == 1
+    assert decoded[0].timestamp_ms == 1699999999750
+    assert decoded[0].raw_price == 100000002
 
 
 def test_symbol_matcher_matches_aliases_but_marks_close_ties_ambiguous():
@@ -198,6 +277,16 @@ def test_sql_identifier_whitelist_blocks_unsafe_table_names():
         qualified_tick_table("tick", "GOLD", {"US30"})
 
 
+def test_ingest_stop_reason_is_truncated_to_sql_contract():
+    reason = "x" * 1000
+
+    truncated = truncate_stop_reason(reason)
+
+    assert truncate_stop_reason(None) is None
+    assert len(truncated) == MAX_STOP_REASON_CHARS
+    assert truncated.endswith("... [truncated]")
+
+
 def test_spool_is_durable_and_idempotent(tmp_path):
     spool = TickSpool(tmp_path / "spool.db")
     target = _target()
@@ -218,6 +307,40 @@ def test_spool_is_durable_and_idempotent(tmp_path):
     assert spool.count() == 0
 
 
+def test_tick_batcher_callbacks_after_insert_and_spool(tmp_path):
+    target = _target()
+    remote = _remote()
+    record = TickRecord.from_historical_tick(target, remote, "BID", 1700000000000, 400001234)
+    inserted_calls = []
+    spooled_calls = []
+
+    class FakeStore:
+        def __init__(self):
+            self.fail = False
+
+        def insert_ticks(self, records):
+            if self.fail:
+                raise RuntimeError("sql down")
+            return len(records)
+
+    store = FakeStore()
+    batcher = TickBatcher(
+        store=store,
+        spool=TickSpool(tmp_path / "spool.db"),
+        batch_size=1,
+        flush_seconds=999,
+        on_inserted=lambda records, inserted: inserted_calls.append((len(records), inserted)),
+        on_spooled=lambda records, spooled, exc: spooled_calls.append((len(records), spooled, str(exc))),
+    )
+
+    batcher.add(record)
+    assert inserted_calls == [(1, 1)]
+
+    store.fail = True
+    batcher.add(TickRecord.from_historical_tick(target, remote, "ASK", 1700000000001, 400001777))
+    assert spooled_calls == [(1, 1, "sql down")]
+
+
 def test_sql_contract_file_defines_tick_schema_and_per_symbol_tables():
     sql = (load_settings().spool_path.parents[2] / "sql" / "07_ctrader_ftmo_tick.sql").read_text(
         encoding="utf-8"
@@ -228,6 +351,7 @@ def test_sql_contract_file_defines_tick_schema_and_per_symbol_tables():
     assert "PipPosition          INT NULL" in sql
     assert "RowsInserted         BIGINT NULL" in sql
     assert "RowsSpooled          BIGINT NULL" in sql
+    assert "Status IN ('RUNNING','STOPPED','FAILED','DONE')" in sql
     for _symbol_id, symbol in EXPECTED_TICK_SYMBOLS:
         assert f"CREATE TABLE tick.{symbol}" in sql
 
@@ -251,6 +375,44 @@ def test_live_cli_supports_capped_smoke_mode():
 
     assert args.command == "live"
     assert args.smoke_seconds == 300
+
+
+def test_tick_cli_supports_ops_commands():
+    parser = build_parser()
+
+    assert parser.parse_args(["check", "--json"]).command == "check"
+    assert parser.parse_args(["spool-status", "--json"]).command == "spool-status"
+    backfill = parser.parse_args(
+        [
+            "backfill",
+            "--from",
+            "2026-06-01T00:00:00Z",
+            "--to",
+            "2026-06-02T00:00:00Z",
+            "--request-timeout",
+            "120",
+            "--symbols",
+            "US30",
+        ]
+    )
+    depth = parser.parse_args(
+        [
+            "history-depth",
+            "--max-days",
+            "20000",
+            "--request-timeout",
+            "120",
+            "--symbols",
+            "US30",
+            "GOLD",
+        ]
+    )
+    assert backfill.command == "backfill"
+    assert backfill.request_timeout == 120
+    assert depth.command == "history-depth"
+    assert depth.max_days == 20000
+    assert depth.request_timeout == 120
+    assert depth.symbols == ["US30", "GOLD"]
 
 
 def test_token_cache_saves_tokens_and_account_without_printing_secret(tmp_path):
@@ -284,3 +446,28 @@ def test_token_cache_saves_tokens_and_account_without_printing_secret(tmp_path):
     assert status["account_id"] == 123456789
     assert "access-secret" not in str(status)
     assert "client-secret" not in str(status)
+    assert status["seconds_until_expiry"] is not None
+    assert status["refresh_recommended"] is False
+
+
+def test_token_refresh_recommended_when_token_is_near_expiry(tmp_path):
+    path = tmp_path / "ctrader_tokens.json"
+    save_token_cache(
+        {
+            "accessToken": "access-secret",
+            "refreshToken": "refresh-secret",
+            "expiresIn": 30,
+        },
+        path=path,
+    )
+
+    cache = load_token_cache(path)
+
+    assert token_refresh_recommended(cache, safety_seconds=60) is True
+    assert token_status(path)["refresh_recommended"] is True
+
+
+def test_reconnect_delay_is_bounded_exponential_backoff():
+    assert reconnect_delay_seconds(1, 5, 300) == 5
+    assert reconnect_delay_seconds(2, 5, 300) == 10
+    assert reconnect_delay_seconds(8, 5, 300) == 300

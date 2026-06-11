@@ -13,7 +13,7 @@ Dự án này tạo một nhánh Data Provider mới, độc lập với pipelin
 - Tạo schema riêng tên ngắn là `tick`.
 - Dùng lại `SymbolID` hiện tại của SEN05 để dữ liệu tick sau này có thể đối chiếu với dữ liệu OHLCV.
 - Mỗi symbol có một bảng tick riêng: ví dụ `tick.US30`, `tick.GOLD`, `tick.BTCUSD`.
-- Python tick provider nằm riêng trong `data_provider/tickdata_ctrader_ftmo/`.
+- Python tick provider nằm riêng trong `data_provider/tick_data/`.
 - App wrapper nằm ở `data_provider/apps/ctrader_ftmo_tick.py`.
 - Hệ thống đã được kiểm thử offline, kiểm thử SQL local, và đã có smoke write vào `tick.IngestRun`.
 - Chưa thể chạy live từ cTrader vì cTrader Open API application hiện vẫn ở trạng thái `Submitted`, chưa `Active`.
@@ -94,7 +94,7 @@ Pipeline cũ vẫn dùng cho OHLCV:
 
 Pipeline mới dành riêng cho tick:
 
-`cTrader/FTMO -> data_provider/tickdata_ctrader_ftmo -> tick.*`
+`cTrader/FTMO -> data_provider/tick_data -> tick.*`
 
 Hai nhánh dùng chung database và `SymbolID`, nhưng không dùng chung bảng dữ liệu chính. Cách này giảm rủi ro làm hỏng hệ thống đang chạy.
 
@@ -194,25 +194,22 @@ Mỗi bảng có cùng cấu trúc. Một dòng là một tick đã chuẩn hóa
 
 Folder chính:
 
-`data_provider/tickdata_ctrader_ftmo/`
+`data_provider/tick_data/`
 
 Các file trong folder này chỉ phục vụ tick provider cTrader/FTMO, không trộn vào pipeline TradingView.
 
 | File | Chức năng |
 |---|---|
 | `__init__.py` | Đánh dấu package Python. |
-| `settings.py` | Đọc config, token cache, endpoint demo/live, danh sách symbol. |
-| `models.py` | Model dữ liệu: `TargetSymbol`, `RemoteSymbol`, `TickRecord`, scale giá, hash chống trùng. |
-| `symbol_matcher.py` | Match symbol SEN05 với symbol cTrader bằng alias và điểm số. |
-| `history.py` | Chia cửa sổ historical tick và decode delta tick từ API. |
-| `spool_sqlite.py` | SQLite spool để giữ tick nếu SQL write lỗi. |
+| `runtime.py` | Đọc config/token cache, endpoint demo/live, lazy-load SDK, helper auth/client. |
+| `symbols.py` | Model symbol và match symbol SEN05 với symbol cTrader bằng alias/điểm số. |
+| `ticks.py` | Model tick, scale giá, hash chống trùng, historical windows và delta decode. |
+| `spool.py` | SQLite spool, gom tick theo batch, flush SQL và drain spool. |
 | `store_sql.py` | Ghi SQL Server, start/finish ingest run, upsert symbol map, update ingest state. |
-| `batcher.py` | Gom tick theo batch, flush theo size/time, xử lý spool. |
-| `auth.py` | Tạo OAuth URL, exchange code, refresh token. |
-| `oauth_flow.py` | Local callback flow ở `http://localhost:8765/callback`. |
+| `auth.py` | Tạo OAuth URL, local callback, exchange code, refresh token. |
 | `token_store.py` | Lưu token cache local, trả trạng thái token mà không in secret. |
-| `sdk.py` | Wrapper nhỏ quanh official `ctrader-open-api` SDK. |
-| `service.py` | Orchestrate account-list, symbol-sync, live ingest, historical backfill. |
+| `service_jobs.py` | Orchestrate account-list, symbol-sync và historical backfill. |
+| `service_live.py` | Live ingest, reconnect, subscribe spot events và flush loop. |
 | `cli.py` | Command line interface cho operator/tester. |
 
 Wrapper app:
@@ -227,7 +224,7 @@ Wrapper này giúp chạy tick provider giống các app khác trong `data_provi
 |---|---|---|
 | `data_provider/sql/07_ctrader_ftmo_tick.sql` | Tạo mới | Tạo schema `tick`, metadata tables, tick tables, views. |
 | `data_provider/apps/ctrader_ftmo_tick.py` | Tạo mới | App entrypoint để chạy CLI tick provider. |
-| `data_provider/tickdata_ctrader_ftmo/` | Tạo mới | Package riêng cho cTrader/FTMO tick provider. |
+| `data_provider/tick_data/` | Tạo mới | Package riêng cho cTrader/FTMO tick provider. |
 | `tests/test_ctrader_ftmo_tickdata.py` | Tạo mới | Test offline cho tick provider. |
 | `docs/ctrader_ftmo_tick_data_provider_report.md` | Tạo mới/cập nhật | Báo cáo dự án cho tester/auditor. |
 
@@ -548,7 +545,7 @@ Khi muốn code thêm tính năng, hãy hỏi 5 câu:
 Prompt mẫu để làm việc tiếp với AI/coder:
 
 ```text
-Hãy đọc data_provider/tickdata_ctrader_ftmo và data_provider/sql/07_ctrader_ftmo_tick.sql.
+Hãy đọc data_provider/tick_data và data_provider/sql/07_ctrader_ftmo_tick.sql.
 Không đụng pipeline OHLCV cũ.
 Mục tiêu là thêm [tính năng].
 Phải giữ SymbolID hiện tại, schema tick, whitelist table name, EventHash idempotency,

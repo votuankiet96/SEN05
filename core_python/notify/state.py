@@ -26,6 +26,7 @@ Phụ thuộc ngoài:
 from __future__ import annotations
 
 import json
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -62,6 +63,9 @@ class SignalState:
         self.path = Path(path) if path else DEFAULT_STATE_PATH
         self.sent: dict[str, str] = {}  # key → ISO timestamp lúc gửi
         self.meta: dict[str, str] = {}
+        # Bảo vệ has()/add()/fingerprint khi Worker thread và main (warm-up) cùng
+        # truy cập state. _load() chạy 1 lần trong __init__ (đơn luồng) nên không khoá.
+        self._lock = threading.Lock()
         self._load()
 
     def _load(self) -> None:
@@ -138,7 +142,8 @@ class SignalState:
         Returns:
             True nếu key đã tồn tại trong state (tín hiệu đã gửi).
         """
-        return key in self.sent
+        with self._lock:
+            return key in self.sent
 
     def add(self, key: str) -> None:
         """
@@ -154,18 +159,21 @@ class SignalState:
             Sửa self.sent. Ghi file state.json (qua .tmp → rename).
             Tạo thư mục cha nếu chưa tồn tại.
         """
-        self.sent[key] = pd.Timestamp.now("UTC").isoformat()
-        self._write()
+        with self._lock:
+            self.sent[key] = pd.Timestamp.now("UTC").isoformat()
+            self._write()
 
     def get_scan_fingerprint(self) -> str | None:
         """Return the warm-up scan fingerprint stored with this state, if any."""
-        value = self.meta.get(SCAN_FINGERPRINT_KEY)
+        with self._lock:
+            value = self.meta.get(SCAN_FINGERPRINT_KEY)
         return value if value else None
 
     def set_scan_fingerprint(self, fingerprint: str) -> None:
         """Persist the scan fingerprint after a fully successful warm-up."""
-        self.meta[SCAN_FINGERPRINT_KEY] = str(fingerprint)
-        self._write()
+        with self._lock:
+            self.meta[SCAN_FINGERPRINT_KEY] = str(fingerprint)
+            self._write()
 
     def _write(self) -> None:
         """Persist current state atomically."""

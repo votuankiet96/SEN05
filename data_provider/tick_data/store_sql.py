@@ -1,4 +1,10 @@
-"""SQL Server persistence for cTrader FTMO ticks."""
+"""SQL Server persistence for the standalone cTrader/FTMO tick provider.
+
+The SQL target is the isolated ``tick`` schema. Dynamic table names are allowed
+only for the configured symbol universe and are always bracket-quoted, because
+market data ingestion must never be able to write into the OHLCV warehouse by
+accident.
+"""
 
 from __future__ import annotations
 
@@ -10,9 +16,76 @@ from collections import defaultdict
 from collections.abc import Callable, Iterable, Sequence
 from datetime import datetime, timezone
 
-from .models import RemoteSymbol, SymbolMatch, TargetSymbol, TickRecord
+from .symbols import RemoteSymbol, SymbolMatch, TargetSymbol
+from .ticks import TickRecord
 
 IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+VALID_INGEST_RUN_STATUSES = {"RUNNING", "STOPPED", "FAILED", "DONE"}
+MAX_STOP_REASON_CHARS = 400
+
+
+def truncate_stop_reason(note: str | None) -> str | None:
+    """Keep tick.IngestRun.StopReason within the SQL NVARCHAR(400) contract."""
+    if note is None:
+        return None
+    text = str(note)
+    if len(text) <= MAX_STOP_REASON_CHARS:
+        return text
+    suffix = "... [truncated]"
+    return text[: MAX_STOP_REASON_CHARS - len(suffix)] + suffix
+
+
+def update_ingest_state_after_insert(
+    store: "TickSqlStore",
+    matched: dict[str, tuple[TargetSymbol, RemoteSymbol]],
+    records: list[TickRecord],
+) -> None:
+    """Update tick.IngestState only after SQL insertion has succeeded."""
+    grouped: dict[str, dict[str, object]] = defaultdict(
+        lambda: {
+            "count": 0,
+            "latest": None,
+            "last_bid": None,
+            "last_bid_ts": -1,
+            "last_ask": None,
+            "last_ask_ts": -1,
+            "source_mode": "LIVE",
+        }
+    )
+    for record in records:
+        symbol = record.local_symbol.upper()
+        if symbol not in matched or record.is_technical_event:
+            continue
+        item = grouped[symbol]
+        item["count"] = int(item["count"]) + 1
+        item["source_mode"] = record.source_mode
+        latest = item["latest"]
+        if latest is None or record.source_timestamp_ms >= latest.source_timestamp_ms:
+            item["latest"] = record
+        if record.bid is not None and record.source_timestamp_ms >= int(item["last_bid_ts"]):
+            item["last_bid"] = record.bid
+            item["last_bid_ts"] = record.source_timestamp_ms
+        if record.ask is not None and record.source_timestamp_ms >= int(item["last_ask_ts"]):
+            item["last_ask"] = record.ask
+            item["last_ask_ts"] = record.source_timestamp_ms
+
+    for symbol, item in grouped.items():
+        latest = item["latest"]
+        if latest is None:
+            continue
+        target, remote = matched[symbol]
+        source_mode = str(item["source_mode"])
+        store.update_ingest_state(
+            target,
+            remote,
+            latest.tick_time_utc,
+            latest.source_timestamp_ms,
+            status="LIVE" if source_mode == "LIVE" else "SYNCED",
+            last_bid=item["last_bid"],
+            last_ask=item["last_ask"],
+            source_mode=source_mode,
+            ticks_inserted=int(item["count"]),
+        )
 
 INSERT_COLUMNS = (
     "SymbolID",
@@ -38,6 +111,7 @@ INSERT_COLUMNS = (
 
 
 def quote_ident(identifier: str) -> str:
+    """Quote a SQL Server identifier after a strict allow-list check."""
     if not IDENTIFIER_RE.match(identifier):
         raise ValueError(f"unsafe SQL identifier: {identifier!r}")
     return f"[{identifier}]"
@@ -61,7 +135,7 @@ def _default_connection_factory():
 
 
 class TickSqlStore:
-    """Write matched ticks into the per-symbol tick schema."""
+    """Write matched ticks into per-symbol tables under the SQL ``tick`` schema."""
 
     def __init__(
         self,
@@ -130,7 +204,7 @@ class TickSqlStore:
                     f"SEN05 cTrader FTMO Tick {mode.upper()}",
                     self.environment,
                     self.account_id,
-                    note,
+                    truncate_stop_reason(note),
                     socket.gethostname(),
                     os.getpid(),
                 ),
@@ -151,6 +225,9 @@ class TickSqlStore:
         rows_spooled: int = 0,
         note: str | None = None,
     ) -> None:
+        status = status.upper()
+        if status not in VALID_INGEST_RUN_STATUSES:
+            raise ValueError(f"invalid tick ingest run status: {status!r}")
         conn = self.connection_factory()
         cursor = conn.cursor()
         try:
@@ -165,10 +242,12 @@ class TickSqlStore:
                  WHERE IngestRunID = ?
                 """,
                 (
-                    status.upper(),
+                    status,
                     int(rows_inserted),
                     int(rows_spooled),
-                    note or f"rows_inserted={rows_inserted}; rows_spooled={rows_spooled}",
+                    truncate_stop_reason(
+                        note or f"rows_inserted={rows_inserted}; rows_spooled={rows_spooled}"
+                    ),
                     ingest_run_id,
                 ),
             )
@@ -291,8 +370,20 @@ class TickSqlStore:
         last_tick_time_utc: datetime,
         last_source_timestamp_ms: int,
         status: str,
+        last_bid: object | None = None,
+        last_ask: object | None = None,
         last_error: str | None = None,
+        source_mode: str = "LIVE",
+        ticks_inserted: int = 0,
     ) -> None:
+        source_mode = source_mode.upper()
+        if source_mode not in {"LIVE", "HISTORICAL"}:
+            raise ValueError(f"invalid tick source_mode for ingest state: {source_mode!r}")
+        tick_time_column = (
+            "LastHistoricalTickTimeUtc" if source_mode == "HISTORICAL" else "LastLiveTickTimeUtc"
+        )
+        tick_time_sql = quote_ident(tick_time_column)
+        tick_time_value = last_tick_time_utc.astimezone(timezone.utc).replace(tzinfo=None)
         conn = self.connection_factory()
         cursor = conn.cursor()
         try:
@@ -305,32 +396,41 @@ class TickSqlStore:
                 ON tgt.SymbolID = src.SymbolID
                 WHEN MATCHED THEN UPDATE SET
                     CTraderSymbolId = ?,
-                    LastLiveTickTimeUtc = ?,
+                    {tick_time_sql} = ?,
                     LastSourceTimestampMs = ?,
+                    LastBid = COALESCE(?, LastBid),
+                    LastAsk = COALESCE(?, LastAsk),
                     LastWriteAtUtc = SYSUTCDATETIME(),
                     LastHeartbeatAtUtc = SYSUTCDATETIME(),
+                    TotalTicksInserted = TotalTicksInserted + ?,
                     Status = ?,
                     LastError = ?,
                     UpdatedAtUtc = SYSUTCDATETIME()
                 WHEN NOT MATCHED THEN INSERT
-                    (SymbolID, CTraderSymbolId, LastLiveTickTimeUtc,
-                     LastSourceTimestampMs, LastWriteAtUtc, LastHeartbeatAtUtc,
-                     Status, LastError)
+                    (SymbolID, CTraderSymbolId, {tick_time_sql},
+                     LastSourceTimestampMs, LastBid, LastAsk, LastWriteAtUtc, LastHeartbeatAtUtc,
+                     TotalTicksInserted, Status, LastError)
                 VALUES
-                    (?, ?, ?, ?, SYSUTCDATETIME(), SYSUTCDATETIME(), ?, ?);
+                    (?, ?, ?, ?, ?, ?, SYSUTCDATETIME(), SYSUTCDATETIME(), ?, ?, ?);
                 """,
                 (
                     target.symbol_id,
                     remote.ctrader_symbol_id,
                     remote.ctrader_symbol_id,
-                    last_tick_time_utc.astimezone(timezone.utc).replace(tzinfo=None),
+                    tick_time_value,
                     int(last_source_timestamp_ms),
+                    last_bid,
+                    last_ask,
+                    int(ticks_inserted),
                     status,
                     last_error,
                     target.symbol_id,
                     remote.ctrader_symbol_id,
-                    last_tick_time_utc.astimezone(timezone.utc).replace(tzinfo=None),
+                    tick_time_value,
                     int(last_source_timestamp_ms),
+                    last_bid,
+                    last_ask,
+                    int(ticks_inserted),
                     status,
                     last_error,
                 ),

@@ -120,8 +120,34 @@ BEGIN
         HostName             NVARCHAR(128) NULL,
         ProcessID            INT NULL,
         CONSTRAINT PK_tick_IngestRun PRIMARY KEY CLUSTERED (IngestRunID),
-        CONSTRAINT CK_tick_IngestRun_Status CHECK (Status IN ('RUNNING','STOPPED','FAILED'))
+        CONSTRAINT CK_tick_IngestRun_Status CHECK (Status IN ('RUNNING','STOPPED','FAILED','DONE'))
     );
+END
+GO
+
+/* Existing installations created before historical backfill used DONE need the
+   same status contract as fresh installs. */
+IF OBJECT_ID('tick.IngestRun', 'U') IS NOT NULL
+   AND EXISTS (
+        SELECT 1 FROM sys.check_constraints
+        WHERE parent_object_id = OBJECT_ID('tick.IngestRun')
+          AND name = 'CK_tick_IngestRun_Status'
+          AND definition NOT LIKE '%DONE%'
+   )
+BEGIN
+    ALTER TABLE tick.IngestRun DROP CONSTRAINT CK_tick_IngestRun_Status;
+END
+GO
+
+IF OBJECT_ID('tick.IngestRun', 'U') IS NOT NULL
+   AND NOT EXISTS (
+        SELECT 1 FROM sys.check_constraints
+        WHERE parent_object_id = OBJECT_ID('tick.IngestRun')
+          AND name = 'CK_tick_IngestRun_Status'
+   )
+BEGIN
+    ALTER TABLE tick.IngestRun WITH CHECK ADD CONSTRAINT CK_tick_IngestRun_Status
+        CHECK (Status IN ('RUNNING','STOPPED','FAILED','DONE'));
 END
 GO
 

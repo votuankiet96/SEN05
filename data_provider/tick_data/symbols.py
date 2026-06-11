@@ -1,10 +1,10 @@
-"""Symbol matching between SEN05 symbols and account-scoped cTrader symbols."""
+"""Symbol models and matching for account-scoped cTrader symbols."""
 
 from __future__ import annotations
 
 import re
-
-from .models import RemoteSymbol, SymbolMatch, TargetSymbol
+from dataclasses import dataclass
+from typing import Any
 
 NORMALIZE_RE = re.compile(r"[^A-Z0-9]+")
 
@@ -13,7 +13,7 @@ LOCAL_ALIASES: dict[str, tuple[str, ...]] = {
     "DE40": ("DE40", "GER40", "DAX40", "DAX", "GERMANY40"),
     "HK50": ("HK50", "HSI", "HONGKONG50"),
     "J225": ("J225", "JP225", "JPN225", "NI225", "NIKKEI225"),
-    "SP35": ("SP35", "ES35", "IBEX35", "SPAIN35"),
+    "SP35": ("SP35", "ES35", "IBEX35", "SPAIN35", "SPN35"),
     "UK100": ("UK100", "FTSE100", "UKX"),
     "US500": ("US500", "SPX500", "SP500", "USSPX500"),
     "US100": ("US100", "NAS100", "NDX", "USTECH100"),
@@ -23,11 +23,60 @@ LOCAL_ALIASES: dict[str, tuple[str, ...]] = {
 }
 
 
+@dataclass(frozen=True)
+class TargetSymbol:
+    """One SEN05 symbol targeted for tick ingestion."""
+
+    symbol_id: int
+    local_symbol: str
+    asset_type: str
+    table: str
+
+    @property
+    def table_name(self) -> str:
+        if "." in self.table:
+            return self.table.rsplit(".", 1)[1]
+        return self.local_symbol
+
+
+@dataclass(frozen=True)
+class RemoteSymbol:
+    """cTrader symbol metadata discovered from a specific account."""
+
+    ctrader_symbol_id: int
+    symbol_name: str
+    digits: int | None = None
+    description: str | None = None
+    enabled: bool | None = None
+    base_asset_id: int | None = None
+    quote_asset_id: int | None = None
+    pip_position: int | None = None
+    raw: dict[str, Any] | None = None
+
+
+@dataclass(frozen=True)
+class SymbolMatch:
+    """Match decision between a local symbol and an account-scoped cTrader symbol."""
+
+    target: TargetSymbol
+    remote: RemoteSymbol | None
+    score: int
+    status: str
+    reason: str
+    alternatives: tuple[RemoteSymbol, ...] = ()
+
+    @property
+    def is_usable(self) -> bool:
+        return self.status == "MATCHED" and self.remote is not None
+
+
 def normalize_symbol_name(value: str | None) -> str:
+    """Normalize broker/display symbols for conservative text matching."""
     return NORMALIZE_RE.sub("", str(value or "").upper())
 
 
 def aliases_for(local_symbol: str) -> tuple[str, ...]:
+    """Return known cTrader/FTMO naming variants for one SEN05 symbol."""
     local_symbol = local_symbol.upper()
     return LOCAL_ALIASES.get(local_symbol, (local_symbol,))
 
@@ -62,6 +111,7 @@ def best_matches_for_target(
     min_score: int = 80,
     ambiguity_margin: int = 5,
 ) -> SymbolMatch:
+    """Pick the best remote symbol or mark the mapping as ambiguous/unsafe."""
     ranked = sorted(
         ((score_remote_symbol(target, remote), remote) for remote in remotes),
         key=lambda item: item[0][0],
@@ -107,6 +157,7 @@ def build_symbol_matches(
     min_score: int = 80,
     ambiguity_margin: int = 5,
 ) -> list[SymbolMatch]:
+    """Build match decisions for the full configured tick universe."""
     return [
         best_matches_for_target(
             target,

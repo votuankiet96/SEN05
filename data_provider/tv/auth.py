@@ -84,6 +84,7 @@ import re
 import ssl
 import threading
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 import requests
@@ -96,7 +97,10 @@ _PROJ = Path(__file__).resolve().parents[2]
 if str(_PROJ) not in sys.path:
     sys.path.insert(0, str(_PROJ))
 
-from config import TV_AUTH_TOKEN, TV_COOKIE, TV_PASSWORD, TV_USERNAME  # noqa: E402
+from config import (  # noqa: E402
+    TV_AUTH_TOKEN, TV_COOKIE, TV_PASSWORD, TV_USERNAME,
+    TV_2FA_SECRET, TV_CAPTCHA_API_KEY, TV_CAPTCHA_SERVICE,
+)
 from data_provider.common.notifications import tg_alert as _tg_alert  # noqa: E402
 from data_provider.paths import TV_TOKEN_CACHE  # noqa: E402
 
@@ -118,6 +122,14 @@ HTTP_MAX_RETRIES    = 4
 HTTP_BASE_DELAY_SEC = 2.0
 HTTP_MAX_DELAY_SEC  = 120.0
 STARTUP_MIN_TOKEN_TTL_SEC = 10 * 60
+TOKEN_PROACTIVE_REFRESH_SEC = int(os.environ.get("TV_TOKEN_PROACTIVE_REFRESH_SEC", "3600"))
+AUTH_REFRESH_COOLDOWN_SEC = int(os.environ.get("TV_AUTH_REFRESH_COOLDOWN_SEC", "900"))
+AUTH_TRANSIENT_COOLDOWN_SEC = int(os.environ.get("TV_AUTH_TRANSIENT_COOLDOWN_SEC", "300"))
+
+# Cookie lifecycle intervals
+COOKIE_CHECK_INTERVAL_SEC        = 2 * 3600        # probe every 2h
+COOKIE_RENEWAL_INTERVAL_SEC      = 3 * 24 * 3600   # force-renew every 3 days
+COOKIE_PROBE_RETRY_INTERVAL_SEC  = 30 * 60         # retry after 30min on probe fail
 
 # =============================================================================
 # GLOBAL AUTH STATE
@@ -134,6 +146,25 @@ _tv_cookie: str = TV_COOKIE
 
 # Đường dẫn token cache (lưu runtime credentials tách khỏi .env)
 _TOKEN_CACHE = TV_TOKEN_CACHE
+
+# Cookie lifecycle state (updated by _ensure_cookie_fresh)
+_last_cookie_check_ts: float    = 0.0
+_last_cookie_renewal_ts: float  = 0.0
+_cookie_probe_fail_streak: int  = 0
+_cookie_renewal_fail_streak: int = 0
+_cookie_lock = threading.Lock()
+_auth_cooldown_lock = threading.Lock()
+_auth_refresh_cooldown_until: float = 0.0
+_auth_refresh_cooldown_reason: str = ""
+
+
+@dataclass(frozen=True)
+class _CookieProbeResult:
+    status: str
+    token: str = GUEST_TOKEN
+    status_code: int | None = None
+    retry_after_sec: float | None = None
+    reason: str = ""
 
 
 # =============================================================================
@@ -181,6 +212,15 @@ def bootstrap(lg: logging.Logger | None = None) -> tuple[str, str]:
     Trả về (token, tên_phương_thức).
     """
     return _bootstrap_credentials(lg)
+
+
+def ensure_cookie_fresh(lg: logging.Logger | None = None) -> None:
+    """Chủ động probe và gia hạn cookie TradingView nếu cần.
+
+    Gọi trước mỗi batch để phát hiện cookie hết hạn trước khi token cũng hết.
+    Non-blocking: bỏ qua nếu renewal đang chạy ở thread khác.
+    """
+    _ensure_cookie_fresh_ttl_aware(lg)
 
 
 # =============================================================================
@@ -348,6 +388,51 @@ def _http_request_with_retry(
     raise last_exc
 
 
+def _retry_after_seconds(headers, default_sec: float) -> float:
+    raw = ""
+    try:
+        raw = headers.get("Retry-After", "") if headers else ""
+    except Exception:
+        raw = ""
+    try:
+        return max(1.0, float(raw))
+    except (TypeError, ValueError):
+        return max(1.0, float(default_sec))
+
+
+def _set_auth_cooldown(seconds: float, reason: str, lg: logging.Logger | None = None) -> None:
+    global _auth_refresh_cooldown_until, _auth_refresh_cooldown_reason
+    if seconds <= 0:
+        return
+    log = lg or _logger
+    until = time.time() + float(seconds)
+    with _auth_cooldown_lock:
+        if until <= _auth_refresh_cooldown_until + 5:
+            return
+        _auth_refresh_cooldown_until = until
+        _auth_refresh_cooldown_reason = reason
+    log.warning("[AUTH] Auth refresh cooldown active for %.0fs (%s).", seconds, reason)
+
+
+def _auth_cooldown_remaining() -> tuple[float, str]:
+    with _auth_cooldown_lock:
+        return max(0.0, _auth_refresh_cooldown_until - time.time()), _auth_refresh_cooldown_reason
+
+
+def _auth_cooldown_blocks_refresh(lg: logging.Logger | None = None, *, context: str = "auth") -> bool:
+    remaining, reason = _auth_cooldown_remaining()
+    if remaining <= 0:
+        return False
+    log = lg or _logger
+    log.warning(
+        "[AUTH] Skipping %s refresh for %.0fs due to cooldown (%s).",
+        context,
+        remaining,
+        reason or "rate/transient protection",
+    )
+    return True
+
+
 def _fetch_auth_token_from_credentials(username: str, password: str) -> tuple[str, str]:
     """
     Đăng nhập TradingView bằng username/password để lấy auth token và cookie mới.
@@ -414,27 +499,30 @@ def _resolve_auth_token(lg: logging.Logger | None = None) -> tuple[str, str]:
             log.info("[AUTH] Using static TV_AUTH_TOKEN from .env.")
             return TV_AUTH_TOKEN, "static_token"
 
+    if _auth_cooldown_blocks_refresh(log, context="resolve"):
+        return GUEST_TOKEN, "cooldown"
+
     # LỚP 1.5: Refresh qua session cookie
     current_cookie = _tv_cookie or TV_COOKIE
     if current_cookie:
-        token = _refresh_token_via_cookie(current_cookie)
+        token = _refresh_token_via_cookie(current_cookie, log)
         if token != GUEST_TOKEN:
-            _save_credentials_to_env(token, current_cookie)
-            return token, "session_refresh"
+            if _save_credentials_to_env(token, current_cookie):
+                return token, "session_refresh"
 
     # LỚP 2: username/password - lấy token + cookie mới từ response HTTP POST
     if TV_USERNAME and TV_PASSWORD:
         token, new_cookie = _fetch_auth_token_from_credentials(TV_USERNAME, TV_PASSWORD)
         if token != GUEST_TOKEN:
-            _save_credentials_to_env(token, new_cookie or current_cookie)
-            return token, "username/password"
+            if _save_credentials_to_env(token, new_cookie or current_cookie):
+                return token, "username/password"
 
     # LỚP 2.5: Headless Chromium với cookie cũ
     if current_cookie:
         token, new_cookie = _headless_refresh(current_cookie)
         if token != GUEST_TOKEN:
-            _save_credentials_to_env(token, new_cookie or current_cookie)
-            return token, "headless_chromium"
+            if _save_credentials_to_env(token, new_cookie or current_cookie):
+                return token, "headless_chromium"
 
     # LỚP 2.6: Headless Chromium đăng nhập từ đầu (không cần cookie cũ)
     # Dùng khi cookie đã hết hạn hoàn toàn - lấy token + cookie hoàn toàn mới
@@ -442,8 +530,8 @@ def _resolve_auth_token(lg: logging.Logger | None = None) -> tuple[str, str]:
         log.info("[AUTH] Cookie expired - trying headless fresh login...")
         token, new_cookie = _headless_login_fresh(TV_USERNAME, TV_PASSWORD)
         if token != GUEST_TOKEN:
-            _save_credentials_to_env(token, new_cookie)
-            return token, "headless_fresh_login"
+            if _save_credentials_to_env(token, new_cookie):
+                return token, "headless_fresh_login"
 
     # LỚP 3: Guest
     log.warning("[AUTH] Falling back to guest token - Premium data may be unavailable.")
@@ -462,7 +550,7 @@ def _renew_auth_token(lg: logging.Logger | None = None) -> None:
         if _auth_token != GUEST_TOKEN:
             return  # Thread khác đã gia hạn xong
 
-        log.warning("[AUTH] All bootstrap methods failed.")
+        log.warning("[AUTH] Token refresh required - bootstrapping credentials.")
         _tg_alert("WARNING", "TradingView token expired - renewing automatically...")
 
         new_token, source = _bootstrap_credentials(log)
@@ -487,11 +575,41 @@ def _jwt_expires_in(token: str) -> float:
     import base64 as _b64
     try:
         part = token.split(".")[1]
-        part += "=" * (4 - len(part) % 4)
-        payload = json.loads(_b64.b64decode(part).decode())
+        part += "=" * (-len(part) % 4)
+        payload = json.loads(_b64.urlsafe_b64decode(part).decode())
         return float(payload["exp"]) - time.time()
     except Exception:
         return -1.0
+
+
+def _is_refreshed_token_usable(
+    token: str,
+    source: str,
+    log: logging.Logger,
+    *,
+    min_remaining_sec: int = 60,
+) -> bool:
+    if not token or token == GUEST_TOKEN:
+        return False
+    remaining = _jwt_expires_in(token)
+    if remaining == -1.0:
+        log.warning("[AUTH] Rejected %s token because JWT expiry could not be decoded.", source)
+        return False
+    if remaining <= min_remaining_sec:
+        log.warning(
+            "[AUTH] Rejected %s token because it expires too soon (%.0fs remaining).",
+            source,
+            remaining,
+        )
+        return False
+    return True
+
+
+def _token_needs_proactive_refresh(token: str, *, threshold_sec: int = TOKEN_PROACTIVE_REFRESH_SEC) -> bool:
+    if not token or token == GUEST_TOKEN:
+        return True
+    remaining = _jwt_expires_in(token)
+    return remaining == -1.0 or remaining < threshold_sec
 
 
 def _is_token_reusable_for_startup(
@@ -535,7 +653,7 @@ def _check_and_maybe_refresh_token(lg: logging.Logger | None = None) -> None:
     need_refresh = False
     with _auth_lock:
         remaining = _jwt_expires_in(_auth_token)
-        if 0 < remaining < 600:
+        if remaining != -1.0 and remaining < TOKEN_PROACTIVE_REFRESH_SEC:
             log.info("[AUTH] Token expiring in %.0fs - proactive refresh.", remaining)
             _auth_token = GUEST_TOKEN
             need_refresh = True
@@ -543,14 +661,10 @@ def _check_and_maybe_refresh_token(lg: logging.Logger | None = None) -> None:
         _renew_auth_token(log)
 
 
-def _refresh_token_via_cookie(cookie_str: str) -> str:
-    """
-    Lớp 1.5 - Làm mới auth_token bằng HTTP GET homepage TradingView.
-    TradingView nhúng auth_token vào HTML khi user đã đăng nhập với sessionid cookie.
-    Trả về token mới, hoặc GUEST_TOKEN nếu thất bại.
-    """
+def _probe_cookie_session(cookie_str: str, lg: logging.Logger | None = None) -> _CookieProbeResult:
+    log = lg or _logger
     if not cookie_str:
-        return GUEST_TOKEN
+        return _CookieProbeResult("missing", reason="cookie is empty")
     try:
         resp = _http_request_with_retry(
             "GET",
@@ -565,18 +679,93 @@ def _refresh_token_via_cookie(cookie_str: str) -> str:
             timeout=20,
             allow_redirects=True,
         )
+        if resp.status_code == 429:
+            return _CookieProbeResult(
+                "rate_limited",
+                status_code=429,
+                retry_after_sec=_retry_after_seconds(resp.headers, AUTH_REFRESH_COOLDOWN_SEC),
+                reason="HTTP 429",
+            )
+        if resp.status_code >= 500:
+            return _CookieProbeResult("transient", status_code=resp.status_code, reason="HTTP 5xx")
+        if resp.status_code in (401, 403) or "sign-in" in resp.url:
+            log.warning(
+                "[AUTH] Cookie probe: session expired - redirected to sign-in (status=%d).",
+                resp.status_code,
+            )
+            return _CookieProbeResult("expired", status_code=resp.status_code, reason="sign-in redirect")
         m = re.search(r'"auth_token"\s*:\s*"(eyJ[A-Za-z0-9._-]+)"', resp.text)
         if m:
             token = m.group(1)
-            _logger.info("[AUTH] Token refreshed via session cookie (HTTP GET).")
-            return token
-        if "sign-in" in resp.url or resp.status_code in (401, 403):
-            _logger.warning("[AUTH] Session cookie expired (redirect to sign-in).")
-        else:
-            _logger.warning("[AUTH] Cookie valid but auth_token not found in page HTML.")
+            log.info("[AUTH] Token refreshed via session cookie (HTTP GET).")
+            return _CookieProbeResult("ok", token=token, status_code=resp.status_code)
+        log.info(
+            "[AUTH] Cookie probe inconclusive: HTTP %d but auth_token was not found in HTML "
+            "(TradingView may use CSR rendering).",
+            resp.status_code,
+        )
+        return _CookieProbeResult("inconclusive", status_code=resp.status_code, reason="token not in HTML")
+    except requests.HTTPError as exc:
+        resp = getattr(exc, "response", None)
+        status = getattr(resp, "status_code", None)
+        headers = getattr(resp, "headers", {}) if resp is not None else {}
+        if status == 429:
+            return _CookieProbeResult(
+                "rate_limited",
+                status_code=status,
+                retry_after_sec=_retry_after_seconds(headers, AUTH_REFRESH_COOLDOWN_SEC),
+                reason="HTTP 429",
+            )
+        if status in (401, 403):
+            log.warning("[AUTH] Cookie probe: session expired (status=%s).", status)
+            return _CookieProbeResult("expired", status_code=status, reason="auth rejected")
+        if status and status >= 500:
+            return _CookieProbeResult("transient", status_code=status, reason="HTTP 5xx")
+        log.warning("[AUTH] Cookie probe: HTTP request failed - %s", exc)
+        return _CookieProbeResult("transient", status_code=status, reason=str(exc))
+    except (requests.ConnectionError, requests.Timeout) as exc:
+        log.warning("[AUTH] Cookie probe: network request failed - %s", exc)
+        return _CookieProbeResult("transient", reason=type(exc).__name__)
     except Exception as exc:
-        _logger.warning("[AUTH] Cookie refresh via HTTP failed: %s", exc)
+        log.warning("[AUTH] Cookie probe: HTTP request failed - %s", exc)
+        return _CookieProbeResult("transient", reason=str(exc))
+
+
+def _refresh_token_via_cookie(cookie_str: str, lg: logging.Logger | None = None) -> str:
+    """
+    Lớp 1.5 - Làm mới auth_token bằng HTTP GET homepage TradingView.
+    TradingView nhúng auth_token vào HTML khi user đã đăng nhập với sessionid cookie.
+    Trả về token mới, hoặc GUEST_TOKEN nếu thất bại.
+
+    Nhận lg để log vào ws_live.log (thay vì _logger nội bộ bị mất).
+    KHÔNG log cookie/token value — chỉ log reason thất bại.
+    """
+    log = lg or _logger
+    result = _probe_cookie_session(cookie_str, log)
+    if result.status == "ok" and _is_refreshed_token_usable(result.token, "session cookie", log):
+        return result.token
+    if result.status == "rate_limited":
+        _set_auth_cooldown(
+            result.retry_after_sec or AUTH_REFRESH_COOLDOWN_SEC,
+            "TradingView HTTP 429 during cookie probe",
+            log,
+        )
+    elif result.status == "transient":
+        _set_auth_cooldown(AUTH_TRANSIENT_COOLDOWN_SEC, "TradingView transient auth probe failure", log)
     return GUEST_TOKEN
+    """
+            log.warning("[AUTH] Cookie probe: session expired — redirected to sign-in (status=%d).",
+                        resp.status_code)
+        else:
+            log.warning(
+                "[AUTH] Cookie probe: HTTP %d — auth_token not found in HTML "
+                "(TradingView may use CSR rendering; headless renewal required).",
+                resp.status_code,
+            )
+    except Exception as exc:
+        log.warning("[AUTH] Cookie probe: HTTP request failed — %s", exc)
+    return GUEST_TOKEN
+    """
 
 
 def _headless_refresh(cookie_str: str) -> tuple[str, str]:
@@ -628,6 +817,7 @@ def _headless_refresh(cookie_str: str) -> tuple[str, str]:
                 ctx.add_cookies(_parse_cookie_list(cookie_str))
 
             page = ctx.new_page()
+            _apply_playwright_stealth(page)
             page.goto("https://www.tradingview.com/", wait_until="networkidle", timeout=45_000)
 
             token: str = page.evaluate(
@@ -699,6 +889,7 @@ def _headless_login_fresh(username: str, password: str) -> tuple[str, str]:
                 locale="en-US",
             )
             page = ctx.new_page()
+            _apply_playwright_stealth(page)
 
             # Mở trang đăng nhập TradingView
             page.goto("https://www.tradingview.com/signin/", wait_until="domcontentloaded", timeout=45_000)
@@ -726,6 +917,72 @@ def _headless_login_fresh(username: str, password: str) -> tuple[str, str]:
                 page.click('button[type="submit"]')
             except Exception:
                 page.keyboard.press("Enter")
+
+            # Chờ 2 giây để CAPTCHA hoặc 2FA có thể hiện ra
+            try:
+                page.wait_for_timeout(2_000)
+            except Exception:
+                pass
+
+            # --- CAPTCHA auto-solve (chỉ khi TV_CAPTCHA_API_KEY được cấu hình) ---
+            try:
+                sitekey: str = page.evaluate(
+                    """() => {
+                        const el = document.querySelector('[data-sitekey]');
+                        return el ? el.getAttribute('data-sitekey') : null;
+                    }"""
+                ) or ""
+                if sitekey:
+                    captcha_token = _solve_captcha_hcaptcha(sitekey, "https://www.tradingview.com/signin/")
+                    if captcha_token:
+                        _logger.info("[AUTH] hCaptcha detected — injecting solution from %s.",
+                                     TV_CAPTCHA_SERVICE or "capsolver")
+                        page.evaluate(
+                            """(token) => {
+                                const ta = document.querySelector('textarea[name="h-captcha-response"]');
+                                if (ta) ta.value = token;
+                                const ta2 = document.querySelector('textarea[name="g-recaptcha-response"]');
+                                if (ta2) ta2.value = token;
+                                const form = document.querySelector('form');
+                                if (form) form.submit();
+                            }""",
+                            captcha_token,
+                        )
+                        try:
+                            page.wait_for_load_state("networkidle", timeout=20_000)
+                        except Exception:
+                            pass
+                    elif TV_CAPTCHA_API_KEY:
+                        _logger.warning("[AUTH] hCaptcha detected but solving failed — login may not complete.")
+            except Exception:
+                pass  # No CAPTCHA on this attempt
+
+            # --- 2FA auto-fill (chỉ khi TV_2FA_SECRET được cấu hình) ---
+            try:
+                totp_code = _get_totp_code()
+                if totp_code:
+                    for sel_2fa in [
+                        'input[name="code"]',
+                        'input[inputmode="numeric"]',
+                        'input[type="text"][autocomplete="one-time-code"]',
+                    ]:
+                        try:
+                            page.wait_for_selector(sel_2fa, timeout=5_000)
+                            page.fill(sel_2fa, totp_code)
+                            try:
+                                page.click('button[type="submit"]')
+                            except Exception:
+                                page.keyboard.press("Enter")
+                            try:
+                                page.wait_for_load_state("networkidle", timeout=20_000)
+                            except Exception:
+                                pass
+                            _logger.info("[AUTH] 2FA code auto-filled.")
+                            break
+                        except Exception:
+                            continue
+            except Exception:
+                pass  # No 2FA on this attempt
 
             # Chờ chuyển về trang chủ sau khi đăng nhập thành công
             try:
@@ -769,6 +1026,390 @@ def _headless_login_fresh(username: str, password: str) -> tuple[str, str]:
         return GUEST_TOKEN, ""
 
 
+# =============================================================================
+# COOKIE LIFECYCLE HELPERS
+# =============================================================================
+
+def _apply_playwright_stealth(page) -> None:
+    """Apply playwright-stealth if installed — reduces bot-detection fingerprinting."""
+    try:
+        from playwright_stealth import stealth_sync  # type: ignore
+        stealth_sync(page)
+    except ImportError:
+        pass
+
+
+def _get_totp_code() -> str | None:
+    """Generate TOTP code from TV_2FA_SECRET. Returns None if secret/pyotp not available."""
+    if not TV_2FA_SECRET:
+        return None
+    try:
+        import pyotp  # type: ignore
+        return pyotp.TOTP(TV_2FA_SECRET).now()
+    except ImportError:
+        _logger.warning("[AUTH] pyotp not installed — cannot auto-fill 2FA. Install: pip install pyotp")
+        return None
+    except Exception as exc:
+        _logger.warning("[AUTH] TOTP generation failed: %s", exc)
+        return None
+
+
+def _solve_via_capsolver(sitekey: str, page_url: str) -> str | None:
+    """Submit hCaptcha to CapSolver API and poll for solution token."""
+    try:
+        payload = {
+            "clientKey": TV_CAPTCHA_API_KEY,
+            "task": {
+                "type": "HCaptchaTaskProxyLess",
+                "websiteURL": page_url,
+                "websiteKey": sitekey,
+            },
+        }
+        r = requests.post("https://api.capsolver.com/createTask", json=payload, timeout=15)
+        task_id = r.json().get("taskId")
+        if not task_id:
+            _logger.warning("[AUTH] CapSolver: task creation failed — %s", r.text[:200])
+            return None
+        for _ in range(60):
+            time.sleep(1)
+            r2 = requests.post(
+                "https://api.capsolver.com/getTaskResult",
+                json={"clientKey": TV_CAPTCHA_API_KEY, "taskId": task_id},
+                timeout=15,
+            )
+            data = r2.json()
+            status = data.get("status")
+            if status == "ready":
+                return data.get("solution", {}).get("gRecaptchaResponse")
+            if status == "failed":
+                _logger.warning("[AUTH] CapSolver: task failed — %s", data)
+                return None
+        _logger.warning("[AUTH] CapSolver: timed out waiting for solution.")
+        return None
+    except Exception as exc:
+        _logger.warning("[AUTH] CapSolver error: %s", exc)
+        return None
+
+
+def _solve_via_2captcha(sitekey: str, page_url: str) -> str | None:
+    """Submit hCaptcha to 2Captcha API and poll for solution token."""
+    try:
+        r = requests.post(
+            "http://2captcha.com/in.php",
+            data={"key": TV_CAPTCHA_API_KEY, "method": "hcaptcha",
+                  "sitekey": sitekey, "pageurl": page_url, "json": 1},
+            timeout=15,
+        )
+        data = r.json()
+        if data.get("status") != 1:
+            _logger.warning("[AUTH] 2Captcha: submit failed — %s", data)
+            return None
+        task_id = data["request"]
+        for _ in range(30):
+            time.sleep(2)
+            r2 = requests.get(
+                "http://2captcha.com/res.php",
+                params={"key": TV_CAPTCHA_API_KEY, "action": "get",
+                        "id": task_id, "json": 1},
+                timeout=15,
+            )
+            data2 = r2.json()
+            if data2.get("status") == 1:
+                return data2["request"]
+            if data2.get("request") != "CAPCHA_NOT_READY":
+                _logger.warning("[AUTH] 2Captcha: error — %s", data2)
+                return None
+        _logger.warning("[AUTH] 2Captcha: timed out waiting for solution.")
+        return None
+    except Exception as exc:
+        _logger.warning("[AUTH] 2Captcha error: %s", exc)
+        return None
+
+
+def _solve_captcha_hcaptcha(sitekey: str, page_url: str) -> str | None:
+    """Dispatch to CapSolver or 2Captcha based on TV_CAPTCHA_SERVICE. Returns None if disabled."""
+    if not TV_CAPTCHA_API_KEY:
+        return None
+    service = (TV_CAPTCHA_SERVICE or "capsolver").lower()
+    if service == "2captcha":
+        return _solve_via_2captcha(sitekey, page_url)
+    return _solve_via_capsolver(sitekey, page_url)
+
+
+def _save_cookie_renewal_ts(ts: float) -> None:
+    """Persist last cookie renewal timestamp into the token cache file."""
+    try:
+        data: dict = {}
+        if _TOKEN_CACHE.exists():
+            data = json.loads(_TOKEN_CACHE.read_text(encoding="utf-8"))
+        data["last_cookie_renewal_ts"] = ts
+        _TOKEN_CACHE.parent.mkdir(parents=True, exist_ok=True)
+        _write_token_cache_atomic(data)
+    except Exception as exc:
+        _logger.warning("[AUTH] Could not persist cookie renewal timestamp: %s", exc)
+
+
+def _ensure_cookie_fresh_ttl_aware(lg: logging.Logger | None = None) -> None:
+    """TTL-aware cookie/token lifecycle used by ws_live public API."""
+    global _last_cookie_check_ts, _last_cookie_renewal_ts, \
+           _cookie_probe_fail_streak, _cookie_renewal_fail_streak, _tv_cookie, _auth_token
+
+    log = lg or _logger
+    now = time.time()
+
+    if _last_cookie_renewal_ts == 0.0:
+        try:
+            cached_ts = float(_load_token_cache().get("last_cookie_renewal_ts", 0.0))
+            if cached_ts > 0:
+                _last_cookie_renewal_ts = cached_ts
+        except Exception:
+            pass
+
+    check_interval = (
+        COOKIE_PROBE_RETRY_INTERVAL_SEC if _cookie_probe_fail_streak > 0
+        else COOKIE_CHECK_INTERVAL_SEC
+    )
+    if now - _last_cookie_check_ts < check_interval:
+        return
+    if _auth_cooldown_blocks_refresh(log, context="cookie lifecycle"):
+        return
+
+    _last_cookie_check_ts = now
+    current_cookie = _tv_cookie or TV_COOKIE
+    if not current_cookie:
+        return
+
+    with _auth_lock:
+        current_token = _auth_token
+    token_remaining = _jwt_expires_in(current_token)
+    token_is_guest = current_token == GUEST_TOKEN
+    token_near_expiry = (
+        token_is_guest
+        or token_remaining == -1.0
+        or (token_remaining != -1.0 and token_remaining < TOKEN_PROACTIVE_REFRESH_SEC)
+    )
+
+    probe = _probe_cookie_session(current_cookie, log)
+    if probe.status == "ok":
+        _cookie_probe_fail_streak = 0
+        if token_near_expiry and _save_credentials_to_env(probe.token, current_cookie):
+            log.info("[AUTH] Cookie probe refreshed token because ttl=%.0fs.", token_remaining)
+        return
+
+    if probe.status == "rate_limited":
+        _set_auth_cooldown(
+            probe.retry_after_sec or AUTH_REFRESH_COOLDOWN_SEC,
+            "TradingView HTTP 429 during cookie lifecycle",
+            log,
+        )
+        return
+
+    if probe.status == "transient":
+        _set_auth_cooldown(AUTH_TRANSIENT_COOLDOWN_SEC, "TradingView transient cookie probe failure", log)
+        return
+
+    has_renewal_ts = _last_cookie_renewal_ts > 0
+    age_since_renewal = now - _last_cookie_renewal_ts if has_renewal_ts else 0.0
+    force_by_age = has_renewal_ts and age_since_renewal >= COOKIE_RENEWAL_INTERVAL_SEC
+    need_renewal = False
+
+    if probe.status == "expired":
+        _cookie_probe_fail_streak += 1
+        need_renewal = True
+        log.warning("[AUTH] Cookie probe confirmed expired session (streak=%d).", _cookie_probe_fail_streak)
+    elif probe.status == "inconclusive":
+        _cookie_probe_fail_streak = 0
+        if token_near_expiry:
+            need_renewal = True
+            log.info(
+                "[AUTH] Cookie probe inconclusive and token ttl=%.0fs - headless renewal is allowed.",
+                token_remaining,
+            )
+        elif force_by_age:
+            need_renewal = True
+            log.info(
+                "[AUTH] Cookie probe inconclusive but renewal age is %.1fh - headless renewal is allowed.",
+                age_since_renewal / 3600,
+            )
+        else:
+            log.info(
+                "[AUTH] Cookie probe inconclusive; token still healthy for %.0fs, skipping headless renewal.",
+                token_remaining,
+            )
+    elif force_by_age:
+        need_renewal = True
+        log.info("[AUTH] Cookie renewal forced by age %.1fh.", age_since_renewal / 3600)
+    else:
+        log.debug("[AUTH] Cookie probe skipped (%s).", probe.status)
+
+    if not need_renewal:
+        return
+    if _auth_cooldown_blocks_refresh(log, context="cookie renewal"):
+        return
+    if not _cookie_lock.acquire(blocking=False):
+        log.debug("[AUTH] Cookie renewal already in progress - skipping.")
+        return
+
+    try:
+        log.info(
+            "[AUTH] Cookie renewal triggered (reason=%s, token_ttl=%.0fs, age=%.1fh).",
+            probe.status,
+            token_remaining,
+            age_since_renewal / 3600,
+        )
+        _tg_alert("WARNING", "[AUTH] TradingView cookie renewal started - fetching a fresh session.")
+
+        new_token, new_cookie = GUEST_TOKEN, ""
+        if current_cookie:
+            new_token, new_cookie = _headless_refresh(current_cookie)
+        if new_token == GUEST_TOKEN and TV_USERNAME and TV_PASSWORD:
+            new_token, new_cookie = _headless_login_fresh(TV_USERNAME, TV_PASSWORD)
+
+        token_updated = False
+        if new_token != GUEST_TOKEN:
+            token_updated = _save_credentials_to_env(new_token, new_cookie or current_cookie)
+        elif new_cookie:
+            _tv_cookie = new_cookie
+            _save_token_cache("", new_cookie)
+
+        if new_cookie:
+            _tv_cookie = new_cookie
+            _cookie_probe_fail_streak = 0
+            _cookie_renewal_fail_streak = 0
+            _last_cookie_renewal_ts = time.time()
+            _save_cookie_renewal_ts(_last_cookie_renewal_ts)
+            log.info(
+                "[AUTH] Cookie renewal succeeded (token=%s, cookie=updated).",
+                "updated" if token_updated else "unchanged",
+            )
+            _tg_alert("INFO", "[AUTH] TradingView cookie renewed successfully.")
+        else:
+            _cookie_renewal_fail_streak += 1
+            log.error("[AUTH] Cookie renewal FAILED (attempt %d).", _cookie_renewal_fail_streak)
+            _tg_alert(
+                "ERROR",
+                f"[AUTH] Cookie renewal FAILED (attempt {_cookie_renewal_fail_streak}).\n"
+                "System will retry at the next scheduled check.",
+            )
+    except Exception as exc:
+        log.error("[AUTH] Unexpected error during cookie renewal: %s", exc)
+    finally:
+        _cookie_lock.release()
+
+
+def _ensure_cookie_fresh(lg: logging.Logger | None = None) -> None:
+    """
+    Proactive cookie lifecycle management.
+
+    Phase 1 — probe (every 2h, or every 30min after a failed probe):
+        HTTP GET tradingview.com with current cookie.
+        If OK: reset fail streak, optionally refresh expiring token.
+        If fail: increment fail streak.
+
+    Phase 2 — renewal (triggered when probe fails twice OR cookie age >= 3 days):
+        headless_refresh (existing cookie) → headless_login_fresh (fresh login).
+        Non-blocking: skips if another renewal thread already holds _cookie_lock.
+    """
+    global _last_cookie_check_ts, _last_cookie_renewal_ts, \
+           _cookie_probe_fail_streak, _cookie_renewal_fail_streak, _tv_cookie, _auth_token
+
+    log = lg or _logger
+    now = time.time()
+
+    # Recover last_cookie_renewal_ts from cache after a restart
+    if _last_cookie_renewal_ts == 0.0:
+        try:
+            cached_ts = float(_load_token_cache().get("last_cookie_renewal_ts", 0.0))
+            if cached_ts > 0:
+                _last_cookie_renewal_ts = cached_ts
+        except Exception:
+            pass
+
+    # --- Phase 1: probe ---
+    check_interval = (
+        COOKIE_PROBE_RETRY_INTERVAL_SEC if _cookie_probe_fail_streak > 0
+        else COOKIE_CHECK_INTERVAL_SEC
+    )
+    if now - _last_cookie_check_ts < check_interval:
+        return
+
+    _last_cookie_check_ts = now
+    current_cookie = _tv_cookie or TV_COOKIE
+    if not current_cookie:
+        return
+
+    log.debug("[AUTH] Cookie probe running.")
+    probe_token = _refresh_token_via_cookie(current_cookie, log)
+    probe_ok = probe_token != GUEST_TOKEN
+
+    if probe_ok:
+        _cookie_probe_fail_streak = 0
+        log.debug("[AUTH] Cookie probe OK — session still alive.")
+        # Opportunistically refresh a nearly-expired token
+        with _auth_lock:
+            remaining = _jwt_expires_in(_auth_token)
+            if remaining < 600 or _auth_token == GUEST_TOKEN:
+                _auth_token = probe_token
+                log.info("[AUTH] Cookie probe opportunistically refreshed expiring token.")
+    else:
+        _cookie_probe_fail_streak += 1
+        log.warning("[AUTH] Cookie probe FAILED (streak=%d).", _cookie_probe_fail_streak)
+
+    # --- Phase 2: renewal decision ---
+    has_renewal_ts = _last_cookie_renewal_ts > 0
+    age_since_renewal = now - _last_cookie_renewal_ts if has_renewal_ts else 0.0
+    need_renewal = (
+        _cookie_probe_fail_streak >= 2
+        or (has_renewal_ts and age_since_renewal >= COOKIE_RENEWAL_INTERVAL_SEC)
+    )
+    if not need_renewal:
+        return
+
+    if not _cookie_lock.acquire(blocking=False):
+        log.debug("[AUTH] Cookie renewal already in progress — skipping.")
+        return
+
+    try:
+        log.info(
+            "[AUTH] Cookie renewal triggered (streak=%d, age=%.1fh).",
+            _cookie_probe_fail_streak, age_since_renewal / 3600,
+        )
+        _tg_alert("WARNING", "[AUTH] TradingView cookie renewal started — fetching a fresh session.")
+
+        new_token, new_cookie = GUEST_TOKEN, ""
+
+        # Attempt 1: headless with existing session
+        if current_cookie:
+            new_token, new_cookie = _headless_refresh(current_cookie)
+
+        # Attempt 2: full fresh login
+        if new_token == GUEST_TOKEN and TV_USERNAME and TV_PASSWORD:
+            new_token, new_cookie = _headless_login_fresh(TV_USERNAME, TV_PASSWORD)
+
+        if new_cookie:
+            carry_token = new_token if new_token != GUEST_TOKEN else _auth_token
+            _save_credentials_to_env(carry_token, new_cookie)
+            _tv_cookie = new_cookie
+            _cookie_probe_fail_streak = 0
+            _cookie_renewal_fail_streak = 0
+            _last_cookie_renewal_ts = time.time()
+            _save_cookie_renewal_ts(_last_cookie_renewal_ts)
+            log.info("[AUTH] Cookie renewal succeeded.")
+            _tg_alert("INFO", "[AUTH] TradingView cookie renewed successfully.")
+        else:
+            _cookie_renewal_fail_streak += 1
+            log.error("[AUTH] Cookie renewal FAILED (attempt %d).", _cookie_renewal_fail_streak)
+            _tg_alert(
+                "ERROR",
+                f"[AUTH] Cookie renewal FAILED (attempt {_cookie_renewal_fail_streak}).\n"
+                "System will retry at the next scheduled check.",
+            )
+    except Exception as exc:
+        log.error("[AUTH] Unexpected error during cookie renewal: %s", exc)
+    finally:
+        _cookie_lock.release()
+
+
 def _load_token_cache() -> dict:
     """Đọc runtime token/cookie từ file runtime/cache/tv_token_cache.json."""
     try:
@@ -779,33 +1420,64 @@ def _load_token_cache() -> dict:
     return {}
 
 
+def _write_token_cache_atomic(data: dict) -> None:
+    _TOKEN_CACHE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = _TOKEN_CACHE.with_name(
+        f"{_TOKEN_CACHE.name}.{os.getpid()}.{threading.get_ident()}.tmp"
+    )
+    try:
+        tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        os.replace(str(tmp), str(_TOKEN_CACHE))
+    finally:
+        try:
+            if tmp.exists():
+                tmp.unlink()
+        except Exception:
+            pass
+
+
 def _save_token_cache(token: str, cookie: str) -> None:
-    """Lưu runtime token/cookie vào runtime/cache/tv_token_cache.json."""
+    """Lưu runtime token/cookie vào runtime/cache/tv_token_cache.json.
+
+    Reads the existing file first so extra fields (e.g. last_cookie_renewal_ts)
+    written by _save_cookie_renewal_ts are not silently discarded.
+    """
     data: dict = {}
-    if token and token != GUEST_TOKEN:
+    try:
+        if _TOKEN_CACHE.exists():
+            data = json.loads(_TOKEN_CACHE.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    if token and token != GUEST_TOKEN and _is_refreshed_token_usable(token, "cache", _logger, min_remaining_sec=0):
         data["TV_AUTH_TOKEN"] = token
     if cookie:
         data["TV_COOKIE"] = cookie
     try:
-        _TOKEN_CACHE.parent.mkdir(parents=True, exist_ok=True)
-        _TOKEN_CACHE.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        _write_token_cache_atomic(data)
     except Exception as exc:
         _logger.warning("[AUTH] Could not write token cache: %s", exc)
 
 
-def _save_credentials_to_env(token: str, cookie: str) -> None:
+def _save_credentials_to_env(token: str, cookie: str) -> bool:
     """
     Cập nhật runtime credentials:
     - In-memory: _auth_token và _tv_cookie (tức thời)
     - File cache: runtime/cache/tv_token_cache.json (durable qua restart)
     """
     global _auth_token, _tv_cookie
-    if token and token != GUEST_TOKEN:
+    token_ok = _is_refreshed_token_usable(token, "runtime credential", _logger)
+    token_to_save = token if token_ok else ""
+    if token_ok:
         _auth_token = token
     if cookie:
         _tv_cookie = cookie
-    _save_token_cache(token, cookie)
-    _logger.info("[AUTH] Credentials saved to runtime token cache.")
+    _save_token_cache(token_to_save, cookie)
+    _logger.info(
+        "[AUTH] Credentials saved to runtime token cache (token=%s, cookie=%s).",
+        "updated" if token_ok else "unchanged",
+        "updated" if cookie else "unchanged",
+    )
+    return token_ok
 
 
 def _bootstrap_credentials(lg: logging.Logger | None = None) -> tuple[str, str]:
@@ -824,38 +1496,41 @@ def _bootstrap_credentials(lg: logging.Logger | None = None) -> tuple[str, str]:
     log = lg or _logger
     log.info("[AUTH] Bootstrapping credentials...")
 
+    if _auth_cooldown_blocks_refresh(log, context="bootstrap"):
+        return GUEST_TOKEN, "cooldown"
+
     current_cookie = _tv_cookie or TV_COOKIE
 
     # Bước 1: Refresh via HTTP GET
     if current_cookie:
-        token = _refresh_token_via_cookie(current_cookie)
+        token = _refresh_token_via_cookie(current_cookie, log)
         if token != GUEST_TOKEN:
-            _save_credentials_to_env(token, current_cookie)
-            return token, "session_refresh"
+            if _save_credentials_to_env(token, current_cookie):
+                return token, "session_refresh"
         log.info("[AUTH] HTTP cookie refresh failed - trying headless Chromium...")
 
     # Bước 2: Headless Chromium
     if current_cookie:
         token, new_cookie = _headless_refresh(current_cookie)
         if token != GUEST_TOKEN:
-            _save_credentials_to_env(token, new_cookie or current_cookie)
-            return token, "headless_chromium"
+            if _save_credentials_to_env(token, new_cookie or current_cookie):
+                return token, "headless_chromium"
 
     # Bước 3: username/password (HTTP POST) - lấy token + cookie mới
     if TV_USERNAME and TV_PASSWORD:
         log.info("[AUTH] Trying username/password login (HTTP POST)...")
         token, new_cookie = _fetch_auth_token_from_credentials(TV_USERNAME, TV_PASSWORD)
         if token != GUEST_TOKEN:
-            _save_credentials_to_env(token, new_cookie or current_cookie)
-            return token, "http_post_login"
+            if _save_credentials_to_env(token, new_cookie or current_cookie):
+                return token, "http_post_login"
 
     # Bước 4: Headless fresh login (không cần cookie cũ) - lấy token + cookie hoàn toàn mới
     if TV_USERNAME and TV_PASSWORD:
         log.info("[AUTH] Trying headless fresh login (Playwright full login)...")
         token, new_cookie = _headless_login_fresh(TV_USERNAME, TV_PASSWORD)
         if token != GUEST_TOKEN:
-            _save_credentials_to_env(token, new_cookie)
-            return token, "headless_fresh_login"
+            if _save_credentials_to_env(token, new_cookie):
+                return token, "headless_fresh_login"
 
     log.warning("[AUTH] All bootstrap methods failed.")
     return GUEST_TOKEN, "guest"

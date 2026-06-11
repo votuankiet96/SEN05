@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-import core_python.notify.signal_watcher as watcher
+import core_python.notify.detector as detector
 from core_python.strategies.knn_combo.config import normalize_params
 from core_python.strategies.knn_combo.levels import add_knn_combo_levels
 from core_python.strategies.knn_combo.payload import build_knn_combo_payload
@@ -278,10 +278,10 @@ def test_knn_combo_watcher_path_loads_trend_and_entry_frames(monkeypatch) -> Non
         enriched["signal_reason"] = "test signal"
         return trend_df.copy(), enriched
 
-    monkeypatch.setattr(watcher, "_load_ohlcv", fake_load)
-    monkeypatch.setattr(watcher, "build_knn_combo_strategy_frames", fake_build)
+    monkeypatch.setattr(detector, "_load_ohlcv", fake_load)
+    monkeypatch.setattr(detector, "build_knn_combo_strategy_frames", fake_build)
 
-    frame, spec, params = watcher.run_strategy_frame(
+    frame, spec, params = detector.run_strategy_frame(
         strategy="knn_combo",
         symbol="US30",
         tf="M30",

@@ -261,6 +261,159 @@ class TestWsLiveDbWorkerRetry:
                "Phải gọi _tg_alert sau khi staging fail hết lần retry"
 
 
+class TestWsLiveAuthSafety:
+    """Coverage for WS auth/rate-limit safety helpers."""
+
+    @staticmethod
+    def _jwt_with_ttl(ttl_sec: int) -> str:
+        import base64
+        import json
+
+        now = int(time.time())
+
+        def enc(payload: dict) -> str:
+            raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+            return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+        return f"{enc({'alg': 'none', 'typ': 'JWT'})}.{enc({'iat': now, 'exp': now + ttl_sec})}.sig"
+
+    def test_ws_error_classifier_handles_http_statuses(self):
+        import importlib
+
+        ws_live = importlib.import_module("data_provider.apps.ws_live")
+
+        class WsError(Exception):
+            def __init__(self, status_code, headers=None):
+                super().__init__(f"Handshake status {status_code}")
+                self.status_code = status_code
+                self.resp_headers = headers or {}
+
+        assert ws_live._classify_ws_error(WsError(401))[0:2] == ("auth", 401)
+        assert ws_live._classify_ws_error(WsError(403))[0:2] == ("auth", 403)
+        assert ws_live._classify_ws_error(WsError(500))[0:2] == ("server", 500)
+        assert ws_live._classify_ws_error(
+            WsError(429, {"Retry-After": "12"})
+        ) == ("rate_limit", 429, 12)
+
+    def test_cookie_probe_inconclusive_skips_headless_when_token_healthy(self, monkeypatch, tmp_path):
+        import importlib
+
+        auth = importlib.import_module("data_provider.tv.auth")
+
+        class Resp:
+            status_code = 200
+            url = "https://www.tradingview.com/"
+            text = "<html></html>"
+            headers = {}
+
+        headless_calls = []
+        monkeypatch.setattr(auth, "_TOKEN_CACHE", tmp_path / "tv_token_cache.json")
+        monkeypatch.setattr(auth, "_http_request_with_retry", lambda *a, **k: Resp())
+        monkeypatch.setattr(auth, "_headless_refresh", lambda cookie: headless_calls.append(cookie) or (auth.GUEST_TOKEN, ""))
+        monkeypatch.setattr(auth, "_headless_login_fresh", lambda *a, **k: pytest.fail("fresh login should not run"))
+        monkeypatch.setattr(auth, "_tg_alert", lambda *a, **k: None)
+        monkeypatch.setattr(auth, "_auth_token", self._jwt_with_ttl(7200))
+        monkeypatch.setattr(auth, "_tv_cookie", "sessionid=old")
+        monkeypatch.setattr(auth, "_last_cookie_check_ts", 0.0)
+        monkeypatch.setattr(auth, "_last_cookie_renewal_ts", time.time())
+        monkeypatch.setattr(auth, "_cookie_probe_fail_streak", 0)
+        monkeypatch.setattr(auth, "_auth_refresh_cooldown_until", 0.0)
+        monkeypatch.setattr(auth, "_auth_refresh_cooldown_reason", "")
+
+        auth.ensure_cookie_fresh()
+
+        assert headless_calls == []
+        assert auth._cookie_probe_fail_streak == 0
+
+    def test_cookie_probe_inconclusive_renews_when_token_near_expiry(self, monkeypatch, tmp_path):
+        import importlib
+        import json
+
+        auth = importlib.import_module("data_provider.tv.auth")
+        fresh_token = self._jwt_with_ttl(14_400)
+
+        class Resp:
+            status_code = 200
+            url = "https://www.tradingview.com/"
+            text = "<html></html>"
+            headers = {}
+
+        headless_calls = []
+
+        def fake_headless(cookie):
+            headless_calls.append(cookie)
+            return fresh_token, "sessionid=new"
+
+        monkeypatch.setattr(auth, "_TOKEN_CACHE", tmp_path / "tv_token_cache.json")
+        monkeypatch.setattr(auth, "_http_request_with_retry", lambda *a, **k: Resp())
+        monkeypatch.setattr(auth, "_headless_refresh", fake_headless)
+        monkeypatch.setattr(auth, "_headless_login_fresh", lambda *a, **k: pytest.fail("fresh login should not run"))
+        monkeypatch.setattr(auth, "_tg_alert", lambda *a, **k: None)
+        monkeypatch.setattr(auth, "_auth_token", self._jwt_with_ttl(1200))
+        monkeypatch.setattr(auth, "_tv_cookie", "sessionid=old")
+        monkeypatch.setattr(auth, "_last_cookie_check_ts", 0.0)
+        monkeypatch.setattr(auth, "_last_cookie_renewal_ts", time.time())
+        monkeypatch.setattr(auth, "_cookie_probe_fail_streak", 0)
+        monkeypatch.setattr(auth, "_auth_refresh_cooldown_until", 0.0)
+        monkeypatch.setattr(auth, "_auth_refresh_cooldown_reason", "")
+
+        auth.ensure_cookie_fresh()
+
+        assert headless_calls == ["sessionid=old"]
+        assert auth._auth_token == fresh_token
+        cache = json.loads((tmp_path / "tv_token_cache.json").read_text(encoding="utf-8"))
+        assert cache["TV_AUTH_TOKEN"] == fresh_token
+        assert cache["TV_COOKIE"] == "sessionid=new"
+
+    def test_cookie_probe_429_sets_auth_cooldown(self, monkeypatch, tmp_path):
+        import importlib
+
+        auth = importlib.import_module("data_provider.tv.auth")
+
+        class Resp:
+            status_code = 429
+            headers = {"Retry-After": "12"}
+
+        def fake_request(*args, **kwargs):
+            raise auth.requests.HTTPError("429", response=Resp())
+
+        headless_calls = []
+        monkeypatch.setattr(auth, "_TOKEN_CACHE", tmp_path / "tv_token_cache.json")
+        monkeypatch.setattr(auth, "_http_request_with_retry", fake_request)
+        monkeypatch.setattr(auth, "_headless_refresh", lambda cookie: headless_calls.append(cookie) or (auth.GUEST_TOKEN, ""))
+        monkeypatch.setattr(auth, "_tg_alert", lambda *a, **k: None)
+        monkeypatch.setattr(auth, "_auth_token", self._jwt_with_ttl(1200))
+        monkeypatch.setattr(auth, "_tv_cookie", "sessionid=old")
+        monkeypatch.setattr(auth, "_last_cookie_check_ts", 0.0)
+        monkeypatch.setattr(auth, "_last_cookie_renewal_ts", time.time())
+        monkeypatch.setattr(auth, "_cookie_probe_fail_streak", 0)
+        monkeypatch.setattr(auth, "_auth_refresh_cooldown_until", 0.0)
+        monkeypatch.setattr(auth, "_auth_refresh_cooldown_reason", "")
+
+        auth.ensure_cookie_fresh()
+
+        remaining, reason = auth._auth_cooldown_remaining()
+        assert headless_calls == []
+        assert remaining > 0
+        assert "429" in reason
+
+    def test_token_cache_does_not_overwrite_good_token_with_guest(self, monkeypatch, tmp_path):
+        import importlib
+        import json
+
+        auth = importlib.import_module("data_provider.tv.auth")
+        good_token = self._jwt_with_ttl(7200)
+        cache_path = tmp_path / "tv_token_cache.json"
+
+        monkeypatch.setattr(auth, "_TOKEN_CACHE", cache_path)
+        auth._save_token_cache(good_token, "sessionid=old")
+        auth._save_token_cache(auth.GUEST_TOKEN, "sessionid=new")
+
+        cache = json.loads(cache_path.read_text(encoding="utf-8"))
+        assert cache["TV_AUTH_TOKEN"] == good_token
+        assert cache["TV_COOKIE"] == "sessionid=new"
+
+
 # =============================================================================
 # NHÓM 4: ws_live — Spool capacity cap
 # =============================================================================

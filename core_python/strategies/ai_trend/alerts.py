@@ -43,6 +43,9 @@ class AiTrendAlert:
     tp_price: float | None = None
     risk_reward: float | None = None
     reason: str = ""
+    # ATR tại bar tín hiệu — OF dùng để sizing/khoảng cách stop. None nếu frame
+    # không có cột "atr" (vd. H3 trend-change thuần bias, không phải entry).
+    atr: float | None = None
 
 
 def extract_h3_trend_alerts(trend_frame: pd.DataFrame, symbol: str) -> list[AiTrendAlert]:
@@ -75,6 +78,7 @@ def extract_h3_trend_alerts(trend_frame: pd.DataFrame, symbol: str) -> list[AiTr
                 ai_knn=_to_float_or_none(row.get("ai_knn")),
                 ai_avg=_to_float_or_none(row.get("ai_avg")),
                 close=_to_float_or_none(row.get("close")),
+                atr=_to_float_or_none(row.get("atr")),
                 reason=f"H3 KNN bias changed to {side}",
             )
         )
@@ -115,6 +119,7 @@ def extract_m45_entry_alerts(entry_frame: pd.DataFrame, symbol: str) -> list[AiT
                 sl_price=_to_float_or_none(row.get("sl_price")),
                 tp_price=_to_float_or_none(row.get("tp_price")),
                 risk_reward=_to_float_or_none(row.get("risk_reward")),
+                atr=_to_float_or_none(row.get("atr")),
                 reason=str(row.get("signal_reason") or f"First aligned M45 {side} in H3 segment"),
             )
         )

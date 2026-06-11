@@ -74,6 +74,11 @@ strategies/ai_trend/levels.py
   Entry = market order tren close cua cay Entry TF co signal.
   SL = swing Dow gan nhat da xac nhan.
   TP = fixed R:R mac dinh 1.5.
+
+strategies/ai_trend/realtime.py
+  Production realtime adapter cho AI Trend H3/M45:
+  normalize event_type, build closed frames, extract alert, format message,
+  validate M45 entry khop H3 bias, va tra ve contract chung cho notify.
 ```
 
 Nhung phan sau la shared runtime, khong thuoc rieng AI Trend:
@@ -83,13 +88,17 @@ notify/scan_config.py
   Production symbols/groups.
 
 notify/signal_watcher.py
-  Scheduler, load DB, drop open bar, goi AI Trend alert extractor, gui Telegram.
+  CLI, warm-up, process lock va thread wiring.
+
+notify/detector.py
+  Dieu phoi realtime chung: goi strategy adapter, dedup, historical filter,
+  ghi outbox va goi alert sender. Khong chua semantic rieng cua AI Trend.
+
+notify/alerts.py
+  Telegram/Discord backend.
 
 notify/state.py
   Dedup state va warm-up.
-
-notify/notifier.py
-  Telegram/Discord backend.
 ```
 
 ## 4. Trend Frame

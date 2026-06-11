@@ -83,6 +83,16 @@ TV_COOKIE     = os.environ.get("TV_COOKIE", "")      # full browser cookie strin
 TV_USERNAME   = os.environ.get("TV_USERNAME", "")    # fallback: native TV email
 TV_PASSWORD   = os.environ.get("TV_PASSWORD", "")    # fallback: native TV password
 
+# Optional: 2FA and CAPTCHA auto-solve (leave empty to disable)
+# TV_2FA_SECRET:     Base32 TOTP secret from Google Authenticator "setup key".
+#                    Install: pip install pyotp
+# TV_CAPTCHA_API_KEY: CapSolver or 2Captcha API key for auto-solving hCaptcha.
+#                    Install: pip install requests  (already present)
+# TV_CAPTCHA_SERVICE: "capsolver" (default) or "2captcha"
+TV_2FA_SECRET      = os.environ.get("TV_2FA_SECRET", "")
+TV_CAPTCHA_API_KEY = os.environ.get("TV_CAPTCHA_API_KEY", "")
+TV_CAPTCHA_SERVICE = os.environ.get("TV_CAPTCHA_SERVICE", "capsolver")
+
 # Discord webhook để nhận thông báo pipeline (để trống nếu không dùng)
 # Lấy URL từ: Server Settings → Integrations → Webhooks → Copy Webhook URL
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
@@ -471,10 +481,19 @@ CTRADER_FTMO_TICK_SYMBOL_CODES = [s["symbol"] for s in CTRADER_FTMO_TICK_SYMBOLS
 CTRADER_FTMO_TICK_BATCH_SIZE = int(os.environ.get("CTRADER_FTMO_TICK_BATCH_SIZE", "500"))
 CTRADER_FTMO_TICK_FLUSH_SECONDS = float(os.environ.get("CTRADER_FTMO_TICK_FLUSH_SECONDS", "1.0"))
 CTRADER_FTMO_TICK_QUEUE_MAXSIZE = int(os.environ.get("CTRADER_FTMO_TICK_QUEUE_MAXSIZE", "50000"))
+CTRADER_FTMO_TICK_RESPONSE_TIMEOUT_SECONDS = float(
+    os.environ.get("CTRADER_FTMO_TICK_RESPONSE_TIMEOUT_SECONDS", "60")
+)
 CTRADER_FTMO_TICK_RECONNECT_MIN_SECONDS = float(os.environ.get("CTRADER_FTMO_TICK_RECONNECT_MIN_SECONDS", "5"))
 CTRADER_FTMO_TICK_RECONNECT_MAX_SECONDS = float(os.environ.get("CTRADER_FTMO_TICK_RECONNECT_MAX_SECONDS", "300"))
 CTRADER_FTMO_TICK_STALE_SECONDS_BTC = int(os.environ.get("CTRADER_FTMO_TICK_STALE_SECONDS_BTC", "120"))
 CTRADER_FTMO_TICK_STALE_SECONDS_MARKET = int(os.environ.get("CTRADER_FTMO_TICK_STALE_SECONDS_MARKET", "600"))
+CTRADER_FTMO_TICK_HEARTBEAT_LOG_SECONDS = int(
+    os.environ.get("CTRADER_FTMO_TICK_HEARTBEAT_LOG_SECONDS", "300")
+)
+CTRADER_FTMO_TICK_DISCORD_REPORT_SECONDS = int(
+    os.environ.get("CTRADER_FTMO_TICK_DISCORD_REPORT_SECONDS", "3600")
+)
 
 
 # -----------------------------------------------------------------------------

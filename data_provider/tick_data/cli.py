@@ -1,30 +1,56 @@
-"""Command line entry point for the cTrader FTMO tick provider."""
+"""Command line entry point for the standalone cTrader/FTMO tick provider.
+
+The CLI is the operator surface for this project sub-tree. It performs setup
+steps such as OAuth, account selection and symbol sync, then runs controlled
+smoke/live/backfill jobs. It must never print secrets except for explicit token
+exchange commands where the operator asks to receive the raw payload.
+"""
 
 from __future__ import annotations
 
 import argparse
 import json
 import logging
+import logging.handlers
 import sys
+from dataclasses import asdict
 from datetime import datetime, timezone
 from getpass import getpass
 
-from .auth import build_authorization_url, exchange_code_for_token, refresh_access_token
-from .oauth_flow import run_local_oauth_login
-from .service import fetch_account_list, run_history_backfill, run_live_ingest, sync_symbols
-from .settings import load_settings
+from .auth import build_authorization_url, exchange_code_for_token, refresh_access_token, run_local_oauth_login
+from .checker import run_tick_check
+from .notify import flush_notifications, notify_tick_report
+from .runtime import load_settings
+from .service_jobs import fetch_account_list, probe_history_depth, run_history_backfill, sync_symbols
+from .service_live import run_live_ingest
+from .spool import TickSpool
 from .store_sql import TickSqlStore
 from .token_store import save_token_cache, token_status, update_cached_account
 
 
-def _setup_logging() -> None:
+def _setup_logging(log_path=None) -> None:
+    handlers: list[logging.Handler] = [logging.StreamHandler()]
+    if log_path is not None:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        handlers.append(
+            logging.handlers.RotatingFileHandler(
+                log_path,
+                maxBytes=10_000_000,
+                backupCount=5,
+                encoding="utf-8",
+            )
+        )
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s - %(message)s",
+        format="%(asctime)s | %(levelname)-7s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=handlers,
+        force=True,
     )
 
 
 def _parse_datetime_ms(value: str) -> int:
+    """Parse UTC ISO text or a millisecond timestamp for historical backfill."""
     raw = value.strip()
     if raw.isdigit():
         return int(raw)
@@ -75,6 +101,7 @@ def _maybe_save_selected_account(accounts: list[dict[str, object]], account_id: 
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build the operator CLI without importing the optional cTrader SDK."""
     parser = argparse.ArgumentParser(description="SEN05 cTrader FTMO tick provider")
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -121,15 +148,41 @@ def build_parser() -> argparse.ArgumentParser:
     backfill.add_argument("--from", dest="from_value", required=True, help="UTC ISO time or ms timestamp")
     backfill.add_argument("--to", dest="to_value", required=True, help="UTC ISO time or ms timestamp")
     backfill.add_argument("--symbols", nargs="*", help="Optional local symbol filter, e.g. US30 GOLD")
+    backfill.add_argument(
+        "--request-timeout",
+        type=float,
+        help="Per-request cTrader response timeout in seconds; defaults to runtime config",
+    )
+
+    history_depth = sub.add_parser("history-depth", help="Probe deepest available historical tick depth")
+    history_depth.add_argument("--symbols", nargs="*", help="Optional local symbol filter, e.g. US30 GOLD")
+    history_depth.add_argument("--max-days", type=int, default=20000, help="Maximum lookback to probe")
+    history_depth.add_argument("--to", dest="to_value", help="UTC ISO time or ms timestamp; default now")
+    history_depth.add_argument("--probe-window-days", type=int, default=7)
+    history_depth.add_argument("--timeout", type=int, default=300)
+    history_depth.add_argument(
+        "--request-timeout",
+        type=float,
+        help="Per-request cTrader response timeout in seconds; defaults to runtime config",
+    )
+    history_depth.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+
+    check = sub.add_parser("check", help="Run read-only tick_data health checks")
+    check.add_argument("--stale-seconds", type=int, help="Override stale heartbeat threshold")
+    check.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+    check.add_argument("--notify", action="store_true", help="Send Discord notification when status is not OK")
+
+    spool_status = sub.add_parser("spool-status", help="Show local tick SQLite spool backlog")
+    spool_status.add_argument("--json", action="store_true", help="Print machine-readable JSON")
 
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
-    _setup_logging()
     parser = build_parser()
     args = parser.parse_args(argv)
     settings = load_settings()
+    _setup_logging(settings.log_path)
 
     if args.command == "show-config":
         print(f"env={settings.env}")
@@ -138,6 +191,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"symbols={','.join(symbol.local_symbol for symbol in settings.symbols)}")
         missing = ",".join(settings.missing_api_fields) or "none"
         print(f"missing_api_fields={missing}")
+        print(f"response_timeout_seconds={settings.response_timeout_seconds:g}")
+        print(f"heartbeat_log_seconds={settings.heartbeat_log_seconds}")
+        print(f"discord_report_seconds={settings.discord_report_seconds}")
         print(f"spool_path={settings.spool_path}")
         return 0
 
@@ -251,6 +307,49 @@ def main(argv: list[str] | None = None) -> int:
         account_id=settings.account_id,
     )
 
+    if args.command == "check":
+        report = run_tick_check(settings, store, stale_seconds=args.stale_seconds)
+        if args.notify and report.status != "OK":
+            top_findings = report.findings[:10]
+            action = (
+                "Action is required. Run tick_status.ps1 and open tick_log_viewer.bat for details."
+                if report.status == "ERROR"
+                else "Monitor it. If the warning repeats, check the dashboard and tick log."
+            )
+            notify_tick_report(
+                "ERROR" if report.status == "ERROR" else "WARNING",
+                f"Tick data check {report.status}",
+                conclusion=(
+                    "The checker found a problem in tick_data."
+                    if report.status == "ERROR"
+                    else "The checker found a warning, but tick_data is not in a hard failure state."
+                ),
+                action=action,
+                details=[
+                    ("Status", report.status),
+                    ("Findings", len(report.findings)),
+                ],
+                technical=[(f"{item.severity} {item.code}", item.message) for item in top_findings],
+                throttle_key=f"tick-check-{report.status.lower()}",
+                throttle_seconds=300,
+            )
+            flush_notifications()
+        if args.json:
+            print(json.dumps(asdict(report), indent=2, sort_keys=True, default=str))
+        else:
+            print(report.to_text())
+        return 1 if report.status == "ERROR" else 0
+
+    if args.command == "spool-status":
+        spool = TickSpool(settings.spool_path)
+        payload = {"path": str(settings.spool_path), "count": spool.count()}
+        if args.json:
+            print(json.dumps(payload, indent=2, sort_keys=True))
+        else:
+            print(f"spool_path={payload['path']}")
+            print(f"spool_count={payload['count']}")
+        return 0
+
     if args.command == "symbol-sync":
         for line in sync_symbols(settings, store if args.apply else None, apply=args.apply):
             print(line)
@@ -269,6 +368,7 @@ def main(argv: list[str] | None = None) -> int:
                     f"duration_seconds={args.smoke_seconds}; no backfill"
                 ),
                 duration_seconds=args.smoke_seconds,
+                handoff_existing=False,
             )
         else:
             run_live_ingest(settings, store)
@@ -281,7 +381,31 @@ def main(argv: list[str] | None = None) -> int:
             _parse_datetime_ms(args.from_value),
             _parse_datetime_ms(args.to_value),
             symbols=args.symbols,
+            request_timeout_seconds=args.request_timeout,
         )
+        return 0
+
+    if args.command == "history-depth":
+        results = probe_history_depth(
+            settings,
+            store,
+            symbols=args.symbols,
+            max_days=args.max_days,
+            to_timestamp_ms=_parse_datetime_ms(args.to_value) if args.to_value else None,
+            probe_window_days=args.probe_window_days,
+            timeout_seconds=args.timeout,
+            request_timeout_seconds=args.request_timeout,
+        )
+        payload = [asdict(result) for result in results]
+        if args.json:
+            print(json.dumps(payload, indent=2, sort_keys=True, default=str))
+        else:
+            for item in payload:
+                print(
+                    f"{item['symbol']}: deepest_available_days={item['deepest_available_days']} "
+                    f"earliest_probe_from_utc={item['earliest_probe_from_utc']} "
+                    f"ctrader={item['ctrader_symbol_name']}({item['ctrader_symbol_id']})"
+                )
         return 0
 
     return 2

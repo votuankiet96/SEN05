@@ -20,5 +20,23 @@ flask>=3.0.0
 # HTTP / APIs
 requests>=2.32.5
 
+# cTrader/FTMO tick provider (data_provider.tick_data)
+ctrader-open-api>=0.9.2
+
+# Redis signal pipeline (OG → OF bridge: pub/sub bar_ready + Streams XADD)
+redis>=5.0.0
+
 # Environment / config
 python-dotenv>=1.2.2
+
+# Optional: headless browser auth (TradingView cookie renewal via Playwright)
+# Install manually when needed: pip install playwright && playwright install chromium
+# playwright>=1.44.0
+
+# Optional: bot-detection reduction for headless Playwright sessions
+# pip install playwright-stealth
+# playwright-stealth>=1.0.6
+
+# Optional: TOTP auto-fill for 2FA (TV_2FA_SECRET must be set in .env)
+# pip install pyotp
+# pyotp>=2.9.0

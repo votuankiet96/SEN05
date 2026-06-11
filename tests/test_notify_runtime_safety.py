@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import json
+import queue
 from types import SimpleNamespace
 
 import pandas as pd
 
+import core_python.notify.detector as detector
+import core_python.notify.runtime as watcher_runtime
 import core_python.notify.signal_watcher as watcher
-from core_python.notify.formatter import format_combo_raw_signal_message
-from core_python.notify.signal_watcher import (
+from core_python.notify.alerts import format_combo_raw_signal_message
+from core_python.notify.delivery_outbox import DeliveryOutbox
+from core_python.notify.detector import (
     _LAST_STALE_LOGGED,
     _drop_open_bar,
     _scan_fingerprint_error,
@@ -55,6 +59,37 @@ class _FakeNotifier:
             }
         )
         return SimpleNamespace(sent=True, backend=backend or "fake", detail="")
+
+
+class _FailingNotifier(_FakeNotifier):
+    def send(
+        self,
+        message: str,
+        chat_id: str | None = None,
+        *,
+        backend: str | None = None,
+        discord_webhook: str | None = None,
+    ) -> SimpleNamespace:
+        self.messages.append(message)
+        self.calls.append(
+            {
+                "message": message,
+                "chat_id": chat_id,
+                "backend": backend,
+                "discord_webhook": discord_webhook,
+            }
+        )
+        return SimpleNamespace(sent=False, backend=backend or "fake", detail="telegram down")
+
+
+class _FakeOutbox:
+    def __init__(self) -> None:
+        self.pending: dict[str, dict] = {}
+        self.calls: list[tuple[str, dict]] = []
+
+    def add_pending(self, signal_id: str, payload: dict) -> None:
+        self.calls.append((signal_id, payload))
+        self.pending.setdefault(signal_id, payload)
 
 
 def test_scan_fingerprint_is_canonical_for_ordering() -> None:
@@ -194,6 +229,178 @@ def test_signal_key_format_stability() -> None:
     assert bangkok_key == key
 
 
+def test_redis_emit_is_deterministic_and_respects_disabled_flag() -> None:
+    row = pd.Series(
+        {
+            "bartime": pd.Timestamp("2026-05-06 12:00:00"),
+            "signal": 1,
+            "entry_price": 111.0,
+            "sl_price": 94.0,
+            "tp_price": 123.0,
+            "atr": 4.5,
+            "signal_reason": "test signal",
+        }
+    )
+    outbox = _FakeOutbox()
+    overrides_hash = detector._overrides_hash({"ENTRY_BARS": 1000, "TREND_BARS": 400})
+
+    first = detector._emit_to_outbox(
+        redis_on=True,
+        dry_run=False,
+        outbox=outbox,
+        strategy="ai_trend",
+        event_type=M45_ENTRY_SIGNAL,
+        symbol="eurusd",
+        tf="m45",
+        signal=row,
+        event_close=pd.Timestamp("2026-05-06 12:45:00", tz="UTC"),
+        overrides_hash=overrides_hash,
+    )
+    second = detector._emit_to_outbox(
+        redis_on=True,
+        dry_run=False,
+        outbox=outbox,
+        strategy="AI_TREND",
+        event_type=M45_ENTRY_SIGNAL,
+        symbol="EURUSD",
+        tf="M45",
+        signal=row,
+        event_close=pd.Timestamp("2026-05-06 12:45:00", tz="UTC"),
+        overrides_hash=overrides_hash,
+    )
+
+    assert first == second
+    assert len(outbox.pending) == 1
+    payload = outbox.pending[str(first)]
+    assert payload["signal_id"] == first
+    assert payload["schema_version"] == "3.2"
+    assert payload["event_type"] == M45_ENTRY_SIGNAL
+    assert payload["symbol"] == "EURUSD"
+    assert payload["timeframe"] == "M45"
+    assert payload["atr"] == 4.5
+
+    disabled_outbox = _FakeOutbox()
+    assert (
+        detector._emit_to_outbox(
+            redis_on=False,
+            dry_run=False,
+            outbox=disabled_outbox,
+            strategy="ai_trend",
+            event_type=M45_ENTRY_SIGNAL,
+            symbol="EURUSD",
+            tf="M45",
+            signal=row,
+            event_close=pd.Timestamp("2026-05-06 12:45:00", tz="UTC"),
+            overrides_hash=overrides_hash,
+        )
+        is None
+    )
+    assert disabled_outbox.pending == {}
+
+
+def test_check_once_queues_redis_before_notifier_result(tmp_path, monkeypatch) -> None:
+    bartime = pd.Timestamp.now("UTC").floor("h") - pd.Timedelta(hours=1)
+    frame = pd.DataFrame(
+        {
+            "bartime": [bartime.tz_localize(None)],
+            "signal": [1],
+            "entry_price": [111.0],
+            "sl_price": [94.0],
+            "tp_price": [123.0],
+            "atr": [4.5],
+            "signal_reason": ["test signal"],
+        }
+    )
+
+    def fake_run_strategy_frame(**_kwargs):
+        return frame, SimpleNamespace(label="MA Cross"), {}
+
+    monkeypatch.setattr(detector, "run_strategy_frame", fake_run_strategy_frame)
+    state = SignalState(tmp_path / "state.json")
+    notifier = _FailingNotifier()
+    outbox = _FakeOutbox()
+
+    events = check_once(
+        strategy="ma_cross",
+        symbols=["US30"],
+        tf="H1",
+        bars=500,
+        state=state,
+        notifier=notifier,  # type: ignore[arg-type]
+        export_on_signal=False,
+        max_alert_age_minutes=240,
+        outbox=outbox,
+        redis_on=True,
+    )
+
+    key = signal_key("ma_cross", "US30", "H1", bartime.tz_localize(None), 1)
+    assert not state.has(key)
+    assert len(outbox.pending) == 1
+    assert notifier.calls
+    assert any("notifier FAILED" in event and "redis queued" in event for event in events)
+
+
+def test_group_matching_keeps_h3_combo_and_ai_trend_distinct() -> None:
+    groups = [
+        {"strategy": "combo", "symbols": ["US30"], "tf": "H3", "overrides": {"A": 1}},
+        {
+            "strategy": "ai_trend",
+            "event_type": H3_TREND_CHANGE,
+            "symbols": ["US30"],
+            "tf": "H3",
+            "overrides": {"TREND_BARS": 400},
+        },
+        {"strategy": "combo", "symbols": ["GOLD"], "tf": "H3", "overrides": {}},
+    ]
+
+    matches = detector._find_matching_groups("us30", "h3", groups)
+
+    assert len(matches) == 2
+    assert {detector._group_runtime_key(group) for group in matches} == {
+        detector._group_runtime_key(groups[0]),
+        detector._group_runtime_key(groups[1]),
+    }
+
+
+def test_trigger_queue_coalesces_until_release() -> None:
+    watcher_runtime._INFLIGHT_EVENTS.clear()
+    event_queue: queue.Queue = queue.Queue()
+    event = watcher_runtime.GroupTriggerEvent(
+        source="bar_ready",
+        symbol="us30",
+        tf="h1",
+        bartime="2026-05-06T12:00:00+00:00",
+    )
+
+    assert watcher_runtime._enqueue_trigger(event_queue, event)
+    assert not watcher_runtime._enqueue_trigger(event_queue, event)
+
+    queued = event_queue.get_nowait()
+    watcher_runtime._release_inflight(queued)
+
+    assert watcher_runtime._enqueue_trigger(event_queue, event)
+    watcher_runtime._INFLIGHT_EVENTS.clear()
+
+
+def test_drain_outbox_adds_delivered_at_and_marks_delivered(tmp_path, monkeypatch) -> None:
+    outbox = DeliveryOutbox(tmp_path / "delivery_outbox.json")
+    outbox.add_pending("sig-1", {"signal_id": "sig-1", "produced_at": "2026-05-06T12:00:00+00:00"})
+    seen_payloads: list[dict] = []
+
+    def fake_xadd_signal(payload):
+        seen_payloads.append(dict(payload))
+        return "1746532800000-0"
+
+    monkeypatch.setattr(watcher_runtime.redis_publisher, "xadd_signal", fake_xadd_signal)
+
+    delivered, failed = watcher_runtime._drain_outbox_once(outbox)
+
+    assert (delivered, failed) == (1, 0)
+    assert outbox.pending_count() == 0
+    assert seen_payloads[0]["signal_id"] == "sig-1"
+    assert "delivered_at" in seen_payloads[0]
+
+
 def test_combo_raw_formatter_excludes_execution_levels() -> None:
     row = pd.Series(
         {
@@ -239,7 +446,7 @@ def test_check_once_skips_and_marks_historical_combo_signal(tmp_path, monkeypatc
     def fake_run_strategy_frame(**_kwargs):
         return frame, SimpleNamespace(label="Combo"), {}
 
-    monkeypatch.setattr(watcher, "run_strategy_frame", fake_run_strategy_frame)
+    monkeypatch.setattr(detector, "run_strategy_frame", fake_run_strategy_frame)
     state = SignalState(tmp_path / "state.json")
     notifier = _FakeNotifier()
 
@@ -284,7 +491,7 @@ def test_check_once_routes_combo_signal_to_discord_raw_message(tmp_path, monkeyp
     def fake_run_strategy_frame(**_kwargs):
         return frame, SimpleNamespace(label="Combo"), {}
 
-    monkeypatch.setattr(watcher, "run_strategy_frame", fake_run_strategy_frame)
+    monkeypatch.setattr(detector, "run_strategy_frame", fake_run_strategy_frame)
     state = SignalState(tmp_path / "state.json")
     notifier = _FakeNotifier()
 
@@ -325,7 +532,7 @@ def test_check_once_routes_non_ai_strategy_away_from_telegram(tmp_path, monkeypa
     def fake_run_strategy_frame(**_kwargs):
         return frame, SimpleNamespace(label="MA Cross"), {}
 
-    monkeypatch.setattr(watcher, "run_strategy_frame", fake_run_strategy_frame)
+    monkeypatch.setattr(detector, "run_strategy_frame", fake_run_strategy_frame)
     state = SignalState(tmp_path / "state.json")
     notifier = _FakeNotifier()
 
@@ -365,11 +572,11 @@ def test_check_once_logs_csv_export_failure_and_still_sends(tmp_path, monkeypatc
     def fake_export_signals(*_args, **_kwargs):
         raise OSError("disk full")
 
-    monkeypatch.setattr(watcher, "run_strategy_frame", fake_run_strategy_frame)
-    monkeypatch.setattr(watcher, "export_signals", fake_export_signals)
+    monkeypatch.setattr(detector, "run_strategy_frame", fake_run_strategy_frame)
+    monkeypatch.setattr(detector, "export_signals", fake_export_signals)
     state = SignalState(tmp_path / "state.json")
     notifier = _FakeNotifier()
-    caplog.set_level("WARNING", logger=watcher.__name__)
+    caplog.set_level("WARNING", logger=detector.__name__)
 
     events = check_once(
         strategy="ma_cross",
@@ -401,7 +608,7 @@ def test_check_ai_trend_once_skips_and_marks_historical_alert(tmp_path, monkeypa
     def fake_run_ai_trend_alerts(**_kwargs):
         return [alert], pd.Timestamp("2026-01-01 00:00:00")
 
-    monkeypatch.setattr(watcher, "run_ai_trend_alerts", fake_run_ai_trend_alerts)
+    monkeypatch.setattr(detector, "run_ai_trend_alerts", fake_run_ai_trend_alerts)
     state = SignalState(tmp_path / "state.json")
     notifier = _FakeNotifier()
 
@@ -529,13 +736,13 @@ def test_run_ai_trend_alerts_applies_m45_levels_before_extract(monkeypatch) -> N
         _ = symbol, bars
         return trend_raw if tf == "H3" else entry_with_signal
 
-    monkeypatch.setattr(watcher, "get_strategy", lambda _name: FakeSpec())
-    monkeypatch.setattr(watcher, "_load_ohlcv", fake_load)
-    monkeypatch.setattr(watcher, "_drop_open_bar", lambda frame, _tf: frame)
-    monkeypatch.setattr(watcher, "_warn_if_stale_bar", lambda *_args, **_kwargs: False)
-    monkeypatch.setattr(watcher, "build_ai_trend_frames", lambda _trend, _entry, _params: (_trend, entry_with_signal))
+    monkeypatch.setattr(detector, "get_strategy", lambda _name: FakeSpec())
+    monkeypatch.setattr(detector, "_load_ohlcv", fake_load)
+    monkeypatch.setattr(detector, "_drop_open_bar", lambda frame, _tf: frame)
+    monkeypatch.setattr(detector, "_warn_if_stale_bar", lambda *_args, **_kwargs: False)
+    monkeypatch.setattr(detector, "build_ai_trend_frames", lambda _trend, _entry, _params: (_trend, entry_with_signal))
 
-    alerts, _latest = watcher.run_ai_trend_alerts(
+    alerts, _latest = detector.run_ai_trend_alerts(
         symbol="EURUSD",
         tf="M45",
         bars=1000,
@@ -564,7 +771,7 @@ def test_check_ai_trend_once_skips_m45_that_does_not_match_h3_bias(tmp_path, mon
     def fake_run_ai_trend_alerts(**_kwargs):
         return [alert], alert.bar_time
 
-    monkeypatch.setattr(watcher, "run_ai_trend_alerts", fake_run_ai_trend_alerts)
+    monkeypatch.setattr(detector, "run_ai_trend_alerts", fake_run_ai_trend_alerts)
     state = SignalState(tmp_path / "state.json")
     notifier = _FakeNotifier()
 
@@ -585,7 +792,7 @@ def test_check_ai_trend_once_skips_m45_that_does_not_match_h3_bias(tmp_path, mon
 def test_hourly_summary_includes_only_ai_trend_m45_entries() -> None:
     now = pd.Timestamp.now("UTC")
     events = [
-        watcher.SentSignalEvent(
+        detector.SentSignalEvent(
             strategy="ai_trend",
             symbol="EURUSD",
             tf="H3",
@@ -594,7 +801,7 @@ def test_hourly_summary_includes_only_ai_trend_m45_entries() -> None:
             sent_at=now,
             kind=H3_TREND_CHANGE,
         ),
-        watcher.SentSignalEvent(
+        detector.SentSignalEvent(
             strategy="ai_trend",
             symbol="EURUSD",
             tf="M45",
