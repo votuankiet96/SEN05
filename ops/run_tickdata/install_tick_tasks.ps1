@@ -4,10 +4,13 @@ param(
     [string]$SupervisorTaskName = "SEN05_TickLive_Supervisor",
     [string]$WatchdogTaskName = "SEN05_TickLive_Watchdog",
     [string]$CheckerTaskName = "SEN05_TickData_Checker",
+    [string]$ShortRepairTaskName = "SEN05_TickData_ShortRepair",
     [int]$RestartDelaySec = 30,
     [int]$WatchdogEverySeconds = 60,
     [int]$CheckerEveryMinutes = 5,
+    [int]$ShortRepairEveryMinutes = 5,
     [switch]$NoChecker,
+    [switch]$NoShortRepair,
     [switch]$Force,
     [switch]$NoStart,
     [switch]$RunWhetherLoggedOnOrNot,
@@ -82,8 +85,9 @@ $psExe = Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe"
 $supervisorScript = Join-Path $paths.RunRoot "tick_live_supervisor.ps1"
 $watchdogScript = Join-Path $paths.RunRoot "tick_live_watchdog.ps1"
 $checkerScript = Join-Path $paths.RunRoot "tick_check.ps1"
+$shortRepairScript = Join-Path $paths.RunRoot "tick_short_overlap_repair.ps1"
 
-foreach ($script in @($supervisorScript, $watchdogScript, $checkerScript)) {
+foreach ($script in @($supervisorScript, $watchdogScript, $checkerScript, $shortRepairScript)) {
     if (-not (Test-Path -LiteralPath $script)) {
         throw "Script not found: $script"
     }
@@ -93,6 +97,9 @@ Remove-TaskIfNeeded -Name $SupervisorTaskName -Path $TaskPath -ForceRemove:$Forc
 Remove-TaskIfNeeded -Name $WatchdogTaskName -Path $TaskPath -ForceRemove:$Force
 if (-not $NoChecker) {
     Remove-TaskIfNeeded -Name $CheckerTaskName -Path $TaskPath -ForceRemove:$Force
+}
+if (-not $NoShortRepair) {
+    Remove-TaskIfNeeded -Name $ShortRepairTaskName -Path $TaskPath -ForceRemove:$Force
 }
 
 $settings = New-TickDataTaskSettings
@@ -161,11 +168,32 @@ if (-not $NoChecker) {
     }
 }
 
+if (-not $NoShortRepair) {
+    $shortRepairArgs = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$shortRepairScript`" -RepoRoot `"$($paths.RepoRoot)`""
+    $shortRepairAction = New-ScheduledTaskAction -Execute $psExe -Argument $shortRepairArgs -WorkingDirectory $paths.RepoRoot
+    $shortRepairTrigger = New-ScheduledTaskTrigger `
+        -Once `
+        -At (Get-Date).AddMinutes(3) `
+        -RepetitionInterval (New-TimeSpan -Minutes $ShortRepairEveryMinutes) `
+        -RepetitionDuration (New-TimeSpan -Days 3650)
+    $shortRepairTask = New-ScheduledTask -Action $shortRepairAction -Trigger $shortRepairTrigger -Settings $settings -Principal $principal
+
+    if ($RunWhetherLoggedOnOrNot) {
+        Register-ScheduledTask -TaskName $ShortRepairTaskName -TaskPath $TaskPath -InputObject $shortRepairTask -User $TaskUser -Password $plainPassword -Force | Out-Null
+    }
+    else {
+        Register-ScheduledTask -TaskName $ShortRepairTaskName -TaskPath $TaskPath -InputObject $shortRepairTask -Force | Out-Null
+    }
+}
+
 if (-not $NoStart) {
     Start-ScheduledTask -TaskName $SupervisorTaskName -TaskPath $TaskPath
     Start-ScheduledTask -TaskName $WatchdogTaskName -TaskPath $TaskPath
     if (-not $NoChecker) {
         Start-ScheduledTask -TaskName $CheckerTaskName -TaskPath $TaskPath
+    }
+    if (-not $NoShortRepair) {
+        Start-ScheduledTask -TaskName $ShortRepairTaskName -TaskPath $TaskPath
     }
 }
 
@@ -176,7 +204,10 @@ Write-Host ("Watchdog  : {0}{1}" -f $TaskPath, $WatchdogTaskName)
 if (-not $NoChecker) {
     Write-Host ("Checker   : {0}{1}" -f $TaskPath, $CheckerTaskName)
 }
+if (-not $NoShortRepair) {
+    Write-Host ("ShortRepair: {0}{1}" -f $TaskPath, $ShortRepairTaskName)
+}
 Write-Host ("Mode      : {0}" -f ($(if ($RunWhetherLoggedOnOrNot) { "run whether logged on or not" } else { "interactive hidden" })))
 Write-Host ("Viewer    : {0}" -f (Join-Path $paths.RunRoot "tick_log_viewer.bat"))
 Write-Host ""
-& (Join-Path $paths.RunRoot "tick_status.ps1") -RepoRoot $paths.RepoRoot -TaskPath $TaskPath -SupervisorTaskName $SupervisorTaskName -WatchdogTaskName $WatchdogTaskName -CheckerTaskName $CheckerTaskName
+& (Join-Path $paths.RunRoot "tick_status.ps1") -RepoRoot $paths.RepoRoot -TaskPath $TaskPath -SupervisorTaskName $SupervisorTaskName -WatchdogTaskName $WatchdogTaskName -CheckerTaskName $CheckerTaskName -ShortRepairTaskName $ShortRepairTaskName

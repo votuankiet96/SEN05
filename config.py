@@ -58,7 +58,9 @@ except ImportError:
 # -----------------------------------------------------------------------------
 SQL_SERVER   = os.environ.get("SQL_SERVER", "localhost")  # Local SQL Server default instance; override via .env
 SQL_DATABASE = "SEN05_AutoTrading"
-SQL_DRIVER   = "ODBC Driver 18 for SQL Server"
+SQL_DRIVER   = os.environ.get("SQL_DRIVER", "ODBC Driver 18 for SQL Server")
+SQL_PORT     = os.environ.get("SQL_PORT", "")
+SQL_TDS_VERSION = os.environ.get("SQL_TDS_VERSION", "7.4")
 SQL_UID      = os.environ.get("SQL_UID", "")   # empty = Windows Auth
 SQL_PWD      = os.environ.get("SQL_PWD", "")   # empty = Windows Auth
 SQL_ENCRYPT  = os.environ.get("SQL_ENCRYPT", "no")   # local SQL Server default

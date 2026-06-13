@@ -25,7 +25,9 @@ from config import (
     SQL_DRIVER,
     SQL_ENCRYPT,
     SQL_PWD,
+    SQL_PORT,
     SQL_SERVER,
+    SQL_TDS_VERSION,
     SQL_TRUST_SERVER_CERT,
     SQL_UID,
     TF_DISPLAY_ORDER,
@@ -45,13 +47,24 @@ class DatabaseWriteError(RuntimeError):
 
 def _build_conn_str() -> str:
     """Tao connection string tu config; uu tien SQL auth, fallback Trusted_Connection."""
-    base = (
-        f"DRIVER={{{SQL_DRIVER}}};"
-        f"SERVER={SQL_SERVER};"
-        f"DATABASE={SQL_DATABASE};"
-        f"Encrypt={SQL_ENCRYPT};"
-        f"TrustServerCertificate={SQL_TRUST_SERVER_CERT};"
-    )
+    if str(SQL_DRIVER).lower() == "freetds":
+        server_part = f"SERVER={SQL_SERVER};"
+        if SQL_PORT:
+            server_part += f"PORT={SQL_PORT};"
+        base = (
+            f"DRIVER={{{SQL_DRIVER}}};"
+            f"{server_part}"
+            f"DATABASE={SQL_DATABASE};"
+            f"TDS_Version={SQL_TDS_VERSION};"
+        )
+    else:
+        base = (
+            f"DRIVER={{{SQL_DRIVER}}};"
+            f"SERVER={SQL_SERVER};"
+            f"DATABASE={SQL_DATABASE};"
+            f"Encrypt={SQL_ENCRYPT};"
+            f"TrustServerCertificate={SQL_TRUST_SERVER_CERT};"
+        )
     if SQL_UID and SQL_PWD:
         return base + f"UID={SQL_UID};PWD={SQL_PWD};"
     return base + "Trusted_Connection=yes;"

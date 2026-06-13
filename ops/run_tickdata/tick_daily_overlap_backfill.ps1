@@ -12,7 +12,9 @@ param(
     [string[]]$Symbols = @(),
     [string]$From = "",
     [string]$To = "",
+    [switch]$SingleSession,
     [switch]$SkipSymbolSync,
+    [switch]$SkipActivityProfile,
     [switch]$NoNotify
 )
 
@@ -83,6 +85,7 @@ $runId = [guid]::NewGuid().ToString("N").Substring(0, 8)
 $beforePath = Join-Path $reportDir "tick_overlap_${runId}_before.json"
 $afterPath = Join-Path $reportDir "tick_overlap_${runId}_after.json"
 $reportPath = Join-Path $reportDir "tick_overlap_${runId}_report.json"
+$activityProfileStatus = "skipped"
 
 function Send-TickOverlapDiscord {
     param(
@@ -494,7 +497,7 @@ if (-not $SkipSymbolSync) {
 Write-Host "Capturing before snapshot..." -ForegroundColor Cyan
 Invoke-TickSnapshot -OutPath $beforePath
 
-foreach ($symbol in $Symbols) {
+if ($SingleSession) {
     $cursor = $fromUtc
     while ($cursor -lt $toUtc) {
         $chunkEnd = $cursor.AddHours($ChunkHours)
@@ -507,38 +510,91 @@ foreach ($symbol in $Symbols) {
         $ok = $false
 
         for ($attempt = 1; $attempt -le $RetryCount; $attempt++) {
-            Write-Host "Backfill $symbol $chunkFrom -> $chunkTo attempt $attempt/$RetryCount" -ForegroundColor Cyan
-            Write-TickDataOpsLog -LogPath $logPath -Message "backfill start run=$runId symbol=$symbol from=$chunkFrom to=$chunkTo attempt=$attempt"
+            Write-Host "Backfill symbols=$($Symbols -join ',') $chunkFrom -> $chunkTo attempt $attempt/$RetryCount" -ForegroundColor Cyan
+            Write-TickDataOpsLog -LogPath $logPath -Message "backfill start run=$runId symbols=$($Symbols -join ',') from=$chunkFrom to=$chunkTo attempt=$attempt single_session=1"
 
-            $exitCode = Invoke-TickCli -ArgsList @(
+            $argsList = @(
                 "backfill",
-                "--symbols", $symbol,
                 "--from", $chunkFrom,
                 "--to", $chunkTo,
-                "--request-timeout", [string]$RequestTimeoutSeconds
+                "--request-timeout", [string]$RequestTimeoutSeconds,
+                "--no-notify",
+                "--symbols"
             )
+            $argsList += $Symbols
+            $exitCode = Invoke-TickCli -ArgsList $argsList
 
             if ($exitCode -eq 0) {
                 $ok = $true
-                Write-TickDataOpsLog -LogPath $logPath -Message "backfill done run=$runId symbol=$symbol from=$chunkFrom to=$chunkTo attempt=$attempt"
+                Write-TickDataOpsLog -LogPath $logPath -Message "backfill done run=$runId symbols=$($Symbols -join ',') from=$chunkFrom to=$chunkTo attempt=$attempt single_session=1"
                 break
             }
 
-            Write-TickDataOpsLog -LogPath $logPath -Level "WARN" -Message "backfill failed run=$runId symbol=$symbol from=$chunkFrom to=$chunkTo attempt=$attempt exit_code=$exitCode"
+            Write-TickDataOpsLog -LogPath $logPath -Level "WARN" -Message "backfill failed run=$runId symbols=$($Symbols -join ',') from=$chunkFrom to=$chunkTo attempt=$attempt exit_code=$exitCode single_session=1"
             if ($attempt -lt $RetryCount) {
                 Start-Sleep -Seconds $RetrySleepSeconds
             }
         }
 
         if (-not $ok) {
-            Write-TickDataOpsLog -LogPath $logPath -Level "ERROR" -Message "backfill exhausted retries run=$runId symbol=$symbol from=$chunkFrom to=$chunkTo"
-            throw "Backfill failed after retries: $symbol $chunkFrom -> $chunkTo"
+            Write-TickDataOpsLog -LogPath $logPath -Level "ERROR" -Message "backfill exhausted retries run=$runId symbols=$($Symbols -join ',') from=$chunkFrom to=$chunkTo single_session=1"
+            throw "Backfill failed after retries: symbols=$($Symbols -join ',') $chunkFrom -> $chunkTo"
         }
 
         if ($BetweenChunksSleepSeconds -gt 0) {
             Start-Sleep -Seconds $BetweenChunksSleepSeconds
         }
         $cursor = $chunkEnd
+    }
+}
+else {
+    foreach ($symbol in $Symbols) {
+        $cursor = $fromUtc
+        while ($cursor -lt $toUtc) {
+            $chunkEnd = $cursor.AddHours($ChunkHours)
+            if ($chunkEnd -gt $toUtc) {
+                $chunkEnd = $toUtc
+            }
+
+            $chunkFrom = Format-UtcIso -Value $cursor
+            $chunkTo = Format-UtcIso -Value $chunkEnd
+            $ok = $false
+
+            for ($attempt = 1; $attempt -le $RetryCount; $attempt++) {
+                Write-Host "Backfill $symbol $chunkFrom -> $chunkTo attempt $attempt/$RetryCount" -ForegroundColor Cyan
+                Write-TickDataOpsLog -LogPath $logPath -Message "backfill start run=$runId symbol=$symbol from=$chunkFrom to=$chunkTo attempt=$attempt"
+
+                $exitCode = Invoke-TickCli -ArgsList @(
+                    "backfill",
+                    "--symbols", $symbol,
+                    "--from", $chunkFrom,
+                    "--to", $chunkTo,
+                    "--request-timeout", [string]$RequestTimeoutSeconds,
+                    "--no-notify"
+                )
+
+                if ($exitCode -eq 0) {
+                    $ok = $true
+                    Write-TickDataOpsLog -LogPath $logPath -Message "backfill done run=$runId symbol=$symbol from=$chunkFrom to=$chunkTo attempt=$attempt"
+                    break
+                }
+
+                Write-TickDataOpsLog -LogPath $logPath -Level "WARN" -Message "backfill failed run=$runId symbol=$symbol from=$chunkFrom to=$chunkTo attempt=$attempt exit_code=$exitCode"
+                if ($attempt -lt $RetryCount) {
+                    Start-Sleep -Seconds $RetrySleepSeconds
+                }
+            }
+
+            if (-not $ok) {
+                Write-TickDataOpsLog -LogPath $logPath -Level "ERROR" -Message "backfill exhausted retries run=$runId symbol=$symbol from=$chunkFrom to=$chunkTo"
+                throw "Backfill failed after retries: $symbol $chunkFrom -> $chunkTo"
+            }
+
+            if ($BetweenChunksSleepSeconds -gt 0) {
+                Start-Sleep -Seconds $BetweenChunksSleepSeconds
+            }
+            $cursor = $chunkEnd
+        }
     }
 }
 
@@ -579,6 +635,23 @@ Write-Host "Report JSON: $reportPath"
 Write-Host "Report JSONL: $reportJsonlPath"
 Write-TickDataOpsLog -LogPath $logPath -Message "daily overlap completed run=$runId historical_added=$($report.totals.historical_added) new_buckets=$($report.totals.new_buckets_any) report=$reportPath"
 
+if (-not $SkipActivityProfile) {
+    Write-Host "Refreshing tick activity profile..." -ForegroundColor Cyan
+    $profileExitCode = Invoke-TickCli -ArgsList @(
+        "build-activity-profile",
+        "--lookback-days", "30",
+        "--bucket-minutes", "15"
+    )
+    if ($profileExitCode -eq 0) {
+        $activityProfileStatus = "refreshed"
+        Write-TickDataOpsLog -LogPath $logPath -Message "activity profile refreshed run=$runId"
+    }
+    else {
+        $activityProfileStatus = "failed"
+        Write-TickDataOpsLog -LogPath $logPath -Level "WARN" -Message "activity profile refresh failed run=$runId exit_code=$profileExitCode"
+    }
+}
+
 $topSymbols = @(
     $report.symbols |
         Sort-Object -Property historical_added -Descending |
@@ -610,7 +683,8 @@ Send-TickOverlapDiscord `
         @("Historical added", ("{0:N0}" -f $report.totals.historical_added)),
         @("BID added", ("{0:N0}" -f $report.totals.historical_bid_added)),
         @("ASK added", ("{0:N0}" -f $report.totals.historical_ask_added)),
-        @("New buckets", ("{0:N0}" -f $report.totals.new_buckets_any))
+        @("New buckets", ("{0:N0}" -f $report.totals.new_buckets_any)),
+        @("Activity profile", $activityProfileStatus)
     ) `
     -Technical (@(
         @("Report", $reportPath),

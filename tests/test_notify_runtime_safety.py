@@ -38,8 +38,8 @@ class _FakeNotifier:
     def __init__(self) -> None:
         self.messages: list[str] = []
         self.calls: list[dict] = []
-        self.discord_webhook = "https://discord.example/default"
-        self.combo_discord_webhook = "https://discord.example/webhook"
+        self.signal_discord_webhook = "https://discord.example/signal"
+        self.discord_webhook = self.signal_discord_webhook
 
     def send(
         self,
@@ -55,7 +55,7 @@ class _FakeNotifier:
                 "message": message,
                 "chat_id": chat_id,
                 "backend": backend,
-                "discord_webhook": discord_webhook,
+                "discord_webhook": discord_webhook or self.signal_discord_webhook,
             }
         )
         return SimpleNamespace(sent=True, backend=backend or "fake", detail="")
@@ -76,7 +76,7 @@ class _FailingNotifier(_FakeNotifier):
                 "message": message,
                 "chat_id": chat_id,
                 "backend": backend,
-                "discord_webhook": discord_webhook,
+                "discord_webhook": discord_webhook or self.signal_discord_webhook,
             }
         )
         return SimpleNamespace(sent=False, backend=backend or "fake", detail="telegram down")
@@ -507,7 +507,7 @@ def test_check_once_routes_combo_signal_to_discord_raw_message(tmp_path, monkeyp
     )
 
     assert notifier.calls[0]["backend"] == "discord"
-    assert notifier.calls[0]["discord_webhook"] == notifier.combo_discord_webhook
+    assert notifier.calls[0]["discord_webhook"] == notifier.signal_discord_webhook
     assert "Combo RAW SIGNAL | US30 H1 | BUY" in notifier.messages[0]
     assert "Entry" not in notifier.messages[0]
     assert "SL" not in notifier.messages[0]
@@ -548,7 +548,7 @@ def test_check_once_routes_non_ai_strategy_away_from_telegram(tmp_path, monkeypa
     )
 
     assert notifier.calls[0]["backend"] == "discord"
-    assert notifier.calls[0]["discord_webhook"] == notifier.discord_webhook
+    assert notifier.calls[0]["discord_webhook"] == notifier.signal_discord_webhook
     assert "MA Cross" in notifier.messages[0]
     assert any("alerted via discord" in event for event in events)
 
@@ -625,6 +625,41 @@ def test_check_ai_trend_once_skips_and_marks_historical_alert(tmp_path, monkeypa
     assert state.has(ai_trend_alert_key(alert))
     assert notifier.messages == []
     assert any("skipped historical AI Trend" in event for event in events)
+
+
+def test_check_ai_trend_once_routes_signal_to_discord_signal_channel(tmp_path, monkeypatch) -> None:
+    now = pd.Timestamp.now("UTC").floor("min")
+    alert = AiTrendAlert(
+        kind=H3_TREND_CHANGE,
+        symbol="AUDUSD",
+        tf="H3",
+        direction=1,
+        bar_time=now - pd.Timedelta(hours=3),
+        event_time=now,
+    )
+
+    def fake_run_ai_trend_alerts(**_kwargs):
+        return [alert], alert.bar_time
+
+    monkeypatch.setattr(detector, "run_ai_trend_alerts", fake_run_ai_trend_alerts)
+    state = SignalState(tmp_path / "state.json")
+    notifier = _FakeNotifier()
+
+    events = check_ai_trend_once(
+        symbols=["AUDUSD"],
+        tf="H3",
+        bars=400,
+        state=state,
+        notifier=notifier,  # type: ignore[arg-type]
+        event_type=H3_TREND_CHANGE,
+        max_alert_age_minutes=240,
+    )
+
+    assert state.has(ai_trend_alert_key(alert))
+    assert notifier.calls[0]["backend"] == "discord"
+    assert notifier.calls[0]["discord_webhook"] == notifier.signal_discord_webhook
+    assert "AI Trend H3 Trend Change" in notifier.messages[0]
+    assert any("alerted via discord" in event for event in events)
 
 
 def test_m45_alert_report_includes_h3_bias_context() -> None:

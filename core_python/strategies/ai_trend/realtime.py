@@ -59,7 +59,7 @@ def detect_realtime_signals(
                 dedup_key=ai_trend_alert_key(alert),
                 payload_source=alert,
                 alert_message=format_ai_trend_alert(alert),
-                alert_backend="telegram",
+                alert_backend="discord",
                 side=side,
                 kind=normalized_event_type,
                 event_text=f"{normalized_event_type} {side}",

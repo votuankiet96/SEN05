@@ -4,6 +4,7 @@ param(
     [string]$SupervisorTaskName = "SEN05_TickLive_Supervisor",
     [string]$WatchdogTaskName = "SEN05_TickLive_Watchdog",
     [string]$CheckerTaskName = "SEN05_TickData_Checker",
+    [string]$ShortRepairTaskName = "SEN05_TickData_ShortRepair",
     [string]$PythonExe = ""
 )
 
@@ -25,7 +26,7 @@ Write-Host ("Python   : {0}" -f $python)
 
 Write-Host ""
 Write-Host "== TASKS ==" -ForegroundColor Cyan
-foreach ($name in @($SupervisorTaskName, $WatchdogTaskName, $CheckerTaskName)) {
+foreach ($name in @($SupervisorTaskName, $WatchdogTaskName, $CheckerTaskName, $ShortRepairTaskName)) {
     try {
         $task = Get-ScheduledTask -TaskName $name -TaskPath $TaskPath -ErrorAction Stop
         $info = Get-ScheduledTaskInfo -TaskName $name -TaskPath $TaskPath -ErrorAction SilentlyContinue

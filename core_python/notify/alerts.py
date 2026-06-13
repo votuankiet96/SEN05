@@ -38,8 +38,11 @@ class Notifier:
         self.dry_run = dry_run
         self.telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
         self.telegram_chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
-        self.discord_webhook = os.environ.get("DISCORD_WEBHOOK_URL", "")
-        self.combo_discord_webhook = os.environ.get("COMBO_DISCORD_WEBHOOK_URL", "") or self.discord_webhook
+        self.signal_discord_webhook = (
+            os.environ.get("SIGNAL_DISCORD_WEBHOOK_URL", "")
+            or os.environ.get("DISCORD_WEBHOOK_URL", "")
+        )
+        self.discord_webhook = self.signal_discord_webhook
         self._last_telegram_send_at = 0.0
 
     def send(
@@ -69,7 +72,7 @@ class Notifier:
             return selected
         if self.telegram_token and self.telegram_chat_id:
             return "telegram"
-        if self.discord_webhook:
+        if self.signal_discord_webhook:
             return "discord"
         return "none"
 
@@ -108,9 +111,9 @@ class Notifier:
             time.sleep(remaining)
 
     def _send_discord(self, message: str, webhook_url: str | None = None) -> NotifyResult:
-        effective_webhook = webhook_url or self.discord_webhook
+        effective_webhook = webhook_url or self.signal_discord_webhook
         if not effective_webhook:
-            return NotifyResult("discord", False, "missing DISCORD_WEBHOOK_URL")
+            return NotifyResult("discord", False, "missing SIGNAL_DISCORD_WEBHOOK_URL or DISCORD_WEBHOOK_URL")
         plain = re.sub(r"<[^>]+>", "", message)
         try:
             response = requests.post(effective_webhook, json={"content": plain[:2000]}, timeout=15)

@@ -210,6 +210,27 @@ def sync_symbols(settings: TickRuntimeSettings, store: TickSqlStore | None, appl
     return lines
 
 
+def build_activity_profile(
+    settings: TickRuntimeSettings,
+    store: TickSqlStore,
+    lookback_days: int = 30,
+    bucket_minutes: int = 15,
+    active_min_ratio: float = 0.25,
+    min_active_ticks: int = 1,
+) -> dict[str, Any]:
+    """Build the learned market activity profile used by tick health checks."""
+    from .checker import build_tick_activity_profile
+
+    return build_tick_activity_profile(
+        settings,
+        store,
+        lookback_days=lookback_days,
+        bucket_minutes=bucket_minutes,
+        active_min_ratio=active_min_ratio,
+        min_active_ticks=min_active_ticks,
+    )
+
+
 def run_history_backfill(
     settings: TickRuntimeSettings,
     store: TickSqlStore,
@@ -217,6 +238,7 @@ def run_history_backfill(
     to_timestamp_ms: int,
     symbols: list[str] | None = None,
     request_timeout_seconds: float | None = None,
+    notify: bool = True,
 ) -> None:
     """Backfill historical BID/ASK ticks for matched symbols."""
     settings = ensure_fresh_access_token(settings, "history backfill")
@@ -240,6 +262,8 @@ def run_history_backfill(
         update_ingest_state_after_insert(store, matched, records)
 
     def on_spooled(records: list[TickRecord], spooled: int, exc: Exception) -> None:
+        if not notify:
+            return
         symbols_in_batch = sorted({record.local_symbol.upper() for record in records})
         notify_tick_report(
             "WARNING",
@@ -265,20 +289,21 @@ def run_history_backfill(
         on_spooled=on_spooled,
     )
     ingest_run_id = store.start_ingest_run("BACKFILL", note=f"{from_timestamp_ms}->{to_timestamp_ms}")
-    notify_tick_report(
-        "INFO",
-        "Tick backfill started",
-        conclusion="The service started downloading historical ticks from cTrader.",
-        action="Monitor the dashboard or log viewer. Large multi-year backfills can take a long time.",
-        details=[
-            ("Run ID", ingest_run_id),
-            ("Symbol", ",".join(sorted(matched))),
-            ("From", utc_from_millis(from_timestamp_ms).isoformat()),
-            ("To", utc_from_millis(to_timestamp_ms).isoformat()),
-        ],
-        throttle_key="tick-backfill-started",
-        throttle_seconds=30,
-    )
+    if notify:
+        notify_tick_report(
+            "INFO",
+            "Tick backfill started",
+            conclusion="The service started downloading historical ticks from cTrader.",
+            action="Monitor the dashboard or log viewer. Large multi-year backfills can take a long time.",
+            details=[
+                ("Run ID", ingest_run_id),
+                ("Symbol", ",".join(sorted(matched))),
+                ("From", utc_from_millis(from_timestamp_ms).isoformat()),
+                ("To", utc_from_millis(to_timestamp_ms).isoformat()),
+            ],
+            throttle_key="tick-backfill-started",
+            throttle_seconds=30,
+        )
     queue: deque[HistoryRequest] = deque()
     state: dict[str, object] = {"finished": False, "error": None}
     for target, remote in matched.values():
@@ -316,21 +341,22 @@ def run_history_backfill(
             rows_spooled=batcher.rows_spooled,
             note=summary,
         )
-        notify_tick_report(
-            "ERROR",
-            "Tick backfill failed",
-            conclusion="Backfill failed before completion.",
-            action="Check logs, cTrader token, network, and database connectivity. After fixing the issue, rerun the same time window.",
-            details=[
-                ("Run ID", ingest_run_id),
-                ("Inserted ticks", batcher.rows_inserted),
-                ("Spooled ticks", batcher.rows_spooled),
-            ],
-            technical=[("Error", summary[:600])],
-            throttle_key="tick-backfill-failed",
-            throttle_seconds=60,
-        )
-        flush_notifications()
+        if notify:
+            notify_tick_report(
+                "ERROR",
+                "Tick backfill failed",
+                conclusion="Backfill failed before completion.",
+                action="Check logs, cTrader token, network, and database connectivity. After fixing the issue, rerun the same time window.",
+                details=[
+                    ("Run ID", ingest_run_id),
+                    ("Inserted ticks", batcher.rows_inserted),
+                    ("Spooled ticks", batcher.rows_spooled),
+                ],
+                technical=[("Error", summary[:600])],
+                throttle_key="tick-backfill-failed",
+                throttle_seconds=60,
+            )
+            flush_notifications()
         stop_reactor(sdk, client)
 
     def send_next() -> None:
@@ -349,20 +375,21 @@ def run_history_backfill(
                 f"{batcher.rows_spooled:,}",
                 ingest_run_id[:8],
             )
-            notify_tick_report(
-                "INFO",
-                "Tick backfill completed",
-                conclusion="Historical tick backfill completed.",
-                action="Open the dashboard or run tick_status.ps1 to review the new data.",
-                details=[
-                    ("Run ID", ingest_run_id),
-                    ("Inserted ticks", batcher.rows_inserted),
-                    ("Spooled ticks", batcher.rows_spooled),
-                ],
-                throttle_key="tick-backfill-completed",
-                throttle_seconds=30,
-            )
-            flush_notifications()
+            if notify:
+                notify_tick_report(
+                    "INFO",
+                    "Tick backfill completed",
+                    conclusion="Historical tick backfill completed.",
+                    action="Open the dashboard or run tick_status.ps1 to review the new data.",
+                    details=[
+                        ("Run ID", ingest_run_id),
+                        ("Inserted ticks", batcher.rows_inserted),
+                        ("Spooled ticks", batcher.rows_spooled),
+                    ],
+                    throttle_key="tick-backfill-completed",
+                    throttle_seconds=30,
+                )
+                flush_notifications()
             stop_reactor(sdk, client)
             return
 

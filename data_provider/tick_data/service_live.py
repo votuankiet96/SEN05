@@ -69,6 +69,9 @@ def run_live_ingest(
         "discord_report_loop_started": False,
         "shutdown_loop_started": False,
         "reconnect_attempt": 0,
+        "reconnect_scheduled": False,
+        "client_generation": 0,
+        "error_generation": None,
         "stop_reason": None,
     }
     spool = TickSpool(settings.spool_path)
@@ -322,7 +325,27 @@ def run_live_ingest(
         logger.info("stopping cTrader live ingest: %s", reason)
         stop_reactor(sdk, client_ref.get("client"))
 
-    def on_error(failure: Any) -> None:
+    def on_error(failure: Any, generation: int | None = None) -> None:
+        current_generation = int(state["client_generation"])
+        if generation is not None and generation != current_generation:
+            logger.debug(
+                "ignoring stale live ingest error from client generation %s current=%s: %s",
+                generation,
+                current_generation,
+                failure,
+            )
+            return
+        if state["stopping"]:
+            logger.info("live ingest error during shutdown: %s", failure)
+            return
+        if generation is not None and state["error_generation"] == generation:
+            logger.debug(
+                "duplicate live ingest error ignored for client generation %s: %s",
+                generation,
+                failure,
+            )
+            return
+        state["error_generation"] = generation
         logger.error("live ingest error: %s", failure)
         notify_tick_report(
             "ERROR",
@@ -331,7 +354,7 @@ def run_live_ingest(
             action="The supervisor will try to restart it. If this repeats, open the log viewer and check token, cTrader, and database connectivity.",
             technical=[("Error", str(failure)[:600])],
             throttle_key="tick-live-error",
-            throttle_seconds=300,
+            throttle_seconds=1800,
         )
         client = client_ref.get("client")
         if client is not None and not state["stopping"]:
@@ -388,17 +411,24 @@ def run_live_ingest(
                 for record in records
             )
 
-    def on_authed() -> None:
+    def on_authed(generation: int) -> None:
+        if generation != int(state["client_generation"]):
+            logger.warning(
+                "ignoring stale live auth callback from client generation %s current=%s",
+                generation,
+                state["client_generation"],
+            )
+            return
         symbol_ids = sorted(by_remote_id)
         client = client_ref.get("client")
         if client is None:
-            on_error(RuntimeError("cTrader client is not available after auth"))
+            on_error(RuntimeError("cTrader client is not available after auth"), generation)
             return
         req = make_subscribe_spots_req(sdk, int(settings.account_id), symbol_ids)
         client.send(
             req,
             responseTimeoutInSeconds=settings.response_timeout_seconds,
-        ).addErrback(on_error)
+        ).addErrback(lambda failure: on_error(failure, generation))
         if not state["flush_loop_started"]:
             state["flush_loop_started"] = True
             flush_loop()
@@ -412,6 +442,8 @@ def run_live_ingest(
             state["shutdown_loop_started"] = True
             shutdown_signal_loop()
         state["reconnect_attempt"] = 0
+        state["reconnect_scheduled"] = False
+        state["error_generation"] = None
         logger.info("subscribed to %d cTrader spot symbols", len(symbol_ids))
         notify_tick_report(
             "INFO",
@@ -426,25 +458,61 @@ def run_live_ingest(
             throttle_seconds=60,
         )
 
-    def on_connected(_client: Any) -> None:
+    def on_connected(_client: Any, generation: int) -> None:
         nonlocal settings
+        if generation != int(state["client_generation"]):
+            logger.debug(
+                "ignoring stale live connect callback from client generation %s current=%s",
+                generation,
+                state["client_generation"],
+            )
+            return
         settings = ensure_fresh_access_token(settings, "live reconnect", logger)
-        send_auth_chain(settings, sdk, _client, on_authed, on_error)
+        send_auth_chain(
+            settings,
+            sdk,
+            _client,
+            lambda: on_authed(generation),
+            lambda failure: on_error(failure, generation),
+        )
 
     def start_client() -> None:
         if state["stopping"]:
             return
+        state["client_generation"] = int(state["client_generation"]) + 1
+        generation = int(state["client_generation"])
+        state["reconnect_scheduled"] = False
+        state["error_generation"] = None
         client = new_client(settings, sdk)
         client_ref["client"] = client
-        client.setConnectedCallback(on_connected)
-        client.setDisconnectedCallback(on_disconnected)
+        client.setConnectedCallback(lambda _client: on_connected(_client, generation))
+        client.setDisconnectedCallback(
+            lambda _client, reason: on_disconnected(_client, reason, generation)
+        )
         client.setMessageReceivedCallback(on_message)
         client.startService()
 
-    def on_disconnected(_client: Any, reason: Any) -> None:
+    def on_disconnected(_client: Any, reason: Any, generation: int | None = None) -> None:
         if state["stopping"]:
             logger.info("cTrader disconnected during shutdown: %s", reason)
             return
+        current_generation = int(state["client_generation"])
+        if generation is not None and generation != current_generation:
+            logger.debug(
+                "ignoring stale live disconnect from client generation %s current=%s: %s",
+                generation,
+                current_generation,
+                reason,
+            )
+            return
+        if state["reconnect_scheduled"]:
+            logger.debug(
+                "cTrader disconnected but reconnect is already scheduled: %s",
+                reason,
+            )
+            return
+        state["reconnect_scheduled"] = True
+        client_ref["client"] = None
         state["reconnect_attempt"] = int(state["reconnect_attempt"]) + 1
         delay = reconnect_delay_seconds(
             int(state["reconnect_attempt"]),
@@ -468,7 +536,7 @@ def run_live_ingest(
             ],
             technical=[("Reason", reason)],
             throttle_key="tick-live-disconnected",
-            throttle_seconds=300,
+            throttle_seconds=1800,
         )
         sdk.reactor.callLater(delay, start_client)
 

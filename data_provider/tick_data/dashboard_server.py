@@ -21,6 +21,7 @@ from .store_sql import TickSqlStore, qualified_tick_table, quote_ident
 
 HERE = Path(__file__).resolve().parent
 STATIC_DIR = HERE / "dashboard"
+DEFAULT_HOST = os.environ.get("CTRADER_FTMO_TICK_DASHBOARD_HOST", "127.0.0.1")
 DEFAULT_PORT = int(os.environ.get("CTRADER_FTMO_TICK_DASHBOARD_PORT", "8061"))
 
 app = Flask(__name__, static_folder=str(STATIC_DIR), static_url_path="")
@@ -69,6 +70,18 @@ def _limit(value: str | None, default: int, maximum: int) -> int:
     except ValueError:
         parsed = default
     return max(1, min(maximum, parsed))
+
+
+def _tail_file_lines(path: Path, lines: int, max_bytes: int = 262_144) -> list[str]:
+    size = path.stat().st_size
+    with path.open("rb") as handle:
+        if size > max_bytes:
+            handle.seek(-max_bytes, os.SEEK_END)
+        text = handle.read().decode("utf-8", errors="replace")
+    result = text.splitlines()
+    if size > max_bytes and result:
+        result = result[1:]
+    return result[-lines:]
 
 
 def _symbol(store: TickSqlStore, raw: str | None) -> str:
@@ -179,13 +192,13 @@ def api_log_tail():
     path = settings.log_path
     if not path.exists():
         return jsonify({"path": str(path), "lines": []})
-    text = path.read_text(encoding="utf-8", errors="replace")
-    return jsonify({"path": str(path), "lines": text.splitlines()[-lines:]})
+    return jsonify({"path": str(path), "lines": _tail_file_lines(path, lines)})
 
 
 def main() -> None:
+    host = os.environ.get("CTRADER_FTMO_TICK_DASHBOARD_HOST", DEFAULT_HOST)
     port = int(os.environ.get("CTRADER_FTMO_TICK_DASHBOARD_PORT", str(DEFAULT_PORT)))
-    app.run(host="127.0.0.1", port=port, debug=False)
+    app.run(host=host, port=port, debug=False, threaded=True, use_reloader=False)
 
 
 if __name__ == "__main__":

@@ -21,7 +21,13 @@ from .auth import build_authorization_url, exchange_code_for_token, refresh_acce
 from .checker import run_tick_check
 from .notify import flush_notifications, notify_tick_report
 from .runtime import load_settings
-from .service_jobs import fetch_account_list, probe_history_depth, run_history_backfill, sync_symbols
+from .service_jobs import (
+    build_activity_profile,
+    fetch_account_list,
+    probe_history_depth,
+    run_history_backfill,
+    sync_symbols,
+)
 from .service_live import run_live_ingest
 from .spool import TickSpool
 from .store_sql import TickSqlStore
@@ -153,6 +159,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         help="Per-request cTrader response timeout in seconds; defaults to runtime config",
     )
+    backfill.add_argument(
+        "--no-notify",
+        action="store_true",
+        help="Suppress per-backfill Discord notifications; parent ops scripts can report the aggregate result",
+    )
 
     history_depth = sub.add_parser("history-depth", help="Probe deepest available historical tick depth")
     history_depth.add_argument("--symbols", nargs="*", help="Optional local symbol filter, e.g. US30 GOLD")
@@ -171,6 +182,13 @@ def build_parser() -> argparse.ArgumentParser:
     check.add_argument("--stale-seconds", type=int, help="Override stale heartbeat threshold")
     check.add_argument("--json", action="store_true", help="Print machine-readable JSON")
     check.add_argument("--notify", action="store_true", help="Send Discord notification when status is not OK")
+
+    profile = sub.add_parser("build-activity-profile", help="Build learned tick activity profile for market-aware checks")
+    profile.add_argument("--lookback-days", type=int, default=30)
+    profile.add_argument("--bucket-minutes", type=int, default=15)
+    profile.add_argument("--active-min-ratio", type=float, default=0.25)
+    profile.add_argument("--min-active-ticks", type=int, default=1)
+    profile.add_argument("--json", action="store_true", help="Print machine-readable JSON")
 
     spool_status = sub.add_parser("spool-status", help="Show local tick SQLite spool backlog")
     spool_status.add_argument("--json", action="store_true", help="Print machine-readable JSON")
@@ -331,7 +349,7 @@ def main(argv: list[str] | None = None) -> int:
                 ],
                 technical=[(f"{item.severity} {item.code}", item.message) for item in top_findings],
                 throttle_key=f"tick-check-{report.status.lower()}",
-                throttle_seconds=300,
+                throttle_seconds=300 if report.status == "ERROR" else 3600,
             )
             flush_notifications()
         if args.json:
@@ -348,6 +366,36 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(f"spool_path={payload['path']}")
             print(f"spool_count={payload['count']}")
+        return 0
+
+    if args.command == "build-activity-profile":
+        if args.lookback_days <= 0:
+            parser.error("--lookback-days must be greater than 0")
+        if args.bucket_minutes <= 0:
+            parser.error("--bucket-minutes must be greater than 0")
+        if args.active_min_ratio < 0 or args.active_min_ratio > 1:
+            parser.error("--active-min-ratio must be between 0 and 1")
+        if args.min_active_ticks <= 0:
+            parser.error("--min-active-ticks must be greater than 0")
+        profile = build_activity_profile(
+            settings,
+            store,
+            lookback_days=args.lookback_days,
+            bucket_minutes=args.bucket_minutes,
+            active_min_ratio=args.active_min_ratio,
+            min_active_ticks=args.min_active_ticks,
+        )
+        if args.json:
+            print(json.dumps(profile, indent=2, sort_keys=True, default=str))
+        else:
+            symbols = profile.get("symbols", {})
+            active = sum(int(item.get("active_buckets", 0)) for item in symbols.values())
+            total = sum(int(item.get("total_buckets", 0)) for item in symbols.values())
+            print(f"profile_path={profile.get('path')}")
+            print(f"generated_at_utc={profile.get('generated_at_utc')}")
+            print(f"lookback_days={profile.get('lookback_days')}")
+            print(f"bucket_minutes={profile.get('bucket_minutes')}")
+            print(f"symbols={len(symbols)} active_buckets={active}/{total}")
         return 0
 
     if args.command == "symbol-sync":
@@ -382,6 +430,7 @@ def main(argv: list[str] | None = None) -> int:
             _parse_datetime_ms(args.to_value),
             symbols=args.symbols,
             request_timeout_seconds=args.request_timeout,
+            notify=not args.no_notify,
         )
         return 0
 

@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEN05 Autotrading — System Architecture</title>
+<style>
+  :root {
+    --dp: #0ea5e9;
+    --og: #8b5cf6;
+    --of: #10b981;
+    --bt: #f59e0b;
+    --bg: #0f172a;
+    --bg2: #1e293b;
+    --bg3: #334155;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --border: #475569;
+    --red: #ef4444;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --radius: 10px;
+    --shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 24px;
+  }
+
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 6px; }
+  h2 { font-size: 18px; font-weight: 600; margin-bottom: 16px; letter-spacing: 0.5px; }
+  h3 { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+
+  .page-header {
+    text-align: center;
+    padding: 32px 24px 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+  }
+  .page-header h1 { color: #fff; }
+  .page-header p { color: var(--text2); margin-top: 6px; font-size: 13px; }
+  .page-header .badges { display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+  }
+
+  section { margin-bottom: 40px; }
+
+  .section-title {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 20px; padding-bottom: 10px;
+    border-bottom: 2px solid var(--border);
+  }
+  .section-title .icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow);
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-auto { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+
+  /* VM Grid */
+  .vm-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .vm-card {
+    background: var(--bg3);
+    border-radius: 8px;
+    padding: 12px 10px;
+    text-align: center;
+    border: 2px solid transparent;
+    position: relative;
+  }
+  .vm-card.dp { border-color: var(--dp); }
+  .vm-card.og { border-color: var(--og); }
+  .vm-card.of { border-color: var(--of); }
+  .vm-card.infra { border-color: var(--bt); }
+  .vm-card .vm-name { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .vm-card .vm-ip { font-family: monospace; font-size: 10px; color: var(--text2); margin-bottom: 6px; }
+  .vm-card .vm-os { font-size: 10px; color: var(--text2); margin-bottom: 6px; }
+  .vm-card .vm-role {
+    font-size: 10px; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px;
+  }
+  .vm-card .vm-desc { font-size: 10px; color: var(--text2); }
+  .vm-card.dp .vm-name { color: var(--dp); }
+  .vm-card.og .vm-name { color: var(--og); }
+  .vm-card.of .vm-name { color: var(--of); }
+  .vm-card.infra .vm-name { color: var(--bt); }
+  .vm-host {
+    background: var(--bg3); border: 2px dashed var(--border);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 8px;
+  }
+  .vm-host-label {
+    font-size: 11px; font-weight: 700; color: var(--text2);
+    letter-spacing: 1px; text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  /* Flow diagram */
+  .flow {
+    display: flex; align-items: center; gap: 0; flex-wrap: wrap;
+  }
+  .flow-node {
+    background: var(--bg3); border-radius: 8px;
+    padding: 10px 14px; text-align: center;
+    border: 1px solid var(--border);
+    min-width: 110px;
+  }
+  .flow-node .fn-label { font-size: 10px; color: var(--text2); }
+  .flow-node .fn-name { font-size: 12px; font-weight: 600; margin-top: 2px; }
+  .flow-arrow {
+    color: var(--text2); font-size: 18px; padding: 0 6px;
+    display: flex; align-items: center; flex-direction: column;
+  }
+  .flow-arrow .arrow-label {
+    font-size: 9px; color: var(--text2); white-space: nowrap;
+    margin-bottom: 2px;
+  }
+  .flow-sep { width: 100%; height: 1px; background: var(--border); margin: 12px 0; }
+
+  /* Tier boxes */
+  .tier-box {
+    border-radius: var(--radius);
+    padding: 16px;
+    border: 2px solid;
+  }
+  .tier-box.dp { border-color: var(--dp); background: rgba(14,165,233,0.06); }
+  .tier-box.og { border-color: var(--og); background: rgba(139,92,246,0.06); }
+  .tier-box.of { border-color: var(--of); background: rgba(16,185,129,0.06); }
+  .tier-box.bt { border-color: var(--bt); background: rgba(245,158,11,0.06); }
+  .tier-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+  .tier-box.dp .tier-label { color: var(--dp); }
+  .tier-box.og .tier-label { color: var(--og); }
+  .tier-box.of .tier-label { color: var(--of); }
+  .tier-box.bt .tier-label { color: var(--bt); }
+
+  /* Arrow connectors */
+  .big-arrow {
+    text-align: center; font-size: 24px; color: var(--text2);
+    padding: 4px 0; line-height: 1;
+  }
+  .big-arrow span { font-size: 10px; color: var(--text2); display: block; margin-top: 2px; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    background: var(--bg3); padding: 8px 12px;
+    text-align: left; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.5px; text-transform: uppercase; color: var(--text2);
+    border-bottom: 2px solid var(--border);
+  }
+  td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg3); }
+
+  /* Status pills */
+  .status {
+    display: inline-block; padding: 2px 8px; border-radius: 12px;
+    font-size: 11px; font-weight: 600;
+  }
+  .status.done { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+  .status.partial { background: rgba(234,179,8,0.15); color: var(--yellow); border: 1px solid rgba(234,179,8,0.3); }
+  .status.todo { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+  .status.prod { background: rgba(14,165,233,0.15); color: var(--dp); border: 1px solid rgba(14,165,233,0.3); }
+
+  /* Code block */
+  .code {
+    background: #0d1117; border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px 16px;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 12px; line-height: 1.7; overflow-x: auto;
+    color: #e6edf3;
+  }
+  .code .c { color: #6e7681; }
+  .code .k { color: #ff7b72; }
+  .code .s { color: #a5d6ff; }
+  .code .v { color: #79c0ff; }
+  .code .p { color: #d2a8ff; }
+
+  /* Component registry table */
+  .comp-row {
+    display: grid; grid-template-columns: 120px 180px 1fr;
+    gap: 8px; padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    align-items: start;
+  }
+  .comp-row:last-child { border-bottom: none; }
+  .comp-type { font-size: 11px; font-weight: 600; color: var(--text2); }
+  .comp-impl { font-family: monospace; font-size: 11px; color: var(--of); }
+  .comp-detail { font-size: 11px; color: var(--text2); }
+
+  /* Info boxes */
+  .info-box {
+    border-left: 3px solid; padding: 10px 14px;
+    border-radius: 0 8px 8px 0; background: var(--bg3);
+    font-size: 12px; margin-bottom: 8px;
+  }
+  .info-box.blue { border-color: var(--dp); }
+  .info-box.purple { border-color: var(--og); }
+  .info-box.green { border-color: var(--of); }
+  .info-box.yellow { border-color: var(--bt); }
+  .info-box strong { display: block; margin-bottom: 4px; }
+
+  /* Notebook steps */
+  .nb-steps { display: flex; gap: 0; flex-direction: column; }
+  .nb-step {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 12px;
+    border-left: 2px solid var(--border);
+    margin-left: 12px;
+    position: relative;
+  }
+  .nb-step::before {
+    content: attr(data-n);
+    position: absolute; left: -13px;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--bt); color: #000; font-weight: 700;
+    font-size: 11px; display: flex; align-items: center; justify-content: center;
+    top: 12px;
+  }
+  .nb-step-title { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .nb-step-desc { font-size: 12px; color: var(--text2); }
+
+  /* Redis channel */
+  .channel-box {
+    background: #0d1117; border: 1px solid var(--dp);
+    border-radius: 8px; padding: 12px 16px;
+    font-family: monospace; font-size: 13px;
+    color: var(--dp); text-align: center; margin-bottom: 12px;
+  }
+
+  /* Roadmap */
+  .roadmap-item {
+    display: flex; gap: 12px; padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .roadmap-item:last-child { border-bottom: none; }
+  .roadmap-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .roadmap-item.done .roadmap-num { background: rgba(34,197,94,0.2); color: var(--green); }
+  .roadmap-item.partial .roadmap-num { background: rgba(234,179,8,0.2); color: var(--yellow); }
+  .roadmap-item.todo .roadmap-num { background: rgba(239,68,68,0.2); color: var(--red); }
+  .roadmap-title { font-weight: 600; font-size: 13px; margin-bottom: 3px; }
+  .roadmap-desc { font-size: 12px; color: var(--text2); }
+
+  .tag {
+    display: inline-block; padding: 1px 7px; border-radius: 4px;
+    font-size: 10px; font-weight: 600; margin-left: 6px;
+  }
+  .tag.dp { background: rgba(14,165,233,0.2); color: var(--dp); }
+  .tag.og { background: rgba(139,92,246,0.2); color: var(--og); }
+  .tag.of { background: rgba(16,185,129,0.2); color: var(--of); }
+  .tag.bt { background: rgba(245,158,11,0.2); color: var(--bt); }
+
+  ul.bullet li { margin-left: 16px; font-size: 12px; color: var(--text2); margin-bottom: 3px; list-style: disc; }
+
+  @media (max-width: 1200px) {
+    .vm-grid { grid-template-columns: repeat(4, 1fr); }
+    .grid-3 { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 800px) {
+    .vm-grid { grid-template-columns: repeat(2, 1fr); }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    .comp-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<div class="page-header">
+  <h1>SEN05 Autotrading</h1>
+  <p>Full System Architecture — Internal Reference Document</p>
+  <div class="badges">
+    <span class="badge" style="background:rgba(14,165,233,0.2);color:var(--dp)">DP — Data Provider</span>
+    <span class="badge" style="background:rgba(139,92,246,0.2);color:var(--og)">OG — Order Generator</span>
+    <span class="badge" style="background:rgba(16,185,129,0.2);color:var(--of)">OF — Order Fulfillment</span>
+    <span class="badge" style="background:rgba(245,158,11,0.2);color:var(--bt)">Backtest / Optimize</span>
+    <span class="badge" style="background:rgba(148,163,184,0.15);color:var(--text2)">Last updated: 2026-06-08</span>
+  </div>
+</div>
+
+
+<!-- ===== 1. INFRASTRUCTURE ===== -->
+<section>
+  <div class="section-title">
+    <div class="icon" style="background:rgba(148,163,184,0.15)">🖥</div>
+    <h2>1. Infrastructure — Hyper-V on SERVER-HOST</h2>
+  </div>
+
+  <div class="card">
+    <div class="vm-host">
+      <div class="vm-host-label">SERVER-HOST (Physical) · Windows 11 Pro Workstation · 10.11.12.5</div>
+      <div class="vm-grid">
+
+        <div class="vm-card dp">
+          <div class="vm-name">VM-DP6</div>
+          <div class="vm-ip">10.11.12.6</div>
+          <div class="vm-os">Ubuntu 24.04</div>
+          <div class="vm-role" style="background:rgba(14,165,233,0.15);color:var(--dp)">Data Provider</div>
+          <div class="vm-desc">ws_live.py<br>pipeline.py<br>SQL ETL</div>
+        </div>
+
+        <div class="vm-card og">
+          <div class="vm-name">VM-OG</div>
+          <div class="vm-ip">10.11.12.8</div>
+          <div class="vm-os">Ubuntu 24.04</div>
+          <div class="vm-role" style="background:rgba(139,92,246,0.15);color:var(--og)">Signal Gen</div>
+          <div class="vm-desc">core_python<br>signal_watcher<br>Redis 6379</div>
+        </div>
+
+        <div class="vm-card of">
+          <div class="vm-name">VM-OF1</div>
+          <div class="vm-ip">10.11.12.x</div>
+          <div class="vm-os">Windows</div>
+          <div class="vm-role" style="background:rgba(16,185,129,0.15);color:var(--of)">combo</div>
+          <div class="vm-desc">cTrader cBot<br>signal:combo:*</div>
+        </div>
+
+        <div class="vm-card of">
+          <div class="vm-name">VM-OF2</div>
+          <div class="vm-ip">10.11.12.x</div>
+          <div class="vm-os">Windows</div>
+          <div class="vm-role" style="background:rgba(16,185,129,0.15);color:var(--of)">ai_trend</div>
+          <div class="vm-desc">cTrader cBot<br>signal:ai_trend:*</div>
+        </div>
+
+        <div class="vm-card of" style="opacity:0.5">
+          <div class="vm-name">VM-OF3</div>
+          <div class="vm-ip">Reserved</div>
+          <div class="vm-os">Windows</div>
+          <div class="vm-role" style="background:rgba(16,185,129,0.1);color:var(--of)">knn_combo</div>
+          <div class="vm-desc">Future strategy</div>
+        </div>
+
+        <div class="vm-card of" style="opacity:0.5">
+          <div class="vm-name">VM-OF4</div>
+          <div class="vm-ip">Reserved</div>
+          <div class="vm-os">Windows</div>
+          <div class="vm-role" style="background:rgba(16,185,129,0.1);color:var(--of)">Reserved</div>
+          <div class="vm-desc">Strategy 4</div>
+        </div>
+
+        <div class="vm-card infra">
+          <div class="vm-name">VM-SQL</div>
+          <div class="vm-ip">10.11.12.6*</div>
+          <div class="vm-os">Windows Server</div>
+          <div class="vm-role" style="background:rgba(245,158,11,0.15);color:var(--bt)">Data Store</div>
+          <div class="vm-desc">SQL Server<br>DWH.Fact_OHLCV<br>Data Warehouse</div>
+        </div>
+
+      </div>
+      <div style="font-size:11px;color:var(--text2);text-align:center">* SQL Server co-located with DP6 in current setup</div>
+    </div>
+
+    <div class="grid-3">
+      <div class="info-box blue">
+        <strong style="color:var(--dp)">Network</strong>
+        LAN 10.11.12.0/24 — tất cả VM giao tiếp nội bộ, không expose ra internet
+      </div>
+      <div class="info-box purple">
+        <strong style="color:var(--og)">Redis Bus</strong>
+        VM-OG host Redis :6379 — single broker cho toàn bộ signal pub/sub
+      </div>
+      <div class="info-box yellow">
+        <strong style="color:var(--bt)">Dev / Backtest</strong>
+        SERVER-HOST Windows trực tiếp · Z:\SEN05_Autotrading
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== 2. THREE-TIER ARCHITECTURE ===== -->
+<section>
+  <div class="section-title">
+    <div class="icon" style="background:rgba(148,163,184,0.15)">🏗</div>
+    <h2>2. Three-Tier System Architecture</h2>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:8px;">
+
+    <!-- DP Tier -->
+    <div class="tier-box dp">
+      <div class="tier-label">Tier 1 — DP (Data Provider)</div>
+      <div class="flow" style="flex-wrap:wrap;gap:6px;align-items:center">
+        <div class="flow-node" style="border-color:rgba(14,165,233,0.4)">
+          <div class="fn-label">Source</div>
+          <div class="fn-name" style="color:var(--dp)">TradingView</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:3px">WebSocket</div>
+        </div>
+        <div class="flow-arrow">→<div class="arrow-label">batch 5min<br>OHLCV tick</div></div>
+        <div class="flow-node" style="border-color:rgba(14,165,233,0.4)">
+          <div class="fn-label">Updater</div>
+          <div class="fn-name" style="color:var(--dp)">ws_live.py</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:3px">Indice+Metal+Crypto</div>
+        </div>
+        <div class="flow-arrow">→<div class="arrow-label">RAM buffer<br>SQLite spool</div></div>
+        <div class="flow-node" style="border-color:rgba(14,165,233,0.4)">
+          <div class="fn-label">ETL</div>
+          <div class="fn-name" style="color:var(--dp)">pipeline.py</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:3px">gap/auto/full modes</div>
+        </div>
+        <div class="flow-arrow">→<div class="arrow-label">upsert</div></div>
+        <div class="flow-node" style="border-color:rgba(14,165,233,0.4)">
+          <div class="fn-label">Storage</div>
+          <div class="fn-name" style="color:var(--dp)">SQL Server</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:3px">DWH.Fact_OHLCV</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="big-arrow">↓<span>SQL query (37 symbols × 15 TFs)</span></div>
+
+    <!-- OG Tier -->
+    <div class="tier-box og">
+      <div class="tier-label">Tier 2 — OG (Order Generator / Signal Engine)</div>
+      <div class="flow" style="flex-wrap:wrap;gap:6px;align-items:center">
+        <div class="flow-node" style="border-color:rgba(139,92,246,0.4)">
+          <div class="fn-label">Scheduler</div>
+          <div class="fn-name" style="color:var(--og)">signal_watcher</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:3px">bar-close aligned</div>
+        </div>
+        <div class="flow-arrow">→<div class="arrow-label">load + run</div></div>
+        <div class="flow-node" style="border-color:rgba(139,92,246,0.4)">
+          <div class="fn-label">Engine</div>
+          <div class="fn-name" style="color:var(--og)">engine.py</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:3px">4 routes</div>
+        </div>
+        <div class="flow-arrow">→<div class="arrow-label">signals</div></div>
+        <div class="flow-node" style="border-color:rgba(139,92,246,0.4)">
+          <div class="fn-label">Dedup</div>
+          <div class="fn-name" style="color:var(--og)">state.json</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:3px">TTL 60 days</div>
+        </div>
+        <div class="flow-arrow">→<div class="arrow-label">new signals</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div class="flow-node" style="border-color:rgba(139,92,246,0.4);min-width:120px">
+            <div class="fn-name" style="color:var(--og);font-size:11px">Redis PUBLISH</div>
+            <div style="font-size:10px;color:var(--red);margin-top:2px">⚠ Not built yet</div>
+          </div>
+          <div class="flow-node" style="border-color:rgba(139,92,246,0.3);opacity:0.7;min-width:120px">
+            <div class="fn-name" style="color:var(--text2);font-size:11px">Telegram/Discord</div>
+            <div style="font-size:10px;color:var(--text2);margin-top:2px">phụ — giữ lại</div>
+          </div>
+          <div class="flow-node" style="border-color:rgba(139,92,246,0.3);opacity:0.7;min-width:120px">
+            <div class="fn-name" style="color:var(--text2);font-size:11px">CSV Export</div>
+            <div style="font-size:10px;color:var(--yellow);margin-top:2px">cần fix</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="big-arrow">↓<span>Redis pub/sub · channel: signal:{strategy}:{symbol}:{tf}</span></div>
+
+    <!-- OF Tier -->
+    <div class="tier-box of">
+      <div class="tier-label">Tier 3 — OF (Order Fulfillment / cBot Execution)</div>
+      <div class="flow" style="flex-wrap:wrap;gap:6px;align-items:center">
+        <div class="flow-node" style="border-color:rgba(16,185,129,0.4)">
+          <div class="fn-label">Subscriber</div>
+          <div class="fn-name" style="color:var(--of)">cBot C#</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:3px">StackExchange.Redis</div>
+        </div>
+        <div class="flow-arrow">→<div class="arrow-label">parse<br>JSON payload</div></div>
+        <div class="flow-node" style="border-color:rgba(16,185,129,0.4)">
+          <div class="fn-label">Calculate</div>
+          <div class="fn-name" style="color:var(--of)">Entry / SL / TP</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:3px">cBot logic</div>
+        </div>
+        <div class="flow-arrow">→<div class="arrow-label">place order</div></div>
+        <div class="flow-node" style="border-color:rgba(16,185,129,0.4)">
+          <div class="fn-label">Broker</div>
+          <div class="fn-name" style="color:var(--of)">Capital.com</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:3px">cTrader platform</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ===== 3. SIGNAL PIPELINE DETAIL ===== -->
+<section>
+  <div class="section-title">
+    <div class="icon" style="background:rgba(139,92,246,0.15)">📡</div>
+    <h2>3. Signal Pipeline — OG Internal</h2>
+  </div>
+
+  <div class="grid-2" style="gap:20px">
+
+    <div>
+      <div class="card">
+        <h3 style="color:var(--og);margin-bottom:14px">Engine Routes (engine.py)</h3>
+        <table>
+          <thead><tr><th>Strategy</th><th>Route Logic</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code style="color:var(--og)">ai_trend</code></td>
+              <td style="font-size:12px;color:var(--text2)">Load H3 trend + M45 entry → merge → detect_signals → add_levels (sl_dow)</td>
+            </tr>
+            <tr>
+              <td><code style="color:var(--og)">knn_combo</code></td>
+              <td style="font-size:12px;color:var(--text2)">KNN trend gate + combo entry signal</td>
+            </tr>
+            <tr>
+              <td><code style="color:var(--og)">combo + HTF</code></td>
+              <td style="font-size:12px;color:var(--text2)">Entry TF + HTF trend filter</td>
+            </tr>
+            <tr>
+              <td><code style="color:var(--text2)">default</code></td>
+              <td style="font-size:12px;color:var(--text2)">Single-TF pipeline</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <h3 style="color:var(--og);margin-bottom:14px">Scan Groups (scan_config.py)</h3>
+        <table>
+          <thead><tr><th>Strategy</th><th>Symbols</th><th>Timeframes</th><th>Bars</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="status prod">ai_trend</span></td>
+              <td style="font-size:12px">11 symbols</td>
+              <td style="font-size:12px">H3 + M45</td>
+              <td style="font-family:monospace;font-size:11px">400 / 1000</td>
+            </tr>
+            <tr>
+              <td><span class="status prod">combo</span></td>
+              <td style="font-size:12px">9 Indice</td>
+              <td style="font-size:12px">H1/H2/H3/H4</td>
+              <td style="font-family:monospace;font-size:11px">—</td>
+            </tr>
+            <tr>
+              <td><span class="status todo">knn_combo</span></td>
+              <td style="font-size:12px;color:var(--text2)">—</td>
+              <td style="font-size:12px;color:var(--text2)">—</td>
+              <td style="font-size:12px;color:var(--text2)">not in scan</td>
+            </tr>
+            <tr>
+              <td><span class="status todo">ma_cross</span></td>
+              <td style="font-size:12px;color:var(--text2)">—</td>
+              <td style="font-size:12px;color:var(--text2)">—</td>
+              <td style="font-size:12px;color:var(--text2)">not in scan</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" style="margin-bottom:12px">
+        <h3 style="color:var(--og);margin-bottom:12px">Signal Dedup Logic</h3>
+        <div class="code"><span class="c"># Key = strategy|symbol|tf|bartime|direction</span>
+<span class="c"># TTL = 60 days</span>
+<span class="c"># Guard = scan fingerprint SHA256</span>
+
+state.json → check key exists?
+  → YES: skip (duplicate)
+  → NO: check fingerprint (avoid historical replay)
+       → NEW: publish → write key</div>
+      </div>
+
+      <div class="card">
+        <h3 style="color:var(--og);margin-bottom:12px">Strategy Pipeline Steps</h3>
+        <div style="font-size:12px;display:flex;flex-direction:column;gap:6px;">
+          <div style="padding:6px 10px;background:var(--bg3);border-radius:6px;border-left:3px solid var(--og)">
+            <strong>1. load_ohlcv</strong>
+            <div style="color:var(--text2)">SQL Server DWH.Fact_OHLCV → DataFrame</div>
+          </div>
+          <div style="text-align:center;color:var(--text2);font-size:16px">↓</div>
+          <div style="padding:6px 10px;background:var(--bg3);border-radius:6px;border-left:3px solid var(--og)">
+            <strong>2. add_indicators</strong>
+            <div style="color:var(--text2)">ATR, MA, MACD, atr5/atr14 (ai_trend)</div>
+          </div>
+          <div style="text-align:center;color:var(--text2);font-size:16px">↓</div>
+          <div style="padding:6px 10px;background:var(--bg3);border-radius:6px;border-left:3px solid var(--og)">
+            <strong>3. detect_signals</strong>
+            <div style="color:var(--text2)">strategy-specific logic → signal col ±1/0</div>
+          </div>
+          <div style="text-align:center;color:var(--text2);font-size:16px">↓</div>
+          <div style="padding:6px 10px;background:var(--bg3);border-radius:6px;border-left:3px solid var(--og)">
+            <strong>4. add_levels</strong>
+            <div style="color:var(--text2)">entry_price, sl_dow, sl_price, tp_price, RR</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== 4. REDIS INTEGRATION ===== -->
+<section>
+  <div class="section-title">
+    <div class="icon" style="background:rgba(239,68,68,0.15)">📮</div>
+    <h2>4. Redis Integration — OG → OF Bridge</h2>
+  </div>
+
+  <div class="grid-2" style="gap:20px">
+    <div>
+      <div class="card" style="margin-bottom:12px">
+        <h3 style="margin-bottom:12px">Channel Pattern</h3>
+        <div class="channel-box">signal:{strategy}:{symbol}:{timeframe}</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:10px">
+          cBot dùng <strong style="color:var(--dp)">pattern subscribe</strong> — 1 instance nhận toàn bộ symbols + TFs của strategy đó:
+        </div>
+        <table style="font-size:12px">
+          <thead><tr><th>OF</th><th>Subscribe Pattern</th><th>Scope</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong style="color:var(--of)">OF1</strong></td>
+              <td><code>signal:combo:*</code></td>
+              <td style="color:var(--text2)">9 Indice × H1/H2/H3/H4</td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--of)">OF2</strong></td>
+              <td><code>signal:ai_trend:*</code></td>
+              <td style="color:var(--text2)">11 symbols × M45</td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--text2)">OF3</strong></td>
+              <td><code>signal:knn_combo:*</code></td>
+              <td style="color:var(--text2);font-style:italic">Future</td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--text2)">OF4</strong></td>
+              <td><code>signal:{strategy4}:*</code></td>
+              <td style="color:var(--text2);font-style:italic">Reserved</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom:12px">Redis Publisher Path (target)</h3>
+        <div style="font-size:12px;color:var(--text2);line-height:1.8">
+          <div>📄 <code style="color:var(--og)">core_python/notify/redis_publisher.py</code> — mới</div>
+          <div>✏️ <code style="color:var(--og)">core_python/notify/signal_watcher.py</code> — thêm publish hook</div>
+          <div>⚙️ <code style="color:var(--og)">.env</code> — REDIS_HOST, PORT, PASSWORD, ENABLED</div>
+        </div>
+        <div class="info-box yellow" style="margin-top:12px">
+          <strong>Backward compatible</strong>
+          REDIS_ENABLED=false → hệ thống chạy bình thường như cũ
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h3 style="margin-bottom:12px">Payload — LOCKED</h3>
+        <div class="code">{
+  <span class="v">"strategy"</span>:    <span class="s">"combo"</span>,
+  <span class="v">"symbol"</span>:      <span class="s">"US30"</span>,
+  <span class="v">"timeframe"</span>:   <span class="s">"H1"</span>,
+  <span class="v">"direction"</span>:   <span class="p">1</span>,         <span class="c">// 1=BUY, -1=SELL</span>
+  <span class="v">"bar_time"</span>:    <span class="s">"2026-06-07T10:00:00Z"</span>, <span class="c">// bar open (UTC)</span>
+  <span class="v">"signal_time"</span>: <span class="s">"2026-06-07T11:00:05Z"</span>, <span class="c">// wall-clock ~+5s</span>
+  <span class="v">"atr"</span>:         <span class="p">45.2</span>       <span class="c">// ATR_PERIOD của strategy</span>
+}
+<span class="c">// cBot tự tính: Entry / SL / TP / Sizing / Position Mgmt</span>
+<span class="c">// KHÔNG truyền entry/SL/TP qua Redis</span></div>
+
+        <div style="margin-top:14px">
+          <h3 style="margin-bottom:10px">Implementation Tasks</h3>
+          <div class="roadmap-item todo">
+            <div class="roadmap-num">1</div>
+            <div>
+              <div class="roadmap-title">Setup Redis trên VM-OG</div>
+              <div class="roadmap-desc">cài redis-server, bind 10.11.12.8, auth, UFW port 6379</div>
+            </div>
+          </div>
+          <div class="roadmap-item todo">
+            <div class="roadmap-num">2</div>
+            <div>
+              <div class="roadmap-title">Build redis_publisher.py + hook vào signal_watcher</div>
+              <div class="roadmap-desc">thêm REDIS_* env vars, publish sau dedup pass</div>
+            </div>
+          </div>
+          <div class="roadmap-item todo">
+            <div class="roadmap-num">3</div>
+            <div>
+              <div class="roadmap-title">Viết cBot C# subscriber (SEN_SignalExecutor mới)</div>
+              <div class="roadmap-desc">StackExchange.Redis, pattern subscribe, parse payload</div>
+            </div>
+          </div>
+          <div class="roadmap-item todo">
+            <div class="roadmap-num">4</div>
+            <div>
+              <div class="roadmap-title">E2E Test — OG → Redis → OF</div>
+              <div class="roadmap-desc">signal phát, OF nhận, order được đặt đúng</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== 5. BACKTEST / OPTIMIZE ===== -->
+<section>
+  <div class="section-title">
+    <div class="icon" style="background:rgba(245,158,11,0.15)">🔬</div>
+    <h2>5. Backtest / Optimize — Internal Python System</h2>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="grid-2" style="gap:16px">
+      <div class="tier-box dp" style="padding:14px">
+        <div class="tier-label">Internal Python (SERVER-HOST)</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.8">
+          ✅ Walk-forward validation<br>
+          ✅ Anchored forward testing<br>
+          ✅ Monte Carlo risk simulation<br>
+          ✅ Parameter stability mapping<br>
+          ✅ Grid search có kiểm soát overfitting<br>
+          <strong style="color:var(--dp)">Output:</strong> Tổ hợp params ổn định → cTrader
+        </div>
+      </div>
+      <div class="tier-box of" style="padding:14px">
+        <div class="tier-label">cTrader Backtest/Optimize (chuẩn)</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.8">
+          ✅ Tick data thật từ Capital.com<br>
+          ✅ Spread + slippage thực tế<br>
+          ✅ Partial fill thực tế<br>
+          ✅ Điều kiện đặt lệnh thực<br>
+          <strong style="color:var(--of)">Output:</strong> Kết quả chính thức trước deploy demo
+        </div>
+      </div>
+    </div>
+    <div class="info-box yellow" style="margin-top:14px">
+      <strong>Triết lý cốt lõi</strong>
+      Internal system là <em>công cụ tìm vùng params tối ưu</em>, không phải hệ thống tính P&L chính xác.
+      Spread/commission không phải ưu tiên — chạy conservative nhất (ambiguity=conservative, next_open entry).
+      Net profit không phải mục tiêu — tìm được vùng ổn định là đủ.
+    </div>
+  </div>
+
+  <div class="grid-2" style="gap:16px;margin-bottom:16px">
+    <div class="card">
+      <h3 style="color:var(--bt);margin-bottom:14px">5 Bước Research (Notebooks)</h3>
+      <div class="nb-steps">
+        <div class="nb-step" data-n="1">
+          <div>
+            <div class="nb-step-title">Single Run <span class="tag bt">01</span></div>
+            <div class="nb-step-desc">Test một config cố định, quan sát behavior của engine</div>
+          </div>
+        </div>
+        <div class="nb-step" data-n="2">
+          <div>
+            <div class="nb-step-title">Stability Map <span class="tag bt">02</span></div>
+            <div class="nb-step-desc">Grid search KSL×KTP, tính <code>stability_score = local_median / local_std</code>, tìm vùng ổn định</div>
+          </div>
+        </div>
+        <div class="nb-step" data-n="3">
+          <div>
+            <div class="nb-step-title">Walk-Forward <span class="tag bt">03</span></div>
+            <div class="nb-step-desc">Train 6 tháng / OOS test 1 tháng / step 1 tháng. Chọn best params trên train → validate OOS</div>
+          </div>
+        </div>
+        <div class="nb-step" data-n="4">
+          <div>
+            <div class="nb-step-title">Monte Carlo <span class="tag bt">04</span></div>
+            <div class="nb-step-desc">Simulate R-paths, tính drawdown distribution, ruin probability</div>
+          </div>
+        </div>
+        <div class="nb-step" data-n="5">
+          <div>
+            <div class="nb-step-title">Compare Versions <span class="tag bt">05</span></div>
+            <div class="nb-step-desc">So sánh config snapshots với nhau theo thời gian</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" style="margin-bottom:12px">
+        <h3 style="color:var(--bt);margin-bottom:12px">Component Engine — combo_ctrader_v0</h3>
+        <div class="comp-row">
+          <div class="comp-type">ENTRY</div>
+          <div class="comp-impl">stop_breakout_signal_bar</div>
+          <div class="comp-detail">BUY: high+x_offset · SELL: low-x_offset (stop order)</div>
+        </div>
+        <div class="comp-row">
+          <div class="comp-type">SL</div>
+          <div class="comp-impl">signal_bar_atr_buffer</div>
+          <div class="comp-detail">KSL 1-4 → 0.382/0.618/1.0/1.272 × ATR</div>
+        </div>
+        <div class="comp-row">
+          <div class="comp-type">TP</div>
+          <div class="comp-impl">fib_atr_ctrader_v0</div>
+          <div class="comp-detail">KTP 1-12 → 1.272→4.236 × ATR</div>
+        </div>
+        <div class="comp-row">
+          <div class="comp-type">ORDER</div>
+          <div class="comp-impl">stop_order</div>
+          <div class="comp-detail">Cancel nếu không fill sau 3 bars</div>
+        </div>
+        <div class="comp-row">
+          <div class="comp-type">EXIT</div>
+          <div class="comp-impl">fixed_only</div>
+          <div class="comp-detail">Không trailing — SL/TP cố định</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="color:var(--bt);margin-bottom:10px">Stability Score — Nguyên tắc cốt lõi</h3>
+        <div class="code"><span class="c"># Không tìm params có expectancy cao nhất</span>
+<span class="c"># Tìm params ổn định trong vùng lân cận</span>
+
+stability_score = local_median(expectancy_r)
+               / local_std(expectancy_r)
+
+<span class="c"># Params tốt = expectancy cao + ít nhạy cảm</span>
+<span class="c"># Ambiguity: bar chạm cả SL+TP → tính là SL (CONSERVATIVE)</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-bottom:14px">Code Status — backtest_optimize/</h3>
+    <div class="grid-2" style="gap:12px">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--green);letter-spacing:0.5px;margin-bottom:8px;text-transform:uppercase">Committed (Stable)</div>
+        <ul class="bullet">
+          <li>contracts.py — core data classes</li>
+          <li>cost_model.py, sizing.py</li>
+          <li>sl_calculator.py, tp_calculator.py</li>
+          <li>position_manager.py</li>
+          <li>engine.py (Single engine)</li>
+          <li>metrics.py, optimize.py, versioning.py</li>
+          <li>monte_carlo.py, market_data.py</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--yellow);letter-spacing:0.5px;margin-bottom:8px;text-transform:uppercase">Uncommitted — Formalizing</div>
+        <ul class="bullet">
+          <li>entry.py, exits.py, fill_model.py</li>
+          <li>orders.py — component engine main</li>
+          <li>registry.py — decorator registry</li>
+          <li>research_pipeline.py</li>
+          <li>configs/presets/ — combo_ctrader_v0</li>
+          <li>configs/strategies/</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== 6. CURRENT STATUS ===== -->
+<section>
+  <div class="section-title">
+    <div class="icon" style="background:rgba(148,163,184,0.15)">📊</div>
+    <h2>6. Current Status — Tổng Quan</h2>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <table>
+      <thead>
+        <tr>
+          <th>Component</th>
+          <th>Module</th>
+          <th>Status</th>
+          <th>Vấn đề / Ghi chú</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="tag dp">DP</span> ws_live.py</td>
+          <td style="font-family:monospace;font-size:11px">data_provider/apps/</td>
+          <td><span class="status done">Production</span></td>
+          <td style="font-size:12px;color:var(--text2)">Batch mode mỗi 5min, chỉ Indice+Metal+Crypto, không phải FOREX</td>
+        </tr>
+        <tr>
+          <td><span class="tag dp">DP</span> pipeline.py</td>
+          <td style="font-family:monospace;font-size:11px">data_provider/apps/</td>
+          <td><span class="status done">Production</span></td>
+          <td style="font-size:12px;color:var(--text2)">gap/auto/full, daily 22:22 UTC, FOREX backfill</td>
+        </tr>
+        <tr>
+          <td><span class="tag og">OG</span> Signal engine</td>
+          <td style="font-family:monospace;font-size:11px">core_python/strategies/</td>
+          <td><span class="status partial">~90%</span></td>
+          <td style="font-size:12px;color:var(--yellow)">ai_trend changes (atr, sl_dow) uncommitted</td>
+        </tr>
+        <tr>
+          <td><span class="tag og">OG</span> Dashboard</td>
+          <td style="font-family:monospace;font-size:11px">core_python/chart/</td>
+          <td><span class="status partial">~85%</span></td>
+          <td style="font-size:12px;color:var(--yellow)">ATR panel ai_trend chờ signal fix deploy</td>
+        </tr>
+        <tr>
+          <td><span class="tag og">OG</span> Export CSV</td>
+          <td style="font-family:monospace;font-size:11px">core_python/export/</td>
+          <td><span class="status partial">~55%</span></td>
+          <td style="font-size:12px;color:var(--yellow)">to_csv.py hardcode 3 cols, 2 đường export không nhất quán</td>
+        </tr>
+        <tr>
+          <td><span class="tag og">OG</span> Redis publisher</td>
+          <td style="font-family:monospace;font-size:11px">core_python/notify/</td>
+          <td><span class="status todo">0%</span></td>
+          <td style="font-size:12px;color:var(--red)">Chưa xây dựng</td>
+        </tr>
+        <tr>
+          <td><span class="tag of">OF</span> cBot executor</td>
+          <td style="font-family:monospace;font-size:11px">cbot_calgo/</td>
+          <td><span class="status todo">Planned</span></td>
+          <td style="font-size:12px;color:var(--red)">SEN_SignalExecutor mới, viết lại hoàn toàn</td>
+        </tr>
+        <tr>
+          <td><span class="tag bt">BT</span> Backtest engines</td>
+          <td style="font-family:monospace;font-size:11px">backtest_optimize/</td>
+          <td><span class="status partial">~70%</span></td>
+          <td style="font-size:12px;color:var(--yellow)">Component engine uncommitted; Single engine stable</td>
+        </tr>
+        <tr>
+          <td><span class="tag bt">BT</span> Research notebooks</td>
+          <td style="font-family:monospace;font-size:11px">backtest_optimize/notebooks/</td>
+          <td><span class="status partial">~80%</span></td>
+          <td style="font-size:12px;color:var(--yellow)">Notebooks 01-05 có, pipeline formalizing</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid-3">
+    <div class="info-box blue">
+      <strong style="color:var(--dp)">Export CSV — vấn đề cụ thể</strong>
+      1. to_csv.py hardcode ["bartime","atr","signal"] — thiếu per-strategy cols<br>
+      2. Hai đường export (watcher vs dashboard) không đồng nhất<br>
+      3. Bulk export ai_trend không nhận TREND_TF từ URL
+    </div>
+    <div class="info-box purple">
+      <strong style="color:var(--og)">ai_trend uncommitted changes</strong>
+      signals.py: atr5/atr14 added<br>
+      levels.py: causal_dow_stop() refactor<br>
+      config.py: ATR_PERIOD=5, pivot params changed<br>
+      payload.py: ATR panel added
+    </div>
+    <div class="info-box green">
+      <strong style="color:var(--of)">Next milestones</strong>
+      1. Commit ai_trend changes sau review<br>
+      2. Fix CSV export unification<br>
+      3. Build Redis publisher<br>
+      4. Build cBot C# subscriber
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== FOOTER ===== -->
+<div style="border-top:1px solid var(--border);margin-top:40px;padding-top:16px;text-align:center;color:var(--text2);font-size:11px">
+  SEN05 Autotrading · Architecture Document · votuankiet96@gmail.com · 2026-06-08
+</div>
+
+</body>
+</html>

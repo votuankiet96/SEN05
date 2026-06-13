@@ -59,7 +59,6 @@ def detect_realtime_signals(
                 payload_source=row,
                 alert_message=format_combo_raw_signal_message(row, strategy_label=spec.label, symbol=symbol, tf=tf),
                 alert_backend="discord",
-                alert_kwargs={"discord_webhook_attr": "combo_discord_webhook"},
                 side=side,
                 kind=str(event_type or "signal").strip().lower() or "signal",
                 event_text=side,

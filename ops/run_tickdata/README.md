@@ -17,6 +17,7 @@ This folder is isolated from `ops/run_wslive`, the OHLCV checker, and the data p
 - `tick_dashboard.bat` is the double-click dashboard launcher.
 - `tick_initial_backfill_max.ps1` probes cTrader history depth, then optionally backfills from the deepest available point.
 - `tick_daily_overlap_backfill.ps1` re-fetches a recent overlap window, reports net-new tick rows, and sends Discord start/error/done notifications.
+- `tick_short_overlap_repair.ps1` re-fetches a short recent overlap window in one cTrader session for near-real-time gap repair.
 - `lib/TickDataOps.psm1` contains shared helper functions.
 
 ## Install On DP6
@@ -82,6 +83,26 @@ ops\run_tickdata\runtime\reports\tick_overlap_<run>_report.json
 ops\run_tickdata\runtime\logs\tick_daily_overlap_report.jsonl
 ```
 
+## Short Overlap Repair
+
+Run a fast recent repair window manually:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File ops\run_tickdata\tick_short_overlap_repair.ps1 `
+  -LookbackMinutes 15 `
+  -SafetyLagMinutes 2
+```
+
+The scheduled task installed by `install_tick_tasks.ps1` is:
+
+```text
+\SEN05\SEN05_TickData_ShortRepair
+```
+
+It runs every 5 minutes by default, uses one cTrader session per run, and suppresses
+per-symbol backfill Discord messages. It sends a throttled Discord summary, default
+once per hour, and sends throttled error alerts if the repair job fails.
+
 ## Live 24/7 Reports
 
 The live service sends Discord notifications for important events:
@@ -102,6 +123,11 @@ The report includes received tick records, SQL inserted rows, spooled rows,
 spool backlog, active symbols, last tick UTC, and top symbols for the window.
 If no tick records are received during the window, the report is sent as a
 warning.
+
+The watchdog also checks the tick health report periodically. If the live process
+is still running but expected-active symbols remain stale for 15 minutes, it writes
+a graceful shutdown signal to the tick live runtime lock. The live process flushes
+and exits, then the supervisor starts a fresh live process.
 
 ## View Logs
 

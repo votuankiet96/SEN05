@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hệ thống Tick Data — SEN05 Autotrading</title>
+<style>
+  :root {
+    --blue:    #1976D2;
+    --blue-lt: #E3F2FD;
+    --green:   #388E3C;
+    --green-lt:#E8F5E9;
+    --orange:  #F57C00;
+    --orange-lt:#FFF3E0;
+    --red:     #C62828;
+    --red-lt:  #FFEBEE;
+    --purple:  #6A1B9A;
+    --purple-lt:#F3E5F5;
+    --gray:    #455A64;
+    --gray-lt: #ECEFF1;
+    --dark:    #1A237E;
+    --text:    #212121;
+    --muted:   #546E7A;
+    --border:  #B0BEC5;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--text);
+    background: #FAFAFA;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+
+  /* ── HEADER ── */
+  .doc-header {
+    background: linear-gradient(135deg, #1A237E 0%, #283593 60%, #3949AB 100%);
+    color: #fff;
+    padding: 36px 40px;
+    border-radius: 10px;
+    margin-bottom: 40px;
+  }
+  .doc-header h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+  .doc-header .meta { font-size: 13px; color: #C5CAE9; margin-top: 10px; }
+
+  /* ── TOC ── */
+  .toc {
+    background: var(--gray-lt);
+    border-left: 5px solid var(--blue);
+    padding: 20px 28px;
+    border-radius: 6px;
+    margin-bottom: 44px;
+  }
+  .toc h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .5px; color: var(--blue); margin-bottom: 12px; }
+  .toc ol { margin-left: 20px; }
+  .toc li { margin-bottom: 5px; }
+  .toc a { color: var(--blue); text-decoration: none; font-weight: 500; }
+  .toc a:hover { text-decoration: underline; }
+  .toc .sub { font-weight: 400; color: var(--muted); font-size: 13.5px; }
+
+  /* ── PARTS ── */
+  .part {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    margin-bottom: 44px;
+    overflow: hidden;
+  }
+  .part-header {
+    padding: 20px 32px;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: .2px;
+  }
+  .part-header.blue   { background: #1565C0; }
+  .part-header.green  { background: #2E7D32; }
+  .part-header.orange { background: #E65100; }
+  .part-header.purple { background: #4A148C; }
+  .part-header.red    { background: #B71C1C; }
+  .part-header.gray   { background: #37474F; }
+
+  .part-body { padding: 32px; }
+
+  h2 {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--dark);
+    margin: 28px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--blue-lt);
+  }
+  h2:first-child { margin-top: 0; }
+
+  h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--gray);
+    margin: 22px 0 8px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+  }
+
+  p { margin-bottom: 14px; }
+  p:last-child { margin-bottom: 0; }
+
+  strong { color: var(--dark); }
+
+  /* ── CALLOUT BOXES ── */
+  .callout {
+    border-left: 4px solid;
+    padding: 14px 18px;
+    border-radius: 0 6px 6px 0;
+    margin: 18px 0;
+    font-size: 14px;
+  }
+  .callout.blue   { background: var(--blue-lt);   border-color: var(--blue);   }
+  .callout.green  { background: var(--green-lt);  border-color: var(--green);  }
+  .callout.orange { background: var(--orange-lt); border-color: var(--orange); }
+  .callout.red    { background: var(--red-lt);    border-color: var(--red);    }
+  .callout.purple { background: var(--purple-lt); border-color: var(--purple); }
+  .callout b { display: block; margin-bottom: 4px; }
+
+  /* ── CODE ── */
+  code {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    background: #F5F5F5;
+    border: 1px solid #E0E0E0;
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: #C62828;
+  }
+  pre {
+    background: #263238;
+    color: #CFD8DC;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 18px 22px;
+    border-radius: 6px;
+    margin: 16px 0;
+    overflow-x: auto;
+  }
+  pre .cmt  { color: #78909C; }
+  pre .grn  { color: #A5D6A7; }
+  pre .org  { color: #FFCC80; }
+  pre .red  { color: #EF9A9A; }
+  pre .blu  { color: #90CAF9; }
+
+  /* ── TABLES ── */
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  th {
+    background: var(--dark);
+    color: #fff;
+    text-align: left;
+    padding: 10px 14px;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  td { padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: #F9FAFB; }
+
+  /* ── RISK GRID ── */
+  .risk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  .risk-card {
+    border-radius: 8px;
+    padding: 18px 20px;
+    border: 1px solid;
+  }
+  .risk-card h3 { margin-top: 0; margin-bottom: 8px; text-transform: none; letter-spacing: 0; font-size: 15px; }
+  .risk-card.red    { background: var(--red-lt);    border-color: #EF9A9A; }
+  .risk-card.orange { background: var(--orange-lt); border-color: #FFCC80; }
+  .risk-card.blue   { background: var(--blue-lt);   border-color: #90CAF9; }
+  .risk-card.purple { background: var(--purple-lt); border-color: #CE93D8; }
+
+  /* ── BADGES ── */
+  .badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .3px;
+  }
+  .badge.ok     { background: var(--green);  color: #fff; }
+  .badge.warn   { background: var(--orange); color: #fff; }
+  .badge.error  { background: var(--red);    color: #fff; }
+  .badge.info   { background: var(--blue);   color: #fff; }
+  .badge.code   { background: #37474F;       color: #fff; font-family: monospace; }
+
+  /* ── DIAGRAM WRAPPER ── */
+  .diagram-wrap {
+    margin: 24px 0;
+    text-align: center;
+  }
+  .diagram-wrap svg { max-width: 100%; height: auto; }
+  .diagram-caption {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 8px;
+    font-style: italic;
+  }
+
+  /* ── STEP LIST ── */
+  .steps { counter-reset: step; list-style: none; padding: 0; margin: 16px 0; }
+  .steps li {
+    counter-increment: step;
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+    align-items: flex-start;
+  }
+  .steps li::before {
+    content: counter(step);
+    min-width: 30px;
+    height: 30px;
+    background: var(--blue);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .steps li .step-content strong { display: block; margin-bottom: 4px; color: var(--dark); }
+
+  .spacer { height: 10px; }
+
+  hr.subtle { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="doc-header">
+  <h1>Hệ thống Thu thập Tick Data — SEN05 Autotrading</h1>
+  <p>Phân tích toàn diện cơ chế vận hành, xử lý rủi ro và chi tiết kỹ thuật</p>
+  <div class="meta">
+    Phiên bản: 1.0 &nbsp;·&nbsp; Ngày tạo: 2026-06-13 &nbsp;·&nbsp;
+    Nguồn: phân tích trực tiếp từ code (data_provider/tick_data/ + ops/run_tickdata/)
+  </div>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#p1">Mục tiêu và bối cảnh</a>
+      <span class="sub"> — Tick data là gì, tại sao cần, và nguồn dữ liệu</span></li>
+    <li><a href="#p2">Hành trình của một tick</a>
+      <span class="sub"> — Từ thị trường thật đến cơ sở dữ liệu, từng bước một</span></li>
+    <li><a href="#p3">Các lớp phòng vệ rủi ro</a>
+      <span class="sub"> — 6 kịch bản rủi ro và cơ chế xử lý cụ thể</span></li>
+    <li><a href="#p4">Chi tiết kỹ thuật</a>
+      <span class="sub"> — Module, config, protocol, SQL, lock, checker</span></li>
+    <li><a href="#p5">Vận hành trên VM-DP</a>
+      <span class="sub"> — Supervisor, watchdog, Task Scheduler, log files</span></li>
+    <li><a href="#p6">Ghi chú và hạn chế</a>
+      <span class="sub"> — Điểm cần lưu ý và hướng cải tiến</span></li>
+  </ol>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- PHẦN I -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="part" id="p1">
+  <div class="part-header blue">PHẦN I — Mục tiêu và Bối cảnh</div>
+  <div class="part-body">
+
+    <h2>1.1 Tick data là gì?</h2>
+    <p>
+      Một <strong>tick</strong> là một sự kiện giá xảy ra bất cứ lúc nào trong phiên giao dịch — khác hoàn toàn với nến (OHLCV) vốn chỉ tổng hợp giá theo từng khung thời gian cố định. Mỗi tick ghi lại chính xác thời điểm, giá bid và ask tại thời điểm đó, do nhà môi giới phát ra.
+    </p>
+    <p>
+      Với một thị trường như US30 trong giờ giao dịch cao điểm, có thể có hàng nghìn tick mỗi phút. Với một thị trường ít sôi động hơn hoặc ngoài giờ giao dịch, khoảng cách giữa các tick có thể là vài phút.
+    </p>
+
+    <h2>1.2 Tại sao SEN05 cần tick data?</h2>
+    <div class="callout blue">
+      <b>Điểm mấu chốt:</b>
+      Hệ thống OHLCV (nến) chỉ cho biết giá mở/cao/thấp/đóng trong một khoảng thời gian. Nó <em>không</em> cho biết spread thực tế, biến động giá bên trong nến, hay thời điểm chính xác giá chạm một mức nào đó. Tick data lấp đầy khoảng trống này.
+    </div>
+    <p>Cụ thể, tick data phục vụ hai mục đích trong SEN05:</p>
+    <table>
+      <tr>
+        <th>Mục đích</th>
+        <th>Giải thích</th>
+        <th>Trạng thái</th>
+      </tr>
+      <tr>
+        <td><strong>Backtest thực tế</strong></td>
+        <td>Khi backtest chiến lược trên cTrader, tick data cho phép mô phỏng chính xác thời điểm SL/TP bị chạm — điều mà nến OHLCV không thể làm được vì không biết thứ tự High/Low trong nến</td>
+        <td><span class="badge info">Mục tiêu chính</span></td>
+      </tr>
+      <tr>
+        <td><strong>Phân tích spread và liquidity</strong></td>
+        <td>Biết spread thực tế tại từng thời điểm trong ngày để đánh giá chi phí giao dịch thực, từ đó điều chỉnh chiến lược</td>
+        <td><span class="badge warn">Tương lai</span></td>
+      </tr>
+    </table>
+    <p>
+      Trong phiên bản hiện tại, tick data được <strong>thu thập và lưu trữ liên tục</strong> nhưng <strong>chưa được tích hợp vào pipeline backtest</strong>. Mục tiêu gần nhất là có đủ dữ liệu tick lịch sử để phục vụ backtest cTrader.
+    </p>
+
+    <h2>1.3 Nguồn dữ liệu: cTrader FTMO</h2>
+    <p>
+      Dữ liệu tick đến từ <strong>cTrader Open API</strong> — giao thức chính thức của nền tảng cTrader, cho phép ứng dụng bên ngoài kết nối và nhận dữ liệu thị trường theo thời gian thực. Tài khoản được dùng là <strong>FTMO demo</strong>.
+    </p>
+
+    <div class="callout green">
+      <b>Tại sao dùng cTrader API thay vì TradingView?</b>
+      TradingView WebSocket chỉ cung cấp dữ liệu OHLCV (nến), không cung cấp tick stream.
+      cTrader API cung cấp <em>spot price events</em> theo thời gian thực — đây là dữ liệu tick thực sự.
+      Hơn nữa, vì cBot của SEN05 chạy trên cTrader, dùng cùng nguồn dữ liệu đảm bảo tính nhất quán.
+    </div>
+
+    <p><strong>Symbols đang thu thập:</strong> Indices (US30, US500, ...), Metal (GOLD), Crypto (BTCUSD, ...).
+    FOREX không được thu thập vì cTrader demo không có đủ FOREX symbols khớp với danh sách SEN05.</p>
+
+    <p><strong>Lưu ý quan trọng về phạm vi:</strong> Tick data được lưu trong schema SQL riêng biệt
+    (<code>tick.*</code>), hoàn toàn tách biệt với kho OHLCV (<code>DWH.*</code>).
+    Hai hệ thống cùng chạy trên VM-DP nhưng không chia sẻ bảng dữ liệu.</p>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- PHẦN II -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="part" id="p2">
+  <div class="part-header blue">PHẦN II — Hành Trình Của Một Tick</div>
+  <div class="part-body">
+
+    <p>Phần này giải thích từng bước cụ thể một tick đi từ máy chủ cTrader đến cơ sở dữ liệu SQL Server. Không cần biết code để hiểu phần này.</p>
+
+    <!-- SVG DIAGRAM: TICK JOURNEY -->
+    <div class="diagram-wrap">
+      <svg viewBox="0 0 900 620" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', Arial, sans-serif">
+        <defs>
+          <marker id="arr" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#455A64"/>
+          </marker>
+          <marker id="arr-g" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#388E3C"/>
+          </marker>
+          <marker id="arr-o" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#F57C00"/>
+          </marker>
+        </defs>
+
+        <!-- STEP 1: cTrader Server -->
+        <rect x="280" y="20" width="340" height="56" rx="8" fill="#1565C0" stroke="none"/>
+        <text x="450" y="44" text-anchor="middle" fill="white" font-size="13" font-weight="700">cTrader Open API Server</text>
+        <text x="450" y="62" text-anchor="middle" fill="#BBDEFB" font-size="11">(FTMO demo environment)</text>
+
+        <!-- arrow down -->
+        <line x1="450" y1="76" x2="450" y2="108" stroke="#455A64" stroke-width="2" marker-end="url(#arr)"/>
+        <text x="510" y="97" fill="#546E7A" font-size="11">Protobuf stream</text>
+
+        <!-- STEP 2: Python service_live.py -->
+        <rect x="220" y="110" width="460" height="72" rx="8" fill="#E3F2FD" stroke="#1976D2" stroke-width="1.5"/>
+        <text x="450" y="134" text-anchor="middle" fill="#0D47A1" font-size="13" font-weight="700">service_live.py — Nhận và xử lý sự kiện</text>
+        <text x="450" y="152" text-anchor="middle" fill="#37474F" font-size="11">Kết nối, xác thực, lắng nghe ProtoOASpotEvent</text>
+        <text x="450" y="169" text-anchor="middle" fill="#37474F" font-size="11">Chuyển đổi sang TickRecord → đưa vào TickBatcher</text>
+
+        <!-- arrow down -->
+        <line x1="450" y1="182" x2="450" y2="214" stroke="#455A64" stroke-width="2" marker-end="url(#arr)"/>
+        <text x="510" y="203" fill="#546E7A" font-size="11">add(record)</text>
+
+        <!-- STEP 3: TickBatcher -->
+        <rect x="220" y="216" width="460" height="80" rx="8" fill="#F3E5F5" stroke="#6A1B9A" stroke-width="1.5"/>
+        <text x="450" y="240" text-anchor="middle" fill="#4A148C" font-size="13" font-weight="700">TickBatcher — Gom nhóm thông minh</text>
+        <text x="450" y="258" text-anchor="middle" fill="#37474F" font-size="11">Tích lũy tick vào bộ đệm tạm (pending list)</text>
+        <text x="450" y="275" text-anchor="middle" fill="#37474F" font-size="11">Flush khi: đủ 500 tick  HOẶC  qua 1 giây</text>
+        <text x="450" y="291" text-anchor="middle" fill="#546E7A" font-size="10">(batch_size=500  ·  flush_seconds=1.0)</text>
+
+        <!-- arrow down: flush attempt -->
+        <line x1="450" y1="296" x2="450" y2="336" stroke="#455A64" stroke-width="2" marker-end="url(#arr)"/>
+        <text x="460" y="320" fill="#546E7A" font-size="11">flush()</text>
+
+        <!-- STEP 4: Decision -->
+        <polygon points="450,340 530,375 450,410 370,375" fill="#FFF9C4" stroke="#F9A825" stroke-width="1.5"/>
+        <text x="450" y="371" text-anchor="middle" fill="#F57F17" font-size="12" font-weight="600">SQL Server</text>
+        <text x="450" y="388" text-anchor="middle" fill="#F57F17" font-size="12" font-weight="600">khả dụng?</text>
+
+        <!-- YES path: right -->
+        <line x1="530" y1="375" x2="660" y2="375" stroke="#388E3C" stroke-width="2" marker-end="url(#arr-g)"/>
+        <text x="590" y="367" fill="#388E3C" font-size="11" font-weight="600">Có</text>
+
+        <!-- SUCCESS box -->
+        <rect x="662" y="340" width="210" height="70" rx="8" fill="#E8F5E9" stroke="#388E3C" stroke-width="1.5"/>
+        <text x="767" y="365" text-anchor="middle" fill="#1B5E20" font-size="12" font-weight="700">INSERT vào SQL</text>
+        <text x="767" y="382" text-anchor="middle" fill="#37474F" font-size="10.5">tick.{SYMBOL} table</text>
+        <text x="767" y="398" text-anchor="middle" fill="#37474F" font-size="10.5">+ Cập nhật IngestState</text>
+
+        <!-- NO path: left -->
+        <line x1="370" y1="375" x2="200" y2="375" stroke="#F57C00" stroke-width="2" marker-end="url(#arr-o)"/>
+        <text x="275" y="367" fill="#F57C00" font-size="11" font-weight="600">Không</text>
+
+        <!-- SPOOL box -->
+        <rect x="10" y="340" width="190" height="70" rx="8" fill="#FFF3E0" stroke="#F57C00" stroke-width="1.5"/>
+        <text x="105" y="365" text-anchor="middle" fill="#E65100" font-size="12" font-weight="700">TickSpool (SQLite)</text>
+        <text x="105" y="382" text-anchor="middle" fill="#37474F" font-size="10.5">Lưu tạm cục bộ</text>
+        <text x="105" y="398" text-anchor="middle" fill="#37474F" font-size="10.5">Lưu batch vào spool</text>
+
+        <!-- Discord WARNING from spool -->
+        <line x1="105" y1="410" x2="105" y2="450" stroke="#F57C00" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <rect x="30" y="452" width="150" height="36" rx="6" fill="#FFCCBC" stroke="#BF360C" stroke-width="1"/>
+        <text x="105" y="468" text-anchor="middle" fill="#BF360C" font-size="11" font-weight="600">Discord WARNING</text>
+        <text x="105" y="482" text-anchor="middle" fill="#BF360C" font-size="10">(throttle 5 phút)</text>
+
+        <!-- drain when SQL recovers -->
+        <line x1="200" y1="375" x2="370" y2="375" stroke="#388E3C" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr-g)"/>
+        <text x="275" y="420" text-anchor="middle" fill="#388E3C" font-size="10.5" font-style="italic">Khi SQL khôi phục:</text>
+        <text x="275" y="434" text-anchor="middle" fill="#388E3C" font-size="10.5" font-style="italic">drain_spool() → retry</text>
+
+        <!-- STEP 5: IngestState -->
+        <line x1="767" y1="410" x2="767" y2="450" stroke="#388E3C" stroke-width="2" marker-end="url(#arr-g)"/>
+        <rect x="662" y="452" width="210" height="55" rx="8" fill="#E8F5E9" stroke="#388E3C" stroke-width="1.5"/>
+        <text x="767" y="474" text-anchor="middle" fill="#1B5E20" font-size="12" font-weight="700">tick.IngestState</text>
+        <text x="767" y="492" text-anchor="middle" fill="#37474F" font-size="10.5">Cập nhật: last bid/ask, thời gian</text>
+        <text x="767" y="507" text-anchor="middle" fill="#37474F" font-size="10.5">tick cuối, tổng số tick đã ghi</text>
+
+        <!-- Monitoring loops -->
+        <rect x="220" y="500" width="420" height="52" rx="8" fill="#ECEFF1" stroke="#90A4AE" stroke-width="1"/>
+        <text x="430" y="522" text-anchor="middle" fill="#37474F" font-size="11" font-weight="600">Các vòng lặp giám sát song song (chạy liên tục)</text>
+        <text x="430" y="540" text-anchor="middle" fill="#546E7A" font-size="10.5">Heartbeat log mỗi 5 phút  ·  Discord report mỗi 60 phút  ·  Stale check mỗi 10 giây</text>
+
+        <!-- connection lines from service_live to monitoring -->
+        <line x1="450" y1="182" x2="430" y2="500" stroke="#90A4AE" stroke-width="1" stroke-dasharray="3,3"/>
+
+        <!-- Labels -->
+        <text x="10" y="610" fill="#546E7A" font-size="11" font-style="italic">
+          Xanh lá = luồng thành công · Cam = luồng dự phòng (spool) · Nét đứt = luồng phụ/monitoring
+        </text>
+      </svg>
+      <div class="diagram-caption">Sơ đồ 1: Hành trình đầy đủ của một tick từ cTrader đến SQL Server</div>
+    </div>
+
+    <h2>Giải thích từng bước</h2>
+
+    <ol class="steps">
+      <li>
+        <div class="step-content">
+          <strong>Xác thực và kết nối với cTrader API</strong>
+          Trước khi nhận bất kỳ tick nào, hệ thống phải xác minh danh tính với máy chủ cTrader.
+          Quá trình này gồm hai lớp: OAuth2 access token (lấy từ biến môi trường) và xác thực
+          ứng dụng (Client ID + Client Secret). Hệ thống kiểm tra token còn hạn không trước mỗi
+          lần kết nối — nếu sắp hết hạn, tự động làm mới. Sau khi xác thực xong, hệ thống gửi
+          lệnh đăng ký theo dõi (subscribe) các symbols cụ thể.
+        </div>
+      </li>
+      <li>
+        <div class="step-content">
+          <strong>Nhận luồng sự kiện giá (Protobuf stream)</strong>
+          Sau khi kết nối thành công, cTrader server liên tục đẩy các sự kiện
+          <code>ProtoOASpotEvent</code> — mỗi sự kiện là một cập nhật giá bid/ask cho một symbol.
+          Hệ thống lọc chỉ xử lý các symbol đã đăng ký (theo danh sách <code>tick.SymbolMap</code>),
+          bỏ qua mọi sự kiện khác. Mỗi sự kiện được chuyển đổi thành một <code>TickRecord</code>
+          chuẩn hóa, ghi nhận chính xác thời điểm nhận được (<code>received_at_utc</code>).
+        </div>
+      </li>
+      <li>
+        <div class="step-content">
+          <strong>Gom nhóm thông minh (Batching)</strong>
+          Thay vì ghi từng tick ngay lập tức vào SQL (sẽ tạo hàng nghìn INSERT/phút và làm chậm
+          hệ thống), hệ thống tích lũy tick vào một bộ đệm tạm gọi là <em>pending list</em>.
+          Có hai điều kiện kích hoạt ghi hàng loạt (flush):
+          <br>• Đã tích lũy đủ <strong>500 tick</strong> (batch_size), hoặc
+          <br>• Đã qua <strong>1 giây</strong> kể từ lần ghi trước (flush_seconds).
+          Điều này đảm bảo độ trễ ghi tối đa là 1 giây — chấp nhận được với mục tiêu thu thập,
+          đồng thời giảm tải database xuống còn vài chục thay vì hàng nghìn INSERT.
+        </div>
+      </li>
+      <li>
+        <div class="step-content">
+          <strong>Ghi vào SQL Server (hoặc chuyển sang spool nếu thất bại)</strong>
+          Khi flush được kích hoạt, hệ thống cố gắng INSERT batch tick vào bảng SQL tương ứng.
+          Mỗi symbol có một bảng riêng: <code>tick.US30</code>, <code>tick.GOLD</code>, v.v.
+          <br><br>
+          <strong>Nếu INSERT thành công</strong> → tiếp tục bình thường, cập nhật IngestState.
+          <br>
+          <strong>Nếu INSERT thất bại</strong> (SQL tạm không khả dụng, network, v.v.) →
+          thay vì mất dữ liệu, hệ thống lưu toàn bộ batch vào file SQLite cục bộ
+          (<code>TickSpool</code>). Đây là "hàng chờ bền vững" — dữ liệu đã vào batch sẽ không bị mất
+          chỉ vì SQL tạm thời có vấn đề. Đồng thời gửi cảnh báo Discord.
+          <br><br>
+          <strong>Giới hạn cần hiểu rõ:</strong> spool chỉ bảo vệ dữ liệu đã được process nhận và đã đi vào
+          batch flush. Nếu process chết đột ngột trước khi kịp flush, hoặc tick phát sinh trong lúc live
+          ingest chưa chạy/reconnect, phần đó cần được vá bằng short overlap repair hoặc daily overlap backfill.
+        </div>
+      </li>
+      <li>
+        <div class="step-content">
+          <strong>Tự động khôi phục từ spool (drain)</strong>
+          Sau mỗi lần flush thành công, hệ thống kiểm tra xem spool có dữ liệu chờ không.
+          Nếu có, lấy một batch từ SQLite, thử INSERT vào SQL. Nếu thành công,
+          <em>mới xóa</em> batch đó khỏi SQLite (không xóa trước — đảm bảo an toàn).
+          Quá trình này lặp lại cho đến khi spool sạch.
+        </div>
+      </li>
+      <li>
+        <div class="step-content">
+          <strong>Cập nhật trạng thái theo dõi (IngestState)</strong>
+          Sau mỗi batch INSERT thành công, hệ thống cập nhật bảng <code>tick.IngestState</code>:
+          ghi nhận thời điểm tick cuối cùng của từng symbol, giá bid/ask gần nhất,
+          tổng số tick đã ghi. Bảng này là nguồn chính để hệ thống checker kiểm tra
+          tình trạng sức khỏe của feed.
+        </div>
+      </li>
+    </ol>
+
+    <h2>2.3 Cơ chế đảm bảo dữ liệu liền mạch</h2>
+    <p>
+      Live ingest là lớp thu thập chính, nhưng không phải là lớp duy nhất bảo vệ tick data.
+      Vì cTrader live stream không tự gửi lại toàn bộ tick đã trôi qua trong lúc mất kết nối,
+      hệ thống dùng thêm hai lớp <strong>overlap repair</strong> để vá các khoảng trống sau đó.
+    </p>
+    <table>
+      <tr><th>Lớp</th><th>Cách hoạt động</th><th>Rủi ro được xử lý</th></tr>
+      <tr>
+        <td><strong>Live ingest</strong></td>
+        <td>Nhận tick gần realtime qua cTrader spot stream, gom batch và ghi vào SQL.</td>
+        <td>Đảm bảo dữ liệu mới nhất được ghi nhanh khi kết nối khỏe.</td>
+      </tr>
+      <tr>
+        <td><strong>Short overlap repair</strong></td>
+        <td>Scheduled task chạy khoảng mỗi 5 phút, kéo lại 15 phút gần nhất và chừa safety lag khoảng 2 phút.</td>
+        <td>Vá các lỗ ngắn do reconnect, process restart, hoặc tick live chưa kịp ghi.</td>
+      </tr>
+      <tr>
+        <td><strong>Daily overlap backfill</strong></td>
+        <td>Kéo lại vùng dữ liệu gần đây, mặc định 48 giờ, theo từng chunk để tránh request quá lớn.</td>
+        <td>Vá các lỗ dài hơn sau sự cố máy, SQL, cTrader hoặc downtime kéo dài.</td>
+      </tr>
+      <tr>
+        <td><strong>EventHash chống trùng</strong></td>
+        <td>Mỗi tick có một hash định danh; bảng tick dùng unique index để bỏ qua dòng đã tồn tại.</td>
+        <td>Cho phép chạy overlap/backfill lặp lại mà không làm phình dữ liệu giả.</td>
+      </tr>
+    </table>
+    <p>
+      Lưu ý vận hành: <code>install_tick_tasks.ps1</code> cài supervisor, watchdog, checker và
+      <code>SEN05_TickData_ShortRepair</code> mặc định. Daily overlap backfill là script riêng
+      (<code>tick_daily_overlap_backfill.ps1</code>); nếu muốn chạy hằng ngày, cần đăng ký lịch chạy
+      hoặc đưa vào quy trình vận hành riêng.
+    </p>
+    <div class="callout blue">
+      <b>Cách hiểu đúng về "không mất dữ liệu"</b>
+      SQLite spool bảo vệ dữ liệu khi SQL Server tạm lỗi sau khi batch đã được gom trong bộ nhớ.
+      Overlap repair/backfill mới là lớp dùng để vá các tick không được live ingest thu thập trong lúc process
+      chưa chạy, đang reconnect, hoặc bị restart. Vì vậy hệ thống không dựa vào một lớp duy nhất,
+      mà dùng nhiều lớp chồng lên nhau để giảm xác suất thiếu tick.
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- PHẦN III -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="part" id="p3">
+  <div class="part-header red">PHẦN III — Các Lớp Phòng Vệ Rủi Ro</div>
+  <div class="part-body">
+
+    <p>Đây là phần quan trọng nhất để hiểu tại sao hệ thống đáng tin cậy.
+    Có <strong>6 kịch bản rủi ro</strong> được xử lý, mỗi cái có cơ chế riêng.</p>
+
+    <!-- SVG: Defense layers overview -->
+    <div class="diagram-wrap">
+      <svg viewBox="0 0 900 340" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', Arial, sans-serif">
+        <!-- Header -->
+        <rect x="0" y="0" width="900" height="340" rx="10" fill="#FAFAFA" stroke="#CFD8DC" stroke-width="1"/>
+        <text x="450" y="28" text-anchor="middle" fill="#1A237E" font-size="14" font-weight="700">6 Lớp Phòng Vệ Rủi Ro — Toàn cảnh</text>
+
+        <!-- Row 1 -->
+        <rect x="20" y="45" width="270" height="80" rx="7" fill="#FFEBEE" stroke="#EF9A9A" stroke-width="1.5"/>
+        <text x="155" y="67" text-anchor="middle" fill="#B71C1C" font-size="12" font-weight="700">① Mất kết nối mạng</text>
+        <text x="155" y="84" text-anchor="middle" fill="#37474F" font-size="10.5">Exponential backoff</text>
+        <text x="155" y="99" text-anchor="middle" fill="#37474F" font-size="10.5">5s → 10s → 20s → ... → 300s</text>
+        <text x="155" y="114" text-anchor="middle" fill="#546E7A" font-size="10">Tự động reconnect, không cần người</text>
+
+        <rect x="315" y="45" width="270" height="80" rx="7" fill="#FFF3E0" stroke="#FFCC80" stroke-width="1.5"/>
+        <text x="450" y="67" text-anchor="middle" fill="#E65100" font-size="12" font-weight="700">② SQL Server tạm lỗi</text>
+        <text x="450" y="84" text-anchor="middle" fill="#37474F" font-size="10.5">SQLite spool cho batch đã nhận</text>
+        <text x="450" y="99" text-anchor="middle" fill="#37474F" font-size="10.5">Auto drain khi SQL khôi phục</text>
+        <text x="450" y="114" text-anchor="middle" fill="#546E7A" font-size="10">Discord alert mỗi 5 phút (throttle)</text>
+
+        <rect x="610" y="45" width="270" height="80" rx="7" fill="#E3F2FD" stroke="#90CAF9" stroke-width="1.5"/>
+        <text x="745" y="67" text-anchor="middle" fill="#0D47A1" font-size="12" font-weight="700">③ Process bị crash</text>
+        <text x="745" y="84" text-anchor="middle" fill="#37474F" font-size="10.5">Supervisor vòng lặp vô tận</text>
+        <text x="745" y="99" text-anchor="middle" fill="#37474F" font-size="10.5">Tự khởi động lại sau crash</text>
+        <text x="745" y="114" text-anchor="middle" fill="#546E7A" font-size="10">Watchdog giám sát supervisor</text>
+
+        <!-- Row 2 -->
+        <rect x="20" y="145" width="270" height="80" rx="7" fill="#F3E5F5" stroke="#CE93D8" stroke-width="1.5"/>
+        <text x="155" y="167" text-anchor="middle" fill="#4A148C" font-size="12" font-weight="700">④ Zombie lock / stale PID</text>
+        <text x="155" y="184" text-anchor="middle" fill="#37474F" font-size="10.5">PID file + DB lock (2 lớp)</text>
+        <text x="155" y="199" text-anchor="middle" fill="#37474F" font-size="10.5">Repair-TickDataStaleRuntime</text>
+        <text x="155" y="214" text-anchor="middle" fill="#546E7A" font-size="10">Tự dọn dẹp khi supervisor khởi động</text>
+
+        <rect x="315" y="145" width="270" height="80" rx="7" fill="#E8F5E9" stroke="#A5D6A7" stroke-width="1.5"/>
+        <text x="450" y="167" text-anchor="middle" fill="#1B5E20" font-size="12" font-weight="700">⑤ Tick không về (stale feed)</text>
+        <text x="450" y="184" text-anchor="middle" fill="#37474F" font-size="10.5">Checker 5 phút/lần</text>
+        <text x="450" y="199" text-anchor="middle" fill="#37474F" font-size="10.5">Activity profile (học từ lịch sử)</text>
+        <text x="450" y="214" text-anchor="middle" fill="#546E7A" font-size="10">Graceful restart nếu stale kéo dài</text>
+
+        <rect x="610" y="145" width="270" height="80" rx="7" fill="#FFF8E1" stroke="#FFE082" stroke-width="1.5"/>
+        <text x="745" y="167" text-anchor="middle" fill="#E65100" font-size="12" font-weight="700">⑥ Hai process cùng chạy</text>
+        <text x="745" y="184" text-anchor="middle" fill="#37474F" font-size="10.5">DB lock (SEN.ActiveTask)</text>
+        <text x="745" y="199" text-anchor="middle" fill="#37474F" font-size="10.5">PID file kiểm tra process còn sống</text>
+        <text x="745" y="214" text-anchor="middle" fill="#546E7A" font-size="10">Handoff protocol: graceful transfer</text>
+
+        <!-- Bottom note -->
+        <rect x="20" y="245" width="860" height="80" rx="7" fill="#ECEFF1" stroke="#B0BEC5" stroke-width="1"/>
+        <text x="450" y="268" text-anchor="middle" fill="#37474F" font-size="12" font-weight="600">Nguyên tắc thiết kế xuyên suốt</text>
+        <text x="450" y="286" text-anchor="middle" fill="#546E7A" font-size="10.5">
+          Fail-open: khi không chắc → tiếp tục hoạt động (không dừng lại chờ)
+        </text>
+        <text x="450" y="303" text-anchor="middle" fill="#546E7A" font-size="10.5">
+          Idempotent: mọi thao tác ghi đều an toàn khi chạy lại (INSERT OR IGNORE, MERGE)
+        </text>
+        <text x="450" y="320" text-anchor="middle" fill="#546E7A" font-size="10.5">
+          Observe first: dọn dẹp lock cũ chỉ khi xác nhận không còn process nào dùng nó
+        </text>
+      </svg>
+      <div class="diagram-caption">Sơ đồ 2: Toàn cảnh 6 lớp phòng vệ rủi ro</div>
+    </div>
+
+    <hr class="subtle">
+
+    <h2>Rủi ro ①: Mất kết nối mạng hoặc server cTrader ngắt kết nối</h2>
+    <div class="callout red">
+      <b>Kịch bản:</b> Kết nối TCP đến cTrader server bị ngắt bất ngờ — có thể do mạng chập chờn,
+      cTrader server restart, token hết hạn, hay lỗi không xác định.
+    </div>
+    <p>
+      Ngay khi nhận sự kiện <code>on_disconnected</code>, hệ thống <strong>không dừng lại</strong>.
+      Nó lên lịch kết nối lại với độ trễ tính theo công thức <em>exponential backoff</em>:
+    </p>
+    <pre>
+delay = min(max_seconds, min_seconds × 2<sup>(attempt - 1)</sup>)
+
+Attempt 1: min(300, 5 × 2⁰) =   <span class="grn">5 giây</span>
+Attempt 2: min(300, 5 × 2¹) =  <span class="grn">10 giây</span>
+Attempt 3: min(300, 5 × 2²) =  <span class="grn">20 giây</span>
+Attempt 4: min(300, 5 × 2³) =  <span class="grn">40 giây</span>
+Attempt 5: min(300, 5 × 2⁴) =  <span class="grn">80 giây</span>
+Attempt 6: min(300, 5 × 2⁵) = <span class="grn">160 giây</span>
+Attempt 7+: min(300, ...) =    <span class="grn">300 giây (tối đa)</span>
+    </pre>
+    <p>
+      Lý do dùng exponential backoff thay vì retry ngay: tránh hammering server cTrader khi nó đang
+      bị quá tải hoặc có vấn đề nghiêm trọng. Nếu server chỉ tạm ngắt, 5 giây là đủ nhanh.
+      Nếu có vấn đề lớn hơn, không nên tấn công server bằng hàng trăm kết nối thất bại.
+    </p>
+    <p>
+      <strong>Quan trọng:</strong> Khi reconnect, hệ thống luôn làm mới access token trước (<code>ensure_fresh_access_token</code>)
+      vì token có thể đã hết hạn trong lúc mất kết nối. Đây là nguồn gây reconnect thất bại phổ biến nếu bỏ qua bước này.
+    </p>
+    <p>
+      Hệ thống cũng theo dõi <strong>client generation</strong> — mỗi lần tạo kết nối mới, generation tăng lên.
+      Các callback từ kết nối cũ bị bỏ qua hoàn toàn, tránh xử lý dữ liệu từ phiên kết nối đã lỗi thời.
+    </p>
+
+    <hr class="subtle">
+
+    <h2>Rủi ro ②: SQL Server tạm thời không khả dụng</h2>
+    <div class="callout orange">
+      <b>Kịch bản:</b> SQL Server khởi động lại, mạng nội bộ gián đoạn, hay connection pool cạn kiệt.
+      Tick đang về liên tục — không thể dừng lại chờ SQL khôi phục.
+    </div>
+    <p>
+      Đây là nơi <strong>TickSpool</strong> phát huy tác dụng. Khi <code>flush()</code> thất bại
+      do lỗi SQL, thay vì mất dữ liệu, toàn bộ batch được chuyển sang
+      <code>spool.append_many(records)</code> — lưu vào file SQLite cục bộ trên đĩa VM-DP.
+    </p>
+    <p>
+      SQLite được cấu hình WAL mode (<code>PRAGMA journal_mode=WAL</code>) để giảm rủi ro hỏng file khi ghi
+      và giúp spool chịu được tình huống process dừng bất thường sau khi transaction đã commit.
+      Mỗi tick có một <code>event_hash</code> duy nhất; SQLite dùng <code>INSERT OR IGNORE</code> để chống ghi trùng.
+      Cần phân biệt: WAL không bảo vệ tick còn nằm trong RAM trước thời điểm flush/spool.
+    </p>
+    <p>
+      Sau mỗi lần flush SQL thành công, hệ thống tự động kiểm tra spool và phục hồi dữ liệu:
+    </p>
+    <pre>
+<span class="cmt"># drain_spool() — chạy sau mỗi flush thành công</span>
+records = spool.read_batch(limit=500)   <span class="cmt"># Lấy từ SQLite</span>
+inserted = store.insert_ticks(records)  <span class="cmt"># Thử SQL</span>
+spool.delete_through(max_seq)           <span class="cmt"># XÓA chỉ sau khi SQL OK</span>
+    </pre>
+    <p>
+      Nguyên tắc: <strong>không bao giờ xóa từ spool trước khi biết chắc SQL đã nhận được</strong>.
+      Nếu SQL thất bại trong lúc drain, dữ liệu vẫn còn trong SQLite và sẽ được thử lại lần sau.
+    </p>
+
+    <hr class="subtle">
+
+    <h2>Rủi ro ③: Python process bị crash (hoặc thoát không có lý do)</h2>
+    <div class="callout orange">
+      <b>Kịch bản:</b> Process Python thoát đột ngột — có thể do lỗi unhandled exception,
+      hết bộ nhớ, hay hệ điều hành kill process.
+    </div>
+    <p>
+      Đây là trách nhiệm của <strong>Supervisor</strong> (<code>tick_live_supervisor.ps1</code>).
+      Supervisor chạy một vòng lặp vô hạn trên PowerShell:
+    </p>
+    <pre>
+Loop {
+  1. Repair-TickDataStaleRuntime()  <span class="cmt"># Dọn dẹp lock cũ từ process trước</span>
+  2. Start python tick live         <span class="cmt"># Khởi động Python process</span>
+  3. Wait-Process                   <span class="cmt"># Chờ đến khi Python thoát</span>
+  4. Log exit code và duration      <span class="cmt"># Ghi lại thông tin</span>
+  5. Update-SupervisorHeartbeat()   <span class="cmt"># Cập nhật heartbeat cho watchdog</span>
+  6. Sleep 30 giây                  <span class="cmt"># Tránh restart loop quá nhanh</span>
+  7. → Quay lại bước 1
+}
+    </pre>
+    <p>
+      Khi Python thoát vì bất kỳ lý do gì, supervisor phát hiện ngay (vì nó đang chờ process) và
+      khởi động lại sau 30 giây. Trong thời gian process chưa chạy hoặc đang reconnect, tick live
+      không được thu thập trực tiếp. Khi reconnect, cTrader live stream không tự gửi lại toàn bộ dữ liệu đã qua,
+      nên có thể xuất hiện khoảng trống trong tick data. Khoảng trống này được xử lý bằng short overlap repair
+      và daily overlap backfill; nếu các job overlap cũng lỗi hoặc cửa sổ thiếu vượt quá phạm vi backfill,
+      người vận hành cần chạy backfill thủ công sâu hơn.
+    </p>
+
+    <hr class="subtle">
+
+    <h2>Rủi ro ④: Zombie lock và stale PID file</h2>
+    <div class="callout purple">
+      <b>Kịch bản:</b> Process crash đột ngột (không qua shutdown thông thường), để lại PID file
+      và DB lock chưa được dọn dẹp. Supervisor khi khởi động lại cần biết là an toàn để bắt đầu.
+    </div>
+    <p>
+      Hệ thống dùng <strong>hai lớp khóa song song</strong> để kiểm soát single-instance:
+    </p>
+    <table>
+      <tr><th>Lớp</th><th>Vị trí</th><th>Cách kiểm tra</th><th>Cách dọn dẹp</th></tr>
+      <tr>
+        <td><strong>DB lock</strong></td>
+        <td><code>SEN.ActiveTask</code> (SQL Server)</td>
+        <td>ExpiresAt còn hạn không?</td>
+        <td>DELETE row; hoặc chờ hết hạn tự động (60 phút)</td>
+      </tr>
+      <tr>
+        <td><strong>PID file</strong></td>
+        <td><code>data_provider/runtime/run/tick_live_runtime.pid</code></td>
+        <td>PID còn tồn tại trên OS không?</td>
+        <td>Unlink file nếu PID không còn sống</td>
+      </tr>
+    </table>
+    <p>
+      Trước mỗi lần khởi động Python, supervisor gọi <code>Repair-TickDataStaleRuntime</code>:
+      hàm này kiểm tra có process tick live nào đang chạy không (bằng cách quét danh sách process
+      của Windows), nếu không có → xóa PID file và xóa DB lock. Nếu có → không làm gì cả
+      (tránh can thiệp vào process đang chạy bình thường).
+    </p>
+    <p>
+      DB lock có <strong>heartbeat thread</strong> riêng — thread này chạy song song và gia hạn lock
+      mỗi 15 phút. Nếu process crash, heartbeat thread cũng dừng, lock hết hạn sau tối đa 60 phút.
+    </p>
+
+    <hr class="subtle">
+
+    <h2>Rủi ro ⑤: Tick không về — stale feed</h2>
+    <div class="callout orange">
+      <b>Kịch bản:</b> Process đang chạy, kết nối có vẻ ổn, nhưng tick không còn về từ một số symbol.
+      Đây là tình huống nguy hiểm nhất vì không có lỗi rõ ràng — hệ thống "im lặng mà sai".
+    </div>
+
+    <p>
+      Có hai cơ chế phát hiện trường hợp này:
+    </p>
+
+    <p><strong>Cơ chế 1 — Bên trong Python (stale detection trong checker):</strong>
+    Bảng <code>tick.IngestState</code> ghi thời điểm tick cuối cùng của từng symbol.
+    Checker so sánh với ngưỡng:
+    </p>
+    <table>
+      <tr><th>Symbol</th><th>Ngưỡng cảnh báo</th><th>Lý do</th></tr>
+      <tr><td>BTCUSD</td><td>120 giây (2 phút)</td><td>BTC hoạt động 24/7, tick rất thường xuyên</td></tr>
+      <tr><td>Các symbol khác</td><td>600 giây (10 phút)</td><td>Có thể có phiên đóng cửa tự nhiên</td></tr>
+    </table>
+
+    <p><strong>Cơ chế 2 — Activity Profile (thông minh hơn):</strong>
+    Checker không đơn giản so sánh với ngưỡng cố định — nó còn tra cứu <em>activity profile</em>,
+    một bản học từ 30 ngày lịch sử:
+    </p>
+    <div class="callout blue">
+      <b>Activity Profile hoạt động thế nào?</b>
+      Hệ thống chia mỗi ngày thành các bucket 15 phút (1440 phút / 15 = 96 bucket/ngày).
+      Với mỗi symbol và mỗi bucket thời gian (ví dụ: thứ Hai 14:00–14:15 UTC),
+      hệ thống học xem có ≥ 25% số ngày trong 30 ngày qua có tick hay không.
+      Nếu không đủ → đánh dấu bucket đó là EXPECTED_QUIET (dự kiến im lặng).
+      <br><br>
+      Kết quả: khi US30 không có tick lúc 21:00 UTC thứ Sáu (thị trường đã đóng),
+      checker hiểu đây là bình thường và <strong>không gửi cảnh báo giả</strong>.
+    </div>
+
+    <p>Ngoài ra còn có trạng thái <strong>TRANSITION_GRACE</strong>:
+    nếu bucket hiện tại là quiet nhưng bucket kề trước hoặc sau là active,
+    checker cũng không cảnh báo — vì đây là thời điểm mở/đóng thị trường, tick có thể không đều.</p>
+
+    <p><strong>Cơ chế xử lý từ Watchdog:</strong>
+    Watchdog chạy mỗi 60 giây, nhưng stale feed check được giới hạn nhịp khoảng 300 giây/lần
+    để tránh tạo tải kiểm tra quá dày. Nếu checker phát hiện stale heartbeat, watchdog ghi nhận
+    thời điểm bắt đầu. Nếu tình trạng stale tiếp tục kéo dài quá <strong>15 phút (900 giây)</strong>
+    kể từ lần phát hiện stale, watchdog gửi tín hiệu shutdown graceful đến Python process.
+    Process dừng lại, supervisor tự động khởi động lại với kết nối mới.
+    </p>
+
+    <hr class="subtle">
+
+    <h2>Rủi ro ⑥: Hai process chạy cùng một lúc</h2>
+    <div class="callout purple">
+      <b>Kịch bản:</b> Do lỗi scheduler hay thao tác thủ công nhầm, hai instance Python cùng kết nối
+      cTrader và cùng ghi vào cùng bảng SQL — gây duplicate ticks và tranh chấp lock.
+    </div>
+    <p>
+      Hệ thống ngăn điều này bằng cả hai lớp lock đã nêu ở Rủi ro ④. Nhưng có thêm một kịch bản
+      đặc biệt: <strong>handoff protocol</strong> — dùng khi muốn cố tình chạy instance mới
+      thay thế instance cũ (ví dụ: deploy code mới).
+    </p>
+    <pre>
+<span class="cmt"># Handoff flow khi allow_handoff=True:</span>
+Instance mới cố gắng acquire DB lock → thất bại (instance cũ đang giữ)
+  ↓
+Instance mới ghi TICK_LIVE_SHUTDOWN_SIGNAL vào cột Payload của DB lock
+  ↓
+Instance cũ: shutdown_signal_loop() polls mỗi 10 giây
+  → Phát hiện signal → Gọi request_stop() → Thoát gracefully
+  ↓
+DB lock được release
+  ↓
+Instance mới acquire lock thành công → Bắt đầu hoạt động
+<span class="cmt"># Toàn bộ quá trình tối đa 60 giây (handoff_wait_seconds)</span>
+    </pre>
+    <p>
+      Nếu sau 60 giây instance cũ vẫn không nhả lock, instance mới từ chối khởi động và báo lỗi —
+      không bao giờ cố tình chiếm lock bằng vũ lực. An toàn hơn là báo lỗi để người vận hành can thiệp.
+    </p>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- PHẦN IV -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="part" id="p4">
+  <div class="part-header purple">PHẦN IV — Chi Tiết Kỹ Thuật</div>
+  <div class="part-body">
+
+    <h2>4.1 Cấu trúc module</h2>
+    <table>
+      <tr><th>File</th><th>Vai trò</th></tr>
+      <tr><td><code>cli.py</code></td><td>Entry point CLI: các lệnh <code>live</code>, <code>backfill</code>, <code>check</code>, <code>symbol-sync</code>, <code>show-config</code></td></tr>
+      <tr><td><code>service_live.py</code></td><td>Vòng lặp chính của live ingest: kết nối, nhận tick, orchestrate batcher + spool</td></tr>
+      <tr><td><code>service_jobs.py</code></td><td>Các job không phải realtime: backfill lịch sử, sync symbols</td></tr>
+      <tr><td><code>runtime.py</code></td><td>Wrapper cTrader SDK: tạo client, gửi auth chain, subscribe spots</td></tr>
+      <tr><td><code>runtime_lock.py</code></td><td>Quản lý singleton lock: DB lock + PID file + heartbeat + handoff</td></tr>
+      <tr><td><code>spool.py</code></td><td>TickSpool (SQLite) + TickBatcher (gom nhóm và flush)</td></tr>
+      <tr><td><code>store_sql.py</code></td><td>Ghi vào SQL Server: insert ticks, IngestRun, IngestState, SymbolMap</td></tr>
+      <tr><td><code>checker.py</code></td><td>Health check read-only: stale detection, activity profile, spool check</td></tr>
+      <tr><td><code>notify.py</code></td><td>Discord notifications với throttle 2 lớp (in-memory + file)</td></tr>
+      <tr><td><code>symbols.py</code></td><td>Danh sách symbols target và mapping logic</td></tr>
+      <tr><td><code>ticks.py</code></td><td>TickRecord dataclass: chuẩn hóa dữ liệu từ Protobuf</td></tr>
+    </table>
+
+    <h2>4.2 Authentication flow (OAuth2)</h2>
+    <ol class="steps">
+      <li>
+        <div class="step-content">
+          <strong>Đọc access token từ biến môi trường</strong>
+          <code>CTRADER_ACCESS_TOKEN</code> được lấy từ config.py, từ đó đọc từ environment variable.
+          Đây là token ngắn hạn (thường có hạn vài giờ đến vài ngày tùy broker).
+        </div>
+      </li>
+      <li>
+        <div class="step-content">
+          <strong>Kiểm tra và refresh token trước khi kết nối</strong>
+          Hàm <code>ensure_fresh_access_token()</code> được gọi ở mỗi lần (re)connect.
+          Nếu token sắp hết hạn → làm mới token. Điều này đảm bảo reconnect sau mất kết nối
+          dài không thất bại vì token đã expire.
+        </div>
+      </li>
+      <li>
+        <div class="step-content">
+          <strong>Gửi auth chain</strong>
+          Sau khi TCP connect thành công, hàm <code>send_auth_chain()</code> gửi tuần tự:
+          (1) Application auth với Client ID + Secret, (2) Account auth với access token + account ID.
+          Chỉ khi cả hai pass → callback <code>on_authed()</code> được gọi và hệ thống mới đăng ký symbols.
+        </div>
+      </li>
+    </ol>
+
+    <h2>4.3 Bảo mật SQL identifier</h2>
+    <p>
+      Vì tên bảng SQL được tạo động từ tên symbol (ví dụ: <code>tick.US30</code>),
+      đây là điểm nhạy cảm với SQL injection nếu không xử lý cẩn thận.
+      Hệ thống dùng hai biện pháp:
+    </p>
+    <pre>
+<span class="cmt"># 1. Allow-list cứng: chỉ symbols đã cấu hình được phép</span>
+def qualified_tick_table(schema, local_symbol, allowed_symbols):
+    if local_symbol.upper() not in allowed_symbols:
+        raise ValueError("symbol not in configured tick universe")
+
+<span class="cmt"># 2. Regex validation + bracket quoting</span>
+IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+def quote_ident(identifier):
+    if not IDENTIFIER_RE.match(identifier):
+        raise ValueError("unsafe SQL identifier")
+    return f"[{identifier}]"  <span class="cmt"># SQL Server bracket quoting</span>
+    </pre>
+    <p>Kết quả: không có symbol nào ngoài danh sách cho phép có thể được ghi vào DB, kể cả khi có lỗi logic ở trên.</p>
+
+    <h2>4.4 Sơ đồ SQL schema (tick)</h2>
+    <table>
+      <tr><th>Bảng</th><th>Nội dung</th><th>Ghi chú</th></tr>
+      <tr><td><code>tick.{SYMBOL}</code></td><td>Raw tick: TickTimeUtc, Bid, Ask, SourceTimestampMs, QuoteType, ...</td><td>Mỗi symbol một bảng</td></tr>
+      <tr><td><code>tick.SymbolMap</code></td><td>Mapping SEN05 symbol ID ↔ cTrader symbol ID, digits, pip position</td><td>Cập nhật bởi symbol-sync</td></tr>
+      <tr><td><code>tick.IngestRun</code></td><td>Mỗi phiên chạy: UUID, start/stop time, rows inserted/spooled, status</td><td>Audit trail</td></tr>
+      <tr><td><code>tick.IngestState</code></td><td>Trạng thái hiện tại mỗi symbol: last tick time, last bid/ask, total ticks</td><td>Nguồn cho health check</td></tr>
+      <tr><td><code>tick.v_IngestHealth</code></td><td>View: join SymbolMap + IngestState, thêm heartbeat age</td><td>Dùng bởi checker</td></tr>
+    </table>
+
+    <h2>4.5 Notification system — throttle 2 lớp</h2>
+    <p>
+      Hệ thống không muốn spam Discord khi có lỗi kéo dài. Mỗi loại thông báo có một
+      <code>throttle_key</code> và thời gian chờ tối thiểu giữa các lần gửi:
+    </p>
+    <table>
+      <tr><th>Event</th><th>throttle_key</th><th>Throttle</th></tr>
+      <tr><td>SQL write failed → spool</td><td>tick-spool-write-failed</td><td>5 phút</td></tr>
+      <tr><td>Mất kết nối cTrader</td><td>tick-live-disconnected</td><td>30 phút</td></tr>
+      <tr><td>Lỗi runtime</td><td>tick-live-error</td><td>30 phút</td></tr>
+      <tr><td>Ingest bắt đầu</td><td>tick-live-started</td><td>30 giây</td></tr>
+      <tr><td>Ingest dừng</td><td>tick-live-stopped</td><td>30 giây</td></tr>
+      <tr><td>Subscription active</td><td>tick-live-subscription-active</td><td>60 giây</td></tr>
+    </table>
+    <p>
+      Throttle được kiểm tra ở <strong>2 nơi</strong>: (1) dict trong memory
+      (reset khi process restart), và (2) file trên đĩa tại <code>CACHE_DIR</code>
+      (bền vững qua restart). Nhờ vậy, kể cả khi supervisor restart liên tục,
+      Discord không bị spam quá mức.
+    </p>
+
+    <h2>4.6 Các config parameters chính</h2>
+    <table>
+      <tr><th>Tên config</th><th>Giá trị</th><th>Ý nghĩa</th></tr>
+      <tr><td><code>CTRADER_FTMO_TICK_BATCH_SIZE</code></td><td>500</td><td>Số tick tối đa trước khi flush</td></tr>
+      <tr><td><code>CTRADER_FTMO_TICK_FLUSH_SECONDS</code></td><td>1.0</td><td>Thời gian tối đa giữa 2 lần flush</td></tr>
+      <tr><td><code>CTRADER_FTMO_TICK_RECONNECT_MIN_SECONDS</code></td><td>5</td><td>Thời gian chờ reconnect tối thiểu</td></tr>
+      <tr><td><code>CTRADER_FTMO_TICK_RECONNECT_MAX_SECONDS</code></td><td>300</td><td>Thời gian chờ reconnect tối đa</td></tr>
+      <tr><td><code>CTRADER_FTMO_TICK_STALE_SECONDS_BTC</code></td><td>120</td><td>Ngưỡng stale cho BTCUSD</td></tr>
+      <tr><td><code>CTRADER_FTMO_TICK_STALE_SECONDS_MARKET</code></td><td>600</td><td>Ngưỡng stale cho các symbol còn lại</td></tr>
+      <tr><td><code>heartbeat_log_seconds</code></td><td>300</td><td>Tần suất log heartbeat vào file</td></tr>
+      <tr><td><code>discord_report_seconds</code></td><td>3600</td><td>Tần suất gửi Discord report định kỳ</td></tr>
+      <tr><td><code>lock_duration_min</code></td><td>60</td><td>Thời gian tối đa DB lock tồn tại</td></tr>
+      <tr><td><code>heartbeat_seconds (lock)</code></td><td>900</td><td>Tần suất gia hạn DB lock</td></tr>
+      <tr><td><code>Activity lookback days</code></td><td>30</td><td>Số ngày học activity profile</td></tr>
+      <tr><td><code>Activity bucket minutes</code></td><td>15</td><td>Độ phân giải bucket thời gian</td></tr>
+    </table>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- PHẦN V -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="part" id="p5">
+  <div class="part-header green">PHẦN V — Vận Hành Trên VM-DP (Windows Server)</div>
+  <div class="part-body">
+
+    <h2>5.1 Kiến trúc tổng thể Supervisor / Watchdog</h2>
+
+    <!-- SVG: Ops architecture -->
+    <div class="diagram-wrap">
+      <svg viewBox="0 0 900 440" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', Arial, sans-serif">
+        <defs>
+          <marker id="a2" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#455A64"/>
+          </marker>
+          <marker id="a2r" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#C62828"/>
+          </marker>
+          <marker id="a2g" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#2E7D32"/>
+          </marker>
+          <marker id="a2p" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#4A148C"/>
+          </marker>
+        </defs>
+
+        <!-- Windows Task Scheduler -->
+        <rect x="10" y="10" width="880" height="60" rx="8" fill="#1A237E" stroke="none"/>
+        <text x="450" y="36" text-anchor="middle" fill="white" font-size="13" font-weight="700">Windows Task Scheduler</text>
+        <text x="450" y="56" text-anchor="middle" fill="#C5CAE9" font-size="11">Quản lý tất cả tasks, khởi động khi Windows boot</text>
+
+        <!-- Task boxes -->
+        <!-- Supervisor -->
+        <rect x="60" y="100" width="200" height="80" rx="7" fill="#E8F5E9" stroke="#388E3C" stroke-width="1.5"/>
+        <text x="160" y="122" text-anchor="middle" fill="#1B5E20" font-size="12" font-weight="700">Supervisor Task</text>
+        <text x="160" y="139" text-anchor="middle" fill="#37474F" font-size="10.5">SEN05_TickLive_Supervisor</text>
+        <text x="160" y="155" text-anchor="middle" fill="#546E7A" font-size="10">At startup + At logon</text>
+        <text x="160" y="170" text-anchor="middle" fill="#546E7A" font-size="10">tick_live_supervisor.ps1</text>
+
+        <!-- Watchdog -->
+        <rect x="290" y="100" width="200" height="80" rx="7" fill="#F3E5F5" stroke="#6A1B9A" stroke-width="1.5"/>
+        <text x="390" y="122" text-anchor="middle" fill="#4A148C" font-size="12" font-weight="700">Watchdog Task</text>
+        <text x="390" y="139" text-anchor="middle" fill="#37474F" font-size="10.5">SEN05_TickLive_Watchdog</text>
+        <text x="390" y="155" text-anchor="middle" fill="#546E7A" font-size="10">Every 60 seconds</text>
+        <text x="390" y="170" text-anchor="middle" fill="#546E7A" font-size="10">tick_live_watchdog.ps1</text>
+
+        <!-- Checker -->
+        <rect x="520" y="100" width="200" height="80" rx="7" fill="#E3F2FD" stroke="#1976D2" stroke-width="1.5"/>
+        <text x="620" y="122" text-anchor="middle" fill="#0D47A1" font-size="12" font-weight="700">Checker Task</text>
+        <text x="620" y="139" text-anchor="middle" fill="#37474F" font-size="10.5">SEN05_TickData_Checker</text>
+        <text x="620" y="155" text-anchor="middle" fill="#546E7A" font-size="10">Every 5 minutes</text>
+        <text x="620" y="170" text-anchor="middle" fill="#546E7A" font-size="10">tick_check.ps1</text>
+
+        <!-- Repair -->
+        <rect x="750" y="100" width="140" height="80" rx="7" fill="#FFF3E0" stroke="#F57C00" stroke-width="1.5"/>
+        <text x="820" y="122" text-anchor="middle" fill="#E65100" font-size="12" font-weight="700">Repair Task</text>
+        <text x="820" y="139" text-anchor="middle" fill="#37474F" font-size="10.5">ShortOverlapRepair</text>
+        <text x="820" y="155" text-anchor="middle" fill="#546E7A" font-size="10">Every 5 minutes</text>
+        <text x="820" y="170" text-anchor="middle" fill="#546E7A" font-size="10">short_overlap_repair.ps1</text>
+
+        <!-- Arrows from scheduler to tasks -->
+        <line x1="160" y1="70" x2="160" y2="100" stroke="#37474F" stroke-width="1.5" marker-end="url(#a2)"/>
+        <line x1="390" y1="70" x2="390" y2="100" stroke="#37474F" stroke-width="1.5" marker-end="url(#a2)"/>
+        <line x1="620" y1="70" x2="620" y2="100" stroke="#37474F" stroke-width="1.5" marker-end="url(#a2)"/>
+        <line x1="820" y1="70" x2="820" y2="100" stroke="#37474F" stroke-width="1.5" marker-end="url(#a2)"/>
+
+        <!-- Python process -->
+        <rect x="100" y="240" width="240" height="70" rx="7" fill="#ECEFF1" stroke="#607D8B" stroke-width="2"/>
+        <text x="220" y="265" text-anchor="middle" fill="#263238" font-size="13" font-weight="700">Python Process</text>
+        <text x="220" y="283" text-anchor="middle" fill="#37474F" font-size="11">service_live.py</text>
+        <text x="220" y="300" text-anchor="middle" fill="#546E7A" font-size="10">PID: tick_live_runtime.pid</text>
+
+        <!-- Supervisor → Python -->
+        <line x1="160" y1="180" x2="180" y2="240" stroke="#388E3C" stroke-width="2" marker-end="url(#a2g)"/>
+        <text x="148" y="218" fill="#2E7D32" font-size="10" font-style="italic">Start</text>
+        <text x="148" y="230" fill="#2E7D32" font-size="10" font-style="italic">Monitor</text>
+        <text x="148" y="242" fill="#2E7D32" font-size="10" font-style="italic">Restart</text>
+
+        <!-- Watchdog → Supervisor (monitors) -->
+        <line x1="390" y1="180" x2="260" y2="240" stroke="#6A1B9A" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#a2p)"/>
+        <text x="355" y="218" fill="#4A148C" font-size="10" font-style="italic">Check state</text>
+        <text x="355" y="230" fill="#4A148C" font-size="10" font-style="italic">Restart if dead</text>
+
+        <!-- Watchdog → Python (stale check) -->
+        <path d="M 390 180 Q 350 330 340 310" stroke="#6A1B9A" stroke-width="1.5" stroke-dasharray="4,3" fill="none" marker-end="url(#a2p)"/>
+        <text x="330" y="340" fill="#4A148C" font-size="10" font-style="italic">Graceful shutdown</text>
+        <text x="330" y="352" fill="#4A148C" font-size="10" font-style="italic">if stale &gt;15min</text>
+
+        <!-- Checker → SQL -->
+        <rect x="500" y="240" width="180" height="70" rx="7" fill="#ECEFF1" stroke="#607D8B" stroke-width="1.5"/>
+        <text x="590" y="265" text-anchor="middle" fill="#263238" font-size="12" font-weight="700">SQL Server</text>
+        <text x="590" y="283" text-anchor="middle" fill="#37474F" font-size="11">tick.IngestState</text>
+        <text x="590" y="300" text-anchor="middle" fill="#546E7A" font-size="10">tick.IngestRun</text>
+
+        <line x1="590" y1="180" x2="590" y2="240" stroke="#1976D2" stroke-width="1.5" marker-end="url(#a2)"/>
+        <text x="600" y="215" fill="#1565C0" font-size="10" font-style="italic">run_tick_check()</text>
+
+        <!-- Python → SQL -->
+        <line x1="340" y1="275" x2="500" y2="275" stroke="#388E3C" stroke-width="1.5" marker-end="url(#a2g)"/>
+        <text x="420" y="267" fill="#2E7D32" font-size="10">INSERT ticks</text>
+
+        <!-- Discord notification -->
+        <rect x="680" y="240" width="200" height="70" rx="7" fill="#FFF3E0" stroke="#F57C00" stroke-width="1.5"/>
+        <text x="780" y="265" text-anchor="middle" fill="#E65100" font-size="12" font-weight="700">Discord</text>
+        <text x="780" y="283" text-anchor="middle" fill="#37474F" font-size="11">Alerts + Reports</text>
+        <text x="780" y="300" text-anchor="middle" fill="#546E7A" font-size="10">notify.py (throttled)</text>
+
+        <line x1="680" y1="265" x2="590" y2="265" stroke="#F57C00" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a2)"/>
+        <text x="635" y="255" fill="#E65100" font-size="10">findings</text>
+
+        <line x1="340" y1="295" x2="680" y2="290" stroke="#F57C00" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a2)"/>
+        <text x="500" y="315" fill="#E65100" font-size="10">spool/error alerts</text>
+
+        <!-- Heartbeat file -->
+        <rect x="60" y="370" width="380" height="50" rx="6" fill="#F9FBE7" stroke="#C6D61D" stroke-width="1"/>
+        <text x="250" y="393" text-anchor="middle" fill="#558B2F" font-size="11" font-weight="600">tick_live_supervisor.heartbeat.json</text>
+        <text x="250" y="410" text-anchor="middle" fill="#546E7A" font-size="10">Supervisor cập nhật sau mỗi vòng lặp · Watchdog đọc để verify supervisor còn hoạt động</text>
+
+        <line x1="160" y1="360" x2="200" y2="370" stroke="#388E3C" stroke-width="1" stroke-dasharray="3,2"/>
+        <line x1="390" y1="180" x2="250" y2="370" stroke="#6A1B9A" stroke-width="1" stroke-dasharray="3,2"/>
+      </svg>
+      <div class="diagram-caption">Sơ đồ 3: Kiến trúc vận hành trên VM-DP — Supervisor, Watchdog và các thành phần phụ</div>
+    </div>
+
+    <h2>5.2 Supervisor — Vòng lặp bảo vệ chính</h2>
+    <p>
+      Supervisor là tuyến phòng thủ đầu tiên. Nó chạy như một Task Scheduler task
+      với thiết lập <em>"At startup + At logon"</em> — đảm bảo tự khởi động khi VM boot.
+      Vòng lặp của supervisor:
+    </p>
+    <ol class="steps">
+      <li>
+        <div class="step-content">
+          <strong>Dọn dẹp trạng thái cũ (Repair)</strong>
+          Gọi <code>Repair-TickDataStaleRuntime</code>: quét danh sách process Windows,
+          nếu không có process tick live nào đang chạy → xóa PID file và xóa DB lock trong SQL.
+          Nếu có process đang chạy → bỏ qua (không can thiệp).
+        </div>
+      </li>
+      <li>
+        <div class="step-content">
+          <strong>Khởi động Python</strong>
+          Chạy: <code>.venv/Scripts/python.exe -m data_provider.apps.ctrader_ftmo_tick live</code>
+          từ thư mục repo. Stdout/stderr được redirect vào <code>tick_live_console.log</code>.
+        </div>
+      </li>
+      <li>
+        <div class="step-content">
+          <strong>Chờ Python thoát</strong>
+          Supervisor block tại đây cho đến khi Python process kết thúc — dù là crash, shutdown bình thường,
+          hay bị kill. Khi Python thoát, supervisor ghi lại exit code và thời gian chạy.
+        </div>
+      </li>
+      <li>
+        <div class="step-content">
+          <strong>Cập nhật heartbeat và chờ 30 giây</strong>
+          Ghi <code>tick_live_supervisor.heartbeat.json</code> với timestamp và state.
+          Sleep 30 giây trước khi bắt đầu lại — tránh restart loop quá nhanh khi Python liên tục crash.
+        </div>
+      </li>
+    </ol>
+
+    <h2>5.3 Watchdog — Giám sát supervisor</h2>
+    <p>
+      Watchdog chạy mỗi <strong>60 giây</strong> (Task Scheduler trigger) và thực hiện 3 kiểm tra:
+    </p>
+    <table>
+      <tr><th>Kiểm tra</th><th>Điều kiện</th><th>Hành động</th></tr>
+      <tr>
+        <td>Supervisor task state</td>
+        <td>Task state ≠ Running</td>
+        <td>Start supervisor task ngay lập tức</td>
+      </tr>
+      <tr>
+        <td>Python process count</td>
+        <td>Supervisor running nhưng không có Python process nào trong hơn 60 giây</td>
+        <td>Stop + restart supervisor task</td>
+      </tr>
+      <tr>
+        <td>Stale feed check (mỗi 300s)</td>
+        <td>Checker report có stale_heartbeat findings ≥ 1 kéo dài hơn 900 giây</td>
+        <td>Gửi graceful shutdown signal → Python tự thoát → supervisor restart mới</td>
+      </tr>
+    </table>
+
+    <div class="callout orange">
+      <b>Tại sao có cả supervisor lẫn watchdog?</b>
+      Supervisor có thể bị treo trong chính vòng lặp của nó (ví dụ: một lệnh PowerShell bị hang).
+      Trong trường hợp đó, task Scheduler báo supervisor "Running" nhưng không có gì thực sự chạy.
+      Watchdog nhìn thẳng vào danh sách process Windows để xác minh Python có thực sự chạy không —
+      không tin vào state của supervisor.
+    </div>
+
+    <h2>5.4 Log files và cách theo dõi</h2>
+    <table>
+      <tr><th>File</th><th>Nội dung</th><th>Đường dẫn</th></tr>
+      <tr><td>App log (Python)</td><td>Log chi tiết từ service_live.py: tick counts, errors, reconnects</td><td><code>data_provider/runtime/logs/ctrader_ftmo_tick.log</code></td></tr>
+      <tr><td>Supervisor log</td><td>Mỗi restart cycle: exit code, thời gian chạy, repair actions</td><td><code>ops/run_tickdata/runtime/logs/tick_live_supervisor.log</code></td></tr>
+      <tr><td>Watchdog log</td><td>Mỗi 60s: kết quả kiểm tra, stale feed actions</td><td><code>ops/run_tickdata/runtime/logs/tick_live_watchdog.log</code></td></tr>
+      <tr><td>Console log</td><td>stdout/stderr trực tiếp từ Python (bổ sung cho app log)</td><td><code>ops/run_tickdata/runtime/logs/tick_live_console.log</code></td></tr>
+      <tr><td>Heartbeat JSON</td><td>Trạng thái supervisor hiện tại (machine-readable)</td><td><code>ops/run_tickdata/runtime/tick_live_supervisor.heartbeat.json</code></td></tr>
+    </table>
+
+    <h2>5.5 Các thao tác thủ công thường gặp</h2>
+    <table>
+      <tr><th>Tình huống</th><th>Lệnh</th></tr>
+      <tr><td>Xem trạng thái hệ thống</td><td><code>.\ops\run_tickdata\tick_status.ps1</code></td></tr>
+      <tr><td>Xem dashboard realtime</td><td><code>.\ops\run_tickdata\tick_dashboard.ps1</code> (port 8061)</td></tr>
+      <tr><td>Check health thủ công</td><td><code>python -m data_provider.apps.ctrader_ftmo_tick check</code></td></tr>
+      <tr><td>Sync symbols mới từ cTrader</td><td><code>python -m data_provider.apps.ctrader_ftmo_tick symbol-sync --apply</code></td></tr>
+      <tr><td>Chạy short overlap repair</td><td><code>.\ops\run_tickdata\tick_short_overlap_repair.ps1</code> (mặc định kéo lại 15 phút gần nhất)</td></tr>
+      <tr><td>Chạy daily overlap backfill</td><td><code>.\ops\run_tickdata\tick_daily_overlap_backfill.ps1</code> (mặc định kéo lại 48 giờ gần nhất)</td></tr>
+      <tr><td>Backfill dữ liệu lịch sử</td><td><code>python -m data_provider.apps.ctrader_ftmo_tick backfill --from 2026-01-01</code></td></tr>
+      <tr><td>Cài đặt scheduled tasks</td><td><code>.\ops\run_tickdata\install_tick_tasks.ps1</code></td></tr>
+    </table>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- PHẦN VI -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="part" id="p6">
+  <div class="part-header gray">PHẦN VI — Ghi Chú, Hạn Chế và Hướng Cải Tiến</div>
+  <div class="part-body">
+
+    <h2>6.1 Hạn chế hiện tại (đã biết)</h2>
+
+    <div class="callout orange">
+      <b>Overlap repair có phạm vi thời gian</b>
+      Short overlap và daily overlap giúp vá phần lớn khoảng trống do live ingest bị ngắt,
+      nhưng chúng chỉ vá trong cửa sổ được cấu hình. Nếu downtime kéo dài hơn cửa sổ daily overlap,
+      hoặc cTrader không còn cung cấp lịch sử tick đủ sâu cho khoảng thiếu đó, cần chạy backfill thủ công
+      với khoảng thời gian rộng hơn và kiểm tra lại coverage sau khi chạy.
+    </div>
+
+    <div class="risk-grid">
+      <div class="risk-card orange">
+        <h3>Tick data chưa được dùng trong backtest</h3>
+        <p>Đang thu thập và lưu trữ đầy đủ, nhưng chưa có pipeline tích hợp vào backtest cTrader.
+        Dữ liệu đang "chờ" trong SQL. Cần build thêm bước export tick sang định dạng cTrader nhận.</p>
+      </div>
+      <div class="risk-card orange">
+        <h3>Thiếu FOREX symbols</h3>
+        <p>cTrader FTMO demo không cung cấp đủ FOREX symbols khớp với danh sách SEN05.
+        Hiện chỉ có Indices, Metal, Crypto. Cần account live hoặc nguồn tick FOREX riêng.</p>
+      </div>
+      <div class="risk-card blue">
+        <h3>Symbol-sync không tự động</h3>
+        <p>Khi cTrader thêm/đổi tên symbol, cần chạy lại <code>symbol-sync --apply</code> thủ công.
+        Chưa có scheduled task tự động refresh symbol map.</p>
+      </div>
+      <div class="risk-card blue">
+        <h3>Activity profile cần đủ 30 ngày mới chính xác</h3>
+        <p>Khi mới triển khai, activity profile chưa đủ dữ liệu → có thể cảnh báo giả
+        trong những ngày đầu. Profile cần khoảng 2–4 tuần dữ liệu để phân loại ổn định.</p>
+      </div>
+    </div>
+
+    <h2>6.2 Hướng cải tiến (further analysis)</h2>
+    <table>
+      <tr><th>Hướng</th><th>Mô tả</th><th>Mức độ ưu tiên</th></tr>
+      <tr>
+        <td><strong>Export tick cho cTrader backtest</strong></td>
+        <td>Build pipeline export tick từ <code>tick.*</code> SQL sang định dạng file .csv hoặc cTrader binary format để dùng trong Historical Data Manager</td>
+        <td><span class="badge info">Cao</span></td>
+      </tr>
+      <tr>
+        <td><strong>Spread analysis</strong></td>
+        <td>Tính median spread (Ask-Bid) theo symbol và khung giờ — dùng để điều chỉnh backtest cost assumption</td>
+        <td><span class="badge warn">Trung bình</span></td>
+      </tr>
+      <tr>
+        <td><strong>Tự động symbol-sync</strong></td>
+        <td>Thêm scheduled task chạy symbol-sync weekly và so sánh với danh sách SEN05, alert nếu có symbol mới phù hợp</td>
+        <td><span class="badge warn">Trung bình</span></td>
+      </tr>
+      <tr>
+        <td><strong>Metrics dashboard bổ sung</strong></td>
+        <td>Bổ sung chart tick frequency theo giờ và ngày vào tick dashboard, giúp quan sát liquidity pattern</td>
+        <td><span class="badge ok">Thấp</span></td>
+      </tr>
+      <tr>
+        <td><strong>Compression cho bảng tick cũ</strong></td>
+        <td>Tick data tích lũy rất nhanh. Cần kế hoạch partition hoặc archival cho dữ liệu > 90 ngày</td>
+        <td><span class="badge warn">Trung bình (dài hạn)</span></td>
+      </tr>
+    </table>
+
+    <div class="callout blue" style="margin-top: 24px;">
+      <b>Ghi chú về tài liệu này:</b>
+      Mọi nội dung trong tài liệu được phân tích trực tiếp từ code tại thời điểm 2026-06-13.
+      Các config values phản ánh cài đặt mặc định trong <code>config.py</code>.
+      Nếu config thay đổi trong tương lai, phần 4.6 cần được cập nhật.
+    </div>
+
+  </div>
+</div>
+
+<div style="text-align:center; color: #90A4AE; font-size: 12px; margin-top: 32px; padding-top: 16px; border-top: 1px solid #ECEFF1;">
+  SEN05 Autotrading — Tick Data System Documentation v1.0 — 2026-06-13
+</div>
+
+</body>
+</html>

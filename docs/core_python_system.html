@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Core Python System - SEN05 Autotrading</title>
+<style>
+  :root {
+    --blue: #1565C0;
+    --blue2: #E3F2FD;
+    --green: #2E7D32;
+    --green2: #E8F5E9;
+    --orange: #EF6C00;
+    --orange2: #FFF3E0;
+    --red: #B71C1C;
+    --red2: #FFEBEE;
+    --purple: #5E35B1;
+    --purple2: #F3E5F5;
+    --gray: #455A64;
+    --gray2: #ECEFF1;
+    --dark: #1A237E;
+    --text: #212121;
+    --muted: #607D8B;
+    --border: #CFD8DC;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0 auto;
+    max-width: 1180px;
+    padding: 30px 24px 80px;
+    font-family: "Segoe UI", Arial, sans-serif;
+    color: var(--text);
+    background: #FAFAFA;
+    font-size: 15px;
+    line-height: 1.68;
+  }
+  .hero {
+    color: #fff;
+    background: linear-gradient(135deg, #0D47A1 0%, #283593 52%, #512DA8 100%);
+    border-radius: 10px;
+    padding: 34px 38px;
+    margin-bottom: 30px;
+  }
+  .hero h1 { margin: 0 0 8px; font-size: 29px; line-height: 1.25; }
+  .hero p { margin: 8px 0 0; color: #E8EAF6; }
+  .meta { font-size: 13px; color: #C5CAE9; margin-top: 14px; }
+  .toc {
+    background: #fff;
+    border-left: 5px solid var(--blue);
+    border-radius: 8px;
+    padding: 20px 28px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    margin-bottom: 32px;
+  }
+  .toc h2 { margin-top: 0; color: var(--blue); font-size: 16px; border: 0; padding: 0; }
+  .toc ol { margin: 0 0 0 22px; padding: 0; }
+  .toc li { margin: 4px 0; }
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .part {
+    background: #fff;
+    border-radius: 9px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    margin: 0 0 34px;
+    overflow: hidden;
+  }
+  .part-title {
+    color: #fff;
+    padding: 18px 30px;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .part-title.blue { background: var(--blue); }
+  .part-title.green { background: var(--green); }
+  .part-title.orange { background: var(--orange); }
+  .part-title.purple { background: var(--purple); }
+  .part-title.gray { background: var(--gray); }
+  .body { padding: 30px; }
+  h2 {
+    font-size: 18px;
+    color: var(--dark);
+    margin: 28px 0 12px;
+    padding-bottom: 7px;
+    border-bottom: 2px solid var(--blue2);
+  }
+  h2:first-child { margin-top: 0; }
+  h3 {
+    font-size: 15px;
+    color: var(--gray);
+    margin: 22px 0 8px;
+    text-transform: uppercase;
+    letter-spacing: .35px;
+  }
+  p { margin: 0 0 14px; }
+  code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 13px;
+    padding: 1px 5px;
+    border: 1px solid #E0E0E0;
+    border-radius: 4px;
+    background: #F5F5F5;
+    color: #C62828;
+  }
+  pre {
+    margin: 16px 0;
+    padding: 16px 18px;
+    background: #263238;
+    color: #ECEFF1;
+    border-radius: 7px;
+    overflow-x: auto;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 20px;
+    font-size: 14px;
+  }
+  th {
+    background: #263238;
+    color: #fff;
+    text-align: left;
+    padding: 10px 12px;
+    font-weight: 600;
+  }
+  td {
+    border-bottom: 1px solid var(--border);
+    padding: 9px 12px;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #FAFAFA; }
+  .callout {
+    margin: 17px 0;
+    border-left: 5px solid;
+    border-radius: 0 7px 7px 0;
+    padding: 14px 17px;
+    background: var(--gray2);
+  }
+  .callout b { display: block; margin-bottom: 4px; color: var(--dark); }
+  .callout.blue { background: var(--blue2); border-color: var(--blue); }
+  .callout.green { background: var(--green2); border-color: var(--green); }
+  .callout.orange { background: var(--orange2); border-color: var(--orange); }
+  .callout.red { background: var(--red2); border-color: var(--red); }
+  .callout.purple { background: var(--purple2); border-color: var(--purple); }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0; }
+  .card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    background: #fff;
+  }
+  .card h3 { margin-top: 0; text-transform: none; letter-spacing: 0; color: var(--dark); }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .badge.blue { background: var(--blue); }
+  .badge.green { background: var(--green); }
+  .badge.orange { background: var(--orange); }
+  .badge.red { background: var(--red); }
+  .diagram { text-align: center; margin: 24px 0; }
+  .diagram svg { width: 100%; max-width: 1040px; height: auto; }
+  .caption { font-size: 12.5px; color: var(--muted); margin-top: 6px; font-style: italic; }
+  .small { font-size: 13px; color: var(--muted); }
+  @media (max-width: 820px) {
+    body { padding: 18px 14px 60px; }
+    .hero, .body { padding: 22px; }
+    .grid { grid-template-columns: 1fr; }
+    table { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Hệ thống Core Python - SEN05 Autotrading</h1>
+  <p>Tài liệu hai lớp: lớp cơ chế hoạt động cho người không đọc code, và lớp kỹ thuật để developer/AI truy vết chính xác file, hàm, config và data contract.</p>
+  <div class="meta">
+    Phạm vi: <code>core_python/</code>. Nguồn đọc chính: <code>main.py</code>, <code>engine.py</code>, <code>data/loader.py</code>, <code>chart/server.py</code>, <code>export/service.py</code>, <code>notify/*</code>, <code>strategies/*</code>. Ngày lập: 2026-06-13.
+  </div>
+</div>
+
+<div class="toc">
+  <h2>Mục Lục</h2>
+  <ol>
+    <li><a href="#overview">Tổng Quan Nhanh</a></li>
+    <li><a href="#layer1">Lớp 1 - Cơ Chế Hoạt Động</a></li>
+    <li><a href="#risks">Lớp 1 - Sự Cố Và Phản Ứng</a></li>
+    <li><a href="#layer2">Lớp 2 - Kỹ Thuật Và Code Mapping</a></li>
+    <li><a href="#ops">Vận Hành, Command Và Runtime File</a></li>
+    <li><a href="#limits">Hạn Chế Và Further Analysis</a></li>
+  </ol>
+</div>
+
+<div class="part" id="overview">
+  <div class="part-title blue">0. Tổng Quan Nhanh</div>
+  <div class="body">
+    <h2>0.1 core_python là gì?</h2>
+    <p>
+      <code>core_python</code> là lớp tính toán và hiển thị tín hiệu chiến lược của SEN05.
+      Nó không phải là hệ thống lấy OHLCV realtime từ broker, cũng không phải là lớp đặt lệnh.
+      Vai trò chính của nó là đọc dữ liệu OHLCV đã nằm trong SQL Server, chạy các chiến lược,
+      dựng payload cho dashboard, xuất CSV tín hiệu và chạy watcher realtime để phát hiện tín hiệu mới.
+    </p>
+    <div class="callout blue">
+      <b>Cách hiểu ngắn gọn</b>
+      <code>data_provider</code> đưa dữ liệu vào kho. <code>core_python</code> đọc dữ liệu đó,
+      tính chỉ báo/tín hiệu, hiển thị cho người dùng và phát tín hiệu realtime ra các kênh alert/Redis.
+    </div>
+
+    <h2>0.2 Ba nhánh sử dụng chính</h2>
+    <table>
+      <tr><th>Nhánh</th><th>Người/Module dùng</th><th>core_python làm gì?</th><th>Đầu ra</th></tr>
+      <tr>
+        <td><strong>Dashboard chart</strong></td>
+        <td>Người dùng mở web tại Flask server</td>
+        <td>Nhận request scan, load OHLCV, chạy strategy, dựng JSON cho Lightweight Charts.</td>
+        <td>Candles, overlays, panels, markers, levels, bảng tín hiệu.</td>
+      </tr>
+      <tr>
+        <td><strong>CSV export</strong></td>
+        <td>Người dùng hoặc công cụ backtest</td>
+        <td>Chạy cùng engine, lọc các dòng có signal và trả CSV.</td>
+        <td>File/download CSV signal-only.</td>
+      </tr>
+      <tr>
+        <td><strong>Realtime watcher</strong></td>
+        <td>Runtime 24/7 sau khi data_provider commit bar</td>
+        <td>Nghe event bar-ready, scan tín hiệu mới, chống gửi trùng, gửi human alert và queue signal cho downstream.</td>
+        <td>Discord/Telegram alert, <code>delivery_outbox.json</code>, Redis Stream <code>signal_stream:{strategy}</code>.</td>
+      </tr>
+    </table>
+
+    <h2>0.3 Những chiến lược hiện được đăng ký</h2>
+    <table>
+      <tr><th>Strategy key</th><th>Mô tả cơ chế</th><th>Ghi chú</th></tr>
+      <tr>
+        <td><code>combo</code></td>
+        <td>Combo tín hiệu dựa trên MA, hướng nến, MACD histogram, ATR và có thể thêm higher-timeframe trend filter.</td>
+        <td>Dùng nhiều trong production scan cho nhóm Indices H1/H2/H3/H4.</td>
+      </tr>
+      <tr>
+        <td><code>ma_cross</code></td>
+        <td>Chiến lược giao cắt MA, có levels và realtime adapter riêng.</td>
+        <td>Có trong registry và CLI override.</td>
+      </tr>
+      <tr>
+        <td><code>ai_trend</code></td>
+        <td>Multi-timeframe: trend TF dùng AI Trend Navigator/KNN để xác định bias; entry TF tìm entry theo EMA/MACD trong trend segment.</td>
+        <td>Production contract hiện tại: H3 trend change và M45 entry signal.</td>
+      </tr>
+      <tr>
+        <td><code>knn_combo</code></td>
+        <td>Multi-timeframe: KNN trend bias ở TF cao lọc raw combo signal ở TF thấp.</td>
+        <td>Thiên về visual signal; không tính position sizing/live execution instruction.</td>
+      </tr>
+    </table>
+
+    <div class="diagram">
+      <svg viewBox="0 0 1040 390" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+        <rect x="0" y="0" width="1040" height="390" rx="12" fill="#FAFAFA" stroke="#CFD8DC"/>
+        <text x="520" y="30" text-anchor="middle" fill="#1A237E" font-size="16" font-weight="700">Vị trí của core_python trong SEN05</text>
+
+        <rect x="30" y="70" width="210" height="78" rx="8" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5"/>
+        <text x="135" y="98" text-anchor="middle" fill="#0D47A1" font-size="13" font-weight="700">data_provider</text>
+        <text x="135" y="119" text-anchor="middle" fill="#455A64" font-size="11">ws_live, pipeline</text>
+        <text x="135" y="137" text-anchor="middle" fill="#455A64" font-size="11">ghi OHLCV vào SQL</text>
+
+        <rect x="300" y="70" width="215" height="78" rx="8" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.5"/>
+        <text x="407" y="98" text-anchor="middle" fill="#1B5E20" font-size="13" font-weight="700">SQL Server DWH</text>
+        <text x="407" y="119" text-anchor="middle" fill="#455A64" font-size="11">DWH.Fact_OHLCV</text>
+        <text x="407" y="137" text-anchor="middle" fill="#455A64" font-size="11">Dim_Symbol, Dim_Timeframe</text>
+
+        <rect x="575" y="70" width="250" height="78" rx="8" fill="#FFF3E0" stroke="#EF6C00" stroke-width="1.5"/>
+        <text x="700" y="98" text-anchor="middle" fill="#E65100" font-size="13" font-weight="700">core_python</text>
+        <text x="700" y="119" text-anchor="middle" fill="#455A64" font-size="11">load dữ liệu, tính strategy</text>
+        <text x="700" y="137" text-anchor="middle" fill="#455A64" font-size="11">chart, export, notify runtime</text>
+
+        <rect x="870" y="44" width="140" height="48" rx="8" fill="#F3E5F5" stroke="#5E35B1" stroke-width="1.5"/>
+        <text x="940" y="73" text-anchor="middle" fill="#4A148C" font-size="12" font-weight="700">Dashboard</text>
+        <rect x="870" y="116" width="140" height="48" rx="8" fill="#F3E5F5" stroke="#5E35B1" stroke-width="1.5"/>
+        <text x="940" y="145" text-anchor="middle" fill="#4A148C" font-size="12" font-weight="700">CSV Export</text>
+        <rect x="870" y="188" width="140" height="48" rx="8" fill="#F3E5F5" stroke="#5E35B1" stroke-width="1.5"/>
+        <text x="940" y="217" text-anchor="middle" fill="#4A148C" font-size="12" font-weight="700">Alert/Redis</text>
+
+        <line x1="240" y1="109" x2="300" y2="109" stroke="#455A64" stroke-width="2" marker-end="url(#arrow)"/>
+        <line x1="515" y1="109" x2="575" y2="109" stroke="#455A64" stroke-width="2" marker-end="url(#arrow)"/>
+        <line x1="825" y1="98" x2="870" y2="68" stroke="#455A64" stroke-width="2" marker-end="url(#arrow)"/>
+        <line x1="825" y1="118" x2="870" y2="140" stroke="#455A64" stroke-width="2" marker-end="url(#arrow)"/>
+        <line x1="775" y1="148" x2="870" y2="212" stroke="#455A64" stroke-width="2" marker-end="url(#arrow)"/>
+
+        <rect x="60" y="275" width="920" height="76" rx="8" fill="#ECEFF1" stroke="#B0BEC5"/>
+        <text x="520" y="302" text-anchor="middle" fill="#37474F" font-size="13" font-weight="700">Ranh giới trách nhiệm</text>
+        <text x="520" y="326" text-anchor="middle" fill="#455A64" font-size="12">core_python không tự lấy bar từ broker và không trực tiếp đặt lệnh.</text>
+        <text x="520" y="345" text-anchor="middle" fill="#455A64" font-size="12">Nó đọc dữ liệu đã commit, tạo tín hiệu, hiển thị/alert và giao tín hiệu cho hệ thống downstream.</text>
+        <defs>
+          <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L0,6 L9,3 z" fill="#455A64"/>
+          </marker>
+        </defs>
+      </svg>
+      <div class="caption">Sơ đồ 1: core_python nằm giữa kho OHLCV và các lớp tiêu thụ tín hiệu.</div>
+    </div>
+  </div>
+</div>
+
+<div class="part" id="layer1">
+  <div class="part-title green">Lớp 1 - Cơ Chế Hoạt Động</div>
+  <div class="body">
+    <h2>1.1 Hành trình của một request dashboard</h2>
+    <p>
+      Khi người dùng mở dashboard, trình duyệt gọi Flask server trong <code>chart/server.py</code>.
+      Server không tự tính toán trong frontend. Nó nhận tham số như strategy, symbol, timeframe,
+      số bar hoặc khoảng ngày, rồi gọi engine chung để chạy chiến lược.
+    </p>
+    <ol>
+      <li><strong>Frontend hỏi cấu hình</strong>: endpoint <code>/api/config</code> trả danh sách strategy, symbol, timeframe và tham số mặc định.</li>
+      <li><strong>Người dùng bấm scan</strong>: endpoint <code>/api/scan</code> nhận request, chuẩn hóa symbol/timeframe/bars/date range.</li>
+      <li><strong>Engine load dữ liệu</strong>: <code>data.loader</code> đọc OHLCV từ <code>DWH.Fact_OHLCV</code>.</li>
+      <li><strong>Engine chạy strategy</strong>: registry chọn đúng pipeline, thêm indicators, detect signals, tính entry/SL/TP nếu strategy hỗ trợ.</li>
+      <li><strong>Payload builder trả JSON</strong>: dashboard nhận candles, overlays, markers, levels, signals và stats để render biểu đồ.</li>
+    </ol>
+
+    <div class="diagram">
+      <svg viewBox="0 0 1040 420" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+        <rect x="0" y="0" width="1040" height="420" rx="12" fill="#FAFAFA" stroke="#CFD8DC"/>
+        <text x="520" y="30" text-anchor="middle" fill="#1A237E" font-size="16" font-weight="700">Luồng Dashboard / Export</text>
+
+        <rect x="40" y="80" width="150" height="70" rx="8" fill="#E3F2FD" stroke="#1565C0"/>
+        <text x="115" y="110" text-anchor="middle" fill="#0D47A1" font-size="13" font-weight="700">Browser</text>
+        <text x="115" y="132" text-anchor="middle" fill="#455A64" font-size="11">/api/scan</text>
+
+        <rect x="245" y="80" width="165" height="70" rx="8" fill="#FFF3E0" stroke="#EF6C00"/>
+        <text x="327" y="105" text-anchor="middle" fill="#E65100" font-size="13" font-weight="700">Flask Server</text>
+        <text x="327" y="126" text-anchor="middle" fill="#455A64" font-size="11">validate request</text>
+        <text x="327" y="141" text-anchor="middle" fill="#455A64" font-size="11">DB request lock</text>
+
+        <rect x="465" y="80" width="165" height="70" rx="8" fill="#E8F5E9" stroke="#2E7D32"/>
+        <text x="547" y="105" text-anchor="middle" fill="#1B5E20" font-size="13" font-weight="700">Engine</text>
+        <text x="547" y="126" text-anchor="middle" fill="#455A64" font-size="11">run_strategy_request</text>
+        <text x="547" y="141" text-anchor="middle" fill="#455A64" font-size="11">date window/warmup</text>
+
+        <rect x="685" y="80" width="145" height="70" rx="8" fill="#F3E5F5" stroke="#5E35B1"/>
+        <text x="757" y="105" text-anchor="middle" fill="#4A148C" font-size="13" font-weight="700">Loader</text>
+        <text x="757" y="126" text-anchor="middle" fill="#455A64" font-size="11">DWH.Fact_OHLCV</text>
+        <text x="757" y="141" text-anchor="middle" fill="#455A64" font-size="11">clean schema</text>
+
+        <rect x="880" y="80" width="130" height="70" rx="8" fill="#FFEBEE" stroke="#B71C1C"/>
+        <text x="945" y="105" text-anchor="middle" fill="#B71C1C" font-size="13" font-weight="700">SQL Server</text>
+        <text x="945" y="126" text-anchor="middle" fill="#455A64" font-size="11">OHLCV bars</text>
+
+        <rect x="365" y="235" width="190" height="76" rx="8" fill="#E8F5E9" stroke="#2E7D32"/>
+        <text x="460" y="263" text-anchor="middle" fill="#1B5E20" font-size="13" font-weight="700">Strategy Pipeline</text>
+        <text x="460" y="284" text-anchor="middle" fill="#455A64" font-size="11">indicators -> signals -> levels</text>
+
+        <rect x="625" y="235" width="170" height="76" rx="8" fill="#E3F2FD" stroke="#1565C0"/>
+        <text x="710" y="263" text-anchor="middle" fill="#0D47A1" font-size="13" font-weight="700">Payload / CSV</text>
+        <text x="710" y="284" text-anchor="middle" fill="#455A64" font-size="11">JSON chart hoặc CSV</text>
+
+        <line x1="190" y1="115" x2="245" y2="115" stroke="#455A64" stroke-width="2" marker-end="url(#arr2)"/>
+        <line x1="410" y1="115" x2="465" y2="115" stroke="#455A64" stroke-width="2" marker-end="url(#arr2)"/>
+        <line x1="630" y1="115" x2="685" y2="115" stroke="#455A64" stroke-width="2" marker-end="url(#arr2)"/>
+        <line x1="830" y1="115" x2="880" y2="115" stroke="#455A64" stroke-width="2" marker-end="url(#arr2)"/>
+        <line x1="945" y1="150" x2="945" y2="188" stroke="#455A64" stroke-width="2"/>
+        <line x1="945" y1="188" x2="547" y2="188" stroke="#455A64" stroke-width="2"/>
+        <line x1="547" y1="188" x2="547" y2="235" stroke="#455A64" stroke-width="2" marker-end="url(#arr2)"/>
+        <line x1="555" y1="273" x2="625" y2="273" stroke="#455A64" stroke-width="2" marker-end="url(#arr2)"/>
+        <line x1="710" y1="235" x2="710" y2="188" stroke="#455A64" stroke-width="2"/>
+        <line x1="710" y1="188" x2="115" y2="188" stroke="#455A64" stroke-width="2"/>
+        <line x1="115" y1="188" x2="115" y2="150" stroke="#455A64" stroke-width="2" marker-end="url(#arr2)"/>
+        <defs>
+          <marker id="arr2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L0,6 L9,3 z" fill="#455A64"/>
+          </marker>
+        </defs>
+      </svg>
+      <div class="caption">Sơ đồ 2: dashboard/export dùng cùng engine, khác nhau ở bước đóng gói output.</div>
+    </div>
+
+    <h2>1.2 Hành trình của một tín hiệu realtime</h2>
+    <p>
+      Nhánh realtime watcher không chờ người dùng bấm scan. Nó chạy 24/7, nghe sự kiện bar mới đã commit
+      từ Redis, hoặc tự fallback scan theo chu kỳ nếu Redis event bị chậm hoặc không khả dụng.
+    </p>
+    <ol>
+      <li><strong>data_provider commit bar đóng</strong>: sau khi OHLCV bar đã ghi vào DB, hệ thống phát event <code>bar_ready:{symbol}:{tf}</code>.</li>
+      <li><strong>signal_watcher nhận event</strong>: event được đưa vào queue, có cơ chế chống enqueue trùng cùng symbol/timeframe/bartime.</li>
+      <li><strong>runtime tìm scan group phù hợp</strong>: chỉ group có symbol và timeframe tương ứng mới được chạy.</li>
+      <li><strong>detector load dữ liệu và gọi strategy realtime adapter</strong>: adapter trả danh sách <code>RealtimeSignal</code> chuẩn hóa.</li>
+      <li><strong>lọc tín hiệu không an toàn</strong>: bỏ signal đã gửi, signal quá cũ, signal lịch sử, hoặc signal bị pre-skip theo rule riêng.</li>
+      <li><strong>ghi outbox và gửi alert</strong>: nếu Redis bật, signal được ghi bền vững vào outbox trước; human alert gửi qua Discord/Telegram theo best-effort.</li>
+      <li><strong>delivery relay giao sang Redis Stream</strong>: relay đọc outbox, XADD vào <code>signal_stream:{strategy}</code>, retry/backoff nếu Redis lỗi.</li>
+    </ol>
+
+    <div class="callout green">
+      <b>Điểm thiết kế quan trọng</b>
+      Human alert và execution delivery là hai chuyện khác nhau. Telegram/Discord chỉ là cảnh báo cho người.
+      Tín hiệu để downstream xử lý được bảo vệ bằng outbox và Redis Stream khi Redis được bật.
+    </div>
+
+    <h2>1.3 Vì sao cần warm-up?</h2>
+    <p>
+      Khi watcher bắt đầu, nó có thể nhìn thấy rất nhiều tín hiệu cũ trong cửa sổ dữ liệu đang load.
+      Nếu gửi tất cả, hệ thống sẽ flood alert và có thể khiến người vận hành hiểu nhầm là vừa có nhiều tín hiệu mới.
+      Vì vậy watcher yêu cầu chạy warm-up trước production. Warm-up chạy cùng logic scan hiện tại,
+      nhưng chỉ ghi các key vào <code>runtime/state.json</code>, không gửi alert.
+    </p>
+    <p>
+      Sau warm-up, watcher lưu thêm <strong>scan fingerprint</strong>. Fingerprint này đại diện cho tập strategy,
+      symbol, timeframe, bars, overrides và chế độ closed-only. Nếu cấu hình scan thay đổi mà chưa warm-up lại,
+      watcher sẽ từ chối chạy production. Đây là lớp bảo vệ rất mạnh để tránh re-alert tín hiệu lịch sử.
+    </p>
+
+    <h2>1.4 Dữ liệu được hiểu như thế nào?</h2>
+    <p>
+      Dữ liệu đầu vào chuẩn là OHLCV với các cột <code>bartime</code>, <code>open</code>, <code>high</code>,
+      <code>low</code>, <code>close</code>, <code>volume</code>. <code>bartime</code> được xem là UTC-naive,
+      nghĩa là timestamp không kèm timezone nhưng được hiểu theo UTC. Loader chỉ làm sạch lỗi hiển nhiên:
+      bỏ dòng không parse được thời gian, bỏ dòng thiếu OHLC, bỏ duplicate <code>bartime</code> và sort tăng dần.
+    </p>
+    <div class="callout orange">
+      <b>Giới hạn của loader</b>
+      Loader không tự audit gap thời gian, không tự backfill và không tự biết thị trường có nghỉ hay không.
+      Nếu DB thiếu bar nhưng vẫn trả về một DataFrame hợp lệ, strategy vẫn chạy trên phần dữ liệu có sẵn.
+      Việc đảm bảo dữ liệu đủ/đúng thuộc lớp data_provider, checker và vận hành dữ liệu.
+    </div>
+  </div>
+</div>
+
+<div class="part" id="risks">
+  <div class="part-title orange">Lớp 1 - Sự Cố Và Phản Ứng</div>
+  <div class="body">
+    <h2>2.1 Bảng rủi ro theo ngôn ngữ vận hành</h2>
+    <table>
+      <tr><th>Rủi ro</th><th>Hệ thống phát hiện bằng cách nào?</th><th>Phản ứng hiện tại</th><th>Dữ liệu/tín hiệu có rủi ro gì?</th></tr>
+      <tr>
+        <td>Symbol không tồn tại</td>
+        <td><code>config.get_symbol()</code> không tìm thấy symbol.</td>
+        <td>Raise lỗi; API thường trả JSON error 400/500 tùy vị trí.</td>
+        <td>Không chạy sai symbol, nhưng người dùng cần chọn symbol hợp lệ.</td>
+      </tr>
+      <tr>
+        <td>Timeframe không được hỗ trợ</td>
+        <td>So với <code>TF_MINUTES</code> trong config.</td>
+        <td>Raise <code>ValueError</code>; watcher ghi load error, dashboard trả error.</td>
+        <td>Không tạo tín hiệu trên timeframe sai.</td>
+      </tr>
+      <tr>
+        <td>DB không kết nối được</td>
+        <td>Exception khi loader gọi <code>get_connection()</code> hoặc SQL execute.</td>
+        <td>Dashboard trả lỗi; watcher ghi event load error và không đánh dấu bar đã xử lý thành công.</td>
+        <td>Không sinh tín hiệu mới trong lần scan lỗi. Khi DB hồi phục, fallback/event sau có thể scan lại.</td>
+      </tr>
+      <tr>
+        <td>Dữ liệu OHLCV bẩn</td>
+        <td>Loader parse <code>bartime</code>/OHLC; phát hiện NaT/NaN/duplicate.</td>
+        <td>Bỏ dòng lỗi, log warning nếu có dòng bị loại.</td>
+        <td>Nếu dữ liệu bẩn nhiều, tín hiệu có thể lệch vì strategy chạy trên dữ liệu còn lại.</td>
+      </tr>
+      <tr>
+        <td>Bar cuối đang mở</td>
+        <td>Realtime watcher dùng <code>_drop_open_bar()</code> theo thời gian hiện tại và độ dài TF.</td>
+        <td>Mặc định chỉ scan bar đã đóng, trừ khi CLI bật <code>--include-open-bar</code>.</td>
+        <td>Giảm rủi ro gửi tín hiệu trên nến chưa đóng.</td>
+      </tr>
+      <tr>
+        <td>Signal lịch sử xuất hiện lại</td>
+        <td>So tuổi signal với giới hạn: mặc định max(3 x TF, 120 phút).</td>
+        <td>Bỏ qua và mark seen, không gửi human alert.</td>
+        <td>Tránh flood alert cũ; nhưng nếu muốn replay lịch sử phải dùng workflow riêng.</td>
+      </tr>
+      <tr>
+        <td>Signal trùng</td>
+        <td>Dedup key trong <code>SignalState</code> hoặc deterministic <code>signal_id</code> trong outbox.</td>
+        <td>Không gửi lại nếu đã có key; outbox add pending idempotent.</td>
+        <td>Giảm rủi ro double-alert/double-delivery.</td>
+      </tr>
+      <tr>
+        <td>Watcher chạy trùng process</td>
+        <td>File lock <code>signal_watcher.lock</code>.</td>
+        <td>Instance mới báo lỗi và thoát.</td>
+        <td>Lock là best-effort theo OS; không phải distributed lock qua DB.</td>
+      </tr>
+      <tr>
+        <td>Redis pub/sub mất event</td>
+        <td>Không dựa duy nhất vào pub/sub; runtime có fallback scanner.</td>
+        <td>Fallback scan định kỳ enqueue latest closed bar.</td>
+        <td>Có thể chậm hơn event-driven, nhưng không phụ thuộc tuyệt đối vào Redis pub/sub.</td>
+      </tr>
+      <tr>
+        <td>Redis Stream lỗi khi giao signal</td>
+        <td><code>xadd_signal()</code> trả None hoặc exception bị bắt.</td>
+        <td>Outbox giữ pending, relay retry với backoff; cảnh báo nếu pending quá lâu.</td>
+        <td>Signal không mất nếu đã vào outbox và file không bị hỏng.</td>
+      </tr>
+      <tr>
+        <td>Telegram/Discord lỗi</td>
+        <td>HTTP/network error hoặc thiếu credentials.</td>
+        <td>Notifier trả result failed; watcher log event. Telegram có throttle và retry 429.</td>
+        <td>Human alert có thể mất. Execution delivery không nên phụ thuộc vào human alert.</td>
+      </tr>
+      <tr>
+        <td>Queue watcher đầy</td>
+        <td><code>event_queue.put_nowait()</code> raise queue.Full.</td>
+        <td>Drop event và log warning, release inflight key.</td>
+        <td>Fallback scan lần sau có thể bù; nhưng nếu quá tải kéo dài cần tăng queue hoặc giảm scan.</td>
+      </tr>
+    </table>
+
+    <h2>2.2 Các lớp phòng vệ chính</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Validate đầu vào</h3>
+        <p>Symbol/timeframe/param được normalize qua config và strategy config. Date range bắt buộc có đủ start/end và end phải sau start.</p>
+      </div>
+      <div class="card">
+        <h3>Chỉ dùng bar đã đóng</h3>
+        <p>Watcher mặc định bỏ bar đang mở để tránh tín hiệu thay đổi khi nến chưa hoàn tất.</p>
+      </div>
+      <div class="card">
+        <h3>Warm-up và fingerprint</h3>
+        <p>Không chạy production nếu chưa warm-up hoặc scan config đã đổi. Đây là lớp chống re-alert lịch sử.</p>
+      </div>
+      <div class="card">
+        <h3>State atomic write</h3>
+        <p><code>state.json</code> và outbox ghi qua file tạm rồi replace, giảm rủi ro file corrupt khi process bị kill.</p>
+      </div>
+      <div class="card">
+        <h3>Outbox + relay</h3>
+        <p>Tín hiệu hợp lệ được ghi pending trước khi relay sang Redis Stream. Redis lỗi thì retry sau.</p>
+      </div>
+      <div class="card">
+        <h3>Fallback scan</h3>
+        <p>Nếu Redis pub/sub không hoạt động, watcher vẫn định kỳ kiểm tra latest closed bar.</p>
+      </div>
+      <div class="card">
+        <h3>Preview cap</h3>
+        <p>Dashboard giới hạn preview cho AI/KNN multi-timeframe ở khoảng 1500 entry bars để tránh request quá nặng; CSV vẫn có thể dùng range đầy đủ.</p>
+      </div>
+      <div class="card">
+        <h3>Export cache</h3>
+        <p>CSV export dashboard có cache 32 item, TTL 120 giây để tránh chạy lại cùng request quá nhiều lần.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="part" id="layer2">
+  <div class="part-title purple">Lớp 2 - Kỹ Thuật Và Code Mapping</div>
+  <div class="body">
+    <h2>3.1 Bản đồ thư mục</h2>
+    <table>
+      <tr><th>Path</th><th>Vai trò kỹ thuật</th><th>Ghi chú</th></tr>
+      <tr><td><code>core_python/main.py</code></td><td>CLI entrypoint chạy Flask chart server.</td><td>Mặc định host/port lấy từ <code>chart.server</code>.</td></tr>
+      <tr><td><code>core_python/config.py</code></td><td>Nạp root <code>config.py</code>, cung cấp symbol/timeframe metadata và SQL connection string.</td><td>Không hardcode DB riêng trong core_python.</td></tr>
+      <tr><td><code>core_python/engine.py</code></td><td>Orchestrator chung cho dashboard/export: parse date window, load data, chạy strategy, trả <code>StrategyRunResult</code>.</td><td>Không build chart JSON, không ghi CSV.</td></tr>
+      <tr><td><code>core_python/data/loader.py</code></td><td>Đọc OHLCV từ SQL Server và làm sạch schema tối thiểu.</td><td>Nguồn chính: <code>DWH.Fact_OHLCV</code>.</td></tr>
+      <tr><td><code>core_python/chart/server.py</code></td><td>Flask API: config, scan, export, data range.</td><td>Có <code>_DB_REQUEST_LOCK</code> để tuần tự hóa request DB trong process.</td></tr>
+      <tr><td><code>core_python/chart/payload.py</code></td><td>Đóng gói DataFrame strategy thành JSON cho Lightweight Charts.</td><td>Single-timeframe payload.</td></tr>
+      <tr><td><code>core_python/export/service.py</code></td><td>Dashboard CSV export, single/bulk, cache request.</td><td>Không dùng cho watcher runtime cũ.</td></tr>
+      <tr><td><code>core_python/export/to_csv.py</code></td><td>Xuất signal CSV từ watcher khi có tín hiệu.</td><td>Cột mặc định: <code>bartime</code>, <code>atr</code>, <code>signal</code>.</td></tr>
+      <tr><td><code>core_python/strategies/registry.py</code></td><td>Đăng ký strategy và pipeline callables.</td><td>Keys: <code>combo</code>, <code>ma_cross</code>, <code>ai_trend</code>, <code>knn_combo</code>.</td></tr>
+      <tr><td><code>core_python/strategies/*</code></td><td>Strategy config, indicators/signals/levels/payload/realtime adapter.</td><td>Semantic riêng của strategy nằm ở đây, không nhét vào notify runtime.</td></tr>
+      <tr><td><code>core_python/notify/signal_watcher.py</code></td><td>Entrypoint runtime 24/7: CLI, warm-up, lock, thread wiring.</td><td>Production watcher bắt đầu tại đây.</td></tr>
+      <tr><td><code>core_python/notify/runtime.py</code></td><td>Worker queue, Redis subscriber, fallback scanner, delivery relay.</td><td>Chịu trách nhiệm event loop.</td></tr>
+      <tr><td><code>core_python/notify/detector.py</code></td><td>Load frame, gọi strategy realtime adapter, dedup/historical filter/outbox/alert.</td><td>Orchestration chung, không chứa rule riêng AI/Combo.</td></tr>
+      <tr><td><code>core_python/notify/state.py</code></td><td>Dedup state, TTL prune, warm-up fingerprint, atomic write.</td><td>Mặc định: <code>core_python/runtime/state.json</code>.</td></tr>
+      <tr><td><code>core_python/notify/delivery_outbox.py</code></td><td>Outbox bền vững cho signal chờ giao sang Redis Stream.</td><td>File: <code>delivery_outbox.json</code>.</td></tr>
+      <tr><td><code>core_python/notify/redis_publisher.py</code></td><td>Redis pub/sub bar_ready và Redis Stream XADD signal.</td><td>Không raise lỗi Redis ra caller.</td></tr>
+      <tr><td><code>core_python/notify/alerts.py</code></td><td>Telegram/Discord notifier.</td><td>Human alert best-effort.</td></tr>
+    </table>
+
+    <h2>3.2 Entry points</h2>
+    <table>
+      <tr><th>Mục đích</th><th>Command</th><th>Code bắt đầu</th><th>Luồng chính</th></tr>
+      <tr>
+        <td>Chạy dashboard</td>
+        <td><code>python -m core_python.main --port 8516</code></td>
+        <td><code>main.py:main()</code></td>
+        <td><code>chart.server.run()</code> -> Flask app.</td>
+      </tr>
+      <tr>
+        <td>Scan chart</td>
+        <td>HTTP <code>/api/scan</code></td>
+        <td><code>chart.server.api_scan()</code></td>
+        <td><code>run_strategy_request()</code> -> payload builder.</td>
+      </tr>
+      <tr>
+        <td>Export CSV dashboard</td>
+        <td>HTTP <code>/api/export</code> hoặc <code>/api/export/bulk</code></td>
+        <td><code>chart.server.api_export*</code></td>
+        <td><code>export.service.build_*_export()</code>.</td>
+      </tr>
+      <tr>
+        <td>Realtime watcher production</td>
+        <td><code>python -m core_python.notify.signal_watcher</code></td>
+        <td><code>signal_watcher.main()</code></td>
+        <td>lock -> state/fingerprint check -> worker/fallback/relay threads.</td>
+      </tr>
+      <tr>
+        <td>Warm-up watcher</td>
+        <td><code>python -m core_python.notify.signal_watcher --warm-up</code></td>
+        <td><code>signal_watcher.main()</code></td>
+        <td>scan current signals -> ghi state -> ghi scan fingerprint -> exit.</td>
+      </tr>
+      <tr>
+        <td>One-shot health/check</td>
+        <td><code>python -m core_python.notify.signal_watcher --once</code></td>
+        <td><code>signal_watcher.main()</code></td>
+        <td>chạy một lượt tất cả scan groups rồi thoát.</td>
+      </tr>
+    </table>
+
+    <h2>3.3 Data contract</h2>
+    <table>
+      <tr><th>Contract</th><th>Schema/field chính</th><th>Nơi tạo</th><th>Nơi dùng</th></tr>
+      <tr>
+        <td>OHLCV DataFrame</td>
+        <td><code>bartime, open, high, low, close, volume</code></td>
+        <td><code>data.loader.load()</code>, <code>load_range()</code></td>
+        <td>Engine, strategy pipelines, realtime detector.</td>
+      </tr>
+      <tr>
+        <td><code>DateWindow</code></td>
+        <td><code>start, end, start_label, end_label</code></td>
+        <td><code>engine.date_window_from_args()</code></td>
+        <td>Dashboard scan/export range mode.</td>
+      </tr>
+      <tr>
+        <td><code>StrategyRunResult</code></td>
+        <td><code>strategy, symbol, tf, params, enriched, layout, trend_frame</code></td>
+        <td><code>engine.run_strategy_request()</code></td>
+        <td>Chart payload và CSV export.</td>
+      </tr>
+      <tr>
+        <td>Chart JSON payload</td>
+        <td><code>meta, params, candles, overlays, panels, markers, levels, signals, stats</code></td>
+        <td><code>chart.payload</code> hoặc strategy-specific payload.</td>
+        <td>Frontend <code>chart/static/app.js</code>.</td>
+      </tr>
+      <tr>
+        <td>RealtimeSignal</td>
+        <td>Required: <code>strategy, event_type, symbol, tf, direction, bar_time, event_time, dedup_key, payload_source, alert_message, alert_backend</code>. Optional (có default): <code>alert_kwargs, side, kind, event_text, historical_text, skip_text, pre_skip_reason</code>.</td>
+        <td>Strategy realtime adapters (<code>strategies/realtime.py</code>).</td>
+        <td><code>notify.detector</code>.</td>
+      </tr>
+      <tr>
+        <td>Signal payload v3.2</td>
+        <td><code>schema_version, signal_id, producer_run_id, expires_at, side, bar_time, event_close</code></td>
+        <td><code>detector._build_signal_payload()</code></td>
+        <td><code>DeliveryOutbox</code> và Redis Stream.</td>
+      </tr>
+      <tr>
+        <td>State JSON</td>
+        <td><code>{"sent": {...}, "meta": {"scan_fingerprint": "..."}}</code></td>
+        <td><code>notify.state.SignalState</code></td>
+        <td>Dedup và warm-up safety.</td>
+      </tr>
+      <tr>
+        <td>Delivery outbox JSON</td>
+        <td><code>{"pending": {...}, "delivered": {...}}</code></td>
+        <td><code>notify.delivery_outbox.DeliveryOutbox</code></td>
+        <td>Redis relay retry.</td>
+      </tr>
+    </table>
+
+    <h2>3.4 Luồng gọi hàm chi tiết</h2>
+    <h3>Dashboard scan</h3>
+    <pre>
+chart.server.api_scan()
+  -> _strategy_defaults()
+  -> engine.date_window_from_args()
+  -> _scan_preview()                    # cap preview cho AI/KNN khi quá nặng
+  -> engine.run_strategy_request()
+      -> strategies.registry.get_strategy()
+      -> strategy.normalize_params()
+      -> data.loader.load() hoặc load_range()
+      -> strategy.add_indicators()
+      -> strategy.detect_signals()
+      -> strategy.add_levels()
+  -> _build_scan_payload()
+      -> chart.payload.build_chart_payload()
+      -> hoặc strategy-specific payload cho combo/ai_trend/knn_combo
+  -> jsonify(payload)
+    </pre>
+
+    <h3>Realtime watcher</h3>
+    <pre>
+signal_watcher.main()
+  -> load scan_config.SCAN_GROUPS hoặc build groups từ CLI
+  -> SignalState()
+  -> warm-up/fingerprint checks
+  -> _WatcherLock.acquire()
+  -> start SignalWorker
+  -> start DeliveryRelay nếu Redis ON
+  -> start BarReadySubscriber nếu Redis ON
+  -> start FallbackScanner
+
+BarReadySubscriber/FallbackScanner
+  -> runtime._enqueue_trigger()
+  -> SignalWorker._handle_trigger_event()
+      -> detector.check_once() hoặc check_ai_trend_once()
+          -> strategy realtime adapter detect_realtime_signals()
+          -> state dedup
+          -> historical age filter
+          -> _emit_to_outbox()
+          -> _send_realtime_alert()
+      -> mark last_processed nếu không có retryable failure
+    </pre>
+
+    <h2>3.5 Config và biến điều khiển</h2>
+    <table>
+      <tr><th>Config/Env</th><th>Nơi đọc</th><th>Tác dụng</th><th>Rủi ro nếu sai</th></tr>
+      <tr><td><code>SYMBOLS</code></td><td>Root <code>config.py</code>, qua <code>core_python/config.py</code></td><td>Map symbol -> SymbolID, asset_type, digits, buffer x.</td><td>Symbol sai làm query DB sai hoặc không chạy.</td></tr>
+      <tr><td><code>TF_MINUTES</code></td><td>Root config</td><td>Độ dài timeframe, dùng cho open-bar drop, date math, alert age.</td><td>Time semantics sai, có thể scan bar chưa đóng hoặc bỏ nhầm.</td></tr>
+      <tr><td><code>TF_DISPLAY_ORDER</code></td><td>Root config</td><td>Danh sách timeframe hiển thị dashboard.</td><td>UI thiếu/sai timeframe.</td></tr>
+      <tr><td><code>SQL_SERVER, SQL_DATABASE, SQL_DRIVER, SQL_UID, SQL_PWD</code></td><td>Root config</td><td>Kết nối SQL Server.</td><td>Dashboard/watcher không load được dữ liệu.</td></tr>
+      <tr><td><code>DEFAULT_SYMBOL, DEFAULT_TF, N_BARS</code></td><td><code>core_python/config.py</code></td><td>Mặc định dashboard và CLI.</td><td>Không nguy hiểm nếu hợp lệ, nhưng trải nghiệm mặc định thay đổi.</td></tr>
+      <tr><td><code>SCAN_GROUPS</code></td><td><code>notify/scan_config.py</code></td><td>Production watcher groups.</td><td>Đổi mà không warm-up lại sẽ bị watcher chặn bằng fingerprint.</td></tr>
+      <tr><td><code>TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID</code></td><td><code>notify/alerts.py</code></td><td>Gửi Telegram alert.</td><td>Thiếu thì Telegram backend failed.</td></tr>
+      <tr><td><code>SIGNAL_DISCORD_WEBHOOK_URL, DISCORD_WEBHOOK_URL</code></td><td><code>notify/alerts.py</code></td><td>Gửi Discord signal alert.</td><td>Thiếu thì Discord backend failed.</td></tr>
+      <tr><td><code>REDIS_ENABLED</code></td><td><code>notify/redis_publisher.py</code></td><td>Bật pub/sub và Redis Stream delivery.</td><td>False/off thì dùng NullDeliveryOutbox, không tích pending để replay sau.</td></tr>
+      <tr><td><code>REDIS_HOST, REDIS_PORT, REDIS_PASSWORD</code></td><td><code>notify/redis_publisher.py</code></td><td>Kết nối Redis.</td><td>Sai thì relay không giao được signal, outbox pending tăng.</td></tr>
+      <tr><td><code>WATCHER_FALLBACK_SCAN_SECONDS</code></td><td><code>notify/runtime.py</code></td><td>Chu kỳ fallback scan, mặc định 300 giây.</td><td>Quá dài làm phát hiện chậm; quá ngắn tăng tải DB.</td></tr>
+      <tr><td><code>SIGNAL_RELAY_RETRY_SECONDS</code></td><td><code>notify/runtime.py</code></td><td>Chu kỳ wake/retry relay, mặc định 30 giây.</td><td>Quá dài làm pending lâu; quá ngắn tăng tải Redis/log.</td></tr>
+      <tr><td><code>SIGNAL_RELAY_ALERT_SECONDS</code></td><td><code>notify/runtime.py</code></td><td>Ngưỡng cảnh báo pending outbox quá lâu, mặc định 300 giây.</td><td>Quá thấp gây noise; quá cao phát hiện kẹt chậm.</td></tr>
+      <tr><td><code>SIGNAL_WATCHER_QUEUE_MAXSIZE</code></td><td><code>notify/runtime.py</code></td><td>Kích thước queue event watcher, mặc định 1000.</td><td>Quá thấp có thể drop event khi burst.</td></tr>
+      <tr><td><code>REDIS_STREAM_RETENTION_DAYS</code></td><td><code>notify/redis_publisher.py</code></td><td>Retention Redis Stream, mặc định 7 ngày.</td><td>Quá ngắn có thể mất lịch sử downstream cần đọc.</td></tr>
+    </table>
+
+    <h2>3.6 Strategy pipeline mapping</h2>
+    <table>
+      <tr><th>Strategy</th><th>Config</th><th>Signals</th><th>Levels</th><th>Payload/Realtime</th></tr>
+      <tr>
+        <td><code>combo</code></td>
+        <td><code>strategies/combo/config.py</code></td>
+        <td><code>strategies/combo/signals.py</code>, <code>pipeline.py</code>, <code>trend_filter.py</code></td>
+        <td><code>strategies/combo/levels.py</code></td>
+        <td><code>payload.py</code>, <code>realtime.py</code></td>
+      </tr>
+      <tr>
+        <td><code>ma_cross</code></td>
+        <td><code>strategies/ma_cross/config.py</code></td>
+        <td><code>strategies/ma_cross/signals.py</code></td>
+        <td><code>strategies/ma_cross/levels.py</code></td>
+        <td><code>realtime.py</code></td>
+      </tr>
+      <tr>
+        <td><code>ai_trend</code></td>
+        <td><code>strategies/ai_trend/config.py</code></td>
+        <td><code>strategies/ai_trend/signals.py</code>; architecture mô tả H3/M45 semantics.</td>
+        <td><code>strategies/ai_trend/levels.py</code></td>
+        <td><code>payload.py</code>, <code>alerts.py</code>, <code>realtime.py</code></td>
+      </tr>
+      <tr>
+        <td><code>knn_combo</code></td>
+        <td><code>strategies/knn_combo/config.py</code></td>
+        <td><code>strategies/knn_combo/signals.py</code>, <code>pipeline.py</code></td>
+        <td><code>strategies/knn_combo/levels.py</code></td>
+        <td><code>payload.py</code>; architecture mô tả no-lookahead KNN gate.</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<div class="part" id="ops">
+  <div class="part-title gray">4. Vận Hành, Command Và Runtime File</div>
+  <div class="body">
+    <h2>4.1 Lệnh thường dùng</h2>
+    <table>
+      <tr><th>Tác vụ</th><th>Lệnh</th><th>Ghi chú</th></tr>
+      <tr>
+        <td>Chạy dashboard</td>
+        <td><code>python -m core_python.main</code></td>
+        <td>Mặc định <code>127.0.0.1:8516</code>; có thể thêm <code>--port</code>, <code>--host</code>.</td>
+      </tr>
+      <tr>
+        <td>Warm-up watcher trước production</td>
+        <td><code>python -m core_python.notify.signal_watcher --warm-up</code></td>
+        <td>Bắt buộc sau khi đổi scan groups/symbol/timeframe/bars/overrides.</td>
+      </tr>
+      <tr>
+        <td>Chạy watcher production</td>
+        <td><code>python -m core_python.notify.signal_watcher</code></td>
+        <td>Cần state file có fingerprint hợp lệ.</td>
+      </tr>
+      <tr>
+        <td>Dry-run một lượt</td>
+        <td><code>python -m core_python.notify.signal_watcher --dry-run --once</code></td>
+        <td>In message, không gửi thật, hữu ích khi kiểm tra cấu hình.</td>
+      </tr>
+      <tr>
+        <td>Override symbol/TF</td>
+        <td><code>python -m core_python.notify.signal_watcher --symbols US30,GOLD --tf H1,H4</code></td>
+        <td>Khi có cả <code>--symbols</code> và <code>--tf</code>, bỏ qua <code>scan_config.py</code>.</td>
+      </tr>
+      <tr>
+        <td>Ghi log watcher ra file</td>
+        <td><code>python -m core_python.notify.signal_watcher --log-file path\to\watcher.log</code></td>
+        <td>Console vẫn in ra màn hình, đồng thời tee vào file.</td>
+      </tr>
+    </table>
+
+    <h2>4.2 Runtime files</h2>
+    <table>
+      <tr><th>File/Folder</th><th>Nội dung</th><th>Cơ chế an toàn</th></tr>
+      <tr>
+        <td><code>core_python/runtime/state.json</code></td>
+        <td>Signal key đã gửi và scan fingerprint.</td>
+        <td>TTL 60 ngày; ghi atomic qua file tạm.</td>
+      </tr>
+      <tr>
+        <td><code>core_python/runtime/delivery_outbox.json</code></td>
+        <td>Pending/delivered execution signal khi Redis bật.</td>
+        <td>Idempotent theo signal_id; retry/backoff; ghi atomic.</td>
+      </tr>
+      <tr>
+        <td><code>core_python/runtime/signal_watcher.lock</code></td>
+        <td>Best-effort single-instance lock cho watcher.</td>
+        <td>OS file lock, release khi process thoát bình thường.</td>
+      </tr>
+      <tr>
+        <td><code>core_python/notify/recorded_signal/&lt;strategy&gt;/</code></td>
+        <td>CSV signal do watcher export khi có signal.</td>
+        <td>Tên file có timestamp, không ghi đè file cũ.</td>
+      </tr>
+    </table>
+
+    <h2>4.3 Khi vận hành cần nhìn gì?</h2>
+    <ul>
+      <li><strong>Watcher startup</strong>: số groups, số symbol-TF slots, Redis signal stream ON/OFF, mode scan_config hay CLI override.</li>
+      <li><strong>Fallback scan log</strong> (mỗi ~<code>WATCHER_FALLBACK_SCAN_SECONDS</code>, mặc định 300s): <code>fallback scan enqueued=N elapsed=Xs</code> — số trigger đã enqueue và thời gian chạy.</li>
+      <li><strong>Relay pending alert</strong>: khi outbox có signal chờ quá <code>SIGNAL_RELAY_ALERT_SECONDS</code> (mặc định 300s), relay log lỗi và gửi Telegram: <code>pending=N oldest=Xs</code>.</li>
+      <li><strong>Queue full warning</strong>: <code>signal watcher queue full; dropped {symbol} {tf} {bartime}</code> khi event bị drop.</li>
+      <li><strong>Load errors</strong>: thường là DB, symbol/timeframe sai, hoặc dữ liệu chưa có.</li>
+      <li><strong>Notifier FAILED</strong>: human alert lỗi, cần kiểm tra Telegram/Discord credentials/network.</li>
+      <li><strong>Outbox pending tăng</strong>: Redis Stream hoặc downstream relay có vấn đề.</li>
+      <li><strong>Fingerprint error</strong>: scan_config đã đổi, cần chạy warm-up lại.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="part" id="limits">
+  <div class="part-title orange">5. Hạn Chế Và Further Analysis</div>
+  <div class="body">
+    <h2>5.1 Hạn chế đã thấy trong thiết kế hiện tại</h2>
+    <table>
+      <tr><th>Hạn chế</th><th>Ý nghĩa</th><th>Gợi ý cải tiến</th></tr>
+      <tr>
+        <td>Loader không kiểm tra gap dữ liệu</td>
+        <td>Strategy có thể chạy trên dữ liệu thiếu bar mà không biết.</td>
+        <td>Thêm health/audit riêng cho coverage OHLCV theo symbol/TF, hoặc hiển thị gap warning ở dashboard.</td>
+      </tr>
+      <tr>
+        <td>Dashboard trả lỗi exception dạng text</td>
+        <td>Người dùng có thể thấy lỗi kỹ thuật thô.</td>
+        <td>Chuẩn hóa error code/message thân thiện và log kỹ thuật riêng.</td>
+      </tr>
+      <tr>
+        <td><code>_DB_REQUEST_LOCK</code> chỉ trong một Flask process</td>
+        <td>Nếu chạy nhiều process/server, lock này không còn serialize toàn cục.</td>
+        <td>Nếu scale dashboard, cần DB pool/rate limit hoặc distributed lock nhẹ.</td>
+      </tr>
+      <tr>
+        <td>Watcher process lock là best-effort local file lock</td>
+        <td>Không chống được hai máy khác nhau cùng chạy watcher trên cùng state nếu cấu hình sai.</td>
+        <td>Nếu production nhiều host, dùng DB/Redis distributed lock.</td>
+      </tr>
+      <tr>
+        <td>Human alert không durable</td>
+        <td>Telegram/Discord lỗi có thể làm mất thông báo cho người.</td>
+        <td>Muốn đảm bảo human alert, cần outbox riêng cho alert hoặc retry queue riêng.</td>
+      </tr>
+      <tr>
+        <td>Queue full sẽ drop event</td>
+        <td>Khi burst quá lớn, một số trigger event bị bỏ.</td>
+        <td>Theo dõi queue_depth, tăng queue, hoặc gom event theo symbol/TF cuối cùng.</td>
+      </tr>
+      <tr>
+        <td>Chi tiết rule từng strategy cần audit riêng</td>
+        <td>Tài liệu này mô tả cơ chế hệ thống và mapping; chưa thay thế tài liệu định lượng/tín hiệu cho từng strategy.</td>
+        <td>Tạo tài liệu riêng cho <code>combo</code>, <code>ai_trend</code>, <code>knn_combo</code>, <code>ma_cross</code> nếu cần audit logic giao dịch sâu.</td>
+      </tr>
+    </table>
+
+    <h2>5.2 Further analysis nên làm tiếp</h2>
+    <ol>
+      <li>Rà soát test coverage hiện có cho <code>engine</code>, <code>loader</code>, <code>notify.detector</code>, <code>state</code>, <code>delivery_outbox</code>.</li>
+      <li>Kiểm tra các script/scheduled task thực tế đang chạy watcher production, nếu có, để bổ sung phần vận hành theo máy chủ.</li>
+      <li>Đối chiếu schema SQL thật của <code>DWH.Fact_OHLCV</code>, <code>DWH.Dim_Symbol</code>, <code>DWH.Dim_Timeframe</code> để thêm data dictionary chuẩn.</li>
+      <li>Viết thêm phụ lục rule giao dịch cho từng strategy, đặc biệt các điều kiện vào lệnh, SL/TP, no-lookahead và session filter.</li>
+      <li>Thêm checklist xử lý sự cố: DB down, Redis down, state mismatch, outbox pending tăng, notifier failed.</li>
+    </ol>
+
+    <div class="callout red">
+      <b>Ghi chú phạm vi</b>
+      Tài liệu này phản ánh các module chính đã đọc trong <code>core_python</code>. Một số file strategy signal chi tiết
+      cần được audit sâu riêng nếu mục tiêu là kiểm chứng tuyệt đối logic giao dịch từng chiến lược.
+      Phần hệ thống, runtime, data contract, watcher, state và outbox đã được mô tả theo code hiện tại.
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

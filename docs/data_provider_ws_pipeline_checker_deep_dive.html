@@ -1,0 +1,1208 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phân tích hệ thống data_provider: ws_live, pipeline, checker</title>
+  <style>
+    :root {
+      --ink: #172033;
+      --muted: #607089;
+      --paper: #f7f9fc;
+      --card: #ffffff;
+      --line: #d8e0eb;
+      --blue: #2563eb;
+      --blue-soft: #e8f0ff;
+      --cyan: #0891b2;
+      --cyan-soft: #e7f7fb;
+      --green: #15803d;
+      --green-soft: #e8f8ee;
+      --amber: #b45309;
+      --amber-soft: #fff4df;
+      --red: #b91c1c;
+      --red-soft: #fdecec;
+      --violet: #6d28d9;
+      --violet-soft: #f0eaff;
+      --slate-soft: #edf2f7;
+      --mono: "Cascadia Mono", Consolas, "Courier New", monospace;
+      --sans: "Segoe UI", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: var(--sans);
+      line-height: 1.62;
+    }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 22px 60px;
+    }
+
+    header {
+      background: linear-gradient(135deg, #0f766e 0%, #2563eb 52%, #4f46e5 100%);
+      color: white;
+      border-radius: 10px;
+      padding: 34px 34px 30px;
+      box-shadow: 0 16px 38px rgba(25, 55, 120, 0.18);
+    }
+
+    header h1 {
+      margin: 0 0 10px;
+      font-size: 31px;
+      line-height: 1.18;
+      font-weight: 760;
+      letter-spacing: 0;
+    }
+
+    header p {
+      max-width: 960px;
+      margin: 8px 0 0;
+      color: rgba(255,255,255,0.92);
+      font-size: 16px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border-radius: 999px;
+      padding: 6px 11px;
+      background: rgba(255,255,255,0.15);
+      color: white;
+      font-size: 13px;
+      border: 1px solid rgba(255,255,255,0.25);
+    }
+
+    nav {
+      margin: 18px 0 24px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 8px 18px;
+    }
+
+    nav a {
+      color: #1d4ed8;
+      text-decoration: none;
+      font-weight: 650;
+      font-size: 14px;
+    }
+
+    nav a:hover { text-decoration: underline; }
+
+    section {
+      margin-top: 22px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 26px 28px;
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      font-size: 24px;
+      color: #0f172a;
+      line-height: 1.25;
+    }
+
+    h3 {
+      margin: 26px 0 10px;
+      font-size: 19px;
+      color: #1e293b;
+    }
+
+    h4 {
+      margin: 20px 0 8px;
+      font-size: 16px;
+      color: #334155;
+    }
+
+    p { margin: 9px 0; }
+
+    ul, ol { padding-left: 24px; }
+    li { margin: 5px 0; }
+
+    code {
+      font-family: var(--mono);
+      font-size: 0.93em;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 5px;
+      padding: 1px 5px;
+    }
+
+    pre {
+      margin: 12px 0;
+      padding: 14px 16px;
+      overflow-x: auto;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 8px;
+      line-height: 1.45;
+    }
+
+    pre code {
+      background: transparent;
+      border: 0;
+      color: inherit;
+      padding: 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 14px;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 10px 11px;
+      vertical-align: top;
+    }
+
+    th {
+      background: #edf2f7;
+      color: #243044;
+      text-align: left;
+    }
+
+    .note, .warning, .risk, .ok {
+      border-radius: 9px;
+      padding: 14px 16px;
+      margin: 14px 0;
+      border: 1px solid;
+    }
+
+    .note { background: var(--blue-soft); border-color: #b6c8ff; }
+    .warning { background: var(--amber-soft); border-color: #f1c375; }
+    .risk { background: var(--red-soft); border-color: #f3aaa8; }
+    .ok { background: var(--green-soft); border-color: #9ad8ab; }
+
+    .small { color: var(--muted); font-size: 13px; }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 14px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 15px;
+      background: #fbfdff;
+    }
+
+    .card h4 { margin-top: 0; }
+
+    .tag {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 3px 8px;
+      margin-right: 5px;
+      color: #0f172a;
+      background: var(--slate-soft);
+    }
+
+    .tag.blue { background: var(--blue-soft); color: #1d4ed8; }
+    .tag.cyan { background: var(--cyan-soft); color: #0e7490; }
+    .tag.green { background: var(--green-soft); color: #166534; }
+    .tag.amber { background: var(--amber-soft); color: #92400e; }
+    .tag.red { background: var(--red-soft); color: #991b1b; }
+    .tag.violet { background: var(--violet-soft); color: #5b21b6; }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(150px, 1fr));
+      gap: 12px;
+      align-items: stretch;
+      margin: 18px 0;
+    }
+
+    .flow-step {
+      position: relative;
+      border-radius: 9px;
+      padding: 14px 13px;
+      border: 1px solid var(--line);
+      background: white;
+      min-height: 116px;
+    }
+
+    .flow-step strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #0f172a;
+    }
+
+    .flow-step:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -13px;
+      width: 13px;
+      height: 2px;
+      background: #94a3b8;
+    }
+
+    .flow-step.source { border-color: #93c5fd; background: #eff6ff; }
+    .flow-step.stage { border-color: #67e8f9; background: #ecfeff; }
+    .flow-step.fact { border-color: #86efac; background: #f0fdf4; }
+    .flow-step.guard { border-color: #fbbf24; background: #fffbeb; }
+    .flow-step.alert { border-color: #fca5a5; background: #fff1f2; }
+
+    .ladder {
+      border-left: 4px solid #cbd5e1;
+      margin: 18px 0 4px 8px;
+      padding-left: 18px;
+    }
+
+    .ladder-item {
+      margin: 0 0 14px;
+      padding: 12px 14px;
+      background: #fbfdff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      position: relative;
+    }
+
+    .ladder-item::before {
+      content: "";
+      position: absolute;
+      left: -28px;
+      top: 18px;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: var(--blue);
+      border: 3px solid white;
+      box-shadow: 0 0 0 1px #93c5fd;
+    }
+
+    .swimlane {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 0;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      overflow: hidden;
+      margin: 16px 0;
+    }
+
+    .lane-label {
+      padding: 14px;
+      font-weight: 750;
+      background: #e2e8f0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .lane-body {
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
+      background: white;
+    }
+
+    .lane-label:last-of-type, .lane-body:last-of-type {
+      border-bottom: 0;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .dot.blue { background: var(--blue); }
+    .dot.cyan { background: var(--cyan); }
+    .dot.green { background: var(--green); }
+    .dot.amber { background: #f59e0b; }
+    .dot.red { background: var(--red); }
+    .dot.violet { background: var(--violet); }
+
+    .svg-wrap {
+      width: 100%;
+      overflow-x: auto;
+      background: #fbfdff;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: 12px;
+      margin: 14px 0;
+    }
+
+    svg text {
+      font-family: var(--sans);
+      fill: #0f172a;
+    }
+
+    @media (max-width: 780px) {
+      header { padding: 24px 20px; }
+      section { padding: 20px 18px; }
+      .flow { grid-template-columns: 1fr; }
+      .flow-step:not(:last-child)::after { display: none; }
+      .swimlane { grid-template-columns: 1fr; }
+      .lane-label { border-bottom: 0; }
+    }
+
+    @media print {
+      body { background: white; }
+      .page { max-width: none; padding: 0; }
+      header, section, nav { box-shadow: none; break-inside: avoid; }
+      nav { display: none; }
+      a { color: inherit; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <h1>Phân tích hệ thống data_provider: ws_live, pipeline, checker</h1>
+      <p>Tài liệu này giải thích cơ chế lấy dữ liệu OHLCV hiện tại trong SEN05 theo hướng dễ hiểu, nhưng vẫn bám sát code. Trọng tâm là ba chương trình <code>ws_live.py</code>, <code>pipeline.py</code> và <code>checker.py</code>.</p>
+      <div class="meta">
+        <span class="pill">Ngày lập: 2026-06-13</span>
+        <span class="pill">Nguồn: code hiện tại trong repo</span>
+        <span class="pill">Phạm vi: TradingView OHLCV data provider</span>
+        <span class="pill">Định dạng: HTML tự chứa</span>
+      </div>
+    </header>
+
+    <nav>
+      <a href="#tom-tat">1. Tóm tắt điều hành</a>
+      <a href="#pham-vi">2. Phạm vi và thuật ngữ</a>
+      <a href="#workflow">3. Workflow tổng thể</a>
+      <a href="#ws-live">4. ws_live</a>
+      <a href="#pipeline">5. pipeline</a>
+      <a href="#checker">6. checker</a>
+      <a href="#phong-ve">7. Các lớp phòng vệ</a>
+      <a href="#rui-ro">8. Tình huống rủi ro</a>
+      <a href="#ky-thuat">9. Ghi chú kỹ thuật</a>
+      <a href="#han-che">10. Hạn chế và further analysis</a>
+    </nav>
+
+    <section id="tom-tat">
+      <h2>1. Tóm Tắt Điều Hành</h2>
+      <p><strong>Mục tiêu chính của cụm hệ thống này</strong> là giữ kho dữ liệu nến OHLCV trong SQL Server đủ lịch sử, đủ mới, không trùng, không dùng nến chưa đóng, và có khả năng tự phát hiện hoặc sửa các sai lệch so với TradingView.</p>
+      <p>Ba chương trình không làm cùng một việc. Chúng chia vai như sau:</p>
+      <div class="grid-3">
+        <div class="card">
+          <h4><span class="tag blue">pipeline</span> Nạp lịch sử và bù gap</h4>
+          <p>Kéo dữ liệu lịch sử hoặc phần bị thiếu từ TradingView vào staging, sau đó ETL vào <code>DWH.Fact_OHLCV</code>. Đây là chương trình dùng cho full load, daily gap fill và scoped reset.</p>
+        </div>
+        <div class="card">
+          <h4><span class="tag cyan">ws_live</span> Cập nhật gần realtime</h4>
+          <p>Không giữ WebSocket 24/7. Cứ mỗi 5 phút mở TradingView WebSocket, lấy vài nến mới nhất cho nhóm asset live, bỏ nến đang mở, ghi staging/Fact rồi đóng kết nối.</p>
+        </div>
+        <div class="card">
+          <h4><span class="tag green">checker</span> Kiểm tra và sửa dữ liệu</h4>
+          <p>So sánh dữ liệu trong DB với TradingView, phát hiện nến thiếu, nến thừa, OHLC sai, interval gap, rồi auto-repair theo cơ chế stage trước, sửa Fact sau, verify lại sau sửa.</p>
+        </div>
+      </div>
+
+      <div class="ok">
+        <strong>Kết luận ngắn:</strong> hệ thống được thiết kế theo mô hình nhiều lớp bảo vệ. Nếu live hụt ngắn, backlog và pipeline gap fill có thể bù. Nếu DB chậm, queue, RAM overflow và SQLite spool đỡ tải. Nếu checker đang sửa dữ liệu, live vẫn stage dữ liệu mới nhưng hoãn ETL sang Fact để tránh race condition. Nếu dữ liệu trong Fact bị sai, checker có thể phát hiện và sửa trong phạm vi đã kiểm tra.
+      </div>
+
+      <div class="warning">
+        <strong>Điểm cần hiểu đúng:</strong> tài liệu này phân tích hệ thống OHLCV TradingView trong <code>data_provider/apps</code>. Repo cũng có nhánh <code>data_provider/tick_data</code> lấy tick BID/ASK từ cTrader/FTMO, nhưng nhánh đó độc lập với ba chương trình đang phân tích ở đây. Nếu gọi chung là "tick data" theo thói quen vận hành, cần phân biệt rõ: tài liệu này nói về nến OHLCV, không phải raw tick cTrader.
+      </div>
+    </section>
+
+    <section id="pham-vi">
+      <h2>2. Phạm Vi, Nguồn Dữ Liệu Và Thuật Ngữ</h2>
+
+      <h3>2.1. Nguồn đã đọc</h3>
+      <p>Tài liệu này được viết dựa trên việc đọc các file chính và phụ trợ sau:</p>
+      <table>
+        <thead>
+          <tr><th>Nhóm</th><th>File</th><th>Vai trò trong phân tích</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Chuẩn audit</td><td><code>docs/README_AUDITOR.md</code></td><td>Nguyên tắc rà soát: data integrity, time semantics, operational safety, risk controls.</td></tr>
+          <tr><td>Ứng dụng chính</td><td><code>data_provider/apps/ws_live.py</code></td><td>Cập nhật gần realtime theo batch WebSocket.</td></tr>
+          <tr><td>Ứng dụng chính</td><td><code>data_provider/apps/pipeline.py</code></td><td>Full load, gap fill, reset/reload dữ liệu lịch sử.</td></tr>
+          <tr><td>Ứng dụng chính</td><td><code>data_provider/apps/checker.py</code></td><td>Scan, compare, repair, verify, interval gap check.</td></tr>
+          <tr><td>Phụ trợ</td><td><code>data_provider/common/helpers.py</code></td><td>Validate OHLCV, pull_and_store, retry, recompute derived, safe repull.</td></tr>
+          <tr><td>Phụ trợ</td><td><code>modules/db_connector.py</code></td><td>MERGE staging, ETL direct, aggregate from Fact, delete/upsert helpers.</td></tr>
+          <tr><td>Phụ trợ</td><td><code>data_provider/tv/auth.py</code></td><td>Token/cookie/guest auth, refresh, cooldown, mid-run refresh.</td></tr>
+          <tr><td>Phụ trợ</td><td><code>data_provider/tv/coord.py</code></td><td>Điều phối live batch, historical job, graceful shutdown.</td></tr>
+          <tr><td>Phụ trợ</td><td><code>data_provider/common/locks.py</code></td><td>Advisory lock trong SQL table <code>SEN.ActiveTask</code>.</td></tr>
+          <tr><td>Cấu hình</td><td><code>config.py</code></td><td>Danh sách symbol, timeframe, staging table, provider, weekend/overnight rules.</td></tr>
+          <tr><td>Ops</td><td><code>ops/run_wslive/README.md</code>, <code>docs/ARCHITECTURE.md</code>, <code>README.md</code></td><td>Đối chiếu vận hành, scheduled task, command, lock contract.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>2.2. Dữ liệu hệ thống đang lấy</h3>
+      <p>Cụm này lấy dữ liệu nến <strong>OHLCV</strong>, tức mỗi bar gồm:</p>
+      <ul>
+        <li><strong>Open</strong>: giá mở nến.</li>
+        <li><strong>High</strong>: giá cao nhất trong nến.</li>
+        <li><strong>Low</strong>: giá thấp nhất trong nến.</li>
+        <li><strong>Close</strong>: giá đóng nến.</li>
+        <li><strong>Volume</strong>: khối lượng theo nguồn TradingView/Capital.com.</li>
+      </ul>
+
+      <p>Nguồn thị trường trong config hiện tại là <code>CAPITALCOM</code> qua TradingView WebSocket. Universe hiện có 37 symbol:</p>
+      <ul>
+        <li>9 chỉ số: <code>FR40</code>, <code>DE40</code>, <code>HK50</code>, <code>J225</code>, <code>SP35</code>, <code>UK100</code>, <code>US500</code>, <code>US100</code>, <code>US30</code>.</li>
+        <li>26 cặp FOREX.</li>
+        <li>1 kim loại: <code>GOLD</code>.</li>
+        <li>1 crypto: <code>BTCUSD</code>.</li>
+      </ul>
+
+      <p>Timeframe trực tiếp hiện là 15 TF:</p>
+      <pre><code>M5, M10, M15, M20, M30, M45,
+H1, M90, H2, H3, H4, H6, H8, D1, W</code></pre>
+
+      <div class="note">
+        <strong>Computed timeframe:</strong> code vẫn giữ cơ chế fallback để tính <code>M10</code>, <code>M20</code>, <code>M90</code>, <code>H6</code>, <code>H8</code> từ TF nhỏ hơn khi bật <code>ENABLE_COMPUTED_TIMEFRAMES=1</code>. Tuy nhiên theo <code>config.py</code>, mặc định hiện tại là <code>ENABLE_COMPUTED_TIMEFRAMES=0</code>, nghĩa là cả 15 TF đều được kéo trực tiếp từ TradingView.
+      </div>
+
+      <h3>2.3. Một số thuật ngữ cần nắm</h3>
+      <table>
+        <thead>
+          <tr><th>Thuật ngữ</th><th>Diễn giải dễ hiểu</th><th>Ý nghĩa vận hành</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>Staging</code></td><td>Bảng đệm tạm trong schema <code>SEN.TF_*</code>.</td><td>Dữ liệu mới đi vào staging trước, chưa coi là dữ liệu chính thức cho chiến lược.</td></tr>
+          <tr><td><code>Fact_OHLCV</code></td><td>Bảng nến chính trong warehouse: <code>DWH.Fact_OHLCV</code>.</td><td>Đây là nơi strategy/backtest/dashboard đọc dữ liệu chuẩn.</td></tr>
+          <tr><td><code>ETL</code></td><td>Bước chuyển dữ liệu từ staging sang Fact.</td><td>Trong code là <code>DWH.usp_LoadDirect</code> hoặc aggregate từ Fact.</td></tr>
+          <tr><td><code>Watermark</code></td><td>Dấu mốc "nến mới nhất đã xử lý".</td><td>Giúp <code>ws_live</code> không ghi lặp nến cũ và biết dữ liệu có bị trễ không.</td></tr>
+          <tr><td><code>Lock</code></td><td>Cờ điều phối trong SQL table <code>SEN.ActiveTask</code>.</td><td>Ngăn nhiều process cùng sửa/ghi vùng dữ liệu nguy hiểm.</td></tr>
+          <tr><td><code>Spool</code></td><td>Hàng đợi bền vững bằng SQLite local.</td><td>Khi DB queue/RAM buffer quá tải, dữ liệu được giữ tạm trên đĩa thay vì mất ngay.</td></tr>
+          <tr><td><code>Backfill</code></td><td>Kéo bổ sung dữ liệu bị thiếu hoặc bị cũ.</td><td>Pipeline làm việc này hàng ngày hoặc theo lệnh thủ công.</td></tr>
+          <tr><td><code>Repair</code></td><td>Xóa/sửa phần dữ liệu sai rồi nạp lại từ nguồn.</td><td>Checker thực hiện khi phát hiện DB lệch so với TradingView.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="workflow">
+      <h2>3. Workflow Tổng Thể</h2>
+      <p>Hãy hình dung hệ thống như một kho dữ liệu có ba lớp vận hành:</p>
+      <ul>
+        <li><strong>Pipeline</strong> xây nền và vá các khoảng thiếu lớn.</li>
+        <li><strong>WS Live</strong> giữ dữ liệu mới trong ngày.</li>
+        <li><strong>Checker</strong> đóng vai trò thanh tra độc lập, so sánh với nguồn và sửa khi cần.</li>
+      </ul>
+
+      <div class="flow" aria-label="Workflow tổng thể">
+        <div class="flow-step source">
+          <strong>TradingView</strong>
+          <span>Nguồn dữ liệu OHLCV qua WebSocket/history endpoint.</span>
+        </div>
+        <div class="flow-step stage">
+          <strong>Staging SEN.TF_*</strong>
+          <span>MERGE theo SymbolID + BarTime. Có thể update row nếu OHLCV thay đổi.</span>
+        </div>
+        <div class="flow-step fact">
+          <strong>DWH.Fact_OHLCV</strong>
+          <span>Bảng chính, unique theo SymbolID + TimeframeID + BarTime.</span>
+        </div>
+        <div class="flow-step guard">
+          <strong>Checker / Lock</strong>
+          <span>So sánh, repair, defer ETL khi đang sửa dữ liệu.</span>
+        </div>
+        <div class="flow-step alert">
+          <strong>Log / Notify / Redis</strong>
+          <span>Ghi log, gửi cảnh báo, publish bar_ready cho signal watcher.</span>
+        </div>
+      </div>
+
+      <h3>3.1. Sơ đồ phối hợp ba chương trình</h3>
+      <div class="svg-wrap">
+        <svg width="1060" height="450" viewBox="0 0 1060 450" role="img" aria-label="Sơ đồ phối hợp pipeline ws_live checker">
+          <defs>
+            <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L9,3 z" fill="#64748b"></path>
+            </marker>
+          </defs>
+
+          <rect x="30" y="34" width="190" height="74" rx="9" fill="#eff6ff" stroke="#60a5fa"></rect>
+          <text x="125" y="63" text-anchor="middle" font-size="16" font-weight="700">TradingView</text>
+          <text x="125" y="86" text-anchor="middle" font-size="12">history + live WebSocket</text>
+
+          <rect x="295" y="24" width="180" height="70" rx="9" fill="#e0f2fe" stroke="#38bdf8"></rect>
+          <text x="385" y="52" text-anchor="middle" font-size="15" font-weight="700">pipeline.py</text>
+          <text x="385" y="74" text-anchor="middle" font-size="12">full load / gap fill</text>
+
+          <rect x="295" y="132" width="180" height="70" rx="9" fill="#ecfeff" stroke="#06b6d4"></rect>
+          <text x="385" y="160" text-anchor="middle" font-size="15" font-weight="700">ws_live.py</text>
+          <text x="385" y="182" text-anchor="middle" font-size="12">batch 5 phút</text>
+
+          <rect x="295" y="240" width="180" height="70" rx="9" fill="#f0fdf4" stroke="#22c55e"></rect>
+          <text x="385" y="268" text-anchor="middle" font-size="15" font-weight="700">checker.py</text>
+          <text x="385" y="290" text-anchor="middle" font-size="12">scan / repair / verify</text>
+
+          <rect x="560" y="98" width="190" height="74" rx="9" fill="#ecfeff" stroke="#67e8f9"></rect>
+          <text x="655" y="126" text-anchor="middle" font-size="15" font-weight="700">SEN.TF_* staging</text>
+          <text x="655" y="149" text-anchor="middle" font-size="12">MERGE, chống trùng</text>
+
+          <rect x="825" y="98" width="190" height="74" rx="9" fill="#f0fdf4" stroke="#86efac"></rect>
+          <text x="920" y="126" text-anchor="middle" font-size="15" font-weight="700">DWH.Fact_OHLCV</text>
+          <text x="920" y="149" text-anchor="middle" font-size="12">warehouse chính</text>
+
+          <rect x="560" y="226" width="190" height="74" rx="9" fill="#fffbeb" stroke="#fbbf24"></rect>
+          <text x="655" y="254" text-anchor="middle" font-size="15" font-weight="700">SEN.ActiveTask</text>
+          <text x="655" y="277" text-anchor="middle" font-size="12">lock điều phối</text>
+
+          <rect x="825" y="226" width="190" height="74" rx="9" fill="#fff1f2" stroke="#fda4af"></rect>
+          <text x="920" y="254" text-anchor="middle" font-size="15" font-weight="700">Log / Notify / Redis</text>
+          <text x="920" y="277" text-anchor="middle" font-size="12">quan sát và tín hiệu</text>
+
+          <line x1="220" y1="70" x2="295" y2="59" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"></line>
+          <line x1="220" y1="78" x2="295" y2="167" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"></line>
+          <line x1="220" y1="86" x2="295" y2="275" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"></line>
+
+          <line x1="475" y1="59" x2="560" y2="126" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"></line>
+          <line x1="475" y1="167" x2="560" y2="140" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"></line>
+          <line x1="475" y1="275" x2="560" y2="157" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"></line>
+
+          <line x1="750" y1="135" x2="825" y2="135" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"></line>
+          <line x1="655" y1="226" x2="655" y2="172" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrow)"></line>
+          <line x1="750" y1="263" x2="825" y2="263" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"></line>
+          <line x1="920" y1="172" x2="920" y2="226" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"></line>
+
+          <text x="655" y="390" text-anchor="middle" font-size="13" fill="#475569">Checker giữ checker_repair + warehouse_maintenance khi sửa; ws_live thấy lock thì chỉ stage và hoãn ETL.</text>
+          <text x="655" y="415" text-anchor="middle" font-size="13" fill="#475569">Pipeline/checker dùng tv_historical_job để không cùng lúc kéo lịch sử nặng từ TradingView.</text>
+        </svg>
+      </div>
+
+      <h3>3.2. Luồng đọc dễ hiểu</h3>
+      <div class="swimlane">
+        <div class="lane-label">Buổi khởi tạo</div>
+        <div class="lane-body">Pipeline chạy full load nếu Fact trống hoặc nếu operator ép <code>--mode full</code>. Nó kéo lịch sử 37 symbol x 15 TF, ghi staging rồi nạp vào Fact.</div>
+
+        <div class="lane-label">Vận hành hằng ngày</div>
+        <div class="lane-body">Pipeline ở <code>gap</code> mode bù phần dữ liệu cũ/thiếu. ws_live chạy nền để cập nhật gần realtime mỗi 5 phút cho Indice, Metal, Crypto.</div>
+
+        <div class="lane-label">Khi nghi ngờ dữ liệu</div>
+        <div class="lane-body">Checker so sánh Fact với TradingView. Nếu có missing, OHLC sai hoặc extra bar, checker lấy lock, stage dữ liệu thay thế, sửa Fact và verify lại.</div>
+
+        <div class="lane-label">Khi có sự cố</div>
+        <div class="lane-body">Retry/backoff xử lý lỗi tạm thời. Lock tránh ghi đè nhau. Spool giữ dữ liệu khi DB writer quá tải. Notify/log giúp operator biết khi cần can thiệp.</div>
+      </div>
+    </section>
+
+    <section id="ws-live">
+      <h2>4. ws_live.py - Cập Nhật Gần Realtime Theo Batch WebSocket</h2>
+
+      <h3>4.1. Vai trò</h3>
+      <p><code>ws_live.py</code> giữ dữ liệu mới trong ngày. Nó bổ sung cho pipeline lịch sử: pipeline kéo nền, còn ws_live cứ 5 phút lấy các nến mới vừa đóng để warehouse không bị trễ quá lâu.</p>
+      <p>Điểm quan trọng: tên "live" không có nghĩa là giữ một WebSocket mở vĩnh viễn. Code hiện tại cố ý chạy theo batch:</p>
+      <pre><code>mở WebSocket → đăng ký symbol/timeframe → nhận vài nến mới nhất → ghi DB → đóng WebSocket → chờ mốc 5 phút kế tiếp</code></pre>
+      <p>Lý do thiết kế này là giảm nguy cơ bị TradingView rate-limit hoặc block khi giữ kết nối liên tục 24/7.</p>
+
+      <h3>4.2. Phạm vi symbol và timeframe</h3>
+      <ul>
+        <li><code>ws_live</code> chỉ theo dõi asset type <code>Indice</code>, <code>Metal</code>, <code>Crypto</code>.</li>
+        <li>FOREX không được cập nhật qua live WS vì lịch đóng/mở cửa phức tạp hơn và để pipeline lịch sử xử lý.</li>
+        <li>Với config hiện tại, live theo dõi 11 symbol: 9 chỉ số, <code>GOLD</code>, <code>BTCUSD</code>.</li>
+        <li>Live dùng 15 timeframe trực tiếp giống pipeline: <code>M5</code> đến <code>W</code>.</li>
+        <li>Code đặt giới hạn chart session để mỗi connection không quá nặng. Với 15 TF, <code>WS_SYMBOLS_PER_CONN</code> bị hạ còn khoảng 6 symbol mỗi connection.</li>
+      </ul>
+
+      <h3>4.3. Trình tự startup</h3>
+      <div class="ladder">
+        <div class="ladder-item"><strong>1. Kiểm tra DB.</strong> Nếu SQL Server không kết nối được, process dừng ngay vì không có nơi ghi dữ liệu.</div>
+        <div class="ladder-item"><strong>2. Dọn lock hết hạn và lấy <code>ws_live_runtime</code>.</strong> Nếu có instance cũ đang chạy, instance mới ghi tín hiệu graceful shutdown, chờ tối đa 60 giây rồi mới tiếp quản.</div>
+        <div class="ladder-item"><strong>3. Lấy local PID lock.</strong> Tăng thêm lớp chống chạy hai process cùng lúc trên máy.</div>
+        <div class="ladder-item"><strong>4. Xác thực TradingView.</strong> Dùng cache token, token trong <code>.env</code>, cookie refresh, headless hoặc guest fallback tùy tình huống.</div>
+        <div class="ladder-item"><strong>5. Auth preflight.</strong> Nếu policy là <code>abort</code> và đang guest mode, process dừng. Mặc định guest policy là <code>pause</code>, tức process sống nhưng bỏ qua batch khi chưa phục hồi auth.</div>
+        <div class="ladder-item"><strong>6. Nạp watermark từ Fact.</strong> Đọc max <code>BarTime</code> của từng symbol/TF trong watchlist để biết nến nào đã commit.</div>
+        <div class="ladder-item"><strong>7. Khởi tạo SQLite spool.</strong> Nếu lần trước còn bar trong spool, đưa lại vào queue khi có chỗ.</div>
+        <div class="ladder-item"><strong>8. Khởi động DB worker, status reporter và scheduler.</strong> DB worker không phải daemon, nên khi shutdown chương trình chờ xử lý hết queue trước khi thoát.</div>
+      </div>
+
+      <h3>4.4. Một batch live hoạt động thế nào</h3>
+      <table>
+        <thead>
+          <tr><th>Bước</th><th>Hành động</th><th>Lớp bảo vệ</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>Scheduler đợi đúng mốc 5 phút rồi chạy batch.</td><td>Tránh trượt lịch kiểu "5 phút sau khi batch cũ kết thúc".</td></tr>
+          <tr><td>2</td><td>Kiểm tra token/cookie trước batch.</td><td>Token sắp hết hạn được refresh chủ động.</td></tr>
+          <tr><td>3</td><td>Refresh watermark từ Fact trước batch.</td><td>Giảm rủi ro watermark RAM lệch với DB sau restart/repair.</td></tr>
+          <tr><td>4</td><td>Lấy lock <code>tv_live_batch</code>.</td><td>Pipeline/checker biết live đang nói chuyện với TradingView để nhường slot.</td></tr>
+          <tr><td>5</td><td>Mỗi group mở một WebSocket riêng và đăng ký nhiều chart session.</td><td>Chia tải theo group, không nhồi quá nhiều session vào một connection.</td></tr>
+          <tr><td>6</td><td>Mỗi chart session request <code>N_BARS_WS=5</code> hoặc <code>N_BARS_WS_BACKLOG=30</code> nếu đang backlog.</td><td>Nếu batch trước miss, batch sau tự kéo rộng hơn để bù.</td></tr>
+          <tr><td>7</td><td>TradingView trả series. Code bỏ bar cuối vì có thể là nến đang mở.</td><td>Không dùng nến chưa đóng, tránh dữ liệu đổi sau đó.</td></tr>
+          <tr><td>8</td><td>Lọc theo effective watermark.</td><td>Chỉ nhận bar mới; khi backlog thì hạ watermark tạm thời để phủ gap.</td></tr>
+          <tr><td>9</td><td>Đưa DataFrame vào DB queue, RAM overflow hoặc SQLite spool.</td><td>Watermark nhận chỉ nhảy sau khi bar đã được accept vào một nơi giữ dữ liệu.</td></tr>
+          <tr><td>10</td><td>DB worker ghi staging, rồi ETL sang Fact nếu không có repair lock.</td><td>Staging MERGE, Fact unique key, retry DB, defer ETL nếu checker đang sửa.</td></tr>
+          <tr><td>11</td><td>Sau ETL thành công, cập nhật committed watermark và publish <code>bar_ready</code>.</td><td>Signal watcher chỉ được báo khi Fact đã commit xong.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>4.5. Ba loại watermark trong ws_live</h3>
+      <table>
+        <thead>
+          <tr><th>Watermark</th><th>Ý nghĩa</th><th>Tại sao cần tách riêng</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>source watermark</code></td><td>Nến đóng mới nhất mà TradingView trả về.</td><td>Cho biết nguồn đang có dữ liệu đến đâu, kể cả chưa ghi DB.</td></tr>
+          <tr><td><code>received watermark</code></td><td>Nến mới nhất đã được accept vào queue/overflow/spool.</td><td>Cho biết hệ thống đã giữ được dữ liệu ở đâu đó, nhưng chưa chắc đã vào Fact.</td></tr>
+          <tr><td><code>committed watermark</code></td><td>Nến mới nhất đã ETL thành công vào Fact.</td><td>Đây là watermark dùng để lọc duplicate thật sự. Nó chỉ nhảy sau commit.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="ok">
+        <strong>Điểm bảo vệ quan trọng:</strong> code không cập nhật committed watermark ngay khi nhận WebSocket. Nó chờ dữ liệu đi qua staging và ETL vào Fact. Điều này tránh lỗi nguy hiểm: watermark đã nhảy nhưng dữ liệu thực tế chưa kịp lưu, dẫn đến mất nến vĩnh viễn.
+      </div>
+
+      <h3>4.6. Queue, overflow RAM và SQLite spool</h3>
+      <p>Live WebSocket nhận dữ liệu nhanh hơn DB có thể ghi trong một số tình huống. Vì vậy hệ thống tách luồng nhận và luồng ghi:</p>
+      <ul>
+        <li>WebSocket thread chỉ parse data và đưa vào <code>_db_queue</code>.</li>
+        <li>DB worker thread lấy item từ queue, validate, ghi staging, chạy ETL.</li>
+      </ul>
+      <p>Nếu queue đầy, dữ liệu đi qua các tầng sau:</p>
+      <table>
+        <thead>
+          <tr><th>Tầng</th><th>Dung lượng theo code</th><th>Khi nào dùng</th><th>Rủi ro còn lại</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>DB queue</code></td><td><code>DB_QUEUE_MAXSIZE=2000</code></td><td>Bình thường.</td><td>Nếu DB worker chậm lâu, queue đầy.</td></tr>
+          <tr><td><code>RAM overflow</code></td><td><code>OVERFLOW_BUFFER_MAX=500</code></td><td>Khi queue đầy.</td><td>Mất nếu process chết trước khi flush, nhưng thường chỉ là vùng đệm ngắn.</td></tr>
+          <tr><td><code>SQLite spool</code></td><td><code>MAX_SPOOL_ROWS=100000</code></td><td>Khi cả queue và RAM overflow đều đầy.</td><td>Nếu spool đầy hoặc SQLite/đĩa lỗi, bar bị reject và alert.</td></tr>
+        </tbody>
+      </table>
+
+      <p>Spool được flush lại vào queue khi có chỗ trống. Status reporter cũng dọn spool entries cũ hơn 48 giờ.</p>
+
+      <h3>4.7. Khi checker đang repair</h3>
+      <p>Checker khi sửa dữ liệu sẽ giữ lock <code>checker_repair</code> và <code>warehouse_maintenance</code>. DB worker của ws_live kiểm tra các lock này. Nếu lock đang active:</p>
+      <ul>
+        <li>bar mới vẫn được ghi vào staging;</li>
+        <li>ETL sang Fact bị hoãn;</li>
+        <li>cặp symbol/TF được đưa vào <code>_deferred_etl</code>;</li>
+        <li>sau khi checker release lock, DB worker chạy lại ETL deferred và cập nhật watermark.</li>
+      </ul>
+      <p>Cơ chế này giúp live không ghi vào Fact đúng lúc checker đang xóa/sửa vùng dữ liệu, tránh race condition.</p>
+
+      <h3>4.8. Retry, backlog và mất kết nối</h3>
+      <p>Mỗi group fetch có retry riêng:</p>
+      <pre><code>attempt 1 fail → chờ 30s
+attempt 2 fail → chờ 60s
+attempt 3 fail → bỏ qua group, chờ batch kế tiếp</code></pre>
+      <p>Nếu một session symbol/TF không trả dữ liệu, pair đó được đưa vào backlog. Batch sau sẽ request nhiều bar hơn và hạ watermark tạm thời để phủ lại đoạn hụt. Nếu một pair miss quá <code>MAX_BACKLOG_BATCHES=12</code> batch liên tiếp, hệ thống cảnh báo rằng gap có thể đã trở thành vĩnh viễn và khuyến nghị chạy checker.</p>
+
+      <h3>4.9. Auth và guest mode</h3>
+      <p>ws_live dùng nhiều lớp auth: token cache, token trong <code>.env</code>, cookie refresh, headless, username/password, cuối cùng là guest. Guest mode có thể trả dữ liệu hạn chế. Chính sách mặc định của ws_live là <code>pause</code>:</p>
+      <ul>
+        <li>nếu rơi vào guest, process không chết ngay;</li>
+        <li>nó thử recover auth;</li>
+        <li>nếu vẫn guest thì bỏ qua batch một khoảng thời gian;</li>
+        <li>mục tiêu là không đưa dữ liệu guest thiếu vào Fact.</li>
+      </ul>
+
+      <h3>4.10. Ops layer</h3>
+      <p>Folder <code>ops/run_wslive</code> cung cấp lớp vận hành Windows:</p>
+      <ul>
+        <li><code>ws_live_supervisor.ps1</code>: chạy ws_live nền và restart nếu child exit.</li>
+        <li><code>ws_live_watchdog.ps1</code>: chạy mỗi 60 giây, restart supervisor nếu mất process.</li>
+        <li><code>install_ws_live_tasks.ps1</code>: đăng ký Scheduled Tasks.</li>
+        <li><code>ws_live_status.ps1</code>: xem task, process, PID file, DB lock, heartbeat.</li>
+      </ul>
+    </section>
+
+    <section id="pipeline">
+      <h2>5. pipeline.py - Full Load, Gap Fill Và Scoped Reset</h2>
+
+      <h3>5.1. Vai trò</h3>
+      <p><code>pipeline.py</code> là chương trình nạp dữ liệu lịch sử. Nó không chạy mỗi 5 phút như ws_live, mà dùng để:</p>
+      <ul>
+        <li>khởi tạo kho dữ liệu lần đầu bằng full load;</li>
+        <li>bù dữ liệu bị cũ hoặc bị thiếu bằng gap fill;</li>
+        <li>reload một phạm vi cụ thể khi dữ liệu bị sai;</li>
+        <li>dọn staging cũ sau khi chạy.</li>
+      </ul>
+
+      <h3>5.2. Các mode chính</h3>
+      <table>
+        <thead>
+          <tr><th>Mode</th><th>Khi nào dùng</th><th>Ghi DB không</th><th>Rủi ro/chú ý</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>auto</code></td><td>Mặc định. Nếu Fact trống thì full, nếu có dữ liệu thì gap.</td><td>Có, trừ khi thêm <code>--dry-run</code>.</td><td>An toàn cho vận hành thường ngày.</td></tr>
+          <tr><td><code>full</code></td><td>Rebuild hoặc khởi tạo lịch sử.</td><td>Có.</td><td>Nặng, lâu, bị block nếu <code>ws_live_runtime</code> đang active.</td></tr>
+          <tr><td><code>gap</code></td><td>Bù dữ liệu bị cũ hoặc thiếu từ lần chạy trước.</td><td>Có.</td><td>Chế độ hàng ngày, nhẹ hơn full.</td></tr>
+          <tr><td><code>--dry-run</code></td><td>Xem kế hoạch trước khi chạy thật.</td><td>Không.</td><td>Nên dùng trước các thao tác reset/reload lớn.</td></tr>
+          <tr><td><code>--reset</code></td><td>Reload phạm vi chọn.</td><td>Có.</td><td>Bắt buộc có scope: symbol, timeframe hoặc asset type.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>5.3. Full load hoạt động thế nào</h3>
+      <div class="ladder">
+        <div class="ladder-item"><strong>1. Lấy danh sách TF lịch sử.</strong> <code>get_historical_timeframes()</code> trả 15 TF trực tiếp và số bar cần lấy.</div>
+        <div class="ladder-item"><strong>2. Lọc scope nếu có.</strong> <code>--symbols</code>, <code>--timeframes</code>, <code>--asset-type</code> thu hẹp phạm vi.</div>
+        <div class="ladder-item"><strong>3. Với từng TF, lặp qua từng symbol.</strong> Mỗi cặp gọi <code>pull_with_retry()</code> hoặc <code>repull_full_symbol()</code> nếu reset.</div>
+        <div class="ladder-item"><strong>4. Dữ liệu đi qua <code>pull_and_store()</code>.</strong> Kéo TradingView, bỏ bar cuối, validate, MERGE staging, ETL direct sang Fact.</div>
+        <div class="ladder-item"><strong>5. Nếu computed TF bật, recompute sau cùng.</strong> Hiện mặc định computed disabled vì 15 TF đều là direct TradingView.</div>
+        <div class="ladder-item"><strong>6. Ghi summary.</strong> Kết quả gồm số pair OK/fail, số bar inserted, fail pairs, log JSONL.</div>
+      </div>
+
+      <h3>5.4. Gap fill hoạt động thế nào</h3>
+      <p>Gap fill không kéo toàn bộ. Nó hỏi DB: "nến mới nhất của mỗi symbol/TF là lúc nào?" rồi so với thời điểm hiện tại.</p>
+      <table>
+        <thead>
+          <tr><th>Trường hợp</th><th>Cách pipeline hiểu</th><th>Cách xử lý</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Không có dữ liệu cho cặp symbol/TF</td><td><code>MISS</code></td><td>Kéo số bar full mặc định của TF đó.</td></tr>
+          <tr><td>Có dữ liệu nhưng nến cuối quá cũ</td><td><code>STALE</code></td><td>Tính số bar cần kéo dựa trên gap giờ và timeframe.</td></tr>
+          <tr><td>Gap cuối tuần hoặc ngoài giờ giao dịch</td><td>Không phải lỗi thật nếu trong threshold</td><td>Bỏ qua để tránh kéo vô ích và tránh false positive.</td></tr>
+        </tbody>
+      </table>
+
+      <p>Với asset đóng cuối tuần như FOREX, Metal, Indice, pipeline dùng <code>trading_hours_in_gap()</code> để không coi khoảng Fri-Mon là lỗi nếu thị trường thật sự đóng. Với crypto, dùng thời gian lịch vì giao dịch 24/7.</p>
+
+      <h3>5.5. Cơ chế pull_and_store chung</h3>
+      <p>Cả full load, gap fill và repair đều dựa nhiều vào <code>pull_and_store()</code>. Trình tự của nó:</p>
+      <ol>
+        <li>Chờ slot an toàn bằng <code>wait_for_historical_slot()</code>, ưu tiên không chen vào live batch.</li>
+        <li>Kéo TradingView qua <code>ws_history.fetch_history()</code>, thử endpoint chính và fallback nếu rỗng.</li>
+        <li>Nếu cần deep history và config cho phép, dùng replay bootstrap để lấy lịch sử cũ hơn.</li>
+        <li>Bỏ bar cuối vì có thể là nến đang mở.</li>
+        <li>Validate: drop null OHLC, drop <code>High &lt; Low</code>, bỏ duplicate timestamp, sort timestamp, drop future bars.</li>
+        <li>Ghi staging bằng <code>insert_staging_batch()</code>, dùng temp table rồi MERGE.</li>
+        <li>Nếu <code>skip_etl=False</code>, gọi <code>run_etl_direct()</code> để nạp staging vào Fact.</li>
+      </ol>
+
+      <h3>5.6. Retry và auth trong pipeline</h3>
+      <p><code>pull_with_retry()</code> retry tối đa 3 lần sau lần đầu, với backoff 10s, 30s, 60s. Nếu có 3 failures liên tiếp trong gap fill, pipeline thử <code>refresh_mid_run()</code>.</p>
+      <p>Khác ws_live, pipeline không chấp nhận guest mode. Nếu TradingView connection trả <code>auth_mode=guest</code>, pipeline dừng với lỗi. Lý do: dữ liệu lịch sử guest có thể bị giới hạn số bar, nếu vẫn nạp sẽ làm kho dữ liệu thiếu mà trông như "thành công".</p>
+
+      <h3>5.7. Lock của pipeline</h3>
+      <table>
+        <thead>
+          <tr><th>Lock</th><th>Khi dùng</th><th>Mục đích</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>tv_historical_job</code></td><td>Mọi run không dry-run.</td><td>Đảm bảo chỉ một pipeline/checker nặng kéo lịch sử TradingView cùng lúc.</td></tr>
+          <tr><td><code>warehouse_maintenance</code></td><td>Full/reset, hoặc gap fill dùng short write lock quanh từng cặp.</td><td>Tránh va chạm với checker repair hoặc maintenance khác.</td></tr>
+          <tr><td><code>ws_live_runtime</code></td><td>Kiểm tra trước full/reset.</td><td>Full/reset bị block nếu live đang chạy, vì tác động dữ liệu rộng.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>5.8. Safe reset</h3>
+      <p><code>--reset</code> không được phép chạy toàn cục không có scope. Bắt buộc phải chọn ít nhất một trong:</p>
+      <ul>
+        <li><code>--symbols</code></li>
+        <li><code>--timeframes</code></li>
+        <li><code>--asset-type</code></li>
+      </ul>
+      <p>Khi reset, code bật <code>_FORCE_RESET_REPULL</code> và dùng cơ chế stage dữ liệu thay thế trước. Với direct TF, <code>repull_full_symbol()</code> xóa staging cũ, pull lại vào staging, lấy replacement window, rồi chỉ xóa Fact trong window staging có dữ liệu thay thế. Nếu staging replacement fail, Fact cũ được giữ nguyên.</p>
+    </section>
+
+    <section id="checker">
+      <h2>6. checker.py - Thanh Tra Dữ Liệu, Repair Và Verify</h2>
+
+      <h3>6.1. Vai trò</h3>
+      <p><code>checker.py</code> là lớp kiểm tra độc lập. Nó không tin tuyệt đối rằng pipeline/ws_live đã ghi đúng. Nó kéo lại dữ liệu từ TradingView trong một cửa sổ gần đây, rồi so sánh từng timestamp với dữ liệu trong <code>DWH.Fact_OHLCV</code>.</p>
+
+      <h3>6.2. Checker kiểm tra những gì</h3>
+      <table>
+        <thead>
+          <tr><th>Loại vấn đề</th><th>Định nghĩa</th><th>Cách xử lý</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Missing bar</td><td>TradingView có timestamp nhưng DB không có.</td><td>Core issue, được đưa vào repair dù tổng mismatch rate thấp.</td></tr>
+          <tr><td>OHLC wrong</td><td>DB có bar cùng timestamp nhưng Open/High/Low/Close lệch quá tolerance.</td><td>Core issue, repair.</td></tr>
+          <tr><td>Extra bar</td><td>DB có timestamp mà TradingView không có trong cửa sổ kiểm tra.</td><td>Core issue, repair hoặc full checked-window repair nếu timeline nhiễm nặng.</td></tr>
+          <tr><td>Volume-only mismatch</td><td>Chỉ volume lệch, OHLC vẫn khớp.</td><td>Hiện được ghi nhận như advisory, không phải điều kiện force repair chính.</td></tr>
+          <tr><td>Interval gap</td><td>Khoảng cách giữa hai bar liên tiếp không đúng kỳ vọng.</td><td>Chạy qua <code>--tf-check</code>, có thể auto-repair interval gaps.</td></tr>
+          <tr><td>C-O continuity</td><td>Close của bar trước lệch Open của bar sau quá ngưỡng.</td><td>DB-only check qua <code>--co-check</code>.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>6.3. Độ sâu kiểm tra</h3>
+      <p>Checker không kiểm tra toàn bộ lịch sử mỗi lần. Nó dùng số bar gần nhất theo TF, ví dụ:</p>
+      <ul>
+        <li><code>M5</code>, <code>M10</code>, <code>M15</code>, <code>M20</code>: 2000 bar.</li>
+        <li><code>M30</code>: 1500 bar.</li>
+        <li><code>M45</code>, <code>H1</code>, <code>M90</code>, <code>H2</code>, <code>H3</code>, <code>H4</code>, <code>H6</code>, <code>H8</code>: 1000 bar.</li>
+        <li><code>D1</code>: 400 bar.</li>
+        <li><code>W</code>: 200 bar.</li>
+      </ul>
+      <p>Default threshold là <code>0.001</code>, tức 0.1%. Tuy nhiên missing, OHLC wrong và extra bar là lỗi cấu trúc dữ liệu, nên có thể bypass threshold và được sửa ngay.</p>
+
+      <h3>6.4. Trình tự scan một pair</h3>
+      <ol>
+        <li>Kéo <code>n_bars + 5</code> từ TradingView bằng WebSocket history.</li>
+        <li>Bỏ bar cuối vì có thể đang mở.</li>
+        <li>Normalize timestamp về UTC naive.</li>
+        <li>Drop future bar vượt quá hiện tại + 1 phút.</li>
+        <li>Lấy <code>from_dt</code> và <code>to_dt</code> từ dữ liệu TradingView.</li>
+        <li>Query <code>DWH.Fact_OHLCV</code> đúng window đó.</li>
+        <li>So sánh tập timestamp và OHLCV.</li>
+        <li>Trả về: missing, mismatched, volume_only, extra, mismatch rate.</li>
+      </ol>
+
+      <h3>6.5. Tolerance khi so sánh</h3>
+      <table>
+        <thead>
+          <tr><th>Trường</th><th>Tolerance</th><th>Ý nghĩa</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>OHLC</td><td><code>max(abs(TV) * 1e-4, 1e-6)</code></td><td>Khoảng 0.01%, có sàn rất nhỏ để tránh lỗi số thực.</td></tr>
+          <tr><td>Volume</td><td><code>max(abs(TV) * 0.005, 25)</code></td><td>Cho phép 0.5% hoặc 25 đơn vị vì volume từ vendor có thể nhiễu.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>6.6. Auto mode hiện tại</h3>
+      <p>Checker mặc định không sửa toàn bộ universe dưới một lock lớn ngay từ đầu. Nó chạy theo "symbol rollout":</p>
+      <div class="ladder">
+        <div class="ladder-item"><strong>1. DST precheck.</strong> Lấy mẫu H2/H3/H4 để phát hiện khả năng lệch do DST. Nếu nhiều pair cùng mismatch rất lớn, bỏ qua sửa các TF đó trong ngày.</div>
+        <div class="ladder-item"><strong>2. Pre-scan từng symbol ở dry-run mode.</strong> Nếu symbol sạch thì không lấy repair lock.</div>
+        <div class="ladder-item"><strong>3. Symbol có vấn đề mới lấy lock.</strong> Lấy <code>checker_repair</code> và <code>warehouse_maintenance</code>.</div>
+        <div class="ladder-item"><strong>4. Rescan và repair dưới lock.</strong> Chỉ sửa khi đang có vùng an toàn.</div>
+        <div class="ladder-item"><strong>5. Verify sau repair.</strong> Kéo lại TradingView và so sánh lại. Nếu chưa sạch, retry vòng sau.</div>
+        <div class="ladder-item"><strong>6. Release lock rồi chuyển symbol tiếp theo.</strong> ws_live có thể resume deferred ETL sau khi lock được release.</div>
+      </div>
+
+      <h3>6.7. Cơ chế repair an toàn</h3>
+      <p>Checker sửa direct TF qua <code>_repair_direct_window()</code>. Thứ tự được thiết kế để không làm mất bar nếu TradingView fail giữa chừng:</p>
+      <ol>
+        <li>Xóa staging cũ của symbol/TF.</li>
+        <li>Kéo dữ liệu thay thế từ TradingView vào staging với <code>skip_etl=True</code>.</li>
+        <li>Nếu cần thay bar cụ thể, kiểm tra staging đã có đủ replacement bar mong đợi.</li>
+        <li>Chỉ sau khi staging OK mới xóa bar sai/thừa khỏi Fact.</li>
+        <li>Chạy <code>run_etl_direct()</code> để đưa staging vào Fact.</li>
+        <li>Retry ETL tối đa 3 lần nếu ETL lỗi.</li>
+      </ol>
+
+      <div class="ok">
+        <strong>Điểm quan trọng:</strong> checker không xóa Fact trước rồi mới đi kéo TradingView. Nó stage trước, xóa/sửa sau. Nếu TradingView fail, Fact cũ vẫn còn.
+      </div>
+
+      <h3>6.8. Khi nào checker không tự repair sâu</h3>
+      <p>Nếu lỗi có tính hệ thống, ví dụ timeline drift hoặc extra bar quá nhiều, checker có thể chọn <code>full_repull</code> trong phạm vi cửa sổ đã kiểm tra. Tuy nhiên code ghi rõ rằng checker không tự kích hoạt deep history replay hoặc full reload lịch sử sâu. Nếu vẫn fail sau verify, việc reload sâu thuộc trách nhiệm của pipeline scoped reload.</p>
+
+      <h3>6.9. Circuit breaker</h3>
+      <p>Nếu TradingView trả rỗng/lỗi liên tiếp, checker:</p>
+      <ul>
+        <li>ngủ 60 giây sau 3 lỗi liên tiếp để tránh rate-limit;</li>
+        <li>thử refresh token giữa run nếu có nhiều lỗi auth;</li>
+        <li>dừng hẳn nếu auth fail liên tiếp tới <code>MAX_AUTH_CONSECUTIVE_FAIL=5</code>, vì có thể IP đang bị block.</li>
+      </ul>
+
+      <h3>6.10. Guest mode bị chặn</h3>
+      <p>Checker dừng nếu auth mode là guest. Lý do: guest có thể chỉ trả khoảng vài trăm bar, khiến checker tưởng DB thiếu hàng loạt rồi sửa nhầm.</p>
+    </section>
+
+    <section id="phong-ve">
+      <h2>7. Các Lớp Phòng Vệ Và Bảo Vệ</h2>
+
+      <h3>7.1. Bảng tổng hợp</h3>
+      <table>
+        <thead>
+          <tr><th>Rủi ro</th><th>Lớp bảo vệ</th><th>Nằm ở đâu</th><th>Giới hạn còn lại</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Nến trùng</td>
+            <td>Watermark, staging MERGE, Fact unique key.</td>
+            <td><code>ws_live.py</code>, <code>db_connector.py</code>, SQL schema.</td>
+            <td>Nếu timestamp nguồn bị đổi anchor do vendor, checker/pipeline cần repair.</td>
+          </tr>
+          <tr>
+            <td>Nến chưa đóng</td>
+            <td>Bỏ bar cuối trong live/history/checker.</td>
+            <td><code>BatchFetcher._handle_series()</code>, <code>pull_and_store()</code>, <code>_pull_tv_bars()</code>.</td>
+            <td>Nếu vendor gửi bar đánh dấu sai thời gian, future cutoff giúp giảm nhưng không giải quyết mọi edge case.</td>
+          </tr>
+          <tr>
+            <td>DB chậm</td>
+            <td>DB worker thread riêng, queue, RAM overflow, SQLite spool.</td>
+            <td><code>ws_live.py</code>.</td>
+            <td>Nếu staging fail sau 3 lần hoặc spool đầy, có thể mất bar và cần checker/pipeline bù.</td>
+          </tr>
+          <tr>
+            <td>TradingView rate-limit</td>
+            <td>Batch mode, session throttle, retry/backoff, cooldown 429/403, sleep giữa historical requests.</td>
+            <td><code>ws_live.py</code>, <code>auth.py</code>, <code>helpers.py</code>, <code>coord.py</code>.</td>
+            <td>Không loại bỏ hoàn toàn nguy cơ bị block nếu tần suất vận hành quá dày.</td>
+          </tr>
+          <tr>
+            <td>Auth hết hạn</td>
+            <td>Token cache, static token, cookie refresh, headless, username/password, proactive refresh, mid-run refresh.</td>
+            <td><code>auth.py</code>, <code>ws_live.py</code>, <code>pipeline.py</code>, <code>checker.py</code>.</td>
+            <td>Guest fallback bị chặn ở pipeline/checker; ws_live mặc định pause khi guest.</td>
+          </tr>
+          <tr>
+            <td>Chạy trùng process</td>
+            <td><code>SEN.ActiveTask</code> locks, local PID lock, supervisor/watchdog.</td>
+            <td><code>locks.py</code>, <code>coord.py</code>, <code>ops/run_wslive</code>.</td>
+            <td>Lock fail-open trong một số đường đọc để tránh deadlock vô hạn, nên cần monitoring.</td>
+          </tr>
+          <tr>
+            <td>Race condition khi checker sửa</td>
+            <td><code>checker_repair</code>, <code>warehouse_maintenance</code>, deferred ETL.</td>
+            <td><code>checker.py</code>, <code>ws_live.py</code>.</td>
+            <td>Nếu checker crash, lock phải hết hạn rồi ws_live mới resume.</td>
+          </tr>
+          <tr>
+            <td>Dữ liệu sai với TradingView</td>
+            <td>Checker compare TV vs DB, repair, verify nhiều vòng.</td>
+            <td><code>checker.py</code>.</td>
+            <td>Checker chỉ sửa trong cửa sổ kiểm tra; lỗi lịch sử sâu cần pipeline scoped reload.</td>
+          </tr>
+          <tr>
+            <td>Gap do thị trường đóng cửa</td>
+            <td>Weekend/trading-hours logic, overnight thresholds, expected quiet handling trong một số check.</td>
+            <td><code>config.py</code>, <code>helpers.py</code>, <code>ws_live.py</code>, <code>checker.py</code>.</td>
+            <td>Lịch exchange chi tiết vẫn là approximation, nhất là CFD/holiday.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>7.2. Vòng bảo vệ theo chiều sâu</h3>
+      <div class="flow">
+        <div class="flow-step source">
+          <strong>Nguồn</strong>
+          <span>Auth, retry, cooldown, endpoint fallback.</span>
+        </div>
+        <div class="flow-step stage">
+          <strong>Input</strong>
+          <span>Bỏ open bar, validate OHLCV, sort timestamp, drop future.</span>
+        </div>
+        <div class="flow-step guard">
+          <strong>Persist</strong>
+          <span>Queue, overflow, spool, staging MERGE.</span>
+        </div>
+        <div class="flow-step fact">
+          <strong>Warehouse</strong>
+          <span>ETL direct, unique Fact, aggregate from Fact.</span>
+        </div>
+        <div class="flow-step alert">
+          <strong>Audit</strong>
+          <span>Checker compare, repair, verify, logs, alerts.</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="rui-ro">
+      <h2>8. Các Tình Huống Rủi Ro Và Cách Hệ Thống Xử Lý</h2>
+
+      <h3>8.1. TradingView mất kết nối trong một batch live</h3>
+      <p><strong>Diễn biến:</strong> một hoặc nhiều chart session không trả dữ liệu trước timeout.</p>
+      <p><strong>Xử lý:</strong> group retry với backoff. Pair miss được đưa vào backlog. Batch sau request 30 bar thay vì 5 và hạ watermark để phủ khoảng thiếu. Nếu miss kéo dài quá 12 batch, hệ thống alert và khuyến nghị checker.</p>
+
+      <h3>8.2. Token TradingView hết hạn</h3>
+      <p><strong>Diễn biến:</strong> WebSocket hoặc history request báo lỗi auth.</p>
+      <p><strong>Xử lý:</strong> auth module thử refresh token. ws_live refresh trước batch và khi phát hiện token error. Pipeline/checker thử mid-run refresh sau nhiều failure. Nếu không phục hồi và rơi vào guest, pipeline/checker dừng; ws_live mặc định pause batch.</p>
+
+      <h3>8.3. SQL Server chậm hoặc DB writer bị nghẽn</h3>
+      <p><strong>Diễn biến:</strong> queue ghi DB đầy.</p>
+      <p><strong>Xử lý:</strong> ws_live chuyển từ DB queue sang RAM overflow, rồi SQLite spool. Khi DB khỏe lại, worker flush trở lại. Nếu staging vẫn fail sau 3 lần, item đó bị coi là mất và alert được gửi.</p>
+
+      <h3>8.4. Checker đang sửa Fact trong lúc live có bar mới</h3>
+      <p><strong>Diễn biến:</strong> checker giữ <code>checker_repair</code>.</p>
+      <p><strong>Xử lý:</strong> ws_live vẫn ghi bar mới vào staging nhưng không ETL sang Fact. Sau khi checker release lock, deferred ETL được xử lý và watermark mới nhảy.</p>
+
+      <h3>8.5. Dữ liệu trong DB thiếu do live hụt lâu</h3>
+      <p><strong>Diễn biến:</strong> live backlog không đủ bù hoặc process tắt lâu.</p>
+      <p><strong>Xử lý:</strong> pipeline gap fill phát hiện stale/MISS dựa trên last bar trong Fact và kéo bổ sung. Nếu vấn đề là sai dữ liệu chứ không chỉ thiếu mới, checker phát hiện bằng so sánh với TradingView.</p>
+
+      <h3>8.6. TradingView restatement hoặc vendor chỉnh lại lịch sử</h3>
+      <p><strong>Diễn biến:</strong> DB đã có bar, nhưng OHLC hiện tại của TradingView khác.</p>
+      <p><strong>Xử lý:</strong> checker đánh dấu OHLC mismatch và repair trong checked window. Nếu drift sâu ngoài cửa sổ kiểm tra, cần pipeline scoped reload.</p>
+
+      <h3>8.7. DST hoặc anchor shift hàng loạt</h3>
+      <p><strong>Diễn biến:</strong> nhiều H2/H3/H4 pair mismatch rất lớn cùng lúc, có thể không phải lỗi dữ liệu riêng lẻ mà do dịch anchor thời gian.</p>
+      <p><strong>Xử lý:</strong> checker có DST precheck. Nếu tỷ lệ cao bất thường, nó skip repair các TF này trong ngày để tránh sửa nhầm, gửi cảnh báo và khuyến nghị chạy lại sau 24h.</p>
+
+      <h3>8.8. Operator chạy reset quá rộng</h3>
+      <p><strong>Diễn biến:</strong> lệnh reset có thể xóa dữ liệu nhiều nếu không giới hạn.</p>
+      <p><strong>Xử lý:</strong> pipeline bắt buộc reset phải có scope. Nếu không có <code>--symbols</code>, <code>--timeframes</code> hoặc <code>--asset-type</code>, process dừng.</p>
+    </section>
+
+    <section id="ky-thuat">
+      <h2>9. Ghi Chú Kỹ Thuật Theo Code</h2>
+
+      <h3>9.1. File map</h3>
+      <table>
+        <thead>
+          <tr><th>File</th><th>Nội dung chính</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>data_provider/apps/ws_live.py</code></td><td>Batch WebSocket updater, queue/spool, watermark, DB worker, status reporter, Redis bar_ready.</td></tr>
+          <tr><td><code>data_provider/apps/pipeline.py</code></td><td>CLI full/gap/reset, filter scope, historical job lock, warehouse lock, run summary.</td></tr>
+          <tr><td><code>data_provider/apps/checker.py</code></td><td>Compare TV vs DB, repair strategy, auto symbol rollout, interval gap, rebuild computed.</td></tr>
+          <tr><td><code>data_provider/common/helpers.py</code></td><td>Validate OHLCV, pull_and_store, pull_with_retry, recompute_derived, repull_full_symbol.</td></tr>
+          <tr><td><code>modules/db_connector.py</code></td><td>SQL connection, staging MERGE, ETL direct, aggregate_from_fact, delete/upsert helpers.</td></tr>
+          <tr><td><code>data_provider/tv/auth.py</code></td><td>TradingView auth state, token refresh, cookie/headless fallback, guest guard helpers.</td></tr>
+          <tr><td><code>data_provider/tv/coord.py</code></td><td>Historical job coordination, live batch window lock, graceful ws_live shutdown signal.</td></tr>
+          <tr><td><code>data_provider/common/locks.py</code></td><td>SQL advisory locks trong <code>SEN.ActiveTask</code>.</td></tr>
+          <tr><td><code>config.py</code></td><td>Symbols, TFs, staging table map, trading-hour gap rules, provider config.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>9.2. Các lock quan trọng</h3>
+      <table>
+        <thead>
+          <tr><th>Lock</th><th>Holder</th><th>Mục đích</th><th>Ghi chú</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>ws_live_runtime</code></td><td>ws_live</td><td>Đánh dấu process live đang chạy.</td><td>Có heartbeat renew; instance mới có thể yêu cầu graceful shutdown.</td></tr>
+          <tr><td><code>tv_live_batch</code></td><td>ws_live</td><td>Đánh dấu cửa sổ live đang nói chuyện với TradingView.</td><td>Historical jobs chờ live batch clear.</td></tr>
+          <tr><td><code>tv_historical_job</code></td><td>pipeline/checker</td><td>Chỉ một job lịch sử nặng cùng lúc.</td><td>Có heartbeat, stale detection, handoff request.</td></tr>
+          <tr><td><code>checker_repair</code></td><td>checker</td><td>Báo rằng checker đang sửa dữ liệu.</td><td>ws_live defer ETL khi lock này active.</td></tr>
+          <tr><td><code>warehouse_maintenance</code></td><td>checker/pipeline</td><td>Bảo vệ vùng ghi/sửa warehouse.</td><td>Full/reset hoặc repair cần lock này.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>9.3. Các bảng SQL chính</h3>
+      <table>
+        <thead>
+          <tr><th>Bảng/procedure</th><th>Vai trò</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>SEN.TF_M5</code> ... <code>SEN.TF_W</code></td><td>15 staging tables. Mỗi bảng unique theo <code>SymbolID, BarTime</code>.</td></tr>
+          <tr><td><code>DWH.Fact_OHLCV</code></td><td>Bảng nến chính. Unique theo <code>SymbolID, TimeframeID, BarTime</code>.</td></tr>
+          <tr><td><code>DWH.Dim_Timeframe</code></td><td>Map TF code sang <code>TimeframeID</code>.</td></tr>
+          <tr><td><code>DWH.Dim_Symbol</code></td><td>Map symbol nội bộ sang ID.</td></tr>
+          <tr><td><code>SEN.ActiveTask</code></td><td>Advisory lock table. <code>TaskName</code> là primary key.</td></tr>
+          <tr><td><code>DWH.usp_LoadDirect</code></td><td>Nạp staging vào Fact theo đường 1:1.</td></tr>
+          <tr><td><code>DWH.usp_AggregateFromStaging</code></td><td>Aggregate fallback từ staging vào Fact.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>9.4. Commands thường dùng</h3>
+      <pre><code># Pipeline
+python data_provider/apps/pipeline.py --mode auto --dry-run
+python data_provider/apps/pipeline.py --mode gap
+python data_provider/apps/pipeline.py --mode full --replay off
+python data_provider/apps/pipeline.py --symbols GOLD,BTCUSD --timeframes M45 --reset
+
+# WS Live
+python data_provider/apps/ws_live.py
+powershell -ExecutionPolicy Bypass -File ops/run_wslive/ws_live_status.ps1
+powershell -ExecutionPolicy Bypass -File ops/run_wslive/ws_live_log_viewer.ps1
+
+# Checker
+python data_provider/apps/checker.py --dry-run
+python data_provider/apps/checker.py --dry-run --sym GOLD
+python data_provider/apps/checker.py --dry-run --tf H1
+python data_provider/apps/checker.py --co-check --co-days 7
+python data_provider/apps/checker.py --dry-run --tf-check
+python data_provider/apps/checker.py --dry-run --rebuild-computed</code></pre>
+
+      <h3>9.5. Scheduled tasks theo tài liệu kiến trúc</h3>
+      <table>
+        <thead>
+          <tr><th>Task</th><th>Lịch</th><th>Mục đích</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>WsLive_Supervisor</td><td>At startup</td><td>Restart <code>ws_live.py</code> nếu crash.</td></tr>
+          <tr><td>WsLive_Watchdog</td><td>Mỗi 60 giây</td><td>Restart supervisor nếu supervisor/process biến mất.</td></tr>
+          <tr><td>OHLCV Pipeline</td><td>Hằng ngày 22:22 UTC</td><td>Gap fill.</td></tr>
+          <tr><td>Data Checker</td><td>Mỗi 3 ngày 03:00 UTC</td><td>Scan và auto-repair chất lượng dữ liệu.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="han-che">
+      <h2>10. Hạn Chế, Ghi Chú Và Further Analysis</h2>
+
+      <h3>10.1. Giới hạn của tài liệu này</h3>
+      <ul>
+        <li>Tài liệu phản ánh code và tài liệu trong repo tại ngày 2026-06-13, không phải trạng thái production runtime tại đúng thời điểm đọc. Muốn biết production đang OK hay không cần xem log, status task, SQL và dashboard.</li>
+        <li>Không chạy live DB query hoặc TradingView pull trong quá trình viết tài liệu này.</li>
+        <li>Không phân tích sâu nhánh <code>data_provider/tick_data</code> cTrader/FTMO vì user yêu cầu tập trung vào <code>ws_live</code>, <code>pipeline</code>, <code>checker</code>.</li>
+      </ul>
+
+      <h3>10.2. Hạn chế kỹ thuật đang thấy từ code</h3>
+      <table>
+        <thead>
+          <tr><th>Hạn chế</th><th>Ý nghĩa</th><th>Gợi ý phân tích/cải tiến</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Checker chỉ sửa trong checked window.</td>
+            <td>Nếu lỗi nằm sâu ngoài cửa sổ 200-2000 bar, checker có thể không nhìn thấy.</td>
+            <td>Cần quy trình định kỳ scoped reload hoặc audit lịch sử sâu cho symbol/TF quan trọng.</td>
+          </tr>
+          <tr>
+            <td>Lock check có một số fail-open path.</td>
+            <td>Nếu DB lỗi khi kiểm tra lock, code có thể giả định unlocked để tránh treo vô hạn.</td>
+            <td>Dashboard/alert nên hiển thị rõ trạng thái lock query failure nếu có.</td>
+          </tr>
+          <tr>
+            <td>SQLite spool chỉ là lớp đệm, không phải giải pháp vĩnh viễn.</td>
+            <td>Nếu DB lỗi kéo dài, spool có thể đầy hoặc entry cũ bị cleanup sau 48h.</td>
+            <td>Monitor spool depth thành metric riêng và cảnh báo sớm hơn.</td>
+          </tr>
+          <tr>
+            <td>Lịch thị trường là approximation.</td>
+            <td>CFD/holiday/session đặc biệt có thể gây false stale hoặc false gap.</td>
+            <td>Bổ sung exchange calendar hoặc activity profile riêng cho OHLCV nếu cần độ chính xác cao hơn.</td>
+          </tr>
+          <tr>
+            <td>Guest mode policy khác nhau theo chương trình.</td>
+            <td>Pipeline/checker dừng, ws_live mặc định pause. Đây là hợp lý, nhưng operator cần hiểu để không nhầm là process chết.</td>
+            <td>Ops status nên hiển thị rõ "paused due to guest auth".</td>
+          </tr>
+          <tr>
+            <td>Volume mismatch được coi nhẹ hơn OHLC.</td>
+            <td>Điều này hợp lý với vendor volume nhiễu, nhưng nếu strategy dùng volume thì cần cẩn trọng.</td>
+            <td>Nếu chiến lược phụ thuộc volume, cần policy riêng cho volume quality.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>10.3. Checklist đọc nhanh khi vận hành</h3>
+      <ul>
+        <li>Nếu dữ liệu mới không về: kiểm tra <code>ws_live_status.ps1</code>, <code>ws_live.log</code>, auth mode và backlog.</li>
+        <li>Nếu nghi thiếu dữ liệu trong ngày: chạy pipeline <code>--mode gap --dry-run</code> trước, rồi chạy thật nếu plan hợp lý.</li>
+        <li>Nếu nghi dữ liệu sai OHLC: chạy checker <code>--dry-run</code> cho symbol/TF liên quan.</li>
+        <li>Nếu checker báo drift hệ thống: không vội repair sâu bằng checker; dùng pipeline scoped reload sau khi xác định phạm vi.</li>
+        <li>Nếu DB chậm: xem queue/overflow/spool trong ws_live health report và SQL Server health.</li>
+        <li>Nếu thấy guest mode: ưu tiên sửa TradingView auth trước khi chạy pipeline/checker.</li>
+      </ul>
+
+      <div class="note">
+        <strong>Tóm lại:</strong> ba chương trình này tạo thành một hệ thống lấy dữ liệu nhiều lớp. Pipeline đảm bảo nền lịch sử, ws_live giữ dữ liệu mới, checker xác minh và sửa. Các lớp lock, staging, watermark, retry, spool và verify giúp giảm khả năng mất dữ liệu hoặc ghi sai trong điều kiện vận hành không hoàn hảo.
+      </div>
+    </section>
+  </div>
+</body>
+</html>

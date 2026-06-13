@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import logging
+import hashlib
 import time
 from collections.abc import Iterable
 from typing import Any
 
+from data_provider.paths import CACHE_DIR, ensure_runtime_dirs
 from data_provider.common.notifications import tg_alert, tg_flush
 
 logger = logging.getLogger(__name__)
@@ -115,7 +117,20 @@ def notify_tick(
         last = _last_sent.get(key, 0.0)
         if now - last < throttle_seconds:
             return
-        _last_sent[key] = now
+        try:
+            ensure_runtime_dirs()
+            digest = hashlib.sha1(key.encode("utf-8")).hexdigest()
+            throttle_path = CACHE_DIR / f"tick_notify_throttle_{digest}.txt"
+            wall_now = time.time()
+            if throttle_path.exists():
+                last_wall = float(throttle_path.read_text(encoding="ascii").strip() or "0")
+                if wall_now - last_wall < throttle_seconds:
+                    return
+            throttle_path.write_text(str(wall_now), encoding="ascii")
+        except Exception:
+            logger.exception("tick Discord persistent throttle failed")
+        finally:
+            _last_sent[key] = now
 
     if body is None:
         detail_text = _detail_block(lines)

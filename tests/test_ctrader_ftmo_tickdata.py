@@ -8,6 +8,12 @@ import pytest
 
 from data_provider.tick_data.auth import build_authorization_url
 from data_provider.tick_data.cli import build_parser
+from data_provider.tick_data.checker import (
+    ACTIVITY_STATE_ACTIVE,
+    ACTIVITY_STATE_QUIET,
+    ACTIVITY_STATE_UNKNOWN,
+    classify_activity_expectation,
+)
 from data_provider.tick_data.ticks import (
     MAX_TICK_REQUEST_MS,
     TickRecord,
@@ -382,6 +388,17 @@ def test_tick_cli_supports_ops_commands():
 
     assert parser.parse_args(["check", "--json"]).command == "check"
     assert parser.parse_args(["spool-status", "--json"]).command == "spool-status"
+    profile = parser.parse_args(
+        [
+            "build-activity-profile",
+            "--lookback-days",
+            "30",
+            "--bucket-minutes",
+            "15",
+            "--active-min-ratio",
+            "0.25",
+        ]
+    )
     backfill = parser.parse_args(
         [
             "backfill",
@@ -391,6 +408,7 @@ def test_tick_cli_supports_ops_commands():
             "2026-06-02T00:00:00Z",
             "--request-timeout",
             "120",
+            "--no-notify",
             "--symbols",
             "US30",
         ]
@@ -409,10 +427,61 @@ def test_tick_cli_supports_ops_commands():
     )
     assert backfill.command == "backfill"
     assert backfill.request_timeout == 120
+    assert backfill.no_notify is True
+    assert profile.command == "build-activity-profile"
+    assert profile.lookback_days == 30
+    assert profile.bucket_minutes == 15
     assert depth.command == "history-depth"
     assert depth.max_days == 20000
     assert depth.request_timeout == 120
     assert depth.symbols == ["US30", "GOLD"]
+
+
+def test_activity_profile_classifies_active_and_quiet_buckets():
+    profile = {
+        "generated_at_utc": "2026-06-12T11:00:00Z",
+        "bucket_minutes": 15,
+        "symbols": {
+            "US100": {
+                "entries": {
+                    "4:044": {
+                        "state": ACTIVITY_STATE_ACTIVE,
+                        "observed_days": 4,
+                        "active_days": 4,
+                        "active_day_ratio": 1.0,
+                        "median_ticks": 100,
+                    },
+                    "5:044": {
+                        "state": ACTIVITY_STATE_QUIET,
+                        "observed_days": 4,
+                        "active_days": 0,
+                        "active_day_ratio": 0.0,
+                        "median_ticks": 0,
+                    },
+                }
+            }
+        },
+    }
+
+    active = classify_activity_expectation(
+        profile,
+        "US100",
+        datetime(2026, 6, 12, 11, 1, tzinfo=timezone.utc),
+    )
+    quiet = classify_activity_expectation(
+        profile,
+        "US100",
+        datetime(2026, 6, 13, 11, 1, tzinfo=timezone.utc),
+    )
+    missing = classify_activity_expectation(
+        profile,
+        "US30",
+        datetime(2026, 6, 12, 11, 1, tzinfo=timezone.utc),
+    )
+
+    assert active["state"] == ACTIVITY_STATE_ACTIVE
+    assert quiet["state"] == ACTIVITY_STATE_QUIET
+    assert missing["state"] == ACTIVITY_STATE_UNKNOWN
 
 
 def test_token_cache_saves_tokens_and_account_without_printing_secret(tmp_path):

@@ -75,7 +75,7 @@ def _parse_args() -> argparse.Namespace:
         choices=["auto", "telegram", "discord", "none"],
         help=(
             "Compatibility option. Signal routing is fixed by strategy "
-            "(Combo/MA Cross -> Discord, AI Trend -> Telegram); use 'none' as a send kill switch."
+            "(registered signals -> Discord signal channel); use 'none' as a send kill switch."
         ),
     )
     parser.add_argument("--dry-run", action="store_true", help="Print messages instead of sending.")
@@ -393,7 +393,7 @@ def main() -> int:
     )
     print(f"Redis signal stream: {'ON' if redis_on else 'OFF'}", flush=True)
     print(
-        "Signal routing: Combo/MA Cross -> Discord, AI Trend -> Telegram; "
+        "Signal routing: registered strategy signals -> Discord signal channel; "
         "--backend none disables sending.",
         flush=True,
     )

@@ -107,9 +107,21 @@ core_python/exports/*.csv
 # Exception: static source HTML files (not generated)
 !data_provider/dashboard/chart.html
 !core_python/chart/static/*.html
+!docs/*.html
 
 # Temporary lint/tool output
 ruff_fix_output.txt
 
 # Claude local config
 **/.claude/settings.local.json
+
+# Ops supervisor runtime state — generated locally, do not commit
+ops/run_tickdata/runtime/*.json
+ops/run_tickdata/runtime/*.txt
+ops/run_tickdata/runtime/logs/*
+!ops/run_tickdata/runtime/logs/.gitkeep
+ops/run_tickdata/runtime/reports/*
+!ops/run_tickdata/runtime/reports/.gitkeep
+ops/run_wslive/runtime/*.json
+ops/run_wslive/runtime/logs/*
+!ops/run_wslive/runtime/logs/.gitkeep

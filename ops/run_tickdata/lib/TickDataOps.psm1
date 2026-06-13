@@ -34,8 +34,12 @@ function Get-TickDataPaths {
         ConsoleLog         = Join-Path $runtimeLogs "tick_live_console.log"
         DashboardLog       = Join-Path $runtimeLogs "tick_dashboard.log"
         BackfillLog        = Join-Path $runtimeLogs "tick_initial_backfill_max.log"
+        ShortRepairLog     = Join-Path $runtimeLogs "tick_short_overlap_repair.log"
         HeartbeatFile      = Join-Path $runtimeRoot "tick_live_supervisor.heartbeat.json"
         NoProcessSinceFile = Join-Path $runtimeRoot "tick_live_no_process_since.txt"
+        ShortRepairLockFile = Join-Path $runtimeRoot "tick_short_overlap_repair.lock"
+        StaleFeedSinceFile = Join-Path $runtimeRoot "tick_live_stale_feed_since.txt"
+        StaleFeedCheckAfterFile = Join-Path $runtimeRoot "tick_live_stale_check_after.txt"
     }
 }
 
@@ -202,6 +206,60 @@ print(json.dumps(result))
     Invoke-TickDataPythonJson -Paths $Paths -PythonCode $code -PythonExe $PythonExe
 }
 
+function Get-TickDataCheckReport {
+    param(
+        [Parameter(Mandatory = $true)][pscustomobject]$Paths,
+        [string]$PythonExe = ""
+    )
+
+    $python = Get-TickDataPython -RepoRoot $Paths.RepoRoot -PythonExe $PythonExe
+    Push-Location $Paths.RepoRoot
+    try {
+        $output = & $python -m $Paths.TickAppModule check --json 2>&1
+        $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $text = ($output -join "`n").Trim()
+    try {
+        $report = $text | ConvertFrom-Json
+        $report | Add-Member -NotePropertyName ok -NotePropertyValue $true -Force
+        $report | Add-Member -NotePropertyName exit_code -NotePropertyValue $exitCode -Force
+        return $report
+    }
+    catch {
+        return [pscustomobject]@{
+            ok        = $false
+            exit_code = $exitCode
+            error     = $_.Exception.Message
+            output    = $text
+        }
+    }
+}
+
+function Request-TickLiveGracefulShutdown {
+    param(
+        [Parameter(Mandatory = $true)][pscustomobject]$Paths,
+        [string]$PythonExe = ""
+    )
+
+    $code = @'
+import json
+import logging
+
+from data_provider.tick_data.runtime_lock import request_tick_live_shutdown
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("tick_ops")
+ok = request_tick_live_shutdown(logger)
+print(json.dumps({"ok": bool(ok)}))
+'@
+
+    Invoke-TickDataPythonJson -Paths $Paths -PythonCode $code -PythonExe $PythonExe
+}
+
 function Clear-TickDataDbLock {
     param(
         [Parameter(Mandatory = $true)][pscustomobject]$Paths,
@@ -325,7 +383,9 @@ Export-ModuleMember -Function `
     Get-TickLiveProcesses, `
     Test-TickDataProcessAlive, `
     Get-TickDataPidFileStatus, `
+    Get-TickDataCheckReport, `
     Get-TickDataDbLockStatus, `
+    Request-TickLiveGracefulShutdown, `
     Clear-TickDataDbLock, `
     Update-TickDataSupervisorHeartbeat, `
     Get-TickDataSupervisorHeartbeat, `

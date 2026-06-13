@@ -120,7 +120,9 @@ else {
     Register-ScheduledTask -TaskName $SupervisorTaskName -TaskPath $TaskPath -InputObject $supervisorTask -Force | Out-Null
 }
 
-$watchdogArgs = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$watchdogScript`" -RepoRoot `"$($paths.RepoRoot)`" -TaskName `"$SupervisorTaskName`" -TaskPath `"$TaskPath`""
+$watchdogTaskNameArg = $SupervisorTaskName.Replace("'", "''")
+$watchdogTaskPathArg = $TaskPath.Replace("'", "''")
+$watchdogArgs = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$watchdogScript`" -RepoRoot `"$($paths.RepoRoot)`" -TaskName '$watchdogTaskNameArg' -TaskPath '$watchdogTaskPathArg'"
 $watchdogAction = New-ScheduledTaskAction -Execute $psExe -Argument $watchdogArgs -WorkingDirectory $paths.RepoRoot
 $watchdogTrigger = New-ScheduledTaskTrigger `
     -Once `

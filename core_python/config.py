@@ -39,6 +39,8 @@ _ROOT_SPEC.loader.exec_module(_ROOT_CONFIG)
 SQL_SERVER = _ROOT_CONFIG.SQL_SERVER
 SQL_DATABASE = _ROOT_CONFIG.SQL_DATABASE
 SQL_DRIVER = _ROOT_CONFIG.SQL_DRIVER
+SQL_PORT = getattr(_ROOT_CONFIG, "SQL_PORT", "")
+SQL_TDS_VERSION = getattr(_ROOT_CONFIG, "SQL_TDS_VERSION", "7.4")
 SQL_UID = _ROOT_CONFIG.SQL_UID
 SQL_PWD = _ROOT_CONFIG.SQL_PWD
 SQL_ENCRYPT = _ROOT_CONFIG.SQL_ENCRYPT
@@ -141,13 +143,24 @@ def sql_connection_string() -> str:
         Chuỗi ODBC connection string. Dùng SQL auth nếu SQL_UID/SQL_PWD được cấu hình,
         ngược lại dùng Windows Integrated Security (Trusted_Connection=yes).
     """
-    base = (
-        f"DRIVER={{{SQL_DRIVER}}};"
-        f"SERVER={SQL_SERVER};"
-        f"DATABASE={SQL_DATABASE};"
-        f"Encrypt={SQL_ENCRYPT};"
-        f"TrustServerCertificate={SQL_TRUST_SERVER_CERT};"
-    )
+    if str(SQL_DRIVER).lower() == "freetds":
+        server_part = f"SERVER={SQL_SERVER};"
+        if SQL_PORT:
+            server_part += f"PORT={SQL_PORT};"
+        base = (
+            f"DRIVER={{{SQL_DRIVER}}};"
+            f"{server_part}"
+            f"DATABASE={SQL_DATABASE};"
+            f"TDS_Version={SQL_TDS_VERSION};"
+        )
+    else:
+        base = (
+            f"DRIVER={{{SQL_DRIVER}}};"
+            f"SERVER={SQL_SERVER};"
+            f"DATABASE={SQL_DATABASE};"
+            f"Encrypt={SQL_ENCRYPT};"
+            f"TrustServerCertificate={SQL_TRUST_SERVER_CERT};"
+        )
     if SQL_UID and SQL_PWD:
         return base + f"UID={SQL_UID};PWD={SQL_PWD};"
     return base + "Trusted_Connection=yes;"
