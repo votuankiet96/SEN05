@@ -8,7 +8,7 @@ Mô tả:
 
 Đầu ra:
     File CSV gồm các cột [bartime, atr, signal] tại thư mục
-    core_python/notify/recorded_signal/<strategy>/
+    core_python/export/recorded_signal/<strategy>/
     (hoặc output_dir tùy chỉnh).
 
 Phụ thuộc ngoài:
@@ -49,7 +49,7 @@ def export_signals(
         df: DataFrame đã enriched đầy đủ (phải có cột bartime, atr, signal).
         symbol: Tên symbol — dùng trong tên file (uppercase tự động).
         strategy: Tên chiến lược — dùng trong tên file.
-        output_dir: Thư mục đích. Mặc định: core_python/notify/recorded_signal/<strategy>/.
+        output_dir: Thư mục đích. Mặc định: core_python/export/recorded_signal/<strategy>/.
 
     Returns:
         Path tới file CSV đã tạo.
@@ -70,7 +70,7 @@ def export_signals(
     if output_dir:
         base_dir = Path(output_dir)
     else:
-        base_dir = Path(__file__).resolve().parents[1] / "notify" / "recorded_signal" / strategy_key
+        base_dir = Path(__file__).resolve().parent / "recorded_signal" / strategy_key
     base_dir.mkdir(parents=True, exist_ok=True)
 
     missing = [col for col in EXPORT_COLUMNS if col not in df.columns]
