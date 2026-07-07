@@ -1,4 +1,4 @@
-"""Characterization tests for core_python.indicators.
+"""Characterization tests for og_core.indicators.
 
 These lock in current behavior on a fixed synthetic fixture so the coming
 file-move/rename refactor stages can be verified to not change any math.
@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import pytest
 
-from core_python.indicators.ai_trend import calc_ai_trend_navigator
-from core_python.indicators.core import atr, ema, macd_hist, sma
-from core_python.indicators.dow_wave import calc_dow_wave
+from og_core.indicators.ai_trend import calc_ai_trend_navigator
+from og_core.indicators.core import atr, ema, macd_hist, sma
+from og_core.indicators.dow_wave import calc_dow_wave
 from tests.fixtures import make_ohlcv
 
 

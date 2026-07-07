@@ -11,9 +11,9 @@ from tests.fixtures import make_ohlcv
 
 
 def test_combo_signals_match_golden():
-    from core_python.strategies.combo import config as combo_config
-    from core_python.strategies.combo.levels import add_combo_levels
-    from core_python.strategies.combo.signals import add_combo_indicators, detect_combo_signals
+    from og_core.strategies.combo import config as combo_config
+    from og_core.strategies.combo.levels import add_combo_levels
+    from og_core.strategies.combo.signals import add_combo_indicators, detect_combo_signals
 
     df = make_ohlcv(300)
     params = combo_config.normalize_params({}, "TESTSYM")
@@ -39,9 +39,9 @@ def test_combo_signals_match_golden():
 
 
 def test_ma_cross_signals_match_golden():
-    from core_python.strategies.ma_cross import config as ma_config
-    from core_python.strategies.ma_cross.levels import add_ma_cross_levels
-    from core_python.strategies.ma_cross.signals import add_ma_cross_indicators, detect_ma_cross_signals
+    from og_core.strategies.ma_cross import config as ma_config
+    from og_core.strategies.ma_cross.levels import add_ma_cross_levels
+    from og_core.strategies.ma_cross.signals import add_ma_cross_indicators, detect_ma_cross_signals
 
     df = make_ohlcv(300)
     params = ma_config.normalize_params({}, "TESTSYM")
@@ -61,9 +61,9 @@ def test_ma_cross_signals_match_golden():
 
 
 def test_ai_trend_signals_match_golden():
-    from core_python.strategies.ai_trend import config as ai_config
-    from core_python.strategies.ai_trend.levels import add_ai_trend_levels
-    from core_python.strategies.ai_trend.signals import build_ai_trend_frames
+    from og_core.strategies.ai_trend import config as ai_config
+    from og_core.strategies.ai_trend.levels import add_ai_trend_levels
+    from og_core.strategies.ai_trend.signals import build_ai_trend_frames
 
     trend_df = make_ohlcv(150, freq_minutes=180, seed=7, start="2026-01-01")
     entry_df = make_ohlcv(300, freq_minutes=45, seed=11, start="2026-01-01")
@@ -87,8 +87,8 @@ def test_ai_trend_signals_match_golden():
 
 
 def test_knn_combo_signals_match_golden():
-    from core_python.strategies.knn_combo import config as knn_config
-    from core_python.strategies.knn_combo.pipeline import build_knn_combo_strategy_frames
+    from og_core.strategies.knn_combo import config as knn_config
+    from og_core.strategies.knn_combo.pipeline import build_knn_combo_strategy_frames
 
     trend_df = make_ohlcv(150, freq_minutes=180, seed=7, start="2026-01-01")
     entry_df = make_ohlcv(300, freq_minutes=60, seed=13, start="2026-01-01")

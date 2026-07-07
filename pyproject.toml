@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "og-core"
+version = "0.1.0"
+description = "OG (Order Generation): reads OHLCV from the SEN05 SQL data warehouse, computes strategy signals, and serves a dashboard + CSV export."
+requires-python = ">=3.11"
+dependencies = [
+    "pandas",
+    "numpy",
+    "Flask",
+    "pyodbc",
+    "python-dotenv",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+og-dashboard = "og_core.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+og_core = ["chart/static/*", "chart/static/vendor/*"]
