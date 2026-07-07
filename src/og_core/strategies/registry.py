@@ -17,7 +17,7 @@ Mô tả:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any, Protocol
 
 import pandas as pd
 
@@ -47,6 +47,44 @@ from og_core.strategies.ma_cross.signals import (
 )
 
 
+class NormalizeParamsFn(Protocol):
+    """Merge defaults + symbol-specific params + user overrides into one validated dict."""
+
+    def __call__(
+        self, overrides: dict[str, Any] | None = None, symbol: str | None = None
+    ) -> dict[str, Any]: ...
+
+
+class AddIndicatorsFn(Protocol):
+    """Add indicator columns to a raw OHLCV frame. Must not mutate the input."""
+
+    def __call__(self, df: pd.DataFrame, params: dict[str, Any] | None = None) -> pd.DataFrame: ...
+
+
+class DetectSignalsFn(Protocol):
+    """Add signal columns to an indicator-enriched frame.
+
+    `symbol` and `sess_mask` are accepted for interface parity across
+    strategies even when a given strategy doesn't need them.
+    """
+
+    def __call__(
+        self,
+        df: pd.DataFrame,
+        symbol: str | None = None,
+        params: dict[str, Any] | None = None,
+        sess_mask: pd.Series | None = None,
+    ) -> pd.DataFrame: ...
+
+
+class AddLevelsFn(Protocol):
+    """Add entry/SL/TP columns to a signal-enriched frame. `params` is required here."""
+
+    def __call__(
+        self, df: pd.DataFrame, params: dict[str, Any], symbol: str | None = None
+    ) -> pd.DataFrame: ...
+
+
 @dataclass(frozen=True)
 class StrategySpec:
     """
@@ -57,24 +95,31 @@ class StrategySpec:
         label:            Tên hiển thị trên UI (ví dụ: "Combo", "MA Cross").
         default_params:   Dict tham số mặc định khi không có override.
         param_fields:     Định nghĩa UI fields (type, min, max...) cho sidebar params.
-        normalize_params: Callable(overrides, symbol) → dict tham số đã validate.
-        add_indicators:   Callable(df, params) → df với cột chỉ báo thêm vào.
-        detect_signals:   Callable(df, symbol, params, sess_mask) → df với cột signal.
-        add_levels:       Callable(df, params, symbol) → df với cột entry/SL/TP.
+        normalize_params: NormalizeParamsFn — (overrides, symbol) → dict tham số đã validate.
+        add_indicators:   AddIndicatorsFn — (df, params) → df với cột chỉ báo thêm vào.
+        detect_signals:   DetectSignalsFn — (df, symbol, params, sess_mask) → df với cột signal.
+        add_levels:       AddLevelsFn — (df, params, symbol) → df với cột entry/SL/TP.
 
     Invariant:
         Pipeline phải gọi theo thứ tự:
         normalize_params → add_indicators → detect_signals → add_levels.
         Mỗi bước nhận output của bước trước làm input.
+
+    Thêm chiến lược mới — checklist:
+        1. Viết 4 hàm khớp đúng chữ ký của 4 Protocol trên (NormalizeParamsFn,
+           AddIndicatorsFn, DetectSignalsFn, AddLevelsFn) trong
+           strategies/<tên>/config.py, signals.py, levels.py.
+        2. Không sửa DataFrame input tại chỗ (return bản copy).
+        3. Đăng ký một StrategySpec mới vào dict STRATEGIES bên dưới.
     """
     key: str
     label: str
     default_params: dict[str, Any]
     param_fields: list[dict[str, Any]]
-    normalize_params: Callable[[dict[str, Any] | None, str | None], dict[str, Any]]
-    add_indicators: Callable[[pd.DataFrame, dict[str, Any] | None], pd.DataFrame]
-    detect_signals: Callable[..., pd.DataFrame]
-    add_levels: Callable[[pd.DataFrame, dict[str, Any], str | None], pd.DataFrame]
+    normalize_params: NormalizeParamsFn
+    add_indicators: AddIndicatorsFn
+    detect_signals: DetectSignalsFn
+    add_levels: AddLevelsFn
 
 
 # Danh sách chiến lược được hỗ trợ. Key phải lowercase để match với query param.

@@ -6,69 +6,18 @@ from typing import Any
 
 import pandas as pd
 
+from og_core.chart.payload_common import (
+    candlestick_points as _candles,
+    clean_params as _clean_params,
+    histogram_points as _histogram,
+    series_points as _series,
+    to_number as _num,
+    to_unix_ts as _ts,
+)
 from og_core.strategies.combo.trend_filter import timeframe_minutes
 
 
 MAX_SIGNAL_ROWS = 120
-
-
-def _ts(value: object) -> int:
-    ts = pd.Timestamp(value)
-    if ts.tzinfo is None:
-        ts = ts.tz_localize("UTC")
-    else:
-        ts = ts.tz_convert("UTC")
-    return int(ts.timestamp())
-
-
-def _num(value: object, digits: int | None = None) -> float | None:
-    if value is None or pd.isna(value):
-        return None
-    out = float(value)
-    return round(out, digits) if digits is not None else out
-
-
-def _candles(df: pd.DataFrame) -> list[dict[str, Any]]:
-    return [
-        {
-            "time": _ts(row["bartime"]),
-            "open": float(row["open"]),
-            "high": float(row["high"]),
-            "low": float(row["low"]),
-            "close": float(row["close"]),
-        }
-        for _, row in df.iterrows()
-        if pd.notna(row.get("bartime"))
-    ]
-
-
-def _series(df: pd.DataFrame, column: str, *, color: str | None = None) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    for _, row in df.iterrows():
-        value = _num(row.get(column))
-        if value is None:
-            continue
-        item: dict[str, Any] = {"time": _ts(row["bartime"]), "value": value}
-        if color:
-            item["color"] = color
-        rows.append(item)
-    return rows
-
-
-def _histogram(df: pd.DataFrame, column: str) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    for _, row in df.iterrows():
-        value = _num(row.get(column))
-        if value is None:
-            continue
-        rows.append(
-            {
-                "time": _ts(row["bartime"]),
-                "value": value,
-                "color": "#22c55e" if value >= 0 else "#ef4444",
-            }
-        )
-    return rows
 
 
 def _trend_regime_histogram(df: pd.DataFrame) -> list[dict[str, Any]]:
@@ -263,16 +212,6 @@ def _stats(entry_df: pd.DataFrame, signals: pd.DataFrame, filtered: pd.DataFrame
         "rawTotal": raw_total,
         "filteredTotal": int(len(filtered)),
     }
-
-
-def _clean_params(params: dict[str, Any]) -> dict[str, Any]:
-    clean: dict[str, Any] = {}
-    for key, value in params.items():
-        if value is None or isinstance(value, (str, bool, int, float, list)):
-            clean[key] = value
-        else:
-            clean[key] = str(value)
-    return clean
 
 
 def attach_dow_trend_filter(

@@ -6,67 +6,18 @@ from typing import Any
 
 import pandas as pd
 
+from og_core.chart.payload_common import (
+    candlestick_points as _candles,
+    clean_params as _clean_params,
+    histogram_points as _histogram,
+    series_points as _series,
+    to_number as _num,
+    to_unix_ts as _ts,
+)
 from og_core.strategies.ai_trend.config import timeframe_minutes
 
 
 MAX_SIGNAL_ROWS = 120
-
-
-def _ts(value: object) -> int:
-    ts = pd.Timestamp(value)
-    if ts.tzinfo is None:
-        ts = ts.tz_localize("UTC")
-    return int(ts.timestamp())
-
-
-def _num(value: object, digits: int | None = None) -> float | None:
-    if value is None or pd.isna(value):
-        return None
-    out = float(value)
-    return round(out, digits) if digits is not None else out
-
-
-def _candles(df: pd.DataFrame) -> list[dict[str, Any]]:
-    return [
-        {
-            "time": _ts(row["bartime"]),
-            "open": float(row["open"]),
-            "high": float(row["high"]),
-            "low": float(row["low"]),
-            "close": float(row["close"]),
-        }
-        for _, row in df.iterrows()
-        if pd.notna(row.get("bartime"))
-    ]
-
-
-def _series(df: pd.DataFrame, column: str, *, color: str | None = None) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    for _, row in df.iterrows():
-        value = _num(row.get(column))
-        if value is None:
-            continue
-        item: dict[str, Any] = {"time": _ts(row["bartime"]), "value": value}
-        if color:
-            item["color"] = color
-        rows.append(item)
-    return rows
-
-
-def _histogram(df: pd.DataFrame, column: str) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    for _, row in df.iterrows():
-        value = _num(row.get(column))
-        if value is None:
-            continue
-        rows.append(
-            {
-                "time": _ts(row["bartime"]),
-                "value": value,
-                "color": "#22c55e" if value >= 0 else "#ef4444",
-            }
-        )
-    return rows
 
 
 def _colored_knn(df: pd.DataFrame) -> list[dict[str, Any]]:
@@ -279,16 +230,6 @@ def _stats(signals: pd.DataFrame) -> dict[str, Any]:
     sell = int(signals["signal"].eq(-1).sum())
     last_signal = int(signals["signal"].iloc[-1])
     return {"total": int(len(signals)), "buy": buy, "sell": sell, "last": "BUY" if last_signal == 1 else "SELL"}
-
-
-def _clean_params(params: dict[str, Any]) -> dict[str, Any]:
-    clean: dict[str, Any] = {}
-    for key, value in params.items():
-        if value is None or isinstance(value, (str, bool, int, float, list)):
-            clean[key] = value
-        else:
-            clean[key] = str(value)
-    return clean
 
 
 def build_ai_trend_payload(
