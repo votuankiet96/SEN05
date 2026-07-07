@@ -1,0 +1,2 @@
+"""Combo visual strategy implementation."""
+
