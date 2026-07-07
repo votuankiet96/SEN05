@@ -45,9 +45,8 @@ from core_python.strategies.combo.payload import build_combo_mtf_payload
 from core_python.strategies.knn_combo.payload import build_knn_combo_payload
 from core_python.strategies.registry import STRATEGIES
 
-ROOT = Path(__file__).resolve().parents[2]
 STATIC_DIR = Path(__file__).resolve().parent / "static"
-VENDOR_DIR = ROOT / "data_provider" / "dashboard" / "static"
+VENDOR_DIR = STATIC_DIR / "vendor"
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8516

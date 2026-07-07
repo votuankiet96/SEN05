@@ -1,10 +1,10 @@
 """
-Tải dữ liệu OHLCV từ SQL Server cho dashboard và watcher.
+Tải dữ liệu OHLCV từ SQL Server cho dashboard.
 
 Mô tả:
-    Kết nối SQL Server qua modules.db_connector, truy vấn bảng DWH.Fact_OHLCV
-    lấy N bar gần nhất cho một symbol và khung thời gian, rồi trả về DataFrame
-    đã được làm sạch và sắp xếp tăng dần theo thời gian.
+    Kết nối SQL Server qua core_python.data.db_connector, truy vấn bảng
+    DWH.Fact_OHLCV lấy N bar gần nhất cho một symbol và khung thời gian, rồi
+    trả về DataFrame đã được làm sạch và sắp xếp tăng dần theo thời gian.
 
 Đầu ra:
     pd.DataFrame với các cột: [bartime, open, high, low, close, volume].
@@ -13,10 +13,11 @@ Mô tả:
 Hợp đồng UTC (UTC Contract):
     BarTime được lưu dạng UTC-naive trong DB theo chuẩn Capital.com / MT5.
     Caller cần tự localize về UTC nếu cần so sánh với timestamp có timezone.
-    Xem _drop_open_bar() trong signal_watcher.py để biết cách xử lý đúng.
+    Bar cuối trong kết quả load()/load_range() có thể là bar đang mở
+    (chưa đóng) — caller tự lọc nếu cần chỉ dùng bar đã đóng.
 
 Phụ thuộc ngoài:
-    modules.db_connector.get_connection() — kết nối pyodbc đến SQL Server.
+    core_python.data.db_connector.get_connection() — kết nối pyodbc đến SQL Server.
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ import logging
 
 import pandas as pd
 
-from modules.db_connector import get_connection
+from core_python.data.db_connector import get_connection
 from core_python.config import TF_MINUTES, get_symbol
 
 logger = logging.getLogger(__name__)
