@@ -56,3 +56,9 @@ cp .env.example .env   # điền thông tin SQL Server thật
 `/api/scan`, `/api/export` cần kết nối SQL Server thật (SQL_SERVER trong
 `.env`) — không hoạt động nếu chưa cấu hình hoặc không có driver ODBC phù
 hợp trên máy.
+
+## Triển khai 24/7
+
+Đã kiểm chứng thật trên `vm-og`: kết nối SQL Server DP6, load dữ liệu thật,
+tính tín hiệu thật, phục vụ qua gunicorn. Xem `deploy/README.md` để biết
+cách cài làm systemd service (cần quyền sudo).
