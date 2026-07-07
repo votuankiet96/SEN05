@@ -12,13 +12,6 @@ from og_core.strategies.combo.trend_filter import (
 )
 
 
-def build_combo_frame(entry_df: pd.DataFrame, params: dict, symbol: str | None = None) -> pd.DataFrame:
-    """Run the current single-timeframe Combo pipeline."""
-    with_indicators = add_combo_indicators(entry_df, params)
-    with_signals = detect_combo_signals(with_indicators, symbol=symbol, params=params)
-    return add_combo_levels(with_signals, params, symbol)
-
-
 def build_combo_mtf_frames(
     trend_df: pd.DataFrame,
     entry_df: pd.DataFrame,

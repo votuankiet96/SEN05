@@ -77,7 +77,6 @@ def _dow_segments(df: pd.DataFrame) -> list[dict[str, Any]]:
     for _, row in pivots.iterrows():
         current = {"time": _ts(row["bartime"]), "value": float(row["dow_pivot_price"])}
         if previous is not None:
-            is_up = current["value"] >= previous["value"]
             segments.append(
                 {
                     "key": "dow_wave",

@@ -16,7 +16,7 @@ Mô tả:
 Đầu ra:
     - SYMBOLS: dict symbol → metadata (symbol_id, asset_type, buffer X, ...)
     - TF_MINUTES, TF_DISPLAY_ORDER: thông tin khung thời gian
-    - Hàm get_symbol(), symbol_names(), timeframe_codes(), sql_connection_string()
+    - Hàm get_symbol(), timeframe_codes(), sql_connection_string()
 
 Phụ thuộc ngoài:
     Biến môi trường / file .env cho thông tin kết nối SQL Server
@@ -26,12 +26,17 @@ Phụ thuộc ngoài:
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any
 
 try:
     from dotenv import load_dotenv
 
-    load_dotenv()
+    # Chỉ định thẳng đường dẫn .env ở repo root thay vì để load_dotenv() tự dò
+    # tìm (mặc định của nó đi theo call-stack của tiến trình gọi, nên khi chạy
+    # qua console-script hay từ cwd khác — vd. systemd service — sẽ không tìm
+    # thấy .env và âm thầm rơi về giá trị mặc định mà không báo lỗi gì).
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 except ImportError:  # python-dotenv là optional — vẫn chạy được qua OS env vars
     pass
 
@@ -161,16 +166,6 @@ SYMBOLS: dict[str, dict[str, Any]] = {
 }
 
 
-def symbol_names() -> list[str]:
-    """
-    Trả về danh sách tên symbol theo thứ tự khai báo.
-
-    Returns:
-        List các mã symbol (uppercase, ví dụ: ["FR40", "DE40", ..., "BTCUSD"]).
-    """
-    return list(SYMBOLS.keys())
-
-
 def timeframe_codes() -> list[str]:
     """
     Trả về danh sách mã khung thời gian theo thứ tự hiển thị.
@@ -202,8 +197,7 @@ def get_symbol(symbol: str) -> dict[str, Any]:
 
 def sql_connection_string() -> str:
     """
-    Xây dựng chuỗi kết nối SQL Server theo cùng định dạng với
-    data/db_connector.py.
+    Xây dựng chuỗi kết nối SQL Server (dùng bởi data/db_connector.py).
 
     Returns:
         Chuỗi ODBC connection string. Dùng SQL auth nếu SQL_UID/SQL_PWD được cấu hình,

@@ -1,8 +1,8 @@
 """Dashboard CSV export service.
 
-The runtime watcher keeps using ``og_core.export.to_csv``. This module is
-for manual/dashboard exports: build signal-only CSV payloads from the shared
-strategy engine without putting export loops inside Flask route handlers.
+Builds signal-only CSV payloads from the shared strategy engine for the
+dashboard's manual export routes (/api/export, /api/export/bulk), without
+putting export loops inside Flask route handlers.
 """
 
 from __future__ import annotations

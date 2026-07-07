@@ -9,11 +9,15 @@ Mô tả:
     gốc. OG (data/loader.py) chỉ từng gọi đúng một hàm của file gốc:
     get_connection(). Toàn bộ phần ghi/ETL không được port sang đây.
 
+    Chuỗi kết nối dùng chung với og_core.config.sql_connection_string() —
+    không định nghĩa lại ở đây để tránh 2 nơi cùng chứa logic build connection
+    string (dễ lệch nhau khi sửa một chỗ mà quên chỗ kia).
+
 Đầu ra:
     get_connection() -> pyodbc.Connection, có retry khi lỗi kết nối tạm thời.
 
 Phụ thuộc ngoài:
-    pyodbc, og_core.config (SQL_* settings).
+    pyodbc, og_core.config (sql_connection_string()).
 """
 
 from __future__ import annotations
@@ -23,47 +27,12 @@ import time
 
 import pyodbc
 
-from og_core.config import (
-    SQL_DATABASE,
-    SQL_DRIVER,
-    SQL_ENCRYPT,
-    SQL_PORT,
-    SQL_PWD,
-    SQL_SERVER,
-    SQL_TDS_VERSION,
-    SQL_TRUST_SERVER_CERT,
-    SQL_UID,
-)
+from og_core.config import sql_connection_string
 
 logger = logging.getLogger(__name__)
 
 _DB_RETRY_COUNT = 3
 _DB_RETRY_DELAY = 5  # giây giữa các lần thử
-
-
-def _build_conn_str() -> str:
-    """Dựng connection string; ưu tiên SQL auth, fallback Windows Integrated Auth."""
-    if str(SQL_DRIVER).lower() == "freetds":
-        server_part = f"SERVER={SQL_SERVER};"
-        if SQL_PORT:
-            server_part += f"PORT={SQL_PORT};"
-        base = (
-            f"DRIVER={{{SQL_DRIVER}}};"
-            f"{server_part}"
-            f"DATABASE={SQL_DATABASE};"
-            f"TDS_Version={SQL_TDS_VERSION};"
-        )
-    else:
-        base = (
-            f"DRIVER={{{SQL_DRIVER}}};"
-            f"SERVER={SQL_SERVER};"
-            f"DATABASE={SQL_DATABASE};"
-            f"Encrypt={SQL_ENCRYPT};"
-            f"TrustServerCertificate={SQL_TRUST_SERVER_CERT};"
-        )
-    if SQL_UID and SQL_PWD:
-        return base + f"UID={SQL_UID};PWD={SQL_PWD};"
-    return base + "Trusted_Connection=yes;"
 
 
 def get_connection() -> pyodbc.Connection:
@@ -83,7 +52,7 @@ def get_connection() -> pyodbc.Connection:
     last_err: Exception = RuntimeError("unreachable")
     for attempt in range(1, _DB_RETRY_COUNT + 1):
         try:
-            return pyodbc.connect(_build_conn_str(), timeout=30)
+            return pyodbc.connect(sql_connection_string(), timeout=30)
         except pyodbc.Error as e:
             last_err = e
             logger.warning("DB connect attempt %d/%d failed: %s", attempt, _DB_RETRY_COUNT, e)
