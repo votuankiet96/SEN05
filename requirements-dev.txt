@@ -1,0 +1,13 @@
+# Dependencies confirmed actually used by this codebase (see grep of all
+# imports across the tree). Superseded by pyproject.toml once the packaging
+# stage of the refactor lands; kept here for now so `pytest` is runnable.
+#
+# Runtime:
+pandas==3.0.3
+numpy==2.5.1
+Flask==3.1.3
+# pyodbc — needed once data/loader.py gets its own db_connector (Giai đoạn 2).
+# python-dotenv — needed for the local SQL settings module (Giai đoạn 2).
+
+# Dev/test:
+pytest==9.1.1
