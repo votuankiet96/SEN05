@@ -20,7 +20,7 @@ og_core/strategies/    4 chiến lược độc lập, cùng 1 hợp đồng Str
                         (đăng ký tập trung ở strategies/registry.py)
 og_core/engine.py      Orchestration dùng chung cho dashboard + export
 og_core/chart/         Flask dashboard API + frontend (Lightweight Charts)
-og_core/export/        Xuất CSV (dashboard export + tiện ích export tín hiệu)
+og_core/export/        Xuất CSV cho dashboard (/api/export, /api/export/bulk)
 tests/                 Test characterization cho indicators + 4 chiến lược
 ```
 

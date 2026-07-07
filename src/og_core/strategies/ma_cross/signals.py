@@ -23,10 +23,7 @@ from __future__ import annotations
 import pandas as pd
 
 from og_core.indicators.core import atr, ma, safe_ratio
-from og_core.strategies.ma_cross.config import (
-    SESSION_HOURS_UTC,
-    get_indicator_params,
-)
+from og_core.strategies.ma_cross.config import get_indicator_params
 
 
 def _session_mask(df: pd.DataFrame, hours_utc: list[int] | None) -> pd.Series:
@@ -100,9 +97,9 @@ def detect_ma_cross_signals(
     Args:
         df: DataFrame đã qua add_ma_cross_indicators().
         symbol: Không sử dụng — placeholder để thống nhất interface.
-        params: Không sử dụng trực tiếp (params đã ở trong indicator columns).
-                Tham số session lấy từ SESSION_HOURS_UTC module-level default.
-        sess_mask: Boolean mask session tùy chỉnh (None = dùng SESSION_HOURS_UTC).
+        params: Dict tham số đã validate (dùng để lấy SESSION_HOURS_UTC nếu có
+                override). None = không lọc theo giờ giao dịch.
+        sess_mask: Boolean mask session tùy chỉnh (None = tính từ params).
 
     Returns:
         Bản sao df với các cột bổ sung:
@@ -114,15 +111,12 @@ def detect_ma_cross_signals(
     Giả định giao dịch:
         Tín hiệu phát sinh tại bar đóng cửa — không có lookahead.
         Entry sẽ ở bar TIẾP THEO (xem add_ma_cross_levels).
-        Potential issue: session_hours_utc ở module level (không từ params) —
-        nếu params override SESSION_HOURS_UTC, override đó sẽ không có hiệu lực ở đây.
     """
     _ = symbol
-    _ = params
     out = df.copy()
     if sess_mask is None:
-        # Lấy SESSION_HOURS_UTC từ module-level default, không từ params
-        sess_mask = _session_mask(out, SESSION_HOURS_UTC)
+        p = {**get_indicator_params(), **(params or {})}
+        sess_mask = _session_mask(out, p.get("SESSION_HOURS_UTC", []))
     sess_mask = pd.Series(sess_mask, index=out.index).fillna(False).astype(bool)
 
     # Mask "valid": tất cả chỉ báo sẵn sàng và trong session
