@@ -1,0 +1,19 @@
+[Unit]
+Description=OG (Order Generation) dashboard - SEN05
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=administrator
+Group=administrator
+WorkingDirectory=/home/administrator/Desktop/og_program
+ExecStart=/home/administrator/Desktop/og_program/.venv/bin/gunicorn --bind 127.0.0.1:8516 --workers 2 --timeout 60 og_core.chart.server:create_app()
+Restart=on-failure
+RestartSec=5
+
+# .env (SQL_* settings) is loaded by og_core/config.py itself via
+# python-dotenv, not by systemd — nothing to set here for that.
+
+[Install]
+WantedBy=multi-user.target

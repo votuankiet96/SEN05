@@ -16,7 +16,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = ["pytest", "ruff", "vulture"]
+prod = ["gunicorn"]
 
 [project.scripts]
 og-dashboard = "og_core.main:main"

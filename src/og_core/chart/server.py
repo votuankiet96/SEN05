@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Lock
@@ -35,6 +37,15 @@ from og_core.strategies.combo.payload import build_combo_mtf_payload
 from og_core.strategies.knn_combo.payload import build_knn_combo_payload
 from og_core.strategies.registry import STRATEGIES
 
+# Cấu hình logging một lần khi module này được import — áp dụng cho cả
+# `python -m og_core.main` (dev) lẫn gunicorn (`og_core.chart.server:create_app()`
+# — prod), vì cả hai đường chạy đều import module này đúng một lần.
+# LOG_LEVEL đọc từ env để chỉnh được khi triển khai mà không cần sửa code.
+logging.basicConfig(
+    level=os.environ.get("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 VENDOR_DIR = STATIC_DIR / "vendor"
 
@@ -60,6 +71,12 @@ class _ScanPreview:
 
 def create_app() -> Flask:
     app = Flask(__name__, static_folder=str(STATIC_DIR), static_url_path="/static")
+
+    @app.route("/health")
+    def health():
+        # Liveness only (process is up) — không query DB ở đây, để health-check
+        # không bị fail dây chuyền khi SQL Server chậm/tạm gián đoạn.
+        return jsonify({"status": "ok"})
 
     @app.route("/")
     def index():

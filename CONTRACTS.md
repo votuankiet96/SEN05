@@ -49,9 +49,17 @@ SQL_ENCRYPT, SQL_TRUST_SERVER_CERT
 ```
 
 `SQL_DATABASE` cố định `"SEN05_AutoTrading"` (không qua env, khớp bản gốc).
-UID/PWD để trống ⇒ Windows Integrated Auth — đây là cách production thật
-đang chạy (xác nhận qua biến môi trường của service đang chạy thật trên
-VM này, xem ghi chú trong lịch sử refactor).
+
+**Đã kiểm chứng thật 2026-07-07** (xem `deploy/README.md`): từ Linux
+(`vm-og`), phải dùng **SQL Authentication** (`SQL_UID`/`SQL_PWD` thật) với
+`SQL_DRIVER=freetds`. Để trống UID/PWD (Windows Integrated Auth) **không
+hoạt động** trên máy Linux không join domain — FreeTDS rơi về GSSAPI/Kerberos
+và lỗi thẳng (`gss_init_sec_context: GSS_S_FAILURE`), đã xác minh bằng
+`TDSDUMP`. Suy đoán trước đó trong bản refactor ban đầu (dựa trên việc không
+thấy `SQL_UID`/`SQL_PWD` trong biến môi trường của service thật đang chạy
+trên VM này) là **sai** — service đó nhiều khả năng đọc UID/PWD qua một
+`.env` riêng mà tài khoản này không có quyền xem, không phải Windows Auth
+thật.
 
 ## 3. Những gì KHÔNG còn là hợp đồng của OG
 
