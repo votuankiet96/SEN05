@@ -31,7 +31,7 @@ from typing import Any
 
 import pandas as pd
 
-from og_core.chart.payload_common import (
+from og_core.chart.payload_helpers import (
     candlestick_points as _candles,
     clean_params as _clean_params,
     histogram_points as _histogram,
