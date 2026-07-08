@@ -12,7 +12,7 @@ import pandas as pd
 from flask import Flask, Response, jsonify, request, send_from_directory
 
 from og_core import config
-from og_core.chart.payload import build_chart_payload
+from og_core.chart.single_chart import build_chart_payload
 from og_core.data.loader import load_bounds
 from og_core.engine import (
     DateWindow,

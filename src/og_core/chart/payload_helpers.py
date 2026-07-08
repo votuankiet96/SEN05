@@ -4,7 +4,7 @@ Hàm dựng payload JSON dùng chung cho tất cả dashboard payload builder.
 Mô tả:
     Trước refactor, các hàm này (chuyển timestamp, làm sạch số, trích series/
     candle/histogram, chuẩn hoá params) được copy-paste giống hệt nhau ở 4 nơi:
-    chart/payload.py và cả 3 strategies/{ai_trend,combo,knn_combo}/payload.py.
+    chart/single_chart.py và cả 3 strategies/{ai_trend,combo,knn_combo}/payload.py.
     Module này gom lại một chỗ duy nhất — 4 nơi trên giờ chỉ import lại.
 
 Đầu vào:
