@@ -1,64 +1,18 @@
-"""
-Cấu hình trung tâm cho dashboard tín hiệu OG (Order Generation).
+"""Shared market metadata for OG strategy code.
 
-Mô tả:
-    Trước refactor, module này nạp metadata (SQL connection, SYMBOLS,
-    TF_MINUTES, TF_DISPLAY_ORDER) từ config.py ở thư mục cha (SEN05 root)
-    bằng importlib — nghĩa là OG chỉ chạy được khi đứng đúng vị trí trong cây
-    thư mục SEN05_Autotrading đầy đủ.
-
-    Sau refactor "tự chủ hoá": OG không còn phụ thuộc cây thư mục SEN05 root
-    nữa. SQL_* đọc từ biến môi trường/.env (xem .env.example). SYMBOLS/
-    TF_MINUTES/TF_DISPLAY_ORDER là dữ liệu tĩnh sao chép nguyên văn từ
-    SEN05_Autotrading/config.py — đây là dữ liệu tra cứu (symbol_id, mã TF),
-    không phải bí mật, nên an toàn khi hardcode trong repo của OG.
-
-Đầu ra:
-    - SYMBOLS: dict symbol → metadata (symbol_id, asset_type, buffer X, ...)
-    - TF_MINUTES, TF_DISPLAY_ORDER: thông tin khung thời gian
-    - Hàm get_symbol(), timeframe_codes(), sql_connection_string()
-
-Phụ thuộc ngoài:
-    Biến môi trường / file .env cho thông tin kết nối SQL Server
-    (xem .env.example). Không còn phụ thuộc file config.py ở thư mục cha.
+This module is intentionally source-agnostic: no SQL, Redis, Flask, or file
+system side effects. `og_past` and `og_live` adapt external data sources into
+the common OHLCV shape, while `og_core` owns symbols, timeframes, indicators,
+strategies, and signal event construction.
 """
 
 from __future__ import annotations
 
-import os
-from pathlib import Path
 from typing import Any
 
-try:
-    from dotenv import load_dotenv
-
-    # Chỉ định thẳng đường dẫn .env ở repo root thay vì để load_dotenv() tự dò
-    # tìm (mặc định của nó đi theo call-stack của tiến trình gọi, nên khi chạy
-    # qua console-script hay từ cwd khác — vd. systemd service — sẽ không tìm
-    # thấy .env và âm thầm rơi về giá trị mặc định mà không báo lỗi gì).
-    load_dotenv(Path(__file__).resolve().parents[2] / ".env")
-except ImportError:  # python-dotenv là optional — vẫn chạy được qua OS env vars
-    pass
-
 
 # -----------------------------------------------------------------------------
-# 1. SQL SERVER CONNECTION
-#    Mặc định khớp với SEN05_Autotrading/config.py gốc: để trống SQL_UID/
-#    SQL_PWD nghĩa là dùng Windows Integrated Auth (Trusted_Connection=yes).
-# -----------------------------------------------------------------------------
-SQL_SERVER = os.environ.get("SQL_SERVER", "localhost")
-SQL_DATABASE = "SEN05_AutoTrading"
-SQL_DRIVER = os.environ.get("SQL_DRIVER", "ODBC Driver 18 for SQL Server")
-SQL_PORT = os.environ.get("SQL_PORT", "")
-SQL_TDS_VERSION = os.environ.get("SQL_TDS_VERSION", "7.4")
-SQL_UID = os.environ.get("SQL_UID", "")   # rỗng = Windows Auth
-SQL_PWD = os.environ.get("SQL_PWD", "")   # rỗng = Windows Auth
-SQL_ENCRYPT = os.environ.get("SQL_ENCRYPT", "no")
-SQL_TRUST_SERVER_CERT = os.environ.get("SQL_TRUST_SERVER_CERT", "yes")
-
-
-# -----------------------------------------------------------------------------
-# 2. TIMEFRAMES — sao chép nguyên từ SEN05_Autotrading/config.py.
+# 1. TIMEFRAMES — sao chép nguyên từ SEN05_Autotrading/config.py.
 # -----------------------------------------------------------------------------
 # Ánh xạ mã khung thời gian → số phút (ví dụ: "H1" → 60, "M5" → 5).
 TF_MINUTES: dict[str, int] = {
@@ -79,7 +33,7 @@ N_BARS = 500  # Số bar mặc định tải về nếu không chỉ định
 
 
 # -----------------------------------------------------------------------------
-# 3. SYMBOLS — sao chép nguyên từ SEN05_Autotrading/config.py.
+# 2. SYMBOLS — sao chép nguyên từ SEN05_Autotrading/config.py.
 # -----------------------------------------------------------------------------
 # Buffer X cho chiến lược Combo — điều chỉnh theo từng symbol.
 # X là khoảng cách tính thêm vào đỉnh/đáy bar khi xác định điểm Entry và SL.
@@ -193,34 +147,3 @@ def get_symbol(symbol: str) -> dict[str, Any]:
     if key not in SYMBOLS:
         raise KeyError(f"Unknown symbol '{symbol}'. Available: {', '.join(SYMBOLS)}")
     return dict(SYMBOLS[key])
-
-
-def sql_connection_string() -> str:
-    """
-    Xây dựng chuỗi kết nối SQL Server (dùng bởi data/db_connector.py).
-
-    Returns:
-        Chuỗi ODBC connection string. Dùng SQL auth nếu SQL_UID/SQL_PWD được cấu hình,
-        ngược lại dùng Windows Integrated Security (Trusted_Connection=yes).
-    """
-    if str(SQL_DRIVER).lower() == "freetds":
-        server_part = f"SERVER={SQL_SERVER};"
-        if SQL_PORT:
-            server_part += f"PORT={SQL_PORT};"
-        base = (
-            f"DRIVER={{{SQL_DRIVER}}};"
-            f"{server_part}"
-            f"DATABASE={SQL_DATABASE};"
-            f"TDS_Version={SQL_TDS_VERSION};"
-        )
-    else:
-        base = (
-            f"DRIVER={{{SQL_DRIVER}}};"
-            f"SERVER={SQL_SERVER};"
-            f"DATABASE={SQL_DATABASE};"
-            f"Encrypt={SQL_ENCRYPT};"
-            f"TrustServerCertificate={SQL_TRUST_SERVER_CERT};"
-        )
-    if SQL_UID and SQL_PWD:
-        return base + f"UID={SQL_UID};PWD={SQL_PWD};"
-    return base + "Trusted_Connection=yes;"

@@ -5,28 +5,27 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "og-core"
 version = "0.1.0"
-description = "OG (Order Generation): reads OHLCV from the SEN05 SQL data warehouse, computes strategy signals, and serves a dashboard + CSV export."
+description = "OG (Order Generation): shared strategy core, historical SQL dashboard/export, and live Redis signal generation."
 requires-python = ">=3.11"
 dependencies = [
     "pandas",
     "numpy",
-    "Flask",
-    "pyodbc",
     "python-dotenv",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest", "ruff", "vulture"]
+past = ["Flask", "pyodbc"]
+live = ["redis"]
 prod = ["gunicorn"]
-# redis_engine (watcher/notify realtime layer) — không phải dependency mặc
-# định của og_core, chỉ cần khi cài/chạy redis_engine.
-watcher = ["redis"]
+all = ["Flask", "pyodbc", "redis", "gunicorn"]
 
 [project.scripts]
-og-dashboard = "og_core.main:main"
+og-dashboard = "og_past.main:main"
+og-live = "og_live.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-og_core = ["chart/static/*", "chart/static/vendor/*"]
+og_past = ["chart/static/*", "chart/static/vendor/*"]

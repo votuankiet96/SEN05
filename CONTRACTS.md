@@ -1,13 +1,13 @@
 # OG External Contracts
 
-OG (`og_core`) không còn phụ thuộc Python vào bất kỳ package nào khác trong
-SEN05 (xem Giai đoạn 2 của refactor). Nhưng nó vẫn kết nối với phần còn lại
-của hệ thống qua **hạ tầng** (SQL Server), không phải qua import. Tài liệu
-này ghi lại đúng những hợp đồng đó.
+OG không còn phụ thuộc Python vào bất kỳ package nào khác trong SEN05. Nó
+kết nối với phần còn lại của hệ thống qua **hạ tầng**, không qua import:
+`og_past` đọc SQL Server để phục vụ dashboard/export lịch sử, còn `og_live`
+đọc/publish Redis Streams để sinh tín hiệu realtime.
 
-## 1. Đọc dữ liệu — SQL Server trên DP6
+## 1. Đọc dữ liệu lịch sử — SQL Server trên DP6
 
-`og_core/data/loader.py` + `og_core/data/db_connector.py` chỉ **đọc**
+`og_past/data/loader.py` + `og_past/data/db_connector.py` chỉ **đọc**
 (SELECT) từ database `SEN05_AutoTrading` trên DP6. Schema kỳ vọng:
 
 ```text
@@ -48,7 +48,35 @@ SQL_SERVER, SQL_DRIVER, SQL_PORT, SQL_TDS_VERSION, SQL_UID, SQL_PWD,
 SQL_ENCRYPT, SQL_TRUST_SERVER_CERT
 ```
 
-`SQL_DATABASE` cố định `"SEN05_AutoTrading"` (không qua env, khớp bản gốc).
+`SQL_DATABASE` mặc định `"SEN05_AutoTrading"` và có thể override qua env nếu
+cần kiểm thử môi trường khác.
+
+## 3. Dữ liệu live — Redis Streams từ DP6
+
+`og_live` không query SQL. DP6 publish stream `candle_snapshot`; mỗi entry
+mang metadata symbol/timeframe và một mảng JSON các nến OHLCV mới nhất
+(thường 500 nến). Schema tối thiểu:
+
+```text
+candle_snapshot
+  tv_symbol  — mã symbol TradingView, ví dụ US30
+  tf_code    — mã timeframe, ví dụ H1
+  bars       — JSON array:
+               [{bar_time, open, high, low, close, volume}, ...]
+```
+
+`og_live` parse snapshot thành frame chuẩn `[bartime, open, high, low, close,
+volume]`, tính chiến lược bằng `og_core`, rồi mặc định chỉ xét bar cuối cùng
+của snapshot để tránh publish lại tín hiệu lịch sử khi service restart.
+
+Output publish lên Redis Stream:
+
+```text
+signal_stream:<strategy>
+  signal_id, strategy, symbol, timeframe, direction, side, bar_time,
+  event_close, entry_price, sl_price, tp_price, risk_reward, atr,
+  signal_reason, produced_at
+```
 
 **Đã kiểm chứng thật 2026-07-07** (xem `deploy/README.md`): từ Linux
 (`vm-og`), phải dùng **SQL Authentication** (`SQL_UID`/`SQL_PWD` thật) với
@@ -61,16 +89,15 @@ trên VM này) là **sai** — service đó nhiều khả năng đọc UID/PWD q
 `.env` riêng mà tài khoản này không có quyền xem, không phải Windows Auth
 thật.
 
-## 3. Những gì KHÔNG còn là hợp đồng của OG
+## 4. Những gì KHÔNG còn là hợp đồng của OG
 
 Trước refactor, `core_python/notify/` từng bắn signal qua Redis Streams cho
 một hệ downstream gọi là "OF", và nghe Redis pub/sub "bar_ready" từ pipeline
 ws_live trên DP6. Toàn bộ phần đó đã được gỡ khỏi repo này (xem lịch sử git,
-commit "remove notify subsystem"). Nếu notify được xây lại sau này, hợp đồng
-Redis đó cần được thiết kế lại từ đầu — tài liệu này cố tình không mô tả một
-hợp đồng đã không còn tồn tại trong code.
+commit "remove notify subsystem"). Hợp đồng Redis hiện tại là stream
+`candle_snapshot` -> `signal_stream:<strategy>`, không phải notify/pubsub cũ.
 
-## 4. Giới hạn kiểm thử đã biết
+## 5. Giới hạn kiểm thử đã biết
 
 Môi trường phát triển hiện tại (VM `vm-og`, xem
 `/home/administrator/Desktop/og_program`) không có driver ODBC hay SQL

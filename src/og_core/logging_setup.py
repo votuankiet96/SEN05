@@ -1,5 +1,5 @@
 """
-Cấu hình logging dùng chung cho og_core (dashboard) và redis_engine.
+Cấu hình logging dùng chung cho các tiến trình OG.
 
 Mô tả:
     Trước đây mỗi chương trình tự gọi logging.basicConfig() riêng, chỉ ghi
@@ -8,12 +8,12 @@ Mô tả:
     runtime/logs/ ở gốc repo, giữ console output như cũ.
 
 Đầu vào:
-    log_filename: tên file trong runtime/logs/ (vd "og_core.log",
-    "redis_engine.log") — mỗi chương trình 1 file riêng, không trộn lẫn.
+    log_filename: tên file trong runtime/logs/ (vd "og_past.log",
+    "og_live.log") — mỗi chương trình 1 file riêng, không trộn lẫn.
 
 Lưu ý:
-    og_core và redis_engine chạy trong 2 tiến trình riêng biệt (dashboard
-    qua gunicorn, redis_engine qua `python -m redis_engine.main`) nên gọi
+    og_past và og_live chạy trong 2 tiến trình riêng biệt (dashboard
+    qua gunicorn, live engine qua `python -m og_live.main`) nên gọi
     setup_logger() cấu hình root logger 1 lần/tiến trình là an toàn, không
     xung đột giữa 2 chương trình. Gunicorn nhiều worker (nhiều tiến trình
     con) cùng ghi vào 1 file là chấp nhận được ở quy mô hiện tại — rotation

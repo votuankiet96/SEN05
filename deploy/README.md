@@ -12,12 +12,12 @@ Claude Code không có — chạy các lệnh dưới đây thủ công.
 ```bash
 cd /home/administrator/Desktop/og_program
 python3 -m venv .venv
-./.venv/bin/pip install -e ".[prod]"
+./.venv/bin/pip install -e ".[past,prod]"
 cp .env.example .env   # rồi điền SQL_SERVER/SQL_UID/SQL_PWD thật
 ```
 
-`.env` hiện tại trên máy này đã có sẵn credential thật (SQL_SERVER=10.11.12.6,
-SQL_DRIVER=freetds, SQL_UID=sa) — không commit vào git (đã gitignore).
+`.env` hiện tại trên máy này đã có sẵn credential thật — không commit vào git
+(đã gitignore).
 
 **Lưu ý bảo mật:** đang dùng tài khoản `sa` (quyền cao nhất SQL Server) cho
 một dashboard chỉ cần quyền đọc. Nên xin admin DP6 tạo 1 login SQL riêng chỉ
@@ -50,30 +50,30 @@ sudo systemctl stop og-dashboard.service
 sudo systemctl disable og-dashboard.service   # tắt tự khởi động cùng máy
 ```
 
-## 5. Cài `redis_engine` làm systemd service
+## 5. Cài `og_live` làm systemd service
 
-Chưa làm — hiện chạy tạm qua `nohup python -m redis_engine.main &` thủ công
-trong phiên làm việc, không tự khởi động lại khi crash/reboot máy.
+`og_live` đọc stream `candle_snapshot` từ Redis, dùng 500 nến trong snapshot
+để tính tín hiệu qua `og_core`, rồi publish tín hiệu mới lên
+`signal_stream:<strategy>`.
 
 ```bash
-./.venv/bin/pip install -e ".[watcher]"   # nếu chưa cài
-sudo cp /home/administrator/Desktop/og_program/deploy/redis-engine.service /etc/systemd/system/
+./.venv/bin/pip install -e ".[live]"   # nếu chưa cài
+sudo cp /home/administrator/Desktop/og_program/deploy/og-live.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now redis-engine.service
+sudo systemctl enable --now og-live.service
 ```
 
 Kiểm tra:
 
 ```bash
-systemctl status redis-engine.service
-journalctl -u redis-engine.service -f
-tail -f /home/administrator/Desktop/og_program/runtime/logs/redis_engine.log
+systemctl status og-live.service
+journalctl -u og-live.service -f
+tail -f /home/administrator/Desktop/og_program/runtime/logs/og_live.log
 ```
 
 `Requires=redis-server.service` — service này sẽ không khởi động nếu Redis
-local chưa chạy. `Restart=on-failure` — nếu 1 trong 2 thread nội bộ
-(`bar_ready_consumer`/`safety_net_poller`) chết vì lỗi không tự phục hồi
-được, tiến trình thoát mã khác 0 và systemd tự khởi động lại toàn bộ.
+local chưa chạy. `Restart=on-failure` giúp systemd tự khởi động lại nếu tiến
+trình live thoát do lỗi không tự phục hồi được.
 
 ## Về sau (không bắt buộc để chạy 24/7, nhưng nên cân nhắc)
 
@@ -85,5 +85,5 @@ local chưa chạy. `Restart=on-failure` — nếu 1 trong 2 thread nội bộ
   hiện dashboard không có auth.
 - **Lỗi API vẫn trả chi tiết exception ra ngoài** (quyết định trước đó là
   chưa cần sửa) — nên sửa nếu mở dashboard ra ngoài `127.0.0.1`.
-- Service này **độc lập hoàn toàn** với `sen05-signal-watcher-combo-h4.service`
-  đang chạy sẵn trên máy — không service nào phụ thuộc/ảnh hưởng lẫn nhau.
+- `og-dashboard.service` và `og-live.service` độc lập với nhau. Dashboard lỗi
+  SQL không làm live dừng; Redis/live lỗi không làm dashboard dừng.
