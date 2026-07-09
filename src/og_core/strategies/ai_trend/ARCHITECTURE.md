@@ -2,11 +2,6 @@
 
 Tai lieu nay mo ta dung hanh vi hien tai cua chien luoc `ai_trend` theo code trong `og_core/strategies/ai_trend/`.
 
-> Ghi chu: ban truoc cua tai lieu nay co mo ta them luong notify production
-> (Telegram alert format, state dedup key, warm-up). Phan notify da duoc go
-> tam khoi og_core (xem lich su git) va se duoc thiet ke lai rieng khi
-> phat trien tiep. Tai lieu nay chi con giu phan logic tin hieu con song.
-
 ## 1. Muc Dich
 
 AI Trend la chien luoc multi-timeframe:

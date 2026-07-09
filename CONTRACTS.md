@@ -89,15 +89,7 @@ trên VM này) là **sai** — service đó nhiều khả năng đọc UID/PWD q
 `.env` riêng mà tài khoản này không có quyền xem, không phải Windows Auth
 thật.
 
-## 4. Những gì KHÔNG còn là hợp đồng của OG
-
-Trước refactor, `core_python/notify/` từng bắn signal qua Redis Streams cho
-một hệ downstream gọi là "OF", và nghe Redis pub/sub "bar_ready" từ pipeline
-ws_live trên DP6. Toàn bộ phần đó đã được gỡ khỏi repo này (xem lịch sử git,
-commit "remove notify subsystem"). Hợp đồng Redis hiện tại là stream
-`candle_snapshot` -> `signal_stream:<strategy>`, không phải notify/pubsub cũ.
-
-## 5. Giới hạn kiểm thử đã biết
+## 4. Giới hạn kiểm thử đã biết
 
 Môi trường phát triển hiện tại (VM `vm-og`, xem
 `/home/administrator/Desktop/og_program`) không có driver ODBC hay SQL

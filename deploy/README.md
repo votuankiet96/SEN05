@@ -1,11 +1,11 @@
 # Triển khai OG dashboard 24/7 trên vm-og
 
-Đã kiểm chứng thật (2026-07-07): kết nối SQL Server trên DP6 (`10.11.12.6`)
-qua FreeTDS + SQL Authentication, load dữ liệu thật, tính tín hiệu thật,
-phục vụ qua gunicorn — tất cả đã chạy đúng trên chính máy `vm-og` này.
+Đã kiểm chứng thật (2026-07-07): kết nối SQL Server trên DP6 qua FreeTDS +
+SQL Authentication, load dữ liệu thật, tính tín hiệu thật, phục vụ qua
+gunicorn — tất cả đã chạy đúng trên chính máy `vm-og` này.
 
 Việc còn lại (cài systemd service) cần quyền root mà tài khoản đang chạy
-Claude Code không có — chạy các lệnh dưới đây thủ công.
+coding agent không có — chạy các lệnh dưới đây thủ công.
 
 ## 1. Cài đặt (đã làm sẵn trong session này, ghi lại để tham khảo)
 
@@ -19,11 +19,10 @@ cp .env.example .env   # rồi điền SQL_SERVER/SQL_UID/SQL_PWD thật
 `.env` hiện tại trên máy này đã có sẵn credential thật — không commit vào git
 (đã gitignore).
 
-**Lưu ý bảo mật:** đang dùng tài khoản `sa` (quyền cao nhất SQL Server) cho
-một dashboard chỉ cần quyền đọc. Nên xin admin DP6 tạo 1 login SQL riêng chỉ
-có quyền `SELECT` trên `SEN05_AutoTrading`, rồi đổi `SQL_UID`/`SQL_PWD` trong
-`.env` — không bắt buộc để chạy được, nhưng nên làm trước khi để chạy 24/7
-lâu dài.
+**Lưu ý bảo mật:** dashboard chỉ cần quyền đọc. Nên xin admin DP6 tạo 1
+login SQL riêng chỉ có quyền `SELECT` trên `SEN05_AutoTrading`, rồi đổi
+`SQL_UID`/`SQL_PWD` trong `.env` — không bắt buộc để chạy được, nhưng nên làm
+trước khi để chạy 24/7 lâu dài.
 
 ## 2. Cài systemd service (cần sudo)
 

@@ -97,7 +97,7 @@ sudo systemctl enable --now og-dashboard.service
 sudo systemctl enable --now og-live.service
 ```
 
-## Remaining Production Checks
+## Production Verification
 
 - Confirm the actual systemd status on vm-og after the owner installs the
   service files.

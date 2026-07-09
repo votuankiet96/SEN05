@@ -3,7 +3,8 @@ Tính toán mức Entry, Stop Loss và Take Profit cho chiến lược Combo.
 
 Mô tả:
     Sau khi detect_combo_signals() xác định tín hiệu, module này tính
-    các mức giá cụ thể để hiển thị trên biểu đồ và gửi trong thông báo Telegram.
+    các mức giá cụ thể để hiển thị trên biểu đồ, export CSV, và publish
+    signal payload.
 
     Mô hình entry là breakout: chờ giá phá vỡ đỉnh/đáy bar tín hiệu + buffer X.
 

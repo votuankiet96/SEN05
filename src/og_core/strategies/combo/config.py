@@ -29,12 +29,12 @@ MACD_SLOW = 25       # EMA chậm của MACD
 MACD_SIGNAL = 5      # EMA đường signal của MACD
 ATR_PERIOD = 5       # Chu kỳ Average True Range (Wilder)
 KTP = 2.272          # Hệ số nhân ATR để tính khoảng cách Take Profit
-MIN_RR = None        # Legacy/report param; not a Combo V0 raw-signal condition
+MIN_RR = None        # Report-only param; not a Combo V0 raw-signal condition
 ENTRY_LINE_BARS = 2  # Số bar kéo dài đường Entry/SL/TP trên biểu đồ
 
 # --- Toggle hiển thị trên biểu đồ ---
-# HTF settings are retained for backward-compatible code paths, but hidden from
-# the Combo V0 dashboard while the original lecture logic is being used.
+# HTF settings are kept for the multi-timeframe Combo path, but hidden from the
+# Combo V0 dashboard while the original lecture logic is being used.
 HTF_TREND_ENABLED = False
 HTF_TF = "D1"
 HTF_TF_OPTIONS = ("H4", "H6", "H8", "D1", "W")
@@ -167,7 +167,7 @@ def _to_optional_float(
     """
     Parse float tùy chọn — trả về None nếu value là None/""/"none"/"null"/"off".
 
-    Dùng cho legacy MIN_RR/report params. MIN_RR không gate raw signal Combo V0.
+    Dùng cho MIN_RR/report params. MIN_RR không gate raw signal Combo V0.
     """
     if value is None:
         return default
