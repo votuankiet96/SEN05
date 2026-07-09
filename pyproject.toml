@@ -20,7 +20,7 @@ dev = ["pytest", "ruff", "vulture"]
 prod = ["gunicorn"]
 # redis_engine (watcher/notify realtime layer) — không phải dependency mặc
 # định của og_core, chỉ cần khi cài/chạy redis_engine.
-watcher = ["redis", "requests"]
+watcher = ["redis"]
 
 [project.scripts]
 og-dashboard = "og_core.main:main"

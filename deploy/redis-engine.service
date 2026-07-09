@@ -1,0 +1,21 @@
+[Unit]
+Description=redis_engine (OG realtime signal backbone) - SEN05
+After=network-online.target redis-server.service
+Wants=network-online.target
+Requires=redis-server.service
+
+[Service]
+Type=simple
+User=administrator
+Group=administrator
+WorkingDirectory=/home/administrator/Desktop/og_program
+ExecStart=/home/administrator/Desktop/og_program/.venv/bin/python -m redis_engine.main
+Restart=on-failure
+RestartSec=5
+
+# .env (REDIS_*, SQL_* settings) is loaded by redis_engine/config.py and
+# og_core/config.py themselves via python-dotenv, not by systemd — nothing
+# to set here for that.
+
+[Install]
+WantedBy=multi-user.target

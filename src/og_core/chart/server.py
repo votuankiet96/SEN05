@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import logging
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Lock
@@ -35,16 +33,14 @@ from og_core.export.service import (
 from og_core.strategies.ai_trend.payload import build_ai_trend_payload
 from og_core.strategies.combo.payload import build_combo_mtf_payload
 from og_core.strategies.knn_combo.payload import build_knn_combo_payload
+from og_core.logging_setup import setup_logger
 from og_core.strategies.registry import STRATEGIES
 
 # Cấu hình logging một lần khi module này được import — áp dụng cho cả
 # `python -m og_core.main` (dev) lẫn gunicorn (`og_core.chart.server:create_app()`
 # — prod), vì cả hai đường chạy đều import module này đúng một lần.
-# LOG_LEVEL đọc từ env để chỉnh được khi triển khai mà không cần sửa code.
-logging.basicConfig(
-    level=os.environ.get("LOG_LEVEL", "INFO").upper(),
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-)
+# Ghi ra console + runtime/logs/og_core.log (xem og_core/logging_setup.py).
+setup_logger("og_core.log")
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 VENDOR_DIR = STATIC_DIR / "vendor"

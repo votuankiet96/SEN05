@@ -50,6 +50,31 @@ sudo systemctl stop og-dashboard.service
 sudo systemctl disable og-dashboard.service   # tắt tự khởi động cùng máy
 ```
 
+## 5. Cài `redis_engine` làm systemd service
+
+Chưa làm — hiện chạy tạm qua `nohup python -m redis_engine.main &` thủ công
+trong phiên làm việc, không tự khởi động lại khi crash/reboot máy.
+
+```bash
+./.venv/bin/pip install -e ".[watcher]"   # nếu chưa cài
+sudo cp /home/administrator/Desktop/og_program/deploy/redis-engine.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now redis-engine.service
+```
+
+Kiểm tra:
+
+```bash
+systemctl status redis-engine.service
+journalctl -u redis-engine.service -f
+tail -f /home/administrator/Desktop/og_program/runtime/logs/redis_engine.log
+```
+
+`Requires=redis-server.service` — service này sẽ không khởi động nếu Redis
+local chưa chạy. `Restart=on-failure` — nếu 1 trong 2 thread nội bộ
+(`bar_ready_consumer`/`safety_net_poller`) chết vì lỗi không tự phục hồi
+được, tiến trình thoát mã khác 0 và systemd tự khởi động lại toàn bộ.
+
 ## Về sau (không bắt buộc để chạy 24/7, nhưng nên cân nhắc)
 
 - **Chỉ bind `127.0.0.1`** — dashboard hiện chỉ truy cập được từ chính máy
