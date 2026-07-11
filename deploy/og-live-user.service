@@ -1,0 +1,14 @@
+[Unit]
+Description=OG Live realtime signal generation - user service
+After=default.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/administrator/Desktop/og_program
+ExecStart=/home/administrator/Desktop/og_program/.venv/bin/python -m og_live.main
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target

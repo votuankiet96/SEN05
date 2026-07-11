@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import pandas as pd
 
 from og_core.signals import build_signal_id
-from og_live import pipeline
+from og_live import pipeline, settings
 from og_live.settings import WatchedItem
 from og_live.sources.candle_snapshot import parse_snapshot_entry, snapshot_symbol_tf
 
@@ -74,6 +74,31 @@ def test_candle_snapshot_parser_returns_standard_frame():
     assert df.columns.tolist() == ["bartime", "open", "high", "low", "close", "volume"]
     assert df["bartime"].astype(str).tolist() == ["2026-01-05 10:00:00", "2026-01-05 11:00:00"]
     assert df["close"].tolist() == [100.5, 102.5]
+
+
+def test_default_live_watchlist_matches_live_fetching_universe(monkeypatch):
+    monkeypatch.delenv("OG_LIVE_WATCHED_JSON", raising=False)
+
+    watched = settings.load_watched_items()
+
+    assert len(watched) == len(settings.LIVE_FETCHING_TIMEFRAMES)
+    assert {item.tf for item in watched} == set(settings.LIVE_FETCHING_TIMEFRAMES)
+    assert sum(len(item.symbols) for item in watched) == 165
+    assert all(item.strategy == "combo" for item in watched)
+    assert all(item.symbols == settings.LIVE_FETCHING_SYMBOLS for item in watched)
+    assert all(item.bars == 500 for item in watched)
+    assert all(item.latest_only for item in watched)
+
+
+def test_live_watched_bars_are_clamped(monkeypatch):
+    monkeypatch.setenv(
+        "OG_LIVE_WATCHED_JSON",
+        json.dumps([{"strategy": "combo", "symbols": ["us30"], "tf": "h1", "bars": 0}]),
+    )
+
+    watched = settings.load_watched_items()
+
+    assert watched[0].bars == 1
 
 
 def test_live_pipeline_latest_only_does_not_replay_old_signals(monkeypatch):

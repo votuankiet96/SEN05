@@ -29,6 +29,8 @@ CONSUMER_NAME = os.environ.get("OG_LIVE_CONSUMER_NAME", "og-primary")
 
 SIGNAL_STREAM_PREFIX = os.environ.get("OG_LIVE_SIGNAL_STREAM_PREFIX", "signal_stream")
 SIGNAL_STREAM_MAXLEN = int(os.environ.get("OG_LIVE_SIGNAL_STREAM_MAXLEN", "10000"))
+SIGNAL_DEDUP_PREFIX = os.environ.get("OG_LIVE_SIGNAL_DEDUP_PREFIX", "signal_seen")
+SIGNAL_DEDUP_TTL_SECONDS = int(os.environ.get("OG_LIVE_SIGNAL_DEDUP_TTL_SECONDS", str(14 * 24 * 3600)))
 
 READ_COUNT = int(os.environ.get("OG_LIVE_READ_COUNT", "50"))
 BLOCK_MS = int(os.environ.get("OG_LIVE_BLOCK_MS", "5000"))
@@ -48,14 +50,52 @@ class WatchedItem:
     latest_only: bool = True
 
 
+LIVE_FETCHING_SYMBOLS = (
+    "BTCUSD",
+    "DE40",
+    "FR40",
+    "GOLD",
+    "HK50",
+    "J225",
+    "SP35",
+    "UK100",
+    "US100",
+    "US30",
+    "US500",
+)
+
+LIVE_FETCHING_TIMEFRAMES = (
+    "M5",
+    "M10",
+    "M15",
+    "M20",
+    "M30",
+    "M45",
+    "M90",
+    "H1",
+    "H2",
+    "H3",
+    "H4",
+    "H6",
+    "H8",
+    "D1",
+    "W",
+)
+
 DEFAULT_WATCHED = [
-    {"strategy": "combo", "symbols": ["US30", "DE40"], "tf": "H1", "bars": 500, "latest_only": True},
+    {"strategy": "combo", "symbols": list(LIVE_FETCHING_SYMBOLS), "tf": tf, "bars": 500, "latest_only": True}
+    for tf in LIVE_FETCHING_TIMEFRAMES
 ]
 
 
 def signal_stream_key(strategy: str) -> str:
     """Return the Redis stream name for one strategy's published signals."""
     return f"{SIGNAL_STREAM_PREFIX}:{strategy}"
+
+
+def signal_dedup_key(signal_id: str) -> str:
+    """Return the Redis idempotency key for one published signal."""
+    return f"{SIGNAL_DEDUP_PREFIX}:{signal_id}"
 
 
 def runtime_dir() -> Path:
@@ -88,7 +128,7 @@ def _parse_watched_item(item: Any) -> WatchedItem:
         strategy=str(item.get("strategy", "combo")).strip().lower(),
         symbols=tuple(str(symbol).strip().upper() for symbol in symbols),
         tf=str(item.get("tf", "H1")).strip().upper(),
-        bars=int(item.get("bars", 500)),
+        bars=max(1, int(item.get("bars", 500))),
         latest_only=_to_bool(item.get("latest_only", True), True),
     )
 
