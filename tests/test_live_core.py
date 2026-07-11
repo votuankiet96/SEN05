@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pandas as pd
 
 from og_core.signals import build_signal_id
+from og_live.healthcheck import CheckResult, _report, _summarize_bars
 from og_live import pipeline, settings
 from og_live.settings import WatchedItem
 from og_live.sources.candle_snapshot import parse_snapshot_entry, snapshot_symbol_tf
@@ -99,6 +101,40 @@ def test_live_watched_bars_are_clamped(monkeypatch):
     watched = settings.load_watched_items()
 
     assert watched[0].bars == 1
+
+
+def test_healthcheck_warn_does_not_fail_without_strict_mode():
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    report = _report(now, [CheckResult("coverage", "warn", "short history")], fail_on_warn=False)
+
+    assert report["status"] == "warn"
+    assert report["exit_status"] == "ok"
+
+
+def test_healthcheck_warn_can_fail_in_strict_mode():
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    report = _report(now, [CheckResult("coverage", "warn", "short history")], fail_on_warn=True)
+
+    assert report["status"] == "warn"
+    assert report["exit_status"] == "fail"
+
+
+def test_healthcheck_summarizes_bars_without_leaking_payload():
+    summary = _summarize_bars(
+        json.dumps(
+            [
+                {"bar_time": "2026-01-01T00:00:00", "open": 1},
+                {"bar_time": "2026-01-01T00:05:00", "open": 2},
+            ]
+        )
+    )
+
+    assert summary == {
+        "valid": True,
+        "count": 2,
+        "first_bar_time": "2026-01-01T00:00:00",
+        "last_bar_time": "2026-01-01T00:05:00",
+    }
 
 
 def test_live_pipeline_latest_only_does_not_replay_old_signals(monkeypatch):

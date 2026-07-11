@@ -71,8 +71,57 @@ tail -f /home/administrator/Desktop/og_program/runtime/logs/og_live.log
 ```
 
 `Requires=redis-server.service` — service này sẽ không khởi động nếu Redis
-local chưa chạy. `Restart=on-failure` giúp systemd tự khởi động lại nếu tiến
-trình live thoát do lỗi không tự phục hồi được.
+local chưa chạy. `Restart=always` giúp systemd tự khởi động lại nếu tiến
+trình live thoát vì bất kỳ lý do nào ngoài thao tác stop chủ động.
+
+## 6. Trạng thái triển khai hiện tại của `og_live`
+
+Trên VM này, `og_live` đang được cài bằng **systemd user service** để không cần
+ghi vào `/etc/systemd/system`:
+
+```bash
+systemctl --user status og-live.service
+systemctl --user restart og-live.service
+journalctl --user -u og-live.service -f
+```
+
+`loginctl enable-linger administrator` đã được bật (`Linger=yes`), nên user
+service có thể tiếp tục chạy sau khi user logout và có thể tự khởi động cùng
+user manager.
+
+Healthcheck Redis/live pipeline cũng đã được cài bằng timer 5 phút/lần:
+
+```bash
+systemctl --user list-timers og-live-healthcheck.timer
+systemctl --user start og-live-healthcheck.service
+journalctl --user -u og-live-healthcheck.service -n 50 --no-pager
+```
+
+Chạy thủ công trong repo:
+
+```bash
+cd /home/administrator/Desktop/og_program
+./.venv/bin/python -m og_live.healthcheck
+./.venv/bin/python -m og_live.healthcheck --json --compact-json
+```
+
+Healthcheck kiểm tra các điểm sống còn:
+
+- Redis còn kết nối được.
+- `candle_snapshot` còn nhận snapshot mới.
+- consumer group `og_live` có `lag=0`, `pending=0`.
+- đủ 165 cặp watched: 11 symbol x 15 timeframe.
+- `signal_stream:combo` đọc được signal mới nhất.
+- local delivery outbox rỗng, không có signal publish lỗi đang chờ retry.
+
+Tình trạng hiện tại có thể trả `STATUS warn` vì 3 cặp weekly chưa đủ đúng 500
+nến lịch sử: `BTCUSD W` và `GOLD W` có 479 nến, `HK50 W` có 397 nến. Đây là
+cảnh báo độ sâu dữ liệu lịch sử, không phải lỗi live engine: healthcheck vẫn
+exit code 0 nếu các điều kiện sống còn ổn.
+
+Redis vẫn còn consumer group cũ `og_watchers` với lag cao. Group này không được
+`og_live` mới dùng; chỉ nên xóa nếu đã xác nhận không còn tiến trình cũ nào cần
+đọc group đó.
 
 ## Về sau (không bắt buộc để chạy 24/7, nhưng nên cân nhắc)
 

@@ -1,6 +1,8 @@
 [Unit]
 Description=OG Live realtime signal generation - user service
 After=default.target
+StartLimitIntervalSec=300
+StartLimitBurst=20
 
 [Service]
 Type=simple
