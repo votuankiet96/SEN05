@@ -22,6 +22,8 @@ all = ["Flask", "pyodbc", "redis", "gunicorn"]
 
 [project.scripts]
 og-dashboard = "og_past.main:main"
+og-engine = "og_core.ops:main"
+og-past-export = "og_past.export_cli:main"
 og-live = "og_live.main:main"
 og-live-healthcheck = "og_live.healthcheck:main"
 
