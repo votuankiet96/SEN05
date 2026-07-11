@@ -49,6 +49,21 @@ sudo systemctl stop og-dashboard.service
 sudo systemctl disable og-dashboard.service   # tắt tự khởi động cùng máy
 ```
 
+### Chạy dashboard bằng user service
+
+Nếu không muốn/cần ghi vào `/etc/systemd/system`, có thể dùng user service:
+
+```bash
+install -D -m 0644 /home/administrator/Desktop/og_program/deploy/og-dashboard-user.service \
+  ~/.config/systemd/user/og-dashboard.service
+systemctl --user daemon-reload
+systemctl --user enable --now og-dashboard.service
+systemctl --user status og-dashboard.service
+```
+
+Trên VM này dashboard đang dùng cách user service, bind ở
+`http://127.0.0.1:8516`.
+
 ## 5. Cài `og_live` làm systemd service
 
 `og_live` đọc stream `candle_snapshot` từ Redis, dùng 500 nến trong snapshot

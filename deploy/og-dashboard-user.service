@@ -1,22 +1,16 @@
 [Unit]
-Description=OG (Order Generation) dashboard - SEN05
-After=network-online.target
-Wants=network-online.target
+Description=OG historical dashboard - user service
+After=default.target
 StartLimitIntervalSec=300
 StartLimitBurst=20
 
 [Service]
 Type=simple
-User=administrator
-Group=administrator
 WorkingDirectory=/home/administrator/Desktop/og_program
 ExecStart=/home/administrator/Desktop/og_program/.venv/bin/gunicorn --bind 127.0.0.1:8516 --workers 2 --timeout 60 og_past.chart.server:create_app()
 Restart=always
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
 
-# .env (SQL_* settings) is loaded by og_past/settings.py itself via
-# python-dotenv, not by systemd — nothing to set here for that.
-
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
