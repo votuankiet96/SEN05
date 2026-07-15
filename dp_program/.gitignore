@@ -1,0 +1,34 @@
+# Real config files contain credentials - commit only the .example templates.
+config/*.env
+!config/*.env.example
+
+# Runtime output (logs, cache, PID files)
+runtime/logs/*
+runtime/cache/*
+runtime/run/*
+runtime/spool/*
+runtime/**/*.db
+runtime/**/*.sqlite
+runtime/**/*.sqlite3
+!runtime/**/.gitkeep
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Test artifacts (pytest temp/cache must never be committed or locked into the repo)
+.pytest_cache/
+.pytest_tmp*/
+pytest_tmp/
+tests/pytest/
+.coverage
+
+# Local executable build output
+build/
+dist/
+*.spec
+
+# Data exports
+*.csv
+*.parquet
