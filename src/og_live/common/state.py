@@ -1,4 +1,4 @@
-"""Local delivered-signal state for OG live deduplication."""
+"""Local delivered-signal and processed-snapshot state for OG Live mechanisms."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import threading
 import time
 from pathlib import Path
 
-from og_live.settings import runtime_dir
+from og_live.common import settings as common_settings
 
 logger = logging.getLogger(__name__)
 
@@ -18,8 +18,9 @@ TTL_SECONDS = 14 * 24 * 3600
 class SignalState:
     """Thread-safe, best-effort durable set of delivered signal IDs."""
 
-    def __init__(self, path: Path | None = None) -> None:
-        self._path = path or (runtime_dir() / "state.json")
+    def __init__(self, path: Path | None = None, *, runtime_dir: Path | None = None) -> None:
+        base_dir = runtime_dir or common_settings.runtime_dir("common")
+        self._path = path or (base_dir / "state.json")
         self._lock = threading.Lock()
         self._seen: dict[str, float] = self._load()
 
@@ -39,7 +40,7 @@ class SignalState:
         if not self._path.exists():
             return {}
         try:
-            raw = json.loads(self._path.read_text())
+            raw = json.loads(self._path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError) as exc:
             logger.warning("state: failed to load %s, starting empty: %s", self._path, exc)
             return {}
@@ -70,3 +71,20 @@ class SignalState:
             tmp.replace(self._path)
         except OSError as exc:
             logger.error("state: failed to persist %s: %s", self._path, exc)
+
+
+class ProcessedSnapshotState(SignalState):
+    """Local durable set of DP snapshot versions already handled by one mechanism."""
+
+    def __init__(self, path: Path | None = None, *, runtime_dir: Path | None = None) -> None:
+        base_dir = runtime_dir or common_settings.runtime_dir("common")
+        super().__init__(path or (base_dir / "processed_snapshots.json"))
+
+    def processed(self, snapshot_key: str) -> bool:
+        """Return True when this strategy/snapshot combination was already handled."""
+        return self.seen(snapshot_key)
+
+    def mark_processed(self, snapshot_key: str) -> None:
+        """Mark one strategy/snapshot combination as handled."""
+        self.mark_delivered(snapshot_key)
+

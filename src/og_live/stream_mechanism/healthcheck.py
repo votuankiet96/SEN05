@@ -1,4 +1,4 @@
-"""Operational healthcheck for the OG live Redis pipeline."""
+"""Operational healthcheck for the OG Live Stream mechanism."""
 
 from __future__ import annotations
 
@@ -11,8 +11,9 @@ from typing import Any
 
 import redis
 
-from og_live import settings
-from og_live.sinks.redis_signals import get_client
+from og_live.common.candle_snapshot import MalformedSnapshotError, parse_state_snapshot
+from og_live.stream_mechanism import settings
+from og_live.stream_mechanism.signals import get_input_client, get_output_client
 
 OK = "ok"
 WARN = "warn"
@@ -35,24 +36,33 @@ def run_healthcheck(args: argparse.Namespace) -> dict[str, Any]:
     checks: list[CheckResult] = []
 
     try:
-        client = get_client()
-        client.ping()
-        checks.append(CheckResult("redis_ping", OK, "Redis connection is alive"))
+        input_client = get_input_client()
+        output_client = get_output_client()
+        input_client.ping()
+        output_client.ping()
+        checks.append(
+            CheckResult(
+                "redis_ping",
+                OK,
+                "Redis stream input/output connections are alive",
+                {"input_db": settings.INPUT_REDIS_DB, "output_db": settings.OUTPUT_REDIS_DB},
+            )
+        )
     except redis.RedisError as exc:
         checks.append(CheckResult("redis_ping", FAIL, f"Redis connection failed: {exc}"))
         return _report(now, checks, fail_on_warn=args.fail_on_warn)
 
     expected_pairs = _expected_pairs()
-    checks.append(_check_input_stream(client, now, args))
-    checks.append(_check_consumer_group(client, args))
-    checks.append(_check_snapshot_coverage(client, expected_pairs, args))
-    checks.append(_check_signal_stream(client))
+    checks.append(_check_input_stream(input_client, now, args))
+    checks.append(_check_consumer_group(input_client, args))
+    checks.append(_check_snapshot_coverage(input_client, expected_pairs, args))
+    checks.append(_check_signal_stream(output_client))
     checks.append(_check_local_state(args))
     return _report(now, checks, fail_on_warn=args.fail_on_warn)
 
 
 def _check_input_stream(client: redis.Redis, now: datetime, args: argparse.Namespace) -> CheckResult:
-    stream = settings.CANDLE_SNAPSHOT_STREAM
+    stream = settings.CANDLE_EVENT_STREAM
     try:
         length = client.xlen(stream)
         latest = client.xrevrange(stream, count=1)
@@ -70,7 +80,8 @@ def _check_input_stream(client: redis.Redis, now: datetime, args: argparse.Names
         status = FAIL
         message = f"{stream} latest entry is stale: {age_seconds:.1f}s"
 
-    bars_summary = _summarize_bars(fields.get("bars"))
+    state_key = fields.get("state_key")
+    snapshot_summary = _summarize_state_snapshot(client, state_key)
     return CheckResult(
         "input_stream",
         status,
@@ -81,13 +92,15 @@ def _check_input_stream(client: redis.Redis, now: datetime, args: argparse.Names
             "latest_entry_id": entry_id,
             "latest_symbol": fields.get("tv_symbol"),
             "latest_timeframe": fields.get("tf_code"),
-            "latest_bars": bars_summary,
+            "latest_bar_time": fields.get("bar_time"),
+            "latest_state_key": state_key,
+            "latest_snapshot": snapshot_summary,
         },
     )
 
 
 def _check_consumer_group(client: redis.Redis, args: argparse.Namespace) -> CheckResult:
-    stream = settings.CANDLE_SNAPSHOT_STREAM
+    stream = settings.CANDLE_EVENT_STREAM
     try:
         groups = client.xinfo_groups(stream)
     except redis.RedisError as exc:
@@ -131,36 +144,34 @@ def _check_snapshot_coverage(
     expected_pairs: set[tuple[str, str]],
     args: argparse.Namespace,
 ) -> CheckResult:
-    stream = settings.CANDLE_SNAPSHOT_STREAM
     if not expected_pairs:
         return CheckResult("snapshot_coverage", FAIL, "No watched symbol/timeframe pairs configured")
 
-    try:
-        entries = client.xrevrange(stream, count=args.coverage_count)
-    except redis.RedisError as exc:
-        return CheckResult("snapshot_coverage", FAIL, f"Cannot scan {stream}: {exc}")
-
     newest_by_pair: dict[tuple[str, str], dict[str, Any]] = {}
     malformed = 0
-    for entry_id, fields in entries:
-        symbol = str(fields.get("tv_symbol") or "").strip().upper()
-        tf = str(fields.get("tf_code") or "").strip().upper()
-        pair = (symbol, tf)
-        if pair not in expected_pairs or pair in newest_by_pair:
+    for pair in sorted(expected_pairs):
+        symbol, tf = pair
+        state_key = settings.candle_state_key(symbol, tf)
+        try:
+            raw_snapshot = client.get(state_key)
+        except redis.RedisError as exc:
+            return CheckResult("snapshot_coverage", FAIL, f"Cannot read {state_key}: {exc}")
+        if raw_snapshot is None:
             continue
         try:
-            bars = json.loads(fields.get("bars") or "[]")
-        except json.JSONDecodeError:
+            snapshot = parse_state_snapshot(raw_snapshot)
+        except MalformedSnapshotError:
             malformed += 1
             continue
-        if not isinstance(bars, list):
+        if snapshot.symbol != symbol or snapshot.tf != tf:
             malformed += 1
             continue
         newest_by_pair[pair] = {
-            "entry_id": entry_id,
-            "bars": len(bars),
-            "first_bar_time": (bars[0] if bars else {}).get("bar_time"),
-            "last_bar_time": (bars[-1] if bars else {}).get("bar_time"),
+            "state_key": state_key,
+            "bars": len(snapshot.bars),
+            "first_bar_time": _frame_bar_time(snapshot.bars, 0),
+            "last_bar_time": _frame_bar_time(snapshot.bars, -1),
+            "latest_bar_time": snapshot.latest_bar_time,
         }
 
     missing = sorted(expected_pairs - set(newest_by_pair))
@@ -200,7 +211,7 @@ def _check_snapshot_coverage(
         {
             "expected_pairs": len(expected_pairs),
             "covered_pairs": len(newest_by_pair),
-            "coverage_count": args.coverage_count,
+            "state_prefix": settings.CANDLE_STATE_PREFIX,
             "missing_pairs": missing[:20],
             "pairs_below_min_bars": short[:20],
             "pairs_not_strict_bars": non_strict[:20],
@@ -209,17 +220,36 @@ def _check_snapshot_coverage(
 
 
 def _check_signal_stream(client: redis.Redis) -> CheckResult:
-    stream = settings.signal_stream_key("combo")
+    streams = _configured_signal_streams()
+    stream_lengths: dict[str, int] = {}
+    latest_stream = None
+    latest_id = None
+    fields: dict[str, Any] = {}
     try:
-        length = client.xlen(stream)
-        latest = client.xrevrange(stream, count=1)
+        for stream in streams:
+            length = client.xlen(stream)
+            stream_lengths[stream] = length
+            latest = client.xrevrange(stream, count=1) if length else []
+            if latest and (latest_id is None or _stream_id_time(latest[0][0]) > _stream_id_time(latest_id)):
+                latest_stream = stream
+                latest_id, fields = latest[0]
     except redis.RedisError as exc:
-        return CheckResult("signal_stream", FAIL, f"Cannot read {stream}: {exc}")
+        return CheckResult("signal_stream", FAIL, f"Cannot read configured signal streams: {exc}")
 
-    if length <= 0:
-        return CheckResult("signal_stream", WARN, f"{stream} has no signals yet", {"stream": stream, "length": length})
+    if not latest_stream or latest_id is None:
+        return CheckResult(
+            "signal_stream",
+            OK,
+            "Signal output is configured; no signals have been published yet",
+            {
+                "streams": streams[:20],
+                "streams_checked": len(streams),
+                "stream_lengths": stream_lengths,
+                "output_mode": settings.SIGNAL_OUTPUT_MODE,
+                "output_db": settings.OUTPUT_REDIS_DB,
+            },
+        )
 
-    latest_id, fields = latest[0]
     missing_fields = [field for field in ("signal_id", "symbol", "timeframe", "bar_time", "side") if not fields.get(field)]
     status = FAIL if missing_fields else OK
     message = f"Latest signal is {fields.get('symbol')} {fields.get('timeframe')} {fields.get('side')}"
@@ -230,8 +260,10 @@ def _check_signal_stream(client: redis.Redis) -> CheckResult:
         status,
         message,
         {
-            "stream": stream,
-            "length": length,
+            "stream": latest_stream,
+            "length": stream_lengths.get(latest_stream, 0),
+            "streams_checked": len(streams),
+            "stream_lengths": stream_lengths,
             "latest_entry_id": latest_id,
             "latest_signal_id": fields.get("signal_id"),
             "latest_symbol": fields.get("symbol"),
@@ -239,6 +271,8 @@ def _check_signal_stream(client: redis.Redis) -> CheckResult:
             "latest_side": fields.get("side"),
             "latest_bar_time": fields.get("bar_time"),
             "latest_produced_at": fields.get("produced_at"),
+            "output_mode": settings.SIGNAL_OUTPUT_MODE,
+            "output_db": settings.OUTPUT_REDIS_DB,
         },
     )
 
@@ -247,28 +281,43 @@ def _check_local_state(args: argparse.Namespace) -> CheckResult:
     runtime = settings.runtime_dir()
     outbox_path = runtime / "delivery_outbox.json"
     state_path = runtime / "state.json"
+    processed_path = runtime / "processed_snapshots.json"
 
     try:
         outbox = _read_json(outbox_path, default=[])
         state = _read_json(state_path, default={})
+        processed = _read_json(processed_path, default={})
     except ValueError as exc:
         return CheckResult("local_state", FAIL, str(exc))
 
     pending = len(outbox) if isinstance(outbox, list) else 0
     delivered_seen = len(state) if isinstance(state, dict) else 0
+    processed_seen = len(processed) if isinstance(processed, dict) else 0
     if pending > args.max_outbox_pending:
         return CheckResult(
             "local_state",
             FAIL,
             f"Delivery outbox has {pending} pending signal(s)",
-            {"outbox_path": str(outbox_path), "pending": pending, "delivered_seen": delivered_seen},
+            {
+                "outbox_path": str(outbox_path),
+                "pending": pending,
+                "delivered_seen": delivered_seen,
+                "processed_seen": processed_seen,
+            },
         )
 
     return CheckResult(
         "local_state",
         OK,
         "Local state is readable and outbox is clear",
-        {"outbox_path": str(outbox_path), "pending": pending, "state_path": str(state_path), "delivered_seen": delivered_seen},
+        {
+            "outbox_path": str(outbox_path),
+            "pending": pending,
+            "state_path": str(state_path),
+            "processed_path": str(processed_path),
+            "delivered_seen": delivered_seen,
+            "processed_seen": processed_seen,
+        },
     )
 
 
@@ -285,19 +334,54 @@ def _stream_id_time(stream_id: str) -> datetime:
     return datetime.fromtimestamp(milliseconds / 1000, tz=timezone.utc)
 
 
-def _summarize_bars(raw_bars: str | None) -> dict[str, Any]:
+def _summarize_state_snapshot(client: redis.Redis, state_key: str | None) -> dict[str, Any]:
+    if not state_key:
+        return {"valid": False, "error": "missing_state_key"}
     try:
-        bars = json.loads(raw_bars or "[]")
-    except json.JSONDecodeError:
-        return {"valid": False, "error": "invalid_json"}
-    if not isinstance(bars, list):
-        return {"valid": False, "error": "not_array"}
+        raw_snapshot = client.get(state_key)
+    except redis.RedisError as exc:
+        return {"valid": False, "error": f"redis_error:{exc}"}
+    if raw_snapshot is None:
+        return {"valid": False, "error": "state_key_missing", "state_key": state_key}
+    return _summarize_snapshot_json(raw_snapshot, state_key=state_key)
+
+
+def _summarize_snapshot_json(raw_snapshot: str, *, state_key: str | None = None) -> dict[str, Any]:
+    try:
+        snapshot = parse_state_snapshot(raw_snapshot)
+    except MalformedSnapshotError as exc:
+        return {"valid": False, "error": str(exc), "state_key": state_key}
     return {
         "valid": True,
-        "count": len(bars),
-        "first_bar_time": (bars[0] if bars else {}).get("bar_time"),
-        "last_bar_time": (bars[-1] if bars else {}).get("bar_time"),
+        "state_key": state_key,
+        "count": len(snapshot.bars),
+        "first_bar_time": _frame_bar_time(snapshot.bars, 0),
+        "last_bar_time": _frame_bar_time(snapshot.bars, -1),
+        "latest_bar_time": snapshot.latest_bar_time,
+        "snapshot_version": snapshot.snapshot_version,
     }
+
+
+def _frame_bar_time(frame: Any, index: int) -> str | None:
+    if getattr(frame, "empty", True):
+        return None
+    value = frame.iloc[index]["bartime"]
+    return value.isoformat() if hasattr(value, "isoformat") else str(value)
+
+
+def _configured_signal_streams() -> list[str]:
+    streams: list[str] = []
+    strategies = {item.strategy for item in settings.load_watched_items()}
+    for strategy in sorted(strategies):
+        if settings.SIGNAL_OUTPUT_MODE in {"legacy", "dual"}:
+            streams.append(settings.signal_stream_key(strategy))
+        if settings.SIGNAL_OUTPUT_MODE in {"routed", "dual"}:
+            for item in settings.load_watched_items():
+                if item.strategy != strategy:
+                    continue
+                for symbol in item.symbols:
+                    streams.append(settings.routed_signal_stream_key(strategy, symbol, item.tf))
+    return list(dict.fromkeys(streams))
 
 
 def _read_json(path: Path, *, default: Any) -> Any:
@@ -336,12 +420,12 @@ def _report(now: datetime, checks: list[CheckResult], *, fail_on_warn: bool) -> 
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Check OG live Redis pipeline health.")
+    parser = argparse.ArgumentParser(description="Check OG Live Stream mechanism health.")
     parser.add_argument("--json", action="store_true", help="Print a JSON report.")
     parser.add_argument("--compact-json", action="store_true", help="Print JSON on one line for journal-friendly logs.")
     parser.add_argument("--fail-on-warn", action="store_true", help="Return exit code 1 when any warning is present.")
-    parser.add_argument("--coverage-count", type=int, default=2000, help="Recent candle_snapshot entries to scan.")
-    parser.add_argument("--max-lag", type=int, default=0, help="Maximum allowed og_live consumer group lag.")
+    parser.add_argument("--coverage-count", type=int, default=2000, help=argparse.SUPPRESS)
+    parser.add_argument("--max-lag", type=int, default=0, help="Maximum allowed stream consumer group lag.")
     parser.add_argument("--max-pending", type=int, default=0, help="Maximum allowed og_live pending entries.")
     parser.add_argument("--max-snapshot-age-seconds", type=int, default=15 * 60, help="Maximum latest stream-entry age.")
     parser.add_argument("--min-bars", type=int, default=300, help="Minimum acceptable bar count per watched pair.")

@@ -66,23 +66,33 @@ Trên VM này dashboard đang dùng cách user service, bind ở
 
 ## 5. Cài `og_live` làm systemd service
 
-`og_live` đọc stream `candle_snapshot` từ Redis, dùng 500 nến trong snapshot
-để tính tín hiệu qua `og_core`, rồi publish tín hiệu mới lên
-`signal_stream:<strategy>`.
+`og_live` hiện có 2 cơ chế live độc lập:
+
+- Stream mechanism: đọc Redis Stream `dp:candle_snapshot:events` từ db0, GET
+  `state_key`, tính tín hiệu qua `og_core`, publish signal lên db1 theo route
+  `og:stream:signals:<strategy>:<symbol>:<tf>`.
+- Pub/Sub mechanism: subscribe channel `dp:pubsub:candle_snapshot:events`,
+  GET `state_key` từ db0, tính tín hiệu qua `og_core`, publish signal lên db2
+  theo route `og:pubsub:signals:<strategy>:<symbol>:<tf>`.
+
+Redis Pub/Sub channel không thuộc db nào; db2 chỉ dùng để lưu signal output
+của Pub/Sub mechanism.
 
 ```bash
 ./.venv/bin/pip install -e ".[live]"   # nếu chưa cài
-sudo cp /home/administrator/Desktop/og_program/deploy/og-live.service /etc/systemd/system/
+sudo cp /home/administrator/Desktop/og_program/deploy/og-live-stream.service /etc/systemd/system/
+sudo cp /home/administrator/Desktop/og_program/deploy/og-live-pubsub.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now og-live.service
+sudo systemctl enable --now og-live-stream.service og-live-pubsub.service
 ```
 
 Kiểm tra:
 
 ```bash
-systemctl status og-live.service
-journalctl -u og-live.service -f
-tail -f /home/administrator/Desktop/og_program/runtime/logs/og_live.log
+systemctl status og-live-stream.service og-live-pubsub.service
+journalctl -u og-live-stream.service -u og-live-pubsub.service -f
+tail -f /home/administrator/Desktop/og_program/runtime/logs/og_live_stream.log
+tail -f /home/administrator/Desktop/og_program/runtime/logs/og_live_pubsub.log
 ```
 
 `Requires=redis-server.service` — service này sẽ không khởi động nếu Redis
@@ -95,9 +105,9 @@ Trên VM này, `og_live` đang được cài bằng **systemd user service** đ�
 ghi vào `/etc/systemd/system`:
 
 ```bash
-systemctl --user status og-live.service
-systemctl --user restart og-live.service
-journalctl --user -u og-live.service -f
+systemctl --user status og-live-stream.service og-live-pubsub.service
+systemctl --user restart og-live-stream.service og-live-pubsub.service
+journalctl --user -u og-live-stream.service -u og-live-pubsub.service -f
 ```
 
 `loginctl enable-linger administrator` đã được bật (`Linger=yes`), nên user
@@ -107,26 +117,27 @@ user manager.
 Healthcheck Redis/live pipeline cũng đã được cài bằng timer 5 phút/lần:
 
 ```bash
-systemctl --user list-timers og-live-healthcheck.timer
-systemctl --user start og-live-healthcheck.service
-journalctl --user -u og-live-healthcheck.service -n 50 --no-pager
+systemctl --user list-timers og-live-stream-healthcheck.timer og-live-pubsub-healthcheck.timer
+systemctl --user start og-live-stream-healthcheck.service og-live-pubsub-healthcheck.service
+journalctl --user -u og-live-stream-healthcheck.service -u og-live-pubsub-healthcheck.service -n 50 --no-pager
 ```
 
 Chạy thủ công trong repo:
 
 ```bash
 cd /home/administrator/Desktop/og_program
-./.venv/bin/python -m og_live.healthcheck
-./.venv/bin/python -m og_live.healthcheck --json --compact-json
+./.venv/bin/python -m og_live.stream_mechanism.healthcheck
+./.venv/bin/python -m og_live.pubsub_mechanism.healthcheck
 ```
 
 Healthcheck kiểm tra các điểm sống còn:
 
 - Redis còn kết nối được.
-- `candle_snapshot` còn nhận snapshot mới.
-- consumer group `og_live` có `lag=0`, `pending=0`.
-- đủ 165 cặp watched: 11 symbol x 15 timeframe.
-- `signal_stream:combo` đọc được signal mới nhất.
+- `dp:candle_snapshot:events` còn nhận event mới cho Stream mechanism.
+- consumer group `og_live_stream` có `lag=0`, `pending=0`.
+- Pub/Sub channel có subscriber khi Pub/Sub mechanism service đang chạy.
+- đủ state key cho các cặp watched.
+- signal output db1 đọc được signal mới nhất nếu đã từng có signal.
 - local delivery outbox rỗng, không có signal publish lỗi đang chờ retry.
 
 Tình trạng hiện tại có thể trả `STATUS warn` vì 3 cặp weekly chưa đủ đúng 500
@@ -148,5 +159,5 @@ Redis vẫn còn consumer group cũ `og_watchers` với lag cao. Group này khô
   hiện dashboard không có auth.
 - **Lỗi API vẫn trả chi tiết exception ra ngoài** (quyết định trước đó là
   chưa cần sửa) — nên sửa nếu mở dashboard ra ngoài `127.0.0.1`.
-- `og-dashboard.service` và `og-live.service` độc lập với nhau. Dashboard lỗi
+- `og-dashboard.service`, `og-live-stream.service` và `og-live-pubsub.service` độc lập với nhau. Dashboard lỗi
   SQL không làm live dừng; Redis/live lỗi không làm dashboard dừng.

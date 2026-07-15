@@ -1,4 +1,4 @@
-"""Durable local outbox for live signals that could not be published to Redis."""
+"""Durable local outbox for signals that could not be published to Redis."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from og_live.settings import runtime_dir
+from og_live.common import settings as common_settings
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +19,9 @@ PublishFn = Callable[[str, dict[str, Any]], str | None]
 class DeliveryOutbox:
     """Thread-safe, best-effort durable queue keyed by signal_id."""
 
-    def __init__(self, path: Path | None = None) -> None:
-        self._path = path or (runtime_dir() / "delivery_outbox.json")
+    def __init__(self, path: Path | None = None, *, runtime_dir: Path | None = None) -> None:
+        base_dir = runtime_dir or common_settings.runtime_dir("common")
+        self._path = path or (base_dir / "delivery_outbox.json")
         self._lock = threading.Lock()
         self._pending: list[dict[str, Any]] = self._load()
 
@@ -93,3 +94,4 @@ class DeliveryOutbox:
         except OSError as exc:
             logger.error("outbox: failed to persist %s: %s", self._path, exc)
             return False
+

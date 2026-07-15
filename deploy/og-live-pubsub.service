@@ -1,5 +1,5 @@
 [Unit]
-Description=OG Live realtime signal generation - SEN05
+Description=OG Live Pub/Sub realtime signal generation - SEN05
 After=network-online.target redis-server.service
 Wants=network-online.target
 Requires=redis-server.service
@@ -11,13 +11,10 @@ Type=simple
 User=administrator
 Group=administrator
 WorkingDirectory=/home/administrator/Desktop/og_program
-ExecStart=/home/administrator/Desktop/og_program/.venv/bin/python -m og_live.main
+ExecStart=/home/administrator/Desktop/og_program/.venv/bin/python -m og_live.pubsub_mechanism.main
 Restart=always
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
-
-# .env (REDIS_* and OG_LIVE_* settings) is loaded by og_live/settings.py via
-# python-dotenv, not by systemd — nothing to set here for that.
 
 [Install]
 WantedBy=multi-user.target

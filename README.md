@@ -2,8 +2,8 @@
 
 OG là lớp sinh tín hiệu giao dịch của hệ thống SEN05. Repo hiện được tách
 thành ba package: `og_core` chứa logic chiến lược chung, `og_past` đọc SQL
-để phục vụ dashboard/export lịch sử, và `og_live` đọc Redis snapshot từ DP6
-để publish tín hiệu realtime.
+để phục vụ dashboard/export lịch sử, và `og_live` đọc Redis event/state
+snapshot từ DP6 để publish tín hiệu realtime.
 
 Tên thư mục checkout không còn ảnh hưởng gì đến việc import sau khi cài đặt
 editable (`pip install -e ...`).
@@ -23,12 +23,12 @@ og_past/data/          Đọc OHLCV từ SQL Server (chỉ đọc, xem CONTRACTS
 og_past/engine.py      Orchestration dashboard/export với date window SQL
 og_past/chart/         Flask dashboard API + frontend (Lightweight Charts)
 og_past/export/        Xuất CSV cho dashboard (/api/export, /api/export/bulk)
-og_live/               Redis candle_snapshot -> og_core -> signal_stream
+og_live/               Live Stream + Pub/Sub mechanisms -> og_core -> signal streams
 tests/                 Test characterization cho indicators + 4 chiến lược
 ```
 
 Xem `CONTRACTS.md` để biết chính xác OG kết nối với DP6 qua đâu: SQL Server
-cho `og_past`, Redis Streams cho `og_live`.
+cho `og_past`, Redis Stream và Redis Pub/Sub cho `og_live`.
 
 ## Cài đặt
 
@@ -51,9 +51,13 @@ Extras chính:
 ./.venv/bin/python -m og_past.main --port 8516
 # hoặc, sau khi cài đặt: og-dashboard --port 8516
 
-# Live signal engine
-./.venv/bin/python -m og_live.main
-# smoke test một batch: ./.venv/bin/python -m og_live.main --once
+# Live Stream mechanism
+./.venv/bin/python -m og_live.stream_mechanism.main
+# smoke test một batch: ./.venv/bin/python -m og_live.stream_mechanism.main --once
+
+# Live Pub/Sub mechanism
+./.venv/bin/python -m og_live.pubsub_mechanism.main
+# smoke test một message: ./.venv/bin/python -m og_live.pubsub_mechanism.main --once --timeout-seconds 60
 
 # Test
 ./.venv/bin/python -m pytest

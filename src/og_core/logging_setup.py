@@ -12,8 +12,8 @@ Mô tả:
     "og_live.log") — mỗi chương trình 1 file riêng, không trộn lẫn.
 
 Lưu ý:
-    og_past và og_live chạy trong 2 tiến trình riêng biệt (dashboard
-    qua gunicorn, live engine qua `python -m og_live.main`) nên gọi
+    og_past và og_live chạy trong các tiến trình riêng biệt (dashboard
+    qua gunicorn, live engine qua stream/pubsub mechanism) nên gọi
     setup_logger() cấu hình root logger 1 lần/tiến trình là an toàn, không
     xung đột giữa 2 chương trình. Gunicorn nhiều worker (nhiều tiến trình
     con) cùng ghi vào 1 file là chấp nhận được ở quy mô hiện tại — rotation

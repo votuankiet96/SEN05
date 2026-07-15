@@ -8,7 +8,7 @@ import pandas as pd
 
 from og_core.engine import run_strategy_on_bars
 from og_core.signals import payloads_from_frame
-from og_live.settings import WatchedItem
+from og_live.common.settings import WatchedItem
 
 logger = logging.getLogger(__name__)
 

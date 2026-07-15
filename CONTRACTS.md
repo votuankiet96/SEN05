@@ -51,32 +51,60 @@ SQL_ENCRYPT, SQL_TRUST_SERVER_CERT
 `SQL_DATABASE` mặc định `"SEN05_AutoTrading"` và có thể override qua env nếu
 cần kiểm thử môi trường khác.
 
-## 3. Dữ liệu live — Redis Streams từ DP6
+## 3. Dữ liệu live — Redis state keys + event stream từ DP6
 
-`og_live` không query SQL. DP6 publish stream `candle_snapshot`; mỗi entry
-mang metadata symbol/timeframe và một mảng JSON các nến OHLCV mới nhất
-(thường 500 nến). Schema tối thiểu:
+`og_live` không query SQL. DP6 ghi snapshot mới nhất vào Redis state key, rồi
+publish một event nhỏ để báo OG key nào vừa được cập nhật sau khi
+`live_fetching` commit nến đóng vào SQL.
+
+State key:
 
 ```text
-candle_snapshot
-  tv_symbol  — mã symbol TradingView, ví dụ US30
-  tf_code    — mã timeframe, ví dụ H1
-  bars       — JSON array:
-               [{bar_time, open, high, low, close, volume}, ...]
+dp:candle_snapshot:latest:{tv_symbol}:{tf_code}
+  schema_version, program, source, symbol_id, tv_symbol, tf_code,
+  bars_count, latest_bar_time, generated_at_utc, snapshot_version,
+  bars: [{bar_time, open, high, low, close, volume}, ...]
 ```
 
-`og_live` parse snapshot thành frame chuẩn `[bartime, open, high, low, close,
-volume]`, tính chiến lược bằng `og_core`, rồi mặc định chỉ xét bar cuối cùng
-của snapshot để tránh publish lại tín hiệu lịch sử khi service restart.
-
-Output publish lên Redis Stream:
+Event stream:
 
 ```text
-signal_stream:<strategy>
+dp:candle_snapshot:events
+  event_type=snapshot_updated, tv_symbol, tf_code, bar_time, state_key,
+  bars_count, published_at_utc, snapshot_version
+```
+
+OG Stream mechanism dùng event stream làm live trigger trong Redis db0, sau đó `GET state_key`
+để lấy 500 nến mới nhất. State key tồn tại một mình chỉ dùng cho
+warm-up/healthcheck; nó không được xem là trigger trading.
+
+Stream mechanism publish signal lên Redis db1 theo route:
+
+```text
+og:stream:signals:{strategy}:{symbol}:{timeframe}
   signal_id, strategy, symbol, timeframe, direction, side, bar_time,
   event_close, entry_price, sl_price, tp_price, risk_reward, atr,
-  signal_reason, produced_at
+  signal_reason, produced_at, schema_version, asset_type, source_program,
+  source_mechanism, source_stream, source_entry_id, source_state_key,
+  source_snapshot_version, source_bar_time
 ```
+
+Ví dụ:
+
+```text
+og:stream:signals:combo:HK50:H4
+```
+
+Pub/Sub mechanism subscribe channel `dp:pubsub:candle_snapshot:events`, dùng
+`state_key` trong message để GET snapshot từ Redis db0, rồi publish signal
+lên Redis db2 theo route:
+
+```text
+og:pubsub:signals:{strategy}:{symbol}:{timeframe}
+```
+
+Redis Pub/Sub channel không nằm trong db0/db1/db2; db2 chỉ là nơi lưu signal
+do Pub/Sub mechanism tạo ra.
 
 **Đã kiểm chứng thật 2026-07-07** (xem `deploy/README.md`): từ Linux
 (`vm-og`), phải dùng **SQL Authentication** (`SQL_UID`/`SQL_PWD` thật) với

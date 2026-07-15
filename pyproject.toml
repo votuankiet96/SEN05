@@ -24,8 +24,10 @@ all = ["Flask", "pyodbc", "redis", "gunicorn"]
 og-dashboard = "og_past.main:main"
 og-engine = "og_core.ops:main"
 og-past-export = "og_past.export_cli:main"
-og-live = "og_live.main:main"
-og-live-healthcheck = "og_live.healthcheck:main"
+og-live-stream = "og_live.stream_mechanism.main:main"
+og-live-stream-healthcheck = "og_live.stream_mechanism.healthcheck:main"
+og-live-pubsub = "og_live.pubsub_mechanism.main:main"
+og-live-pubsub-healthcheck = "og_live.pubsub_mechanism.healthcheck:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

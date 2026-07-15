@@ -1,5 +1,5 @@
 [Unit]
-Description=OG Live realtime signal generation - user service
+Description=OG Live Stream realtime signal generation - user service
 After=default.target
 StartLimitIntervalSec=300
 StartLimitBurst=20
@@ -7,7 +7,7 @@ StartLimitBurst=20
 [Service]
 Type=simple
 WorkingDirectory=/home/administrator/Desktop/og_program
-ExecStart=/home/administrator/Desktop/og_program/.venv/bin/python -m og_live.main
+ExecStart=/home/administrator/Desktop/og_program/.venv/bin/python -m og_live.stream_mechanism.main
 Restart=always
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
