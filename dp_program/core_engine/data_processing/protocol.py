@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import random
 import re
@@ -128,6 +129,38 @@ def extract_ws_status(error: Any) -> tuple[int | None, Any]:
         return None, headers
 
 
+def extract_ws_close_code(error: Any) -> int | None:
+    """Return a WebSocket close code without confusing it with an HTTP status."""
+    for attr in ("close_status_code", "close_code", "code"):
+        value = getattr(error, attr, None)
+        try:
+            code = int(value)
+        except (TypeError, ValueError):
+            continue
+        if 1000 <= code <= 4999:
+            return code
+
+    text = str(error)
+    if "opcode=8" not in text.lower() and "close frame" not in text.lower():
+        return None
+
+    match = re.search(r"data=(b(?:'[^']*'|\"[^\"]*\"))", text, flags=re.IGNORECASE)
+    if match:
+        try:
+            payload = ast.literal_eval(match.group(1))
+        except (SyntaxError, ValueError):
+            payload = None
+        if isinstance(payload, bytes) and len(payload) >= 2:
+            return int.from_bytes(payload[:2], byteorder="big", signed=False)
+
+    match = re.search(r"(?:close(?:\s+status)?(?:\s+code)?|code)\s*[:=]\s*(\d{4})", text, re.IGNORECASE)
+    if match:
+        code = int(match.group(1))
+        if 1000 <= code <= 4999:
+            return code
+    return None
+
+
 def classify_ws_error(
     error: Any,
     *,
@@ -136,6 +169,10 @@ def classify_ws_error(
     forbidden_cooldown_sec: int,
     token_expiry_keywords: tuple[str, ...],
 ) -> tuple[str, int | None, int]:
+    close_code = extract_ws_close_code(error)
+    if close_code == 1000:
+        return "normal_close", close_code, 0
+
     status, headers = extract_ws_status(error)
     text = str(error).lower()
     if status == 429:
@@ -154,4 +191,3 @@ def classify_ws_error(
     if "too many" in text or "rate limit" in text:
         return "rate_limit", status, rate_limit_cooldown_sec
     return "network", status, 0
-

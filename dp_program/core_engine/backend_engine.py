@@ -580,6 +580,8 @@ class BackendSupervisor:
         self._supervisor_lock_acquired = False
         self._main_loop_seen_at = time.time()
         self._main_loop_stale_reported = False
+        self._supervisor_lock_issue_reported_at = 0.0
+        self._supervisor_lock_issue_kind = ""
         self._live_state_issue_reported_at = 0.0
         self._live_state_issue_kind = ""
 
@@ -626,6 +628,44 @@ class BackendSupervisor:
     def _mark_main_loop_alive(self) -> None:
         self._main_loop_seen_at = time.time()
         self._main_loop_stale_reported = False
+
+    def _handle_supervisor_lock_renew_failed(self, payload: str) -> None:
+        active = fetch_lock(DP_PROGRAM_LOCK, active_only=True)
+        if active is None:
+            if acquire(DP_PROGRAM_LOCK, duration_min=10, payload=payload):
+                self._supervisor_lock_acquired = True
+                self._supervisor_lock_issue_reported_at = 0.0
+                self._supervisor_lock_issue_kind = ""
+                logger.warning(
+                    "%s",
+                    _slog(
+                        "Supervisor lock reacquired",
+                        lock=DP_PROGRAM_LOCK,
+                        reason="lock_row_missing_during_renew",
+                        result="recovered",
+                    ),
+                )
+                return
+            active = fetch_lock(DP_PROGRAM_LOCK, active_only=True)
+
+        detail = _active_lock_detail(DP_PROGRAM_LOCK) if active else {}
+        now = time.time()
+        kind = "renew_failed_conflict" if active else "renew_failed_missing"
+        if self._supervisor_lock_issue_kind == kind and now - self._supervisor_lock_issue_reported_at < 300:
+            return
+        self._supervisor_lock_issue_kind = kind
+        self._supervisor_lock_issue_reported_at = now
+        logger.error(
+            "%s",
+            _slog(
+                "Supervisor lock renewal failed",
+                lock=DP_PROGRAM_LOCK,
+                active_pid=detail.get("pid") or "-",
+                active_started=detail.get("started") or "-",
+                action="reacquire_attempted",
+                result="warning",
+            ),
+        )
 
     def _safe_notify(self, notify_fn: Any, **kwargs: Any) -> None:
         try:
@@ -779,8 +819,9 @@ class BackendSupervisor:
                             pass
                         self._main_loop_stale_reported = True
                     return
-                if not renew(DP_PROGRAM_LOCK, duration_min=10, payload=self._supervisor_payload()):
-                    logger.error("%s", _slog("Supervisor lock renewal failed", lock=DP_PROGRAM_LOCK, result="warning"))
+                payload = self._supervisor_payload()
+                if not renew(DP_PROGRAM_LOCK, duration_min=10, payload=payload):
+                    self._handle_supervisor_lock_renew_failed(payload)
 
         threading.Thread(target=loop, name="dp-program-lock-heartbeat", daemon=True).start()
 

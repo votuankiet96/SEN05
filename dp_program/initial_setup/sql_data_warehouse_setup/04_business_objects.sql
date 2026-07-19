@@ -118,7 +118,32 @@ BEGIN
     -- so we concatenate it into the SQL string after the whitelist check above.
     -- All other variable values (@SymbolID, @TimeframeID, @FromTime) are passed as
     -- proper parameters to sp_executesql to avoid any injection risk from those values.
+    DECLARE @UpdatedRows INT = 0;
+    DECLARE @InsertedRows INT = 0;
+
     DECLARE @sql NVARCHAR(MAX) = N'
+        UPDATE f
+        SET f.[Open]  = s.[Open],
+            f.High    = s.High,
+            f.Low     = s.Low,
+            f.[Close] = s.[Close]
+        FROM DWH.Fact_OHLCV AS f
+        INNER JOIN ' + @StagingTable + N' AS s
+            ON s.SymbolID = f.SymbolID
+           AND s.BarTime = f.BarTime
+        WHERE f.SymbolID = @SymbolID
+          AND f.TimeframeID = @TimeframeID
+          AND s.BarTime >= @FromTime
+          AND s.IsProcessed = 1
+          AND (
+              f.[Open] <> s.[Open]
+              OR f.High <> s.High
+              OR f.Low <> s.Low
+              OR f.[Close] <> s.[Close]
+          );
+
+        SET @UpdatedRows = @@ROWCOUNT;
+
         INSERT INTO DWH.Fact_OHLCV
             (SymbolID, TimeframeID, DateKey, BarTime,
              [Open], High, Low, [Close], Volume, TickCount)
@@ -141,15 +166,25 @@ BEGIN
                 AND f.TimeframeID = @TimeframeID
                 AND f.BarTime     = ' + @StagingTable + N'.BarTime
           );
+
+        SET @InsertedRows = @@ROWCOUNT;
     ';
 
     -- Step 5: Execute with parameterised values (safe from injection for these values).
     EXEC sp_executesql @sql,
-        N'@SymbolID INT, @TimeframeID TINYINT, @FromTime DATETIME2',
-        @SymbolID, @TimeframeID, @FromTime;
+        N'@SymbolID INT, @TimeframeID TINYINT, @FromTime DATETIME2,
+          @UpdatedRows INT OUTPUT, @InsertedRows INT OUTPUT',
+        @SymbolID, @TimeframeID, @FromTime,
+        @UpdatedRows OUTPUT, @InsertedRows OUTPUT;
+
+    SELECT @UpdatedRows AS UpdatedRows,
+           @InsertedRows AS InsertedRows,
+           @UpdatedRows + @InsertedRows AS AffectedRows;
 
     PRINT 'usp_LoadDirect OK: TF=' + @TFCode
-          + ' SymbolID=' + CAST(@SymbolID AS VARCHAR);
+          + ' SymbolID=' + CAST(@SymbolID AS VARCHAR)
+          + ' Updated=' + CAST(@UpdatedRows AS VARCHAR)
+          + ' Inserted=' + CAST(@InsertedRows AS VARCHAR);
 END
 GO
 PRINT 'Procedure DWH.usp_LoadDirect created.';

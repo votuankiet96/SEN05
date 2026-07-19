@@ -623,9 +623,10 @@ class LiveReporter:
         has_recent_data_flow = last_hour_accepted > 0 and last_hour_saved > 0
         source_lag_is_actionable = source_lag_count > 0 and not has_recent_data_flow
 
+        critical_stale_without_flow = stale_count > 15 and not has_recent_data_flow
         if (
             recent_errors > 0
-            or stale_count > 15
+            or critical_stale_without_flow
             or (source_lag_count > 15 and not has_recent_data_flow)
             or spool_count > 0
             or recent_ws_errors > 5

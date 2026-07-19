@@ -7,6 +7,7 @@ import pickle
 import queue
 import sqlite3
 import threading
+from contextlib import closing
 from pathlib import Path
 from typing import Any
 
@@ -32,7 +33,7 @@ class LiveSpool:
     def init(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self._lock:
-            with sqlite3.connect(self.path) as con:
+            with closing(sqlite3.connect(self.path)) as con:
                 con.execute(
                     """
                     CREATE TABLE IF NOT EXISTS spool (
@@ -78,7 +79,7 @@ class LiveSpool:
         batch_id, symbol_id, tf_code, staging_table, tv_symbol, df = self._normalize_item(item)
         blob = self._encode_payload(df)
         with self._lock:
-            with sqlite3.connect(self.path) as con:
+            with closing(sqlite3.connect(self.path)) as con:
                 count = con.execute("SELECT COUNT(*) FROM spool").fetchone()[0]
                 if count >= self.max_rows:
                     self.logger.error(
@@ -108,7 +109,7 @@ class LiveSpool:
     def flush_to_queue(self, target_queue: queue.Queue, *, limit: int = 200) -> int:
         flushed = 0
         with self._lock:
-            with sqlite3.connect(self.path) as con:
+            with closing(sqlite3.connect(self.path)) as con:
                 rows = con.execute(
                     "SELECT id,batch_id,payload_version,symbol_id,tf_code,staging_table,tv_symbol,bar_data "
                     "FROM spool ORDER BY id LIMIT ?",
@@ -150,7 +151,7 @@ class LiveSpool:
     def count(self) -> int | None:
         try:
             with self._lock:
-                with sqlite3.connect(self.path) as con:
+                with closing(sqlite3.connect(self.path)) as con:
                     row = con.execute("SELECT COUNT(*) FROM spool").fetchone()
             return int(row[0]) if row else 0
         except Exception:
@@ -159,7 +160,7 @@ class LiveSpool:
     def cleanup_old(self, *, hours: int = 48) -> int:
         try:
             with self._lock:
-                with sqlite3.connect(self.path) as con:
+                with closing(sqlite3.connect(self.path)) as con:
                     con.execute(
                         "DELETE FROM spool WHERE created_at < datetime('now', ?)",
                         (f"-{int(hours)} hours",),

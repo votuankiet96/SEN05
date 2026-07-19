@@ -234,7 +234,7 @@ def run_etl_direct(
     Goi stored procedure DWH.usp_LoadDirect de nap du lieu 1:1 vao Fact_OHLCV.
 
     Dau ra:
-    - So dong moi chen vao Fact (tinh theo before/after count).
+    - So dong duoc chen moi hoac cap nhat OHLC trong Fact.
 
     Anh huong he thong:
     - Ham an toan khi goi lap lai, do SP da chong duplicate.
@@ -242,38 +242,28 @@ def run_etl_direct(
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        # Count rows in Fact before ETL
-        cursor.execute(
-            "SELECT COUNT(*) FROM DWH.Fact_OHLCV f "
-            "JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID "
-            "WHERE f.SymbolID = ? AND tf.Code = ?",
-            (symbol_id, tf_code),
-        )
-        before = cursor.fetchone()[0]
-
         cursor.execute("EXEC DWH.usp_LoadDirect ?, ?, ?", (symbol_id, tf_code, staging_table))
+
+        result = cursor.fetchone()
+        if result is None:
+            raise DatabaseWriteError("DWH.usp_LoadDirect did not return row counts")
+
+        updated = max(0, int(result[0] or 0))
+        inserted = max(0, int(result[1] or 0))
+        affected = max(0, int(result[2] or 0))
         conn.commit()
-
-        # Count rows in Fact after ETL
-        cursor.execute(
-            "SELECT COUNT(*) FROM DWH.Fact_OHLCV f "
-            "JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID "
-            "WHERE f.SymbolID = ? AND tf.Code = ?",
-            (symbol_id, tf_code),
-        )
-        after = cursor.fetchone()[0]
-
-        inserted = after - before
         _warehouse_log(
             20,
             source=source,
             target=_target_label(symbol=symbol, symbol_id=symbol_id, tf_code=tf_code, staging_table=staging_table),
             action="fact_save",
-            fact_saved=inserted,
+            fact_saved=affected,
+            fact_inserted=inserted,
+            fact_updated=updated,
             table=staging_table,
-            result="ok" if inserted else "no_new_rows",
+            result="ok" if affected else "no_change",
         )
-        return inserted
+        return affected
     except Exception as e:
         _warehouse_log(
             40,

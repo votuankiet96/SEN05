@@ -389,6 +389,8 @@ _db_queue: queue.Queue = queue.Queue(maxsize=DB_QUEUE_MAXSIZE)
 
 _spool = LiveSpool(WS_OVERFLOW_SPOOL, max_rows=MAX_SPOOL_ROWS, logger=logger)
 
+_spool_pending = threading.Event()
+
 _consecutive_guest_batches = 0
 
 _GUEST_ALERT_THRESHOLD = 3
@@ -490,6 +492,18 @@ def _wait_for_ws_cooldown(label: str) -> None:
 
 def _handle_ws_transport_error(group_id: int, error) -> tuple[str, int | None]:
     kind, status, cooldown = _classify_ws_error(error)
+
+    if kind == "normal_close":
+        logger.info(
+            "%s",
+            _llog(
+                "TradingView WebSocket closed normally",
+                group=group_id,
+                code=status or 1000,
+                result="closed",
+            ),
+        )
+        return kind, status
 
     logger.error("%s", _llog("TradingView WebSocket error", group=group_id, type=kind, status=status or "n/a", reason=error, result="failed"))
 
@@ -891,9 +905,6 @@ def _wait_for_batch_db(batch_id: int, timeout_sec: float = BATCH_DB_REPORT_WAIT_
 
 def _flush_overflow_to_queue() -> None:
     with _overflow_lock:
-        if not _overflow_buf:
-            return
-
         recharged = 0
 
         remaining = []
@@ -912,12 +923,18 @@ def _flush_overflow_to_queue() -> None:
         if recharged:
             logger.info("%s", _llog("Memory safety buffer restored to queue", bars=recharged, result="queued"))
 
-    if not _db_queue.full():
+    if _spool_pending.is_set() and not _db_queue.full():
         flushed = _spool.flush_to_queue(_db_queue)
 
         if flushed:
             with _state_lock:
                 _stats["queue_depth"] = _db_queue.qsize()
+
+        pending = _spool.count()
+        if pending == 0:
+            _spool_pending.clear()
+        elif pending is None or pending > 0:
+            _spool_pending.set()
 
 def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str) -> str:
     try:
@@ -992,6 +1009,8 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
                             _stats["queue_depth"] = _db_queue.qsize()
 
                         return "rejected"
+
+                    _spool_pending.set()
 
                     logger.warning(
                         "%s",
@@ -3520,7 +3539,17 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
 
     _spool.init()
 
+    initial_spool_rows = _spool.count()
+    if initial_spool_rows is None or initial_spool_rows > 0:
+        _spool_pending.set()
+
     recovered = _spool.flush_to_queue(_db_queue)
+
+    remaining_spool_rows = _spool.count()
+    if remaining_spool_rows == 0:
+        _spool_pending.clear()
+    elif remaining_spool_rows is None or remaining_spool_rows > 0:
+        _spool_pending.set()
 
     with _state_lock:
         _stats["queue_depth"] = _db_queue.qsize()
@@ -3536,6 +3565,19 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
 
     print("\n[Step 4/4] Starting background workers...\n")
 
+    critical_thread_failure = threading.Event()
+    critical_thread_detail: dict[str, str] = {}
+    critical_thread_lock = threading.Lock()
+
+    def _mark_critical_thread_failure(task: str, reason: str) -> bool:
+        with critical_thread_lock:
+            if critical_thread_failure.is_set():
+                return False
+            critical_thread_detail.update({"task": task, "reason": reason})
+            critical_thread_failure.set()
+        _shutdown.set()
+        return True
+
     def _thread_excepthook(args: threading.ExceptHookArgs) -> None:
         if args.exc_type is SystemExit:
             return
@@ -3550,6 +3592,10 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
 
         tname = getattr(args.thread, "name", "unknown")
 
+        is_critical = tname in {"db-worker", "live-batch-loop"}
+        if is_critical:
+            _mark_critical_thread_failure(tname, f"{args.exc_type.__name__}: {args.exc_value}")
+
         logger.critical("[THREAD CRASH] %s: %s\n%s", tname, args.exc_value, tb)
 
         notify_live_event(
@@ -3558,9 +3604,17 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
             summary="One internal task inside live fetching crashed.",
             current_state={"task": tname, "worker": "live fetching"},
             data_result="Some live batches or database writes may pause depending on which task crashed.",
-            health_risk="High. The supervisor should restart the live worker if heartbeat becomes stale.",
+            health_risk=(
+                "High. This critical task failure will stop the live child so the supervisor can restart it."
+                if is_critical
+                else "Medium. The failed auxiliary task was reported for operator review."
+            ),
             reason=f"{args.exc_type.__name__}: {args.exc_value}",
-            recommended_action="Check runtime/logs/operation/live_fetching.log. If the worker does not recover, restart DP Program.",
+            recommended_action=(
+                "Confirm the DP supervisor starts a replacement live child and the next batch reaches backlog=0."
+                if is_critical
+                else "Check runtime/logs/operation/live_fetching.log for the auxiliary task failure."
+            ),
             trace={"log_file": str(WS_LIVE_LOG), "traceback_tail": tb[-800:]},
             result="failed",
         )
@@ -3646,6 +3700,32 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
             if _shutdown.is_set():
                 break
 
+            if not db_thread.is_alive():
+                if _mark_critical_thread_failure("db-worker", "thread exited while live fetching was active"):
+                    logger.critical(
+                        "%s",
+                        _llog(
+                            "Critical live task stopped",
+                            task="db-worker",
+                            action="exit_for_supervisor_restart",
+                            result="failed",
+                        ),
+                    )
+                break
+
+            if not sched_thread.is_alive():
+                if _mark_critical_thread_failure("live-batch-loop", "thread exited while live fetching was active"):
+                    logger.critical(
+                        "%s",
+                        _llog(
+                            "Critical live task stopped",
+                            task="live-batch-loop",
+                            action="exit_for_supervisor_restart",
+                            result="failed",
+                        ),
+                    )
+                break
+
             _shutdown_check_counter += 1
 
             if _shutdown_check_counter >= SHUTDOWN_POLL_SEC:
@@ -3706,9 +3786,24 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
     else:
         cleanup_orphan_live_batch_window(logger)
 
-    _db_queue.join()
+    if db_thread.is_alive():
+        _db_queue.join()
+    else:
+        logger.critical(
+            "%s",
+            _llog(
+                "Database writer unavailable during shutdown",
+                pending_items=_db_queue.qsize(),
+                action="skip_unbounded_queue_wait",
+                result="failed",
+            ),
+        )
 
     db_thread.join(timeout=30)
+
+    failed_task = critical_thread_detail.get("task")
+    failed_reason = critical_thread_detail.get("reason")
+    exit_code = 1 if critical_thread_failure.is_set() else 0
 
     with _state_lock:
         s = dict(_stats)
@@ -3716,7 +3811,7 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
     logger.info(
         "%s",
         _llog(
-            "Live feed stopped cleanly",
+            "Live feed stopped after critical task failure" if exit_code else "Live feed stopped cleanly",
             closed_candles_received=s.get("accepted_bars", 0),
             rows_saved=s.get("fact_inserted", s["bars_inserted"]),
             temporary_rows=s.get("staging_rows", 0),
@@ -3724,33 +3819,49 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
             websocket_errors=s.get("ws_errors", 0),
             events=s["events"],
             batches=s["batches_run"],
-            result="stopped",
+            failed_task=failed_task,
+            reason=failed_reason,
+            result="failed" if exit_code else "stopped",
         ),
     )
 
     _write_live_state(
-        status="stopped",
+        status="failed" if exit_code else "stopped",
         stopped_at=_utc_iso(),
         accepted_bars=s.get("accepted_bars", 0),
         fact_inserted=s.get("fact_inserted", s["bars_inserted"]),
         errors=s["errors"],
         batches_run=s["batches_run"],
+        failed_task=failed_task,
+        failure_reason=failed_reason,
     )
 
     notify_live_event(
-        severity="INFO",
-        title="Live feed stopped",
-        summary="Live OHLCV collection stopped after flushing queued database writes.",
+        severity="ERROR" if exit_code else "INFO",
+        title="Live feed stopped after internal failure" if exit_code else "Live feed stopped",
+        summary=(
+            "A critical internal task failed, so the live child exited for a clean supervisor restart."
+            if exit_code
+            else "Live OHLCV collection stopped after flushing queued database writes."
+        ),
         current_state={"worker": "stopped", "batches_completed": s["batches_run"], "errors": s["errors"]},
         data_result={
             "closed_candles_received": s.get("accepted_bars", 0),
             "rows_saved_to_main_table": s.get("fact_inserted", s["bars_inserted"]),
             "temporary_rows_touched": s.get("staging_rows", 0),
         },
-        health_risk="Low if shutdown was intentional. No new live candles will be saved while stopped.",
-        recommended_action="Restart live fetching if the system should keep collecting data 24/7.",
+        health_risk=(
+            "High until the supervisor replacement child completes a healthy batch."
+            if exit_code
+            else "Low if shutdown was intentional. No new live candles will be saved while stopped."
+        ),
+        recommended_action=(
+            "Confirm the supervisor replacement and verify the next batch has full sessions and backlog=0."
+            if exit_code
+            else "Restart live fetching if the system should keep collecting data 24/7."
+        ),
         trace={"log_file": str(WS_LIVE_LOG), "state_file": str(WS_LIVE_STATE)},
-        result="stopped",
+        result="failed" if exit_code else "stopped",
     )
 
     ws_lock_stop.set()
@@ -3772,7 +3883,7 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
     print(f"  WS events     : {s['events']:,}")
 
     print(f"  Batches run   : {s['batches_run']}")
-    return 0
+    return exit_code
 
 if __name__ == "__main__":
     raise SystemExit(main())

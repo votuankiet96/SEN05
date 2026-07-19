@@ -187,7 +187,7 @@ def _database_check() -> Check:
             detail["fact_ohlcv_rows"] = int(cur.fetchone()[0])
             cur.execute(
                 """
-                SELECT TOP 1 s.TVSymbol, tf.Code, f.BarTime
+                SELECT TOP 1 s.Symbol, tf.Code, f.BarTime
                 FROM DWH.Fact_OHLCV f
                 JOIN DWH.Dim_Symbol s ON s.SymbolID = f.SymbolID
                 JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID
@@ -451,6 +451,25 @@ def _backend_state_check() -> Check:
             "DP Program supervisor state is not updating. The process exists, but its main control loop may be stuck.",
             detail,
         )
+    if active_status and alive:
+        try:
+            supervisor_lock = LockCoordinator().fetch(DP_PROGRAM_LOCK, active_only=True)
+            detail["supervisor_lock_active"] = bool(supervisor_lock)
+            if not supervisor_lock:
+                return Check(
+                    "program_state",
+                    "warn",
+                    "DP Program supervisor is running, but its runtime coordination lock is missing.",
+                    detail,
+                )
+        except Exception as exc:
+            detail["supervisor_lock_check_error"] = str(exc)
+            return Check(
+                "program_state",
+                "warn",
+                "DP Program supervisor is running, but its runtime coordination lock could not be checked.",
+                detail,
+            )
     return Check(
         "program_state",
         "ok",
