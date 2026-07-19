@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tick Engine Data Check</title>
+<script src="/static/lightweight-charts.js"></script>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg2: #161b22;
+  --bg3: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --muted: #7d8590;
+  --accent: #58a6ff;
+  --bid: #2196F3;
+  --ask: #F44336;
+  --mid: #888888;
+  --ok: #2ea043;
+  --warn: #d29922;
+  --err: #cf222e;
+  --info: #388bfd;
+  --card-h: 88px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+       background: var(--bg); color: var(--text); font-size: 13px; height: 100vh; overflow: hidden; }
+/* ── tabs ── */
+.tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--bg2); }
+.tab-btn { padding: 10px 20px; cursor: pointer; border: none; background: none;
+           color: var(--muted); font-size: 13px; transition: color .15s; }
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+.tab-panel { display: none; min-height: 0; }
+.tab-panel.active { display: flex; flex-direction: column; }
+/* ── layout ── */
+#app { display: flex; flex-direction: column; height: 100vh; }
+#chart-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+#health-panel,
+#health-tab { flex: 1; min-height: 0; overflow-y: auto; padding: 16px; gap: 16px; display: none; flex-direction: column; }
+#health-panel.active { display: flex; }
+/* ── toolbar ── */
+.toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+           background: var(--bg2); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.toolbar label { color: var(--muted); font-size: 12px; }
+select, input[type=number] { background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text); padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+select:focus, input:focus { outline: none; border-color: var(--accent); }
+.win-btn { padding: 4px 10px; background: var(--bg3); border: 1px solid var(--border);
+           color: var(--muted); border-radius: 4px; cursor: pointer; font-size: 12px;
+           transition: all .12s; }
+.win-btn:hover { border-color: var(--accent); color: var(--text); }
+.win-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.refresh-btn { margin-left: auto; padding: 4px 12px; background: var(--bg3);
+               border: 1px solid var(--border); color: var(--text); border-radius: 4px;
+               cursor: pointer; font-size: 12px; }
+.refresh-btn:hover { border-color: var(--accent); }
+/* ── price bar ── */
+.price-bar { display: flex; gap: 20px; align-items: center; padding: 6px 12px;
+             background: var(--bg2); border-bottom: 1px solid var(--border); font-size: 12px; }
+.price-bar .lbl { color: var(--muted); }
+.price-bar .val { font-weight: 600; font-size: 14px; }
+.bid-val { color: var(--bid); }
+.ask-val { color: var(--ask); }
+.spread-val { color: var(--warn); }
+.tick-info { margin-left: auto; color: var(--muted); }
+/* ── chart canvas ── */
+#chart-container { flex: 1; min-height: 0; position: relative; }
+.loading-overlay { position: absolute; inset: 0; display: flex; align-items: center;
+                   justify-content: center; background: rgba(13,17,23,.7);
+                   color: var(--muted); font-size: 14px; z-index: 10; }
+/* ── legend ── */
+#chart-legend { position: absolute; top: 8px; left: 8px; z-index: 5;
+                background: rgba(22,27,34,.85); border: 1px solid var(--border);
+                border-radius: 4px; padding: 6px 10px; font-size: 11px; line-height: 1.7; }
+.legend-bid { color: var(--bid); }
+.legend-ask { color: var(--ask); }
+.legend-mid { color: var(--mid); }
+/* ── health summary ── */
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; flex: 0 0 auto; }
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px;
+        padding: 12px 14px; min-height: var(--card-h); }
+.card .card-label { color: var(--muted); font-size: 11px; text-transform: uppercase;
+                    letter-spacing: .6px; margin-bottom: 6px; }
+.card .card-value { font-size: 22px; font-weight: 600; }
+.card .card-sub { color: var(--muted); font-size: 11px; margin-top: 4px; }
+/* ── tables ── */
+.section-title { font-size: 12px; text-transform: uppercase; letter-spacing: .6px;
+                 color: var(--muted); margin-bottom: 8px; }
+.tbl-wrap { max-width: 100%; min-width: 0; overflow: auto; border: 1px solid var(--border); border-radius: 6px; }
+table { width: 100%; border-collapse: collapse; }
+th { background: var(--bg3); padding: 7px 10px; text-align: left; font-size: 11px;
+     color: var(--muted); font-weight: 600; white-space: nowrap; }
+td { padding: 6px 10px; border-top: 1px solid var(--border); white-space: nowrap;
+     font-size: 12px; }
+tr:hover td { background: var(--bg3); }
+/* status badges */
+.badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 11px;
+         font-weight: 600; }
+.badge-ok   { background: rgba(46,160,67,.15); color: #3fb950; }
+.badge-warn { background: rgba(210,153,34,.15); color: #d29922; }
+.badge-err  { background: rgba(207,34,46,.15);  color: #f85149; }
+.badge-info { background: rgba(56,139,253,.15); color: #79c0ff; }
+.badge-muted{ background: var(--bg3); color: var(--muted); }
+/* ── two-column health layout ── */
+.health-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  align-items: start;
+  gap: 16px;
+  min-height: 0;
+  width: 100%;
+  flex: 0 0 auto;
+}
+.health-main,
+.health-side,
+.runs-section { min-width: 0; width: 100%; flex: 0 0 auto; }
+.health-side { display: flex; flex-direction: column; gap: 16px; }
+.sym-health-wrap { max-height: 360px; }
+.sym-health-wrap th { position: sticky; top: 0; z-index: 1; }
+/* ── ingest run rows ── */
+#runs-list { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.run-item { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px;
+            padding: 8px 12px; font-size: 12px; min-width: 0; }
+.run-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; min-width: 0; }
+.run-header strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.run-id { margin-left: auto; color: var(--muted); font-size: 11px; flex: 0 1 360px;
+          min-width: 120px; overflow: hidden; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+.run-meta { color: var(--muted); font-size: 11px; display: flex; gap: 12px; flex-wrap: wrap; }
+.run-meta span { min-width: 0; overflow-wrap: anywhere; }
+.run-meta .reason { flex-basis: 100%; }
+/* ── locks / spool ── */
+.lock-item { background: var(--bg2); border: 1px solid var(--border); border-radius: 5px;
+             padding: 7px 10px; margin-bottom: 6px; font-size: 12px; min-width: 0; overflow-wrap: anywhere; }
+.lock-active { border-left: 3px solid var(--ok); }
+.lock-expired { border-left: 3px solid var(--border); opacity: .6; }
+.spool-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px;
+             padding: 12px; text-align: center; }
+.spool-count { font-size: 32px; font-weight: 700; color: var(--warn); }
+.spool-label { color: var(--muted); font-size: 11px; margin-top: 2px; }
+/* ── status dot ── */
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+.dot-ok   { background: var(--ok); }
+.dot-warn { background: var(--warn); }
+.dot-err  { background: var(--err); }
+.dot-muted{ background: var(--muted); }
+@media (max-width: 1100px) {
+  .health-cols { grid-template-columns: 1fr; }
+  .sym-health-wrap { max-height: none; }
+}
+@media (max-width: 760px) {
+  #health-tab { padding: 12px; }
+  .summary-grid { grid-template-columns: 1fr; }
+  .run-header { flex-wrap: wrap; }
+  .run-id { flex-basis: 100%; text-align: left; margin-left: 0; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('chart')">BID/ASK Chart</button>
+    <button class="tab-btn" onclick="switchTab('health')">Data Health</button>
+    <span style="margin-left:auto;padding:10px 14px;color:var(--muted);font-size:11px;" id="last-updated"></span>
+  </div>
+
+  <!-- ========== CHART TAB ========== -->
+  <div id="chart-tab" class="tab-panel active" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+    <div class="toolbar">
+      <label>Symbol</label>
+      <select id="sym-select" onchange="loadChart()"></select>
+      <label style="margin-left:8px;">Window</label>
+      <div id="win-buttons" style="display:flex;gap:4px;"></div>
+      <label style="margin-left:8px;">Max Ticks</label>
+      <input type="number" id="max-ticks" value="2000" min="100" max="10000" step="100"
+             style="width:80px;" onchange="loadChart()">
+      <button class="refresh-btn" onclick="loadChart()">&#8635; Refresh</button>
+    </div>
+    <div class="price-bar">
+      <span class="lbl">BID</span><span class="val bid-val" id="live-bid">—</span>
+      <span class="lbl">ASK</span><span class="val ask-val" id="live-ask">—</span>
+      <span class="lbl">Spread</span><span class="val spread-val" id="live-spread">—</span>
+      <span class="lbl" style="margin-left:16px;">Last Tick (UTC)</span>
+      <span class="val" id="live-time" style="font-size:12px;">—</span>
+      <span class="tick-info" id="tick-count"></span>
+    </div>
+    <div id="chart-container">
+      <div class="loading-overlay" id="chart-loading">Loading…</div>
+      <div id="chart-legend">
+        <div class="legend-bid">— BID</div>
+        <div class="legend-ask">— ASK</div>
+        <div class="legend-mid">— MID</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== HEALTH TAB ========== -->
+  <div id="health-tab" class="tab-panel">
+    <!-- summary cards -->
+    <div class="summary-grid" id="summary-cards">
+      <div class="card"><div class="card-label">Active Symbols</div><div class="card-value" id="s-active">—</div><div class="card-sub" id="s-total"></div></div>
+      <div class="card"><div class="card-label">Total Ticks Inserted</div><div class="card-value" id="s-ticks">—</div><div class="card-sub" id="s-latest-tick"></div></div>
+      <div class="card"><div class="card-label">History Lag</div><div class="card-value" id="s-lag">—</div><div class="card-sub">seconds behind latest pull</div></div>
+      <div class="card"><div class="card-label">Running Sessions</div><div class="card-value" id="s-running">—</div><div class="card-sub" id="s-latest-write"></div></div>
+    </div>
+
+    <!-- symbol health table + runs/locks columns -->
+    <div class="health-cols">
+      <div class="health-main">
+        <div class="section-title">Symbol Health</div>
+        <div class="tbl-wrap sym-health-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Symbol</th><th>Status</th><th>Last Historical Tick (UTC)</th>
+                <th>Lag (s)</th><th>Last Bid</th><th>Last Ask</th><th>Spread</th>
+                <th>Ticks</th><th>Errors</th>
+              </tr>
+            </thead>
+            <tbody id="sym-health-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="health-side">
+        <!-- locks -->
+        <div>
+          <div class="section-title">Advisory Locks (SEN.ActiveTask)</div>
+          <div id="locks-list"><div style="color:var(--muted)">Loading…</div></div>
+        </div>
+        <!-- spool -->
+        <div>
+          <div class="section-title">SQLite Spool Backlog</div>
+          <div class="spool-box">
+            <div class="spool-count" id="spool-count">—</div>
+            <div class="spool-label" id="spool-label">ticks buffered</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ingest runs -->
+    <div class="runs-section">
+      <div class="section-title">Recent Ingest Runs</div>
+      <div id="runs-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ─── state ─── */
+let chart = null;
+let bidSeries = null, askSeries = null, midSeries = null;
+let currentMinutes = 60;
+let autoRefreshTimer = null;
+
+/* ─── init ─── */
+window.addEventListener('DOMContentLoaded', async () => {
+  await buildSymbolSelect();
+  buildWindowButtons();
+  initChart();
+  await loadChart();
+  startAutoRefresh();
+});
+
+/* ─── tabs ─── */
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', ['chart','health'][i] === name);
+  });
+  document.getElementById('chart-tab').style.display = name === 'chart' ? 'flex' : 'none';
+  const ht = document.getElementById('health-tab');
+  ht.style.display = name === 'health' ? 'flex' : 'none';
+  if (name === 'health') loadHealth();
+}
+
+/* ─── symbol select ─── */
+async function buildSymbolSelect() {
+  const groups = await apiFetch('/api/symbols');
+  const sel = document.getElementById('sym-select');
+  for (const [group, symbols] of Object.entries(groups)) {
+    const og = document.createElement('optgroup');
+    og.label = group;
+    symbols.forEach(s => {
+      const o = document.createElement('option');
+      o.value = s; o.textContent = s;
+      if (s === 'US30') o.selected = true;
+      og.appendChild(o);
+    });
+    sel.appendChild(og);
+  }
+}
+
+/* ─── window buttons ─── */
+function buildWindowButtons() {
+  const windows = [{label:'1h',minutes:60},{label:'4h',minutes:240},{label:'1d',minutes:1440},{label:'3d',minutes:4320},{label:'7d',minutes:10080}];
+  const container = document.getElementById('win-buttons');
+  windows.forEach(w => {
+    const btn = document.createElement('button');
+    btn.className = 'win-btn' + (w.minutes === currentMinutes ? ' active' : '');
+    btn.textContent = w.label;
+    btn.onclick = () => {
+      currentMinutes = w.minutes;
+      container.querySelectorAll('.win-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadChart();
+    };
+    container.appendChild(btn);
+  });
+}
+
+/* ─── chart init ─── */
+function initChart() {
+  const container = document.getElementById('chart-container');
+  chart = LightweightCharts.createChart(container, {
+    layout: { background: { color: '#0d1117' }, textColor: '#7d8590' },
+    grid: { vertLines: { color: '#21262d' }, horzLines: { color: '#21262d' } },
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    rightPriceScale: { borderColor: '#30363d' },
+    timeScale: { borderColor: '#30363d', timeVisible: true, secondsVisible: true },
+    width: container.clientWidth,
+    height: container.clientHeight,
+  });
+  bidSeries = chart.addLineSeries({ color: '#2196F3', lineWidth: 1, title: 'BID', priceLineVisible: false });
+  askSeries = chart.addLineSeries({ color: '#F44336', lineWidth: 1, title: 'ASK', priceLineVisible: false });
+  midSeries = chart.addLineSeries({ color: '#666666', lineWidth: 1, title: 'MID', priceLineVisible: false, lineStyle: 1 });
+
+  const ro = new ResizeObserver(() => {
+    chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
+  });
+  ro.observe(container);
+}
+
+/* ─── load chart data ─── */
+async function loadChart() {
+  const sym = document.getElementById('sym-select').value;
+  const maxTicks = parseInt(document.getElementById('max-ticks').value) || 2000;
+  setChartLoading(true);
+  try {
+    const data = await apiFetch(`/api/tick-series?symbol=${sym}&minutes=${currentMinutes}&max_ticks=${maxTicks}`);
+    bidSeries.setData(data.bid || []);
+    askSeries.setData(data.ask || []);
+    midSeries.setData(data.mid || []);
+    chart.timeScale().fitContent();
+    updatePriceBar(data);
+    document.getElementById('tick-count').textContent = `${data.ticks_returned} points`;
+    setLastUpdated();
+  } catch(e) {
+    console.error('loadChart', e);
+  } finally {
+    setChartLoading(false);
+  }
+}
+
+function setChartLoading(on) {
+  document.getElementById('chart-loading').style.display = on ? 'flex' : 'none';
+}
+
+function updatePriceBar(data) {
+  const bid = data.latest_bid, ask = data.latest_ask;
+  document.getElementById('live-bid').textContent = bid != null ? bid.toFixed(5) : '—';
+  document.getElementById('live-ask').textContent = ask != null ? ask.toFixed(5) : '—';
+  if (bid != null && ask != null) {
+    document.getElementById('live-spread').textContent = (ask - bid).toFixed(5);
+  } else {
+    document.getElementById('live-spread').textContent = '—';
+  }
+  document.getElementById('live-time').textContent = data.latest_tick_utc
+    ? data.latest_tick_utc.replace('T', ' ').replace('Z', ' UTC')
+    : '—';
+}
+
+/* ─── health ─── */
+async function loadHealth() {
+  await Promise.all([loadSummary(), loadSymbolHealth(), loadIngestRuns(), loadLocks(), loadSpool()]);
+}
+
+async function loadSummary() {
+  const d = await apiFetch('/api/health/summary');
+  document.getElementById('s-active').textContent = `${d.ActiveSymbols ?? '—'} / ${d.TotalSymbols ?? '—'}`;
+  document.getElementById('s-total').textContent = '';
+  document.getElementById('s-ticks').textContent = fmtNum(d.TotalTicksInserted);
+  document.getElementById('s-latest-tick').textContent = d.LatestHistoricalTickUtc
+    ? 'Latest: ' + d.LatestHistoricalTickUtc.replace('T',' ').replace('Z',' UTC')
+    : '';
+  const lag = d.LagSeconds;
+  const lagEl = document.getElementById('s-lag');
+  lagEl.textContent = lag != null ? lag : '—';
+  lagEl.style.color = lag == null ? '' : lag < 60 ? '#3fb950' : lag < 300 ? '#d29922' : '#f85149';
+  document.getElementById('s-running').textContent = d.RunningCount ?? '—';
+  document.getElementById('s-latest-write').textContent = d.LatestWriteAtUtc
+    ? 'Last write: ' + d.LatestWriteAtUtc.replace('T',' ').replace('Z',' UTC')
+    : '';
+  setLastUpdated();
+}
+
+async function loadSymbolHealth() {
+  const d = await apiFetch('/api/health/symbols');
+  const tbody = document.getElementById('sym-health-body');
+  tbody.innerHTML = '';
+  (d.symbols || []).forEach(s => {
+    const lag = s.LagSeconds;
+    const statusCls = statusClass(s.Status, lag);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${esc(s.SenSymbol)}</strong></td>
+      <td>${badge(s.Status, statusCls)}</td>
+      <td>${esc(s.LastHistoricalTickTimeUtc || '—')}</td>
+      <td style="color:${lagColor(lag)}">${lag != null ? lag : '—'}</td>
+      <td>${esc(s.LastBid ?? '—')}</td>
+      <td>${esc(s.LastAsk ?? '—')}</td>
+      <td>${s.Spread != null ? Number(s.Spread).toFixed(5) : '—'}</td>
+      <td>${fmtNum(s.TotalTicksInserted)}</td>
+      <td style="color:${s.ConsecutiveErrors > 0 ? 'var(--err)' : 'var(--muted)'}">${s.ConsecutiveErrors ?? 0}</td>
+    `;
+    tr.title = s.LastError || '';
+    tbody.appendChild(tr);
+  });
+}
+
+async function loadIngestRuns() {
+  const d = await apiFetch('/api/health/runs?limit=20');
+  const container = document.getElementById('runs-list');
+  container.innerHTML = '';
+  (d.runs || []).forEach(r => {
+    const statusCls = r.Status === 'RUNNING' ? 'badge-ok'
+      : r.Status === 'DONE' ? 'badge-info'
+      : r.Status === 'FAILED' ? 'badge-err'
+      : 'badge-muted';
+    const div = document.createElement('div');
+    div.className = 'run-item';
+    div.innerHTML = `
+      <div class="run-header">
+        ${badge(r.Status, statusCls)}
+        <strong>${esc(r.AppName || '—')}</strong>
+        <span style="color:var(--muted);">${esc(r.Environment || '')}</span>
+        <span class="run-id">${esc(r.IngestRunID)}</span>
+      </div>
+      <div class="run-meta">
+        <span>Started: ${fmtUtc(r.StartedAtUtc)}</span>
+        ${r.StoppedAtUtc ? `<span>Stopped: ${fmtUtc(r.StoppedAtUtc)}</span>` : ''}
+        <span>Duration: ${r.DurationSeconds != null ? fmtDuration(r.DurationSeconds) : '—'}</span>
+        <span>Inserted: ${fmtNum(r.RowsInserted)}</span>
+        <span>Spooled: ${fmtNum(r.RowsSpooled)}</span>
+        ${r.StopReason ? `<span class="reason">Reason: ${esc(r.StopReason)}</span>` : ''}
+      </div>
+    `;
+    container.appendChild(div);
+  });
+  if (!d.runs || d.runs.length === 0) {
+    container.innerHTML = '<div style="color:var(--muted);padding:10px">No ingest runs found.</div>';
+  }
+}
+
+async function loadLocks() {
+  const d = await apiFetch('/api/health/locks');
+  const container = document.getElementById('locks-list');
+  container.innerHTML = '';
+  (d.items || []).forEach(item => {
+    const active = item.IsActive === 1 || item.IsActive === true;
+    const div = document.createElement('div');
+    div.className = 'lock-item ' + (active ? 'lock-active' : 'lock-expired');
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="dot ${active ? 'dot-ok' : 'dot-muted'}"></span>
+        <strong>${esc(item.TaskName)}</strong>
+        ${active ? `<span style="color:var(--muted);font-size:11px;margin-left:auto">exp in ${item.SecondsToExpiry}s</span>` : ''}
+      </div>
+      <div style="color:var(--muted);font-size:11px;margin-top:2px">${fmtUtc(item.StartedAt)}</div>
+      ${item.Payload ? `<div style="color:var(--muted);font-size:11px;word-break:break-all">${esc(item.Payload)}</div>` : ''}
+    `;
+    container.appendChild(div);
+  });
+  if (!d.items || d.items.length === 0) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:12px">No advisory locks.</div>';
+  }
+}
+
+async function loadSpool() {
+  const d = await apiFetch('/api/health/spool');
+  const count = d.count;
+  document.getElementById('spool-count').textContent = count != null ? fmtNum(count) : '—';
+  const label = document.getElementById('spool-label');
+  if (!d.exists) {
+    label.textContent = 'spool file not found';
+    document.getElementById('spool-count').style.color = 'var(--muted)';
+  } else {
+    label.textContent = 'ticks buffered';
+    document.getElementById('spool-count').style.color = count > 0 ? 'var(--warn)' : 'var(--ok)';
+  }
+}
+
+/* ─── auto refresh ─── */
+function startAutoRefresh() {
+  if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+  autoRefreshTimer = setInterval(() => {
+    const activeTab = document.getElementById('health-tab').style.display !== 'none' ? 'health' : 'chart';
+    if (activeTab === 'chart') loadChart();
+    else loadHealth();
+  }, 30000);
+}
+
+/* ─── helpers ─── */
+async function apiFetch(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
+  return r.json();
+}
+
+function setLastUpdated() {
+  const el = document.getElementById('last-updated');
+  el.textContent = 'Updated: ' + new Date().toISOString().replace('T',' ').slice(0,19) + ' UTC';
+}
+
+function esc(s) {
+  if (s == null) return '—';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function fmtNum(n) {
+  if (n == null) return '—';
+  return Number(n).toLocaleString();
+}
+
+function fmtUtc(s) {
+  if (!s) return '—';
+  return String(s).replace('T',' ').replace('Z',' UTC').slice(0,22);
+}
+
+function fmtDuration(secs) {
+  if (secs == null) return '—';
+  const s = Math.abs(secs);
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s/60)}m ${s%60}s`;
+  return `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m`;
+}
+
+function lagColor(lag) {
+  if (lag == null) return 'var(--muted)';
+  if (lag < 60) return '#3fb950';
+  if (lag < 300) return '#d29922';
+  return '#f85149';
+}
+
+function statusClass(status, lag) {
+  if (!status) return 'badge-muted';
+  const s = status.toUpperCase();
+  if (s === 'LIVE' || s === 'SYNCED') return lag != null && lag < 120 ? 'badge-ok' : 'badge-warn';
+  if (s === 'ERROR' || s === 'FAILED') return 'badge-err';
+  if (s === 'IDLE') return 'badge-muted';
+  return 'badge-info';
+}
+
+function badge(text, cls) {
+  return `<span class="badge ${cls}">${esc(text)}</span>`;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# tick_program/requirements.txt
+# Install these only for the standalone cTrader/FTMO tick program.
+
+pyodbc>=5.0.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+truststore>=0.9.0
+service_identity==24.2.0
+
+# Windows + Python 3.14 currently has no prebuilt twisted-iocpsupport wheel.
+# The cTrader SDK remains tick-program-only; core_system must not depend on it.
+ctrader-open-api==0.9.2; platform_system != "Windows" or python_version < "3.14"
+Twisted==24.3.0; platform_system != "Windows" or python_version < "3.14"

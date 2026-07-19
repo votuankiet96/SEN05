@@ -1,0 +1,29 @@
+# Local credentials
+config/*.env
+!config/*.env.example
+
+# Runtime state, logs, caches, and local buffers
+runtime/
+*.log
+*.db
+*.sqlite
+*.sqlite3
+
+# Python generated files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# OS/editor local files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
