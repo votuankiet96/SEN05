@@ -64,6 +64,21 @@ def test_current_verified_gap_cache_round_trips_with_version(monkeypatch, tmp_pa
     assert runtime_support.load_verified_gaps() == {(81, "M5"): [(start, end)]}
 
 
+def test_find_hole_pairs_propagates_gap_scan_failure(monkeypatch):
+    def fail_scan(*_args, **_kwargs):
+        raise RuntimeError("SQL Server unreachable")
+
+    monkeypatch.setattr(runtime_support, "get_internal_gaps", fail_scan)
+
+    with pytest.raises(RuntimeError, match="SQL Server unreachable"):
+        runtime_support.find_hole_pairs(
+            [],
+            pipeline.logger,
+            symbols=[],
+            tf_filter={"M5"},
+        )
+
+
 def test_set_replay_runtime_enabled_is_visible_in_pipeline_module():
     _reset_replay_runtime()
     try:
