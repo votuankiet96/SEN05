@@ -34,13 +34,26 @@ def parse_packets(raw: str) -> list[str]:
     length prefix - callers are expected to echo it straight back to keep
     the connection alive (see BatchFetcher._on_message), so it must be
     returned as-is rather than silently dropped.
+
+    A heartbeat is not necessarily alone in a raw receive buffer - it can
+    legitimately arrive bundled with a framed data message in the same TCP
+    read, either before or after it (or both, sandwiching it). The
+    heartbeat token itself is bounded to `~h~` followed by its digits;
+    parsing continues past it rather than stopping there, so a message on
+    either side of a heartbeat in the same buffer is never silently
+    dropped. See test_protocol.py's "does_not_swallow" tests for the exact
+    regression this guards against.
     """
     packets: list[str] = []
     pos = 0
     while pos < len(raw):
         if raw.startswith("~h~", pos):
-            packets.append(raw[pos:])
-            break
+            start = pos
+            pos += 3
+            while pos < len(raw) and raw[pos].isdigit():
+                pos += 1
+            packets.append(raw[start:pos])
+            continue
         if raw[pos : pos + 3] != "~m~":
             break
         pos += 3

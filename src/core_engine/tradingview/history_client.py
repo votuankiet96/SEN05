@@ -261,15 +261,22 @@ def fetch_history(
                 if isinstance(raw, bytes):
                     raw = raw.decode("utf-8", errors="replace")
 
-                if raw.startswith("~h~"):
-                    try:
-                        ws.send(f"~m~{len(raw)}~m~{raw}")
-                    except Exception:
-                        pass
-                    continue
-
+                # Echo EVERY heartbeat packet found in this buffer, not
+                # just when the buffer's own prefix is "~h~" - a heartbeat
+                # can legitimately arrive bundled with a framed data
+                # message in the same TCP read (before, after, or between
+                # other packets). The old raw.startswith("~h~") check only
+                # caught a heartbeat that happened to be first; any
+                # heartbeat found later via _parse_packets was silently
+                # skipped instead of echoed (see live/engine.py's
+                # BatchFetcher._on_message for the pattern this now
+                # matches, which was already correct there).
                 for packet in _parse_packets(raw):
                     if packet.startswith("~h~"):
+                        try:
+                            ws.send(f"~m~{len(packet)}~m~{packet}")
+                        except Exception:
+                            pass
                         continue
                     try:
                         msg = json.loads(packet)
@@ -426,15 +433,22 @@ def fetch_replay_window(
                 if isinstance(raw, bytes):
                     raw = raw.decode("utf-8", errors="replace")
 
-                if raw.startswith("~h~"):
-                    try:
-                        ws.send(f"~m~{len(raw)}~m~{raw}")
-                    except Exception:
-                        pass
-                    continue
-
+                # Echo EVERY heartbeat packet found in this buffer, not
+                # just when the buffer's own prefix is "~h~" - a heartbeat
+                # can legitimately arrive bundled with a framed data
+                # message in the same TCP read (before, after, or between
+                # other packets). The old raw.startswith("~h~") check only
+                # caught a heartbeat that happened to be first; any
+                # heartbeat found later via _parse_packets was silently
+                # skipped instead of echoed (see live/engine.py's
+                # BatchFetcher._on_message for the pattern this now
+                # matches, which was already correct there).
                 for packet in _parse_packets(raw):
                     if packet.startswith("~h~"):
+                        try:
+                            ws.send(f"~m~{len(packet)}~m~{packet}")
+                        except Exception:
+                            pass
                         continue
                     try:
                         msg = json.loads(packet)

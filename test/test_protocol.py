@@ -81,6 +81,37 @@ def test_parse_packets_returns_heartbeat_trailing_a_data_frame():
     assert packets[-1] == "~h~99"
 
 
+def test_parse_packets_does_not_swallow_a_data_frame_following_a_heartbeat():
+    # Round-2 audit finding (Codex), verified here before fixing: a bare
+    # heartbeat is not necessarily alone in a raw WS receive buffer - a
+    # heartbeat can legitimately arrive bundled with a following framed
+    # data message in the same TCP read. The old implementation appended
+    # raw[pos:] (everything from the heartbeat to the END of the buffer)
+    # as the heartbeat "packet" and then broke out of the loop entirely,
+    # silently discarding any framed message that followed the heartbeat
+    # in the same buffer instead of parsing it separately.
+    raw = "~h~42" + _frame("qsd", ["a"])
+    packets = protocol.parse_packets(raw)
+
+    assert "~h~42" in packets
+    data_packets = [p for p in packets if not p.startswith("~h~")]
+    assert len(data_packets) == 1, f"expected the framed message to survive, got packets={packets!r}"
+    assert json.loads(data_packets[0]) == {"m": "qsd", "p": ["a"]}
+
+
+def test_parse_packets_does_not_swallow_a_frame_following_a_mid_buffer_heartbeat():
+    # A stricter version of the same scenario: heartbeat sandwiched between
+    # two framed messages must not swallow the SECOND one either.
+    raw = _frame("m1", [1]) + "~h~7" + _frame("m2", [2])
+    packets = protocol.parse_packets(raw)
+
+    data_packets = [p for p in packets if not p.startswith("~h~")]
+    assert [json.loads(p)["m"] for p in data_packets] == ["m1", "m2"], (
+        f"expected both framed messages around the heartbeat to survive, got packets={packets!r}"
+    )
+    assert "~h~7" in packets
+
+
 def test_parse_packets_handles_empty_and_malformed_input():
     assert protocol.parse_packets("") == []
     assert protocol.parse_packets("not a tv frame at all") == []
