@@ -103,6 +103,15 @@ def trading_hours_in_gap(start: datetime, end: datetime) -> float:
     return max(0.0, total_hours - weekend_h)
 
 
+def gap_threshold_minutes(sym: dict, tf_code: str) -> int:
+    """Raw adjacent-bar threshold shared by discovery and re-verification."""
+    tf_mins = int(TF_MINUTES[tf_code])
+    asset_type = sym["asset_type"]
+    tv_sym = sym["tv_symbol"]
+    overnight = int(SYMBOL_OVERNIGHT_MINS.get(tv_sym, OVERNIGHT_GAP_MINUTES.get(asset_type, 0)))
+    return max(tf_mins * 3, overnight + tf_mins)
+
+
 def calc_gap_n_bars(gap_hours: float, tf_code: str, asset_type: str) -> int:
     tf_mins = TF_MINUTES[tf_code]
     trading_ratio = 5 / 7 if asset_type in WEEKEND_CLOSED else 1.0
@@ -455,11 +464,7 @@ def find_hole_pairs(
             continue
         verified_windows = (verified_gaps or {}).get((sym_id, tf_code), [])
         asset_type = sym["asset_type"]
-        threshold = tf_mins * 3
-        tv_sym = sym["tv_symbol"]
-        overnight = SYMBOL_OVERNIGHT_MINS.get(tv_sym, OVERNIGHT_GAP_MINUTES.get(asset_type, 0))
-        if overnight > 0:
-            threshold = max(threshold, overnight + tf_mins)
+        threshold = gap_threshold_minutes(sym, tf_code)
 
         real_gaps = []
         for gap_start, gap_end, gap_raw_min in gaps:

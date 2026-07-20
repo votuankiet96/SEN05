@@ -41,6 +41,7 @@ from core_engine.historical.runtime_support import (
     find_stale_pairs,
     flatten_verified_gap_windows,
     fmt_gap,
+    gap_threshold_minutes,
     load_verified_gaps,
     raise_if_cancelled,
     save_verified_gaps,
@@ -588,7 +589,13 @@ def run_backfill(
                 # really filled (see warehouse.reader.fact_covers_window).
                 for gap_start, gap_end in item.get("gap_windows", []) or []:
                     try:
-                        covered = fact_covers_window(sym["symbol_id"], tf_code, gap_start, gap_end)
+                        covered = fact_covers_window(
+                            sym["symbol_id"],
+                            tf_code,
+                            gap_start,
+                            gap_end,
+                            max_gap_minutes=gap_threshold_minutes(sym, tf_code),
+                        )
                     except Exception as exc:
                         logger.warning(
                             "%s",

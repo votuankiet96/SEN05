@@ -59,11 +59,29 @@ def test_get_internal_gaps_empty_tf_codes_returns_empty_dict_without_querying():
     assert reader.get_internal_gaps([], lookback_days=7) == {}
 
 
-def test_fact_covers_window_true_when_a_matching_row_exists(monkeypatch):
-    monkeypatch.setattr(reader, "get_connection", lambda: _OneRowConnection((1,)))
-    assert reader.fact_covers_window(11, "M5", "2026-01-01", "2026-01-02") is True
+def test_fact_covers_window_true_only_when_largest_remaining_gap_is_within_limit(monkeypatch):
+    monkeypatch.setattr(reader, "get_connection", lambda: _OneRowConnection((13, 5)))
+    assert reader.fact_covers_window(
+        11,
+        "M5",
+        "2026-01-01",
+        "2026-01-02",
+        max_gap_minutes=15,
+    ) is True
 
 
-def test_fact_covers_window_false_when_no_matching_row(monkeypatch):
-    monkeypatch.setattr(reader, "get_connection", lambda: _OneRowConnection(None))
-    assert reader.fact_covers_window(11, "M5", "2026-01-01", "2026-01-02") is False
+@pytest.mark.parametrize("summary_row", [None, (0, None), (1, None), (3, 55)])
+def test_fact_covers_window_rejects_empty_singleton_and_partial_repairs(monkeypatch, summary_row):
+    monkeypatch.setattr(reader, "get_connection", lambda: _OneRowConnection(summary_row))
+    assert reader.fact_covers_window(
+        11,
+        "M5",
+        "2026-01-01",
+        "2026-01-02",
+        max_gap_minutes=15,
+    ) is False
+
+
+def test_fact_covers_window_rejects_non_positive_threshold_without_querying():
+    with pytest.raises(ValueError, match="positive"):
+        reader.fact_covers_window(11, "M5", "2026-01-01", "2026-01-02", max_gap_minutes=0)

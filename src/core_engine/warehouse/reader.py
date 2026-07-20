@@ -170,27 +170,56 @@ def get_internal_gaps(tf_codes: list, lookback_days: int = 60) -> dict:
         conn.close()
 
 
-def fact_covers_window(symbol_id: int, tf_code: str, gap_start, gap_end) -> bool:
-    """True if DWH.Fact_OHLCV has at least one bar for this symbol/timeframe
-    inside [gap_start, gap_end]. Used to confirm a repair actually landed
-    data before caching a gap window as "verified" (see
-    historical.pipeline.run_backfill) - a repair call reporting "0 rows
-    affected" is not itself proof the window is covered; it could equally
-    mean TradingView legitimately had nothing there, or a write silently
-    no-op'd for an unrelated reason."""
+def fact_covers_window(
+    symbol_id: int,
+    tf_code: str,
+    gap_start,
+    gap_end,
+    *,
+    max_gap_minutes: int,
+) -> bool:
+    """Return whether a repaired Fact window no longer contains a large gap.
+
+    ``gap_start`` and ``gap_end`` are the two existing bars which exposed
+    the hole. Merely finding a row in the inclusive window is therefore not
+    evidence of repair: those boundary rows make that test true even when no
+    data was added. Verify every adjacent pair and cache the window only when
+    its largest remaining raw gap is within the discovery threshold.
+
+    This is deliberately conservative around exchange closures: a legitimate
+    closure may be rechecked later, but an incomplete repair must not be hidden
+    by the verified-gap cache for 30 days.
+    """
+    if max_gap_minutes <= 0:
+        raise ValueError("max_gap_minutes must be positive")
     conn = get_connection()
     cursor = conn.cursor()
     try:
         cursor.execute(
             """
-            SELECT TOP 1 1
-            FROM DWH.Fact_OHLCV f
-            JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID
-            WHERE f.SymbolID = ? AND tf.Code = ? AND f.BarTime >= ? AND f.BarTime <= ?
+            WITH ordered AS (
+                SELECT
+                    f.BarTime,
+                    LEAD(f.BarTime) OVER (ORDER BY f.BarTime) AS NextBarTime
+                FROM DWH.Fact_OHLCV f
+                JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID
+                WHERE f.SymbolID = ?
+                  AND tf.Code = ?
+                  AND f.BarTime >= ?
+                  AND f.BarTime <= ?
+            )
+            SELECT
+                COUNT_BIG(*) AS BarCount,
+                MAX(DATEDIFF(MINUTE, BarTime, NextBarTime)) AS MaxGapMinutes
+            FROM ordered
             """,
             (symbol_id, tf_code, gap_start, gap_end),
         )
-        return cursor.fetchone() is not None
+        row = cursor.fetchone()
+        if row is None:
+            return False
+        bar_count, largest_gap = int(row[0] or 0), row[1]
+        return bar_count >= 2 and largest_gap is not None and int(largest_gap) <= max_gap_minutes
     finally:
         conn.close()
 
