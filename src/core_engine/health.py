@@ -24,12 +24,14 @@ from core_engine.settings import (
     BACKEND,
     BACKEND_STATE,
     CACHE_DIR,
+    CANDLE_SNAPSHOT,
     ENV_FILE,
     HISTORICAL,
     HISTORICAL_SUMMARY_LOG,
     LOG_DIR,
     RUN_DIR,
     SPOOL_DIR,
+    STORAGE,
     SYMBOLS,
     TF_DISPLAY_ORDER,
     WS_LIVE_STATE,
@@ -725,6 +727,71 @@ $rows | ConvertTo-Json -Compress -Depth 4
     )
 
 
+def _redis_snapshot_check() -> Check:
+    """Probe the optional OG snapshot lane without weakening SQL health.
+
+    ``both`` keeps SQL Server authoritative, so a Redis outage is a warning
+    rather than a service-wide failure. The check belongs to the slower
+    DB-inclusive cycle to avoid adding network I/O to the 30-second fast
+    heartbeat loop.
+    """
+    if STORAGE.mode == "sql" or not CANDLE_SNAPSHOT.enabled:
+        return Check(
+            "redis_snapshot",
+            "ok",
+            "Redis candle snapshot handoff is disabled.",
+            {"enabled": False, "storage_mode": STORAGE.mode},
+        )
+    if not CANDLE_SNAPSHOT.redis_host:
+        return Check(
+            "redis_snapshot",
+            "warn",
+            "Redis candle snapshot handoff is enabled but no host is configured.",
+            {"enabled": True, "storage_mode": STORAGE.mode, "configured": False},
+        )
+
+    client = None
+    try:
+        import redis
+
+        timeout = max(0.05, min(float(CANDLE_SNAPSHOT.timeout_sec), 5.0))
+        client = redis.Redis(
+            host=CANDLE_SNAPSHOT.redis_host,
+            port=CANDLE_SNAPSHOT.redis_port,
+            username=CANDLE_SNAPSHOT.redis_username or None,
+            password=CANDLE_SNAPSHOT.redis_password or None,
+            db=CANDLE_SNAPSHOT.redis_db,
+            socket_connect_timeout=timeout,
+            socket_timeout=timeout,
+        )
+        if not client.ping():
+            raise RuntimeError("PING returned a false response")
+        return Check(
+            "redis_snapshot",
+            "ok",
+            "Redis candle snapshot handoff is reachable.",
+            {"enabled": True, "storage_mode": STORAGE.mode, "configured": True},
+        )
+    except Exception as exc:
+        return Check(
+            "redis_snapshot",
+            "warn",
+            "Redis candle snapshot handoff is not reachable; SQL remains authoritative.",
+            {
+                "enabled": True,
+                "storage_mode": STORAGE.mode,
+                "configured": True,
+                "reason": f"{type(exc).__name__}: {exc}",
+            },
+        )
+    finally:
+        if client is not None:
+            try:
+                client.close()
+            except Exception:
+                pass
+
+
 def collect_health(*, deep_auth: bool = False, include_database: bool = True) -> dict[str, Any]:
     checks = [
         _runtime_check(),
@@ -741,6 +808,7 @@ def collect_health(*, deep_auth: bool = False, include_database: bool = True) ->
     if include_database:
         checks.insert(2, _database_check())
         checks.insert(3, _db_contract_check())
+        checks.insert(4, _redis_snapshot_check())
         checks.append(_locks_check())
 
     statuses = [check.status for check in checks]

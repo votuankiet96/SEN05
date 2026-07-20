@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -46,6 +47,62 @@ def _write_state(path, **fields):
 
 def _iso(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).isoformat()
+
+
+def _redis_settings(*, enabled=True, host="redis.internal"):
+    return SimpleNamespace(
+        enabled=enabled,
+        redis_host=host,
+        redis_port=6379,
+        redis_username="",
+        redis_password="",
+        redis_db=0,
+        timeout_sec=0.1,
+    )
+
+
+def test_redis_snapshot_health_is_disabled_in_sql_mode(monkeypatch):
+    monkeypatch.setattr(health, "STORAGE", SimpleNamespace(mode="sql"))
+    monkeypatch.setattr(health, "CANDLE_SNAPSHOT", _redis_settings())
+
+    check = health._redis_snapshot_check()
+
+    assert check.status == "ok"
+    assert check.detail["enabled"] is False
+
+
+def test_redis_snapshot_health_warns_when_enabled_without_host(monkeypatch):
+    monkeypatch.setattr(health, "STORAGE", SimpleNamespace(mode="both"))
+    monkeypatch.setattr(health, "CANDLE_SNAPSHOT", _redis_settings(host=""))
+
+    check = health._redis_snapshot_check()
+
+    assert check.status == "warn"
+    assert check.detail["configured"] is False
+
+
+@pytest.mark.parametrize("ping_result, expected", [(True, "ok"), (False, "warn")])
+def test_redis_snapshot_health_reports_ping_result(monkeypatch, ping_result, expected):
+    closed = []
+
+    class FakeRedis:
+        def __init__(self, **_kwargs):
+            pass
+
+        def ping(self):
+            return ping_result
+
+        def close(self):
+            closed.append(True)
+
+    monkeypatch.setattr(health, "STORAGE", SimpleNamespace(mode="both"))
+    monkeypatch.setattr(health, "CANDLE_SNAPSHOT", _redis_settings())
+    monkeypatch.setitem(sys.modules, "redis", SimpleNamespace(Redis=FakeRedis))
+
+    check = health._redis_snapshot_check()
+
+    assert check.status == expected
+    assert closed == [True]
 
 
 def test_missing_state_file_is_warn(live_state_path, backend_enabled):
