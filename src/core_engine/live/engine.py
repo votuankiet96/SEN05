@@ -908,7 +908,7 @@ def _flush_overflow_to_queue() -> None:
 
 
 def _lease_spool_into_queue(limit: int = 200) -> int:
-    """Non-destructively claim pending/expired-lease spool rows and hand
+    """Non-destructively claim pending spool rows and hand
     them to the RAM dispatch queue. Unlike the old flush_to_queue(), a row
     stays in the spool (status='leased') until _db_worker acks it - so a
     crash before that ack simply leaves it eligible to be leased again."""
@@ -990,6 +990,23 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
             _stats["queue_depth"] = _db_queue.qsize()
         return "rejected"
 
+    if not _spool.claim_for_dispatch(row_id):
+        # Another recovery pass claimed it first. Its durable copy remains
+        # authoritative; do not create a second in-memory delivery.
+        _spool_pending.set()
+        logger.warning(
+            "%s",
+            _llog(
+                "Durable outbox row already claimed",
+                group=group_id,
+                symbol=tv_symbol,
+                timeframe=tf_code,
+                row_id=row_id,
+                result="spooled",
+            ),
+        )
+        return "spooled"
+
     queued_item = (row_id, *item)
     try:
         _db_queue.put_nowait(queued_item)
@@ -1051,6 +1068,7 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
                 # the item is already safely persisted on disk (above) -
                 # nothing to lose here. It will be picked up on the next
                 # lease pass in _flush_overflow_to_queue once room frees up.
+                _spool.release_for_retry(row_id, error="RAM dispatch capacity full")
                 _spool_pending.set()
 
                 logger.warning(
@@ -1064,6 +1082,8 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
                 return "spooled"
 
     except Exception as exc:
+        _spool.release_for_retry(row_id, error=f"unexpected queue failure: {exc}")
+        _spool_pending.set()
         logger.exception(
             "%s",
             _llog("Unexpected queue failure", group=group_id, symbol=tv_symbol, timeframe=tf_code, reason=exc, result="dropped"),
@@ -1335,6 +1355,9 @@ def _db_worker() -> None:
             fact_inserted = 0
 
             try:
+                covered_spool_ids = _spool.staged_ids_for_key(
+                    symbol_id, tf_code, staging_table, tv_symbol
+                )
                 fact_inserted = _run_etl_direct_with_retry(
                     symbol_id,
                     tf_code,
@@ -1374,13 +1397,12 @@ def _db_worker() -> None:
             else:
                 _set_committed_watermark(key, max_committed_ts)
 
-                # Fact commit confirmed: ack this row and any other rows
-                # this same symbol/timeframe accumulated while staged
-                # (e.g. earlier bars whose ETL attempt failed and was
-                # deferred) - one successful run_etl_direct() call migrates
-                # every not-yet-migrated staging row for this key, not just
-                # this one.
-                _spool.ack_staged_for_key(symbol_id, tf_code, staging_table, tv_symbol)
+                # Fact commit confirmed. Ack only the exact staged-row
+                # snapshot taken before the procedure started. A row that
+                # becomes staged concurrently while the procedure is
+                # running was not necessarily in its source set and must
+                # remain durable for the next ETL pass.
+                _spool.ack_staged_ids(covered_spool_ids)
 
                 _record_db_result(
                     batch_id,
@@ -1433,6 +1455,9 @@ def _db_worker() -> None:
                         continue
 
                     try:
+                        covered_spool_ids = _spool.staged_ids_for_key(
+                            sym_id, tf_c, stg_tbl, sym_nm
+                        )
                         fact_inserted = _run_etl_direct_with_retry(
                             sym_id,
                             tf_c,
@@ -1451,11 +1476,7 @@ def _db_worker() -> None:
 
                         _deferred_etl_next_attempt.pop(defer_key, None)
 
-                        # Fact commit confirmed for this key - ack every
-                        # spool row still 'staged' for it (see the
-                        # matching comment on the immediate-ETL success
-                        # path above).
-                        _spool.ack_staged_for_key(sym_id, tf_c, stg_tbl, sym_nm)
+                        _spool.ack_staged_ids(covered_spool_ids)
 
                     except Exception as exc:
                         logger.error("%s", _llog("Delayed main table update failed", symbol=sym_nm, timeframe=tf_c, reason=exc, result="failed"))
@@ -1489,6 +1510,9 @@ def _db_worker() -> None:
                 defer_key = (sym_id, tf_c, stg_tbl, sym_nm)
 
                 try:
+                    covered_spool_ids = _spool.staged_ids_for_key(
+                        sym_id, tf_c, stg_tbl, sym_nm
+                    )
                     fact_inserted = _run_etl_direct_with_retry(
                         sym_id,
                         tf_c,
@@ -1516,7 +1540,7 @@ def _db_worker() -> None:
 
                     _deferred_etl_next_attempt.pop(defer_key, None)
 
-                    _spool.ack_staged_for_key(sym_id, tf_c, stg_tbl, sym_nm)
+                    _spool.ack_staged_ids(covered_spool_ids)
 
                 except Exception as exc:
                     logger.error(

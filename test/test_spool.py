@@ -19,7 +19,7 @@ which is excluded from lease_batch() so it is never re-staged, but is also
 NOT acked - so a crash at any point up through a successful Fact commit is
 recoverable:
   1. after the SQLite commit, before RAM enqueue -> test_kill_after_persist_before_lease_survives_restart
-  2. after dequeue/lease, before staging succeeds -> test_kill_after_lease_before_ack_is_recoverable_after_lease_expires
+  2. after dequeue/lease, before staging succeeds -> test_kill_after_lease_before_ack_is_recoverable_on_restart
   3. after a successful staging commit, before mark_staged() itself runs -> test_kill_after_staging_success_before_mark_staged_is_safe_to_reprocess
   4. "during the stored procedure" (staging -> Fact ETL) -> test_kill_during_etl_leaves_row_staged_and_recoverable
   5. after Fact commit, before ack -> test_kill_after_fact_commit_before_ack_recovers_via_restart_reset
@@ -99,19 +99,22 @@ def test_kill_after_persist_before_lease_survives_restart(spool):
 # --- fault injection point 2: crash after lease, before ack -------------
 
 
-def test_kill_after_lease_before_ack_is_recoverable_after_lease_expires(spool):
+def test_kill_after_lease_before_ack_is_recoverable_on_restart(spool):
     row_id = spool.persist_pending(_sample_item(symbol_id=202))
-    leased = spool.lease_batch(lease_seconds=-1)  # already-expired lease
+    leased = spool.lease_batch()
     assert len(leased) == 1
     assert leased[0][0] == row_id
 
-    # "Crash" here: ack() never runs. A later pass (this process's own
-    # retry loop, or a fresh process after restart) must be able to lease
-    # the SAME row again rather than losing it or creating a duplicate.
-    leased_again = spool.lease_batch(lease_seconds=60)
+    # "Crash" here: ack() never runs. A fresh process resets the orphaned
+    # lease immediately and must recover the SAME row without duplicating
+    # it. The still-running process must not reclaim an expired lease,
+    # because the original delivery may merely be waiting in its RAM queue.
+    assert spool.lease_batch(lease_seconds=-1) == []
+    restarted = _reopen(spool)
+    leased_again = restarted.lease_batch()
     assert len(leased_again) == 1
     assert leased_again[0][0] == row_id
-    assert spool.count() == 1  # still exactly one row, not duplicated
+    assert restarted.count() == 1  # still exactly one row, not duplicated
 
 
 def test_lease_does_not_hand_out_a_row_whose_lease_has_not_expired(spool):
@@ -376,3 +379,41 @@ def test_count_returns_none_when_db_file_is_unreachable(tmp_path):
     bogus_path = tmp_path / "not_a_real_dir" / "sub" / "spool.db"
     s = LiveSpool(bogus_path, max_rows=10, logger=log)
     assert s.count() is None
+
+
+def test_restart_immediately_recovers_leased_and_staged_rows(spool):
+    leased_id = spool.persist_pending(_sample_item(symbol_id=701))
+    staged_id = spool.persist_pending(_sample_item(symbol_id=702))
+    assert spool.claim_for_dispatch(leased_id) is True
+    assert spool.claim_for_dispatch(staged_id) is True
+    spool.mark_staged(staged_id)
+
+    restarted = _reopen(spool)
+    recovered = restarted.lease_batch()
+
+    assert {row_id for row_id, _item in recovered} == {leased_id, staged_id}
+
+
+def test_claim_for_dispatch_prevents_recovery_queue_from_leasing_same_row(spool):
+    row_id = spool.persist_pending(_sample_item(symbol_id=703))
+
+    assert spool.claim_for_dispatch(row_id) is True
+    assert spool.lease_batch(lease_seconds=-1) == []
+
+
+def test_ack_exact_staged_ids_does_not_ack_row_staged_after_etl_snapshot(spool):
+    first = spool.persist_pending(_sample_item(symbol_id=704))
+    second = spool.persist_pending(_sample_item(symbol_id=704))
+    assert spool.claim_for_dispatch(first) is True
+    spool.mark_staged(first)
+
+    # This is the exact set that existed immediately before the successful
+    # ETL call began. A concurrent worker stages another row only after the
+    # SP's source scan, so key-wide ack would incorrectly delete it.
+    covered_ids = spool.staged_ids_for_key(704, "M5", "SEN.TF_M5", "EURUSD")
+    assert spool.claim_for_dispatch(second) is True
+    spool.mark_staged(second)
+
+    assert spool.ack_staged_ids(covered_ids) == 1
+    assert spool.count_staged_pending_fact() == 1
+    assert spool.staged_ids_for_key(704, "M5", "SEN.TF_M5", "EURUSD") == [second]

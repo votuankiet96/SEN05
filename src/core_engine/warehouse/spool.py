@@ -7,7 +7,7 @@ A row moves through three states:
     pending -> leased -> staged -> (deleted / acked)
 
 - pending: durable on disk, not yet claimed by a worker.
-- leased: claimed by lease_batch() for staging; reverts to pending
+- leased: claimed for dispatch/staging; reverts to pending
   (release_for_retry) if the staging write fails, so a failed attempt is
   retried rather than dropped.
 - staged: insert_staging_batch() succeeded (the row is durably in
@@ -15,7 +15,7 @@ A row moves through three states:
   yet succeeded for it. A 'staged' row is excluded from lease_batch()'s
   pending/leased query, so it is never re-staged while waiting - but it
   is NOT acked yet either.
-- The row is only finally deleted (ack / ack_staged_for_key) once
+- The row is only finally deleted (ack / ack_staged_ids) once
   run_etl_direct() actually succeeds for that symbol/timeframe. This is
   deliberate: acking right after the staging write (an earlier version of
   this design did that) would leave the exact gap this outbox exists to
@@ -136,28 +136,19 @@ class LiveSpool:
                     )
                     """
                 )
-                # Crash/restart recovery: a 'staged' row means a previous
-                # process successfully wrote it to SQL Server
-                # staging but had not yet confirmed the Fact_OHLCV commit
-                # when it stopped (graceful shutdown that ran out of time,
-                # or a hard crash). The in-memory deferred-ETL retry state
-                # that would normally track "this still needs Fact commit"
-                # does not survive a restart, so without this reset these
-                # rows would sit in 'staged' forever - excluded from
-                # lease_batch() by design, but with nothing left to ever
-                # retry their ETL. Resetting to 'pending' re-enters the
-                # normal pending -> leased -> staged -> ack cycle; both
-                # legs of that cycle are idempotent (MERGE / NOT EXISTS),
-                # so redoing the staging write for an already-staged,
-                # unchanged row is a safe no-op.
+                # Crash/restart recovery. No worker from the previous
+                # process can still own a lease, and the in-memory ETL
+                # retry set does not survive a restart. Requeue both
+                # in-flight states so every unacked row immediately
+                # re-enters the idempotent staging -> Fact path.
                 reset = con.execute(
                     "UPDATE spool SET status='pending', lease_id=NULL, lease_until=NULL "
-                    "WHERE status='staged'"
+                    "WHERE status IN ('leased','staged')"
                 ).rowcount
                 con.commit()
         if reset:
             self.logger.warning(
-                "[SPOOL] Recovered %d row(s) left 'staged' by a previous run - re-queued for staging+ETL.",
+                "[SPOOL] Recovered %d unacked row(s) from a previous run - re-queued for staging+ETL.",
                 reset,
             )
         self.logger.info("[SPOOL] Persistent write-ahead outbox ready: %s", self.path)
@@ -202,12 +193,33 @@ class LiveSpool:
 
     # -- lease / ack / retry path ---------------------------------------
 
+    def claim_for_dispatch(self, row_id: int, *, lease_seconds: int = DEFAULT_LEASE_SECONDS) -> bool:
+        """Atomically claim a just-persisted row before handing it to RAM.
+
+        Without this compare-and-set, the recovery pump can lease the same
+        still-pending row while the direct enqueue path is already carrying
+        it, producing duplicate concurrent staging/ETL work.
+        """
+        lease_id = uuid.uuid4().hex[:12]
+        with self._lock:
+            with closing(sqlite3.connect(self.path)) as con:
+                cur = con.execute(
+                    "UPDATE spool SET status='leased', lease_id=?, lease_until=?, "
+                    "attempts=attempts+1 WHERE id=? AND status='pending'",
+                    (lease_id, _iso(time.time() + lease_seconds), row_id),
+                )
+                con.commit()
+                return int(cur.rowcount or 0) == 1
+
     def lease_batch(self, *, limit: int = 200, lease_seconds: int = DEFAULT_LEASE_SECONDS) -> list[tuple[int, tuple]]:
-        """Atomically claim up to `limit` rows that are pending, or whose
-        previous lease expired (crash/timeout recovery), for processing.
-        Rows stay in the table (not deleted) until ack() confirms success -
-        so a crash between lease_batch() and ack() simply leaves the row
-        eligible to be leased again once its lease_until passes."""
+        """Atomically claim up to `limit` pending rows for processing.
+
+        Leases are not reclaimed by another dispatcher in the same process:
+        they may legitimately wait in the RAM queue longer than the nominal
+        lease duration. On process restart init() resets all unacked leased
+        rows immediately, which provides crash recovery without concurrent
+        duplicate dispatch.
+        """
         lease_id = uuid.uuid4().hex[:12]
         leased: list[tuple[int, tuple]] = []
         with self._lock:
@@ -219,11 +231,10 @@ class LiveSpool:
                     SELECT id, batch_id, payload_version, symbol_id, tf_code, staging_table, tv_symbol, bar_data
                     FROM spool
                     WHERE status = 'pending'
-                       OR (status = 'leased' AND (lease_until IS NULL OR lease_until < ?))
                     ORDER BY id
                     LIMIT ?
                     """,
-                    (_iso(now), limit),
+                    (limit,),
                 ).fetchall()
                 ids = [row[0] for row in rows]
                 if ids:
@@ -268,31 +279,59 @@ class LiveSpool:
         the process stopped) resolves it."""
         with self._lock:
             with closing(sqlite3.connect(self.path)) as con:
-                con.execute(
-                    "UPDATE spool SET status='staged', lease_id=NULL, lease_until=NULL WHERE id=?",
+                cur = con.execute(
+                    "UPDATE spool SET status='staged', lease_id=NULL, lease_until=NULL "
+                    "WHERE id=? AND status='leased'",
                     (row_id,),
                 )
+                if int(cur.rowcount or 0) != 1:
+                    con.rollback()
+                    raise RuntimeError(
+                        f"Spool row {row_id} was not leased when marking it staged"
+                    )
                 con.commit()
 
-    def ack_staged_for_key(self, symbol_id: int, tf_code: str, staging_table: str, tv_symbol: str) -> int:
-        """Ack (delete) every 'staged' row matching this exact symbol/
-        timeframe/table/symbol-name key - called once run_etl_direct()
-        succeeds for that key. A single successful ETL call migrates every
-        not-yet-migrated staging row for that key (see warehouse.writer.
-        run_etl_direct's NOT EXISTS scan), not just the most recent one -
-        so any other rows this key accumulated while deferred (warehouse
-        maintenance lock held, or prior ETL attempts failing) are equally
-        covered by that same success and must be acked together, not just
-        the row that happened to trigger this particular attempt."""
+    def staged_ids_for_key(
+        self, symbol_id: int, tf_code: str, staging_table: str, tv_symbol: str
+    ) -> list[int]:
+        """Snapshot the exact staged rows covered by the upcoming ETL call.
+
+        Callers take this snapshot immediately before invoking the stored
+        procedure and acknowledge only these ids after its transaction has
+        committed. Rows staged concurrently after the snapshot therefore
+        cannot be deleted by an ETL call that never observed them.
+        """
         with self._lock:
             with closing(sqlite3.connect(self.path)) as con:
-                cur = con.execute(
-                    "DELETE FROM spool WHERE status='staged' AND symbol_id=? AND tf_code=? "
-                    "AND staging_table=? AND tv_symbol=?",
+                rows = con.execute(
+                    "SELECT id FROM spool WHERE status='staged' AND symbol_id=? "
+                    "AND tf_code=? AND staging_table=? AND tv_symbol=? ORDER BY id",
                     (symbol_id, tf_code, staging_table, tv_symbol),
-                )
+                ).fetchall()
+        return [int(row[0]) for row in rows]
+
+    def ack_staged_ids(self, row_ids: list[int]) -> int:
+        """Delete only the pre-ETL snapshot after Fact commit succeeds."""
+        ids = list(dict.fromkeys(int(row_id) for row_id in row_ids))
+        deleted = 0
+        with self._lock:
+            with closing(sqlite3.connect(self.path)) as con:
+                for offset in range(0, len(ids), 500):
+                    chunk = ids[offset : offset + 500]
+                    placeholders = ",".join("?" for _ in chunk)
+                    cur = con.execute(
+                        f"DELETE FROM spool WHERE status='staged' AND id IN ({placeholders})",
+                        chunk,
+                    )
+                    deleted += int(cur.rowcount or 0)
                 con.commit()
-                return int(cur.rowcount or 0)
+        return deleted
+
+    def ack_staged_for_key(self, symbol_id: int, tf_code: str, staging_table: str, tv_symbol: str) -> int:
+        """Compatibility helper; production ETL uses snapshot + exact ACK."""
+        return self.ack_staged_ids(
+            self.staged_ids_for_key(symbol_id, tf_code, staging_table, tv_symbol)
+        )
 
     def release_for_retry(self, row_id: int, *, error: str | None = None) -> None:
         """Give up on the current attempt WITHOUT deleting the row - it
@@ -303,7 +342,7 @@ class LiveSpool:
             with closing(sqlite3.connect(self.path)) as con:
                 con.execute(
                     "UPDATE spool SET status='pending', lease_id=NULL, lease_until=NULL, "
-                    "last_error=? WHERE id=?",
+                    "last_error=? WHERE id=? AND status='leased'",
                     ((error or "")[:500], row_id),
                 )
                 con.commit()
