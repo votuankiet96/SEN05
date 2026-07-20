@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from core_engine.logkit.formatters import clean, operation_line
+from core_engine.logkit.tables import cell as _cell, kv as _kv
 
 
 PAIR_HEADER = " | ".join(
@@ -35,15 +36,6 @@ def fmt_int(value: int | float | None) -> str:
         return str(value)
 
 
-def _cell(value: Any, width: int, *, align: str = "left") -> str:
-    text = "-" if value is None or value == "" else clean(value)
-    if len(text) > width:
-        text = text[: max(1, width - 3)].rstrip() + "..."
-    if align == "right":
-        return text.rjust(width)
-    return text.ljust(width)
-
-
 def _duration(seconds: float | int | None) -> str:
     if seconds is None:
         return "-"
@@ -63,10 +55,6 @@ def _duration(seconds: float | int | None) -> str:
 def log_historical_block(logger: logging.Logger, level: int, text: str) -> None:
     for raw_line in str(text).split("\n"):
         logger.log(level, "%s", raw_line.rstrip())
-
-
-def _kv(label: str, value: Any) -> str:
-    return f"  {label:<17}: {clean(value)}"
 
 
 def _mode_label(mode: str) -> str:

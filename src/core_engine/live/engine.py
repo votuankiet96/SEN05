@@ -32,12 +32,14 @@ import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 
+from core_engine.exit_codes import EXIT_LOCK_CONFLICT
 from core_engine.reporting.discord import sanitize_ssl_keylogfile
 sanitize_ssl_keylogfile()
 
 import websocket
 
-from core_engine.logkit.factory import ResilientRotatingFileHandler, setup_logger
+from core_engine.logkit.factory import get_logger
+from core_engine.logkit.handlers import ResilientRotatingFileHandler
 from core_engine.warehouse.validation import validate_ohlcv_df
 from core_engine.coordination.locks import (
     acquire as _acquire_task_lock,
@@ -50,9 +52,8 @@ from core_engine.coordination.locks import (
 from core_engine.reporting.discord import (
     QUICK_COMMANDS_HINT,
     notify_live_event,
-    start_bot_listener,
-    tg_alert as _tg_alert,
-    tg_send as _tg_send,
+    send_alert as _send_alert,
+    send_message as _send_message,
 )
 from core_engine.warehouse.repository import (
     insert_staging_batch,
@@ -121,7 +122,7 @@ WS_SYMBOLS = [s for s in SYMBOLS if s["asset_type"] in {"Indice", "Metal", "Cryp
 
 WS_LOG_FILE = str(WS_LIVE_LOG)
 
-logger = setup_logger(
+logger = get_logger(
     "live_fetching",
     WS_LOG_FILE,
     rotating=True,
@@ -149,7 +150,7 @@ def _setup_message_only_file_logger(name: str, log_file) -> logging.Logger:
     return aux_logger
 
 
-report_logger = setup_logger(
+report_logger = get_logger(
     "live_reports",
     str(WS_LIVE_REPORT_LOG),
     rotating=True,
@@ -467,7 +468,7 @@ def _set_ws_cooldown(seconds: int, reason: str) -> None:
     if notify:
         logger.warning("%s", _llog("TradingView reconnect cooldown started", wait_seconds=seconds, reason=reason, result="waiting"))
 
-        _tg_alert(
+        _send_alert(
             "WARNING",
             "Live feed is waiting before reconnecting\n"
             f"Waiting time: {seconds}s\n"
@@ -642,7 +643,7 @@ def _load_watermarks() -> None:
             ),
         )
 
-        _tg_alert(
+        _send_alert(
             "WARNING",
             "Live feed started with outdated data\n"
             f"Pairs affected: {len(stale)}\n"
@@ -977,7 +978,7 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
                         ),
                     )
 
-                    _tg_alert(
+                    _send_alert(
                         "WARNING",
                         "Database writer is falling behind\n"
                         f"Memory safety buffer: {new_len}/{OVERFLOW_BUFFER_MAX}\n"
@@ -992,7 +993,7 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
             else:
                 try:
                     if not _spool.write(item):
-                        _tg_alert(
+                        _send_alert(
                             "CRITICAL",
                             "Live feed cannot store new candles safely\n"
                             f"Disk safety buffer is full: {MAX_SPOOL_ROWS} rows\n"
@@ -1025,7 +1026,7 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
                         _llog("Disk safety buffer write failed", group=group_id, symbol=tv_symbol, timeframe=tf_code, reason=exc, result="dropped"),
                     )
 
-                    _tg_alert(
+                    _send_alert(
                         "ERROR",
                         "Live feed could not save a candle\n"
                         f"Affected pair: {tv_symbol}/{tf_code}\n"
@@ -1174,7 +1175,7 @@ def _db_worker() -> None:
 
                     _increment_data_error_counter()
 
-                    _tg_alert(
+                    _send_alert(
                         "ERROR",
                         "Database save failed after retries\n"
                         f"Affected pair: {tv_symbol}/{tf_code}\n"
@@ -1227,7 +1228,7 @@ def _db_worker() -> None:
                         ),
                     )
 
-                    _tg_alert(
+                    _send_alert(
                         "WARNING",
                         "Saved candles are waiting before entering the main table\n"
                         f"Waiting items: {n_deferred}/{_DEFERRED_ETL_MAX}\n"
@@ -1539,7 +1540,7 @@ def _update_missed_pairs(
             count,
         )
 
-        _tg_alert(
+        _send_alert(
             "WARNING",
             "Live feed is missing repeated candles\n"
             f"Pair: {sym_name}/{tf_code}\n"
@@ -1951,7 +1952,7 @@ class BatchFetcher:
 
                         enqueue_status = _enqueue_or_buffer(item, self.group_id, tv_symbol, tf_code)
 
-                        if enqueue_status is False or enqueue_status == "rejected":
+                        if enqueue_status == "rejected":
                             with _overflow_lock:
                                 overflow_depth = len(_overflow_buf)
 
@@ -2154,7 +2155,7 @@ class BatchFetcher:
             )
 
             if not expected_snapshot:
-                _tg_alert(
+                _send_alert(
                     "ERROR",
                     "Live feed could not open TradingView chart sessions\n"
                     f"Connection group: {self.group_id}\n"
@@ -2163,7 +2164,7 @@ class BatchFetcher:
                 )
 
             else:
-                _tg_alert(
+                _send_alert(
                     "WARNING",
                     "Live feed batch timed out\n"
                     f"Connection group: {self.group_id}\n"
@@ -2276,7 +2277,7 @@ class BatchFetcher:
                         ),
                     )
 
-                    _tg_alert(
+                    _send_alert(
                         "ERROR",
                         "Live feed stopped retrying one missing pair\n"
                         f"Pair: {_sym_name.get(pair[0], str(pair[0]))}/{pair[1]}\n"
@@ -2400,7 +2401,7 @@ def _update_guest_mode_counter(is_guest: bool) -> None:
                 ),
             )
 
-            _tg_alert(
+            _send_alert(
                 "WARNING",
                 "TradingView session is limited\n"
                 f"Consecutive live batches: {_consecutive_guest_batches}\n"
@@ -2442,7 +2443,7 @@ def _guest_mode_blocks_batch() -> bool:
     if TV_WS_GUEST_POLICY == "abort":
         logger.error("%s", _llog("Live batch blocked by limited TradingView login", policy="abort", result="stopping"))
 
-        _tg_alert(
+        _send_alert(
             "ERROR",
             "Live feed stopped because TradingView login is not valid\n"
             "Policy: stop instead of running with limited access\n"
@@ -2488,7 +2489,7 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
             else None,
         )
 
-        _tg_alert(
+        _send_alert(
             "WARNING",
             "Live feed is waiting for TradingView to become reachable\n"
             f"Reason: {connectivity_detail}\n"
@@ -2617,7 +2618,7 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
             ),
         )
 
-        _tg_alert(
+        _send_alert(
             "ERROR",
             "Live feed batch took too long and was released safely\n"
             f"Batch: #{batch_id}\n"
@@ -2810,7 +2811,7 @@ def _on_batch_complete(
             int(db_metrics.get("accepted", 0)) - int(db_metrics.get("db_processed", 0)),
         )
 
-        _tg_alert(
+        _send_alert(
             "INFO",
             "Live feed first batch finished\n"
             f"Batch: #{batch_num}\n"
@@ -3311,7 +3312,7 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
                 result="skipped",
             )
             print("Live fetching is already running. New live process was skipped.")
-            return 5
+            return EXIT_LOCK_CONFLICT
 
         logger.info("%s", _llog("Live handoff requested", action="ask_old_instance_to_stop", result="waiting"))
 
@@ -3459,7 +3460,7 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
                 blocked_until=blocked_until,
             )
 
-            _tg_alert(
+            _send_alert(
                 "WARNING",
                 "Live feed is waiting for TradingView before refreshing login\n"
                 f"Reason: {tv_network_detail}\n"
@@ -3494,7 +3495,7 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
         password=TRADINGVIEW.password,
         guest_policy=TV_WS_GUEST_POLICY,
         require_headless=TV_WS_PREFLIGHT_REQUIRE_HEADLESS,
-        alert=_tg_alert,
+        alert=_send_alert,
     ):
         print("  ERROR: Auth preflight failed. See live_fetching.log for details.")
 
@@ -3662,8 +3663,6 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
         trace={"log_file": str(WS_LIVE_LOG), "state_file": str(WS_LIVE_STATE)},
         result="started",
     )
-
-    start_bot_listener()
 
     logger.info("%s", _llog("Discord notification channel ready", mode="send_only", result="ready"))
 

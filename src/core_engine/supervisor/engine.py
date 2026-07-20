@@ -22,11 +22,12 @@ from datetime import date, datetime, time as dtime, timezone
 from pathlib import Path
 from typing import Any
 
+from core_engine.exit_codes import EXIT_LOCK_CONFLICT
 from core_engine.health import cleanup_old_runtime_files, collect_health
 from core_engine.logkit.activity import log_activity
-from core_engine.logkit.factory import setup_logger
+from core_engine.logkit.factory import get_logger
 from core_engine.logkit.formatters import operation_line
-from core_engine.reporting.discord import notify_backend_event, notify_historical_event, notify_live_event, tg_flush
+from core_engine.reporting.discord import notify_backend_event, notify_historical_event, notify_live_event, flush_pending
 from core_engine.settings import (
     APP_ROOT,
     BACKEND,
@@ -57,7 +58,7 @@ from core_engine.coordination.locks import (
 )
 
 
-logger = setup_logger("system", str(BACKEND_LOG), rotating=True, utc=True, pipe_format=True)
+logger = get_logger("system", str(BACKEND_LOG), rotating=True, utc=True, pipe_format=True)
 
 
 def _slog(event: str, *details: str, **fields: Any) -> str:
@@ -221,7 +222,7 @@ def queue_historical_job(
         trace={"queue_file": str(HISTORICAL_QUEUE_FILE)},
         result="queued",
     )
-    tg_flush()
+    flush_pending()
     return job
 
 
@@ -288,7 +289,7 @@ def record_operator_decision(
         trace={"task_name": detail.get("task_name", "-")},
         result=decision,
     )
-    tg_flush()
+    flush_pending()
 
 
 @dataclass
@@ -866,7 +867,7 @@ class BackendSupervisor:
                 trace={"task_name": DP_PROGRAM_LOCK},
                 result="skipped",
             )
-            tg_flush()
+            flush_pending()
             return False
 
         logger.warning("%s", _slog("Supervisor replacement requested", active_pid=detail.get("pid"), result="stopping_old_process"))
@@ -892,7 +893,7 @@ class BackendSupervisor:
             trace={"task_name": DP_PROGRAM_LOCK},
             result="failed",
         )
-        tg_flush()
+        flush_pending()
         return False
 
     def _release_supervisor_lock(self) -> None:
@@ -1425,7 +1426,7 @@ class BackendSupervisor:
 
     def run(self) -> int:
         if not self._acquire_supervisor_lock():
-            return 5
+            return EXIT_LOCK_CONFLICT
         clear_stop_request()
         self._write_state(status="starting")
         logger.info(
@@ -1548,7 +1549,7 @@ class BackendSupervisor:
             trace={"backend_state": str(BACKEND_STATE)},
             result="stopped",
         )
-        tg_flush()
+        flush_pending()
         logger.info("%s", _slog("Supervisor stopped", live_exit_code=self.live.last_exit_code, historical_exit_code=self.historical.last_exit_code, result="stopped"))
         log_activity(
             "program_stopped",

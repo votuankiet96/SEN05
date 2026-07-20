@@ -17,7 +17,7 @@ from urllib.parse import parse_qs, urlparse
 
 from core_engine.dashboard import chart_queries, health_queries
 from core_engine.logkit.activity import log_activity
-from core_engine.logkit.factory import setup_logger
+from core_engine.logkit.factory import get_logger
 from core_engine.logkit.formatters import operation_line
 from core_engine.settings import RUN_DIR, SYSTEM_LOG_DIR, ensure_runtime_dirs
 
@@ -30,7 +30,7 @@ PID_FILE = RUN_DIR / "chart_datacheck.pid"
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = int(os.environ.get("CHART_DATACHECK_PORT", "8050") or "8050")
 
-logger = setup_logger("chart_datacheck", str(CHART_LOG), rotating=True, console=True, utc=True, pipe_format=True)
+logger = get_logger("chart_datacheck", str(CHART_LOG), rotating=True, console=True, utc=True, pipe_format=True)
 
 
 def _clog(event: str, *details: str, **fields: object) -> str:

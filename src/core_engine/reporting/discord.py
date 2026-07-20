@@ -1,8 +1,7 @@
 """Discord webhook notifications for the refactored DP backend.
 
-The public function names keep the old notification-compatible API:
-tg_send, tg_alert, tg_flush, start_bot_listener, and QUICK_COMMANDS_HINT.
-Discord webhooks are outbound-only.
+Public API: send_message, send_alert, flush_pending, notify_*_event, and
+QUICK_COMMANDS_HINT. Discord webhooks are outbound-only.
 """
 
 from __future__ import annotations
@@ -1093,7 +1092,7 @@ def _start_sender(payload: dict[str, Any], *, kind: str, level: str, meta: dict[
     _pending_threads.append(thread)
 
 
-def tg_send(message: str) -> None:
+def send_message(message: str) -> None:
     """Send a general Discord notification as an embed with a color side line."""
     if not NOTIFICATION.discord_webhook_url:
         return
@@ -1103,7 +1102,7 @@ def tg_send(message: str) -> None:
     _start_sender(payload, kind="message", level=level, meta=meta)
 
 
-def tg_flush(timeout: float = 12.0) -> None:
+def flush_pending(timeout: float = 12.0) -> None:
     """Wait for pending Discord sends to finish."""
     global _pending_threads
     alive: list[threading.Thread] = []
@@ -1114,7 +1113,7 @@ def tg_flush(timeout: float = 12.0) -> None:
     _pending_threads = alive
 
 
-def tg_alert(level: str, text: str) -> None:
+def send_alert(level: str, text: str) -> None:
     """Send a level-specific Discord alert as an embed with a color side line."""
     if not NOTIFICATION.discord_webhook_url:
         return
@@ -1174,8 +1173,3 @@ def notify_auth_event(*, severity: str, title: str, summary: str, **kwargs: Any)
 
 def notify_database_event(*, severity: str, title: str, summary: str, **kwargs: Any) -> None:
     notify_operator_report(area="database", severity=severity, title=title, summary=summary, **kwargs)
-
-
-def start_bot_listener() -> None:
-    """No-op: Discord webhook is outbound-only."""
-    return None

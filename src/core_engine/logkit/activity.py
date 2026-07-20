@@ -5,11 +5,11 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from core_engine.logkit.factory import setup_logger
+from core_engine.logkit.factory import get_logger
 from core_engine.settings import ACTIVITY_LOG
 
 
-_logger = setup_logger("activity", str(ACTIVITY_LOG), rotating=True, console=False)
+_logger = get_logger("activity", str(ACTIVITY_LOG), rotating=True, console=False)
 
 _COMPONENT_LABELS = {
     "system": "System",

@@ -22,6 +22,7 @@ from typing import Any
 
 import pandas as pd
 
+from core_engine.exit_codes import EXIT_CANCELLED, EXIT_LOCK_CONFLICT
 from core_engine.tradingview import auth as tv_auth
 from core_engine.tradingview import history_client as tv_history
 from core_engine.warehouse.repository import (
@@ -74,9 +75,9 @@ from core_engine.coordination.locks import (
     wait_for_historical_slot,
 )
 from core_engine.reporting.historical_reporter import HistoricalReporter, fmt_int
-from core_engine.logkit.factory import setup_logger
+from core_engine.logkit.factory import get_logger
 from core_engine.logkit.formatters import operation_line
-from core_engine.reporting.discord import QUICK_COMMANDS_HINT, notify_historical_event, tg_flush
+from core_engine.reporting.discord import QUICK_COMMANDS_HINT, notify_historical_event, flush_pending
 from core_engine.settings import (
     BACKEND,
     DIRECT_TFS,
@@ -111,7 +112,7 @@ WAREHOUSE_WRITE_LOCK_POLL_SEC = 5.0
 TF_INTERVAL = get_tf_interval_map()
 RUN_SUMMARY_FILE = str(HISTORICAL_SUMMARY_LOG)
 
-logger = setup_logger(
+logger = get_logger(
     "historical_pulling",
     str(PIPELINE_LOG),
     rotating=True,
@@ -410,7 +411,7 @@ def _acquire_historical_or_report(owner: str, args: Any, *, duration_min: int) -
             trace={"lock": HISTORICAL_JOB_LOCK},
             result="skipped",
         )
-        tg_flush()
+        flush_pending()
     else:
         _clear_historical_cancel(f"{owner}_lock_acquired")
     return lease
@@ -587,12 +588,10 @@ def pull_and_store(
     sym: dict[str, Any],
     tf_code: str,
     n_bars: int,
-    interval: str,
     *,
     skip_etl: bool = False,
     allow_replay: bool = True,
 ) -> int:
-    del interval  # interval is kept in the signature for pipeline compatibility.
     df, note = _fetch_history_frame(tv, sym, tf_code, n_bars, allow_replay=allow_replay)
     if df is None or df.empty:
         logger.warning(
@@ -625,12 +624,11 @@ def pull_with_retry(
     sym: dict[str, Any],
     tf_code: str,
     n_bars: int,
-    interval: str,
     *,
     max_retries: int = 3,
     allow_replay: bool = True,
 ) -> int:
-    result = pull_and_store(tv, sym, tf_code, n_bars, interval, allow_replay=allow_replay)
+    result = pull_and_store(tv, sym, tf_code, n_bars, allow_replay=allow_replay)
     delays = tuple(HISTORICAL.retry_delays or (10, 30, 60))
     for attempt in range(1, max_retries + 1):
         if result >= 0:
@@ -648,7 +646,7 @@ def pull_with_retry(
             ),
         )
         time.sleep(delay)
-        result = pull_and_store(tv, sym, tf_code, n_bars, interval, allow_replay=allow_replay)
+        result = pull_and_store(tv, sym, tf_code, n_bars, allow_replay=allow_replay)
     if result < 0:
         logger.error(
             "%s",
@@ -663,7 +661,7 @@ def pull_with_retry(
     return result
 
 
-def repull_full_symbol(tv: SimpleNamespace, sym: dict[str, Any], tf_code: str, interval: str) -> tuple[int, int]:
+def replace_symbol_history(tv: SimpleNamespace, sym: dict[str, Any], tf_code: str) -> tuple[int, int]:
     staging = TF_STAGING.get(tf_code)
     if not staging:
         logger.error("%s", _hlog("Repair temporary table missing", symbol=sym["tv_symbol"], timeframe=tf_code, result="failed"))
@@ -681,7 +679,6 @@ def repull_full_symbol(tv: SimpleNamespace, sym: dict[str, Any], tf_code: str, i
         sym,
         tf_code,
         next(n for i, t, s, n in get_historical_timeframes() if t == tf_code),
-        interval,
         skip_etl=True,
         allow_replay=False,
     )
@@ -743,7 +740,7 @@ def run_full_load(tv: SimpleNamespace, *, symbols: list[dict[str, Any]], dry_run
                 stats["ok"] += 1
                 continue
             wait_for_historical_slot("historical-full", logger)
-            result = pull_with_retry(tv, sym, tf_code, n_bars, interval, allow_replay=True)
+            result = pull_with_retry(tv, sym, tf_code, n_bars, allow_replay=True)
             _reporter.pair_result(index, pairs_total, sym["tv_symbol"], tf_code, result)
             if result >= 0:
                 stats["ok"] += 1
@@ -811,7 +808,6 @@ def run_backfill(
             sym,
             tf_code,
             n_bars,
-            TF_INTERVAL[tf_code],
             allow_replay=False,
         )
         _reporter.pair_result(index, len(stale), sym["tv_symbol"], tf_code, result)
@@ -969,7 +965,7 @@ def main(argv: list[str] | None = None) -> int:
                     duration_min=60,
                 )
                 if historical_lease is None:
-                    return 5
+                    return EXIT_LOCK_CONFLICT
                 atexit.register(release_historical_job, historical_lease, "historical-reset", logger)
                 _cleanup_orphan_warehouse_maintenance(
                     "historical_reset_lock_acquired",
@@ -978,7 +974,7 @@ def main(argv: list[str] | None = None) -> int:
                 maintenance_acquired = acquire(WAREHOUSE_MAINTENANCE_LOCK, duration_min=60)
                 if not maintenance_acquired:
                     logger.error("%s", _hlog("Reset could not enter maintenance mode", lock=WAREHOUSE_MAINTENANCE_LOCK, result="failed"))
-                    return 5
+                    return EXIT_LOCK_CONFLICT
             stats = run_reset_scope(
                 symbols=scope.symbols,
                 dry_run=args.dry_run,
@@ -1035,7 +1031,7 @@ def main(argv: list[str] | None = None) -> int:
                 release(WAREHOUSE_MAINTENANCE_LOCK)
             if not args.dry_run:
                 release_historical_job(historical_lease, "historical-reset", logger)
-            tg_flush()
+            flush_pending()
 
     ok, detail = tv_probe(logger, symbols=scope.symbols, direct_tfs=DIRECT_TFS)
     if not ok:
@@ -1052,7 +1048,7 @@ def main(argv: list[str] | None = None) -> int:
             trace={"pipeline_log": str(PIPELINE_LOG)},
             result="failed",
         )
-        tg_flush()
+        flush_pending()
         return EXIT_TV_UNAVAILABLE
     logger.info("%s", _hlog("TradingView connection check passed", result="ready"))
 
@@ -1071,7 +1067,7 @@ def main(argv: list[str] | None = None) -> int:
             duration_min=240,
         )
         if historical_lease is None:
-            return 5
+            return EXIT_LOCK_CONFLICT
         atexit.register(release_historical_job, historical_lease, "historical-pipeline", logger)
         if maintenance_scope:
             _cleanup_orphan_warehouse_maintenance(
@@ -1148,7 +1144,7 @@ def main(argv: list[str] | None = None) -> int:
             trace={"pipeline_log": str(PIPELINE_LOG)},
             result="stopped",
         )
-        return 130
+        return EXIT_CANCELLED
     except Exception as exc:
         logger.exception("%s", _hlog("Historical pull failed", reason=exc, result="failed"))
         notify_historical_event(
@@ -1167,7 +1163,7 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         if not args.dry_run:
             release_historical_job(historical_lease, "historical-pipeline", logger)
-        tg_flush()
+        flush_pending()
 
 
 if __name__ == "__main__":

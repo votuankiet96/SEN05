@@ -11,6 +11,7 @@ import time
 from typing import Any
 
 from core_engine.supervisor import engine as backend_engine
+from core_engine.exit_codes import EXIT_CANCELLED, EXIT_OK
 from core_engine.logkit.activity import log_activity
 from core_engine.tradingview import auth as tv_auth
 from core_engine import health
@@ -305,9 +306,9 @@ def _run_operator_decision(args: argparse.Namespace) -> int:
 
 
 def _terminal_completion_status(exit_code: int) -> tuple[str, str]:
-    if exit_code == 0:
+    if exit_code == EXIT_OK:
         return "completed", "Operator terminal command finished."
-    if exit_code == 130:
+    if exit_code == EXIT_CANCELLED:
         return "stopped", "Operator terminal command stopped after a Graceful Stop request."
     return "failed", "Operator terminal command finished with an error."
 

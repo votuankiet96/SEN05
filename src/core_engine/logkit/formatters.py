@@ -1,58 +1,9 @@
-"""Small fixed-width log helpers for data-provider console output."""
+"""Log line formatting: single-line operator log records and console output."""
 
 from __future__ import annotations
 
 import logging
 import re
-
-COL_EVENT = 8
-COL_PROGRESS = 7
-COL_SYMBOL = 8
-COL_TF = 4
-COL_ACTION = 24
-COL_AMOUNT = 30
-COL_WINDOW = 43
-COL_STATUS = 42
-TABLE_EVENTS = {
-    "EVENT",
-    "PLAN",
-    "TF",
-    "PAIR",
-    "RESULT",
-    "WS",
-    "WS_WARN",
-    "REPLAY",
-    "DB",
-    "STAGE",
-    "WARN",
-    "ERROR",
-    "CLEAN",
-    "MISS",
-    "STALE",
-    "SYMBOL",
-    "TF_SUM",
-}
-
-EVENT_LABELS = {
-    "EVENT": "Event",
-    "PLAN": "Plan prepared",
-    "TF": "Timeframe started",
-    "PAIR": "Pair queued",
-    "RESULT": "Pair completed",
-    "WS": "TradingView history",
-    "WS_WARN": "TradingView warning",
-    "REPLAY": "Replay window loaded",
-    "DB": "Database write",
-    "STAGE": "Temporary table update",
-    "WARN": "Warning",
-    "ERROR": "Error",
-    "CLEAN": "Cleanup",
-    "MISS": "Missing data",
-    "STALE": "Outdated data",
-    "SYMBOL": "Symbol scan",
-    "TF_SUM": "Timeframe completed",
-    "SECTION": "Section",
-}
 
 
 def num(value) -> str:
@@ -63,17 +14,6 @@ def num(value) -> str:
         return f"{int(value):,}"
     except Exception:
         return str(value)
-
-
-def cell(value, width: int, align: str = "left") -> str:
-    """Fixed-width, single-line cell with conservative clipping."""
-    text = "" if value is None or value == "" else str(value)
-    text = " ".join(text.replace("\r", " ").replace("\n", " ").split())
-    if len(text) > width:
-        text = text[: max(1, width - 1)] + "~"
-    if align == "right":
-        return text.rjust(width)
-    return text.ljust(width)
 
 
 def ts(value) -> str:
@@ -97,28 +37,6 @@ def window(start, end) -> str:
     if start is None and end is None:
         return "-"
     return f"from {ts(start)} to {ts(end)}"
-
-
-def tv_status(status: str | None) -> str:
-    """Translate verbose TradingView statuses into operator-friendly text."""
-    if not status:
-        return "-"
-    text = str(status)
-    if text.startswith("completed+more+"):
-        match = re.search(r"completed\+more\+(\d+)", text)
-        extra = num(match.group(1)) if match else "?"
-        if "no_more" in text:
-            return f"done; extra {extra}; max reached"
-        return f"done; extra {extra}"
-    if text.startswith("completed+no_more"):
-        return "done; max reached"
-    if text.startswith("completed"):
-        return "done"
-    if text.startswith("partial_timeout"):
-        return "partial; timed out"
-    if text.startswith("empty"):
-        return "empty; no older bars"
-    return text
 
 
 def clean(value) -> str:
@@ -161,44 +79,33 @@ def operation_line(area: str, event: str, *details: str, **fields) -> str:
     return " | ".join(parts)
 
 
-def header() -> str:
-    return make("EVENT", "PROG", "SYMBOL", "TF", "STEP", "COUNTS", "PERIOD", "RESULT")
+_CONSOLE_SANITIZE_MAP = {
+    "Ã¢Å“â€œ": "[OK]",
+    "Ã¢Å“-": "[ERR]",
+    "âœ—": "[ERR]",
+    "Ã¢â€ Â»": "[RETRY]",
+    "â†»": "[RETRY]",
+    "Ã¢â€ â€™": "->",
+    "Ã¢â‚¬â€": "-",
+    "Ã¢â€°Ë†": "~",
+    "â‰ˆ": "~",
+    "Ã¢â‚¬Â¢": "-",
+    "â€¢": "-",
+    "Ã¢-â€¹": "[SKIP]",
+    "Ã°Å¸â€Â": "[CHECK]",
+    "ðŸ”": "[CHECK]",
+    "Ã°Å¸â€Â§": "[FIX]",
+    "ðŸ”§": "[FIX]",
+    "Ã¢ÂÅ’": "[FAIL]",
+    "Ã¢Å¡Â Ã¯Â¸Â": "[WARN]",
+}
 
 
-def make(
-    event: str,
-    progress: str = "",
-    symbol: str = "",
-    tf: str = "",
-    action: str = "",
-    amount: str = "",
-    range_: str = "",
-    status: str = "",
-) -> str:
-    label = EVENT_LABELS.get(event, clean(event).replace("_", " ").title())
-    return operation_line(
-        "HISTORICAL",
-        label,
-        progress=progress,
-        symbol=symbol,
-        timeframe=tf,
-        action=action,
-        detail=amount,
-        window=range_,
-        status=status,
-    )
+class ConsoleSanitizingFormatter(logging.Formatter):
+    """Console-only formatter that normalizes mojibake/emoji markers."""
 
-
-def log(
-    logger: logging.Logger,
-    event: str,
-    progress: str = "",
-    symbol: str = "",
-    tf: str = "",
-    action: str = "",
-    amount: str = "",
-    range_: str = "",
-    status: str = "",
-    level: int = logging.INFO,
-) -> None:
-    logger.log(level, make(event, progress, symbol, tf, action, amount, range_, status))
+    def format(self, record: logging.LogRecord) -> str:
+        text = super().format(record)
+        for src, dst in _CONSOLE_SANITIZE_MAP.items():
+            text = text.replace(src, dst)
+        return text

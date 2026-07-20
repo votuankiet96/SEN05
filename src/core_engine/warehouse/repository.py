@@ -23,14 +23,14 @@ from core_engine.settings import (
     TF_DISPLAY_ORDER,
     TF_STAGING,
 )
-from core_engine.logkit.factory import setup_logger
+from core_engine.logkit.factory import get_logger
 from core_engine.warehouse.connection import (
     DatabaseWriteError,
     get_connection,
     test_connection,
 )
 
-logger = setup_logger("data_warehouse", str(DATA_WAREHOUSE_LOG), rotating=True, console=False, utc=True)
+logger = get_logger("data_warehouse", str(DATA_WAREHOUSE_LOG), rotating=True, console=False, utc=True)
 
 
 def _fmt_count(value) -> str:

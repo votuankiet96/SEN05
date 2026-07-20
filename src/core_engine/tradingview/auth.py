@@ -102,9 +102,9 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
-from core_engine.logkit.factory import setup_logger  # noqa: E402
+from core_engine.logkit.factory import get_logger  # noqa: E402
 from core_engine.logkit.formatters import operation_line  # noqa: E402
-from core_engine.reporting.discord import notify_auth_event, sanitize_ssl_keylogfile, tg_alert as _tg_alert  # noqa: E402
+from core_engine.reporting.discord import notify_auth_event, sanitize_ssl_keylogfile, send_alert as _send_alert  # noqa: E402
 from core_engine.settings import (  # noqa: E402
     AUTH_LOG,
     CACHE_DIR,
@@ -139,7 +139,7 @@ class _AuthLogFilter(logging.Filter):
 
 
 # Module-level logger, dùng khi caller không truyền logger vào.
-_logger = setup_logger("tv_auth", str(AUTH_LOG), rotating=True, console=False, utc=True, pipe_format=True)
+_logger = get_logger("tv_auth", str(AUTH_LOG), rotating=True, console=False, utc=True, pipe_format=True)
 _logger.addFilter(_AuthLogFilter())
 
 sanitize_ssl_keylogfile()
@@ -1108,27 +1108,27 @@ def _resolve_auth_token_refresh_paths(log: logging.Logger) -> tuple[str, str]:
     if current_cookie:
         token = _refresh_token_via_cookie(current_cookie, log)
         if token != GUEST_TOKEN:
-            if _save_credentials_to_env(token, current_cookie):
+            if _save_credentials_to_cache(token, current_cookie):
                 return token, "session_refresh"
 
     # LỚP 2: Làm mới từ persistent browser profile.
     token, new_cookie = _refresh_from_browser_profile(log)
     if token != GUEST_TOKEN:
-        if _save_credentials_to_env(token, new_cookie or current_cookie):
+        if _save_credentials_to_cache(token, new_cookie or current_cookie):
             return token, "browser_profile"
 
     if TRADINGVIEW.username and TRADINGVIEW.password:
         # LỚP 2.5: username/password - lấy token + cookie mới từ response HTTP POST
         token, new_cookie = _fetch_auth_token_from_credentials(TRADINGVIEW.username, TRADINGVIEW.password)
         if token != GUEST_TOKEN:
-            if _save_credentials_to_env(token, new_cookie or current_cookie):
+            if _save_credentials_to_cache(token, new_cookie or current_cookie):
                 return token, "username/password"
 
     # LỚP 3: Headless Chromium với cookie hiện có
     if current_cookie:
         token, new_cookie = _headless_refresh(current_cookie)
         if token != GUEST_TOKEN:
-            if _save_credentials_to_env(token, new_cookie or current_cookie):
+            if _save_credentials_to_cache(token, new_cookie or current_cookie):
                 return token, "headless_chromium"
 
     # LỚP 4: Headless Chromium đăng nhập từ đầu, không cần cookie cũ.
@@ -1137,7 +1137,7 @@ def _resolve_auth_token_refresh_paths(log: logging.Logger) -> tuple[str, str]:
         log.info("[AUTH] Cookie expired - trying headless fresh login...")
         token, new_cookie = _headless_login_fresh(TRADINGVIEW.username, TRADINGVIEW.password)
         if token != GUEST_TOKEN:
-            if _save_credentials_to_env(token, new_cookie):
+            if _save_credentials_to_cache(token, new_cookie):
                 return token, "headless_fresh_login"
     elif TRADINGVIEW.username and TRADINGVIEW.password:
         log.info(
@@ -1251,7 +1251,7 @@ def _renew_auth_token_coordinated(
         log.warning("[AUTH] Proactive token refresh requested - bootstrapping credentials.")
     else:
         log.warning("[AUTH] Token refresh required - bootstrapping credentials.")
-        _tg_alert(
+        _send_alert(
             "INFO",
             "TradingView session is expiring; refreshing automatically",
         )
@@ -1298,7 +1298,7 @@ def _renew_auth_token_coordinated(
         else:
             safe_source = safe_auth_source_label(source)
             log.info("[AUTH] Token renewed successfully (source: %s).", safe_source)
-            _tg_alert(
+            _send_alert(
                 "INFO",
                 "TradingView session refreshed during the run\n"
                 f"Source: {safe_source}\n"
@@ -1323,7 +1323,7 @@ def _renew_auth_token_coordinated(
     with _auth_lock:
         _auth_token = GUEST_TOKEN
     log.error("[AUTH] Token renewal failed - all groups will use guest access.")
-    _tg_alert(
+    _send_alert(
         "ERROR",
         "TradingView session refresh failed\n"
         "Meaning: the system is using limited TradingView access.\n"
@@ -1714,7 +1714,7 @@ def _refresh_from_browser_profile(lg: logging.Logger | None = None) -> tuple[str
                 token = _extract_token_from_page(page, cookies)
                 cookie_out = _cookie_header_from_list(cookies)
                 ctx.close()
-        if token and _save_credentials_to_env(token, cookie_out):
+        if token and _save_credentials_to_cache(token, cookie_out):
             log.info("[AUTH] Token refreshed from persistent browser profile.")
             return token, cookie_out
         if cookie_out:
@@ -1763,7 +1763,7 @@ def _interactive_browser_login(
                         if token and _is_refreshed_token_usable(
                             token, "interactive browser", log, min_remaining_sec=60
                         ):
-                            _save_credentials_to_env(token, cookie_out)
+                            _save_credentials_to_cache(token, cookie_out)
                             ctx.close()
                             log.info("[AUTH] Interactive browser login captured token and cookie.")
                             return token, "interactive_browser_session"
@@ -2238,7 +2238,7 @@ def _ensure_cookie_fresh_ttl_aware(lg: logging.Logger | None = None) -> None:
     probe = _probe_cookie_session(current_cookie, log)
     if probe.status == "ok":
         _cookie_probe_fail_streak = 0
-        if token_near_expiry and _save_credentials_to_env(probe.token, current_cookie):
+        if token_near_expiry and _save_credentials_to_cache(probe.token, current_cookie):
             log.info("[AUTH] Cookie probe refreshed token because ttl=%.0fs.", token_remaining)
         return
 
@@ -2333,7 +2333,7 @@ def _ensure_cookie_fresh_ttl_aware(lg: logging.Logger | None = None) -> None:
 
         token_updated = False
         if new_token != GUEST_TOKEN:
-            token_updated = _save_credentials_to_env(new_token, new_cookie or current_cookie)
+            token_updated = _save_credentials_to_cache(new_token, new_cookie or current_cookie)
         elif new_cookie:
             _tv_cookie = new_cookie
             _save_token_cache("", new_cookie)
@@ -2430,7 +2430,7 @@ def _save_token_cache(token: str, cookie: str) -> None:
         _logger.warning("[AUTH] Could not write token cache: %s", exc)
 
 
-def _save_credentials_to_env(token: str, cookie: str) -> bool:
+def _save_credentials_to_cache(token: str, cookie: str) -> bool:
     """
     Cập nhật runtime credentials:
     - In-memory: _auth_token và _tv_cookie, có hiệu lực ngay trong process.
@@ -2513,21 +2513,21 @@ def _bootstrap_credentials(lg: logging.Logger | None = None) -> tuple[str, str]:
     if current_cookie:
         token = _refresh_token_via_cookie(current_cookie, log)
         if token != GUEST_TOKEN:
-            if _save_credentials_to_env(token, current_cookie):
+            if _save_credentials_to_cache(token, current_cookie):
                 return token, "session_refresh"
         log.info("[AUTH] HTTP cookie refresh failed - trying headless Chromium...")
 
     # Bước 2: Làm mới từ persistent browser profile.
     token, new_cookie = _refresh_from_browser_profile(log)
     if token != GUEST_TOKEN:
-        if _save_credentials_to_env(token, new_cookie or current_cookie):
+        if _save_credentials_to_cache(token, new_cookie or current_cookie):
             return token, "browser_profile"
 
     # Bước 3: Headless Chromium với cookie hiện có.
     if current_cookie:
         token, new_cookie = _headless_refresh(current_cookie)
         if token != GUEST_TOKEN:
-            if _save_credentials_to_env(token, new_cookie or current_cookie):
+            if _save_credentials_to_cache(token, new_cookie or current_cookie):
                 return token, "headless_chromium"
 
     # Bước 4: username/password (HTTP POST) - lấy token + cookie mới.
@@ -2535,7 +2535,7 @@ def _bootstrap_credentials(lg: logging.Logger | None = None) -> tuple[str, str]:
         log.info("[AUTH] Trying username/password login (HTTP POST)...")
         token, new_cookie = _fetch_auth_token_from_credentials(TRADINGVIEW.username, TRADINGVIEW.password)
         if token != GUEST_TOKEN:
-            if _save_credentials_to_env(token, new_cookie or current_cookie):
+            if _save_credentials_to_cache(token, new_cookie or current_cookie):
                 return token, "http_post_login"
 
     # Bước 5: Headless fresh login, không cần cookie cũ.
@@ -2543,7 +2543,7 @@ def _bootstrap_credentials(lg: logging.Logger | None = None) -> tuple[str, str]:
         log.info("[AUTH] Trying headless fresh login (Playwright full login)...")
         token, new_cookie = _headless_login_fresh(TRADINGVIEW.username, TRADINGVIEW.password)
         if token != GUEST_TOKEN:
-            if _save_credentials_to_env(token, new_cookie):
+            if _save_credentials_to_cache(token, new_cookie):
                 return token, "headless_fresh_login"
     elif TRADINGVIEW.username and TRADINGVIEW.password:
         log.info(

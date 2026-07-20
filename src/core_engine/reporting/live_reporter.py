@@ -7,35 +7,10 @@ import re
 from collections.abc import Mapping
 
 from core_engine.logkit.formatters import clean, operation_line
+from core_engine.logkit.tables import cell as _cell
+from core_engine.settings import TF_DISPLAY_ORDER
 
-TF_ORDER = (
-    "M5",
-    "M10",
-    "M15",
-    "M20",
-    "M30",
-    "M45",
-    "H1",
-    "M90",
-    "H2",
-    "H3",
-    "H4",
-    "H6",
-    "H8",
-    "D1",
-    "W",
-)
-
-
-def _cell(value: str | int | None, width: int, *, align: str = "left") -> str:
-    text = "-" if value is None or value == "" else clean(value)
-    if len(text) > width:
-        text = text[: max(1, width - 3)].rstrip() + "..."
-    if align == "right":
-        return text.rjust(width)
-    if align == "center":
-        return text.center(width)
-    return text.ljust(width)
+TF_ORDER = tuple(TF_DISPLAY_ORDER)
 
 
 def _inline_fields(*details: str, **fields) -> str:

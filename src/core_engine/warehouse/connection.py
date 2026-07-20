@@ -7,10 +7,10 @@ import time
 import pyodbc
 
 from core_engine.logkit.formatters import operation_line
-from core_engine.logkit.factory import setup_logger
+from core_engine.logkit.factory import get_logger
 from core_engine.settings import DATA_WAREHOUSE_LOG, DB, build_conn_str
 
-logger = setup_logger("data_warehouse", str(DATA_WAREHOUSE_LOG), rotating=True, console=False, utc=True)
+logger = get_logger("data_warehouse", str(DATA_WAREHOUSE_LOG), rotating=True, console=False, utc=True)
 
 
 class DatabaseWriteError(RuntimeError):
