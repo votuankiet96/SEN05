@@ -387,7 +387,7 @@ class BackendSettings:
     historical_start_delay_sec: int = env_int("HISTORICAL_START_DELAY_SEC", 15, minimum=0, maximum=3600)
     historical_backfill_mode: str = env_str("HISTORICAL_BACKFILL_MODE", "gap").lower()
     historical_backfill_args: str = env_str("HISTORICAL_BACKFILL_ARGS", "")
-    historical_max_runtime_minutes: int = env_int("HISTORICAL_MAX_RUNTIME_MINUTES", 0, minimum=0)
+    historical_max_runtime_minutes: int = env_int("HISTORICAL_MAX_RUNTIME_MINUTES", 360, minimum=0)
     historical_retry_base_sec: int = env_int("BACKEND_HISTORICAL_RETRY_BASE_SEC", 300, minimum=30)
     historical_retry_max_sec: int = env_int("BACKEND_HISTORICAL_RETRY_MAX_SEC", 1800, minimum=60)
     shutdown_grace_sec: int = env_int("BACKEND_SHUTDOWN_GRACE_SEC", 240, minimum=5)

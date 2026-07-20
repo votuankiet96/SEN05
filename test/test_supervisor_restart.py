@@ -275,15 +275,16 @@ def test_enforce_historical_runtime_limit_does_nothing_within_limit(sup, monkeyp
     assert calls == []
 
 
-def test_enforce_historical_runtime_limit_disabled_by_default(sup, monkeypatch):
+def test_enforce_historical_runtime_limit_can_be_explicitly_disabled(sup, monkeypatch):
     from datetime import datetime, timedelta, timezone
 
+    monkeypatch.setattr(supervisor_engine, "BACKEND", _backend_with(historical_max_runtime_minutes=0))
     sup.historical.process = SimpleNamespace(poll=lambda: None)
     sup.active_historical_started_at = datetime.now(timezone.utc) - timedelta(days=1)
     calls = []
     monkeypatch.setattr(sup, "stop_historical", lambda **k: calls.append(k))
 
-    sup._enforce_historical_runtime_limit()  # limit_min defaults to 0 = disabled
+    sup._enforce_historical_runtime_limit()
 
     assert calls == []
 
