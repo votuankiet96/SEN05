@@ -107,10 +107,60 @@ def _run_data_health(args: argparse.Namespace) -> int:
     return 0 if report.get("status") != "fail" else 1
 
 
+def _run_reconcile_fact(args: argparse.Namespace) -> int:
+    from core_engine.warehouse.reconcile import reconcile_all, total_missing
+
+    tf_filter = None
+    if args.timeframes:
+        tf_filter = {tf.strip().upper() for tf in args.timeframes.split(",") if tf.strip()}
+
+    results = reconcile_all(apply=args.apply, tf_filter=tf_filter)
+    missing = total_missing(results)
+
+    if args.json:
+        payload = {
+            "applied": bool(args.apply),
+            "missing_count": missing,
+            "timeframes": [
+                {
+                    "tf_code": r.tf_code,
+                    "staging_table": r.staging_table,
+                    "missing_before": r.missing_before,
+                    "repaired": r.repaired,
+                    "missing_after": r.missing_after,
+                    "symbols_affected": r.symbols_affected,
+                    "error": r.error,
+                }
+                for r in results
+            ],
+        }
+        print(json.dumps(payload, indent=2, sort_keys=True, default=str))
+    else:
+        mode = "APPLY (re-running ETL for affected symbols)" if args.apply else "SCAN ONLY (pass --apply to repair)"
+        print(f"Staging -> Fact reconciliation: {mode}")
+        for r in results:
+            if r.error:
+                print(f"  {r.tf_code:<4} {r.staging_table:<12} ERROR: {r.error}")
+                continue
+            if r.missing_before == 0 and (r.missing_after or 0) == 0:
+                continue
+            print(
+                f"  {r.tf_code:<4} {r.staging_table:<12} "
+                f"missing_before={r.missing_before} repaired={r.repaired} "
+                f"missing_after={r.missing_after} symbols={r.symbols_affected}"
+            )
+        if missing == 0:
+            print("Result: missing_count = 0 across all checked timeframes.")
+        else:
+            print(f"Result: missing_count = {missing} - NOT safe to purge staging for affected tables yet.")
+
+    return 0 if missing == 0 else 1
+
+
 def _collect_core_settings() -> dict[str, Any]:
     auth_status = tv_auth.browser_profile_status()
     token = auth_status.get("token") or {}
-    live_symbols = [s for s in SYMBOLS if s["asset_type"] in {"Indice", "Metal", "Crypto"}]
+    live_symbols = [s for s in SYMBOLS if s["asset_type"] in set(LIVE.asset_types)]
     return {
         "program": {
             "name": "DP Program",
@@ -382,6 +432,20 @@ def build_parser() -> argparse.ArgumentParser:
     data_health.add_argument("--lookback-days", type=int, default=None, help="internal gap scan window")
     _add_json_flag(data_health)
 
+    reconcile = sub.add_parser(
+        "reconcile-fact",
+        help="find (and optionally repair) staging rows that never reached DWH.Fact_OHLCV",
+    )
+    reconcile.add_argument(
+        "--timeframes", default=None,
+        help="comma-separated timeframe codes to check (default: all)",
+    )
+    reconcile.add_argument(
+        "--apply", action="store_true",
+        help="re-run ETL for affected symbols instead of only reporting the gap",
+    )
+    _add_json_flag(reconcile)
+
     stop = sub.add_parser("stop", help="request graceful DP Program/live/historical shutdown")
     stop.add_argument("--reason", default="operator", help="reason stored in runtime stop files")
     stop.add_argument("--wait-sec", type=int, default=60, help="seconds to wait for active processes to stop")
@@ -452,6 +516,8 @@ def _dispatch(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
         return _run_status(args)
     if args.command == "data-health":
         return _run_data_health(args)
+    if args.command == "reconcile-fact":
+        return _run_reconcile_fact(args)
     if args.command == "stop":
         report = backend_engine.request_stop(
             args.reason,

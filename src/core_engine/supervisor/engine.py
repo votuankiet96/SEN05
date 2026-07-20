@@ -27,8 +27,8 @@ from datetime import date, datetime, time as dtime, timezone
 from pathlib import Path
 from typing import Any
 
-from core_engine.exit_codes import EXIT_LOCK_CONFLICT
-from core_engine.health import cleanup_old_runtime_files, collect_health
+from core_engine.exit_codes import EXIT_CANCELLED, EXIT_ERROR, EXIT_LOCK_CONFLICT
+from core_engine.health import _age_seconds, cleanup_old_runtime_files, collect_health
 from core_engine.logkit.activity import log_activity
 from core_engine.logkit.formatters import operation_line
 from core_engine.reporting.discord import notify_backend_event, notify_historical_event, notify_live_event, flush_pending
@@ -72,6 +72,26 @@ from core_engine.supervisor.process_control import (
 )
 
 
+# Backoff schedule for live restarts once the per-hour restart budget
+# (BACKEND.live_max_restarts_per_hour) is exhausted. Previously the
+# supervisor simply gave up and left live dead until an operator manually
+# restarted DP Program - these constants replace that with an automatic,
+# non-blocking retry-with-cooldown (mirrors the existing historical-retry
+# backoff shape: base * 2^failures, capped).
+LIVE_RESTART_BACKOFF_BASE_SEC = 30
+LIVE_RESTART_BACKOFF_MAX_SEC = 1800
+# Exit codes where an immediate retry is unlikely to help (another process
+# already holds the lock, or the exit was itself a cooperative cancel) get
+# a longer minimum backoff instead of competing for the normal restart
+# budget, which exists for genuine crash-loop protection.
+LIVE_RESTART_SLOW_EXIT_CODES = (EXIT_LOCK_CONFLICT, EXIT_CANCELLED)
+LIVE_RESTART_SLOW_MIN_SEC = 120
+# After this much continuous uptime, a prior failure streak is forgiven -
+# without this, one bad hour early in a multi-day run would otherwise
+# leave a permanently smaller retry budget for the rest of that run.
+LIVE_RESTART_STABLE_RESET_SEC = 1800
+
+
 class BackendSupervisor:
     def __init__(
         self,
@@ -93,6 +113,10 @@ class BackendSupervisor:
         self.live = ManagedProcess("live")
         self.historical = ManagedProcess("historical")
         self.live_restart_times: list[float] = []
+        self.live_failure_count = 0
+        self.live_retry_not_before = 0.0
+        self._live_backoff_reported_until = 0.0
+        self._live_stable_reset_done_for_start: float | None = None
         state = _load_json(BACKEND_STATE)
         self.last_backfill_date = str(state.get("last_backfill_date") or "")
         raw_slots = state.get("last_backfill_slots")
@@ -109,6 +133,8 @@ class BackendSupervisor:
             else None
         )
         self._last_health: dict[str, Any] = {}
+        self._last_db_health_at = 0.0
+        self._last_critical_drain_at = 0.0
         self._last_retention_day = ""
         self._started_at = utc_iso()
         self._lock_stop = threading.Event()
@@ -142,6 +168,8 @@ class BackendSupervisor:
             "historical_retry_not_before_epoch": self.historical_retry_not_before,
             "historical_retry_wait_seconds": self._historical_retry_wait_seconds(),
             "live_restart_count_last_hour": self._live_restarts_last_hour(),
+            "live_failure_count": self.live_failure_count,
+            "live_retry_wait_seconds": self._live_retry_wait_seconds(),
         }
         payload.update(extra)
         return payload
@@ -560,7 +588,12 @@ class BackendSupervisor:
     def start_live(self, *, reason: str = "auto_start") -> None:
         if self.live.running:
             return
-        clear_stop_request()
+        # clear_stop_request() intentionally does NOT happen here (it used
+        # to). If an operator's Graceful Stop request lands in the window
+        # between a crash being detected and this restart call, this used
+        # to silently erase that stop signal, meaning "stop DP Program"
+        # sent during a restart cooldown was ignored. The stop flag is now
+        # only cleared once, at supervisor startup (see run()).
         self._spawn(
             self.live,
             [sys.executable, "-m", "core_engine.live.engine"],
@@ -635,26 +668,101 @@ class BackendSupervisor:
             return False
         return self._live_restarts_last_hour() < limit
 
-    def _restart_live(self, reason: str) -> None:
-        if not self._restart_budget_available():
-            logger.error("%s", _slog("Live restart blocked by safety budget", reason=reason, limit_per_hour=BACKEND.live_max_restarts_per_hour, result="failed"))
-            self._safe_notify(
-                notify_live_event,
-                severity="ERROR",
-                title="Live restart was blocked",
-                summary="The live feed looked unhealthy, but the supervisor did not restart it because the restart safety limit was reached.",
-                current_state={
-                    "reason": reason,
-                    "restart_limit": f"{BACKEND.live_max_restarts_per_hour} per hour",
-                    "current_pid": self.live.pid,
-                },
-                data_result="Live candles may be delayed until the operator checks the process.",
-                health_risk="High. Automatic recovery paused to avoid an endless restart loop.",
-                reason="The worker restarted too many times in the last hour.",
-                recommended_action="Open runtime/logs/operation/live_fetching.log, fix the repeated cause, then restart DP Program manually.",
-                trace={"stdout_log": str(BACKEND_CHILD_STDOUT_LOG), "state_file": str(WS_LIVE_STATE)},
-                result="failed",
-            )
+    def _live_retry_wait_seconds(self) -> int:
+        if self.live_retry_not_before <= 0:
+            return 0
+        return max(0, int(round(self.live_retry_not_before - time.time())))
+
+    def _arm_live_backoff(self, *, exit_code: int | None, reason: str) -> None:
+        """Schedule a non-blocking automatic retry instead of leaving live
+        dead. Exit codes where an immediate retry is unlikely to help
+        (lock conflict, cooperative cancel) get a longer minimum delay so
+        they do not spend the fast retry budget on a near-certain repeat
+        failure."""
+        self.live_failure_count += 1
+        base = LIVE_RESTART_BACKOFF_BASE_SEC
+        if exit_code in LIVE_RESTART_SLOW_EXIT_CODES:
+            base = max(base, LIVE_RESTART_SLOW_MIN_SEC)
+        delay = min(LIVE_RESTART_BACKOFF_MAX_SEC, base * (2 ** max(0, self.live_failure_count - 1)))
+        self.live_retry_not_before = time.time() + delay
+        retry_after = datetime.fromtimestamp(self.live_retry_not_before, tz=timezone.utc).isoformat()
+        logger.warning(
+            "%s",
+            _slog(
+                "Live restart backoff armed",
+                reason=reason,
+                exit_code=exit_code,
+                failures=self.live_failure_count,
+                retry_delay_seconds=delay,
+                retry_after_utc=retry_after,
+                result="waiting",
+            ),
+        )
+        self._safe_notify(
+            notify_live_event,
+            severity="WARNING",
+            title="Live restart delayed",
+            summary="The live feed exited and immediate restart was skipped (safety budget or a slow-retry exit "
+            "code). DP Program will retry automatically after a backoff instead of staying down.",
+            current_state={
+                "reason": reason,
+                "exit_code": exit_code,
+                "failure_count": self.live_failure_count,
+                "retry_after_utc": retry_after,
+            },
+            data_result="No live candles will be collected until the automatic retry succeeds.",
+            health_risk="Medium - automatic recovery is scheduled, not abandoned, but data collection is paused "
+            "until then.",
+            recommended_action="No action needed if this resolves on its own. If failures keep repeating, inspect "
+            "runtime/logs/operation/live_fetching.log.",
+            trace={"stdout_log": str(BACKEND_CHILD_STDOUT_LOG), "state_file": str(WS_LIVE_STATE)},
+            result="waiting",
+        )
+
+    def _reset_live_backoff_if_stable(self) -> None:
+        """Forgive a prior failure streak after enough continuous uptime,
+        so one bad hour early in a multi-day run does not permanently
+        shrink the retry budget for the rest of that run."""
+        if not self.live.running or not self.live.started_at or not self.live_failure_count:
+            return
+        if self._live_stable_reset_done_for_start == self.live.started_at:
+            return
+        if time.time() - self.live.started_at < LIVE_RESTART_STABLE_RESET_SEC:
+            return
+        logger.info(
+            "%s",
+            _slog("Live restart backoff cleared after stable runtime", previous_failures=self.live_failure_count, result="recovered"),
+        )
+        self.live_failure_count = 0
+        self.live_retry_not_before = 0.0
+        self._live_stable_reset_done_for_start = self.live.started_at
+
+    def _live_retry_due(self) -> bool:
+        if not self.live_enabled or self.live.running or not BACKEND.live_restart_on_exit:
+            return False
+        if self.live_retry_not_before <= 0:
+            return False
+        return time.time() >= self.live_retry_not_before
+
+    def _retry_live_after_backoff(self) -> None:
+        self.live_retry_not_before = 0.0
+        self.live_restart_times.append(time.time())
+        logger.info("%s", _slog("Live automatic retry starting", result="starting"))
+        self.start_live(reason="restart:backoff_retry")
+
+    def _restart_live(self, reason: str, *, exit_code: int | None = None) -> None:
+        if exit_code in LIVE_RESTART_SLOW_EXIT_CODES or not self._restart_budget_available():
+            if exit_code not in LIVE_RESTART_SLOW_EXIT_CODES:
+                logger.error(
+                    "%s",
+                    _slog(
+                        "Live restart budget exhausted - scheduling backoff retry instead of giving up",
+                        reason=reason,
+                        limit_per_hour=BACKEND.live_max_restarts_per_hour,
+                        result="deferred",
+                    ),
+                )
+            self._arm_live_backoff(exit_code=exit_code, reason=reason)
             return
         self.stop_live(reason=f"restart:{reason}", force_after_grace=True)
         if BACKEND.live_restart_cooldown_sec:
@@ -743,7 +851,7 @@ class BackendSupervisor:
         except Exception:
             pass
 
-    def _live_state_age_seconds(self) -> float | None:
+    def _live_state_age_seconds(self, field: str = "updated_at") -> float | None:
         state = _load_json(WS_LIVE_STATE)
         state_pid = state.get("pid")
         if self.live.pid is not None:
@@ -752,7 +860,7 @@ class BackendSupervisor:
                     return None
             except (TypeError, ValueError):
                 return None
-        value = state.get("updated_at")
+        value = state.get(field)
         if not value:
             return None
         try:
@@ -806,7 +914,7 @@ class BackendSupervisor:
             )
             self.live.process = None
             if self.live_enabled and BACKEND.live_restart_on_exit and not stop_requested():
-                self._restart_live(f"exit_code={live_code}")
+                self._restart_live(f"exit_code={live_code}", exit_code=live_code)
 
         hist_code = self.historical.poll()
         if hist_code is not None and self.historical.process is not None:
@@ -958,6 +1066,152 @@ class BackendSupervisor:
                 return
             logger.error("%s", _slog("Live heartbeat stale", age_seconds=round(age), threshold_seconds=threshold, result="restart_needed"))
             self._restart_live(f"stale_heartbeat_age={age:.0f}s")
+            return
+
+        # Business-progress check: the process heartbeat above is written
+        # by its own dedicated thread (LiveStateWriter.heartbeat_loop) and
+        # can stay fresh even if the main batch loop itself deadlocks or
+        # hangs. batch_completed_at only advances when a batch actually
+        # finishes, so a live process that is technically "alive" but
+        # stuck looks unhealthy here even though the heartbeat check above
+        # passed.
+        if self.live.started_at and time.time() - self.live.started_at > threshold:
+            batch_age = self._live_state_age_seconds("batch_completed_at")
+            if batch_age is not None and batch_age > threshold:
+                logger.error(
+                    "%s",
+                    _slog(
+                        "Live batch loop stale despite fresh heartbeat",
+                        batch_age_seconds=round(batch_age),
+                        threshold_seconds=threshold,
+                        result="restart_needed",
+                    ),
+                )
+                self._restart_live(f"stale_batch_progress_age={batch_age:.0f}s")
+
+    def _enforce_historical_runtime_limit(self) -> None:
+        """HISTORICAL_MAX_RUNTIME_MINUTES was defined in settings but never
+        read anywhere - a stuck/hung historical job (e.g. blocked
+        indefinitely waiting on a lock, or a network call with no
+        effective timeout) could run forever with nothing to stop it."""
+        limit_min = BACKEND.historical_max_runtime_minutes
+        if limit_min <= 0 or not self.historical.running or not self.active_historical_started_at:
+            return
+        elapsed_min = (datetime.now(timezone.utc) - self.active_historical_started_at).total_seconds() / 60.0
+        if elapsed_min <= limit_min:
+            return
+        logger.error(
+            "%s",
+            _slog(
+                "Historical job exceeded max runtime - cancelling",
+                elapsed_minutes=round(elapsed_min, 1),
+                limit_minutes=limit_min,
+                result="cancelling",
+            ),
+        )
+        self._safe_notify(
+            notify_historical_event,
+            severity="ERROR",
+            title="Historical job exceeded max runtime",
+            summary=f"The active historical job has been running for {elapsed_min:.0f} minutes "
+            f"(limit {limit_min}) and is being cancelled.",
+            current_state={"elapsed_minutes": round(elapsed_min, 1), "limit_minutes": limit_min},
+            data_result="The job will be asked to stop gracefully, then force-terminated after the usual grace period.",
+            health_risk="Medium - a stuck job blocks the warehouse-write lock, which can delay live merges.",
+            recommended_action="Check runtime/logs/operation/historical_pulling.log for what it was stuck on.",
+            trace={"stdout_log": str(BACKEND_CHILD_STDOUT_LOG)},
+            result="cancelling",
+        )
+        self.stop_historical(reason="max_runtime_exceeded", force_after_grace=True)
+
+    def _drain_critical_alert_outbox(self) -> None:
+        """Retry any CRITICAL Discord alerts still stuck undelivered (see
+        logkit.critical_outbox) so a webhook/network outage self-heals once
+        connectivity returns, instead of only retrying the next time
+        something happens to log another CRITICAL record."""
+        now = time.time()
+        if now - self._last_critical_drain_at < 60:
+            return
+        self._last_critical_drain_at = now
+        try:
+            from core_engine.logkit.critical_outbox import critical_alert_outbox
+
+            critical_alert_outbox().drain()
+        except Exception:
+            pass
+
+    def _run_periodic_db_health_check(self) -> None:
+        """DB-inclusive health check on a slow interval (default 15 min),
+        separate from the fast heartbeat-only loop below. Round-2 audit
+        BLOCKER-3: before this existed, the only include_database=True
+        health check ran once at supervisor startup - an ETL/contract
+        failure that started hours or days into a run (the exact scenario
+        that produced a 12+ day Fact_OHLCV staleness previously) was never
+        checked again until an operator happened to run `doctor` by hand.
+        """
+        now = time.time()
+        if now - self._last_db_health_at < BACKEND.db_health_interval_sec:
+            return
+        self._last_db_health_at = now
+        db_health = collect_health(deep_auth=False, include_database=True)
+        checks_by_name = {c.get("name"): c for c in db_health.get("checks", [])}
+
+        contract_check = checks_by_name.get("db_contract")
+        if contract_check and contract_check.get("status") == "fail":
+            reason = str(contract_check.get("message") or "")
+            if not (reason.startswith("contract check could not run") or reason.startswith("db contract check failed")):
+                logger.critical(
+                    "%s",
+                    _slog(
+                        "Periodic database contract check failed",
+                        reason=reason,
+                        result="failed",
+                    ),
+                )
+                self._safe_notify(
+                    notify_backend_event,
+                    severity="CRITICAL",
+                    title="Database contract check failed during 24/7 operation",
+                    summary="DWH.usp_LoadDirect no longer matches the version the ETL writer expects. This can "
+                    "happen if the procedure was redeployed/rolled back without updating the extended property.",
+                    current_state={"reason": reason},
+                    data_result="Live/historical may be writing staging rows that never reach Fact_OHLCV.",
+                    health_risk="Critical - this is the exact drift that previously caused a multi-day Fact_OHLCV staleness.",
+                    recommended_action="Run `python -m core_engine doctor` and scripts/sql/08_migration_usp_loaddirect_v2.sql "
+                    "through a controlled deploy, then `python -m core_engine reconcile-fact --apply`.",
+                    trace={"migration_script": "scripts/sql/08_migration_usp_loaddirect_v2.sql"},
+                    result="failed",
+                )
+
+        db_check = checks_by_name.get("database")
+        if db_check and db_check.get("status") == "ok":
+            latest_bar = (db_check.get("detail") or {}).get("latest_bar")
+            if latest_bar and latest_bar.get("bar_time"):
+                age = _age_seconds(latest_bar.get("bar_time"))
+                if age is not None and self.live_enabled and age > BACKEND.live_stale_minutes * 60 * 4:
+                    logger.error(
+                        "%s",
+                        _slog(
+                            "Fact_OHLCV freshness check failed",
+                            latest_bar=latest_bar,
+                            age_seconds=round(age),
+                            result="stale",
+                        ),
+                    )
+                    self._safe_notify(
+                        notify_backend_event,
+                        severity="ERROR",
+                        title="Fact_OHLCV is stale",
+                        summary="The most recent row in DWH.Fact_OHLCV is older than expected while live fetching "
+                        "is enabled. Candles may be stuck in staging - check reconcile-fact.",
+                        current_state={"latest_bar": latest_bar, "age_seconds": round(age)},
+                        data_result="Strategies reading Fact_OHLCV may be trading on stale data.",
+                        health_risk="High for an AutoTrading system.",
+                        recommended_action="Run `python -m core_engine reconcile-fact` to check for staging rows "
+                        "stuck behind a broken/skipped ETL call.",
+                        trace={"tool": "python -m core_engine reconcile-fact"},
+                        result="failed",
+                    )
 
     def run(self) -> int:
         if not self._acquire_supervisor_lock():
@@ -987,6 +1241,81 @@ class BackendSupervisor:
         self._last_health = health
         if health.get("status") == "fail":
             logger.warning("%s", _slog("Startup health check failed", action="continue_and_report", result="warning"))
+        contract_check = next(
+            (c for c in health.get("checks", []) if c.get("name") == "db_contract"),
+            None,
+        )
+        if contract_check and contract_check.get("status") == "fail":
+            reason = str(contract_check.get("message") or "")
+            db_unreachable = reason.startswith("contract check could not run") or reason.startswith("db contract check failed")
+            if not db_unreachable:
+                # Database IS reachable but usp_LoadDirect is the wrong shape
+                # (or predates contract tagging entirely) - every write would
+                # either fail loudly or silently drop into a broken ETL
+                # path. Refuse to start rather than continue_and_report.
+                logger.critical(
+                    "%s",
+                    _slog(
+                        "Database contract check failed - refusing to start",
+                        reason=reason,
+                        action="run scripts/sql/08_migration_usp_loaddirect_v2.sql through a controlled deploy",
+                        result="failed",
+                    ),
+                )
+                self._write_state(status="failed", reason="db_contract_mismatch", contract_detail=contract_check.get("detail"))
+                notify_backend_event(
+                    severity="CRITICAL",
+                    title="DP Program refused to start: database contract mismatch",
+                    summary="DWH.usp_LoadDirect is not the version the ETL writer expects. Starting anyway would "
+                    "either fail every ETL call or silently accumulate staging rows that never reach Fact_OHLCV.",
+                    current_state={"reason": reason},
+                    data_result="No live or historical worker was started.",
+                    health_risk="Critical - this is the exact drift that caused a multi-day Fact_OHLCV staleness previously.",
+                    recommended_action="Run scripts/sql/08_migration_usp_loaddirect_v2.sql through a controlled "
+                    "deploy, then `python -m core_engine doctor` to confirm, then restart DP Program.",
+                    trace={"migration_script": "scripts/sql/08_migration_usp_loaddirect_v2.sql"},
+                    result="failed",
+                )
+                flush_pending()
+                self._release_supervisor_lock()
+                return EXIT_ERROR
+
+        if self.schedule_enabled and not self._schedule_times():
+            # HISTORICAL_BACKFILL_UTC parsed to zero usable slots (e.g. a
+            # typo like "1100,2200" with no colons). Previously each bad
+            # token only logged an error and the supervisor kept running
+            # with historical_backfill_enabled=True but literally no
+            # scheduled slot ever due - a silent, easy-to-miss gap where
+            # scheduled backfill silently stopped happening at all (the
+            # one-time startup historical run, if enabled, would still
+            # fire once, masking the problem until the next day).
+            logger.critical(
+                "%s",
+                _slog(
+                    "Historical schedule is enabled but resolved to zero usable time slots",
+                    raw_value=BACKEND.historical_backfill_utc,
+                    expected_format="HH:MM[,HH:MM...]",
+                    result="refused_to_start",
+                ),
+            )
+            self._write_state(status="failed", reason="empty_historical_schedule")
+            notify_backend_event(
+                severity="CRITICAL",
+                title="DP Program refused to start: historical schedule is empty",
+                summary=f"HISTORICAL_BACKFILL_UTC={BACKEND.historical_backfill_utc!r} did not parse to any usable "
+                "HH:MM slot, but historical backfill is enabled.",
+                current_state={"raw_value": BACKEND.historical_backfill_utc},
+                data_result="No live or historical worker was started.",
+                health_risk="High - scheduled gap repair would silently never run.",
+                recommended_action="Fix HISTORICAL_BACKFILL_UTC in config/dp_provider.env (format: HH:MM,HH:MM), "
+                "or set HISTORICAL_BACKFILL_ENABLED=0 if no schedule is intended.",
+                trace={},
+                result="failed",
+            )
+            flush_pending()
+            self._release_supervisor_lock()
+            return EXIT_ERROR
+
         if self.live_enabled:
             self.start_live(reason="backend_start")
             self._write_state(status="running", startup_phase="live_started")
@@ -1000,6 +1329,9 @@ class BackendSupervisor:
                     break
                 self._poll_children()
                 self._monitor_live_freshness()
+                self._reset_live_backoff_if_stable()
+                if self._live_retry_due():
+                    self._retry_live_after_backoff()
                 if self._start_next_queued_historical():
                     pass
                 elif self._startup_historical_due():
@@ -1010,6 +1342,9 @@ class BackendSupervisor:
                     if due_slot:
                         self.start_historical(reason=f"schedule_{due_slot}_utc", schedule_slot=due_slot)
                 self._run_retention_once_per_day()
+                self._run_periodic_db_health_check()
+                self._drain_critical_alert_outbox()
+                self._enforce_historical_runtime_limit()
                 now = time.time()
                 if now >= next_health_at:
                     self._last_health = collect_health(deep_auth=False, include_database=False)

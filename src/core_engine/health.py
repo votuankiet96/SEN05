@@ -210,6 +210,58 @@ def _database_check() -> Check:
         return Check("database", "fail", f"SQL Server check failed: {exc}")
 
 
+def _db_contract_check() -> Check:
+    """Fail loudly if DWH.usp_LoadDirect is not the shape the ETL caller expects.
+
+    This is the check that would have caught the round-2 audit's stale
+    usp_LoadDirect finding automatically instead of via a 12+ day silent
+    Fact_OHLCV staleness. Unlike the general database check, a contract
+    mismatch is always reported as "fail", never "warn" - the caller
+    (supervisor/live/historical startup) must refuse to run writes against
+    it rather than continue_and_report.
+    """
+    try:
+        from core_engine.warehouse.connection import verify_database_contract
+
+        result = verify_database_contract()
+        if result["ok"]:
+            return Check(
+                "db_contract",
+                "ok",
+                "DWH.usp_LoadDirect contract version matches.",
+                {"object": result["object"], "version": result["version"]},
+            )
+        return Check("db_contract", "fail", result["reason"] or "contract mismatch", result)
+    except Exception as exc:
+        return Check("db_contract", "fail", f"db contract check failed: {exc}")
+
+
+def _critical_outbox_check() -> Check:
+    """Surface a stuck CRITICAL-alert backlog (see logkit.critical_outbox)
+    even when nobody is watching Discord itself - this is the fallback
+    channel for the case that handler exists to cover in the first place,
+    so it must not itself be silent."""
+    try:
+        from core_engine.logkit.critical_outbox import critical_alert_outbox
+
+        status = critical_alert_outbox().status()
+    except Exception as exc:
+        return Check("critical_alerts", "warn", f"Could not read critical alert outbox: {exc}")
+
+    pending = int(status.get("pending_count") or 0)
+    if pending == 0:
+        return Check("critical_alerts", "ok", "No undelivered CRITICAL alerts.", status)
+    oldest_age = status.get("oldest_pending_age_seconds")
+    if oldest_age is not None and oldest_age > 900:
+        return Check(
+            "critical_alerts",
+            "fail",
+            f"{pending} CRITICAL alert(s) have been undelivered for over 15 minutes - Discord webhook may be down.",
+            status,
+        )
+    return Check("critical_alerts", "warn", f"{pending} CRITICAL alert(s) waiting for delivery.", status)
+
+
 def _auth_check(*, deep: bool = False) -> Check:
     try:
         status = tv_auth.browser_profile_status()
@@ -358,6 +410,12 @@ def _live_state_check() -> Check:
             {"path": str(WS_LIVE_STATE)},
         )
     age = _age_seconds(state.get("updated_at"))
+    # batch_completed_at is a *business-progress* signal, distinct from
+    # updated_at (a process-liveness heartbeat written by its own thread -
+    # see LiveStateWriter.heartbeat_loop). A deadlocked/hung main loop can
+    # still tick the heartbeat thread while never finishing another batch,
+    # which the heartbeat-only staleness check below cannot detect.
+    batch_age = _age_seconds(state.get("batch_completed_at"))
     stale_after = BACKEND.live_stale_minutes * 60
     detail = {
         "path": str(WS_LIVE_STATE),
@@ -365,14 +423,31 @@ def _live_state_check() -> Check:
         "pid": state.get("pid"),
         "updated_at": state.get("updated_at"),
         "age_seconds": round(age, 1) if age is not None else None,
+        "batch_completed_at": state.get("batch_completed_at"),
+        "batch_age_seconds": round(batch_age, 1) if batch_age is not None else None,
         "batches_run": state.get("batches_run"),
         "accepted_bars": state.get("accepted_bars"),
         "fact_inserted": state.get("fact_inserted"),
         "errors": state.get("errors"),
     }
     active_status = str(state.get("status") or "").lower() in {"starting", "running", "waiting"}
+    inactive_status = str(state.get("status") or "").lower() in {"failed", "stopped"}
     pid, alive = _pid_state(state.get("pid"))
     detail["pid_alive"] = alive
+    if inactive_status and BACKEND.live_auto_start:
+        # Live is configured to run 24/7 but its own state file says it is
+        # not running. Previously this fell through to "ok" simply because
+        # "failed"/"stopped" were not in the active_status set at all -
+        # meaning a live worker that crashed and was NOT auto-restarted
+        # (e.g. mid-backoff, or restart_on_exit disabled) looked healthy to
+        # doctor/status until someone happened to read the status field by
+        # eye.
+        return Check(
+            "live_state",
+            "fail",
+            f"Live is configured to run (WS_LIVE_AUTO_START=1) but its state is '{state.get('status')}'.",
+            detail,
+        )
     if active_status and pid and alive is False:
         return Check(
             "live_state",
@@ -384,6 +459,14 @@ def _live_state_check() -> Check:
         return Check("live_state", "warn", "Live state timestamp is not readable.", detail)
     if active_status and age > stale_after:
         return Check("live_state", "fail", "Live state heartbeat is stale.", detail)
+    if active_status and batch_age is not None and batch_age > stale_after:
+        return Check(
+            "live_state",
+            "fail",
+            "Live process heartbeat is current, but it has not completed a batch in longer than "
+            "the stale threshold - the main loop may be stuck even though the process is alive.",
+            detail,
+        )
     return Check("live_state", "ok", "Live state is readable.", detail)
 
 
@@ -624,12 +707,14 @@ def collect_health(*, deep_auth: bool = False, include_database: bool = True) ->
         _chromium_check(),
         _auth_check(deep=deep_auth),
         _discord_check(),
+        _critical_outbox_check(),
         _backend_state_check(),
         _live_state_check(),
         _historical_state_check(),
     ]
     if include_database:
         checks.insert(2, _database_check())
+        checks.insert(3, _db_contract_check())
         checks.append(_locks_check())
 
     statuses = [check.status for check in checks]

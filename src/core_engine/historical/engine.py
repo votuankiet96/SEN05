@@ -12,13 +12,13 @@ from __future__ import annotations
 
 import atexit
 import json
-import os
 import sys
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from typing import Any
 
 from core_engine.exit_codes import EXIT_CANCELLED, EXIT_LOCK_CONFLICT
+from core_engine.logkit.jsonl import append_jsonl_capped
 from core_engine.tradingview import auth as tv_auth
 from core_engine.reporting.historical_reporter import fmt_int
 from core_engine.warehouse.maintenance import purge_staging
@@ -62,6 +62,7 @@ from core_engine.settings import (
     HISTORICAL_CANCEL_FILE,
     HISTORICAL_SUMMARY_LOG,
     PIPELINE_LOG,
+    STORAGE,
     SYMBOLS,
     get_historical_timeframes,
 )
@@ -109,9 +110,10 @@ def _write_run_summary(mode: str, started: datetime, elapsed: float, stats: dict
         "stats": stats,
     }
     try:
-        os.makedirs(os.path.dirname(RUN_SUMMARY_FILE), exist_ok=True)
-        with open(RUN_SUMMARY_FILE, "a", encoding="utf-8") as handle:
-            handle.write(json.dumps(row, ensure_ascii=True, sort_keys=True) + "\n")
+        # Size-capped instead of a bare unbounded append - see
+        # core_engine.logkit.jsonl for why age-based retention alone
+        # cannot bound an actively-appended file.
+        append_jsonl_capped(RUN_SUMMARY_FILE, row)
     except OSError as exc:
         logger.warning("%s", _hlog("Run summary write failed", reason=exc, result="warning"))
 
@@ -299,6 +301,20 @@ def _acquire_historical_or_report(owner: str, args: Any, *, duration_min: int) -
 
 
 def main(argv: list[str] | None = None) -> int:
+    if STORAGE.mode != "sql":
+        # Same guard as live/engine.py - see round-2 audit item H12. This
+        # engine always writes SQL regardless of DP_STORAGE_MODE.
+        logger.critical(
+            "%s",
+            _hlog(
+                "Unsupported storage mode requested",
+                mode=STORAGE.mode,
+                reason="redis/both mode is not wired into the historical engine's write path yet",
+                result="refused_to_start",
+            ),
+        )
+        return 1
+
     started = datetime.now(timezone.utc)
     parser = build_parser(HOLE_LOOKBACK_DAYS)
     args = parser.parse_args(argv)
@@ -328,6 +344,13 @@ def main(argv: list[str] | None = None) -> int:
         _clear_historical_cancel("historical_start_no_active_job")
 
     if not test_connection():
+        return 4
+
+    from core_engine.warehouse.connection import verify_database_contract
+
+    _contract = verify_database_contract()
+    if not _contract["ok"]:
+        logger.critical("%s", _hlog("Database contract check failed", reason=_contract["reason"], result="refused_to_start"))
         return 4
 
     mode = args.mode if args.mode != "auto" else detect_mode()

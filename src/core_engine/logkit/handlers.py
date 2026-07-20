@@ -145,24 +145,31 @@ class CriticalDiscordHandler(logging.Handler):
     This lets any component report a CRITICAL condition (cannot start,
     forced to drop data, ...) simply by logging at CRITICAL level, instead
     of every call site having to remember to also call the Discord
-    notifier. Delivery reuses the existing outbound Discord channel
-    (webhook check, retry, circuit breaker, dedupe) - this handler only
-    decides *when* to send, not *how*.
+    notifier.
+
+    Unlike ordinary notify_*_event/send_alert calls (which are fire-and-
+    forget by design and have no fallback if the webhook is unreachable),
+    a CRITICAL record is durable: it is persisted to a small SQLite outbox
+    BEFORE delivery is attempted, sent synchronously so a real HTTP status
+    can be checked, and only acked (deleted) on 200/204. A failed send
+    leaves the row pending for the next drain() pass (see
+    core_engine.logkit.critical_outbox) instead of vanishing, and every
+    attempt updates runtime/logs/system/critical_undelivered.log so
+    doctor/health can see a stuck backlog even if Discord itself stays
+    down for a long time.
     """
 
     def __init__(self) -> None:
         super().__init__(level=logging.CRITICAL)
 
     def emit(self, record: logging.LogRecord) -> None:
+        message = f"[{record.name}] {record.getMessage()}"
         try:
-            # Imported lazily: core_engine.reporting.discord itself logs
-            # through this package, so importing it at module load time
-            # would create a circular import.
-            from core_engine.reporting.discord import send_alert
+            from core_engine.logkit.critical_outbox import critical_alert_outbox
 
-            send_alert("critical", f"[{record.name}] {record.getMessage()}")
+            critical_alert_outbox().record_and_send(message)
         except Exception:
-            pass
+            self.handleError(record)
 
 
 _CRITICAL_DISCORD_HANDLER: logging.Handler | None = None

@@ -158,6 +158,13 @@ class DatabaseSettings:
     health_timeout_seconds: int = env_int("SQL_HEALTH_TIMEOUT_SECONDS", 30, minimum=1)
     retry_count: int = env_int("DB_RETRY_COUNT", 3, minimum=1)
     retry_delay_sec: float = env_float("DB_RETRY_DELAY_SEC", 5.0, minimum=0.0)
+    # Per-statement execution timeout (pyodbc Connection.timeout) so a hung
+    # statement cannot block a worker thread/shutdown indefinitely.
+    command_timeout_seconds: int = env_int("SQL_COMMAND_TIMEOUT_SECONDS", 30, minimum=1)
+    # SET LOCK_TIMEOUT in milliseconds: how long a statement waits on a row/key
+    # lock (e.g. the UPDLOCK/HOLDLOCK guard in usp_LoadDirect) before SQL Server
+    # raises error 1222 instead of blocking forever. -1 would mean "wait forever".
+    lock_timeout_ms: int = env_int("SQL_LOCK_TIMEOUT_MS", 15_000, minimum=100)
 
 
 @dataclass(frozen=True)
@@ -225,6 +232,28 @@ class HistoricalSettings:
 @dataclass(frozen=True)
 class LiveSettings:
     auto_start: bool = env_bool("WS_LIVE_AUTO_START", False)
+    # Which instruments.py asset_type values live fetching watches over
+    # WebSocket. Currently only 11 of 37 configured instruments (Indice,
+    # Metal, Crypto) are live - the 26 FOREX symbols are historical-only,
+    # refreshed on the HISTORICAL_BACKFILL_UTC schedule (default
+    # 11:00/22:00 UTC), not in real time. This is a known, deliberate
+    # scope limit from the initial build, not a bug - see round-2 audit
+    # item P0-8 and docs/OPERATOR_RUNBOOK.md for the operational
+    # consequence (FOREX freshness SLA is "next scheduled historical run",
+    # not "next live batch"). Whether to extend live coverage to FOREX is
+    # a business decision, not something this code should decide on its
+    # own - see EXPECTED_LIVE_SYMBOL_COUNT below for a guard against this
+    # set silently drifting out of sync with instruments.py instead.
+    asset_types: tuple[str, ...] = tuple(
+        item for item in env_csv("LIVE_ASSET_TYPES", "Indice,Metal,Crypto")
+    )
+    # Optional fail-fast guard: if set, live refuses to start unless
+    # exactly this many symbols match asset_types. Left unset by default
+    # (no enforcement) since the "correct" count depends on
+    # instruments.py content that can legitimately change; an operator
+    # who wants drift protection sets this once after confirming the
+    # current count via `python -m core_engine settings`.
+    expected_symbol_count: int = env_int("EXPECTED_LIVE_SYMBOLS", 0, minimum=0)
     batch_interval_min: int = env_int("WS_LIVE_BATCH_INTERVAL_MIN", 5, minimum=1)
     shutdown_poll_sec: int = env_int("WS_LIVE_SHUTDOWN_POLL_SEC", 2, minimum=1)
     batch_fetch_timeout_sec: int = env_int("WS_LIVE_BATCH_FETCH_TIMEOUT_SEC", 120, minimum=5)
@@ -339,6 +368,13 @@ class LoggingSettings:
 @dataclass(frozen=True)
 class BackendSettings:
     health_interval_sec: int = env_int("BACKEND_HEALTH_INTERVAL_SEC", 30, minimum=5)
+    # Separate, much slower interval for the DB-inclusive health check
+    # (Fact_OHLCV freshness + usp_LoadDirect contract). Deliberately not
+    # tied to health_interval_sec: that one runs every few seconds and
+    # must stay cheap (no DB round trip), while this one opens a real SQL
+    # connection and is meant to catch a systemic ETL failure automatically
+    # instead of only at supervisor startup - see round-2 audit BLOCKER-3.
+    db_health_interval_sec: int = env_int("BACKEND_DB_HEALTH_INTERVAL_SEC", 900, minimum=60)
     live_auto_start: bool = env_bool("WS_LIVE_AUTO_START", False)
     live_restart_on_exit: bool = env_bool("BACKEND_LIVE_RESTART_ON_EXIT", True)
     live_restart_on_stale: bool = env_bool("BACKEND_LIVE_RESTART_ON_STALE", True)

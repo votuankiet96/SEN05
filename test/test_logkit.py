@@ -78,26 +78,40 @@ def test_warning_and_above_reach_the_shared_errors_log(unique_logger_name, tmp_p
     assert "this error SHOULD appear" in content
 
 
-def test_critical_log_triggers_discord_alert_without_hitting_network(unique_logger_name, tmp_path):
+def test_critical_log_triggers_discord_alert_without_hitting_network(
+    unique_logger_name, tmp_path, isolated_critical_alert_outbox, monkeypatch
+):
     calls = []
-    with patch("core_engine.reporting.discord.send_alert", side_effect=lambda level, text: calls.append((level, text))):
-        log_file = str(tmp_path / f"{unique_logger_name}.log")
-        log = get_logger(unique_logger_name, log_file, console=False)
-        log.critical("simulated critical failure")
+    monkeypatch.setattr(
+        isolated_critical_alert_outbox, "send_one",
+        lambda message: calls.append(message) or True,
+    )
+    log_file = str(tmp_path / f"{unique_logger_name}.log")
+    log = get_logger(unique_logger_name, log_file, console=False)
+    log.critical("simulated critical failure")
 
     assert len(calls) == 1
-    level, text = calls[0]
-    assert level == "critical"
-    assert unique_logger_name in text
-    assert "simulated critical failure" in text
+    assert unique_logger_name in calls[0]
+    assert "simulated critical failure" in calls[0]
+    # A successful send must ack (delete) the outbox row, not leave it pending.
+    assert isolated_critical_alert_outbox.status()["pending_count"] == 0
 
 
-def test_critical_discord_handler_swallows_send_failures(unique_logger_name, tmp_path):
-    # A broken Discord channel must never crash the caller's log statement.
-    with patch("core_engine.reporting.discord.send_alert", side_effect=RuntimeError("webhook down")):
-        log_file = str(tmp_path / f"{unique_logger_name}.log")
-        log = get_logger(unique_logger_name, log_file, console=False)
-        log.critical("this must not raise")  # no exception expected
+def test_critical_discord_handler_swallows_send_failures(
+    unique_logger_name, tmp_path, isolated_critical_alert_outbox, monkeypatch
+):
+    # A broken Discord channel must never crash the caller's log statement,
+    # and the failed alert must remain in the outbox for a later retry
+    # rather than being lost.
+    monkeypatch.setattr(
+        isolated_critical_alert_outbox, "send_one",
+        lambda message: (_ for _ in ()).throw(RuntimeError("webhook down")),
+    )
+    log_file = str(tmp_path / f"{unique_logger_name}.log")
+    log = get_logger(unique_logger_name, log_file, console=False)
+    log.critical("this must not raise")  # no exception expected
+
+    assert isolated_critical_alert_outbox.status()["pending_count"] == 1
 
 
 def test_errors_aggregate_handler_is_a_singleton():
