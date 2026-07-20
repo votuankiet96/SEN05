@@ -184,7 +184,10 @@ class LockCoordinator:
         # process, since _DEFAULT below is the module-wide singleton every
         # public function goes through). Used to fence renew()/release()
         # against a stale owner - see scripts/sql/09_migration_lock_fencing.sql.
-        self.owner_id = uuid.uuid4().hex
+        # SQL Server UNIQUEIDENTIFIER accepts the canonical hyphenated UUID
+        # representation. uuid.hex (32 compact characters) is rejected by
+        # the ODBC parameter conversion used in production.
+        self.owner_id = str(uuid.uuid4())
         self._cache: dict[str, dict[str, float | bool]] = {}
         self._local_historical_lease: LockLease | None = None
         self._owner_fencing_available: bool | None = None
@@ -536,7 +539,7 @@ class LockCoordinator:
                 started_at=row[0],
                 expires_at=row[1],
                 payload=str(row[2] or ""),
-                owner_id=str(row[3]) if fencing and row[3] is not None else None,
+                owner_id=str(row[3]).lower() if fencing and row[3] is not None else None,
                 fence=int(row[4]) if fencing and row[4] is not None else None,
             )
         except Exception as exc:

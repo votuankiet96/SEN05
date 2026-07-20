@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import time
 import threading
+import uuid
 
 import pytest
 
@@ -177,6 +178,8 @@ def test_two_processes_get_different_owner_ids(db):
     a = _coordinator(db)
     b = _coordinator(db)
     assert a.owner_id != b.owner_id
+    assert str(uuid.UUID(a.owner_id)) == a.owner_id
+    assert len(a.owner_id) == 36
 
 
 def test_each_acquisition_records_a_monotonic_fence(db):
