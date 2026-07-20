@@ -133,6 +133,7 @@ class BackendSupervisor:
             else None
         )
         self._last_health: dict[str, Any] = {}
+        self._last_runtime_health_status: str | None = None
         self._last_db_health_at = 0.0
         self._last_critical_drain_at = 0.0
         self._last_retention_day = ""
@@ -1235,6 +1236,7 @@ class BackendSupervisor:
                             result="stale",
                         ),
                     )
+
                     self._safe_notify(
                         notify_backend_event,
                         severity="ERROR",
@@ -1249,6 +1251,42 @@ class BackendSupervisor:
                         trace={"tool": "python -m core_engine reconcile-fact"},
                         result="failed",
                     )
+
+    def _report_runtime_health_transition(self, health: dict[str, Any]) -> None:
+        """Make disk/readiness degradation visible without alert spam."""
+        runtime_check = next(
+            (check for check in health.get("checks", []) if check.get("name") == "runtime"),
+            None,
+        )
+        if not runtime_check:
+            return
+        status = str(runtime_check.get("status") or "").lower()
+        if status == self._last_runtime_health_status:
+            return
+        previous = self._last_runtime_health_status
+        self._last_runtime_health_status = status
+        detail = runtime_check.get("detail") or {}
+        fields = {
+            "free_gb": detail.get("disk_free_gb", "unknown"),
+            "free_percent": detail.get("disk_free_percent", "unknown"),
+            "previous_status": previous or "startup",
+        }
+        if status == "fail":
+            # Component loggers carry the durable CRITICAL outbox handler.
+            logger.critical(
+                "%s",
+                _slog("Runtime disk health critical", **fields, result="failed"),
+            )
+        elif status == "warn":
+            logger.warning(
+                "%s",
+                _slog("Runtime disk health degraded", **fields, result="warning"),
+            )
+        elif status == "ok" and previous in {"warn", "fail"}:
+            logger.info(
+                "%s",
+                _slog("Runtime disk health recovered", **fields, result="recovered"),
+            )
 
     def run(self) -> int:
         if not self._acquire_supervisor_lock():
@@ -1276,6 +1314,7 @@ class BackendSupervisor:
         )
         health = collect_health(deep_auth=False, include_database=True)
         self._last_health = health
+        self._report_runtime_health_transition(health)
         if health.get("status") == "fail":
             logger.warning("%s", _slog("Startup health check failed", action="continue_and_report", result="warning"))
         contract_check = next(
@@ -1385,6 +1424,7 @@ class BackendSupervisor:
                 now = time.time()
                 if now >= next_health_at:
                     self._last_health = collect_health(deep_auth=False, include_database=False)
+                    self._report_runtime_health_transition(self._last_health)
                     next_health_at = now + BACKEND.health_interval_sec
                 self._write_state(status="running", health_status=self._last_health.get("status"))
                 time.sleep(1)

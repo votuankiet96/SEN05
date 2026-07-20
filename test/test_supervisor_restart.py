@@ -369,3 +369,37 @@ def test_critical_outbox_drain_failure_is_not_silent(sup, monkeypatch):
     rendered = str(warnings[0])
     assert "Critical alert outbox retry failed" in rendered
     assert "fault-injected SQLite failure" in rendered
+
+
+def test_runtime_disk_failure_alerts_once_and_recovery_is_reported(sup, monkeypatch):
+    criticals = []
+    infos = []
+    monkeypatch.setattr(supervisor_engine.logger, "critical", lambda *args: criticals.append(args))
+    monkeypatch.setattr(supervisor_engine.logger, "info", lambda *args: infos.append(args))
+    failed = {
+        "checks": [
+            {
+                "name": "runtime",
+                "status": "fail",
+                "detail": {"disk_free_gb": 0.5, "disk_free_percent": 0.7},
+            }
+        ]
+    }
+    recovered = {
+        "checks": [
+            {
+                "name": "runtime",
+                "status": "ok",
+                "detail": {"disk_free_gb": 10.0, "disk_free_percent": 15.0},
+            }
+        ]
+    }
+
+    sup._report_runtime_health_transition(failed)
+    sup._report_runtime_health_transition(failed)
+    sup._report_runtime_health_transition(recovered)
+
+    assert len(criticals) == 1
+    assert "Runtime disk health critical" in str(criticals[0])
+    assert len(infos) == 1
+    assert "Runtime disk health recovered" in str(infos[0])
