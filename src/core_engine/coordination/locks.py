@@ -77,10 +77,6 @@ class LockLease:
     released: bool = False
 
 
-class HistoricalJobHandoffRequested(RuntimeError):
-    """Raised when a historical job lost ownership and should stop safely."""
-
-
 def default_connection_factory() -> Any:
     """Lazy default import so this module can be reviewed before wiring."""
     from core_engine.warehouse.connection import get_connection
@@ -574,18 +570,6 @@ class LockCoordinator:
             daemon=True,
         )
         thread.start()
-
-    def checkpoint_historical_lease(self, lease: LockLease | None = None) -> None:
-        lease = lease or self._local_historical_lease
-        if lease is None or lease.released:
-            return
-        record = self.fetch(lease.task_name, active_only=True)
-        if record is None:
-            lease.stop_event.set()
-            raise HistoricalJobHandoffRequested("historical lock disappeared")
-        if record.meta.get("run") != lease.run_id:
-            lease.stop_event.set()
-            raise HistoricalJobHandoffRequested("historical lock ownership changed")
 
     def release_lease(self, lease: LockLease | None) -> bool:
         if lease is None or lease.released:

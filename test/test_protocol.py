@@ -63,6 +63,24 @@ def test_parse_packets_splits_multiple_concatenated_frames():
     assert [json.loads(p)["m"] for p in packets] == ["m1", "m2", "m3"]
 
 
+def test_parse_packets_returns_standalone_heartbeat():
+    # Regression test: TradingView pings arrive as a bare `~h~<n>` with no
+    # `~m~` length-prefix framing. protocol.parse_packets used to only
+    # recognize `~m~`-framed messages, so a standalone heartbeat matched
+    # nothing and was silently dropped - which meant live/engine.py's
+    # BatchFetcher (which echoes `~h~` pings back to keep the WebSocket
+    # alive) never actually received one to echo. Fixed to match the
+    # heartbeat-aware parsing tv_history.py already had.
+    packets = protocol.parse_packets("~h~42")
+    assert packets == ["~h~42"]
+
+
+def test_parse_packets_returns_heartbeat_trailing_a_data_frame():
+    raw = _frame("qsd", ["a"]) + "~h~99"
+    packets = protocol.parse_packets(raw)
+    assert packets[-1] == "~h~99"
+
+
 def test_parse_packets_handles_empty_and_malformed_input():
     assert protocol.parse_packets("") == []
     assert protocol.parse_packets("not a tv frame at all") == []

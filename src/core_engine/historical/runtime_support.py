@@ -9,11 +9,12 @@ import math
 import os
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Any
 
 from core_engine.tradingview import history_client as tv_history
 from core_engine.warehouse.reader import get_internal_gaps
+from core_engine.warehouse.validation import utc_naive_now
 from core_engine.reporting.historical_reporter import historical_scan_summary_block, log_historical_block
 from core_engine.logkit.formatters import operation_line
 from core_engine.settings import (
@@ -41,10 +42,6 @@ PREFLIGHT_PREFERRED_SYMBOLS = ("US500", "EURUSD", "BTCUSD", "FR40")
 
 class HistoricalPullCancelled(Exception):
     """Raised when the operator requested a cooperative historical stop."""
-
-
-def utc_naive_now() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def now_utc() -> datetime:
@@ -214,10 +211,6 @@ def _csv_exact(value: str | None) -> set[str]:
     if not value:
         return set()
     return {item.strip() for item in value.split(",") if item.strip()}
-
-
-def has_any_filter(*, symbols_csv: str | None, asset_type_csv: str | None, timeframes_csv: str | None) -> bool:
-    return bool(symbols_csv or asset_type_csv or timeframes_csv)
 
 
 def resolve_scope(

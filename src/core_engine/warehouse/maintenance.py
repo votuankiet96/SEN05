@@ -12,7 +12,7 @@ import time
 
 from core_engine.settings import HISTORICAL, TF_DISPLAY_ORDER, TF_STAGING
 from core_engine.warehouse.connection import get_connection
-from core_engine.warehouse.operation_log import _fmt_count, _target_label, _warehouse_log, logger
+from core_engine.warehouse.operation_log import _target_label, _warehouse_log, logger
 
 
 _ALL_STAGING_TABLES = [TF_STAGING[tf_code] for tf_code in TF_DISPLAY_ORDER if tf_code in TF_STAGING]

@@ -8,7 +8,7 @@ anything in reader.py/maintenance.py.
 from __future__ import annotations
 
 from core_engine.warehouse.connection import DatabaseWriteError, get_connection
-from core_engine.warehouse.operation_log import _fmt_count, _target_label, _warehouse_log, logger
+from core_engine.warehouse.operation_log import _target_label, _warehouse_log
 
 
 def insert_staging_batch(

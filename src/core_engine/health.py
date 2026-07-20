@@ -32,7 +32,6 @@ from core_engine.settings import (
     SPOOL_DIR,
     SYMBOLS,
     TF_DISPLAY_ORDER,
-    WS_LIVE_LOG,
     WS_LIVE_STATE,
     ensure_runtime_dirs,
 )

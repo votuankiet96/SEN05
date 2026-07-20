@@ -69,21 +69,6 @@ def test_is_refreshed_token_usable_accepts_healthy_token(logger):
     assert jwt_utils._is_refreshed_token_usable(token, "test", logger) is True
 
 
-def test_token_needs_proactive_refresh_true_for_guest_and_empty():
-    assert jwt_utils._token_needs_proactive_refresh(jwt_utils.GUEST_TOKEN) is True
-    assert jwt_utils._token_needs_proactive_refresh("") is True
-
-
-def test_token_needs_proactive_refresh_true_when_below_threshold():
-    token = _make_jwt(60)
-    assert jwt_utils._token_needs_proactive_refresh(token, threshold_sec=900) is True
-
-
-def test_token_needs_proactive_refresh_false_when_well_within_threshold():
-    token = _make_jwt(3600)
-    assert jwt_utils._token_needs_proactive_refresh(token, threshold_sec=900) is False
-
-
 def test_is_token_reusable_for_startup_accepts_undecodable_as_is(logger):
     # Cannot decode expiry -> assume usable rather than block startup.
     assert jwt_utils._is_token_reusable_for_startup("garbage", "test", logger) is True

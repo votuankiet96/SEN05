@@ -47,7 +47,6 @@ from core_engine.historical.runtime_support import (
 )
 from core_engine.coordination.locks import (
     HISTORICAL_JOB_LOCK,
-    HistoricalJobHandoffRequested,
     acquire,
     acquire_historical_job,
     cleanup_expired,
@@ -537,7 +536,7 @@ def main(argv: list[str] | None = None) -> int:
             result="warning" if has_warning else "completed",
         )
         return 0 if stats.get("fail", 0) == 0 else 1
-    except (HistoricalPullCancelled, HistoricalJobHandoffRequested) as exc:
+    except HistoricalPullCancelled as exc:
         logger.warning("%s", _hlog("Historical pull stopped safely", reason=exc, result="stopped"))
         notify_historical_event(
             severity="WARNING",

@@ -94,7 +94,6 @@ import random
 import re
 import shutil
 import socket
-import sys
 import tempfile
 import threading
 import time
@@ -108,7 +107,6 @@ from core_engine.reporting.discord import notify_auth_event, sanitize_ssl_keylog
 from core_engine.settings import (  # noqa: E402
     AUTH_LOG,
     CACHE_DIR,
-    HISTORICAL,
     TRADINGVIEW,
     env_bool as env_flag,
     env_int,

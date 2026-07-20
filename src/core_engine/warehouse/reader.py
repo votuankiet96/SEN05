@@ -6,9 +6,8 @@ nothing here writes to SEN.* or DWH.* tables.
 
 from __future__ import annotations
 
-from core_engine.settings import TF_STAGING
 from core_engine.warehouse.connection import get_connection
-from core_engine.warehouse.operation_log import _fmt_count, _target_label, _warehouse_log, logger
+from core_engine.warehouse.operation_log import _target_label, _warehouse_log
 
 
 def get_latest_bars() -> dict:

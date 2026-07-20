@@ -6,7 +6,6 @@ staging, ETL, locking, and reporting.
 
 Public API:
 - fetch_history(): normal TradingView chart history request.
-- get_hist(): convenience wrapper returning only the DataFrame.
 - fetch_replay_window(): one replay/deep-history window.
 - crawl_replay_history(): multi-window replay crawl before a cutoff time.
 """
@@ -15,8 +14,6 @@ from __future__ import annotations
 
 import json
 import logging
-import random
-import string
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -26,6 +23,7 @@ import pandas as pd
 import websocket
 
 from core_engine.tradingview import auth as _tv_auth
+from core_engine.tradingview import protocol
 from core_engine.settings import TRADINGVIEW
 from core_engine.logkit import formatters as _logfmt
 
@@ -100,38 +98,17 @@ def get_ws_interval_map() -> dict[str, str]:
     return dict(WS_INTERVALS)
 
 
-def _gen_id(prefix: str = "cs") -> str:
-    suffix = "".join(random.choice(string.ascii_lowercase) for _ in range(12))
-    return f"{prefix}_{suffix}"
+# Wire-format framing (~m~ length-prefixed messages, ~h~ heartbeats) is
+# shared with the live engine's WS client via core_engine.tradingview.protocol
+# rather than reimplemented here - see that module for the framing details.
+_gen_id = protocol.gen_session_id
 
 
 def _send(ws: websocket.WebSocket, method: str, params: list[Any]) -> None:
-    payload = json.dumps({"m": method, "p": params}, separators=(",", ":"))
-    ws.send(f"~m~{len(payload)}~m~{payload}")
+    protocol.send_tv_message(ws, [method, *params])
 
 
-def _parse_packets(raw: str) -> list[str]:
-    packets: list[str] = []
-    pos = 0
-    while pos < len(raw):
-        if raw.startswith("~h~", pos):
-            packets.append(raw[pos:])
-            break
-        if raw[pos : pos + 3] != "~m~":
-            break
-        pos += 3
-        sep = raw.find("~m~", pos)
-        if sep == -1:
-            break
-        length_str = raw[pos:sep]
-        pos = sep + 3
-        try:
-            length = int(length_str)
-        except ValueError:
-            break
-        packets.append(raw[pos : pos + length])
-        pos += length
-    return packets
+_parse_packets = protocol.parse_packets
 
 
 def _headers(cookie: str) -> list[str]:
@@ -359,26 +336,6 @@ def fetch_history(
         return WsHistoryResult(None, status, n_bars, 0, interval, error, endpoint_name)
 
     return WsHistoryResult(df, status, n_bars, len(df), interval, error, endpoint_name)
-
-
-def get_hist(
-    symbol: str,
-    exchange: str,
-    tf_code: str,
-    n_bars: int,
-    logger: logging.Logger | None = None,
-    **kwargs,
-) -> pd.DataFrame | None:
-    """Convenience wrapper returning only the DataFrame."""
-    result = fetch_history(
-        symbol=symbol,
-        exchange=exchange,
-        tf_code=tf_code,
-        n_bars=n_bars,
-        logger=logger,
-        **kwargs,
-    )
-    return result.df
 
 
 def fetch_replay_window(

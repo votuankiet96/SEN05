@@ -29,13 +29,8 @@ import pandas as pd
 
 from core_engine.tradingview import auth as tv_auth
 from core_engine.tradingview import history_client as tv_history
-from core_engine.warehouse.maintenance import (
-    delete_fact_bars_range,
-    delete_staging_bars,
-    preview_ohlcv_reset_scope,
-    reset_ohlcv_scope,
-)
-from core_engine.warehouse.reader import get_fact_bar_window_context, get_latest_bars, get_staging_bar_window
+from core_engine.warehouse.maintenance import preview_ohlcv_reset_scope, reset_ohlcv_scope
+from core_engine.warehouse.reader import get_latest_bars
 from core_engine.warehouse.writer import insert_staging_batch, run_etl_direct
 from core_engine.warehouse.validation import validate_ohlcv_df
 from core_engine.historical.runtime_support import (
@@ -128,15 +123,6 @@ def _hlog(event: str, *details: str, **fields: Any) -> str:
 
 
 _warehouse_write_lock_depth = 0
-
-def _fmt_ts(value: Any) -> str:
-    if value is None:
-        return "-"
-    try:
-        return value.strftime("%Y-%m-%d %H:%M:%S")
-    except Exception:
-        return str(value)
-
 
 def _warehouse_lock_payload(owner: str) -> str:
     return (
@@ -453,63 +439,6 @@ def pull_with_retry(
         )
     return result
 
-
-def replace_symbol_history(tv: SimpleNamespace, sym: dict[str, Any], tf_code: str) -> tuple[int, int]:
-    staging = TF_STAGING.get(tf_code)
-    if not staging:
-        logger.error("%s", _hlog("Repair temporary table missing", symbol=sym["tv_symbol"], timeframe=tf_code, result="failed"))
-        return 0, RESULT_ERROR
-    with _warehouse_write_slot(f"historical-repair-stage-clear:{sym['tv_symbol']}:{tf_code}"):
-        delete_staging_bars(
-            sym["symbol_id"],
-            staging,
-            source="historical_repair",
-            symbol=sym["tv_symbol"],
-            tf_code=tf_code,
-        )
-    staged = pull_and_store(
-        tv,
-        sym,
-        tf_code,
-        next(n for i, t, s, n in get_historical_timeframes() if t == tf_code),
-        skip_etl=True,
-        allow_replay=False,
-    )
-    if staged < 0:
-        return 0, staged
-    stage_first, stage_last, stage_count = get_staging_bar_window(sym["symbol_id"], staging)
-    if stage_count <= 0 or stage_first is None or stage_last is None:
-        return 0, RESULT_TV_EMPTY
-    before = get_fact_bar_window_context(sym["symbol_id"], tf_code, stage_first, stage_last)
-    logger.info(
-        "%s",
-        _hlog(
-            "Repair window prepared",
-            symbol=sym["tv_symbol"],
-            timeframe=tf_code,
-            window=f"{_fmt_ts(stage_first)} -> {_fmt_ts(stage_last)}",
-            temporary_rows=stage_count,
-            existing_rows=before.get("window_count", 0),
-            result="ready",
-        ),
-    )
-    with _warehouse_write_slot(f"historical-repair-fact-replace:{sym['tv_symbol']}:{tf_code}"):
-        deleted = delete_fact_bars_range(
-            sym["symbol_id"],
-            tf_code,
-            stage_first,
-            stage_last,
-            source="historical_repair",
-            symbol=sym["tv_symbol"],
-        )
-        inserted = run_etl_direct(
-            sym["symbol_id"],
-            tf_code,
-            staging,
-            source="historical_repair",
-            symbol=sym["tv_symbol"],
-        )
-    return deleted, inserted
 
 def _selected_timeframes(tf_filter: set[str] | None = None) -> list[tuple[str, str, str, int]]:
     active = set(tf_filter or set())

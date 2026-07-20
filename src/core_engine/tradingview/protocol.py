@@ -27,9 +27,20 @@ def send_tv_message(ws: Any, msg: list) -> None:
 
 
 def parse_packets(raw: str) -> list[str]:
+    """Split a raw WS receive buffer into individual TradingView packets.
+
+    Most packets use `~m~<len>~m~<payload>` length-prefixed framing. A
+    heartbeat ping arrives as a bare `~h~<number>` with no framing and no
+    length prefix - callers are expected to echo it straight back to keep
+    the connection alive (see BatchFetcher._on_message), so it must be
+    returned as-is rather than silently dropped.
+    """
     packets: list[str] = []
     pos = 0
     while pos < len(raw):
+        if raw.startswith("~h~", pos):
+            packets.append(raw[pos:])
+            break
         if raw[pos : pos + 3] != "~m~":
             break
         pos += 3

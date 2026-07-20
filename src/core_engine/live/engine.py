@@ -25,7 +25,6 @@ import math
 import os
 import queue
 import socket
-import sys
 import threading
 import time
 import traceback
@@ -47,13 +46,11 @@ from core_engine.coordination.locks import (
     is_locked as _is_task_locked,
     release as _release_task_lock,
     renew as _renew_task_lock,
-    update_payload as _update_task_payload,
 )
 from core_engine.reporting.discord import (
     QUICK_COMMANDS_HINT,
     notify_live_event,
     send_alert as _send_alert,
-    send_message as _send_message,
 )
 from core_engine.warehouse.writer import (
     insert_staging_batch,
@@ -73,7 +70,6 @@ from core_engine.settings import (
     WS_LIVE_PID,
     WS_LIVE_REPORT_LOG,
     WS_LIVE_STATE,
-    WS_OVERFLOW_SPOOL,
 )
 
 from core_engine.tradingview import protocol as live_protocol
@@ -138,7 +134,6 @@ from core_engine.live.state import (
     _state_lock,
     _stats,
     _tradingview_connectivity_ok,
-    _tv_connectivity_probe,
     _write_defer_lock_cache,
     _write_live_state,
     _ws_cooldown_lock,

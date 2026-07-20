@@ -69,15 +69,6 @@ def _is_refreshed_token_usable(
     return True
 
 
-def _token_needs_proactive_refresh(
-    token: str, *, threshold_sec: int = TOKEN_PROACTIVE_REFRESH_SEC
-) -> bool:
-    if not token or token == GUEST_TOKEN:
-        return True
-    remaining = _jwt_expires_in(token)
-    return remaining == -1.0 or remaining < threshold_sec
-
-
 def _is_token_reusable_for_startup(
     token: str,
     source: str,
