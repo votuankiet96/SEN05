@@ -1143,6 +1143,31 @@ def _wait_for_queue_drain(timeout_sec: float) -> bool:
         time.sleep(0.2)
 
 
+def _report_db_worker_stopped_at_shutdown(pending_items: int) -> bool:
+    """Report a stopped DB worker; return True only when data is at risk."""
+    pending_items = max(0, int(pending_items))
+    if pending_items > 0:
+        logger.critical(
+            "%s",
+            _llog(
+                "Database writer unavailable during shutdown",
+                pending_items=pending_items,
+                action="skip_unbounded_queue_wait",
+                result="failed",
+            ),
+        )
+        return True
+    logger.info(
+        "%s",
+        _llog(
+            "Database writer already stopped after drain",
+            pending_items=0,
+            result="stopped",
+        ),
+    )
+    return False
+
+
 def _db_worker() -> None:
     logger.info("%s", _llog("Database writer started", result="running"))
 
@@ -3982,15 +4007,12 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
                 ),
             )
     else:
-        logger.critical(
-            "%s",
-            _llog(
-                "Database writer unavailable during shutdown",
-                pending_items=_db_queue.qsize(),
-                action="skip_unbounded_queue_wait",
-                result="failed",
-            ),
-        )
+        # The worker's own loop exits as soon as shutdown is set and every
+        # queued/spooled row has drained. Reaching this branch with zero
+        # pending items is therefore the normal successful shutdown path,
+        # not a worker failure (the main loop separately detects a worker
+        # that dies while live collection is still active).
+        _report_db_worker_stopped_at_shutdown(_db_queue.qsize())
 
     db_thread.join(timeout=30)
 

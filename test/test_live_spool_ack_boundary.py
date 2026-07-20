@@ -98,3 +98,27 @@ def test_fault_inside_etl_never_acks_staged_outbox_row(monkeypatch):
 
     assert any(event[0] == "fact_commit_attempt" for event in events)
     assert not any(event[0] == "ack" for event in events)
+
+
+def test_clean_worker_exit_with_empty_queue_is_not_a_shutdown_critical(monkeypatch, caplog):
+    """The worker is designed to exit itself after shutdown+drain. Guard
+    the production smoke regression where that normal state emitted a
+    false CRITICAL despite pending_items=0."""
+    monkeypatch.setattr(live_engine.logger, "propagate", True)
+    with caplog.at_level("CRITICAL", logger=live_engine.logger.name):
+        unsafe = live_engine._report_db_worker_stopped_at_shutdown(0)
+
+    assert unsafe is False
+    assert caplog.records == []
+
+
+def test_dead_worker_with_pending_queue_remains_shutdown_critical(monkeypatch, caplog):
+    monkeypatch.setattr(live_engine.logger, "propagate", True)
+    with caplog.at_level("CRITICAL", logger=live_engine.logger.name):
+        unsafe = live_engine._report_db_worker_stopped_at_shutdown(3)
+
+    assert unsafe is True
+    assert any(
+        "pending_items=3" in record.getMessage()
+        for record in caplog.records
+    )
