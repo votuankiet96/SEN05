@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DP Program Chart & Data Health</title>
+  <script src="/static/lightweight-charts.js"></script>
+  <style>
+    :root {
+      --bg: #eef3f8;
+      --panel: #ffffff;
+      --ink: #172033;
+      --muted: #61708a;
+      --line: #cdd8e6;
+      --accent: #0b7f95;
+      --ok: #0f8a63;
+      --warn: #b46b00;
+      --bad: #c73535;
+      --dark: #101722;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Segoe UI, Arial, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+    }
+    header {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 18px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+    }
+    h1 { font-size: 20px; margin: 0; }
+    .tabs { display: flex; gap: 6px; margin-left: 12px; }
+    button, select, input {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+    }
+    button {
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 650;
+    }
+    button.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    #status {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    main {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      min-height: calc(100vh - 64px);
+      gap: 14px;
+      padding: 14px;
+    }
+    aside, section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    aside {
+      padding: 14px;
+      overflow: auto;
+      max-height: calc(100vh - 92px);
+    }
+    .label {
+      display: block;
+      margin: 12px 0 7px;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    select, input {
+      width: 100%;
+      padding: 8px 10px;
+      margin-bottom: 4px;
+    }
+    .tf-grid, .sym-grid { display: flex; flex-wrap: wrap; gap: 5px; }
+    .tf-grid button, .sym-grid button { padding: 6px 8px; font-size: 12px; }
+    .group-name {
+      display: block;
+      margin: 10px 0 5px;
+      font-weight: 700;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    #chartPanel {
+      display: flex;
+      flex-direction: column;
+      min-height: calc(100vh - 92px);
+      padding: 12px;
+    }
+    #chart {
+      flex: 1;
+      min-height: 420px;
+      background: #fff;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(120px, 1fr));
+      gap: 10px;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #f8fbff;
+    }
+    .metric .name {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .metric .value {
+      margin-top: 4px;
+      font-size: 17px;
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+    #healthView {
+      display: none;
+      grid-column: 1 / -1;
+      padding: 12px;
+    }
+    .health-body {
+      display: grid;
+      grid-template-columns: 1fr 330px;
+      gap: 12px;
+      min-height: 600px;
+    }
+    .matrix-wrap, .side-list {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    table { border-collapse: collapse; width: 100%; font-size: 12px; }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+      padding: 6px;
+      white-space: nowrap;
+      text-align: center;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background: #f4f8fc;
+      z-index: 1;
+    }
+    th:first-child, td:first-child {
+      position: sticky;
+      left: 0;
+      background: #f4f8fc;
+      text-align: left;
+      font-weight: 700;
+      z-index: 2;
+    }
+    .cell-ok { background: rgba(15, 138, 99, .15); }
+    .cell-warn { background: rgba(180, 107, 0, .18); }
+    .cell-stale { background: rgba(199, 53, 53, .18); }
+    .cell-empty { background: rgba(97, 112, 138, .12); color: var(--muted); }
+    .cell-unknown { background: rgba(11, 127, 149, .12); }
+    .side-card {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--line);
+      font-size: 12px;
+    }
+    .side-card strong { display: block; margin-bottom: 4px; }
+    .muted { color: var(--muted); }
+    .hidden { display: none !important; }
+    @media (max-width: 980px) {
+      main { grid-template-columns: 1fr; }
+      aside { max-height: none; }
+      .summary { grid-template-columns: repeat(2, 1fr); }
+      .health-body { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>DP Program Chart & Data Health</h1>
+    <div class="tabs">
+      <button id="tabChart" class="active">Chart</button>
+      <button id="tabHealth">Data Health</button>
+    </div>
+    <span id="status">Starting...</span>
+  </header>
+
+  <main>
+    <aside id="sidebar">
+      <span class="label">Timeframe</span>
+      <div id="tfButtons" class="tf-grid"></div>
+
+      <span class="label">Candles</span>
+      <select id="barsSelect">
+        <option value="100">100</option>
+        <option value="200">200</option>
+        <option value="500" selected>500</option>
+        <option value="1000">1,000</option>
+        <option value="2000">2,000</option>
+      </select>
+
+      <span class="label">Symbol</span>
+      <div id="symbolPanel"></div>
+    </aside>
+
+    <section id="chartPanel">
+      <div id="chart"></div>
+    </section>
+
+    <section id="healthView">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <button id="refreshHealth">Refresh Health</button>
+        <span id="healthStatus" class="muted">Not loaded</span>
+      </div>
+      <div id="summary" class="summary"></div>
+      <div class="health-body" style="margin-top:12px">
+        <div class="matrix-wrap" id="matrixWrap"></div>
+        <div style="display:flex;flex-direction:column;gap:12px;min-height:0">
+          <div>
+            <h3 style="margin:0 0 8px">Runtime Locks</h3>
+            <div class="side-list" id="locksList"></div>
+          </div>
+          <div>
+            <h3 style="margin:0 0 8px">Staging Backlog</h3>
+            <div class="side-list" id="stagingList"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+<script>
+const state = { symbol: 'EURUSD', tf: 'H1', bars: 500, view: 'chart' };
+const statusEl = document.getElementById('status');
+const chartEl = document.getElementById('chart');
+const chart = LightweightCharts.createChart(chartEl, {
+  layout: { background: { color: '#ffffff' }, textColor: '#172033' },
+  grid: { vertLines: { color: '#edf2f7' }, horzLines: { color: '#edf2f7' } },
+  rightPriceScale: { borderColor: '#cdd8e6' },
+  timeScale: { borderColor: '#cdd8e6', timeVisible: true },
+});
+const candles = chart.addCandlestickSeries({
+  upColor: '#0f8a63',
+  downColor: '#c73535',
+  borderUpColor: '#0f8a63',
+  borderDownColor: '#c73535',
+  wickUpColor: '#0f8a63',
+  wickDownColor: '#c73535',
+});
+const volume = chart.addHistogramSeries({
+  priceFormat: { type: 'volume' },
+  priceScaleId: 'volume',
+  color: 'rgba(11,127,149,.28)',
+});
+chart.priceScale('volume').applyOptions({ scaleMargins: { top: .82, bottom: 0 } });
+
+new ResizeObserver(entries => {
+  for (const e of entries) {
+    chart.applyOptions({ width: Math.floor(e.contentRect.width), height: Math.floor(e.contentRect.height) });
+  }
+}).observe(chartEl);
+
+function esc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function fmtInt(v) {
+  if (v == null || Number.isNaN(Number(v))) return '-';
+  return Number(v).toLocaleString('en-US');
+}
+function fmtDate(v) {
+  if (!v) return '-';
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return String(v);
+  return d.toLocaleString('vi-VN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+}
+function fmtLag(minutes) {
+  if (minutes == null) return '-';
+  const m = Number(minutes);
+  if (m < 0) return 'future';
+  if (m < 60) return `${m}m`;
+  if (m < 1440) return `${Math.round(m / 60)}h`;
+  return `${Math.round(m / 1440)}d`;
+}
+function compactRows(v) {
+  const n = Number(v || 0);
+  if (!n) return '0';
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'm';
+  if (n >= 10000) return Math.round(n / 1000) + 'k';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+  return String(n);
+}
+async function fetchJson(url) {
+  const resp = await fetch(url, { cache: 'no-store' });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+  return data;
+}
+async function loadCandles() {
+  statusEl.textContent = `Loading ${state.symbol} ${state.tf}...`;
+  try {
+    const data = await fetchJson(`/api/candles?symbol=${encodeURIComponent(state.symbol)}&tf=${encodeURIComponent(state.tf)}&bars=${state.bars}`);
+    const rows = data.candles || [];
+    candles.setData(rows);
+    volume.setData(rows.map(d => ({
+      time: d.time,
+      value: d.volume,
+      color: d.close >= d.open ? 'rgba(15,138,99,.32)' : 'rgba(199,53,53,.32)',
+    })));
+    chart.timeScale().fitContent();
+    const latest = rows[rows.length - 1];
+    statusEl.textContent = latest
+      ? `${state.symbol} ${state.tf}: ${rows.length} candles, latest ${fmtDate(latest.bar_time)}`
+      : `${state.symbol} ${state.tf}: no candles`;
+  } catch (err) {
+    statusEl.textContent = `Chart error: ${err.message}`;
+  }
+}
+function setActiveButtons() {
+  document.querySelectorAll('[data-tf]').forEach(btn => btn.classList.toggle('active', btn.dataset.tf === state.tf));
+  document.querySelectorAll('[data-symbol]').forEach(btn => btn.classList.toggle('active', btn.dataset.symbol === state.symbol));
+}
+async function initControls() {
+  const tfData = await fetchJson('/api/timeframes');
+  const tfButtons = document.getElementById('tfButtons');
+  tfButtons.innerHTML = (tfData.direct || []).map(tf => `<button data-tf="${esc(tf)}">${esc(tf)}</button>`).join('');
+  tfButtons.querySelectorAll('button').forEach(btn => {
+    btn.onclick = () => { state.tf = btn.dataset.tf; setActiveButtons(); loadCandles(); };
+  });
+
+  const symbols = await fetchJson('/api/symbols');
+  const panel = document.getElementById('symbolPanel');
+  panel.innerHTML = Object.entries(symbols).map(([group, items]) => `
+    <span class="group-name">${esc(group)}</span>
+    <div class="sym-grid">${items.map(sym => `<button data-symbol="${esc(sym)}">${esc(sym)}</button>`).join('')}</div>
+  `).join('');
+  panel.querySelectorAll('button').forEach(btn => {
+    btn.onclick = () => { state.symbol = btn.dataset.symbol; setActiveButtons(); loadCandles(); };
+  });
+  setActiveButtons();
+}
+function renderSummary(summary) {
+  const items = [
+    ['Fact Rows', fmtInt(summary.TotalRows)],
+    ['Rows 24h', fmtInt(summary.RowsCreatedLast24h)],
+    ['Symbols', `${fmtInt(summary.SymbolsWithData)} / ${fmtInt(summary.TotalSymbols)}`],
+    ['Timeframes', `${fmtInt(summary.TimeframesWithData)} / ${fmtInt(summary.TotalTimeframes)}`],
+    ['Latest Bar', fmtDate(summary.LatestBarTime)],
+    ['Latest Write', fmtDate(summary.LatestCreatedAt)],
+    ['Oldest Bar', fmtDate(summary.OldestBarTime)],
+    ['Expected Pairs', fmtInt(summary.ExpectedPairs)],
+  ];
+  document.getElementById('summary').innerHTML = items.map(([name, value]) => `
+    <div class="metric"><div class="name">${esc(name)}</div><div class="value">${esc(value)}</div></div>
+  `).join('');
+}
+function renderMatrix(matrix) {
+  const tfs = matrix.timeframes || [];
+  const head = `<thead><tr><th>Symbol</th>${tfs.map(tf => `<th>${esc(tf)}</th>`).join('')}</tr></thead>`;
+  const body = (matrix.symbols || []).map(item => {
+    const cells = tfs.map(tf => {
+      const c = (item.cells || {})[tf] || { state: 'empty', RowCount: 0 };
+      const title = `${item.symbol} ${tf}\nRows: ${fmtInt(c.RowCount)}\nLatest: ${fmtDate(c.LatestBarTime)}\nLag: ${fmtLag(c.LatestLagMinutes)}`;
+      return `<td class="cell-${esc(c.state || 'unknown')}" title="${esc(title)}" data-symbol="${esc(item.symbol)}" data-matrix-tf="${esc(tf)}">
+        <strong>${compactRows(c.RowCount)}</strong><br><span class="muted">${fmtLag(c.LatestLagMinutes)}</span>
+      </td>`;
+    }).join('');
+    return `<tr><td>${esc(item.symbol)}</td>${cells}</tr>`;
+  }).join('');
+  document.getElementById('matrixWrap').innerHTML = `<table>${head}<tbody>${body}</tbody></table>`;
+  document.querySelectorAll('[data-matrix-tf]').forEach(cell => {
+    cell.onclick = () => {
+      state.symbol = cell.dataset.symbol;
+      state.tf = cell.dataset.matrixTf;
+      setActiveButtons();
+      switchView('chart');
+      loadCandles();
+    };
+  });
+}
+function renderLocks(data) {
+  const items = data.items || [];
+  document.getElementById('locksList').innerHTML = items.length ? items.map(item => {
+    const active = Number(item.IsActive) === 1;
+    return `<div class="side-card"><strong>${esc(item.TaskName)}</strong>
+      <span class="${active ? '' : 'muted'}">${active ? 'active' : 'expired'}</span><br>
+      <span class="muted">expires ${fmtDate(item.ExpiresAt)}</span></div>`;
+  }).join('') : '<div class="side-card muted">No lock rows.</div>';
+}
+function renderStaging(data) {
+  const items = data.items || [];
+  document.getElementById('stagingList').innerHTML = items.length ? items.map(item => {
+    const pending = Number(item.NotLoadedRows ?? item.PendingRows ?? 0);
+    const detail = item.error ? `<span style="color:var(--bad)">${esc(item.error)}</span>` :
+      `${fmtInt(pending)} not in Fact<br><span class="muted">total ${fmtInt(item.TotalRows)}, latest ${fmtDate(item.LatestBarTime)}</span>`;
+    return `<div class="side-card"><strong>${esc(item.TFCode)}</strong>${detail}</div>`;
+  }).join('') : '<div class="side-card muted">No staging rows.</div>';
+}
+async function loadHealth() {
+  document.getElementById('healthStatus').textContent = 'Loading...';
+  try {
+    const summary = await fetchJson('/api/health/summary');
+    renderSummary(summary);
+    const matrix = await fetchJson('/api/health/matrix');
+    renderMatrix(matrix);
+    const locks = await fetchJson('/api/health/locks');
+    renderLocks(locks);
+    const staging = await fetchJson('/api/health/staging');
+    renderStaging(staging);
+    const totals = matrix.totals || {};
+    document.getElementById('healthStatus').textContent =
+      `Updated ${new Date().toLocaleTimeString('vi-VN')} - OK ${fmtInt(totals.ok)}, Warn ${fmtInt(totals.warn)}, Stale ${fmtInt(totals.stale)}, Empty ${fmtInt(totals.empty)}`;
+  } catch (err) {
+    document.getElementById('healthStatus').textContent = `Health error: ${err.message}`;
+  }
+}
+function switchView(view) {
+  state.view = view;
+  document.getElementById('tabChart').classList.toggle('active', view === 'chart');
+  document.getElementById('tabHealth').classList.toggle('active', view === 'health');
+  document.getElementById('sidebar').classList.toggle('hidden', view !== 'chart');
+  document.getElementById('chartPanel').classList.toggle('hidden', view !== 'chart');
+  document.getElementById('healthView').style.display = view === 'health' ? 'block' : 'none';
+  if (view === 'health') loadHealth();
+}
+document.getElementById('barsSelect').onchange = e => { state.bars = Number(e.target.value || 500); loadCandles(); };
+document.getElementById('tabChart').onclick = () => switchView('chart');
+document.getElementById('tabHealth').onclick = () => switchView('health');
+document.getElementById('refreshHealth').onclick = loadHealth;
+
+(async function init() {
+  try {
+    await initControls();
+    await loadCandles();
+    setInterval(() => { if (state.view === 'chart') loadCandles(); }, 60000);
+    setInterval(() => { if (state.view === 'health') loadHealth(); }, 60000);
+  } catch (err) {
+    statusEl.textContent = `Startup error: ${err.message}`;
+  }
+})();
+</script>
+</body>
+</html>
