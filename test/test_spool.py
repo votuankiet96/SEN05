@@ -1,14 +1,42 @@
-"""Tests for core_engine.warehouse.spool.LiveSpool - the disk-backed fallback
-used when the live feed's DB queue and RAM overflow buffer are both full.
-This is the last line of defense against dropping live bars, so its
-encode/decode round trip and full/corrupt-row handling need to actually work.
+"""Tests for core_engine.warehouse.spool.LiveSpool - the durable write-ahead
+outbox every live OHLCV candle passes through before it is ever placed on
+the in-memory dispatch queue (see live/engine.py's _enqueue_or_buffer).
+
+Round-2 audit finding (Codex): the previous design only used the spool as a
+last-resort RAM-overflow buffer, and its flush_to_queue() deleted a row the
+instant it was handed to the in-memory queue - before that data was
+actually durable in SQL Server. A crash between that delete and a
+successful staging commit lost the candle permanently, and a write that
+failed after retries was simply task_done()'d and dropped with no spool
+fallback at all.
+
+This file fault-injects the crash points the user asked to cover, against
+the real ack boundary: a row is only acked (deleted) once BOTH
+insert_staging_batch AND run_etl_direct have succeeded for it - not after
+staging alone. A row that is durably staged but still awaiting its Fact
+commit sits in a third state, 'staged' (see LiveSpool's module docstring),
+which is excluded from lease_batch() so it is never re-staged, but is also
+NOT acked - so a crash at any point up through a successful Fact commit is
+recoverable:
+  1. after the SQLite commit, before RAM enqueue -> test_kill_after_persist_before_lease_survives_restart
+  2. after dequeue/lease, before staging succeeds -> test_kill_after_lease_before_ack_is_recoverable_after_lease_expires
+  3. after a successful staging commit, before mark_staged() itself runs -> test_kill_after_staging_success_before_mark_staged_is_safe_to_reprocess
+  4. "during the stored procedure" (staging -> Fact ETL) -> test_kill_during_etl_leaves_row_staged_and_recoverable
+  5. after Fact commit, before ack -> test_kill_after_fact_commit_before_ack_recovers_via_restart_reset
+
+An earlier version of this design acked right after the staging write
+succeeded, delegating the staging->Fact gap to the in-memory _deferred_etl
+retry loop plus the reconcile-fact CLI as a secondary safety net. That was
+rejected on review: reconcile-fact is an operator-triggered/periodic check,
+not automatic durability, and it left the live path with nearly the same
+staging-to-Fact crash gap that the P0-2 historical-side fix had just
+closed. The current design closes it directly instead.
 """
 
 from __future__ import annotations
 
 import logging
 import pickle
-import queue
 
 import pandas as pd
 import pytest
@@ -30,83 +58,251 @@ def _sample_item(batch_id=1, symbol_id=101, tf_code="M5"):
     return (batch_id, symbol_id, tf_code, "SEN.TF_M5", "EURUSD", df)
 
 
+def _reopen(spool: LiveSpool) -> LiveSpool:
+    """Simulate a process restart: a fresh LiveSpool instance pointed at
+    the same on-disk file, with no in-memory state carried over."""
+    log = logging.getLogger("test_spool_reopened")
+    log.addHandler(logging.NullHandler())
+    fresh = LiveSpool(spool.path, max_rows=spool.max_rows, logger=log)
+    fresh.init()
+    return fresh
+
+
 def test_init_is_idempotent(spool):
     spool.init()
     spool.init()
     assert spool.count() == 0
 
 
-def test_write_then_flush_round_trips_the_dataframe(spool):
-    item = _sample_item()
-    assert spool.write(item) is True
+# --- fault injection point 1: crash after SQLite commit, before enqueue ---
+
+
+def test_kill_after_persist_before_lease_survives_restart(spool):
+    row_id = spool.persist_pending(_sample_item(symbol_id=101))
+    assert row_id is not None
     assert spool.count() == 1
 
-    q: queue.Queue = queue.Queue(maxsize=10)
-    flushed = spool.flush_to_queue(q)
-    assert flushed == 1
+    # "Crash" here: nothing further happens to this process. A fresh
+    # instance (simulated restart) must still see and be able to lease it.
+    restarted = _reopen(spool)
+    leased = restarted.lease_batch()
+
+    assert len(leased) == 1
+    got_row_id, (batch_id, symbol_id, tf_code, staging_table, tv_symbol, df) = leased[0]
+    assert got_row_id == row_id
+    assert (symbol_id, tf_code, staging_table, tv_symbol) == (101, "M5", "SEN.TF_M5", "EURUSD")
+    assert list(df["open"]) == [1.0]
+    # Exactly one copy - no duplicate row was created by the "restart".
+    assert restarted.count() == 1
+
+
+# --- fault injection point 2: crash after lease, before ack -------------
+
+
+def test_kill_after_lease_before_ack_is_recoverable_after_lease_expires(spool):
+    row_id = spool.persist_pending(_sample_item(symbol_id=202))
+    leased = spool.lease_batch(lease_seconds=-1)  # already-expired lease
+    assert len(leased) == 1
+    assert leased[0][0] == row_id
+
+    # "Crash" here: ack() never runs. A later pass (this process's own
+    # retry loop, or a fresh process after restart) must be able to lease
+    # the SAME row again rather than losing it or creating a duplicate.
+    leased_again = spool.lease_batch(lease_seconds=60)
+    assert len(leased_again) == 1
+    assert leased_again[0][0] == row_id
+    assert spool.count() == 1  # still exactly one row, not duplicated
+
+
+def test_lease_does_not_hand_out_a_row_whose_lease_has_not_expired(spool):
+    # A genuinely in-flight lease (not yet timed out) must not be handed to
+    # a second worker concurrently - that would cause double-processing.
+    spool.persist_pending(_sample_item(symbol_id=303))
+    first = spool.lease_batch(lease_seconds=120)
+    assert len(first) == 1
+
+    second = spool.lease_batch(lease_seconds=120)
+    assert second == []  # lease still active; nothing to hand out
+
+
+# --- fault injection point 3: staging succeeded, crash before mark_staged -
+
+
+def test_kill_after_staging_success_before_mark_staged_is_safe_to_reprocess(spool):
+    """Models: insert_staging_batch() committed in SQL Server, but the
+    process died before live/engine.py's _db_worker reached
+    _spool.mark_staged(). On restart the row is still 'leased' (its lease
+    expires) and gets leased again, effectively "re-staged" -
+    insert_staging_batch's MERGE ... WHEN MATCHED AND (values differ) makes
+    re-submitting the same unchanged bars a safe no-op, so re-processing
+    after this exact crash point is idempotent, not just "not lost"."""
+    row_id = spool.persist_pending(_sample_item(symbol_id=404))
+    leased = spool.lease_batch(lease_seconds=-1)  # already-expired lease
+    assert leased[0][0] == row_id
+    # (staging insert would happen here in live/engine.py; simulate the
+    # crash by never calling mark_staged())
+
+    restarted = _reopen(spool)
+    recovered = restarted.lease_batch()
+    assert len(recovered) == 1
+    assert recovered[0][0] == row_id
+    assert restarted.count() == 1
+
+
+# --- fault injection point 4: crash during/after ETL, before ack ---------
+
+
+def test_mark_staged_removes_row_from_lease_pool_without_deleting_it(spool):
+    row_id = spool.persist_pending(_sample_item())
+    spool.lease_batch()
+    spool.mark_staged(row_id)
+
+    assert spool.count() == 1  # still durable, not acked
+    assert spool.count_unstaged() == 0  # but no longer in the lease pool
+    assert spool.count_staged_pending_fact() == 1
+    assert spool.lease_batch(lease_seconds=-1) == [], "a staged row must never be re-leased"
+
+
+def test_kill_during_etl_leaves_row_staged_and_recoverable(spool):
+    """Models: run_etl_direct() itself failed or the process died mid-call
+    (the "during the stored procedure" crash point). The row stays
+    'staged' - not lost, not silently re-staged, just waiting - and a
+    fresh process picks it back up via the pending-reset in init()."""
+    row_id = spool.persist_pending(_sample_item(symbol_id=505))
+    spool.lease_batch()
+    spool.mark_staged(row_id)
+    # (run_etl_direct() would be attempted here and fail/crash; no
+    # ack_staged_for_key() call happens)
+
+    restarted = _reopen(spool)  # init() resets leftover 'staged' rows
+    assert restarted.count_staged_pending_fact() == 0
+    recovered = restarted.lease_batch()
+    assert len(recovered) == 1
+    assert recovered[0][0] == row_id
+    assert restarted.count() == 1  # still exactly one copy
+
+
+# --- fault injection point 5: Fact commit succeeded, crash before ack ----
+
+
+def test_kill_after_fact_commit_before_ack_recovers_via_restart_reset(spool):
+    """Models: run_etl_direct() actually committed to Fact_OHLCV, but the
+    process died before ack_staged_for_key() ran. The row is still
+    'staged' on disk. On restart it is reset to pending and re-enters the
+    pipeline - insert_staging_batch's MERGE is a no-op for the unchanged
+    row, and run_etl_direct's NOT EXISTS check means re-running ETL for
+    already-committed data inserts/updates nothing (it is not "lost", it
+    is a harmless redundant confirmation, not a duplicate)."""
+    row_id = spool.persist_pending(_sample_item(symbol_id=606))
+    spool.lease_batch()
+    spool.mark_staged(row_id)
+    # (run_etl_direct() succeeds here in the real flow; crash happens
+    # before ack_staged_for_key() is called)
+
+    restarted = _reopen(spool)
+    recovered = restarted.lease_batch()
+    assert len(recovered) == 1
+    assert recovered[0][0] == row_id
+
+
+def test_ack_staged_for_key_deletes_all_matching_rows_at_once(spool):
+    # Two bars for the same symbol/timeframe both deferred while staged
+    # (e.g. stuck behind a warehouse maintenance lock); one successful
+    # run_etl_direct() call migrates both, so both must be acked together.
+    id_a = spool.persist_pending(_sample_item(symbol_id=101, tf_code="M5"))
+    id_b = spool.persist_pending(_sample_item(symbol_id=101, tf_code="M5"))
+    spool.lease_batch()
+    spool.mark_staged(id_a)
+    spool.mark_staged(id_b)
+
+    deleted = spool.ack_staged_for_key(101, "M5", "SEN.TF_M5", "EURUSD")
+
+    assert deleted == 2
     assert spool.count() == 0
 
-    batch_id, symbol_id, tf_code, staging_table, tv_symbol, df = q.get_nowait()
-    assert (batch_id, symbol_id, tf_code, staging_table, tv_symbol) == (1, 101, "M5", "SEN.TF_M5", "EURUSD")
-    assert list(df["open"]) == [1.0]
+
+def test_ack_staged_for_key_does_not_touch_other_keys(spool):
+    id_a = spool.persist_pending(_sample_item(symbol_id=101, tf_code="M5"))
+    id_b = spool.persist_pending(_sample_item(symbol_id=202, tf_code="M15"))
+    spool.lease_batch()
+    spool.mark_staged(id_a)
+    spool.mark_staged(id_b)
+
+    deleted = spool.ack_staged_for_key(101, "M5", "SEN.TF_M5", "EURUSD")
+
+    assert deleted == 1
+    assert spool.count() == 1
+    remaining = spool.lease_batch(lease_seconds=-1)
+    assert remaining == [], "the other row is still 'staged', not back in the lease pool"
+    assert spool.count_staged_pending_fact() == 1
 
 
-def test_write_rejects_when_spool_is_full(spool):
+def test_ack_deletes_the_row_so_it_is_never_leased_again(spool):
+    row_id = spool.persist_pending(_sample_item())
+    spool.lease_batch()
+    spool.ack(row_id)
+
+    assert spool.count() == 0
+    assert spool.lease_batch(lease_seconds=-1) == []
+
+
+def test_release_for_retry_keeps_row_available_without_duplicating(spool):
+    row_id = spool.persist_pending(_sample_item())
+    spool.lease_batch()
+    spool.release_for_retry(row_id, error="insert_staging_batch failed after retries")
+
+    assert spool.count() == 1  # not dropped
+    leased = spool.lease_batch()
+    assert len(leased) == 1
+    assert leased[0][0] == row_id  # same row, not a duplicate
+
+
+# --- outbox-full behavior: pause, never silently drop --------------------
+
+
+def test_persist_pending_returns_none_when_full_without_losing_anything(spool):
     for i in range(3):
-        assert spool.write(_sample_item(symbol_id=100 + i)) is True
-    assert spool.count() == 3
-    # max_rows=3: a 4th write must be rejected, not silently accepted.
-    assert spool.write(_sample_item(symbol_id=999)) is False
+        assert spool.persist_pending(_sample_item(symbol_id=100 + i)) is not None
     assert spool.count() == 3
 
-
-def test_normalize_item_accepts_legacy_5_tuple_without_batch_id(spool):
-    df = pd.DataFrame({"open": [2.0]})
-    legacy_item = (202, "M15", "SEN.TF_M15", "GBPUSD", df)  # no batch_id
-    assert spool.write(legacy_item) is True
-
-    q: queue.Queue = queue.Queue(maxsize=10)
-    spool.flush_to_queue(q)
-    batch_id, symbol_id, tf_code, staging_table, tv_symbol, out_df = q.get_nowait()
-    assert batch_id == 0
-    assert symbol_id == 202
-    assert tf_code == "M15"
+    # max_rows=3: a 4th item cannot be accepted durably. The caller
+    # (live/engine.py) must treat None as "pause new batches", not as "drop
+    # this one" - persist_pending itself must not have partially inserted
+    # anything.
+    result = spool.persist_pending(_sample_item(symbol_id=999))
+    assert result is None
+    assert spool.count() == 3
 
 
-def test_flush_to_queue_stops_when_target_queue_is_full(spool):
-    for i in range(3):
-        spool.write(_sample_item(symbol_id=100 + i))
-    q: queue.Queue = queue.Queue(maxsize=1)
-    flushed = spool.flush_to_queue(q)
-    assert flushed == 1
-    # The un-flushed rows must remain in the spool, not be lost.
-    assert spool.count() == 2
+# --- legacy back-compat -----------------------------------------------
 
 
-def test_flush_to_queue_quarantines_corrupt_payload(spool, tmp_path):
+def test_write_is_a_bool_alias_for_persist_pending(spool):
+    assert spool.write(_sample_item(symbol_id=555)) is True
+    assert spool.count() == 1
+
+
+def test_lease_batch_quarantines_corrupt_payload(spool):
     import sqlite3
     from contextlib import closing
 
-    assert spool.write(_sample_item()) is True
-
-    # Corrupt the stored payload directly, bypassing the public API, to
-    # simulate on-disk corruption / an incompatible payload version.
+    row_id = spool.persist_pending(_sample_item())
     with closing(sqlite3.connect(spool.path)) as con:
         con.execute("UPDATE spool SET bar_data = ?", (b"not a pickle blob",))
         con.commit()
 
-    q: queue.Queue = queue.Queue(maxsize=10)
-    flushed = spool.flush_to_queue(q)
-    assert flushed == 0
-    assert spool.count() == 0  # corrupt row removed from the live table
-    assert q.empty()
+    leased = spool.lease_batch()
+    assert leased == []
+    assert spool.count() == 0  # corrupt row removed from the live table, not left stuck forever
 
     with closing(sqlite3.connect(spool.path)) as con:
-        quarantined = con.execute("SELECT COUNT(*) FROM spool_quarantine").fetchone()[0]
+        quarantined = con.execute(
+            "SELECT COUNT(*) FROM spool_quarantine WHERE original_id = ?", (row_id,)
+        ).fetchone()[0]
     assert quarantined == 1
 
 
-def test_decode_payload_rejects_wrong_version(spool):
+def test_decode_payload_rejects_wrong_version():
     bad_blob = pickle.dumps(
         {PAYLOAD_MARKER: True, "version": 999, "kind": "ohlcv_frame", "data": None},
         protocol=pickle.HIGHEST_PROTOCOL,
@@ -122,11 +318,55 @@ def test_decode_payload_accepts_legacy_bare_object_at_version_0():
     assert list(decoded["open"]) == [3.0]
 
 
-def test_cleanup_old_removes_nothing_for_fresh_rows(spool):
-    spool.write(_sample_item())
+# --- cleanup_old must never expire an un-acked row ------------------------
+
+
+def test_cleanup_old_never_deletes_staged_rows_regardless_of_age(spool):
+    row_id = spool.persist_pending(_sample_item())
+    spool.lease_batch()
+    spool.mark_staged(row_id)
+    import sqlite3
+    from contextlib import closing
+
+    with closing(sqlite3.connect(spool.path)) as con:
+        con.execute("UPDATE spool SET created_at = datetime('now', '-30 days') WHERE id=?", (row_id,))
+        con.commit()
+
     deleted = spool.cleanup_old(hours=48)
     assert deleted == 0
-    assert spool.count() == 1
+    assert spool.count() == 1  # still there - a row awaiting Fact commit is never age-expired
+
+
+def test_cleanup_old_never_deletes_pending_or_leased_rows_regardless_of_age(spool):
+    row_id = spool.persist_pending(_sample_item())
+    import sqlite3
+    from contextlib import closing
+
+    # Backdate the row to look 30 days old.
+    with closing(sqlite3.connect(spool.path)) as con:
+        con.execute("UPDATE spool SET created_at = datetime('now', '-30 days') WHERE id=?", (row_id,))
+        con.commit()
+
+    deleted = spool.cleanup_old(hours=48)
+    assert deleted == 0
+    assert spool.count() == 1  # still there - only quarantine entries expire by age
+
+
+def test_cleanup_old_prunes_stale_quarantine_entries(spool):
+    import sqlite3
+    from contextlib import closing
+
+    with closing(sqlite3.connect(spool.path)) as con:
+        con.execute(
+            "INSERT INTO spool_quarantine "
+            "(original_id, symbol_id, tf_code, staging_table, tv_symbol, error, created_at, quarantined_at) "
+            "VALUES (1, 101, 'M5', 'SEN.TF_M5', 'EURUSD', 'x', "
+            "datetime('now', '-72 hours'), datetime('now', '-72 hours'))"
+        )
+        con.commit()
+
+    deleted = spool.cleanup_old(hours=48)
+    assert deleted == 1
 
 
 def test_count_returns_none_when_db_file_is_unreachable(tmp_path):

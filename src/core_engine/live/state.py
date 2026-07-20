@@ -83,6 +83,12 @@ _stats = {
     "ws_auth_errors": 0,
     "ws_rate_limits": 0,
     "ws_server_errors": 0,
+    # Count of connection-group fetches that timed out and had their
+    # underlying socket forced closed to unblock a stuck thread - see
+    # BatchFetcher.fetch()'s timeout branch. A high/growing count over a
+    # long-running process signals accumulating leaked WS threads/sockets
+    # worth investigating (network quality, TradingView-side stalls).
+    "ws_forced_socket_closes": 0,
     "events": 0,
     "queue_depth": 0,
     "batches_run": 0,
@@ -120,6 +126,15 @@ def _tradingview_connectivity_ok() -> tuple[bool, str]:
 _tv_connectivity_block_until = 0.0
 
 _tv_connectivity_last_error = ""
+
+# Set when the durable spool outbox itself is full (persist_pending()
+# returned None) - the batch orchestrator checks this before starting a
+# new batch so the system pauses fetching new candles it cannot durably
+# store, instead of silently dropping them. Cleared once the backlog
+# drains below capacity. Reassigned at runtime -> callers outside this
+# module must go through `core_engine.live.state` (the module object),
+# not `from core_engine.live.state import spool_full_pause`.
+spool_full_pause = False
 
 _shutdown = threading.Event()
 
