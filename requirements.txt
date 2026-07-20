@@ -1,5 +1,5 @@
 # dp_program backend-core requirements
-# Install with: python initial_setup/install_python_deps.py
+# Install with: python scripts/install_python_deps.py
 
 pyodbc>=5.0.0
 python-dotenv>=1.0.0
@@ -20,3 +20,6 @@ requests>=2.31.0
 # Optional candle_snapshot handoff from live_fetching to OG via Redis Streams.
 # Disabled by default unless CANDLE_SNAPSHOT_ENABLED=1 in config/dp_provider.env.
 redis>=5.0.0
+
+# Dev/test only - not required to run the service.
+pytest>=8.0.0
