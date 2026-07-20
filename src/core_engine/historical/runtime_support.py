@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from core_engine.tradingview import history_client as tv_history
-from core_engine.warehouse.repository import get_internal_gaps
+from core_engine.warehouse.reader import get_internal_gaps
 from core_engine.reporting.historical_reporter import historical_scan_summary_block, log_historical_block
 from core_engine.logkit.formatters import operation_line
 from core_engine.settings import (

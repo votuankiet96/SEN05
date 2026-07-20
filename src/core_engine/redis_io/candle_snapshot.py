@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Iterable, Mapping
 
-from core_engine.warehouse.repository import get_latest_ohlcv_snapshot
+from core_engine.warehouse.reader import get_latest_ohlcv_snapshot
 from core_engine.settings import CANDLE_SNAPSHOT
 
 logger = logging.getLogger("candle_snapshot")

@@ -679,7 +679,7 @@ def collect_data_health(*, lookback_days: int | None = None) -> dict[str, Any]:
     data itself looks current enough to run production, not whether the machine
     dependencies are installed.
     """
-    from core_engine.warehouse.repository import get_internal_gaps, get_latest_bars
+    from core_engine.warehouse.reader import get_internal_gaps, get_latest_bars
     from core_engine.warehouse.connection import get_connection
     from core_engine.historical.runtime_support import find_hole_pairs, find_stale_pairs
 

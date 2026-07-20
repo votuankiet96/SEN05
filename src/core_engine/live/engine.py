@@ -55,7 +55,7 @@ from core_engine.reporting.discord import (
     send_alert as _send_alert,
     send_message as _send_message,
 )
-from core_engine.warehouse.repository import (
+from core_engine.warehouse.writer import (
     insert_staging_batch,
     run_etl_direct,
 )

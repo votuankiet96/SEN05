@@ -25,18 +25,15 @@ import pandas as pd
 from core_engine.exit_codes import EXIT_CANCELLED, EXIT_LOCK_CONFLICT
 from core_engine.tradingview import auth as tv_auth
 from core_engine.tradingview import history_client as tv_history
-from core_engine.warehouse.repository import (
+from core_engine.warehouse.maintenance import (
     delete_fact_bars_range,
     delete_staging_bars,
-    get_fact_bar_window_context,
-    get_latest_bars,
-    get_staging_bar_window,
-    insert_staging_batch,
     preview_ohlcv_reset_scope,
     purge_staging,
     reset_ohlcv_scope,
-    run_etl_direct,
 )
+from core_engine.warehouse.reader import get_fact_bar_window_context, get_latest_bars, get_staging_bar_window
+from core_engine.warehouse.writer import insert_staging_batch, run_etl_direct
 from core_engine.warehouse.validation import validate_ohlcv_df
 from core_engine.warehouse.connection import test_connection
 from core_engine.historical.runtime_support import (
