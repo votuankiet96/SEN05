@@ -59,7 +59,9 @@ from core_engine.settings.operational import (
     RUNTIME_DIR,
     RUN_DIR,
     SPOOL_DIR,
+    STORAGE,
     SYSTEM_LOG_DIR,
+    StorageSettings,
     TRADINGVIEW,
     TradingViewSettings,
     VERIFIED_MARKET_GAPS,
@@ -88,21 +90,3 @@ from core_engine.settings.system import (
     get_historical_timeframes,
     get_tf_interval_map,
 )
-
-
-# --- Legacy compatibility scalars -------------------------------------
-# TV_WS_REPLAY_* are still imported by name into core_engine.historical.engine,
-# which overrides its own imported copies at runtime via
-# `globals()[name] = value` (`_set_replay_runtime`) to apply CLI replay
-# options. HISTORICAL is a frozen dataclass, so that in-place override
-# pattern cannot target `HISTORICAL.replay_*` directly; keep exporting these
-# scalars until the historical engine split replaces the pattern with a
-# proper mutable runtime-options object.
-TV_WS_REPLAY_ENABLED = HISTORICAL.replay_enabled
-TV_WS_REPLAY_ENDPOINT = HISTORICAL.replay_endpoint
-TV_WS_REPLAY_START_DATE = HISTORICAL.replay_start_date
-TV_WS_REPLAY_TFS = HISTORICAL.replay_tfs
-TV_WS_REPLAY_WINDOW_BARS = HISTORICAL.replay_window_bars
-TV_WS_REPLAY_STEP_BARS = HISTORICAL.replay_step_bars
-TV_WS_REPLAY_MAX_WINDOWS_PER_PAIR = HISTORICAL.replay_max_windows_per_pair
-TV_WS_REPLAY_TIMEOUT_SEC = HISTORICAL.replay_timeout_sec

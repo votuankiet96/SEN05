@@ -297,6 +297,36 @@ class CandleSnapshotSettings:
     pubsub_schema_version: int = env_int("DP_CANDLE_PUBSUB_SCHEMA_VERSION", 1, minimum=1)
 
 
+_STORAGE_MODES = {"sql", "redis", "both"}
+
+
+def _resolve_storage_mode() -> str:
+    """Resolve DP_STORAGE_MODE, falling back to CANDLE_SNAPSHOT_ENABLED.
+
+    Existing deployments never set DP_STORAGE_MODE, so leaving it unset
+    must reproduce today's behavior exactly: CANDLE_SNAPSHOT_ENABLED=0 ->
+    SQL-only (the historical default), CANDLE_SNAPSHOT_ENABLED=1 -> both
+    SQL and Redis (the existing candle-snapshot handoff to OG).
+    """
+    raw = env_str("DP_STORAGE_MODE").lower()
+    if raw in _STORAGE_MODES:
+        return raw
+    return "both" if env_bool("CANDLE_SNAPSHOT_ENABLED", False) else "sql"
+
+
+@dataclass(frozen=True)
+class StorageSettings:
+    mode: str = _resolve_storage_mode()
+    # Only used to seed Redis when mode == "redis" and there is no SQL
+    # Fact_OHLCV history to read a starting watermark from; see
+    # live/engine.py's init-candles startup step.
+    redis_init_candles: int = env_int("REDIS_INIT_CANDLES", 500, minimum=50, maximum=5000)
+
+    def __post_init__(self) -> None:
+        if self.mode not in _STORAGE_MODES:
+            object.__setattr__(self, "mode", "sql")
+
+
 @dataclass(frozen=True)
 class LoggingSettings:
     level: str = env_str("LOG_LEVEL", "INFO").upper()
@@ -339,6 +369,7 @@ HISTORICAL = HistoricalSettings()
 LIVE = LiveSettings()
 NOTIFICATION = NotificationSettings()
 CANDLE_SNAPSHOT = CandleSnapshotSettings()
+STORAGE = StorageSettings()
 LOGGING = LoggingSettings()
 BACKEND = BackendSettings()
 
