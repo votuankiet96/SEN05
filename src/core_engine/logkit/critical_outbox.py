@@ -28,6 +28,8 @@ from contextlib import closing
 from pathlib import Path
 from typing import Any
 
+from core_engine.tls import ensure_system_truststore
+
 DEFAULT_TIMEOUT_CONNECT_SEC = 5.0
 DEFAULT_TIMEOUT_READ_SEC = 10.0
 
@@ -116,6 +118,10 @@ class CriticalAlertOutbox:
             # "critical alerts have nowhere to go" rather than pretending
             # delivery succeeded.
             return False
+        # Do not rely on TradingView auth being imported first to activate
+        # Windows' certificate store. CRITICAL startup alerts can be the
+        # first outbound HTTP request made by the process.
+        ensure_system_truststore()
         try:
             import requests
 

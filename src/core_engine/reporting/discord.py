@@ -884,6 +884,9 @@ def _duplicate_suppression(
 
 def _post_payload(payload: dict[str, Any], *, kind: str, level: str, meta: dict[str, Any]) -> None:
     sanitize_ssl_keylogfile()
+    from core_engine.tls import ensure_system_truststore
+
+    ensure_system_truststore()
     import requests
 
     circuit_remaining = _discord_circuit_remaining()

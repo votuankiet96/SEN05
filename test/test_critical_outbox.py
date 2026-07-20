@@ -83,6 +83,32 @@ def test_send_one_returns_false_without_network_when_webhook_not_configured(tmp_
     assert ob.send_one("hello") is False
 
 
+def test_send_one_activates_system_trust_before_http_post(tmp_path, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+
+    ob = _outbox(tmp_path)
+    events = []
+    monkeypatch.setattr(
+        "core_engine.settings.NOTIFICATION",
+        SimpleNamespace(discord_webhook_url="https://discord.invalid/test"),
+    )
+    monkeypatch.setattr(
+        "core_engine.logkit.critical_outbox.ensure_system_truststore",
+        lambda: events.append("trust") or True,
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "requests",
+        SimpleNamespace(
+            post=lambda *_args, **_kwargs: events.append("post") or SimpleNamespace(status_code=204)
+        ),
+    )
+
+    assert ob.send_one("hello") is True
+    assert events == ["trust", "post"]
+
+
 def test_persist_survives_across_instances_pointed_at_the_same_file(tmp_path):
     ob = _outbox(tmp_path)
     row_id = ob.persist("durable message")
