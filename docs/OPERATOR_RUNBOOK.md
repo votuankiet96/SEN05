@@ -4,7 +4,7 @@ This runbook is for terminal/service operation of DP Program.
 It assumes the current app root is:
 
 ```powershell
-C:\Users\ADMIN\Desktop\dp_program
+<dp_program_root>
 ```
 
 For DP6 production, prefer a local path such as:
@@ -20,22 +20,22 @@ Do not run the Windows Service from a mapped drive such as `Z:\`.
 Run PowerShell as Administrator:
 
 ```powershell
-cd C:\Users\ADMIN\Desktop\dp_program
-python .\initial_setup\install_python_deps.py
+cd <dp_program_root>
+python .\scripts\install_python_deps.py
+pip install -e .
 ```
 
-This installs Python packages from `requirements.txt` and installs Playwright Chromium into:
-
-```text
-runtime\cache\playwright-browsers
-```
+This installs Python packages from `requirements.txt`, installs Playwright
+Chromium into `runtime\cache\playwright-browsers`, and registers the
+`core_engine` package (editable install) so `python -m core_engine ...`
+resolves from anywhere under the checkout.
 
 ## 2. Prepare SQL Data Warehouse
 
 The SQL setup files are in:
 
 ```text
-initial_setup\sql_data_warehouse_setup
+scripts\sql
 ```
 
 They create:
@@ -53,7 +53,7 @@ They create:
 Run with `sqlcmd`:
 
 ```powershell
-cd C:\Users\ADMIN\Desktop\dp_program\initial_setup\sql_data_warehouse_setup
+cd <dp_program_root>\scripts\sql
 sqlcmd -S localhost -E -i .\00_run_all.sql
 ```
 
@@ -87,7 +87,7 @@ Never paste secrets into reports or chat.
 The simplest operator entrypoint is:
 
 ```powershell
-cd C:\Users\ADMIN\Desktop\dp_program
+cd <dp_program_root>
 .\run_dp.bat
 ```
 
@@ -104,7 +104,7 @@ DP Program, live fetching, or historical pulling is already active; choose
 Graceful Stop first, then confirm System Check reports no active runtime process.
 
 ```powershell
-cd C:\Users\ADMIN\Desktop\dp_program
+cd <dp_program_root>
 python -m core_engine doctor
 ```
 
@@ -147,14 +147,14 @@ Install NSSM first and make sure `nssm.exe` is in PATH, or pass `-NssmPath`.
 Run PowerShell as Administrator:
 
 ```powershell
-cd C:\Users\ADMIN\Desktop\dp_program
-powershell -NoProfile -ExecutionPolicy Bypass -File .\initial_setup\windows_service\install_windows_service.ps1 -Start
+cd <dp_program_root>
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows_service\install_windows_service.ps1 -Start
 ```
 
 If NSSM is not in PATH:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\initial_setup\windows_service\install_windows_service.ps1 -NssmPath "C:\Tools\nssm\nssm.exe" -Start
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows_service\install_windows_service.ps1 -NssmPath "C:\Tools\nssm\nssm.exe" -Start
 ```
 
 Important service account rule:
@@ -180,7 +180,7 @@ Start-Service SEN05DataProvider
 Request graceful stop:
 
 ```powershell
-cd C:\Users\ADMIN\Desktop\dp_program
+cd <dp_program_root>
 python -m core_engine stop --reason operator
 ```
 
@@ -193,7 +193,7 @@ Stop-Service SEN05DataProvider
 Remove service:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\initial_setup\windows_service\remove_windows_service.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows_service\remove_windows_service.ps1
 ```
 
 ## 8. Logs
@@ -202,6 +202,7 @@ System logs:
 
 ```text
 runtime\logs\system\system.log
+runtime\logs\system\errors.log
 runtime\logs\system\activity.log
 runtime\logs\system\auth.log
 runtime\logs\system\discord.log
@@ -209,6 +210,10 @@ runtime\logs\system\subprocess_debug.log
 runtime\logs\system\service_stdout.log
 runtime\logs\system\service_stderr.log
 ```
+
+`errors.log` aggregates every component's WARNING and above in one place -
+check it first when something looks wrong, then follow up in the specific
+component log for full context.
 
 Operation logs:
 
@@ -223,6 +228,7 @@ runtime\logs\operation\historical_pulling_summary.jsonl
 Use:
 
 ```powershell
+Get-Content .\runtime\logs\system\errors.log -Tail 100
 Get-Content .\runtime\logs\system\activity.log -Tail 100
 Get-Content .\runtime\logs\system\system.log -Tail 100
 Get-Content .\runtime\logs\operation\live_fetching.log -Tail 100

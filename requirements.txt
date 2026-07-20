@@ -7,7 +7,7 @@ truststore>=0.9.0
 
 # Playwright provides the Python API. Its Chromium browser binary is a
 # required runtime dependency for TradingView headless auth fallback.
-# initial_setup/install_python_deps.py installs Chromium into the app runtime cache.
+# scripts/install_python_deps.py installs Chromium into the app runtime cache.
 # If installing manually with pip, also run:
 #   python -m playwright install chromium
 playwright>=1.44.0
