@@ -1,4 +1,4 @@
-﻿"""
+"""
 Quản lý xác thực TradingView dùng chung cho historical pipeline và ws_live.
 
 Module này giữ token/cookie TradingView ở trạng thái có thể dùng được cho các
@@ -25,7 +25,7 @@ Mục tiêu của module này không chỉ là "đăng nhập được", mà là
 """
 
 # =============================================================================
-# core_engine/tradingview/auth.py - Xác thực TradingView dùng chung
+# core_engine/tradingview/auth/core.py - Xác thực TradingView dùng chung
 # =============================================================================
 #
 # FILE NÀY LÀM GÌ?
@@ -114,6 +114,17 @@ from core_engine.settings import (  # noqa: E402
     env_int,
 )
 from core_engine.coordination.locks import _local_pid_alive as is_pid_alive  # noqa: E402
+from core_engine.tradingview.auth.jwt_utils import (  # noqa: E402
+    GUEST_TOKEN,
+    STARTUP_MIN_TOKEN_TTL_SEC,
+    TOKEN_PROACTIVE_REFRESH_SEC,
+    TOKEN_PROACTIVE_RETRY_SEC,
+    _is_refreshed_token_usable,
+    _is_token_reusable_for_startup,
+    _jwt_expires_in,
+    _token_status_summary,
+)
+from core_engine.tradingview.auth.captcha import _get_totp_code, _solve_captcha_hcaptcha  # noqa: E402
 
 class _AuthLogFilter(logging.Filter):
     """Chuẩn hóa cách ghi auth.log mà không thay đổi hành vi xác thực TradingView."""
@@ -157,9 +168,6 @@ except Exception:
 # HẰNG SỐ
 # =============================================================================
 
-# Chuỗi đặc biệt báo hiệu trạng thái chưa xác thực hoặc guest.
-GUEST_TOKEN = "unauthorized_user_token"
-
 
 def safe_auth_source_label(source: str | None) -> str:
     """Trả về nhãn nguồn auth an toàn, không chứa token/cookie bí mật."""
@@ -180,13 +188,6 @@ TOKEN_EXPIRY_KEYWORDS = ("unauthorized", "auth_error", "not_authorized")
 HTTP_MAX_RETRIES = 4
 HTTP_BASE_DELAY_SEC = 2.0
 HTTP_MAX_DELAY_SEC = 120.0
-STARTUP_MIN_TOKEN_TTL_SEC = 10 * 60
-TOKEN_PROACTIVE_REFRESH_SEC = env_int(
-    "TV_TOKEN_PROACTIVE_REFRESH_SEC", 15 * 60, minimum=0
-)
-TOKEN_PROACTIVE_RETRY_SEC = env_int(
-    "TV_TOKEN_PROACTIVE_RETRY_SEC", 10 * 60, minimum=0
-)
 AUTH_REFRESH_COOLDOWN_SEC = env_int("TV_AUTH_REFRESH_COOLDOWN_SEC", 900, minimum=0)
 AUTH_TRANSIENT_COOLDOWN_SEC = env_int(
     "TV_AUTH_TRANSIENT_COOLDOWN_SEC", 300, minimum=0
@@ -277,15 +278,6 @@ def set_current_cookie(cookie: str) -> None:
     global _tv_cookie
     _tv_cookie = cookie or ""
 
-def get_auth_mode() -> str:
-    """
-    Trả về chế độ xác thực hiện tại: "guest" hoặc "authenticated".
-    Dùng để phát hiện guest mode trước khi chạy historical pipeline/live.
-    """
-    with _auth_lock:
-        return "guest" if _auth_token == GUEST_TOKEN else "authenticated"
-
-
 
 def is_guest_mode() -> bool:
     """Trả về True khi token hiện tại là guest hoặc chưa xác thực."""
@@ -298,7 +290,6 @@ def set_current_token(token: str) -> None:
     global _auth_token
     with _auth_lock:
         _auth_token = token
-
 
 
 def token_expires_in(token: str) -> float:
@@ -384,11 +375,6 @@ def browser_profile_status() -> dict:
     }
 
 
-def refresh_from_browser_profile(lg: logging.Logger | None = None) -> tuple[str, str]:
-    """Làm mới token/cookie TradingView từ persistent browser profile."""
-    return _refresh_from_browser_profile(lg=lg)
-
-
 def interactive_browser_login(
     *,
     timeout_sec: int = 600,
@@ -396,13 +382,6 @@ def interactive_browser_login(
 ) -> tuple[str, str]:
     """Mở browser profile hiển thị, chờ người vận hành đăng nhập, rồi cache credentials."""
     return _interactive_browser_login(timeout_sec=timeout_sec, lg=lg)
-
-
-@contextmanager
-def auth_refresh_process_lock(lg: logging.Logger | None = None):
-    """Guard public để các CLI auth job dùng chung khóa refresh."""
-    with _auth_refresh_process_lock(lg) as acquired:
-        yield acquired
 
 
 def auth_refresh_lock_status() -> dict:
@@ -1015,9 +994,7 @@ def _fetch_auth_token_from_credentials(username: str, password: str) -> tuple[st
             data={"username": username, "password": password, "remember": "on"},
             headers={
                 "Referer": "https://www.tradingview.com",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/124.0.0.0 Safari/537.36",
+                "User-Agent": _PLAYWRIGHT_USER_AGENT,
             },
             timeout=15,
         )
@@ -1331,84 +1308,6 @@ def _renew_auth_token_coordinated(
     )
 
 
-def _jwt_expires_in(token: str) -> float:
-    """
-    Giải mã JWT để lấy trường 'exp', rồi trả về số giây còn lại.
-    Trả về -1.0 nếu không thể giải mã, ví dụ token không phải JWT.
-    """
-    import base64 as _b64
-
-    try:
-        part = token.split(".")[1]
-        part += "=" * (-len(part) % 4)
-        payload = json.loads(_b64.urlsafe_b64decode(part).decode())
-        return float(payload["exp"]) - time.time()
-    except Exception:
-        return -1.0
-
-
-def _is_refreshed_token_usable(
-    token: str,
-    source: str,
-    log: logging.Logger,
-    *,
-    min_remaining_sec: int = 60,
-) -> bool:
-    if not token or token == GUEST_TOKEN:
-        return False
-    remaining = _jwt_expires_in(token)
-    if remaining == -1.0:
-        log.warning("[AUTH] Rejected %s token because JWT expiry could not be decoded.", source)
-        return False
-    if remaining <= min_remaining_sec:
-        log.warning(
-            "[AUTH] Rejected %s token because it expires too soon (%.0fs remaining).",
-            source,
-            remaining,
-        )
-        return False
-    return True
-
-
-def _token_needs_proactive_refresh(
-    token: str, *, threshold_sec: int = TOKEN_PROACTIVE_REFRESH_SEC
-) -> bool:
-    if not token or token == GUEST_TOKEN:
-        return True
-    remaining = _jwt_expires_in(token)
-    return remaining == -1.0 or remaining < threshold_sec
-
-
-def _is_token_reusable_for_startup(
-    token: str,
-    source: str,
-    log: logging.Logger,
-    *,
-    min_remaining_sec: int = STARTUP_MIN_TOKEN_TTL_SEC,
-) -> bool:
-    """
-    Từ chối token đã hết hạn hoặc gần hết hạn lúc startup.
-
-    Việc này tránh cho historical/live job báo kết nối TradingView đã sẵn sàng
-    trong khi cached/static token sẽ lỗi ngay ở lần pull đầu tiên.
-    """
-    remaining = _jwt_expires_in(token)
-    if remaining == -1.0:
-        log.info("[AUTH] Could not decode %s expiry; using token as-is.", source)
-        return True
-    if remaining <= 0:
-        log.warning("[AUTH] Ignoring expired %s (expired %.0fs ago).", source, abs(remaining))
-        return False
-    if remaining < min_remaining_sec:
-        log.info(
-            "[AUTH] Skipping %s because token expires in %.0fs; trying refresh paths.",
-            source,
-            remaining,
-        )
-        return False
-    return True
-
-
 def _check_and_maybe_refresh_token(lg: logging.Logger | None = None) -> None:
     """
     Chủ động làm mới token nếu sắp hết hạn.
@@ -1450,9 +1349,7 @@ def _probe_cookie_session(cookie_str: str, lg: logging.Logger | None = None) -> 
             "https://www.tradingview.com/",
             headers={
                 "Cookie": cookie_str,
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/124.0.0.0 Safari/537.36",
+                "User-Agent": _PLAYWRIGHT_USER_AGENT,
                 "Accept-Language": "en-US,en;q=0.9",
             },
             timeout=20,
@@ -1538,30 +1435,6 @@ def _refresh_token_via_cookie(cookie_str: str, lg: logging.Logger | None = None)
             AUTH_TRANSIENT_COOLDOWN_SEC, "TradingView transient auth probe failure", log
         )
     return GUEST_TOKEN
-
-
-def _token_status_summary(token: str, source: str = "") -> dict:
-    if not token:
-        return {"present": False, "source": source, "state": "missing", "seconds_remaining": None}
-    if token == GUEST_TOKEN:
-        return {"present": True, "source": source, "state": "guest", "seconds_remaining": None}
-    remaining = _jwt_expires_in(token)
-    if remaining == -1.0:
-        return {"present": True, "source": source, "state": "unknown", "seconds_remaining": None}
-    if remaining <= 0:
-        return {
-            "present": True,
-            "source": source,
-            "state": "expired",
-            "seconds_remaining": int(remaining),
-        }
-    state = "expiring_soon" if remaining < TOKEN_PROACTIVE_REFRESH_SEC else "valid"
-    return {
-        "present": True,
-        "source": source,
-        "state": state,
-        "seconds_remaining": int(remaining),
-    }
 
 
 @contextmanager
@@ -1810,11 +1683,7 @@ def _headless_refresh(cookie_str: str) -> tuple[str, str]:
         with sync_playwright() as pw:
             browser = pw.chromium.launch(headless=True, args=["--no-sandbox"])
             ctx = browser.new_context(
-                user_agent=(
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/124.0.0.0 Safari/537.36"
-                ),
+                user_agent=_PLAYWRIGHT_USER_AGENT,
                 locale="en-US",
             )
             if cookie_str:
@@ -1894,11 +1763,7 @@ def _headless_login_fresh(username: str, password: str) -> tuple[str, str]:
         with sync_playwright() as pw:
             browser = pw.chromium.launch(headless=True, args=["--no-sandbox"])
             ctx = browser.new_context(
-                user_agent=(
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/124.0.0.0 Safari/537.36"
-                ),
+                user_agent=_PLAYWRIGHT_USER_AGENT,
                 locale="en-US",
             )
             page = ctx.new_page()
@@ -2070,110 +1935,6 @@ def _apply_playwright_stealth(page) -> None:
         stealth_sync(page)
     except ImportError:
         pass
-
-
-def _get_totp_code() -> str | None:
-    """Tạo mã TOTP từ TRADINGVIEW.two_fa_secret; trả về None nếu thiếu secret hoặc pyotp."""
-    if not TRADINGVIEW.two_fa_secret:
-        return None
-    try:
-        import pyotp  # type: ignore
-
-        return pyotp.TOTP(TRADINGVIEW.two_fa_secret).now()
-    except ImportError:
-        _logger.warning(
-            "[AUTH] pyotp not installed - cannot auto-fill 2FA. Install: pip install pyotp"
-        )
-        return None
-    except Exception as exc:
-        _logger.warning("[AUTH] TOTP generation failed: %s", exc)
-        return None
-
-
-def _solve_via_capsolver(sitekey: str, page_url: str) -> str | None:
-    """Gửi hCaptcha lên CapSolver API và poll đến khi có solution token."""
-    try:
-        payload = {
-            "clientKey": TRADINGVIEW.captcha_api_key,
-            "task": {
-                "type": "HCaptchaTaskProxyLess",
-                "websiteURL": page_url,
-                "websiteKey": sitekey,
-            },
-        }
-        r = requests.post("https://api.capsolver.com/createTask", json=payload, timeout=15)
-        task_id = r.json().get("taskId")
-        if not task_id:
-            _logger.warning("[AUTH] CapSolver: task creation failed - %s", r.text[:200])
-            return None
-        for _ in range(60):
-            time.sleep(1)
-            r2 = requests.post(
-                "https://api.capsolver.com/getTaskResult",
-                json={"clientKey": TRADINGVIEW.captcha_api_key, "taskId": task_id},
-                timeout=15,
-            )
-            data = r2.json()
-            status = data.get("status")
-            if status == "ready":
-                return data.get("solution", {}).get("gRecaptchaResponse")
-            if status == "failed":
-                _logger.warning("[AUTH] CapSolver: task failed - %s", data)
-                return None
-        _logger.warning("[AUTH] CapSolver: timed out waiting for solution.")
-        return None
-    except Exception as exc:
-        _logger.warning("[AUTH] CapSolver error: %s", exc)
-        return None
-
-
-def _solve_via_2captcha(sitekey: str, page_url: str) -> str | None:
-    """Gửi hCaptcha lên 2Captcha API và poll đến khi có solution token."""
-    try:
-        r = requests.post(
-            "http://2captcha.com/in.php",
-            data={
-                "key": TRADINGVIEW.captcha_api_key,
-                "method": "hcaptcha",
-                "sitekey": sitekey,
-                "pageurl": page_url,
-                "json": 1,
-            },
-            timeout=15,
-        )
-        data = r.json()
-        if data.get("status") != 1:
-            _logger.warning("[AUTH] 2Captcha: submit failed - %s", data)
-            return None
-        task_id = data["request"]
-        for _ in range(30):
-            time.sleep(2)
-            r2 = requests.get(
-                "http://2captcha.com/res.php",
-                params={"key": TRADINGVIEW.captcha_api_key, "action": "get", "id": task_id, "json": 1},
-                timeout=15,
-            )
-            data2 = r2.json()
-            if data2.get("status") == 1:
-                return data2["request"]
-            if data2.get("request") != "CAPCHA_NOT_READY":
-                _logger.warning("[AUTH] 2Captcha: error - %s", data2)
-                return None
-        _logger.warning("[AUTH] 2Captcha: timed out waiting for solution.")
-        return None
-    except Exception as exc:
-        _logger.warning("[AUTH] 2Captcha error: %s", exc)
-        return None
-
-
-def _solve_captcha_hcaptcha(sitekey: str, page_url: str) -> str | None:
-    """Chọn CapSolver hoặc 2Captcha theo TRADINGVIEW.captcha_service; trả về None nếu đang tắt."""
-    if not TRADINGVIEW.captcha_api_key:
-        return None
-    service = (TRADINGVIEW.captcha_service or "capsolver").lower()
-    if service == "2captcha":
-        return _solve_via_2captcha(sitekey, page_url)
-    return _solve_via_capsolver(sitekey, page_url)
 
 
 def _save_cookie_renewal_ts(ts: float) -> None:
@@ -2553,6 +2314,5 @@ def _bootstrap_credentials(lg: logging.Logger | None = None) -> tuple[str, str]:
 
     log.warning("[AUTH] All bootstrap methods failed.")
     return GUEST_TOKEN, "guest"
-
 
 
