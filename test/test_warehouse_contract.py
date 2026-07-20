@@ -127,6 +127,20 @@ def test_scan_timeframe_reports_missing_rows_by_symbol(monkeypatch):
     assert result.error is None
 
 
+def test_reconcile_scan_includes_staging_corrections_not_only_missing_keys(monkeypatch):
+    cursor = _FakeCursor(fetchall_result=[])
+    _patch_get_connection(monkeypatch, warehouse_reconcile, cursor)
+
+    warehouse_reconcile.scan_timeframe("M5")
+
+    sql = " ".join(cursor.executed[0][0].split())
+    assert "LEFT JOIN DWH.Fact_OHLCV" in sql
+    assert "f.SymbolID IS NULL" in sql
+    for column in ("[Open]", "High", "Low", "[Close]", "Volume"):
+        assert f"f.{column}" in sql
+        assert f"s.{column}" in sql
+
+
 def test_scan_timeframe_unknown_code_reports_error_not_zero():
     result = warehouse_reconcile.scan_timeframe("NOT_A_TF")
     assert result.error is not None

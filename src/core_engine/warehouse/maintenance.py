@@ -79,12 +79,12 @@ def purge_staging(
                     if effective_batch <= 0:
                         break
 
-                # Only delete a staging row once it is CONFIRMED to have reached
-                # Fact_OHLCV (matching SymbolID + Timeframe + BarTime). Age +
-                # IsProcessed=1 alone is not proof of migration: a prior run can
-                # have crashed or hit a broken/skipped ETL call after staging
-                # committed but before Fact did, and purging on age alone would
-                # then delete the only remaining copy of that candle forever.
+                # Only delete a staging row once Fact_OHLCV has the same key AND
+                # the same OHLCV values. Key existence alone is insufficient: a
+                # TradingView correction may have updated staging before a crash
+                # prevented usp_LoadDirect v2 from updating an older Fact row.
+                # Purging that mismatched staging row would destroy the only
+                # durable copy of the corrected values.
                 # See core_engine.warehouse.reconcile for an operator-facing
                 # scan/repair tool that finds this exact condition proactively.
                 cursor.execute(
@@ -96,6 +96,9 @@ def purge_staging(
                     f"     SELECT 1 FROM DWH.Fact_OHLCV f"
                     f"     JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID"
                     f"     WHERE f.SymbolID = s.SymbolID AND tf.Code = ? AND f.BarTime = s.BarTime"
+                    f"       AND f.[Open] = s.[Open] AND f.High = s.High"
+                    f"       AND f.Low = s.Low AND f.[Close] = s.[Close]"
+                    f"       AND ISNULL(f.Volume, -1) = ISNULL(s.Volume, -1)"
                     f" )",
                     (-days_to_keep, tf_code),
                 )

@@ -1,5 +1,5 @@
-"""Staging -> Fact reconciliation: find and repair candles stuck behind a
-failed or skipped ETL call.
+"""Staging -> Fact reconciliation: find and repair missing or stale Fact
+candles stuck behind a failed/skipped ETL call.
 
 Two known ways a staging row can end up "IsProcessed=1 but never reached
 Fact_OHLCV" without raising loudly at the time:
@@ -37,17 +37,31 @@ class TimeframeReconcileResult:
 
 
 def _missing_count_by_symbol(cursor, staging_table: str, tf_code: str) -> dict[int, int]:
+    """Return staging rows whose Fact key is absent or whose OHLCV differs.
+
+    The public result fields retain their established ``missing_*`` names for
+    CLI compatibility, but they represent all staging-to-Fact divergence. A
+    key-only NOT EXISTS scan misses the correction crash case: staging can
+    contain newer OHLCV values while Fact already has the same key with old
+    values, and usp_LoadDirect v2 is responsible for updating it.
+    """
     cursor.execute(
         f"""
         SELECT s.SymbolID, COUNT(*)
         FROM {staging_table} s
         JOIN DWH.Dim_Timeframe tf ON tf.Code = ?
+        LEFT JOIN DWH.Fact_OHLCV f
+          ON f.SymbolID = s.SymbolID
+         AND f.TimeframeID = tf.TimeframeID
+         AND f.BarTime = s.BarTime
         WHERE s.IsProcessed = 1
-          AND NOT EXISTS (
-              SELECT 1 FROM DWH.Fact_OHLCV f
-              WHERE f.SymbolID = s.SymbolID
-                AND f.TimeframeID = tf.TimeframeID
-                AND f.BarTime = s.BarTime
+          AND (
+              f.SymbolID IS NULL
+              OR f.[Open] <> s.[Open]
+              OR f.High <> s.High
+              OR f.Low <> s.Low
+              OR f.[Close] <> s.[Close]
+              OR ISNULL(f.Volume, -1) <> ISNULL(s.Volume, -1)
           )
         GROUP BY s.SymbolID
         """,

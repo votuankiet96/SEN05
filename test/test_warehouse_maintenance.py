@@ -54,7 +54,7 @@ class _FakeConnection:
         self.closed = True
 
 
-def test_purge_staging_sql_requires_matching_fact_row(monkeypatch):
+def test_purge_staging_sql_requires_value_equivalent_fact_row(monkeypatch):
     cursor = _FakeCursor(first_call_rowcount=0)
     conn = _FakeConnection(cursor)
     monkeypatch.setattr(maintenance, "get_connection", lambda: conn)
@@ -66,6 +66,15 @@ def test_purge_staging_sql_requires_matching_fact_row(monkeypatch):
         assert "EXISTS" in sql
         assert "DWH.Fact_OHLCV" in sql
         assert "Dim_Timeframe" in sql
+        # A matching key alone is insufficient: staging may contain a
+        # TradingView correction that committed before the process crashed,
+        # while Fact still has the old values. Purging that row would lose
+        # the only durable copy of the correction.
+        for column in ("[Open]", "High", "Low", "[Close]", "Volume"):
+            assert f"f.{column}" in sql
+            assert f"s.{column}" in sql
+        assert "ISNULL(f.Volume" in sql
+        assert "ISNULL(s.Volume" in sql
         # params: (-days_to_keep, tf_code)
         assert params[0] == -7
         assert params[1] in maintenance.TF_STAGING or params[1] in {
