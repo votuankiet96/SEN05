@@ -37,6 +37,9 @@ from __future__ import annotations
 
 import logging
 import pickle
+import sqlite3
+import subprocess
+import sys
 
 import pandas as pd
 import pytest
@@ -392,6 +395,47 @@ def test_restart_immediately_recovers_leased_and_staged_rows(spool):
     recovered = restarted.lease_batch()
 
     assert {row_id for row_id, _item in recovered} == {leased_id, staged_id}
+
+
+def test_process_death_mid_state_transaction_rolls_back_and_restart_recovers(spool):
+    """Exercise a real process death between the state UPDATE and COMMIT.
+
+    SQLite must either commit the whole ``leased -> staged`` transition or
+    retain the previous ``leased`` row.  ``LiveSpool.init()`` deliberately
+    resets both possible states, so neither side of that atomic boundary can
+    strand or lose the candle.
+    """
+    row_id = spool.persist_pending(_sample_item(symbol_id=705))
+    assert spool.claim_for_dispatch(row_id) is True
+
+    crash_script = """
+import os
+import sqlite3
+import sys
+
+con = sqlite3.connect(sys.argv[1])
+con.execute("BEGIN IMMEDIATE")
+con.execute(
+    "UPDATE spool SET status='staged', lease_id=NULL, lease_until=NULL "
+    "WHERE id=? AND status='leased'",
+    (int(sys.argv[2]),),
+)
+os._exit(91)
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", crash_script, str(spool.path), str(row_id)],
+        check=False,
+        timeout=10,
+    )
+    assert result.returncode == 91
+
+    with sqlite3.connect(spool.path) as con:
+        status = con.execute("SELECT status FROM spool WHERE id=?", (row_id,)).fetchone()[0]
+    assert status == "leased", "the uncommitted staged transition must be rolled back atomically"
+
+    restarted = _reopen(spool)
+    recovered = restarted.lease_batch()
+    assert [recovered_id for recovered_id, _item in recovered] == [row_id]
 
 
 def test_claim_for_dispatch_prevents_recovery_queue_from_leasing_same_row(spool):
