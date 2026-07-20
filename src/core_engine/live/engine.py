@@ -1,4 +1,4 @@
-﻿"""Live OHLCV batch fetch engine.
+"""Live OHLCV batch fetch engine.
 
 Inputs:
 - config/dp_provider.env and config/instruments.py symbols/timeframes
@@ -95,16 +95,54 @@ from core_engine.live.runtime_support import (
     freshness_threshold_minutes,
     future_cutoff_ts,
     is_market_expected_live,
-    LiveStateWriter,
-    LocalRuntimeLock,
-    TradingViewConnectivityProbe,
     cleanup_dead_runtime_lock,
     run_auth_preflight,
     runtime_payload as make_runtime_payload,
     utc_iso as _utc_iso,
 )
-
-from core_engine.warehouse.spool import LiveSpool
+from core_engine.live import state as _state
+from core_engine.live.state import (
+    BATCH_DB_REPORT_WAIT_SEC,
+    MAX_BATCH_METRIC_HISTORY,
+    _CANDLE_HEADER_REPEAT_ROWS,
+    _GUEST_ALERT_THRESHOLD,
+    _DEFERRED_ETL_MAX,
+    _DEFERRED_ETL_WARN,
+    _WRITE_DEFER_LOCK_TTL,
+    _WRITE_DEFER_LOCKS,
+    _backlog,
+    _backlog_lock,
+    _batch_metrics,
+    _batch_metrics_lock,
+    _candle_table_lock,
+    _db_queue,
+    _deferred_etl,
+    _deferred_etl_next_attempt,
+    _deferred_lock,
+    _hourly_lock,
+    _hourly_stats,
+    _increment_data_error_counter,
+    _last_bar_ts,
+    _live_table_file_lock,
+    _missed_lock,
+    _missed_pairs,
+    _overflow_buf,
+    _overflow_lock,
+    _received_bar_ts,
+    _runtime_lock,
+    _shutdown,
+    _source_bar_ts,
+    _spool,
+    _spool_pending,
+    _state_heartbeat_loop,
+    _state_lock,
+    _stats,
+    _tradingview_connectivity_ok,
+    _tv_connectivity_probe,
+    _write_defer_lock_cache,
+    _write_live_state,
+    _ws_cooldown_lock,
+)
 
 from core_engine.tradingview import auth as _tv_auth
 
@@ -189,9 +227,6 @@ TV_WS_CONNECTIVITY_PREFLIGHT = _live_settings.connectivity_preflight
 TV_WS_CONNECTIVITY_TIMEOUT_SEC = _live_settings.connectivity_timeout_sec
 TV_WS_CONNECTIVITY_COOLDOWN_SEC = _live_settings.connectivity_cooldown_sec
 
-_tv_connectivity_block_until = 0.0
-
-_tv_connectivity_last_error = ""
 
 DB_QUEUE_MAXSIZE = _live_settings.db_queue_maxsize
 OVERFLOW_BUFFER_MAX = _live_settings.overflow_buffer_max
@@ -237,13 +272,6 @@ def _log_report_block(title: str, lines: list[str], level: int = logging.INFO) -
     _append_live_table_text(_reporter.format_block(title, lines, level=level))
     _report_file_reporter.log_block(title, lines, level)
 
-_CANDLE_HEADER_REPEAT_ROWS = 30
-
-_candle_table_lock = threading.Lock()
-
-_candle_table_rows = 0
-
-_live_table_file_lock = threading.Lock()
 
 
 def _append_live_table_text(text: str) -> None:
@@ -276,18 +304,16 @@ def _log_candle_block(text: str) -> None:
 
 
 def _start_candle_table(batch_id: int) -> None:
-    global _candle_table_rows
     with _candle_table_lock:
-        _candle_table_rows = 0
+        _state._candle_table_rows = 0
     _log_candle_block(live_candle_section(batch_id))
 
 
 def _log_candle_row(line: str) -> None:
-    global _candle_table_rows
     with _candle_table_lock:
-        if _candle_table_rows > 0 and _candle_table_rows % _CANDLE_HEADER_REPEAT_ROWS == 0:
+        if _state._candle_table_rows > 0 and _state._candle_table_rows % _CANDLE_HEADER_REPEAT_ROWS == 0:
             _log_candle_block(live_candle_header_refresh())
-        _candle_table_rows += 1
+        _state._candle_table_rows += 1
     _append_live_table_text(line)
 
 _fmt_pair_label = _reporter.pair_label
@@ -312,131 +338,6 @@ def _write_live_summary(row: dict) -> None:
 
 TV_WS_TIMEZONE = _live_settings.timezone
 
-_state_lock = threading.Lock()
-
-_deferred_etl: dict[tuple[int, str, str, str], float] = {}
-
-_deferred_etl_next_attempt: dict[tuple[int, str, str, str], float] = {}
-
-_deferred_lock = threading.Lock()
-
-_write_defer_lock_cache: dict = {"locked": False, "checked_at": 0.0, "name": ""}
-
-_WRITE_DEFER_LOCK_TTL = 30.0
-
-_DEFERRED_ETL_WARN = 2000
-
-_DEFERRED_ETL_MAX = 5000
-
-_WRITE_DEFER_LOCKS = ("warehouse_maintenance",)
-
-_last_bar_ts: dict[tuple[int, str], float] = {}
-
-_received_bar_ts: dict[tuple[int, str], float] = {}
-
-_source_bar_ts: dict[tuple[int, str], float] = {}
-
-_stats = {
-    "bars_inserted": 0,
-    "accepted_bars": 0,
-    "staging_rows": 0,
-    "fact_inserted": 0,
-    "errors": 0,
-    "ws_errors": 0,
-    "ws_auth_errors": 0,
-    "ws_rate_limits": 0,
-    "ws_server_errors": 0,
-    "events": 0,
-    "queue_depth": 0,
-    "batches_run": 0,
-}
-
-_live_state_writer = LiveStateWriter(WS_LIVE_STATE, logger)
-
-_write_live_state = _live_state_writer.write
-
-_runtime_lock = LocalRuntimeLock(_LOCAL_RUNTIME_LOCK_FILE, logger)
-
-_tv_connectivity_probe = TradingViewConnectivityProbe(
-    enabled=TV_WS_CONNECTIVITY_PREFLIGHT,
-    timeout_sec=TV_WS_CONNECTIVITY_TIMEOUT_SEC,
-    cooldown_sec=TV_WS_CONNECTIVITY_COOLDOWN_SEC,
-)
-
-def _state_heartbeat_loop() -> None:
-    _live_state_writer.heartbeat_loop(_shutdown, STATE_HEARTBEAT_SEC)
-
-def _tradingview_connectivity_ok() -> tuple[bool, str]:
-    global _tv_connectivity_block_until, _tv_connectivity_last_error
-
-    ok, detail = _tv_connectivity_probe.check()
-
-    _tv_connectivity_block_until = _tv_connectivity_probe.block_until
-
-    _tv_connectivity_last_error = _tv_connectivity_probe.last_error
-
-    return ok, detail
-
-_shutdown = threading.Event()
-
-_overflow_buf = []
-
-_overflow_lock = threading.Lock()
-
-_db_queue: queue.Queue = queue.Queue(maxsize=DB_QUEUE_MAXSIZE)
-
-_spool = LiveSpool(WS_OVERFLOW_SPOOL, max_rows=MAX_SPOOL_ROWS, logger=logger)
-
-_spool_pending = threading.Event()
-
-_consecutive_guest_batches = 0
-
-_GUEST_ALERT_THRESHOLD = 3
-
-_ws_cooldown_lock = threading.Lock()
-
-_ws_cooldown_until = 0.0
-
-_ws_cooldown_reason = ""
-
-_missed_pairs: dict[tuple[int, str], int] = {}
-
-_missed_lock = threading.Lock()
-
-_backlog: dict[tuple[int, str], int] = {}
-
-_backlog_lock = threading.Lock()
-
-_hourly_stats: dict = {
-    "batches": 0,
-    "accepted_bars": 0,
-    "fact_bars": 0,
-    "staging_rows": 0,
-    "errors": 0,
-    "ws_errors": 0,
-    "zero_bar_batches": 0,
-    "backlog_peak": 0,
-    "pair_bars": {},
-    "pair_accepted": {},
-    "pair_staging": {},
-}
-
-_hourly_lock = threading.Lock()
-
-def _increment_data_error_counter() -> None:
-    with _state_lock:
-        _stats["errors"] += 1
-
-    with _hourly_lock:
-        _hourly_stats["errors"] = int(_hourly_stats.get("errors", 0)) + 1
-
-_batch_metrics: dict[int, dict] = {}
-
-_batch_metrics_lock = threading.Lock()
-
-BATCH_DB_REPORT_WAIT_SEC = 60.0
-
-MAX_BATCH_METRIC_HISTORY = 288
 
 def _classify_ws_error(error) -> tuple[str, int | None, int]:
     return live_protocol.classify_ws_error(
@@ -448,7 +349,6 @@ def _classify_ws_error(error) -> tuple[str, int | None, int]:
     )
 
 def _set_ws_cooldown(seconds: int, reason: str) -> None:
-    global _ws_cooldown_until, _ws_cooldown_reason
 
     if seconds <= 0:
         return
@@ -458,10 +358,10 @@ def _set_ws_cooldown(seconds: int, reason: str) -> None:
     notify = False
 
     with _ws_cooldown_lock:
-        if until > _ws_cooldown_until + 5:
-            _ws_cooldown_until = until
+        if until > _state._ws_cooldown_until + 5:
+            _state._ws_cooldown_until = until
 
-            _ws_cooldown_reason = reason
+            _state._ws_cooldown_reason = reason
 
             notify = True
 
@@ -477,9 +377,9 @@ def _set_ws_cooldown(seconds: int, reason: str) -> None:
 
 def _wait_for_ws_cooldown(label: str) -> None:
     with _ws_cooldown_lock:
-        remaining = max(0.0, _ws_cooldown_until - time.time())
+        remaining = max(0.0, _state._ws_cooldown_until - time.time())
 
-        reason = _ws_cooldown_reason
+        reason = _state._ws_cooldown_reason
 
     if remaining <= 0:
         return
@@ -2385,17 +2285,16 @@ class BatchFetcher:
         return completed and expected_count > 0 and received_count >= expected_count
 
 def _update_guest_mode_counter(is_guest: bool) -> None:
-    global _consecutive_guest_batches
 
     if is_guest:
-        _consecutive_guest_batches += 1
+        _state._consecutive_guest_batches += 1
 
-        if _consecutive_guest_batches >= _GUEST_ALERT_THRESHOLD:
+        if _state._consecutive_guest_batches >= _GUEST_ALERT_THRESHOLD:
             logger.error(
                 "%s",
                 _llog(
                     "TradingView limited login repeated",
-                    consecutive_batches=_consecutive_guest_batches,
+                    consecutive_batches=_state._consecutive_guest_batches,
                     risk="data_depth_may_be_limited",
                     result="warning",
                 ),
@@ -2404,19 +2303,19 @@ def _update_guest_mode_counter(is_guest: bool) -> None:
             _send_alert(
                 "WARNING",
                 "TradingView session is limited\n"
-                f"Consecutive live batches: {_consecutive_guest_batches}\n"
+                f"Consecutive live batches: {_state._consecutive_guest_batches}\n"
                 "Meaning: data depth may be limited or some premium symbols may not return enough candles.\n"
                 "Suggested action: refresh TradingView login if this repeats during market hours.",
             )
 
     else:
-        if _consecutive_guest_batches >= _GUEST_ALERT_THRESHOLD:
+        if _state._consecutive_guest_batches >= _GUEST_ALERT_THRESHOLD:
             logger.info(
                 "%s",
-                _llog("TradingView login recovered", previous_limited_batches=_consecutive_guest_batches, result="healthy"),
+                _llog("TradingView login recovered", previous_limited_batches=_state._consecutive_guest_batches, result="healthy"),
             )
 
-        _consecutive_guest_batches = 0
+        _state._consecutive_guest_batches = 0
 
 def _guest_mode_blocks_batch() -> bool:
     is_guest = _tv_auth.is_guest_mode()
@@ -2481,10 +2380,10 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
             status="network_blocked",
             network_error=connectivity_detail,
             blocked_until=datetime.fromtimestamp(
-                _tv_connectivity_block_until, tz=timezone.utc
+                _state._tv_connectivity_block_until, tz=timezone.utc
             ).isoformat()
 
-            if _tv_connectivity_block_until
+            if _state._tv_connectivity_block_until
 
             else None,
         )
@@ -2865,13 +2764,13 @@ def _batch_loop(groups: list[BatchFetcher]) -> None:
         )
 
         connectivity_cooldown = (
-            bool(_tv_connectivity_block_until)
+            bool(_state._tv_connectivity_block_until)
 
-            and time.time() < float(_tv_connectivity_block_until)
+            and time.time() < float(_state._tv_connectivity_block_until)
         )
 
         blocked_until = (
-            datetime.fromtimestamp(_tv_connectivity_block_until, tz=timezone.utc).isoformat()
+            datetime.fromtimestamp(_state._tv_connectivity_block_until, tz=timezone.utc).isoformat()
 
             if connectivity_cooldown
 
@@ -2883,7 +2782,7 @@ def _batch_loop(groups: list[BatchFetcher]) -> None:
             next_batch_in_sec=round(wait, 3),
             next_batch_after=_utc_iso(),
             blocked_until=blocked_until,
-            network_error=_tv_connectivity_last_error if connectivity_cooldown else None,
+            network_error=_state._tv_connectivity_last_error if connectivity_cooldown else None,
             batch_started_at=None,
             batch_group_timeout_sec=None,
         )
@@ -3021,7 +2920,7 @@ def _status_reporter() -> None:
         token_secs = _tv_auth.token_expires_in(current_token)
 
         if is_guest:
-            auth_info = f"Guest ({_consecutive_guest_batches} batches in a row)"
+            auth_info = f"Guest ({_state._consecutive_guest_batches} batches in a row)"
 
         elif token_secs > 0:
             th = int(token_secs) // 3600
@@ -3063,7 +2962,7 @@ def _status_reporter() -> None:
             total_ws_errors=total_ws_errors,
             n_miss_active=n_miss_active,
             is_guest=is_guest,
-            consecutive_guest_batches=_consecutive_guest_batches,
+            consecutive_guest_batches=_state._consecutive_guest_batches,
         )
         previous_health_status = getattr(_status_reporter, "_last_health_status", None)
         recovered_from_warning = (
@@ -3441,9 +3340,9 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
                 break
 
             blocked_until = (
-                datetime.fromtimestamp(_tv_connectivity_block_until, tz=timezone.utc).isoformat()
+                datetime.fromtimestamp(_state._tv_connectivity_block_until, tz=timezone.utc).isoformat()
 
-                if _tv_connectivity_block_until
+                if _state._tv_connectivity_block_until
 
                 else None
             )
