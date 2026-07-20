@@ -1,6 +1,7 @@
 param(
     [string]$ServiceName = "SEN05DataProvider",
     [string]$AppRoot = "",
+    [string]$PythonExe = "",
     [string]$NssmPath = "nssm.exe"
 )
 
@@ -30,6 +31,16 @@ if (-not $AppRoot) {
     $AppRoot = (Resolve-Path $AppRoot).Path
 }
 
+if (-not $PythonExe) {
+    $PythonExe = Resolve-CommandPath "python.exe"
+    if (-not $PythonExe) {
+        $PythonExe = Resolve-CommandPath "python"
+    }
+}
+if (-not $PythonExe) {
+    throw "python.exe was not found in PATH. Pass -PythonExe explicitly."
+}
+
 $nssm = Resolve-CommandPath $NssmPath
 if (-not $nssm -and (Test-Path $NssmPath)) {
     $nssm = (Resolve-Path $NssmPath).Path
@@ -46,7 +57,10 @@ if (-not $service) {
 
 Push-Location $AppRoot
 try {
-    python -m core_engine stop --reason "windows_service_remove"
+    & $PythonExe -m core_engine stop --reason "windows_service_remove"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "The cooperative stop command exited $LASTEXITCODE; continuing with Windows service stop."
+    }
 } finally {
     Pop-Location
 }
@@ -59,4 +73,7 @@ if ($service.Status -ne "Stopped") {
 }
 
 & $nssm remove $ServiceName confirm
+if ($LASTEXITCODE -ne 0) {
+    throw "NSSM could not remove service '$ServiceName' (exit $LASTEXITCODE)."
+}
 Write-Host "Removed Windows service: $ServiceName"

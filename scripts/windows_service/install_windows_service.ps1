@@ -34,6 +34,28 @@ function Resolve-CommandPath([string]$CommandName) {
     return $cmd.Source
 }
 
+function Invoke-NssmChecked {
+    param(
+        [Parameter(ValueFromRemainingArguments = $true)]
+        [string[]]$NssmArguments
+    )
+    & $script:nssm @NssmArguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "NSSM command failed (exit $LASTEXITCODE): nssm $($NssmArguments -join ' ')"
+    }
+}
+
+function Invoke-ScChecked {
+    param(
+        [Parameter(ValueFromRemainingArguments = $true)]
+        [string[]]$ScArguments
+    )
+    & sc.exe @ScArguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "sc.exe command failed (exit $LASTEXITCODE): sc.exe $($ScArguments -join ' ')"
+    }
+}
+
 Require-Administrator
 
 if (-not $AppRoot) {
@@ -64,11 +86,16 @@ if (-not $nssm) {
 # with a clear error, rather than installing a service that will just
 # crash-loop with an unhelpful ImportError in service_stderr.log.
 Write-Host "Validating core_engine is importable..."
-& $PythonExe -c "import core_engine" 2>$null
+$modulePath = (& $PythonExe -c "import core_engine; print(core_engine.__file__)" 2>$null | Select-Object -Last 1)
 if ($LASTEXITCODE -ne 0) {
     throw "python -c `"import core_engine`" failed with $PythonExe. Run 'pip install -e .' from $AppRoot first (see docs/OPERATOR_RUNBOOK.md section 1)."
 }
-Write-Host "OK: core_engine is importable."
+$modulePath = [IO.Path]::GetFullPath(([string]$modulePath).Trim())
+$expectedModuleRoot = [IO.Path]::GetFullPath((Join-Path $AppRoot "src\core_engine"))
+if (-not $modulePath.StartsWith($expectedModuleRoot, [StringComparison]::OrdinalIgnoreCase)) {
+    throw "core_engine resolves to '$modulePath', not this deployment at '$expectedModuleRoot'. Run '$PythonExe -m pip install -e .' from $AppRoot first."
+}
+Write-Host "OK: core_engine resolves to $modulePath"
 
 $runtimeLogDir = Join-Path $AppRoot "runtime\logs\system"
 New-Item -ItemType Directory -Force -Path $runtimeLogDir | Out-Null
@@ -78,55 +105,68 @@ if ($existing) {
     throw "Service '$ServiceName' already exists. Remove it first or choose another -ServiceName."
 }
 
-& $nssm install $ServiceName $PythonExe "-m core_engine run"
-& $nssm set $ServiceName AppDirectory $AppRoot
-& $nssm set $ServiceName DisplayName "SEN05 Data Provider"
-& $nssm set $ServiceName Description "SEN05 backend data provider: live OHLCV fetching, scheduled historical backfill, health and Discord reporting."
-# Delayed-auto (not plain auto-start): the service depends on SQL Server
-# and network being reachable, which are not guaranteed to be up yet at
-# the exact moment Windows starts auto-start services on boot. Delayed
-# start gives those a head start instead of racing them - the process's
-# own startup checks (test_connection(), verify_database_contract()) plus
-# NSSM's AppRestartDelay still apply as a second layer of defense either way.
-& $nssm set $ServiceName Start SERVICE_DELAYED_AUTO_START
-& $nssm set $ServiceName AppStdout (Join-Path $runtimeLogDir "service_stdout.log")
-& $nssm set $ServiceName AppStderr (Join-Path $runtimeLogDir "service_stderr.log")
-& $nssm set $ServiceName AppRotateFiles 1
-& $nssm set $ServiceName AppRotateOnline 1
-& $nssm set $ServiceName AppRotateBytes 10485760
-& $nssm set $ServiceName AppThrottle 15000
-& $nssm set $ServiceName AppRestartDelay 30000
-& $nssm set $ServiceName AppExit Default Restart
-# Exit code 5 = EXIT_LOCK_CONFLICT (core_engine.exit_codes): another
-# supervisor already holds the DP Program advisory lock. Restarting
-# immediately (even with the 30s AppRestartDelay above) just repeats the
-# same conflict until an operator resolves it, wasting the NSSM restart
-# budget that should be reserved for genuine crashes. Exit instead of
-# Restart for this specific code and let the operator investigate
-# (`python -m core_engine status` / conflict-status) before restarting by
-# hand.
-& $nssm set $ServiceName AppExit 5 Exit
-& $nssm set $ServiceName AppStopMethodConsole 240000
-& $nssm set $ServiceName AppStopMethodWindow 30000
-& $nssm set $ServiceName AppStopMethodThreads 30000
-& $nssm set $ServiceName AppStopMethodSkip 0
+$installedByThisRun = $false
+try {
+    Invoke-NssmChecked install $ServiceName $PythonExe "-m core_engine run"
+    $installedByThisRun = $true
+    Invoke-NssmChecked set $ServiceName AppDirectory $AppRoot
+    Invoke-NssmChecked set $ServiceName DisplayName "SEN05 Data Provider"
+    Invoke-NssmChecked set $ServiceName Description "SEN05 backend data provider: live OHLCV fetching, scheduled historical backfill, health and Discord reporting."
+    # Delayed-auto (not plain auto-start): the service depends on SQL Server
+    # and network being reachable, which are not guaranteed to be up yet at
+    # the exact moment Windows starts auto-start services on boot.
+    Invoke-NssmChecked set $ServiceName Start SERVICE_DELAYED_AUTO_START
+    Invoke-NssmChecked set $ServiceName AppStdout (Join-Path $runtimeLogDir "service_stdout.log")
+    Invoke-NssmChecked set $ServiceName AppStderr (Join-Path $runtimeLogDir "service_stderr.log")
+    Invoke-NssmChecked set $ServiceName AppRotateFiles 1
+    Invoke-NssmChecked set $ServiceName AppRotateOnline 1
+    Invoke-NssmChecked set $ServiceName AppRotateBytes 10485760
+    Invoke-NssmChecked set $ServiceName AppThrottle 15000
+    Invoke-NssmChecked set $ServiceName AppRestartDelay 30000
+    Invoke-NssmChecked set $ServiceName AppExit Default Restart
+    # Exit code 5 = EXIT_LOCK_CONFLICT. Leave the service stopped rather
+    # than spending the application restart loop on a second supervisor.
+    Invoke-NssmChecked set $ServiceName AppExit 5 Exit
+    Invoke-NssmChecked set $ServiceName AppStopMethodConsole 240000
+    Invoke-NssmChecked set $ServiceName AppStopMethodWindow 30000
+    Invoke-NssmChecked set $ServiceName AppStopMethodThreads 30000
+    Invoke-NssmChecked set $ServiceName AppStopMethodSkip 0
 
-if ($ServiceUser) {
-    if (-not $ServicePassword) {
-        throw "-ServiceUser was supplied without -ServicePassword. Both are required to set the service Log On account here."
+    if ($ServiceUser) {
+        if (-not $ServicePassword) {
+            throw "-ServiceUser was supplied without -ServicePassword. Both are required to set the service Log On account here."
+        }
+        $passwordBstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($ServicePassword)
+        try {
+            $plainPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto($passwordBstr)
+            Invoke-NssmChecked set $ServiceName ObjectName $ServiceUser $plainPassword
+        } finally {
+            if ($null -ne $passwordBstr) {
+                [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($passwordBstr)
+            }
+            $plainPassword = $null
+        }
+        Write-Host "Service Log On account set to: $ServiceUser"
+    } else {
+        Write-Host ""
+        Write-Host "WARNING: -ServiceUser was not supplied - the service will run as LocalSystem." -ForegroundColor Yellow
+        Write-Host "LocalSystem normally cannot see a per-user TradingView browser/cache profile," -ForegroundColor Yellow
+        Write-Host "which breaks headless auth refresh after a reboot/restart. Prefer re-running" -ForegroundColor Yellow
+        Write-Host "this script with -ServiceUser/-ServicePassword, or set it manually now:" -ForegroundColor Yellow
+        Write-Host "  services.msc -> $ServiceName -> Properties -> Log On" -ForegroundColor Yellow
     }
-    $plainPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
-        [Runtime.InteropServices.Marshal]::SecureStringToBSTR($ServicePassword)
-    )
-    & $nssm set $ServiceName ObjectName $ServiceUser $plainPassword
-    Write-Host "Service Log On account set to: $ServiceUser"
-} else {
-    Write-Host ""
-    Write-Host "WARNING: -ServiceUser was not supplied - the service will run as LocalSystem." -ForegroundColor Yellow
-    Write-Host "LocalSystem normally cannot see a per-user TradingView browser/cache profile," -ForegroundColor Yellow
-    Write-Host "which breaks headless auth refresh after a reboot/restart. Prefer re-running" -ForegroundColor Yellow
-    Write-Host "this script with -ServiceUser/-ServicePassword, or set it manually now:" -ForegroundColor Yellow
-    Write-Host "  services.msc -> $ServiceName -> Properties -> Log On" -ForegroundColor Yellow
+
+    # NSSM restarts the Python app. SCM recovery is a separate safety net
+    # for the service wrapper itself being killed or crashing. AppExit 5
+    # remains an intentional NSSM stop and is not marked as a non-crash
+    # failure, so it does not become a second conflict restart loop.
+    Invoke-ScChecked failure $ServiceName "reset=" "86400" "actions=" "restart/60000/restart/120000/restart/300000"
+} catch {
+    if ($installedByThisRun) {
+        Write-Warning "Service installation failed; removing the partial service definition."
+        & $nssm remove $ServiceName confirm | Out-Null
+    }
+    throw
 }
 
 Write-Host ""
