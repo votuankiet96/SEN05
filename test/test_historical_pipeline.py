@@ -22,6 +22,7 @@ import pandas as pd
 import pytest
 
 from core_engine.historical import pipeline
+from core_engine.historical import runtime_support
 from core_engine.historical.engine import _set_replay_runtime
 
 
@@ -36,6 +37,31 @@ def _reset_replay_runtime():
     pipeline.replay_runtime.step_bars = HISTORICAL.replay_step_bars
     pipeline.replay_runtime.max_windows_per_pair = HISTORICAL.replay_max_windows_per_pair
     pipeline.replay_runtime.timeout_sec = HISTORICAL.replay_timeout_sec
+
+
+def test_legacy_verified_gap_cache_is_invalidated(monkeypatch, tmp_path):
+    cache = tmp_path / "verified_market_gaps.json"
+    cache.write_text(
+        '{"verified_at":"2026-07-20T00:00:00","windows":[[81,"M5","2026-07-19T00:00:00","2026-07-19T01:00:00"]]}',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(runtime_support, "VERIFIED_MARKET_GAPS", cache)
+
+    assert runtime_support.load_verified_gaps() == {}
+
+
+def test_current_verified_gap_cache_round_trips_with_version(monkeypatch, tmp_path):
+    cache = tmp_path / "verified_market_gaps.json"
+    monkeypatch.setattr(runtime_support, "VERIFIED_MARKET_GAPS", cache)
+    monkeypatch.setattr(runtime_support, "now_utc", lambda: datetime(2026, 7, 20, 0, 0, 0))
+    start = datetime(2026, 7, 19, 0, 0, 0)
+    end = datetime(2026, 7, 19, 1, 0, 0)
+
+    runtime_support.save_verified_gaps({(81, "M5", start, end)}, pipeline.logger)
+
+    raw = cache.read_text(encoding="utf-8")
+    assert f'"verification_version": {runtime_support.VERIFIED_GAP_CACHE_VERSION}' in raw
+    assert runtime_support.load_verified_gaps() == {(81, "M5"): [(start, end)]}
 
 
 def test_set_replay_runtime_enabled_is_visible_in_pipeline_module():

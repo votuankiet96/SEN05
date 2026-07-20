@@ -33,6 +33,7 @@ from core_engine.settings import (
 EXIT_TV_UNAVAILABLE = 3
 MAX_CONSECUTIVE_FAIL = HISTORICAL.max_consecutive_fail
 HOLE_LOOKBACK_DAYS = HISTORICAL.hole_lookback_days
+VERIFIED_GAP_CACHE_VERSION = 2
 PREFLIGHT_PROBE_BARS = 5
 PREFLIGHT_TIMEOUT_SEC = 30
 PREFLIGHT_SYMBOL_LIMIT = 4
@@ -374,6 +375,12 @@ def flatten_verified_gap_windows(verified_gaps: dict) -> set:
 def load_verified_gaps() -> dict:
     try:
         data = json.loads(VERIFIED_MARKET_GAPS.read_text(encoding="utf-8"))
+        # Version 1 only checked whether *any* row existed in an inclusive
+        # gap window. The boundary bars themselves made that true, so those
+        # entries cannot safely suppress repair scans under the stricter v2
+        # contiguous-coverage check.
+        if data.get("verification_version") != VERIFIED_GAP_CACHE_VERSION:
+            return {}
         saved = datetime.fromisoformat(data["verified_at"])
         if (now_utc() - saved).days > 30:
             return {}
@@ -391,6 +398,7 @@ def load_verified_gaps() -> dict:
 
 def save_verified_gaps(windows: set, logger: logging.Logger) -> None:
     data = {
+        "verification_version": VERIFIED_GAP_CACHE_VERSION,
         "verified_at": now_utc().isoformat(),
         "windows": sorted([[sid, tfc, gs.isoformat(), ge.isoformat()] for sid, tfc, gs, ge in windows]),
     }
