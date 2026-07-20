@@ -136,9 +136,16 @@ def run_etl_direct(
     *,
     source: str = "unknown_source",
     symbol: str | None = None,
+    from_time: str | None = None,
 ) -> int:
     """
     Goi stored procedure DWH.usp_LoadDirect de nap du lieu 1:1 vao Fact_OHLCV.
+
+    from_time (optional): scopes the SP's NOT EXISTS idempotency scan to
+    BarTime >= from_time instead of full history (2008-01-01 default).
+    Pass the earliest bar time of the batch/window just written so a
+    catch-up call after a skipped/failed prior attempt stays cheap instead
+    of rescanning the whole staging table on every call.
 
     Dau ra:
     - So dong duoc chen moi hoac cap nhat OHLC trong Fact.
@@ -149,7 +156,10 @@ def run_etl_direct(
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("EXEC DWH.usp_LoadDirect ?, ?, ?", (symbol_id, tf_code, staging_table))
+        cursor.execute(
+            "EXEC DWH.usp_LoadDirect ?, ?, ?, ?",
+            (symbol_id, tf_code, staging_table, from_time),
+        )
 
         result = cursor.fetchone()
         if result is None:

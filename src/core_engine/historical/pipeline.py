@@ -30,7 +30,7 @@ import pandas as pd
 from core_engine.tradingview import auth as tv_auth
 from core_engine.tradingview import history_client as tv_history
 from core_engine.warehouse.maintenance import preview_ohlcv_reset_scope, reset_ohlcv_scope
-from core_engine.warehouse.reader import get_latest_bars
+from core_engine.warehouse.reader import fact_covers_window, get_latest_bars
 from core_engine.warehouse.writer import insert_staging_batch, run_etl_direct
 from core_engine.warehouse.validation import validate_ohlcv_df
 from core_engine.historical.runtime_support import (
@@ -351,14 +351,23 @@ def _write_ohlcv_frame(
         )
         if skip_etl:
             return staged
-        if staged <= 0:
-            return 0
+        # Always call ETL, even when this exact pull re-staged rows that
+        # already matched (staged == 0, MERGE affected nothing). A prior
+        # run can have crashed after insert_staging_batch committed but
+        # before run_etl_direct ran (or before it succeeded) - the staged
+        # row is then permanently IsProcessed=1 with unchanged values, so
+        # `staged` will read 0 on every future pull of the same bars and a
+        # short-circuit here would mean run_etl_direct is never called
+        # again for that stuck row. from_time scopes the SP's NOT EXISTS
+        # scan to this pull's own window instead of the full history.
+        from_time = clean_df.index.min().strftime("%Y-%m-%d %H:%M:%S") if not clean_df.empty else None
         inserted = run_etl_direct(
             sym["symbol_id"],
             tf_code,
             staging,
             source="historical_pulling",
             symbol=sym["tv_symbol"],
+            from_time=from_time,
         )
     return int(inserted)
 
@@ -449,6 +458,15 @@ def run_full_load(tv: SimpleNamespace, *, symbols: list[dict[str, Any]], dry_run
     stats = {"ok": 0, "fail": 0, "inserted": 0}
     pairs_total = len(symbols)
     tfs = _selected_timeframes(_TF_FILTER)
+    # stats["fail"] is the TRUE total across the whole run and is never
+    # reset - it is what the caller (historical/engine.py) uses to decide
+    # whether the run actually succeeded. consecutive_fail is a separate,
+    # local counter that DOES reset after a successful mid-run auth
+    # refresh - it only exists to decide when to trigger that refresh.
+    # Before this split, both concerns shared stats["fail"], so a mid-run
+    # refresh silently erased the run's true failure count and the final
+    # exit code/summary could report "success" despite real pair failures.
+    consecutive_fail = 0
     for step_idx, (interval, tf_code, staging, n_bars) in enumerate(tfs, start=1):
         raise_if_cancelled(logger, f"full:{tf_code}")
         _reporter.tf_header(step_idx, len(tfs), tf_code, n_bars, pairs_total, staging)
@@ -466,11 +484,13 @@ def run_full_load(tv: SimpleNamespace, *, symbols: list[dict[str, Any]], dry_run
             if result >= 0:
                 stats["ok"] += 1
                 stats["inserted"] += max(0, result)
+                consecutive_fail = 0
             else:
                 stats["fail"] += 1
-                if stats["fail"] >= MAX_CONSECUTIVE_FAIL and _refresh_mid_run(tv):
-                    stats["fail"] = 0
-                elif stats["fail"] >= MAX_CONSECUTIVE_FAIL:
+                consecutive_fail += 1
+                if consecutive_fail >= MAX_CONSECUTIVE_FAIL and _refresh_mid_run(tv):
+                    consecutive_fail = 0
+                elif consecutive_fail >= MAX_CONSECUTIVE_FAIL:
                     raise RuntimeError("too many consecutive historical pull failures")
             sleep_for(sym["tv_symbol"])
         _reporter.tf_summary(tf_code, stats["ok"], stats["fail"], stats["inserted"])
@@ -502,6 +522,12 @@ def run_backfill(
         logger.info("%s", _hlog("Backfill scan completed", pairs_needing_repair=0, result="no_action_needed"))
         return stats
 
+    # See run_full_load's comment on the same split: stats["fail"] is the
+    # true cumulative total for reporting; consecutive_fail drives only
+    # the mid-run-refresh trigger and resets on any success, so crossing
+    # the threshold once does not keep re-triggering a refresh on every
+    # single failure for the rest of the run.
+    consecutive_fail = 0
     _reporter.pair_flow_header("PAIR FLOW")
     for index, item in enumerate(stale, start=1):
         raise_if_cancelled(logger, f"backfill:{index}/{len(stale)}")
@@ -534,13 +560,50 @@ def run_backfill(
         if result >= 0:
             stats["ok"] += 1
             stats["inserted"] += max(0, result)
+            consecutive_fail = 0
             if result == 0:
+                # "0 rows affected" alone is not proof this window is
+                # actually covered - it could equally mean TradingView
+                # legitimately had nothing there, or the pull genuinely
+                # found nothing to write. Re-query Fact_OHLCV before
+                # caching the window as verified-clean, so a future scan
+                # is not permanently blinded to a gap that was never
+                # really filled (see warehouse.reader.fact_covers_window).
                 for gap_start, gap_end in item.get("gap_windows", []) or []:
-                    verified_windows.add((sym["symbol_id"], tf_code, gap_start, gap_end))
+                    try:
+                        covered = fact_covers_window(sym["symbol_id"], tf_code, gap_start, gap_end)
+                    except Exception as exc:
+                        logger.warning(
+                            "%s",
+                            _hlog(
+                                "Gap re-verification failed - not caching as verified",
+                                symbol=sym["tv_symbol"],
+                                timeframe=tf_code,
+                                reason=exc,
+                                result="skipped",
+                            ),
+                        )
+                        continue
+                    if covered:
+                        verified_windows.add((sym["symbol_id"], tf_code, gap_start, gap_end))
+                    else:
+                        logger.debug(
+                            "%s",
+                            _hlog(
+                                "Gap window still not covered after repair - not caching as verified",
+                                symbol=sym["tv_symbol"],
+                                timeframe=tf_code,
+                                result="unresolved",
+                            ),
+                        )
         else:
             stats["fail"] += 1
-            if stats["fail"] >= MAX_CONSECUTIVE_FAIL and not _refresh_mid_run(tv):
-                raise RuntimeError("too many consecutive backfill failures")
+            consecutive_fail += 1
+            if consecutive_fail >= MAX_CONSECUTIVE_FAIL:
+                if _refresh_mid_run(tv):
+                    consecutive_fail = 0
+                else:
+                    raise RuntimeError("too many consecutive backfill failures")
         sleep_for(sym["tv_symbol"])
 
     if verified_windows:

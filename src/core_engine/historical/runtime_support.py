@@ -399,7 +399,24 @@ def find_hole_pairs(
     tf_filter: set[str] | None = None,
 ) -> list:
     tf_codes = [tf for tf in DIRECT_TFS if not tf_filter or tf in tf_filter]
-    raw = get_internal_gaps(tf_codes, lookback_days=lookback_days)
+    try:
+        raw = get_internal_gaps(tf_codes, lookback_days=lookback_days)
+    except Exception as exc:
+        # A scan failure is NOT the same as "scanned and found nothing" -
+        # logging it as "clean" would let a transient SQL error mask real
+        # gaps. Log loudly and return no new holes for this run rather
+        # than silently caching a false "verified clean" result.
+        logger.error(
+            "%s",
+            operation_line(
+                "HISTORICAL",
+                "Internal gap scan failed",
+                lookback_days=lookback_days,
+                reason=exc,
+                result="skipped_this_run",
+            ),
+        )
+        return []
     if not raw:
         log_historical_block(
             logger,

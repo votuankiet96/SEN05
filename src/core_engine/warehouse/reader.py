@@ -158,7 +158,39 @@ def get_internal_gaps(tf_codes: list, lookback_days: int = 60) -> dict:
             result="failed",
             reason=e,
         )
-        return {}
+        # Re-raise instead of returning {}: an empty dict here is
+        # indistinguishable from "scanned successfully, found zero gaps",
+        # and the caller (historical.runtime_support.find_hole_pairs) used
+        # to treat that as "clean" - meaning a transient SQL failure during
+        # the gap scan silently masked real gaps instead of surfacing an
+        # error. Callers must now explicitly handle scan failure as
+        # "unknown", not "clean".
+        raise
+    finally:
+        conn.close()
+
+
+def fact_covers_window(symbol_id: int, tf_code: str, gap_start, gap_end) -> bool:
+    """True if DWH.Fact_OHLCV has at least one bar for this symbol/timeframe
+    inside [gap_start, gap_end]. Used to confirm a repair actually landed
+    data before caching a gap window as "verified" (see
+    historical.pipeline.run_backfill) - a repair call reporting "0 rows
+    affected" is not itself proof the window is covered; it could equally
+    mean TradingView legitimately had nothing there, or a write silently
+    no-op'd for an unrelated reason."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            SELECT TOP 1 1
+            FROM DWH.Fact_OHLCV f
+            JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID
+            WHERE f.SymbolID = ? AND tf.Code = ? AND f.BarTime >= ? AND f.BarTime <= ?
+            """,
+            (symbol_id, tf_code, gap_start, gap_end),
+        )
+        return cursor.fetchone() is not None
     finally:
         conn.close()
 

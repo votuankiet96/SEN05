@@ -16,6 +16,7 @@ from core_engine.warehouse.operation_log import _target_label, _warehouse_log, l
 
 
 _ALL_STAGING_TABLES = [TF_STAGING[tf_code] for tf_code in TF_DISPLAY_ORDER if tf_code in TF_STAGING]
+_STAGING_TABLE_TF_CODE = {TF_STAGING[tf_code]: tf_code for tf_code in TF_DISPLAY_ORDER if tf_code in TF_STAGING}
 
 def purge_staging(
     days_to_keep: int = 7,
@@ -51,6 +52,7 @@ def purge_staging(
     cursor = conn.cursor()
     try:
         for table in _ALL_STAGING_TABLES:
+            tf_code = _STAGING_TABLE_TF_CODE[table]
             table_deleted = 0
             batches = 0
             while True:
@@ -77,11 +79,25 @@ def purge_staging(
                     if effective_batch <= 0:
                         break
 
+                # Only delete a staging row once it is CONFIRMED to have reached
+                # Fact_OHLCV (matching SymbolID + Timeframe + BarTime). Age +
+                # IsProcessed=1 alone is not proof of migration: a prior run can
+                # have crashed or hit a broken/skipped ETL call after staging
+                # committed but before Fact did, and purging on age alone would
+                # then delete the only remaining copy of that candle forever.
+                # See core_engine.warehouse.reconcile for an operator-facing
+                # scan/repair tool that finds this exact condition proactively.
                 cursor.execute(
-                    f"DELETE TOP ({effective_batch}) FROM {table} WITH (ROWLOCK)"
-                    f" WHERE IsProcessed = 1"
-                    f" AND BarTime < DATEADD(day, ?, GETUTCDATE())",
-                    (-days_to_keep,),
+                    f"DELETE TOP ({effective_batch}) s"
+                    f" FROM {table} AS s WITH (ROWLOCK)"
+                    f" WHERE s.IsProcessed = 1"
+                    f" AND s.BarTime < DATEADD(day, ?, GETUTCDATE())"
+                    f" AND EXISTS ("
+                    f"     SELECT 1 FROM DWH.Fact_OHLCV f"
+                    f"     JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID"
+                    f"     WHERE f.SymbolID = s.SymbolID AND tf.Code = ? AND f.BarTime = s.BarTime"
+                    f" )",
+                    (-days_to_keep, tf_code),
                 )
                 rowcount = max(0, int(cursor.rowcount or 0))
                 conn.commit()
