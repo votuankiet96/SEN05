@@ -82,6 +82,47 @@ Minimum required groups:
 
 Never paste secrets into reports or chat.
 
+## 3b. Live vs Historical Coverage (IMPORTANT - read before relying on this for real-time FOREX)
+
+DP Program tracks 37 instruments total, but only a **subset is fetched live** over
+WebSocket every 5 minutes. The rest are refreshed **only by the scheduled historical
+job** (`HISTORICAL_BACKFILL_UTC`, default `11:00,22:00` UTC).
+
+- **Live (real-time, ~5 min lag)**: instruments whose `asset_type` is in
+  `LIVE_ASSET_TYPES` (default `Indice,Metal,Crypto` - 11 of 37 symbols as configured
+  at last count; run `python -m core_engine settings` to see the current live count).
+- **Historical-only (scheduled, up to ~11h lag between runs, longer if a run fails or
+  the schedule is disabled)**: everything else - by default this is all 26 FOREX
+  pairs.
+
+This is a **deliberate scope limit from the initial build, not a bug**, and this
+refactor round does not change it or decide whether to change it - see round-2 audit
+item P0-8. If SEN05 AutoTrading strategies need real-time FOREX prices, the live
+universe would need to be extended (`LIVE_ASSET_TYPES=Indice,Metal,Crypto,FOREX`) and
+load-tested first: that would raise live's WebSocket session count from ~165
+(11 symbols x 15 timeframes) to ~555 (37 x 15), which is a materially different load
+profile (more connection groups, more concurrent staging/ETL writes) that has not been
+validated.
+
+**Operator action needed:** confirm with the strategy owner whether the current
+11-live/26-historical-only split is acceptable for production, or whether FOREX needs
+to move to live coverage first.
+
+Two related settings (`config/dp_provider.env`):
+
+```env
+# Optional. CSV of instruments.py asset_type values to fetch live. Default
+# matches the historical hardcoded scope (Indice,Metal,Crypto).
+LIVE_ASSET_TYPES=Indice,Metal,Crypto
+
+# Optional. If set, live refuses to start unless the resolved live symbol
+# count matches exactly - a guard against LIVE_ASSET_TYPES and
+# instruments.py silently drifting out of sync (e.g. a new asset_type
+# added to instruments.py without updating LIVE_ASSET_TYPES). Leave unset
+# (0) for no enforcement; set it once after confirming the current count.
+EXPECTED_LIVE_SYMBOLS=0
+```
+
 ## 4. Check Readiness
 
 The simplest operator entrypoint is:
@@ -157,11 +198,27 @@ If NSSM is not in PATH:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows_service\install_windows_service.ps1 -NssmPath "C:\Tools\nssm\nssm.exe" -Start
 ```
 
+The installer validates `python -c "import core_engine"` before creating the service
+and fails loudly if it does not import cleanly (usually a missing `pip install -e .`),
+instead of installing a service that would just crash-loop.
+
 Important service account rule:
 
 - Prefer running the service as the same Windows user that owns the TradingView browser/cache profile.
 - Avoid `LocalSystem` unless you intentionally set up a separate auth/cache profile for it.
-- Configure this in `services.msc` -> `SEN05DataProvider` -> Properties -> Log On.
+- Set this directly at install time instead of as a separate manual step (a manual
+  `services.msc` step is easy to skip, and skipping it fails silently until the next
+  headless auth refresh is needed):
+
+```powershell
+$cred = Get-Credential  # enter the target Windows account and password
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows_service\install_windows_service.ps1 `
+    -ServiceUser $cred.UserName -ServicePassword $cred.Password -Start
+```
+
+  If `-ServiceUser`/`-ServicePassword` are omitted, the installer warns and leaves the
+  service on `LocalSystem` - configure it afterward in `services.msc` ->
+  `SEN05DataProvider` -> Properties -> Log On if you did not pass them.
 
 ## 7. Daily Operation Commands
 
