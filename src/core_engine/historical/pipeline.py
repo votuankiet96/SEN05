@@ -35,6 +35,7 @@ from core_engine.warehouse.writer import insert_staging_batch, run_etl_direct
 from core_engine.warehouse.validation import validate_ohlcv_df
 from core_engine.historical.runtime_support import (
     HOLE_LOOKBACK_DAYS,
+    HistoricalPullCancelled,
     MAX_CONSECUTIVE_FAIL,
     find_hole_pairs,
     find_stale_pairs,
@@ -141,6 +142,7 @@ class _WarehouseWriteSlot:
 
     def __enter__(self) -> "_WarehouseWriteSlot":
         global _warehouse_write_lock_depth
+        raise_if_cancelled(logger, f"warehouse-write:{self.owner}:before-lock")
         if _warehouse_write_lock_depth > 0:
             _warehouse_write_lock_depth += 1
             return self
@@ -157,6 +159,16 @@ class _WarehouseWriteSlot:
             ):
                 self.acquired = True
                 _warehouse_write_lock_depth = 1
+                # The historical lease heartbeat can fail while this thread
+                # waits for the short warehouse lock. Recheck immediately
+                # before any staging/Fact write begins.
+                try:
+                    raise_if_cancelled(logger, f"warehouse-write:{self.owner}:acquired")
+                except BaseException:
+                    release(WAREHOUSE_MAINTENANCE_LOCK)
+                    self.acquired = False
+                    _warehouse_write_lock_depth = 0
+                    raise
                 return self
 
             record = fetch_lock(WAREHOUSE_MAINTENANCE_LOCK, active_only=True)
@@ -403,6 +415,11 @@ def pull_and_store(
             ),
         )
         return inserted
+    except HistoricalPullCancelled:
+        # Lease loss/operator cancellation is control flow, not a pair-level
+        # retryable data error. Propagate it to engine.main so no later write
+        # runs under a lock this process no longer owns.
+        raise
     except Exception as exc:
         logger.exception("%s", _hlog("Pair write failed", symbol=sym["tv_symbol"], timeframe=tf_code, reason=exc, result="failed"))
         return RESULT_ERROR

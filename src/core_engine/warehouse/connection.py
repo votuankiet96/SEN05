@@ -64,6 +64,7 @@ def get_connection() -> pyodbc.Connection:
 
 def test_connection() -> bool:
     """Operator-facing SQL health check."""
+    conn = None
     try:
         conn = get_connection()
         cursor = conn.cursor()
@@ -74,16 +75,18 @@ def test_connection() -> bool:
             """
         )
         count = cursor.fetchone()[0]
-        conn.close()
         print(operation_line("DATABASE", "SQL Server connection ready", tables=count, schemas="SEN,DWH,MART", result="ready"))
         return True
     except Exception as exc:
         print(operation_line("DATABASE", "SQL Server connection failed", reason=exc, result="failed"))
         return False
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def verify_database_contract() -> dict:
-    """Check that DWH.usp_LoadDirect is the shape the Python ETL caller expects.
+    """Check the stored-procedure and advisory-lock contracts required by writers.
 
     Reads the DPContractVersion extended property set by
     scripts/sql/04_business_objects.sql (or the standalone
@@ -115,6 +118,15 @@ def verify_database_contract() -> dict:
                 """
             )
             row = cursor.fetchone()
+            cursor.execute(
+                """
+                SELECT COUNT(*)
+                FROM sys.columns
+                WHERE object_id = OBJECT_ID('SEN.ActiveTask')
+                  AND name IN ('OwnerId', 'Fence')
+                """
+            )
+            lock_row = cursor.fetchone()
         finally:
             conn.close()
     except Exception as exc:
@@ -127,7 +139,8 @@ def verify_database_contract() -> dict:
         }
 
     version = str(row[0]) if row and row[0] is not None else None
-    ok = version == EXPECTED_CONTRACT_VERSION
+    lock_columns = int(lock_row[0] or 0) if lock_row else 0
+    ok = version == EXPECTED_CONTRACT_VERSION and lock_columns == 2
     if ok:
         reason = None
     elif version is None:
@@ -137,15 +150,22 @@ def verify_database_contract() -> dict:
             "Run scripts/sql/08_migration_usp_loaddirect_v2.sql through a controlled "
             "deploy before resuming writes."
         )
-    else:
+    elif version != EXPECTED_CONTRACT_VERSION:
         reason = (
             f"DWH.usp_LoadDirect contract version mismatch: found {version}, "
             f"expected {EXPECTED_CONTRACT_VERSION}."
+        )
+    else:
+        reason = (
+            "SEN.ActiveTask lock-fencing contract is missing or partial: "
+            f"found {lock_columns}/2 required columns (OwnerId, Fence). "
+            "Run scripts/sql/09_migration_lock_fencing.sql through a controlled deploy."
         )
     return {
         "ok": ok,
         "object": "DWH.usp_LoadDirect",
         "version": version,
         "expected_version": EXPECTED_CONTRACT_VERSION,
+        "lock_fencing_columns": lock_columns,
         "reason": reason,
     }

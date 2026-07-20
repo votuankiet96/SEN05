@@ -59,6 +59,19 @@ def cancel_requested() -> bool:
 
 
 def raise_if_cancelled(logger: logging.Logger, where: str = "") -> None:
+    # Lease loss is equivalent to an operator cancellation from the data
+    # path's perspective: finish no more symbol/timeframe units and unwind
+    # through the normal finally blocks. Import lazily to keep this helper
+    # independent of coordination module initialization order.
+    from core_engine.coordination.locks import historical_lease_lost
+
+    if historical_lease_lost():
+        suffix = f" ({where})" if where else ""
+        logger.critical(
+            "[LOCK LOST] Historical lease was lost%s; stopping at safe checkpoint.",
+            suffix,
+        )
+        raise HistoricalPullCancelled("historical database lock lease lost")
     if not cancel_requested():
         return
     suffix = f" ({where})" if where else ""

@@ -80,6 +80,19 @@ def test_verify_database_contract_fails_on_version_mismatch(monkeypatch):
     assert "mismatch" in result["reason"]
 
 
+def test_verify_database_contract_requires_both_lock_fencing_columns(monkeypatch):
+    cursor = _FakeCursor()
+    responses = iter([(warehouse_connection.EXPECTED_CONTRACT_VERSION,), (1,)])
+    cursor.fetchone = lambda: next(responses)
+    _patch_get_connection(monkeypatch, warehouse_connection, cursor)
+
+    result = warehouse_connection.verify_database_contract()
+
+    assert result["ok"] is False
+    assert result["lock_fencing_columns"] == 1
+    assert "missing or partial" in result["reason"]
+
+
 def test_verify_database_contract_fails_when_property_missing():
     # No property found -> fetchone() returns None, exactly what the stale
     # (pre-audit) production procedure would produce: it was deployed before
@@ -110,6 +123,14 @@ def test_verify_database_contract_reports_connection_failure_distinctly(monkeypa
     assert result["ok"] is False
     assert result["version"] is None
     assert "contract check could not run" in result["reason"]
+
+
+def test_connection_closes_connection_when_health_query_fails(monkeypatch):
+    cursor = _FakeCursor(raise_on_execute=RuntimeError("query failed"))
+    conn = _patch_get_connection(monkeypatch, warehouse_connection, cursor)
+
+    assert warehouse_connection.test_connection() is False
+    assert conn.closed is True
 
 
 # --- reconcile ------------------------------------------------------------

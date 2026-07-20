@@ -53,6 +53,7 @@ from core_engine.coordination.locks import (
     fetch_lock,
     is_locked,
     release,
+    release_record,
     release_historical_job,
 )
 from core_engine.reporting.discord import QUICK_COMMANDS_HINT, notify_historical_event, flush_pending
@@ -96,7 +97,7 @@ def _cleanup_orphan_warehouse_maintenance(
             result="cleared",
         ),
     )
-    release(WAREHOUSE_MAINTENANCE_LOCK)
+    release_record(record)
 
 
 
@@ -340,7 +341,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if args.force_unlock:
-        release("tv_historical_job")
+        forced_record = fetch_lock("tv_historical_job", active_only=False)
+        if forced_record is not None:
+            release_record(forced_record)
     cleanup_expired()
     if not _describe_historical_owner().get("active"):
         _clear_historical_cancel("historical_start_no_active_job")

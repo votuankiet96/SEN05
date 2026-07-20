@@ -61,6 +61,8 @@ class LockRecord:
     started_at: Any | None
     expires_at: Any | None
     payload: str
+    owner_id: str | None = None
+    fence: int | None = None
 
     @property
     def meta(self) -> dict[str, str]:
@@ -74,6 +76,8 @@ class LockLease:
     run_id: str
     owner_prefix: str
     stop_event: threading.Event
+    lost_event: threading.Event
+    fence: int | None = None
     released: bool = False
 
 
@@ -184,12 +188,13 @@ class LockCoordinator:
         self._cache: dict[str, dict[str, float | bool]] = {}
         self._local_historical_lease: LockLease | None = None
         self._owner_fencing_available: bool | None = None
+        self._owned_fences: dict[str, int] = {}
 
     def _connect(self) -> Any:
         return self.connection_factory()
 
     def _supports_owner_fencing(self, cur: Any) -> bool:
-        """Feature-detect the OwnerId column once per process, cached.
+        """Feature-detect the OwnerId+Fence pair once per process, cached.
 
         Deliberately adaptive rather than assumed: this code can deploy
         before scripts/sql/09_migration_lock_fencing.sql has been run
@@ -204,11 +209,23 @@ class LockCoordinator:
             return self._owner_fencing_available
         try:
             cur.execute(
-                "SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('SEN.ActiveTask') AND name = 'OwnerId'"
+                "SELECT COUNT(*) FROM sys.columns "
+                "WHERE object_id = OBJECT_ID('SEN.ActiveTask') "
+                "AND name IN ('OwnerId','Fence')"
             )
-            self._owner_fencing_available = cur.fetchone() is not None
+            row = cur.fetchone()
+            column_count = int(row[0] or 0) if row else 0
+            if column_count not in {0, 2}:
+                raise RuntimeError(
+                    "SEN.ActiveTask lock-fencing migration is partial; "
+                    "OwnerId and Fence must be deployed together"
+                )
+            self._owner_fencing_available = column_count == 2
         except Exception:
-            self._owner_fencing_available = False
+            # A transient metadata-query failure must not be cached as an
+            # unfenced database for the lifetime of a 24/7 process.
+            self._owner_fencing_available = None
+            raise
         return self._owner_fencing_available
 
     def cleanup_expired(self) -> int:
@@ -259,7 +276,21 @@ class LockCoordinator:
                     """,
                     (task_name, ttl_min, payload, self.owner_id) if fencing else (task_name, ttl_min, payload),
                 )
+            acquired_fence = None
+            if fencing:
+                cur.execute(
+                    "SELECT Fence FROM SEN.ActiveTask WHERE TaskName = ? AND OwnerId = ?",
+                    (task_name, self.owner_id),
+                )
+                row = cur.fetchone()
+                if row is None:
+                    raise RuntimeError(
+                        f"lock acquire({task_name}) could not read its fencing token"
+                    )
+                acquired_fence = int(row[0])
             conn.commit()
+            if acquired_fence is not None:
+                self._owned_fences[task_name] = acquired_fence
             self._cache.pop(task_name, None)
             return True
         except Exception as exc:
@@ -294,7 +325,14 @@ class LockCoordinator:
             # release()'s owner_prefix path) - so OwnerId fencing applies
             # unconditionally whenever the column is available, on top of
             # any owner_prefix check.
-            fence_sql = " AND OwnerId = ?" if fencing else ""
+            owned_fence = self._owned_fences.get(task_name) if fencing else None
+            if fencing and owned_fence is None:
+                self.logger.error(
+                    "lock renew(%s) refused: this process has no fencing token",
+                    task_name,
+                )
+                return False
+            fence_sql = " AND OwnerId = ? AND Fence = ?" if fencing else ""
             params: list[Any] = [ttl_min]
             if payload is not None:
                 params.append(payload)
@@ -303,6 +341,7 @@ class LockCoordinator:
                 params.append(f"{owner_prefix}%")
             if fencing:
                 params.append(self.owner_id)
+                params.append(owned_fence)
             cur.execute(
                 f"""
                 UPDATE SEN.ActiveTask
@@ -348,8 +387,9 @@ class LockCoordinator:
                     # lock a different process has since legitimately
                     # acquired for the same TaskName.
                     cur.execute(
-                        "DELETE FROM SEN.ActiveTask WHERE TaskName = ? AND OwnerId = ?",
-                        (task_name, self.owner_id),
+                        "DELETE FROM SEN.ActiveTask "
+                        "WHERE TaskName = ? AND OwnerId = ? AND Fence = ?",
+                        (task_name, self.owner_id, self._owned_fences.get(task_name, -1)),
                     )
                 else:
                     cur.execute("DELETE FROM SEN.ActiveTask WHERE TaskName = ?", (task_name,))
@@ -360,6 +400,8 @@ class LockCoordinator:
                         "lock release(%s): no active row matched", task_name
                     )
                 self._cache.pop(task_name, None)
+                if deleted:
+                    self._owned_fences.pop(task_name, None)
                 return deleted > 0
             except Exception as exc:
                 level = logging.WARNING if attempt == 1 else logging.ERROR
@@ -376,30 +418,78 @@ class LockCoordinator:
         self._cache.pop(task_name, None)
         return False
 
+    def release_record(self, record: LockRecord) -> bool:
+        """Administrative CAS delete of the exact row previously fetched.
+
+        This is used only for confirmed stale/orphan/force-unlock paths.
+        Matching the immutable owner and generation prevents a fetch/delete
+        race from removing a replacement owner's newly acquired lock.
+        """
+        conn = None
+        try:
+            conn = self._connect()
+            cur = conn.cursor()
+            if self._supports_owner_fencing(cur):
+                if not record.owner_id or record.fence is None:
+                    return False
+                cur.execute(
+                    "DELETE FROM SEN.ActiveTask "
+                    "WHERE TaskName = ? AND OwnerId = ? AND Fence = ?",
+                    (record.task_name, record.owner_id, record.fence),
+                )
+            else:
+                cur.execute(
+                    "DELETE FROM SEN.ActiveTask WHERE TaskName = ? AND Payload = ?",
+                    (record.task_name, record.payload),
+                )
+            conn.commit()
+            deleted = int(cur.rowcount or 0)
+            self._cache.pop(record.task_name, None)
+            return deleted > 0
+        except Exception as exc:
+            self.logger.warning("lock release_record(%s) failed: %s", record.task_name, exc)
+            return False
+        finally:
+            if conn is not None:
+                conn.close()
+
     def update_payload(
         self,
         task_name: str,
         payload: str,
         *,
         expire_after_seconds: int | None = None,
+        expected_record: LockRecord | None = None,
     ) -> bool:
         conn = None
         try:
             conn = self._connect()
             cur = conn.cursor()
+            fencing = self._supports_owner_fencing(cur)
+            expected_sql = ""
+            expected_params: list[Any] = []
+            if expected_record is not None:
+                if fencing:
+                    if not expected_record.owner_id or expected_record.fence is None:
+                        return False
+                    expected_sql = " AND OwnerId = ? AND Fence = ?"
+                    expected_params = [expected_record.owner_id, expected_record.fence]
+                else:
+                    expected_sql = " AND Payload = ?"
+                    expected_params = [expected_record.payload]
             if expire_after_seconds is None:
                 cur.execute(
-                    """
+                    f"""
                     UPDATE SEN.ActiveTask
                     SET Payload = ?
-                    WHERE TaskName = ? AND ExpiresAt > SYSUTCDATETIME()
+                    WHERE TaskName = ? AND ExpiresAt > SYSUTCDATETIME(){expected_sql}
                     """,
-                    (payload, task_name),
+                    (payload, task_name, *expected_params),
                 )
             else:
                 grace = max(1, int(expire_after_seconds))
                 cur.execute(
-                    """
+                    f"""
                     UPDATE SEN.ActiveTask
                     SET Payload = ?,
                         ExpiresAt = CASE
@@ -407,9 +497,9 @@ class LockCoordinator:
                                 THEN DATEADD(second, ?, SYSUTCDATETIME())
                             ELSE ExpiresAt
                         END
-                    WHERE TaskName = ? AND ExpiresAt > SYSUTCDATETIME()
+                    WHERE TaskName = ? AND ExpiresAt > SYSUTCDATETIME(){expected_sql}
                     """,
-                    (payload, grace, grace, task_name),
+                    (payload, grace, grace, task_name, *expected_params),
                 )
             conn.commit()
             ok = int(cur.rowcount or 0) > 0
@@ -428,9 +518,11 @@ class LockCoordinator:
             conn = self._connect()
             cur = conn.cursor()
             active_sql = "AND ExpiresAt > SYSUTCDATETIME()" if active_only else ""
+            fencing = self._supports_owner_fencing(cur)
+            fencing_cols = ", OwnerId, Fence" if fencing else ""
             cur.execute(
                 f"""
-                SELECT StartedAt, ExpiresAt, Payload
+                SELECT StartedAt, ExpiresAt, Payload{fencing_cols}
                 FROM SEN.ActiveTask
                 WHERE TaskName = ? {active_sql}
                 """,
@@ -444,6 +536,8 @@ class LockCoordinator:
                 started_at=row[0],
                 expires_at=row[1],
                 payload=str(row[2] or ""),
+                owner_id=str(row[3]) if fencing and row[3] is not None else None,
+                fence=int(row[4]) if fencing and row[4] is not None else None,
             )
         except Exception as exc:
             self.logger.warning("lock fetch(%s) failed: %s", task_name, exc)
@@ -523,8 +617,7 @@ class LockCoordinator:
         if not reason:
             return False
 
-        owner_prefix = f"run={meta['run']};" if meta.get("run") else None
-        released = self.release(task_name, owner_prefix=owner_prefix)
+        released = self.release_record(record)
         if released:
             self.logger.warning(
                 "released stale lock %s owner=%s pid=%s reason=%s",
@@ -558,6 +651,8 @@ class LockCoordinator:
                     run_id=run_id,
                     owner_prefix=owner_prefix,
                     stop_event=threading.Event(),
+                    lost_event=threading.Event(),
+                    fence=self._owned_fences.get(HISTORICAL_JOB_LOCK),
                 )
                 self._local_historical_lease = lease
                 self._start_heartbeat(lease, ttl_min=ttl_min, started=started)
@@ -615,11 +710,13 @@ class LockCoordinator:
                     owner_prefix=lease.owner_prefix,
                 )
                 if not ok:
-                    self.logger.warning(
-                        "historical lock heartbeat failed owner=%s run=%s",
+                    lease.lost_event.set()
+                    self.logger.critical(
+                        "historical lock heartbeat lost owner=%s run=%s; stopping at next safe checkpoint",
                         lease.owner,
                         lease.run_id,
                     )
+                    return
 
         thread = threading.Thread(
             target=loop,
@@ -632,11 +729,15 @@ class LockCoordinator:
         if lease is None or lease.released:
             return False
         lease.stop_event.set()
-        released = self.release(lease.task_name, owner_prefix=lease.owner_prefix)
+        released = self.release(lease.task_name)
         lease.released = True
         if self._local_historical_lease is lease:
             self._local_historical_lease = None
         return released
+
+    def historical_lease_lost(self) -> bool:
+        lease = self._local_historical_lease
+        return bool(lease and lease.lost_event.is_set())
 
     def acquire_live_runtime(
         self,
@@ -696,6 +797,7 @@ class LockCoordinator:
             LIVE_RUNTIME_LOCK,
             format_payload(meta),
             expire_after_seconds=grace_sec,
+            expected_record=record,
         )
 
     def is_live_shutdown_requested(self) -> bool:
@@ -717,11 +819,12 @@ class LockCoordinator:
         return self.release(LIVE_BATCH_LOCK)
 
     def cleanup_orphan_live_batch(self) -> bool:
-        if not self.is_locked(LIVE_BATCH_LOCK, cache_sec=0):
+        record = self.fetch(LIVE_BATCH_LOCK, active_only=True)
+        if record is None:
             return False
         if self.is_locked(LIVE_RUNTIME_LOCK, cache_sec=0):
             return False
-        return self.release(LIVE_BATCH_LOCK)
+        return self.release_record(record)
 
     def wait_for_live_batch_clear(
         self,
@@ -784,16 +887,22 @@ def update_payload(
     payload: str,
     *,
     expire_after_seconds: int | None = None,
+    expected_record: LockRecord | None = None,
 ) -> bool:
     return _DEFAULT.update_payload(
         task_name,
         payload,
         expire_after_seconds=expire_after_seconds,
+        expected_record=expected_record,
     )
 
 
 def release(task_name: str) -> bool:
     return _DEFAULT.release(task_name)
+
+
+def release_record(record: LockRecord) -> bool:
+    return _DEFAULT.release_record(record)
 
 
 def is_locked(task_name: str) -> bool:
@@ -851,6 +960,10 @@ def release_historical_job(
     if logger is not None:
         _DEFAULT.logger = logger
     return _DEFAULT.release_lease(lease)
+
+
+def historical_lease_lost() -> bool:
+    return _DEFAULT.historical_lease_lost()
 
 
 def wait_for_historical_slot(

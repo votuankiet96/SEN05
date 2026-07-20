@@ -230,3 +230,19 @@ def test_write_ohlcv_frame_skip_etl_still_skips(monkeypatch):
 
     assert etl_calls == []
     assert result == 0
+
+
+def test_pull_and_store_does_not_swallow_lost_lock_cancellation(monkeypatch):
+    monkeypatch.setattr(
+        pipeline,
+        "_fetch_history_frame",
+        lambda *a, **k: (_valid_ohlcv_df(), "fault-injected"),
+    )
+
+    def _lost_lock(*_args, **_kwargs):
+        raise pipeline.HistoricalPullCancelled("historical database lock lease lost")
+
+    monkeypatch.setattr(pipeline, "_write_ohlcv_frame", _lost_lock)
+
+    with pytest.raises(pipeline.HistoricalPullCancelled, match="lock lease lost"):
+        pipeline.pull_and_store(object(), _sym(), "M5", 10)

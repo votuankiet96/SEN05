@@ -17,10 +17,13 @@ the actual WHERE-clause logic, not a mocked-away version of it.
 from __future__ import annotations
 
 import time
+import threading
 
 import pytest
 
-from core_engine.coordination.locks import LockCoordinator
+import core_engine.coordination.locks as locks_module
+from core_engine.coordination.locks import LockCoordinator, LockLease, LockRecord
+from core_engine.historical import runtime_support
 
 
 class _FakeActiveTaskDB:
@@ -62,7 +65,7 @@ class _FakeCursor:
         params = tuple(params)
 
         if "sys.columns" in sql_norm:
-            self._last_result = [(1,)]  # OwnerId column "exists"
+            self._last_result = [(2,)]  # OwnerId and Fence both exist
             return self
 
         if sql_norm.startswith("DELETE FROM SEN.ActiveTask WHERE TaskName = ? AND ExpiresAt <= SYSUTCDATETIME()"):
@@ -91,28 +94,50 @@ class _FakeCursor:
             self.rowcount = 1
             return self
 
+        if sql_norm.startswith("SELECT Fence FROM SEN.ActiveTask"):
+            task_name, owner_id = params
+            row = self.db.rows.get(task_name)
+            self._last_result = (
+                [(row["fence"],)] if row and row["owner_id"] == owner_id else []
+            )
+            return self
+
         if sql_norm.startswith("UPDATE SEN.ActiveTask SET ExpiresAt"):
-            # params order: [ttl_min, (payload,) task_name, (owner_prefix,) (owner_id,)]
+            # params order: [ttl_min, (payload,) task_name,
+            #                (owner_prefix,) (owner_id, fence)]
             ttl_min = params[0]
-            rest = list(params[1:])
-            has_fence = "OwnerId = ?" in sql_norm
-            owner_id = rest.pop() if has_fence else None
-            task_name = rest.pop()
+            index = 1
+            has_payload_update = ", Payload = ?" in sql_norm
+            if has_payload_update:
+                index += 1
+            task_name = params[index]
+            index += 1
+            owner_prefix = None
+            if "Payload LIKE ?" in sql_norm:
+                owner_prefix = params[index]
+                index += 1
+            has_fence = "OwnerId = ? AND Fence = ?" in sql_norm
+            owner_id = params[index] if has_fence else None
+            fence = params[index + 1] if has_fence else None
             row = self.db.rows.get(task_name)
             self.rowcount = 0
             if row and row["expires_at"] > time.time():
-                if has_fence and row["owner_id"] != owner_id:
+                if owner_prefix and not str(row.get("payload") or "").startswith(owner_prefix[:-1]):
+                    self.rowcount = 0
+                elif has_fence and (
+                    row["owner_id"] != owner_id or row["fence"] != fence
+                ):
                     self.rowcount = 0
                 else:
                     row["expires_at"] = time.time() + ttl_min * 60
                     self.rowcount = 1
             return self
 
-        if sql_norm.startswith("DELETE FROM SEN.ActiveTask WHERE TaskName = ? AND OwnerId = ?"):
-            task_name, owner_id = params
+        if sql_norm.startswith("DELETE FROM SEN.ActiveTask WHERE TaskName = ? AND OwnerId = ? AND Fence = ?"):
+            task_name, owner_id, fence = params
             row = self.db.rows.get(task_name)
             self.rowcount = 0
-            if row and row["owner_id"] == owner_id:
+            if row and row["owner_id"] == owner_id and row["fence"] == fence:
                 del self.db.rows[task_name]
                 self.rowcount = 1
             return self
@@ -152,6 +177,17 @@ def test_two_processes_get_different_owner_ids(db):
     a = _coordinator(db)
     b = _coordinator(db)
     assert a.owner_id != b.owner_id
+
+
+def test_each_acquisition_records_a_monotonic_fence(db):
+    a = _coordinator(db)
+    b = _coordinator(db)
+    assert a.acquire("ws_live_runtime", ttl_min=60) is True
+    first_fence = a._owned_fences["ws_live_runtime"]
+    db.rows["ws_live_runtime"]["expires_at"] = time.time() - 1
+    assert b.acquire("ws_live_runtime", ttl_min=60) is True
+
+    assert b._owned_fences["ws_live_runtime"] > first_fence
 
 
 def test_stale_owner_cannot_renew_after_another_process_took_over(db):
@@ -213,6 +249,26 @@ def test_owner_prefix_targeted_release_bypasses_owner_id_fencing_by_design(db):
     assert "tv_historical_job" not in db.rows
 
 
+def test_release_record_cannot_delete_a_replacement_generation(db):
+    a = _coordinator(db)
+    b = _coordinator(db)
+    assert a.acquire("tv_live_batch", ttl_min=10, payload="kind=live_batch") is True
+    old = dict(db.rows["tv_live_batch"])
+    record = LockRecord(
+        task_name="tv_live_batch",
+        started_at=None,
+        expires_at=None,
+        payload="kind=live_batch",
+        owner_id=old["owner_id"],
+        fence=old["fence"],
+    )
+    db.rows["tv_live_batch"]["expires_at"] = time.time() - 1
+    assert b.acquire("tv_live_batch", ttl_min=10, payload="kind=live_batch") is True
+
+    assert a.release_record(record) is False
+    assert db.rows["tv_live_batch"]["owner_id"] == b.owner_id
+
+
 def test_fencing_falls_back_gracefully_when_column_not_migrated_yet(db):
     # Simulate an unmigrated database: sys.columns lookup finds nothing.
     class _NoOwnerColumnDB(_FakeActiveTaskDB):
@@ -224,7 +280,7 @@ def test_fencing_falls_back_gracefully_when_column_not_migrated_yet(db):
 
     def _execute_no_owner_column(self, sql, params=()):
         if "sys.columns" in " ".join(sql.split()):
-            self._last_result = [None]  # column not found -> fetchone() returns None below
+            self._last_result = [(0,)]
             return self
         return real_execute(self, sql, params)
 
@@ -238,3 +294,48 @@ def test_fencing_falls_back_gracefully_when_column_not_migrated_yet(db):
         assert a.release("ws_live_runtime") is True
     finally:
         _FakeCursor.execute = orig
+
+
+def test_transient_capability_query_failure_is_not_cached_as_unfenced(db):
+    coordinator = _coordinator(db)
+    real_execute = _FakeCursor.execute
+    calls = {"metadata": 0}
+
+    def _flaky_execute(self, sql, params=()):
+        if "sys.columns" in " ".join(sql.split()):
+            calls["metadata"] += 1
+            if calls["metadata"] == 1:
+                raise RuntimeError("transient metadata timeout")
+        return real_execute(self, sql, params)
+
+    orig = _FakeCursor.execute
+    _FakeCursor.execute = _flaky_execute
+    try:
+        assert coordinator.acquire("ws_live_runtime", ttl_min=60) is False
+        assert coordinator._owner_fencing_available is None
+        assert coordinator.acquire("ws_live_runtime", ttl_min=60) is True
+        assert coordinator._owned_fences["ws_live_runtime"] >= 1
+    finally:
+        _FakeCursor.execute = orig
+
+
+def test_historical_checkpoint_stops_after_lease_loss(db, monkeypatch):
+    coordinator = _coordinator(db)
+    lease = LockLease(
+        task_name="tv_historical_job",
+        owner="historical-pipeline",
+        run_id="lost123",
+        owner_prefix="run=lost123;",
+        stop_event=threading.Event(),
+        lost_event=threading.Event(),
+        fence=42,
+    )
+    lease.lost_event.set()
+    coordinator._local_historical_lease = lease
+    monkeypatch.setattr(locks_module, "_DEFAULT", coordinator)
+
+    with pytest.raises(
+        runtime_support.HistoricalPullCancelled,
+        match="lock lease lost",
+    ):
+        runtime_support.raise_if_cancelled(coordinator.logger, "before-write")
