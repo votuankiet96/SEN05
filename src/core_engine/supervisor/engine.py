@@ -30,8 +30,7 @@ from core_engine.reporting.discord import notify_backend_event, notify_historica
 from core_engine.settings import (
     APP_ROOT,
     BACKEND,
-    BACKEND_HISTORICAL_STDOUT_LOG,
-    BACKEND_LIVE_STDOUT_LOG,
+    BACKEND_CHILD_STDOUT_LOG,
     BACKEND_LOG,
     BACKEND_STATE,
     BACKEND_STOP_FILE,
@@ -762,7 +761,7 @@ class BackendSupervisor:
             health_risk="Medium. Missing ranges may remain until the next historical retry succeeds.",
             reason="The historical subprocess exited with a non-zero code, usually caused by a transient TradingView or network failure.",
             recommended_action="No immediate action needed if live fetching is healthy. If this repeats after several retries, inspect historical_pulling.log and TradingView connectivity.",
-            trace={"system_log": str(BACKEND_LOG), "historical_log": str(BACKEND_HISTORICAL_STDOUT_LOG)},
+            trace={"system_log": str(BACKEND_LOG), "historical_log": str(BACKEND_CHILD_STDOUT_LOG)},
             result="warning",
         )
 
@@ -941,7 +940,7 @@ class BackendSupervisor:
         title = str(job.get("title") or "Historical queued job")
         command = [sys.executable, "-m", "core_engine", "historical", *args]
         self._clear_startup_historical_pending(covered_by=f"queued_job:{title}")
-        self._spawn(self.historical, command, BACKEND_HISTORICAL_STDOUT_LOG)
+        self._spawn(self.historical, command, BACKEND_CHILD_STDOUT_LOG)
         self._safe_notify(
             notify_historical_event,
             severity="INFO",
@@ -951,7 +950,7 @@ class BackendSupervisor:
             data_result="The queued job is now running. Results will be reported when it completes.",
             health_risk="Medium while running. Historical repair can temporarily defer live merges.",
             recommended_action="Watch historical_pulling.log until the job completes.",
-            trace={"queue_file": str(HISTORICAL_QUEUE_FILE), "stdout_log": str(BACKEND_HISTORICAL_STDOUT_LOG)},
+            trace={"queue_file": str(HISTORICAL_QUEUE_FILE), "stdout_log": str(BACKEND_CHILD_STDOUT_LOG)},
             result="started",
         )
         return True
@@ -1029,7 +1028,7 @@ class BackendSupervisor:
         self._spawn(
             self.live,
             [sys.executable, "-m", "core_engine.live.engine"],
-            BACKEND_LIVE_STDOUT_LOG,
+            BACKEND_CHILD_STDOUT_LOG,
         )
         self._safe_notify(
             notify_live_event,
@@ -1044,7 +1043,7 @@ class BackendSupervisor:
             data_result="No candles are expected at startup; wait for the next live batch.",
             health_risk="Low. The worker has started and the supervisor is watching it.",
             recommended_action="No action needed now. Check the next live health report.",
-            trace={"stdout_log": str(BACKEND_LIVE_STDOUT_LOG)},
+            trace={"stdout_log": str(BACKEND_CHILD_STDOUT_LOG)},
             result="started",
         )
 
@@ -1070,7 +1069,7 @@ class BackendSupervisor:
         self.active_historical_slot = schedule_slot
         self.active_historical_reason = reason
         self.active_historical_started_at = datetime.now(timezone.utc)
-        self._spawn(self.historical, command, BACKEND_HISTORICAL_STDOUT_LOG)
+        self._spawn(self.historical, command, BACKEND_CHILD_STDOUT_LOG)
         self._safe_notify(
             notify_historical_event,
             severity="INFO",
@@ -1085,7 +1084,7 @@ class BackendSupervisor:
             data_result="Rows will be reported by the historical job when it finishes.",
             health_risk="Medium while running. It can write many rows and may defer live merges through the maintenance lock.",
             recommended_action="Let it run unless you intentionally need to stop historical repair.",
-            trace={"stdout_log": str(BACKEND_HISTORICAL_STDOUT_LOG)},
+            trace={"stdout_log": str(BACKEND_CHILD_STDOUT_LOG)},
             result="started",
         )
 
@@ -1117,7 +1116,7 @@ class BackendSupervisor:
                 health_risk="High. Automatic recovery paused to avoid an endless restart loop.",
                 reason="The worker restarted too many times in the last hour.",
                 recommended_action="Open runtime/logs/operation/live_fetching.log, fix the repeated cause, then restart DP Program manually.",
-                trace={"stdout_log": str(BACKEND_LIVE_STDOUT_LOG), "state_file": str(WS_LIVE_STATE)},
+                trace={"stdout_log": str(BACKEND_CHILD_STDOUT_LOG), "state_file": str(WS_LIVE_STATE)},
                 result="failed",
             )
             return

@@ -488,7 +488,7 @@ def run_auth_preflight(
         try:
             import pyotp  # noqa: F401
         except ImportError:
-            logger.warning("[PREFLIGHT] TV_2FA_SECRET is set but pyotp is not installed.")
+            logger.warning("[PREFLIGHT] TRADINGVIEW.two_fa_secret is set but pyotp is not installed.")
 
     if current_token == tv_auth.GUEST_TOKEN and guest_policy == "abort":
         alert(

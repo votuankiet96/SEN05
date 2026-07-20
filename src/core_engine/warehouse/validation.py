@@ -5,8 +5,6 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta, timezone
 
-from core_engine.settings import FIXED_H_ALIGNMENT
-
 
 def utc_naive_now() -> datetime:
     """Return current UTC as a naive datetime for SQL Server DATETIME columns."""
@@ -123,23 +121,6 @@ def validate_ohlcv_df(
 
     if df.empty:
         return df, had_issues
-
-    if tf_code in FIXED_H_ALIGNMENT.get(tv_symbol, {}):
-        tf_hours = int(tf_code[1:])
-        expected = FIXED_H_ALIGNMENT[tv_symbol][tf_code]
-        wrong_align = df.index.hour % tf_hours != expected
-        if wrong_align.any():
-            n_bad = int(wrong_align.sum())
-            logger.warning(
-                "  VALIDATE %s %s: %d bars alignment sai (h%%%d != %d) -> dropped",
-                tv_symbol,
-                tf_code,
-                n_bad,
-                tf_hours,
-                expected,
-            )
-            df = df[~wrong_align]
-            had_issues = True
 
     if had_issues:
         dropped = original_len - len(df)

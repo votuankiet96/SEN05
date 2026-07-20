@@ -61,21 +61,18 @@ from core_engine.warehouse.repository import (
 from core_engine.warehouse.connection import get_connection, test_connection
 
 from core_engine.settings import (
-    DISCORD_WEBHOOK_URL,
-    SYMBOL_OVERNIGHT_MINS,
-    SYMBOLS,
-    TF_STAGING,
-    TV_AUTH_TOKEN,
-    TV_COOKIE,
-    TV_PASSWORD,
-    TV_USERNAME,
+    LIVE,
     LIVE_SUMMARY_LOG,
+    NOTIFICATION,
+    SYMBOLS,
+    SYMBOL_OVERNIGHT_MINS,
+    TF_STAGING,
+    TRADINGVIEW,
     WS_LIVE_LOG,
     WS_LIVE_PID,
     WS_LIVE_REPORT_LOG,
     WS_LIVE_STATE,
     WS_OVERFLOW_SPOOL,
-    load_live_settings,
 )
 
 from core_engine.tradingview import protocol as live_protocol
@@ -169,7 +166,7 @@ _LOCAL_RUNTIME_LOCK_FILE = WS_LIVE_PID
 
 TV_BASE_URL = "wss://data.tradingview.com/socket.io/websocket"
 
-_live_settings = load_live_settings(logger)
+_live_settings = LIVE
 
 WS_SYMBOLS_PER_CONN = _live_settings.symbols_per_conn
 N_BARS_WS = _live_settings.n_bars
@@ -3252,9 +3249,9 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
 
     print(f"  Connect timeout  : {BATCH_FETCH_TIMEOUT} seconds per connection")
 
-    print(f"  Login method     : {'Cookie + Token' if TV_COOKIE else 'Username / Password'}")
+    print(f"  Login method     : {'Cookie + Token' if TRADINGVIEW.cookie else 'Username / Password'}")
 
-    print(f"  Discord alerts   : {'On' if DISCORD_WEBHOOK_URL else 'Off'}")
+    print(f"  Discord alerts   : {'On' if NOTIFICATION.discord_webhook_url else 'Off'}")
 
     print(f"  Started at (UTC) : {started_utc.strftime('%Y-%m-%d %H:%M:%S UTC')}")
 
@@ -3433,7 +3430,7 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
 
         return _tv_auth.token_expires_in(token) > 300
 
-    _has_valid_token = _usable_token(_cache_token) or _usable_token(TV_AUTH_TOKEN)
+    _has_valid_token = _usable_token(_cache_token) or _usable_token(TRADINGVIEW.auth_token)
 
     if not _has_valid_token:
         while not _shutdown.is_set():
@@ -3492,9 +3489,9 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
         tv_auth=_tv_auth,
         logger=logger,
         token_source=token_source,
-        static_cookie=TV_COOKIE,
-        username=TV_USERNAME,
-        password=TV_PASSWORD,
+        static_cookie=TRADINGVIEW.cookie,
+        username=TRADINGVIEW.username,
+        password=TRADINGVIEW.password,
         guest_policy=TV_WS_GUEST_POLICY,
         require_headless=TV_WS_PREFLIGHT_REQUIRE_HEADLESS,
         alert=_tg_alert,

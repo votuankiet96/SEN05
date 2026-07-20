@@ -26,7 +26,7 @@ import pandas as pd
 import websocket
 
 from core_engine.tradingview import auth as _tv_auth
-from core_engine.settings import TV_COOKIE, TV_WS_HISTORY_ENDPOINT
+from core_engine.settings import TRADINGVIEW
 from core_engine.logkit import formatters as _logfmt
 
 
@@ -147,7 +147,7 @@ def _headers(cookie: str) -> list[str]:
 
 
 def _resolve_endpoint(endpoint: str | None) -> tuple[str, str]:
-    endpoint_name = (endpoint or TV_WS_HISTORY_ENDPOINT or "data").strip().lower()
+    endpoint_name = (endpoint or TRADINGVIEW.history_endpoint or "data").strip().lower()
     if endpoint_name.startswith("wss://"):
         return endpoint_name, endpoint_name
     url = TV_WS_ENDPOINT_URLS.get(endpoint_name)
@@ -169,7 +169,7 @@ def _current_auth() -> tuple[str, str]:
         token, _ = _tv_auth.resolve_auth_token(log)
         _tv_auth.set_current_token(token)
 
-    cookie = _tv_auth.get_current_cookie() or TV_COOKIE or ""
+    cookie = _tv_auth.get_current_cookie() or TRADINGVIEW.cookie or ""
     return token, cookie
 
 

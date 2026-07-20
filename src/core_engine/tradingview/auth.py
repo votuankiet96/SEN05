@@ -108,14 +108,8 @@ from core_engine.reporting.discord import notify_auth_event, sanitize_ssl_keylog
 from core_engine.settings import (  # noqa: E402
     AUTH_LOG,
     CACHE_DIR,
-    HISTORICAL_PROVIDER,
-    TV_2FA_SECRET,
-    TV_AUTH_TOKEN,
-    TV_CAPTCHA_API_KEY,
-    TV_CAPTCHA_SERVICE,
-    TV_COOKIE,
-    TV_PASSWORD,
-    TV_USERNAME,
+    HISTORICAL,
+    TRADINGVIEW,
     env_bool as env_flag,
     env_int,
 )
@@ -225,7 +219,7 @@ _http_session: requests.Session | None = None
 _http_session_lock = threading.Lock()
 
 # Cookie TradingView ở runtime, có thể được cập nhật khi refresh.
-_tv_cookie: str = TV_COOKIE
+_tv_cookie: str = TRADINGVIEW.cookie
 
 # Đường dẫn token cache, lưu runtime credentials tách khỏi .env.
 _TOKEN_CACHE = CACHE_DIR / "tv_token_cache.json"
@@ -323,7 +317,7 @@ def resolve_auth_token(lg: logging.Logger | None = None) -> tuple[str, str]:
 
 
 def has_2fa_secret() -> bool:
-    return bool(TV_2FA_SECRET)
+    return bool(TRADINGVIEW.two_fa_secret)
 
 
 def check_and_refresh(lg: logging.Logger | None = None) -> None:
@@ -361,8 +355,8 @@ def browser_profile_status() -> dict:
     cache = _load_token_cache()
     cache_token = str(cache.get("TV_AUTH_TOKEN") or "")
     cache_cookie = str(cache.get("TV_COOKIE") or "")
-    env_token = TV_AUTH_TOKEN or ""
-    env_cookie = TV_COOKIE or ""
+    env_token = TRADINGVIEW.auth_token or ""
+    env_cookie = TRADINGVIEW.cookie or ""
     token_source = "runtime_cache" if cache_token else ("config/dp_provider.env" if env_token else "")
     token = cache_token or env_token
     profile_exists = _BROWSER_PROFILE_DIR.exists()
@@ -377,8 +371,8 @@ def browser_profile_status() -> dict:
         "token_source": token_source,
         "token_present": bool(token),
         "cookie_present": bool(cache_cookie or env_cookie),
-        "username_present": bool(TV_USERNAME),
-        "password_present": bool(TV_PASSWORD),
+        "username_present": bool(TRADINGVIEW.username),
+        "password_present": bool(TRADINGVIEW.password),
         "cache_present": bool(cache),
         "cache_has_token": bool(cache_token),
         "cache_has_cookie": bool(cache_cookie),
@@ -1071,10 +1065,10 @@ def _resolve_auth_token(
             return cached_token, "cached_token"
 
     # LỚP 1: Static token từ .env
-    if TV_AUTH_TOKEN and TV_AUTH_TOKEN != GUEST_TOKEN:
-        if _is_token_reusable_for_startup(TV_AUTH_TOKEN, "static_token", log):
-            log.info("[AUTH] Using static TV_AUTH_TOKEN from .env.")
-            return TV_AUTH_TOKEN, "static_token"
+    if TRADINGVIEW.auth_token and TRADINGVIEW.auth_token != GUEST_TOKEN:
+        if _is_token_reusable_for_startup(TRADINGVIEW.auth_token, "static_token", log):
+            log.info("[AUTH] Using static TRADINGVIEW.auth_token from .env.")
+            return TRADINGVIEW.auth_token, "static_token"
 
     if _auth_cooldown_blocks_refresh(log, context="resolve"):
         return GUEST_TOKEN, "cooldown"
@@ -1110,7 +1104,7 @@ def _resolve_auth_token_refresh_paths(log: logging.Logger) -> tuple[str, str]:
     global _tv_cookie
 
     # LỚP 1.5: Làm mới qua session cookie.
-    current_cookie = _tv_cookie or TV_COOKIE
+    current_cookie = _tv_cookie or TRADINGVIEW.cookie
     if current_cookie:
         token = _refresh_token_via_cookie(current_cookie, log)
         if token != GUEST_TOKEN:
@@ -1123,9 +1117,9 @@ def _resolve_auth_token_refresh_paths(log: logging.Logger) -> tuple[str, str]:
         if _save_credentials_to_env(token, new_cookie or current_cookie):
             return token, "browser_profile"
 
-    if TV_USERNAME and TV_PASSWORD:
+    if TRADINGVIEW.username and TRADINGVIEW.password:
         # LỚP 2.5: username/password - lấy token + cookie mới từ response HTTP POST
-        token, new_cookie = _fetch_auth_token_from_credentials(TV_USERNAME, TV_PASSWORD)
+        token, new_cookie = _fetch_auth_token_from_credentials(TRADINGVIEW.username, TRADINGVIEW.password)
         if token != GUEST_TOKEN:
             if _save_credentials_to_env(token, new_cookie or current_cookie):
                 return token, "username/password"
@@ -1139,16 +1133,16 @@ def _resolve_auth_token_refresh_paths(log: logging.Logger) -> tuple[str, str]:
 
     # LỚP 4: Headless Chromium đăng nhập từ đầu, không cần cookie cũ.
     # Dùng khi cookie đã hết hạn hoàn toàn và cấu hình cho phép full login tự động.
-    if TV_USERNAME and TV_PASSWORD and AUTH_HEADLESS_FRESH_LOGIN_ENABLED:
+    if TRADINGVIEW.username and TRADINGVIEW.password and AUTH_HEADLESS_FRESH_LOGIN_ENABLED:
         log.info("[AUTH] Cookie expired - trying headless fresh login...")
-        token, new_cookie = _headless_login_fresh(TV_USERNAME, TV_PASSWORD)
+        token, new_cookie = _headless_login_fresh(TRADINGVIEW.username, TRADINGVIEW.password)
         if token != GUEST_TOKEN:
             if _save_credentials_to_env(token, new_cookie):
                 return token, "headless_fresh_login"
-    elif TV_USERNAME and TV_PASSWORD:
+    elif TRADINGVIEW.username and TRADINGVIEW.password:
         log.info(
             "[AUTH] Skipping headless fresh login because TV_AUTH_HEADLESS_FRESH_LOGIN is disabled. "
-            "For Google/SSO accounts, refresh TV_AUTH_TOKEN and TV_COOKIE from an interactive browser."
+            "For Google/SSO accounts, refresh TRADINGVIEW.auth_token and TRADINGVIEW.cookie from an interactive browser."
         )
 
     # LỚP CUỐI: Guest
@@ -1963,7 +1957,7 @@ def _headless_login_fresh(username: str, password: str) -> tuple[str, str]:
                     if captcha_token:
                         _logger.info(
                             "[AUTH] hCaptcha detected - injecting solution from %s.",
-                            TV_CAPTCHA_SERVICE or "capsolver",
+                            TRADINGVIEW.captcha_service or "capsolver",
                         )
                         page.evaluate(
                             """(token) => {
@@ -1980,7 +1974,7 @@ def _headless_login_fresh(username: str, password: str) -> tuple[str, str]:
                             page.wait_for_load_state("networkidle", timeout=20_000)
                         except Exception:
                             pass
-                    elif TV_CAPTCHA_API_KEY:
+                    elif TRADINGVIEW.captcha_api_key:
                         _logger.warning(
                             "[AUTH] hCaptcha detected but solving failed - login may not complete."
                         )
@@ -2079,13 +2073,13 @@ def _apply_playwright_stealth(page) -> None:
 
 
 def _get_totp_code() -> str | None:
-    """Tạo mã TOTP từ TV_2FA_SECRET; trả về None nếu thiếu secret hoặc pyotp."""
-    if not TV_2FA_SECRET:
+    """Tạo mã TOTP từ TRADINGVIEW.two_fa_secret; trả về None nếu thiếu secret hoặc pyotp."""
+    if not TRADINGVIEW.two_fa_secret:
         return None
     try:
         import pyotp  # type: ignore
 
-        return pyotp.TOTP(TV_2FA_SECRET).now()
+        return pyotp.TOTP(TRADINGVIEW.two_fa_secret).now()
     except ImportError:
         _logger.warning(
             "[AUTH] pyotp not installed - cannot auto-fill 2FA. Install: pip install pyotp"
@@ -2100,7 +2094,7 @@ def _solve_via_capsolver(sitekey: str, page_url: str) -> str | None:
     """Gửi hCaptcha lên CapSolver API và poll đến khi có solution token."""
     try:
         payload = {
-            "clientKey": TV_CAPTCHA_API_KEY,
+            "clientKey": TRADINGVIEW.captcha_api_key,
             "task": {
                 "type": "HCaptchaTaskProxyLess",
                 "websiteURL": page_url,
@@ -2116,7 +2110,7 @@ def _solve_via_capsolver(sitekey: str, page_url: str) -> str | None:
             time.sleep(1)
             r2 = requests.post(
                 "https://api.capsolver.com/getTaskResult",
-                json={"clientKey": TV_CAPTCHA_API_KEY, "taskId": task_id},
+                json={"clientKey": TRADINGVIEW.captcha_api_key, "taskId": task_id},
                 timeout=15,
             )
             data = r2.json()
@@ -2139,7 +2133,7 @@ def _solve_via_2captcha(sitekey: str, page_url: str) -> str | None:
         r = requests.post(
             "http://2captcha.com/in.php",
             data={
-                "key": TV_CAPTCHA_API_KEY,
+                "key": TRADINGVIEW.captcha_api_key,
                 "method": "hcaptcha",
                 "sitekey": sitekey,
                 "pageurl": page_url,
@@ -2156,7 +2150,7 @@ def _solve_via_2captcha(sitekey: str, page_url: str) -> str | None:
             time.sleep(2)
             r2 = requests.get(
                 "http://2captcha.com/res.php",
-                params={"key": TV_CAPTCHA_API_KEY, "action": "get", "id": task_id, "json": 1},
+                params={"key": TRADINGVIEW.captcha_api_key, "action": "get", "id": task_id, "json": 1},
                 timeout=15,
             )
             data2 = r2.json()
@@ -2173,10 +2167,10 @@ def _solve_via_2captcha(sitekey: str, page_url: str) -> str | None:
 
 
 def _solve_captcha_hcaptcha(sitekey: str, page_url: str) -> str | None:
-    """Chọn CapSolver hoặc 2Captcha theo TV_CAPTCHA_SERVICE; trả về None nếu đang tắt."""
-    if not TV_CAPTCHA_API_KEY:
+    """Chọn CapSolver hoặc 2Captcha theo TRADINGVIEW.captcha_service; trả về None nếu đang tắt."""
+    if not TRADINGVIEW.captcha_api_key:
         return None
-    service = (TV_CAPTCHA_SERVICE or "capsolver").lower()
+    service = (TRADINGVIEW.captcha_service or "capsolver").lower()
     if service == "2captcha":
         return _solve_via_2captcha(sitekey, page_url)
     return _solve_via_capsolver(sitekey, page_url)
@@ -2227,7 +2221,7 @@ def _ensure_cookie_fresh_ttl_aware(lg: logging.Logger | None = None) -> None:
         return
 
     _last_cookie_check_ts = now
-    current_cookie = _tv_cookie or TV_COOKIE
+    current_cookie = _tv_cookie or TRADINGVIEW.cookie
     if not current_cookie:
         return
 
@@ -2334,8 +2328,8 @@ def _ensure_cookie_fresh_ttl_aware(lg: logging.Logger | None = None) -> None:
         new_token, new_cookie = GUEST_TOKEN, ""
         if current_cookie:
             new_token, new_cookie = _headless_refresh(current_cookie)
-        if new_token == GUEST_TOKEN and TV_USERNAME and TV_PASSWORD:
-            new_token, new_cookie = _headless_login_fresh(TV_USERNAME, TV_PASSWORD)
+        if new_token == GUEST_TOKEN and TRADINGVIEW.username and TRADINGVIEW.password:
+            new_token, new_cookie = _headless_login_fresh(TRADINGVIEW.username, TRADINGVIEW.password)
 
         token_updated = False
         if new_token != GUEST_TOKEN:
@@ -2513,7 +2507,7 @@ def _bootstrap_credentials(lg: logging.Logger | None = None) -> tuple[str, str]:
         )
         return GUEST_TOKEN, "network_unavailable"
 
-    current_cookie = _tv_cookie or TV_COOKIE
+    current_cookie = _tv_cookie or TRADINGVIEW.cookie
 
     # Bước 1: Làm mới qua HTTP GET.
     if current_cookie:
@@ -2537,21 +2531,21 @@ def _bootstrap_credentials(lg: logging.Logger | None = None) -> tuple[str, str]:
                 return token, "headless_chromium"
 
     # Bước 4: username/password (HTTP POST) - lấy token + cookie mới.
-    if TV_USERNAME and TV_PASSWORD:
+    if TRADINGVIEW.username and TRADINGVIEW.password:
         log.info("[AUTH] Trying username/password login (HTTP POST)...")
-        token, new_cookie = _fetch_auth_token_from_credentials(TV_USERNAME, TV_PASSWORD)
+        token, new_cookie = _fetch_auth_token_from_credentials(TRADINGVIEW.username, TRADINGVIEW.password)
         if token != GUEST_TOKEN:
             if _save_credentials_to_env(token, new_cookie or current_cookie):
                 return token, "http_post_login"
 
     # Bước 5: Headless fresh login, không cần cookie cũ.
-    if TV_USERNAME and TV_PASSWORD and AUTH_HEADLESS_FRESH_LOGIN_ENABLED:
+    if TRADINGVIEW.username and TRADINGVIEW.password and AUTH_HEADLESS_FRESH_LOGIN_ENABLED:
         log.info("[AUTH] Trying headless fresh login (Playwright full login)...")
-        token, new_cookie = _headless_login_fresh(TV_USERNAME, TV_PASSWORD)
+        token, new_cookie = _headless_login_fresh(TRADINGVIEW.username, TRADINGVIEW.password)
         if token != GUEST_TOKEN:
             if _save_credentials_to_env(token, new_cookie):
                 return token, "headless_fresh_login"
-    elif TV_USERNAME and TV_PASSWORD:
+    elif TRADINGVIEW.username and TRADINGVIEW.password:
         log.info(
             "[AUTH] Skipping headless fresh login because TV_AUTH_HEADLESS_FRESH_LOGIN is disabled. "
             "Refresh token/cookie manually for Google/SSO accounts."

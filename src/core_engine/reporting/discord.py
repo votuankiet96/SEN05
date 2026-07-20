@@ -20,7 +20,7 @@ from html import unescape
 from typing import Any
 from uuid import uuid4
 
-from core_engine.settings import DISCORD_LOG, DISCORD_WEBHOOK_URL, LOG_LEVEL, NOTIFICATION
+from core_engine.settings import DISCORD_LOG, LOGGING, NOTIFICATION
 from core_engine.logkit.formatters import operation_line
 
 logger = logging.getLogger(__name__)
@@ -200,7 +200,7 @@ def _ensure_discord_logger() -> None:
             )
             handler.formatter.converter = time.gmtime
             logger.addHandler(handler)
-            logger.setLevel(getattr(logging, LOG_LEVEL, logging.INFO))
+            logger.setLevel(getattr(logging, LOGGING.level, logging.INFO))
             logger.propagate = False
             _discord_logger_configured = True
         except Exception:
@@ -927,7 +927,7 @@ def _post_payload(payload: dict[str, Any], *, kind: str, level: str, meta: dict[
         attempts = attempt + 1
         try:
             resp = requests.post(
-                DISCORD_WEBHOOK_URL,
+                NOTIFICATION.discord_webhook_url,
                 json=payload,
                 timeout=(DISCORD_TIMEOUT_CONNECT_SEC, DISCORD_TIMEOUT_READ_SEC),
                 verify=True,
@@ -1095,7 +1095,7 @@ def _start_sender(payload: dict[str, Any], *, kind: str, level: str, meta: dict[
 
 def tg_send(message: str) -> None:
     """Send a general Discord notification as an embed with a color side line."""
-    if not DISCORD_WEBHOOK_URL:
+    if not NOTIFICATION.discord_webhook_url:
         return
     plain = _format_discord_text(message)
     level = _infer_level(plain)
@@ -1116,7 +1116,7 @@ def tg_flush(timeout: float = 12.0) -> None:
 
 def tg_alert(level: str, text: str) -> None:
     """Send a level-specific Discord alert as an embed with a color side line."""
-    if not DISCORD_WEBHOOK_URL:
+    if not NOTIFICATION.discord_webhook_url:
         return
     normalized = _normalize_level(level)
     payload, meta = _build_embed_payload(level=normalized, text=text)
@@ -1138,7 +1138,7 @@ def notify_operator_report(
     result: str | None = None,
 ) -> None:
     """Send a structured Discord report written for operators, not code readers."""
-    if not DISCORD_WEBHOOK_URL:
+    if not NOTIFICATION.discord_webhook_url:
         return
     payload, meta = _build_operator_report_payload(
         area=area,

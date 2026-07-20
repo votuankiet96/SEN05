@@ -83,15 +83,11 @@ from core_engine.settings import (
     HISTORICAL,
     HISTORICAL_CANCEL_FILE,
     HISTORICAL_SUMMARY_LOG,
-    HISTORICAL_PROVIDER,
     PIPELINE_LOG,
     SYMBOLS,
-    TF_STAGING,
     TF_MINUTES,
+    TF_STAGING,
     TRADINGVIEW,
-    TV_WS_HISTORY_FALLBACK_ENDPOINTS,
-    TV_WS_HISTORY_REQUEST_MORE_BARS,
-    TV_WS_HISTORY_REQUEST_MORE_ROUNDS,
     TV_WS_REPLAY_ENABLED,
     TV_WS_REPLAY_ENDPOINT,
     TV_WS_REPLAY_MAX_WINDOWS_PER_PAIR,
@@ -507,8 +503,8 @@ def _fetch_history_frame(
         timeout_sec=TRADINGVIEW.history_timeout_sec,
         token=token,
         endpoint=TRADINGVIEW.history_endpoint,
-        request_more_rounds=TV_WS_HISTORY_REQUEST_MORE_ROUNDS,
-        request_more_bars=TV_WS_HISTORY_REQUEST_MORE_BARS,
+        request_more_rounds=TRADINGVIEW.history_request_more_rounds,
+        request_more_bars=TRADINGVIEW.history_request_more_bars,
     )
     frames: list[pd.DataFrame | None] = [result.df]
     notes = [f"history:{result.status}:{result.returned}"]

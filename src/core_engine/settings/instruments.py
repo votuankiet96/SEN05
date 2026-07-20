@@ -1,5 +1,5 @@
 # =============================================================================
-# shared/instruments.py
+# core_engine/settings/instruments.py
 # Single source of truth for instrument and timeframe definitions.
 #
 # Imported by the DP backend and any downstream Python consumers.

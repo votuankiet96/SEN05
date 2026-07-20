@@ -11,7 +11,7 @@ import time
 from datetime import datetime
 
 from core_engine.logkit.formatters import operation_line
-from core_engine.settings import LOG_LEVEL
+from core_engine.settings import LOGGING
 
 
 class ResilientRotatingFileHandler(logging.handlers.RotatingFileHandler):
@@ -195,7 +195,7 @@ def setup_logger(
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-    logger.setLevel(getattr(logging, LOG_LEVEL, logging.INFO))
+    logger.setLevel(getattr(logging, LOGGING.level, logging.INFO))
     logger.propagate = False
     if normalize_prefixes:
         logger.addFilter(OperatorPrefixFilter())
