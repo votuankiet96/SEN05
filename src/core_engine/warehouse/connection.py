@@ -20,13 +20,30 @@ class DatabaseWriteError(RuntimeError):
 _DB_RETRY_COUNT = DB.retry_count
 _DB_RETRY_DELAY = DB.retry_delay_sec
 
+# core_engine.warehouse.connection.verify_database_contract() checks this
+# against DWH.usp_LoadDirect's DPContractVersion extended property (set by
+# scripts/sql/04_business_objects.sql / 08_migration_usp_loaddirect_v2.sql).
+# Bump both together whenever usp_LoadDirect's shape changes.
+EXPECTED_CONTRACT_VERSION = "2"
+
 
 def get_connection() -> pyodbc.Connection:
-    """Return a live pyodbc connection with short transient retry."""
+    """Return a live pyodbc connection with short transient retry.
+
+    Applies a per-statement command timeout and SET LOCK_TIMEOUT so a
+    hung statement or lock wait cannot block a worker thread (or shutdown)
+    indefinitely - see settings.DB.command_timeout_seconds/lock_timeout_ms.
+    """
     last_err: Exception = RuntimeError("unreachable")
     for attempt in range(1, _DB_RETRY_COUNT + 1):
         try:
-            return pyodbc.connect(build_conn_str(), timeout=DB.health_timeout_seconds)
+            conn = pyodbc.connect(build_conn_str(), timeout=DB.health_timeout_seconds)
+            conn.timeout = DB.command_timeout_seconds
+            try:
+                conn.execute(f"SET LOCK_TIMEOUT {int(DB.lock_timeout_ms)}")
+            except pyodbc.Error:
+                pass
+            return conn
         except pyodbc.Error as exc:
             last_err = exc
             logger.warning(
@@ -63,3 +80,72 @@ def test_connection() -> bool:
     except Exception as exc:
         print(operation_line("DATABASE", "SQL Server connection failed", reason=exc, result="failed"))
         return False
+
+
+def verify_database_contract() -> dict:
+    """Check that DWH.usp_LoadDirect is the shape the Python ETL caller expects.
+
+    Reads the DPContractVersion extended property set by
+    scripts/sql/04_business_objects.sql (or the standalone
+    08_migration_usp_loaddirect_v2.sql controlled-deploy script) and
+    compares it to EXPECTED_CONTRACT_VERSION. A missing property means the
+    deployed procedure predates contract tagging entirely (the exact
+    drift found in the round-2 audit: an INSERT-only procedure with no
+    result set, which breaks every run_etl_direct() call with "No
+    results. Previous SQL was not a query.").
+
+    Never raises - callers decide whether a mismatch is fatal. A
+    connection failure is reported as its own non-ok reason distinct from
+    a version mismatch, since the caller may want to treat "database
+    unreachable" and "database reachable but running the wrong contract"
+    differently.
+    """
+    try:
+        conn = get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT CAST(value AS NVARCHAR(50))
+                FROM sys.extended_properties
+                WHERE major_id = OBJECT_ID('DWH.usp_LoadDirect')
+                  AND minor_id = 0
+                  AND class = 1
+                  AND name = 'DPContractVersion'
+                """
+            )
+            row = cursor.fetchone()
+        finally:
+            conn.close()
+    except Exception as exc:
+        return {
+            "ok": False,
+            "object": "DWH.usp_LoadDirect",
+            "version": None,
+            "expected_version": EXPECTED_CONTRACT_VERSION,
+            "reason": f"contract check could not run: {exc}",
+        }
+
+    version = str(row[0]) if row and row[0] is not None else None
+    ok = version == EXPECTED_CONTRACT_VERSION
+    if ok:
+        reason = None
+    elif version is None:
+        reason = (
+            "DWH.usp_LoadDirect has no DPContractVersion property - it predates "
+            "contract tagging and is almost certainly the stale INSERT-only shape. "
+            "Run scripts/sql/08_migration_usp_loaddirect_v2.sql through a controlled "
+            "deploy before resuming writes."
+        )
+    else:
+        reason = (
+            f"DWH.usp_LoadDirect contract version mismatch: found {version}, "
+            f"expected {EXPECTED_CONTRACT_VERSION}."
+        )
+    return {
+        "ok": ok,
+        "object": "DWH.usp_LoadDirect",
+        "version": version,
+        "expected_version": EXPECTED_CONTRACT_VERSION,
+        "reason": reason,
+    }

@@ -35,6 +35,19 @@ BEGIN
         -- Examples: heartbeat metadata or shutdown_requested=1.
         Payload   NVARCHAR(500) NULL,
 
+        -- Set once per acquire() from the acquiring LockCoordinator's own
+        -- generated identifier. renew()/release() require a matching
+        -- OwnerId (not just TaskName), so a process that lost and regained
+        -- its DB connection after another process legitimately took over
+        -- an expired lock cannot renew or delete that other process's
+        -- lock - see scripts/sql/09_migration_lock_fencing.sql for the
+        -- split-brain scenario this closes.
+        OwnerId   UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+
+        -- Strictly-increasing generation counter (survives delete +
+        -- reacquire for the same TaskName, since IDENTITY does not reset).
+        Fence     BIGINT IDENTITY(1,1) NOT NULL,
+
         CONSTRAINT PK_ActiveTask PRIMARY KEY CLUSTERED (TaskName)
     );
 

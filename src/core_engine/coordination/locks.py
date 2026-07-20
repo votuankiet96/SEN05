@@ -176,11 +176,40 @@ class LockCoordinator:
         self.pid_alive = pid_alive or _local_pid_alive
         self.host = host or socket.gethostname()
         self.pid = pid or os.getpid()
+        # One identifier per LockCoordinator instance (effectively one per
+        # process, since _DEFAULT below is the module-wide singleton every
+        # public function goes through). Used to fence renew()/release()
+        # against a stale owner - see scripts/sql/09_migration_lock_fencing.sql.
+        self.owner_id = uuid.uuid4().hex
         self._cache: dict[str, dict[str, float | bool]] = {}
         self._local_historical_lease: LockLease | None = None
+        self._owner_fencing_available: bool | None = None
 
     def _connect(self) -> Any:
         return self.connection_factory()
+
+    def _supports_owner_fencing(self, cur: Any) -> bool:
+        """Feature-detect the OwnerId column once per process, cached.
+
+        Deliberately adaptive rather than assumed: this code can deploy
+        before scripts/sql/09_migration_lock_fencing.sql has been run
+        against a given database (that migration is intentionally NOT
+        run automatically - see its header). Without this check, every
+        acquire/renew/release call would start failing with a SQL error
+        the moment this code runs against an unmigrated database. Once
+        the column exists, fencing activates automatically on the next
+        check with no code redeploy needed.
+        """
+        if self._owner_fencing_available is not None:
+            return self._owner_fencing_available
+        try:
+            cur.execute(
+                "SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('SEN.ActiveTask') AND name = 'OwnerId'"
+            )
+            self._owner_fencing_available = cur.fetchone() is not None
+        except Exception:
+            self._owner_fencing_available = False
+        return self._owner_fencing_available
 
     def cleanup_expired(self) -> int:
         conn = None
@@ -211,21 +240,24 @@ class LockCoordinator:
                 """,
                 (task_name,),
             )
+            fencing = self._supports_owner_fencing(cur)
+            owner_col = ", OwnerId" if fencing else ""
+            owner_val_sql = ", ?" if fencing else ""
             if payload is None:
                 cur.execute(
-                    """
-                    INSERT INTO SEN.ActiveTask (TaskName, ExpiresAt)
-                    VALUES (?, DATEADD(minute, ?, SYSUTCDATETIME()))
+                    f"""
+                    INSERT INTO SEN.ActiveTask (TaskName, ExpiresAt{owner_col})
+                    VALUES (?, DATEADD(minute, ?, SYSUTCDATETIME()){owner_val_sql})
                     """,
-                    (task_name, ttl_min),
+                    (task_name, ttl_min, self.owner_id) if fencing else (task_name, ttl_min),
                 )
             else:
                 cur.execute(
-                    """
-                    INSERT INTO SEN.ActiveTask (TaskName, ExpiresAt, Payload)
-                    VALUES (?, DATEADD(minute, ?, SYSUTCDATETIME()), ?)
+                    f"""
+                    INSERT INTO SEN.ActiveTask (TaskName, ExpiresAt, Payload{owner_col})
+                    VALUES (?, DATEADD(minute, ?, SYSUTCDATETIME()), ?{owner_val_sql})
                     """,
-                    (task_name, ttl_min, payload),
+                    (task_name, ttl_min, payload, self.owner_id) if fencing else (task_name, ttl_min, payload),
                 )
             conn.commit()
             self._cache.pop(task_name, None)
@@ -254,21 +286,30 @@ class LockCoordinator:
         try:
             conn = self._connect()
             cur = conn.cursor()
+            fencing = self._supports_owner_fencing(cur)
             payload_sql = ", Payload = ?" if payload is not None else ""
             owner_sql = " AND Payload LIKE ?" if owner_prefix else ""
+            # Renew is always "extend a lock I currently hold" - never an
+            # administrative action on someone else's lock (unlike
+            # release()'s owner_prefix path) - so OwnerId fencing applies
+            # unconditionally whenever the column is available, on top of
+            # any owner_prefix check.
+            fence_sql = " AND OwnerId = ?" if fencing else ""
             params: list[Any] = [ttl_min]
             if payload is not None:
                 params.append(payload)
             params.append(task_name)
             if owner_prefix:
                 params.append(f"{owner_prefix}%")
+            if fencing:
+                params.append(self.owner_id)
             cur.execute(
                 f"""
                 UPDATE SEN.ActiveTask
                 SET ExpiresAt = DATEADD(minute, ?, SYSUTCDATETIME())
                     {payload_sql}
                 WHERE TaskName = ? AND ExpiresAt > SYSUTCDATETIME()
-                    {owner_sql}
+                    {owner_sql}{fence_sql}
                 """,
                 tuple(params),
             )
@@ -290,9 +331,25 @@ class LockCoordinator:
                 conn = self._connect()
                 cur = conn.cursor()
                 if owner_prefix:
+                    # Administrative/targeted delete of a SPECIFIC known
+                    # row (e.g. cleanup_stale_lock releasing a lock that
+                    # belongs to a different, already-dead process) - must
+                    # NOT also filter by self.owner_id, since the row being
+                    # deleted deliberately does not belong to this process.
                     cur.execute(
                         "DELETE FROM SEN.ActiveTask WHERE TaskName = ? AND Payload LIKE ?",
                         (task_name, f"{owner_prefix}%"),
+                    )
+                elif self._supports_owner_fencing(cur):
+                    # Plain release() with no explicit target: this is
+                    # always "release the lock I currently hold" (e.g.
+                    # release_live_runtime(), release_supervisor_lock()) -
+                    # fence it so a stale/reconnected owner cannot delete a
+                    # lock a different process has since legitimately
+                    # acquired for the same TaskName.
+                    cur.execute(
+                        "DELETE FROM SEN.ActiveTask WHERE TaskName = ? AND OwnerId = ?",
+                        (task_name, self.owner_id),
                     )
                 else:
                     cur.execute("DELETE FROM SEN.ActiveTask WHERE TaskName = ?", (task_name,))
