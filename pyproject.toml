@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dp-program"
+version = "1.0.0"
+description = "SEN05 DP Program - TradingView OHLCV data provider (SQL Server / Redis)."
+requires-python = ">=3.11"
+dependencies = [
+    "pyodbc>=5.0.0",
+    "python-dotenv>=1.0.0",
+    "truststore>=0.9.0",
+    "playwright>=1.44.0",
+    "pandas>=2.0.0",
+    "websocket-client>=1.6.0",
+    "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+redis = ["redis>=5.0.0"]
+dev = ["pytest>=8.0.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["core_engine*"]
+
+[tool.setuptools.package-data]
+"core_engine.dashboard" = ["static/*"]
