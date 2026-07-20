@@ -138,6 +138,52 @@ def test_unknown_replay_name_is_ignored_without_error():
     _set_replay_runtime("NOT_A_REPLAY_SETTING", 123)  # must not raise
 
 
+def test_targeted_gap_fetch_does_not_expand_into_deep_history(monkeypatch):
+    captured = {}
+
+    def _fake_fetch_history(**kwargs):
+        captured.update(kwargs)
+        return pipeline.tv_history.WsHistoryResult(
+            _valid_ohlcv_df(), "completed", kwargs["n_bars"], 2, "5", "", "data"
+        )
+
+    monkeypatch.setattr(pipeline.tv_history, "fetch_history", _fake_fetch_history)
+
+    pipeline._fetch_history_frame(
+        pipeline.SimpleNamespace(token="token"),
+        _sym(),
+        "M5",
+        15,
+        allow_replay=False,
+    )
+
+    assert captured["request_more_rounds"] == 0
+    assert captured["n_bars"] == 15
+
+
+def test_full_fetch_keeps_configured_deep_history_rounds(monkeypatch):
+    captured = {}
+
+    def _fake_fetch_history(**kwargs):
+        captured.update(kwargs)
+        return pipeline.tv_history.WsHistoryResult(
+            _valid_ohlcv_df(), "completed", kwargs["n_bars"], 2, "5", "", "data"
+        )
+
+    monkeypatch.setattr(pipeline.tv_history, "fetch_history", _fake_fetch_history)
+    monkeypatch.setattr(pipeline.replay_runtime, "enabled", False)
+
+    pipeline._fetch_history_frame(
+        pipeline.SimpleNamespace(token="token"),
+        _sym(),
+        "M5",
+        15,
+        allow_replay=True,
+    )
+
+    assert captured["request_more_rounds"] == pipeline.TRADINGVIEW.history_request_more_rounds
+
+
 # --- _write_ohlcv_frame: crash-recovery fix (P0-2) -------------------------
 #
 # A prior historical run can crash after insert_staging_batch() commits but

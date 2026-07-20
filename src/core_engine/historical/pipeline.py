@@ -297,7 +297,14 @@ def _fetch_history_frame(
         timeout_sec=TRADINGVIEW.history_timeout_sec,
         token=token,
         endpoint=TRADINGVIEW.history_endpoint,
-        request_more_rounds=TRADINGVIEW.history_request_more_rounds,
+        # A targeted gap repair already calculated the exact number of bars
+        # needed for its window. Applying the full-load request-more policy
+        # here can turn a 15-bar repair into hundreds of thousands of bars
+        # and can reach dates outside the warehouse calendar. Full/replay
+        # loads keep the configured deep-history behaviour.
+        request_more_rounds=(
+            TRADINGVIEW.history_request_more_rounds if allow_replay else 0
+        ),
         request_more_bars=TRADINGVIEW.history_request_more_bars,
     )
     frames: list[pd.DataFrame | None] = [result.df]
