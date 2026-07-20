@@ -1680,43 +1680,56 @@ def _headless_refresh(cookie_str: str) -> tuple[str, str]:
     try:
         with sync_playwright() as pw:
             browser = pw.chromium.launch(headless=True, args=["--no-sandbox"])
-            ctx = browser.new_context(
-                user_agent=_PLAYWRIGHT_USER_AGENT,
-                locale="en-US",
-            )
-            if cookie_str:
-                ctx.add_cookies(_parse_cookie_list(cookie_str))
-
-            page = ctx.new_page()
-            _apply_playwright_stealth(page)
-            page.goto("https://www.tradingview.com/", wait_until="networkidle", timeout=45_000)
-
-            token: str = (
-                page.evaluate(
-                    """() => {
-                    try {
-                        const m = document.documentElement.innerHTML.match(/"auth_token":"(eyJ[^"]+)"/);
-                        if (m) return m[1];
-                    } catch(e) {}
-                    try {
-                        if (window.__tv_initData && window.__tv_initData.auth_token)
-                            return window.__tv_initData.auth_token;
-                    } catch(e) {}
-                    try {
-                        if (window.initData && window.initData.auth_token)
-                            return window.initData.auth_token;
-                    } catch(e) {}
-                    return null;
-                }"""
+            try:
+                ctx = browser.new_context(
+                    user_agent=_PLAYWRIGHT_USER_AGENT,
+                    locale="en-US",
                 )
-                or ""
-            )
+                if cookie_str:
+                    ctx.add_cookies(_parse_cookie_list(cookie_str))
 
-            all_cookies = ctx.cookies()
-            if not token:
-                token = _extract_token_from_page(page, all_cookies)
-            cookie_out = "; ".join(f"{c['name']}={c['value']}" for c in all_cookies)
-            browser.close()
+                page = ctx.new_page()
+                _apply_playwright_stealth(page)
+                page.goto("https://www.tradingview.com/", wait_until="networkidle", timeout=45_000)
+
+                token: str = (
+                    page.evaluate(
+                        """() => {
+                        try {
+                            const m = document.documentElement.innerHTML.match(/"auth_token":"(eyJ[^"]+)"/);
+                            if (m) return m[1];
+                        } catch(e) {}
+                        try {
+                            if (window.__tv_initData && window.__tv_initData.auth_token)
+                                return window.__tv_initData.auth_token;
+                        } catch(e) {}
+                        try {
+                            if (window.initData && window.initData.auth_token)
+                                return window.initData.auth_token;
+                        } catch(e) {}
+                        return null;
+                    }"""
+                    )
+                    or ""
+                )
+
+                all_cookies = ctx.cookies()
+                if not token:
+                    token = _extract_token_from_page(page, all_cookies)
+                cookie_out = "; ".join(f"{c['name']}={c['value']}" for c in all_cookies)
+            finally:
+                # Explicit close regardless of success/exception: relying
+                # on sync_playwright()'s own teardown to also clean up any
+                # browser instances it launched is not something to
+                # depend on for a process that runs this repeatedly over
+                # weeks - an unhandled exception between launch() and the
+                # old single close() call (e.g. page.goto() timing out)
+                # used to skip cleanup entirely, leaking a headless
+                # Chromium process per occurrence.
+                try:
+                    browser.close()
+                except Exception:
+                    pass
 
             if token:
                 _logger.info("[AUTH] Token refreshed via headless Chromium.")
@@ -1760,151 +1773,161 @@ def _headless_login_fresh(username: str, password: str) -> tuple[str, str]:
     try:
         with sync_playwright() as pw:
             browser = pw.chromium.launch(headless=True, args=["--no-sandbox"])
-            ctx = browser.new_context(
-                user_agent=_PLAYWRIGHT_USER_AGENT,
-                locale="en-US",
-            )
-            page = ctx.new_page()
-            _apply_playwright_stealth(page)
-
-            # Mở trang đăng nhập TradingView.
-            page.goto(
-                "https://www.tradingview.com/accounts/signin/", wait_until="domcontentloaded", timeout=45_000
-            )
-
-            # Điền email, thử các selector phổ biến theo thứ tự.
-            filled = False
-            for sel in ['input[name="username"]', 'input[type="email"]', 'input[name="email"]']:
-                try:
-                    page.wait_for_selector(sel, timeout=5_000)
-                    page.fill(sel, username)
-                    filled = True
-                    break
-                except Exception:
-                    continue
-            if not filled:
-                _logger.warning("[AUTH] Headless fresh login: username/email input was not found.")
-                browser.close()
-                return GUEST_TOKEN, ""
-
-            # Điền password.
-            page.fill('input[type="password"]', password)
-
-            # Gửi form bằng nút submit hoặc phím Enter.
             try:
-                page.click('button[type="submit"]')
-            except Exception:
-                page.keyboard.press("Enter")
-
-            # Chờ ngắn để CAPTCHA hoặc 2FA có thể hiện ra.
-            try:
-                page.wait_for_timeout(2_000)
-            except Exception:
-                pass
-
-            # --- CAPTCHA auto-solve, chỉ khi TV_CAPTCHA_API_KEY được cấu hình ---
-            try:
-                sitekey: str = (
-                    page.evaluate(
-                        """() => {
-                        const el = document.querySelector('[data-sitekey]');
-                        return el ? el.getAttribute('data-sitekey') : null;
-                    }"""
-                    )
-                    or ""
+                ctx = browser.new_context(
+                    user_agent=_PLAYWRIGHT_USER_AGENT,
+                    locale="en-US",
                 )
-                if sitekey:
-                    captcha_token = _solve_captcha_hcaptcha(
-                        sitekey, "https://www.tradingview.com/accounts/signin/"
-                    )
-                    if captcha_token:
-                        _logger.info(
-                            "[AUTH] hCaptcha detected - injecting solution from %s.",
-                            TRADINGVIEW.captcha_service or "capsolver",
-                        )
-                        page.evaluate(
-                            """(token) => {
-                                const ta = document.querySelector('textarea[name="h-captcha-response"]');
-                                if (ta) ta.value = token;
-                                const ta2 = document.querySelector('textarea[name="g-recaptcha-response"]');
-                                if (ta2) ta2.value = token;
-                                const form = document.querySelector('form');
-                                if (form) form.submit();
-                            }""",
-                            captcha_token,
-                        )
-                        try:
-                            page.wait_for_load_state("networkidle", timeout=20_000)
-                        except Exception:
-                            pass
-                    elif TRADINGVIEW.captcha_api_key:
-                        _logger.warning(
-                            "[AUTH] hCaptcha detected but solving failed - login may not complete."
-                        )
-            except Exception:
-                pass  # Không thấy CAPTCHA trong lần thử này.
+                page = ctx.new_page()
+                _apply_playwright_stealth(page)
 
-            # --- 2FA auto-fill, chỉ khi TV_2FA_SECRET được cấu hình ---
-            try:
-                totp_code = _get_totp_code()
-                if totp_code:
-                    for sel_2fa in [
-                        'input[name="code"]',
-                        'input[inputmode="numeric"]',
-                        'input[type="text"][autocomplete="one-time-code"]',
-                    ]:
-                        try:
-                            page.wait_for_selector(sel_2fa, timeout=5_000)
-                            page.fill(sel_2fa, totp_code)
-                            try:
-                                page.click('button[type="submit"]')
-                            except Exception:
-                                page.keyboard.press("Enter")
+                # Mở trang đăng nhập TradingView.
+                page.goto(
+                    "https://www.tradingview.com/accounts/signin/", wait_until="domcontentloaded", timeout=45_000
+                )
+
+                # Điền email, thử các selector phổ biến theo thứ tự.
+                filled = False
+                for sel in ['input[name="username"]', 'input[type="email"]', 'input[name="email"]']:
+                    try:
+                        page.wait_for_selector(sel, timeout=5_000)
+                        page.fill(sel, username)
+                        filled = True
+                        break
+                    except Exception:
+                        continue
+                if not filled:
+                    _logger.warning("[AUTH] Headless fresh login: username/email input was not found.")
+                    return GUEST_TOKEN, ""
+
+                # Điền password.
+                page.fill('input[type="password"]', password)
+
+                # Gửi form bằng nút submit hoặc phím Enter.
+                try:
+                    page.click('button[type="submit"]')
+                except Exception:
+                    page.keyboard.press("Enter")
+
+                # Chờ ngắn để CAPTCHA hoặc 2FA có thể hiện ra.
+                try:
+                    page.wait_for_timeout(2_000)
+                except Exception:
+                    pass
+
+                # --- CAPTCHA auto-solve, chỉ khi TV_CAPTCHA_API_KEY được cấu hình ---
+                try:
+                    sitekey: str = (
+                        page.evaluate(
+                            """() => {
+                            const el = document.querySelector('[data-sitekey]');
+                            return el ? el.getAttribute('data-sitekey') : null;
+                        }"""
+                        )
+                        or ""
+                    )
+                    if sitekey:
+                        captcha_token = _solve_captcha_hcaptcha(
+                            sitekey, "https://www.tradingview.com/accounts/signin/"
+                        )
+                        if captcha_token:
+                            _logger.info(
+                                "[AUTH] hCaptcha detected - injecting solution from %s.",
+                                TRADINGVIEW.captcha_service or "capsolver",
+                            )
+                            page.evaluate(
+                                """(token) => {
+                                    const ta = document.querySelector('textarea[name="h-captcha-response"]');
+                                    if (ta) ta.value = token;
+                                    const ta2 = document.querySelector('textarea[name="g-recaptcha-response"]');
+                                    if (ta2) ta2.value = token;
+                                    const form = document.querySelector('form');
+                                    if (form) form.submit();
+                                }""",
+                                captcha_token,
+                            )
                             try:
                                 page.wait_for_load_state("networkidle", timeout=20_000)
                             except Exception:
                                 pass
-                            _logger.info("[AUTH] 2FA code auto-filled.")
-                            break
-                        except Exception:
-                            continue
-            except Exception:
-                pass  # Không thấy 2FA trong lần thử này.
+                        elif TRADINGVIEW.captcha_api_key:
+                            _logger.warning(
+                                "[AUTH] hCaptcha detected but solving failed - login may not complete."
+                            )
+                except Exception:
+                    pass  # Không thấy CAPTCHA trong lần thử này.
 
-            # Chờ chuyển về trang chủ sau khi đăng nhập thành công.
-            try:
-                page.wait_for_url("**/tradingview.com/**", timeout=30_000)
-                page.wait_for_load_state("networkidle", timeout=20_000)
-            except Exception:
-                pass  # Tiếp tục extract dù timeout; token có thể đã có.
+                # --- 2FA auto-fill, chỉ khi TV_2FA_SECRET được cấu hình ---
+                try:
+                    totp_code = _get_totp_code()
+                    if totp_code:
+                        for sel_2fa in [
+                            'input[name="code"]',
+                            'input[inputmode="numeric"]',
+                            'input[type="text"][autocomplete="one-time-code"]',
+                        ]:
+                            try:
+                                page.wait_for_selector(sel_2fa, timeout=5_000)
+                                page.fill(sel_2fa, totp_code)
+                                try:
+                                    page.click('button[type="submit"]')
+                                except Exception:
+                                    page.keyboard.press("Enter")
+                                try:
+                                    page.wait_for_load_state("networkidle", timeout=20_000)
+                                except Exception:
+                                    pass
+                                _logger.info("[AUTH] 2FA code auto-filled.")
+                                break
+                            except Exception:
+                                continue
+                except Exception:
+                    pass  # Không thấy 2FA trong lần thử này.
 
-            # Extract auth token từ HTML hoặc JS globals.
-            token: str = (
-                page.evaluate(
-                    """() => {
-                    try {
-                        const m = document.documentElement.innerHTML.match(/"auth_token":"(eyJ[^"]+)"/);
-                        if (m) return m[1];
-                    } catch(e) {}
-                    try {
-                        if (window.__tv_initData && window.__tv_initData.auth_token)
-                            return window.__tv_initData.auth_token;
-                    } catch(e) {}
-                    try {
-                        if (window.initData && window.initData.auth_token)
-                            return window.initData.auth_token;
-                    } catch(e) {}
-                    return null;
-                }"""
+                # Chờ chuyển về trang chủ sau khi đăng nhập thành công.
+                try:
+                    page.wait_for_url("**/tradingview.com/**", timeout=30_000)
+                    page.wait_for_load_state("networkidle", timeout=20_000)
+                except Exception:
+                    pass  # Tiếp tục extract dù timeout; token có thể đã có.
+
+                # Extract auth token từ HTML hoặc JS globals.
+                token: str = (
+                    page.evaluate(
+                        """() => {
+                        try {
+                            const m = document.documentElement.innerHTML.match(/"auth_token":"(eyJ[^"]+)"/);
+                            if (m) return m[1];
+                        } catch(e) {}
+                        try {
+                            if (window.__tv_initData && window.__tv_initData.auth_token)
+                                return window.__tv_initData.auth_token;
+                        } catch(e) {}
+                        try {
+                            if (window.initData && window.initData.auth_token)
+                                return window.initData.auth_token;
+                        } catch(e) {}
+                        return null;
+                    }"""
+                    )
+                    or ""
                 )
-                or ""
-            )
 
-            all_cookies = ctx.cookies()
-            if not token:
-                token = _extract_token_from_page(page, all_cookies)
-            cookie_out = "; ".join(f"{c['name']}={c['value']}" for c in all_cookies)
-            browser.close()
+                all_cookies = ctx.cookies()
+                if not token:
+                    token = _extract_token_from_page(page, all_cookies)
+                cookie_out = "; ".join(f"{c['name']}={c['value']}" for c in all_cookies)
+
+            finally:
+                # See _headless_refresh's identical finally block for why this is
+                # explicit rather than relying on sync_playwright()'s own teardown to
+                # close browsers it launched - an unhandled exception between launch()
+                # and the old single close() call (e.g. page.goto() timing out) used to
+                # skip cleanup entirely, leaking a headless Chromium process per occurrence.
+                try:
+                    browser.close()
+                except Exception:
+                    pass
 
             if token:
                 _logger.info(
