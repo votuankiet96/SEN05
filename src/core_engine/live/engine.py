@@ -39,6 +39,7 @@ import websocket
 
 from core_engine.logkit.factory import get_logger
 from core_engine.logkit.handlers import ResilientRotatingFileHandler
+from core_engine.logkit.jsonl import append_jsonl_capped
 from core_engine.warehouse.validation import validate_ohlcv_df
 from core_engine.coordination.locks import (
     acquire as _acquire_task_lock,
@@ -60,6 +61,7 @@ from core_engine.warehouse.connection import get_connection, test_connection
 
 from core_engine.settings import (
     LIVE,
+    STORAGE,
     LIVE_SUMMARY_LOG,
     NOTIFICATION,
     SYMBOLS,
@@ -84,7 +86,11 @@ from core_engine.reporting.live_reporter import (
     live_start_block,
     live_tv_line,
 )
-from core_engine.redis_io.candle_snapshot import publish_candle_snapshot, seed_candle_snapshots
+from core_engine.redis_io.candle_snapshot import (
+    publish_candle_snapshot,
+    seed_candle_snapshots,
+    set_recovery_callback,
+)
 from core_engine.live.runtime_support import (
     as_utc_timestamp,
     freshness_alert_threshold_minutes,
@@ -151,7 +157,33 @@ from core_engine.coordination.locks import (
     request_ws_live_shutdown,
 )
 
-WS_SYMBOLS = [s for s in SYMBOLS if s["asset_type"] in {"Indice", "Metal", "Crypto"}]
+def _resolve_ws_symbols(symbols: list[dict], asset_types: tuple[str, ...]) -> list[dict]:
+    return [s for s in symbols if s["asset_type"] in set(asset_types)]
+
+
+def _check_expected_live_symbol_count(count: int, expected: int, asset_types: tuple[str, ...]) -> None:
+    """Raises if EXPECTED_LIVE_SYMBOLS is set and does not match. Split out
+    from the module-level call below purely so it is unit-testable without
+    needing to reload core_engine.live.engine (a module-level import-time
+    side effect otherwise)."""
+    if expected and count != expected:
+        raise RuntimeError(
+            f"EXPECTED_LIVE_SYMBOLS={expected} but LIVE_ASSET_TYPES={','.join(asset_types)} "
+            f"currently resolves to {count} symbol(s) from instruments.py. Refusing to start "
+            "rather than silently watching a different live universe than expected - update "
+            "EXPECTED_LIVE_SYMBOLS (or LIVE_ASSET_TYPES/instruments.py, whichever changed) "
+            "after confirming the new count is intentional."
+        )
+
+
+# Which asset types are watched live is operator-configurable
+# (LIVE_ASSET_TYPES), defaulting to the historical "Indice,Metal,Crypto"
+# scope - see settings.operational.LiveSettings.asset_types for why the 26
+# FOREX symbols are not in this set by default and why that is a business
+# decision, not a bug to silently fix here.
+WS_SYMBOLS = _resolve_ws_symbols(SYMBOLS, LIVE.asset_types)
+
+_check_expected_live_symbol_count(len(WS_SYMBOLS), LIVE.expected_symbol_count, LIVE.asset_types)
 
 WS_LOG_FILE = str(WS_LIVE_LOG)
 
@@ -269,6 +301,46 @@ def _log_report_block(title: str, lines: list[str], level: int = logging.INFO) -
 
 
 
+def _live_log_rotating_handler() -> logging.Handler | None:
+    for handler in logger.handlers:
+        if isinstance(handler, ResilientRotatingFileHandler):
+            return handler
+    return None
+
+
+def _maybe_rotate_live_log() -> None:
+    """Manually trigger the same size-based rollover _append_live_table_text's
+    raw file writes below would otherwise bypass entirely.
+
+    logger's ResilientRotatingFileHandler only ever checks maxBytes inside
+    its own emit() - i.e. only when a real logger.info()/warning()/etc.
+    call happens. The live candle-flow table (the majority of this file's
+    volume - a full table is appended per batch, per candle row) is
+    written via a separate raw path.open("a") append instead of through
+    the logger, so it never triggers that check. The size cap was
+    effectively unenforced for most of this file's actual growth: rollover
+    would only happen whenever the next unrelated logger.X() call
+    happened to fire, by which point the file could already be many times
+    over maxBytes. This re-checks after every raw append instead.
+    """
+    handler = _live_log_rotating_handler()
+    if handler is None:
+        return
+    try:
+        if handler.maxBytes > 0 and os.path.getsize(WS_LOG_FILE) >= handler.maxBytes:
+            # Acquire the handler's own lock before calling doRollover()
+            # directly - emit() normally holds this for the same reason
+            # (a concurrent logger.info() call from another thread must
+            # not race a rollover happening underneath it).
+            handler.acquire()
+            try:
+                handler.doRollover()
+            finally:
+                handler.release()
+    except Exception:
+        pass
+
+
 def _append_live_table_text(text: str) -> None:
     block = str(text).strip("\n")
     if not block:
@@ -283,6 +355,7 @@ def _append_live_table_text(text: str) -> None:
         with _live_table_file_lock:
             with path.open("a", encoding="utf-8") as handle:
                 handle.write(block + "\n")
+            _maybe_rotate_live_log()
     except Exception as exc:
         logger.warning("Could not write live table log: %s", exc)
 
@@ -324,9 +397,11 @@ _summarize_backlog = _reporter.backlog
 
 def _write_live_summary(row: dict) -> None:
     try:
-        LIVE_SUMMARY_LOG.parent.mkdir(parents=True, exist_ok=True)
-        with LIVE_SUMMARY_LOG.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(row, ensure_ascii=True, sort_keys=True) + "\n")
+        # Size-capped instead of a bare unbounded append: an actively-
+        # written file's mtime never looks "old" to the age-based runtime
+        # retention job, so this file was growing forever otherwise - see
+        # core_engine.logkit.jsonl.
+        append_jsonl_capped(LIVE_SUMMARY_LOG, row)
     except Exception as exc:
         logger.warning("Could not write live batch summary: %s", exc)
 
@@ -817,11 +892,7 @@ def _flush_overflow_to_queue() -> None:
             logger.info("%s", _llog("Memory safety buffer restored to queue", bars=recharged, result="queued"))
 
     if _spool_pending.is_set() and not _db_queue.full():
-        flushed = _spool.flush_to_queue(_db_queue)
-
-        if flushed:
-            with _state_lock:
-                _stats["queue_depth"] = _db_queue.qsize()
+        _lease_spool_into_queue()
 
         pending = _spool.count()
         if pending == 0:
@@ -829,9 +900,99 @@ def _flush_overflow_to_queue() -> None:
         elif pending is None or pending > 0:
             _spool_pending.set()
 
+    if _state.spool_full_pause:
+        pending = _spool.count()
+        if pending is not None and pending < MAX_SPOOL_ROWS:
+            _state.spool_full_pause = False
+            logger.warning("%s", _llog("Durable outbox backlog drained - batches resumed", pending=pending, result="resumed"))
+
+
+def _lease_spool_into_queue(limit: int = 200) -> int:
+    """Non-destructively claim pending/expired-lease spool rows and hand
+    them to the RAM dispatch queue. Unlike the old flush_to_queue(), a row
+    stays in the spool (status='leased') until _db_worker acks it - so a
+    crash before that ack simply leaves it eligible to be leased again."""
+    leased = _spool.lease_batch(limit=limit)
+    queued = 0
+    for row_id, item in leased:
+        try:
+            _db_queue.put_nowait((row_id, *item))
+            queued += 1
+        except queue.Full:
+            # Release immediately rather than holding a lease on a row we
+            # could not hand off - otherwise it sits "leased" and
+            # unavailable to a future pass until the lease time expires.
+            _spool.release_for_retry(row_id, error="queue full during lease recovery")
+    if queued:
+        logger.info("%s", _llog("Recovered bars from durable outbox", bars=queued, result="queued"))
+        with _state_lock:
+            _stats["queue_depth"] = _db_queue.qsize()
+    return queued
+
 def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str) -> str:
+    """Persist item to the durable spool FIRST, then hand a (row_id, item)
+    tuple to the fast in-memory dispatch path (queue, then RAM overflow).
+
+    The row is only deleted from the spool by _db_worker's ack() after a
+    successful staging write - never here. This means every candle is
+    durable on disk from the moment it is accepted, and a process crash at
+    any point between here and a successful staging commit loses nothing:
+    the next process start leases the still-present row and retries it.
+    """
     try:
-        _db_queue.put_nowait(item)
+        row_id = _spool.persist_pending(item)
+    except Exception as exc:
+        logger.error(
+            "%s",
+            _llog("Durable outbox write failed", group=group_id, symbol=tv_symbol, timeframe=tf_code, reason=exc, result="rejected"),
+        )
+        _send_alert(
+            "ERROR",
+            "Live feed could not durably store a candle\n"
+            f"Affected pair: {tv_symbol}/{tf_code}\n"
+            "The disk safety buffer write itself failed.\n"
+            "Suggested action: check disk space and permissions now." + QUICK_COMMANDS_HINT,
+        )
+        _increment_data_error_counter()
+        with _state_lock:
+            _stats["queue_depth"] = _db_queue.qsize()
+        return "rejected"
+
+    if row_id is None:
+        # The durable outbox itself is full. Accepting the item anyway
+        # would mean holding it only in RAM with no durability guarantee -
+        # exactly the gap this design exists to close. Pause new batch
+        # fetching instead (checked by _spool_full_blocks_batch) and raise
+        # CRITICAL every time so the operator cannot miss a growing
+        # backlog silently.
+        _state.spool_full_pause = True
+        logger.critical(
+            "%s",
+            _llog(
+                "Durable outbox full - new batches paused",
+                group=group_id,
+                symbol=tv_symbol,
+                timeframe=tf_code,
+                capacity=MAX_SPOOL_ROWS,
+                result="paused",
+            ),
+        )
+        _send_alert(
+            "CRITICAL",
+            "Live feed cannot store new candles safely\n"
+            f"Disk safety buffer is full: {MAX_SPOOL_ROWS} rows\n"
+            f"Affected pair: {tv_symbol}/{tf_code}\n"
+            "New batches are paused until the backlog drains.\n"
+            "Suggested action: check SQL Server and free disk space now." + QUICK_COMMANDS_HINT,
+        )
+        _increment_data_error_counter()
+        with _state_lock:
+            _stats["queue_depth"] = _db_queue.qsize()
+        return "rejected"
+
+    queued_item = (row_id, *item)
+    try:
+        _db_queue.put_nowait(queued_item)
 
         with _state_lock:
             _stats["queue_depth"] = _db_queue.qsize()
@@ -843,7 +1004,7 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
             buf_len = len(_overflow_buf)
 
             if buf_len < OVERFLOW_BUFFER_MAX:
-                _overflow_buf.append(item)
+                _overflow_buf.append(queued_item)
 
                 new_len = buf_len + 1
 
@@ -886,55 +1047,21 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
                 return "buffered"
 
             else:
-                try:
-                    if not _spool.write(item):
-                        _send_alert(
-                            "CRITICAL",
-                            "Live feed cannot store new candles safely\n"
-                            f"Disk safety buffer is full: {MAX_SPOOL_ROWS} rows\n"
-                            f"Affected pair: {tv_symbol}/{tf_code}\n"
-                            "Suggested action: check SQL Server and free disk space now.",
-                        )
+                # Both the RAM queue and RAM overflow buffer are full, but
+                # the item is already safely persisted on disk (above) -
+                # nothing to lose here. It will be picked up on the next
+                # lease pass in _flush_overflow_to_queue once room frees up.
+                _spool_pending.set()
 
-                        _increment_data_error_counter()
+                logger.warning(
+                    "%s",
+                    _llog("Disk safety buffer used", group=group_id, symbol=tv_symbol, timeframe=tf_code, result="spooled"),
+                )
 
-                        with _state_lock:
-                            _stats["queue_depth"] = _db_queue.qsize()
+                with _state_lock:
+                    _stats["queue_depth"] = _db_queue.qsize()
 
-                        return "rejected"
-
-                    _spool_pending.set()
-
-                    logger.warning(
-                        "%s",
-                        _llog("Disk safety buffer used", group=group_id, symbol=tv_symbol, timeframe=tf_code, result="spooled"),
-                    )
-
-                    with _state_lock:
-                        _stats["queue_depth"] = _db_queue.qsize()
-
-                    return "spooled"
-
-                except Exception as exc:
-                    logger.error(
-                        "%s",
-                        _llog("Disk safety buffer write failed", group=group_id, symbol=tv_symbol, timeframe=tf_code, reason=exc, result="dropped"),
-                    )
-
-                    _send_alert(
-                        "ERROR",
-                        "Live feed could not save a candle\n"
-                        f"Affected pair: {tv_symbol}/{tf_code}\n"
-                        "The write queue, memory safety buffer, and disk safety buffer all failed.\n"
-                        "Suggested action: check database writer and disk space now." + QUICK_COMMANDS_HINT,
-                    )
-
-                    _increment_data_error_counter()
-
-                    with _state_lock:
-                        _stats["queue_depth"] = _db_queue.qsize()
-
-                    return "rejected"
+                return "spooled"
 
     except Exception as exc:
         logger.exception(
@@ -982,6 +1109,20 @@ def _write_defer_lock_name() -> str:
 
     return name or "write-defer"
 
+def _wait_for_queue_drain(timeout_sec: float) -> bool:
+    """Bounded equivalent of _db_queue.join() - returns True if the queue
+    fully drained within timeout_sec, False on timeout. Uses the same
+    unfinished_tasks/mutex Queue.join() itself relies on internally."""
+    deadline = time.monotonic() + max(0.0, timeout_sec)
+    while True:
+        with _db_queue.mutex:
+            if _db_queue.unfinished_tasks == 0:
+                return True
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.2)
+
+
 def _db_worker() -> None:
     logger.info("%s", _llog("Database writer started", result="running"))
 
@@ -992,7 +1133,11 @@ def _db_worker() -> None:
             with _overflow_lock:
                 overflow_pending = len(_overflow_buf)
 
-            spool_pending = _spool.count() or 0
+            # Only pending/leased rows gate this loop - 'staged' rows
+            # (staged but not yet Fact-committed) are drained by the
+            # separate _deferred_etl shutdown-flush pass right after this
+            # loop exits, not by waiting here. See LiveSpool.count_unstaged.
+            spool_pending = _spool.count_unstaged() or 0
 
             if overflow_pending == 0 and spool_pending == 0:
                 break
@@ -1006,13 +1151,7 @@ def _db_worker() -> None:
         except queue.Empty:
             continue
 
-        if len(item) == 6:
-            batch_id, symbol_id, tf_code, staging_table, tv_symbol, df = item
-
-        else:
-            batch_id = 0
-
-            symbol_id, tf_code, staging_table, tv_symbol, df = item
+        row_id, batch_id, symbol_id, tf_code, staging_table, tv_symbol, df = item
 
         key = (symbol_id, tf_code)
 
@@ -1028,6 +1167,8 @@ def _db_worker() -> None:
 
         if df.empty:
             _record_db_result(batch_id, key, accepted_count, 0, 0)
+
+            _spool.ack(row_id)
 
             _db_queue.task_done()
 
@@ -1097,9 +1238,25 @@ def _db_worker() -> None:
         if not _staging_ok:
             _record_db_result(batch_id, key, accepted_count, 0, 0, error=True)
 
+            # Do NOT delete the durable copy: release it back to the
+            # outbox so the next lease pass retries it instead of losing
+            # it. This is the fix for the previous behavior where a
+            # staging write that failed after all retries was simply
+            # task_done()'d and the candle was gone for good.
+            _spool.release_for_retry(row_id, error="insert_staging_batch failed after retries")
+
             _db_queue.task_done()
 
             continue
+
+        # Staging succeeded but this row is NOT acked yet - only marked
+        # 'staged'. The outbox row stays durable until run_etl_direct()
+        # (staging -> Fact) also succeeds for this symbol/timeframe (see
+        # the ack_staged_for_key() calls below and warehouse/spool.py's
+        # module docstring for why: acking here would leave the exact
+        # staging-to-Fact crash gap this design exists to close still open
+        # on the live path).
+        _spool.mark_staged(row_id)
 
         max_committed_ts = max(_as_utc_timestamp(ts) for ts in df.index)
         latest_saved_utc = _fmt_bar_time_utc(max_committed_ts)
@@ -1217,6 +1374,14 @@ def _db_worker() -> None:
             else:
                 _set_committed_watermark(key, max_committed_ts)
 
+                # Fact commit confirmed: ack this row and any other rows
+                # this same symbol/timeframe accumulated while staged
+                # (e.g. earlier bars whose ETL attempt failed and was
+                # deferred) - one successful run_etl_direct() call migrates
+                # every not-yet-migrated staging row for this key, not just
+                # this one.
+                _spool.ack_staged_for_key(symbol_id, tf_code, staging_table, tv_symbol)
+
                 _record_db_result(
                     batch_id,
                     key,
@@ -1286,6 +1451,12 @@ def _db_worker() -> None:
 
                         _deferred_etl_next_attempt.pop(defer_key, None)
 
+                        # Fact commit confirmed for this key - ack every
+                        # spool row still 'staged' for it (see the
+                        # matching comment on the immediate-ETL success
+                        # path above).
+                        _spool.ack_staged_for_key(sym_id, tf_c, stg_tbl, sym_nm)
+
                     except Exception as exc:
                         logger.error("%s", _llog("Delayed main table update failed", symbol=sym_nm, timeframe=tf_c, reason=exc, result="failed"))
 
@@ -1344,6 +1515,8 @@ def _db_worker() -> None:
                     publish_candle_snapshot(sym_id, sym_nm, tf_c)
 
                     _deferred_etl_next_attempt.pop(defer_key, None)
+
+                    _spool.ack_staged_for_key(sym_id, tf_c, stg_tbl, sym_nm)
 
                 except Exception as exc:
                     logger.error(
@@ -2029,6 +2202,26 @@ class BatchFetcher:
             except Exception:
                 pass
 
+            # keep_running=False is only checked between reads by
+            # websocket-client's own loop - it does not unblock a thread
+            # that is already stuck inside a blocking socket recv() (e.g.
+            # TradingView stopped sending data without closing the TCP
+            # connection). Without forcing the underlying socket closed
+            # too, that ws_thread can linger indefinitely; over many days
+            # of repeated timeouts, these accumulate as leaked threads and
+            # open file descriptors even though _is_current_fetch()
+            # already prevents a stale thread's callbacks from corrupting
+            # newer batches' data.
+            try:
+                sock = getattr(ws, "sock", None)
+                raw_sock = getattr(sock, "sock", None) if sock is not None else None
+                if raw_sock is not None:
+                    raw_sock.close()
+                    with _state_lock:
+                        _stats["ws_forced_socket_closes"] = _stats.get("ws_forced_socket_closes", 0) + 1
+            except Exception:
+                pass
+
             missing = [
                 f"{cs_map_timeout_snapshot[cs][3]} {cs_map_timeout_snapshot[cs][1]}"
 
@@ -2312,6 +2505,22 @@ def _update_guest_mode_counter(is_guest: bool) -> None:
 
         _state._consecutive_guest_batches = 0
 
+def _spool_full_blocks_batch() -> bool:
+    """Pause starting a new batch while the durable outbox is full.
+
+    Set by _enqueue_or_buffer when persist_pending() returns None, cleared
+    by _flush_overflow_to_queue once the backlog drains. Fetching new
+    candles while unable to durably store them would just move the
+    "cannot store safely" problem into RAM instead of solving it.
+    """
+    if not _state.spool_full_pause:
+        return False
+
+    logger.warning("%s", _llog("Live batch paused: durable outbox full", result="skipped_this_batch"))
+
+    return True
+
+
 def _guest_mode_blocks_batch() -> bool:
     is_guest = _tv_auth.is_guest_mode()
 
@@ -2393,6 +2602,9 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
         return
 
     if _guest_mode_blocks_batch():
+        return
+
+    if _spool_full_blocks_batch():
         return
 
     with _state_lock:
@@ -3104,6 +3316,30 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
     if hasattr(_sys.stdout, "reconfigure"):
         _sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
+    if STORAGE.mode != "sql":
+        # DP_STORAGE_MODE=redis/both is defined in settings but not wired
+        # into this engine's write path at all - the live engine writes to
+        # SQL unconditionally regardless of this setting. Continuing
+        # silently would let an operator believe SQL writes are
+        # disabled/reduced (e.g. to justify taking SQL Server offline)
+        # when they are not; refusing to start is safer than a silent
+        # no-op. See round-2 audit item 12/H12.
+        logger.critical(
+            "%s",
+            _llog(
+                "Unsupported storage mode requested",
+                mode=STORAGE.mode,
+                reason="redis/both mode is not wired into the live engine's write path yet",
+                result="refused_to_start",
+            ),
+        )
+        print(
+            f"ERROR: DP_STORAGE_MODE={STORAGE.mode!r} is not supported by the live engine yet "
+            "(it always writes SQL regardless of this setting). Set DP_STORAGE_MODE=sql (or "
+            "leave it unset) to start."
+        )
+        return 1
+
     n_groups = math.ceil(len(WS_SYMBOLS) / WS_SYMBOLS_PER_CONN)
     started_utc = datetime.now(timezone.utc)
     started_local = started_utc.astimezone()
@@ -3157,6 +3393,15 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
     if not test_connection():
         print("ERROR: Could not connect to the database. The system did not start.")
 
+        return 1
+
+    from core_engine.warehouse.connection import verify_database_contract
+
+    _contract = verify_database_contract()
+    if not _contract["ok"]:
+        logger.critical("%s", _llog("Database contract check failed", reason=_contract["reason"], result="refused_to_start"))
+        print(f"ERROR: Database contract check failed: {_contract['reason']}")
+        print("Run scripts/sql/08_migration_usp_loaddirect_v2.sql through a controlled deploy, then retry.")
         return 1
 
     from core_engine.coordination.locks import cleanup_expired as _cleanup_expired
@@ -3290,10 +3535,26 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
             renewed = _renew_task_lock("ws_live_runtime", duration_min=60, payload=heartbeat_payload)
 
             if not renewed:
-                logger.warning(
+                # A renew() that matches 0 rows (once lock fencing is
+                # active - see coordination.locks._supports_owner_fencing)
+                # is a real signal, not a transient blip: either the lock
+                # row is gone, or - the split-brain case this exists to
+                # catch - a different process already re-acquired it under
+                # a new OwnerId after this one appeared unresponsive.
+                # Continuing to write in either case risks two writers
+                # racing on the same data, so this stops immediately
+                # instead of waiting out the remaining TTL.
+                logger.critical(
                     "%s",
-                    _llog("Live lock renewal failed", lock="ws_live_runtime", risk="process_may_look_stopped", result="warning"),
+                    _llog(
+                        "Live lock renewal failed - stopping immediately",
+                        lock="ws_live_runtime",
+                        risk="possible_second_writer_holds_this_lock",
+                        result="shutting_down",
+                    ),
                 )
+                _shutdown.set()
+                return
 
     threading.Thread(target=_ws_lock_heartbeat, name="ws-live-lock-heartbeat", daemon=True).start()
 
@@ -3415,6 +3676,8 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
 
     _load_watermarks()
 
+    set_recovery_callback(lambda: seed_candle_snapshots(WS_SYMBOLS, WS_TF_CODES, reason="circuit_recovered"))
+
     seed_result = seed_candle_snapshots(WS_SYMBOLS, WS_TF_CODES, reason="live_startup")
     if seed_result.get("result") != "disabled":
         logger.info(
@@ -3435,7 +3698,7 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
     if initial_spool_rows is None or initial_spool_rows > 0:
         _spool_pending.set()
 
-    recovered = _spool.flush_to_queue(_db_queue)
+    recovered = _lease_spool_into_queue()
 
     remaining_spool_rows = _spool.count()
     if remaining_spool_rows == 0:
@@ -3677,7 +3940,25 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
         cleanup_orphan_live_batch_window(logger)
 
     if db_thread.is_alive():
-        _db_queue.join()
+        # Bounded wait instead of the unbounded _db_queue.join(): every
+        # item still in the queue is already durable in the spool outbox
+        # (persisted before being queued - see _enqueue_or_buffer), so
+        # timing out here and proceeding to shutdown loses nothing. The
+        # next process start leases whatever is still pending and retries
+        # it; this bound just prevents a slow/hung SQL Server from making
+        # shutdown itself hang indefinitely.
+        drained = _wait_for_queue_drain(WS_LIVE_SHUTDOWN_GRACE_SECONDS)
+        if not drained:
+            logger.warning(
+                "%s",
+                _llog(
+                    "Shutdown queue drain timed out",
+                    remaining_items=_db_queue.qsize(),
+                    timeout_seconds=WS_LIVE_SHUTDOWN_GRACE_SECONDS,
+                    action="items_remain_durable_in_spool",
+                    result="timeout",
+                ),
+            )
     else:
         logger.critical(
             "%s",

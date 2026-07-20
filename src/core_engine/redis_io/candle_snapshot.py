@@ -53,6 +53,16 @@ class CandleSnapshotPublisher:
         self._circuit_open_until = 0.0
         self._pubsub_circuit_open_until = 0.0
         self._last_queue_full_log_at = 0.0
+        # Optional callback the owning engine can register (see
+        # live/engine.py's startup sequence) to re-seed every live symbol/
+        # timeframe once the circuit recovers from an open state. Redis
+        # publish here is intentionally best-effort/fire-and-forget (the
+        # live DB writer must never wait on it), so any snapshot_updated
+        # events OG missed during an outage are otherwise gone for good -
+        # this is a light mitigation (catch up once connectivity returns)
+        # rather than a full durable outbox/replay log for Redis, which
+        # would be a larger change - see round-2 audit item H12.
+        self.on_recovered: Any | None = None
 
     def enqueue(self, symbol_id: int, tv_symbol: str, tf_code: str) -> None:
         if not CANDLE_SNAPSHOT.enabled:
@@ -284,6 +294,11 @@ class CandleSnapshotPublisher:
             self._circuit_open_until = 0.0
         if was_open:
             _runtime_logger().info("CANDLE_SNAPSHOT | Redis recovered | result=publishing")
+            if self.on_recovered is not None:
+                try:
+                    self.on_recovered()
+                except Exception:
+                    _runtime_logger().exception("CANDLE_SNAPSHOT | on_recovered callback failed safely | result=skipped")
 
     def _open_pubsub_circuit(self) -> None:
         now = time.monotonic()
@@ -356,6 +371,14 @@ def _safe_int(value: object) -> int:
 def publish_candle_snapshot(symbol_id: int, tv_symbol: str, tf_code: str) -> None:
     """Queue one candle snapshot handoff after live Fact_OHLCV commit succeeds."""
     _publisher.enqueue(symbol_id, tv_symbol, tf_code)
+
+
+def set_recovery_callback(callback) -> None:
+    """Register a callback fired once whenever the Redis circuit breaker
+    recovers from an open state (see CandleSnapshotPublisher.on_recovered).
+    Intended for live/engine.py to re-run seed_candle_snapshots() so OG
+    catches up on any snapshot_updated events missed during an outage."""
+    _publisher.on_recovered = callback
 
 
 def seed_candle_snapshots(
