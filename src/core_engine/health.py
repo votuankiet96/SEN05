@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -133,14 +134,33 @@ def _runtime_check() -> Check:
             probe.write_text("ok", encoding="utf-8")
             probe.unlink(missing_ok=True)
             writable[path.name] = True
+        usage = shutil.disk_usage(APP_ROOT)
+        free_gb = usage.free / (1024**3)
+        total_gb = usage.total / (1024**3)
+        free_percent = (usage.free / usage.total * 100.0) if usage.total else 0.0
+        warn_gb = float(getattr(BACKEND, "disk_warn_free_gb", 5.0))
+        fail_gb = float(getattr(BACKEND, "disk_fail_free_gb", 1.0))
+        status = "ok"
+        message = "Runtime folders are present and writable."
+        if free_gb <= fail_gb:
+            status = "fail"
+            message = "Runtime disk space is critically low; durable spool/log/outbox writes are at risk."
+        elif free_gb <= warn_gb:
+            status = "warn"
+            message = "Runtime disk space is low; free space should be reclaimed before it becomes critical."
         return Check(
             "runtime",
-            "ok",
-            "Runtime folders are present and writable.",
+            status,
+            message,
             {
                 "app_root": str(APP_ROOT),
                 "env_file": str(ENV_FILE),
                 "writable": writable,
+                "disk_total_gb": round(total_gb, 2),
+                "disk_free_gb": round(free_gb, 2),
+                "disk_free_percent": round(free_percent, 2),
+                "disk_warn_free_gb": warn_gb,
+                "disk_fail_free_gb": fail_gb,
             },
         )
     except Exception as exc:

@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from collections import namedtuple
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -59,6 +60,33 @@ def _redis_settings(*, enabled=True, host="redis.internal"):
         redis_db=0,
         timeout_sec=0.1,
     )
+
+
+@pytest.mark.parametrize(
+    ("free_gb", "expected"),
+    [(13.0, "ok"), (4.0, "warn"), (0.5, "fail")],
+)
+def test_runtime_health_reports_low_disk_space(monkeypatch, tmp_path, free_gb, expected):
+    for name in ("LOG_DIR", "CACHE_DIR", "RUN_DIR", "SPOOL_DIR"):
+        path = tmp_path / name.lower()
+        path.mkdir()
+        monkeypatch.setattr(health, name, path)
+    monkeypatch.setattr(health, "APP_ROOT", tmp_path)
+    monkeypatch.setattr(health, "ensure_runtime_dirs", lambda: None)
+    monkeypatch.setattr(
+        health,
+        "BACKEND",
+        SimpleNamespace(disk_warn_free_gb=5.0, disk_fail_free_gb=1.0),
+    )
+    DiskUsage = namedtuple("usage", "total used free")
+    total = 100 * 1024**3
+    free = int(free_gb * 1024**3)
+    monkeypatch.setattr(health.shutil, "disk_usage", lambda _path: DiskUsage(total, total - free, free))
+
+    check = health._runtime_check()
+
+    assert check.status == expected
+    assert check.detail["disk_free_gb"] == free_gb
 
 
 def test_redis_snapshot_health_is_disabled_in_sql_mode(monkeypatch):

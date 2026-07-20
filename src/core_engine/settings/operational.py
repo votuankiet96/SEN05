@@ -368,6 +368,8 @@ class LoggingSettings:
 @dataclass(frozen=True)
 class BackendSettings:
     health_interval_sec: int = env_int("BACKEND_HEALTH_INTERVAL_SEC", 30, minimum=5)
+    disk_warn_free_gb: float = env_float("BACKEND_DISK_WARN_FREE_GB", 5.0, minimum=0.0)
+    disk_fail_free_gb: float = env_float("BACKEND_DISK_FAIL_FREE_GB", 1.0, minimum=0.0)
     # Separate, much slower interval for the DB-inclusive health check
     # (Fact_OHLCV freshness + usp_LoadDirect contract). Deliberately not
     # tied to health_interval_sec: that one runs every few seconds and
@@ -397,6 +399,8 @@ class BackendSettings:
     def __post_init__(self) -> None:
         if self.historical_backfill_mode not in {"auto", "full", "gap"}:
             object.__setattr__(self, "historical_backfill_mode", "gap")
+        if self.disk_fail_free_gb > self.disk_warn_free_gb:
+            object.__setattr__(self, "disk_fail_free_gb", self.disk_warn_free_gb)
 
 
 DB = DatabaseSettings()
