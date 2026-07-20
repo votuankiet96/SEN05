@@ -15,6 +15,7 @@ rebind - these tests exist to keep that working.
 
 from __future__ import annotations
 
+from contextlib import nullcontext
 from datetime import datetime, timedelta, timezone
 
 import pandas as pd
@@ -120,7 +121,14 @@ def _sym() -> dict:
     return {"tv_symbol": "EURUSD", "tv_exchange": "OANDA", "symbol_id": 999}
 
 
-def test_write_ohlcv_frame_calls_etl_even_when_staged_rows_is_zero(monkeypatch):
+@pytest.fixture
+def isolated_warehouse_lock(monkeypatch):
+    """Unit tests for frame/ETL behavior must never acquire the real
+    SEN.ActiveTask lock from the production database."""
+    monkeypatch.setattr(pipeline, "_warehouse_write_slot", lambda _owner: nullcontext())
+
+
+def test_write_ohlcv_frame_calls_etl_even_when_staged_rows_is_zero(monkeypatch, isolated_warehouse_lock):
     etl_calls = []
     monkeypatch.setattr(pipeline, "insert_staging_batch", lambda *a, **k: 0)
     monkeypatch.setattr(
@@ -136,7 +144,7 @@ def test_write_ohlcv_frame_calls_etl_even_when_staged_rows_is_zero(monkeypatch):
     assert result == 0
 
 
-def test_write_ohlcv_frame_passes_from_time_scoped_to_batch(monkeypatch):
+def test_write_ohlcv_frame_passes_from_time_scoped_to_batch(monkeypatch, isolated_warehouse_lock):
     # validate_ohlcv_df's default normalize_timestamps=True reinterprets a
     # naive index as LOCAL wall-clock time and converts to UTC, so the
     # from_time actually sent to run_etl_direct will not textually equal
@@ -221,7 +229,7 @@ def test_run_full_load_raises_after_consecutive_fail_even_with_prior_successes(m
         pipeline.run_full_load(object(), symbols=symbols, dry_run=False)
 
 
-def test_write_ohlcv_frame_skip_etl_still_skips(monkeypatch):
+def test_write_ohlcv_frame_skip_etl_still_skips(monkeypatch, isolated_warehouse_lock):
     etl_calls = []
     monkeypatch.setattr(pipeline, "insert_staging_batch", lambda *a, **k: 0)
     monkeypatch.setattr(pipeline, "run_etl_direct", lambda *a, **k: etl_calls.append(1))

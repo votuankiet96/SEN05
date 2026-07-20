@@ -14,7 +14,32 @@ instance with network delivery stubbed out for every test.
 
 from __future__ import annotations
 
+import os
+import shutil
+import tempfile
+from pathlib import Path
+
 import pytest
+
+
+# This must run while conftest is imported, before pytest imports test
+# modules (many of which create component loggers at module scope). A
+# fixture is too late for that: collection would already have attached
+# handlers to the real production runtime logs. Use the checked-in example
+# config as well, so unit tests cannot inherit production DB/webhook secrets.
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_TEST_APP_ROOT = Path(tempfile.mkdtemp(prefix="dp_program_pytest_"))
+(_TEST_APP_ROOT / "config").mkdir(parents=True, exist_ok=True)
+shutil.copy2(
+    _REPO_ROOT / "config" / "dp_provider.env.example",
+    _TEST_APP_ROOT / "config" / "dp_provider.env",
+)
+os.environ["DP_APP_ROOT"] = str(_TEST_APP_ROOT)
+os.environ["DP_DISABLE_CONSOLE_LOG"] = "1"
+
+
+def pytest_sessionfinish(session, exitstatus):
+    shutil.rmtree(_TEST_APP_ROOT, ignore_errors=True)
 
 
 @pytest.fixture(autouse=True)
