@@ -301,15 +301,17 @@ def _acquire_historical_or_report(owner: str, args: Any, *, duration_min: int) -
 
 
 def main(argv: list[str] | None = None) -> int:
-    if STORAGE.mode != "sql":
-        # Same guard as live/engine.py - see round-2 audit item H12. This
-        # engine always writes SQL regardless of DP_STORAGE_MODE.
+    if STORAGE.mode == "redis":
+        # Historical data always lands in SQL. ``both`` is valid because it
+        # keeps SQL authoritative while the live engine maintains the Redis
+        # snapshot side-channel; only Redis-only would misrepresent this
+        # engine's actual durability behavior.
         logger.critical(
             "%s",
             _hlog(
                 "Unsupported storage mode requested",
                 mode=STORAGE.mode,
-                reason="redis/both mode is not wired into the historical engine's write path yet",
+                reason="redis-only mode is not wired into the historical engine's durable write path",
                 result="refused_to_start",
             ),
         )

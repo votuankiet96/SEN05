@@ -3316,27 +3316,25 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
     if hasattr(_sys.stdout, "reconfigure"):
         _sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-    if STORAGE.mode != "sql":
-        # DP_STORAGE_MODE=redis/both is defined in settings but not wired
-        # into this engine's write path at all - the live engine writes to
-        # SQL unconditionally regardless of this setting. Continuing
-        # silently would let an operator believe SQL writes are
-        # disabled/reduced (e.g. to justify taking SQL Server offline)
-        # when they are not; refusing to start is safer than a silent
-        # no-op. See round-2 audit item 12/H12.
+    if STORAGE.mode == "redis":
+        # Redis-only is not a durable warehouse implementation: this engine
+        # always commits SQL first and only then publishes optional Redis
+        # candle snapshots. ``both`` is valid (and is the backward-compatible
+        # result of CANDLE_SNAPSHOT_ENABLED=1); SQL remains authoritative.
+        # Refuse only ``redis`` so an operator cannot mistakenly take SQL
+        # offline while believing the setting changed the durable write path.
         logger.critical(
             "%s",
             _llog(
                 "Unsupported storage mode requested",
                 mode=STORAGE.mode,
-                reason="redis/both mode is not wired into the live engine's write path yet",
+                reason="redis-only mode is not wired into the live engine's durable write path",
                 result="refused_to_start",
             ),
         )
         print(
-            f"ERROR: DP_STORAGE_MODE={STORAGE.mode!r} is not supported by the live engine yet "
-            "(it always writes SQL regardless of this setting). Set DP_STORAGE_MODE=sql (or "
-            "leave it unset) to start."
+            f"ERROR: DP_STORAGE_MODE={STORAGE.mode!r} is not supported by the live engine "
+            "because SQL is the durable system of record. Set DP_STORAGE_MODE=sql or both."
         )
         return 1
 
