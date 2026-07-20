@@ -1162,8 +1162,20 @@ class BackendSupervisor:
             from core_engine.logkit.critical_outbox import critical_alert_outbox
 
             critical_alert_outbox().drain()
-        except Exception:
-            pass
+        except Exception as exc:
+            # Do not emit CRITICAL here: that would recursively enqueue a new
+            # alert into the outbox whose drain just failed. A local WARNING
+            # still makes the retry-path failure visible while the original
+            # unacked row remains durable for the next attempt.
+            logger.warning(
+                "%s",
+                _slog(
+                    "Critical alert outbox retry failed",
+                    reason=exc,
+                    action="leave_unacked_for_next_retry",
+                    result="warning",
+                ),
+            )
 
     def _run_periodic_db_health_check(self) -> None:
         """DB-inclusive health check on a slow interval (default 15 min),

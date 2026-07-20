@@ -348,3 +348,24 @@ def test_monitor_restarts_when_first_batch_never_completes(sup, monkeypatch):
     sup._monitor_live_freshness()
 
     assert restarted and "first_batch" in restarted[0]
+
+
+def test_critical_outbox_drain_failure_is_not_silent(sup, monkeypatch):
+    from core_engine.logkit import critical_outbox
+
+    class _BrokenOutbox:
+        @staticmethod
+        def drain():
+            raise RuntimeError("fault-injected SQLite failure")
+
+    monkeypatch.setattr(critical_outbox, "critical_alert_outbox", lambda: _BrokenOutbox())
+    warnings = []
+    monkeypatch.setattr(supervisor_engine.logger, "warning", lambda *args: warnings.append(args))
+    sup._last_critical_drain_at = 0.0
+
+    sup._drain_critical_alert_outbox()
+
+    assert len(warnings) == 1
+    rendered = str(warnings[0])
+    assert "Critical alert outbox retry failed" in rendered
+    assert "fault-injected SQLite failure" in rendered
