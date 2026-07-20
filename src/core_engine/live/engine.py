@@ -902,9 +902,18 @@ def _flush_overflow_to_queue() -> None:
 
     if _state.spool_full_pause:
         pending = _spool.count()
-        if pending is not None and pending < MAX_SPOOL_ROWS:
+        reserve_rows = min(MAX_SPOOL_ROWS, len(WS_SYMBOLS) * len(WS_TF_CODES))
+        if pending is not None and pending + reserve_rows <= MAX_SPOOL_ROWS:
             _state.spool_full_pause = False
-            logger.warning("%s", _llog("Durable outbox backlog drained - batches resumed", pending=pending, result="resumed"))
+            logger.warning(
+                "%s",
+                _llog(
+                    "Durable outbox capacity restored - batches resumed",
+                    pending=pending,
+                    reserved_rows=reserve_rows,
+                    result="resumed",
+                ),
+            )
 
 
 def _lease_spool_into_queue(limit: int = 200) -> int:
@@ -933,8 +942,8 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
     """Persist item to the durable spool FIRST, then hand a (row_id, item)
     tuple to the fast in-memory dispatch path (queue, then RAM overflow).
 
-    The row is only deleted from the spool by _db_worker's ack() after a
-    successful staging write - never here. This means every candle is
+    The row is only deleted from the spool by _db_worker's exact ACK after
+    both staging and Fact commit succeed - never here. This means every candle is
     durable on disk from the moment it is accepted, and a process crash at
     any point between here and a successful staging commit loses nothing:
     the next process start leases the still-present row and retries it.
@@ -2555,17 +2564,51 @@ def _update_guest_mode_counter(is_guest: bool) -> None:
         _state._consecutive_guest_batches = 0
 
 def _spool_full_blocks_batch() -> bool:
-    """Pause starting a new batch while the durable outbox is full.
+    """Pause unless the durable outbox can admit one complete live batch.
 
-    Set by _enqueue_or_buffer when persist_pending() returns None, cleared
-    by _flush_overflow_to_queue once the backlog drains. Fetching new
-    candles while unable to durably store them would just move the
-    "cannot store safely" problem into RAM instead of solving it.
+    One spool row contains all newly accepted bars for one symbol/timeframe,
+    so the worst normal batch needs one row per configured live pair. Waiting
+    until ``persist_pending()`` returns ``None`` is one item too late: that
+    item has already been accepted from TradingView but cannot be persisted.
+    Reserve the whole batch up front and resume only after that capacity is
+    available again.
     """
-    if not _state.spool_full_pause:
+    pending = _spool.count()
+    if pending is None:
+        _state.spool_full_pause = True
+        logger.critical(
+            "%s",
+            _llog("Live batch paused: durable outbox is not readable", result="paused"),
+        )
+        return True
+
+    reserve_rows = min(MAX_SPOOL_ROWS, len(WS_SYMBOLS) * len(WS_TF_CODES))
+    has_capacity = pending + reserve_rows <= MAX_SPOOL_ROWS
+    if has_capacity:
+        if _state.spool_full_pause:
+            _state.spool_full_pause = False
+            logger.warning(
+                "%s",
+                _llog(
+                    "Durable outbox capacity restored - batches resumed",
+                    pending=pending,
+                    reserved_rows=reserve_rows,
+                    result="resumed",
+                ),
+            )
         return False
 
-    logger.warning("%s", _llog("Live batch paused: durable outbox full", result="skipped_this_batch"))
+    _state.spool_full_pause = True
+    logger.warning(
+        "%s",
+        _llog(
+            "Live batch paused: durable outbox capacity reserved",
+            pending=pending,
+            capacity=MAX_SPOOL_ROWS,
+            required_free_rows=reserve_rows,
+            result="skipped_this_batch",
+        ),
+    )
 
     return True
 
