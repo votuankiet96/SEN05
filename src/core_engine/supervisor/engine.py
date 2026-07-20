@@ -1088,6 +1088,31 @@ class BackendSupervisor:
                     ),
                 )
                 self._restart_live(f"stale_batch_progress_age={batch_age:.0f}s")
+            elif batch_age is None:
+                # A child can hang before completing its very first batch,
+                # so no batch_completed_at field exists to become stale.
+                # Use the batch start timestamp (or child start timestamp
+                # while waiting for the first scheduled batch) as the
+                # initial semantic-progress deadline. Do not restart a
+                # known network-blocked child here: reconnect/cooldown is
+                # already active and a process recycle cannot restore the
+                # external network.
+                state = _load_json(WS_LIVE_STATE)
+                state_status = str(state.get("status") or "").lower()
+                if state_status not in {"network_blocked", "handoff_waiting"}:
+                    reference_field = "batch_started_at" if state_status == "batch_running" else "child_started_at"
+                    first_batch_age = self._live_state_age_seconds(reference_field)
+                    if first_batch_age is not None and first_batch_age > threshold:
+                        logger.error(
+                            "%s",
+                            _slog(
+                                "Live first batch did not complete",
+                                progress_age_seconds=round(first_batch_age),
+                                threshold_seconds=threshold,
+                                result="restart_needed",
+                            ),
+                        )
+                        self._restart_live(f"first_batch_stale_age={first_batch_age:.0f}s")
 
     def _enforce_historical_runtime_limit(self) -> None:
         """HISTORICAL_MAX_RUNTIME_MINUTES was defined in settings but never

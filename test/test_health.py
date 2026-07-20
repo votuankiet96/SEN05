@@ -120,3 +120,37 @@ def test_missing_batch_completed_at_does_not_fail_a_fresh_heartbeat(live_state_p
     _write_state(live_state_path, status="starting", pid=None, updated_at=_iso(now))
     check = health._live_state_check()
     assert check.status == "ok"
+
+
+def test_batch_running_with_dead_pid_is_not_reported_healthy(live_state_path, backend_enabled):
+    now = datetime.now(timezone.utc)
+    _write_state(
+        live_state_path,
+        status="batch_running",
+        pid=999_999_999,
+        updated_at=_iso(now),
+        batch_started_at=_iso(now - timedelta(minutes=1)),
+    )
+
+    check = health._live_state_check()
+
+    assert check.status == "fail"
+    assert "pid" in check.message.lower()
+
+
+def test_first_batch_stall_fails_after_startup_grace(live_state_path, backend_enabled):
+    now = datetime.now(timezone.utc)
+    _write_state(
+        live_state_path,
+        status="batch_running",
+        pid=os.getpid(),
+        updated_at=_iso(now),
+        child_started_at=_iso(now - timedelta(minutes=30)),
+        batch_started_at=_iso(now - timedelta(minutes=25)),
+        batch_completed_at=None,
+    )
+
+    check = health._live_state_check()
+
+    assert check.status == "fail"
+    assert "first batch" in check.message.lower()

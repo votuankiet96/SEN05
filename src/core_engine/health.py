@@ -416,6 +416,8 @@ def _live_state_check() -> Check:
     # still tick the heartbeat thread while never finishing another batch,
     # which the heartbeat-only staleness check below cannot detect.
     batch_age = _age_seconds(state.get("batch_completed_at"))
+    child_age = _age_seconds(state.get("child_started_at"))
+    batch_started_age = _age_seconds(state.get("batch_started_at"))
     stale_after = BACKEND.live_stale_minutes * 60
     detail = {
         "path": str(WS_LIVE_STATE),
@@ -425,13 +427,24 @@ def _live_state_check() -> Check:
         "age_seconds": round(age, 1) if age is not None else None,
         "batch_completed_at": state.get("batch_completed_at"),
         "batch_age_seconds": round(batch_age, 1) if batch_age is not None else None,
+        "child_age_seconds": round(child_age, 1) if child_age is not None else None,
+        "batch_started_age_seconds": round(batch_started_age, 1) if batch_started_age is not None else None,
         "batches_run": state.get("batches_run"),
         "accepted_bars": state.get("accepted_bars"),
         "fact_inserted": state.get("fact_inserted"),
         "errors": state.get("errors"),
     }
-    active_status = str(state.get("status") or "").lower() in {"starting", "running", "waiting"}
-    inactive_status = str(state.get("status") or "").lower() in {"failed", "stopped"}
+    state_status = str(state.get("status") or "").lower()
+    active_status = state_status in {
+        "starting",
+        "running",
+        "waiting",
+        "batch_running",
+        "batch_stale_released",
+        "network_blocked",
+        "handoff_waiting",
+    }
+    inactive_status = state_status in {"failed", "stopped"}
     pid, alive = _pid_state(state.get("pid"))
     detail["pid_alive"] = alive
     if inactive_status and BACKEND.live_auto_start:
@@ -451,7 +464,7 @@ def _live_state_check() -> Check:
     if active_status and pid and alive is False:
         return Check(
             "live_state",
-            "warn",
+            "fail" if BACKEND.live_auto_start else "warn",
             "Live state is stale: it says live is active, but that PID is not running.",
             detail,
         )
@@ -467,6 +480,19 @@ def _live_state_check() -> Check:
             "the stale threshold - the main loop may be stuck even though the process is alive.",
             detail,
         )
+    if active_status and batch_age is None:
+        # Before the first completed batch there is no batch_completed_at
+        # watermark yet. That is legitimate only during the startup grace
+        # window; otherwise a first-batch deadlock looks healthy forever
+        # because the independent heartbeat thread keeps updated_at fresh.
+        first_progress_age = batch_started_age if state_status == "batch_running" else child_age
+        if first_progress_age is not None and first_progress_age > stale_after:
+            return Check(
+                "live_state",
+                "fail",
+                "Live heartbeat is current, but the first batch has not completed within the startup grace period.",
+                detail,
+            )
     return Check("live_state", "ok", "Live state is readable.", detail)
 
 

@@ -139,7 +139,7 @@ def test_retry_live_after_backoff_clears_deadline_and_calls_start(sup, monkeypat
 def test_reset_live_backoff_if_stable_clears_after_long_uptime(sup):
     sup.live_failure_count = 3
     sup.live_retry_not_before = time.time() + 100
-    sup.live.process = SimpleNamespace(poll=lambda: None)
+    sup.live.process = SimpleNamespace(poll=lambda: None, pid=None)
     sup.live.started_at = time.time() - (LIVE_RESTART_BACKOFF_BASE_SEC * 10_000)  # long ago
 
     sup._reset_live_backoff_if_stable()
@@ -320,3 +320,30 @@ def test_start_live_no_longer_clears_the_stop_flag(sup, monkeypatch):
         "start_live() must not clear a pending Graceful Stop request - only "
         "run() should do that once, at supervisor startup"
     )
+
+
+def test_monitor_restarts_when_first_batch_never_completes(sup, monkeypatch):
+    """A fresh heartbeat must not hide a main loop stuck in its first batch."""
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    sup.live.process = SimpleNamespace(poll=lambda: None, pid=None)
+    sup.live.started_at = time.time() - 3600
+    monkeypatch.setattr(
+        supervisor_engine,
+        "_load_json",
+        lambda _path: {
+            "pid": None,
+            "status": "batch_running",
+            "updated_at": now.isoformat(),
+            "child_started_at": (now - timedelta(hours=1)).isoformat(),
+            "batch_started_at": (now - timedelta(minutes=30)).isoformat(),
+            "batch_completed_at": None,
+        },
+    )
+    restarted = []
+    monkeypatch.setattr(sup, "_restart_live", lambda reason, **kwargs: restarted.append(reason))
+
+    sup._monitor_live_freshness()
+
+    assert restarted and "first_batch" in restarted[0]
