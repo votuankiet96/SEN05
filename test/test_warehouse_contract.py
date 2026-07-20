@@ -10,10 +10,26 @@ fake cursor/connection so these tests run in the no-DB/no-network suite.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from core_engine.warehouse import connection as warehouse_connection
 from core_engine.warehouse import reconcile as warehouse_reconcile
+
+
+def test_v3_sql_contract_resolves_datekey_through_dimension():
+    sql_path = (
+        Path(__file__).resolve().parents[1]
+        / "scripts"
+        / "sql"
+        / "10_migration_usp_loaddirect_v3_date_fence.sql"
+    )
+    sql = sql_path.read_text(encoding="utf-8")
+
+    assert "INNER JOIN DWH.Dim_Date AS d" in sql
+    assert "d.DateKey" in sql
+    assert "DPContractVersion', @value = N'3'" in sql
 
 
 class _FakeCursor:
@@ -58,7 +74,9 @@ def _patch_get_connection(monkeypatch, module, cursor: _FakeCursor):
 
 
 def test_verify_database_contract_ok_when_version_matches(monkeypatch):
-    cursor = _FakeCursor(fetchone_result=(warehouse_connection.EXPECTED_CONTRACT_VERSION,))
+    cursor = _FakeCursor()
+    responses = iter([(warehouse_connection.EXPECTED_CONTRACT_VERSION,), (2,)])
+    cursor.fetchone = lambda: next(responses)
     conn = _patch_get_connection(monkeypatch, warehouse_connection, cursor)
 
     result = warehouse_connection.verify_database_contract()

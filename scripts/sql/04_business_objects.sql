@@ -197,12 +197,14 @@ BEGIN
             (SymbolID, TimeframeID, DateKey, BarTime,
              [Open], High, Low, [Close], Volume, TickCount)
         SELECT @SymbolID, @TimeframeID,
-            -- DateKey: convert BarTime to DATE, format as YYYYMMDD string, cast to INT
-            -- e.g. 2024-03-15 → ''20240315'' → 20240315
-            CONVERT(INT, CONVERT(VARCHAR, CAST(BarTime AS DATE), 112)),
-            BarTime, [Open], High, Low, [Close], Volume,
+            -- Resolve DateKey through the warehouse calendar. Bars outside
+            -- Dim_Date remain visible in staging but cannot violate the FK.
+            d.DateKey,
+            src.BarTime, src.[Open], src.High, src.Low, src.[Close], src.Volume,
             1   -- TickCount = 1 for all direct pulls (one staging row = one raw candle)
         FROM ' + @StagingTable + N' AS src
+        INNER JOIN DWH.Dim_Date AS d
+            ON d.FullDate = CAST(src.BarTime AS DATE)
         WHERE src.SymbolID    = @SymbolID    -- only load rows for the requested symbol
           AND src.BarTime    >= @FromTime    -- skip bars before the requested start date
           AND src.IsProcessed = 1            -- only load bars flagged as complete by the Python pipeline
@@ -259,14 +261,14 @@ IF EXISTS (
       AND class = 1
       AND name = 'DPContractVersion'
 )
-    EXEC sp_updateextendedproperty @name = N'DPContractVersion', @value = N'2',
+    EXEC sp_updateextendedproperty @name = N'DPContractVersion', @value = N'3',
         @level0type = N'SCHEMA', @level0name = N'DWH',
         @level1type = N'PROCEDURE', @level1name = N'usp_LoadDirect';
 ELSE
-    EXEC sp_addextendedproperty @name = N'DPContractVersion', @value = N'2',
+    EXEC sp_addextendedproperty @name = N'DPContractVersion', @value = N'3',
         @level0type = N'SCHEMA', @level0name = N'DWH',
         @level1type = N'PROCEDURE', @level1name = N'usp_LoadDirect';
 GO
 
-PRINT 'Procedure DWH.usp_LoadDirect created (contract v2).';
+PRINT 'Procedure DWH.usp_LoadDirect created (contract v3).';
 GO

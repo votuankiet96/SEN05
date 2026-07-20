@@ -24,7 +24,7 @@ _DB_RETRY_DELAY = DB.retry_delay_sec
 # against DWH.usp_LoadDirect's DPContractVersion extended property (set by
 # scripts/sql/04_business_objects.sql / 08_migration_usp_loaddirect_v2.sql).
 # Bump both together whenever usp_LoadDirect's shape changes.
-EXPECTED_CONTRACT_VERSION = "2"
+EXPECTED_CONTRACT_VERSION = "3"
 
 
 def get_connection() -> pyodbc.Connection:
