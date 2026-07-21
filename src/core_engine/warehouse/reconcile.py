@@ -72,11 +72,16 @@ class TimeframeReconcileResult:
     unsupported_calendar_symbols: list[int] = field(default_factory=list)
     unsupported_calendar_range: tuple[str, str] | None = None
     counted_unsupported_as_missing: bool = False
+    supported_missing_before: int = 0
+    supported_mismatched_before: int = 0
+    supported_missing_after: int | None = 0
+    supported_mismatched_after: int | None = 0
 
 
 @dataclass
 class _SymbolDivergence:
-    in_range: int = 0
+    supported_missing: int = 0
+    supported_mismatched: int = 0
     unsupported: int = 0
     unsupported_min: str | None = None
     unsupported_max: str | None = None
@@ -101,7 +106,14 @@ def _divergence_by_symbol(cursor, staging_table: str, tf_code: str) -> dict[int,
         f"""
         SELECT
             s.SymbolID,
-            SUM(CASE WHEN d.DateKey IS NOT NULL THEN 1 ELSE 0 END) AS in_range,
+            SUM(CASE
+                    WHEN d.DateKey IS NOT NULL AND f.SymbolID IS NULL THEN 1
+                    ELSE 0
+                END) AS supported_missing,
+            SUM(CASE
+                    WHEN d.DateKey IS NOT NULL AND f.SymbolID IS NOT NULL THEN 1
+                    ELSE 0
+                END) AS supported_mismatched,
             SUM(CASE WHEN d.DateKey IS NULL THEN 1 ELSE 0 END) AS unsupported,
             MIN(CASE WHEN d.DateKey IS NULL THEN s.BarTime END) AS unsupported_min,
             MAX(CASE WHEN d.DateKey IS NULL THEN s.BarTime END) AS unsupported_max
@@ -128,9 +140,17 @@ def _divergence_by_symbol(cursor, staging_table: str, tf_code: str) -> dict[int,
     )
     result: dict[int, _SymbolDivergence] = {}
     for row in cursor.fetchall():
-        symbol_id, in_range, unsupported, unsupported_min, unsupported_max = row
+        (
+            symbol_id,
+            supported_missing,
+            supported_mismatched,
+            unsupported,
+            unsupported_min,
+            unsupported_max,
+        ) = row
         result[int(symbol_id)] = _SymbolDivergence(
-            in_range=int(in_range or 0),
+            supported_missing=int(supported_missing or 0),
+            supported_mismatched=int(supported_mismatched or 0),
             unsupported=int(unsupported or 0),
             unsupported_min=str(unsupported_min) if unsupported_min is not None else None,
             unsupported_max=str(unsupported_max) if unsupported_max is not None else None,
@@ -160,8 +180,14 @@ def scan_timeframe(tf_code: str, *, count_unsupported_as_missing: bool = False) 
         cursor = conn.cursor()
         by_symbol = _divergence_by_symbol(cursor, staging_table, tf_code)
 
-        in_range_symbols = sorted(sid for sid, d in by_symbol.items() if d.in_range > 0)
+        in_range_symbols = sorted(
+            sid
+            for sid, d in by_symbol.items()
+            if d.supported_missing > 0 or d.supported_mismatched > 0
+        )
         unsupported_symbols = sorted(sid for sid, d in by_symbol.items() if d.unsupported > 0)
+        supported_missing_total = sum(d.supported_missing for d in by_symbol.values())
+        supported_mismatched_total = sum(d.supported_mismatched for d in by_symbol.values())
         unsupported_total = sum(d.unsupported for d in by_symbol.values())
 
         mins = [d.unsupported_min for d in by_symbol.values() if d.unsupported_min]
@@ -169,10 +195,10 @@ def scan_timeframe(tf_code: str, *, count_unsupported_as_missing: bool = False) 
         unsupported_range = (min(mins), max(maxs)) if mins and maxs else None
 
         if count_unsupported_as_missing:
-            missing_total = sum(d.in_range + d.unsupported for d in by_symbol.values())
+            missing_total = supported_missing_total + supported_mismatched_total + unsupported_total
             affected_symbols = sorted(set(in_range_symbols) | set(unsupported_symbols))
         else:
-            missing_total = sum(d.in_range for d in by_symbol.values())
+            missing_total = supported_missing_total + supported_mismatched_total
             affected_symbols = in_range_symbols
 
         return TimeframeReconcileResult(
@@ -186,6 +212,10 @@ def scan_timeframe(tf_code: str, *, count_unsupported_as_missing: bool = False) 
             unsupported_calendar_symbols=unsupported_symbols,
             unsupported_calendar_range=unsupported_range,
             counted_unsupported_as_missing=count_unsupported_as_missing,
+            supported_missing_before=supported_missing_total,
+            supported_mismatched_before=supported_mismatched_total,
+            supported_missing_after=supported_missing_total,
+            supported_mismatched_after=supported_mismatched_total,
         )
     except Exception as exc:
         return TimeframeReconcileResult(
@@ -239,9 +269,13 @@ def reconcile_timeframe(
         symbols_affected=after.symbols_affected,
         unsupported_calendar_count=after.unsupported_calendar_count,
         unsupported_calendar_symbols=after.unsupported_calendar_symbols,
-        unsupported_calendar_range=after.unsupported_calendar_range,
-        counted_unsupported_as_missing=count_unsupported_as_missing,
-    )
+            unsupported_calendar_range=after.unsupported_calendar_range,
+            counted_unsupported_as_missing=count_unsupported_as_missing,
+            supported_missing_before=before.supported_missing_before,
+            supported_mismatched_before=before.supported_mismatched_before,
+            supported_missing_after=after.supported_missing_after,
+            supported_mismatched_after=after.supported_mismatched_after,
+        )
 
 
 def reconcile_all(

@@ -119,6 +119,8 @@ def _run_reconcile_fact(args: argparse.Namespace) -> int:
     missing = total_missing(results)
     unsupported_rows = [r for r in results if not r.error and r.unsupported_calendar_count]
     unsupported_total = sum(r.unsupported_calendar_count for r in unsupported_rows)
+    supported_missing = sum((r.supported_missing_after or 0) for r in results if not r.error)
+    supported_mismatched = sum((r.supported_mismatched_after or 0) for r in results if not r.error)
 
     if args.json:
         payload = {
@@ -126,6 +128,9 @@ def _run_reconcile_fact(args: argparse.Namespace) -> int:
             "missing_count": missing,
             "counted_unsupported_as_missing": count_unsupported,
             "unsupported_calendar_total": unsupported_total,
+            "supported_missing_fact_rows": supported_missing,
+            "supported_mismatched_fact_rows": supported_mismatched,
+            "unsupported_calendar_rows": unsupported_total,
             "timeframes": [
                 {
                     "tf_code": r.tf_code,
@@ -138,6 +143,10 @@ def _run_reconcile_fact(args: argparse.Namespace) -> int:
                     "unsupported_calendar_count": r.unsupported_calendar_count,
                     "unsupported_calendar_symbols": r.unsupported_calendar_symbols,
                     "unsupported_calendar_range": r.unsupported_calendar_range,
+                    "supported_missing_before": r.supported_missing_before,
+                    "supported_mismatched_before": r.supported_mismatched_before,
+                    "supported_missing_after": r.supported_missing_after,
+                    "supported_mismatched_after": r.supported_mismatched_after,
                 }
                 for r in results
             ],
@@ -161,6 +170,12 @@ def _run_reconcile_fact(args: argparse.Namespace) -> int:
             print("Result: missing_count = 0 across all checked timeframes.")
         else:
             print(f"Result: missing_count = {missing} - NOT safe to purge staging for affected tables yet.")
+        print(
+            "Fact-eligible detail: "
+            f"supported_missing_fact_rows={supported_missing} "
+            f"supported_mismatched_fact_rows={supported_mismatched} "
+            f"unsupported_calendar_rows={unsupported_total}"
+        )
 
         if unsupported_rows and not count_unsupported:
             print()

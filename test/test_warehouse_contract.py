@@ -155,8 +155,9 @@ def test_connection_closes_connection_when_health_query_fails(monkeypatch):
 
 
 def test_scan_timeframe_reports_missing_rows_by_symbol(monkeypatch):
-    # Row shape: (SymbolID, in_range, unsupported, unsupported_min, unsupported_max).
-    cursor = _FakeCursor(fetchall_result=[(11, 3, 0, None, None), (22, 1, 0, None, None)])
+    # Row shape: (SymbolID, supported_missing, supported_mismatched,
+    # unsupported, unsupported_min, unsupported_max).
+    cursor = _FakeCursor(fetchall_result=[(11, 3, 0, 0, None, None), (22, 1, 0, 0, None, None)])
     _patch_get_connection(monkeypatch, warehouse_reconcile, cursor)
 
     result = warehouse_reconcile.scan_timeframe("M5")
@@ -166,6 +167,23 @@ def test_scan_timeframe_reports_missing_rows_by_symbol(monkeypatch):
     assert result.symbols_affected == [11, 22]
     assert result.error is None
     assert result.unsupported_calendar_count == 0
+    assert result.supported_missing_after == 4
+    assert result.supported_mismatched_after == 0
+
+
+def test_scan_timeframe_separates_missing_fact_from_existing_fact_mismatch(monkeypatch):
+    cursor = _FakeCursor(fetchall_result=[(11, 2, 3, 0, None, None)])
+    _patch_get_connection(monkeypatch, warehouse_reconcile, cursor)
+
+    result = warehouse_reconcile.scan_timeframe("M5")
+
+    assert result.missing_after == 5
+    assert result.supported_missing_after == 2
+    assert result.supported_mismatched_after == 3
+
+    sql = " ".join(cursor.executed[0][0].split())
+    assert "d.DateKey IS NOT NULL AND f.SymbolID IS NULL" in sql
+    assert "d.DateKey IS NOT NULL AND f.SymbolID IS NOT NULL" in sql
 
 
 def test_reconcile_scan_includes_staging_corrections_not_only_missing_keys(monkeypatch):
@@ -203,7 +221,7 @@ def test_scan_timeframe_excludes_unsupported_calendar_rows_from_missing_by_defau
     # outside Dim_Date's covered range - exactly the round-3 evidence
     # (reconcile-fact wrongly reported missing_count=2231 for US500/D1).
     cursor = _FakeCursor(
-        fetchall_result=[(8, 2, 2231, "1999-02-17 22:00:00", "2007-12-30 23:00:00")]
+        fetchall_result=[(8, 1, 1, 2231, "1999-02-17 22:00:00", "2007-12-30 23:00:00")]
     )
     _patch_get_connection(monkeypatch, warehouse_reconcile, cursor)
 
@@ -222,7 +240,7 @@ def test_scan_timeframe_symbol_with_only_unsupported_rows_is_not_in_symbols_affe
     # A symbol whose ENTIRE divergence is calendar-unsupported must not
     # appear in symbols_affected by default - retrying ETL for it against
     # usp_LoadDirect v3 is a guaranteed no-op, not a real repair target.
-    cursor = _FakeCursor(fetchall_result=[(8, 0, 2231, "1999-02-17", "2007-12-30")])
+    cursor = _FakeCursor(fetchall_result=[(8, 0, 0, 2231, "1999-02-17", "2007-12-30")])
     _patch_get_connection(monkeypatch, warehouse_reconcile, cursor)
 
     result = warehouse_reconcile.scan_timeframe("D1")
@@ -234,7 +252,7 @@ def test_scan_timeframe_symbol_with_only_unsupported_rows_is_not_in_symbols_affe
 
 def test_scan_timeframe_count_unsupported_as_missing_reverts_to_strict_behavior(monkeypatch):
     cursor = _FakeCursor(
-        fetchall_result=[(8, 2, 2231, "1999-02-17", "2007-12-30")]
+        fetchall_result=[(8, 1, 1, 2231, "1999-02-17", "2007-12-30")]
     )
     _patch_get_connection(monkeypatch, warehouse_reconcile, cursor)
 
@@ -254,7 +272,7 @@ def test_scan_timeframe_unknown_code_reports_error_not_zero():
 
 
 def test_reconcile_timeframe_scan_only_does_not_call_etl(monkeypatch):
-    cursor = _FakeCursor(fetchall_result=[(11, 2, 0, None, None)])
+    cursor = _FakeCursor(fetchall_result=[(11, 2, 0, 0, None, None)])
     _patch_get_connection(monkeypatch, warehouse_reconcile, cursor)
     called = []
     monkeypatch.setattr(warehouse_reconcile, "run_etl_direct", lambda *a, **k: called.append(a))
@@ -276,7 +294,7 @@ def test_reconcile_timeframe_apply_reruns_etl_and_reverifies(monkeypatch):
     def _fake_get_connection():
         calls["n"] += 1
         if calls["n"] == 1:
-            return _FakeConnection(_FakeCursor(fetchall_result=[(11, 2, 0, None, None)]))
+            return _FakeConnection(_FakeCursor(fetchall_result=[(11, 2, 0, 0, None, None)]))
         return _FakeConnection(_FakeCursor(fetchall_result=[]))
 
     monkeypatch.setattr(warehouse_reconcile, "get_connection", _fake_get_connection)
@@ -300,8 +318,8 @@ def test_reconcile_timeframe_apply_continues_past_one_symbol_failure(monkeypatch
     def _fake_get_connection():
         calls["n"] += 1
         if calls["n"] == 1:
-            return _FakeConnection(_FakeCursor(fetchall_result=[(11, 1, 0, None, None), (22, 1, 0, None, None)]))
-        return _FakeConnection(_FakeCursor(fetchall_result=[(11, 1, 0, None, None)]))
+            return _FakeConnection(_FakeCursor(fetchall_result=[(11, 1, 0, 0, None, None), (22, 1, 0, 0, None, None)]))
+        return _FakeConnection(_FakeCursor(fetchall_result=[(11, 1, 0, 0, None, None)]))
 
     monkeypatch.setattr(warehouse_reconcile, "get_connection", _fake_get_connection)
 
@@ -322,7 +340,7 @@ def test_reconcile_timeframe_apply_continues_past_one_symbol_failure(monkeypatch
 def test_reconcile_timeframe_apply_does_not_call_etl_for_unsupported_only_symbol(monkeypatch):
     # Symbol 8 has only calendar-unsupported divergence -> not in
     # symbols_affected -> apply must not waste an ETL call on it.
-    cursor = _FakeCursor(fetchall_result=[(8, 0, 2231, "1999-02-17", "2007-12-30")])
+    cursor = _FakeCursor(fetchall_result=[(8, 0, 0, 2231, "1999-02-17", "2007-12-30")])
     _patch_get_connection(monkeypatch, warehouse_reconcile, cursor)
     etl_calls = []
     monkeypatch.setattr(
