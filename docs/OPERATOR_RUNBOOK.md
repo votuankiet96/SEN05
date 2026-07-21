@@ -210,7 +210,7 @@ logs\operation\historical_pulling.log
 logs\operation\live_fetching_summary.jsonl
 run\backend_engine_state.json
 run\ws_live_state.json
-spool\live_spool.sqlite3
+spool\overflow_spool.db
 ```
 
 For the approved shortened follow-up, sample for 30 minutes and then inspect
@@ -222,7 +222,15 @@ count. Thirty minutes is accepted by the owner in place of the earlier
 slots unless one actually occurs in the observed interval.
 
 Gap health is based only on unresolved gaps during expected market-open time.
-Weekend/holiday timeline gaps are classified as market closure, not repairs.
+The classifier excludes only exact recurring closure signatures and the narrow
+FOREX Friday-evening to Sunday-evening boundary. One-off weekday gaps stay
+actionable. After a repair pull, an unresolved window can be classified as an
+upstream-unavailable provider gap only when the latest TradingView response
+contains both exact boundary candles and no candle between them. That proof is
+cached for at most 24 hours, loaded by `data-health`, and then rechecked; zero
+SQL rows by itself is never sufficient proof. Review
+`verified_upstream_gap_pairs`/`verified_upstream_gap_windows` separately from
+`market_open_gap_pairs` in the JSON report.
 
 ## 8. Discord webhook rotation
 
