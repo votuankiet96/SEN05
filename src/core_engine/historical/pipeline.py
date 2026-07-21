@@ -468,7 +468,13 @@ def pull_with_retry(
                 result="retrying",
             ),
         )
-        time.sleep(delay)
+        deadline = time.monotonic() + delay
+        while True:
+            raise_if_cancelled(logger, "pair retry backoff")
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            time.sleep(min(1.0, remaining))
         result = pull_and_store(tv, sym, tf_code, n_bars, allow_replay=allow_replay)
     if result < 0:
         logger.error(
