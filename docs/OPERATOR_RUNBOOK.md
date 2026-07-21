@@ -221,6 +221,84 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows_service\in
   service on `LocalSystem` - configure it afterward in `services.msc` ->
   `SEN05DataProvider` -> Properties -> Log On if you did not pass them.
 
+## 6b. Deployment Drift Risk - Proposal (CAN XAC NHAN - NOT YET APPLIED)
+
+**Status: this section is a proposal only.** Nothing below has been implemented or
+changed by this fix round. It documents a real risk the round-3 production audit
+found and sketches a fix, so it is not lost - but the actual migration to a new
+deploy model is a process change that needs Kiet's (and ideally Codex's) explicit
+sign-off before anyone acts on it, because it changes how "what code is actually
+running" is defined and verified on VM-DP6.
+
+**The problem, as observed in round 3:**
+
+- `pip install -e .` (section 1) makes the installed `dp-program` package a `.pth`
+  file that points directly at `<dp_program_root>\src` - today that is the mutable
+  share path (`C:\Share\dp_program\src` on VM-DP6, or `Z:\dp_program\src` when mapped).
+- There is no immutable, versioned release directory. The Python interpreter always
+  imports whatever is currently sitting on disk at that path, regardless of whether
+  it matches a specific reviewed/tested commit.
+- Round-3 evidence: the audit workspace *was* the same share VM-DP6's task/service
+  imports from (`REPO=//10.11.12.6/Share/dp_program`), and `pip install -e .`'s own
+  output was not captured as a deploy artifact - so "what commit is actually
+  running" could only be inferred after the fact from `git rev-parse HEAD` on the
+  share, not proven at the moment the service/task last (re)started.
+- Practical consequence: a checkout, `git pull`, `git stash`, or even an in-progress
+  manual edit on the share can change what the *next* service/task restart runs,
+  with no explicit "deploy" step, no atomic swap, and no easy rollback to "the
+  exact bytes that were running before."  A crash-restart (NSSM `AppExit`/Scheduled
+  Task `RestartCount`) picks up whatever is on disk at that instant, which may not
+  be the version that was actually validated.
+
+**Proposed fix: release-directory-per-commit + atomic switch.**
+
+1. Deploys land in a new, immutable directory per commit, e.g.
+   `C:\dp_releases\<short-sha>-<UTC-timestamp>\`, populated by `git archive` (or a
+   clean `git checkout` into a fresh directory) of the exact commit being deployed -
+   never by editing the share in place.
+2. Each release directory gets its own virtualenv (or at least its own
+   `pip install -e .`) so dependency drift is also pinned per release, not shared.
+3. A single stable path (e.g. `C:\dp_program\current`) is a directory junction
+   (`mklink /J`, since NTFS symlinks need elevated privileges that a plain junction
+   does not) pointing at the active release directory. NSSM's `AppDirectory`/the
+   Scheduled Task's working directory and Python path both reference `current`, not
+   a release directory by name, so operator-facing paths in this runbook do not
+   change.
+4. A deploy script:
+   - resolves the target commit, creates the new release directory, installs it,
+     runs the existing no-DB verification (`compileall`, `pytest`, `doctor --no-db`),
+   - only on success, stops the service/task, repoints the `current` junction at the
+     new release directory (an atomic filesystem operation - no window where
+     `current` resolves to a half-written tree),
+   - starts the service/task, runs a smoke check, and
+   - **keeps the previous release directory on disk** so rollback is "repoint the
+     junction back and restart," not "hope git still has it."
+5. `doctor`/`status` output gains a `release_dir`/`release_commit` field read from a
+   small manifest file written into each release directory at deploy time (e.g.
+   `RELEASE_COMMIT=<sha>`, `RELEASE_DEPLOYED_AT=<iso8601>`), so "what commit is
+   actually running" becomes something `doctor --json` can answer directly, instead
+   of needing to separately `git rev-parse HEAD` on whatever the share currently
+   contains.
+6. Old release directories are pruned by a retention policy (e.g. keep the last N,
+   or last 30 days) - manually or via a scheduled cleanup, deliberately not
+   automatic-and-silent given this is exactly the kind of disk-usage change an
+   operator should be able to see happening.
+
+**What this deliberately does NOT decide:**
+
+- Whether `C:\dp_releases\` lives on the same physical disk/share as today, or a
+  local disk on VM-DP6 specifically to remove the "running code lives on a network
+  share" dependency entirely - a separate, larger discussion.
+- Whether to build this deploy script now vs. keep the current "checkout in place,
+  `pip install -e .`, restart" process for a while longer given the current
+  operational priority is closing the P0/High items and completing a real soak
+  test, not a deploy-tooling rewrite.
+- Whether release pruning is manual or scheduled, and what retention window to use.
+
+These are process and priority calls for Kiet (and worth a second pass from Codex
+given it audits the deployed-artifact side of this program), not something a
+code-review/fix pass should decide unilaterally.
+
 ## 7. Daily Operation Commands
 
 Check service:
