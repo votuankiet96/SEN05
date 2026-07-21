@@ -69,3 +69,13 @@ def test_expected_symbol_count_default_is_active_and_matches_real_instruments():
     _check_expected_live_symbol_count(
         count=len(resolved), expected=LIVE.expected_symbol_count, asset_types=LIVE.asset_types
     )  # must not raise
+
+
+def test_settings_evidence_reports_11_symbols_and_165_sessions():
+    from core_engine import cli
+
+    settings = cli._collect_core_settings()
+    live = settings["live_fetching"]
+    assert live["expected_live_symbols"] == 11
+    assert live["resolved_live_symbols"] == 11
+    assert live["symbol_timeframe_sessions"] == 165

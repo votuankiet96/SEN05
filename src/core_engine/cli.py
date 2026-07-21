@@ -245,6 +245,10 @@ def _collect_core_settings() -> dict[str, Any]:
         },
         "live_fetching": {
             "auto_start": LIVE.auto_start,
+            "asset_types": ",".join(LIVE.asset_types),
+            "expected_live_symbols": LIVE.expected_symbol_count,
+            "resolved_live_symbols": len(live_symbols),
+            "symbol_timeframe_sessions": len(live_symbols) * len(TF_DISPLAY_ORDER),
             "batch_interval_min": LIVE.batch_interval_min,
             "n_bars_per_request": LIVE.n_bars,
             "drop_open_bar_policy": "keeps only closed bars",
