@@ -125,6 +125,59 @@ def _safe_path_status(path: Path) -> dict[str, Any]:
     }
 
 
+def _release_identity_check() -> Check:
+    manifest_path = APP_ROOT / "RELEASE_MANIFEST.json"
+    if not manifest_path.exists():
+        return Check(
+            "release_identity",
+            "warn",
+            "No immutable release manifest is present; this appears to be a source-checkout runtime.",
+            {"app_root": str(APP_ROOT), "manifest": str(manifest_path), "release_mode": "source_checkout"},
+        )
+
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+    except Exception as exc:
+        return Check(
+            "release_identity",
+            "fail",
+            "The immutable release manifest is unreadable.",
+            {"manifest": str(manifest_path), "reason": f"{type(exc).__name__}: {exc}"},
+        )
+
+    commit = str(manifest.get("release_commit") or "").lower()
+    declared_dir = Path(str(manifest.get("release_directory") or ""))
+    try:
+        directory_matches = declared_dir.resolve() == APP_ROOT.resolve()
+    except Exception:
+        directory_matches = False
+    if len(commit) != 40 or any(ch not in "0123456789abcdef" for ch in commit) or not directory_matches:
+        return Check(
+            "release_identity",
+            "fail",
+            "The release manifest does not match the code directory currently imported by Python.",
+            {
+                "app_root": str(APP_ROOT),
+                "release_directory": str(declared_dir),
+                "release_commit": commit or None,
+                "directory_matches": directory_matches,
+            },
+        )
+
+    return Check(
+        "release_identity",
+        "ok",
+        "Python is running from a versioned immutable release directory.",
+        {
+            "app_root": str(APP_ROOT),
+            "release_directory": str(declared_dir),
+            "release_commit": commit,
+            "deployed_at_utc": manifest.get("deployed_at_utc"),
+            "package_install": manifest.get("package_install"),
+        },
+    )
+
+
 def _runtime_check() -> Check:
     try:
         ensure_runtime_dirs()
@@ -814,6 +867,7 @@ def _redis_snapshot_check() -> Check:
 
 def collect_health(*, deep_auth: bool = False, include_database: bool = True) -> dict[str, Any]:
     checks = [
+        _release_identity_check(),
         _runtime_check(),
         _config_check(),
         _process_inventory_check(),

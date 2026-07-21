@@ -1,6 +1,6 @@
 # DP Program (SEN05 Data Provider)
 
-Terminal-first Windows service that fetches OHLCV data for 37 instruments
+Terminal-first Windows application that fetches OHLCV data for 37 instruments
 (FOREX, Indices, Metal, Crypto) from TradingView and stores it in SQL Server
 for the SEN05 AutoTrading strategies, with an optional Redis candle-snapshot
 handoff to OG. The dashboard and exe build flow are intentionally out of
@@ -24,7 +24,7 @@ dp_program/
     dashboard/                # read-only Chart & Data Health local viewer
   test/                     # pytest suite (no DB/TradingView/Redis required)
   config/                   # dp_provider.env (operator-editable, gitignored) + .example
-  scripts/                  # setup, launcher, Windows service install, SQL schema
+  scripts/                  # setup, launcher, Scheduled Task deploy, SQL schema
   docs/                     # OPERATOR_RUNBOOK.md
   runtime/                  # logs/cache/run/spool - gitignored, created on demand
 ```
@@ -131,8 +131,10 @@ BACKEND_LOG_RETENTION_DAYS=30
 ```
 
 `WS_LIVE_AUTO_START=1` means `python -m core_engine run` will start live
-fetching automatically. For 24/7 operation, use the Windows Service scripts
-in `scripts\windows_service` after the terminal smoke tests are clean.
+fetching automatically. VM-DP6 production runs through Scheduled Task
+`\SEN05\SEN05 DP Program 24x7`; use `scripts\windows_task` for controlled
+release deployment after terminal smoke tests are clean. Do not install NSSM
+for the current production release.
 
 Storage destination (`config/dp_provider.env`):
 
@@ -155,7 +157,7 @@ log_file, ...)`. Level policy is consistent across the whole program:
 | INFO | Normal operation | batch done, job start/finish |
 | WARNING | Degraded but self-recovering | retry, cooldown, stale data |
 | ERROR | A task/component failed | ETL failed after retries |
-| CRITICAL | Service-level failure or data-loss risk | can't start, forced to drop data |
+| CRITICAL | Program-level failure or data-loss risk | can't start, forced to drop data |
 
 `LOG_LEVEL` sets the global level; `LOG_LEVEL_<COMPONENT>` overrides it per
 component (e.g. `LOG_LEVEL_LIVE_FETCHING=DEBUG`). Every WARNING and above,
