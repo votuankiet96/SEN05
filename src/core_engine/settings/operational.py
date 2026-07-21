@@ -247,13 +247,16 @@ class LiveSettings:
     asset_types: tuple[str, ...] = tuple(
         item for item in env_csv("LIVE_ASSET_TYPES", "Indice,Metal,Crypto")
     )
-    # Optional fail-fast guard: if set, live refuses to start unless
-    # exactly this many symbols match asset_types. Left unset by default
-    # (no enforcement) since the "correct" count depends on
-    # instruments.py content that can legitimately change; an operator
-    # who wants drift protection sets this once after confirming the
-    # current count via `python -m core_engine settings`.
-    expected_symbol_count: int = env_int("EXPECTED_LIVE_SYMBOLS", 0, minimum=0)
+    # Fail-fast guard: live refuses to start unless exactly this many
+    # symbols match asset_types. Defaults to 11 - the actual current count
+    # for Indice+Metal+Crypto in instruments.py (round-3 audit NEW finding:
+    # the previous default of 0 disabled this guard entirely, so it never
+    # actually caught anything). 0 explicitly disables the guard for an
+    # operator who does not want it enforced; any other value is the
+    # expected count to enforce - confirm the current count via
+    # `python -m core_engine settings` before changing instruments.py's
+    # asset_type mix so this does not start failing for the wrong reason.
+    expected_symbol_count: int = env_int("EXPECTED_LIVE_SYMBOLS", 11, minimum=0)
     batch_interval_min: int = env_int("WS_LIVE_BATCH_INTERVAL_MIN", 5, minimum=1)
     shutdown_poll_sec: int = env_int("WS_LIVE_SHUTDOWN_POLL_SEC", 2, minimum=1)
     batch_fetch_timeout_sec: int = env_int("WS_LIVE_BATCH_FETCH_TIMEOUT_SEC", 120, minimum=5)

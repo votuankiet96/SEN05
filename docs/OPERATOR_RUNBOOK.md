@@ -115,12 +115,13 @@ Two related settings (`config/dp_provider.env`):
 # matches the historical hardcoded scope (Indice,Metal,Crypto).
 LIVE_ASSET_TYPES=Indice,Metal,Crypto
 
-# Optional. If set, live refuses to start unless the resolved live symbol
-# count matches exactly - a guard against LIVE_ASSET_TYPES and
-# instruments.py silently drifting out of sync (e.g. a new asset_type
-# added to instruments.py without updating LIVE_ASSET_TYPES). Leave unset
-# (0) for no enforcement; set it once after confirming the current count.
-EXPECTED_LIVE_SYMBOLS=0
+# Drift guard: live refuses to start unless the resolved live symbol count
+# matches exactly - defaults to 11 (the current LIVE_ASSET_TYPES count), so
+# this is enforcing by default (round-3 audit NEW finding: it used to
+# default to 0/disabled, so it never actually caught anything). Set to 0 to
+# disable; update the number here if you deliberately change
+# LIVE_ASSET_TYPES or instruments.py's asset mix.
+EXPECTED_LIVE_SYMBOLS=11
 ```
 
 ## 4. Check Readiness
