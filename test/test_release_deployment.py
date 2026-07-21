@@ -26,6 +26,13 @@ def test_release_identity_accepts_matching_manifest(monkeypatch, tmp_path):
     assert check.detail["release_commit"] == "a" * 40
 
 
+def test_pytest_never_collects_deployment_evidence_copies():
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert '[tool.pytest.ini_options]' in pyproject
+    assert 'testpaths = ["test"]' in pyproject
+    assert '"runtime"' in pyproject
+
+
 def test_release_identity_rejects_manifest_for_different_directory(monkeypatch, tmp_path):
     manifest = {"release_commit": "b" * 40, "release_directory": str(tmp_path / "elsewhere")}
     (tmp_path / "RELEASE_MANIFEST.json").write_text(json.dumps(manifest), encoding="utf-8")
@@ -45,9 +52,9 @@ def test_installed_package_discovers_release_root_from_manifest(tmp_path):
 
 def test_vm_promotion_script_contains_all_destructive_safety_gates():
     script = (ROOT / "scripts" / "windows_task" / "promote_vm_dp6.ps1").read_text(encoding="utf-8")
+    sql_helper = (ROOT / "scripts" / "windows_task" / "sql_deploy.py").read_text(encoding="utf-8")
     expected_in_order = [
-        "BACKUP DATABASE",
-        "RESTORE VERIFYONLY",
+        "database_backup_and_verify",
         "core_engine', 'stop'",
         "10_migration_usp_loaddirect_v3_date_fence.sql",
         "09_migration_lock_fencing.sql",
@@ -57,12 +64,16 @@ def test_vm_promotion_script_contains_all_destructive_safety_gates():
     ]
     positions = [script.index(token) for token in expected_in_order]
     assert positions == sorted(positions)
-    assert "COPY_ONLY, CHECKSUM, COMPRESSION" in script
+    assert "COPY_ONLY, CHECKSUM, COMPRESSION" in sql_helper
+    assert "RESTORE VERIFYONLY" in sql_helper
     assert "Wait-TaskNotRunning -TimeoutSec 120" in script
     assert "rollback_database_restore.log" in script
     assert "production_candidate.json" in script
     assert "Get-FileHash" in script
     assert "& git" not in script
+    assert "sqlcmd" not in script.lower()
+    assert "sql_deploy.py" in script
+    assert "Set-Phase 'promotion_complete'" in script
     assert "${(" not in script
     assert "$shortCommit = $commit.Substring(0, 12)" in script
 

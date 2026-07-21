@@ -38,13 +38,6 @@ function Invoke-NativeChecked {
     finally { Pop-Location }
 }
 
-function Invoke-SqlFileChecked([string]$Path, [string]$EvidenceFile, [string]$Commit) {
-    Invoke-NativeChecked -Executable 'sqlcmd' `
-        -Arguments @('-b', '-r1', '-S', $SqlServer, '-E', '-d', $Database,
-                     '-v', "DeploymentCommit=$Commit", '-i', $Path) `
-        -WorkingDirectory $SourceRoot -EvidenceFile $EvidenceFile
-}
-
 function Wait-TaskNotRunning([int]$TimeoutSec) {
     $deadline = (Get-Date).AddSeconds($TimeoutSec)
     do {
@@ -87,6 +80,20 @@ $evidenceDir = Join-Path $SourceRoot "runtime\deploy\go_${stamp}_${shortCommit}"
 New-Item -ItemType Directory -Path $evidenceDir -Force | Out-Null
 $candidateRoot = Join-Path $evidenceDir 'candidate_source'
 Expand-Archive -LiteralPath $artifactPath -DestinationPath $candidateRoot
+$sqlHelper = Join-Path $candidateRoot 'scripts\windows_task\sql_deploy.py'
+
+function Set-Phase([string]$Name) {
+    $payload = [ordered]@{
+        phase = $Name
+        updated_at_utc = (Get-Date).ToUniversalTime().ToString('o')
+        pid = $PID
+    }
+    $payload | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidenceDir 'current_phase.json') -Encoding UTF8
+    ($payload | ConvertTo-Json -Compress) | Add-Content -LiteralPath (Join-Path $evidenceDir 'phase_history.jsonl') -Encoding UTF8
+    Write-Host "`n=== DP GO PHASE: $Name ===" -ForegroundColor Cyan
+}
+
+Set-Phase 'predeploy_evidence'
 $task = Get-ScheduledTask -TaskPath $TaskPath -TaskName $TaskName -ErrorAction Stop
 $taskInfo = Get-ScheduledTaskInfo -TaskPath $TaskPath -TaskName $TaskName
 $originalAction = $task.Actions[0]
@@ -151,26 +158,22 @@ try {
 
 # Full COPY_ONLY database backup includes SEN.ActiveTask, DWH.Fact_OHLCV and
 # every DWH object.  VERIFYONLY WITH CHECKSUM is a hard gate before mutation.
-$backupRootLines = & sqlcmd -S $SqlServer -E -d $Database -h -1 -W -Q `
-    "SET NOCOUNT ON; SELECT CONVERT(nvarchar(4000), SERVERPROPERTY('InstanceDefaultBackupPath'));" 2>&1
-if ($LASTEXITCODE -ne 0) { throw "Could not resolve SQL backup directory: $backupRootLines" }
-$backupRoot = ($backupRootLines | Where-Object { $_ -and $_.Trim() } | Select-Object -First 1).Trim()
-if (-not $backupRoot.EndsWith('\')) { $backupRoot += '\' }
-$backupFile = $backupRoot + "SEN05_AutoTrading_GO_${stamp}_${shortCommit}.bak"
-$escapedBackup = $backupFile.Replace("'", "''")
-$backupQuery = @"
-SET NOCOUNT ON;
-BACKUP DATABASE [$Database] TO DISK = N'$escapedBackup'
-  WITH COPY_ONLY, CHECKSUM, COMPRESSION, INIT, STATS = 10;
-RESTORE VERIFYONLY FROM DISK = N'$escapedBackup' WITH CHECKSUM;
-SELECT N'$escapedBackup' AS verified_backup_file;
-"@
-Invoke-NativeChecked -Executable 'sqlcmd' `
-    -Arguments @('-b', '-r1', '-S', $SqlServer, '-E', '-d', $Database, '-Q', $backupQuery) `
+Set-Phase 'database_backup_and_verify'
+$backupManifestPath = Join-Path $evidenceDir 'database_backup_manifest.json'
+Invoke-NativeChecked -Executable $ServicePython `
+    -Arguments @($sqlHelper, 'backup', '--server', $SqlServer, '--database', $Database,
+                 '--stamp', $stamp, '--short-commit', $shortCommit,
+                 '--output', $backupManifestPath) `
     -WorkingDirectory $SourceRoot -EvidenceFile (Join-Path $evidenceDir 'database_backup_verify.log')
+$backupManifest = Get-Content -LiteralPath $backupManifestPath -Raw | ConvertFrom-Json
+if ($backupManifest.result -ne 'verified' -or -not $backupManifest.backup_file) {
+    throw 'Python SQL helper did not produce a verified backup manifest.'
+}
+$backupFile = [string]$backupManifest.backup_file
 
 # Graceful stop only.  If the supervisor refuses to exit, abort without force
 # killing it; destructive maintenance must not start while writers are alive.
+Set-Phase 'graceful_stop'
 try {
     Invoke-NativeChecked -Executable $ServicePython -Arguments @('-m', 'core_engine', 'stop', '--reason', 'production-go-deploy') `
         -WorkingDirectory $SourceRoot -EvidenceFile (Join-Path $evidenceDir 'graceful_stop.log')
@@ -186,33 +189,30 @@ $migrationsStarted = $false
 $promotionComplete = $false
 try {
     $migrationsStarted = $true
-    Invoke-SqlFileChecked -Path (Join-Path $candidateRoot 'scripts\sql\10_migration_usp_loaddirect_v3_date_fence.sql') `
-        -EvidenceFile (Join-Path $evidenceDir 'migration_10_usp_v3.log') -Commit $commit
-    Invoke-SqlFileChecked -Path (Join-Path $candidateRoot 'scripts\sql\09_migration_lock_fencing.sql') `
-        -EvidenceFile (Join-Path $evidenceDir 'migration_09_lock_fencing.log') -Commit $commit
-    Invoke-SqlFileChecked -Path (Join-Path $candidateRoot 'scripts\sql\11_migration_archive_us500_d1_unsupported_calendar.sql') `
-        -EvidenceFile (Join-Path $evidenceDir 'migration_11_archive.log') -Commit $commit
+    Set-Phase 'database_migrations'
+    $migrationManifestPath = Join-Path $evidenceDir 'migration_manifest.json'
+    Invoke-NativeChecked -Executable $ServicePython `
+        -Arguments @($sqlHelper, 'migrate', '--server', $SqlServer, '--database', $Database,
+                     '--commit', $commit, '--files',
+                     (Join-Path $candidateRoot 'scripts\sql\10_migration_usp_loaddirect_v3_date_fence.sql'),
+                     (Join-Path $candidateRoot 'scripts\sql\09_migration_lock_fencing.sql'),
+                     (Join-Path $candidateRoot 'scripts\sql\11_migration_archive_us500_d1_unsupported_calendar.sql'),
+                     '--output', $migrationManifestPath) `
+        -WorkingDirectory $SourceRoot -EvidenceFile (Join-Path $evidenceDir 'database_migrations.log')
 
-    $contractQuery = @"
-SET NOCOUNT ON;
-SELECT
-  CAST(ep.value AS varchar(20)) AS contract_version,
-  (SELECT COUNT(*) FROM sys.columns WHERE object_id=OBJECT_ID('SEN.ActiveTask') AND name IN ('OwnerId','Fence')) AS lock_fencing_columns,
-  (SELECT COUNT(*) FROM SEN.OHLCV_UnsupportedCalendar WHERE SourceTable='SEN.TF_D1' AND SymbolID=8 AND Reason='unsupported_calendar_date_before_2008') AS archived_unsupported_rows,
-  (SELECT COUNT(*) FROM SEN.TF_D1 s LEFT JOIN DWH.Dim_Date d ON d.FullDate=CAST(s.BarTime AS date) WHERE s.SymbolID=8 AND d.DateKey IS NULL) AS unsupported_staging_rows
-FROM sys.extended_properties ep
-WHERE ep.major_id=OBJECT_ID('DWH.usp_LoadDirect') AND ep.minor_id=0 AND ep.name='DPContractVersion'
-FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
-"@
-    Invoke-NativeChecked -Executable 'sqlcmd' `
-        -Arguments @('-b', '-S', $SqlServer, '-E', '-d', $Database, '-h', '-1', '-W', '-w', '65535', '-Q', $contractQuery) `
-        -WorkingDirectory $SourceRoot -EvidenceFile (Join-Path $evidenceDir 'database_contract.json')
-    $contract = Get-Content -LiteralPath (Join-Path $evidenceDir 'database_contract.json') -Raw | ConvertFrom-Json
+    Set-Phase 'database_contract_verification'
+    $contractPath = Join-Path $evidenceDir 'database_contract.json'
+    Invoke-NativeChecked -Executable $ServicePython `
+        -Arguments @($sqlHelper, 'contract', '--server', $SqlServer, '--database', $Database,
+                     '--output', $contractPath) `
+        -WorkingDirectory $SourceRoot -EvidenceFile (Join-Path $evidenceDir 'database_contract.log')
+    $contract = Get-Content -LiteralPath $contractPath -Raw | ConvertFrom-Json
     if ([string]$contract.contract_version -ne '3' -or [int]$contract.lock_fencing_columns -ne 2 -or
         [int]$contract.archived_unsupported_rows -ne 2231 -or [int]$contract.unsupported_staging_rows -ne 0) {
         throw 'Database contract/archive postconditions failed.'
     }
 
+    Set-Phase 'reconcile_fact'
     $previousPythonPath = $env:PYTHONPATH
     $previousAppRoot = $env:DP_APP_ROOT
     try {
@@ -233,11 +233,13 @@ FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
         throw 'reconcile-fact did not reach all-zero supported/mismatched/unsupported staging acceptance.'
     }
 
-    $watermarkQuery = "SET NOCOUNT ON; SELECT COUNT_BIG(*) AS fact_rows, CONVERT(varchar(33), MAX(BarTime), 127) AS max_bar_time_utc FROM DWH.Fact_OHLCV;"
-    Invoke-NativeChecked -Executable 'sqlcmd' `
-        -Arguments @('-b', '-S', $SqlServer, '-E', '-d', $Database, '-Q', $watermarkQuery) `
+    Set-Phase 'fact_watermark_before_start'
+    Invoke-NativeChecked -Executable $ServicePython `
+        -Arguments @($sqlHelper, 'watermark', '--server', $SqlServer, '--database', $Database,
+                     '--output', (Join-Path $evidenceDir 'fact_watermark_before_start.json')) `
         -WorkingDirectory $SourceRoot -EvidenceFile (Join-Path $evidenceDir 'fact_watermark_before_start.log')
 
+    Set-Phase 'immutable_release_deploy'
     Invoke-NativeChecked -Executable 'powershell.exe' `
         -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
                      (Join-Path $candidateRoot 'scripts\windows_task\deploy_release.ps1'),
@@ -247,6 +249,7 @@ FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
                      '-ServicePython', $ServicePython, '-StartTask') `
         -WorkingDirectory $SourceRoot -EvidenceFile (Join-Path $evidenceDir 'release_deploy.log')
 
+    Set-Phase 'scheduled_task_start_verification'
     $releasePython = 'C:\dp_program\current\.venv\Scripts\python.exe'
     $deadline = (Get-Date).AddSeconds(180)
     $runtimeHealthy = $false
@@ -283,6 +286,7 @@ FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
     }
 
     $promotionComplete = $true
+    Set-Phase 'promotion_complete'
 }
 catch {
     $_ | Out-String | Set-Content -LiteralPath (Join-Path $evidenceDir 'promotion_failure.txt')
@@ -304,13 +308,10 @@ catch {
                 New-Item -ItemType Junction -Path $currentPath -Target $oldCurrentTarget | Out-Null
             }
 
-            $restoreQuery = @"
-ALTER DATABASE [$Database] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-RESTORE DATABASE [$Database] FROM DISK = N'$escapedBackup' WITH REPLACE, CHECKSUM;
-ALTER DATABASE [$Database] SET MULTI_USER;
-"@
-            Invoke-NativeChecked -Executable 'sqlcmd' `
-                -Arguments @('-b', '-r1', '-S', $SqlServer, '-E', '-d', 'master', '-Q', $restoreQuery) `
+            Set-Phase 'rollback_database_restore'
+            Invoke-NativeChecked -Executable $ServicePython `
+                -Arguments @($sqlHelper, 'restore', '--server', $SqlServer, '--database', $Database,
+                             '--backup-file', $backupFile) `
                 -WorkingDirectory $SourceRoot -EvidenceFile (Join-Path $evidenceDir 'rollback_database_restore.log')
             Start-ScheduledTask -TaskPath $TaskPath -TaskName $TaskName
             'rollback_complete' | Set-Content -LiteralPath (Join-Path $evidenceDir 'rollback_result.txt')

@@ -27,3 +27,7 @@ include = ["core_engine*"]
 
 [tool.setuptools.package-data]
 "core_engine.dashboard" = ["static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+norecursedirs = ["runtime", ".git", ".venv", "build", "dist"]
