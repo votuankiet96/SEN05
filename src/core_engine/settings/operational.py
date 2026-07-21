@@ -263,6 +263,20 @@ class LiveSettings:
     ws_thread_join_grace_sec: int = env_int("WS_LIVE_WS_THREAD_JOIN_GRACE_SEC", 10, minimum=1)
     batch_group_join_timeout_sec: int = env_int("WS_LIVE_BATCH_GROUP_JOIN_TIMEOUT_SEC", 135, minimum=5)
     batch_max_retries: int = env_int("WS_LIVE_BATCH_MAX_RETRIES", 3, minimum=0)
+    # A websocket-client run_forever() call that is truly wedged in a
+    # blocking native socket read (ignores keep_running=False AND a forced
+    # raw-socket close) cannot be reclaimed from Python at all - only
+    # exiting the OS process reclaims that thread/fd. Rather than leaving
+    # such a thread abandoned forever (the previous mitigation), a group
+    # whose worker is still busy at BATCH_GROUP_JOIN_TIMEOUT_SEC for this
+    # many CONSECUTIVE scheduled batches is treated as unrecoverable
+    # in-process: the live child logs CRITICAL and exits, and the
+    # supervisor's existing restart/backoff machinery (P0-4) recycles it
+    # via a fresh OS process, which guarantees full reclamation. See
+    # High-11 in the round-3 audit fix set.
+    group_wedge_hard_deadline_batches: int = env_int(
+        "WS_LIVE_GROUP_WEDGE_HARD_DEADLINE_BATCHES", 3, minimum=1
+    )
     n_bars: int = env_int("WS_LIVE_N_BARS", 5, minimum=1)
     n_bars_backlog: int = env_int("WS_LIVE_N_BARS_BACKLOG", 30, minimum=1)
     max_backlog_batches: int = env_int("WS_LIVE_MAX_BACKLOG_BATCHES", 12, minimum=0)

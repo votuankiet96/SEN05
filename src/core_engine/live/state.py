@@ -89,6 +89,16 @@ _stats = {
     # long-running process signals accumulating leaked WS threads/sockets
     # worth investigating (network quality, TradingView-side stalls).
     "ws_forced_socket_closes": 0,
+    # A forced socket close (above) did not unblock the underlying OS
+    # thread within WS_LIVE_WS_THREAD_JOIN_GRACE_SEC - this specific
+    # thread/fd is now permanently unreclaimable except by process exit.
+    "ws_orphaned_threads": 0,
+    # Times a connection group's persistent worker was still busy
+    # (wedged) for WS_LIVE_GROUP_WEDGE_HARD_DEADLINE_BATCHES consecutive
+    # scheduled batches and the live process recycled itself via the
+    # supervisor to reclaim it - see BatchFetcher._worker_loop and
+    # _run_batch's hard-deadline check (High-11).
+    "ws_wedged_group_recycles": 0,
     "events": 0,
     "queue_depth": 0,
     "batches_run": 0,

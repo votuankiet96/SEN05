@@ -244,6 +244,7 @@ BATCH_MAX_RETRIES = _live_settings.batch_max_retries
 RECONNECT_BASE_SEC = _live_settings.reconnect_base_sec
 RECONNECT_MAX_SEC = _live_settings.reconnect_max_sec
 BATCH_GROUP_JOIN_TIMEOUT_SEC = _live_settings.batch_group_join_timeout_sec
+GROUP_WEDGE_HARD_DEADLINE_BATCHES = _live_settings.group_wedge_hard_deadline_batches
 STATE_HEARTBEAT_SEC = _live_settings.state_heartbeat_sec
 TV_WS_GUEST_POLICY = _live_settings.guest_policy
 TV_WS_GUEST_PAUSE_SEC = _live_settings.guest_pause_sec
@@ -1710,6 +1711,134 @@ class BatchFetcher:
 
         self._report_level = logging.INFO
 
+        # Persistent-worker plumbing (High-11 redesign): one dedicated
+        # thread per group, started once in main() and reused for the
+        # process lifetime, instead of _run_batch spawning a fresh
+        # batch-g{id} thread every scheduled cycle. request_batch()
+        # signals this event; the worker loop clears it, runs the fetch
+        # retry loop, then signals _batch_complete. This also guarantees
+        # at most one fetch attempt in flight per group at a time - the
+        # previous design could start a brand-new batch-g{id}/ws-g{id}
+        # thread pair for a group whose previous cycle's thread was still
+        # running past BATCH_GROUP_JOIN_TIMEOUT_SEC.
+        self._batch_request = threading.Event()
+
+        self._batch_complete = threading.Event()
+
+        self._pending_batch_id: int | None = None
+
+        self._busy = False
+
+        self._worker_thread: threading.Thread | None = None
+
+        # Consecutive scheduled batches this group's worker was still
+        # busy (wedged) at BATCH_GROUP_JOIN_TIMEOUT_SEC. Reset to 0 the
+        # moment the worker completes a batch. See GROUP_WEDGE_HARD_
+        # DEADLINE_BATCHES and _run_batch()'s use of this counter.
+        self._consecutive_stuck_batches = 0
+
+    def start_worker(self) -> None:
+        """Start this group's persistent worker thread. Called once from
+        main() for every group, before the batch scheduler loop starts."""
+        self._worker_thread = threading.Thread(
+            target=self._worker_loop, name=f"worker-g{self.group_id}", daemon=True
+        )
+        self._worker_thread.start()
+
+    def request_batch(self, batch_id: int) -> None:
+        """Hand this group's persistent worker the next batch id to fetch.
+        Must only be called after the previous _batch_complete has fired
+        (or at startup) - _run_batch enforces this by construction, since
+        it only calls request_batch() once per scheduled cycle and always
+        waits on _batch_complete before the next one."""
+        self._pending_batch_id = batch_id
+        self._batch_complete.clear()
+        self._batch_request.set()
+
+    def _worker_loop(self) -> None:
+        while not _shutdown.is_set():
+            if not self._batch_request.wait(timeout=1.0):
+                continue
+
+            if _shutdown.is_set():
+                return
+
+            self._batch_request.clear()
+
+            batch_id = self._pending_batch_id
+
+            self._busy = True
+
+            try:
+                if batch_id is not None:
+                    self._fetch_with_retry(batch_id)
+            except Exception as exc:  # noqa: BLE001 - a wedged/crashed
+                # worker must not silently stop answering future batches.
+                logger.error(
+                    "%s",
+                    _llog(
+                        "Connection group worker loop raised",
+                        group=self.group_id,
+                        reason=exc,
+                        result="continuing",
+                    ),
+                )
+            finally:
+                self._busy = False
+
+                self._batch_complete.set()
+
+    def _fetch_with_retry(self, batch_id: int) -> None:
+        """Attempt this group's batch fetch with retry/backoff. Moved out
+        of _run_batch's per-cycle closure into a method so the persistent
+        worker thread (see _worker_loop) can call it directly instead of
+        a new thread being created to run it every cycle."""
+        delay = RECONNECT_BASE_SEC
+
+        for attempt in range(1, BATCH_MAX_RETRIES + 1):
+            if _shutdown.is_set():
+                return
+
+            try:
+                _wait_for_ws_cooldown(f"G{self.group_id}")
+
+                if _shutdown.is_set():
+                    return
+
+                success = self.fetch(batch_id)
+
+                if success:
+                    return
+
+                logger.warning(
+                    "%s",
+                    _llog(
+                        "Connection group fetch incomplete",
+                        group=self.group_id,
+                        attempt=f"{attempt}/{BATCH_MAX_RETRIES}",
+                        result="retrying",
+                    ),
+                )
+
+            except Exception as exc:
+                logger.error(
+                    "%s",
+                    _llog(
+                        "Connection group fetch failed",
+                        group=self.group_id,
+                        attempt=f"{attempt}/{BATCH_MAX_RETRIES}",
+                        reason=exc,
+                        result="failed",
+                    ),
+                )
+
+            if attempt < BATCH_MAX_RETRIES:
+                logger.info("%s", _llog("Connection group retry scheduled", group=self.group_id, wait_seconds=delay, result="waiting"))
+
+                _shutdown.wait(delay)
+
+                delay = min(delay * 2, RECONNECT_MAX_SEC)
+
     def _next_fetch_token(self) -> int:
         with self._lock:
             self._fetch_token += 1
@@ -2338,6 +2467,17 @@ class BatchFetcher:
                 ),
             )
 
+            if not _shutdown.is_set():
+                # This specific OS thread is now genuinely unreclaimable
+                # from Python (it ignored keep_running=False AND a forced
+                # raw-socket close). _run_batch's consecutive-stuck-batch
+                # counter is what decides whether to recycle the whole
+                # process; this counter is the operator-facing metric for
+                # "how often has that actually happened" (see doctor/
+                # status output and _stats).
+                with _state_lock:
+                    _stats["ws_orphaned_threads"] = _stats.get("ws_orphaned_threads", 0) + 1
+
         self._ws = None
 
         with self._lock:
@@ -2663,6 +2803,39 @@ def _guest_mode_blocks_batch() -> bool:
 
     return True
 
+
+def _classify_group_batch_outcomes(groups: list, *, hard_deadline_batches: int) -> tuple[list[str], list[int]]:
+    """After _run_batch has requested a batch from every group's persistent
+    worker and waited up to BATCH_GROUP_JOIN_TIMEOUT_SEC, classify which
+    groups are still busy (stuck for this cycle) and which have been busy
+    for hard_deadline_batches CONSECUTIVE cycles in a row (wedged - a
+    forced socket close already failed to unblock them, so nothing short
+    of exiting the process can reclaim that thread). Also updates each
+    group's _consecutive_stuck_batches counter as a side effect.
+
+    Split out from _run_batch, and accepting duck-typed group objects
+    (only .group_id/._busy/._consecutive_stuck_batches are read/written),
+    purely so this decision is unit-testable without needing a real
+    BatchFetcher/websocket stack.
+    """
+    stuck_group_names: list[str] = []
+
+    wedged_group_ids: list[int] = []
+
+    for g in groups:
+        if g._busy:
+            stuck_group_names.append(f"G{g.group_id}")
+
+            g._consecutive_stuck_batches += 1
+
+            if g._consecutive_stuck_batches >= hard_deadline_batches:
+                wedged_group_ids.append(g.group_id)
+        else:
+            g._consecutive_stuck_batches = 0
+
+    return stuck_group_names, wedged_group_ids
+
+
 def _run_batch(groups: list[BatchFetcher]) -> None:
     ok, connectivity_detail = _tradingview_connectivity_ok()
 
@@ -2723,95 +2896,47 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
 
     live_batch_lock = acquire_live_batch_window(logger)
 
-    def _fetch_with_retry(group: BatchFetcher) -> None:
-        delay = RECONNECT_BASE_SEC
+    # Signal every group's persistent worker (started once in main() via
+    # BatchFetcher.start_worker()) instead of spawning a fresh batch-g{id}
+    # thread here every cycle - see BatchFetcher._worker_loop.
+    for g in groups:
+        g.request_batch(batch_id)
 
-        for attempt in range(1, BATCH_MAX_RETRIES + 1):
-            if _shutdown.is_set():
-                return
+    stuck_group_names: list[str] = []
 
-            try:
-                _wait_for_ws_cooldown(f"G{group.group_id}")
-
-                if _shutdown.is_set():
-                    return
-
-                success = group.fetch(batch_id)
-
-                if success:
-                    return
-
-                logger.warning(
-                    "%s",
-                    _llog(
-                        "Connection group fetch incomplete",
-                        group=group.group_id,
-                        attempt=f"{attempt}/{BATCH_MAX_RETRIES}",
-                        result="retrying",
-                    ),
-                )
-
-            except Exception as exc:
-                logger.error(
-                    "%s",
-                    _llog(
-                        "Connection group fetch failed",
-                        group=group.group_id,
-                        attempt=f"{attempt}/{BATCH_MAX_RETRIES}",
-                        reason=exc,
-                        result="failed",
-                    ),
-                )
-
-            if attempt < BATCH_MAX_RETRIES:
-                logger.info("%s", _llog("Connection group retry scheduled", group=group.group_id, wait_seconds=delay, result="waiting"))
-
-                _shutdown.wait(delay)
-
-                delay = min(delay * 2, RECONNECT_MAX_SEC)
-
-    threads = [
-        threading.Thread(
-            target=_fetch_with_retry, args=(g,), daemon=True, name=f"batch-g{g.group_id}"
-        )
-
-        for g in groups
-    ]
-
-    stuck_threads: list[str] = []
+    wedged_group_ids: list[int] = []
 
     try:
-        for t in threads:
-            t.start()
-
         deadline = time.monotonic() + BATCH_GROUP_JOIN_TIMEOUT_SEC
 
-        for t in threads:
+        for g in groups:
             remaining = max(0.0, deadline - time.monotonic())
 
-            t.join(timeout=remaining)
+            g._batch_complete.wait(timeout=remaining)
 
-        stuck_threads = [t.name for t in threads if t.is_alive()]
+        stuck_group_names, wedged_group_ids = _classify_group_batch_outcomes(
+            groups, hard_deadline_batches=GROUP_WEDGE_HARD_DEADLINE_BATCHES
+        )
 
-        if stuck_threads:
+        if stuck_group_names:
             _write_live_state(
                 status="batch_stale_released",
                 batch_id=batch_id,
-                stale_threads=stuck_threads,
+                stale_threads=stuck_group_names,
                 batch_completed_at=_utc_iso(),
             )
 
     finally:
         release_live_batch_window(live_batch_lock)
 
-    if stuck_threads:
+    if stuck_group_names:
         logger.error(
             "%s",
             _llog(
                 "Live batch exceeded safe time limit",
                 batch=batch_id,
                 limit_seconds=BATCH_GROUP_JOIN_TIMEOUT_SEC,
-                stuck_groups=", ".join(stuck_threads),
+                stuck_groups=", ".join(stuck_group_names),
                 result="released_for_next_batch",
             ),
         )
@@ -2820,9 +2945,46 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
             "ERROR",
             "Live feed batch took too long and was released safely\n"
             f"Batch: #{batch_id}\n"
-            f"Stuck worker groups: {', '.join(stuck_threads)}\n"
+            f"Stuck worker groups: {', '.join(stuck_group_names)}\n"
             "Meaning: this batch was abandoned so the next jobs are not blocked.",
         )
+
+    if wedged_group_ids:
+        # A worker thread that is STILL busy after GROUP_WEDGE_HARD_
+        # DEADLINE_BATCHES consecutive scheduled batches - even after
+        # fetch()'s own timeout path already tried a forced raw-socket
+        # close - is blocked in a native call Python cannot reclaim from
+        # inside this process. The only guaranteed reclamation is exiting
+        # the process: the supervisor's existing restart/backoff (P0-4)
+        # then starts a fresh one, which is a full, clean OS-level
+        # recycle of every thread/socket/fd this process was holding.
+        detail = ", ".join(f"G{gid}" for gid in wedged_group_ids)
+
+        logger.critical(
+            "%s",
+            _llog(
+                "Connection group worker wedged past hard deadline",
+                groups=detail,
+                consecutive_batches=GROUP_WEDGE_HARD_DEADLINE_BATCHES,
+                result="recycling_process",
+            ),
+        )
+
+        _send_alert(
+            "CRITICAL",
+            "Live feed is recycling itself to reclaim a stuck connection\n"
+            f"Wedged group(s): {detail}\n"
+            f"Unresponsive for {GROUP_WEDGE_HARD_DEADLINE_BATCHES} consecutive batches, "
+            "even after a forced socket close.\n"
+            "This process will exit now; the DP supervisor will start a replacement." + QUICK_COMMANDS_HINT,
+        )
+
+        with _state_lock:
+            _stats["ws_wedged_group_recycles"] = _stats.get("ws_wedged_group_recycles", 0) + 1
+
+        _shutdown.set()
+
+        return
 
     total_new = sum(g._new_bars_count for g in groups)
 
@@ -3865,6 +4027,12 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
         )
 
     threading.excepthook = _thread_excepthook
+
+    # Start each connection group's persistent worker before the batch
+    # scheduler can issue its first request_batch() - see BatchFetcher.
+    # start_worker()/High-11 redesign.
+    for g in groups:
+        g.start_worker()
 
     db_thread = threading.Thread(target=_db_worker, name="db-worker", daemon=False)
 
