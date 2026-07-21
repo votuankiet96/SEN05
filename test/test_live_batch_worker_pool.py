@@ -24,7 +24,12 @@ from types import SimpleNamespace
 import pytest
 
 from core_engine.live import engine as live_engine
-from core_engine.live.engine import BatchFetcher, _classify_group_batch_outcomes
+from core_engine.live.engine import (
+    BatchFetcher,
+    LiveProcessRecycleRequired,
+    _claim_ws_callback_stall_fault,
+    _classify_group_batch_outcomes,
+)
 
 
 @pytest.fixture
@@ -128,9 +133,18 @@ def test_worker_survives_fetch_exception_and_keeps_answering_future_batches(monk
 # --- stuck / hard-deadline classification -----------------------------------
 
 
-def _fake_group(group_id: int, *, busy: bool, consecutive_stuck_batches: int = 0):
+def _fake_group(
+    group_id: int,
+    *,
+    busy: bool,
+    consecutive_stuck_batches: int = 0,
+    requires_process_recycle: bool = False,
+):
     return SimpleNamespace(
-        group_id=group_id, _busy=busy, _consecutive_stuck_batches=consecutive_stuck_batches
+        group_id=group_id,
+        _busy=busy,
+        _requires_process_recycle=requires_process_recycle,
+        _consecutive_stuck_batches=consecutive_stuck_batches,
     )
 
 
@@ -178,3 +192,114 @@ def test_classify_consecutive_counter_does_not_overflow_past_threshold_reporting
     stuck, wedged = _classify_group_batch_outcomes([g], hard_deadline_batches=3)
     assert wedged == [9]
     assert g._consecutive_stuck_batches == 6
+
+
+def test_idle_worker_with_orphaned_websocket_is_not_mistaken_for_recovered():
+    # Regression: fetch() returned and _worker_loop set _busy=False after
+    # ws_thread survived force-close.  The old classifier reset the counter
+    # forever, so every later batch could leak another ws-g{id} thread.
+    g = _fake_group(4, busy=False, requires_process_recycle=True)
+
+    for expected_count in (1, 2):
+        stuck, wedged = _classify_group_batch_outcomes([g], hard_deadline_batches=3)
+        assert stuck == ["G4"]
+        assert wedged == []
+        assert g._consecutive_stuck_batches == expected_count
+
+    stuck, wedged = _classify_group_batch_outcomes([g], hard_deadline_batches=3)
+    assert stuck == ["G4"]
+    assert wedged == [4]
+    assert g._consecutive_stuck_batches == 3
+
+
+def test_orphaned_group_does_not_open_another_websocket(monkeypatch, isolated_shutdown):
+    calls = []
+
+    def _fetch(self, batch_id, timeout=None):
+        calls.append(batch_id)
+        return True
+
+    g = _start_group_with_stub_fetch(monkeypatch, 3, _fetch)
+    g._requires_process_recycle = True
+    g.request_batch(99)
+    assert g._batch_complete.wait(timeout=2)
+    assert calls == []
+
+
+def test_fetch_marks_process_recycle_when_socket_thread_survives_force_close(
+    monkeypatch, isolated_shutdown
+):
+    release_thread = threading.Event()
+
+    class _RawSocket:
+        def close(self):
+            return None
+
+    class _FakeWebSocketApp:
+        def __init__(self, *_args, **_kwargs):
+            self.keep_running = True
+            self.sock = SimpleNamespace(sock=_RawSocket())
+
+        def run_forever(self):
+            # Simulate a native websocket read/callback that ignores both
+            # keep_running=False and the forced raw-socket close.
+            release_thread.wait(timeout=5)
+
+        def close(self):
+            return None
+
+    monkeypatch.setattr(live_engine.websocket, "WebSocketApp", _FakeWebSocketApp)
+    monkeypatch.setattr(live_engine, "WS_THREAD_JOIN_GRACE_SEC", 0.01)
+    g = BatchFetcher(6, [])
+
+    try:
+        assert g.fetch(1, timeout=0.01) is False
+        assert g._requires_process_recycle is True
+    finally:
+        release_thread.set()
+
+
+def test_wedged_batch_raises_fatal_recycle_signal(monkeypatch, isolated_shutdown):
+    done = threading.Event()
+    done.set()
+    group = SimpleNamespace(
+        group_id=8,
+        _busy=False,
+        _requires_process_recycle=True,
+        _consecutive_stuck_batches=2,
+        _batch_complete=done,
+        request_batch=lambda _batch_id: None,
+    )
+
+    monkeypatch.setattr(live_engine, "_tradingview_connectivity_ok", lambda: (True, "ok"))
+    monkeypatch.setattr(live_engine, "_guest_mode_blocks_batch", lambda: False)
+    monkeypatch.setattr(live_engine, "_spool_full_blocks_batch", lambda: False)
+    monkeypatch.setattr(live_engine, "_init_batch_metrics", lambda _batch_id: None)
+    monkeypatch.setattr(live_engine, "_start_candle_table", lambda _batch_id: None)
+    monkeypatch.setattr(live_engine, "_write_live_state", lambda **_kwargs: None)
+    monkeypatch.setattr(live_engine, "acquire_live_batch_window", lambda _logger: False)
+    monkeypatch.setattr(live_engine, "release_live_batch_window", lambda _held: None)
+    monkeypatch.setattr(live_engine, "_send_alert", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(live_engine, "GROUP_WEDGE_HARD_DEADLINE_BATCHES", 3)
+
+    with pytest.raises(LiveProcessRecycleRequired, match="G8"):
+        live_engine._run_batch([group])
+
+    assert isolated_shutdown.is_set()
+
+
+def test_controlled_socket_stall_marker_is_exact_and_one_shot(monkeypatch, tmp_path):
+    monkeypatch.setattr(live_engine, "RUN_DIR", tmp_path)
+    marker = tmp_path / "fault_inject_ws_callback_stall_g2.request"
+
+    marker.write_text("not-authorized", encoding="utf-8")
+    assert _claim_ws_callback_stall_fault(2) is None
+    assert marker.exists()
+
+    marker.write_text("STALL_ONCE\n", encoding="utf-8")
+    evidence = _claim_ws_callback_stall_fault(2)
+    assert evidence is not None
+    assert evidence.exists()
+    assert ".active." in evidence.name
+    assert not marker.exists()
+    assert _claim_ws_callback_stall_fault(2) is None

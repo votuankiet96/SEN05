@@ -72,6 +72,7 @@ from core_engine.settings import (
     WS_LIVE_PID,
     WS_LIVE_REPORT_LOG,
     WS_LIVE_STATE,
+    RUN_DIR,
 )
 
 from core_engine.tradingview import protocol as live_protocol
@@ -157,6 +158,11 @@ from core_engine.coordination.locks import (
     request_ws_live_shutdown,
 )
 
+
+class LiveProcessRecycleRequired(RuntimeError):
+    """Fatal live-child condition that only an OS process restart can heal."""
+
+
 def _resolve_ws_symbols(symbols: list[dict], asset_types: tuple[str, ...]) -> list[dict]:
     return [s for s in symbols if s["asset_type"] in set(asset_types)]
 
@@ -174,6 +180,28 @@ def _check_expected_live_symbol_count(count: int, expected: int, asset_types: tu
             "EXPECTED_LIVE_SYMBOLS (or LIVE_ASSET_TYPES/instruments.py, whichever changed) "
             "after confirming the new count is intentional."
         )
+
+
+def _claim_ws_callback_stall_fault(group_id: int) -> Path | None:
+    """Claim a deliberately planted, one-shot maintenance fault marker.
+
+    This hook is inert unless an operator creates the exact group marker
+    containing ``STALL_ONCE``.  Renaming the request before stalling makes
+    the injection one-shot across the supervisor-driven process restart and
+    leaves an evidence file with the PID/timestamp.  It exists solely to
+    exercise the real websocket timeout/force-close/orphan/recycle path on
+    VM-DP6 during an approved maintenance window.
+    """
+    request = RUN_DIR / f"fault_inject_ws_callback_stall_g{group_id}.request"
+    try:
+        if request.read_text(encoding="utf-8").strip() != "STALL_ONCE":
+            return None
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        active = request.with_name(f"{request.stem}.active.{os.getpid()}.{stamp}")
+        request.replace(active)
+        return active
+    except (FileNotFoundError, OSError):
+        return None
 
 
 # Which asset types are watched live is operator-configurable
@@ -1703,6 +1731,8 @@ class BatchFetcher:
 
         self._fetch_token = 0
 
+        self._fault_marker_checked_token = 0
+
         self._timed_out = False
 
         self._report_title = ""
@@ -1736,6 +1766,13 @@ class BatchFetcher:
         # moment the worker completes a batch. See GROUP_WEDGE_HARD_
         # DEADLINE_BATCHES and _run_batch()'s use of this counter.
         self._consecutive_stuck_batches = 0
+
+        # Once a ws-g{id} thread has ignored both WebSocketApp.close() and a
+        # forced raw-socket close, Python cannot reclaim it.  The persistent
+        # group worker itself may already be idle at that point, so this flag
+        # must survive independently of _busy until the whole child process
+        # is recycled by the supervisor.
+        self._requires_process_recycle = False
 
     def start_worker(self) -> None:
         """Start this group's persistent worker thread. Called once from
@@ -1796,7 +1833,7 @@ class BatchFetcher:
         delay = RECONNECT_BASE_SEC
 
         for attempt in range(1, BATCH_MAX_RETRIES + 1):
-            if _shutdown.is_set():
+            if _shutdown.is_set() or self._requires_process_recycle:
                 return
 
             try:
@@ -2047,6 +2084,29 @@ class BatchFetcher:
 
         if not self._is_current_ws(ws) or not self._is_current_fetch(token):
             return
+
+        with self._lock:
+            check_fault_marker = self._fault_marker_checked_token != token
+            if check_fault_marker:
+                self._fault_marker_checked_token = token
+
+        fault_evidence = _claim_ws_callback_stall_fault(self.group_id) if check_fault_marker else None
+        if fault_evidence is not None:
+            logger.warning(
+                "%s",
+                _llog(
+                    "Controlled WebSocket callback stall injected",
+                    group=self.group_id,
+                    evidence=fault_evidence,
+                    action="exercise_force_close_and_process_recycle",
+                    result="fault_injected",
+                ),
+            )
+            # Deliberately ignore shutdown: the purpose of this maintenance
+            # hook is to simulate a native callback that Python cannot
+            # reclaim.  ws-g{id} is daemonized and the live child must exit.
+            while True:
+                time.sleep(60)
 
         with _state_lock:
             _stats["events"] += 1
@@ -2478,6 +2538,8 @@ class BatchFetcher:
                 with _state_lock:
                     _stats["ws_orphaned_threads"] = _stats.get("ws_orphaned_threads", 0) + 1
 
+                self._requires_process_recycle = True
+
         self._ws = None
 
         with self._lock:
@@ -2814,7 +2876,8 @@ def _classify_group_batch_outcomes(groups: list, *, hard_deadline_batches: int) 
     group's _consecutive_stuck_batches counter as a side effect.
 
     Split out from _run_batch, and accepting duck-typed group objects
-    (only .group_id/._busy/._consecutive_stuck_batches are read/written),
+    (only .group_id/._busy/._requires_process_recycle/
+    ._consecutive_stuck_batches are read/written),
     purely so this decision is unit-testable without needing a real
     BatchFetcher/websocket stack.
     """
@@ -2823,7 +2886,7 @@ def _classify_group_batch_outcomes(groups: list, *, hard_deadline_batches: int) 
     wedged_group_ids: list[int] = []
 
     for g in groups:
-        if g._busy:
+        if g._busy or g._requires_process_recycle:
             stuck_group_names.append(f"G{g.group_id}")
 
             g._consecutive_stuck_batches += 1
@@ -2984,7 +3047,11 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
 
         _shutdown.set()
 
-        return
+        # _run_batch executes on the critical live-batch-loop thread.  An
+        # uncaught exception is intentional here: the installed thread
+        # excepthook marks the live child failed, yielding exit code 1 so the
+        # supervisor records a crash/restart instead of a clean operator stop.
+        raise LiveProcessRecycleRequired(f"unreclaimable websocket group(s): {detail}")
 
     total_new = sum(g._new_bars_count for g in groups)
 
