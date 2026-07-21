@@ -5,6 +5,7 @@ param(
     [string]$TaskName = 'SEN05 DP Program 24x7',
     [string]$SqlServer = 'localhost',
     [string]$Database = 'SEN05_AutoTrading',
+    [string]$CandidateManifest = '',
     [string]$ServicePython = 'C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe'
 )
 
@@ -66,14 +67,25 @@ function Remove-JunctionOnly([string]$Path) {
 Assert-Administrator
 $SourceRoot = (Resolve-Path -LiteralPath $SourceRoot).Path
 $stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')
-$commit = (& git -C $SourceRoot rev-parse 'HEAD^{commit}').Trim().ToLowerInvariant()
-if ($LASTEXITCODE -ne 0 -or $commit -notmatch '^[0-9a-f]{40}$') { throw 'Cannot resolve source HEAD.' }
-if ((& git -C $SourceRoot status --porcelain)) {
-    throw 'Source checkout is not clean. Commit or remove changes before production promotion.'
+if (-not $CandidateManifest) {
+    $CandidateManifest = Join-Path $SourceRoot 'runtime\deploy\artifacts\production_candidate.json'
+}
+$CandidateManifest = (Resolve-Path -LiteralPath $CandidateManifest).Path
+$candidate = Get-Content -LiteralPath $CandidateManifest -Raw | ConvertFrom-Json
+$commit = ([string]$candidate.release_commit).Trim().ToLowerInvariant()
+if ($commit -notmatch '^[0-9a-f]{40}$') { throw 'Candidate manifest has an invalid release_commit.' }
+$artifactPath = Join-Path $SourceRoot ([string]$candidate.artifact_relative_path)
+$artifactPath = (Resolve-Path -LiteralPath $artifactPath).Path
+$artifactSha256 = ([string]$candidate.sha256).Trim().ToLowerInvariant()
+$actualArtifactSha256 = (Get-FileHash -LiteralPath $artifactPath -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($artifactSha256 -notmatch '^[0-9a-f]{64}$' -or $actualArtifactSha256 -ne $artifactSha256) {
+    throw 'Production candidate artifact failed SHA-256 verification.'
 }
 
 $evidenceDir = Join-Path $SourceRoot "runtime\deploy\go_${stamp}_${($commit.Substring(0,12))}"
 New-Item -ItemType Directory -Path $evidenceDir -Force | Out-Null
+$candidateRoot = Join-Path $evidenceDir 'candidate_source'
+Expand-Archive -LiteralPath $artifactPath -DestinationPath $candidateRoot
 $task = Get-ScheduledTask -TaskPath $TaskPath -TaskName $TaskName -ErrorAction Stop
 $taskInfo = Get-ScheduledTaskInfo -TaskPath $TaskPath -TaskName $TaskName
 $originalAction = $task.Actions[0]
@@ -96,6 +108,9 @@ if (Test-Path -LiteralPath $currentPath) {
     user = [Security.Principal.WindowsIdentity]::GetCurrent().Name
     source_root = $SourceRoot
     source_commit = $commit
+    candidate_manifest = $CandidateManifest
+    artifact_path = $artifactPath
+    artifact_sha256 = $artifactSha256
     task_path = $TaskPath
     task_name = $TaskName
     task_state = [string]$task.State
@@ -117,8 +132,13 @@ if ($taskXmlText -notmatch '<Delay>PT45S</Delay>' -or
 Copy-Item -LiteralPath (Join-Path $SourceRoot 'config\dp_provider.env') `
     -Destination (Join-Path $evidenceDir 'dp_provider.env.before')
 
-Invoke-NativeChecked -Executable 'git' -Arguments @('-C', $SourceRoot, 'show', '--stat', '--oneline', $commit) `
-    -WorkingDirectory $SourceRoot -EvidenceFile (Join-Path $evidenceDir 'git_commit.txt')
+[ordered]@{
+    release_commit = $commit
+    artifact_path = $artifactPath
+    expected_sha256 = $artifactSha256
+    verified_sha256 = $actualArtifactSha256
+    verified_at_utc = (Get-Date).ToUniversalTime().ToString('o')
+} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidenceDir 'artifact_verification.json') -Encoding UTF8
 try {
     Invoke-NativeChecked -Executable $ServicePython -Arguments @('-m', 'core_engine', 'doctor', '--json') `
         -WorkingDirectory $SourceRoot -EvidenceFile (Join-Path $evidenceDir 'doctor_before.json')
@@ -165,11 +185,11 @@ $migrationsStarted = $false
 $promotionComplete = $false
 try {
     $migrationsStarted = $true
-    Invoke-SqlFileChecked -Path (Join-Path $SourceRoot 'scripts\sql\10_migration_usp_loaddirect_v3_date_fence.sql') `
+    Invoke-SqlFileChecked -Path (Join-Path $candidateRoot 'scripts\sql\10_migration_usp_loaddirect_v3_date_fence.sql') `
         -EvidenceFile (Join-Path $evidenceDir 'migration_10_usp_v3.log') -Commit $commit
-    Invoke-SqlFileChecked -Path (Join-Path $SourceRoot 'scripts\sql\09_migration_lock_fencing.sql') `
+    Invoke-SqlFileChecked -Path (Join-Path $candidateRoot 'scripts\sql\09_migration_lock_fencing.sql') `
         -EvidenceFile (Join-Path $evidenceDir 'migration_09_lock_fencing.log') -Commit $commit
-    Invoke-SqlFileChecked -Path (Join-Path $SourceRoot 'scripts\sql\11_migration_archive_us500_d1_unsupported_calendar.sql') `
+    Invoke-SqlFileChecked -Path (Join-Path $candidateRoot 'scripts\sql\11_migration_archive_us500_d1_unsupported_calendar.sql') `
         -EvidenceFile (Join-Path $evidenceDir 'migration_11_archive.log') -Commit $commit
 
     $contractQuery = @"
@@ -192,9 +212,19 @@ FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
         throw 'Database contract/archive postconditions failed.'
     }
 
-    & $ServicePython -m core_engine reconcile-fact --apply --json 2>&1 |
-        Tee-Object -FilePath (Join-Path $evidenceDir 'reconcile_apply.json')
-    $reconcileExit = $LASTEXITCODE
+    $previousPythonPath = $env:PYTHONPATH
+    $previousAppRoot = $env:DP_APP_ROOT
+    try {
+        $env:PYTHONPATH = Join-Path $candidateRoot 'src'
+        $env:DP_APP_ROOT = $SourceRoot
+        & $ServicePython -m core_engine reconcile-fact --apply --json 2>&1 |
+            Tee-Object -FilePath (Join-Path $evidenceDir 'reconcile_apply.json')
+        $reconcileExit = $LASTEXITCODE
+    }
+    finally {
+        $env:PYTHONPATH = $previousPythonPath
+        $env:DP_APP_ROOT = $previousAppRoot
+    }
     $reconcile = Get-Content -LiteralPath (Join-Path $evidenceDir 'reconcile_apply.json') -Raw | ConvertFrom-Json
     if ($reconcileExit -ne 0 -or [int]$reconcile.supported_missing_fact_rows -ne 0 -or
         [int]$reconcile.supported_mismatched_fact_rows -ne 0 -or
@@ -209,9 +239,10 @@ FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
 
     Invoke-NativeChecked -Executable 'powershell.exe' `
         -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
-                     (Join-Path $SourceRoot 'scripts\windows_task\deploy_release.ps1'),
+                     (Join-Path $candidateRoot 'scripts\windows_task\deploy_release.ps1'),
                      '-SourceRoot', $SourceRoot, '-TaskPath', $TaskPath,
-                     '-TaskName', $TaskName, '-Commit', $commit,
+                     '-TaskName', $TaskName, '-ArtifactPath', $artifactPath,
+                     '-ArtifactSha256', $artifactSha256, '-ResolvedCommit', $commit,
                      '-ServicePython', $ServicePython, '-StartTask') `
         -WorkingDirectory $SourceRoot -EvidenceFile (Join-Path $evidenceDir 'release_deploy.log')
 

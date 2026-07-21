@@ -6,6 +6,9 @@ param(
     [string]$TaskPath = '\SEN05\',
     [string]$TaskName = 'SEN05 DP Program 24x7',
     [string]$Commit = 'HEAD',
+    [string]$ArtifactPath = '',
+    [string]$ArtifactSha256 = '',
+    [string]$ResolvedCommit = '',
     [string]$ServicePython = 'C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe',
     [switch]$StartTask,
     [switch]$SkipTests
@@ -53,7 +56,7 @@ function Invoke-NativeChecked {
 Assert-Administrator
 
 $resolvedSource = (Resolve-Path -LiteralPath $SourceRoot).Path
-if (-not (Test-Path -LiteralPath (Join-Path $resolvedSource '.git'))) {
+if (-not $ArtifactPath -and -not (Test-Path -LiteralPath (Join-Path $resolvedSource '.git'))) {
     throw "SourceRoot is not the dp-program git checkout: $resolvedSource"
 }
 if (-not (Test-Path -LiteralPath $ServicePython)) {
@@ -65,9 +68,23 @@ if ($task.State -eq 'Running') {
     throw 'Scheduled Task is still Running. Request a graceful core_engine stop before release switching.'
 }
 
-$commitFull = (& git -C $resolvedSource rev-parse "$Commit^{commit}").Trim().ToLowerInvariant()
-if ($LASTEXITCODE -ne 0 -or $commitFull -notmatch '^[0-9a-f]{40}$') {
-    throw "Could not resolve a full git commit from: $Commit"
+$artifactSource = $null
+if ($ArtifactPath) {
+    $artifactSource = (Resolve-Path -LiteralPath $ArtifactPath).Path
+    $commitFull = $ResolvedCommit.Trim().ToLowerInvariant()
+    if ($commitFull -notmatch '^[0-9a-f]{40}$') {
+        throw 'ResolvedCommit must be the full 40-character commit for the prebuilt artifact.'
+    }
+    $actualArtifactHash = (Get-FileHash -LiteralPath $artifactSource -Algorithm SHA256).Hash.ToLowerInvariant()
+    if (-not $ArtifactSha256 -or $actualArtifactHash -ne $ArtifactSha256.Trim().ToLowerInvariant()) {
+        throw "Prebuilt artifact SHA-256 mismatch: $artifactSource"
+    }
+}
+else {
+    $commitFull = (& git -C $resolvedSource rev-parse "$Commit^{commit}").Trim().ToLowerInvariant()
+    if ($LASTEXITCODE -ne 0 -or $commitFull -notmatch '^[0-9a-f]{40}$') {
+        throw "Could not resolve a full git commit from: $Commit"
+    }
 }
 $shortCommit = $commitFull.Substring(0, 12)
 $stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')
@@ -88,9 +105,20 @@ if ((Test-Path -LiteralPath $buildingDir) -or (Test-Path -LiteralPath $releaseDi
 
 New-Item -ItemType Directory -Path $buildingDir | Out-Null
 try {
-    Invoke-NativeChecked -Executable 'git' `
-        -Arguments @('-C', $resolvedSource, 'archive', '--format=zip', '--output', $archivePath, $commitFull) `
-        -WorkingDirectory $resolvedSource -EvidenceFile (Join-Path $evidenceDir 'git_archive.log')
+    if ($artifactSource) {
+        Copy-Item -LiteralPath $artifactSource -Destination $archivePath
+        [ordered]@{
+            artifact = $artifactSource
+            sha256 = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+            release_commit = $commitFull
+            verified_at_utc = (Get-Date).ToUniversalTime().ToString('o')
+        } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidenceDir 'artifact_verification.json') -Encoding UTF8
+    }
+    else {
+        Invoke-NativeChecked -Executable 'git' `
+            -Arguments @('-C', $resolvedSource, 'archive', '--format=zip', '--output', $archivePath, $commitFull) `
+            -WorkingDirectory $resolvedSource -EvidenceFile (Join-Path $evidenceDir 'git_archive.log')
+    }
     Expand-Archive -LiteralPath $archivePath -DestinationPath $buildingDir
     Remove-Item -LiteralPath $archivePath -Force
 

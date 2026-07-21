@@ -60,6 +60,9 @@ def test_vm_promotion_script_contains_all_destructive_safety_gates():
     assert "COPY_ONLY, CHECKSUM, COMPRESSION" in script
     assert "Wait-TaskNotRunning -TimeoutSec 120" in script
     assert "rollback_database_restore.log" in script
+    assert "production_candidate.json" in script
+    assert "Get-FileHash" in script
+    assert "& git" not in script
 
 
 def test_release_script_uses_exact_archive_noneditable_venv_and_scheduled_task():
@@ -72,6 +75,8 @@ def test_release_script_uses_exact_archive_noneditable_venv_and_scheduled_task()
     assert "$current = Join-Path $StableRoot 'current'" in script
     assert "expected_live_symbols" in script
     assert "symbol_timeframe_sessions" in script
+    assert "ArtifactSha256" in script
+    assert "Prebuilt artifact SHA-256 mismatch" in script
 
 
 def test_runbook_names_scheduled_task_not_scm_commands():
