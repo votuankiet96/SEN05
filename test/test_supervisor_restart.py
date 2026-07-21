@@ -323,6 +323,25 @@ def test_start_live_no_longer_clears_the_stop_flag(sup, monkeypatch):
     )
 
 
+def test_supervisor_start_cleans_dead_prior_lease_before_acquire(sup, monkeypatch):
+    calls: list[tuple[str, object]] = []
+    monkeypatch.setattr(
+        supervisor_engine,
+        "cleanup_stale_lock",
+        lambda task, **kwargs: calls.append(("cleanup", (task, kwargs))) or True,
+    )
+    monkeypatch.setattr(
+        supervisor_engine,
+        "acquire",
+        lambda task, **kwargs: calls.append(("acquire", (task, kwargs))) or True,
+    )
+    monkeypatch.setattr(sup, "_start_supervisor_heartbeat", lambda: calls.append(("heartbeat", None)))
+
+    assert sup._acquire_supervisor_lock() is True
+    assert [name for name, _ in calls] == ["cleanup", "acquire", "heartbeat"]
+    assert calls[0][1][1]["stale_after_sec"] == 10 * 60
+
+
 def test_monitor_restarts_when_first_batch_never_completes(sup, monkeypatch):
     """A fresh heartbeat must not hide a main loop stuck in its first batch."""
     from datetime import datetime, timedelta, timezone

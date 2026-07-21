@@ -49,6 +49,7 @@ from core_engine.settings import (
 from core_engine.coordination.locks import (
     DP_PROGRAM_LOCK,
     acquire,
+    cleanup_stale_lock,
     fetch_lock,
     format_payload,
     release,
@@ -391,6 +392,13 @@ class BackendSupervisor:
 
     def _acquire_supervisor_lock(self) -> bool:
         payload = self._supervisor_payload()
+        # A forced Task stop or VM reboot can leave the prior supervisor row
+        # alive for the remainder of its 10-minute SQL lease.  The Scheduled
+        # Task retries every minute, but every retry used to exit with code 5
+        # until that lease expired.  Remove only a lock that the fencing layer
+        # can prove belongs to a dead same-host PID (or whose heartbeat has
+        # exceeded the lease itself), then acquire normally.
+        cleanup_stale_lock(DP_PROGRAM_LOCK, stale_after_sec=10 * 60)
         if acquire(DP_PROGRAM_LOCK, duration_min=10, payload=payload):
             self._supervisor_lock_acquired = True
             self._start_supervisor_heartbeat()
