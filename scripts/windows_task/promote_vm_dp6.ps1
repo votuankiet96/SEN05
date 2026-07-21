@@ -6,6 +6,8 @@ param(
     [string]$SqlServer = 'localhost',
     [string]$Database = 'SEN05_AutoTrading',
     [string]$BackupDirectory = '',
+    [switch]$SkipDatabaseBackup,
+    [string]$BackupWaiverReason = '',
     [string]$CandidateManifest = '',
     [string]$ServicePython = 'C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe'
 )
@@ -59,6 +61,17 @@ function Remove-JunctionOnly([string]$Path) {
 }
 
 Assert-Administrator
+if ($SkipDatabaseBackup -and [string]::IsNullOrWhiteSpace($BackupWaiverReason)) {
+    throw '-SkipDatabaseBackup requires a non-empty -BackupWaiverReason for deployment evidence.'
+}
+if ($SkipDatabaseBackup -and $BackupDirectory) {
+    throw '-SkipDatabaseBackup and -BackupDirectory cannot be used together.'
+}
+$backupPolicy = if ($SkipDatabaseBackup) {
+    'skipped_by_explicit_operator_waiver'
+} else {
+    'full_copy_only_checksum_verified'
+}
 $SourceRoot = (Resolve-Path -LiteralPath $SourceRoot).Path
 $stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')
 if (-not $CandidateManifest) {
@@ -120,6 +133,8 @@ if (Test-Path -LiteralPath $currentPath) {
     candidate_manifest = $CandidateManifest
     artifact_path = $artifactPath
     artifact_sha256 = $artifactSha256
+    database_backup_policy = $backupPolicy
+    database_backup_waiver_reason = $BackupWaiverReason
     task_path = $TaskPath
     task_name = $TaskName
     task_state = [string]$task.State
@@ -161,20 +176,32 @@ try {
 # every DWH object.  VERIFYONLY WITH CHECKSUM is a hard gate before mutation.
 Set-Phase 'database_backup_and_verify'
 $backupManifestPath = Join-Path $evidenceDir 'database_backup_manifest.json'
-$backupArguments = @($sqlHelper, 'backup', '--server', $SqlServer, '--database', $Database,
-                     '--stamp', $stamp, '--short-commit', $shortCommit,
-                     '--output', $backupManifestPath)
-if ($BackupDirectory) {
-    $backupArguments += @('--backup-directory', $BackupDirectory)
+$backupFile = $null
+if ($SkipDatabaseBackup) {
+    $backupManifest = [ordered]@{
+        result = 'skipped_by_explicit_operator_waiver'
+        reason = $BackupWaiverReason
+        consequence = 'No full-database restore point; failed post-migration promotion leaves the Scheduled Task stopped for controlled recovery.'
+        authorized_at_utc = (Get-Date).ToUniversalTime().ToString('o')
+    }
+    $backupManifest | ConvertTo-Json | Set-Content -LiteralPath $backupManifestPath -Encoding UTF8
+    $backupManifest | ConvertTo-Json | Tee-Object -FilePath (Join-Path $evidenceDir 'database_backup_verify.log')
+} else {
+    $backupArguments = @($sqlHelper, 'backup', '--server', $SqlServer, '--database', $Database,
+                         '--stamp', $stamp, '--short-commit', $shortCommit,
+                         '--output', $backupManifestPath)
+    if ($BackupDirectory) {
+        $backupArguments += @('--backup-directory', $BackupDirectory)
+    }
+    Invoke-NativeChecked -Executable $ServicePython `
+        -Arguments $backupArguments `
+        -WorkingDirectory $SourceRoot -EvidenceFile (Join-Path $evidenceDir 'database_backup_verify.log')
+    $backupManifest = Get-Content -LiteralPath $backupManifestPath -Raw | ConvertFrom-Json
+    if ($backupManifest.result -ne 'verified' -or -not $backupManifest.backup_file) {
+        throw 'Python SQL helper did not produce a verified backup manifest.'
+    }
+    $backupFile = [string]$backupManifest.backup_file
 }
-Invoke-NativeChecked -Executable $ServicePython `
-    -Arguments $backupArguments `
-    -WorkingDirectory $SourceRoot -EvidenceFile (Join-Path $evidenceDir 'database_backup_verify.log')
-$backupManifest = Get-Content -LiteralPath $backupManifestPath -Raw | ConvertFrom-Json
-if ($backupManifest.result -ne 'verified' -or -not $backupManifest.backup_file) {
-    throw 'Python SQL helper did not produce a verified backup manifest.'
-}
-$backupFile = [string]$backupManifest.backup_file
 
 # Graceful stop only.  If the supervisor refuses to exit, abort without force
 # killing it; destructive maintenance must not start while writers are alive.
@@ -313,13 +340,24 @@ catch {
                 New-Item -ItemType Junction -Path $currentPath -Target $oldCurrentTarget | Out-Null
             }
 
-            Set-Phase 'rollback_database_restore'
-            Invoke-NativeChecked -Executable $ServicePython `
-                -Arguments @($sqlHelper, 'restore', '--server', $SqlServer, '--database', $Database,
-                             '--backup-file', $backupFile) `
-                -WorkingDirectory $SourceRoot -EvidenceFile (Join-Path $evidenceDir 'rollback_database_restore.log')
-            Start-ScheduledTask -TaskPath $TaskPath -TaskName $TaskName
-            'rollback_complete' | Set-Content -LiteralPath (Join-Path $evidenceDir 'rollback_result.txt')
+            if ($backupFile) {
+                Set-Phase 'rollback_database_restore'
+                Invoke-NativeChecked -Executable $ServicePython `
+                    -Arguments @($sqlHelper, 'restore', '--server', $SqlServer, '--database', $Database,
+                                 '--backup-file', $backupFile) `
+                    -WorkingDirectory $SourceRoot -EvidenceFile (Join-Path $evidenceDir 'rollback_database_restore.log')
+                Start-ScheduledTask -TaskPath $TaskPath -TaskName $TaskName
+                'rollback_complete' | Set-Content -LiteralPath (Join-Path $evidenceDir 'rollback_result.txt')
+            } else {
+                Set-Phase 'rollback_database_restore_skipped'
+                [ordered]@{
+                    result = 'database_restore_unavailable'
+                    reason = $BackupWaiverReason
+                    scheduled_task = 'left_stopped_to_prevent_old_code_running_against_migrated_schema'
+                    recorded_at_utc = (Get-Date).ToUniversalTime().ToString('o')
+                } | ConvertTo-Json | Set-Content `
+                    -LiteralPath (Join-Path $evidenceDir 'rollback_result.txt') -Encoding UTF8
+            }
         }
         catch {
             $_ | Out-String | Set-Content -LiteralPath (Join-Path $evidenceDir 'rollback_failure.txt')
@@ -334,6 +372,8 @@ if ($promotionComplete) {
         commit = $commit
         evidence_directory = $evidenceDir
         database_backup = $backupFile
+        database_backup_policy = $backupPolicy
+        database_backup_waiver_reason = $BackupWaiverReason
         scheduled_task = "$TaskPath$TaskName"
         completed_at_utc = (Get-Date).ToUniversalTime().ToString('o')
     } | ConvertTo-Json

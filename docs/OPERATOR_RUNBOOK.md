@@ -120,6 +120,23 @@ The script hard-gates this sequence:
 8. Require supervisor state `running`, a live child PID, a passing doctor,
    and the unchanged 11/165 settings.
 
+The normal production path requires the verified full backup. If the owner
+explicitly waives it because the OHLCV dataset is recoverable by backfill, the
+exception must be auditable and cannot be selected accidentally:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File `
+  .\scripts\windows_task\promote_vm_dp6.ps1 `
+  -SkipDatabaseBackup `
+  -BackupWaiverReason 'Owner approved: OHLCV is recoverable by controlled backfill'
+```
+
+This waiver removes full-database rollback. Migrations retain their own
+transactional checks, but if a later promotion gate fails, the script restores
+the prior Task action/junction and deliberately leaves the Scheduled Task
+stopped rather than run old code against a migrated schema. The evidence logs
+record the waiver reason and require controlled operator recovery.
+
 Evidence is written under:
 
 ```text
@@ -127,9 +144,11 @@ C:\Share\dp_program\runtime\deploy\go_<UTC>_<SHA>\
 C:\Share\dp_program\runtime\deploy\release_<SHA>_<UTC>\
 ```
 
-If any post-migration gate fails, the promotion script attempts reverse-order
-rollback: stop the new runtime, restore the old Task action/junction, restore
-the verified full SQL backup, and start the prior Scheduled Task. Inspect
+If any post-migration gate fails on the normal backed-up path, the promotion
+script attempts reverse-order rollback: stop the new runtime, restore the old
+Task action/junction, restore the verified full SQL backup, and start the prior
+Scheduled Task. On the explicit no-backup path it leaves the Task stopped as
+described above. Inspect
 `promotion_failure.txt`, `rollback_result.txt`, and, if present,
 `rollback_failure.txt` before any second attempt.
 
