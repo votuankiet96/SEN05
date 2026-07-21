@@ -81,3 +81,11 @@ def test_execute_batch_does_not_require_cursor_timeout_attribute():
     assert sql_deploy.execute_batch(conn, "SELECT 1") == []
     assert conn.value.executed == ["SELECT 1"]
     assert not hasattr(conn.value, "timeout")
+
+
+def test_backup_avoids_odbc_stats_result_stream_and_gates_on_file():
+    source = HELPER_PATH.read_text(encoding="utf-8")
+    assert "STATS = 10" not in source
+    assert "backup_file.is_file()" in source
+    assert "backup_file.stat().st_size > 0" in source
+    assert "RESTORE VERIFYONLY" in source

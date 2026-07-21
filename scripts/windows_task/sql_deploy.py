@@ -12,6 +12,7 @@ import argparse
 import json
 import re
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
@@ -128,8 +129,21 @@ def backup_database(args: argparse.Namespace) -> int:
         execute_batch(
             conn,
             f"BACKUP DATABASE [{database}] TO DISK = N'{escaped}' "
-            "WITH COPY_ONLY, CHECKSUM, COMPRESSION, INIT, STATS = 10;",
+            "WITH COPY_ONLY, CHECKSUM, COMPRESSION, INIT;",
         )
+        # BACKUP is synchronous, but verify the OS artifact explicitly before
+        # asking SQL Server to consume it. Some ODBC drivers surface STATS
+        # messages as pseudo-result sets and can release/cancel the cursor
+        # before the final completion token; this command intentionally does
+        # not use STATS and this file gate prevents a false "backup complete".
+        deadline = time.monotonic() + 30
+        while time.monotonic() < deadline:
+            if backup_file.is_file() and backup_file.stat().st_size > 0:
+                break
+            time.sleep(0.5)
+        if not backup_file.is_file() or backup_file.stat().st_size <= 0:
+            raise RuntimeError(f"backup command returned but file is missing/empty: {backup_file}")
+        backup_size = backup_file.stat().st_size
         emit("backup completed; RESTORE VERIFYONLY started")
         execute_batch(conn, f"RESTORE VERIFYONLY FROM DISK = N'{escaped}' WITH CHECKSUM;")
         emit("RESTORE VERIFYONLY completed")
@@ -138,6 +152,7 @@ def backup_database(args: argparse.Namespace) -> int:
             "result": "verified",
             "database": database,
             "backup_file": str(backup_file),
+            "backup_bytes": backup_size,
             "copy_only": True,
             "checksum": True,
             "verified_at_utc": utc_now(),
