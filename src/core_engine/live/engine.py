@@ -1755,6 +1755,12 @@ class BatchFetcher:
 
         self._batch_complete = threading.Event()
 
+        # Set by the scheduler when the outer batch deadline has already
+        # published/released this cycle.  A worker must not keep retrying an
+        # old batch after that point: late callbacks mutate backlog/metrics
+        # after the report and can race the next request's completion Event.
+        self._batch_cancel = threading.Event()
+
         self._pending_batch_id: int | None = None
 
         self._busy = False
@@ -1782,15 +1788,30 @@ class BatchFetcher:
         )
         self._worker_thread.start()
 
-    def request_batch(self, batch_id: int) -> None:
+    def request_batch(self, batch_id: int) -> bool:
         """Hand this group's persistent worker the next batch id to fetch.
-        Must only be called after the previous _batch_complete has fired
-        (or at startup) - _run_batch enforces this by construction, since
-        it only calls request_batch() once per scheduled cycle and always
-        waits on _batch_complete before the next one."""
+        Return False without mutating the pending request when the prior
+        cycle is still busy or this process must be recycled."""
+        if self._busy or self._requires_process_recycle:
+            return False
+
         self._pending_batch_id = batch_id
+        self._batch_cancel.clear()
         self._batch_complete.clear()
         self._batch_request.set()
+        return True
+
+    def abandon_batch(self, batch_id: int) -> None:
+        """Cancel retry/backoff work after the scheduler released a batch.
+
+        ``fetch()`` has its own bounded socket timeout/force-close path.  The
+        event here handles the later retry/backoff loop, ensuring that an old
+        batch cannot continue receiving callbacks after its summary and live
+        state have already been finalized.
+        """
+
+        if self._pending_batch_id == batch_id:
+            self._batch_cancel.set()
 
     def _worker_loop(self) -> None:
         while not _shutdown.is_set():
@@ -1833,7 +1854,7 @@ class BatchFetcher:
         delay = RECONNECT_BASE_SEC
 
         for attempt in range(1, BATCH_MAX_RETRIES + 1):
-            if _shutdown.is_set() or self._requires_process_recycle:
+            if _shutdown.is_set() or self._requires_process_recycle or self._batch_cancel.is_set():
                 return
 
             try:
@@ -1844,7 +1865,7 @@ class BatchFetcher:
 
                 success = self.fetch(batch_id)
 
-                if success:
+                if success or self._batch_cancel.is_set():
                     return
 
                 logger.warning(
@@ -1872,7 +1893,11 @@ class BatchFetcher:
             if attempt < BATCH_MAX_RETRIES:
                 logger.info("%s", _llog("Connection group retry scheduled", group=self.group_id, wait_seconds=delay, result="waiting"))
 
-                _shutdown.wait(delay)
+                if self._batch_cancel.wait(delay):
+                    return
+
+                if _shutdown.is_set():
+                    return
 
                 delay = min(delay * 2, RECONNECT_MAX_SEC)
 
@@ -2866,7 +2891,12 @@ def _guest_mode_blocks_batch() -> bool:
     return True
 
 
-def _classify_group_batch_outcomes(groups: list, *, hard_deadline_batches: int) -> tuple[list[str], list[int]]:
+def _classify_group_batch_outcomes(
+    groups: list,
+    *,
+    hard_deadline_batches: int,
+    unrequested_group_ids: set[int] | None = None,
+) -> tuple[list[str], list[int]]:
     """After _run_batch has requested a batch from every group's persistent
     worker and waited up to BATCH_GROUP_JOIN_TIMEOUT_SEC, classify which
     groups are still busy (stuck for this cycle) and which have been busy
@@ -2885,8 +2915,10 @@ def _classify_group_batch_outcomes(groups: list, *, hard_deadline_batches: int) 
 
     wedged_group_ids: list[int] = []
 
+    unrequested = unrequested_group_ids or set()
+
     for g in groups:
-        if g._busy or g._requires_process_recycle:
+        if g.group_id in unrequested or g._busy or g._requires_process_recycle:
             stuck_group_names.append(f"G{g.group_id}")
 
             g._consecutive_stuck_batches += 1
@@ -2972,8 +3004,17 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
     # Signal every group's persistent worker (started once in main() via
     # BatchFetcher.start_worker()) instead of spawning a fresh batch-g{id}
     # thread here every cycle - see BatchFetcher._worker_loop.
+    requested_groups: list[BatchFetcher] = []
+    unrequested_group_ids: set[int] = set()
+
     for g in groups:
-        g.request_batch(batch_id)
+        if g.request_batch(batch_id):
+            requested_groups.append(g)
+        else:
+            # The prior cycle did not unwind despite its cancellation, or an
+            # orphaned websocket already requires process recycling.  Never
+            # overwrite _pending_batch_id/_batch_complete in that state.
+            unrequested_group_ids.add(g.group_id)
 
     stuck_group_names: list[str] = []
 
@@ -2982,14 +3023,20 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
     try:
         deadline = time.monotonic() + BATCH_GROUP_JOIN_TIMEOUT_SEC
 
-        for g in groups:
+        for g in requested_groups:
             remaining = max(0.0, deadline - time.monotonic())
 
             g._batch_complete.wait(timeout=remaining)
 
         stuck_group_names, wedged_group_ids = _classify_group_batch_outcomes(
-            groups, hard_deadline_batches=GROUP_WEDGE_HARD_DEADLINE_BATCHES
+            groups,
+            hard_deadline_batches=GROUP_WEDGE_HARD_DEADLINE_BATCHES,
+            unrequested_group_ids=unrequested_group_ids,
         )
+
+        for g in groups:
+            if f"G{g.group_id}" in stuck_group_names:
+                g.abandon_batch(batch_id)
 
         if stuck_group_names:
             _write_live_state(

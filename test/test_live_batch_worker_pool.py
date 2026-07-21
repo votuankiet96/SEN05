@@ -103,6 +103,51 @@ def test_request_batch_after_previous_completion_does_not_overlap(monkeypatch, i
     assert in_flight["max_concurrent"] == 1
 
 
+def test_abandoned_batch_cancels_retry_backoff_and_never_retries_late(monkeypatch, isolated_shutdown):
+    first_attempt_finished = threading.Event()
+    calls = []
+
+    def _incomplete_fetch(self, batch_id, timeout=None):
+        calls.append(batch_id)
+        first_attempt_finished.set()
+        return False
+
+    monkeypatch.setattr(live_engine, "BATCH_MAX_RETRIES", 3)
+    monkeypatch.setattr(live_engine, "RECONNECT_BASE_SEC", 60)
+    g = _start_group_with_stub_fetch(monkeypatch, 4, _incomplete_fetch)
+
+    assert g.request_batch(17) is True
+    assert first_attempt_finished.wait(timeout=2)
+    g.abandon_batch(17)
+
+    assert g._batch_complete.wait(timeout=2)
+    assert calls == [17]
+    assert g._busy is False
+
+
+def test_busy_worker_rejects_new_batch_without_overwriting_pending_id(monkeypatch, isolated_shutdown):
+    entered = threading.Event()
+    release = threading.Event()
+    calls = []
+
+    def _blocked_fetch(self, batch_id, timeout=None):
+        calls.append(batch_id)
+        entered.set()
+        release.wait(timeout=2)
+        return True
+
+    g = _start_group_with_stub_fetch(monkeypatch, 6, _blocked_fetch)
+    assert g.request_batch(1) is True
+    assert entered.wait(timeout=2)
+
+    assert g.request_batch(2) is False
+    assert g._pending_batch_id == 1
+
+    release.set()
+    assert g._batch_complete.wait(timeout=2)
+    assert calls == [1]
+
+
 def test_worker_survives_fetch_exception_and_keeps_answering_future_batches(monkeypatch, isolated_shutdown):
     attempts = {"n": 0}
 
@@ -159,6 +204,18 @@ def test_classify_marks_idle_group_ok_and_resets_counter():
 def test_classify_marks_busy_group_stuck_but_not_wedged_before_threshold():
     g = _fake_group(5, busy=True, consecutive_stuck_batches=0)
     stuck, wedged = _classify_group_batch_outcomes([g], hard_deadline_batches=3)
+    assert stuck == ["G5"]
+    assert wedged == []
+    assert g._consecutive_stuck_batches == 1
+
+
+def test_classify_marks_unrequested_group_stuck_even_if_prior_worker_just_became_idle():
+    g = _fake_group(5, busy=False, consecutive_stuck_batches=0)
+    stuck, wedged = _classify_group_batch_outcomes(
+        [g],
+        hard_deadline_batches=3,
+        unrequested_group_ids={5},
+    )
     assert stuck == ["G5"]
     assert wedged == []
     assert g._consecutive_stuck_batches == 1
@@ -221,8 +278,7 @@ def test_orphaned_group_does_not_open_another_websocket(monkeypatch, isolated_sh
 
     g = _start_group_with_stub_fetch(monkeypatch, 3, _fetch)
     g._requires_process_recycle = True
-    g.request_batch(99)
-    assert g._batch_complete.wait(timeout=2)
+    assert g.request_batch(99) is False
     assert calls == []
 
 
@@ -268,7 +324,8 @@ def test_wedged_batch_raises_fatal_recycle_signal(monkeypatch, isolated_shutdown
         _requires_process_recycle=True,
         _consecutive_stuck_batches=2,
         _batch_complete=done,
-        request_batch=lambda _batch_id: None,
+        request_batch=lambda _batch_id: False,
+        abandon_batch=lambda _batch_id: None,
     )
 
     monkeypatch.setattr(live_engine, "_tradingview_connectivity_ok", lambda: (True, "ok"))
