@@ -132,9 +132,10 @@ BACKEND_LOG_RETENTION_DAYS=30
 
 `WS_LIVE_AUTO_START=1` means `python -m core_engine run` will start live
 fetching automatically. VM-DP6 production runs through Scheduled Task
-`\SEN05\SEN05 DP Program 24x7`; use `scripts\windows_task` for controlled
-release deployment after terminal smoke tests are clean. Do not install NSSM
-for the current production release.
+`\SEN05\SEN05 DP Program 24x7`. The current owner-approved action runs the
+committed checkout at `C:\Share\dp_program` directly; the immutable release
+switch under `scripts\windows_task` is deferred to a separate deployment
+decision. Do not install NSSM for the current production release.
 
 Storage destination (`config/dp_provider.env`):
 

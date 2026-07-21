@@ -21,30 +21,31 @@ FOREX symbols remain historical-only. Historical backfill runs at **11:00 and
 Do not install or configure NSSM during this production release. Any future
 wrapper migration is a separate change decision.
 
-## 2. Release and state layout
+## 2. Active production layout
 
-Production code is never imported from the mutable checkout after promotion.
+For the current VM-DP6 release, the owner explicitly selected in-place
+operation from `C:\Share\dp_program`. The immutable release-directory switch is
+deferred; do not claim that it is active in doctor/evidence output.
 
 ```text
-C:\Share\dp_program                 deployment source checkout only
-C:\dp_releases\<sha>_<utc>         immutable code + release-local virtualenv
-C:\dp_program\current              junction to active immutable release
-C:\Share\dp_program\config         persistent operator config and secrets
-C:\Share\dp_program\runtime        persistent logs/cache/spool/outboxes/state
+C:\Share\dp_program                 active code checkout and working directory
+C:\Share\dp_program\config         production config and secrets
+C:\Share\dp_program\runtime        logs/cache/spool/outboxes/state
+C:\Users\Administrator\...\Python312\python.exe  Scheduled Task Python
 ```
 
-Each release's `config` and `runtime` paths are junctions to the two persistent
-directories above. This preserves the TradingView browser cache, live spool,
-Discord outbox and logs across an atomic code switch while keeping executable
-Python files immutable. `RELEASE_MANIFEST.json` and `RELEASE_REQUIREMENTS.txt`
-inside the release identify the exact commit and installed dependency set.
+The checkout must remain on the recorded production commit with a clean working
+tree. Because this layout is mutable, every production edit must be committed
+and tested before a controlled Scheduled Task restart. The doctor
+`release_identity=warn/source_checkout` result is expected for this explicitly
+approved layout, but every other doctor failure remains blocking.
 
-The Scheduled Task action after promotion must be:
+The active Scheduled Task action is:
 
 ```text
-Execute          C:\dp_program\current\.venv\Scripts\python.exe
+Execute          C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe
 Arguments        -m core_engine run --live
-WorkingDirectory C:\dp_program\current
+WorkingDirectory C:\Share\dp_program
 ```
 
 ## 3. Configuration contract
@@ -64,8 +65,9 @@ HISTORICAL_BACKFILL_UTC=11:00,22:00
 silently accepting a different live universe. Verify the resolved values:
 
 ```powershell
-cd C:\dp_program\current
-.\.venv\Scripts\python.exe -m core_engine settings --json
+cd C:\Share\dp_program
+& C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe `
+  -m core_engine settings --json
 ```
 
 Acceptance fields are `expected_live_symbols=11`,
@@ -89,9 +91,12 @@ Redis/OG in `both` mode is an **eventually consistent candle snapshot**:
 This is the approved production contract; a durable Redis outbox is not a GO
 prerequisite under this contract.
 
-## 5. Controlled promotion on VM-DP6
+## 5. Future immutable promotion (not active in this release)
 
-Run from an elevated PowerShell prompt **on VM-DP6**, never from the mapped
+The script below remains the preferred future migration to immutable releases,
+but it was not used for the current owner-approved in-place runtime. Run it only
+after a separate deployment decision, from an elevated PowerShell prompt **on
+VM-DP6**, never from the mapped
 `Z:` drive on another Windows kernel:
 
 ```powershell
@@ -171,8 +176,9 @@ Start-ScheduledTask -TaskPath '\SEN05\' -TaskName 'SEN05 DP Program 24x7'
 Graceful stop:
 
 ```powershell
-cd C:\dp_program\current
-.\.venv\Scripts\python.exe -m core_engine stop --reason operator
+cd C:\Share\dp_program
+& C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe `
+  -m core_engine stop --reason operator
 ```
 
 Wait for the Task to leave `Running`. `Stop-ScheduledTask` is reserved for an
@@ -182,11 +188,12 @@ explicit recovery test.
 Readiness and reconciliation:
 
 ```powershell
-cd C:\dp_program\current
-.\.venv\Scripts\python.exe -m core_engine status --json
-.\.venv\Scripts\python.exe -m core_engine doctor --json
-.\.venv\Scripts\python.exe -m core_engine data-health --json
-.\.venv\Scripts\python.exe -m core_engine reconcile-fact --json
+cd C:\Share\dp_program
+$python = 'C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe'
+& $python -m core_engine status --json
+& $python -m core_engine doctor --json
+& $python -m core_engine data-health --json
+& $python -m core_engine reconcile-fact --json
 ```
 
 ## 7. Logs and 30-minute production follow-up
@@ -252,8 +259,9 @@ Do not create this marker outside the confirmed window.
 
 ## 10. Healthy production criteria
 
-- Scheduled Task is `Running` and its action resolves through `current`.
-- `RELEASE_MANIFEST.json` identifies the promoted commit.
+- Scheduled Task is `Running` with working directory `C:\Share\dp_program`.
+- `git rev-parse HEAD` matches the recorded production commit and the working
+  tree is clean.
 - Supervisor and live state heartbeats advance; live PID is alive.
 - Startup log reports 11 symbols and 165 sessions.
 - Fact watermark advances when at least one approved market is open.
