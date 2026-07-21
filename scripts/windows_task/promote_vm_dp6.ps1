@@ -74,6 +74,7 @@ $CandidateManifest = (Resolve-Path -LiteralPath $CandidateManifest).Path
 $candidate = Get-Content -LiteralPath $CandidateManifest -Raw | ConvertFrom-Json
 $commit = ([string]$candidate.release_commit).Trim().ToLowerInvariant()
 if ($commit -notmatch '^[0-9a-f]{40}$') { throw 'Candidate manifest has an invalid release_commit.' }
+$shortCommit = $commit.Substring(0, 12)
 $artifactPath = Join-Path $SourceRoot ([string]$candidate.artifact_relative_path)
 $artifactPath = (Resolve-Path -LiteralPath $artifactPath).Path
 $artifactSha256 = ([string]$candidate.sha256).Trim().ToLowerInvariant()
@@ -82,7 +83,7 @@ if ($artifactSha256 -notmatch '^[0-9a-f]{64}$' -or $actualArtifactSha256 -ne $ar
     throw 'Production candidate artifact failed SHA-256 verification.'
 }
 
-$evidenceDir = Join-Path $SourceRoot "runtime\deploy\go_${stamp}_${($commit.Substring(0,12))}"
+$evidenceDir = Join-Path $SourceRoot "runtime\deploy\go_${stamp}_${shortCommit}"
 New-Item -ItemType Directory -Path $evidenceDir -Force | Out-Null
 $candidateRoot = Join-Path $evidenceDir 'candidate_source'
 Expand-Archive -LiteralPath $artifactPath -DestinationPath $candidateRoot
@@ -155,7 +156,7 @@ $backupRootLines = & sqlcmd -S $SqlServer -E -d $Database -h -1 -W -Q `
 if ($LASTEXITCODE -ne 0) { throw "Could not resolve SQL backup directory: $backupRootLines" }
 $backupRoot = ($backupRootLines | Where-Object { $_ -and $_.Trim() } | Select-Object -First 1).Trim()
 if (-not $backupRoot.EndsWith('\')) { $backupRoot += '\' }
-$backupFile = $backupRoot + "SEN05_AutoTrading_GO_${stamp}_${($commit.Substring(0,12))}.bak"
+$backupFile = $backupRoot + "SEN05_AutoTrading_GO_${stamp}_${shortCommit}.bak"
 $escapedBackup = $backupFile.Replace("'", "''")
 $backupQuery = @"
 SET NOCOUNT ON;

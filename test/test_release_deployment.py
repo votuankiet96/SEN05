@@ -63,6 +63,8 @@ def test_vm_promotion_script_contains_all_destructive_safety_gates():
     assert "production_candidate.json" in script
     assert "Get-FileHash" in script
     assert "& git" not in script
+    assert "${(" not in script
+    assert "$shortCommit = $commit.Substring(0, 12)" in script
 
 
 def test_release_script_uses_exact_archive_noneditable_venv_and_scheduled_task():
