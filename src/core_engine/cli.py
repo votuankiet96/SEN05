@@ -114,13 +114,18 @@ def _run_reconcile_fact(args: argparse.Namespace) -> int:
     if args.timeframes:
         tf_filter = {tf.strip().upper() for tf in args.timeframes.split(",") if tf.strip()}
 
-    results = reconcile_all(apply=args.apply, tf_filter=tf_filter)
+    count_unsupported = bool(getattr(args, "count_unsupported_as_missing", False))
+    results = reconcile_all(apply=args.apply, tf_filter=tf_filter, count_unsupported_as_missing=count_unsupported)
     missing = total_missing(results)
+    unsupported_rows = [r for r in results if not r.error and r.unsupported_calendar_count]
+    unsupported_total = sum(r.unsupported_calendar_count for r in unsupported_rows)
 
     if args.json:
         payload = {
             "applied": bool(args.apply),
             "missing_count": missing,
+            "counted_unsupported_as_missing": count_unsupported,
+            "unsupported_calendar_total": unsupported_total,
             "timeframes": [
                 {
                     "tf_code": r.tf_code,
@@ -130,6 +135,9 @@ def _run_reconcile_fact(args: argparse.Namespace) -> int:
                     "missing_after": r.missing_after,
                     "symbols_affected": r.symbols_affected,
                     "error": r.error,
+                    "unsupported_calendar_count": r.unsupported_calendar_count,
+                    "unsupported_calendar_symbols": r.unsupported_calendar_symbols,
+                    "unsupported_calendar_range": r.unsupported_calendar_range,
                 }
                 for r in results
             ],
@@ -153,6 +161,40 @@ def _run_reconcile_fact(args: argparse.Namespace) -> int:
             print("Result: missing_count = 0 across all checked timeframes.")
         else:
             print(f"Result: missing_count = {missing} - NOT safe to purge staging for affected tables yet.")
+
+        if unsupported_rows and not count_unsupported:
+            print()
+            print(
+                f"NOTE: {unsupported_total} staging row(s) fall outside DWH.Dim_Date's covered "
+                "calendar range and are therefore intentionally never inserted into Fact by "
+                "usp_LoadDirect v3 (date-dimension fence). They are NOT counted in missing_count "
+                "above and do NOT affect this command's exit code."
+            )
+            for r in unsupported_rows:
+                lo, hi = r.unsupported_calendar_range or ("?", "?")
+                print(
+                    f"  {r.tf_code:<4} {r.staging_table:<12} "
+                    f"unsupported={r.unsupported_calendar_count} range={lo} -> {hi} "
+                    f"symbols={r.unsupported_calendar_symbols}"
+                )
+            print(
+                "This is a data-scope decision, not something reconcile-fact decides "
+                "automatically. Two options:"
+            )
+            print(
+                "  1) Extend DWH.Dim_Date backward to cover this range, then re-run "
+                "reconcile-fact --apply."
+            )
+            print(
+                "  2) Treat these rows as permanently out of scope and purge them from "
+                "staging (a dedicated, explicitly-confirmed action - the routine "
+                "purge_staging maintenance job already skips them since they have no "
+                "matching Fact row)."
+            )
+            print(
+                "Pass --count-unsupported-as-missing to fold these back into missing_count "
+                "and this command's exit code instead (reverts to strict pre-fence behavior)."
+            )
 
     return 0 if missing == 0 else 1
 
@@ -443,6 +485,14 @@ def build_parser() -> argparse.ArgumentParser:
     reconcile.add_argument(
         "--apply", action="store_true",
         help="re-run ETL for affected symbols instead of only reporting the gap",
+    )
+    reconcile.add_argument(
+        "--count-unsupported-as-missing", action="store_true",
+        help=(
+            "fold staging rows outside DWH.Dim_Date's covered calendar range back into "
+            "missing_count/exit code (default: report them separately, since usp_LoadDirect "
+            "v3 intentionally never inserts them)"
+        ),
     )
     _add_json_flag(reconcile)
 
