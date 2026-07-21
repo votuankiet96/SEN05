@@ -95,7 +95,6 @@ def drain_results(cursor: pyodbc.Cursor) -> list[list[object]]:
 
 def execute_batch(conn: pyodbc.Connection, sql: str) -> list[list[object]]:
     cursor = conn.cursor()
-    cursor.timeout = 0
     cursor.execute(sql)
     return drain_results(cursor)
 

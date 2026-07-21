@@ -53,3 +53,31 @@ def test_trusted_connection_string_contains_no_password():
     assert "Trusted_Connection=yes" in value
     assert "PWD=" not in value
     assert "UID=" not in value
+
+
+def test_execute_batch_does_not_require_cursor_timeout_attribute():
+    class ProductionShapedCursor:
+        description = None
+        messages = []
+
+        def __init__(self):
+            self.executed = []
+
+        def execute(self, sql):
+            self.executed.append(sql)
+            return self
+
+        def nextset(self):
+            return False
+
+    class Connection:
+        def __init__(self):
+            self.value = ProductionShapedCursor()
+
+        def cursor(self):
+            return self.value
+
+    conn = Connection()
+    assert sql_deploy.execute_batch(conn, "SELECT 1") == []
+    assert conn.value.executed == ["SELECT 1"]
+    assert not hasattr(conn.value, "timeout")
