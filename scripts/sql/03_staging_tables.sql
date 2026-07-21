@@ -433,3 +433,34 @@ BEGIN
     PRINT 'Table SEN.TF_W created.';
 END
 GO
+
+-- Permanent, auditable quarantine for staging rows whose calendar date is
+-- intentionally outside DWH.Dim_Date.  Production data is moved here only
+-- by a controlled migration after backup and exact row-count verification.
+IF OBJECT_ID('SEN.OHLCV_UnsupportedCalendar', 'U') IS NULL
+BEGIN
+    CREATE TABLE SEN.OHLCV_UnsupportedCalendar (
+        ArchiveID        BIGINT         NOT NULL IDENTITY(1,1),
+        SourceTable      SYSNAME        NOT NULL,
+        RawID            BIGINT         NOT NULL,
+        SymbolID         INT            NOT NULL,
+        BarTime          DATETIME2(0)   NOT NULL,
+        [Open]           DECIMAL(18,8)  NOT NULL,
+        High             DECIMAL(18,8)  NOT NULL,
+        Low              DECIMAL(18,8)  NOT NULL,
+        [Close]          DECIMAL(18,8)  NOT NULL,
+        Volume           DECIMAL(20,4)  NULL,
+        ReceivedAt       DATETIME2      NOT NULL,
+        IsProcessed      BIT            NOT NULL,
+        ArchivedAt       DATETIME2(0)   NOT NULL CONSTRAINT DF_UnsupportedCalendar_ArchivedAt DEFAULT SYSUTCDATETIME(),
+        Reason           NVARCHAR(200)  NOT NULL,
+        DeploymentCommit CHAR(40)       NOT NULL,
+        CONSTRAINT PK_OHLCV_UnsupportedCalendar PRIMARY KEY CLUSTERED (ArchiveID),
+        CONSTRAINT UQ_UnsupportedCalendar_Source UNIQUE (SourceTable, RawID)
+    );
+    CREATE NONCLUSTERED INDEX IX_UnsupportedCalendar_SymbolBarTime
+        ON SEN.OHLCV_UnsupportedCalendar (SymbolID, BarTime)
+        INCLUDE (SourceTable, Reason, DeploymentCommit);
+    PRINT 'Table SEN.OHLCV_UnsupportedCalendar created.';
+END
+GO

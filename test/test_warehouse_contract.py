@@ -32,6 +32,27 @@ def test_v3_sql_contract_resolves_datekey_through_dimension():
     assert "DPContractVersion', @value = N'3'" in sql
 
 
+def test_us500_archive_migration_verifies_before_deleting_in_one_transaction():
+    sql_path = (
+        Path(__file__).resolve().parents[1]
+        / "scripts"
+        / "sql"
+        / "11_migration_archive_us500_d1_unsupported_calendar.sql"
+    )
+    sql = sql_path.read_text(encoding="utf-8")
+
+    assert "BEGIN TRANSACTION" in sql
+    assert "@ExpectedRows INT = 2231" in sql
+    assert "@US500SymbolID INT = 8" in sql
+    assert "@Inserted <> @SourceBefore" in sql
+    assert "@Verified <> @SourceBefore" in sql
+    assert "DELETE s" in sql
+    assert sql.index("@Verified <> @SourceBefore") < sql.index("DELETE s")
+    assert "@UnsupportedAfter <> 0 OR @ArchivedTotal <> @ExpectedRows" in sql
+    assert "IF XACT_STATE() <> 0 ROLLBACK TRANSACTION" in sql
+    assert "$(DeploymentCommit)" in sql
+
+
 class _FakeCursor:
     def __init__(self, fetchone_result=None, fetchall_result=None, raise_on_execute=None):
         self._fetchone_result = fetchone_result
