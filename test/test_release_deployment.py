@@ -76,6 +76,8 @@ def test_vm_promotion_script_contains_all_destructive_safety_gates():
     assert "Set-Phase 'promotion_complete'" in script
     assert "${(" not in script
     assert "$shortCommit = $commit.Substring(0, 12)" in script
+    assert "[string]$BackupDirectory = ''" in script
+    assert "@('--backup-directory', $BackupDirectory)" in script
 
 
 def test_release_script_uses_exact_archive_noneditable_venv_and_scheduled_task():

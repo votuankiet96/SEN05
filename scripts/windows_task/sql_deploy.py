@@ -114,14 +114,21 @@ def validate_database(database: str) -> str:
 def backup_database(args: argparse.Namespace) -> int:
     database = validate_database(args.database)
     conn = connect(server=args.server, database="master", driver=args.driver)
+    backup_file: Path | None = None
+    backup_verified = False
     try:
-        cursor = conn.cursor()
-        row = cursor.execute(
-            "SELECT CONVERT(nvarchar(4000), SERVERPROPERTY('InstanceDefaultBackupPath'))"
-        ).fetchone()
-        if not row or not row[0]:
-            raise RuntimeError("SQL Server did not report InstanceDefaultBackupPath")
-        backup_root = Path(str(row[0]))
+        if args.backup_directory:
+            backup_root = Path(args.backup_directory)
+        else:
+            cursor = conn.cursor()
+            row = cursor.execute(
+                "SELECT CONVERT(nvarchar(4000), SERVERPROPERTY('InstanceDefaultBackupPath'))"
+            ).fetchone()
+            if not row or not row[0]:
+                raise RuntimeError("SQL Server did not report InstanceDefaultBackupPath")
+            backup_root = Path(str(row[0]))
+        if not backup_root.is_dir():
+            raise RuntimeError(f"backup directory does not exist or is inaccessible: {backup_root}")
         backup_file = backup_root / f"{database}_GO_{args.stamp}_{args.short_commit}.bak"
         escaped = str(backup_file).replace("'", "''")
 
@@ -147,6 +154,7 @@ def backup_database(args: argparse.Namespace) -> int:
         emit("backup completed; RESTORE VERIFYONLY started")
         execute_batch(conn, f"RESTORE VERIFYONLY FROM DISK = N'{escaped}' WITH CHECKSUM;")
         emit("RESTORE VERIFYONLY completed")
+        backup_verified = True
 
         payload = {
             "result": "verified",
@@ -160,6 +168,25 @@ def backup_database(args: argparse.Namespace) -> int:
         write_json(Path(args.output), payload)
         print(json.dumps(payload), flush=True)
         return 0
+    except Exception:
+        # A failed BACKUP (especially OS error 112) can leave a multi-GB
+        # unusable media file and make the production volume completely full.
+        # The name is unique to this promotion attempt, so remove only that
+        # exact unverified artifact. A verified rollback point is never removed.
+        if backup_file is not None and not backup_verified and backup_file.is_file():
+            partial_size = backup_file.stat().st_size
+            try:
+                backup_file.unlink()
+                emit(
+                    "removed incomplete backup artifact | "
+                    f"file={backup_file} | bytes={partial_size}"
+                )
+            except OSError as cleanup_error:
+                emit(
+                    "WARNING: could not remove incomplete backup artifact | "
+                    f"file={backup_file} | error={cleanup_error}"
+                )
+        raise
     finally:
         conn.close()
 
@@ -290,6 +317,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_common(backup)
     backup.add_argument("--stamp", required=True)
     backup.add_argument("--short-commit", required=True)
+    backup.add_argument("--backup-directory", default="")
     backup.add_argument("--output", required=True)
     backup.set_defaults(func=backup_database)
 

@@ -5,6 +5,7 @@ param(
     [string]$TaskName = 'SEN05 DP Program 24x7',
     [string]$SqlServer = 'localhost',
     [string]$Database = 'SEN05_AutoTrading',
+    [string]$BackupDirectory = '',
     [string]$CandidateManifest = '',
     [string]$ServicePython = 'C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe'
 )
@@ -160,10 +161,14 @@ try {
 # every DWH object.  VERIFYONLY WITH CHECKSUM is a hard gate before mutation.
 Set-Phase 'database_backup_and_verify'
 $backupManifestPath = Join-Path $evidenceDir 'database_backup_manifest.json'
+$backupArguments = @($sqlHelper, 'backup', '--server', $SqlServer, '--database', $Database,
+                     '--stamp', $stamp, '--short-commit', $shortCommit,
+                     '--output', $backupManifestPath)
+if ($BackupDirectory) {
+    $backupArguments += @('--backup-directory', $BackupDirectory)
+}
 Invoke-NativeChecked -Executable $ServicePython `
-    -Arguments @($sqlHelper, 'backup', '--server', $SqlServer, '--database', $Database,
-                 '--stamp', $stamp, '--short-commit', $shortCommit,
-                 '--output', $backupManifestPath) `
+    -Arguments $backupArguments `
     -WorkingDirectory $SourceRoot -EvidenceFile (Join-Path $evidenceDir 'database_backup_verify.log')
 $backupManifest = Get-Content -LiteralPath $backupManifestPath -Raw | ConvertFrom-Json
 if ($backupManifest.result -ne 'verified' -or -not $backupManifest.backup_file) {

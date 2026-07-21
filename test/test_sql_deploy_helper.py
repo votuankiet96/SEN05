@@ -89,3 +89,25 @@ def test_backup_avoids_odbc_stats_result_stream_and_gates_on_file():
     assert "backup_file.is_file()" in source
     assert "backup_file.stat().st_size > 0" in source
     assert "RESTORE VERIFYONLY" in source
+
+
+def test_backup_supports_alternate_directory_and_cleans_only_unverified_artifact():
+    parser = sql_deploy.build_parser()
+    args = parser.parse_args(
+        [
+            "backup",
+            "--stamp",
+            "20260721T000000Z",
+            "--short-commit",
+            "a" * 12,
+            "--backup-directory",
+            r"D:\\SQLBackup",
+            "--output",
+            "manifest.json",
+        ]
+    )
+    assert args.backup_directory == r"D:\\SQLBackup"
+
+    source = HELPER_PATH.read_text(encoding="utf-8")
+    assert "not backup_verified and backup_file.is_file()" in source
+    assert "backup_file.unlink()" in source
