@@ -954,16 +954,24 @@ def collect_data_health(*, lookback_days: int | None = None) -> dict[str, Any]:
     }
     missing_keys = sorted(configured_keys - set(latest_configured.keys()))
     stale = find_stale_pairs(latest, symbols=SYMBOLS)
+    stale_keys = {
+        (int(item["sym"]["symbol_id"]), str(item["tf_code"]))
+        for item in stale
+    }
     repair_items = list(stale)
-    repair_items.extend(
-        find_hole_pairs(
-            repair_items,
-            logging.getLogger("data_health"),
-            lookback_days=lookback,
-            symbols=SYMBOLS,
-            tf_filter=set(TF_DISPLAY_ORDER),
-        )
+    new_holes = find_hole_pairs(
+        repair_items,
+        logging.getLogger("data_health"),
+        lookback_days=lookback,
+        symbols=SYMBOLS,
+        tf_filter=set(TF_DISPLAY_ORDER),
     )
+    repair_items.extend(new_holes)
+    market_open_gap_keys = {
+        (int(item["sym"]["symbol_id"]), str(item["tf_code"]))
+        for item in repair_items
+        if "HOLE" in str(item.get("reason", ""))
+    }
 
     newest_key = None
     oldest_key = None
@@ -1053,6 +1061,11 @@ def collect_data_health(*, lookback_days: int | None = None) -> dict[str, Any]:
             "pairs_with_data": len(latest_configured),
             "pairs_missing_all_data": len(missing_keys),
             "pairs_needing_repair": len(repair_items),
+            # GO-gate metric: unlike the raw LEAD() scan, this excludes
+            # weekend time, configured overnight allowance, verified
+            # windows, and exact recurring market-closure signatures.
+            "market_open_gap_pairs": len(market_open_gap_keys),
+            "stale_pairs": len(stale_keys),
             "raw_internal_gap_pairs": len(raw_gaps),
             "raw_internal_gap_windows": gap_windows,
         },
@@ -1080,6 +1093,8 @@ def print_data_health(report: dict[str, Any], *, as_json: bool = False) -> None:
     print(f"- Pairs with data             : {coverage.get('pairs_with_data')}")
     print(f"- Pairs missing all data       : {coverage.get('pairs_missing_all_data')}")
     print(f"- Pairs needing repair         : {coverage.get('pairs_needing_repair')}")
+    print(f"- Market-open gap pairs        : {coverage.get('market_open_gap_pairs')}")
+    print(f"- Stale pairs                  : {coverage.get('stale_pairs')}")
     print(f"- Raw timeline gap pairs       : {coverage.get('raw_internal_gap_pairs')}")
     print(f"- Raw timeline gap windows     : {coverage.get('raw_internal_gap_windows')}")
     newest = report.get("newest_bar") or {}
