@@ -399,7 +399,23 @@ class BackendSupervisor:
         # can prove belongs to a dead same-host PID (or whose heartbeat has
         # exceeded the lease itself), then acquire normally.
         cleanup_stale_lock(DP_PROGRAM_LOCK, stale_after_sec=10 * 60)
-        if acquire(DP_PROGRAM_LOCK, duration_min=10, payload=payload):
+        acquired = acquire(DP_PROGRAM_LOCK, duration_min=10, payload=payload)
+        if not acquired:
+            # During VM boot, SQL Server can become reachable between the
+            # cleanup fetch and the INSERT. In the reproduced VM-DP6 case,
+            # cleanup saw no row only because its DB connection failed; the
+            # subsequent acquire connected successfully but hit the prior-
+            # boot row and was misreported as a genuine lock conflict. Now
+            # that connectivity is established, classify/delete the exact
+            # fenced row once more and retry the INSERT.
+            cleaned_after_connect = cleanup_stale_lock(
+                DP_PROGRAM_LOCK,
+                stale_after_sec=10 * 60,
+            )
+            if cleaned_after_connect:
+                acquired = acquire(DP_PROGRAM_LOCK, duration_min=10, payload=payload)
+
+        if acquired:
             self._supervisor_lock_acquired = True
             self._start_supervisor_heartbeat()
             return True

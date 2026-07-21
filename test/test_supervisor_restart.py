@@ -342,6 +342,28 @@ def test_supervisor_start_cleans_dead_prior_lease_before_acquire(sup, monkeypatc
     assert calls[0][1][1]["stale_after_sec"] == 10 * 60
 
 
+def test_supervisor_rechecks_stale_lease_after_boot_sql_recovers(sup, monkeypatch):
+    """The first cleanup can fail while SQL Server is still starting."""
+    cleanup_results = iter([False, True])
+    acquire_results = iter([False, True])
+    calls: list[str] = []
+
+    def _cleanup(*_args, **_kwargs):
+        calls.append("cleanup")
+        return next(cleanup_results)
+
+    def _acquire(*_args, **_kwargs):
+        calls.append("acquire")
+        return next(acquire_results)
+
+    monkeypatch.setattr(supervisor_engine, "cleanup_stale_lock", _cleanup)
+    monkeypatch.setattr(supervisor_engine, "acquire", _acquire)
+    monkeypatch.setattr(sup, "_start_supervisor_heartbeat", lambda: calls.append("heartbeat"))
+
+    assert sup._acquire_supervisor_lock() is True
+    assert calls == ["cleanup", "acquire", "cleanup", "acquire", "heartbeat"]
+
+
 def test_monitor_restarts_when_first_batch_never_completes(sup, monkeypatch):
     """A fresh heartbeat must not hide a main loop stuck in its first batch."""
     from datetime import datetime, timedelta, timezone
