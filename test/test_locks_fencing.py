@@ -19,6 +19,7 @@ from __future__ import annotations
 import time
 import threading
 import uuid
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -250,6 +251,70 @@ def test_owner_prefix_targeted_release_bypasses_owner_id_fencing_by_design(db):
 
     assert released is True
     assert "tv_historical_job" not in db.rows
+
+
+def test_stale_lock_from_prior_boot_is_released_even_if_pid_was_reused(db, monkeypatch):
+    """Regression for the VM-DP6 BootTrigger failure on 2026-07-21.
+
+    Windows reused the old supervisor PID after reboot.  PID-liveness-only
+    cleanup therefore treated the stale SQL lease as a live supervisor and
+    the Scheduled Task exited with code 5.
+    """
+    boot = datetime(2026, 7, 21, 15, 38, 41)
+    coordinator = LockCoordinator(
+        connection_factory=db.new_connection,
+        logger=locks_module.logging.getLogger("test_prior_boot_lock"),
+        host="WIN-B8609EA108T",
+        pid_alive=lambda _pid: True,
+        process_started_at=lambda _pid: boot + timedelta(seconds=2),
+        boot_started_at=boot,
+    )
+    record = LockRecord(
+        task_name="dp_program_supervisor",
+        started_at=None,
+        expires_at=None,
+        payload=(
+            "kind=supervisor;host=WIN-B8609EA108T;pid=7660;"
+            "started=2026-07-21T14:03:02.830194+00:00;heartbeat=2026-07-21T15:38:22"
+        ),
+        owner_id=str(uuid.uuid4()),
+        fence=42,
+    )
+    released: list[LockRecord] = []
+    monkeypatch.setattr(coordinator, "fetch", lambda *_args, **_kwargs: record)
+    monkeypatch.setattr(coordinator, "release_record", lambda row: released.append(row) or True)
+
+    assert coordinator.cleanup_stale_lock("dp_program_supervisor") is True
+    assert released == [record]
+
+
+def test_same_boot_reused_pid_is_released_by_process_creation_time(db, monkeypatch):
+    boot = datetime(2026, 7, 21, 15, 0, 0)
+    coordinator = LockCoordinator(
+        connection_factory=db.new_connection,
+        logger=locks_module.logging.getLogger("test_reused_pid_lock"),
+        host="WIN-B8609EA108T",
+        pid_alive=lambda _pid: True,
+        process_started_at=lambda _pid: datetime(2026, 7, 21, 15, 20, 0),
+        boot_started_at=boot,
+    )
+    record = LockRecord(
+        task_name="dp_program_supervisor",
+        started_at=None,
+        expires_at=None,
+        payload=(
+            "kind=supervisor;host=WIN-B8609EA108T;pid=7660;"
+            "started=2026-07-21T15:05:00;heartbeat=2026-07-21T15:19:00"
+        ),
+        owner_id=str(uuid.uuid4()),
+        fence=43,
+    )
+    released: list[LockRecord] = []
+    monkeypatch.setattr(coordinator, "fetch", lambda *_args, **_kwargs: record)
+    monkeypatch.setattr(coordinator, "release_record", lambda row: released.append(row) or True)
+
+    assert coordinator.cleanup_stale_lock("dp_program_supervisor") is True
+    assert released == [record]
 
 
 def test_release_record_cannot_delete_a_replacement_generation(db):

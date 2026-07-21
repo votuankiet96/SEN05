@@ -24,7 +24,7 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
 try:
@@ -163,6 +163,67 @@ def _local_pid_alive(pid: int) -> bool:
         kernel32.CloseHandle(handle)
 
 
+def _local_boot_started_utc() -> datetime | None:
+    """Return this Windows boot's approximate UTC start time.
+
+    A PID alone is not a process identity: Windows can reuse it immediately
+    after a reboot.  ``GetTickCount64`` is monotonic since boot, so combining
+    it with the current UTC clock lets stale-lock recovery distinguish a row
+    written before this boot even when its PID now belongs to another process.
+    The value is deliberately advisory; OwnerId+Fence remains the authority
+    for the compare-and-delete operation.
+    """
+    if os.name != "nt":
+        return None
+    try:
+        uptime_ms = int(ctypes.windll.kernel32.GetTickCount64())
+        now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+        return now_utc - timedelta(milliseconds=uptime_ms)
+    except Exception:
+        return None
+
+
+def _local_process_started_utc(pid: int) -> datetime | None:
+    """Return a Windows process creation time without adding psutil."""
+    if os.name != "nt" or pid <= 0:
+        return None
+
+    class _FileTime(ctypes.Structure):
+        _fields_ = [("low", ctypes.c_ulong), ("high", ctypes.c_ulong)]
+
+    kernel32 = ctypes.windll.kernel32
+    handle = kernel32.OpenProcess(0x1000, False, int(pid))
+    if not handle:
+        return None
+    try:
+        created = _FileTime()
+        exited = _FileTime()
+        kernel = _FileTime()
+        user = _FileTime()
+        if not kernel32.GetProcessTimes(
+            handle,
+            ctypes.byref(created),
+            ctypes.byref(exited),
+            ctypes.byref(kernel),
+            ctypes.byref(user),
+        ):
+            return None
+        ticks = (int(created.high) << 32) | int(created.low)
+        # FILETIME counts 100 ns intervals since 1601-01-01 UTC.
+        unix_seconds = ticks / 10_000_000 - 11_644_473_600
+        return datetime.fromtimestamp(unix_seconds, tz=timezone.utc).replace(tzinfo=None)
+    except Exception:
+        return None
+    finally:
+        kernel32.CloseHandle(handle)
+
+
+def _utc_naive(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
+
+
 class LockCoordinator:
     """Small facade over SEN.ActiveTask for engine-level coordination."""
 
@@ -172,12 +233,16 @@ class LockCoordinator:
         *,
         logger: logging.Logger | None = None,
         pid_alive: Callable[[int], bool] | None = None,
+        process_started_at: Callable[[int], datetime | None] | None = None,
+        boot_started_at: datetime | None = None,
         host: str | None = None,
         pid: int | None = None,
     ) -> None:
         self.connection_factory = connection_factory or default_connection_factory
         self.logger = logger or logging.getLogger(__name__)
         self.pid_alive = pid_alive or _local_pid_alive
+        self.process_started_at = process_started_at or _local_process_started_utc
+        self.boot_started_at = _utc_naive(boot_started_at) if boot_started_at else _local_boot_started_utc()
         self.host = host or socket.gethostname()
         self.pid = pid or os.getpid()
         # One identifier per LockCoordinator instance (effectively one per
@@ -576,17 +641,53 @@ class LockCoordinator:
             }
         )
 
-    def _same_host_pid_dead(self, meta: dict[str, str]) -> bool:
+    def _same_host_stale_process_reason(self, meta: dict[str, str]) -> str:
         host = meta.get("host")
         if host and host.lower() != self.host.lower():
-            return False
+            return ""
+
+        recorded_started: datetime | None = None
+        started_text = meta.get("started")
+        if started_text:
+            try:
+                recorded_started = _utc_naive(datetime.fromisoformat(started_text))
+            except Exception:
+                recorded_started = None
+
+        # This check must precede PID liveness.  The reboot incident on
+        # VM-DP6 reproduced the exact race: stale supervisor PID 7660 was
+        # already reused by an unrelated process, making pid_alive(7660)
+        # return True and blocking the BootTrigger for the full SQL TTL.
+        if recorded_started and self.boot_started_at:
+            if recorded_started < self.boot_started_at - timedelta(seconds=5):
+                return f"owner started before current boot ({started_text})"
+
         pid_text = meta.get("pid")
         if not pid_text:
-            return False
+            return ""
         try:
-            return not self.pid_alive(int(pid_text))
+            pid = int(pid_text)
+            if not self.pid_alive(pid):
+                return f"dead pid {pid_text}"
+
+            # Cover same-boot PID reuse as well.  Process creation is allowed
+            # a small tolerance because the lock timestamp is written just
+            # after process construction and only has microsecond precision.
+            actual_started = self.process_started_at(pid)
+            if recorded_started and actual_started:
+                actual_started = _utc_naive(actual_started)
+                if actual_started > recorded_started + timedelta(seconds=5):
+                    return (
+                        f"pid {pid_text} reused by process started "
+                        f"{actual_started.isoformat(timespec='seconds')}"
+                    )
         except Exception:
-            return False
+            return ""
+        return ""
+
+    def _same_host_pid_dead(self, meta: dict[str, str]) -> bool:
+        """Backward-compatible predicate retained for callers/tests."""
+        return self._same_host_stale_process_reason(meta).startswith("dead pid ")
 
     def _heartbeat_stale(self, meta: dict[str, str], *, stale_after_sec: float) -> bool:
         heartbeat = meta.get("heartbeat") or meta.get("started")
@@ -612,9 +713,9 @@ class LockCoordinator:
         reason = ""
         if force:
             reason = "forced cleanup"
-        elif self._same_host_pid_dead(meta):
-            reason = f"dead pid {meta.get('pid')}"
-        elif self._heartbeat_stale(meta, stale_after_sec=stale_after_sec):
+        else:
+            reason = self._same_host_stale_process_reason(meta)
+        if not reason and self._heartbeat_stale(meta, stale_after_sec=stale_after_sec):
             reason = "stale heartbeat"
 
         if not reason:
