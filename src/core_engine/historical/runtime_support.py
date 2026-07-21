@@ -7,6 +7,7 @@ import json
 import logging
 import math
 import os
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -102,6 +103,51 @@ def trading_hours_in_gap(start: datetime, end: datetime) -> float:
         t += timedelta(hours=1)
         walked += 1.0
     return max(0.0, total_hours - weekend_h)
+
+
+def _gap_schedule_signature(start: datetime, end: datetime, gap_minutes: int) -> tuple[int, int, int, int, int, int, int]:
+    """Return the weekly wall-clock signature of one adjacent-bar gap.
+
+    Capital.com instruments have provider-specific daily and weekly closures.
+    A simple ``weekday >= 5`` calculation cannot describe those sessions: for
+    example, many Friday-close/Sunday-open gaps include several Friday evening
+    hours and were consequently reported as market-open holes.  Exact recurring
+    signatures let the warehouse data itself prove a scheduled closure without
+    teaching this service a brittle, manually maintained exchange calendar.
+
+    The duration is deliberately part of the signature.  If even one bar is
+    missing immediately before or after a normal closure, the duration changes
+    and that anomalous window remains eligible for repair.
+    """
+
+    return (
+        start.weekday(),
+        start.hour,
+        start.minute,
+        end.weekday(),
+        end.hour,
+        end.minute,
+        int(gap_minutes),
+    )
+
+
+def recurring_market_closure_signatures(
+    gaps: list[tuple[datetime, datetime, int]],
+    *,
+    minimum_occurrences: int = 2,
+) -> set[tuple[int, int, int, int, int, int, int]]:
+    """Identify exact gap shapes that recur on the weekly market schedule.
+
+    Two occurrences are required so a one-off provider outage or a genuine
+    missing-data window is never suppressed merely because it resembles a
+    closure.  DST changes naturally create a second signature and each shape
+    must independently recur before it is trusted.
+    """
+
+    if minimum_occurrences < 2:
+        raise ValueError("minimum_occurrences must be at least 2")
+    counts = Counter(_gap_schedule_signature(start, end, minutes) for start, end, minutes in gaps)
+    return {signature for signature, count in counts.items() if count >= minimum_occurrences}
 
 
 def gap_threshold_minutes(sym: dict, tf_code: str) -> int:
@@ -474,11 +520,15 @@ def find_hole_pairs(
         verified_windows = (verified_gaps or {}).get((sym_id, tf_code), [])
         asset_type = sym["asset_type"]
         threshold = gap_threshold_minutes(sym, tf_code)
+        recurring_closures = recurring_market_closure_signatures(gaps)
 
         real_gaps = []
         for gap_start, gap_end, gap_raw_min in gaps:
             if any(vs <= gap_start and gap_end <= ve for vs, ve in verified_windows):
                 n_skip_verified += 1
+                continue
+            if _gap_schedule_signature(gap_start, gap_end, gap_raw_min) in recurring_closures:
+                n_excluded += 1
                 continue
             trading_min = trading_hours_in_gap(gap_start, gap_end) * 60 if asset_type in WEEKEND_CLOSED else float(gap_raw_min)
             if trading_min > threshold:

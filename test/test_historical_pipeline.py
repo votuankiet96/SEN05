@@ -79,6 +79,68 @@ def test_find_hole_pairs_propagates_gap_scan_failure(monkeypatch):
         )
 
 
+def test_find_hole_pairs_excludes_exact_recurring_market_closure_but_repairs_anomaly(monkeypatch):
+    symbol = {"symbol_id": 11, "tv_symbol": "AUDCAD", "asset_type": "FOREX"}
+    recurring_1 = (
+        datetime(2026, 7, 3, 20, 0),
+        datetime(2026, 7, 5, 21, 0),
+        2940,
+    )
+    recurring_2 = (
+        datetime(2026, 7, 10, 20, 0),
+        datetime(2026, 7, 12, 21, 0),
+        2940,
+    )
+    anomalous_market_hour_gap = (
+        datetime(2026, 7, 14, 8, 0),
+        datetime(2026, 7, 14, 12, 0),
+        240,
+    )
+    monkeypatch.setattr(
+        runtime_support,
+        "get_internal_gaps",
+        lambda *_args, **_kwargs: {
+            (11, "M5"): [recurring_1, recurring_2, anomalous_market_hour_gap]
+        },
+    )
+    monkeypatch.setattr(runtime_support, "now_utc", lambda: datetime(2026, 7, 15, 0, 0))
+
+    holes = runtime_support.find_hole_pairs(
+        [],
+        pipeline.logger,
+        symbols=[symbol],
+        tf_filter={"M5"},
+    )
+
+    assert len(holes) == 1
+    assert holes[0]["gap_windows"] == [anomalous_market_hour_gap[:2]]
+
+
+def test_find_hole_pairs_keeps_one_off_closure_like_gap_conservatively(monkeypatch):
+    symbol = {"symbol_id": 11, "tv_symbol": "AUDCAD", "asset_type": "FOREX"}
+    one_off = (
+        datetime(2026, 7, 3, 20, 0),
+        datetime(2026, 7, 5, 21, 0),
+        2940,
+    )
+    monkeypatch.setattr(
+        runtime_support,
+        "get_internal_gaps",
+        lambda *_args, **_kwargs: {(11, "M5"): [one_off]},
+    )
+    monkeypatch.setattr(runtime_support, "now_utc", lambda: datetime(2026, 7, 6, 0, 0))
+
+    holes = runtime_support.find_hole_pairs(
+        [],
+        pipeline.logger,
+        symbols=[symbol],
+        tf_filter={"M5"},
+    )
+
+    assert len(holes) == 1
+    assert holes[0]["gap_windows"] == [one_off[:2]]
+
+
 def test_set_replay_runtime_enabled_is_visible_in_pipeline_module():
     _reset_replay_runtime()
     try:
