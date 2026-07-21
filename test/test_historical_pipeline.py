@@ -118,10 +118,13 @@ def test_find_hole_pairs_excludes_exact_recurring_market_closure_but_repairs_ano
 
 def test_find_hole_pairs_keeps_one_off_closure_like_gap_conservatively(monkeypatch):
     symbol = {"symbol_id": 11, "tv_symbol": "AUDCAD", "asset_type": "FOREX"}
+    # It crosses the weekend, but starts well before the documented
+    # Friday-evening FX close. The narrow session-boundary rule must not
+    # hide this possible market-hours outage merely because it is one-off.
     one_off = (
-        datetime(2026, 7, 3, 20, 0),
+        datetime(2026, 7, 3, 16, 0),
         datetime(2026, 7, 5, 21, 0),
-        2940,
+        3180,
     )
     monkeypatch.setattr(
         runtime_support,
@@ -139,6 +142,33 @@ def test_find_hole_pairs_keeps_one_off_closure_like_gap_conservatively(monkeypat
 
     assert len(holes) == 1
     assert holes[0]["gap_windows"] == [one_off[:2]]
+
+
+def test_find_hole_pairs_excludes_only_friday_evening_forex_weekend(monkeypatch):
+    symbol = {"symbol_id": 11, "tv_symbol": "AUDCAD", "asset_type": "FOREX"}
+    weekend = (
+        datetime(2026, 7, 17, 20, 55),
+        datetime(2026, 7, 19, 21, 5),
+        2890,
+    )
+    friday_market_hour_outage = (
+        datetime(2026, 7, 17, 12, 0),
+        datetime(2026, 7, 17, 16, 0),
+        240,
+    )
+    monkeypatch.setattr(
+        runtime_support,
+        "get_internal_gaps",
+        lambda *_args, **_kwargs: {(11, "M5"): [weekend, friday_market_hour_outage]},
+    )
+    monkeypatch.setattr(runtime_support, "now_utc", lambda: datetime(2026, 7, 20, 0, 0))
+
+    holes = runtime_support.find_hole_pairs(
+        [], pipeline.logger, symbols=[symbol], tf_filter={"M5"}
+    )
+
+    assert len(holes) == 1
+    assert holes[0]["gap_windows"] == [friday_market_hour_outage[:2]]
 
 
 def test_set_replay_runtime_enabled_is_visible_in_pipeline_module():
@@ -264,6 +294,67 @@ def _valid_ohlcv_df() -> pd.DataFrame:
         {"open": [1.0, 1.1], "high": [1.2, 1.3], "low": [0.9, 1.0], "close": [1.1, 1.2]},
         index=idx,
     )
+
+
+def test_source_frame_confirms_unavailable_requires_both_exact_boundaries_and_no_interior():
+    start = datetime(2026, 6, 27, 4, 55)
+    end = datetime(2026, 6, 27, 21, 5)
+    boundaries_only = pd.DataFrame(
+        {"close": [1.0, 2.0]},
+        index=pd.DatetimeIndex([start, end], tz="UTC"),
+    )
+    with_interior = pd.DataFrame(
+        {"close": [1.0, 1.5, 2.0]},
+        index=pd.DatetimeIndex([start, start + timedelta(minutes=5), end], tz="UTC"),
+    )
+    missing_end = boundaries_only.iloc[:1]
+
+    assert pipeline.source_frame_confirms_gap_unavailable(boundaries_only, start, end)
+    assert not pipeline.source_frame_confirms_gap_unavailable(with_interior, start, end)
+    assert not pipeline.source_frame_confirms_gap_unavailable(missing_end, start, end)
+
+
+def test_backfill_caches_only_source_proven_unavailable_gap(monkeypatch):
+    start = datetime(2026, 6, 27, 4, 55)
+    end = datetime(2026, 6, 27, 21, 5)
+    sym = {"symbol_id": 81, "tv_symbol": "BTCUSD", "asset_type": "Crypto"}
+    item = {
+        "sym": sym,
+        "tf_code": "M5",
+        "n_bars": 20_000,
+        "reason": "HOLE",
+        "last_bar": start,
+        "gap_hours": 24.0,
+        "gap_windows": [(start, end)],
+    }
+    frame = pd.DataFrame(
+        {"close": [1.0, 2.0]},
+        index=pd.DatetimeIndex([start, end], tz="UTC"),
+    )
+    saved = []
+
+    monkeypatch.setattr(pipeline, "get_latest_bars", lambda: {})
+    monkeypatch.setattr(pipeline, "find_stale_pairs", lambda *a, **k: [item])
+    monkeypatch.setattr(pipeline, "find_hole_pairs", lambda *a, **k: [])
+    monkeypatch.setattr(pipeline, "load_verified_gaps", lambda: {})
+    monkeypatch.setattr(pipeline, "wait_for_historical_slot", lambda *a, **k: True)
+    monkeypatch.setattr(pipeline, "sleep_for", lambda *a, **k: None)
+    monkeypatch.setattr(pipeline._reporter, "pair_flow_header", lambda *a, **k: None)
+    monkeypatch.setattr(pipeline._reporter, "pair_start", lambda *a, **k: None)
+    monkeypatch.setattr(pipeline._reporter, "pair_result", lambda *a, **k: None)
+    monkeypatch.setattr(pipeline, "fact_covers_window", lambda *a, **k: False)
+    monkeypatch.setattr(pipeline, "save_verified_gaps", lambda rows, _logger: saved.append(rows))
+
+    def successful_pull(*_args, fetched_frame_out=None, **_kwargs):
+        fetched_frame_out[:] = [frame]
+        return 0
+
+    monkeypatch.setattr(pipeline, "pull_with_retry", successful_pull)
+
+    stats = pipeline.run_backfill(object(), symbols=[sym])
+
+    assert stats == {"queued": 1, "ok": 1, "fail": 0, "inserted": 0}
+    assert saved == [{(81, "M5", start, end)}]
 
 
 def _sym() -> dict:

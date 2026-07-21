@@ -34,7 +34,8 @@ from core_engine.settings import (
 EXIT_TV_UNAVAILABLE = 3
 MAX_CONSECUTIVE_FAIL = HISTORICAL.max_consecutive_fail
 HOLE_LOOKBACK_DAYS = HISTORICAL.hole_lookback_days
-VERIFIED_GAP_CACHE_VERSION = 2
+VERIFIED_GAP_CACHE_VERSION = 3
+VERIFIED_GAP_CACHE_TTL_HOURS = 24
 PREFLIGHT_PROBE_BARS = 5
 PREFLIGHT_TIMEOUT_SEC = 30
 PREFLIGHT_SYMBOL_LIMIT = 4
@@ -148,6 +149,37 @@ def recurring_market_closure_signatures(
         raise ValueError("minimum_occurrences must be at least 2")
     counts = Counter(_gap_schedule_signature(start, end, minutes) for start, end, minutes in gaps)
     return {signature for signature, count in counts.items() if count >= minimum_occurrences}
+
+
+def is_expected_weekend_session_closure(
+    gap_start: datetime,
+    gap_end: datetime,
+    *,
+    tf_minutes: int,
+    asset_type: str,
+) -> bool:
+    """Recognise only the unambiguous Friday-evening FX weekend boundary.
+
+    ``gap_start`` is the timestamp of the last existing candle, so the
+    first actually-missing instant is one timeframe later.  Capital.com's
+    weekday FX feed closes on Friday evening and resumes Sunday evening,
+    but the exact first/last bar varies slightly by pair and DST.  Treating
+    only this narrow Friday-evening -> Sunday-evening shape as a closure
+    removes false GO-gate gaps without hiding a weekday/provider outage.
+    """
+
+    if asset_type != "FOREX" or tf_minutes <= 0:
+        return False
+    first_missing = gap_start + timedelta(minutes=tf_minutes)
+    if first_missing.weekday() != 4 or gap_end.weekday() != 6:
+        return False
+    first_missing_minute = first_missing.hour * 60 + first_missing.minute
+    reopen_minute = gap_end.hour * 60 + gap_end.minute
+    return (
+        first_missing_minute >= 18 * 60
+        and 20 * 60 <= reopen_minute <= 23 * 60 + 59
+        and timedelta(hours=36) <= gap_end - gap_start <= timedelta(hours=60)
+    )
 
 
 def gap_threshold_minutes(sym: dict, tf_code: str) -> int:
@@ -421,14 +453,14 @@ def flatten_verified_gap_windows(verified_gaps: dict) -> set:
 def load_verified_gaps() -> dict:
     try:
         data = json.loads(VERIFIED_MARKET_GAPS.read_text(encoding="utf-8"))
-        # Version 1 only checked whether *any* row existed in an inclusive
-        # gap window. The boundary bars themselves made that true, so those
-        # entries cannot safely suppress repair scans under the stricter v2
-        # contiguous-coverage check.
+        # Versions before v3 did not require a TradingView response to
+        # contain both boundary bars before an unresolved window could be
+        # classified as unavailable at the source. They cannot safely
+        # suppress current repair scans.
         if data.get("verification_version") != VERIFIED_GAP_CACHE_VERSION:
             return {}
         saved = datetime.fromisoformat(data["verified_at"])
-        if (now_utc() - saved).days > 30:
+        if (now_utc() - saved).total_seconds() > VERIFIED_GAP_CACHE_TTL_HOURS * 3600:
             return {}
         if "windows" not in data:
             return {}
@@ -528,6 +560,14 @@ def find_hole_pairs(
                 n_skip_verified += 1
                 continue
             if _gap_schedule_signature(gap_start, gap_end, gap_raw_min) in recurring_closures:
+                n_excluded += 1
+                continue
+            if is_expected_weekend_session_closure(
+                gap_start,
+                gap_end,
+                tf_minutes=tf_mins,
+                asset_type=asset_type,
+            ):
                 n_excluded += 1
                 continue
             trading_min = trading_hours_in_gap(gap_start, gap_end) * 60 if asset_type in WEEKEND_CLOSED else float(gap_raw_min)

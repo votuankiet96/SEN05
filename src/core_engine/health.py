@@ -936,7 +936,11 @@ def collect_data_health(*, lookback_days: int | None = None) -> dict[str, Any]:
     """
     from core_engine.warehouse.reader import get_internal_gaps, get_latest_bars
     from core_engine.warehouse.connection import get_connection
-    from core_engine.historical.runtime_support import find_hole_pairs, find_stale_pairs
+    from core_engine.historical.runtime_support import (
+        find_hole_pairs,
+        find_stale_pairs,
+        load_verified_gaps,
+    )
 
     lookback = int(lookback_days or HISTORICAL.hole_lookback_days)
     expected_pairs = len(SYMBOLS) * len(TF_DISPLAY_ORDER)
@@ -959,9 +963,11 @@ def collect_data_health(*, lookback_days: int | None = None) -> dict[str, Any]:
         for item in stale
     }
     repair_items = list(stale)
+    verified_gaps = load_verified_gaps()
     new_holes = find_hole_pairs(
         repair_items,
         logging.getLogger("data_health"),
+        verified_gaps=verified_gaps,
         lookback_days=lookback,
         symbols=SYMBOLS,
         tf_filter=set(TF_DISPLAY_ORDER),
@@ -1065,6 +1071,8 @@ def collect_data_health(*, lookback_days: int | None = None) -> dict[str, Any]:
             # weekend time, configured overnight allowance, verified
             # windows, and exact recurring market-closure signatures.
             "market_open_gap_pairs": len(market_open_gap_keys),
+            "verified_upstream_gap_pairs": len(verified_gaps),
+            "verified_upstream_gap_windows": sum(len(rows) for rows in verified_gaps.values()),
             "stale_pairs": len(stale_keys),
             "raw_internal_gap_pairs": len(raw_gaps),
             "raw_internal_gap_windows": gap_windows,

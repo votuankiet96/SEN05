@@ -402,6 +402,39 @@ def _write_ohlcv_frame(
     return int(inserted)
 
 
+def source_frame_confirms_gap_unavailable(
+    df: pd.DataFrame | None,
+    gap_start: datetime,
+    gap_end: datetime,
+) -> bool:
+    """Return true only when TradingView itself proves an interior gap.
+
+    Both exact boundary candles must be present in the latest successful
+    response and no candle may exist between them.  Merely receiving zero
+    new SQL rows is not proof: the request might not have reached the old
+    window at all.  This strict boundary check lets the 24-hour verified-gap
+    cache distinguish an upstream-unavailable range from an incomplete pull.
+    """
+
+    if df is None or df.empty:
+        return False
+    try:
+        index = pd.DatetimeIndex(df.index)
+        if index.tz is not None:
+            index = index.tz_convert("UTC").tz_localize(None)
+        else:
+            index = index.tz_localize(None)
+        start = pd.Timestamp(gap_start)
+        end = pd.Timestamp(gap_end)
+        if start.tzinfo is not None:
+            start = start.tz_convert("UTC").tz_localize(None)
+        if end.tzinfo is not None:
+            end = end.tz_convert("UTC").tz_localize(None)
+    except Exception:
+        return False
+    return start in index and end in index and not bool(((index > start) & (index < end)).any())
+
+
 def pull_and_store(
     tv: SimpleNamespace,
     sym: dict[str, Any],
@@ -410,8 +443,11 @@ def pull_and_store(
     *,
     skip_etl: bool = False,
     allow_replay: bool = True,
+    fetched_frame_out: list[pd.DataFrame | None] | None = None,
 ) -> int:
     df, note = _fetch_history_frame(tv, sym, tf_code, n_bars, allow_replay=allow_replay)
+    if fetched_frame_out is not None:
+        fetched_frame_out[:] = [df]
     if df is None or df.empty:
         logger.warning(
             "%s",
@@ -450,8 +486,16 @@ def pull_with_retry(
     *,
     max_retries: int = 3,
     allow_replay: bool = True,
+    fetched_frame_out: list[pd.DataFrame | None] | None = None,
 ) -> int:
-    result = pull_and_store(tv, sym, tf_code, n_bars, allow_replay=allow_replay)
+    result = pull_and_store(
+        tv,
+        sym,
+        tf_code,
+        n_bars,
+        allow_replay=allow_replay,
+        fetched_frame_out=fetched_frame_out,
+    )
     delays = tuple(HISTORICAL.retry_delays or (10, 30, 60))
     for attempt in range(1, max_retries + 1):
         if result >= 0:
@@ -475,7 +519,14 @@ def pull_with_retry(
             if remaining <= 0:
                 break
             time.sleep(min(1.0, remaining))
-        result = pull_and_store(tv, sym, tf_code, n_bars, allow_replay=allow_replay)
+        result = pull_and_store(
+            tv,
+            sym,
+            tf_code,
+            n_bars,
+            allow_replay=allow_replay,
+            fetched_frame_out=fetched_frame_out,
+        )
     if result < 0:
         logger.error(
             "%s",
@@ -590,59 +641,75 @@ def run_backfill(
             stats["ok"] += 1
             continue
         wait_for_historical_slot("historical-backfill", logger)
+        fetched_frame: list[pd.DataFrame | None] = []
         result = pull_with_retry(
             tv,
             sym,
             tf_code,
             n_bars,
             allow_replay=False,
+            fetched_frame_out=fetched_frame,
         )
         _reporter.pair_result(index, len(stale), sym["tv_symbol"], tf_code, result)
         if result >= 0:
             stats["ok"] += 1
             stats["inserted"] += max(0, result)
             consecutive_fail = 0
-            if result == 0:
-                # "0 rows affected" alone is not proof this window is
-                # actually covered - it could equally mean TradingView
-                # legitimately had nothing there, or the pull genuinely
-                # found nothing to write. Re-query Fact_OHLCV before
-                # caching the window as verified-clean, so a future scan
-                # is not permanently blinded to a gap that was never
-                # really filled (see warehouse.reader.fact_covers_window).
-                for gap_start, gap_end in item.get("gap_windows", []) or []:
-                    try:
-                        covered = fact_covers_window(
-                            sym["symbol_id"],
-                            tf_code,
-                            gap_start,
-                            gap_end,
-                            max_gap_minutes=gap_threshold_minutes(sym, tf_code),
-                        )
-                    except Exception as exc:
-                        logger.warning(
-                            "%s",
-                            _hlog(
-                                "Gap re-verification failed - not caching as verified",
-                                symbol=sym["tv_symbol"],
-                                timeframe=tf_code,
-                                reason=exc,
-                                result="skipped",
-                            ),
-                        )
-                        continue
-                    if covered:
-                        verified_windows.add((sym["symbol_id"], tf_code, gap_start, gap_end))
-                    else:
-                        logger.debug(
-                            "%s",
-                            _hlog(
-                                "Gap window still not covered after repair - not caching as verified",
-                                symbol=sym["tv_symbol"],
-                                timeframe=tf_code,
-                                result="unresolved",
-                            ),
-                        )
+            # Re-verify every requested gap after any successful pull. A
+            # positive insert count can be for newer candles while an older
+            # gap remains unavailable at TradingView, so result == 0 is not
+            # the right condition for this decision.
+            for gap_start, gap_end in item.get("gap_windows", []) or []:
+                try:
+                    covered = fact_covers_window(
+                        sym["symbol_id"],
+                        tf_code,
+                        gap_start,
+                        gap_end,
+                        max_gap_minutes=gap_threshold_minutes(sym, tf_code),
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "%s",
+                        _hlog(
+                            "Gap re-verification failed - not caching as verified",
+                            symbol=sym["tv_symbol"],
+                            timeframe=tf_code,
+                            reason=exc,
+                            result="skipped",
+                        ),
+                    )
+                    continue
+                if covered:
+                    verified_windows.add((sym["symbol_id"], tf_code, gap_start, gap_end))
+                elif source_frame_confirms_gap_unavailable(
+                    fetched_frame[0] if fetched_frame else None,
+                    gap_start,
+                    gap_end,
+                ):
+                    verified_windows.add((sym["symbol_id"], tf_code, gap_start, gap_end))
+                    logger.info(
+                        "%s",
+                        _hlog(
+                            "Gap confirmed unavailable in TradingView response",
+                            symbol=sym["tv_symbol"],
+                            timeframe=tf_code,
+                            gap_start=gap_start,
+                            gap_end=gap_end,
+                            cache_ttl="24h",
+                            result="verified_upstream_gap",
+                        ),
+                    )
+                else:
+                    logger.debug(
+                        "%s",
+                        _hlog(
+                            "Gap window still unresolved after repair - source boundaries not proven",
+                            symbol=sym["tv_symbol"],
+                            timeframe=tf_code,
+                            result="unresolved",
+                        ),
+                    )
         else:
             stats["fail"] += 1
             consecutive_fail += 1
