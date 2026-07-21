@@ -288,6 +288,16 @@ def _fetch_history_frame(
     allow_replay: bool,
 ) -> tuple[pd.DataFrame | None, str]:
     token = getattr(tv, "token", None)
+    if not token or token == tv_auth.GUEST_TOKEN:
+        refreshed_token, source = tv_auth.resolve_auth_token(logger)
+        if refreshed_token and refreshed_token != tv_auth.GUEST_TOKEN:
+            token = refreshed_token
+            tv.token = refreshed_token
+            tv_auth.set_current_token(refreshed_token)
+            logger.info(
+                "Historical auth promoted from limited access to %s.",
+                tv_auth.safe_auth_source_label(source),
+            )
     result = tv_history.fetch_history(
         symbol=sym["tv_symbol"],
         exchange=sym["tv_exchange"],

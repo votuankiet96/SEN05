@@ -200,6 +200,10 @@ AUTH_CONNECTIVITY_READ_TIMEOUT_SEC = env_int(
 AUTH_REFRESH_LOCK_STALE_SEC = env_int(
     "TV_AUTH_REFRESH_LOCK_STALE_SEC", 20 * 60, minimum=60
 )
+AUTH_REFRESH_PEER_WAIT_SEC = env_int(
+    "TV_AUTH_REFRESH_PEER_WAIT_SEC", 90, minimum=0
+)
+AUTH_REFRESH_PEER_POLL_SEC = 1.0
 AUTH_HEADLESS_FRESH_LOGIN_ENABLED = env_flag("TV_AUTH_HEADLESS_FRESH_LOGIN", False)
 
 # Chu kỳ kiểm tra và gia hạn cookie.
@@ -2238,26 +2242,59 @@ def _bootstrap_credentials_coordinated(lg: logging.Logger | None = None) -> tupl
     """Bootstrap credentials TradingView dưới process-level auth lock dùng chung."""
     log = lg or _logger
     with _auth_refresh_process_lock(log) as acquired:
-        if not acquired:
+        if acquired:
+            cached_token, source = _load_reusable_cached_token(
+                log, min_remaining_sec=STARTUP_MIN_TOKEN_TTL_SEC
+            )
+            if cached_token:
+                log.info("[AUTH] Using cached token before bootstrap refresh.")
+                return cached_token, source
+            return _bootstrap_credentials(log)
+
+        cached_token, source = _load_reusable_cached_token(log, min_remaining_sec=60)
+        if cached_token:
+            log.info(
+                "[AUTH] Another process refreshed credentials; using %s from runtime cache.",
+                source,
+            )
+            return cached_token, source
+        log.info(
+            "[AUTH] Another process is refreshing credentials; waiting up to %ss for its runtime cache.",
+            AUTH_REFRESH_PEER_WAIT_SEC,
+        )
+
+    deadline = time.monotonic() + AUTH_REFRESH_PEER_WAIT_SEC
+    while time.monotonic() < deadline:
+        time.sleep(AUTH_REFRESH_PEER_POLL_SEC)
+        cached_token, source = _load_reusable_cached_token(log, min_remaining_sec=60)
+        if cached_token:
+            log.info(
+                "[AUTH] Peer refresh completed; using %s from runtime cache.",
+                source,
+            )
+            return cached_token, source
+        if not auth_refresh_lock_status().get("present"):
+            break
+
+    # The peer may have exited without producing a token. Try to become the
+    # refresher once before falling back to limited access.
+    with _auth_refresh_process_lock(log) as acquired:
+        if acquired:
             cached_token, source = _load_reusable_cached_token(log, min_remaining_sec=60)
             if cached_token:
                 log.info(
-                    "[AUTH] Another process refreshed credentials; using %s from runtime cache.",
+                    "[AUTH] Peer refresh completed; using %s from runtime cache.",
                     source,
                 )
                 return cached_token, source
-            log.warning(
-                "[AUTH] Another process is refreshing credentials; bootstrap will not start a second refresh."
-            )
-            return GUEST_TOKEN, "auth_refresh_in_progress"
+            return _bootstrap_credentials(log)
 
-        cached_token, source = _load_reusable_cached_token(
-            log, min_remaining_sec=STARTUP_MIN_TOKEN_TTL_SEC
-        )
-        if cached_token:
-            log.info("[AUTH] Using cached token before bootstrap refresh.")
-            return cached_token, source
-        return _bootstrap_credentials(log)
+    log.warning(
+        "[AUTH] Peer credential refresh did not produce a usable token within %ss; "
+        "using limited access for now.",
+        AUTH_REFRESH_PEER_WAIT_SEC,
+    )
+    return GUEST_TOKEN, "auth_refresh_in_progress"
 
 
 def _bootstrap_credentials(lg: logging.Logger | None = None) -> tuple[str, str]:
