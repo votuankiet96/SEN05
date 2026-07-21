@@ -2899,6 +2899,15 @@ def _classify_group_batch_outcomes(groups: list, *, hard_deadline_batches: int) 
     return stuck_group_names, wedged_group_ids
 
 
+def _ws_recovery_metrics_snapshot() -> dict[str, int]:
+    with _state_lock:
+        return {
+            "ws_forced_socket_closes": int(_stats.get("ws_forced_socket_closes", 0)),
+            "ws_orphaned_threads": int(_stats.get("ws_orphaned_threads", 0)),
+            "ws_wedged_group_recycles": int(_stats.get("ws_wedged_group_recycles", 0)),
+        }
+
+
 def _run_batch(groups: list[BatchFetcher]) -> None:
     ok, connectivity_detail = _tradingview_connectivity_ok()
 
@@ -2955,6 +2964,7 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
         batch_started_at=batch_start_iso,
         batch_group_timeout_sec=BATCH_GROUP_JOIN_TIMEOUT_SEC,
         groups=len(groups),
+        **_ws_recovery_metrics_snapshot(),
     )
 
     live_batch_lock = acquire_live_batch_window(logger)
@@ -3199,6 +3209,7 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
         fact_inserted=fact_inserted,
         backlog_pairs=len(backlog_snap),
         stale_threads=[],
+        **_ws_recovery_metrics_snapshot(),
     )
 
 def _on_batch_complete(
@@ -3882,6 +3893,7 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
         child_started_at=_utc_iso(),
         batch_interval_min=BATCH_INTERVAL_MIN,
         heartbeat_sec=STATE_HEARTBEAT_SEC,
+        **_ws_recovery_metrics_snapshot(),
     )
 
     threading.Thread(target=_state_heartbeat_loop, name="ws-live-state-heartbeat", daemon=True).start()
@@ -4327,6 +4339,7 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
         batches_run=s["batches_run"],
         failed_task=failed_task,
         failure_reason=failed_reason,
+        **_ws_recovery_metrics_snapshot(),
     )
 
     notify_live_event(

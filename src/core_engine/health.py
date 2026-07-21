@@ -508,6 +508,9 @@ def _live_state_check() -> Check:
         "accepted_bars": state.get("accepted_bars"),
         "fact_inserted": state.get("fact_inserted"),
         "errors": state.get("errors"),
+        "ws_forced_socket_closes": state.get("ws_forced_socket_closes", 0),
+        "ws_orphaned_threads": state.get("ws_orphaned_threads", 0),
+        "ws_wedged_group_recycles": state.get("ws_wedged_group_recycles", 0),
     }
     state_status = str(state.get("status") or "").lower()
     active_status = state_status in {

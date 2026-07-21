@@ -172,6 +172,26 @@ def test_running_with_fresh_heartbeat_and_fresh_batch_is_ok(live_state_path, bac
     assert check.status == "ok"
 
 
+def test_live_recovery_metrics_are_exposed_in_health_detail(live_state_path, backend_enabled):
+    now = datetime.now(timezone.utc)
+    _write_state(
+        live_state_path,
+        status="waiting",
+        pid=os.getpid(),
+        updated_at=_iso(now),
+        batch_completed_at=_iso(now),
+        ws_forced_socket_closes=2,
+        ws_orphaned_threads=1,
+        ws_wedged_group_recycles=1,
+    )
+
+    check = health._live_state_check()
+
+    assert check.detail["ws_forced_socket_closes"] == 2
+    assert check.detail["ws_orphaned_threads"] == 1
+    assert check.detail["ws_wedged_group_recycles"] == 1
+
+
 def test_running_with_stale_batch_completed_at_is_fail_even_with_fresh_heartbeat(live_state_path, backend_enabled):
     now = datetime.now(timezone.utc)
     _write_state(
