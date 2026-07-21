@@ -8,6 +8,9 @@ config/*.env
 runtime/**
 !runtime/**/
 !runtime/**/.gitkeep
+# Deployment evidence may contain an expanded, exact source artifact whose
+# tracked-looking files must never reappear as untracked workspace changes.
+runtime/deploy/**
 
 # Packaging metadata from `pip install -e .`
 *.egg-info/
