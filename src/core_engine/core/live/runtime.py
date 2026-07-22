@@ -29,6 +29,7 @@ import socket
 import threading
 import time
 from collections.abc import Mapping
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Callable
 
@@ -200,6 +201,58 @@ _backlog_lock = threading.Lock()
 # Pairs that exhausted live retry and now require historical repair remain
 # visible to health reporting until a later live response proves recovery.
 _requires_backfill: set[tuple[int, str]] = set()
+
+
+@dataclass(frozen=True)
+class MissingPairUpdate:
+    recovered: tuple[tuple[int, str], ...]
+    pending: tuple[tuple[tuple[int, str], int], ...]
+    repeated_alerts: tuple[tuple[tuple[int, str], int], ...]
+    requires_backfill: tuple[tuple[tuple[int, str], int], ...]
+    backlog: dict[tuple[int, str], int]
+
+
+def update_missing_pairs(
+    received: set[tuple[int, str]],
+    missed: set[tuple[int, str]],
+    *,
+    alert_every: int,
+    max_live_retries: int,
+) -> MissingPairUpdate:
+    """Advance the single live missing-pair state machine atomically."""
+
+    recovered: list[tuple[int, str]] = []
+    pending: list[tuple[tuple[int, str], int]] = []
+    repeated_alerts: list[tuple[tuple[int, str], int]] = []
+    requires_backfill: list[tuple[tuple[int, str], int]] = []
+    with _backlog_lock:
+        for pair in received:
+            if pair in _backlog or pair in _requires_backfill:
+                recovered.append(pair)
+            _backlog.pop(pair, None)
+            _requires_backfill.discard(pair)
+
+        for pair in missed:
+            count = _backlog.get(pair, 0) + 1
+            if count <= max_live_retries:
+                _backlog[pair] = count
+                pending.append((pair, count))
+                if alert_every > 0 and count % alert_every == 0:
+                    repeated_alerts.append((pair, count))
+            else:
+                _backlog.pop(pair, None)
+                _requires_backfill.add(pair)
+                requires_backfill.append((pair, count))
+
+        snapshot = dict(_backlog)
+
+    return MissingPairUpdate(
+        recovered=tuple(recovered),
+        pending=tuple(pending),
+        repeated_alerts=tuple(repeated_alerts),
+        requires_backfill=tuple(requires_backfill),
+        backlog=snapshot,
+    )
 
 _hourly_stats: dict = {
     "batches": 0,

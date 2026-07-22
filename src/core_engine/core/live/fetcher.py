@@ -37,13 +37,13 @@ from core_engine.core.live.runtime import (
     _last_bar_ts,
     _overflow_buf,
     _overflow_lock,
-    _requires_backfill,
     _shutdown,
     _source_bar_ts,
     _spool,
     _state_lock,
     _stats,
     _ws_cooldown_lock,
+    update_missing_pairs,
 )
 from core_engine.shared.time import future_cutoff_ts as _future_cutoff_ts
 from core_engine.settings import LIVE, RUN_DIR, SYMBOLS, TF_STAGING
@@ -1097,81 +1097,59 @@ class BatchFetcher:
 
         _sym_name = {s["symbol_id"]: s["tv_symbol"] for s in WS_SYMBOLS}
 
-        repeated_miss_alerts: list[tuple[tuple[int, str], int]] = []
+        missing_update = update_missing_pairs(
+            received_pairs,
+            missed_pairs,
+            alert_every=MAX_MISS_RETRIES,
+            max_live_retries=MAX_BACKLOG_BATCHES,
+        )
 
-        with _backlog_lock:
-            for pair in received_pairs:
-                if pair in _backlog:
-                    logger.info(
-                        "%s",
-                        _llog(
-                            "Pair recovered from retry list",
-                            symbol=_sym_name.get(pair[0], str(pair[0])),
-                            timeframe=pair[1],
-                            result="recovered",
-                        ),
-                    )
+        for pair in missing_update.recovered:
+            logger.info(
+                "%s",
+                _llog(
+                    "Pair recovered from retry list",
+                    symbol=_sym_name.get(pair[0], str(pair[0])),
+                    timeframe=pair[1],
+                    result="recovered",
+                ),
+            )
 
-                _backlog.pop(pair, None)
-                _requires_backfill.discard(pair)
+        for pair, count in missing_update.pending:
+            logger.info(
+                "%s",
+                _llog(
+                    "Pair missed this batch",
+                    symbol=_sym_name.get(pair[0], str(pair[0])),
+                    timeframe=pair[1],
+                    consecutive_misses=count,
+                    next_request_bars=N_BARS_WS_BACKLOG,
+                    result="retry_next_batch",
+                ),
+            )
 
-            for pair in missed_pairs:
-                count = _backlog.get(pair, 0) + 1
+        for pair, count in missing_update.requires_backfill:
+            logger.error(
+                "%s",
+                _llog(
+                    "Pair missed too many batches",
+                    symbol=_sym_name.get(pair[0], str(pair[0])),
+                    timeframe=pair[1],
+                    consecutive_misses=count,
+                    result="gap_requires_backfill",
+                ),
+            )
+            _send_alert(
+                "ERROR",
+                "Live feed stopped retrying one missing pair\n"
+                f"Pair: {_sym_name.get(pair[0], str(pair[0]))}/{pair[1]}\n"
+                f"Missed batches: {count} in a row (about {count * 5} minutes)\n"
+                "Meaning: this pair likely has a real data gap now.\n"
+                "Suggested action: run historical backfill/replay to repair the gap."
+                + QUICK_COMMANDS_HINT,
+            )
 
-                if count <= MAX_BACKLOG_BATCHES:
-                    _backlog[pair] = count
-
-                    if MAX_MISS_RETRIES > 0 and count % MAX_MISS_RETRIES == 0:
-                        repeated_miss_alerts.append((pair, count))
-
-                    logger.info(
-                        "%s",
-                        _llog(
-                            "Pair missed this batch",
-                            symbol=_sym_name.get(pair[0], str(pair[0])),
-                            timeframe=pair[1],
-                            consecutive_misses=count,
-                            next_request_bars=N_BARS_WS_BACKLOG,
-                            result="retry_next_batch",
-                        ),
-                    )
-
-                    logger.info(
-                        "%s",
-                        _llog(
-                            "Pair miss audit",
-                            symbol=_sym_name.get(pair[0], str(pair[0])),
-                            timeframe=pair[1],
-                            consecutive_misses=count,
-                            result="tracked",
-                        ),
-                    )
-
-                else:
-                    logger.error(
-                        "%s",
-                        _llog(
-                            "Pair missed too many batches",
-                            symbol=_sym_name.get(pair[0], str(pair[0])),
-                            timeframe=pair[1],
-                            consecutive_misses=count,
-                            result="gap_requires_backfill",
-                        ),
-                    )
-
-                    _send_alert(
-                        "ERROR",
-                        "Live feed stopped retrying one missing pair\n"
-                        f"Pair: {_sym_name.get(pair[0], str(pair[0]))}/{pair[1]}\n"
-                        f"Missed batches: {count} in a row (about {count * 5} minutes)\n"
-                        "Meaning: this pair likely has a real data gap now.\n"
-                        "Suggested action: run historical backfill/replay to repair the gap." + QUICK_COMMANDS_HINT,
-                    )
-
-                    _backlog.pop(pair, None)
-                    _requires_backfill.add(pair)
-
-        for (symbol_id, tf_code), count in repeated_miss_alerts:
+        for (symbol_id, tf_code), count in missing_update.repeated_alerts:
             symbol_name = _sym_name.get(symbol_id, str(symbol_id))
             logger.warning(
                 "[MISS] %s [%s] missed %d batch(es) in a row - sending alert.",
@@ -1188,8 +1166,7 @@ class BatchFetcher:
                 "then run historical backfill if a gap remains.",
             )
 
-        with _backlog_lock:
-            backlog_snap = dict(_backlog)
+        backlog_snap = missing_update.backlog
 
         pair_new_bars_snap: dict[tuple[int, str], int]
 
