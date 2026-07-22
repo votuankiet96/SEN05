@@ -499,6 +499,12 @@ def _take_ready_fact_key() -> tuple[tuple[int, str, str, str] | None, float, flo
     return None, 0.0, wait_seconds
 
 
+def _fact_backlog_size() -> int:
+    """Return symbol/timeframe keys currently waiting for Fact delivery."""
+    with _deferred_lock:
+        return len(_deferred_etl)
+
+
 def _db_worker() -> None:
     """Persist live candles to staging without waiting on Fact ETL."""
     logger.info("%s", _llog("Database staging writer started", result="running"))
@@ -581,7 +587,7 @@ def _db_worker() -> None:
                     _shutdown.wait(5)
 
         if not staging_ok:
-            _record_db_result(batch_id, key, accepted_count, 0, 0, error=True)
+            _record_db_result(batch_id, key, accepted_count, 0, 0)
             _spool.release_for_retry(
                 row_id, error="insert_staging_batch failed after retries"
             )

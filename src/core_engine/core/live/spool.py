@@ -288,25 +288,6 @@ class LiveSpool:
                     )
                 con.commit()
 
-    def staged_ids_for_key(
-        self, symbol_id: int, tf_code: str, staging_table: str, tv_symbol: str
-    ) -> list[int]:
-        """Snapshot the exact staged rows covered by the upcoming ETL call.
-
-        Callers take this snapshot immediately before invoking the stored
-        procedure and acknowledge only these ids after its transaction has
-        committed. Rows staged concurrently after the snapshot therefore
-        cannot be deleted by an ETL call that never observed them.
-        """
-        with self._lock:
-            with closing(sqlite3.connect(self.path)) as con:
-                rows = con.execute(
-                    "SELECT id FROM spool WHERE status='staged' AND symbol_id=? "
-                    "AND tf_code=? AND staging_table=? AND tv_symbol=? ORDER BY id",
-                    (symbol_id, tf_code, staging_table, tv_symbol),
-                ).fetchall()
-        return [int(row[0]) for row in rows]
-
     def staged_snapshot_for_key(
         self, symbol_id: int, tf_code: str, staging_table: str, tv_symbol: str
     ) -> tuple[list[int], str | None]:
@@ -372,12 +353,6 @@ class LiveSpool:
                     deleted += int(cur.rowcount or 0)
                 con.commit()
         return deleted
-
-    def ack_staged_for_key(self, symbol_id: int, tf_code: str, staging_table: str, tv_symbol: str) -> int:
-        """Compatibility helper; production ETL uses snapshot + exact ACK."""
-        return self.ack_staged_ids(
-            self.staged_ids_for_key(symbol_id, tf_code, staging_table, tv_symbol)
-        )
 
     def release_for_retry(self, row_id: int, *, error: str | None = None) -> None:
         """Give up on the current attempt WITHOUT deleting the row - it
@@ -464,13 +439,6 @@ class LiveSpool:
             self.logger.warning("[SPOOL] cleanup_old failed: %s", exc)
             return 0
 
-    # -- legacy-shaped helpers kept for compatibility --------------------
-
-    def write(self, item: tuple) -> bool:
-        """Back-compat alias for the old overflow-only write() - now just
-        persist_pending() with a bool result."""
-        return self.persist_pending(item) is not None
-
     # -- internals --------------------------------------------------------
 
     def _quarantine_and_delete(self, con, *, row_id, payload_version, sym_id, tf_code, stg_tbl, tv_sym, error) -> None:
@@ -518,8 +486,6 @@ class LiveSpool:
             if obj.get("kind") != "ohlcv_frame":
                 raise ValueError(f"unsupported spool payload kind {obj.get('kind')!r}")
             return obj.get("data")
-        if int(payload_version or 0) == 0:
-            return obj
         raise ValueError(f"missing spool payload envelope for version {payload_version}")
 
 

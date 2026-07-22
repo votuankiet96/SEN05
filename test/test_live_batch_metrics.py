@@ -7,7 +7,7 @@ from core_engine.core.live import batch_metrics
 
 def test_batch_metrics_tracks_acceptance_and_database_delivery(monkeypatch):
     metrics = {}
-    stats = {"accepted_bars": 0, "staging_rows": 0, "fact_inserted": 0, "bars_inserted": 0}
+    stats = {"accepted_bars": 0, "staging_rows": 0, "fact_inserted": 0}
     hourly = {
         "fact_bars": 0,
         "staging_rows": 0,
@@ -31,18 +31,6 @@ def test_batch_metrics_tracks_acceptance_and_database_delivery(monkeypatch):
     assert snapshot["db_processed"] == 3
     assert snapshot["staging_rows"] == 2
     assert snapshot["fact_inserted"] == 2
-    assert snapshot["pair_accepted"] == {key: 3}
-    assert snapshot["pair_fact"] == {key: 2}
-    assert stats == {"accepted_bars": 3, "staging_rows": 2, "fact_inserted": 2, "bars_inserted": 2}
+    assert stats == {"accepted_bars": 3, "staging_rows": 2, "fact_inserted": 2}
     assert hourly["pair_bars"] == {key: 2}
     assert hourly["pair_staging"] == {key: 2}
-
-
-def test_batch_metrics_snapshot_does_not_expose_nested_mutable_maps(monkeypatch):
-    monkeypatch.setattr(batch_metrics, "_batch_metrics", {1: batch_metrics._empty_metrics()})
-    monkeypatch.setattr(batch_metrics, "_batch_metrics_lock", threading.Lock())
-
-    result = batch_metrics.snapshot(1)
-    result["pair_accepted"][(1, "M5")] = 99
-
-    assert batch_metrics._batch_metrics[1]["pair_accepted"] == {}

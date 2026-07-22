@@ -57,7 +57,10 @@ def spool(tmp_path):
 
 
 def _sample_item(batch_id=1, symbol_id=101, tf_code="M5"):
-    df = pd.DataFrame({"open": [1.0], "close": [1.1]})
+    df = pd.DataFrame(
+        {"open": [1.0], "close": [1.1]},
+        index=[pd.Timestamp("2026-07-22 00:00:00", tz="UTC")],
+    )
     return (batch_id, symbol_id, tf_code, "SEN.TF_M5", "EURUSD", df)
 
 
@@ -203,7 +206,7 @@ def test_kill_after_fact_commit_before_ack_recovers_via_restart_reset(spool):
     spool.lease_batch()
     spool.mark_staged(row_id)
     # (run_etl_direct() succeeds here in the real flow; crash happens
-    # before ack_staged_for_key() is called)
+    # before the exact staged-id snapshot is acknowledged)
 
     restarted = _reopen(spool)
     recovered = restarted.lease_batch()
@@ -211,7 +214,7 @@ def test_kill_after_fact_commit_before_ack_recovers_via_restart_reset(spool):
     assert recovered[0][0] == row_id
 
 
-def test_ack_staged_for_key_deletes_all_matching_rows_at_once(spool):
+def test_ack_staged_snapshot_deletes_all_matching_rows_at_once(spool):
     # Two bars for the same symbol/timeframe both deferred while staged
     # (e.g. stuck behind a warehouse maintenance lock); one successful
     # run_etl_direct() call migrates both, so both must be acked together.
@@ -221,20 +224,22 @@ def test_ack_staged_for_key_deletes_all_matching_rows_at_once(spool):
     spool.mark_staged(id_a)
     spool.mark_staged(id_b)
 
-    deleted = spool.ack_staged_for_key(101, "M5", "SEN.TF_M5", "EURUSD")
+    row_ids, _ = spool.staged_snapshot_for_key(101, "M5", "SEN.TF_M5", "EURUSD")
+    deleted = spool.ack_staged_ids(row_ids)
 
     assert deleted == 2
     assert spool.count() == 0
 
 
-def test_ack_staged_for_key_does_not_touch_other_keys(spool):
+def test_ack_staged_snapshot_does_not_touch_other_keys(spool):
     id_a = spool.persist_pending(_sample_item(symbol_id=101, tf_code="M5"))
     id_b = spool.persist_pending(_sample_item(symbol_id=202, tf_code="M15"))
     spool.lease_batch()
     spool.mark_staged(id_a)
     spool.mark_staged(id_b)
 
-    deleted = spool.ack_staged_for_key(101, "M5", "SEN.TF_M5", "EURUSD")
+    row_ids, _ = spool.staged_snapshot_for_key(101, "M5", "SEN.TF_M5", "EURUSD")
+    deleted = spool.ack_staged_ids(row_ids)
 
     assert deleted == 1
     assert spool.count() == 1
@@ -280,14 +285,6 @@ def test_persist_pending_returns_none_when_full_without_losing_anything(spool):
     assert spool.count() == 3
 
 
-# --- legacy back-compat -----------------------------------------------
-
-
-def test_write_is_a_bool_alias_for_persist_pending(spool):
-    assert spool.write(_sample_item(symbol_id=555)) is True
-    assert spool.count() == 1
-
-
 def test_lease_batch_quarantines_corrupt_payload(spool):
     import sqlite3
     from contextlib import closing
@@ -317,11 +314,11 @@ def test_decode_payload_rejects_wrong_version():
         LiveSpool._decode_payload(bad_blob, payload_version=999)
 
 
-def test_decode_payload_accepts_legacy_bare_object_at_version_0():
+def test_decode_payload_rejects_legacy_bare_object_at_version_0():
     df = pd.DataFrame({"open": [3.0]})
     bare_blob = pickle.dumps(df, protocol=pickle.HIGHEST_PROTOCOL)
-    decoded = LiveSpool._decode_payload(bare_blob, payload_version=0)
-    assert list(decoded["open"]) == [3.0]
+    with pytest.raises(ValueError, match="missing spool payload envelope"):
+        LiveSpool._decode_payload(bare_blob, payload_version=0)
 
 
 # --- cleanup_old must never expire an un-acked row ------------------------
@@ -454,13 +451,14 @@ def test_ack_exact_staged_ids_does_not_ack_row_staged_after_etl_snapshot(spool):
     # This is the exact set that existed immediately before the successful
     # ETL call began. A concurrent worker stages another row only after the
     # SP's source scan, so key-wide ack would incorrectly delete it.
-    covered_ids = spool.staged_ids_for_key(704, "M5", "SEN.TF_M5", "EURUSD")
+    covered_ids, _ = spool.staged_snapshot_for_key(704, "M5", "SEN.TF_M5", "EURUSD")
     assert spool.claim_for_dispatch(second) is True
     spool.mark_staged(second)
 
     assert spool.ack_staged_ids(covered_ids) == 1
     assert spool.count_staged_pending_fact() == 1
-    assert spool.staged_ids_for_key(704, "M5", "SEN.TF_M5", "EURUSD") == [second]
+    remaining_ids, _ = spool.staged_snapshot_for_key(704, "M5", "SEN.TF_M5", "EURUSD")
+    assert remaining_ids == [second]
 
 
 def test_staged_snapshot_uses_earliest_timestamp_from_exact_covered_rows(spool):

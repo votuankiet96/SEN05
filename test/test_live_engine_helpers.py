@@ -127,7 +127,7 @@ def test_enqueue_or_buffer_rejects_when_every_layer_is_full(isolated_write_path)
     small_queue, overflow, spool = isolated_write_path
     small_queue.put_nowait(_item("fill"))  # queue full
     overflow.append(_item("fill"))  # buffer full
-    spool.write(_item("fill"))  # MAX_SPOOL_ROWS=1, so the disk spool is now full too
+    spool.persist_pending(_item("fill"))  # MAX_SPOOL_ROWS=1, so the disk spool is now full too
 
     status = db_worker._enqueue_or_buffer(_item("D"), group_id=1, tv_symbol="EURUSD", tf_code="M5")
     assert status == "rejected"

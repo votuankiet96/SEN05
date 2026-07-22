@@ -78,6 +78,7 @@ from core_engine.core.live.batch_metrics import (
 from core_engine.core.live.db_worker import (
     _db_worker,
     _etl_worker,
+    _fact_backlog_size,
     _lease_spool_into_queue,
     _report_db_worker_stopped_at_shutdown,
     _wait_for_queue_drain,
@@ -92,7 +93,6 @@ from core_engine.core.live.runtime_support import (
     as_utc_timestamp,
     freshness_alert_threshold_minutes,
     freshness_threshold_minutes,
-    future_cutoff_ts,
     is_market_expected_live,
     cleanup_dead_runtime_lock,
     run_auth_preflight,
@@ -110,10 +110,9 @@ from core_engine.core.live.state import (
     _hourly_lock,
     _hourly_stats,
     _last_bar_ts,
-    _missed_lock,
-    _missed_pairs,
     _overflow_buf,
     _overflow_lock,
+    _requires_backfill,
     _runtime_lock,
     _shutdown,
     _source_bar_ts,
@@ -321,8 +320,6 @@ def _load_watermarks() -> None:
             f"Worst pair: {worst_symbol}/{worst[1]} ({worst[2]:.0f} minutes old)\n"
             "Suggested action: run historical backfill.",
         )
-
-_future_cutoff_ts = future_cutoff_ts
 
 _as_utc_timestamp = as_utc_timestamp
 
@@ -748,7 +745,7 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
 
     staging_rows = int(db_metrics.get("staging_rows", 0))
 
-    deferred_items = int(db_metrics.get("deferred_items", 0))
+    deferred_items = _fact_backlog_size()
 
     db_processed = int(db_metrics.get("db_processed", 0))
 
@@ -995,8 +992,8 @@ def _status_reporter() -> None:
         with _overflow_lock:
             overflow = len(_overflow_buf)
 
-        with _missed_lock:
-            n_miss_active = sum(1 for v in _missed_pairs.values() if v > 0)
+        with _backlog_lock:
+            n_miss_active = len(_backlog) + len(_requires_backfill)
 
         now_dt = datetime.now(timezone.utc)
 
@@ -1163,7 +1160,7 @@ def _status_reporter() -> None:
                 status=health_status,
                 login=auth_info,
                 closed_candles_received=s.get("accepted_bars", 0),
-                rows_saved=s.get("fact_inserted", s["bars_inserted"]),
+                rows_saved=s["fact_inserted"],
                 recent_errors=recent_errors,
                 total_errors=total_errors,
                 recent_websocket_errors=recent_ws_errors,
@@ -1206,7 +1203,7 @@ def _status_reporter() -> None:
             f"Last hour: {hourly_summary}",
             f"Total    : {s['batches_run']} batches | {s.get('accepted_bars', 0):,} accepted | "
 
-            f"{s.get('fact_inserted', s['bars_inserted']):,} saved rows | "
+            f"{s['fact_inserted']:,} saved rows | "
 
             f"{recent_errors} recent errors / {total_errors} total errors",
             f"Network  : {recent_ws_errors} recent WebSocket errors / {total_ws_errors} total WebSocket errors",
@@ -1262,7 +1259,7 @@ def _status_reporter() -> None:
             data_result={
                 "last_hour": hourly_summary,
                 "total_closed_candles_received": f"{s.get('accepted_bars', 0):,}",
-                "total_rows_saved": f"{s.get('fact_inserted', s['bars_inserted']):,}",
+                "total_rows_saved": f"{s['fact_inserted']:,}",
                 "recent_write_errors": recent_errors,
                 "total_write_errors": total_errors,
                 "received_by_symbol": acc_sym_line,
@@ -1994,7 +1991,7 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
         _llog(
             "Live feed stopped after critical task failure" if exit_code else "Live feed stopped cleanly",
             closed_candles_received=s.get("accepted_bars", 0),
-            rows_saved=s.get("fact_inserted", s["bars_inserted"]),
+            rows_saved=s["fact_inserted"],
             temporary_rows=s.get("staging_rows", 0),
             errors=s["errors"],
             websocket_errors=s.get("ws_errors", 0),
@@ -2010,7 +2007,7 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
         status="failed" if exit_code else "stopped",
         stopped_at=_utc_iso(),
         accepted_bars=s.get("accepted_bars", 0),
-        fact_inserted=s.get("fact_inserted", s["bars_inserted"]),
+        fact_inserted=s["fact_inserted"],
         errors=s["errors"],
         batches_run=s["batches_run"],
         failed_task=failed_task,
@@ -2029,7 +2026,7 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
         current_state={"worker": "stopped", "batches_completed": s["batches_run"], "errors": s["errors"]},
         data_result={
             "closed_candles_received": s.get("accepted_bars", 0),
-            "rows_saved_to_main_table": s.get("fact_inserted", s["bars_inserted"]),
+            "rows_saved_to_main_table": s["fact_inserted"],
             "temporary_rows_touched": s.get("staging_rows", 0),
         },
         health_risk=(
@@ -2056,7 +2053,7 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
 
     print(f"\n  Accepted bars : {s.get('accepted_bars', 0):,}")
 
-    print(f"  Fact inserted : {s.get('fact_inserted', s['bars_inserted']):,}")
+    print(f"  Fact inserted : {s['fact_inserted']:,}")
 
     print(f"  Staging rows  : {s.get('staging_rows', 0):,}")
 

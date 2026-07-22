@@ -23,10 +23,6 @@ def _empty_metrics() -> dict:
         "db_processed": 0,
         "staging_rows": 0,
         "fact_inserted": 0,
-        "deferred_items": 0,
-        "errors": 0,
-        "pair_accepted": {},
-        "pair_fact": {},
     }
 
 
@@ -45,7 +41,6 @@ def record_accepted(batch_id: int, key: tuple[int, str], count: int) -> None:
     with _batch_metrics_lock:
         metrics = _batch_metrics.setdefault(batch_id, _empty_metrics())
         metrics["accepted"] += count
-        metrics["pair_accepted"][key] = metrics["pair_accepted"].get(key, 0) + count
     with _state_lock:
         _stats["accepted_bars"] += count
 
@@ -56,9 +51,6 @@ def record_db_result(
     accepted_count: int,
     staging_rows: int,
     fact_inserted: int,
-    *,
-    deferred: bool = False,
-    error: bool = False,
 ) -> None:
     staging_rows = max(0, int(staging_rows or 0))
     fact_inserted = max(0, int(fact_inserted or 0))
@@ -67,12 +59,6 @@ def record_db_result(
         metrics["db_processed"] += max(0, accepted_count)
         metrics["staging_rows"] += staging_rows
         metrics["fact_inserted"] += fact_inserted
-        if deferred:
-            metrics["deferred_items"] += 1
-        if error:
-            metrics["errors"] += 1
-        if fact_inserted:
-            metrics["pair_fact"][key] = metrics["pair_fact"].get(key, 0) + fact_inserted
 
     if fact_inserted:
         with _hourly_lock:
@@ -83,7 +69,6 @@ def record_db_result(
         with _state_lock:
             _stats["staging_rows"] += staging_rows
             _stats["fact_inserted"] += fact_inserted
-            _stats["bars_inserted"] += fact_inserted
         if staging_rows:
             with _hourly_lock:
                 _hourly_stats["staging_rows"] += staging_rows
@@ -95,8 +80,6 @@ def record_db_result(
 def snapshot(batch_id: int) -> dict:
     with _batch_metrics_lock:
         metrics = dict(_batch_metrics.get(batch_id, {}))
-        metrics["pair_accepted"] = dict(metrics.get("pair_accepted", {}))
-        metrics["pair_fact"] = dict(metrics.get("pair_fact", {}))
         return metrics
 
 

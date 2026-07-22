@@ -81,12 +81,9 @@ _WRITE_DEFER_LOCKS = ("warehouse_maintenance",)
 
 _last_bar_ts: dict[tuple[int, str], float] = {}
 
-_received_bar_ts: dict[tuple[int, str], float] = {}
-
 _source_bar_ts: dict[tuple[int, str], float] = {}
 
 _stats = {
-    "bars_inserted": 0,
     "accepted_bars": 0,
     "staging_rows": 0,
     "fact_inserted": 0,
@@ -180,13 +177,13 @@ _ws_cooldown_until = 0.0
 
 _ws_cooldown_reason = ""
 
-_missed_pairs: dict[tuple[int, str], int] = {}
-
-_missed_lock = threading.Lock()
-
 _backlog: dict[tuple[int, str], int] = {}
 
 _backlog_lock = threading.Lock()
+
+# Pairs that exhausted live retry and now require historical repair remain
+# visible to health reporting until a later live response proves recovery.
+_requires_backfill: set[tuple[int, str]] = set()
 
 _hourly_stats: dict = {
     "batches": 0,

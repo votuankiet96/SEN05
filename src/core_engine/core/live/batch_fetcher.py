@@ -36,11 +36,9 @@ from core_engine.core.live.state import (
     _hourly_lock,
     _hourly_stats,
     _last_bar_ts,
-    _missed_lock,
-    _missed_pairs,
     _overflow_buf,
     _overflow_lock,
-    _received_bar_ts,
+    _requires_backfill,
     _shutdown,
     _source_bar_ts,
     _spool,
@@ -201,11 +199,6 @@ def _handle_ws_transport_error(group_id: int, error) -> tuple[str, int | None]:
     return kind, status
 
 
-def _set_received_watermark(key: tuple[int, str], max_ts: float) -> None:
-    with _state_lock:
-        _received_bar_ts[key] = max(max_ts, _received_bar_ts.get(key, 0.0))
-
-
 def _set_source_watermark(key: tuple[int, str], max_ts: float) -> None:
     with _state_lock:
         _source_bar_ts[key] = max(max_ts, _source_bar_ts.get(key, 0.0))
@@ -216,41 +209,6 @@ def _is_token_error(msg_type: str, data: str) -> bool:
         keyword in data.lower() for keyword in TOKEN_EXPIRY_KEYWORDS
     )
 
-
-def _update_missed_pairs(
-    received: set[tuple[int, str]],
-    missed: set[tuple[int, str]],
-) -> None:
-    alerts: list[tuple[tuple[int, str], int]] = []
-    with _missed_lock:
-        for key in received:
-            _missed_pairs.pop(key, None)
-        for key in missed:
-            count = _missed_pairs.get(key, 0) + 1
-            _missed_pairs[key] = count
-            if count >= MAX_MISS_RETRIES:
-                alerts.append((key, count))
-                _missed_pairs[key] = 0
-
-    for (symbol_id, tf_code), count in alerts:
-        symbol_name = next(
-            (symbol["tv_symbol"] for symbol in WS_SYMBOLS if symbol["symbol_id"] == symbol_id),
-            str(symbol_id),
-        )
-        logger.warning(
-            "[MISS] %s [%s] missed %d batch(es) in a row - sending alert.",
-            symbol_name,
-            tf_code,
-            count,
-        )
-        _send_alert(
-            "WARNING",
-            "Live feed is missing repeated candles\n"
-            f"Pair: {symbol_name}/{tf_code}\n"
-            f"Repeated misses: {count} live batches\n"
-            "Suggested action: check TradingView availability for this pair, "
-            "then run historical backfill if a gap remains.",
-        )
 
 class BatchFetcher:
     def __init__(self, group_id: int, symbols: list) -> None:
@@ -863,8 +821,6 @@ class BatchFetcher:
 
                             return
 
-                        _set_received_watermark(key, safe_new_bars[-1]["v"][0])
-
                         with self._lock:
                             self._new_bars_count += len(safe_new_bars)
 
@@ -1139,9 +1095,9 @@ class BatchFetcher:
             if cs in cs_map_snapshot
         }
 
-        _update_missed_pairs(received_pairs, missed_pairs)
-
         _sym_name = {s["symbol_id"]: s["tv_symbol"] for s in WS_SYMBOLS}
+
+        repeated_miss_alerts: list[tuple[tuple[int, str], int]] = []
 
         with _backlog_lock:
             for pair in received_pairs:
@@ -1157,12 +1113,16 @@ class BatchFetcher:
                     )
 
                 _backlog.pop(pair, None)
+                _requires_backfill.discard(pair)
 
             for pair in missed_pairs:
                 count = _backlog.get(pair, 0) + 1
 
                 if count <= MAX_BACKLOG_BATCHES:
                     _backlog[pair] = count
+
+                    if MAX_MISS_RETRIES > 0 and count % MAX_MISS_RETRIES == 0:
+                        repeated_miss_alerts.append((pair, count))
 
                     logger.info(
                         "%s",
@@ -1209,6 +1169,24 @@ class BatchFetcher:
                     )
 
                     _backlog.pop(pair, None)
+                    _requires_backfill.add(pair)
+
+        for (symbol_id, tf_code), count in repeated_miss_alerts:
+            symbol_name = _sym_name.get(symbol_id, str(symbol_id))
+            logger.warning(
+                "[MISS] %s [%s] missed %d batch(es) in a row - sending alert.",
+                symbol_name,
+                tf_code,
+                count,
+            )
+            _send_alert(
+                "WARNING",
+                "Live feed is missing repeated candles\n"
+                f"Pair: {symbol_name}/{tf_code}\n"
+                f"Repeated misses: {count} live batches\n"
+                "Suggested action: check TradingView availability for this pair, "
+                "then run historical backfill if a gap remains.",
+            )
 
         with _backlog_lock:
             backlog_snap = dict(_backlog)
