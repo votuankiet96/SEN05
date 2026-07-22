@@ -47,6 +47,48 @@ class _OneRowConnection:
         pass
 
 
+class _RecordingCursor:
+    def __init__(self, rows):
+        self.rows = rows
+        self.sql = ""
+
+    def execute(self, sql, *args):
+        self.sql = sql
+        return self
+
+    def fetchall(self):
+        return self.rows
+
+
+class _RecordingConnection:
+    def __init__(self, rows):
+        self.cursor_instance = _RecordingCursor(rows)
+        self.closed = False
+
+    def cursor(self):
+        return self.cursor_instance
+
+    def close(self):
+        self.closed = True
+
+
+def test_get_latest_bars_uses_bounded_index_seeks_not_full_fact_aggregate(monkeypatch):
+    conn = _RecordingConnection([(81, "M5", "2026-07-22 02:30:00")])
+    monkeypatch.setattr(reader, "get_connection", lambda: conn)
+
+    result = reader.get_latest_bars()
+
+    sql = " ".join(conn.cursor_instance.sql.split()).upper()
+    assert result == {(81, "M5"): "2026-07-22 02:30:00"}
+    assert "CROSS APPLY" in sql
+    assert "TOP (1)" in sql
+    assert "INDEX(IX_FACT_SYM_TF_TIME)" in sql
+    assert "ORDER BY F.BARTIME DESC" in sql
+    assert "OPTION (MAXDOP 1, RECOMPILE)" in sql
+    assert "MAX(F.BARTIME)" not in sql
+    assert conn.closed is True
+
+
 def test_get_internal_gaps_raises_instead_of_swallowing_sql_failure(monkeypatch):
     monkeypatch.setattr(reader, "get_connection", lambda: _FailingConnection())
 

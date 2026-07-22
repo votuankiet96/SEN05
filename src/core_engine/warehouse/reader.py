@@ -21,10 +21,17 @@ def get_latest_bars() -> dict:
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT f.SymbolID, tf.Code, MAX(f.BarTime) AS LastBar
-            FROM DWH.Fact_OHLCV f
-            JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID
-            GROUP BY f.SymbolID, tf.Code
+            SELECT s.SymbolID, tf.Code, latest.LastBar
+            FROM DWH.Dim_Symbol s
+            CROSS JOIN DWH.Dim_Timeframe tf
+            CROSS APPLY (
+                SELECT TOP (1) f.BarTime AS LastBar
+                FROM DWH.Fact_OHLCV f WITH (INDEX(IX_Fact_Sym_TF_Time))
+                WHERE f.SymbolID = s.SymbolID
+                  AND f.TimeframeID = tf.TimeframeID
+                ORDER BY f.BarTime DESC
+            ) latest
+            OPTION (MAXDOP 1, RECOMPILE)
         """)
         return {(row[0], row[1]): row[2] for row in cursor.fetchall()}
     finally:
