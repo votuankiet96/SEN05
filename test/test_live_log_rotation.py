@@ -16,7 +16,7 @@ import logging
 
 import pytest
 
-import core_engine.core.live.logging_support as live_logging
+import core_engine.core.live.telemetry as live_logging
 from core_engine.util.logkit.handlers import ResilientRotatingFileHandler
 
 

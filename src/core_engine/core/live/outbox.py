@@ -24,7 +24,7 @@ A row moves through three states:
   pointing at the fact that Fact_OHLCV is still missing that data,
   because the in-memory deferred-ETL retry state (live.runtime._deferred_etl)
   does not survive a crash. Keeping the row 'staged' until Fact commit
-  succeeds means a crash at that exact point is recoverable: LiveSpool.init()
+  succeeds means a crash at that exact point is recoverable: LiveOutbox.init()
   resets any leftover 'staged' rows back to 'pending' on the next startup,
   so they re-enter the normal pending -> leased -> staged -> ack cycle
   (safe/idempotent: insert_staging_batch's MERGE is a no-op for unchanged
@@ -36,7 +36,7 @@ resort overflow buffer, and its own flush_to_queue() deleted a row the
 moment it was handed to the in-memory queue - before that data was
 actually durable in SQL Server. A crash between that delete and a
 successful staging commit lost the candle permanently. See
-test/test_spool.py for fault-injection coverage of the crash points this
+test/test_live_outbox.py for fault-injection coverage of the crash points this
 design is meant to survive.
 """
 
@@ -58,7 +58,7 @@ PAYLOAD_MARKER = "__sen05_spool_payload__"
 DEFAULT_LEASE_SECONDS = 120
 
 
-class LiveSpool:
+class LiveOutbox:
     """Disk-backed durable outbox: every live OHLCV batch passes through here."""
 
     def __init__(

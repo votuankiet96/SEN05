@@ -1,6 +1,6 @@
 """Shared fixed-width table cell/key-value helpers for operator reports.
 
-`core_engine.core.live.reporter` and `core_engine.core.historical.reporter`
+`core_engine.core.live.telemetry` and `core_engine.core.historical.reporter`
 used to each define their own byte-identical `_cell`/`_kv` helpers; this
 module is the single source of truth for both.
 """

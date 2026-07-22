@@ -7,7 +7,7 @@ and startup/shutdown sequence) imports from this module rather than the
 other way around, so this module has no dependency on `engine`.
 
 Most of what's here is a mutable *container* (dict, list, Queue, Lock,
-Event, or a stateful object like LiveSpool) - those are safe to import by
+Event, or a stateful object like LiveOutbox) - those are safe to import by
 name (`from core_engine.core.live.runtime import _stats`) because callers mutate
 what the name points to, they never reassign the name itself.
 
@@ -17,7 +17,7 @@ A handful of plain scalars ARE reassigned at runtime
 `_tv_connectivity_last_error`). Python's `from module import name` binds a
 snapshot for those, not a live reference, so callers outside this module
 must go through the module object (`from core_engine.core.live import runtime`
-then `state._candle_table_rows = ...`) to see/make updates correctly.
+then `runtime._candle_table_rows = ...`) to see/make updates correctly.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ from collections.abc import Mapping
 from datetime import datetime
 from typing import Callable
 
-from core_engine.core.live.spool import LiveSpool
+from core_engine.core.live.outbox import LiveOutbox
 from core_engine.settings import (
     LIVE,
     OVERNIGHT_GAP_MINUTES,
@@ -72,8 +72,8 @@ _deferred_lock = threading.Lock()
 # The staging writer and Fact loader are deliberately separate workers.  The
 # metadata map lets the Fact worker report the original batch only after the
 # exact staged outbox row has crossed the Fact commit boundary.  The durable
-# source of truth remains LiveSpool; this map is only in-process bookkeeping
-# and may safely disappear on a crash because LiveSpool.init() requeues staged
+# source of truth remains LiveOutbox; this map is only in-process bookkeeping
+# and may safely disappear on a crash because LiveOutbox.init() requeues staged
 # rows on the replacement process.
 _etl_item_meta: dict[int, dict] = {}
 
@@ -179,7 +179,7 @@ _overflow_lock = threading.Lock()
 
 _db_queue: queue.Queue = queue.Queue(maxsize=LIVE.db_queue_maxsize)
 
-_spool = LiveSpool(WS_OVERFLOW_SPOOL, max_rows=LIVE.max_spool_rows, logger=logger)
+_spool = LiveOutbox(WS_OVERFLOW_SPOOL, max_rows=LIVE.max_spool_rows, logger=logger)
 
 _spool_pending = threading.Event()
 

@@ -24,8 +24,8 @@ from types import SimpleNamespace
 import pytest
 
 from core_engine.core.live import engine as live_engine
-from core_engine.core.live import batch_fetcher
-from core_engine.core.live.batch_fetcher import BatchFetcher, _claim_ws_callback_stall_fault
+from core_engine.core.live import fetcher
+from core_engine.core.live.fetcher import BatchFetcher, _claim_ws_callback_stall_fault
 from core_engine.core.live.engine import (
     LiveProcessRecycleRequired,
     _classify_group_batch_outcomes,
@@ -39,7 +39,7 @@ def isolated_shutdown(monkeypatch):
     level singleton, and is guaranteed stoppable at teardown."""
     event = threading.Event()
     monkeypatch.setattr(live_engine, "_shutdown", event)
-    monkeypatch.setattr(batch_fetcher, "_shutdown", event)
+    monkeypatch.setattr(fetcher, "_shutdown", event)
     yield event
     event.set()
 
@@ -113,8 +113,8 @@ def test_abandoned_batch_cancels_retry_backoff_and_never_retries_late(monkeypatc
         first_attempt_finished.set()
         return False
 
-    monkeypatch.setattr(batch_fetcher, "BATCH_MAX_RETRIES", 3)
-    monkeypatch.setattr(batch_fetcher, "RECONNECT_BASE_SEC", 60)
+    monkeypatch.setattr(fetcher, "BATCH_MAX_RETRIES", 3)
+    monkeypatch.setattr(fetcher, "RECONNECT_BASE_SEC", 60)
     g = _start_group_with_stub_fetch(monkeypatch, 4, _incomplete_fetch)
 
     assert g.request_batch(17) is True
@@ -162,7 +162,7 @@ def test_worker_survives_fetch_exception_and_keeps_answering_future_batches(monk
     # request so the first request_batch() call observes the exception
     # directly rather than being swallowed by _fetch_with_retry's own
     # retry loop.
-    monkeypatch.setattr(batch_fetcher, "BATCH_MAX_RETRIES", 1)
+    monkeypatch.setattr(fetcher, "BATCH_MAX_RETRIES", 1)
 
     g = _start_group_with_stub_fetch(monkeypatch, 2, _flaky_fetch)
 
@@ -305,8 +305,8 @@ def test_fetch_marks_process_recycle_when_socket_thread_survives_force_close(
         def close(self):
             return None
 
-    monkeypatch.setattr(batch_fetcher.websocket, "WebSocketApp", _FakeWebSocketApp)
-    monkeypatch.setattr(batch_fetcher, "WS_THREAD_JOIN_GRACE_SEC", 0.01)
+    monkeypatch.setattr(fetcher.websocket, "WebSocketApp", _FakeWebSocketApp)
+    monkeypatch.setattr(fetcher, "WS_THREAD_JOIN_GRACE_SEC", 0.01)
     g = BatchFetcher(6, [])
 
     try:
@@ -347,7 +347,7 @@ def test_wedged_batch_raises_fatal_recycle_signal(monkeypatch, isolated_shutdown
 
 
 def test_controlled_socket_stall_marker_is_exact_and_one_shot(monkeypatch, tmp_path):
-    monkeypatch.setattr(batch_fetcher, "RUN_DIR", tmp_path)
+    monkeypatch.setattr(fetcher, "RUN_DIR", tmp_path)
     marker = tmp_path / "fault_inject_ws_callback_stall_g2.request"
 
     marker.write_text("not-authorized", encoding="utf-8")

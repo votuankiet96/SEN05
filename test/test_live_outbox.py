@@ -1,4 +1,4 @@
-"""Tests for core_engine.core.live.spool.LiveSpool - the durable write-ahead
+"""Tests for core_engine.core.live.outbox.LiveOutbox - the durable write-ahead
 outbox every live OHLCV candle passes through before it is ever placed on
 the in-memory dispatch queue (see live/engine.py's _enqueue_or_buffer).
 
@@ -14,7 +14,7 @@ This file fault-injects the crash points the user asked to cover, against
 the real ack boundary: a row is only acked (deleted) once BOTH
 insert_staging_batch AND run_etl_direct have succeeded for it - not after
 staging alone. A row that is durably staged but still awaiting its Fact
-commit sits in a third state, 'staged' (see LiveSpool's module docstring),
+commit sits in a third state, 'staged' (see LiveOutbox's module docstring),
 which is excluded from lease_batch() so it is never re-staged, but is also
 NOT acked - so a crash at any point up through a successful Fact commit is
 recoverable:
@@ -44,14 +44,14 @@ import sys
 import pandas as pd
 import pytest
 
-from core_engine.core.live.spool import PAYLOAD_MARKER, LiveSpool
+from core_engine.core.live.outbox import PAYLOAD_MARKER, LiveOutbox
 
 
 @pytest.fixture
 def spool(tmp_path):
     log = logging.getLogger("test_spool")
     log.addHandler(logging.NullHandler())
-    s = LiveSpool(tmp_path / "spool.db", max_rows=3, logger=log)
+    s = LiveOutbox(tmp_path / "spool.db", max_rows=3, logger=log)
     s.init()
     return s
 
@@ -64,12 +64,12 @@ def _sample_item(batch_id=1, symbol_id=101, tf_code="M5"):
     return (batch_id, symbol_id, tf_code, "SEN.TF_M5", "EURUSD", df)
 
 
-def _reopen(spool: LiveSpool) -> LiveSpool:
-    """Simulate a process restart: a fresh LiveSpool instance pointed at
+def _reopen(spool: LiveOutbox) -> LiveOutbox:
+    """Simulate a process restart: a fresh LiveOutbox instance pointed at
     the same on-disk file, with no in-memory state carried over."""
     log = logging.getLogger("test_spool_reopened")
     log.addHandler(logging.NullHandler())
-    fresh = LiveSpool(spool.path, max_rows=spool.max_rows, logger=log)
+    fresh = LiveOutbox(spool.path, max_rows=spool.max_rows, logger=log)
     fresh.init()
     return fresh
 
@@ -311,14 +311,14 @@ def test_decode_payload_rejects_wrong_version():
         protocol=pickle.HIGHEST_PROTOCOL,
     )
     with pytest.raises(ValueError, match="unsupported spool payload version"):
-        LiveSpool._decode_payload(bad_blob, payload_version=999)
+        LiveOutbox._decode_payload(bad_blob, payload_version=999)
 
 
 def test_decode_payload_rejects_legacy_bare_object_at_version_0():
     df = pd.DataFrame({"open": [3.0]})
     bare_blob = pickle.dumps(df, protocol=pickle.HIGHEST_PROTOCOL)
     with pytest.raises(ValueError, match="missing spool payload envelope"):
-        LiveSpool._decode_payload(bare_blob, payload_version=0)
+        LiveOutbox._decode_payload(bare_blob, payload_version=0)
 
 
 # --- cleanup_old must never expire an un-acked row ------------------------
@@ -377,7 +377,7 @@ def test_count_returns_none_when_db_file_is_unreachable(tmp_path):
     log.addHandler(logging.NullHandler())
     # A directory path where a file is expected makes sqlite3.connect fail.
     bogus_path = tmp_path / "not_a_real_dir" / "sub" / "spool.db"
-    s = LiveSpool(bogus_path, max_rows=10, logger=log)
+    s = LiveOutbox(bogus_path, max_rows=10, logger=log)
     assert s.count() is None
 
 
@@ -398,7 +398,7 @@ def test_process_death_mid_state_transaction_rolls_back_and_restart_recovers(spo
     """Exercise a real process death between the state UPDATE and COMMIT.
 
     SQLite must either commit the whole ``leased -> staged`` transition or
-    retain the previous ``leased`` row.  ``LiveSpool.init()`` deliberately
+    retain the previous ``leased`` row.  ``LiveOutbox.init()`` deliberately
     resets both possible states, so neither side of that atomic boundary can
     strand or lose the candle.
     """

@@ -8,12 +8,12 @@ from datetime import datetime, timezone
 
 from core_engine.core.live import runtime as _runtime
 from core_engine.core.live.runtime import record_db_result as _record_db_result
-from core_engine.core.live.logging_support import (
+from core_engine.core.live.telemetry import (
     log_candle_row as _log_candle_row,
     logger,
     operation_line as _llog,
 )
-from core_engine.core.live.reporter import live_db_line
+from core_engine.core.live.telemetry import live_db_line
 from core_engine.core.live.runtime import (
     _DEFERRED_ETL_MAX,
     _DEFERRED_ETL_WARN,

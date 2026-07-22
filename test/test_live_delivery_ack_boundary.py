@@ -1,6 +1,6 @@
 """Integration-level checks for live engine's staging -> Fact ack boundary.
 
-The lower-level spool tests cannot prove where ``_db_worker`` calls ack. These
+The lower-level outbox tests cannot prove where the delivery worker calls ack. These
 tests execute one real worker iteration with fault-injected SQL functions so a
 regression that moves ack before ``run_etl_direct`` fails deterministically.
 """
@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 
-from core_engine.core.live import db_worker
+from core_engine.core.live import delivery as db_worker
 
 
 class _RecordingSpool:
@@ -91,7 +91,7 @@ def _run_one_worker_item(monkeypatch, *, etl_raises: bool):
     return events
 
 
-def test_db_worker_acks_only_after_fact_commit(monkeypatch):
+def test_delivery_worker_acks_only_after_fact_commit(monkeypatch):
     events = _run_one_worker_item(monkeypatch, etl_raises=False)
 
     names = [event[0] for event in events]

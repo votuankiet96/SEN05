@@ -58,7 +58,7 @@ from core_engine.settings import (
     WS_LIVE_STATE,
 )
 
-from core_engine.core.live.logging_support import (
+from core_engine.core.live.telemetry import (
     log_block as _log_block,
     log_report_block as _log_report_block,
     log_report_text as _log_report_text,
@@ -72,7 +72,8 @@ from core_engine.core.live.logging_support import (
     summarize_pair_counts as _summarize_pair_counts,
     write_live_summary as _write_live_summary,
 )
-from core_engine.core.live.db_worker import (
+from core_engine.core.live.scheduler import run_aligned_schedule
+from core_engine.core.live.delivery import (
     _db_worker,
     _etl_worker,
     _fact_backlog_size,
@@ -80,8 +81,8 @@ from core_engine.core.live.db_worker import (
     _report_db_worker_stopped_at_shutdown,
     _wait_for_queue_drain,
 )
-from core_engine.core.live.batch_fetcher import BatchFetcher
-from core_engine.core.live.reporter import (
+from core_engine.core.live.fetcher import BatchFetcher
+from core_engine.core.live.telemetry import (
     live_next_batch_block,
     live_start_block,
 )
@@ -908,72 +909,53 @@ def _on_batch_complete(
             ),
         )
 
-def _seconds_until_next_boundary(interval_minutes: int) -> float:
-    now = datetime.now()
+def _prepare_live_batch() -> None:
+    _tv_auth.check_and_refresh(logger)
+    _tv_auth.ensure_cookie_fresh(logger)
+    _refresh_watermarks_from_fact("pre-batch")
 
-    elapsed = (now.minute % interval_minutes) * 60 + now.second + now.microsecond / 1_000_000
 
-    wait = interval_minutes * 60 - elapsed
+def _report_batch_wait(wait: float) -> None:
+    _log_report_text(
+        logging.INFO,
+        live_next_batch_block(
+            wait_seconds=round(wait),
+            interval_minutes=BATCH_INTERVAL_MIN,
+        ),
+    )
+    connectivity_cooldown = bool(
+        _runtime._tv_connectivity_block_until
+        and time.time() < float(_runtime._tv_connectivity_block_until)
+    )
+    blocked_until = (
+        datetime.fromtimestamp(
+            _runtime._tv_connectivity_block_until,
+            tz=timezone.utc,
+        ).isoformat()
+        if connectivity_cooldown
+        else None
+    )
+    _write_live_state(
+        status="network_blocked" if connectivity_cooldown else "waiting",
+        next_batch_in_sec=round(wait, 3),
+        next_batch_after=_utc_iso(),
+        blocked_until=blocked_until,
+        network_error=(
+            _runtime._tv_connectivity_last_error if connectivity_cooldown else None
+        ),
+        batch_started_at=None,
+        batch_group_timeout_sec=None,
+    )
 
-    return wait if wait > 5 else interval_minutes * 60
 
 def _batch_loop(groups: list[BatchFetcher]) -> None:
-    if not _shutdown.is_set():
-        _tv_auth.check_and_refresh(logger)
-
-        _tv_auth.ensure_cookie_fresh(logger)
-
-        _refresh_watermarks_from_fact("pre-batch")
-
-        _run_batch(groups)
-
-    while not _shutdown.is_set():
-        wait = _seconds_until_next_boundary(BATCH_INTERVAL_MIN)
-
-        _log_report_text(
-            logging.INFO,
-            live_next_batch_block(
-                wait_seconds=round(wait),
-                interval_minutes=BATCH_INTERVAL_MIN,
-            ),
-        )
-
-        connectivity_cooldown = (
-            bool(_runtime._tv_connectivity_block_until)
-
-            and time.time() < float(_runtime._tv_connectivity_block_until)
-        )
-
-        blocked_until = (
-            datetime.fromtimestamp(_runtime._tv_connectivity_block_until, tz=timezone.utc).isoformat()
-
-            if connectivity_cooldown
-
-            else None
-        )
-
-        _write_live_state(
-            status="network_blocked" if connectivity_cooldown else "waiting",
-            next_batch_in_sec=round(wait, 3),
-            next_batch_after=_utc_iso(),
-            blocked_until=blocked_until,
-            network_error=_runtime._tv_connectivity_last_error if connectivity_cooldown else None,
-            batch_started_at=None,
-            batch_group_timeout_sec=None,
-        )
-
-        _shutdown.wait(wait)
-
-        if _shutdown.is_set():
-            break
-
-        _tv_auth.check_and_refresh(logger)
-
-        _tv_auth.ensure_cookie_fresh(logger)
-
-        _refresh_watermarks_from_fact("pre-batch")
-
-        _run_batch(groups)
+    run_aligned_schedule(
+        shutdown=_shutdown,
+        interval_minutes=BATCH_INTERVAL_MIN,
+        prepare_batch=_prepare_live_batch,
+        run_batch=lambda: _run_batch(groups),
+        report_wait=_report_batch_wait,
+    )
 
 def _status_reporter() -> None:
     while not _shutdown.wait(STATUS_INTERVAL_SEC):
