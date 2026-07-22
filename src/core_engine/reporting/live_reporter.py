@@ -357,14 +357,6 @@ class LiveReporter:
         return "healthy"
 
     @staticmethod
-    def _headline_status(result: str) -> str:
-        if result == "failed":
-            return "failed"
-        if result == "warning":
-            return "warning"
-        return "completed"
-
-    @staticmethod
     def _kv(label: str, value: str | int | None) -> str:
         text = "-" if value is None or value == "" else str(value)
         return f"{label:<14}: {text}"

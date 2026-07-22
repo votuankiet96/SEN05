@@ -90,10 +90,6 @@ class ReplayCrawlResult:
     error: str = ""
 
 
-class TradingViewWsHistoryError(RuntimeError):
-    """Raised when the TradingView WebSocket historical request fails."""
-
-
 def get_ws_interval_map() -> dict[str, str]:
     return dict(WS_INTERVALS)
 
@@ -158,15 +154,6 @@ def _to_utc_datetime(value: str | datetime) -> datetime:
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc)
-
-
-def _fmt_ts(value: datetime) -> str:
-    try:
-        if value.tzinfo is not None:
-            value = value.astimezone(timezone.utc)
-        return value.strftime("%Y-%m-%d %H:%M")
-    except Exception:
-        return str(value)
 
 
 def _bars_by_ts_to_df(bars_by_ts: dict[float, list[Any]]) -> pd.DataFrame | None:

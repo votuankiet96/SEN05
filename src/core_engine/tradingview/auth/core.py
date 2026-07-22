@@ -1152,66 +1152,6 @@ def _resolve_auth_token_refresh_paths_guarded(log: logging.Logger) -> tuple[str,
     return _resolve_auth_token_refresh_paths(log)
 
 
-def _renew_auth_token(lg: logging.Logger | None = None) -> None:
-    """
-    Gia hạn token khi TradingView báo lỗi xác thực giữa chừng.
-    Dùng lock để đảm bảo chỉ một thread thực hiện gia hạn tại một thời điểm.
-    """
-    global _auth_token
-    log = lg or _logger
-    with _auth_lock:
-        if _auth_token != GUEST_TOKEN:
-            return  # Thread khác đã gia hạn xong.
-
-        log.warning("[AUTH] Token refresh required - bootstrapping credentials.")
-        notify_auth_event(
-            severity="INFO",
-            title="TradingView session is expiring",
-            summary="The current TradingView session is near expiration. The system is refreshing it automatically.",
-            current_state={"access": "refreshing"},
-            data_result="No data loss is expected while refresh is in progress.",
-            health_risk="Low unless refresh fails in the next message.",
-            recommended_action="No action needed now.",
-            trace={"cache": "runtime/cache/tv_token_cache.json"},
-            result="refreshing",
-        )
-
-        new_token, source = _bootstrap_credentials(log)
-        if new_token == GUEST_TOKEN:
-            new_token, source = _resolve_auth_token(log)
-
-        _auth_token = new_token
-
-        if new_token != GUEST_TOKEN:
-            safe_source = safe_auth_source_label(source)
-            log.info("[AUTH] Token renewed successfully (source: %s).", safe_source)
-            notify_auth_event(
-                severity="INFO",
-                title="TradingView session refreshed during the run",
-                summary="TradingView access was renewed successfully.",
-                current_state={"source": safe_source, "access": "confirmed session"},
-                data_result="Live and historical jobs can continue with renewed access.",
-                health_risk="Low. Automatic refresh worked.",
-                recommended_action="No action needed.",
-                trace={"cache": "runtime/cache/tv_token_cache.json"},
-                result="refreshing",
-            )
-        else:
-            log.error("[AUTH] Token renewal failed - all groups will use guest access.")
-            notify_auth_event(
-                severity="ERROR",
-                title="TradingView session refresh failed",
-                summary="TradingView token renewal failed and the system is using limited access.",
-                current_state={"access": "guest / limited"},
-                data_result="Live or historical jobs may receive incomplete data.",
-                health_risk="High if the market is open or backfill is running.",
-                reason="Automatic token renewal could not obtain a valid token.",
-                recommended_action="Check TradingView credentials, browser profile, and network access, then rerun affected jobs.",
-                trace={"cache": "runtime/cache/tv_token_cache.json"},
-                result="failed",
-            )
-
-
 def _renew_auth_token_coordinated(
     lg: logging.Logger | None = None,
     *,

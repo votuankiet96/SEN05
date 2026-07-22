@@ -426,15 +426,6 @@ def _clean_title(text: str, level: str) -> str:
     return title[:250]
 
 
-def _description_from_text(text: str) -> str:
-    lines = text.splitlines()
-    first_idx = next((idx for idx, line in enumerate(lines) if line.strip()), None)
-    if first_idx is None:
-        return "No details."
-    rest = "\n".join(lines[first_idx + 1 :]).strip()
-    return rest or "No additional details."
-
-
 def _split_labeled_line(line: str) -> tuple[str, str] | None:
     if ":" not in line:
         return None
@@ -1173,6 +1164,3 @@ def notify_historical_event(*, severity: str, title: str, summary: str, **kwargs
 def notify_auth_event(*, severity: str, title: str, summary: str, **kwargs: Any) -> None:
     notify_operator_report(area="auth", severity=severity, title=title, summary=summary, **kwargs)
 
-
-def notify_database_event(*, severity: str, title: str, summary: str, **kwargs: Any) -> None:
-    notify_operator_report(area="database", severity=severity, title=title, summary=summary, **kwargs)
