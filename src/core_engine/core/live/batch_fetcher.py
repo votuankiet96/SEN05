@@ -13,7 +13,7 @@ from pathlib import Path
 import websocket
 
 from core_engine.core.live import runtime as _runtime
-from core_engine.core.live.batch_metrics import record_accepted as _record_batch_accepted
+from core_engine.core.live.runtime import record_accepted as _record_batch_accepted
 from core_engine.core.live.db_worker import (
     _enqueue_or_buffer,
     _fmt_bar_time_utc,

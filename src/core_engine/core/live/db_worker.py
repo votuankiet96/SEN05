@@ -7,7 +7,7 @@ import time
 from datetime import datetime, timezone
 
 from core_engine.core.live import runtime as _runtime
-from core_engine.core.live.batch_metrics import record_db_result as _record_db_result
+from core_engine.core.live.runtime import record_db_result as _record_db_result
 from core_engine.core.live.logging_support import (
     log_candle_row as _log_candle_row,
     logger,

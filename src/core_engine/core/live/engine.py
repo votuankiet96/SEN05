@@ -72,10 +72,6 @@ from core_engine.core.live.logging_support import (
     summarize_pair_counts as _summarize_pair_counts,
     write_live_summary as _write_live_summary,
 )
-from core_engine.core.live.batch_metrics import (
-    init_batch as _init_batch_metrics,
-    wait_for_db as _wait_for_batch_db,
-)
 from core_engine.core.live.db_worker import (
     _db_worker,
     _etl_worker,
@@ -121,6 +117,8 @@ from core_engine.core.live.runtime import (
     _stats,
     _tradingview_connectivity_ok,
     _write_live_state,
+    init_batch_metrics as _init_batch_metrics,
+    wait_for_batch_db as _wait_for_batch_db,
 )
 from core_engine.shared.time import as_utc_timestamp, utc_iso as _utc_iso
 

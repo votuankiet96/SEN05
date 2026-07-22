@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import threading
 
-from core_engine.core.live import batch_metrics
+from core_engine.core.live import runtime
 
 
 def test_batch_metrics_tracks_acceptance_and_database_delivery(monkeypatch):
@@ -14,19 +14,19 @@ def test_batch_metrics_tracks_acceptance_and_database_delivery(monkeypatch):
         "pair_bars": {},
         "pair_staging": {},
     }
-    monkeypatch.setattr(batch_metrics, "_batch_metrics", metrics)
-    monkeypatch.setattr(batch_metrics, "_stats", stats)
-    monkeypatch.setattr(batch_metrics, "_hourly_stats", hourly)
-    monkeypatch.setattr(batch_metrics, "_batch_metrics_lock", threading.Lock())
-    monkeypatch.setattr(batch_metrics, "_state_lock", threading.Lock())
-    monkeypatch.setattr(batch_metrics, "_hourly_lock", threading.Lock())
+    monkeypatch.setattr(runtime, "_batch_metrics", metrics)
+    monkeypatch.setattr(runtime, "_stats", stats)
+    monkeypatch.setattr(runtime, "_hourly_stats", hourly)
+    monkeypatch.setattr(runtime, "_batch_metrics_lock", threading.Lock())
+    monkeypatch.setattr(runtime, "_state_lock", threading.Lock())
+    monkeypatch.setattr(runtime, "_hourly_lock", threading.Lock())
 
     key = (11, "M5")
-    batch_metrics.init_batch(7)
-    batch_metrics.record_accepted(7, key, 3)
-    batch_metrics.record_db_result(7, key, 3, 2, 2)
+    runtime.init_batch_metrics(7)
+    runtime.record_accepted(7, key, 3)
+    runtime.record_db_result(7, key, 3, 2, 2)
 
-    snapshot = batch_metrics.snapshot(7)
+    snapshot = runtime.snapshot_batch_metrics(7)
     assert snapshot["accepted"] == 3
     assert snapshot["db_processed"] == 3
     assert snapshot["staging_rows"] == 2
