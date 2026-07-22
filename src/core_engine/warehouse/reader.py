@@ -117,6 +117,9 @@ def get_internal_gaps(tf_codes: list, lookback_days: int = 60) -> dict:
     try:
         cursor.execute(
             f"""
+            DECLARE @Cutoff datetime2(7) = DATEADD(day, -?, SYSUTCDATETIME());
+            DECLARE @MinDateKey int = CONVERT(int, CONVERT(char(8), @Cutoff, 112));
+
             WITH ordered AS (
                 SELECT
                     f.SymbolID,
@@ -126,9 +129,10 @@ def get_internal_gaps(tf_codes: list, lookback_days: int = 60) -> dict:
                         PARTITION BY f.SymbolID, f.TimeframeID
                         ORDER BY f.BarTime
                     ) AS NextBarTime
-                FROM DWH.Fact_OHLCV f
+                FROM DWH.Fact_OHLCV f WITH (INDEX(IX_Fact_DateKey))
                 JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID
-                WHERE f.BarTime >= DATEADD(day, -?, GETUTCDATE())
+                WHERE f.DateKey >= @MinDateKey
+                  AND f.BarTime >= @Cutoff
                   AND tf.Code IN ({placeholders})
             )
             SELECT SymbolID, TFCode, BarTime, NextBarTime,
@@ -137,6 +141,7 @@ def get_internal_gaps(tf_codes: list, lookback_days: int = 60) -> dict:
             WHERE NextBarTime IS NOT NULL
               AND DATEDIFF(MINUTE, BarTime, NextBarTime) > 10
             ORDER BY SymbolID, TFCode, BarTime
+            OPTION (MAXDOP 1, RECOMPILE)
         """,
             [lookback_days] + list(tf_codes),
         )

@@ -101,6 +101,21 @@ def test_get_internal_gaps_empty_tf_codes_returns_empty_dict_without_querying():
     assert reader.get_internal_gaps([], lookback_days=7) == {}
 
 
+def test_get_internal_gaps_bounds_scan_by_date_index_and_serial_plan(monkeypatch):
+    conn = _RecordingConnection([(81, "M5", "2026-07-20", "2026-07-21", 1440)])
+    monkeypatch.setattr(reader, "get_connection", lambda: conn)
+
+    result = reader.get_internal_gaps(["M5"], lookback_days=2)
+
+    sql = " ".join(conn.cursor_instance.sql.split()).upper()
+    assert result == {(81, "M5"): [("2026-07-20", "2026-07-21", 1440)]}
+    assert "F.DATEKEY >= @MINDATEKEY" in sql
+    assert "F.BARTIME >= @CUTOFF" in sql
+    assert "INDEX(IX_FACT_DATEKEY)" in sql
+    assert "OPTION (MAXDOP 1, RECOMPILE)" in sql
+    assert conn.closed is True
+
+
 def test_fact_covers_window_true_only_when_largest_remaining_gap_is_within_limit(monkeypatch):
     monkeypatch.setattr(reader, "get_connection", lambda: _OneRowConnection((13, 5)))
     assert reader.fact_covers_window(
