@@ -1,4 +1,4 @@
-"""Tests for the Medium-15 fix in core_engine.core.live.engine: the candle-flow
+"""Tests for the live logging support candle-table rotation path.
 table (_append_live_table_text) writes directly to live_fetching.log via a
 raw file append, bypassing the ResilientRotatingFileHandler that
 `logger` (the same file) is configured with. Rotation only used to get
@@ -16,13 +16,13 @@ import logging
 
 import pytest
 
-import core_engine.core.live.engine as live_engine
+import core_engine.core.live.logging_support as live_logging
 from core_engine.util.logkit.handlers import ResilientRotatingFileHandler
 
 
 @pytest.fixture
 def isolated_live_logger(tmp_path, monkeypatch):
-    """Point live_engine.logger/WS_LOG_FILE at a throwaway rotating
+    """Point live_logging.logger/WS_LOG_FILE at a throwaway rotating
     handler + file instead of the real runtime log, so this test can grow
     the file past maxBytes without touching anything real."""
     log_file = tmp_path / "live_fetching.log"
@@ -33,14 +33,14 @@ def isolated_live_logger(tmp_path, monkeypatch):
     fake_logger.addHandler(handler)
     fake_logger.setLevel(logging.INFO)
 
-    monkeypatch.setattr(live_engine, "logger", fake_logger)
-    monkeypatch.setattr(live_engine, "WS_LOG_FILE", str(log_file))
+    monkeypatch.setattr(live_logging, "logger", fake_logger)
+    monkeypatch.setattr(live_logging, "WS_LOG_FILE", str(log_file))
     yield log_file
     fake_logger.handlers.clear()
 
 
 def test_live_log_rotating_handler_finds_the_attached_handler(isolated_live_logger):
-    handler = live_engine._live_log_rotating_handler()
+    handler = live_logging.live_log_rotating_handler()
     assert isinstance(handler, ResilientRotatingFileHandler)
 
 
@@ -52,7 +52,7 @@ def test_maybe_rotate_triggers_rollover_once_raw_appends_exceed_max_bytes(isolat
     with log_file.open("a", encoding="utf-8") as handle:
         handle.write("x" * 250 + "\n")
 
-    live_engine._maybe_rotate_live_log()
+    live_logging.maybe_rotate_live_log()
 
     rotated = tmp_path / "live_fetching.log.1"
     assert rotated.exists(), "doRollover() must have fired once the raw-appended file exceeded maxBytes"
@@ -65,7 +65,7 @@ def test_maybe_rotate_does_nothing_below_max_bytes(isolated_live_logger, tmp_pat
     with log_file.open("a", encoding="utf-8") as handle:
         handle.write("short\n")
 
-    live_engine._maybe_rotate_live_log()
+    live_logging.maybe_rotate_live_log()
 
     assert not (tmp_path / "live_fetching.log.1").exists()
 
@@ -73,5 +73,5 @@ def test_maybe_rotate_does_nothing_below_max_bytes(isolated_live_logger, tmp_pat
 def test_maybe_rotate_is_safe_with_no_rotating_handler_attached(monkeypatch):
     fake_logger = logging.getLogger("test_live_log_rotation_no_handler")
     fake_logger.handlers.clear()
-    monkeypatch.setattr(live_engine, "logger", fake_logger)
-    live_engine._maybe_rotate_live_log()  # must not raise
+    monkeypatch.setattr(live_logging, "logger", fake_logger)
+    live_logging.maybe_rotate_live_log()  # must not raise

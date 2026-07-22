@@ -37,9 +37,6 @@ sanitize_ssl_keylogfile()
 
 import websocket
 
-from core_engine.util.logkit.factory import get_logger
-from core_engine.util.logkit.handlers import ResilientRotatingFileHandler
-from core_engine.util.logkit.jsonl import append_jsonl_capped
 from core_engine.shared.warehouse.validation import validate_ohlcv_df
 from core_engine.util.coordination.locks import (
     acquire as _acquire_task_lock,
@@ -62,28 +59,36 @@ from core_engine.shared.warehouse.connection import get_connection, test_connect
 from core_engine.settings import (
     LIVE,
     STORAGE,
-    LIVE_SUMMARY_LOG,
     NOTIFICATION,
     SYMBOLS,
     SYMBOL_OVERNIGHT_MINS,
     TF_STAGING,
     TRADINGVIEW,
-    WS_LIVE_LOG,
     WS_LIVE_PID,
-    WS_LIVE_REPORT_LOG,
     WS_LIVE_STATE,
     RUN_DIR,
 )
 
 from core_engine.shared.tradingview import protocol as live_protocol
+from core_engine.core.live.logging_support import (
+    format_pair_label as _fmt_pair_label,
+    log_block as _log_block,
+    log_candle_row as _log_candle_row,
+    log_report_block as _log_report_block,
+    log_report_text as _log_report_text,
+    logger,
+    operation_line as _llog,
+    reporter as _reporter,
+    start_candle_table as _start_candle_table,
+    summarize_backlog as _summarize_backlog,
+    summarize_counts_by_symbol as _summarize_counts_by_symbol,
+    summarize_counts_by_tf as _summarize_counts_by_tf,
+    summarize_pair_counts as _summarize_pair_counts,
+    write_live_summary as _write_live_summary,
+)
 from core_engine.core.live.reporter import (
-    LiveReporter,
-    live_candle_header_refresh,
-    live_candle_section,
     live_db_line,
     live_next_batch_block,
-    log_live_block,
-    live_operation_line,
     live_start_block,
     live_tv_line,
 )
@@ -107,7 +112,6 @@ from core_engine.core.live import state as _state
 from core_engine.core.live.state import (
     BATCH_DB_REPORT_WAIT_SEC,
     MAX_BATCH_METRIC_HISTORY,
-    _CANDLE_HEADER_REPEAT_ROWS,
     _GUEST_ALERT_THRESHOLD,
     _DEFERRED_ETL_MAX,
     _DEFERRED_ETL_WARN,
@@ -117,7 +121,6 @@ from core_engine.core.live.state import (
     _backlog_lock,
     _batch_metrics,
     _batch_metrics_lock,
-    _candle_table_lock,
     _db_queue,
     _db_worker_done,
     _deferred_etl,
@@ -129,7 +132,6 @@ from core_engine.core.live.state import (
     _hourly_stats,
     _increment_data_error_counter,
     _last_bar_ts,
-    _live_table_file_lock,
     _missed_lock,
     _missed_pairs,
     _overflow_buf,
@@ -216,49 +218,6 @@ WS_SYMBOLS = _resolve_ws_symbols(SYMBOLS, LIVE.asset_types)
 
 _check_expected_live_symbol_count(len(WS_SYMBOLS), LIVE.expected_symbol_count, LIVE.asset_types)
 
-WS_LOG_FILE = str(WS_LIVE_LOG)
-
-logger = get_logger(
-    "live_fetching",
-    WS_LOG_FILE,
-    rotating=True,
-    utc=True,
-    pipe_format=True,
-    normalize_prefixes=True,
-)
-
-
-def _setup_message_only_file_logger(name: str, log_file) -> logging.Logger:
-    aux_logger = logging.getLogger(name)
-    if aux_logger.handlers:
-        return aux_logger
-    aux_logger.setLevel(logger.level)
-    aux_logger.propagate = False
-    os.makedirs(os.path.dirname(os.path.abspath(str(log_file))), exist_ok=True)
-    handler = ResilientRotatingFileHandler(
-        str(log_file),
-        maxBytes=10 * 1024 * 1024,
-        backupCount=5,
-        encoding="utf-8",
-    )
-    handler.setFormatter(logging.Formatter("%(message)s"))
-    aux_logger.addHandler(handler)
-    return aux_logger
-
-
-report_logger = get_logger(
-    "live_reports",
-    str(WS_LIVE_REPORT_LOG),
-    rotating=True,
-    console=False,
-    utc=True,
-    pipe_format=True,
-)
-
-
-def _llog(event: str, *details: str, **fields) -> str:
-    return live_operation_line(event, *details, **fields)
-
 _LOCAL_RUNTIME_LOCK_FILE = WS_LIVE_PID
 
 TV_BASE_URL = "wss://data.tradingview.com/socket.io/websocket"
@@ -321,122 +280,6 @@ WS_WATCH_KEYS = frozenset((sid, tf_code) for sid in WS_SYMBOL_IDS for tf_code in
 _SYMBOL_META_BY_ID = {s["symbol_id"]: s for s in WS_SYMBOLS}
 
 _SYMBOL_NAME_BY_ID = {sid: s["tv_symbol"] for sid, s in _SYMBOL_META_BY_ID.items()}
-
-_reporter = LiveReporter(logger, _SYMBOL_NAME_BY_ID)
-
-_report_file_reporter = LiveReporter(report_logger, _SYMBOL_NAME_BY_ID)
-
-
-def _log_report_block(title: str, lines: list[str], level: int = logging.INFO) -> None:
-    _append_live_table_text(_reporter.format_block(title, lines, level=level))
-    _report_file_reporter.log_block(title, lines, level)
-
-
-
-def _live_log_rotating_handler() -> logging.Handler | None:
-    for handler in logger.handlers:
-        if isinstance(handler, ResilientRotatingFileHandler):
-            return handler
-    return None
-
-
-def _maybe_rotate_live_log() -> None:
-    """Manually trigger the same size-based rollover _append_live_table_text's
-    raw file writes below would otherwise bypass entirely.
-
-    logger's ResilientRotatingFileHandler only ever checks maxBytes inside
-    its own emit() - i.e. only when a real logger.info()/warning()/etc.
-    call happens. The live candle-flow table (the majority of this file's
-    volume - a full table is appended per batch, per candle row) is
-    written via a separate raw path.open("a") append instead of through
-    the logger, so it never triggers that check. The size cap was
-    effectively unenforced for most of this file's actual growth: rollover
-    would only happen whenever the next unrelated logger.X() call
-    happened to fire, by which point the file could already be many times
-    over maxBytes. This re-checks after every raw append instead.
-    """
-    handler = _live_log_rotating_handler()
-    if handler is None:
-        return
-    try:
-        if handler.maxBytes > 0 and os.path.getsize(WS_LOG_FILE) >= handler.maxBytes:
-            # Acquire the handler's own lock before calling doRollover()
-            # directly - emit() normally holds this for the same reason
-            # (a concurrent logger.info() call from another thread must
-            # not race a rollover happening underneath it).
-            handler.acquire()
-            try:
-                handler.doRollover()
-            finally:
-                handler.release()
-    except Exception:
-        pass
-
-
-def _append_live_table_text(text: str) -> None:
-    block = str(text).strip("\n")
-    if not block:
-        return
-    try:
-        print(block, flush=True)
-    except Exception:
-        pass
-    try:
-        path = Path(WS_LOG_FILE)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with _live_table_file_lock:
-            with path.open("a", encoding="utf-8") as handle:
-                handle.write(block + "\n")
-            _maybe_rotate_live_log()
-    except Exception as exc:
-        logger.warning("Could not write live table log: %s", exc)
-
-def _log_block(level: int, text: str) -> None:
-    log_live_block(logger, level, text)
-
-
-def _log_report_text(level: int, text: str) -> None:
-    log_live_block(report_logger, level, text)
-
-
-def _log_candle_block(text: str) -> None:
-    _append_live_table_text(text)
-
-
-def _start_candle_table(batch_id: int) -> None:
-    with _candle_table_lock:
-        _state._candle_table_rows = 0
-    _log_candle_block(live_candle_section(batch_id))
-
-
-def _log_candle_row(line: str) -> None:
-    with _candle_table_lock:
-        if _state._candle_table_rows > 0 and _state._candle_table_rows % _CANDLE_HEADER_REPEAT_ROWS == 0:
-            _log_candle_block(live_candle_header_refresh())
-        _state._candle_table_rows += 1
-    _append_live_table_text(line)
-
-_fmt_pair_label = _reporter.pair_label
-
-_summarize_pair_counts = _reporter.pair_counts
-
-_summarize_counts_by_symbol = _reporter.counts_by_symbol
-
-_summarize_counts_by_tf = _reporter.counts_by_tf
-
-_summarize_backlog = _reporter.backlog
-
-
-def _write_live_summary(row: dict) -> None:
-    try:
-        # Size-capped instead of a bare unbounded append: an actively-
-        # written file's mtime never looks "old" to the age-based runtime
-        # retention job, so this file was growing forever otherwise - see
-        # core_engine.util.logkit.jsonl.
-        append_jsonl_capped(LIVE_SUMMARY_LOG, row)
-    except Exception as exc:
-        logger.warning("Could not write live batch summary: %s", exc)
-
 
 TV_WS_TIMEZONE = _live_settings.timezone
 
