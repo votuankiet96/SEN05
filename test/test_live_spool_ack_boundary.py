@@ -26,9 +26,9 @@ class _RecordingSpool:
     def mark_staged(self, row_id):
         self.events.append(("mark_staged", row_id))
 
-    def staged_ids_for_key(self, *_key):
+    def staged_snapshot_for_key(self, *_key):
         self.events.append(("snapshot",))
-        return [77]
+        return [77], "2026-07-21 10:00:00"
 
     def ack_staged_ids(self, row_ids):
         self.events.append(("ack", tuple(row_ids)))
@@ -65,8 +65,8 @@ def _run_one_worker_item(monkeypatch, *, etl_raises: bool):
         lambda *_a, **_k: events.append(("staging_commit",)) or 1,
     )
 
-    def _etl(*_args, **_kwargs):
-        events.append(("fact_commit_attempt",))
+    def _etl(*_args, **kwargs):
+        events.append(("fact_commit_attempt", kwargs.get("from_time")))
         if etl_raises:
             raise RuntimeError("fault injected inside usp_LoadDirect")
         return 1
@@ -91,6 +91,7 @@ def test_db_worker_acks_only_after_fact_commit(monkeypatch):
     names = [event[0] for event in events]
     assert names.index("staging_commit") < names.index("mark_staged")
     assert names.index("snapshot") < names.index("fact_commit_attempt") < names.index("ack")
+    assert ("fact_commit_attempt", "2026-07-21 10:00:00") in events
 
 
 def test_fault_inside_etl_never_acks_staged_outbox_row(monkeypatch):

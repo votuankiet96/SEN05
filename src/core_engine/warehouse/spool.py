@@ -48,6 +48,7 @@ import sqlite3
 import time
 import uuid
 from contextlib import closing
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -309,6 +310,55 @@ class LiveSpool:
                     (symbol_id, tf_code, staging_table, tv_symbol),
                 ).fetchall()
         return [int(row[0]) for row in rows]
+
+    def staged_snapshot_for_key(
+        self, symbol_id: int, tf_code: str, staging_table: str, tv_symbol: str
+    ) -> tuple[list[int], str | None]:
+        """Snapshot staged ids and the earliest candle covered by that snapshot.
+
+        ``usp_LoadDirect`` must receive the earliest candle from the exact
+        pre-ETL snapshot. Passing ``NULL`` makes the procedure scan staging
+        from 2008, which is both unnecessarily expensive and, under a live
+        backlog, can exhaust SQL Server workers. Using only the current RAM
+        item's timestamp is unsafe too: older rows may already be staged for
+        the same key and would then be acknowledged without being covered by
+        the procedure's source window.
+
+        The payload is decoded while holding the spool lock so the ids and
+        their lower timestamp boundary describe one atomic SQLite snapshot.
+        Corrupt payloads deliberately raise: callers must leave those rows
+        unacked rather than guess a boundary that could skip data.
+        """
+        with self._lock:
+            with closing(sqlite3.connect(self.path)) as con:
+                rows = con.execute(
+                    "SELECT id, payload_version, bar_data FROM spool "
+                    "WHERE status='staged' AND symbol_id=? AND tf_code=? "
+                    "AND staging_table=? AND tv_symbol=? ORDER BY id",
+                    (symbol_id, tf_code, staging_table, tv_symbol),
+                ).fetchall()
+
+                row_ids: list[int] = []
+                earliest: datetime | None = None
+                for row_id, payload_version, blob in rows:
+                    row_ids.append(int(row_id))
+                    df = self._decode_payload(blob, int(payload_version or 0))
+                    if df is None or getattr(df, "empty", True):
+                        continue
+                    candidate = min(df.index)
+                    if hasattr(candidate, "to_pydatetime"):
+                        candidate = candidate.to_pydatetime()
+                    if not isinstance(candidate, datetime):
+                        raise ValueError(
+                            f"Spool row {row_id} has a non-datetime candle index"
+                        )
+                    if candidate.tzinfo is not None:
+                        candidate = candidate.astimezone(timezone.utc).replace(tzinfo=None)
+                    if earliest is None or candidate < earliest:
+                        earliest = candidate
+
+        from_time = earliest.strftime("%Y-%m-%d %H:%M:%S") if earliest else None
+        return row_ids, from_time
 
     def ack_staged_ids(self, row_ids: list[int]) -> int:
         """Delete only the pre-ETL snapshot after Fact commit succeeds."""

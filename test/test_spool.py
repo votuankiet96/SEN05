@@ -461,3 +461,31 @@ def test_ack_exact_staged_ids_does_not_ack_row_staged_after_etl_snapshot(spool):
     assert spool.ack_staged_ids(covered_ids) == 1
     assert spool.count_staged_pending_fact() == 1
     assert spool.staged_ids_for_key(704, "M5", "SEN.TF_M5", "EURUSD") == [second]
+
+
+def test_staged_snapshot_uses_earliest_timestamp_from_exact_covered_rows(spool):
+    newer = pd.DataFrame(
+        {"open": [2.0], "close": [2.1]},
+        index=[pd.Timestamp("2026-07-22 02:05:00", tz="UTC")],
+    )
+    older = pd.DataFrame(
+        {"open": [1.0], "close": [1.1]},
+        index=[pd.Timestamp("2026-07-21 21:10:00")],
+    )
+    newer_id = spool.persist_pending(
+        (1, 704, "M5", "SEN.TF_M5", "EURUSD", newer)
+    )
+    older_id = spool.persist_pending(
+        (1, 704, "M5", "SEN.TF_M5", "EURUSD", older)
+    )
+    assert spool.claim_for_dispatch(newer_id) is True
+    spool.mark_staged(newer_id)
+    assert spool.claim_for_dispatch(older_id) is True
+    spool.mark_staged(older_id)
+
+    row_ids, from_time = spool.staged_snapshot_for_key(
+        704, "M5", "SEN.TF_M5", "EURUSD"
+    )
+
+    assert row_ids == [newer_id, older_id]
+    assert from_time == "2026-07-21 21:10:00"

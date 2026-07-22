@@ -828,6 +828,7 @@ def _run_etl_direct_with_retry(
     tv_symbol: str,
     *,
     context: str,
+    from_time: str | None,
 ) -> int:
     last_exc: Exception | None = None
 
@@ -840,6 +841,7 @@ def _run_etl_direct_with_retry(
                 staging_table,
                 source=source,
                 symbol=tv_symbol,
+                from_time=from_time,
             )
 
         except Exception as exc:
@@ -1418,7 +1420,7 @@ def _db_worker() -> None:
             fact_inserted = 0
 
             try:
-                covered_spool_ids = _spool.staged_ids_for_key(
+                covered_spool_ids, covered_from_time = _spool.staged_snapshot_for_key(
                     symbol_id, tf_code, staging_table, tv_symbol
                 )
                 fact_inserted = _run_etl_direct_with_retry(
@@ -1427,6 +1429,7 @@ def _db_worker() -> None:
                     staging_table,
                     tv_symbol,
                     context="live",
+                    from_time=covered_from_time,
                 )
 
             except Exception as exc:
@@ -1518,7 +1521,7 @@ def _db_worker() -> None:
                         continue
 
                     try:
-                        covered_spool_ids = _spool.staged_ids_for_key(
+                        covered_spool_ids, covered_from_time = _spool.staged_snapshot_for_key(
                             sym_id, tf_c, stg_tbl, sym_nm
                         )
                         fact_inserted = _run_etl_direct_with_retry(
@@ -1527,6 +1530,7 @@ def _db_worker() -> None:
                             stg_tbl,
                             sym_nm,
                             context="deferred",
+                            from_time=covered_from_time,
                         )
 
                         logger.info("%s", _llog("Delayed main table update completed", symbol=sym_nm, timeframe=tf_c, result="saved"))
@@ -1573,7 +1577,7 @@ def _db_worker() -> None:
                 defer_key = (sym_id, tf_c, stg_tbl, sym_nm)
 
                 try:
-                    covered_spool_ids = _spool.staged_ids_for_key(
+                    covered_spool_ids, covered_from_time = _spool.staged_snapshot_for_key(
                         sym_id, tf_c, stg_tbl, sym_nm
                     )
                     fact_inserted = _run_etl_direct_with_retry(
@@ -1582,6 +1586,7 @@ def _db_worker() -> None:
                         stg_tbl,
                         sym_nm,
                         context="shutdown",
+                        from_time=covered_from_time,
                     )
 
                     logger.info(
