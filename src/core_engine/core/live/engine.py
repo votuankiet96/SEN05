@@ -53,6 +53,7 @@ from core_engine.settings import (
     SYMBOLS,
     SYMBOL_OVERNIGHT_MINS,
     TRADINGVIEW,
+    WS_LIVE_LOG,
     WS_LIVE_PID,
     WS_LIVE_STATE,
 )

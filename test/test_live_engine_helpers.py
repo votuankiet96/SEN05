@@ -47,6 +47,14 @@ def test_is_token_error_false_when_keyword_absent():
     assert batch_fetcher._is_token_error("error", "connection reset") is False
 
 
+def test_live_main_notification_trace_paths_are_bound():
+    # main() builds startup/shutdown notification traces after background
+    # workers start. A missing import here raises before the smoke timer and
+    # leaves the non-daemon DB worker alive after the main stack unwinds.
+    assert live_engine.WS_LIVE_LOG.name == "live_fetching.log"
+    assert live_engine.WS_LIVE_STATE.name == "ws_live_state.json"
+
+
 def test_fmt_bar_time_utc_formats_epoch_seconds():
     # 2024-01-01 00:00:00 UTC
     assert db_worker._fmt_bar_time_utc(1704067200) == "00:00 UTC"
