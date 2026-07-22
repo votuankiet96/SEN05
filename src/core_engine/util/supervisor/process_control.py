@@ -20,10 +20,12 @@ import subprocess
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from core_engine.shared.time import utc_iso
+from core_engine.util.runtime_state import atomic_write_json as _atomic_write_json
+from core_engine.util.runtime_state import load_json as _load_json
 from core_engine.util.logkit.activity import log_activity
 from core_engine.util.logkit.factory import get_logger
 from core_engine.util.logkit.formatters import operation_line
@@ -315,40 +317,6 @@ class ManagedProcess:
             except Exception:
                 pass
             self.stdout_handle = None
-
-
-def utc_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def _load_json(path: Path) -> dict[str, Any]:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {}
-    except Exception:
-        return {}
-
-
-def _atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    data = json.dumps(payload, ensure_ascii=True, sort_keys=True, indent=2)
-    last_error: OSError | None = None
-    for attempt in range(6):
-        tmp = path.with_name(f"{path.name}.{os.getpid()}.{time.time_ns()}.tmp")
-        try:
-            tmp.write_text(data, encoding="utf-8")
-            tmp.replace(path)
-            return
-        except OSError as exc:
-            last_error = exc
-            try:
-                tmp.unlink(missing_ok=True)
-            except OSError:
-                pass
-            if attempt < 5:
-                time.sleep(min(0.05 * (2**attempt), 0.8))
-    if last_error is not None:
-        raise last_error
 
 
 def _mark_runtime_state_stopped(*, reason: str) -> None:

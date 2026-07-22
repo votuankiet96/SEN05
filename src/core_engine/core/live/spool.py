@@ -22,7 +22,7 @@ A row moves through three states:
   close still open on the live path - a crash between a successful
   staging commit and the Fact commit would have nothing durable left
   pointing at the fact that Fact_OHLCV is still missing that data,
-  because the in-memory deferred-ETL retry state (live.state._deferred_etl)
+  because the in-memory deferred-ETL retry state (live.runtime._deferred_etl)
   does not survive a crash. Keeping the row 'staged' until Fact commit
   succeeds means a crash at that exact point is recoverable: LiveSpool.init()
   resets any leftover 'staged' rows back to 'pending' on the next startup,

@@ -20,11 +20,13 @@ import ctypes
 import logging
 import os
 import socket
+import subprocess
 import threading
 import time
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, Callable
 
 try:
@@ -979,6 +981,97 @@ def cleanup_expired() -> int:
 
 def local_pid_alive(pid: int) -> bool:
     return _local_pid_alive(pid)
+
+
+class LocalProcessLock:
+    """Exclusive PID-file lock with stale-owner recovery.
+
+    On Windows, PID reuse is guarded by checking that the surviving process
+    command line contains one of the configured application markers.
+    """
+
+    def __init__(
+        self,
+        path: Path,
+        logger: logging.Logger,
+        *,
+        command_markers: tuple[str, ...] = (),
+    ) -> None:
+        self.path = path
+        self.logger = logger
+        self.command_markers = tuple(marker.lower() for marker in command_markers if marker)
+
+    def _pid_matches_owner(self, pid: int) -> bool:
+        if pid <= 0:
+            return False
+        if os.name == "nt" and self.command_markers:
+            try:
+                script = (
+                    '$p = Get-CimInstance Win32_Process -Filter "ProcessId=%d" '
+                    "-ErrorAction SilentlyContinue; "
+                    "if ($p) { $p.CommandLine }"
+                ) % int(pid)
+                result = subprocess.run(
+                    [
+                        "powershell.exe",
+                        "-NoProfile",
+                        "-ExecutionPolicy",
+                        "Bypass",
+                        "-Command",
+                        script,
+                    ],
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=5,
+                    check=False,
+                )
+                command_line = (result.stdout or "").strip().lower()
+                if not command_line:
+                    return False
+                return any(marker in command_line for marker in self.command_markers)
+            except Exception:
+                pass
+        return _local_pid_alive(pid)
+
+    def acquire(self) -> bool:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        while True:
+            try:
+                descriptor = os.open(str(self.path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                    handle.write(str(os.getpid()))
+                return True
+            except FileExistsError:
+                try:
+                    existing_pid = int(self.path.read_text(encoding="utf-8").strip())
+                except Exception:
+                    existing_pid = 0
+                if existing_pid and self._pid_matches_owner(existing_pid):
+                    self.logger.error(
+                        "[LOCK] Local process is already running (pid=%d). Startup aborted.",
+                        existing_pid,
+                    )
+                    return False
+                try:
+                    self.path.unlink()
+                except FileNotFoundError:
+                    continue
+                except Exception as exc:
+                    self.logger.error("[LOCK] Could not remove stale local runtime lock: %s", exc)
+                    return False
+
+    def release(self) -> None:
+        try:
+            existing_pid = int(self.path.read_text(encoding="utf-8").strip())
+        except Exception:
+            existing_pid = 0
+        if existing_pid == os.getpid():
+            try:
+                self.path.unlink()
+            except FileNotFoundError:
+                pass
 
 
 def cleanup_stale_lock(

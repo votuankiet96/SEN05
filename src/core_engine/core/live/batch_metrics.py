@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 
-from core_engine.core.live.state import (
+from core_engine.core.live.runtime import (
     BATCH_DB_REPORT_WAIT_SEC,
     MAX_BATCH_METRIC_HISTORY,
     _batch_metrics,

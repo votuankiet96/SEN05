@@ -87,7 +87,7 @@ def isolated_write_path(tmp_path, monkeypatch):
     monkeypatch.setattr(db_worker, "MAX_SPOOL_ROWS", 1)
     monkeypatch.setattr(live_engine, "_spool", small_spool)
     monkeypatch.setattr(live_engine, "MAX_SPOOL_ROWS", 1)
-    monkeypatch.setattr(live_engine._state, "spool_full_pause", False)
+    monkeypatch.setattr(live_engine._runtime, "spool_full_pause", False)
 
     with patch.object(db_worker, "_send_alert"):
         yield small_queue, small_overflow, small_spool
@@ -145,20 +145,20 @@ def test_enqueue_or_buffer_never_returns_a_bare_bool():
 
 def test_batch_is_blocked_proactively_when_spool_has_no_full_batch_capacity(isolated_write_path):
     _queue, _overflow, spool = isolated_write_path
-    assert live_engine._state.spool_full_pause is False
+    assert live_engine._runtime.spool_full_pause is False
     assert spool.persist_pending(_item("fill")) is not None
 
     # The old implementation returned False here until an enqueue was
     # actually rejected. Admission control must pause before accepting it.
     assert live_engine._spool_full_blocks_batch() is True
-    assert live_engine._state.spool_full_pause is True
+    assert live_engine._runtime.spool_full_pause is True
 
 
 def test_batch_resumes_after_reserved_spool_capacity_returns(isolated_write_path):
     _queue, _overflow, spool = isolated_write_path
     row_id = spool.persist_pending(_item("fill"))
-    live_engine._state.spool_full_pause = True
+    live_engine._runtime.spool_full_pause = True
     spool.ack(row_id)
 
     assert live_engine._spool_full_blocks_batch() is False
-    assert live_engine._state.spool_full_pause is False
+    assert live_engine._runtime.spool_full_pause is False

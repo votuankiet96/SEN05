@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from core_engine.shared.tradingview import auth as tv_auth
+from core_engine.shared.tradingview.diagnostics import playwright_browser_status
 from core_engine.shared.time import parse_utc_time as _parse_time
 from core_engine.util.supervisor.process_control import same_local_host
 from core_engine.settings import (
@@ -42,7 +43,6 @@ from core_engine.settings import (
     WS_OVERFLOW_SPOOL,
     ensure_runtime_dirs,
 )
-from core_engine.core.live.runtime_support import playwright_browser_status
 from core_engine.util.coordination.locks import (
     DP_PROGRAM_LOCK,
     HISTORICAL_JOB_LOCK,

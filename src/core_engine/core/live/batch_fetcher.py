@@ -12,7 +12,7 @@ from pathlib import Path
 
 import websocket
 
-from core_engine.core.live import state as _state
+from core_engine.core.live import runtime as _runtime
 from core_engine.core.live.batch_metrics import record_accepted as _record_batch_accepted
 from core_engine.core.live.db_worker import (
     _enqueue_or_buffer,
@@ -28,8 +28,7 @@ from core_engine.core.live.logging_support import (
     summarize_counts_by_tf as _summarize_counts_by_tf,
 )
 from core_engine.core.live.reporter import live_tv_line
-from core_engine.core.live.runtime_support import future_cutoff_ts as _future_cutoff_ts
-from core_engine.core.live.state import (
+from core_engine.core.live.runtime import (
     _backlog,
     _backlog_lock,
     _db_queue,
@@ -46,6 +45,7 @@ from core_engine.core.live.state import (
     _stats,
     _ws_cooldown_lock,
 )
+from core_engine.shared.time import future_cutoff_ts as _future_cutoff_ts
 from core_engine.settings import LIVE, RUN_DIR, SYMBOLS, TF_STAGING
 from core_engine.shared.tradingview import auth as _tv_auth
 from core_engine.shared.tradingview import history_client as _tv_ws_history
@@ -107,9 +107,9 @@ def _set_ws_cooldown(seconds: int, reason: str) -> None:
     until = time.time() + seconds
     notify = False
     with _ws_cooldown_lock:
-        if until > _state._ws_cooldown_until + 5:
-            _state._ws_cooldown_until = until
-            _state._ws_cooldown_reason = reason
+        if until > _runtime._ws_cooldown_until + 5:
+            _runtime._ws_cooldown_until = until
+            _runtime._ws_cooldown_reason = reason
             notify = True
     if notify:
         logger.warning(
@@ -131,8 +131,8 @@ def _set_ws_cooldown(seconds: int, reason: str) -> None:
 
 def _wait_for_ws_cooldown(label: str) -> None:
     with _ws_cooldown_lock:
-        remaining = max(0.0, _state._ws_cooldown_until - time.time())
-        reason = _state._ws_cooldown_reason
+        remaining = max(0.0, _runtime._ws_cooldown_until - time.time())
+        reason = _runtime._ws_cooldown_reason
     if remaining <= 0:
         return
     logger.warning(

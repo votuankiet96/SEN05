@@ -34,6 +34,7 @@ sanitize_ssl_keylogfile()
 
 from core_engine.util.coordination.locks import (
     acquire as _acquire_task_lock,
+    cleanup_stale_lock,
     fetch_lock as _fetch_task_lock,
     is_locked as _is_task_locked,
     release as _release_task_lock,
@@ -89,18 +90,15 @@ from core_engine.core.live.reporter import (
     live_start_block,
 )
 from core_engine.util.redis_io.candle_snapshot import seed_candle_snapshots, set_recovery_callback
-from core_engine.core.live.runtime_support import (
-    as_utc_timestamp,
+from core_engine.core.live.runtime import (
     freshness_alert_threshold_minutes,
     freshness_threshold_minutes,
     is_market_expected_live,
-    cleanup_dead_runtime_lock,
     run_auth_preflight,
-    runtime_payload as make_runtime_payload,
-    utc_iso as _utc_iso,
+    runtime_payload,
 )
-from core_engine.core.live import state as _state
-from core_engine.core.live.state import (
+from core_engine.core.live import runtime as _runtime
+from core_engine.core.live.runtime import (
     _GUEST_ALERT_THRESHOLD,
     _backlog,
     _backlog_lock,
@@ -124,6 +122,7 @@ from core_engine.core.live.state import (
     _tradingview_connectivity_ok,
     _write_live_state,
 )
+from core_engine.shared.time import as_utc_timestamp, utc_iso as _utc_iso
 
 from core_engine.shared.tradingview import auth as _tv_auth
 
@@ -343,29 +342,25 @@ def _freshness_alert_threshold_minutes(symbol_id: int, tf_code: str) -> int:
     )
 
 def _cleanup_dead_ws_live_runtime_lock() -> bool:
-    return cleanup_dead_runtime_lock(
-        task_name="ws_live_runtime",
-        get_connection=get_connection,
-        logger=logger,
-    )
+    return cleanup_stale_lock("ws_live_runtime")
 
 _acquire_local_runtime_lock = _runtime_lock.acquire
 
 _release_local_runtime_lock = _runtime_lock.release
 
-_ws_live_runtime_payload = make_runtime_payload
+_ws_live_runtime_payload = runtime_payload
 
 def _update_guest_mode_counter(is_guest: bool) -> None:
 
     if is_guest:
-        _state._consecutive_guest_batches += 1
+        _runtime._consecutive_guest_batches += 1
 
-        if _state._consecutive_guest_batches >= _GUEST_ALERT_THRESHOLD:
+        if _runtime._consecutive_guest_batches >= _GUEST_ALERT_THRESHOLD:
             logger.error(
                 "%s",
                 _llog(
                     "TradingView limited login repeated",
-                    consecutive_batches=_state._consecutive_guest_batches,
+                    consecutive_batches=_runtime._consecutive_guest_batches,
                     risk="data_depth_may_be_limited",
                     result="warning",
                 ),
@@ -374,19 +369,19 @@ def _update_guest_mode_counter(is_guest: bool) -> None:
             _send_alert(
                 "WARNING",
                 "TradingView session is limited\n"
-                f"Consecutive live batches: {_state._consecutive_guest_batches}\n"
+                f"Consecutive live batches: {_runtime._consecutive_guest_batches}\n"
                 "Meaning: data depth may be limited or some premium symbols may not return enough candles.\n"
                 "Suggested action: refresh TradingView login if this repeats during market hours.",
             )
 
     else:
-        if _state._consecutive_guest_batches >= _GUEST_ALERT_THRESHOLD:
+        if _runtime._consecutive_guest_batches >= _GUEST_ALERT_THRESHOLD:
             logger.info(
                 "%s",
-                _llog("TradingView login recovered", previous_limited_batches=_state._consecutive_guest_batches, result="healthy"),
+                _llog("TradingView login recovered", previous_limited_batches=_runtime._consecutive_guest_batches, result="healthy"),
             )
 
-        _state._consecutive_guest_batches = 0
+        _runtime._consecutive_guest_batches = 0
 
 def _spool_full_blocks_batch() -> bool:
     """Pause unless the durable outbox can admit one complete live batch.
@@ -400,7 +395,7 @@ def _spool_full_blocks_batch() -> bool:
     """
     pending = _spool.count()
     if pending is None:
-        _state.spool_full_pause = True
+        _runtime.spool_full_pause = True
         logger.critical(
             "%s",
             _llog("Live batch paused: durable outbox is not readable", result="paused"),
@@ -410,8 +405,8 @@ def _spool_full_blocks_batch() -> bool:
     reserve_rows = min(MAX_SPOOL_ROWS, len(WS_SYMBOLS) * len(WS_TF_CODES))
     has_capacity = pending + reserve_rows <= MAX_SPOOL_ROWS
     if has_capacity:
-        if _state.spool_full_pause:
-            _state.spool_full_pause = False
+        if _runtime.spool_full_pause:
+            _runtime.spool_full_pause = False
             logger.warning(
                 "%s",
                 _llog(
@@ -423,7 +418,7 @@ def _spool_full_blocks_batch() -> bool:
             )
         return False
 
-    _state.spool_full_pause = True
+    _runtime.spool_full_pause = True
     logger.warning(
         "%s",
         _llog(
@@ -551,10 +546,10 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
             status="network_blocked",
             network_error=connectivity_detail,
             blocked_until=datetime.fromtimestamp(
-                _state._tv_connectivity_block_until, tz=timezone.utc
+                _runtime._tv_connectivity_block_until, tz=timezone.utc
             ).isoformat()
 
-            if _state._tv_connectivity_block_until
+            if _runtime._tv_connectivity_block_until
 
             else None,
         )
@@ -946,13 +941,13 @@ def _batch_loop(groups: list[BatchFetcher]) -> None:
         )
 
         connectivity_cooldown = (
-            bool(_state._tv_connectivity_block_until)
+            bool(_runtime._tv_connectivity_block_until)
 
-            and time.time() < float(_state._tv_connectivity_block_until)
+            and time.time() < float(_runtime._tv_connectivity_block_until)
         )
 
         blocked_until = (
-            datetime.fromtimestamp(_state._tv_connectivity_block_until, tz=timezone.utc).isoformat()
+            datetime.fromtimestamp(_runtime._tv_connectivity_block_until, tz=timezone.utc).isoformat()
 
             if connectivity_cooldown
 
@@ -964,7 +959,7 @@ def _batch_loop(groups: list[BatchFetcher]) -> None:
             next_batch_in_sec=round(wait, 3),
             next_batch_after=_utc_iso(),
             blocked_until=blocked_until,
-            network_error=_state._tv_connectivity_last_error if connectivity_cooldown else None,
+            network_error=_runtime._tv_connectivity_last_error if connectivity_cooldown else None,
             batch_started_at=None,
             batch_group_timeout_sec=None,
         )
@@ -1102,7 +1097,7 @@ def _status_reporter() -> None:
         token_secs = _tv_auth.token_expires_in(current_token)
 
         if is_guest:
-            auth_info = f"Guest ({_state._consecutive_guest_batches} batches in a row)"
+            auth_info = f"Guest ({_runtime._consecutive_guest_batches} batches in a row)"
 
         elif token_secs > 0:
             th = int(token_secs) // 3600
@@ -1144,7 +1139,7 @@ def _status_reporter() -> None:
             total_ws_errors=total_ws_errors,
             n_miss_active=n_miss_active,
             is_guest=is_guest,
-            consecutive_guest_batches=_state._consecutive_guest_batches,
+            consecutive_guest_batches=_runtime._consecutive_guest_batches,
         )
         previous_health_status = getattr(_status_reporter, "_last_health_status", None)
         recovered_from_warning = (
@@ -1570,9 +1565,9 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
                 break
 
             blocked_until = (
-                datetime.fromtimestamp(_state._tv_connectivity_block_until, tz=timezone.utc).isoformat()
+                datetime.fromtimestamp(_runtime._tv_connectivity_block_until, tz=timezone.utc).isoformat()
 
-                if _state._tv_connectivity_block_until
+                if _runtime._tv_connectivity_block_until
 
                 else None
             )

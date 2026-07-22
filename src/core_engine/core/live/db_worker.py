@@ -6,7 +6,7 @@ import queue
 import time
 from datetime import datetime, timezone
 
-from core_engine.core.live import state as _state
+from core_engine.core.live import runtime as _runtime
 from core_engine.core.live.batch_metrics import record_db_result as _record_db_result
 from core_engine.core.live.logging_support import (
     log_candle_row as _log_candle_row,
@@ -14,8 +14,7 @@ from core_engine.core.live.logging_support import (
     operation_line as _llog,
 )
 from core_engine.core.live.reporter import live_db_line
-from core_engine.core.live.runtime_support import as_utc_timestamp as _as_utc_timestamp
-from core_engine.core.live.state import (
+from core_engine.core.live.runtime import (
     _DEFERRED_ETL_MAX,
     _DEFERRED_ETL_WARN,
     _WRITE_DEFER_LOCK_TTL,
@@ -38,6 +37,7 @@ from core_engine.core.live.state import (
     _stats,
     _write_defer_lock_cache,
 )
+from core_engine.shared.time import as_utc_timestamp as _as_utc_timestamp
 from core_engine.settings import LIVE, SYMBOLS
 from core_engine.shared.tradingview.history_client import get_ws_interval_map
 from core_engine.shared.warehouse.validation import validate_ohlcv_df
@@ -157,11 +157,11 @@ def _flush_overflow_to_queue() -> None:
         elif pending is None or pending > 0:
             _spool_pending.set()
 
-    if _state.spool_full_pause:
+    if _runtime.spool_full_pause:
         pending = _spool.count()
         reserve_rows = min(MAX_SPOOL_ROWS, len(WS_SYMBOLS) * len(WS_TF_CODES))
         if pending is not None and pending + reserve_rows <= MAX_SPOOL_ROWS:
-            _state.spool_full_pause = False
+            _runtime.spool_full_pause = False
             logger.warning(
                 "%s",
                 _llog(
@@ -231,7 +231,7 @@ def _enqueue_or_buffer(item: tuple, group_id: int, tv_symbol: str, tf_code: str)
         # fetching instead (checked by _spool_full_blocks_batch) and raise
         # CRITICAL every time so the operator cannot miss a growing
         # backlog silently.
-        _state.spool_full_pause = True
+        _runtime.spool_full_pause = True
         logger.critical(
             "%s",
             _llog(

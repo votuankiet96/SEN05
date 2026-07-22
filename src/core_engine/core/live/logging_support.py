@@ -6,7 +6,7 @@ import logging
 import os
 from pathlib import Path
 
-from core_engine.core.live import state as _state
+from core_engine.core.live import runtime as _runtime
 from core_engine.core.live.reporter import (
     LiveReporter,
     live_candle_header_refresh,
@@ -14,7 +14,7 @@ from core_engine.core.live.reporter import (
     live_operation_line,
     log_live_block,
 )
-from core_engine.core.live.state import (
+from core_engine.core.live.runtime import (
     _CANDLE_HEADER_REPEAT_ROWS,
     _candle_table_lock,
     _live_table_file_lock,
@@ -111,15 +111,15 @@ def log_report_text(level: int, text: str) -> None:
 
 def start_candle_table(batch_id: int) -> None:
     with _candle_table_lock:
-        _state._candle_table_rows = 0
+        _runtime._candle_table_rows = 0
     append_live_table_text(live_candle_section(batch_id))
 
 
 def log_candle_row(line: str) -> None:
     with _candle_table_lock:
-        if _state._candle_table_rows > 0 and _state._candle_table_rows % _CANDLE_HEADER_REPEAT_ROWS == 0:
+        if _runtime._candle_table_rows > 0 and _runtime._candle_table_rows % _CANDLE_HEADER_REPEAT_ROWS == 0:
             append_live_table_text(live_candle_header_refresh())
-        _state._candle_table_rows += 1
+        _runtime._candle_table_rows += 1
     append_live_table_text(line)
 
 
