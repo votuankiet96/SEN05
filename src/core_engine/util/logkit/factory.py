@@ -39,7 +39,8 @@ from core_engine.util.logkit.handlers import (
     critical_discord_handler,
     errors_aggregate_handler,
 )
-from core_engine.settings import LOGGING, env_str
+from core_engine.util.logkit.paths import process_role, process_scoped_log_path, register_log_sink
+from core_engine.settings import LOGGING, SYSTEM_LOG_DIR, env_str
 
 
 class OperatorPrefixFilter(logging.Filter):
@@ -94,6 +95,7 @@ def get_logger(
     utc: bool = False,
     pipe_format: bool = False,
     normalize_prefixes: bool = False,
+    process_scoped: bool = True,
 ) -> logging.Logger:
     """Create (or return the already-built) logger for a runtime component."""
     logger = logging.getLogger(name)
@@ -109,6 +111,9 @@ def get_logger(
     if normalize_prefixes:
         logger.addFilter(OperatorPrefixFilter())
 
+    logical_log_file = log_file
+    if process_scoped:
+        log_file = str(process_scoped_log_path(log_file))
     log_dir = os.path.dirname(os.path.abspath(log_file))
     if log_dir:
         os.makedirs(log_dir, exist_ok=True)
@@ -142,6 +147,16 @@ def get_logger(
         fh = logging.FileHandler(log_file, encoding="utf-8")
     fh.setFormatter(file_fmt)
     logger.addHandler(fh)
+    register_log_sink(fh.baseFilename, logical_path=logical_log_file)
+    role = process_role()
+    if role in {"supervisor", "live", "historical"}:
+        crash_path = SYSTEM_LOG_DIR / f"crash.{role}.{os.getpid()}.log"
+        if crash_path.exists():
+            register_log_sink(
+                crash_path,
+                logical_path=SYSTEM_LOG_DIR / "crash.log",
+                kind="crash",
+            )
 
     logger.addHandler(errors_aggregate_handler())
     logger.addHandler(critical_discord_handler())

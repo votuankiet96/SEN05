@@ -102,7 +102,8 @@ def _run_clean(args: argparse.Namespace) -> int:
         print(f"Runtime retention: {result['retention_days']} day(s)")
         print(f"Deleted files    : {len(result.get('deleted', []))}")
         print(f"Kept files       : {result.get('kept_count')}")
-    return 0
+        print(f"Delete failures  : {len(result.get('failed', []))}")
+    return 1 if result.get("failed") else 0
 
 
 def _run_data_health(args: argparse.Namespace) -> int:

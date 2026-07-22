@@ -130,20 +130,37 @@ $python = 'C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python
 
 ## 6. Logs and 30-minute production follow-up
 
-Primary files are under `C:\Share\dp_program\runtime`:
+Physical rotating files are process-owned and named
+`<component>.<role>.<pid>.log`; the launcher log menu automatically follows
+the newest matching PID using open-read-close polling. Do not use
+`Get-Content -Wait`, because its long-held Windows handle can block rollover.
+
+Primary families/state are under `C:\Share\dp_program\runtime`:
 
 ```text
-logs\system\system.log
-logs\system\errors.log
-logs\system\activity.log
-logs\system\discord.log
-logs\operation\live_fetching.log
-logs\operation\historical_pulling.log
+logs\system\system.supervisor.<pid>.log
+logs\system\errors.<role>.<pid>.log
+logs\system\activity.<role>.<pid>.log
+logs\system\discord.<role>.<pid>.log
+logs\system\crash.<role>.<pid>.log
+logs\system\subprocess_stderr.<role>.<pid>.log
+logs\operation\live_fetching.live.<pid>.log
+logs\operation\historical_pulling.historical.<pid>.log
 logs\operation\live_fetching_summary.jsonl
 run\backend_engine_state.json
 run\ws_live_state.json
+run\log_sinks\<role>.<pid>.json
+run\notification_status\<role>.<pid>.json
+run\log_retention_state.json
 spool\overflow_spool.db
 ```
+
+`doctor --json` must report both `log_sinks=ok` and `discord=ok` for GO.
+It fails closed on a missing/unwritable active sink, a new rollover fallback,
+an unhealthy CRITICAL outbox, a dead/full Discord queue, an open Discord
+circuit, or absence of any confirmed HTTP 200/204 delivery from active PIDs.
+Retention runs hourly, includes `.log.N`, `.out`, `.txt`, crash/stderr files,
+protects active PID files, and enforces a 3 GiB hard log budget.
 
 For the approved shortened follow-up, sample for 30 minutes and then inspect
 the complete interval. Record Fact watermark/freshness, spool pending/staged
@@ -174,7 +191,9 @@ Rotation requires a Discord channel administrator:
 4. Confirm `discord.sent` with HTTP 200/204 and an empty critical outbox.
 5. Revoke the old webhook in Discord, then record timestamps only—never URLs.
 
-Both successful delivery and old-webhook revocation are GO gates.
+For the current pilot GO, the owner explicitly accepted retaining the existing
+webhook. Confirmed delivery remains a GO gate; rotation/revocation becomes a
+gate only when a new webhook is actually issued.
 
 ## 8. Approved socket-stall recovery test
 

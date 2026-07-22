@@ -715,7 +715,8 @@ def maybe_rotate_live_log() -> None:
     if handler is None:
         return
     try:
-        if handler.maxBytes > 0 and os.path.getsize(WS_LOG_FILE) >= handler.maxBytes:
+        actual_path = getattr(handler, "baseFilename", WS_LOG_FILE)
+        if handler.maxBytes > 0 and os.path.getsize(actual_path) >= handler.maxBytes:
             handler.acquire()
             try:
                 handler.doRollover()
@@ -734,12 +735,24 @@ def append_live_table_text(text: str) -> None:
     except Exception:
         pass
     try:
-        path = Path(WS_LOG_FILE)
+        handler = live_log_rotating_handler()
+        path = Path(getattr(handler, "baseFilename", WS_LOG_FILE))
         path.parent.mkdir(parents=True, exist_ok=True)
         with _live_table_file_lock:
-            with path.open("a", encoding="utf-8") as handle:
-                handle.write(block + "\n")
-            maybe_rotate_live_log()
+            if handler is None:
+                with path.open("a", encoding="utf-8") as handle:
+                    handle.write(block + "\n")
+            else:
+                handler.acquire()
+                try:
+                    if handler.stream is None:
+                        handler.stream = handler._open()
+                    handler.stream.write(block + "\n")
+                    handler.flush()
+                    if handler.maxBytes > 0 and os.path.getsize(handler.baseFilename) >= handler.maxBytes:
+                        handler.doRollover()
+                finally:
+                    handler.release()
     except Exception as exc:
         logger.warning("Could not write live table log: %s", exc)
 

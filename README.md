@@ -154,7 +154,7 @@ log_file, ...)`. Level policy is consistent across the whole program:
 
 `LOG_LEVEL` sets the global level; `LOG_LEVEL_<COMPONENT>` overrides it per
 component (e.g. `LOG_LEVEL_LIVE_FETCHING=DEBUG`). Every WARNING and above,
-from any component, also lands in `runtime/logs/system/errors.log` so an
+from any component, also lands in the `runtime/logs/system/errors.*.*.log` family so an
 operator can check one file instead of every component log. A CRITICAL
 record automatically triggers a Discord alert - no call site needs to
 remember to notify separately.
@@ -163,20 +163,28 @@ remember to notify separately.
 
 Runtime files are written under `runtime/` (gitignored).
 
-System logs:
+Long-lived processes own separate physical files named
+`<component>.<role>.<pid>.log`. This is required for reliable rotation on
+Windows; supervisor, live, and historical never share a rotating file handle.
+Use the launcher log menu (polling mode) to follow the newest PID without
+holding a file open across rollover.
 
-- `runtime/logs/system/system.log` - supervisor, scheduler, restart, cleanup.
-- `runtime/logs/system/errors.log` - every component's WARNING+ in one place.
-- `runtime/logs/system/activity.log` - operator timeline from terminal start to finish.
-- `runtime/logs/system/auth.log` - TradingView token/cookie/browser auth flow.
-- `runtime/logs/system/discord.log` - Discord delivery result and retry status.
-- `runtime/logs/system/subprocess_debug.log` - debug-only child stdout/stderr capture.
+System log families:
+
+- `runtime/logs/system/system.supervisor.<pid>.log` - scheduler/restart/cleanup.
+- `runtime/logs/system/errors.<role>.<pid>.log` - per-process WARNING+ aggregate.
+- `runtime/logs/system/activity.<role>.<pid>.log` - operator timeline.
+- `runtime/logs/system/auth.<role>.<pid>.log` - TradingView auth flow.
+- `runtime/logs/system/discord.<role>.<pid>.log` - Discord delivery/retry.
+- `runtime/logs/system/crash.<role>.<pid>.log` - import/unhandled/native crash capture.
+- `runtime/logs/system/subprocess_debug.supervisor.<pid>.log` - child lifecycle.
+- `runtime/logs/system/subprocess_stderr.<role>.<pid>.log` - child stderr/traceback.
 
 Operation logs:
 
-- `runtime/logs/operation/live_fetching.log`
-- `runtime/logs/operation/historical_pulling.log`
-- `runtime/logs/operation/data_warehouse.log`
+- `runtime/logs/operation/live_fetching.live.<pid>.log`
+- `runtime/logs/operation/historical_pulling.historical.<pid>.log`
+- `runtime/logs/operation/data_warehouse.<role>.<pid>.log`
 - `runtime/logs/operation/live_fetching_summary.jsonl`
 - `runtime/logs/operation/historical_pulling_summary.jsonl`
 
@@ -184,6 +192,9 @@ Runtime state:
 
 - `runtime/run/backend_engine_state.json`
 - `runtime/run/ws_live_state.json`
+- `runtime/run/log_sinks/<role>.<pid>.json`
+- `runtime/run/notification_status/<role>.<pid>.json`
+- `runtime/run/log_retention_state.json`
 
 ## Tests
 
@@ -192,7 +203,7 @@ pip install -e .[dev]
 pytest test/
 ```
 
-The suite (~130 tests, a few seconds) covers the TradingView WS wire format,
+The suite covers the TradingView WS wire format,
 OHLCV validation, the disk spool, settings resolution, the logging
 infrastructure, and the pure/testable pieces of the live and historical
 engines. It needs no SQL Server, TradingView, or Redis connection.

@@ -7,31 +7,42 @@ QUICK_COMMANDS_HINT. Discord webhooks are outbound-only.
 from __future__ import annotations
 
 import logging
-import logging.handlers
+import json
+import os
+import queue
 import re
 import sys
 import threading
 import time
-import os
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from hashlib import sha256
 from html import unescape
 from typing import Any
 from uuid import uuid4
 
-from core_engine.settings import DISCORD_LOG, LOGGING, NOTIFICATION
+from core_engine.settings import DISCORD_LOG, LOGGING, NOTIFICATION, RUN_DIR
 from core_engine.util.logkit.formatters import operation_line
+from core_engine.util.logkit.handlers import ResilientRotatingFileHandler
+from core_engine.util.logkit.paths import process_role, process_scoped_log_path, register_log_sink
+from core_engine.util.notify.transport import post_webhook_once
 
 logger = logging.getLogger(__name__)
 _discord_logger_configured = False
 _discord_logger_lock = threading.Lock()
-_pending_threads: list[threading.Thread] = []
 _discord_circuit_lock = threading.Lock()
 _discord_failure_count = 0
 _discord_circuit_open_until = 0.0
 _discord_dedupe_lock = threading.Lock()
 _discord_last_sent: dict[str, float] = {}
 _discord_suppressed: dict[str, int] = {}
+_discord_last_dedupe_cleanup = 0.0
+_discord_status_lock = threading.Lock()
+_discord_last_success_at: str | None = None
+_discord_last_failure_at: str | None = None
+_discord_last_failure_error: str | None = None
+_discord_logger_error: str | None = None
+_discord_queue_rejections = 0
 
 DISCORD_SEND_ATTEMPTS = NOTIFICATION.discord_send_attempts
 DISCORD_TIMEOUT_CONNECT_SEC = NOTIFICATION.discord_timeout_connect_sec
@@ -39,7 +50,124 @@ DISCORD_TIMEOUT_READ_SEC = NOTIFICATION.discord_timeout_read_sec
 DISCORD_CIRCUIT_FAILURES = NOTIFICATION.discord_circuit_failures
 DISCORD_CIRCUIT_COOLDOWN_SEC = NOTIFICATION.discord_circuit_cooldown_sec
 DISCORD_DEDUPE_WINDOW_SEC = NOTIFICATION.discord_dedupe_window_sec
+DISCORD_QUEUE_MAXSIZE = 256
+DISCORD_DEDUPE_MAX_KEYS = 4096
 _UNSAFE_SSLKEYLOG_PREFIXES = ("\\\\.\\", "\\\\??\\")
+
+
+@dataclass(frozen=True)
+class _DiscordSendItem:
+    payload: dict[str, Any]
+    kind: str
+    level: str
+    meta: dict[str, Any]
+
+
+class _DiscordSender:
+    """One bounded, process-local worker for ordinary Discord messages.
+
+    Ordinary reports are intentionally not the durable CRITICAL path (that
+    path uses ``critical_outbox.py``).  A bounded queue prevents a webhook
+    outage from creating one daemon thread per report and exhausting process
+    resources.  The single worker also makes delivery-time deduplication
+    deterministic: a failed message never causes the next queued copy to be
+    suppressed.
+    """
+
+    _STOP = object()
+
+    def __init__(self, *, maxsize: int = DISCORD_QUEUE_MAXSIZE) -> None:
+        self._queue: queue.Queue[_DiscordSendItem | object] = queue.Queue(maxsize=maxsize)
+        self._worker: threading.Thread | None = None
+        self._worker_lock = threading.Lock()
+        self._pending_condition = threading.Condition()
+        self._pending = 0
+
+    def _ensure_worker(self) -> None:
+        worker = self._worker
+        if worker is not None and worker.is_alive():
+            return
+        with self._worker_lock:
+            worker = self._worker
+            if worker is not None and worker.is_alive():
+                return
+            self._worker = threading.Thread(
+                target=self._run,
+                daemon=True,
+                name="discord-sender",
+            )
+            self._worker.start()
+
+    def submit(self, item: _DiscordSendItem) -> bool:
+        self._ensure_worker()
+        # Keep the pending increment atomic with publication.  Otherwise the
+        # worker can finish a very fast send before submit() increments it.
+        with self._pending_condition:
+            try:
+                self._queue.put_nowait(item)
+            except queue.Full:
+                return False
+            self._pending += 1
+        return True
+
+    def flush(self, timeout: float) -> bool:
+        """Wait up to ``timeout`` seconds for all currently queued work."""
+        deadline = time.monotonic() + max(0.0, timeout)
+        with self._pending_condition:
+            while self._pending:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return False
+                self._pending_condition.wait(timeout=remaining)
+            return True
+
+    def close(self, timeout: float = 1.0) -> bool:
+        """Stop this sender instance (used by isolated tests)."""
+        if not self.flush(timeout):
+            return False
+        worker = self._worker
+        if worker is None:
+            return True
+        try:
+            self._queue.put_nowait(self._STOP)
+        except queue.Full:
+            return False
+        worker.join(timeout=max(0.0, timeout))
+        return not worker.is_alive()
+
+    def status(self) -> dict[str, Any]:
+        with self._pending_condition:
+            pending = self._pending
+        worker = self._worker
+        return {
+            "queue_pending": pending,
+            "queue_maxsize": self._queue.maxsize,
+            "worker_started": worker is not None,
+            "worker_alive": bool(worker and worker.is_alive()),
+        }
+
+    def _run(self) -> None:
+        while True:
+            item = self._queue.get()
+            try:
+                if item is self._STOP:
+                    return
+                assert isinstance(item, _DiscordSendItem)
+                _deliver_item(item)
+            except Exception as exc:
+                # A malformed payload or an unexpected bookkeeping failure
+                # must not kill the sole sender and strand the queue forever.
+                _log_sender_exception("worker", exc)
+            finally:
+                self._queue.task_done()
+                if item is not self._STOP:
+                    with self._pending_condition:
+                        self._pending -= 1
+                        self._pending_condition.notify_all()
+                    _persist_discord_status("queue_progress")
+
+
+_discord_sender = _DiscordSender()
 
 # Discord embed side-bar colors.
 _COLORS = {
@@ -177,16 +305,17 @@ QUICK_COMMANDS_HINT = (
 
 def _ensure_discord_logger() -> None:
     """Attach a dedicated Discord delivery log file once per process."""
-    global _discord_logger_configured
+    global _discord_logger_configured, _discord_logger_error
     if _discord_logger_configured:
         return
     with _discord_logger_lock:
         if _discord_logger_configured:
             return
         try:
-            DISCORD_LOG.parent.mkdir(parents=True, exist_ok=True)
-            handler = logging.handlers.RotatingFileHandler(
-                DISCORD_LOG,
+            discord_log = process_scoped_log_path(DISCORD_LOG)
+            discord_log.parent.mkdir(parents=True, exist_ok=True)
+            handler = ResilientRotatingFileHandler(
+                discord_log,
                 maxBytes=5 * 1024 * 1024,
                 backupCount=5,
                 encoding="utf-8",
@@ -199,12 +328,43 @@ def _ensure_discord_logger() -> None:
             )
             handler.formatter.converter = time.gmtime
             logger.addHandler(handler)
+            register_log_sink(handler.baseFilename, logical_path=DISCORD_LOG)
             logger.setLevel(getattr(logging, LOGGING.level, logging.INFO))
             logger.propagate = False
+            _discord_logger_error = None
             _discord_logger_configured = True
+        except Exception as exc:
+            # Keep propagation enabled so a failed dedicated sink remains
+            # visible in the process/root crash capture.  A NullHandler here
+            # used to turn logger setup failures into silent notification
+            # failures for the rest of the process lifetime.
+            logger.propagate = True
+            _discord_logger_error = f"{type(exc).__name__}: {exc}"
+            _discord_logger_configured = False
+            logger.error(
+                "Discord delivery logger setup failed: %s",
+                exc.__class__.__name__,
+            )
+
+
+def _log_sender_exception(stage: str, exc: BaseException) -> None:
+    """Best-effort diagnostics that never expose a webhook URL."""
+    try:
+        _ensure_discord_logger()
+        logger.warning(
+            "Discord sender %s failed: %s",
+            stage,
+            exc.__class__.__name__,
+        )
+    except Exception:
+        # Logging must never become a second failure that kills the sender.
+        try:
+            print(
+                f"Discord sender {stage} failed: {exc.__class__.__name__}",
+                file=sys.stderr,
+            )
         except Exception:
-            logger.addHandler(logging.NullHandler())
-            _discord_logger_configured = True
+            pass
 
 
 def sanitize_ssl_keylogfile(env: os._Environ[str] | dict[str, str] | None = None) -> str | None:
@@ -793,25 +953,77 @@ def _record_discord_activity(
     )
 
 
+def _safe_record_discord_activity(action: str, **kwargs: Any) -> None:
+    """Record delivery telemetry without changing the delivery outcome."""
+    try:
+        _record_discord_activity(action, **kwargs)
+    except Exception as exc:
+        _log_sender_exception("activity_log", exc)
+
+
 def _discord_circuit_remaining() -> float:
     with _discord_circuit_lock:
         return max(0.0, _discord_circuit_open_until - time.time())
 
 
+def _utc_iso_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _persist_discord_status(event: str) -> None:
+    """Publish non-secret sender health for doctor from another process."""
+    try:
+        role = process_role()
+        if role not in {"supervisor", "live", "historical"}:
+            return
+        with _discord_status_lock:
+            payload = {
+                "role": role,
+                "pid": os.getpid(),
+                "updated_at": _utc_iso_now(),
+                "event": event,
+                "configured": bool(NOTIFICATION.discord_webhook_url),
+                "last_success_at": _discord_last_success_at,
+                "last_failure_at": _discord_last_failure_at,
+                "last_failure_error": _discord_last_failure_error,
+                "consecutive_failures": _discord_failure_count,
+                "circuit_open_seconds": round(_discord_circuit_remaining(), 3),
+                "logger_error": _discord_logger_error,
+                "queue_rejections": _discord_queue_rejections,
+                **_discord_sender.status(),
+            }
+            target = RUN_DIR / "notification_status" / f"{role}.{os.getpid()}.json"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            temp = target.with_name(f".{target.name}.{threading.get_ident()}.tmp")
+            temp.write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
+            os.replace(temp, target)
+    except Exception as exc:
+        _log_sender_exception("status_write", exc)
+
+
 def _discord_mark_success() -> None:
     global _discord_circuit_open_until, _discord_failure_count
+    global _discord_last_success_at, _discord_last_failure_error
     with _discord_circuit_lock:
         _discord_failure_count = 0
         _discord_circuit_open_until = 0.0
+        _discord_last_success_at = _utc_iso_now()
+        _discord_last_failure_error = None
+    _persist_discord_status("delivery_success")
 
 
-def _discord_mark_failure() -> tuple[int, float]:
+def _discord_mark_failure(error: str | None = None) -> tuple[int, float]:
     global _discord_circuit_open_until, _discord_failure_count
+    global _discord_last_failure_at, _discord_last_failure_error
     with _discord_circuit_lock:
         _discord_failure_count += 1
+        _discord_last_failure_at = _utc_iso_now()
+        _discord_last_failure_error = error or "delivery_failed"
         if _discord_failure_count >= DISCORD_CIRCUIT_FAILURES:
             _discord_circuit_open_until = time.time() + DISCORD_CIRCUIT_COOLDOWN_SEC
-        return _discord_failure_count, max(0.0, _discord_circuit_open_until - time.time())
+        result = _discord_failure_count, max(0.0, _discord_circuit_open_until - time.time())
+    _persist_discord_status("delivery_failure")
+    return result
 
 
 def _dedupe_key(kind: str, level: str, meta: dict[str, Any]) -> str:
@@ -837,29 +1049,92 @@ def _duplicate_suppression(
     if level not in {"WARNING", "ERROR", "FAIL", "FAILED", "CRITICAL"}:
         return False, 0, 0.0
 
+    global _discord_last_dedupe_cleanup
     now = time.time()
     key = _dedupe_key(kind, level, meta)
     with _discord_dedupe_lock:
+        if (
+            now - _discord_last_dedupe_cleanup >= 60
+            or len(_discord_last_sent) > DISCORD_DEDUPE_MAX_KEYS
+        ):
+            cutoff = now - max(1, DISCORD_DEDUPE_WINDOW_SEC)
+            stale = [item for item, sent_at in _discord_last_sent.items() if sent_at < cutoff]
+            for item in stale:
+                _discord_last_sent.pop(item, None)
+                _discord_suppressed.pop(item, None)
+            if len(_discord_last_sent) > DISCORD_DEDUPE_MAX_KEYS:
+                overflow = len(_discord_last_sent) - DISCORD_DEDUPE_MAX_KEYS
+                for item, _sent_at in sorted(
+                    _discord_last_sent.items(), key=lambda pair: pair[1]
+                )[:overflow]:
+                    _discord_last_sent.pop(item, None)
+                    _discord_suppressed.pop(item, None)
+            for item in list(_discord_suppressed):
+                if item not in _discord_last_sent:
+                    _discord_suppressed.pop(item, None)
+            _discord_last_dedupe_cleanup = now
         last = _discord_last_sent.get(key, 0.0)
         elapsed = now - last
         if last and elapsed < DISCORD_DEDUPE_WINDOW_SEC:
             _discord_suppressed[key] = _discord_suppressed.get(key, 0) + 1
             return True, _discord_suppressed[key], DISCORD_DEDUPE_WINDOW_SEC - elapsed
 
-        suppressed = _discord_suppressed.pop(key, 0)
-        _discord_last_sent[key] = now
+        # Do not reserve the dedupe window here.  The worker only records a
+        # last-sent timestamp after Discord confirms HTTP 200/204.  This is
+        # what allows a duplicate queued behind a failed send to retry.
+        suppressed = _discord_suppressed.get(key, 0)
+        return False, suppressed, 0.0
 
+
+def _mark_duplicate_delivered(*, kind: str, level: str, meta: dict[str, Any]) -> None:
+    if DISCORD_DEDUPE_WINDOW_SEC <= 0:
+        return
+    if level not in {"WARNING", "ERROR", "FAIL", "FAILED", "CRITICAL"}:
+        return
+    key = _dedupe_key(kind, level, meta)
+    with _discord_dedupe_lock:
+        suppressed = _discord_suppressed.pop(key, 0)
+        _discord_last_sent[key] = time.time()
     if suppressed:
         meta["duplicate_suppressed_since_last"] = suppressed
-    return False, suppressed, 0.0
 
 
-def _post_payload(payload: dict[str, Any], *, kind: str, level: str, meta: dict[str, Any]) -> None:
-    sanitize_ssl_keylogfile()
-    from core_engine.other.tls import ensure_system_truststore
-
-    ensure_system_truststore()
-    import requests
+def _post_payload(
+    payload: dict[str, Any],
+    *,
+    kind: str,
+    level: str,
+    meta: dict[str, Any],
+) -> bool:
+    """Post one payload and return True only on Discord HTTP 200/204."""
+    started_at = time.time()
+    try:
+        _ensure_discord_logger()
+        sanitize_ssl_keylogfile()
+    except Exception as exc:
+        _log_sender_exception("setup", exc)
+        fail_count, circuit_remaining = _discord_mark_failure(exc.__class__.__name__)
+        _safe_record_discord_activity(
+            "discord.failed",
+            status="failed",
+            kind=kind,
+            level=level,
+            message=(
+                f"Discord {kind} setup failed: "
+                f"{meta.get('feature', 'system')}/{meta.get('result', 'notified')} - "
+                f"{meta.get('title', '')}"
+            ),
+            detail={
+                **meta,
+                "delivery_result": "failed",
+                "error": exc.__class__.__name__,
+                "attempts": 0,
+                "duration_seconds": round(time.time() - started_at, 3),
+                "consecutive_failures": fail_count,
+                "circuit_open_seconds": round(circuit_remaining, 1),
+            },
+        )
+        return False
 
     circuit_remaining = _discord_circuit_remaining()
     if circuit_remaining > 0:
@@ -875,7 +1150,7 @@ def _post_payload(payload: dict[str, Any], *, kind: str, level: str, meta: dict[
                 result="skipped",
             ),
         )
-        _record_discord_activity(
+        _safe_record_discord_activity(
             "discord.skipped",
             status="warning",
             kind=kind,
@@ -891,23 +1166,54 @@ def _post_payload(payload: dict[str, Any], *, kind: str, level: str, meta: dict[
                 "retry_after_seconds": round(circuit_remaining, 1),
             },
         )
-        return
+        return False
 
     last_status: int | None = None
     last_error: str | None = None
     attempts = 0
-    started_at = time.time()
     for attempt in range(DISCORD_SEND_ATTEMPTS):
         attempts = attempt + 1
-        try:
-            resp = requests.post(
-                NOTIFICATION.discord_webhook_url,
-                json=payload,
-                timeout=(DISCORD_TIMEOUT_CONNECT_SEC, DISCORD_TIMEOUT_READ_SEC),
-                verify=True,
+        result = post_webhook_once(
+            NOTIFICATION.discord_webhook_url,
+            payload,
+            connect_timeout=DISCORD_TIMEOUT_CONNECT_SEC,
+            read_timeout=DISCORD_TIMEOUT_READ_SEC,
+        )
+        if result.error is not None:
+            last_error = result.error.__class__.__name__
+            _log_sender_exception(
+                "setup" if result.stage == "setup" else f"http_attempt_{attempts}",
+                result.error,
             )
-            last_status = resp.status_code
-            if resp.status_code in (200, 204):
+            if result.stage == "setup":
+                fail_count, circuit_remaining = _discord_mark_failure(last_error)
+                _safe_record_discord_activity(
+                    "discord.failed",
+                    status="failed",
+                    kind=kind,
+                    level=level,
+                    message=(
+                        f"Discord {kind} setup failed: "
+                        f"{meta.get('feature', 'system')}/{meta.get('result', 'notified')} - "
+                        f"{meta.get('title', '')}"
+                    ),
+                    detail={
+                        **meta,
+                        "delivery_result": "failed",
+                        "error": last_error,
+                        "attempts": 0,
+                        "duration_seconds": round(time.time() - started_at, 3),
+                        "consecutive_failures": fail_count,
+                        "circuit_open_seconds": round(circuit_remaining, 1),
+                    },
+                )
+                return False
+            if attempt + 1 < DISCORD_SEND_ATTEMPTS:
+                time.sleep(1.5)
+            continue
+
+        last_status = result.status_code
+        if result.ok:
                 logger.debug(
                     "%s",
                     operation_line(
@@ -915,13 +1221,13 @@ def _post_payload(payload: dict[str, Any], *, kind: str, level: str, meta: dict[
                         "Send completed",
                         notification_type=kind,
                         event_level=level,
-                        http_status=resp.status_code,
+                        http_status=result.status_code,
                         result="delivered",
                     ),
                 )
                 _discord_mark_success()
                 business_status = _STATUS_BY_LEVEL.get(level, "success")
-                _record_discord_activity(
+                _safe_record_discord_activity(
                     "discord.sent",
                     status="success",
                     kind=kind,
@@ -938,13 +1244,13 @@ def _post_payload(payload: dict[str, Any], *, kind: str, level: str, meta: dict[
                         "business_level": level,
                         "business_status": business_status,
                         "business_result": meta.get("result", "notified"),
-                        "http_status": resp.status_code,
+                        "http_status": result.status_code,
                         "attempts": attempts,
                         "duration_seconds": round(time.time() - started_at, 3),
                     },
                 )
                 if business_status in {"warning", "failed"}:
-                    _record_discord_activity(
+                    _safe_record_discord_activity(
                         "discord.alert",
                         status=business_status,
                         kind=kind,
@@ -961,25 +1267,17 @@ def _post_payload(payload: dict[str, Any], *, kind: str, level: str, meta: dict[
                             "business_level": level,
                             "business_status": business_status,
                             "business_result": meta.get("result", "notified"),
-                            "http_status": resp.status_code,
+                            "http_status": result.status_code,
                             "attempts": attempts,
                             "duration_seconds": round(time.time() - started_at, 3),
                         },
                     )
-                return
-            if resp.status_code == 429:
-                try:
-                    wait = float(resp.json().get("retry_after", 5))
-                except Exception:
-                    wait = 5.0
-                time.sleep(min(wait, 5))
-            elif attempt + 1 < DISCORD_SEND_ATTEMPTS:
-                time.sleep(1.5)
-        except Exception:
-            last_error = sys.exc_info()[1].__class__.__name__
-            if attempt + 1 < DISCORD_SEND_ATTEMPTS:
-                time.sleep(1.5)
-    fail_count, circuit_remaining = _discord_mark_failure()
+                return True
+        if result.status_code == 429:
+            time.sleep(min(result.retry_after_seconds or 5.0, 5.0))
+        elif attempt + 1 < DISCORD_SEND_ATTEMPTS:
+            time.sleep(1.5)
+    fail_count, circuit_remaining = _discord_mark_failure(last_error or str(last_status or "http_failure"))
     logger.warning(
         "%s",
         operation_line(
@@ -994,7 +1292,7 @@ def _post_payload(payload: dict[str, Any], *, kind: str, level: str, meta: dict[
             result="failed",
         ),
     )
-    _record_discord_activity(
+    _safe_record_discord_activity(
         "discord.failed",
         status="failed",
         kind=kind,
@@ -1015,28 +1313,30 @@ def _post_payload(payload: dict[str, Any], *, kind: str, level: str, meta: dict[
             "circuit_open_seconds": round(circuit_remaining, 1),
         },
     )
+    return False
 
 
-def _start_sender(payload: dict[str, Any], *, kind: str, level: str, meta: dict[str, Any]) -> None:
-    global _pending_threads
+def _deliver_item(item: _DiscordSendItem) -> None:
+    """Apply delivery-time dedupe and send one item on the sole worker."""
     suppressed, suppressed_count, retry_after = _duplicate_suppression(
-        kind=kind,
-        level=level,
-        meta=meta,
+        kind=item.kind,
+        level=item.level,
+        meta=item.meta,
     )
     if suppressed:
-        _record_discord_activity(
+        _safe_record_discord_activity(
             "discord.suppressed",
             status="warning",
-            kind=kind,
-            level=level,
+            kind=item.kind,
+            level=item.level,
             message=(
-                f"Discord {kind} duplicate suppressed: "
-                f"{meta.get('feature', 'system')}/{meta.get('result', 'notified')} - "
-                f"{meta.get('title', '')}"
+                f"Discord {item.kind} duplicate suppressed: "
+                f"{item.meta.get('feature', 'system')}/"
+                f"{item.meta.get('result', 'notified')} - "
+                f"{item.meta.get('title', '')}"
             ),
             detail={
-                **meta,
+                **item.meta,
                 "delivery_result": "suppressed",
                 "reason": "duplicate_within_window",
                 "suppressed_count": suppressed_count,
@@ -1044,7 +1344,52 @@ def _start_sender(payload: dict[str, Any], *, kind: str, level: str, meta: dict[
             },
         )
         return
-    _record_discord_activity(
+
+    if suppressed_count:
+        item.meta["duplicate_suppressed_since_last"] = suppressed_count
+    delivered = _post_payload(
+        item.payload,
+        kind=item.kind,
+        level=item.level,
+        meta=item.meta,
+    )
+    if delivered:
+        _mark_duplicate_delivered(kind=item.kind, level=item.level, meta=item.meta)
+
+
+def _start_sender(payload: dict[str, Any], *, kind: str, level: str, meta: dict[str, Any]) -> None:
+    global _discord_queue_rejections
+    item = _DiscordSendItem(payload=payload, kind=kind, level=level, meta=meta)
+    reject_reason = "queue_full"
+    try:
+        accepted = _discord_sender.submit(item)
+    except Exception as exc:
+        _log_sender_exception("queue_submit", exc)
+        accepted = False
+        reject_reason = "queue_unavailable"
+    if not accepted:
+        with _discord_status_lock:
+            _discord_queue_rejections += 1
+        _persist_discord_status("queue_rejected")
+        _safe_record_discord_activity(
+            "discord.queue_rejected",
+            status="failed",
+            kind=kind,
+            level=level,
+            message=(
+                f"Discord {kind} rejected by bounded sender queue ({reject_reason}) - "
+                f"{meta.get('feature', 'system')}/{meta.get('result', 'notified')} - "
+                f"{meta.get('title', '')}"
+            ),
+            detail={
+                **meta,
+                "delivery_result": "failed",
+                "reason": reject_reason,
+            },
+        )
+        return
+
+    _safe_record_discord_activity(
         "discord.queued",
         status="queued",
         kind=kind,
@@ -1056,26 +1401,12 @@ def _start_sender(payload: dict[str, Any], *, kind: str, level: str, meta: dict[
         ),
         detail={**meta, "delivery_result": "queued"},
     )
-    thread = threading.Thread(
-        target=_post_payload,
-        kwargs={"payload": payload, "kind": kind, "level": level, "meta": meta},
-        daemon=True,
-        name=f"discord-{kind}",
-    )
-    thread.start()
-    _pending_threads = [t for t in _pending_threads if t.is_alive()]
-    _pending_threads.append(thread)
+    _persist_discord_status("queued")
 
 
-def flush_pending(timeout: float = 12.0) -> None:
-    """Wait for pending Discord sends to finish."""
-    global _pending_threads
-    alive: list[threading.Thread] = []
-    for thread in _pending_threads:
-        thread.join(timeout=timeout)
-        if thread.is_alive():
-            alive.append(thread)
-    _pending_threads = alive
+def flush_pending(timeout: float = 12.0) -> bool:
+    """Wait up to one total timeout for the bounded sender queue to drain."""
+    return _discord_sender.flush(timeout)
 
 
 def send_alert(level: str, text: str) -> None:

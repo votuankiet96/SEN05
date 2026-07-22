@@ -11,6 +11,7 @@ start_live() no longer touching the stop flag.
 
 from __future__ import annotations
 
+import threading
 import time
 from types import SimpleNamespace
 
@@ -396,7 +397,7 @@ def test_critical_outbox_drain_failure_is_not_silent(sup, monkeypatch):
 
     class _BrokenOutbox:
         @staticmethod
-        def drain():
+        def drain(*, limit=20):
             raise RuntimeError("fault-injected SQLite failure")
 
     monkeypatch.setattr(critical_outbox, "critical_alert_outbox", lambda: _BrokenOutbox())
@@ -405,11 +406,43 @@ def test_critical_outbox_drain_failure_is_not_silent(sup, monkeypatch):
     sup._last_critical_drain_at = 0.0
 
     sup._drain_critical_alert_outbox()
+    assert sup._critical_drain_thread is not None
+    sup._critical_drain_thread.join(timeout=2)
 
     assert len(warnings) == 1
     rendered = str(warnings[0])
     assert "Critical alert outbox retry failed" in rendered
     assert "fault-injected SQLite failure" in rendered
+
+
+def test_critical_outbox_network_stall_never_blocks_supervisor_loop(sup, monkeypatch):
+    from core_engine.util.notify import critical_outbox
+
+    entered = threading.Event()
+    release = threading.Event()
+
+    class _StalledOutbox:
+        @staticmethod
+        def drain(*, limit=20):
+            entered.set()
+            release.wait(timeout=2)
+            return 0
+
+    monkeypatch.setattr(critical_outbox, "critical_alert_outbox", lambda: _StalledOutbox())
+    sup._last_critical_drain_at = 0.0
+
+    started = time.monotonic()
+    sup._drain_critical_alert_outbox()
+    elapsed = time.monotonic() - started
+
+    assert elapsed < 0.2
+    assert entered.wait(timeout=1)
+    first_thread = sup._critical_drain_thread
+    sup._last_critical_drain_at = 0.0
+    sup._drain_critical_alert_outbox()
+    assert sup._critical_drain_thread is first_thread
+    release.set()
+    first_thread.join(timeout=2)
 
 
 def test_runtime_disk_failure_alerts_once_and_recovery_is_reported(sup, monkeypatch):

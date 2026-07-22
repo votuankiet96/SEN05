@@ -17,6 +17,7 @@ import os
 import signal
 import socket
 import subprocess
+import threading
 import time
 import uuid
 from dataclasses import dataclass
@@ -290,7 +291,8 @@ class ManagedProcess:
     process: subprocess.Popen | None = None
     started_at: float = 0.0
     command: list[str] | None = None
-    stdout_handle: Any | None = None
+    stderr_handle: Any | None = None
+    stderr_thread: threading.Thread | None = None
     last_exit_code: int | None = None
 
     @property
@@ -311,12 +313,18 @@ class ManagedProcess:
         return code
 
     def close_log(self) -> None:
-        if self.stdout_handle is not None:
+        if self.stderr_thread is not None and self.stderr_thread is not threading.current_thread():
+            # A normally exited child closes its pipe; let the pump consume the
+            # remaining traceback before forcing the reader closed.
+            self.stderr_thread.join(timeout=2.0)
+        if self.stderr_thread is not None and self.stderr_thread.is_alive() and self.stderr_handle is not None:
             try:
-                self.stdout_handle.close()
+                self.stderr_handle.close()
             except Exception:
                 pass
-            self.stdout_handle = None
+            self.stderr_thread.join(timeout=1.0)
+        self.stderr_handle = None
+        self.stderr_thread = None
 
 
 def _mark_runtime_state_stopped(*, reason: str) -> None:

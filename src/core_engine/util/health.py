@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import shutil
 import sqlite3
 import subprocess
@@ -70,6 +71,28 @@ class Check:
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+LOG_WARN_TOTAL_BYTES = 2 * 1024 * 1024 * 1024
+LOG_FAIL_TOTAL_BYTES = 3 * 1024 * 1024 * 1024
+LOG_ACTIVE_FILE_FAIL_BYTES = 50 * 1024 * 1024
+
+
+def _active_runtime_roles() -> dict[str, int]:
+    """Return active production role/PID pairs from state plus OS liveness."""
+    result: dict[str, int] = {}
+    backend = _read_json(BACKEND_STATE)
+    live = _read_json(WS_LIVE_STATE)
+    candidates = {
+        "supervisor": backend.get("pid"),
+        "live": live.get("pid") or backend.get("live_pid"),
+        "historical": backend.get("historical_pid"),
+    }
+    for role, raw_pid in candidates.items():
+        pid, alive = _pid_state(raw_pid)
+        if pid and alive:
+            result[role] = pid
+    return result
 
 
 def _age_seconds(value: Any) -> float | None:
@@ -249,7 +272,14 @@ def _critical_outbox_check() -> Check:
     except Exception as exc:
         return Check("critical_alerts", "warn", f"Could not read critical alert outbox: {exc}")
 
-    pending = int(status.get("pending_count") or 0)
+    if not status.get("healthy") or status.get("pending_count") is None:
+        return Check(
+            "critical_alerts",
+            "fail",
+            "CRITICAL alert outbox storage is unhealthy; pending alerts cannot be trusted.",
+            status,
+        )
+    pending = int(status["pending_count"])
     if pending == 0:
         return Check("critical_alerts", "ok", "No undelivered CRITICAL alerts.", status)
     oldest_age = status.get("oldest_pending_age_seconds")
@@ -372,12 +402,153 @@ def _chromium_check() -> Check:
     return Check("chromium", "warn", "Playwright Chromium is not ready for headless auth refresh.", {"reason": detail})
 
 
+def _log_sinks_check() -> Check:
+    active = _active_runtime_roles()
+    total_bytes = 0
+    log_files: list[Path] = []
+    try:
+        if LOG_DIR.exists():
+            log_files = [path for path in LOG_DIR.rglob("*") if path.is_file()]
+            total_bytes = sum(path.stat().st_size for path in log_files)
+    except OSError as exc:
+        return Check("log_sinks", "fail", f"Runtime logs cannot be inventoried: {exc}")
+
+    detail: dict[str, Any] = {
+        "active_roles": active,
+        "log_file_count": len(log_files),
+        "total_bytes": total_bytes,
+        "warn_budget_bytes": LOG_WARN_TOTAL_BYTES,
+        "fail_budget_bytes": LOG_FAIL_TOTAL_BYTES,
+        "registries": {},
+        "missing": [],
+        "unwritable": [],
+        "oversized_active": [],
+        "active_fallbacks": [],
+    }
+    failures: list[str] = []
+    warnings: list[str] = []
+    for role, pid in active.items():
+        registry = RUN_DIR / "log_sinks" / f"{role}.{pid}.json"
+        payload = _read_json(registry)
+        detail["registries"][role] = str(registry)
+        if not payload:
+            failures.append(f"missing sink registry for {role} PID {pid}")
+            detail["missing"].append(str(registry))
+            continue
+        sinks = payload.get("sinks") if isinstance(payload.get("sinks"), list) else []
+        if not sinks:
+            failures.append(f"empty sink registry for {role} PID {pid}")
+            continue
+        kinds = {str(item.get("kind") or "") for item in sinks}
+        if "crash" not in kinds:
+            failures.append(f"crash capture is not registered for {role} PID {pid}")
+        for item in sinks:
+            physical = Path(str(item.get("physical_path") or ""))
+            if not physical.is_file():
+                detail["missing"].append(str(physical))
+                failures.append(f"registered sink is missing: {physical.name}")
+                continue
+            try:
+                size = physical.stat().st_size
+                # Opening without writing validates ACL/share compatibility and
+                # does not perturb file age or content.
+                descriptor = os.open(str(physical), os.O_WRONLY | os.O_APPEND)
+                os.close(descriptor)
+            except OSError as exc:
+                detail["unwritable"].append({"path": str(physical), "reason": str(exc)})
+                failures.append(f"registered sink is not appendable: {physical.name}")
+                continue
+            if size > LOG_ACTIVE_FILE_FAIL_BYTES:
+                detail["oversized_active"].append({"path": str(physical), "bytes": size})
+                failures.append(f"active sink exceeds 50 MiB: {physical.name}")
+
+        active_fallbacks = [
+            str(path)
+            for path in log_files
+            if f".active.{pid}." in path.name
+        ]
+        if active_fallbacks:
+            detail["active_fallbacks"].extend(active_fallbacks)
+            failures.append(f"{role} PID {pid} is writing rollover fallback files")
+
+    retention_state = _read_json(RUN_DIR / "log_retention_state.json")
+    detail["retention"] = retention_state
+    if retention_state.get("failed"):
+        failures.append("the last runtime retention pass had deletion errors")
+    if total_bytes >= LOG_FAIL_TOTAL_BYTES:
+        failures.append("runtime logs exceed the 3 GiB hard budget")
+    elif total_bytes >= LOG_WARN_TOTAL_BYTES:
+        warnings.append("runtime logs exceed the 2 GiB warning budget")
+
+    if failures:
+        return Check("log_sinks", "fail", "; ".join(dict.fromkeys(failures)), detail)
+    if warnings:
+        return Check("log_sinks", "warn", "; ".join(warnings), detail)
+    message = (
+        "All active process log sinks are registered, appendable, and within budget."
+        if active
+        else "No active DP process; retained log files are within budget."
+    )
+    return Check("log_sinks", "ok", message, detail)
+
+
 def _discord_check() -> Check:
     from core_engine.settings import NOTIFICATION
 
-    if NOTIFICATION.discord_webhook_url:
-        return Check("discord", "ok", "Discord webhook is configured.", {"configured": True})
-    return Check("discord", "warn", "Discord webhook is not configured.", {"configured": False})
+    if not NOTIFICATION.discord_webhook_url:
+        return Check("discord", "warn", "Discord webhook is not configured.", {"configured": False})
+
+    active = _active_runtime_roles()
+    detail: dict[str, Any] = {"configured": True, "active_roles": active, "senders": {}}
+    if not active:
+        return Check(
+            "discord",
+            "warn",
+            "Discord webhook is configured, but no active process can prove delivery health.",
+            detail,
+        )
+
+    failures: list[str] = []
+    warnings: list[str] = []
+    any_success = False
+    for role, pid in active.items():
+        path = RUN_DIR / "notification_status" / f"{role}.{pid}.json"
+        status = _read_json(path)
+        detail["senders"][role] = status or {"path": str(path), "missing": True}
+        if not status:
+            failures.append(f"notification status is missing for {role} PID {pid}")
+            continue
+        if status.get("logger_error"):
+            failures.append(f"Discord log sink failed for {role} PID {pid}")
+        pending = int(status.get("queue_pending") or 0)
+        maximum = max(1, int(status.get("queue_maxsize") or 1))
+        if pending >= maximum:
+            failures.append(f"Discord queue is full for {role} PID {pid}")
+        if pending and status.get("worker_started") and not status.get("worker_alive"):
+            failures.append(f"Discord worker is dead with pending messages for {role} PID {pid}")
+        if float(status.get("circuit_open_seconds") or 0) > 0:
+            failures.append(f"Discord circuit is open for {role} PID {pid}")
+        success_at = status.get("last_success_at")
+        failure_at = status.get("last_failure_at")
+        if success_at:
+            any_success = True
+        if failure_at and (not success_at or str(failure_at) > str(success_at)):
+            failure_age = _age_seconds(failure_at)
+            text = f"latest Discord attempt failed for {role} PID {pid}"
+            (failures if failure_age is not None and failure_age > 900 else warnings).append(text)
+    if not any_success:
+        failures.append("no active process has a confirmed Discord HTTP 200/204 delivery")
+
+    if failures:
+        return Check("discord", "fail", "; ".join(dict.fromkeys(failures)), detail)
+    if warnings:
+        return Check("discord", "warn", "; ".join(dict.fromkeys(warnings)), detail)
+    return Check(
+        "discord",
+        "ok",
+        "Discord is configured and active senders have confirmed delivery.",
+        detail,
+    )
 
 
 def _locks_check() -> Check:
@@ -854,6 +1025,7 @@ def collect_health(*, deep_auth: bool = False, include_database: bool = True) ->
         _process_inventory_check(),
         _chromium_check(),
         _auth_check(deep=deep_auth),
+        _log_sinks_check(),
         _discord_check(),
         _critical_outbox_check(),
         _backend_state_check(),
@@ -1149,24 +1321,97 @@ def print_json(report: dict[str, Any], *, indent: int | None = None) -> None:
 def cleanup_old_runtime_files(*, days: int | None = None) -> dict[str, Any]:
     retention_days = BACKEND.log_retention_days if days is None else max(0, int(days))
     cutoff = time.time() - retention_days * 86400
-    candidates = []
+    active_pids = set(_active_runtime_roles().values())
+    candidates: list[Path] = []
     for root in (LOG_DIR, RUN_DIR, SPOOL_DIR):
         if not root.exists():
             continue
         for path in root.rglob("*"):
             if not path.is_file():
                 continue
-            if path.suffix.lower() in {".log", ".jsonl", ".tmp", ".old"} or root == RUN_DIR:
+            name = path.name.lower()
+            log_artifact = bool(
+                re.search(r"\.log(?:\.\d+)?$", name)
+                or ".active." in name
+                or path.suffix.lower() in {".jsonl", ".tmp", ".old", ".out", ".txt"}
+            )
+            if root == LOG_DIR or root == RUN_DIR or log_artifact:
                 candidates.append(path)
     deleted: list[str] = []
     kept: list[str] = []
+    failed: list[dict[str, str]] = []
+
+    def _belongs_to_active_pid(path: Path) -> bool:
+        return any(re.search(rf"(?:^|\.){pid}(?:\.|$)", path.name) for pid in active_pids)
+
+    def _delete(path: Path, *, reason: str) -> bool:
+        try:
+            path.unlink()
+            deleted.append(str(path))
+            return True
+        except Exception as exc:
+            failed.append({"path": str(path), "reason": f"{reason}: {type(exc).__name__}: {exc}"})
+            return False
+
     for path in candidates:
         try:
-            if path.stat().st_mtime < cutoff:
-                path.unlink()
-                deleted.append(str(path))
+            if _belongs_to_active_pid(path):
+                kept.append(str(path))
+            elif path.stat().st_mtime < cutoff:
+                _delete(path, reason="age_retention")
             else:
                 kept.append(str(path))
-        except Exception:
+        except Exception as exc:
+            failed.append({"path": str(path), "reason": f"stat: {type(exc).__name__}: {exc}"})
             kept.append(str(path))
-    return {"retention_days": retention_days, "deleted": deleted, "kept_count": len(kept)}
+
+    # Enforce a hard aggregate budget using only closed/stale files. Fresh
+    # canonical state logs and all files owned by active PIDs are protected.
+    budget_deleted: list[str] = []
+    try:
+        remaining_logs = [path for path in LOG_DIR.rglob("*") if path.is_file()]
+        total_bytes = sum(path.stat().st_size for path in remaining_logs)
+        target_bytes = int(LOG_WARN_TOTAL_BYTES * 0.75)
+        if total_bytes > LOG_FAIL_TOTAL_BYTES:
+            eligible = sorted(
+                (
+                    path
+                    for path in remaining_logs
+                    if not _belongs_to_active_pid(path)
+                    and path.stat().st_mtime < time.time() - 3600
+                ),
+                key=lambda item: item.stat().st_mtime,
+            )
+            for path in eligible:
+                if total_bytes <= target_bytes:
+                    break
+                size = path.stat().st_size
+                if _delete(path, reason="global_budget"):
+                    budget_deleted.append(str(path))
+                    total_bytes = max(0, total_bytes - size)
+    except Exception as exc:
+        failed.append({"path": str(LOG_DIR), "reason": f"budget: {type(exc).__name__}: {exc}"})
+        total_bytes = None
+
+    result = {
+        "generated_at": _utc_now().isoformat(),
+        "retention_days": retention_days,
+        "active_pids": sorted(active_pids),
+        "deleted": deleted,
+        "budget_deleted": budget_deleted,
+        "failed": failed,
+        "kept_count": len(kept),
+        "remaining_log_bytes": total_bytes,
+        "hard_budget_bytes": LOG_FAIL_TOTAL_BYTES,
+    }
+    state_path = RUN_DIR / "log_retention_state.json"
+    try:
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        temp = state_path.with_name(f".{state_path.name}.{os.getpid()}.tmp")
+        temp.write_text(json.dumps(result, ensure_ascii=True, indent=2), encoding="utf-8")
+        os.replace(temp, state_path)
+    except Exception as exc:
+        result["failed"].append(
+            {"path": str(state_path), "reason": f"state_write: {type(exc).__name__}: {exc}"}
+        )
+    return result

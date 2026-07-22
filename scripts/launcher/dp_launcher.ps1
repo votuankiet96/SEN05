@@ -518,91 +518,87 @@ function Confirm-AllScopeRisk {
     return ($confirm -eq "RUN")
 }
 
-function Start-LogTailWindow {
+function Start-LogPollWindow {
     param(
-        [string]$RelativePath,
-        [string]$Label
+        [string]$RelativePattern,
+        [string]$Label,
+        [switch]$LiveOnly
     )
-    $path = Join-Path $AppRoot $RelativePath
+    $pattern = Join-Path $AppRoot $RelativePattern
     $safeTitle = $Label -replace "'", "''"
-    $safePath = $path -replace "'", "''"
+    $safePattern = $pattern -replace "'", "''"
+    $liveOnlyLiteral = $(if ($LiveOnly) { '$true' } else { '$false' })
     $command = @"
 `$Host.UI.RawUI.WindowTitle = '$safeTitle'
+`$pattern = '$safePattern'
+`$liveOnly = $liveOnlyLiteral
 Write-Host ''
 Write-Host '$Label'
-Write-Host 'Path: $safePath'
+Write-Host "Pattern: `$pattern"
+Write-Host 'Mode: polling tail; file handles close between polls so rotation is never blocked.'
 Write-Host ''
-if (-not (Test-Path -LiteralPath '$safePath')) {
-    Write-Host 'Log file does not exist yet. Waiting for it to be created...'
-    while (-not (Test-Path -LiteralPath '$safePath')) { Start-Sleep -Seconds 2 }
-}
-Get-Content -LiteralPath '$safePath' -Tail 200 -Wait
-"@
-    $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))
-    Start-Process powershell.exe -ArgumentList @(
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-EncodedCommand",
-        $encoded
-    )
-}
 
-function Start-LiveLogTableWindow {
-    param(
-        [string]$RelativePath,
-        [string]$Label
-    )
-    $path = Join-Path $AppRoot $RelativePath
-    $safeTitle = $Label -replace "'", "''"
-    $safePath = $path -replace "'", "''"
-    $command = @"
-`$Host.UI.RawUI.WindowTitle = '$safeTitle'
-`$path = '$safePath'
-`$label = '$Label'
-function Test-LiveLogLine {
+function Write-SelectedLogLine {
     param([AllowEmptyString()][string]`$Line)
-    if (`$null -eq `$Line) { return `$false }
-    return (
+    if (-not `$liveOnly -or
         `$Line -match '\|\s+CANDLE\s+\|' -or
         `$Line -match '^LOG UTC\s+\|' -or
         `$Line -match '\[OPERATION\]' -or
         `$Line -match '\[CANDLE FLOW' -or
         `$Line -match '\[CANDLES' -or
         `$Line -match '\[BATCH SUMMARY' -or
-        `$Line -match '\|\s*$' -or
-        `$Line -match '\|\s*-{20,}\s*$' -or
-        `$Line -match '\|\s*={20,}\s*$' -or
-        `$Line -match '^-{20,}\s*$' -or
-        `$Line -match '^={20,}\s*$' -or
-        `$Line -match '\|\s+(WARNING|ERROR)\s+\|' -or
-        `$Line -match '^\s+(Status|Sessions|Accepted|Missing|Backlog|Runtime|Database|Queue|Retry|By symbol|By TF|Top pairs|Details|Result|Issues)\s+:'
-    )
+        `$Line -match '\|\s+(WARNING|ERROR|CRITICAL)\s+\|' -or
+        `$Line -match '^\s+(Status|Sessions|Accepted|Missing|Backlog|Runtime|Database|Queue|Retry|By symbol|By TF|Top pairs|Details|Result|Issues)\s+:') {
+        Write-Host `$Line
+    }
 }
 
-function Write-LiveLogLine {
-    param([AllowEmptyString()][string]`$Line)
-    Write-Host `$Line
-}
-
-Write-Host ''
-Write-Host `$label
-Write-Host "Path: `$path"
-Write-Host 'Mode: streaming tail. This window no longer refreshes the whole screen.'
-Write-Host 'Close this window when you no longer need to watch the log.'
-Write-Host ''
-while (-not (Test-Path -LiteralPath `$path)) {
-    Write-Host 'Log file does not exist yet. Waiting for it to be created...'
-    Start-Sleep -Seconds 2
-}
-try {
-    Get-Content -LiteralPath `$path -Tail 250 -Wait -ErrorAction Stop | ForEach-Object {
-        if (Test-LiveLogLine `$_) {
-            Write-LiveLogLine `$_
+`$currentPath = ''
+[long]`$offset = 0
+while (`$true) {
+    `$candidate = Get-ChildItem -Path `$pattern -File -ErrorAction SilentlyContinue |
+        Where-Object { `$_.Name -notmatch '\.active\.' } |
+        Sort-Object LastWriteTimeUtc -Descending |
+        Select-Object -First 1
+    if (`$null -eq `$candidate) {
+        Start-Sleep -Seconds 2
+        continue
+    }
+    if (`$candidate.FullName -ne `$currentPath) {
+        `$currentPath = `$candidate.FullName
+        Write-Host ''
+        Write-Host "Following: `$currentPath" -ForegroundColor Cyan
+        Get-Content -LiteralPath `$currentPath -Tail 200 -ErrorAction SilentlyContinue |
+            ForEach-Object { Write-SelectedLogLine `$_ }
+        `$offset = (Get-Item -LiteralPath `$currentPath).Length
+    } else {
+        `$stream = `$null
+        `$reader = `$null
+        try {
+            `$share = [IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete
+            `$stream = [IO.File]::Open(
+                `$currentPath,
+                [IO.FileMode]::Open,
+                [IO.FileAccess]::Read,
+                `$share
+            )
+            if (`$stream.Length -lt `$offset) { `$offset = 0 }
+            if (`$stream.Length -gt `$offset) {
+                [void]`$stream.Seek(`$offset, [IO.SeekOrigin]::Begin)
+                `$reader = New-Object IO.StreamReader(`$stream, [Text.Encoding]::UTF8, `$true, 4096, `$true)
+                while (-not `$reader.EndOfStream) {
+                    Write-SelectedLogLine `$reader.ReadLine()
+                }
+                `$offset = `$stream.Position
+            }
+        } catch {
+            Write-Host "Log poll warning: `$(`$_.Exception.Message)" -ForegroundColor Yellow
+        } finally {
+            if (`$null -ne `$reader) { `$reader.Dispose() }
+            if (`$null -ne `$stream) { `$stream.Dispose() }
         }
     }
-} catch {
-    Write-Host "Could not read log: `$(`$_.Exception.Message)" -ForegroundColor Yellow
+    Start-Sleep -Seconds 2
 }
 "@
     $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))
@@ -769,14 +765,14 @@ while ($true) {
             }
         }
 
-        "13" { Start-LogTailWindow "runtime\logs\system\system.log" "DP Program system log" }
-        "14" { Start-LogTailWindow "runtime\logs\system\activity.log" "Activity timeline log" }
-        "15" { Start-LogTailWindow "runtime\logs\system\auth.log" "TradingView auth log" }
-        "16" { Start-LogTailWindow "runtime\logs\system\discord.log" "Discord notification log" }
-        "17" { Start-LogTailWindow "runtime\logs\system\subprocess_debug.log" "Subprocess debug log" }
-        "18" { Start-LogTailWindow "runtime\logs\operation\live_fetching.log" "Live fetching log" }
-        "19" { Start-LogTailWindow "runtime\logs\operation\historical_pulling.log" "Historical pulling log" }
-        "20" { Start-LogTailWindow "runtime\logs\operation\data_warehouse.log" "Data warehouse log" }
+        "13" { Start-LogPollWindow "runtime\logs\system\system*.log" "DP Program system log" }
+        "14" { Start-LogPollWindow "runtime\logs\system\activity*.log" "Activity timeline log" }
+        "15" { Start-LogPollWindow "runtime\logs\system\auth*.log" "TradingView auth log" }
+        "16" { Start-LogPollWindow "runtime\logs\system\discord*.log" "Discord notification log" }
+        "17" { Start-LogPollWindow "runtime\logs\system\subprocess_*.log" "Subprocess lifecycle/stderr log" }
+        "18" { Start-LogPollWindow "runtime\logs\operation\live_fetching*.log" "Live fetching log" -LiveOnly }
+        "19" { Start-LogPollWindow "runtime\logs\operation\historical_pulling*.log" "Historical pulling log" }
+        "20" { Start-LogPollWindow "runtime\logs\operation\data_warehouse*.log" "Data warehouse log" }
         "21" { Invoke-CleanRuntimeLogs }
         "0" { exit 0 }
         default { Write-Host "Unknown option."; Start-Sleep -Seconds 1 }

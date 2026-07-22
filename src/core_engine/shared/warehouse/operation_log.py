@@ -11,7 +11,14 @@ from __future__ import annotations
 from core_engine.settings import DATA_WAREHOUSE_LOG, TF_STAGING
 from core_engine.util.logkit.factory import get_logger
 
-logger = get_logger("data_warehouse", str(DATA_WAREHOUSE_LOG), rotating=True, console=False, utc=True)
+logger = get_logger(
+    "data_warehouse",
+    str(DATA_WAREHOUSE_LOG),
+    rotating=True,
+    console=False,
+    utc=True,
+    process_scoped=True,
+)
 
 
 def _fmt_count(value) -> str:

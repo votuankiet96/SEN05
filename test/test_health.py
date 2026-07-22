@@ -297,3 +297,73 @@ def test_first_batch_stall_fails_after_startup_grace(live_state_path, backend_en
 
     assert check.status == "fail"
     assert "first batch" in check.message.lower()
+
+
+def test_critical_outbox_storage_failure_is_a_health_failure(monkeypatch):
+    from core_engine.util.notify import critical_outbox
+
+    fake = SimpleNamespace(
+        status=lambda: {
+            "healthy": False,
+            "pending_count": None,
+            "storage_error": "DatabaseError: corrupt",
+        }
+    )
+    monkeypatch.setattr(critical_outbox, "critical_alert_outbox", lambda: fake)
+
+    check = health._critical_outbox_check()
+
+    assert check.status == "fail"
+    assert "cannot be trusted" in check.message
+
+
+def test_log_health_fails_when_active_process_has_no_sink_registry(tmp_path, monkeypatch):
+    log_dir = tmp_path / "logs"
+    run_dir = tmp_path / "run"
+    log_dir.mkdir()
+    run_dir.mkdir()
+    monkeypatch.setattr(health, "LOG_DIR", log_dir)
+    monkeypatch.setattr(health, "RUN_DIR", run_dir)
+    monkeypatch.setattr(health, "_active_runtime_roles", lambda: {"live": 12345})
+
+    check = health._log_sinks_check()
+
+    assert check.status == "fail"
+    assert "missing sink registry" in check.message
+
+
+def test_discord_health_requires_confirmed_delivery_for_active_process(
+    tmp_path, monkeypatch
+):
+    import core_engine.settings as settings
+
+    run_dir = tmp_path / "run"
+    status_dir = run_dir / "notification_status"
+    status_dir.mkdir(parents=True)
+    monkeypatch.setattr(health, "RUN_DIR", run_dir)
+    monkeypatch.setattr(health, "_active_runtime_roles", lambda: {"live": 321})
+    monkeypatch.setattr(
+        settings,
+        "NOTIFICATION",
+        SimpleNamespace(discord_webhook_url="https://configured.invalid/webhook"),
+    )
+    (status_dir / "live.321.json").write_text(
+        json.dumps(
+            {
+                "last_success_at": None,
+                "last_failure_at": None,
+                "queue_pending": 0,
+                "queue_maxsize": 256,
+                "worker_started": True,
+                "worker_alive": True,
+                "circuit_open_seconds": 0,
+                "logger_error": None,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    check = health._discord_check()
+
+    assert check.status == "fail"
+    assert "confirmed Discord" in check.message

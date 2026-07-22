@@ -9,7 +9,13 @@ from core_engine.util.logkit.factory import get_logger
 from core_engine.settings import ACTIVITY_LOG
 
 
-_logger = get_logger("activity", str(ACTIVITY_LOG), rotating=True, console=False)
+_logger = get_logger(
+    "activity",
+    str(ACTIVITY_LOG),
+    rotating=True,
+    console=False,
+    process_scoped=True,
+)
 
 _COMPONENT_LABELS = {
     "system": "System",

@@ -34,6 +34,7 @@ def append_jsonl_capped(
     *,
     max_bytes: int = DEFAULT_MAX_BYTES,
     keep_lines: int = DEFAULT_KEEP_LINES,
+    strict: bool = False,
 ) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -44,7 +45,8 @@ def append_jsonl_capped(
         if max_bytes > 0 and path.stat().st_size >= max_bytes:
             _truncate_to_tail(path, keep_lines)
     except OSError:
-        pass
+        if strict:
+            raise
 
 
 def _truncate_to_tail(path: Path, keep_lines: int) -> None:

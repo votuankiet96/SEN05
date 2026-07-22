@@ -12,6 +12,7 @@ state-file helpers live in process_control.py.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import shlex
 import subprocess
@@ -26,7 +27,14 @@ from core_engine.other.exit_codes import EXIT_CANCELLED, EXIT_ERROR, EXIT_LOCK_C
 from core_engine.util.health import _age_seconds, cleanup_old_runtime_files, collect_health
 from core_engine.shared.time import parse_utc_time
 from core_engine.util.logkit.activity import log_activity
+from core_engine.util.logkit.factory import get_logger
 from core_engine.util.logkit.formatters import operation_line
+from core_engine.util.logkit.handlers import ResilientRotatingFileHandler
+from core_engine.util.logkit.paths import (
+    log_sink_registry_path,
+    register_log_sink,
+    unregister_log_sink,
+)
 from core_engine.util.notify.discord import notify_backend_event, notify_historical_event, notify_live_event, flush_pending
 from core_engine.settings import (
     APP_ROOT,
@@ -86,6 +94,43 @@ LIVE_RESTART_SLOW_MIN_SEC = 120
 # leave a permanently smaller retry budget for the rest of that run.
 LIVE_RESTART_STABLE_RESET_SEC = 1800
 
+_child_lifecycle_logger = get_logger(
+    "child_lifecycle",
+    str(BACKEND_CHILD_STDOUT_LOG),
+    rotating=True,
+    console=False,
+    utc=True,
+)
+
+
+def _pump_child_stderr(
+    managed: ManagedProcess,
+    stderr_logger: logging.Logger,
+    stderr_handler: logging.Handler,
+) -> None:
+    """Drain one child's stderr for its lifetime into a bounded log sink."""
+    handle = managed.stderr_handle
+    if handle is None:
+        return
+    try:
+        for raw_line in iter(handle.readline, ""):
+            line = raw_line.rstrip("\r\n")
+            if line:
+                stderr_logger.error("%s", line)
+    except (OSError, ValueError):
+        pass
+    finally:
+        try:
+            handle.close()
+        except Exception:
+            pass
+        try:
+            stderr_logger.removeHandler(stderr_handler)
+            stderr_handler.close()
+        except Exception:
+            pass
+        unregister_log_sink(getattr(stderr_handler, "baseFilename", ""))
+
 
 class BackendSupervisor:
     def __init__(
@@ -131,7 +176,8 @@ class BackendSupervisor:
         self._last_runtime_health_status: str | None = None
         self._last_db_health_at = 0.0
         self._last_critical_drain_at = 0.0
-        self._last_retention_day = ""
+        self._critical_drain_thread: threading.Thread | None = None
+        self._last_retention_at = 0.0
         self._started_at = utc_iso()
         self._lock_stop = threading.Event()
         self._supervisor_lock_acquired = False
@@ -538,9 +584,11 @@ class BackendSupervisor:
         )
         return True
 
-    def _child_env(self) -> dict[str, str]:
+    def _child_env(self, role: str) -> dict[str, str]:
         env = os.environ.copy()
         env.setdefault("PYTHONIOENCODING", "utf-8")
+        env["DP_PROCESS_ROLE"] = role
+        env.setdefault("PYTHONFAULTHANDLER", "1")
         env["DP_HISTORICAL_CANCEL_FILE"] = str(HISTORICAL_CANCEL_FILE)
         env["DP_DISABLE_CONSOLE_LOG"] = "1"
         env["DP_LIVE_CONFLICT_POLICY"] = "skip"
@@ -548,51 +596,95 @@ class BackendSupervisor:
 
     def _spawn(self, managed: ManagedProcess, command: list[str], stdout_log: Path) -> None:
         stdout_log.parent.mkdir(parents=True, exist_ok=True)
-        with stdout_log.open("a", encoding="utf-8", buffering=1) as handle:
-            handle.write(
-                operation_line(
-                    "SUBPROCESS",
-                    "Child process starting",
-                    process=managed.name,
-                    command=" ".join(command),
-                    started_at=utc_iso(),
-                    result="starting",
-                )
-                + "\n"
-            )
+        _child_lifecycle_logger.info(
+            "%s",
+            operation_line(
+                "SUBPROCESS",
+                "Child process starting",
+                process=managed.name,
+                command=" ".join(command),
+                started_at=utc_iso(),
+                result="starting",
+            ),
+        )
         creationflags = 0
         if os.name == "nt":
             creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
         process = subprocess.Popen(
             command,
             cwd=str(APP_ROOT),
-            env=self._child_env(),
+            env=self._child_env(managed.name),
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
             text=True,
+            encoding="utf-8",
+            errors="replace",
+            bufsize=1,
             creationflags=creationflags,
             close_fds=True,
         )
         managed.process = process
         managed.command = command
         managed.started_at = time.time()
-        managed.stdout_handle = None
+        managed.stderr_handle = process.stderr
+        stderr_path = stdout_log.with_name(
+            f"subprocess_stderr.{managed.name}.{process.pid}.log"
+        )
+        try:
+            stderr_handler = ResilientRotatingFileHandler(
+                str(stderr_path),
+                maxBytes=10 * 1024 * 1024,
+                backupCount=5,
+                encoding="utf-8",
+            )
+            stderr_formatter = logging.Formatter(
+                "%(asctime)s [%(levelname)s] %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S UTC",
+            )
+            stderr_formatter.converter = time.gmtime
+            stderr_handler.setFormatter(stderr_formatter)
+            register_log_sink(
+                stderr_handler.baseFilename,
+                logical_path=stdout_log.with_name(f"subprocess_stderr.{managed.name}.log"),
+                kind="child_stderr",
+            )
+            stderr_logger = logging.Logger(
+                f"subprocess_stderr.{managed.name}.{process.pid}",
+                level=logging.ERROR,
+            )
+            stderr_logger.addHandler(stderr_handler)
+        except Exception:
+            if process.stderr is not None:
+                process.stderr.close()
+            process.terminate()
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
+            raise
+        managed.stderr_thread = threading.Thread(
+            target=_pump_child_stderr,
+            args=(managed, stderr_logger, stderr_handler),
+            name=f"stderr-{managed.name}-{process.pid}",
+            daemon=True,
+        )
+        managed.stderr_thread.start()
         managed.last_exit_code = None
         self._write_state(status="starting", spawn_phase=f"{managed.name}_spawned")
-        with stdout_log.open("a", encoding="utf-8", buffering=1) as handle:
-            handle.write(
-                operation_line(
-                    "SUBPROCESS",
-                    "Child process started",
-                    process=managed.name,
-                    pid=process.pid,
-                    command=" ".join(command),
-                    started_at=utc_iso(),
-                    result="running",
-                )
-                + "\n"
-            )
+        _child_lifecycle_logger.info(
+            "%s",
+            operation_line(
+                "SUBPROCESS",
+                "Child process started",
+                process=managed.name,
+                pid=process.pid,
+                command=" ".join(command),
+                started_at=utc_iso(),
+                result="running",
+            ),
+        )
         logger.info("%s", _slog("Child process started", process=managed.name, pid=process.pid, command=" ".join(command), result="running"))
         component = "live_fetching" if managed.name == "live" else "historical_pulling"
         log_activity(
@@ -893,7 +985,16 @@ class BackendSupervisor:
         if not self.live.started_at:
             return None
         ages: list[float] = []
-        for path in (LIVE_SUMMARY_LOG, WS_LIVE_LOG):
+        paths = [LIVE_SUMMARY_LOG]
+        if self.live.pid:
+            registry = _load_json(log_sink_registry_path(role="live", pid=self.live.pid))
+            for item in registry.get("sinks") or []:
+                try:
+                    if Path(str(item.get("logical_path"))).resolve() == WS_LIVE_LOG.resolve():
+                        paths.append(Path(str(item.get("physical_path"))))
+                except Exception:
+                    continue
+        for path in paths:
             try:
                 stat = path.stat()
             except OSError:
@@ -1025,21 +1126,33 @@ class BackendSupervisor:
         return None
 
     def _run_retention_once_per_day(self) -> None:
-        today = date.today().isoformat()
-        if self._last_retention_day == today:
+        now = time.time()
+        if now - self._last_retention_at < 3600:
             return
-        self._last_retention_day = today
+        self._last_retention_at = now
         result = cleanup_old_runtime_files(days=BACKEND.log_retention_days)
         deleted = len(result.get("deleted", []))
+        failures = result.get("failed") or []
         if deleted:
             logger.info("%s", _slog("Runtime retention removed old files", deleted_files=deleted, retention_days=BACKEND.log_retention_days, result="completed"))
+        if failures:
+            logger.error(
+                "%s",
+                _slog(
+                    "Runtime retention could not remove one or more files",
+                    failure_count=len(failures),
+                    first_failure=failures[0],
+                    result="failed",
+                ),
+            )
         log_activity(
             "runtime_retention",
             component="system",
-            status="completed",
+            status="failed" if failures else "completed",
             message="Runtime retention check completed.",
             retention_days=BACKEND.log_retention_days,
             deleted_files=deleted,
+            failures=len(failures),
         )
 
     def _monitor_live_freshness(self) -> None:
@@ -1170,25 +1283,37 @@ class BackendSupervisor:
         now = time.time()
         if now - self._last_critical_drain_at < 60:
             return
+        if self._critical_drain_thread is not None and self._critical_drain_thread.is_alive():
+            return
         self._last_critical_drain_at = now
-        try:
-            from core_engine.util.notify.critical_outbox import critical_alert_outbox
 
-            critical_alert_outbox().drain()
-        except Exception as exc:
-            # Do not emit CRITICAL here: that would recursively enqueue a new
-            # alert into the outbox whose drain just failed. A local WARNING
-            # still makes the retry-path failure visible while the original
-            # unacked row remains durable for the next attempt.
-            logger.warning(
-                "%s",
-                _slog(
-                    "Critical alert outbox retry failed",
-                    reason=exc,
-                    action="leave_unacked_for_next_retry",
-                    result="warning",
-                ),
-            )
+        def _drain() -> None:
+            try:
+                from core_engine.util.notify.critical_outbox import critical_alert_outbox
+
+                # Three rows keep one pass below ~45 seconds at the configured
+                # connect/read timeouts. Most importantly this network work is
+                # never allowed to pause child polling or restart decisions.
+                critical_alert_outbox().drain(limit=3)
+            except Exception as exc:
+                # Do not emit CRITICAL here: that would recursively enqueue a
+                # new alert into the outbox whose drain just failed.
+                logger.warning(
+                    "%s",
+                    _slog(
+                        "Critical alert outbox retry failed",
+                        reason=exc,
+                        action="leave_unacked_for_next_retry",
+                        result="warning",
+                    ),
+                )
+
+        self._critical_drain_thread = threading.Thread(
+            target=_drain,
+            name="critical-outbox-drain",
+            daemon=True,
+        )
+        self._critical_drain_thread.start()
 
     def _run_periodic_db_health_check(self) -> None:
         """DB-inclusive health check on a slow interval (default 15 min),
