@@ -1,7 +1,7 @@
 """Live OHLCV batch fetch engine.
 
 Inputs:
-- config/dp_provider.env and config/instruments.py symbols/timeframes
+- config/dp_provider.env and core_engine.settings.instruments symbols/timeframes
 - TradingView auth/token/cookie runtime
 - SQL Server warehouse connection
 
@@ -54,7 +54,6 @@ from core_engine.settings import (
     SYMBOL_OVERNIGHT_MINS,
     TRADINGVIEW,
     WS_LIVE_LOG,
-    WS_LIVE_PID,
     WS_LIVE_STATE,
 )
 
@@ -74,7 +73,6 @@ from core_engine.core.live.logging_support import (
 )
 from core_engine.core.live.batch_metrics import (
     init_batch as _init_batch_metrics,
-    record_db_result as _record_db_result,
     wait_for_db as _wait_for_batch_db,
 )
 from core_engine.core.live.db_worker import (
@@ -111,7 +109,6 @@ from core_engine.core.live.state import (
     _etl_wakeup,
     _hourly_lock,
     _hourly_stats,
-    _increment_data_error_counter,
     _last_bar_ts,
     _missed_lock,
     _missed_pairs,
@@ -174,8 +171,6 @@ WS_SYMBOLS = _resolve_ws_symbols(SYMBOLS, LIVE.asset_types)
 
 _check_expected_live_symbol_count(len(WS_SYMBOLS), LIVE.expected_symbol_count, LIVE.asset_types)
 
-_LOCAL_RUNTIME_LOCK_FILE = WS_LIVE_PID
-
 _live_settings = LIVE
 
 WS_SYMBOLS_PER_CONN = _live_settings.symbols_per_conn
@@ -193,7 +188,6 @@ TV_WS_CONNECTIVITY_TIMEOUT_SEC = _live_settings.connectivity_timeout_sec
 TV_WS_CONNECTIVITY_COOLDOWN_SEC = _live_settings.connectivity_cooldown_sec
 
 
-DB_QUEUE_MAXSIZE = _live_settings.db_queue_maxsize
 STATUS_INTERVAL_SEC = _live_settings.status_interval_sec
 MAX_SPOOL_ROWS = _live_settings.max_spool_rows
 
@@ -214,8 +208,6 @@ WS_SYMBOL_IDS = tuple(s["symbol_id"] for s in WS_SYMBOLS)
 WS_WATCH_KEYS = frozenset((sid, tf_code) for sid in WS_SYMBOL_IDS for tf_code in WS_TF_CODES)
 
 _SYMBOL_META_BY_ID = {s["symbol_id"]: s for s in WS_SYMBOLS}
-
-_SYMBOL_NAME_BY_ID = {sid: s["tv_symbol"] for sid, s in _SYMBOL_META_BY_ID.items()}
 
 def _refresh_watermarks_from_fact(reason: str = "refresh") -> int:
     loaded = 0
@@ -726,8 +718,6 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
     for g in groups:
         for key, cnt in g._pair_new_bars.items():
             batch_pair_bars[key] = batch_pair_bars.get(key, 0) + cnt
-
-    _sym_name = {s["symbol_id"]: s["tv_symbol"] for s in WS_SYMBOLS}
 
     with _backlog_lock:
         backlog_snap = dict(_backlog)

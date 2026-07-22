@@ -8,9 +8,9 @@
      refactored core_engine runtime.
 
    SOURCE OF TRUTH:
-     The canonical runtime list is config/instruments.py.
+     The canonical runtime list is src/core_engine/settings/instruments.py.
      This SQL file is the install-time database seed for a fresh
-     warehouse. If symbols change in config/instruments.py, update this
+     warehouse. If symbols change in src/core_engine/settings/instruments.py, update this
      seed in the same change.
 
    SAFE TO RE-RUN:

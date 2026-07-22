@@ -349,4 +349,4 @@ GO
 
 
 -- NOTE: DWH.Dim_Symbol is seeded by 06_seed_symbols.sql.
--- The runtime instrument source is config/instruments.py -> SYMBOLS.
+-- The runtime instrument source is src/core_engine/settings/instruments.py -> SYMBOLS.

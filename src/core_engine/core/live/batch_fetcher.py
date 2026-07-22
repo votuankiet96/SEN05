@@ -957,7 +957,7 @@ class BatchFetcher:
         self._done.set()
 
     def fetch(self, batch_id: int, timeout: int = BATCH_FETCH_TIMEOUT) -> bool:
-        token = self._next_fetch_token()
+        self._next_fetch_token()
 
         self._done.clear()
 

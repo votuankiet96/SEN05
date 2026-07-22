@@ -1,10 +1,4 @@
-"""Warehouse maintenance path: purge, delete, and scoped reset.
-
-Split out of the former db_connector.py / repository.py and kept
-separate from writer.py/reader.py deliberately: everything here deletes
-or overwrites historical data, the highest-blast-radius operations in
-the warehouse layer.
-"""
+"""Explicit warehouse purge and reset operations, isolated from live writes."""
 
 from __future__ import annotations
 
@@ -22,11 +16,10 @@ from core_engine.settings import (
     WS_OVERFLOW_SPOOL,
 )
 from core_engine.shared.warehouse.connection import get_connection
-from core_engine.shared.warehouse.operation_log import _target_label, _warehouse_log, logger
+from core_engine.shared.warehouse.operation_log import _warehouse_log, logger
 
 
 _ALL_STAGING_TABLES = [TF_STAGING[tf_code] for tf_code in TF_DISPLAY_ORDER if tf_code in TF_STAGING]
-_STAGING_TABLE_TF_CODE = {TF_STAGING[tf_code]: tf_code for tf_code in TF_DISPLAY_ORDER if tf_code in TF_STAGING}
 _STAGING_TABLE_TF_ID = {
     TF_STAGING[tf_code]: timeframe_id
     for timeframe_id, tf_code in enumerate(TF_DISPLAY_ORDER, start=1)
@@ -131,7 +124,6 @@ def purge_staging(
     cursor = conn.cursor()
     try:
         for table in _ALL_STAGING_TABLES:
-            tf_code = _STAGING_TABLE_TF_CODE[table]
             timeframe_id = _STAGING_TABLE_TF_ID[table]
             staging_index = f"IX_{table.split('.', 1)[1]}_SBT"
             table_deleted = 0
@@ -264,135 +256,6 @@ def purge_staging(
     finally:
         conn.close()
     return deleted_summary
-
-def delete_fact_bars_range(
-    symbol_id: int,
-    tf_code: str,
-    from_dt,
-    to_dt,
-    *,
-    source: str = "historical_repair",
-    symbol: str | None = None,
-) -> int:
-    """
-    Xoa Fact_OHLCV trong dung cua so BarTime [from_dt, to_dt].
-
-    Dung cho windowed replacement: staging da co data thay the, chi xoa
-    phan Fact nam trong cua so vua pull lai de giu nguyen lich su ngoai window.
-    """
-    if from_dt is None or to_dt is None or from_dt > to_dt:
-        _warehouse_log(
-            30,
-            source=source,
-            target=_target_label(symbol=symbol, symbol_id=symbol_id, tf_code=tf_code),
-            action="fact_delete_window",
-            from_time=from_dt,
-            to_time=to_dt,
-            result="invalid_window",
-        )
-        return 0
-
-    conn = get_connection()
-    cursor = conn.cursor()
-    try:
-        cursor.execute("SELECT TimeframeID FROM DWH.Dim_Timeframe WHERE Code = ?", (tf_code,))
-        row = cursor.fetchone()
-        if not row:
-            _warehouse_log(
-                30,
-                source=source,
-                target=_target_label(symbol=symbol, symbol_id=symbol_id, tf_code=tf_code),
-                action="fact_delete_window",
-                result="unknown_timeframe",
-            )
-            return 0
-        tf_id = row[0]
-        cursor.execute(
-            """
-            DELETE FROM DWH.Fact_OHLCV
-            WHERE SymbolID = ?
-              AND TimeframeID = ?
-              AND BarTime >= ?
-              AND BarTime <= ?
-            """,
-            (symbol_id, tf_id, from_dt, to_dt),
-        )
-        deleted = cursor.rowcount
-        conn.commit()
-        _warehouse_log(
-            20,
-            source=source,
-            target=_target_label(symbol=symbol, symbol_id=symbol_id, tf_code=tf_code),
-            action="fact_delete_window",
-            fact_deleted=deleted,
-            from_time=from_dt,
-            to_time=to_dt,
-            result="ok",
-        )
-        return deleted
-    except Exception as e:
-        conn.rollback()
-        _warehouse_log(
-            40,
-            source=source,
-            target=_target_label(symbol=symbol, symbol_id=symbol_id, tf_code=tf_code),
-            action="fact_delete_window",
-            from_time=from_dt,
-            to_time=to_dt,
-            result="failed",
-            reason=e,
-        )
-        return 0
-    finally:
-        conn.close()
-
-def delete_staging_bars(
-    symbol_id: int,
-    staging_table: str,
-    *,
-    source: str = "historical_repair",
-    symbol: str | None = None,
-    tf_code: str | None = None,
-) -> int:
-    """
-    Xoa toan bo bar cua symbol trong mot staging table.
-
-    Dung khi:
-    - Chuan bi pull lai tu dau de loai bo staging cu/co kha nang loi.
-
-    Dau ra:
-    - So dong da xoa.
-    """
-    conn = get_connection()
-    cursor = conn.cursor()
-    try:
-        cursor.execute(f"DELETE FROM {staging_table} WHERE SymbolID = ?", (symbol_id,))
-        deleted = cursor.rowcount
-        conn.commit()
-        _warehouse_log(
-            20,
-            source=source,
-            target=_target_label(symbol=symbol, symbol_id=symbol_id, tf_code=tf_code, staging_table=staging_table),
-            action="staging_delete",
-            staging_deleted=deleted,
-            table=staging_table,
-            result="ok",
-        )
-        return deleted
-    except Exception as e:
-        conn.rollback()
-        _warehouse_log(
-            40,
-            source=source,
-            target=_target_label(symbol=symbol, symbol_id=symbol_id, tf_code=tf_code, staging_table=staging_table),
-            action="staging_delete",
-            table=staging_table,
-            result="failed",
-            reason=e,
-        )
-        return 0
-    finally:
-        conn.close()
 
 def _sql_in_placeholders(values: list) -> str:
     return ",".join("?" for _ in values)

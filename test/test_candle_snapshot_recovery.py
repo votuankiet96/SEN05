@@ -3,7 +3,7 @@ optional on_recovered callback when the Redis circuit breaker closes again
 after being open, so live/engine.py can re-seed every live symbol/
 timeframe and OG catches up on any snapshot_updated events it missed
 during the outage. This is a light mitigation, not a full durable outbox -
-see the module docstring in redis_io/candle_snapshot.py for why.
+see the module docstring in util/redis_io/candle_snapshot.py for why.
 """
 
 from __future__ import annotations

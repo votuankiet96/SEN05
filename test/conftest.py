@@ -6,7 +6,7 @@ fix) persists to a real SQLite file under runtime/cache and performs a
 real synchronous HTTP POST on every CRITICAL log record - on ANY
 component logger, not just ones a given test file created itself. Without
 this fixture, any test anywhere in the suite that triggers logger.critical()
-on a shared logger (e.g. supervisor/engine.py's "system" logger) would
+on a shared logger (e.g. util/supervisor/engine.py's "system" logger) would
 write to the real outbox file and attempt a real network call. This
 autouse, suite-wide fixture resets the outbox singleton to a tmp_path-backed
 instance with network delivery stubbed out for every test.

@@ -1,6 +1,6 @@
 """Discord webhook notifications for the refactored DP backend.
 
-Public API: send_message, send_alert, flush_pending, notify_*_event, and
+Public API: send_alert, flush_pending, notify_*_event, and
 QUICK_COMMANDS_HINT. Discord webhooks are outbound-only.
 """
 
@@ -378,25 +378,6 @@ def _normalize_level(level: str | None) -> str:
     }
     value = aliases.get(value, value)
     return value if value in _COLORS else "INFO"
-
-
-def _infer_level(text: str) -> str:
-    head = text.strip().upper()[:160]
-    if any(token in head for token in ("[FAIL]", "[FAILED]", "[ERROR]", "[RED]", " ERROR ", "FAILED")) or re.search(
-        r"\bRED\b", head
-    ):
-        return "ERROR"
-    if any(token in head for token in ("[CRIT]", "CRITICAL")):
-        return "CRITICAL"
-    if any(token in head for token in ("[WARN]", "[YELLOW]", "WARNING", "STALE", "TIMEOUT")) or re.search(
-        r"\bYELLOW\b", head
-    ):
-        return "WARNING"
-    if any(token in head for token in ("[OK]", "[GREEN]", "SUCCESS", "COMPLETED", "READY")) or re.search(
-        r"\b(GREEN|HEALTHY)\b", head
-    ):
-        return "SUCCESS"
-    return "INFO"
 
 
 def _clean_title(text: str, level: str) -> str:
@@ -1084,16 +1065,6 @@ def _start_sender(payload: dict[str, Any], *, kind: str, level: str, meta: dict[
     thread.start()
     _pending_threads = [t for t in _pending_threads if t.is_alive()]
     _pending_threads.append(thread)
-
-
-def send_message(message: str) -> None:
-    """Send a general Discord notification as an embed with a color side line."""
-    if not NOTIFICATION.discord_webhook_url:
-        return
-    plain = _format_discord_text(message)
-    level = _infer_level(plain)
-    payload, meta = _build_embed_payload(level=level, text=plain)
-    _start_sender(payload, kind="message", level=level, meta=meta)
 
 
 def flush_pending(timeout: float = 12.0) -> None:

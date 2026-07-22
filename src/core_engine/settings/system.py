@@ -91,7 +91,3 @@ _ORDERED_TFS = ["W", "D1", "H8", "H6", "H4", "H3", "H2", "H1", "M90", "M45", "M3
 
 def get_historical_timeframes() -> list[tuple[str, str, str, int]]:
     return [(TF_INTERVAL_MAP[tf], tf, TF_STAGING[tf], DEFAULT_N_BARS[tf]) for tf in _ORDERED_TFS]
-
-
-def get_tf_interval_map() -> dict[str, str]:
-    return dict(TF_INTERVAL_MAP)

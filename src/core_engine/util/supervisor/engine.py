@@ -1,17 +1,12 @@
 """24/7 process supervisor for DP Program: BackendSupervisor + run_forever.
 
-Split out of supervisor/engine.py. Owns lifecycle, the historical backfill
-schedule, the live-freshness watchdog, and restart/retry policy. It does
+Owns lifecycle, the historical backfill schedule, the live-freshness
+watchdog, and restart/retry policy. It does
 not fetch or transform market data; those responsibilities stay inside
 historical/engine.py and live/engine.py, spawned as subprocesses.
 
 Lock/stop-file coordination, the historical job queue, and small JSON
-state-file helpers live in supervisor/process_control.py and are
-imported from here (this module never needs anything back from it).
-queue_historical_job and record_operator_decision are re-exported below
-purely so `from core_engine.util.supervisor import engine as backend_engine`
-callers (core_engine/cli.py) keep working unchanged even though those
-two functions don't touch BackendSupervisor.
+state-file helpers live in process_control.py.
 """
 
 from __future__ import annotations
@@ -66,8 +61,6 @@ from core_engine.util.supervisor.process_control import (
     _slog,
     clear_stop_request,
     logger,
-    queue_historical_job,
-    record_operator_decision,
     request_stop,
     stop_requested,
     utc_iso,

@@ -4,7 +4,7 @@ only echo a heartbeat when it was the raw receive buffer's own prefix,
 silently skipping (not echoing) a heartbeat found later via _parse_packets
 - e.g. one bundled after a framed data message in the same TCP read. It
 also relied on parse_packets() itself, which had a related bug (fixed in
-tradingview/protocol.py - see test_protocol.py's "does_not_swallow" tests):
+shared/tradingview/protocol.py - see test_protocol.py's "does_not_swallow" tests):
 a bare heartbeat used to swallow everything after it in the same buffer,
 including a following framed message.
 

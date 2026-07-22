@@ -57,9 +57,6 @@ SYMBOLS: list[dict] = [
     {"symbol_id": 81, "tv_symbol": "BTCUSD", "tv_exchange": "CAPITALCOM", "asset_type": "Crypto"},
 ]
 
-# Quick lookup: tv_symbol → asset_type
-ASSET_TYPE_MAP: dict[str, str] = {s["tv_symbol"]: s["asset_type"] for s in SYMBOLS}
-
 # Asset types that close on weekends (no bars Sat/Sun)
 WEEKEND_CLOSED: set[str] = {"FOREX", "Metal", "Indice"}
 
@@ -123,19 +120,3 @@ TF_MINUTES: dict[str, int] = {
     "D1": 1440,
     "W": 10080,
 }
-
-# All 15 TF codes as a SQL IN clause string (avoids repeated string building)
-ALL_TFS_SQL: str = (
-    "('M5','M10','M15','M20','M30','M45','H1','M90','H2','H3','H4','H6','H8','D1','W')"
-)
-
-# Cross-TF OHLCV consistency check pairs: (small_tf, big_tf, bucket_minutes)
-CROSS_TF_PAIRS: list[tuple] = [
-    ("M5", "M15", 15),
-    ("M5", "M30", 30),
-    ("M15", "M45", 45),
-    ("M30", "H1", 60),
-    ("H1", "H2", 120),
-    ("H1", "H3", 180),
-    ("H1", "H4", 240),
-]

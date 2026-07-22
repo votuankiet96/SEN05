@@ -1,13 +1,9 @@
-"""Warehouse read path: watermarks, snapshots, and gap queries.
-
-Split out of the former db_connector.py / repository.py. Read-only -
-nothing here writes to SEN.* or DWH.* tables.
-"""
+"""Read-only warehouse operations: watermarks, snapshots, and gap queries."""
 
 from __future__ import annotations
 
 from core_engine.shared.warehouse.connection import get_connection
-from core_engine.shared.warehouse.operation_log import _target_label, _warehouse_log
+from core_engine.shared.warehouse.operation_log import _warehouse_log
 
 
 def get_latest_bars() -> dict:

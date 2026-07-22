@@ -18,7 +18,7 @@ dp_program/
     settings/               # operational (env-driven) vs. system (fixed) config
   test/                     # pytest suite (no DB/TradingView/Redis required)
   config/                   # dp_provider.env (operator-editable, gitignored) + .example
-  scripts/                  # setup, launcher, Scheduled Task deploy, SQL schema
+  scripts/                  # dependency setup, operator launcher, SQL schema
   docs/                     # OPERATOR_RUNBOOK.md
   runtime/                  # logs/cache/run/spool - gitignored, created on demand
 ```

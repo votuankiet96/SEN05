@@ -1,9 +1,4 @@
-"""Warehouse write path: staging insert and the staging -> Fact ETL call.
-
-Split out of the former db_connector.py / repository.py. Each function
-opens and closes its own connection; none of these call each other or
-anything in reader.py/maintenance.py.
-"""
+"""Warehouse write path: staging insert and the staging -> Fact ETL call."""
 
 from __future__ import annotations
 

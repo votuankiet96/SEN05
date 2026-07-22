@@ -75,8 +75,8 @@ Mục tiêu của module này không chỉ là "đăng nhập được", mà là
 #     Đây là phương án cuối cùng, không nên chạy lâu ở chế độ guest.
 #
 # CÁC SCRIPT DÙNG FILE NÀY:
-#   live_fetching.py - WebSocket live      (bootstrap, get_current_token, renew)
-#   historical_pulling.py - Backfill hằng ngày  (get_valid_tv_connection, refresh_mid_run)
+#   core/live - WebSocket live (bootstrap, get_current_token, renew)
+#   core/historical - scheduled backfill (resolve_auth_token, refresh_mid_run)
 #
 # CẤU HÌNH CẦN THIẾT TRONG FILE .env:
 #   TV_AUTH_TOKEN=eyJhbGci...   -> copy từ trình duyệt khi cần token tĩnh
@@ -108,7 +108,6 @@ from core_engine.settings import (  # noqa: E402
     AUTH_LOG,
     CACHE_DIR,
     TRADINGVIEW,
-    env_bool as env_flag,
     env_int,
 )
 from core_engine.util.coordination.locks import _local_pid_alive as is_pid_alive  # noqa: E402
@@ -186,11 +185,9 @@ TOKEN_EXPIRY_KEYWORDS = ("unauthorized", "auth_error", "not_authorized")
 HTTP_MAX_RETRIES = 4
 HTTP_BASE_DELAY_SEC = 2.0
 HTTP_MAX_DELAY_SEC = 120.0
-AUTH_REFRESH_COOLDOWN_SEC = env_int("TV_AUTH_REFRESH_COOLDOWN_SEC", 900, minimum=0)
-AUTH_TRANSIENT_COOLDOWN_SEC = env_int(
-    "TV_AUTH_TRANSIENT_COOLDOWN_SEC", 300, minimum=0
-)
-AUTH_CONNECTIVITY_PREFLIGHT = env_flag("TV_AUTH_CONNECTIVITY_PREFLIGHT", True)
+AUTH_REFRESH_COOLDOWN_SEC = TRADINGVIEW.auth_refresh_cooldown_sec
+AUTH_TRANSIENT_COOLDOWN_SEC = TRADINGVIEW.auth_transient_cooldown_sec
+AUTH_CONNECTIVITY_PREFLIGHT = TRADINGVIEW.auth_connectivity_preflight
 AUTH_CONNECTIVITY_CONNECT_TIMEOUT_SEC = env_int(
     "TV_AUTH_CONNECTIVITY_CONNECT_TIMEOUT_SEC", 2, minimum=1
 )
@@ -204,7 +201,7 @@ AUTH_REFRESH_PEER_WAIT_SEC = env_int(
     "TV_AUTH_REFRESH_PEER_WAIT_SEC", 90, minimum=0
 )
 AUTH_REFRESH_PEER_POLL_SEC = 1.0
-AUTH_HEADLESS_FRESH_LOGIN_ENABLED = env_flag("TV_AUTH_HEADLESS_FRESH_LOGIN", False)
+AUTH_HEADLESS_FRESH_LOGIN_ENABLED = TRADINGVIEW.headless_fresh_login
 
 # Chu kỳ kiểm tra và gia hạn cookie.
 COOKIE_CHECK_INTERVAL_SEC = 2 * 3600  # probe every 2h
@@ -229,8 +226,8 @@ _TOKEN_CACHE = CACHE_DIR / "tv_token_cache.json"
 _AUTH_REFRESH_LOCK = _TOKEN_CACHE.parent / "tv_auth_refresh.lock"
 _PLAYWRIGHT_BROWSER_CACHE = _TOKEN_CACHE.parent / "playwright-browsers"
 _BROWSER_PROFILE_DIR = (
-    Path(os.environ["TV_BROWSER_PROFILE_DIR"]).expanduser()
-    if os.environ.get("TV_BROWSER_PROFILE_DIR", "").strip()
+    Path(TRADINGVIEW.browser_profile_dir).expanduser()
+    if TRADINGVIEW.browser_profile_dir
     else _TOKEN_CACHE.parent / "tradingview-browser-profile"
 )
 _PLAYWRIGHT_USER_AGENT = (
@@ -261,7 +258,7 @@ class _CookieProbeResult:
 
 
 # =============================================================================
-# PUBLIC API - dùng bởi live_fetching.py
+# PUBLIC API - dùng bởi live và historical engines
 # =============================================================================
 
 
@@ -1080,8 +1077,6 @@ def _resolve_auth_token(
 
 def _resolve_auth_token_refresh_paths(log: logging.Logger) -> tuple[str, str]:
     """Chạy các nhánh refresh qua mạng/browser; caller đang giữ process-level auth lock."""
-    global _tv_cookie
-
     # LỚP 1.5: Làm mới qua session cookie.
     current_cookie = _tv_cookie or TRADINGVIEW.cookie
     if current_cookie:
@@ -1879,8 +1874,7 @@ def _ensure_cookie_fresh_ttl_aware(lg: logging.Logger | None = None) -> None:
         _last_cookie_renewal_ts, \
         _cookie_probe_fail_streak, \
         _cookie_renewal_fail_streak, \
-        _tv_cookie, \
-        _auth_token
+        _tv_cookie
 
     log = lg or _logger
     now = time.time()
@@ -2208,7 +2202,6 @@ def _bootstrap_credentials(lg: logging.Logger | None = None) -> tuple[str, str]:
 
     Trả về (token, tên_phương_thức).
     """
-    global _tv_cookie
     log = lg or _logger
     log.info("[AUTH] Bootstrapping credentials...")
 

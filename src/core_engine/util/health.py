@@ -104,14 +104,6 @@ def _read_last_jsonl(path: Path) -> dict[str, Any]:
         return {}
 
 
-def _safe_path_status(path: Path) -> dict[str, Any]:
-    return {
-        "path": str(path),
-        "exists": path.exists(),
-        "is_dir": path.is_dir(),
-    }
-
-
 def _runtime_check() -> Check:
     try:
         ensure_runtime_dirs()

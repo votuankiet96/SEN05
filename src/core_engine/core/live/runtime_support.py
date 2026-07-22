@@ -358,7 +358,7 @@ class LocalRuntimeLock:
 
 
 def runtime_payload(*, started_at: str | None = None) -> str:
-    now = datetime.utcnow().isoformat(timespec="seconds")
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
     return (
         f"host={socket.gethostname()};"
         f"pid={os.getpid()};"
@@ -484,7 +484,7 @@ def run_auth_preflight(
 
     if tv_auth.has_2fa_secret():
         try:
-            import pyotp  # noqa: F401
+            __import__("pyotp")
         except ImportError:
             logger.warning("[PREFLIGHT] TRADINGVIEW.two_fa_secret is set but pyotp is not installed.")
 

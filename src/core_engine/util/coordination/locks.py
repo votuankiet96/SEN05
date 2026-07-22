@@ -45,7 +45,6 @@ WAREHOUSE_MAINTENANCE_LOCK = "warehouse_maintenance"
 
 DEFAULT_LOCK_CACHE_TTL_SEC = 30.0
 DEFAULT_HISTORICAL_TTL_MIN = 240
-DEFAULT_LIVE_RUNTIME_TTL_MIN = 10
 DEFAULT_LIVE_BATCH_TTL_MIN = 10
 DEFAULT_HEARTBEAT_SEC = 60.0
 
@@ -89,7 +88,7 @@ def default_connection_factory() -> Any:
 
 
 def utc_stamp() -> str:
-    return datetime.utcnow().isoformat(timespec="seconds")
+    return datetime.now(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
 
 
 def parse_payload(payload: str | None) -> dict[str, str]:
@@ -449,9 +448,8 @@ class LockCoordinator:
                     )
                 elif self._supports_owner_fencing(cur):
                     # Plain release() with no explicit target: this is
-                    # always "release the lock I currently hold" (e.g.
-                    # release_live_runtime(), release_supervisor_lock()) -
-                    # fence it so a stale/reconnected owner cannot delete a
+                    # always "release the lock I currently hold". Fence it
+                    # so a stale/reconnected owner cannot delete a
                     # lock a different process has since legitimately
                     # acquired for the same TaskName.
                     cur.execute(
@@ -685,16 +683,13 @@ class LockCoordinator:
             return ""
         return ""
 
-    def _same_host_pid_dead(self, meta: dict[str, str]) -> bool:
-        """Backward-compatible predicate retained for callers/tests."""
-        return self._same_host_stale_process_reason(meta).startswith("dead pid ")
-
     def _heartbeat_stale(self, meta: dict[str, str], *, stale_after_sec: float) -> bool:
         heartbeat = meta.get("heartbeat") or meta.get("started")
         if not heartbeat:
             return False
         try:
-            age = (datetime.utcnow() - datetime.fromisoformat(heartbeat)).total_seconds()
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            age = (now - datetime.fromisoformat(heartbeat)).total_seconds()
             return age > stale_after_sec
         except Exception:
             return False
@@ -842,45 +837,6 @@ class LockCoordinator:
     def historical_lease_lost(self) -> bool:
         lease = self._local_historical_lease
         return bool(lease and lease.lost_event.is_set())
-
-    def acquire_live_runtime(
-        self,
-        *,
-        ttl_min: int = DEFAULT_LIVE_RUNTIME_TTL_MIN,
-        started: str | None = None,
-    ) -> bool:
-        started = started or utc_stamp()
-        payload = format_payload(
-            {
-                "kind": "live_runtime",
-                "host": self.host,
-                "pid": str(self.pid),
-                "started": started,
-                "heartbeat": utc_stamp(),
-            }
-        )
-        return self.acquire(LIVE_RUNTIME_LOCK, ttl_min, payload)
-
-    def renew_live_runtime(
-        self,
-        *,
-        ttl_min: int = DEFAULT_LIVE_RUNTIME_TTL_MIN,
-        started: str | None = None,
-    ) -> bool:
-        started = started or utc_stamp()
-        payload = format_payload(
-            {
-                "kind": "live_runtime",
-                "host": self.host,
-                "pid": str(self.pid),
-                "started": started,
-                "heartbeat": utc_stamp(),
-            }
-        )
-        return self.renew(LIVE_RUNTIME_LOCK, ttl_min, payload=payload)
-
-    def release_live_runtime(self) -> bool:
-        return self.release(LIVE_RUNTIME_LOCK)
 
     def request_live_shutdown(self, *, grace_sec: int = LIVE_SHUTDOWN_GRACE_SEC) -> bool:
         record = self.fetch(LIVE_RUNTIME_LOCK, active_only=True)

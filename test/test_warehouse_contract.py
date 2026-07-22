@@ -12,8 +12,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from core_engine.shared.warehouse import connection as warehouse_connection
 from core_engine.shared.warehouse import reconcile as warehouse_reconcile
 

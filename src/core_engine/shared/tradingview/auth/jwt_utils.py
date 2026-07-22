@@ -14,20 +14,15 @@ import json
 import logging
 import time
 
-from core_engine.settings import env_int
+from core_engine.settings import TRADINGVIEW
 
 # Chuỗi đặc biệt báo hiệu trạng thái chưa xác thực hoặc guest.
 GUEST_TOKEN = "unauthorized_user_token"
 
 STARTUP_MIN_TOKEN_TTL_SEC = 10 * 60
 
-TOKEN_PROACTIVE_REFRESH_SEC = env_int(
-    "TV_TOKEN_PROACTIVE_REFRESH_SEC", 15 * 60, minimum=0
-)
-
-TOKEN_PROACTIVE_RETRY_SEC = env_int(
-    "TV_TOKEN_PROACTIVE_RETRY_SEC", 10 * 60, minimum=0
-)
+TOKEN_PROACTIVE_REFRESH_SEC = TRADINGVIEW.token_proactive_refresh_sec
+TOKEN_PROACTIVE_RETRY_SEC = TRADINGVIEW.token_proactive_retry_sec
 
 
 def _jwt_expires_in(token: str) -> float:

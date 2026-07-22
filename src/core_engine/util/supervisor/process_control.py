@@ -1,7 +1,7 @@
 """Process/lock coordination utilities for the DP Program supervisor.
 
-Split out of supervisor/engine.py: everything here is a free function or
-small helper class the BackendSupervisor class (engine.py) builds on -
+Everything here is a free function or small helper class the
+BackendSupervisor class builds on:
 same-host process identification, graceful/forced stop coordination
 across the three runtime locks (supervisor/live/historical), the queued-
 historical-job file, operator-decision logging, and the small JSON
@@ -521,7 +521,3 @@ def clear_stop_request() -> None:
 
 def stop_requested() -> bool:
     return BACKEND_STOP_FILE.exists()
-
-
-def backend_status() -> dict[str, Any]:
-    return _load_json(BACKEND_STATE)

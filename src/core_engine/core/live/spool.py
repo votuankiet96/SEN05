@@ -55,10 +55,6 @@ from typing import Any
 PAYLOAD_VERSION = 1
 PAYLOAD_MARKER = "__sen05_spool_payload__"
 
-STATUS_PENDING = "pending"
-STATUS_LEASED = "leased"
-STATUS_STAGED = "staged"
-
 DEFAULT_LEASE_SECONDS = 120
 
 
@@ -439,20 +435,6 @@ class LiveSpool:
                 with closing(sqlite3.connect(self.path)) as con:
                     row = con.execute(
                         "SELECT COUNT(*) FROM spool WHERE status='staged'"
-                    ).fetchone()
-            return int(row[0]) if row else 0
-        except Exception:
-            return None
-
-    def count_pending_retry(self) -> int | None:
-        """Rows currently sitting in `pending` with attempts > 0, i.e.
-        genuinely stuck/retrying rows rather than the normal in-flight
-        pending->leased->ack turnover."""
-        try:
-            with self._lock:
-                with closing(sqlite3.connect(self.path)) as con:
-                    row = con.execute(
-                        "SELECT COUNT(*) FROM spool WHERE status='pending' AND attempts > 0"
                     ).fetchone()
             return int(row[0]) if row else 0
         except Exception:

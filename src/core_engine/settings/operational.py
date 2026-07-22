@@ -174,15 +174,12 @@ class TradingViewSettings:
     captcha_service: str = env_str("TV_CAPTCHA_SERVICE", "capsolver")
     browser_profile_dir: str = env_str("TV_BROWSER_PROFILE_DIR", "")
     headless_fresh_login: bool = env_bool("TV_AUTH_HEADLESS_FRESH_LOGIN", False)
-    token_proactive_refresh_sec: int = env_int("TV_TOKEN_PROACTIVE_REFRESH_SEC", 900, minimum=60)
-    token_proactive_retry_sec: int = env_int("TV_TOKEN_PROACTIVE_RETRY_SEC", 600, minimum=60)
-    auth_refresh_cooldown_sec: int = env_int("TV_AUTH_REFRESH_COOLDOWN_SEC", 900, minimum=60)
-    auth_transient_cooldown_sec: int = env_int("TV_AUTH_TRANSIENT_COOLDOWN_SEC", 300, minimum=30)
+    token_proactive_refresh_sec: int = env_int("TV_TOKEN_PROACTIVE_REFRESH_SEC", 900, minimum=0)
+    token_proactive_retry_sec: int = env_int("TV_TOKEN_PROACTIVE_RETRY_SEC", 600, minimum=0)
+    auth_refresh_cooldown_sec: int = env_int("TV_AUTH_REFRESH_COOLDOWN_SEC", 900, minimum=0)
+    auth_transient_cooldown_sec: int = env_int("TV_AUTH_TRANSIENT_COOLDOWN_SEC", 300, minimum=0)
     auth_connectivity_preflight: bool = env_bool("TV_AUTH_CONNECTIVITY_PREFLIGHT", True)
     history_endpoint: str = env_str("TV_WS_HISTORY_ENDPOINT", "prodata").lower()
-    history_fallback_endpoints: tuple[str, ...] = tuple(
-        item.lower() for item in env_csv("TV_WS_HISTORY_FALLBACK_ENDPOINTS", "data")
-    )
     history_request_more_rounds: int = env_int("TV_WS_HISTORY_REQUEST_MORE_ROUNDS", 5, minimum=0)
     history_request_more_bars: int = env_int("TV_WS_HISTORY_REQUEST_MORE_BARS", 50000, minimum=1)
     history_timeout_sec: float = env_float("TV_WS_HISTORY_TIMEOUT_SEC", 45.0, minimum=5.0)
@@ -192,7 +189,6 @@ class TradingViewSettings:
 @dataclass(frozen=True)
 class HistoricalSettings:
     provider: str = env_str("HISTORICAL_PROVIDER", "websocket").lower()
-    staging_insert_chunk_rows: int = env_int("STAGING_INSERT_CHUNK_ROWS", 50000, minimum=1)
     staging_cleanup_batch_rows: int = env_int(
         "STAGING_CLEANUP_BATCH_ROWS", 1000, minimum=500, maximum=50000
     )
@@ -217,7 +213,6 @@ class HistoricalSettings:
     )
     safety_factor: float = env_float("PIPELINE_SAFETY_FACTOR", 1.5, minimum=1.0)
     min_pull_bars: int = env_int("PIPELINE_MIN_PULL_BARS", 10, minimum=1)
-    fill_threshold: int = env_int("PIPELINE_FILL_THRESHOLD", 5, minimum=0)
     replay_enabled: bool = env_bool("TV_WS_REPLAY_ENABLED", True)
     replay_tfs: frozenset[str] = frozenset(
         item.upper() for item in env_csv("TV_WS_REPLAY_TFS", "M5,M10,M15,M20,M30,M45,H1")
@@ -378,7 +373,6 @@ class StorageSettings:
 @dataclass(frozen=True)
 class LoggingSettings:
     level: str = env_str("LOG_LEVEL", "INFO").upper()
-    pipeline_log: Path = PIPELINE_LOG
     live_log: Path = WS_LIVE_LOG
     live_candle_log: Path = WS_LIVE_CANDLE_LOG
     live_report_log: Path = WS_LIVE_REPORT_LOG

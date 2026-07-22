@@ -11,6 +11,10 @@ import time
 from typing import Any
 
 from core_engine.util.supervisor import engine as backend_engine
+from core_engine.util.supervisor.process_control import (
+    queue_historical_job,
+    record_operator_decision,
+)
 from core_engine.other.exit_codes import EXIT_CANCELLED, EXIT_OK
 from core_engine.util.logkit.activity import log_activity
 from core_engine.shared.tradingview import auth as tv_auth
@@ -401,7 +405,7 @@ def _run_conflict_status(args: argparse.Namespace) -> int:
 
 def _run_operator_decision(args: argparse.Namespace) -> int:
     detail = _runtime_conflict_status(args.kind)
-    backend_engine.record_operator_decision(
+    record_operator_decision(
         kind=args.kind,
         decision=args.decision,
         requested_title=args.requested_title,
@@ -422,7 +426,7 @@ def _run_queue_historical(args: argparse.Namespace) -> int:
     raw_args = list(args.historical_args or [])
     if raw_args and raw_args[0] == "--":
         raw_args = raw_args[1:]
-    job = backend_engine.queue_historical_job(
+    job = queue_historical_job(
         raw_args,
         title=args.title,
         requested_by=args.requested_by,
@@ -515,7 +519,7 @@ def build_parser() -> argparse.ArgumentParser:
     live.add_argument("--smoke-seconds", type=int, default=None, help="stop live fetching after N seconds")
     live.add_argument("--replace", action="store_true", help="gracefully replace an active live fetching worker")
 
-    sub.add_parser("historical", help="pass remaining arguments to historical_pulling.py")
+    sub.add_parser("historical", help="run the historical backfill and gap-repair engine")
 
     queue_hist = sub.add_parser("queue-historical", help="queue a historical job for the DP Program supervisor")
     queue_hist.add_argument("--title", default="Historical job")

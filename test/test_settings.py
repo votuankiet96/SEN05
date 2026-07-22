@@ -78,9 +78,9 @@ def test_settings_facade_reexports_typed_groups_and_paths():
     for name in (
         "DB", "TRADINGVIEW", "HISTORICAL", "LIVE", "NOTIFICATION",
         "CANDLE_SNAPSHOT", "STORAGE", "LOGGING", "BACKEND",
-        "APP_ROOT", "CONFIG_DIR", "ENV_FILE", "RUNTIME_DIR",
+        "APP_ROOT", "ENV_FILE", "RUNTIME_DIR",
         "SYMBOLS", "TF_DISPLAY_ORDER", "TF_MINUTES", "DIRECT_TFS", "WEEKEND_CLOSED",
-        "TF_INTERVAL_MAP", "TF_STAGING", "DEFAULT_N_BARS",
+        "TF_STAGING", "DEFAULT_N_BARS",
         "build_conn_str", "ensure_runtime_dirs", "get_historical_timeframes",
     ):
         assert hasattr(settings, name), f"settings facade is missing {name}"
