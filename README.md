@@ -11,17 +11,11 @@ scope until DP Program is stable as a terminal application.
 ```
 dp_program/
   src/core_engine/        # the package: pip install -e . makes it importable
-    settings/              # operational (env-driven) vs. system (fixed) config
-    logkit/                 # standardized logging: get_logger(), errors.log, CRITICAL->Discord
-    supervisor/             # 24/7 process supervisor (BackendSupervisor + run_forever)
-    live/                   # live OHLCV engine (WebSocket -> staging -> warehouse/Redis)
-    historical/             # historical backfill/gap-repair engine
-    tradingview/            # TradingView WS protocol, history client, auth
-    warehouse/              # SQL Server connection, read/write, maintenance
-    coordination/           # SEN.ActiveTask advisory locks
-    reporting/               # operator report formatting, Discord notifications
-    redis_io/                # Redis candle-snapshot publisher (all Redis code lives here)
-    dashboard/                # read-only Chart & Data Health local viewer
+    core/                   # live and historical domain engines
+    shared/                 # TradingView, warehouse and shared domain helpers
+    util/                   # CLI, supervisor, health, logging, notify, Redis, dashboard
+    other/                  # TLS and process exit-code primitives
+    settings/               # operational (env-driven) vs. system (fixed) config
   test/                     # pytest suite (no DB/TradingView/Redis required)
   config/                   # dp_provider.env (operator-editable, gitignored) + .example
   scripts/                  # setup, launcher, Scheduled Task deploy, SQL schema
@@ -133,17 +127,15 @@ BACKEND_LOG_RETENTION_DAYS=30
 `WS_LIVE_AUTO_START=1` means `python -m core_engine run` will start live
 fetching automatically. VM-DP6 production runs through Scheduled Task
 `\SEN05\SEN05 DP Program 24x7`. The current owner-approved action runs the
-committed checkout at `C:\Share\dp_program` directly; the immutable release
-switch under `scripts\windows_task` is deferred to a separate deployment
-decision. Do not install NSSM for the current production release.
+committed checkout at `C:\Share\dp_program` directly. Do not install NSSM for
+the current production release.
 
 Storage destination (`config/dp_provider.env`):
 
 ```env
-# Optional. Unset infers the mode from CANDLE_SNAPSHOT_ENABLED for backward
-# compatibility (0 -> sql, 1 -> both). "redis" (Redis-only, no SQL Server
-# writes) is defined but not yet wired into the live engine - reserved for
-# a future change.
+# Optional. Unset infers the mode from CANDLE_SNAPSHOT_ENABLED
+# (0 -> sql, 1 -> both). Redis-only operation is rejected because SQL Server
+# is the durable system of record.
 DP_STORAGE_MODE=sql
 ```
 

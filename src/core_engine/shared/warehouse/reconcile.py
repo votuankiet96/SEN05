@@ -35,15 +35,9 @@ This module therefore separates staging/Fact divergence into two buckets:
     does not fail a deploy over data usp_LoadDirect is intentionally
     fencing off.
 
-Whether to fold unsupported-calendar rows back into missing_before/
-missing_after (the pre-fence behavior) is controlled by the
-count_unsupported_as_missing flag on scan_timeframe/reconcile_timeframe/
-reconcile_all (also exposed as `reconcile-fact --count-unsupported-as-
-missing`), defaulting to False. This module does not decide - and must
-not decide - whether to extend DWH.Dim_Date backward or purge the
-out-of-range staging rows; that is an explicit business/data decision
-left to the operator (see docs/OPERATOR_RUNBOOK.md and the reconcile-fact
-CLI's printed guidance).
+Unsupported-calendar rows are always reported separately and never retried.
+Whether to extend DWH.Dim_Date or archive those rows remains an explicit
+business/data decision outside this reconciliation command.
 
 This module is read-mostly by default (`--apply` is required to actually
 call run_etl_direct) so it is safe to run against production for a status
@@ -71,7 +65,6 @@ class TimeframeReconcileResult:
     unsupported_calendar_count: int = 0
     unsupported_calendar_symbols: list[int] = field(default_factory=list)
     unsupported_calendar_range: tuple[str, str] | None = None
-    counted_unsupported_as_missing: bool = False
     supported_missing_before: int = 0
     supported_mismatched_before: int = 0
     supported_missing_after: int | None = 0
@@ -158,16 +151,13 @@ def _divergence_by_symbol(cursor, staging_table: str, tf_code: str) -> dict[int,
     return result
 
 
-def scan_timeframe(tf_code: str, *, count_unsupported_as_missing: bool = False) -> TimeframeReconcileResult:
+def scan_timeframe(tf_code: str) -> TimeframeReconcileResult:
     """Count staging rows that never made it to Fact for one timeframe.
 
     By default, rows outside DWH.Dim_Date's covered range are excluded from
     missing_before/missing_after/symbols_affected (they are reported
     separately instead) since usp_LoadDirect v4 will never insert them
-    regardless of how many times ETL is retried. Pass
-    count_unsupported_as_missing=True to fold them back in (the pre-fence
-    behavior), e.g. for an operator who wants a strict/full divergence
-    count regardless of cause.
+    regardless of how many times ETL is retried.
     """
     staging_table = TF_STAGING.get(tf_code)
     if not staging_table:
@@ -194,12 +184,7 @@ def scan_timeframe(tf_code: str, *, count_unsupported_as_missing: bool = False) 
         maxs = [d.unsupported_max for d in by_symbol.values() if d.unsupported_max]
         unsupported_range = (min(mins), max(maxs)) if mins and maxs else None
 
-        if count_unsupported_as_missing:
-            missing_total = supported_missing_total + supported_mismatched_total + unsupported_total
-            affected_symbols = sorted(set(in_range_symbols) | set(unsupported_symbols))
-        else:
-            missing_total = supported_missing_total + supported_mismatched_total
-            affected_symbols = in_range_symbols
+        missing_total = supported_missing_total + supported_mismatched_total
 
         return TimeframeReconcileResult(
             tf_code=tf_code,
@@ -207,11 +192,10 @@ def scan_timeframe(tf_code: str, *, count_unsupported_as_missing: bool = False) 
             missing_before=missing_total,
             repaired=0,
             missing_after=missing_total,
-            symbols_affected=affected_symbols,
+            symbols_affected=in_range_symbols,
             unsupported_calendar_count=unsupported_total,
             unsupported_calendar_symbols=unsupported_symbols,
             unsupported_calendar_range=unsupported_range,
-            counted_unsupported_as_missing=count_unsupported_as_missing,
             supported_missing_before=supported_missing_total,
             supported_mismatched_before=supported_mismatched_total,
             supported_missing_after=supported_missing_total,
@@ -226,23 +210,20 @@ def scan_timeframe(tf_code: str, *, count_unsupported_as_missing: bool = False) 
         conn.close()
 
 
-def reconcile_timeframe(
-    tf_code: str, *, apply: bool, count_unsupported_as_missing: bool = False
-) -> TimeframeReconcileResult:
+def reconcile_timeframe(tf_code: str, *, apply: bool) -> TimeframeReconcileResult:
     """Scan one timeframe and, if apply=True, re-run ETL per affected symbol.
 
     symbols_affected (and therefore which symbols get an ETL retry under
     apply=True) excludes symbols whose only divergence is calendar-
-    unsupported rows, unless count_unsupported_as_missing=True - retrying
-    ETL for a symbol that has nothing but out-of-calendar rows is a
-    guaranteed no-op against usp_LoadDirect v4.
+    unsupported; retrying ETL for those rows is a guaranteed no-op against
+    usp_LoadDirect v4.
 
     Re-verifies the missing count after applying so the caller can trust
     missing_after without a second pass. Never raises for a per-symbol ETL
     failure - those are reflected by a non-zero missing_after count instead,
     so one broken symbol does not abort reconciliation for the rest.
     """
-    before = scan_timeframe(tf_code, count_unsupported_as_missing=count_unsupported_as_missing)
+    before = scan_timeframe(tf_code)
     if before.error or not before.symbols_affected or not apply:
         return before
 
@@ -259,7 +240,7 @@ def reconcile_timeframe(
         except Exception:
             continue
 
-    after = scan_timeframe(tf_code, count_unsupported_as_missing=count_unsupported_as_missing)
+    after = scan_timeframe(tf_code)
     return TimeframeReconcileResult(
         tf_code=tf_code,
         staging_table=before.staging_table,
@@ -270,7 +251,6 @@ def reconcile_timeframe(
         unsupported_calendar_count=after.unsupported_calendar_count,
         unsupported_calendar_symbols=after.unsupported_calendar_symbols,
             unsupported_calendar_range=after.unsupported_calendar_range,
-            counted_unsupported_as_missing=count_unsupported_as_missing,
             supported_missing_before=before.supported_missing_before,
             supported_mismatched_before=before.supported_mismatched_before,
             supported_missing_after=after.supported_missing_after,
@@ -278,13 +258,11 @@ def reconcile_timeframe(
         )
 
 
-def reconcile_all(
-    *, apply: bool, tf_filter: set[str] | None = None, count_unsupported_as_missing: bool = False
-) -> list[TimeframeReconcileResult]:
+def reconcile_all(*, apply: bool, tf_filter: set[str] | None = None) -> list[TimeframeReconcileResult]:
     """Scan (and optionally repair) every timeframe, or a filtered subset."""
     codes = [tf for tf in TF_DISPLAY_ORDER if tf in TF_STAGING and (not tf_filter or tf in tf_filter)]
     return [
-        reconcile_timeframe(tf_code, apply=apply, count_unsupported_as_missing=count_unsupported_as_missing)
+        reconcile_timeframe(tf_code, apply=apply)
         for tf_code in codes
     ]
 

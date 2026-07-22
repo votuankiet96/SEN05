@@ -270,7 +270,6 @@ def test_scan_timeframe_excludes_unsupported_calendar_rows_from_missing_by_defau
     assert result.unsupported_calendar_count == 2231
     assert result.unsupported_calendar_symbols == [8]
     assert result.unsupported_calendar_range == ("1999-02-17 22:00:00", "2007-12-30 23:00:00")
-    assert result.counted_unsupported_as_missing is False
 
 
 def test_scan_timeframe_symbol_with_only_unsupported_rows_is_not_in_symbols_affected(monkeypatch):
@@ -285,20 +284,6 @@ def test_scan_timeframe_symbol_with_only_unsupported_rows_is_not_in_symbols_affe
     assert result.missing_before == 0
     assert result.symbols_affected == []
     assert result.unsupported_calendar_symbols == [8]
-
-
-def test_scan_timeframe_count_unsupported_as_missing_reverts_to_strict_behavior(monkeypatch):
-    cursor = _FakeCursor(
-        fetchall_result=[(8, 1, 1, 2231, "1999-02-17", "2007-12-30")]
-    )
-    _patch_get_connection(monkeypatch, warehouse_reconcile, cursor)
-
-    result = warehouse_reconcile.scan_timeframe("D1", count_unsupported_as_missing=True)
-
-    assert result.missing_before == 2233
-    assert result.missing_after == 2233
-    assert result.symbols_affected == [8]
-    assert result.counted_unsupported_as_missing is True
 
 
 def test_scan_timeframe_unknown_code_reports_error_not_zero():
@@ -405,8 +390,8 @@ def test_total_missing_sums_across_timeframes(monkeypatch):
 
 def test_total_missing_ignores_unsupported_calendar_count_by_default():
     # total_missing() only ever looks at missing_after, which (by default,
-    # count_unsupported_as_missing=False) already excludes unsupported-
-    # calendar rows - so a timeframe with a large unsupported_calendar_count
+    # always excludes unsupported-calendar rows, so a timeframe with a large
+    # unsupported_calendar_count
     # but zero real gaps must not push reconcile-fact's exit code to 1.
     result = warehouse_reconcile.TimeframeReconcileResult(
         tf_code="D1", staging_table="SEN.TF_D1", missing_before=0, repaired=0, missing_after=0,
@@ -416,17 +401,17 @@ def test_total_missing_ignores_unsupported_calendar_count_by_default():
     assert warehouse_reconcile.total_missing([result]) == 0
 
 
-def test_reconcile_all_propagates_count_unsupported_as_missing_flag(monkeypatch):
+def test_reconcile_all_propagates_apply_mode(monkeypatch):
     seen = []
 
-    def _fake_reconcile_timeframe(tf_code, *, apply, count_unsupported_as_missing=False):
-        seen.append((tf_code, count_unsupported_as_missing))
+    def _fake_reconcile_timeframe(tf_code, *, apply):
+        seen.append((tf_code, apply))
         return warehouse_reconcile.TimeframeReconcileResult(
             tf_code=tf_code, staging_table="?", missing_before=0, repaired=0, missing_after=0,
         )
 
     monkeypatch.setattr(warehouse_reconcile, "reconcile_timeframe", _fake_reconcile_timeframe)
 
-    warehouse_reconcile.reconcile_all(apply=False, tf_filter={"D1"}, count_unsupported_as_missing=True)
+    warehouse_reconcile.reconcile_all(apply=False, tf_filter={"D1"})
 
-    assert seen == [("D1", True)]
+    assert seen == [("D1", False)]

@@ -23,9 +23,9 @@ wrapper migration is a separate change decision.
 
 ## 2. Active production layout
 
-For the current VM-DP6 release, the owner explicitly selected in-place
-operation from `C:\Share\dp_program`. The immutable release-directory switch is
-deferred; do not claim that it is active in doctor/evidence output.
+VM-DP6 runs the committed source checkout in place from
+`C:\Share\dp_program`. Release-directory promotion is not part of this
+deployment model.
 
 ```text
 C:\Share\dp_program                 active code checkout and working directory
@@ -35,10 +35,8 @@ C:\Users\Administrator\...\Python312\python.exe  Scheduled Task Python
 ```
 
 The checkout must remain on the recorded production commit with a clean working
-tree. Because this layout is mutable, every production edit must be committed
-and tested before a controlled Scheduled Task restart. The doctor
-`release_identity=warn/source_checkout` result is expected for this explicitly
-approved layout, but every other doctor failure remains blocking.
+tree. Every production edit must be committed and tested before a controlled
+Scheduled Task restart.
 
 The active Scheduled Task action is:
 
@@ -91,73 +89,7 @@ Redis/OG in `both` mode is an **eventually consistent candle snapshot**:
 This is the approved production contract; a durable Redis outbox is not a GO
 prerequisite under this contract.
 
-## 5. Future immutable promotion (not active in this release)
-
-The script below remains the preferred future migration to immutable releases,
-but it was not used for the current owner-approved in-place runtime. Run it only
-after a separate deployment decision, from an elevated PowerShell prompt **on
-VM-DP6**, never from the mapped
-`Z:` drive on another Windows kernel:
-
-```powershell
-cd C:\Share\dp_program
-powershell -NoProfile -ExecutionPolicy Bypass -File `
-  .\scripts\windows_task\promote_vm_dp6.ps1
-```
-
-The script hard-gates this sequence:
-
-1. Capture hostname, commit, Scheduled Task XML/state, doctor and data-health.
-2. Create a full `COPY_ONLY, CHECKSUM` database backup and run
-   `RESTORE VERIFYONLY ... WITH CHECKSUM`.
-3. Request a graceful supervisor stop and abort if it remains alive after
-   120 seconds; it does not force-kill before migration.
-4. Deploy usp_LoadDirect v4, lock fencing, and the transactional US500/D1
-   unsupported-calendar archive migration.
-5. Verify contract version 4, two fencing columns, 2,231 archived rows and
-   zero unsupported US500/D1 staging rows.
-6. Run `reconcile-fact --apply --json` and require all three fields to be zero:
-   `supported_missing_fact_rows`, `supported_mismatched_fact_rows`, and
-   `unsupported_calendar_rows`.
-7. Build a release-local virtualenv, install non-editably, compile, run the
-   full pytest suite, validate 11/165, switch `current`, update the existing
-   Scheduled Task action without changing its account, and start it.
-8. Require supervisor state `running`, a live child PID, a passing doctor,
-   and the unchanged 11/165 settings.
-
-The normal production path requires the verified full backup. If the owner
-explicitly waives it because the OHLCV dataset is recoverable by backfill, the
-exception must be auditable and cannot be selected accidentally:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File `
-  .\scripts\windows_task\promote_vm_dp6.ps1 `
-  -SkipDatabaseBackup `
-  -BackupWaiverReason 'Owner approved: OHLCV is recoverable by controlled backfill'
-```
-
-This waiver removes full-database rollback. Migrations retain their own
-transactional checks, but if a later promotion gate fails, the script restores
-the prior Task action/junction and deliberately leaves the Scheduled Task
-stopped rather than run old code against a migrated schema. The evidence logs
-record the waiver reason and require controlled operator recovery.
-
-Evidence is written under:
-
-```text
-C:\Share\dp_program\runtime\deploy\go_<UTC>_<SHA>\
-C:\Share\dp_program\runtime\deploy\release_<SHA>_<UTC>\
-```
-
-If any post-migration gate fails on the normal backed-up path, the promotion
-script attempts reverse-order rollback: stop the new runtime, restore the old
-Task action/junction, restore the verified full SQL backup, and start the prior
-Scheduled Task. On the explicit no-backup path it leaves the Task stopped as
-described above. Inspect
-`promotion_failure.txt`, `rollback_result.txt`, and, if present,
-`rollback_failure.txt` before any second attempt.
-
-## 6. Daily Scheduled Task operations
+## 5. Daily Scheduled Task operations
 
 Check wrapper state and last result:
 
@@ -196,7 +128,7 @@ $python = 'C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python
 & $python -m core_engine reconcile-fact --json
 ```
 
-## 7. Logs and 30-minute production follow-up
+## 6. Logs and 30-minute production follow-up
 
 Primary files are under `C:\Share\dp_program\runtime`:
 
@@ -232,7 +164,7 @@ SQL rows by itself is never sufficient proof. Review
 `verified_upstream_gap_pairs`/`verified_upstream_gap_windows` separately from
 `market_open_gap_pairs` in the JSON report.
 
-## 8. Discord webhook rotation
+## 7. Discord webhook rotation
 
 Rotation requires a Discord channel administrator:
 
@@ -244,7 +176,7 @@ Rotation requires a Discord channel administrator:
 
 Both successful delivery and old-webhook revocation are GO gates.
 
-## 9. Approved socket-stall recovery test
+## 8. Approved socket-stall recovery test
 
 Only during a confirmed maintenance window, inject one real callback stall in
 group 0 by creating this exact one-shot marker:
@@ -265,7 +197,7 @@ one-shot, so the replacement cannot enter a fault loop.
 
 Do not create this marker outside the confirmed window.
 
-## 10. Healthy production criteria
+## 9. Healthy production criteria
 
 - Scheduled Task is `Running` with working directory `C:\Share\dp_program`.
 - `git rev-parse HEAD` matches the recorded production commit and the working

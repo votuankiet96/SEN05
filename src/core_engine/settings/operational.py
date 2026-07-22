@@ -16,24 +16,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-# APP_ROOT is the repository/release root (the directory that contains
-# config/, scripts/, and runtime/). In a source checkout this file lives at
-# <root>/src/core_engine/settings/operational.py. In an immutable production
-# release it is copied into <root>/.venv/Lib/site-packages, so a fixed parent
-# count is no longer correct; RELEASE_MANIFEST.json anchors that layout.
-# DP_APP_ROOT lets an operator override the root explicitly (e.g. when the
-# package is installed elsewhere but should still read/write a fixed
-# runtime/config location).
-def _discover_app_root(module_file: Path) -> Path:
-    resolved = module_file.resolve()
-    for parent in resolved.parents:
-        if (parent / "RELEASE_MANIFEST.json").is_file():
-            return parent
-    return resolved.parents[3]
-
-
+# APP_ROOT is the source-checkout root containing config/, scripts/, and
+# runtime/. DP_APP_ROOT remains available for an explicit alternate checkout.
 _APP_ROOT_OVERRIDE = os.environ.get("DP_APP_ROOT", "").strip()
-APP_ROOT = Path(_APP_ROOT_OVERRIDE) if _APP_ROOT_OVERRIDE else _discover_app_root(Path(__file__))
+APP_ROOT = Path(_APP_ROOT_OVERRIDE) if _APP_ROOT_OVERRIDE else Path(__file__).resolve().parents[3]
 CONFIG_DIR = APP_ROOT / "config"
 ENV_FILE = CONFIG_DIR / "dp_provider.env"
 ENV_EXAMPLE_FILE = CONFIG_DIR / "dp_provider.env.example"

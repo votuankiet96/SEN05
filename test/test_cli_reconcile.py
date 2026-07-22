@@ -27,7 +27,6 @@ def test_reconcile_json_exposes_go_gate_buckets(monkeypatch, capsys):
             apply=False,
             timeframes=None,
             json=True,
-            count_unsupported_as_missing=False,
         )
     )
 
@@ -54,7 +53,6 @@ def test_unsupported_rows_alone_do_not_fail_reconcile_by_default(monkeypatch, ca
             apply=False,
             timeframes=None,
             json=True,
-            count_unsupported_as_missing=False,
         )
     )
 

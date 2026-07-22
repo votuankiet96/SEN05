@@ -114,8 +114,7 @@ def _run_reconcile_fact(args: argparse.Namespace) -> int:
     if args.timeframes:
         tf_filter = {tf.strip().upper() for tf in args.timeframes.split(",") if tf.strip()}
 
-    count_unsupported = bool(getattr(args, "count_unsupported_as_missing", False))
-    results = reconcile_all(apply=args.apply, tf_filter=tf_filter, count_unsupported_as_missing=count_unsupported)
+    results = reconcile_all(apply=args.apply, tf_filter=tf_filter)
     missing = total_missing(results)
     unsupported_rows = [r for r in results if not r.error and r.unsupported_calendar_count]
     unsupported_total = sum(r.unsupported_calendar_count for r in unsupported_rows)
@@ -126,7 +125,6 @@ def _run_reconcile_fact(args: argparse.Namespace) -> int:
         payload = {
             "applied": bool(args.apply),
             "missing_count": missing,
-            "counted_unsupported_as_missing": count_unsupported,
             "unsupported_calendar_total": unsupported_total,
             "supported_missing_fact_rows": supported_missing,
             "supported_mismatched_fact_rows": supported_mismatched,
@@ -177,7 +175,7 @@ def _run_reconcile_fact(args: argparse.Namespace) -> int:
             f"unsupported_calendar_rows={unsupported_total}"
         )
 
-        if unsupported_rows and not count_unsupported:
+        if unsupported_rows:
             print()
             print(
                 f"NOTE: {unsupported_total} staging row(s) fall outside DWH.Dim_Date's covered "
@@ -205,10 +203,6 @@ def _run_reconcile_fact(args: argparse.Namespace) -> int:
                 "staging (a dedicated, explicitly-confirmed action - the routine "
                 "purge_staging maintenance job already skips them since they have no "
                 "matching Fact row)."
-            )
-            print(
-                "Pass --count-unsupported-as-missing to fold these back into missing_count "
-                "and this command's exit code instead (reverts to strict pre-fence behavior)."
             )
 
     return 0 if missing == 0 else 1
@@ -504,14 +498,6 @@ def build_parser() -> argparse.ArgumentParser:
     reconcile.add_argument(
         "--apply", action="store_true",
         help="re-run ETL for affected symbols instead of only reporting the gap",
-    )
-    reconcile.add_argument(
-        "--count-unsupported-as-missing", action="store_true",
-        help=(
-            "fold staging rows outside DWH.Dim_Date's covered calendar range back into "
-            "missing_count/exit code (default: report them separately, since usp_LoadDirect "
-            "v3 intentionally never inserts them)"
-        ),
     )
     _add_json_flag(reconcile)
 
