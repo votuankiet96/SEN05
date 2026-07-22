@@ -35,7 +35,7 @@ def test_import_every_core_engine_module():
 
 
 def test_cli_entrypoint_importable():
-    from core_engine import cli
+    from core_engine.util import cli
 
     parser = cli.build_parser()
     assert parser.prog == "python -m core_engine"

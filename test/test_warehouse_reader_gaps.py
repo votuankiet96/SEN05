@@ -1,4 +1,4 @@
-"""Tests for the High-9 gap-repair fixes in core_engine.warehouse.reader:
+"""Tests for the High-9 gap-repair fixes in core_engine.shared.warehouse.reader:
 get_internal_gaps() now raises on SQL failure instead of returning {}
 (indistinguishable from "scanned, found nothing"), and fact_covers_window()
 lets a repair caller re-verify a window actually landed data before
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from core_engine.warehouse import reader
+from core_engine.shared.warehouse import reader
 
 
 class _FailingCursor:

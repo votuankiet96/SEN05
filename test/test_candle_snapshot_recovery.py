@@ -8,7 +8,7 @@ see the module docstring in redis_io/candle_snapshot.py for why.
 
 from __future__ import annotations
 
-from core_engine.redis_io.candle_snapshot import CandleSnapshotPublisher
+from core_engine.util.redis_io.candle_snapshot import CandleSnapshotPublisher
 
 
 def test_mark_recovered_fires_callback_only_when_circuit_was_open():

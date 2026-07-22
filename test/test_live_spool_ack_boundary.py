@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 
-import core_engine.live.engine as live_engine
+import core_engine.core.live.engine as live_engine
 
 
 class _RecordingSpool:

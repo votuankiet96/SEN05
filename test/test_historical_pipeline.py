@@ -1,4 +1,4 @@
-"""Tests for the core_engine.historical.engine / .pipeline split.
+"""Tests for the core_engine.core.historical.engine / .pipeline split.
 
 historical/engine.py's _set_replay_runtime applies --replay-* CLI
 overrides; historical/pipeline.py's _fetch_history_frame reads them when
@@ -21,10 +21,10 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 import pytest
 
-from core_engine.historical import pipeline
-from core_engine.historical import engine as historical_engine
-from core_engine.historical import runtime_support
-from core_engine.historical.engine import _set_replay_runtime
+from core_engine.core.historical import pipeline
+from core_engine.core.historical import engine as historical_engine
+from core_engine.core.historical import runtime_support
+from core_engine.core.historical.engine import _set_replay_runtime
 
 
 def _reset_replay_runtime():

@@ -1,4 +1,4 @@
-"""Tests for the Medium-18 fix in core_engine.tradingview.auth.core:
+"""Tests for the Medium-18 fix in core_engine.shared.tradingview.auth.core:
 _headless_refresh() and _headless_login_fresh() used to call browser.close()
 only on their explicit success/early-return paths. Any exception raised in
 between launch() and that call (e.g. page.goto() timing out, a selector
@@ -17,7 +17,7 @@ from contextlib import contextmanager
 
 import pytest
 
-from core_engine.tradingview.auth import core as auth_core
+from core_engine.shared.tradingview.auth import core as auth_core
 
 
 class _FakePage:

@@ -1,5 +1,5 @@
-"""Tests for core_engine.warehouse.connection.verify_database_contract and
-core_engine.warehouse.reconcile - the round-2-audit fixes for the
+"""Tests for core_engine.shared.warehouse.connection.verify_database_contract and
+core_engine.shared.warehouse.reconcile - the round-2-audit fixes for the
 usp_LoadDirect version-drift blocker (contract check must fail loudly
 instead of continue_and_report, and reconciliation must be able to find
 and repair staging rows stuck behind a broken/skipped ETL call).
@@ -14,8 +14,8 @@ from pathlib import Path
 
 import pytest
 
-from core_engine.warehouse import connection as warehouse_connection
-from core_engine.warehouse import reconcile as warehouse_reconcile
+from core_engine.shared.warehouse import connection as warehouse_connection
+from core_engine.shared.warehouse import reconcile as warehouse_reconcile
 
 
 def test_v3_sql_contract_resolves_datekey_through_dimension():

@@ -53,8 +53,8 @@ deployment needs a fixed path regardless of where the package resolves from.
 `core_engine` is the application entrypoint. It supervises two independent
 data engines, each spawned as its own subprocess:
 
-- Historical OHLCV: `core_engine.historical.engine`
-- Live OHLCV: `core_engine.live.engine`
+- Historical OHLCV: `core_engine.core.historical.engine`
+- Live OHLCV: `core_engine.core.live.engine`
 
 In production, start the DP Program supervisor:
 
@@ -149,7 +149,7 @@ DP_STORAGE_MODE=sql
 
 ## Logging
 
-Every component logs through `core_engine.logkit.get_logger(component,
+Every component logs through `core_engine.util.logkit.get_logger(component,
 log_file, ...)`. Level policy is consistent across the whole program:
 
 | Level | Meaning | Example |

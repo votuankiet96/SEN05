@@ -1,4 +1,4 @@
-"""Tests for core_engine.warehouse.spool.LiveSpool - the durable write-ahead
+"""Tests for core_engine.core.live.spool.LiveSpool - the durable write-ahead
 outbox every live OHLCV candle passes through before it is ever placed on
 the in-memory dispatch queue (see live/engine.py's _enqueue_or_buffer).
 
@@ -44,7 +44,7 @@ import sys
 import pandas as pd
 import pytest
 
-from core_engine.warehouse.spool import PAYLOAD_MARKER, LiveSpool
+from core_engine.core.live.spool import PAYLOAD_MARKER, LiveSpool
 
 
 @pytest.fixture

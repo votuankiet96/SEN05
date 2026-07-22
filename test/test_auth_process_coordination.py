@@ -3,8 +3,8 @@ from __future__ import annotations
 from contextlib import contextmanager
 from types import SimpleNamespace
 
-from core_engine.historical import pipeline
-from core_engine.tradingview.auth import core as auth_core
+from core_engine.core.historical import pipeline
+from core_engine.shared.tradingview.auth import core as auth_core
 
 
 def _lock_sequence(*states: bool):

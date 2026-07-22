@@ -1,4 +1,4 @@
-"""Tests for core_engine.warehouse.maintenance.purge_staging - the P0-2
+"""Tests for core_engine.shared.warehouse.maintenance.purge_staging - the P0-2
 crash-recovery fix. Before this fix, purge deleted staging rows based only
 on age + IsProcessed=1, with no check that the row had actually reached
 Fact_OHLCV. Combined with the ETL-skip-on-staged==0 bug (see
@@ -10,7 +10,7 @@ to exist.
 
 from __future__ import annotations
 
-from core_engine.warehouse import maintenance
+from core_engine.shared.warehouse import maintenance
 
 
 class _FakeCursor:

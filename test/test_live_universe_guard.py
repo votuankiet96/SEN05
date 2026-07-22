@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import pytest
 
-from core_engine.live.engine import (
+from core_engine.core.live.engine import (
     _check_expected_live_symbol_count,
     _resolve_ws_symbols,
 )
@@ -72,7 +72,7 @@ def test_expected_symbol_count_default_is_active_and_matches_real_instruments():
 
 
 def test_settings_evidence_reports_11_symbols_and_165_sessions():
-    from core_engine import cli
+    from core_engine.util import cli
 
     settings = cli._collect_core_settings()
     live = settings["live_fetching"]

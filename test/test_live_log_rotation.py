@@ -1,4 +1,4 @@
-"""Tests for the Medium-15 fix in core_engine.live.engine: the candle-flow
+"""Tests for the Medium-15 fix in core_engine.core.live.engine: the candle-flow
 table (_append_live_table_text) writes directly to live_fetching.log via a
 raw file append, bypassing the ResilientRotatingFileHandler that
 `logger` (the same file) is configured with. Rotation only used to get
@@ -16,8 +16,8 @@ import logging
 
 import pytest
 
-import core_engine.live.engine as live_engine
-from core_engine.logkit.handlers import ResilientRotatingFileHandler
+import core_engine.core.live.engine as live_engine
+from core_engine.util.logkit.handlers import ResilientRotatingFileHandler
 
 
 @pytest.fixture

@@ -29,7 +29,7 @@
 
    CONTRACT VERSION:
      This procedure carries an extended property `DPContractVersion` that
-     the Python side reads at startup (core_engine.warehouse.connection.
+     the Python side reads at startup (core_engine.shared.warehouse.connection.
      verify_database_contract) and refuses to run if it does not match
      EXPECTED_CONTRACT_VERSION. Bump the version below AND the Python
      constant together whenever the return shape or call signature of
@@ -79,7 +79,7 @@ GO
 
    RETURNS:
      Exactly one result set, one row: (UpdatedRows, InsertedRows,
-     AffectedRows). The Python caller (core_engine.warehouse.writer.
+     AffectedRows). The Python caller (core_engine.shared.warehouse.writer.
      run_etl_direct) always does cursor.fetchone() on this - a procedure
      shape that does not return this result set breaks every call.
 
@@ -254,7 +254,7 @@ BEGIN
 END
 GO
 
--- Contract version marker: core_engine.warehouse.connection.verify_database_contract
+-- Contract version marker: core_engine.shared.warehouse.connection.verify_database_contract
 -- reads this at startup and refuses to run against a mismatched/missing version.
 IF EXISTS (
     SELECT 1 FROM sys.extended_properties

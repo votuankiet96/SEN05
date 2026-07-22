@@ -1,6 +1,6 @@
 """Shared pytest fixtures for the whole test suite.
 
-Every core_engine.logkit.get_logger() call attaches the shared
+Every core_engine.util.logkit.get_logger() call attaches the shared
 CriticalDiscordHandler singleton, which (as of the P0-6 durable-outbox
 fix) persists to a real SQLite file under runtime/cache and performs a
 real synchronous HTTP POST on every CRITICAL log record - on ANY
@@ -44,7 +44,7 @@ def pytest_sessionfinish(session, exitstatus):
 
 @pytest.fixture(autouse=True)
 def isolated_critical_alert_outbox(tmp_path, monkeypatch):
-    import core_engine.logkit.critical_outbox as outbox_mod
+    import core_engine.util.notify.critical_outbox as outbox_mod
 
     fake = outbox_mod.CriticalAlertOutbox(
         db_path=tmp_path / "critical_alerts_outbox.db",

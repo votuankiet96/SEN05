@@ -20,14 +20,14 @@ def _storage_with(mode: str):
 
 
 def test_live_engine_refuses_to_start_for_unsupported_storage_mode(monkeypatch):
-    import core_engine.live.engine as live_engine
+    import core_engine.core.live.engine as live_engine
 
     monkeypatch.setattr(live_engine, "STORAGE", _storage_with("redis"))
     assert live_engine.main() == 1
 
 
 def _assert_live_mode_reaches_database_guard(monkeypatch, mode: str):
-    import core_engine.live.engine as live_engine
+    import core_engine.core.live.engine as live_engine
 
     monkeypatch.setattr(live_engine, "STORAGE", _storage_with(mode))
     calls = []
@@ -45,14 +45,14 @@ def test_live_engine_proceeds_past_the_guard_for_both_mode(monkeypatch):
 
 
 def test_historical_engine_refuses_to_start_for_redis_only_mode(monkeypatch):
-    import core_engine.historical.engine as historical_engine
+    import core_engine.core.historical.engine as historical_engine
 
     monkeypatch.setattr(historical_engine, "STORAGE", _storage_with("redis"))
     assert historical_engine.main([]) == 1
 
 
 def test_historical_engine_allows_both_mode_and_reaches_database_guard(monkeypatch):
-    import core_engine.historical.engine as historical_engine
+    import core_engine.core.historical.engine as historical_engine
 
     calls = []
     monkeypatch.setattr(historical_engine, "STORAGE", _storage_with("both"))

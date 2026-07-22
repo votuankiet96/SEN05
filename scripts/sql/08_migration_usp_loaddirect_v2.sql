@@ -10,7 +10,7 @@
      database's currently-deployed DWH.usp_LoadDirect is an OLDER shape
      than the one defined in scripts/sql/04_business_objects.sql: it only
      INSERTs and returns no result set. The Python ETL caller
-     (core_engine.warehouse.writer.run_etl_direct) always does
+     (core_engine.shared.warehouse.writer.run_etl_direct) always does
      cursor.fetchone() expecting a 3-column row-count result set, so
      EVERY call against the stale procedure raises "No results. Previous
      SQL was not a query." This was confirmed to be the direct cause of
@@ -39,7 +39,7 @@
      4. Validate the contract before restarting the service:
           python -m core_engine doctor
         doctor now includes a "db_contract" check
-        (core_engine.warehouse.connection.verify_database_contract) that
+        (core_engine.shared.warehouse.connection.verify_database_contract) that
         fails loudly if the extended property below does not match.
         Confirm it reports OK.
      5. Deploy/restart the application code for this same change window

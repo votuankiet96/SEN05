@@ -1,4 +1,4 @@
-"""Tests for core_engine.warehouse.validation - the OHLCV cleaning gate every
+"""Tests for core_engine.shared.warehouse.validation - the OHLCV cleaning gate every
 bar passes through before staging/Fact, both in the live and historical
 paths. A regression here means bad rows silently reach the warehouse.
 """
@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 import pytest
 
-from core_engine.warehouse.validation import normalize_tv_hist_df_to_utc, validate_ohlcv_df
+from core_engine.shared.warehouse.validation import normalize_tv_hist_df_to_utc, validate_ohlcv_df
 
 
 @pytest.fixture

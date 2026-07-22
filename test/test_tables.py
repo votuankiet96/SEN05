@@ -1,11 +1,11 @@
-"""Tests for core_engine.logkit.tables - the shared cell()/kv() helpers that
+"""Tests for core_engine.util.logkit.tables - the shared cell()/kv() helpers that
 replaced the byte-identical private copies live_reporter.py and
 historical_reporter.py used to each define.
 """
 
 from __future__ import annotations
 
-from core_engine.logkit.tables import cell, kv
+from core_engine.util.logkit.tables import cell, kv
 
 
 def test_cell_left_aligns_and_pads_by_default():

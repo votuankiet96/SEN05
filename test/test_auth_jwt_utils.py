@@ -1,4 +1,4 @@
-"""Tests for core_engine.tradingview.auth.jwt_utils - the JWT decoding and
+"""Tests for core_engine.shared.tradingview.auth.jwt_utils - the JWT decoding and
 token-usability checks extracted from auth.py. Pure functions, no shared
 auth state, no network - a good target for real coverage.
 """
@@ -12,7 +12,7 @@ import time
 
 import pytest
 
-from core_engine.tradingview.auth import jwt_utils
+from core_engine.shared.tradingview.auth import jwt_utils
 
 
 @pytest.fixture

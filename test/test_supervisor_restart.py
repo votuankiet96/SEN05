@@ -16,9 +16,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from core_engine.exit_codes import EXIT_CANCELLED, EXIT_LOCK_CONFLICT
-from core_engine.supervisor import engine as supervisor_engine
-from core_engine.supervisor.engine import (
+from core_engine.other.exit_codes import EXIT_CANCELLED, EXIT_LOCK_CONFLICT
+from core_engine.util.supervisor import engine as supervisor_engine
+from core_engine.util.supervisor.engine import (
     LIVE_RESTART_BACKOFF_BASE_SEC,
     LIVE_RESTART_BACKOFF_MAX_SEC,
     LIVE_RESTART_SLOW_MIN_SEC,
@@ -392,7 +392,7 @@ def test_monitor_restarts_when_first_batch_never_completes(sup, monkeypatch):
 
 
 def test_critical_outbox_drain_failure_is_not_silent(sup, monkeypatch):
-    from core_engine.logkit import critical_outbox
+    from core_engine.util.notify import critical_outbox
 
     class _BrokenOutbox:
         @staticmethod

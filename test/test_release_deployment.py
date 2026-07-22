@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from core_engine import health
+from core_engine.util import health
 from core_engine.settings import operational
 
 

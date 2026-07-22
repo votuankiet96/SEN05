@@ -1,4 +1,4 @@
-"""Tests for core_engine.logkit.jsonl.append_jsonl_capped - the Medium-15
+"""Tests for core_engine.util.logkit.jsonl.append_jsonl_capped - the Medium-15
 fix for live_fetching_summary.jsonl / historical_pulling_summary.jsonl
 growing forever. Both files used to be appended to via a bare
 open(path, "a") with no cap, and health.cleanup_old_runtime_files' age-
@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 
-from core_engine.logkit.jsonl import append_jsonl_capped
+from core_engine.util.logkit.jsonl import append_jsonl_capped
 
 
 def test_append_adds_one_line_per_call(tmp_path):

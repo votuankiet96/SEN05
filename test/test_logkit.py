@@ -1,4 +1,4 @@
-"""Tests for core_engine.logkit: the get_logger() factory, the shared
+"""Tests for core_engine.util.logkit: the get_logger() factory, the shared
 errors.log WARNING+ aggregate handler, and the CRITICAL -> Discord alert
 handler added when logging was standardized.
 """
@@ -10,9 +10,9 @@ from unittest.mock import patch
 
 import pytest
 
-from core_engine.logkit.factory import _component_level, get_logger
-from core_engine.logkit.handlers import critical_discord_handler, errors_aggregate_handler
-from core_engine.logkit import tables
+from core_engine.util.logkit.factory import _component_level, get_logger
+from core_engine.util.logkit.handlers import critical_discord_handler, errors_aggregate_handler
+from core_engine.util.logkit import tables
 
 
 @pytest.fixture
@@ -34,7 +34,7 @@ def isolated_errors_aggregate_handler(tmp_path, monkeypatch):
     singleton and point it at a throwaway file for every test here, then
     reset it again afterward so real usage rebuilds the real handler.
     """
-    import core_engine.logkit.handlers as handlers_mod
+    import core_engine.util.logkit.handlers as handlers_mod
 
     monkeypatch.setattr(handlers_mod, "_ERRORS_AGGREGATE_HANDLER", None)
     monkeypatch.setattr("core_engine.settings.SYSTEM_LOG_DIR", tmp_path)
@@ -123,9 +123,9 @@ def test_critical_discord_handler_is_a_singleton():
 
 
 def test_component_level_defaults_to_global_log_level():
-    with patch("core_engine.logkit.factory.LOGGING") as mock_logging:
+    with patch("core_engine.util.logkit.factory.LOGGING") as mock_logging:
         mock_logging.level = "INFO"
-        with patch("core_engine.logkit.factory.env_str", return_value=""):
+        with patch("core_engine.util.logkit.factory.env_str", return_value=""):
             assert _component_level("live_fetching") == logging.INFO
 
 
@@ -133,7 +133,7 @@ def test_component_level_honors_per_component_override():
     def fake_env_str(name):
         return "DEBUG" if name == "LOG_LEVEL_LIVE_FETCHING" else ""
 
-    with patch("core_engine.logkit.factory.env_str", side_effect=fake_env_str):
+    with patch("core_engine.util.logkit.factory.env_str", side_effect=fake_env_str):
         assert _component_level("live_fetching") == logging.DEBUG
 
 

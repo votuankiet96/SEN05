@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 
-from core_engine import cli
-from core_engine.warehouse import reconcile
+from core_engine.util import cli
+from core_engine.shared.warehouse import reconcile
 
 
 def test_reconcile_json_exposes_go_gate_buckets(monkeypatch, capsys):

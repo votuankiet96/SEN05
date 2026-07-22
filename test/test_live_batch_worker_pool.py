@@ -23,8 +23,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from core_engine.live import engine as live_engine
-from core_engine.live.engine import (
+from core_engine.core.live import engine as live_engine
+from core_engine.core.live.engine import (
     BatchFetcher,
     LiveProcessRecycleRequired,
     _claim_ws_callback_stall_fault,

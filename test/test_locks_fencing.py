@@ -1,4 +1,4 @@
-"""Tests for the P0-7 lock-fencing fix in core_engine.coordination.locks.
+"""Tests for the P0-7 lock-fencing fix in core_engine.util.coordination.locks.
 
 Split-brain scenario (Codex, round-2 audit): process A loses its DB
 connection for longer than the lock TTL, process B legitimately acquires
@@ -23,9 +23,9 @@ from datetime import datetime, timedelta
 
 import pytest
 
-import core_engine.coordination.locks as locks_module
-from core_engine.coordination.locks import LockCoordinator, LockLease, LockRecord
-from core_engine.historical import runtime_support
+import core_engine.util.coordination.locks as locks_module
+from core_engine.util.coordination.locks import LockCoordinator, LockLease, LockRecord
+from core_engine.core.historical import runtime_support
 
 
 class _FakeActiveTaskDB:

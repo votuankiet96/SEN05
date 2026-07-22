@@ -1,4 +1,4 @@
-"""Targeted tests for the testable pieces of core_engine.live.engine.
+"""Targeted tests for the testable pieces of core_engine.core.live.engine.
 
 live/engine.py is the live OHLCV fetch engine: ~3,900 lines with heavy
 module-level shared state (queues, locks, a disk spool) built for a 24/7
@@ -28,8 +28,8 @@ from unittest.mock import patch
 
 import pytest
 
-from core_engine.live import engine as live_engine
-from core_engine.warehouse.spool import LiveSpool
+from core_engine.core.live import engine as live_engine
+from core_engine.core.live.spool import LiveSpool
 
 
 def test_is_token_error_matches_configured_keywords():

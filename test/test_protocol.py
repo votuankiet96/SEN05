@@ -1,6 +1,6 @@
 """Tests for the pure TradingView WebSocket wire-format helpers.
 
-These cover core_engine.tradingview.protocol, which every live/historical
+These cover core_engine.shared.tradingview.protocol, which every live/historical
 data path depends on to talk to TradingView - a regression here would
 silently corrupt every bar the service fetches.
 """
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 
-from core_engine.tradingview import protocol
+from core_engine.shared.tradingview import protocol
 
 
 def test_gen_session_id_has_prefix_and_length():

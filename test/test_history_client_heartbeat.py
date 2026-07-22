@@ -1,4 +1,4 @@
-"""Tests for the Medium-14 fix in core_engine.tradingview.history_client:
+"""Tests for the Medium-14 fix in core_engine.shared.tradingview.history_client:
 drain_until_complete() (used by fetch_history/crawl_replay_history) used to
 only echo a heartbeat when it was the raw receive buffer's own prefix,
 silently skipping (not echoing) a heartbeat found later via _parse_packets
@@ -23,7 +23,7 @@ import json
 
 import pytest
 
-from core_engine.tradingview import history_client
+from core_engine.shared.tradingview import history_client
 
 
 def _frame(method, params):

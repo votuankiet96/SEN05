@@ -1,4 +1,4 @@
-"""Tests for core_engine.health._live_state_check - the P0-5 fix.
+"""Tests for core_engine.util.health._live_state_check - the P0-5 fix.
 
 Two gaps closed here:
   1. "failed"/"stopped" were never in the active_status set at all, so a
@@ -23,7 +23,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from core_engine import health
+from core_engine.util import health
 
 
 @pytest.fixture

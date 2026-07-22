@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from core_engine.historical import pipeline
-from core_engine.historical.runtime_support import HistoricalPullCancelled
+from core_engine.core.historical import pipeline
+from core_engine.core.historical.runtime_support import HistoricalPullCancelled
 
 
 def test_pair_retry_backoff_honors_shutdown_before_sleep(monkeypatch):

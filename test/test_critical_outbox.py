@@ -1,4 +1,4 @@
-"""Tests for core_engine.logkit.critical_outbox.CriticalAlertOutbox - the
+"""Tests for core_engine.util.notify.critical_outbox.CriticalAlertOutbox - the
 P0-6 fix: a CRITICAL alert now persists to SQLite before delivery is
 attempted, is only acked (deleted) on a real send success, and stays
 pending (retried by drain()) rather than vanishing on failure.
@@ -6,7 +6,7 @@ pending (retried by drain()) rather than vanishing on failure.
 
 from __future__ import annotations
 
-from core_engine.logkit.critical_outbox import CriticalAlertOutbox
+from core_engine.util.notify.critical_outbox import CriticalAlertOutbox
 
 
 def _outbox(tmp_path) -> CriticalAlertOutbox:
@@ -94,7 +94,7 @@ def test_send_one_activates_system_trust_before_http_post(tmp_path, monkeypatch)
         SimpleNamespace(discord_webhook_url="https://discord.invalid/test"),
     )
     monkeypatch.setattr(
-        "core_engine.logkit.critical_outbox.ensure_system_truststore",
+        "core_engine.util.notify.critical_outbox.ensure_system_truststore",
         lambda: events.append("trust") or True,
     )
     monkeypatch.setitem(
