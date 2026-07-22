@@ -21,6 +21,8 @@ from pathlib import Path
 from typing import Any
 
 from core_engine.tradingview import auth as tv_auth
+from core_engine.shared.time import parse_utc_time as _parse_time
+from core_engine.supervisor.process_control import same_local_host
 from core_engine.settings import (
     APP_ROOT,
     BACKEND,
@@ -68,23 +70,6 @@ class Check:
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
-
-
-def _parse_time(value: Any) -> datetime | None:
-    if not value:
-        return None
-    text = str(value).strip()
-    if not text:
-        return None
-    try:
-        if text.endswith("Z"):
-            text = text[:-1] + "+00:00"
-        parsed = datetime.fromisoformat(text)
-        if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=timezone.utc)
-        return parsed.astimezone(timezone.utc)
-    except Exception:
-        return None
 
 
 def _age_seconds(value: Any) -> float | None:
@@ -476,13 +461,7 @@ def _locks_check() -> Check:
                 pid_alive: bool | None = None
                 same_host_dead = False
                 pid_text = meta.get("pid")
-                host = str(meta.get("host") or "").strip().lower()
-                local_hosts = {
-                    str(os.environ.get("COMPUTERNAME") or "").strip().lower(),
-                    str(os.uname().nodename if hasattr(os, "uname") else "").strip().lower(),
-                }
-                local_hosts.discard("")
-                same_host = bool(host and host in local_hosts)
+                same_host = same_local_host(meta.get("host"))
                 if pid_text:
                     try:
                         pid_alive = local_pid_alive(int(pid_text))

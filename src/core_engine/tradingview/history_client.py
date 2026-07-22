@@ -104,9 +104,6 @@ def _send(ws: websocket.WebSocket, method: str, params: list[Any]) -> None:
     protocol.send_tv_message(ws, [method, *params])
 
 
-_parse_packets = protocol.parse_packets
-
-
 def _headers(cookie: str) -> list[str]:
     headers = [
         "Origin: https://www.tradingview.com",
@@ -238,33 +235,14 @@ def fetch_history(
             deadline = time.monotonic() + timeout_sec
             while time.monotonic() < deadline:
                 try:
-                    raw = ws.recv()
+                    packets = protocol.receive_data_packets(ws)
                 except websocket.WebSocketTimeoutException:
                     continue
                 except Exception as exc:
                     error = str(exc)
                     return "recv_error"
 
-                if isinstance(raw, bytes):
-                    raw = raw.decode("utf-8", errors="replace")
-
-                # Echo EVERY heartbeat packet found in this buffer, not
-                # just when the buffer's own prefix is "~h~" - a heartbeat
-                # can legitimately arrive bundled with a framed data
-                # message in the same TCP read (before, after, or between
-                # other packets). The old raw.startswith("~h~") check only
-                # caught a heartbeat that happened to be first; any
-                # heartbeat found later via _parse_packets was silently
-                # skipped instead of echoed (see live/engine.py's
-                # BatchFetcher._on_message for the pattern this now
-                # matches, which was already correct there).
-                for packet in _parse_packets(raw):
-                    if packet.startswith("~h~"):
-                        try:
-                            ws.send(f"~m~{len(packet)}~m~{packet}")
-                        except Exception:
-                            pass
-                        continue
+                for packet in packets:
                     try:
                         msg = json.loads(packet)
                     except Exception:
@@ -408,7 +386,7 @@ def fetch_replay_window(
             last_count = -1
             while time.monotonic() < deadline:
                 try:
-                    raw = ws.recv()
+                    packets = protocol.receive_data_packets(ws)
                 except websocket.WebSocketTimeoutException:
                     if saw_data and time.monotonic() - last_change > 1.5:
                         return "idle_after_data"
@@ -417,26 +395,7 @@ def fetch_replay_window(
                     error = str(exc)
                     return "recv_error"
 
-                if isinstance(raw, bytes):
-                    raw = raw.decode("utf-8", errors="replace")
-
-                # Echo EVERY heartbeat packet found in this buffer, not
-                # just when the buffer's own prefix is "~h~" - a heartbeat
-                # can legitimately arrive bundled with a framed data
-                # message in the same TCP read (before, after, or between
-                # other packets). The old raw.startswith("~h~") check only
-                # caught a heartbeat that happened to be first; any
-                # heartbeat found later via _parse_packets was silently
-                # skipped instead of echoed (see live/engine.py's
-                # BatchFetcher._on_message for the pattern this now
-                # matches, which was already correct there).
-                for packet in _parse_packets(raw):
-                    if packet.startswith("~h~"):
-                        try:
-                            ws.send(f"~m~{len(packet)}~m~{packet}")
-                        except Exception:
-                            pass
-                        continue
+                for packet in packets:
                     try:
                         msg = json.loads(packet)
                     except Exception:

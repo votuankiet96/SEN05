@@ -24,11 +24,15 @@ def test_gen_session_id_is_unique_across_calls():
 
 
 class _FakeWS:
-    def __init__(self):
+    def __init__(self, raw=None):
         self.sent = []
+        self.raw = raw
 
     def send(self, payload):
         self.sent.append(payload)
+
+    def recv(self):
+        return self.raw
 
 
 def test_send_tv_message_frames_with_length_prefix():
@@ -115,6 +119,15 @@ def test_parse_packets_does_not_swallow_a_frame_following_a_mid_buffer_heartbeat
 def test_parse_packets_handles_empty_and_malformed_input():
     assert protocol.parse_packets("") == []
     assert protocol.parse_packets("not a tv frame at all") == []
+
+
+def test_receive_data_packets_echoes_every_heartbeat_and_returns_only_data():
+    ws = _FakeWS((_frame("m1", [1]) + "~h~7" + _frame("m2", [2])).encode())
+
+    packets = protocol.receive_data_packets(ws)
+
+    assert [json.loads(packet)["m"] for packet in packets] == ["m1", "m2"]
+    assert ws.sent == ["~m~4~m~~h~7"]
 
 
 def test_bars_to_df_converts_ohlcv_rows():

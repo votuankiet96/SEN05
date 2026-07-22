@@ -71,6 +71,31 @@ def parse_packets(raw: str) -> list[str]:
     return packets
 
 
+def receive_data_packets(ws: Any) -> list[str]:
+    """Receive one WebSocket buffer, echo heartbeats, and return data packets.
+
+    Timeout and connection exceptions intentionally propagate so callers can
+    retain their request-specific deadline and idle-after-data policies.
+    Heartbeat send failures remain best-effort, matching both historical
+    receive loops' previous behavior.
+    """
+
+    raw = ws.recv()
+    if isinstance(raw, bytes):
+        raw = raw.decode("utf-8", errors="replace")
+
+    data_packets: list[str] = []
+    for packet in parse_packets(str(raw)):
+        if packet.startswith("~h~"):
+            try:
+                ws.send(f"~m~{len(packet)}~m~{packet}")
+            except Exception:
+                pass
+            continue
+        data_packets.append(packet)
+    return data_packets
+
+
 def bars_to_df(bars: list) -> pd.DataFrame:
     records = []
     for bar in bars:

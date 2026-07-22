@@ -62,7 +62,7 @@ STOP_TARGETS = (
 )
 
 
-def _local_host_names() -> set[str]:
+def local_host_names() -> set[str]:
     names = {
         str(os.environ.get("COMPUTERNAME") or "").strip().lower(),
         str(socket.gethostname() or "").strip().lower(),
@@ -70,9 +70,9 @@ def _local_host_names() -> set[str]:
     return {name for name in names if name}
 
 
-def _same_local_host(host: str | None) -> bool:
+def same_local_host(host: str | None) -> bool:
     host_name = str(host or "").strip().lower()
-    return bool(host_name and host_name in _local_host_names())
+    return bool(host_name and host_name in local_host_names())
 
 
 def _safe_pid(value: Any) -> int | None:
@@ -132,7 +132,7 @@ def _stop_target_snapshot() -> list[dict[str, Any]]:
                 "started": meta.get("started"),
                 "heartbeat": meta.get("heartbeat"),
                 "expires_at": str(record.expires_at or ""),
-                "same_host": _same_local_host(meta.get("host")),
+                "same_host": same_local_host(meta.get("host")),
                 "note": "active runtime lock",
             }
         )

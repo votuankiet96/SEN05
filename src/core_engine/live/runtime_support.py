@@ -17,6 +17,7 @@ from typing import Callable
 import requests
 
 from core_engine.coordination.locks import _local_pid_alive as is_pid_alive
+from core_engine.shared.freshness import stale_after_minutes
 from core_engine.settings import CACHE_DIR, OVERNIGHT_GAP_MINUTES, TF_MINUTES
 
 
@@ -62,7 +63,6 @@ def freshness_threshold_minutes(
     tf_code: str,
 ) -> int:
     tf_min = int(TF_MINUTES.get(tf_code, 60))
-    threshold = tf_min * 3
     meta = symbol_meta_by_id.get(symbol_id, {})
     asset_type = meta.get("asset_type")
     tv_symbol = meta.get("tv_symbol")
@@ -74,9 +74,7 @@ def freshness_threshold_minutes(
     else:
         overnight_min = int(OVERNIGHT_GAP_MINUTES.get(str(asset_type), 0))
 
-    if overnight_min > 0:
-        threshold = max(threshold, overnight_min + tf_min)
-    return threshold
+    return stale_after_minutes(tf_min, overnight_min)
 
 
 def freshness_alert_threshold_minutes(

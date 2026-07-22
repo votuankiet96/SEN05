@@ -211,6 +211,25 @@ def _refresh_mid_run(tv: SimpleNamespace) -> bool:
         logger.error("%s", _hlog("TradingView login refresh failed", result="failed"))
     return ok
 
+
+def _next_consecutive_failures(
+    tv: SimpleNamespace,
+    current: int,
+    *,
+    succeeded: bool,
+    operation: str,
+) -> int:
+    """Advance the shared historical failure/refresh state machine."""
+
+    if succeeded:
+        return 0
+    failures = current + 1
+    if failures < MAX_CONSECUTIVE_FAIL:
+        return failures
+    if _refresh_mid_run(tv):
+        return 0
+    raise RuntimeError(f"too many consecutive {operation} failures")
+
 def _combine_frames(*frames: pd.DataFrame | None) -> pd.DataFrame | None:
     valid = [df for df in frames if df is not None and not df.empty]
     if not valid:
@@ -576,14 +595,14 @@ def run_full_load(tv: SimpleNamespace, *, symbols: list[dict[str, Any]], dry_run
             if result >= 0:
                 stats["ok"] += 1
                 stats["inserted"] += max(0, result)
-                consecutive_fail = 0
             else:
                 stats["fail"] += 1
-                consecutive_fail += 1
-                if consecutive_fail >= MAX_CONSECUTIVE_FAIL and _refresh_mid_run(tv):
-                    consecutive_fail = 0
-                elif consecutive_fail >= MAX_CONSECUTIVE_FAIL:
-                    raise RuntimeError("too many consecutive historical pull failures")
+            consecutive_fail = _next_consecutive_failures(
+                tv,
+                consecutive_fail,
+                succeeded=result >= 0,
+                operation="historical pull",
+            )
             sleep_for(sym["tv_symbol"])
         _reporter.tf_summary(tf_code, stats["ok"], stats["fail"], stats["inserted"])
     return stats
@@ -594,8 +613,9 @@ def run_backfill(
     symbols: list[dict[str, Any]],
     dry_run: bool = False,
     hole_lookback_days: int = HOLE_LOOKBACK_DAYS,
+    latest_bars: dict | None = None,
 ) -> dict[str, int]:
-    latest = get_latest_bars()
+    latest = get_latest_bars() if latest_bars is None else latest_bars
     stale = find_stale_pairs(latest, tf_filter=_TF_FILTER, symbols=symbols)
     verified_gaps = load_verified_gaps()
     verified_windows = flatten_verified_gap_windows(verified_gaps)
@@ -654,7 +674,6 @@ def run_backfill(
         if result >= 0:
             stats["ok"] += 1
             stats["inserted"] += max(0, result)
-            consecutive_fail = 0
             # Re-verify every requested gap after any successful pull. A
             # positive insert count can be for newer candles while an older
             # gap remains unavailable at TradingView, so result == 0 is not
@@ -712,12 +731,12 @@ def run_backfill(
                     )
         else:
             stats["fail"] += 1
-            consecutive_fail += 1
-            if consecutive_fail >= MAX_CONSECUTIVE_FAIL:
-                if _refresh_mid_run(tv):
-                    consecutive_fail = 0
-                else:
-                    raise RuntimeError("too many consecutive backfill failures")
+        consecutive_fail = _next_consecutive_failures(
+            tv,
+            consecutive_fail,
+            succeeded=result >= 0,
+            operation="backfill",
+        )
         sleep_for(sym["tv_symbol"])
 
     if verified_windows:

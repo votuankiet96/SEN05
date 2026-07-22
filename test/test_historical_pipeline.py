@@ -22,6 +22,7 @@ import pandas as pd
 import pytest
 
 from core_engine.historical import pipeline
+from core_engine.historical import engine as historical_engine
 from core_engine.historical import runtime_support
 from core_engine.historical.engine import _set_replay_runtime
 
@@ -467,6 +468,56 @@ def test_run_full_load_raises_after_consecutive_fail_even_with_prior_successes(m
     symbols = [{"tv_symbol": f"SYM{i}", "symbol_id": i} for i in range(3)]
     with pytest.raises(RuntimeError, match="too many consecutive"):
         pipeline.run_full_load(object(), symbols=symbols, dry_run=False)
+
+
+def test_run_backfill_uses_mode_detection_snapshot_without_second_database_read(monkeypatch):
+    monkeypatch.setattr(
+        pipeline,
+        "get_latest_bars",
+        lambda: pytest.fail("run_backfill must reuse the auto-mode snapshot"),
+    )
+    monkeypatch.setattr(pipeline, "find_stale_pairs", lambda *a, **k: [])
+    monkeypatch.setattr(pipeline, "find_hole_pairs", lambda *a, **k: [])
+    monkeypatch.setattr(pipeline, "load_verified_gaps", lambda: {})
+
+    stats = pipeline.run_backfill(object(), symbols=[], latest_bars={})
+
+    assert stats == {"queued": 0, "ok": 0, "fail": 0, "inserted": 0}
+
+
+def test_managed_historical_lease_registers_and_releases_one_cleanup(monkeypatch):
+    lease = object()
+    calls = []
+    monkeypatch.setattr(
+        historical_engine,
+        "_acquire_historical_or_report",
+        lambda owner, args, duration_min: lease,
+    )
+    monkeypatch.setattr(
+        historical_engine.atexit,
+        "register",
+        lambda func, *args: calls.append(("register", func, args)),
+    )
+    monkeypatch.setattr(
+        historical_engine.atexit,
+        "unregister",
+        lambda func: calls.append(("unregister", func)),
+    )
+    monkeypatch.setattr(
+        historical_engine,
+        "release_historical_job",
+        lambda *args: calls.append(("release", args)),
+    )
+
+    acquired = historical_engine._acquire_managed_historical_job(
+        "test-owner",
+        object(),
+        duration_min=5,
+    )
+    historical_engine._release_managed_historical_job(acquired, "test-owner")
+
+    assert acquired is lease
+    assert [call[0] for call in calls] == ["register", "unregister", "release"]
 
 
 def test_write_ohlcv_frame_skip_etl_still_skips(monkeypatch, isolated_warehouse_lock):

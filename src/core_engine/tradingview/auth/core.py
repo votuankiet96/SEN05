@@ -1636,31 +1636,9 @@ def _headless_refresh(cookie_str: str) -> tuple[str, str]:
                 _apply_playwright_stealth(page)
                 page.goto("https://www.tradingview.com/", wait_until="networkidle", timeout=45_000)
 
-                token: str = (
-                    page.evaluate(
-                        """() => {
-                        try {
-                            const m = document.documentElement.innerHTML.match(/"auth_token":"(eyJ[^"]+)"/);
-                            if (m) return m[1];
-                        } catch(e) {}
-                        try {
-                            if (window.__tv_initData && window.__tv_initData.auth_token)
-                                return window.__tv_initData.auth_token;
-                        } catch(e) {}
-                        try {
-                            if (window.initData && window.initData.auth_token)
-                                return window.initData.auth_token;
-                        } catch(e) {}
-                        return null;
-                    }"""
-                    )
-                    or ""
-                )
-
                 all_cookies = ctx.cookies()
-                if not token:
-                    token = _extract_token_from_page(page, all_cookies)
-                cookie_out = "; ".join(f"{c['name']}={c['value']}" for c in all_cookies)
+                token = _extract_token_from_page(page, all_cookies)
+                cookie_out = _cookie_header_from_list(all_cookies)
             finally:
                 # Explicit close regardless of success/exception: relying
                 # on sync_playwright()'s own teardown to also clean up any
@@ -1835,32 +1813,11 @@ def _headless_login_fresh(username: str, password: str) -> tuple[str, str]:
                 except Exception:
                     pass  # Tiếp tục extract dù timeout; token có thể đã có.
 
-                # Extract auth token từ HTML hoặc JS globals.
-                token: str = (
-                    page.evaluate(
-                        """() => {
-                        try {
-                            const m = document.documentElement.innerHTML.match(/"auth_token":"(eyJ[^"]+)"/);
-                            if (m) return m[1];
-                        } catch(e) {}
-                        try {
-                            if (window.__tv_initData && window.__tv_initData.auth_token)
-                                return window.__tv_initData.auth_token;
-                        } catch(e) {}
-                        try {
-                            if (window.initData && window.initData.auth_token)
-                                return window.initData.auth_token;
-                        } catch(e) {}
-                        return null;
-                    }"""
-                    )
-                    or ""
-                )
-
+                # Extract credentials through the same browser/page helper as
+                # cookie refresh and persistent-profile auth.
                 all_cookies = ctx.cookies()
-                if not token:
-                    token = _extract_token_from_page(page, all_cookies)
-                cookie_out = "; ".join(f"{c['name']}={c['value']}" for c in all_cookies)
+                token = _extract_token_from_page(page, all_cookies)
+                cookie_out = _cookie_header_from_list(all_cookies)
 
             finally:
                 # See _headless_refresh's identical finally block for why this is

@@ -29,6 +29,7 @@ from typing import Any
 
 from core_engine.exit_codes import EXIT_CANCELLED, EXIT_ERROR, EXIT_LOCK_CONFLICT
 from core_engine.health import _age_seconds, cleanup_old_runtime_files, collect_health
+from core_engine.shared.time import parse_utc_time
 from core_engine.logkit.activity import log_activity
 from core_engine.logkit.formatters import operation_line
 from core_engine.reporting.discord import notify_backend_event, notify_historical_event, notify_live_event, flush_pending
@@ -888,18 +889,12 @@ class BackendSupervisor:
         value = state.get(field)
         if not value:
             return None
-        try:
-            text = str(value)
-            if text.endswith("Z"):
-                text = text[:-1] + "+00:00"
-            parsed = datetime.fromisoformat(text)
-            if parsed.tzinfo is None:
-                parsed = parsed.replace(tzinfo=timezone.utc)
-            if self.live.started_at and parsed.timestamp() < self.live.started_at - 5:
-                return None
-            return max(0.0, (datetime.now(timezone.utc) - parsed.astimezone(timezone.utc)).total_seconds())
-        except Exception:
+        parsed = parse_utc_time(value)
+        if parsed is None:
             return None
+        if self.live.started_at and parsed.timestamp() < self.live.started_at - 5:
+            return None
+        return max(0.0, (datetime.now(timezone.utc) - parsed).total_seconds())
 
     def _live_output_age_seconds(self) -> float | None:
         if not self.live.started_at:

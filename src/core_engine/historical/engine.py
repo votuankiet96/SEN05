@@ -170,8 +170,8 @@ def _apply_replay_cli_options(args: Any) -> list[str]:
     return apply_replay_cli_options(args, valid_tfs=valid_tfs, set_runtime=_set_replay_runtime)
 
 
-def detect_mode() -> str:
-    latest = get_latest_bars()
+def detect_mode(latest_bars: dict | None = None) -> str:
+    latest = get_latest_bars() if latest_bars is None else latest_bars
     return "full" if not latest else "gap"
 
 
@@ -291,6 +291,27 @@ def _acquire_historical_or_report(owner: str, args: Any, *, duration_min: int) -
     return lease
 
 
+def _acquire_managed_historical_job(owner: str, args: Any, *, duration_min: int) -> Any:
+    """Acquire a historical lease and register one emergency exit cleanup."""
+
+    lease = _acquire_historical_or_report(owner, args, duration_min=duration_min)
+    if lease is not None:
+        atexit.register(release_historical_job, lease, owner, logger)
+    return lease
+
+
+def _release_managed_historical_job(lease: Any, owner: str) -> None:
+    """Release a managed lease once and remove its process-exit fallback."""
+
+    if lease is None:
+        return
+    try:
+        atexit.unregister(release_historical_job)
+    except Exception:
+        pass
+    release_historical_job(lease, owner, logger)
+
+
 
 
 
@@ -358,7 +379,8 @@ def main(argv: list[str] | None = None) -> int:
         logger.critical("%s", _hlog("Database contract check failed", reason=_contract["reason"], result="refused_to_start"))
         return 4
 
-    mode = args.mode if args.mode != "auto" else detect_mode()
+    latest_bars = get_latest_bars() if args.mode == "auto" else None
+    mode = args.mode if args.mode != "auto" else detect_mode(latest_bars)
     _reporter.start(
         mode=mode,
         started=started,
@@ -393,14 +415,13 @@ def main(argv: list[str] | None = None) -> int:
                 return 2
             if not args.dry_run:
                 _cleanup_orphan_warehouse_maintenance("historical_reset_start")
-                historical_lease = _acquire_historical_or_report(
+                historical_lease = _acquire_managed_historical_job(
                     "historical-reset",
                     args,
                     duration_min=60,
                 )
                 if historical_lease is None:
                     return EXIT_LOCK_CONFLICT
-                atexit.register(release_historical_job, historical_lease, "historical-reset", logger)
                 _cleanup_orphan_warehouse_maintenance(
                     "historical_reset_lock_acquired",
                     allow_after_historical_lock=True,
@@ -464,7 +485,7 @@ def main(argv: list[str] | None = None) -> int:
             if maintenance_acquired:
                 release(WAREHOUSE_MAINTENANCE_LOCK)
             if not args.dry_run:
-                release_historical_job(historical_lease, "historical-reset", logger)
+                _release_managed_historical_job(historical_lease, "historical-reset")
             flush_pending()
 
     ok, detail = tv_probe(logger, symbols=scope.symbols, direct_tfs=DIRECT_TFS)
@@ -495,14 +516,13 @@ def main(argv: list[str] | None = None) -> int:
     if not args.dry_run:
         if maintenance_scope:
             _cleanup_orphan_warehouse_maintenance("historical_pipeline_start")
-        historical_lease = _acquire_historical_or_report(
+        historical_lease = _acquire_managed_historical_job(
             "historical-pipeline",
             args,
             duration_min=240,
         )
         if historical_lease is None:
             return EXIT_LOCK_CONFLICT
-        atexit.register(release_historical_job, historical_lease, "historical-pipeline", logger)
         if maintenance_scope:
             _cleanup_orphan_warehouse_maintenance(
                 "historical_pipeline_lock_acquired",
@@ -519,6 +539,7 @@ def main(argv: list[str] | None = None) -> int:
                 symbols=scope.symbols,
                 dry_run=args.dry_run,
                 hole_lookback_days=args.hole_lookback_days,
+                latest_bars=latest_bars,
             )
         if not args.dry_run:
             purged = purge_staging(days_to_keep=7)
@@ -596,7 +617,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     finally:
         if not args.dry_run:
-            release_historical_job(historical_lease, "historical-pipeline", logger)
+            _release_managed_historical_job(historical_lease, "historical-pipeline")
         flush_pending()
 
 

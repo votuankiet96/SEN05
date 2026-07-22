@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from core_engine.tradingview import history_client as tv_history
+from core_engine.shared.freshness import stale_after_minutes
 from core_engine.warehouse.reader import get_internal_gaps
 from core_engine.warehouse.validation import utc_naive_now
 from core_engine.reporting.historical_reporter import historical_scan_summary_block, log_historical_block
@@ -188,7 +189,7 @@ def gap_threshold_minutes(sym: dict, tf_code: str) -> int:
     asset_type = sym["asset_type"]
     tv_sym = sym["tv_symbol"]
     overnight = int(SYMBOL_OVERNIGHT_MINS.get(tv_sym, OVERNIGHT_GAP_MINUTES.get(asset_type, 0)))
-    return max(tf_mins * 3, overnight + tf_mins)
+    return stale_after_minutes(tf_mins, overnight)
 
 
 def calc_gap_n_bars(gap_hours: float, tf_code: str, asset_type: str) -> int:
