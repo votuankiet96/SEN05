@@ -23,6 +23,9 @@ class _RecordingSpool:
     def count_unstaged(self):
         return 0
 
+    def count(self):
+        return 0
+
     def mark_staged(self, row_id):
         self.events.append(("mark_staged", row_id))
 
@@ -80,8 +83,12 @@ def _run_one_worker_item(monkeypatch, *, etl_raises: bool):
     monkeypatch.setattr(live_engine, "_increment_data_error_counter", lambda: None)
     monkeypatch.setattr(live_engine, "_deferred_etl", {})
     monkeypatch.setattr(live_engine, "_deferred_etl_next_attempt", {})
+    monkeypatch.setattr(live_engine, "_etl_item_meta", {})
+    monkeypatch.setattr(live_engine, "_etl_wakeup", threading.Event())
+    monkeypatch.setattr(live_engine, "_db_worker_done", threading.Event())
 
     live_engine._db_worker()
+    live_engine._etl_worker()
     return events
 
 
@@ -99,6 +106,99 @@ def test_fault_inside_etl_never_acks_staged_outbox_row(monkeypatch):
 
     assert any(event[0] == "fact_commit_attempt" for event in events)
     assert not any(event[0] == "ack" for event in events)
+
+
+def test_staging_writer_never_waits_for_fact_loader(monkeypatch):
+    """A wedged M10 Fact call must not head-of-line block later staging."""
+    events = []
+    work_queue = queue.Queue()
+    work_queue.put((77, 1, 704, "M10", "SEN.TF_M10", "US500", _one_valid_frame()))
+    work_queue.put((78, 1, 705, "M5", "SEN.TF_M5", "FR40", _one_valid_frame()))
+    shutdown = threading.Event()
+    shutdown.set()
+
+    class _TwoRowSpool(_RecordingSpool):
+        def staged_snapshot_for_key(self, _symbol_id, tf_code, *_rest):
+            row_id = 77 if tf_code == "M10" else 78
+            self.events.append(("snapshot", row_id))
+            return [row_id], "2026-07-21 10:00:00"
+
+    monkeypatch.setattr(live_engine, "_db_queue", work_queue)
+    monkeypatch.setattr(live_engine, "_shutdown", shutdown)
+    monkeypatch.setattr(live_engine, "_spool", _TwoRowSpool(events))
+    monkeypatch.setattr(live_engine, "_flush_overflow_to_queue", lambda: None)
+    monkeypatch.setattr(live_engine, "validate_ohlcv_df", lambda df, *_a, **_k: (df, {}))
+    monkeypatch.setattr(
+        live_engine,
+        "insert_staging_batch",
+        lambda *_a, **_k: events.append(("staging_commit",)) or 1,
+    )
+    monkeypatch.setattr(
+        live_engine,
+        "_run_etl_direct_with_retry",
+        lambda *_a, **_k: events.append(("fact_commit_attempt",)) or 1,
+    )
+    monkeypatch.setattr(live_engine, "_write_defer_lock_active", lambda: False)
+    monkeypatch.setattr(live_engine, "_record_db_result", lambda *_a, **_k: None)
+    monkeypatch.setattr(live_engine, "_set_committed_watermark", lambda *_a, **_k: None)
+    monkeypatch.setattr(live_engine, "publish_candle_snapshot", lambda *_a, **_k: None)
+    monkeypatch.setattr(live_engine, "_log_candle_row", lambda *_a, **_k: None)
+    monkeypatch.setattr(live_engine, "_deferred_etl", {})
+    monkeypatch.setattr(live_engine, "_deferred_etl_next_attempt", {})
+    monkeypatch.setattr(live_engine, "_etl_item_meta", {})
+    monkeypatch.setattr(live_engine, "_etl_wakeup", threading.Event())
+    monkeypatch.setattr(live_engine, "_db_worker_done", threading.Event())
+
+    live_engine._db_worker()
+    assert [event[0] for event in events].count("staging_commit") == 2
+    assert not any(event[0] == "fact_commit_attempt" for event in events)
+
+    live_engine._etl_worker()
+    assert [event[0] for event in events].count("fact_commit_attempt") == 2
+
+
+def test_fact_key_scheduler_skips_cooling_key_instead_of_head_of_line_blocking(monkeypatch):
+    slow = (8, "M10", "SEN.TF_M10", "US500")
+    healthy = (2, "M5", "SEN.TF_M5", "FR40")
+    monkeypatch.setattr(live_engine, "_deferred_etl", {slow: 10.0, healthy: 20.0})
+    monkeypatch.setattr(
+        live_engine, "_deferred_etl_next_attempt", {slow: 160.0, healthy: 0.0}
+    )
+    monkeypatch.setattr(live_engine.time, "monotonic", lambda: 100.0)
+
+    key, max_ts, _wait = live_engine._take_ready_fact_key()
+
+    assert key == healthy
+    assert max_ts == 20.0
+    assert slow in live_engine._deferred_etl
+
+
+def test_fact_worker_can_limit_hot_path_to_one_sql_attempt(monkeypatch):
+    attempts = []
+    monkeypatch.setattr(live_engine, "_shutdown", threading.Event())
+
+    def _fail(*_args, **_kwargs):
+        attempts.append(1)
+        raise RuntimeError("fault-injected SQL timeout")
+
+    monkeypatch.setattr(live_engine, "run_etl_direct", _fail)
+
+    try:
+        live_engine._run_etl_direct_with_retry(
+            8,
+            "M10",
+            "SEN.TF_M10",
+            "US500",
+            context="deferred",
+            from_time="2026-07-22 04:00:00",
+            max_attempts=1,
+        )
+    except RuntimeError as exc:
+        assert "fault-injected" in str(exc)
+    else:
+        raise AssertionError("fault injection must escape after one attempt")
+
+    assert len(attempts) == 1
 
 
 def test_clean_worker_exit_with_empty_queue_is_not_a_shutdown_critical(monkeypatch, caplog):

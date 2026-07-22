@@ -121,3 +121,59 @@ def test_purge_staging_stops_when_batch_returns_zero_rows(monkeypatch):
     delete_calls = [sql for sql, _ in cursor.executed if sql.startswith("DELETE TOP")]
     table_count = len(maintenance._ALL_STAGING_TABLES)
     assert len(delete_calls) == table_count * 2
+
+
+def test_purge_staging_yields_before_opening_sql_when_live_has_pressure(monkeypatch):
+    monkeypatch.setattr(
+        maintenance, "_live_write_pressure_reason", lambda: "live_spool_not_empty"
+    )
+    monkeypatch.setattr(
+        maintenance,
+        "get_connection",
+        lambda: (_ for _ in ()).throw(AssertionError("SQL must not be opened")),
+    )
+
+    result = maintenance.purge_staging(days_to_keep=7)
+
+    assert "live_spool_not_empty" in result["__partial__"]
+
+
+def test_purge_staging_enforces_fair_per_table_budget(monkeypatch):
+    class _AlwaysDeletesCursor(_FakeCursor):
+        def execute(self, sql, params=()):
+            self.executed.append((sql, tuple(params)))
+            self.rowcount = 1000 if sql.startswith("DELETE TOP") else 0
+            return self
+
+    cursor = _AlwaysDeletesCursor()
+    conn = _FakeConnection(cursor)
+    monkeypatch.setattr(maintenance, "get_connection", lambda: conn)
+    monkeypatch.setattr(maintenance, "_live_write_pressure_reason", lambda: None)
+
+    result = maintenance.purge_staging(
+        days_to_keep=7,
+        batch_size=1000,
+        max_rows_per_run=0,
+        max_rows_per_table=2000,
+        max_seconds=600,
+        checkpoint=False,
+    )
+
+    assert "__error__" not in result
+    for table in maintenance._ALL_STAGING_TABLES:
+        assert result[table] == 2000
+        assert sum(table in sql for sql, _ in cursor.executed) == 2
+
+
+def test_purge_staging_enforces_wall_clock_budget(monkeypatch):
+    cursor = _FakeCursor(first_call_rowcount=1000)
+    conn = _FakeConnection(cursor)
+    ticks = iter((10.0, 41.0))
+    monkeypatch.setattr(maintenance, "get_connection", lambda: conn)
+    monkeypatch.setattr(maintenance, "_live_write_pressure_reason", lambda: None)
+    monkeypatch.setattr(maintenance.time, "monotonic", lambda: next(ticks))
+
+    result = maintenance.purge_staging(days_to_keep=7, max_seconds=30)
+
+    assert "time_budget_reached" in result["__partial__"]
+    assert not cursor.executed

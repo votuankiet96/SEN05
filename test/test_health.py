@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
 import sys
 from collections import namedtuple
 from datetime import datetime, timedelta, timezone
@@ -87,6 +88,43 @@ def test_runtime_health_reports_low_disk_space(monkeypatch, tmp_path, free_gb, e
 
     assert check.status == expected
     assert check.detail["disk_free_gb"] == free_gb
+
+
+def test_live_spool_health_fails_when_fact_backlog_is_stale(monkeypatch, tmp_path):
+    path = tmp_path / "overflow_spool.db"
+    with sqlite3.connect(path) as conn:
+        conn.execute(
+            "CREATE TABLE spool (status TEXT NOT NULL, created_at TEXT NOT NULL)"
+        )
+        conn.execute("CREATE TABLE spool_quarantine (id INTEGER)")
+        old = datetime.now(timezone.utc) - timedelta(minutes=20)
+        conn.execute(
+            "INSERT INTO spool(status, created_at) VALUES (?, ?)",
+            ("staged", old.strftime("%Y-%m-%d %H:%M:%S")),
+        )
+        conn.commit()
+    monkeypatch.setattr(health, "WS_OVERFLOW_SPOOL", path)
+
+    check = health._live_spool_check()
+
+    assert check.status == "fail"
+    assert check.detail["pending_count"] == 1
+    assert check.detail["by_status"] == {"staged": 1}
+
+
+def test_live_spool_health_is_ok_when_empty(monkeypatch, tmp_path):
+    path = tmp_path / "overflow_spool.db"
+    with sqlite3.connect(path) as conn:
+        conn.execute(
+            "CREATE TABLE spool (status TEXT NOT NULL, created_at TEXT NOT NULL)"
+        )
+        conn.execute("CREATE TABLE spool_quarantine (id INTEGER)")
+    monkeypatch.setattr(health, "WS_OVERFLOW_SPOOL", path)
+
+    check = health._live_spool_check()
+
+    assert check.status == "ok"
+    assert check.detail["pending_count"] == 0
 
 
 def test_redis_snapshot_health_is_disabled_in_sql_mode(monkeypatch):

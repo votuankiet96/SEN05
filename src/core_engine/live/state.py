@@ -57,6 +57,18 @@ _deferred_etl_next_attempt: dict[tuple[int, str, str, str], float] = {}
 
 _deferred_lock = threading.Lock()
 
+# The staging writer and Fact loader are deliberately separate workers.  The
+# metadata map lets the Fact worker report the original batch only after the
+# exact staged outbox row has crossed the Fact commit boundary.  The durable
+# source of truth remains LiveSpool; this map is only in-process bookkeeping
+# and may safely disappear on a crash because LiveSpool.init() requeues staged
+# rows on the replacement process.
+_etl_item_meta: dict[int, dict] = {}
+
+_etl_wakeup = threading.Event()
+
+_db_worker_done = threading.Event()
+
 _write_defer_lock_cache: dict = {"locked": False, "checked_at": 0.0, "name": ""}
 
 _WRITE_DEFER_LOCK_TTL = 30.0

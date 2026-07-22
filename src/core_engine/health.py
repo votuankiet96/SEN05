@@ -11,6 +11,7 @@ import json
 import logging
 import os
 import shutil
+import sqlite3
 import subprocess
 import sys
 import time
@@ -36,6 +37,7 @@ from core_engine.settings import (
     SYMBOLS,
     TF_DISPLAY_ORDER,
     WS_LIVE_STATE,
+    WS_OVERFLOW_SPOOL,
     ensure_runtime_dirs,
 )
 from core_engine.live.runtime_support import playwright_browser_status
@@ -335,6 +337,65 @@ def _critical_outbox_check() -> Check:
             status,
         )
     return Check("critical_alerts", "warn", f"{pending} CRITICAL alert(s) waiting for delivery.", status)
+
+
+def _live_spool_check() -> Check:
+    """Detect a live process that receives candles but cannot reach Fact."""
+    path = Path(WS_OVERFLOW_SPOOL)
+    if not path.exists():
+        return Check(
+            "live_spool",
+            "ok",
+            "Live durable spool has not been created yet.",
+            {"path": str(path), "pending_count": 0},
+        )
+    try:
+        uri = f"{path.resolve().as_uri()}?mode=ro"
+        with sqlite3.connect(uri, uri=True, timeout=1.0) as conn:
+            rows = conn.execute(
+                "SELECT status, COUNT(*), MIN(created_at) FROM spool GROUP BY status"
+            ).fetchall()
+            quarantine = int(
+                conn.execute("SELECT COUNT(*) FROM spool_quarantine").fetchone()[0]
+            )
+    except (OSError, sqlite3.Error) as exc:
+        return Check("live_spool", "warn", f"Could not read live durable spool: {exc}")
+
+    by_status = {str(status): int(count) for status, count, _oldest in rows}
+    oldest_values = [oldest for _status, _count, oldest in rows if oldest]
+    oldest = min(oldest_values) if oldest_values else None
+    oldest_age = _age_seconds(oldest)
+    pending = sum(by_status.values())
+    detail = {
+        "path": str(path),
+        "pending_count": pending,
+        "by_status": by_status,
+        "oldest_created_at": oldest,
+        "oldest_age_seconds": oldest_age,
+        "quarantine_count": quarantine,
+    }
+    if quarantine:
+        return Check(
+            "live_spool",
+            "fail",
+            f"{quarantine} live spool row(s) are quarantined and require operator review.",
+            detail,
+        )
+    if pending == 0:
+        return Check("live_spool", "ok", "Live durable spool is empty.", detail)
+    if oldest_age is not None and oldest_age > 900:
+        return Check(
+            "live_spool",
+            "fail",
+            f"{pending} live row(s) have waited over 15 minutes for Fact commit.",
+            detail,
+        )
+    return Check(
+        "live_spool",
+        "warn",
+        f"{pending} live row(s) are waiting for Fact commit.",
+        detail,
+    )
 
 
 def _auth_check(*, deep: bool = False) -> Check:
@@ -880,6 +941,7 @@ def collect_health(*, deep_auth: bool = False, include_database: bool = True) ->
         _critical_outbox_check(),
         _backend_state_check(),
         _live_state_check(),
+        _live_spool_check(),
         _historical_state_check(),
     ]
     if include_database:

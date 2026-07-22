@@ -8,9 +8,19 @@ the warehouse layer.
 
 from __future__ import annotations
 
+import json
+import sqlite3
 import time
+from datetime import datetime, timezone
+from pathlib import Path
 
-from core_engine.settings import HISTORICAL, TF_DISPLAY_ORDER, TF_STAGING
+from core_engine.settings import (
+    HISTORICAL,
+    TF_DISPLAY_ORDER,
+    TF_STAGING,
+    WS_LIVE_STATE,
+    WS_OVERFLOW_SPOOL,
+)
 from core_engine.warehouse.connection import get_connection
 from core_engine.warehouse.operation_log import _target_label, _warehouse_log, logger
 
@@ -23,12 +33,60 @@ _STAGING_TABLE_TF_ID = {
     if tf_code in TF_STAGING
 }
 
+
+def _live_write_pressure_reason() -> str | None:
+    """Return why cleanup should yield to the production live writer."""
+    spool_path = Path(WS_OVERFLOW_SPOOL)
+    if spool_path.exists():
+        try:
+            uri = f"{spool_path.resolve().as_uri()}?mode=ro"
+            with sqlite3.connect(uri, uri=True, timeout=0.25) as spool_conn:
+                if spool_conn.execute("SELECT 1 FROM spool LIMIT 1").fetchone():
+                    return "live_spool_not_empty"
+        except (OSError, sqlite3.Error):
+            # Cleanup is optional; inability to prove the live outbox empty
+            # must never be allowed to add load to an already uncertain host.
+            return "live_spool_status_unavailable"
+
+    state_path = Path(WS_LIVE_STATE)
+    if state_path.exists():
+        try:
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            updated_raw = str(state.get("updated_at") or "")
+            updated = datetime.fromisoformat(updated_raw.replace("Z", "+00:00"))
+            if updated.tzinfo is None:
+                updated = updated.replace(tzinfo=timezone.utc)
+            age_sec = (datetime.now(timezone.utc) - updated).total_seconds()
+            if state.get("status") == "batch_running" and age_sec <= 180:
+                return "live_batch_running"
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            return "live_state_unreadable"
+    return None
+
+
+def _partial_cleanup_result(deleted_summary: dict, total_deleted: int, reason: str) -> dict:
+    deleted_summary["__partial__"] = (
+        f"cleanup paused after {total_deleted:,} row(s); reason={reason}"
+    )
+    _warehouse_log(
+        20,
+        source="maintenance",
+        target="all staging tables",
+        action="staging_cleanup_budget_reached",
+        deleted=total_deleted,
+        reason=reason,
+        result="partial",
+    )
+    return deleted_summary
+
 def purge_staging(
     days_to_keep: int = 7,
     *,
     batch_size: int | None = None,
     pause_sec: float | None = None,
     max_rows_per_run: int | None = None,
+    max_rows_per_table: int | None = None,
+    max_seconds: float | None = None,
     checkpoint: bool | None = None,
 ) -> dict:
     """
@@ -46,13 +104,29 @@ def purge_staging(
     max_rows_per_run = (
         HISTORICAL.staging_cleanup_max_rows_per_run if max_rows_per_run is None else int(max_rows_per_run)
     )
+    max_rows_per_table = (
+        HISTORICAL.staging_cleanup_max_rows_per_table
+        if max_rows_per_table is None
+        else int(max_rows_per_table)
+    )
+    max_seconds = (
+        HISTORICAL.staging_cleanup_max_seconds if max_seconds is None else float(max_seconds)
+    )
     checkpoint = HISTORICAL.staging_cleanup_checkpoint if checkpoint is None else bool(checkpoint)
 
     batch_size = max(500, min(int(batch_size), 50_000))
     pause_sec = max(0.0, min(float(pause_sec), 5.0))
     max_rows_per_run = max(0, int(max_rows_per_run))
+    max_rows_per_table = max(0, int(max_rows_per_table))
+    max_seconds = max(1.0, float(max_seconds))
     deleted_summary = {}
     total_deleted = 0
+    started_mono = time.monotonic()
+
+    pressure_reason = _live_write_pressure_reason()
+    if pressure_reason:
+        return _partial_cleanup_result(deleted_summary, 0, pressure_reason)
+
     conn = get_connection()
     cursor = conn.cursor()
     try:
@@ -63,26 +137,34 @@ def purge_staging(
             table_deleted = 0
             batches = 0
             while True:
+                pressure_reason = _live_write_pressure_reason()
+                if pressure_reason:
+                    deleted_summary[table] = table_deleted
+                    return _partial_cleanup_result(
+                        deleted_summary, total_deleted, pressure_reason
+                    )
+                if time.monotonic() - started_mono >= max_seconds:
+                    deleted_summary[table] = table_deleted
+                    return _partial_cleanup_result(
+                        deleted_summary, total_deleted, "time_budget_reached"
+                    )
                 if max_rows_per_run and total_deleted >= max_rows_per_run:
                     deleted_summary[table] = table_deleted
-                    deleted_summary["__partial__"] = (
-                        f"cleanup paused after {total_deleted:,} row(s); "
-                        "remaining old temporary rows will be cleaned in later runs"
+                    return _partial_cleanup_result(
+                        deleted_summary, total_deleted, "global_row_budget_reached"
                     )
-                    _warehouse_log(
-                        20,
-                        source="maintenance",
-                        target="all staging tables",
-                        action="staging_cleanup_budget_reached",
-                        deleted=total_deleted,
-                        max_rows=max_rows_per_run,
-                        result="partial",
-                    )
-                    return deleted_summary
+                if max_rows_per_table and table_deleted >= max_rows_per_table:
+                    break
 
                 effective_batch = batch_size
                 if max_rows_per_run:
                     effective_batch = min(effective_batch, max_rows_per_run - total_deleted)
+                    if effective_batch <= 0:
+                        break
+                if max_rows_per_table:
+                    effective_batch = min(
+                        effective_batch, max_rows_per_table - table_deleted
+                    )
                     if effective_batch <= 0:
                         break
 

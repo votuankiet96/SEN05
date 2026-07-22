@@ -119,9 +119,12 @@ from core_engine.live.state import (
     _batch_metrics_lock,
     _candle_table_lock,
     _db_queue,
+    _db_worker_done,
     _deferred_etl,
     _deferred_etl_next_attempt,
     _deferred_lock,
+    _etl_item_meta,
+    _etl_wakeup,
     _hourly_lock,
     _hourly_stats,
     _increment_data_error_counter,
@@ -829,10 +832,13 @@ def _run_etl_direct_with_retry(
     *,
     context: str,
     from_time: str | None,
+    max_attempts: int | None = None,
 ) -> int:
     last_exc: Exception | None = None
 
-    for attempt in range(1, ETL_DIRECT_RETRIES + 1):
+    attempts = ETL_DIRECT_RETRIES if max_attempts is None else max(1, int(max_attempts))
+
+    for attempt in range(1, attempts + 1):
         try:
             source = "live_fetching" if context == "live" else f"live_fetching_{context}"
             return run_etl_direct(
@@ -847,7 +853,7 @@ def _run_etl_direct_with_retry(
         except Exception as exc:
             last_exc = exc
 
-            if attempt >= ETL_DIRECT_RETRIES:
+            if attempt >= attempts:
                 break
 
             delay = ETL_DIRECT_RETRY_DELAY_SEC * attempt
@@ -859,7 +865,7 @@ def _run_etl_direct_with_retry(
                     symbol=tv_symbol,
                     timeframe=tf_code,
                     context=context,
-                    attempt=f"{attempt + 1}/{ETL_DIRECT_RETRIES}",
+                    attempt=f"{attempt + 1}/{attempts}",
                     wait_seconds=delay,
                     reason=exc,
                     result="retrying",
@@ -1208,64 +1214,113 @@ def _report_db_worker_stopped_at_shutdown(pending_items: int) -> bool:
     return False
 
 
-def _db_worker() -> None:
-    logger.info("%s", _llog("Database writer started", result="running"))
+def _queue_fact_load(
+    *,
+    row_id: int,
+    batch_id: int,
+    symbol_id: int,
+    tf_code: str,
+    staging_table: str,
+    tv_symbol: str,
+    accepted_count: int,
+    staging_rows: int,
+    max_committed_ts: float,
+    latest_saved_utc: str,
+) -> None:
+    """Register one staged outbox row for the independent Fact worker."""
+    defer_key = (symbol_id, tf_code, staging_table, tv_symbol)
+    with _deferred_lock:
+        _etl_item_meta[row_id] = {
+            "batch_id": batch_id,
+            "key": (symbol_id, tf_code),
+            "accepted_count": accepted_count,
+            "staging_rows": staging_rows,
+            "max_committed_ts": max_committed_ts,
+            "latest_saved_utc": latest_saved_utc,
+        }
+        _deferred_etl[defer_key] = max(
+            max_committed_ts,
+            _deferred_etl.get(defer_key, 0.0),
+        )
+        _deferred_etl_next_attempt.setdefault(defer_key, 0.0)
+        waiting = len(_deferred_etl)
 
+    if waiting >= _DEFERRED_ETL_MAX:
+        logger.error(
+            "%s",
+            _llog(
+                "Main table update backlog high",
+                waiting_items=waiting,
+                capacity=_DEFERRED_ETL_MAX,
+                symbol=tv_symbol,
+                timeframe=tf_code,
+                result="waiting_in_temporary_table",
+            ),
+        )
+    elif waiting >= _DEFERRED_ETL_WARN:
+        logger.warning(
+            "%s",
+            _llog(
+                "Main table update backlog growing",
+                waiting_items=waiting,
+                capacity=_DEFERRED_ETL_MAX,
+                result="waiting",
+            ),
+        )
+    _etl_wakeup.set()
+
+
+def _take_ready_fact_key() -> tuple[tuple[int, str, str, str] | None, float, float]:
+    """Pop one eligible key, preserving dict order for fair round-robin."""
+    now_mono = time.monotonic()
+    wait_seconds = 1.0
+    with _deferred_lock:
+        for defer_key, max_ts in list(_deferred_etl.items()):
+            next_attempt = float(_deferred_etl_next_attempt.get(defer_key, 0.0) or 0.0)
+            if next_attempt > now_mono:
+                wait_seconds = min(wait_seconds, max(0.05, next_attempt - now_mono))
+                continue
+            _deferred_etl.pop(defer_key, None)
+            _deferred_etl_next_attempt.pop(defer_key, None)
+            return defer_key, max_ts, 0.0
+    return None, 0.0, wait_seconds
+
+
+def _db_worker() -> None:
+    """Persist live candles to staging without waiting on Fact ETL."""
+    logger.info("%s", _llog("Database staging writer started", result="running"))
+    _db_worker_done.clear()
     while True:
         _flush_overflow_to_queue()
-
         if _shutdown.is_set() and _db_queue.empty():
             with _overflow_lock:
                 overflow_pending = len(_overflow_buf)
-
-            # Only pending/leased rows gate this loop - 'staged' rows
-            # (staged but not yet Fact-committed) are drained by the
-            # separate _deferred_etl shutdown-flush pass right after this
-            # loop exits, not by waiting here. See LiveSpool.count_unstaged.
-            spool_pending = _spool.count_unstaged() or 0
-
-            if overflow_pending == 0 and spool_pending == 0:
+            if overflow_pending == 0 and (_spool.count_unstaged() or 0) == 0:
                 break
 
         try:
             item = _db_queue.get(timeout=1.0)
-
             with _state_lock:
                 _stats["queue_depth"] = _db_queue.qsize()
-
         except queue.Empty:
             continue
 
         row_id, batch_id, symbol_id, tf_code, staging_table, tv_symbol, df = item
-
         key = (symbol_id, tf_code)
-
         accepted_count = len(df.index) if hasattr(df, "index") else 0
-
         df, _ = validate_ohlcv_df(
-            df,
-            tv_symbol,
-            tf_code,
-            logger,
-            normalize_timestamps=False,
+            df, tv_symbol, tf_code, logger, normalize_timestamps=False
         )
-
         if df.empty:
             _record_db_result(batch_id, key, accepted_count, 0, 0)
-
             _spool.ack(row_id)
-
             _db_queue.task_done()
-
             continue
 
-        _DB_WORKER_RETRIES = 3
-
+        staging_retries = 3
         inserted = 0
-
-        _staging_ok = False
-
-        for _attempt in range(1, _DB_WORKER_RETRIES + 1):
+        staging_ok = False
+        for attempt in range(1, staging_retries + 1):
             try:
                 inserted = insert_staging_batch(
                     df,
@@ -1275,35 +1330,28 @@ def _db_worker() -> None:
                     symbol=tv_symbol,
                     tf_code=tf_code,
                 )
-
-                _staging_ok = True
-
+                staging_ok = True
                 break
-
             except Exception as exc:
-                if _attempt == _DB_WORKER_RETRIES:
+                if attempt == staging_retries:
                     logger.error(
                         "%s",
                         _llog(
                             "Temporary table write failed",
                             symbol=tv_symbol,
                             timeframe=tf_code,
-                            attempts=_DB_WORKER_RETRIES,
+                            attempts=staging_retries,
                             reason=exc,
-                            result="data_lost",
+                            result="durable_retry",
                         ),
                     )
-
                     _increment_data_error_counter()
-
                     _send_alert(
                         "ERROR",
-                        "Database save failed after retries\n"
+                        "Database staging save failed after retries\n"
                         f"Affected pair: {tv_symbol}/{tf_code}\n"
-                        f"Retries: {_DB_WORKER_RETRIES}\n"
-                        f"Reason: `{exc}`",
+                        f"Retries: {staging_retries}\nReason: `{exc}`",
                     )
-
                 else:
                     logger.warning(
                         "%s",
@@ -1311,334 +1359,167 @@ def _db_worker() -> None:
                             "Temporary table write retry scheduled",
                             symbol=tv_symbol,
                             timeframe=tf_code,
-                            attempt=f"{_attempt}/{_DB_WORKER_RETRIES}",
+                            attempt=f"{attempt}/{staging_retries}",
                             wait_seconds=5,
                             reason=exc,
                             result="retrying",
                         ),
                     )
-
                     _shutdown.wait(5)
 
-        if not _staging_ok:
+        if not staging_ok:
             _record_db_result(batch_id, key, accepted_count, 0, 0, error=True)
-
-            # Do NOT delete the durable copy: release it back to the
-            # outbox so the next lease pass retries it instead of losing
-            # it. This is the fix for the previous behavior where a
-            # staging write that failed after all retries was simply
-            # task_done()'d and the candle was gone for good.
-            _spool.release_for_retry(row_id, error="insert_staging_batch failed after retries")
-
+            _spool.release_for_retry(
+                row_id, error="insert_staging_batch failed after retries"
+            )
             _db_queue.task_done()
-
             continue
 
-        # Staging succeeded but this row is NOT acked yet - only marked
-        # 'staged'. The outbox row stays durable until run_etl_direct()
-        # (staging -> Fact) also succeeds for this symbol/timeframe (see
-        # the ack_staged_for_key() calls below and warehouse/spool.py's
-        # module docstring for why: acking here would leave the exact
-        # staging-to-Fact crash gap this design exists to close still open
-        # on the live path).
+        # The row remains durable in status='staged' until the independent
+        # Fact worker commits usp_LoadDirect and acknowledges this exact id.
         _spool.mark_staged(row_id)
-
         max_committed_ts = max(_as_utc_timestamp(ts) for ts in df.index)
         latest_saved_utc = _fmt_bar_time_utc(max_committed_ts)
-
-        if _write_defer_lock_active():
-            with _deferred_lock:
-                defer_key = (symbol_id, tf_code, staging_table, tv_symbol)
-
-                n_deferred = len(_deferred_etl)
-
-                if n_deferred >= _DEFERRED_ETL_MAX:
-                    logger.error(
-                        "%s",
-                        _llog(
-                            "Main table update backlog high",
-                            waiting_items=n_deferred,
-                            capacity=_DEFERRED_ETL_MAX,
-                            symbol=tv_symbol,
-                            timeframe=tf_code,
-                            result="waiting_in_temporary_table",
-                        ),
-                    )
-
-                    _send_alert(
-                        "WARNING",
-                        "Saved candles are waiting before entering the main table\n"
-                        f"Waiting items: {n_deferred}/{_DEFERRED_ETL_MAX}\n"
-                        f"Pair: {tv_symbol}/{tf_code}\n"
-                        "Reason: another repair or maintenance job is holding the warehouse write lock.",
-                    )
-
-                else:
-                    if n_deferred >= _DEFERRED_ETL_WARN:
-                        logger.warning(
-                            "%s",
-                            _llog(
-                                "Main table update backlog growing",
-                                waiting_items=n_deferred,
-                                capacity=_DEFERRED_ETL_MAX,
-                                reason="warehouse_maintenance_lock_active",
-                                result="waiting",
-                            ),
-                        )
-
-                _deferred_etl[defer_key] = max(
-                    max_committed_ts,
-                    _deferred_etl.get(defer_key, 0.0),
-                )
-
-                _deferred_etl_next_attempt[defer_key] = 0.0
-
-            _log_candle_row(
-                live_db_line(
-                    logged_at=datetime.now(timezone.utc).strftime("%H:%M:%S"),
-                    symbol=tv_symbol,
-                    timeframe=tf_code,
-                    action="staged",
-                    candles=accepted_count,
-                    latest_utc=latest_saved_utc,
-                    temporary_rows=inserted,
-                    result="WAITING",
-                    detail=f"waiting for {_write_defer_lock_name()}",
-                )
-            )
-
-            _record_db_result(
-                batch_id,
-                key,
-                accepted_count,
-                inserted,
-                0,
-                deferred=True,
-            )
-
-        else:
-            fact_inserted = 0
-
-            try:
-                covered_spool_ids, covered_from_time = _spool.staged_snapshot_for_key(
-                    symbol_id, tf_code, staging_table, tv_symbol
-                )
-                fact_inserted = _run_etl_direct_with_retry(
-                    symbol_id,
-                    tf_code,
-                    staging_table,
-                    tv_symbol,
-                    context="live",
-                    from_time=covered_from_time,
-                )
-
-            except Exception as exc:
-                _record_etl_direct_error(
-                    batch_id, key, accepted_count, inserted, tv_symbol, tf_code, exc
-                )
-
-                defer_key = (symbol_id, tf_code, staging_table, tv_symbol)
-
-                with _deferred_lock:
-                    _deferred_etl[defer_key] = max(
-                        max_committed_ts,
-                        _deferred_etl.get(defer_key, 0.0),
-                    )
-
-                    _deferred_etl_next_attempt[defer_key] = (
-                        time.monotonic() + ETL_DEFERRED_RETRY_COOLDOWN_SEC
-                    )
-
-                logger.warning(
-                    "%s",
-                    _llog(
-                        "Main table update deferred after retry",
-                        symbol=tv_symbol,
-                        timeframe=tf_code,
-                        retry_after_seconds=ETL_DEFERRED_RETRY_COOLDOWN_SEC,
-                        result="deferred",
-                    ),
-                )
-
-            else:
-                _set_committed_watermark(key, max_committed_ts)
-
-                # Fact commit confirmed. Ack only the exact staged-row
-                # snapshot taken before the procedure started. A row that
-                # becomes staged concurrently while the procedure is
-                # running was not necessarily in its source set and must
-                # remain durable for the next ETL pass.
-                _spool.ack_staged_ids(covered_spool_ids)
-
-                _record_db_result(
-                    batch_id,
-                    key,
-                    accepted_count,
-                    inserted,
-                    fact_inserted,
-                )
-
-                if inserted > 0 or fact_inserted > 0:
-                    publish_candle_snapshot(symbol_id, tv_symbol, tf_code)
-
-                if inserted > 0 or fact_inserted > 0:
-                    _log_candle_row(
-                        live_db_line(
-                            logged_at=datetime.now(timezone.utc).strftime("%H:%M:%S"),
-                            symbol=tv_symbol,
-                            timeframe=tf_code,
-                            action="saved",
-                            candles=accepted_count,
-                            latest_utc=latest_saved_utc,
-                            temporary_rows=inserted,
-                            saved_rows=fact_inserted,
-                        )
-                    )
-
+        _queue_fact_load(
+            row_id=row_id,
+            batch_id=batch_id,
+            symbol_id=symbol_id,
+            tf_code=tf_code,
+            staging_table=staging_table,
+            tv_symbol=tv_symbol,
+            accepted_count=accepted_count,
+            staging_rows=inserted,
+            max_committed_ts=max_committed_ts,
+            latest_saved_utc=latest_saved_utc,
+        )
         _db_queue.task_done()
-
         with _state_lock:
             _stats["queue_depth"] = _db_queue.qsize()
 
-        with _deferred_lock:
-            if _deferred_etl and not _write_defer_lock_active():
-                logger.info("%s", _llog("Processing delayed main table updates", items=len(_deferred_etl), result="running"))
+    _db_worker_done.set()
+    _etl_wakeup.set()
+    logger.info("%s", _llog("Database staging writer stopped", result="stopped"))
 
-                _write_defer_lock_cache["checked_at"] = 0.0
 
-                still_deferred: dict[tuple[int, str, str, str], float] = {}
+def _etl_worker() -> None:
+    """Load staged rows into Fact fairly, one bounded attempt per key."""
+    logger.info("%s", _llog("Fact loader started", result="running"))
+    while True:
+        if _write_defer_lock_active():
+            if _shutdown.is_set() and _db_worker_done.is_set():
+                break
+            _etl_wakeup.wait(1.0)
+            _etl_wakeup.clear()
+            continue
 
-                now_mono = time.monotonic()
+        defer_key, max_ts, wait_seconds = _take_ready_fact_key()
+        if defer_key is None:
+            if _shutdown.is_set() and _db_worker_done.is_set():
+                break
+            _etl_wakeup.wait(wait_seconds)
+            _etl_wakeup.clear()
+            continue
 
-                for (sym_id, tf_c, stg_tbl, sym_nm), max_ts in list(_deferred_etl.items()):
-                    defer_key = (sym_id, tf_c, stg_tbl, sym_nm)
-
-                    next_attempt = float(_deferred_etl_next_attempt.get(defer_key, 0.0) or 0.0)
-
-                    if next_attempt > now_mono:
-                        still_deferred[defer_key] = max_ts
-
-                        continue
-
-                    try:
-                        covered_spool_ids, covered_from_time = _spool.staged_snapshot_for_key(
-                            sym_id, tf_c, stg_tbl, sym_nm
-                        )
-                        fact_inserted = _run_etl_direct_with_retry(
-                            sym_id,
-                            tf_c,
-                            stg_tbl,
-                            sym_nm,
-                            context="deferred",
-                            from_time=covered_from_time,
-                        )
-
-                        logger.info("%s", _llog("Delayed main table update completed", symbol=sym_nm, timeframe=tf_c, result="saved"))
-
-                        _set_committed_watermark((sym_id, tf_c), max_ts)
-
-                        _record_db_result(0, (sym_id, tf_c), 0, 0, fact_inserted)
-
-                        publish_candle_snapshot(sym_id, sym_nm, tf_c)
-
-                        _deferred_etl_next_attempt.pop(defer_key, None)
-
-                        _spool.ack_staged_ids(covered_spool_ids)
-
-                    except Exception as exc:
-                        logger.error("%s", _llog("Delayed main table update failed", symbol=sym_nm, timeframe=tf_c, reason=exc, result="failed"))
-
-                        _increment_data_error_counter()
-
-                        still_deferred[defer_key] = max_ts
-
-                        _deferred_etl_next_attempt[defer_key] = (
-                            time.monotonic() + ETL_DEFERRED_RETRY_COOLDOWN_SEC
-                        )
-
-                _deferred_etl.clear()
-
-                _deferred_etl.update(still_deferred)
-
-                for defer_key in list(_deferred_etl_next_attempt):
-                    if defer_key not in _deferred_etl:
-                        _deferred_etl_next_attempt.pop(defer_key, None)
-
-    with _deferred_lock:
-        if _deferred_etl and not _write_defer_lock_active():
-            logger.info(
-                "%s",
-                _llog("Processing delayed main table updates before shutdown", items=len(_deferred_etl), result="running"),
+        sym_id, tf_c, stg_tbl, sym_nm = defer_key
+        covered_spool_ids: list[int] = []
+        try:
+            covered_spool_ids, covered_from_time = _spool.staged_snapshot_for_key(
+                sym_id, tf_c, stg_tbl, sym_nm
             )
+            if not covered_spool_ids:
+                with _deferred_lock:
+                    stale_ids = [
+                        row_id
+                        for row_id, meta in _etl_item_meta.items()
+                        if meta.get("key") == (sym_id, tf_c)
+                    ]
+                    for row_id in stale_ids:
+                        _etl_item_meta.pop(row_id, None)
+                continue
 
-            still_deferred: dict[tuple[int, str, str, str], float] = {}
-
-            for (sym_id, tf_c, stg_tbl, sym_nm), max_ts in list(_deferred_etl.items()):
-                defer_key = (sym_id, tf_c, stg_tbl, sym_nm)
-
-                try:
-                    covered_spool_ids, covered_from_time = _spool.staged_snapshot_for_key(
-                        sym_id, tf_c, stg_tbl, sym_nm
+            affected = _run_etl_direct_with_retry(
+                sym_id,
+                tf_c,
+                stg_tbl,
+                sym_nm,
+                context="deferred",
+                from_time=covered_from_time,
+                max_attempts=1,
+            )
+            # Fact commit happened inside run_etl_direct. Ack only the exact
+            # pre-call snapshot; a concurrently staged row remains for the
+            # next key turn.
+            _spool.ack_staged_ids(covered_spool_ids)
+        except Exception as exc:
+            logger.error(
+                "%s",
+                _llog(
+                    "Delayed main table update failed",
+                    symbol=sym_nm,
+                    timeframe=tf_c,
+                    retry_after_seconds=ETL_DEFERRED_RETRY_COOLDOWN_SEC,
+                    reason=exc,
+                    result="deferred",
+                ),
+            )
+            _increment_data_error_counter()
+            if not _shutdown.is_set():
+                with _deferred_lock:
+                    _deferred_etl[defer_key] = max(
+                        max_ts, _deferred_etl.get(defer_key, 0.0)
                     )
-                    fact_inserted = _run_etl_direct_with_retry(
-                        sym_id,
-                        tf_c,
-                        stg_tbl,
-                        sym_nm,
-                        context="shutdown",
-                        from_time=covered_from_time,
-                    )
-
-                    logger.info(
-                        "%s",
-                        _llog(
-                            "Delayed main table update completed before shutdown",
-                            symbol=sym_nm,
-                            timeframe=tf_c,
-                            rows=fact_inserted,
-                            result="saved",
-                        ),
-                    )
-
-                    _set_committed_watermark((sym_id, tf_c), max_ts)
-
-                    _record_db_result(0, (sym_id, tf_c), 0, 0, fact_inserted)
-
-                    publish_candle_snapshot(sym_id, sym_nm, tf_c)
-
-                    _deferred_etl_next_attempt.pop(defer_key, None)
-
-                    _spool.ack_staged_ids(covered_spool_ids)
-
-                except Exception as exc:
-                    logger.error(
-                        "%s",
-                        _llog(
-                            "Delayed main table update failed before shutdown",
-                            symbol=sym_nm,
-                            timeframe=tf_c,
-                            reason=exc,
-                            result="failed",
-                        ),
-                    )
-
-                    _increment_data_error_counter()
-
-                    still_deferred[defer_key] = max_ts
-
                     _deferred_etl_next_attempt[defer_key] = (
                         time.monotonic() + ETL_DEFERRED_RETRY_COOLDOWN_SEC
                     )
+                _etl_wakeup.set()
+            continue
 
-            _deferred_etl.clear()
+        with _deferred_lock:
+            covered_meta = [
+                _etl_item_meta.pop(row_id, None) for row_id in covered_spool_ids
+            ]
+        covered_meta = [meta for meta in covered_meta if meta is not None]
+        committed_ts = max(
+            [max_ts] + [float(meta["max_committed_ts"]) for meta in covered_meta]
+        )
+        _set_committed_watermark((sym_id, tf_c), committed_ts)
 
-            _deferred_etl.update(still_deferred)
+        for index, meta in enumerate(covered_meta):
+            _record_db_result(
+                int(meta["batch_id"]),
+                tuple(meta["key"]),
+                int(meta["accepted_count"]),
+                int(meta["staging_rows"]),
+                affected if index == 0 else 0,
+            )
+        if affected or any(int(meta["staging_rows"]) for meta in covered_meta):
+            publish_candle_snapshot(sym_id, sym_nm, tf_c)
+            _log_candle_row(
+                live_db_line(
+                    logged_at=datetime.now(timezone.utc).strftime("%H:%M:%S"),
+                    symbol=sym_nm,
+                    timeframe=tf_c,
+                    action="saved",
+                    candles=sum(int(meta["accepted_count"]) for meta in covered_meta),
+                    latest_utc=(
+                        covered_meta[-1]["latest_saved_utc"]
+                        if covered_meta
+                        else _fmt_bar_time_utc(committed_ts)
+                    ),
+                    temporary_rows=sum(int(meta["staging_rows"]) for meta in covered_meta),
+                    saved_rows=affected,
+                )
+            )
 
-            for defer_key in list(_deferred_etl_next_attempt):
-                if defer_key not in _deferred_etl:
-                    _deferred_etl_next_attempt.pop(defer_key, None)
-
-    logger.info("%s", _llog("Database writer stopped", result="stopped"))
+    logger.info(
+        "%s",
+        _llog(
+            "Fact loader stopped",
+            staged_rows_remaining=_spool.count() or 0,
+            action="remaining_rows_requeue_on_next_start",
+            result="stopped",
+        ),
+    )
 
 _gen_id = live_protocol.gen_session_id
 
@@ -4130,7 +4011,7 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
 
         tname = getattr(args.thread, "name", "unknown")
 
-        is_critical = tname in {"db-worker", "live-batch-loop"}
+        is_critical = tname in {"db-worker", "etl-worker", "live-batch-loop"}
         if is_critical:
             _mark_critical_thread_failure(tname, f"{args.exc_type.__name__}: {args.exc_value}")
 
@@ -4165,8 +4046,12 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
     for g in groups:
         g.start_worker()
 
+    _db_worker_done.clear()
+    _etl_wakeup.clear()
+    etl_thread = threading.Thread(target=_etl_worker, name="etl-worker", daemon=True)
     db_thread = threading.Thread(target=_db_worker, name="db-worker", daemon=False)
 
+    etl_thread.start()
     db_thread.start()
 
     threading.Thread(target=_status_reporter, name="status", daemon=True).start()
@@ -4249,6 +4134,19 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
                         _llog(
                             "Critical live task stopped",
                             task="db-worker",
+                            action="exit_for_supervisor_restart",
+                            result="failed",
+                        ),
+                    )
+                break
+
+            if not etl_thread.is_alive():
+                if _mark_critical_thread_failure("etl-worker", "thread exited while live fetching was active"):
+                    logger.critical(
+                        "%s",
+                        _llog(
+                            "Critical live task stopped",
+                            task="etl-worker",
                             action="exit_for_supervisor_restart",
                             result="failed",
                         ),
@@ -4357,6 +4255,19 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
         _report_db_worker_stopped_at_shutdown(_db_queue.qsize())
 
     db_thread.join(timeout=30)
+
+    _etl_wakeup.set()
+    etl_thread.join(timeout=30)
+    if etl_thread.is_alive():
+        logger.warning(
+            "%s",
+            _llog(
+                "Fact loader did not stop within bounded grace",
+                timeout_seconds=30,
+                action="staged_rows_remain_durable_for_next_start",
+                result="timeout",
+            ),
+        )
 
     failed_task = critical_thread_detail.get("task")
     failed_reason = critical_thread_detail.get("reason")

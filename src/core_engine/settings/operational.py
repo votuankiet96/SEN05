@@ -208,15 +208,21 @@ class HistoricalSettings:
     provider: str = env_str("HISTORICAL_PROVIDER", "websocket").lower()
     staging_insert_chunk_rows: int = env_int("STAGING_INSERT_CHUNK_ROWS", 50000, minimum=1)
     staging_cleanup_batch_rows: int = env_int(
-        "STAGING_CLEANUP_BATCH_ROWS", 5000, minimum=500, maximum=50000
+        "STAGING_CLEANUP_BATCH_ROWS", 1000, minimum=500, maximum=50000
     )
     staging_cleanup_pause_sec: float = env_float(
-        "STAGING_CLEANUP_PAUSE_SEC", 0.05, minimum=0.0, maximum=5.0
+        "STAGING_CLEANUP_PAUSE_SEC", 0.20, minimum=0.0, maximum=5.0
     )
     staging_cleanup_max_rows_per_run: int = env_int(
-        "STAGING_CLEANUP_MAX_ROWS_PER_RUN", 500000, minimum=0
+        "STAGING_CLEANUP_MAX_ROWS_PER_RUN", 20000, minimum=0
     )
-    staging_cleanup_checkpoint: bool = env_bool("STAGING_CLEANUP_CHECKPOINT", True)
+    staging_cleanup_max_rows_per_table: int = env_int(
+        "STAGING_CLEANUP_MAX_ROWS_PER_TABLE", 5000, minimum=0
+    )
+    staging_cleanup_max_seconds: float = env_float(
+        "STAGING_CLEANUP_MAX_SECONDS", 30.0, minimum=1.0, maximum=600.0
+    )
+    staging_cleanup_checkpoint: bool = env_bool("STAGING_CLEANUP_CHECKPOINT", False)
     drop_open_last_bar: bool = env_bool("HISTORICAL_DROP_OPEN_LAST_BAR", True)
     hole_lookback_days: int = env_int("PIPELINE_HOLE_LOOKBACK_DAYS", 60, minimum=1)
     max_consecutive_fail: int = env_int("PIPELINE_MAX_CONSECUTIVE_FAIL", 8, minimum=1)
