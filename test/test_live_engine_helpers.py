@@ -29,6 +29,7 @@ from unittest.mock import patch
 import pytest
 
 from core_engine.core.live import engine as live_engine
+from core_engine.core.live import db_worker
 from core_engine.core.live.spool import LiveSpool
 
 
@@ -47,11 +48,11 @@ def test_is_token_error_false_when_keyword_absent():
 
 def test_fmt_bar_time_utc_formats_epoch_seconds():
     # 2024-01-01 00:00:00 UTC
-    assert live_engine._fmt_bar_time_utc(1704067200) == "00:00 UTC"
+    assert db_worker._fmt_bar_time_utc(1704067200) == "00:00 UTC"
 
 
 def test_fmt_bar_time_utc_falls_back_to_str_on_bad_input():
-    assert live_engine._fmt_bar_time_utc("not-a-timestamp") == "not-a-timestamp"
+    assert db_worker._fmt_bar_time_utc("not-a-timestamp") == "not-a-timestamp"
 
 
 @pytest.fixture
@@ -70,14 +71,16 @@ def isolated_write_path(tmp_path, monkeypatch):
     small_spool = LiveSpool(tmp_path / "test_spool.db", max_rows=1, logger=log)
     small_spool.init()
 
-    monkeypatch.setattr(live_engine, "_db_queue", small_queue)
-    monkeypatch.setattr(live_engine, "_overflow_buf", small_overflow)
+    monkeypatch.setattr(db_worker, "_db_queue", small_queue)
+    monkeypatch.setattr(db_worker, "_overflow_buf", small_overflow)
+    monkeypatch.setattr(db_worker, "_spool", small_spool)
+    monkeypatch.setattr(db_worker, "OVERFLOW_BUFFER_MAX", 1)
+    monkeypatch.setattr(db_worker, "MAX_SPOOL_ROWS", 1)
     monkeypatch.setattr(live_engine, "_spool", small_spool)
-    monkeypatch.setattr(live_engine, "OVERFLOW_BUFFER_MAX", 1)
     monkeypatch.setattr(live_engine, "MAX_SPOOL_ROWS", 1)
     monkeypatch.setattr(live_engine._state, "spool_full_pause", False)
 
-    with patch.object(live_engine, "_send_alert"):
+    with patch.object(db_worker, "_send_alert"):
         yield small_queue, small_overflow, small_spool
 
 
@@ -87,7 +90,7 @@ def _item(tag="A"):
 
 def test_enqueue_or_buffer_queues_when_db_queue_has_room(isolated_write_path):
     small_queue, _overflow, _spool = isolated_write_path
-    status = live_engine._enqueue_or_buffer(_item(), group_id=1, tv_symbol="EURUSD", tf_code="M5")
+    status = db_worker._enqueue_or_buffer(_item(), group_id=1, tv_symbol="EURUSD", tf_code="M5")
     assert status == "queued"
     assert small_queue.qsize() == 1
 
@@ -96,7 +99,7 @@ def test_enqueue_or_buffer_falls_back_to_overflow_buffer_when_queue_full(isolate
     small_queue, overflow, _spool = isolated_write_path
     small_queue.put_nowait(_item("fill"))  # maxsize=1, so the queue is now full
 
-    status = live_engine._enqueue_or_buffer(_item("B"), group_id=1, tv_symbol="EURUSD", tf_code="M5")
+    status = db_worker._enqueue_or_buffer(_item("B"), group_id=1, tv_symbol="EURUSD", tf_code="M5")
     assert status == "buffered"
     assert len(overflow) == 1
 
@@ -106,7 +109,7 @@ def test_enqueue_or_buffer_falls_back_to_disk_spool_when_overflow_full(isolated_
     small_queue.put_nowait(_item("fill"))  # queue full
     overflow.append(_item("fill"))  # OVERFLOW_BUFFER_MAX=1, so buffer is now full too
 
-    status = live_engine._enqueue_or_buffer(_item("C"), group_id=1, tv_symbol="EURUSD", tf_code="M5")
+    status = db_worker._enqueue_or_buffer(_item("C"), group_id=1, tv_symbol="EURUSD", tf_code="M5")
     assert status == "spooled"
     assert spool.count() == 1
 
@@ -117,7 +120,7 @@ def test_enqueue_or_buffer_rejects_when_every_layer_is_full(isolated_write_path)
     overflow.append(_item("fill"))  # buffer full
     spool.write(_item("fill"))  # MAX_SPOOL_ROWS=1, so the disk spool is now full too
 
-    status = live_engine._enqueue_or_buffer(_item("D"), group_id=1, tv_symbol="EURUSD", tf_code="M5")
+    status = db_worker._enqueue_or_buffer(_item("D"), group_id=1, tv_symbol="EURUSD", tf_code="M5")
     assert status == "rejected"
 
 
@@ -127,7 +130,7 @@ def test_enqueue_or_buffer_never_returns_a_bare_bool():
     # function's return type is str, not bool - the check was dead code.
     import inspect
 
-    sig = inspect.signature(live_engine._enqueue_or_buffer)
+    sig = inspect.signature(db_worker._enqueue_or_buffer)
     assert sig.return_annotation in (str, "str")
 
 
