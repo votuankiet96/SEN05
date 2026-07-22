@@ -30,20 +30,21 @@ import pytest
 
 from core_engine.core.live import engine as live_engine
 from core_engine.core.live import db_worker
+from core_engine.core.live import batch_fetcher
 from core_engine.core.live.spool import LiveSpool
 
 
 def test_is_token_error_matches_configured_keywords():
-    assert live_engine._is_token_error("error", "session is unauthorized") is True
-    assert live_engine._is_token_error("critical_error", "auth_error occurred") is True
+    assert batch_fetcher._is_token_error("error", "session is unauthorized") is True
+    assert batch_fetcher._is_token_error("critical_error", "auth_error occurred") is True
 
 
 def test_is_token_error_ignores_non_error_message_types():
-    assert live_engine._is_token_error("info", "unauthorized") is False
+    assert batch_fetcher._is_token_error("info", "unauthorized") is False
 
 
 def test_is_token_error_false_when_keyword_absent():
-    assert live_engine._is_token_error("error", "connection reset") is False
+    assert batch_fetcher._is_token_error("error", "connection reset") is False
 
 
 def test_fmt_bar_time_utc_formats_epoch_seconds():
