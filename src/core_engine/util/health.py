@@ -499,7 +499,12 @@ def _discord_check() -> Check:
         return Check("discord", "warn", "Discord webhook is not configured.", {"configured": False})
 
     active = _active_runtime_roles()
-    detail: dict[str, Any] = {"configured": True, "active_roles": active, "senders": {}}
+    detail: dict[str, Any] = {
+        "configured": True,
+        "active_roles": active,
+        "senders": {},
+        "unexercised_roles": [],
+    }
     if not active:
         return Check(
             "discord",
@@ -516,7 +521,12 @@ def _discord_check() -> Check:
         status = _read_json(path)
         detail["senders"][role] = status or {"path": str(path), "missing": True}
         if not status:
-            failures.append(f"notification status is missing for {role} PID {pid}")
+            # A worker that has not emitted an event yet has not demonstrated a
+            # failure. The supervisor owns lifecycle notifications for its
+            # children, so fail the channel only when no active sender has a
+            # confirmed delivery (checked below), not merely because every
+            # child role has not independently exercised it yet.
+            detail["unexercised_roles"].append(role)
             continue
         if status.get("logger_error"):
             failures.append(f"Discord log sink failed for {role} PID {pid}")

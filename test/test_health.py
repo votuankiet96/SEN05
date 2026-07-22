@@ -367,3 +367,44 @@ def test_discord_health_requires_confirmed_delivery_for_active_process(
 
     assert check.status == "fail"
     assert "confirmed Discord" in check.message
+
+
+def test_discord_health_does_not_fail_for_unexercised_child_when_owner_delivered(
+    tmp_path, monkeypatch
+):
+    import core_engine.settings as settings
+
+    run_dir = tmp_path / "run"
+    status_dir = run_dir / "notification_status"
+    status_dir.mkdir(parents=True)
+    monkeypatch.setattr(health, "RUN_DIR", run_dir)
+    monkeypatch.setattr(
+        health,
+        "_active_runtime_roles",
+        lambda: {"supervisor": 100, "historical": 200},
+    )
+    monkeypatch.setattr(
+        settings,
+        "NOTIFICATION",
+        SimpleNamespace(discord_webhook_url="https://configured.invalid/webhook"),
+    )
+    (status_dir / "supervisor.100.json").write_text(
+        json.dumps(
+            {
+                "last_success_at": datetime.now(timezone.utc).isoformat(),
+                "last_failure_at": None,
+                "queue_pending": 0,
+                "queue_maxsize": 256,
+                "worker_started": True,
+                "worker_alive": True,
+                "circuit_open_seconds": 0,
+                "logger_error": None,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    check = health._discord_check()
+
+    assert check.status == "ok"
+    assert check.detail["unexercised_roles"] == ["historical"]
