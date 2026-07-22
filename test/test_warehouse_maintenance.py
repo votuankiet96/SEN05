@@ -65,7 +65,8 @@ def test_purge_staging_sql_requires_value_equivalent_fact_row(monkeypatch):
     for sql, params in cursor.executed:
         assert "EXISTS" in sql
         assert "DWH.Fact_OHLCV" in sql
-        assert "Dim_Timeframe" in sql
+        assert "INDEX(IX_Fact_Sym_TF_Time)" in sql
+        assert "OPTION (MAXDOP 1, RECOMPILE)" in sql
         # A matching key alone is insufficient: staging may contain a
         # TradingView correction that committed before the process crashed,
         # while Fact still has the old values. Purging that row would lose
@@ -75,31 +76,31 @@ def test_purge_staging_sql_requires_value_equivalent_fact_row(monkeypatch):
             assert f"s.{column}" in sql
         assert "ISNULL(f.Volume" in sql
         assert "ISNULL(s.Volume" in sql
-        # params: (-days_to_keep, tf_code)
+        # params: (-days_to_keep, fixed TimeframeID)
         assert params[0] == -7
-        assert params[1] in maintenance.TF_STAGING or params[1] in {
-            v for v in maintenance._STAGING_TABLE_TF_CODE.values()
-        }
+        assert params[1] in maintenance._STAGING_TABLE_TF_ID.values()
     assert conn.closed is True
 
 
-def test_purge_staging_uses_correct_tf_code_per_table(monkeypatch):
+def test_purge_staging_uses_correct_tf_id_and_indexes_per_table(monkeypatch):
     cursor = _FakeCursor(first_call_rowcount=0)
     conn = _FakeConnection(cursor)
     monkeypatch.setattr(maintenance, "get_connection", lambda: conn)
 
     maintenance.purge_staging(days_to_keep=1)
 
-    seen_tables_to_tf: dict[str, str] = {}
+    seen_tables_to_tf: dict[str, int] = {}
     for sql, params in cursor.executed:
-        for table, tf_code in maintenance._STAGING_TABLE_TF_CODE.items():
+        for table, tf_id in maintenance._STAGING_TABLE_TF_ID.items():
             if table in sql:
                 seen_tables_to_tf[table] = params[1]
+                expected_index = f"IX_{table.split('.', 1)[1]}_SBT"
+                assert f"INDEX({expected_index})" in sql
                 break
 
-    for table, expected_tf in maintenance._STAGING_TABLE_TF_CODE.items():
+    for table, expected_tf in maintenance._STAGING_TABLE_TF_ID.items():
         assert seen_tables_to_tf.get(table) == expected_tf, (
-            f"purge for {table} must scope the Fact-existence check to timeframe {expected_tf}"
+            f"purge for {table} must scope the Fact-existence check to TimeframeID {expected_tf}"
         )
 
 

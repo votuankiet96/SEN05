@@ -17,6 +17,11 @@ from core_engine.warehouse.operation_log import _target_label, _warehouse_log, l
 
 _ALL_STAGING_TABLES = [TF_STAGING[tf_code] for tf_code in TF_DISPLAY_ORDER if tf_code in TF_STAGING]
 _STAGING_TABLE_TF_CODE = {TF_STAGING[tf_code]: tf_code for tf_code in TF_DISPLAY_ORDER if tf_code in TF_STAGING}
+_STAGING_TABLE_TF_ID = {
+    TF_STAGING[tf_code]: timeframe_id
+    for timeframe_id, tf_code in enumerate(TF_DISPLAY_ORDER, start=1)
+    if tf_code in TF_STAGING
+}
 
 def purge_staging(
     days_to_keep: int = 7,
@@ -53,6 +58,8 @@ def purge_staging(
     try:
         for table in _ALL_STAGING_TABLES:
             tf_code = _STAGING_TABLE_TF_CODE[table]
+            timeframe_id = _STAGING_TABLE_TF_ID[table]
+            staging_index = f"IX_{table.split('.', 1)[1]}_SBT"
             table_deleted = 0
             batches = 0
             while True:
@@ -89,18 +96,18 @@ def purge_staging(
                 # scan/repair tool that finds this exact condition proactively.
                 cursor.execute(
                     f"DELETE TOP ({effective_batch}) s"
-                    f" FROM {table} AS s WITH (ROWLOCK)"
+                    f" FROM {table} AS s WITH (ROWLOCK, INDEX({staging_index}))"
                     f" WHERE s.IsProcessed = 1"
                     f" AND s.BarTime < DATEADD(day, ?, GETUTCDATE())"
                     f" AND EXISTS ("
-                    f"     SELECT 1 FROM DWH.Fact_OHLCV f"
-                    f"     JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID"
-                    f"     WHERE f.SymbolID = s.SymbolID AND tf.Code = ? AND f.BarTime = s.BarTime"
+                    f"     SELECT 1 FROM DWH.Fact_OHLCV f WITH (INDEX(IX_Fact_Sym_TF_Time))"
+                    f"     WHERE f.SymbolID = s.SymbolID AND f.TimeframeID = ? AND f.BarTime = s.BarTime"
                     f"       AND f.[Open] = s.[Open] AND f.High = s.High"
                     f"       AND f.Low = s.Low AND f.[Close] = s.[Close]"
                     f"       AND ISNULL(f.Volume, -1) = ISNULL(s.Volume, -1)"
-                    f" )",
-                    (-days_to_keep, tf_code),
+                    f" )"
+                    f" OPTION (MAXDOP 1, RECOMPILE)",
+                    (-days_to_keep, timeframe_id),
                 )
                 rowcount = max(0, int(cursor.rowcount or 0))
                 conn.commit()
