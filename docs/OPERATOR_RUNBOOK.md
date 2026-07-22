@@ -76,7 +76,7 @@ Acceptance fields are `expected_live_symbols=11`,
 ## 4. SQL and Redis data contracts
 
 SQL Server database `SEN05_AutoTrading` is the durable system of record.
-`DWH.usp_LoadDirect` must advertise `DPContractVersion=3`, and
+`DWH.usp_LoadDirect` must advertise `DPContractVersion=4`, and
 `SEN.ActiveTask` must contain both `OwnerId` and `Fence`.
 
 Redis/OG in `both` mode is an **eventually consistent candle snapshot**:
@@ -112,9 +112,9 @@ The script hard-gates this sequence:
    `RESTORE VERIFYONLY ... WITH CHECKSUM`.
 3. Request a graceful supervisor stop and abort if it remains alive after
    120 seconds; it does not force-kill before migration.
-4. Deploy usp_LoadDirect v3, lock fencing, and the transactional US500/D1
+4. Deploy usp_LoadDirect v4, lock fencing, and the transactional US500/D1
    unsupported-calendar archive migration.
-5. Verify contract version 3, two fencing columns, 2,231 archived rows and
+5. Verify contract version 4, two fencing columns, 2,231 archived rows and
    zero unsupported US500/D1 staging rows.
 6. Run `reconcile-fact --apply --json` and require all three fields to be zero:
    `supported_missing_fact_rows`, `supported_mismatched_fact_rows`, and

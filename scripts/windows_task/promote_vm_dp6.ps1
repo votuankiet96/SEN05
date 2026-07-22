@@ -226,7 +226,7 @@ try {
     Invoke-NativeChecked -Executable $ServicePython `
         -Arguments @($sqlHelper, 'migrate', '--server', $SqlServer, '--database', $Database,
                      '--commit', $commit, '--files',
-                     (Join-Path $candidateRoot 'scripts\sql\10_migration_usp_loaddirect_v3_date_fence.sql'),
+                     (Join-Path $candidateRoot 'scripts\sql\12_migration_usp_loaddirect_v4_bounded_plan.sql'),
                      (Join-Path $candidateRoot 'scripts\sql\09_migration_lock_fencing.sql'),
                      (Join-Path $candidateRoot 'scripts\sql\11_migration_archive_us500_d1_unsupported_calendar.sql'),
                      '--output', $migrationManifestPath) `
@@ -239,7 +239,7 @@ try {
                      '--output', $contractPath) `
         -WorkingDirectory $SourceRoot -EvidenceFile (Join-Path $evidenceDir 'database_contract.log')
     $contract = Get-Content -LiteralPath $contractPath -Raw | ConvertFrom-Json
-    if ([string]$contract.contract_version -ne '3' -or [int]$contract.lock_fencing_columns -ne 2 -or
+    if ([string]$contract.contract_version -ne '4' -or [int]$contract.lock_fencing_columns -ne 2 -or
         [int]$contract.archived_unsupported_rows -ne 2231 -or [int]$contract.unsupported_staging_rows -ne 0) {
         throw 'Database contract/archive postconditions failed.'
     }

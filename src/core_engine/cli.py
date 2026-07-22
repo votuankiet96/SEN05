@@ -182,7 +182,7 @@ def _run_reconcile_fact(args: argparse.Namespace) -> int:
             print(
                 f"NOTE: {unsupported_total} staging row(s) fall outside DWH.Dim_Date's covered "
                 "calendar range and are therefore intentionally never inserted into Fact by "
-                "usp_LoadDirect v3 (date-dimension fence). They are NOT counted in missing_count "
+                "usp_LoadDirect v4 (date-dimension fence + bounded execution plan). They are NOT counted in missing_count "
                 "above and do NOT affect this command's exit code."
             )
             for r in unsupported_rows:

@@ -56,7 +56,7 @@ def test_vm_promotion_script_contains_all_destructive_safety_gates():
     expected_in_order = [
         "database_backup_and_verify",
         "core_engine', 'stop'",
-        "10_migration_usp_loaddirect_v3_date_fence.sql",
+        "12_migration_usp_loaddirect_v4_bounded_plan.sql",
         "09_migration_lock_fencing.sql",
         "11_migration_archive_us500_d1_unsupported_calendar.sql",
         "reconcile-fact --apply --json",

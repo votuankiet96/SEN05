@@ -12,7 +12,7 @@ Fact_OHLCV" without raising loudly at the time:
      carry rows stuck from before that fix.
 
 A THIRD case looks identical to (1)/(2) from a plain "Fact row missing"
-scan but is NOT a bug: usp_LoadDirect v3 (scripts/sql/10_migration_usp_
+scan but is NOT a bug: usp_LoadDirect v4 (scripts/sql/12_migration_usp_
 loaddirect_v3_date_fence.sql) resolves each staging row's Fact DateKey by
 joining DWH.Dim_Date on the row's calendar date, and deliberately never
 inserts a row whose date has no Dim_Date entry (this is what stops a
@@ -98,7 +98,7 @@ def _divergence_by_symbol(cursor, staging_table: str, tf_code: str) -> dict[int,
     has the same key with old values, and usp_LoadDirect is responsible for
     updating it.
 
-    The LEFT JOIN to DWH.Dim_Date mirrors usp_LoadDirect v3's own join
+    The LEFT JOIN to DWH.Dim_Date mirrors usp_LoadDirect v4's own join
     condition exactly (``d.FullDate = CAST(BarTime AS DATE)``) so this scan
     can never disagree with what the stored procedure will actually do.
     """
@@ -163,7 +163,7 @@ def scan_timeframe(tf_code: str, *, count_unsupported_as_missing: bool = False) 
 
     By default, rows outside DWH.Dim_Date's covered range are excluded from
     missing_before/missing_after/symbols_affected (they are reported
-    separately instead) since usp_LoadDirect v3 will never insert them
+    separately instead) since usp_LoadDirect v4 will never insert them
     regardless of how many times ETL is retried. Pass
     count_unsupported_as_missing=True to fold them back in (the pre-fence
     behavior), e.g. for an operator who wants a strict/full divergence
@@ -235,7 +235,7 @@ def reconcile_timeframe(
     apply=True) excludes symbols whose only divergence is calendar-
     unsupported rows, unless count_unsupported_as_missing=True - retrying
     ETL for a symbol that has nothing but out-of-calendar rows is a
-    guaranteed no-op against usp_LoadDirect v3.
+    guaranteed no-op against usp_LoadDirect v4.
 
     Re-verifies the missing count after applying so the caller can trust
     missing_after without a second pass. Never raises for a per-symbol ETL

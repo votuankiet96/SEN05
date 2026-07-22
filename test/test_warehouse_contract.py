@@ -32,6 +32,22 @@ def test_v3_sql_contract_resolves_datekey_through_dimension():
     assert "DPContractVersion', @value = N'3'" in sql
 
 
+def test_v4_sql_contract_recompiles_bounded_single_worker_statements():
+    root = Path(__file__).resolve().parents[1]
+    migration = (
+        root / "scripts" / "sql" / "12_migration_usp_loaddirect_v4_bounded_plan.sql"
+    ).read_text(encoding="utf-8")
+    canonical = (root / "scripts" / "sql" / "04_business_objects.sql").read_text(
+        encoding="utf-8"
+    )
+
+    for sql in (migration, canonical):
+        assert sql.count("OPTION (RECOMPILE, MAXDOP 1)") == 2
+        assert "INNER JOIN DWH.Dim_Date AS d" in sql
+        assert "WITH (UPDLOCK, HOLDLOCK)" in sql
+        assert "DPContractVersion', @value = N'4'" in sql
+
+
 def test_us500_archive_migration_verifies_before_deleting_in_one_transaction():
     sql_path = (
         Path(__file__).resolve().parents[1]

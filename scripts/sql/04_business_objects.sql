@@ -189,7 +189,8 @@ BEGIN
               OR f.Low <> s.Low
               OR f.[Close] <> s.[Close]
               OR ISNULL(f.Volume, -1) <> ISNULL(s.Volume, -1)
-          );
+          )
+        OPTION (RECOMPILE, MAXDOP 1);
 
         SET @UpdatedRows = @@ROWCOUNT;
 
@@ -219,7 +220,8 @@ BEGIN
               WHERE f.SymbolID    = @SymbolID
                 AND f.TimeframeID = @TimeframeID
                 AND f.BarTime     = src.BarTime
-          );
+          )
+        OPTION (RECOMPILE, MAXDOP 1);
 
         SET @InsertedRows = @@ROWCOUNT;
     ';
@@ -261,14 +263,14 @@ IF EXISTS (
       AND class = 1
       AND name = 'DPContractVersion'
 )
-    EXEC sp_updateextendedproperty @name = N'DPContractVersion', @value = N'3',
+    EXEC sp_updateextendedproperty @name = N'DPContractVersion', @value = N'4',
         @level0type = N'SCHEMA', @level0name = N'DWH',
         @level1type = N'PROCEDURE', @level1name = N'usp_LoadDirect';
 ELSE
-    EXEC sp_addextendedproperty @name = N'DPContractVersion', @value = N'3',
+    EXEC sp_addextendedproperty @name = N'DPContractVersion', @value = N'4',
         @level0type = N'SCHEMA', @level0name = N'DWH',
         @level1type = N'PROCEDURE', @level1name = N'usp_LoadDirect';
 GO
 
-PRINT 'Procedure DWH.usp_LoadDirect created (contract v3).';
+PRINT 'Procedure DWH.usp_LoadDirect created (contract v4).';
 GO
