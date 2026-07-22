@@ -86,6 +86,12 @@ from core_engine.core.live.logging_support import (
     summarize_pair_counts as _summarize_pair_counts,
     write_live_summary as _write_live_summary,
 )
+from core_engine.core.live.batch_metrics import (
+    init_batch as _init_batch_metrics,
+    record_accepted as _record_batch_accepted,
+    record_db_result as _record_db_result,
+    wait_for_db as _wait_for_batch_db,
+)
 from core_engine.core.live.reporter import (
     live_db_line,
     live_next_batch_block,
@@ -110,8 +116,6 @@ from core_engine.core.live.runtime_support import (
 )
 from core_engine.core.live import state as _state
 from core_engine.core.live.state import (
-    BATCH_DB_REPORT_WAIT_SEC,
-    MAX_BATCH_METRIC_HISTORY,
     _GUEST_ALERT_THRESHOLD,
     _DEFERRED_ETL_MAX,
     _DEFERRED_ETL_WARN,
@@ -119,8 +123,6 @@ from core_engine.core.live.state import (
     _WRITE_DEFER_LOCKS,
     _backlog,
     _backlog_lock,
-    _batch_metrics,
-    _batch_metrics_lock,
     _db_queue,
     _db_worker_done,
     _deferred_etl,
@@ -542,116 +544,6 @@ def _set_committed_watermark(key: tuple[int, str], max_ts: float) -> None:
     with _state_lock:
         _last_bar_ts[key] = max(max_ts, _last_bar_ts.get(key, 0.0))
 
-def _init_batch_metrics(batch_id: int) -> None:
-    with _batch_metrics_lock:
-        _batch_metrics[batch_id] = {
-            "accepted": 0,
-            "db_processed": 0,
-            "staging_rows": 0,
-            "fact_inserted": 0,
-            "deferred_items": 0,
-            "errors": 0,
-            "pair_accepted": {},
-            "pair_fact": {},
-        }
-
-        if len(_batch_metrics) > MAX_BATCH_METRIC_HISTORY:
-            for old_batch_id in sorted(_batch_metrics)[:-MAX_BATCH_METRIC_HISTORY]:
-                if old_batch_id != 0:
-                    _batch_metrics.pop(old_batch_id, None)
-
-def _record_batch_accepted(batch_id: int, key: tuple[int, str], count: int) -> None:
-    if count <= 0:
-        return
-
-    with _batch_metrics_lock:
-        metrics = _batch_metrics.setdefault(
-            batch_id,
-            {
-                "accepted": 0,
-                "db_processed": 0,
-                "staging_rows": 0,
-                "fact_inserted": 0,
-                "deferred_items": 0,
-                "errors": 0,
-                "pair_accepted": {},
-                "pair_fact": {},
-            },
-        )
-
-        metrics["accepted"] += count
-
-        metrics["pair_accepted"][key] = metrics["pair_accepted"].get(key, 0) + count
-
-    with _state_lock:
-        _stats["accepted_bars"] += count
-
-def _record_db_result(
-    batch_id: int,
-    key: tuple[int, str],
-    accepted_count: int,
-    staging_rows: int,
-    fact_inserted: int,
-    *,
-    deferred: bool = False,
-    error: bool = False,
-) -> None:
-    staging_rows = max(0, int(staging_rows or 0))
-
-    fact_inserted = max(0, int(fact_inserted or 0))
-
-    with _batch_metrics_lock:
-        metrics = _batch_metrics.setdefault(
-            batch_id,
-            {
-                "accepted": 0,
-                "db_processed": 0,
-                "staging_rows": 0,
-                "fact_inserted": 0,
-                "deferred_items": 0,
-                "errors": 0,
-                "pair_accepted": {},
-                "pair_fact": {},
-            },
-        )
-
-        metrics["db_processed"] += max(0, accepted_count)
-
-        metrics["staging_rows"] += staging_rows
-
-        metrics["fact_inserted"] += fact_inserted
-
-        if deferred:
-            metrics["deferred_items"] += 1
-
-        if error:
-            metrics["errors"] += 1
-
-        if fact_inserted:
-            metrics["pair_fact"][key] = metrics["pair_fact"].get(key, 0) + fact_inserted
-
-    if fact_inserted:
-        with _hourly_lock:
-            _hourly_stats["fact_bars"] += fact_inserted
-
-            _hourly_stats["pair_bars"][key] = _hourly_stats["pair_bars"].get(key, 0) + fact_inserted
-
-    if staging_rows or fact_inserted:
-        with _state_lock:
-            _stats["staging_rows"] += staging_rows
-
-            _stats["fact_inserted"] += fact_inserted
-
-            _stats["bars_inserted"] += fact_inserted
-
-        if staging_rows:
-            with _hourly_lock:
-                _hourly_stats["staging_rows"] += staging_rows
-
-                _hourly_stats["pair_staging"][key] = (
-                    _hourly_stats["pair_staging"].get(key, 0) + staging_rows
-                )
-
 def _record_etl_direct_error(
     batch_id: int,
     key: tuple[int, str],
@@ -722,34 +614,6 @@ def _run_etl_direct_with_retry(
         raise last_exc
 
     raise RuntimeError("ETL direct retry interrupted")
-
-def _snapshot_batch_metrics(batch_id: int) -> dict:
-    with _batch_metrics_lock:
-        metrics = dict(_batch_metrics.get(batch_id, {}))
-
-        metrics["pair_accepted"] = dict(metrics.get("pair_accepted", {}))
-
-        metrics["pair_fact"] = dict(metrics.get("pair_fact", {}))
-
-        return metrics
-
-def _wait_for_batch_db(batch_id: int, timeout_sec: float = BATCH_DB_REPORT_WAIT_SEC) -> dict:
-    deadline = time.monotonic() + timeout_sec
-
-    while True:
-        metrics = _snapshot_batch_metrics(batch_id)
-
-        accepted = int(metrics.get("accepted", 0))
-
-        processed = int(metrics.get("db_processed", 0))
-
-        if accepted == 0 or processed >= accepted or time.monotonic() >= deadline:
-            return metrics
-
-        _shutdown.wait(0.25)
-
-        if _shutdown.is_set():
-            return _snapshot_batch_metrics(batch_id)
 
 def _flush_overflow_to_queue() -> None:
     with _overflow_lock:
