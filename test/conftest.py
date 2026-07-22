@@ -56,5 +56,6 @@ def isolated_critical_alert_outbox(tmp_path, monkeypatch):
     # without depending on real webhook connectivity.
     monkeypatch.setattr(fake, "send_one", lambda message: False)
     monkeypatch.setattr(outbox_mod, "_OUTBOX", fake)
+    monkeypatch.setattr(outbox_mod, "_DISPATCHER", outbox_mod._CriticalDeliveryDispatcher())
     yield fake
     monkeypatch.setattr(outbox_mod, "_OUTBOX", None)

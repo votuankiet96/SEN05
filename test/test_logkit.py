@@ -6,6 +6,7 @@ handler added when logging was standardized.
 from __future__ import annotations
 
 import logging
+import time
 from unittest.mock import patch
 
 import pytest
@@ -90,10 +91,15 @@ def test_critical_log_triggers_discord_alert_without_hitting_network(
     log = get_logger(unique_logger_name, log_file, console=False)
     log.critical("simulated critical failure")
 
+    deadline = time.time() + 2
+    while not calls and time.time() < deadline:
+        time.sleep(0.01)
     assert len(calls) == 1
     assert unique_logger_name in calls[0]
     assert "simulated critical failure" in calls[0]
     # A successful send must ack (delete) the outbox row, not leave it pending.
+    while isolated_critical_alert_outbox.status()["pending_count"] and time.time() < deadline:
+        time.sleep(0.01)
     assert isolated_critical_alert_outbox.status()["pending_count"] == 0
 
 
