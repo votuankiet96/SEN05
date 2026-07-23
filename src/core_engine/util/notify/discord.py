@@ -21,13 +21,12 @@ from html import unescape
 from typing import Any
 from uuid import uuid4
 
-from core_engine.settings import DISCORD_LOG, LOGGING, NOTIFICATION, RUN_DIR
-from core_engine.util.logkit.formatters import operation_line
-from core_engine.util.logkit.handlers import ResilientRotatingFileHandler
-from core_engine.util.logkit.paths import process_role, process_scoped_log_path, register_log_sink
+from core_engine.settings import NOTIFICATION, RUN_DIR
+from core_engine.util.logkit import get_logger, operation_line
+from core_engine.util.logkit.sink import process_role
 from core_engine.util.notify.transport import post_webhook_once
 
-logger = logging.getLogger(__name__)
+logger = get_logger("discord", stream="alerts", console=False)
 _discord_logger_configured = False
 _discord_logger_lock = threading.Lock()
 _discord_circuit_lock = threading.Lock()
@@ -304,47 +303,15 @@ QUICK_COMMANDS_HINT = (
 
 
 def _ensure_discord_logger() -> None:
-    """Attach a dedicated Discord delivery log file once per process."""
+    """Confirm that Discord delivery uses the canonical alerts sink."""
     global _discord_logger_configured, _discord_logger_error
     if _discord_logger_configured:
         return
     with _discord_logger_lock:
         if _discord_logger_configured:
             return
-        try:
-            discord_log = process_scoped_log_path(DISCORD_LOG)
-            discord_log.parent.mkdir(parents=True, exist_ok=True)
-            handler = ResilientRotatingFileHandler(
-                discord_log,
-                maxBytes=5 * 1024 * 1024,
-                backupCount=5,
-                encoding="utf-8",
-            )
-            handler.setFormatter(
-                logging.Formatter(
-                    "%(asctime)s | %(levelname)-7s | %(message)s",
-                    datefmt="%Y-%m-%d %H:%M:%S UTC",
-                )
-            )
-            handler.formatter.converter = time.gmtime
-            logger.addHandler(handler)
-            register_log_sink(handler.baseFilename, logical_path=DISCORD_LOG)
-            logger.setLevel(getattr(logging, LOGGING.level, logging.INFO))
-            logger.propagate = False
-            _discord_logger_error = None
-            _discord_logger_configured = True
-        except Exception as exc:
-            # Keep propagation enabled so a failed dedicated sink remains
-            # visible in the process/root crash capture.  A NullHandler here
-            # used to turn logger setup failures into silent notification
-            # failures for the rest of the process lifetime.
-            logger.propagate = True
-            _discord_logger_error = f"{type(exc).__name__}: {exc}"
-            _discord_logger_configured = False
-            logger.error(
-                "Discord delivery logger setup failed: %s",
-                exc.__class__.__name__,
-            )
+        _discord_logger_error = None
+        _discord_logger_configured = True
 
 
 def _log_sender_exception(stage: str, exc: BaseException) -> None:

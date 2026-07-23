@@ -80,6 +80,7 @@ def _run_etl_direct_with_retry(
     *,
     context: str,
     from_time: str | None,
+    batch_id: object | None = None,
     max_attempts: int | None = None,
 ) -> int:
     last_exc: Exception | None = None
@@ -96,6 +97,7 @@ def _run_etl_direct_with_retry(
                 source=source,
                 symbol=tv_symbol,
                 from_time=from_time,
+                batch_id=batch_id,
             )
 
         except Exception as exc:
@@ -548,6 +550,7 @@ def _db_worker() -> None:
                     source="live_fetching",
                     symbol=tv_symbol,
                     tf_code=tf_code,
+                    batch_id=batch_id,
                 )
                 staging_ok = True
                 break
@@ -656,6 +659,22 @@ def _etl_worker() -> None:
                         _etl_item_meta.pop(row_id, None)
                 continue
 
+            with _deferred_lock:
+                covered_batch_ids = sorted(
+                    {
+                        int(meta["batch_id"])
+                        for row_id in covered_spool_ids
+                        if (meta := _etl_item_meta.get(row_id)) is not None
+                    }
+                )
+            batch_reference: object | None
+            if len(covered_batch_ids) == 1:
+                batch_reference = covered_batch_ids[0]
+            elif covered_batch_ids:
+                batch_reference = ",".join(str(item) for item in covered_batch_ids)
+            else:
+                batch_reference = None
+
             affected = _run_etl_direct_with_retry(
                 sym_id,
                 tf_c,
@@ -663,6 +682,7 @@ def _etl_worker() -> None:
                 sym_nm,
                 context="deferred",
                 from_time=covered_from_time,
+                batch_id=batch_reference,
                 max_attempts=1,
             )
             # Fact commit happened inside run_etl_direct. Ack only the exact

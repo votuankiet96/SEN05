@@ -34,7 +34,7 @@ try:
 except Exception:  # pragma: no cover - import is optional for static review
     pyodbc = None  # type: ignore[assignment]
 
-from core_engine.util.logkit.formatters import operation_line
+from core_engine.util.logkit import get_logger, operation_line
 
 
 ConnectionFactory = Callable[[], Any]
@@ -240,7 +240,7 @@ class LockCoordinator:
         pid: int | None = None,
     ) -> None:
         self.connection_factory = connection_factory or default_connection_factory
-        self.logger = logger or logging.getLogger(__name__)
+        self.logger = logger or get_logger("coordination_locks", console=False)
         self.pid_alive = pid_alive or _local_pid_alive
         self.process_started_at = process_started_at or _local_process_started_utc
         self.boot_started_at = _utc_naive(boot_started_at) if boot_started_at else _local_boot_started_utc()

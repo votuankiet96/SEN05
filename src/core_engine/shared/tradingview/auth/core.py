@@ -101,11 +101,9 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
-from core_engine.util.logkit.factory import get_logger  # noqa: E402
-from core_engine.util.logkit.formatters import operation_line  # noqa: E402
+from core_engine.util.logkit import get_logger, operation_line  # noqa: E402
 from core_engine.util.notify.discord import notify_auth_event, sanitize_ssl_keylogfile, send_alert as _send_alert  # noqa: E402
 from core_engine.settings import (  # noqa: E402
-    AUTH_LOG,
     CACHE_DIR,
     TRADINGVIEW,
     env_int,
@@ -124,7 +122,7 @@ from core_engine.shared.tradingview.auth.jwt_utils import (  # noqa: E402
 from core_engine.shared.tradingview.auth.captcha import _get_totp_code, _solve_captcha_hcaptcha  # noqa: E402
 
 class _AuthLogFilter(logging.Filter):
-    """Chuẩn hóa cách ghi auth.log mà không thay đổi hành vi xác thực TradingView."""
+    """Normalize auth events without changing TradingView authentication behavior."""
 
     _REPLACEMENTS = (
         ("auth_token", "login token"),
@@ -147,7 +145,7 @@ class _AuthLogFilter(logging.Filter):
 
 
 # Module-level logger, dùng khi caller không truyền logger vào.
-_logger = get_logger("tv_auth", str(AUTH_LOG), rotating=True, console=False, utc=True, pipe_format=True)
+_logger = get_logger("tv_auth", console=False)
 _logger.addFilter(_AuthLogFilter())
 
 sanitize_ssl_keylogfile()

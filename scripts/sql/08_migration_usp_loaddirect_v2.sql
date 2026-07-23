@@ -47,9 +47,9 @@
         check ships with the refactor/production-structure branch).
      6. Smoke test before resuming full 24/7 operation:
           python -m core_engine live --smoke-seconds 90
-        Confirm the live_fetching.log / live_fetching_summary.jsonl shows
+        Confirm runtime/logs/live.log shows
         fact_inserted > 0 for at least one batch, and that
-        runtime/logs/system/errors.log has no new "run_etl_direct failed"
+        runtime/logs/alerts.log has no new "run_etl_direct failed"
         entries after the smoke window starts.
      7. Run the new reconciliation tool to catch up any staging rows that
         were stuck behind the stale procedure before this migration:

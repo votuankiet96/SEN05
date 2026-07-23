@@ -1,9 +1,39 @@
-"""Standardized logging infrastructure (loggers, handlers, formatters) for DP Program.
+"""The only public logging API used by DP Program components."""
 
-`get_logger(component, log_file, ...)` is the single entry point components
-should use; see `core_engine.util.logkit.factory` for the full level policy.
-"""
+from core_engine.util.logkit.core import (
+    bind_context,
+    current_context,
+    flush_logs,
+    get_logger,
+    log_activity,
+    log_event,
+    set_context,
+)
+from core_engine.util.logkit.formatter import (
+    cell,
+    clean,
+    kv,
+    num,
+    operation_line,
+    ts,
+    value_text,
+    window,
+)
 
-from core_engine.util.logkit.factory import get_logger
-
-__all__ = ["get_logger"]
+__all__ = [
+    "bind_context",
+    "cell",
+    "clean",
+    "current_context",
+    "flush_logs",
+    "get_logger",
+    "kv",
+    "log_activity",
+    "log_event",
+    "num",
+    "operation_line",
+    "set_context",
+    "ts",
+    "value_text",
+    "window",
+]

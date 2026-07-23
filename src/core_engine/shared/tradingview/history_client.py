@@ -25,7 +25,10 @@ import websocket
 from core_engine.shared.tradingview import auth as _tv_auth
 from core_engine.shared.tradingview import protocol
 from core_engine.settings import TRADINGVIEW
-from core_engine.util.logkit import formatters as _logfmt
+from core_engine.util.logkit import num as _log_num
+from core_engine.util.logkit import get_logger
+from core_engine.util.logkit import operation_line as _operation_line
+from core_engine.util.logkit import window as _log_window
 
 
 TV_WS_ENDPOINT_URLS: dict[str, str] = {
@@ -34,6 +37,8 @@ TV_WS_ENDPOINT_URLS: dict[str, str] = {
     "widgetdata": "wss://widgetdata.tradingview.com/socket.io/websocket",
 }
 TV_WS_TIMEZONE = "Etc/UTC"
+_logger = get_logger("tv_history", stream="historical", console=False)
+_auth_logger = get_logger("tv_history_auth", stream="historical", console=False)
 
 WS_INTERVALS: dict[str, str] = {
     "W": "1W",
@@ -128,7 +133,7 @@ def _resolve_endpoint(endpoint: str | None) -> tuple[str, str]:
 
 
 def _current_auth() -> tuple[str, str]:
-    log = logging.getLogger("tv_history.auth")
+    log = _auth_logger
     try:
         _tv_auth.check_and_refresh(log)
     except Exception as exc:
@@ -187,7 +192,7 @@ def fetch_history(
     request_more_bars: int = 10000,
 ) -> WsHistoryResult:
     """Fetch historical OHLCV bars from TradingView WebSocket."""
-    log = logger or logging.getLogger("tv_history")
+    log = logger or _logger
     tf_code = tf_code.upper()
     interval = WS_INTERVALS.get(tf_code)
     if not interval:
@@ -325,7 +330,7 @@ def fetch_replay_window(
     endpoint: str | None = None,
 ) -> ReplayWindowResult:
     """Fetch one TradingView replay window around anchor_utc."""
-    log = logger or logging.getLogger("tv_history.replay")
+    log = logger or get_logger("tv_history_replay", stream="historical", console=False)
     tf_code = tf_code.upper()
     interval = WS_INTERVALS.get(tf_code)
     if not interval:
@@ -510,7 +515,7 @@ def crawl_replay_history(
     Crawl replay windows from TradingView's earliest available replay bar up to
     end_before_utc. Returned bars are filtered to strictly before end_before_utc.
     """
-    log = logger or logging.getLogger("tv_history.replay")
+    log = logger or _logger
     tf_code = tf_code.upper()
     interval = WS_INTERVALS.get(tf_code)
     if not interval:
@@ -583,15 +588,18 @@ def crawl_replay_history(
             window_last = last
             last_seen = last if last_seen is None else max(last_seen, last)
             if windows == 1 or windows % 25 == 0:
-                _logfmt.log(
-                    log,
-                    "REPLAY",
-                    symbol=symbol,
-                    tf=tf_code,
-                    action="window_loaded",
-                    amount=f"rows {_logfmt.num(len(df))}",
-                    range_=_logfmt.window(first, last),
-                    status=f"window {windows}",
+                log.info(
+                    "%s",
+                    _operation_line(
+                        "HISTORICAL",
+                        "Replay window loaded",
+                        symbol=symbol,
+                        timeframe=tf_code,
+                        rows=_log_num(len(df)),
+                        range=_log_window(first, last),
+                        window=windows,
+                        result="loaded",
+                    ),
                 )
 
         if last_seen is not None and last_seen >= end_before - tf_delta:

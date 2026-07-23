@@ -7,14 +7,15 @@ configured. No shared auth state is read or written here.
 
 from __future__ import annotations
 
-import logging
 import time
 
 import requests
 
 from core_engine.settings import TRADINGVIEW
 
-_logger = logging.getLogger("tv_auth")
+from core_engine.util.logkit import get_logger
+
+_logger = get_logger("tv_auth", console=False)
 
 
 def _get_totp_code() -> str | None:

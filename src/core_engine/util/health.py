@@ -8,7 +8,6 @@ directories during a readiness check.
 from __future__ import annotations
 
 import json
-import logging
 import os
 import re
 import shutil
@@ -25,6 +24,7 @@ from core_engine.shared.tradingview import auth as tv_auth
 from core_engine.shared.tradingview.diagnostics import playwright_browser_status
 from core_engine.shared.time import parse_utc_time as _parse_time
 from core_engine.util.runtime_state import load_json
+from core_engine.util.logkit import get_logger
 from core_engine.util.supervisor.process_control import same_local_host
 from core_engine.settings import (
     APP_ROOT,
@@ -34,8 +34,12 @@ from core_engine.settings import (
     CANDLE_SNAPSHOT,
     ENV_FILE,
     HISTORICAL,
-    HISTORICAL_SUMMARY_LOG,
+    HISTORICAL_LOG,
+    LIVE_LOG,
+    LOG_EMERGENCY_DIR,
     LOG_DIR,
+    LOGGING,
+    ALERTS_LOG,
     RUN_DIR,
     SPOOL_DIR,
     STORAGE,
@@ -43,6 +47,7 @@ from core_engine.settings import (
     TF_DISPLAY_ORDER,
     WS_LIVE_STATE,
     WS_OVERFLOW_SPOOL,
+    SYSTEM_LOG,
     ensure_runtime_dirs,
 )
 from core_engine.util.coordination.locks import (
@@ -74,9 +79,9 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-LOG_WARN_TOTAL_BYTES = 2 * 1024 * 1024 * 1024
-LOG_FAIL_TOTAL_BYTES = 3 * 1024 * 1024 * 1024
-LOG_ACTIVE_FILE_FAIL_BYTES = 50 * 1024 * 1024
+LOG_FAIL_TOTAL_BYTES = int(LOGGING.disk_budget_mb) * 1024 * 1024
+LOG_WARN_TOTAL_BYTES = int(LOG_FAIL_TOTAL_BYTES * 0.9)
+LOG_ACTIVE_FILE_FAIL_BYTES = max(5, int(LOGGING.max_file_mb) * 2) * 1024 * 1024
 
 
 def _active_runtime_roles() -> dict[str, int]:
@@ -420,7 +425,7 @@ def _log_sinks_check() -> Check:
         "missing": [],
         "unwritable": [],
         "oversized_active": [],
-        "active_fallbacks": [],
+        "emergency_fallbacks": [],
     }
     failures: list[str] = []
     warnings: list[str] = []
@@ -432,15 +437,23 @@ def _log_sinks_check() -> Check:
             failures.append(f"missing sink registry for {role} PID {pid}")
             detail["missing"].append(str(registry))
             continue
-        sinks = payload.get("sinks") if isinstance(payload.get("sinks"), list) else []
-        if not sinks:
+        if payload.get("error"):
+            failures.append(f"{role} sink reported an error: {payload['error']}")
+        paths = payload.get("paths") if isinstance(payload.get("paths"), list) else []
+        if not paths:
             failures.append(f"empty sink registry for {role} PID {pid}")
             continue
-        kinds = {str(item.get("kind") or "") for item in sinks}
-        if "crash" not in kinds:
-            failures.append(f"crash capture is not registered for {role} PID {pid}")
-        for item in sinks:
-            physical = Path(str(item.get("physical_path") or ""))
+        expected = {
+            "supervisor": {str(SYSTEM_LOG.resolve()), str(ALERTS_LOG.resolve())},
+            "live": {str(LIVE_LOG.resolve()), str(ALERTS_LOG.resolve())},
+            "historical": {str(HISTORICAL_LOG.resolve()), str(ALERTS_LOG.resolve())},
+        }.get(role, set())
+        missing_expected = expected - {str(Path(item).resolve()) for item in paths}
+        if missing_expected:
+            failures.append(f"{role} sink registry is missing canonical streams")
+            detail["missing"].extend(sorted(missing_expected))
+        for item in paths:
+            physical = Path(str(item or ""))
             if not physical.is_file():
                 detail["missing"].append(str(physical))
                 failures.append(f"registered sink is missing: {physical.name}")
@@ -459,23 +472,27 @@ def _log_sinks_check() -> Check:
                 detail["oversized_active"].append({"path": str(physical), "bytes": size})
                 failures.append(f"active sink exceeds 50 MiB: {physical.name}")
 
-        active_fallbacks = [
-            str(path)
-            for path in log_files
-            if f".active.{pid}." in path.name
-        ]
-        if active_fallbacks:
-            detail["active_fallbacks"].extend(active_fallbacks)
-            failures.append(f"{role} PID {pid} is writing rollover fallback files")
+        crash_path = RUN_DIR / "log_emergency" / f"crash.{role}.{pid}.log"
+        if not crash_path.exists():
+            failures.append(f"early crash capture is missing for {role} PID {pid}")
+            detail["missing"].append(str(crash_path))
+
+        emergency_path = LOG_EMERGENCY_DIR / f"{role}.{pid}.log"
+        try:
+            if emergency_path.exists() and emergency_path.stat().st_size:
+                detail["emergency_fallbacks"].append(str(emergency_path))
+                failures.append(f"{role} PID {pid} used the emergency logging fallback")
+        except OSError as exc:
+            failures.append(f"cannot inspect {role} emergency logging fallback: {exc}")
 
     retention_state = _read_json(RUN_DIR / "log_retention_state.json")
     detail["retention"] = retention_state
     if retention_state.get("failed"):
         failures.append("the last runtime retention pass had deletion errors")
     if total_bytes >= LOG_FAIL_TOTAL_BYTES:
-        failures.append("runtime logs exceed the 3 GiB hard budget")
+        failures.append("runtime logs exceed the configured hard budget")
     elif total_bytes >= LOG_WARN_TOTAL_BYTES:
-        warnings.append("runtime logs exceed the 2 GiB warning budget")
+        warnings.append("runtime logs exceed 90% of the configured hard budget")
 
     if failures:
         return Check("log_sinks", "fail", "; ".join(dict.fromkeys(failures)), detail)
@@ -732,8 +749,8 @@ def _live_state_check() -> Check:
 
 
 def _historical_state_check() -> Check:
-    summary_path = HISTORICAL_SUMMARY_LOG
-    summary = _read_last_jsonl(summary_path)
+    summary_path = RUN_DIR / "historical_last_run.json"
+    summary = _read_json(summary_path)
     if not summary:
         return Check(
             "historical_state",
@@ -741,7 +758,7 @@ def _historical_state_check() -> Check:
             "No historical run summary has been written yet.",
             {"path": str(summary_path)},
         )
-    age = _age_seconds(summary.get("ts"))
+    age = _age_seconds(summary.get("ts") or summary.get("completed_at"))
     return Check(
         "historical_state",
         "ok",
@@ -1124,7 +1141,7 @@ def collect_data_health(*, lookback_days: int | None = None) -> dict[str, Any]:
     verified_gaps = load_verified_gaps()
     new_holes = find_hole_pairs(
         repair_items,
-        logging.getLogger("data_health"),
+        get_logger("data_health", stream="system", console=False),
         verified_gaps=verified_gaps,
         lookback_days=lookback,
         symbols=SYMBOLS,
@@ -1326,24 +1343,10 @@ def print_json(report: dict[str, Any], *, indent: int | None = None) -> None:
 
 
 def cleanup_old_runtime_files(*, days: int | None = None) -> dict[str, Any]:
-    retention_days = BACKEND.log_retention_days if days is None else max(0, int(days))
+    """Clean closed runtime artifacts without touching active logs or spool data."""
+    retention_days = LOGGING.retention_days if days is None else max(0, int(days))
     cutoff = time.time() - retention_days * 86400
     active_pids = set(_active_runtime_roles().values())
-    candidates: list[Path] = []
-    for root in (LOG_DIR, RUN_DIR, SPOOL_DIR):
-        if not root.exists():
-            continue
-        for path in root.rglob("*"):
-            if not path.is_file():
-                continue
-            name = path.name.lower()
-            log_artifact = bool(
-                re.search(r"\.log(?:\.\d+)?$", name)
-                or ".active." in name
-                or path.suffix.lower() in {".jsonl", ".tmp", ".old", ".out", ".txt"}
-            )
-            if root == LOG_DIR or root == RUN_DIR or log_artifact:
-                candidates.append(path)
     deleted: list[str] = []
     kept: list[str] = []
     failed: list[dict[str, str]] = []
@@ -1360,6 +1363,43 @@ def cleanup_old_runtime_files(*, days: int | None = None) -> dict[str, Any]:
             failed.append({"path": str(path), "reason": f"{reason}: {type(exc).__name__}: {exc}"})
             return False
 
+    # Canonical current logs are never cleanup candidates. The sink owns only
+    # archive retention and its configured disk budget.
+    try:
+        from core_engine.util.logkit.sink import cleanup_archives
+
+        archive_result = cleanup_archives()
+        deleted.extend(str(path) for path in archive_result.get("deleted", []))
+        failed.extend(
+            {
+                "path": str(item.get("path", LOG_DIR)),
+                "reason": f"archive_retention: {item.get('error', 'unknown error')}",
+            }
+            for item in archive_result.get("failed", [])
+        )
+    except Exception as exc:
+        archive_result = {}
+        failed.append(
+            {
+                "path": str(LOG_DIR),
+                "reason": f"archive_retention: {type(exc).__name__}: {exc}",
+            }
+        )
+
+    candidates: list[Path] = []
+    if RUN_DIR.exists():
+        for path in RUN_DIR.rglob("*"):
+            if not path.is_file():
+                continue
+            relative = path.relative_to(RUN_DIR).as_posix().lower()
+            name = path.name.lower()
+            if path.suffix.lower() in {".tmp", ".old", ".out"}:
+                candidates.append(path)
+            elif relative.startswith(("log_sinks/", "notification_status/")):
+                candidates.append(path)
+            elif relative.startswith("log_emergency/") and name.endswith(".log"):
+                candidates.append(path)
+
     for path in candidates:
         try:
             if _belongs_to_active_pid(path):
@@ -1372,30 +1412,9 @@ def cleanup_old_runtime_files(*, days: int | None = None) -> dict[str, Any]:
             failed.append({"path": str(path), "reason": f"stat: {type(exc).__name__}: {exc}"})
             kept.append(str(path))
 
-    # Enforce a hard aggregate budget using only closed/stale files. Fresh
-    # canonical state logs and all files owned by active PIDs are protected.
-    budget_deleted: list[str] = []
     try:
         remaining_logs = [path for path in LOG_DIR.rglob("*") if path.is_file()]
         total_bytes = sum(path.stat().st_size for path in remaining_logs)
-        target_bytes = int(LOG_WARN_TOTAL_BYTES * 0.75)
-        if total_bytes > LOG_FAIL_TOTAL_BYTES:
-            eligible = sorted(
-                (
-                    path
-                    for path in remaining_logs
-                    if not _belongs_to_active_pid(path)
-                    and path.stat().st_mtime < time.time() - 3600
-                ),
-                key=lambda item: item.stat().st_mtime,
-            )
-            for path in eligible:
-                if total_bytes <= target_bytes:
-                    break
-                size = path.stat().st_size
-                if _delete(path, reason="global_budget"):
-                    budget_deleted.append(str(path))
-                    total_bytes = max(0, total_bytes - size)
     except Exception as exc:
         failed.append({"path": str(LOG_DIR), "reason": f"budget: {type(exc).__name__}: {exc}"})
         total_bytes = None
@@ -1405,20 +1424,10 @@ def cleanup_old_runtime_files(*, days: int | None = None) -> dict[str, Any]:
         "retention_days": retention_days,
         "active_pids": sorted(active_pids),
         "deleted": deleted,
-        "budget_deleted": budget_deleted,
+        "archive_retention": archive_result,
         "failed": failed,
         "kept_count": len(kept),
         "remaining_log_bytes": total_bytes,
         "hard_budget_bytes": LOG_FAIL_TOTAL_BYTES,
     }
-    state_path = RUN_DIR / "log_retention_state.json"
-    try:
-        state_path.parent.mkdir(parents=True, exist_ok=True)
-        temp = state_path.with_name(f".{state_path.name}.{os.getpid()}.tmp")
-        temp.write_text(json.dumps(result, ensure_ascii=True, indent=2), encoding="utf-8")
-        os.replace(temp, state_path)
-    except Exception as exc:
-        result["failed"].append(
-            {"path": str(state_path), "reason": f"state_write: {type(exc).__name__}: {exc}"}
-        )
     return result

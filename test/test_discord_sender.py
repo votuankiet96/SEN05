@@ -10,7 +10,7 @@ from types import SimpleNamespace
 import pytest
 
 from core_engine.util.notify import discord
-from core_engine.util.logkit.handlers import ResilientRotatingFileHandler
+from core_engine.util.logkit.sink import SinkQueueHandler
 
 
 def _item(*, level: str = "ERROR", content_hash: str = "same") -> discord._DiscordSendItem:
@@ -228,34 +228,15 @@ def test_activity_log_failure_after_http_success_does_not_retry_delivery(
     assert posts == [1]
 
 
-def test_discord_delivery_log_is_resilient_and_process_scoped(tmp_path, monkeypatch):
+def test_discord_delivery_uses_the_single_canonical_alerts_sink(monkeypatch):
     original_handlers = list(discord.logger.handlers)
-    original_propagate = discord.logger.propagate
-    original_level = discord.logger.level
-    for handler in original_handlers:
-        discord.logger.removeHandler(handler)
-
-    monkeypatch.setattr(discord, "DISCORD_LOG", tmp_path / "discord.log")
     monkeypatch.setattr(discord, "_discord_logger_configured", False)
     monkeypatch.setenv("DP_PROCESS_ROLE", "live")
-    try:
-        discord._ensure_discord_logger()
-        handlers = [
-            handler
-            for handler in discord.logger.handlers
-            if isinstance(handler, ResilientRotatingFileHandler)
-        ]
-        assert len(handlers) == 1
-        assert ".live." in handlers[0].baseFilename
-        assert handlers[0].baseFilename.endswith(".log")
-    finally:
-        for handler in list(discord.logger.handlers):
-            discord.logger.removeHandler(handler)
-            handler.close()
-        for handler in original_handlers:
-            discord.logger.addHandler(handler)
-        discord.logger.propagate = original_propagate
-        discord.logger.setLevel(original_level)
+    discord._ensure_discord_logger()
+    assert discord.logger.handlers == original_handlers
+    handlers = [handler for handler in discord.logger.handlers if isinstance(handler, SinkQueueHandler)]
+    assert len(handlers) == 1
+    assert handlers[0].stream == "alerts"
 
 
 def test_dedupe_memory_is_ttl_and_size_bounded(isolated_sender, monkeypatch):

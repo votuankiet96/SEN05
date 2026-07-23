@@ -21,18 +21,14 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 from core_engine.shared.time import utc_iso
 from core_engine.util.runtime_state import atomic_write_json as _atomic_write_json
 from core_engine.util.runtime_state import load_json as _load_json
-from core_engine.util.logkit.activity import log_activity
-from core_engine.util.logkit.factory import get_logger
-from core_engine.util.logkit.formatters import operation_line
+from core_engine.util.logkit import get_logger, log_activity, operation_line
 from core_engine.util.notify.discord import notify_backend_event, notify_historical_event, notify_live_event, flush_pending
 from core_engine.settings import (
-    BACKEND_LOG,
     BACKEND_STATE,
     BACKEND_STOP_FILE,
     HISTORICAL_CANCEL_FILE,
@@ -51,7 +47,7 @@ from core_engine.util.coordination.locks import (
 )
 
 
-logger = get_logger("system", str(BACKEND_LOG), rotating=True, utc=True, pipe_format=True)
+logger = get_logger("system", stream="system")
 
 
 def _slog(event: str, *details: str, **fields: Any) -> str:
@@ -211,7 +207,7 @@ def queue_historical_job(
         current_state={"queued_job": title, "job_id": job["id"], "requested_by": requested_by},
         data_result="No data was changed by the queued request yet. It will run after the active historical job finishes.",
         health_risk="Low. The system avoided running two historical jobs at the same time.",
-        recommended_action="Let the active historical job finish, then watch historical_pulling.log for the queued job start.",
+        recommended_action="Let the active historical job finish, then watch runtime/logs/historical.log for the queued job start.",
         trace={"queue_file": str(HISTORICAL_QUEUE_FILE)},
         result="queued",
     )

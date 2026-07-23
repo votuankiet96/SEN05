@@ -23,14 +23,12 @@ from typing import Any, Iterable, Mapping
 
 from core_engine.shared.warehouse.reader import get_latest_ohlcv_snapshot
 from core_engine.settings import CANDLE_SNAPSHOT
+from core_engine.util.logkit import get_logger
 
-logger = logging.getLogger("candle_snapshot")
+logger = get_logger("candle_snapshot", stream="live", console=False)
 
 
 def _runtime_logger() -> logging.Logger:
-    live_logger = logging.getLogger("live_fetching")
-    if live_logger.handlers:
-        return live_logger
     return logger
 
 

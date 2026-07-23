@@ -19,35 +19,27 @@ import subprocess
 import sys
 import threading
 import time
-from datetime import date, datetime, time as dtime, timezone
-from pathlib import Path
+from datetime import datetime, time as dtime, timezone
 from typing import Any
 
 from core_engine.other.exit_codes import EXIT_CANCELLED, EXIT_ERROR, EXIT_LOCK_CONFLICT
 from core_engine.util.health import _age_seconds, cleanup_old_runtime_files, collect_health
 from core_engine.shared.time import parse_utc_time
-from core_engine.util.logkit.activity import log_activity
-from core_engine.util.logkit.factory import get_logger
-from core_engine.util.logkit.formatters import operation_line
-from core_engine.util.logkit.handlers import ResilientRotatingFileHandler
-from core_engine.util.logkit.paths import (
-    log_sink_registry_path,
-    register_log_sink,
-    unregister_log_sink,
-)
+from core_engine.util.logkit import log_activity, operation_line
+from core_engine.util.logkit.bootstrap import ingest_emergency_crashes
 from core_engine.util.notify.discord import notify_backend_event, notify_historical_event, notify_live_event, flush_pending
 from core_engine.util.runtime_state import read_json_snapshot
 from core_engine.settings import (
     APP_ROOT,
     BACKEND,
-    BACKEND_CHILD_STDOUT_LOG,
-    BACKEND_LOG,
     BACKEND_STATE,
     BACKEND_STOP_FILE,
     HISTORICAL_CANCEL_FILE,
+    HISTORICAL_LOG,
     HISTORICAL_QUEUE_FILE,
-    LIVE_SUMMARY_LOG,
-    WS_LIVE_LOG,
+    LIVE_LOG,
+    LOGGING,
+    SYSTEM_LOG,
     WS_LIVE_STATE,
     ensure_runtime_dirs,
 )
@@ -96,21 +88,20 @@ LIVE_RESTART_SLOW_MIN_SEC = 120
 LIVE_RESTART_STABLE_RESET_SEC = 1800
 LIVE_SEMANTIC_STALE_CONFIRMATIONS = 3
 
-_child_lifecycle_logger = get_logger(
-    "child_lifecycle",
-    str(BACKEND_CHILD_STDOUT_LOG),
-    rotating=True,
-    console=False,
-    utc=True,
-)
+
+def _child_stderr_level(line: str) -> int:
+    text = str(line).lower()
+    if any(word in text for word in ("traceback", "exception", "error:", "fatal")):
+        return logging.ERROR
+    if any(word in text for word in ("warning", "deprecated")):
+        return logging.WARNING
+    return logging.INFO
 
 
 def _pump_child_stderr(
     managed: ManagedProcess,
-    stderr_logger: logging.Logger,
-    stderr_handler: logging.Handler,
 ) -> None:
-    """Drain one child's stderr for its lifetime into a bounded log sink."""
+    """Drain one child's stderr into the canonical system stream."""
     handle = managed.stderr_handle
     if handle is None:
         return
@@ -118,7 +109,17 @@ def _pump_child_stderr(
         for raw_line in iter(handle.readline, ""):
             line = raw_line.rstrip("\r\n")
             if line:
-                stderr_logger.error("%s", line)
+                logger.log(
+                    _child_stderr_level(line),
+                    "%s",
+                    operation_line(
+                        "SYSTEM",
+                        "Child process diagnostic",
+                        line,
+                        process=managed.name,
+                        result="captured",
+                    ),
+                )
     except (OSError, ValueError):
         pass
     finally:
@@ -126,12 +127,6 @@ def _pump_child_stderr(
             handle.close()
         except Exception:
             pass
-        try:
-            stderr_logger.removeHandler(stderr_handler)
-            stderr_handler.close()
-        except Exception:
-            pass
-        unregister_log_sink(getattr(stderr_handler, "baseFilename", ""))
 
 
 class BackendSupervisor:
@@ -370,8 +365,8 @@ class BackendSupervisor:
             data_result="No duplicate historical job was started immediately. Live fetching can continue during this waiting period.",
             health_risk="Medium. Missing ranges may remain until the next historical retry succeeds.",
             reason="The historical subprocess exited with a non-zero code, usually caused by a transient TradingView or network failure.",
-            recommended_action="No immediate action needed if live fetching is healthy. If this repeats after several retries, inspect historical_pulling.log and TradingView connectivity.",
-            trace={"system_log": str(BACKEND_LOG), "historical_log": str(BACKEND_CHILD_STDOUT_LOG)},
+            recommended_action="No immediate action needed if live fetching is healthy. If this repeats after several retries, inspect runtime/logs/historical.log and TradingView connectivity.",
+            trace={"system_log": str(SYSTEM_LOG), "historical_log": str(HISTORICAL_LOG)},
             result="warning",
         )
 
@@ -573,7 +568,7 @@ class BackendSupervisor:
         title = str(job.get("title") or "Historical queued job")
         command = [sys.executable, "-m", "core_engine", "historical", *args]
         self._clear_startup_historical_pending(covered_by=f"queued_job:{title}")
-        self._spawn(self.historical, command, BACKEND_CHILD_STDOUT_LOG)
+        self._spawn(self.historical, command)
         self._safe_notify(
             notify_historical_event,
             severity="INFO",
@@ -582,8 +577,8 @@ class BackendSupervisor:
             current_state={"queued_job": title, "job_id": job.get("id"), "remaining_queue": len(jobs)},
             data_result="The queued job is now running. Results will be reported when it completes.",
             health_risk="Medium while running. Historical repair can temporarily defer live merges.",
-            recommended_action="Watch historical_pulling.log until the job completes.",
-            trace={"queue_file": str(HISTORICAL_QUEUE_FILE), "stdout_log": str(BACKEND_CHILD_STDOUT_LOG)},
+            recommended_action="Watch runtime/logs/historical.log until the job completes.",
+            trace={"queue_file": str(HISTORICAL_QUEUE_FILE), "log_file": str(HISTORICAL_LOG)},
             result="started",
         )
         return True
@@ -598,9 +593,8 @@ class BackendSupervisor:
         env["DP_LIVE_CONFLICT_POLICY"] = "skip"
         return env
 
-    def _spawn(self, managed: ManagedProcess, command: list[str], stdout_log: Path) -> None:
-        stdout_log.parent.mkdir(parents=True, exist_ok=True)
-        _child_lifecycle_logger.info(
+    def _spawn(self, managed: ManagedProcess, command: list[str]) -> None:
+        logger.info(
             "%s",
             operation_line(
                 "SUBPROCESS",
@@ -632,52 +626,16 @@ class BackendSupervisor:
         managed.command = command
         managed.started_at = time.time()
         managed.stderr_handle = process.stderr
-        stderr_path = stdout_log.with_name(
-            f"subprocess_stderr.{managed.name}.{process.pid}.log"
-        )
-        try:
-            stderr_handler = ResilientRotatingFileHandler(
-                str(stderr_path),
-                maxBytes=10 * 1024 * 1024,
-                backupCount=5,
-                encoding="utf-8",
-            )
-            stderr_formatter = logging.Formatter(
-                "%(asctime)s [%(levelname)s] %(message)s",
-                datefmt="%Y-%m-%d %H:%M:%S UTC",
-            )
-            stderr_formatter.converter = time.gmtime
-            stderr_handler.setFormatter(stderr_formatter)
-            register_log_sink(
-                stderr_handler.baseFilename,
-                logical_path=stdout_log.with_name(f"subprocess_stderr.{managed.name}.log"),
-                kind="child_stderr",
-            )
-            stderr_logger = logging.Logger(
-                f"subprocess_stderr.{managed.name}.{process.pid}",
-                level=logging.ERROR,
-            )
-            stderr_logger.addHandler(stderr_handler)
-        except Exception:
-            if process.stderr is not None:
-                process.stderr.close()
-            process.terminate()
-            try:
-                process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=5)
-            raise
         managed.stderr_thread = threading.Thread(
             target=_pump_child_stderr,
-            args=(managed, stderr_logger, stderr_handler),
+            args=(managed,),
             name=f"stderr-{managed.name}-{process.pid}",
             daemon=True,
         )
         managed.stderr_thread.start()
         managed.last_exit_code = None
         self._write_state(status="starting", spawn_phase=f"{managed.name}_spawned")
-        _child_lifecycle_logger.info(
+        logger.info(
             "%s",
             operation_line(
                 "SUBPROCESS",
@@ -697,7 +655,7 @@ class BackendSupervisor:
             status="started",
             message=f"{component} worker process started.",
             pid=process.pid,
-            stdout_log=stdout_log,
+            output_log=SYSTEM_LOG,
         )
 
     def start_live(self, *, reason: str = "auto_start") -> None:
@@ -712,7 +670,6 @@ class BackendSupervisor:
         self._spawn(
             self.live,
             [sys.executable, "-m", "core_engine.core.live.engine"],
-            BACKEND_CHILD_STDOUT_LOG,
         )
         self._safe_notify(
             notify_live_event,
@@ -727,7 +684,7 @@ class BackendSupervisor:
             data_result="No candles are expected at startup; wait for the next live batch.",
             health_risk="Low. The worker has started and the supervisor is watching it.",
             recommended_action="No action needed now. Check the next live health report.",
-            trace={"stdout_log": str(BACKEND_CHILD_STDOUT_LOG)},
+            trace={"log_file": str(LIVE_LOG)},
             result="started",
         )
 
@@ -753,7 +710,7 @@ class BackendSupervisor:
         self.active_historical_slot = schedule_slot
         self.active_historical_reason = reason
         self.active_historical_started_at = datetime.now(timezone.utc)
-        self._spawn(self.historical, command, BACKEND_CHILD_STDOUT_LOG)
+        self._spawn(self.historical, command)
         self._safe_notify(
             notify_historical_event,
             severity="INFO",
@@ -768,7 +725,7 @@ class BackendSupervisor:
             data_result="Rows will be reported by the historical job when it finishes.",
             health_risk="Medium while running. It can write many rows and may defer live merges through the maintenance lock.",
             recommended_action="Let it run unless you intentionally need to stop historical repair.",
-            trace={"stdout_log": str(BACKEND_CHILD_STDOUT_LOG)},
+            trace={"log_file": str(HISTORICAL_LOG)},
             result="started",
         )
 
@@ -829,8 +786,8 @@ class BackendSupervisor:
             health_risk="Medium - automatic recovery is scheduled, not abandoned, but data collection is paused "
             "until then.",
             recommended_action="No action needed if this resolves on its own. If failures keep repeating, inspect "
-            "runtime/logs/operation/live_fetching.log.",
-            trace={"stdout_log": str(BACKEND_CHILD_STDOUT_LOG), "state_file": str(WS_LIVE_STATE)},
+            "runtime/logs/live.log.",
+            trace={"log_file": str(LIVE_LOG), "state_file": str(WS_LIVE_STATE)},
             result="waiting",
         )
 
@@ -1004,15 +961,7 @@ class BackendSupervisor:
         if not self.live.started_at:
             return None
         ages: list[float] = []
-        paths = [LIVE_SUMMARY_LOG]
-        if self.live.pid:
-            registry = _load_json(log_sink_registry_path(role="live", pid=self.live.pid))
-            for item in registry.get("sinks") or []:
-                try:
-                    if Path(str(item.get("logical_path"))).resolve() == WS_LIVE_LOG.resolve():
-                        paths.append(Path(str(item.get("physical_path"))))
-                except Exception:
-                    continue
+        paths = [LIVE_LOG]
         for path in paths:
             try:
                 stat = path.stat()
@@ -1149,11 +1098,11 @@ class BackendSupervisor:
         if now - self._last_retention_at < 3600:
             return
         self._last_retention_at = now
-        result = cleanup_old_runtime_files(days=BACKEND.log_retention_days)
+        result = cleanup_old_runtime_files(days=LOGGING.retention_days)
         deleted = len(result.get("deleted", []))
         failures = result.get("failed") or []
         if deleted:
-            logger.info("%s", _slog("Runtime retention removed old files", deleted_files=deleted, retention_days=BACKEND.log_retention_days, result="completed"))
+            logger.info("%s", _slog("Runtime retention removed old files", deleted_files=deleted, retention_days=LOGGING.retention_days, result="completed"))
         if failures:
             logger.error(
                 "%s",
@@ -1169,7 +1118,7 @@ class BackendSupervisor:
             component="system",
             status="failed" if failures else "completed",
             message="Runtime retention check completed.",
-            retention_days=BACKEND.log_retention_days,
+            retention_days=LOGGING.retention_days,
             deleted_files=deleted,
             failures=len(failures),
         )
@@ -1345,8 +1294,8 @@ class BackendSupervisor:
             current_state={"elapsed_minutes": round(elapsed_min, 1), "limit_minutes": limit_min},
             data_result="The job will be asked to stop gracefully, then force-terminated after the usual grace period.",
             health_risk="Medium - a stuck job blocks the warehouse-write lock, which can delay live merges.",
-            recommended_action="Check runtime/logs/operation/historical_pulling.log for what it was stuck on.",
-            trace={"stdout_log": str(BACKEND_CHILD_STDOUT_LOG)},
+            recommended_action="Check runtime/logs/historical.log for what it was stuck on.",
+            trace={"log_file": str(HISTORICAL_LOG)},
             result="cancelling",
         )
         self.stop_historical(reason="max_runtime_exceeded", force_after_grace=True)
@@ -1516,6 +1465,16 @@ class BackendSupervisor:
                 result="starting",
             ),
         )
+        recovered_crashes = ingest_emergency_crashes()
+        if recovered_crashes:
+            logger.warning(
+                "%s",
+                _slog(
+                    "Recovered crash evidence from a previous process",
+                    recovered_files=recovered_crashes,
+                    result="recorded",
+                ),
+            )
         log_activity(
             "program_started",
             component="system",
@@ -1617,6 +1576,7 @@ class BackendSupervisor:
                     logger.info("%s", _slog("Smoke test timeout reached", result="stopping"))
                     break
                 self._poll_children()
+                ingest_emergency_crashes()
                 self._monitor_live_freshness()
                 self._reset_live_backoff_if_stable()
                 if self._live_retry_due():
@@ -1656,8 +1616,8 @@ class BackendSupervisor:
                 data_result="Live and historical jobs may stop or be left for shutdown cleanup.",
                 health_risk="High. The 24/7 process owner is no longer reliable until restarted.",
                 reason=f"{type(exc).__name__}: {exc}",
-                recommended_action="Review runtime/logs/system/system.log, fix the cause, then start DP Program again.",
-                trace={"backend_log": str(BACKEND_LOG)},
+                recommended_action="Review runtime/logs/system.log, fix the cause, then start DP Program again.",
+                trace={"system_log": str(SYSTEM_LOG)},
                 result="failed",
             )
             return 1

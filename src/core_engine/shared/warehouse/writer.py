@@ -14,6 +14,7 @@ def insert_staging_batch(
     source: str = "unknown_source",
     symbol: str | None = None,
     tf_code: str | None = None,
+    batch_id: object | None = None,
 ) -> int:
     """
     Ghi loat OHLCV vao staging table an toan va nhanh.
@@ -103,6 +104,7 @@ def insert_staging_batch(
             action="staging_save",
             staged=affected,
             table=staging_table,
+            batch_id=batch_id,
             result="ok" if affected else "no_change",
         )
         return affected
@@ -115,6 +117,7 @@ def insert_staging_batch(
             target=_target_label(symbol=symbol, symbol_id=symbol_id, tf_code=tf_code, staging_table=staging_table),
             action="staging_save",
             table=staging_table,
+            batch_id=batch_id,
             result="failed",
             reason=e,
         )
@@ -132,6 +135,7 @@ def run_etl_direct(
     source: str = "unknown_source",
     symbol: str | None = None,
     from_time: str | None = None,
+    batch_id: object | None = None,
 ) -> int:
     """
     Goi stored procedure DWH.usp_LoadDirect de nap du lieu 1:1 vao Fact_OHLCV.
@@ -173,6 +177,7 @@ def run_etl_direct(
             fact_inserted=inserted,
             fact_updated=updated,
             table=staging_table,
+            batch_id=batch_id,
             result="ok" if affected else "no_change",
         )
         return affected
@@ -183,6 +188,7 @@ def run_etl_direct(
             target=_target_label(symbol=symbol, symbol_id=symbol_id, tf_code=tf_code, staging_table=staging_table),
             action="fact_save",
             table=staging_table,
+            batch_id=batch_id,
             result="failed",
             reason=e,
         )

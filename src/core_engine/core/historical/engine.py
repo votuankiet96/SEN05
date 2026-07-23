@@ -12,13 +12,15 @@ from __future__ import annotations
 
 import atexit
 import json
+import logging
 import sys
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from typing import Any
 
 from core_engine.other.exit_codes import EXIT_CANCELLED, EXIT_LOCK_CONFLICT
-from core_engine.util.logkit.jsonl import append_jsonl_capped
+from core_engine.util.logkit import log_event, set_context
+from core_engine.util.runtime_state import atomic_write_json
 from core_engine.shared.tradingview import auth as tv_auth
 from core_engine.core.historical.reporter import fmt_int
 from core_engine.shared.warehouse.maintenance import purge_staging
@@ -61,17 +63,12 @@ from core_engine.settings import (
     BACKEND,
     DIRECT_TFS,
     HISTORICAL_CANCEL_FILE,
-    HISTORICAL_SUMMARY_LOG,
-    PIPELINE_LOG,
+    HISTORICAL_LOG,
+    RUN_DIR,
     STORAGE,
     SYMBOLS,
     get_historical_timeframes,
 )
-
-
-RUN_SUMMARY_FILE = str(HISTORICAL_SUMMARY_LOG)
-
-
 
 
 def _cleanup_orphan_warehouse_maintenance(
@@ -103,20 +100,40 @@ def _cleanup_orphan_warehouse_maintenance(
 
 
 def _write_run_summary(mode: str, started: datetime, elapsed: float, stats: dict[str, Any]) -> None:
-    row = {
-        "ts": datetime.now(timezone.utc).isoformat(),
+    fail_count = int(stats.get("fail", 0) or 0)
+    completed_at = datetime.now(timezone.utc).isoformat()
+    state = {
+        "ts": completed_at,
+        "completed_at": completed_at,
         "mode": mode,
         "started": started.isoformat(),
         "elapsed_seconds": round(elapsed, 3),
         "stats": stats,
     }
     try:
-        # Size-capped instead of a bare unbounded append - see
-        # core_engine.util.logkit.jsonl for why age-based retention alone
-        # cannot bound an actively-appended file.
-        append_jsonl_capped(RUN_SUMMARY_FILE, row)
+        atomic_write_json(RUN_DIR / "historical_last_run.json", state)
     except OSError as exc:
-        logger.warning("%s", _hlog("Run summary write failed", reason=exc, result="warning"))
+        logger.warning(
+            "%s",
+            _hlog(
+                "Historical state snapshot could not be updated",
+                reason=exc,
+                result="warning",
+            ),
+        )
+    log_event(
+        logger,
+        logging.WARNING if fail_count else logging.INFO,
+        "historical.run.completed",
+        "Historical run completed",
+        area="HISTORICAL",
+        stage="COMPLETE",
+        result="COMPLETED WITH WARNINGS" if fail_count else "OK",
+        mode=mode,
+        started_at=started.isoformat(),
+        elapsed_seconds=round(elapsed, 3),
+        **{str(key): value for key, value in stats.items()},
+    )
 
 
 def _stats_for_operator(stats: dict[str, Any]) -> str:
@@ -245,7 +262,7 @@ def _acquire_historical_or_report(owner: str, args: Any, *, duration_min: int) -
             },
             data_result="The new job will wait until the old job reaches a safe checkpoint and releases its lock.",
             health_risk="Medium. Historical coverage may remain partial until the replacement job finishes.",
-            recommended_action="Watch historical_pulling.log until the old job stops and the new job starts.",
+            recommended_action="Watch runtime/logs/historical.log until the old job stops and the new job starts.",
             trace={"lock": HISTORICAL_JOB_LOCK, "cancel_file": str(HISTORICAL_CANCEL_FILE)},
             result="stopping",
         )
@@ -381,6 +398,10 @@ def main(argv: list[str] | None = None) -> int:
 
     latest_bars = get_latest_bars() if args.mode == "auto" else None
     mode = args.mode if args.mode != "auto" else detect_mode(latest_bars)
+    set_context(
+        run_id=f"H-{started.strftime('%Y%m%dT%H%M%S%fZ')}",
+        mode=mode,
+    )
     _reporter.start(
         mode=mode,
         started=started,
@@ -476,8 +497,8 @@ def main(argv: list[str] | None = None) -> int:
                 data_result="No successful reset result was recorded.",
                 health_risk="Medium. The warehouse may still be unchanged, but the intended maintenance action did not complete.",
                 reason=str(exc),
-                recommended_action="Check runtime/logs/operation/historical_pulling.log, fix the reported cause, then rerun the reset if still needed.",
-                trace={"pipeline_log": str(PIPELINE_LOG)},
+                recommended_action="Check runtime/logs/historical.log, fix the reported cause, then rerun the reset if still needed.",
+                trace={"pipeline_log": str(HISTORICAL_LOG)},
                 result="failed",
             )
             return 1
@@ -500,7 +521,7 @@ def main(argv: list[str] | None = None) -> int:
             health_risk="High for backfill coverage. Missing ranges will remain until TradingView access recovers.",
             reason=detail,
             recommended_action=f"Check network and TradingView login, then rerun historical pulling. {QUICK_COMMANDS_HINT}",
-            trace={"pipeline_log": str(PIPELINE_LOG)},
+            trace={"pipeline_log": str(HISTORICAL_LOG)},
             result="failed",
         )
         flush_pending()
@@ -579,9 +600,9 @@ def main(argv: list[str] | None = None) -> int:
                 else
                 "No action needed unless counts look unexpected."
                 if stats.get("fail", 0) == 0
-                else "Review runtime/logs/operation/historical_pulling.log and rerun gap repair for failed pairs."
+                else "Review runtime/logs/historical.log and rerun gap repair for failed pairs."
             ),
-            trace={"pipeline_log": str(PIPELINE_LOG), "runtime_summary": "runtime/run/historical_last_run.json"},
+            trace={"pipeline_log": str(HISTORICAL_LOG), "runtime_summary": "runtime/run/historical_last_run.json"},
             result="warning" if has_warning else "completed",
         )
         return 0 if stats.get("fail", 0) == 0 else 1
@@ -596,7 +617,7 @@ def main(argv: list[str] | None = None) -> int:
             health_risk="Medium. Remaining gaps may still need a later backfill.",
             reason=str(exc),
             recommended_action="Rerun gap repair when the current maintenance window is clear.",
-            trace={"pipeline_log": str(PIPELINE_LOG)},
+            trace={"pipeline_log": str(HISTORICAL_LOG)},
             result="stopped",
         )
         return EXIT_CANCELLED
@@ -610,8 +631,8 @@ def main(argv: list[str] | None = None) -> int:
             data_result="The run did not complete. Some pairs may have been saved before the failure.",
             health_risk="High for data coverage. Missing or stale ranges may remain.",
             reason=str(exc),
-            recommended_action=f"Open runtime/logs/operation/historical_pulling.log, fix the cause, then rerun gap repair. {QUICK_COMMANDS_HINT}",
-            trace={"pipeline_log": str(PIPELINE_LOG)},
+            recommended_action=f"Open runtime/logs/historical.log, fix the cause, then rerun gap repair. {QUICK_COMMANDS_HINT}",
+            trace={"pipeline_log": str(HISTORICAL_LOG)},
             result="failed",
         )
         return 1

@@ -25,26 +25,17 @@ ENV_FILE = CONFIG_DIR / "dp_provider.env"
 ENV_EXAMPLE_FILE = CONFIG_DIR / "dp_provider.env.example"
 RUNTIME_DIR = APP_ROOT / "runtime"
 LOG_DIR = RUNTIME_DIR / "logs"
-SYSTEM_LOG_DIR = LOG_DIR / "system"
-OPERATION_LOG_DIR = LOG_DIR / "operation"
+LOG_ARCHIVE_DIR = LOG_DIR / "archive"
 CACHE_DIR = RUNTIME_DIR / "cache"
 RUN_DIR = RUNTIME_DIR / "run"
 SPOOL_DIR = RUNTIME_DIR / "spool"
+LOG_LOCK_DIR = RUN_DIR / "log_locks"
+LOG_EMERGENCY_DIR = RUN_DIR / "log_emergency"
 
-BACKEND_LOG = SYSTEM_LOG_DIR / "system.log"
-ACTIVITY_LOG = SYSTEM_LOG_DIR / "activity.log"
-AUTH_LOG = SYSTEM_LOG_DIR / "auth.log"
-DISCORD_LOG = SYSTEM_LOG_DIR / "discord.log"
-# All supervised child processes (live + historical) share one debug-only
-# stdout/stderr capture file; each process also owns its own real log file.
-BACKEND_CHILD_STDOUT_LOG = SYSTEM_LOG_DIR / "subprocess_debug.log"
-WS_LIVE_LOG = OPERATION_LOG_DIR / "live_fetching.log"
-WS_LIVE_CANDLE_LOG = OPERATION_LOG_DIR / "live_candles.log"
-WS_LIVE_REPORT_LOG = OPERATION_LOG_DIR / "live_reports.log"
-PIPELINE_LOG = OPERATION_LOG_DIR / "historical_pulling.log"
-DATA_WAREHOUSE_LOG = OPERATION_LOG_DIR / "data_warehouse.log"
-LIVE_SUMMARY_LOG = OPERATION_LOG_DIR / "live_fetching_summary.jsonl"
-HISTORICAL_SUMMARY_LOG = OPERATION_LOG_DIR / "historical_pulling_summary.jsonl"
+LIVE_LOG = LOG_DIR / "live.log"
+HISTORICAL_LOG = LOG_DIR / "historical.log"
+SYSTEM_LOG = LOG_DIR / "system.log"
+ALERTS_LOG = LOG_DIR / "alerts.log"
 WS_LIVE_PID = RUN_DIR / "ws_live_runtime.pid"
 WS_LIVE_STATE = RUN_DIR / "ws_live_state.json"
 BACKEND_STATE = RUN_DIR / "backend_engine_state.json"
@@ -373,9 +364,15 @@ class StorageSettings:
 @dataclass(frozen=True)
 class LoggingSettings:
     level: str = env_str("LOG_LEVEL", "INFO").upper()
-    live_log: Path = WS_LIVE_LOG
-    live_candle_log: Path = WS_LIVE_CANDLE_LOG
-    live_report_log: Path = WS_LIVE_REPORT_LOG
+    queue_size: int = env_int("LOG_QUEUE_SIZE", 10000, minimum=100)
+    queue_wait_ms: int = env_int("LOG_QUEUE_WAIT_MS", 20, minimum=0)
+    max_file_mb: int = env_int("LOG_MAX_FILE_MB", 25, minimum=1)
+    retention_days: int = env_int("BACKEND_LOG_RETENTION_DAYS", 30, minimum=1)
+    disk_budget_mb: int = env_int("LOG_DISK_BUDGET_MB", 2048, minimum=100)
+    live_log: Path = LIVE_LOG
+    historical_log: Path = HISTORICAL_LOG
+    system_log: Path = SYSTEM_LOG
+    alerts_log: Path = ALERTS_LOG
 
 
 @dataclass(frozen=True)
@@ -406,7 +403,6 @@ class BackendSettings:
     historical_retry_base_sec: int = env_int("BACKEND_HISTORICAL_RETRY_BASE_SEC", 300, minimum=30)
     historical_retry_max_sec: int = env_int("BACKEND_HISTORICAL_RETRY_MAX_SEC", 1800, minimum=60)
     shutdown_grace_sec: int = env_int("BACKEND_SHUTDOWN_GRACE_SEC", 240, minimum=5)
-    log_retention_days: int = env_int("BACKEND_LOG_RETENTION_DAYS", 30, minimum=1)
     status_json_indent: int = env_int("BACKEND_STATUS_JSON_INDENT", 2, minimum=0, maximum=8)
 
     def __post_init__(self) -> None:
@@ -448,5 +444,13 @@ def build_conn_str(database: str | None = None, db: DatabaseSettings = DB) -> st
 
 
 def ensure_runtime_dirs() -> None:
-    for path in (LOG_DIR, SYSTEM_LOG_DIR, OPERATION_LOG_DIR, CACHE_DIR, RUN_DIR, SPOOL_DIR):
+    for path in (
+        LOG_DIR,
+        LOG_ARCHIVE_DIR,
+        LOG_LOCK_DIR,
+        LOG_EMERGENCY_DIR,
+        CACHE_DIR,
+        RUN_DIR,
+        SPOOL_DIR,
+    ):
         path.mkdir(parents=True, exist_ok=True)

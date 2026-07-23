@@ -58,11 +58,9 @@ from core_engine.util.coordination.locks import (
     wait_for_historical_slot,
 )
 from core_engine.core.historical.reporter import HistoricalReporter, fmt_int
-from core_engine.util.logkit.factory import get_logger
-from core_engine.util.logkit.formatters import operation_line
+from core_engine.util.logkit import get_logger, operation_line
 from core_engine.settings import (
     HISTORICAL,
-    PIPELINE_LOG,
     TF_MINUTES,
     TF_STAGING,
     TRADINGVIEW,
@@ -80,10 +78,6 @@ WAREHOUSE_WRITE_LOCK_POLL_SEC = 5.0
 
 logger = get_logger(
     "historical_pulling",
-    str(PIPELINE_LOG),
-    rotating=True,
-    utc=True,
-    pipe_format=True,
     normalize_prefixes=True,
 )
 

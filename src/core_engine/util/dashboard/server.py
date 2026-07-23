@@ -16,21 +16,18 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from core_engine.util.dashboard import chart_queries, health_queries
-from core_engine.util.logkit.activity import log_activity
-from core_engine.util.logkit.factory import get_logger
-from core_engine.util.logkit.formatters import operation_line
-from core_engine.settings import RUN_DIR, SYSTEM_LOG_DIR, ensure_runtime_dirs
+from core_engine.util.logkit import get_logger, log_activity, operation_line
+from core_engine.settings import RUN_DIR, ensure_runtime_dirs
 
 
 MODULE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = MODULE_DIR / "static"
 INDEX_FILE = STATIC_DIR / "chart.html"
-CHART_LOG = SYSTEM_LOG_DIR / "chart_datacheck.log"
 PID_FILE = RUN_DIR / "chart_datacheck.pid"
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = int(os.environ.get("CHART_DATACHECK_PORT", "8050") or "8050")
 
-logger = get_logger("chart_datacheck", str(CHART_LOG), rotating=True, console=True, utc=True, pipe_format=True)
+logger = get_logger("chart_datacheck", stream="system")
 
 
 def _clog(event: str, *details: str, **fields: object) -> str:

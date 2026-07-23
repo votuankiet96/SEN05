@@ -1,15 +1,9 @@
 """Shared pytest fixtures for the whole test suite.
 
-Every core_engine.util.logkit.get_logger() call attaches the shared
-CriticalDiscordHandler singleton, which (as of the P0-6 durable-outbox
-fix) persists to a real SQLite file under runtime/cache and performs a
-real synchronous HTTP POST on every CRITICAL log record - on ANY
-component logger, not just ones a given test file created itself. Without
-this fixture, any test anywhere in the suite that triggers logger.critical()
-on a shared logger (e.g. util/supervisor/engine.py's "system" logger) would
-write to the real outbox file and attempt a real network call. This
-autouse, suite-wide fixture resets the outbox singleton to a tmp_path-backed
-instance with network delivery stubbed out for every test.
+Every CRITICAL record is synchronously persisted to a SQLite outbox before
+the logging call returns; HTTP delivery then runs in a fixed background
+worker. This suite-wide fixture isolates that durable store and disables real
+network delivery for every test.
 """
 
 from __future__ import annotations

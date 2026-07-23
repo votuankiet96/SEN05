@@ -51,7 +51,7 @@ def test_live_main_notification_trace_paths_are_bound():
     # main() builds startup/shutdown notification traces after background
     # workers start. A missing import here raises before the smoke timer and
     # leaves the non-daemon DB worker alive after the main stack unwinds.
-    assert live_engine.WS_LIVE_LOG.name == "live_fetching.log"
+    assert live_engine.LIVE_LOG.name == "live.log"
     assert live_engine.WS_LIVE_STATE.name == "ws_live_state.json"
 
 

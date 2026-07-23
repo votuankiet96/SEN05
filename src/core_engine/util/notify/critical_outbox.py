@@ -502,11 +502,11 @@ def enqueue_critical_alert(message: str) -> int:
 def critical_alert_outbox() -> CriticalAlertOutbox:
     global _OUTBOX
     if _OUTBOX is None:
-        from core_engine.settings import CACHE_DIR, SYSTEM_LOG_DIR
+        from core_engine.settings import CACHE_DIR, RUN_DIR
 
         outbox = CriticalAlertOutbox(
             db_path=CACHE_DIR / "critical_alerts_outbox.db",
-            status_log_path=SYSTEM_LOG_DIR / "critical_outbox_status.json",
+            status_log_path=RUN_DIR / "critical_outbox_status.json",
         )
         outbox.init()
         _OUTBOX = outbox

@@ -18,7 +18,7 @@ from core_engine.shared.freshness import stale_after_minutes
 from core_engine.shared.warehouse.reader import get_internal_gaps
 from core_engine.shared.warehouse.validation import utc_naive_now
 from core_engine.core.historical.reporter import historical_scan_summary_block, log_historical_block
-from core_engine.util.logkit.formatters import operation_line
+from core_engine.util.logkit import operation_line
 from core_engine.settings import (
     DEFAULT_N_BARS,
     DIRECT_TFS,

@@ -6,17 +6,12 @@ import time
 
 import pyodbc
 
-from core_engine.util.logkit.formatters import operation_line
-from core_engine.util.logkit.factory import get_logger
-from core_engine.settings import DATA_WAREHOUSE_LOG, DB, build_conn_str
+from core_engine.util.logkit import get_logger, operation_line
+from core_engine.settings import DB, build_conn_str
 
 logger = get_logger(
     "data_warehouse",
-    str(DATA_WAREHOUSE_LOG),
-    rotating=True,
     console=False,
-    utc=True,
-    process_scoped=True,
 )
 
 

@@ -16,7 +16,7 @@ from core_engine.util.supervisor.process_control import (
     record_operator_decision,
 )
 from core_engine.other.exit_codes import EXIT_CANCELLED, EXIT_OK
-from core_engine.util.logkit.activity import log_activity
+from core_engine.util.logkit import log_activity
 from core_engine.shared.tradingview import auth as tv_auth
 from core_engine.util import health
 from core_engine.settings import (
@@ -31,11 +31,9 @@ from core_engine.settings import (
     LIVE,
     LOGGING,
     LOG_DIR,
-    OPERATION_LOG_DIR,
     NOTIFICATION,
     RUNTIME_DIR,
     SPOOL_DIR,
-    SYSTEM_LOG_DIR,
     SYMBOLS,
     TF_DISPLAY_ORDER,
     TRADINGVIEW,
@@ -280,7 +278,7 @@ def _collect_core_settings() -> dict[str, Any]:
             "live_stale_minutes": BACKEND.live_stale_minutes,
             "live_max_restarts_per_hour": BACKEND.live_max_restarts_per_hour,
             "shutdown_grace_sec": BACKEND.shutdown_grace_sec,
-            "log_retention_days": BACKEND.log_retention_days,
+            "log_retention_days": LOGGING.retention_days,
         },
         "tradingview_auth": {
             "token_state": token.get("state"),
@@ -312,11 +310,10 @@ def _collect_core_settings() -> dict[str, Any]:
         },
         "runtime_paths": {
             "logs": str(LOG_DIR),
-            "system_logs": str(SYSTEM_LOG_DIR),
-            "operation_logs": str(OPERATION_LOG_DIR),
-            "live_engine_log": str(LOGGING.live_log),
-            "live_candle_log": str(LOGGING.live_candle_log),
-            "live_report_log": str(LOGGING.live_report_log),
+            "live_log": str(LOGGING.live_log),
+            "historical_log": str(LOGGING.historical_log),
+            "system_log": str(LOGGING.system_log),
+            "alerts_log": str(LOGGING.alerts_log),
             "cache": str(CACHE_DIR),
             "spool": str(SPOOL_DIR),
         },
@@ -557,6 +554,25 @@ def build_parser() -> argparse.ArgumentParser:
 
     settings = sub.add_parser("settings", help="show non-secret core settings")
     _add_json_flag(settings)
+
+    logs = sub.add_parser("logs", help="query the four canonical DP Program logs")
+    logs.add_argument(
+        "logs_action",
+        choices=["status", "watch", "trace", "find", "risks"],
+        help="operator log view",
+    )
+    logs.add_argument("reference", nargs="?", help="correlation ID for `logs trace`")
+    logs.add_argument(
+        "--correlation-id",
+        default=None,
+        help="explicit correlation ID for `logs trace`",
+    )
+    logs.add_argument("--since", default="24h", help="lookback such as 30m, 24h, or 7d")
+    logs.add_argument("--level", default="DEBUG", help="minimum level for `logs find`")
+    logs.add_argument("--component", default=None, help="component filter for `logs find`")
+    logs.add_argument("--event", default=None, help="event-code filter for `logs find`")
+    logs.add_argument("--limit", type=int, default=200, help="maximum matching events")
+    _add_json_flag(logs)
     return parser
 
 
@@ -578,6 +594,45 @@ def _dispatch(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
         return _run_data_health(args)
     if args.command == "reconcile-fact":
         return _run_reconcile_fact(args)
+    if args.command == "logs":
+        from core_engine.util.logkit import query as log_query
+
+        if args.logs_action == "status":
+            log_query.print_status(
+                log_query.status_report(since=args.since),
+                as_json=args.json,
+            )
+            return 0
+        if args.logs_action == "watch":
+            if args.json:
+                parser.error("logs watch does not support --json")
+            log_query.watch_events()
+            return 0
+        if args.logs_action == "trace":
+            reference = args.correlation_id or args.reference
+            if not reference:
+                parser.error("logs trace requires a correlation ID")
+            events = log_query.find_events(
+                since=args.since,
+                correlation_id=reference,
+                limit=args.limit,
+            )
+            log_query.print_events(events, as_json=args.json)
+            return 0 if events else 1
+        if args.logs_action == "find":
+            events = log_query.find_events(
+                since=args.since,
+                min_level=args.level,
+                component=args.component,
+                event_code=args.event,
+                limit=args.limit,
+            )
+            log_query.print_events(events, as_json=args.json)
+            return 0
+        if args.logs_action == "risks":
+            report = log_query.risk_report(since=args.since)
+            log_query.print_risks(report, as_json=args.json)
+            return 0 if report.get("status") == "ok" else 1
     if args.command == "stop":
         report = backend_engine.request_stop(
             args.reason,

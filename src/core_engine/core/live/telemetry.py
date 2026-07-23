@@ -3,85 +3,44 @@
 from __future__ import annotations
 
 import logging
-import os
 import re
 from collections.abc import Mapping
-from pathlib import Path
 
 from core_engine.core.live import runtime as _runtime
 from core_engine.core.live.runtime import (
     _CANDLE_HEADER_REPEAT_ROWS,
     _candle_table_lock,
-    _live_table_file_lock,
 )
-from core_engine.util.logkit.formatters import clean, operation_line
-from core_engine.util.logkit.factory import get_logger
-from core_engine.util.logkit.handlers import ResilientRotatingFileHandler
-from core_engine.util.logkit.jsonl import append_jsonl_capped
-from core_engine.util.logkit.tables import cell as _cell
+from core_engine.util.logkit import cell as _cell
+from core_engine.util.logkit import (
+    clean,
+    get_logger,
+    log_event,
+    operation_line as _event_line,
+)
 from core_engine.settings import (
-    LIVE_SUMMARY_LOG,
     SYMBOLS,
     TF_DISPLAY_ORDER,
-    WS_LIVE_LOG,
-    WS_LIVE_REPORT_LOG,
 )
 
 TF_ORDER = tuple(TF_DISPLAY_ORDER)
-WS_LOG_FILE = str(WS_LIVE_LOG)
 
 logger = get_logger(
     "live_fetching",
-    WS_LOG_FILE,
-    rotating=True,
-    utc=True,
-    pipe_format=True,
     normalize_prefixes=True,
 )
 
-report_logger = get_logger(
-    "live_reports",
-    str(WS_LIVE_REPORT_LOG),
-    rotating=True,
-    console=False,
-    utc=True,
-    pipe_format=True,
-)
-
-
-def _inline_fields(*details: str, **fields) -> str:
-    parts: list[str] = []
-    for detail in details:
-        text = clean(detail)
-        if text and text != "-":
-            parts.append(text)
-    for key, value in fields.items():
-        if value is None or value == "":
-            continue
-        safe_key = re.sub(r"[^A-Za-z0-9_]+", "_", str(key).strip().lower()).strip("_")
-        if safe_key:
-            parts.append(f"{safe_key}={clean(value)}")
-    return " | ".join(parts) if parts else "-"
-
 
 def log_live_block(logger: logging.Logger, level: int, text: str) -> None:
-    block = str(text).strip("\n")
-    if block:
-        logger.log(level, "%s", block)
+    for raw_line in str(text).splitlines():
+        line = raw_line.strip()
+        if not line or set(line) <= {"-", "="}:
+            continue
+        logger.log(level, "%s", _event_line("LIVE", line))
 
 
 def live_operation_line(event: str, *details: str, **fields) -> str:
-    result = fields.pop("result", None)
-    result_text = clean(result).upper() if result else "-"
-    detail_text = _inline_fields(*details, **fields)
-    return " | ".join(
-        [
-            "[EVENT]",
-            _cell(event, 34),
-            _cell(result_text, 10),
-            detail_text,
-        ]
-    )
+    return _event_line("LIVE", event, *details, **fields)
 
 
 def live_start_block(
@@ -689,7 +648,6 @@ class LiveReporter:
 
 _symbol_name_by_id = {symbol["symbol_id"]: symbol["tv_symbol"] for symbol in SYMBOLS}
 reporter = LiveReporter(logger, _symbol_name_by_id)
-_report_file_reporter = LiveReporter(report_logger, _symbol_name_by_id)
 
 
 def operation_line(event: str, *details: str, **fields) -> str:
@@ -697,64 +655,20 @@ def operation_line(event: str, *details: str, **fields) -> str:
 
 
 def log_report_block(title: str, lines: list[str], level: int = logging.INFO) -> None:
-    append_live_table_text(reporter.format_block(title, lines, level=level))
-    _report_file_reporter.log_block(title, lines, level)
-
-
-def live_log_rotating_handler() -> logging.Handler | None:
-    for handler in logger.handlers:
-        if isinstance(handler, ResilientRotatingFileHandler):
-            return handler
-    return None
-
-
-def maybe_rotate_live_log() -> None:
-    """Rotate after raw table appends that bypass the logging handler."""
-
-    handler = live_log_rotating_handler()
-    if handler is None:
-        return
-    try:
-        actual_path = getattr(handler, "baseFilename", WS_LOG_FILE)
-        if handler.maxBytes > 0 and os.path.getsize(actual_path) >= handler.maxBytes:
-            handler.acquire()
-            try:
-                handler.doRollover()
-            finally:
-                handler.release()
-    except Exception:
-        pass
+    details = [clean(line) for line in lines if clean(line) != "-"]
+    logger.log(
+        level,
+        operation_line(
+            "LIVE",
+            title,
+            *details,
+            result="warning" if level >= logging.WARNING else "ok",
+        ),
+    )
 
 
 def append_live_table_text(text: str) -> None:
-    block = str(text).strip("\n")
-    if not block:
-        return
-    try:
-        print(block, flush=True)
-    except Exception:
-        pass
-    try:
-        handler = live_log_rotating_handler()
-        path = Path(getattr(handler, "baseFilename", WS_LOG_FILE))
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with _live_table_file_lock:
-            if handler is None:
-                with path.open("a", encoding="utf-8") as handle:
-                    handle.write(block + "\n")
-            else:
-                handler.acquire()
-                try:
-                    if handler.stream is None:
-                        handler.stream = handler._open()
-                    handler.stream.write(block + "\n")
-                    handler.flush()
-                    if handler.maxBytes > 0 and os.path.getsize(handler.baseFilename) >= handler.maxBytes:
-                        handler.doRollover()
-                finally:
-                    handler.release()
-    except Exception as exc:
-        logger.warning("Could not write live table log: %s", exc)
+    log_live_block(logger, logging.INFO, text)
 
 
 def log_block(level: int, text: str) -> None:
@@ -762,7 +676,7 @@ def log_block(level: int, text: str) -> None:
 
 
 def log_report_text(level: int, text: str) -> None:
-    log_live_block(report_logger, level, text)
+    log_live_block(logger, level, text)
 
 
 def start_candle_table(batch_id: int) -> None:
@@ -783,10 +697,18 @@ def log_candle_row(line: str) -> None:
 
 
 def write_live_summary(row: dict) -> None:
-    try:
-        append_jsonl_capped(LIVE_SUMMARY_LOG, row)
-    except Exception as exc:
-        logger.warning("Could not write live batch summary: %s", exc)
+    payload = {str(key): value for key, value in row.items()}
+    fail_count = int(payload.get("errors", 0) or 0)
+    log_event(
+        logger,
+        logging.WARNING if fail_count else logging.INFO,
+        "live.batch.completed",
+        "Live batch completed",
+        area="LIVE",
+        stage="COMPLETE",
+        result="COMPLETED WITH WARNINGS" if fail_count else "OK",
+        **payload,
+    )
 
 
 format_pair_label = reporter.pair_label

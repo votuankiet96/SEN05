@@ -13,8 +13,7 @@ Process:
 
 Outputs:
 - DWH.Fact_OHLCV rows
-- runtime/logs/operation/live_fetching.log
-- runtime/logs/operation/live_reports.log
+- runtime/logs/live.log
 - runtime/run/ws_live_state.json
 """
 
@@ -54,7 +53,7 @@ from core_engine.settings import (
     SYMBOLS,
     SYMBOL_OVERNIGHT_MINS,
     TRADINGVIEW,
-    WS_LIVE_LOG,
+    LIVE_LOG,
     WS_LIVE_STATE,
 )
 
@@ -122,6 +121,7 @@ from core_engine.core.live.runtime import (
     wait_for_batch_db as _wait_for_batch_db,
 )
 from core_engine.shared.time import as_utc_timestamp, utc_iso as _utc_iso
+from core_engine.util.logkit import set_context
 
 from core_engine.shared.tradingview import auth as _tv_auth
 
@@ -573,6 +573,7 @@ def _run_batch(groups: list[BatchFetcher]) -> None:
 
         batch_id = _stats["batches_run"]
 
+    set_context(batch_id=batch_id, correlation_id=batch_id)
     _init_batch_metrics(batch_id)
 
     batch_start_dt = datetime.now(timezone.utc)
@@ -1256,7 +1257,7 @@ def _status_reporter() -> None:
                 if notify_level == "SUCCESS"
                 else "Watch the next cycle. If this repeats during market hours, check TradingView login, network, and SQL Server."
             ),
-            trace={"log_file": str(WS_LIVE_LOG), "state_file": str(WS_LIVE_STATE)},
+            trace={"log_file": str(LIVE_LOG), "state_file": str(WS_LIVE_STATE)},
             result="healthy" if notify_level == "SUCCESS" else "warning" if notify_level == "WARNING" else "failed",
         )
 
@@ -1395,7 +1396,7 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
                 data_result="No new live process was started. The existing live feed remains responsible for candles.",
                 health_risk="Low. The system avoided two live workers writing at the same time.",
                 recommended_action="Use Status/logs to inspect the active live process, or choose restart/replace intentionally.",
-                trace={"lock": "ws_live_runtime", "log_file": str(WS_LIVE_LOG)},
+                trace={"lock": "ws_live_runtime", "log_file": str(LIVE_LOG)},
                 result="skipped",
             )
             print("Live fetching is already running. New live process was skipped.")
@@ -1601,7 +1602,7 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
         require_headless=TV_WS_PREFLIGHT_REQUIRE_HEADLESS,
         alert=_send_alert,
     ):
-        print("  ERROR: Auth preflight failed. See live_fetching.log for details.")
+        print("  ERROR: Auth preflight failed. See runtime/logs/live.log for details.")
 
         return 1
 
@@ -1617,7 +1618,7 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
             health_risk="Medium. Data coverage may be lower than expected during market hours.",
             reason="The current TradingView session resolved to guest mode.",
             recommended_action="Refresh TradingView login if this repeats or if symbols stop receiving candles.",
-            trace={"log_file": str(WS_LIVE_LOG)},
+            trace={"log_file": str(LIVE_LOG)},
             result="warning",
         )
 
@@ -1717,9 +1718,9 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
             recommended_action=(
                 "Confirm the DP supervisor starts a replacement live child and the next batch reaches backlog=0."
                 if is_critical
-                else "Check runtime/logs/operation/live_fetching.log for the auxiliary task failure."
+                else "Check runtime/logs/live.log for the auxiliary task failure."
             ),
-            trace={"log_file": str(WS_LIVE_LOG), "traceback_tail": tb[-800:]},
+            trace={"log_file": str(LIVE_LOG), "traceback_tail": tb[-800:]},
             result="failed",
         )
 
@@ -1775,8 +1776,8 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
         },
         data_result="No saved rows are expected until the first live batch finishes.",
         health_risk="Low. Startup completed and background workers are active.",
-        recommended_action="No action needed now. Watch the first health report and live_fetching.log.",
-        trace={"log_file": str(WS_LIVE_LOG), "state_file": str(WS_LIVE_STATE)},
+        recommended_action="No action needed now. Watch the first health report and runtime/logs/live.log.",
+        trace={"log_file": str(LIVE_LOG), "state_file": str(WS_LIVE_STATE)},
         result="started",
     )
 
@@ -1886,8 +1887,8 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
             data_result="Live candles may stop until the DP Program supervisor restarts this worker.",
             health_risk="High for 24/7 operation if the supervisor cannot restart it.",
             reason=f"{type(exc).__name__}: {exc}",
-            recommended_action="Check runtime/logs/operation/live_fetching.log and runtime/logs/system/system.log, then confirm whether DP Program restarted live fetching.",
-            trace={"log_file": str(WS_LIVE_LOG), "traceback_tail": tb[-800:]},
+            recommended_action="Check runtime/logs/live.log and runtime/logs/system.log, then confirm whether DP Program restarted live fetching.",
+            trace={"log_file": str(LIVE_LOG), "traceback_tail": tb[-800:]},
             result="failed",
         )
 
@@ -2014,7 +2015,7 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
             if exit_code
             else "Restart live fetching if the system should keep collecting data 24/7."
         ),
-        trace={"log_file": str(WS_LIVE_LOG), "state_file": str(WS_LIVE_STATE)},
+        trace={"log_file": str(LIVE_LOG), "state_file": str(WS_LIVE_STATE)},
         result="failed" if exit_code else "stopped",
     )
 

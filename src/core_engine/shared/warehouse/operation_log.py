@@ -8,24 +8,13 @@ of which of the three modules produced it.
 
 from __future__ import annotations
 
-from core_engine.settings import DATA_WAREHOUSE_LOG, TF_STAGING
-from core_engine.util.logkit.factory import get_logger
+from core_engine.settings import TF_STAGING
+from core_engine.util.logkit import get_logger, log_event
 
 logger = get_logger(
     "data_warehouse",
-    str(DATA_WAREHOUSE_LOG),
-    rotating=True,
     console=False,
-    utc=True,
-    process_scoped=True,
 )
-
-
-def _fmt_count(value) -> str:
-    try:
-        return f"{int(value):,}"
-    except Exception:
-        return str(value)
 
 
 def _tf_from_staging_table(staging_table: str | None) -> str | None:
@@ -53,14 +42,6 @@ def _target_label(
     return f"scope {tf}"
 
 
-def _field(key: str, value) -> str | None:
-    if value is None or value == "":
-        return None
-    if isinstance(value, int):
-        value = _fmt_count(value)
-    return f"{key}={value}"
-
-
 def _warehouse_log(
     level: int,
     *,
@@ -70,12 +51,20 @@ def _warehouse_log(
     result: str,
     **fields,
 ) -> None:
-    parts = [
-        "WAREHOUSE",
-        source,
-        target,
-        action,
-    ]
-    parts.extend(part for key, value in fields.items() if (part := _field(key, value)))
-    parts.append(f"result={result}")
-    logger.log(level, " | ".join(parts))
+    payload = {
+        str(key): value
+        for key, value in fields.items()
+        if value is not None and value != ""
+    }
+    log_event(
+        logger,
+        level,
+        f"warehouse.{action}",
+        f"{action.replace('_', ' ').title()} for {target}",
+        area="DATABASE",
+        stage="FAILED" if str(result).lower() == "failed" else "COMPLETE",
+        result=result,
+        source=source,
+        target=target,
+        **payload,
+    )

@@ -7,8 +7,8 @@ from collections.abc import Iterable
 from datetime import datetime, timezone
 from typing import Any
 
-from core_engine.util.logkit.formatters import clean, operation_line
-from core_engine.util.logkit.tables import cell as _cell, kv as _kv
+from core_engine.util.logkit import cell as _cell
+from core_engine.util.logkit import clean, kv as _kv, operation_line
 
 
 PAIR_HEADER = " | ".join(
@@ -54,7 +54,10 @@ def _duration(seconds: float | int | None) -> str:
 
 def log_historical_block(logger: logging.Logger, level: int, text: str) -> None:
     for raw_line in str(text).split("\n"):
-        logger.log(level, "%s", raw_line.rstrip())
+        line = raw_line.strip()
+        if not line or set(line) <= {"-", "="}:
+            continue
+        logger.log(level, "%s", operation_line("HISTORICAL", line))
 
 
 def _mode_label(mode: str) -> str:

@@ -41,8 +41,7 @@ def test_record_and_send_success_acks_and_leaves_no_pending_rows(tmp_path, monke
 def test_critical_handler_persists_then_returns_without_waiting_for_network(
     tmp_path, monkeypatch
 ):
-    import logging
-    from core_engine.util.logkit.handlers import CriticalDiscordHandler
+    from core_engine.util.logkit import get_logger
     from core_engine.util.notify import critical_outbox
 
     ob = _outbox(tmp_path)
@@ -57,15 +56,17 @@ def test_critical_handler_persists_then_returns_without_waiting_for_network(
     monkeypatch.setattr(ob, "send_one", stalled_send)
     monkeypatch.setattr(critical_outbox, "_OUTBOX", ob)
     monkeypatch.setattr(critical_outbox, "_DISPATCHER", _CriticalDeliveryDispatcher())
-    record = logging.LogRecord(
-        "fault_probe", logging.CRITICAL, __file__, 1, "durable critical", (), None
-    )
-
     started = time.monotonic()
-    CriticalDiscordHandler().emit(record)
+    get_logger(
+        "critical_outbox_fault_probe",
+        stream="alerts",
+        console=False,
+    ).critical("durable critical")
     elapsed = time.monotonic() - started
 
     assert elapsed < 0.2
+    # The SQLite row must already exist when logger.critical() returns.
+    assert ob.status()["pending_count"] == 1
     assert entered.wait(timeout=1)
     assert ob.status()["pending_count"] == 1
     release.set()
