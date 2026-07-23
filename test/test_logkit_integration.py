@@ -8,6 +8,7 @@ import logging
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from core_engine.util.logkit import formatter, query
@@ -105,6 +106,76 @@ def test_query_deduplicates_alert_mirror_by_event_id(tmp_path, monkeypatch):
     monkeypatch.setattr(query, "LOG_ARCHIVE_DIR", tmp_path / "archive")
 
     assert len(query.find_events(since="24h")) == 1
+
+
+def test_status_uses_physical_stream_and_counts_alert_mirror_once(tmp_path, monkeypatch):
+    live = tmp_path / "live.log"
+    alerts = tmp_path / "alerts.log"
+
+    def formatted_line(message: str, level: int, event_id: str, created: float) -> str:
+        record = logging.LogRecord("dp.live.test", level, __file__, 1, message, (), None)
+        record.created = created
+        record.dp_stream = "live"
+        record.dp_component = "test"
+        record.dp_role = "live"
+        record.dp_context = {}
+        record.dp_fields = {}
+        record.dp_event_id = event_id
+        return formatter.OperatorFormatter().format(record) + "\n"
+
+    now = time.time()
+    warning = formatted_line(
+        formatter.operation_line("AUTH", "Token refresh needed", stage="ATTENTION"),
+        logging.WARNING,
+        "mirror-warning-1",
+        now,
+    )
+    completed = formatted_line(
+        formatter.operation_line("LIVE", "Live batch completed", stage="COMPLETE"),
+        logging.INFO,
+        "live-completed-1",
+        now + 1,
+    )
+    live.write_text(warning + completed, encoding="utf-8")
+    alerts.write_text(warning, encoding="utf-8")
+    monkeypatch.setattr(
+        query,
+        "_CURRENT",
+        {
+            "live": live,
+            "historical": tmp_path / "historical.log",
+            "system": tmp_path / "system.log",
+            "alerts": alerts,
+        },
+    )
+    monkeypatch.setattr(query, "LOG_ARCHIVE_DIR", tmp_path / "archive")
+
+    report = query.status_report(since="24h")
+
+    assert report["streams"]["live"]["last_event"] == "live.live.batch.completed"
+    assert report["streams"]["alerts"]["last_event"] == "auth.token.refresh.needed"
+    assert report["events"] == 2
+    assert report["levels"]["WARNING"] == 1
+
+
+def test_status_prints_quiet_for_inactive_alert_stream(capsys):
+    report = {
+        "streams": {
+            "alerts": {
+                "exists": True,
+                "age_seconds": 3600,
+                "last_event": "discord.delivery.event",
+                "last_message": "Delivery event",
+            }
+        },
+        "levels": {},
+    }
+
+    query.print_status(report)
+
+    output = capsys.readouterr().out
+    assert "ALERTS       QUIET" in output
+    assert "ALERTS       STALE" not in output
 
 
 def test_child_stderr_is_classified_and_persisted_in_system_log():

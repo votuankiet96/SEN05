@@ -169,14 +169,25 @@ def print_events(events: list[dict[str, Any]], *, as_json: bool = False) -> None
 
 def status_report(*, since: str = "24h") -> dict[str, Any]:
     events: list[dict[str, Any]] = []
-    for stream in _CURRENT:
-        events.extend(find_events(streams={stream}, since=since, limit=5000))
+    seen_event_ids: set[str] = set()
     latest: dict[str, dict[str, Any]] = {}
     levels = Counter()
-    for event in events:
-        stream = str(event.get("stream", "system"))
-        latest[stream] = event
-        levels[str(event.get("level", "UNKNOWN"))] += 1
+    for stream in _CURRENT:
+        stream_events = find_events(streams={stream}, since=since, limit=5000)
+        if stream_events:
+            # Status describes each physical operator stream. Mirrored warnings in
+            # alerts.log intentionally keep their original logical stream, so using
+            # event["stream"] here would let an old mirror overwrite a newer live
+            # or historical event.
+            latest[stream] = stream_events[-1]
+        for event in stream_events:
+            event_id = str(event.get("event_id") or "")
+            if event_id and event_id != "-":
+                if event_id in seen_event_ids:
+                    continue
+                seen_event_ids.add(event_id)
+            events.append(event)
+            levels[str(event.get("level", "UNKNOWN"))] += 1
     streams: dict[str, Any] = {}
     now = datetime.now(timezone.utc)
     for stream, path in _CURRENT.items():
@@ -216,6 +227,10 @@ def print_status(report: dict[str, Any], *, as_json: bool = False) -> None:
             state = "UNKNOWN"
         elif stream == "historical":
             state = "OK" if age < 36 * 3600 else "STALE"
+        elif stream == "alerts":
+            # A quiet alert stream is normally healthy. Delivery and outbox
+            # health are checked by `doctor`; silence alone must not be an alarm.
+            state = "OK" if age < 20 * 60 else "QUIET"
         else:
             state = "OK" if age < 20 * 60 else "STALE"
         print(
