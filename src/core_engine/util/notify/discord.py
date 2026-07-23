@@ -7,7 +7,6 @@ QUICK_COMMANDS_HINT. Discord webhooks are outbound-only.
 from __future__ import annotations
 
 import logging
-import json
 import os
 import queue
 import re
@@ -25,6 +24,7 @@ from core_engine.settings import NOTIFICATION, RUN_DIR
 from core_engine.util.logkit import get_logger, operation_line
 from core_engine.util.logkit.sink import process_role
 from core_engine.util.notify.transport import post_webhook_once
+from core_engine.util.runtime_state import atomic_write_json
 
 logger = get_logger("discord", stream="alerts", console=False)
 _discord_logger_configured = False
@@ -960,10 +960,7 @@ def _persist_discord_status(event: str) -> None:
                 **_discord_sender.status(),
             }
             target = RUN_DIR / "notification_status" / f"{role}.{os.getpid()}.json"
-            target.parent.mkdir(parents=True, exist_ok=True)
-            temp = target.with_name(f".{target.name}.{threading.get_ident()}.tmp")
-            temp.write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
-            os.replace(temp, target)
+            atomic_write_json(target, payload)
     except Exception as exc:
         _log_sender_exception("status_write", exc)
 

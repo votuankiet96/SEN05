@@ -109,6 +109,7 @@ from core_engine.settings import (  # noqa: E402
     env_int,
 )
 from core_engine.util.coordination.locks import _local_pid_alive as is_pid_alive  # noqa: E402
+from core_engine.util.runtime_state import atomic_write_json  # noqa: E402
 from core_engine.shared.tradingview.auth.jwt_utils import (  # noqa: E402
     GUEST_TOKEN,
     STARTUP_MIN_TOKEN_TTL_SEC,
@@ -505,6 +506,7 @@ def diagnose_connectivity(
                     headers=headers,
                     timeout=(http_connect_timeout, http_read_timeout),
                     allow_redirects=True,
+                    verify=True,
                 )
             except Exception as exc:
                 last_exc = exc
@@ -723,6 +725,9 @@ def _http_request_with_retry(
     HTTP 4xx khác (400/401/403/404) -> không retry vì đây là lỗi từ client.
     """
     last_exc: Exception = RuntimeError("No attempts made")
+    # Never inherit an insecure Session default or a caller's verify=False.
+    # truststore is installed above, so Windows enterprise roots remain usable.
+    kwargs["verify"] = True
 
     for attempt in range(max_retries + 1):
         try:
@@ -872,6 +877,7 @@ def tradingview_http_connectivity_preflight(
                 float(AUTH_CONNECTIVITY_READ_TIMEOUT_SEC),
             ),
             allow_redirects=True,
+            verify=True,
         )
         if resp.status_code < 500:
             return True, f"HTTP {resp.status_code} -> {resp.url}"
@@ -2066,17 +2072,7 @@ def _load_token_cache() -> dict:
 
 
 def _write_token_cache_atomic(data: dict) -> None:
-    _TOKEN_CACHE.parent.mkdir(parents=True, exist_ok=True)
-    tmp = _TOKEN_CACHE.with_name(f"{_TOKEN_CACHE.name}.{os.getpid()}.{threading.get_ident()}.tmp")
-    try:
-        tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        os.replace(str(tmp), str(_TOKEN_CACHE))
-    finally:
-        try:
-            if tmp.exists():
-                tmp.unlink()
-        except Exception:
-            pass
+    atomic_write_json(_TOKEN_CACHE, data)
 
 
 def _save_token_cache(token: str, cookie: str) -> None:

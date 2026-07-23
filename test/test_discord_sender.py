@@ -258,3 +258,20 @@ def test_dedupe_memory_is_ttl_and_size_bounded(isolated_sender, monkeypatch):
 
     assert len(discord._discord_last_sent) <= discord.DISCORD_DEDUPE_MAX_KEYS
     assert len(discord._discord_suppressed) <= discord.DISCORD_DEDUPE_MAX_KEYS
+
+
+def test_discord_status_uses_retrying_atomic_writer(tmp_path, monkeypatch):
+    writes = []
+    monkeypatch.setattr(discord, "RUN_DIR", tmp_path)
+    monkeypatch.setattr(discord, "process_role", lambda: "live")
+    monkeypatch.setattr(
+        discord,
+        "atomic_write_json",
+        lambda path, payload: writes.append((path, payload)),
+    )
+
+    discord._persist_discord_status("delivery_success")
+
+    assert len(writes) == 1
+    assert writes[0][0] == tmp_path / "notification_status" / f"live.{discord.os.getpid()}.json"
+    assert writes[0][1]["event"] == "delivery_success"

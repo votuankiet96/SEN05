@@ -5,7 +5,6 @@ from __future__ import annotations
 import atexit
 import gzip
 import itertools
-import json
 import logging
 import os
 import queue
@@ -30,6 +29,7 @@ from core_engine.settings import (
     SYSTEM_LOG,
 )
 from core_engine.util.logkit.formatter import OperatorFormatter
+from core_engine.util.runtime_state import atomic_write_json
 
 _STREAM_PATHS = {
     "live": LIVE_LOG,
@@ -117,10 +117,7 @@ def _cross_process_lock(name: str, *, timeout: float = 2.0) -> Iterator[None]:
 
 
 def _atomic_json(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temp = path.with_name(f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
-    temp.write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
-    os.replace(temp, path)
+    atomic_write_json(path, payload)
 
 
 def _registry_path() -> Path:

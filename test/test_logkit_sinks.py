@@ -157,3 +157,20 @@ def test_register_creates_source_and_alert_files_before_first_warning(tmp_path, 
         assert alerts.is_file()
     finally:
         manager.close()
+
+
+def test_log_registry_uses_retrying_atomic_writer(tmp_path, monkeypatch):
+    writes = []
+    monkeypatch.setattr(sink, "RUN_DIR", tmp_path)
+    monkeypatch.setattr(sink, "process_role", lambda: "live")
+    monkeypatch.setattr(
+        sink,
+        "atomic_write_json",
+        lambda path, payload: writes.append((path, payload)),
+    )
+
+    sink._register_streams({"live", "alerts"})
+
+    assert len(writes) == 1
+    assert writes[0][0] == tmp_path / "log_sinks" / f"live.{os.getpid()}.json"
+    assert writes[0][1]["streams"] == ["alerts", "live"]

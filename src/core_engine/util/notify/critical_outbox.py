@@ -14,8 +14,6 @@ an unreadable database must never be represented as an empty outbox.
 from __future__ import annotations
 
 import calendar
-import json
-import os
 import sqlite3
 import threading
 import time
@@ -25,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from core_engine.util.notify.transport import post_webhook_once
+from core_engine.util.runtime_state import atomic_write_json
 
 DEFAULT_TIMEOUT_CONNECT_SEC = 5.0
 DEFAULT_TIMEOUT_READ_SEC = 10.0
@@ -425,13 +424,8 @@ class CriticalAlertOutbox:
 
     def _write_status(self) -> None:
         try:
-            self.status_log_path.parent.mkdir(parents=True, exist_ok=True)
             payload = {"updated_at": _utc_now_iso(), **self.status()}
-            temp = self.status_log_path.with_name(
-                f".{self.status_log_path.name}.{os.getpid()}.{threading.get_ident()}.tmp"
-            )
-            temp.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
-            os.replace(temp, self.status_log_path)
+            atomic_write_json(self.status_log_path, payload)
         except Exception as exc:
             raise CriticalOutboxStorageError(
                 f"critical alert status log write failed: {type(exc).__name__}: {exc}"

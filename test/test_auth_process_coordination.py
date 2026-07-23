@@ -73,3 +73,23 @@ def test_historical_promotes_guest_token_from_runtime_cache(monkeypatch):
     assert captured["global_token"] == "fresh-token"
     assert captured["token"] == "fresh-token"
 
+
+def test_auth_http_requests_always_enforce_tls_verification(monkeypatch):
+    captured = {}
+
+    class Session:
+        def request(self, method, url, **kwargs):
+            captured.update(method=method, url=url, **kwargs)
+            return SimpleNamespace(status_code=200)
+
+    monkeypatch.setattr(auth_core, "_get_http_session", lambda: Session())
+
+    response = auth_core._http_request_with_retry(
+        "GET",
+        "https://www.tradingview.com/",
+        max_retries=0,
+        verify=False,
+    )
+
+    assert response.status_code == 200
+    assert captured["verify"] is True
