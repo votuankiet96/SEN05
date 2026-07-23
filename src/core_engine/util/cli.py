@@ -412,11 +412,27 @@ def _run_operator_decision(args: argparse.Namespace) -> int:
     return 0
 
 
-def _terminal_completion_status(exit_code: int) -> tuple[str, str]:
+def _terminal_completion_status(
+    exit_code: int,
+    argv: list[str] | None = None,
+) -> tuple[str, str]:
     if exit_code == EXIT_OK:
         return "completed", "Operator terminal command finished."
     if exit_code == EXIT_CANCELLED:
         return "stopped", "Operator terminal command stopped after a Graceful Stop request."
+    tokens = tuple(str(token).strip().lower() for token in (argv or []) if str(token).strip())
+    command = tokens[0] if tokens else ""
+    read_only_finding = (
+        command in {"doctor", "data-health", "status", "conflict-status"}
+        or (command == "logs" and len(tokens) > 1 and tokens[1] in {"risks", "trace"})
+        or (command == "auth" and len(tokens) > 1 and tokens[1] == "diagnose")
+        or (command == "reconcile-fact" and "--apply" not in tokens)
+    )
+    if exit_code == 1 and read_only_finding:
+        return (
+            "warning",
+            "Operator terminal check completed and found a condition that needs attention.",
+        )
     return "failed", "Operator terminal command finished with an error."
 
 
@@ -736,7 +752,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         raise
     finally:
-        status, message = _terminal_completion_status(exit_code)
+        status, message = _terminal_completion_status(exit_code, argv)
         log_activity(
             "terminal_command_completed",
             component="terminal",

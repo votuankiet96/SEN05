@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from core_engine.other.exit_codes import EXIT_CANCELLED
+from core_engine.util.cli import _terminal_completion_status
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -20,3 +23,19 @@ def test_runbook_names_scheduled_task_not_scm_commands():
     assert "Get-Service SEN05DataProvider" not in runbook
     assert "Start-Service SEN05DataProvider" not in runbook
     assert "Stop-Service SEN05DataProvider" not in runbook
+
+
+def test_read_only_health_findings_are_logged_as_attention_not_failures():
+    status, message = _terminal_completion_status(1, ["logs", "risks", "--since", "30m"])
+
+    assert status == "warning"
+    assert "needs attention" in message
+    assert _terminal_completion_status(1, ["doctor"])[0] == "warning"
+    assert _terminal_completion_status(1, ["reconcile-fact"])[0] == "warning"
+    assert _terminal_completion_status(1, ["reconcile-fact", "--apply"])[0] == "failed"
+
+
+def test_terminal_completion_status_preserves_success_stop_and_real_failure():
+    assert _terminal_completion_status(0, ["settings"])[0] == "completed"
+    assert _terminal_completion_status(EXIT_CANCELLED, ["stop"])[0] == "stopped"
+    assert _terminal_completion_status(1, ["live"])[0] == "failed"

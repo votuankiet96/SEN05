@@ -234,6 +234,65 @@ def test_periodic_db_health_check_does_not_escalate_when_db_unreachable(sup, mon
     assert notified == []
 
 
+def test_periodic_db_health_check_reports_stale_once_and_recovery_once(sup, monkeypatch):
+    monkeypatch.setattr(supervisor_engine.time, "time", lambda: 1_000_000.0)
+    sup._last_db_health_at = 0.0
+    checks = iter(
+        [
+            {
+                "checks": [
+                    {
+                        "name": "database",
+                        "status": "ok",
+                        "detail": {"latest_bar": {"bar_time": "2026-07-23 01:00:00"}},
+                    }
+                ]
+            },
+            {
+                "checks": [
+                    {
+                        "name": "database",
+                        "status": "ok",
+                        "detail": {"latest_bar": {"bar_time": "2026-07-23 01:00:00"}},
+                    }
+                ]
+            },
+            {
+                "checks": [
+                    {
+                        "name": "database",
+                        "status": "ok",
+                        "detail": {"latest_bar": {"bar_time": "2026-07-23 04:00:00"}},
+                    }
+                ]
+            },
+        ]
+    )
+    monkeypatch.setattr(supervisor_engine, "collect_health", lambda **k: next(checks))
+    monkeypatch.setattr(
+        supervisor_engine,
+        "_age_seconds",
+        lambda value: 10_000.0 if value.endswith("01:00:00") else 60.0,
+    )
+    notifications = []
+    errors = []
+    infos = []
+    monkeypatch.setattr(sup, "_safe_notify", lambda fn, **kwargs: notifications.append(kwargs))
+    monkeypatch.setattr(supervisor_engine.logger, "error", lambda *args: errors.append(args))
+    monkeypatch.setattr(supervisor_engine.logger, "info", lambda *args: infos.append(args))
+
+    sup._run_periodic_db_health_check()
+    sup._last_db_health_at = 0.0
+    sup._run_periodic_db_health_check()
+    sup._last_db_health_at = 0.0
+    sup._run_periodic_db_health_check()
+
+    assert len(errors) == 1
+    assert len(infos) == 1
+    assert "freshness recovered" in str(infos[0])
+    assert [item["severity"] for item in notifications] == ["ERROR", "INFO"]
+
+
 # --- High-10: HISTORICAL_MAX_RUNTIME_MINUTES was defined but never used --
 
 

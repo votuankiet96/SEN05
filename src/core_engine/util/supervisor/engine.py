@@ -171,6 +171,7 @@ class BackendSupervisor:
         )
         self._last_health: dict[str, Any] = {}
         self._last_runtime_health_status: str | None = None
+        self._last_fact_freshness_status: str | None = None
         self._last_db_health_at = 0.0
         self._last_critical_drain_at = 0.0
         self._critical_drain_thread: threading.Thread | None = None
@@ -1388,31 +1389,60 @@ class BackendSupervisor:
             latest_bar = (db_check.get("detail") or {}).get("latest_bar")
             if latest_bar and latest_bar.get("bar_time"):
                 age = _age_seconds(latest_bar.get("bar_time"))
-                if age is not None and self.live_enabled and age > BACKEND.live_stale_minutes * 60 * 4:
-                    logger.error(
-                        "%s",
-                        _slog(
-                            "Fact_OHLCV freshness check failed",
-                            latest_bar=latest_bar,
-                            age_seconds=round(age),
-                            result="stale",
-                        ),
-                    )
+                if age is not None and self.live_enabled:
+                    threshold_seconds = BACKEND.live_stale_minutes * 60 * 4
+                    status = "stale" if age > threshold_seconds else "ok"
+                    previous = self._last_fact_freshness_status
+                    self._last_fact_freshness_status = status
+                    if status == "stale" and previous != "stale":
+                        logger.error(
+                            "%s",
+                            _slog(
+                                "Fact_OHLCV freshness check failed",
+                                latest_bar=latest_bar,
+                                age_seconds=round(age),
+                                threshold_seconds=threshold_seconds,
+                                result="stale",
+                            ),
+                        )
 
-                    self._safe_notify(
-                        notify_backend_event,
-                        severity="ERROR",
-                        title="Fact_OHLCV is stale",
-                        summary="The most recent row in DWH.Fact_OHLCV is older than expected while live fetching "
-                        "is enabled. Candles may be stuck in staging - check reconcile-fact.",
-                        current_state={"latest_bar": latest_bar, "age_seconds": round(age)},
-                        data_result="Strategies reading Fact_OHLCV may be trading on stale data.",
-                        health_risk="High for an AutoTrading system.",
-                        recommended_action="Run `python -m core_engine reconcile-fact` to check for staging rows "
-                        "stuck behind a broken/skipped ETL call.",
-                        trace={"tool": "python -m core_engine reconcile-fact"},
-                        result="failed",
-                    )
+                        self._safe_notify(
+                            notify_backend_event,
+                            severity="ERROR",
+                            title="Fact_OHLCV is stale",
+                            summary="The most recent row in DWH.Fact_OHLCV is older than expected while live fetching "
+                            "is enabled. Candles may be stuck in staging - check reconcile-fact.",
+                            current_state={"latest_bar": latest_bar, "age_seconds": round(age)},
+                            data_result="Strategies reading Fact_OHLCV may be trading on stale data.",
+                            health_risk="High for an AutoTrading system.",
+                            recommended_action="Run `python -m core_engine reconcile-fact` to check for staging rows "
+                            "stuck behind a broken/skipped ETL call.",
+                            trace={"tool": "python -m core_engine reconcile-fact"},
+                            result="failed",
+                        )
+                    elif status == "ok" and previous == "stale":
+                        logger.info(
+                            "%s",
+                            _slog(
+                                "Fact_OHLCV freshness recovered",
+                                latest_bar=latest_bar,
+                                age_seconds=round(age),
+                                threshold_seconds=threshold_seconds,
+                                result="recovered",
+                            ),
+                        )
+                        self._safe_notify(
+                            notify_backend_event,
+                            severity="INFO",
+                            title="Fact_OHLCV freshness recovered",
+                            summary="DWH.Fact_OHLCV is advancing within the expected live-data window again.",
+                            current_state={"latest_bar": latest_bar, "age_seconds": round(age)},
+                            data_result="Consumers can read current OHLCV data again.",
+                            health_risk="Recovered; continue normal monitoring.",
+                            recommended_action="No operator action is required.",
+                            trace={"previous_status": previous, "current_status": status},
+                            result="recovered",
+                        )
 
     def _report_runtime_health_transition(self, health: dict[str, Any]) -> None:
         """Make disk/readiness degradation visible without alert spam."""
