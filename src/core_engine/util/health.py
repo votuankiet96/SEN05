@@ -49,6 +49,7 @@ from core_engine.settings import (
     WS_OVERFLOW_SPOOL,
     SYSTEM_LOG,
     ensure_runtime_dirs,
+    inspect_operator_config,
 )
 from core_engine.util.coordination.locks import (
     DP_PROGRAM_LOCK,
@@ -184,11 +185,26 @@ def _config_check() -> Check:
             "Required DP Program configuration is missing.",
             {"missing": missing},
         )
+    report = inspect_operator_config()
+    if not report.get("ok"):
+        return Check(
+            "config_contract",
+            "fail",
+            "Operator config contains unsupported or invalid settings.",
+            {
+                "env_file": str(ENV_FILE),
+                "issues": report.get("issues", []),
+            },
+        )
     return Check(
-        "config",
+        "config_contract",
         "ok",
-        "Config file and instrument list are available.",
-        {"symbols": len(SYMBOLS), "env_file": str(ENV_FILE)},
+        "Operator config is valid and contains only supported settings.",
+        {
+            "symbols": len(SYMBOLS),
+            "env_file": str(ENV_FILE),
+            "operator_settings": report.get("key_count", 0),
+        },
     )
 
 
@@ -710,7 +726,7 @@ def _live_state_check() -> Check:
         return Check(
             "live_state",
             "fail",
-            f"Live is configured to run (WS_LIVE_AUTO_START=1) but its state is '{state.get('status')}'.",
+            f"Live is designed to run continuously but its state is '{state.get('status')}'.",
             detail,
         )
     if active_status and pid and alive is False:

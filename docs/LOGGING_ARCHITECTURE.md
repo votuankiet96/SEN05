@@ -93,8 +93,8 @@ silent/missing streams. Mirrored alert records are deduplicated by `event_id`.
 
 ## Retention and health
 
-- Rotation occurs at UTC day change or the configured `LOG_MAX_FILE_MB`.
-- Default archive retention is `BACKEND_LOG_RETENTION_DAYS=30`.
+- Rotation occurs at UTC day change or the internal 25 MB file-size boundary.
+- Default archive retention is `LOG_RETENTION_DAYS=30`.
 - `LOG_DISK_BUDGET_MB` bounds current logs plus archives; cleanup removes only
   closed archives, oldest first.
 - Current canonical logs and spool/outbox data are never deleted by retention.

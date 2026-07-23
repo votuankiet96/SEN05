@@ -106,7 +106,7 @@ from core_engine.util.notify.discord import notify_auth_event, sanitize_ssl_keyl
 from core_engine.settings import (  # noqa: E402
     CACHE_DIR,
     TRADINGVIEW,
-    env_int,
+    TRADINGVIEW_POLICY,
 )
 from core_engine.util.coordination.locks import _local_pid_alive as is_pid_alive  # noqa: E402
 from core_engine.util.runtime_state import atomic_write_json  # noqa: E402
@@ -187,18 +187,10 @@ HTTP_MAX_DELAY_SEC = 120.0
 AUTH_REFRESH_COOLDOWN_SEC = TRADINGVIEW.auth_refresh_cooldown_sec
 AUTH_TRANSIENT_COOLDOWN_SEC = TRADINGVIEW.auth_transient_cooldown_sec
 AUTH_CONNECTIVITY_PREFLIGHT = TRADINGVIEW.auth_connectivity_preflight
-AUTH_CONNECTIVITY_CONNECT_TIMEOUT_SEC = env_int(
-    "TV_AUTH_CONNECTIVITY_CONNECT_TIMEOUT_SEC", 2, minimum=1
-)
-AUTH_CONNECTIVITY_READ_TIMEOUT_SEC = env_int(
-    "TV_AUTH_CONNECTIVITY_READ_TIMEOUT_SEC", 4, minimum=1
-)
-AUTH_REFRESH_LOCK_STALE_SEC = env_int(
-    "TV_AUTH_REFRESH_LOCK_STALE_SEC", 20 * 60, minimum=60
-)
-AUTH_REFRESH_PEER_WAIT_SEC = env_int(
-    "TV_AUTH_REFRESH_PEER_WAIT_SEC", 90, minimum=0
-)
+AUTH_CONNECTIVITY_CONNECT_TIMEOUT_SEC = TRADINGVIEW_POLICY.auth_connect_timeout_sec
+AUTH_CONNECTIVITY_READ_TIMEOUT_SEC = TRADINGVIEW_POLICY.auth_read_timeout_sec
+AUTH_REFRESH_LOCK_STALE_SEC = TRADINGVIEW_POLICY.auth_refresh_lock_stale_sec
+AUTH_REFRESH_PEER_WAIT_SEC = TRADINGVIEW_POLICY.auth_refresh_peer_wait_sec
 AUTH_REFRESH_PEER_POLL_SEC = 1.0
 AUTH_HEADLESS_FRESH_LOGIN_ENABLED = TRADINGVIEW.headless_fresh_login
 

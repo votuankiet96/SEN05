@@ -2,10 +2,8 @@
 
 ``redis`` is unsupported because both engines require SQL as the durable
 warehouse. ``both`` is supported: SQL remains authoritative while the live
-engine additionally publishes best-effort Redis candle snapshots. Production
-currently reaches ``both`` through the backward-compatible
-``CANDLE_SNAPSHOT_ENABLED=1`` fallback, so rejecting it would stop both workers
-immediately after deploy.
+engine additionally publishes best-effort Redis candle snapshots. Storage
+mode is now a reviewed system contract rather than an operator env toggle.
 """
 
 from __future__ import annotations

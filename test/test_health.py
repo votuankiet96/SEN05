@@ -4,7 +4,7 @@ Two gaps closed here:
   1. "failed"/"stopped" were never in the active_status set at all, so a
      live worker that crashed (and was not yet auto-restarted, e.g. mid
      backoff) reported "ok" via doctor/status instead of "fail", even
-     though live is configured to run 24/7 (WS_LIVE_AUTO_START=1).
+     though live is designed to run continuously.
   2. The only staleness signal was updated_at, a heartbeat written by its
      own dedicated thread - a deadlocked main batch loop could keep that
      heartbeat fresh forever while never finishing another batch.
@@ -190,8 +190,8 @@ def test_stopped_status_is_fail_when_live_auto_start_enabled(live_state_path, ba
 
 
 def test_failed_status_is_not_fail_when_live_auto_start_disabled(live_state_path, backend_disabled):
-    # If the operator has WS_LIVE_AUTO_START=0, "stopped"/"failed" is
-    # expected, not a health problem to page anyone about.
+    # The helper still supports an intentionally disabled live component for
+    # isolated maintenance/test deployments.
     _write_state(live_state_path, status="stopped", pid=None, updated_at=_iso(datetime.now(timezone.utc)))
     check = health._live_state_check()
     assert check.status != "fail"

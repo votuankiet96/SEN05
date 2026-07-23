@@ -145,25 +145,20 @@ def _resolve_ws_symbols(symbols: list[dict], asset_types: tuple[str, ...]) -> li
 
 
 def _check_expected_live_symbol_count(count: int, expected: int, asset_types: tuple[str, ...]) -> None:
-    """Raises if EXPECTED_LIVE_SYMBOLS is set and does not match. Split out
-    from the module-level call below purely so it is unit-testable without
-    needing to reload core_engine.core.live.engine (a module-level import-time
-    side effect otherwise)."""
+    """Refuse a live universe that differs from the reviewed system contract."""
     if expected and count != expected:
         raise RuntimeError(
-            f"EXPECTED_LIVE_SYMBOLS={expected} but LIVE_ASSET_TYPES={','.join(asset_types)} "
+            f"The system contract expects {expected} live symbols in "
+            f"{','.join(asset_types)}, "
             f"currently resolves to {count} symbol(s) from instruments.py. Refusing to start "
             "rather than silently watching a different live universe than expected - update "
-            "EXPECTED_LIVE_SYMBOLS (or LIVE_ASSET_TYPES/instruments.py, whichever changed) "
-            "after confirming the new count is intentional."
+            "settings/system.py or instruments.py only after the changed business scope has "
+            "been reviewed and approved."
         )
 
 
-# Which asset types are watched live is operator-configurable
-# (LIVE_ASSET_TYPES), defaulting to the historical "Indice,Metal,Crypto"
-# scope - see settings.operational.LiveSettings.asset_types for why the 26
-# FOREX symbols are not in this set by default and why that is a business
-# decision, not a bug to silently fix here.
+# The live universe is a reviewed system contract, not an operator toggle.
+# FOREX remains historical-only by business decision.
 WS_SYMBOLS = _resolve_ws_symbols(SYMBOLS, LIVE.asset_types)
 
 _check_expected_live_symbol_count(len(WS_SYMBOLS), LIVE.expected_symbol_count, LIVE.asset_types)
@@ -1270,10 +1265,8 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
     if STORAGE.mode == "redis":
         # Redis-only is not a durable warehouse implementation: this engine
         # always commits SQL first and only then publishes optional Redis
-        # candle snapshots. ``both`` is valid (and is the backward-compatible
-        # result of CANDLE_SNAPSHOT_ENABLED=1); SQL remains authoritative.
-        # Refuse only ``redis`` so an operator cannot mistakenly take SQL
-        # offline while believing the setting changed the durable write path.
+        # candle snapshots. Keep this defensive guard even though storage mode
+        # is now a reviewed system constant rather than an operator setting.
         logger.critical(
             "%s",
             _llog(
@@ -1284,8 +1277,8 @@ def main(smoke_seconds: int | None = None, *, conflict_policy: str | None = None
             ),
         )
         print(
-            f"ERROR: DP_STORAGE_MODE={STORAGE.mode!r} is not supported by the live engine "
-            "because SQL is the durable system of record. Set DP_STORAGE_MODE=sql or both."
+            f"ERROR: System storage mode {STORAGE.mode!r} is unsupported because SQL is "
+            "the durable system of record. Correct settings/system.py before deployment."
         )
         return 1
 

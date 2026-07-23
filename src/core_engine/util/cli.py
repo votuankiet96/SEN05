@@ -37,6 +37,7 @@ from core_engine.settings import (
     SYMBOLS,
     TF_DISPLAY_ORDER,
     TRADINGVIEW,
+    inspect_operator_config,
 )
 from core_engine.util.coordination.locks import (
     DP_PROGRAM_LOCK,
@@ -256,7 +257,7 @@ def _collect_core_settings() -> dict[str, Any]:
             "disk_spool_max_rows": LIVE.max_spool_rows,
         },
         "historical_pulling": {
-            "default_provider": HISTORICAL.provider,
+            "provider": "websocket",
             "drop_open_last_bar": HISTORICAL.drop_open_last_bar,
             "hole_lookback_days": HISTORICAL.hole_lookback_days,
             "max_consecutive_fail": HISTORICAL.max_consecutive_fail,
@@ -317,6 +318,7 @@ def _collect_core_settings() -> dict[str, Any]:
             "cache": str(CACHE_DIR),
             "spool": str(SPOOL_DIR),
         },
+        "operator_config": inspect_operator_config(),
     }
 
 
@@ -709,6 +711,16 @@ def _dispatch(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] in {"run", "live", "historical"}:
+        config_report = inspect_operator_config()
+        if not config_report.get("ok"):
+            print("CONFIG ERROR")
+            print()
+            for issue in config_report.get("issues", []):
+                print(f"- {issue}")
+            print()
+            print("Run `python -m core_engine doctor` after correcting config/dp_provider.env.")
+            return 2
     started = time.time()
     command_label = argv[0] if argv else "help"
     log_activity(

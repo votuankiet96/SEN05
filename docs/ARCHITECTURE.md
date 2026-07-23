@@ -97,9 +97,10 @@ src/core_engine/
 │   └── exit_codes.py               (14d)   mã thoát process dùng chung (OK/ERROR/LOCK_CONFLICT/CANCELLED)
 │
 └── settings/                               NỀN CẤU HÌNH TOÀN HỆ THỐNG — đứng ngoài 4 nhóm trên
-    ├── operational.py             (452d)   đọc config/dp_provider.env, định kiểu — LIVE/HISTORICAL/DB/BACKEND/...
-    ├── instruments.py             (122d)   danh sách 37 symbol cố định (nguồn sự thật duy nhất)
-    └── system.py                   (93d)   bảng cố định: timeframe/interval map, staging table name, N_BARS mặc định
+    ├── operational.py                     validates the small operator env surface and builds typed settings
+    ├── internal.py                        reviewed retry, timeout, queue and protocol policies
+    ├── instruments.py                     fixed list of 37 symbols (single source of truth)
+    └── system.py                          reviewed live scope, SQL durability and domain tables
 ```
 
 ---
@@ -147,4 +148,4 @@ src/core_engine/
 
 ### `other/` và `settings/`
 
-`other/` chỉ 2 file tiện ích không trạng thái (TLS trust-store, exit code) — dùng bởi cả core lẫn util nên không thuộc riêng nhóm nào. `settings/` là nền cấu hình duy nhất cho toàn hệ thống: `instruments.py` định nghĩa cứng 37 symbol, `system.py` là bảng miền cố định (timeframe/staging table), `operational.py` đọc `config/dp_provider.env` và định kiểu mọi giá trị vận hành operator có thể chỉnh.
+`other/` chỉ 2 file tiện ích không trạng thái (TLS trust-store, exit code) — dùng bởi cả core lẫn util nên không thuộc riêng nhóm nào. `settings/` là biên cấu hình duy nhất: `operational.py` chỉ đọc và kiểm tra giá trị triển khai mà operator có thể chỉnh hợp lý; `internal.py` giữ chính sách kỹ thuật như retry/timeout/queue; `system.py` giữ hợp đồng sản phẩm đã review; `instruments.py` giữ danh sách 37 symbol.

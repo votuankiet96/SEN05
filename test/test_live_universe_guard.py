@@ -1,12 +1,8 @@
-"""Tests for the P0-8 fix: live/engine.py's watched-symbol universe is now
-operator-configurable (LIVE_ASSET_TYPES) instead of a hardcoded
-{"Indice", "Metal", "Crypto"} literal, and an optional EXPECTED_LIVE_SYMBOLS
-guard can fail fast if the resolved count silently drifts (e.g. someone
-adds a new asset_type to instruments.py without updating LIVE_ASSET_TYPES,
-or vice versa).
+"""Tests for the reviewed live-universe safety contract.
 
-This is explicitly NOT about deciding whether FOREX should be live - see
-docs/OPERATOR_RUNBOOK.md for that open question, left for Kiet to decide.
+The production universe is deliberately fixed at Indice, Metal and Crypto.
+The expected count prevents a code or instrument-list edit from silently
+changing business scope.
 """
 
 from __future__ import annotations
@@ -33,10 +29,7 @@ def test_resolve_ws_symbols_default_scope_excludes_forex():
     assert {s["tv_symbol"] for s in resolved} == {"US500", "GOLD", "BTCUSD"}
 
 
-def test_resolve_ws_symbols_is_configurable_to_include_forex():
-    # Proves the universe is now driven by settings, not a hardcoded
-    # literal - this does NOT mean FOREX should actually be enabled by
-    # default; it is a guard test, not a policy change.
+def test_resolve_ws_symbols_helper_can_express_a_reviewed_future_scope():
     resolved = _resolve_ws_symbols(_symbols(), ("Indice", "Metal", "Crypto", "FOREX"))
     assert {s["tv_symbol"] for s in resolved} == {"US500", "GOLD", "BTCUSD", "EURUSD"}
 
@@ -50,16 +43,12 @@ def test_expected_count_matching_does_not_raise():
 
 
 def test_expected_count_mismatch_raises_with_actionable_message():
-    with pytest.raises(RuntimeError, match="EXPECTED_LIVE_SYMBOLS"):
+    with pytest.raises(RuntimeError, match="system contract expects"):
         _check_expected_live_symbol_count(count=12, expected=11, asset_types=("Indice", "Metal", "Crypto"))
 
 
 def test_expected_symbol_count_default_is_active_and_matches_real_instruments():
-    # Round-3 audit NEW finding: EXPECTED_LIVE_SYMBOLS defaulted to 0, which
-    # `if expected and count != expected` treats as "guard disabled" - so
-    # the drift guard silently never fired in production. The default must
-    # be non-zero (enforcing) AND must match what LIVE_ASSET_TYPES actually
-    # resolves to today, or every real startup would fail.
+    # The production default must be non-zero and match the reviewed scope.
     from core_engine.settings import LIVE
     from core_engine.settings.instruments import SYMBOLS
 

@@ -1,17 +1,14 @@
 """Fixed, code-level domain configuration.
 
-Unlike `core_engine.settings.operational`, nothing here is meant to differ
-between deployments: timeframe/interval mappings, staging table names, and
-default bar counts are part of how the DP Program domain model works, not
-something an operator tunes per environment. A couple of tables still allow
-an env override for historical compatibility (e.g. `N_BARS_*`), which is why
-this module imports the `env_int` helper from `operational`.
+Nothing here varies by deployment. Changes require a reviewed commit because
+they alter the data contract, supported market universe, or storage design.
 """
 
 from __future__ import annotations
 
-from core_engine.settings.operational import env_int
-
+LIVE_ASSET_TYPES: tuple[str, ...] = ("Indice", "Metal", "Crypto")
+EXPECTED_LIVE_SYMBOLS = 11
+STORAGE_MODE = "sql"
 
 TF_INTERVAL_MAP: dict[str, str] = {
     "M5": "5",
@@ -50,21 +47,21 @@ TF_STAGING: dict[str, str] = {
 }
 
 DEFAULT_N_BARS: dict[str, int] = {
-    "W": env_int("N_BARS_W", 1000),
-    "D1": env_int("N_BARS_D1", 5000),
-    "H8": env_int("N_BARS_H8", 10000),
-    "H6": env_int("N_BARS_H6", 10000),
-    "H4": env_int("N_BARS_H4", 10000),
-    "H3": env_int("N_BARS_H3", 10000),
-    "H2": env_int("N_BARS_H2", 10000),
-    "H1": env_int("N_BARS_H1", 20000),
-    "M90": env_int("N_BARS_M90", 10000),
-    "M45": env_int("N_BARS_M45", 10000),
-    "M30": env_int("N_BARS_M30", 20000),
-    "M20": env_int("N_BARS_M20", 20000),
-    "M15": env_int("N_BARS_M15", 20000),
-    "M10": env_int("N_BARS_M10", 20000),
-    "M5": env_int("N_BARS_M5", 20000),
+    "W": 1_000,
+    "D1": 5_000,
+    "H8": 10_000,
+    "H6": 10_000,
+    "H4": 10_000,
+    "H3": 10_000,
+    "H2": 10_000,
+    "H1": 20_000,
+    "M90": 10_000,
+    "M45": 10_000,
+    "M30": 20_000,
+    "M20": 20_000,
+    "M15": 20_000,
+    "M10": 20_000,
+    "M5": 20_000,
 }
 
 SYMBOL_OVERNIGHT_MINS = {
@@ -80,10 +77,10 @@ SYMBOL_OVERNIGHT_MINS = {
 }
 
 OVERNIGHT_GAP_MINUTES = {
-    "Indice": env_int("PIPELINE_OVERNIGHT_GAP_INDICE", 1080, minimum=0),
-    "Metal": env_int("PIPELINE_OVERNIGHT_GAP_METAL", 180, minimum=0),
-    "FOREX": env_int("PIPELINE_OVERNIGHT_GAP_FOREX", 150, minimum=0),
-    "Crypto": env_int("PIPELINE_OVERNIGHT_GAP_CRYPTO", 0, minimum=0),
+    "Indice": 1_080,
+    "Metal": 180,
+    "FOREX": 150,
+    "Crypto": 0,
 }
 
 _ORDERED_TFS = ["W", "D1", "H8", "H6", "H4", "H3", "H2", "H1", "M90", "M45", "M30", "M20", "M15", "M10", "M5"]

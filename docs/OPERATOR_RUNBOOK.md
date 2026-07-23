@@ -49,18 +49,27 @@ WorkingDirectory C:\Share\dp_program
 ## 3. Configuration contract
 
 Operator configuration is `C:\Share\dp_program\config\dp_provider.env`.
-Never paste its contents into chat, tickets, or reports. The production guard
-values are:
+Never paste its contents into chat, tickets, or reports. Start from
+`config\dp_provider.env.example`; every supported setting has a plain-English
+description there.
 
-```env
-LIVE_ASSET_TYPES=Indice,Metal,Crypto
-EXPECTED_LIVE_SYMBOLS=11
-HISTORICAL_BACKFILL_ENABLED=1
-HISTORICAL_BACKFILL_UTC=11:00,22:00
-```
+The operator file contains only deployment-specific values:
 
-`EXPECTED_LIVE_SYMBOLS` defaults to 11 if omitted. Startup fails rather than
-silently accepting a different live universe. Verify the resolved values:
+- SQL address and optional SQL credentials.
+- TradingView credentials, browser profile and optional sign-in helpers.
+- Historical schedule enable/disable and UTC schedule.
+- Discord webhook.
+- Log level, retention days and disk budget.
+- Optional Redis connection credentials.
+
+Live scope, SQL durability, retry/backoff, queue sizes, timeouts and protocol
+mechanics are reviewed system design values. They are intentionally not
+operator switches. The approved scope is 11 live symbols (Indice, Metal and
+Crypto) across 15 timeframes; FOREX remains historical-only.
+
+The config loader fails before either engine starts if it finds an unknown
+key, duplicate key or invalid value. Verify both the operator file and resolved
+system contract:
 
 ```powershell
 cd C:\Share\dp_program
@@ -68,8 +77,10 @@ cd C:\Share\dp_program
   -m core_engine settings --json
 ```
 
-Acceptance fields are `expected_live_symbols=11`,
-`resolved_live_symbols=11`, and `symbol_timeframe_sessions=165`.
+Acceptance fields are `operator_config.ok=true`,
+`expected_live_symbols=11`, `resolved_live_symbols=11`,
+`symbol_timeframe_sessions=165`, `storage_mode=sql`,
+`candle_snapshot_enabled=false`, and `pubsub_enabled=false`.
 
 ## 4. SQL and Redis data contracts
 
@@ -77,17 +88,18 @@ SQL Server database `SEN05_AutoTrading` is the durable system of record.
 `DWH.usp_LoadDirect` must advertise `DPContractVersion=4`, and
 `SEN.ActiveTask` must contain both `OwnerId` and `Fence`.
 
-Redis/OG in `both` mode is an **eventually consistent candle snapshot**:
+Redis/OG, when enabled by a reviewed code release, is an **eventually
+consistent candle snapshot**:
 
 - SQL remains authoritative for recovery, reconciliation and audit.
 - Redis delivery is not guaranteed lossless for every event.
 - On Redis recovery, DP Program reseeds a bounded snapshot from SQL.
 - OG must not treat Redis Stream continuity as proof that no candle was lost;
   it must tolerate reseed/duplicate snapshot events.
-- `DP_STORAGE_MODE=redis` is forbidden and fails startup. Use `sql` or `both`.
+- The production code contract is SQL-only; storage mode is not an env toggle.
 
-This is the approved production contract; a durable Redis outbox is not a GO
-prerequisite under this contract.
+SQL remains the approved production contract. Enabling Redis requires a code
+review and release; a durable Redis outbox is not implied by snapshot mode.
 
 ## 5. Daily Scheduled Task operations
 

@@ -10,8 +10,10 @@ that working tree snapshot, not the committed HEAD. **Re-verify line numbers
 against current code before implementing anything here** — this document is a
 proposal for review, not an already-applied change.
 
-Status: **proposal only, nothing in this document has been applied to the
-codebase.**
+Status: **implemented and superseded on 2026-07-23.** This file is retained as
+the audit trail that led to the final design. The current contract is defined
+by `config/dp_provider.env.example`, `settings/operational.py`,
+`settings/internal.py`, `settings/system.py`, and `docs/OPERATOR_RUNBOOK.md`.
 
 ## 1. Purpose
 
