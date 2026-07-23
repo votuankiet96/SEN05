@@ -87,6 +87,9 @@ LIVE_RESTART_SLOW_MIN_SEC = 120
 # leave a permanently smaller retry budget for the rest of that run.
 LIVE_RESTART_STABLE_RESET_SEC = 1800
 LIVE_SEMANTIC_STALE_CONFIRMATIONS = 3
+_STARTUP_TRANSIENT_HEALTH_CHECKS = frozenset(
+    {"live_state", "historical_state", "discord"}
+)
 
 
 def _child_stderr_level(line: str) -> int:
@@ -96,6 +99,16 @@ def _child_stderr_level(line: str) -> int:
     if any(word in text for word in ("warning", "deprecated")):
         return logging.WARNING
     return logging.INFO
+
+
+def _startup_actionable_failures(health: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return real preflight failures, excluding children not spawned yet."""
+    return [
+        check
+        for check in health.get("checks", [])
+        if str(check.get("status") or "").lower() == "fail"
+        and str(check.get("name") or "") not in _STARTUP_TRANSIENT_HEALTH_CHECKS
+    ]
 
 
 def _pump_child_stderr(
@@ -1517,8 +1530,17 @@ class BackendSupervisor:
         health = collect_health(deep_auth=False, include_database=True)
         self._last_health = health
         self._report_runtime_health_transition(health)
-        if health.get("status") == "fail":
-            logger.warning("%s", _slog("Startup health check failed", action="continue_and_report", result="warning"))
+        startup_failures = _startup_actionable_failures(health)
+        if startup_failures:
+            logger.warning(
+                "%s",
+                _slog(
+                    "Startup readiness check found actionable failures",
+                    failed_checks=[str(check.get("name") or "unknown") for check in startup_failures],
+                    action="continue_and_report",
+                    result="warning",
+                ),
+            )
         contract_check = next(
             (c for c in health.get("checks", []) if c.get("name") == "db_contract"),
             None,

@@ -25,6 +25,7 @@ from core_engine.util.supervisor.engine import (
     LIVE_RESTART_BACKOFF_MAX_SEC,
     LIVE_RESTART_SLOW_MIN_SEC,
     BackendSupervisor,
+    _startup_actionable_failures,
 )
 
 
@@ -291,6 +292,33 @@ def test_periodic_db_health_check_reports_stale_once_and_recovery_once(sup, monk
     assert len(infos) == 1
     assert "freshness recovered" in str(infos[0])
     assert [item["severity"] for item in notifications] == ["ERROR", "INFO"]
+
+
+def test_startup_health_ignores_children_that_have_not_been_spawned():
+    health = {
+        "status": "fail",
+        "checks": [
+            {"name": "live_state", "status": "fail", "message": "Live is stopped."},
+            {"name": "historical_state", "status": "fail", "message": "No run yet."},
+            {"name": "discord", "status": "fail", "message": "Sender has not started."},
+            {"name": "database", "status": "ok", "message": "SQL is reachable."},
+        ],
+    }
+
+    assert _startup_actionable_failures(health) == []
+
+
+def test_startup_health_keeps_real_readiness_failures():
+    database_failure = {"name": "database", "status": "fail", "message": "SQL is unreachable."}
+    health = {
+        "status": "fail",
+        "checks": [
+            {"name": "live_state", "status": "fail", "message": "Live is stopped."},
+            database_failure,
+        ],
+    }
+
+    assert _startup_actionable_failures(health) == [database_failure]
 
 
 # --- High-10: HISTORICAL_MAX_RUNTIME_MINUTES was defined but never used --
