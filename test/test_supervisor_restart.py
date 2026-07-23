@@ -18,6 +18,7 @@ from types import SimpleNamespace
 import pytest
 
 from core_engine.other.exit_codes import EXIT_CANCELLED, EXIT_LOCK_CONFLICT
+from core_engine.util.runtime_state import JsonReadResult
 from core_engine.util.supervisor import engine as supervisor_engine
 from core_engine.util.supervisor.engine import (
     LIVE_RESTART_BACKOFF_BASE_SEC,
@@ -366,7 +367,7 @@ def test_supervisor_rechecks_stale_lease_after_boot_sql_recovers(sup, monkeypatc
 
 
 def test_monitor_restarts_when_first_batch_never_completes(sup, monkeypatch):
-    """A fresh heartbeat must not hide a main loop stuck in its first batch."""
+    """Three identical valid snapshots prove a stuck first batch."""
     from datetime import datetime, timedelta, timezone
 
     now = datetime.now(timezone.utc)
@@ -374,22 +375,132 @@ def test_monitor_restarts_when_first_batch_never_completes(sup, monkeypatch):
     sup.live.started_at = time.time() - 3600
     monkeypatch.setattr(
         supervisor_engine,
-        "_load_json",
-        lambda _path: {
-            "pid": None,
-            "status": "batch_running",
-            "updated_at": now.isoformat(),
-            "child_started_at": (now - timedelta(hours=1)).isoformat(),
-            "batch_started_at": (now - timedelta(minutes=30)).isoformat(),
-            "batch_completed_at": None,
-        },
+        "read_json_snapshot",
+        lambda _path: JsonReadResult(
+            data={
+                "pid": None,
+                "status": "batch_running",
+                "updated_at": now.isoformat(),
+                "child_started_at": (now - timedelta(hours=1)).isoformat(),
+                "batch_started_at": (now - timedelta(minutes=30)).isoformat(),
+                "batch_completed_at": None,
+            },
+            error=None,
+            attempts=1,
+        ),
     )
     restarted = []
     monkeypatch.setattr(sup, "_restart_live", lambda reason, **kwargs: restarted.append(reason))
 
     sup._monitor_live_freshness()
+    sup._monitor_live_freshness()
+    assert restarted == []
+    sup._monitor_live_freshness()
 
     assert restarted and "first_batch" in restarted[0]
+
+
+def test_monitor_ignores_transient_state_read_failure_when_output_is_fresh(sup, monkeypatch):
+    """A Windows sharing race must never be reinterpreted as missing progress."""
+
+    sup.live.process = SimpleNamespace(poll=lambda: None, pid=1234)
+    sup.live.started_at = time.time() - 3600
+    monkeypatch.setattr(
+        supervisor_engine,
+        "read_json_snapshot",
+        lambda _path: JsonReadResult(
+            data=None,
+            error=PermissionError("fault-injected sharing violation"),
+            attempts=5,
+        ),
+    )
+    monkeypatch.setattr(sup, "_live_output_age_seconds", lambda: 1.0)
+    restarted = []
+    monkeypatch.setattr(sup, "_restart_live", lambda reason, **kwargs: restarted.append(reason))
+
+    sup._monitor_live_freshness()
+
+    assert restarted == []
+    assert sup._live_semantic_stale_confirmations == 0
+
+
+def test_monitor_requires_three_matching_stale_batch_snapshots(sup, monkeypatch):
+    """One stale-looking state read is insufficient evidence for a recycle."""
+
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    state = {
+        "pid": 1234,
+        "status": "waiting",
+        "updated_at": now.isoformat(),
+        "batch_completed_at": (now - timedelta(minutes=30)).isoformat(),
+    }
+    sup.live.process = SimpleNamespace(poll=lambda: None, pid=1234)
+    sup.live.started_at = time.time() - 3600
+    monkeypatch.setattr(
+        supervisor_engine,
+        "read_json_snapshot",
+        lambda _path: JsonReadResult(data=state, error=None, attempts=1),
+    )
+    restarted = []
+    monkeypatch.setattr(sup, "_restart_live", lambda reason, **kwargs: restarted.append(reason))
+
+    sup._monitor_live_freshness()
+    sup._monitor_live_freshness()
+    assert restarted == []
+
+    sup._monitor_live_freshness()
+    assert len(restarted) == 1
+    assert "stale_batch_progress" in restarted[0]
+
+
+def test_monitor_resets_stale_vote_when_snapshot_progresses(sup, monkeypatch):
+    """Stale confirmations must be consecutive observations of one watermark."""
+
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    snapshots = iter(
+        [
+            {
+                "pid": 1234,
+                "status": "waiting",
+                "updated_at": now.isoformat(),
+                "batch_completed_at": (now - timedelta(minutes=30)).isoformat(),
+            },
+            {
+                "pid": 1234,
+                "status": "waiting",
+                "updated_at": now.isoformat(),
+                "batch_completed_at": now.isoformat(),
+            },
+            {
+                "pid": 1234,
+                "status": "waiting",
+                "updated_at": now.isoformat(),
+                "batch_completed_at": (now - timedelta(minutes=30)).isoformat(),
+            },
+        ]
+    )
+    sup.live.process = SimpleNamespace(poll=lambda: None, pid=1234)
+    sup.live.started_at = time.time() - 3600
+    monkeypatch.setattr(
+        supervisor_engine,
+        "read_json_snapshot",
+        lambda _path: JsonReadResult(data=next(snapshots), error=None, attempts=1),
+    )
+    restarted = []
+    monkeypatch.setattr(sup, "_restart_live", lambda reason, **kwargs: restarted.append(reason))
+
+    sup._monitor_live_freshness()
+    assert sup._live_semantic_stale_confirmations == 1
+    sup._monitor_live_freshness()
+    assert sup._live_semantic_stale_confirmations == 0
+    sup._monitor_live_freshness()
+
+    assert restarted == []
+    assert sup._live_semantic_stale_confirmations == 1
 
 
 def test_critical_outbox_drain_failure_is_not_silent(sup, monkeypatch):

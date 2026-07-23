@@ -6,20 +6,58 @@ import json
 import os
 import threading
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from core_engine.shared.time import utc_iso
 
 
-def load_json(path: Path) -> dict[str, Any]:
-    """Read a JSON object, returning an empty mapping for absent/corrupt data."""
+@dataclass(frozen=True)
+class JsonReadResult:
+    """Result of a bounded attempt sequence to read an atomic JSON file."""
 
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {}
-    except Exception:
-        return {}
+    data: dict[str, Any] | None
+    error: Exception | None
+    attempts: int
+
+    @property
+    def ok(self) -> bool:
+        return self.data is not None
+
+
+def read_json_snapshot(
+    path: Path,
+    *,
+    attempts: int = 5,
+    base_delay_sec: float = 0.01,
+) -> JsonReadResult:
+    """Read one JSON object with bounded retries for atomic-replace races.
+
+    ``data is None`` is intentionally different from an empty, valid JSON
+    object.  Lifecycle decisions must not mistake a transient Windows sharing
+    error for an absent semantic field.
+    """
+
+    total_attempts = max(1, int(attempts))
+    last_error: Exception | None = None
+    for attempt in range(total_attempts):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                raise ValueError(f"Expected a JSON object in {path}")
+            return JsonReadResult(data=data, error=None, attempts=attempt + 1)
+        except (OSError, json.JSONDecodeError, ValueError) as exc:
+            last_error = exc
+            if attempt + 1 < total_attempts:
+                time.sleep(min(max(0.0, base_delay_sec) * (2**attempt), 0.1))
+    return JsonReadResult(data=None, error=last_error, attempts=total_attempts)
+
+
+def load_json(path: Path) -> dict[str, Any]:
+    """Compatibility reader for callers that do not make lifecycle decisions."""
+
+    return read_json_snapshot(path).data or {}
 
 
 def atomic_write_json(
@@ -79,6 +117,7 @@ class RuntimeStateWriter:
         self.logger = logger
         self._lock = threading.Lock()
         self._last_warning_at = 0.0
+        self._state: dict[str, Any] = {}
 
     def write(self, **updates: Any) -> None:
         current_pid = os.getpid()
@@ -88,10 +127,7 @@ class RuntimeStateWriter:
                 "updated_at": utc_iso(),
                 "status": "running",
             }
-            existing = load_json(self.path)
-            if int(existing.get("pid") or 0) == current_pid:
-                payload.update(existing)
-
+            payload.update(self._state)
             payload.update(updates)
             status_text = str(payload.get("status") or "")
             if status_text == "stopped":
@@ -103,6 +139,12 @@ class RuntimeStateWriter:
             if status_text in self.ACTIVE_STATUSES:
                 for key in self.TERMINAL_FIELDS:
                     payload.pop(key, None)
+
+            # The process owns this document.  Preserve the complete semantic
+            # snapshot in memory even when one filesystem write exhausts its
+            # retries; the next heartbeat will persist it without rebuilding a
+            # partial state from disk.
+            self._state = payload.copy()
 
             try:
                 atomic_write_json(self.path, payload, indent=None)

@@ -24,6 +24,7 @@ from typing import Any
 from core_engine.shared.tradingview import auth as tv_auth
 from core_engine.shared.tradingview.diagnostics import playwright_browser_status
 from core_engine.shared.time import parse_utc_time as _parse_time
+from core_engine.util.runtime_state import load_json
 from core_engine.util.supervisor.process_control import same_local_host
 from core_engine.settings import (
     APP_ROOT,
@@ -103,11 +104,7 @@ def _age_seconds(value: Any) -> float | None:
 
 
 def _read_json(path: Path) -> dict[str, Any]:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {}
-    except Exception:
-        return {}
+    return load_json(path)
 
 
 def _read_last_jsonl(path: Path) -> dict[str, Any]:

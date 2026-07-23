@@ -36,6 +36,7 @@ from core_engine.util.logkit.paths import (
     unregister_log_sink,
 )
 from core_engine.util.notify.discord import notify_backend_event, notify_historical_event, notify_live_event, flush_pending
+from core_engine.util.runtime_state import read_json_snapshot
 from core_engine.settings import (
     APP_ROOT,
     BACKEND,
@@ -93,6 +94,7 @@ LIVE_RESTART_SLOW_MIN_SEC = 120
 # without this, one bad hour early in a multi-day run would otherwise
 # leave a permanently smaller retry budget for the rest of that run.
 LIVE_RESTART_STABLE_RESET_SEC = 1800
+LIVE_SEMANTIC_STALE_CONFIRMATIONS = 3
 
 _child_lifecycle_logger = get_logger(
     "child_lifecycle",
@@ -187,6 +189,8 @@ class BackendSupervisor:
         self._supervisor_lock_issue_kind = ""
         self._live_state_issue_reported_at = 0.0
         self._live_state_issue_kind = ""
+        self._live_semantic_stale_key = ""
+        self._live_semantic_stale_confirmations = 0
 
     def _state_payload(self, status: str = "running", **extra: Any) -> dict[str, Any]:
         payload = {
@@ -962,8 +966,11 @@ class BackendSupervisor:
         except Exception:
             pass
 
-    def _live_state_age_seconds(self, field: str = "updated_at") -> float | None:
-        state = _load_json(WS_LIVE_STATE)
+    def _live_state_age_seconds(
+        self,
+        state: dict[str, Any],
+        field: str = "updated_at",
+    ) -> float | None:
         state_pid = state.get("pid")
         if self.live.pid is not None:
             try:
@@ -980,6 +987,18 @@ class BackendSupervisor:
         if self.live.started_at and parsed.timestamp() < self.live.started_at - 5:
             return None
         return max(0.0, (datetime.now(timezone.utc) - parsed).total_seconds())
+
+    def _reset_live_semantic_stale_confirmation(self) -> None:
+        self._live_semantic_stale_key = ""
+        self._live_semantic_stale_confirmations = 0
+
+    def _confirm_live_semantic_stale(self, key: str) -> bool:
+        if key != self._live_semantic_stale_key:
+            self._live_semantic_stale_key = key
+            self._live_semantic_stale_confirmations = 1
+        else:
+            self._live_semantic_stale_confirmations += 1
+        return self._live_semantic_stale_confirmations >= LIVE_SEMANTIC_STALE_CONFIRMATIONS
 
     def _live_output_age_seconds(self) -> float | None:
         if not self.live.started_at:
@@ -1157,12 +1176,47 @@ class BackendSupervisor:
 
     def _monitor_live_freshness(self) -> None:
         if not self.live_enabled or not self.live.running:
+            self._reset_live_semantic_stale_confirmation()
             return
         if not BACKEND.live_restart_on_stale:
+            self._reset_live_semantic_stale_confirmation()
             return
         threshold = BACKEND.live_stale_minutes * 60
-        age = self._live_state_age_seconds()
+        snapshot = read_json_snapshot(WS_LIVE_STATE)
+        state = snapshot.data
+        if state is None:
+            self._reset_live_semantic_stale_confirmation()
+            output_age = self._live_output_age_seconds()
+            if output_age is not None and output_age <= threshold:
+                self._log_live_state_issue_once(
+                    "Live state snapshot temporarily unreadable but live output is current",
+                    attempts=snapshot.attempts,
+                    reason=type(snapshot.error).__name__ if snapshot.error else "unknown",
+                    output_age_seconds=round(output_age),
+                    threshold_seconds=threshold,
+                    action="keep_running",
+                    result="warning",
+                )
+                return
+            startup_age = time.time() - self.live.started_at if self.live.started_at else 0.0
+            if startup_age > threshold:
+                logger.error(
+                    "%s",
+                    _slog(
+                        "Live state snapshot unreadable and live output is stale",
+                        attempts=snapshot.attempts,
+                        reason=type(snapshot.error).__name__ if snapshot.error else "unknown",
+                        age_seconds=round(startup_age),
+                        threshold_seconds=threshold,
+                        result="restart_needed",
+                    ),
+                )
+                self._restart_live(f"unreadable_state_and_output_age={startup_age:.0f}s")
+            return
+
+        age = self._live_state_age_seconds(state)
         if age is None:
+            self._reset_live_semantic_stale_confirmation()
             output_age = self._live_output_age_seconds()
             if output_age is not None and output_age <= threshold:
                 self._log_live_state_issue_once(
@@ -1179,6 +1233,7 @@ class BackendSupervisor:
                 self._restart_live(f"missing_current_state_age={startup_age:.0f}s")
             return
         if age > threshold:
+            self._reset_live_semantic_stale_confirmation()
             output_age = self._live_output_age_seconds()
             if output_age is not None and output_age <= threshold:
                 self._log_live_state_issue_once(
@@ -1202,8 +1257,11 @@ class BackendSupervisor:
         # stuck looks unhealthy here even though the heartbeat check above
         # passed.
         if self.live.started_at and time.time() - self.live.started_at > threshold:
-            batch_age = self._live_state_age_seconds("batch_completed_at")
+            batch_age = self._live_state_age_seconds(state, "batch_completed_at")
             if batch_age is not None and batch_age > threshold:
+                stale_key = f"batch:{state.get('pid')}:{state.get('batch_completed_at')}"
+                if not self._confirm_live_semantic_stale(stale_key):
+                    return
                 logger.error(
                     "%s",
                     _slog(
@@ -1213,7 +1271,9 @@ class BackendSupervisor:
                         result="restart_needed",
                     ),
                 )
+                self._reset_live_semantic_stale_confirmation()
                 self._restart_live(f"stale_batch_progress_age={batch_age:.0f}s")
+                return
             elif batch_age is None:
                 # A child can hang before completing its very first batch,
                 # so no batch_completed_at field exists to become stale.
@@ -1223,12 +1283,17 @@ class BackendSupervisor:
                 # known network-blocked child here: reconnect/cooldown is
                 # already active and a process recycle cannot restore the
                 # external network.
-                state = _load_json(WS_LIVE_STATE)
                 state_status = str(state.get("status") or "").lower()
                 if state_status not in {"network_blocked", "handoff_waiting"}:
                     reference_field = "batch_started_at" if state_status == "batch_running" else "child_started_at"
-                    first_batch_age = self._live_state_age_seconds(reference_field)
+                    first_batch_age = self._live_state_age_seconds(state, reference_field)
                     if first_batch_age is not None and first_batch_age > threshold:
+                        stale_key = (
+                            f"first:{state.get('pid')}:{reference_field}:"
+                            f"{state.get(reference_field)}"
+                        )
+                        if not self._confirm_live_semantic_stale(stale_key):
+                            return
                         logger.error(
                             "%s",
                             _slog(
@@ -1238,7 +1303,18 @@ class BackendSupervisor:
                                 result="restart_needed",
                             ),
                         )
+                        self._reset_live_semantic_stale_confirmation()
                         self._restart_live(f"first_batch_stale_age={first_batch_age:.0f}s")
+                        return
+                # The snapshot is valid but does not yet prove a stale first
+                # batch (for example, network handoff is active or the first
+                # batch deadline has not elapsed).  Do not carry a previous
+                # stale vote into a later supervisor pass.
+                self._reset_live_semantic_stale_confirmation()
+            else:
+                self._reset_live_semantic_stale_confirmation()
+        else:
+            self._reset_live_semantic_stale_confirmation()
 
     def _enforce_historical_runtime_limit(self) -> None:
         """HISTORICAL_MAX_RUNTIME_MINUTES was defined in settings but never
