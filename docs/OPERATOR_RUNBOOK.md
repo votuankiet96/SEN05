@@ -130,25 +130,46 @@ $python = 'C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python
 
 ## 6. Logs and 30-minute production follow-up
 
-Physical rotating files are process-owned and named
-`<component>.<role>.<pid>.log`; the launcher log menu automatically follows
-the newest matching PID using open-read-close polling. Do not use
-`Get-Content -Wait`, because its long-held Windows handle can block rollover.
-
-Primary families/state are under `C:\Share\dp_program\runtime`:
+There are four active logs under `C:\Share\dp_program\runtime\logs`:
 
 ```text
-logs\system\system.supervisor.<pid>.log
-logs\system\errors.<role>.<pid>.log
-logs\system\activity.<role>.<pid>.log
-logs\system\discord.<role>.<pid>.log
-logs\system\crash.<role>.<pid>.log
-logs\system\subprocess_stderr.<role>.<pid>.log
-logs\operation\live_fetching.live.<pid>.log
-logs\operation\historical_pulling.historical.<pid>.log
-logs\operation\live_fetching_summary.jsonl
+live.log         live fetch, delivery, SQL and Redis work
+historical.log   backfill, gap repair and historical SQL work
+system.log       supervisor, scheduler, locks, lifecycle and crash recovery
+alerts.log       every WARNING, ERROR and CRITICAL plus notification delivery
+```
+
+Every line has this operator-readable layout:
+
+```text
+UTC time | LEVEL | AREA | STAGE | message | RESULT | REFERENCE | JSON details
+```
+
+The first seven columns are for the operator. The final JSON object is for
+Codex/Claude review and exact filtering. Use these commands:
+
+```powershell
+python -m core_engine logs status
+python -m core_engine logs watch
+python -m core_engine logs find --since 2h --level WARNING
+python -m core_engine logs trace --correlation-id <batch-or-run-id>
+python -m core_engine logs risks --since 24h
+```
+
+Do not use `Get-Content -Wait`; the supported watcher uses open-read-close
+polling and does not interfere with Windows rotation.
+
+Closed rotations are compressed under `logs\archive\YYYY-MM-DD`. Retention is
+30 days by default and the configured disk budget is enforced only against
+closed archives; current logs and `spool\overflow_spool.db` are never deleted
+by log cleanup.
+
+Runtime state remains separate from logs:
+
+```text
 run\backend_engine_state.json
 run\ws_live_state.json
+run\historical_last_run.json
 run\log_sinks\<role>.<pid>.json
 run\notification_status\<role>.<pid>.json
 run\log_retention_state.json
@@ -156,11 +177,9 @@ spool\overflow_spool.db
 ```
 
 `doctor --json` must report both `log_sinks=ok` and `discord=ok` for GO.
-It fails closed on a missing/unwritable active sink, a new rollover fallback,
-an unhealthy CRITICAL outbox, a dead/full Discord queue, an open Discord
-circuit, or absence of any confirmed HTTP 200/204 delivery from active PIDs.
-Retention runs hourly, includes `.log.N`, `.out`, `.txt`, crash/stderr files,
-protects active PID files, and enforces a 3 GiB hard log budget.
+It fails closed on a missing/unwritable canonical sink, a non-empty emergency
+logging fallback, an unhealthy CRITICAL outbox, a dead/full Discord queue, an
+open Discord circuit, or absence of a confirmed HTTP 200/204 delivery.
 
 For the approved shortened follow-up, sample for 30 minutes and then inspect
 the complete interval. Record Fact watermark/freshness, spool pending/staged

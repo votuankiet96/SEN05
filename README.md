@@ -141,8 +141,9 @@ DP_STORAGE_MODE=sql
 
 ## Logging
 
-Every component logs through `core_engine.util.logkit.get_logger(component,
-log_file, ...)`. Level policy is consistent across the whole program:
+Every component logs through `core_engine.util.logkit.get_logger()`. Domain
+code never opens a log file directly. Level policy is consistent across the
+whole program:
 
 | Level | Meaning | Example |
 |---|---|---|
@@ -153,40 +154,42 @@ log_file, ...)`. Level policy is consistent across the whole program:
 | CRITICAL | Program-level failure or data-loss risk | can't start, forced to drop data |
 
 `LOG_LEVEL` sets the global level; `LOG_LEVEL_<COMPONENT>` overrides it per
-component (e.g. `LOG_LEVEL_LIVE_FETCHING=DEBUG`). Every WARNING and above,
-from any component, also lands in the `runtime/logs/system/errors.*.*.log` family so an
-operator can check one file instead of every component log. A CRITICAL
-record automatically triggers a Discord alert - no call site needs to
-remember to notify separately.
+component (for example `LOG_LEVEL_LIVE_FETCHING=DEBUG`). Every WARNING and
+above is mirrored to `runtime/logs/alerts.log`. A CRITICAL record is written
+to disk and persisted to the SQLite alert outbox before the logging call
+returns; Discord delivery is asynchronous and retried until acknowledged.
+
+Each physical line contains fixed human-readable columns followed by compact
+JSON metadata:
+
+```text
+UTC time | LEVEL | AREA | STAGE | message | RESULT | REFERENCE | JSON
+```
+
+Use the supported queries instead of manually searching many files:
+
+```powershell
+python -m core_engine logs status
+python -m core_engine logs watch
+python -m core_engine logs find --since 2h --level WARNING
+python -m core_engine logs trace --correlation-id <batch-or-run-id>
+python -m core_engine logs risks --since 24h
+```
 
 ## Logs And State
 
-Runtime files are written under `runtime/` (gitignored).
+Runtime files are written under `runtime/` (gitignored). There are exactly four
+active text logs:
 
-Long-lived processes own separate physical files named
-`<component>.<role>.<pid>.log`. This is required for reliable rotation on
-Windows; supervisor, live, and historical never share a rotating file handle.
-Use the launcher log menu (polling mode) to follow the newest PID without
-holding a file open across rollover.
+- `runtime/logs/live.log` - live fetch, delivery, SQL and Redis work.
+- `runtime/logs/historical.log` - backfill, gap repair and historical SQL work.
+- `runtime/logs/system.log` - supervisor, scheduler, locks, lifecycle and crash recovery.
+- `runtime/logs/alerts.log` - all WARNING/ERROR/CRITICAL events and notification delivery.
 
-System log families:
-
-- `runtime/logs/system/system.supervisor.<pid>.log` - scheduler/restart/cleanup.
-- `runtime/logs/system/errors.<role>.<pid>.log` - per-process WARNING+ aggregate.
-- `runtime/logs/system/activity.<role>.<pid>.log` - operator timeline.
-- `runtime/logs/system/auth.<role>.<pid>.log` - TradingView auth flow.
-- `runtime/logs/system/discord.<role>.<pid>.log` - Discord delivery/retry.
-- `runtime/logs/system/crash.<role>.<pid>.log` - import/unhandled/native crash capture.
-- `runtime/logs/system/subprocess_debug.supervisor.<pid>.log` - child lifecycle.
-- `runtime/logs/system/subprocess_stderr.<role>.<pid>.log` - child stderr/traceback.
-
-Operation logs:
-
-- `runtime/logs/operation/live_fetching.live.<pid>.log`
-- `runtime/logs/operation/historical_pulling.historical.<pid>.log`
-- `runtime/logs/operation/data_warehouse.<role>.<pid>.log`
-- `runtime/logs/operation/live_fetching_summary.jsonl`
-- `runtime/logs/operation/historical_pulling_summary.jsonl`
+Closed rotations are gzip-compressed under `runtime/logs/archive/YYYY-MM-DD/`.
+The default retention is 30 days and the total archive budget is configurable.
+Writers use a short cross-process lock and never keep the active log file open,
+so rotation remains safe on Windows.
 
 Runtime state:
 
@@ -195,6 +198,7 @@ Runtime state:
 - `runtime/run/log_sinks/<role>.<pid>.json`
 - `runtime/run/notification_status/<role>.<pid>.json`
 - `runtime/run/log_retention_state.json`
+- `runtime/run/historical_last_run.json`
 
 ## Tests
 
