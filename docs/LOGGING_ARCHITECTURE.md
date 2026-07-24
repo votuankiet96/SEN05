@@ -1,83 +1,72 @@
 # DP Program Logging Architecture
 
+DP Program uses one logging system for live, historical, supervisor, warehouse,
+auth, health and notification events. Domain code logs through
+`core_engine.util.logkit`; it must not create its own file handlers or append
+directly to log files.
+
 ## Goals
 
-The logging system has five operational goals:
-
-1. Record the service continuously without slowing the data engines.
-2. Reconstruct one live batch, historical run, failure or recovery by reference.
-3. Stay readable for an operator without requiring Python knowledge.
-4. Support deterministic filtering and review by Codex/Claude.
+1. Keep the data path non-blocking for ordinary events.
+2. Persist CRITICAL evidence before returning from the logging call.
+3. Make operator review possible without Python knowledge.
+4. Keep machine-readable fields available for exact filtering.
 5. Keep the physical layout small and predictable.
 
-Log messages, fields and command output are English and ASCII-safe. UTF-8 is
-used on disk; untrusted line breaks and pipe characters are normalized so one
-event always occupies one physical line.
+## Active Logs
 
-## Physical layout
-
-Only four active text logs exist:
+Only four active text logs are canonical:
 
 | File | Owner and content |
 |---|---|
-| `runtime/logs/live.log` | Live WebSocket batches, validation, SQL/Redis delivery and live recovery |
-| `runtime/logs/historical.log` | Historical pulls, gap repair, validation and historical SQL delivery |
-| `runtime/logs/system.log` | Supervisor, scheduler, locks, process lifecycle and recovered crash evidence |
-| `runtime/logs/alerts.log` | Mirror of every WARNING/ERROR/CRITICAL event and notification delivery state |
+| `runtime/logs/live.log` | Live WebSocket batches, validation, staging, ETL, Redis snapshot work and live recovery |
+| `runtime/logs/historical.log` | Historical fetch, gap repair, reset, validation and warehouse delivery |
+| `runtime/logs/system.log` | Supervisor, scheduler, locks, process lifecycle, terminal commands and recovered crash evidence |
+| `runtime/logs/alerts.log` | WARNING/ERROR/CRITICAL mirror and notification delivery state |
 
-Rotated files are closed, gzip-compressed and moved to
-`runtime/logs/archive/YYYY-MM-DD/`. Runtime state JSON, SQLite outboxes and
-spool databases are not log files and remain under `runtime/run`,
-`runtime/cache` and `runtime/spool`.
+Runtime state JSON, SQLite outboxes and live spool databases are not log files.
+They remain under `runtime/run`, `runtime/cache` and `runtime/spool`.
 
-## Event pipeline
+## Event Pipeline
 
 ```text
 domain logger
-  -> level filter
-  -> context and stable event fields
+  -> log level filter
+  -> context/correlation fields
   -> bounded per-process queue
-  -> one writer thread
-  -> short cross-process lock
+  -> writer thread
+  -> short cross-process append lock
   -> canonical source log
   -> WARNING+ mirror to alerts.log
   -> CRITICAL durable SQLite outbox
   -> asynchronous Discord delivery
 ```
 
-DEBUG/INFO/WARNING/ERROR normally use the bounded queue. A CRITICAL event is
-different: its canonical line and SQLite outbox row are persisted before the
-logging call returns. Network delivery never blocks the engine.
+DEBUG, INFO, WARNING and ERROR use the bounded queue under normal conditions.
+When the queue is full, the caller writes directly under the same append lock
+instead of silently dropping the event.
 
-When the queue is full, the caller writes the record directly under the same
-lock instead of dropping it. If canonical writing fails, the event goes to
-`runtime/run/log_emergency/<role>.<pid>.log`; health fails closed while a
-non-empty emergency file exists.
+CRITICAL is different: the canonical line and CRITICAL outbox row are persisted
+before the logging call returns. Network delivery never blocks the engine.
 
-## Line format
+If canonical writing fails, the emergency path is
+`runtime/run/log_emergency`. Health fails closed while unresolved emergency
+evidence exists.
+
+## Line Format
+
+Each physical line has stable operator columns followed by JSON metadata:
 
 ```text
-2026-07-23 03:32:23.900 UTC | INFO | DATABASE | COMPLETE | Main data store updated | OK | L-44 | {"event":"warehouse.fact.committed",...}
+UTC time | LEVEL | AREA | STAGE | message | RESULT | REFERENCE | JSON
 ```
 
-The columns are:
+The formatter normalizes unsafe line breaks and pipe characters so one event is
+one physical line. It redacts webhook URLs, bearer credentials, tokens,
+cookies, passwords and secrets while keeping safe state words such as
+`present`, `updated` and `authenticated`.
 
-| Column | Operator meaning |
-|---|---|
-| UTC time | When the event happened |
-| Level | DEBUG, INFO, WARNING, ERROR or CRITICAL |
-| Area | LIVE, HISTORICAL, DATABASE, AUTH, SYSTEM, and so on |
-| Stage | START, PROGRESS, COMPLETE, RECOVERY, FAILED, STOP or CRITICAL |
-| Message | Short plain-English description |
-| Result | OK, MONITORING, FAILED, ACTION REQUIRED, and so on |
-| Reference | Batch/run/job/correlation identifier, or `-` |
-| JSON | Stable fields for exact filtering and automated review |
-
-The formatter centrally redacts webhook URLs, bearer credentials, tokens,
-cookies, passwords and secrets. Safe state words such as `authenticated`,
-`present` and `updated` remain visible.
-
-## Operator commands
+## Operator Queries
 
 ```powershell
 python -m core_engine logs status
@@ -87,33 +76,66 @@ python -m core_engine logs trace --correlation-id <id>
 python -m core_engine logs risks --since 24h
 ```
 
-`logs risks` reports evidence with physical file and line number for recorded
-failures, repeated warnings, incomplete operations, delivery count mismatch and
-silent/missing streams. Mirrored alert records are deduplicated by `event_id`.
+`logs risks` scans active and archived logs for failures, repeated warnings,
+incomplete operations, delivery mismatches and silent/missing streams.
 
-## Retention and health
+## Rotation And Retention
 
-- Rotation occurs at UTC day change or the internal 25 MB file-size boundary.
-- Default archive retention is `LOG_RETENTION_DAYS=30`.
-- `LOG_DISK_BUDGET_MB` bounds current logs plus archives; cleanup removes only
-  closed archives, oldest first.
-- Current canonical logs and spool/outbox data are never deleted by retention.
-- `doctor` validates active registries, canonical files, append access, size
-  bounds, early crash capture, retention errors and emergency fallbacks.
+Rotation and retention are implemented in `util/logkit/sink.py`.
 
-## Source ownership
+- Rotation is controlled by date and `LOG_MAX_FILE_MB`.
+- Archive retention is controlled by `LOG_RETENTION_DAYS`.
+- Archive disk budget is controlled by `LOG_DISK_BUDGET_MB`.
+- Closed rotations are gzip-compressed under
+  `runtime/logs/archive/YYYY-MM-DD/`.
+- Retention removes only closed archives.
+- Current logs, live spool and SQLite outboxes are never deleted by log
+  retention.
 
-All production logging infrastructure is contained in six `util/logkit` files:
+`doctor --json` validates canonical sink status, append access, active
+registries, emergency fallback state, retention errors and CRITICAL outbox
+health.
+
+## Alert Delivery
+
+Ordinary Discord alerts are handled by `util.notify.discord`:
+
+- outbound-only webhook transport;
+- bounded process-local sender queue;
+- delivery-time dedupe;
+- retry and circuit breaker;
+- non-secret status JSON under `runtime/run/notification_status`.
+
+CRITICAL alert durability is handled by `util.notify.critical_outbox`:
+
+- SQLite outbox under runtime cache;
+- durable enqueue before return;
+- background retry;
+- status file `runtime/run/critical_outbox_status.json`.
+
+Discord delivery proves alert transport only. It does not prove TradingView,
+SQL or Fact delivery health.
+
+## Source Ownership
+
+Logging implementation:
 
 ```text
-__init__.py  bootstrap.py  core.py  formatter.py  query.py  sink.py
+src/core_engine/util/logkit/
+  __init__.py
+  bootstrap.py
+  core.py
+  formatter.py
+  query.py
+  sink.py
 ```
 
-Alert delivery is contained in four `util/notify` files:
+Alert implementation:
 
 ```text
-__init__.py  critical_outbox.py  discord.py  transport.py
+src/core_engine/util/notify/
+  __init__.py
+  critical_outbox.py
+  discord.py
+  transport.py
 ```
-
-No domain module may create a `FileHandler`, rotate a log or append directly to
-one of the four canonical logs.

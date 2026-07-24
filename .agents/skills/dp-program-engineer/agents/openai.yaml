@@ -1,0 +1,4 @@
+interface:
+  display_name: "DP Program Engineer"
+  short_description: "Audit, debug, test, and operate dp_program"
+  default_prompt: "Use $dp-program-engineer to inspect dp_program from source and runtime evidence, then complete the requested engineering workflow."

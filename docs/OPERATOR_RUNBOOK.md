@@ -1,117 +1,187 @@
-# SEN05 Data Provider — VM-DP6 Operator Runbook
+# SEN05 DP Program Operator Runbook
 
-## 1. Production identity
+This runbook is the owner of production operation details. Architecture and
+engineering rationale live in the other canonical docs.
 
-DP Program production is hosted on **VM-DP6**. Its 24/7 Windows wrapper is the
-Scheduled Task below; it is not an NSSM/SCM Windows Service.
+## Production Identity
+
+VM-DP6 runs DP Program through Scheduled Task:
 
 ```text
 TaskPath : \SEN05\
 TaskName : SEN05 DP Program 24x7
-Account  : Administrator (existing TradingView browser profile owner)
-Trigger  : VM boot + 45 seconds
-Retry    : every 1 minute, up to 999 attempts
+Command  : python -m core_engine run --live
 ```
 
-The approved live universe is fixed at **11 symbols** (`Indice,Metal,Crypto`),
-15 timeframes each, or **165 symbol/timeframe sessions per batch**. All 26
-FOREX symbols remain historical-only. Historical backfill runs at **11:00 and
-22:00 UTC**; UTC has no daylight-saving transition.
+This deployment is not a Windows Service and is not managed by NSSM. The
+`scripts/windows_service/` scripts are legacy/unsupported for the current
+deployment model; do not run them unless Kiệt approves a separate wrapper
+migration.
 
-Do not install or configure NSSM during this production release. Any future
-wrapper migration is a separate change decision.
+## Verify Paths
 
-## 2. Active production layout
-
-VM-DP6 runs the committed source checkout in place from
-`C:\Share\dp_program`. Release-directory promotion is not part of this
-deployment model.
+As verified on 2026-07-24, the physical repository root is:
 
 ```text
-C:\Share\dp_program                 active code checkout and working directory
-C:\Share\dp_program\config         production config and secrets
-C:\Share\dp_program\runtime        logs/cache/spool/outboxes/state
-C:\Users\Administrator\...\Python312\python.exe  Scheduled Task Python
+C:\Users\Administrator\Desktop\dp_program
 ```
 
-The checkout must remain on the recorded production commit with a clean working
-tree. Every production edit must be committed and tested before a controlled
-Scheduled Task restart.
-
-The active Scheduled Task action is:
+The Scheduled Task working directory is:
 
 ```text
-Execute          C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe
-Arguments        -m core_engine run --live
-WorkingDirectory C:\Share\dp_program
+C:\Share\dp_program
 ```
 
-## 3. Configuration contract
+At that timestamp `C:\Share\dp_program` was a junction to the physical root.
+Re-check before treating this as evidence:
 
-Operator configuration is `C:\Share\dp_program\config\dp_provider.env`.
-Never paste its contents into chat, tickets, or reports. Start from
-`config\dp_provider.env.example`; every supported setting has a plain-English
-description there.
+```powershell
+Get-Item -LiteralPath 'C:\Users\Administrator\Desktop\dp_program' |
+  Select-Object FullName,Attributes,LinkType,Target
+Get-Item -LiteralPath 'C:\Share\dp_program' |
+  Select-Object FullName,Attributes,LinkType,Target
+```
 
-The operator file contains only deployment-specific values:
-
-- SQL address and optional SQL credentials.
-- TradingView credentials, browser profile and optional sign-in helpers.
-- Historical schedule enable/disable and UTC schedule.
-- Discord webhook.
-- Log level, retention days and disk budget.
-- Optional Redis connection credentials.
-
-Live scope, SQL durability, retry/backoff, queue sizes, timeouts and protocol
-mechanics are reviewed system design values. They are intentionally not
-operator switches. The approved scope is 11 live symbols (Indice, Metal and
-Crypto) across 15 timeframes; FOREX remains historical-only.
-
-The config loader fails before either engine starts if it finds an unknown
-key, duplicate key or invalid value. Verify both the operator file and resolved
-system contract:
+Use the Scheduled Task working directory for operator commands:
 
 ```powershell
 cd C:\Share\dp_program
-& C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe `
-  -m core_engine settings --json
 ```
 
-Acceptance fields are `operator_config.ok=true`,
-`expected_live_symbols=11`, `resolved_live_symbols=11`,
-`symbol_timeframe_sessions=165`, `storage_mode=sql`,
-`candle_snapshot_enabled=false`, and `pubsub_enabled=false`.
-
-## 4. SQL and Redis data contracts
-
-SQL Server database `SEN05_AutoTrading` is the durable system of record.
-`DWH.usp_LoadDirect` must advertise `DPContractVersion=4`, and
-`SEN.ActiveTask` must contain both `OwnerId` and `Fence`.
-
-Redis/OG, when enabled by a reviewed code release, is an **eventually
-consistent candle snapshot**:
-
-- SQL remains authoritative for recovery, reconciliation and audit.
-- Redis delivery is not guaranteed lossless for every event.
-- On Redis recovery, DP Program reseeds a bounded snapshot from SQL.
-- OG must not treat Redis Stream continuity as proof that no candle was lost;
-  it must tolerate reseed/duplicate snapshot events.
-- The production code contract is SQL-only; storage mode is not an env toggle.
-
-SQL remains the approved production contract. Enabling Redis requires a code
-review and release; a durable Redis outbox is not implied by snapshot mode.
-
-## 5. Daily Scheduled Task operations
-
-Check wrapper state and last result:
+## Verify Scheduled Task
 
 ```powershell
 Get-ScheduledTask -TaskPath '\SEN05\' -TaskName 'SEN05 DP Program 24x7' |
-  Select-Object TaskName,State
+  Select-Object TaskPath,TaskName,State
+
 Get-ScheduledTaskInfo -TaskPath '\SEN05\' -TaskName 'SEN05 DP Program 24x7'
+
+Get-ScheduledTask -TaskPath '\SEN05\' -TaskName 'SEN05 DP Program 24x7' |
+  Select-Object -ExpandProperty Actions
+
+Get-ScheduledTask -TaskPath '\SEN05\' -TaskName 'SEN05 DP Program 24x7' |
+  Select-Object -ExpandProperty Principal
+
+Get-ScheduledTask -TaskPath '\SEN05\' -TaskName 'SEN05 DP Program 24x7' |
+  Select-Object -ExpandProperty Settings
 ```
 
-Start:
+Production Python verified on 2026-07-24:
+
+```text
+C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe
+```
+
+Re-check:
+
+```powershell
+$python = 'C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe'
+& $python -c "import sys, core_engine; print(sys.executable); print(core_engine.__file__)"
+```
+
+## Git Baseline
+
+Before changing files:
+
+```powershell
+git status --short
+git branch --show-current
+git rev-parse HEAD
+git log --oneline -10
+```
+
+Do not edit `.git` manually. If Git is not available, stop before mutating or
+deleting documentation.
+
+## Configuration Checks
+
+Never paste `config\dp_provider.env` into chat or tickets.
+
+Use the non-secret settings view:
+
+```powershell
+cd C:\Share\dp_program
+$python = 'C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe'
+& $python -m core_engine settings --json
+```
+
+Expected stable contract fields:
+
+- `symbols_total=37`
+- `resolved_live_symbols=11`
+- `symbol_timeframe_sessions=165`
+- `storage_mode=sql`
+- `operator_config.ok=true`
+
+Redis/OG snapshot fields are expected to remain disabled unless a reviewed
+release explicitly enables them.
+
+## Readiness And Status
+
+```powershell
+cd C:\Share\dp_program
+$python = 'C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe'
+
+& $python -m core_engine doctor --json
+& $python -m core_engine status --json
+& $python -m core_engine data-health --json
+& $python -m core_engine logs status --json
+& $python -m core_engine logs risks --since 24h --json
+```
+
+Interpretation rules:
+
+- Scheduled Task `Running` only proves the wrapper state.
+- Discord delivery only proves alert transport.
+- `doctor` status must be read with its timestamp and detailed checks.
+- `data-health` can be `warn` for repairable stale/gap pairs even when the
+  live runtime is healthy.
+- Runtime PIDs, row counts and freshness values are snapshots, not permanent
+  documentation facts.
+
+## Process Tree
+
+```powershell
+Get-CimInstance Win32_Process |
+  Where-Object { $_.CommandLine -match 'core_engine' } |
+  Select-Object ProcessId,ParentProcessId,CreationDate,CommandLine
+```
+
+Expected shape under the Scheduled Task:
+
+```text
+supervisor: python -m core_engine run --live
+live child: python -m core_engine.core.live.engine
+historical child: present only while a scheduled/queued historical job runs
+```
+
+## Logs
+
+Four active logs live under `runtime\logs`:
+
+```text
+live.log         live WebSocket, validation, staging, ETL, Redis snapshot work
+historical.log   historical fetch, repair, reset and warehouse work
+system.log       supervisor, scheduler, locks, lifecycle and crash recovery
+alerts.log       WARNING/ERROR/CRITICAL mirror and notification delivery state
+```
+
+Use supported queries:
+
+```powershell
+python -m core_engine logs status
+python -m core_engine logs watch
+python -m core_engine logs find --since 2h --level WARNING
+python -m core_engine logs trace --correlation-id <id>
+python -m core_engine logs risks --since 24h
+```
+
+Avoid `Get-Content -Wait`; the built-in watcher avoids interfering with
+Windows-safe rotation.
+
+## Start And Stop
+
+Start the Scheduled Task:
 
 ```powershell
 Start-ScheduledTask -TaskPath '\SEN05\' -TaskName 'SEN05 DP Program 24x7'
@@ -121,142 +191,83 @@ Graceful stop:
 
 ```powershell
 cd C:\Share\dp_program
-& C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe `
-  -m core_engine stop --reason operator
-```
-
-Wait for the Task to leave `Running`. `Stop-ScheduledTask` is reserved for an
-approved maintenance/fault window after graceful stop has failed or for an
-explicit recovery test.
-
-Readiness and reconciliation:
-
-```powershell
-cd C:\Share\dp_program
 $python = 'C:\Users\Administrator\AppData\Local\Programs\Python\Python312\python.exe'
-& $python -m core_engine status --json
-& $python -m core_engine doctor --json
-& $python -m core_engine data-health --json
-& $python -m core_engine reconcile-fact --json
+& $python -m core_engine stop --reason operator
 ```
 
-## 6. Logs and 30-minute production follow-up
+Wait for the task/process tree to leave the active state. `Stop-ScheduledTask`
+or direct process termination is reserved for an approved maintenance or
+recovery window after graceful stop fails.
 
-There are four active logs under `C:\Share\dp_program\runtime\logs`:
+## Historical Repair
 
-```text
-live.log         live fetch, delivery, SQL and Redis work
-historical.log   backfill, gap repair and historical SQL work
-system.log       supervisor, scheduler, locks, lifecycle and crash recovery
-alerts.log       every WARNING, ERROR and CRITICAL plus notification delivery
-```
-
-Every line has this operator-readable layout:
-
-```text
-UTC time | LEVEL | AREA | STAGE | message | RESULT | REFERENCE | JSON details
-```
-
-The first seven columns are for the operator. The final JSON object is for
-Codex/Claude review and exact filtering. Use these commands:
+Check first:
 
 ```powershell
-python -m core_engine logs status
-python -m core_engine logs watch
-python -m core_engine logs find --since 2h --level WARNING
-python -m core_engine logs trace --correlation-id <batch-or-run-id>
-python -m core_engine logs risks --since 24h
+python -m core_engine data-health --json
+python -m core_engine reconcile-fact --json
 ```
 
-Do not use `Get-Content -Wait`; the supported watcher uses open-read-close
-polling and does not interfere with Windows rotation.
-
-Closed rotations are compressed under `logs\archive\YYYY-MM-DD`. Retention is
-30 days by default and the configured disk budget is enforced only against
-closed archives; current logs and `spool\overflow_spool.db` are never deleted
-by log cleanup.
-
-Runtime state remains separate from logs:
-
-```text
-run\backend_engine_state.json
-run\ws_live_state.json
-run\historical_last_run.json
-run\log_sinks\<role>.<pid>.json
-run\notification_status\<role>.<pid>.json
-run\log_retention_state.json
-spool\overflow_spool.db
-```
-
-`doctor --json` must report both `log_sinks=ok` and `discord=ok` for GO.
-It fails closed on a missing/unwritable canonical sink, a non-empty emergency
-logging fallback, an unhealthy CRITICAL outbox, a dead/full Discord queue, an
-open Discord circuit, or absence of a confirmed HTTP 200/204 delivery.
-
-For the approved shortened follow-up, sample for 30 minutes and then inspect
-the complete interval. Record Fact watermark/freshness, spool pending/staged
-and oldest age, live/historical restart counts, Discord sent/queued counts,
-`ws_orphaned_threads`, `ws_wedged_group_recycles`, RSS, thread count and handle
-count. Thirty minutes is accepted by the owner in place of the earlier
-24–72-hour soak; it does not prove passage through both historical schedule
-slots unless one actually occurs in the observed interval.
-
-Gap health is based only on unresolved gaps during expected market-open time.
-The classifier excludes only exact recurring closure signatures and the narrow
-FOREX Friday-evening to Sunday-evening boundary. One-off weekday gaps stay
-actionable. After a repair pull, an unresolved window can be classified as an
-upstream-unavailable provider gap only when the latest TradingView response
-contains both exact boundary candles and no candle between them. That proof is
-cached for at most 24 hours, loaded by `data-health`, and then rechecked; zero
-SQL rows by itself is never sufficient proof. Review
-`verified_upstream_gap_pairs`/`verified_upstream_gap_windows` separately from
-`market_open_gap_pairs` in the JSON report.
-
-## 7. Discord webhook rotation
-
-Rotation requires a Discord channel administrator:
-
-1. Create a new webhook in the approved channel without posting its URL.
-2. Replace only `DISCORD_WEBHOOK_URL` in the production env file.
-3. Start/restart through the Scheduled Task and send the approved test alert.
-4. Confirm `discord.sent` with HTTP 200/204 and an empty critical outbox.
-5. Revoke the old webhook in Discord, then record timestamps only—never URLs.
-
-For the current pilot GO, the owner explicitly accepted retaining the existing
-webhook. Confirmed delivery remains a GO gate; rotation/revocation becomes a
-gate only when a new webhook is actually issued.
-
-## 8. Approved socket-stall recovery test
-
-Only during a confirmed maintenance window, inject one real callback stall in
-group 0 by creating this exact one-shot marker:
+Dry-run historical mode when investigating:
 
 ```powershell
-Set-Content `
-  C:\Share\dp_program\runtime\run\fault_inject_ws_callback_stall_g0.request `
-  'STALL_ONCE' -NoNewline
+python -m core_engine historical --mode auto --dry-run
 ```
 
-The first live callback atomically renames it to an `.active.<pid>.<UTC>`
-evidence file and deliberately leaves one daemon WebSocket callback stuck.
-Expected behavior is: fetch timeout → forced raw-socket close →
-`ws_orphaned_threads` increments → no second socket is opened for that group →
-three consecutive classifications → `ws_wedged_group_recycles` increments →
-live child exits non-zero → supervisor restarts a fresh child. The request is
-one-shot, so the replacement cannot enter a fault loop.
+Run gap repair only after confirming it is the intended operator action:
 
-Do not create this marker outside the confirmed window.
+```powershell
+python -m core_engine historical --mode gap
+```
 
-## 9. Healthy production criteria
+Do not extend `DWH.Dim_Date`, change SQL schema or run destructive reset without
+explicit approval.
 
-- Scheduled Task is `Running` with working directory `C:\Share\dp_program`.
-- `git rev-parse HEAD` matches the recorded production commit and the working
-  tree is clean.
-- Supervisor and live state heartbeats advance; live PID is alive.
-- Startup log reports 11 symbols and 165 sessions.
-- Fact watermark advances when at least one approved market is open.
-- Reconcile's three acceptance buckets are zero.
-- Live spool has no old pending/staged lease backlog.
-- Discord alert outbox drains after successful HTTP 200/204 delivery.
-- Resource counts do not increase monotonically during the observation window.
-- Historical gaps remaining after repair are explainable by market closure.
+## Runtime Evidence To Capture
+
+For production conclusions, record UTC timestamp plus:
+
+- Task state/action/account/settings.
+- Branch, HEAD and working tree.
+- Python executable and `core_engine.__file__`.
+- Process tree.
+- `settings --json`.
+- `doctor --json`.
+- `status --json`.
+- `data-health --json`.
+- `logs status --json`.
+- `logs risks --since 24h --json`.
+- Fact watermark/count from health output.
+- Live batch completion and spool pending/staged metrics.
+- Historical last-run summary.
+- Discord and CRITICAL outbox status.
+
+Do not call a short snapshot a soak test.
+
+## Discord Webhook Rotation
+
+Webhook rotation requires a Discord channel administrator and explicit approval:
+
+1. Create a new webhook in the approved channel without sharing the URL.
+2. Replace only `DISCORD_WEBHOOK_URL` in the private env file.
+3. Start through the Scheduled Task.
+4. Confirm HTTP 200/204 delivery in alert logs/status.
+5. Revoke the old webhook in Discord.
+6. Record timestamps only, never URLs.
+
+## Healthy Short-Check Criteria
+
+For a short operational check, collect evidence that:
+
+- Scheduled Task and process tree match the expected shape.
+- `doctor --json` status and detailed checks are acceptable for the intended
+  operation.
+- Live state heartbeat and latest batch evidence are advancing when an approved
+  market is open.
+- Fact watermark advances when live markets are expected to produce data.
+- Live spool has no old pending/staged backlog.
+- Active locks are expected and not stale.
+- Four log streams exist and have no unresolved ERROR/CRITICAL sequence.
+- Discord and CRITICAL outbox status are not stuck.
+
+If any gate is unclear, report it as risk instead of promoting the conclusion.

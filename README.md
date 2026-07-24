@@ -1,97 +1,86 @@
 # DP Program (SEN05 Data Provider)
 
-Terminal-first Windows application that fetches OHLCV data for 37 instruments
-(FOREX, Indices, Metal, Crypto) from TradingView and stores it in SQL Server
-for the SEN05 AutoTrading strategies, with an optional Redis candle-snapshot
-handoff to OG. The dashboard and exe build flow are intentionally out of
-scope until DP Program is stable as a terminal application.
+DP Program is the terminal-first Windows data provider for SEN05. It fetches
+TradingView OHLCV data, validates it, writes SQL Server staging tables, and
+loads `DWH.Fact_OHLCV` through the warehouse contract used by SEN05
+AutoTrading.
+
+SQL Server is the durable system of record. Redis/OG candle snapshots are an
+optional, best-effort handoff when enabled by a reviewed release; they are not
+the durable audit or recovery source.
+
+## Canonical Docs
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Operator Runbook](docs/OPERATOR_RUNBOOK.md)
+- [Logging Architecture](docs/LOGGING_ARCHITECTURE.md)
+- [Engineering Decisions](docs/ENGINEERING_DECISIONS.md)
+
+Historical audit reports and discussion notes are kept in Git history, not as
+active documentation.
 
 ## Layout
 
-```
+```text
 dp_program/
-  src/core_engine/        # the package: pip install -e . makes it importable
-    core/                   # live and historical domain engines
-    shared/                 # TradingView, warehouse and shared domain helpers
-    util/                   # CLI, supervisor, health, logging, notify, Redis, dashboard
-    other/                  # TLS and process exit-code primitives
-    settings/               # operational (env-driven) vs. system (fixed) config
-  test/                     # pytest suite (no DB/TradingView/Redis required)
-  config/                   # dp_provider.env (operator-editable, gitignored) + .example
-  scripts/                  # dependency setup, operator launcher, SQL schema
-  docs/                     # OPERATOR_RUNBOOK.md
-  runtime/                  # logs/cache/run/spool - gitignored, created on demand
+  src/core_engine/        Python package, installed with pip install -e .
+    core/                 live and historical OHLCV engines
+    shared/               TradingView, warehouse and shared domain helpers
+    util/                 CLI, supervisor, health, logging, notify, dashboard
+    other/                TLS and process exit-code primitives
+    settings/             operational, internal, system and instrument settings
+  config/                 dp_provider.env.example; real env file is private
+  docs/                   canonical operator and engineering documentation
+  scripts/                launcher, dependency helper and SQL scripts
+  test/                   pytest suite
+  runtime/                logs/cache/run/spool, gitignored and created on demand
 ```
 
-## First Setup
+## Setup
 
 ```powershell
 cd <dp_program_root>
 python scripts\install_python_deps.py
-pip install -e .
+python -m pip install -e .
 copy config\dp_provider.env.example config\dp_provider.env
 ```
 
-Edit `config/dp_provider.env` before real operation. Keep this file private -
-it holds TradingView and SQL Server credentials (`.gitignore` excludes it;
-only `*.env.example` is committed).
+Edit `config\dp_provider.env` before real operation. Never commit or paste the
+real env file; it contains SQL, TradingView and Discord secrets.
 
-`pip install -e .` registers the `core_engine` package so `python -m
-core_engine ...` works from anywhere under the checkout. The app root
-(where `config/` and `runtime/` are read/written) is auto-detected from the
-installed package location; override it explicitly with `DP_APP_ROOT` if a
-deployment needs a fixed path regardless of where the package resolves from.
+The package entrypoint is:
+
+```powershell
+python -m core_engine
+```
 
 ## Runtime Model
 
-`core_engine` is the application entrypoint. It supervises two independent
-data engines, each spawned as its own subprocess:
+The supervisor owns the 24/7 process lifecycle and can spawn two independent
+Python child processes:
 
-- Historical OHLCV: `core_engine.core.historical.engine`
-- Live OHLCV: `core_engine.core.live.engine`
+- `core_engine.core.live.engine` for near-real-time TradingView batches.
+- `core_engine.core.historical.engine` for scheduled full/gap/reset work.
 
-In production, start the DP Program supervisor:
-
-```powershell
-cd <dp_program_root>
-python -m core_engine run
-```
-
-The supervisor can auto-start live fetching, schedule daily historical
-backfill, monitor heartbeats, restart stale live processes, and shut down
-gracefully.
+Live and historical share TradingView auth, warehouse validation/writer code,
+SQL advisory locks and the four canonical logs. They do not share an in-memory
+process.
 
 ## Operator Commands
 
-Open the terminal launcher:
-
 ```powershell
-cd <dp_program_root>
-.\run_dp.bat
-```
-
-The launcher keeps the menu open while long-running jobs are started in their
-own PowerShell windows.
-
-```powershell
-# Readiness checks
-python -m core_engine doctor
-python -m core_engine doctor --deep-auth
-
-# Current state
-python -m core_engine status
+# Readiness and current state
+python -m core_engine settings --json
+python -m core_engine doctor --json
 python -m core_engine status --json
-python -m core_engine data-health
+python -m core_engine data-health --json
 
-# DP Program supervisor
-python -m core_engine run
-python -m core_engine stop
+# Supervisor lifecycle
+python -m core_engine run --live
+python -m core_engine stop --reason operator
 
-# Run live directly for testing
-python -m core_engine live
+# Direct engine runs for controlled testing
 python -m core_engine live --smoke-seconds 120
-
-# Run historical directly
 python -m core_engine historical --mode auto --dry-run
 python -m core_engine historical --mode gap
 python -m core_engine historical --mode full
@@ -102,123 +91,79 @@ python -m core_engine auth status
 python -m core_engine auth diagnose
 python -m core_engine auth login --timeout-sec 900
 
-# Runtime cleanup
-python -m core_engine clean-runtime --days 30
+# Logs
+python -m core_engine logs status
+python -m core_engine logs find --since 2h --level WARNING
+python -m core_engine logs trace --correlation-id <id>
+python -m core_engine logs risks --since 24h
 
-# Read-only chart/data-health viewer
+# Read-only local chart/data-health viewer
 python -m core_engine chart-datacheck --open-browser
 ```
 
-## Key Config
+The menu launcher remains available:
 
-DP Program supervisor:
-
-```env
-WS_LIVE_AUTO_START=1
-HISTORICAL_BACKFILL_ENABLED=1
-HISTORICAL_BACKFILL_UTC=11:00,22:00
-HISTORICAL_BACKFILL_MODE=gap
-BACKEND_LIVE_RESTART_ON_EXIT=1
-BACKEND_LIVE_RESTART_ON_STALE=1
-BACKEND_LIVE_STALE_MINUTES=15
-BACKEND_LOG_RETENTION_DAYS=30
+```powershell
+.\run_dp.bat
 ```
 
-`WS_LIVE_AUTO_START=1` means `python -m core_engine run` will start live
-fetching automatically. VM-DP6 production runs through Scheduled Task
-`\SEN05\SEN05 DP Program 24x7`. The current owner-approved action runs the
-committed checkout at `C:\Share\dp_program` directly. Do not install NSSM for
-the current production release.
+## Configuration
 
-Storage destination (`config/dp_provider.env`):
+`config/dp_provider.env.example` is the committed template. The real
+`config/dp_provider.env` is gitignored and deployment-specific.
 
-```env
-# Optional. Unset infers the mode from CANDLE_SNAPSHOT_ENABLED
-# (0 -> sql, 1 -> both). Redis-only operation is rejected because SQL Server
-# is the durable system of record.
-DP_STORAGE_MODE=sql
-```
+The stable production contract is owned by code:
+
+- `settings/system.py`: live scope and SQL durability contract.
+- `settings/instruments.py`: 37 instruments and 15 direct timeframes.
+- `settings/internal.py`: retry, timeout, queue and protocol policies.
+- `settings/operational.py`: small operator-facing env surface and validation.
+
+Useful verification fields from `settings --json` include:
+
+- `symbols_total=37`
+- `resolved_live_symbols=11`
+- `symbol_timeframe_sessions=165`
+- `storage_mode=sql`
+- `candle_snapshot_enabled=false` unless a reviewed Redis/OG release enables it
+
+## Production Notes
+
+VM-DP6 production is operated by Scheduled Task, not by a Windows Service. As
+verified on 2026-07-24, the task uses `C:\Share\dp_program` as its working
+directory; that path is a junction to the physical repository root
+`C:\Users\Administrator\Desktop\dp_program`. Re-verify with the runbook before
+using any deployment fact as evidence.
+
+Detailed Scheduled Task commands and recovery steps belong in the
+[Operator Runbook](docs/OPERATOR_RUNBOOK.md).
 
 ## Logging
 
-Every component logs through `core_engine.util.logkit.get_logger()`. Domain
-code never opens a log file directly. Level policy is consistent across the
-whole program:
+Every component logs through `core_engine.util.logkit`. There are four active
+text logs:
 
-| Level | Meaning | Example |
-|---|---|---|
-| DEBUG | Diagnostics, off by default | raw WS payloads |
-| INFO | Normal operation | batch done, job start/finish |
-| WARNING | Degraded but self-recovering | retry, cooldown, stale data |
-| ERROR | A task/component failed | ETL failed after retries |
-| CRITICAL | Program-level failure or data-loss risk | can't start, forced to drop data |
+- `runtime/logs/live.log`
+- `runtime/logs/historical.log`
+- `runtime/logs/system.log`
+- `runtime/logs/alerts.log`
 
-`LOG_LEVEL` sets the global level; `LOG_LEVEL_<COMPONENT>` overrides it per
-component (for example `LOG_LEVEL_LIVE_FETCHING=DEBUG`). Every WARNING and
-above is mirrored to `runtime/logs/alerts.log`. A CRITICAL record is written
-to disk and persisted to the SQLite alert outbox before the logging call
-returns; Discord delivery is asynchronous and retried until acknowledged.
+Rotated files are gzip-compressed under `runtime/logs/archive/YYYY-MM-DD/`.
+Retention is controlled by `LOG_RETENTION_DAYS` and archive disk budget by
+`LOG_DISK_BUDGET_MB`. Current logs, SQLite outboxes and live spool databases
+are not deleted by log retention.
 
-Each physical line contains fixed human-readable columns followed by compact
-JSON metadata:
-
-```text
-UTC time | LEVEL | AREA | STAGE | message | RESULT | REFERENCE | JSON
-```
-
-Use the supported queries instead of manually searching many files:
-
-```powershell
-python -m core_engine logs status
-python -m core_engine logs watch
-python -m core_engine logs find --since 2h --level WARNING
-python -m core_engine logs trace --correlation-id <batch-or-run-id>
-python -m core_engine logs risks --since 24h
-```
-
-## Logs And State
-
-Runtime files are written under `runtime/` (gitignored). There are exactly four
-active text logs:
-
-- `runtime/logs/live.log` - live fetch, delivery, SQL and Redis work.
-- `runtime/logs/historical.log` - backfill, gap repair and historical SQL work.
-- `runtime/logs/system.log` - supervisor, scheduler, locks, lifecycle and crash recovery.
-- `runtime/logs/alerts.log` - all WARNING/ERROR/CRITICAL events and notification delivery.
-
-Closed rotations are gzip-compressed under `runtime/logs/archive/YYYY-MM-DD/`.
-The default retention is 30 days and the total archive budget is configurable.
-Writers use a short cross-process lock and never keep the active log file open,
-so rotation remains safe on Windows.
-
-Runtime state:
-
-- `runtime/run/backend_engine_state.json`
-- `runtime/run/ws_live_state.json`
-- `runtime/run/log_sinks/<role>.<pid>.json`
-- `runtime/run/notification_status/<role>.<pid>.json`
-- `runtime/run/log_retention_state.json`
-- `runtime/run/historical_last_run.json`
+See [Logging Architecture](docs/LOGGING_ARCHITECTURE.md).
 
 ## Tests
 
 ```powershell
-pip install -e .[dev]
-pytest test/
+python -m pip install -e .[dev]
+python -m pytest test/
 ```
 
-The suite covers the TradingView WS wire format,
-OHLCV validation, the disk spool, settings resolution, the logging
-infrastructure, and the pure/testable pieces of the live and historical
-engines. It needs no SQL Server, TradingView, or Redis connection.
-
-## Production Notes
-
-- Live and historical run as separate processes when started by the supervisor.
-- TradingView auth refresh is coordinated so processes do not renew credentials
-  at the same time.
-- Historical backfill uses database locks and yields around live batch windows.
-- Stop requests are cooperative first; force termination happens only after the
-  configured grace period.
-- The terminal DP Program is the foundation. A dashboard should only observe or
-  request actions after this layer is proven stable.
+The suite covers TradingView protocol parsing, auth helpers, OHLCV validation,
+live outbox/delivery boundaries, warehouse contract logic, SQL lock fencing,
+settings validation, health, logging and supervisor behavior. Unit tests do not
+prove production delivery by themselves; use `doctor`, `status`, `data-health`
+and runtime evidence for that.
