@@ -1,0 +1,25 @@
+# dp_program backend-core requirements
+# Install with: python scripts/install_python_deps.py
+
+pyodbc>=5.0.0
+python-dotenv>=1.0.0
+truststore>=0.9.0
+
+# Playwright provides the Python API. Its Chromium browser binary is a
+# required runtime dependency for TradingView headless auth fallback.
+# scripts/install_python_deps.py installs Chromium into the app runtime cache.
+# If installing manually with pip, also run:
+#   python -m playwright install chromium
+playwright>=1.44.0
+
+# Historical/live OHLCV engines
+pandas>=2.0.0
+websocket-client>=1.6.0
+requests>=2.31.0
+
+# Optional candle_snapshot handoff from live_fetching to OG via Redis Streams.
+# Disabled by default unless CANDLE_SNAPSHOT_ENABLED=1 in config/dp_provider.env.
+redis>=5.0.0
+
+# Dev/test only - not required to run the service.
+pytest>=8.0.0

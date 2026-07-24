@@ -1,0 +1,141 @@
+"""Settings facade for DP Program.
+
+Source of truth:
+- Operator-editable runtime values live in `config/dp_provider.env`, loaded
+  and typed by `core_engine.settings.operational`.
+- Fixed, code-level domain tables (timeframe/interval maps, default bar
+  counts) live in `core_engine.settings.system`.
+- Instrument/timeframe definitions live in `core_engine.settings.instruments`.
+
+Everything else in the codebase should import from `core_engine.settings`
+(this module) rather than reaching into the submodules directly, so the
+internal split can keep evolving without touching every call site.
+"""
+
+from __future__ import annotations
+
+from core_engine.settings.instruments import (
+    DIRECT_TFS,
+    SYMBOLS,
+    TF_DISPLAY_ORDER,
+    TF_MINUTES,
+    WEEKEND_CLOSED,
+)
+from core_engine.settings.internal import (
+    BACKEND_POLICY,
+    DATABASE_POLICY,
+    HISTORICAL_POLICY,
+    LIVE_POLICY,
+    LOGGING_POLICY,
+    NOTIFICATION_POLICY,
+    SNAPSHOT_POLICY,
+    TRADINGVIEW_POLICY,
+)
+from core_engine.settings.operational import (
+    ALERTS_LOG,
+    APP_ROOT,
+    BACKEND,
+    BACKEND_STATE,
+    BACKEND_STOP_FILE,
+    CACHE_DIR,
+    CANDLE_SNAPSHOT,
+    DB,
+    ENV_FILE,
+    HISTORICAL,
+    HISTORICAL_CANCEL_FILE,
+    HISTORICAL_LOG,
+    HISTORICAL_QUEUE_FILE,
+    LIVE,
+    LIVE_LOG,
+    LOG_ARCHIVE_DIR,
+    LOG_DIR,
+    LOG_EMERGENCY_DIR,
+    LOG_LOCK_DIR,
+    LOGGING,
+    NOTIFICATION,
+    RUNTIME_DIR,
+    RUN_DIR,
+    SPOOL_DIR,
+    STORAGE,
+    SYSTEM_LOG,
+    TRADINGVIEW,
+    VERIFIED_MARKET_GAPS,
+    WS_LIVE_PID,
+    WS_LIVE_STATE,
+    WS_OVERFLOW_SPOOL,
+    build_conn_str,
+    ensure_runtime_dirs,
+    env_int,
+    env_str,
+    inspect_operator_config,
+)
+from core_engine.settings.system import (
+    DEFAULT_N_BARS,
+    EXPECTED_LIVE_SYMBOLS,
+    LIVE_ASSET_TYPES,
+    OVERNIGHT_GAP_MINUTES,
+    STORAGE_MODE,
+    SYMBOL_OVERNIGHT_MINS,
+    TF_STAGING,
+    get_historical_timeframes,
+)
+
+__all__ = [
+    "ALERTS_LOG",
+    "APP_ROOT",
+    "BACKEND",
+    "BACKEND_POLICY",
+    "BACKEND_STATE",
+    "BACKEND_STOP_FILE",
+    "CACHE_DIR",
+    "CANDLE_SNAPSHOT",
+    "DB",
+    "DATABASE_POLICY",
+    "DEFAULT_N_BARS",
+    "DIRECT_TFS",
+    "ENV_FILE",
+    "HISTORICAL",
+    "HISTORICAL_POLICY",
+    "HISTORICAL_CANCEL_FILE",
+    "HISTORICAL_QUEUE_FILE",
+    "HISTORICAL_LOG",
+    "LIVE",
+    "LIVE_ASSET_TYPES",
+    "LIVE_POLICY",
+    "LIVE_LOG",
+    "LOG_ARCHIVE_DIR",
+    "LOGGING",
+    "LOGGING_POLICY",
+    "LOG_DIR",
+    "LOG_EMERGENCY_DIR",
+    "LOG_LOCK_DIR",
+    "NOTIFICATION",
+    "NOTIFICATION_POLICY",
+    "OVERNIGHT_GAP_MINUTES",
+    "RUNTIME_DIR",
+    "RUN_DIR",
+    "SPOOL_DIR",
+    "STORAGE",
+    "STORAGE_MODE",
+    "SYMBOLS",
+    "SYMBOL_OVERNIGHT_MINS",
+    "SYSTEM_LOG",
+    "TF_DISPLAY_ORDER",
+    "TF_MINUTES",
+    "TF_STAGING",
+    "TRADINGVIEW",
+    "TRADINGVIEW_POLICY",
+    "VERIFIED_MARKET_GAPS",
+    "WEEKEND_CLOSED",
+    "WS_LIVE_PID",
+    "WS_LIVE_STATE",
+    "WS_OVERFLOW_SPOOL",
+    "build_conn_str",
+    "ensure_runtime_dirs",
+    "env_int",
+    "env_str",
+    "get_historical_timeframes",
+    "inspect_operator_config",
+    "EXPECTED_LIVE_SYMBOLS",
+    "SNAPSHOT_POLICY",
+]

@@ -1,0 +1,392 @@
+"""Explicit warehouse purge and reset operations, isolated from live writes."""
+
+from __future__ import annotations
+
+import json
+import sqlite3
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+
+from core_engine.settings import (
+    HISTORICAL,
+    TF_DISPLAY_ORDER,
+    TF_STAGING,
+    WS_LIVE_STATE,
+    WS_OVERFLOW_SPOOL,
+)
+from core_engine.shared.warehouse.connection import get_connection
+from core_engine.shared.warehouse.operation_log import _warehouse_log, logger
+
+
+_ALL_STAGING_TABLES = [TF_STAGING[tf_code] for tf_code in TF_DISPLAY_ORDER if tf_code in TF_STAGING]
+_STAGING_TABLE_TF_ID = {
+    TF_STAGING[tf_code]: timeframe_id
+    for timeframe_id, tf_code in enumerate(TF_DISPLAY_ORDER, start=1)
+    if tf_code in TF_STAGING
+}
+
+
+def _live_write_pressure_reason() -> str | None:
+    """Return why cleanup should yield to the production live writer."""
+    spool_path = Path(WS_OVERFLOW_SPOOL)
+    if spool_path.exists():
+        try:
+            uri = f"{spool_path.resolve().as_uri()}?mode=ro"
+            with sqlite3.connect(uri, uri=True, timeout=0.25) as spool_conn:
+                if spool_conn.execute("SELECT 1 FROM spool LIMIT 1").fetchone():
+                    return "live_spool_not_empty"
+        except (OSError, sqlite3.Error):
+            # Cleanup is optional; inability to prove the live outbox empty
+            # must never be allowed to add load to an already uncertain host.
+            return "live_spool_status_unavailable"
+
+    state_path = Path(WS_LIVE_STATE)
+    if state_path.exists():
+        try:
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            updated_raw = str(state.get("updated_at") or "")
+            updated = datetime.fromisoformat(updated_raw.replace("Z", "+00:00"))
+            if updated.tzinfo is None:
+                updated = updated.replace(tzinfo=timezone.utc)
+            age_sec = (datetime.now(timezone.utc) - updated).total_seconds()
+            if state.get("status") == "batch_running" and age_sec <= 180:
+                return "live_batch_running"
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            return "live_state_unreadable"
+    return None
+
+
+def _partial_cleanup_result(deleted_summary: dict, total_deleted: int, reason: str) -> dict:
+    deleted_summary["__partial__"] = (
+        f"cleanup paused after {total_deleted:,} row(s); reason={reason}"
+    )
+    _warehouse_log(
+        20,
+        source="maintenance",
+        target="all staging tables",
+        action="staging_cleanup_budget_reached",
+        deleted=total_deleted,
+        reason=reason,
+        result="partial",
+    )
+    return deleted_summary
+
+def purge_staging(
+    days_to_keep: int = 7,
+    *,
+    batch_size: int | None = None,
+    pause_sec: float | None = None,
+    max_rows_per_run: int | None = None,
+    max_rows_per_table: int | None = None,
+    max_seconds: float | None = None,
+    checkpoint: bool | None = None,
+) -> dict:
+    """
+    Don dep staging da xu ly, chi giu lai N ngay gan nhat.
+
+    Tai sao can:
+    - Staging chi la bo dem tam.
+    - Neu khong don dep dinh ky, bang se phinh to va lam cham pipeline.
+
+    Dau ra:
+    - dict {ten_bang: so_dong_da_xoa} de bao cao log.
+    """
+    batch_size = HISTORICAL.staging_cleanup_batch_rows if batch_size is None else int(batch_size)
+    pause_sec = HISTORICAL.staging_cleanup_pause_sec if pause_sec is None else float(pause_sec)
+    max_rows_per_run = (
+        HISTORICAL.staging_cleanup_max_rows_per_run if max_rows_per_run is None else int(max_rows_per_run)
+    )
+    max_rows_per_table = (
+        HISTORICAL.staging_cleanup_max_rows_per_table
+        if max_rows_per_table is None
+        else int(max_rows_per_table)
+    )
+    max_seconds = (
+        HISTORICAL.staging_cleanup_max_seconds if max_seconds is None else float(max_seconds)
+    )
+    checkpoint = HISTORICAL.staging_cleanup_checkpoint if checkpoint is None else bool(checkpoint)
+
+    batch_size = max(500, min(int(batch_size), 50_000))
+    pause_sec = max(0.0, min(float(pause_sec), 5.0))
+    max_rows_per_run = max(0, int(max_rows_per_run))
+    max_rows_per_table = max(0, int(max_rows_per_table))
+    max_seconds = max(1.0, float(max_seconds))
+    deleted_summary = {}
+    total_deleted = 0
+    started_mono = time.monotonic()
+
+    pressure_reason = _live_write_pressure_reason()
+    if pressure_reason:
+        return _partial_cleanup_result(deleted_summary, 0, pressure_reason)
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        for table in _ALL_STAGING_TABLES:
+            timeframe_id = _STAGING_TABLE_TF_ID[table]
+            staging_index = f"IX_{table.split('.', 1)[1]}_SBT"
+            table_deleted = 0
+            batches = 0
+            while True:
+                pressure_reason = _live_write_pressure_reason()
+                if pressure_reason:
+                    deleted_summary[table] = table_deleted
+                    return _partial_cleanup_result(
+                        deleted_summary, total_deleted, pressure_reason
+                    )
+                if time.monotonic() - started_mono >= max_seconds:
+                    deleted_summary[table] = table_deleted
+                    return _partial_cleanup_result(
+                        deleted_summary, total_deleted, "time_budget_reached"
+                    )
+                if max_rows_per_run and total_deleted >= max_rows_per_run:
+                    deleted_summary[table] = table_deleted
+                    return _partial_cleanup_result(
+                        deleted_summary, total_deleted, "global_row_budget_reached"
+                    )
+                if max_rows_per_table and table_deleted >= max_rows_per_table:
+                    break
+
+                effective_batch = batch_size
+                if max_rows_per_run:
+                    effective_batch = min(effective_batch, max_rows_per_run - total_deleted)
+                    if effective_batch <= 0:
+                        break
+                if max_rows_per_table:
+                    effective_batch = min(
+                        effective_batch, max_rows_per_table - table_deleted
+                    )
+                    if effective_batch <= 0:
+                        break
+
+                # Only delete a staging row once Fact_OHLCV has the same key AND
+                # the same OHLCV values. Key existence alone is insufficient: a
+                # TradingView correction may have updated staging before a crash
+                # prevented usp_LoadDirect v2 from updating an older Fact row.
+                # Purging that mismatched staging row would destroy the only
+                # durable copy of the corrected values.
+                # See core_engine.shared.warehouse.reconcile for an operator-facing
+                # scan/repair tool that finds this exact condition proactively.
+                cursor.execute(
+                    f"DELETE TOP ({effective_batch}) s"
+                    f" FROM {table} AS s WITH (ROWLOCK, INDEX({staging_index}))"
+                    f" WHERE s.IsProcessed = 1"
+                    f" AND s.BarTime < DATEADD(day, ?, GETUTCDATE())"
+                    f" AND EXISTS ("
+                    f"     SELECT 1 FROM DWH.Fact_OHLCV f WITH (INDEX(IX_Fact_Sym_TF_Time))"
+                    f"     WHERE f.SymbolID = s.SymbolID AND f.TimeframeID = ? AND f.BarTime = s.BarTime"
+                    f"       AND f.[Open] = s.[Open] AND f.High = s.High"
+                    f"       AND f.Low = s.Low AND f.[Close] = s.[Close]"
+                    f"       AND ISNULL(f.Volume, -1) = ISNULL(s.Volume, -1)"
+                    f" )"
+                    f" OPTION (MAXDOP 1, RECOMPILE)",
+                    (-days_to_keep, timeframe_id),
+                )
+                rowcount = max(0, int(cursor.rowcount or 0))
+                conn.commit()
+                if rowcount == 0:
+                    break
+                table_deleted += rowcount
+                total_deleted += rowcount
+                batches += 1
+                if checkpoint:
+                    try:
+                        cursor.execute("CHECKPOINT")
+                        conn.commit()
+                    except Exception as checkpoint_error:
+                        _warehouse_log(
+                            30,
+                            source="maintenance",
+                            target=table,
+                            action="staging_cleanup_checkpoint",
+                            result="warning",
+                            reason=checkpoint_error,
+                        )
+                _warehouse_log(
+                    20,
+                    source="maintenance",
+                    target=table,
+                    action="staging_cleanup_batch",
+                    deleted=rowcount,
+                    total_deleted=table_deleted,
+                    batch_size=effective_batch,
+                    keep_days=days_to_keep,
+                    result="ok",
+                )
+                if pause_sec:
+                    time.sleep(pause_sec)
+            deleted_summary[table] = table_deleted
+            if table_deleted:
+                _warehouse_log(
+                    20,
+                    source="maintenance",
+                    target=table,
+                    action="staging_cleanup_table",
+                    deleted=table_deleted,
+                    batches=batches,
+                    keep_days=days_to_keep,
+                    result="ok",
+                )
+        total = sum(deleted_summary.values())
+        _warehouse_log(
+            20,
+            source="maintenance",
+            target="all staging tables",
+            action="staging_cleanup",
+            deleted=total,
+            batch_size=batch_size,
+            max_rows=max_rows_per_run,
+            pause_sec=pause_sec,
+            checkpoint="yes" if checkpoint else "no",
+            keep_days=days_to_keep,
+            result="ok",
+        )
+    except Exception as e:
+        conn.rollback()
+        deleted_summary["__error__"] = str(e)
+        _warehouse_log(
+            40,
+            source="maintenance",
+            target="all staging tables",
+            action="staging_cleanup",
+            result="failed",
+            reason=e,
+        )
+    finally:
+        conn.close()
+    return deleted_summary
+
+def _sql_in_placeholders(values: list) -> str:
+    return ",".join("?" for _ in values)
+
+def preview_ohlcv_reset_scope(
+    symbol_ids: list[int],
+    tf_codes: list[str],
+    *,
+    source: str = "historical_reset",
+    scope_label: str | None = None,
+) -> dict:
+    """
+    Count rows that would be removed by historical reset for a scoped target.
+
+    This function never mutates data. It is intentionally paired with
+    reset_ohlcv_scope so the operator can review the blast radius first.
+    """
+    symbol_ids = [int(value) for value in symbol_ids]
+    tf_codes = [str(value).upper() for value in tf_codes if str(value).upper() in TF_STAGING]
+    summary = {"fact_rows": 0, "staging_rows": {}, "staging_total": 0}
+    if not symbol_ids or not tf_codes:
+        return summary
+
+    sid_sql = _sql_in_placeholders(symbol_ids)
+    tf_sql = _sql_in_placeholders(tf_codes)
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            f"""
+            SELECT COUNT(*)
+            FROM DWH.Fact_OHLCV f
+            JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID
+            WHERE f.SymbolID IN ({sid_sql})
+              AND tf.Code IN ({tf_sql})
+            """,
+            symbol_ids + tf_codes,
+        )
+        summary["fact_rows"] = int(cursor.fetchone()[0] or 0)
+
+        for tf_code in tf_codes:
+            table = TF_STAGING[tf_code]
+            cursor.execute(
+                f"SELECT COUNT(*) FROM {table} WHERE SymbolID IN ({sid_sql})",
+                symbol_ids,
+            )
+            count = int(cursor.fetchone()[0] or 0)
+            summary["staging_rows"][table] = count
+            summary["staging_total"] += count
+        _warehouse_log(
+            30,
+            source=source,
+            target=scope_label or f"{len(symbol_ids)} symbol(s), {len(tf_codes)} timeframe(s)",
+            action="reset_preview",
+            fact_rows=summary["fact_rows"],
+            staging_rows=summary["staging_total"],
+            timeframes=",".join(tf_codes),
+            result="preview_only",
+        )
+        return summary
+    finally:
+        conn.close()
+
+def reset_ohlcv_scope(
+    symbol_ids: list[int],
+    tf_codes: list[str],
+    *,
+    source: str = "historical_reset",
+    scope_label: str | None = None,
+) -> dict:
+    """
+    Delete Fact_OHLCV and staging rows for a scoped historical reset.
+
+    The caller is responsible for operator confirmation and runtime locks.
+    """
+    symbol_ids = [int(value) for value in symbol_ids]
+    tf_codes = [str(value).upper() for value in tf_codes if str(value).upper() in TF_STAGING]
+    summary = {"fact_rows": 0, "staging_rows": {}, "staging_total": 0}
+    if not symbol_ids or not tf_codes:
+        return summary
+
+    sid_sql = _sql_in_placeholders(symbol_ids)
+    tf_sql = _sql_in_placeholders(tf_codes)
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            f"""
+            DELETE f
+            FROM DWH.Fact_OHLCV f
+            JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID = f.TimeframeID
+            WHERE f.SymbolID IN ({sid_sql})
+              AND tf.Code IN ({tf_sql})
+            """,
+            symbol_ids + tf_codes,
+        )
+        summary["fact_rows"] = int(cursor.rowcount or 0)
+
+        for tf_code in tf_codes:
+            table = TF_STAGING[tf_code]
+            cursor.execute(
+                f"DELETE FROM {table} WHERE SymbolID IN ({sid_sql})",
+                symbol_ids,
+            )
+            deleted = int(cursor.rowcount or 0)
+            summary["staging_rows"][table] = deleted
+            summary["staging_total"] += deleted
+
+        conn.commit()
+        _warehouse_log(
+            30,
+            source=source,
+            target=scope_label or f"{len(symbol_ids)} symbol(s), {len(tf_codes)} timeframe(s)",
+            action="reset_delete",
+            fact_deleted=summary["fact_rows"],
+            staging_deleted=summary["staging_total"],
+            timeframes=",".join(tf_codes),
+            result="completed",
+        )
+        return summary
+    except Exception:
+        conn.rollback()
+        _warehouse_log(
+            40,
+            source=source,
+            target=scope_label or f"{len(symbol_ids)} symbol(s), {len(tf_codes)} timeframe(s)",
+            action="reset_delete",
+            timeframes=",".join(tf_codes),
+            result="failed_rolled_back",
+        )
+        logger.exception("WAREHOUSE | %s | reset_delete | transaction rolled back", source)
+        raise
+    finally:
+        conn.close()

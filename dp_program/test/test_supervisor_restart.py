@@ -1,0 +1,677 @@
+"""Tests for the P0-4 fix: BackendSupervisor's live-restart budget used to
+give up permanently once BACKEND_LIVE_MAX_RESTARTS_PER_HOUR was exhausted
+(operator had to notice and restart DP Program by hand), and start_live()
+unconditionally cleared the Graceful Stop flag file - so a stop request
+that arrived during a restart cooldown was silently erased. This file
+covers the replacement: a non-blocking exponential-backoff retry that
+keeps trying automatically, exit-code-aware slow retries for lock-conflict/
+cancelled exits, a stable-uptime reset of the failure count, and
+start_live() no longer touching the stop flag.
+"""
+
+from __future__ import annotations
+
+import threading
+import time
+from types import SimpleNamespace
+
+import pytest
+
+from core_engine.other.exit_codes import EXIT_CANCELLED, EXIT_LOCK_CONFLICT
+from core_engine.util.runtime_state import JsonReadResult
+from core_engine.util.supervisor import engine as supervisor_engine
+from core_engine.util.supervisor.engine import (
+    LIVE_RESTART_BACKOFF_BASE_SEC,
+    LIVE_RESTART_BACKOFF_MAX_SEC,
+    LIVE_RESTART_SLOW_MIN_SEC,
+    BackendSupervisor,
+    _startup_actionable_failures,
+)
+
+
+@pytest.fixture
+def sup(monkeypatch):
+    # Notifications/log_activity touch Discord + activity log machinery we
+    # do not want to exercise for real in a unit test.
+    monkeypatch.setattr(supervisor_engine, "notify_live_event", lambda **k: None)
+    monkeypatch.setattr(supervisor_engine, "notify_backend_event", lambda **k: None)
+    monkeypatch.setattr(supervisor_engine, "notify_historical_event", lambda **k: None)
+    monkeypatch.setattr(supervisor_engine, "flush_pending", lambda: None)
+    monkeypatch.setattr(supervisor_engine, "log_activity", lambda *a, **k: None)
+    monkeypatch.setattr(supervisor_engine, "_atomic_write_json", lambda *a, **k: None)
+    return BackendSupervisor(live_enabled=True, schedule_enabled=False)
+
+
+def test_arm_live_backoff_schedules_future_retry_and_counts_failure(sup):
+    assert sup.live_failure_count == 0
+    sup._arm_live_backoff(exit_code=1, reason="test")
+    assert sup.live_failure_count == 1
+    assert sup._live_retry_wait_seconds() > 0
+    assert sup.live_retry_not_before > time.time()
+
+
+def test_live_retry_due_is_false_before_deadline_true_after(sup):
+    sup.live_retry_not_before = time.time() + 3600
+    assert sup._live_retry_due() is False
+
+    sup.live_retry_not_before = time.time() - 1
+    assert sup._live_retry_due() is True
+
+
+def test_live_retry_due_requires_live_not_already_running(sup):
+    sup.live_retry_not_before = time.time() - 1
+    sup.live.process = SimpleNamespace(poll=lambda: None)  # still running
+    assert sup._live_retry_due() is False
+
+
+def test_backoff_grows_exponentially_and_caps(sup):
+    delays = []
+    for _ in range(8):
+        before = sup.live_retry_not_before
+        sup._arm_live_backoff(exit_code=1, reason="test")
+        delays.append(sup.live_retry_not_before - max(before, time.time() - 1))
+
+    # Roughly increasing (allowing for timing jitter across the loop) and
+    # never exceeding the configured cap.
+    assert delays[0] < delays[3]
+    assert all(d <= LIVE_RESTART_BACKOFF_MAX_SEC + 2 for d in delays)
+
+
+def test_lock_conflict_exit_code_gets_slow_minimum_backoff(sup):
+    sup._arm_live_backoff(exit_code=EXIT_LOCK_CONFLICT, reason="test")
+    assert sup._live_retry_wait_seconds() >= LIVE_RESTART_SLOW_MIN_SEC - 1
+
+
+def test_cancelled_exit_code_also_gets_slow_minimum_backoff(sup):
+    sup._arm_live_backoff(exit_code=EXIT_CANCELLED, reason="test")
+    assert sup._live_retry_wait_seconds() >= LIVE_RESTART_SLOW_MIN_SEC - 1
+
+
+def test_restart_live_skips_immediate_retry_for_lock_conflict(sup, monkeypatch):
+    calls = []
+    monkeypatch.setattr(sup, "stop_live", lambda **k: calls.append("stop_live"))
+    monkeypatch.setattr(sup, "start_live", lambda **k: calls.append("start_live"))
+
+    sup._restart_live("exit_code=5", exit_code=EXIT_LOCK_CONFLICT)
+
+    assert calls == []  # no immediate stop/start attempt
+    assert sup.live_failure_count == 1
+    assert sup._live_retry_wait_seconds() > 0
+
+
+def test_restart_live_retries_immediately_within_budget(sup, monkeypatch):
+    calls = []
+    monkeypatch.setattr(sup, "stop_live", lambda **k: calls.append("stop_live"))
+    monkeypatch.setattr(sup, "start_live", lambda **k: calls.append("start_live"))
+    monkeypatch.setattr(supervisor_engine.time, "sleep", lambda *_: None)
+
+    sup._restart_live("exit_code=1", exit_code=1)
+
+    assert calls == ["stop_live", "start_live"]
+    assert sup.live_failure_count == 0  # budget path does not touch the backoff counter
+
+
+def test_restart_live_falls_back_to_backoff_once_budget_exhausted(sup, monkeypatch):
+    # BACKEND is a frozen dataclass singleton - simulate an exhausted
+    # per-hour budget by monkeypatching the check method directly instead
+    # of trying to mutate frozen settings.
+    monkeypatch.setattr(sup, "_restart_budget_available", lambda: False)
+    monkeypatch.setattr(supervisor_engine.time, "sleep", lambda *_: None)
+    calls = []
+    monkeypatch.setattr(sup, "stop_live", lambda **k: calls.append("stop_live"))
+    monkeypatch.setattr(sup, "start_live", lambda **k: calls.append("start_live"))
+
+    sup._restart_live("exit_code=1", exit_code=1)  # budget already exhausted
+
+    assert calls == []
+    assert sup.live_failure_count == 1
+    assert sup._live_retry_wait_seconds() > 0
+
+
+def test_retry_live_after_backoff_clears_deadline_and_calls_start(sup, monkeypatch):
+    sup.live_retry_not_before = time.time() - 1
+    calls = []
+    monkeypatch.setattr(sup, "start_live", lambda **k: calls.append(k))
+
+    sup._retry_live_after_backoff()
+
+    assert sup.live_retry_not_before == 0.0
+    assert len(calls) == 1
+
+
+def test_reset_live_backoff_if_stable_clears_after_long_uptime(sup):
+    sup.live_failure_count = 3
+    sup.live_retry_not_before = time.time() + 100
+    sup.live.process = SimpleNamespace(poll=lambda: None, pid=None)
+    sup.live.started_at = time.time() - (LIVE_RESTART_BACKOFF_BASE_SEC * 10_000)  # long ago
+
+    sup._reset_live_backoff_if_stable()
+
+    assert sup.live_failure_count == 0
+    assert sup.live_retry_not_before == 0.0
+
+
+def test_reset_live_backoff_if_stable_does_nothing_for_short_uptime(sup):
+    sup.live_failure_count = 3
+    sup.live.process = SimpleNamespace(poll=lambda: None)
+    sup.live.started_at = time.time() - 5  # just started
+
+    sup._reset_live_backoff_if_stable()
+
+    assert sup.live_failure_count == 3
+
+
+# --- P0-5: periodic DB-inclusive health check (not just at startup) ------
+
+
+def test_periodic_db_health_check_respects_interval(sup, monkeypatch):
+    calls = []
+    monkeypatch.setattr(supervisor_engine, "collect_health", lambda **k: calls.append(k) or {"checks": []})
+    monkeypatch.setattr(supervisor_engine.time, "time", lambda: 1_000_000.0)
+    sup._last_db_health_at = 1_000_000.0 - 10  # well inside the interval
+
+    sup._run_periodic_db_health_check()
+
+    assert calls == []  # too soon since the last check
+
+
+def test_periodic_db_health_check_runs_after_interval_elapses(sup, monkeypatch):
+    from core_engine.settings import BACKEND
+
+    calls = []
+    monkeypatch.setattr(supervisor_engine, "collect_health", lambda **k: calls.append(k) or {"checks": []})
+    monkeypatch.setattr(supervisor_engine.time, "time", lambda: 1_000_000.0)
+    sup._last_db_health_at = 1_000_000.0 - BACKEND.db_health_interval_sec - 1
+
+    sup._run_periodic_db_health_check()
+
+    assert len(calls) == 1
+    assert calls[0].get("include_database") is True
+
+
+def test_periodic_db_health_check_escalates_contract_mismatch_to_critical(sup, monkeypatch, caplog):
+    monkeypatch.setattr(supervisor_engine.time, "time", lambda: 1_000_000.0)
+    sup._last_db_health_at = 0.0
+    monkeypatch.setattr(
+        supervisor_engine, "collect_health",
+        lambda **k: {
+            "checks": [
+                {"name": "db_contract", "status": "fail", "message": "contract version mismatch: found 1, expected 2"},
+            ]
+        },
+    )
+    notified = []
+    monkeypatch.setattr(sup, "_safe_notify", lambda fn, **k: notified.append(k))
+
+    import logging
+
+    with caplog.at_level(logging.CRITICAL, logger="system"):
+        sup._run_periodic_db_health_check()
+
+    assert any(r.levelno == logging.CRITICAL for r in caplog.records)
+    assert len(notified) == 1
+    assert notified[0]["severity"] == "CRITICAL"
+
+
+def test_periodic_db_health_check_does_not_escalate_when_db_unreachable(sup, monkeypatch):
+    monkeypatch.setattr(supervisor_engine.time, "time", lambda: 1_000_000.0)
+    sup._last_db_health_at = 0.0
+    monkeypatch.setattr(
+        supervisor_engine, "collect_health",
+        lambda **k: {
+            "checks": [
+                {"name": "db_contract", "status": "fail", "message": "contract check could not run: SQL Server unreachable"},
+            ]
+        },
+    )
+    notified = []
+    monkeypatch.setattr(sup, "_safe_notify", lambda fn, **k: notified.append(k))
+
+    sup._run_periodic_db_health_check()
+
+    # A totally unreachable database is a different, already-covered
+    # problem (the general "database" check) - this path must not also
+    # fire the contract-mismatch CRITICAL alert for it.
+    assert notified == []
+
+
+def test_periodic_db_health_check_reports_stale_once_and_recovery_once(sup, monkeypatch):
+    monkeypatch.setattr(supervisor_engine.time, "time", lambda: 1_000_000.0)
+    sup._last_db_health_at = 0.0
+    checks = iter(
+        [
+            {
+                "checks": [
+                    {
+                        "name": "database",
+                        "status": "ok",
+                        "detail": {"latest_bar": {"bar_time": "2026-07-23 01:00:00"}},
+                    }
+                ]
+            },
+            {
+                "checks": [
+                    {
+                        "name": "database",
+                        "status": "ok",
+                        "detail": {"latest_bar": {"bar_time": "2026-07-23 01:00:00"}},
+                    }
+                ]
+            },
+            {
+                "checks": [
+                    {
+                        "name": "database",
+                        "status": "ok",
+                        "detail": {"latest_bar": {"bar_time": "2026-07-23 04:00:00"}},
+                    }
+                ]
+            },
+        ]
+    )
+    monkeypatch.setattr(supervisor_engine, "collect_health", lambda **k: next(checks))
+    monkeypatch.setattr(
+        supervisor_engine,
+        "_age_seconds",
+        lambda value: 10_000.0 if value.endswith("01:00:00") else 60.0,
+    )
+    notifications = []
+    errors = []
+    infos = []
+    monkeypatch.setattr(sup, "_safe_notify", lambda fn, **kwargs: notifications.append(kwargs))
+    monkeypatch.setattr(supervisor_engine.logger, "error", lambda *args: errors.append(args))
+    monkeypatch.setattr(supervisor_engine.logger, "info", lambda *args: infos.append(args))
+
+    sup._run_periodic_db_health_check()
+    sup._last_db_health_at = 0.0
+    sup._run_periodic_db_health_check()
+    sup._last_db_health_at = 0.0
+    sup._run_periodic_db_health_check()
+
+    assert len(errors) == 1
+    assert len(infos) == 1
+    assert "freshness recovered" in str(infos[0])
+    assert [item["severity"] for item in notifications] == ["ERROR", "INFO"]
+
+
+def test_startup_health_ignores_children_that_have_not_been_spawned():
+    health = {
+        "status": "fail",
+        "checks": [
+            {"name": "live_state", "status": "fail", "message": "Live is stopped."},
+            {"name": "historical_state", "status": "fail", "message": "No run yet."},
+            {"name": "discord", "status": "fail", "message": "Sender has not started."},
+            {"name": "database", "status": "ok", "message": "SQL is reachable."},
+        ],
+    }
+
+    assert _startup_actionable_failures(health) == []
+
+
+def test_startup_health_keeps_real_readiness_failures():
+    database_failure = {"name": "database", "status": "fail", "message": "SQL is unreachable."}
+    health = {
+        "status": "fail",
+        "checks": [
+            {"name": "live_state", "status": "fail", "message": "Live is stopped."},
+            database_failure,
+        ],
+    }
+
+    assert _startup_actionable_failures(health) == [database_failure]
+
+
+# --- High-10: HISTORICAL_MAX_RUNTIME_MINUTES was defined but never used --
+
+
+def _backend_with(**overrides):
+    # BackendSettings is a frozen dataclass singleton - cannot setattr()
+    # onto it directly. dataclasses.replace() makes a new instance with
+    # just the given field(s) overridden, safe to monkeypatch the module-
+    # level BACKEND name to point at instead.
+    import dataclasses
+    from core_engine.settings import BACKEND
+
+    return dataclasses.replace(BACKEND, **overrides)
+
+
+def test_enforce_historical_runtime_limit_cancels_when_exceeded(sup, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+
+    monkeypatch.setattr(supervisor_engine, "BACKEND", _backend_with(historical_max_runtime_minutes=30))
+    sup.historical.process = SimpleNamespace(poll=lambda: None)
+    sup.active_historical_started_at = datetime.now(timezone.utc) - timedelta(minutes=45)
+    calls = []
+    monkeypatch.setattr(sup, "stop_historical", lambda **k: calls.append(k))
+
+    sup._enforce_historical_runtime_limit()
+
+    assert len(calls) == 1
+    assert calls[0]["force_after_grace"] is True
+
+
+def test_enforce_historical_runtime_limit_does_nothing_within_limit(sup, monkeypatch):
+    from datetime import datetime, timezone
+
+    monkeypatch.setattr(supervisor_engine, "BACKEND", _backend_with(historical_max_runtime_minutes=30))
+    sup.historical.process = SimpleNamespace(poll=lambda: None)
+    sup.active_historical_started_at = datetime.now(timezone.utc)
+    calls = []
+    monkeypatch.setattr(sup, "stop_historical", lambda **k: calls.append(k))
+
+    sup._enforce_historical_runtime_limit()
+
+    assert calls == []
+
+
+def test_enforce_historical_runtime_limit_can_be_explicitly_disabled(sup, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+
+    monkeypatch.setattr(supervisor_engine, "BACKEND", _backend_with(historical_max_runtime_minutes=0))
+    sup.historical.process = SimpleNamespace(poll=lambda: None)
+    sup.active_historical_started_at = datetime.now(timezone.utc) - timedelta(days=1)
+    calls = []
+    monkeypatch.setattr(sup, "stop_historical", lambda **k: calls.append(k))
+
+    sup._enforce_historical_runtime_limit()
+
+    assert calls == []
+
+
+# --- Medium-17: fully-malformed HISTORICAL_BACKFILL_UTC must be detectable -
+
+
+def test_schedule_times_returns_empty_for_fully_malformed_value(sup, monkeypatch):
+    monkeypatch.setattr(supervisor_engine, "BACKEND", _backend_with(historical_backfill_utc="not,a,time"))
+    assert sup._schedule_times() == []
+
+
+def test_schedule_times_parses_valid_value_normally(sup, monkeypatch):
+    monkeypatch.setattr(supervisor_engine, "BACKEND", _backend_with(historical_backfill_utc="11:00,22:00"))
+    times = sup._schedule_times()
+    assert len(times) == 2
+    assert [sup._schedule_label(t) for t in times] == ["11:00", "22:00"]
+
+
+def test_schedule_times_skips_only_the_bad_tokens_and_keeps_good_ones(sup, monkeypatch):
+    monkeypatch.setattr(supervisor_engine, "BACKEND", _backend_with(historical_backfill_utc="11:00,garbage,22:00"))
+    times = sup._schedule_times()
+    assert [sup._schedule_label(t) for t in times] == ["11:00", "22:00"]
+
+
+def test_start_live_no_longer_clears_the_stop_flag(sup, monkeypatch):
+    called = {"clear_stop_request": False}
+    monkeypatch.setattr(supervisor_engine, "clear_stop_request", lambda: called.update(clear_stop_request=True))
+    monkeypatch.setattr(sup, "_spawn", lambda *a, **k: None)
+
+    sup.start_live(reason="test")
+
+    assert called["clear_stop_request"] is False, (
+        "start_live() must not clear a pending Graceful Stop request - only "
+        "run() should do that once, at supervisor startup"
+    )
+
+
+def test_supervisor_start_cleans_dead_prior_lease_before_acquire(sup, monkeypatch):
+    calls: list[tuple[str, object]] = []
+    monkeypatch.setattr(
+        supervisor_engine,
+        "cleanup_stale_lock",
+        lambda task, **kwargs: calls.append(("cleanup", (task, kwargs))) or True,
+    )
+    monkeypatch.setattr(
+        supervisor_engine,
+        "acquire",
+        lambda task, **kwargs: calls.append(("acquire", (task, kwargs))) or True,
+    )
+    monkeypatch.setattr(sup, "_start_supervisor_heartbeat", lambda: calls.append(("heartbeat", None)))
+
+    assert sup._acquire_supervisor_lock() is True
+    assert [name for name, _ in calls] == ["cleanup", "acquire", "heartbeat"]
+    assert calls[0][1][1]["stale_after_sec"] == 10 * 60
+
+
+def test_supervisor_rechecks_stale_lease_after_boot_sql_recovers(sup, monkeypatch):
+    """The first cleanup can fail while SQL Server is still starting."""
+    cleanup_results = iter([False, True])
+    acquire_results = iter([False, True])
+    calls: list[str] = []
+
+    def _cleanup(*_args, **_kwargs):
+        calls.append("cleanup")
+        return next(cleanup_results)
+
+    def _acquire(*_args, **_kwargs):
+        calls.append("acquire")
+        return next(acquire_results)
+
+    monkeypatch.setattr(supervisor_engine, "cleanup_stale_lock", _cleanup)
+    monkeypatch.setattr(supervisor_engine, "acquire", _acquire)
+    monkeypatch.setattr(sup, "_start_supervisor_heartbeat", lambda: calls.append("heartbeat"))
+
+    assert sup._acquire_supervisor_lock() is True
+    assert calls == ["cleanup", "acquire", "cleanup", "acquire", "heartbeat"]
+
+
+def test_monitor_restarts_when_first_batch_never_completes(sup, monkeypatch):
+    """Three identical valid snapshots prove a stuck first batch."""
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    sup.live.process = SimpleNamespace(poll=lambda: None, pid=None)
+    sup.live.started_at = time.time() - 3600
+    monkeypatch.setattr(
+        supervisor_engine,
+        "read_json_snapshot",
+        lambda _path: JsonReadResult(
+            data={
+                "pid": None,
+                "status": "batch_running",
+                "updated_at": now.isoformat(),
+                "child_started_at": (now - timedelta(hours=1)).isoformat(),
+                "batch_started_at": (now - timedelta(minutes=30)).isoformat(),
+                "batch_completed_at": None,
+            },
+            error=None,
+            attempts=1,
+        ),
+    )
+    restarted = []
+    monkeypatch.setattr(sup, "_restart_live", lambda reason, **kwargs: restarted.append(reason))
+
+    sup._monitor_live_freshness()
+    sup._monitor_live_freshness()
+    assert restarted == []
+    sup._monitor_live_freshness()
+
+    assert restarted and "first_batch" in restarted[0]
+
+
+def test_monitor_ignores_transient_state_read_failure_when_output_is_fresh(sup, monkeypatch):
+    """A Windows sharing race must never be reinterpreted as missing progress."""
+
+    sup.live.process = SimpleNamespace(poll=lambda: None, pid=1234)
+    sup.live.started_at = time.time() - 3600
+    monkeypatch.setattr(
+        supervisor_engine,
+        "read_json_snapshot",
+        lambda _path: JsonReadResult(
+            data=None,
+            error=PermissionError("fault-injected sharing violation"),
+            attempts=5,
+        ),
+    )
+    monkeypatch.setattr(sup, "_live_output_age_seconds", lambda: 1.0)
+    restarted = []
+    monkeypatch.setattr(sup, "_restart_live", lambda reason, **kwargs: restarted.append(reason))
+
+    sup._monitor_live_freshness()
+
+    assert restarted == []
+    assert sup._live_semantic_stale_confirmations == 0
+
+
+def test_monitor_requires_three_matching_stale_batch_snapshots(sup, monkeypatch):
+    """One stale-looking state read is insufficient evidence for a recycle."""
+
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    state = {
+        "pid": 1234,
+        "status": "waiting",
+        "updated_at": now.isoformat(),
+        "batch_completed_at": (now - timedelta(minutes=30)).isoformat(),
+    }
+    sup.live.process = SimpleNamespace(poll=lambda: None, pid=1234)
+    sup.live.started_at = time.time() - 3600
+    monkeypatch.setattr(
+        supervisor_engine,
+        "read_json_snapshot",
+        lambda _path: JsonReadResult(data=state, error=None, attempts=1),
+    )
+    restarted = []
+    monkeypatch.setattr(sup, "_restart_live", lambda reason, **kwargs: restarted.append(reason))
+
+    sup._monitor_live_freshness()
+    sup._monitor_live_freshness()
+    assert restarted == []
+
+    sup._monitor_live_freshness()
+    assert len(restarted) == 1
+    assert "stale_batch_progress" in restarted[0]
+
+
+def test_monitor_resets_stale_vote_when_snapshot_progresses(sup, monkeypatch):
+    """Stale confirmations must be consecutive observations of one watermark."""
+
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    snapshots = iter(
+        [
+            {
+                "pid": 1234,
+                "status": "waiting",
+                "updated_at": now.isoformat(),
+                "batch_completed_at": (now - timedelta(minutes=30)).isoformat(),
+            },
+            {
+                "pid": 1234,
+                "status": "waiting",
+                "updated_at": now.isoformat(),
+                "batch_completed_at": now.isoformat(),
+            },
+            {
+                "pid": 1234,
+                "status": "waiting",
+                "updated_at": now.isoformat(),
+                "batch_completed_at": (now - timedelta(minutes=30)).isoformat(),
+            },
+        ]
+    )
+    sup.live.process = SimpleNamespace(poll=lambda: None, pid=1234)
+    sup.live.started_at = time.time() - 3600
+    monkeypatch.setattr(
+        supervisor_engine,
+        "read_json_snapshot",
+        lambda _path: JsonReadResult(data=next(snapshots), error=None, attempts=1),
+    )
+    restarted = []
+    monkeypatch.setattr(sup, "_restart_live", lambda reason, **kwargs: restarted.append(reason))
+
+    sup._monitor_live_freshness()
+    assert sup._live_semantic_stale_confirmations == 1
+    sup._monitor_live_freshness()
+    assert sup._live_semantic_stale_confirmations == 0
+    sup._monitor_live_freshness()
+
+    assert restarted == []
+    assert sup._live_semantic_stale_confirmations == 1
+
+
+def test_critical_outbox_drain_failure_is_not_silent(sup, monkeypatch):
+    from core_engine.util.notify import critical_outbox
+
+    class _BrokenOutbox:
+        @staticmethod
+        def drain(*, limit=20):
+            raise RuntimeError("fault-injected SQLite failure")
+
+    monkeypatch.setattr(critical_outbox, "critical_alert_outbox", lambda: _BrokenOutbox())
+    warnings = []
+    monkeypatch.setattr(supervisor_engine.logger, "warning", lambda *args: warnings.append(args))
+    sup._last_critical_drain_at = 0.0
+
+    sup._drain_critical_alert_outbox()
+    assert sup._critical_drain_thread is not None
+    sup._critical_drain_thread.join(timeout=2)
+
+    assert len(warnings) == 1
+    rendered = str(warnings[0])
+    assert "Critical alert outbox retry failed" in rendered
+    assert "fault-injected SQLite failure" in rendered
+
+
+def test_critical_outbox_network_stall_never_blocks_supervisor_loop(sup, monkeypatch):
+    from core_engine.util.notify import critical_outbox
+
+    entered = threading.Event()
+    release = threading.Event()
+
+    class _StalledOutbox:
+        @staticmethod
+        def drain(*, limit=20):
+            entered.set()
+            release.wait(timeout=2)
+            return 0
+
+    monkeypatch.setattr(critical_outbox, "critical_alert_outbox", lambda: _StalledOutbox())
+    sup._last_critical_drain_at = 0.0
+
+    started = time.monotonic()
+    sup._drain_critical_alert_outbox()
+    elapsed = time.monotonic() - started
+
+    assert elapsed < 0.2
+    assert entered.wait(timeout=1)
+    first_thread = sup._critical_drain_thread
+    sup._last_critical_drain_at = 0.0
+    sup._drain_critical_alert_outbox()
+    assert sup._critical_drain_thread is first_thread
+    release.set()
+    first_thread.join(timeout=2)
+
+
+def test_runtime_disk_failure_alerts_once_and_recovery_is_reported(sup, monkeypatch):
+    criticals = []
+    infos = []
+    monkeypatch.setattr(supervisor_engine.logger, "critical", lambda *args: criticals.append(args))
+    monkeypatch.setattr(supervisor_engine.logger, "info", lambda *args: infos.append(args))
+    failed = {
+        "checks": [
+            {
+                "name": "runtime",
+                "status": "fail",
+                "detail": {"disk_free_gb": 0.5, "disk_free_percent": 0.7},
+            }
+        ]
+    }
+    recovered = {
+        "checks": [
+            {
+                "name": "runtime",
+                "status": "ok",
+                "detail": {"disk_free_gb": 10.0, "disk_free_percent": 15.0},
+            }
+        ]
+    }
+
+    sup._report_runtime_health_transition(failed)
+    sup._report_runtime_health_transition(failed)
+    sup._report_runtime_health_transition(recovered)
+
+    assert len(criticals) == 1
+    assert "Runtime disk health critical" in str(criticals[0])
+    assert len(infos) == 1
+    assert "Runtime disk health recovered" in str(infos[0])
