@@ -1,8 +1,0 @@
-[Unit]
-Description=OG Live Stream Redis pipeline healthcheck
-
-[Service]
-Type=oneshot
-WorkingDirectory=/home/administrator/Desktop/og_program
-ExecStart=/home/administrator/Desktop/og_program/.venv/bin/python -m og_live.stream_mechanism.healthcheck --json --compact-json
-Environment=PYTHONUNBUFFERED=1

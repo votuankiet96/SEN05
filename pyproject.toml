@@ -3,34 +3,29 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "og-core"
+name = "core-python"
 version = "0.1.0"
-description = "OG (Order Generation): shared strategy core, historical SQL dashboard/export, and live Redis signal generation."
+description = "core_python: SQL-backed strategy engine, historical dashboard, and CSV export (Combo, MA Cross)."
 requires-python = ">=3.11"
 dependencies = [
     "pandas",
     "numpy",
     "python-dotenv",
+    "Flask",
+    "pyodbc",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest", "ruff", "vulture"]
-past = ["Flask", "pyodbc"]
-live = ["redis"]
 prod = ["gunicorn"]
-all = ["Flask", "pyodbc", "redis", "gunicorn"]
 
 [project.scripts]
-og-dashboard = "og_past.main:main"
-og-engine = "og_core.ops:main"
-og-past-export = "og_past.export_cli:main"
-og-live-stream = "og_live.stream_mechanism.main:main"
-og-live-stream-healthcheck = "og_live.stream_mechanism.healthcheck:main"
-og-live-pubsub = "og_live.pubsub_mechanism.main:main"
-og-live-pubsub-healthcheck = "og_live.pubsub_mechanism.healthcheck:main"
+core-python-dashboard = "core_python.main:main"
+core-python-ops = "core_python.util.ops:main"
+core-python-export = "core_python.export_cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-og_past = ["chart/static/*", "chart/static/vendor/*"]
+core_python = ["chart/static/*", "chart/static/vendor/*"]
