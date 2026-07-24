@@ -1026,7 +1026,8 @@ def _status_reporter() -> None:
 
         _spool.cleanup_old()
 
-        spool_count = _spool.count() or 0
+        spool_count_raw, spool_oldest_age_seconds = _spool.health_snapshot()
+        spool_count = spool_count_raw or 0
 
         now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
@@ -1111,6 +1112,7 @@ def _status_reporter() -> None:
             source_lag_count=source_lag_count,
             source_lag_entries=source_lag_entries,
             spool_count=spool_count,
+            spool_oldest_age_seconds=spool_oldest_age_seconds,
             recent_ws_errors=recent_ws_errors,
             total_ws_errors=total_ws_errors,
             n_miss_active=n_miss_active,
@@ -1140,6 +1142,11 @@ def _status_reporter() -> None:
                 write_queue=s["queue_depth"],
                 memory_buffer=overflow,
                 disk_buffer=spool_count,
+                disk_buffer_oldest_seconds=(
+                    round(spool_oldest_age_seconds, 1)
+                    if spool_oldest_age_seconds is not None
+                    else None
+                ),
                 missing_pairs=n_miss_active,
                 late_pairs=stale_count,
                 feed_delay_pairs=source_lag_count,
@@ -1226,6 +1233,11 @@ def _status_reporter() -> None:
                 "write_queue": s["queue_depth"],
                 "memory_safety_buffer": overflow,
                 "disk_safety_buffer": spool_count,
+                "disk_safety_buffer_oldest_seconds": (
+                    round(spool_oldest_age_seconds, 1)
+                    if spool_oldest_age_seconds is not None
+                    else None
+                ),
             },
             data_result={
                 "last_hour": hourly_summary,

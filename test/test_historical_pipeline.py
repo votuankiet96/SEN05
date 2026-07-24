@@ -27,6 +27,25 @@ from core_engine.core.historical import runtime_support
 from core_engine.core.historical.engine import _set_replay_runtime
 
 
+def test_find_stale_pairs_honors_configured_daily_closure(monkeypatch):
+    symbol = {
+        "symbol_id": 81,
+        "asset_type": "Indice",
+        "tv_symbol": "SP35",
+    }
+    now = datetime(2026, 7, 24, 6, 0)
+    last_bar = now - timedelta(minutes=800)
+    monkeypatch.setattr(runtime_support, "now_utc", lambda: now)
+
+    stale = runtime_support.find_stale_pairs(
+        {(81, "M5"): last_bar},
+        tf_filter={"M5"},
+        symbols=[symbol],
+    )
+
+    assert stale == []
+
+
 def _reset_replay_runtime():
     from core_engine.settings import HISTORICAL
 

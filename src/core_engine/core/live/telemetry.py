@@ -7,6 +7,7 @@ import re
 from collections.abc import Mapping
 
 from core_engine.core.live import runtime as _runtime
+from core_engine.core.live.outbox import OUTBOX_STALE_ALERT_SECONDS
 from core_engine.core.live.runtime import (
     _CANDLE_HEADER_REPEAT_ROWS,
     _candle_table_lock,
@@ -576,6 +577,7 @@ class LiveReporter:
         source_lag_count: int,
         source_lag_entries: list[tuple[float, int, str, float]],
         spool_count: int,
+        spool_oldest_age_seconds: float | None,
         recent_ws_errors: int,
         total_ws_errors: int,
         n_miss_active: int,
@@ -584,18 +586,31 @@ class LiveReporter:
     ) -> tuple[str, str, list[str]]:
         has_recent_data_flow = last_hour_accepted > 0 and last_hour_saved > 0
         source_lag_is_actionable = source_lag_count > 0 and not has_recent_data_flow
+        outbox_is_stale = (
+            spool_count > 0
+            and spool_oldest_age_seconds is not None
+            and spool_oldest_age_seconds >= OUTBOX_STALE_ALERT_SECONDS
+        )
+        outbox_age_unknown = spool_count > 0 and spool_oldest_age_seconds is None
 
         critical_stale_without_flow = stale_count > 15 and not has_recent_data_flow
         if (
             recent_errors > 0
             or critical_stale_without_flow
             or (source_lag_count > 15 and not has_recent_data_flow)
-            or spool_count > 0
+            or outbox_is_stale
             or recent_ws_errors > 5
         ):
             health_status = "CRITICAL"
             notify_level = "ERROR"
-        elif n_miss_active > 0 or stale_count > 0 or source_lag_is_actionable or is_guest or recent_ws_errors > 0:
+        elif (
+            n_miss_active > 0
+            or stale_count > 0
+            or source_lag_is_actionable
+            or outbox_age_unknown
+            or is_guest
+            or recent_ws_errors > 0
+        ):
             health_status = "WARNING"
             notify_level = "WARNING"
         else:
@@ -607,9 +622,15 @@ class LiveReporter:
             issues.append(f"{recent_errors} database write errors happened in the last status window")
         if recent_ws_errors:
             issues.append(f"{recent_ws_errors} TradingView WebSocket errors happened in the last status window")
-        if spool_count:
+        if outbox_is_stale:
+            waited_minutes = spool_oldest_age_seconds / 60
             issues.append(
-                f"Temporary buffer has {spool_count} bars waiting - database writes are slow"
+                f"Durable outbox has {spool_count} bars waiting for Fact; "
+                f"oldest has waited {waited_minutes:.0f} minutes"
+            )
+        elif outbox_age_unknown:
+            issues.append(
+                f"Durable outbox has {spool_count} bars waiting, but oldest age is unavailable"
             )
         if stale_count > 3:
             issues.append(f"{stale_count} pairs have outdated data")

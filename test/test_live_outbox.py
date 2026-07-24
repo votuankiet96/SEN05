@@ -381,6 +381,27 @@ def test_count_returns_none_when_db_file_is_unreachable(tmp_path):
     assert s.count() is None
 
 
+def test_health_snapshot_reports_count_and_oldest_row_age(spool):
+    row_id = spool.persist_pending(_sample_item())
+    assert row_id is not None
+    with sqlite3.connect(spool.path) as con:
+        con.execute(
+            "UPDATE spool SET created_at = datetime('now', '-20 minutes') WHERE id=?",
+            (row_id,),
+        )
+        con.commit()
+
+    count, oldest_age_seconds = spool.health_snapshot()
+
+    assert count == 1
+    assert oldest_age_seconds is not None
+    assert 19 * 60 <= oldest_age_seconds <= 21 * 60
+
+
+def test_health_snapshot_is_empty_without_pending_rows(spool):
+    assert spool.health_snapshot() == (0, None)
+
+
 def test_restart_immediately_recovers_leased_and_staged_rows(spool):
     leased_id = spool.persist_pending(_sample_item(symbol_id=701))
     staged_id = spool.persist_pending(_sample_item(symbol_id=702))

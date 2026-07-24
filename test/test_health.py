@@ -63,6 +63,107 @@ def _redis_settings(*, enabled=True, host="redis.internal"):
     )
 
 
+def _repair_item(*, asset_type: str, reason: str = "STALE"):
+    return {
+        "sym": {
+            "symbol_id": 1,
+            "asset_type": asset_type,
+            "tv_symbol": "TEST",
+        },
+        "tf_code": "M5",
+        "reason": reason,
+        "gap_hours": 1.0,
+    }
+
+
+def test_data_health_only_suppresses_schedule_current_historical_latency():
+    items = [
+        _repair_item(asset_type="FOREX"),
+        _repair_item(asset_type="FOREX", reason="STALE+HOLE"),
+        _repair_item(asset_type="Indice"),
+        _repair_item(asset_type="FOREX", reason="MISS"),
+    ]
+
+    actionable, scheduled = health._partition_data_health_repairs(
+        items,
+        live_asset_types={"Indice", "Metal", "Crypto"},
+        historical_schedule_current=True,
+    )
+
+    assert scheduled == [items[0]]
+    assert actionable == items[1:]
+
+
+def test_data_health_keeps_historical_latency_actionable_after_missed_schedule():
+    item = _repair_item(asset_type="FOREX")
+
+    actionable, scheduled = health._partition_data_health_repairs(
+        [item],
+        live_asset_types={"Indice", "Metal", "Crypto"},
+        historical_schedule_current=False,
+    )
+
+    assert actionable == [item]
+    assert scheduled == []
+
+
+def test_historical_schedule_context_accepts_previous_success_during_new_slot_grace(
+    monkeypatch,
+    tmp_path,
+):
+    now = datetime(2026, 7, 24, 12, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr(health, "_utc_now", lambda: now)
+    monkeypatch.setattr(health, "RUN_DIR", tmp_path)
+    monkeypatch.setattr(
+        health,
+        "BACKEND",
+        SimpleNamespace(
+            historical_backfill_enabled=True,
+            historical_backfill_utc="11:00,22:00",
+            historical_max_runtime_minutes=360,
+        ),
+    )
+    _write_state(
+        tmp_path / "historical_last_run.json",
+        completed_at="2026-07-24T03:02:00+00:00",
+        stats={"queued": 310, "ok": 310, "fail": 0},
+    )
+
+    context = health._historical_schedule_context()
+
+    assert context["current"] is True
+    assert context["required_success_after"] == "2026-07-23T22:00:00+00:00"
+    assert context["grace_deadline"] == "2026-07-24T17:00:00+00:00"
+
+
+def test_historical_schedule_context_detects_missed_completed_slot(
+    monkeypatch,
+    tmp_path,
+):
+    now = datetime(2026, 7, 24, 18, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr(health, "_utc_now", lambda: now)
+    monkeypatch.setattr(health, "RUN_DIR", tmp_path)
+    monkeypatch.setattr(
+        health,
+        "BACKEND",
+        SimpleNamespace(
+            historical_backfill_enabled=True,
+            historical_backfill_utc="11:00,22:00",
+            historical_max_runtime_minutes=360,
+        ),
+    )
+    _write_state(
+        tmp_path / "historical_last_run.json",
+        completed_at="2026-07-24T03:02:00+00:00",
+        stats={"queued": 310, "ok": 310, "fail": 0},
+    )
+
+    context = health._historical_schedule_context()
+
+    assert context["current"] is False
+    assert context["required_success_after"] == "2026-07-24T11:00:00+00:00"
+
+
 @pytest.mark.parametrize(
     ("free_gb", "expected"),
     [(13.0, "ok"), (4.0, "warn"), (0.5, "fail")],
@@ -110,6 +211,27 @@ def test_live_spool_health_fails_when_fact_backlog_is_stale(monkeypatch, tmp_pat
     assert check.status == "fail"
     assert check.detail["pending_count"] == 1
     assert check.detail["by_status"] == {"staged": 1}
+
+
+def test_live_spool_health_accepts_fresh_in_flight_row(monkeypatch, tmp_path):
+    path = tmp_path / "overflow_spool.db"
+    with sqlite3.connect(path) as conn:
+        conn.execute(
+            "CREATE TABLE spool (status TEXT NOT NULL, created_at TEXT NOT NULL)"
+        )
+        conn.execute("CREATE TABLE spool_quarantine (id INTEGER)")
+        conn.execute(
+            "INSERT INTO spool(status, created_at) VALUES (?, datetime('now'))",
+            ("leased",),
+        )
+        conn.commit()
+    monkeypatch.setattr(health, "WS_OVERFLOW_SPOOL", path)
+
+    check = health._live_spool_check()
+
+    assert check.status == "ok"
+    assert check.detail["pending_count"] == 1
+    assert "in-flight" in check.message
 
 
 def test_live_spool_health_is_ok_when_empty(monkeypatch, tmp_path):

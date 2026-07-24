@@ -25,6 +25,28 @@ def test_runbook_names_scheduled_task_not_scm_commands():
     assert "Stop-Service SEN05DataProvider" not in runbook
 
 
+def test_launcher_uses_canonical_log_streams_and_supported_queries():
+    launcher = (ROOT / "scripts" / "launcher" / "dp_launcher.ps1").read_text(
+        encoding="utf-8"
+    )
+
+    for stream in ("system.log", "live.log", "historical.log", "alerts.log"):
+        assert f"runtime\\logs\\{stream}" in launcher
+    for stale_path in (
+        "runtime\\logs\\system\\",
+        "runtime\\logs\\operation\\",
+        "activity*.log",
+        "auth*.log",
+        "discord*.log",
+        "subprocess_*.log",
+    ):
+        assert stale_path not in launcher
+    assert '"logs", "status"' in launcher
+    assert '"logs", "find"' in launcher
+    assert '"logs", "risks"' in launcher
+    assert '"logs", "trace"' in launcher
+
+
 def test_read_only_health_findings_are_logged_as_attention_not_failures():
     status, message = _terminal_completion_status(1, ["logs", "risks", "--since", "30m"])
 

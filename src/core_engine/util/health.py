@@ -16,10 +16,11 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass, asdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from core_engine.core.live.outbox import OUTBOX_STALE_ALERT_SECONDS
 from core_engine.shared.tradingview import auth as tv_auth
 from core_engine.shared.tradingview.diagnostics import playwright_browser_status
 from core_engine.shared.time import parse_utc_time as _parse_time
@@ -35,6 +36,7 @@ from core_engine.settings import (
     ENV_FILE,
     HISTORICAL,
     HISTORICAL_LOG,
+    LIVE,
     LIVE_LOG,
     LOG_EMERGENCY_DIR,
     LOG_DIR,
@@ -355,17 +357,27 @@ def _live_spool_check() -> Check:
         )
     if pending == 0:
         return Check("live_spool", "ok", "Live durable spool is empty.", detail)
-    if oldest_age is not None and oldest_age > 900:
+    if (
+        oldest_age is not None
+        and oldest_age >= OUTBOX_STALE_ALERT_SECONDS
+    ):
         return Check(
             "live_spool",
             "fail",
-            f"{pending} live row(s) have waited over 15 minutes for Fact commit.",
+            f"{pending} live row(s) have waited at least 15 minutes for Fact commit.",
+            detail,
+        )
+    if oldest_age is not None:
+        return Check(
+            "live_spool",
+            "ok",
+            f"{pending} live row(s) are in-flight within the normal delivery window.",
             detail,
         )
     return Check(
         "live_spool",
         "warn",
-        f"{pending} live row(s) are waiting for Fact commit.",
+        f"{pending} live row(s) are waiting for Fact commit, but oldest age is unavailable.",
         detail,
     )
 
@@ -1118,6 +1130,144 @@ def _format_age(seconds: float | None) -> str:
     return f"{hours / 24:.1f}d"
 
 
+def _historical_schedule_context() -> dict[str, Any]:
+    """Describe whether historical-only freshness is inside its run schedule."""
+    enabled = bool(getattr(BACKEND, "historical_backfill_enabled", False))
+    schedule_text = str(getattr(BACKEND, "historical_backfill_utc", "") or "")
+    max_runtime_minutes = max(
+        1,
+        int(getattr(BACKEND, "historical_max_runtime_minutes", 0) or 0),
+    )
+    context: dict[str, Any] = {
+        "enabled": enabled,
+        "schedule_utc": schedule_text,
+        "max_runtime_minutes": max_runtime_minutes,
+        "current": False,
+    }
+    if not enabled:
+        context["reason"] = "scheduled historical backfill is disabled"
+        return context
+
+    schedule: list[tuple[int, int]] = []
+    try:
+        for raw in schedule_text.split(","):
+            token = raw.strip()
+            if not token:
+                continue
+            hour_text, minute_text = token.split(":", 1)
+            hour = int(hour_text)
+            minute = int(minute_text)
+            if not (0 <= hour <= 23 and 0 <= minute <= 59):
+                raise ValueError(token)
+            schedule.append((hour, minute))
+    except (TypeError, ValueError):
+        context["reason"] = "historical schedule is invalid"
+        return context
+    schedule = sorted(set(schedule))
+    if not schedule:
+        context["reason"] = "historical schedule is empty"
+        return context
+
+    now = _utc_now().astimezone(timezone.utc)
+    due_slots: list[datetime] = []
+    for day_offset in range(-3, 1):
+        day = (now + timedelta(days=day_offset)).date()
+        for hour, minute in schedule:
+            slot = datetime(
+                day.year,
+                day.month,
+                day.day,
+                hour,
+                minute,
+                tzinfo=timezone.utc,
+            )
+            if slot <= now:
+                due_slots.append(slot)
+    due_slots.sort()
+    if not due_slots:
+        context["reason"] = "no historical schedule slot could be resolved"
+        return context
+
+    current_due = due_slots[-1]
+    previous_due = due_slots[-2] if len(due_slots) > 1 else current_due
+    grace_deadline = current_due + timedelta(minutes=max_runtime_minutes)
+    required_success_after = (
+        previous_due if now <= grace_deadline else current_due
+    )
+
+    state_path = RUN_DIR / "historical_last_run.json"
+    state = _read_json(state_path)
+    completed_at = _parse_time(state.get("completed_at") or state.get("ts"))
+    stats = state.get("stats") if isinstance(state.get("stats"), dict) else {}
+    try:
+        failures = int(stats.get("fail", 0) or 0)
+        succeeded = int(stats.get("ok", 0) or 0)
+        queued_raw = stats.get("queued")
+        queued = int(queued_raw) if queued_raw is not None else None
+    except (TypeError, ValueError):
+        failures = 1
+        succeeded = 0
+        queued = None
+    last_run_successful = (
+        completed_at is not None
+        and failures == 0
+        and (queued is None or succeeded >= queued)
+    )
+    current = bool(
+        last_run_successful
+        and completed_at is not None
+        and completed_at >= required_success_after
+    )
+
+    context.update(
+        {
+            "state_path": str(state_path),
+            "current_due_at": current_due.isoformat(),
+            "grace_deadline": grace_deadline.isoformat(),
+            "required_success_after": required_success_after.isoformat(),
+            "last_completed_at": completed_at.isoformat() if completed_at else None,
+            "last_run_successful": last_run_successful,
+            "last_run_age_seconds": (
+                max(0.0, (now - completed_at).total_seconds())
+                if completed_at is not None
+                else None
+            ),
+            "current": current,
+        }
+    )
+    if not current:
+        context["reason"] = (
+            "no successful historical run completed within the required schedule window"
+        )
+    return context
+
+
+def _partition_data_health_repairs(
+    items: list[dict[str, Any]],
+    *,
+    live_asset_types: set[str],
+    historical_schedule_current: bool,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Separate expected historical-only latency from actionable repair work."""
+    live_types = {str(value).upper() for value in live_asset_types}
+    actionable: list[dict[str, Any]] = []
+    scheduled_latency: list[dict[str, Any]] = []
+    for item in items:
+        sym = item.get("sym") if isinstance(item.get("sym"), dict) else {}
+        asset_type = str(sym.get("asset_type") or "").upper()
+        expected_latency = (
+            historical_schedule_current
+            and str(item.get("reason") or "") == "STALE"
+            and bool(asset_type)
+            and asset_type not in live_types
+        )
+        if expected_latency:
+            scheduled_latency.append(item)
+        else:
+            actionable.append(item)
+    return actionable, scheduled_latency
+
+
 def collect_data_health(*, lookback_days: int | None = None) -> dict[str, Any]:
     """Read-only warehouse coverage summary for operators.
 
@@ -1149,7 +1299,7 @@ def collect_data_health(*, lookback_days: int | None = None) -> dict[str, Any]:
     }
     missing_keys = sorted(configured_keys - set(latest_configured.keys()))
     stale = find_stale_pairs(latest, symbols=SYMBOLS)
-    stale_keys = {
+    raw_stale_keys = {
         (int(item["sym"]["symbol_id"]), str(item["tf_code"]))
         for item in stale
     }
@@ -1164,6 +1314,17 @@ def collect_data_health(*, lookback_days: int | None = None) -> dict[str, Any]:
         tf_filter=set(TF_DISPLAY_ORDER),
     )
     repair_items.extend(new_holes)
+    historical_schedule = _historical_schedule_context()
+    repair_items, scheduled_latency = _partition_data_health_repairs(
+        repair_items,
+        live_asset_types=set(LIVE.asset_types),
+        historical_schedule_current=bool(historical_schedule.get("current")),
+    )
+    scheduled_latency_keys = {
+        (int(item["sym"]["symbol_id"]), str(item["tf_code"]))
+        for item in scheduled_latency
+    }
+    actionable_stale_keys = raw_stale_keys - scheduled_latency_keys
     market_open_gap_keys = {
         (int(item["sym"]["symbol_id"]), str(item["tf_code"]))
         for item in repair_items
@@ -1191,21 +1352,26 @@ def collect_data_health(*, lookback_days: int | None = None) -> dict[str, Any]:
             "age": _format_age(age),
         }
 
-    worst_stale = []
-    repair_items.sort(key=lambda item: (item.get("reason") != "MISS", -float(item.get("gap_hours") or 0)))
-    for item in repair_items[:15]:
+    def repair_example(item: dict[str, Any]) -> dict[str, Any]:
         sym = item.get("sym") or {}
         last_bar = item.get("last_bar")
-        worst_stale.append(
-            {
-                "symbol": sym.get("tv_symbol", "-"),
-                "timeframe": item.get("tf_code", "-"),
-                "reason": item.get("reason", "-"),
-                "last_bar": _format_dt(last_bar),
-                "gap": _format_age(float(item.get("gap_hours") or 0) * 3600),
-                "suggested_pull_bars": item.get("n_bars"),
-            }
-        )
+        return {
+            "symbol": sym.get("tv_symbol", "-"),
+            "timeframe": item.get("tf_code", "-"),
+            "reason": item.get("reason", "-"),
+            "last_bar": _format_dt(last_bar),
+            "gap": _format_age(float(item.get("gap_hours") or 0) * 3600),
+            "suggested_pull_bars": item.get("n_bars"),
+        }
+
+    repair_items.sort(key=lambda item: (item.get("reason") != "MISS", -float(item.get("gap_hours") or 0)))
+    scheduled_latency.sort(
+        key=lambda item: -float(item.get("gap_hours") or 0)
+    )
+    worst_stale = [repair_example(item) for item in repair_items[:15]]
+    scheduled_latency_examples = [
+        repair_example(item) for item in scheduled_latency[:15]
+    ]
 
     raw_gaps = get_internal_gaps(list(TF_DISPLAY_ORDER), lookback_days=lookback)
     gap_windows = sum(len(rows) for rows in raw_gaps.values())
@@ -1245,6 +1411,11 @@ def collect_data_health(*, lookback_days: int | None = None) -> dict[str, Any]:
     elif repair_items or missing_keys:
         status = "warn"
         recommendation = "Run Backfill Missing / Gap Repair, then review Data Health again."
+    elif scheduled_latency:
+        recommendation = (
+            "No manual repair needed. Historical-only latency is within "
+            "the configured schedule grace."
+        )
 
     return {
         "status": status,
@@ -1264,14 +1435,18 @@ def collect_data_health(*, lookback_days: int | None = None) -> dict[str, Any]:
             "market_open_gap_pairs": len(market_open_gap_keys),
             "verified_upstream_gap_pairs": len(verified_gaps),
             "verified_upstream_gap_windows": sum(len(rows) for rows in verified_gaps.values()),
-            "stale_pairs": len(stale_keys),
+            "stale_pairs": len(actionable_stale_keys),
+            "raw_stale_pairs": len(raw_stale_keys),
+            "scheduled_historical_latency_pairs": len(scheduled_latency_keys),
             "raw_internal_gap_pairs": len(raw_gaps),
             "raw_internal_gap_windows": gap_windows,
         },
+        "historical_schedule": historical_schedule,
         "newest_bar": pair_row(newest_key, latest_configured.get(newest_key)) if newest_key else None,
         "oldest_latest_bar": pair_row(oldest_key, latest_configured.get(oldest_key)) if oldest_key else None,
         "missing_examples": [pair_row(key) for key in missing_keys[:15]],
         "repair_examples": worst_stale,
+        "scheduled_historical_latency_examples": scheduled_latency_examples,
         "internal_gap_examples": gap_examples,
         "recommendation": recommendation,
     }
@@ -1293,7 +1468,9 @@ def print_data_health(report: dict[str, Any], *, as_json: bool = False) -> None:
     print(f"- Pairs missing all data       : {coverage.get('pairs_missing_all_data')}")
     print(f"- Pairs needing repair         : {coverage.get('pairs_needing_repair')}")
     print(f"- Market-open gap pairs        : {coverage.get('market_open_gap_pairs')}")
-    print(f"- Stale pairs                  : {coverage.get('stale_pairs')}")
+    print(f"- Actionable stale pairs       : {coverage.get('stale_pairs')}")
+    print(f"- Scheduled historical latency : {coverage.get('scheduled_historical_latency_pairs')}")
+    print(f"- Raw stale candidates         : {coverage.get('raw_stale_pairs')}")
     print(f"- Raw timeline gap pairs       : {coverage.get('raw_internal_gap_pairs')}")
     print(f"- Raw timeline gap windows     : {coverage.get('raw_internal_gap_windows')}")
     newest = report.get("newest_bar") or {}
@@ -1309,6 +1486,14 @@ def print_data_health(report: dict[str, Any], *, as_json: bool = False) -> None:
             print(
                 f"- {row['symbol']} {row['timeframe']}: {row['reason']} | "
                 f"last={row['last_bar']} | gap={row['gap']} | pull~{row['suggested_pull_bars']}"
+            )
+    if report.get("scheduled_historical_latency_examples"):
+        print("")
+        print("[Scheduled Historical Latency: informational]")
+        for row in report["scheduled_historical_latency_examples"][:10]:
+            print(
+                f"- {row['symbol']} {row['timeframe']}: "
+                f"last={row['last_bar']} | gap={row['gap']}"
             )
     if report.get("missing_examples"):
         print("")

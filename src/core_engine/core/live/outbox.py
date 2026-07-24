@@ -56,6 +56,7 @@ PAYLOAD_VERSION = 1
 PAYLOAD_MARKER = "__sen05_spool_payload__"
 
 DEFAULT_LEASE_SECONDS = 120
+OUTBOX_STALE_ALERT_SECONDS = 15 * 60
 
 
 class LiveOutbox:
@@ -379,6 +380,30 @@ class LiveOutbox:
         except Exception:
             return None
 
+    def health_snapshot(self) -> tuple[int | None, float | None]:
+        """Return pending count and oldest age from one SQLite snapshot."""
+        try:
+            with self._lock:
+                with closing(sqlite3.connect(self.path)) as con:
+                    row = con.execute(
+                        "SELECT COUNT(*), MIN(created_at) FROM spool"
+                    ).fetchone()
+            count = int(row[0]) if row else 0
+            if not count or not row or not row[1]:
+                return count, None
+            created_at = datetime.fromisoformat(str(row[1]))
+            if created_at.tzinfo is None:
+                created_at = created_at.replace(tzinfo=timezone.utc)
+            else:
+                created_at = created_at.astimezone(timezone.utc)
+            age_seconds = max(
+                0.0,
+                (datetime.now(timezone.utc) - created_at).total_seconds(),
+            )
+            return count, age_seconds
+        except Exception:
+            return None, None
+
     def count_unstaged(self) -> int | None:
         """Rows still in pending/leased (i.e. not yet even staged).
 
@@ -421,8 +446,8 @@ class LiveOutbox:
         leased row by age - an un-acked row means the candle has not been
         confirmed durable in SQL Server yet, and age alone is not a reason
         to give up on it; the operator-facing spool_pending metric and
-        CRITICAL alert (when the outbox nears capacity) are the intended
-        signal for a stuck backlog, not silent expiry."""
+        stale-backlog/capacity alerts are the intended signal for a stuck
+        backlog, not silent expiry."""
         try:
             with self._lock:
                 with closing(sqlite3.connect(self.path)) as con:

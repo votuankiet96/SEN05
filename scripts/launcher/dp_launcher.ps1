@@ -40,13 +40,13 @@ function Write-Menu {
     Write-Host ""
     Write-Host "[Logs / Runtime]"
     Write-Host " 13. Tail System Log"
-    Write-Host " 14. Tail Activity Log"
-    Write-Host " 15. Tail Auth Log"
-    Write-Host " 16. Tail Discord Log"
-    Write-Host " 17. Tail Subprocess Debug Log"
-    Write-Host " 18. Tail Live Fetching Log"
-    Write-Host " 19. Tail Historical Pulling Log"
-    Write-Host " 20. Tail Data Warehouse Log"
+    Write-Host " 14. Tail Live Log"
+    Write-Host " 15. Tail Historical Log"
+    Write-Host " 16. Tail Alerts Log"
+    Write-Host " 17. Log Stream Status"
+    Write-Host " 18. Recent Warnings / Errors (2h)"
+    Write-Host " 19. Risk Review (24h)"
+    Write-Host " 20. Trace Correlation ID"
     Write-Host " 21. Clean Runtime Logs by Retention"
     Write-Host ""
     Write-Host "  0. Exit"
@@ -646,6 +646,25 @@ function Invoke-CleanRuntimeLogs {
     Invoke-DpInline $cleanArgs
 }
 
+function Invoke-LogTrace {
+    Write-Host ""
+    Write-Host "[Trace Correlation ID]"
+    Write-Host ""
+    $referenceRaw = Read-Host "Correlation ID"
+    $reference = $(if ($null -eq $referenceRaw) { "" } else { $referenceRaw.Trim() })
+    if (-not $reference) {
+        Write-Host "Correlation ID is required." -ForegroundColor Yellow
+        Pause-Dp
+        return
+    }
+    Invoke-DpInline @(
+        "-m", "core_engine", "logs", "trace",
+        "--correlation-id", $reference,
+        "--since", "24h",
+        "--limit", "500"
+    )
+}
+
 function Test-ResetRuntimeBlocker {
     $blockers = @()
     $supervisor = Get-ConflictStatus -Kind "supervisor"
@@ -765,14 +784,14 @@ while ($true) {
             }
         }
 
-        "13" { Start-LogPollWindow "runtime\logs\system\system*.log" "DP Program system log" }
-        "14" { Start-LogPollWindow "runtime\logs\system\activity*.log" "Activity timeline log" }
-        "15" { Start-LogPollWindow "runtime\logs\system\auth*.log" "TradingView auth log" }
-        "16" { Start-LogPollWindow "runtime\logs\system\discord*.log" "Discord notification log" }
-        "17" { Start-LogPollWindow "runtime\logs\system\subprocess_*.log" "Subprocess lifecycle/stderr log" }
-        "18" { Start-LogPollWindow "runtime\logs\operation\live_fetching*.log" "Live fetching log" -LiveOnly }
-        "19" { Start-LogPollWindow "runtime\logs\operation\historical_pulling*.log" "Historical pulling log" }
-        "20" { Start-LogPollWindow "runtime\logs\operation\data_warehouse*.log" "Data warehouse log" }
+        "13" { Start-LogPollWindow "runtime\logs\system.log" "DP Program system log" }
+        "14" { Start-LogPollWindow "runtime\logs\live.log" "Live fetching log" -LiveOnly }
+        "15" { Start-LogPollWindow "runtime\logs\historical.log" "Historical pulling log" }
+        "16" { Start-LogPollWindow "runtime\logs\alerts.log" "Alerts and delivery log" }
+        "17" { Invoke-DpInline @("-m", "core_engine", "logs", "status") }
+        "18" { Invoke-DpInline @("-m", "core_engine", "logs", "find", "--since", "2h", "--level", "WARNING", "--limit", "200") }
+        "19" { Invoke-DpInline @("-m", "core_engine", "logs", "risks", "--since", "24h") }
+        "20" { Invoke-LogTrace }
         "21" { Invoke-CleanRuntimeLogs }
         "0" { exit 0 }
         default { Write-Host "Unknown option."; Start-Sleep -Seconds 1 }

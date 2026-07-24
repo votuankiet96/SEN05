@@ -134,8 +134,12 @@ Interpretation rules:
 - Scheduled Task `Running` only proves the wrapper state.
 - Discord delivery only proves alert transport.
 - `doctor` status must be read with its timestamp and detailed checks.
-- `data-health` can be `warn` for repairable stale/gap pairs even when the
-  live runtime is healthy.
+- `data-health` reports historical-only `STALE` candidates as scheduled
+  latency while the latest successful historical run remains inside its
+  configured schedule grace. These pairs are informational and do not enter
+  `pairs_needing_repair`.
+- `data-health` is `warn` when a pair is missing, has a market-open hole, is
+  stale on the live universe, or historical schedule evidence is overdue.
 - Runtime PIDs, row counts and freshness values are snapshots, not permanent
   documentation facts.
 
@@ -175,6 +179,9 @@ python -m core_engine logs find --since 2h --level WARNING
 python -m core_engine logs trace --correlation-id <id>
 python -m core_engine logs risks --since 24h
 ```
+
+Launcher options 13-16 follow these same four physical files. Options 17-20
+run the supported status, find, risks and trace queries.
 
 Avoid `Get-Content -Wait`; the built-in watcher avoids interfering with
 Windows-safe rotation.

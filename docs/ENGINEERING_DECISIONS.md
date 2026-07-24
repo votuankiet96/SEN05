@@ -78,5 +78,6 @@ python -m core_engine doctor --json
 python -m core_engine data-health --json
 ```
 
-Use `data-health` warnings as operational findings, not as a reason to block a
-documentation commit by default.
+Treat `pairs_needing_repair` and `market_open_gap_pairs` as operational
+findings. Historical-only `STALE` candidates remain informational while the
+latest successful historical run is inside the configured schedule grace.

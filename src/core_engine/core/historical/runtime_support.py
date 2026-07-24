@@ -431,13 +431,13 @@ def find_stale_pairs(latest: dict, *, tf_filter: set[str] | None = None, symbols
                 last_bar = last_bar.replace(tzinfo=None)
             gap_min = (now - last_bar).total_seconds() / 60
             gap_hours = gap_min / 60
+            if gap_min <= gap_threshold_minutes(sym, tf_code):
+                continue
             if asset_type in WEEKEND_CLOSED:
                 trading_h = trading_hours_in_gap(last_bar, now)
                 threshold_h = (5 * 24.0 if tf_code == "W" else tf_mins / 60.0) * 2
                 if trading_h <= threshold_h:
                     continue
-            elif gap_min <= tf_mins * 2:
-                continue
             stale.append({"sym": sym, "tf_code": tf_code, "last_bar": last_bar, "gap_hours": round(gap_hours, 1), "n_bars": calc_gap_n_bars(gap_hours, tf_code, asset_type), "reason": "STALE"})
     stale.sort(key=lambda item: (item["reason"] != "MISS", -item["gap_hours"]))
     return stale
