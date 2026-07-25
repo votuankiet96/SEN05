@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "core-python"
+version = "0.1.0"
+description = "core_python: SQL-backed strategy engine, historical dashboard, and CSV export (Combo, MA Cross)."
+requires-python = ">=3.11"
+dependencies = [
+    "pandas",
+    "numpy",
+    "python-dotenv",
+    "Flask",
+    "pyodbc",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff", "vulture"]
+prod = ["gunicorn"]
+
+[project.scripts]
+core-python-dashboard = "core_python.main:main"
+core-python-ops = "core_python.util.ops:main"
+core-python-export = "core_python.export_cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+core_python = ["chart/static/*", "chart/static/vendor/*"]
