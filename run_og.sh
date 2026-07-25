@@ -28,6 +28,36 @@ has_desktop() {
   [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]]
 }
 
+# Terminals launched without inheriting the desktop session (VS Code's
+# integrated terminal, SSH to the same machine, etc.) have no DISPLAY /
+# WAYLAND_DISPLAY, so has_desktop() would wrongly report "no desktop" even
+# though one is actively logged in. The desktop session publishes these into
+# the systemd --user manager's environment (via dbus-update-activation-
+# environment) precisely so on-demand processes can recover them; read them
+# from there before falling back to the text-only path.
+detect_desktop_env() {
+  has_desktop && return 0
+  command -v systemctl >/dev/null 2>&1 || return 1
+
+  local env_output
+  env_output="$(systemctl --user show-environment 2>/dev/null)" || return 1
+
+  local display wayland_display xauthority runtime_dir
+  display="$(printf '%s\n' "$env_output" | sed -n 's/^DISPLAY=//p')"
+  wayland_display="$(printf '%s\n' "$env_output" | sed -n 's/^WAYLAND_DISPLAY=//p')"
+  xauthority="$(printf '%s\n' "$env_output" | sed -n 's/^XAUTHORITY=//p')"
+  runtime_dir="$(printf '%s\n' "$env_output" | sed -n 's/^XDG_RUNTIME_DIR=//p')"
+
+  [[ -n "$display" || -n "$wayland_display" ]] || return 1
+  export DISPLAY="${display:-}"
+  export WAYLAND_DISPLAY="${wayland_display:-}"
+  [[ -n "$xauthority" ]] && export XAUTHORITY="$xauthority"
+  [[ -n "$runtime_dir" ]] && export XDG_RUNTIME_DIR="$runtime_dir"
+  return 0
+}
+
+detect_desktop_env || true
+
 launch_terminal() {
   local title="$1"
   local cmd="$2"
@@ -69,14 +99,16 @@ run_task() {
 }
 
 open_dashboard() {
+  echo
+  echo "Dashboard: $DASHBOARD_URL"
   if has_desktop && command -v xdg-open >/dev/null 2>&1; then
-    xdg-open "$DASHBOARD_URL" >/dev/null 2>&1 &
+    echo "Opening in the default browser (see /tmp/og_launcher_xdg-open.log if nothing appears)..."
+    xdg-open "$DASHBOARD_URL" >/tmp/og_launcher_xdg-open.log 2>&1 &
+    disown
   else
-    echo
-    echo "Open dashboard in a browser:"
-    echo "  $DASHBOARD_URL"
-    pause
+    echo "No desktop session detected from this terminal — open the URL above manually."
   fi
+  pause
 }
 
 main_menu() {
