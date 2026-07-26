@@ -18,13 +18,13 @@ import time
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from core_engine.core.live.outbox import OUTBOX_STALE_ALERT_SECONDS
 from core_engine.shared.tradingview import auth as tv_auth
 from core_engine.shared.tradingview.diagnostics import playwright_browser_status
 from core_engine.shared.time import parse_utc_time as _parse_time
-from core_engine.util.runtime_state import load_json
+from core_engine.util.primitives.runtime_state import load_json
 from core_engine.util.logkit import get_logger
 from core_engine.util.supervisor.process_control import same_local_host
 from core_engine.settings import (
@@ -1247,25 +1247,36 @@ def _partition_data_health_repairs(
     *,
     live_asset_types: set[str],
     historical_schedule_current: bool,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Separate expected historical-only latency from actionable repair work."""
+    market_expected_live: Callable[[dict[str, Any]], bool] | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    """Separate expected latency from actionable repair work."""
     live_types = {str(value).upper() for value in live_asset_types}
     actionable: list[dict[str, Any]] = []
     scheduled_latency: list[dict[str, Any]] = []
+    market_closed_latency: list[dict[str, Any]] = []
     for item in items:
         sym = item.get("sym") if isinstance(item.get("sym"), dict) else {}
         asset_type = str(sym.get("asset_type") or "").upper()
+        reason = str(item.get("reason") or "")
         expected_latency = (
             historical_schedule_current
-            and str(item.get("reason") or "") == "STALE"
+            and reason == "STALE"
             and bool(asset_type)
             and asset_type not in live_types
         )
         if expected_latency:
             scheduled_latency.append(item)
+        elif (
+            reason == "STALE"
+            and bool(asset_type)
+            and asset_type in live_types
+            and market_expected_live is not None
+            and not market_expected_live(sym)
+        ):
+            market_closed_latency.append(item)
         else:
             actionable.append(item)
-    return actionable, scheduled_latency
+    return actionable, scheduled_latency, market_closed_latency
 
 
 def collect_data_health(*, lookback_days: int | None = None) -> dict[str, Any]:
@@ -1277,11 +1288,12 @@ def collect_data_health(*, lookback_days: int | None = None) -> dict[str, Any]:
     """
     from core_engine.shared.warehouse.reader import get_internal_gaps, get_latest_bars
     from core_engine.shared.warehouse.connection import get_connection
-    from core_engine.core.historical.runtime_support import (
+    from core_engine.core.historical.gap_detection import (
         find_hole_pairs,
         find_stale_pairs,
         load_verified_gaps,
     )
+    from core_engine.core.live.runtime import is_market_expected_live
 
     lookback = int(lookback_days or HISTORICAL.hole_lookback_days)
     expected_pairs = len(SYMBOLS) * len(TF_DISPLAY_ORDER)
@@ -1315,16 +1327,26 @@ def collect_data_health(*, lookback_days: int | None = None) -> dict[str, Any]:
     )
     repair_items.extend(new_holes)
     historical_schedule = _historical_schedule_context()
-    repair_items, scheduled_latency = _partition_data_health_repairs(
+    now = _utc_now().replace(tzinfo=None)
+    repair_items, scheduled_latency, market_closed_latency = _partition_data_health_repairs(
         repair_items,
         live_asset_types=set(LIVE.asset_types),
         historical_schedule_current=bool(historical_schedule.get("current")),
+        market_expected_live=lambda sym: is_market_expected_live(
+            symbol_by_id,
+            int(sym.get("symbol_id")),
+            now,
+        ),
     )
     scheduled_latency_keys = {
         (int(item["sym"]["symbol_id"]), str(item["tf_code"]))
         for item in scheduled_latency
     }
-    actionable_stale_keys = raw_stale_keys - scheduled_latency_keys
+    market_closed_latency_keys = {
+        (int(item["sym"]["symbol_id"]), str(item["tf_code"]))
+        for item in market_closed_latency
+    }
+    actionable_stale_keys = raw_stale_keys - scheduled_latency_keys - market_closed_latency_keys
     market_open_gap_keys = {
         (int(item["sym"]["symbol_id"]), str(item["tf_code"]))
         for item in repair_items
@@ -1336,8 +1358,6 @@ def collect_data_health(*, lookback_days: int | None = None) -> dict[str, Any]:
     if latest_configured:
         newest_key = max(latest_configured, key=lambda key: latest_configured[key])
         oldest_key = min(latest_configured, key=lambda key: latest_configured[key])
-
-    now = _utc_now().replace(tzinfo=None)
 
     def pair_row(key: tuple[int, str], value: Any = None) -> dict[str, Any]:
         sym = symbol_by_id.get(int(key[0]), {})
@@ -1368,9 +1388,15 @@ def collect_data_health(*, lookback_days: int | None = None) -> dict[str, Any]:
     scheduled_latency.sort(
         key=lambda item: -float(item.get("gap_hours") or 0)
     )
+    market_closed_latency.sort(
+        key=lambda item: -float(item.get("gap_hours") or 0)
+    )
     worst_stale = [repair_example(item) for item in repair_items[:15]]
     scheduled_latency_examples = [
         repair_example(item) for item in scheduled_latency[:15]
+    ]
+    market_closed_latency_examples = [
+        repair_example(item) for item in market_closed_latency[:15]
     ]
 
     raw_gaps = get_internal_gaps(list(TF_DISPLAY_ORDER), lookback_days=lookback)
@@ -1411,10 +1437,10 @@ def collect_data_health(*, lookback_days: int | None = None) -> dict[str, Any]:
     elif repair_items or missing_keys:
         status = "warn"
         recommendation = "Run Backfill Missing / Gap Repair, then review Data Health again."
-    elif scheduled_latency:
+    elif scheduled_latency or market_closed_latency:
         recommendation = (
-            "No manual repair needed. Historical-only latency is within "
-            "the configured schedule grace."
+            "No manual repair needed. Current stale candidates are explained by "
+            "historical schedule grace or closed live markets."
         )
 
     return {
@@ -1438,6 +1464,7 @@ def collect_data_health(*, lookback_days: int | None = None) -> dict[str, Any]:
             "stale_pairs": len(actionable_stale_keys),
             "raw_stale_pairs": len(raw_stale_keys),
             "scheduled_historical_latency_pairs": len(scheduled_latency_keys),
+            "market_closed_latency_pairs": len(market_closed_latency_keys),
             "raw_internal_gap_pairs": len(raw_gaps),
             "raw_internal_gap_windows": gap_windows,
         },
@@ -1447,6 +1474,7 @@ def collect_data_health(*, lookback_days: int | None = None) -> dict[str, Any]:
         "missing_examples": [pair_row(key) for key in missing_keys[:15]],
         "repair_examples": worst_stale,
         "scheduled_historical_latency_examples": scheduled_latency_examples,
+        "market_closed_latency_examples": market_closed_latency_examples,
         "internal_gap_examples": gap_examples,
         "recommendation": recommendation,
     }
@@ -1470,6 +1498,7 @@ def print_data_health(report: dict[str, Any], *, as_json: bool = False) -> None:
     print(f"- Market-open gap pairs        : {coverage.get('market_open_gap_pairs')}")
     print(f"- Actionable stale pairs       : {coverage.get('stale_pairs')}")
     print(f"- Scheduled historical latency : {coverage.get('scheduled_historical_latency_pairs')}")
+    print(f"- Market-closed live latency   : {coverage.get('market_closed_latency_pairs')}")
     print(f"- Raw stale candidates         : {coverage.get('raw_stale_pairs')}")
     print(f"- Raw timeline gap pairs       : {coverage.get('raw_internal_gap_pairs')}")
     print(f"- Raw timeline gap windows     : {coverage.get('raw_internal_gap_windows')}")
@@ -1491,6 +1520,14 @@ def print_data_health(report: dict[str, Any], *, as_json: bool = False) -> None:
         print("")
         print("[Scheduled Historical Latency: informational]")
         for row in report["scheduled_historical_latency_examples"][:10]:
+            print(
+                f"- {row['symbol']} {row['timeframe']}: "
+                f"last={row['last_bar']} | gap={row['gap']}"
+            )
+    if report.get("market_closed_latency_examples"):
+        print("")
+        print("[Market-Closed Live Latency: informational]")
+        for row in report["market_closed_latency_examples"][:10]:
             print(
                 f"- {row['symbol']} {row['timeframe']}: "
                 f"last={row['last_bar']} | gap={row['gap']}"

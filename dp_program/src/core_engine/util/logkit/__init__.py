@@ -7,6 +7,7 @@ from core_engine.util.logkit.core import (
     get_logger,
     log_activity,
     log_event,
+    log_raw,
     set_context,
 )
 from core_engine.util.logkit.formatter import (
@@ -30,6 +31,7 @@ __all__ = [
     "kv",
     "log_activity",
     "log_event",
+    "log_raw",
     "num",
     "operation_line",
     "set_context",

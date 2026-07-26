@@ -25,7 +25,7 @@ import pytest
 
 import core_engine.util.coordination.locks as locks_module
 from core_engine.util.coordination.locks import LockCoordinator, LockLease, LockRecord
-from core_engine.core.historical import runtime_support
+from core_engine.core.historical import run_control
 
 
 class _FakeActiveTaskDB:
@@ -403,7 +403,7 @@ def test_historical_checkpoint_stops_after_lease_loss(db, monkeypatch):
     monkeypatch.setattr(locks_module, "_DEFAULT", coordinator)
 
     with pytest.raises(
-        runtime_support.HistoricalPullCancelled,
+        run_control.HistoricalPullCancelled,
         match="lock lease lost",
     ):
-        runtime_support.raise_if_cancelled(coordinator.logger, "before-write")
+        run_control.raise_if_cancelled(coordinator.logger, "before-write")

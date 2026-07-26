@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
-from core_engine.util import runtime_state
-from core_engine.util.runtime_state import RuntimeStateWriter, read_json_snapshot
+from core_engine.util.primitives import runtime_state
+from core_engine.util.primitives.runtime_state import RuntimeStateWriter, read_json_snapshot
 
 
 def test_snapshot_reader_retries_windows_sharing_violation(tmp_path, monkeypatch):

@@ -24,8 +24,8 @@ from dataclasses import dataclass
 from typing import Any
 
 from core_engine.shared.time import utc_iso
-from core_engine.util.runtime_state import atomic_write_json as _atomic_write_json
-from core_engine.util.runtime_state import load_json as _load_json
+from core_engine.util.primitives.runtime_state import atomic_write_json as _atomic_write_json
+from core_engine.util.primitives.runtime_state import load_json as _load_json
 from core_engine.util.logkit import get_logger, log_activity, operation_line
 from core_engine.util.notify.discord import notify_backend_event, notify_historical_event, notify_live_event, flush_pending
 from core_engine.settings import (

@@ -84,7 +84,7 @@ def test_data_health_only_suppresses_schedule_current_historical_latency():
         _repair_item(asset_type="FOREX", reason="MISS"),
     ]
 
-    actionable, scheduled = health._partition_data_health_repairs(
+    actionable, scheduled, market_closed = health._partition_data_health_repairs(
         items,
         live_asset_types={"Indice", "Metal", "Crypto"},
         historical_schedule_current=True,
@@ -92,12 +92,13 @@ def test_data_health_only_suppresses_schedule_current_historical_latency():
 
     assert scheduled == [items[0]]
     assert actionable == items[1:]
+    assert market_closed == []
 
 
 def test_data_health_keeps_historical_latency_actionable_after_missed_schedule():
     item = _repair_item(asset_type="FOREX")
 
-    actionable, scheduled = health._partition_data_health_repairs(
+    actionable, scheduled, market_closed = health._partition_data_health_repairs(
         [item],
         live_asset_types={"Indice", "Metal", "Crypto"},
         historical_schedule_current=False,
@@ -105,6 +106,23 @@ def test_data_health_keeps_historical_latency_actionable_after_missed_schedule()
 
     assert actionable == [item]
     assert scheduled == []
+    assert market_closed == []
+
+
+def test_data_health_treats_live_stale_as_informational_when_market_closed():
+    stale = _repair_item(asset_type="Indice")
+    hole = _repair_item(asset_type="Indice", reason="STALE+HOLE")
+
+    actionable, scheduled, market_closed = health._partition_data_health_repairs(
+        [stale, hole],
+        live_asset_types={"Indice", "Metal", "Crypto"},
+        historical_schedule_current=True,
+        market_expected_live=lambda _sym: False,
+    )
+
+    assert actionable == [hole]
+    assert scheduled == []
+    assert market_closed == [stale]
 
 
 def test_historical_schedule_context_accepts_previous_success_during_new_slot_grace(

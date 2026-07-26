@@ -24,7 +24,7 @@ from core_engine.settings import NOTIFICATION, RUN_DIR
 from core_engine.util.logkit import get_logger, operation_line
 from core_engine.util.logkit.sink import process_role
 from core_engine.util.notify.transport import post_webhook_once
-from core_engine.util.runtime_state import atomic_write_json
+from core_engine.util.primitives.runtime_state import atomic_write_json
 
 logger = get_logger("discord", stream="alerts", console=False)
 _discord_logger_configured = False
@@ -318,10 +318,12 @@ def _log_sender_exception(stage: str, exc: BaseException) -> None:
     """Best-effort diagnostics that never expose a webhook URL."""
     try:
         _ensure_discord_logger()
+        error_message = _truncate_plain_text(_redact_sensitive_text(str(exc)), 300)
         logger.warning(
-            "Discord sender %s failed: %s",
+            "Discord sender %s failed: %s%s",
             stage,
             exc.__class__.__name__,
+            f": {error_message}" if error_message else "",
         )
     except Exception:
         # Logging must never become a second failure that kills the sender.
@@ -332,6 +334,22 @@ def _log_sender_exception(stage: str, exc: BaseException) -> None:
             )
         except Exception:
             pass
+
+
+def _exception_detail(exc: BaseException) -> dict[str, str]:
+    """Return safe operator diagnostics for a delivery/setup exception."""
+
+    detail = {"error": exc.__class__.__name__}
+    message = _truncate_plain_text(_redact_sensitive_text(str(exc)), 300)
+    if message:
+        detail["error_message"] = message
+    missing_module = getattr(exc, "name", None)
+    if isinstance(exc, ModuleNotFoundError) and missing_module:
+        detail["missing_module"] = _truncate_plain_text(
+            _redact_sensitive_text(str(missing_module)),
+            200,
+        )
+    return detail
 
 
 def sanitize_ssl_keylogfile(env: os._Environ[str] | dict[str, str] | None = None) -> str | None:
@@ -886,6 +904,9 @@ def _record_discord_activity(
         "delivery_status",
         "delivery_result",
         "http_status",
+        "error",
+        "error_message",
+        "missing_module",
         "attempts",
         "duration_seconds",
         "business_status",
@@ -908,13 +929,20 @@ def _record_discord_activity(
         "%s",
         operation_line(
             "DISCORD",
-            "Delivery event",
+            # The human message IS the alert title (e.g. "Info: Live feed
+            # started") so a glance at the message column says what this
+            # delivery was actually for - previously this was the fixed
+            # literal "Delivery event" for every single line, with the
+            # actual title buried as just another JSON field. event_code is
+            # pinned separately so `logs find --event discord.delivery`
+            # still works regardless of the title text.
+            safe_detail.get("title") or message,
             action=action,
             delivery=delivery_status,
             event_area=safe_detail.get("feature", "system"),
             event_status=event_status,
             event_result=safe_detail.get("result", "notified"),
-            title=safe_detail.get("title", message),
+            event_code="discord.delivery",
             detail=suffix.strip(" |") if suffix else "",
         ),
     )
@@ -1091,7 +1119,7 @@ def _post_payload(
             detail={
                 **meta,
                 "delivery_result": "failed",
-                "error": exc.__class__.__name__,
+                **_exception_detail(exc),
                 "attempts": 0,
                 "duration_seconds": round(time.time() - started_at, 3),
                 "consecutive_failures": fail_count,
@@ -1164,7 +1192,7 @@ def _post_payload(
                     detail={
                         **meta,
                         "delivery_result": "failed",
-                        "error": last_error,
+                        **_exception_detail(result.error),
                         "attempts": 0,
                         "duration_seconds": round(time.time() - started_at, 3),
                         "consecutive_failures": fail_count,
@@ -1429,4 +1457,3 @@ def notify_historical_event(*, severity: str, title: str, summary: str, **kwargs
 
 def notify_auth_event(*, severity: str, title: str, summary: str, **kwargs: Any) -> None:
     notify_operator_report(area="auth", severity=severity, title=title, summary=summary, **kwargs)
-

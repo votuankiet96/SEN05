@@ -168,7 +168,7 @@ def get_internal_gaps(tf_codes: list, lookback_days: int = 60) -> dict:
         )
         # Re-raise instead of returning {}: an empty dict here is
         # indistinguishable from "scanned successfully, found zero gaps",
-        # and the caller (historical.runtime_support.find_hole_pairs) used
+        # and the caller (historical.gap_detection.find_hole_pairs) used
         # to treat that as "clean" - meaning a transient SQL failure during
         # the gap scan silently masked real gaps instead of surfacing an
         # error. Callers must now explicitly handle scan failure as

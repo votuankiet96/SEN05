@@ -146,6 +146,28 @@ class EventText(str):
         return obj
 
 
+class RawText(str):
+    """Pre-formatted human-facing text written to the log file as-is.
+
+    Unlike ``EventText``/``operation_line()``, this carries no area, event
+    code or JSON tail, and its internal whitespace/newlines are preserved
+    rather than collapsed - it exists for aligned table rows and report
+    blocks (see ``core.live.telemetry`` / ``core.historical.reporter``)
+    that are display content, not individually queryable events. Any
+    matching queryable data is logged separately through
+    ``operation_line()``. Content still passes through secret redaction.
+    """
+
+    def __new__(cls, text: str) -> "RawText":
+        return str.__new__(cls, text)
+
+
+def _redact_preserve_layout(value: Any) -> str:
+    """Redact secrets without collapsing whitespace/newlines like clean() does."""
+    text = str(value).replace("\r\n", "\n").replace("\r", "\n")
+    return _redact_text(text)
+
+
 def operation_line(area: str, event: str, *details: str, **fields: Any) -> EventText:
     """Build one structured event while remaining compatible with ``str``."""
     normalized: dict[str, Any] = {}
@@ -244,6 +266,9 @@ class OperatorFormatter(logging.Formatter):
     default_msec_format = "%s.%03d"
 
     def format(self, record: logging.LogRecord) -> str:
+        if isinstance(record.msg, RawText) and not record.args:
+            return _redact_preserve_layout(record.msg)
+
         context = dict(getattr(record, "dp_context", {}) or {})
         component = clean(getattr(record, "dp_component", record.name)).lower()
         stream = clean(getattr(record, "dp_stream", "system")).lower()
@@ -376,6 +401,7 @@ def parse_operator_line(line: str) -> dict[str, Any] | None:
 __all__ = [
     "EventText",
     "OperatorFormatter",
+    "RawText",
     "SCHEMA_VERSION",
     "cell",
     "clean",

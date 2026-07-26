@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from core_engine.other.exit_codes import EXIT_CANCELLED
+from core_engine.util.primitives.exit_codes import EXIT_CANCELLED
 from core_engine.util.cli import _terminal_completion_status
 
 

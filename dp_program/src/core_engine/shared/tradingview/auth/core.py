@@ -109,7 +109,7 @@ from core_engine.settings import (  # noqa: E402
     TRADINGVIEW_POLICY,
 )
 from core_engine.util.coordination.locks import _local_pid_alive as is_pid_alive  # noqa: E402
-from core_engine.util.runtime_state import atomic_write_json  # noqa: E402
+from core_engine.util.primitives.runtime_state import atomic_write_json  # noqa: E402
 from core_engine.shared.tradingview.auth.jwt_utils import (  # noqa: E402
     GUEST_TOKEN,
     STARTUP_MIN_TOKEN_TTL_SEC,

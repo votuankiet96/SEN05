@@ -168,7 +168,7 @@ def test_send_one_activates_system_trust_before_http_post(tmp_path, monkeypatch)
         SimpleNamespace(discord_webhook_url="https://discord.invalid/test"),
     )
     monkeypatch.setattr(
-        "core_engine.other.tls.ensure_system_truststore",
+        "core_engine.util.primitives.tls.ensure_system_truststore",
         lambda: events.append("trust") or True,
     )
     monkeypatch.setitem(

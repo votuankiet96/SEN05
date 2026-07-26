@@ -171,7 +171,7 @@ def test_flush_pending_obeys_one_total_timeout(isolated_sender, monkeypatch):
 def test_post_payload_returns_false_when_trust_setup_fails(isolated_sender, monkeypatch):
     _make_sender, activities = isolated_sender
     monkeypatch.setattr(
-        "core_engine.other.tls.ensure_system_truststore",
+        "core_engine.util.primitives.tls.ensure_system_truststore",
         lambda: (_ for _ in ()).throw(RuntimeError("trust unavailable")),
     )
 
@@ -180,6 +180,32 @@ def test_post_payload_returns_false_when_trust_setup_fails(isolated_sender, monk
     assert len(failed) == 1
     assert failed[0]["detail"]["attempts"] == 0
     assert failed[0]["detail"]["error"] == "RuntimeError"
+    assert failed[0]["detail"]["error_message"] == "trust unavailable"
+
+
+def test_post_payload_records_setup_failure_module_name(isolated_sender, monkeypatch):
+    _make_sender, activities = isolated_sender
+    error = ModuleNotFoundError(
+        "No module named 'core_engine.util.primitives.tls'",
+        name="core_engine.util.primitives.tls",
+    )
+    monkeypatch.setattr(
+        discord,
+        "post_webhook_once",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            ok=False,
+            error=error,
+            stage="setup",
+            status_code=None,
+        ),
+    )
+
+    assert discord._post_payload(**_item().__dict__) is False
+    failed = [detail for action, detail in activities if action == "discord.failed"]
+    assert len(failed) == 1
+    assert failed[0]["detail"]["error"] == "ModuleNotFoundError"
+    assert failed[0]["detail"]["missing_module"] == "core_engine.util.primitives.tls"
+    assert "core_engine.util.primitives.tls" in failed[0]["detail"]["error_message"]
 
 
 def test_post_payload_returns_true_only_for_confirmed_discord_status(
@@ -187,7 +213,7 @@ def test_post_payload_returns_true_only_for_confirmed_discord_status(
 ):
     _make_sender, _activities = isolated_sender
     monkeypatch.setattr(
-        "core_engine.other.tls.ensure_system_truststore",
+        "core_engine.util.primitives.tls.ensure_system_truststore",
         lambda: True,
     )
     monkeypatch.setitem(
@@ -207,7 +233,7 @@ def test_activity_log_failure_after_http_success_does_not_retry_delivery(
     _make_sender, _activities = isolated_sender
     posts: list[int] = []
     monkeypatch.setattr(
-        "core_engine.other.tls.ensure_system_truststore",
+        "core_engine.util.primitives.tls.ensure_system_truststore",
         lambda: True,
     )
     monkeypatch.setitem(

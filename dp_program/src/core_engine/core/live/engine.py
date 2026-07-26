@@ -27,7 +27,7 @@ import time
 import traceback
 from datetime import datetime, timezone
 
-from core_engine.other.exit_codes import EXIT_LOCK_CONFLICT
+from core_engine.util.primitives.exit_codes import EXIT_LOCK_CONFLICT
 from core_engine.util.notify.discord import sanitize_ssl_keylogfile
 sanitize_ssl_keylogfile()
 

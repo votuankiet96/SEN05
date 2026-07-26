@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from typing import Any, Iterator
 
 from core_engine.settings import LOGGING, env_str
-from core_engine.util.logkit.formatter import EventText, OperatorFormatter, clean, operation_line
+from core_engine.util.logkit.formatter import EventText, OperatorFormatter, RawText, clean, operation_line
 from core_engine.util.logkit.sink import (
     SinkQueueHandler,
     flush_logs,
@@ -92,7 +92,7 @@ class _PrefixFilter(logging.Filter):
     }
 
     def filter(self, record: logging.LogRecord) -> bool:
-        if isinstance(record.msg, EventText):
+        if isinstance(record.msg, (EventText, RawText)):
             return True
         try:
             raw = record.getMessage()
@@ -280,6 +280,16 @@ def log_event(
     )
 
 
+def log_raw(logger: logging.Logger, level: int, text: str) -> None:
+    """Emit a pre-formatted human block (aligned table row/report) as one
+    physical record with no column wrapper or JSON tail - see
+    ``formatter.RawText``. Blank/whitespace-only text is a no-op."""
+    stripped = str(text).strip("\n")
+    if not stripped:
+        return
+    logger.log(level, RawText(stripped))
+
+
 def log_activity(
     action: str,
     *,
@@ -314,5 +324,6 @@ __all__ = [
     "get_logger",
     "log_activity",
     "log_event",
+    "log_raw",
     "set_context",
 ]

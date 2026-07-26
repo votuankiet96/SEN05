@@ -22,13 +22,13 @@ import time
 from datetime import datetime, time as dtime, timezone
 from typing import Any
 
-from core_engine.other.exit_codes import EXIT_CANCELLED, EXIT_ERROR, EXIT_LOCK_CONFLICT
+from core_engine.util.primitives.exit_codes import EXIT_CANCELLED, EXIT_ERROR, EXIT_LOCK_CONFLICT
 from core_engine.util.health import _age_seconds, cleanup_old_runtime_files, collect_health
 from core_engine.shared.time import parse_utc_time
 from core_engine.util.logkit import log_activity, operation_line
 from core_engine.util.logkit.bootstrap import ingest_emergency_crashes
 from core_engine.util.notify.discord import notify_backend_event, notify_historical_event, notify_live_event, flush_pending
-from core_engine.util.runtime_state import read_json_snapshot
+from core_engine.util.primitives.runtime_state import read_json_snapshot
 from core_engine.settings import (
     APP_ROOT,
     BACKEND,

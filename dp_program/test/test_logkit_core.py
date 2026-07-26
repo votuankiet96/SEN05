@@ -17,17 +17,17 @@ from core_engine.util.logkit import (
     set_context,
 )
 from core_engine.util.logkit.core import _component_level
-from core_engine.util.logkit.formatter import OperatorFormatter, parse_operator_line
+from core_engine.util.logkit.formatter import OperatorFormatter, RawText, parse_operator_line
 
 
-def _record(message, *, level: int = logging.INFO) -> logging.LogRecord:
+def _record(message, *, level: int = logging.INFO, args: tuple = ()) -> logging.LogRecord:
     record = logging.LogRecord(
         "dp.live.test",
         level,
         __file__,
         1,
         message,
-        (),
+        args,
         None,
     )
     record.dp_stream = "live"
@@ -262,3 +262,50 @@ def test_table_helpers_remain_consistent_for_operator_views():
     assert cell("42", 6, align="right") == "    42"
     assert cell("a_very_long_symbol_name", 10).endswith("...")
     assert kv("Mode", "gap") == "  Mode             : gap"
+
+
+def test_raw_text_is_written_verbatim_with_no_column_wrapper_or_json_tail():
+    block = "TIME     TYPE\n10:55:18 CANDLE  US100 M5   1 | 2 | 3"
+    line = OperatorFormatter().format(_record(RawText(block)))
+
+    assert line == block
+    # Table/report blocks are display-only: the query tool must skip them
+    # rather than mis-parse a fixed-width column as a canonical field.
+    assert parse_operator_line(line) is None
+
+
+def test_raw_text_preserves_alignment_but_still_redacts_secrets():
+    block = "Cookie: sessionid=super-secret-value\nrow1   col2   col3"
+    line = OperatorFormatter().format(_record(RawText(block)))
+
+    assert "super-secret-value" not in line
+    assert "row1   col2   col3" in line
+
+
+def test_raw_text_with_args_falls_back_to_normal_formatting():
+    # RawText must only bypass the column/JSON format when it is the sole,
+    # un-interpolated message - never when used as a %-style format string.
+    line = OperatorFormatter().format(_record(RawText("plain %s"), args=("value",)))
+    assert parse_operator_line(line) is not None
+
+
+def test_log_raw_writes_pre_formatted_block_without_json_tail():
+    from core_engine.settings import LIVE_LOG
+    from core_engine.util.logkit import log_raw
+
+    logger = get_logger("test_log_raw", stream="live", console=False)
+    marker = f"raw-block-{time.time_ns()}"
+    block = f"{marker}\ncol1   col2\nval1   val2"
+    log_raw(logger, logging.INFO, block)
+    assert flush_logs(3)
+
+    content = LIVE_LOG.read_text(encoding="utf-8")
+    assert block in content
+
+
+def test_log_raw_is_a_no_op_for_blank_text():
+    from core_engine.util.logkit import log_raw
+
+    logger = get_logger("test_log_raw_blank", stream="system", console=False)
+    log_raw(logger, logging.INFO, "   \n   ")
+    assert flush_logs(3)

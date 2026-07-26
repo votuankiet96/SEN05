@@ -8,11 +8,12 @@ from datetime import datetime, timezone
 from typing import Any
 
 from core_engine.util.logkit import cell as _cell
-from core_engine.util.logkit import clean, kv as _kv, operation_line
+from core_engine.util.logkit import clean, kv as _kv, log_raw as _log_raw, operation_line
 
 
 PAIR_HEADER = " | ".join(
     [
+        "TIME".ljust(8),
         "PROG".ljust(7),
         "SYMBOL".ljust(8),
         "TF".ljust(4),
@@ -53,11 +54,12 @@ def _duration(seconds: float | int | None) -> str:
 
 
 def log_historical_block(logger: logging.Logger, level: int, text: str) -> None:
-    for raw_line in str(text).split("\n"):
-        line = raw_line.strip()
-        if not line or set(line) <= {"-", "="}:
-            continue
-        logger.log(level, "%s", operation_line("HISTORICAL", line))
+    """Write a pre-formatted human block (table/report) as one record.
+
+    Preserves alignment/whitespace and writes it atomically - no per-line
+    JSON wrapping. This is display content for operators; any matching
+    queryable data is logged separately via operation_line()."""
+    _log_raw(logger, level, text)
 
 
 def _mode_label(mode: str) -> str:
@@ -145,9 +147,11 @@ def historical_pair_line(
     saved: str | int | None,
     result: str,
     detail: str | None = None,
+    time_str: str | None = None,
 ) -> str:
     return " | ".join(
         [
+            _cell(time_str or _now_hms(), 8),
             _cell(progress, 7),
             _cell(symbol, 8),
             _cell(timeframe, 4),
@@ -159,6 +163,10 @@ def historical_pair_line(
             clean(detail),
         ]
     )
+
+
+def _now_hms() -> str:
+    return datetime.now(timezone.utc).strftime("%H:%M:%S")
 
 
 def historical_scan_summary_block(
@@ -193,9 +201,10 @@ def historical_run_summary_block(
     elapsed_seconds: float,
     stats: dict[str, Any],
     dry_run: bool,
+    status: str | None = None,
 ) -> str:
     fail = int(stats.get("fail", 0) or 0)
-    status = "completed" if fail == 0 else "completed with warnings"
+    status = status or ("completed" if fail == 0 else "completed with warnings")
     block = [
         "",
         "[HISTORICAL SUMMARY]",
@@ -217,12 +226,17 @@ def historical_run_summary_block(
             block.append(_kv(label, fmt_int(stats.get(key))))
     if "inserted" in stats:
         block.append(_kv("Rows saved", "not written (dry run)" if dry_run else fmt_int(stats.get("inserted"))))
+    if status == "stopped":
+        next_action = "run was cancelled/lost its lock before finishing; rerun Backfill Missing to cover the remaining scope"
+    elif status == "failed":
+        next_action = "check runtime/logs/historical.log for the error, fix the cause, then rerun"
+    elif fail:
+        next_action = "review failed pairs and rerun Backfill Missing"
+    else:
+        next_action = "no action needed unless counts look unexpected"
     block.extend(
         [
-            _kv(
-                "Next action",
-                "review failed pairs and rerun Backfill Missing" if fail else "no action needed unless counts look unexpected",
-            ),
+            _kv("Next action", next_action),
             "=" * 96,
             "",
         ]
@@ -313,8 +327,9 @@ class HistoricalReporter:
             "request": request,
             "detail": detail,
         }
-        self.logger.info(
-            "%s",
+        _log_raw(
+            self.logger,
+            logging.INFO,
             historical_pair_line(
                 progress=progress,
                 symbol=symbol,
@@ -345,8 +360,9 @@ class HistoricalReporter:
             saved = "-"
             status = "failed"
             detail = "TradingView returned no data" if result == -2 else "write/fetch error"
-        self.logger.info(
-            "%s",
+        _log_raw(
+            self.logger,
+            logging.INFO,
             historical_pair_line(
                 progress=progress,
                 symbol=symbol,
@@ -363,8 +379,9 @@ class HistoricalReporter:
     def pair_dry_run(self, index: int, total: int, symbol: str, tf_code: str) -> None:
         progress = self._progress(index, total)
         context = self._pair_context.get((progress, symbol, tf_code), {})
-        self.logger.info(
-            "%s",
+        _log_raw(
+            self.logger,
+            logging.INFO,
             historical_pair_line(
                 progress=progress,
                 symbol=symbol,
@@ -424,8 +441,18 @@ class HistoricalReporter:
             ),
         )
 
-    def run_summary(self, *, mode: str, elapsed_seconds: float, stats: dict[str, Any], dry_run: bool) -> None:
-        level = logging.INFO if int(stats.get("fail", 0) or 0) == 0 else logging.WARNING
+    def run_summary(
+        self,
+        *,
+        mode: str,
+        elapsed_seconds: float,
+        stats: dict[str, Any],
+        dry_run: bool,
+        status: str | None = None,
+        level: int | None = None,
+    ) -> None:
+        if level is None:
+            level = logging.INFO if int(stats.get("fail", 0) or 0) == 0 else logging.WARNING
         log_historical_block(
             self.logger,
             level,
@@ -434,5 +461,6 @@ class HistoricalReporter:
                 elapsed_seconds=elapsed_seconds,
                 stats=stats,
                 dry_run=dry_run,
+                status=status,
             ),
         )

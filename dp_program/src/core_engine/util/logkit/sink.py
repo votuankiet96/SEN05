@@ -29,7 +29,7 @@ from core_engine.settings import (
     SYSTEM_LOG,
 )
 from core_engine.util.logkit.formatter import OperatorFormatter
-from core_engine.util.runtime_state import atomic_write_json
+from core_engine.util.primitives.runtime_state import atomic_write_json
 
 _STREAM_PATHS = {
     "live": LIVE_LOG,

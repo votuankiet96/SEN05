@@ -23,7 +23,7 @@ import pytest
 
 from core_engine.core.historical import pipeline
 from core_engine.core.historical import engine as historical_engine
-from core_engine.core.historical import runtime_support
+from core_engine.core.historical import gap_detection
 from core_engine.core.historical.engine import _set_replay_runtime
 
 
@@ -35,9 +35,9 @@ def test_find_stale_pairs_honors_configured_daily_closure(monkeypatch):
     }
     now = datetime(2026, 7, 24, 6, 0)
     last_bar = now - timedelta(minutes=800)
-    monkeypatch.setattr(runtime_support, "now_utc", lambda: now)
+    monkeypatch.setattr(gap_detection, "now_utc", lambda: now)
 
-    stale = runtime_support.find_stale_pairs(
+    stale = gap_detection.find_stale_pairs(
         {(81, "M5"): last_bar},
         tf_filter={"M5"},
         symbols=[symbol],
@@ -65,33 +65,33 @@ def test_legacy_verified_gap_cache_is_invalidated(monkeypatch, tmp_path):
         '{"verified_at":"2026-07-20T00:00:00","windows":[[81,"M5","2026-07-19T00:00:00","2026-07-19T01:00:00"]]}',
         encoding="utf-8",
     )
-    monkeypatch.setattr(runtime_support, "VERIFIED_MARKET_GAPS", cache)
+    monkeypatch.setattr(gap_detection, "VERIFIED_MARKET_GAPS", cache)
 
-    assert runtime_support.load_verified_gaps() == {}
+    assert gap_detection.load_verified_gaps() == {}
 
 
 def test_current_verified_gap_cache_round_trips_with_version(monkeypatch, tmp_path):
     cache = tmp_path / "verified_market_gaps.json"
-    monkeypatch.setattr(runtime_support, "VERIFIED_MARKET_GAPS", cache)
-    monkeypatch.setattr(runtime_support, "now_utc", lambda: datetime(2026, 7, 20, 0, 0, 0))
+    monkeypatch.setattr(gap_detection, "VERIFIED_MARKET_GAPS", cache)
+    monkeypatch.setattr(gap_detection, "now_utc", lambda: datetime(2026, 7, 20, 0, 0, 0))
     start = datetime(2026, 7, 19, 0, 0, 0)
     end = datetime(2026, 7, 19, 1, 0, 0)
 
-    runtime_support.save_verified_gaps({(81, "M5", start, end)}, pipeline.logger)
+    gap_detection.save_verified_gaps({(81, "M5", start, end)}, pipeline.logger)
 
     raw = cache.read_text(encoding="utf-8")
-    assert f'"verification_version": {runtime_support.VERIFIED_GAP_CACHE_VERSION}' in raw
-    assert runtime_support.load_verified_gaps() == {(81, "M5"): [(start, end)]}
+    assert f'"verification_version": {gap_detection.VERIFIED_GAP_CACHE_VERSION}' in raw
+    assert gap_detection.load_verified_gaps() == {(81, "M5"): [(start, end)]}
 
 
 def test_find_hole_pairs_propagates_gap_scan_failure(monkeypatch):
     def fail_scan(*_args, **_kwargs):
         raise RuntimeError("SQL Server unreachable")
 
-    monkeypatch.setattr(runtime_support, "get_internal_gaps", fail_scan)
+    monkeypatch.setattr(gap_detection, "get_internal_gaps", fail_scan)
 
     with pytest.raises(RuntimeError, match="SQL Server unreachable"):
-        runtime_support.find_hole_pairs(
+        gap_detection.find_hole_pairs(
             [],
             pipeline.logger,
             symbols=[],
@@ -117,15 +117,15 @@ def test_find_hole_pairs_excludes_exact_recurring_market_closure_but_repairs_ano
         240,
     )
     monkeypatch.setattr(
-        runtime_support,
+        gap_detection,
         "get_internal_gaps",
         lambda *_args, **_kwargs: {
             (11, "M5"): [recurring_1, recurring_2, anomalous_market_hour_gap]
         },
     )
-    monkeypatch.setattr(runtime_support, "now_utc", lambda: datetime(2026, 7, 15, 0, 0))
+    monkeypatch.setattr(gap_detection, "now_utc", lambda: datetime(2026, 7, 15, 0, 0))
 
-    holes = runtime_support.find_hole_pairs(
+    holes = gap_detection.find_hole_pairs(
         [],
         pipeline.logger,
         symbols=[symbol],
@@ -147,13 +147,13 @@ def test_find_hole_pairs_keeps_one_off_closure_like_gap_conservatively(monkeypat
         3180,
     )
     monkeypatch.setattr(
-        runtime_support,
+        gap_detection,
         "get_internal_gaps",
         lambda *_args, **_kwargs: {(11, "M5"): [one_off]},
     )
-    monkeypatch.setattr(runtime_support, "now_utc", lambda: datetime(2026, 7, 6, 0, 0))
+    monkeypatch.setattr(gap_detection, "now_utc", lambda: datetime(2026, 7, 6, 0, 0))
 
-    holes = runtime_support.find_hole_pairs(
+    holes = gap_detection.find_hole_pairs(
         [],
         pipeline.logger,
         symbols=[symbol],
@@ -177,13 +177,13 @@ def test_find_hole_pairs_excludes_only_friday_evening_forex_weekend(monkeypatch)
         240,
     )
     monkeypatch.setattr(
-        runtime_support,
+        gap_detection,
         "get_internal_gaps",
         lambda *_args, **_kwargs: {(11, "M5"): [weekend, friday_market_hour_outage]},
     )
-    monkeypatch.setattr(runtime_support, "now_utc", lambda: datetime(2026, 7, 20, 0, 0))
+    monkeypatch.setattr(gap_detection, "now_utc", lambda: datetime(2026, 7, 20, 0, 0))
 
-    holes = runtime_support.find_hole_pairs(
+    holes = gap_detection.find_hole_pairs(
         [], pipeline.logger, symbols=[symbol], tf_filter={"M5"}
     )
 

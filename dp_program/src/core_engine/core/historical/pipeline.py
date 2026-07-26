@@ -33,19 +33,16 @@ from core_engine.shared.warehouse.maintenance import preview_ohlcv_reset_scope, 
 from core_engine.shared.warehouse.reader import fact_covers_window, get_latest_bars
 from core_engine.shared.warehouse.writer import insert_staging_batch, run_etl_direct
 from core_engine.shared.warehouse.validation import validate_ohlcv_df
-from core_engine.core.historical.runtime_support import (
+from core_engine.core.historical.run_control import HistoricalPullCancelled, raise_if_cancelled
+from core_engine.core.historical.gap_detection import (
     HOLE_LOOKBACK_DAYS,
-    HistoricalPullCancelled,
-    MAX_CONSECUTIVE_FAIL,
     find_hole_pairs,
     find_stale_pairs,
     flatten_verified_gap_windows,
     fmt_gap,
     gap_threshold_minutes,
     load_verified_gaps,
-    raise_if_cancelled,
     save_verified_gaps,
-    sleep_for,
 )
 from core_engine.util.coordination.locks import (
     DP_PROGRAM_LOCK,
@@ -113,9 +110,16 @@ _reporter = HistoricalReporter(
 
 _TF_FILTER: set[str] = set()
 
+MAX_CONSECUTIVE_FAIL = HISTORICAL.max_consecutive_fail
+
 
 def _hlog(event: str, *details: str, **fields: Any) -> str:
     return operation_line("HISTORICAL", event, *details, **fields)
+
+
+def sleep_for(tv_symbol: str) -> None:
+    delay = 10.0 if str(tv_symbol).upper() == "GOLD" else 5.0
+    time.sleep(delay)
 
 
 _warehouse_write_lock_depth = 0
@@ -578,12 +582,16 @@ def run_full_load(tv: SimpleNamespace, *, symbols: list[dict[str, Any]], dry_run
         _reporter.pair_flow_header("PAIR FLOW")
         for index, sym in enumerate(symbols, start=1):
             raise_if_cancelled(logger, f"full:{sym['tv_symbol']}:{tf_code}")
+            if not dry_run:
+                # Checked before pair_start() logs the PULL row so a pause
+                # lands cleanly between two pairs' rows instead of splitting
+                # this pair's own PULL/DONE pair apart.
+                wait_for_historical_slot("historical-full", logger)
             _reporter.pair_start(index, pairs_total, sym["tv_symbol"], tf_code, f"pull {fmt_int(n_bars)}")
             if dry_run:
                 _reporter.pair_dry_run(index, pairs_total, sym["tv_symbol"], tf_code)
                 stats["ok"] += 1
                 continue
-            wait_for_historical_slot("historical-full", logger)
             result = pull_with_retry(tv, sym, tf_code, n_bars, allow_replay=True)
             _reporter.pair_result(index, pairs_total, sym["tv_symbol"], tf_code, result)
             if result >= 0:
@@ -641,6 +649,10 @@ def run_backfill(
         tf_code = item["tf_code"]
         n_bars = int(item["n_bars"])
         reason = str(item.get("reason", "STALE"))
+        if not dry_run:
+            # See run_full_load's matching comment: checked before pair_start()
+            # so a pause lands between two pairs' rows, not mid pair.
+            wait_for_historical_slot("historical-backfill", logger)
         _reporter.pair_start(
             index,
             len(stale),
@@ -654,7 +666,6 @@ def run_backfill(
             _reporter.pair_dry_run(index, len(stale), sym["tv_symbol"], tf_code)
             stats["ok"] += 1
             continue
-        wait_for_historical_slot("historical-backfill", logger)
         fetched_frame: list[pd.DataFrame | None] = []
         result = pull_with_retry(
             tv,

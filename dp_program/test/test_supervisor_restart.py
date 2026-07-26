@@ -17,8 +17,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from core_engine.other.exit_codes import EXIT_CANCELLED, EXIT_LOCK_CONFLICT
-from core_engine.util.runtime_state import JsonReadResult
+from core_engine.util.primitives.exit_codes import EXIT_CANCELLED, EXIT_LOCK_CONFLICT
+from core_engine.util.primitives.runtime_state import JsonReadResult
 from core_engine.util.supervisor import engine as supervisor_engine
 from core_engine.util.supervisor.engine import (
     LIVE_RESTART_BACKOFF_BASE_SEC,

@@ -35,7 +35,12 @@ def _parse_since(value: str | None) -> datetime | None:
             return now - timedelta(**{units[text[-1]]: amount})
         except Exception:
             pass
-    parsed = datetime.fromisoformat(text.replace("z", "+00:00"))
+    try:
+        parsed = datetime.fromisoformat(text.replace("z", "+00:00"))
+    except ValueError:
+        raise ValueError(
+            f"invalid --since value {value!r}: expected a duration like 30m/24h/7d or an ISO 8601 datetime"
+        ) from None
     return parsed.replace(tzinfo=parsed.tzinfo or timezone.utc).astimezone(timezone.utc)
 
 

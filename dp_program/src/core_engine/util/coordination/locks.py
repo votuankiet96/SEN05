@@ -34,7 +34,7 @@ try:
 except Exception:  # pragma: no cover - import is optional for static review
     pyodbc = None  # type: ignore[assignment]
 
-from core_engine.util.logkit import get_logger, operation_line
+from core_engine.util.logkit import get_logger, log_raw, operation_line
 
 
 ConnectionFactory = Callable[[], Any]
@@ -917,8 +917,13 @@ class LockCoordinator:
         if seconds > HISTORICAL_YIELD_BEFORE_BATCH_SEC:
             return True
         sleep_sec = seconds + 5.0
-        self.logger.info(
-            "yielding %.0fs for upcoming live batch window", sleep_sec
+        now = datetime.now(timezone.utc)
+        resume_at = now + timedelta(seconds=sleep_sec)
+        log_raw(
+            self.logger,
+            logging.INFO,
+            f"{now.strftime('%H:%M:%S')} [PAUSE]  yielding {sleep_sec:.0f}s to the live batch window"
+            f" -> resume ~{resume_at.strftime('%H:%M:%S')}",
         )
         time.sleep(sleep_sec)
         return self.wait_for_live_batch_clear()

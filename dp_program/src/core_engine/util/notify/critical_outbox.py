@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from core_engine.util.notify.transport import post_webhook_once
-from core_engine.util.runtime_state import atomic_write_json
+from core_engine.util.primitives.runtime_state import atomic_write_json
 
 DEFAULT_TIMEOUT_CONNECT_SEC = 5.0
 DEFAULT_TIMEOUT_READ_SEC = 10.0

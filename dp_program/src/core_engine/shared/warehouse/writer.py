@@ -97,8 +97,14 @@ def insert_staging_batch(
         affected = cursor.rowcount
 
         conn.commit()
+        # DEBUG, not INFO: the live/historical per-row progress table (see
+        # core.live.telemetry / core.historical.reporter) already shows this
+        # exact outcome in its SAVED/DONE row. Logging it again at INFO here
+        # would interleave a JSON record between every table row, breaking
+        # the aligned table apart. Failures below stay at ERROR - a partial
+        # staging/Fact split is exactly the case the table row can't show.
         _warehouse_log(
-            20,
+            10,
             source=source,
             target=_target_label(symbol=symbol, symbol_id=symbol_id, tf_code=tf_code, staging_table=staging_table),
             action="staging_save",
@@ -168,8 +174,9 @@ def run_etl_direct(
         inserted = max(0, int(result[1] or 0))
         affected = max(0, int(result[2] or 0))
         conn.commit()
+        # DEBUG - see the matching note in insert_staging_batch() above.
         _warehouse_log(
-            20,
+            10,
             source=source,
             target=_target_label(symbol=symbol, symbol_id=symbol_id, tf_code=tf_code, staging_table=staging_table),
             action="fact_save",

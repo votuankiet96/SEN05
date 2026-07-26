@@ -46,7 +46,7 @@ from core_engine.shared.freshness import stale_after_minutes
 from core_engine.shared.tradingview.diagnostics import ConnectivityProbe, playwright_browser_status
 from core_engine.util.coordination.locks import LocalProcessLock, format_payload, utc_stamp
 from core_engine.util.logkit import get_logger
-from core_engine.util.runtime_state import RuntimeStateWriter
+from core_engine.util.primitives.runtime_state import RuntimeStateWriter
 
 # Runtime helpers can emit before engine.py finishes importing, so they own a
 # real centralized logger rather than relying on root-logger configuration.

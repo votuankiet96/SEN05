@@ -15,7 +15,7 @@ from core_engine.util.supervisor.process_control import (
     queue_historical_job,
     record_operator_decision,
 )
-from core_engine.other.exit_codes import EXIT_CANCELLED, EXIT_OK
+from core_engine.util.primitives.exit_codes import EXIT_CANCELLED, EXIT_OK
 from core_engine.util.logkit import log_activity
 from core_engine.shared.tradingview import auth as tv_auth
 from core_engine.util import health

@@ -17,6 +17,7 @@ from core_engine.util.logkit import (
     clean,
     get_logger,
     log_event,
+    log_raw as _log_raw,
     operation_line as _event_line,
 )
 from core_engine.settings import (
@@ -33,11 +34,12 @@ logger = get_logger(
 
 
 def log_live_block(logger: logging.Logger, level: int, text: str) -> None:
-    for raw_line in str(text).splitlines():
-        line = raw_line.strip()
-        if not line or set(line) <= {"-", "="}:
-            continue
-        logger.log(level, "%s", _event_line("LIVE", line))
+    """Write a pre-formatted human block (table/report) as one record.
+
+    Preserves alignment/whitespace and writes it atomically - no per-line
+    JSON wrapping. This is display content for operators; any matching
+    queryable data is logged separately via operation_line()."""
+    _log_raw(logger, level, text)
 
 
 def live_operation_line(event: str, *details: str, **fields) -> str:
@@ -250,7 +252,18 @@ class LiveReporter:
     def log_block(self, title: str, lines: list[str], level: int = logging.INFO) -> None:
         friendly = self._friendly_title(title)
         log_live_block(self.logger, level, self._summary_block(friendly, lines, level=level))
-        self.logger.debug("%s", operation_line("LIVE", f"{friendly} detail", *self._line_details(lines)))
+        fields = self._summary_fields(friendly, lines, level=level)
+        self.logger.log(level, "%s", _event_line("LIVE", self._event_key(friendly), **fields))
+
+    @staticmethod
+    def _event_key(friendly_title: str) -> str:
+        if friendly_title.startswith("Connection group "):
+            return "group_report"
+        if friendly_title.startswith("Batch "):
+            return "batch_report"
+        if friendly_title == "Hourly health report":
+            return "health_report"
+        return "report"
 
     def format_block(self, title: str, lines: list[str], level: int = logging.INFO) -> str:
         friendly = self._friendly_title(title)
@@ -438,7 +451,20 @@ class LiveReporter:
                     "-" * 96,
                     self._kv("Result", result),
                     self._kv("Status", self._short(data.get("status"), limit=130)),
+                    self._kv("Login", self._short(data.get("login"), limit=130)),
+                    self._kv("Last hour", self._short(data.get("last_hour"), limit=130)),
+                    self._kv("Total", self._short(data.get("total"), limit=130)),
+                    self._kv("Network", self._short(data.get("network"), limit=130)),
+                    self._kv("Buffers", self._short(data.get("buffers"), limit=130)),
+                    self._kv("Freshness", self._short(data.get("freshness"), limit=130)),
+                    self._kv("Accepted sym", self._short(data.get("accepted"), limit=130)),
+                    self._kv("Accepted TF", self._short(data.get("accepted_2"), limit=130)),
+                    self._kv("Staging sym", self._short(data.get("staging"), limit=130)),
+                    self._kv("Staging TF", self._short(data.get("staging_2"), limit=130)),
+                    self._kv("Fact sym", self._short(data.get("fact"), limit=130)),
+                    self._kv("Fact TF", self._short(data.get("fact_2"), limit=130)),
                     self._kv("Issues", self._short(issue_text, limit=160)),
+                    "-" * 96,
                 ]
             )
 
@@ -451,7 +477,9 @@ class LiveReporter:
             changed_count = self._count_list(data.get("changed"))
             result = self._report_result(level, data.get("missing"))
             accepted_text = data.get("accepted")
+            group_number = self._match(r"Connection group\s+(\d+)", friendly_title)
             fields: dict[str, str | int | None] = {
+                "group": int(group_number) if group_number is not None else None,
                 "sessions": data.get("sessions"),
                 "closed_candles": self._match_int(r"(\d[\d,]*)\s+bars?", accepted_text),
                 "pairs": self._match_int(r"(\d[\d,]*)\s+pair", accepted_text),
@@ -676,16 +704,10 @@ def operation_line(event: str, *details: str, **fields) -> str:
 
 
 def log_report_block(title: str, lines: list[str], level: int = logging.INFO) -> None:
-    details = [clean(line) for line in lines if clean(line) != "-"]
-    logger.log(
-        level,
-        operation_line(
-            "LIVE",
-            title,
-            *details,
-            result="warning" if level >= logging.WARNING else "ok",
-        ),
-    )
+    """Route WS LIVE GROUP/BATCH/HEALTH reports through LiveReporter: one
+    aligned human block (RawText, see log_live_block) plus one queryable
+    structured event with a stable event key - see LiveReporter.log_block()."""
+    reporter.log_block(title, lines, level)
 
 
 def append_live_table_text(text: str) -> None:

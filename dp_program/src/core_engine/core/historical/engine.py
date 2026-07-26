@@ -18,9 +18,9 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 from typing import Any
 
-from core_engine.other.exit_codes import EXIT_CANCELLED, EXIT_LOCK_CONFLICT
+from core_engine.util.primitives.exit_codes import EXIT_CANCELLED, EXIT_LOCK_CONFLICT
 from core_engine.util.logkit import log_event, set_context
-from core_engine.util.runtime_state import atomic_write_json
+from core_engine.util.primitives.runtime_state import atomic_write_json
 from core_engine.shared.tradingview import auth as tv_auth
 from core_engine.core.historical.reporter import fmt_int
 from core_engine.shared.warehouse.maintenance import purge_staging
@@ -38,15 +38,15 @@ from core_engine.core.historical.pipeline import (
     run_full_load,
     run_reset_scope,
 )
-from core_engine.core.historical.runtime_support import (
+from core_engine.core.historical.run_control import (
     EXIT_TV_UNAVAILABLE,
-    HOLE_LOOKBACK_DAYS,
     HistoricalPullCancelled,
     apply_replay_cli_options,
     build_parser,
     resolve_scope,
     tv_probe,
 )
+from core_engine.core.historical.gap_detection import HOLE_LOOKBACK_DAYS
 from core_engine.util.coordination.locks import (
     HISTORICAL_JOB_LOCK,
     acquire,
@@ -608,6 +608,15 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if stats.get("fail", 0) == 0 else 1
     except HistoricalPullCancelled as exc:
         logger.warning("%s", _hlog("Historical pull stopped safely", reason=exc, result="stopped"))
+        elapsed = (datetime.now(timezone.utc) - started).total_seconds()
+        _reporter.run_summary(
+            mode=mode,
+            elapsed_seconds=elapsed,
+            stats={},
+            dry_run=args.dry_run,
+            status="stopped",
+            level=logging.WARNING,
+        )
         notify_historical_event(
             severity="WARNING",
             title="Historical pull stopped safely",
@@ -623,6 +632,15 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_CANCELLED
     except Exception as exc:
         logger.exception("%s", _hlog("Historical pull failed", reason=exc, result="failed"))
+        elapsed = (datetime.now(timezone.utc) - started).total_seconds()
+        _reporter.run_summary(
+            mode=mode,
+            elapsed_seconds=elapsed,
+            stats={},
+            dry_run=args.dry_run,
+            status="failed",
+            level=logging.ERROR,
+        )
         notify_historical_event(
             severity="ERROR",
             title="Historical pull failed",

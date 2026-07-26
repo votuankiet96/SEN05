@@ -24,7 +24,7 @@ def post_webhook_once(
 ) -> DiscordHttpResult:
     """Perform exactly one verified request and return a structured result."""
     try:
-        from core_engine.other.tls import ensure_system_truststore
+        from core_engine.util.primitives.tls import ensure_system_truststore
 
         ensure_system_truststore()
         import requests

@@ -45,3 +45,37 @@ def test_outbox_row_waiting_over_15_minutes_is_critical():
     assert status == "CRITICAL"
     assert level == "ERROR"
     assert any("Fact" in issue and "16" in issue for issue in issues)
+
+
+def test_log_block_emits_one_aligned_raw_table_and_one_stable_event(caplog):
+    from core_engine.util.logkit.formatter import EventText, RawText
+
+    logger_name = "test_live_report_block"
+    reporter = LiveReporter(logging.getLogger(logger_name), {})
+    lines = [
+        "Sessions : 165/165 answered",
+        "Accepted : 11 closed candles across 11 pair(s)",
+        "Missing  : none",
+        "Retry    : 0 pair(s) / -",
+        "Analysis : Batch flow is healthy",
+    ]
+
+    with caplog.at_level(logging.INFO, logger=logger_name):
+        reporter.log_block("WS LIVE BATCH REPORT #64", lines, logging.INFO)
+
+    raw_records = [r for r in caplog.records if isinstance(r.msg, RawText)]
+    event_records = [
+        r
+        for r in caplog.records
+        if r.msg == "%s" and r.args and isinstance(r.args[0], EventText)
+    ]
+
+    # Exactly one pre-formatted block, not one record per source line.
+    assert len(raw_records) == 1
+    assert "BATCH SUMMARY #64" in raw_records[0].msg
+    assert raw_records[0].msg.count("\n") > 1
+
+    # Exactly one queryable companion event with a stable (not slugified
+    # sentence) event key, independent of the batch number.
+    assert len(event_records) == 1
+    assert event_records[0].args[0].event == "batch_report"
