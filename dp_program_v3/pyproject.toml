@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dp-program-v3"
+version = "3.0.0"
+description = "Standalone production TradingView OHLCV provider for SQL Server."
+requires-python = ">=3.11"
+dependencies = [
+    "websocket-client>=1.6.0",
+    "pyodbc>=5.0.0",
+    "PyYAML>=6.0.0",
+    "requests>=2.31.0",
+    "playwright>=1.45.0",
+    "pyotp>=2.9.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0"]
+
+[project.scripts]
+dp-program = "dp_program.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+norecursedirs = ["runtime", ".git", ".venv", "build", "dist"]
+pythonpath = ["src"]

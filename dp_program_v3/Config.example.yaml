@@ -1,0 +1,39 @@
+# Copy this file to Config.yaml and fill the private credential fields.
+# Config.yaml is the only runtime config file and must never be committed.
+
+app:
+  log_level: INFO
+  runtime_dir: runtime
+
+discord:
+  enabled: false
+  webhook_url: ""
+
+tradingview:
+  auth_token: ""
+  cookie: ""
+  username: ""
+  password: ""
+  two_factor_secret: ""
+
+backfill:
+  enabled: true
+  # Exact first-policy scan; completed pairs later use only Fact tail + overlap.
+  lookback_days: 60
+
+live:
+  enabled: true
+
+service:
+  backfill_on_start: true
+  backfill_schedule_utc: ["11:00", "22:00"]
+
+sql_server:
+  server: localhost
+  database: SEN05_AutoTrading
+  port: ""
+  username: ""
+  password: ""
+  trusted_connection: true
+  encrypt: "no"
+  trust_server_certificate: true

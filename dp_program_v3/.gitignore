@@ -1,0 +1,36 @@
+# Config.yaml contains host credentials. Commit only the sanitized template.
+Config.yaml
+!Config.example.yaml
+
+# Runtime output (logs, cache, PID files, ad-hoc monitor scripts, backups).
+# Everything under runtime/ is transient operational output - ignore the
+# whole tree and only keep directory placeholders.
+runtime/**
+!runtime/**/
+!runtime/**/.gitkeep
+# Deployment evidence may contain an expanded, exact source artifact whose
+# tracked-looking files must never reappear as untracked workspace changes.
+runtime/deploy/**
+
+# Packaging metadata from `pip install -e .`
+*.egg-info/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Test artifacts (pytest temp/cache must never be committed or locked into the repo)
+.pytest_cache/
+.pytest_tmp*/
+pytest_tmp/
+.coverage
+
+# Local executable build output
+build/
+dist/
+*.spec
+
+# Data exports
+*.csv
+*.parquet
