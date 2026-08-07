@@ -26,6 +26,7 @@ from .engine.sql_connector import check_connection, fetch_universe, select_pairs
 
 def build_parser() -> argparse.ArgumentParser:
     """Build the small V3 CLI."""
+    # Khai báo các lệnh operator có thể gọi từ run_*.bat hoặc terminal.
     parser = argparse.ArgumentParser(description="DP Program V3 TradingView OHLCV engine")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -54,6 +55,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _doctor(config: dict) -> dict:
+    # Chạy các kiểm tra read-only để biết hệ thống sẵn sàng vận hành chưa.
     sql = check_connection(config)
     authentication = auth_status(config)
     browser = browser_status()
@@ -90,6 +92,7 @@ def _doctor(config: dict) -> dict:
 
 
 def _settings(config: dict) -> dict:
+    # Trả cấu hình đã che secret, dùng để kiểm nhanh runtime đang dùng gì.
     symbols, timeframes = fetch_universe(config)
     live_pairs = select_pairs(config, live=True)
     backfill_pairs = select_pairs(config, live=False)
@@ -120,6 +123,7 @@ def _settings(config: dict) -> dict:
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Load config and dispatch one V3 command."""
+    # Điểm vào chính: load config, chọn log file theo vai trò, rồi chạy lệnh.
     parser = build_parser()
     args = parser.parse_args(argv)
     config = None
@@ -129,12 +133,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             args.command == "auth" and args.action == "refresh"
         )
         if writes:
+            # Lệnh có ghi dữ liệu dùng log riêng cho live/backfill.
             role = (
                 "backfill" if args.command in {"run-backfill", "backfill"}
                 else "live"
             )
             configure_logging(config, role=role)
         else:
+            # Lệnh chỉ đọc/chẩn đoán dùng logging console đơn giản.
             logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
         if args.command == "backfill":
             with instance_lock(config, "backfill"):
@@ -188,6 +194,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             or int(summary.get("failed", 0)) > 0
             or int(summary.get("deferred", 0)) > 0
         ):
+            # Exit code 1 giúp wrapper nhận biết lệnh đã có lỗi hoặc còn việc hoãn lại.
             return 1
         return 0
     except (ConfigError, ValueError) as exc:

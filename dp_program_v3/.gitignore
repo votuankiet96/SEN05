@@ -25,10 +25,18 @@ __pycache__/
 pytest_tmp/
 .coverage
 
-# Local executable build output
+# Local executable build output. run_dp/*.exe is a ~50MB rebuildable
+# binary (see scripts/windows/dp_program_entry.py) -- too large for git
+# history. run_dp/vendor/ is the bundled Chromium build for offline
+# deployment (~690MB, assembled from the local Playwright cache at
+# packaging time) -- same reason. install.ps1/DEPLOY.md/sql/*.sql/
+# Config.example.yaml under run_dp/ ARE tracked (small, reviewable
+# source, not rebuildable binary output).
 build/
 dist/
 *.spec
+run_dp/*.exe
+run_dp/vendor/
 
 # Data exports
 *.csv

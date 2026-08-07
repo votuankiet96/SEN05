@@ -1,13 +1,7 @@
 """TradingView framing and finite one-symbol multi-series WebSocket fetches."""
-# File này là lớp giao thức thấp nhất, nói chuyện trực tiếp với TradingView
-# qua WebSocket thô: tự đóng gói/giải gói khung tin theo định dạng riêng
-# của TradingView (~m~<len>~m~<json>), tự dựng phiên chart, tự parse candle
-# từ payload JSON. Một lần "fetch" ở đây LUÔN hữu hạn (finite) — mở socket,
-# xin đúng số nến cần, chờ tới khi chứng minh được đã nhận đủ (hoặc hết
-# thời gian/hết lượt mở rộng), rồi đóng socket lại — khác hẳn kiểu socket
-# streaming sống mãi. Toàn bộ module chỉ phục vụ MỘT symbol mỗi lần gọi,
-# nhưng có thể gộp nhiều timeframe ("series") của symbol đó vào chung một
-# kết nối để tiết kiệm số lần mở socket.
+# File này nói chuyện trực tiếp với WebSocket TradingView.
+# Một lần fetch mở một socket cho một symbol, có thể gộp nhiều timeframe,
+# nhận đủ dữ liệu cần lấy rồi đóng socket. Nếu thiếu/sai format thì báo lỗi.
 from __future__ import annotations
 import gc, json, logging, math, secrets, time
 from datetime import datetime, timezone
@@ -17,58 +11,33 @@ import websocket
 from ..log import log_event
 from .auth import USER_AGENT, ensure_authenticated
 LOGGER = logging.getLogger(__name__)
-# Tên method trong giao thức TradingView báo hiệu tin nhắn này MANG dữ
-# liệu candle thật sự ("du" = data update, "timescale_update" = cập nhật
-# theo mốc thời gian).
+# Message có dữ liệu candle thật.
 _DATA_MESSAGES = {"du", "timescale_update"}
-# Tên method báo hiệu TradingView chủ động TỪ CHỐI yêu cầu (khác với việc
-# không hiểu được phản hồi — đây là provider nói thẳng "không được").
+# Message báo TradingView từ chối request.
 _ERROR_MESSAGES = {"error", "critical_error", "series_error", "symbol_error"}
-# _MAX_SERIES: số lượng timeframe tối đa gộp chung một socket cho một
-# symbol — đúng bằng tổng số timeframe hệ thống hỗ trợ (M5..W), nên trong
-# thực tế mỗi symbol chỉ cần đúng một kết nối để lấy hết mọi timeframe.
-# _MAX_EXTENSION_ROUNDS: số lượt "xin thêm dữ liệu cũ hơn" tối đa cho một
-# lần fetch, để chặn vòng lặp mở rộng chạy vô hạn nếu provider không hợp
-# tác.
+# Giới hạn số series trên một socket và số lượt xin thêm dữ liệu cũ hơn.
 _MAX_SERIES, _MAX_EXTENSION_ROUNDS = 15, 3
-# Bốn loại lỗi tách biệt theo đúng NGUYÊN NHÂN, để nơi gọi (fetch_candles_batch
-# bên dưới, và pipeline.py ở lớp trên) có thể phản ứng khác nhau tùy loại:
+# Các loại lỗi được tách theo nguyên nhân để lớp trên xử lý đúng.
 class IncompleteFetchError(TimeoutError): """A requested series was not proven complete."""
-# -> không chứng minh được đã nhận đủ dữ liệu yêu cầu (hết giờ, hết lượt
-#    mở rộng, hoặc request_more_data không tiến triển).
+# Chưa chứng minh được đã nhận đủ dữ liệu yêu cầu.
 class MalformedResponseError(RuntimeError): """A provider frame cannot be trusted."""
-# -> khung tin/cấu trúc JSON không đúng như giao thức mong đợi, không thể
-#    tin để xử lý tiếp (không cố đoán/khôi phục dữ liệu sai định dạng).
+# Frame/JSON sai cấu trúc, không thể tin để xử lý tiếp.
 class InvalidCandleError(RuntimeError): """A provider bar cannot be represented."""
-# -> cấu trúc tin nhắn thì đúng, nhưng GIÁ TRỊ của một candle cụ thể
-#    không thể chuyển đổi được (không parse được số/thời gian).
+# Candle có giá trị không parse được.
 class ProviderRequestError(RuntimeError): """The provider explicitly rejected a request."""
-# -> TradingView chủ động gửi một trong các _ERROR_MESSAGES, tức từ chối
-#    yêu cầu một cách tường minh (khác timeout, khác lỗi parse).
+# TradingView chủ động từ chối request.
 class FetchRequest(NamedTuple):
-    # Mô tả đúng một series (một symbol + một timeframe) cần lấy.
-    # bars: số nến xin lúc đầu. max_bars: trần tuyệt đối được phép xin
-    # thêm qua các lượt mở rộng. oldest_required: nếu có, buộc phải chứng
-    # minh đã lấy được nến cũ tới tận mốc thời gian này (dùng cho backfill
-    # cần phủ đủ cửa sổ lịch sử; để None thì không đòi mở rộng gì cả, hợp
-    # với các fetch kiểu live chỉ cần vài nến mới nhất).
+    # Một request cho một symbol/timeframe.
+    # oldest_required dùng khi backfill cần chắc chắn đã kéo đủ về quá khứ.
     symbol: dict[str, Any]; timeframe: dict[str, Any]
     bars: int; max_bars: int
     oldest_required: datetime | None = None
 class FetchResult(NamedTuple):
-    # candles: danh sách nến đã chuẩn hóa, sắp theo thời gian tăng dần.
-    # requested_bars: tổng số nến cuối cùng đã xin (sau mọi lượt mở rộng).
-    # extension_rounds: đã cần bao nhiêu lượt mở rộng để đủ dữ liệu — dùng
-    # để log/giám sát, số càng cao càng đáng chú ý về hiệu năng provider.
+    # Kết quả đã chuẩn hóa của một series sau khi fetch xong.
     candles: list[dict[str, Any]]; requested_bars: int; extension_rounds: int
 def request_key(request: FetchRequest) -> tuple[int, str]: return int(request.symbol["symbol_id"]), str(request.timeframe["code"])
 def frame_message(method: str, params: list[Any]) -> str:
-    # Đóng gói một lệnh theo đúng định dạng khung tin riêng của
-    # TradingView: "~m~<số byte của payload>~m~<payload JSON>". Đây không
-    # phải khung WebSocket chuẩn — WS đã tự đóng khung tin nhắn của nó rồi
-    # — mà là một lớp đóng khung THÊM của riêng TradingView bên trong nội
-    # dung text của một khung WS, để gộp nhiều lệnh logic hoặc heartbeat
-    # vào cùng luồng.
+    # TradingView bọc JSON bằng khung riêng: ~m~length~m~payload.
     payload = json.dumps({"m": method, "p": params}, separators=(",", ":"))
     return f"~m~{len(payload)}~m~{payload}"
 def split_messages(raw: str | bytes) -> list[str]:
@@ -77,15 +46,12 @@ def split_messages(raw: str | bytes) -> list[str]:
         text = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
     except UnicodeDecodeError as exc:
         raise MalformedResponseError("provider frame is not valid UTF-8") from exc
-    # Provider đóng socket mà không gửi gì cả — đây là một sự kiện mạng
-    # hợp lệ (không phải dữ liệu sai định dạng), nên coi là "chưa lấy đủ"
-    # (IncompleteFetchError) thay vì "dữ liệu hỏng" (MalformedResponseError).
+    # Socket đóng mà không có dữ liệu nghĩa là chưa lấy đủ.
     if not text: raise IncompleteFetchError("provider closed the WebSocket connection")
     packets, position = [], 0
     while position < len(text):
         if text.startswith("~h~", position):
-            # Gói heartbeat: chỉ có số thứ tự, không có payload JSON đi
-            # kèm — giữ nguyên dạng thô, để _receive() echo lại y hệt.
+            # Heartbeat không có JSON; giữ nguyên để echo lại cho provider.
             start, position = position, position + 3
             digit_start = position
             while position < len(text) and text[position].isdigit():
@@ -108,11 +74,8 @@ def split_messages(raw: str | bytes) -> list[str]:
     return packets
 def normalize_candle(values: list[Any], symbol: dict[str, Any],
                      timeframe: dict[str, Any]) -> dict[str, Any]:
-    # Chuyển mảng thô của TradingView [time, open, high, low, close, volume]
-    # thành đúng hình dạng candle chuẩn dùng xuyên suốt engine (khớp với
-    # những gì pipeline.py::validate_candles() mong đợi nhận vào). Giá và
-    # volume LUÔN parse qua Decimal (str(value) trước, không qua float) để
-    # tránh sai số dấu phẩy động nhị phân trên dữ liệu giá tiền thật.
+    # Đổi candle thô của TradingView về dict chuẩn của engine.
+    # Giá/volume dùng Decimal để tránh sai số float trên dữ liệu giá.
     if len(values) < 6: raise InvalidCandleError("provider candle has fewer than six fields")
     try:
         timestamp = datetime.fromtimestamp(float(values[0]), tz=timezone.utc)
@@ -128,9 +91,7 @@ def parse_series_message(message: str | dict[str, Any], symbol: dict[str, Any],
                          timeframe: dict[str, Any], series_id: str = "s1"
                          ) -> list[dict[str, Any]]:
     """Extract one selected series from a provider data message."""
-    # Kiểm tra nghiêm ngặt từng lớp cấu trúc JSON mong đợi — bất kỳ chỗ
-    # nào không đúng hình dạng đều raise MalformedResponseError ngay, theo
-    # đúng triết lý "không tin, không đoán" xuyên suốt codebase này.
+    # Đọc đúng series cần lấy. Sai format thì báo lỗi, không đoán dữ liệu.
     try:
         payload = json.loads(message) if isinstance(message, str) else message
     except json.JSONDecodeError as exc:
@@ -150,21 +111,14 @@ def parse_series_message(message: str | dict[str, Any], symbol: dict[str, Any],
     return [normalize_candle(bar.get("v") or [], symbol, timeframe) for bar in bars]
 def _session_id(prefix: str) -> str: return f"{prefix}_{secrets.token_hex(6)}"
 def _headers(cookie: str) -> list[str]:
-    # Referer/User-Agent giả lập một tab trình duyệt thật — TradingView từ
-    # chối kết nối không có các header này. Cookie chỉ gửi kèm nếu có
-    # (phiên đã xác thực); không có cookie vẫn kết nối được nhưng ở dạng
-    # guest (xem GUEST_TOKEN trong configuration.py).
+    # Header mô phỏng browser thật; cookie chỉ gắn khi có phiên đăng nhập.
     values = ["Referer: https://www.tradingview.com/", f"User-Agent: {USER_AGENT}"]
     return values + ([f"Cookie: {cookie}"] if cookie else [])
 def _validate_batch(requests: list[FetchRequest], cap: int) -> None:
-    # Kiểm tra hình dạng của cả batch TRƯỚC KHI mở socket, để một batch sai
-    # (rỗng, quá nhiều series, khác symbol, trùng timeframe, vượt trần bar)
-    # bị từ chối ngay tại chỗ gọi thay vì lãng phí một lần kết nối thật.
+    # Kiểm batch trước khi mở socket để tránh lãng phí kết nối thật.
     if not requests or len(requests) > _MAX_SERIES:
         raise ValueError(f"batch must contain 1..{_MAX_SERIES} series")
-    # Một socket/batch chỉ phục vụ đúng MỘT symbol — kiểm tra bằng cách
-    # gom (exchange, symbol) của mọi request vào set, phải còn đúng 1 phần
-    # tử.
+    # Một socket chỉ phục vụ đúng một symbol, nhưng có thể nhiều timeframe.
     symbols = {(r.symbol["exchange"], r.symbol["symbol"]) for r in requests}
     keys = [request_key(request) for request in requests]
     if len(symbols) != 1 or len(keys) != len(set(keys)):
@@ -174,14 +128,9 @@ def _validate_batch(requests: list[FetchRequest], cap: int) -> None:
     if sum(r.bars for r in requests) > cap:
         raise ValueError("batch initial request exceeds aggregate bar cap")
 def _register(socket: Any, tv: dict[str, Any], request: FetchRequest, index: int) -> dict:
-    # Gửi đúng trình tự 4 lệnh giao thức TradingView để mở một phiên chart
-    # và bắt đầu một series mới: tạo phiên -> đặt timezone -> resolve
-    # symbol thành alias -> tạo series với số nến ban đầu. `index` (vị trí
-    # trong batch) dùng để sinh alias/series id duy nhất trong cùng một
-    # socket (sym1/s1, sym2/s2...).
+    # Đăng ký một series: tạo chart session, resolve symbol, rồi xin số nến đầu.
     session, alias, series = _session_id("cs"), f"sym{index}", f"s{index}"
-    # Dấu "=" ở đầu là quy ước riêng của TradingView, báo đây là một mô tả
-    # resolve thô (JSON), không phải một symbol ID đã resolve sẵn.
+    # Dấu "=" báo TradingView đây là mô tả symbol dạng JSON thô.
     resolved = "=" + json.dumps({
         "symbol": f"{request.symbol['exchange']}:{request.symbol['symbol']}",
         "adjustment": "splits"}, separators=(",", ":"))
@@ -194,10 +143,7 @@ def _register(socket: Any, tv: dict[str, Any], request: FetchRequest, index: int
     )
     for method, params in commands:
         socket.send(frame_message(method, params))
-    # State theo dõi tiến độ của riêng series này trong suốt vòng đời của
-    # lần fetch: candles tích lũy theo timestamp (tự khử trùng lặp nếu
-    # cùng một mốc thời gian được cập nhật nhiều lần), requested/rounds
-    # phục vụ logic mở rộng và log.
+    # State lưu candle theo timestamp để tự khử trùng lặp trong lần fetch.
     return {"request": request, "session": session, "series": series,
             "candles": {}, "requested": int(request.bars), "rounds": 0}
 def _decode(packet: str) -> dict[str, Any]:
@@ -209,11 +155,7 @@ def _decode(packet: str) -> dict[str, Any]:
         raise MalformedResponseError("provider packet is not an object")
     return message
 def _route(message: dict[str, Any], lookup: dict[tuple[str, str], dict]) -> tuple | None:
-    # Bộ định tuyến trung tâm cho mọi tin nhắn đã giải mã: quyết định đây
-    # là lỗi, là dữ liệu candle, là tín hiệu "series đã xong", hay là loại
-    # tin nhắn khác mà chương trình này không quan tâm (bị bỏ qua có chủ
-    # đích, không raise lỗi — vì TradingView còn gửi nhiều loại tin khác
-    # không liên quan tới candle, ví dụ quote realtime).
+    # Phân loại message: lỗi, dữ liệu candle, hoàn tất series, hoặc bỏ qua.
     method, params = message.get("m"), message.get("p")
     if method in _ERROR_MESSAGES:
         raise ProviderRequestError(f"TradingView error: {str(params)[:200]}")
@@ -234,9 +176,7 @@ def _route(message: dict[str, Any], lookup: dict[tuple[str, str], dict]) -> tupl
                 state["candles"][candle["timestamp"]] = candle
         return None
     if method == "series_completed":
-        # Tín hiệu TradingView báo "series này đã gửi hết dữ liệu cho lượt
-        # này" — trả về key (session, series_id) để _receive() gỡ khỏi
-        # tập pending.
+        # TradingView báo series đã gửi xong lượt này.
         if not isinstance(params, list) or len(params) < 2:
             raise MalformedResponseError("provider completion has invalid parameters")
         key = (params[0], params[1])
@@ -248,74 +188,56 @@ def _receive(
     socket: Any, lookup: dict[tuple[str, str], dict],
     pending: set[tuple[str, str]], deadline: float,
 ) -> int:
-    # Vòng lặp nhận dữ liệu cho một lượt: chạy tới khi hết pending hoặc hết
-    # deadline (mốc thời gian tuyệt đối, tính theo time.monotonic()).
+    # Nhận dữ liệu tới khi mọi series xong hoặc tới deadline tổng.
     received_bytes = 0
     while pending and time.monotonic() < deadline:
         try:
             raw = socket.recv()
         except websocket.WebSocketTimeoutException:
-            # Timeout ngắn (1 giây, set ở _fetch_batch_once) của riêng một
-            # lần recv() KHÔNG phải lỗi thật — chỉ là "chưa có gì mới",
-            # vòng lặp quay lại kiểm tra deadline tổng. Cách này giữ vòng
-            # lặp phản hồi nhanh thay vì bị block cứng vào một recv() dài.
+            # Timeout ngắn chỉ nghĩa là chưa có packet mới; tiếp tục chờ.
             continue
         received_bytes += len(raw)
         for packet in split_messages(raw):
             if packet.startswith("~h~"):
-                # Phải echo lại đúng gói heartbeat để giữ phiên sống —
-                # không trả lời thì TradingView sẽ coi client là "chết" và
-                # ngắt kết nối.
+                # Echo heartbeat để TradingView giữ socket sống.
                 socket.send(f"~m~{len(packet)}~m~{packet}")
             else:
                 completed = _route(_decode(packet), lookup)
                 if completed:
                     pending.discard(completed)
     if pending:
-        # Vẫn còn series chưa xong sau khi hết deadline: KHÔNG được coi
-        # như đã lấy đủ — báo lỗi rõ ràng để lớp gọi bên trên (require_coverage
-        # ở pipeline.py) không bao giờ âm thầm nhận dữ liệu thiếu.
+        # Còn series chưa xong thì báo lỗi, không trả dữ liệu thiếu.
         names = ",".join(lookup[key]["request"].timeframe["code"]
                          for key in sorted(pending))
         raise IncompleteFetchError(f"provider response incomplete for series={names}")
     return received_bytes
 def _extension_count(state: dict, aggregate_left: int) -> int:
-    # Tính xem series này còn cần xin thêm bao nhiêu nến CŨ HƠN để chạm
-    # tới oldest_required — dùng cho các lượt "request_more_data" bên dưới.
+    # Tính cần xin thêm bao nhiêu nến cũ hơn để chạm oldest_required.
     request, candles = state["request"], state["candles"]
     if request.oldest_required is None:
-        # Không đòi phủ lịch sử sâu (ví dụ fetch kiểu live) -> không bao
-        # giờ cần mở rộng.
+        # Live không cần phủ sâu về quá khứ nên không mở rộng.
         return 0
     earliest = min(candles) if candles else None
     if earliest is not None and earliest <= request.oldest_required:
-        # Đã chạm hoặc vượt mốc yêu cầu -> coi như đã đủ, không cần thêm.
+        # Đã chạm mốc yêu cầu thì đủ.
         return 0
-    # Ngân sách còn lại bị giới hạn bởi CẢ HAI: trần riêng của series này
-    # (max_bars trừ đi số đã xin) LẪN ngân sách chung còn lại của cả batch
-    # (aggregate_left, do caller truyền vào dựa trên cap tổng).
+    # Ngân sách còn lại bị giới hạn bởi cả series riêng và batch chung.
     available = min(request.max_bars - state["requested"], aggregate_left)
     if available <= 0:
-        # Hết ngân sách mà vẫn chưa đủ phủ -> fail-closed ngay, không âm
-        # thầm trả về dữ liệu thiếu.
+        # Hết ngân sách mà vẫn thiếu thì báo lỗi, không trả thiếu.
         raise IncompleteFetchError(
             f"coverage cap reached for {request.timeframe['code']}")
     if earliest is None:
-        # Chưa có nến nào cả (trường hợp hiếm, lượt đầu không trả gì) ->
-        # không có cơ sở ước lượng, xin trọn phần ngân sách còn lại.
+        # Chưa có nến thì chưa ước lượng được, xin hết phần còn lại.
         return available
-    # Ước lượng số nến cần thêm dựa trên khoảng cách thời gian còn thiếu
-    # chia cho độ dài một nến, làm tròn lên và cộng dư 1 nến — tránh xin
-    # thừa toàn bộ ngân sách mỗi lượt khi chỉ còn thiếu một khoảng nhỏ.
+    # Ước lượng số nến thiếu theo khoảng thời gian còn lại.
     seconds = int(request.timeframe["minutes"]) * 60
     gap = math.ceil((earliest - request.oldest_required).total_seconds() / seconds) + 1
     return min(available, max(1, gap))
 def _fetch_batch_once(
     tv: dict[str, Any], requests: list[FetchRequest], cap: int,
 ) -> tuple[dict[tuple[int, str], FetchResult], dict[str, Any]]:
-    # Toàn bộ vòng đời MỘT lần thử fetch: mở socket -> xác thực phiên ->
-    # đăng ký từng series -> nhận lượt đầu -> mở rộng tối đa
-    # _MAX_EXTENSION_ROUNDS lượt cho series nào còn thiếu -> đóng socket.
+    # Một lần thử fetch: mở socket, auth, đăng ký series, nhận dữ liệu, đóng socket.
     _validate_batch(requests, cap)
     opened = time.monotonic()
     socket = websocket.create_connection(
@@ -323,18 +245,14 @@ def _fetch_batch_once(
         origin="https://www.tradingview.com", timeout=float(tv["timeout_seconds"]))
     connected, received = time.monotonic(), 0
     try:
-        # Timeout ngắn cho từng lần recv() riêng lẻ, để vòng lặp ở
-        # _receive() luôn kiểm tra lại được deadline tổng thay vì bị chặn
-        # cứng.
+        # Timeout ngắn để _receive() còn kiểm tra được deadline tổng.
         socket.settimeout(1.0)
-        # set_auth_token PHẢI gửi trước mọi lệnh dựng phiên/series khác,
-        # đúng thứ tự bắt buộc của giao thức.
+        # Auth token phải gửi trước khi tạo chart session/series.
         socket.send(frame_message("set_auth_token", [tv["auth_token"]]))
         states = [_register(socket, tv, request, index)
                   for index, request in enumerate(requests, 1)]
         lookup = {(s["session"], s["series"]): s for s in states}
-        # Deadline tính cho TOÀN BỘ lần fetch (không phải riêng từng lượt),
-        # dựa trên tradingview.timeout_seconds.
+        # Deadline áp dụng cho toàn bộ lần fetch này.
         deadline = time.monotonic() + float(tv["timeout_seconds"])
         received += _receive(socket, lookup, set(lookup), deadline)
         for _round in range(_MAX_EXTENSION_ROUNDS):
@@ -345,9 +263,7 @@ def _fetch_batch_once(
                 if not count:
                     continue
                 key = (state["session"], state["series"])
-                # Ghi lại mốc "trước khi xin thêm" để sau lượt nhận có thể
-                # kiểm tra provider có thực sự trả về dữ liệu CŨ HƠN hay
-                # không.
+                # Ghi mốc cũ nhất trước khi xin thêm để kiểm provider có tiến triển.
                 before[key] = min(state["candles"]) if state["candles"] else None
                 state["requested"] += count
                 state["rounds"] += 1
@@ -356,23 +272,17 @@ def _fetch_batch_once(
                 socket.send(frame_message(
                     "request_more_data", [*key, int(count)]))
             if not pending:
-                # Không series nào cần mở rộng nữa -> đã đủ, thoát sớm.
+                # Không còn series cần mở rộng thì đã đủ.
                 break
             received += _receive(socket, lookup, pending, deadline)
             for key, prior in before.items():
                 candles = lookup[key]["candles"]
                 current = min(candles) if candles else None
                 if current is None or (prior is not None and current >= prior):
-                    # Lưới an toàn chống "đứng yên": nếu request_more_data
-                    # không thực sự đẩy mốc cũ nhất lùi thêm, coi như
-                    # provider không tiến triển thật, fail ngay ở lượt đầu
-                    # tiên phát hiện thay vì lặng lẽ chạy hết cả 3 lượt rồi
-                    # mới báo lỗi.
+                    # Nếu xin thêm mà mốc cũ nhất không lùi lại thì dừng.
                     raise IncompleteFetchError("request_more_data made no older progress")
         if any(_extension_count(state, cap) for state in states):
-            # Sau khi hết lượt mở rộng (hoặc dừng sớm) mà vẫn còn series
-            # chưa đủ phủ -> đây là thất bại dứt điểm, không còn cách nào
-            # khác trong ngân sách cho phép.
+            # Hết lượt mở rộng mà vẫn thiếu thì coi là fetch thất bại.
             raise IncompleteFetchError("coverage incomplete after bounded extension")
         results = {}
         for state in states:
@@ -383,9 +293,7 @@ def _fetch_batch_once(
         return results, {"connect_seconds": round(connected - opened, 3),
                          "received_bytes": received}
     finally:
-        # Luôn cố đóng socket; lỗi lúc đóng không được che mất lỗi/kết quả
-        # thật sự của lần fetch, và cũng không có gì để xử lý thêm nếu đóng
-        # thất bại.
+        # Luôn cố đóng socket; lỗi lúc đóng không che lỗi chính.
         try:
             socket.close()
         except Exception:
@@ -402,10 +310,7 @@ def fetch_candles_batch(
             try:
                 results, metrics = _fetch_batch_once(tv, requests, cap)
             finally:
-                # Chủ động gọi gc sau mỗi lần thử: tiến trình này chạy nền
-                # 24/7, liên tục mở/đóng socket và tạo payload candle lớn —
-                # chủ động dọn rác mỗi vòng để tránh bộ nhớ phình dần theo
-                # thời gian thay vì chỉ trông chờ chu kỳ GC tự động.
+                # Dọn rác sau mỗi lần thử để process 24/7 không phình bộ nhớ.
                 gc.collect()
             log_event(
                 LOGGER, logging.INFO, "FETCH_BATCH_COMPLETED", "NONE",
@@ -419,14 +324,10 @@ def fetch_candles_batch(
         except Exception as exc:
             last_error = exc
             text = str(exc).lower()
-            # Đoán theo từ khóa trong nội dung lỗi xem có phải do phiên
-            # xác thực hết hạn/bị từ chối hay không — TradingView không
-            # luôn trả về một loại exception riêng cho lỗi auth, nên phải
-            # dò chữ trong message.
+            # Một số lỗi auth chỉ nằm trong text exception, nên kiểm từ khóa.
             refresh = any(word in text for word in (
                 "auth", "permission", "forbidden", "unauthorized"))
-            # TradingView đã từ chối tường minh (không phải do auth) ->
-            # thử lại cũng vô ích, dừng ngay.
+            # TradingView từ chối rõ ràng, không phải auth, thì retry cũng vô ích.
             rejected = isinstance(exc, ProviderRequestError) and not refresh
             if attempt >= attempts or rejected: break
             log_event(
@@ -446,9 +347,6 @@ def fetch_candles(
     timeframe: dict[str, Any], bars: int,
 ) -> list[dict[str, Any]]:
     """Single-series facade over the canonical finite batch transport."""
-    # bars == max_bars: đường tắt dùng cho fetch đơn lẻ, không cho phép mở
-    # rộng thêm (không đặt oldest_required) — muốn phủ lịch sử sâu và có
-    # kiểm soát mở rộng thì phải gọi thẳng fetch_candles_batch với
-    # FetchRequest đầy đủ (xem backfill.py).
+    # Hàm tiện ích cho fetch một series; không tự mở rộng lịch sử.
     request = FetchRequest(symbol, timeframe, int(bars), int(bars))
     return fetch_candles_batch(config, [request])[request_key(request)].candles

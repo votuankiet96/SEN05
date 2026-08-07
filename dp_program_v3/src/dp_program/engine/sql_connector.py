@@ -11,9 +11,17 @@ _SQL_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*$")
 Pair = tuple[dict[str, Any], dict[str, Any]]
 _LIVE_ASSET_TYPES = {"CRYPTO", "INDICE", "METAL"}
 
+# Đây là file duy nhất trong engine được nói chuyện với SQL Server.
+# File khác muốn đọc symbol/timeframe, đọc mốc nến, hoặc ghi SQL đều phải gọi qua đây.
+# Làm vậy để toàn bộ quy ước SQL nằm một chỗ, dễ kiểm tra.
+
+# Một pair nghĩa là một cặp symbol + timeframe.
+# Danh sách gốc lấy từ bảng dimension trong SQL.
+
 
 def warehouse_timestamp(value: datetime) -> datetime:
     """Normalize an aware UTC timestamp for SQL DATETIME2(0)."""
+    # SQL lưu thời gian UTC đến giây, không lưu microsecond.
     normalized = value if value.tzinfo is None else value.astimezone(timezone.utc).replace(
         tzinfo=None
     )
@@ -21,6 +29,7 @@ def warehouse_timestamp(value: datetime) -> datetime:
 
 
 def _decimal_text(value: Any, *, precision: int, scale: int) -> str:
+    # Ép số về đúng độ chính xác mà SQL đang lưu.
     try:
         normalized = Decimal(value).quantize(
             Decimal(1).scaleb(-scale), rounding=ROUND_HALF_UP
@@ -36,6 +45,8 @@ def warehouse_value_signature(
     open_: Any, high: Any, low: Any, close: Any, volume: Any
 ) -> tuple[str | None, ...]:
     """Normalize OHLCV values exactly to the warehouse DECIMAL contract."""
+    # Tạo dấu so sánh cho OHLCV.
+    # Dùng để biết nến mới có khác nến trong SQL không.
     prices = tuple(
         _decimal_text(value, precision=18, scale=8)
         for value in (open_, high, low, close)
@@ -48,6 +59,7 @@ def warehouse_value_signature(
 
 def candle_signature(candle: dict[str, Any]) -> tuple[str | None, ...]:
     """Normalize one candle exactly to the warehouse DECIMAL contract."""
+    # Đưa một nến về dạng so sánh được với SQL.
     return warehouse_value_signature(
         candle["open"], candle["high"], candle["low"], candle["close"], candle.get("volume")
     )
@@ -55,6 +67,7 @@ def candle_signature(candle: dict[str, Any]) -> tuple[str | None, ...]:
 
 def prepare_warehouse_rows(candles: Iterable[dict[str, Any]]) -> list[tuple[Any, ...]]:
     """Build SQL rows while reusing signatures computed during comparison."""
+    # Chuẩn bị dữ liệu để đưa vào bảng tạm SQL.
     return [
         (
             int(candle["symbol_id"]),
@@ -66,11 +79,15 @@ def prepare_warehouse_rows(candles: Iterable[dict[str, Any]]) -> list[tuple[Any,
 
 
 def _quoted_name(name: str) -> str:
+    # Chỉ chấp nhận tên bảng/procedure dạng Schema.Object.
+    # Sau đó quote lại để tránh tên SQL không an toàn.
     if not _SQL_NAME.fullmatch(name):
         raise ValueError(f"unsafe SQL identifier: {name!r}")
     return ".".join(f"[{part}]" for part in name.split("."))
 def build_connection_string(sql: dict[str, Any]) -> str:
     """Build a pyodbc connection string from resolved configuration."""
+    # Tạo connection string từ config.
+    # Không log chuỗi này vì có thể chứa password.
     server = sql["server"]
     if sql.get("port"):
         server = f"{server},{sql['port']}"
@@ -86,6 +103,7 @@ def build_connection_string(sql: dict[str, Any]) -> str:
     return ";".join(parts) + ";"
 def get_connection(config: dict[str, Any]) -> pyodbc.Connection:
     """Open a SQL connection with one bounded retry policy."""
+    # Mở kết nối SQL với số lần retry có giới hạn.
     sql, last_error = config["sql_server"], None
     attempts, started = int(sql["retry_count"]), time.monotonic()
     for attempt in range(1, attempts + 1):
@@ -114,6 +132,8 @@ def fetch_universe(
     config: dict[str, Any],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Read symbol and timeframe definitions from the canonical DWH dimensions."""
+    # Đọc danh sách symbol/timeframe từ SQL.
+    # `BrokerChannel` là phần đứng trước symbol TradingView, ví dụ CAPITALCOM:GOLD.
     connection = get_connection(config)
     try:
         cursor = connection.cursor()
@@ -122,6 +142,8 @@ def fetch_universe(
         )
         symbols = []
         for row in cursor.fetchall():
+            # Symbol đang bật phải có BrokerChannel.
+            # Nếu thiếu thì báo lỗi ngay để tránh gọi sai mã TradingView.
             enabled = bool(row[4])
             exchange = str(row[2] or "").strip()
             if enabled and not exchange:
@@ -135,6 +157,7 @@ def fetch_universe(
             "SELECT Code,Minutes,SourceTable FROM DWH.Dim_Timeframe ORDER BY Minutes"
         )
         timeframes = [
+            # TradingView dùng phút cho intraday, nhưng D1/W cần chuỗi riêng.
             {"code": str(row[0]),
              "interval": "1D" if int(row[1]) == 1440 else "1W" if int(row[1]) == 10080 else str(int(row[1])),
              "minutes": int(row[1]), "staging_table": f"SEN.{row[2]}"}
@@ -146,6 +169,8 @@ def fetch_universe(
 
 
 def _selection(values: Any, name: str) -> set[str]:
+    # Kiểm danh sách operator nhập trong Config.yaml.
+    # Không được rỗng hoặc trùng.
     if not isinstance(values, list) or not values:
         raise ValueError(f"{name} must be a non-empty list")
     normalized = [str(value).strip().upper() for value in values]
@@ -155,6 +180,8 @@ def _selection(values: Any, name: str) -> set[str]:
 
 
 def _index(rows: list[dict[str, Any]], key: str, name: str) -> dict[str, dict[str, Any]]:
+    # Tạo index theo symbol hoặc timeframe code.
+    # Nếu SQL có trùng thì báo lỗi ngay.
     indexed: dict[str, dict[str, Any]] = {}
     for row in rows:
         value = str(row.get(key) or "").strip().upper()
@@ -172,6 +199,9 @@ def select_pairs(
     timeframe_filter: str | None = None,
 ) -> list[Pair]:
     """Resolve SQL definitions, operator live selection, and optional CLI filters."""
+    # Chọn danh sách cặp cần chạy.
+    # Backfill chạy toàn bộ symbol/timeframe đang bật.
+    # Live chỉ chạy danh sách operator chọn trong Config.yaml.
     sql_symbols, sql_timeframes = fetch_universe(config)
     symbols_by_name = _index(sql_symbols, "symbol", "symbol universe")
     timeframes_by_code = _index(sql_timeframes, "code", "timeframe universe")
@@ -179,6 +209,7 @@ def select_pairs(
         name: symbol for name, symbol in symbols_by_name.items() if symbol["enabled"]
     }
     if live:
+        # Live chỉ nhận symbol/timeframe có trong SQL và đang active.
         selected_symbols = _selection(config["live"].get("symbols"), "live.symbols")
         selected_timeframes = _selection(
             config["live"].get("timeframes"), "live.timeframes"
@@ -194,6 +225,7 @@ def select_pairs(
             if str(active[name]["asset_type"]).upper() not in _LIVE_ASSET_TYPES
         )
         if forbidden:
+            # FOREX hiện chỉ dùng cho backfill, không chạy live.
             raise ValueError(f"FOREX is historical-only: {', '.join(forbidden)}")
     else:
         selected_symbols, selected_timeframes = set(active), set(timeframes_by_code)
@@ -226,11 +258,15 @@ def select_pairs(
 
 def pair_key(pair: Pair) -> str:
     """Return the stable, secret-free runtime key for one pair."""
+    # Key này dùng trong log/state.
+    # Không chứa secret.
     symbol, timeframe = pair
     return f"{symbol['exchange']}:{symbol['symbol']}/{timeframe['code']}"
 
 def read_chart_rows(config: dict[str, Any], symbol: str, timeframe: str, bars: int) -> list[tuple[Any, ...]]:
     """Read recent committed Fact candles for the offline operator chart."""
+    # Chart offline chỉ đọc dữ liệu đã ghi trong SQL.
+    # Không gọi TradingView và không ghi gì.
     fact_table = _quoted_name(config["tables"]["fact_table"])
     connection = get_connection(config)
     try:
@@ -244,6 +280,7 @@ def read_chart_rows(config: dict[str, Any], symbol: str, timeframe: str, bars: i
         connection.close()
 def check_connection(config: dict[str, Any]) -> dict[str, Any]:
     """Return read-only schema and stored-procedure contract evidence."""
+    # Doctor/check-sql dùng hàm này để kiểm SQL có đúng quy ước không.
     fact_table = _quoted_name(config["tables"]["fact_table"])
     procedure = config["tables"]["load_procedure"]
     connection = get_connection(config)
@@ -257,6 +294,8 @@ def check_connection(config: dict[str, Any]) -> dict[str, Any]:
         version = str(row[0]) if row and row[0] is not None else None
         threshold = warehouse_timestamp(
             datetime.now(timezone.utc) - timedelta(days=int(config["backfill"]["lookback_days"])))
+        # Đếm cặp nào chưa có dữ liệu chạm tới mốc lookback.
+        # Số này cho biết còn thiếu dữ liệu nền hay không.
         cursor.execute(f"""SELECT COUNT(*) FROM DWH.Dim_Symbol s CROSS JOIN DWH.Dim_Timeframe tf
             WHERE s.IsActive=1 AND NOT EXISTS (SELECT 1 FROM {fact_table} f
             WHERE f.SymbolID=s.SymbolID AND f.TimeframeID=tf.TimeframeID AND f.BarTime<=?)""", threshold)
@@ -277,6 +316,8 @@ def get_pair_states(
     pairs: list[tuple[dict[str, Any], dict[str, Any]]],
 ) -> dict[tuple[int, str], dict[str, Any]]:
     """Batch-read earliest and latest Fact watermarks for each pair."""
+    # Đọc mốc nến cũ nhất và mới nhất cho nhiều cặp cùng lúc.
+    # Backfill dùng mốc cũ nhất; live dùng mốc mới nhất.
     if not pairs:
         return {}
     fact_table = _quoted_name(config["tables"]["fact_table"])
@@ -302,6 +343,7 @@ def get_pair_states(
 def fetch_existing_candles(config: dict[str, Any], symbol_id: int, timeframe_code: str,
                            start_time: datetime, end_time: datetime, connection: pyodbc.Connection | None = None) -> dict[datetime, tuple[str | None, ...]]:
     """Read committed Fact values in an inclusive provider-observed window."""
+    # Pipeline dùng hàm này để biết SQL đang có nến nào trong cùng cửa sổ.
     fact_table = _quoted_name(config["tables"]["fact_table"])
     active = connection or get_connection(config)
     try:
@@ -317,6 +359,7 @@ def fetch_existing_candles(config: dict[str, Any], symbol_id: int, timeframe_cod
     finally:
         if connection is None: active.close()
 def _require_contract(cursor: pyodbc.Cursor, procedure: str, expected: str) -> None:
+    # Trước khi ghi SQL, kiểm stored procedure đúng version.
     cursor.execute("""SELECT CAST(value AS NVARCHAR(50)) FROM sys.extended_properties
         WHERE major_id=OBJECT_ID(?) AND minor_id=0 AND class=1 AND name='DPContractVersion'""",
         procedure)
@@ -328,6 +371,8 @@ def _require_contract(cursor: pyodbc.Cursor, procedure: str, expected: str) -> N
         )
 def _fetch_result_row(cursor: pyodbc.Cursor, operation: str) -> Any:
     """Return the first query row after any preceding DML row-count sets."""
+    # Một lệnh SQL có thể trả nhiều result set.
+    # Hàm này đi tới dòng kết quả thật cần đọc.
     while True:
         if cursor.description is not None:
             row = cursor.fetchone()
@@ -341,10 +386,14 @@ def bulk_upsert_candles(
     symbol_id: int | None = None, connection: pyodbc.Connection | None = None,
 ) -> dict[str, int]:
     """Load one complete provider window into staging and Fact."""
+    # Hàm ghi SQL chính.
+    # Nến đã kiểm xong được đưa vào staging, rồi loader đẩy sang Fact.
+    # Có lỗi ở bước nào thì rollback.
     empty = {"input": 0, "staged_inserted": 0, "staged_updated": 0,
              "fact_inserted": 0, "fact_updated": 0, "affected": 0, "skipped": 0}
     symbol_ids = {int(candle["symbol_id"]) for candle in candles}
     if len(symbol_ids) > 1:
+        # Một lần ghi chỉ nhận một symbol.
         raise ValueError("bulk_upsert_candles accepts one symbol per batch")
     if symbol_ids:
         resolved_symbol_id = next(iter(symbol_ids))
@@ -366,6 +415,7 @@ def bulk_upsert_candles(
         _require_contract(cursor, procedure_name, str(config["sql_server"]["contract_version"]))
         staged_inserted = staged_updated = fact_inserted = fact_updated = affected = 0
         if rows:
+            # Bảng tạm giữ toàn bộ nến cần ghi trong lần này.
             cursor.execute("""IF OBJECT_ID('tempdb..#V3Candles') IS NOT NULL DROP TABLE #V3Candles;
                 CREATE TABLE #V3Candles (SymbolID INT NOT NULL,BarTime DATETIME2(0) NOT NULL,[Open] DECIMAL(18,8) NOT NULL,High DECIMAL(18,8) NOT NULL,Low DECIMAL(18,8) NOT NULL,
                 [Close] DECIMAL(18,8) NOT NULL,Volume DECIMAL(20,4) NULL,PRIMARY KEY(SymbolID,BarTime))""")
@@ -375,6 +425,7 @@ def bulk_upsert_candles(
             size = int(config["sql_server"]["batch_size"])
             for offset in range(0, len(rows), size):
                 cursor.executemany(insert, rows[offset : offset + size])
+            # MERGE staging: thêm nến mới, cập nhật nến đổi giá trị.
             cursor.execute(f"""
                 DECLARE @Actions TABLE (ActionName NVARCHAR(10));
                 MERGE {staging_table} WITH (HOLDLOCK) AS target
@@ -397,11 +448,13 @@ def bulk_upsert_candles(
             stage_row = _fetch_result_row(cursor, "staging merge")
             staged_inserted, staged_updated = (int(value or 0) for value in stage_row)
             from_time = min(row[1] for row in rows)
+            # Loader đẩy dữ liệu từ staging sang Fact.
             cursor.execute(f"EXEC {procedure} ?,?,?,?", resolved_symbol_id,
                            timeframe["code"], staging_name, from_time)
             fact_row = _fetch_result_row(cursor, procedure_name)
             fact_updated, fact_inserted, affected = (
                 max(0, int(value or 0)) for value in fact_row)
+            # Sau khi loader chạy, kiểm lại Fact đã có đủ nến đúng giá trị.
             cursor.execute(f"""IF EXISTS(SELECT 1 FROM #V3Candles source
                 JOIN DWH.Dim_Timeframe tf ON tf.Code=? LEFT JOIN {fact_table} fact
                 ON fact.SymbolID=source.SymbolID AND fact.TimeframeID=tf.TimeframeID

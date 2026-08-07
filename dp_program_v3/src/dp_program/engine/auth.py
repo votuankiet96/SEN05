@@ -15,8 +15,17 @@ LOGGER = logging.getLogger(__name__)
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124"
 _NEXT_REFRESH_ATTEMPT = 0.0
 
+# File này lo phần đăng nhập TradingView cho live và backfill.
+# Mục tiêu: luôn dùng tài khoản thật. Nếu không đăng nhập được thì dừng, không chạy guest.
+# Thứ tự xử lý đi từ nhẹ tới nặng: dùng token/cookie cũ, refresh cookie, rồi mới đăng nhập lại.
+
+
 class AuthError(RuntimeError):
     pass
+
+
+# Nhóm JWT: đọc token để biết token có thuộc user thật và còn hạn không.
+# Nhóm này không gọi TradingView, nên kiểm tra rất nhanh.
 def _claims(token: str) -> dict[str, Any]:
     try:
         payload = token.split(".")[1]
@@ -37,6 +46,10 @@ def _authenticated(token: str, minimum_ttl: int) -> bool:
     claims = _claims(token)
     identity = claims.get("user_id") or claims.get("id") or claims.get("sub")
     return bool(identity) and token_seconds_remaining(token) > minimum_ttl
+
+
+# Nhóm cache: lưu token/cookie đã dùng được để lần sau không phải đăng nhập lại.
+# Nếu token trong cache không hợp lệ, hệ thống vẫn dừng thay vì chạy guest.
 def _cache_path(config: dict[str, Any]) -> Path:
     return Path(config["app"]["runtime_dir"]) / "cache" / "tradingview_auth.json"
 def _load_cache(config: dict[str, Any]) -> dict[str, Any]:
@@ -57,6 +70,10 @@ def _save_cache(config: dict[str, Any], token: str, cookie: str, source: str) ->
     }
     _write_cache(config, payload)
     return payload
+
+
+# Nhóm cookie: đổi cookie qua lại giữa dạng text và dạng browser cần dùng.
+# Chỉ nhận cookie của TradingView.
 def _cookie_list(raw: str) -> list[dict[str, Any]]:
     result = []
     for part in raw.split(";"):
@@ -70,6 +87,9 @@ def _cookie_header(cookies: list[dict[str, Any]]) -> str:
              and re.fullmatch(r"(?:.+\.)?tradingview\.com",
                               str(item.get("domain", "tradingview.com")).lower().lstrip(".")))
     return "; ".join(f"{item['name']}={item['value']}" for item in valid)
+
+
+# Sau khi mở trang TradingView, tìm token ở các nơi TradingView có thể lưu.
 def _page_token(page: Any, cookies: list[dict[str, Any]]) -> str:
     script = """() => {
       for (const text of [document.documentElement.innerHTML, document.cookie]) {
@@ -87,6 +107,10 @@ def _page_token(page: Any, cookies: list[dict[str, Any]]) -> str:
         token = ""
     values = (str(item.get("value") or "") for item in cookies if item.get("name") == "auth_token")
     return token or next(values, "")
+
+
+# Cách nhẹ nhất: dùng cookie đang có để xin lại token mới.
+# Nếu cách này chạy được thì không cần mở browser hay nhập password.
 def _http_cookie_refresh(cookie: str) -> tuple[str, str]:
     if not cookie:
         return "", ""
@@ -98,6 +122,10 @@ def _http_cookie_refresh(cookie: str) -> tuple[str, str]:
         renewed_cookie = _cookie_header([vars(item) for item in session.cookies])
     match = re.search(r'"auth_token"\s*:\s*"(eyJ[A-Za-z0-9._-]+)"', response.text)
     return (match.group(1), renewed_cookie or cookie) if match else ("", renewed_cookie or cookie)
+
+
+# Đăng nhập thẳng bằng username/password qua HTTP.
+# Nếu TradingView chặn hoặc đổi cách đăng nhập, hệ thống sẽ thử cách bằng browser.
 def _http_login(username: str, password: str) -> tuple[str, str]:
     if not username or not password:
         return "", ""
@@ -109,6 +137,10 @@ def _http_login(username: str, password: str) -> tuple[str, str]:
     token = str(response.json().get("user", {}).get("auth_token") or "")
     cookie = "; ".join(f"{key}={value}" for key, value in response.cookies.items())
     return token, cookie
+
+
+# Điền form đăng nhập trong browser ẩn.
+# Cách này giống thao tác người dùng hơn, và có thể nhập mã 2FA nếu đã cấu hình.
 def _complete_browser_login(page: Any, tv: dict[str, Any]) -> None:
     username, password = tv.get("username", ""), tv.get("password", "")
     if not username or not password:
@@ -148,6 +180,10 @@ def _complete_browser_login(page: Any, tv: dict[str, Any]) -> None:
             except Exception:
                 continue
     page.wait_for_timeout(4_000)
+
+
+# Mở Chromium ẩn để lấy lại session TradingView.
+# Có thể dùng profile cũ, hoặc đăng nhập mới từ đầu.
 def _browser_refresh(config: dict[str, Any], cookie: str, *, fresh_login: bool) -> tuple[str, str]:
     from playwright.sync_api import sync_playwright
 
@@ -176,6 +212,10 @@ def _browser_refresh(config: dict[str, Any], cookie: str, *, fresh_login: bool) 
             return _page_token(page, cookies), _cookie_header(cookies)
         finally:
             context.close()
+
+
+# Kiểm tra máy có mở được Chromium ẩn không.
+# Không đăng nhập và không sửa cache.
 def browser_status() -> dict[str, Any]:
     """Verify that Playwright Chromium can start and exit headlessly."""
     try:
@@ -189,11 +229,16 @@ def browser_status() -> dict[str, Any]:
         return {"ok": True, "detail": "Playwright Chromium launched successfully"}
     except Exception as exc:
         return {"ok": False, "detail": f"{type(exc).__name__}: {exc}"}
+
+
+# Ghi log cho từng cách đăng nhập, nhưng không ghi token/cookie/password.
 def _log_path(level: int, event: str, risk: str, source: str, started: float,
               **fields: Any) -> None:
     log_event(LOGGER, level, event, risk, component="auth", source=source,
               duration_seconds=round(time.monotonic() - started, 3), **fields)
 def _refresh(config: dict[str, Any]) -> dict[str, Any]:
+    # Thử từng cách đăng nhập, từ ít rủi ro nhất đến nặng nhất.
+    # Cách nào lấy được token thật thì lưu cache và dùng ngay.
     tv = config["tradingview"]
     cache = _load_cache(config)
     original_cookie = cookie = str(cache.get("cookie") or tv.get("cookie") or "")
@@ -227,6 +272,10 @@ def _refresh(config: dict[str, Any]) -> dict[str, Any]:
                       error_type=type(exc).__name__, error=exc,
                       action="trying next authentication path")
     raise AuthError("TradingView authentication failed: " + "; ".join(errors))
+
+
+# Chọn token/cookie tốt nhất đang có.
+# Ưu tiên cache runtime vì đó là lần đăng nhập mới nhất.
 def _best_material(config: dict[str, Any]) -> tuple[dict[str, Any], tuple[str, str, str] | None]:
     tv = config["tradingview"]
     cache = _load_cache(config)
@@ -238,6 +287,10 @@ def _best_material(config: dict[str, Any]) -> tuple[dict[str, Any], tuple[str, s
 def _activate(tv: dict[str, Any], material: tuple[str, str, str]) -> dict[str, Any]:
     tv.update(auth_token=material[1], cookie=material[2])
     return {"token": material[1], "cookie": material[2], "source": material[0]}
+
+
+# Đảm bảo đăng nhập khi đã giữ khóa.
+# Khóa này ngăn live và backfill cùng refresh auth một lúc.
 def _ensure_authenticated_locked(config: dict[str, Any], *, force: bool) -> dict[str, Any]:
     global _NEXT_REFRESH_ATTEMPT
     tv = config["tradingview"]
@@ -266,6 +319,10 @@ def _ensure_authenticated_locked(config: dict[str, Any], *, force: bool) -> dict
     tv.update(auth_token=refreshed["token"], cookie=refreshed["cookie"])
     _NEXT_REFRESH_ATTEMPT = 0.0
     return refreshed
+
+
+# Hàm chính mà live/backfill gọi trước khi kết nối TradingView.
+# Token còn hạn thì dùng ngay. Hết hạn thì refresh có khóa bảo vệ.
 def ensure_authenticated(config: dict[str, Any], *, force: bool = False) -> dict[str, Any]:
     """Resolve account auth while serializing refresh/cache/profile mutation."""
     tv = config["tradingview"]
@@ -283,6 +340,9 @@ def ensure_authenticated(config: dict[str, Any], *, force: bool = False) -> dict
             return _ensure_authenticated_locked(config, force=force)
     except InterprocessLockTimeout as exc:
         raise AuthError("TradingView authentication refresh lock timed out") from exc
+
+
+# Trả trạng thái đăng nhập cho status/doctor, không lộ secret.
 def auth_status(config: dict[str, Any]) -> dict[str, Any]:
     """Return a secret-free auth readiness snapshot."""
     cache = _load_cache(config)

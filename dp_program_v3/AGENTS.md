@@ -104,6 +104,12 @@ python -m dp_program doctor
 `check-sql` là read-only. Không dùng `backfill` hoặc `live` như integration
 test trên database thật nếu chưa xác nhận write scope.
 
+Sau khi hoàn tất một task (trước khi báo xong cho operator): dọn sạch mọi
+artifact tạm sinh ra trong lúc làm — build cache (`build/`, `__pycache__/`),
+file test/scratch tự tạo, Scheduled Task tạm dùng để verify, tiến trình
+con lỡ khởi động ngoài ý muốn. Không để lại rác trong repo hay trên máy
+vận hành chỉ vì task đã "xong việc chính".
+
 ## Toàn vẹn dữ liệu và SQL
 
 - UTC được lưu dưới dạng SQL `DATETIME2(0)`.

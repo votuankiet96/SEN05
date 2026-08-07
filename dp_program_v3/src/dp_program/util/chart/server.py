@@ -1,4 +1,6 @@
 """Local offline chart server backed by read-only warehouse queries."""
+# Tool chart offline cho operator xem dữ liệu đã ghi trong SQL.
+# File này không gọi TradingView và không ghi SQL.
 
 from __future__ import annotations
 
@@ -83,6 +85,7 @@ _Rows = Callable[[dict[str, Any], str, str, int], list[tuple[Any, ...]]]
 def _meta(
     symbols: list[dict[str, Any]], timeframes: list[dict[str, Any]]
 ) -> dict[str, Any]:
+    # Tạo danh sách symbol/timeframe cho dropdown trên browser.
     groups: dict[str, list[str]] = {}
     for item in symbols:
         if item["enabled"]:
@@ -99,6 +102,7 @@ def _meta(
 
 
 def _unix_seconds(value: Any) -> int:
+    # lightweight-charts dùng Unix seconds UTC cho trục thời gian.
     if not isinstance(value, datetime):
         value = datetime.fromisoformat(str(value))
     if value.tzinfo is None:
@@ -117,6 +121,7 @@ def _load_candles(
     row_loader: _Rows = read_chart_rows,
 ) -> list[dict[str, Any]]:
     """Validate the reviewed contract, then map committed SQL rows for charts."""
+    # Kiểm request từ browser, rồi đọc nến đã commit trong warehouse.
     tv_symbol = str(tv_symbol or "").strip().upper()
     timeframe = str(timeframe or "").strip().upper()
     allowed_symbols = {
@@ -145,12 +150,14 @@ def _load_candles(
 
 
 class ChartServer(ThreadingHTTPServer):
+    # Server giữ config và universe đã đọc lúc khởi động.
     config: dict[str, Any]
     symbols: list[dict[str, Any]]
     timeframes: list[dict[str, Any]]
 
 
 class Handler(BaseHTTPRequestHandler):
+    # HTTP handler phục vụ HTML, JS asset và hai API JSON read-only.
     server_version = "DPProgramChart/1.0"
 
     def log_message(self, fmt: str, *args: object) -> None:
@@ -162,6 +169,7 @@ class Handler(BaseHTTPRequestHandler):
         content_type: str,
         status: HTTPStatus = HTTPStatus.OK,
     ) -> None:
+        # Gửi response với header an toàn cơ bản cho tool local.
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
@@ -176,10 +184,12 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _json(self, value: object, status: HTTPStatus = HTTPStatus.OK) -> None:
+        # API luôn trả JSON gọn, dễ đọc từ browser/devtool.
         body = json.dumps(value, ensure_ascii=True, separators=(",", ":")).encode()
         self._send(body, "application/json; charset=utf-8", status)
 
     def do_GET(self) -> None:  # noqa: N802 - stdlib callback name
+        # Router nhỏ cho trang chart và API đọc dữ liệu.
         parsed = urlparse(self.path)
         try:
             if parsed.path in {"/", "/chart"}:
@@ -216,6 +226,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def run_server(host: str = "127.0.0.1", port: int = 8050, *, open_browser: bool = False) -> None:
+    # Khởi động chart server local, read-only.
     if not ASSET.is_file():
         raise FileNotFoundError(f"Offline chart asset is missing: {ASSET.name}")
     server = ChartServer((host, port), Handler)
@@ -235,6 +246,7 @@ def run_server(host: str = "127.0.0.1", port: int = 8050, *, open_browser: bool 
 
 
 def main() -> int:
+    # CLI thủ công cho operator mở chart khi cần kiểm dữ liệu.
     parser = argparse.ArgumentParser(description="Run the local read-only DP Program chart.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8050)

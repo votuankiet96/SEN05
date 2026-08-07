@@ -22,6 +22,13 @@ from .sql_connector import bulk_upsert_candles, fetch_universe
 LOGGER = logging.getLogger(__name__)
 _VALID_NAME = re.compile(r"^\d+_[A-Z0-9]+_\d{8}T\d{6}Z\.json$")
 
+# Spool là chỗ lưu tạm nến ra file trước khi ghi SQL.
+# Nếu chương trình tắt giữa chừng, lần sau còn file để ghi lại.
+# File này cũng chứa khóa dùng chung giữa live và backfill.
+
+# Tên file gồm SymbolID, timeframe và thời gian nến.
+# Nhìn tên file là biết nến đó thuộc cặp nào.
+
 
 class InterprocessLockTimeout(TimeoutError):
     """Raised when a bounded shared-runtime lock cannot be acquired."""
@@ -32,6 +39,8 @@ def interprocess_lock(
     config: dict[str, Any], name: str, *, timeout_seconds: float
 ) -> Iterator[None]:
     """Hold one named OS file lock for a bounded interval."""
+    # Khóa file để hai process không sửa cùng một tài nguyên cùng lúc.
+    # Có timeout để không chờ vô hạn.
     path = Path(config["app"]["runtime_dir"]) / "run" / f"{name}.lock"
     path.parent.mkdir(parents=True, exist_ok=True)
     handle = path.open("a+b")
@@ -73,6 +82,8 @@ def interprocess_lock(
 
 def atomic_write_text(path: Path, text: str) -> None:
     """Atomically replace one shared-runtime text file via a unique temp file."""
+    # Ghi vào file tạm trước, rồi thay thế file thật.
+    # Cách này tránh file bị ghi nửa chừng.
     temporary = path.with_name(f".{path.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp")
     try:
         temporary.write_text(text, encoding="utf-8")
@@ -89,15 +100,20 @@ def atomic_write_text(path: Path, text: str) -> None:
 
 
 def _directory(config: dict[str, Any]) -> Path:
+    # File còn nằm ở đây nghĩa là chưa chắc đã ghi xong SQL.
     return Path(config["app"]["runtime_dir"]) / "spool" / "pending"
 
 
 def _key(candle: dict[str, Any]) -> str:
+    # Cùng một nến luôn ra cùng một tên file.
+    # Vì vậy ghi lại nhiều lần vẫn không tạo trùng.
     timestamp = candle["timestamp"].astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     return f"{int(candle['symbol_id'])}_{candle['timeframe']}_{timestamp}.json"
 
 
 def _payload(candle: dict[str, Any]) -> dict[str, Any]:
+    # Payload chỉ giữ dữ liệu cần để ghi SQL lại.
+    # Decimal và thời gian được chuyển thành text để lưu JSON an toàn.
     return {
         "symbol_id": int(candle["symbol_id"]),
         "symbol": str(candle["symbol"]),
@@ -114,6 +130,7 @@ def _payload(candle: dict[str, Any]) -> dict[str, Any]:
 
 def enqueue(config: dict[str, Any], candles: list[dict[str, Any]]) -> int:
     """Atomically persist candles by business key before warehouse delivery."""
+    # Lưu nến ra file ngay trước khi ghi SQL.
     directory = _directory(config)
     directory.mkdir(parents=True, exist_ok=True)
     for candle in candles:
@@ -124,6 +141,7 @@ def enqueue(config: dict[str, Any], candles: list[dict[str, Any]]) -> int:
 
 def ack(config: dict[str, Any], candles: list[dict[str, Any]]) -> int:
     """Remove only candles whose staging and Fact transaction committed."""
+    # Chỉ xóa file sau khi SQL đã ghi thành công.
     directory = _directory(config)
     removed = 0
     for candle in candles:
@@ -143,6 +161,7 @@ def ack(config: dict[str, Any], candles: list[dict[str, Any]]) -> int:
 
 
 def _load(path: Path) -> dict[str, Any]:
+    # Đọc file tạm và đổi dữ liệu về đúng kiểu để ghi lại SQL.
     value = json.loads(path.read_text(encoding="utf-8"))
     value["timestamp"] = datetime.fromisoformat(value["timestamp"]).astimezone(timezone.utc)
     for key in ("open", "high", "low", "close"):
@@ -153,6 +172,8 @@ def _load(path: Path) -> dict[str, Any]:
 
 def pending_status(config: dict[str, Any]) -> dict[str, Any]:
     """Return count, corrupt count, bytes, and oldest age without candle values."""
+    # Status chỉ trả số lượng, dung lượng và tuổi file.
+    # Không log giá trị nến.
     directory = _directory(config)
     files = list(directory.glob("*.json")) if directory.is_dir() else []
     now = datetime.now(timezone.utc).timestamp()
@@ -173,12 +194,15 @@ def pending_status(config: dict[str, Any]) -> dict[str, Any]:
 
 def drain(config: dict[str, Any], *, limit: int = 5000) -> dict[str, int]:
     """Replay pending candles idempotently and acknowledge only after SQL commit."""
+    # Runtime gọi hàm này để ghi lại các file tạm còn sót.
+    # Ghi theo từng symbol/timeframe để đúng quy ước SQL.
     directory = _directory(config)
     paths = sorted(directory.glob("*.json"))[:limit] if directory.is_dir() else []
     grouped: dict[tuple[int, str], list[Path]] = {}
     failed = 0
     for path in paths:
         if not _VALID_NAME.fullmatch(path.name):
+            # File sai tên được giữ lại để người vận hành kiểm tra.
             failed += 1
             log_event(
                 LOGGER,
@@ -202,6 +226,7 @@ def drain(config: dict[str, Any], *, limit: int = 5000) -> dict[str, int]:
         pending_count = len(group_paths)
         try:
             with interprocess_lock(config, "delivery", timeout_seconds=timeout):
+                # Replay cũng dùng khóa ghi SQL như pipeline.
                 items = []
                 for path in group_paths:
                     try:
@@ -222,6 +247,7 @@ def drain(config: dict[str, Any], *, limit: int = 5000) -> dict[str, int]:
                 if not items:
                     continue
                 pending_count = len(items)
+                # Ghi lại nến cũ vẫn an toàn vì SQL tự xử lý trùng.
                 bulk_upsert_candles(config, timeframes[code], [item[1] for item in items])
                 for path, _ in items:
                     path.unlink(missing_ok=True)

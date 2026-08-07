@@ -31,6 +31,12 @@ _FAILURE_ACTIONS = {
     "planning": "window was not requested; Fact watermark did not advance",
 }
 
+# Pipeline là cửa kiểm cuối trước khi ghi SQL.
+# File này kiểm nến TradingView trả về, so với dữ liệu SQL, lưu tạm ra file, rồi mới ghi SQL.
+# Live và backfill dùng chung file này để có cùng một chuẩn ghi dữ liệu.
+
+# Bảng này giúp log nói rõ lỗi xảy ra ở bước nào và hệ thống sẽ làm gì tiếp.
+
 
 class CoverageError(RuntimeError):
     """Raised when a completed response does not reach the planned cursor."""
@@ -43,6 +49,8 @@ class CandleValidationError(RuntimeError):
 class PipelineError(RuntimeError):
     """Attach a stable pipeline stage to an underlying failure."""
 
+    # Gắn lỗi với tên bước bị lỗi để log dễ đọc.
+
     def __init__(self, stage: str, cause: Exception) -> None:
         super().__init__(str(cause))
         self.stage = stage
@@ -51,6 +59,7 @@ class PipelineError(RuntimeError):
 
 def utc(value: datetime) -> datetime:
     """Normalize a datetime to timezone-aware UTC."""
+    # Quy mọi thời điểm về UTC để so sánh với SQL không bị lệch múi giờ.
     return (
         value.replace(tzinfo=timezone.utc)
         if value.tzinfo is None
@@ -66,6 +75,9 @@ def validate_candles(
     now: datetime | None = None,
 ) -> list[dict[str, Any]]:
     """Validate, normalize, deduplicate, and sort the canonical candle shape."""
+    # Kiểm nến TradingView trả về.
+    # Nến sai định dạng, giá vô lý hoặc volume âm sẽ làm lỗi cả request.
+    # Nếu chỉ lấy nến đã đóng, nến đang chạy sẽ bị bỏ qua.
     current = utc(now or datetime.now(timezone.utc))
     unique: dict[tuple[int, str, datetime], dict[str, Any]] = {}
     for index, candle in enumerate(candles):
@@ -96,10 +108,12 @@ def validate_candles(
             "volume": volume,
         }
         unique[(int(candle["symbol_id"]), timeframe["code"], timestamp)] = normalized
+    # Bỏ nến trùng và sắp xếp theo thời gian tăng dần.
     return [unique[key] for key in sorted(unique, key=lambda item: item[2])]
 
 
 def _empty_sql_result() -> dict[str, int]:
+    # Dùng khi không có nến mới hoặc nến khác SQL.
     return {
         "input": 0,
         "staged_inserted": 0,
@@ -116,6 +130,8 @@ def _window(
     start: datetime | None,
     end: datetime,
 ) -> list[dict[str, Any]]:
+    # Chỉ giữ nến nằm trong cửa sổ cần kiểm.
+    # Không tự tạo nến cho ngày nghỉ.
     lower = None if start is None else utc(start)
     upper = utc(end)
     return [
@@ -142,6 +158,8 @@ def fetch_and_store(
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """Fetch one complete window and converge its provider-observed candles."""
+    # Hàm chính để xử lý một cặp symbol/timeframe.
+    # Có thể nhận nến đã tải sẵn, hoặc tự tải nếu caller chưa tải.
     started_at = datetime.now(timezone.utc)
     started = time.monotonic()
     current = utc(now or window_end or started_at)
@@ -154,6 +172,7 @@ def fetch_and_store(
             else provider_candles
         )
         stage = "validation"
+        # Kiểm nến trước khi đụng tới file tạm hoặc SQL.
         valid = validate_candles(
             received,
             timeframe,
@@ -162,6 +181,7 @@ def fetch_and_store(
         )
         stage = "coverage"
         if require_coverage and window_start is not None:
+            # Nếu yêu cầu phủ đủ cửa sổ mà TradingView trả thiếu, không ghi SQL.
             lower = utc(window_start)
             if not valid or valid[0]["timestamp"] > lower:
                 earliest = None if not valid else valid[0]["timestamp"].isoformat()
@@ -169,6 +189,8 @@ def fetch_and_store(
                     f"coverage did not reach {lower.isoformat()}; earliest={earliest}"
                 )
         if required_cursor is not None:
+            # Response phải chứa lại mốc SQL cũ.
+            # Nếu thiếu mốc này, có thể đang bị mất đoạn dữ liệu.
             cursor = utc(required_cursor)
             if not valid or valid[-1]["timestamp"] < cursor:
                 latest = None if not valid else valid[-1]["timestamp"].isoformat()
@@ -183,6 +205,7 @@ def fetch_and_store(
             if observed else nullcontext()
         )
         with guard:
+            # Khóa ghi SQL để live và backfill không ghi cùng lúc.
             existing: dict[datetime, tuple[str | None, ...]] = {}
             if observed:
                 existing = fetch_existing_candles(
@@ -195,6 +218,7 @@ def fetch_and_store(
                 )
             missing = changed = unchanged = 0
             for candle in observed:
+                # Tạo dấu so sánh để biết nến này mới, đổi, hay y hệt SQL.
                 key = candle["timestamp"].replace(tzinfo=None)
                 candle["_signature"] = signature = candle_signature(candle)
                 if key not in existing:
@@ -208,9 +232,11 @@ def fetch_and_store(
             delivery = observed if needs_delivery else []
             if delivery:
                 stage = "spool_enqueue"
+                # Lưu tạm ra file trước khi ghi SQL.
                 enqueue(config, delivery)
             if delivery:
                 stage = "sql_delivery"
+                # Ghi SQL. Nếu lỗi, transaction rollback và file tạm còn lại.
                 sql_result = bulk_upsert_candles(
                     config,
                     timeframe,
@@ -220,12 +246,14 @@ def fetch_and_store(
                 )
             if delivery:
                 stage = "spool_ack"
+                # Chỉ xóa file tạm sau khi SQL ghi xong.
                 ack(config, delivery)
     except AuthError:
         raise
     except Exception as exc:
         raise PipelineError(stage, exc) from exc
     result = {
+        # Kết quả này dùng cho log và cho runtime cập nhật trạng thái.
         "workflow": workflow,
         "symbol": f"{symbol['exchange']}:{symbol['symbol']}",
         "timeframe": timeframe["code"],
@@ -274,6 +302,8 @@ def log_pair_failure(
     stage: str = "planning",
 ) -> None:
     """Emit one secret-safe failure record with the durable recovery action."""
+    # Log lỗi theo từng cặp, không lộ secret.
+    # Log cũng nói hệ thống sẽ tự retry hay cần người vận hành xem.
     failure_stage = error.stage if isinstance(error, PipelineError) else stage
     cause = error.cause if isinstance(error, PipelineError) else error
     log_event(

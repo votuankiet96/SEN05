@@ -459,6 +459,117 @@ def test_chart_rejects_values_outside_reviewed_contract(
         )
 
 
+def _load_exe_entry():
+    root = Path(__file__).resolve().parents[1]
+    path = root / "scripts" / "windows" / "dp_program_entry.py"
+    spec = importlib.util.spec_from_file_location("dp_program_exe_entry", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class _FakeProcess:
+    """Records the role it was asked to run instead of ever starting one."""
+
+    exitcode = 0
+
+    def __init__(self, *, target, args, name) -> None:
+        self.role = args[0]
+        self.name = name
+        self.started = False
+
+    def start(self) -> None:
+        self.started = True
+
+    def join(self) -> None:
+        pass
+
+
+def _enabled_config(*, live: bool, backfill: bool) -> dict:
+    return {"live": {"enabled": live}, "backfill": {"enabled": backfill}}
+
+
+def test_exe_entry_spawns_one_child_process_per_enabled_workflow() -> None:
+    entry = _load_exe_entry()
+    spawned: list[_FakeProcess] = []
+
+    def factory(*, target, args, name):
+        process = _FakeProcess(target=target, args=args, name=name)
+        spawned.append(process)
+        return process
+
+    code = entry.main_entry(
+        config=_enabled_config(live=True, backfill=True), process_factory=factory
+    )
+    assert code == 0
+    assert {process.role for process in spawned} == {"live", "backfill"}
+    assert all(process.started for process in spawned)
+
+
+def test_exe_entry_spawns_only_the_enabled_workflow() -> None:
+    entry = _load_exe_entry()
+    spawned: list[_FakeProcess] = []
+
+    def factory(*, target, args, name):
+        process = _FakeProcess(target=target, args=args, name=name)
+        spawned.append(process)
+        return process
+
+    code = entry.main_entry(
+        config=_enabled_config(live=True, backfill=False), process_factory=factory
+    )
+    assert code == 0
+    assert [process.role for process in spawned] == ["live"]
+
+
+def test_exe_entry_spawns_nothing_when_both_workflows_disabled() -> None:
+    entry = _load_exe_entry()
+
+    def factory(*_args, **_kwargs):
+        pytest.fail("no process should be spawned when nothing is enabled")
+
+    code = entry.main_entry(
+        config=_enabled_config(live=False, backfill=False), process_factory=factory
+    )
+    assert code == 1
+
+
+def test_run_dp_example_config_matches_current_schema() -> None:
+    root = Path(__file__).resolve().parents[1]
+    example_config = (root / "run_dp" / "Config.example.yaml").read_text(encoding="utf-8")
+    assert "sql_server:" in example_config
+    assert "tradingview:" in example_config
+    # The example must never carry a real secret if someone edits it in
+    # place and forgets to rename it away from the tracked filename.
+    assert 'auth_token: ""' in example_config
+
+
+def test_run_dp_deploy_package_bundles_sql_installer_and_docs() -> None:
+    root = Path(__file__).resolve().parents[1]
+    run_dp = root / "run_dp"
+    sql_names = {path.name for path in (run_dp / "sql").glob("*.sql")}
+    canonical_names = {path.name for path in (root / "scripts" / "sql").glob("*.sql")}
+    assert sql_names == canonical_names
+    for name in canonical_names:
+        assert (run_dp / "sql" / name).read_text(encoding="utf-8") == (
+            root / "scripts" / "sql" / name
+        ).read_text(encoding="utf-8")
+
+    installer = (run_dp / "install.ps1").read_text(encoding="utf-8")
+    assert "dp_program.exe" in installer
+    assert "sqlcmd" in installer
+    assert "ms-playwright" in installer
+    assert "SEN05 DP Program Engine" in installer
+    # -SqlDatabase does not exist: 01_setup_database.sql hardcodes the
+    # database name itself, so a parameter implying it is choosable would
+    # be misleading (see the fix that removed it).
+    assert "SqlDatabase" not in installer
+
+    deploy_doc = (run_dp / "DEPLOY.md").read_text(encoding="utf-8")
+    assert "install.ps1" in deploy_doc
+    assert "Config.example.yaml" in deploy_doc
+
+
 def test_utilities_have_strict_boundaries_and_offline_chart_asset() -> None:
     root = Path(__file__).resolve().parents[1]
     assert not (root / "src" / "util").exists()
@@ -510,6 +621,24 @@ def test_run_batches_launch_only_portable_foreground_services() -> None:
         assert "taskkill" not in lowered
         assert 'start "dp program"' not in lowered
         assert "c:\\users\\" not in lowered
+
+
+def test_top_level_launcher_dispatches_to_backfill_live_and_chart() -> None:
+    root = Path(__file__).resolve().parents[1]
+    batch = (root / "run.bat").read_text(encoding="ascii")
+    lowered = batch.lower()
+    assert "%~dp0" in lowered
+    assert "c:\\users\\" not in lowered
+    for mode, target in (
+        ("live", "run_live.bat"),
+        ("backfill", "run_backfill.bat"),
+        ("chart", "run_live.bat"),
+    ):
+        assert f'"%~1"=="{mode}"' in lowered
+        assert target.lower() in lowered
+    # Extra arguments after the mode must forward through unchanged
+    # (e.g. `run.bat backfill check` -> run_backfill.bat check).
+    assert "%2 %3 %4" in batch
 
 
 def test_scheduled_task_installer_registers_boot_and_watchdog_tasks() -> None:

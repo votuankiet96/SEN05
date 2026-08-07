@@ -18,6 +18,12 @@ _MAX_CONSECUTIVE_GROUP_FAILURES = 2
 _MAX_TOTAL_GROUP_FAILURES = 3
 _CYCLE_BUDGET_SECONDS = 120
 
+# File này chạy live: lấy nến mới theo chu kỳ ngắn.
+# Live chỉ chạy cho cặp đã có dữ liệu nền trong SQL. Nếu chưa có, backfill phải chạy trước.
+# Nếu lần này lấy thiếu nến, hệ thống ghi nhớ cặp đó để lần sau kéo bù.
+
+# Các ngưỡng dưới đây giúp dừng sớm khi lỗi liên tục, tránh đánh quá nhiều vào TradingView.
+
 
 class CatchupWindowError(RuntimeError):
     """Raised rather than advancing across an oversized gap."""
@@ -30,6 +36,10 @@ class MissingWatermarkError(RuntimeError):
 @dataclass(frozen=True)
 class LivePlan:
     """One live request derived from the durable Fact watermark."""
+
+    # Một plan nói rõ lần live này cần lấy bao nhiêu nến.
+    # Mốc bắt đầu luôn dựa trên nến mới nhất đã lưu trong SQL.
+    # Nếu response không chứa lại mốc đó, hệ thống không ghi để tránh mất gap.
 
     bars: int
     max_bars: int
@@ -48,6 +58,9 @@ def plan_live(
     catch_up: bool = False,
 ) -> LivePlan:
     """Use a small healthy tail and bounded Fact-watermark recovery."""
+    # Lập kế hoạch cho một cặp trong một cycle live.
+    # Bình thường lấy ít nến. Nếu cặp đang pending thì lấy rộng hơn để bù.
+    # Nếu không biết bắt đầu từ đâu, live báo lỗi để backfill xử lý trước.
     current = utc(now or datetime.now(timezone.utc))
     if latest is None:
         raise MissingWatermarkError("live requires a Fact watermark; run backfill first")
@@ -56,6 +69,7 @@ def plan_live(
         raise CatchupWindowError("Fact watermark is ahead of the current UTC time")
     minutes = int(timeframe["minutes"])
     overlap = int(config["backfill"]["overlap_bars"])
+    # Lùi lại vài nến để bắt nến bị thiếu hoặc bị sửa.
     start = durable_latest - timedelta(minutes=max(0, overlap - 1) * minutes)
     tail = max(int(config["live"]["bars_per_request"]), overlap) + 2
     required = (
@@ -72,6 +86,8 @@ def plan_live(
 
 
 def _ordered_pairs(pairs: list[Pair], prior_order: list[str]) -> list[Pair]:
+    # Cặp còn pending từ cycle trước được chạy trước.
+    # Nhờ vậy phần có nguy cơ thiếu dữ liệu được ưu tiên bù.
     pending = set(prior_order)
     priority = {key: index for index, key in enumerate(prior_order)}
     return sorted(
@@ -87,6 +103,8 @@ def _request_groups(
     config: dict[str, Any],
     planned: list[tuple[Pair, LivePlan, FetchRequest]],
 ) -> list[list[tuple[Pair, LivePlan, FetchRequest]]]:
+    # Gom nhiều timeframe của cùng một symbol vào một lần gọi TradingView.
+    # Làm vậy giảm số lần kết nối nhưng vẫn giữ request trong giới hạn an toàn.
     cap = int(config["backfill"]["max_bars_per_request"])
     by_symbol: dict[tuple[str, str], list[tuple[Pair, LivePlan, FetchRequest]]] = {}
     for item in planned:
@@ -122,11 +140,14 @@ def run_live_pairs(
     stop_requested: Callable[[], bool] | None = None,
 ) -> dict[str, Any]:
     """Fetch per-symbol batches, then deliver each pair serially."""
+    # Chạy một cycle live hữu hạn.
+    # Luồng: đọc mốc SQL, lập kế hoạch, tải từ TradingView, ghi SQL, rồi trả danh sách còn pending.
     planning_started = time.monotonic()
     current = utc(now or datetime.now(timezone.utc))
     selected = {pair_key(pair) for pair in pairs}
     prior_order = [key for key in (pending_pairs or ()) if key in selected]
     prior_pending = set(prior_order)
+    # Chỉ giữ pending nếu cặp đó vẫn còn trong danh sách live hiện tại.
     ordered = _ordered_pairs(pairs, prior_order)
     states = get_pair_states(config, ordered)
     pending, processed = set(prior_pending), set()
@@ -140,6 +161,7 @@ def run_live_pairs(
     for symbol, timeframe in ordered:
         display = pair_key((symbol, timeframe))
         try:
+            # Cặp pending lấy rộng hơn; cặp bình thường lấy ít nến.
             plan = plan_live(
                 config, timeframe,
                 states[(int(symbol["symbol_id"]), timeframe["code"])]["latest"],
@@ -149,6 +171,7 @@ def run_live_pairs(
                 symbol, timeframe, plan.bars, plan.max_bars, plan.window_start
             )))
         except Exception as exc:
+            # Không lập được plan thì giữ cặp này cho cycle sau.
             summary["failed"] += 1
             failed_pairs.append(display)
             pending.add(display)
@@ -162,6 +185,7 @@ def run_live_pairs(
     }
 
     def timed(key: str, action: Callable[[], Any]) -> Any:
+        # Đo thời gian từng bước để log biết chậm ở đâu.
         stage_started = time.monotonic()
         try:
             return action()
@@ -174,6 +198,7 @@ def run_live_pairs(
         if (stop_requested and stop_requested()) or (
             group_index and time.monotonic() - budget_started >= _CYCLE_BUDGET_SECONDS
         ):
+            # Nếu đang stop hoặc hết thời gian cycle, phần chưa chạy để lại cho cycle sau.
             break
         group_failed = False
         requests = [request for _pair, _plan, request in group]
@@ -184,6 +209,7 @@ def run_live_pairs(
         except AuthError:
             raise
         except Exception as exc:
+            # Tải lỗi thì cả nhóm vào pending để lần sau thử lại.
             group_failed = True
             for (symbol, timeframe), _plan, _request in group:
                 display = pair_key((symbol, timeframe))
@@ -196,6 +222,7 @@ def run_live_pairs(
             try:
                 connection = timed("connection_seconds", lambda: get_connection(config))
             except Exception as exc:
+                # Không mở được SQL thì không ghi gì; cả nhóm chờ lần sau.
                 group_failed = True
                 for (symbol, timeframe), _plan, _request in group:
                     display = pair_key((symbol, timeframe))
@@ -210,6 +237,7 @@ def run_live_pairs(
                         display = pair_key((symbol, timeframe))
                         pair_started = time.monotonic()
                         try:
+                            # Pipeline sẽ kiểm nến trước khi ghi SQL.
                             provider = fetched[request_key(request)]
                             result = fetch_and_store(
                                 config, symbol, timeframe, workflow="live",
@@ -229,6 +257,7 @@ def run_live_pairs(
                         except AuthError:
                             raise
                         except Exception as exc:
+                            # Lỗi riêng cặp nào thì cặp đó vào pending.
                             group_failed = True
                             summary["failed"] += 1
                             failed_pairs.append(display)
@@ -253,11 +282,13 @@ def run_live_pairs(
             consecutive >= _MAX_CONSECUTIVE_GROUP_FAILURES
             or total_group_failures >= _MAX_TOTAL_GROUP_FAILURES
         ):
+            # Lỗi nhiều nhóm thì dừng sớm để bảo vệ tài khoản.
             circuit_open = True
             break
     deferred_pairs = [
         pair_key(pair) for pair in ordered if pair_key(pair) not in processed
     ]
+    # Cặp chưa kịp chạy hoặc chạy lỗi đều được đưa vào pending.
     pending.update(deferred_pairs)
     if circuit_open:
         log_event(
@@ -272,6 +303,7 @@ def run_live_pairs(
         + [key for key in prior_order if key in pending]
         + sorted(pending)
     ))
+    # Giữ thứ tự pending ổn định để cycle sau ưu tiên đúng.
     summary.update(
         failed_pairs=failed_pairs, deferred_pairs=deferred_pairs,
         deferred=len(deferred_pairs), pending_pairs=pending_order,
@@ -288,6 +320,8 @@ def run_live_cycle(
     timeframe: str | None = None,
 ) -> dict[str, Any]:
     """Run exactly one finite live cycle."""
+    # Điểm vào khi chạy một live cycle thủ công.
+    # Runtime 24/7 gọi hàm thấp hơn để giữ pending qua nhiều cycle.
     if not config["live"].get("enabled", True):
         raise RuntimeError("live fetching is disabled in Config.yaml")
     pairs = select_pairs(
