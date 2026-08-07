@@ -1,0 +1,79 @@
+# Config.example.yaml — mẫu cấu hình, KHÔNG chứa secret thật.
+# Copy file này thành Config.yaml, đặt cùng thư mục với
+# dp_program_live.exe / dp_program_backfill.exe, rồi điền đúng thông tin
+# thật của môi trường đó vào các chỗ để trống bên dưới.
+#
+# Không commit Config.yaml thật lên git.
+
+app:
+  log_level: INFO
+  runtime_dir: runtime
+
+discord:
+  enabled: false
+  webhook_url: ""
+
+tradingview:
+  # Điền token/cookie phiên đăng nhập TradingView thật của bạn.
+  auth_token: ""
+  cookie: ""
+  # Chỉ cần username/password nếu muốn tự động đăng nhập lại bằng
+  # trình duyệt headless khi token/cookie hết hạn.
+  username: ""
+  password: ""
+  two_factor_secret: ""
+
+backfill:
+  enabled: true
+  lookback_days: 60
+  run_on_start: true
+  schedule_utc: ["11:11", "15:15", "19:19", "23:23", "03:03", "07:07"]
+
+live:
+  enabled: true
+  interval_minutes: 5
+  bars_per_request: 3
+  closed_candles_only: true
+  # Danh sách symbol/timeframe dưới đây phải khớp tên đang bật (IsActive=1)
+  # trong DWH.Dim_Symbol / DWH.Dim_Timeframe của SQL warehouse đang kết nối.
+  symbols:
+    - FR40
+    - DE40
+    - HK50
+    - J225
+    - SP35
+    - UK100
+    - US500
+    - US100
+    - US30
+    - GOLD
+    - BTCUSD
+  timeframes:
+    - M5
+    - M10
+    - M15
+    - M20
+    - M30
+    - M45
+    - H1
+    - M90
+    - H2
+    - H3
+    - H4
+    - H6
+    - H8
+    - D1
+    - W
+
+service: {}
+
+sql_server:
+  # Điền thông tin SQL Server thật của môi trường triển khai.
+  server: ""
+  database: ""
+  port: ""
+  username: ""
+  password: ""
+  trusted_connection: true
+  encrypt: "no"
+  trust_server_certificate: true
