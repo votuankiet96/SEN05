@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import math
@@ -8,7 +8,14 @@ from decimal import Decimal
 import pytest
 
 from dp_program import configuration
-from dp_program.engine import backfill, live, pipeline, sql_connector, websocket
+from dp_program.engine import (
+    backfill,
+    live,
+    pipeline,
+    sql_connector,
+    websocket,
+)
+from dp_program.engine.sql_connector import candle_signature
 
 
 def _symbol(symbol_id: int = 56, name: str = "GOLD") -> dict:
@@ -523,7 +530,7 @@ def test_bootstrap_plan_scans_60_days_with_bounded_initial_fetch(
         config,
         _symbol(),
         _timeframe(minutes, code),
-        {"bootstrap_complete": False, "latest": now - timedelta(minutes=5)},
+        {"earliest": None, "latest": now - timedelta(minutes=5)},
         now=now,
     )
     maximum = math.ceil(60 * 24 * 60 / minutes) + 3
@@ -545,7 +552,7 @@ def test_rolling_backfill_uses_tail_plus_overlap_not_60_days() -> None:
         config,
         _symbol(),
         _timeframe(),
-        {"bootstrap_complete": True, "latest": latest},
+        {"earliest": now - timedelta(days=65), "latest": latest},
         now=now,
     )
     assert plan.window_start == latest - timedelta(minutes=10)
@@ -565,14 +572,14 @@ def test_catchup_over_cap_fails_closed() -> None:
             config,
             _symbol(),
             _timeframe(),
-            {"bootstrap_complete": True, "latest": latest},
+            {"earliest": now - timedelta(days=65), "latest": latest},
             now=now,
         )
     with pytest.raises(live.CatchupWindowError, match="exceeds"):
         live.plan_live(config, _timeframe(), latest, now=now, catch_up=True)
 
 
-def test_live_uses_fixed_healthy_window_and_dynamic_pending_catchup() -> None:
+def test_live_uses_fixed_tail_and_dynamic_pending_extension_bound() -> None:
     config = configuration.load_config()
     latest = datetime(2026, 7, 27, 4, 0, tzinfo=timezone.utc)
     first_now = datetime(2026, 7, 28, 4, 0, tzinfo=timezone.utc)
@@ -582,9 +589,42 @@ def test_live_uses_fixed_healthy_window_and_dynamic_pending_catchup() -> None:
     catchup = live.plan_live(
         config, _timeframe(), latest, now=later_now, catch_up=True
     )
-    assert healthy_first.bars == healthy_later.bars == 5
-    assert catchup.bars > healthy_later.bars
+    assert healthy_first.bars == healthy_later.bars == catchup.bars == 5
+    assert catchup.max_bars > healthy_later.max_bars
     assert healthy_first.required_cursor == latest
+
+
+def test_live_weekend_pending_starts_small_and_reserves_exact_coverage() -> None:
+    config = configuration.load_config()
+    latest = datetime(2026, 7, 31, 20, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 8, 2, 12, 0, tzinfo=timezone.utc)
+    plan = live.plan_live(config, _timeframe(), latest, now=now, catch_up=True)
+    start = latest - timedelta(minutes=10)
+    required = math.ceil((now - start).total_seconds() / 300) + 1
+
+    assert plan.bars == 5
+    assert plan.max_bars == required + 5
+    assert plan.window_start == start
+    assert plan.required_cursor == latest
+
+
+def test_live_groups_reserve_aggregate_capacity_for_pending_extension() -> None:
+    config = configuration.load_config()
+    config["backfill"]["max_bars_per_request"] = 20
+    symbol = _symbol()
+    now = datetime(2026, 8, 3, 4, 0, tzinfo=timezone.utc)
+    plan = live.LivePlan(5, 15, now, now, True, now)
+    planned = []
+    for timeframe in (_timeframe(), _timeframe(10, "M10")):
+        request = websocket.FetchRequest(symbol, timeframe, 5, 15, now)
+        planned.append(((symbol, timeframe), plan, request))
+
+    groups = live._request_groups(config, planned)
+
+    assert [[item[0][1]["code"] for item in group] for group in groups] == [
+        ["M5"],
+        ["M10"],
+    ]
 
 
 def test_live_without_fact_watermark_fails_closed() -> None:
@@ -604,7 +644,7 @@ def test_future_fact_watermark_fails_closed_for_both_workflows() -> None:
             config,
             _symbol(),
             _timeframe(),
-            {"bootstrap_complete": True, "latest": future},
+            {"latest": future},
             now=now,
         )
 
@@ -623,8 +663,8 @@ def test_pipeline_filters_exact_window_and_classifies_provider_delta(
     open_bar = _candle(end)
     provider = [before, same, changed, missing, open_bar]
     existing = {
-        same["timestamp"].replace(tzinfo=None): sql_connector.candle_signature(same),
-        changed["timestamp"].replace(tzinfo=None): sql_connector.candle_signature(
+        same["timestamp"].replace(tzinfo=None): candle_signature(same),
+        changed["timestamp"].replace(tzinfo=None): candle_signature(
             _candle(changed["timestamp"], close="101")
         ),
     }
@@ -675,7 +715,7 @@ def test_provider_absence_on_weekend_is_not_a_gap(monkeypatch) -> None:
     friday = _candle(datetime(2026, 7, 24, 21, 0, tzinfo=timezone.utc))
     monday = _candle(datetime(2026, 7, 27, 0, 0, tzinfo=timezone.utc))
     existing = {
-        item["timestamp"].replace(tzinfo=None): sql_connector.candle_signature(item)
+        item["timestamp"].replace(tzinfo=None): candle_signature(item)
         for item in (friday, monday)
     }
     writes: list[object] = []
@@ -727,7 +767,6 @@ def test_short_bootstrap_coverage_does_not_write_or_complete(monkeypatch) -> Non
             window_start=start,
             window_end=start + timedelta(days=60),
             require_coverage=True,
-            complete_bootstrap=True,
             now=start + timedelta(days=60),
         )
     assert calls == []
@@ -762,36 +801,24 @@ def test_response_ending_before_fact_cursor_is_rejected(monkeypatch) -> None:
     assert calls == []
 
 
-def test_zero_delta_bootstrap_commits_only_state(monkeypatch) -> None:
+def test_zero_delta_window_does_not_call_bulk_upsert(monkeypatch) -> None:
     config = configuration.load_config()
     start = datetime(2026, 5, 29, 4, 0, tzinfo=timezone.utc)
     inside = _candle(start + timedelta(minutes=5))
     provider = [_candle(start - timedelta(minutes=5)), inside]
     existing = {
-        inside["timestamp"].replace(tzinfo=None): sql_connector.candle_signature(inside)
+        inside["timestamp"].replace(tzinfo=None): candle_signature(inside)
     }
-    observed: dict = {}
     monkeypatch.setattr(pipeline, "fetch_candles", lambda *_a: provider)
     monkeypatch.setattr(pipeline, "fetch_existing_candles", lambda *_a, **_k: existing)
     monkeypatch.setattr(pipeline, "enqueue", lambda *_a: pytest.fail("no candle spool"))
     monkeypatch.setattr(
         pipeline,
         "bulk_upsert_candles",
-        lambda _c, _tf, candles, **kwargs: observed.update(
-            candles=candles, **kwargs
-        )
-        or {
-            "input": 0,
-            "staged_inserted": 0,
-            "staged_updated": 0,
-            "fact_inserted": 0,
-            "fact_updated": 0,
-            "affected": 0,
-            "skipped": 0,
-        },
+        lambda *_a, **_k: pytest.fail("zero-delta window must not call bulk_upsert_candles"),
     )
 
-    pipeline.fetch_and_store(
+    result = pipeline.fetch_and_store(
         config,
         _symbol(),
         _timeframe(),
@@ -800,15 +827,14 @@ def test_zero_delta_bootstrap_commits_only_state(monkeypatch) -> None:
         window_start=start,
         window_end=start + timedelta(days=60),
         require_coverage=True,
-        complete_bootstrap=True,
         now=start + timedelta(days=60),
     )
-    assert observed["candles"] == []
-    assert observed["symbol_id"] == 56
-    assert observed["complete_bootstrap"] is True
+    assert result["delivery_input"] == 0
 
 
-def test_live_pending_pair_expands_from_fact_watermark_and_recovers(monkeypatch) -> None:
+def test_live_pending_pair_expands_bound_from_fact_watermark_and_recovers(
+    monkeypatch,
+) -> None:
     config = configuration.load_config()
     pair = (_symbol(), _timeframe())
     latest = datetime(2026, 7, 28, 3, 55, tzinfo=timezone.utc)
@@ -818,6 +844,7 @@ def test_live_pending_pair_expands_from_fact_watermark_and_recovers(monkeypatch)
         lambda *_a: {(56, "M5"): {"bootstrap_complete": True, "latest": latest}},
     )
     attempts: list[int] = []
+    requests_seen: list[websocket.FetchRequest] = []
 
     def fail_then_pass(_config, _symbol, _timeframe, **kwargs):
         attempts.append(kwargs["bars"])
@@ -825,11 +852,11 @@ def test_live_pending_pair_expands_from_fact_watermark_and_recovers(monkeypatch)
             raise pipeline.PipelineError("fetch", RuntimeError("partial"))
         return {"affected": 1}
 
-    monkeypatch.setattr(
-        live,
-        "fetch_candles_batch",
-        lambda _config, requests: _batch_results(requests),
-    )
+    def fetch(_config, requests):
+        requests_seen.append(requests[0])
+        return _batch_results(requests)
+
+    monkeypatch.setattr(live, "fetch_candles_batch", fetch)
     monkeypatch.setattr(live, "get_connection", lambda _config: _FakeConnection())
     monkeypatch.setattr(live, "fetch_and_store", fail_then_pass)
     first = live.run_live_pairs(
@@ -844,7 +871,9 @@ def test_live_pending_pair_expands_from_fact_watermark_and_recovers(monkeypatch)
     assert first["failed"] == 1
     assert second["failed"] == 0
     assert second["recovered_pairs"] == ["CAPITALCOM:GOLD/M5"]
-    assert attempts[1] > attempts[0]
+    assert attempts == [5, 5]
+    assert requests_seen[1].max_bars > requests_seen[0].max_bars
+    assert requests_seen[1].oldest_required == requests_seen[0].oldest_required
 
 
 def test_live_fetches_two_timeframes_for_one_symbol_in_one_batch(monkeypatch) -> None:
@@ -886,6 +915,12 @@ def test_live_fetches_two_timeframes_for_one_symbol_in_one_batch(monkeypatch) ->
     assert deliveries == ["M5", "M10"]
     assert result["ok"] == 2
     assert result["failed"] == 0
+    assert set(result["timings"]) == {
+        "planning_seconds", "fetch_seconds", "connection_seconds",
+        "pipeline_seconds", "max_pair_seconds",
+    }
+    assert all(value >= 0 for value in result["timings"].values())
+    assert result["timings"]["max_pair_seconds"] <= result["timings"]["pipeline_seconds"]
 
 
 def test_live_transport_failure_keeps_whole_symbol_batch_pending(monkeypatch) -> None:
@@ -930,17 +965,25 @@ def test_bootstrap_group_reserves_capacity_for_same_socket_extension(
 ) -> None:
     config = configuration.load_config()
     symbol = _symbol()
-    pairs = [(symbol, timeframe) for timeframe in config["data"]["timeframes"]]
+    timeframes = [
+        _timeframe(minutes, code)
+        for minutes, code in (
+            (5, "M5"), (10, "M10"), (15, "M15"), (20, "M20"), (30, "M30"),
+            (45, "M45"), (60, "H1"), (90, "M90"), (120, "H2"), (180, "H3"),
+            (240, "H4"), (360, "H6"), (480, "H8"), (1440, "D1"), (10080, "W"),
+        )
+    ]
+    pairs = [(symbol, timeframe) for timeframe in timeframes]
     latest = datetime(2026, 7, 28, 3, 55, tzinfo=timezone.utc)
     monkeypatch.setattr(
         backfill,
         "get_pair_states",
         lambda *_a: {
             (56, timeframe["code"]): {
-                "bootstrap_complete": False,
+                "earliest": None,
                 "latest": latest,
             }
-            for timeframe in config["data"]["timeframes"]
+            for timeframe in timeframes
         },
     )
     now = datetime(2026, 7, 28, 4, 0, tzinfo=timezone.utc)
@@ -968,7 +1011,7 @@ def test_backfill_circuit_defers_after_two_transport_group_failures(
         "get_pair_states",
         lambda *_a: {
             (symbol_id, "M5"): {
-                "bootstrap_complete": True,
+                "earliest": datetime(2020, 1, 1, tzinfo=timezone.utc),
                 "latest": latest,
             }
             for symbol_id, _name in names
@@ -997,13 +1040,6 @@ def test_backfill_circuit_defers_after_two_transport_group_failures(
         "CAPITALCOM:US500/M5",
         "CAPITALCOM:US100/M5",
     ]
-
-
-def test_old_bootstrap_state_is_not_current_policy() -> None:
-    config = configuration.load_config()
-    epoch = datetime.fromisoformat(config["backfill"]["policy_epoch_utc"])
-    assert not sql_connector.bootstrap_state_is_current(epoch - timedelta(seconds=1), epoch)
-    assert sql_connector.bootstrap_state_is_current(epoch, epoch)
 
 
 def test_one_live_pair_failure_does_not_block_the_next_pair(monkeypatch) -> None:
@@ -1249,7 +1285,7 @@ def test_pipeline_tags_each_candle_with_its_comparison_signature(
     config["app"]["runtime_dir"] = str(tmp_path)
     candle = _candle(datetime(2026, 7, 28, 3, 55, tzinfo=timezone.utc))
     signature_calls: list[datetime] = []
-    real_signature = sql_connector.candle_signature
+    real_signature = candle_signature
 
     def counting_signature(value):
         signature_calls.append(value["timestamp"])
@@ -1368,8 +1404,8 @@ def test_backfill_group_reuses_one_connection_across_its_pairs(monkeypatch) -> N
         backfill,
         "get_pair_states",
         lambda *_a: {
-            (56, "M5"): {"bootstrap_complete": True, "latest": latest},
-            (56, "M10"): {"bootstrap_complete": True, "latest": latest},
+            (56, "M5"): {"earliest": datetime(2020, 1, 1, tzinfo=timezone.utc), "latest": latest},
+            (56, "M10"): {"earliest": datetime(2020, 1, 1, tzinfo=timezone.utc), "latest": latest},
         },
     )
     monkeypatch.setattr(

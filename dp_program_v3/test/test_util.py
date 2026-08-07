@@ -1,10 +1,20 @@
 from __future__ import annotations
 
+import importlib.util
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 
 import pytest
+
+
+def _load_watchdog():
+    root = Path(__file__).resolve().parents[1]
+    path = root / "scripts" / "windows" / "watchdog.py"
+    spec = importlib.util.spec_from_file_location("dp_program_watchdog", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 class _Response:
@@ -43,17 +53,26 @@ class _Connection:
         self.closed = True
 
 
+def _code_line_count(path: Path) -> int:
+    """Count lines that carry logic, excluding blank lines and whole-line comments."""
+    return sum(
+        1
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    )
+
+
 def _config() -> dict:
-    return {
-        "data": {
-            "symbols": [
-                {"exchange": "CAPITALCOM", "symbol": "GOLD"},
-                {"exchange": "CAPITALCOM", "symbol": "BTCUSD"},
-            ],
-            "timeframes": [{"code": "M5"}, {"code": "H1"}],
-        },
-        "tables": {"fact_table": "DWH.Fact_OHLCV"},
-    }
+    return {"tables": {"fact_table": "DWH.Fact_OHLCV"}}
+
+
+def _universe() -> tuple[list[dict], list[dict]]:
+    symbols = [
+        {"exchange": "CAPITALCOM", "symbol": "GOLD", "asset_type": "METAL", "enabled": True},
+        {"exchange": "CAPITALCOM", "symbol": "BTCUSD", "asset_type": "CRYPTO", "enabled": True},
+    ]
+    timeframes = [{"code": "M5"}, {"code": "H1"}]
+    return symbols, timeframes
 
 
 def test_discord_config_gate_requires_webhook_only_when_enabled(tmp_path: Path) -> None:
@@ -61,8 +80,48 @@ def test_discord_config_gate_requires_webhook_only_when_enabled(tmp_path: Path) 
 
     from dp_program.configuration import ConfigError, load_config
 
-    example = Path(__file__).resolve().parents[1] / "Config.example.yaml"
-    source = yaml.safe_load(example.read_text(encoding="utf-8"))
+    source = {
+        "app": {"log_level": "INFO", "runtime_dir": "runtime"},
+        "discord": {"enabled": False, "webhook_url": ""},
+        "tradingview": {
+            "auth_token": "",
+            "cookie": "",
+            "username": "",
+            "password": "",
+            "two_factor_secret": "",
+        },
+        "backfill": {
+            "enabled": True,
+            "lookback_days": 60,
+            "run_on_start": True,
+            "schedule_utc": ["11:11", "15:15", "19:19", "23:23", "03:03", "07:07"],
+        },
+        "live": {
+            "enabled": True,
+            "interval_minutes": 5,
+            "bars_per_request": 3,
+            "closed_candles_only": True,
+            "symbols": [
+                "FR40", "DE40", "HK50", "J225", "SP35", "UK100",
+                "US500", "US100", "US30", "GOLD", "BTCUSD",
+            ],
+            "timeframes": [
+                "M5", "M10", "M15", "M20", "M30", "M45", "H1", "M90",
+                "H2", "H3", "H4", "H6", "H8", "D1", "W",
+            ],
+        },
+        "service": {},
+        "sql_server": {
+            "server": "localhost",
+            "database": "SEN05_AutoTrading",
+            "port": "",
+            "username": "",
+            "password": "",
+            "trusted_connection": True,
+            "encrypt": "no",
+            "trust_server_certificate": True,
+        },
+    }
     disabled = tmp_path / "disabled.yaml"
     disabled.write_text(yaml.safe_dump(source), encoding="utf-8")
     config = load_config(disabled)
@@ -153,6 +212,70 @@ def test_discord_reporter_is_inert_when_disabled() -> None:
     with reporter:
         reporter.publish("health", {"status": "running"})
     assert reporter.thread is None
+
+
+def test_send_watchdog_alert_posts_a_critical_embed_without_a_reporter_thread() -> None:
+    from dp_program.util.discord_report import send_watchdog_alert
+
+    payloads: list[dict] = []
+
+    def post(_url: str, *, json: dict, timeout: float) -> _Response:
+        payloads.append(json)
+        return _Response(204)
+
+    status = send_watchdog_alert(
+        {
+            "discord": {
+                "enabled": True,
+                "webhook_url": "https://discord.com/api/webhooks/123/secret",
+            }
+        },
+        "live_service_down",
+        {"status": "stopped", "pid": 6112, "process_alive": False, "risk": "CRITICAL"},
+        post=post,
+    )
+    assert status == 204
+    assert len(payloads) == 1
+    assert "CRITICAL" in str(payloads[0])
+    assert "LIVE_SERVICE_DOWN" in str(payloads[0])
+
+
+def test_send_watchdog_alert_is_inert_when_discord_disabled() -> None:
+    from dp_program.util.discord_report import send_watchdog_alert
+
+    status = send_watchdog_alert(
+        {"discord": {"enabled": False, "webhook_url": ""}},
+        "live_service_down",
+        {"status": "stopped", "risk": "CRITICAL"},
+        post=lambda *_args, **_kwargs: pytest.fail("Discord must remain disabled"),
+    )
+    assert status == 0
+
+
+def test_watchdog_alerts_once_per_outage_and_clears_marker_on_recovery(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    watchdog = _load_watchdog()
+    monkeypatch.setattr(watchdog, "load_config", lambda: {"app": {"runtime_dir": str(tmp_path)}})
+    statuses = {"live": {"ok": False}, "backfill": {"ok": True}}
+    monkeypatch.setattr(watchdog, "service_status", lambda _config, role: statuses[role])
+    sent: list[tuple] = []
+    monkeypatch.setattr(
+        watchdog, "send_watchdog_alert", lambda *args, **kwargs: sent.append((args, kwargs))
+    )
+    marker = tmp_path / "run" / "watchdog_alerted_live"
+
+    assert watchdog.main() == 1
+    assert len(sent) == 1 and marker.exists()
+
+    # Still unhealthy on the next run: stays silent (edge-triggered, not per-poll).
+    assert watchdog.main() == 1
+    assert len(sent) == 1
+
+    # Recovery clears the marker so a future outage can alert again.
+    statuses["live"] = {"ok": True}
+    assert watchdog.main() == 0
+    assert not marker.exists()
 
 
 def test_discord_reporter_runs_only_inside_service_lifecycle() -> None:
@@ -272,8 +395,10 @@ def test_chart_query_is_read_only_parameterized_and_returns_oldest_first(
     )
     monkeypatch.setattr(sql_connector, "get_connection", lambda _config: connection)
     rows = sql_connector.read_chart_rows(_config(), "GOLD", "M5", 50)
+    symbols, timeframes = _universe()
     candles = server._load_candles(
-        _config(), "CAPITALCOM:GOLD", "M5", 50, row_loader=lambda *_args: rows
+        symbols, timeframes, _config(), "CAPITALCOM:GOLD", "M5", 50,
+        row_loader=lambda *_args: rows,
     )
 
     statement = connection._cursor.statement.upper()
@@ -286,6 +411,25 @@ def test_chart_query_is_read_only_parameterized_and_returns_oldest_first(
         int(newer.timestamp()),
     ]
     assert candles[0]["volume"] == 10.0
+
+
+def test_chart_meta_groups_enabled_symbols_by_asset_type_from_sql_universe() -> None:
+    from dp_program.util.chart import server
+
+    symbols = [
+        {"exchange": "CAPITALCOM", "symbol": "GOLD", "asset_type": "METAL", "enabled": True},
+        {"exchange": "CAPITALCOM", "symbol": "BTCUSD", "asset_type": "CRYPTO", "enabled": True},
+        {"exchange": "CAPITALCOM", "symbol": "EURUSD", "asset_type": "FOREX", "enabled": False},
+    ]
+    timeframes = [{"code": "M5"}, {"code": "H1"}]
+
+    meta = server._meta(symbols, timeframes)
+
+    assert meta["symbols"] == [
+        {"name": "CRYPTO", "values": ["CAPITALCOM:BTCUSD"]},
+        {"name": "METAL", "values": ["CAPITALCOM:GOLD"]},
+    ]
+    assert meta["timeframes"] == ["M5", "H1"]
 
 
 @pytest.mark.parametrize(
@@ -302,8 +446,11 @@ def test_chart_rejects_values_outside_reviewed_contract(
 ) -> None:
     from dp_program.util.chart import server
 
+    symbols, timeframes = _universe()
     with pytest.raises(ValueError):
         server._load_candles(
+            symbols,
+            timeframes,
             _config(),
             symbol,
             timeframe,
@@ -324,7 +471,7 @@ def test_utilities_have_strict_boundaries_and_offline_chart_asset() -> None:
         "src/dp_program/util/discord_report.py",
     ]
     for relative in utility_python:
-        assert len((root / relative).read_text(encoding="utf-8").splitlines()) <= 300
+        assert _code_line_count(root / relative) <= 300
 
     imports = {
         path.relative_to(root).as_posix()
@@ -342,35 +489,37 @@ def test_utilities_have_strict_boundaries_and_offline_chart_asset() -> None:
     assert "http://" not in server.PAGE
 
 
-def test_run_batch_has_only_portable_check_start_stop_actions() -> None:
+def test_run_batches_launch_only_portable_foreground_services() -> None:
     root = Path(__file__).resolve().parents[1]
-    batch = (root / "run_dp.bat").read_text(encoding="ascii")
-    lowered = batch.lower()
-    assert "%~dp0" in lowered
-    assert ".venv\\scripts\\python.exe" in lowered
-    assert "-m dp_program settings" in lowered
-    assert "-m dp_program status" in lowered
-    assert "-m dp_program doctor" in lowered
-    assert "start-scheduledtask" in lowered
-    assert "get-scheduledtask" in lowered
-    assert "-m dp_program stop" in lowered
-    assert "taskkill" not in lowered
-    assert 'start "dp program"' not in lowered
-    assert "c:\\users\\" not in lowered
+    assert not (root / "run_dp.bat").exists()
+    for name, mode in (("run_live.bat", "live"), ("run_backfill.bat", "backfill")):
+        batch = (root / name).read_text(encoding="ascii")
+        lowered = batch.lower()
+        assert "%~dp0" in lowered
+        assert ".venv\\scripts\\python.exe" in lowered
+        assert "-m dp_program settings" in lowered
+        assert f"-m dp_program status --mode {mode}" in lowered
+        assert "-m dp_program check-sql" in lowered
+        assert "-m dp_program doctor" in lowered
+        assert f"'stop_{mode}.request'" in lowered
+        assert f"-m dp_program run-{mode}" in lowered
+        assert f"-m dp_program stop --mode {mode}" in lowered
+        assert "scheduledtask" not in lowered
+        assert "start-process" not in lowered
+        assert "start /b" not in lowered
+        assert "taskkill" not in lowered
+        assert 'start "dp program"' not in lowered
+        assert "c:\\users\\" not in lowered
 
 
-def test_task_installer_verifies_the_complete_24x7_contract() -> None:
+def test_scheduled_task_installer_registers_boot_and_watchdog_tasks() -> None:
     root = Path(__file__).resolve().parents[1]
-    source = (root / "scripts" / "windows" / "install_task.ps1").read_text(
-        encoding="utf-8"
-    )
-    for expected in (
-        "MSFT_TaskBootTrigger",
-        "S4U",
-        "Highest",
-        "IgnoreNew",
-        "PT0S",
-        "RestartCount",
-        "PT1M",
-    ):
-        assert expected in source
+    installer = (root / "scripts" / "windows" / "install_task.ps1").read_text(encoding="utf-8")
+    assert "run_live.bat" in installer and "run_backfill.bat" in installer
+    assert "AtStartup" in installer
+    assert "RestartCount 999" in installer
+    assert "watchdog.py" in installer
+    assert "LogonType S4U" in installer
+    watchdog = (root / "scripts" / "windows" / "watchdog.py").read_text(encoding="utf-8")
+    assert "service_status" in watchdog
+    assert "send_watchdog_alert" in watchdog

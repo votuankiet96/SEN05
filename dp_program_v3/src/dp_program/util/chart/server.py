@@ -14,7 +14,7 @@ from typing import Any, Callable
 from urllib.parse import parse_qs, urlparse
 
 from ...configuration import load_config
-from ...engine.sql_connector import read_chart_rows
+from ...engine.sql_connector import fetch_universe, read_chart_rows
 
 LOGGER = logging.getLogger(__name__)
 ASSET = Path(__file__).with_name("lightweight-charts.js")
@@ -80,10 +80,12 @@ PAGE = """<!doctype html>
 _Rows = Callable[[dict[str, Any], str, str, int], list[tuple[Any, ...]]]
 
 
-def _meta(config: dict[str, Any]) -> dict[str, Any]:
+def _meta(
+    symbols: list[dict[str, Any]], timeframes: list[dict[str, Any]]
+) -> dict[str, Any]:
     groups: dict[str, list[str]] = {}
-    for item in config["data"]["symbols"]:
-        if item.get("enabled", True):
+    for item in symbols:
+        if item["enabled"]:
             groups.setdefault(str(item["asset_type"]), []).append(
                 f"{item['exchange']}:{item['symbol']}"
             )
@@ -92,7 +94,7 @@ def _meta(config: dict[str, Any]) -> dict[str, Any]:
             {"name": name, "values": sorted(values)}
             for name, values in sorted(groups.items())
         ],
-        "timeframes": [item["code"] for item in config["data"]["timeframes"]],
+        "timeframes": [item["code"] for item in timeframes],
     }
 
 
@@ -105,6 +107,8 @@ def _unix_seconds(value: Any) -> int:
 
 
 def _load_candles(
+    symbols: list[dict[str, Any]],
+    timeframes: list[dict[str, Any]],
     config: dict[str, Any],
     tv_symbol: str,
     timeframe: str,
@@ -116,11 +120,9 @@ def _load_candles(
     tv_symbol = str(tv_symbol or "").strip().upper()
     timeframe = str(timeframe or "").strip().upper()
     allowed_symbols = {
-        f"{item['exchange']}:{item['symbol']}"
-        for item in config["data"]["symbols"]
-        if item.get("enabled", True)
+        f"{item['exchange']}:{item['symbol']}" for item in symbols if item["enabled"]
     }
-    allowed_timeframes = {item["code"] for item in config["data"]["timeframes"]}
+    allowed_timeframes = {item["code"] for item in timeframes}
     if tv_symbol not in allowed_symbols:
         raise ValueError(f"Unknown symbol: {tv_symbol}")
     if timeframe not in allowed_timeframes:
@@ -144,6 +146,8 @@ def _load_candles(
 
 class ChartServer(ThreadingHTTPServer):
     config: dict[str, Any]
+    symbols: list[dict[str, Any]]
+    timeframes: list[dict[str, Any]]
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -183,13 +187,20 @@ class Handler(BaseHTTPRequestHandler):
             elif parsed.path == "/assets/lightweight-charts.js":
                 self._send(ASSET.read_bytes(), "text/javascript; charset=utf-8")
             elif parsed.path == "/api/meta":
-                self._json(_meta(self.server.config))
+                self._json(_meta(self.server.symbols, self.server.timeframes))
             elif parsed.path == "/api/candles":
                 query = parse_qs(parsed.query)
                 symbol = (query.get("symbol") or [""])[0]
                 timeframe = (query.get("timeframe") or [""])[0]
                 bars = int((query.get("bars") or ["500"])[0])
-                candles = _load_candles(self.server.config, symbol, timeframe, bars)
+                candles = _load_candles(
+                    self.server.symbols,
+                    self.server.timeframes,
+                    self.server.config,
+                    symbol,
+                    timeframe,
+                    bars,
+                )
                 self._json({
                     "symbol": symbol.upper(),
                     "timeframe": timeframe.upper(),
@@ -209,6 +220,7 @@ def run_server(host: str = "127.0.0.1", port: int = 8050, *, open_browser: bool 
         raise FileNotFoundError(f"Offline chart asset is missing: {ASSET.name}")
     server = ChartServer((host, port), Handler)
     server.config = load_config()
+    server.symbols, server.timeframes = fetch_universe(server.config)
     url = f"http://{host}:{server.server_address[1]}"
     LOGGER.info("Read-only offline chart started at %s", url)
     if open_browser:

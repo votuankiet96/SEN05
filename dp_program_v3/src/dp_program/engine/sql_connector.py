@@ -1,12 +1,70 @@
 """The only DP Program V3 module that talks to SQL Server."""
 from __future__ import annotations
-import re
-import time
-from datetime import datetime, timezone
+import logging, re, time
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any, Iterable
 import pyodbc
+from ..log import log_event
+LOGGER = logging.getLogger(__name__)
 _SQL_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*$")
+Pair = tuple[dict[str, Any], dict[str, Any]]
+_LIVE_ASSET_TYPES = {"CRYPTO", "INDICE", "METAL"}
+
+
+def warehouse_timestamp(value: datetime) -> datetime:
+    """Normalize an aware UTC timestamp for SQL DATETIME2(0)."""
+    normalized = value if value.tzinfo is None else value.astimezone(timezone.utc).replace(
+        tzinfo=None
+    )
+    return normalized.replace(microsecond=0)
+
+
+def _decimal_text(value: Any, *, precision: int, scale: int) -> str:
+    try:
+        normalized = Decimal(value).quantize(
+            Decimal(1).scaleb(-scale), rounding=ROUND_HALF_UP
+        )
+    except (InvalidOperation, TypeError, ValueError) as exc:
+        raise ValueError(f"invalid SQL decimal value: {value!r}") from exc
+    if not normalized.is_finite() or abs(normalized) >= Decimal(10) ** (precision - scale):
+        raise ValueError(f"SQL decimal value exceeds DECIMAL({precision},{scale})")
+    return f"{normalized:.{scale}f}"
+
+
+def warehouse_value_signature(
+    open_: Any, high: Any, low: Any, close: Any, volume: Any
+) -> tuple[str | None, ...]:
+    """Normalize OHLCV values exactly to the warehouse DECIMAL contract."""
+    prices = tuple(
+        _decimal_text(value, precision=18, scale=8)
+        for value in (open_, high, low, close)
+    )
+    normalized_volume = (
+        None if volume is None else _decimal_text(volume, precision=20, scale=4)
+    )
+    return (*prices, normalized_volume)
+
+
+def candle_signature(candle: dict[str, Any]) -> tuple[str | None, ...]:
+    """Normalize one candle exactly to the warehouse DECIMAL contract."""
+    return warehouse_value_signature(
+        candle["open"], candle["high"], candle["low"], candle["close"], candle.get("volume")
+    )
+
+
+def prepare_warehouse_rows(candles: Iterable[dict[str, Any]]) -> list[tuple[Any, ...]]:
+    """Build SQL rows while reusing signatures computed during comparison."""
+    return [
+        (
+            int(candle["symbol_id"]),
+            warehouse_timestamp(candle["timestamp"]),
+            *(candle.get("_signature") or candle_signature(candle)),
+        )
+        for candle in candles
+    ]
+
+
 def _quoted_name(name: str) -> str:
     if not _SQL_NAME.fullmatch(name):
         raise ValueError(f"unsafe SQL identifier: {name!r}")
@@ -28,19 +86,149 @@ def build_connection_string(sql: dict[str, Any]) -> str:
     return ";".join(parts) + ";"
 def get_connection(config: dict[str, Any]) -> pyodbc.Connection:
     """Open a SQL connection with one bounded retry policy."""
-    sql = config["sql_server"]
-    last_error: Exception | None = None
-    for attempt in range(1, int(sql["retry_count"]) + 1):
+    sql, last_error = config["sql_server"], None
+    attempts, started = int(sql["retry_count"]), time.monotonic()
+    for attempt in range(1, attempts + 1):
+        attempt_started = time.monotonic()
         try:
-            connection = pyodbc.connect(build_connection_string(sql),
-                                        timeout=int(sql["timeout_seconds"]))
+            connection = pyodbc.connect(
+                build_connection_string(sql), timeout=int(sql["timeout_seconds"]))
             connection.timeout = int(sql["command_timeout_seconds"])
+            if attempt > 1:
+                log_event(
+                    LOGGER, logging.INFO, "SQL_CONNECTION_RECOVERED", "NONE",
+                    component="sql", attempts=attempt, duration_seconds=round(
+                        time.monotonic() - started, 3))
             return connection
         except pyodbc.Error as exc:
             last_error = exc
-            if attempt < int(sql["retry_count"]):
+            if attempt < attempts:
+                log_event(
+                    LOGGER, logging.WARNING, "SQL_CONNECTION_RETRY", "LOW",
+                    component="sql", attempt=attempt, max_attempts=attempts,
+                    duration_seconds=round(time.monotonic() - attempt_started, 3),
+                    error_type=type(exc).__name__, action="bounded SQL connection retry")
                 time.sleep(float(sql.get("retry_delay_seconds", 1)))
     raise ConnectionError(f"SQL Server connection failed: {last_error}") from last_error
+def fetch_universe(
+    config: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Read symbol and timeframe definitions from the canonical DWH dimensions."""
+    connection = get_connection(config)
+    try:
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT SymbolID,Symbol,BrokerChannel,AssetType,IsActive FROM DWH.Dim_Symbol ORDER BY SymbolID"
+        )
+        symbols = []
+        for row in cursor.fetchall():
+            enabled = bool(row[4])
+            exchange = str(row[2] or "").strip()
+            if enabled and not exchange:
+                raise ValueError(
+                    f"DWH.Dim_Symbol.BrokerChannel is null/empty for active "
+                    f"symbol {row[1]!r} (SymbolID={row[0]})"
+                )
+            symbols.append({"symbol_id": int(row[0]), "exchange": exchange,
+                             "symbol": str(row[1]), "asset_type": str(row[3]), "enabled": enabled})
+        cursor.execute(
+            "SELECT Code,Minutes,SourceTable FROM DWH.Dim_Timeframe ORDER BY Minutes"
+        )
+        timeframes = [
+            {"code": str(row[0]),
+             "interval": "1D" if int(row[1]) == 1440 else "1W" if int(row[1]) == 10080 else str(int(row[1])),
+             "minutes": int(row[1]), "staging_table": f"SEN.{row[2]}"}
+            for row in cursor.fetchall()
+        ]
+        return symbols, timeframes
+    finally:
+        connection.close()
+
+
+def _selection(values: Any, name: str) -> set[str]:
+    if not isinstance(values, list) or not values:
+        raise ValueError(f"{name} must be a non-empty list")
+    normalized = [str(value).strip().upper() for value in values]
+    if any(not value for value in normalized) or len(normalized) != len(set(normalized)):
+        raise ValueError(f"{name} contains an empty or duplicate value")
+    return set(normalized)
+
+
+def _index(rows: list[dict[str, Any]], key: str, name: str) -> dict[str, dict[str, Any]]:
+    indexed: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        value = str(row.get(key) or "").strip().upper()
+        if not value or value in indexed:
+            raise ValueError(f"SQL {name} contains an empty or duplicate {key}")
+        indexed[value] = row
+    return indexed
+
+
+def select_pairs(
+    config: dict[str, Any],
+    *,
+    live: bool,
+    symbol_filter: str | None = None,
+    timeframe_filter: str | None = None,
+) -> list[Pair]:
+    """Resolve SQL definitions, operator live selection, and optional CLI filters."""
+    sql_symbols, sql_timeframes = fetch_universe(config)
+    symbols_by_name = _index(sql_symbols, "symbol", "symbol universe")
+    timeframes_by_code = _index(sql_timeframes, "code", "timeframe universe")
+    active = {
+        name: symbol for name, symbol in symbols_by_name.items() if symbol["enabled"]
+    }
+    if live:
+        selected_symbols = _selection(config["live"].get("symbols"), "live.symbols")
+        selected_timeframes = _selection(
+            config["live"].get("timeframes"), "live.timeframes"
+        )
+        unknown_symbols = selected_symbols - set(active)
+        unknown_timeframes = selected_timeframes - set(timeframes_by_code)
+        if unknown_symbols or unknown_timeframes:
+            invalid = sorted(unknown_symbols | unknown_timeframes)
+            raise ValueError(f"unknown or inactive live selection: {', '.join(invalid)}")
+        forbidden = sorted(
+            name
+            for name in selected_symbols
+            if str(active[name]["asset_type"]).upper() not in _LIVE_ASSET_TYPES
+        )
+        if forbidden:
+            raise ValueError(f"FOREX is historical-only: {', '.join(forbidden)}")
+    else:
+        selected_symbols, selected_timeframes = set(active), set(timeframes_by_code)
+    requested_symbol = (symbol_filter or "").strip().upper()
+    requested_timeframe = (timeframe_filter or "").strip().upper()
+    symbols = [
+        symbol
+        for name, symbol in active.items()
+        if name in selected_symbols
+        and (
+            not requested_symbol
+            or requested_symbol
+            in {name, f"{symbol['exchange']}:{symbol['symbol']}".upper()}
+        )
+    ]
+    timeframes = [
+        timeframe
+        for code, timeframe in timeframes_by_code.items()
+        if code in selected_timeframes and (not requested_timeframe or code == requested_timeframe)
+    ]
+    if requested_symbol and not symbols:
+        raise ValueError(f"unknown or disabled symbol: {symbol_filter}")
+    if requested_timeframe and not timeframes:
+        raise ValueError(f"unknown timeframe: {timeframe_filter}")
+    pairs = [(symbol, timeframe) for symbol in symbols for timeframe in timeframes]
+    if not pairs:
+        raise ValueError("workflow selection resolved to zero pairs")
+    return pairs
+
+
+def pair_key(pair: Pair) -> str:
+    """Return the stable, secret-free runtime key for one pair."""
+    symbol, timeframe = pair
+    return f"{symbol['exchange']}:{symbol['symbol']}/{timeframe['code']}"
+
 def read_chart_rows(config: dict[str, Any], symbol: str, timeframe: str, bars: int) -> list[tuple[Any, ...]]:
     """Read recent committed Fact candles for the offline operator chart."""
     fact_table = _quoted_name(config["tables"]["fact_table"])
@@ -54,51 +242,31 @@ def read_chart_rows(config: dict[str, Any], symbol: str, timeframe: str, bars: i
         return list(cursor.fetchall())
     finally:
         connection.close()
-def _policy_epoch(config: dict[str, Any]) -> datetime:
-    return datetime.fromisoformat(config["backfill"]["policy_epoch_utc"]).astimezone(timezone.utc)
-def bootstrap_state_is_current(completed_at: datetime | None, epoch: datetime) -> bool:
-    """Return whether a completion timestamp proves the active backfill policy."""
-    if completed_at is None:
-        return False
-    value = completed_at.replace(tzinfo=timezone.utc) if completed_at.tzinfo is None else completed_at
-    return value.astimezone(timezone.utc) >= epoch.astimezone(timezone.utc)
 def check_connection(config: dict[str, Any]) -> dict[str, Any]:
     """Return read-only schema and stored-procedure contract evidence."""
     fact_table = _quoted_name(config["tables"]["fact_table"])
-    state_name = config["tables"]["backfill_state_table"]
-    state_table = _quoted_name(state_name)
     procedure = config["tables"]["load_procedure"]
     connection = get_connection(config)
     try:
         cursor = connection.cursor()
-        cursor.execute(f"SELECT COUNT_BIG(*), MAX(BarTime) FROM {fact_table}")
-        fact_row = cursor.fetchone()
-        fact_rows = int(fact_row[0])
-        fact_watermark = fact_row[1]
+        cursor.execute(f"SELECT COUNT_BIG(*), MAX(BarTime) FROM {fact_table}"); fact_row = cursor.fetchone()
+        fact_rows, fact_watermark = int(fact_row[0]), fact_row[1]
         cursor.execute("""SELECT CAST(value AS NVARCHAR(50)) FROM sys.extended_properties
             WHERE major_id=OBJECT_ID(?) AND minor_id=0 AND class=1 AND name='DPContractVersion'""", procedure)
         row = cursor.fetchone()
         version = str(row[0]) if row and row[0] is not None else None
-        cursor.execute("SELECT CASE WHEN OBJECT_ID(?, 'U') IS NULL THEN 0 ELSE 1 END", state_name)
-        state_table_exists = bool(cursor.fetchone()[0])
-        state_rows = 0
-        bootstrap_completed_pairs = 0
-        if state_table_exists:
-            cursor.execute(f"""SELECT COUNT_BIG(*),SUM(CASE WHEN BootstrapCompletedAt>=? THEN 1 ELSE 0 END)
-                FROM {state_table}""", _sql_timestamp(_policy_epoch(config)))
-            state_row = cursor.fetchone()
-            state_rows = int(state_row[0] or 0)
-            bootstrap_completed_pairs = int(state_row[1] or 0)
-        expected_pairs = len(config["data"]["symbols"]) * len(config["data"]["timeframes"])
+        threshold = warehouse_timestamp(
+            datetime.now(timezone.utc) - timedelta(days=int(config["backfill"]["lookback_days"])))
+        cursor.execute(f"""SELECT COUNT(*) FROM DWH.Dim_Symbol s CROSS JOIN DWH.Dim_Timeframe tf
+            WHERE s.IsActive=1 AND NOT EXISTS (SELECT 1 FROM {fact_table} f
+            WHERE f.SymbolID=s.SymbolID AND f.TimeframeID=tf.TimeframeID AND f.BarTime<=?)""", threshold)
+        bootstrap_remaining_pairs = int(cursor.fetchone()[0])
         expected = str(config["sql_server"]["contract_version"])
         return {
-            "ok": version == expected and state_table_exists,
+            "ok": version == expected,
             "database": config["sql_server"]["database"], "fact_rows": fact_rows,
-            "fact_watermark_utc": fact_watermark, "backfill_state_table": state_name,
-            "backfill_state_table_exists": state_table_exists,
-            "bootstrap_state_rows_total": state_rows, "bootstrap_completed_pairs": bootstrap_completed_pairs,
-            "bootstrap_remaining_pairs": max(0, expected_pairs - bootstrap_completed_pairs),
-            "backfill_policy_epoch_utc": config["backfill"]["policy_epoch_utc"],
+            "fact_watermark_utc": fact_watermark,
+            "bootstrap_remaining_pairs": bootstrap_remaining_pairs,
             "procedure": procedure, "contract_version": version,
             "expected_contract_version": expected,
         }
@@ -108,10 +276,9 @@ def get_pair_states(
     config: dict[str, Any],
     pairs: list[tuple[dict[str, Any], dict[str, Any]]],
 ) -> dict[tuple[int, str], dict[str, Any]]:
-    """Batch-read durable policy completion and latest Fact watermarks."""
+    """Batch-read earliest and latest Fact watermarks for each pair."""
     if not pairs:
         return {}
-    state_table = _quoted_name(config["tables"]["backfill_state_table"])
     fact_table = _quoted_name(config["tables"]["fact_table"])
     requested = sorted({(int(s["symbol_id"]), str(tf["code"])) for s, tf in pairs})
     connection = get_connection(config)
@@ -121,20 +288,15 @@ def get_pair_states(
                        "PRIMARY KEY (SymbolID,TFCode))")
         cursor.fast_executemany = True
         cursor.executemany("INSERT INTO #Pairs (SymbolID, TFCode) VALUES (?, ?)", requested)
-        cursor.execute(f"""SELECT p.SymbolID,p.TFCode,state.BootstrapCompletedAt,latest.BarTime
+        cursor.execute(f"""SELECT p.SymbolID,p.TFCode,earliest.BarTime,latest.BarTime
             FROM #Pairs p JOIN DWH.Dim_Timeframe tf ON tf.Code=p.TFCode
-            LEFT JOIN {state_table} state ON state.SymbolID=p.SymbolID AND state.TimeframeID=tf.TimeframeID
+            OUTER APPLY (SELECT TOP (1) f.BarTime FROM {fact_table} f WHERE f.SymbolID=p.SymbolID
+            AND f.TimeframeID=tf.TimeframeID ORDER BY f.BarTime ASC) earliest
             OUTER APPLY (SELECT TOP (1) f.BarTime FROM {fact_table} f WHERE f.SymbolID=p.SymbolID
             AND f.TimeframeID=tf.TimeframeID ORDER BY f.BarTime DESC) latest""")
-        epoch = _policy_epoch(config)
-        return {
-            (int(row[0]), str(row[1])): {
-                "bootstrap_complete": bootstrap_state_is_current(row[2], epoch),
-                "bootstrap_completed_at": row[2],
-                "latest": row[3],
-            }
-            for row in cursor.fetchall()
-        }
+        return {(int(row[0]), str(row[1])): {
+            "earliest": row[2], "latest": row[3],
+        } for row in cursor.fetchall()}
     finally:
         connection.close()
 def fetch_existing_candles(config: dict[str, Any], symbol_id: int, timeframe_code: str,
@@ -147,43 +309,13 @@ def fetch_existing_candles(config: dict[str, Any], symbol_id: int, timeframe_cod
         cursor.execute(f"""SELECT f.BarTime,f.[Open],f.High,f.Low,f.[Close],f.Volume
             FROM {fact_table} f JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID=f.TimeframeID
             WHERE f.SymbolID=? AND tf.Code=? AND f.BarTime>=? AND f.BarTime<=?""",
-            int(symbol_id), timeframe_code, _sql_timestamp(start_time), _sql_timestamp(end_time))
+            int(symbol_id), timeframe_code, warehouse_timestamp(start_time), warehouse_timestamp(end_time))
         return {
-            row[0]: _value_signature(row[1], row[2], row[3], row[4], row[5])
+            row[0]: warehouse_value_signature(row[1], row[2], row[3], row[4], row[5])
             for row in cursor.fetchall()
         }
     finally:
         if connection is None: active.close()
-def _sql_timestamp(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        return value.replace(microsecond=0)
-    return value.astimezone(timezone.utc).replace(tzinfo=None, microsecond=0)
-def _decimal_text(value: Any, *, precision: int, scale: int) -> str:
-    """Bind DECIMAL values as fixed-scale text to avoid ODBC precision inference."""
-    try:
-        decimal_value = Decimal(value)
-        quantum = Decimal(1).scaleb(-scale)
-        normalized = decimal_value.quantize(quantum, rounding=ROUND_HALF_UP)
-    except (InvalidOperation, TypeError, ValueError) as exc:
-        raise ValueError(f"invalid SQL decimal value: {value!r}") from exc
-    if not normalized.is_finite() or abs(normalized) >= Decimal(10) ** (precision - scale):
-        raise ValueError(f"SQL decimal value exceeds DECIMAL({precision},{scale})")
-    return f"{normalized:.{scale}f}"
-def _value_signature(open_: Any, high: Any, low: Any, close: Any,
-                     volume: Any) -> tuple[str | None, ...]:
-    prices = tuple(_decimal_text(value, precision=18, scale=8)
-                   for value in (open_, high, low, close))
-    normalized_volume = None if volume is None else _decimal_text(
-        volume, precision=20, scale=4)
-    return (*prices, normalized_volume)
-def candle_signature(candle: dict[str, Any]) -> tuple[str | None, ...]:
-    """Return values exactly normalized to the warehouse DECIMAL contract."""
-    return _value_signature(candle["open"], candle["high"], candle["low"],
-                            candle["close"], candle.get("volume"))
-def prepare_rows(candles: Iterable[dict[str, Any]]) -> list[tuple[Any, ...]]:
-    """Create pyodbc rows, reusing any signature already computed during comparison."""
-    return [(int(candle["symbol_id"]), _sql_timestamp(candle["timestamp"]),
-             *(candle.get("_signature") or candle_signature(candle))) for candle in candles]
 def _require_contract(cursor: pyodbc.Cursor, procedure: str, expected: str) -> None:
     cursor.execute("""SELECT CAST(value AS NVARCHAR(50)) FROM sys.extended_properties
         WHERE major_id=OBJECT_ID(?) AND minor_id=0 AND class=1 AND name='DPContractVersion'""",
@@ -205,10 +337,10 @@ def _fetch_result_row(cursor: pyodbc.Cursor, operation: str) -> Any:
             raise RuntimeError(f"{operation} did not return row counts")
 def bulk_upsert_candles(
     config: dict[str, Any], timeframe: dict[str, Any],
-    candles: list[dict[str, Any]], *, complete_bootstrap: bool = False,
+    candles: list[dict[str, Any]], *,
     symbol_id: int | None = None, connection: pyodbc.Connection | None = None,
 ) -> dict[str, int]:
-    """Load one complete provider window and atomically advance bootstrap state."""
+    """Load one complete provider window into staging and Fact."""
     empty = {"input": 0, "staged_inserted": 0, "staged_updated": 0,
              "fact_inserted": 0, "fact_updated": 0, "affected": 0, "skipped": 0}
     symbol_ids = {int(candle["symbol_id"]) for candle in candles}
@@ -220,11 +352,9 @@ def bulk_upsert_candles(
             raise ValueError("symbol_id does not match candle batch")
     elif symbol_id is not None:
         resolved_symbol_id = int(symbol_id)
-    elif complete_bootstrap:
-        raise ValueError("symbol_id is required for empty bootstrap completion")
     else:
         return empty
-    rows = prepare_rows(candles)
+    rows = prepare_warehouse_rows(candles)
     staging_name = timeframe["staging_table"]
     staging_table = _quoted_name(staging_name)
     fact_table = _quoted_name(config["tables"]["fact_table"])
@@ -279,16 +409,6 @@ def bulk_upsert_candles(
                 OR fact.[Open]<>source.[Open] OR fact.High<>source.High OR fact.Low<>source.Low
                 OR fact.[Close]<>source.[Close] OR ISNULL(fact.Volume,-1)<>ISNULL(source.Volume,-1))
                 THROW 51021,'Fact verification failed for provider batch.',1;""", timeframe["code"])
-        if complete_bootstrap:
-            state_table = _quoted_name(config["tables"]["backfill_state_table"])
-            cursor.execute(f"""MERGE {state_table} WITH(HOLDLOCK) AS target USING
-                (SELECT CAST(? AS INT) SymbolID,TimeframeID FROM DWH.Dim_Timeframe WHERE Code=?) AS source
-                ON target.SymbolID=source.SymbolID AND target.TimeframeID=source.TimeframeID
-                WHEN NOT MATCHED THEN INSERT(SymbolID,TimeframeID,BootstrapCompletedAt)
-                VALUES(source.SymbolID,source.TimeframeID,SYSUTCDATETIME())
-                WHEN MATCHED THEN UPDATE SET BootstrapCompletedAt=SYSUTCDATETIME();
-                IF @@ROWCOUNT=0 THROW 51020,'Cannot complete bootstrap for unknown timeframe.',1;""",
-                resolved_symbol_id, timeframe["code"])
         active.commit()
         return {"input": len(rows), "staged_inserted": staged_inserted, "staged_updated": staged_updated,
                 "fact_inserted": fact_inserted, "fact_updated": fact_updated, "affected": affected,

@@ -4,7 +4,7 @@ import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from . import Pair, pair_key, select_pairs
+from .sql_connector import Pair, pair_key, select_pairs
 from .auth import AuthError
 from .pipeline import fetch_and_store, log_pair_failure, utc
 from .sql_connector import get_connection, get_pair_states
@@ -41,6 +41,13 @@ def _bounded(config: dict[str, Any], bars: int, context: str) -> int:
     return max(1, bars)
 
 
+def _bootstrap_complete(config: dict[str, Any], state: dict[str, Any], current: datetime) -> bool:
+    """Complete once Fact_OHLCV's earliest bar reaches the lookback window (require_coverage already proved it)."""
+    earliest = state.get("earliest")
+    threshold = current - timedelta(days=int(config["backfill"]["lookback_days"]))
+    return earliest is not None and utc(earliest) <= threshold
+
+
 def plan_backfill(
     config: dict[str, Any],
     symbol: dict[str, Any],
@@ -62,7 +69,7 @@ def plan_backfill(
             int(bars_override), int(bars_override), None, current,
             False, False, None,
         )
-    complete = bool(state.get("bootstrap_complete"))
+    complete = _bootstrap_complete(config, state, current)
     latest = state.get("latest")
     durable_latest = None if latest is None else utc(latest)
     if durable_latest is not None and durable_latest > current:
@@ -208,7 +215,6 @@ def _run_group(
                     window_start=plan.window_start, window_end=plan.window_end,
                     require_coverage=plan.require_coverage,
                     required_cursor=plan.required_cursor,
-                    complete_bootstrap=plan.complete_bootstrap,
                     provider_candles=provider.candles, now=current,
                     connection=connection,
                 )
@@ -268,15 +274,14 @@ def run_backfill_pairs(
     return summary
 
 
-def prioritize_backfill_pairs(config: dict[str, Any], pairs: list[Pair]) -> list[Pair]:
+def prioritize_backfill_pairs(
+    config: dict[str, Any], pairs: list[Pair], *, now: datetime | None = None
+) -> list[Pair]:
     """Put policy-pending bootstrap pairs before completed rolling work."""
+    current = utc(now or datetime.now(timezone.utc))
     states = get_pair_states(config, pairs)
-    return sorted(
-        pairs,
-        key=lambda pair: states[
-            (int(pair[0]["symbol_id"]), pair[1]["code"])
-        ]["bootstrap_complete"],
-    )
+    return sorted(pairs, key=lambda pair: _bootstrap_complete(
+        config, states[(int(pair[0]["symbol_id"]), pair[1]["code"])], current))
 
 
 def run_backfill(

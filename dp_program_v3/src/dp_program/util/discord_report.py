@@ -1,4 +1,6 @@
 """Non-blocking Discord reporting tied to the engine service lifecycle."""
+# Reporter Discord chạy cùng service live/backfill.
+# Gửi Discord lỗi cũng không được làm dừng engine chính.
 
 from __future__ import annotations
 
@@ -16,9 +18,12 @@ import requests
 from ..log import log_event
 
 LOGGER = logging.getLogger(__name__)
+# Health gửi định kỳ; cảnh báo lặp bị throttle để tránh spam.
 _PERIOD_SECONDS = 3600
 _DUPLICATE_SECONDS = 900
+# Màu embed theo mức rủi ro.
 _COLORS = {"NONE": 0x2ECC71, "MEDIUM": 0xF1C40F, "HIGH": 0xE67E22, "CRITICAL": 0xE74C3C}
+# Gợi ý hành động ngắn cho operator trong Discord.
 _ACTIONS = {
     "NONE": "No operator action required",
     "MEDIUM": "Monitor the next cycle and inspect logs if it persists",
@@ -30,6 +35,7 @@ _Post = Callable[..., Any]
 
 def _redact(value: object) -> str:
     """Return bounded operator text with common credentials removed."""
+    # Che webhook/token/password trước khi đưa text lên Discord.
     text = str(value)
     text = re.sub(
         r"https://(?:discord(?:app)?\.com)/api/webhooks/[^\s\"']+",
@@ -48,6 +54,7 @@ def _redact(value: object) -> str:
 
 
 def _risk(snapshot: dict[str, Any]) -> str:
+    # Tính mức rủi ro từ snapshot runtime hiện tại.
     explicit = str(snapshot.get("risk") or "").upper()
     if explicit in _COLORS:
         return explicit
@@ -83,11 +90,13 @@ def _risk(snapshot: dict[str, Any]) -> str:
 
 
 def _field(name: str, value: object, *, inline: bool = True) -> dict[str, Any]:
+    # Một field nhỏ trong Discord embed, luôn đi qua redact.
     return {"name": name, "value": _redact(value) or "-", "inline": inline}
 
 
 def _build_payload(snapshot: dict[str, Any], event: str) -> dict[str, Any]:
     """Build one concise embed from a secret-free runtime snapshot."""
+    # Tạo payload ngắn: process, heartbeat, auth, SQL, live, backfill, spool.
     risk = _risk(snapshot)
     status = "HEALTHY" if risk == "NONE" else ("WARNING" if risk == "MEDIUM" else risk)
     service_status = str(snapshot.get("status") or "unknown").title()
@@ -157,6 +166,7 @@ def _post_payload(
     attempts: int = 3,
 ) -> int:
     """Send with bounded retry; only Discord 200/204 responses are success."""
+    # Gửi webhook với retry có giới hạn; HTTP 429 thì tôn trọng retry_after.
     last_status = 0
     last_error: Exception | None = None
     for attempt in range(1, attempts + 1):
@@ -180,6 +190,24 @@ def _post_payload(
     raise RuntimeError(f"Discord delivery failed: {detail}") from last_error
 
 
+def send_watchdog_alert(
+    config: dict[str, Any], event: str, snapshot: dict[str, Any], *, post: _Post = requests.post
+) -> int:
+    """Send one immediate alert from a short-lived script outside the engine.
+
+    DiscordReporter needs a background worker thread bound to the running
+    engine's lifecycle; a periodic watchdog process has neither, so it
+    calls straight through to the same payload/post building blocks.
+    """
+    # scripts/windows/watchdog.py gọi hàm này; không qua DiscordReporter
+    # vì watchdog chạy ngắn hạn, không có thread nền để publish() vào.
+    settings = config.get("discord") or {}
+    webhook_url = str(settings.get("webhook_url") or "")
+    if not bool(settings.get("enabled")) or not webhook_url:
+        return 0
+    return _post_payload(webhook_url, _build_payload(snapshot, event), post=post)
+
+
 class DiscordReporter:
     """Own one bounded worker while, and only while, the engine is running."""
 
@@ -190,6 +218,7 @@ class DiscordReporter:
         post: _Post = requests.post,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
+        # Chỉ chuẩn bị worker; thread thật được mở trong __enter__.
         settings = config.get("discord") or {}
         self.enabled = bool(settings.get("enabled"))
         self.webhook_url = str(settings.get("webhook_url") or "")
@@ -206,6 +235,7 @@ class DiscordReporter:
         self.last_signature: tuple[Any, ...] | None = None
 
     def __enter__(self) -> "DiscordReporter":
+        # Worker chỉ sống khi service đang chạy trong context này.
         if self.enabled:
             self.thread = threading.Thread(
                 target=self._worker, name="dp-discord-reporter", daemon=True
@@ -214,6 +244,7 @@ class DiscordReporter:
         return self
 
     def publish(self, event: str, state: dict[str, Any]) -> None:
+        # Quyết định gửi hay bỏ qua để Discord không bị spam.
         if not self.enabled or self.thread is None or not self.thread.is_alive():
             return
         snapshot = deepcopy(state)
@@ -249,6 +280,7 @@ class DiscordReporter:
         self.last_risk, self.last_signature = risk, signature
 
     def _worker(self) -> None:
+        # Worker nền gửi HTTP; lỗi Discord chỉ ghi log, engine vẫn chạy tiếp.
         while True:
             item = self.items.get()
             if item is None:
@@ -268,6 +300,7 @@ class DiscordReporter:
                 )
 
     def close(self) -> None:
+        # Dừng worker có timeout để shutdown service không bị treo.
         if self.thread is None:
             return
         try:
@@ -285,6 +318,7 @@ class DiscordReporter:
             )
 
     def __exit__(self, exc_type: Any, _exc: Any, _traceback: Any) -> bool:
+        # Nếu service thoát vì exception, cố gửi một report "failed" cuối.
         if exc_type is not None:
             self.publish("failed", {"status": "failed", "error_type": exc_type.__name__})
         self.close()

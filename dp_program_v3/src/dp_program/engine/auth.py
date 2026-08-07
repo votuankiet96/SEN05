@@ -2,11 +2,7 @@
 
 from __future__ import annotations
 
-import base64
-import json
-import logging
-import re
-import time
+import base64, json, logging, re, time
 from pathlib import Path
 from typing import Any
 
@@ -14,14 +10,13 @@ import requests
 
 from ..configuration import GUEST_TOKEN
 from ..log import log_event
+from .spool import InterprocessLockTimeout, atomic_write_text, interprocess_lock
 LOGGER = logging.getLogger(__name__)
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124"
 _NEXT_REFRESH_ATTEMPT = 0.0
 
 class AuthError(RuntimeError):
     pass
-
-
 def _claims(token: str) -> dict[str, Any]:
     try:
         payload = token.split(".")[1]
@@ -30,38 +25,30 @@ def _claims(token: str) -> dict[str, Any]:
         return value if isinstance(value, dict) else {}
     except Exception:
         return {}
-
 def token_seconds_remaining(token: str, *, now: float | None = None) -> float:
     """Return JWT lifetime, or -1 when the expiry cannot be decoded."""
     try:
         return float(_claims(token)["exp"]) - (time.time() if now is None else now)
     except (KeyError, TypeError, ValueError):
         return -1.0
-
 def _authenticated(token: str, minimum_ttl: int) -> bool:
     if not token or token == GUEST_TOKEN:
         return False
     claims = _claims(token)
     identity = claims.get("user_id") or claims.get("id") or claims.get("sub")
     return bool(identity) and token_seconds_remaining(token) > minimum_ttl
-
 def _cache_path(config: dict[str, Any]) -> Path:
     return Path(config["app"]["runtime_dir"]) / "cache" / "tradingview_auth.json"
-
 def _load_cache(config: dict[str, Any]) -> dict[str, Any]:
     try:
         value = json.loads(_cache_path(config).read_text(encoding="utf-8"))
         return value if isinstance(value, dict) else {}
     except (OSError, ValueError):
         return {}
-
 def _write_cache(config: dict[str, Any], payload: dict[str, Any]) -> None:
     path = _cache_path(config)
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".tmp")
-    temporary.write_text(json.dumps(payload), encoding="utf-8")
-    temporary.replace(path)
-
+    atomic_write_text(path, json.dumps(payload))
 def _save_cache(config: dict[str, Any], token: str, cookie: str, source: str) -> dict[str, Any]:
     if not _authenticated(token, 60):
         raise AuthError(f"TradingView {source} did not return an authenticated JWT")
@@ -70,24 +57,19 @@ def _save_cache(config: dict[str, Any], token: str, cookie: str, source: str) ->
     }
     _write_cache(config, payload)
     return payload
-
 def _cookie_list(raw: str) -> list[dict[str, Any]]:
     result = []
     for part in raw.split(";"):
         name, separator, value = part.strip().partition("=")
         if separator and name and value:
-            result.append({"name": name, "value": value, "domain": ".tradingview.com",
-                           "path": "/", "secure": True})
+            result.append({"name": name, "value": value,
+                           "domain": ".tradingview.com", "path": "/", "secure": True})
     return result
-
 def _cookie_header(cookies: list[dict[str, Any]]) -> str:
-    valid = (
-        item for item in cookies
-        if item.get("name") and item.get("value")
-        and "tradingview.com" in str(item.get("domain", "tradingview.com"))
-    )
+    valid = (item for item in cookies if item.get("name") and item.get("value")
+             and re.fullmatch(r"(?:.+\.)?tradingview\.com",
+                              str(item.get("domain", "tradingview.com")).lower().lstrip(".")))
     return "; ".join(f"{item['name']}={item['value']}" for item in valid)
-
 def _page_token(page: Any, cookies: list[dict[str, Any]]) -> str:
     script = """() => {
       for (const text of [document.documentElement.innerHTML, document.cookie]) {
@@ -103,32 +85,30 @@ def _page_token(page: Any, cookies: list[dict[str, Any]]) -> str:
         token = str(page.evaluate(script) or "")
     except Exception:
         token = ""
-    values = (str(item.get("value") or "") for item in cookies
-              if item.get("name") == "auth_token")
+    values = (str(item.get("value") or "") for item in cookies if item.get("name") == "auth_token")
     return token or next(values, "")
-
 def _http_cookie_refresh(cookie: str) -> tuple[str, str]:
     if not cookie:
         return "", ""
-    headers = {"Cookie": cookie, "User-Agent": USER_AGENT, "Accept-Language": "en-US"}
-    response = requests.get("https://www.tradingview.com/", headers=headers, timeout=20)
-    response.raise_for_status()
+    headers = {"User-Agent": USER_AGENT, "Accept-Language": "en-US"}
+    with requests.Session() as session:
+        for item in _cookie_list(cookie): session.cookies.set(**item)
+        response = session.get("https://www.tradingview.com/", headers=headers, timeout=20)
+        response.raise_for_status()
+        renewed_cookie = _cookie_header([vars(item) for item in session.cookies])
     match = re.search(r'"auth_token"\s*:\s*"(eyJ[A-Za-z0-9._-]+)"', response.text)
-    return (match.group(1), cookie) if match else ("", cookie)
-
+    return (match.group(1), renewed_cookie or cookie) if match else ("", renewed_cookie or cookie)
 def _http_login(username: str, password: str) -> tuple[str, str]:
     if not username or not password:
         return "", ""
     data = {"username": username, "password": password, "remember": "on"}
     headers = {"Referer": "https://www.tradingview.com/", "User-Agent": USER_AGENT}
-    response = requests.post(
-        "https://www.tradingview.com/accounts/signin/", data=data, headers=headers, timeout=20
-    )
+    response = requests.post("https://www.tradingview.com/accounts/signin/",
+                             data=data, headers=headers, timeout=20)
     response.raise_for_status()
     token = str(response.json().get("user", {}).get("auth_token") or "")
     cookie = "; ".join(f"{key}={value}" for key, value in response.cookies.items())
     return token, cookie
-
 def _complete_browser_login(page: Any, tv: dict[str, Any]) -> None:
     username, password = tv.get("username", ""), tv.get("password", "")
     if not username or not password:
@@ -139,7 +119,8 @@ def _complete_browser_login(page: Any, tv: dict[str, Any]) -> None:
             break
         except Exception:
             continue
-    selectors = ('input[name="username"]', 'input[type="email"]', 'input[name="email"]')
+    selectors = ('input[name="id_username"]', 'input[name="username"]',
+                 'input[type="email"]', 'input[name="email"]')
     for selector in selectors:
         try:
             page.locator(selector).first.fill(username, timeout=5_000)
@@ -148,7 +129,7 @@ def _complete_browser_login(page: Any, tv: dict[str, Any]) -> None:
             continue
     else:
         raise AuthError("TradingView login username field was not found")
-    page.locator('input[type="password"]').first.fill(password, timeout=10_000)
+    page.locator('input[name="id_password"], input[type="password"]').first.fill(password, timeout=10_000)
     try:
         page.locator('button[type="submit"]').first.click(timeout=5_000)
     except Exception:
@@ -157,10 +138,7 @@ def _complete_browser_login(page: Any, tv: dict[str, Any]) -> None:
     if tv.get("two_factor_secret"):
         import pyotp
 
-        selectors = (
-            'input[name="code"]', 'input[inputmode="numeric"]',
-            'input[autocomplete="one-time-code"]',
-        )
+        selectors = ('input[name="code"]', 'input[inputmode="numeric"]', 'input[autocomplete="one-time-code"]')
         for selector in selectors:
             try:
                 code = pyotp.TOTP(tv["two_factor_secret"]).now()
@@ -170,9 +148,7 @@ def _complete_browser_login(page: Any, tv: dict[str, Any]) -> None:
             except Exception:
                 continue
     page.wait_for_timeout(4_000)
-
-def _browser_refresh(config: dict[str, Any], cookie: str, *,
-                     fresh_login: bool) -> tuple[str, str]:
+def _browser_refresh(config: dict[str, Any], cookie: str, *, fresh_login: bool) -> tuple[str, str]:
     from playwright.sync_api import sync_playwright
 
     tv = config["tradingview"]
@@ -200,7 +176,6 @@ def _browser_refresh(config: dict[str, Any], cookie: str, *,
             return _page_token(page, cookies), _cookie_header(cookies)
         finally:
             context.close()
-
 def browser_status() -> dict[str, Any]:
     """Verify that Playwright Chromium can start and exit headlessly."""
     try:
@@ -214,12 +189,14 @@ def browser_status() -> dict[str, Any]:
         return {"ok": True, "detail": "Playwright Chromium launched successfully"}
     except Exception as exc:
         return {"ok": False, "detail": f"{type(exc).__name__}: {exc}"}
-
-
+def _log_path(level: int, event: str, risk: str, source: str, started: float,
+              **fields: Any) -> None:
+    log_event(LOGGER, level, event, risk, component="auth", source=source,
+              duration_seconds=round(time.monotonic() - started, 3), **fields)
 def _refresh(config: dict[str, Any]) -> dict[str, Any]:
     tv = config["tradingview"]
     cache = _load_cache(config)
-    cookie = str(cache.get("cookie") or tv.get("cookie") or "")
+    original_cookie = cookie = str(cache.get("cookie") or tv.get("cookie") or "")
     attempts = [
         ("session_cookie", lambda: _http_cookie_refresh(cookie)),
         ("browser_profile", lambda: _browser_refresh(config, cookie, fresh_login=False)),
@@ -232,30 +209,39 @@ def _refresh(config: dict[str, Any]) -> dict[str, Any]:
         )
     errors = []
     for source, action in attempts:
+        started = time.monotonic()
         try:
             token, new_cookie = action()
+            cookie = new_cookie or cookie
             if _authenticated(token, 60):
-                log_event(LOGGER, logging.INFO, "AUTH_REFRESHED", "NONE", component="auth", source=source)
-                return _save_cache(config, token, new_cookie or cookie, source)
+                saved = _save_cache(config, token, cookie, source)
+                _log_path(logging.INFO, "AUTH_REFRESHED", "NONE", source, started,
+                          session_material_changed=cookie != original_cookie)
+                return saved
             errors.append(f"{source}: no authenticated token")
+            _log_path(logging.INFO, "AUTH_PATH_NO_TOKEN", "LOW", source, started,
+                      action="trying next authentication path")
         except Exception as exc:
             errors.append(f"{source}: {type(exc).__name__}")
-            log_event(LOGGER, logging.WARNING, "AUTH_PATH_FAILED", "MEDIUM", component="auth",
-                      source=source, error_type=type(exc).__name__, error=exc,
+            _log_path(logging.WARNING, "AUTH_PATH_FAILED", "MEDIUM", source, started,
+                      error_type=type(exc).__name__, error=exc,
                       action="trying next authentication path")
     raise AuthError("TradingView authentication failed: " + "; ".join(errors))
-
-
-def ensure_authenticated(config: dict[str, Any], *, force: bool = False) -> dict[str, Any]:
-    """Resolve an account JWT, refresh proactively, and never return guest access."""
-    global _NEXT_REFRESH_ATTEMPT
+def _best_material(config: dict[str, Any]) -> tuple[dict[str, Any], tuple[str, str, str] | None]:
     tv = config["tradingview"]
     cache = _load_cache(config)
     candidates = [
         ("runtime_cache", str(cache.get("token") or ""), str(cache.get("cookie") or "")),
         ("configuration", str(tv.get("auth_token") or ""), str(tv.get("cookie") or "")),
     ]
-    best = next((item for item in candidates if _authenticated(item[1], 60)), None)
+    return cache, next((item for item in candidates if _authenticated(item[1], 60)), None)
+def _activate(tv: dict[str, Any], material: tuple[str, str, str]) -> dict[str, Any]:
+    tv.update(auth_token=material[1], cookie=material[2])
+    return {"token": material[1], "cookie": material[2], "source": material[0]}
+def _ensure_authenticated_locked(config: dict[str, Any], *, force: bool) -> dict[str, Any]:
+    global _NEXT_REFRESH_ATTEMPT
+    tv = config["tradingview"]
+    cache, best = _best_material(config)
     minimum = int(tv["proactive_refresh_seconds"])
     retry_active = (
         time.monotonic() < _NEXT_REFRESH_ATTEMPT
@@ -264,8 +250,7 @@ def ensure_authenticated(config: dict[str, Any], *, force: bool = False) -> dict
     if not force and best and (
         _authenticated(best[1], minimum) or retry_active
     ):
-        tv.update(auth_token=best[1], cookie=best[2])
-        return {"token": best[1], "cookie": best[2], "source": best[0]}
+        return _activate(tv, best)
     if not force and not best and retry_active:
         raise AuthError("TradingView authentication retry cooldown is active")
     try:
@@ -276,14 +261,28 @@ def ensure_authenticated(config: dict[str, Any], *, force: bool = False) -> dict
         cache["retry_after"] = time.time() + delay
         _write_cache(config, cache)
         if best and not force:
-            tv.update(auth_token=best[1], cookie=best[2])
-            return {"token": best[1], "cookie": best[2], "source": best[0]}
+            return _activate(tv, best)
         raise
     tv.update(auth_token=refreshed["token"], cookie=refreshed["cookie"])
     _NEXT_REFRESH_ATTEMPT = 0.0
     return refreshed
-
-
+def ensure_authenticated(config: dict[str, Any], *, force: bool = False) -> dict[str, Any]:
+    """Resolve account auth while serializing refresh/cache/profile mutation."""
+    tv = config["tradingview"]
+    _cache, best = _best_material(config)
+    if not force and best and _authenticated(best[1], int(tv["proactive_refresh_seconds"])):
+        return _activate(tv, best)
+    try:
+        with interprocess_lock(config, "auth_refresh", timeout_seconds=0):
+            return _ensure_authenticated_locked(config, force=force)
+    except InterprocessLockTimeout:
+        if best and not force:
+            return _activate(tv, best)
+    try:
+        with interprocess_lock(config, "auth_refresh", timeout_seconds=240):
+            return _ensure_authenticated_locked(config, force=force)
+    except InterprocessLockTimeout as exc:
+        raise AuthError("TradingView authentication refresh lock timed out") from exc
 def auth_status(config: dict[str, Any]) -> dict[str, Any]:
     """Return a secret-free auth readiness snapshot."""
     cache = _load_cache(config)

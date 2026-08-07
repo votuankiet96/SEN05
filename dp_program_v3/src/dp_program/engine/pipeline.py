@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import logging
 import time
+from contextlib import nullcontext
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from .auth import AuthError
 from ..log import log_event
-from .spool import ack, enqueue
+from .spool import ack, enqueue, interprocess_lock
 from .sql_connector import (
     bulk_upsert_candles,
     candle_signature,
@@ -136,7 +137,6 @@ def fetch_and_store(
     window_end: datetime | None = None,
     require_coverage: bool = False,
     required_cursor: datetime | None = None,
-    complete_bootstrap: bool = False,
     provider_candles: list[dict[str, Any]] | None = None,
     connection: Any | None = None,
     now: datetime | None = None,
@@ -177,45 +177,50 @@ def fetch_and_store(
                 )
         observed = _window(valid, window_start, upper)
         stage = "sql_compare"
-        existing: dict[datetime, tuple[str | None, ...]] = {}
-        if observed:
-            existing = fetch_existing_candles(
-                config,
-                int(symbol["symbol_id"]),
-                timeframe["code"],
-                observed[0]["timestamp"],
-                observed[-1]["timestamp"],
-                connection=connection,
-            )
-        missing = changed = unchanged = 0
-        for candle in observed:
-            key = candle["timestamp"].replace(tzinfo=None)
-            candle["_signature"] = signature = candle_signature(candle)
-            if key not in existing:
-                missing += 1
-            elif existing[key] != signature:
-                changed += 1
-            else:
-                unchanged += 1
-        needs_delivery = missing + changed > 0
-        sql_result = _empty_sql_result()
-        delivery = observed if needs_delivery else []
-        if delivery:
-            stage = "spool_enqueue"
-            enqueue(config, delivery)
-        if delivery or complete_bootstrap:
-            stage = "sql_delivery"
-            sql_result = bulk_upsert_candles(
-                config,
-                timeframe,
-                delivery,
-                complete_bootstrap=complete_bootstrap,
-                symbol_id=int(symbol["symbol_id"]),
-                connection=connection,
-            )
-        if delivery:
-            stage = "spool_ack"
-            ack(config, delivery)
+        lock_timeout = float(config["sql_server"]["command_timeout_seconds"]) + 5.0
+        guard = (
+            interprocess_lock(config, "delivery", timeout_seconds=lock_timeout)
+            if observed else nullcontext()
+        )
+        with guard:
+            existing: dict[datetime, tuple[str | None, ...]] = {}
+            if observed:
+                existing = fetch_existing_candles(
+                    config,
+                    int(symbol["symbol_id"]),
+                    timeframe["code"],
+                    observed[0]["timestamp"],
+                    observed[-1]["timestamp"],
+                    connection=connection,
+                )
+            missing = changed = unchanged = 0
+            for candle in observed:
+                key = candle["timestamp"].replace(tzinfo=None)
+                candle["_signature"] = signature = candle_signature(candle)
+                if key not in existing:
+                    missing += 1
+                elif existing[key] != signature:
+                    changed += 1
+                else:
+                    unchanged += 1
+            needs_delivery = missing + changed > 0
+            sql_result = _empty_sql_result()
+            delivery = observed if needs_delivery else []
+            if delivery:
+                stage = "spool_enqueue"
+                enqueue(config, delivery)
+            if delivery:
+                stage = "sql_delivery"
+                sql_result = bulk_upsert_candles(
+                    config,
+                    timeframe,
+                    delivery,
+                    symbol_id=int(symbol["symbol_id"]),
+                    connection=connection,
+                )
+            if delivery:
+                stage = "spool_ack"
+                ack(config, delivery)
     except AuthError:
         raise
     except Exception as exc:

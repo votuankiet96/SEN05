@@ -1,6 +1,5 @@
-# Config.yaml contains host credentials. Commit only the sanitized template.
+# Config.yaml contains host credentials and is local-only.
 Config.yaml
-!Config.example.yaml
 
 # Runtime output (logs, cache, PID files, ad-hoc monitor scripts, backups).
 # Everything under runtime/ is transient operational output - ignore the

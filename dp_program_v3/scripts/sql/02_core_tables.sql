@@ -68,20 +68,23 @@ GO
 --     Examples: EURUSD, Gold (GOLD), S&P 500 CFD (US500), Bitcoin (BTCUSD)
 --
 --     KEY COLUMNS:
---       SymbolID  — A stable number (e.g. 33) used in every candle row.
---                   This number NEVER changes, even if the name changes.
---       Symbol    — The runtime TradingView/Capital.com ticker used by Python.
---       RefName   — Legacy or common reference ticker for the same instrument.
---                   e.g. RefName stores "CAC40" while runtime Symbol is "FR40".
---       AssetType — Category: "FOREX", "Indice", "Metal", or "Crypto".
---       IsActive  — 1 = currently traded; 0 = retired/removed.
+--       SymbolID      — A stable number (e.g. 33) used in every candle row.
+--                       This number NEVER changes, even if the name changes.
+--       Symbol        — The runtime TradingView/Capital.com ticker used by Python.
+--       BrokerChannel — Which data provider/broker feed this symbol is pulled
+--                       through on TradingView, e.g. "CAPITALCOM". Every
+--                       symbol currently shares one channel, but different
+--                       symbols or asset types may use different channels in
+--                       the future (e.g. "TVC" for some instruments).
+--       AssetType     — Category: "FOREX", "Indice", "Metal", or "Crypto".
+--       IsActive      — 1 = currently traded; 0 = retired/removed.
 -- -------------------------------------------------------
 IF OBJECT_ID('DWH.Dim_Symbol', 'U') IS NULL  -- 'U' = user table; only create if it doesn't exist
 BEGIN
     CREATE TABLE DWH.Dim_Symbol (
-        SymbolID    INT          NOT NULL,   -- stable numeric PK from config.py SYMBOLS list
-        Symbol      NVARCHAR(20) NOT NULL,   -- runtime TradingView/Capital.com ticker used by Python
-        RefName     NVARCHAR(20) NULL,       -- legacy / alternative name (nullable — not all symbols have one)
+        SymbolID      INT          NOT NULL,   -- stable numeric PK, sourced from this warehouse
+        Symbol        NVARCHAR(20) NOT NULL,   -- runtime TradingView/Capital.com ticker used by Python
+        BrokerChannel NVARCHAR(20) NULL,       -- data provider/broker feed used to resolve this symbol on TradingView
         AssetType   NVARCHAR(20) NOT NULL,   -- category: FOREX | Indice | Metal | Crypto
         IsActive    BIT          NOT NULL DEFAULT 1,              -- 1 = currently traded; 0 = retired symbol
         CreatedAt   DATETIME2    NOT NULL DEFAULT SYSUTCDATETIME(), -- UTC timestamp of row insert
@@ -346,27 +349,7 @@ BEGIN
 END
 GO
 
--- Durable V3 bootstrap completion. Presence of a pair means its configured
--- full-history request committed successfully; absence means bootstrap is
--- still pending. The row is committed atomically with the corresponding Fact
--- load, so process restarts can safely retry without losing state.
-IF OBJECT_ID('SEN.DP_BackfillState', 'U') IS NULL
-BEGIN
-    CREATE TABLE SEN.DP_BackfillState (
-        SymbolID             INT          NOT NULL,
-        TimeframeID          TINYINT      NOT NULL,
-        BootstrapCompletedAt DATETIME2(0) NOT NULL,
-        CONSTRAINT PK_DP_BackfillState
-            PRIMARY KEY CLUSTERED (SymbolID, TimeframeID),
-        CONSTRAINT FK_DP_BackfillState_Symbol
-            FOREIGN KEY (SymbolID) REFERENCES DWH.Dim_Symbol (SymbolID),
-        CONSTRAINT FK_DP_BackfillState_Timeframe
-            FOREIGN KEY (TimeframeID) REFERENCES DWH.Dim_Timeframe (TimeframeID)
-    );
-    PRINT 'Table SEN.DP_BackfillState created.';
-END
-GO
-
-
 -- NOTE: DWH.Dim_Symbol is seeded by 05_seed_symbols.sql.
--- The DP Program V3 runtime instrument source is configuration.py::_SYMBOLS.
+-- DWH.Dim_Symbol and DWH.Dim_Timeframe are the DP Program V3 runtime
+-- instrument source of truth; the Python runtime reads them directly and
+-- holds no separate symbol/timeframe list of its own.

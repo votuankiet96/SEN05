@@ -6,7 +6,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Iterable
-from . import Pair, pair_key, select_pairs
+from .sql_connector import Pair, pair_key, select_pairs
 from .auth import AuthError
 from ..log import log_event
 from .pipeline import fetch_and_store, log_pair_failure, utc
@@ -57,17 +57,18 @@ def plan_live(
     minutes = int(timeframe["minutes"])
     overlap = int(config["backfill"]["overlap_bars"])
     start = durable_latest - timedelta(minutes=max(0, overlap - 1) * minutes)
-    if catch_up:
-        bars = math.ceil((current - start).total_seconds() / (minutes * 60)) + 1
-    else:
-        bars = max(int(config["live"]["bars_per_request"]), overlap) + 2
+    tail = max(int(config["live"]["bars_per_request"]), overlap) + 2
+    required = (
+        math.ceil((current - start).total_seconds() / (minutes * 60)) + 1
+        if catch_up else tail
+    )
     maximum = int(config["backfill"]["max_bars_per_request"])
-    if bars > maximum:
+    if required > maximum:
         raise CatchupWindowError(
-            f"live catch-up requires {bars} bars and exceeds request cap {maximum}"
+            f"live catch-up requires {required} bars and exceeds request cap {maximum}"
         )
-    max_bars = min(maximum, bars + overlap + 2)
-    return LivePlan(max(1, bars), max_bars, start, current, True, durable_latest)
+    max_bars = min(maximum, max(tail, required + overlap + 2))
+    return LivePlan(tail, max_bars, start, current, True, durable_latest)
 
 
 def _ordered_pairs(pairs: list[Pair], prior_order: list[str]) -> list[Pair]:
@@ -121,6 +122,7 @@ def run_live_pairs(
     stop_requested: Callable[[], bool] | None = None,
 ) -> dict[str, Any]:
     """Fetch per-symbol batches, then deliver each pair serially."""
+    planning_started = time.monotonic()
     current = utc(now or datetime.now(timezone.utc))
     selected = {pair_key(pair) for pair in pairs}
     prior_order = [key for key in (pending_pairs or ()) if key in selected]
@@ -153,18 +155,32 @@ def run_live_pairs(
             processed.add(display)
             log_pair_failure("live", symbol, timeframe, exc)
     groups = _request_groups(config, planned)
-    started = time.monotonic()
+    timings = {
+        "planning_seconds": time.monotonic() - planning_started,
+        "fetch_seconds": 0.0, "connection_seconds": 0.0,
+        "pipeline_seconds": 0.0, "max_pair_seconds": 0.0,
+    }
+
+    def timed(key: str, action: Callable[[], Any]) -> Any:
+        stage_started = time.monotonic()
+        try:
+            return action()
+        finally:
+            timings[key] += time.monotonic() - stage_started
+    budget_started = time.monotonic()
     consecutive = total_group_failures = 0
     circuit_open = False
     for group_index, group in enumerate(groups):
         if (stop_requested and stop_requested()) or (
-            group_index and time.monotonic() - started >= _CYCLE_BUDGET_SECONDS
+            group_index and time.monotonic() - budget_started >= _CYCLE_BUDGET_SECONDS
         ):
             break
         group_failed = False
         requests = [request for _pair, _plan, request in group]
         try:
-            fetched = fetch_candles_batch(config, requests)
+            fetched = timed(
+                "fetch_seconds", lambda: fetch_candles_batch(config, requests)
+            )
         except AuthError:
             raise
         except Exception as exc:
@@ -178,7 +194,7 @@ def run_live_pairs(
                 log_pair_failure("live", symbol, timeframe, exc, stage="fetch")
         else:
             try:
-                connection = get_connection(config)
+                connection = timed("connection_seconds", lambda: get_connection(config))
             except Exception as exc:
                 group_failed = True
                 for (symbol, timeframe), _plan, _request in group:
@@ -192,6 +208,7 @@ def run_live_pairs(
                 try:
                     for (symbol, timeframe), plan, request in group:
                         display = pair_key((symbol, timeframe))
+                        pair_started = time.monotonic()
                         try:
                             provider = fetched[request_key(request)]
                             result = fetch_and_store(
@@ -217,6 +234,12 @@ def run_live_pairs(
                             failed_pairs.append(display)
                             pending.add(display)
                             log_pair_failure("live", symbol, timeframe, exc)
+                        finally:
+                            pair_seconds = time.monotonic() - pair_started
+                            timings["pipeline_seconds"] += pair_seconds
+                            timings["max_pair_seconds"] = max(
+                                timings["max_pair_seconds"], pair_seconds
+                            )
                         processed.add(display)
                 finally:
                     connection.close()
@@ -253,6 +276,7 @@ def run_live_pairs(
         failed_pairs=failed_pairs, deferred_pairs=deferred_pairs,
         deferred=len(deferred_pairs), pending_pairs=pending_order,
         recovered_pairs=recovered,
+        timings={key: round(value, 3) for key, value in timings.items()},
     )
     return summary
 

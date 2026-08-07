@@ -21,7 +21,6 @@ VALUES
     (N'DWH.Dim_Timeframe'),
     (N'DWH.Dim_Date'),
     (N'DWH.Fact_OHLCV'),
-    (N'SEN.DP_BackfillState'),
     (N'SEN.TF_M5'),
     (N'SEN.TF_M10'),
     (N'SEN.TF_M15'),
@@ -142,42 +141,6 @@ IF NOT EXISTS (
 )
     THROW 51005, 'DWH.Fact_OHLCV is missing its unique business key.', 1;
 
-IF NOT EXISTS (
-    SELECT 1
-    FROM sys.indexes AS i
-    JOIN sys.index_columns AS c1
-      ON c1.object_id = i.object_id
-     AND c1.index_id = i.index_id
-     AND c1.key_ordinal = 1
-    JOIN sys.columns AS n1
-      ON n1.object_id = c1.object_id
-     AND n1.column_id = c1.column_id
-    JOIN sys.index_columns AS c2
-      ON c2.object_id = i.object_id
-     AND c2.index_id = i.index_id
-     AND c2.key_ordinal = 2
-    JOIN sys.columns AS n2
-      ON n2.object_id = c2.object_id
-     AND n2.column_id = c2.column_id
-    WHERE i.object_id = OBJECT_ID('SEN.DP_BackfillState')
-      AND i.is_primary_key = 1
-      AND n1.name = 'SymbolID'
-      AND n2.name = 'TimeframeID'
-)
-    THROW 51009, 'SEN.DP_BackfillState is missing its pair primary key.', 1;
-
-IF NOT EXISTS (
-    SELECT 1
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = 'SEN'
-      AND TABLE_NAME = 'DP_BackfillState'
-      AND COLUMN_NAME = 'BootstrapCompletedAt'
-      AND DATA_TYPE = 'datetime2'
-      AND DATETIME_PRECISION = 0
-      AND IS_NULLABLE = 'NO'
-)
-    THROW 51010, 'SEN.DP_BackfillState has an invalid completion timestamp.', 1;
-
 IF OBJECT_ID('DWH.usp_LoadDirect', 'P') IS NULL
     THROW 51006, 'DWH.usp_LoadDirect is missing.', 1;
 
@@ -210,7 +173,6 @@ SELECT
     (SELECT COUNT_BIG(*) FROM DWH.Dim_Date) AS DateCount,
     (SELECT COUNT_BIG(*) FROM INFORMATION_SCHEMA.TABLES
      WHERE TABLE_SCHEMA = 'SEN' AND TABLE_NAME LIKE 'TF[_]%') AS StagingTableCount,
-    (SELECT COUNT_BIG(*) FROM SEN.DP_BackfillState) AS BootstrapCompletedPairs,
     @ContractVersion AS LoaderContractVersion;
 
 PRINT 'DP Program V3 SQL warehouse verification passed.';

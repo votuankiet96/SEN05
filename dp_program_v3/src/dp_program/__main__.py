@@ -16,11 +16,12 @@ from .engine.runtime import (
     instance_lock,
     record_service_failure,
     request_stop,
-    run_service,
+    run_backfill_service,
+    run_live_service,
     service_status,
 )
 from .engine.spool import pending_status
-from .engine.sql_connector import check_connection
+from .engine.sql_connector import check_connection, fetch_universe, select_pairs
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -38,10 +39,13 @@ def build_parser() -> argparse.ArgumentParser:
     live.add_argument("--timeframe", help="timeframe code such as M5")
 
     subparsers.add_parser("check-sql", help="verify SQL connectivity and contract")
-    subparsers.add_parser("run", help="run the single-instance production service")
+    subparsers.add_parser("run-live", help="run the continuous single-instance live service")
+    subparsers.add_parser("run-backfill", help="run the continuous single-instance backfill service")
     stop = subparsers.add_parser("stop", help="request a graceful service stop")
+    stop.add_argument("--mode", choices=("live", "backfill"), required=True)
     stop.add_argument("--wait-seconds", type=int, default=300)
-    subparsers.add_parser("status", help="show durable service state")
+    status = subparsers.add_parser("status", help="show durable service state")
+    status.add_argument("--mode", choices=("live", "backfill"), required=True)
     subparsers.add_parser("doctor", help="run read-only production readiness checks")
     subparsers.add_parser("settings", help="show secret-free effective settings")
     auth = subparsers.add_parser("auth", help="inspect or refresh TradingView auth")
@@ -54,12 +58,20 @@ def _doctor(config: dict) -> dict:
     authentication = auth_status(config)
     browser = browser_status()
     spool = pending_status(config)
+    symbols, timeframes = fetch_universe(config)
+    live_pairs = select_pairs(config, live=True)
+    backfill_pairs = select_pairs(config, live=False)
     contract = {
-        "symbols": len(config["data"]["symbols"]),
-        "live_symbols": sum(bool(item["live"]) for item in config["data"]["symbols"]),
-        "timeframes": len(config["data"]["timeframes"]),
-        "live_pairs": sum(bool(item["live"]) for item in config["data"]["symbols"])
-        * len(config["data"]["timeframes"]),
+        "symbols": sum(bool(item["enabled"]) for item in symbols),
+        "timeframes": len(timeframes),
+        "live_symbols": len({pair[0]["symbol"] for pair in live_pairs}),
+        "live_timeframes": len({pair[1]["code"] for pair in live_pairs}),
+        "live_pairs": len(live_pairs),
+        "backfill_pairs": len(backfill_pairs),
+        "live_interval_minutes": config["live"]["interval_minutes"],
+        "live_bars_per_request": config["live"]["bars_per_request"],
+        "closed_candles_only": config["live"]["closed_candles_only"],
+        "backfill_schedule_utc": config["backfill"]["schedule_utc"],
     }
     ok = (
         bool(sql.get("ok"))
@@ -78,18 +90,26 @@ def _doctor(config: dict) -> dict:
 
 
 def _settings(config: dict) -> dict:
+    symbols, timeframes = fetch_universe(config)
+    live_pairs = select_pairs(config, live=True)
+    backfill_pairs = select_pairs(config, live=False)
     return {
         "ok": True,
         "config_path": config["app"]["config_path"],
         "runtime_dir": config["app"]["runtime_dir"],
         "single_config_file": True,
-        "symbols": len(config["data"]["symbols"]),
-        "live_symbols": sum(bool(item["live"]) for item in config["data"]["symbols"]),
-        "timeframes": len(config["data"]["timeframes"]),
+        "symbols": sum(bool(item["enabled"]) for item in symbols),
+        "timeframes": len(timeframes),
+        "live_symbols": len({pair[0]["symbol"] for pair in live_pairs}),
+        "live_timeframes": len({pair[1]["code"] for pair in live_pairs}),
+        "live_pairs": len(live_pairs),
+        "backfill_pairs": len(backfill_pairs),
         "live_interval_minutes": config["live"]["interval_minutes"],
+        "live_bars_per_request": config["live"]["bars_per_request"],
+        "closed_candles_only": config["live"]["closed_candles_only"],
         "backfill_lookback_days": config["backfill"]["lookback_days"],
-        "backfill_policy_epoch_utc": config["backfill"]["policy_epoch_utc"],
-        "backfill_schedule_utc": config["service"]["backfill_schedule_utc"],
+        "backfill_run_on_start": config["backfill"]["run_on_start"],
+        "backfill_schedule_utc": config["backfill"]["schedule_utc"],
         "sql_database": config["sql_server"]["database"],
         "sql_contract_version": config["sql_server"]["contract_version"],
         "discord_enabled": config["discord"]["enabled"],
@@ -105,15 +125,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     config = None
     try:
         config = load_config()
-        writes = args.command in {"run", "backfill", "live"} or (
+        writes = args.command in {"run-live", "run-backfill", "backfill", "live"} or (
             args.command == "auth" and args.action == "refresh"
         )
         if writes:
-            configure_logging(config)
+            role = (
+                "backfill" if args.command in {"run-backfill", "backfill"}
+                else "live"
+            )
+            configure_logging(config, role=role)
         else:
             logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
         if args.command == "backfill":
-            with instance_lock(config):
+            with instance_lock(config, "backfill"):
                 summary = run_backfill(
                     config,
                     symbol=args.symbol,
@@ -121,7 +145,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     bars=args.bars,
                 )
         elif args.command == "live":
-            with instance_lock(config):
+            with instance_lock(config, "live"):
                 summary = run_live_cycle(
                     config,
                     symbol=args.symbol,
@@ -129,15 +153,20 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
         elif args.command == "check-sql":
             summary = check_connection(config)
-        elif args.command == "run":
+        elif args.command == "run-live":
             try:
-                summary = run_service(config)
+                summary = run_live_service(config)
+            except ValueError as exc:
+                raise RuntimeError("service runtime validation failed") from exc
+        elif args.command == "run-backfill":
+            try:
+                summary = run_backfill_service(config)
             except ValueError as exc:
                 raise RuntimeError("service runtime validation failed") from exc
         elif args.command == "stop":
-            summary = request_stop(config, wait_seconds=args.wait_seconds)
+            summary = request_stop(config, args.mode, wait_seconds=args.wait_seconds)
         elif args.command == "status":
-            summary = service_status(config)
+            summary = service_status(config, args.mode)
         elif args.command == "doctor":
             summary = _doctor(config)
         elif args.command == "settings":
@@ -145,7 +174,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif args.action == "status":
             summary = auth_status(config)
         else:
-            with instance_lock(config):
+            with instance_lock(config, "auth"):
                 refreshed = ensure_authenticated(config, force=True)
             summary = {
                 "ok": True,
@@ -176,10 +205,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 130
     except Exception as exc:
         is_auth = isinstance(exc, AuthError)
-        is_service = args.command == "run"
+        is_service = args.command in {"run-live", "run-backfill"}
         if is_service and config is not None:
             try:
-                record_service_failure(config, exc)
+                record_service_failure(config, "live" if args.command == "run-live" else "backfill", exc)
             except Exception:
                 pass
         log_event(
