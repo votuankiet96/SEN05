@@ -171,6 +171,12 @@ def test_discord_report_redacts_secrets_and_builds_operator_payload() -> None:
         {"last_live": {"failed": 0, "deferred": 4}}
     ) == "MEDIUM"
     assert discord_report._risk(
+        {"spool": {"pending": 2, "corrupt": 0, "oldest_age_seconds": 20}}
+    ) == "NONE"
+    assert discord_report._risk(
+        {"spool": {"pending": 2, "corrupt": 0, "oldest_age_seconds": 121}}
+    ) == "MEDIUM"
+    assert discord_report._risk(
         {
             "backfill_queue_remaining": 10,
             "last_backfill_progress_at": (
@@ -343,6 +349,41 @@ def test_discord_reporter_suppresses_duplicate_incidents_for_15_minutes() -> Non
         now[0] = 902
         reporter.publish("live", {"status": "running", "risk": "HIGH"})
     assert len(payloads) == 3
+
+
+def test_discord_reporter_sends_periodic_health_every_three_hours() -> None:
+    from dp_program.util.discord_report import DiscordReporter
+
+    now = [0.0]
+    payloads: list[dict] = []
+
+    def post(_url: str, *, json: dict, timeout: float) -> _Response:
+        payloads.append(json)
+        return _Response(204)
+
+    reporter = DiscordReporter(
+        {
+            "discord": {
+                "enabled": True,
+                "webhook_url": "https://discord.com/api/webhooks/123/secret",
+            }
+        },
+        post=post,
+        clock=lambda: now[0],
+    )
+    healthy = {
+        "status": "running",
+        "auth": {"ok": True},
+        "database": {"ok": True},
+        "spool": {"pending": 0, "corrupt": 0},
+    }
+    with reporter:
+        reporter.publish("health", healthy)
+        now[0] = 3600
+        reporter.publish("health", healthy)
+        now[0] = 10800
+        reporter.publish("health", healthy)
+    assert len(payloads) == 2
 
 
 def test_discord_reporter_never_suppresses_a_completed_backfill_generation() -> None:
