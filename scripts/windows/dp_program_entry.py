@@ -27,10 +27,23 @@ separate child process is also exactly how today's two independent
 work, so this preserves the existing per-workflow instance lock and
 state-file behaviour unchanged; this script only decides whether/how to
 launch each one, not how each one runs.
+
+Playwright browser path: when frozen by PyInstaller, Playwright's driver
+resolves its own bundled temp-extraction folder as the browser cache
+location (a "_MEI.../playwright/driver/package/.local-browsers/..." path
+that never has a browser in it) instead of the real, already-populated
+%LOCALAPPDATA%\\ms-playwright cache that run_dp/install.ps1 sets up (or
+that an existing `playwright install` already created on this machine).
+Pointing PLAYWRIGHT_BROWSERS_PATH at that real cache, before anything
+imports playwright, makes every launch path (headless, menu, watchdog,
+and the multiprocessing children below, which inherit this process's
+environment) resolve Chromium correctly without needing this env var set
+anywhere outside the frozen exe.
 """
 from __future__ import annotations
 
 import multiprocessing
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -38,6 +51,11 @@ from typing import Any, Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+os.environ.setdefault(
+    "PLAYWRIGHT_BROWSERS_PATH",
+    str(Path(os.environ.get("LOCALAPPDATA") or (Path.home() / "AppData" / "Local")) / "ms-playwright"),
+)
 
 _ROLES = ("live", "backfill")
 
