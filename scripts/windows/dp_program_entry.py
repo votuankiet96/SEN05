@@ -1,29 +1,43 @@
 """PyInstaller entry point for the standalone, config-driven engine .exe.
 
-No command-line argument needed: double-click dp_program.exe and it reads
-Config.yaml's live.enabled / backfill.enabled and starts whichever
-workflow(s) are turned on -- both, concurrently, if both are enabled.
-Config.yaml is the single source of truth for what runs; nothing about
-which workflow to run is hardcoded here.
+Three ways this can be launched:
+  - No arguments, non-interactive (Task Scheduler, no attached console):
+    unchanged from before -- reads Config.yaml's live.enabled /
+    backfill.enabled and starts whichever workflow(s) are turned on, both
+    concurrently if both are enabled. This is what the already-deployed
+    "SEN05 DP Program Engine" Scheduled Task relies on; it must keep
+    working exactly as today.
+  - No arguments, from a real interactive console (double-click, or run
+    from an open terminal): shows the operator menu (dp_program_menu.py)
+    instead of starting anything automatically.
+  - "--watchdog": run one health-check pass and exit (0 if live/backfill
+    both look healthy, 1 otherwise) -- meant to be invoked periodically by
+    a separate, repeating Scheduled Task (see dp_program_task_setup.py).
+    Mirrors scripts/windows/watchdog.py's check, duplicated here in a
+    dozen lines instead of imported, so the frozen exe never depends on a
+    second .py file being resolvable at runtime.
 
-Each enabled workflow runs in its own child OS process (multiprocessing,
-not threading): engine/runtime.py's run_live_service()/run_backfill_service()
-each call signal.signal(), which Python only allows from a thread's own
-process main thread -- running both in threads of one process would crash
-the second one. A separate child process is also exactly how today's two
-independent `python -m dp_program run-live` / `run-backfill` invocations
-already work, so this preserves the existing per-workflow instance lock
-and state-file behaviour unchanged; this script only decides whether to
+Each enabled live/backfill workflow runs in its own child OS process
+(multiprocessing, not threading): engine/runtime.py's
+run_live_service()/run_backfill_service() each call signal.signal(),
+which Python only allows from a thread's own process main thread --
+running both in threads of one process would crash the second one. A
+separate child process is also exactly how today's two independent
+`python -m dp_program run-live` / `run-backfill` invocations already
+work, so this preserves the existing per-workflow instance lock and
+state-file behaviour unchanged; this script only decides whether/how to
 launch each one, not how each one runs.
 """
 from __future__ import annotations
 
 import multiprocessing
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 _ROLES = ("live", "backfill")
 
@@ -59,8 +73,78 @@ def main_entry(
     return 0 if all(process.exitcode == 0 for process in processes) else 1
 
 
+def watchdog_once(config: dict[str, Any] | None = None) -> int:
+    """One-shot health check: alert on Discord if live/backfill looks unhealthy.
+
+    Never restarts or signals the engine -- Task Scheduler's own
+    restart-on-failure on the Engine task is what brings a crashed service
+    back. This only reads durable on-disk state and de-dupes repeat alerts
+    with a marker file, same as scripts/windows/watchdog.py does for the
+    source deployment.
+    """
+    from dp_program.configuration import load_config
+    from dp_program.engine.runtime import service_status
+    from dp_program.util.discord_report import send_watchdog_alert
+
+    if config is None:
+        config = load_config()
+    run_dir = Path(config["app"]["runtime_dir"]) / "run"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    unhealthy = False
+    for role in _ROLES:
+        marker = run_dir / f"watchdog_alerted_{role}"
+        status = service_status(config, role)
+        if status.get("ok"):
+            marker.unlink(missing_ok=True)
+            continue
+        unhealthy = True
+        if marker.exists():
+            continue
+        snapshot = {**status, "risk": "CRITICAL", "component": role}
+        send_watchdog_alert(config, f"{role}_service_down", snapshot)
+        marker.write_text(datetime.now(timezone.utc).isoformat(), encoding="ascii")
+    return 1 if unhealthy else 0
+
+
+def _interactive() -> bool:
+    """True only when launched from a real console the operator can type into."""
+    try:
+        return sys.stdin.isatty() and sys.stdout.isatty()
+    except Exception:
+        return False
+
+
+def _run_elevated_task_action(flag: str) -> int:
+    # Reached only in the *elevated* relaunch spawned by
+    # dp_program_task_setup.py's UAC prompt -- run the one requested
+    # Task Scheduler action and exit, pausing so the new console window
+    # doesn't flash-close before the operator can read the result.
+    from dp_program_task_setup import ACTION_FLAGS
+
+    import dp_program_task_setup as task_setup
+
+    action = getattr(task_setup, ACTION_FLAGS[flag])
+    try:
+        action()
+        code = 0
+    except Exception as exc:
+        print(f"ERROR: {exc}")
+        code = 1
+    input("\nNhan Enter de dong cua so nay...")
+    return code
+
+
 if __name__ == "__main__":
     multiprocessing.freeze_support()
+    if "--watchdog" in sys.argv[1:]:
+        raise SystemExit(watchdog_once())
+    _task_flags = [arg for arg in sys.argv[1:] if arg in ("--setup-engine-task", "--setup-watchdog-task", "--remove-tasks")]
+    if _task_flags:
+        raise SystemExit(_run_elevated_task_action(_task_flags[0]))
+    if _interactive():
+        from dp_program_menu import run_menu
+
+        raise SystemExit(run_menu())
     try:
         raise SystemExit(main_entry())
     except Exception as exc:  # operator-facing message instead of a raw traceback
