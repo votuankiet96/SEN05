@@ -19,8 +19,9 @@ from ..log import log_event
 
 LOGGER = logging.getLogger(__name__)
 # Health gửi định kỳ; cảnh báo lặp bị throttle để tránh spam.
-_PERIOD_SECONDS = 3600
+_PERIOD_SECONDS = 3 * 3600
 _DUPLICATE_SECONDS = 900
+_SPOOL_PENDING_WARNING_SECONDS = 120
 # Màu embed theo mức rủi ro.
 _COLORS = {"NONE": 0x2ECC71, "MEDIUM": 0xF1C40F, "HIGH": 0xE67E22, "CRITICAL": 0xE74C3C}
 # Gợi ý hành động ngắn cho operator trong Discord.
@@ -74,7 +75,9 @@ def _risk(snapshot: dict[str, Any]) -> str:
         or bool(snapshot.get("backfill_failed_pairs"))
     ):
         return "HIGH"
-    if float(spool.get("oldest_age_seconds") or 0) > 900:
+    spool_pending = int(spool.get("pending") or 0)
+    spool_age = float(spool.get("oldest_age_seconds") or 0)
+    if spool_age > 900:
         return "HIGH"
     progress = snapshot.get("last_backfill_progress_at")
     if int(snapshot.get("backfill_queue_remaining") or 0) and progress:
@@ -84,7 +87,9 @@ def _risk(snapshot: dict[str, Any]) -> str:
                 return "HIGH"
         except (TypeError, ValueError):
             pass
-    if int(spool.get("pending") or 0) or int(live.get("deferred") or 0):
+    # Spool pending vài giây là trạng thái bình thường khi đang commit SQL.
+    # Chỉ nâng cảnh báo nếu file tạm tồn tại đủ lâu để giống dấu hiệu kẹt.
+    if (spool_pending and spool_age > _SPOOL_PENDING_WARNING_SECONDS) or int(live.get("deferred") or 0):
         return "MEDIUM"
     return "NONE"
 

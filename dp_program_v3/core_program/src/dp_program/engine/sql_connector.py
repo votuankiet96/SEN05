@@ -358,6 +358,22 @@ def fetch_existing_candles(config: dict[str, Any], symbol_id: int, timeframe_cod
         }
     finally:
         if connection is None: active.close()
+def read_latest_candles(
+    config: dict[str, Any], symbol_id: int, timeframe_code: str, limit: int,
+) -> list[tuple[Any, ...]]:
+    """Read the most recent N committed Fact candles for one pair, oldest first."""
+    # Redis publisher dùng hàm này để lấy cửa sổ nến mới nhất cho một pair.
+    fact_table = _quoted_name(config["tables"]["fact_table"])
+    connection = get_connection(config)
+    try:
+        cursor = connection.cursor()
+        cursor.execute(f"""SELECT TOP (?) f.BarTime,f.[Open],f.High,f.Low,f.[Close],f.Volume
+            FROM {fact_table} f JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID=f.TimeframeID
+            WHERE f.SymbolID=? AND tf.Code=? ORDER BY f.BarTime DESC""",
+            int(limit), int(symbol_id), timeframe_code)
+        return list(reversed(cursor.fetchall()))
+    finally:
+        connection.close()
 def _require_contract(cursor: pyodbc.Cursor, procedure: str, expected: str) -> None:
     # Trước khi ghi SQL, kiểm stored procedure đúng version.
     cursor.execute("""SELECT CAST(value AS NVARCHAR(50)) FROM sys.extended_properties
