@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Iterator
 from ..log import log_event
 from ..util.discord_report import DiscordReporter
+from ..util.redis_publisher import seed_all_live_pairs
 from .sql_connector import Pair, pair_key, select_pairs
 from .auth import auth_status, ensure_authenticated
 from .backfill import next_backfill_group, prioritize_backfill_pairs, run_backfill_pairs
@@ -214,6 +215,7 @@ def run_live_service(config: dict[str, Any]) -> dict[str, Any]:
         if _stop_requested(config, "live"):
             return _finish(config, "live", state, reporter)
         live_pairs = _workflow_pairs(config, live=True)
+        seed_all_live_pairs(config, live_pairs)
         # Trước cycle đầu tiên: đăng nhập, kiểm SQL, ghi lại file tạm nếu có.
         credentials = ensure_authenticated(config); database = _wait_for_database(config); replay = drain(config)
         pending_live = {pair_key(pair) for pair in live_pairs}

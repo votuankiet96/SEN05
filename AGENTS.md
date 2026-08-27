@@ -57,6 +57,9 @@ Engine là package `dp_program` theo src layout. Các file chính:
 - `src/dp_program/__main__.py`: CLI.
 - `src/dp_program/util/discord_report.py`: reporter Discord tùy chọn, chỉ sống cùng
   lifecycle của `run`;
+- `src/dp_program/util/redis_publisher.py`: publisher Redis tùy chọn cho live — sau mỗi
+  lần một pair live ghi warehouse thành công, đọc lại nguyên cửa sổ nến mới nhất và
+  ghi đè sang Redis cho OG đọc; không chặn đường ghi SQL chính;
 - `src/dp_program/util/chart/server.py`: chart offline chạy thủ công, chỉ đọc Fact qua
   `sql_connector.py`.
 
@@ -83,8 +86,9 @@ Khi sửa code:
    code (dòng trống và dòng comment nguyên dòng không tính vào giới hạn này —
    xem `_code_line_count()` trong `test/test_v3.py` và `test/test_util.py`),
    riêng `sql_connector.py` tối đa 460 dòng code vì nó gộp SQL access và
-   contract để không tạo thêm file. Utility đúng 2 file Python; không tạo shim
-   hoặc owner trùng. Không dùng package `__init__.py` làm owner logic.
+   contract để không tạo thêm file. Utility đúng 3 file Python (`discord_report.py`,
+   `redis_publisher.py`, `chart/server.py`); không tạo shim hoặc owner trùng.
+   Không dùng package `__init__.py` làm owner logic.
 7. Code, identifier, chuỗi thông báo lỗi/log trong code, và application
    log dùng tiếng Anh. Riêng comment giải thích (dòng bắt đầu bằng `#`,
    và docstring) dùng tiếng Việt — xem `src/dp_program/configuration.py`

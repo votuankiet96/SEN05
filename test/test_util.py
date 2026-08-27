@@ -53,6 +53,15 @@ class _Connection:
         self.closed = True
 
 
+class _FakeRedisClient:
+    def __init__(self) -> None:
+        self.evals: list[tuple[str, int, tuple]] = []
+
+    def eval(self, script: str, numkeys: int, *keys_and_args: object) -> int:
+        self.evals.append((script, numkeys, keys_and_args))
+        return 1
+
+
 def _code_line_count(path: Path) -> int:
     """Count lines that carry logic, excluding blank lines and whole-line comments."""
     return sum(
@@ -83,6 +92,7 @@ def test_discord_config_gate_requires_webhook_only_when_enabled(tmp_path: Path) 
     source = {
         "app": {"log_level": "INFO", "runtime_dir": "runtime"},
         "discord": {"enabled": False, "webhook_url": ""},
+        "redis": {"enabled": False},
         "tradingview": {
             "auth_token": "",
             "cookie": "",
@@ -420,6 +430,131 @@ def test_discord_reporter_never_suppresses_a_completed_backfill_generation() -> 
     assert "555/555" in str(payloads[2])
 
 
+def test_redis_publisher_is_inert_when_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    from dp_program.util import redis_publisher
+
+    monkeypatch.setattr(
+        redis_publisher, "read_latest_candles",
+        lambda *_a, **_k: pytest.fail("SQL must not be read when Redis is disabled"),
+    )
+    publisher = redis_publisher._RedisPublisher()
+    publisher.enqueue({"redis": {"enabled": False}}, 1, "GOLD", "M5")
+    assert publisher._thread is None
+    assert publisher._queue.empty()
+
+
+def test_redis_publisher_overwrites_full_snapshot_on_each_publish(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from dp_program.util import redis_publisher
+
+    bar1 = datetime(2026, 7, 27, 12, 0)
+    bar2 = datetime(2026, 7, 27, 12, 5)
+    rows = [
+        (bar1, Decimal("1"), Decimal("2"), Decimal("0.5"), Decimal("1.5"), Decimal("10")),
+        (bar2, Decimal("1.5"), Decimal("2.5"), Decimal("1"), Decimal("2"), Decimal("12")),
+    ]
+    monkeypatch.setattr(redis_publisher, "read_latest_candles", lambda *_a, **_k: rows)
+    client = _FakeRedisClient()
+    publisher = redis_publisher._RedisPublisher()
+    monkeypatch.setattr(publisher, "_get_client", lambda _settings: client)
+
+    config = {
+        "redis": {
+            "enabled": True, "bars_per_snapshot": 500, "circuit_cooldown_seconds": 30,
+            "key_prefix": "dp:candles",
+        }
+    }
+    publisher._publish_one(config, 9, "US30", "H1")
+    assert len(client.evals) == 1  # one atomic replace call, never an incremental patch
+    script, numkeys, keys_and_args = client.evals[0]
+    assert "DEL" in script and "ZADD" in script
+    assert numkeys == 1
+    key, score1, member1, score2, member2 = keys_and_args
+    assert key == "dp:candles:H1:US30"
+    assert score1 == bar1.replace(tzinfo=timezone.utc).timestamp()
+    assert score2 == bar2.replace(tzinfo=timezone.utc).timestamp()
+    assert member1.count('"bartime"') == 1  # each member is exactly one candle
+    assert '"open":1.5' in member2  # Decimal converted to a real JSON number
+
+
+def test_redis_publisher_circuit_breaker_skips_after_failure_until_cooldown(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+) -> None:
+    from dp_program.util import redis_publisher
+
+    calls: list[int] = []
+
+    def _boom(*_a, **_k):
+        calls.append(1)
+        raise ConnectionError("redis down")
+
+    monkeypatch.setattr(redis_publisher, "read_latest_candles", _boom)
+    publisher = redis_publisher._RedisPublisher()
+    config = {
+        "redis": {
+            "enabled": True, "bars_per_snapshot": 500, "circuit_cooldown_seconds": 30,
+            "key_prefix": "dp:candles",
+        }
+    }
+
+    def _run_once() -> None:
+        try:
+            publisher._publish_one(config, 1, "GOLD", "M5")
+        except Exception as exc:  # mirrors what _worker_loop does around _publish_one
+            publisher._open_circuit(config, exc)
+
+    with caplog.at_level("WARNING", logger="dp_program.util.redis_publisher"):
+        _run_once()
+        _run_once()  # circuit already open: must skip, not call read_latest_candles again
+
+    assert len(calls) == 1
+    failures = [record for record in caplog.records if "REDIS_PUBLISH_FAILED" in record.message]
+    assert len(failures) == 1
+
+
+def test_redis_publisher_builds_client_from_config(monkeypatch: pytest.MonkeyPatch) -> None:
+    import redis as redis_module
+
+    from dp_program.util import redis_publisher
+
+    captured: dict = {}
+
+    class _FakeRedis:
+        def __init__(self, **kwargs: object) -> None:
+            captured.update(kwargs)
+
+    monkeypatch.setattr(redis_module, "Redis", _FakeRedis)
+    publisher = redis_publisher._RedisPublisher()
+    settings = {
+        "host": "10.11.12.8", "port": 6379, "db": 0,
+        "username": "", "password": "Redis@SEN05_2026", "timeout_seconds": 0.3,
+    }
+    client = publisher._get_client(settings)
+    assert isinstance(client, _FakeRedis)
+    assert captured["host"] == "10.11.12.8"
+    assert captured["password"] == "Redis@SEN05_2026"
+    assert captured["username"] is None  # empty string normalized to None
+
+
+def test_seed_all_live_pairs_enqueues_every_pair(monkeypatch: pytest.MonkeyPatch) -> None:
+    from dp_program.util import redis_publisher
+
+    calls: list[tuple] = []
+
+    class _FakePublisher:
+        def enqueue(self, _config, symbol_id, symbol, tf_code):
+            calls.append((symbol_id, symbol, tf_code))
+
+    monkeypatch.setattr(redis_publisher, "_publisher", _FakePublisher())
+    pairs = [
+        ({"symbol_id": 1, "symbol": "GOLD"}, {"code": "M5"}),
+        ({"symbol_id": 2, "symbol": "BTCUSD"}, {"code": "H1"}),
+    ]
+    redis_publisher.seed_all_live_pairs({"redis": {"enabled": True}}, pairs)
+    assert calls == [(1, "GOLD", "M5"), (2, "BTCUSD", "H1")]
+
+
 def test_chart_query_is_read_only_parameterized_and_returns_oldest_first(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -576,8 +711,8 @@ def test_exe_entry_spawns_nothing_when_both_workflows_disabled() -> None:
 
 
 def test_run_dp_example_config_matches_current_schema() -> None:
-    root = Path(__file__).resolve().parents[1]
-    example_config = (root / "run_dp" / "Config.example.yaml").read_text(encoding="utf-8")
+    run_dp = Path(__file__).resolve().parents[2] / "run_dp"
+    example_config = (run_dp / "Config.example.yaml").read_text(encoding="utf-8")
     assert "sql_server:" in example_config
     assert "tradingview:" in example_config
     # The example must never carry a real secret if someone edits it in
@@ -587,7 +722,9 @@ def test_run_dp_example_config_matches_current_schema() -> None:
 
 def test_run_dp_deploy_package_bundles_sql_installer_and_docs() -> None:
     root = Path(__file__).resolve().parents[1]
-    run_dp = root / "run_dp"
+    # run_dp/ is a sibling of the repo root (core_program/), not a subpath
+    # of it -- it is an untracked, regenerated build/deploy output folder.
+    run_dp = root.parent / "run_dp"
     sql_names = {path.name for path in (run_dp / "sql").glob("*.sql")}
     canonical_names = {path.name for path in (root / "scripts" / "sql").glob("*.sql")}
     assert sql_names == canonical_names
@@ -621,6 +758,7 @@ def test_utilities_have_strict_boundaries_and_offline_chart_asset() -> None:
     assert utility_python == [
         "src/dp_program/util/chart/server.py",
         "src/dp_program/util/discord_report.py",
+        "src/dp_program/util/redis_publisher.py",
     ]
     for relative in utility_python:
         assert _code_line_count(root / relative) <= 300
@@ -631,6 +769,15 @@ def test_utilities_have_strict_boundaries_and_offline_chart_asset() -> None:
         if "util.discord_report" in path.read_text(encoding="utf-8")
     }
     assert imports == {"src/dp_program/engine/runtime.py"}
+
+    redis_imports = {
+        path.relative_to(root).as_posix()
+        for path in (root / "src" / "dp_program").rglob("*.py")
+        if "util.redis_publisher" in path.read_text(encoding="utf-8")
+    }
+    assert redis_imports == {
+        "src/dp_program/engine/runtime.py", "src/dp_program/engine/live.py",
+    }
 
     from dp_program.util.chart import server
 

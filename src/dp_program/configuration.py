@@ -152,7 +152,7 @@ def _resolve_paths(config: dict[str, Any], root: Path) -> None:
 def _validate(config: dict[str, Any]) -> None:
     # Mọi section chính phải tồn tại trước khi đọc key bên trong.
     for section in (
-        "app", "tradingview", "discord", "backfill", "live", "service", "sql_server", "tables"
+        "app", "tradingview", "discord", "redis", "backfill", "live", "service", "sql_server", "tables"
     ):
         _mapping(config.get(section), section)
 
@@ -164,6 +164,42 @@ def _validate(config: dict[str, Any]) -> None:
         ("https://discord.com/api/webhooks/", "https://discordapp.com/api/webhooks/")
     ):
         raise ConfigError("discord.webhook_url must be configured when Discord is enabled")
+
+    # Redis: đẩy nến live cho OG đọc; tuỳ chọn bật/tắt, mặc định tắt.
+    # Operator không bắt buộc phải khai đủ mọi key khi Redis còn tắt — thiếu
+    # key nào thì dùng mặc định dưới đây, khai rồi thì vẫn bị kiểm kiểu chặt.
+    redis_cfg = config["redis"]
+    redis_cfg.setdefault("enabled", False)
+    redis_cfg.setdefault("host", "")
+    redis_cfg.setdefault("username", "")
+    redis_cfg.setdefault("password", "")
+    redis_cfg.setdefault("key_prefix", "dp:candles")
+    redis_cfg.setdefault("port", 6379)
+    redis_cfg.setdefault("db", 0)
+    redis_cfg.setdefault("bars_per_snapshot", 500)
+    redis_cfg.setdefault("circuit_cooldown_seconds", 30)
+    redis_cfg.setdefault("timeout_seconds", 0.3)
+    redis_cfg["enabled"] = _boolean(redis_cfg["enabled"], "redis.enabled")
+    redis_cfg["host"] = str(redis_cfg["host"] or "").strip()
+    redis_cfg["username"] = str(redis_cfg["username"] or "").strip()
+    redis_cfg["password"] = str(redis_cfg["password"] or "").strip()
+    redis_cfg["key_prefix"] = str(redis_cfg["key_prefix"] or "dp:candles").strip()
+    for key in ("port", "bars_per_snapshot", "circuit_cooldown_seconds"):
+        redis_cfg[key] = _positive_int(redis_cfg[key], f"redis.{key}")
+    try:
+        redis_cfg["db"] = int(redis_cfg["db"])
+    except (TypeError, ValueError) as exc:
+        raise ConfigError("redis.db must be an integer") from exc
+    if redis_cfg["db"] < 0:
+        raise ConfigError("redis.db must be zero or a positive integer")
+    try:
+        redis_cfg["timeout_seconds"] = float(redis_cfg["timeout_seconds"])
+    except (TypeError, ValueError) as exc:
+        raise ConfigError("redis.timeout_seconds must be a number") from exc
+    if redis_cfg["timeout_seconds"] <= 0:
+        raise ConfigError("redis.timeout_seconds must be greater than zero")
+    if redis_cfg["enabled"] and not redis_cfg["host"]:
+        raise ConfigError("redis.host must be configured when Redis is enabled")
 
     # TradingView: token/cookie và tài khoản dùng khi cần đăng nhập lại.
     tv = config["tradingview"]

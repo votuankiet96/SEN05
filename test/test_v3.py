@@ -87,6 +87,7 @@ def _operator_config_template() -> dict:
     return {
         "app": {"log_level": "INFO", "runtime_dir": "runtime"},
         "discord": {"enabled": False, "webhook_url": ""},
+        "redis": {"enabled": False},
         "tradingview": {
             "auth_token": "",
             "cookie": "",
