@@ -105,6 +105,19 @@ def _request_stop() -> None:
     _pause()
 
 
+def _open_chart() -> None:
+    from dp_program.util.chart.server import run_server
+
+    print("\nDang mo chart read-only tai http://127.0.0.1:8050 ... Nhan Ctrl+C de dong va quay lai menu.\n")
+    try:
+        run_server(open_browser=True)
+    except KeyboardInterrupt:
+        pass
+    except Exception as exc:
+        print(f"\nERROR: {exc}")
+    _pause()
+
+
 def _install_startup_task() -> None:
     from dp_program_task_setup import install_engine_task
 
@@ -134,9 +147,10 @@ _ACTIONS: dict[str, Callable[[], None]] = {
     "5": _run_both_foreground,
     "6": _view_logs,
     "7": _request_stop,
-    "8": _install_startup_task,
-    "9": _install_watchdog_task,
-    "10": _uninstall_tasks,
+    "8": _open_chart,
+    "9": _install_startup_task,
+    "10": _install_watchdog_task,
+    "11": _uninstall_tasks,
 }
 
 
@@ -150,10 +164,11 @@ def _print_menu() -> None:
     print("  5. Chay ca Live + Backfill (foreground)")
     print("  6. Xem log gan nhat")
     print("  7. Gui yeu cau dung an toan")
+    print("  8. Mo chart (read-only, http://127.0.0.1:8050)")
     print("\n  Cai dat van hanh nen (can quyen Administrator)")
-    print("  8. Cai dat khoi dong cung Windows + tu restart khi crash")
-    print("  9. Cai dat Watchdog (giam sat dinh ky, canh bao khi treo)")
-    print(" 10. Go cai dat (huy Task Scheduler da dang ky)")
+    print("  9. Cai dat khoi dong cung Windows + tu restart khi crash")
+    print(" 10. Cai dat Watchdog (giam sat dinh ky, canh bao khi treo)")
+    print(" 11. Go cai dat (huy Task Scheduler da dang ky)")
     print("\n  0. Thoat")
 
 
@@ -161,7 +176,7 @@ def run_menu() -> int:
     while True:
         _print_menu()
         try:
-            choice = input("\nChon [0-10]: ").strip()
+            choice = input("\nChon [0-11]: ").strip()
         except (EOFError, KeyboardInterrupt):
             return 0
         if choice == "0":

@@ -95,8 +95,12 @@ $installDir = "{install_dir}"
 $name = "{name}"
 $taskFolder = "{folder}"
 $action = New-ScheduledTaskAction -Execute $exePath -Argument "--watchdog" -WorkingDirectory $installDir
+# [TimeSpan]::MaxValue fails Task Scheduler's XML "value out of range"
+# validation (same issue documented in install_task.ps1's
+# Register-WatchdogTask); Task Scheduler has no true "forever" repetition
+# duration, so 10 years is the conventional stand-in.
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 5) `
-    -RepetitionDuration ([TimeSpan]::MaxValue)
+    -RepetitionDuration (New-TimeSpan -Days 3650)
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -Priority 7
 $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\\$env:USERNAME" -LogonType S4U -RunLevel Highest
 $definition = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings -Principal $principal

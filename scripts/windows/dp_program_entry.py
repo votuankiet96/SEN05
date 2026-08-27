@@ -61,6 +61,17 @@ _ROLES = ("live", "backfill")
 
 
 def _run_role(role: str) -> None:
+    # A previous graceful stop (menu option 7, or dp_program stop) leaves
+    # stop_<role>.request on disk; run_live.bat/run_backfill.bat's own
+    # :start label already clears this before launching the CLI directly,
+    # but that cleanup never ran for this entry point. Without it, a fresh
+    # start sees the stale request immediately and exits right away
+    # (SERVICE_STOPPED with no SERVICE_STARTED at all) instead of running.
+    from dp_program.configuration import load_config
+
+    config = load_config()
+    (Path(config["app"]["runtime_dir"]) / "run" / f"stop_{role}.request").unlink(missing_ok=True)
+
     from dp_program.__main__ import main
 
     raise SystemExit(main([f"run-{role}"]))
