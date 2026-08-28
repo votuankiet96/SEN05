@@ -143,11 +143,13 @@ def _interactive() -> bool:
         return False
 
 
-def _run_elevated_task_action(flag: str) -> int:
-    # Reached only in the *elevated* relaunch spawned by
-    # dp_program_task_setup.py's UAC prompt -- run the one requested
-    # Task Scheduler action and exit, pausing so the new console window
-    # doesn't flash-close before the operator can read the result.
+def _run_elevated_task_action(flag: str, *, pause_after: bool) -> int:
+    # Two callers reach this: dp_program_task_setup.py's own UAC relaunch
+    # (a brand-new console just for this one action -- pause_after=True so
+    # it doesn't flash-close before the operator reads the result), and
+    # install.ps1's Register-EngineTask, which is already elevated and
+    # calls this directly inline in its own automated, mostly-unattended
+    # flow -- pause_after=False there so a stray prompt never blocks it.
     from dp_program_task_setup import ACTION_FLAGS
 
     import dp_program_task_setup as task_setup
@@ -159,7 +161,8 @@ def _run_elevated_task_action(flag: str) -> int:
     except Exception as exc:
         print(f"ERROR: {exc}")
         code = 1
-    input("\nNhan Enter de dong cua so nay...")
+    if pause_after:
+        input("\nNhan Enter de dong cua so nay...")
     return code
 
 
@@ -169,7 +172,7 @@ if __name__ == "__main__":
         raise SystemExit(watchdog_once())
     _task_flags = [arg for arg in sys.argv[1:] if arg in ("--setup-engine-task", "--setup-watchdog-task", "--remove-tasks")]
     if _task_flags:
-        raise SystemExit(_run_elevated_task_action(_task_flags[0]))
+        raise SystemExit(_run_elevated_task_action(_task_flags[0], pause_after="--pause-after" in sys.argv[1:]))
     if _interactive():
         from dp_program_menu import run_menu
 

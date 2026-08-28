@@ -53,7 +53,13 @@ def _exe_path() -> Path:
 
 def _relaunch_elevated(action_flag: str) -> None:
     exe = _exe_path()
-    result = ctypes.windll.shell32.ShellExecuteW(None, "runas", str(exe), action_flag, str(exe.parent), 1)
+    # --pause-after: this relaunch opens a brand-new console just for this
+    # one action, so it needs to wait for the operator before closing.
+    # install.ps1's Register-EngineTask calls dp_program_entry directly
+    # (already elevated, no relaunch) and never passes this.
+    result = ctypes.windll.shell32.ShellExecuteW(
+        None, "runas", str(exe), f"{action_flag} --pause-after", str(exe.parent), 1
+    )
     if int(result) <= 32:
         raise RuntimeError("Khong xin duoc quyen Administrator (bi tu choi hoac UAC that bai).")
     print("Da mo 1 cua so moi voi quyen Administrator de thuc hien thao tac nay.")
