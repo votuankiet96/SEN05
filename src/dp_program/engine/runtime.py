@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Iterator
 from ..log import log_event
 from ..util.discord_report import DiscordReporter
-from ..util.redis_publisher import seed_all_live_pairs
+from ..util.redis_publisher import reconcile_all_live_pairs
 from .sql_connector import Pair, pair_key, select_pairs
 from .auth import auth_status, ensure_authenticated
 from .backfill import next_backfill_group, prioritize_backfill_pairs, run_backfill_pairs
@@ -215,7 +215,7 @@ def run_live_service(config: dict[str, Any]) -> dict[str, Any]:
         if _stop_requested(config, "live"):
             return _finish(config, "live", state, reporter)
         live_pairs = _workflow_pairs(config, live=True)
-        seed_all_live_pairs(config, live_pairs)
+        reconcile_all_live_pairs(config, live_pairs)
         # Trước cycle đầu tiên: đăng nhập, kiểm SQL, ghi lại file tạm nếu có.
         credentials = ensure_authenticated(config); database = _wait_for_database(config); replay = drain(config)
         pending_live = {pair_key(pair) for pair in live_pairs}
@@ -228,6 +228,10 @@ def run_live_service(config: dict[str, Any]) -> dict[str, Any]:
         log_event(LOGGER, logging.INFO, "SERVICE_STARTED", "NONE", component="runtime",
                   mode="live", live_pairs=len(live_pairs), auth_source=credentials["source"])
         interval = int(config["live"]["interval_minutes"]) * 60; next_heartbeat = time.monotonic()
+        # Đối chiếu Redis với SQL định kỳ, độc lập với cycle live: bù lại
+        # mọi lần cập nhật incremental hay Pub/Sub bị lỡ (hàng đợi đầy,
+        # circuit breaker mở, backfill/spool ghi SQL nhưng chưa publish...).
+        next_reconcile = time.monotonic() + int(config["redis"]["reconcile_interval_seconds"])
         while not _stop_requested(config, "live"):
             # Mỗi vòng là một cycle live.
             # Nếu chạy quá thời gian interval, cycle sau chạy ngay.
@@ -260,6 +264,9 @@ def run_live_service(config: dict[str, Any]) -> dict[str, Any]:
                 if time.monotonic() >= next_heartbeat:
                     state["spool"] = pending_status(config); _write_state(config, "live", state)
                     reporter.publish("health", state); next_heartbeat = time.monotonic() + int(config["service"]["heartbeat_seconds"])
+                if time.monotonic() >= next_reconcile:
+                    reconcile_all_live_pairs(config, live_pairs)
+                    next_reconcile = time.monotonic() + int(config["redis"]["reconcile_interval_seconds"])
                 time.sleep(1)
         return _finish(config, "live", state, reporter)
 

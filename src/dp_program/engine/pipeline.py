@@ -267,6 +267,10 @@ def fetch_and_store(
         "changed_before": changed,
         "unchanged_before": unchanged,
         "delivery_input": len(delivery),
+        # Danh sách nến thật sự vừa ghi SQL (mới hoặc sửa) -- live.py dùng
+        # đúng danh sách này để publish Redis incremental, không cần đọc
+        # lại SQL hay đoán "cái gì mới" ở tầng khác.
+        "delivered_candles": delivery,
         "gap_basis": "provider_observed",
         "calendar_closures_ignored": True,
         **sql_result,

@@ -438,14 +438,58 @@ def test_redis_publisher_is_inert_when_disabled(monkeypatch: pytest.MonkeyPatch)
         lambda *_a, **_k: pytest.fail("SQL must not be read when Redis is disabled"),
     )
     publisher = redis_publisher._RedisPublisher()
-    publisher.enqueue({"redis": {"enabled": False}}, 1, "GOLD", "M5")
+    publisher.enqueue({"redis": {"enabled": False}}, 1, "GOLD", "M5", [])
     assert publisher._thread is None
     assert publisher._queue.empty()
 
 
-def test_redis_publisher_overwrites_full_snapshot_on_each_publish(
+def _redis_config() -> dict:
+    return {
+        "redis": {
+            "enabled": True, "bars_per_snapshot": 500, "circuit_cooldown_seconds": 30,
+            "key_prefix": "dp:candles", "event_channel": "dp:events:candles",
+        }
+    }
+
+
+def test_redis_publisher_writes_only_the_changed_candles(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """The hot path never reads SQL -- it upserts exactly the candles live.py
+    already wrote, via HSET (not ZADD), and PUBLISHes them as one event."""
+    from dp_program.util import redis_publisher
+
+    monkeypatch.setattr(
+        redis_publisher, "read_latest_candles",
+        lambda *_a, **_k: pytest.fail("hot path must not read SQL -- it already has the candles"),
+    )
+    client = _FakeRedisClient()
+    publisher = redis_publisher._RedisPublisher()
+    monkeypatch.setattr(publisher, "_get_client", lambda _settings: client)
+
+    bar = datetime(2026, 7, 27, 12, 5)
+    candles = [{
+        "timestamp": bar, "open": Decimal("1.5"), "high": Decimal("2.5"),
+        "low": Decimal("1"), "close": Decimal("2"), "volume": Decimal("12"),
+    }]
+    publisher._publish_one(_redis_config(), "US30", "H1", candles)
+    assert len(client.evals) == 1
+    script, numkeys, rest = client.evals[0]
+    assert "HSET" in script and "PUBLISH" in script and "ZADD" not in script
+    assert numkeys == 3
+    data_key, order_key, channel, max_size, prefix, bartime, payload = rest
+    assert data_key == "dp:candles:H1:US30:data"
+    assert order_key == "dp:candles:H1:US30:order"
+    assert channel == "dp:events:candles"
+    assert bartime == str(int(bar.replace(tzinfo=timezone.utc).timestamp()))
+    assert '"open":1.5' in payload  # Decimal converted to a real JSON number
+
+
+def test_redis_publisher_reconcile_reads_sql_and_diffs_against_current_hash(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reconciliation (startup + periodic safety net) re-reads SQL truth and
+    sends it to the diff-and-patch script, not the incremental HSET script."""
     from dp_program.util import redis_publisher
 
     bar1 = datetime(2026, 7, 27, 12, 0)
@@ -459,23 +503,16 @@ def test_redis_publisher_overwrites_full_snapshot_on_each_publish(
     publisher = redis_publisher._RedisPublisher()
     monkeypatch.setattr(publisher, "_get_client", lambda _settings: client)
 
-    config = {
-        "redis": {
-            "enabled": True, "bars_per_snapshot": 500, "circuit_cooldown_seconds": 30,
-            "key_prefix": "dp:candles",
-        }
-    }
-    publisher._publish_one(config, 9, "US30", "H1")
-    assert len(client.evals) == 1  # one atomic replace call, never an incremental patch
-    script, numkeys, keys_and_args = client.evals[0]
-    assert "DEL" in script and "ZADD" in script
-    assert numkeys == 1
-    key, score1, member1, score2, member2 = keys_and_args
-    assert key == "dp:candles:H1:US30"
-    assert score1 == bar1.replace(tzinfo=timezone.utc).timestamp()
-    assert score2 == bar2.replace(tzinfo=timezone.utc).timestamp()
-    assert member1.count('"bartime"') == 1  # each member is exactly one candle
-    assert '"open":1.5' in member2  # Decimal converted to a real JSON number
+    publisher._reconcile_one(_redis_config(), 9, "US30", "H1")
+    assert len(client.evals) == 1
+    script, numkeys, rest = client.evals[0]
+    assert "HKEYS" in script and "HDEL" in script  # diffs and evicts, not a blind DEL+rewrite
+    assert numkeys == 2
+    data_key, order_key, bartime1, _payload1, bartime2, _payload2 = rest
+    assert data_key == "dp:candles:H1:US30:data"
+    assert order_key == "dp:candles:H1:US30:order"
+    assert bartime1 == str(int(bar1.replace(tzinfo=timezone.utc).timestamp()))
+    assert bartime2 == str(int(bar2.replace(tzinfo=timezone.utc).timestamp()))
 
 
 def test_redis_publisher_circuit_breaker_skips_after_failure_until_cooldown(
@@ -491,17 +528,12 @@ def test_redis_publisher_circuit_breaker_skips_after_failure_until_cooldown(
 
     monkeypatch.setattr(redis_publisher, "read_latest_candles", _boom)
     publisher = redis_publisher._RedisPublisher()
-    config = {
-        "redis": {
-            "enabled": True, "bars_per_snapshot": 500, "circuit_cooldown_seconds": 30,
-            "key_prefix": "dp:candles",
-        }
-    }
+    config = _redis_config()
 
     def _run_once() -> None:
         try:
-            publisher._publish_one(config, 1, "GOLD", "M5")
-        except Exception as exc:  # mirrors what _worker_loop does around _publish_one
+            publisher._reconcile_one(config, 1, "GOLD", "M5")
+        except Exception as exc:  # mirrors what _worker_loop does around _reconcile_one
             publisher._open_circuit(config, exc)
 
     with caplog.at_level("WARNING", logger="dp_program.util.redis_publisher"):
@@ -537,22 +569,23 @@ def test_redis_publisher_builds_client_from_config(monkeypatch: pytest.MonkeyPat
     assert captured["username"] is None  # empty string normalized to None
 
 
-def test_seed_all_live_pairs_enqueues_every_pair(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_reconcile_all_live_pairs_enqueues_every_pair(monkeypatch: pytest.MonkeyPatch) -> None:
     from dp_program.util import redis_publisher
 
     calls: list[tuple] = []
 
     class _FakePublisher:
-        def enqueue(self, _config, symbol_id, symbol, tf_code):
-            calls.append((symbol_id, symbol, tf_code))
+        def enqueue(self, _config, symbol_id, symbol, tf_code, candles):
+            calls.append((symbol_id, symbol, tf_code, candles))
 
     monkeypatch.setattr(redis_publisher, "_publisher", _FakePublisher())
     pairs = [
         ({"symbol_id": 1, "symbol": "GOLD"}, {"code": "M5"}),
         ({"symbol_id": 2, "symbol": "BTCUSD"}, {"code": "H1"}),
     ]
-    redis_publisher.seed_all_live_pairs({"redis": {"enabled": True}}, pairs)
-    assert calls == [(1, "GOLD", "M5"), (2, "BTCUSD", "H1")]
+    redis_publisher.reconcile_all_live_pairs({"redis": {"enabled": True}}, pairs)
+    # candles=None signals a full SQL reconciliation, not an incremental publish.
+    assert calls == [(1, "GOLD", "M5", None), (2, "BTCUSD", "H1", None)]
 
 
 def test_chart_query_is_read_only_parameterized_and_returns_oldest_first(

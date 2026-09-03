@@ -174,17 +174,20 @@ def _validate(config: dict[str, Any]) -> None:
     redis_cfg.setdefault("username", "")
     redis_cfg.setdefault("password", "")
     redis_cfg.setdefault("key_prefix", "dp:candles")
+    redis_cfg.setdefault("event_channel", "dp:events:candles")
     redis_cfg.setdefault("port", 6379)
     redis_cfg.setdefault("db", 0)
     redis_cfg.setdefault("bars_per_snapshot", 500)
     redis_cfg.setdefault("circuit_cooldown_seconds", 30)
+    redis_cfg.setdefault("reconcile_interval_seconds", 1800)
     redis_cfg.setdefault("timeout_seconds", 0.3)
     redis_cfg["enabled"] = _boolean(redis_cfg["enabled"], "redis.enabled")
     redis_cfg["host"] = str(redis_cfg["host"] or "").strip()
     redis_cfg["username"] = str(redis_cfg["username"] or "").strip()
     redis_cfg["password"] = str(redis_cfg["password"] or "").strip()
     redis_cfg["key_prefix"] = str(redis_cfg["key_prefix"] or "dp:candles").strip()
-    for key in ("port", "bars_per_snapshot", "circuit_cooldown_seconds"):
+    redis_cfg["event_channel"] = str(redis_cfg["event_channel"] or "dp:events:candles").strip()
+    for key in ("port", "bars_per_snapshot", "circuit_cooldown_seconds", "reconcile_interval_seconds"):
         redis_cfg[key] = _positive_int(redis_cfg[key], f"redis.{key}")
     try:
         redis_cfg["db"] = int(redis_cfg["db"])

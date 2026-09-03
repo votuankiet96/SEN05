@@ -255,6 +255,7 @@ def run_live_pairs(
                             if int(result["affected"]) > 0:
                                 publish_candle_update(
                                     config, symbol["symbol_id"], symbol["symbol"], timeframe["code"],
+                                    result["delivered_candles"],
                                 )
                             if display in prior_pending:
                                 recovered.append(display)

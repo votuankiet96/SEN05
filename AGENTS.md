@@ -57,9 +57,14 @@ Engine là package `dp_program` theo src layout. Các file chính:
 - `src/dp_program/__main__.py`: CLI.
 - `src/dp_program/util/discord_report.py`: reporter Discord tùy chọn, chỉ sống cùng
   lifecycle của `run`;
-- `src/dp_program/util/redis_publisher.py`: publisher Redis tùy chọn cho live — sau mỗi
-  lần một pair live ghi warehouse thành công, đọc lại nguyên cửa sổ nến mới nhất và
-  ghi đè sang Redis cho OG đọc; không chặn đường ghi SQL chính;
+- `src/dp_program/util/redis_publisher.py`: publisher Redis tùy chọn cho live — mỗi
+  pair có 1 Hash (`...:data`, field=bartime, value=JSON nến) và 1 List
+  (`...:order`, thứ tự bartime để tỉa cửa sổ trượt); sau mỗi lần một pair live
+  ghi warehouse thành công, chỉ HSET đúng các nến vừa thay đổi rồi PUBLISH JSON
+  các nến đó lên kênh `redis.event_channel` cho OG đọc, không đọc lại/ghi đè cả
+  cửa sổ; runtime còn tự đối chiếu (reconcile) toàn bộ Hash/List với SQL định kỳ
+  (`redis.reconcile_interval_seconds`) và lúc khởi động, để tự phục hồi mọi lần
+  publish incremental bị lỡ; không chặn đường ghi SQL chính;
 - `src/dp_program/util/chart/server.py`: chart offline chạy thủ công, chỉ đọc Fact qua
   `sql_connector.py`.
 

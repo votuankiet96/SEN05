@@ -850,7 +850,7 @@ def test_live_pending_pair_expands_bound_from_fact_watermark_and_recovers(
         attempts.append(kwargs["bars"])
         if len(attempts) == 1:
             raise pipeline.PipelineError("fetch", RuntimeError("partial"))
-        return {"affected": 1}
+        return {"affected": 1, "delivered_candles": []}
 
     def fetch(_config, requests):
         requests_seen.append(requests[0])
@@ -1065,7 +1065,7 @@ def test_one_live_pair_failure_does_not_block_the_next_pair(monkeypatch) -> None
         visited.append(symbol["symbol_id"])
         if symbol["symbol_id"] == 56:
             raise pipeline.PipelineError("fetch", RuntimeError("partial"))
-        return {"affected": 1}
+        return {"affected": 1, "delivered_candles": []}
 
     monkeypatch.setattr(
         live,
