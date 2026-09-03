@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import re
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -483,6 +485,17 @@ def test_redis_publisher_writes_only_the_changed_candles(
     assert channel == "dp:events:candles"
     assert bartime == str(int(bar.replace(tzinfo=timezone.utc).timestamp()))
     assert '"open":1.5' in payload  # Decimal converted to a real JSON number
+    # Mock Redis o day khong thuc thi Lua, nen no khong the tu bat loi
+    # neu chuoi noi trong script bi sai (vd thieu dau dong '}' -- day
+    # la loi that da xay ra va duoc redis_probe/pubsub_probe.py bat qua
+    # 1 event PUBLISH that khong parse duoc). Trich dung dung literal
+    # duoc noi sau table.concat(...) trong script that de dung lai
+    # chinh xac PUBLISH payload cuoi cung se la gi, roi parse thu --
+    # neu ai sua script lam vo JSON lan nua, dong assert nay se do.
+    suffix_match = re.search(r"table\.concat\(events, ','\)\s*\.\.\s*'([^']*)'", script)
+    assert suffix_match, "khong tim thay doan noi chuoi PUBLISH trong script Lua"
+    envelope = prefix + payload + suffix_match.group(1)
+    assert json.loads(envelope) == {"symbol": "US30", "timeframe": "H1", "candles": [json.loads(payload)]}
 
 
 def test_redis_publisher_reconcile_reads_sql_and_diffs_against_current_hash(

@@ -67,7 +67,10 @@ if size > max_size then
     end
 end
 if #events > 0 then
-    redis.call('PUBLISH', channel, event_prefix .. table.concat(events, ',') .. ']')
+    -- ']}' dong ca mang candles LAN object JSON ngoai cung (event_prefix
+    -- moi chi mo "{...:[" ) -- thieu '}' se sinh JSON cut cut, khong
+    -- parse duoc o phia consumer (bug that, pubsub_probe.py bat duoc).
+    redis.call('PUBLISH', channel, event_prefix .. table.concat(events, ',') .. ']}')
 end
 return 1
 """
