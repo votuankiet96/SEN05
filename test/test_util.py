@@ -498,6 +498,40 @@ def test_redis_publisher_writes_only_the_changed_candles(
     assert json.loads(envelope) == {"symbol": "US30", "timeframe": "H1", "candles": [json.loads(payload)]}
 
 
+def test_redis_publisher_skips_non_finite_candle_instead_of_crashing(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+) -> None:
+    """websocket.py's normalize_candle() should already reject NaN/Infinity at
+    the source (see test_engine_workflows.py), but this is the layer-2
+    backstop: even if a non-finite value ever reached here another way (a
+    real incident OG caught -- see REDIS_CANDLE_SKIPPED), it must never be
+    written to Redis, and a good candle in the same call must still go
+    through instead of the whole publish crashing."""
+    from dp_program.util import redis_publisher
+
+    client = _FakeRedisClient()
+    publisher = redis_publisher._RedisPublisher()
+    monkeypatch.setattr(publisher, "_get_client", lambda _settings: client)
+
+    good_bar, bad_bar = datetime(2026, 7, 27, 12, 5), datetime(2026, 7, 27, 12, 10)
+    candles = [
+        {"timestamp": good_bar, "open": Decimal("1.5"), "high": Decimal("2.5"),
+         "low": Decimal("1"), "close": Decimal("2"), "volume": Decimal("12")},
+        {"timestamp": bad_bar, "open": Decimal("1.5"), "high": Decimal("2.5"),
+         "low": Decimal("1"), "close": Decimal("nan"), "volume": Decimal("12")},
+    ]
+    with caplog.at_level("WARNING", logger="dp_program.util.redis_publisher"):
+        publisher._publish_one(_redis_config(), "US30", "H1", candles)
+
+    assert len(client.evals) == 1
+    _script, _numkeys, rest = client.evals[0]
+    _data_key, _order_key, _channel, _max_size, _prefix, bartime, payload = rest
+    assert bartime == str(int(good_bar.replace(tzinfo=timezone.utc).timestamp()))
+    assert "nan" not in payload.lower()
+    skipped = [r for r in caplog.records if "REDIS_CANDLE_SKIPPED" in r.message]
+    assert len(skipped) == 1
+
+
 def test_redis_publisher_reconcile_reads_sql_and_diffs_against_current_hash(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

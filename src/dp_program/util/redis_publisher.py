@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import queue
 import threading
 import time
@@ -112,13 +113,20 @@ def _epoch_key(bartime: Any) -> str:
 
 def _candle_json(bartime: Any, open_: Any, high: Any, low: Any, close: Any, volume: Any) -> str:
     text = bartime.isoformat(sep=" ") if hasattr(bartime, "isoformat") else str(bartime)
-    return json.dumps(
-        {
-            "bartime": text, "open": float(open_), "high": float(high), "low": float(low),
-            "close": float(close), "volume": float(volume) if volume is not None else None,
-        },
-        separators=(",", ":"),
-    )
+    values = {
+        "open": float(open_), "high": float(high), "low": float(low), "close": float(close),
+        "volume": float(volume) if volume is not None else None,
+    }
+    # Phòng thủ lớp 2 (lớp 1 là normalize_candle() trong websocket.py chặn
+    # ngay lúc parse provider): dù nguồn nào đưa tới đây (delivered_candles
+    # từ live, hay read_latest_candles lúc reconcile) mà lọt được giá trị
+    # không hữu hạn, KHÔNG được ghi -- json.dumps mặc định cho phép NaN
+    # thành literal NaN trong JSON, làm consumer đọc "thành công" một giá
+    # trị vô nghĩa thay vì báo lỗi rõ ràng.
+    non_finite = [key for key, value in values.items() if value is not None and not math.isfinite(value)]
+    if non_finite:
+        raise ValueError(f"non-finite candle value(s): {', '.join(non_finite)}")
+    return json.dumps({"bartime": text, **values}, separators=(",", ":"))
 
 
 def _pipeline_candles_to_args(candles: list[dict[str, Any]]) -> list[str]:
@@ -127,19 +135,35 @@ def _pipeline_candles_to_args(candles: list[dict[str, Any]]) -> list[str]:
     args: list[str] = []
     for candle in candles:
         bartime = candle["timestamp"]
+        try:
+            payload = _candle_json(
+                bartime, candle["open"], candle["high"], candle["low"],
+                candle["close"], candle.get("volume"),
+            )
+        except ValueError as exc:
+            log_event(
+                LOGGER, logging.WARNING, "REDIS_CANDLE_SKIPPED", "MEDIUM", component="redis",
+                bartime=str(bartime), error=str(exc), action="skipped, next fetch/reconcile will overwrite",
+            )
+            continue
         args.append(_epoch_key(bartime))
-        args.append(_candle_json(
-            bartime, candle["open"], candle["high"], candle["low"],
-            candle["close"], candle.get("volume"),
-        ))
+        args.append(payload)
     return args
 
 
 def _sql_rows_to_args(rows: list[tuple[Any, ...]]) -> list[str]:
     args: list[str] = []
     for bartime, open_, high, low, close, volume in rows:
+        try:
+            payload = _candle_json(bartime, open_, high, low, close, volume)
+        except ValueError as exc:
+            log_event(
+                LOGGER, logging.WARNING, "REDIS_CANDLE_SKIPPED", "MEDIUM", component="redis",
+                bartime=str(bartime), error=str(exc), action="skipped, next fetch/reconcile will overwrite",
+            )
+            continue
         args.append(_epoch_key(bartime))
-        args.append(_candle_json(bartime, open_, high, low, close, volume))
+        args.append(payload)
     return args
 
 

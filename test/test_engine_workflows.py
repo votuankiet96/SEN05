@@ -351,6 +351,19 @@ def test_malformed_provider_bar_is_rejected_not_silently_dropped() -> None:
         websocket.parse_series_message(message, _symbol(), _timeframe())
 
 
+@pytest.mark.parametrize("bad_close", (float("nan"), float("inf"), float("-inf")))
+def test_non_finite_provider_price_is_rejected_not_forwarded(bad_close: float) -> None:
+    """Decimal("nan")/Decimal("inf") build fine (no exception) -- a NaN/Infinity
+    close from the provider must still fail closed here, not ride all the way
+    to the JSON redis_publisher.py writes for OG to reject downstream."""
+    message = {
+        "m": "timescale_update",
+        "p": ["cs_test", {"s1": {"s": [{"v": [1_700_000_000, 100, 101, 99, bad_close, 10]}]}}],
+    }
+    with pytest.raises(websocket.InvalidCandleError, match="non-finite"):
+        websocket.parse_series_message(message, _symbol(), _timeframe())
+
+
 @pytest.mark.parametrize(
     "message",
     (
