@@ -85,9 +85,8 @@ def normalize_candle(values: list[Any], symbol: dict[str, Any],
         raise InvalidCandleError("provider candle contains invalid values") from exc
     # Decimal("nan")/Decimal("inf") không raise ở try trên -- provider từng
     # thoáng qua trả NaN cho 1 giá OHLC, lọt tới tận JSON ghi Redis. Chặn
-    # ngay tại nguồn; nêu đúng field + bartime để lần sau còn biết field
-    # nào, lúc nào -- lần trước chỉ ghi chung chung "non-finite value".
-    if (bad := [n for n, p in zip(("open", "high", "low", "close", "volume"), (*prices, volume)) if p is not None and not p.is_finite()]): raise InvalidCandleError(f"provider candle has non-finite {','.join(bad)} at {timestamp.isoformat()}")
+    # ngay tại nguồn để rơi vào đúng đường retry/catch-up có sẵn.
+    if not all(p.is_finite() for p in [*prices, volume] if p is not None): raise InvalidCandleError("provider candle contains a non-finite value")
     return {"symbol_id": int(symbol["symbol_id"]), "symbol": symbol["symbol"],
         "exchange": symbol["exchange"], "timeframe": timeframe["code"],
         "timestamp": timestamp, "open": prices[0], "high": prices[1],
