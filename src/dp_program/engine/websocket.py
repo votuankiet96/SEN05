@@ -83,10 +83,6 @@ def normalize_candle(values: list[Any], symbol: dict[str, Any],
         volume = None if values[5] is None else Decimal(str(values[5]))
     except (InvalidOperation, TypeError, ValueError, OSError) as exc:
         raise InvalidCandleError("provider candle contains invalid values") from exc
-    # Decimal("nan")/Decimal("inf") không raise ở try trên -- provider từng
-    # thoáng qua trả NaN cho 1 giá OHLC, lọt tới tận JSON ghi Redis. Chặn
-    # ngay tại nguồn để rơi vào đúng đường retry/catch-up có sẵn.
-    if not all(p.is_finite() for p in [*prices, volume] if p is not None): raise InvalidCandleError("provider candle contains a non-finite value")
     return {"symbol_id": int(symbol["symbol_id"]), "symbol": symbol["symbol"],
         "exchange": symbol["exchange"], "timeframe": timeframe["code"],
         "timestamp": timestamp, "open": prices[0], "high": prices[1],
@@ -103,7 +99,8 @@ def parse_series_message(message: str | dict[str, Any], symbol: dict[str, Any],
     if not isinstance(payload, dict): raise MalformedResponseError("provider message is not an object")
     if payload.get("m") not in _DATA_MESSAGES: return []
     params = payload.get("p")
-    if not isinstance(params, list) or len(params) < 2 or not isinstance(params[1], dict): raise MalformedResponseError("provider data message has invalid parameters")
+    if not isinstance(params, list) or len(params) < 2 or not isinstance(params[1], dict):
+        raise MalformedResponseError("provider data message has invalid parameters")
     if series_id not in params[1]: raise MalformedResponseError("provider data message omits the requested series")
     series = params[1][series_id]
     if not isinstance(series, dict): raise MalformedResponseError("provider series is not an object")
