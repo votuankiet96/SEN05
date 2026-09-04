@@ -42,9 +42,13 @@ _TECHNICAL_DEFAULTS = {
     "tradingview": {
         "websocket_url": "wss://prodata.tradingview.com/socket.io/websocket",
         "timezone": "Etc/UTC",
-        "timeout_seconds": 45,
+        # Giảm từ 45/5 xuống 15/3 (giữ nguyên retry_count=3, cùng số lần thử)
+        # để live.interval_minutes rút xuống 2 phút vẫn còn đủ chỗ cho
+        # backfill_guard_seconds an toàn -- xem
+        # test_config_loads_operator_settings_without_static_universe.
+        "timeout_seconds": 15,
         "retry_count": 3,
-        "retry_delay_seconds": 5,
+        "retry_delay_seconds": 3,
         # Nơi Chromium lưu phiên đăng nhập khi cần lấy cookie mới.
         "browser_profile_dir": "runtime/cache/tradingview-profile",
         # Khi cần login lại, mở browser ẩn và đăng nhập mới.
@@ -60,7 +64,7 @@ _TECHNICAL_DEFAULTS = {
     },
     # Nhịp service 24/7: heartbeat, thời gian chờ startup và log rotation.
     "service": {
-        "backfill_guard_seconds": 150, "startup_grace_seconds": 300,
+        "backfill_guard_seconds": 60, "startup_grace_seconds": 300,
         "heartbeat_seconds": 15,
         "log_max_bytes": 20971520,
         "log_backup_count": 30,

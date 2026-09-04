@@ -2041,7 +2041,7 @@ def test_runtime_uses_one_private_yaml_configuration(tmp_path) -> None:
         "enabled", "interval_minutes", "bars_per_request",
         "closed_candles_only", "symbols", "timeframes",
     }
-    assert config["live"]["interval_minutes"] == 5
+    assert config["live"]["interval_minutes"] == 2
     assert config["live"]["bars_per_request"] == 3
     assert config["live"]["closed_candles_only"] is True
 
