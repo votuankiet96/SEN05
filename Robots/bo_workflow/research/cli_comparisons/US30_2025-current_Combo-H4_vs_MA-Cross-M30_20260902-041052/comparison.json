@@ -1,0 +1,55 @@
+﻿{
+    "Comparable":  false,
+    "DifferenceReasons":  [
+                              "Bot=[Combo, MA Cross]",
+                              "Period=[h4, m30]"
+                          ],
+    "RankedByNetProfit":  [
+                              {
+                                  "RunName":  "MA Cross_US30.cash_m30_20260902-040711",
+                                  "Bot":  "MA Cross",
+                                  "Symbol":  "US30.cash",
+                                  "Period":  "m30",
+                                  "StartDate":  "2025-01-01",
+                                  "EndDate":  "2026-09-02",
+                                  "DataMode":  "tickDataFromServer",
+                                  "StartingCapital":  10000,
+                                  "EndingBalance":  10408.529999999993,
+                                  "NetProfit":  408.53,
+                                  "ROI":  4.09,
+                                  "ProfitFactor":  1.03,
+                                  "TotalTrades":  310,
+                                  "WinningTrades":  157,
+                                  "LosingTrades":  153,
+                                  "WinRatePct":  50.65,
+                                  "MaxBalanceDrawdownPct":  18.000265536473098,
+                                  "MaxEquityDrawdownPct":  18.93955626729216,
+                                  "Parameters":  "{\"SignalFilePath\":\"Z:\\\\Desktop\\\\og_program\\\\runtime\\\\exports\\\\ma_cross_US30_M30_full_history_signals.csv\",\"KslLevel\":\"Fib0618\",\"KtpLevel\":\"Fib0618\",\"RiskPercent\":1,\"EnableDailyLossLimit\":\"false\",\"MaxDailyLossPercent\":5,\"EnableMaxDrawdown\":\"false\",\"MaxTotalDrawdownPercent\":10,\"EnableMaxConsecutiveLosses\":\"false\",\"MaxConsecutiveLosses\":5}",
+                                  "RunDirectory":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\MA Cross_US30.cash_m30_20260902-040711",
+                                  "ReportJsonPath":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\MA Cross_US30.cash_m30_20260902-040711\\report.json"
+                              },
+                              {
+                                  "RunName":  "Combo_US30.cash_h4_20260902-034316",
+                                  "Bot":  "Combo",
+                                  "Symbol":  "US30.cash",
+                                  "Period":  "h4",
+                                  "StartDate":  "2025-01-01",
+                                  "EndDate":  "2026-09-02",
+                                  "DataMode":  "tickDataFromServer",
+                                  "StartingCapital":  10000,
+                                  "EndingBalance":  9766.53,
+                                  "NetProfit":  -233.47,
+                                  "ROI":  -2.33,
+                                  "ProfitFactor":  0.97,
+                                  "TotalTrades":  153,
+                                  "WinningTrades":  79,
+                                  "LosingTrades":  74,
+                                  "WinRatePct":  51.63,
+                                  "MaxBalanceDrawdownPct":  15.535838484178127,
+                                  "MaxEquityDrawdownPct":  17.431469536123714,
+                                  "Parameters":  "{\"SignalFilePath\":\"Z:\\\\Desktop\\\\og_program\\\\runtime\\\\exports\\\\combo_US30_H4_full_history_signals.csv\",\"KslLevel\":\"Fib0618\",\"KtpLevel\":\"Fib0618\",\"RiskPercent\":1,\"EnableDailyLossLimit\":\"false\",\"MaxDailyLossPercent\":5,\"EnableMaxDrawdown\":\"false\",\"MaxTotalDrawdownPercent\":10,\"EnableMaxConsecutiveLosses\":\"false\",\"MaxConsecutiveLosses\":5}",
+                                  "RunDirectory":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_US30.cash_h4_20260902-034316",
+                                  "ReportJsonPath":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_US30.cash_h4_20260902-034316\\report.json"
+                              }
+                          ]
+}

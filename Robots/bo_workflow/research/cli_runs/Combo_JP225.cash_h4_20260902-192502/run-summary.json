@@ -1,0 +1,39 @@
+﻿{
+    "SchemaVersion":  1,
+    "CreatedAtUtc":  "2026-09-03T02:25:23.2954074Z",
+    "Success":  false,
+    "FailureReason":  "ReportJsonMissing",
+    "Input":  {
+                  "AlgoPath":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\Combo.algo",
+                  "AlgoSHA256":  "F55E7FBA663B6A212C7F19D6E63E2482F922E0B7865411CE19DA7B66780C04B7",
+                  "SymbolInput":  "JP225.cash",
+                  "ResolvedSymbol":  "JP225.cash",
+                  "Period":  "h4",
+                  "StartDate":  "2025-01-01",
+                  "EndDate":  "2025-01-15",
+                  "DataMode":  "Ticks",
+                  "Broker":  "FTMO Platform",
+                  "Account":  "7563609",
+                  "Parameters":  {
+                                     "RiskPercent":  0.5,
+                                     "SignalFilePath":  "Z:\\Desktop\\og_program\\runtime\\exports\\combo_J225_H4_full_history_signals.csv"
+                                 },
+                  "SignalFile":  {
+                                     "Path":  "Z:\\Desktop\\og_program\\runtime\\exports\\combo_J225_H4_full_history_signals.csv",
+                                     "Length":  56316,
+                                     "LastWriteTime":  "2026-09-01T15:48:43.0000000Z",
+                                     "SHA256":  "323F642441B807C4F3E214A8BB17A17866674122E6E3FE9ACE92DC2C4015BE58"
+                                 }
+              },
+    "Actual":  {
+                   "StartDate":  null,
+                   "EndDate":  null
+               },
+    "Metrics":  null,
+    "Artifacts":  {
+                      "Params":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_JP225.cash_h4_20260902-192502\\params.cbotset",
+                      "Command":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_JP225.cash_h4_20260902-192502\\command.txt",
+                      "Log":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_JP225.cash_h4_20260902-192502\\log.txt",
+                      "ReportJson":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_JP225.cash_h4_20260902-192502\\report.json"
+                  }
+}

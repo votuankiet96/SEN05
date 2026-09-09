@@ -1,0 +1,84 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_UK100.cash_h4_20260901-2128\params.cbotset 
+--start=01/01/2025 --end=09/01/2026 --data-mode=Ticks --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --symbol=UK100.cash --period=h4 --full-access 
+--report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_UK100.cash_h4_20260901-2128
+\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...128\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | UK100.cash                | cmd arg              |
+| Period               | h4                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 09/01/2026 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 3                         | default value        |
+| KtpLevel             | 3                         | default value        |
+| RiskPercent          | 0.5                       | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+02/09/2026 04:28:58.271 | Establishing connection using votuankiet96@gmail.com...
+02/09/2026 04:29:01.466 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Progress | Loading UK100.cash, h4 | 100.00 % |
+Info | CBot instance [Combo, UK100.cash, h4] started.
+Progress | Backtesting | 0.28 % |
+Progress | Backtesting | 0.41 % |
+Progress | Backtesting | 0.43 % |
+Progress | Backtesting | 0.45 % |
+Progress | Backtesting | 0.47 % |
+Progress | Backtesting | 0.50 % |
+Progress | Backtesting | 0.61 % |
+Progress | Backtesting | 0.67 % |
+Progress | Backtesting | 0.71 % |
+Progress | Backtesting | 1.34 % |
+Progress | Backtesting | 1.46 % |
+Progress | Backtesting | 1.57 % |
+Progress | Backtesting | 1.59 % |
+Progress | Loading GBPUSD, h4 | 100.00 % |
+02/01/2025 01:05:00.006 | Info | Combo: loaded 1243 valid signal row(s) from CSV.
+02/01/2025 01:05:00.006 | Info | Combo: signal scheduling active with chart timeframe h4 (04:00:00); CSV timeframe must match the chart timeframe.
+06/01/2025 23:05:00.003 | Trade | Placing Stop Order to Sell 2.01 UK100.cash (Price: 8187.9, SL: 8206.37642642193, TP: 8169.42)
+06/01/2025 23:05:00.003 | Trade |  Placing Stop Order to Sell 2.01 UK100.cash (Price: 8187.9, SL: 8206.37642642193, TP: 8169.42) SUCCEEDED, PendingOrder OID1
+06/01/2025 23:05:00.003 | Info | Combo: bartime=2025-01-06 19:00, executed=2025-01-06 23:05:00, pending Sell placed at 8187.9; SL=8206.376426421932, TP=8169.423573578068; valid for the next 3 chart bar(s).
+Error | CBot instance [Combo, UK100.cash, h4] aborted by timeout.
+{
+	"Equity":,
+	"NetProfit":-,
+	"MaxBalanceDrawdownPercentages":-,
+	"MaxEquityDrawdownPercentages":-,
+	"MaxBalanceDrawdown":-,
+	"MaxEquityDrawdown":-,
+	"WinningTrades":-,
+	"LosingTrades":-,
+	"TotalTrades":-,
+	"AverageTrade":-,
+	"ProfitFactor":-,
+	"Fitness":0
+}
+Message expected
+System.InvalidOperationException: Message expected
+   at cTrader.Console.Infrastructure.StateMachine.Strategies.BacktestReportSavingStateStrategy.DoEnter()
+   at cTrader.Console.Infrastructure.StateMachine.Strategies.ConsoleStateStrategyBase.Enter()
+   at cTrader.Console.Infrastructure.StateMachine.ConsoleApplicationLifecycleStateMachine.OnMovedToLifecycleState(IConsoleApplicationLifecycleStateStrategy newStateStrategy)
+   at cTrader.Console.Infrastructure.StateMachine.ConsoleApplicationLifecycleStateTransition.InternalMoveTo(ConsoleApplicationLifecycleState state)
+   at cTrader.Console.Infrastructure.StateMachine.ConsoleApplicationLifecycleStateTransition.<>c__DisplayClass7_0.<MoveTo>b__0()
+   at cTrader.Console.Infrastructure.Dispatcher.ConsoleThreadDispatcher.<>c__DisplayClass12_0.<ExecuteInternalAsync>g__ExecuteAction|0()
+

@@ -1,0 +1,570 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_leverage_crosscheck_2025H1\SP35\params.cbotset 
+--start=01/01/2025 --end=01/07/2025 --data-mode=M1 --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=SPN35.cash 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_leverage_crosscheck_2025H1\SP35\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...P35\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | SPN35.cash                | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 01/07/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | M1                        | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 2                         | cbotset              |
+| KtpLevel             | 4                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 50                        | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+04/09/2026 04:54:56.845 | Establishing connection using votuankiet96@gmail.com...
+04/09/2026 04:55:01.625 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Info | CBot instance [Combo, SPN35.cash, h1] started.
+Progress | Backtesting | 0.73 % |
+Progress | Backtesting | 0.78 % |
+Progress | Backtesting | 0.78 % |
+Progress | Backtesting | 2.93 % |
+Progress | Backtesting | 8.03 % |
+Progress | Backtesting | 10.62 % |
+Progress | Backtesting | 11.72 % |
+Progress | Backtesting | 14.47 % |
+Progress | Backtesting | 16.67 % |
+Progress | Backtesting | 19.42 % |
+Progress | Backtesting | 22.16 % |
+Progress | Backtesting | 24.36 % |
+Progress | Backtesting | 27.11 % |
+Progress | Backtesting | 29.86 % |
+Progress | Backtesting | 31.69 % |
+Progress | Backtesting | 34.80 % |
+Progress | Backtesting | 38.12 % |
+Progress | Backtesting | 41.39 % |
+Progress | Backtesting | 45.24 % |
+Progress | Backtesting | 47.44 % |
+Progress | Backtesting | 54.01 % |
+Progress | Backtesting | 56.93 % |
+Progress | Backtesting | 61.15 % |
+Progress | Backtesting | 64.45 % |
+Progress | Backtesting | 68.29 % |
+Progress | Backtesting | 70.49 % |
+Progress | Backtesting | 73.79 % |
+Progress | Backtesting | 76.67 % |
+Progress | Backtesting | 79.83 % |
+Progress | Backtesting | 82.03 % |
+Progress | Backtesting | 84.78 % |
+Progress | Backtesting | 87.52 % |
+Progress | Backtesting | 89.72 % |
+Progress | Backtesting | 93.25 % |
+Progress | Backtesting | 95.77 % |
+02/01/2025 08:05:00.000 | Info | Combo: loaded 2212 valid signal row(s) from CSV.
+02/01/2025 08:05:00.000 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+02/01/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 1.93 SPN35.cash (Price: 11490, SL: 11533.8275838617, TP: 11375.26)
+02/01/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 1.93 SPN35.cash (Price: 11490, SL: 11533.8275838617, TP: 11375.26) SUCCEEDED, PendingOrder OID1
+02/01/2025 10:00:00.000 | Info | Combo: bartime=2025-01-02 09:00, executed=2025-01-02 10:00:00, pending Sell placed at 11490; SL=11533.827583861712, TP=11375.259385450041; valid for the next 3 chart bar(s).
+02/01/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 1.86 SPN35.cash (Price: 11569, SL: 11524.0578216502, TP: 11686.66)
+02/01/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 1.86 SPN35.cash (Price: 11569, SL: 11524.0578216502, TP: 11686.66) SUCCEEDED, PendingOrder OID4
+02/01/2025 14:00:00.000 | Info | Combo: bartime=2025-01-02 13:00, executed=2025-01-02 14:00:00, pending Buy placed at 11569; SL=11524.057821650244, TP=11686.658622919664; valid for the next 3 chart bar(s).
+06/01/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 1.99 SPN35.cash (Price: 11585.6, SL: 11628.6615244773, TP: 11472.86)
+06/01/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 1.99 SPN35.cash (Price: 11585.6, SL: 11628.6615244773, TP: 11472.86) SUCCEEDED, PendingOrder OID7
+06/01/2025 10:00:00.000 | Info | Combo: bartime=2025-01-06 09:00, executed=2025-01-06 10:00:00, pending Sell placed at 11585.6; SL=11628.661524477266, TP=11472.86492891852; valid for the next 3 chart bar(s).
+06/01/2025 12:00:00.000 | Info | Combo: bartime=2025-01-06 11:00, reversal - cancelling existing Sell pending order 7 before opening opposite direction.
+06/01/2025 12:00:00.000 | Trade | Cancelling pending order OID7
+06/01/2025 12:00:00.000 | Trade |  Cancelling pending order OID7 SUCCEEDED
+06/01/2025 12:00:00.000 | Trade | Placing Stop Order to Buy 1.5 SPN35.cash (Price: 11740.6, SL: 11683.6206243346, TP: 11889.77)
+06/01/2025 12:00:00.000 | Trade |  Placing Stop Order to Buy 1.5 SPN35.cash (Price: 11740.6, SL: 11683.6206243346, TP: 11889.77) SUCCEEDED, PendingOrder OID8
+06/01/2025 12:00:00.000 | Info | Combo: bartime=2025-01-06 11:00, executed=2025-01-06 12:00:00, pending Buy placed at 11740.6; SL=11683.620624334551, TP=11889.772005492148; valid for the next 3 chart bar(s).
+08/01/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 1.35 SPN35.cash (Price: 11697.1, SL: 11759.5870429492, TP: 11533.51)
+08/01/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 1.35 SPN35.cash (Price: 11697.1, SL: 11759.5870429492, TP: 11533.51) SUCCEEDED, PendingOrder OID11
+08/01/2025 12:00:00.000 | Info | Combo: bartime=2025-01-08 11:00, executed=2025-01-08 12:00:00, pending Sell placed at 11697.1; SL=11759.587042949173, TP=11533.508921559065; valid for the next 3 chart bar(s).
+08/01/2025 15:00:00.000 | Trade | Cancelling pending order OID11
+08/01/2025 15:00:00.000 | Trade |  Cancelling pending order OID11 SUCCEEDED
+08/01/2025 15:00:00.000 | Info | Combo: pending order 11 cancelled after 3 chart bars.
+09/01/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 1.5 SPN35.cash (Price: 11834.3, SL: 11777.8426002499, TP: 11982.11)
+09/01/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 1.5 SPN35.cash (Price: 11834.3, SL: 11777.8426002499, TP: 11982.11) SUCCEEDED, PendingOrder OID12
+09/01/2025 09:00:00.000 | Info | Combo: bartime=2025-01-09 08:00, executed=2025-01-09 09:00:00, pending Buy placed at 11834.3; SL=11777.842600249924, TP=11982.1054725457; valid for the next 3 chart bar(s).
+10/01/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 2.02 SPN35.cash (Price: 11756.6, SL: 11797.9870063755, TP: 11648.25)
+10/01/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 2.02 SPN35.cash (Price: 11756.6, SL: 11797.9870063755, TP: 11648.25) SUCCEEDED, PendingOrder OID15
+10/01/2025 09:00:00.000 | Info | Combo: bartime=2025-01-10 08:00, executed=2025-01-10 09:00:00, pending Sell placed at 11756.6; SL=11797.987006375548, TP=11648.248817308815; valid for the next 3 chart bar(s).
+10/01/2025 12:00:00.000 | Trade | Cancelling pending order OID15
+10/01/2025 12:00:00.000 | Trade |  Cancelling pending order OID15 SUCCEEDED
+10/01/2025 12:00:00.000 | Info | Combo: pending order 15 cancelled after 3 chart bars.
+13/01/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 1.84 SPN35.cash (Price: 11723.3, SL: 11677.8880233957, TP: 11842.19)
+13/01/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 1.84 SPN35.cash (Price: 11723.3, SL: 11677.8880233957, TP: 11842.19) SUCCEEDED, PendingOrder OID16
+13/01/2025 18:00:00.000 | Info | Combo: bartime=2025-01-13 17:00, executed=2025-01-13 18:00:00, pending Buy placed at 11723.3; SL=11677.888023395732, TP=11842.188554749971; valid for the next 3 chart bar(s).
+16/01/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 2.12 SPN35.cash (Price: 11824.3, SL: 11864.6296079224, TP: 11718.72)
+16/01/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 2.12 SPN35.cash (Price: 11824.3, SL: 11864.6296079224, TP: 11718.72) SUCCEEDED, PendingOrder OID19
+16/01/2025 13:00:00.000 | Info | Combo: bartime=2025-01-16 12:00, executed=2025-01-16 13:00:00, pending Sell placed at 11824.3; SL=11864.629607922414, TP=11718.71708645912; valid for the next 3 chart bar(s).
+17/01/2025 08:05:00.000 | Trade | Placing Stop Order to Buy 2.3 SPN35.cash (Price: 11883.9, SL: 11846.9868762086, TP: 11980.54)
+17/01/2025 08:05:00.000 | Trade |  Placing Stop Order to Buy 2.3 SPN35.cash (Price: 11883.9, SL: 11846.9868762086, TP: 11980.54) SUCCEEDED, PendingOrder OID22
+17/01/2025 08:05:00.000 | Info | Combo: bartime=2025-01-17 07:00, executed=2025-01-17 08:05:00, pending Buy placed at 11883.9; SL=11846.986876208628, TP=11980.53855808581; valid for the next 3 chart bar(s).
+21/01/2025 08:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.95 units, which needs about $5445.38 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5121.15 budget, free margin was $10242.31). Size was cut from 2.95 to 2.71 units. Real risk on this trade is now about $93.84 (0.92% of balance) instead of the requested 1.00%.
+21/01/2025 08:05:00.000 | Trade | Placing Stop Order to Sell 2.71 SPN35.cash (Price: 11916, SL: 11945.344731353, TP: 11839.18)
+21/01/2025 08:05:00.000 | Trade |  Placing Stop Order to Sell 2.71 SPN35.cash (Price: 11916, SL: 11945.344731353, TP: 11839.18) SUCCEEDED, PendingOrder OID25
+21/01/2025 08:05:00.000 | Info | Combo: bartime=2025-01-20 18:00, executed=2025-01-21 08:05:00, pending Sell placed at 11916; SL=11945.344731353032, TP=11839.17549331776; valid for the next 3 chart bar(s).
+21/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-21 14:00, reversal - closing existing Sell position 8 before opening opposite direction.
+21/01/2025 15:00:00.000 | Trade | Closing position PID8 (Volume: 2.71)
+21/01/2025 15:00:00.000 | Trade |  Closing position PID8 (Volume: 2.71) SUCCEEDED
+21/01/2025 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.87 units, which needs about $5297.71 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5022.02 budget, free margin was $10044.04). Size was cut from 2.87 to 2.66 units. Real risk on this trade is now about $92.88 (0.92% of balance) instead of the requested 1.00%.
+21/01/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 2.66 SPN35.cash (Price: 11938.8, SL: 11909.2091857563, TP: 12016.27)
+21/01/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 2.66 SPN35.cash (Price: 11938.8, SL: 11909.2091857563, TP: 12016.27) SUCCEEDED, PendingOrder OID29
+21/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-21 14:00, executed=2025-01-21 15:00:00, pending Buy placed at 11938.8; SL=11909.209185756281, TP=12016.268751690053; valid for the next 3 chart bar(s).
+21/01/2025 17:00:00.000 | Info | Combo: bartime=2025-01-21 16:00, Buy signal skipped: already have same-direction exposure open.
+21/01/2025 18:00:00.000 | Trade | Cancelling pending order OID29
+21/01/2025 18:00:00.000 | Trade |  Cancelling pending order OID29 SUCCEEDED
+21/01/2025 18:00:00.000 | Info | Combo: pending order 29 cancelled after 3 chart bars.
+22/01/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 2.52 SPN35.cash (Price: 11888.9, SL: 11922.6594316873, TP: 11800.52)
+22/01/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 2.52 SPN35.cash (Price: 11888.9, SL: 11922.6594316873, TP: 11800.52) SUCCEEDED, PendingOrder OID30
+22/01/2025 10:00:00.000 | Info | Combo: bartime=2025-01-22 09:00, executed=2025-01-22 10:00:00, pending Sell placed at 11888.9; SL=11922.659431687283, TP=11800.51780784269; valid for the next 3 chart bar(s).
+22/01/2025 11:00:00.000 | Info | Combo: bartime=2025-01-22 10:00, reversal - cancelling existing Sell pending order 30 before opening opposite direction.
+22/01/2025 11:00:00.000 | Trade | Cancelling pending order OID30
+22/01/2025 11:00:00.000 | Trade |  Cancelling pending order OID30 SUCCEEDED
+22/01/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 2.12 SPN35.cash (Price: 11964.4, SL: 11924.3924546502, TP: 12069.14)
+22/01/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 2.12 SPN35.cash (Price: 11964.4, SL: 11924.3924546502, TP: 12069.14) SUCCEEDED, PendingOrder OID31
+22/01/2025 11:00:00.000 | Info | Combo: bartime=2025-01-22 10:00, executed=2025-01-22 11:00:00, pending Buy placed at 11964.4; SL=11924.392454650173, TP=12069.139753725847; valid for the next 3 chart bar(s).
+22/01/2025 14:00:00.000 | Trade | Cancelling pending order OID31
+22/01/2025 14:00:00.000 | Trade |  Cancelling pending order OID31 SUCCEEDED
+22/01/2025 14:00:00.000 | Info | Combo: pending order 31 cancelled after 3 chart bars.
+22/01/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 2.46 SPN35.cash (Price: 11896.6, SL: 11931.0878632191, TP: 11806.31)
+22/01/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 2.46 SPN35.cash (Price: 11896.6, SL: 11931.0878632191, TP: 11806.31) SUCCEEDED, PendingOrder OID32
+22/01/2025 14:00:00.000 | Info | Combo: bartime=2025-01-22 13:00, executed=2025-01-22 14:00:00, pending Sell placed at 11896.6; SL=11931.087863219112, TP=11806.310774092366; valid for the next 3 chart bar(s).
+23/01/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 2.26 SPN35.cash (Price: 11927, SL: 11889.8593891739, TP: 12024.23)
+23/01/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 2.26 SPN35.cash (Price: 11927, SL: 11889.8593891739, TP: 12024.23) SUCCEEDED, PendingOrder OID35
+23/01/2025 10:00:00.000 | Info | Combo: bartime=2025-01-23 09:00, executed=2025-01-23 10:00:00, pending Buy placed at 11927; SL=11889.859389173946, TP=12024.234119142611; valid for the next 3 chart bar(s).
+24/01/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 2.4 SPN35.cash (Price: 11933.3, SL: 11969.1759354593, TP: 11839.38)
+24/01/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 2.4 SPN35.cash (Price: 11933.3, SL: 11969.1759354593, TP: 11839.38) SUCCEEDED, PendingOrder OID38
+24/01/2025 12:00:00.000 | Info | Combo: bartime=2025-01-24 11:00, executed=2025-01-24 12:00:00, pending Sell placed at 11933.3; SL=11969.17593545928, TP=11839.376800967602; valid for the next 3 chart bar(s).
+24/01/2025 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.94 units, which needs about $5426.92 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5046.70 budget, free margin was $10093.40). Size was cut from 2.94 to 2.67 units. Real risk on this trade is now about $91.62 (0.91% of balance) instead of the requested 1.00%.
+24/01/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 2.67 SPN35.cash (Price: 11934.1, SL: 11963.1783031641, TP: 11857.97)
+24/01/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 2.67 SPN35.cash (Price: 11934.1, SL: 11963.1783031641, TP: 11857.97) SUCCEEDED, PendingOrder OID41
+24/01/2025 16:00:00.000 | Info | Combo: bartime=2025-01-24 15:00, executed=2025-01-24 16:00:00, pending Sell placed at 11934.1; SL=11963.178303164123, TP=11857.97300231633; valid for the next 3 chart bar(s).
+24/01/2025 18:00:00.000 | Info | Combo: bartime=2025-01-24 17:00, Sell signal skipped: already have same-direction exposure open.
+27/01/2025 08:05:00.000 | Trade | Cancelling pending order OID41
+27/01/2025 08:05:00.000 | Trade |  Cancelling pending order OID41 SUCCEEDED
+27/01/2025 08:05:00.000 | Info | Combo: pending order 41 cancelled after 3 chart bars.
+27/01/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 1.57 SPN35.cash (Price: 11995.9, SL: 11941.5735148953, TP: 12138.13)
+27/01/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 1.57 SPN35.cash (Price: 11995.9, SL: 11941.5735148953, TP: 12138.13) SUCCEEDED, PendingOrder OID42
+27/01/2025 10:00:00.000 | Info | Combo: bartime=2025-01-27 09:00, executed=2025-01-27 10:00:00, pending Buy placed at 11995.9; SL=11941.573514895344, TP=12138.126738003988; valid for the next 3 chart bar(s).
+27/01/2025 12:00:00.000 | Info | Combo: bartime=2025-01-27 11:00, Buy signal skipped: already have same-direction exposure open.
+27/01/2025 13:00:00.000 | Trade | Cancelling pending order OID42
+27/01/2025 13:00:00.000 | Trade |  Cancelling pending order OID42 SUCCEEDED
+27/01/2025 13:00:00.000 | Info | Combo: pending order 42 cancelled after 3 chart bars.
+31/01/2025 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.11 units, which needs about $5740.72 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5046.70 budget, free margin was $10093.40). Size was cut from 3.11 to 2.67 units. Real risk on this trade is now about $86.63 (0.86% of balance) instead of the requested 1.00%.
+31/01/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 2.67 SPN35.cash (Price: 12381, SL: 12408.4962452225, TP: 12309.01)
+31/01/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 2.67 SPN35.cash (Price: 12381, SL: 12408.4962452225, TP: 12309.01) SUCCEEDED, PendingOrder OID43
+31/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-31 14:00, executed=2025-01-31 15:00:00, pending Sell placed at 12381; SL=12408.496245222537, TP=12309.014830007396; valid for the next 3 chart bar(s).
+04/02/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 1.62 SPN35.cash (Price: 12267.5, SL: 12213.7967456068, TP: 12408.1)
+04/02/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 1.62 SPN35.cash (Price: 12267.5, SL: 12213.7967456068, TP: 12408.1) SUCCEEDED, PendingOrder OID46
+04/02/2025 10:00:00.000 | Info | Combo: bartime=2025-02-04 09:00, executed=2025-02-04 10:00:00, pending Buy placed at 12267.5; SL=12213.796745606793, TP=12408.095120001419; valid for the next 3 chart bar(s).
+07/02/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 2.56 SPN35.cash (Price: 12657.9, SL: 12693.401808225, TP: 12564.96)
+07/02/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 2.56 SPN35.cash (Price: 12657.9, SL: 12693.401808225, TP: 12564.96) SUCCEEDED, PendingOrder OID49
+07/02/2025 17:00:00.000 | Info | Combo: bartime=2025-02-07 16:00, executed=2025-02-07 17:00:00, pending Sell placed at 12657.9; SL=12693.40180822495, TP=12564.956266067082; valid for the next 3 chart bar(s).
+10/02/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 2.74 SPN35.cash (Price: 12694.5, SL: 12727.2191388238, TP: 12608.84)
+10/02/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 2.74 SPN35.cash (Price: 12694.5, SL: 12727.2191388238, TP: 12608.84) SUCCEEDED, PendingOrder OID52
+10/02/2025 14:00:00.000 | Info | Combo: bartime=2025-02-10 13:00, executed=2025-02-10 14:00:00, pending Sell placed at 12694.5; SL=12727.219138823844, TP=12608.841294559175; valid for the next 3 chart bar(s).
+11/02/2025 08:05:00.000 | Info | Combo: bartime=2025-02-11 07:00, Sell signal skipped: already have same-direction exposure open.
+13/02/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 2.56 SPN35.cash (Price: 12905.2, SL: 12939.7652955754, TP: 12814.71)
+13/02/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 2.56 SPN35.cash (Price: 12905.2, SL: 12939.7652955754, TP: 12814.71) SUCCEEDED, PendingOrder OID55
+13/02/2025 17:00:00.000 | Info | Combo: bartime=2025-02-13 16:00, executed=2025-02-13 17:00:00, pending Sell placed at 12905.2; SL=12939.765295575422, TP=12814.708056183548; valid for the next 3 chart bar(s).
+19/02/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 2.01 SPN35.cash (Price: 13035.8, SL: 13079.2841260666, TP: 12921.96)
+19/02/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 2.01 SPN35.cash (Price: 13035.8, SL: 13079.2841260666, TP: 12921.96) SUCCEEDED, PendingOrder OID58
+19/02/2025 11:00:00.000 | Info | Combo: bartime=2025-02-19 10:00, executed=2025-02-19 11:00:00, pending Sell placed at 13035.8; SL=13079.284126066586, TP=12921.958557957676; valid for the next 3 chart bar(s).
+20/02/2025 13:00:00.000 | Trade | Placing Stop Order to Buy 2.24 SPN35.cash (Price: 13028.6, SL: 12988.4941951226, TP: 13133.6)
+20/02/2025 13:00:00.000 | Trade |  Placing Stop Order to Buy 2.24 SPN35.cash (Price: 13028.6, SL: 12988.4941951226, TP: 13133.6) SUCCEEDED, PendingOrder OID61
+20/02/2025 13:00:00.000 | Info | Combo: bartime=2025-02-20 12:00, executed=2025-02-20 13:00:00, pending Buy placed at 13028.6; SL=12988.494195122596, TP=13133.596997169048; valid for the next 3 chart bar(s).
+20/02/2025 16:00:00.000 | Trade | Cancelling pending order OID61
+20/02/2025 16:00:00.000 | Trade |  Cancelling pending order OID61 SUCCEEDED
+20/02/2025 16:00:00.000 | Info | Combo: pending order 61 cancelled after 3 chart bars.
+21/02/2025 12:00:00.000 | Trade | Placing Stop Order to Buy 2.02 SPN35.cash (Price: 12992.1, SL: 12947.6623601291, TP: 13108.44)
+21/02/2025 12:00:00.000 | Trade |  Placing Stop Order to Buy 2.02 SPN35.cash (Price: 12992.1, SL: 12947.6623601291, TP: 13108.44) SUCCEEDED, PendingOrder OID62
+21/02/2025 12:00:00.000 | Info | Combo: bartime=2025-02-21 11:00, executed=2025-02-21 12:00:00, pending Buy placed at 12992.1; SL=12947.662360129116, TP=13108.437741181975; valid for the next 3 chart bar(s).
+21/02/2025 15:00:00.000 | Trade | Cancelling pending order OID62
+21/02/2025 15:00:00.000 | Trade |  Cancelling pending order OID62 SUCCEEDED
+21/02/2025 15:00:00.000 | Info | Combo: pending order 62 cancelled after 3 chart bars.
+24/02/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 1.7 SPN35.cash (Price: 12933.5, SL: 12986.1619831538, TP: 12795.63)
+24/02/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 1.7 SPN35.cash (Price: 12933.5, SL: 12986.1619831538, TP: 12795.63) SUCCEEDED, PendingOrder OID63
+24/02/2025 15:00:00.000 | Info | Combo: bartime=2025-02-24 14:00, executed=2025-02-24 15:00:00, pending Sell placed at 12933.5; SL=12986.16198315379, TP=12795.630928103377; valid for the next 3 chart bar(s).
+25/02/2025 08:05:00.000 | Trade | Placing Stop Order to Sell 2.12 SPN35.cash (Price: 12948.7, SL: 12990.5200866398, TP: 12839.22)
+25/02/2025 08:05:00.000 | Trade |  Placing Stop Order to Sell 2.12 SPN35.cash (Price: 12948.7, SL: 12990.5200866398, TP: 12839.22) SUCCEEDED, PendingOrder OID66
+25/02/2025 08:05:00.000 | Info | Combo: bartime=2025-02-25 07:00, executed=2025-02-25 08:05:00, pending Sell placed at 12948.7; SL=12990.520086639835, TP=12839.215013176916; valid for the next 3 chart bar(s).
+25/02/2025 09:00:00.000 | Info | Combo: bartime=2025-02-25 08:00, reversal - cancelling existing Sell pending order 66 before opening opposite direction.
+25/02/2025 09:00:00.000 | Trade | Cancelling pending order OID66
+25/02/2025 09:00:00.000 | Trade |  Cancelling pending order OID66 SUCCEEDED
+25/02/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 1.58 SPN35.cash (Price: 13077, SL: 13020.9839306881, TP: 13223.65)
+25/02/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 1.58 SPN35.cash (Price: 13077, SL: 13020.9839306881, TP: 13223.65) SUCCEEDED, PendingOrder OID67
+25/02/2025 09:00:00.000 | Info | Combo: bartime=2025-02-25 08:00, executed=2025-02-25 09:00:00, pending Buy placed at 13077; SL=13020.983930688133, TP=13223.650069458468; valid for the next 3 chart bar(s).
+27/02/2025 08:05:00.000 | Trade | Placing Stop Order to Sell 1.69 SPN35.cash (Price: 13202.6, SL: 13256.2242941775, TP: 13062.21)
+27/02/2025 08:05:00.000 | Trade |  Placing Stop Order to Sell 1.69 SPN35.cash (Price: 13202.6, SL: 13256.2242941775, TP: 13062.21) SUCCEEDED, PendingOrder OID70
+27/02/2025 08:05:00.000 | Info | Combo: bartime=2025-02-27 07:00, executed=2025-02-27 08:05:00, pending Sell placed at 13202.6; SL=13256.22429417747, TP=13062.211597843389; valid for the next 3 chart bar(s).
+27/02/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 1.71 SPN35.cash (Price: 13213.5, SL: 13265.8970181729, TP: 13076.32)
+27/02/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 1.71 SPN35.cash (Price: 13213.5, SL: 13265.8970181729, TP: 13076.32) SUCCEEDED, PendingOrder OID73
+27/02/2025 14:00:00.000 | Info | Combo: bartime=2025-02-27 13:00, executed=2025-02-27 14:00:00, pending Sell placed at 13213.5; SL=13265.897018172858, TP=13076.324606423457; valid for the next 3 chart bar(s).
+28/02/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 1.5 SPN35.cash (Price: 13283.5, SL: 13224.4778432436, TP: 13438.02)
+28/02/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 1.5 SPN35.cash (Price: 13283.5, SL: 13224.4778432436, TP: 13438.02) SUCCEEDED, PendingOrder OID76
+28/02/2025 10:00:00.000 | Info | Combo: bartime=2025-02-28 09:00, executed=2025-02-28 10:00:00, pending Buy placed at 13283.5; SL=13224.47784324358, TP=13438.020006388308; valid for the next 3 chart bar(s).
+03/03/2025 08:05:00.000 | Info | Combo: bartime=2025-02-28 18:00, reversal - closing existing Buy position 22 before opening opposite direction.
+03/03/2025 08:05:00.000 | Trade | Closing position PID22 (Volume: 1.5)
+03/03/2025 08:05:00.000 | Trade |  Closing position PID22 (Volume: 1.5) SUCCEEDED
+03/03/2025 08:05:00.000 | Trade | Placing Stop Order to Sell 1.7 SPN35.cash (Price: 13217.6, SL: 13270.0595951415, TP: 13080.26)
+03/03/2025 08:05:00.000 | Trade |  Placing Stop Order to Sell 1.7 SPN35.cash (Price: 13217.6, SL: 13270.0595951415, TP: 13080.26) SUCCEEDED, PendingOrder OID80
+03/03/2025 08:05:00.000 | Info | Combo: bartime=2025-02-28 18:00, executed=2025-03-03 08:05:00, pending Sell placed at 13217.6; SL=13270.059595141507, TP=13080.260779919538; valid for the next 3 chart bar(s).
+03/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-03 08:00, Sell signal skipped: already have same-direction exposure open.
+04/03/2025 08:05:00.000 | Trade | Placing Stop Order to Sell 1.31 SPN35.cash (Price: 13229.4, SL: 13296.6862260651, TP: 13053.24)
+04/03/2025 08:05:00.000 | Trade |  Placing Stop Order to Sell 1.31 SPN35.cash (Price: 13229.4, SL: 13296.6862260651, TP: 13053.24) SUCCEEDED, PendingOrder OID83
+04/03/2025 08:05:00.000 | Info | Combo: bartime=2025-03-04 07:00, executed=2025-03-04 08:05:00, pending Sell placed at 13229.4; SL=13296.686226065118, TP=13053.24466016152; valid for the next 3 chart bar(s).
+05/03/2025 08:05:00.000 | Trade | Placing Stop Order to Buy 1.12 SPN35.cash (Price: 13319.3, SL: 13238.7139558268, TP: 13530.27)
+05/03/2025 08:05:00.000 | Trade |  Placing Stop Order to Buy 1.12 SPN35.cash (Price: 13319.3, SL: 13238.7139558268, TP: 13530.27) SUCCEEDED, PendingOrder OID86
+05/03/2025 08:05:00.000 | Info | Combo: bartime=2025-03-05 07:00, executed=2025-03-05 08:05:00, pending Buy placed at 13319.3; SL=13238.713955826814, TP=13530.2742636454; valid for the next 3 chart bar(s).
+06/03/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 1.27 SPN35.cash (Price: 13124.7, SL: 13195.1184986105, TP: 12940.34)
+06/03/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 1.27 SPN35.cash (Price: 13124.7, SL: 13195.1184986105, TP: 12940.34) SUCCEEDED, PendingOrder OID89
+06/03/2025 10:00:00.000 | Info | Combo: bartime=2025-03-06 09:00, executed=2025-03-06 10:00:00, pending Sell placed at 13124.7; SL=13195.118498610458, TP=12940.344370637824; valid for the next 3 chart bar(s).
+06/03/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 1.4 SPN35.cash (Price: 13241.6, SL: 13178.2146771003, TP: 13407.54)
+06/03/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 1.4 SPN35.cash (Price: 13241.6, SL: 13178.2146771003, TP: 13407.54) SUCCEEDED, PendingOrder OID92
+06/03/2025 16:00:00.000 | Info | Combo: bartime=2025-03-06 15:00, executed=2025-03-06 16:00:00, pending Buy placed at 13241.6; SL=13178.21467710026, TP=13407.54277535152; valid for the next 3 chart bar(s).
+07/03/2025 12:00:00.000 | Trade | Placing Stop Order to Buy 1.53 SPN35.cash (Price: 13201.8, SL: 13144.8150837208, TP: 13350.99)
+07/03/2025 12:00:00.000 | Trade |  Placing Stop Order to Buy 1.53 SPN35.cash (Price: 13201.8, SL: 13144.8150837208, TP: 13350.99) SUCCEEDED, PendingOrder OID95
+07/03/2025 12:00:00.000 | Info | Combo: bartime=2025-03-07 11:00, executed=2025-03-07 12:00:00, pending Buy placed at 13201.8; SL=13144.815083720812, TP=13350.98651081891; valid for the next 3 chart bar(s).
+07/03/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 1.32 SPN35.cash (Price: 13242, SL: 13176.3853228651, TP: 13413.78)
+07/03/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 1.32 SPN35.cash (Price: 13242, SL: 13176.3853228651, TP: 13413.78) SUCCEEDED, PendingOrder OID98
+07/03/2025 15:00:00.000 | Info | Combo: bartime=2025-03-07 14:00, executed=2025-03-07 15:00:00, pending Buy placed at 13242; SL=13176.385322865057, TP=13413.779224739283; valid for the next 3 chart bar(s).
+10/03/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 0.84 SPN35.cash (Price: 13057.3, SL: 13158.3814539229, TP: 12792.67)
+10/03/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.84 SPN35.cash (Price: 13057.3, SL: 13158.3814539229, TP: 12792.67) SUCCEEDED, PendingOrder OID101
+10/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-10 08:00, executed=2025-03-10 09:00:00, pending Sell placed at 13057.3; SL=13158.381453922862, TP=12792.668753629945; valid for the next 3 chart bar(s).
+13/03/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 1.08 SPN35.cash (Price: 12850.1, SL: 12771.6356755698, TP: 13055.52)
+13/03/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 1.08 SPN35.cash (Price: 12850.1, SL: 12771.6356755698, TP: 13055.52) SUCCEEDED, PendingOrder OID104
+13/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-13 08:00, executed=2025-03-13 09:00:00, pending Buy placed at 12850.1; SL=12771.635675569849, TP=13055.519601358135; valid for the next 3 chart bar(s).
+13/03/2025 18:00:00.000 | Info | Combo: bartime=2025-03-13 17:00, reversal - closing existing Buy position 31 before opening opposite direction.
+13/03/2025 18:00:00.000 | Trade | Closing position PID31 (Volume: 1.08)
+13/03/2025 18:00:00.000 | Trade |  Closing position PID31 (Volume: 1.08) SUCCEEDED
+13/03/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 1.46 SPN35.cash (Price: 12776.4, SL: 12833.5764604741, TP: 12626.71)
+13/03/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 1.46 SPN35.cash (Price: 12776.4, SL: 12833.5764604741, TP: 12626.71) SUCCEEDED, PendingOrder OID108
+13/03/2025 18:00:00.000 | Info | Combo: bartime=2025-03-13 17:00, executed=2025-03-13 18:00:00, pending Sell placed at 12776.4; SL=12833.576460474069, TP=12626.712026478885; valid for the next 3 chart bar(s).
+14/03/2025 08:05:00.000 | Info | Combo: bartime=2025-03-13 18:00, reversal - cancelling existing Sell pending order 108 before opening opposite direction.
+14/03/2025 08:05:00.000 | Trade | Cancelling pending order OID108
+14/03/2025 08:05:00.000 | Trade |  Cancelling pending order OID108 SUCCEEDED
+14/03/2025 08:05:00.000 | Trade | Placing Stop Order to Buy 1.53 SPN35.cash (Price: 12830.9, SL: 12776.1588316207, TP: 12974.21)
+14/03/2025 08:05:00.000 | Trade |  Placing Stop Order to Buy 1.53 SPN35.cash (Price: 12830.9, SL: 12776.1588316207, TP: 12974.21) SUCCEEDED, PendingOrder OID109
+14/03/2025 08:05:00.000 | Info | Combo: bartime=2025-03-13 18:00, executed=2025-03-14 08:05:00, pending Buy placed at 12830.9; SL=12776.158831620744, TP=12974.212378816892; valid for the next 3 chart bar(s).
+20/03/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 1.31 SPN35.cash (Price: 13235.2, SL: 13301.0352859134, TP: 13062.84)
+20/03/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 1.31 SPN35.cash (Price: 13235.2, SL: 13301.0352859134, TP: 13062.84) SUCCEEDED, PendingOrder OID112
+20/03/2025 10:00:00.000 | Info | Combo: bartime=2025-03-20 09:00, executed=2025-03-20 10:00:00, pending Sell placed at 13235.2; SL=13301.035285913438, TP=13062.84322147862; valid for the next 3 chart bar(s).
+21/03/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 1.46 SPN35.cash (Price: 13343.4, SL: 13285.0066822515, TP: 13496.27)
+21/03/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 1.46 SPN35.cash (Price: 13343.4, SL: 13285.0066822515, TP: 13496.27) SUCCEEDED, PendingOrder OID115
+21/03/2025 11:00:00.000 | Info | Combo: bartime=2025-03-21 10:00, executed=2025-03-21 11:00:00, pending Buy placed at 13343.4; SL=13285.006682251455, TP=13496.27370586569; valid for the next 3 chart bar(s).
+21/03/2025 14:00:00.000 | Trade | Cancelling pending order OID115
+21/03/2025 14:00:00.000 | Trade |  Cancelling pending order OID115 SUCCEEDED
+21/03/2025 14:00:00.000 | Info | Combo: pending order 115 cancelled after 3 chart bars.
+24/03/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 1.53 SPN35.cash (Price: 13316.2, SL: 13371.9179408324, TP: 13170.33)
+24/03/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 1.53 SPN35.cash (Price: 13316.2, SL: 13371.9179408324, TP: 13170.33) SUCCEEDED, PendingOrder OID116
+24/03/2025 13:00:00.000 | Info | Combo: bartime=2025-03-24 12:00, executed=2025-03-24 13:00:00, pending Sell placed at 13316.2; SL=13371.917940832369, TP=13170.330430900862; valid for the next 3 chart bar(s).
+24/03/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 1.47 SPN35.cash (Price: 13318.2, SL: 13375.4194821327, TP: 13168.4)
+24/03/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 1.47 SPN35.cash (Price: 13318.2, SL: 13375.4194821327, TP: 13168.4) SUCCEEDED, PendingOrder OID119
+24/03/2025 15:00:00.000 | Info | Combo: bartime=2025-03-24 14:00, executed=2025-03-24 15:00:00, pending Sell placed at 13318.2; SL=13375.419482132716, TP=13168.399395776552; valid for the next 3 chart bar(s).
+25/03/2025 08:05:00.000 | Info | Combo: bartime=2025-03-25 07:00, reversal - closing existing Sell position 35 before opening opposite direction.
+25/03/2025 08:05:00.000 | Trade | Closing position PID35 (Volume: 1.47)
+25/03/2025 08:05:00.000 | Trade |  Closing position PID35 (Volume: 1.47) SUCCEEDED
+25/03/2025 08:05:00.000 | Trade | Placing Stop Order to Buy 1.85 SPN35.cash (Price: 13367.5, SL: 13322.9040480948, TP: 13484.25)
+25/03/2025 08:05:00.000 | Trade |  Placing Stop Order to Buy 1.85 SPN35.cash (Price: 13367.5, SL: 13322.9040480948, TP: 13484.25) SUCCEEDED, PendingOrder OID123
+25/03/2025 08:05:00.000 | Info | Combo: bartime=2025-03-25 07:00, executed=2025-03-25 08:05:00, pending Buy placed at 13367.5; SL=13322.904048094751, TP=13484.25220208794; valid for the next 3 chart bar(s).
+26/03/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 1.87 SPN35.cash (Price: 13417, SL: 13461.9430679646, TP: 13299.34)
+26/03/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 1.87 SPN35.cash (Price: 13417, SL: 13461.9430679646, TP: 13299.34) SUCCEEDED, PendingOrder OID126
+26/03/2025 14:00:00.000 | Info | Combo: bartime=2025-03-26 13:00, executed=2025-03-26 14:00:00, pending Sell placed at 13417; SL=13461.943067964643, TP=13299.339048068565; valid for the next 3 chart bar(s).
+27/03/2025 13:00:00.000 | Trade | Placing Stop Order to Buy 1.69 SPN35.cash (Price: 13445.5, SL: 13394.4521579164, TP: 13579.14)
+27/03/2025 13:00:00.000 | Trade |  Placing Stop Order to Buy 1.69 SPN35.cash (Price: 13445.5, SL: 13394.4521579164, TP: 13579.14) SUCCEEDED, PendingOrder OID129
+27/03/2025 13:00:00.000 | Info | Combo: bartime=2025-03-27 12:00, executed=2025-03-27 13:00:00, pending Buy placed at 13445.5; SL=13394.45215791644, TP=13579.143250574762; valid for the next 3 chart bar(s).
+28/03/2025 08:05:00.000 | Trade | Placing Stop Order to Sell 2.09 SPN35.cash (Price: 13402.7, SL: 13443.4493735152, TP: 13296.02)
+28/03/2025 08:05:00.000 | Trade |  Placing Stop Order to Sell 2.09 SPN35.cash (Price: 13402.7, SL: 13443.4493735152, TP: 13296.02) SUCCEEDED, PendingOrder OID132
+28/03/2025 08:05:00.000 | Info | Combo: bartime=2025-03-27 18:00, executed=2025-03-28 08:05:00, pending Sell placed at 13402.7; SL=13443.449373515154, TP=13296.01814013733; valid for the next 3 chart bar(s).
+28/03/2025 08:05:00.000 | Info | Combo: bartime=2025-03-28 07:00, Sell signal skipped: already have same-direction exposure open.
+28/03/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 1.41 SPN35.cash (Price: 13330.6, SL: 13392.6992981708, TP: 13168.02)
+28/03/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 1.41 SPN35.cash (Price: 13330.6, SL: 13392.6992981708, TP: 13168.02) SUCCEEDED, PendingOrder OID135
+28/03/2025 13:00:00.000 | Info | Combo: bartime=2025-03-28 12:00, executed=2025-03-28 13:00:00, pending Sell placed at 13330.6; SL=13392.699298170757, TP=13168.024037388961; valid for the next 3 chart bar(s).
+01/04/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 1.56 SPN35.cash (Price: 13232.7, SL: 13175.0880233078, TP: 13383.53)
+01/04/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 1.56 SPN35.cash (Price: 13232.7, SL: 13175.0880233078, TP: 13383.53) SUCCEEDED, PendingOrder OID138
+01/04/2025 09:00:00.000 | Info | Combo: bartime=2025-04-01 08:00, executed=2025-04-01 09:00:00, pending Buy placed at 13232.7; SL=13175.088023307751, TP=13383.52815498031; valid for the next 3 chart bar(s).
+08/04/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 0.48 SPN35.cash (Price: 11907.7, SL: 11725.1738612267, TP: 12385.55)
+08/04/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 0.48 SPN35.cash (Price: 11907.7, SL: 11725.1738612267, TP: 12385.55) SUCCEEDED, PendingOrder OID141
+08/04/2025 11:00:00.000 | Info | Combo: bartime=2025-04-08 10:00, executed=2025-04-08 11:00:00, pending Buy placed at 11907.7; SL=11725.173861226725, TP=12385.553431308437; valid for the next 3 chart bar(s).
+09/04/2025 07:05:00.000 | Info | Combo: bartime=2025-04-08 17:00, reversal - closing existing Buy position 42 before opening opposite direction.
+09/04/2025 07:05:00.000 | Trade | Closing position PID42 (Volume: 0.48)
+09/04/2025 07:05:00.000 | Trade |  Closing position PID42 (Volume: 0.48) SUCCEEDED
+09/04/2025 07:05:00.000 | Trade | Placing Stop Order to Sell 0.64 SPN35.cash (Price: 11815.8, SL: 11952.5174906581, TP: 11457.87)
+09/04/2025 07:05:00.000 | Trade |  Placing Stop Order to Sell 0.64 SPN35.cash (Price: 11815.8, SL: 11952.5174906581, TP: 11457.87) SUCCEEDED, PendingOrder OID145
+09/04/2025 07:05:00.000 | Info | Combo: bartime=2025-04-08 17:00, executed=2025-04-09 07:05:00, pending Sell placed at 11815.8; SL=11952.517490658065, TP=11457.873609457183; valid for the next 3 chart bar(s).
+10/04/2025 07:05:00.000 | Trade | Placing Stop Order to Buy 0.33 SPN35.cash (Price: 12534.1, SL: 12278.9511230679, TP: 13202.08)
+10/04/2025 07:05:00.000 | Trade |  Placing Stop Order to Buy 0.33 SPN35.cash (Price: 12534.1, SL: 12278.9511230679, TP: 13202.08) SUCCEEDED, PendingOrder OID148
+10/04/2025 07:05:00.000 | Info | Combo: bartime=2025-04-09 17:00, executed=2025-04-10 07:05:00, pending Buy placed at 12534.1; SL=12278.95112306791, TP=13202.07975980821; valid for the next 3 chart bar(s).
+11/04/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 0.53 SPN35.cash (Price: 12155.8, SL: 12313.900067229, TP: 11741.89)
+11/04/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.53 SPN35.cash (Price: 12155.8, SL: 12313.900067229, TP: 11741.89) SUCCEEDED, PendingOrder OID151
+11/04/2025 09:00:00.000 | Info | Combo: bartime=2025-04-11 08:00, executed=2025-04-11 09:00:00, pending Sell placed at 12155.8; SL=12313.900067229033, TP=11741.894023994388; valid for the next 3 chart bar(s).
+11/04/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 0.57 SPN35.cash (Price: 12247.3, SL: 12393.7752344213, TP: 11863.83)
+11/04/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 0.57 SPN35.cash (Price: 12247.3, SL: 12393.7752344213, TP: 11863.83) SUCCEEDED, PendingOrder OID154
+11/04/2025 12:00:00.000 | Info | Combo: bartime=2025-04-11 11:00, executed=2025-04-11 12:00:00, pending Sell placed at 12247.3; SL=12393.775234421264, TP=11863.827836285125; valid for the next 3 chart bar(s).
+17/04/2025 07:05:00.000 | Trade | Placing Stop Order to Sell 1.39 SPN35.cash (Price: 12785.2, SL: 12845.0999999341, TP: 12628.38)
+17/04/2025 07:05:00.000 | Trade |  Placing Stop Order to Sell 1.39 SPN35.cash (Price: 12785.2, SL: 12845.0999999341, TP: 12628.38) SUCCEEDED, PendingOrder OID157
+17/04/2025 07:05:00.000 | Info | Combo: bartime=2025-04-16 17:00, executed=2025-04-17 07:05:00, pending Sell placed at 12785.2; SL=12845.099999934111, TP=12628.381800172501; valid for the next 3 chart bar(s).
+17/04/2025 10:00:00.000 | Trade | Cancelling pending order OID157
+17/04/2025 10:00:00.000 | Trade |  Cancelling pending order OID157 SUCCEEDED
+17/04/2025 10:00:00.000 | Info | Combo: pending order 157 cancelled after 3 chart bars.
+17/04/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 1.22 SPN35.cash (Price: 12843.4, SL: 12911.4232672595, TP: 12665.32)
+17/04/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 1.22 SPN35.cash (Price: 12843.4, SL: 12911.4232672595, TP: 12665.32) SUCCEEDED, PendingOrder OID158
+17/04/2025 16:00:00.000 | Info | Combo: bartime=2025-04-17 15:00, executed=2025-04-17 16:00:00, pending Sell placed at 12843.4; SL=12911.423267259484, TP=12665.315086314667; valid for the next 3 chart bar(s).
+22/04/2025 07:05:00.000 | Info | Combo: bartime=2025-04-21 06:00, Sell signal skipped: already have same-direction exposure open.
+24/04/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 1.54 SPN35.cash (Price: 13124.7, SL: 13177.8802087115, TP: 12985.47)
+24/04/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 1.54 SPN35.cash (Price: 13124.7, SL: 13177.8802087115, TP: 12985.47) SUCCEEDED, PendingOrder OID161
+24/04/2025 13:00:00.000 | Info | Combo: bartime=2025-04-24 12:00, executed=2025-04-24 13:00:00, pending Sell placed at 13124.7; SL=13177.880208711531, TP=12985.474213593212; valid for the next 3 chart bar(s).
+29/04/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 1.41 SPN35.cash (Price: 13343.6, SL: 13401.0346458028, TP: 13193.24)
+29/04/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 1.41 SPN35.cash (Price: 13343.6, SL: 13401.0346458028, TP: 13193.24) SUCCEEDED, PendingOrder OID164
+29/04/2025 09:00:00.000 | Info | Combo: bartime=2025-04-29 08:00, executed=2025-04-29 09:00:00, pending Sell placed at 13343.6; SL=13401.03464580281, TP=13193.236097288243; valid for the next 3 chart bar(s).
+30/04/2025 17:00:00.000 | Trade | Placing Stop Order to Buy 1.25 SPN35.cash (Price: 13277.6, SL: 13210.9987034466, TP: 13451.96)
+30/04/2025 17:00:00.000 | Trade |  Placing Stop Order to Buy 1.25 SPN35.cash (Price: 13277.6, SL: 13210.9987034466, TP: 13451.96) SUCCEEDED, PendingOrder OID167
+30/04/2025 17:00:00.000 | Info | Combo: bartime=2025-04-30 16:00, executed=2025-04-30 17:00:00, pending Buy placed at 13277.6; SL=13210.998703446587, TP=13451.962194376836; valid for the next 3 chart bar(s).
+02/05/2025 11:00:00.000 | Info | Combo: bartime=2025-05-02 10:00, reversal - closing existing Buy position 50 before opening opposite direction.
+02/05/2025 11:00:00.000 | Trade | Closing position PID50 (Volume: 1.25)
+02/05/2025 11:00:00.000 | Trade |  Closing position PID50 (Volume: 1.25) SUCCEEDED
+02/05/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 1.5 SPN35.cash (Price: 13329.3, SL: 13385.223620179, TP: 13182.89)
+02/05/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 1.5 SPN35.cash (Price: 13329.3, SL: 13385.223620179, TP: 13182.89) SUCCEEDED, PendingOrder OID171
+02/05/2025 11:00:00.000 | Info | Combo: bartime=2025-05-02 10:00, executed=2025-05-02 11:00:00, pending Sell placed at 13329.3; SL=13385.223620178966, TP=13182.891962371463; valid for the next 3 chart bar(s).
+02/05/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 1.44 SPN35.cash (Price: 13339.6, SL: 13397.3600935316, TP: 13188.38)
+02/05/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 1.44 SPN35.cash (Price: 13339.6, SL: 13397.3600935316, TP: 13188.38) SUCCEEDED, PendingOrder OID174
+02/05/2025 14:00:00.000 | Info | Combo: bartime=2025-05-02 13:00, executed=2025-05-02 14:00:00, pending Sell placed at 13339.6; SL=13397.360093531632, TP=13188.38407513419; valid for the next 3 chart bar(s).
+02/05/2025 15:00:00.000 | Info | Combo: bartime=2025-05-02 14:00, reversal - cancelling existing Sell pending order 174 before opening opposite direction.
+02/05/2025 15:00:00.000 | Trade | Cancelling pending order OID174
+02/05/2025 15:00:00.000 | Trade |  Cancelling pending order OID174 SUCCEEDED
+02/05/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 1.35 SPN35.cash (Price: 13442.7, SL: 13380.9719251747, TP: 13604.3)
+02/05/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 1.35 SPN35.cash (Price: 13442.7, SL: 13380.9719251747, TP: 13604.3) SUCCEEDED, PendingOrder OID175
+02/05/2025 15:00:00.000 | Info | Combo: bartime=2025-05-02 14:00, executed=2025-05-02 15:00:00, pending Buy placed at 13442.7; SL=13380.971925174696, TP=13604.30409989265; valid for the next 3 chart bar(s).
+06/05/2025 10:00:00.000 | Info | Combo: bartime=2025-05-06 09:00, reversal - closing existing Buy position 52 before opening opposite direction.
+06/05/2025 10:00:00.000 | Trade | Closing position PID52 (Volume: 1.35)
+06/05/2025 10:00:00.000 | Trade |  Closing position PID52 (Volume: 1.35) SUCCEEDED
+06/05/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 1.7 SPN35.cash (Price: 13401.6, SL: 13450.7027476328, TP: 13273.05)
+06/05/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 1.7 SPN35.cash (Price: 13401.6, SL: 13450.7027476328, TP: 13273.05) SUCCEEDED, PendingOrder OID179
+06/05/2025 10:00:00.000 | Info | Combo: bartime=2025-05-06 09:00, executed=2025-05-06 10:00:00, pending Sell placed at 13401.6; SL=13450.70274763284, TP=13273.049006697225; valid for the next 3 chart bar(s).
+06/05/2025 13:00:00.000 | Trade | Cancelling pending order OID179
+06/05/2025 13:00:00.000 | Trade |  Cancelling pending order OID179 SUCCEEDED
+06/05/2025 13:00:00.000 | Info | Combo: pending order 179 cancelled after 3 chart bars.
+06/05/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 1.91 SPN35.cash (Price: 13481.9, SL: 13525.4500843443, TP: 13367.89)
+06/05/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 1.91 SPN35.cash (Price: 13481.9, SL: 13525.4500843443, TP: 13367.89) SUCCEEDED, PendingOrder OID180
+06/05/2025 15:00:00.000 | Info | Combo: bartime=2025-05-06 14:00, executed=2025-05-06 15:00:00, pending Sell placed at 13481.9; SL=13525.45008434433, TP=13367.885879186546; valid for the next 3 chart bar(s).
+07/05/2025 16:00:00.000 | Info | Combo: bartime=2025-05-07 15:00, reversal - closing existing Sell position 53 before opening opposite direction.
+07/05/2025 16:00:00.000 | Trade | Closing position PID53 (Volume: 1.91)
+07/05/2025 16:00:00.000 | Trade |  Closing position PID53 (Volume: 1.91) SUCCEEDED
+07/05/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 2.01 SPN35.cash (Price: 13507.6, SL: 13466.2942644048, TP: 13615.74)
+07/05/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 2.01 SPN35.cash (Price: 13507.6, SL: 13466.2942644048, TP: 13615.74) SUCCEEDED, PendingOrder OID184
+07/05/2025 16:00:00.000 | Info | Combo: bartime=2025-05-07 15:00, executed=2025-05-07 16:00:00, pending Buy placed at 13507.6; SL=13466.294264404827, TP=13615.738415788164; valid for the next 3 chart bar(s).
+08/05/2025 08:00:00.000 | Trade | Cancelling pending order OID184
+08/05/2025 08:00:00.000 | Trade |  Cancelling pending order OID184 SUCCEEDED
+08/05/2025 08:00:00.000 | Info | Combo: pending order 184 cancelled after 3 chart bars.
+08/05/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 1.59 SPN35.cash (Price: 13422, SL: 13474.3516292998, TP: 13284.94)
+08/05/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 1.59 SPN35.cash (Price: 13422, SL: 13474.3516292998, TP: 13284.94) SUCCEEDED, PendingOrder OID185
+08/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-08 07:00, executed=2025-05-08 08:00:00, pending Sell placed at 13422; SL=13474.351629299783, TP=13284.943434493167; valid for the next 3 chart bar(s).
+08/05/2025 11:00:00.000 | Trade | Cancelling pending order OID185
+08/05/2025 11:00:00.000 | Trade |  Cancelling pending order OID185 SUCCEEDED
+08/05/2025 11:00:00.000 | Info | Combo: pending order 185 cancelled after 3 chart bars.
+08/05/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 1.79 SPN35.cash (Price: 13448.9, SL: 13495.4691375112, TP: 13326.98)
+08/05/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 1.79 SPN35.cash (Price: 13448.9, SL: 13495.4691375112, TP: 13326.98) SUCCEEDED, PendingOrder OID186
+08/05/2025 14:00:00.000 | Info | Combo: bartime=2025-05-08 13:00, executed=2025-05-08 14:00:00, pending Sell placed at 13448.9; SL=13495.469137511162, TP=13326.981997995776; valid for the next 3 chart bar(s).
+08/05/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 1.62 SPN35.cash (Price: 13519.4, SL: 13468.6957519929, TP: 13652.14)
+08/05/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 1.62 SPN35.cash (Price: 13519.4, SL: 13468.6957519929, TP: 13652.14) SUCCEEDED, PendingOrder OID189
+08/05/2025 16:00:00.000 | Info | Combo: bartime=2025-05-08 15:00, executed=2025-05-08 16:00:00, pending Buy placed at 13519.4; SL=13468.695751992855, TP=13652.143721282702; valid for the next 3 chart bar(s).
+19/05/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 1.95 SPN35.cash (Price: 13997.5, SL: 14040.8067902993, TP: 13884.12)
+19/05/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 1.95 SPN35.cash (Price: 13997.5, SL: 14040.8067902993, TP: 13884.12) SUCCEEDED, PendingOrder OID192
+19/05/2025 11:00:00.000 | Info | Combo: bartime=2025-05-19 10:00, executed=2025-05-19 11:00:00, pending Sell placed at 13997.5; SL=14040.806790299337, TP=13884.122822996334; valid for the next 3 chart bar(s).
+19/05/2025 14:00:00.000 | Trade | Cancelling pending order OID192
+19/05/2025 14:00:00.000 | Trade |  Cancelling pending order OID192 SUCCEEDED
+19/05/2025 14:00:00.000 | Info | Combo: pending order 192 cancelled after 3 chart bars.
+21/05/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 2.39 SPN35.cash (Price: 14289.2, SL: 14324.6400900325, TP: 14196.42)
+21/05/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 2.39 SPN35.cash (Price: 14289.2, SL: 14324.6400900325, TP: 14196.42) SUCCEEDED, PendingOrder OID193
+21/05/2025 16:00:00.000 | Info | Combo: bartime=2025-05-21 15:00, executed=2025-05-21 16:00:00, pending Sell placed at 14289.2; SL=14324.640090032457, TP=14196.417844295029; valid for the next 3 chart bar(s).
+23/05/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 0.85 SPN35.cash (Price: 13926.7, SL: 14028.3255679896, TP: 13660.64)
+23/05/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 0.85 SPN35.cash (Price: 13926.7, SL: 14028.3255679896, TP: 13660.64) SUCCEEDED, PendingOrder OID196
+23/05/2025 12:00:00.000 | Info | Combo: bartime=2025-05-23 11:00, executed=2025-05-23 12:00:00, pending Sell placed at 13926.7; SL=14028.32556798963, TP=13660.644263003152; valid for the next 3 chart bar(s).
+27/05/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 1.79 SPN35.cash (Price: 14297.4, SL: 14249.5189136249, TP: 14422.75)
+27/05/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 1.79 SPN35.cash (Price: 14297.4, SL: 14249.5189136249, TP: 14422.75) SUCCEEDED, PendingOrder OID199
+27/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-27 07:00, executed=2025-05-27 08:00:00, pending Buy placed at 14297.4; SL=14249.518913624886, TP=14422.752684130048; valid for the next 3 chart bar(s).
+27/05/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 1.8 SPN35.cash (Price: 14188, SL: 14235.0639162241, TP: 14064.79)
+27/05/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 1.8 SPN35.cash (Price: 14188, SL: 14235.0639162241, TP: 14064.79) SUCCEEDED, PendingOrder OID202
+27/05/2025 11:00:00.000 | Info | Combo: bartime=2025-05-27 10:00, executed=2025-05-27 11:00:00, pending Sell placed at 14188; SL=14235.063916224059, TP=14064.786667325414; valid for the next 3 chart bar(s).
+27/05/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 1.94 SPN35.cash (Price: 14258.9, SL: 14215.6539799146, TP: 14372.12)
+27/05/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 1.94 SPN35.cash (Price: 14258.9, SL: 14215.6539799146, TP: 14372.12) SUCCEEDED, PendingOrder OID205
+27/05/2025 15:00:00.000 | Info | Combo: bartime=2025-05-27 14:00, executed=2025-05-27 15:00:00, pending Buy placed at 14258.9; SL=14215.653979914625, TP=14372.118080583508; valid for the next 3 chart bar(s).
+28/05/2025 07:05:00.000 | Info | Combo: bartime=2025-05-28 06:00, reversal - closing existing Buy position 60 before opening opposite direction.
+28/05/2025 07:05:00.000 | Trade | Closing position PID60 (Volume: 1.94)
+28/05/2025 07:05:00.000 | Trade |  Closing position PID60 (Volume: 1.94) SUCCEEDED
+28/05/2025 07:05:00.000 | Trade | Placing Stop Order to Sell 2.42 SPN35.cash (Price: 14187.2, SL: 14221.733089827, TP: 14096.79)
+28/05/2025 07:05:00.000 | Trade |  Placing Stop Order to Sell 2.42 SPN35.cash (Price: 14187.2, SL: 14221.733089827, TP: 14096.79) SUCCEEDED, PendingOrder OID209
+28/05/2025 07:05:00.000 | Info | Combo: bartime=2025-05-28 06:00, executed=2025-05-28 07:05:00, pending Sell placed at 14187.2; SL=14221.73308982697, TP=14096.792370832996; valid for the next 3 chart bar(s).
+28/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-28 07:00, reversal - cancelling existing Sell pending order 209 before opening opposite direction.
+28/05/2025 08:00:00.000 | Trade | Cancelling pending order OID209
+28/05/2025 08:00:00.000 | Trade |  Cancelling pending order OID209 SUCCEEDED
+28/05/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 2.1 SPN35.cash (Price: 14265.5, SL: 14225.8135281384, TP: 14369.4)
+28/05/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 2.1 SPN35.cash (Price: 14265.5, SL: 14225.8135281384, TP: 14369.4) SUCCEEDED, PendingOrder OID210
+28/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-28 07:00, executed=2025-05-28 08:00:00, pending Buy placed at 14265.5; SL=14225.813528138426, TP=14369.399183333604; valid for the next 3 chart bar(s).
+28/05/2025 09:00:00.000 | Info | Combo: bartime=2025-05-28 08:00, reversal - cancelling existing Buy pending order 210 before opening opposite direction.
+28/05/2025 09:00:00.000 | Trade | Cancelling pending order OID210
+28/05/2025 09:00:00.000 | Trade |  Cancelling pending order OID210 SUCCEEDED
+28/05/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 1.96 SPN35.cash (Price: 14182.6, SL: 14225.0691774893, TP: 14071.42)
+28/05/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 1.96 SPN35.cash (Price: 14182.6, SL: 14225.0691774893, TP: 14071.42) SUCCEEDED, PendingOrder OID211
+28/05/2025 09:00:00.000 | Info | Combo: bartime=2025-05-28 08:00, executed=2025-05-28 09:00:00, pending Sell placed at 14182.6; SL=14225.06917748926, TP=14071.415693333118; valid for the next 3 chart bar(s).
+29/05/2025 10:00:00.000 | Info | Combo: bartime=2025-05-29 09:00, reversal - closing existing Sell position 61 before opening opposite direction.
+29/05/2025 10:00:00.000 | Trade | Closing position PID61 (Volume: 1.96)
+29/05/2025 10:00:00.000 | Trade |  Closing position PID61 (Volume: 1.96) SUCCEEDED
+29/05/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 1.55 SPN35.cash (Price: 14183.9, SL: 14129.8080961528, TP: 14325.51)
+29/05/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 1.55 SPN35.cash (Price: 14183.9, SL: 14129.8080961528, TP: 14325.51) SUCCEEDED, PendingOrder OID215
+29/05/2025 10:00:00.000 | Info | Combo: bartime=2025-05-29 09:00, executed=2025-05-29 10:00:00, pending Buy placed at 14183.9; SL=14129.808096152847, TP=14325.512604271846; valid for the next 3 chart bar(s).
+29/05/2025 13:00:00.000 | Trade | Cancelling pending order OID215
+29/05/2025 13:00:00.000 | Trade |  Cancelling pending order OID215 SUCCEEDED
+29/05/2025 13:00:00.000 | Info | Combo: pending order 215 cancelled after 3 chart bars.
+30/05/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 1.54 SPN35.cash (Price: 14178.5, SL: 14124.1830482976, TP: 14320.7)
+30/05/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 1.54 SPN35.cash (Price: 14178.5, SL: 14124.1830482976, TP: 14320.7) SUCCEEDED, PendingOrder OID216
+30/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-30 07:00, executed=2025-05-30 08:00:00, pending Buy placed at 14178.5; SL=14124.183048297633, TP=14320.701779556799; valid for the next 3 chart bar(s).
+30/05/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 1.61 SPN35.cash (Price: 14083.3, SL: 14134.7230069694, TP: 13948.67)
+30/05/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 1.61 SPN35.cash (Price: 14083.3, SL: 14134.7230069694, TP: 13948.67) SUCCEEDED, PendingOrder OID219
+30/05/2025 17:00:00.000 | Info | Combo: bartime=2025-05-30 16:00, executed=2025-05-30 17:00:00, pending Sell placed at 14083.3; SL=14134.723006969376, TP=13948.67456775417; valid for the next 3 chart bar(s).
+02/06/2025 09:00:00.000 | Trade | Cancelling pending order OID219
+02/06/2025 09:00:00.000 | Trade |  Cancelling pending order OID219 SUCCEEDED
+02/06/2025 09:00:00.000 | Info | Combo: pending order 219 cancelled after 3 chart bars.
+02/06/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 1.36 SPN35.cash (Price: 14200.1, SL: 14139.1342028333, TP: 14359.71)
+02/06/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 1.36 SPN35.cash (Price: 14200.1, SL: 14139.1342028333, TP: 14359.71) SUCCEEDED, PendingOrder OID220
+02/06/2025 15:00:00.000 | Info | Combo: bartime=2025-06-02 14:00, executed=2025-06-02 15:00:00, pending Buy placed at 14200.1; SL=14139.134202833313, TP=14359.708456982386; valid for the next 3 chart bar(s).
+03/06/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 1.31 SPN35.cash (Price: 14097.4, SL: 14159.6063284156, TP: 13934.54)
+03/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 1.31 SPN35.cash (Price: 14097.4, SL: 14159.6063284156, TP: 13934.54) SUCCEEDED, PendingOrder OID223
+03/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-03 07:00, executed=2025-06-03 08:00:00, pending Sell placed at 14097.4; SL=14159.606328415579, TP=13934.543832208012; valid for the next 3 chart bar(s).
+03/06/2025 11:00:00.000 | Trade | Cancelling pending order OID223
+03/06/2025 11:00:00.000 | Trade |  Cancelling pending order OID223 SUCCEEDED
+03/06/2025 11:00:00.000 | Info | Combo: pending order 223 cancelled after 3 chart bars.
+04/06/2025 07:05:00.000 | Trade | Placing Stop Order to Buy 2.32 SPN35.cash (Price: 14176.3, SL: 14141.0578109072, TP: 14268.56)
+04/06/2025 07:05:00.000 | Trade |  Placing Stop Order to Buy 2.32 SPN35.cash (Price: 14176.3, SL: 14141.0578109072, TP: 14268.56) SUCCEEDED, PendingOrder OID224
+04/06/2025 07:05:00.000 | Info | Combo: bartime=2025-06-04 06:00, executed=2025-06-04 07:05:00, pending Buy placed at 14176.3; SL=14141.057810907161, TP=14268.564051045052; valid for the next 3 chart bar(s).
+05/06/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 1.82 SPN35.cash (Price: 14133.6, SL: 14089.4533010448, TP: 14249.18)
+05/06/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 1.82 SPN35.cash (Price: 14133.6, SL: 14089.4533010448, TP: 14249.18) SUCCEEDED, PendingOrder OID227
+05/06/2025 09:00:00.000 | Info | Combo: bartime=2025-06-05 08:00, executed=2025-06-05 09:00:00, pending Buy placed at 14133.6; SL=14089.453301044827, TP=14249.176057864644; valid for the next 3 chart bar(s).
+05/06/2025 12:00:00.000 | Trade | Cancelling pending order OID227
+05/06/2025 12:00:00.000 | Trade |  Cancelling pending order OID227 SUCCEEDED
+05/06/2025 12:00:00.000 | Info | Combo: pending order 227 cancelled after 3 chart bars.
+05/06/2025 13:00:00.000 | Trade | Placing Stop Order to Buy 2.18 SPN35.cash (Price: 14156, SL: 14119.121352108, TP: 14252.55)
+05/06/2025 13:00:00.000 | Trade |  Placing Stop Order to Buy 2.18 SPN35.cash (Price: 14156, SL: 14119.121352108, TP: 14252.55) SUCCEEDED, PendingOrder OID228
+05/06/2025 13:00:00.000 | Info | Combo: bartime=2025-06-05 12:00, executed=2025-06-05 13:00:00, pending Buy placed at 14156; SL=14119.12135210796, TP=14252.548300181357; valid for the next 3 chart bar(s).
+09/06/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 2.1 SPN35.cash (Price: 14205.5, SL: 14244.8597917301, TP: 14102.46)
+09/06/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 2.1 SPN35.cash (Price: 14205.5, SL: 14244.8597917301, TP: 14102.46) SUCCEEDED, PendingOrder OID231
+09/06/2025 12:00:00.000 | Info | Combo: bartime=2025-06-09 11:00, executed=2025-06-09 12:00:00, pending Sell placed at 14205.5; SL=14244.859791730065, TP=14102.456065250692; valid for the next 3 chart bar(s).
+10/06/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 2.25 SPN35.cash (Price: 14298.3, SL: 14262.1262960363, TP: 14393)
+10/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 2.25 SPN35.cash (Price: 14298.3, SL: 14262.1262960363, TP: 14393) SUCCEEDED, PendingOrder OID234
+10/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-10 07:00, executed=2025-06-10 08:00:00, pending Buy placed at 14298.3; SL=14262.126296036296, TP=14393.002756976974; valid for the next 3 chart bar(s).
+10/06/2025 09:00:00.000 | Info | Combo: bartime=2025-06-10 08:00, reversal - cancelling existing Buy pending order 234 before opening opposite direction.
+10/06/2025 09:00:00.000 | Trade | Cancelling pending order OID234
+10/06/2025 09:00:00.000 | Trade |  Cancelling pending order OID234 SUCCEEDED
+10/06/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 1.88 SPN35.cash (Price: 14215.4, SL: 14258.818963171, TP: 14101.73)
+10/06/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 1.88 SPN35.cash (Price: 14215.4, SL: 14258.818963171, TP: 14101.73) SUCCEEDED, PendingOrder OID235
+10/06/2025 09:00:00.000 | Info | Combo: bartime=2025-06-10 08:00, executed=2025-06-10 09:00:00, pending Sell placed at 14215.4; SL=14258.818963170961, TP=14101.72915441842; valid for the next 3 chart bar(s).
+10/06/2025 10:00:00.000 | Info | Combo: bartime=2025-06-10 09:00, reversal - cancelling existing Sell pending order 235 before opening opposite direction.
+10/06/2025 10:00:00.000 | Trade | Cancelling pending order OID235
+10/06/2025 10:00:00.000 | Trade |  Cancelling pending order OID235 SUCCEEDED
+10/06/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 1.9 SPN35.cash (Price: 14271.9, SL: 14228.9848294632, TP: 14384.25)
+10/06/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 1.9 SPN35.cash (Price: 14271.9, SL: 14228.9848294632, TP: 14384.25) SUCCEEDED, PendingOrder OID236
+10/06/2025 10:00:00.000 | Info | Combo: bartime=2025-06-10 09:00, executed=2025-06-10 10:00:00, pending Buy placed at 14271.9; SL=14228.98482946323, TP=14384.251916465262; valid for the next 3 chart bar(s).
+10/06/2025 13:00:00.000 | Trade | Cancelling pending order OID236
+10/06/2025 13:00:00.000 | Trade |  Cancelling pending order OID236 SUCCEEDED
+10/06/2025 13:00:00.000 | Info | Combo: pending order 236 cancelled after 3 chart bars.
+10/06/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 2.03 SPN35.cash (Price: 14228.2, SL: 14268.3815790815, TP: 14123)
+10/06/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 2.03 SPN35.cash (Price: 14228.2, SL: 14268.3815790815, TP: 14123) SUCCEEDED, PendingOrder OID237
+10/06/2025 15:00:00.000 | Info | Combo: bartime=2025-06-10 14:00, executed=2025-06-10 15:00:00, pending Sell placed at 14228.2; SL=14268.38157908149, TP=14123.004625964664; valid for the next 3 chart bar(s).
+12/06/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 1.84 SPN35.cash (Price: 14138.2, SL: 14092.8529648688, TP: 14256.92)
+12/06/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 1.84 SPN35.cash (Price: 14138.2, SL: 14092.8529648688, TP: 14256.92) SUCCEEDED, PendingOrder OID240
+12/06/2025 15:00:00.000 | Info | Combo: bartime=2025-06-12 14:00, executed=2025-06-12 15:00:00, pending Buy placed at 14138.2; SL=14092.852964868765, TP=14256.918537973574; valid for the next 3 chart bar(s).
+12/06/2025 17:00:00.000 | Info | Combo: bartime=2025-06-12 16:00, Buy signal skipped: already have same-direction exposure open.
+13/06/2025 07:05:00.000 | Trade | Cancelling pending order OID240
+13/06/2025 07:05:00.000 | Trade |  Cancelling pending order OID240 SUCCEEDED
+13/06/2025 07:05:00.000 | Info | Combo: pending order 240 cancelled after 3 chart bars.
+13/06/2025 07:05:00.000 | Trade | Placing Stop Order to Sell 1.18 SPN35.cash (Price: 13904.9, SL: 13975.3170255898, TP: 13720.55)
+13/06/2025 07:05:00.000 | Trade |  Placing Stop Order to Sell 1.18 SPN35.cash (Price: 13904.9, SL: 13975.3170255898, TP: 13720.55) SUCCEEDED, PendingOrder OID241
+13/06/2025 07:05:00.000 | Info | Combo: bartime=2025-06-13 06:00, executed=2025-06-13 07:05:00, pending Sell placed at 13904.9; SL=13975.317025589753, TP=13720.548227006024; valid for the next 3 chart bar(s).
+16/06/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 1.37 SPN35.cash (Price: 14034.4, SL: 13974.4467428011, TP: 14191.36)
+16/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 1.37 SPN35.cash (Price: 14034.4, SL: 13974.4467428011, TP: 14191.36) SUCCEEDED, PendingOrder OID244
+16/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-16 07:00, executed=2025-06-16 08:00:00, pending Buy placed at 14034.4; SL=13974.446742801132, TP=14191.357627346637; valid for the next 3 chart bar(s).
+17/06/2025 07:05:00.000 | Info | Combo: bartime=2025-06-17 06:00, reversal - closing existing Buy position 69 before opening opposite direction.
+17/06/2025 07:05:00.000 | Trade | Closing position PID69 (Volume: 1.37)
+17/06/2025 07:05:00.000 | Trade |  Closing position PID69 (Volume: 1.37) SUCCEEDED
+17/06/2025 07:05:00.000 | Trade | Placing Stop Order to Sell 1.46 SPN35.cash (Price: 13974.7, SL: 14030.2294855308, TP: 13829.32)
+17/06/2025 07:05:00.000 | Trade |  Placing Stop Order to Sell 1.46 SPN35.cash (Price: 13974.7, SL: 14030.2294855308, TP: 13829.32) SUCCEEDED, PendingOrder OID248
+17/06/2025 07:05:00.000 | Info | Combo: bartime=2025-06-17 06:00, executed=2025-06-17 07:05:00, pending Sell placed at 13974.7; SL=14030.229485530772, TP=13829.32380688044; valid for the next 3 chart bar(s).
+18/06/2025 15:00:00.000 | Info | Combo: bartime=2025-06-18 14:00, reversal - closing existing Sell position 70 before opening opposite direction.
+18/06/2025 15:00:00.000 | Trade | Closing position PID70 (Volume: 1.46)
+18/06/2025 15:00:00.000 | Trade |  Closing position PID70 (Volume: 1.46) SUCCEEDED
+18/06/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 1.57 SPN35.cash (Price: 13946.8, SL: 13895.0400424231, TP: 14082.31)
+18/06/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 1.57 SPN35.cash (Price: 13946.8, SL: 13895.0400424231, TP: 14082.31) SUCCEEDED, PendingOrder OID252
+18/06/2025 15:00:00.000 | Info | Combo: bartime=2025-06-18 14:00, executed=2025-06-18 15:00:00, pending Buy placed at 13946.8; SL=13895.040042423108, TP=14082.307568936298; valid for the next 3 chart bar(s).
+19/06/2025 07:05:00.000 | Trade | Cancelling pending order OID252
+19/06/2025 07:05:00.000 | Trade |  Cancelling pending order OID252 SUCCEEDED
+19/06/2025 07:05:00.000 | Info | Combo: pending order 252 cancelled after 3 chart bars.
+20/06/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 1.1 SPN35.cash (Price: 13888, SL: 13813.887596103, TP: 14082.03)
+20/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 1.1 SPN35.cash (Price: 13888, SL: 13813.887596103, TP: 14082.03) SUCCEEDED, PendingOrder OID253
+20/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-20 07:00, executed=2025-06-20 08:00:00, pending Buy placed at 13888; SL=13813.887596102955, TP=14082.026273402464; valid for the next 3 chart bar(s).
+23/06/2025 07:05:00.000 | Info | Combo: bartime=2025-06-23 06:00, reversal - closing existing Buy position 71 before opening opposite direction.
+23/06/2025 07:05:00.000 | Trade | Closing position PID71 (Volume: 1.1)
+23/06/2025 07:05:00.000 | Trade |  Closing position PID71 (Volume: 1.1) SUCCEEDED
+23/06/2025 07:05:00.000 | Trade | Placing Stop Order to Sell 1.36 SPN35.cash (Price: 13757.4, SL: 13815.9342713777, TP: 13604.16)
+23/06/2025 07:05:00.000 | Trade |  Placing Stop Order to Sell 1.36 SPN35.cash (Price: 13757.4, SL: 13815.9342713777, TP: 13604.16) SUCCEEDED, PendingOrder OID257
+23/06/2025 07:05:00.000 | Info | Combo: bartime=2025-06-23 06:00, executed=2025-06-23 07:05:00, pending Sell placed at 13757.4; SL=13815.934271377715, TP=13604.15727753314; valid for the next 3 chart bar(s).
+23/06/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 1.22 SPN35.cash (Price: 13814.2, SL: 13878.4847469454, TP: 13645.9)
+23/06/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 1.22 SPN35.cash (Price: 13814.2, SL: 13878.4847469454, TP: 13645.9) SUCCEEDED, PendingOrder OID260
+23/06/2025 10:00:00.000 | Info | Combo: bartime=2025-06-23 09:00, executed=2025-06-23 10:00:00, pending Sell placed at 13814.2; SL=13878.48474694539, TP=13645.90253249697; valid for the next 3 chart bar(s).
+23/06/2025 14:00:00.000 | Info | Combo: bartime=2025-06-23 13:00, reversal - closing existing Sell position 73 before opening opposite direction.
+23/06/2025 14:00:00.000 | Trade | Closing position PID73 (Volume: 1.22)
+23/06/2025 14:00:00.000 | Trade |  Closing position PID73 (Volume: 1.22) SUCCEEDED
+23/06/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 1.25 SPN35.cash (Price: 13861.9, SL: 13799.1795276512, TP: 14026.1)
+23/06/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 1.25 SPN35.cash (Price: 13861.9, SL: 13799.1795276512, TP: 14026.1) SUCCEEDED, PendingOrder OID264
+23/06/2025 14:00:00.000 | Info | Combo: bartime=2025-06-23 13:00, executed=2025-06-23 14:00:00, pending Buy placed at 13861.9; SL=13799.179527651168, TP=14026.102196609241; valid for the next 3 chart bar(s).
+24/06/2025 07:05:00.000 | Trade | Placing Stop Order to Buy 1.21 SPN35.cash (Price: 13874.5, SL: 13810.3048945259, TP: 14042.56)
+24/06/2025 07:05:00.000 | Trade |  Placing Stop Order to Buy 1.21 SPN35.cash (Price: 13874.5, SL: 13810.3048945259, TP: 14042.56) SUCCEEDED, PendingOrder OID267
+24/06/2025 07:05:00.000 | Info | Combo: bartime=2025-06-23 17:00, executed=2025-06-24 07:05:00, pending Buy placed at 13874.5; SL=13810.304894525918, TP=14042.562786131146; valid for the next 3 chart bar(s).
+25/06/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 1.43 SPN35.cash (Price: 13953, SL: 14007.0799536909, TP: 13811.42)
+25/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 1.43 SPN35.cash (Price: 13953, SL: 14007.0799536909, TP: 13811.42) SUCCEEDED, PendingOrder OID270
+25/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-25 07:00, executed=2025-06-25 08:00:00, pending Sell placed at 13953; SL=14007.079953690854, TP=13811.418681237345; valid for the next 3 chart bar(s).
+30/06/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 1.76 SPN35.cash (Price: 13887.6, SL: 13932.7418996594, TP: 13769.42)
+30/06/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 1.76 SPN35.cash (Price: 13887.6, SL: 13932.7418996594, TP: 13769.42) SUCCEEDED, PendingOrder OID273
+30/06/2025 10:00:00.000 | Info | Combo: bartime=2025-06-30 09:00, executed=2025-06-30 10:00:00, pending Sell placed at 13887.6; SL=13932.74189965936, TP=13769.418506691796; valid for the next 3 chart bar(s).
+30/06/2025 13:00:00.000 | Trade | Cancelling pending order OID273
+30/06/2025 13:00:00.000 | Trade |  Cancelling pending order OID273 SUCCEEDED
+30/06/2025 13:00:00.000 | Info | Combo: pending order 273 cancelled after 3 chart bars.
+01/07/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 1.96 SPN35.cash (Price: 13943.1, SL: 13983.6998682533, TP: 13836.81)
+01/07/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 1.96 SPN35.cash (Price: 13943.1, SL: 13983.6998682533, TP: 13836.81) SUCCEEDED, PendingOrder OID274
+01/07/2025 13:00:00.000 | Info | Combo: bartime=2025-07-01 12:00, executed=2025-07-01 13:00:00, pending Sell placed at 13943.1; SL=13983.699868253329, TP=13836.809544912785; valid for the next 3 chart bar(s).
+01/07/2025 16:00:00.000 | Trade | Cancelling pending order OID274
+01/07/2025 16:00:00.000 | Trade |  Cancelling pending order OID274 SUCCEEDED
+01/07/2025 16:00:00.000 | Info | Combo: pending order 274 cancelled after 3 chart bars.
+01/07/2025 17:59:00.000 | Info | Combo: loaded=2212, processed=116, before-start=1799, not-processed=297, placed=108, failed=0, guard-skipped=0, pending-expired=23, same-direction-skipped=8, reversed=23, margin-capped=4, margin-blocked=0.
+Progress | Backtesting | 99.86 % |
+Info | CBot instance [Combo, SPN35.cash, h1] stopped.
+{
+	"Equity":9425.72,
+	"NetProfit":-574.27,
+	"MaxBalanceDrawdownPercentages":14,
+	"MaxEquityDrawdownPercentages":15,
+	"MaxBalanceDrawdown":1569.89,
+	"MaxEquityDrawdown":1690.71,
+	"WinningTrades":26,
+	"LosingTrades":50,
+	"TotalTrades":76,
+	"AverageTrade":-7.55,
+	"ProfitFactor":0.9,
+	"Fitness":0
+}
+

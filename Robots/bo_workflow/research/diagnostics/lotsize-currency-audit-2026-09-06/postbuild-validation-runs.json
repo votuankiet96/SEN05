@@ -1,0 +1,38 @@
+﻿[
+    {
+        "Case":  "Combo-JP225",
+        "Success":  true,
+        "FailureReason":  null,
+        "RunDirectory":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_JP225.cash_h1_20260907-001755",
+        "NetProfit":  null,
+        "TotalTrades":  null,
+        "HistoryItems":  null
+    },
+    {
+        "Case":  "Combo-HK50",
+        "Success":  true,
+        "FailureReason":  null,
+        "RunDirectory":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_HK50.cash_h1_20260907-001841",
+        "NetProfit":  null,
+        "TotalTrades":  null,
+        "HistoryItems":  null
+    },
+    {
+        "Case":  "Combo-US30",
+        "Success":  true,
+        "FailureReason":  null,
+        "RunDirectory":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_US30.cash_h1_20260907-001919",
+        "NetProfit":  null,
+        "TotalTrades":  null,
+        "HistoryItems":  null
+    },
+    {
+        "Case":  "MA-Cross-JP225",
+        "Success":  true,
+        "FailureReason":  null,
+        "RunDirectory":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\MA Cross_JP225.cash_m45_20260907-001956",
+        "NetProfit":  null,
+        "TotalTrades":  null,
+        "HistoryItems":  null
+    }
+]

@@ -1,0 +1,15 @@
+﻿backtest
+C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo
+C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_UK100.cash_h4_20260902-031953\params.cbotset
+--start=01/01/2025
+--end=07/01/2025
+--data-mode=Ticks
+--ctid=votuankiet96@gmail.com
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt
+--account=7563609
+--broker=FTMO Platform
+--symbol=UK100.cash
+--period=h4
+--full-access
+--report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_UK100.cash_h4_20260902-031953\report.json
+

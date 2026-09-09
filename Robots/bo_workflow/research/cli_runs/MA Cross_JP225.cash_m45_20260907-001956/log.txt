@@ -1,0 +1,131 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\MA Cross.algo 
+C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\MA 
+Cross_JP225.cash_m45_20260907-001956\params.cbotset --start=01/01/2025 --end=08/01/2025 --data-mode=Ticks 
+--ctid=votuankiet96@gmail.com --pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO 
+Platform --symbol=JP225.cash --period=m45 --full-access 
+--report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\MA 
+Cross_JP225.cash_m45_20260907-001956\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...956\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | JP225.cash                | cmd arg              |
+| Period               | m45                       | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 08/01/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 2                         | default value        |
+| KtpLevel             | 4                         | default value        |
+| RiskPercent          | 1                         | default value        |
+| MaxMarginPercent     | 50                        | default value        |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+07/09/2026 07:19:58.974 | Establishing connection using votuankiet96@gmail.com...
+07/09/2026 07:20:01.260 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Info | CBot instance [MA Cross, JP225.cash, m45] started.
+Progress | Backtesting | 12.02 % |
+Progress | Backtesting | 17.50 % |
+Progress | Backtesting | 19.28 % |
+Progress | Backtesting | 20.22 % |
+Progress | Backtesting | 20.73 % |
+Progress | Backtesting | 21.68 % |
+Progress | Backtesting | 22.51 % |
+Progress | Backtesting | 25.76 % |
+Progress | Backtesting | 25.91 % |
+Progress | Backtesting | 26.68 % |
+Progress | Backtesting | 27.63 % |
+Progress | Backtesting | 28.61 % |
+Progress | Backtesting | 29.28 % |
+Progress | Backtesting | 30.01 % |
+Progress | Backtesting | 31.39 % |
+Progress | Backtesting | 32.56 % |
+Progress | Backtesting | 35.63 % |
+Progress | Backtesting | 62.50 % |
+Progress | Backtesting | 63.19 % |
+Progress | Backtesting | 64.74 % |
+Progress | Backtesting | 66.51 % |
+Progress | Backtesting | 67.48 % |
+Progress | Backtesting | 68.62 % |
+Progress | Backtesting | 69.41 % |
+Progress | Backtesting | 70.08 % |
+Progress | Backtesting | 70.71 % |
+Progress | Backtesting | 71.53 % |
+Progress | Backtesting | 72.19 % |
+Progress | Backtesting | 73.07 % |
+Progress | Backtesting | 75.00 % |
+Progress | Backtesting | 75.06 % |
+Progress | Backtesting | 76.03 % |
+Progress | Backtesting | 77.65 % |
+Progress | Backtesting | 78.94 % |
+Progress | Backtesting | 79.82 % |
+Progress | Backtesting | 81.19 % |
+Progress | Backtesting | 82.58 % |
+Progress | Backtesting | 83.35 % |
+Progress | Backtesting | 84.19 % |
+Progress | Backtesting | 85.75 % |
+Progress | Backtesting | 87.50 % |
+Progress | Backtesting | 87.50 % |
+Progress | Backtesting | 88.13 % |
+Progress | Backtesting | 89.97 % |
+Progress | Backtesting | 91.63 % |
+Progress | Backtesting | 93.23 % |
+Progress | Backtesting | 93.78 % |
+Progress | Backtesting | 94.77 % |
+Progress | Backtesting | 95.59 % |
+Progress | Backtesting | 96.85 % |
+Progress | Backtesting | 98.56 % |
+01/01/2025 23:05:00.003 | Info | MA Cross: loaded 2029 valid signal row(s) from CSV.
+01/01/2025 23:05:00.003 | Info | MA Cross: signal scheduling active with chart timeframe m45 (00:45:00); CSV timeframe must match the chart timeframe.
+03/01/2025 01:45:19.867 | Trade | Executing Market Order to Sell 135.6 JP225.cash (SL: 115.99, TP: 303.65)
+03/01/2025 01:45:19.867 | Trade |  Executing Market Order to Sell 135.6 JP225.cash (SL: 115.99, TP: 303.65) SUCCEEDED, Position PID1
+03/01/2025 01:45:19.867 | Info | MA Cross: bartime=2025-01-03 01:00, executed=2025-01-03 01:45:19, market Sell placed; SL=115.9851098762699 pips, TP=303.6490176560746 pips.
+03/01/2025 16:45:00.272 | Trade | Executing Market Order to Buy 153.6 JP225.cash (SL: 101.29, TP: 265.19)
+03/01/2025 16:45:00.272 | Trade |  Executing Market Order to Buy 153.6 JP225.cash (SL: 101.29, TP: 265.19) SUCCEEDED, Position PID2
+03/01/2025 16:45:00.272 | Info | MA Cross: bartime=2025-01-03 16:00, executed=2025-01-03 16:45:00, market Buy placed; SL=101.29413592461488 pips, TP=265.18804785064174 pips.
+06/01/2025 15:30:00.213 | Trade | Executing Market Order to Buy 118.6 JP225.cash (SL: 135.12, TP: 353.73)
+06/01/2025 15:30:00.213 | Trade |  Executing Market Order to Buy 118.6 JP225.cash (SL: 135.12, TP: 353.73) SUCCEEDED, Position PID3
+06/01/2025 15:30:00.213 | Info | MA Cross: bartime=2025-01-06 14:45, executed=2025-01-06 15:30:00, market Buy placed; SL=135.1158482412783 pips, TP=353.73329069566654 pips.
+07/01/2025 21:15:10.684 | Trade | Executing Market Order to Sell 114.2 JP225.cash (SL: 139.28, TP: 364.64)
+07/01/2025 21:15:10.684 | Trade |  Executing Market Order to Sell 114.2 JP225.cash (SL: 139.28, TP: 364.64) SUCCEEDED, Position PID4
+07/01/2025 21:15:10.684 | Info | MA Cross: bartime=2025-01-07 20:30, executed=2025-01-07 21:15:10, market Sell placed; SL=139.28327744068991 pips, TP=364.64362033972617 pips.
+08/01/2025 10:45:17.585 | Trade | Executing Market Order to Buy 156.1 JP225.cash (SL: 101.1, TP: 264.69)
+08/01/2025 10:45:17.585 | Trade |  Executing Market Order to Buy 156.1 JP225.cash (SL: 101.1, TP: 264.69) SUCCEEDED, Position PID5
+08/01/2025 10:45:17.585 | Info | MA Cross: bartime=2025-01-08 10:00, executed=2025-01-08 10:45:17, market Buy placed; SL=101.10211228352492 pips, TP=264.6853299582682 pips.
+08/01/2025 14:30:00.185 | Trade | Executing Market Order to Sell 146.9 JP225.cash (SL: 106.44, TP: 278.67)
+08/01/2025 14:30:00.185 | Trade |  Executing Market Order to Sell 146.9 JP225.cash (SL: 106.44, TP: 278.67) SUCCEEDED, Position PID6
+08/01/2025 14:30:00.185 | Info | MA Cross: bartime=2025-01-08 13:45, executed=2025-01-08 14:30:00, market Sell placed; SL=106.44354015306546 pips, TP=278.6691881207253 pips.
+08/01/2025 23:59:59.985 | Info | MA Cross: loaded=2029, processed=6, before-start=1641, not-processed=382, placed=6, failed=0, guard-skipped=0, same-direction-skipped=0, reversed=0, margin-capped=0, margin-blocked=0.
+Progress | Backtesting | 100.00 % |
+Info | CBot instance [MA Cross, JP225.cash, m45] stopped.
+{
+	"Equity":9773.97,
+	"NetProfit":-226.03,
+	"MaxBalanceDrawdownPercentages":3,
+	"MaxEquityDrawdownPercentages":4,
+	"MaxBalanceDrawdown":403.8,
+	"MaxEquityDrawdown":460.34,
+	"WinningTrades":1,
+	"LosingTrades":5,
+	"TotalTrades":6,
+	"AverageTrade":-37.67,
+	"ProfitFactor":0.55,
+	"Fitness":0
+}
+

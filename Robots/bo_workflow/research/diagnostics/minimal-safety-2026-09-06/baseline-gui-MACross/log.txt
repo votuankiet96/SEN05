@@ -1,0 +1,97 @@
+01/01/2026 00:00:00.000 | Info | CBot instance [MA Cross, US30.cash, m30] started.
+01/01/2026 23:05:00.002 | Info | MA Cross: loaded 2939 valid signal row(s) from CSV.
+01/01/2026 23:05:00.002 | Info | MA Cross: signal scheduling active with chart timeframe m30 (00:30:00); CSV timeframe must match the chart timeframe.
+02/01/2026 21:30:00.618 | Trade | Executing Market Order to Buy 1 US30.cash (SL: 99.37, TP: 260.14)
+02/01/2026 21:30:00.618 | Trade | → Executing Market Order to Buy 1 US30.cash (SL: 99.37, TP: 260.14) SUCCEEDED, Position PID1
+02/01/2026 21:30:00.618 | Info | MA Cross: bartime=2026-01-02 21:00, executed=2026-01-02 21:30:00, market Buy placed; SL=99.36619220027293 pips, TP=260.14069118031455 pips.
+06/01/2026 07:00:00.208 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 4.25 units, which needs about $13883.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5130.99 budget, free margin was $10261.99). Size was cut from 4.25 to 1.53 units. Real risk on this trade is now about $36.88 (0.36% of balance) instead of the requested 1.00%.
+06/01/2026 07:00:00.208 | Trade | Executing Market Order to Sell 1.53 US30.cash (SL: 24.11, TP: 63.11)
+06/01/2026 07:00:00.208 | Trade | → Executing Market Order to Sell 1.53 US30.cash (SL: 24.11, TP: 63.11) SUCCEEDED, Position PID2
+06/01/2026 07:00:00.208 | Info | MA Cross: bartime=2026-01-06 06:30, executed=2026-01-06 07:00:00, market Sell placed; SL=24.10749274996615 pips, TP=63.113416019411375 pips.
+06/01/2026 16:30:00.008 | Trade | Executing Market Order to Buy 1 US30.cash (SL: 102.93, TP: 269.47)
+06/01/2026 16:30:00.008 | Trade | → Executing Market Order to Buy 1 US30.cash (SL: 102.93, TP: 269.47) SUCCEEDED, Position PID3
+06/01/2026 16:30:00.008 | Info | MA Cross: bartime=2026-01-06 16:00, executed=2026-01-06 16:30:00, market Buy placed; SL=102.93120374514486 pips, TP=269.47389140478924 pips.
+07/01/2026 12:30:00.208 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 4.37 units, which needs about $14419.31 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5314.44 budget, free margin was $10628.87). Size was cut from 4.37 to 1.57 units. Real risk on this trade is now about $38.16 (0.36% of balance) instead of the requested 1.00%.
+07/01/2026 12:30:00.208 | Trade | Executing Market Order to Sell 1.57 US30.cash (SL: 24.31, TP: 63.63)
+07/01/2026 12:30:00.208 | Trade | → Executing Market Order to Sell 1.57 US30.cash (SL: 24.31, TP: 63.63) SUCCEEDED, Position PID4
+07/01/2026 12:30:00.208 | Info | MA Cross: bartime=2026-01-07 12:00, executed=2026-01-07 12:30:00, market Sell placed; SL=24.306561892560538 pips, TP=63.63457903472349 pips.
+08/01/2026 16:30:00.007 | Trade | Executing Market Order to Buy 0.92 US30.cash (SL: 114.8, TP: 300.55)
+08/01/2026 16:30:00.007 | Trade | → Executing Market Order to Buy 0.92 US30.cash (SL: 114.8, TP: 300.55) SUCCEEDED, Position PID5
+08/01/2026 16:30:00.007 | Info | MA Cross: bartime=2026-01-08 16:00, executed=2026-01-08 16:30:00, market Buy placed; SL=114.79975826191637 pips, TP=300.545767129697 pips.
+09/01/2026 07:30:00.613 | Info | MA Cross: bartime=2026-01-09 07:00, reversal - closing existing Buy position 5 before opening opposite direction.
+09/01/2026 07:30:00.613 | Trade | Closing position PID5 (Volume: 0.92)
+09/01/2026 07:30:00.613 | Trade | → Closing position PID5 (Volume: 0.92) SUCCEEDED
+09/01/2026 07:30:00.613 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 3.73 units, which needs about $12244.67 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5280.69 budget, free margin was $10561.37). Size was cut from 3.73 to 1.57 units. Real risk on this trade is now about $44.39 (0.42% of balance) instead of the requested 1.00%.
+09/01/2026 07:30:00.613 | Trade | Executing Market Order to Sell 1.57 US30.cash (SL: 28.27, TP: 74.02)
+09/01/2026 07:30:00.613 | Trade | → Executing Market Order to Sell 1.57 US30.cash (SL: 28.27, TP: 74.02) SUCCEEDED, Position PID6
+09/01/2026 07:30:00.613 | Info | MA Cross: bartime=2026-01-09 07:00, executed=2026-01-09 07:30:00, market Sell placed; SL=28.27236648932626 pips, TP=74.01705546905615 pips.
+09/01/2026 14:30:00.010 | Trade | Executing Market Order to Buy 1.39 US30.cash (SL: 75.31, TP: 197.17)
+09/01/2026 14:30:00.010 | Trade | → Executing Market Order to Buy 1.39 US30.cash (SL: 75.31, TP: 197.17) SUCCEEDED, Position PID7
+09/01/2026 14:30:00.010 | Info | MA Cross: bartime=2026-01-09 14:00, executed=2026-01-09 14:30:00, market Buy placed; SL=75.31206129166858 pips, TP=197.16697646158835 pips.
+12/01/2026 04:00:00.102 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 2.43 units, which needs about $7978.94 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5205.70 budget, free margin was $10411.41). Size was cut from 2.43 to 1.55 units. Real risk on this trade is now about $66.36 (0.64% of balance) instead of the requested 1.00%.
+12/01/2026 04:00:00.102 | Trade | Executing Market Order to Sell 1.55 US30.cash (SL: 42.81, TP: 112.08)
+12/01/2026 04:00:00.102 | Trade | → Executing Market Order to Sell 1.55 US30.cash (SL: 42.81, TP: 112.08) SUCCEEDED, Position PID8
+12/01/2026 04:00:00.102 | Info | MA Cross: bartime=2026-01-12 03:30, executed=2026-01-12 04:00:00, market Sell placed; SL=42.812484457361336 pips, TP=112.08308430937197 pips.
+12/01/2026 17:30:00.006 | Trade | Executing Market Order to Buy 1.01 US30.cash (SL: 101.57, TP: 265.9)
+12/01/2026 17:30:00.006 | Trade | → Executing Market Order to Buy 1.01 US30.cash (SL: 101.57, TP: 265.9) SUCCEEDED, Position PID9
+12/01/2026 17:30:00.006 | Info | MA Cross: bartime=2026-01-12 17:00, executed=2026-01-12 17:30:00, market Buy placed; SL=101.56619749174365 pips, TP=265.9003050333849 pips.
+13/01/2026 11:30:00.700 | Info | MA Cross: bartime=2026-01-13 11:00, reversal - closing existing Buy position 9 before opening opposite direction.
+13/01/2026 11:30:00.700 | Trade | Closing position PID9 (Volume: 1.01)
+13/01/2026 11:30:00.700 | Trade | → Closing position PID9 (Volume: 1.01) SUCCEEDED
+13/01/2026 11:30:00.700 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 4.54 units, which needs about $14990.96 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5219.76 budget, free margin was $10439.53). Size was cut from 4.54 to 1.54 units. Real risk on this trade is now about $35.40 (0.34% of balance) instead of the requested 1.00%.
+13/01/2026 11:30:00.700 | Trade | Executing Market Order to Sell 1.54 US30.cash (SL: 22.99, TP: 60.18)
+13/01/2026 11:30:00.700 | Trade | → Executing Market Order to Sell 1.54 US30.cash (SL: 22.99, TP: 60.18) SUCCEEDED, Position PID10
+13/01/2026 11:30:00.700 | Info | MA Cross: bartime=2026-01-13 11:00, executed=2026-01-13 11:30:00, market Sell placed; SL=22.98681924517434 pips, TP=60.179492783866415 pips.
+15/01/2026 00:00:00.306 | Trade | Executing Market Order to Buy 1.57 US30.cash (SL: 65.87, TP: 172.45)
+15/01/2026 00:00:00.306 | Trade | → Executing Market Order to Buy 1.57 US30.cash (SL: 65.87, TP: 172.45) SUCCEEDED, Position PID11
+15/01/2026 00:00:00.306 | Info | MA Cross: bartime=2026-01-14 23:30, executed=2026-01-15 00:00:00, market Buy placed; SL=65.86956520583558 pips, TP=172.44652170887755 pips.
+16/01/2026 13:30:00.507 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 2.43 units, which needs about $8013.52 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5337.41 budget, free margin was $10674.83). Size was cut from 2.43 to 1.58 units. Real risk on this trade is now about $69.26 (0.65% of balance) instead of the requested 1.00%.
+16/01/2026 13:30:00.507 | Trade | Executing Market Order to Sell 1.58 US30.cash (SL: 43.84, TP: 114.76)
+16/01/2026 13:30:00.507 | Trade | → Executing Market Order to Sell 1.58 US30.cash (SL: 43.84, TP: 114.76) SUCCEEDED, Position PID12
+16/01/2026 13:30:00.507 | Info | MA Cross: bartime=2026-01-16 13:00, executed=2026-01-16 13:30:00, market Sell placed; SL=43.83538458958026 pips, TP=114.76103685552111 pips.
+21/01/2026 09:30:01.006 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 3.04 units, which needs about $9846.19 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5302.30 budget, free margin was $10604.60). Size was cut from 3.04 to 1.60 units. Real risk on this trade is now about $55.73 (0.53% of balance) instead of the requested 1.00%.
+21/01/2026 09:30:01.006 | Trade | Executing Market Order to Buy 1.6 US30.cash (SL: 34.83, TP: 91.19)
+21/01/2026 09:30:01.006 | Trade | → Executing Market Order to Buy 1.6 US30.cash (SL: 34.83, TP: 91.19) SUCCEEDED, Position PID13
+21/01/2026 09:30:01.006 | Info | MA Cross: bartime=2026-01-21 09:00, executed=2026-01-21 09:30:01, market Buy placed; SL=34.83221781685927 pips, TP=91.19074624453756 pips.
+21/01/2026 12:00:00.107 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 1.64 units, which needs about $5289.81 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5274.19 budget, free margin was $10548.38). Size was cut from 1.64 to 1.60 units. Real risk on this trade is now about $102.40 (0.97% of balance) instead of the requested 1.00%.
+21/01/2026 12:00:00.107 | Trade | Executing Market Order to Sell 1.6 US30.cash (SL: 64, TP: 167.56)
+21/01/2026 12:00:00.107 | Trade | → Executing Market Order to Sell 1.6 US30.cash (SL: 64, TP: 167.56) SUCCEEDED, Position PID14
+21/01/2026 12:00:00.107 | Info | MA Cross: bartime=2026-01-21 11:30, executed=2026-01-21 12:00:00, market Sell placed; SL=64.00127713422917 pips, TP=167.55534353741197 pips.
+21/01/2026 16:30:00.008 | Trade | Executing Market Order to Buy 0.82 US30.cash (SL: 125.86, TP: 329.51)
+21/01/2026 16:30:00.008 | Trade | → Executing Market Order to Buy 0.82 US30.cash (SL: 125.86, TP: 329.51) SUCCEEDED, Position PID15
+21/01/2026 16:30:00.008 | Info | MA Cross: bartime=2026-01-21 16:00, executed=2026-01-21 16:30:00, market Buy placed; SL=125.8644084188538 pips, TP=329.5130212405592 pips.
+23/01/2026 06:30:00.105 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 4.45 units, which needs about $14662.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5170.63 budget, free margin was $10341.25). Size was cut from 4.45 to 1.53 units. Real risk on this trade is now about $35.48 (0.34% of balance) instead of the requested 1.00%.
+23/01/2026 06:30:00.105 | Trade | Executing Market Order to Buy 1.53 US30.cash (SL: 23.19, TP: 60.71)
+23/01/2026 06:30:00.105 | Trade | → Executing Market Order to Buy 1.53 US30.cash (SL: 23.19, TP: 60.71) SUCCEEDED, Position PID16
+23/01/2026 06:30:00.105 | Info | MA Cross: bartime=2026-01-23 06:00, executed=2026-01-23 06:30:00, market Buy placed; SL=23.188598978260686 pips, TP=60.70775212508647 pips.
+23/01/2026 08:30:00.106 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 3.37 units, which needs about $11091.50 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5152.82 budget, free margin was $10305.63). Size was cut from 3.37 to 1.53 units. Real risk on this trade is now about $46.66 (0.45% of balance) instead of the requested 1.00%.
+23/01/2026 08:30:00.106 | Trade | Executing Market Order to Sell 1.53 US30.cash (SL: 30.5, TP: 79.85)
+23/01/2026 08:30:00.106 | Trade | → Executing Market Order to Sell 1.53 US30.cash (SL: 30.5, TP: 79.85) SUCCEEDED, Position PID17
+23/01/2026 08:30:00.106 | Info | MA Cross: bartime=2026-01-23 08:00, executed=2026-01-23 08:30:00, market Sell placed; SL=30.499810141494454 pips, TP=79.84850295043248 pips.
+26/01/2026 09:30:00.206 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 2.61 units, which needs about $8548.96 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5215.79 budget, free margin was $10431.58). Size was cut from 2.61 to 1.56 units. Real risk on this trade is now about $62.23 (0.60% of balance) instead of the requested 1.00%.
+26/01/2026 09:30:00.206 | Trade | Executing Market Order to Buy 1.56 US30.cash (SL: 39.89, TP: 104.43)
+26/01/2026 09:30:00.206 | Trade | → Executing Market Order to Buy 1.56 US30.cash (SL: 39.89, TP: 104.43) SUCCEEDED, Position PID18
+26/01/2026 09:30:00.206 | Info | MA Cross: bartime=2026-01-26 09:00, executed=2026-01-26 09:30:00, market Buy placed; SL=39.889464410527765 pips, TP=104.43061782676169 pips.
+27/01/2026 13:30:00.143 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 1.65 units, which needs about $5405.32 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5184.56 budget, free margin was $10369.12). Size was cut from 1.65 to 1.55 units. Real risk on this trade is now about $97.20 (0.94% of balance) instead of the requested 1.00%.
+27/01/2026 13:30:00.143 | Trade | Executing Market Order to Sell 1.55 US30.cash (SL: 62.71, TP: 164.17)
+27/01/2026 13:30:00.143 | Trade | → Executing Market Order to Sell 1.55 US30.cash (SL: 62.71, TP: 164.17) SUCCEEDED, Position PID19
+27/01/2026 13:30:00.143 | Info | MA Cross: bartime=2026-01-27 13:00, executed=2026-01-27 13:30:00, market Sell placed; SL=62.707706781356435 pips, TP=164.16877635359114 pips.
+28/01/2026 06:00:00.144 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 4.46 units, which needs about $14579.51 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5313.07 budget, free margin was $10626.13). Size was cut from 4.46 to 1.59 units. Real risk on this trade is now about $37.83 (0.36% of balance) instead of the requested 1.00%.
+28/01/2026 06:00:00.144 | Trade | Executing Market Order to Buy 1.59 US30.cash (SL: 23.79, TP: 62.28)
+28/01/2026 06:00:00.144 | Trade | → Executing Market Order to Buy 1.59 US30.cash (SL: 23.79, TP: 62.28) SUCCEEDED, Position PID20
+28/01/2026 06:00:00.144 | Info | MA Cross: bartime=2026-01-28 05:30, executed=2026-01-28 06:00:00, market Buy placed; SL=23.78940600786617 pips, TP=62.28066492859363 pips.
+28/01/2026 16:30:00.011 | Trade | Executing Market Order to Buy 1.23 US30.cash (SL: 85.52, TP: 223.9)
+28/01/2026 16:30:00.011 | Trade | → Executing Market Order to Buy 1.23 US30.cash (SL: 85.52, TP: 223.9) SUCCEEDED, Position PID21
+28/01/2026 16:30:00.011 | Info | MA Cross: bartime=2026-01-28 16:00, executed=2026-01-28 16:30:00, market Buy placed; SL=85.52397469751034 pips, TP=223.90176575808206 pips.
+29/01/2026 08:00:00.043 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 2.90 units, which needs about $9485.17 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5240.72 budget, free margin was $10481.43). Size was cut from 2.90 to 1.57 units. Real risk on this trade is now about $56.56 (0.54% of balance) instead of the requested 1.00%.
+29/01/2026 08:00:00.043 | Trade | Executing Market Order to Buy 1.57 US30.cash (SL: 36.03, TP: 94.32)
+29/01/2026 08:00:00.043 | Trade | → Executing Market Order to Buy 1.57 US30.cash (SL: 36.03, TP: 94.32) SUCCEEDED, Position PID22
+29/01/2026 08:00:00.043 | Info | MA Cross: bartime=2026-01-29 07:30, executed=2026-01-29 08:00:00, market Buy placed; SL=36.02610646983787 pips, TP=94.31634673803553 pips.
+29/01/2026 17:00:00.066 | Trade | Executing Market Order to Sell 0.61 US30.cash (SL: 168.37, TP: 440.79)
+29/01/2026 17:00:00.066 | Trade | → Executing Market Order to Sell 0.61 US30.cash (SL: 168.37, TP: 440.79) SUCCEEDED, Position PID23
+29/01/2026 17:00:00.066 | Info | MA Cross: bartime=2026-01-29 16:30, executed=2026-01-29 17:00:00, market Sell placed; SL=168.3676663924479 pips, TP=440.78655061542855 pips.
+30/01/2026 18:30:00.046 | Trade | Executing Market Order to Sell 0.68 US30.cash (SL: 156.69, TP: 410.21)
+30/01/2026 18:30:00.046 | Trade | → Executing Market Order to Sell 0.68 US30.cash (SL: 156.69, TP: 410.21) SUCCEEDED, Position PID24
+30/01/2026 18:30:00.046 | Info | MA Cross: bartime=2026-01-30 18:00, executed=2026-01-30 18:30:00, market Sell placed; SL=156.68775408006707 pips, TP=410.20854018161555 pips.
+01/02/2026 23:59:59.293 | Info | MA Cross: loaded=2939, processed=24, before-start=2731, not-processed=184, placed=24, failed=0, guard-skipped=0, same-direction-skipped=0, reversed=2, margin-capped=14, margin-blocked=0.
+01/02/2026 23:59:59.293 | Info | CBot instance [MA Cross, US30.cash, m30] stopped.

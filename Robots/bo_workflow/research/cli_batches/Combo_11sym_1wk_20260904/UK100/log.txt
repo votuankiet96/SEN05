@@ -1,0 +1,117 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_11sym_1wk_20260904\UK100\params.cbotset 
+--start=01/01/2025 --end=08/01/2025 --data-mode=Ticks --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=UK100.cash 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_11sym_1wk_20260904\UK100\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...100\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | UK100.cash                | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 08/01/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 2                         | cbotset              |
+| KtpLevel             | 4                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 50                        | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+04/09/2026 15:14:13.691 | Establishing connection using votuankiet96@gmail.com...
+04/09/2026 15:14:18.523 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Info | CBot instance [Combo, UK100.cash, h1] started.
+Progress | Backtesting | 13.06 % |
+Progress | Backtesting | 19.70 % |
+Progress | Backtesting | 20.61 % |
+Progress | Backtesting | 21.76 % |
+Progress | Backtesting | 23.46 % |
+Progress | Backtesting | 27.91 % |
+Progress | Backtesting | 30.19 % |
+Progress | Backtesting | 32.81 % |
+Progress | Backtesting | 32.97 % |
+Progress | Backtesting | 34.40 % |
+Progress | Backtesting | 62.64 % |
+Progress | Backtesting | 67.06 % |
+Progress | Backtesting | 68.51 % |
+Progress | Backtesting | 73.01 % |
+Progress | Backtesting | 75.24 % |
+Progress | Backtesting | 79.36 % |
+Progress | Backtesting | 82.83 % |
+Progress | Backtesting | 85.48 % |
+Progress | Backtesting | 91.81 % |
+Progress | Backtesting | 94.00 % |
+Progress | Backtesting | 95.33 % |
+Progress | Backtesting | 97.75 % |
+02/01/2025 01:05:00.006 | Info | Combo: loaded 4824 valid signal row(s) from CSV.
+02/01/2025 01:05:00.006 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+03/01/2025 15:00:00.167 | Trade | Placing Stop Order to Sell 4.23 UK100.cash (Price: 8217.7, SL: 8236.80526273306, TP: 8167.68)
+03/01/2025 15:00:00.167 | Trade |  Placing Stop Order to Sell 4.23 UK100.cash (Price: 8217.7, SL: 8236.80526273306, TP: 8167.68) SUCCEEDED, PendingOrder OID1
+03/01/2025 15:00:00.167 | Info | Combo: bartime=2025-01-03 14:00, executed=2025-01-03 15:00:00, pending Sell placed at 8217.7; SL=8236.805262733054, TP=8167.6824221648685; valid for the next 3 chart bar(s).
+06/01/2025 12:00:00.086 | Trade | Placing Stop Order to Buy 4.75 UK100.cash (Price: 8239.4, SL: 8222.55810726768, TP: 8283.49)
+06/01/2025 12:00:00.086 | Trade |  Placing Stop Order to Buy 4.75 UK100.cash (Price: 8239.4, SL: 8222.55810726768, TP: 8283.49) SUCCEEDED, PendingOrder OID4
+06/01/2025 12:00:00.086 | Info | Combo: bartime=2025-01-06 11:00, executed=2025-01-06 12:00:00, pending Buy placed at 8239.4; SL=8222.558107267681, TP=8283.492075173208; valid for the next 3 chart bar(s).
+06/01/2025 16:00:00.391 | Trade | Placing Stop Order to Buy 3.54 UK100.cash (Price: 8237.9, SL: 8215.50844073684, TP: 8296.52)
+06/01/2025 16:00:00.391 | Trade |  Placing Stop Order to Buy 3.54 UK100.cash (Price: 8237.9, SL: 8215.50844073684, TP: 8296.52) SUCCEEDED, PendingOrder OID7
+06/01/2025 16:00:00.391 | Info | Combo: bartime=2025-01-06 15:00, executed=2025-01-06 16:00:00, pending Buy placed at 8237.9; SL=8215.508440736841, TP=8296.521102150946; valid for the next 3 chart bar(s).
+06/01/2025 19:00:00.285 | Trade | Placing Stop Order to Sell 3.51 UK100.cash (Price: 8205.1, SL: 8227.42687834274, TP: 8146.65)
+06/01/2025 19:00:00.285 | Trade |  Placing Stop Order to Sell 3.51 UK100.cash (Price: 8205.1, SL: 8227.42687834274, TP: 8146.65) SUCCEEDED, PendingOrder OID10
+06/01/2025 19:00:00.285 | Info | Combo: bartime=2025-01-06 18:00, executed=2025-01-06 19:00:00, pending Sell placed at 8205.1; SL=8227.426878342736, TP=8146.648232498716; valid for the next 3 chart bar(s).
+07/01/2025 08:00:00.217 | Info | Combo: bartime=2025-01-07 07:00, reversal - closing existing Sell position 4 before opening opposite direction.
+07/01/2025 08:00:00.217 | Trade | Closing position PID4 (Volume: 3.51)
+07/01/2025 08:00:00.217 | Trade |  Closing position PID4 (Volume: 3.51) SUCCEEDED
+07/01/2025 08:00:00.217 | Trade | Placing Stop Order to Buy 5.92 UK100.cash (Price: 8218.8, SL: 8205.60572028411, TP: 8253.34)
+07/01/2025 08:00:00.217 | Trade |  Placing Stop Order to Buy 5.92 UK100.cash (Price: 8218.8, SL: 8205.60572028411, TP: 8253.34) SUCCEEDED, PendingOrder OID14
+07/01/2025 08:00:00.217 | Info | Combo: bartime=2025-01-07 07:00, executed=2025-01-07 08:00:00, pending Buy placed at 8218.8; SL=8205.605720284111, TP=8253.342624296194; valid for the next 3 chart bar(s).
+08/01/2025 07:00:00.284 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.91 units, which needs about $5379.11 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4768.41 budget, free margin was $9536.83). Size was cut from 7.91 to 6.87 units. Real risk on this trade is now about $82.81 (0.87% of balance) instead of the requested 1.00%.
+08/01/2025 07:00:00.284 | Trade | Placing Stop Order to Sell 6.87 UK100.cash (Price: 8225.8, SL: 8235.5539597533, TP: 8200.26)
+08/01/2025 07:00:00.284 | Trade |  Placing Stop Order to Sell 6.87 UK100.cash (Price: 8225.8, SL: 8235.5539597533, TP: 8200.26) SUCCEEDED, PendingOrder OID17
+08/01/2025 07:00:00.284 | Info | Combo: bartime=2025-01-08 06:00, executed=2025-01-08 07:00:00, pending Sell placed at 8225.8; SL=8235.5539597533, TP=8200.264133365858; valid for the next 3 chart bar(s).
+08/01/2025 10:00:00.985 | Trade | Cancelling pending order OID17
+08/01/2025 10:00:00.985 | Trade |  Cancelling pending order OID17 SUCCEEDED
+08/01/2025 10:00:00.985 | Info | Combo: pending order 17 cancelled after 3 chart bars.
+08/01/2025 12:00:00.367 | Trade | Placing Stop Order to Sell 3.44 UK100.cash (Price: 8210.6, SL: 8233.02440153196, TP: 8151.89)
+08/01/2025 12:00:00.367 | Trade |  Placing Stop Order to Sell 3.44 UK100.cash (Price: 8210.6, SL: 8233.02440153196, TP: 8151.89) SUCCEEDED, PendingOrder OID18
+08/01/2025 12:00:00.367 | Info | Combo: bartime=2025-01-08 11:00, executed=2025-01-08 12:00:00, pending Sell placed at 8210.6; SL=8233.024401531962, TP=8151.892916789325; valid for the next 3 chart bar(s).
+08/01/2025 16:00:00.288 | Trade | Placing Stop Order to Buy 3.16 UK100.cash (Price: 8252.1, SL: 8227.98776513251, TP: 8315.23)
+08/01/2025 16:00:00.288 | Trade |  Placing Stop Order to Buy 3.16 UK100.cash (Price: 8252.1, SL: 8227.98776513251, TP: 8315.23) SUCCEEDED, PendingOrder OID21
+08/01/2025 16:00:00.288 | Info | Combo: bartime=2025-01-08 15:00, executed=2025-01-08 16:00:00, pending Buy placed at 8252.1; SL=8227.98776513251, TP=8315.225830883093; valid for the next 3 chart bar(s).
+08/01/2025 20:00:00.188 | Trade | Placing Stop Order to Buy 3.33 UK100.cash (Price: 8257.8, SL: 8235.09834859828, TP: 8317.23)
+08/01/2025 20:00:00.188 | Trade |  Placing Stop Order to Buy 3.33 UK100.cash (Price: 8257.8, SL: 8235.09834859828, TP: 8317.23) SUCCEEDED, PendingOrder OID24
+08/01/2025 20:00:00.188 | Info | Combo: bartime=2025-01-08 19:00, executed=2025-01-08 20:00:00, pending Buy placed at 8257.8; SL=8235.098348598274, TP=8317.232923369713; valid for the next 3 chart bar(s).
+08/01/2025 23:59:59.486 | Info | Combo: loaded=4824, processed=9, before-start=3879, not-processed=936, placed=9, failed=0, guard-skipped=0, pending-expired=1, same-direction-skipped=0, reversed=1, margin-capped=1, margin-blocked=0.
+Progress | Backtesting | 100.00 % |
+Info | CBot instance [Combo, UK100.cash, h1] stopped.
+{
+	"Equity":9299.82,
+	"NetProfit":-700.18,
+	"MaxBalanceDrawdownPercentages":7,
+	"MaxEquityDrawdownPercentages":8,
+	"MaxBalanceDrawdown":700.18,
+	"MaxEquityDrawdown":824.84,
+	"WinningTrades":0,
+	"LosingTrades":8,
+	"TotalTrades":8,
+	"AverageTrade":-87.52,
+	"ProfitFactor":0,
+	"Fitness":0
+}
+

@@ -1,0 +1,9 @@
+﻿{
+    "Parameters":  {
+                       "KslLevel":  "2",
+                       "MaxMarginPercent":  "50",
+                       "SignalFilePath":  "Z:\\Desktop\\og_program\\runtime\\exports\\combo_HK50_H1_full_history_signals.csv",
+                       "KtpLevel":  "4",
+                       "RiskPercent":  "1"
+                   }
+}

@@ -1,0 +1,2392 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\experiments\Combo_US30_h4_2025_KSL-KTP_20260902-052051\artifacts\run_00
+49\params.cbotset --start=01/01/2025 --end=01/01/2026 --data-mode=Ticks --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=US30.cash 
+--period=h4 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\experiments\Comb
+o_US30_h4_2025_KSL-KTP_20260902-052051\artifacts\run_0049\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...049\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | US30.cash                 | cmd arg              |
+| Period               | h4                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 01/01/2026 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | Fib0786                   | cbotset              |
+| KtpLevel             | Fib2000                   | cbotset              |
+| RiskPercent          | 1                         | default value        |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+02/09/2026 12:32:35.207 | Establishing connection using votuankiet96@gmail.com...
+02/09/2026 12:32:37.365 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Info | CBot instance [Combo, US30.cash, h4] started.
+Progress | Backtesting | 0.26 % |
+Progress | Backtesting | 0.27 % |
+Progress | Backtesting | 0.29 % |
+Progress | Backtesting | 0.32 % |
+Progress | Backtesting | 0.37 % |
+Progress | Backtesting | 0.38 % |
+Progress | Backtesting | 0.41 % |
+Progress | Backtesting | 0.43 % |
+Progress | Backtesting | 0.44 % |
+Progress | Backtesting | 0.45 % |
+Progress | Backtesting | 0.46 % |
+Progress | Backtesting | 0.46 % |
+Progress | Backtesting | 0.47 % |
+Progress | Backtesting | 0.48 % |
+Progress | Backtesting | 0.49 % |
+Progress | Backtesting | 0.49 % |
+Progress | Backtesting | 0.50 % |
+Progress | Backtesting | 0.50 % |
+Progress | Backtesting | 0.51 % |
+Progress | Backtesting | 0.71 % |
+Progress | Backtesting | 0.72 % |
+Progress | Backtesting | 0.73 % |
+Progress | Backtesting | 0.75 % |
+Progress | Backtesting | 0.77 % |
+Progress | Backtesting | 1.37 % |
+Progress | Backtesting | 1.46 % |
+Progress | Backtesting | 1.49 % |
+Progress | Backtesting | 1.53 % |
+Progress | Backtesting | 1.54 % |
+Progress | Backtesting | 1.54 % |
+Progress | Backtesting | 1.55 % |
+Progress | Backtesting | 1.56 % |
+Progress | Backtesting | 1.58 % |
+Progress | Backtesting | 1.59 % |
+Progress | Backtesting | 1.60 % |
+Progress | Backtesting | 1.64 % |
+Progress | Backtesting | 1.72 % |
+Progress | Backtesting | 1.76 % |
+Progress | Backtesting | 1.81 % |
+Progress | Backtesting | 1.82 % |
+Progress | Backtesting | 1.83 % |
+Progress | Backtesting | 1.84 % |
+Progress | Backtesting | 1.86 % |
+Progress | Backtesting | 1.88 % |
+Progress | Backtesting | 1.91 % |
+Progress | Backtesting | 1.98 % |
+Progress | Backtesting | 2.01 % |
+Progress | Backtesting | 2.03 % |
+Progress | Backtesting | 2.05 % |
+Progress | Backtesting | 2.06 % |
+Progress | Backtesting | 2.06 % |
+Progress | Backtesting | 2.07 % |
+Progress | Backtesting | 2.08 % |
+Progress | Backtesting | 2.08 % |
+Progress | Backtesting | 2.09 % |
+Progress | Backtesting | 2.10 % |
+Progress | Backtesting | 2.11 % |
+Progress | Backtesting | 2.12 % |
+Progress | Backtesting | 2.12 % |
+Progress | Backtesting | 2.13 % |
+Progress | Backtesting | 2.13 % |
+Progress | Backtesting | 2.14 % |
+Progress | Backtesting | 2.18 % |
+Progress | Backtesting | 2.21 % |
+Progress | Backtesting | 2.28 % |
+Progress | Backtesting | 2.32 % |
+Progress | Backtesting | 2.46 % |
+Progress | Backtesting | 2.51 % |
+Progress | Backtesting | 2.57 % |
+Progress | Backtesting | 2.59 % |
+Progress | Backtesting | 2.61 % |
+Progress | Backtesting | 2.62 % |
+Progress | Backtesting | 2.63 % |
+Progress | Backtesting | 2.63 % |
+Progress | Backtesting | 2.64 % |
+Progress | Backtesting | 2.65 % |
+Progress | Backtesting | 2.66 % |
+Progress | Backtesting | 2.67 % |
+Progress | Backtesting | 2.68 % |
+Progress | Backtesting | 2.69 % |
+Progress | Backtesting | 3.28 % |
+Progress | Backtesting | 3.31 % |
+Progress | Backtesting | 3.37 % |
+Progress | Backtesting | 3.40 % |
+Progress | Backtesting | 3.43 % |
+Progress | Backtesting | 3.46 % |
+Progress | Backtesting | 3.47 % |
+Progress | Backtesting | 3.49 % |
+Progress | Backtesting | 3.50 % |
+Progress | Backtesting | 3.52 % |
+Progress | Backtesting | 3.55 % |
+Progress | Backtesting | 3.65 % |
+Progress | Backtesting | 3.70 % |
+Progress | Backtesting | 3.72 % |
+Progress | Backtesting | 3.73 % |
+Progress | Backtesting | 3.74 % |
+Progress | Backtesting | 3.75 % |
+Progress | Backtesting | 3.78 % |
+Progress | Backtesting | 3.79 % |
+Progress | Backtesting | 3.92 % |
+Progress | Backtesting | 3.98 % |
+Progress | Backtesting | 3.99 % |
+Progress | Backtesting | 4.01 % |
+Progress | Backtesting | 4.03 % |
+Progress | Backtesting | 4.06 % |
+Progress | Backtesting | 4.10 % |
+Progress | Backtesting | 4.17 % |
+Progress | Backtesting | 4.24 % |
+Progress | Backtesting | 4.27 % |
+Progress | Backtesting | 4.28 % |
+Progress | Backtesting | 4.29 % |
+Progress | Backtesting | 4.31 % |
+Progress | Backtesting | 4.33 % |
+Progress | Backtesting | 4.37 % |
+Progress | Backtesting | 4.46 % |
+Progress | Backtesting | 4.54 % |
+Progress | Backtesting | 4.56 % |
+Progress | Backtesting | 4.59 % |
+Progress | Backtesting | 4.62 % |
+Progress | Backtesting | 5.26 % |
+Progress | Backtesting | 5.35 % |
+Progress | Backtesting | 5.46 % |
+Progress | Backtesting | 5.55 % |
+Progress | Backtesting | 5.63 % |
+Progress | Backtesting | 5.64 % |
+Progress | Backtesting | 5.66 % |
+Progress | Backtesting | 5.68 % |
+Progress | Backtesting | 5.74 % |
+Progress | Backtesting | 5.87 % |
+Progress | Backtesting | 5.91 % |
+Progress | Backtesting | 5.95 % |
+Progress | Backtesting | 6.01 % |
+Progress | Backtesting | 6.16 % |
+Progress | Backtesting | 6.19 % |
+Progress | Backtesting | 6.22 % |
+Progress | Backtesting | 6.28 % |
+Progress | Backtesting | 6.40 % |
+Progress | Backtesting | 6.46 % |
+Progress | Backtesting | 6.49 % |
+Progress | Backtesting | 6.52 % |
+Progress | Backtesting | 7.11 % |
+Progress | Backtesting | 7.18 % |
+Progress | Backtesting | 7.20 % |
+Progress | Backtesting | 7.23 % |
+Progress | Backtesting | 7.26 % |
+Progress | Backtesting | 7.28 % |
+Progress | Backtesting | 7.29 % |
+Progress | Backtesting | 7.30 % |
+Progress | Backtesting | 7.33 % |
+Progress | Backtesting | 7.34 % |
+Progress | Backtesting | 7.38 % |
+Progress | Backtesting | 7.41 % |
+Progress | Backtesting | 7.47 % |
+Progress | Backtesting | 7.53 % |
+Progress | Backtesting | 7.55 % |
+Progress | Backtesting | 7.56 % |
+Progress | Backtesting | 7.59 % |
+Progress | Backtesting | 7.61 % |
+Progress | Backtesting | 7.65 % |
+Progress | Backtesting | 7.73 % |
+Progress | Backtesting | 7.81 % |
+Progress | Backtesting | 7.82 % |
+Progress | Backtesting | 7.85 % |
+Progress | Backtesting | 7.87 % |
+Progress | Backtesting | 7.88 % |
+Progress | Backtesting | 7.90 % |
+Progress | Backtesting | 7.92 % |
+Progress | Backtesting | 8.02 % |
+Progress | Backtesting | 8.08 % |
+Progress | Backtesting | 8.10 % |
+Progress | Backtesting | 8.11 % |
+Progress | Backtesting | 8.13 % |
+Progress | Backtesting | 8.15 % |
+Progress | Backtesting | 8.20 % |
+Progress | Backtesting | 8.35 % |
+Progress | Backtesting | 8.37 % |
+Progress | Backtesting | 8.39 % |
+Progress | Backtesting | 8.40 % |
+Progress | Backtesting | 8.43 % |
+Progress | Backtesting | 9.01 % |
+Progress | Backtesting | 9.02 % |
+Progress | Backtesting | 9.03 % |
+Progress | Backtesting | 9.05 % |
+Progress | Backtesting | 9.09 % |
+Progress | Backtesting | 9.11 % |
+Progress | Backtesting | 9.12 % |
+Progress | Backtesting | 9.15 % |
+Progress | Backtesting | 9.16 % |
+Progress | Backtesting | 9.18 % |
+Progress | Backtesting | 9.18 % |
+Progress | Backtesting | 9.19 % |
+Progress | Backtesting | 9.20 % |
+Progress | Backtesting | 9.20 % |
+Progress | Backtesting | 9.21 % |
+Progress | Backtesting | 9.21 % |
+Progress | Backtesting | 9.22 % |
+Progress | Backtesting | 9.23 % |
+Progress | Backtesting | 9.25 % |
+Progress | Backtesting | 9.26 % |
+Progress | Backtesting | 9.31 % |
+Progress | Backtesting | 9.37 % |
+Progress | Backtesting | 9.43 % |
+Progress | Backtesting | 9.46 % |
+Progress | Backtesting | 9.47 % |
+Progress | Backtesting | 9.48 % |
+Progress | Backtesting | 9.50 % |
+Progress | Backtesting | 9.52 % |
+Progress | Backtesting | 9.56 % |
+Progress | Backtesting | 9.61 % |
+Progress | Backtesting | 9.67 % |
+Progress | Backtesting | 9.71 % |
+Progress | Backtesting | 9.73 % |
+Progress | Backtesting | 9.75 % |
+Progress | Backtesting | 9.78 % |
+Progress | Backtesting | 9.84 % |
+Progress | Backtesting | 9.96 % |
+Progress | Backtesting | 10.01 % |
+Progress | Backtesting | 10.04 % |
+Progress | Backtesting | 10.07 % |
+Progress | Backtesting | 10.11 % |
+Progress | Backtesting | 10.27 % |
+Progress | Backtesting | 10.29 % |
+Progress | Backtesting | 10.30 % |
+Progress | Backtesting | 10.31 % |
+Progress | Backtesting | 10.32 % |
+Progress | Backtesting | 10.34 % |
+Progress | Backtesting | 10.92 % |
+Progress | Backtesting | 10.93 % |
+Progress | Backtesting | 11.02 % |
+Progress | Backtesting | 11.06 % |
+Progress | Backtesting | 11.10 % |
+Progress | Backtesting | 11.12 % |
+Progress | Backtesting | 11.15 % |
+Progress | Backtesting | 11.21 % |
+Progress | Backtesting | 11.35 % |
+Progress | Backtesting | 11.38 % |
+Progress | Backtesting | 11.40 % |
+Progress | Backtesting | 11.42 % |
+Progress | Backtesting | 11.48 % |
+Progress | Backtesting | 11.63 % |
+Progress | Backtesting | 11.64 % |
+Progress | Backtesting | 11.65 % |
+Progress | Backtesting | 11.66 % |
+Progress | Backtesting | 11.66 % |
+Progress | Backtesting | 11.68 % |
+Progress | Backtesting | 11.71 % |
+Progress | Backtesting | 11.75 % |
+Progress | Backtesting | 11.84 % |
+Progress | Backtesting | 11.91 % |
+Progress | Backtesting | 11.93 % |
+Progress | Backtesting | 11.96 % |
+Progress | Backtesting | 11.98 % |
+Progress | Backtesting | 12.11 % |
+Progress | Backtesting | 12.19 % |
+Progress | Backtesting | 12.20 % |
+Progress | Backtesting | 12.22 % |
+Progress | Backtesting | 12.24 % |
+Progress | Backtesting | 12.84 % |
+Progress | Backtesting | 13.11 % |
+Progress | Backtesting | 13.22 % |
+Progress | Backtesting | 13.29 % |
+Progress | Backtesting | 13.31 % |
+Progress | Backtesting | 13.33 % |
+Progress | Backtesting | 13.34 % |
+Progress | Backtesting | 13.39 % |
+Progress | Backtesting | 13.55 % |
+Progress | Backtesting | 13.57 % |
+Progress | Backtesting | 13.57 % |
+Progress | Backtesting | 13.59 % |
+Progress | Backtesting | 13.62 % |
+Progress | Backtesting | 13.68 % |
+Progress | Backtesting | 13.77 % |
+Progress | Backtesting | 13.81 % |
+Progress | Backtesting | 13.83 % |
+Progress | Backtesting | 13.85 % |
+Progress | Backtesting | 13.87 % |
+Progress | Backtesting | 13.89 % |
+Progress | Backtesting | 13.93 % |
+Progress | Backtesting | 14.04 % |
+Progress | Backtesting | 14.10 % |
+Progress | Backtesting | 14.12 % |
+Progress | Backtesting | 14.13 % |
+Progress | Backtesting | 14.15 % |
+Progress | Backtesting | 14.17 % |
+Progress | Backtesting | 14.75 % |
+Progress | Backtesting | 14.85 % |
+Progress | Backtesting | 14.90 % |
+Progress | Backtesting | 14.92 % |
+Progress | Backtesting | 14.94 % |
+Progress | Backtesting | 14.95 % |
+Progress | Backtesting | 14.96 % |
+Progress | Backtesting | 14.97 % |
+Progress | Backtesting | 14.98 % |
+Progress | Backtesting | 15.02 % |
+Progress | Backtesting | 15.03 % |
+Progress | Backtesting | 15.11 % |
+Progress | Backtesting | 15.13 % |
+Progress | Backtesting | 15.18 % |
+Progress | Backtesting | 15.20 % |
+Progress | Backtesting | 15.21 % |
+Progress | Backtesting | 15.22 % |
+Progress | Backtesting | 15.23 % |
+Progress | Backtesting | 15.24 % |
+Progress | Backtesting | 15.25 % |
+Progress | Backtesting | 15.26 % |
+Progress | Backtesting | 15.27 % |
+Progress | Backtesting | 15.30 % |
+Progress | Backtesting | 15.37 % |
+Progress | Backtesting | 15.41 % |
+Progress | Backtesting | 15.45 % |
+Progress | Backtesting | 15.47 % |
+Progress | Backtesting | 15.48 % |
+Progress | Backtesting | 15.49 % |
+Progress | Backtesting | 15.51 % |
+Progress | Backtesting | 15.52 % |
+Progress | Backtesting | 15.53 % |
+Progress | Backtesting | 15.55 % |
+Progress | Backtesting | 15.57 % |
+Progress | Backtesting | 15.63 % |
+Progress | Backtesting | 15.68 % |
+Progress | Backtesting | 15.73 % |
+Progress | Backtesting | 15.74 % |
+Progress | Backtesting | 15.75 % |
+Progress | Backtesting | 15.76 % |
+Progress | Backtesting | 15.78 % |
+Progress | Backtesting | 15.80 % |
+Progress | Backtesting | 15.81 % |
+Progress | Backtesting | 15.86 % |
+Progress | Backtesting | 15.90 % |
+Progress | Backtesting | 15.94 % |
+Progress | Backtesting | 16.00 % |
+Progress | Backtesting | 16.02 % |
+Progress | Backtesting | 16.03 % |
+Progress | Backtesting | 16.04 % |
+Progress | Backtesting | 16.05 % |
+Progress | Backtesting | 16.06 % |
+Progress | Backtesting | 16.08 % |
+Progress | Backtesting | 16.67 % |
+Progress | Backtesting | 16.70 % |
+Progress | Backtesting | 16.76 % |
+Progress | Backtesting | 16.79 % |
+Progress | Backtesting | 16.83 % |
+Progress | Backtesting | 16.84 % |
+Progress | Backtesting | 16.84 % |
+Progress | Backtesting | 16.85 % |
+Progress | Backtesting | 16.85 % |
+Progress | Backtesting | 16.86 % |
+Progress | Backtesting | 16.87 % |
+Progress | Backtesting | 16.88 % |
+Progress | Backtesting | 16.89 % |
+Progress | Backtesting | 16.90 % |
+Progress | Backtesting | 16.90 % |
+Progress | Backtesting | 16.94 % |
+Progress | Backtesting | 16.96 % |
+Progress | Backtesting | 17.03 % |
+Progress | Backtesting | 17.06 % |
+Progress | Backtesting | 17.09 % |
+Progress | Backtesting | 17.11 % |
+Progress | Backtesting | 17.12 % |
+Progress | Backtesting | 17.12 % |
+Progress | Backtesting | 17.14 % |
+Progress | Backtesting | 17.15 % |
+Progress | Backtesting | 17.15 % |
+Progress | Backtesting | 17.16 % |
+Progress | Backtesting | 17.17 % |
+Progress | Backtesting | 17.17 % |
+Progress | Backtesting | 17.19 % |
+Progress | Backtesting | 17.21 % |
+Progress | Backtesting | 17.23 % |
+Progress | Backtesting | 17.26 % |
+Progress | Backtesting | 17.29 % |
+Progress | Backtesting | 17.31 % |
+Progress | Backtesting | 17.33 % |
+Progress | Backtesting | 17.36 % |
+Progress | Backtesting | 17.38 % |
+Progress | Backtesting | 17.38 % |
+Progress | Backtesting | 17.39 % |
+Progress | Backtesting | 17.40 % |
+Progress | Backtesting | 17.41 % |
+Progress | Backtesting | 17.41 % |
+Progress | Backtesting | 17.42 % |
+Progress | Backtesting | 17.43 % |
+Progress | Backtesting | 17.43 % |
+Progress | Backtesting | 17.44 % |
+Progress | Backtesting | 17.45 % |
+Progress | Backtesting | 17.49 % |
+Progress | Backtesting | 17.58 % |
+Progress | Backtesting | 17.59 % |
+Progress | Backtesting | 17.64 % |
+Progress | Backtesting | 17.66 % |
+Progress | Backtesting | 17.67 % |
+Progress | Backtesting | 17.68 % |
+Progress | Backtesting | 17.69 % |
+Progress | Backtesting | 17.71 % |
+Progress | Backtesting | 17.72 % |
+Progress | Backtesting | 17.73 % |
+Progress | Backtesting | 17.76 % |
+Progress | Backtesting | 17.78 % |
+Progress | Backtesting | 17.83 % |
+Progress | Backtesting | 17.86 % |
+Progress | Backtesting | 17.89 % |
+Progress | Backtesting | 17.92 % |
+Progress | Backtesting | 17.93 % |
+Progress | Backtesting | 17.93 % |
+Progress | Backtesting | 17.94 % |
+Progress | Backtesting | 17.95 % |
+Progress | Backtesting | 17.96 % |
+Progress | Backtesting | 17.96 % |
+Progress | Backtesting | 17.97 % |
+Progress | Backtesting | 17.99 % |
+Progress | Backtesting | 18.56 % |
+Progress | Backtesting | 18.58 % |
+Progress | Backtesting | 18.60 % |
+Progress | Backtesting | 18.65 % |
+Progress | Backtesting | 18.69 % |
+Progress | Backtesting | 18.70 % |
+Progress | Backtesting | 18.73 % |
+Progress | Backtesting | 18.74 % |
+Progress | Backtesting | 18.75 % |
+Progress | Backtesting | 18.76 % |
+Progress | Backtesting | 18.77 % |
+Progress | Backtesting | 18.78 % |
+Progress | Backtesting | 18.78 % |
+Progress | Backtesting | 18.79 % |
+Progress | Backtesting | 18.80 % |
+Progress | Backtesting | 18.81 % |
+Progress | Backtesting | 18.85 % |
+Progress | Backtesting | 18.87 % |
+Progress | Backtesting | 18.88 % |
+Progress | Backtesting | 18.91 % |
+Progress | Backtesting | 18.94 % |
+Progress | Backtesting | 18.99 % |
+Progress | Backtesting | 19.01 % |
+Progress | Backtesting | 19.02 % |
+Progress | Backtesting | 19.03 % |
+Progress | Backtesting | 19.05 % |
+Progress | Backtesting | 19.06 % |
+Progress | Backtesting | 19.06 % |
+Progress | Backtesting | 19.07 % |
+Progress | Backtesting | 19.08 % |
+Progress | Backtesting | 19.08 % |
+Progress | Backtesting | 19.13 % |
+Progress | Backtesting | 19.15 % |
+Progress | Backtesting | 19.21 % |
+Progress | Backtesting | 19.23 % |
+Progress | Backtesting | 19.25 % |
+Progress | Backtesting | 19.28 % |
+Progress | Backtesting | 19.29 % |
+Progress | Backtesting | 19.31 % |
+Progress | Backtesting | 19.31 % |
+Progress | Backtesting | 19.32 % |
+Progress | Backtesting | 19.34 % |
+Progress | Backtesting | 19.35 % |
+Progress | Backtesting | 19.39 % |
+Progress | Backtesting | 19.40 % |
+Progress | Backtesting | 19.44 % |
+Progress | Backtesting | 19.48 % |
+Progress | Backtesting | 19.50 % |
+Progress | Backtesting | 19.53 % |
+Progress | Backtesting | 19.55 % |
+Progress | Backtesting | 19.56 % |
+Progress | Backtesting | 19.57 % |
+Progress | Backtesting | 19.57 % |
+Progress | Backtesting | 19.58 % |
+Progress | Backtesting | 19.59 % |
+Progress | Backtesting | 19.60 % |
+Progress | Backtesting | 19.61 % |
+Progress | Backtesting | 19.62 % |
+Progress | Backtesting | 19.66 % |
+Progress | Backtesting | 19.68 % |
+Progress | Backtesting | 19.73 % |
+Progress | Backtesting | 19.77 % |
+Progress | Backtesting | 19.79 % |
+Progress | Backtesting | 19.80 % |
+Progress | Backtesting | 19.83 % |
+Progress | Backtesting | 19.84 % |
+Progress | Backtesting | 19.85 % |
+Progress | Backtesting | 19.86 % |
+Progress | Backtesting | 19.88 % |
+Progress | Backtesting | 19.89 % |
+Progress | Backtesting | 19.89 % |
+Progress | Backtesting | 19.90 % |
+Progress | Backtesting | 20.49 % |
+Progress | Backtesting | 20.51 % |
+Progress | Backtesting | 20.55 % |
+Progress | Backtesting | 20.58 % |
+Progress | Backtesting | 20.61 % |
+Progress | Backtesting | 20.65 % |
+Progress | Backtesting | 20.65 % |
+Progress | Backtesting | 20.66 % |
+Progress | Backtesting | 20.67 % |
+Progress | Backtesting | 20.69 % |
+Progress | Backtesting | 20.71 % |
+Progress | Backtesting | 20.77 % |
+Progress | Backtesting | 20.85 % |
+Progress | Backtesting | 20.88 % |
+Progress | Backtesting | 20.92 % |
+Progress | Backtesting | 20.93 % |
+Progress | Backtesting | 20.93 % |
+Progress | Backtesting | 20.95 % |
+Progress | Backtesting | 20.96 % |
+Progress | Backtesting | 20.97 % |
+Progress | Backtesting | 20.98 % |
+Progress | Backtesting | 21.03 % |
+Progress | Backtesting | 21.07 % |
+Progress | Backtesting | 21.13 % |
+Progress | Backtesting | 21.17 % |
+Progress | Backtesting | 21.20 % |
+Progress | Backtesting | 21.21 % |
+Progress | Backtesting | 21.23 % |
+Progress | Backtesting | 21.25 % |
+Progress | Backtesting | 21.26 % |
+Progress | Backtesting | 21.30 % |
+Progress | Backtesting | 21.31 % |
+Progress | Backtesting | 21.41 % |
+Progress | Backtesting | 21.43 % |
+Progress | Backtesting | 21.46 % |
+Progress | Backtesting | 21.47 % |
+Progress | Backtesting | 21.48 % |
+Progress | Backtesting | 21.49 % |
+Progress | Backtesting | 21.51 % |
+Progress | Backtesting | 21.53 % |
+Progress | Backtesting | 21.54 % |
+Progress | Backtesting | 21.58 % |
+Progress | Backtesting | 21.62 % |
+Progress | Backtesting | 21.68 % |
+Progress | Backtesting | 21.72 % |
+Progress | Backtesting | 21.74 % |
+Progress | Backtesting | 21.75 % |
+Progress | Backtesting | 21.75 % |
+Progress | Backtesting | 21.76 % |
+Progress | Backtesting | 21.76 % |
+Progress | Backtesting | 21.77 % |
+Progress | Backtesting | 21.79 % |
+Progress | Backtesting | 21.80 % |
+Progress | Backtesting | 21.82 % |
+Progress | Backtesting | 22.47 % |
+Progress | Backtesting | 22.54 % |
+Progress | Backtesting | 22.57 % |
+Progress | Backtesting | 22.59 % |
+Progress | Backtesting | 22.62 % |
+Progress | Backtesting | 22.63 % |
+Progress | Backtesting | 22.68 % |
+Progress | Backtesting | 22.78 % |
+Progress | Backtesting | 22.83 % |
+Progress | Backtesting | 22.85 % |
+Progress | Backtesting | 22.87 % |
+Progress | Backtesting | 22.90 % |
+Progress | Backtesting | 22.93 % |
+Progress | Backtesting | 22.96 % |
+Progress | Backtesting | 23.05 % |
+Progress | Backtesting | 23.06 % |
+Progress | Backtesting | 23.11 % |
+Progress | Backtesting | 23.11 % |
+Progress | Backtesting | 23.13 % |
+Progress | Backtesting | 23.14 % |
+Progress | Backtesting | 23.15 % |
+Progress | Backtesting | 23.16 % |
+Progress | Backtesting | 23.17 % |
+Progress | Backtesting | 23.22 % |
+Progress | Backtesting | 23.22 % |
+Progress | Backtesting | 23.25 % |
+Progress | Backtesting | 23.31 % |
+Progress | Backtesting | 23.33 % |
+Progress | Backtesting | 23.36 % |
+Progress | Backtesting | 23.37 % |
+Progress | Backtesting | 23.38 % |
+Progress | Backtesting | 23.39 % |
+Progress | Backtesting | 23.40 % |
+Progress | Backtesting | 23.41 % |
+Progress | Backtesting | 23.42 % |
+Progress | Backtesting | 23.43 % |
+Progress | Backtesting | 23.44 % |
+Progress | Backtesting | 23.45 % |
+Progress | Backtesting | 23.50 % |
+Progress | Backtesting | 23.55 % |
+Progress | Backtesting | 23.59 % |
+Progress | Backtesting | 23.64 % |
+Progress | Backtesting | 23.65 % |
+Progress | Backtesting | 23.66 % |
+Progress | Backtesting | 23.67 % |
+Progress | Backtesting | 23.69 % |
+Progress | Backtesting | 23.70 % |
+Progress | Backtesting | 23.71 % |
+Progress | Backtesting | 23.73 % |
+Progress | Backtesting | 24.32 % |
+Progress | Backtesting | 24.36 % |
+Progress | Backtesting | 24.40 % |
+Progress | Backtesting | 24.42 % |
+Progress | Backtesting | 24.45 % |
+Progress | Backtesting | 24.47 % |
+Progress | Backtesting | 24.48 % |
+Progress | Backtesting | 24.50 % |
+Progress | Backtesting | 24.51 % |
+Progress | Backtesting | 24.52 % |
+Progress | Backtesting | 24.54 % |
+Progress | Backtesting | 24.59 % |
+Progress | Backtesting | 24.62 % |
+Progress | Backtesting | 24.67 % |
+Progress | Backtesting | 24.69 % |
+Progress | Backtesting | 24.71 % |
+Progress | Backtesting | 24.73 % |
+Progress | Backtesting | 24.75 % |
+Progress | Backtesting | 24.76 % |
+Progress | Backtesting | 24.77 % |
+Progress | Backtesting | 24.78 % |
+Progress | Backtesting | 24.79 % |
+Progress | Backtesting | 24.80 % |
+Progress | Backtesting | 24.81 % |
+Progress | Backtesting | 24.86 % |
+Progress | Backtesting | 24.90 % |
+Progress | Backtesting | 24.95 % |
+Progress | Backtesting | 24.97 % |
+Progress | Backtesting | 24.99 % |
+Progress | Backtesting | 25.01 % |
+Progress | Backtesting | 25.02 % |
+Progress | Backtesting | 25.03 % |
+Progress | Backtesting | 25.04 % |
+Progress | Backtesting | 25.05 % |
+Progress | Backtesting | 25.06 % |
+Progress | Backtesting | 25.07 % |
+Progress | Backtesting | 25.08 % |
+Progress | Backtesting | 25.08 % |
+Progress | Backtesting | 25.09 % |
+Progress | Backtesting | 25.12 % |
+Progress | Backtesting | 25.14 % |
+Progress | Backtesting | 25.17 % |
+Progress | Backtesting | 25.22 % |
+Progress | Backtesting | 25.25 % |
+Progress | Backtesting | 25.27 % |
+Progress | Backtesting | 25.28 % |
+Progress | Backtesting | 25.29 % |
+Progress | Backtesting | 25.30 % |
+Progress | Backtesting | 25.31 % |
+Progress | Backtesting | 25.32 % |
+Progress | Backtesting | 25.33 % |
+Progress | Backtesting | 25.34 % |
+Progress | Backtesting | 25.35 % |
+Progress | Backtesting | 25.36 % |
+Progress | Backtesting | 25.41 % |
+Progress | Backtesting | 25.41 % |
+Progress | Backtesting | 25.42 % |
+Progress | Backtesting | 25.43 % |
+Progress | Backtesting | 25.46 % |
+Progress | Backtesting | 25.49 % |
+Progress | Backtesting | 25.51 % |
+Progress | Backtesting | 25.52 % |
+Progress | Backtesting | 25.54 % |
+Progress | Backtesting | 25.55 % |
+Progress | Backtesting | 25.57 % |
+Progress | Backtesting | 25.58 % |
+Progress | Backtesting | 25.59 % |
+Progress | Backtesting | 25.60 % |
+Progress | Backtesting | 25.61 % |
+Progress | Backtesting | 25.62 % |
+Progress | Backtesting | 25.63 % |
+Progress | Backtesting | 25.65 % |
+Progress | Backtesting | 26.23 % |
+Progress | Backtesting | 26.24 % |
+Progress | Backtesting | 26.25 % |
+Progress | Backtesting | 26.27 % |
+Progress | Backtesting | 26.30 % |
+Progress | Backtesting | 26.31 % |
+Progress | Backtesting | 26.33 % |
+Progress | Backtesting | 26.34 % |
+Progress | Backtesting | 26.36 % |
+Progress | Backtesting | 26.37 % |
+Progress | Backtesting | 26.38 % |
+Progress | Backtesting | 26.39 % |
+Progress | Backtesting | 26.40 % |
+Progress | Backtesting | 26.42 % |
+Progress | Backtesting | 26.45 % |
+Progress | Backtesting | 26.50 % |
+Progress | Backtesting | 26.52 % |
+Progress | Backtesting | 26.58 % |
+Progress | Backtesting | 26.60 % |
+Progress | Backtesting | 26.64 % |
+Progress | Backtesting | 26.66 % |
+Progress | Backtesting | 26.67 % |
+Progress | Backtesting | 26.68 % |
+Progress | Backtesting | 26.69 % |
+Progress | Backtesting | 26.71 % |
+Progress | Backtesting | 26.72 % |
+Progress | Backtesting | 26.73 % |
+Progress | Backtesting | 26.78 % |
+Progress | Backtesting | 26.80 % |
+Progress | Backtesting | 26.84 % |
+Progress | Backtesting | 26.86 % |
+Progress | Backtesting | 26.88 % |
+Progress | Backtesting | 26.91 % |
+Progress | Backtesting | 26.93 % |
+Progress | Backtesting | 26.94 % |
+Progress | Backtesting | 26.96 % |
+Progress | Backtesting | 26.97 % |
+Progress | Backtesting | 26.99 % |
+Progress | Backtesting | 27.00 % |
+Progress | Backtesting | 27.05 % |
+Progress | Backtesting | 27.07 % |
+Progress | Backtesting | 27.10 % |
+Progress | Backtesting | 27.12 % |
+Progress | Backtesting | 27.14 % |
+Progress | Backtesting | 27.15 % |
+Progress | Backtesting | 27.17 % |
+Progress | Backtesting | 27.19 % |
+Progress | Backtesting | 27.21 % |
+Progress | Backtesting | 27.22 % |
+Progress | Backtesting | 27.23 % |
+Progress | Backtesting | 27.24 % |
+Progress | Backtesting | 27.25 % |
+Progress | Backtesting | 27.26 % |
+Progress | Backtesting | 27.27 % |
+Progress | Backtesting | 27.27 % |
+Progress | Backtesting | 27.29 % |
+Progress | Backtesting | 27.32 % |
+Progress | Backtesting | 27.35 % |
+Progress | Backtesting | 27.39 % |
+Progress | Backtesting | 27.42 % |
+Progress | Backtesting | 27.45 % |
+Progress | Backtesting | 27.48 % |
+Progress | Backtesting | 27.49 % |
+Progress | Backtesting | 27.50 % |
+Progress | Backtesting | 27.52 % |
+Progress | Backtesting | 27.53 % |
+Progress | Backtesting | 27.54 % |
+Progress | Backtesting | 27.55 % |
+Progress | Backtesting | 28.12 % |
+Progress | Backtesting | 28.14 % |
+Progress | Backtesting | 28.22 % |
+Progress | Backtesting | 28.29 % |
+Progress | Backtesting | 28.31 % |
+Progress | Backtesting | 28.32 % |
+Progress | Backtesting | 28.34 % |
+Progress | Backtesting | 28.35 % |
+Progress | Backtesting | 28.37 % |
+Progress | Backtesting | 28.42 % |
+Progress | Backtesting | 28.49 % |
+Progress | Backtesting | 28.53 % |
+Progress | Backtesting | 28.56 % |
+Progress | Backtesting | 28.58 % |
+Progress | Backtesting | 28.59 % |
+Progress | Backtesting | 28.60 % |
+Progress | Backtesting | 28.61 % |
+Progress | Backtesting | 28.62 % |
+Progress | Backtesting | 28.63 % |
+Progress | Backtesting | 28.68 % |
+Progress | Backtesting | 28.69 % |
+Progress | Backtesting | 28.76 % |
+Progress | Backtesting | 28.79 % |
+Progress | Backtesting | 28.82 % |
+Progress | Backtesting | 28.85 % |
+Progress | Backtesting | 28.86 % |
+Progress | Backtesting | 28.88 % |
+Progress | Backtesting | 28.89 % |
+Progress | Backtesting | 28.91 % |
+Progress | Backtesting | 28.96 % |
+Progress | Backtesting | 28.97 % |
+Progress | Backtesting | 29.04 % |
+Progress | Backtesting | 29.08 % |
+Progress | Backtesting | 29.12 % |
+Progress | Backtesting | 29.13 % |
+Progress | Backtesting | 29.15 % |
+Progress | Backtesting | 29.16 % |
+Progress | Backtesting | 29.18 % |
+Progress | Backtesting | 29.20 % |
+Progress | Backtesting | 30.08 % |
+Progress | Backtesting | 30.19 % |
+Progress | Backtesting | 30.21 % |
+Progress | Backtesting | 30.23 % |
+Progress | Backtesting | 30.25 % |
+Progress | Backtesting | 30.27 % |
+Progress | Backtesting | 30.33 % |
+Progress | Backtesting | 30.33 % |
+Progress | Backtesting | 30.39 % |
+Progress | Backtesting | 30.41 % |
+Progress | Backtesting | 30.43 % |
+Progress | Backtesting | 30.46 % |
+Progress | Backtesting | 30.49 % |
+Progress | Backtesting | 30.51 % |
+Progress | Backtesting | 30.52 % |
+Progress | Backtesting | 30.54 % |
+Progress | Backtesting | 30.56 % |
+Progress | Backtesting | 30.60 % |
+Progress | Backtesting | 30.64 % |
+Progress | Backtesting | 30.69 % |
+Progress | Backtesting | 30.73 % |
+Progress | Backtesting | 30.76 % |
+Progress | Backtesting | 30.77 % |
+Progress | Backtesting | 30.79 % |
+Progress | Backtesting | 30.80 % |
+Progress | Backtesting | 30.82 % |
+Progress | Backtesting | 30.87 % |
+Progress | Backtesting | 30.93 % |
+Progress | Backtesting | 30.98 % |
+Progress | Backtesting | 31.02 % |
+Progress | Backtesting | 31.04 % |
+Progress | Backtesting | 31.06 % |
+Progress | Backtesting | 31.08 % |
+Progress | Backtesting | 31.10 % |
+Progress | Backtesting | 31.16 % |
+Progress | Backtesting | 31.23 % |
+Progress | Backtesting | 31.25 % |
+Progress | Backtesting | 31.27 % |
+Progress | Backtesting | 31.29 % |
+Progress | Backtesting | 31.30 % |
+Progress | Backtesting | 31.32 % |
+Progress | Backtesting | 31.35 % |
+Progress | Backtesting | 31.37 % |
+Progress | Backtesting | 31.97 % |
+Progress | Backtesting | 32.07 % |
+Progress | Backtesting | 32.12 % |
+Progress | Backtesting | 32.14 % |
+Progress | Backtesting | 32.16 % |
+Progress | Backtesting | 32.18 % |
+Progress | Backtesting | 32.23 % |
+Progress | Backtesting | 32.27 % |
+Progress | Backtesting | 32.36 % |
+Progress | Backtesting | 32.40 % |
+Progress | Backtesting | 32.41 % |
+Progress | Backtesting | 32.43 % |
+Progress | Backtesting | 32.45 % |
+Progress | Backtesting | 32.50 % |
+Progress | Backtesting | 32.54 % |
+Progress | Backtesting | 32.63 % |
+Progress | Backtesting | 32.67 % |
+Progress | Backtesting | 32.68 % |
+Progress | Backtesting | 32.69 % |
+Progress | Backtesting | 32.70 % |
+Progress | Backtesting | 32.72 % |
+Progress | Backtesting | 32.74 % |
+Progress | Backtesting | 32.78 % |
+Progress | Backtesting | 32.83 % |
+Progress | Backtesting | 32.92 % |
+Progress | Backtesting | 32.94 % |
+Progress | Backtesting | 32.96 % |
+Progress | Backtesting | 32.97 % |
+Progress | Backtesting | 32.99 % |
+Progress | Backtesting | 33.00 % |
+Progress | Backtesting | 33.06 % |
+Progress | Backtesting | 33.08 % |
+Progress | Backtesting | 33.14 % |
+Progress | Backtesting | 33.19 % |
+Progress | Backtesting | 33.22 % |
+Progress | Backtesting | 33.24 % |
+Progress | Backtesting | 33.26 % |
+Progress | Backtesting | 33.28 % |
+Progress | Backtesting | 33.88 % |
+Progress | Backtesting | 33.95 % |
+Progress | Backtesting | 34.02 % |
+Progress | Backtesting | 34.05 % |
+Progress | Backtesting | 34.07 % |
+Progress | Backtesting | 34.09 % |
+Progress | Backtesting | 34.15 % |
+Progress | Backtesting | 34.25 % |
+Progress | Backtesting | 34.30 % |
+Progress | Backtesting | 34.32 % |
+Progress | Backtesting | 34.33 % |
+Progress | Backtesting | 34.35 % |
+Progress | Backtesting | 34.38 % |
+Progress | Backtesting | 34.43 % |
+Progress | Backtesting | 34.48 % |
+Progress | Backtesting | 34.54 % |
+Progress | Backtesting | 34.58 % |
+Progress | Backtesting | 34.59 % |
+Progress | Backtesting | 34.61 % |
+Progress | Backtesting | 34.62 % |
+Progress | Backtesting | 34.64 % |
+Progress | Backtesting | 34.65 % |
+Progress | Backtesting | 34.71 % |
+Progress | Backtesting | 34.77 % |
+Progress | Backtesting | 34.83 % |
+Progress | Backtesting | 34.86 % |
+Progress | Backtesting | 34.87 % |
+Progress | Backtesting | 34.88 % |
+Progress | Backtesting | 34.90 % |
+Progress | Backtesting | 34.92 % |
+Progress | Backtesting | 34.97 % |
+Progress | Backtesting | 35.06 % |
+Progress | Backtesting | 35.12 % |
+Progress | Backtesting | 35.14 % |
+Progress | Backtesting | 35.16 % |
+Progress | Backtesting | 35.18 % |
+Progress | Backtesting | 35.77 % |
+Progress | Backtesting | 35.80 % |
+Progress | Backtesting | 35.88 % |
+Progress | Backtesting | 35.92 % |
+Progress | Backtesting | 35.95 % |
+Progress | Backtesting | 35.97 % |
+Progress | Backtesting | 35.99 % |
+Progress | Backtesting | 36.02 % |
+Progress | Backtesting | 36.07 % |
+Progress | Backtesting | 36.15 % |
+Progress | Backtesting | 36.21 % |
+Progress | Backtesting | 36.23 % |
+Progress | Backtesting | 36.25 % |
+Progress | Backtesting | 36.26 % |
+Progress | Backtesting | 36.29 % |
+Progress | Backtesting | 36.34 % |
+Progress | Backtesting | 36.44 % |
+Progress | Backtesting | 36.50 % |
+Progress | Backtesting | 36.51 % |
+Progress | Backtesting | 36.54 % |
+Progress | Backtesting | 36.56 % |
+Progress | Backtesting | 36.61 % |
+Progress | Backtesting | 36.71 % |
+Progress | Backtesting | 36.77 % |
+Progress | Backtesting | 36.79 % |
+Progress | Backtesting | 36.81 % |
+Progress | Backtesting | 36.83 % |
+Progress | Backtesting | 36.84 % |
+Progress | Backtesting | 36.92 % |
+Progress | Backtesting | 37.01 % |
+Progress | Backtesting | 37.04 % |
+Progress | Backtesting | 37.06 % |
+Progress | Backtesting | 37.08 % |
+Progress | Backtesting | 37.10 % |
+Progress | Backtesting | 37.11 % |
+Progress | Backtesting | 37.70 % |
+Progress | Backtesting | 37.74 % |
+Progress | Backtesting | 37.77 % |
+Progress | Backtesting | 37.84 % |
+Progress | Backtesting | 37.87 % |
+Progress | Backtesting | 37.89 % |
+Progress | Backtesting | 37.90 % |
+Progress | Backtesting | 37.92 % |
+Progress | Backtesting | 37.98 % |
+Progress | Backtesting | 38.05 % |
+Progress | Backtesting | 38.13 % |
+Progress | Backtesting | 38.15 % |
+Progress | Backtesting | 38.18 % |
+Progress | Backtesting | 38.21 % |
+Progress | Backtesting | 38.28 % |
+Progress | Backtesting | 38.36 % |
+Progress | Backtesting | 38.40 % |
+Progress | Backtesting | 38.42 % |
+Progress | Backtesting | 38.43 % |
+Progress | Backtesting | 38.45 % |
+Progress | Backtesting | 38.46 % |
+Progress | Backtesting | 38.48 % |
+Progress | Backtesting | 38.52 % |
+Progress | Backtesting | 38.62 % |
+Progress | Backtesting | 38.67 % |
+Progress | Backtesting | 38.69 % |
+Progress | Backtesting | 38.71 % |
+Progress | Backtesting | 38.72 % |
+Progress | Backtesting | 38.75 % |
+Progress | Backtesting | 38.80 % |
+Progress | Backtesting | 38.91 % |
+Progress | Backtesting | 38.94 % |
+Progress | Backtesting | 38.96 % |
+Progress | Backtesting | 38.97 % |
+Progress | Backtesting | 38.99 % |
+Progress | Backtesting | 39.01 % |
+Progress | Backtesting | 39.03 % |
+Progress | Backtesting | 39.66 % |
+Progress | Backtesting | 39.78 % |
+Progress | Backtesting | 39.90 % |
+Progress | Backtesting | 40.00 % |
+Progress | Backtesting | 40.05 % |
+Progress | Backtesting | 40.08 % |
+Progress | Backtesting | 40.11 % |
+Progress | Backtesting | 40.20 % |
+Progress | Backtesting | 40.31 % |
+Progress | Backtesting | 40.33 % |
+Progress | Backtesting | 40.36 % |
+Progress | Backtesting | 40.39 % |
+Progress | Backtesting | 40.43 % |
+Progress | Backtesting | 40.44 % |
+Progress | Backtesting | 40.46 % |
+Progress | Backtesting | 40.52 % |
+Progress | Backtesting | 40.58 % |
+Progress | Backtesting | 40.60 % |
+Progress | Backtesting | 40.61 % |
+Progress | Backtesting | 40.62 % |
+Progress | Backtesting | 40.64 % |
+Progress | Backtesting | 40.65 % |
+Progress | Backtesting | 40.67 % |
+Progress | Backtesting | 40.71 % |
+Progress | Backtesting | 40.78 % |
+Progress | Backtesting | 40.83 % |
+Progress | Backtesting | 40.86 % |
+Progress | Backtesting | 40.88 % |
+Progress | Backtesting | 40.89 % |
+Progress | Backtesting | 40.90 % |
+Progress | Backtesting | 40.91 % |
+Progress | Backtesting | 40.93 % |
+Progress | Backtesting | 40.94 % |
+Progress | Backtesting | 41.54 % |
+Progress | Backtesting | 41.62 % |
+Progress | Backtesting | 41.68 % |
+Progress | Backtesting | 41.70 % |
+Progress | Backtesting | 41.72 % |
+Progress | Backtesting | 41.75 % |
+Progress | Backtesting | 41.80 % |
+Progress | Backtesting | 41.89 % |
+Progress | Backtesting | 41.96 % |
+Progress | Backtesting | 41.97 % |
+Progress | Backtesting | 41.98 % |
+Progress | Backtesting | 42.00 % |
+Progress | Backtesting | 42.03 % |
+Progress | Backtesting | 42.08 % |
+Progress | Backtesting | 42.19 % |
+Progress | Backtesting | 42.24 % |
+Progress | Backtesting | 42.26 % |
+Progress | Backtesting | 42.29 % |
+Progress | Backtesting | 42.35 % |
+Progress | Backtesting | 42.47 % |
+Progress | Backtesting | 42.51 % |
+Progress | Backtesting | 42.53 % |
+Progress | Backtesting | 42.55 % |
+Progress | Backtesting | 42.57 % |
+Progress | Backtesting | 42.62 % |
+Progress | Backtesting | 42.70 % |
+Progress | Backtesting | 42.77 % |
+Progress | Backtesting | 42.80 % |
+Progress | Backtesting | 42.82 % |
+Progress | Backtesting | 42.85 % |
+Progress | Backtesting | 43.47 % |
+Progress | Backtesting | 43.59 % |
+Progress | Backtesting | 43.62 % |
+Progress | Backtesting | 43.66 % |
+Progress | Backtesting | 43.73 % |
+Progress | Backtesting | 43.81 % |
+Progress | Backtesting | 43.87 % |
+Progress | Backtesting | 43.90 % |
+Progress | Backtesting | 43.93 % |
+Progress | Backtesting | 43.99 % |
+Progress | Backtesting | 44.08 % |
+Progress | Backtesting | 44.14 % |
+Progress | Backtesting | 44.17 % |
+Progress | Backtesting | 44.19 % |
+Progress | Backtesting | 44.21 % |
+Progress | Backtesting | 44.26 % |
+Progress | Backtesting | 44.35 % |
+Progress | Backtesting | 44.39 % |
+Progress | Backtesting | 44.42 % |
+Progress | Backtesting | 44.44 % |
+Progress | Backtesting | 44.47 % |
+Progress | Backtesting | 44.48 % |
+Progress | Backtesting | 44.54 % |
+Progress | Backtesting | 44.54 % |
+Progress | Backtesting | 44.55 % |
+Progress | Backtesting | 44.56 % |
+Progress | Backtesting | 44.59 % |
+Progress | Backtesting | 44.62 % |
+Progress | Backtesting | 44.64 % |
+Progress | Backtesting | 44.68 % |
+Progress | Backtesting | 44.70 % |
+Progress | Backtesting | 44.71 % |
+Progress | Backtesting | 44.74 % |
+Progress | Backtesting | 44.76 % |
+Progress | Backtesting | 45.35 % |
+Progress | Backtesting | 45.39 % |
+Progress | Backtesting | 45.45 % |
+Progress | Backtesting | 45.51 % |
+Progress | Backtesting | 45.52 % |
+Progress | Backtesting | 45.54 % |
+Progress | Backtesting | 45.57 % |
+Progress | Backtesting | 45.62 % |
+Progress | Backtesting | 45.65 % |
+Progress | Backtesting | 45.72 % |
+Progress | Backtesting | 45.78 % |
+Progress | Backtesting | 45.81 % |
+Progress | Backtesting | 45.83 % |
+Progress | Backtesting | 45.86 % |
+Progress | Backtesting | 45.91 % |
+Progress | Backtesting | 45.98 % |
+Progress | Backtesting | 46.04 % |
+Progress | Backtesting | 46.07 % |
+Progress | Backtesting | 46.10 % |
+Progress | Backtesting | 46.12 % |
+Progress | Backtesting | 46.17 % |
+Progress | Backtesting | 46.24 % |
+Progress | Backtesting | 46.28 % |
+Progress | Backtesting | 46.33 % |
+Progress | Backtesting | 46.45 % |
+Progress | Backtesting | 46.53 % |
+Progress | Backtesting | 46.60 % |
+Progress | Backtesting | 46.61 % |
+Progress | Backtesting | 46.63 % |
+Progress | Backtesting | 46.65 % |
+Progress | Backtesting | 46.68 % |
+Progress | Backtesting | 47.27 % |
+Progress | Backtesting | 47.37 % |
+Progress | Backtesting | 47.42 % |
+Progress | Backtesting | 47.44 % |
+Progress | Backtesting | 47.46 % |
+Progress | Backtesting | 47.47 % |
+Progress | Backtesting | 47.53 % |
+Progress | Backtesting | 47.55 % |
+Progress | Backtesting | 47.62 % |
+Progress | Backtesting | 47.68 % |
+Progress | Backtesting | 47.71 % |
+Progress | Backtesting | 47.74 % |
+Progress | Backtesting | 47.83 % |
+Progress | Backtesting | 47.97 % |
+Progress | Backtesting | 48.00 % |
+Progress | Backtesting | 48.04 % |
+Progress | Backtesting | 48.17 % |
+Progress | Backtesting | 48.25 % |
+Progress | Backtesting | 48.29 % |
+Progress | Backtesting | 48.36 % |
+Progress | Backtesting | 48.51 % |
+Progress | Backtesting | 48.53 % |
+Progress | Backtesting | 48.57 % |
+Progress | Backtesting | 48.59 % |
+Progress | Backtesting | 49.27 % |
+Progress | Backtesting | 49.35 % |
+Progress | Backtesting | 49.38 % |
+Progress | Backtesting | 49.45 % |
+Progress | Backtesting | 49.59 % |
+Progress | Backtesting | 49.62 % |
+Progress | Backtesting | 49.63 % |
+Progress | Backtesting | 49.67 % |
+Progress | Backtesting | 49.73 % |
+Progress | Backtesting | 49.85 % |
+Progress | Backtesting | 49.89 % |
+Progress | Backtesting | 49.90 % |
+Progress | Backtesting | 49.94 % |
+Progress | Backtesting | 50.06 % |
+Progress | Backtesting | 50.16 % |
+Progress | Backtesting | 50.19 % |
+Progress | Backtesting | 50.37 % |
+Progress | Backtesting | 51.07 % |
+Progress | Backtesting | 51.11 % |
+Progress | Backtesting | 51.21 % |
+Progress | Backtesting | 51.26 % |
+Progress | Backtesting | 51.28 % |
+Progress | Backtesting | 51.30 % |
+Progress | Backtesting | 51.32 % |
+Progress | Backtesting | 51.39 % |
+Progress | Backtesting | 51.51 % |
+Progress | Backtesting | 51.54 % |
+Progress | Backtesting | 51.56 % |
+Progress | Backtesting | 51.59 % |
+Progress | Backtesting | 51.73 % |
+Progress | Backtesting | 51.80 % |
+Progress | Backtesting | 51.81 % |
+Progress | Backtesting | 51.82 % |
+Progress | Backtesting | 51.83 % |
+Progress | Backtesting | 51.85 % |
+Progress | Backtesting | 51.86 % |
+Progress | Backtesting | 51.92 % |
+Progress | Backtesting | 52.04 % |
+Progress | Backtesting | 52.08 % |
+Progress | Backtesting | 52.11 % |
+Progress | Backtesting | 52.19 % |
+Progress | Backtesting | 52.26 % |
+Progress | Backtesting | 52.33 % |
+Progress | Backtesting | 52.36 % |
+Progress | Backtesting | 52.39 % |
+Progress | Backtesting | 53.01 % |
+Progress | Backtesting | 53.10 % |
+Progress | Backtesting | 53.16 % |
+Progress | Backtesting | 53.18 % |
+Progress | Backtesting | 53.22 % |
+Progress | Backtesting | 53.28 % |
+Progress | Backtesting | 53.36 % |
+Progress | Backtesting | 53.43 % |
+Progress | Backtesting | 53.45 % |
+Progress | Backtesting | 53.48 % |
+Progress | Backtesting | 53.51 % |
+Progress | Backtesting | 53.56 % |
+Progress | Backtesting | 53.67 % |
+Progress | Backtesting | 53.70 % |
+Progress | Backtesting | 53.72 % |
+Progress | Backtesting | 53.74 % |
+Progress | Backtesting | 53.77 % |
+Progress | Backtesting | 53.83 % |
+Progress | Backtesting | 53.94 % |
+Progress | Backtesting | 53.99 % |
+Progress | Backtesting | 54.01 % |
+Progress | Backtesting | 54.05 % |
+Progress | Backtesting | 54.18 % |
+Progress | Backtesting | 54.26 % |
+Progress | Backtesting | 54.29 % |
+Progress | Backtesting | 54.34 % |
+Progress | Backtesting | 55.07 % |
+Progress | Backtesting | 55.09 % |
+Progress | Backtesting | 55.12 % |
+Progress | Backtesting | 55.19 % |
+Progress | Backtesting | 55.34 % |
+Progress | Backtesting | 55.37 % |
+Progress | Backtesting | 55.40 % |
+Progress | Backtesting | 55.46 % |
+Progress | Backtesting | 55.54 % |
+Progress | Backtesting | 55.62 % |
+Progress | Backtesting | 55.63 % |
+Progress | Backtesting | 55.65 % |
+Progress | Backtesting | 55.65 % |
+Progress | Backtesting | 55.66 % |
+Progress | Backtesting | 55.68 % |
+Progress | Backtesting | 55.74 % |
+Progress | Backtesting | 55.88 % |
+Progress | Backtesting | 55.91 % |
+Progress | Backtesting | 55.94 % |
+Progress | Backtesting | 56.01 % |
+Progress | Backtesting | 56.16 % |
+Progress | Backtesting | 56.19 % |
+Progress | Backtesting | 56.23 % |
+Progress | Backtesting | 56.93 % |
+Progress | Backtesting | 56.99 % |
+Progress | Backtesting | 57.01 % |
+Progress | Backtesting | 57.05 % |
+Progress | Backtesting | 57.19 % |
+Progress | Backtesting | 57.26 % |
+Progress | Backtesting | 57.29 % |
+Progress | Backtesting | 57.31 % |
+Progress | Backtesting | 57.33 % |
+Progress | Backtesting | 57.45 % |
+Progress | Backtesting | 57.53 % |
+Progress | Backtesting | 57.56 % |
+Progress | Backtesting | 57.59 % |
+Progress | Backtesting | 57.65 % |
+Progress | Backtesting | 57.74 % |
+Progress | Backtesting | 57.81 % |
+Progress | Backtesting | 57.83 % |
+Progress | Backtesting | 57.85 % |
+Progress | Backtesting | 57.87 % |
+Progress | Backtesting | 57.92 % |
+Progress | Backtesting | 58.01 % |
+Progress | Backtesting | 58.05 % |
+Progress | Backtesting | 58.08 % |
+Progress | Backtesting | 58.10 % |
+Progress | Backtesting | 58.12 % |
+Progress | Backtesting | 58.14 % |
+Progress | Backtesting | 58.74 % |
+Progress | Backtesting | 58.76 % |
+Progress | Backtesting | 58.81 % |
+Progress | Backtesting | 58.84 % |
+Progress | Backtesting | 58.90 % |
+Progress | Backtesting | 58.93 % |
+Progress | Backtesting | 58.97 % |
+Progress | Backtesting | 59.03 % |
+Progress | Backtesting | 59.11 % |
+Progress | Backtesting | 59.16 % |
+Progress | Backtesting | 59.18 % |
+Progress | Backtesting | 59.20 % |
+Progress | Backtesting | 59.23 % |
+Progress | Backtesting | 59.24 % |
+Progress | Backtesting | 59.33 % |
+Progress | Backtesting | 59.42 % |
+Progress | Backtesting | 59.45 % |
+Progress | Backtesting | 59.47 % |
+Progress | Backtesting | 59.51 % |
+Progress | Backtesting | 59.56 % |
+Progress | Backtesting | 59.67 % |
+Progress | Backtesting | 59.72 % |
+Progress | Backtesting | 59.74 % |
+Progress | Backtesting | 59.76 % |
+Progress | Backtesting | 59.78 % |
+Progress | Backtesting | 59.84 % |
+Progress | Backtesting | 59.97 % |
+Progress | Backtesting | 60.00 % |
+Progress | Backtesting | 60.03 % |
+Progress | Backtesting | 60.64 % |
+Progress | Backtesting | 60.74 % |
+Progress | Backtesting | 60.81 % |
+Progress | Backtesting | 60.83 % |
+Progress | Backtesting | 60.87 % |
+Progress | Backtesting | 60.93 % |
+Progress | Backtesting | 61.00 % |
+Progress | Backtesting | 61.08 % |
+Progress | Backtesting | 61.09 % |
+Progress | Backtesting | 61.11 % |
+Progress | Backtesting | 61.14 % |
+Progress | Backtesting | 61.20 % |
+Progress | Backtesting | 61.32 % |
+Progress | Backtesting | 61.37 % |
+Progress | Backtesting | 61.39 % |
+Progress | Backtesting | 61.42 % |
+Progress | Backtesting | 61.50 % |
+Progress | Backtesting | 61.63 % |
+Progress | Backtesting | 61.65 % |
+Progress | Backtesting | 61.66 % |
+Progress | Backtesting | 61.69 % |
+Progress | Backtesting | 61.75 % |
+Progress | Backtesting | 61.86 % |
+Progress | Backtesting | 61.91 % |
+Progress | Backtesting | 61.93 % |
+Progress | Backtesting | 61.96 % |
+Progress | Backtesting | 62.57 % |
+Progress | Backtesting | 62.72 % |
+Progress | Backtesting | 62.73 % |
+Progress | Backtesting | 62.75 % |
+Progress | Backtesting | 62.82 % |
+Progress | Backtesting | 62.93 % |
+Progress | Backtesting | 63.00 % |
+Progress | Backtesting | 63.03 % |
+Progress | Backtesting | 63.05 % |
+Progress | Backtesting | 63.11 % |
+Progress | Backtesting | 63.19 % |
+Progress | Backtesting | 63.26 % |
+Progress | Backtesting | 63.28 % |
+Progress | Backtesting | 63.30 % |
+Progress | Backtesting | 63.32 % |
+Progress | Backtesting | 63.35 % |
+Progress | Backtesting | 63.44 % |
+Progress | Backtesting | 63.52 % |
+Progress | Backtesting | 63.55 % |
+Progress | Backtesting | 63.56 % |
+Progress | Backtesting | 63.57 % |
+Progress | Backtesting | 63.59 % |
+Progress | Backtesting | 63.61 % |
+Progress | Backtesting | 63.66 % |
+Progress | Backtesting | 63.75 % |
+Progress | Backtesting | 63.82 % |
+Progress | Backtesting | 63.83 % |
+Progress | Backtesting | 63.84 % |
+Progress | Backtesting | 63.87 % |
+Progress | Backtesting | 64.48 % |
+Progress | Backtesting | 64.60 % |
+Progress | Backtesting | 64.65 % |
+Progress | Backtesting | 64.68 % |
+Progress | Backtesting | 64.71 % |
+Progress | Backtesting | 64.75 % |
+Progress | Backtesting | 64.77 % |
+Progress | Backtesting | 64.84 % |
+Progress | Backtesting | 64.90 % |
+Progress | Backtesting | 64.93 % |
+Progress | Backtesting | 64.97 % |
+Progress | Backtesting | 65.06 % |
+Progress | Backtesting | 65.19 % |
+Progress | Backtesting | 65.22 % |
+Progress | Backtesting | 65.26 % |
+Progress | Backtesting | 65.33 % |
+Progress | Backtesting | 65.45 % |
+Progress | Backtesting | 65.47 % |
+Progress | Backtesting | 65.49 % |
+Progress | Backtesting | 65.53 % |
+Progress | Backtesting | 65.67 % |
+Progress | Backtesting | 65.73 % |
+Progress | Backtesting | 65.74 % |
+Progress | Backtesting | 65.75 % |
+Progress | Backtesting | 65.76 % |
+Progress | Backtesting | 65.77 % |
+Progress | Backtesting | 65.80 % |
+Progress | Backtesting | 66.46 % |
+Progress | Backtesting | 66.55 % |
+Progress | Backtesting | 66.67 % |
+Progress | Backtesting | 66.76 % |
+Progress | Backtesting | 66.81 % |
+Progress | Backtesting | 66.83 % |
+Progress | Backtesting | 66.85 % |
+Progress | Backtesting | 66.88 % |
+Progress | Backtesting | 66.94 % |
+Progress | Backtesting | 67.03 % |
+Progress | Backtesting | 67.10 % |
+Progress | Backtesting | 67.11 % |
+Progress | Backtesting | 67.14 % |
+Progress | Backtesting | 67.17 % |
+Progress | Backtesting | 67.25 % |
+Progress | Backtesting | 67.37 % |
+Progress | Backtesting | 67.37 % |
+Progress | Backtesting | 67.38 % |
+Progress | Backtesting | 67.40 % |
+Progress | Backtesting | 67.43 % |
+Progress | Backtesting | 67.49 % |
+Progress | Backtesting | 67.62 % |
+Progress | Backtesting | 67.64 % |
+Progress | Backtesting | 67.65 % |
+Progress | Backtesting | 67.65 % |
+Progress | Backtesting | 67.66 % |
+Progress | Backtesting | 67.67 % |
+Progress | Backtesting | 67.69 % |
+Progress | Backtesting | 67.71 % |
+Progress | Backtesting | 68.31 % |
+Progress | Backtesting | 68.41 % |
+Progress | Backtesting | 68.47 % |
+Progress | Backtesting | 68.50 % |
+Progress | Backtesting | 68.53 % |
+Progress | Backtesting | 68.67 % |
+Progress | Backtesting | 68.74 % |
+Progress | Backtesting | 68.76 % |
+Progress | Backtesting | 68.79 % |
+Progress | Backtesting | 68.81 % |
+Progress | Backtesting | 68.93 % |
+Progress | Backtesting | 69.01 % |
+Progress | Backtesting | 69.03 % |
+Progress | Backtesting | 69.06 % |
+Progress | Backtesting | 69.13 % |
+Progress | Backtesting | 69.27 % |
+Progress | Backtesting | 69.29 % |
+Progress | Backtesting | 69.31 % |
+Progress | Backtesting | 69.34 % |
+Progress | Backtesting | 69.41 % |
+Progress | Backtesting | 69.56 % |
+Progress | Backtesting | 69.59 % |
+Progress | Backtesting | 69.63 % |
+Progress | Backtesting | 70.24 % |
+Progress | Backtesting | 70.37 % |
+Progress | Backtesting | 70.39 % |
+Progress | Backtesting | 70.43 % |
+Progress | Backtesting | 70.49 % |
+Progress | Backtesting | 70.62 % |
+Progress | Backtesting | 70.65 % |
+Progress | Backtesting | 70.67 % |
+Progress | Backtesting | 70.70 % |
+Progress | Backtesting | 70.77 % |
+Progress | Backtesting | 70.89 % |
+Progress | Backtesting | 70.93 % |
+Progress | Backtesting | 70.97 % |
+Progress | Backtesting | 70.98 % |
+Progress | Backtesting | 71.04 % |
+Progress | Backtesting | 71.11 % |
+Progress | Backtesting | 71.14 % |
+Progress | Backtesting | 71.19 % |
+Progress | Backtesting | 71.22 % |
+Progress | Backtesting | 71.25 % |
+Progress | Backtesting | 71.31 % |
+Progress | Backtesting | 71.39 % |
+Progress | Backtesting | 71.47 % |
+Progress | Backtesting | 71.49 % |
+Progress | Backtesting | 71.53 % |
+Progress | Backtesting | 72.19 % |
+Progress | Backtesting | 72.29 % |
+Progress | Backtesting | 72.31 % |
+Progress | Backtesting | 72.35 % |
+Progress | Backtesting | 72.47 % |
+Progress | Backtesting | 72.56 % |
+Progress | Backtesting | 72.59 % |
+Progress | Backtesting | 72.62 % |
+Progress | Backtesting | 72.68 % |
+Progress | Backtesting | 72.83 % |
+Progress | Backtesting | 72.85 % |
+Progress | Backtesting | 72.88 % |
+Progress | Backtesting | 72.91 % |
+Progress | Backtesting | 72.97 % |
+Progress | Backtesting | 73.07 % |
+Progress | Backtesting | 73.10 % |
+Progress | Backtesting | 73.11 % |
+Progress | Backtesting | 73.13 % |
+Progress | Backtesting | 73.15 % |
+Progress | Backtesting | 73.17 % |
+Progress | Backtesting | 73.22 % |
+Progress | Backtesting | 73.24 % |
+Progress | Backtesting | 73.31 % |
+Progress | Backtesting | 73.37 % |
+Progress | Backtesting | 73.38 % |
+Progress | Backtesting | 73.40 % |
+Progress | Backtesting | 73.43 % |
+Progress | Backtesting | 74.04 % |
+Progress | Backtesting | 74.14 % |
+Progress | Backtesting | 74.20 % |
+Progress | Backtesting | 74.23 % |
+Progress | Backtesting | 74.25 % |
+Progress | Backtesting | 74.33 % |
+Progress | Backtesting | 74.44 % |
+Progress | Backtesting | 74.48 % |
+Progress | Backtesting | 74.50 % |
+Progress | Backtesting | 74.53 % |
+Progress | Backtesting | 74.59 % |
+Progress | Backtesting | 74.66 % |
+Progress | Backtesting | 74.69 % |
+Progress | Backtesting | 74.74 % |
+Progress | Backtesting | 74.76 % |
+Progress | Backtesting | 74.80 % |
+Progress | Backtesting | 74.86 % |
+Progress | Backtesting | 74.96 % |
+Progress | Backtesting | 75.03 % |
+Progress | Backtesting | 75.06 % |
+Progress | Backtesting | 75.14 % |
+Progress | Backtesting | 75.29 % |
+Progress | Backtesting | 75.31 % |
+Progress | Backtesting | 75.34 % |
+Progress | Backtesting | 75.36 % |
+Progress | Backtesting | 76.02 % |
+Progress | Backtesting | 76.11 % |
+Progress | Backtesting | 76.13 % |
+Progress | Backtesting | 76.16 % |
+Progress | Backtesting | 76.23 % |
+Progress | Backtesting | 76.34 % |
+Progress | Backtesting | 76.40 % |
+Progress | Backtesting | 76.42 % |
+Progress | Backtesting | 76.45 % |
+Progress | Backtesting | 76.53 % |
+Progress | Backtesting | 76.65 % |
+Progress | Backtesting | 76.67 % |
+Progress | Backtesting | 76.69 % |
+Progress | Backtesting | 76.74 % |
+Progress | Backtesting | 76.85 % |
+Progress | Backtesting | 76.93 % |
+Progress | Backtesting | 76.95 % |
+Progress | Backtesting | 76.97 % |
+Progress | Backtesting | 76.98 % |
+Progress | Backtesting | 77.00 % |
+Progress | Backtesting | 77.05 % |
+Progress | Backtesting | 77.13 % |
+Progress | Backtesting | 77.20 % |
+Progress | Backtesting | 77.22 % |
+Progress | Backtesting | 77.23 % |
+Progress | Backtesting | 77.25 % |
+Progress | Backtesting | 77.26 % |
+Progress | Backtesting | 77.28 % |
+Progress | Backtesting | 77.87 % |
+Progress | Backtesting | 77.92 % |
+Progress | Backtesting | 77.99 % |
+Progress | Backtesting | 78.03 % |
+Progress | Backtesting | 78.04 % |
+Progress | Backtesting | 78.07 % |
+Progress | Backtesting | 78.09 % |
+Progress | Backtesting | 78.15 % |
+Progress | Backtesting | 78.19 % |
+Progress | Backtesting | 78.23 % |
+Progress | Backtesting | 78.26 % |
+Progress | Backtesting | 78.30 % |
+Progress | Backtesting | 78.31 % |
+Progress | Backtesting | 78.33 % |
+Progress | Backtesting | 78.35 % |
+Progress | Backtesting | 78.37 % |
+Progress | Backtesting | 78.42 % |
+Progress | Backtesting | 78.45 % |
+Progress | Backtesting | 78.51 % |
+Progress | Backtesting | 78.55 % |
+Progress | Backtesting | 78.57 % |
+Progress | Backtesting | 78.58 % |
+Progress | Backtesting | 78.60 % |
+Progress | Backtesting | 78.61 % |
+Progress | Backtesting | 78.63 % |
+Progress | Backtesting | 78.69 % |
+Progress | Backtesting | 78.75 % |
+Progress | Backtesting | 78.78 % |
+Progress | Backtesting | 78.82 % |
+Progress | Backtesting | 78.84 % |
+Progress | Backtesting | 78.86 % |
+Progress | Backtesting | 78.87 % |
+Progress | Backtesting | 78.89 % |
+Progress | Backtesting | 78.90 % |
+Progress | Backtesting | 78.91 % |
+Progress | Backtesting | 78.95 % |
+Progress | Backtesting | 78.96 % |
+Progress | Backtesting | 79.01 % |
+Progress | Backtesting | 79.03 % |
+Progress | Backtesting | 79.04 % |
+Progress | Backtesting | 79.06 % |
+Progress | Backtesting | 79.09 % |
+Progress | Backtesting | 79.10 % |
+Progress | Backtesting | 79.12 % |
+Progress | Backtesting | 79.14 % |
+Progress | Backtesting | 79.15 % |
+Progress | Backtesting | 79.17 % |
+Progress | Backtesting | 79.78 % |
+Progress | Backtesting | 79.86 % |
+Progress | Backtesting | 79.91 % |
+Progress | Backtesting | 79.94 % |
+Progress | Backtesting | 79.96 % |
+Progress | Backtesting | 79.98 % |
+Progress | Backtesting | 80.05 % |
+Progress | Backtesting | 80.08 % |
+Progress | Backtesting | 80.12 % |
+Progress | Backtesting | 80.15 % |
+Progress | Backtesting | 80.21 % |
+Progress | Backtesting | 80.23 % |
+Progress | Backtesting | 80.25 % |
+Progress | Backtesting | 80.27 % |
+Progress | Backtesting | 80.33 % |
+Progress | Backtesting | 80.41 % |
+Progress | Backtesting | 80.48 % |
+Progress | Backtesting | 80.50 % |
+Progress | Backtesting | 80.52 % |
+Progress | Backtesting | 80.54 % |
+Progress | Backtesting | 80.60 % |
+Progress | Backtesting | 80.62 % |
+Progress | Backtesting | 80.69 % |
+Progress | Backtesting | 80.74 % |
+Progress | Backtesting | 80.76 % |
+Progress | Backtesting | 80.78 % |
+Progress | Backtesting | 80.80 % |
+Progress | Backtesting | 80.87 % |
+Progress | Backtesting | 80.94 % |
+Progress | Backtesting | 81.03 % |
+Progress | Backtesting | 81.05 % |
+Progress | Backtesting | 81.07 % |
+Progress | Backtesting | 81.09 % |
+Progress | Backtesting | 81.70 % |
+Progress | Backtesting | 81.81 % |
+Progress | Backtesting | 81.86 % |
+Progress | Backtesting | 81.88 % |
+Progress | Backtesting | 81.92 % |
+Progress | Backtesting | 82.03 % |
+Progress | Backtesting | 82.12 % |
+Progress | Backtesting | 82.15 % |
+Progress | Backtesting | 82.17 % |
+Progress | Backtesting | 82.24 % |
+Progress | Backtesting | 82.37 % |
+Progress | Backtesting | 82.41 % |
+Progress | Backtesting | 82.44 % |
+Progress | Backtesting | 82.46 % |
+Progress | Backtesting | 82.50 % |
+Progress | Backtesting | 82.53 % |
+Progress | Backtesting | 82.58 % |
+Progress | Backtesting | 82.62 % |
+Progress | Backtesting | 82.66 % |
+Progress | Backtesting | 82.67 % |
+Progress | Backtesting | 82.68 % |
+Progress | Backtesting | 82.70 % |
+Progress | Backtesting | 82.73 % |
+Progress | Backtesting | 82.75 % |
+Progress | Backtesting | 82.82 % |
+Progress | Backtesting | 82.93 % |
+Progress | Backtesting | 82.95 % |
+Progress | Backtesting | 82.96 % |
+Progress | Backtesting | 82.99 % |
+Progress | Backtesting | 83.01 % |
+Progress | Backtesting | 83.63 % |
+Progress | Backtesting | 83.72 % |
+Progress | Backtesting | 83.77 % |
+Progress | Backtesting | 83.78 % |
+Progress | Backtesting | 83.80 % |
+Progress | Backtesting | 83.83 % |
+Progress | Backtesting | 83.88 % |
+Progress | Backtesting | 83.91 % |
+Progress | Backtesting | 83.94 % |
+Progress | Backtesting | 83.98 % |
+Progress | Backtesting | 84.02 % |
+Progress | Backtesting | 84.05 % |
+Progress | Backtesting | 84.06 % |
+Progress | Backtesting | 84.09 % |
+Progress | Backtesting | 84.11 % |
+Progress | Backtesting | 84.14 % |
+Progress | Backtesting | 84.15 % |
+Progress | Backtesting | 84.19 % |
+Progress | Backtesting | 84.24 % |
+Progress | Backtesting | 84.29 % |
+Progress | Backtesting | 84.33 % |
+Progress | Backtesting | 84.35 % |
+Progress | Backtesting | 84.38 % |
+Progress | Backtesting | 84.43 % |
+Progress | Backtesting | 84.48 % |
+Progress | Backtesting | 84.56 % |
+Progress | Backtesting | 84.60 % |
+Progress | Backtesting | 84.61 % |
+Progress | Backtesting | 84.63 % |
+Progress | Backtesting | 84.65 % |
+Progress | Backtesting | 84.70 % |
+Progress | Backtesting | 84.73 % |
+Progress | Backtesting | 84.80 % |
+Progress | Backtesting | 84.85 % |
+Progress | Backtesting | 84.87 % |
+Progress | Backtesting | 84.89 % |
+Progress | Backtesting | 84.90 % |
+Progress | Backtesting | 84.92 % |
+Progress | Backtesting | 85.52 % |
+Progress | Backtesting | 85.59 % |
+Progress | Backtesting | 85.68 % |
+Progress | Backtesting | 85.69 % |
+Progress | Backtesting | 85.71 % |
+Progress | Backtesting | 85.75 % |
+Progress | Backtesting | 85.79 % |
+Progress | Backtesting | 85.88 % |
+Progress | Backtesting | 85.96 % |
+Progress | Backtesting | 85.97 % |
+Progress | Backtesting | 86.00 % |
+Progress | Backtesting | 86.03 % |
+Progress | Backtesting | 86.07 % |
+Progress | Backtesting | 86.17 % |
+Progress | Backtesting | 86.24 % |
+Progress | Backtesting | 86.26 % |
+Progress | Backtesting | 86.28 % |
+Progress | Backtesting | 86.34 % |
+Progress | Backtesting | 86.35 % |
+Progress | Backtesting | 86.43 % |
+Progress | Backtesting | 86.50 % |
+Progress | Backtesting | 86.51 % |
+Progress | Backtesting | 86.52 % |
+Progress | Backtesting | 86.53 % |
+Progress | Backtesting | 86.55 % |
+Progress | Backtesting | 86.56 % |
+Progress | Backtesting | 86.57 % |
+Progress | Backtesting | 86.58 % |
+Progress | Backtesting | 86.61 % |
+Progress | Backtesting | 86.66 % |
+Progress | Backtesting | 86.70 % |
+Progress | Backtesting | 86.72 % |
+Progress | Backtesting | 86.75 % |
+Progress | Backtesting | 86.78 % |
+Progress | Backtesting | 86.79 % |
+Progress | Backtesting | 86.81 % |
+Progress | Backtesting | 86.82 % |
+Progress | Backtesting | 86.84 % |
+Progress | Backtesting | 87.43 % |
+Progress | Backtesting | 87.44 % |
+Progress | Backtesting | 87.53 % |
+Progress | Backtesting | 87.58 % |
+Progress | Backtesting | 87.60 % |
+Progress | Backtesting | 87.62 % |
+Progress | Backtesting | 87.63 % |
+Progress | Backtesting | 87.65 % |
+Progress | Backtesting | 87.66 % |
+Progress | Backtesting | 87.70 % |
+Progress | Backtesting | 87.73 % |
+Progress | Backtesting | 87.76 % |
+Progress | Backtesting | 87.80 % |
+Progress | Backtesting | 87.84 % |
+Progress | Backtesting | 87.87 % |
+Progress | Backtesting | 87.88 % |
+Progress | Backtesting | 87.89 % |
+Progress | Backtesting | 87.91 % |
+Progress | Backtesting | 87.92 % |
+Progress | Backtesting | 87.93 % |
+Progress | Backtesting | 87.95 % |
+Progress | Backtesting | 87.98 % |
+Progress | Backtesting | 88.01 % |
+Progress | Backtesting | 88.06 % |
+Progress | Backtesting | 88.10 % |
+Progress | Backtesting | 88.14 % |
+Progress | Backtesting | 88.16 % |
+Progress | Backtesting | 88.17 % |
+Progress | Backtesting | 88.19 % |
+Progress | Backtesting | 88.20 % |
+Progress | Backtesting | 88.22 % |
+Progress | Backtesting | 88.24 % |
+Progress | Backtesting | 88.25 % |
+Progress | Backtesting | 88.28 % |
+Progress | Backtesting | 88.31 % |
+Progress | Backtesting | 88.37 % |
+Progress | Backtesting | 88.41 % |
+Progress | Backtesting | 88.42 % |
+Progress | Backtesting | 88.43 % |
+Progress | Backtesting | 88.44 % |
+Progress | Backtesting | 88.45 % |
+Progress | Backtesting | 88.47 % |
+Progress | Backtesting | 88.48 % |
+Progress | Backtesting | 88.49 % |
+Progress | Backtesting | 88.52 % |
+Progress | Backtesting | 88.55 % |
+Progress | Backtesting | 88.59 % |
+Progress | Backtesting | 88.63 % |
+Progress | Backtesting | 88.65 % |
+Progress | Backtesting | 88.67 % |
+Progress | Backtesting | 88.69 % |
+Progress | Backtesting | 88.70 % |
+Progress | Backtesting | 88.72 % |
+Progress | Backtesting | 88.73 % |
+Progress | Backtesting | 88.74 % |
+Progress | Backtesting | 88.75 % |
+Progress | Backtesting | 88.76 % |
+Progress | Backtesting | 88.77 % |
+Progress | Backtesting | 89.36 % |
+Progress | Backtesting | 89.40 % |
+Progress | Backtesting | 89.44 % |
+Progress | Backtesting | 89.47 % |
+Progress | Backtesting | 89.51 % |
+Progress | Backtesting | 89.52 % |
+Progress | Backtesting | 89.54 % |
+Progress | Backtesting | 89.56 % |
+Progress | Backtesting | 89.61 % |
+Progress | Backtesting | 89.64 % |
+Progress | Backtesting | 89.72 % |
+Progress | Backtesting | 89.77 % |
+Progress | Backtesting | 89.79 % |
+Progress | Backtesting | 89.80 % |
+Progress | Backtesting | 89.82 % |
+Progress | Backtesting | 89.85 % |
+Progress | Backtesting | 89.91 % |
+Progress | Backtesting | 90.02 % |
+Progress | Backtesting | 90.06 % |
+Progress | Backtesting | 90.08 % |
+Progress | Backtesting | 90.09 % |
+Progress | Backtesting | 90.11 % |
+Progress | Backtesting | 90.18 % |
+Progress | Backtesting | 90.37 % |
+Progress | Backtesting | 90.63 % |
+Progress | Backtesting | 91.25 % |
+Progress | Backtesting | 91.26 % |
+Progress | Backtesting | 91.31 % |
+Progress | Backtesting | 91.38 % |
+Progress | Backtesting | 91.42 % |
+Progress | Backtesting | 91.43 % |
+Progress | Backtesting | 91.45 % |
+Progress | Backtesting | 91.48 % |
+Progress | Backtesting | 91.53 % |
+Progress | Backtesting | 91.60 % |
+Progress | Backtesting | 91.68 % |
+Progress | Backtesting | 91.71 % |
+Progress | Backtesting | 91.72 % |
+Progress | Backtesting | 91.74 % |
+Progress | Backtesting | 91.76 % |
+Progress | Backtesting | 91.83 % |
+Progress | Backtesting | 91.93 % |
+Progress | Backtesting | 91.97 % |
+Progress | Backtesting | 91.99 % |
+Progress | Backtesting | 92.01 % |
+Progress | Backtesting | 92.04 % |
+Progress | Backtesting | 92.14 % |
+Progress | Backtesting | 92.24 % |
+Progress | Backtesting | 92.26 % |
+Progress | Backtesting | 92.28 % |
+Progress | Backtesting | 92.31 % |
+Progress | Backtesting | 92.36 % |
+Progress | Backtesting | 92.49 % |
+Progress | Backtesting | 92.52 % |
+Progress | Backtesting | 92.54 % |
+Progress | Backtesting | 92.56 % |
+Progress | Backtesting | 92.59 % |
+Progress | Backtesting | 93.19 % |
+Progress | Backtesting | 93.34 % |
+Progress | Backtesting | 93.35 % |
+Progress | Backtesting | 93.37 % |
+Progress | Backtesting | 93.40 % |
+Progress | Backtesting | 93.45 % |
+Progress | Backtesting | 93.56 % |
+Progress | Backtesting | 93.61 % |
+Progress | Backtesting | 93.62 % |
+Progress | Backtesting | 93.65 % |
+Progress | Backtesting | 93.68 % |
+Progress | Backtesting | 93.76 % |
+Progress | Backtesting | 93.86 % |
+Progress | Backtesting | 93.89 % |
+Progress | Backtesting | 93.91 % |
+Progress | Backtesting | 93.93 % |
+Progress | Backtesting | 93.94 % |
+Progress | Backtesting | 93.95 % |
+Progress | Backtesting | 93.99 % |
+Progress | Backtesting | 94.04 % |
+Progress | Backtesting | 94.07 % |
+Progress | Backtesting | 94.09 % |
+Progress | Backtesting | 94.12 % |
+Progress | Backtesting | 94.15 % |
+Progress | Backtesting | 94.16 % |
+Progress | Backtesting | 94.16 % |
+Progress | Backtesting | 94.17 % |
+Progress | Backtesting | 94.18 % |
+Progress | Backtesting | 94.20 % |
+Progress | Backtesting | 94.22 % |
+Progress | Backtesting | 94.23 % |
+Progress | Backtesting | 94.26 % |
+Progress | Backtesting | 94.31 % |
+Progress | Backtesting | 94.36 % |
+Progress | Backtesting | 94.39 % |
+Progress | Backtesting | 94.43 % |
+Progress | Backtesting | 94.44 % |
+Progress | Backtesting | 94.45 % |
+Progress | Backtesting | 94.46 % |
+Progress | Backtesting | 94.47 % |
+Progress | Backtesting | 94.49 % |
+Progress | Backtesting | 95.08 % |
+Progress | Backtesting | 95.17 % |
+Progress | Backtesting | 95.24 % |
+Progress | Backtesting | 95.26 % |
+Progress | Backtesting | 95.27 % |
+Progress | Backtesting | 95.29 % |
+Progress | Backtesting | 95.31 % |
+Progress | Backtesting | 95.36 % |
+Progress | Backtesting | 95.39 % |
+Progress | Backtesting | 95.46 % |
+Progress | Backtesting | 95.50 % |
+Progress | Backtesting | 95.53 % |
+Progress | Backtesting | 95.54 % |
+Progress | Backtesting | 95.55 % |
+Progress | Backtesting | 95.57 % |
+Progress | Backtesting | 95.58 % |
+Progress | Backtesting | 95.63 % |
+Progress | Backtesting | 95.67 % |
+Progress | Backtesting | 95.73 % |
+Progress | Backtesting | 95.78 % |
+Progress | Backtesting | 95.80 % |
+Progress | Backtesting | 95.81 % |
+Progress | Backtesting | 95.82 % |
+Progress | Backtesting | 95.84 % |
+Progress | Backtesting | 95.86 % |
+Progress | Backtesting | 95.90 % |
+Progress | Backtesting | 95.93 % |
+Progress | Backtesting | 96.00 % |
+Progress | Backtesting | 96.07 % |
+Progress | Backtesting | 96.08 % |
+Progress | Backtesting | 96.10 % |
+Progress | Backtesting | 96.11 % |
+Progress | Backtesting | 96.13 % |
+Progress | Backtesting | 96.17 % |
+Progress | Backtesting | 96.26 % |
+Progress | Backtesting | 96.32 % |
+Progress | Backtesting | 96.35 % |
+Progress | Backtesting | 96.35 % |
+Progress | Backtesting | 96.38 % |
+Progress | Backtesting | 96.40 % |
+Progress | Backtesting | 96.99 % |
+Progress | Backtesting | 97.09 % |
+Progress | Backtesting | 97.16 % |
+Progress | Backtesting | 97.18 % |
+Progress | Backtesting | 97.20 % |
+Progress | Backtesting | 97.26 % |
+Progress | Backtesting | 97.38 % |
+Progress | Backtesting | 97.44 % |
+Progress | Backtesting | 97.46 % |
+Progress | Backtesting | 97.51 % |
+Progress | Backtesting | 97.71 % |
+Progress | Backtesting | 98.09 % |
+Progress | Backtesting | 98.25 % |
+Progress | Backtesting | 98.27 % |
+Progress | Backtesting | 98.31 % |
+Progress | Backtesting | 98.91 % |
+Progress | Backtesting | 99.02 % |
+Progress | Backtesting | 99.07 % |
+Progress | Backtesting | 99.08 % |
+Progress | Backtesting | 99.09 % |
+Progress | Backtesting | 99.11 % |
+Progress | Backtesting | 99.14 % |
+Progress | Backtesting | 99.20 % |
+Progress | Backtesting | 99.30 % |
+Progress | Backtesting | 99.35 % |
+Progress | Backtesting | 99.36 % |
+Progress | Backtesting | 99.36 % |
+Progress | Backtesting | 99.37 % |
+Progress | Backtesting | 99.38 % |
+Progress | Backtesting | 99.40 % |
+Progress | Backtesting | 99.41 % |
+Progress | Backtesting | 99.46 % |
+Progress | Backtesting | 99.61 % |
+Progress | Backtesting | 99.63 % |
+Progress | Backtesting | 99.66 % |
+Progress | Backtesting | 99.69 % |
+01/01/2025 23:05:00.003 | Info | Combo: loaded 1101 valid signal row(s) from CSV.
+01/01/2025 23:05:00.003 | Info | Combo: signal scheduling active with chart timeframe h4 (04:00:00); CSV timeframe must match the chart timeframe.
+02/01/2025 14:00:00.233 | Trade | Placing Stop Order to Buy 0.63 US30.cash (Price: 42899.9, SL: 42743.4609808718, TP: 43297.96)
+02/01/2025 14:00:00.233 | Trade |  Placing Stop Order to Buy 0.63 US30.cash (Price: 42899.9, SL: 42743.4609808718, TP: 43297.96) SUCCEEDED, PendingOrder OID1
+02/01/2025 14:00:00.233 | Info | Combo: bartime=2025-01-02 10:00, executed=2025-01-02 14:00:00, pending Buy placed at 42899.9; SL=42743.46098087178, TP=43297.96366190388; valid for the next 3 chart bar(s).
+02/01/2025 18:00:00.067 | Info | Combo: bartime=2025-01-02 14:00, reversal - cancelling existing Buy pending order 1 before opening opposite direction.
+02/01/2025 18:00:00.067 | Trade | Cancelling pending order OID1
+02/01/2025 18:00:00.067 | Trade |  Cancelling pending order OID1 SUCCEEDED
+02/01/2025 18:00:00.067 | Trade | Placing Stop Order to Sell 0.41 US30.cash (Price: 42125.9, SL: 42365.0998153026, TP: 41517.25)
+02/01/2025 18:00:00.067 | Trade |  Placing Stop Order to Sell 0.41 US30.cash (Price: 42125.9, SL: 42365.0998153026, TP: 41517.25) SUCCEEDED, PendingOrder OID2
+02/01/2025 18:00:00.067 | Info | Combo: bartime=2025-01-02 14:00, executed=2025-01-02 18:00:00, pending Sell placed at 42125.9; SL=42365.09981530258, TP=41517.2490704769; valid for the next 3 chart bar(s).
+03/01/2025 18:00:00.070 | Trade | Placing Stop Order to Buy 0.61 US30.cash (Price: 42666.9, SL: 42505.4353222733, TP: 43077.75)
+03/01/2025 18:00:00.070 | Trade |  Placing Stop Order to Buy 0.61 US30.cash (Price: 42666.9, SL: 42505.4353222733, TP: 43077.75) SUCCEEDED, PendingOrder OID5
+03/01/2025 18:00:00.070 | Info | Combo: bartime=2025-01-03 14:00, executed=2025-01-03 18:00:00, pending Buy placed at 42666.9; SL=42505.43532227332, TP=43077.75159726891; valid for the next 3 chart bar(s).
+07/01/2025 18:00:00.086 | Trade | Placing Stop Order to Sell 0.65 US30.cash (Price: 42513.2, SL: 42668.161396419, TP: 42118.9)
+07/01/2025 18:00:00.086 | Trade |  Placing Stop Order to Sell 0.65 US30.cash (Price: 42513.2, SL: 42668.161396419, TP: 42118.9) SUCCEEDED, PendingOrder OID8
+07/01/2025 18:00:00.086 | Info | Combo: bartime=2025-01-07 14:00, executed=2025-01-07 18:00:00, pending Sell placed at 42513.2; SL=42668.16139641896, TP=42118.896192318156; valid for the next 3 chart bar(s).
+27/01/2025 03:00:00.289 | Trade | Placing Stop Order to Sell 0.97 US30.cash (Price: 44175.4, SL: 44281.7807365992, TP: 43904.71)
+27/01/2025 03:00:00.289 | Trade |  Placing Stop Order to Sell 0.97 US30.cash (Price: 44175.4, SL: 44281.7807365992, TP: 43904.71) SUCCEEDED, PendingOrder OID11
+27/01/2025 03:00:00.289 | Info | Combo: bartime=2025-01-26 23:00, executed=2025-01-27 03:00:00, pending Sell placed at 44175.4; SL=44281.78073659916, TP=43904.71110280113; valid for the next 3 chart bar(s).
+30/01/2025 14:00:00.155 | Trade | Placing Stop Order to Sell 0.77 US30.cash (Price: 44601.5, SL: 44738.6435932908, TP: 44252.53)
+30/01/2025 14:00:00.155 | Trade |  Placing Stop Order to Sell 0.77 US30.cash (Price: 44601.5, SL: 44738.6435932908, TP: 44252.53) SUCCEEDED, PendingOrder OID14
+30/01/2025 14:00:00.155 | Info | Combo: bartime=2025-01-30 10:00, executed=2025-01-30 14:00:00, pending Sell placed at 44601.5; SL=44738.64359329077, TP=44252.53411376395; valid for the next 3 chart bar(s).
+31/01/2025 02:00:01.190 | Trade | Cancelling pending order OID14
+31/01/2025 02:00:01.190 | Trade |  Cancelling pending order OID14 SUCCEEDED
+31/01/2025 02:00:01.190 | Info | Combo: pending order 14 cancelled after 3 chart bars.
+02/02/2025 23:05:00.008 | Trade | Placing Stop Order to Sell 0.64 US30.cash (Price: 44485.2, SL: 44650.967836961, TP: 44063.4)
+02/02/2025 23:05:00.008 | Trade |  Placing Stop Order to Sell 0.64 US30.cash (Price: 44485.2, SL: 44650.967836961, TP: 44063.4) SUCCEEDED, PendingOrder OID15
+02/02/2025 23:05:00.008 | Info | Combo: bartime=2025-01-31 18:00, executed=2025-02-02 23:05:00, pending Sell placed at 44485.2; SL=44650.967836961034, TP=44063.39888813986; valid for the next 3 chart bar(s).
+04/02/2025 23:05:00.003 | Trade | Placing Stop Order to Buy 0.59 US30.cash (Price: 44613.4, SL: 44439.5517259042, TP: 45055.76)
+04/02/2025 23:05:00.003 | Trade |  Placing Stop Order to Buy 0.59 US30.cash (Price: 44613.4, SL: 44439.5517259042, TP: 45055.76) SUCCEEDED, PendingOrder OID18
+04/02/2025 23:05:00.003 | Info | Combo: bartime=2025-02-04 18:00, executed=2025-02-04 23:05:00, pending Buy placed at 44613.4; SL=44439.551725904246, TP=45055.76202059988; valid for the next 3 chart bar(s).
+05/02/2025 10:00:00.075 | Trade | Cancelling pending order OID18
+05/02/2025 10:00:00.075 | Trade |  Cancelling pending order OID18 SUCCEEDED
+05/02/2025 10:00:00.075 | Info | Combo: pending order 18 cancelled after 3 chart bars.
+05/02/2025 14:00:01.395 | Trade | Placing Stop Order to Buy 0.8 US30.cash (Price: 44581.5, SL: 44453.5438045304, TP: 44907.09)
+05/02/2025 14:00:01.395 | Trade |  Placing Stop Order to Buy 0.8 US30.cash (Price: 44581.5, SL: 44453.5438045304, TP: 44907.09) SUCCEEDED, PendingOrder OID19
+05/02/2025 14:00:01.395 | Info | Combo: bartime=2025-02-05 10:00, executed=2025-02-05 14:00:01, pending Buy placed at 44581.5; SL=44453.54380453038, TP=44907.08828363771; valid for the next 3 chart bar(s).
+07/02/2025 18:00:00.196 | Trade | Placing Stop Order to Sell 0.59 US30.cash (Price: 44352.5, SL: 44522.0731803258, TP: 43921.02)
+07/02/2025 18:00:00.196 | Trade |  Placing Stop Order to Sell 0.59 US30.cash (Price: 44352.5, SL: 44522.0731803258, TP: 43921.02) SUCCEEDED, PendingOrder OID22
+07/02/2025 18:00:00.196 | Info | Combo: bartime=2025-02-07 14:00, executed=2025-02-07 18:00:00, pending Sell placed at 44352.5; SL=44522.07318032575, TP=43921.01608059606; valid for the next 3 chart bar(s).
+11/02/2025 23:05:00.003 | Trade | Placing Stop Order to Buy 0.83 US30.cash (Price: 44644.5, SL: 44523.7516384024, TP: 44951.75)
+11/02/2025 23:05:00.003 | Trade |  Placing Stop Order to Buy 0.83 US30.cash (Price: 44644.5, SL: 44523.7516384024, TP: 44951.75) SUCCEEDED, PendingOrder OID25
+11/02/2025 23:05:00.003 | Info | Combo: bartime=2025-02-11 18:00, executed=2025-02-11 23:05:00, pending Buy placed at 44644.5; SL=44523.75163840238, TP=44951.74773943416; valid for the next 3 chart bar(s).
+12/02/2025 10:00:00.155 | Trade | Cancelling pending order OID25
+12/02/2025 10:00:00.155 | Trade |  Cancelling pending order OID25 SUCCEEDED
+12/02/2025 10:00:00.155 | Info | Combo: pending order 25 cancelled after 3 chart bars.
+12/02/2025 14:00:00.631 | Trade | Placing Stop Order to Sell 0.69 US30.cash (Price: 44125.5, SL: 44270.8719081104, TP: 43755.6)
+12/02/2025 14:00:00.631 | Trade |  Placing Stop Order to Sell 0.69 US30.cash (Price: 44125.5, SL: 44270.8719081104, TP: 43755.6) SUCCEEDED, PendingOrder OID26
+12/02/2025 14:00:00.631 | Info | Combo: bartime=2025-02-12 10:00, executed=2025-02-12 14:00:00, pending Sell placed at 44125.5; SL=44270.871908110385, TP=43755.59692592777; valid for the next 3 chart bar(s).
+12/02/2025 23:05:00.002 | Trade | Placing Stop Order to Sell 0.59 US30.cash (Price: 44280, SL: 44447.2835811906, TP: 43854.34)
+12/02/2025 23:05:00.002 | Trade |  Placing Stop Order to Sell 0.59 US30.cash (Price: 44280, SL: 44447.2835811906, TP: 43854.34) SUCCEEDED, PendingOrder OID29
+12/02/2025 23:05:00.002 | Info | Combo: bartime=2025-02-12 18:00, executed=2025-02-12 23:05:00, pending Sell placed at 44280; SL=44447.28358119065, TP=43854.34203259377; valid for the next 3 chart bar(s).
+13/02/2025 06:00:06.054 | Info | Combo: bartime=2025-02-13 02:00, reversal - cancelling existing Sell pending order 29 before opening opposite direction.
+13/02/2025 06:00:06.054 | Trade | Cancelling pending order OID29
+13/02/2025 06:00:06.054 | Trade |  Cancelling pending order OID29 SUCCEEDED
+13/02/2025 06:00:06.054 | Trade | Placing Stop Order to Buy 0.8 US30.cash (Price: 44469.5, SL: 44346.334940038, TP: 44782.9)
+13/02/2025 06:00:06.054 | Trade |  Placing Stop Order to Buy 0.8 US30.cash (Price: 44469.5, SL: 44346.334940038, TP: 44782.9) SUCCEEDED, PendingOrder OID30
+13/02/2025 06:00:06.054 | Info | Combo: bartime=2025-02-13 02:00, executed=2025-02-13 06:00:06, pending Buy placed at 44469.5; SL=44346.33494003799, TP=44782.897099139984; valid for the next 3 chart bar(s).
+13/02/2025 10:00:00.055 | Info | Combo: bartime=2025-02-13 06:00, reversal - cancelling existing Buy pending order 30 before opening opposite direction.
+13/02/2025 10:00:00.055 | Trade | Cancelling pending order OID30
+13/02/2025 10:00:00.055 | Trade |  Cancelling pending order OID30 SUCCEEDED
+13/02/2025 10:00:00.055 | Trade | Placing Stop Order to Sell 0.76 US30.cash (Price: 44244.5, SL: 44374.3148479696, TP: 43914.18)
+13/02/2025 10:00:00.055 | Trade |  Placing Stop Order to Sell 0.76 US30.cash (Price: 44244.5, SL: 44374.3148479696, TP: 43914.18) SUCCEEDED, PendingOrder OID31
+13/02/2025 10:00:00.055 | Info | Combo: bartime=2025-02-13 06:00, executed=2025-02-13 10:00:00, pending Sell placed at 44244.5; SL=44374.31484796961, TP=43914.18232068801; valid for the next 3 chart bar(s).
+13/02/2025 14:00:00.131 | Info | Combo: bartime=2025-02-13 10:00, reversal - cancelling existing Sell pending order 31 before opening opposite direction.
+13/02/2025 14:00:00.131 | Trade | Cancelling pending order OID31
+13/02/2025 14:00:00.131 | Trade |  Cancelling pending order OID31 SUCCEEDED
+13/02/2025 14:00:00.131 | Trade | Placing Stop Order to Buy 0.78 US30.cash (Price: 44484, SL: 44357.0397216243, TP: 44807.05)
+13/02/2025 14:00:00.131 | Trade |  Placing Stop Order to Buy 0.78 US30.cash (Price: 44484, SL: 44357.0397216243, TP: 44807.05) SUCCEEDED, PendingOrder OID32
+13/02/2025 14:00:00.131 | Info | Combo: bartime=2025-02-13 10:00, executed=2025-02-13 14:00:00, pending Buy placed at 44484; SL=44357.03972162431, TP=44807.05414344959; valid for the next 3 chart bar(s).
+13/02/2025 23:05:00.009 | Trade | Placing Stop Order to Buy 0.6 US30.cash (Price: 44780.5, SL: 44617.4542618396, TP: 45195.37)
+13/02/2025 23:05:00.009 | Trade |  Placing Stop Order to Buy 0.6 US30.cash (Price: 44780.5, SL: 44617.4542618396, TP: 45195.37) SUCCEEDED, PendingOrder OID35
+13/02/2025 23:05:00.009 | Info | Combo: bartime=2025-02-13 18:00, executed=2025-02-13 23:05:00, pending Buy placed at 44780.5; SL=44617.45426183956, TP=45195.37465180774; valid for the next 3 chart bar(s).
+14/02/2025 10:00:00.150 | Trade | Cancelling pending order OID35
+14/02/2025 10:00:00.150 | Trade |  Cancelling pending order OID35 SUCCEEDED
+14/02/2025 10:00:00.150 | Info | Combo: pending order 35 cancelled after 3 chart bars.
+16/02/2025 23:05:00.004 | Trade | Placing Stop Order to Sell 0.79 US30.cash (Price: 44463.5, SL: 44587.0286899651, TP: 44149.18)
+16/02/2025 23:05:00.004 | Trade |  Placing Stop Order to Sell 0.79 US30.cash (Price: 44463.5, SL: 44587.0286899651, TP: 44149.18) SUCCEEDED, PendingOrder OID36
+16/02/2025 23:05:00.004 | Info | Combo: bartime=2025-02-14 18:00, executed=2025-02-16 23:05:00, pending Sell placed at 44463.5; SL=44587.02868996513, TP=44149.17763367651; valid for the next 3 chart bar(s).
+17/02/2025 10:00:01.171 | Trade | Cancelling pending order OID36
+17/02/2025 10:00:01.171 | Trade |  Cancelling pending order OID36 SUCCEEDED
+17/02/2025 10:00:01.171 | Info | Combo: pending order 36 cancelled after 3 chart bars.
+18/02/2025 06:00:00.377 | Trade | Placing Stop Order to Sell 1.61 US30.cash (Price: 44540.4, SL: 44601.3836454414, TP: 44385.23)
+18/02/2025 06:00:00.377 | Trade |  Placing Stop Order to Sell 1.61 US30.cash (Price: 44540.4, SL: 44601.3836454414, TP: 44385.23) SUCCEEDED, PendingOrder OID37
+18/02/2025 06:00:00.377 | Info | Combo: bartime=2025-02-18 02:00, executed=2025-02-18 06:00:00, pending Sell placed at 44540.4; SL=44601.38364544142, TP=44385.2253296656; valid for the next 3 chart bar(s).
+18/02/2025 18:00:00.276 | Trade | Placing Stop Order to Sell 1.04 US30.cash (Price: 44347.9, SL: 44440.988114466, TP: 44111.03)
+18/02/2025 18:00:00.276 | Trade |  Placing Stop Order to Sell 1.04 US30.cash (Price: 44347.9, SL: 44440.988114466, TP: 44111.03) SUCCEEDED, PendingOrder OID40
+18/02/2025 18:00:00.276 | Info | Combo: bartime=2025-02-18 14:00, executed=2025-02-18 18:00:00, pending Sell placed at 44347.9; SL=44440.98811446601, TP=44111.03456878879; valid for the next 3 chart bar(s).
+19/02/2025 14:00:00.380 | Trade | Placing Stop Order to Sell 1.1 US30.cash (Price: 44393.9, SL: 44481.3476186282, TP: 44171.39)
+19/02/2025 14:00:00.380 | Trade |  Placing Stop Order to Sell 1.1 US30.cash (Price: 44393.9, SL: 44481.3476186282, TP: 44171.39) SUCCEEDED, PendingOrder OID43
+19/02/2025 14:00:00.380 | Info | Combo: bartime=2025-02-19 10:00, executed=2025-02-19 14:00:00, pending Sell placed at 44393.9; SL=44481.34761862822, TP=44171.38697550071; valid for the next 3 chart bar(s).
+20/02/2025 10:00:00.818 | Trade | Placing Stop Order to Buy 1.13 US30.cash (Price: 44569.8, SL: 44486.0738542479, TP: 44782.84)
+20/02/2025 10:00:00.818 | Trade |  Placing Stop Order to Buy 1.13 US30.cash (Price: 44569.8, SL: 44486.0738542479, TP: 44782.84) SUCCEEDED, PendingOrder OID46
+20/02/2025 10:00:00.818 | Info | Combo: bartime=2025-02-20 06:00, executed=2025-02-20 10:00:00, pending Buy placed at 44569.8; SL=44486.07385424791, TP=44782.84362786793; valid for the next 3 chart bar(s).
+20/02/2025 14:00:00.246 | Trade | Placing Stop Order to Sell 1.08 US30.cash (Price: 44435.3, SL: 44522.0881166017, TP: 44214.47)
+20/02/2025 14:00:00.246 | Trade |  Placing Stop Order to Sell 1.08 US30.cash (Price: 44435.3, SL: 44522.0881166017, TP: 44214.47) SUCCEEDED, PendingOrder OID49
+20/02/2025 14:00:00.246 | Info | Combo: bartime=2025-02-20 10:00, executed=2025-02-20 14:00:00, pending Sell placed at 44435.3; SL=44522.08811660168, TP=44214.46509770566; valid for the next 3 chart bar(s).
+26/02/2025 06:00:00.726 | Trade | Placing Stop Order to Buy 0.61 US30.cash (Price: 43730.2, SL: 43573.775280813, TP: 44128.23)
+26/02/2025 06:00:00.726 | Trade |  Placing Stop Order to Buy 0.61 US30.cash (Price: 43730.2, SL: 43573.775280813, TP: 44128.23) SUCCEEDED, PendingOrder OID52
+26/02/2025 06:00:00.726 | Info | Combo: bartime=2025-02-26 02:00, executed=2025-02-26 06:00:00, pending Buy placed at 43730.2; SL=43573.77528081299, TP=44128.22727528502; valid for the next 3 chart bar(s).
+27/02/2025 18:00:00.168 | Trade | Placing Stop Order to Buy 0.47 US30.cash (Price: 43897.3, SL: 43693.5123063841, TP: 44415.84)
+27/02/2025 18:00:00.168 | Trade |  Placing Stop Order to Buy 0.47 US30.cash (Price: 43897.3, SL: 43693.5123063841, TP: 44415.84) SUCCEEDED, PendingOrder OID55
+27/02/2025 18:00:00.168 | Info | Combo: bartime=2025-02-27 14:00, executed=2025-02-27 18:00:00, pending Buy placed at 43897.3; SL=43693.5123063841, TP=44415.84374965879; valid for the next 3 chart bar(s).
+27/02/2025 23:05:00.005 | Info | Combo: bartime=2025-02-27 18:00, reversal - cancelling existing Buy pending order 55 before opening opposite direction.
+27/02/2025 23:05:00.005 | Trade | Cancelling pending order OID55
+27/02/2025 23:05:00.005 | Trade |  Cancelling pending order OID55 SUCCEEDED
+27/02/2025 23:05:00.005 | Trade | Placing Stop Order to Sell 0.37 US30.cash (Price: 43184.4, SL: 43436.8612348927, TP: 42542.01)
+27/02/2025 23:05:00.005 | Trade |  Placing Stop Order to Sell 0.37 US30.cash (Price: 43184.4, SL: 43436.8612348927, TP: 42542.01) SUCCEEDED, PendingOrder OID56
+27/02/2025 23:05:00.005 | Info | Combo: bartime=2025-02-27 18:00, executed=2025-02-27 23:05:00, pending Sell placed at 43184.4; SL=43436.86123489273, TP=42542.00500027297; valid for the next 3 chart bar(s).
+02/03/2025 23:05:00.004 | Trade | Placing Stop Order to Buy 0.34 US30.cash (Price: 43872.4, SL: 43593.7747731763, TP: 44581.37)
+02/03/2025 23:05:00.004 | Trade |  Placing Stop Order to Buy 0.34 US30.cash (Price: 43872.4, SL: 43593.7747731763, TP: 44581.37) SUCCEEDED, PendingOrder OID59
+02/03/2025 23:05:00.004 | Info | Combo: bartime=2025-02-28 18:00, executed=2025-03-02 23:05:00, pending Buy placed at 43872.4; SL=43593.77477317629, TP=44581.37004280844; valid for the next 3 chart bar(s).
+09/03/2025 22:05:00.003 | Trade | Placing Stop Order to Buy 0.34 US30.cash (Price: 42905.5, SL: 42631.9865351179, TP: 43601.46)
+09/03/2025 22:05:00.003 | Trade |  Placing Stop Order to Buy 0.34 US30.cash (Price: 42905.5, SL: 42631.9865351179, TP: 43601.46) SUCCEEDED, PendingOrder OID62
+09/03/2025 22:05:00.003 | Info | Combo: bartime=2025-03-07 18:00, executed=2025-03-09 22:05:00, pending Buy placed at 42905.5; SL=42631.98653511789, TP=43601.46301496721; valid for the next 3 chart bar(s).
+10/03/2025 09:00:00.041 | Trade | Cancelling pending order OID62
+10/03/2025 09:00:00.041 | Trade |  Cancelling pending order OID62 SUCCEEDED
+10/03/2025 09:00:00.041 | Info | Combo: pending order 62 cancelled after 3 chart bars.
+14/03/2025 17:00:00.141 | Trade | Placing Stop Order to Buy 0.43 US30.cash (Price: 41449.2, SL: 41234.8452848287, TP: 41994.63)
+14/03/2025 17:00:00.141 | Trade |  Placing Stop Order to Buy 0.43 US30.cash (Price: 41449.2, SL: 41234.8452848287, TP: 41994.63) SUCCEEDED, PendingOrder OID63
+14/03/2025 17:00:00.141 | Info | Combo: bartime=2025-03-14 13:00, executed=2025-03-14 17:00:00, pending Buy placed at 41449.2; SL=41234.845284828734, TP=41994.631845219505; valid for the next 3 chart bar(s).
+21/03/2025 09:00:00.110 | Trade | Placing Stop Order to Sell 0.54 US30.cash (Price: 41730.9, SL: 41901.3344905525, TP: 41297.22)
+21/03/2025 09:00:00.110 | Trade |  Placing Stop Order to Sell 0.54 US30.cash (Price: 41730.9, SL: 41901.3344905525, TP: 41297.22) SUCCEEDED, PendingOrder OID66
+21/03/2025 09:00:00.110 | Info | Combo: bartime=2025-03-21 05:00, executed=2025-03-21 09:00:00, pending Sell placed at 41730.9; SL=41901.33449055248, TP=41297.22445152042; valid for the next 3 chart bar(s).
+26/03/2025 22:05:00.008 | Trade | Placing Stop Order to Sell 0.65 US30.cash (Price: 42306, SL: 42446.3550785551, TP: 41948.86)
+26/03/2025 22:05:00.008 | Trade |  Placing Stop Order to Sell 0.65 US30.cash (Price: 42306, SL: 42446.3550785551, TP: 41948.86) SUCCEEDED, PendingOrder OID69
+26/03/2025 22:05:00.008 | Info | Combo: bartime=2025-03-26 17:00, executed=2025-03-26 22:05:00, pending Sell placed at 42306; SL=42446.35507855508, TP=41948.86239553414; valid for the next 3 chart bar(s).
+01/04/2025 17:00:00.195 | Trade | Placing Stop Order to Buy 0.36 US30.cash (Price: 42141.8, SL: 41889.9279869306, TP: 42782.7)
+01/04/2025 17:00:00.195 | Trade |  Placing Stop Order to Buy 0.36 US30.cash (Price: 42141.8, SL: 41889.9279869306, TP: 42782.7) SUCCEEDED, PendingOrder OID72
+01/04/2025 17:00:00.195 | Info | Combo: bartime=2025-04-01 13:00, executed=2025-04-01 17:00:00, pending Buy placed at 42141.8; SL=41889.92798693063, TP=42782.69570755567; valid for the next 3 chart bar(s).
+02/04/2025 05:00:00.562 | Trade | Cancelling pending order OID72
+02/04/2025 05:00:00.562 | Trade |  Cancelling pending order OID72 SUCCEEDED
+02/04/2025 05:00:00.562 | Info | Combo: pending order 72 cancelled after 3 chart bars.
+02/04/2025 13:00:00.662 | Trade | Placing Stop Order to Sell 0.48 US30.cash (Price: 41595.1, SL: 41783.3961978826, TP: 41115.97)
+02/04/2025 13:00:00.662 | Trade |  Placing Stop Order to Sell 0.48 US30.cash (Price: 41595.1, SL: 41783.3961978826, TP: 41115.97) SUCCEEDED, PendingOrder OID73
+02/04/2025 13:00:00.662 | Info | Combo: bartime=2025-04-02 09:00, executed=2025-04-02 13:00:00, pending Sell placed at 41595.1; SL=41783.396197882576, TP=41115.97481454816; valid for the next 3 chart bar(s).
+02/04/2025 17:00:00.163 | Info | Combo: bartime=2025-04-02 13:00, reversal - cancelling existing Sell pending order 73 before opening opposite direction.
+02/04/2025 17:00:00.163 | Trade | Cancelling pending order OID73
+02/04/2025 17:00:00.163 | Trade |  Cancelling pending order OID73 SUCCEEDED
+02/04/2025 17:00:00.163 | Trade | Placing Stop Order to Buy 0.35 US30.cash (Price: 42298.1, SL: 42041.5102416939, TP: 42951)
+02/04/2025 17:00:00.163 | Trade |  Placing Stop Order to Buy 0.35 US30.cash (Price: 42298.1, SL: 42041.5102416939, TP: 42951) SUCCEEDED, PendingOrder OID74
+02/04/2025 17:00:00.163 | Info | Combo: bartime=2025-04-02 13:00, executed=2025-04-02 17:00:00, pending Buy placed at 42298.1; SL=42041.51024169394, TP=42951.000148361476; valid for the next 3 chart bar(s).
+03/04/2025 01:00:00.164 | Trade | Placing Stop Order to Sell 0.22 US30.cash (Price: 41025.3, SL: 41419.0923253159, TP: 40023.28)
+03/04/2025 01:00:00.164 | Trade |  Placing Stop Order to Sell 0.22 US30.cash (Price: 41025.3, SL: 41419.0923253159, TP: 40023.28) SUCCEEDED, PendingOrder OID77
+03/04/2025 01:00:00.164 | Info | Combo: bartime=2025-04-02 21:00, executed=2025-04-03 01:00:00, pending Sell placed at 41025.3; SL=41419.09232531588, TP=40023.283905048665; valid for the next 3 chart bar(s).
+09/04/2025 22:05:00.002 | Trade | Placing Stop Order to Buy 0.08 US30.cash (Price: 40810.7, SL: 39726.4779700588, TP: 43569.53)
+09/04/2025 22:05:00.002 | Trade |  Placing Stop Order to Buy 0.08 US30.cash (Price: 40810.7, SL: 39726.4779700588, TP: 43569.53) SUCCEEDED, PendingOrder OID80
+09/04/2025 22:05:00.002 | Info | Combo: bartime=2025-04-09 17:00, executed=2025-04-09 22:05:00, pending Buy placed at 40810.7; SL=39726.47797005878, TP=43569.534681784266; valid for the next 3 chart bar(s).
+22/04/2025 17:00:00.069 | Trade | Placing Stop Order to Buy 0.3 US30.cash (Price: 39288, SL: 38987.5429019459, TP: 40052.52)
+22/04/2025 17:00:00.069 | Trade |  Placing Stop Order to Buy 0.3 US30.cash (Price: 39288, SL: 38987.5429019459, TP: 40052.52) SUCCEEDED, PendingOrder OID83
+22/04/2025 17:00:00.069 | Info | Combo: bartime=2025-04-22 13:00, executed=2025-04-22 17:00:00, pending Buy placed at 39288; SL=38987.54290194589, TP=40052.521878000276; valid for the next 3 chart bar(s).
+30/04/2025 13:00:00.063 | Trade | Placing Stop Order to Sell 0.47 US30.cash (Price: 40127.8, SL: 40322.3405756398, TP: 39632.79)
+30/04/2025 13:00:00.063 | Trade |  Placing Stop Order to Sell 0.47 US30.cash (Price: 40127.8, SL: 40322.3405756398, TP: 39632.79) SUCCEEDED, PendingOrder OID86
+30/04/2025 13:00:00.063 | Info | Combo: bartime=2025-04-30 09:00, executed=2025-04-30 13:00:00, pending Sell placed at 40127.8; SL=40322.34057563979, TP=39632.78581262141; valid for the next 3 chart bar(s).
+06/05/2025 09:00:00.122 | Trade | Placing Stop Order to Sell 0.62 US30.cash (Price: 40934.8, SL: 41080.633881292, TP: 40563.72)
+06/05/2025 09:00:00.122 | Trade |  Placing Stop Order to Sell 0.62 US30.cash (Price: 40934.8, SL: 41080.633881292, TP: 40563.72) SUCCEEDED, PendingOrder OID89
+06/05/2025 09:00:00.122 | Info | Combo: bartime=2025-05-06 05:00, executed=2025-05-06 09:00:00, pending Sell placed at 40934.8; SL=41080.633881291964, TP=40563.72142164895; valid for the next 3 chart bar(s).
+07/05/2025 05:00:00.617 | Trade | Placing Stop Order to Sell 0.43 US30.cash (Price: 41003.8, SL: 41213.8750958218, TP: 40469.26)
+07/05/2025 05:00:00.617 | Trade |  Placing Stop Order to Sell 0.43 US30.cash (Price: 41003.8, SL: 41213.8750958218, TP: 40469.26) SUCCEEDED, PendingOrder OID92
+07/05/2025 05:00:00.617 | Info | Combo: bartime=2025-05-07 01:00, executed=2025-05-07 05:00:00, pending Sell placed at 41003.8; SL=41213.87509582176, TP=40469.25777144593; valid for the next 3 chart bar(s).
+07/05/2025 17:00:00.345 | Info | Combo: bartime=2025-05-07 13:00, reversal - closing existing Sell position 27 before opening opposite direction.
+07/05/2025 17:00:00.345 | Trade | Closing position PID27 (Volume: 0.43)
+07/05/2025 17:00:00.345 | Trade |  Closing position PID27 (Volume: 0.43) SUCCEEDED
+07/05/2025 17:00:00.345 | Trade | Placing Stop Order to Buy 0.5 US30.cash (Price: 41220.5, SL: 41042.2990149393, TP: 41673.94)
+07/05/2025 17:00:00.345 | Trade |  Placing Stop Order to Buy 0.5 US30.cash (Price: 41220.5, SL: 41042.2990149393, TP: 41673.94) SUCCEEDED, PendingOrder OID96
+07/05/2025 17:00:00.345 | Info | Combo: bartime=2025-05-07 13:00, executed=2025-05-07 17:00:00, pending Buy placed at 41220.5; SL=41042.299014939264, TP=41673.937621019686; valid for the next 3 chart bar(s).
+08/05/2025 01:00:00.432 | Trade | Placing Stop Order to Buy 0.43 US30.cash (Price: 41226.3, SL: 41023.8358015611, TP: 41741.48)
+08/05/2025 01:00:00.432 | Trade |  Placing Stop Order to Buy 0.43 US30.cash (Price: 41226.3, SL: 41023.8358015611, TP: 41741.48) SUCCEEDED, PendingOrder OID99
+08/05/2025 01:00:00.432 | Info | Combo: bartime=2025-05-07 21:00, executed=2025-05-08 01:00:00, pending Buy placed at 41226.3; SL=41023.83580156113, TP=41741.4760774526; valid for the next 3 chart bar(s).
+09/05/2025 17:00:00.547 | Trade | Placing Stop Order to Sell 0.42 US30.cash (Price: 41133, SL: 41345.5276165495, TP: 40592.22)
+09/05/2025 17:00:00.547 | Trade |  Placing Stop Order to Sell 0.42 US30.cash (Price: 41133, SL: 41345.5276165495, TP: 40592.22) SUCCEEDED, PendingOrder OID102
+09/05/2025 17:00:00.547 | Info | Combo: bartime=2025-05-09 13:00, executed=2025-05-09 17:00:00, pending Sell placed at 41133; SL=41345.5276165495, TP=40592.21726068829; valid for the next 3 chart bar(s).
+12/05/2025 05:00:01.202 | Trade | Cancelling pending order OID102
+12/05/2025 05:00:01.202 | Trade |  Cancelling pending order OID102 SUCCEEDED
+12/05/2025 05:00:01.202 | Info | Combo: pending order 102 cancelled after 3 chart bars.
+15/05/2025 17:00:00.521 | Trade | Placing Stop Order to Buy 0.58 US30.cash (Price: 42251.9, SL: 42097.6742296586, TP: 42644.33)
+15/05/2025 17:00:00.521 | Trade |  Placing Stop Order to Buy 0.58 US30.cash (Price: 42251.9, SL: 42097.6742296586, TP: 42644.33) SUCCEEDED, PendingOrder OID103
+15/05/2025 17:00:00.521 | Info | Combo: bartime=2025-05-15 13:00, executed=2025-05-15 17:00:00, pending Buy placed at 42251.9; SL=42097.67422965864, TP=42644.331985601435; valid for the next 3 chart bar(s).
+21/05/2025 05:00:00.175 | Trade | Placing Stop Order to Sell 0.77 US30.cash (Price: 42525.9, SL: 42645.6031873848, TP: 42221.31)
+21/05/2025 05:00:00.175 | Trade |  Placing Stop Order to Sell 0.77 US30.cash (Price: 42525.9, SL: 42645.6031873848, TP: 42221.31) SUCCEEDED, PendingOrder OID106
+21/05/2025 05:00:00.175 | Info | Combo: bartime=2025-05-21 01:00, executed=2025-05-21 05:00:00, pending Sell placed at 42525.9; SL=42645.603187384804, TP=42221.311736934345; valid for the next 3 chart bar(s).
+29/05/2025 01:00:00.095 | Trade | Placing Stop Order to Buy 0.46 US30.cash (Price: 42653.8, SL: 42447.2448870995, TP: 43179.39)
+29/05/2025 01:00:00.095 | Trade |  Placing Stop Order to Buy 0.46 US30.cash (Price: 42653.8, SL: 42447.2448870995, TP: 43179.39) SUCCEEDED, PendingOrder OID109
+29/05/2025 01:00:00.095 | Info | Combo: bartime=2025-05-28 21:00, executed=2025-05-29 01:00:00, pending Buy placed at 42653.8; SL=42447.24488709946, TP=43179.38552900901; valid for the next 3 chart bar(s).
+29/05/2025 13:00:00.105 | Trade | Placing Stop Order to Sell 0.45 US30.cash (Price: 42138.5, SL: 42348.1000226051, TP: 41605.17)
+29/05/2025 13:00:00.105 | Trade |  Placing Stop Order to Sell 0.45 US30.cash (Price: 42138.5, SL: 42348.1000226051, TP: 41605.17) SUCCEEDED, PendingOrder OID112
+29/05/2025 13:00:00.105 | Info | Combo: bartime=2025-05-29 09:00, executed=2025-05-29 13:00:00, pending Sell placed at 42138.5; SL=42348.100022605075, TP=41605.16660914739; valid for the next 3 chart bar(s).
+02/06/2025 22:05:00.002 | Trade | Placing Stop Order to Buy 0.49 US30.cash (Price: 42360, SL: 42172.0774829101, TP: 42838.17)
+02/06/2025 22:05:00.002 | Trade |  Placing Stop Order to Buy 0.49 US30.cash (Price: 42360, SL: 42172.0774829101, TP: 42838.17) SUCCEEDED, PendingOrder OID115
+02/06/2025 22:05:00.002 | Info | Combo: bartime=2025-06-02 18:00, executed=2025-06-02 22:05:00, pending Buy placed at 42360; SL=42172.077482910056, TP=42838.17434374031; valid for the next 3 chart bar(s).
+03/06/2025 09:00:00.463 | Trade | Cancelling pending order OID115
+03/06/2025 09:00:00.463 | Trade |  Cancelling pending order OID115 SUCCEEDED
+03/06/2025 09:00:00.463 | Info | Combo: pending order 115 cancelled after 3 chart bars.
+03/06/2025 13:00:00.095 | Trade | Placing Stop Order to Buy 0.68 US30.cash (Price: 42263.3, SL: 42127.20577764, TP: 42609.6)
+03/06/2025 13:00:00.095 | Trade |  Placing Stop Order to Buy 0.68 US30.cash (Price: 42263.3, SL: 42127.20577764, TP: 42609.6) SUCCEEDED, PendingOrder OID116
+03/06/2025 13:00:00.095 | Info | Combo: bartime=2025-06-03 09:00, executed=2025-06-03 13:00:00, pending Buy placed at 42263.3; SL=42127.20577763996, TP=42609.59573119604; valid for the next 3 chart bar(s).
+05/06/2025 22:05:00.003 | Trade | Placing Stop Order to Sell 0.53 US30.cash (Price: 42195.3, SL: 42374.929686557, TP: 41738.23)
+05/06/2025 22:05:00.003 | Trade |  Placing Stop Order to Sell 0.53 US30.cash (Price: 42195.3, SL: 42374.929686557, TP: 41738.23) SUCCEEDED, PendingOrder OID119
+05/06/2025 22:05:00.003 | Info | Combo: bartime=2025-06-05 17:00, executed=2025-06-05 22:05:00, pending Sell placed at 42195.3; SL=42374.929686556956, TP=41738.22700621642; valid for the next 3 chart bar(s).
+06/06/2025 09:00:02.267 | Trade | Cancelling pending order OID119
+06/06/2025 09:00:02.267 | Trade |  Cancelling pending order OID119 SUCCEEDED
+06/06/2025 09:00:02.267 | Info | Combo: pending order 119 cancelled after 3 chart bars.
+12/06/2025 01:00:00.189 | Trade | Placing Stop Order to Sell 0.55 US30.cash (Price: 42709.7, SL: 42884.2762528151, TP: 42265.49)
+12/06/2025 01:00:00.189 | Trade |  Placing Stop Order to Sell 0.55 US30.cash (Price: 42709.7, SL: 42884.2762528151, TP: 42265.49) SUCCEEDED, PendingOrder OID120
+12/06/2025 01:00:00.189 | Info | Combo: bartime=2025-06-11 21:00, executed=2025-06-12 01:00:00, pending Sell placed at 42709.7; SL=42884.276252815056, TP=42265.48561624666; valid for the next 3 chart bar(s).
+13/06/2025 01:00:00.291 | Trade | Placing Stop Order to Sell 0.44 US30.cash (Price: 42340.6, SL: 42555.418883618, TP: 41793.99)
+13/06/2025 01:00:00.291 | Trade |  Placing Stop Order to Sell 0.44 US30.cash (Price: 42340.6, SL: 42555.418883618, TP: 41793.99) SUCCEEDED, PendingOrder OID123
+13/06/2025 01:00:00.291 | Info | Combo: bartime=2025-06-12 21:00, executed=2025-06-13 01:00:00, pending Sell placed at 42340.6; SL=42555.41888361795, TP=41793.987064585366; valid for the next 3 chart bar(s).
+16/06/2025 14:00:00.347 | Trade | Placing Stop Order to Buy 0.47 US30.cash (Price: 42643, SL: 42446.9852384725, TP: 43141.77)
+16/06/2025 14:00:00.347 | Trade |  Placing Stop Order to Buy 0.47 US30.cash (Price: 42643, SL: 42446.9852384725, TP: 43141.77) SUCCEEDED, PendingOrder OID126
+16/06/2025 14:00:00.347 | Info | Combo: bartime=2025-06-16 10:00, executed=2025-06-16 14:00:00, pending Buy placed at 42643; SL=42446.98523847253, TP=43141.76529650756; valid for the next 3 chart bar(s).
+20/06/2025 13:00:00.276 | Trade | Placing Stop Order to Buy 0.57 US30.cash (Price: 42351.1, SL: 42190.4270055506, TP: 42759.94)
+20/06/2025 13:00:00.276 | Trade |  Placing Stop Order to Buy 0.57 US30.cash (Price: 42351.1, SL: 42190.4270055506, TP: 42759.94) SUCCEEDED, PendingOrder OID129
+20/06/2025 13:00:00.276 | Info | Combo: bartime=2025-06-20 09:00, executed=2025-06-20 13:00:00, pending Buy placed at 42351.1; SL=42190.42700555057, TP=42759.937136003646; valid for the next 3 chart bar(s).
+23/06/2025 10:00:00.660 | Trade | Placing Stop Order to Buy 0.52 US30.cash (Price: 42304.5, SL: 42129.9817378828, TP: 42748.57)
+23/06/2025 10:00:00.660 | Trade |  Placing Stop Order to Buy 0.52 US30.cash (Price: 42304.5, SL: 42129.9817378828, TP: 42748.57) SUCCEEDED, PendingOrder OID132
+23/06/2025 10:00:00.660 | Info | Combo: bartime=2025-06-23 06:00, executed=2025-06-23 10:00:00, pending Buy placed at 42304.5; SL=42129.98173788281, TP=42748.566824725676; valid for the next 3 chart bar(s).
+07/07/2025 18:00:00.431 | Trade | Placing Stop Order to Sell 0.53 US30.cash (Price: 44260.7, SL: 44431.2405376648, TP: 43826.75)
+07/07/2025 18:00:00.431 | Trade |  Placing Stop Order to Sell 0.53 US30.cash (Price: 44260.7, SL: 44431.2405376648, TP: 43826.75) SUCCEEDED, PendingOrder OID135
+07/07/2025 18:00:00.431 | Info | Combo: bartime=2025-07-07 14:00, executed=2025-07-07 18:00:00, pending Sell placed at 44260.7; SL=44431.24053766481, TP=43826.75461153991; valid for the next 3 chart bar(s).
+09/07/2025 22:05:00.006 | Trade | Placing Stop Order to Buy 0.64 US30.cash (Price: 44490.4, SL: 44350.0828770923, TP: 44847.44)
+09/07/2025 22:05:00.006 | Trade |  Placing Stop Order to Buy 0.64 US30.cash (Price: 44490.4, SL: 44350.0828770923, TP: 44847.44) SUCCEEDED, PendingOrder OID138
+09/07/2025 22:05:00.006 | Info | Combo: bartime=2025-07-09 17:00, executed=2025-07-09 22:05:00, pending Buy placed at 44490.4; SL=44350.082877092296, TP=44847.44102521045; valid for the next 3 chart bar(s).
+10/07/2025 13:00:00.731 | Trade | Placing Stop Order to Buy 0.86 US30.cash (Price: 44469.5, SL: 44366.441627737, TP: 44731.74)
+10/07/2025 13:00:00.731 | Trade |  Placing Stop Order to Buy 0.86 US30.cash (Price: 44469.5, SL: 44366.441627737, TP: 44731.74) SUCCEEDED, PendingOrder OID141
+10/07/2025 13:00:00.731 | Info | Combo: bartime=2025-07-10 09:00, executed=2025-07-10 13:00:00, pending Buy placed at 44469.5; SL=44366.441627737004, TP=44731.73504392619; valid for the next 3 chart bar(s).
+11/07/2025 17:00:00.131 | Trade | Placing Stop Order to Sell 0.65 US30.cash (Price: 44258.1, SL: 44398.2028181345, TP: 43901.6)
+11/07/2025 17:00:00.131 | Trade |  Placing Stop Order to Sell 0.65 US30.cash (Price: 44258.1, SL: 44398.2028181345, TP: 43901.6) SUCCEEDED, PendingOrder OID144
+11/07/2025 17:00:00.131 | Info | Combo: bartime=2025-07-11 13:00, executed=2025-07-11 17:00:00, pending Sell placed at 44258.1; SL=44398.20281813449, TP=43901.604279556006; valid for the next 3 chart bar(s).
+14/07/2025 18:00:00.249 | Trade | Placing Stop Order to Buy 0.68 US30.cash (Price: 44459.3, SL: 44327.4962945614, TP: 44794.68)
+14/07/2025 18:00:00.249 | Trade |  Placing Stop Order to Buy 0.68 US30.cash (Price: 44459.3, SL: 44327.4962945614, TP: 44794.68) SUCCEEDED, PendingOrder OID147
+14/07/2025 18:00:00.249 | Info | Combo: bartime=2025-07-14 14:00, executed=2025-07-14 18:00:00, pending Buy placed at 44459.3; SL=44327.49629456135, TP=44794.67838534008; valid for the next 3 chart bar(s).
+15/07/2025 17:00:00.158 | Trade | Placing Stop Order to Sell 0.56 US30.cash (Price: 44064.4, SL: 44223.5457000241, TP: 43659.45)
+15/07/2025 17:00:00.158 | Trade |  Placing Stop Order to Sell 0.56 US30.cash (Price: 44064.4, SL: 44223.5457000241, TP: 43659.45) SUCCEEDED, PendingOrder OID150
+15/07/2025 17:00:00.158 | Info | Combo: bartime=2025-07-15 13:00, executed=2025-07-15 17:00:00, pending Sell placed at 44064.4; SL=44223.54570002411, TP=43659.44910935341; valid for the next 3 chart bar(s).
+17/07/2025 13:00:00.143 | Trade | Placing Stop Order to Buy 0.8 US30.cash (Price: 44265.4, SL: 44155.1833026699, TP: 44545.85)
+17/07/2025 13:00:00.143 | Trade |  Placing Stop Order to Buy 0.8 US30.cash (Price: 44265.4, SL: 44155.1833026699, TP: 44545.85) SUCCEEDED, PendingOrder OID153
+17/07/2025 13:00:00.143 | Info | Combo: bartime=2025-07-17 09:00, executed=2025-07-17 13:00:00, pending Buy placed at 44265.4; SL=44155.18330266989, TP=44545.84961152702; valid for the next 3 chart bar(s).
+18/07/2025 17:00:00.441 | Trade | Placing Stop Order to Sell 0.64 US30.cash (Price: 44209.4, SL: 44350.2762445268, TP: 43850.94)
+18/07/2025 17:00:00.441 | Trade |  Placing Stop Order to Sell 0.64 US30.cash (Price: 44209.4, SL: 44350.2762445268, TP: 43850.94) SUCCEEDED, PendingOrder OID156
+18/07/2025 17:00:00.441 | Info | Combo: bartime=2025-07-18 13:00, executed=2025-07-18 17:00:00, pending Sell placed at 44209.4; SL=44350.27624452681, TP=43850.93627346869; valid for the next 3 chart bar(s).
+21/07/2025 05:00:01.331 | Trade | Cancelling pending order OID156
+21/07/2025 05:00:01.331 | Trade |  Cancelling pending order OID156 SUCCEEDED
+21/07/2025 05:00:01.331 | Info | Combo: pending order 156 cancelled after 3 chart bars.
+22/07/2025 05:00:00.631 | Trade | Placing Stop Order to Sell 0.91 US30.cash (Price: 44344.9, SL: 44444.3661821267, TP: 44091.81)
+22/07/2025 05:00:00.631 | Trade |  Placing Stop Order to Sell 0.91 US30.cash (Price: 44344.9, SL: 44444.3661821267, TP: 44091.81) SUCCEEDED, PendingOrder OID157
+22/07/2025 05:00:00.631 | Info | Combo: bartime=2025-07-22 01:00, executed=2025-07-22 05:00:00, pending Sell placed at 44344.9; SL=44444.366182126716, TP=44091.80538899056; valid for the next 3 chart bar(s).
+22/07/2025 22:05:00.002 | Trade | Placing Stop Order to Buy 0.81 US30.cash (Price: 44551.5, SL: 44441.1455871609, TP: 44832.3)
+22/07/2025 22:05:00.002 | Trade |  Placing Stop Order to Buy 0.81 US30.cash (Price: 44551.5, SL: 44441.1455871609, TP: 44832.3) SUCCEEDED, PendingOrder OID160
+22/07/2025 22:05:00.002 | Info | Combo: bartime=2025-07-22 17:00, executed=2025-07-22 22:05:00, pending Buy placed at 44551.5; SL=44441.1455871609, TP=44832.30003266947; valid for the next 3 chart bar(s).
+28/07/2025 14:00:00.128 | Trade | Placing Stop Order to Sell 0.78 US30.cash (Price: 44769.7, SL: 44887.3642190012, TP: 44470.3)
+28/07/2025 14:00:00.128 | Trade |  Placing Stop Order to Sell 0.78 US30.cash (Price: 44769.7, SL: 44887.3642190012, TP: 44470.3) SUCCEEDED, PendingOrder OID163
+28/07/2025 14:00:00.128 | Info | Combo: bartime=2025-07-28 10:00, executed=2025-07-28 14:00:00, pending Sell placed at 44769.7; SL=44887.364219001174, TP=44470.29995165095; valid for the next 3 chart bar(s).
+29/07/2025 17:00:00.088 | Trade | Placing Stop Order to Sell 0.75 US30.cash (Price: 44587.8, SL: 44708.1438185845, TP: 44281.58)
+29/07/2025 17:00:00.088 | Trade |  Placing Stop Order to Sell 0.75 US30.cash (Price: 44587.8, SL: 44708.1438185845, TP: 44281.58) SUCCEEDED, PendingOrder OID166
+29/07/2025 17:00:00.088 | Info | Combo: bartime=2025-07-29 13:00, executed=2025-07-29 17:00:00, pending Sell placed at 44587.8; SL=44708.14381858452, TP=44281.581632100475; valid for the next 3 chart bar(s).
+04/08/2025 22:05:00.009 | Trade | Placing Stop Order to Buy 0.49 US30.cash (Price: 44270.7, SL: 44090.3420832937, TP: 44729.63)
+04/08/2025 22:05:00.009 | Trade |  Placing Stop Order to Buy 0.49 US30.cash (Price: 44270.7, SL: 44090.3420832937, TP: 44729.63) SUCCEEDED, PendingOrder OID169
+04/08/2025 22:05:00.009 | Info | Combo: bartime=2025-08-04 18:00, executed=2025-08-04 22:05:00, pending Buy placed at 44270.7; SL=44090.342083293704, TP=44729.62599670812; valid for the next 3 chart bar(s).
+07/08/2025 17:00:00.089 | Trade | Placing Stop Order to Sell 0.43 US30.cash (Price: 43803.5, SL: 44007.5396864198, TP: 43284.32)
+07/08/2025 17:00:00.089 | Trade |  Placing Stop Order to Sell 0.43 US30.cash (Price: 43803.5, SL: 44007.5396864198, TP: 43284.32) SUCCEEDED, PendingOrder OID172
+07/08/2025 17:00:00.089 | Info | Combo: bartime=2025-08-07 13:00, executed=2025-08-07 17:00:00, pending Sell placed at 43803.5; SL=44007.539686419754, TP=43284.315047277974; valid for the next 3 chart bar(s).
+08/08/2025 17:00:00.331 | Trade | Placing Stop Order to Buy 0.62 US30.cash (Price: 44291.1, SL: 44150.83702564, TP: 44648)
+08/08/2025 17:00:00.331 | Trade |  Placing Stop Order to Buy 0.62 US30.cash (Price: 44291.1, SL: 44150.83702564, TP: 44648) SUCCEEDED, PendingOrder OID175
+08/08/2025 17:00:00.331 | Info | Combo: bartime=2025-08-08 13:00, executed=2025-08-08 17:00:00, pending Buy placed at 44291.1; SL=44150.83702563998, TP=44648.003242646366; valid for the next 3 chart bar(s).
+11/08/2025 18:00:00.071 | Trade | Placing Stop Order to Sell 0.65 US30.cash (Price: 43954.7, SL: 44088.0457798642, TP: 43615.4)
+11/08/2025 18:00:00.071 | Trade |  Placing Stop Order to Sell 0.65 US30.cash (Price: 43954.7, SL: 44088.0457798642, TP: 43615.4) SUCCEEDED, PendingOrder OID178
+11/08/2025 18:00:00.071 | Info | Combo: bartime=2025-08-11 14:00, executed=2025-08-11 18:00:00, pending Sell placed at 43954.7; SL=44088.04577986423, TP=43615.39776115971; valid for the next 3 chart bar(s).
+12/08/2025 13:00:00.068 | Trade | Placing Stop Order to Buy 0.64 US30.cash (Price: 44278.8, SL: 44145.4973059901, TP: 44617.99)
+12/08/2025 13:00:00.068 | Trade |  Placing Stop Order to Buy 0.64 US30.cash (Price: 44278.8, SL: 44145.4973059901, TP: 44617.99) SUCCEEDED, PendingOrder OID181
+12/08/2025 13:00:00.068 | Info | Combo: bartime=2025-08-12 09:00, executed=2025-08-12 13:00:00, pending Buy placed at 44278.8; SL=44145.49730599009, TP=44617.99260562319; valid for the next 3 chart bar(s).
+18/08/2025 10:00:00.155 | Trade | Placing Stop Order to Sell 0.76 US30.cash (Price: 44808.5, SL: 44924.3452437896, TP: 44513.73)
+18/08/2025 10:00:00.155 | Trade |  Placing Stop Order to Sell 0.76 US30.cash (Price: 44808.5, SL: 44924.3452437896, TP: 44513.73) SUCCEEDED, PendingOrder OID184
+18/08/2025 10:00:00.155 | Info | Combo: bartime=2025-08-18 06:00, executed=2025-08-18 10:00:00, pending Sell placed at 44808.5; SL=44924.345243789605, TP=44513.7283873038; valid for the next 3 chart bar(s).
+18/08/2025 22:05:00.002 | Trade | Cancelling pending order OID184
+18/08/2025 22:05:00.002 | Trade |  Cancelling pending order OID184 SUCCEEDED
+18/08/2025 22:05:00.002 | Info | Combo: pending order 184 cancelled after 3 chart bars.
+19/08/2025 17:00:00.353 | Trade | Placing Stop Order to Sell 0.62 US30.cash (Price: 44857.6, SL: 44998.0548962442, TP: 44500.21)
+19/08/2025 17:00:00.353 | Trade |  Placing Stop Order to Sell 0.62 US30.cash (Price: 44857.6, SL: 44998.0548962442, TP: 44500.21) SUCCEEDED, PendingOrder OID185
+19/08/2025 17:00:00.353 | Info | Combo: bartime=2025-08-19 13:00, executed=2025-08-19 17:00:00, pending Sell placed at 44857.6; SL=44998.05489624421, TP=44500.208406503276; valid for the next 3 chart bar(s).
+21/08/2025 01:00:00.354 | Trade | Placing Stop Order to Sell 0.67 US30.cash (Price: 44835.8, SL: 44964.4807611819, TP: 44508.37)
+21/08/2025 01:00:00.354 | Trade |  Placing Stop Order to Sell 0.67 US30.cash (Price: 44835.8, SL: 44964.4807611819, TP: 44508.37) SUCCEEDED, PendingOrder OID188
+21/08/2025 01:00:00.354 | Info | Combo: bartime=2025-08-20 21:00, executed=2025-08-21 01:00:00, pending Sell placed at 44835.8; SL=44964.480761181854, TP=44508.368037705215; valid for the next 3 chart bar(s).
+22/08/2025 09:00:00.951 | Info | Combo: bartime=2025-08-22 05:00, reversal - closing existing Sell position 57 before opening opposite direction.
+22/08/2025 09:00:00.951 | Trade | Closing position PID57 (Volume: 0.67)
+22/08/2025 09:00:00.951 | Trade |  Closing position PID57 (Volume: 0.67) SUCCEEDED
+22/08/2025 09:00:00.951 | Trade | Placing Stop Order to Buy 0.69 US30.cash (Price: 44922.8, SL: 44797.0300185989, TP: 45242.83)
+22/08/2025 09:00:00.951 | Trade |  Placing Stop Order to Buy 0.69 US30.cash (Price: 44922.8, SL: 44797.0300185989, TP: 45242.83) SUCCEEDED, PendingOrder OID192
+22/08/2025 09:00:00.951 | Info | Combo: bartime=2025-08-22 05:00, executed=2025-08-22 09:00:00, pending Buy placed at 44922.8; SL=44797.03001859888, TP=45242.82539796724; valid for the next 3 chart bar(s).
+01/09/2025 06:00:00.101 | Trade | Placing Stop Order to Sell 0.91 US30.cash (Price: 45482.5, SL: 45580.1051885371, TP: 45234.14)
+01/09/2025 06:00:00.101 | Trade |  Placing Stop Order to Sell 0.91 US30.cash (Price: 45482.5, SL: 45580.1051885371, TP: 45234.14) SUCCEEDED, PendingOrder OID195
+01/09/2025 06:00:00.101 | Info | Combo: bartime=2025-09-01 02:00, executed=2025-09-01 06:00:00, pending Sell placed at 45482.5; SL=45580.10518853707, TP=45234.14074163596; valid for the next 3 chart bar(s).
+02/09/2025 01:00:03.604 | Trade | Placing Stop Order to Sell 1.18 US30.cash (Price: 45457.9, SL: 45532.4306680518, TP: 45268.25)
+02/09/2025 01:00:03.604 | Trade |  Placing Stop Order to Sell 1.18 US30.cash (Price: 45457.9, SL: 45532.4306680518, TP: 45268.25) SUCCEEDED, PendingOrder OID198
+02/09/2025 01:00:03.604 | Info | Combo: bartime=2025-09-01 21:00, executed=2025-09-02 01:00:03, pending Sell placed at 45457.9; SL=45532.43066805183, TP=45268.25453421927; valid for the next 3 chart bar(s).
+04/09/2025 17:00:00.101 | Trade | Placing Stop Order to Buy 0.66 US30.cash (Price: 45508.8, SL: 45373.4129105457, TP: 45853.3)
+04/09/2025 17:00:00.101 | Trade |  Placing Stop Order to Buy 0.66 US30.cash (Price: 45508.8, SL: 45373.4129105457, TP: 45853.3) SUCCEEDED, PendingOrder OID201
+04/09/2025 17:00:00.101 | Info | Combo: bartime=2025-09-04 13:00, executed=2025-09-04 17:00:00, pending Buy placed at 45508.8; SL=45373.412910545674, TP=45853.296410825256; valid for the next 3 chart bar(s).
+08/09/2025 14:00:00.240 | Trade | Placing Stop Order to Sell 0.63 US30.cash (Price: 45268.7, SL: 45408.9158560187, TP: 44911.92)
+08/09/2025 14:00:00.240 | Trade |  Placing Stop Order to Sell 0.63 US30.cash (Price: 45268.7, SL: 45408.9158560187, TP: 44911.92) SUCCEEDED, PendingOrder OID204
+08/09/2025 14:00:00.240 | Info | Combo: bartime=2025-09-08 10:00, executed=2025-09-08 14:00:00, pending Sell placed at 45268.7; SL=45408.91585601872, TP=44911.91665135185; valid for the next 3 chart bar(s).
+09/09/2025 01:00:00.207 | Trade | Cancelling pending order OID204
+09/09/2025 01:00:00.207 | Trade |  Cancelling pending order OID204 SUCCEEDED
+09/09/2025 01:00:00.207 | Info | Combo: pending order 204 cancelled after 3 chart bars.
+10/09/2025 17:00:00.207 | Trade | Placing Stop Order to Sell 0.61 US30.cash (Price: 45366, SL: 45511.7738991379, TP: 44995.07)
+10/09/2025 17:00:00.207 | Trade |  Placing Stop Order to Sell 0.61 US30.cash (Price: 45366, SL: 45511.7738991379, TP: 44995.07) SUCCEEDED, PendingOrder OID205
+10/09/2025 17:00:00.207 | Info | Combo: bartime=2025-09-10 13:00, executed=2025-09-10 17:00:00, pending Sell placed at 45366; SL=45511.7738991379, TP=44995.07404799517; valid for the next 3 chart bar(s).
+11/09/2025 05:00:00.116 | Trade | Cancelling pending order OID205
+11/09/2025 05:00:00.116 | Trade |  Cancelling pending order OID205 SUCCEEDED
+11/09/2025 05:00:00.116 | Info | Combo: pending order 205 cancelled after 3 chart bars.
+11/09/2025 13:00:00.051 | Trade | Placing Stop Order to Buy 0.88 US30.cash (Price: 45651.4, SL: 45549.9342696585, TP: 45909.58)
+11/09/2025 13:00:00.051 | Trade |  Placing Stop Order to Buy 0.88 US30.cash (Price: 45651.4, SL: 45549.9342696585, TP: 45909.58) SUCCEEDED, PendingOrder OID206
+11/09/2025 13:00:00.051 | Info | Combo: bartime=2025-09-11 09:00, executed=2025-09-11 13:00:00, pending Buy placed at 45651.4; SL=45549.93426965849, TP=45909.58251995294; valid for the next 3 chart bar(s).
+16/09/2025 13:00:00.299 | Trade | Placing Stop Order to Sell 1.18 US30.cash (Price: 45817, SL: 45894.5123974202, TP: 45619.77)
+16/09/2025 13:00:00.299 | Trade |  Placing Stop Order to Sell 1.18 US30.cash (Price: 45817, SL: 45894.5123974202, TP: 45619.77) SUCCEEDED, PendingOrder OID209
+16/09/2025 13:00:00.299 | Info | Combo: bartime=2025-09-16 09:00, executed=2025-09-16 13:00:00, pending Sell placed at 45817; SL=45894.51239742021, TP=45619.76743658981; valid for the next 3 chart bar(s).
+17/09/2025 17:00:00.041 | Trade | Placing Stop Order to Buy 0.84 US30.cash (Price: 46114.1, SL: 46006.8278934972, TP: 46387.06)
+17/09/2025 17:00:00.041 | Trade |  Placing Stop Order to Buy 0.84 US30.cash (Price: 46114.1, SL: 46006.8278934972, TP: 46387.06) SUCCEEDED, PendingOrder OID212
+17/09/2025 17:00:00.041 | Info | Combo: bartime=2025-09-17 13:00, executed=2025-09-17 17:00:00, pending Buy placed at 46114.1; SL=46006.82789349718, TP=46387.05701400208; valid for the next 3 chart bar(s).
+24/09/2025 17:00:00.020 | Trade | Placing Stop Order to Sell 0.69 US30.cash (Price: 46100.3, SL: 46229.5541301142, TP: 45771.41)
+24/09/2025 17:00:00.020 | Trade |  Placing Stop Order to Sell 0.69 US30.cash (Price: 46100.3, SL: 46229.5541301142, TP: 45771.41) SUCCEEDED, PendingOrder OID215
+24/09/2025 17:00:00.020 | Info | Combo: bartime=2025-09-24 13:00, executed=2025-09-24 17:00:00, pending Sell placed at 46100.3; SL=46229.554130114215, TP=45771.40908367886; valid for the next 3 chart bar(s).
+26/09/2025 17:00:00.119 | Trade | Placing Stop Order to Buy 0.59 US30.cash (Price: 46368.6, SL: 46220.8017206407, TP: 46744.68)
+26/09/2025 17:00:00.119 | Trade |  Placing Stop Order to Buy 0.59 US30.cash (Price: 46368.6, SL: 46220.8017206407, TP: 46744.68) SUCCEEDED, PendingOrder OID218
+26/09/2025 17:00:00.119 | Info | Combo: bartime=2025-09-26 13:00, executed=2025-09-26 17:00:00, pending Buy placed at 46368.6; SL=46220.80172064067, TP=46744.677046715835; valid for the next 3 chart bar(s).
+01/10/2025 05:00:00.188 | Trade | Placing Stop Order to Sell 0.73 US30.cash (Price: 46189.7, SL: 46308.9734391001, TP: 45886.21)
+01/10/2025 05:00:00.188 | Trade |  Placing Stop Order to Sell 0.73 US30.cash (Price: 46189.7, SL: 46308.9734391001, TP: 45886.21) SUCCEEDED, PendingOrder OID221
+01/10/2025 05:00:00.188 | Info | Combo: bartime=2025-10-01 01:00, executed=2025-10-01 05:00:00, pending Sell placed at 46189.7; SL=46308.97343910007, TP=45886.20524402017; valid for the next 3 chart bar(s).
+06/10/2025 14:00:00.039 | Trade | Placing Stop Order to Sell 0.55 US30.cash (Price: 46512, SL: 46667.0574999948, TP: 46117.45)
+06/10/2025 14:00:00.039 | Trade |  Placing Stop Order to Sell 0.55 US30.cash (Price: 46512, SL: 46667.0574999948, TP: 46117.45) SUCCEEDED, PendingOrder OID224
+06/10/2025 14:00:00.039 | Info | Combo: bartime=2025-10-06 10:00, executed=2025-10-06 14:00:00, pending Sell placed at 46512; SL=46667.05749999484, TP=46117.45165395716; valid for the next 3 chart bar(s).
+07/10/2025 17:00:00.640 | Trade | Placing Stop Order to Sell 0.53 US30.cash (Price: 46436.6, SL: 46595.9311385256, TP: 46031.18)
+07/10/2025 17:00:00.640 | Trade |  Placing Stop Order to Sell 0.53 US30.cash (Price: 46436.6, SL: 46595.9311385256, TP: 46031.18) SUCCEEDED, PendingOrder OID227
+07/10/2025 17:00:00.640 | Info | Combo: bartime=2025-10-07 13:00, executed=2025-10-07 17:00:00, pending Sell placed at 46436.6; SL=46595.93113852564, TP=46031.17725565995; valid for the next 3 chart bar(s).
+08/10/2025 05:00:03.043 | Trade | Cancelling pending order OID227
+08/10/2025 05:00:03.043 | Trade |  Cancelling pending order OID227 SUCCEEDED
+08/10/2025 05:00:03.043 | Info | Combo: pending order 227 cancelled after 3 chart bars.
+08/10/2025 13:00:00.042 | Trade | Placing Stop Order to Buy 0.84 US30.cash (Price: 46745.7, SL: 46643.5360104799, TP: 47005.66)
+08/10/2025 13:00:00.042 | Trade |  Placing Stop Order to Buy 0.84 US30.cash (Price: 46745.7, SL: 46643.5360104799, TP: 47005.66) SUCCEEDED, PendingOrder OID228
+08/10/2025 13:00:00.042 | Info | Combo: bartime=2025-10-08 09:00, executed=2025-10-08 13:00:00, pending Buy placed at 46745.7; SL=46643.53601047992, TP=47005.659260865345; valid for the next 3 chart bar(s).
+08/10/2025 22:05:00.002 | Trade | Placing Stop Order to Sell 0.63 US30.cash (Price: 46584.8, SL: 46719.4755692928, TP: 46242.11)
+08/10/2025 22:05:00.002 | Trade |  Placing Stop Order to Sell 0.63 US30.cash (Price: 46584.8, SL: 46719.4755692928, TP: 46242.11) SUCCEEDED, PendingOrder OID231
+08/10/2025 22:05:00.002 | Info | Combo: bartime=2025-10-08 17:00, executed=2025-10-08 22:05:00, pending Sell placed at 46584.8; SL=46719.47556929285, TP=46242.114073046185; valid for the next 3 chart bar(s).
+14/10/2025 17:00:00.143 | Trade | Placing Stop Order to Buy 0.26 US30.cash (Price: 46445.4, SL: 46115.4941512575, TP: 47284.86)
+14/10/2025 17:00:00.143 | Trade |  Placing Stop Order to Buy 0.26 US30.cash (Price: 46445.4, SL: 46115.4941512575, TP: 47284.86) SUCCEEDED, PendingOrder OID234
+14/10/2025 17:00:00.143 | Info | Combo: bartime=2025-10-14 13:00, executed=2025-10-14 17:00:00, pending Buy placed at 46445.4; SL=46115.49415125752, TP=47284.85508585873; valid for the next 3 chart bar(s).
+16/10/2025 17:00:00.280 | Trade | Placing Stop Order to Sell 0.41 US30.cash (Price: 45882.2, SL: 46090.2464109366, TP: 45352.82)
+16/10/2025 17:00:00.280 | Trade |  Placing Stop Order to Sell 0.41 US30.cash (Price: 45882.2, SL: 46090.2464109366, TP: 45352.82) SUCCEEDED, PendingOrder OID237
+16/10/2025 17:00:00.280 | Info | Combo: bartime=2025-10-16 13:00, executed=2025-10-16 17:00:00, pending Sell placed at 45882.2; SL=46090.246410936605, TP=45352.81981949972; valid for the next 3 chart bar(s).
+19/10/2025 22:05:00.002 | Trade | Placing Stop Order to Buy 0.33 US30.cash (Price: 46335.5, SL: 46083.93544234, TP: 46975.61)
+19/10/2025 22:05:00.002 | Trade |  Placing Stop Order to Buy 0.33 US30.cash (Price: 46335.5, SL: 46083.93544234, TP: 46975.61) SUCCEEDED, PendingOrder OID240
+19/10/2025 22:05:00.002 | Info | Combo: bartime=2025-10-17 17:00, executed=2025-10-19 22:05:00, pending Buy placed at 46335.5; SL=46083.93544234003, TP=46975.61337826965; valid for the next 3 chart bar(s).
+22/10/2025 22:05:00.002 | Trade | Placing Stop Order to Sell 0.52 US30.cash (Price: 46443.8, SL: 46611.6038104501, TP: 46016.82)
+22/10/2025 22:05:00.002 | Trade |  Placing Stop Order to Sell 0.52 US30.cash (Price: 46443.8, SL: 46611.6038104501, TP: 46016.82) SUCCEEDED, PendingOrder OID243
+22/10/2025 22:05:00.002 | Info | Combo: bartime=2025-10-22 17:00, executed=2025-10-22 22:05:00, pending Sell placed at 46443.8; SL=46611.60381045007, TP=46016.81829402019; valid for the next 3 chart bar(s).
+24/10/2025 01:00:00.175 | Trade | Placing Stop Order to Buy 0.75 US30.cash (Price: 46753.8, SL: 46638.9225999947, TP: 47046.11)
+24/10/2025 01:00:00.175 | Trade |  Placing Stop Order to Buy 0.75 US30.cash (Price: 46753.8, SL: 46638.9225999947, TP: 47046.11) SUCCEEDED, PendingOrder OID246
+24/10/2025 01:00:00.175 | Info | Combo: bartime=2025-10-23 21:00, executed=2025-10-24 01:00:00, pending Buy placed at 46753.8; SL=46638.9225999947, TP=47046.108905865905; valid for the next 3 chart bar(s).
+30/10/2025 05:00:00.721 | Trade | Placing Stop Order to Sell 0.45 US30.cash (Price: 47483.9, SL: 47678.9189008498, TP: 46987.67)
+30/10/2025 05:00:00.721 | Trade |  Placing Stop Order to Sell 0.45 US30.cash (Price: 47483.9, SL: 47678.9189008498, TP: 46987.67) SUCCEEDED, PendingOrder OID249
+30/10/2025 05:00:00.721 | Info | Combo: bartime=2025-10-30 01:00, executed=2025-10-30 05:00:00, pending Sell placed at 47483.9; SL=47678.9189008498, TP=46987.66870012774; valid for the next 3 chart bar(s).
+30/10/2025 22:05:00.003 | Trade | Placing Stop Order to Sell 0.36 US30.cash (Price: 47473.2, SL: 47712.1275334681, TP: 46865.24)
+30/10/2025 22:05:00.003 | Trade |  Placing Stop Order to Sell 0.36 US30.cash (Price: 47473.2, SL: 47712.1275334681, TP: 46865.24) SUCCEEDED, PendingOrder OID252
+30/10/2025 22:05:00.003 | Info | Combo: bartime=2025-10-30 17:00, executed=2025-10-30 22:05:00, pending Sell placed at 47473.2; SL=47712.127533468076, TP=46865.24189957232; valid for the next 3 chart bar(s).
+31/10/2025 09:00:00.157 | Trade | Cancelling pending order OID252
+31/10/2025 09:00:00.157 | Trade |  Cancelling pending order OID252 SUCCEEDED
+31/10/2025 09:00:00.157 | Info | Combo: pending order 252 cancelled after 3 chart bars.
+03/11/2025 07:00:00.130 | Trade | Placing Stop Order to Sell 0.54 US30.cash (Price: 47567, SL: 47728.6243807395, TP: 47155.74)
+03/11/2025 07:00:00.130 | Trade |  Placing Stop Order to Sell 0.54 US30.cash (Price: 47567, SL: 47728.6243807395, TP: 47155.74) SUCCEEDED, PendingOrder OID253
+03/11/2025 07:00:00.130 | Info | Combo: bartime=2025-11-03 03:00, executed=2025-11-03 07:00:00, pending Sell placed at 47567; SL=47728.62438073949, TP=47155.74203374175; valid for the next 3 chart bar(s).
+03/11/2025 15:00:00.332 | Info | Combo: bartime=2025-11-03 11:00, Sell signal skipped: already have same-direction exposure open.
+05/11/2025 18:00:00.031 | Trade | Placing Stop Order to Buy 0.48 US30.cash (Price: 47466.6, SL: 47281.1753066593, TP: 47938.42)
+05/11/2025 18:00:00.031 | Trade |  Placing Stop Order to Buy 0.48 US30.cash (Price: 47466.6, SL: 47281.1753066593, TP: 47938.42) SUCCEEDED, PendingOrder OID256
+05/11/2025 18:00:00.031 | Info | Combo: bartime=2025-11-05 14:00, executed=2025-11-05 18:00:00, pending Buy placed at 47466.6; SL=47281.17530665927, TP=47938.41855811889; valid for the next 3 chart bar(s).
+06/11/2025 06:00:00.233 | Trade | Cancelling pending order OID256
+06/11/2025 06:00:00.233 | Trade |  Cancelling pending order OID256 SUCCEEDED
+06/11/2025 06:00:00.233 | Info | Combo: pending order 256 cancelled after 3 chart bars.
+06/11/2025 18:00:00.130 | Trade | Placing Stop Order to Sell 0.48 US30.cash (Price: 46776.1, SL: 46961.5902455759, TP: 46304.11)
+06/11/2025 18:00:00.130 | Trade |  Placing Stop Order to Sell 0.48 US30.cash (Price: 46776.1, SL: 46961.5902455759, TP: 46304.11) SUCCEEDED, PendingOrder OID257
+06/11/2025 18:00:00.130 | Info | Combo: bartime=2025-11-06 14:00, executed=2025-11-06 18:00:00, pending Sell placed at 46776.1; SL=46961.59024557591, TP=46304.114642300476; valid for the next 3 chart bar(s).
+07/11/2025 06:00:00.133 | Trade | Cancelling pending order OID257
+07/11/2025 06:00:00.133 | Trade |  Cancelling pending order OID257 SUCCEEDED
+07/11/2025 06:00:00.133 | Info | Combo: pending order 257 cancelled after 3 chart bars.
+10/11/2025 11:00:00.243 | Trade | Placing Stop Order to Buy 0.56 US30.cash (Price: 47225.5, SL: 47064.671651484, TP: 47634.73)
+10/11/2025 11:00:00.243 | Trade |  Placing Stop Order to Buy 0.56 US30.cash (Price: 47225.5, SL: 47064.671651484, TP: 47634.73) SUCCEEDED, PendingOrder OID258
+10/11/2025 11:00:00.243 | Info | Combo: bartime=2025-11-10 07:00, executed=2025-11-10 11:00:00, pending Buy placed at 47225.5; SL=47064.67165148404, TP=47634.732438971914; valid for the next 3 chart bar(s).
+13/11/2025 18:00:00.048 | Trade | Placing Stop Order to Sell 0.51 US30.cash (Price: 47733.1, SL: 47908.4485715351, TP: 47286.92)
+13/11/2025 18:00:00.048 | Trade |  Placing Stop Order to Sell 0.51 US30.cash (Price: 47733.1, SL: 47908.4485715351, TP: 47286.92) SUCCEEDED, PendingOrder OID261
+13/11/2025 18:00:00.048 | Info | Combo: bartime=2025-11-13 14:00, executed=2025-11-13 18:00:00, pending Sell placed at 47733.1; SL=47908.448571535075, TP=47286.92042866392; valid for the next 3 chart bar(s).
+20/11/2025 14:00:00.126 | Trade | Placing Stop Order to Buy 0.49 US30.cash (Price: 46612.7, SL: 46427.4670786076, TP: 47084.03)
+20/11/2025 14:00:00.126 | Trade |  Placing Stop Order to Buy 0.49 US30.cash (Price: 46612.7, SL: 46427.4670786076, TP: 47084.03) SUCCEEDED, PendingOrder OID264
+20/11/2025 14:00:00.126 | Info | Combo: bartime=2025-11-20 10:00, executed=2025-11-20 14:00:00, pending Buy placed at 46612.7; SL=46427.46707860759, TP=47084.03058878475; valid for the next 3 chart bar(s).
+21/11/2025 18:00:00.006 | Trade | Placing Stop Order to Buy 0.28 US30.cash (Price: 46503.3, SL: 46188.1053690074, TP: 47305.32)
+21/11/2025 18:00:00.006 | Trade |  Placing Stop Order to Buy 0.28 US30.cash (Price: 46503.3, SL: 46188.1053690074, TP: 47305.32) SUCCEEDED, PendingOrder OID267
+21/11/2025 18:00:00.006 | Info | Combo: bartime=2025-11-21 14:00, executed=2025-11-21 18:00:00, pending Buy placed at 46503.3; SL=46188.10536900745, TP=47305.32196181312; valid for the next 3 chart bar(s).
+01/12/2025 23:05:00.006 | Trade | Placing Stop Order to Sell 0.53 US30.cash (Price: 47256.6, SL: 47425.4282506595, TP: 46827.01)
+01/12/2025 23:05:00.006 | Trade |  Placing Stop Order to Sell 0.53 US30.cash (Price: 47256.6, SL: 47425.4282506595, TP: 46827.01) SUCCEEDED, PendingOrder OID270
+01/12/2025 23:05:00.006 | Info | Combo: bartime=2025-12-01 19:00, executed=2025-12-01 23:05:00, pending Sell placed at 47256.6; SL=47425.42825065947, TP=46827.01157593011; valid for the next 3 chart bar(s).
+02/12/2025 23:05:00.004 | Trade | Placing Stop Order to Buy 0.54 US30.cash (Price: 47602.2, SL: 47439.9064286143, TP: 48015.16)
+02/12/2025 23:05:00.004 | Trade |  Placing Stop Order to Buy 0.54 US30.cash (Price: 47602.2, SL: 47439.9064286143, TP: 48015.16) SUCCEEDED, PendingOrder OID273
+02/12/2025 23:05:00.004 | Info | Combo: bartime=2025-12-02 18:00, executed=2025-12-02 23:05:00, pending Buy placed at 47602.2; SL=47439.90642861432, TP=48015.16074143937; valid for the next 3 chart bar(s).
+08/12/2025 19:00:00.237 | Trade | Placing Stop Order to Sell 0.65 US30.cash (Price: 47601, SL: 47735.6767862564, TP: 47258.31)
+08/12/2025 19:00:00.237 | Trade |  Placing Stop Order to Sell 0.65 US30.cash (Price: 47601, SL: 47735.6767862564, TP: 47258.31) SUCCEEDED, PendingOrder OID276
+08/12/2025 19:00:00.237 | Info | Combo: bartime=2025-12-08 15:00, executed=2025-12-08 19:00:00, pending Sell placed at 47601; SL=47735.67678625642, TP=47258.31097644676; valid for the next 3 chart bar(s).
+09/12/2025 06:00:00.438 | Trade | Cancelling pending order OID276
+09/12/2025 06:00:00.438 | Trade |  Cancelling pending order OID276 SUCCEEDED
+09/12/2025 06:00:00.438 | Info | Combo: pending order 276 cancelled after 3 chart bars.
+10/12/2025 18:00:00.642 | Trade | Placing Stop Order to Buy 0.67 US30.cash (Price: 47828.6, SL: 47697.4491772362, TP: 48162.32)
+10/12/2025 18:00:00.642 | Trade |  Placing Stop Order to Buy 0.67 US30.cash (Price: 47828.6, SL: 47697.4491772362, TP: 48162.32) SUCCEEDED, PendingOrder OID277
+10/12/2025 18:00:00.642 | Info | Combo: bartime=2025-12-10 14:00, executed=2025-12-10 18:00:00, pending Buy placed at 47828.6; SL=47697.44917723616, TP=48162.317106269315; valid for the next 3 chart bar(s).
+15/12/2025 19:00:00.031 | Trade | Placing Stop Order to Sell 0.57 US30.cash (Price: 48255.7, SL: 48413.8024624098, TP: 47853.4)
+15/12/2025 19:00:00.031 | Trade |  Placing Stop Order to Sell 0.57 US30.cash (Price: 48255.7, SL: 48413.8024624098, TP: 47853.4) SUCCEEDED, PendingOrder OID280
+15/12/2025 19:00:00.031 | Info | Combo: bartime=2025-12-15 15:00, executed=2025-12-15 19:00:00, pending Sell placed at 48255.7; SL=48413.80246240975, TP=47853.40365799045; valid for the next 3 chart bar(s).
+19/12/2025 18:00:01.274 | Trade | Placing Stop Order to Buy 0.5 US30.cash (Price: 48307.1, SL: 48130.8998877022, TP: 48755.45)
+19/12/2025 18:00:01.274 | Trade |  Placing Stop Order to Buy 0.5 US30.cash (Price: 48307.1, SL: 48130.8998877022, TP: 48755.45) SUCCEEDED, PendingOrder OID283
+19/12/2025 18:00:01.274 | Info | Combo: bartime=2025-12-19 14:00, executed=2025-12-19 18:00:01, pending Buy placed at 48307.1; SL=48130.89988770215, TP=48755.446341724804; valid for the next 3 chart bar(s).
+22/12/2025 06:00:00.385 | Trade | Cancelling pending order OID283
+22/12/2025 06:00:00.385 | Trade |  Cancelling pending order OID283 SUCCEEDED
+22/12/2025 06:00:00.385 | Info | Combo: pending order 283 cancelled after 3 chart bars.
+29/12/2025 15:00:00.119 | Trade | Placing Stop Order to Sell 1.03 US30.cash (Price: 48501, SL: 48587.7062334233, TP: 48280.37)
+29/12/2025 15:00:00.119 | Trade |  Placing Stop Order to Sell 1.03 US30.cash (Price: 48501, SL: 48587.7062334233, TP: 48280.37) SUCCEEDED, PendingOrder OID284
+29/12/2025 15:00:00.119 | Info | Combo: bartime=2025-12-29 11:00, executed=2025-12-29 15:00:00, pending Sell placed at 48501; SL=48587.70623342332, TP=48280.37345184905; valid for the next 3 chart bar(s).
+01/01/2026 23:59:59.417 | Info | Combo: loaded=1101, processed=113, before-start=900, not-processed=88, placed=112, failed=0, guard-skipped=0, pending-expired=20, same-direction-skipped=1, reversed=8.
+Progress | Backtesting | 100.00 % |
+Info | CBot instance [Combo, US30.cash, h4] stopped.
+{
+	"Equity":9139.99,
+	"NetProfit":-860.01,
+	"MaxBalanceDrawdownPercentages":20,
+	"MaxEquityDrawdownPercentages":21,
+	"MaxBalanceDrawdown":2145.63,
+	"MaxEquityDrawdown":2369.02,
+	"WinningTrades":24,
+	"LosingTrades":62,
+	"TotalTrades":86,
+	"AverageTrade":-10,
+	"ProfitFactor":0.86,
+	"Fitness":0
+}
+

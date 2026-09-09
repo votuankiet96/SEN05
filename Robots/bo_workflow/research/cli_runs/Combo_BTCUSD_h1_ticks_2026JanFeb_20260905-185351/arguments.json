@@ -1,0 +1,17 @@
+﻿[
+    "backtest",
+    "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\Combo.algo",
+    "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_BTCUSD_h1_ticks_2026JanFeb_20260905-185351\\params.cbotset",
+    "--start=01/01/2026 00:00",
+    "--end=28/02/2026 23:59",
+    "--data-mode=Ticks",
+    "--balance=10000",
+    "--ctid=votuankiet96@gmail.com",
+    "--pwd-file=C:\\Users\\Administrator\\.ctrader-cli-pwd.txt",
+    "--account=7563609",
+    "--broker=FTMO Platform",
+    "--symbol=BTCUSD",
+    "--period=h1",
+    "--full-access",
+    "--report-json=C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_BTCUSD_h1_ticks_2026JanFeb_20260905-185351\\report.json"
+]

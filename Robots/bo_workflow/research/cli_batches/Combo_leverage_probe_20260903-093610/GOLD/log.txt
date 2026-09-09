@@ -1,0 +1,1008 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_leverage_probe_20260903-093610\GOLD\params.cbotset 
+--start=01/01/2026 --end=28/02/2026 --data-mode=Ticks --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=XAUUSD 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_leverage_probe_20260903-093610\GOLD\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...OLD\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | XAUUSD                    | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2026 00:00          | cmd arg              |
+| End                  | 28/02/2026 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 3                         | cbotset              |
+| KtpLevel             | 7                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 1                         | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+03/09/2026 16:36:14.456 | Establishing connection using votuankiet96@gmail.com...
+03/09/2026 16:36:16.709 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Progress | Loading XAUUSD, h1 | 100.00 % |
+Info | CBot instance [Combo, XAUUSD, h1] started.
+Progress | Backtesting | 1.63 % |
+Progress | Backtesting | 1.69 % |
+Progress | Backtesting | 1.71 % |
+Progress | Backtesting | 1.74 % |
+Progress | Backtesting | 1.78 % |
+Progress | Backtesting | 1.80 % |
+Progress | Backtesting | 1.84 % |
+Progress | Backtesting | 1.87 % |
+Progress | Backtesting | 1.95 % |
+Progress | Backtesting | 2.09 % |
+Progress | Backtesting | 2.26 % |
+Progress | Backtesting | 2.41 % |
+Progress | Backtesting | 2.78 % |
+Progress | Backtesting | 2.84 % |
+Progress | Backtesting | 2.95 % |
+Progress | Backtesting | 3.08 % |
+Progress | Backtesting | 6.76 % |
+Progress | Backtesting | 6.78 % |
+Progress | Backtesting | 6.85 % |
+Progress | Backtesting | 6.91 % |
+Progress | Backtesting | 7.00 % |
+Progress | Backtesting | 7.19 % |
+Progress | Backtesting | 7.35 % |
+Progress | Backtesting | 7.47 % |
+Progress | Backtesting | 7.62 % |
+Progress | Backtesting | 7.74 % |
+Progress | Backtesting | 7.83 % |
+Progress | Backtesting | 7.93 % |
+Progress | Backtesting | 8.05 % |
+Progress | Backtesting | 8.20 % |
+Progress | Backtesting | 8.47 % |
+Progress | Backtesting | 8.61 % |
+Progress | Backtesting | 8.76 % |
+Progress | Backtesting | 8.93 % |
+Progress | Backtesting | 9.10 % |
+Progress | Backtesting | 9.25 % |
+Progress | Backtesting | 9.42 % |
+Progress | Backtesting | 9.51 % |
+Progress | Backtesting | 9.60 % |
+Progress | Backtesting | 9.72 % |
+Progress | Backtesting | 9.85 % |
+Progress | Backtesting | 10.13 % |
+Progress | Backtesting | 10.17 % |
+Progress | Backtesting | 10.24 % |
+Progress | Backtesting | 10.31 % |
+Progress | Backtesting | 10.44 % |
+Progress | Backtesting | 10.58 % |
+Progress | Backtesting | 10.67 % |
+Progress | Backtesting | 10.86 % |
+Progress | Backtesting | 11.04 % |
+Progress | Backtesting | 11.12 % |
+Progress | Backtesting | 11.22 % |
+Progress | Backtesting | 11.33 % |
+Progress | Backtesting | 11.48 % |
+Progress | Backtesting | 11.65 % |
+Progress | Backtesting | 11.86 % |
+Progress | Backtesting | 12.00 % |
+Progress | Backtesting | 12.16 % |
+Progress | Backtesting | 12.32 % |
+Progress | Backtesting | 12.48 % |
+Progress | Backtesting | 12.69 % |
+Progress | Backtesting | 12.82 % |
+Progress | Backtesting | 12.94 % |
+Progress | Backtesting | 13.04 % |
+Progress | Backtesting | 13.16 % |
+Progress | Backtesting | 13.32 % |
+Progress | Backtesting | 13.56 % |
+Progress | Backtesting | 13.66 % |
+Progress | Backtesting | 13.76 % |
+Progress | Backtesting | 13.95 % |
+Progress | Backtesting | 14.10 % |
+Progress | Backtesting | 14.29 % |
+Progress | Backtesting | 14.47 % |
+Progress | Backtesting | 14.55 % |
+Progress | Backtesting | 14.61 % |
+Progress | Backtesting | 14.70 % |
+Progress | Backtesting | 14.84 % |
+Progress | Backtesting | 15.02 % |
+Progress | Backtesting | 18.64 % |
+Progress | Backtesting | 18.74 % |
+Progress | Backtesting | 18.87 % |
+Progress | Backtesting | 19.06 % |
+Progress | Backtesting | 19.18 % |
+Progress | Backtesting | 19.36 % |
+Progress | Backtesting | 19.51 % |
+Progress | Backtesting | 19.64 % |
+Progress | Backtesting | 19.71 % |
+Progress | Backtesting | 19.79 % |
+Progress | Backtesting | 19.91 % |
+Progress | Backtesting | 20.01 % |
+Progress | Backtesting | 20.10 % |
+Progress | Backtesting | 20.29 % |
+Progress | Backtesting | 20.34 % |
+Progress | Backtesting | 20.41 % |
+Progress | Backtesting | 20.46 % |
+Progress | Backtesting | 20.52 % |
+Progress | Backtesting | 20.60 % |
+Progress | Backtesting | 20.72 % |
+Progress | Backtesting | 20.81 % |
+Progress | Backtesting | 20.92 % |
+Progress | Backtesting | 21.05 % |
+Progress | Backtesting | 21.20 % |
+Progress | Backtesting | 21.29 % |
+Progress | Backtesting | 21.35 % |
+Progress | Backtesting | 21.39 % |
+Progress | Backtesting | 21.43 % |
+Progress | Backtesting | 21.51 % |
+Progress | Backtesting | 21.59 % |
+Progress | Backtesting | 21.65 % |
+Progress | Backtesting | 21.69 % |
+Progress | Backtesting | 21.79 % |
+Progress | Backtesting | 21.99 % |
+Progress | Backtesting | 22.03 % |
+Progress | Backtesting | 22.11 % |
+Progress | Backtesting | 22.19 % |
+Progress | Backtesting | 22.30 % |
+Progress | Backtesting | 22.42 % |
+Progress | Backtesting | 22.49 % |
+Progress | Backtesting | 22.60 % |
+Progress | Backtesting | 22.69 % |
+Progress | Backtesting | 22.79 % |
+Progress | Backtesting | 22.89 % |
+Progress | Backtesting | 22.97 % |
+Progress | Backtesting | 23.02 % |
+Progress | Backtesting | 23.08 % |
+Progress | Backtesting | 23.13 % |
+Progress | Backtesting | 23.18 % |
+Progress | Backtesting | 23.26 % |
+Progress | Backtesting | 23.32 % |
+Progress | Backtesting | 23.37 % |
+Progress | Backtesting | 23.45 % |
+Progress | Backtesting | 23.50 % |
+Progress | Backtesting | 23.68 % |
+Progress | Backtesting | 23.73 % |
+Progress | Backtesting | 23.79 % |
+Progress | Backtesting | 23.83 % |
+Progress | Backtesting | 23.88 % |
+Progress | Backtesting | 23.95 % |
+Progress | Backtesting | 24.01 % |
+Progress | Backtesting | 24.11 % |
+Progress | Backtesting | 24.17 % |
+Progress | Backtesting | 24.26 % |
+Progress | Backtesting | 24.35 % |
+Progress | Backtesting | 24.44 % |
+Progress | Backtesting | 24.55 % |
+Progress | Backtesting | 24.62 % |
+Progress | Backtesting | 24.69 % |
+Progress | Backtesting | 24.74 % |
+Progress | Backtesting | 24.80 % |
+Progress | Backtesting | 24.87 % |
+Progress | Backtesting | 24.99 % |
+Progress | Backtesting | 25.11 % |
+Progress | Backtesting | 25.27 % |
+Progress | Backtesting | 25.42 % |
+Progress | Backtesting | 25.56 % |
+Progress | Backtesting | 25.72 % |
+Progress | Backtesting | 25.90 % |
+Progress | Backtesting | 26.09 % |
+Progress | Backtesting | 26.33 % |
+Progress | Backtesting | 26.44 % |
+Progress | Backtesting | 26.53 % |
+Progress | Backtesting | 26.62 % |
+Progress | Backtesting | 26.73 % |
+Progress | Backtesting | 26.90 % |
+Progress | Backtesting | 30.51 % |
+Progress | Backtesting | 30.64 % |
+Progress | Backtesting | 30.78 % |
+Progress | Backtesting | 31.00 % |
+Progress | Backtesting | 31.20 % |
+Progress | Backtesting | 31.44 % |
+Progress | Backtesting | 31.63 % |
+Progress | Backtesting | 32.17 % |
+Progress | Backtesting | 32.20 % |
+Progress | Backtesting | 32.39 % |
+Progress | Backtesting | 32.52 % |
+Progress | Backtesting | 32.68 % |
+Progress | Backtesting | 32.85 % |
+Progress | Backtesting | 33.04 % |
+Progress | Backtesting | 33.19 % |
+Progress | Backtesting | 33.29 % |
+Progress | Backtesting | 33.40 % |
+Progress | Backtesting | 33.51 % |
+Progress | Backtesting | 33.67 % |
+Progress | Backtesting | 33.90 % |
+Progress | Backtesting | 34.00 % |
+Progress | Backtesting | 34.12 % |
+Progress | Backtesting | 34.29 % |
+Progress | Backtesting | 34.40 % |
+Progress | Backtesting | 34.58 % |
+Progress | Backtesting | 34.77 % |
+Progress | Backtesting | 34.90 % |
+Progress | Backtesting | 35.00 % |
+Progress | Backtesting | 35.08 % |
+Progress | Backtesting | 35.17 % |
+Progress | Backtesting | 35.28 % |
+Progress | Backtesting | 35.38 % |
+Progress | Backtesting | 35.59 % |
+Progress | Backtesting | 35.70 % |
+Progress | Backtesting | 35.84 % |
+Progress | Backtesting | 36.02 % |
+Progress | Backtesting | 36.17 % |
+Progress | Backtesting | 36.30 % |
+Progress | Backtesting | 36.51 % |
+Progress | Backtesting | 36.64 % |
+Progress | Backtesting | 36.72 % |
+Progress | Backtesting | 36.84 % |
+Progress | Backtesting | 36.97 % |
+Progress | Backtesting | 37.12 % |
+Progress | Backtesting | 37.29 % |
+Progress | Backtesting | 37.44 % |
+Progress | Backtesting | 37.66 % |
+Progress | Backtesting | 37.83 % |
+Progress | Backtesting | 37.99 % |
+Progress | Backtesting | 38.19 % |
+Progress | Backtesting | 38.28 % |
+Progress | Backtesting | 38.37 % |
+Progress | Backtesting | 38.47 % |
+Progress | Backtesting | 38.59 % |
+Progress | Backtesting | 38.68 % |
+Progress | Backtesting | 42.32 % |
+Progress | Backtesting | 42.37 % |
+Progress | Backtesting | 42.47 % |
+Progress | Backtesting | 42.59 % |
+Progress | Backtesting | 42.72 % |
+Progress | Backtesting | 42.84 % |
+Progress | Backtesting | 42.98 % |
+Progress | Backtesting | 43.12 % |
+Progress | Backtesting | 43.28 % |
+Progress | Backtesting | 43.38 % |
+Progress | Backtesting | 43.48 % |
+Progress | Backtesting | 43.58 % |
+Progress | Backtesting | 43.67 % |
+Progress | Backtesting | 43.75 % |
+Progress | Backtesting | 43.81 % |
+Progress | Backtesting | 43.89 % |
+Progress | Backtesting | 44.07 % |
+Progress | Backtesting | 44.14 % |
+Progress | Backtesting | 44.25 % |
+Progress | Backtesting | 44.39 % |
+Progress | Backtesting | 44.51 % |
+Progress | Backtesting | 44.61 % |
+Progress | Backtesting | 44.71 % |
+Progress | Backtesting | 44.83 % |
+Progress | Backtesting | 44.94 % |
+Progress | Backtesting | 45.03 % |
+Progress | Backtesting | 45.11 % |
+Progress | Backtesting | 45.20 % |
+Progress | Backtesting | 45.27 % |
+Progress | Backtesting | 45.33 % |
+Progress | Backtesting | 45.42 % |
+Progress | Backtesting | 45.51 % |
+Progress | Backtesting | 45.57 % |
+Progress | Backtesting | 45.76 % |
+Progress | Backtesting | 45.87 % |
+Progress | Backtesting | 45.98 % |
+Progress | Backtesting | 46.11 % |
+Progress | Backtesting | 46.24 % |
+Progress | Backtesting | 46.38 % |
+Progress | Backtesting | 46.51 % |
+Progress | Backtesting | 46.64 % |
+Progress | Backtesting | 46.75 % |
+Progress | Backtesting | 46.86 % |
+Progress | Backtesting | 46.93 % |
+Progress | Backtesting | 47.03 % |
+Progress | Backtesting | 47.13 % |
+Progress | Backtesting | 47.20 % |
+Progress | Backtesting | 47.40 % |
+Progress | Backtesting | 47.46 % |
+Progress | Backtesting | 47.54 % |
+Progress | Backtesting | 47.63 % |
+Progress | Backtesting | 47.73 % |
+Progress | Backtesting | 47.86 % |
+Progress | Backtesting | 47.96 % |
+Progress | Backtesting | 48.07 % |
+Progress | Backtesting | 48.25 % |
+Progress | Backtesting | 48.37 % |
+Progress | Backtesting | 48.45 % |
+Progress | Backtesting | 48.54 % |
+Progress | Backtesting | 48.64 % |
+Progress | Backtesting | 48.72 % |
+Progress | Backtesting | 48.77 % |
+Progress | Backtesting | 48.82 % |
+Progress | Backtesting | 48.88 % |
+Progress | Backtesting | 48.98 % |
+Progress | Backtesting | 49.15 % |
+Progress | Backtesting | 49.24 % |
+Progress | Backtesting | 49.33 % |
+Progress | Backtesting | 49.42 % |
+Progress | Backtesting | 49.53 % |
+Progress | Backtesting | 49.64 % |
+Progress | Backtesting | 49.73 % |
+Progress | Backtesting | 49.82 % |
+Progress | Backtesting | 49.90 % |
+Progress | Backtesting | 50.02 % |
+Progress | Backtesting | 50.10 % |
+Progress | Backtesting | 50.20 % |
+Progress | Backtesting | 50.26 % |
+Progress | Backtesting | 50.37 % |
+Progress | Backtesting | 50.43 % |
+Progress | Backtesting | 50.51 % |
+Progress | Backtesting | 50.60 % |
+Progress | Backtesting | 54.19 % |
+Progress | Backtesting | 54.24 % |
+Progress | Backtesting | 54.31 % |
+Progress | Backtesting | 54.40 % |
+Progress | Backtesting | 54.50 % |
+Progress | Backtesting | 54.59 % |
+Progress | Backtesting | 54.68 % |
+Progress | Backtesting | 54.77 % |
+Progress | Backtesting | 54.87 % |
+Progress | Backtesting | 54.97 % |
+Progress | Backtesting | 55.05 % |
+Progress | Backtesting | 55.14 % |
+Progress | Backtesting | 55.18 % |
+Progress | Backtesting | 55.25 % |
+Progress | Backtesting | 55.31 % |
+Progress | Backtesting | 55.41 % |
+Progress | Backtesting | 55.48 % |
+Progress | Backtesting | 55.59 % |
+Progress | Backtesting | 55.69 % |
+Progress | Backtesting | 55.89 % |
+Progress | Backtesting | 55.93 % |
+Progress | Backtesting | 56.00 % |
+Progress | Backtesting | 56.07 % |
+Progress | Backtesting | 56.15 % |
+Progress | Backtesting | 56.23 % |
+Progress | Backtesting | 56.33 % |
+Progress | Backtesting | 56.42 % |
+Progress | Backtesting | 56.54 % |
+Progress | Backtesting | 56.67 % |
+Progress | Backtesting | 56.80 % |
+Progress | Backtesting | 56.92 % |
+Progress | Backtesting | 57.01 % |
+Progress | Backtesting | 57.09 % |
+Progress | Backtesting | 57.19 % |
+Progress | Backtesting | 57.28 % |
+Progress | Backtesting | 57.38 % |
+Progress | Backtesting | 57.61 % |
+Progress | Backtesting | 57.63 % |
+Progress | Backtesting | 57.72 % |
+Progress | Backtesting | 57.85 % |
+Progress | Backtesting | 58.03 % |
+Progress | Backtesting | 58.16 % |
+Progress | Backtesting | 58.32 % |
+Progress | Backtesting | 58.46 % |
+Progress | Backtesting | 58.59 % |
+Progress | Backtesting | 58.67 % |
+Progress | Backtesting | 58.73 % |
+Progress | Backtesting | 58.81 % |
+Progress | Backtesting | 58.88 % |
+Progress | Backtesting | 58.95 % |
+Progress | Backtesting | 59.06 % |
+Progress | Backtesting | 59.26 % |
+Progress | Backtesting | 59.32 % |
+Progress | Backtesting | 59.41 % |
+Progress | Backtesting | 59.49 % |
+Progress | Backtesting | 59.56 % |
+Progress | Backtesting | 59.65 % |
+Progress | Backtesting | 59.74 % |
+Progress | Backtesting | 59.82 % |
+Progress | Backtesting | 59.91 % |
+Progress | Backtesting | 60.00 % |
+Progress | Backtesting | 60.10 % |
+Progress | Backtesting | 60.34 % |
+Progress | Backtesting | 60.41 % |
+Progress | Backtesting | 60.49 % |
+Progress | Backtesting | 60.57 % |
+Progress | Backtesting | 60.66 % |
+Progress | Backtesting | 60.75 % |
+Progress | Backtesting | 60.86 % |
+Progress | Backtesting | 61.02 % |
+Progress | Backtesting | 61.09 % |
+Progress | Backtesting | 61.17 % |
+Progress | Backtesting | 61.26 % |
+Progress | Backtesting | 61.39 % |
+Progress | Backtesting | 61.47 % |
+Progress | Backtesting | 61.56 % |
+Progress | Backtesting | 61.67 % |
+Progress | Backtesting | 61.82 % |
+Progress | Backtesting | 61.95 % |
+Progress | Backtesting | 62.04 % |
+Progress | Backtesting | 62.08 % |
+Progress | Backtesting | 62.11 % |
+Progress | Backtesting | 62.15 % |
+Progress | Backtesting | 62.19 % |
+Progress | Backtesting | 62.24 % |
+Progress | Backtesting | 62.30 % |
+Progress | Backtesting | 62.36 % |
+Progress | Backtesting | 62.43 % |
+Progress | Backtesting | 62.50 % |
+Progress | Backtesting | 66.05 % |
+Progress | Backtesting | 66.09 % |
+Progress | Backtesting | 66.10 % |
+Progress | Backtesting | 66.14 % |
+Progress | Backtesting | 66.19 % |
+Progress | Backtesting | 66.23 % |
+Progress | Backtesting | 66.28 % |
+Progress | Backtesting | 66.33 % |
+Progress | Backtesting | 66.39 % |
+Progress | Backtesting | 66.46 % |
+Progress | Backtesting | 66.53 % |
+Progress | Backtesting | 66.56 % |
+Progress | Backtesting | 66.62 % |
+Progress | Backtesting | 66.67 % |
+Progress | Backtesting | 66.73 % |
+Progress | Backtesting | 66.80 % |
+Progress | Backtesting | 66.86 % |
+Progress | Backtesting | 66.92 % |
+Progress | Backtesting | 67.06 % |
+Progress | Backtesting | 67.15 % |
+Progress | Backtesting | 67.26 % |
+Progress | Backtesting | 67.38 % |
+Progress | Backtesting | 67.48 % |
+Progress | Backtesting | 67.75 % |
+Progress | Backtesting | 67.80 % |
+Progress | Backtesting | 67.90 % |
+Progress | Backtesting | 68.00 % |
+Progress | Backtesting | 68.13 % |
+Progress | Backtesting | 68.25 % |
+Progress | Backtesting | 68.38 % |
+Progress | Backtesting | 68.52 % |
+Progress | Backtesting | 68.70 % |
+Progress | Backtesting | 68.80 % |
+Progress | Backtesting | 68.87 % |
+Progress | Backtesting | 68.94 % |
+Progress | Backtesting | 69.01 % |
+Progress | Backtesting | 69.10 % |
+Progress | Backtesting | 69.18 % |
+Progress | Backtesting | 69.43 % |
+Progress | Backtesting | 69.49 % |
+Progress | Backtesting | 69.62 % |
+Progress | Backtesting | 69.79 % |
+Progress | Backtesting | 69.97 % |
+Progress | Backtesting | 70.14 % |
+Progress | Backtesting | 70.30 % |
+Progress | Backtesting | 70.44 % |
+Progress | Backtesting | 70.54 % |
+Progress | Backtesting | 70.63 % |
+Progress | Backtesting | 70.76 % |
+Progress | Backtesting | 70.90 % |
+Progress | Backtesting | 71.18 % |
+Progress | Backtesting | 71.19 % |
+Progress | Backtesting | 71.28 % |
+Progress | Backtesting | 71.44 % |
+Progress | Backtesting | 71.67 % |
+Progress | Backtesting | 71.91 % |
+Progress | Backtesting | 72.13 % |
+Progress | Backtesting | 72.26 % |
+Progress | Backtesting | 72.37 % |
+Progress | Backtesting | 72.44 % |
+Progress | Backtesting | 72.53 % |
+Progress | Backtesting | 72.65 % |
+Progress | Backtesting | 72.88 % |
+Progress | Backtesting | 73.02 % |
+Progress | Backtesting | 73.22 % |
+Progress | Backtesting | 73.38 % |
+Progress | Backtesting | 73.55 % |
+Progress | Backtesting | 73.74 % |
+Progress | Backtesting | 73.89 % |
+Progress | Backtesting | 73.99 % |
+Progress | Backtesting | 74.10 % |
+Progress | Backtesting | 74.24 % |
+Progress | Backtesting | 74.37 % |
+Progress | Backtesting | 77.97 % |
+Progress | Backtesting | 78.15 % |
+Progress | Backtesting | 78.32 % |
+Progress | Backtesting | 78.51 % |
+Progress | Backtesting | 78.79 % |
+Progress | Backtesting | 78.94 % |
+Progress | Backtesting | 79.09 % |
+Progress | Backtesting | 79.28 % |
+Progress | Backtesting | 79.66 % |
+Progress | Backtesting | 79.77 % |
+Progress | Backtesting | 79.95 % |
+Progress | Backtesting | 80.09 % |
+Progress | Backtesting | 80.23 % |
+Progress | Backtesting | 80.43 % |
+Progress | Backtesting | 80.62 % |
+Progress | Backtesting | 80.73 % |
+Progress | Backtesting | 80.83 % |
+Progress | Backtesting | 80.96 % |
+Progress | Backtesting | 81.10 % |
+Progress | Backtesting | 81.36 % |
+Progress | Backtesting | 81.49 % |
+Progress | Backtesting | 81.74 % |
+Progress | Backtesting | 81.96 % |
+Progress | Backtesting | 82.10 % |
+Progress | Backtesting | 82.31 % |
+Progress | Backtesting | 82.45 % |
+Progress | Backtesting | 82.57 % |
+Progress | Backtesting | 82.74 % |
+Progress | Backtesting | 82.85 % |
+Progress | Backtesting | 83.05 % |
+Progress | Backtesting | 83.30 % |
+Progress | Backtesting | 83.60 % |
+Progress | Backtesting | 83.84 % |
+Progress | Backtesting | 84.02 % |
+Progress | Backtesting | 84.13 % |
+Progress | Backtesting | 84.47 % |
+Progress | Backtesting | 84.75 % |
+Progress | Backtesting | 84.91 % |
+Progress | Backtesting | 85.22 % |
+Progress | Backtesting | 85.43 % |
+Progress | Backtesting | 85.58 % |
+Progress | Backtesting | 85.75 % |
+Progress | Backtesting | 85.84 % |
+Progress | Backtesting | 85.92 % |
+Progress | Backtesting | 86.05 % |
+Progress | Backtesting | 86.19 % |
+Progress | Backtesting | 89.82 % |
+Progress | Backtesting | 89.83 % |
+Progress | Backtesting | 89.91 % |
+Progress | Backtesting | 90.10 % |
+Progress | Backtesting | 90.33 % |
+Progress | Backtesting | 90.51 % |
+Progress | Backtesting | 90.73 % |
+Progress | Backtesting | 90.86 % |
+Progress | Backtesting | 90.97 % |
+Progress | Backtesting | 91.08 % |
+Progress | Backtesting | 91.21 % |
+Progress | Backtesting | 91.49 % |
+Progress | Backtesting | 91.53 % |
+Progress | Backtesting | 91.61 % |
+Progress | Backtesting | 91.73 % |
+Progress | Backtesting | 91.94 % |
+Progress | Backtesting | 92.12 % |
+Progress | Backtesting | 92.39 % |
+Progress | Backtesting | 92.53 % |
+Progress | Backtesting | 92.67 % |
+Progress | Backtesting | 92.81 % |
+Progress | Backtesting | 92.97 % |
+Progress | Backtesting | 93.22 % |
+Progress | Backtesting | 93.37 % |
+Progress | Backtesting | 93.56 % |
+Progress | Backtesting | 93.74 % |
+Progress | Backtesting | 94.00 % |
+Progress | Backtesting | 94.20 % |
+Progress | Backtesting | 94.31 % |
+Progress | Backtesting | 94.42 % |
+Progress | Backtesting | 94.61 % |
+Progress | Backtesting | 94.75 % |
+Progress | Backtesting | 94.92 % |
+Progress | Backtesting | 95.06 % |
+Progress | Backtesting | 95.22 % |
+Progress | Backtesting | 95.39 % |
+Progress | Backtesting | 95.54 % |
+Progress | Backtesting | 95.78 % |
+Progress | Backtesting | 95.93 % |
+Progress | Backtesting | 96.01 % |
+Progress | Backtesting | 96.11 % |
+Progress | Backtesting | 96.21 % |
+Progress | Backtesting | 96.37 % |
+Progress | Backtesting | 96.61 % |
+Progress | Backtesting | 96.75 % |
+Progress | Backtesting | 96.88 % |
+Progress | Backtesting | 97.09 % |
+Progress | Backtesting | 97.28 % |
+Progress | Backtesting | 97.49 % |
+Progress | Backtesting | 97.61 % |
+Progress | Backtesting | 97.71 % |
+Progress | Backtesting | 97.83 % |
+Progress | Backtesting | 97.96 % |
+01/01/2026 23:05:00.002 | Info | Combo: loaded 4593 valid signal row(s) from CSV.
+01/01/2026 23:05:00.002 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+02/01/2026 00:00:00.395 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.00 units, which needs about $2418.19 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.00 budget, free margin was $10000.00). Size was cut from 7.00 to 1.00 units. Real risk on this trade is now about $12.91 (0.13% of balance) instead of the requested 1.00%.
+02/01/2026 00:00:00.395 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 4351.83, SL: 4338.92369013238, TP: 4385.62)
+02/01/2026 00:00:00.395 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 4351.83, SL: 4338.92369013238, TP: 4385.62) SUCCEEDED, PendingOrder OID1
+02/01/2026 00:00:00.395 | Info | Combo: bartime=2026-01-01 23:00, executed=2026-01-02 00:00:00, pending Buy placed at 4351.83; SL=4338.923690132376, TP=4385.620306417178; valid for the next 3 chart bar(s).
+02/01/2026 15:00:00.208 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.00 units, which needs about $2763.65 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.33 budget, free margin was $10033.20). Size was cut from 8.00 to 1.00 units. Real risk on this trade is now about $11.94 (0.12% of balance) instead of the requested 1.00%.
+02/01/2026 15:00:00.208 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4347.52, SL: 4359.4616545238, TP: 4316.26)
+02/01/2026 15:00:00.208 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4347.52, SL: 4359.4616545238, TP: 4316.26) SUCCEEDED, PendingOrder OID4
+02/01/2026 15:00:00.208 | Info | Combo: bartime=2026-01-02 14:00, executed=2026-01-02 15:00:00, pending Sell placed at 4347.52; SL=4359.461654523796, TP=4316.255279903721; valid for the next 3 chart bar(s).
+05/01/2026 00:00:00.204 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.00 units, which needs about $2763.65 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.63 budget, free margin was $10062.91). Size was cut from 8.00 to 1.00 units. Real risk on this trade is now about $12.55 (0.12% of balance) instead of the requested 1.00%.
+05/01/2026 00:00:00.204 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 4376.36, SL: 4363.80728564016, TP: 4409.22)
+05/01/2026 00:00:00.204 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 4376.36, SL: 4363.80728564016, TP: 4409.22) SUCCEEDED, PendingOrder OID7
+05/01/2026 00:00:00.204 | Info | Combo: bartime=2026-01-04 23:00, executed=2026-01-05 00:00:00, pending Buy placed at 4376.36; SL=4363.807285640162, TP=4409.224549893554; valid for the next 3 chart bar(s).
+06/01/2026 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.00 units, which needs about $3109.10 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.95 budget, free margin was $10095.40). Size was cut from 9.00 to 1.00 units. Real risk on this trade is now about $10.79 (0.11% of balance) instead of the requested 1.00%.
+06/01/2026 10:00:00.000 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4444.29, SL: 4455.07823327815, TP: 4416.05)
+06/01/2026 10:00:00.000 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4444.29, SL: 4455.07823327815, TP: 4416.05) SUCCEEDED, PendingOrder OID10
+06/01/2026 10:00:00.000 | Info | Combo: bartime=2026-01-06 09:00, executed=2026-01-06 10:00:00, pending Sell placed at 4444.29; SL=4455.078233278155, TP=4416.045078569493; valid for the next 3 chart bar(s).
+07/01/2026 02:00:00.204 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.00 units, which needs about $3109.10 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.85 budget, free margin was $10084.59). Size was cut from 9.00 to 1.00 units. Real risk on this trade is now about $10.41 (0.10% of balance) instead of the requested 1.00%.
+07/01/2026 02:00:00.204 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4460.57, SL: 4470.97879407704, TP: 4433.32)
+07/01/2026 02:00:00.204 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4460.57, SL: 4470.97879407704, TP: 4433.32) SUCCEEDED, PendingOrder OID13
+07/01/2026 02:00:00.204 | Info | Combo: bartime=2026-01-07 01:00, executed=2026-01-07 02:00:00, pending Sell placed at 4460.57; SL=4470.978794077041, TP=4433.318497060432; valid for the next 3 chart bar(s).
+08/01/2026 00:00:00.378 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 12.00 units, which needs about $4145.47 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.74 budget, free margin was $10074.08). Size was cut from 12.00 to 1.00 units. Real risk on this trade is now about $7.89 (0.08% of balance) instead of the requested 1.00%.
+08/01/2026 00:00:00.378 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 4464.53, SL: 4456.64297991245, TP: 4485.18)
+08/01/2026 00:00:00.378 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 4464.53, SL: 4456.64297991245, TP: 4485.18) SUCCEEDED, PendingOrder OID16
+08/01/2026 00:00:00.378 | Info | Combo: bartime=2026-01-07 23:00, executed=2026-01-08 00:00:00, pending Buy placed at 4464.53; SL=4456.642979912448, TP=4485.179188514011; valid for the next 3 chart bar(s).
+08/01/2026 16:00:00.202 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.00 units, which needs about $2763.65 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.66 budget, free margin was $10066.00). Size was cut from 8.00 to 1.00 units. Real risk on this trade is now about $11.74 (0.12% of balance) instead of the requested 1.00%.
+08/01/2026 16:00:00.202 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 4456.85, SL: 4445.10887073459, TP: 4487.59)
+08/01/2026 16:00:00.202 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 4456.85, SL: 4445.10887073459, TP: 4487.59) SUCCEEDED, PendingOrder OID19
+08/01/2026 16:00:00.202 | Info | Combo: bartime=2026-01-08 15:00, executed=2026-01-08 16:00:00, pending Buy placed at 4456.85; SL=4445.108870734587, TP=4487.589720309772; valid for the next 3 chart bar(s).
+09/01/2026 13:00:00.209 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 13.00 units, which needs about $4490.93 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.54 budget, free margin was $10054.10). Size was cut from 13.00 to 1.00 units. Real risk on this trade is now about $7.18 (0.07% of balance) instead of the requested 1.00%.
+09/01/2026 13:00:00.209 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4460.42, SL: 4467.60365263936, TP: 4441.61)
+09/01/2026 13:00:00.209 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4460.42, SL: 4467.60365263936, TP: 4441.61) SUCCEEDED, PendingOrder OID22
+09/01/2026 13:00:00.209 | Info | Combo: bartime=2026-01-09 12:00, executed=2026-01-09 13:00:00, pending Sell placed at 4460.42; SL=4467.60365263936, TP=4441.612313963617; valid for the next 3 chart bar(s).
+09/01/2026 14:00:00.003 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 10.00 units, which needs about $3454.56 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.47 budget, free margin was $10046.61). Size was cut from 10.00 to 1.00 units. Real risk on this trade is now about $9.84 (0.10% of balance) instead of the requested 1.00%.
+09/01/2026 14:00:00.003 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 4492.43, SL: 4482.58820988851, TP: 4518.2)
+09/01/2026 14:00:00.003 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 4492.43, SL: 4482.58820988851, TP: 4518.2) SUCCEEDED, PendingOrder OID25
+09/01/2026 14:00:00.003 | Info | Combo: bartime=2026-01-09 13:00, executed=2026-01-09 14:00:00, pending Buy placed at 4492.43; SL=4482.588209888512, TP=4518.197016829106; valid for the next 3 chart bar(s).
+12/01/2026 21:00:00.001 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.00 units, which needs about $3109.10 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.37 budget, free margin was $10036.68). Size was cut from 9.00 to 1.00 units. Real risk on this trade is now about $11.05 (0.11% of balance) instead of the requested 1.00%.
+12/01/2026 21:00:00.001 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4591.05, SL: 4602.10451148707, TP: 4562.11)
+12/01/2026 21:00:00.001 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4591.05, SL: 4602.10451148707, TP: 4562.11) SUCCEEDED, PendingOrder OID28
+12/01/2026 21:00:00.001 | Info | Combo: bartime=2026-01-12 20:00, executed=2026-01-12 21:00:00, pending Sell placed at 4591.05; SL=4602.104511487072, TP=4562.107929472358; valid for the next 3 chart bar(s).
+13/01/2026 01:00:00.206 | Info | Combo: bartime=2026-01-13 00:00, Sell signal skipped: already have same-direction exposure open.
+13/01/2026 14:00:00.208 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.00 units, which needs about $3109.10 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.25 budget, free margin was $10025.38). Size was cut from 9.00 to 1.00 units. Real risk on this trade is now about $10.27 (0.10% of balance) instead of the requested 1.00%.
+13/01/2026 14:00:00.208 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 4621.36, SL: 4611.0938062333, TP: 4648.24)
+13/01/2026 14:00:00.208 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 4621.36, SL: 4611.0938062333, TP: 4648.24) SUCCEEDED, PendingOrder OID31
+13/01/2026 14:00:00.208 | Info | Combo: bartime=2026-01-13 13:00, executed=2026-01-13 14:00:00, pending Buy placed at 4621.36; SL=4611.093806233295, TP=4648.238157790499; valid for the next 3 chart bar(s).
+13/01/2026 18:00:00.202 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.00 units, which needs about $2072.74 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.15 budget, free margin was $10014.77). Size was cut from 6.00 to 1.00 units. Real risk on this trade is now about $14.52 (0.15% of balance) instead of the requested 1.00%.
+13/01/2026 18:00:00.202 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4586.09, SL: 4600.61246880684, TP: 4548.07)
+13/01/2026 18:00:00.202 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4586.09, SL: 4600.61246880684, TP: 4548.07) SUCCEEDED, PendingOrder OID34
+13/01/2026 18:00:00.202 | Info | Combo: bartime=2026-01-13 17:00, executed=2026-01-13 18:00:00, pending Sell placed at 4586.09; SL=4600.612468806842, TP=4548.068390729011; valid for the next 3 chart bar(s).
+13/01/2026 21:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.00 units, which needs about $2418.19 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.00 budget, free margin was $10000.21). Size was cut from 7.00 to 1.00 units. Real risk on this trade is now about $14.05 (0.14% of balance) instead of the requested 1.00%.
+13/01/2026 21:00:00.000 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4568.83, SL: 4582.8834929891, TP: 4532.04)
+13/01/2026 21:00:00.000 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4568.83, SL: 4582.8834929891, TP: 4532.04) SUCCEEDED, PendingOrder OID37
+13/01/2026 21:00:00.000 | Info | Combo: bartime=2026-01-13 20:00, executed=2026-01-13 21:00:00, pending Sell placed at 4568.83; SL=4582.883492989104, TP=4532.036227093254; valid for the next 3 chart bar(s).
+14/01/2026 01:00:00.001 | Trade | Cancelling pending order OID37
+14/01/2026 01:00:00.001 | Trade |  Cancelling pending order OID37 SUCCEEDED
+14/01/2026 01:00:00.001 | Info | Combo: pending order 37 cancelled after 3 chart bars.
+14/01/2026 15:00:00.003 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.00 units, which needs about $3109.10 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.00 budget, free margin was $10000.21). Size was cut from 9.00 to 1.00 units. Real risk on this trade is now about $10.72 (0.11% of balance) instead of the requested 1.00%.
+14/01/2026 15:00:00.003 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4606.35, SL: 4617.06896410102, TP: 4578.29)
+14/01/2026 15:00:00.003 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4606.35, SL: 4617.06896410102, TP: 4578.29) SUCCEEDED, PendingOrder OID38
+14/01/2026 15:00:00.003 | Info | Combo: bartime=2026-01-14 14:00, executed=2026-01-14 15:00:00, pending Sell placed at 4606.35; SL=4617.068964101022, TP=4578.286433793766; valid for the next 3 chart bar(s).
+14/01/2026 23:05:00.006 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.00 units, which needs about $3109.10 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.88 budget, free margin was $9988.35). Size was cut from 9.00 to 1.00 units. Real risk on this trade is now about $10.47 (0.10% of balance) instead of the requested 1.00%.
+14/01/2026 23:05:00.006 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4617.28, SL: 4627.75000594677, TP: 4589.87)
+14/01/2026 23:05:00.006 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4617.28, SL: 4627.75000594677, TP: 4589.87) SUCCEEDED, PendingOrder OID41
+14/01/2026 23:05:00.006 | Info | Combo: bartime=2026-01-14 21:00, executed=2026-01-14 23:05:00, pending Sell placed at 4617.28; SL=4627.750005946767, TP=4589.868236857818; valid for the next 3 chart bar(s).
+15/01/2026 11:00:00.004 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 11.00 units, which needs about $3800.02 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.16 budget, free margin was $10015.91). Size was cut from 11.00 to 1.00 units. Real risk on this trade is now about $8.95 (0.09% of balance) instead of the requested 1.00%.
+15/01/2026 11:00:00.004 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 4621, SL: 4612.04845214525, TP: 4644.44)
+15/01/2026 11:00:00.004 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 4621, SL: 4612.04845214525, TP: 4644.44) SUCCEEDED, PendingOrder OID44
+15/01/2026 11:00:00.004 | Info | Combo: bartime=2026-01-15 10:00, executed=2026-01-15 11:00:00, pending Buy placed at 4621; SL=4612.048452145245, TP=4644.436253121349; valid for the next 3 chart bar(s).
+15/01/2026 14:00:00.001 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.00 units, which needs about $3109.10 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.07 budget, free margin was $10006.91). Size was cut from 9.00 to 1.00 units. Real risk on this trade is now about $10.29 (0.10% of balance) instead of the requested 1.00%.
+15/01/2026 14:00:00.001 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4581.3, SL: 4591.59272146164, TP: 4554.35)
+15/01/2026 14:00:00.001 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4581.3, SL: 4591.59272146164, TP: 4554.35) SUCCEEDED, PendingOrder OID47
+15/01/2026 14:00:00.001 | Info | Combo: bartime=2026-01-15 13:00, executed=2026-01-15 14:00:00, pending Sell placed at 4581.3; SL=4591.592721461635, TP=4554.3523894418695; valid for the next 3 chart bar(s).
+15/01/2026 17:00:00.003 | Trade | Cancelling pending order OID47
+15/01/2026 17:00:00.003 | Trade |  Cancelling pending order OID47 SUCCEEDED
+15/01/2026 17:00:00.003 | Info | Combo: pending order 47 cancelled after 3 chart bars.
+15/01/2026 18:00:00.003 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.00 units, which needs about $3109.10 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.07 budget, free margin was $10006.91). Size was cut from 9.00 to 1.00 units. Real risk on this trade is now about $11.11 (0.11% of balance) instead of the requested 1.00%.
+15/01/2026 18:00:00.003 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 4617.35, SL: 4606.23934720931, TP: 4646.44)
+15/01/2026 18:00:00.003 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 4617.35, SL: 4606.23934720931, TP: 4646.44) SUCCEEDED, PendingOrder OID48
+15/01/2026 18:00:00.003 | Info | Combo: bartime=2026-01-15 17:00, executed=2026-01-15 18:00:00, pending Buy placed at 4617.35; SL=4606.2393472093145, TP=4646.439055364611; valid for the next 3 chart bar(s).
+15/01/2026 21:00:00.009 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 10.00 units, which needs about $3454.56 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.95 budget, free margin was $9995.01). Size was cut from 10.00 to 1.00 units. Real risk on this trade is now about $9.11 (0.09% of balance) instead of the requested 1.00%.
+15/01/2026 21:00:00.009 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4600.17, SL: 4609.27777630883, TP: 4576.32)
+15/01/2026 21:00:00.009 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4600.17, SL: 4609.27777630883, TP: 4576.32) SUCCEEDED, PendingOrder OID51
+15/01/2026 21:00:00.009 | Info | Combo: bartime=2026-01-15 20:00, executed=2026-01-15 21:00:00, pending Sell placed at 4600.17; SL=4609.277776308832, TP=4576.324721573319; valid for the next 3 chart bar(s).
+15/01/2026 23:05:00.006 | Info | Combo: bartime=2026-01-15 21:00, reversal - cancelling existing Sell pending order 51 before opening opposite direction.
+15/01/2026 23:05:00.006 | Trade | Cancelling pending order OID51
+15/01/2026 23:05:00.006 | Trade |  Cancelling pending order OID51 SUCCEEDED
+15/01/2026 23:05:00.006 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 11.00 units, which needs about $3800.02 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.95 budget, free margin was $9995.01). Size was cut from 11.00 to 1.00 units. Real risk on this trade is now about $8.77 (0.09% of balance) instead of the requested 1.00%.
+15/01/2026 23:05:00.006 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 4616.89, SL: 4608.12181495294, TP: 4639.85)
+15/01/2026 23:05:00.006 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 4616.89, SL: 4608.12181495294, TP: 4639.85) SUCCEEDED, PendingOrder OID52
+15/01/2026 23:05:00.006 | Info | Combo: bartime=2026-01-15 21:00, executed=2026-01-15 23:05:00, pending Buy placed at 4616.89; SL=4608.121814952935, TP=4639.846186741345; valid for the next 3 chart bar(s).
+16/01/2026 01:00:00.004 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 11.00 units, which needs about $3800.02 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.84 budget, free margin was $9983.53). Size was cut from 11.00 to 1.00 units. Real risk on this trade is now about $8.63 (0.09% of balance) instead of the requested 1.00%.
+16/01/2026 01:00:00.004 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4597.9, SL: 4606.52648963012, TP: 4575.31)
+16/01/2026 01:00:00.004 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4597.9, SL: 4606.52648963012, TP: 4575.31) SUCCEEDED, PendingOrder OID55
+16/01/2026 01:00:00.004 | Info | Combo: bartime=2026-01-16 00:00, executed=2026-01-16 01:00:00, pending Sell placed at 4597.9; SL=4606.526489630121, TP=4575.314789285539; valid for the next 3 chart bar(s).
+16/01/2026 06:00:00.202 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 12.00 units, which needs about $4145.47 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.75 budget, free margin was $9974.63). Size was cut from 12.00 to 1.00 units. Real risk on this trade is now about $8.09 (0.08% of balance) instead of the requested 1.00%.
+16/01/2026 06:00:00.202 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 4616.51, SL: 4608.424457734, TP: 4637.68)
+16/01/2026 06:00:00.202 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 4616.51, SL: 4608.424457734, TP: 4637.68) SUCCEEDED, PendingOrder OID58
+16/01/2026 06:00:00.202 | Info | Combo: bartime=2026-01-16 05:00, executed=2026-01-16 06:00:00, pending Buy placed at 4616.51; SL=4608.424457734001, TP=4637.678943990915; valid for the next 3 chart bar(s).
+16/01/2026 08:00:00.208 | Info | Combo: bartime=2026-01-16 07:00, Buy signal skipped: already have same-direction exposure open.
+16/01/2026 09:00:00.205 | Trade | Cancelling pending order OID58
+16/01/2026 09:00:00.205 | Trade |  Cancelling pending order OID58 SUCCEEDED
+16/01/2026 09:00:00.205 | Info | Combo: pending order 58 cancelled after 3 chart bars.
+16/01/2026 12:00:00.204 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 12.00 units, which needs about $4145.47 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.75 budget, free margin was $9974.63). Size was cut from 12.00 to 1.00 units. Real risk on this trade is now about $8.27 (0.08% of balance) instead of the requested 1.00%.
+16/01/2026 12:00:00.204 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 4616.53, SL: 4608.2630358143, TP: 4638.17)
+16/01/2026 12:00:00.204 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 4616.53, SL: 4608.2630358143, TP: 4638.17) SUCCEEDED, PendingOrder OID59
+16/01/2026 12:00:00.204 | Info | Combo: bartime=2026-01-16 11:00, executed=2026-01-16 12:00:00, pending Buy placed at 4616.53; SL=4608.2630358143015, TP=4638.173928887474; valid for the next 3 chart bar(s).
+16/01/2026 15:00:00.006 | Trade | Cancelling pending order OID59
+16/01/2026 15:00:00.006 | Trade |  Cancelling pending order OID59 SUCCEEDED
+16/01/2026 15:00:00.006 | Info | Combo: pending order 59 cancelled after 3 chart bars.
+16/01/2026 15:00:00.006 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.00 units, which needs about $3109.10 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.75 budget, free margin was $9974.63). Size was cut from 9.00 to 1.00 units. Real risk on this trade is now about $10.00 (0.10% of balance) instead of the requested 1.00%.
+16/01/2026 15:00:00.006 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 4615.24, SL: 4605.23781465692, TP: 4641.43)
+16/01/2026 15:00:00.006 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 4615.24, SL: 4605.23781465692, TP: 4641.43) SUCCEEDED, PendingOrder OID60
+16/01/2026 15:00:00.006 | Info | Combo: bartime=2026-01-16 14:00, executed=2026-01-16 15:00:00, pending Buy placed at 4615.24; SL=4605.237814656923, TP=4641.426951270386; valid for the next 3 chart bar(s).
+16/01/2026 16:00:00.003 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.00 units, which needs about $1727.28 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.63 budget, free margin was $9963.36). Size was cut from 5.00 to 1.00 units. Real risk on this trade is now about $18.34 (0.18% of balance) instead of the requested 1.00%.
+16/01/2026 16:00:00.003 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4536.15, SL: 4554.49088827446, TP: 4488.13)
+16/01/2026 16:00:00.003 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4536.15, SL: 4554.49088827446, TP: 4488.13) SUCCEEDED, PendingOrder OID63
+16/01/2026 16:00:00.003 | Info | Combo: bartime=2026-01-16 15:00, executed=2026-01-16 16:00:00, pending Sell placed at 4536.15; SL=4554.490888274461, TP=4488.131298983691; valid for the next 3 chart bar(s).
+16/01/2026 19:00:00.008 | Trade | Cancelling pending order OID63
+16/01/2026 19:00:00.008 | Trade |  Cancelling pending order OID63 SUCCEEDED
+16/01/2026 19:00:00.008 | Info | Combo: pending order 63 cancelled after 3 chart bars.
+19/01/2026 00:00:00.488 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.00 units, which needs about $1381.82 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.63 budget, free margin was $9963.36). Size was cut from 4.00 to 1.00 units. Real risk on this trade is now about $21.52 (0.22% of balance) instead of the requested 1.00%.
+19/01/2026 00:00:00.488 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 4691.11, SL: 4669.58515615912, TP: 4747.46)
+19/01/2026 00:00:00.488 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 4691.11, SL: 4669.58515615912, TP: 4747.46) SUCCEEDED, PendingOrder OID64
+19/01/2026 00:00:00.488 | Info | Combo: bartime=2026-01-18 23:00, executed=2026-01-19 00:00:00, pending Buy placed at 4691.11; SL=4669.585156159119, TP=4747.464688243599; valid for the next 3 chart bar(s).
+19/01/2026 03:00:00.203 | Trade | Cancelling pending order OID64
+19/01/2026 03:00:00.203 | Trade |  Cancelling pending order OID64 SUCCEEDED
+19/01/2026 03:00:00.203 | Info | Combo: pending order 64 cancelled after 3 chart bars.
+20/01/2026 00:00:00.399 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 15.00 units, which needs about $5181.84 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.63 budget, free margin was $9963.36). Size was cut from 15.00 to 1.00 units. Real risk on this trade is now about $6.26 (0.06% of balance) instead of the requested 1.00%.
+20/01/2026 00:00:00.399 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4663.76, SL: 4670.01791703962, TP: 4647.38)
+20/01/2026 00:00:00.399 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4663.76, SL: 4670.01791703962, TP: 4647.38) SUCCEEDED, PendingOrder OID65
+20/01/2026 00:00:00.399 | Info | Combo: bartime=2026-01-19 23:00, executed=2026-01-20 00:00:00, pending Sell placed at 4663.76; SL=4670.017917039623, TP=4647.376003608237; valid for the next 3 chart bar(s).
+21/01/2026 17:00:00.006 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.00 units, which needs about $1727.28 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.57 budget, free margin was $9957.07). Size was cut from 5.00 to 1.00 units. Real risk on this trade is now about $19.65 (0.20% of balance) instead of the requested 1.00%.
+21/01/2026 17:00:00.006 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4818.98, SL: 4838.63056594114, TP: 4767.53)
+21/01/2026 17:00:00.006 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4818.98, SL: 4838.63056594114, TP: 4767.53) SUCCEEDED, PendingOrder OID68
+21/01/2026 17:00:00.006 | Info | Combo: bartime=2026-01-21 16:00, executed=2026-01-21 17:00:00, pending Sell placed at 4818.98; SL=4838.630565941145, TP=4767.53240179163; valid for the next 3 chart bar(s).
+21/01/2026 20:00:00.006 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.00 units, which needs about $1036.37 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.37 budget, free margin was $9937.37). Size was cut from 3.00 to 1.00 units. Real risk on this trade is now about $27.72 (0.28% of balance) instead of the requested 1.00%.
+21/01/2026 20:00:00.006 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4755.31, SL: 4783.03407360187, TP: 4682.72)
+21/01/2026 20:00:00.006 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4755.31, SL: 4783.03407360187, TP: 4682.72) SUCCEEDED, PendingOrder OID71
+21/01/2026 20:00:00.006 | Info | Combo: bartime=2026-01-21 19:00, executed=2026-01-21 20:00:00, pending Sell placed at 4755.31; SL=4783.034073601866, TP=4682.724965877315; valid for the next 3 chart bar(s).
+22/01/2026 00:00:00.005 | Trade | Cancelling pending order OID71
+22/01/2026 00:00:00.005 | Trade |  Cancelling pending order OID71 SUCCEEDED
+22/01/2026 00:00:00.005 | Info | Combo: pending order 71 cancelled after 3 chart bars.
+22/01/2026 07:00:00.003 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.00 units, which needs about $2072.74 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.37 budget, free margin was $9937.37). Size was cut from 6.00 to 1.00 units. Real risk on this trade is now about $14.97 (0.15% of balance) instead of the requested 1.00%.
+22/01/2026 07:00:00.003 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 4829.6, SL: 4814.6336689438, TP: 4868.78)
+22/01/2026 07:00:00.003 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 4829.6, SL: 4814.6336689438, TP: 4868.78) SUCCEEDED, PendingOrder OID72
+22/01/2026 07:00:00.003 | Info | Combo: bartime=2026-01-22 06:00, executed=2026-01-22 07:00:00, pending Buy placed at 4829.6; SL=4814.633668943799, TP=4868.783695224811; valid for the next 3 chart bar(s).
+23/01/2026 09:00:00.005 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.00 units, which needs about $2072.74 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.22 budget, free margin was $9921.86). Size was cut from 6.00 to 1.00 units. Real risk on this trade is now about $14.45 (0.15% of balance) instead of the requested 1.00%.
+23/01/2026 09:00:00.005 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4900.83, SL: 4915.28165828206, TP: 4862.99)
+23/01/2026 09:00:00.005 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4900.83, SL: 4915.28165828206, TP: 4862.99) SUCCEEDED, PendingOrder OID75
+23/01/2026 09:00:00.005 | Info | Combo: bartime=2026-01-23 08:00, executed=2026-01-23 09:00:00, pending Sell placed at 4900.83; SL=4915.281658282063, TP=4862.993781390973; valid for the next 3 chart bar(s).
+26/01/2026 19:00:00.200 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.00 units, which needs about $1727.28 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.07 budget, free margin was $9907.13). Size was cut from 5.00 to 1.00 units. Real risk on this trade is now about $19.24 (0.19% of balance) instead of the requested 1.00%.
+26/01/2026 19:00:00.200 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 5057.2, SL: 5076.44014933201, TP: 5006.83)
+26/01/2026 19:00:00.200 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 5057.2, SL: 5076.44014933201, TP: 5006.83) SUCCEEDED, PendingOrder OID78
+26/01/2026 19:00:00.200 | Info | Combo: bartime=2026-01-26 18:00, executed=2026-01-26 19:00:00, pending Sell placed at 5057.2; SL=5076.440149332014, TP=5006.826922946279; valid for the next 3 chart bar(s).
+27/01/2026 03:00:00.006 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.00 units, which needs about $1036.37 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.58 budget, free margin was $9958.32). Size was cut from 3.00 to 1.00 units. Real risk on this trade is now about $26.95 (0.27% of balance) instead of the requested 1.00%.
+27/01/2026 03:00:00.006 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 5080.23, SL: 5053.27781376057, TP: 5150.79)
+27/01/2026 03:00:00.006 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 5080.23, SL: 5053.27781376057, TP: 5150.79) SUCCEEDED, PendingOrder OID81
+27/01/2026 03:00:00.006 | Info | Combo: bartime=2026-01-27 02:00, executed=2026-01-27 03:00:00, pending Buy placed at 5080.23; SL=5053.2778137605665, TP=5150.794138083176; valid for the next 3 chart bar(s).
+27/01/2026 06:00:00.004 | Info | Combo: bartime=2026-01-27 05:00, Buy signal skipped: already have same-direction exposure open.
+27/01/2026 15:00:00.006 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.00 units, which needs about $2072.74 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.31 budget, free margin was $9930.52). Size was cut from 6.00 to 1.00 units. Real risk on this trade is now about $15.42 (0.16% of balance) instead of the requested 1.00%.
+27/01/2026 15:00:00.006 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 5046.02, SL: 5061.43632830412, TP: 5005.66)
+27/01/2026 15:00:00.006 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 5046.02, SL: 5061.43632830412, TP: 5005.66) SUCCEEDED, PendingOrder OID84
+27/01/2026 15:00:00.006 | Info | Combo: bartime=2026-01-27 14:00, executed=2026-01-27 15:00:00, pending Sell placed at 5046.02; SL=5061.436328304116, TP=5005.658156640683; valid for the next 3 chart bar(s).
+27/01/2026 18:00:00.205 | Trade | Cancelling pending order OID84
+27/01/2026 18:00:00.205 | Trade |  Cancelling pending order OID84 SUCCEEDED
+27/01/2026 18:00:00.205 | Info | Combo: pending order 84 cancelled after 3 chart bars.
+29/01/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.00 units, which needs about $345.46 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.31 budget, free margin was $9930.52). Size was cut from 1.00 to 1.00 units. Real risk on this trade is now about $72.96 (0.73% of balance) instead of the requested 1.00%.
+29/01/2026 16:00:00.000 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 5097.6, SL: 5170.56075915578, TP: 4906.58)
+29/01/2026 16:00:00.000 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 5097.6, SL: 5170.56075915578, TP: 4906.58) SUCCEEDED, PendingOrder OID85
+29/01/2026 16:00:00.000 | Info | Combo: bartime=2026-01-29 15:00, executed=2026-01-29 16:00:00, pending Sell placed at 5097.6; SL=5170.560759155784, TP=4906.579760009616; valid for the next 3 chart bar(s).
+29/01/2026 19:00:00.017 | Trade | Cancelling pending order OID85
+29/01/2026 19:00:00.017 | Trade |  Cancelling pending order OID85 SUCCEEDED
+29/01/2026 19:00:00.017 | Info | Combo: pending order 85 cancelled after 3 chart bars.
+02/02/2026 12:00:00.005 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.00 units, which needs about $345.46 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.31 budget, free margin was $9930.52). Size was cut from 1.00 to 1.00 units. Real risk on this trade is now about $68.71 (0.69% of balance) instead of the requested 1.00%.
+02/02/2026 12:00:00.005 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 4779.46, SL: 4710.74533831573, TP: 4959.36)
+02/02/2026 12:00:00.005 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 4779.46, SL: 4710.74533831573, TP: 4959.36) SUCCEEDED, PendingOrder OID86
+02/02/2026 12:00:00.005 | Info | Combo: bartime=2026-02-02 11:00, executed=2026-02-02 12:00:00, pending Buy placed at 4779.46; SL=4710.745338315734, TP=4959.363434636151; valid for the next 3 chart bar(s).
+02/02/2026 20:00:00.007 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.00 units, which needs about $345.46 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $98.59 budget, free margin was $9858.99). Size was cut from 1.00 to 1.00 units. Real risk on this trade is now about $56.02 (0.57% of balance) instead of the requested 1.00%.
+02/02/2026 20:00:00.007 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 4712.97, SL: 4656.954510575, TP: 4859.63)
+02/02/2026 20:00:00.007 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 4712.97, SL: 4656.954510575, TP: 4859.63) SUCCEEDED, PendingOrder OID89
+02/02/2026 20:00:00.007 | Info | Combo: bartime=2026-02-02 19:00, executed=2026-02-02 20:00:00, pending Buy placed at 4712.97; SL=4656.954510575002, TP=4859.625439950886; valid for the next 3 chart bar(s).
+03/02/2026 00:00:00.468 | Info | Combo: bartime=2026-02-02 23:00, Buy signal skipped: already have same-direction exposure open.
+04/02/2026 15:00:00.490 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.00 units, which needs about $1036.37 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.08 budget, free margin was $10007.77). Size was cut from 3.00 to 1.00 units. Real risk on this trade is now about $28.43 (0.28% of balance) instead of the requested 1.00%.
+04/02/2026 15:00:00.490 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4965.59, SL: 4994.02232812718, TP: 4891.15)
+04/02/2026 15:00:00.490 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4965.59, SL: 4994.02232812718, TP: 4891.15) SUCCEEDED, PendingOrder OID92
+04/02/2026 15:00:00.490 | Info | Combo: bartime=2026-02-04 14:00, executed=2026-02-04 15:00:00, pending Sell placed at 4965.59; SL=4994.022328127182, TP=4891.150668430777; valid for the next 3 chart bar(s).
+05/02/2026 00:00:00.002 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.00 units, which needs about $1036.37 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.79 budget, free margin was $10079.08). Size was cut from 3.00 to 1.00 units. Real risk on this trade is now about $31.78 (0.32% of balance) instead of the requested 1.00%.
+05/02/2026 00:00:00.002 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 5024.01, SL: 4992.2269610393, TP: 5107.22)
+05/02/2026 00:00:00.002 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 5024.01, SL: 4992.2269610393, TP: 5107.22) SUCCEEDED, PendingOrder OID95
+05/02/2026 00:00:00.002 | Info | Combo: bartime=2026-02-04 23:00, executed=2026-02-05 00:00:00, pending Buy placed at 5024.01; SL=4992.226961039301, TP=5107.221904592898; valid for the next 3 chart bar(s).
+05/02/2026 03:00:00.006 | Trade | Cancelling pending order OID95
+05/02/2026 03:00:00.006 | Trade |  Cancelling pending order OID95 SUCCEEDED
+05/02/2026 03:00:00.006 | Info | Combo: pending order 95 cancelled after 3 chart bars.
+06/02/2026 06:00:00.004 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.00 units, which needs about $690.91 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.79 budget, free margin was $10079.08). Size was cut from 2.00 to 1.00 units. Real risk on this trade is now about $41.05 (0.41% of balance) instead of the requested 1.00%.
+06/02/2026 06:00:00.004 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 4898.3, SL: 4857.24597999054, TP: 5005.78)
+06/02/2026 06:00:00.004 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 4898.3, SL: 4857.24597999054, TP: 5005.78) SUCCEEDED, PendingOrder OID96
+06/02/2026 06:00:00.004 | Info | Combo: bartime=2026-02-06 05:00, executed=2026-02-06 06:00:00, pending Buy placed at 4898.3; SL=4857.245979990545, TP=5005.784473099189; valid for the next 3 chart bar(s).
+10/02/2026 00:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.00 units, which needs about $1381.82 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.38 budget, free margin was $10037.96). Size was cut from 4.00 to 1.00 units. Real risk on this trade is now about $24.13 (0.24% of balance) instead of the requested 1.00%.
+10/02/2026 00:00:00.000 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4986.78, SL: 5010.91145662766, TP: 4923.6)
+10/02/2026 00:00:00.000 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4986.78, SL: 5010.91145662766, TP: 4923.6) SUCCEEDED, PendingOrder OID99
+10/02/2026 00:00:00.000 | Info | Combo: bartime=2026-02-09 23:00, executed=2026-02-10 00:00:00, pending Sell placed at 4986.78; SL=5010.911456627658, TP=4923.600878926293; valid for the next 3 chart bar(s).
+10/02/2026 03:00:00.203 | Trade | Cancelling pending order OID99
+10/02/2026 03:00:00.203 | Trade |  Cancelling pending order OID99 SUCCEEDED
+10/02/2026 03:00:00.203 | Info | Combo: pending order 99 cancelled after 3 chart bars.
+10/02/2026 04:00:00.204 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.00 units, which needs about $1727.28 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.38 budget, free margin was $10037.96). Size was cut from 5.00 to 1.00 units. Real risk on this trade is now about $19.56 (0.19% of balance) instead of the requested 1.00%.
+10/02/2026 04:00:00.204 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 5015.64, SL: 5035.19579631469, TP: 4964.44)
+10/02/2026 04:00:00.204 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 5015.64, SL: 5035.19579631469, TP: 4964.44) SUCCEEDED, PendingOrder OID100
+10/02/2026 04:00:00.204 | Info | Combo: bartime=2026-02-10 03:00, executed=2026-02-10 04:00:00, pending Sell placed at 5015.64; SL=5035.195796314689, TP=4964.44052032821; valid for the next 3 chart bar(s).
+10/02/2026 07:00:00.007 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.00 units, which needs about $1727.28 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.18 budget, free margin was $10017.85). Size was cut from 5.00 to 1.00 units. Real risk on this trade is now about $17.49 (0.17% of balance) instead of the requested 1.00%.
+10/02/2026 07:00:00.007 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 5018.27, SL: 5035.76041715312, TP: 4972.48)
+10/02/2026 07:00:00.007 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 5018.27, SL: 5035.76041715312, TP: 4972.48) SUCCEEDED, PendingOrder OID103
+10/02/2026 07:00:00.007 | Info | Combo: bartime=2026-02-10 06:00, executed=2026-02-10 07:00:00, pending Sell placed at 5018.27; SL=5035.760417153121, TP=4972.477936968044; valid for the next 3 chart bar(s).
+10/02/2026 10:00:00.204 | Trade | Cancelling pending order OID103
+10/02/2026 10:00:00.204 | Trade |  Cancelling pending order OID103 SUCCEEDED
+10/02/2026 10:00:00.204 | Info | Combo: pending order 103 cancelled after 3 chart bars.
+10/02/2026 10:00:00.204 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.00 units, which needs about $2072.74 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.18 budget, free margin was $10017.85). Size was cut from 6.00 to 1.00 units. Real risk on this trade is now about $15.71 (0.16% of balance) instead of the requested 1.00%.
+10/02/2026 10:00:00.204 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 5063.42, SL: 5047.7117484976, TP: 5104.55)
+10/02/2026 10:00:00.204 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 5063.42, SL: 5047.7117484976, TP: 5104.55) SUCCEEDED, PendingOrder OID104
+10/02/2026 10:00:00.204 | Info | Combo: bartime=2026-02-10 09:00, executed=2026-02-10 10:00:00, pending Buy placed at 5063.42; SL=5047.7117484976025, TP=5104.546134192362; valid for the next 3 chart bar(s).
+10/02/2026 13:00:00.204 | Trade | Cancelling pending order OID104
+10/02/2026 13:00:00.204 | Trade |  Cancelling pending order OID104 SUCCEEDED
+10/02/2026 13:00:00.204 | Info | Combo: pending order 104 cancelled after 3 chart bars.
+10/02/2026 13:00:00.204 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.00 units, which needs about $2072.74 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.18 budget, free margin was $10017.85). Size was cut from 6.00 to 1.00 units. Real risk on this trade is now about $15.68 (0.16% of balance) instead of the requested 1.00%.
+10/02/2026 13:00:00.204 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 5018.85, SL: 5034.52650684923, TP: 4977.81)
+10/02/2026 13:00:00.204 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 5018.85, SL: 5034.52650684923, TP: 4977.81) SUCCEEDED, PendingOrder OID105
+10/02/2026 13:00:00.204 | Info | Combo: bartime=2026-02-10 12:00, executed=2026-02-10 13:00:00, pending Sell placed at 5018.85; SL=5034.526506849228, TP=4977.806977213511; valid for the next 3 chart bar(s).
+10/02/2026 14:00:00.207 | Info | Combo: bartime=2026-02-10 13:00, reversal - cancelling existing Sell pending order 105 before opening opposite direction.
+10/02/2026 14:00:00.207 | Trade | Cancelling pending order OID105
+10/02/2026 14:00:00.207 | Trade |  Cancelling pending order OID105 SUCCEEDED
+10/02/2026 14:00:00.207 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.00 units, which needs about $2072.74 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.18 budget, free margin was $10017.85). Size was cut from 6.00 to 1.00 units. Real risk on this trade is now about $16.56 (0.17% of balance) instead of the requested 1.00%.
+10/02/2026 14:00:00.207 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 5059.22, SL: 5042.66179452062, TP: 5102.57)
+10/02/2026 14:00:00.207 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 5059.22, SL: 5042.66179452062, TP: 5102.57) SUCCEEDED, PendingOrder OID106
+10/02/2026 14:00:00.207 | Info | Combo: bartime=2026-02-10 13:00, executed=2026-02-10 14:00:00, pending Buy placed at 5059.22; SL=5042.661794520618, TP=5102.571418229192; valid for the next 3 chart bar(s).
+10/02/2026 15:00:00.212 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.00 units, which needs about $1381.82 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.01 budget, free margin was $10001.04). Size was cut from 4.00 to 1.00 units. Real risk on this trade is now about $20.40 (0.20% of balance) instead of the requested 1.00%.
+10/02/2026 15:00:00.212 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 5020.09, SL: 5040.48682438351, TP: 4966.69)
+10/02/2026 15:00:00.212 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 5020.09, SL: 5040.48682438351, TP: 4966.69) SUCCEEDED, PendingOrder OID109
+10/02/2026 15:00:00.212 | Info | Combo: bartime=2026-02-10 14:00, executed=2026-02-10 15:00:00, pending Sell placed at 5020.09; SL=5040.486824383506, TP=4966.688605416647; valid for the next 3 chart bar(s).
+11/02/2026 00:00:00.482 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.00 units, which needs about $2072.74 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.81 budget, free margin was $9980.56). Size was cut from 6.00 to 1.00 units. Real risk on this trade is now about $15.63 (0.16% of balance) instead of the requested 1.00%.
+11/02/2026 00:00:00.482 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 5054.85, SL: 5039.21691375622, TP: 5095.78)
+11/02/2026 00:00:00.482 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 5054.85, SL: 5039.21691375622, TP: 5095.78) SUCCEEDED, PendingOrder OID112
+11/02/2026 00:00:00.482 | Info | Combo: bartime=2026-02-10 23:00, executed=2026-02-11 00:00:00, pending Buy placed at 5054.85; SL=5039.216913756218, TP=5095.779342301683; valid for the next 3 chart bar(s).
+12/02/2026 00:00:00.083 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.00 units, which needs about $1727.28 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.63 budget, free margin was $9962.60). Size was cut from 5.00 to 1.00 units. Real risk on this trade is now about $19.43 (0.20% of balance) instead of the requested 1.00%.
+12/02/2026 00:00:00.083 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 5052.53, SL: 5071.9596699962, TP: 5001.66)
+12/02/2026 00:00:00.083 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 5052.53, SL: 5071.9596699962, TP: 5001.66) SUCCEEDED, PendingOrder OID115
+12/02/2026 00:00:00.083 | Info | Combo: bartime=2026-02-11 23:00, executed=2026-02-12 00:00:00, pending Sell placed at 5052.53; SL=5071.959669996199, TP=5001.660734540694; valid for the next 3 chart bar(s).
+12/02/2026 06:00:00.204 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.00 units, which needs about $2418.19 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.41 budget, free margin was $9941.15). Size was cut from 7.00 to 1.00 units. Real risk on this trade is now about $13.11 (0.13% of balance) instead of the requested 1.00%.
+12/02/2026 06:00:00.204 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 5078.76, SL: 5065.64918189156, TP: 5113.09)
+12/02/2026 06:00:00.204 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 5078.76, SL: 5065.64918189156, TP: 5113.09) SUCCEEDED, PendingOrder OID118
+12/02/2026 06:00:00.204 | Info | Combo: bartime=2026-02-12 05:00, executed=2026-02-12 06:00:00, pending Buy placed at 5078.76; SL=5065.6491818915565, TP=5113.085734141525; valid for the next 3 chart bar(s).
+12/02/2026 07:00:00.401 | Info | Combo: bartime=2026-02-12 06:00, reversal - cancelling existing Buy pending order 118 before opening opposite direction.
+12/02/2026 07:00:00.401 | Trade | Cancelling pending order OID118
+12/02/2026 07:00:00.401 | Trade |  Cancelling pending order OID118 SUCCEEDED
+12/02/2026 07:00:00.401 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.00 units, which needs about $2418.19 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.41 budget, free margin was $9941.15). Size was cut from 7.00 to 1.00 units. Real risk on this trade is now about $14.12 (0.14% of balance) instead of the requested 1.00%.
+12/02/2026 07:00:00.401 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 5046.27, SL: 5060.39373048676, TP: 5009.29)
+12/02/2026 07:00:00.401 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 5046.27, SL: 5060.39373048676, TP: 5009.29) SUCCEEDED, PendingOrder OID119
+12/02/2026 07:00:00.401 | Info | Combo: bartime=2026-02-12 06:00, executed=2026-02-12 07:00:00, pending Sell placed at 5046.27; SL=5060.393730486756, TP=5009.292336686781; valid for the next 3 chart bar(s).
+12/02/2026 10:00:00.205 | Trade | Cancelling pending order OID119
+12/02/2026 10:00:00.205 | Trade |  Cancelling pending order OID119 SUCCEEDED
+12/02/2026 10:00:00.205 | Info | Combo: pending order 119 cancelled after 3 chart bars.
+12/02/2026 10:00:00.205 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.00 units, which needs about $2763.65 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.41 budget, free margin was $9941.15). Size was cut from 8.00 to 1.00 units. Real risk on this trade is now about $12.30 (0.12% of balance) instead of the requested 1.00%.
+12/02/2026 10:00:00.205 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 5081.16, SL: 5068.86278039078, TP: 5113.36)
+12/02/2026 10:00:00.205 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 5081.16, SL: 5068.86278039078, TP: 5113.36) SUCCEEDED, PendingOrder OID120
+12/02/2026 10:00:00.205 | Info | Combo: bartime=2026-02-12 09:00, executed=2026-02-12 10:00:00, pending Buy placed at 5081.16; SL=5068.862780390781, TP=5113.355633216368; valid for the next 3 chart bar(s).
+12/02/2026 11:00:00.207 | Info | Combo: bartime=2026-02-12 10:00, reversal - cancelling existing Buy pending order 120 before opening opposite direction.
+12/02/2026 11:00:00.207 | Trade | Cancelling pending order OID120
+12/02/2026 11:00:00.207 | Trade |  Cancelling pending order OID120 SUCCEEDED
+12/02/2026 11:00:00.207 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.00 units, which needs about $2418.19 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.41 budget, free margin was $9941.15). Size was cut from 7.00 to 1.00 units. Real risk on this trade is now about $12.44 (0.13% of balance) instead of the requested 1.00%.
+12/02/2026 11:00:00.207 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 5055.33, SL: 5067.76831968738, TP: 5022.76)
+12/02/2026 11:00:00.207 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 5055.33, SL: 5067.76831968738, TP: 5022.76) SUCCEEDED, PendingOrder OID121
+12/02/2026 11:00:00.207 | Info | Combo: bartime=2026-02-12 10:00, executed=2026-02-12 11:00:00, pending Sell placed at 5055.33; SL=5067.768319687375, TP=5022.764949426905; valid for the next 3 chart bar(s).
+12/02/2026 14:00:00.207 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.00 units, which needs about $2418.19 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.29 budget, free margin was $9928.54). Size was cut from 7.00 to 1.00 units. Real risk on this trade is now about $13.04 (0.13% of balance) instead of the requested 1.00%.
+12/02/2026 14:00:00.207 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 5084.07, SL: 5071.03499184006, TP: 5118.2)
+12/02/2026 14:00:00.207 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 5084.07, SL: 5071.03499184006, TP: 5118.2) SUCCEEDED, PendingOrder OID124
+12/02/2026 14:00:00.207 | Info | Combo: bartime=2026-02-12 13:00, executed=2026-02-12 14:00:00, pending Buy placed at 5084.07; SL=5071.034991840064, TP=5118.197254373424; valid for the next 3 chart bar(s).
+12/02/2026 15:00:00.003 | Info | Combo: bartime=2026-02-12 14:00, reversal - cancelling existing Buy pending order 124 before opening opposite direction.
+12/02/2026 15:00:00.003 | Trade | Cancelling pending order OID124
+12/02/2026 15:00:00.003 | Trade |  Cancelling pending order OID124 SUCCEEDED
+12/02/2026 15:00:00.003 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.00 units, which needs about $2072.74 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.29 budget, free margin was $9928.54). Size was cut from 6.00 to 1.00 units. Real risk on this trade is now about $15.22 (0.15% of balance) instead of the requested 1.00%.
+12/02/2026 15:00:00.003 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 5038.37, SL: 5053.59245052795, TP: 4998.52)
+12/02/2026 15:00:00.003 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 5038.37, SL: 5053.59245052795, TP: 4998.52) SUCCEEDED, PendingOrder OID125
+12/02/2026 15:00:00.003 | Info | Combo: bartime=2026-02-12 14:00, executed=2026-02-12 15:00:00, pending Sell placed at 5038.37; SL=5053.592450527948, TP=4998.515752501261; valid for the next 3 chart bar(s).
+12/02/2026 17:00:00.005 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.00 units, which needs about $690.91 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.68 budget, free margin was $9968.23). Size was cut from 2.00 to 1.00 units. Real risk on this trade is now about $36.66 (0.37% of balance) instead of the requested 1.00%.
+12/02/2026 17:00:00.005 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4877.96, SL: 4914.61577393789, TP: 4781.99)
+12/02/2026 17:00:00.005 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4877.96, SL: 4914.61577393789, TP: 4781.99) SUCCEEDED, PendingOrder OID128
+12/02/2026 17:00:00.005 | Info | Combo: bartime=2026-02-12 16:00, executed=2026-02-12 17:00:00, pending Sell placed at 4877.96; SL=4914.615773937887, TP=4781.990676000807; valid for the next 3 chart bar(s).
+12/02/2026 20:00:00.006 | Trade | Cancelling pending order OID128
+12/02/2026 20:00:00.006 | Trade |  Cancelling pending order OID128 SUCCEEDED
+12/02/2026 20:00:00.006 | Info | Combo: pending order 128 cancelled after 3 chart bars.
+13/02/2026 13:00:00.201 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.00 units, which needs about $2072.74 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.68 budget, free margin was $9968.23). Size was cut from 6.00 to 1.00 units. Real risk on this trade is now about $16.30 (0.16% of balance) instead of the requested 1.00%.
+13/02/2026 13:00:00.201 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 4974.46, SL: 4958.15665735842, TP: 5017.14)
+13/02/2026 13:00:00.201 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 4974.46, SL: 4958.15665735842, TP: 5017.14) SUCCEEDED, PendingOrder OID129
+13/02/2026 13:00:00.201 | Info | Combo: bartime=2026-02-13 12:00, executed=2026-02-13 13:00:00, pending Buy placed at 4974.46; SL=4958.156657358424, TP=5017.1441559774585; valid for the next 3 chart bar(s).
+16/02/2026 03:00:00.205 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.00 units, which needs about $1727.28 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.52 budget, free margin was $9951.57). Size was cut from 5.00 to 1.00 units. Real risk on this trade is now about $18.15 (0.18% of balance) instead of the requested 1.00%.
+16/02/2026 03:00:00.205 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4991.53, SL: 5009.68086831963, TP: 4944.01)
+16/02/2026 03:00:00.205 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4991.53, SL: 5009.68086831963, TP: 4944.01) SUCCEEDED, PendingOrder OID132
+16/02/2026 03:00:00.205 | Info | Combo: bartime=2026-02-16 02:00, executed=2026-02-16 03:00:00, pending Sell placed at 4991.53; SL=5009.6808683196305, TP=4944.0087945935875; valid for the next 3 chart bar(s).
+18/02/2026 03:00:00.202 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.00 units, which needs about $2072.74 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.33 budget, free margin was $9932.50). Size was cut from 6.00 to 1.00 units. Real risk on this trade is now about $16.06 (0.16% of balance) instead of the requested 1.00%.
+18/02/2026 03:00:00.202 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 4907.59, SL: 4891.53021024874, TP: 4949.64)
+18/02/2026 03:00:00.202 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 4907.59, SL: 4891.53021024874, TP: 4949.64) SUCCEEDED, PendingOrder OID135
+18/02/2026 03:00:00.202 | Info | Combo: bartime=2026-02-18 02:00, executed=2026-02-18 03:00:00, pending Buy placed at 4907.59; SL=4891.530210248739, TP=4949.6365045591265; valid for the next 3 chart bar(s).
+19/02/2026 12:00:00.410 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.00 units, which needs about $3109.10 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.75 budget, free margin was $9975.28). Size was cut from 9.00 to 1.00 units. Real risk on this trade is now about $10.96 (0.11% of balance) instead of the requested 1.00%.
+19/02/2026 12:00:00.410 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4977.21, SL: 4988.16755099754, TP: 4948.52)
+19/02/2026 12:00:00.410 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4977.21, SL: 4988.16755099754, TP: 4948.52) SUCCEEDED, PendingOrder OID138
+19/02/2026 12:00:00.410 | Info | Combo: bartime=2026-02-19 11:00, executed=2026-02-19 12:00:00, pending Sell placed at 4977.21; SL=4988.167550997541, TP=4948.521783957894; valid for the next 3 chart bar(s).
+19/02/2026 18:00:00.200 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.00 units, which needs about $2072.74 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.64 budget, free margin was $9963.73). Size was cut from 6.00 to 1.00 units. Real risk on this trade is now about $14.49 (0.15% of balance) instead of the requested 1.00%.
+19/02/2026 18:00:00.200 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4982.23, SL: 4996.7216374007, TP: 4944.29)
+19/02/2026 18:00:00.200 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4982.23, SL: 4996.7216374007, TP: 4944.29) SUCCEEDED, PendingOrder OID141
+19/02/2026 18:00:00.200 | Info | Combo: bartime=2026-02-19 17:00, executed=2026-02-19 18:00:00, pending Sell placed at 4982.23; SL=4996.721637400699, TP=4944.289111141858; valid for the next 3 chart bar(s).
+20/02/2026 00:00:00.548 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.00 units, which needs about $2763.65 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.49 budget, free margin was $9949.00). Size was cut from 8.00 to 1.00 units. Real risk on this trade is now about $11.47 (0.12% of balance) instead of the requested 1.00%.
+20/02/2026 00:00:00.548 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 4984.7, SL: 4996.17138788426, TP: 4954.67)
+20/02/2026 00:00:00.548 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 4984.7, SL: 4996.17138788426, TP: 4954.67) SUCCEEDED, PendingOrder OID144
+20/02/2026 00:00:00.548 | Info | Combo: bartime=2026-02-19 23:00, executed=2026-02-20 00:00:00, pending Sell placed at 4984.7; SL=4996.171387884261, TP=4954.666495798164; valid for the next 3 chart bar(s).
+20/02/2026 01:00:00.208 | Info | Combo: bartime=2026-02-20 00:00, reversal - cancelling existing Sell pending order 144 before opening opposite direction.
+20/02/2026 01:00:00.208 | Trade | Cancelling pending order OID144
+20/02/2026 01:00:00.208 | Trade |  Cancelling pending order OID144 SUCCEEDED
+20/02/2026 01:00:00.208 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.00 units, which needs about $2763.65 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.49 budget, free margin was $9949.00). Size was cut from 8.00 to 1.00 units. Real risk on this trade is now about $11.84 (0.12% of balance) instead of the requested 1.00%.
+20/02/2026 01:00:00.208 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 5007.28, SL: 4995.43683769259, TP: 5038.29)
+20/02/2026 01:00:00.208 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 5007.28, SL: 4995.43683769259, TP: 5038.29) SUCCEEDED, PendingOrder OID145
+20/02/2026 01:00:00.208 | Info | Combo: bartime=2026-02-20 00:00, executed=2026-02-20 01:00:00, pending Buy placed at 5007.28; SL=4995.43683769259, TP=5038.286855361468; valid for the next 3 chart bar(s).
+24/02/2026 02:00:00.003 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.00 units, which needs about $1381.82 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.37 budget, free margin was $9936.90). Size was cut from 4.00 to 1.00 units. Real risk on this trade is now about $20.47 (0.21% of balance) instead of the requested 1.00%.
+24/02/2026 02:00:00.003 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 5144.51, SL: 5164.98228034488, TP: 5090.91)
+24/02/2026 02:00:00.003 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 5144.51, SL: 5164.98228034488, TP: 5090.91) SUCCEEDED, PendingOrder OID148
+24/02/2026 02:00:00.003 | Info | Combo: bartime=2026-02-24 01:00, executed=2026-02-24 02:00:00, pending Sell placed at 5144.51; SL=5164.982280344884, TP=5090.911052430386; valid for the next 3 chart bar(s).
+24/02/2026 04:00:00.205 | Info | Combo: bartime=2026-02-24 03:00, Sell signal skipped: already have same-direction exposure open.
+24/02/2026 05:00:00.205 | Trade | Cancelling pending order OID148
+24/02/2026 05:00:00.205 | Trade |  Cancelling pending order OID148 SUCCEEDED
+24/02/2026 05:00:00.205 | Info | Combo: pending order 148 cancelled after 3 chart bars.
+24/02/2026 21:00:00.001 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.00 units, which needs about $2072.74 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.37 budget, free margin was $9936.90). Size was cut from 6.00 to 1.00 units. Real risk on this trade is now about $14.91 (0.15% of balance) instead of the requested 1.00%.
+24/02/2026 21:00:00.001 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 5173.53, SL: 5158.61649662948, TP: 5212.58)
+24/02/2026 21:00:00.001 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 5173.53, SL: 5158.61649662948, TP: 5212.58) SUCCEEDED, PendingOrder OID149
+24/02/2026 21:00:00.001 | Info | Combo: bartime=2026-02-24 20:00, executed=2026-02-24 21:00:00, pending Buy placed at 5173.53; SL=5158.616496629478, TP=5212.5753858470935; valid for the next 3 chart bar(s).
+25/02/2026 01:00:00.205 | Trade | Cancelling pending order OID149
+25/02/2026 01:00:00.205 | Trade |  Cancelling pending order OID149 SUCCEEDED
+25/02/2026 01:00:00.205 | Info | Combo: pending order 149 cancelled after 3 chart bars.
+25/02/2026 02:00:00.205 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.00 units, which needs about $1727.28 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.37 budget, free margin was $9936.90). Size was cut from 5.00 to 1.00 units. Real risk on this trade is now about $17.74 (0.18% of balance) instead of the requested 1.00%.
+25/02/2026 02:00:00.205 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 5190.2, SL: 5172.46361564343, TP: 5236.64)
+25/02/2026 02:00:00.205 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 5190.2, SL: 5172.46361564343, TP: 5236.64) SUCCEEDED, PendingOrder OID150
+25/02/2026 02:00:00.205 | Info | Combo: bartime=2026-02-25 01:00, executed=2026-02-25 02:00:00, pending Buy placed at 5190.2; SL=5172.463615643434, TP=5236.636035418969; valid for the next 3 chart bar(s).
+25/02/2026 21:00:00.007 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.00 units, which needs about $2072.74 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.17 budget, free margin was $9917.49). Size was cut from 6.00 to 1.00 units. Real risk on this trade is now about $16.40 (0.17% of balance) instead of the requested 1.00%.
+25/02/2026 21:00:00.007 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 5145.35, SL: 5161.74689184444, TP: 5102.42)
+25/02/2026 21:00:00.007 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 5145.35, SL: 5161.74689184444, TP: 5102.42) SUCCEEDED, PendingOrder OID153
+25/02/2026 21:00:00.007 | Info | Combo: bartime=2026-02-25 20:00, executed=2026-02-25 21:00:00, pending Sell placed at 5145.35; SL=5161.746891844443, TP=5102.4209207050035; valid for the next 3 chart bar(s).
+26/02/2026 01:00:00.203 | Trade | Cancelling pending order OID153
+26/02/2026 01:00:00.203 | Trade |  Cancelling pending order OID153 SUCCEEDED
+26/02/2026 01:00:00.203 | Info | Combo: pending order 153 cancelled after 3 chart bars.
+26/02/2026 04:00:00.205 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.00 units, which needs about $2418.19 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.17 budget, free margin was $9917.49). Size was cut from 7.00 to 1.00 units. Real risk on this trade is now about $13.73 (0.14% of balance) instead of the requested 1.00%.
+26/02/2026 04:00:00.205 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 5194.09, SL: 5180.35574361889, TP: 5230.05)
+26/02/2026 04:00:00.205 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 5194.09, SL: 5180.35574361889, TP: 5230.05) SUCCEEDED, PendingOrder OID154
+26/02/2026 04:00:00.205 | Info | Combo: bartime=2026-02-26 03:00, executed=2026-02-26 04:00:00, pending Buy placed at 5194.09; SL=5180.35574361889, TP=5230.047972208148; valid for the next 3 chart bar(s).
+26/02/2026 08:00:00.201 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.00 units, which needs about $3109.10 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.04 budget, free margin was $9903.64). Size was cut from 9.00 to 1.00 units. Real risk on this trade is now about $10.23 (0.10% of balance) instead of the requested 1.00%.
+26/02/2026 08:00:00.201 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 5178.95, SL: 5189.1832407577, TP: 5152.16)
+26/02/2026 08:00:00.201 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 5178.95, SL: 5189.1832407577, TP: 5152.16) SUCCEEDED, PendingOrder OID157
+26/02/2026 08:00:00.201 | Info | Combo: bartime=2026-02-26 07:00, executed=2026-02-26 08:00:00, pending Sell placed at 5178.95; SL=5189.183240757702, TP=5152.158117239543; valid for the next 3 chart bar(s).
+26/02/2026 14:00:00.001 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.00 units, which needs about $2418.19 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $98.93 budget, free margin was $9892.62). Size was cut from 7.00 to 1.00 units. Real risk on this trade is now about $12.91 (0.13% of balance) instead of the requested 1.00%.
+26/02/2026 14:00:00.001 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 5163.59, SL: 5176.50456720023, TP: 5129.78)
+26/02/2026 14:00:00.001 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 5163.59, SL: 5176.50456720023, TP: 5129.78) SUCCEEDED, PendingOrder OID160
+26/02/2026 14:00:00.001 | Info | Combo: bartime=2026-02-26 13:00, executed=2026-02-26 14:00:00, pending Sell placed at 5163.59; SL=5176.504567200227, TP=5129.778074870603; valid for the next 3 chart bar(s).
+26/02/2026 16:00:00.006 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.00 units, which needs about $1727.28 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $98.79 budget, free margin was $9879.24). Size was cut from 5.00 to 1.00 units. Real risk on this trade is now about $19.59 (0.20% of balance) instead of the requested 1.00%.
+26/02/2026 16:00:00.006 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 5193.22, SL: 5173.63192819186, TP: 5244.5)
+26/02/2026 16:00:00.006 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 5193.22, SL: 5173.63192819186, TP: 5244.5) SUCCEEDED, PendingOrder OID163
+26/02/2026 16:00:00.006 | Info | Combo: bartime=2026-02-26 15:00, executed=2026-02-26 16:00:00, pending Buy placed at 5193.22; SL=5173.631928191855, TP=5244.503980882815; valid for the next 3 chart bar(s).
+26/02/2026 19:00:00.002 | Trade | Cancelling pending order OID163
+26/02/2026 19:00:00.002 | Trade |  Cancelling pending order OID163 SUCCEEDED
+26/02/2026 19:00:00.002 | Info | Combo: pending order 163 cancelled after 3 chart bars.
+26/02/2026 20:00:00.006 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.00 units, which needs about $2072.74 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $98.79 budget, free margin was $9879.24). Size was cut from 6.00 to 1.00 units. Real risk on this trade is now about $15.51 (0.16% of balance) instead of the requested 1.00%.
+26/02/2026 20:00:00.006 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 5194.45, SL: 5178.94167788338, TP: 5235.05)
+26/02/2026 20:00:00.006 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 5194.45, SL: 5178.94167788338, TP: 5235.05) SUCCEEDED, PendingOrder OID164
+26/02/2026 20:00:00.006 | Info | Combo: bartime=2026-02-26 19:00, executed=2026-02-26 20:00:00, pending Buy placed at 5194.45; SL=5178.941677883384, TP=5235.052694473601; valid for the next 3 chart bar(s).
+27/02/2026 01:00:00.207 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.00 units, which needs about $2418.19 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $98.63 budget, free margin was $9862.84). Size was cut from 7.00 to 1.00 units. Real risk on this trade is now about $13.05 (0.13% of balance) instead of the requested 1.00%.
+27/02/2026 01:00:00.207 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 5169.48, SL: 5182.53075523497, TP: 5135.31)
+27/02/2026 01:00:00.207 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 5169.48, SL: 5182.53075523497, TP: 5135.31) SUCCEEDED, PendingOrder OID167
+27/02/2026 01:00:00.207 | Info | Combo: bartime=2026-02-27 00:00, executed=2026-02-27 01:00:00, pending Sell placed at 5169.48; SL=5182.530755234966, TP=5135.311517847613; valid for the next 3 chart bar(s).
+27/02/2026 02:00:00.208 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.00 units, which needs about $2418.19 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $98.49 budget, free margin was $9848.94). Size was cut from 7.00 to 1.00 units. Real risk on this trade is now about $13.85 (0.14% of balance) instead of the requested 1.00%.
+27/02/2026 02:00:00.208 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 5194.8, SL: 5180.94803581203, TP: 5231.07)
+27/02/2026 02:00:00.208 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 5194.8, SL: 5180.94803581203, TP: 5231.07) SUCCEEDED, PendingOrder OID170
+27/02/2026 02:00:00.208 | Info | Combo: bartime=2026-02-27 01:00, executed=2026-02-27 02:00:00, pending Buy placed at 5194.8; SL=5180.948035812027, TP=5231.06614572191; valid for the next 3 chart bar(s).
+27/02/2026 08:00:00.205 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.00 units, which needs about $3109.10 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $98.35 budget, free margin was $9835.03). Size was cut from 9.00 to 1.00 units. Real risk on this trade is now about $10.34 (0.11% of balance) instead of the requested 1.00%.
+27/02/2026 08:00:00.205 | Trade | Placing Stop Order to Sell 1 XAUUSD (Price: 5174.96, SL: 5185.29835321433, TP: 5147.89)
+27/02/2026 08:00:00.205 | Trade |  Placing Stop Order to Sell 1 XAUUSD (Price: 5174.96, SL: 5185.29835321433, TP: 5147.89) SUCCEEDED, PendingOrder OID173
+27/02/2026 08:00:00.205 | Info | Combo: bartime=2026-02-27 07:00, executed=2026-02-27 08:00:00, pending Sell placed at 5174.96; SL=5185.298353214332, TP=5147.892919901636; valid for the next 3 chart bar(s).
+27/02/2026 12:00:00.005 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 11.00 units, which needs about $3800.02 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $98.24 budget, free margin was $9824.02). Size was cut from 11.00 to 1.00 units. Real risk on this trade is now about $8.43 (0.09% of balance) instead of the requested 1.00%.
+27/02/2026 12:00:00.005 | Trade | Placing Stop Order to Buy 1 XAUUSD (Price: 5185.97, SL: 5177.53900265141, TP: 5208.04)
+27/02/2026 12:00:00.005 | Trade |  Placing Stop Order to Buy 1 XAUUSD (Price: 5185.97, SL: 5177.53900265141, TP: 5208.04) SUCCEEDED, PendingOrder OID176
+27/02/2026 12:00:00.005 | Info | Combo: bartime=2026-02-27 11:00, executed=2026-02-27 12:00:00, pending Buy placed at 5185.97; SL=5177.53900265141, TP=5208.0433878802905; valid for the next 3 chart bar(s).
+27/02/2026 21:49:59.404 | Info | Combo: loaded=4593, processed=81, before-start=4265, not-processed=247, placed=76, failed=0, guard-skipped=0, pending-expired=19, same-direction-skipped=5, reversed=6, margin-capped=76, margin-blocked=0.
+Progress | Backtesting | 98.15 % |
+Info | CBot instance [Combo, XAUUSD, h1] stopped.
+{
+	"Equity":9846.54,
+	"NetProfit":-153.46,
+	"MaxBalanceDrawdownPercentages":2,
+	"MaxEquityDrawdownPercentages":2,
+	"MaxBalanceDrawdown":271.37,
+	"MaxEquityDrawdown":275.87,
+	"WinningTrades":10,
+	"LosingTrades":41,
+	"TotalTrades":51,
+	"AverageTrade":-3,
+	"ProfitFactor":0.76,
+	"Fitness":0
+}
+

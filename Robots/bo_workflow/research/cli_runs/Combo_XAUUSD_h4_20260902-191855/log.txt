@@ -1,0 +1,172 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo 
+C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_XAUUSD_h4_20260902-191855\params.cbotset 
+--start=01/01/2025 --end=15/01/2025 --data-mode=Ticks --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=XAUUSD 
+--period=h4 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_X
+AUUSD_h4_20260902-191855\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...855\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | XAUUSD                    | cmd arg              |
+| Period               | h4                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 15/01/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 3                         | default value        |
+| KtpLevel             | 3                         | default value        |
+| RiskPercent          | 0.5                       | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+03/09/2026 02:18:58.228 | Establishing connection using votuankiet96@gmail.com...
+03/09/2026 02:19:00.520 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Progress | Loading XAUUSD, h4 | 100.00 % |
+Info | CBot instance [Combo, XAUUSD, h4] started.
+Progress | Backtesting | 6.41 % |
+Progress | Backtesting | 7.03 % |
+Progress | Backtesting | 7.22 % |
+Progress | Backtesting | 7.49 % |
+Progress | Backtesting | 7.94 % |
+Progress | Backtesting | 8.32 % |
+Progress | Backtesting | 8.62 % |
+Progress | Backtesting | 8.92 % |
+Progress | Backtesting | 9.21 % |
+Progress | Backtesting | 9.73 % |
+Progress | Backtesting | 10.38 % |
+Progress | Backtesting | 10.90 % |
+Progress | Backtesting | 11.48 % |
+Progress | Backtesting | 12.10 % |
+Progress | Backtesting | 13.33 % |
+Progress | Backtesting | 14.21 % |
+Progress | Backtesting | 15.48 % |
+Progress | Backtesting | 16.44 % |
+Progress | Backtesting | 17.27 % |
+Progress | Backtesting | 17.78 % |
+Progress | Backtesting | 18.60 % |
+Progress | Backtesting | 33.33 % |
+Progress | Backtesting | 34.95 % |
+Progress | Backtesting | 35.28 % |
+Progress | Backtesting | 35.43 % |
+Progress | Backtesting | 35.66 % |
+Progress | Backtesting | 35.91 % |
+Progress | Backtesting | 36.22 % |
+Progress | Backtesting | 36.46 % |
+Progress | Backtesting | 37.24 % |
+Progress | Backtesting | 37.44 % |
+Progress | Backtesting | 37.64 % |
+Progress | Backtesting | 37.96 % |
+Progress | Backtesting | 38.44 % |
+Progress | Backtesting | 38.98 % |
+Progress | Backtesting | 40.00 % |
+Progress | Backtesting | 40.62 % |
+Progress | Backtesting | 41.56 % |
+Progress | Backtesting | 42.09 % |
+Progress | Backtesting | 42.54 % |
+Progress | Backtesting | 43.23 % |
+Progress | Backtesting | 43.71 % |
+Progress | Backtesting | 44.07 % |
+Progress | Backtesting | 44.38 % |
+Progress | Backtesting | 44.77 % |
+Progress | Backtesting | 45.28 % |
+Progress | Backtesting | 46.67 % |
+Progress | Backtesting | 47.29 % |
+Progress | Backtesting | 48.37 % |
+Progress | Backtesting | 49.25 % |
+Progress | Backtesting | 49.92 % |
+Progress | Backtesting | 50.45 % |
+Progress | Backtesting | 50.82 % |
+Progress | Backtesting | 51.31 % |
+Progress | Backtesting | 51.83 % |
+Progress | Backtesting | 53.13 % |
+Progress | Backtesting | 53.75 % |
+Progress | Backtesting | 55.53 % |
+Progress | Backtesting | 56.53 % |
+Progress | Backtesting | 57.35 % |
+Progress | Backtesting | 58.17 % |
+Progress | Backtesting | 60.00 % |
+Progress | Backtesting | 60.90 % |
+Progress | Backtesting | 62.14 % |
+Progress | Backtesting | 62.94 % |
+Progress | Backtesting | 63.76 % |
+Progress | Backtesting | 64.13 % |
+Progress | Backtesting | 64.53 % |
+Progress | Backtesting | 65.12 % |
+Progress | Backtesting | 66.00 % |
+Progress | Backtesting | 80.16 % |
+Progress | Backtesting | 80.97 % |
+Progress | Backtesting | 82.08 % |
+Progress | Backtesting | 82.75 % |
+Progress | Backtesting | 83.47 % |
+Progress | Backtesting | 83.94 % |
+Progress | Backtesting | 84.36 % |
+Progress | Backtesting | 84.82 % |
+Progress | Backtesting | 85.45 % |
+Progress | Backtesting | 86.67 % |
+Progress | Backtesting | 87.47 % |
+Progress | Backtesting | 88.67 % |
+Progress | Backtesting | 89.45 % |
+Progress | Backtesting | 90.34 % |
+Progress | Backtesting | 90.73 % |
+Progress | Backtesting | 91.23 % |
+Progress | Backtesting | 91.92 % |
+Progress | Backtesting | 93.33 % |
+Progress | Backtesting | 94.67 % |
+Progress | Backtesting | 95.47 % |
+Progress | Backtesting | 96.24 % |
+Progress | Backtesting | 97.24 % |
+Progress | Backtesting | 97.49 % |
+Progress | Backtesting | 97.84 % |
+Progress | Backtesting | 98.55 % |
+01/01/2025 23:05:00.003 | Info | Combo: loaded 1203 valid signal row(s) from CSV.
+01/01/2025 23:05:00.003 | Info | Combo: signal scheduling active with chart timeframe h4 (04:00:00); CSV timeframe must match the chart timeframe.
+06/01/2025 07:00:00.305 | Trade | Placing Stop Order to Sell 7 XAUUSD (Price: 2629.72, SL: 2636.381646175, TP: 2623.06)
+06/01/2025 07:00:00.305 | Trade |  Placing Stop Order to Sell 7 XAUUSD (Price: 2629.72, SL: 2636.381646175, TP: 2623.06) SUCCEEDED, PendingOrder OID1
+06/01/2025 07:00:00.305 | Info | Combo: bartime=2025-01-06 03:00, executed=2025-01-06 07:00:00, pending Sell placed at 2629.72; SL=2636.3816461749984, TP=2623.058353825001; valid for the next 3 chart bar(s).
+07/01/2025 15:00:00.007 | Trade | Placing Stop Order to Buy 6 XAUUSD (Price: 2664.7, SL: 2656.79794310409, TP: 2672.6)
+07/01/2025 15:00:00.007 | Trade |  Placing Stop Order to Buy 6 XAUUSD (Price: 2664.7, SL: 2656.79794310409, TP: 2672.6) SUCCEEDED, PendingOrder OID4
+07/01/2025 15:00:00.007 | Info | Combo: bartime=2025-01-07 11:00, executed=2025-01-07 15:00:00, pending Buy placed at 2664.7; SL=2656.7979431040903, TP=2672.6020568959093; valid for the next 3 chart bar(s).
+08/01/2025 02:00:00.333 | Trade | Cancelling pending order OID4
+08/01/2025 02:00:00.333 | Trade |  Cancelling pending order OID4 SUCCEEDED
+08/01/2025 02:00:00.333 | Info | Combo: pending order 4 cancelled after 3 chart bars.
+13/01/2025 15:00:00.306 | Trade | Placing Stop Order to Sell 6 XAUUSD (Price: 2663.1, SL: 2671.1900273141, TP: 2655.01)
+13/01/2025 15:00:00.306 | Trade |  Placing Stop Order to Sell 6 XAUUSD (Price: 2663.1, SL: 2671.1900273141, TP: 2655.01) SUCCEEDED, PendingOrder OID5
+13/01/2025 15:00:00.306 | Info | Combo: bartime=2025-01-13 11:00, executed=2025-01-13 15:00:00, pending Sell placed at 2663.1; SL=2671.1900273140964, TP=2655.0099726859034; valid for the next 3 chart bar(s).
+14/01/2025 23:05:00.003 | Trade | Placing Stop Order to Buy 7 XAUUSD (Price: 2678.67, SL: 2672.45036612143, TP: 2684.89)
+14/01/2025 23:05:00.003 | Trade |  Placing Stop Order to Buy 7 XAUUSD (Price: 2678.67, SL: 2672.45036612143, TP: 2684.89) SUCCEEDED, PendingOrder OID8
+14/01/2025 23:05:00.003 | Info | Combo: bartime=2025-01-14 19:00, executed=2025-01-14 23:05:00, pending Buy placed at 2678.67; SL=2672.4503661214294, TP=2684.8896338785707; valid for the next 3 chart bar(s).
+15/01/2025 07:00:00.096 | Info | Combo: bartime=2025-01-15 03:00, Buy signal skipped: already have same-direction exposure open.
+15/01/2025 23:59:59.912 | Info | Combo: loaded=1203, processed=5, before-start=997, not-processed=201, placed=4, failed=0, guard-skipped=0, pending-expired=1, same-direction-skipped=1, reversed=0, margin-capped=0, margin-blocked=0.
+Progress | Backtesting | 100.00 % |
+Info | CBot instance [Combo, XAUUSD, h4] stopped.
+{
+	"Equity":9945.77,
+	"NetProfit":-54.23,
+	"MaxBalanceDrawdownPercentages":0,
+	"MaxEquityDrawdownPercentages":1,
+	"MaxBalanceDrawdown":97.84,
+	"MaxEquityDrawdown":134.1,
+	"WinningTrades":1,
+	"LosingTrades":2,
+	"TotalTrades":3,
+	"AverageTrade":-18.07,
+	"ProfitFactor":0.45,
+	"Fitness":0
+}
+

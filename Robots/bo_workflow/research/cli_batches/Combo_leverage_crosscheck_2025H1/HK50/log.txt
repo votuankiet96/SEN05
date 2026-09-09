@@ -1,0 +1,76 @@
+﻿ctrader-cli.exe : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Ad
+ministrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_leverage_crosscheck_2025H1\HK50\params.cbotset 
+--start=01/01/2025 --end=01/07/2025 --data-mode=M1 --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=HK50.cash 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_leverage_crosscheck_2025H1\HK50\report.json
+At C:\Users\Administrator\AppData\Local\Temp\claude\c--Users-Administrator-Documents-cAlgo-Sources-Robots\b31e021f-795a
+-471c-904c-56646d43ff9c\scratchpad\retry-de40-hk50.ps1:32 char:15
++     $output = & $CliExe @argList 2>&1
++               ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...K50\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | HK50.cash                 | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 01/07/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | M1                        | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 2                         | cbotset              |
+| KtpLevel             | 4                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 50                        | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+04/09/2026 06:23:52.298 | Establishing connection using votuankiet96@gmail.com...
+04/09/2026 06:23:58.864 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Info | CBot instance [Combo, HK50.cash, h1] started.
+Progress | Backtesting | 0.58 % |
+Progress | Backtesting | 0.60 % |
+02/01/2025 01:20:00.000 | Info | Combo: loaded 2638 valid signal row(s) from CSV.
+02/01/2025 01:20:00.000 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+02/01/2025 02:00:00.000 | Trade | Placing Stop Order to Sell 5.46 HK50.cash (Price: 19597.2, SL: 19740.6889164468, TP: 19221.55)
+02/01/2025 02:00:00.000 | Trade | → Placing Stop Order to Sell 5.46 HK50.cash (Price: 19597.2, SL: 19740.6889164468, TP: 19221.55) SUCCEEDED, PendingOrder OID1
+02/01/2025 02:00:00.000 | Info | Combo: bartime=2025-01-02 01:00, executed=2025-01-02 02:00:00, pending Sell placed at 19597.2; SL=19740.68891644679, TP=19221.546016742308; valid for the next 3 chart bar(s).
+Error | CBot instance [Combo, HK50.cash, h1] aborted by timeout.
+{
+	"Equity":,
+	"NetProfit":-,
+	"MaxBalanceDrawdownPercentages":-,
+	"MaxEquityDrawdownPercentages":-,
+	"MaxBalanceDrawdown":-,
+	"MaxEquityDrawdown":-,
+	"WinningTrades":-,
+	"LosingTrades":-,
+	"TotalTrades":-,
+	"AverageTrade":-,
+	"ProfitFactor":-,
+	"Fitness":0
+}
+Message expected
+System.InvalidOperationException: Message expected
+   at cTrader.Console.Infrastructure.StateMachine.Strategies.BacktestReportSavingStateStrategy.DoEnter()
+   at cTrader.Console.Infrastructure.StateMachine.Strategies.ConsoleStateStrategyBase.Enter()
+   at cTrader.Console.Infrastructure.StateMachine.ConsoleApplicationLifecycleStateMachine.OnMovedToLifecycleState(IConsoleApplicationLifecycleStateStrategy newStateStrategy)
+   at cTrader.Console.Infrastructure.StateMachine.ConsoleApplicationLifecycleStateTransition.InternalMoveTo(ConsoleApplicationLifecycleState state)
+   at cTrader.Console.Infrastructure.StateMachine.ConsoleApplicationLifecycleStateTransition.<>c__DisplayClass7_0.<MoveTo>b__0()
+   at cTrader.Console.Infrastructure.Dispatcher.ConsoleThreadDispatcher.<>c__DisplayClass12_0.<ExecuteInternalAsync>g__ExecuteAction|0()
+

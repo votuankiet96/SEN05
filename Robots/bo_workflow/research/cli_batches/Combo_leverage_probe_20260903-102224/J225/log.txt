@@ -1,0 +1,546 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_leverage_probe_20260903-102224\J225\params.cbotset 
+--start=01/01/2026 --end=28/02/2026 --data-mode=M1 --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=JP225.cash 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_leverage_probe_20260903-102224\J225\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...225\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | JP225.cash                | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2026 00:00          | cmd arg              |
+| End                  | 28/02/2026 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | M1                        | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 3                         | cbotset              |
+| KtpLevel             | 7                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 1                         | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+03/09/2026 17:22:28.297 | Establishing connection using votuankiet96@gmail.com...
+03/09/2026 17:22:30.561 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Progress | Loading JP225.cash, h1 | 1.67 % |
+Progress | Loading JP225.cash, h1 | 3.33 % |
+Progress | Loading JP225.cash, h1 | 5.00 % |
+Progress | Loading JP225.cash, h1 | 6.67 % |
+Progress | Loading JP225.cash, h1 | 8.33 % |
+Progress | Loading JP225.cash, h1 | 10.00 % |
+Progress | Loading JP225.cash, h1 | 11.67 % |
+Progress | Loading JP225.cash, h1 | 13.33 % |
+Progress | Loading JP225.cash, h1 | 15.00 % |
+Progress | Loading JP225.cash, h1 | 16.67 % |
+Progress | Loading JP225.cash, h1 | 18.33 % |
+Progress | Loading JP225.cash, h1 | 20.00 % |
+Progress | Loading JP225.cash, h1 | 21.67 % |
+Progress | Loading JP225.cash, h1 | 23.33 % |
+Progress | Loading JP225.cash, h1 | 25.00 % |
+Progress | Loading JP225.cash, h1 | 26.67 % |
+Progress | Loading JP225.cash, h1 | 28.33 % |
+Progress | Loading JP225.cash, h1 | 30.00 % |
+Progress | Loading JP225.cash, h1 | 31.67 % |
+Progress | Loading JP225.cash, h1 | 33.33 % |
+Progress | Loading JP225.cash, h1 | 35.00 % |
+Progress | Loading JP225.cash, h1 | 36.67 % |
+Progress | Loading JP225.cash, h1 | 38.33 % |
+Progress | Loading JP225.cash, h1 | 40.00 % |
+Progress | Loading JP225.cash, h1 | 41.67 % |
+Progress | Loading JP225.cash, h1 | 43.33 % |
+Progress | Loading JP225.cash, h1 | 45.00 % |
+Progress | Loading JP225.cash, h1 | 46.67 % |
+Progress | Loading JP225.cash, h1 | 48.33 % |
+Progress | Loading JP225.cash, h1 | 50.00 % |
+Progress | Loading JP225.cash, h1 | 51.67 % |
+Progress | Loading JP225.cash, h1 | 53.33 % |
+Progress | Loading JP225.cash, h1 | 55.00 % |
+Progress | Loading JP225.cash, h1 | 56.67 % |
+Progress | Loading JP225.cash, h1 | 58.33 % |
+Progress | Loading JP225.cash, h1 | 60.00 % |
+Progress | Loading JP225.cash, h1 | 61.67 % |
+Progress | Loading JP225.cash, h1 | 63.33 % |
+Progress | Loading JP225.cash, h1 | 65.00 % |
+Progress | Loading JP225.cash, h1 | 66.67 % |
+Progress | Loading JP225.cash, h1 | 68.33 % |
+Progress | Loading JP225.cash, h1 | 70.00 % |
+Progress | Loading JP225.cash, h1 | 71.67 % |
+Progress | Loading JP225.cash, h1 | 73.33 % |
+Progress | Loading JP225.cash, h1 | 75.00 % |
+Progress | Loading JP225.cash, h1 | 76.67 % |
+Progress | Loading JP225.cash, h1 | 78.33 % |
+Progress | Loading JP225.cash, h1 | 80.00 % |
+Progress | Loading JP225.cash, h1 | 81.67 % |
+Progress | Loading JP225.cash, h1 | 83.33 % |
+Progress | Loading JP225.cash, h1 | 85.00 % |
+Progress | Loading JP225.cash, h1 | 86.67 % |
+Progress | Loading JP225.cash, h1 | 88.33 % |
+Progress | Loading JP225.cash, h1 | 90.00 % |
+Progress | Loading JP225.cash, h1 | 91.67 % |
+Progress | Loading JP225.cash, h1 | 93.33 % |
+Progress | Loading JP225.cash, h1 | 95.00 % |
+Progress | Loading JP225.cash, h1 | 96.67 % |
+Progress | Loading JP225.cash, h1 | 98.33 % |
+Progress | Loading JP225.cash, h1 | 100.00 % |
+Info | CBot instance [Combo, JP225.cash, h1] started.
+Progress | Backtesting | 1.63 % |
+Progress | Backtesting | 2.82 % |
+Progress | Loading USDJPY, h1 | 1.72 % |
+Progress | Loading USDJPY, h1 | 3.45 % |
+Progress | Loading USDJPY, h1 | 5.17 % |
+Progress | Loading USDJPY, h1 | 6.90 % |
+Progress | Loading USDJPY, h1 | 8.62 % |
+Progress | Loading USDJPY, h1 | 10.34 % |
+Progress | Loading USDJPY, h1 | 12.07 % |
+Progress | Loading USDJPY, h1 | 13.79 % |
+Progress | Loading USDJPY, h1 | 15.52 % |
+Progress | Loading USDJPY, h1 | 17.24 % |
+Progress | Loading USDJPY, h1 | 18.97 % |
+Progress | Loading USDJPY, h1 | 20.69 % |
+Progress | Loading USDJPY, h1 | 22.41 % |
+Progress | Loading USDJPY, h1 | 24.14 % |
+Progress | Loading USDJPY, h1 | 25.86 % |
+Progress | Loading USDJPY, h1 | 27.59 % |
+Progress | Loading USDJPY, h1 | 29.31 % |
+Progress | Loading USDJPY, h1 | 31.03 % |
+Progress | Loading USDJPY, h1 | 32.76 % |
+Progress | Loading USDJPY, h1 | 34.48 % |
+Progress | Loading USDJPY, h1 | 36.21 % |
+Progress | Loading USDJPY, h1 | 37.93 % |
+Progress | Loading USDJPY, h1 | 39.66 % |
+Progress | Loading USDJPY, h1 | 41.38 % |
+Progress | Loading USDJPY, h1 | 43.10 % |
+Progress | Loading USDJPY, h1 | 44.83 % |
+Progress | Loading USDJPY, h1 | 46.55 % |
+Progress | Loading USDJPY, h1 | 48.28 % |
+Progress | Loading USDJPY, h1 | 50.00 % |
+Progress | Loading USDJPY, h1 | 51.72 % |
+Progress | Loading USDJPY, h1 | 53.45 % |
+Progress | Loading USDJPY, h1 | 55.17 % |
+Progress | Loading USDJPY, h1 | 56.90 % |
+Progress | Loading USDJPY, h1 | 58.62 % |
+Progress | Loading USDJPY, h1 | 60.34 % |
+Progress | Loading USDJPY, h1 | 62.07 % |
+Progress | Loading USDJPY, h1 | 63.79 % |
+Progress | Loading USDJPY, h1 | 65.52 % |
+Progress | Loading USDJPY, h1 | 67.24 % |
+Progress | Loading USDJPY, h1 | 68.97 % |
+Progress | Loading USDJPY, h1 | 70.69 % |
+Progress | Loading USDJPY, h1 | 72.41 % |
+Progress | Loading USDJPY, h1 | 74.14 % |
+Progress | Loading USDJPY, h1 | 75.86 % |
+Progress | Loading USDJPY, h1 | 77.59 % |
+Progress | Loading USDJPY, h1 | 79.31 % |
+Progress | Loading USDJPY, h1 | 81.03 % |
+Progress | Loading USDJPY, h1 | 82.76 % |
+Progress | Loading USDJPY, h1 | 84.48 % |
+Progress | Loading USDJPY, h1 | 86.21 % |
+Progress | Loading USDJPY, h1 | 87.93 % |
+Progress | Loading USDJPY, h1 | 89.66 % |
+Progress | Loading USDJPY, h1 | 91.38 % |
+Progress | Loading USDJPY, h1 | 93.10 % |
+Progress | Loading USDJPY, h1 | 94.83 % |
+Progress | Loading USDJPY, h1 | 96.55 % |
+Progress | Loading USDJPY, h1 | 98.28 % |
+Progress | Loading USDJPY, h1 | 100.00 % |
+Progress | Backtesting | 2.84 % |
+Progress | Backtesting | 8.72 % |
+Progress | Backtesting | 24.73 % |
+Progress | Backtesting | 33.98 % |
+Progress | Backtesting | 43.16 % |
+Progress | Backtesting | 49.90 % |
+Progress | Backtesting | 58.54 % |
+Progress | Backtesting | 69.28 % |
+Progress | Backtesting | 80.75 % |
+Progress | Backtesting | 93.22 % |
+01/01/2026 23:05:00.000 | Info | Combo: loaded 4542 valid signal row(s) from CSV.
+01/01/2026 23:05:00.000 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+02/01/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 126.50 units, which needs about $3153.48 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.00 budget, free margin was $10000.00). Size was cut from 126.50 to 3.90 units. Real risk on this trade is now about $3.08 (0.03% of balance) instead of the requested 1.00%.
+02/01/2026 16:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 50718.5, SL: 50841.8710790533, TP: 50395.5)
+02/01/2026 16:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 50718.5, SL: 50841.8710790533, TP: 50395.5) SUCCEEDED, PendingOrder OID1
+02/01/2026 16:00:00.000 | Info | Combo: bartime=2026-01-02 15:00, executed=2026-01-02 16:00:00, pending Sell placed at 50718.5; SL=50841.87107905334, TP=50395.49934319046; valid for the next 3 chart bar(s).
+06/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 113.30 units, which needs about $2824.42 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.96 budget, free margin was $9996.43). Size was cut from 113.30 to 3.90 units. Real risk on this trade is now about $3.44 (0.03% of balance) instead of the requested 1.00%.
+06/01/2026 09:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 52140.8, SL: 52278.4690468419, TP: 51780.37)
+06/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 52140.8, SL: 52278.4690468419, TP: 51780.37) SUCCEEDED, PendingOrder OID4
+06/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-06 08:00, executed=2026-01-06 09:00:00, pending Sell placed at 52140.8; SL=52278.46904684193, TP=51780.36550519379; valid for the next 3 chart bar(s).
+07/01/2026 00:00:00.000 | Info | Combo: bartime=2026-01-06 23:00, reversal - closing existing Sell position 2 before opening opposite direction.
+07/01/2026 00:00:00.000 | Trade | Closing position PID2 (Volume: 3.9)
+07/01/2026 00:00:00.000 | Trade |  Closing position PID2 (Volume: 3.9) SUCCEEDED
+07/01/2026 00:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 218.70 units, which needs about $5451.91 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.95 budget, free margin was $9995.32). Size was cut from 218.70 to 3.90 units. Real risk on this trade is now about $1.78 (0.02% of balance) instead of the requested 1.00%.
+07/01/2026 00:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 52237.6, SL: 52166.261131855, TP: 52424.37)
+07/01/2026 00:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 52237.6, SL: 52166.261131855, TP: 52424.37) SUCCEEDED, PendingOrder OID8
+07/01/2026 00:00:00.000 | Info | Combo: bartime=2026-01-06 23:00, executed=2026-01-07 00:00:00, pending Buy placed at 52237.6; SL=52166.26113185499, TP=52424.373929868314; valid for the next 3 chart bar(s).
+07/01/2026 05:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 147.90 units, which needs about $3686.96 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.93 budget, free margin was $9993.05). Size was cut from 147.90 to 3.90 units. Real risk on this trade is now about $2.63 (0.03% of balance) instead of the requested 1.00%.
+07/01/2026 05:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 51829.7, SL: 51935.1772149058, TP: 51553.55)
+07/01/2026 05:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 51829.7, SL: 51935.1772149058, TP: 51553.55) SUCCEEDED, PendingOrder OID11
+07/01/2026 05:00:00.000 | Info | Combo: bartime=2026-01-07 04:00, executed=2026-01-07 05:00:00, pending Sell placed at 51829.7; SL=51935.17721490575, TP=51553.54768006875; valid for the next 3 chart bar(s).
+07/01/2026 17:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 211.90 units, which needs about $5282.40 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.90 budget, free margin was $9990.30). Size was cut from 211.90 to 3.90 units. Real risk on this trade is now about $1.84 (0.02% of balance) instead of the requested 1.00%.
+07/01/2026 17:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 52081.3, SL: 52007.6992347663, TP: 52274)
+07/01/2026 17:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 52081.3, SL: 52007.6992347663, TP: 52274) SUCCEEDED, PendingOrder OID14
+07/01/2026 17:00:00.000 | Info | Combo: bartime=2026-01-07 16:00, executed=2026-01-07 17:00:00, pending Buy placed at 52081.3; SL=52007.699234766274, TP=52273.9958546087; valid for the next 3 chart bar(s).
+07/01/2026 19:00:00.000 | Info | Combo: bartime=2026-01-07 18:00, Buy signal skipped: already have same-direction exposure open.
+07/01/2026 20:00:00.000 | Trade | Cancelling pending order OID14
+07/01/2026 20:00:00.000 | Trade |  Cancelling pending order OID14 SUCCEEDED
+07/01/2026 20:00:00.000 | Info | Combo: pending order 14 cancelled after 3 chart bars.
+07/01/2026 21:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 213.10 units, which needs about $5312.31 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.90 budget, free margin was $9990.30). Size was cut from 213.10 to 3.90 units. Real risk on this trade is now about $1.83 (0.02% of balance) instead of the requested 1.00%.
+07/01/2026 21:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 51829.5, SL: 51902.6961601597, TP: 51637.86)
+07/01/2026 21:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 51829.5, SL: 51902.6961601597, TP: 51637.86) SUCCEEDED, PendingOrder OID15
+07/01/2026 21:00:00.000 | Info | Combo: bartime=2026-01-07 20:00, executed=2026-01-07 21:00:00, pending Sell placed at 51829.5; SL=51902.696160159736, TP=51637.863451232275; valid for the next 3 chart bar(s).
+08/01/2026 18:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 162.70 units, which needs about $4055.90 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.88 budget, free margin was $9988.18). Size was cut from 162.70 to 3.90 units. Real risk on this trade is now about $2.39 (0.02% of balance) instead of the requested 1.00%.
+08/01/2026 18:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 51490.6, SL: 51394.7641518385, TP: 51741.51)
+08/01/2026 18:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 51490.6, SL: 51394.7641518385, TP: 51741.51) SUCCEEDED, PendingOrder OID18
+08/01/2026 18:00:00.000 | Info | Combo: bartime=2026-01-08 17:00, executed=2026-01-08 18:00:00, pending Buy placed at 51490.6; SL=51394.764151838484, TP=51741.51003612514; valid for the next 3 chart bar(s).
+08/01/2026 20:00:00.000 | Info | Combo: bartime=2026-01-08 19:00, Buy signal skipped: already have same-direction exposure open.
+09/01/2026 01:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 154.60 units, which needs about $3853.98 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.85 budget, free margin was $9985.20). Size was cut from 154.60 to 3.90 units. Real risk on this trade is now about $2.52 (0.03% of balance) instead of the requested 1.00%.
+09/01/2026 01:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 51310.1, SL: 51410.9054514442, TP: 51046.18)
+09/01/2026 01:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 51310.1, SL: 51410.9054514442, TP: 51046.18) SUCCEEDED, PendingOrder OID21
+09/01/2026 01:00:00.000 | Info | Combo: bartime=2026-01-09 00:00, executed=2026-01-09 01:00:00, pending Sell placed at 51310.1; SL=51410.9054514442, TP=51046.178931332164; valid for the next 3 chart bar(s).
+09/01/2026 02:00:00.000 | Info | Combo: bartime=2026-01-09 01:00, reversal - cancelling existing Sell pending order 21 before opening opposite direction.
+09/01/2026 02:00:00.000 | Trade | Cancelling pending order OID21
+09/01/2026 02:00:00.000 | Trade |  Cancelling pending order OID21 SUCCEEDED
+09/01/2026 02:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 154.30 units, which needs about $3846.50 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.85 budget, free margin was $9985.20). Size was cut from 154.30 to 3.90 units. Real risk on this trade is now about $2.52 (0.03% of balance) instead of the requested 1.00%.
+09/01/2026 02:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 51515.5, SL: 51414.4739988446, TP: 51780)
+09/01/2026 02:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 51515.5, SL: 51414.4739988446, TP: 51780) SUCCEEDED, PendingOrder OID22
+09/01/2026 02:00:00.000 | Info | Combo: bartime=2026-01-09 01:00, executed=2026-01-09 02:00:00, pending Buy placed at 51515.5; SL=51414.47399884464, TP=51779.99849493427; valid for the next 3 chart bar(s).
+13/01/2026 00:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 189.00 units, which needs about $4711.53 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.91 budget, free margin was $9991.07). Size was cut from 189.00 to 3.90 units. Real risk on this trade is now about $2.06 (0.02% of balance) instead of the requested 1.00%.
+13/01/2026 00:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 53853.9, SL: 53936.4407332113, TP: 53637.8)
+13/01/2026 00:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 53853.9, SL: 53936.4407332113, TP: 53637.8) SUCCEEDED, PendingOrder OID25
+13/01/2026 00:00:00.000 | Info | Combo: bartime=2026-01-12 23:00, executed=2026-01-13 00:00:00, pending Sell placed at 53853.9; SL=53936.4407332113, TP=53637.7982098125; valid for the next 3 chart bar(s).
+13/01/2026 12:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 173.10 units, which needs about $4315.16 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.89 budget, free margin was $9988.57). Size was cut from 173.10 to 3.90 units. Real risk on this trade is now about $2.25 (0.02% of balance) instead of the requested 1.00%.
+13/01/2026 12:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 53915.7, SL: 53825.6072242718, TP: 54151.57)
+13/01/2026 12:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 53915.7, SL: 53825.6072242718, TP: 54151.57) SUCCEEDED, PendingOrder OID28
+13/01/2026 12:00:00.000 | Info | Combo: bartime=2026-01-13 11:00, executed=2026-01-13 12:00:00, pending Buy placed at 53915.7; SL=53825.607224271844, TP=54151.57396622677; valid for the next 3 chart bar(s).
+13/01/2026 14:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 161.40 units, which needs about $4023.49 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.86 budget, free margin was $9986.07). Size was cut from 161.40 to 3.90 units. Real risk on this trade is now about $2.41 (0.02% of balance) instead of the requested 1.00%.
+13/01/2026 14:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 54024.5, SL: 53927.906623534, TP: 54277.39)
+13/01/2026 14:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 54024.5, SL: 53927.906623534, TP: 54277.39) SUCCEEDED, PendingOrder OID31
+13/01/2026 14:00:00.000 | Info | Combo: bartime=2026-01-13 13:00, executed=2026-01-13 14:00:00, pending Buy placed at 54024.5; SL=53927.906623533985, TP=54277.39333838513; valid for the next 3 chart bar(s).
+14/01/2026 12:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 113.60 units, which needs about $2831.90 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.83 budget, free margin was $9983.30). Size was cut from 113.60 to 3.90 units. Real risk on this trade is now about $3.43 (0.03% of balance) instead of the requested 1.00%.
+14/01/2026 12:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 53991.8, SL: 54128.9303734184, TP: 53632.78)
+14/01/2026 12:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 53991.8, SL: 54128.9303734184, TP: 53632.78) SUCCEEDED, PendingOrder OID34
+14/01/2026 12:00:00.000 | Info | Combo: bartime=2026-01-14 11:00, executed=2026-01-14 12:00:00, pending Sell placed at 53991.8; SL=54128.930373418356, TP=53632.77581846134; valid for the next 3 chart bar(s).
+15/01/2026 07:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 118.10 units, which needs about $2944.08 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.74 budget, free margin was $9973.86). Size was cut from 118.10 to 3.90 units. Real risk on this trade is now about $3.29 (0.03% of balance) instead of the requested 1.00%.
+15/01/2026 07:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 54202, SL: 54070.2059669408, TP: 54547.05)
+15/01/2026 07:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 54202, SL: 54070.2059669408, TP: 54547.05) SUCCEEDED, PendingOrder OID37
+15/01/2026 07:00:00.000 | Info | Combo: bartime=2026-01-15 06:00, executed=2026-01-15 07:00:00, pending Buy placed at 54202; SL=54070.20596694085, TP=54547.05298622931; valid for the next 3 chart bar(s).
+15/01/2026 20:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 187.10 units, which needs about $4664.16 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.70 budget, free margin was $9969.89). Size was cut from 187.10 to 3.90 units. Real risk on this trade is now about $2.08 (0.02% of balance) instead of the requested 1.00%.
+15/01/2026 20:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 53978.7, SL: 54061.8617975367, TP: 53760.97)
+15/01/2026 20:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 53978.7, SL: 54061.8617975367, TP: 53760.97) SUCCEEDED, PendingOrder OID40
+15/01/2026 20:00:00.000 | Info | Combo: bartime=2026-01-15 19:00, executed=2026-01-15 20:00:00, pending Sell placed at 53978.7; SL=54061.86179753674, TP=53760.97218703163; valid for the next 3 chart bar(s).
+19/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 134.50 units, which needs about $3352.91 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.67 budget, free margin was $9967.46). Size was cut from 134.50 to 3.90 units. Real risk on this trade is now about $2.89 (0.03% of balance) instead of the requested 1.00%.
+19/01/2026 09:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 53705.9, SL: 53590.25112941, TP: 54008.68)
+19/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 53705.9, SL: 53590.25112941, TP: 54008.68) SUCCEEDED, PendingOrder OID43
+19/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-19 08:00, executed=2026-01-19 09:00:00, pending Buy placed at 53705.9; SL=53590.25112941003, TP=54008.68296539574; valid for the next 3 chart bar(s).
+19/01/2026 12:00:00.000 | Trade | Cancelling pending order OID43
+19/01/2026 12:00:00.000 | Trade |  Cancelling pending order OID43 SUCCEEDED
+19/01/2026 12:00:00.000 | Info | Combo: pending order 43 cancelled after 3 chart bars.
+19/01/2026 13:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 156.70 units, which needs about $3906.33 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.67 budget, free margin was $9967.46). Size was cut from 156.70 to 3.90 units. Real risk on this trade is now about $2.48 (0.02% of balance) instead of the requested 1.00%.
+19/01/2026 13:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 53572.1, SL: 53472.8149595664, TP: 53832.04)
+19/01/2026 13:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 53572.1, SL: 53472.8149595664, TP: 53832.04) SUCCEEDED, PendingOrder OID44
+19/01/2026 13:00:00.000 | Info | Combo: bartime=2026-01-19 12:00, executed=2026-01-19 13:00:00, pending Buy placed at 53572.1; SL=53472.81495956635, TP=53832.04044566609; valid for the next 3 chart bar(s).
+19/01/2026 23:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 311.50 units, which needs about $7765.30 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.65 budget, free margin was $9964.76). Size was cut from 311.50 to 3.90 units. Real risk on this trade is now about $1.25 (0.01% of balance) instead of the requested 1.00%.
+19/01/2026 23:05:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 53445, SL: 53494.9408165009, TP: 53314.25)
+19/01/2026 23:05:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 53445, SL: 53494.9408165009, TP: 53314.25) SUCCEEDED, PendingOrder OID47
+19/01/2026 23:05:00.000 | Info | Combo: bartime=2026-01-19 20:00, executed=2026-01-19 23:05:00, pending Sell placed at 53445; SL=53494.940816500886, TP=53314.24880081159; valid for the next 3 chart bar(s).
+21/01/2026 01:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 82.10 units, which needs about $2046.65 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.63 budget, free margin was $9963.16). Size was cut from 82.10 to 3.90 units. Real risk on this trade is now about $4.73 (0.05% of balance) instead of the requested 1.00%.
+21/01/2026 01:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 52663.6, SL: 52474.3383763438, TP: 53159.11)
+21/01/2026 01:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 52663.6, SL: 52474.3383763438, TP: 53159.11) SUCCEEDED, PendingOrder OID50
+21/01/2026 01:00:00.000 | Info | Combo: bartime=2026-01-21 00:00, executed=2026-01-21 01:00:00, pending Buy placed at 52663.6; SL=52474.33837634379, TP=53159.11020562418; valid for the next 3 chart bar(s).
+21/01/2026 12:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 124.10 units, which needs about $3093.65 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.57 budget, free margin was $9957.47). Size was cut from 124.10 to 3.90 units. Real risk on this trade is now about $3.13 (0.03% of balance) instead of the requested 1.00%.
+21/01/2026 12:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 52408.4, SL: 52533.6663479438, TP: 52080.44)
+21/01/2026 12:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 52408.4, SL: 52533.6663479438, TP: 52080.44) SUCCEEDED, PendingOrder OID53
+21/01/2026 12:00:00.000 | Info | Combo: bartime=2026-01-21 11:00, executed=2026-01-21 12:00:00, pending Sell placed at 52408.4; SL=52533.666347943836, TP=52080.43729616; valid for the next 3 chart bar(s).
+23/01/2026 01:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 150.80 units, which needs about $3759.25 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.54 budget, free margin was $9953.92). Size was cut from 150.80 to 3.90 units. Real risk on this trade is now about $2.57 (0.03% of balance) instead of the requested 1.00%.
+23/01/2026 01:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 53611.7, SL: 53714.7096472784, TP: 53342.01)
+23/01/2026 01:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 53611.7, SL: 53714.7096472784, TP: 53342.01) SUCCEEDED, PendingOrder OID56
+23/01/2026 01:00:00.000 | Info | Combo: bartime=2026-01-23 00:00, executed=2026-01-23 01:00:00, pending Sell placed at 53611.7; SL=53714.709647278425, TP=53342.00807557201; valid for the next 3 chart bar(s).
+23/01/2026 04:00:00.000 | Trade | Cancelling pending order OID56
+23/01/2026 04:00:00.000 | Trade |  Cancelling pending order OID56 SUCCEEDED
+23/01/2026 04:00:00.000 | Info | Combo: pending order 56 cancelled after 3 chart bars.
+23/01/2026 05:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 127.60 units, which needs about $3180.90 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.54 budget, free margin was $9953.92). Size was cut from 127.60 to 3.90 units. Real risk on this trade is now about $3.04 (0.03% of balance) instead of the requested 1.00%.
+23/01/2026 05:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 53699.9, SL: 53821.6510062452, TP: 53381.14)
+23/01/2026 05:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 53699.9, SL: 53821.6510062452, TP: 53381.14) SUCCEEDED, PendingOrder OID57
+23/01/2026 05:00:00.000 | Info | Combo: bartime=2026-01-23 04:00, executed=2026-01-23 05:00:00, pending Sell placed at 53699.9; SL=53821.65100624524, TP=53381.140893034295; valid for the next 3 chart bar(s).
+27/01/2026 00:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 145.90 units, which needs about $3637.10 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.50 budget, free margin was $9950.17). Size was cut from 145.90 to 3.90 units. Real risk on this trade is now about $2.66 (0.03% of balance) instead of the requested 1.00%.
+27/01/2026 00:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 52907.3, SL: 52800.8305418164, TP: 53186.05)
+27/01/2026 00:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 52907.3, SL: 52800.8305418164, TP: 53186.05) SUCCEEDED, PendingOrder OID60
+27/01/2026 00:00:00.000 | Info | Combo: bartime=2026-01-26 23:00, executed=2026-01-27 00:00:00, pending Buy placed at 52907.3; SL=52800.83054181645, TP=53186.050134855956; valid for the next 3 chart bar(s).
+27/01/2026 13:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 138.80 units, which needs about $3460.11 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.57 budget, free margin was $9957.36). Size was cut from 138.80 to 3.90 units. Real risk on this trade is now about $2.80 (0.03% of balance) instead of the requested 1.00%.
+27/01/2026 13:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 52816.7, SL: 52928.6574345612, TP: 52523.58)
+27/01/2026 13:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 52816.7, SL: 52928.6574345612, TP: 52523.58) SUCCEEDED, PendingOrder OID63
+27/01/2026 13:00:00.000 | Info | Combo: bartime=2026-01-27 12:00, executed=2026-01-27 13:00:00, pending Sell placed at 52816.7; SL=52928.65743456118, TP=52523.58166809063; valid for the next 3 chart bar(s).
+27/01/2026 18:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 140.20 units, which needs about $3495.01 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.54 budget, free margin was $9954.36). Size was cut from 140.20 to 3.90 units. Real risk on this trade is now about $2.77 (0.03% of balance) instead of the requested 1.00%.
+27/01/2026 18:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 52881, SL: 52991.853984125, TP: 52590.77)
+27/01/2026 18:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 52881, SL: 52991.853984125, TP: 52590.77) SUCCEEDED, PendingOrder OID66
+27/01/2026 18:00:00.000 | Info | Combo: bartime=2026-01-27 17:00, executed=2026-01-27 18:00:00, pending Sell placed at 52881; SL=52991.85398412501, TP=52590.770637031936; valid for the next 3 chart bar(s).
+29/01/2026 01:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 77.80 units, which needs about $1939.45 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.51 budget, free margin was $9950.74). Size was cut from 77.80 to 3.90 units. Real risk on this trade is now about $4.98 (0.05% of balance) instead of the requested 1.00%.
+29/01/2026 01:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 53219.9, SL: 53419.4185775673, TP: 52697.54)
+29/01/2026 01:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 53219.9, SL: 53419.4185775673, TP: 52697.54) SUCCEEDED, PendingOrder OID69
+29/01/2026 01:00:00.000 | Info | Combo: bartime=2026-01-29 00:00, executed=2026-01-29 01:00:00, pending Sell placed at 53219.9; SL=53419.41857756734, TP=52697.535827663516; valid for the next 3 chart bar(s).
+29/01/2026 07:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 93.40 units, which needs about $2328.34 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.45 budget, free margin was $9945.35). Size was cut from 93.40 to 3.90 units. Real risk on this trade is now about $4.15 (0.04% of balance) instead of the requested 1.00%.
+29/01/2026 07:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 53267.8, SL: 53434.0137937354, TP: 52832.63)
+29/01/2026 07:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 53267.8, SL: 53434.0137937354, TP: 52832.63) SUCCEEDED, PendingOrder OID72
+29/01/2026 07:00:00.000 | Info | Combo: bartime=2026-01-29 06:00, executed=2026-01-29 07:00:00, pending Sell placed at 53267.8; SL=53434.013793735416, TP=52832.63184746943; valid for the next 3 chart bar(s).
+29/01/2026 10:00:00.000 | Trade | Cancelling pending order OID72
+29/01/2026 10:00:00.000 | Trade |  Cancelling pending order OID72 SUCCEEDED
+29/01/2026 10:00:00.000 | Info | Combo: pending order 72 cancelled after 3 chart bars.
+29/01/2026 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 119.10 units, which needs about $2969.01 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.45 budget, free margin was $9945.35). Size was cut from 119.10 to 3.90 units. Real risk on this trade is now about $3.25 (0.03% of balance) instead of the requested 1.00%.
+29/01/2026 15:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 53042.2, SL: 53172.5133276448, TP: 52701.02)
+29/01/2026 15:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 53042.2, SL: 53172.5133276448, TP: 52701.02) SUCCEEDED, PendingOrder OID73
+29/01/2026 15:00:00.000 | Info | Combo: bartime=2026-01-29 14:00, executed=2026-01-29 15:00:00, pending Sell placed at 53042.2; SL=53172.51332764478, TP=52701.02368263873; valid for the next 3 chart bar(s).
+29/01/2026 21:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 90.00 units, which needs about $2243.58 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.53 budget, free margin was $9952.89). Size was cut from 90.00 to 3.90 units. Real risk on this trade is now about $4.31 (0.04% of balance) instead of the requested 1.00%.
+29/01/2026 21:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 53321, SL: 53148.4344101867, TP: 53772.8)
+29/01/2026 21:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 53321, SL: 53148.4344101867, TP: 53772.8) SUCCEEDED, PendingOrder OID76
+29/01/2026 21:00:00.000 | Info | Combo: bartime=2026-01-29 20:00, executed=2026-01-29 21:00:00, pending Buy placed at 53321; SL=53148.43441018669, TP=53772.79793578955; valid for the next 3 chart bar(s).
+30/01/2026 04:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 90.60 units, which needs about $2258.54 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.48 budget, free margin was $9948.22). Size was cut from 90.60 to 3.90 units. Real risk on this trade is now about $4.28 (0.04% of balance) instead of the requested 1.00%.
+30/01/2026 04:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 53274.1, SL: 53102.7246949798, TP: 53722.78)
+30/01/2026 04:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 53274.1, SL: 53102.7246949798, TP: 53722.78) SUCCEEDED, PendingOrder OID79
+30/01/2026 04:00:00.000 | Info | Combo: bartime=2026-01-30 03:00, executed=2026-01-30 04:00:00, pending Buy placed at 53274.1; SL=53102.72469497982, TP=53722.78162382305; valid for the next 3 chart bar(s).
+30/01/2026 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 106.20 units, which needs about $2647.43 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.43 budget, free margin was $9943.17). Size was cut from 106.20 to 3.90 units. Real risk on this trade is now about $3.65 (0.04% of balance) instead of the requested 1.00%.
+30/01/2026 10:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 53073.2, SL: 53219.3849665, TP: 52690.47)
+30/01/2026 10:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 53073.2, SL: 53219.3849665, TP: 52690.47) SUCCEEDED, PendingOrder OID82
+30/01/2026 10:00:00.000 | Info | Combo: bartime=2026-01-30 09:00, executed=2026-01-30 10:00:00, pending Sell placed at 53073.2; SL=53219.38496650001, TP=52690.469780263724; valid for the next 3 chart bar(s).
+30/01/2026 13:00:00.000 | Trade | Cancelling pending order OID82
+30/01/2026 13:00:00.000 | Trade |  Cancelling pending order OID82 SUCCEEDED
+30/01/2026 13:00:00.000 | Info | Combo: pending order 82 cancelled after 3 chart bars.
+02/02/2026 03:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 57.10 units, which needs about $1423.43 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.43 budget, free margin was $9943.17). Size was cut from 57.10 to 3.90 units. Real risk on this trade is now about $6.78 (0.07% of balance) instead of the requested 1.00%.
+02/02/2026 03:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 53190.2, SL: 53461.6645342009, TP: 52479.47)
+02/02/2026 03:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 53190.2, SL: 53461.6645342009, TP: 52479.47) SUCCEEDED, PendingOrder OID83
+02/02/2026 03:00:00.000 | Info | Combo: bartime=2026-02-02 02:00, executed=2026-02-02 03:00:00, pending Sell placed at 53190.2; SL=53461.66453420089, TP=52479.472465474035; valid for the next 3 chart bar(s).
+02/02/2026 14:00:00.000 | Info | Combo: bartime=2026-02-02 13:00, reversal - closing existing Sell position 26 before opening opposite direction.
+02/02/2026 14:00:00.000 | Trade | Closing position PID26 (Volume: 3.9)
+02/02/2026 14:00:00.000 | Trade |  Closing position PID26 (Volume: 3.9) SUCCEEDED
+02/02/2026 14:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 115.60 units, which needs about $2881.76 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.39 budget, free margin was $9939.07). Size was cut from 115.60 to 3.90 units. Real risk on this trade is now about $3.35 (0.03% of balance) instead of the requested 1.00%.
+02/02/2026 14:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 53381.7, SL: 53247.4701134864, TP: 53733.13)
+02/02/2026 14:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 53381.7, SL: 53247.4701134864, TP: 53733.13) SUCCEEDED, PendingOrder OID87
+02/02/2026 14:00:00.000 | Info | Combo: bartime=2026-02-02 13:00, executed=2026-02-02 14:00:00, pending Buy placed at 53381.7; SL=53247.47011348638, TP=53733.13035012788; valid for the next 3 chart bar(s).
+03/02/2026 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 116.60 units, which needs about $2906.69 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.48 budget, free margin was $9947.69). Size was cut from 116.60 to 3.90 units. Real risk on this trade is now about $3.33 (0.03% of balance) instead of the requested 1.00%.
+03/02/2026 15:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 53997.9, SL: 54131.0675434209, TP: 53649.25)
+03/02/2026 15:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 53997.9, SL: 54131.0675434209, TP: 53649.25) SUCCEEDED, PendingOrder OID90
+03/02/2026 15:00:00.000 | Info | Combo: bartime=2026-02-03 14:00, executed=2026-02-03 15:00:00, pending Sell placed at 53997.9; SL=54131.06754342093, TP=53649.25099473291; valid for the next 3 chart bar(s).
+04/02/2026 02:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 94.60 units, which needs about $2358.26 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.44 budget, free margin was $9944.24). Size was cut from 94.60 to 3.90 units. Real risk on this trade is now about $4.10 (0.04% of balance) instead of the requested 1.00%.
+04/02/2026 02:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 54434.2, SL: 54270.0697475875, TP: 54863.91)
+04/02/2026 02:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 54434.2, SL: 54270.0697475875, TP: 54863.91) SUCCEEDED, PendingOrder OID93
+04/02/2026 02:00:00.000 | Info | Combo: bartime=2026-02-04 01:00, executed=2026-02-04 02:00:00, pending Buy placed at 54434.2; SL=54270.069747587535, TP=54863.913185118705; valid for the next 3 chart bar(s).
+04/02/2026 18:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 76.40 units, which needs about $1904.55 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.40 budget, free margin was $9939.69). Size was cut from 76.40 to 3.90 units. Real risk on this trade is now about $5.07 (0.05% of balance) instead of the requested 1.00%.
+04/02/2026 18:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 54129.4, SL: 54332.5392934657, TP: 53597.56)
+04/02/2026 18:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 54129.4, SL: 54332.5392934657, TP: 53597.56) SUCCEEDED, PendingOrder OID96
+04/02/2026 18:00:00.000 | Info | Combo: bartime=2026-02-04 17:00, executed=2026-02-04 18:00:00, pending Sell placed at 54129.4; SL=54332.5392934657, TP=53597.55634817557; valid for the next 3 chart bar(s).
+04/02/2026 21:00:00.000 | Trade | Cancelling pending order OID96
+04/02/2026 21:00:00.000 | Trade |  Cancelling pending order OID96 SUCCEEDED
+04/02/2026 21:00:00.000 | Info | Combo: pending order 96 cancelled after 3 chart bars.
+04/02/2026 21:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 78.30 units, which needs about $1951.92 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.40 budget, free margin was $9939.69). Size was cut from 78.30 to 3.90 units. Real risk on this trade is now about $4.95 (0.05% of balance) instead of the requested 1.00%.
+04/02/2026 21:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 54414.4, SL: 54612.5435502544, TP: 53895.64)
+04/02/2026 21:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 54414.4, SL: 54612.5435502544, TP: 53895.64) SUCCEEDED, PendingOrder OID97
+04/02/2026 21:00:00.000 | Info | Combo: bartime=2026-02-04 20:00, executed=2026-02-04 21:00:00, pending Sell placed at 54414.4; SL=54612.543550254435, TP=53895.635818265895; valid for the next 3 chart bar(s).
+05/02/2026 00:00:00.000 | Info | Combo: bartime=2026-02-04 23:00, Sell signal skipped: already have same-direction exposure open.
+05/02/2026 12:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 120.50 units, which needs about $3003.91 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.51 budget, free margin was $9951.42). Size was cut from 120.50 to 3.90 units. Real risk on this trade is now about $3.22 (0.03% of balance) instead of the requested 1.00%.
+05/02/2026 12:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 54329.4, SL: 54200.4863988409, TP: 54666.91)
+05/02/2026 12:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 54329.4, SL: 54200.4863988409, TP: 54666.91) SUCCEEDED, PendingOrder OID100
+05/02/2026 12:00:00.000 | Info | Combo: bartime=2026-02-05 11:00, executed=2026-02-05 12:00:00, pending Buy placed at 54329.4; SL=54200.486398840905, TP=54666.91166128709; valid for the next 3 chart bar(s).
+05/02/2026 15:00:00.000 | Trade | Cancelling pending order OID100
+05/02/2026 15:00:00.000 | Trade |  Cancelling pending order OID100 SUCCEEDED
+05/02/2026 15:00:00.000 | Info | Combo: pending order 100 cancelled after 3 chart bars.
+05/02/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 70.80 units, which needs about $1764.95 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.51 budget, free margin was $9951.42). Size was cut from 70.80 to 3.90 units. Real risk on this trade is now about $5.48 (0.06% of balance) instead of the requested 1.00%.
+05/02/2026 16:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 53729.5, SL: 53948.8988036748, TP: 53155.09)
+05/02/2026 16:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 53729.5, SL: 53948.8988036748, TP: 53155.09) SUCCEEDED, PendingOrder OID101
+05/02/2026 16:00:00.000 | Info | Combo: bartime=2026-02-05 15:00, executed=2026-02-05 16:00:00, pending Sell placed at 53729.5; SL=53948.89880367477, TP=53155.08695089681; valid for the next 3 chart bar(s).
+05/02/2026 17:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 65.50 units, which needs about $1632.83 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.45 budget, free margin was $9945.35). Size was cut from 65.50 to 3.90 units. Real risk on this trade is now about $5.92 (0.06% of balance) instead of the requested 1.00%.
+05/02/2026 17:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 54225, SL: 53988.1135570602, TP: 54845.2)
+05/02/2026 17:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 54225, SL: 53988.1135570602, TP: 54845.2) SUCCEEDED, PendingOrder OID104
+05/02/2026 17:00:00.000 | Info | Combo: bartime=2026-02-05 16:00, executed=2026-02-05 17:00:00, pending Buy placed at 54225; SL=53988.113557060184, TP=54845.197839282555; valid for the next 3 chart bar(s).
+05/02/2026 20:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 76.20 units, which needs about $1899.57 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.39 budget, free margin was $9938.91). Size was cut from 76.20 to 3.90 units. Real risk on this trade is now about $5.08 (0.05% of balance) instead of the requested 1.00%.
+05/02/2026 20:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 54232.7, SL: 54029.1385652148, TP: 54765.65)
+05/02/2026 20:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 54232.7, SL: 54029.1385652148, TP: 54765.65) SUCCEEDED, PendingOrder OID107
+05/02/2026 20:00:00.000 | Info | Combo: bartime=2026-02-05 19:00, executed=2026-02-05 20:00:00, pending Buy placed at 54232.7; SL=54029.13856521481, TP=54765.64886971266; valid for the next 3 chart bar(s).
+05/02/2026 21:00:00.000 | Info | Combo: bartime=2026-02-05 20:00, reversal - cancelling existing Buy pending order 107 before opening opposite direction.
+05/02/2026 21:00:00.000 | Trade | Cancelling pending order OID107
+05/02/2026 21:00:00.000 | Trade |  Cancelling pending order OID107 SUCCEEDED
+05/02/2026 21:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 74.10 units, which needs about $1847.22 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.39 budget, free margin was $9938.91). Size was cut from 74.10 to 3.90 units. Real risk on this trade is now about $5.22 (0.05% of balance) instead of the requested 1.00%.
+05/02/2026 21:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 53808.5, SL: 54017.6744278282, TP: 53260.86)
+05/02/2026 21:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 53808.5, SL: 54017.6744278282, TP: 53260.86) SUCCEEDED, PendingOrder OID108
+05/02/2026 21:00:00.000 | Info | Combo: bartime=2026-02-05 20:00, executed=2026-02-05 21:00:00, pending Sell placed at 53808.5; SL=54017.67442782815, TP=53260.855624229865; valid for the next 3 chart bar(s).
+06/02/2026 03:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 63.40 units, which needs about $1580.48 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.54 budget, free margin was $9953.95). Size was cut from 63.40 to 3.90 units. Real risk on this trade is now about $6.12 (0.06% of balance) instead of the requested 1.00%.
+06/02/2026 03:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 54121.3, SL: 53876.2110165386, TP: 54762.97)
+06/02/2026 03:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 54121.3, SL: 53876.2110165386, TP: 54762.97) SUCCEEDED, PendingOrder OID111
+06/02/2026 03:00:00.000 | Info | Combo: bartime=2026-02-06 02:00, executed=2026-02-06 03:00:00, pending Buy placed at 54121.3; SL=53876.21101653862, TP=54762.97309909469; valid for the next 3 chart bar(s).
+09/02/2026 07:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 53.20 units, which needs about $1326.21 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.47 budget, free margin was $9947.06). Size was cut from 53.20 to 3.90 units. Real risk on this trade is now about $7.28 (0.07% of balance) instead of the requested 1.00%.
+09/02/2026 07:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 56074.1, SL: 56365.7653761186, TP: 55310.48)
+09/02/2026 07:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 56074.1, SL: 56365.7653761186, TP: 55310.48) SUCCEEDED, PendingOrder OID114
+09/02/2026 07:00:00.000 | Info | Combo: bartime=2026-02-09 06:00, executed=2026-02-09 07:00:00, pending Sell placed at 56074.1; SL=56365.76537611856, TP=55310.48417708765; valid for the next 3 chart bar(s).
+09/02/2026 10:00:00.000 | Trade | Cancelling pending order OID114
+09/02/2026 10:00:00.000 | Trade |  Cancelling pending order OID114 SUCCEEDED
+09/02/2026 10:00:00.000 | Info | Combo: pending order 114 cancelled after 3 chart bars.
+09/02/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 67.00 units, which needs about $1670.22 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.47 budget, free margin was $9947.06). Size was cut from 67.00 to 3.90 units. Real risk on this trade is now about $5.79 (0.06% of balance) instead of the requested 1.00%.
+09/02/2026 16:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 56941.9, SL: 56710.1766712665, TP: 57548.58)
+09/02/2026 16:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 56941.9, SL: 56710.1766712665, TP: 57548.58) SUCCEEDED, PendingOrder OID115
+09/02/2026 16:00:00.000 | Info | Combo: bartime=2026-02-09 15:00, executed=2026-02-09 16:00:00, pending Buy placed at 56941.9; SL=56710.1766712665, TP=57548.58017134435; valid for the next 3 chart bar(s).
+10/02/2026 21:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 99.70 units, which needs about $2485.39 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.62 budget, free margin was $9961.82). Size was cut from 99.70 to 3.90 units. Real risk on this trade is now about $3.89 (0.04% of balance) instead of the requested 1.00%.
+10/02/2026 21:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 57796.9, SL: 57952.8290236229, TP: 57388.66)
+10/02/2026 21:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 57796.9, SL: 57952.8290236229, TP: 57388.66) SUCCEEDED, PendingOrder OID118
+10/02/2026 21:00:00.000 | Info | Combo: bartime=2026-02-10 20:00, executed=2026-02-10 21:00:00, pending Sell placed at 57796.9; SL=57952.82902362288, TP=57388.658640417765; valid for the next 3 chart bar(s).
+11/02/2026 05:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 115.90 units, which needs about $2889.24 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.57 budget, free margin was $9957.10). Size was cut from 115.90 to 3.90 units. Real risk on this trade is now about $3.35 (0.03% of balance) instead of the requested 1.00%.
+11/02/2026 05:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 57907.8, SL: 58041.9267530126, TP: 57556.64)
+11/02/2026 05:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 57907.8, SL: 58041.9267530126, TP: 57556.64) SUCCEEDED, PendingOrder OID121
+11/02/2026 05:00:00.000 | Info | Combo: bartime=2026-02-11 04:00, executed=2026-02-11 05:00:00, pending Sell placed at 57907.8; SL=58041.92675301261, TP=57556.63966606085; valid for the next 3 chart bar(s).
+11/02/2026 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 129.50 units, which needs about $3228.27 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.53 budget, free margin was $9953.03). Size was cut from 129.50 to 3.90 units. Real risk on this trade is now about $3.00 (0.03% of balance) instead of the requested 1.00%.
+11/02/2026 10:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 58016.2, SL: 58136.1286621072, TP: 57702.21)
+11/02/2026 10:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 58016.2, SL: 58136.1286621072, TP: 57702.21) SUCCEEDED, PendingOrder OID124
+11/02/2026 10:00:00.000 | Info | Combo: bartime=2026-02-11 09:00, executed=2026-02-11 10:00:00, pending Sell placed at 58016.2; SL=58136.12866210717, TP=57702.21201409482; valid for the next 3 chart bar(s).
+11/02/2026 14:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 115.60 units, which needs about $2881.76 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.46 budget, free margin was $9946.19). Size was cut from 115.60 to 3.90 units. Real risk on this trade is now about $3.36 (0.03% of balance) instead of the requested 1.00%.
+11/02/2026 14:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 58473.7, SL: 58339.3672811209, TP: 58825.4)
+11/02/2026 14:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 58473.7, SL: 58339.3672811209, TP: 58825.4) SUCCEEDED, PendingOrder OID127
+11/02/2026 14:00:00.000 | Info | Combo: bartime=2026-02-11 13:00, executed=2026-02-11 14:00:00, pending Buy placed at 58473.7; SL=58339.3672811209, TP=58825.399577906755; valid for the next 3 chart bar(s).
+11/02/2026 18:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 91.40 units, which needs about $2278.48 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.43 budget, free margin was $9942.57). Size was cut from 91.40 to 3.90 units. Real risk on this trade is now about $4.24 (0.04% of balance) instead of the requested 1.00%.
+11/02/2026 18:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 58026.8, SL: 58196.5392035729, TP: 57582.4)
+11/02/2026 18:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 58026.8, SL: 58196.5392035729, TP: 57582.4) SUCCEEDED, PendingOrder OID130
+11/02/2026 18:00:00.000 | Info | Combo: bartime=2026-02-11 17:00, executed=2026-02-11 18:00:00, pending Sell placed at 58026.8; SL=58196.53920357288, TP=57582.40189096939; valid for the next 3 chart bar(s).
+12/02/2026 00:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 126.60 units, which needs about $3155.98 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.38 budget, free margin was $9937.95). Size was cut from 126.60 to 3.90 units. Real risk on this trade is now about $3.06 (0.03% of balance) instead of the requested 1.00%.
+12/02/2026 00:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 57858.9, SL: 57981.4575784342, TP: 57538.03)
+12/02/2026 00:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 57858.9, SL: 57981.4575784342, TP: 57538.03) SUCCEEDED, PendingOrder OID133
+12/02/2026 00:00:00.000 | Info | Combo: bartime=2026-02-11 23:00, executed=2026-02-12 00:00:00, pending Sell placed at 57858.9; SL=57981.45757843421, TP=57538.02918785348; valid for the next 3 chart bar(s).
+13/02/2026 03:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 73.80 units, which needs about $1839.74 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.34 budget, free margin was $9934.32). Size was cut from 73.80 to 3.90 units. Real risk on this trade is now about $5.25 (0.05% of balance) instead of the requested 1.00%.
+13/02/2026 03:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 57332.2, SL: 57122.1807824042, TP: 57882.06)
+13/02/2026 03:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 57332.2, SL: 57122.1807824042, TP: 57882.06) SUCCEEDED, PendingOrder OID136
+13/02/2026 03:00:00.000 | Info | Combo: bartime=2026-02-13 02:00, executed=2026-02-13 03:00:00, pending Buy placed at 57332.2; SL=57122.180782404255, TP=57882.0561392717; valid for the next 3 chart bar(s).
+13/02/2026 05:00:00.000 | Info | Combo: bartime=2026-02-13 04:00, Buy signal skipped: already have same-direction exposure open.
+13/02/2026 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 91.70 units, which needs about $2285.96 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.29 budget, free margin was $9928.73). Size was cut from 91.70 to 3.90 units. Real risk on this trade is now about $4.22 (0.04% of balance) instead of the requested 1.00%.
+13/02/2026 08:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 57205.2, SL: 57036.2976716102, TP: 57647.41)
+13/02/2026 08:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 57205.2, SL: 57036.2976716102, TP: 57647.41) SUCCEEDED, PendingOrder OID139
+13/02/2026 08:00:00.000 | Info | Combo: bartime=2026-02-13 07:00, executed=2026-02-13 08:00:00, pending Buy placed at 57205.2; SL=57036.29767161023, TP=57647.407066884545; valid for the next 3 chart bar(s).
+13/02/2026 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 78.00 units, which needs about $1944.44 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.23 budget, free margin was $9922.56). Size was cut from 78.00 to 3.90 units. Real risk on this trade is now about $4.96 (0.05% of balance) instead of the requested 1.00%.
+13/02/2026 15:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 56993.3, SL: 57191.8166601003, TP: 56473.56)
+13/02/2026 15:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 56993.3, SL: 57191.8166601003, TP: 56473.56) SUCCEEDED, PendingOrder OID142
+13/02/2026 15:00:00.000 | Info | Combo: bartime=2026-02-13 14:00, executed=2026-02-13 15:00:00, pending Sell placed at 56993.3; SL=57191.816660100325, TP=56473.5589708053; valid for the next 3 chart bar(s).
+13/02/2026 16:00:00.000 | Info | Combo: bartime=2026-02-13 15:00, reversal - cancelling existing Sell pending order 142 before opening opposite direction.
+13/02/2026 16:00:00.000 | Trade | Cancelling pending order OID142
+13/02/2026 16:00:00.000 | Trade |  Cancelling pending order OID142 SUCCEEDED
+13/02/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 72.70 units, which needs about $1812.32 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.23 budget, free margin was $9922.56). Size was cut from 72.70 to 3.90 units. Real risk on this trade is now about $5.32 (0.05% of balance) instead of the requested 1.00%.
+13/02/2026 16:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 57556.2, SL: 57343.3487519197, TP: 58113.47)
+13/02/2026 16:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 57556.2, SL: 57343.3487519197, TP: 58113.47) SUCCEEDED, PendingOrder OID143
+13/02/2026 16:00:00.000 | Info | Combo: bartime=2026-02-13 15:00, executed=2026-02-13 16:00:00, pending Buy placed at 57556.2; SL=57343.34875191974, TP=58113.470743355756; valid for the next 3 chart bar(s).
+16/02/2026 01:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 69.80 units, which needs about $1740.02 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.17 budget, free margin was $9916.82). Size was cut from 69.80 to 3.80 units. Real risk on this trade is now about $5.39 (0.05% of balance) instead of the requested 1.00%.
+16/02/2026 01:00:00.000 | Trade | Placing Stop Order to Sell 3.8 JP225.cash (Price: 56851, SL: 57072.6683533168, TP: 56270.64)
+16/02/2026 01:00:00.000 | Trade |  Placing Stop Order to Sell 3.8 JP225.cash (Price: 56851, SL: 57072.6683533168, TP: 56270.64) SUCCEEDED, PendingOrder OID146
+16/02/2026 01:00:00.000 | Info | Combo: bartime=2026-02-16 00:00, executed=2026-02-16 01:00:00, pending Sell placed at 56851; SL=57072.66835331683, TP=56270.64499083069; valid for the next 3 chart bar(s).
+17/02/2026 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 122.50 units, which needs about $3053.77 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.32 budget, free margin was $9931.60). Size was cut from 122.50 to 3.90 units. Real risk on this trade is now about $3.16 (0.03% of balance) instead of the requested 1.00%.
+17/02/2026 08:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 56723.6, SL: 56597.0535041614, TP: 57054.91)
+17/02/2026 08:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 56723.6, SL: 56597.0535041614, TP: 57054.91) SUCCEEDED, PendingOrder OID149
+17/02/2026 08:00:00.000 | Info | Combo: bartime=2026-02-17 07:00, executed=2026-02-17 08:00:00, pending Buy placed at 56723.6; SL=56597.05350416144, TP=57054.91428845757; valid for the next 3 chart bar(s).
+17/02/2026 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 94.80 units, which needs about $2363.24 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.27 budget, free margin was $9927.18). Size was cut from 94.80 to 3.90 units. Real risk on this trade is now about $4.08 (0.04% of balance) instead of the requested 1.00%.
+17/02/2026 15:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 56457.1, SL: 56620.5331333558, TP: 56029.21)
+17/02/2026 15:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 56457.1, SL: 56620.5331333558, TP: 56029.21) SUCCEEDED, PendingOrder OID152
+17/02/2026 15:00:00.000 | Info | Combo: bartime=2026-02-17 14:00, executed=2026-02-17 15:00:00, pending Sell placed at 56457.1; SL=56620.53313335576, TP=56029.21195830158; valid for the next 3 chart bar(s).
+17/02/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 89.60 units, which needs about $2233.61 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.22 budget, free margin was $9921.56). Size was cut from 89.60 to 3.90 units. Real risk on this trade is now about $4.32 (0.04% of balance) instead of the requested 1.00%.
+17/02/2026 16:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 56808.1, SL: 56635.3294933154, TP: 57260.43)
+17/02/2026 16:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 56808.1, SL: 56635.3294933154, TP: 57260.43) SUCCEEDED, PendingOrder OID155
+17/02/2026 16:00:00.000 | Info | Combo: bartime=2026-02-17 15:00, executed=2026-02-17 16:00:00, pending Buy placed at 56808.1; SL=56635.32949331539, TP=57260.434433358736; valid for the next 3 chart bar(s).
+18/02/2026 13:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 151.40 units, which needs about $3774.21 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.33 budget, free margin was $9932.72). Size was cut from 151.40 to 3.90 units. Real risk on this trade is now about $2.56 (0.03% of balance) instead of the requested 1.00%.
+18/02/2026 13:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 57048.4, SL: 57150.8046658212, TP: 56780.29)
+18/02/2026 13:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 57048.4, SL: 57150.8046658212, TP: 56780.29) SUCCEEDED, PendingOrder OID158
+18/02/2026 13:00:00.000 | Info | Combo: bartime=2026-02-18 12:00, executed=2026-02-18 13:00:00, pending Sell placed at 57048.4; SL=57150.804665821226, TP=56780.29199142599; valid for the next 3 chart bar(s).
+18/02/2026 15:00:00.000 | Info | Combo: bartime=2026-02-18 14:00, reversal - cancelling existing Sell pending order 158 before opening opposite direction.
+18/02/2026 15:00:00.000 | Trade | Cancelling pending order OID158
+18/02/2026 15:00:00.000 | Trade |  Cancelling pending order OID158 SUCCEEDED
+18/02/2026 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 112.60 units, which needs about $2806.97 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.33 budget, free margin was $9932.72). Size was cut from 112.60 to 3.90 units. Real risk on this trade is now about $3.44 (0.03% of balance) instead of the requested 1.00%.
+18/02/2026 15:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 57567, SL: 57429.3058058744, TP: 57927.5)
+18/02/2026 15:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 57567, SL: 57429.3058058744, TP: 57927.5) SUCCEEDED, PendingOrder OID159
+18/02/2026 15:00:00.000 | Info | Combo: bartime=2026-02-18 14:00, executed=2026-02-18 15:00:00, pending Buy placed at 57567; SL=57429.30580587441, TP=57927.50033348737; valid for the next 3 chart bar(s).
+19/02/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 134.90 units, which needs about $3362.88 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.29 budget, free margin was $9928.80). Size was cut from 134.90 to 3.90 units. Real risk on this trade is now about $2.87 (0.03% of balance) instead of the requested 1.00%.
+19/02/2026 09:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 57179.2, SL: 57294.067433889, TP: 56878.46)
+19/02/2026 09:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 57179.2, SL: 57294.067433889, TP: 56878.46) SUCCEEDED, PendingOrder OID162
+19/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-19 08:00, executed=2026-02-19 09:00:00, pending Sell placed at 57179.2; SL=57294.067433889046, TP=56878.46293198628; valid for the next 3 chart bar(s).
+20/02/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 164.40 units, which needs about $4098.28 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.36 budget, free margin was $9935.94). Size was cut from 164.40 to 3.90 units. Real risk on this trade is now about $2.36 (0.02% of balance) instead of the requested 1.00%.
+20/02/2026 09:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 56998.5, SL: 56904.1771044977, TP: 57245.45)
+20/02/2026 09:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 56998.5, SL: 56904.1771044977, TP: 57245.45) SUCCEEDED, PendingOrder OID165
+20/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-20 08:00, executed=2026-02-20 09:00:00, pending Buy placed at 56998.5; SL=56904.17710449767, TP=57245.448940004484; valid for the next 3 chart bar(s).
+20/02/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 106.90 units, which needs about $2664.88 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.33 budget, free margin was $9933.19). Size was cut from 106.90 to 3.90 units. Real risk on this trade is now about $3.62 (0.04% of balance) instead of the requested 1.00%.
+20/02/2026 16:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 57296.4, SL: 57151.3072057842, TP: 57676.27)
+20/02/2026 16:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 57296.4, SL: 57151.3072057842, TP: 57676.27) SUCCEEDED, PendingOrder OID168
+20/02/2026 16:00:00.000 | Info | Combo: bartime=2026-02-20 15:00, executed=2026-02-20 16:00:00, pending Buy placed at 57296.4; SL=57151.30720578419, TP=57676.27077838379; valid for the next 3 chart bar(s).
+20/02/2026 19:00:00.000 | Trade | Cancelling pending order OID168
+20/02/2026 19:00:00.000 | Trade |  Cancelling pending order OID168 SUCCEEDED
+20/02/2026 19:00:00.000 | Info | Combo: pending order 168 cancelled after 3 chart bars.
+23/02/2026 01:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 91.40 units, which needs about $2278.48 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.33 budget, free margin was $9933.19). Size was cut from 91.40 to 3.90 units. Real risk on this trade is now about $4.23 (0.04% of balance) instead of the requested 1.00%.
+23/02/2026 01:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 56499.7, SL: 56669.2186626113, TP: 56055.88)
+23/02/2026 01:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 56499.7, SL: 56669.2186626113, TP: 56055.88) SUCCEEDED, PendingOrder OID169
+23/02/2026 01:00:00.000 | Info | Combo: bartime=2026-02-23 00:00, executed=2026-02-23 01:00:00, pending Sell placed at 56499.7; SL=56669.21866261127, TP=56055.87929432842; valid for the next 3 chart bar(s).
+23/02/2026 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 136.60 units, which needs about $3405.26 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.28 budget, free margin was $9928.49). Size was cut from 136.60 to 3.90 units. Real risk on this trade is now about $2.83 (0.03% of balance) instead of the requested 1.00%.
+23/02/2026 08:00:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 56958.7, SL: 56845.2471939581, TP: 57255.73)
+23/02/2026 08:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 56958.7, SL: 56845.2471939581, TP: 57255.73) SUCCEEDED, PendingOrder OID172
+23/02/2026 08:00:00.000 | Info | Combo: bartime=2026-02-23 07:00, executed=2026-02-23 08:00:00, pending Buy placed at 56958.7; SL=56845.2471939581, TP=57255.733398342694; valid for the next 3 chart bar(s).
+23/02/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 110.70 units, which needs about $2759.61 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.25 budget, free margin was $9925.29). Size was cut from 110.70 to 3.90 units. Real risk on this trade is now about $3.49 (0.04% of balance) instead of the requested 1.00%.
+23/02/2026 16:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 56645.6, SL: 56785.519710189, TP: 56279.27)
+23/02/2026 16:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 56645.6, SL: 56785.519710189, TP: 56279.27) SUCCEEDED, PendingOrder OID175
+23/02/2026 16:00:00.000 | Info | Combo: bartime=2026-02-23 15:00, executed=2026-02-23 16:00:00, pending Sell placed at 56645.6; SL=56785.51971018896, TP=56279.27299177066; valid for the next 3 chart bar(s).
+23/02/2026 20:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 127.30 units, which needs about $3173.43 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.21 budget, free margin was $9921.34). Size was cut from 127.30 to 3.90 units. Real risk on this trade is now about $3.04 (0.03% of balance) instead of the requested 1.00%.
+23/02/2026 20:00:00.000 | Trade | Placing Stop Order to Sell 3.9 JP225.cash (Price: 56670.9, SL: 56792.5843664134, TP: 56352.32)
+23/02/2026 20:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 JP225.cash (Price: 56670.9, SL: 56792.5843664134, TP: 56352.32) SUCCEEDED, PendingOrder OID178
+23/02/2026 20:00:00.000 | Info | Combo: bartime=2026-02-23 19:00, executed=2026-02-23 20:00:00, pending Sell placed at 56670.9; SL=56792.5843664134, TP=56352.31536430927; valid for the next 3 chart bar(s).
+23/02/2026 23:05:00.000 | Info | Combo: bartime=2026-02-23 21:00, reversal - cancelling existing Sell pending order 178 before opening opposite direction.
+23/02/2026 23:05:00.000 | Trade | Cancelling pending order OID178
+23/02/2026 23:05:00.000 | Trade |  Cancelling pending order OID178 SUCCEEDED
+23/02/2026 23:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 161.20 units, which needs about $4018.51 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.21 budget, free margin was $9921.34). Size was cut from 161.20 to 3.90 units. Real risk on this trade is now about $2.40 (0.02% of balance) instead of the requested 1.00%.
+23/02/2026 23:05:00.000 | Trade | Placing Stop Order to Buy 3.9 JP225.cash (Price: 56838.9, SL: 56742.7984214954, TP: 57090.51)
+23/02/2026 23:05:00.000 | Trade |  Placing Stop Order to Buy 3.9 JP225.cash (Price: 56838.9, SL: 56742.7984214954, TP: 57090.51) SUCCEEDED, PendingOrder OID179
+23/02/2026 23:05:00.000 | Info | Combo: bartime=2026-02-23 21:00, executed=2026-02-23 23:05:00, pending Buy placed at 56838.9; SL=56742.79842149543, TP=57090.50575084207; valid for the next 3 chart bar(s).
+24/02/2026 01:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 102.30 units, which needs about $2550.21 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.18 budget, free margin was $9918.49). Size was cut from 102.30 to 3.80 units. Real risk on this trade is now about $3.68 (0.04% of balance) instead of the requested 1.00%.
+24/02/2026 01:00:00.000 | Trade | Placing Stop Order to Buy 3.8 JP225.cash (Price: 57309, SL: 57157.7211790057, TP: 57705.07)
+24/02/2026 01:00:00.000 | Trade |  Placing Stop Order to Buy 3.8 JP225.cash (Price: 57309, SL: 57157.7211790057, TP: 57705.07) SUCCEEDED, PendingOrder OID182
+24/02/2026 01:00:00.000 | Info | Combo: bartime=2026-02-24 00:00, executed=2026-02-24 01:00:00, pending Buy placed at 57309; SL=57157.72117900566, TP=57705.06655723114; valid for the next 3 chart bar(s).
+26/02/2026 00:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 83.70 units, which needs about $2086.53 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.14 budget, free margin was $9914.16). Size was cut from 83.70 to 3.80 units. Real risk on this trade is now about $4.50 (0.05% of balance) instead of the requested 1.00%.
+26/02/2026 00:00:00.000 | Trade | Placing Stop Order to Sell 3.8 JP225.cash (Price: 59112.3, SL: 59297.1437321194, TP: 58628.36)
+26/02/2026 00:00:00.000 | Trade |  Placing Stop Order to Sell 3.8 JP225.cash (Price: 59112.3, SL: 59297.1437321194, TP: 58628.36) SUCCEEDED, PendingOrder OID185
+26/02/2026 00:00:00.000 | Info | Combo: bartime=2026-02-25 23:00, executed=2026-02-26 00:00:00, pending Sell placed at 59112.3; SL=59297.14373211941, TP=58628.35637771975; valid for the next 3 chart bar(s).
+26/02/2026 13:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 146.80 units, which needs about $3659.54 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.08 budget, free margin was $9907.86). Size was cut from 146.80 to 3.80 units. Real risk on this trade is now about $2.56 (0.03% of balance) instead of the requested 1.00%.
+26/02/2026 13:00:00.000 | Trade | Placing Stop Order to Buy 3.8 JP225.cash (Price: 59225.2, SL: 59119.8603443526, TP: 59500.99)
+26/02/2026 13:00:00.000 | Trade |  Placing Stop Order to Buy 3.8 JP225.cash (Price: 59225.2, SL: 59119.8603443526, TP: 59500.99) SUCCEEDED, PendingOrder OID188
+26/02/2026 13:00:00.000 | Info | Combo: bartime=2026-02-26 12:00, executed=2026-02-26 13:00:00, pending Buy placed at 59225.2; SL=59119.860344352644, TP=59500.992172876075; valid for the next 3 chart bar(s).
+26/02/2026 15:00:00.000 | Info | Combo: bartime=2026-02-26 14:00, reversal - cancelling existing Buy pending order 188 before opening opposite direction.
+26/02/2026 15:00:00.000 | Trade | Cancelling pending order OID188
+26/02/2026 15:00:00.000 | Trade |  Cancelling pending order OID188 SUCCEEDED
+26/02/2026 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 120.90 units, which needs about $3013.88 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.08 budget, free margin was $9907.86). Size was cut from 120.90 to 3.80 units. Real risk on this trade is now about $3.11 (0.03% of balance) instead of the requested 1.00%.
+26/02/2026 15:00:00.000 | Trade | Placing Stop Order to Sell 3.8 JP225.cash (Price: 58781, SL: 58908.9467716143, TP: 58446.02)
+26/02/2026 15:00:00.000 | Trade |  Placing Stop Order to Sell 3.8 JP225.cash (Price: 58781, SL: 58908.9467716143, TP: 58446.02) SUCCEEDED, PendingOrder OID189
+26/02/2026 15:00:00.000 | Info | Combo: bartime=2026-02-26 14:00, executed=2026-02-26 15:00:00, pending Sell placed at 58781; SL=58908.946771614304, TP=58446.019617359314; valid for the next 3 chart bar(s).
+27/02/2026 04:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 104.40 units, which needs about $2602.56 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.14 budget, free margin was $9914.19). Size was cut from 104.40 to 3.80 units. Real risk on this trade is now about $3.61 (0.04% of balance) instead of the requested 1.00%.
+27/02/2026 04:00:00.000 | Trade | Placing Stop Order to Buy 3.8 JP225.cash (Price: 58892.1, SL: 58743.889836119, TP: 59280.13)
+27/02/2026 04:00:00.000 | Trade |  Placing Stop Order to Buy 3.8 JP225.cash (Price: 58892.1, SL: 58743.889836119, TP: 59280.13) SUCCEEDED, PendingOrder OID192
+27/02/2026 04:00:00.000 | Info | Combo: bartime=2026-02-27 03:00, executed=2026-02-27 04:00:00, pending Buy placed at 58892.1; SL=58743.88983611901, TP=59280.13243553307; valid for the next 3 chart bar(s).
+27/02/2026 14:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 94.30 units, which needs about $2350.78 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.10 budget, free margin was $9910.17). Size was cut from 94.30 to 3.80 units. Real risk on this trade is now about $3.99 (0.04% of balance) instead of the requested 1.00%.
+27/02/2026 14:00:00.000 | Trade | Placing Stop Order to Sell 3.8 JP225.cash (Price: 58431.3, SL: 58595.3949171183, TP: 58001.68)
+27/02/2026 14:00:00.000 | Trade |  Placing Stop Order to Sell 3.8 JP225.cash (Price: 58431.3, SL: 58595.3949171183, TP: 58001.68) SUCCEEDED, PendingOrder OID195
+27/02/2026 14:00:00.000 | Info | Combo: bartime=2026-02-27 13:00, executed=2026-02-27 14:00:00, pending Sell placed at 58431.3; SL=58595.39491711829, TP=58001.67932702688; valid for the next 3 chart bar(s).
+27/02/2026 21:49:00.000 | Info | Combo: loaded=4542, processed=79, before-start=4213, not-processed=250, placed=75, failed=0, guard-skipped=0, pending-expired=9, same-direction-skipped=4, reversed=8, margin-capped=75, margin-blocked=0.
+Progress | Backtesting | 98.15 % |
+Info | CBot instance [Combo, JP225.cash, h1] stopped.
+{
+	"Equity":9903.95,
+	"NetProfit":-96.04,
+	"MaxBalanceDrawdownPercentages":0,
+	"MaxEquityDrawdownPercentages":0,
+	"MaxBalanceDrawdown":96.04,
+	"MaxEquityDrawdown":98.06,
+	"WinningTrades":11,
+	"LosingTrades":49,
+	"TotalTrades":60,
+	"AverageTrade":-1.6,
+	"ProfitFactor":0.53,
+	"Fitness":0
+}
+

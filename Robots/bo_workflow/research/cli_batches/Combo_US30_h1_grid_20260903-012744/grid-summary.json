@@ -1,0 +1,74 @@
+﻿[
+    {
+        "RunNumber":  1,
+        "Success":  true,
+        "FailureReason":  null,
+        "Parameters":  "{\"MaxMarginPercent\":5,\"RiskPercent\":1,\"KslLevel\":3,\"SignalFilePath\":\"Z:\\\\Desktop\\\\og_program\\\\runtime\\\\exports\\\\combo_US30_H1_full_history_signals.csv\",\"KtpLevel\":7}",
+        "OutputDir":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_US30.cash_h1_20260903-012755",
+        "NetProfit":  156.53,
+        "ROI":  1.57,
+        "ProfitFactor":  2.61,
+        "TotalTrades":  22,
+        "MaxEquityDrawdownPct":  0.4825912589919555
+    },
+    {
+        "RunNumber":  2,
+        "Success":  true,
+        "FailureReason":  null,
+        "Parameters":  "{\"MaxMarginPercent\":10,\"RiskPercent\":1,\"KslLevel\":3,\"SignalFilePath\":\"Z:\\\\Desktop\\\\og_program\\\\runtime\\\\exports\\\\combo_US30_H1_full_history_signals.csv\",\"KtpLevel\":7}",
+        "OutputDir":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_US30.cash_h1_20260903-012909",
+        "NetProfit":  312.2,
+        "ROI":  3.12,
+        "ProfitFactor":  2.6,
+        "TotalTrades":  22,
+        "MaxEquityDrawdownPct":  0.9509025375835009
+    },
+    {
+        "RunNumber":  3,
+        "Success":  true,
+        "FailureReason":  null,
+        "Parameters":  "{\"MaxMarginPercent\":20,\"RiskPercent\":1,\"KslLevel\":3,\"SignalFilePath\":\"Z:\\\\Desktop\\\\og_program\\\\runtime\\\\exports\\\\combo_US30_H1_full_history_signals.csv\",\"KtpLevel\":7}",
+        "OutputDir":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_US30.cash_h1_20260903-013002",
+        "NetProfit":  633.52,
+        "ROI":  6.34,
+        "ProfitFactor":  2.56,
+        "TotalTrades":  22,
+        "MaxEquityDrawdownPct":  1.9355998467783444
+    },
+    {
+        "RunNumber":  4,
+        "Success":  true,
+        "FailureReason":  null,
+        "Parameters":  "{\"MaxMarginPercent\":30,\"RiskPercent\":1,\"KslLevel\":3,\"SignalFilePath\":\"Z:\\\\Desktop\\\\og_program\\\\runtime\\\\exports\\\\combo_US30_H1_full_history_signals.csv\",\"KtpLevel\":7}",
+        "OutputDir":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_US30.cash_h1_20260903-013054",
+        "NetProfit":  967.28,
+        "ROI":  9.67,
+        "ProfitFactor":  2.55,
+        "TotalTrades":  22,
+        "MaxEquityDrawdownPct":  2.864075807915781
+    },
+    {
+        "RunNumber":  5,
+        "Success":  true,
+        "FailureReason":  null,
+        "Parameters":  "{\"MaxMarginPercent\":50,\"RiskPercent\":1,\"KslLevel\":3,\"SignalFilePath\":\"Z:\\\\Desktop\\\\og_program\\\\runtime\\\\exports\\\\combo_US30_H1_full_history_signals.csv\",\"KtpLevel\":7}",
+        "OutputDir":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_US30.cash_h1_20260903-013147",
+        "NetProfit":  1612.85,
+        "ROI":  16.13,
+        "ProfitFactor":  2.72,
+        "TotalTrades":  22,
+        "MaxEquityDrawdownPct":  3.2795683615877693
+    },
+    {
+        "RunNumber":  6,
+        "Success":  true,
+        "FailureReason":  null,
+        "Parameters":  "{\"MaxMarginPercent\":100,\"RiskPercent\":1,\"KslLevel\":3,\"SignalFilePath\":\"Z:\\\\Desktop\\\\og_program\\\\runtime\\\\exports\\\\combo_US30_H1_full_history_signals.csv\",\"KtpLevel\":7}",
+        "OutputDir":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_US30.cash_h1_20260903-013241",
+        "NetProfit":  1870.25,
+        "ROI":  18.7,
+        "ProfitFactor":  2.48,
+        "TotalTrades":  22,
+        "MaxEquityDrawdownPct":  4.520799003052839
+    }
+]

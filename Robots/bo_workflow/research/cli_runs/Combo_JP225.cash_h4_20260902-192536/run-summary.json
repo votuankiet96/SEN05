@@ -1,0 +1,51 @@
+﻿{
+    "SchemaVersion":  1,
+    "CreatedAtUtc":  "2026-09-03T02:27:40.1865675Z",
+    "Success":  true,
+    "FailureReason":  null,
+    "Input":  {
+                  "AlgoPath":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\Combo.algo",
+                  "AlgoSHA256":  "F55E7FBA663B6A212C7F19D6E63E2482F922E0B7865411CE19DA7B66780C04B7",
+                  "SymbolInput":  "JP225",
+                  "ResolvedSymbol":  "JP225.cash",
+                  "Period":  "h4",
+                  "StartDate":  "2025-01-01",
+                  "EndDate":  "2025-01-15",
+                  "DataMode":  "Ticks",
+                  "Broker":  "FTMO Platform",
+                  "Account":  "7563609",
+                  "Parameters":  {
+                                     "RiskPercent":  0.5,
+                                     "SignalFilePath":  "Z:\\Desktop\\og_program\\runtime\\exports\\combo_J225_H4_full_history_signals.csv"
+                                 },
+                  "SignalFile":  {
+                                     "Path":  "Z:\\Desktop\\og_program\\runtime\\exports\\combo_J225_H4_full_history_signals.csv",
+                                     "Length":  56316,
+                                     "LastWriteTime":  "2026-09-01T15:48:43.0000000Z",
+                                     "SHA256":  "323F642441B807C4F3E214A8BB17A17866674122E6E3FE9ACE92DC2C4015BE58"
+                                 }
+              },
+    "Actual":  {
+                   "StartDate":  "2025-01-01",
+                   "EndDate":  "2025-01-15"
+               },
+    "Metrics":  {
+                    "StartingCapital":  10000,
+                    "EndingBalance":  10133.519999999999,
+                    "NetProfit":  133.52,
+                    "ROI":  1.34,
+                    "ProfitFactor":  13.2,
+                    "TotalTrades":  4,
+                    "WinningTrades":  3,
+                    "LosingTrades":  1,
+                    "MaxBalanceDrawdownPct":  0.1078421128379481,
+                    "MaxEquityDrawdownPct":  0.7061042183622952,
+                    "HistoryItems":  4
+                },
+    "Artifacts":  {
+                      "Params":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_JP225.cash_h4_20260902-192536\\params.cbotset",
+                      "Command":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_JP225.cash_h4_20260902-192536\\command.txt",
+                      "Log":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_JP225.cash_h4_20260902-192536\\log.txt",
+                      "ReportJson":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_JP225.cash_h4_20260902-192536\\report.json"
+                  }
+}

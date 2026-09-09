@@ -1,0 +1,74 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_GER40.cash_h4_20260901-2339\params.cbotset 
+--start=01/01/2025 --end=02/01/2025 --data-mode=Ticks --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --symbol=GER40.cash --period=h4 --full-access 
+--report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_GER40.cash_h4_20260901-2339
+\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...339\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | GER40.cash                | cmd arg              |
+| Period               | h4                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 02/01/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 3                         | default value        |
+| KtpLevel             | 3                         | default value        |
+| RiskPercent          | 0.5                       | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+02/09/2026 06:40:01.869 | Establishing connection using votuankiet96@gmail.com...
+02/09/2026 06:40:04.156 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Progress | Loading GER40.cash, h4 | 100.00 % |
+Info | CBot instance [Combo, GER40.cash, h4] started.
+Progress | Backtesting | 50.70 % |
+Progress | Backtesting | 62.50 % |
+Progress | Loading EURUSD, h4 | 100.00 % |
+Progress | Backtesting | 62.50 % |
+Progress | Backtesting | 66.75 % |
+Progress | Backtesting | 78.30 % |
+Progress | Backtesting | 80.85 % |
+Progress | Backtesting | 83.21 % |
+Progress | Backtesting | 87.33 % |
+Progress | Backtesting | 93.38 % |
+02/01/2025 00:20:00.004 | Info | Combo: loaded 1086 valid signal row(s) from CSV.
+02/01/2025 00:20:00.004 | Info | Combo: signal scheduling active with chart timeframe h4 (04:00:00); CSV timeframe must match the chart timeframe.
+02/01/2025 06:00:00.366 | Trade | Placing Stop Order to Buy 0.99 GER40.cash (Price: 19923.9, SL: 19874.9934725785, TP: 19972.81)
+02/01/2025 06:00:00.366 | Trade |  Placing Stop Order to Buy 0.99 GER40.cash (Price: 19923.9, SL: 19874.9934725785, TP: 19972.81) SUCCEEDED, PendingOrder OID1
+02/01/2025 06:00:00.366 | Info | Combo: bartime=2025-01-02 02:00, executed=2025-01-02 06:00:00, pending Buy placed at 19923.9; SL=19874.993472578517, TP=19972.806527421486; valid for the next 3 chart bar(s).
+02/01/2025 23:59:57.268 | Info | Combo: loaded=1086, processed=1, before-start=884, not-processed=201, placed=1, failed=0, guard-skipped=0, pending-expired=0, same-direction-skipped=0, reversed=0.
+Progress | Backtesting | 100.00 % |
+Info | CBot instance [Combo, GER40.cash, h4] stopped.
+{
+	"Equity":10046.65,
+	"NetProfit":46.65,
+	"MaxBalanceDrawdownPercentages":0,
+	"MaxEquityDrawdownPercentages":0,
+	"MaxBalanceDrawdown":0,
+	"MaxEquityDrawdown":47.9,
+	"WinningTrades":1,
+	"LosingTrades":0,
+	"TotalTrades":1,
+	"AverageTrade":46.65,
+	"ProfitFactor":-,
+	"Fitness":0
+}
+

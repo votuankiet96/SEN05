@@ -1,0 +1,580 @@
+Info | CBot instance [Combo, BTCUSD, h1] started.
+01/01/2026 00:00:02.002 | Info | Combo: loaded 6222 valid signal row(s) from CSV.
+01/01/2026 00:00:02.002 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+01/01/2026 10:00:00.201 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.54 units, which needs about $36082.77 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5000.00 budget, free margin was $10000.00). Size was cut from 0.54 to 0.07 units. Real risk on this trade is now about $12.76 (0.13% of balance) instead of the requested 1.00%.
+01/01/2026 10:00:00.201 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 87834.7, SL: 87652.3949679102, TP: 88311.97)
+01/01/2026 10:00:00.201 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 87834.7, SL: 87652.3949679102, TP: 88311.97) SUCCEEDED, PendingOrder OID1
+01/01/2026 10:00:00.201 | Info | Combo: bartime=2026-01-01 09:00, executed=2026-01-01 10:00:00, pending Buy placed at 87834.7; SL=87652.39496791016, TP=88311.97457401117; valid for the next 3 chart bar(s).
+03/01/2026 15:00:00.202 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.37 units, which needs about $24723.38 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5016.66 budget, free margin was $10033.32). Size was cut from 0.37 to 0.07 units. Real risk on this trade is now about $18.95 (0.19% of balance) instead of the requested 1.00%.
+03/01/2026 15:00:00.202 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 90204.7, SL: 89934.0344524886, TP: 90913.3)
+03/01/2026 15:00:00.202 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 90204.7, SL: 89934.0344524886, TP: 90913.3) SUCCEEDED, PendingOrder OID4
+03/01/2026 15:00:00.202 | Info | Combo: bartime=2026-01-03 14:00, executed=2026-01-03 15:00:00, pending Buy placed at 90204.7; SL=89934.03445248866, TP=90913.30240338469; valid for the next 3 chart bar(s).
+03/01/2026 16:00:00.001 | Info | Combo: bartime=2026-01-03 15:00, reversal - cancelling existing Buy pending order 4 before opening opposite direction.
+03/01/2026 16:00:00.001 | Trade | Cancelling pending order OID4
+03/01/2026 16:00:00.001 | Trade | → Cancelling pending order OID4 SUCCEEDED
+03/01/2026 16:00:00.001 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.40 units, which needs about $26727.98 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5016.66 budget, free margin was $10033.32). Size was cut from 0.40 to 0.07 units. Real risk on this trade is now about $17.20 (0.17% of balance) instead of the requested 1.00%.
+03/01/2026 16:00:00.001 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 89849.95, SL: 90095.6324380091, TP: 89206.75)
+03/01/2026 16:00:00.001 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 89849.95, SL: 90095.6324380091, TP: 89206.75) SUCCEEDED, PendingOrder OID5
+03/01/2026 16:00:00.001 | Info | Combo: bartime=2026-01-03 15:00, executed=2026-01-03 16:00:00, pending Sell placed at 89849.95; SL=90095.63243800907, TP=89206.75337729225; valid for the next 3 chart bar(s).
+03/01/2026 17:00:00.208 | Info | Combo: bartime=2026-01-03 16:00, reversal - cancelling existing Sell pending order 5 before opening opposite direction.
+03/01/2026 17:00:00.208 | Trade | Cancelling pending order OID5
+03/01/2026 17:00:00.208 | Trade | → Cancelling pending order OID5 SUCCEEDED
+03/01/2026 17:00:00.208 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.39 units, which needs about $26059.78 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5016.66 budget, free margin was $10033.32). Size was cut from 0.39 to 0.07 units. Real risk on this trade is now about $17.81 (0.18% of balance) instead of the requested 1.00%.
+03/01/2026 17:00:00.208 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 90184.35, SL: 89929.8940495928, TP: 90850.52)
+03/01/2026 17:00:00.208 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 90184.35, SL: 89929.8940495928, TP: 90850.52) SUCCEEDED, PendingOrder OID6
+03/01/2026 17:00:00.208 | Info | Combo: bartime=2026-01-03 16:00, executed=2026-01-03 17:00:00, pending Buy placed at 90184.35; SL=89929.89404959275, TP=90850.51567816621; valid for the next 3 chart bar(s).
+03/01/2026 20:00:00.089 | Trade | Cancelling pending order OID6
+03/01/2026 20:00:00.089 | Trade | → Cancelling pending order OID6 SUCCEEDED
+03/01/2026 20:00:00.089 | Info | Combo: pending order 6 cancelled after 3 chart bars.
+04/01/2026 19:00:02.001 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.38 units, which needs about $25391.58 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5016.66 budget, free margin was $10033.32). Size was cut from 0.38 to 0.07 units. Real risk on this trade is now about $18.12 (0.18% of balance) instead of the requested 1.00%.
+04/01/2026 19:00:02.001 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 90885.15, SL: 91144.075447988, TP: 90207.28)
+04/01/2026 19:00:02.001 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 90885.15, SL: 91144.075447988, TP: 90207.28) SUCCEEDED, PendingOrder OID7
+04/01/2026 19:00:02.001 | Info | Combo: bartime=2026-01-04 18:00, executed=2026-01-04 19:00:02, pending Sell placed at 90885.15; SL=91144.07544798804, TP=90207.28317716728; valid for the next 3 chart bar(s).
+05/01/2026 00:00:00.011 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.35 units, which needs about $23386.98 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5006.76 budget, free margin was $10013.53). Size was cut from 0.35 to 0.07 units. Real risk on this trade is now about $19.73 (0.20% of balance) instead of the requested 1.00%.
+05/01/2026 00:00:00.011 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 91571.7, SL: 91289.8153412033, TP: 92309.67)
+05/01/2026 00:00:00.011 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 91571.7, SL: 91289.8153412033, TP: 92309.67) SUCCEEDED, PendingOrder OID10
+05/01/2026 00:00:00.011 | Info | Combo: bartime=2026-01-04 23:00, executed=2026-01-05 00:00:00, pending Buy placed at 91571.7; SL=91289.81534120327, TP=92309.67403672982; valid for the next 3 chart bar(s).
+06/01/2026 06:00:00.206 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.27 units, which needs about $18041.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5032.57 budget, free margin was $10065.15). Size was cut from 0.27 to 0.07 units. Real risk on this trade is now about $25.71 (0.26% of balance) instead of the requested 1.00%.
+06/01/2026 06:00:00.206 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 93483.1, SL: 93850.3973178452, TP: 92521.52)
+06/01/2026 06:00:00.206 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 93483.1, SL: 93850.3973178452, TP: 92521.52) SUCCEEDED, PendingOrder OID13
+06/01/2026 06:00:00.206 | Info | Combo: bartime=2026-01-06 05:00, executed=2026-01-06 06:00:00, pending Sell placed at 93483.1; SL=93850.3973178452, TP=92521.5156218813; valid for the next 3 chart bar(s).
+06/01/2026 13:00:00.210 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.31 units, which needs about $20714.18 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5019.62 budget, free margin was $10039.25). Size was cut from 0.31 to 0.07 units. Real risk on this trade is now about $22.19 (0.22% of balance) instead of the requested 1.00%.
+06/01/2026 13:00:00.210 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 93979.4, SL: 93662.3293586486, TP: 94809.49)
+06/01/2026 13:00:00.210 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 93979.4, SL: 93662.3293586486, TP: 94809.49) SUCCEEDED, PendingOrder OID16
+06/01/2026 13:00:00.210 | Info | Combo: bartime=2026-01-06 12:00, executed=2026-01-06 13:00:00, pending Buy placed at 93979.4; SL=93662.32935864863, TP=94809.49093905787; valid for the next 3 chart bar(s).
+06/01/2026 15:00:00.404 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.23 units, which needs about $15368.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5008.49 budget, free margin was $10016.99). Size was cut from 0.23 to 0.07 units. Real risk on this trade is now about $29.61 (0.30% of balance) instead of the requested 1.00%.
+06/01/2026 15:00:00.404 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 94450.9, SL: 94027.8967895351, TP: 95558.32)
+06/01/2026 15:00:00.404 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 94450.9, SL: 94027.8967895351, TP: 95558.32) SUCCEEDED, PendingOrder OID19
+06/01/2026 15:00:00.404 | Info | Combo: bartime=2026-01-06 14:00, executed=2026-01-06 15:00:00, pending Buy placed at 94450.9; SL=94027.89678953512, TP=95558.32240499703; valid for the next 3 chart bar(s).
+06/01/2026 16:00:00.200 | Info | Combo: bartime=2026-01-06 15:00, reversal - cancelling existing Buy pending order 19 before opening opposite direction.
+06/01/2026 16:00:00.200 | Trade | Cancelling pending order OID19
+06/01/2026 16:00:00.200 | Trade | → Cancelling pending order OID19 SUCCEEDED
+06/01/2026 16:00:00.200 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.18 units, which needs about $12027.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5008.49 budget, free margin was $10016.99). Size was cut from 0.18 to 0.07 units. Real risk on this trade is now about $37.32 (0.37% of balance) instead of the requested 1.00%.
+06/01/2026 16:00:00.200 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 93238.55, SL: 93771.6725683719, TP: 91842.84)
+06/01/2026 16:00:00.200 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 93238.55, SL: 93771.6725683719, TP: 91842.84) SUCCEEDED, PendingOrder OID20
+06/01/2026 16:00:00.200 | Info | Combo: bartime=2026-01-06 15:00, executed=2026-01-06 16:00:00, pending Sell placed at 93238.55; SL=93771.6725683719, TP=91842.83511600237; valid for the next 3 chart bar(s).
+08/01/2026 16:00:00.009 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.15 units, which needs about $10022.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5058.56 budget, free margin was $10117.12). Size was cut from 0.15 to 0.07 units. Real risk on this trade is now about $45.99 (0.45% of balance) instead of the requested 1.00%.
+08/01/2026 16:00:00.009 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 90764.55, SL: 90107.5987077742, TP: 92484.45)
+08/01/2026 16:00:00.009 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 90764.55, SL: 90107.5987077742, TP: 92484.45) SUCCEEDED, PendingOrder OID23
+08/01/2026 16:00:00.009 | Info | Combo: bartime=2026-01-08 15:00, executed=2026-01-08 16:00:00, pending Buy placed at 90764.55; SL=90107.59870777422, TP=92484.4484830471; valid for the next 3 chart bar(s).
+09/01/2026 08:00:00.409 | Info | Combo: bartime=2026-01-09 07:00, reversal - closing existing Buy position 7 before opening opposite direction.
+09/01/2026 08:00:00.409 | Trade | Closing position PID7 (Volume: 0.07)
+09/01/2026 08:00:00.409 | Trade | → Closing position PID7 (Volume: 0.07) SUCCEEDED
+09/01/2026 08:00:00.409 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.29 units, which needs about $19377.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5054.11 budget, free margin was $10108.22). Size was cut from 0.29 to 0.07 units. Real risk on this trade is now about $24.04 (0.24% of balance) instead of the requested 1.00%.
+09/01/2026 08:00:00.409 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 90557.8, SL: 90901.2944408801, TP: 89658.53)
+09/01/2026 08:00:00.409 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 90557.8, SL: 90901.2944408801, TP: 89658.53) SUCCEEDED, PendingOrder OID27
+09/01/2026 08:00:00.409 | Info | Combo: bartime=2026-01-09 07:00, executed=2026-01-09 08:00:00, pending Sell placed at 90557.8; SL=90901.29444088008, TP=89658.53155377595; valid for the next 3 chart bar(s).
+09/01/2026 16:00:00.008 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.12 units, which needs about $8018.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5083.85 budget, free margin was $10167.71). Size was cut from 0.12 to 0.07 units. Real risk on this trade is now about $57.86 (0.57% of balance) instead of the requested 1.00%.
+09/01/2026 16:00:00.008 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 91966.2, SL: 91139.5778276416, TP: 94130.3)
+09/01/2026 16:00:00.008 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 91966.2, SL: 91139.5778276416, TP: 94130.3) SUCCEEDED, PendingOrder OID30
+09/01/2026 16:00:00.008 | Info | Combo: bartime=2026-01-09 15:00, executed=2026-01-09 16:00:00, pending Buy placed at 91966.2; SL=91139.57782764155, TP=94130.29684723441; valid for the next 3 chart bar(s).
+09/01/2026 19:00:00.439 | Trade | Cancelling pending order OID30
+09/01/2026 19:00:00.439 | Trade | → Cancelling pending order OID30 SUCCEEDED
+09/01/2026 19:00:00.439 | Info | Combo: pending order 30 cancelled after 3 chart bars.
+10/01/2026 02:00:00.405 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.26 units, which needs about $17373.19 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5083.85 budget, free margin was $10167.71). Size was cut from 0.26 to 0.07 units. Real risk on this trade is now about $26.60 (0.26% of balance) instead of the requested 1.00%.
+10/01/2026 02:00:00.405 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 90624.7, SL: 90244.7375122839, TP: 91619.44)
+10/01/2026 02:00:00.405 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 90624.7, SL: 90244.7375122839, TP: 91619.44) SUCCEEDED, PendingOrder OID31
+10/01/2026 02:00:00.405 | Info | Combo: bartime=2026-01-10 01:00, executed=2026-01-10 02:00:00, pending Buy placed at 90624.7; SL=90244.73751228386, TP=91619.44179284085; valid for the next 3 chart bar(s).
+10/01/2026 20:00:00.055 | Info | Combo: bartime=2026-01-10 09:00, Buy signal skipped: already have same-direction exposure open.
+10/01/2026 20:00:00.055 | Info | Combo: bartime=2026-01-10 17:00, reversal - closing existing Buy position 9 before opening opposite direction.
+10/01/2026 20:00:00.055 | Trade | Closing position PID9 (Volume: 0.07)
+10/01/2026 20:00:00.055 | Trade | → Closing position PID9 (Volume: 0.07) SUCCEEDED
+10/01/2026 20:00:00.055 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.71 units, which needs about $47442.16 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5081.78 budget, free margin was $10163.56). Size was cut from 0.71 to 0.07 units. Real risk on this trade is now about $9.92 (0.10% of balance) instead of the requested 1.00%.
+10/01/2026 20:00:00.055 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 90347.35, SL: 90489.0021510676, TP: 89976.5)
+10/01/2026 20:00:00.055 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 90347.35, SL: 90489.0021510676, TP: 89976.5) SUCCEEDED, PendingOrder OID35
+10/01/2026 20:00:00.055 | Info | Combo: bartime=2026-01-10 17:00, executed=2026-01-10 20:00:00, pending Sell placed at 90347.35; SL=90489.00215106757, TP=89976.50466850513; valid for the next 3 chart bar(s).
+10/01/2026 23:00:10.403 | Trade | Cancelling pending order OID35
+10/01/2026 23:00:10.403 | Trade | → Cancelling pending order OID35 SUCCEEDED
+10/01/2026 23:00:10.403 | Info | Combo: pending order 35 cancelled after 3 chart bars.
+11/01/2026 01:00:04.198 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.75 units, which needs about $50114.96 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5081.78 budget, free margin was $10163.56). Size was cut from 0.75 to 0.07 units. Real risk on this trade is now about $9.43 (0.09% of balance) instead of the requested 1.00%.
+11/01/2026 01:00:04.198 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 90548.55, SL: 90413.8269088884, TP: 90901.26)
+11/01/2026 01:00:04.198 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 90548.55, SL: 90413.8269088884, TP: 90901.26) SUCCEEDED, PendingOrder OID36
+11/01/2026 01:00:04.198 | Info | Combo: bartime=2026-01-11 00:00, executed=2026-01-11 01:00:04, pending Buy placed at 90548.55; SL=90413.82690888844, TP=90901.25505253008; valid for the next 3 chart bar(s).
+11/01/2026 20:00:00.074 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.41 units, which needs about $27396.18 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5093.22 budget, free margin was $10186.45). Size was cut from 0.41 to 0.07 units. Real risk on this trade is now about $17.31 (0.17% of balance) instead of the requested 1.00%.
+11/01/2026 20:00:00.074 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 90467.9, SL: 90715.1807436402, TP: 89820.52)
+11/01/2026 20:00:00.074 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 90467.9, SL: 90715.1807436402, TP: 89820.52) SUCCEEDED, PendingOrder OID39
+11/01/2026 20:00:00.074 | Info | Combo: bartime=2026-01-11 19:00, executed=2026-01-11 20:00:00, pending Sell placed at 90467.9; SL=90715.18074364022, TP=89820.5190131499; valid for the next 3 chart bar(s).
+12/01/2026 00:00:00.001 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.27 units, which needs about $18041.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5080.28 budget, free margin was $10160.57). Size was cut from 0.27 to 0.07 units. Real risk on this trade is now about $25.93 (0.26% of balance) instead of the requested 1.00%.
+12/01/2026 00:00:00.001 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 90935.8, SL: 90565.431967405, TP: 91905.42)
+12/01/2026 00:00:00.001 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 90935.8, SL: 90565.431967405, TP: 91905.42) SUCCEEDED, PendingOrder OID42
+12/01/2026 00:00:00.001 | Info | Combo: bartime=2026-01-11 23:00, executed=2026-01-12 00:00:00, pending Buy placed at 90935.8; SL=90565.43196740496, TP=91905.4235093338; valid for the next 3 chart bar(s).
+12/01/2026 09:00:00.001 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.15 units, which needs about $10022.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5113.27 budget, free margin was $10226.54). Size was cut from 0.15 to 0.07 units. Real risk on this trade is now about $45.60 (0.45% of balance) instead of the requested 1.00%.
+12/01/2026 09:00:00.001 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 90194.2, SL: 90845.5601704635, TP: 88488.94)
+12/01/2026 09:00:00.001 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 90194.2, SL: 90845.5601704635, TP: 88488.94) SUCCEEDED, PendingOrder OID45
+12/01/2026 09:00:00.001 | Info | Combo: bartime=2026-01-12 08:00, executed=2026-01-12 09:00:00, pending Sell placed at 90194.2; SL=90845.56017046353, TP=88488.93907372646; valid for the next 3 chart bar(s).
+12/01/2026 12:00:00.016 | Trade | Cancelling pending order OID45
+12/01/2026 12:00:00.016 | Trade | → Cancelling pending order OID45 SUCCEEDED
+12/01/2026 12:00:00.016 | Info | Combo: pending order 45 cancelled after 3 chart bars.
+12/01/2026 16:00:00.087 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.16 units, which needs about $10691.19 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5113.27 budget, free margin was $10226.54). Size was cut from 0.16 to 0.07 units. Real risk on this trade is now about $44.18 (0.43% of balance) instead of the requested 1.00%.
+12/01/2026 16:00:00.087 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 91604.45, SL: 90973.2493000592, TP: 93256.93)
+12/01/2026 16:00:00.087 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 91604.45, SL: 90973.2493000592, TP: 93256.93) SUCCEEDED, PendingOrder OID46
+12/01/2026 16:00:00.087 | Info | Combo: bartime=2026-01-12 15:00, executed=2026-01-12 16:00:00, pending Buy placed at 91604.45; SL=90973.24930005921, TP=93256.93343244499; valid for the next 3 chart bar(s).
+12/01/2026 22:05:00.007 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.15 units, which needs about $10022.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5090.48 budget, free margin was $10180.97). Size was cut from 0.15 to 0.07 units. Real risk on this trade is now about $45.47 (0.45% of balance) instead of the requested 1.00%.
+12/01/2026 22:05:00.007 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 90786.7, SL: 91436.2045322853, TP: 89086.3)
+12/01/2026 22:05:00.007 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 90786.7, SL: 91436.2045322853, TP: 89086.3) SUCCEEDED, PendingOrder OID49
+12/01/2026 22:05:00.007 | Info | Combo: bartime=2026-01-12 21:00, executed=2026-01-12 22:05:00, pending Sell placed at 90786.7; SL=91436.20453228528, TP=89086.29713447714; valid for the next 3 chart bar(s).
+13/01/2026 01:00:00.808 | Trade | Cancelling pending order OID49
+13/01/2026 01:00:00.808 | Trade | → Cancelling pending order OID49 SUCCEEDED
+13/01/2026 01:00:00.808 | Info | Combo: pending order 49 cancelled after 3 chart bars.
+13/01/2026 02:00:01.605 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.21 units, which needs about $14032.19 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5090.48 budget, free margin was $10180.97). Size was cut from 0.21 to 0.07 units. Real risk on this trade is now about $33.89 (0.33% of balance) instead of the requested 1.00%.
+13/01/2026 02:00:01.605 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 90865.8, SL: 91350.0070564241, TP: 89598.15)
+13/01/2026 02:00:01.605 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 90865.8, SL: 91350.0070564241, TP: 89598.15) SUCCEEDED, PendingOrder OID50
+13/01/2026 02:00:01.605 | Info | Combo: bartime=2026-01-13 01:00, executed=2026-01-13 02:00:01, pending Sell placed at 90865.8; SL=91350.00705642406, TP=89598.14592628184; valid for the next 3 chart bar(s).
+13/01/2026 05:00:00.057 | Trade | Cancelling pending order OID50
+13/01/2026 05:00:00.057 | Trade | → Cancelling pending order OID50 SUCCEEDED
+13/01/2026 05:00:00.057 | Info | Combo: pending order 50 cancelled after 3 chart bars.
+14/01/2026 12:00:00.020 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.23 units, which needs about $15368.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5090.48 budget, free margin was $10180.97). Size was cut from 0.23 to 0.07 units. Real risk on this trade is now about $29.73 (0.29% of balance) instead of the requested 1.00%.
+14/01/2026 12:00:00.020 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 94622.25, SL: 95046.900013611, TP: 93510.52)
+14/01/2026 12:00:00.020 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 94622.25, SL: 95046.900013611, TP: 93510.52) SUCCEEDED, PendingOrder OID51
+14/01/2026 12:00:00.020 | Info | Combo: bartime=2026-01-14 11:00, executed=2026-01-14 12:00:00, pending Sell placed at 94622.25; SL=95046.90001361097, TP=93510.5162643665; valid for the next 3 chart bar(s).
+14/01/2026 15:00:00.008 | Trade | Cancelling pending order OID51
+14/01/2026 15:00:00.008 | Trade | → Cancelling pending order OID51 SUCCEEDED
+14/01/2026 15:00:00.008 | Info | Combo: pending order 51 cancelled after 3 chart bars.
+14/01/2026 15:00:00.008 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.14 units, which needs about $9354.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5090.48 budget, free margin was $10180.97). Size was cut from 0.14 to 0.07 units. Real risk on this trade is now about $49.23 (0.48% of balance) instead of the requested 1.00%.
+14/01/2026 15:00:00.008 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 96828, SL: 96124.7851930312, TP: 98669.02)
+14/01/2026 15:00:00.008 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 96828, SL: 96124.7851930312, TP: 98669.02) SUCCEEDED, PendingOrder OID52
+14/01/2026 15:00:00.008 | Info | Combo: bartime=2026-01-14 14:00, executed=2026-01-14 15:00:00, pending Buy placed at 96828; SL=96124.78519303119, TP=98669.01636464435; valid for the next 3 chart bar(s).
+15/01/2026 04:00:00.207 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.16 units, which needs about $10691.19 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5062.98 budget, free margin was $10125.97). Size was cut from 0.16 to 0.07 units. Real risk on this trade is now about $43.52 (0.43% of balance) instead of the requested 1.00%.
+15/01/2026 04:00:00.207 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 95677.65, SL: 96299.3895135047, TP: 94049.94)
+15/01/2026 04:00:00.207 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 95677.65, SL: 96299.3895135047, TP: 94049.94) SUCCEEDED, PendingOrder OID55
+15/01/2026 04:00:00.207 | Info | Combo: bartime=2026-01-15 03:00, executed=2026-01-15 04:00:00, pending Sell placed at 95677.65; SL=96299.38951350474, TP=94049.9359536446; valid for the next 3 chart bar(s).
+15/01/2026 07:00:00.008 | Trade | Cancelling pending order OID55
+15/01/2026 07:00:00.008 | Trade | → Cancelling pending order OID55 SUCCEEDED
+15/01/2026 07:00:00.008 | Info | Combo: pending order 55 cancelled after 3 chart bars.
+15/01/2026 10:00:00.210 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.19 units, which needs about $12695.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5062.98 budget, free margin was $10125.97). Size was cut from 0.19 to 0.07 units. Real risk on this trade is now about $35.48 (0.35% of balance) instead of the requested 1.00%.
+15/01/2026 10:00:00.210 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 97198.55, SL: 96691.6684257718, TP: 98525.57)
+15/01/2026 10:00:00.210 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 97198.55, SL: 96691.6684257718, TP: 98525.57) SUCCEEDED, PendingOrder OID56
+15/01/2026 10:00:00.210 | Info | Combo: bartime=2026-01-15 09:00, executed=2026-01-15 10:00:00, pending Buy placed at 97198.55; SL=96691.66842577182, TP=98525.5659613294; valid for the next 3 chart bar(s).
+15/01/2026 12:00:00.208 | Info | Combo: bartime=2026-01-15 11:00, reversal - cancelling existing Buy pending order 56 before opening opposite direction.
+15/01/2026 12:00:00.208 | Trade | Cancelling pending order OID56
+15/01/2026 12:00:00.208 | Trade | → Cancelling pending order OID56 SUCCEEDED
+15/01/2026 12:00:00.208 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.22 units, which needs about $14700.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5062.98 budget, free margin was $10125.97). Size was cut from 0.22 to 0.07 units. Real risk on this trade is now about $31.09 (0.31% of balance) instead of the requested 1.00%.
+15/01/2026 12:00:00.208 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 96494.45, SL: 96938.532207506, TP: 95331.84)
+15/01/2026 12:00:00.208 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 96494.45, SL: 96938.532207506, TP: 95331.84) SUCCEEDED, PendingOrder OID57
+15/01/2026 12:00:00.208 | Info | Combo: bartime=2026-01-15 11:00, executed=2026-01-15 12:00:00, pending Sell placed at 96494.45; SL=96938.53220750604, TP=95331.84278074918; valid for the next 3 chart bar(s).
+15/01/2026 13:00:00.058 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.22 units, which needs about $14700.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5047.10 budget, free margin was $10094.21). Size was cut from 0.22 to 0.07 units. Real risk on this trade is now about $31.56 (0.31% of balance) instead of the requested 1.00%.
+15/01/2026 13:00:00.058 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 97009.15, SL: 96558.2442339952, TP: 98189.62)
+15/01/2026 13:00:00.058 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 97009.15, SL: 96558.2442339952, TP: 98189.62) SUCCEEDED, PendingOrder OID60
+15/01/2026 13:00:00.058 | Info | Combo: bartime=2026-01-15 12:00, executed=2026-01-15 13:00:00, pending Buy placed at 97009.15; SL=96558.24423399517, TP=98189.62129540065; valid for the next 3 chart bar(s).
+15/01/2026 15:00:00.008 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.15 units, which needs about $10022.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5030.97 budget, free margin was $10061.95). Size was cut from 0.15 to 0.07 units. Real risk on this trade is now about $46.68 (0.46% of balance) instead of the requested 1.00%.
+15/01/2026 15:00:00.008 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 95485.4, SL: 96152.2496902431, TP: 93739.59)
+15/01/2026 15:00:00.008 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 95485.4, SL: 96152.2496902431, TP: 93739.59) SUCCEEDED, PendingOrder OID63
+15/01/2026 15:00:00.008 | Info | Combo: bartime=2026-01-15 14:00, executed=2026-01-15 15:00:00, pending Sell placed at 95485.4; SL=96152.24969024309, TP=93739.58751094357; valid for the next 3 chart bar(s).
+15/01/2026 19:00:00.007 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.13 units, which needs about $8686.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5005.94 budget, free margin was $10011.89). Size was cut from 0.13 to 0.07 units. Real risk on this trade is now about $53.81 (0.54% of balance) instead of the requested 1.00%.
+15/01/2026 19:00:00.007 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 95652.6, SL: 96421.3112331236, TP: 93640.11)
+15/01/2026 19:00:00.007 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 95652.6, SL: 96421.3112331236, TP: 93640.11) SUCCEEDED, PendingOrder OID66
+15/01/2026 19:00:00.007 | Info | Combo: bartime=2026-01-15 18:00, executed=2026-01-15 19:00:00, pending Sell placed at 95652.6; SL=96421.31123312358, TP=93640.1139916825; valid for the next 3 chart bar(s).
+16/01/2026 21:00:00.069 | Info | Combo: bartime=2026-01-16 20:00, reversal - closing existing Sell position 18 before opening opposite direction.
+16/01/2026 21:00:00.069 | Trade | Closing position PID18 (Volume: 0.07)
+16/01/2026 21:00:00.069 | Trade | → Closing position PID18 (Volume: 0.07) SUCCEEDED
+16/01/2026 21:00:00.069 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.18 units, which needs about $12027.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4999.60 budget, free margin was $9999.20). Size was cut from 0.18 to 0.07 units. Real risk on this trade is now about $36.95 (0.37% of balance) instead of the requested 1.00%.
+16/01/2026 21:00:00.069 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 95564.1, SL: 95036.1959137624, TP: 96946.15)
+16/01/2026 21:00:00.069 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 95564.1, SL: 95036.1959137624, TP: 96946.15) SUCCEEDED, PendingOrder OID70
+16/01/2026 21:00:00.069 | Info | Combo: bartime=2026-01-16 20:00, executed=2026-01-16 21:00:00, pending Buy placed at 95564.1; SL=95036.19591376238, TP=96946.15289777014; valid for the next 3 chart bar(s).
+17/01/2026 00:00:01.537 | Trade | Cancelling pending order OID70
+17/01/2026 00:00:01.537 | Trade | → Cancelling pending order OID70 SUCCEEDED
+17/01/2026 00:00:01.537 | Info | Combo: pending order 70 cancelled after 3 chart bars.
+17/01/2026 11:00:01.639 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.54 units, which needs about $36082.77 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4999.60 budget, free margin was $9999.20). Size was cut from 0.54 to 0.07 units. Real risk on this trade is now about $12.78 (0.13% of balance) instead of the requested 1.00%.
+17/01/2026 11:00:01.639 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 94998, SL: 95180.5978047809, TP: 94519.96)
+17/01/2026 11:00:01.639 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 94998, SL: 95180.5978047809, TP: 94519.96) SUCCEEDED, PendingOrder OID71
+17/01/2026 11:00:01.639 | Info | Combo: bartime=2026-01-17 10:00, executed=2026-01-17 11:00:01, pending Sell placed at 94998; SL=95180.59780478092, TP=94519.95894708356; valid for the next 3 chart bar(s).
+17/01/2026 14:00:00.097 | Trade | Cancelling pending order OID71
+17/01/2026 14:00:00.097 | Trade | → Cancelling pending order OID71 SUCCEEDED
+17/01/2026 14:00:00.097 | Info | Combo: pending order 71 cancelled after 3 chart bars.
+17/01/2026 14:00:00.097 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.52 units, which needs about $34746.37 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4999.60 budget, free margin was $9999.20). Size was cut from 0.52 to 0.07 units. Real risk on this trade is now about $13.42 (0.13% of balance) instead of the requested 1.00%.
+17/01/2026 14:00:00.097 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 95420.75, SL: 95229.0163239522, TP: 95922.71)
+17/01/2026 14:00:00.097 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 95420.75, SL: 95229.0163239522, TP: 95922.71) SUCCEEDED, PendingOrder OID72
+17/01/2026 14:00:00.097 | Info | Combo: bartime=2026-01-17 13:00, executed=2026-01-17 14:00:00, pending Buy placed at 95420.75; SL=95229.01632395216, TP=95922.70876389321; valid for the next 3 chart bar(s).
+17/01/2026 19:00:01.276 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.53 units, which needs about $35414.57 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4992.43 budget, free margin was $9984.86). Size was cut from 0.53 to 0.07 units. Real risk on this trade is now about $13.11 (0.13% of balance) instead of the requested 1.00%.
+17/01/2026 19:00:01.276 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 95460.9, SL: 95273.6203890326, TP: 95951.2)
+17/01/2026 19:00:01.276 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 95460.9, SL: 95273.6203890326, TP: 95951.2) SUCCEEDED, PendingOrder OID75
+17/01/2026 19:00:01.276 | Info | Combo: bartime=2026-01-17 18:00, executed=2026-01-17 19:00:01, pending Buy placed at 95460.9; SL=95273.62038903264, TP=95951.19802151252; valid for the next 3 chart bar(s).
+17/01/2026 20:00:02.601 | Info | Combo: bartime=2026-01-17 19:00, reversal - cancelling existing Buy pending order 75 before opening opposite direction.
+17/01/2026 20:00:02.601 | Trade | Cancelling pending order OID75
+17/01/2026 20:00:02.601 | Trade | → Cancelling pending order OID75 SUCCEEDED
+17/01/2026 20:00:02.601 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.55 units, which needs about $36750.97 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4992.43 budget, free margin was $9984.86). Size was cut from 0.55 to 0.07 units. Real risk on this trade is now about $12.48 (0.13% of balance) instead of the requested 1.00%.
+17/01/2026 20:00:02.601 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 95172.8, SL: 95351.1336887739, TP: 94705.92)
+17/01/2026 20:00:02.601 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 95172.8, SL: 95351.1336887739, TP: 94705.92) SUCCEEDED, PendingOrder OID76
+17/01/2026 20:00:02.601 | Info | Combo: bartime=2026-01-17 19:00, executed=2026-01-17 20:00:02, pending Sell placed at 95172.8; SL=95351.13368877389, TP=94705.92240278998; valid for the next 3 chart bar(s).
+17/01/2026 22:05:00.003 | Info | Combo: bartime=2026-01-17 21:00, Sell signal skipped: already have same-direction exposure open.
+18/01/2026 10:00:00.000 | Info | Combo: bartime=2026-01-18 09:00, reversal - closing existing Sell position 20 before opening opposite direction.
+18/01/2026 10:00:00.000 | Trade | Closing position PID20 (Volume: 0.07)
+18/01/2026 10:00:00.000 | Trade | → Closing position PID20 (Volume: 0.07) SUCCEEDED
+18/01/2026 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.67 units, which needs about $44769.37 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4990.25 budget, free margin was $9980.51). Size was cut from 0.67 to 0.07 units. Real risk on this trade is now about $10.36 (0.10% of balance) instead of the requested 1.00%.
+18/01/2026 10:00:00.000 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 95271.7, SL: 95123.7674577537, TP: 95658.99)
+18/01/2026 10:00:00.000 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 95271.7, SL: 95123.7674577537, TP: 95658.99) SUCCEEDED, PendingOrder OID80
+18/01/2026 10:00:00.000 | Info | Combo: bartime=2026-01-18 09:00, executed=2026-01-18 10:00:00, pending Buy placed at 95271.7; SL=95123.76745775374, TP=95658.98739560069; valid for the next 3 chart bar(s).
+18/01/2026 13:00:01.278 | Trade | Cancelling pending order OID80
+18/01/2026 13:00:01.278 | Trade | → Cancelling pending order OID80 SUCCEEDED
+18/01/2026 13:00:01.278 | Info | Combo: pending order 80 cancelled after 3 chart bars.
+18/01/2026 17:00:00.817 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.51 units, which needs about $34078.17 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4990.25 budget, free margin was $9980.51). Size was cut from 0.51 to 0.07 units. Real risk on this trade is now about $13.55 (0.14% of balance) instead of the requested 1.00%.
+18/01/2026 17:00:00.817 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 95177.15, SL: 94983.5639945963, TP: 95683.96)
+18/01/2026 17:00:00.817 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 95177.15, SL: 94983.5639945963, TP: 95683.96) SUCCEEDED, PendingOrder OID81
+18/01/2026 17:00:00.817 | Info | Combo: bartime=2026-01-18 16:00, executed=2026-01-18 17:00:00, pending Buy placed at 95177.15; SL=94983.56399459632, TP=95683.95816214682; valid for the next 3 chart bar(s).
+19/01/2026 00:00:00.011 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.19 units, which needs about $12695.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4982.60 budget, free margin was $9965.21). Size was cut from 0.19 to 0.07 units. Real risk on this trade is now about $35.92 (0.36% of balance) instead of the requested 1.00%.
+19/01/2026 00:00:00.011 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 93496.7, SL: 94009.7999681604, TP: 92153.4)
+19/01/2026 00:00:00.011 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 93496.7, SL: 94009.7999681604, TP: 92153.4) SUCCEEDED, PendingOrder OID84
+19/01/2026 00:00:00.011 | Info | Combo: bartime=2026-01-18 23:00, executed=2026-01-19 00:00:00, pending Sell placed at 93496.7; SL=94009.79996816043, TP=92153.40428335598; valid for the next 3 chart bar(s).
+19/01/2026 17:00:00.408 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.29 units, which needs about $19377.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5030.66 budget, free margin was $10061.32). Size was cut from 0.29 to 0.07 units. Real risk on this trade is now about $23.88 (0.24% of balance) instead of the requested 1.00%.
+19/01/2026 17:00:00.408 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 93388.1, SL: 93046.9941834144, TP: 94281.12)
+19/01/2026 17:00:00.408 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 93388.1, SL: 93046.9941834144, TP: 94281.12) SUCCEEDED, PendingOrder OID87
+19/01/2026 17:00:00.408 | Info | Combo: bartime=2026-01-19 16:00, executed=2026-01-19 17:00:00, pending Buy placed at 93388.1; SL=93046.99418341441, TP=94281.11502782108; valid for the next 3 chart bar(s).
+19/01/2026 20:00:01.490 | Trade | Cancelling pending order OID87
+19/01/2026 20:00:01.490 | Trade | → Cancelling pending order OID87 SUCCEEDED
+19/01/2026 20:00:01.490 | Info | Combo: pending order 87 cancelled after 3 chart bars.
+19/01/2026 23:00:00.407 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.30 units, which needs about $20045.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5030.66 budget, free margin was $10061.32). Size was cut from 0.30 to 0.07 units. Real risk on this trade is now about $22.83 (0.23% of balance) instead of the requested 1.00%.
+19/01/2026 23:00:00.407 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 92422.4, SL: 92748.601076783, TP: 91568.41)
+19/01/2026 23:00:00.407 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 92422.4, SL: 92748.601076783, TP: 91568.41) SUCCEEDED, PendingOrder OID88
+19/01/2026 23:00:00.407 | Info | Combo: bartime=2026-01-19 22:00, executed=2026-01-19 23:00:00, pending Sell placed at 92422.4; SL=92748.60107678302, TP=91568.40558098206; valid for the next 3 chart bar(s).
+21/01/2026 06:00:00.605 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.17 units, which needs about $11359.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5019.10 budget, free margin was $10038.19). Size was cut from 0.17 to 0.07 units. Real risk on this trade is now about $39.17 (0.39% of balance) instead of the requested 1.00%.
+21/01/2026 06:00:00.605 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 90033, SL: 89473.4282577692, TP: 91497.96)
+21/01/2026 06:00:00.605 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 90033, SL: 89473.4282577692, TP: 91497.96) SUCCEEDED, PendingOrder OID91
+21/01/2026 06:00:00.605 | Info | Combo: bartime=2026-01-21 05:00, executed=2026-01-21 06:00:00, pending Buy placed at 90033; SL=89473.42825776918, TP=91497.9588211603; valid for the next 3 chart bar(s).
+21/01/2026 09:00:00.266 | Trade | Cancelling pending order OID91
+21/01/2026 09:00:00.266 | Trade | → Cancelling pending order OID91 SUCCEEDED
+21/01/2026 09:00:00.266 | Info | Combo: pending order 91 cancelled after 3 chart bars.
+21/01/2026 15:00:00.005 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.14 units, which needs about $9354.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5019.10 budget, free margin was $10038.19). Size was cut from 0.14 to 0.07 units. Real risk on this trade is now about $48.35 (0.48% of balance) instead of the requested 1.00%.
+21/01/2026 15:00:00.005 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 89927.8, SL: 89237.032863644, TP: 91736.23)
+21/01/2026 15:00:00.005 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 89927.8, SL: 89237.032863644, TP: 91736.23) SUCCEEDED, PendingOrder OID92
+21/01/2026 15:00:00.005 | Info | Combo: bartime=2026-01-21 14:00, executed=2026-01-21 15:00:00, pending Buy placed at 89927.8; SL=89237.03286364398, TP=91736.22836298007; valid for the next 3 chart bar(s).
+21/01/2026 17:00:00.010 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.08 units, which needs about $5345.60 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4994.72 budget, free margin was $9989.43). Size was cut from 0.08 to 0.07 units. Real risk on this trade is now about $78.99 (0.79% of balance) instead of the requested 1.00%.
+21/01/2026 17:00:00.010 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 87434.25, SL: 88562.6929672679, TP: 84479.99)
+21/01/2026 17:00:00.010 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 87434.25, SL: 88562.6929672679, TP: 84479.99) SUCCEEDED, PendingOrder OID95
+21/01/2026 17:00:00.010 | Info | Combo: bartime=2026-01-21 16:00, executed=2026-01-21 17:00:00, pending Sell placed at 87434.25; SL=88562.69296726785, TP=84479.98631169276; valid for the next 3 chart bar(s).
+21/01/2026 20:00:00.008 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 90393.65, SL: 89097.1060007589, TP: 93788)
+21/01/2026 20:00:00.008 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 90393.65, SL: 89097.1060007589, TP: 93788) SUCCEEDED, PendingOrder OID98
+21/01/2026 20:00:00.008 | Info | Combo: bartime=2026-01-21 19:00, executed=2026-01-21 20:00:00, pending Buy placed at 90393.65; SL=89097.10600075885, TP=93788.0021900133; valid for the next 3 chart bar(s).
+21/01/2026 23:00:00.005 | Trade | Cancelling pending order OID98
+21/01/2026 23:00:00.005 | Trade | → Cancelling pending order OID98 SUCCEEDED
+21/01/2026 23:00:00.005 | Info | Combo: pending order 98 cancelled after 3 chart bars.
+22/01/2026 14:00:00.063 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.24 units, which needs about $16036.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4954.94 budget, free margin was $9909.89). Size was cut from 0.24 to 0.07 units. Real risk on this trade is now about $28.25 (0.29% of balance) instead of the requested 1.00%.
+22/01/2026 14:00:00.063 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 89325.15, SL: 89728.6613520836, TP: 88268.76)
+22/01/2026 14:00:00.063 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 89325.15, SL: 89728.6613520836, TP: 88268.76) SUCCEEDED, PendingOrder OID99
+22/01/2026 14:00:00.063 | Info | Combo: bartime=2026-01-22 13:00, executed=2026-01-22 14:00:00, pending Sell placed at 89325.15; SL=89728.6613520836, TP=88268.7572802451; valid for the next 3 chart bar(s).
+22/01/2026 20:00:00.033 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.16 units, which needs about $10691.19 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4940.69 budget, free margin was $9881.39). Size was cut from 0.16 to 0.07 units. Real risk on this trade is now about $42.23 (0.43% of balance) instead of the requested 1.00%.
+22/01/2026 20:00:00.033 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 89866.95, SL: 89263.6280993194, TP: 91446.45)
+22/01/2026 20:00:00.033 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 89866.95, SL: 89263.6280993194, TP: 91446.45) SUCCEEDED, PendingOrder OID102
+22/01/2026 20:00:00.033 | Info | Combo: bartime=2026-01-22 19:00, executed=2026-01-22 20:00:00, pending Buy placed at 89866.95; SL=89263.6280993194, TP=91446.44673598182; valid for the next 3 chart bar(s).
+23/01/2026 02:00:00.008 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.22 units, which needs about $14700.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4916.34 budget, free margin was $9832.69). Size was cut from 0.22 to 0.07 units. Real risk on this trade is now about $30.40 (0.31% of balance) instead of the requested 1.00%.
+23/01/2026 02:00:00.008 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 89878.9, SL: 89444.664652468, TP: 91015.73)
+23/01/2026 02:00:00.008 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 89878.9, SL: 89444.664652468, TP: 91015.73) SUCCEEDED, PendingOrder OID105
+23/01/2026 02:00:00.008 | Info | Combo: bartime=2026-01-23 01:00, executed=2026-01-23 02:00:00, pending Buy placed at 89878.9; SL=89444.66465246798, TP=91015.72813983881; valid for the next 3 chart bar(s).
+23/01/2026 07:00:00.259 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.25 units, which needs about $16704.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4900.61 budget, free margin was $9801.22). Size was cut from 0.25 to 0.07 units. Real risk on this trade is now about $26.80 (0.27% of balance) instead of the requested 1.00%.
+23/01/2026 07:00:00.259 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 89224.75, SL: 89607.5647346793, TP: 88222.54)
+23/01/2026 07:00:00.259 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 89224.75, SL: 89607.5647346793, TP: 88222.54) SUCCEEDED, PendingOrder OID108
+23/01/2026 07:00:00.259 | Info | Combo: bartime=2026-01-23 06:00, executed=2026-01-23 07:00:00, pending Sell placed at 89224.75; SL=89607.5647346793, TP=88222.54102460961; valid for the next 3 chart bar(s).
+23/01/2026 09:00:00.210 | Info | Combo: bartime=2026-01-23 08:00, Sell signal skipped: already have same-direction exposure open.
+23/01/2026 16:00:00.010 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.15 units, which needs about $10022.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4886.72 budget, free margin was $9773.44). Size was cut from 0.15 to 0.07 units. Real risk on this trade is now about $44.51 (0.46% of balance) instead of the requested 1.00%.
+23/01/2026 16:00:00.010 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 89781.2, SL: 89145.3094267096, TP: 91445.96)
+23/01/2026 16:00:00.010 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 89781.2, SL: 89145.3094267096, TP: 91445.96) SUCCEEDED, PendingOrder OID111
+23/01/2026 16:00:00.010 | Info | Combo: bartime=2026-01-23 15:00, executed=2026-01-23 16:00:00, pending Buy placed at 89781.2; SL=89145.30942670962, TP=91445.9615208742; valid for the next 3 chart bar(s).
+23/01/2026 21:00:00.008 | Info | Combo: bartime=2026-01-23 20:00, reversal - closing existing Buy position 30 before opening opposite direction.
+23/01/2026 21:00:00.008 | Trade | Closing position PID30 (Volume: 0.07)
+23/01/2026 21:00:00.008 | Trade | → Closing position PID30 (Volume: 0.07) SUCCEEDED
+23/01/2026 21:00:00.008 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.11 units, which needs about $7350.19 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4867.29 budget, free margin was $9734.58). Size was cut from 0.11 to 0.07 units. Real risk on this trade is now about $58.35 (0.60% of balance) instead of the requested 1.00%.
+23/01/2026 21:00:00.008 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 89021.35, SL: 89854.8760790558, TP: 86839.18)
+23/01/2026 21:00:00.008 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 89021.35, SL: 89854.8760790558, TP: 86839.18) SUCCEEDED, PendingOrder OID115
+23/01/2026 21:00:00.008 | Info | Combo: bartime=2026-01-23 20:00, executed=2026-01-23 21:00:00, pending Sell placed at 89021.35; SL=89854.87607905579, TP=86839.17872503196; valid for the next 3 chart bar(s).
+24/01/2026 00:00:00.001 | Trade | Cancelling pending order OID115
+24/01/2026 00:00:00.001 | Trade | → Cancelling pending order OID115 SUCCEEDED
+24/01/2026 00:00:00.001 | Info | Combo: pending order 115 cancelled after 3 chart bars.
+24/01/2026 01:00:00.221 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.19 units, which needs about $12695.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4867.29 budget, free margin was $9734.58). Size was cut from 0.19 to 0.07 units. Real risk on this trade is now about $35.12 (0.36% of balance) instead of the requested 1.00%.
+24/01/2026 01:00:00.221 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 89225.7, SL: 89727.3929219812, TP: 87912.27)
+24/01/2026 01:00:00.221 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 89225.7, SL: 89727.3929219812, TP: 87912.27) SUCCEEDED, PendingOrder OID116
+24/01/2026 01:00:00.221 | Info | Combo: bartime=2026-01-24 00:00, executed=2026-01-24 01:00:00, pending Sell placed at 89225.7; SL=89727.39292198124, TP=87912.26793025309; valid for the next 3 chart bar(s).
+24/01/2026 04:00:00.627 | Trade | Cancelling pending order OID116
+24/01/2026 04:00:00.627 | Trade | → Cancelling pending order OID116 SUCCEEDED
+24/01/2026 04:00:00.627 | Info | Combo: pending order 116 cancelled after 3 chart bars.
+26/01/2026 05:00:00.206 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.14 units, which needs about $9354.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4867.29 budget, free margin was $9734.58). Size was cut from 0.14 to 0.07 units. Real risk on this trade is now about $46.45 (0.48% of balance) instead of the requested 1.00%.
+26/01/2026 05:00:00.206 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 87851.8, SL: 87188.2550012859, TP: 89588.96)
+26/01/2026 05:00:00.206 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 87851.8, SL: 87188.2550012859, TP: 89588.96) SUCCEEDED, PendingOrder OID117
+26/01/2026 05:00:00.206 | Info | Combo: bartime=2026-01-26 04:00, executed=2026-01-26 05:00:00, pending Buy placed at 87851.8; SL=87188.25500128586, TP=89588.96080663365; valid for the next 3 chart bar(s).
+26/01/2026 19:00:00.007 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.13 units, which needs about $8686.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4843.95 budget, free margin was $9687.91). Size was cut from 0.13 to 0.07 units. Real risk on this trade is now about $50.92 (0.53% of balance) instead of the requested 1.00%.
+26/01/2026 19:00:00.007 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 88345.85, SL: 87618.4609966224, TP: 90250.15)
+26/01/2026 19:00:00.007 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 88345.85, SL: 87618.4609966224, TP: 90250.15) SUCCEEDED, PendingOrder OID120
+26/01/2026 19:00:00.007 | Info | Combo: bartime=2026-01-26 18:00, executed=2026-01-26 19:00:00, pending Buy placed at 88345.85; SL=87618.46099662234, TP=90250.15441084275; valid for the next 3 chart bar(s).
+26/01/2026 21:00:00.060 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.14 units, which needs about $9354.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4817.72 budget, free margin was $9635.44). Size was cut from 0.14 to 0.07 units. Real risk on this trade is now about $47.59 (0.49% of balance) instead of the requested 1.00%.
+26/01/2026 21:00:00.060 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 87367.75, SL: 88047.5989621617, TP: 85587.91)
+26/01/2026 21:00:00.060 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 87367.75, SL: 88047.5989621617, TP: 85587.91) SUCCEEDED, PendingOrder OID123
+26/01/2026 21:00:00.060 | Info | Combo: bartime=2026-01-26 20:00, executed=2026-01-26 21:00:00, pending Sell placed at 87367.75; SL=88047.59896216172, TP=85587.90541706064; valid for the next 3 chart bar(s).
+26/01/2026 22:05:00.009 | Info | Combo: bartime=2026-01-26 21:00, reversal - cancelling existing Sell pending order 123 before opening opposite direction.
+26/01/2026 22:05:00.009 | Trade | Cancelling pending order OID123
+26/01/2026 22:05:00.009 | Trade | → Cancelling pending order OID123 SUCCEEDED
+26/01/2026 22:05:00.009 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.14 units, which needs about $9354.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4817.72 budget, free margin was $9635.44). Size was cut from 0.14 to 0.07 units. Real risk on this trade is now about $47.36 (0.49% of balance) instead of the requested 1.00%.
+26/01/2026 22:05:00.009 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 88168.2, SL: 87491.6708302706, TP: 89939.35)
+26/01/2026 22:05:00.009 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 88168.2, SL: 87491.6708302706, TP: 89939.35) SUCCEEDED, PendingOrder OID124
+26/01/2026 22:05:00.009 | Info | Combo: bartime=2026-01-26 21:00, executed=2026-01-26 22:05:00, pending Buy placed at 88168.2; SL=87491.67083027062, TP=89939.35336635148; valid for the next 3 chart bar(s).
+27/01/2026 09:00:00.206 | Info | Combo: bartime=2026-01-27 08:00, reversal - closing existing Buy position 33 before opening opposite direction.
+27/01/2026 09:00:00.206 | Trade | Closing position PID33 (Volume: 0.07)
+27/01/2026 09:00:00.206 | Trade | → Closing position PID33 (Volume: 0.07) SUCCEEDED
+27/01/2026 09:00:00.206 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.28 units, which needs about $18709.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4816.39 budget, free margin was $9632.79). Size was cut from 0.28 to 0.07 units. Real risk on this trade is now about $23.28 (0.24% of balance) instead of the requested 1.00%.
+27/01/2026 09:00:00.206 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 87929.8, SL: 88262.4319626898, TP: 87058.97)
+27/01/2026 09:00:00.206 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 87929.8, SL: 88262.4319626898, TP: 87058.97) SUCCEEDED, PendingOrder OID128
+27/01/2026 09:00:00.206 | Info | Combo: bartime=2026-01-27 08:00, executed=2026-01-27 09:00:00, pending Sell placed at 87929.8; SL=88262.43196268979, TP=87058.96952167813; valid for the next 3 chart bar(s).
+27/01/2026 17:00:00.008 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.18 units, which needs about $12027.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4804.67 budget, free margin was $9609.34). Size was cut from 0.18 to 0.07 units. Real risk on this trade is now about $36.08 (0.38% of balance) instead of the requested 1.00%.
+27/01/2026 17:00:00.008 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 88730.6, SL: 88215.1469639505, TP: 90080.06)
+27/01/2026 17:00:00.008 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 88730.6, SL: 88215.1469639505, TP: 90080.06) SUCCEEDED, PendingOrder OID131
+27/01/2026 17:00:00.008 | Info | Combo: bartime=2026-01-27 16:00, executed=2026-01-27 17:00:00, pending Buy placed at 88730.6; SL=88215.14696395051, TP=90080.0560483776; valid for the next 3 chart bar(s).
+27/01/2026 18:00:00.081 | Info | Combo: bartime=2026-01-27 17:00, reversal - cancelling existing Buy pending order 131 before opening opposite direction.
+27/01/2026 18:00:00.081 | Trade | Cancelling pending order OID131
+27/01/2026 18:00:00.081 | Trade | → Cancelling pending order OID131 SUCCEEDED
+27/01/2026 18:00:00.081 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.13 units, which needs about $8686.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4804.67 budget, free margin was $9609.34). Size was cut from 0.13 to 0.07 units. Real risk on this trade is now about $48.32 (0.50% of balance) instead of the requested 1.00%.
+27/01/2026 18:00:00.081 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 87118.35, SL: 87808.5824288396, TP: 85311.32)
+27/01/2026 18:00:00.081 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 87118.35, SL: 87808.5824288396, TP: 85311.32) SUCCEEDED, PendingOrder OID132
+27/01/2026 18:00:00.081 | Info | Combo: bartime=2026-01-27 17:00, executed=2026-01-27 18:00:00, pending Sell placed at 87118.35; SL=87808.58242883961, TP=85311.32150129793; valid for the next 3 chart bar(s).
+27/01/2026 19:00:00.282 | Info | Combo: bartime=2026-01-27 18:00, reversal - cancelling existing Sell pending order 132 before opening opposite direction.
+27/01/2026 19:00:00.282 | Trade | Cancelling pending order OID132
+27/01/2026 19:00:00.282 | Trade | → Cancelling pending order OID132 SUCCEEDED
+27/01/2026 19:00:00.282 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.12 units, which needs about $8018.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4804.67 budget, free margin was $9609.34). Size was cut from 0.12 to 0.07 units. Real risk on this trade is now about $53.20 (0.55% of balance) instead of the requested 1.00%.
+27/01/2026 19:00:00.282 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 88405.25, SL: 87645.2040569283, TP: 90395.05)
+27/01/2026 19:00:00.282 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 88405.25, SL: 87645.2040569283, TP: 90395.05) SUCCEEDED, PendingOrder OID133
+27/01/2026 19:00:00.282 | Info | Combo: bartime=2026-01-27 18:00, executed=2026-01-27 19:00:00, pending Buy placed at 88405.25; SL=87645.20405692831, TP=90395.05027896166; valid for the next 3 chart bar(s).
+28/01/2026 20:00:00.212 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.12 units, which needs about $8018.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4871.85 budget, free margin was $9743.71). Size was cut from 0.12 to 0.07 units. Real risk on this trade is now about $52.85 (0.54% of balance) instead of the requested 1.00%.
+28/01/2026 20:00:00.212 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 88813.95, SL: 89568.9496622836, TP: 86837.36)
+28/01/2026 20:00:00.212 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 88813.95, SL: 89568.9496622836, TP: 86837.36) SUCCEEDED, PendingOrder OID136
+28/01/2026 20:00:00.212 | Info | Combo: bartime=2026-01-28 19:00, executed=2026-01-28 20:00:00, pending Sell placed at 88813.95; SL=89568.94966228357, TP=86837.3608841416; valid for the next 3 chart bar(s).
+28/01/2026 23:00:01.407 | Trade | Cancelling pending order OID136
+28/01/2026 23:00:01.407 | Trade | → Cancelling pending order OID136 SUCCEEDED
+28/01/2026 23:00:01.407 | Info | Combo: pending order 136 cancelled after 3 chart bars.
+30/01/2026 17:00:00.006 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.11 units, which needs about $7350.19 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4871.85 budget, free margin was $9743.71). Size was cut from 0.11 to 0.07 units. Real risk on this trade is now about $61.03 (0.63% of balance) instead of the requested 1.00%.
+30/01/2026 17:00:00.006 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 83386.5, SL: 82514.6834061436, TP: 85668.92)
+30/01/2026 17:00:00.006 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 83386.5, SL: 82514.6834061436, TP: 85668.92) SUCCEEDED, PendingOrder OID137
+30/01/2026 17:00:00.006 | Info | Combo: bartime=2026-01-30 16:00, executed=2026-01-30 17:00:00, pending Buy placed at 83386.5; SL=82514.68340614357, TP=85668.91584271615; valid for the next 3 chart bar(s).
+30/01/2026 19:00:00.007 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.08 units, which needs about $5345.60 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4840.85 budget, free margin was $9681.71). Size was cut from 0.08 to 0.07 units. Real risk on this trade is now about $79.81 (0.82% of balance) instead of the requested 1.00%.
+30/01/2026 19:00:00.007 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 84037.8, SL: 82897.6893799319, TP: 87022.61)
+30/01/2026 19:00:00.007 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 84037.8, SL: 82897.6893799319, TP: 87022.61) SUCCEEDED, PendingOrder OID140
+30/01/2026 19:00:00.007 | Info | Combo: bartime=2026-01-30 18:00, executed=2026-01-30 19:00:00, pending Buy placed at 84037.8; SL=82897.68937993188, TP=87022.60960333834; valid for the next 3 chart bar(s).
+31/01/2026 09:00:00.200 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.16 units, which needs about $10691.19 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4793.41 budget, free margin was $9586.83). Size was cut from 0.16 to 0.07 units. Real risk on this trade is now about $40.90 (0.43% of balance) instead of the requested 1.00%.
+31/01/2026 09:00:00.200 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 82370.1, SL: 82954.4060972205, TP: 80840.39)
+31/01/2026 09:00:00.200 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 82370.1, SL: 82954.4060972205, TP: 80840.39) SUCCEEDED, PendingOrder OID143
+31/01/2026 09:00:00.200 | Info | Combo: bartime=2026-01-31 08:00, executed=2026-01-31 09:00:00, pending Sell placed at 82370.1; SL=82954.40609722052, TP=80840.38663747671; valid for the next 3 chart bar(s).
+01/02/2026 10:00:00.002 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.14 units, which needs about $9354.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4815.52 budget, free margin was $9631.03). Size was cut from 0.14 to 0.07 units. Real risk on this trade is now about $44.95 (0.47% of balance) instead of the requested 1.00%.
+01/02/2026 10:00:00.002 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 79088.3, SL: 78446.1213987915, TP: 80769.52)
+01/02/2026 10:00:00.002 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 79088.3, SL: 78446.1213987915, TP: 80769.52) SUCCEEDED, PendingOrder OID146
+01/02/2026 10:00:00.002 | Info | Combo: bartime=2026-02-01 09:00, executed=2026-02-01 10:00:00, pending Buy placed at 79088.3; SL=78446.12139879153, TP=80769.5235779638; valid for the next 3 chart bar(s).
+01/02/2026 12:00:00.057 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.13 units, which needs about $8686.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4792.85 budget, free margin was $9585.70). Size was cut from 0.13 to 0.07 units. Real risk on this trade is now about $49.39 (0.52% of balance) instead of the requested 1.00%.
+01/02/2026 12:00:00.057 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 78837.75, SL: 78132.1356952266, TP: 80685.05)
+01/02/2026 12:00:00.057 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 78837.75, SL: 78132.1356952266, TP: 80685.05) SUCCEEDED, PendingOrder OID149
+01/02/2026 12:00:00.057 | Info | Combo: bartime=2026-02-01 11:00, executed=2026-02-01 12:00:00, pending Buy placed at 78837.75; SL=78132.13569522658, TP=80685.04824989683; valid for the next 3 chart bar(s).
+01/02/2026 15:00:00.004 | Trade | Cancelling pending order OID149
+01/02/2026 15:00:00.004 | Trade | → Cancelling pending order OID149 SUCCEEDED
+01/02/2026 15:00:00.004 | Info | Combo: pending order 149 cancelled after 3 chart bars.
+02/02/2026 10:00:00.007 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.08 units, which needs about $5345.60 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4792.85 budget, free margin was $9585.70). Size was cut from 0.08 to 0.07 units. Real risk on this trade is now about $78.36 (0.82% of balance) instead of the requested 1.00%.
+02/02/2026 10:00:00.007 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 77761, SL: 76641.5475014736, TP: 80691.73)
+02/02/2026 10:00:00.007 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 77761, SL: 76641.5475014736, TP: 80691.73) SUCCEEDED, PendingOrder OID150
+02/02/2026 10:00:00.007 | Info | Combo: bartime=2026-02-02 09:00, executed=2026-02-02 10:00:00, pending Buy placed at 77761; SL=76641.54750147361, TP=80691.72664114209; valid for the next 3 chart bar(s).
+03/02/2026 03:00:00.206 | Info | Combo: bartime=2026-02-03 02:00, reversal - closing existing Buy position 40 before opening opposite direction.
+03/02/2026 03:00:00.206 | Trade | Closing position PID40 (Volume: 0.07)
+03/02/2026 03:00:00.206 | Trade | → Closing position PID40 (Volume: 0.07) SUCCEEDED
+03/02/2026 03:00:00.206 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.13 units, which needs about $8686.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4791.22 budget, free margin was $9582.44). Size was cut from 0.13 to 0.07 units. Real risk on this trade is now about $50.46 (0.53% of balance) instead of the requested 1.00%.
+03/02/2026 03:00:00.206 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 77653.25, SL: 78374.1018511832, TP: 75766.06)
+03/02/2026 03:00:00.206 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 77653.25, SL: 78374.1018511832, TP: 75766.06) SUCCEEDED, PendingOrder OID154
+03/02/2026 03:00:00.206 | Info | Combo: bartime=2026-02-03 02:00, executed=2026-02-03 03:00:00, pending Sell placed at 77653.25; SL=78374.10185118318, TP=75766.05985360245; valid for the next 3 chart bar(s).
+03/02/2026 06:00:00.103 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.13 units, which needs about $8686.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4764.82 budget, free margin was $9529.63). Size was cut from 0.13 to 0.06 units. Real risk on this trade is now about $43.60 (0.46% of balance) instead of the requested 1.00%.
+03/02/2026 06:00:00.103 | Trade | Placing Stop Order to Sell 0.06 BTCUSD (Price: 78076.25, SL: 78802.8569478058, TP: 76173.99)
+03/02/2026 06:00:00.103 | Trade | → Placing Stop Order to Sell 0.06 BTCUSD (Price: 78076.25, SL: 78802.8569478058, TP: 76173.99) SUCCEEDED, PendingOrder OID157
+03/02/2026 06:00:00.103 | Info | Combo: bartime=2026-02-03 05:00, executed=2026-02-03 06:00:00, pending Sell placed at 78076.25; SL=78802.85694780579, TP=76173.99301064445; valid for the next 3 chart bar(s).
+03/02/2026 10:00:00.247 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.13 units, which needs about $8686.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4742.55 budget, free margin was $9485.09). Size was cut from 0.13 to 0.06 units. Real risk on this trade is now about $42.33 (0.45% of balance) instead of the requested 1.00%.
+03/02/2026 10:00:00.247 | Trade | Placing Stop Order to Sell 0.06 BTCUSD (Price: 77796.25, SL: 78501.7415658212, TP: 75949.27)
+03/02/2026 10:00:00.247 | Trade | → Placing Stop Order to Sell 0.06 BTCUSD (Price: 77796.25, SL: 78501.7415658212, TP: 75949.27) SUCCEEDED, PendingOrder OID160
+03/02/2026 10:00:00.247 | Info | Combo: bartime=2026-02-03 09:00, executed=2026-02-03 10:00:00, pending Sell placed at 77796.25; SL=78501.74156582126, TP=75949.27308067997; valid for the next 3 chart bar(s).
+03/02/2026 13:00:00.035 | Trade | Cancelling pending order OID160
+03/02/2026 13:00:00.035 | Trade | → Cancelling pending order OID160 SUCCEEDED
+03/02/2026 13:00:00.035 | Info | Combo: pending order 160 cancelled after 3 chart bars.
+04/02/2026 04:00:02.609 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.09 units, which needs about $6013.80 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4742.55 budget, free margin was $9485.09). Size was cut from 0.09 to 0.06 units. Real risk on this trade is now about $62.02 (0.65% of balance) instead of the requested 1.00%.
+04/02/2026 04:00:02.609 | Trade | Placing Stop Order to Buy 0.06 BTCUSD (Price: 76898.65, SL: 75864.9248622681, TP: 79604.94)
+04/02/2026 04:00:02.609 | Trade | → Placing Stop Order to Buy 0.06 BTCUSD (Price: 76898.65, SL: 75864.9248622681, TP: 79604.94) SUCCEEDED, PendingOrder OID161
+04/02/2026 04:00:02.609 | Info | Combo: bartime=2026-02-04 03:00, executed=2026-02-04 04:00:02, pending Buy placed at 76898.65; SL=75864.92486226809, TP=79604.94241058211; valid for the next 3 chart bar(s).
+04/02/2026 07:00:00.409 | Trade | Cancelling pending order OID161
+04/02/2026 07:00:00.409 | Trade | → Cancelling pending order OID161 SUCCEEDED
+04/02/2026 07:00:00.409 | Info | Combo: pending order 161 cancelled after 3 chart bars.
+04/02/2026 07:00:00.409 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.12 units, which needs about $8018.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4742.55 budget, free margin was $9485.09). Size was cut from 0.12 to 0.06 units. Real risk on this trade is now about $45.03 (0.47% of balance) instead of the requested 1.00%.
+04/02/2026 07:00:00.409 | Trade | Placing Stop Order to Buy 0.06 BTCUSD (Price: 76712.5, SL: 75961.9475294813, TP: 78677.45)
+04/02/2026 07:00:00.409 | Trade | → Placing Stop Order to Buy 0.06 BTCUSD (Price: 76712.5, SL: 75961.9475294813, TP: 78677.45) SUCCEEDED, PendingOrder OID162
+04/02/2026 07:00:00.409 | Info | Combo: bartime=2026-02-04 06:00, executed=2026-02-04 07:00:00, pending Buy placed at 76712.5; SL=75961.94752948127, TP=78677.44636781803; valid for the next 3 chart bar(s).
+04/02/2026 10:00:00.208 | Trade | Cancelling pending order OID162
+04/02/2026 10:00:00.208 | Trade | → Cancelling pending order OID162 SUCCEEDED
+04/02/2026 10:00:00.208 | Info | Combo: pending order 162 cancelled after 3 chart bars.
+04/02/2026 14:00:00.209 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.13 units, which needs about $8686.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4742.55 budget, free margin was $9485.09). Size was cut from 0.13 to 0.06 units. Real risk on this trade is now about $40.71 (0.43% of balance) instead of the requested 1.00%.
+04/02/2026 14:00:00.209 | Trade | Placing Stop Order to Sell 0.06 BTCUSD (Price: 74665.65, SL: 75344.1160003453, TP: 72889.43)
+04/02/2026 14:00:00.209 | Trade | → Placing Stop Order to Sell 0.06 BTCUSD (Price: 74665.65, SL: 75344.1160003453, TP: 72889.43) SUCCEEDED, PendingOrder OID163
+04/02/2026 14:00:00.209 | Info | Combo: bartime=2026-02-04 13:00, executed=2026-02-04 14:00:00, pending Sell placed at 74665.65; SL=75344.11600034533, TP=72889.42601109591; valid for the next 3 chart bar(s).
+06/02/2026 06:00:00.009 | Trade | Placing Stop Order to Buy 0.05 BTCUSD (Price: 66749.05, SL: 64897.3803973949, TP: 71596.72)
+06/02/2026 06:00:00.009 | Trade | → Placing Stop Order to Buy 0.05 BTCUSD (Price: 66749.05, SL: 64897.3803973949, TP: 71596.72) SUCCEEDED, PendingOrder OID166
+06/02/2026 06:00:00.009 | Info | Combo: bartime=2026-02-06 05:00, executed=2026-02-06 06:00:00, pending Buy placed at 66749.05; SL=64897.380397394925, TP=71596.7210196201; valid for the next 3 chart bar(s).
+06/02/2026 10:00:00.015 | Trade | Placing Stop Order to Buy 0.06 BTCUSD (Price: 66102.15, SL: 64645.271490773, TP: 69916.26)
+06/02/2026 10:00:00.015 | Trade | → Placing Stop Order to Buy 0.06 BTCUSD (Price: 66102.15, SL: 64645.271490773, TP: 69916.26) SUCCEEDED, PendingOrder OID169
+06/02/2026 10:00:00.015 | Info | Combo: bartime=2026-02-06 09:00, executed=2026-02-06 10:00:00, pending Buy placed at 66102.15; SL=64645.27149077295, TP=69916.25793715638; valid for the next 3 chart bar(s).
+07/02/2026 21:00:00.201 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.13 units, which needs about $8686.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4788.80 budget, free margin was $9577.60). Size was cut from 0.13 to 0.07 units. Real risk on this trade is now about $51.49 (0.54% of balance) instead of the requested 1.00%.
+07/02/2026 21:00:00.201 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 69706.75, SL: 68971.1760092206, TP: 71632.48)
+07/02/2026 21:00:00.201 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 69706.75, SL: 68971.1760092206, TP: 71632.48) SUCCEEDED, PendingOrder OID172
+07/02/2026 21:00:00.201 | Info | Combo: bartime=2026-02-07 20:00, executed=2026-02-07 21:00:00, pending Buy placed at 69706.75; SL=68971.17600922057, TP=71632.48270786054; valid for the next 3 chart bar(s).
+08/02/2026 00:00:00.202 | Trade | Cancelling pending order OID172
+08/02/2026 00:00:00.202 | Trade | → Cancelling pending order OID172 SUCCEEDED
+08/02/2026 00:00:00.202 | Info | Combo: pending order 172 cancelled after 3 chart bars.
+08/02/2026 01:00:00.001 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.15 units, which needs about $10022.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4788.80 budget, free margin was $9577.60). Size was cut from 0.15 to 0.07 units. Real risk on this trade is now about $41.93 (0.44% of balance) instead of the requested 1.00%.
+08/02/2026 01:00:00.001 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 68775.3, SL: 69374.2924666233, TP: 67207.14)
+08/02/2026 01:00:00.001 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 68775.3, SL: 69374.2924666233, TP: 67207.14) SUCCEEDED, PendingOrder OID173
+08/02/2026 01:00:00.001 | Info | Combo: bartime=2026-02-08 00:00, executed=2026-02-08 01:00:00, pending Sell placed at 68775.3; SL=69374.29246662326, TP=67207.13772238031; valid for the next 3 chart bar(s).
+08/02/2026 04:00:00.001 | Trade | Cancelling pending order OID173
+08/02/2026 04:00:00.001 | Trade | → Cancelling pending order OID173 SUCCEEDED
+08/02/2026 04:00:00.001 | Info | Combo: pending order 173 cancelled after 3 chart bars.
+09/02/2026 00:00:00.037 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.10 units, which needs about $6681.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4788.80 budget, free margin was $9577.60). Size was cut from 0.10 to 0.07 units. Real risk on this trade is now about $63.58 (0.66% of balance) instead of the requested 1.00%.
+09/02/2026 00:00:00.037 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 69894.6, SL: 70802.9359569434, TP: 67516.58)
+09/02/2026 00:00:00.037 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 69894.6, SL: 70802.9359569434, TP: 67516.58) SUCCEEDED, PendingOrder OID174
+09/02/2026 00:00:00.037 | Info | Combo: bartime=2026-02-08 23:00, executed=2026-02-09 00:00:00, pending Sell placed at 69894.6; SL=70802.93595694334, TP=67516.57646472234; valid for the next 3 chart bar(s).
+09/02/2026 03:00:00.207 | Trade | Cancelling pending order OID174
+09/02/2026 03:00:00.207 | Trade | → Cancelling pending order OID174 SUCCEEDED
+09/02/2026 03:00:00.207 | Info | Combo: pending order 174 cancelled after 3 chart bars.
+09/02/2026 04:00:00.209 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.11 units, which needs about $7350.19 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4788.80 budget, free margin was $9577.60). Size was cut from 0.11 to 0.07 units. Real risk on this trade is now about $58.32 (0.61% of balance) instead of the requested 1.00%.
+09/02/2026 04:00:00.209 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 71407.25, SL: 70574.163192036, TP: 73588.27)
+09/02/2026 04:00:00.209 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 71407.25, SL: 70574.163192036, TP: 73588.27) SUCCEEDED, PendingOrder OID175
+09/02/2026 04:00:00.209 | Info | Combo: bartime=2026-02-09 03:00, executed=2026-02-09 04:00:00, pending Buy placed at 71407.25; SL=70574.16319203601, TP=73588.27126324974; valid for the next 3 chart bar(s).
+09/02/2026 07:00:00.100 | Trade | Cancelling pending order OID175
+09/02/2026 07:00:00.100 | Trade | → Cancelling pending order OID175 SUCCEEDED
+09/02/2026 07:00:00.100 | Info | Combo: pending order 175 cancelled after 3 chart bars.
+09/02/2026 07:00:00.100 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.14 units, which needs about $9354.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4788.80 budget, free margin was $9577.60). Size was cut from 0.14 to 0.07 units. Real risk on this trade is now about $47.24 (0.49% of balance) instead of the requested 1.00%.
+09/02/2026 07:00:00.100 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 70192.65, SL: 70867.5740456776, TP: 68425.7)
+09/02/2026 07:00:00.100 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 70192.65, SL: 70867.5740456776, TP: 68425.7) SUCCEEDED, PendingOrder OID176
+09/02/2026 07:00:00.100 | Info | Combo: bartime=2026-02-09 06:00, executed=2026-02-09 07:00:00, pending Sell placed at 70192.65; SL=70867.57404567757, TP=68425.69884841613; valid for the next 3 chart bar(s).
+09/02/2026 17:00:00.007 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.10 units, which needs about $6681.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4847.59 budget, free margin was $9695.17). Size was cut from 0.10 to 0.07 units. Real risk on this trade is now about $67.69 (0.70% of balance) instead of the requested 1.00%.
+09/02/2026 17:00:00.007 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 70396.85, SL: 69429.8170294968, TP: 72928.54)
+09/02/2026 17:00:00.007 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 70396.85, SL: 69429.8170294968, TP: 72928.54) SUCCEEDED, PendingOrder OID179
+09/02/2026 17:00:00.007 | Info | Combo: bartime=2026-02-09 16:00, executed=2026-02-09 17:00:00, pending Buy placed at 70396.85; SL=69429.8170294968, TP=72928.54231677741; valid for the next 3 chart bar(s).
+10/02/2026 01:00:00.207 | Info | Combo: bartime=2026-02-10 00:00, reversal - closing existing Buy position 47 before opening opposite direction.
+10/02/2026 01:00:00.207 | Trade | Closing position PID47 (Volume: 0.07)
+10/02/2026 01:00:00.207 | Trade | → Closing position PID47 (Volume: 0.07) SUCCEEDED
+10/02/2026 01:00:00.207 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.13 units, which needs about $8686.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4824.28 budget, free margin was $9648.56). Size was cut from 0.13 to 0.07 units. Real risk on this trade is now about $48.65 (0.50% of balance) instead of the requested 1.00%.
+10/02/2026 01:00:00.207 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 69636.7, SL: 70331.6288093565, TP: 67817.38)
+10/02/2026 01:00:00.207 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 69636.7, SL: 70331.6288093565, TP: 67817.38) SUCCEEDED, PendingOrder OID183
+10/02/2026 01:00:00.207 | Info | Combo: bartime=2026-02-10 00:00, executed=2026-02-10 01:00:00, pending Sell placed at 69636.7; SL=70331.62880935654, TP=67817.37637710458; valid for the next 3 chart bar(s).
+10/02/2026 04:00:00.005 | Info | Combo: bartime=2026-02-10 03:00, Sell signal skipped: already have same-direction exposure open.
+10/02/2026 17:00:00.212 | Info | Combo: bartime=2026-02-10 16:00, reversal - closing existing Sell position 48 before opening opposite direction.
+10/02/2026 17:00:00.212 | Trade | Closing position PID48 (Volume: 0.07)
+10/02/2026 17:00:00.212 | Trade | → Closing position PID48 (Volume: 0.07) SUCCEEDED
+10/02/2026 17:00:00.212 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.11 units, which needs about $7350.19 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4829.56 budget, free margin was $9659.12). Size was cut from 0.11 to 0.07 units. Real risk on this trade is now about $60.60 (0.63% of balance) instead of the requested 1.00%.
+10/02/2026 17:00:00.212 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 69797, SL: 68931.3102176973, TP: 72063.38)
+10/02/2026 17:00:00.212 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 69797, SL: 68931.3102176973, TP: 72063.38) SUCCEEDED, PendingOrder OID187
+10/02/2026 17:00:00.212 | Info | Combo: bartime=2026-02-10 16:00, executed=2026-02-10 17:00:00, pending Buy placed at 69797; SL=68931.31021769732, TP=72063.37585006843; valid for the next 3 chart bar(s).
+11/02/2026 01:00:00.210 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.16 units, which needs about $10691.19 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4797.99 budget, free margin was $9595.98). Size was cut from 0.16 to 0.07 units. Real risk on this trade is now about $40.16 (0.42% of balance) instead of the requested 1.00%.
+11/02/2026 01:00:00.210 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 69214.85, SL: 68641.1911757492, TP: 70716.69)
+11/02/2026 01:00:00.210 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 69214.85, SL: 68641.1911757492, TP: 70716.69) SUCCEEDED, PendingOrder OID190
+11/02/2026 01:00:00.210 | Info | Combo: bartime=2026-02-11 00:00, executed=2026-02-11 01:00:00, pending Buy placed at 69214.85; SL=68641.19117574915, TP=70716.68880188874; valid for the next 3 chart bar(s).
+11/02/2026 20:00:00.007 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.09 units, which needs about $6013.80 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4777.68 budget, free margin was $9555.37). Size was cut from 0.09 to 0.07 units. Real risk on this trade is now about $69.74 (0.73% of balance) instead of the requested 1.00%.
+11/02/2026 20:00:00.007 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 67837.2, SL: 66840.9396519968, TP: 70445.41)
+11/02/2026 20:00:00.007 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 67837.2, SL: 66840.9396519968, TP: 70445.41) SUCCEEDED, PendingOrder OID193
+11/02/2026 20:00:00.007 | Info | Combo: bartime=2026-02-11 19:00, executed=2026-02-11 20:00:00, pending Buy placed at 67837.2; SL=66840.93965199681, TP=70445.40959107234; valid for the next 3 chart bar(s).
+12/02/2026 05:00:00.208 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.15 units, which needs about $10022.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4742.47 budget, free margin was $9484.95). Size was cut from 0.15 to 0.06 units. Real risk on this trade is now about $36.48 (0.38% of balance) instead of the requested 1.00%.
+12/02/2026 05:00:00.208 | Trade | Placing Stop Order to Sell 0.06 BTCUSD (Price: 66881.55, SL: 67489.4808918615, TP: 65289.99)
+12/02/2026 05:00:00.208 | Trade | → Placing Stop Order to Sell 0.06 BTCUSD (Price: 66881.55, SL: 67489.4808918615, TP: 65289.99) SUCCEEDED, PendingOrder OID196
+12/02/2026 05:00:00.208 | Info | Combo: bartime=2026-02-12 04:00, executed=2026-02-12 05:00:00, pending Sell placed at 66881.55; SL=67489.48089186147, TP=65289.98692510666; valid for the next 3 chart bar(s).
+12/02/2026 09:00:00.008 | Info | Combo: bartime=2026-02-12 08:00, Sell signal skipped: already have same-direction exposure open.
+12/02/2026 10:00:00.267 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.17 units, which needs about $11359.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4723.43 budget, free margin was $9446.86). Size was cut from 0.17 to 0.06 units. Real risk on this trade is now about $31.77 (0.34% of balance) instead of the requested 1.00%.
+12/02/2026 10:00:00.267 | Trade | Placing Stop Order to Buy 0.06 BTCUSD (Price: 67676.45, SL: 67147.0239253548, TP: 69062.49)
+12/02/2026 10:00:00.267 | Trade | → Placing Stop Order to Buy 0.06 BTCUSD (Price: 67676.45, SL: 67147.0239253548, TP: 69062.49) SUCCEEDED, PendingOrder OID199
+12/02/2026 10:00:00.267 | Info | Combo: bartime=2026-02-12 09:00, executed=2026-02-12 10:00:00, pending Buy placed at 67676.45; SL=67147.02392535482, TP=69062.48746342104; valid for the next 3 chart bar(s).
+12/02/2026 16:00:00.009 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.13 units, which needs about $8686.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4707.18 budget, free margin was $9414.37). Size was cut from 0.13 to 0.06 units. Real risk on this trade is now about $41.78 (0.44% of balance) instead of the requested 1.00%.
+12/02/2026 16:00:00.009 | Trade | Placing Stop Order to Sell 0.06 BTCUSD (Price: 66925.15, SL: 67621.4994753118, TP: 65102.11)
+12/02/2026 16:00:00.009 | Trade | → Placing Stop Order to Sell 0.06 BTCUSD (Price: 66925.15, SL: 67621.4994753118, TP: 65102.11) SUCCEEDED, PendingOrder OID202
+12/02/2026 16:00:00.009 | Info | Combo: bartime=2026-02-12 15:00, executed=2026-02-12 16:00:00, pending Sell placed at 66925.15; SL=67621.49947531178, TP=65102.10707363374; valid for the next 3 chart bar(s).
+13/02/2026 09:00:00.008 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.19 units, which needs about $12695.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4761.90 budget, free margin was $9523.81). Size was cut from 0.19 to 0.06 units. Real risk on this trade is now about $29.31 (0.31% of balance) instead of the requested 1.00%.
+13/02/2026 09:00:00.008 | Trade | Placing Stop Order to Buy 0.06 BTCUSD (Price: 66708.4, SL: 66219.9139686232, TP: 67987.26)
+13/02/2026 09:00:00.008 | Trade | → Placing Stop Order to Buy 0.06 BTCUSD (Price: 66708.4, SL: 66219.9139686232, TP: 67987.26) SUCCEEDED, PendingOrder OID205
+13/02/2026 09:00:00.008 | Info | Combo: bartime=2026-02-13 08:00, executed=2026-02-13 09:00:00, pending Buy placed at 66708.4; SL=66219.91396862321, TP=67987.2564301444; valid for the next 3 chart bar(s).
+15/02/2026 02:00:00.202 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.24 units, which needs about $16036.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4800.59 budget, free margin was $9601.17). Size was cut from 0.24 to 0.07 units. Real risk on this trade is now about $27.12 (0.28% of balance) instead of the requested 1.00%.
+15/02/2026 02:00:00.202 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 69250.75, SL: 69638.1459098632, TP: 68236.55)
+15/02/2026 02:00:00.202 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 69250.75, SL: 69638.1459098632, TP: 68236.55) SUCCEEDED, PendingOrder OID208
+15/02/2026 02:00:00.202 | Info | Combo: bartime=2026-02-15 01:00, executed=2026-02-15 02:00:00, pending Sell placed at 69250.75; SL=69638.14590986317, TP=68236.5475079782; valid for the next 3 chart bar(s).
+15/02/2026 13:00:00.001 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.17 units, which needs about $11359.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4786.13 budget, free margin was $9572.26). Size was cut from 0.17 to 0.07 units. Real risk on this trade is now about $38.30 (0.40% of balance) instead of the requested 1.00%.
+15/02/2026 13:00:00.001 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 69208.35, SL: 69755.4702450191, TP: 67775.99)
+15/02/2026 13:00:00.001 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 69208.35, SL: 69755.4702450191, TP: 67775.99) SUCCEEDED, PendingOrder OID211
+15/02/2026 13:00:00.001 | Info | Combo: bartime=2026-02-15 12:00, executed=2026-02-15 13:00:00, pending Sell placed at 69208.35; SL=69755.4702450191, TP=67775.98919854003; valid for the next 3 chart bar(s).
+16/02/2026 09:00:00.300 | Info | Combo: bartime=2026-02-16 08:00, reversal - closing existing Sell position 57 before opening opposite direction.
+16/02/2026 09:00:00.300 | Trade | Closing position PID57 (Volume: 0.07)
+16/02/2026 09:00:00.300 | Trade | → Closing position PID57 (Volume: 0.07) SUCCEEDED
+16/02/2026 09:00:00.300 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.25 units, which needs about $16704.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4802.23 budget, free margin was $9604.47). Size was cut from 0.25 to 0.07 units. Real risk on this trade is now about $26.63 (0.28% of balance) instead of the requested 1.00%.
+16/02/2026 09:00:00.300 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 68790.9, SL: 68410.4502977114, TP: 69786.92)
+16/02/2026 09:00:00.300 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 68790.9, SL: 68410.4502977114, TP: 69786.92) SUCCEEDED, PendingOrder OID215
+16/02/2026 09:00:00.300 | Info | Combo: bartime=2026-02-16 08:00, executed=2026-02-16 09:00:00, pending Buy placed at 68790.9; SL=68410.45029771142, TP=69786.91732059148; valid for the next 3 chart bar(s).
+16/02/2026 21:00:00.004 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.15 units, which needs about $10022.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4788.81 budget, free margin was $9577.63). Size was cut from 0.15 to 0.07 units. Real risk on this trade is now about $42.37 (0.44% of balance) instead of the requested 1.00%.
+16/02/2026 21:00:00.004 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 68543.5, SL: 67938.1796780391, TP: 70128.23)
+16/02/2026 21:00:00.004 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 68543.5, SL: 67938.1796780391, TP: 70128.23) SUCCEEDED, PendingOrder OID218
+16/02/2026 21:00:00.004 | Info | Combo: bartime=2026-02-16 20:00, executed=2026-02-16 21:00:00, pending Buy placed at 68543.5; SL=67938.17967803912, TP=70128.22860289359; valid for the next 3 chart bar(s).
+17/02/2026 09:00:00.283 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.22 units, which needs about $14700.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4767.50 budget, free margin was $9535.01). Size was cut from 0.22 to 0.06 units. Real risk on this trade is now about $25.00 (0.26% of balance) instead of the requested 1.00%.
+17/02/2026 09:00:00.283 | Trade | Placing Stop Order to Sell 0.06 BTCUSD (Price: 68024.4, SL: 68441.0538274276, TP: 66933.6)
+17/02/2026 09:00:00.283 | Trade | → Placing Stop Order to Sell 0.06 BTCUSD (Price: 68024.4, SL: 68441.0538274276, TP: 66933.6) SUCCEEDED, PendingOrder OID221
+17/02/2026 09:00:00.283 | Info | Combo: bartime=2026-02-17 08:00, executed=2026-02-17 09:00:00, pending Sell placed at 68024.4; SL=68441.05382742765, TP=66933.60027979441; valid for the next 3 chart bar(s).
+18/02/2026 12:00:00.007 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.21 units, which needs about $14032.19 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4800.24 budget, free margin was $9600.49). Size was cut from 0.21 to 0.07 units. Real risk on this trade is now about $31.93 (0.33% of balance) instead of the requested 1.00%.
+18/02/2026 12:00:00.007 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 66986.25, SL: 67442.4082009085, TP: 65792.03)
+18/02/2026 12:00:00.007 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 66986.25, SL: 67442.4082009085, TP: 65792.03) SUCCEEDED, PendingOrder OID224
+18/02/2026 12:00:00.007 | Info | Combo: bartime=2026-02-18 11:00, executed=2026-02-18 12:00:00, pending Sell placed at 66986.25; SL=67442.40820090853, TP=65792.02783002148; valid for the next 3 chart bar(s).
+18/02/2026 17:00:00.209 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.14 units, which needs about $9354.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4783.51 budget, free margin was $9567.03). Size was cut from 0.14 to 0.07 units. Real risk on this trade is now about $44.98 (0.47% of balance) instead of the requested 1.00%.
+18/02/2026 17:00:00.209 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 66892.65, SL: 67535.2068792737, TP: 65210.44)
+18/02/2026 17:00:00.209 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 66892.65, SL: 67535.2068792737, TP: 65210.44) SUCCEEDED, PendingOrder OID227
+18/02/2026 17:00:00.209 | Info | Combo: bartime=2026-02-18 16:00, executed=2026-02-18 17:00:00, pending Sell placed at 66892.65; SL=67535.2068792737, TP=65210.436090061434; valid for the next 3 chart bar(s).
+19/02/2026 12:00:00.209 | Info | Combo: bartime=2026-02-19 11:00, Sell signal skipped: already have same-direction exposure open.
+19/02/2026 19:00:00.247 | Info | Combo: bartime=2026-02-19 18:00, reversal - closing existing Sell position 62 before opening opposite direction.
+19/02/2026 19:00:00.247 | Trade | Closing position PID62 (Volume: 0.07)
+19/02/2026 19:00:00.247 | Trade | → Closing position PID62 (Volume: 0.07) SUCCEEDED
+19/02/2026 19:00:00.247 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.13 units, which needs about $8686.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4777.65 budget, free margin was $9555.31). Size was cut from 0.13 to 0.07 units. Real risk on this trade is now about $48.49 (0.51% of balance) instead of the requested 1.00%.
+19/02/2026 19:00:00.247 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 67061.3, SL: 66368.5928524628, TP: 68874.81)
+19/02/2026 19:00:00.247 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 67061.3, SL: 66368.5928524628, TP: 68874.81) SUCCEEDED, PendingOrder OID231
+19/02/2026 19:00:00.247 | Info | Combo: bartime=2026-02-19 18:00, executed=2026-02-19 19:00:00, pending Buy placed at 67061.3; SL=66368.59285246275, TP=68874.80731225252; valid for the next 3 chart bar(s).
+20/02/2026 14:00:00.214 | Info | Combo: bartime=2026-02-20 13:00, reversal - closing existing Buy position 63 before opening opposite direction.
+20/02/2026 14:00:00.214 | Trade | Closing position PID63 (Volume: 0.07)
+20/02/2026 14:00:00.214 | Trade | → Closing position PID63 (Volume: 0.07) SUCCEEDED
+20/02/2026 14:00:00.214 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.17 units, which needs about $11359.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4766.02 budget, free margin was $9532.04). Size was cut from 0.17 to 0.06 units. Real risk on this trade is now about $31.88 (0.33% of balance) instead of the requested 1.00%.
+20/02/2026 14:00:00.214 | Trade | Placing Stop Order to Sell 0.06 BTCUSD (Price: 66361.6, SL: 66892.8902622521, TP: 64970.68)
+20/02/2026 14:00:00.214 | Trade | → Placing Stop Order to Sell 0.06 BTCUSD (Price: 66361.6, SL: 66892.8902622521, TP: 64970.68) SUCCEEDED, PendingOrder OID235
+20/02/2026 14:00:00.214 | Info | Combo: bartime=2026-02-20 13:00, executed=2026-02-20 14:00:00, pending Sell placed at 66361.6; SL=66892.89026225208, TP=64970.682093424046; valid for the next 3 chart bar(s).
+20/02/2026 17:00:00.009 | Trade | Cancelling pending order OID235
+20/02/2026 17:00:00.009 | Trade | → Cancelling pending order OID235 SUCCEEDED
+20/02/2026 17:00:00.009 | Info | Combo: pending order 235 cancelled after 3 chart bars.
+21/02/2026 04:00:00.201 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.26 units, which needs about $17373.19 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4766.02 budget, free margin was $9532.04). Size was cut from 0.26 to 0.06 units. Real risk on this trade is now about $21.33 (0.22% of balance) instead of the requested 1.00%.
+21/02/2026 04:00:00.201 | Trade | Placing Stop Order to Sell 0.06 BTCUSD (Price: 67449.85, SL: 67805.3167654538, TP: 66519.24)
+21/02/2026 04:00:00.201 | Trade | → Placing Stop Order to Sell 0.06 BTCUSD (Price: 67449.85, SL: 67805.3167654538, TP: 66519.24) SUCCEEDED, PendingOrder OID236
+21/02/2026 04:00:00.201 | Info | Combo: bartime=2026-02-21 03:00, executed=2026-02-21 04:00:00, pending Sell placed at 67449.85; SL=67805.31676545381, TP=66519.23800804192; valid for the next 3 chart bar(s).
+21/02/2026 07:00:00.201 | Trade | Cancelling pending order OID236
+21/02/2026 07:00:00.201 | Trade | → Cancelling pending order OID236 SUCCEEDED
+21/02/2026 07:00:00.201 | Info | Combo: pending order 236 cancelled after 3 chart bars.
+21/02/2026 23:00:00.003 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.29 units, which needs about $19377.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4766.02 budget, free margin was $9532.04). Size was cut from 0.29 to 0.06 units. Real risk on this trade is now about $19.26 (0.20% of balance) instead of the requested 1.00%.
+21/02/2026 23:00:00.003 | Trade | Placing Stop Order to Sell 0.06 BTCUSD (Price: 67825.3, SL: 68146.2526521744, TP: 66985.05)
+21/02/2026 23:00:00.003 | Trade | → Placing Stop Order to Sell 0.06 BTCUSD (Price: 67825.3, SL: 68146.2526521744, TP: 66985.05) SUCCEEDED, PendingOrder OID237
+21/02/2026 23:00:00.003 | Info | Combo: bartime=2026-02-21 22:00, executed=2026-02-21 23:00:00, pending Sell placed at 67825.3; SL=68146.25265217439, TP=66985.04595660747; valid for the next 3 chart bar(s).
+22/02/2026 12:00:00.201 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.62 units, which needs about $41428.37 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4756.25 budget, free margin was $9512.51). Size was cut from 0.62 to 0.06 units. Real risk on this trade is now about $9.10 (0.10% of balance) instead of the requested 1.00%.
+22/02/2026 12:00:00.201 | Trade | Placing Stop Order to Buy 0.06 BTCUSD (Price: 68254.5, SL: 68102.8070772577, TP: 68651.63)
+22/02/2026 12:00:00.201 | Trade | → Placing Stop Order to Buy 0.06 BTCUSD (Price: 68254.5, SL: 68102.8070772577, TP: 68651.63) SUCCEEDED, PendingOrder OID240
+22/02/2026 12:00:00.201 | Info | Combo: bartime=2026-02-22 11:00, executed=2026-02-22 12:00:00, pending Buy placed at 68254.5; SL=68102.8070772577, TP=68651.63207173934; valid for the next 3 chart bar(s).
+22/02/2026 13:00:00.201 | Info | Combo: bartime=2026-02-22 12:00, reversal - cancelling existing Buy pending order 240 before opening opposite direction.
+22/02/2026 13:00:00.201 | Trade | Cancelling pending order OID240
+22/02/2026 13:00:00.201 | Trade | → Cancelling pending order OID240 SUCCEEDED
+22/02/2026 13:00:00.201 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.49 units, which needs about $32741.78 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4756.25 budget, free margin was $9512.51). Size was cut from 0.49 to 0.06 units. Real risk on this trade is now about $11.46 (0.12% of balance) instead of the requested 1.00%.
+22/02/2026 13:00:00.201 | Trade | Placing Stop Order to Sell 0.06 BTCUSD (Price: 67793.05, SL: 67984.0143381938, TP: 67293.11)
+22/02/2026 13:00:00.201 | Trade | → Placing Stop Order to Sell 0.06 BTCUSD (Price: 67793.05, SL: 67984.0143381938, TP: 67293.11) SUCCEEDED, PendingOrder OID241
+22/02/2026 13:00:00.201 | Info | Combo: bartime=2026-02-22 12:00, executed=2026-02-22 13:00:00, pending Sell placed at 67793.05; SL=67984.01433819384, TP=67293.10536260853; valid for the next 3 chart bar(s).
+24/02/2026 16:00:00.208 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.15 units, which needs about $10022.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4770.38 budget, free margin was $9540.76). Size was cut from 0.15 to 0.06 units. Real risk on this trade is now about $36.39 (0.38% of balance) instead of the requested 1.00%.
+24/02/2026 16:00:00.208 | Trade | Placing Stop Order to Buy 0.06 BTCUSD (Price: 64052.6, SL: 63446.0345692236, TP: 65640.59)
+24/02/2026 16:00:00.208 | Trade | → Placing Stop Order to Buy 0.06 BTCUSD (Price: 64052.6, SL: 63446.0345692236, TP: 65640.59) SUCCEEDED, PendingOrder OID244
+24/02/2026 16:00:00.208 | Info | Combo: bartime=2026-02-24 15:00, executed=2026-02-24 16:00:00, pending Buy placed at 64052.6; SL=63446.03456922361, TP=65640.58829777259; valid for the next 3 chart bar(s).
+26/02/2026 08:00:00.218 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.16 units, which needs about $10691.19 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4816.71 budget, free margin was $9633.42). Size was cut from 0.16 to 0.07 units. Real risk on this trade is now about $39.79 (0.41% of balance) instead of the requested 1.00%.
+26/02/2026 08:00:00.218 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 67761.35, SL: 68329.7499082545, TP: 66273.28)
+26/02/2026 08:00:00.218 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 67761.35, SL: 68329.7499082545, TP: 66273.28) SUCCEEDED, PendingOrder OID247
+26/02/2026 08:00:00.218 | Info | Combo: bartime=2026-02-26 07:00, executed=2026-02-26 08:00:00, pending Sell placed at 67761.35; SL=68329.74990825451, TP=66273.27904018971; valid for the next 3 chart bar(s).
+26/02/2026 11:00:00.206 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.17 units, which needs about $11359.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4796.47 budget, free margin was $9592.95). Size was cut from 0.17 to 0.07 units. Real risk on this trade is now about $38.44 (0.40% of balance) instead of the requested 1.00%.
+26/02/2026 11:00:00.206 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 68184.15, SL: 68733.2295530263, TP: 66746.66)
+26/02/2026 11:00:00.206 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 68184.15, SL: 68733.2295530263, TP: 66746.66) SUCCEEDED, PendingOrder OID250
+26/02/2026 11:00:00.206 | Info | Combo: bartime=2026-02-26 10:00, executed=2026-02-26 11:00:00, pending Sell placed at 68184.15; SL=68733.2295530263, TP=66746.65973017713; valid for the next 3 chart bar(s).
+27/02/2026 04:00:00.212 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.20 units, which needs about $13363.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4847.13 budget, free margin was $9694.27). Size was cut from 0.20 to 0.07 units. Real risk on this trade is now about $33.76 (0.35% of balance) instead of the requested 1.00%.
+27/02/2026 04:00:00.212 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 67738.35, SL: 67256.0328365427, TP: 69001.06)
+27/02/2026 04:00:00.212 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 67738.35, SL: 67256.0328365427, TP: 69001.06) SUCCEEDED, PendingOrder OID253
+27/02/2026 04:00:00.212 | Info | Combo: bartime=2026-02-27 03:00, executed=2026-02-27 04:00:00, pending Buy placed at 67738.35; SL=67256.03283654273, TP=69001.05633393118; valid for the next 3 chart bar(s).
+27/02/2026 10:00:00.287 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.19 units, which needs about $12695.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4830.01 budget, free margin was $9660.03). Size was cut from 0.19 to 0.07 units. Real risk on this trade is now about $34.38 (0.36% of balance) instead of the requested 1.00%.
+27/02/2026 10:00:00.287 | Trade | Placing Stop Order to Sell 0.07 BTCUSD (Price: 67230.3, SL: 67721.3816896974, TP: 65944.65)
+27/02/2026 10:00:00.287 | Trade | → Placing Stop Order to Sell 0.07 BTCUSD (Price: 67230.3, SL: 67721.3816896974, TP: 65944.65) SUCCEEDED, PendingOrder OID256
+27/02/2026 10:00:00.287 | Info | Combo: bartime=2026-02-27 09:00, executed=2026-02-27 10:00:00, pending Sell placed at 67230.3; SL=67721.38168969734, TP=65944.64813637236; valid for the next 3 chart bar(s).
+28/02/2026 17:00:00.216 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.13 units, which needs about $8686.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4875.02 budget, free margin was $9750.05). Size was cut from 0.13 to 0.07 units. Real risk on this trade is now about $50.88 (0.52% of balance) instead of the requested 1.00%.
+28/02/2026 17:00:00.216 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 65233.7, SL: 64506.8399002751, TP: 67136.62)
+28/02/2026 17:00:00.216 | Trade | → Placing Stop Order to Buy 0.07 BTCUSD (Price: 65233.7, SL: 64506.8399002751, TP: 67136.62) SUCCEEDED, PendingOrder OID259
+28/02/2026 17:00:00.216 | Info | Combo: bartime=2026-02-28 16:00, executed=2026-02-28 17:00:00, pending Buy placed at 65233.7; SL=64506.8399002751, TP=67136.61974107976; valid for the next 3 chart bar(s).
+28/02/2026 23:59:59.844 | Info | Combo: loaded=6222, processed=113, before-start=5732, not-processed=377, placed=107, failed=0, guard-skipped=0, pending-expired=27, same-direction-skipped=6, reversed=21, margin-capped=104, margin-blocked=0.
+Info | CBot instance [Combo, BTCUSD, h1] stopped.

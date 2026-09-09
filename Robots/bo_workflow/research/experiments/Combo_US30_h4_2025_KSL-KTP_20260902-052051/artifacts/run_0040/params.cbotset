@@ -1,0 +1,7 @@
+﻿{
+    "Parameters":  {
+                       "KslLevel":  "Fib0618",
+                       "SignalFilePath":  "Z:\\Desktop\\og_program\\runtime\\exports\\combo_US30_H4_full_history_signals.csv",
+                       "KtpLevel":  "Fib2618"
+                   }
+}

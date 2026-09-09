@@ -1,0 +1,114 @@
+Info | CBot instance [MA Cross, JP225.cash, m45] started.
+01/01/2026 23:05:00.004 | Info | MA Cross: loaded 2029 valid signal row(s) from CSV.
+01/01/2026 23:05:00.004 | Info | MA Cross: signal scheduling active with chart timeframe m45 (00:45:00); CSV timeframe must match the chart timeframe.
+06/01/2026 16:00:01.706 | Trade | Executing Market Order to Sell 110.4 JP225.cash (SL: 141.43, TP: 370.27)
+06/01/2026 16:00:01.706 | Trade | → Executing Market Order to Sell 110.4 JP225.cash (SL: 141.43, TP: 370.27) SUCCEEDED, Position PID1
+06/01/2026 16:00:01.706 | Info | MA Cross: bartime=2026-01-06 15:15, executed=2026-01-06 16:00:01, market Sell placed; SL=141.43081444938943 pips, TP=370.2658722285015 pips.
+07/01/2026 10:00:00.107 | Trade | Executing Market Order to Sell 143.4 JP225.cash (SL: 107.69, TP: 281.93)
+07/01/2026 10:00:00.107 | Trade | → Executing Market Order to Sell 143.4 JP225.cash (SL: 107.69, TP: 281.93) SUCCEEDED, Position PID2
+07/01/2026 10:00:00.107 | Info | MA Cross: bartime=2026-01-07 09:15, executed=2026-01-07 10:00:00, market Sell placed; SL=107.68775924259484 pips, TP=281.92655369711326 pips.
+09/01/2026 00:15:02.307 | Trade | Executing Market Order to Buy 120.4 JP225.cash (SL: 127.02, TP: 332.53)
+09/01/2026 00:15:02.307 | Trade | → Executing Market Order to Buy 120.4 JP225.cash (SL: 127.02, TP: 332.53) SUCCEEDED, Position PID3
+09/01/2026 00:15:02.307 | Info | MA Cross: bartime=2026-01-08 23:30, executed=2026-01-09 00:15:02, market Buy placed; SL=127.01532421909465 pips, TP=332.52611880558976 pips.
+13/01/2026 04:00:00.200 | Trade | Executing Market Order to Sell 74.4 JP225.cash (SL: 203.34, TP: 532.35)
+13/01/2026 04:00:00.200 | Trade | → Executing Market Order to Sell 74.4 JP225.cash (SL: 203.34, TP: 532.35) SUCCEEDED, Position PID4
+13/01/2026 04:00:00.200 | Info | MA Cross: bartime=2026-01-13 03:15, executed=2026-01-13 04:00:00, market Sell placed; SL=203.34036746282922 pips, TP=532.3450820176869 pips.
+13/01/2026 16:45:00.901 | Trade | Executing Market Order to Buy 82.2 JP225.cash (SL: 182.32, TP: 477.31)
+13/01/2026 16:45:00.901 | Trade | → Executing Market Order to Buy 82.2 JP225.cash (SL: 182.32, TP: 477.31) SUCCEEDED, Position PID5
+13/01/2026 16:45:00.901 | Info | MA Cross: bartime=2026-01-13 16:00, executed=2026-01-13 16:45:00, market Buy placed; SL=182.31801053041056 pips, TP=477.3085515686148 pips.
+14/01/2026 17:30:00.099 | Trade | Executing Market Order to Sell 65.5 JP225.cash (SL: 226.51, TP: 593.01)
+14/01/2026 17:30:00.099 | Trade | → Executing Market Order to Sell 65.5 JP225.cash (SL: 226.51, TP: 593.01) SUCCEEDED, Position PID6
+14/01/2026 17:30:00.099 | Info | MA Cross: bartime=2026-01-14 16:45, executed=2026-01-14 17:30:00, market Sell placed; SL=226.51127949974153 pips, TP=593.0065297303233 pips.
+15/01/2026 10:45:03.901 | Trade | Executing Market Order to Buy 91.2 JP225.cash (SL: 160.93, TP: 421.31)
+15/01/2026 10:45:03.901 | Trade | → Executing Market Order to Buy 91.2 JP225.cash (SL: 160.93, TP: 421.31) SUCCEEDED, Position PID7
+15/01/2026 10:45:03.901 | Info | MA Cross: bartime=2026-01-15 10:00, executed=2026-01-15 10:45:03, market Buy placed; SL=160.92700118494818 pips, TP=421.3068891021943 pips.
+16/01/2026 01:00:00.503 | Trade | Executing Market Order to Sell 96.2 JP225.cash (SL: 151.06, TP: 395.47)
+16/01/2026 01:00:00.503 | Trade | → Executing Market Order to Sell 96.2 JP225.cash (SL: 151.06, TP: 395.47) SUCCEEDED, Position PID8
+16/01/2026 01:00:00.503 | Info | MA Cross: bartime=2026-01-16 00:15, executed=2026-01-16 01:00:00, market Sell placed; SL=151.05873928024994 pips, TP=395.4717794356943 pips.
+19/01/2026 23:05:00.007 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 225.10 units, which needs about $5611.45 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4608.31 budget, free margin was $9216.63). Size was cut from 225.10 to 181.10 units. Real risk on this trade is now about $74.13 (0.80% of balance) instead of the requested 1.00%.
+19/01/2026 23:05:00.007 | Trade | Executing Market Order to Buy 181.1 JP225.cash (SL: 63.92, TP: 167.33)
+19/01/2026 23:05:00.007 | Trade | → Executing Market Order to Buy 181.1 JP225.cash (SL: 63.92, TP: 167.33) SUCCEEDED, Position PID9
+19/01/2026 23:05:00.007 | Info | MA Cross: bartime=2026-01-19 20:00, executed=2026-01-19 23:05:00, market Buy placed; SL=63.916397753127754 pips, TP=167.33312931768845 pips.
+20/01/2026 01:00:00.105 | Trade | Executing Market Order to Sell 87.5 JP225.cash (SL: 163.01, TP: 426.77)
+20/01/2026 01:00:00.105 | Trade | → Executing Market Order to Sell 87.5 JP225.cash (SL: 163.01, TP: 426.77) SUCCEEDED, Position PID10
+20/01/2026 01:00:00.105 | Info | MA Cross: bartime=2026-01-20 00:15, executed=2026-01-20 01:00:00, market Sell placed; SL=163.01343651968082 pips, TP=426.7691768085244 pips.
+21/01/2026 05:30:01.206 | Trade | Executing Market Order to Buy 70.2 JP225.cash (SL: 208.36, TP: 545.49)
+21/01/2026 05:30:01.206 | Trade | → Executing Market Order to Buy 70.2 JP225.cash (SL: 208.36, TP: 545.49) SUCCEEDED, Position PID11
+21/01/2026 05:30:01.206 | Info | MA Cross: bartime=2026-01-21 04:45, executed=2026-01-21 05:30:01, market Buy placed; SL=208.36237394808867 pips, TP=545.4926949960961 pips.
+23/01/2026 05:30:02.607 | Trade | Executing Market Order to Sell 84.2 JP225.cash (SL: 171.98, TP: 450.25)
+23/01/2026 05:30:02.607 | Trade | → Executing Market Order to Sell 84.2 JP225.cash (SL: 171.98, TP: 450.25) SUCCEEDED, Position PID12
+23/01/2026 05:30:02.607 | Info | MA Cross: bartime=2026-01-23 04:45, executed=2026-01-23 05:30:02, market Sell placed; SL=171.98144089811592 pips, TP=450.2474122712675 pips.
+27/01/2026 03:15:00.244 | Trade | Executing Market Order to Buy 93.9 JP225.cash (SL: 158.35, TP: 414.56)
+27/01/2026 03:15:00.244 | Trade | → Executing Market Order to Buy 93.9 JP225.cash (SL: 158.35, TP: 414.56) SUCCEEDED, Position PID13
+27/01/2026 03:15:00.244 | Info | MA Cross: bartime=2026-01-27 02:30, executed=2026-01-27 03:15:00, market Buy placed; SL=158.34904572121542 pips, TP=414.55780169814193 pips.
+27/01/2026 21:15:03.942 | Trade | Executing Market Order to Sell 105.1 JP225.cash (SL: 140.04, TP: 366.62)
+27/01/2026 21:15:03.942 | Trade | → Executing Market Order to Sell 105.1 JP225.cash (SL: 140.04, TP: 366.62) SUCCEEDED, Position PID14
+27/01/2026 21:15:03.942 | Info | MA Cross: bartime=2026-01-27 20:30, executed=2026-01-27 21:15:03, market Sell placed; SL=140.03741442337002 pips, TP=366.6179509603827 pips.
+28/01/2026 07:00:00.843 | Trade | Executing Market Order to Buy 52.3 JP225.cash (SL: 278.07, TP: 728)
+28/01/2026 07:00:00.843 | Trade | → Executing Market Order to Buy 52.3 JP225.cash (SL: 278.07, TP: 728) SUCCEEDED, Position PID15
+28/01/2026 07:00:00.843 | Info | MA Cross: bartime=2026-01-28 06:15, executed=2026-01-28 07:00:00, market Buy placed; SL=278.0743153146652 pips, TP=727.9985574937936 pips.
+29/01/2026 07:00:00.643 | Trade | Executing Market Order to Sell 72.7 JP225.cash (SL: 198.06, TP: 518.51)
+29/01/2026 07:00:00.643 | Trade | → Executing Market Order to Sell 72.7 JP225.cash (SL: 198.06, TP: 518.51) SUCCEEDED, Position PID16
+29/01/2026 07:00:00.643 | Info | MA Cross: bartime=2026-01-29 06:15, executed=2026-01-29 07:00:00, market Sell placed; SL=198.0553030559208 pips, TP=518.5087834004006 pips.
+30/01/2026 04:45:00.243 | Trade | Executing Market Order to Buy 59.9 JP225.cash (SL: 246.56, TP: 645.48)
+30/01/2026 04:45:00.243 | Trade | → Executing Market Order to Buy 59.9 JP225.cash (SL: 246.56, TP: 645.48) SUCCEEDED, Position PID17
+30/01/2026 04:45:00.243 | Info | MA Cross: bartime=2026-01-30 04:00, executed=2026-01-30 04:45:00, market Buy placed; SL=246.55508536630222 pips, TP=645.4812134889792 pips.
+02/02/2026 05:45:00.593 | Trade | Executing Market Order to Sell 41.7 JP225.cash (SL: 350.38, TP: 917.3)
+02/02/2026 05:45:00.593 | Trade | → Executing Market Order to Sell 41.7 JP225.cash (SL: 350.38, TP: 917.3) SUCCEEDED, Position PID18
+02/02/2026 05:45:00.593 | Info | MA Cross: bartime=2026-02-02 05:00, executed=2026-02-02 05:45:00, market Sell placed; SL=350.38275336835113 pips, TP=917.3020483183432 pips.
+02/02/2026 17:45:02.091 | Trade | Executing Market Order to Buy 87.1 JP225.cash (SL: 166.21, TP: 435.15)
+02/02/2026 17:45:02.091 | Trade | → Executing Market Order to Buy 87.1 JP225.cash (SL: 166.21, TP: 435.15) SUCCEEDED, Position PID19
+02/02/2026 17:45:02.091 | Info | MA Cross: bartime=2026-02-02 17:00, executed=2026-02-02 17:45:02, market Buy placed; SL=166.21353333483725 pips, TP=435.1470302706039 pips.
+03/02/2026 19:00:00.095 | Trade | Executing Market Order to Sell 67.7 JP225.cash (SL: 211.82, TP: 554.53)
+03/02/2026 19:00:00.095 | Trade | → Executing Market Order to Sell 67.7 JP225.cash (SL: 211.82, TP: 554.53) SUCCEEDED, Position PID20
+03/02/2026 19:00:00.095 | Info | MA Cross: bartime=2026-02-03 18:15, executed=2026-02-03 19:00:00, market Sell placed; SL=211.81581978182422 pips, TP=554.5338161888158 pips.
+04/02/2026 07:00:00.193 | Trade | Executing Market Order to Buy 75 JP225.cash (SL: 189.19, TP: 495.29)
+04/02/2026 07:00:00.193 | Trade | → Executing Market Order to Buy 75 JP225.cash (SL: 189.19, TP: 495.29) SUCCEEDED, Position PID21
+04/02/2026 07:00:00.193 | Info | MA Cross: bartime=2026-02-04 06:15, executed=2026-02-04 07:00:00, market Buy placed; SL=189.18507419959997 pips, TP=495.2865242545527 pips.
+05/02/2026 01:00:00.193 | Trade | Executing Market Order to Sell 48.6 JP225.cash (SL: 299.82, TP: 784.94)
+05/02/2026 01:00:00.193 | Trade | → Executing Market Order to Sell 48.6 JP225.cash (SL: 299.82, TP: 784.94) SUCCEEDED, Position PID22
+05/02/2026 01:00:00.193 | Info | MA Cross: bartime=2026-02-05 00:15, executed=2026-02-05 01:00:00, market Sell placed; SL=299.8236807966345 pips, TP=784.9383963255891 pips.
+06/02/2026 09:15:00.194 | Trade | Executing Market Order to Buy 45.1 JP225.cash (SL: 330.88, TP: 866.25)
+06/02/2026 09:15:00.194 | Trade | → Executing Market Order to Buy 45.1 JP225.cash (SL: 330.88, TP: 866.25) SUCCEEDED, Position PID23
+06/02/2026 09:15:00.194 | Info | MA Cross: bartime=2026-02-06 08:30, executed=2026-02-06 09:15:00, market Buy placed; SL=330.8810705329081 pips, TP=866.2466426551533 pips.
+09/02/2026 17:45:02.513 | Trade | Executing Market Order to Buy 68.3 JP225.cash (SL: 224.6, TP: 588)
+09/02/2026 17:45:02.513 | Trade | → Executing Market Order to Buy 68.3 JP225.cash (SL: 224.6, TP: 588) SUCCEEDED, Position PID24
+09/02/2026 17:45:02.513 | Info | MA Cross: bartime=2026-02-09 17:00, executed=2026-02-09 17:45:02, market Buy placed; SL=224.59954064077357 pips, TP=588.0015973975452 pips.
+12/02/2026 01:45:01.815 | Trade | Executing Market Order to Sell 69.2 JP225.cash (SL: 227.31, TP: 595.08)
+12/02/2026 01:45:01.815 | Trade | → Executing Market Order to Sell 69.2 JP225.cash (SL: 227.31, TP: 595.08) SUCCEEDED, Position PID25
+12/02/2026 01:45:01.815 | Info | MA Cross: bartime=2026-02-12 01:00, executed=2026-02-12 01:45:01, market Sell placed; SL=227.30513499483453 pips, TP=595.0848434164768 pips.
+16/02/2026 04:15:01.994 | Trade | Executing Market Order to Sell 73.1 JP225.cash (SL: 220.89, TP: 578.29)
+16/02/2026 04:15:01.994 | Trade | → Executing Market Order to Sell 73.1 JP225.cash (SL: 220.89, TP: 578.29) SUCCEEDED, Position PID26
+16/02/2026 04:15:01.994 | Info | MA Cross: bartime=2026-02-16 03:30, executed=2026-02-16 04:15:01, market Sell placed; SL=220.88887201010363 pips, TP=578.2870669224512 pips.
+17/02/2026 14:30:00.097 | Trade | Executing Market Order to Buy 92.1 JP225.cash (SL: 179.84, TP: 470.81)
+17/02/2026 14:30:00.097 | Trade | → Executing Market Order to Buy 92.1 JP225.cash (SL: 179.84, TP: 470.81) SUCCEEDED, Position PID27
+17/02/2026 14:30:00.097 | Info | MA Cross: bartime=2026-02-17 13:45, executed=2026-02-17 14:30:00, market Buy placed; SL=179.83658071367992 pips, TP=470.812168308414 pips.
+19/02/2026 11:30:01.295 | Trade | Executing Market Order to Sell 102.1 JP225.cash (SL: 160.59, TP: 420.43)
+19/02/2026 11:30:01.295 | Trade | → Executing Market Order to Sell 102.1 JP225.cash (SL: 160.59, TP: 420.43) SUCCEEDED, Position PID28
+19/02/2026 11:30:01.295 | Info | MA Cross: bartime=2026-02-19 10:45, executed=2026-02-19 11:30:01, market Sell placed; SL=160.59258410432778 pips, TP=420.4313851851301 pips.
+20/02/2026 17:30:00.096 | Trade | Executing Market Order to Buy 62.2 JP225.cash (SL: 270.56, TP: 708.33)
+20/02/2026 17:30:00.096 | Trade | → Executing Market Order to Buy 62.2 JP225.cash (SL: 270.56, TP: 708.33) SUCCEEDED, Position PID29
+20/02/2026 17:30:00.096 | Info | MA Cross: bartime=2026-02-20 16:45, executed=2026-02-20 17:30:00, market Buy placed; SL=270.56211410931525 pips, TP=708.3316147381872 pips.
+23/02/2026 05:00:00.135 | Trade | Executing Market Order to Sell 106.4 JP225.cash (SL: 156.45, TP: 409.59)
+23/02/2026 05:00:00.135 | Trade | → Executing Market Order to Sell 106.4 JP225.cash (SL: 156.45, TP: 409.59) SUCCEEDED, Position PID30
+23/02/2026 05:00:00.135 | Info | MA Cross: bartime=2026-02-23 04:15, executed=2026-02-23 05:00:00, market Sell placed; SL=156.45058295043904 pips, TP=409.5876261642494 pips.
+23/02/2026 14:45:00.236 | Trade | Executing Market Order to Buy 119.1 JP225.cash (SL: 138.37, TP: 362.26)
+23/02/2026 14:45:00.236 | Trade | → Executing Market Order to Buy 119.1 JP225.cash (SL: 138.37, TP: 362.26) SUCCEEDED, Position PID31
+23/02/2026 14:45:00.236 | Info | MA Cross: bartime=2026-02-23 14:00, executed=2026-02-23 14:45:00, market Buy placed; SL=138.37343471307966 pips, TP=362.26165207884253 pips.
+23/02/2026 20:45:01.035 | Trade | Executing Market Order to Sell 91.8 JP225.cash (SL: 177.69, TP: 465.18)
+23/02/2026 20:45:01.035 | Trade | → Executing Market Order to Sell 91.8 JP225.cash (SL: 177.69, TP: 465.18) SUCCEEDED, Position PID32
+23/02/2026 20:45:01.035 | Info | MA Cross: bartime=2026-02-23 20:00, executed=2026-02-23 20:45:01, market Sell placed; SL=177.6851520444322 pips, TP=465.17972805232347 pips.
+24/02/2026 01:45:02.837 | Trade | Executing Market Order to Buy 80.8 JP225.cash (SL: 199.68, TP: 522.75)
+24/02/2026 01:45:02.837 | Trade | → Executing Market Order to Buy 80.8 JP225.cash (SL: 199.68, TP: 522.75) SUCCEEDED, Position PID33
+24/02/2026 01:45:02.837 | Info | MA Cross: bartime=2026-02-24 01:00, executed=2026-02-24 01:45:02, market Buy placed; SL=199.67569191802775 pips, TP=522.7509614413966 pips.
+26/02/2026 05:30:00.137 | Trade | Executing Market Order to Sell 73.6 JP225.cash (SL: 216.95, TP: 567.98)
+26/02/2026 05:30:00.137 | Trade | → Executing Market Order to Sell 73.6 JP225.cash (SL: 216.95, TP: 567.98) SUCCEEDED, Position PID34
+26/02/2026 05:30:00.137 | Info | MA Cross: bartime=2026-02-26 04:45, executed=2026-02-26 05:30:00, market Sell placed; SL=216.95043988085334 pips, TP=567.976251608074 pips.
+27/02/2026 09:15:02.236 | Trade | Executing Market Order to Buy 79 JP225.cash (SL: 200.11, TP: 523.89)
+27/02/2026 09:15:02.236 | Trade | → Executing Market Order to Buy 79 JP225.cash (SL: 200.11, TP: 523.89) SUCCEEDED, Position PID35
+27/02/2026 09:15:02.236 | Info | MA Cross: bartime=2026-02-27 08:30, executed=2026-02-27 09:15:02, market Buy placed; SL=200.11076974643746 pips, TP=523.8899951961732 pips.
+27/02/2026 19:45:05.336 | Trade | Executing Market Order to Sell 90.3 JP225.cash (SL: 173.23, TP: 453.53)
+27/02/2026 19:45:05.336 | Trade | → Executing Market Order to Sell 90.3 JP225.cash (SL: 173.23, TP: 453.53) SUCCEEDED, Position PID36
+27/02/2026 19:45:05.336 | Info | MA Cross: bartime=2026-02-27 19:00, executed=2026-02-27 19:45:05, market Sell placed; SL=173.23420060375133 pips, TP=453.52713718062097 pips.
+27/02/2026 21:49:51.936 | Info | MA Cross: loaded=2029, processed=36, before-start=1867, not-processed=126, placed=36, failed=0, guard-skipped=0, same-direction-skipped=0, reversed=0, margin-capped=1, margin-blocked=0.
+Info | CBot instance [MA Cross, JP225.cash, m45] stopped.

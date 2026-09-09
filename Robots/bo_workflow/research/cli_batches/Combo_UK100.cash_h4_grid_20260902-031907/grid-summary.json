@@ -1,0 +1,26 @@
+﻿[
+    {
+        "RunNumber":  1,
+        "Success":  true,
+        "FailureReason":  null,
+        "Parameters":  "{\"RiskPercent\":0.4,\"SignalFilePath\":\"Z:\\\\Desktop\\\\og_program\\\\runtime\\\\exports\\\\combo_UK100_H4_full_history_signals.csv\"}",
+        "OutputDir":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_UK100.cash_h4_20260902-031916",
+        "NetProfit":  -40.03,
+        "ROI":  -0.4,
+        "ProfitFactor":  0,
+        "TotalTrades":  1,
+        "MaxEquityDrawdownPct":  0.4099602338573159
+    },
+    {
+        "RunNumber":  2,
+        "Success":  true,
+        "FailureReason":  null,
+        "Parameters":  "{\"RiskPercent\":0.5,\"SignalFilePath\":\"Z:\\\\Desktop\\\\og_program\\\\runtime\\\\exports\\\\combo_UK100_H4_full_history_signals.csv\"}",
+        "OutputDir":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_UK100.cash_h4_20260902-031953",
+        "NetProfit":  -49.98,
+        "ROI":  -0.5,
+        "ProfitFactor":  0,
+        "TotalTrades":  1,
+        "MaxEquityDrawdownPct":  0.5118380675938081
+    }
+]

@@ -1,0 +1,309 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_leverage_probe_20260903-102224\SP35\params.cbotset 
+--start=01/01/2026 --end=28/02/2026 --data-mode=M1 --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=SPN35.cash 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_leverage_probe_20260903-102224\SP35\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...P35\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | SPN35.cash                | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2026 00:00          | cmd arg              |
+| End                  | 28/02/2026 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | M1                        | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 3                         | cbotset              |
+| KtpLevel             | 7                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 1                         | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+03/09/2026 17:22:28.107 | Establishing connection using votuankiet96@gmail.com...
+03/09/2026 17:22:30.301 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Progress | Loading SPN35.cash, h1 | 1.67 % |
+Progress | Loading SPN35.cash, h1 | 3.33 % |
+Progress | Loading SPN35.cash, h1 | 5.00 % |
+Progress | Loading SPN35.cash, h1 | 6.67 % |
+Progress | Loading SPN35.cash, h1 | 8.33 % |
+Progress | Loading SPN35.cash, h1 | 10.00 % |
+Progress | Loading SPN35.cash, h1 | 11.67 % |
+Progress | Loading SPN35.cash, h1 | 13.33 % |
+Progress | Loading SPN35.cash, h1 | 15.00 % |
+Progress | Loading SPN35.cash, h1 | 16.67 % |
+Progress | Loading SPN35.cash, h1 | 18.33 % |
+Progress | Loading SPN35.cash, h1 | 20.00 % |
+Progress | Loading SPN35.cash, h1 | 21.67 % |
+Progress | Loading SPN35.cash, h1 | 23.33 % |
+Progress | Loading SPN35.cash, h1 | 25.00 % |
+Progress | Loading SPN35.cash, h1 | 26.67 % |
+Progress | Loading SPN35.cash, h1 | 28.33 % |
+Progress | Loading SPN35.cash, h1 | 30.00 % |
+Progress | Loading SPN35.cash, h1 | 31.67 % |
+Progress | Loading SPN35.cash, h1 | 33.33 % |
+Progress | Loading SPN35.cash, h1 | 35.00 % |
+Progress | Loading SPN35.cash, h1 | 36.67 % |
+Progress | Loading SPN35.cash, h1 | 38.33 % |
+Progress | Loading SPN35.cash, h1 | 40.00 % |
+Progress | Loading SPN35.cash, h1 | 41.67 % |
+Progress | Loading SPN35.cash, h1 | 43.33 % |
+Progress | Loading SPN35.cash, h1 | 45.00 % |
+Progress | Loading SPN35.cash, h1 | 46.67 % |
+Progress | Loading SPN35.cash, h1 | 48.33 % |
+Progress | Loading SPN35.cash, h1 | 50.00 % |
+Progress | Loading SPN35.cash, h1 | 51.67 % |
+Progress | Loading SPN35.cash, h1 | 53.33 % |
+Progress | Loading SPN35.cash, h1 | 55.00 % |
+Progress | Loading SPN35.cash, h1 | 56.67 % |
+Progress | Loading SPN35.cash, h1 | 58.33 % |
+Progress | Loading SPN35.cash, h1 | 60.00 % |
+Progress | Loading SPN35.cash, h1 | 61.67 % |
+Progress | Loading SPN35.cash, h1 | 63.33 % |
+Progress | Loading SPN35.cash, h1 | 65.00 % |
+Progress | Loading SPN35.cash, h1 | 66.67 % |
+Progress | Loading SPN35.cash, h1 | 68.33 % |
+Progress | Loading SPN35.cash, h1 | 70.00 % |
+Progress | Loading SPN35.cash, h1 | 71.67 % |
+Progress | Loading SPN35.cash, h1 | 73.33 % |
+Progress | Loading SPN35.cash, h1 | 75.00 % |
+Progress | Loading SPN35.cash, h1 | 76.67 % |
+Progress | Loading SPN35.cash, h1 | 78.33 % |
+Progress | Loading SPN35.cash, h1 | 80.00 % |
+Progress | Loading SPN35.cash, h1 | 81.67 % |
+Progress | Loading SPN35.cash, h1 | 83.33 % |
+Progress | Loading SPN35.cash, h1 | 85.00 % |
+Progress | Loading SPN35.cash, h1 | 86.67 % |
+Progress | Loading SPN35.cash, h1 | 88.33 % |
+Progress | Loading SPN35.cash, h1 | 90.00 % |
+Progress | Loading SPN35.cash, h1 | 91.67 % |
+Progress | Loading SPN35.cash, h1 | 93.33 % |
+Progress | Loading SPN35.cash, h1 | 95.00 % |
+Progress | Loading SPN35.cash, h1 | 96.67 % |
+Progress | Loading SPN35.cash, h1 | 98.33 % |
+Progress | Loading SPN35.cash, h1 | 100.00 % |
+Info | CBot instance [Combo, SPN35.cash, h1] started.
+Progress | Backtesting | 2.27 % |
+Progress | Backtesting | 2.33 % |
+Progress | Loading EURUSD, h1 | 1.72 % |
+Progress | Loading EURUSD, h1 | 3.45 % |
+Progress | Loading EURUSD, h1 | 5.17 % |
+Progress | Loading EURUSD, h1 | 6.90 % |
+Progress | Loading EURUSD, h1 | 8.62 % |
+Progress | Loading EURUSD, h1 | 12.07 % |
+Progress | Loading EURUSD, h1 | 12.07 % |
+Progress | Loading EURUSD, h1 | 13.79 % |
+Progress | Loading EURUSD, h1 | 15.52 % |
+Progress | Loading EURUSD, h1 | 17.24 % |
+Progress | Loading EURUSD, h1 | 20.69 % |
+Progress | Loading EURUSD, h1 | 20.69 % |
+Progress | Loading EURUSD, h1 | 24.14 % |
+Progress | Loading EURUSD, h1 | 24.14 % |
+Progress | Loading EURUSD, h1 | 25.86 % |
+Progress | Loading EURUSD, h1 | 27.59 % |
+Progress | Loading EURUSD, h1 | 29.31 % |
+Progress | Loading EURUSD, h1 | 32.76 % |
+Progress | Loading EURUSD, h1 | 32.76 % |
+Progress | Loading EURUSD, h1 | 34.48 % |
+Progress | Loading EURUSD, h1 | 36.21 % |
+Progress | Loading EURUSD, h1 | 41.38 % |
+Progress | Loading EURUSD, h1 | 41.38 % |
+Progress | Loading EURUSD, h1 | 41.38 % |
+Progress | Loading EURUSD, h1 | 43.10 % |
+Progress | Loading EURUSD, h1 | 44.83 % |
+Progress | Loading EURUSD, h1 | 48.28 % |
+Progress | Loading EURUSD, h1 | 48.28 % |
+Progress | Loading EURUSD, h1 | 50.00 % |
+Progress | Loading EURUSD, h1 | 51.72 % |
+Progress | Loading EURUSD, h1 | 53.45 % |
+Progress | Loading EURUSD, h1 | 55.17 % |
+Progress | Loading EURUSD, h1 | 56.90 % |
+Progress | Loading EURUSD, h1 | 58.62 % |
+Progress | Loading EURUSD, h1 | 60.34 % |
+Progress | Loading EURUSD, h1 | 62.07 % |
+Progress | Loading EURUSD, h1 | 63.79 % |
+Progress | Loading EURUSD, h1 | 65.52 % |
+Progress | Loading EURUSD, h1 | 67.24 % |
+Progress | Loading EURUSD, h1 | 68.97 % |
+Progress | Loading EURUSD, h1 | 70.69 % |
+Progress | Loading EURUSD, h1 | 72.41 % |
+Progress | Loading EURUSD, h1 | 74.14 % |
+Progress | Loading EURUSD, h1 | 75.86 % |
+Progress | Loading EURUSD, h1 | 77.59 % |
+Progress | Loading EURUSD, h1 | 79.31 % |
+Progress | Loading EURUSD, h1 | 81.03 % |
+Progress | Loading EURUSD, h1 | 82.76 % |
+Progress | Loading EURUSD, h1 | 84.48 % |
+Progress | Loading EURUSD, h1 | 86.21 % |
+Progress | Loading EURUSD, h1 | 87.93 % |
+Progress | Loading EURUSD, h1 | 89.66 % |
+Progress | Loading EURUSD, h1 | 91.38 % |
+Progress | Loading EURUSD, h1 | 93.10 % |
+Progress | Loading EURUSD, h1 | 94.83 % |
+Progress | Loading EURUSD, h1 | 96.55 % |
+Progress | Loading EURUSD, h1 | 98.28 % |
+Progress | Loading EURUSD, h1 | 100.00 % |
+Progress | Backtesting | 2.33 % |
+Progress | Backtesting | 11.34 % |
+Progress | Backtesting | 50.45 % |
+Progress | Backtesting | 68.72 % |
+Progress | Backtesting | 84.04 % |
+02/01/2026 08:05:00.000 | Info | Combo: loaded 2212 valid signal row(s) from CSV.
+02/01/2026 08:05:00.000 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+02/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.13 units, which needs about $5153.28 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.00 budget, free margin was $10000.00). Size was cut from 2.13 to 0.04 units. Real risk on this trade is now about $1.88 (0.02% of balance) instead of the requested 1.00%.
+02/01/2026 09:00:00.000 | Trade | Placing Stop Order to Buy 0.04 SPN35.cash (Price: 17394.1, SL: 17354.3347884539, TP: 17498.21)
+02/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 SPN35.cash (Price: 17394.1, SL: 17354.3347884539, TP: 17498.21) SUCCEEDED, PendingOrder OID1
+02/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-02 08:00, executed=2026-01-02 09:00:00, pending Buy placed at 17394.1; SL=17354.334788453856, TP=17498.21021404799; valid for the next 3 chart bar(s).
+08/01/2026 12:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.73 units, which needs about $6604.91 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.97 budget, free margin was $9996.96). Size was cut from 2.73 to 0.04 units. Real risk on this trade is now about $1.46 (0.01% of balance) instead of the requested 1.00%.
+08/01/2026 12:00:00.000 | Trade | Placing Stop Order to Buy 0.04 SPN35.cash (Price: 17635, SL: 17603.9606562733, TP: 17716.26)
+08/01/2026 12:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 SPN35.cash (Price: 17635, SL: 17603.9606562733, TP: 17716.26) SUCCEEDED, PendingOrder OID4
+08/01/2026 12:00:00.000 | Info | Combo: bartime=2026-01-08 11:00, executed=2026-01-08 12:00:00, pending Buy placed at 17635; SL=17603.96065627331, TP=17716.264819012595; valid for the next 3 chart bar(s).
+08/01/2026 15:00:00.000 | Info | Combo: bartime=2026-01-08 14:00, Buy signal skipped: already have same-direction exposure open.
+09/01/2026 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.48 units, which needs about $6000.07 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.01 budget, free margin was $10000.58). Size was cut from 2.48 to 0.04 units. Real risk on this trade is now about $1.61 (0.02% of balance) instead of the requested 1.00%.
+09/01/2026 10:00:00.000 | Trade | Placing Stop Order to Sell 0.04 SPN35.cash (Price: 17588, SL: 17622.0692244642, TP: 17498.8)
+09/01/2026 10:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 SPN35.cash (Price: 17588, SL: 17622.0692244642, TP: 17498.8) SUCCEEDED, PendingOrder OID7
+09/01/2026 10:00:00.000 | Info | Combo: bartime=2026-01-09 09:00, executed=2026-01-09 10:00:00, pending Sell placed at 17588; SL=17622.069224464216, TP=17498.802580609867; valid for the next 3 chart bar(s).
+09/01/2026 12:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.61 units, which needs about $6314.59 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.99 budget, free margin was $9998.81). Size was cut from 2.61 to 0.04 units. Real risk on this trade is now about $1.53 (0.02% of balance) instead of the requested 1.00%.
+09/01/2026 12:00:00.000 | Trade | Placing Stop Order to Sell 0.04 SPN35.cash (Price: 17584.5, SL: 17616.8646876571, TP: 17499.77)
+09/01/2026 12:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 SPN35.cash (Price: 17584.5, SL: 17616.8646876571, TP: 17499.77) SUCCEEDED, PendingOrder OID10
+09/01/2026 12:00:00.000 | Info | Combo: bartime=2026-01-09 11:00, executed=2026-01-09 12:00:00, pending Sell placed at 17584.5; SL=17616.8646876571, TP=17499.765267590315; valid for the next 3 chart bar(s).
+09/01/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.55 units, which needs about $6169.43 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.97 budget, free margin was $9997.22). Size was cut from 2.55 to 0.04 units. Real risk on this trade is now about $1.57 (0.02% of balance) instead of the requested 1.00%.
+09/01/2026 16:00:00.000 | Trade | Placing Stop Order to Buy 0.04 SPN35.cash (Price: 17649.8, SL: 17616.5979436157, TP: 17736.73)
+09/01/2026 16:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 SPN35.cash (Price: 17649.8, SL: 17616.5979436157, TP: 17736.73) SUCCEEDED, PendingOrder OID13
+09/01/2026 16:00:00.000 | Info | Combo: bartime=2026-01-09 15:00, executed=2026-01-09 16:00:00, pending Buy placed at 17649.8; SL=17616.597943615652, TP=17736.727066715008; valid for the next 3 chart bar(s).
+09/01/2026 17:00:00.000 | Info | Combo: bartime=2026-01-09 16:00, reversal - closing existing Buy position 5 before opening opposite direction.
+09/01/2026 17:00:00.000 | Trade | Closing position PID5 (Volume: 0.04)
+09/01/2026 17:00:00.000 | Trade |  Closing position PID5 (Volume: 0.04) SUCCEEDED
+09/01/2026 17:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.34 units, which needs about $5661.35 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.97 budget, free margin was $9997.14). Size was cut from 2.34 to 0.04 units. Real risk on this trade is now about $1.70 (0.02% of balance) instead of the requested 1.00%.
+09/01/2026 17:00:00.000 | Trade | Placing Stop Order to Sell 0.04 SPN35.cash (Price: 17578.6, SL: 17614.6788451075, TP: 17484.14)
+09/01/2026 17:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 SPN35.cash (Price: 17578.6, SL: 17614.6788451075, TP: 17484.14) SUCCEEDED, PendingOrder OID17
+09/01/2026 17:00:00.000 | Info | Combo: bartime=2026-01-09 16:00, executed=2026-01-09 17:00:00, pending Sell placed at 17578.6; SL=17614.678845107475, TP=17484.141146627993; valid for the next 3 chart bar(s).
+12/01/2026 13:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.92 units, which needs about $4645.21 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.99 budget, free margin was $9999.48). Size was cut from 1.92 to 0.04 units. Real risk on this trade is now about $2.08 (0.02% of balance) instead of the requested 1.00%.
+12/01/2026 13:00:00.000 | Trade | Placing Stop Order to Buy 0.04 SPN35.cash (Price: 17656.4, SL: 17612.2862641921, TP: 17771.9)
+12/01/2026 13:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 SPN35.cash (Price: 17656.4, SL: 17612.2862641921, TP: 17771.9) SUCCEEDED, PendingOrder OID20
+12/01/2026 13:00:00.000 | Info | Combo: bartime=2026-01-12 12:00, executed=2026-01-12 13:00:00, pending Buy placed at 17656.4; SL=17612.286264192095, TP=17771.895185335266; valid for the next 3 chart bar(s).
+14/01/2026 12:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.25 units, which needs about $5443.61 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.05 budget, free margin was $10004.63). Size was cut from 2.25 to 0.04 units. Real risk on this trade is now about $1.77 (0.02% of balance) instead of the requested 1.00%.
+14/01/2026 12:00:00.000 | Trade | Placing Stop Order to Sell 0.04 SPN35.cash (Price: 17668.5, SL: 17706.0550648312, TP: 17570.18)
+14/01/2026 12:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 SPN35.cash (Price: 17668.5, SL: 17706.0550648312, TP: 17570.18) SUCCEEDED, PendingOrder OID23
+14/01/2026 12:00:00.000 | Info | Combo: bartime=2026-01-14 11:00, executed=2026-01-14 12:00:00, pending Sell placed at 17668.5; SL=17706.05506483118, TP=17570.17622184976; valid for the next 3 chart bar(s).
+14/01/2026 15:00:00.000 | Trade | Cancelling pending order OID23
+14/01/2026 15:00:00.000 | Trade |  Cancelling pending order OID23 SUCCEEDED
+14/01/2026 15:00:00.000 | Info | Combo: pending order 23 cancelled after 3 chart bars.
+14/01/2026 17:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.17 units, which needs about $5250.06 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.05 budget, free margin was $10004.63). Size was cut from 2.17 to 0.04 units. Real risk on this trade is now about $1.84 (0.02% of balance) instead of the requested 1.00%.
+14/01/2026 17:00:00.000 | Trade | Placing Stop Order to Sell 0.04 SPN35.cash (Price: 17657.8, SL: 17696.7243221079, TP: 17555.89)
+14/01/2026 17:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 SPN35.cash (Price: 17657.8, SL: 17696.7243221079, TP: 17555.89) SUCCEEDED, PendingOrder OID24
+14/01/2026 17:00:00.000 | Info | Combo: bartime=2026-01-14 16:00, executed=2026-01-14 17:00:00, pending Sell placed at 17657.8; SL=17696.72432210788, TP=17555.89133791173; valid for the next 3 chart bar(s).
+16/01/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.85 units, which needs about $6895.24 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.02 budget, free margin was $10002.27). Size was cut from 2.85 to 0.04 units. Real risk on this trade is now about $1.40 (0.01% of balance) instead of the requested 1.00%.
+16/01/2026 16:00:00.000 | Trade | Placing Stop Order to Buy 0.04 SPN35.cash (Price: 17671.6, SL: 17641.8468069042, TP: 17749.5)
+16/01/2026 16:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 SPN35.cash (Price: 17671.6, SL: 17641.8468069042, TP: 17749.5) SUCCEEDED, PendingOrder OID27
+16/01/2026 16:00:00.000 | Info | Combo: bartime=2026-01-16 15:00, executed=2026-01-16 16:00:00, pending Buy placed at 17671.6; SL=17641.846806904225, TP=17749.497518493466; valid for the next 3 chart bar(s).
+19/01/2026 13:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.56 units, which needs about $3774.24 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.95 budget, free margin was $9995.05). Size was cut from 1.56 to 0.04 units. Real risk on this trade is now about $2.55 (0.03% of balance) instead of the requested 1.00%.
+19/01/2026 13:00:00.000 | Trade | Placing Stop Order to Buy 0.04 SPN35.cash (Price: 17653, SL: 17598.9421050259, TP: 17794.53)
+19/01/2026 13:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 SPN35.cash (Price: 17653, SL: 17598.9421050259, TP: 17794.53) SUCCEEDED, PendingOrder OID30
+19/01/2026 13:00:00.000 | Info | Combo: bartime=2026-01-19 12:00, executed=2026-01-19 13:00:00, pending Buy placed at 17653; SL=17598.942105025893, TP=17794.530216938678; valid for the next 3 chart bar(s).
+20/01/2026 08:05:00.000 | Info | Combo: bartime=2026-01-20 07:00, reversal - closing existing Buy position 10 before opening opposite direction.
+20/01/2026 08:05:00.000 | Trade | Closing position PID10 (Volume: 0.04)
+20/01/2026 08:05:00.000 | Trade |  Closing position PID10 (Volume: 0.04) SUCCEEDED
+20/01/2026 08:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.07 units, which needs about $5008.12 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.88 budget, free margin was $9987.89). Size was cut from 2.07 to 0.04 units. Real risk on this trade is now about $1.92 (0.02% of balance) instead of the requested 1.00%.
+20/01/2026 08:05:00.000 | Trade | Placing Stop Order to Sell 0.04 SPN35.cash (Price: 17499.9, SL: 17540.6535851962, TP: 17393.2)
+20/01/2026 08:05:00.000 | Trade |  Placing Stop Order to Sell 0.04 SPN35.cash (Price: 17499.9, SL: 17540.6535851962, TP: 17393.2) SUCCEEDED, PendingOrder OID34
+20/01/2026 08:05:00.000 | Info | Combo: bartime=2026-01-20 07:00, executed=2026-01-20 08:05:00, pending Sell placed at 17499.9; SL=17540.653585196236, TP=17393.202102188505; valid for the next 3 chart bar(s).
+21/01/2026 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.48 units, which needs about $3580.69 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.86 budget, free margin was $9985.57). Size was cut from 1.48 to 0.04 units. Real risk on this trade is now about $2.70 (0.03% of balance) instead of the requested 1.00%.
+21/01/2026 15:00:00.000 | Trade | Placing Stop Order to Buy 0.04 SPN35.cash (Price: 17478.2, SL: 17420.9969170667, TP: 17627.96)
+21/01/2026 15:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 SPN35.cash (Price: 17478.2, SL: 17420.9969170667, TP: 17627.96) SUCCEEDED, PendingOrder OID37
+21/01/2026 15:00:00.000 | Info | Combo: bartime=2026-01-21 14:00, executed=2026-01-21 15:00:00, pending Buy placed at 17478.2; SL=17420.9969170667, TP=17627.964705802722; valid for the next 3 chart bar(s).
+26/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.58 units, which needs about $6242.01 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.83 budget, free margin was $9982.68). Size was cut from 2.58 to 0.04 units. Real risk on this trade is now about $1.55 (0.02% of balance) instead of the requested 1.00%.
+26/01/2026 09:00:00.000 | Trade | Placing Stop Order to Buy 0.04 SPN35.cash (Price: 17629, SL: 17596.2190755952, TP: 17714.82)
+26/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 SPN35.cash (Price: 17629, SL: 17596.2190755952, TP: 17714.82) SUCCEEDED, PendingOrder OID40
+26/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-26 08:00, executed=2026-01-26 09:00:00, pending Buy placed at 17629; SL=17596.219075595174, TP=17714.824491402927; valid for the next 3 chart bar(s).
+26/01/2026 11:00:00.000 | Info | Combo: bartime=2026-01-26 10:00, Buy signal skipped: already have same-direction exposure open.
+28/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.15 units, which needs about $5201.67 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.87 budget, free margin was $9986.75). Size was cut from 2.15 to 0.04 units. Real risk on this trade is now about $1.86 (0.02% of balance) instead of the requested 1.00%.
+28/01/2026 09:00:00.000 | Trade | Placing Stop Order to Sell 0.04 SPN35.cash (Price: 17648.1, SL: 17687.4365873517, TP: 17545.11)
+28/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 SPN35.cash (Price: 17648.1, SL: 17687.4365873517, TP: 17545.11) SUCCEEDED, PendingOrder OID43
+28/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-28 08:00, executed=2026-01-28 09:00:00, pending Sell placed at 17648.1; SL=17687.436587351687, TP=17545.111976804154; valid for the next 3 chart bar(s).
+29/01/2026 11:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.36 units, which needs about $5709.74 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.93 budget, free margin was $9993.10). Size was cut from 2.36 to 0.04 units. Real risk on this trade is now about $1.69 (0.02% of balance) instead of the requested 1.00%.
+29/01/2026 11:00:00.000 | Trade | Placing Stop Order to Buy 0.04 SPN35.cash (Price: 17689.9, SL: 17654.0924559519, TP: 17783.65)
+29/01/2026 11:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 SPN35.cash (Price: 17689.9, SL: 17654.0924559519, TP: 17783.65) SUCCEEDED, PendingOrder OID46
+29/01/2026 11:00:00.000 | Info | Combo: bartime=2026-01-29 10:00, executed=2026-01-29 11:00:00, pending Buy placed at 17689.9; SL=17654.092455951883, TP=17783.64855383472; valid for the next 3 chart bar(s).
+29/01/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.52 units, which needs about $3677.46 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.97 budget, free margin was $9997.50). Size was cut from 1.52 to 0.04 units. Real risk on this trade is now about $2.62 (0.03% of balance) instead of the requested 1.00%.
+29/01/2026 16:00:00.000 | Trade | Placing Stop Order to Sell 0.04 SPN35.cash (Price: 17537.5, SL: 17593.1275928017, TP: 17391.86)
+29/01/2026 16:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 SPN35.cash (Price: 17537.5, SL: 17593.1275928017, TP: 17391.86) SUCCEEDED, PendingOrder OID49
+29/01/2026 16:00:00.000 | Info | Combo: bartime=2026-01-29 15:00, executed=2026-01-29 16:00:00, pending Sell placed at 17537.5; SL=17593.127592801688, TP=17391.86012111144; valid for the next 3 chart bar(s).
+30/01/2026 08:05:00.000 | Trade | Cancelling pending order OID49
+30/01/2026 08:05:00.000 | Trade |  Cancelling pending order OID49 SUCCEEDED
+30/01/2026 08:05:00.000 | Info | Combo: pending order 49 cancelled after 3 chart bars.
+03/02/2026 18:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.11 units, which needs about $5104.90 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.97 budget, free margin was $9997.50). Size was cut from 2.11 to 0.04 units. Real risk on this trade is now about $1.90 (0.02% of balance) instead of the requested 1.00%.
+03/02/2026 18:00:00.000 | Trade | Placing Stop Order to Sell 0.04 SPN35.cash (Price: 18035.8, SL: 18075.9736962817, TP: 17930.62)
+03/02/2026 18:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 SPN35.cash (Price: 18035.8, SL: 18075.9736962817, TP: 17930.62) SUCCEEDED, PendingOrder OID50
+03/02/2026 18:00:00.000 | Info | Combo: bartime=2026-02-03 17:00, executed=2026-02-03 18:00:00, pending Sell placed at 18035.8; SL=18075.97369628166, TP=17930.620322680054; valid for the next 3 chart bar(s).
+04/02/2026 17:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.31 units, which needs about $3169.39 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.03 budget, free margin was $10002.73). Size was cut from 1.31 to 0.04 units. Real risk on this trade is now about $3.04 (0.03% of balance) instead of the requested 1.00%.
+04/02/2026 17:00:00.000 | Trade | Placing Stop Order to Sell 0.04 SPN35.cash (Price: 18031.5, SL: 18095.8887174178, TP: 17862.92)
+04/02/2026 17:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 SPN35.cash (Price: 18031.5, SL: 18095.8887174178, TP: 17862.92) SUCCEEDED, PendingOrder OID53
+04/02/2026 17:00:00.000 | Info | Combo: bartime=2026-02-04 16:00, executed=2026-02-04 17:00:00, pending Sell placed at 18031.5; SL=18095.888717417798, TP=17862.922419446604; valid for the next 3 chart bar(s).
+10/02/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.29 units, which needs about $5540.39 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.09 budget, free margin was $10009.50). Size was cut from 2.29 to 0.04 units. Real risk on this trade is now about $1.74 (0.02% of balance) instead of the requested 1.00%.
+10/02/2026 16:00:00.000 | Trade | Placing Stop Order to Sell 0.04 SPN35.cash (Price: 18118.4, SL: 18155.3167031912, TP: 18021.75)
+10/02/2026 16:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 SPN35.cash (Price: 18118.4, SL: 18155.3167031912, TP: 18021.75) SUCCEEDED, PendingOrder OID56
+10/02/2026 16:00:00.000 | Info | Combo: bartime=2026-02-10 15:00, executed=2026-02-10 16:00:00, pending Sell placed at 18118.4; SL=18155.31670319123, TP=18021.747531127166; valid for the next 3 chart bar(s).
+12/02/2026 08:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.55 units, which needs about $3750.04 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.07 budget, free margin was $10007.40). Size was cut from 1.55 to 0.04 units. Real risk on this trade is now about $2.57 (0.03% of balance) instead of the requested 1.00%.
+12/02/2026 08:05:00.000 | Trade | Placing Stop Order to Buy 0.04 SPN35.cash (Price: 18141.3, SL: 18086.7430002522, TP: 18284.14)
+12/02/2026 08:05:00.000 | Trade |  Placing Stop Order to Buy 0.04 SPN35.cash (Price: 18141.3, SL: 18086.7430002522, TP: 18284.14) SUCCEEDED, PendingOrder OID59
+12/02/2026 08:05:00.000 | Info | Combo: bartime=2026-02-12 07:00, executed=2026-02-12 08:05:00, pending Buy placed at 18141.3; SL=18086.743000252154, TP=18284.136934614904; valid for the next 3 chart bar(s).
+16/02/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.57 units, which needs about $3798.43 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.04 budget, free margin was $10004.22). Size was cut from 1.57 to 0.04 units. Real risk on this trade is now about $2.54 (0.03% of balance) instead of the requested 1.00%.
+16/02/2026 09:00:00.000 | Trade | Placing Stop Order to Buy 0.04 SPN35.cash (Price: 17851.7, SL: 17797.751855723, TP: 17992.94)
+16/02/2026 09:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 SPN35.cash (Price: 17851.7, SL: 17797.751855723, TP: 17992.94) SUCCEEDED, PendingOrder OID62
+16/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-16 08:00, executed=2026-02-16 09:00:00, pending Buy placed at 17851.7; SL=17797.75185572302, TP=17992.94287611675; valid for the next 3 chart bar(s).
+19/02/2026 11:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.22 units, which needs about $5371.03 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.14 budget, free margin was $10014.06). Size was cut from 2.22 to 0.04 units. Real risk on this trade is now about $1.80 (0.02% of balance) instead of the requested 1.00%.
+19/02/2026 11:00:00.000 | Trade | Placing Stop Order to Sell 0.04 SPN35.cash (Price: 18022.6, SL: 18060.7072476151, TP: 17922.83)
+19/02/2026 11:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 SPN35.cash (Price: 18022.6, SL: 18060.7072476151, TP: 17922.83) SUCCEEDED, PendingOrder OID65
+19/02/2026 11:00:00.000 | Info | Combo: bartime=2026-02-19 10:00, executed=2026-02-19 11:00:00, pending Sell placed at 18022.6; SL=18060.70724761506, TP=17922.830539415583; valid for the next 3 chart bar(s).
+20/02/2026 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.86 units, which needs about $4500.05 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.19 budget, free margin was $10018.78). Size was cut from 1.86 to 0.04 units. Real risk on this trade is now about $2.15 (0.02% of balance) instead of the requested 1.00%.
+20/02/2026 10:00:00.000 | Trade | Placing Stop Order to Buy 0.04 SPN35.cash (Price: 18134.9, SL: 18089.3894462094, TP: 18254.05)
+20/02/2026 10:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 SPN35.cash (Price: 18134.9, SL: 18089.3894462094, TP: 18254.05) SUCCEEDED, PendingOrder OID68
+20/02/2026 10:00:00.000 | Info | Combo: bartime=2026-02-20 09:00, executed=2026-02-20 10:00:00, pending Buy placed at 18134.9; SL=18089.389446209363, TP=18254.052226591022; valid for the next 3 chart bar(s).
+23/02/2026 18:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.02 units, which needs about $4887.15 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.17 budget, free margin was $10016.59). Size was cut from 2.02 to 0.04 units. Real risk on this trade is now about $1.98 (0.02% of balance) instead of the requested 1.00%.
+23/02/2026 18:00:00.000 | Trade | Placing Stop Order to Sell 0.04 SPN35.cash (Price: 18197, SL: 18238.9785496682, TP: 18087.09)
+23/02/2026 18:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 SPN35.cash (Price: 18197, SL: 18238.9785496682, TP: 18087.09) SUCCEEDED, PendingOrder OID71
+23/02/2026 18:00:00.000 | Info | Combo: bartime=2026-02-23 17:00, executed=2026-02-23 18:00:00, pending Sell placed at 18197; SL=18238.978549668234, TP=18087.094994557927; valid for the next 3 chart bar(s).
+24/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-24 08:00, Sell signal skipped: already have same-direction exposure open.
+25/02/2026 08:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.08 units, which needs about $5032.32 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.13 budget, free margin was $10013.38). Size was cut from 2.08 to 0.04 units. Real risk on this trade is now about $1.92 (0.02% of balance) instead of the requested 1.00%.
+25/02/2026 08:05:00.000 | Trade | Placing Stop Order to Buy 0.04 SPN35.cash (Price: 18316.1, SL: 18275.3460213595, TP: 18422.8)
+25/02/2026 08:05:00.000 | Trade |  Placing Stop Order to Buy 0.04 SPN35.cash (Price: 18316.1, SL: 18275.3460213595, TP: 18422.8) SUCCEEDED, PendingOrder OID74
+25/02/2026 08:05:00.000 | Info | Combo: bartime=2026-02-25 07:00, executed=2026-02-25 08:05:00, pending Buy placed at 18316.1; SL=18275.34602135951, TP=18422.798927896943; valid for the next 3 chart bar(s).
+27/02/2026 14:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.82 units, which needs about $4403.28 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.10 budget, free margin was $10009.55). Size was cut from 1.82 to 0.04 units. Real risk on this trade is now about $2.19 (0.02% of balance) instead of the requested 1.00%.
+27/02/2026 14:00:00.000 | Trade | Placing Stop Order to Sell 0.04 SPN35.cash (Price: 18356.3, SL: 18402.760830546, TP: 18234.66)
+27/02/2026 14:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 SPN35.cash (Price: 18356.3, SL: 18402.760830546, TP: 18234.66) SUCCEEDED, PendingOrder OID77
+27/02/2026 14:00:00.000 | Info | Combo: bartime=2026-02-27 13:00, executed=2026-02-27 14:00:00, pending Sell placed at 18356.3; SL=18402.76083054605, TP=18234.659832000798; valid for the next 3 chart bar(s).
+27/02/2026 18:59:00.000 | Info | Combo: loaded=2212, processed=30, before-start=2041, not-processed=141, placed=27, failed=0, guard-skipped=0, pending-expired=2, same-direction-skipped=3, reversed=2, margin-capped=27, margin-blocked=0.
+Progress | Backtesting | 97.95 % |
+Info | CBot instance [Combo, SPN35.cash, h1] stopped.
+{
+	"Equity":10015.42,
+	"NetProfit":15.43,
+	"MaxBalanceDrawdownPercentages":0,
+	"MaxEquityDrawdownPercentages":0,
+	"MaxBalanceDrawdown":21.94,
+	"MaxEquityDrawdown":25.01,
+	"WinningTrades":11,
+	"LosingTrades":14,
+	"TotalTrades":25,
+	"AverageTrade":0.61,
+	"ProfitFactor":1.36,
+	"Fitness":0
+}
+

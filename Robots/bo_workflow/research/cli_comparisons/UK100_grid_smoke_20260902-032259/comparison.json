@@ -1,0 +1,54 @@
+﻿{
+    "Comparable":  true,
+    "DifferenceReasons":  [
+
+                          ],
+    "RankedByNetProfit":  [
+                              {
+                                  "RunName":  "Combo_UK100.cash_h4_20260902-031916",
+                                  "Bot":  "Combo",
+                                  "Symbol":  "UK100.cash",
+                                  "Period":  "h4",
+                                  "StartDate":  "2025-01-01",
+                                  "EndDate":  "2025-01-07",
+                                  "DataMode":  "tickDataFromServer",
+                                  "StartingCapital":  10000,
+                                  "EndingBalance":  9959.97,
+                                  "NetProfit":  -40.03,
+                                  "ROI":  -0.4,
+                                  "ProfitFactor":  0,
+                                  "TotalTrades":  1,
+                                  "WinningTrades":  0,
+                                  "LosingTrades":  1,
+                                  "WinRatePct":  0,
+                                  "MaxBalanceDrawdownPct":  0.40030000000000654,
+                                  "MaxEquityDrawdownPct":  0.4099602338573159,
+                                  "Parameters":  "{\"SignalFilePath\":\"Z:\\\\Desktop\\\\og_program\\\\runtime\\\\exports\\\\combo_UK100_H4_full_history_signals.csv\",\"KslLevel\":\"Fib0618\",\"KtpLevel\":\"Fib0618\",\"RiskPercent\":0.4,\"EnableDailyLossLimit\":\"false\",\"MaxDailyLossPercent\":5,\"EnableMaxDrawdown\":\"false\",\"MaxTotalDrawdownPercent\":10,\"EnableMaxConsecutiveLosses\":\"false\",\"MaxConsecutiveLosses\":5}",
+                                  "RunDirectory":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_UK100.cash_h4_20260902-031916",
+                                  "ReportJsonPath":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_UK100.cash_h4_20260902-031916\\report.json"
+                              },
+                              {
+                                  "RunName":  "Combo_UK100.cash_h4_20260902-031953",
+                                  "Bot":  "Combo",
+                                  "Symbol":  "UK100.cash",
+                                  "Period":  "h4",
+                                  "StartDate":  "2025-01-01",
+                                  "EndDate":  "2025-01-07",
+                                  "DataMode":  "tickDataFromServer",
+                                  "StartingCapital":  10000,
+                                  "EndingBalance":  9950.02,
+                                  "NetProfit":  -49.98,
+                                  "ROI":  -0.5,
+                                  "ProfitFactor":  0,
+                                  "TotalTrades":  1,
+                                  "WinningTrades":  0,
+                                  "LosingTrades":  1,
+                                  "WinRatePct":  0,
+                                  "MaxBalanceDrawdownPct":  0.49979999999999564,
+                                  "MaxEquityDrawdownPct":  0.5118380675938081,
+                                  "Parameters":  "{\"SignalFilePath\":\"Z:\\\\Desktop\\\\og_program\\\\runtime\\\\exports\\\\combo_UK100_H4_full_history_signals.csv\",\"KslLevel\":\"Fib0618\",\"KtpLevel\":\"Fib0618\",\"RiskPercent\":0.5,\"EnableDailyLossLimit\":\"false\",\"MaxDailyLossPercent\":5,\"EnableMaxDrawdown\":\"false\",\"MaxTotalDrawdownPercent\":10,\"EnableMaxConsecutiveLosses\":\"false\",\"MaxConsecutiveLosses\":5}",
+                                  "RunDirectory":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_UK100.cash_h4_20260902-031953",
+                                  "ReportJsonPath":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_UK100.cash_h4_20260902-031953\\report.json"
+                              }
+                          ]
+}

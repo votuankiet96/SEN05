@@ -1,0 +1,1384 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_leverage_crosscheck_2025H1\UK100\params.cbotset 
+--start=01/01/2025 --end=01/07/2025 --data-mode=M1 --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=UK100.cash 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_leverage_crosscheck_2025H1\UK100\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...100\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | UK100.cash                | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 01/07/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | M1                        | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 2                         | cbotset              |
+| KtpLevel             | 4                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 50                        | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+04/09/2026 04:54:56.829 | Establishing connection using votuankiet96@gmail.com...
+04/09/2026 04:55:01.506 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Info | CBot instance [Combo, UK100.cash, h1] started.
+Progress | Backtesting | 0.57 % |
+Progress | Backtesting | 1.44 % |
+Progress | Backtesting | 1.45 % |
+Progress | Backtesting | 3.03 % |
+Progress | Backtesting | 4.87 % |
+Progress | Backtesting | 6.87 % |
+Progress | Backtesting | 7.75 % |
+Progress | Backtesting | 8.98 % |
+Progress | Backtesting | 11.13 % |
+Progress | Backtesting | 12.30 % |
+Progress | Backtesting | 14.59 % |
+Progress | Backtesting | 15.93 % |
+Progress | Backtesting | 18.13 % |
+Progress | Backtesting | 19.78 % |
+Progress | Backtesting | 22.53 % |
+Progress | Backtesting | 24.56 % |
+Progress | Backtesting | 27.47 % |
+Progress | Backtesting | 30.22 % |
+Progress | Backtesting | 32.08 % |
+Progress | Backtesting | 34.62 % |
+Progress | Backtesting | 37.38 % |
+Progress | Backtesting | 39.56 % |
+Progress | Backtesting | 42.31 % |
+Progress | Backtesting | 45.05 % |
+Progress | Backtesting | 46.70 % |
+Progress | Backtesting | 49.13 % |
+Progress | Backtesting | 51.10 % |
+Progress | Backtesting | 53.62 % |
+Progress | Backtesting | 56.55 % |
+Progress | Backtesting | 57.72 % |
+Progress | Backtesting | 61.54 % |
+Progress | Backtesting | 64.24 % |
+Progress | Backtesting | 65.93 % |
+Progress | Backtesting | 69.23 % |
+Progress | Backtesting | 75.78 % |
+Progress | Backtesting | 77.47 % |
+Progress | Backtesting | 80.46 % |
+Progress | Backtesting | 81.97 % |
+Progress | Backtesting | 84.07 % |
+Progress | Backtesting | 85.71 % |
+Progress | Backtesting | 88.46 % |
+Progress | Backtesting | 89.56 % |
+Progress | Backtesting | 91.76 % |
+Progress | Backtesting | 93.41 % |
+Progress | Backtesting | 95.60 % |
+Progress | Backtesting | 97.25 % |
+02/01/2025 01:05:00.000 | Info | Combo: loaded 4824 valid signal row(s) from CSV.
+02/01/2025 01:05:00.000 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+03/01/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 3.8 UK100.cash (Price: 8217.7, SL: 8236.80526273306, TP: 8167.68)
+03/01/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 3.8 UK100.cash (Price: 8217.7, SL: 8236.80526273306, TP: 8167.68) SUCCEEDED, PendingOrder OID1
+03/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-03 14:00, executed=2025-01-03 15:00:00, pending Sell placed at 8217.7; SL=8236.805262733054, TP=8167.6824221648685; valid for the next 3 chart bar(s).
+06/01/2025 12:00:00.000 | Info | Combo: bartime=2025-01-06 11:00, reversal - closing existing Sell position 1 before opening opposite direction.
+06/01/2025 12:00:00.000 | Trade | Closing position PID1 (Volume: 3.8)
+06/01/2025 12:00:00.000 | Trade |  Closing position PID1 (Volume: 3.8) SUCCEEDED
+06/01/2025 12:00:00.000 | Trade | Placing Stop Order to Buy 4.29 UK100.cash (Price: 8239.4, SL: 8222.55810726768, TP: 8283.49)
+06/01/2025 12:00:00.000 | Trade |  Placing Stop Order to Buy 4.29 UK100.cash (Price: 8239.4, SL: 8222.55810726768, TP: 8283.49) SUCCEEDED, PendingOrder OID5
+06/01/2025 12:00:00.000 | Info | Combo: bartime=2025-01-06 11:00, executed=2025-01-06 12:00:00, pending Buy placed at 8239.4; SL=8222.558107267681, TP=8283.492075173208; valid for the next 3 chart bar(s).
+06/01/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 3.19 UK100.cash (Price: 8237.9, SL: 8215.50844073684, TP: 8296.52)
+06/01/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 3.19 UK100.cash (Price: 8237.9, SL: 8215.50844073684, TP: 8296.52) SUCCEEDED, PendingOrder OID8
+06/01/2025 16:00:00.000 | Info | Combo: bartime=2025-01-06 15:00, executed=2025-01-06 16:00:00, pending Buy placed at 8237.9; SL=8215.508440736841, TP=8296.521102150946; valid for the next 3 chart bar(s).
+06/01/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 3.16 UK100.cash (Price: 8205.1, SL: 8227.42687834274, TP: 8146.65)
+06/01/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 3.16 UK100.cash (Price: 8205.1, SL: 8227.42687834274, TP: 8146.65) SUCCEEDED, PendingOrder OID11
+06/01/2025 19:00:00.000 | Info | Combo: bartime=2025-01-06 18:00, executed=2025-01-06 19:00:00, pending Sell placed at 8205.1; SL=8227.426878342736, TP=8146.648232498716; valid for the next 3 chart bar(s).
+07/01/2025 08:00:00.000 | Info | Combo: bartime=2025-01-07 07:00, reversal - closing existing Sell position 4 before opening opposite direction.
+07/01/2025 08:00:00.000 | Trade | Closing position PID4 (Volume: 3.16)
+07/01/2025 08:00:00.000 | Trade |  Closing position PID4 (Volume: 3.16) SUCCEEDED
+07/01/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 5.33 UK100.cash (Price: 8218.8, SL: 8205.60572028411, TP: 8253.34)
+07/01/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 5.33 UK100.cash (Price: 8218.8, SL: 8205.60572028411, TP: 8253.34) SUCCEEDED, PendingOrder OID15
+07/01/2025 08:00:00.000 | Info | Combo: bartime=2025-01-07 07:00, executed=2025-01-07 08:00:00, pending Buy placed at 8218.8; SL=8205.605720284111, TP=8253.342624296194; valid for the next 3 chart bar(s).
+08/01/2025 07:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.10 units, which needs about $5717.58 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4762.06 budget, free margin was $9524.12). Size was cut from 7.10 to 5.79 units. Real risk on this trade is now about $77.62 (0.82% of balance) instead of the requested 1.00%.
+08/01/2025 07:00:00.000 | Trade | Placing Stop Order to Sell 5.79 UK100.cash (Price: 8225.8, SL: 8235.5539597533, TP: 8200.26)
+08/01/2025 07:00:00.000 | Trade |  Placing Stop Order to Sell 5.79 UK100.cash (Price: 8225.8, SL: 8235.5539597533, TP: 8200.26) SUCCEEDED, PendingOrder OID18
+08/01/2025 07:00:00.000 | Info | Combo: bartime=2025-01-08 06:00, executed=2025-01-08 07:00:00, pending Sell placed at 8225.8; SL=8235.5539597533, TP=8200.264133365858; valid for the next 3 chart bar(s).
+08/01/2025 10:00:00.000 | Trade | Cancelling pending order OID18
+08/01/2025 10:00:00.000 | Trade |  Cancelling pending order OID18 SUCCEEDED
+08/01/2025 10:00:00.000 | Info | Combo: pending order 18 cancelled after 3 chart bars.
+08/01/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 3.09 UK100.cash (Price: 8210.6, SL: 8233.02440153196, TP: 8151.89)
+08/01/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 3.09 UK100.cash (Price: 8210.6, SL: 8233.02440153196, TP: 8151.89) SUCCEEDED, PendingOrder OID19
+08/01/2025 12:00:00.000 | Info | Combo: bartime=2025-01-08 11:00, executed=2025-01-08 12:00:00, pending Sell placed at 8210.6; SL=8233.024401531962, TP=8151.892916789325; valid for the next 3 chart bar(s).
+08/01/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 2.84 UK100.cash (Price: 8252.1, SL: 8227.98776513251, TP: 8315.23)
+08/01/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 2.84 UK100.cash (Price: 8252.1, SL: 8227.98776513251, TP: 8315.23) SUCCEEDED, PendingOrder OID22
+08/01/2025 16:00:00.000 | Info | Combo: bartime=2025-01-08 15:00, executed=2025-01-08 16:00:00, pending Buy placed at 8252.1; SL=8227.98776513251, TP=8315.225830883093; valid for the next 3 chart bar(s).
+08/01/2025 20:00:00.000 | Trade | Placing Stop Order to Buy 2.98 UK100.cash (Price: 8257.8, SL: 8235.09834859828, TP: 8317.23)
+08/01/2025 20:00:00.000 | Trade |  Placing Stop Order to Buy 2.98 UK100.cash (Price: 8257.8, SL: 8235.09834859828, TP: 8317.23) SUCCEEDED, PendingOrder OID25
+08/01/2025 20:00:00.000 | Info | Combo: bartime=2025-01-08 19:00, executed=2025-01-08 20:00:00, pending Buy placed at 8257.8; SL=8235.098348598274, TP=8317.232923369713; valid for the next 3 chart bar(s).
+10/01/2025 07:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.74 units, which needs about $5427.67 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4774.86 budget, free margin was $9549.71). Size was cut from 6.74 to 5.81 units. Real risk on this trade is now about $82.21 (0.86% of balance) instead of the requested 1.00%.
+10/01/2025 07:00:00.000 | Trade | Placing Stop Order to Sell 5.81 UK100.cash (Price: 8302.9, SL: 8313.1949048778, TP: 8275.95)
+10/01/2025 07:00:00.000 | Trade |  Placing Stop Order to Sell 5.81 UK100.cash (Price: 8302.9, SL: 8313.1949048778, TP: 8275.95) SUCCEEDED, PendingOrder OID28
+10/01/2025 07:00:00.000 | Info | Combo: bartime=2025-01-10 06:00, executed=2025-01-10 07:00:00, pending Sell placed at 8302.9; SL=8313.194904877797, TP=8275.947939029926; valid for the next 3 chart bar(s).
+10/01/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 4.83 UK100.cash (Price: 8330.9, SL: 8316.65926087821, TP: 8368.18)
+10/01/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 4.83 UK100.cash (Price: 8330.9, SL: 8316.65926087821, TP: 8368.18) SUCCEEDED, PendingOrder OID31
+10/01/2025 09:00:00.000 | Info | Combo: bartime=2025-01-10 08:00, executed=2025-01-10 09:00:00, pending Buy placed at 8330.9; SL=8316.659260878208, TP=8368.182255020847; valid for the next 3 chart bar(s).
+10/01/2025 10:00:00.000 | Info | Combo: bartime=2025-01-10 09:00, reversal - cancelling existing Buy pending order 31 before opening opposite direction.
+10/01/2025 10:00:00.000 | Trade | Cancelling pending order OID31
+10/01/2025 10:00:00.000 | Trade |  Cancelling pending order OID31 SUCCEEDED
+10/01/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 4.03 UK100.cash (Price: 8288.4, SL: 8305.43259129743, TP: 8243.81)
+10/01/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 4.03 UK100.cash (Price: 8288.4, SL: 8305.43259129743, TP: 8243.81) SUCCEEDED, PendingOrder OID32
+10/01/2025 10:00:00.000 | Info | Combo: bartime=2025-01-10 09:00, executed=2025-01-10 10:00:00, pending Sell placed at 8288.4; SL=8305.432591297433, TP=8243.80867598332; valid for the next 3 chart bar(s).
+14/01/2025 00:00:00.000 | Trade | Placing Stop Order to Buy 5.08 UK100.cash (Price: 8237.9, SL: 8224.04074855503, TP: 8274.18)
+14/01/2025 00:00:00.000 | Trade |  Placing Stop Order to Buy 5.08 UK100.cash (Price: 8237.9, SL: 8224.04074855503, TP: 8274.18) SUCCEEDED, PendingOrder OID35
+14/01/2025 00:00:00.000 | Info | Combo: bartime=2025-01-13 23:00, executed=2025-01-14 00:00:00, pending Buy placed at 8237.9; SL=8224.040748555026, TP=8274.183520282942; valid for the next 3 chart bar(s).
+14/01/2025 03:00:00.000 | Trade | Cancelling pending order OID35
+14/01/2025 03:00:00.000 | Trade |  Cancelling pending order OID35 SUCCEEDED
+14/01/2025 03:00:00.000 | Info | Combo: pending order 35 cancelled after 3 chart bars.
+14/01/2025 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.26 units, which needs about $5041.13 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4847.67 budget, free margin was $9695.33). Size was cut from 6.26 to 5.89 units. Real risk on this trade is now about $91.11 (0.94% of balance) instead of the requested 1.00%.
+14/01/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 5.89 UK100.cash (Price: 8211, SL: 8222.25352627891, TP: 8181.54)
+14/01/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 5.89 UK100.cash (Price: 8211, SL: 8222.25352627891, TP: 8181.54) SUCCEEDED, PendingOrder OID36
+14/01/2025 08:00:00.000 | Info | Combo: bartime=2025-01-14 07:00, executed=2025-01-14 08:00:00, pending Sell placed at 8211; SL=8222.253526278906, TP=8181.538268201823; valid for the next 3 chart bar(s).
+14/01/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 4.42 UK100.cash (Price: 8202, SL: 8217.75709149107, TP: 8160.75)
+14/01/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 4.42 UK100.cash (Price: 8202, SL: 8217.75709149107, TP: 8160.75) SUCCEEDED, PendingOrder OID39
+14/01/2025 13:00:00.000 | Info | Combo: bartime=2025-01-14 12:00, executed=2025-01-14 13:00:00, pending Sell placed at 8202; SL=8217.757091491072, TP=8160.747934476374; valid for the next 3 chart bar(s).
+14/01/2025 23:05:00.000 | Trade | Placing Stop Order to Buy 3.84 UK100.cash (Price: 8228.2, SL: 8210.25091825058, TP: 8275.19)
+14/01/2025 23:05:00.000 | Trade |  Placing Stop Order to Buy 3.84 UK100.cash (Price: 8228.2, SL: 8210.25091825058, TP: 8275.19) SUCCEEDED, PendingOrder OID42
+14/01/2025 23:05:00.000 | Info | Combo: bartime=2025-01-14 21:00, executed=2025-01-14 23:05:00, pending Buy placed at 8228.2; SL=8210.250918250582, TP=8275.190696019981; valid for the next 3 chart bar(s).
+15/01/2025 02:00:00.000 | Trade | Cancelling pending order OID42
+15/01/2025 02:00:00.000 | Trade |  Cancelling pending order OID42 SUCCEEDED
+15/01/2025 02:00:00.000 | Info | Combo: pending order 42 cancelled after 3 chart bars.
+20/01/2025 02:00:00.000 | Trade | Placing Stop Order to Sell 5.4 UK100.cash (Price: 8482, SL: 8494.76654848841, TP: 8448.58)
+20/01/2025 02:00:00.000 | Trade |  Placing Stop Order to Sell 5.4 UK100.cash (Price: 8482, SL: 8494.76654848841, TP: 8448.58) SUCCEEDED, PendingOrder OID43
+20/01/2025 02:00:00.000 | Info | Combo: bartime=2025-01-20 01:00, executed=2025-01-20 02:00:00, pending Sell placed at 8482; SL=8494.766548488413, TP=8448.577176057335; valid for the next 3 chart bar(s).
+20/01/2025 05:00:00.000 | Trade | Cancelling pending order OID43
+20/01/2025 05:00:00.000 | Trade |  Cancelling pending order OID43 SUCCEEDED
+20/01/2025 05:00:00.000 | Info | Combo: pending order 43 cancelled after 3 chart bars.
+20/01/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 4.58 UK100.cash (Price: 8533.7, SL: 8518.65464153044, TP: 8573.09)
+20/01/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 4.58 UK100.cash (Price: 8533.7, SL: 8518.65464153044, TP: 8573.09) SUCCEEDED, PendingOrder OID44
+20/01/2025 09:00:00.000 | Info | Combo: bartime=2025-01-20 08:00, executed=2025-01-20 09:00:00, pending Buy placed at 8533.7; SL=8518.654641530444, TP=8573.088748473301; valid for the next 3 chart bar(s).
+20/01/2025 12:00:00.000 | Trade | Cancelling pending order OID44
+20/01/2025 12:00:00.000 | Trade |  Cancelling pending order OID44 SUCCEEDED
+20/01/2025 12:00:00.000 | Info | Combo: pending order 44 cancelled after 3 chart bars.
+21/01/2025 01:00:00.000 | Trade | Placing Stop Order to Sell 3.45 UK100.cash (Price: 8477.8, SL: 8497.7386911223, TP: 8425.6)
+21/01/2025 01:00:00.000 | Trade |  Placing Stop Order to Sell 3.45 UK100.cash (Price: 8477.8, SL: 8497.7386911223, TP: 8425.6) SUCCEEDED, PendingOrder OID45
+21/01/2025 01:00:00.000 | Info | Combo: bartime=2025-01-21 00:00, executed=2025-01-21 01:00:00, pending Sell placed at 8477.8; SL=8497.7386911223, TP=8425.600506641817; valid for the next 3 chart bar(s).
+21/01/2025 04:00:00.000 | Trade | Cancelling pending order OID45
+21/01/2025 04:00:00.000 | Trade |  Cancelling pending order OID45 SUCCEEDED
+21/01/2025 04:00:00.000 | Info | Combo: pending order 45 cancelled after 3 chart bars.
+21/01/2025 05:00:00.000 | Trade | Placing Stop Order to Sell 3.96 UK100.cash (Price: 8510.2, SL: 8527.59392788369, TP: 8464.66)
+21/01/2025 05:00:00.000 | Trade |  Placing Stop Order to Sell 3.96 UK100.cash (Price: 8510.2, SL: 8527.59392788369, TP: 8464.66) SUCCEEDED, PendingOrder OID46
+21/01/2025 05:00:00.000 | Info | Combo: bartime=2025-01-21 04:00, executed=2025-01-21 05:00:00, pending Sell placed at 8510.2; SL=8527.593927883694, TP=8464.66269680049; valid for the next 3 chart bar(s).
+21/01/2025 07:00:00.000 | Info | Combo: bartime=2025-01-21 06:00, Sell signal skipped: already have same-direction exposure open.
+21/01/2025 08:00:00.000 | Trade | Cancelling pending order OID46
+21/01/2025 08:00:00.000 | Trade |  Cancelling pending order OID46 SUCCEEDED
+21/01/2025 08:00:00.000 | Info | Combo: pending order 46 cancelled after 3 chart bars.
+21/01/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 4.44 UK100.cash (Price: 8536, SL: 8520.50070892355, TP: 8576.58)
+21/01/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 4.44 UK100.cash (Price: 8536, SL: 8520.50070892355, TP: 8576.58) SUCCEEDED, PendingOrder OID47
+21/01/2025 08:00:00.000 | Info | Combo: bartime=2025-01-21 07:00, executed=2025-01-21 08:00:00, pending Buy placed at 8536; SL=8520.500708923548, TP=8576.57714403815; valid for the next 3 chart bar(s).
+21/01/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 4.04 UK100.cash (Price: 8512, SL: 8528.87323703114, TP: 8467.83)
+21/01/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 4.04 UK100.cash (Price: 8512, SL: 8528.87323703114, TP: 8467.83) SUCCEEDED, PendingOrder OID50
+21/01/2025 11:00:00.000 | Info | Combo: bartime=2025-01-21 10:00, executed=2025-01-21 11:00:00, pending Sell placed at 8512; SL=8528.873237031143, TP=8467.825865452467; valid for the next 3 chart bar(s).
+21/01/2025 13:00:00.000 | Info | Combo: bartime=2025-01-21 12:00, Sell signal skipped: already have same-direction exposure open.
+21/01/2025 14:00:00.000 | Trade | Cancelling pending order OID50
+21/01/2025 14:00:00.000 | Trade |  Cancelling pending order OID50 SUCCEEDED
+21/01/2025 14:00:00.000 | Info | Combo: pending order 50 cancelled after 3 chart bars.
+21/01/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 4.04 UK100.cash (Price: 8544.3, SL: 8527.44090264005, TP: 8588.44)
+21/01/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 4.04 UK100.cash (Price: 8544.3, SL: 8527.44090264005, TP: 8588.44) SUCCEEDED, PendingOrder OID51
+21/01/2025 14:00:00.000 | Info | Combo: bartime=2025-01-21 13:00, executed=2025-01-21 14:00:00, pending Buy placed at 8544.3; SL=8527.440902640054, TP=8588.437116888337; valid for the next 3 chart bar(s).
+22/01/2025 07:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.47 units, which needs about $6015.54 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4639.58 budget, free margin was $9279.16). Size was cut from 7.47 to 5.64 units. Real risk on this trade is now about $70.05 (0.75% of balance) instead of the requested 1.00%.
+22/01/2025 07:00:00.000 | Trade | Placing Stop Order to Sell 5.64 UK100.cash (Price: 8542.5, SL: 8551.53678058072, TP: 8518.84)
+22/01/2025 07:00:00.000 | Trade |  Placing Stop Order to Sell 5.64 UK100.cash (Price: 8542.5, SL: 8551.53678058072, TP: 8518.84) SUCCEEDED, PendingOrder OID54
+22/01/2025 07:00:00.000 | Info | Combo: bartime=2025-01-22 06:00, executed=2025-01-22 07:00:00, pending Sell placed at 8542.5; SL=8551.536780580724, TP=8518.841708439666; valid for the next 3 chart bar(s).
+22/01/2025 10:00:00.000 | Trade | Cancelling pending order OID54
+22/01/2025 10:00:00.000 | Trade |  Cancelling pending order OID54 SUCCEEDED
+22/01/2025 10:00:00.000 | Info | Combo: pending order 54 cancelled after 3 chart bars.
+22/01/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 5.06 UK100.cash (Price: 8550.8, SL: 8564.12410000684, TP: 8515.92)
+22/01/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 5.06 UK100.cash (Price: 8550.8, SL: 8564.12410000684, TP: 8515.92) SUCCEEDED, PendingOrder OID55
+22/01/2025 14:00:00.000 | Info | Combo: bartime=2025-01-22 13:00, executed=2025-01-22 14:00:00, pending Sell placed at 8550.8; SL=8564.124100006842, TP=8515.917506182086; valid for the next 3 chart bar(s).
+24/01/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 4.41 UK100.cash (Price: 8524.2, SL: 8539.88245815581, TP: 8483.14)
+24/01/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 4.41 UK100.cash (Price: 8524.2, SL: 8539.88245815581, TP: 8483.14) SUCCEEDED, PendingOrder OID58
+24/01/2025 10:00:00.000 | Info | Combo: bartime=2025-01-24 09:00, executed=2025-01-24 10:00:00, pending Sell placed at 8524.2; SL=8539.882458155813, TP=8483.143324548086; valid for the next 3 chart bar(s).
+24/01/2025 13:00:00.000 | Trade | Cancelling pending order OID58
+24/01/2025 13:00:00.000 | Trade |  Cancelling pending order OID58 SUCCEEDED
+24/01/2025 13:00:00.000 | Info | Combo: pending order 58 cancelled after 3 chart bars.
+27/01/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 2.87 UK100.cash (Price: 8490.2, SL: 8466.10916223044, TP: 8553.27)
+27/01/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 2.87 UK100.cash (Price: 8490.2, SL: 8466.10916223044, TP: 8553.27) SUCCEEDED, PendingOrder OID59
+27/01/2025 09:00:00.000 | Info | Combo: bartime=2025-01-27 08:00, executed=2025-01-27 09:00:00, pending Buy placed at 8490.2; SL=8466.109162230445, TP=8553.269813280696; valid for the next 3 chart bar(s).
+27/01/2025 13:00:00.000 | Info | Combo: bartime=2025-01-27 12:00, Buy signal skipped: already have same-direction exposure open.
+28/01/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 3.42 UK100.cash (Price: 8511, SL: 8531.75591993609, TP: 8456.66)
+28/01/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 3.42 UK100.cash (Price: 8511, SL: 8531.75591993609, TP: 8456.66) SUCCEEDED, PendingOrder OID62
+28/01/2025 17:00:00.000 | Info | Combo: bartime=2025-01-28 16:00, executed=2025-01-28 17:00:00, pending Sell placed at 8511; SL=8531.755919936088, TP=8456.661001607325; valid for the next 3 chart bar(s).
+28/01/2025 20:00:00.000 | Trade | Cancelling pending order OID62
+28/01/2025 20:00:00.000 | Trade |  Cancelling pending order OID62 SUCCEEDED
+28/01/2025 20:00:00.000 | Info | Combo: pending order 62 cancelled after 3 chart bars.
+29/01/2025 00:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.44 units, which needs about $5186.08 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4884.18 budget, free margin was $9768.35). Size was cut from 6.44 to 5.94 units. Real risk on this trade is now about $90.07 (0.92% of balance) instead of the requested 1.00%.
+29/01/2025 00:00:00.000 | Trade | Placing Stop Order to Sell 5.94 UK100.cash (Price: 8526.3, SL: 8537.33223987572, TP: 8497.42)
+29/01/2025 00:00:00.000 | Trade |  Placing Stop Order to Sell 5.94 UK100.cash (Price: 8526.3, SL: 8537.33223987572, TP: 8497.42) SUCCEEDED, PendingOrder OID63
+29/01/2025 00:00:00.000 | Info | Combo: bartime=2025-01-28 23:00, executed=2025-01-29 00:00:00, pending Sell placed at 8526.3; SL=8537.332239875725, TP=8497.417596005349; valid for the next 3 chart bar(s).
+29/01/2025 03:00:00.000 | Trade | Cancelling pending order OID63
+29/01/2025 03:00:00.000 | Trade |  Cancelling pending order OID63 SUCCEEDED
+29/01/2025 03:00:00.000 | Info | Combo: pending order 63 cancelled after 3 chart bars.
+29/01/2025 04:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.93 units, which needs about $5580.68 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4884.18 budget, free margin was $9768.35). Size was cut from 6.93 to 5.94 units. Real risk on this trade is now about $83.73 (0.86% of balance) instead of the requested 1.00%.
+29/01/2025 04:00:00.000 | Trade | Placing Stop Order to Sell 5.94 UK100.cash (Price: 8526.6, SL: 8536.8549654531, TP: 8499.75)
+29/01/2025 04:00:00.000 | Trade |  Placing Stop Order to Sell 5.94 UK100.cash (Price: 8526.6, SL: 8536.8549654531, TP: 8499.75) SUCCEEDED, PendingOrder OID64
+29/01/2025 04:00:00.000 | Info | Combo: bartime=2025-01-29 03:00, executed=2025-01-29 04:00:00, pending Sell placed at 8526.6; SL=8536.854965453098, TP=8499.752500443792; valid for the next 3 chart bar(s).
+29/01/2025 07:00:00.000 | Trade | Cancelling pending order OID64
+29/01/2025 07:00:00.000 | Trade |  Cancelling pending order OID64 SUCCEEDED
+29/01/2025 07:00:00.000 | Info | Combo: pending order 64 cancelled after 3 chart bars.
+29/01/2025 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.27 units, which needs about $5049.18 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4884.18 budget, free margin was $9768.35). Size was cut from 6.27 to 5.94 units. Real risk on this trade is now about $92.50 (0.95% of balance) instead of the requested 1.00%.
+29/01/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 5.94 UK100.cash (Price: 8518.8, SL: 8530.12955384959, TP: 8489.14)
+29/01/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 5.94 UK100.cash (Price: 8518.8, SL: 8530.12955384959, TP: 8489.14) SUCCEEDED, PendingOrder OID65
+29/01/2025 08:00:00.000 | Info | Combo: bartime=2025-01-29 07:00, executed=2025-01-29 08:00:00, pending Sell placed at 8518.8; SL=8530.129553849589, TP=8489.139228021775; valid for the next 3 chart bar(s).
+29/01/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 4.87 UK100.cash (Price: 8550.4, SL: 8535.99708553626, TP: 8588.11)
+29/01/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 4.87 UK100.cash (Price: 8550.4, SL: 8535.99708553626, TP: 8588.11) SUCCEEDED, PendingOrder OID68
+29/01/2025 10:00:00.000 | Info | Combo: bartime=2025-01-29 09:00, executed=2025-01-29 10:00:00, pending Buy placed at 8550.4; SL=8535.997085536263, TP=8588.106830066063; valid for the next 3 chart bar(s).
+29/01/2025 18:00:00.000 | Info | Combo: bartime=2025-01-29 17:00, reversal - closing existing Buy position 18 before opening opposite direction.
+29/01/2025 18:00:00.000 | Trade | Closing position PID18 (Volume: 4.87)
+29/01/2025 18:00:00.000 | Trade |  Closing position PID18 (Volume: 4.87) SUCCEEDED
+29/01/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 4.51 UK100.cash (Price: 8534.5, SL: 8549.95151462988, TP: 8494.05)
+29/01/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 4.51 UK100.cash (Price: 8534.5, SL: 8549.95151462988, TP: 8494.05) SUCCEEDED, PendingOrder OID72
+29/01/2025 18:00:00.000 | Info | Combo: bartime=2025-01-29 17:00, executed=2025-01-29 18:00:00, pending Sell placed at 8534.5; SL=8549.951514629876, TP=8494.047934698983; valid for the next 3 chart bar(s).
+30/01/2025 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.65 units, which needs about $5355.20 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4742.40 budget, free margin was $9484.80). Size was cut from 6.65 to 5.77 units. Real risk on this trade is now about $82.21 (0.87% of balance) instead of the requested 1.00%.
+30/01/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 5.77 UK100.cash (Price: 8565.6, SL: 8555.2340335367, TP: 8592.74)
+30/01/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 5.77 UK100.cash (Price: 8565.6, SL: 8555.2340335367, TP: 8592.74) SUCCEEDED, PendingOrder OID75
+30/01/2025 08:00:00.000 | Info | Combo: bartime=2025-01-30 07:00, executed=2025-01-30 08:00:00, pending Buy placed at 8565.6; SL=8555.234033536704, TP=8592.73810020091; valid for the next 3 chart bar(s).
+31/01/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 4.31 UK100.cash (Price: 8659.2, SL: 8675.02404682351, TP: 8617.77)
+31/01/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 4.31 UK100.cash (Price: 8659.2, SL: 8675.02404682351, TP: 8617.77) SUCCEEDED, PendingOrder OID78
+31/01/2025 17:00:00.000 | Info | Combo: bartime=2025-01-31 16:00, executed=2025-01-31 17:00:00, pending Sell placed at 8659.2; SL=8675.024046823508, TP=8617.77264541606; valid for the next 3 chart bar(s).
+31/01/2025 19:00:00.000 | Info | Combo: bartime=2025-01-31 18:00, Sell signal skipped: already have same-direction exposure open.
+03/02/2025 19:00:00.000 | Trade | Placing Stop Order to Buy 2.21 UK100.cash (Price: 8577.2, SL: 8544.22155615384, TP: 8663.54)
+03/02/2025 19:00:00.000 | Trade |  Placing Stop Order to Buy 2.21 UK100.cash (Price: 8577.2, SL: 8544.22155615384, TP: 8663.54) SUCCEEDED, PendingOrder OID81
+03/02/2025 19:00:00.000 | Info | Combo: bartime=2025-02-03 18:00, executed=2025-02-03 19:00:00, pending Buy placed at 8577.2; SL=8544.221556153838, TP=8663.537565989256; valid for the next 3 chart bar(s).
+03/02/2025 23:05:00.000 | Info | Combo: bartime=2025-02-03 21:00, Buy signal skipped: already have same-direction exposure open.
+04/02/2025 06:00:00.000 | Trade | Placing Stop Order to Sell 3.25 UK100.cash (Price: 8531, SL: 8553.12546009441, TP: 8473.08)
+04/02/2025 06:00:00.000 | Trade |  Placing Stop Order to Sell 3.25 UK100.cash (Price: 8531, SL: 8553.12546009441, TP: 8473.08) SUCCEEDED, PendingOrder OID84
+04/02/2025 06:00:00.000 | Info | Combo: bartime=2025-02-04 05:00, executed=2025-02-04 06:00:00, pending Sell placed at 8531; SL=8553.125460094407, TP=8473.075545472844; valid for the next 3 chart bar(s).
+04/02/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 2.87 UK100.cash (Price: 8577.9, SL: 8553.10032923626, TP: 8642.83)
+04/02/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 2.87 UK100.cash (Price: 8577.9, SL: 8553.10032923626, TP: 8642.83) SUCCEEDED, PendingOrder OID87
+04/02/2025 11:00:00.000 | Info | Combo: bartime=2025-02-04 10:00, executed=2025-02-04 11:00:00, pending Buy placed at 8577.9; SL=8553.100329236264, TP=8642.825538059458; valid for the next 3 chart bar(s).
+04/02/2025 13:00:00.000 | Info | Combo: bartime=2025-02-04 12:00, Buy signal skipped: already have same-direction exposure open.
+04/02/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 2.81 UK100.cash (Price: 8581.3, SL: 8556.25517485517, TP: 8646.87)
+04/02/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 2.81 UK100.cash (Price: 8581.3, SL: 8556.25517485517, TP: 8646.87) SUCCEEDED, PendingOrder OID90
+04/02/2025 15:00:00.000 | Info | Combo: bartime=2025-02-04 14:00, executed=2025-02-04 15:00:00, pending Buy placed at 8581.3; SL=8556.255174855174, TP=8646.867352229154; valid for the next 3 chart bar(s).
+05/02/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 4.6 UK100.cash (Price: 8583.4, SL: 8568.24383936199, TP: 8623.08)
+05/02/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 4.6 UK100.cash (Price: 8583.4, SL: 8568.24383936199, TP: 8623.08) SUCCEEDED, PendingOrder OID93
+05/02/2025 09:00:00.000 | Info | Combo: bartime=2025-02-05 08:00, executed=2025-02-05 09:00:00, pending Buy placed at 8583.4; SL=8568.24383936199, TP=8623.078828550306; valid for the next 3 chart bar(s).
+06/02/2025 20:00:00.000 | Trade | Placing Stop Order to Sell 3.64 UK100.cash (Price: 8686.3, SL: 8705.95800029504, TP: 8634.84)
+06/02/2025 20:00:00.000 | Trade |  Placing Stop Order to Sell 3.64 UK100.cash (Price: 8686.3, SL: 8705.95800029504, TP: 8634.84) SUCCEEDED, PendingOrder OID96
+06/02/2025 20:00:00.000 | Info | Combo: bartime=2025-02-06 19:00, executed=2025-02-06 20:00:00, pending Sell placed at 8686.3; SL=8705.958000295042, TP=8634.835355227577; valid for the next 3 chart bar(s).
+07/02/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 4.85 UK100.cash (Price: 8696.9, SL: 8711.35836187057, TP: 8659.05)
+07/02/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 4.85 UK100.cash (Price: 8696.9, SL: 8711.35836187057, TP: 8659.05) SUCCEEDED, PendingOrder OID99
+07/02/2025 11:00:00.000 | Info | Combo: bartime=2025-02-07 10:00, executed=2025-02-07 11:00:00, pending Sell placed at 8696.9; SL=8711.358361870572, TP=8659.048008622838; valid for the next 3 chart bar(s).
+07/02/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 4.05 UK100.cash (Price: 8682.9, SL: 8699.99106001775, TP: 8638.16)
+07/02/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 4.05 UK100.cash (Price: 8682.9, SL: 8699.99106001775, TP: 8638.16) SUCCEEDED, PendingOrder OID102
+07/02/2025 16:00:00.000 | Info | Combo: bartime=2025-02-07 15:00, executed=2025-02-07 16:00:00, pending Sell placed at 8682.9; SL=8699.99106001775, TP=8638.155604873531; valid for the next 3 chart bar(s).
+07/02/2025 19:00:00.000 | Trade | Cancelling pending order OID102
+07/02/2025 19:00:00.000 | Trade |  Cancelling pending order OID102 SUCCEEDED
+07/02/2025 19:00:00.000 | Info | Combo: pending order 102 cancelled after 3 chart bars.
+10/02/2025 01:00:00.000 | Trade | Placing Stop Order to Buy 4.81 UK100.cash (Price: 8712, SL: 8697.60546378413, TP: 8749.68)
+10/02/2025 01:00:00.000 | Trade |  Placing Stop Order to Buy 4.81 UK100.cash (Price: 8712, SL: 8697.60546378413, TP: 8749.68) SUCCEEDED, PendingOrder OID103
+10/02/2025 01:00:00.000 | Info | Combo: bartime=2025-02-10 00:00, executed=2025-02-10 01:00:00, pending Buy placed at 8712; SL=8697.605463784132, TP=8749.684895813141; valid for the next 3 chart bar(s).
+11/02/2025 07:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.25 units, which needs about $7448.96 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4881.81 budget, free margin was $9763.61). Size was cut from 9.25 to 5.94 units. Real risk on this trade is now about $62.70 (0.64% of balance) instead of the requested 1.00%.
+11/02/2025 07:00:00.000 | Trade | Placing Stop Order to Sell 5.94 UK100.cash (Price: 8761.6, SL: 8769.2792575597, TP: 8741.5)
+11/02/2025 07:00:00.000 | Trade |  Placing Stop Order to Sell 5.94 UK100.cash (Price: 8761.6, SL: 8769.2792575597, TP: 8741.5) SUCCEEDED, PendingOrder OID106
+11/02/2025 07:00:00.000 | Info | Combo: bartime=2025-02-11 06:00, executed=2025-02-11 07:00:00, pending Sell placed at 8761.6; SL=8769.2792575597, TP=8741.495703708706; valid for the next 3 chart bar(s).
+11/02/2025 09:00:00.000 | Info | Combo: bartime=2025-02-11 08:00, Sell signal skipped: already have same-direction exposure open.
+11/02/2025 10:00:00.000 | Trade | Cancelling pending order OID106
+11/02/2025 10:00:00.000 | Trade |  Cancelling pending order OID106 SUCCEEDED
+11/02/2025 10:00:00.000 | Info | Combo: pending order 106 cancelled after 3 chart bars.
+11/02/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 5.24 UK100.cash (Price: 8752.1, SL: 8765.63191623498, TP: 8716.67)
+11/02/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 5.24 UK100.cash (Price: 8752.1, SL: 8765.63191623498, TP: 8716.67) SUCCEEDED, PendingOrder OID107
+11/02/2025 14:00:00.000 | Info | Combo: bartime=2025-02-11 13:00, executed=2025-02-11 14:00:00, pending Sell placed at 8752.1; SL=8765.631916234985, TP=8716.673443296813; valid for the next 3 chart bar(s).
+11/02/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 4.26 UK100.cash (Price: 8788.6, SL: 8772.12757360961, TP: 8831.72)
+11/02/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 4.26 UK100.cash (Price: 8788.6, SL: 8772.12757360961, TP: 8831.72) SUCCEEDED, PendingOrder OID110
+11/02/2025 16:00:00.000 | Info | Combo: bartime=2025-02-11 15:00, executed=2025-02-11 16:00:00, pending Buy placed at 8788.6; SL=8772.12757360961, TP=8831.72481229004; valid for the next 3 chart bar(s).
+11/02/2025 18:00:00.000 | Info | Combo: bartime=2025-02-11 17:00, Buy signal skipped: already have same-direction exposure open.
+11/02/2025 19:00:00.000 | Trade | Cancelling pending order OID110
+11/02/2025 19:00:00.000 | Trade |  Cancelling pending order OID110 SUCCEEDED
+11/02/2025 19:00:00.000 | Info | Combo: pending order 110 cancelled after 3 chart bars.
+12/02/2025 11:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.26 units, which needs about $5846.42 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4830.67 budget, free margin was $9661.34). Size was cut from 7.26 to 5.87 units. Real risk on this trade is now about $78.07 (0.81% of balance) instead of the requested 1.00%.
+12/02/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 5.87 UK100.cash (Price: 8770.6, SL: 8780.27575431458, TP: 8745.27)
+12/02/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 5.87 UK100.cash (Price: 8770.6, SL: 8780.27575431458, TP: 8745.27) SUCCEEDED, PendingOrder OID111
+12/02/2025 11:00:00.000 | Info | Combo: bartime=2025-02-12 10:00, executed=2025-02-12 11:00:00, pending Sell placed at 8770.6; SL=8780.275754314582, TP=8745.268875204427; valid for the next 3 chart bar(s).
+13/02/2025 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.73 units, which needs about $5419.62 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4763.83 budget, free margin was $9527.65). Size was cut from 6.73 to 5.79 units. Real risk on this trade is now about $81.96 (0.86% of balance) instead of the requested 1.00%.
+13/02/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 5.79 UK100.cash (Price: 8795.6, SL: 8805.89924102432, TP: 8768.64)
+13/02/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 5.79 UK100.cash (Price: 8795.6, SL: 8805.89924102432, TP: 8768.64) SUCCEEDED, PendingOrder OID114
+13/02/2025 08:00:00.000 | Info | Combo: bartime=2025-02-13 07:00, executed=2025-02-13 08:00:00, pending Sell placed at 8795.6; SL=8805.899241024315, TP=8768.636586998342; valid for the next 3 chart bar(s).
+14/02/2025 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.13 units, which needs about $7352.32 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4848.58 budget, free margin was $9697.16). Size was cut from 9.13 to 5.90 units. Real risk on this trade is now about $62.66 (0.65% of balance) instead of the requested 1.00%.
+14/02/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 5.9 UK100.cash (Price: 8772.2, SL: 8764.47361667395, TP: 8792.43)
+14/02/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 5.9 UK100.cash (Price: 8772.2, SL: 8764.47361667395, TP: 8792.43) SUCCEEDED, PendingOrder OID117
+14/02/2025 08:00:00.000 | Info | Combo: bartime=2025-02-14 07:00, executed=2025-02-14 08:00:00, pending Buy placed at 8772.2; SL=8764.473616673953, TP=8792.427671547595; valid for the next 3 chart bar(s).
+14/02/2025 09:00:00.000 | Info | Combo: bartime=2025-02-14 08:00, reversal - cancelling existing Buy pending order 117 before opening opposite direction.
+14/02/2025 09:00:00.000 | Trade | Cancelling pending order OID117
+14/02/2025 09:00:00.000 | Trade |  Cancelling pending order OID117 SUCCEEDED
+14/02/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 5.3 UK100.cash (Price: 8725.1, SL: 8738.40110666084, TP: 8690.28)
+14/02/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 5.3 UK100.cash (Price: 8725.1, SL: 8738.40110666084, TP: 8690.28) SUCCEEDED, PendingOrder OID118
+14/02/2025 09:00:00.000 | Info | Combo: bartime=2025-02-14 08:00, executed=2025-02-14 09:00:00, pending Sell placed at 8725.1; SL=8738.40110666084, TP=8690.277702761925; valid for the next 3 chart bar(s).
+14/02/2025 12:00:00.000 | Trade | Cancelling pending order OID118
+14/02/2025 12:00:00.000 | Trade |  Cancelling pending order OID118 SUCCEEDED
+14/02/2025 12:00:00.000 | Info | Combo: pending order 118 cancelled after 3 chart bars.
+18/02/2025 06:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.78 units, which needs about $7070.47 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4848.58 budget, free margin was $9697.16). Size was cut from 8.78 to 5.90 units. Real risk on this trade is now about $65.12 (0.67% of balance) instead of the requested 1.00%.
+18/02/2025 06:00:00.000 | Trade | Placing Stop Order to Sell 5.9 UK100.cash (Price: 8753.5, SL: 8761.52998240896, TP: 8732.48)
+18/02/2025 06:00:00.000 | Trade |  Placing Stop Order to Sell 5.9 UK100.cash (Price: 8753.5, SL: 8761.52998240896, TP: 8732.48) SUCCEEDED, PendingOrder OID119
+18/02/2025 06:00:00.000 | Info | Combo: bartime=2025-02-18 05:00, executed=2025-02-18 06:00:00, pending Sell placed at 8753.5; SL=8761.529982408956, TP=8732.477506053356; valid for the next 3 chart bar(s).
+18/02/2025 09:00:00.000 | Trade | Cancelling pending order OID119
+18/02/2025 09:00:00.000 | Trade |  Cancelling pending order OID119 SUCCEEDED
+18/02/2025 09:00:00.000 | Info | Combo: pending order 119 cancelled after 3 chart bars.
+18/02/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 4.98 UK100.cash (Price: 8752.2, SL: 8766.34095099339, TP: 8715.18)
+18/02/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 4.98 UK100.cash (Price: 8752.2, SL: 8766.34095099339, TP: 8715.18) SUCCEEDED, PendingOrder OID120
+18/02/2025 09:00:00.000 | Info | Combo: bartime=2025-02-18 08:00, executed=2025-02-18 09:00:00, pending Sell placed at 8752.2; SL=8766.340950993386, TP=8715.178990299319; valid for the next 3 chart bar(s).
+18/02/2025 11:00:00.000 | Info | Combo: bartime=2025-02-18 10:00, reversal - cancelling existing Sell pending order 120 before opening opposite direction.
+18/02/2025 11:00:00.000 | Trade | Cancelling pending order OID120
+18/02/2025 11:00:00.000 | Trade |  Cancelling pending order OID120 SUCCEEDED
+18/02/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 4.62 UK100.cash (Price: 8787, SL: 8771.76179136423, TP: 8826.89)
+18/02/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 4.62 UK100.cash (Price: 8787, SL: 8771.76179136423, TP: 8826.89) SUCCEEDED, PendingOrder OID121
+18/02/2025 11:00:00.000 | Info | Combo: bartime=2025-02-18 10:00, executed=2025-02-18 11:00:00, pending Buy placed at 8787; SL=8771.761791364233, TP=8826.893630208437; valid for the next 3 chart bar(s).
+18/02/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 4.39 UK100.cash (Price: 8752.3, SL: 8768.17677025721, TP: 8710.73)
+18/02/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 4.39 UK100.cash (Price: 8752.3, SL: 8768.17677025721, TP: 8710.73) SUCCEEDED, PendingOrder OID124
+18/02/2025 15:00:00.000 | Info | Combo: bartime=2025-02-18 14:00, executed=2025-02-18 15:00:00, pending Sell placed at 8752.3; SL=8768.176770257209, TP=8710.734615466623; valid for the next 3 chart bar(s).
+18/02/2025 16:00:00.000 | Info | Combo: bartime=2025-02-18 15:00, reversal - cancelling existing Sell pending order 124 before opening opposite direction.
+18/02/2025 16:00:00.000 | Trade | Cancelling pending order OID124
+18/02/2025 16:00:00.000 | Trade |  Cancelling pending order OID124 SUCCEEDED
+18/02/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 4.35 UK100.cash (Price: 8790, SL: 8773.95858379423, TP: 8832)
+18/02/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 4.35 UK100.cash (Price: 8790, SL: 8773.95858379423, TP: 8832) SUCCEEDED, PendingOrder OID125
+18/02/2025 16:00:00.000 | Info | Combo: bartime=2025-02-18 15:00, executed=2025-02-18 16:00:00, pending Buy placed at 8790; SL=8773.958583794232, TP=8831.996427626702; valid for the next 3 chart bar(s).
+18/02/2025 19:00:00.000 | Trade | Cancelling pending order OID125
+18/02/2025 19:00:00.000 | Trade |  Cancelling pending order OID125 SUCCEEDED
+18/02/2025 19:00:00.000 | Info | Combo: pending order 125 cancelled after 3 chart bars.
+18/02/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 5.07 UK100.cash (Price: 8765.3, SL: 8779.05720509735, TP: 8729.28)
+18/02/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 5.07 UK100.cash (Price: 8765.3, SL: 8779.05720509735, TP: 8729.28) SUCCEEDED, PendingOrder OID126
+18/02/2025 19:00:00.000 | Info | Combo: bartime=2025-02-18 18:00, executed=2025-02-18 19:00:00, pending Sell placed at 8765.3; SL=8779.057205097353, TP=8729.283637055129; valid for the next 3 chart bar(s).
+19/02/2025 07:00:00.000 | Info | Combo: bartime=2025-02-19 06:00, reversal - closing existing Sell position 34 before opening opposite direction.
+19/02/2025 07:00:00.000 | Trade | Closing position PID34 (Volume: 5.07)
+19/02/2025 07:00:00.000 | Trade |  Closing position PID34 (Volume: 5.07) SUCCEEDED
+19/02/2025 07:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.22 units, which needs about $7424.80 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4771.95 budget, free margin was $9543.89). Size was cut from 9.22 to 5.80 units. Real risk on this trade is now about $60.00 (0.63% of balance) instead of the requested 1.00%.
+19/02/2025 07:00:00.000 | Trade | Placing Stop Order to Buy 5.8 UK100.cash (Price: 8777.6, SL: 8770.07369717619, TP: 8797.3)
+19/02/2025 07:00:00.000 | Trade |  Placing Stop Order to Buy 5.8 UK100.cash (Price: 8777.6, SL: 8770.07369717619, TP: 8797.3) SUCCEEDED, PendingOrder OID130
+19/02/2025 07:00:00.000 | Info | Combo: bartime=2025-02-19 06:00, executed=2025-02-19 07:00:00, pending Buy placed at 8777.6; SL=8770.073697176194, TP=8797.303860792725; valid for the next 3 chart bar(s).
+19/02/2025 10:00:00.000 | Trade | Cancelling pending order OID130
+19/02/2025 10:00:00.000 | Trade |  Cancelling pending order OID130 SUCCEEDED
+19/02/2025 10:00:00.000 | Info | Combo: pending order 130 cancelled after 3 chart bars.
+20/02/2025 07:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.07 units, which needs about $5693.42 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4771.95 budget, free margin was $9543.89). Size was cut from 7.07 to 5.80 units. Real risk on this trade is now about $78.29 (0.82% of balance) instead of the requested 1.00%.
+20/02/2025 07:00:00.000 | Trade | Placing Stop Order to Buy 5.8 UK100.cash (Price: 8712, SL: 8702.17916690431, TP: 8737.71)
+20/02/2025 07:00:00.000 | Trade |  Placing Stop Order to Buy 5.8 UK100.cash (Price: 8712, SL: 8702.17916690431, TP: 8737.71) SUCCEEDED, PendingOrder OID131
+20/02/2025 07:00:00.000 | Info | Combo: bartime=2025-02-20 06:00, executed=2025-02-20 07:00:00, pending Buy placed at 8712; SL=8702.17916690431, TP=8737.710941044514; valid for the next 3 chart bar(s).
+20/02/2025 10:00:00.000 | Trade | Cancelling pending order OID131
+20/02/2025 10:00:00.000 | Trade |  Cancelling pending order OID131 SUCCEEDED
+20/02/2025 10:00:00.000 | Info | Combo: pending order 131 cancelled after 3 chart bars.
+21/02/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 5.89 UK100.cash (Price: 8679.4, SL: 8667.62413880285, TP: 8710.23)
+21/02/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 5.89 UK100.cash (Price: 8679.4, SL: 8667.62413880285, TP: 8710.23) SUCCEEDED, PendingOrder OID132
+21/02/2025 09:00:00.000 | Info | Combo: bartime=2025-02-21 08:00, executed=2025-02-21 09:00:00, pending Buy placed at 8679.4; SL=8667.62413880285, TP=8710.229204614136; valid for the next 3 chart bar(s).
+21/02/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 3.95 UK100.cash (Price: 8637.1, SL: 8654.44299055766, TP: 8591.7)
+21/02/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 3.95 UK100.cash (Price: 8637.1, SL: 8654.44299055766, TP: 8591.7) SUCCEEDED, PendingOrder OID135
+21/02/2025 15:00:00.000 | Info | Combo: bartime=2025-02-21 14:00, executed=2025-02-21 15:00:00, pending Sell placed at 8637.1; SL=8654.442990557665, TP=8591.696050720033; valid for the next 3 chart bar(s).
+21/02/2025 18:00:00.000 | Trade | Cancelling pending order OID135
+21/02/2025 18:00:00.000 | Trade |  Cancelling pending order OID135 SUCCEEDED
+21/02/2025 18:00:00.000 | Info | Combo: pending order 135 cancelled after 3 chart bars.
+21/02/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 3.88 UK100.cash (Price: 8644.4, SL: 8662.03161116552, TP: 8598.24)
+21/02/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 3.88 UK100.cash (Price: 8644.4, SL: 8662.03161116552, TP: 8598.24) SUCCEEDED, PendingOrder OID136
+21/02/2025 18:00:00.000 | Info | Combo: bartime=2025-02-21 17:00, executed=2025-02-21 18:00:00, pending Sell placed at 8644.4; SL=8662.031611165525, TP=8598.240441968655; valid for the next 3 chart bar(s).
+24/02/2025 01:00:00.000 | Info | Combo: bartime=2025-02-24 00:00, reversal - closing existing Sell position 36 before opening opposite direction.
+24/02/2025 01:00:00.000 | Trade | Closing position PID36 (Volume: 3.88)
+24/02/2025 01:00:00.000 | Trade |  Closing position PID36 (Volume: 3.88) SUCCEEDED
+24/02/2025 01:00:00.000 | Trade | Placing Stop Order to Buy 3.69 UK100.cash (Price: 8668.1, SL: 8649.64908292262, TP: 8716.4)
+24/02/2025 01:00:00.000 | Trade |  Placing Stop Order to Buy 3.69 UK100.cash (Price: 8668.1, SL: 8649.64908292262, TP: 8716.4) SUCCEEDED, PendingOrder OID140
+24/02/2025 01:00:00.000 | Info | Combo: bartime=2025-02-24 00:00, executed=2025-02-24 01:00:00, pending Buy placed at 8668.1; SL=8649.649082922624, TP=8716.40450090857; valid for the next 3 chart bar(s).
+24/02/2025 14:00:00.000 | Info | Combo: bartime=2025-02-24 13:00, reversal - closing existing Buy position 37 before opening opposite direction.
+24/02/2025 14:00:00.000 | Trade | Closing position PID37 (Volume: 3.69)
+24/02/2025 14:00:00.000 | Trade |  Closing position PID37 (Volume: 3.69) SUCCEEDED
+24/02/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 4.11 UK100.cash (Price: 8645, SL: 8661.41398406416, TP: 8602.03)
+24/02/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 4.11 UK100.cash (Price: 8645, SL: 8661.41398406416, TP: 8602.03) SUCCEEDED, PendingOrder OID144
+24/02/2025 14:00:00.000 | Info | Combo: bartime=2025-02-24 13:00, executed=2025-02-24 14:00:00, pending Sell placed at 8645; SL=8661.41398406416, TP=8602.028189720028; valid for the next 3 chart bar(s).
+25/02/2025 03:00:00.000 | Trade | Placing Stop Order to Buy 5.67 UK100.cash (Price: 8661.1, SL: 8649.31860268092, TP: 8691.94)
+25/02/2025 03:00:00.000 | Trade |  Placing Stop Order to Buy 5.67 UK100.cash (Price: 8661.1, SL: 8649.31860268092, TP: 8691.94) SUCCEEDED, PendingOrder OID147
+25/02/2025 03:00:00.000 | Info | Combo: bartime=2025-02-25 02:00, executed=2025-02-25 03:00:00, pending Buy placed at 8661.1; SL=8649.318602680925, TP=8691.943698181336; valid for the next 3 chart bar(s).
+25/02/2025 06:00:00.000 | Trade | Cancelling pending order OID147
+25/02/2025 06:00:00.000 | Trade |  Cancelling pending order OID147 SUCCEEDED
+25/02/2025 06:00:00.000 | Info | Combo: pending order 147 cancelled after 3 chart bars.
+25/02/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 5.45 UK100.cash (Price: 8624.1, SL: 8636.36660827351, TP: 8591.99)
+25/02/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 5.45 UK100.cash (Price: 8624.1, SL: 8636.36660827351, TP: 8591.99) SUCCEEDED, PendingOrder OID148
+25/02/2025 08:00:00.000 | Info | Combo: bartime=2025-02-25 07:00, executed=2025-02-25 08:00:00, pending Sell placed at 8624.1; SL=8636.366608273514, TP=8591.98601953994; valid for the next 3 chart bar(s).
+25/02/2025 09:00:00.000 | Info | Combo: bartime=2025-02-25 08:00, reversal - cancelling existing Sell pending order 148 before opening opposite direction.
+25/02/2025 09:00:00.000 | Trade | Cancelling pending order OID148
+25/02/2025 09:00:00.000 | Trade |  Cancelling pending order OID148 SUCCEEDED
+25/02/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 3.49 UK100.cash (Price: 8679.8, SL: 8660.68671338119, TP: 8729.84)
+25/02/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 3.49 UK100.cash (Price: 8679.8, SL: 8660.68671338119, TP: 8729.84) SUCCEEDED, PendingOrder OID149
+25/02/2025 09:00:00.000 | Info | Combo: bartime=2025-02-25 08:00, executed=2025-02-25 09:00:00, pending Buy placed at 8679.8; SL=8660.686713381188, TP=8729.838584368048; valid for the next 3 chart bar(s).
+26/02/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 3.18 UK100.cash (Price: 8699.3, SL: 8720.03399278112, TP: 8645.02)
+26/02/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 3.18 UK100.cash (Price: 8699.3, SL: 8720.03399278112, TP: 8645.02) SUCCEEDED, PendingOrder OID152
+26/02/2025 17:00:00.000 | Info | Combo: bartime=2025-02-26 16:00, executed=2025-02-26 17:00:00, pending Sell placed at 8699.3; SL=8720.033992781116, TP=8645.018406899035; valid for the next 3 chart bar(s).
+27/02/2025 02:00:00.000 | Trade | Placing Stop Order to Buy 3.91 UK100.cash (Price: 8719.6, SL: 8702.97348387655, TP: 8763.13)
+27/02/2025 02:00:00.000 | Trade |  Placing Stop Order to Buy 3.91 UK100.cash (Price: 8719.6, SL: 8702.97348387655, TP: 8763.13) SUCCEEDED, PendingOrder OID155
+27/02/2025 02:00:00.000 | Info | Combo: bartime=2025-02-27 01:00, executed=2025-02-27 02:00:00, pending Buy placed at 8719.6; SL=8702.97348387655, TP=8763.128219211192; valid for the next 3 chart bar(s).
+27/02/2025 05:00:00.000 | Trade | Cancelling pending order OID155
+27/02/2025 05:00:00.000 | Trade |  Cancelling pending order OID155 SUCCEEDED
+27/02/2025 05:00:00.000 | Info | Combo: pending order 155 cancelled after 3 chart bars.
+27/02/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 4.81 UK100.cash (Price: 8694.3, SL: 8707.82668224266, TP: 8658.89)
+27/02/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 4.81 UK100.cash (Price: 8694.3, SL: 8707.82668224266, TP: 8658.89) SUCCEEDED, PendingOrder OID156
+27/02/2025 08:00:00.000 | Info | Combo: bartime=2025-02-27 07:00, executed=2025-02-27 08:00:00, pending Sell placed at 8694.3; SL=8707.826682242665, TP=8658.8871458887; valid for the next 3 chart bar(s).
+27/02/2025 10:00:00.000 | Info | Combo: bartime=2025-02-27 09:00, reversal - cancelling existing Sell pending order 156 before opening opposite direction.
+27/02/2025 10:00:00.000 | Trade | Cancelling pending order OID156
+27/02/2025 10:00:00.000 | Trade |  Cancelling pending order OID156 SUCCEEDED
+27/02/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 2.8 UK100.cash (Price: 8760.1, SL: 8736.87492336469, TP: 8820.9)
+27/02/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 2.8 UK100.cash (Price: 8760.1, SL: 8736.87492336469, TP: 8820.9) SUCCEEDED, PendingOrder OID157
+27/02/2025 10:00:00.000 | Info | Combo: bartime=2025-02-27 09:00, executed=2025-02-27 10:00:00, pending Buy placed at 8760.1; SL=8736.874923364694, TP=8820.903250631232; valid for the next 3 chart bar(s).
+27/02/2025 21:00:00.000 | Trade | Placing Stop Order to Sell 2.48 UK100.cash (Price: 8719.4, SL: 8745.34903685185, TP: 8651.47)
+27/02/2025 21:00:00.000 | Trade |  Placing Stop Order to Sell 2.48 UK100.cash (Price: 8719.4, SL: 8745.34903685185, TP: 8651.47) SUCCEEDED, PendingOrder OID160
+27/02/2025 21:00:00.000 | Info | Combo: bartime=2025-02-27 20:00, executed=2025-02-27 21:00:00, pending Sell placed at 8719.4; SL=8745.34903685185, TP=8651.465421521854; valid for the next 3 chart bar(s).
+28/02/2025 01:00:00.000 | Trade | Cancelling pending order OID160
+28/02/2025 01:00:00.000 | Trade |  Cancelling pending order OID160 SUCCEEDED
+28/02/2025 01:00:00.000 | Info | Combo: pending order 160 cancelled after 3 chart bars.
+28/02/2025 01:00:00.000 | Trade | Placing Stop Order to Sell 3.38 UK100.cash (Price: 8714.9, SL: 8733.91272549452, TP: 8665.12)
+28/02/2025 01:00:00.000 | Trade |  Placing Stop Order to Sell 3.38 UK100.cash (Price: 8714.9, SL: 8733.91272549452, TP: 8665.12) SUCCEEDED, PendingOrder OID161
+28/02/2025 01:00:00.000 | Info | Combo: bartime=2025-02-28 00:00, executed=2025-02-28 01:00:00, pending Sell placed at 8714.9; SL=8733.912725494518, TP=8665.124684655351; valid for the next 3 chart bar(s).
+28/02/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 3.11 UK100.cash (Price: 8742.5, SL: 8722.0587302963, TP: 8796.02)
+28/02/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 3.11 UK100.cash (Price: 8742.5, SL: 8722.0587302963, TP: 8796.02) SUCCEEDED, PendingOrder OID164
+28/02/2025 09:00:00.000 | Info | Combo: bartime=2025-02-28 08:00, executed=2025-02-28 09:00:00, pending Buy placed at 8742.5; SL=8722.058730296298, TP=8796.015244084294; valid for the next 3 chart bar(s).
+03/03/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 2.07 UK100.cash (Price: 8822.9, SL: 8854.3958715841, TP: 8740.44)
+03/03/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 2.07 UK100.cash (Price: 8822.9, SL: 8854.3958715841, TP: 8740.44) SUCCEEDED, PendingOrder OID167
+03/03/2025 19:00:00.000 | Info | Combo: bartime=2025-03-03 18:00, executed=2025-03-03 19:00:00, pending Sell placed at 8822.9; SL=8854.395871584104, TP=8740.443808192813; valid for the next 3 chart bar(s).
+04/03/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 2.57 UK100.cash (Price: 8854, SL: 8828.90599370064, TP: 8919.7)
+04/03/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 2.57 UK100.cash (Price: 8854, SL: 8828.90599370064, TP: 8919.7) SUCCEEDED, PendingOrder OID170
+04/03/2025 11:00:00.000 | Info | Combo: bartime=2025-03-04 10:00, executed=2025-03-04 11:00:00, pending Buy placed at 8854; SL=8828.90599370064, TP=8919.696108491722; valid for the next 3 chart bar(s).
+04/03/2025 14:00:00.000 | Trade | Cancelling pending order OID170
+04/03/2025 14:00:00.000 | Trade |  Cancelling pending order OID170 SUCCEEDED
+04/03/2025 14:00:00.000 | Info | Combo: pending order 170 cancelled after 3 chart bars.
+04/03/2025 19:00:00.000 | Trade | Placing Stop Order to Buy 1.98 UK100.cash (Price: 8839.7, SL: 8807.2127590481, TP: 8924.75)
+04/03/2025 19:00:00.000 | Trade |  Placing Stop Order to Buy 1.98 UK100.cash (Price: 8839.7, SL: 8807.2127590481, TP: 8924.75) SUCCEEDED, PendingOrder OID171
+04/03/2025 19:00:00.000 | Info | Combo: bartime=2025-03-04 18:00, executed=2025-03-04 19:00:00, pending Buy placed at 8839.7; SL=8807.212759048103, TP=8924.751596812068; valid for the next 3 chart bar(s).
+04/03/2025 23:05:00.000 | Trade | Placing Stop Order to Buy 1.41 UK100.cash (Price: 8855.9, SL: 8810.94653263263, TP: 8973.59)
+04/03/2025 23:05:00.000 | Trade |  Placing Stop Order to Buy 1.41 UK100.cash (Price: 8855.9, SL: 8810.94653263263, TP: 8973.59) SUCCEEDED, PendingOrder OID174
+04/03/2025 23:05:00.000 | Info | Combo: bartime=2025-03-04 21:00, executed=2025-03-04 23:05:00, pending Buy placed at 8855.9; SL=8810.946532632628, TP=8973.588177567777; valid for the next 3 chart bar(s).
+05/03/2025 02:00:00.000 | Trade | Cancelling pending order OID174
+05/03/2025 02:00:00.000 | Trade |  Cancelling pending order OID174 SUCCEEDED
+05/03/2025 02:00:00.000 | Info | Combo: pending order 174 cancelled after 3 chart bars.
+05/03/2025 03:00:00.000 | Trade | Placing Stop Order to Sell 2 UK100.cash (Price: 8796.9, SL: 8828.72334023368, TP: 8713.59)
+05/03/2025 03:00:00.000 | Trade |  Placing Stop Order to Sell 2 UK100.cash (Price: 8796.9, SL: 8828.72334023368, TP: 8713.59) SUCCEEDED, PendingOrder OID175
+05/03/2025 03:00:00.000 | Info | Combo: bartime=2025-03-05 02:00, executed=2025-03-05 03:00:00, pending Sell placed at 8796.9; SL=8828.723340233675, TP=8713.586495268239; valid for the next 3 chart bar(s).
+05/03/2025 05:00:00.000 | Info | Combo: bartime=2025-03-05 04:00, Sell signal skipped: already have same-direction exposure open.
+05/03/2025 06:00:00.000 | Trade | Cancelling pending order OID175
+05/03/2025 06:00:00.000 | Trade |  Cancelling pending order OID175 SUCCEEDED
+05/03/2025 06:00:00.000 | Info | Combo: pending order 175 cancelled after 3 chart bars.
+05/03/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 2.54 UK100.cash (Price: 8784.4, SL: 8809.37769612777, TP: 8719.01)
+05/03/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 2.54 UK100.cash (Price: 8784.4, SL: 8809.37769612777, TP: 8719.01) SUCCEEDED, PendingOrder OID176
+05/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-05 07:00, executed=2025-03-05 08:00:00, pending Sell placed at 8784.4; SL=8809.377696127769, TP=8719.008391537496; valid for the next 3 chart bar(s).
+05/03/2025 10:00:00.000 | Info | Combo: bartime=2025-03-05 09:00, reversal - cancelling existing Sell pending order 176 before opening opposite direction.
+05/03/2025 10:00:00.000 | Trade | Cancelling pending order OID176
+05/03/2025 10:00:00.000 | Trade |  Cancelling pending order OID176 SUCCEEDED
+05/03/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 2.27 UK100.cash (Price: 8838.4, SL: 8810.36227447823, TP: 8911.8)
+05/03/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 2.27 UK100.cash (Price: 8838.4, SL: 8810.36227447823, TP: 8911.8) SUCCEEDED, PendingOrder OID177
+05/03/2025 10:00:00.000 | Info | Combo: bartime=2025-03-05 09:00, executed=2025-03-05 10:00:00, pending Buy placed at 8838.4; SL=8810.362274478228, TP=8911.802765416; valid for the next 3 chart bar(s).
+05/03/2025 11:00:00.000 | Info | Combo: bartime=2025-03-05 10:00, reversal - cancelling existing Buy pending order 177 before opening opposite direction.
+05/03/2025 11:00:00.000 | Trade | Cancelling pending order OID177
+05/03/2025 11:00:00.000 | Trade |  Cancelling pending order OID177 SUCCEEDED
+05/03/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 2.07 UK100.cash (Price: 8790.6, SL: 8821.33018041742, TP: 8710.15)
+05/03/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 2.07 UK100.cash (Price: 8790.6, SL: 8821.33018041742, TP: 8710.15) SUCCEEDED, PendingOrder OID178
+05/03/2025 11:00:00.000 | Info | Combo: bartime=2025-03-05 10:00, executed=2025-03-05 11:00:00, pending Sell placed at 8790.6; SL=8821.330180417419, TP=8710.1483876672; valid for the next 3 chart bar(s).
+06/03/2025 05:00:00.000 | Trade | Placing Stop Order to Buy 4.43 UK100.cash (Price: 8789.6, SL: 8775.38930737286, TP: 8826.8)
+06/03/2025 05:00:00.000 | Trade |  Placing Stop Order to Buy 4.43 UK100.cash (Price: 8789.6, SL: 8775.38930737286, TP: 8826.8) SUCCEEDED, PendingOrder OID181
+06/03/2025 05:00:00.000 | Info | Combo: bartime=2025-03-06 04:00, executed=2025-03-06 05:00:00, pending Buy placed at 8789.6; SL=8775.389307372854, TP=8826.803593297871; valid for the next 3 chart bar(s).
+06/03/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 3.55 UK100.cash (Price: 8756.1, SL: 8773.6622746251, TP: 8710.12)
+06/03/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 3.55 UK100.cash (Price: 8756.1, SL: 8773.6622746251, TP: 8710.12) SUCCEEDED, PendingOrder OID184
+06/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-06 07:00, executed=2025-03-06 08:00:00, pending Sell placed at 8756.1; SL=8773.6622746251, TP=8710.12196503149; valid for the next 3 chart bar(s).
+07/03/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 2.73 UK100.cash (Price: 8675.6, SL: 8652.21248376659, TP: 8736.83)
+07/03/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 2.73 UK100.cash (Price: 8675.6, SL: 8652.21248376659, TP: 8736.83) SUCCEEDED, PendingOrder OID187
+07/03/2025 14:00:00.000 | Info | Combo: bartime=2025-03-07 13:00, executed=2025-03-07 14:00:00, pending Buy placed at 8675.6; SL=8652.212483766594, TP=8736.828517499056; valid for the next 3 chart bar(s).
+10/03/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 3.17 UK100.cash (Price: 8678.6, SL: 8699.28845458713, TP: 8624.44)
+10/03/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 3.17 UK100.cash (Price: 8678.6, SL: 8699.28845458713, TP: 8624.44) SUCCEEDED, PendingOrder OID190
+10/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-10 07:00, executed=2025-03-10 08:00:00, pending Sell placed at 8678.6; SL=8699.288454587131, TP=8624.43762589089; valid for the next 3 chart bar(s).
+11/03/2025 04:00:00.000 | Trade | Placing Stop Order to Buy 2.25 UK100.cash (Price: 8616.6, SL: 8586.7304897879, TP: 8694.8)
+11/03/2025 04:00:00.000 | Trade |  Placing Stop Order to Buy 2.25 UK100.cash (Price: 8616.6, SL: 8586.7304897879, TP: 8694.8) SUCCEEDED, PendingOrder OID193
+11/03/2025 04:00:00.000 | Info | Combo: bartime=2025-03-11 03:00, executed=2025-03-11 04:00:00, pending Buy placed at 8616.6; SL=8586.7304897879, TP=8694.79837773528; valid for the next 3 chart bar(s).
+11/03/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 2.59 UK100.cash (Price: 8574.3, SL: 8600.03962968504, TP: 8506.91)
+11/03/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 2.59 UK100.cash (Price: 8574.3, SL: 8600.03962968504, TP: 8506.91) SUCCEEDED, PendingOrder OID196
+11/03/2025 10:00:00.000 | Info | Combo: bartime=2025-03-11 09:00, executed=2025-03-11 10:00:00, pending Sell placed at 8574.3; SL=8600.03962968504, TP=8506.913649484562; valid for the next 3 chart bar(s).
+11/03/2025 12:00:00.000 | Info | Combo: bartime=2025-03-11 11:00, Sell signal skipped: already have same-direction exposure open.
+12/03/2025 06:00:00.000 | Trade | Placing Stop Order to Buy 4.02 UK100.cash (Price: 8537.8, SL: 8520.79768657545, TP: 8582.31)
+12/03/2025 06:00:00.000 | Trade |  Placing Stop Order to Buy 4.02 UK100.cash (Price: 8537.8, SL: 8520.79768657545, TP: 8582.31) SUCCEEDED, PendingOrder OID199
+12/03/2025 06:00:00.000 | Info | Combo: bartime=2025-03-12 05:00, executed=2025-03-12 06:00:00, pending Buy placed at 8537.8; SL=8520.797686575448, TP=8582.312056545474; valid for the next 3 chart bar(s).
+12/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-12 07:00, Buy signal skipped: already have same-direction exposure open.
+12/03/2025 09:00:00.000 | Trade | Cancelling pending order OID199
+12/03/2025 09:00:00.000 | Trade |  Cancelling pending order OID199 SUCCEEDED
+12/03/2025 09:00:00.000 | Info | Combo: pending order 199 cancelled after 3 chart bars.
+12/03/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 2.83 UK100.cash (Price: 8503.4, SL: 8527.57265328659, TP: 8440.12)
+12/03/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 2.83 UK100.cash (Price: 8503.4, SL: 8527.57265328659, TP: 8440.12) SUCCEEDED, PendingOrder OID200
+12/03/2025 15:00:00.000 | Info | Combo: bartime=2025-03-12 14:00, executed=2025-03-12 15:00:00, pending Sell placed at 8503.4; SL=8527.572653286587, TP=8440.115993695714; valid for the next 3 chart bar(s).
+12/03/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 2.72 UK100.cash (Price: 8512.4, SL: 8537.20249810342, TP: 8447.47)
+12/03/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 2.72 UK100.cash (Price: 8512.4, SL: 8537.20249810342, TP: 8447.47) SUCCEEDED, PendingOrder OID203
+12/03/2025 17:00:00.000 | Info | Combo: bartime=2025-03-12 16:00, executed=2025-03-12 17:00:00, pending Sell placed at 8512.4; SL=8537.202498103416, TP=8447.467059965256; valid for the next 3 chart bar(s).
+12/03/2025 19:00:00.000 | Info | Combo: bartime=2025-03-12 18:00, reversal - cancelling existing Sell pending order 203 before opening opposite direction.
+12/03/2025 19:00:00.000 | Trade | Cancelling pending order OID203
+12/03/2025 19:00:00.000 | Trade |  Cancelling pending order OID203 SUCCEEDED
+12/03/2025 19:00:00.000 | Trade | Placing Stop Order to Buy 2.3 UK100.cash (Price: 8567.4, SL: 8538.08640121381, TP: 8644.14)
+12/03/2025 19:00:00.000 | Trade |  Placing Stop Order to Buy 2.3 UK100.cash (Price: 8567.4, SL: 8538.08640121381, TP: 8644.14) SUCCEEDED, PendingOrder OID204
+12/03/2025 19:00:00.000 | Info | Combo: bartime=2025-03-12 18:00, executed=2025-03-12 19:00:00, pending Buy placed at 8567.4; SL=8538.086401213814, TP=8644.143001622235; valid for the next 3 chart bar(s).
+12/03/2025 23:00:00.000 | Trade | Cancelling pending order OID204
+12/03/2025 23:00:00.000 | Trade |  Cancelling pending order OID204 SUCCEEDED
+12/03/2025 23:00:00.000 | Info | Combo: pending order 204 cancelled after 3 chart bars.
+13/03/2025 03:00:00.000 | Trade | Placing Stop Order to Sell 4.15 UK100.cash (Price: 8529.4, SL: 8545.67752655373, TP: 8486.79)
+13/03/2025 03:00:00.000 | Trade |  Placing Stop Order to Sell 4.15 UK100.cash (Price: 8529.4, SL: 8545.67752655373, TP: 8486.79) SUCCEEDED, PendingOrder OID205
+13/03/2025 03:00:00.000 | Info | Combo: bartime=2025-03-13 02:00, executed=2025-03-13 03:00:00, pending Sell placed at 8529.4; SL=8545.67752655373, TP=8486.785435482328; valid for the next 3 chart bar(s).
+13/03/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 2.7 UK100.cash (Price: 8569.8, SL: 8545.0032992791, TP: 8634.72)
+13/03/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 2.7 UK100.cash (Price: 8569.8, SL: 8545.0032992791, TP: 8634.72) SUCCEEDED, PendingOrder OID208
+13/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-13 08:00, executed=2025-03-13 09:00:00, pending Buy placed at 8569.8; SL=8545.003299279098, TP=8634.717762487318; valid for the next 3 chart bar(s).
+13/03/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 2.29 UK100.cash (Price: 8533.6, SL: 8562.42736689222, TP: 8458.13)
+13/03/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 2.29 UK100.cash (Price: 8533.6, SL: 8562.42736689222, TP: 8458.13) SUCCEEDED, PendingOrder OID211
+13/03/2025 14:00:00.000 | Info | Combo: bartime=2025-03-13 13:00, executed=2025-03-13 14:00:00, pending Sell placed at 8533.6; SL=8562.427366892225, TP=8458.129953476157; valid for the next 3 chart bar(s).
+13/03/2025 15:00:00.000 | Info | Combo: bartime=2025-03-13 14:00, Sell signal skipped: already have same-direction exposure open.
+13/03/2025 18:00:00.000 | Info | Combo: bartime=2025-03-13 17:00, Sell signal skipped: already have same-direction exposure open.
+17/03/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 4.16 UK100.cash (Price: 8617.9, SL: 8633.61707875809, TP: 8576.75)
+17/03/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 4.16 UK100.cash (Price: 8617.9, SL: 8633.61707875809, TP: 8576.75) SUCCEEDED, PendingOrder OID214
+17/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-17 08:00, executed=2025-03-17 09:00:00, pending Sell placed at 8617.9; SL=8633.617078758087, TP=8576.752687811328; valid for the next 3 chart bar(s).
+17/03/2025 12:00:00.000 | Trade | Cancelling pending order OID214
+17/03/2025 12:00:00.000 | Trade |  Cancelling pending order OID214 SUCCEEDED
+17/03/2025 12:00:00.000 | Info | Combo: pending order 214 cancelled after 3 chart bars.
+17/03/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 3.28 UK100.cash (Price: 8690.7, SL: 8670.75101163255, TP: 8742.93)
+17/03/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 3.28 UK100.cash (Price: 8690.7, SL: 8670.75101163255, TP: 8742.93) SUCCEEDED, PendingOrder OID215
+17/03/2025 14:00:00.000 | Info | Combo: bartime=2025-03-17 13:00, executed=2025-03-17 14:00:00, pending Buy placed at 8690.7; SL=8670.75101163255, TP=8742.926451545985; valid for the next 3 chart bar(s).
+17/03/2025 17:00:00.000 | Trade | Cancelling pending order OID215
+17/03/2025 17:00:00.000 | Trade |  Cancelling pending order OID215 SUCCEEDED
+17/03/2025 17:00:00.000 | Info | Combo: pending order 215 cancelled after 3 chart bars.
+18/03/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 3.94 UK100.cash (Price: 8691.2, SL: 8707.81070387318, TP: 8647.71)
+18/03/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 3.94 UK100.cash (Price: 8691.2, SL: 8707.81070387318, TP: 8647.71) SUCCEEDED, PendingOrder OID216
+18/03/2025 15:00:00.000 | Info | Combo: bartime=2025-03-18 14:00, executed=2025-03-18 15:00:00, pending Sell placed at 8691.2; SL=8707.810703873185, TP=8647.713177260004; valid for the next 3 chart bar(s).
+18/03/2025 23:00:00.000 | Info | Combo: bartime=2025-03-18 22:00, reversal - closing existing Sell position 57 before opening opposite direction.
+18/03/2025 23:00:00.000 | Trade | Closing position PID57 (Volume: 3.94)
+18/03/2025 23:00:00.000 | Trade |  Closing position PID57 (Volume: 3.94) SUCCEEDED
+18/03/2025 23:00:00.000 | Trade | Placing Stop Order to Buy 4.32 UK100.cash (Price: 8710.1, SL: 8695.0643613151, TP: 8749.46)
+18/03/2025 23:00:00.000 | Trade |  Placing Stop Order to Buy 4.32 UK100.cash (Price: 8710.1, SL: 8695.0643613151, TP: 8749.46) SUCCEEDED, PendingOrder OID220
+18/03/2025 23:00:00.000 | Info | Combo: bartime=2025-03-18 22:00, executed=2025-03-18 23:00:00, pending Buy placed at 8710.1; SL=8695.064361315095, TP=8749.463302077083; valid for the next 3 chart bar(s).
+19/03/2025 00:00:00.000 | Info | Combo: bartime=2025-03-18 23:00, Buy signal skipped: already have same-direction exposure open.
+19/03/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 4.79 UK100.cash (Price: 8677.6, SL: 8691.03266706812, TP: 8642.43)
+19/03/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 4.79 UK100.cash (Price: 8677.6, SL: 8691.03266706812, TP: 8642.43) SUCCEEDED, PendingOrder OID223
+19/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-19 07:00, executed=2025-03-19 08:00:00, pending Sell placed at 8677.6; SL=8691.032667068117, TP=8642.433277615672; valid for the next 3 chart bar(s).
+19/03/2025 13:00:00.000 | Trade | Placing Stop Order to Buy 3.23 UK100.cash (Price: 8708.1, SL: 8688.46094365512, TP: 8759.52)
+19/03/2025 13:00:00.000 | Trade |  Placing Stop Order to Buy 3.23 UK100.cash (Price: 8708.1, SL: 8688.46094365512, TP: 8759.52) SUCCEEDED, PendingOrder OID226
+19/03/2025 13:00:00.000 | Info | Combo: bartime=2025-03-19 12:00, executed=2025-03-19 13:00:00, pending Buy placed at 8708.1; SL=8688.46094365512, TP=8759.515049510897; valid for the next 3 chart bar(s).
+19/03/2025 14:00:00.000 | Info | Combo: bartime=2025-03-19 13:00, reversal - cancelling existing Buy pending order 226 before opening opposite direction.
+19/03/2025 14:00:00.000 | Trade | Cancelling pending order OID226
+19/03/2025 14:00:00.000 | Trade |  Cancelling pending order OID226 SUCCEEDED
+19/03/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 2.99 UK100.cash (Price: 8672.1, SL: 8693.3512450759, TP: 8616.46)
+19/03/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 2.99 UK100.cash (Price: 8672.1, SL: 8693.3512450759, TP: 8616.46) SUCCEEDED, PendingOrder OID227
+19/03/2025 14:00:00.000 | Info | Combo: bartime=2025-03-19 13:00, executed=2025-03-19 14:00:00, pending Sell placed at 8672.1; SL=8693.351245075904, TP=8616.464240391282; valid for the next 3 chart bar(s).
+19/03/2025 15:00:00.000 | Info | Combo: bartime=2025-03-19 14:00, reversal - cancelling existing Sell pending order 227 before opening opposite direction.
+19/03/2025 15:00:00.000 | Trade | Cancelling pending order OID227
+19/03/2025 15:00:00.000 | Trade |  Cancelling pending order OID227 SUCCEEDED
+19/03/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 3.04 UK100.cash (Price: 8713.3, SL: 8692.39900393928, TP: 8768.02)
+19/03/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 3.04 UK100.cash (Price: 8713.3, SL: 8692.39900393928, TP: 8768.02) SUCCEEDED, PendingOrder OID228
+19/03/2025 15:00:00.000 | Info | Combo: bartime=2025-03-19 14:00, executed=2025-03-19 15:00:00, pending Buy placed at 8713.3; SL=8692.399003939276, TP=8768.018807686973; valid for the next 3 chart bar(s).
+19/03/2025 19:00:00.000 | Trade | Placing Stop Order to Buy 3.37 UK100.cash (Price: 8720.1, SL: 8701.42855201353, TP: 8768.98)
+19/03/2025 19:00:00.000 | Trade |  Placing Stop Order to Buy 3.37 UK100.cash (Price: 8720.1, SL: 8701.42855201353, TP: 8768.98) SUCCEEDED, PendingOrder OID231
+19/03/2025 19:00:00.000 | Info | Combo: bartime=2025-03-19 18:00, executed=2025-03-19 19:00:00, pending Buy placed at 8720.1; SL=8701.428552013527, TP=8768.981850828584; valid for the next 3 chart bar(s).
+20/03/2025 04:00:00.000 | Trade | Placing Stop Order to Sell 5.11 UK100.cash (Price: 8694.7, SL: 8706.85425360702, TP: 8662.88)
+20/03/2025 04:00:00.000 | Trade |  Placing Stop Order to Sell 5.11 UK100.cash (Price: 8694.7, SL: 8706.85425360702, TP: 8662.88) SUCCEEDED, PendingOrder OID234
+20/03/2025 04:00:00.000 | Info | Combo: bartime=2025-03-20 03:00, executed=2025-03-20 04:00:00, pending Sell placed at 8694.7; SL=8706.854253607018, TP=8662.880164056827; valid for the next 3 chart bar(s).
+20/03/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 3.61 UK100.cash (Price: 8747.2, SL: 8730.19697417805, TP: 8791.71)
+20/03/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 3.61 UK100.cash (Price: 8747.2, SL: 8730.19697417805, TP: 8791.71) SUCCEEDED, PendingOrder OID237
+20/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-20 08:00, executed=2025-03-20 09:00:00, pending Buy placed at 8747.2; SL=8730.196974178052, TP=8791.71392160186; valid for the next 3 chart bar(s).
+20/03/2025 10:00:00.000 | Info | Combo: bartime=2025-03-20 09:00, reversal - cancelling existing Buy pending order 237 before opening opposite direction.
+20/03/2025 10:00:00.000 | Trade | Cancelling pending order OID237
+20/03/2025 10:00:00.000 | Trade |  Cancelling pending order OID237 SUCCEEDED
+20/03/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 2.83 UK100.cash (Price: 8678.5, SL: 8700.14242065756, TP: 8621.84)
+20/03/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 2.83 UK100.cash (Price: 8678.5, SL: 8700.14242065756, TP: 8621.84) SUCCEEDED, PendingOrder OID238
+20/03/2025 10:00:00.000 | Info | Combo: bartime=2025-03-20 09:00, executed=2025-03-20 10:00:00, pending Sell placed at 8678.5; SL=8700.14242065756, TP=8621.840142718513; valid for the next 3 chart bar(s).
+20/03/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 2.84 UK100.cash (Price: 8712.5, SL: 8691.13022759893, TP: 8768.45)
+20/03/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 2.84 UK100.cash (Price: 8712.5, SL: 8691.13022759893, TP: 8768.45) SUCCEEDED, PendingOrder OID241
+20/03/2025 15:00:00.000 | Info | Combo: bartime=2025-03-20 14:00, executed=2025-03-20 15:00:00, pending Buy placed at 8712.5; SL=8691.130227598931, TP=8768.446064145997; valid for the next 3 chart bar(s).
+20/03/2025 18:00:00.000 | Trade | Cancelling pending order OID241
+20/03/2025 18:00:00.000 | Trade |  Cancelling pending order OID241 SUCCEEDED
+20/03/2025 18:00:00.000 | Info | Combo: pending order 241 cancelled after 3 chart bars.
+20/03/2025 20:00:00.000 | Trade | Placing Stop Order to Buy 3.06 UK100.cash (Price: 8710.5, SL: 8690.67531297962, TP: 8762.4)
+20/03/2025 20:00:00.000 | Trade |  Placing Stop Order to Buy 3.06 UK100.cash (Price: 8710.5, SL: 8690.67531297962, TP: 8762.4) SUCCEEDED, PendingOrder OID242
+20/03/2025 20:00:00.000 | Info | Combo: bartime=2025-03-20 19:00, executed=2025-03-20 20:00:00, pending Buy placed at 8710.5; SL=8690.675312979618, TP=8762.40103061936; valid for the next 3 chart bar(s).
+21/03/2025 00:00:00.000 | Trade | Cancelling pending order OID242
+21/03/2025 00:00:00.000 | Trade |  Cancelling pending order OID242 SUCCEEDED
+21/03/2025 00:00:00.000 | Info | Combo: pending order 242 cancelled after 3 chart bars.
+21/03/2025 01:00:00.000 | Trade | Placing Stop Order to Buy 4.47 UK100.cash (Price: 8711.6, SL: 8698.01548819645, TP: 8747.16)
+21/03/2025 01:00:00.000 | Trade |  Placing Stop Order to Buy 4.47 UK100.cash (Price: 8711.6, SL: 8698.01548819645, TP: 8747.16) SUCCEEDED, PendingOrder OID243
+21/03/2025 01:00:00.000 | Info | Combo: bartime=2025-03-21 00:00, executed=2025-03-21 01:00:00, pending Buy placed at 8711.6; SL=8698.015488196452, TP=8747.164251901691; valid for the next 3 chart bar(s).
+21/03/2025 04:00:00.000 | Trade | Cancelling pending order OID243
+21/03/2025 04:00:00.000 | Trade |  Cancelling pending order OID243 SUCCEEDED
+21/03/2025 04:00:00.000 | Info | Combo: pending order 243 cancelled after 3 chart bars.
+21/03/2025 05:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.46 units, which needs about $4396.90 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4180.24 budget, free margin was $8360.48). Size was cut from 5.46 to 5.08 units. Real risk on this trade is now about $77.73 (0.93% of balance) instead of the requested 1.00%.
+21/03/2025 05:00:00.000 | Trade | Placing Stop Order to Buy 5.08 UK100.cash (Price: 8710.5, SL: 8699.36730396526, TP: 8739.65)
+21/03/2025 05:00:00.000 | Trade |  Placing Stop Order to Buy 5.08 UK100.cash (Price: 8710.5, SL: 8699.36730396526, TP: 8739.65) SUCCEEDED, PendingOrder OID244
+21/03/2025 05:00:00.000 | Info | Combo: bartime=2025-03-21 04:00, executed=2025-03-21 05:00:00, pending Buy placed at 8710.5; SL=8699.367303965266, TP=8739.645398218932; valid for the next 3 chart bar(s).
+21/03/2025 06:00:00.000 | Info | Combo: bartime=2025-03-21 05:00, reversal - cancelling existing Buy pending order 244 before opening opposite direction.
+21/03/2025 06:00:00.000 | Trade | Cancelling pending order OID244
+21/03/2025 06:00:00.000 | Trade |  Cancelling pending order OID244 SUCCEEDED
+21/03/2025 06:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.66 units, which needs about $4557.96 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4180.24 budget, free margin was $8360.48). Size was cut from 5.66 to 5.08 units. Real risk on this trade is now about $75.03 (0.90% of balance) instead of the requested 1.00%.
+21/03/2025 06:00:00.000 | Trade | Placing Stop Order to Sell 5.08 UK100.cash (Price: 8687.5, SL: 8698.24615682779, TP: 8659.37)
+21/03/2025 06:00:00.000 | Trade |  Placing Stop Order to Sell 5.08 UK100.cash (Price: 8687.5, SL: 8698.24615682779, TP: 8659.37) SUCCEEDED, PendingOrder OID245
+21/03/2025 06:00:00.000 | Info | Combo: bartime=2025-03-21 05:00, executed=2025-03-21 06:00:00, pending Sell placed at 8687.5; SL=8698.246156827787, TP=8659.366561424855; valid for the next 3 chart bar(s).
+21/03/2025 07:00:00.000 | Info | Combo: bartime=2025-03-21 06:00, reversal - cancelling existing Sell pending order 245 before opening opposite direction.
+21/03/2025 07:00:00.000 | Trade | Cancelling pending order OID245
+21/03/2025 07:00:00.000 | Trade |  Cancelling pending order OID245 SUCCEEDED
+21/03/2025 07:00:00.000 | Trade | Placing Stop Order to Buy 5 UK100.cash (Price: 8713.5, SL: 8701.34307453777, TP: 8745.33)
+21/03/2025 07:00:00.000 | Trade |  Placing Stop Order to Buy 5 UK100.cash (Price: 8713.5, SL: 8701.34307453777, TP: 8745.33) SUCCEEDED, PendingOrder OID246
+21/03/2025 07:00:00.000 | Info | Combo: bartime=2025-03-21 06:00, executed=2025-03-21 07:00:00, pending Buy placed at 8713.5; SL=8701.34307453777, TP=8745.326830860116; valid for the next 3 chart bar(s).
+21/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-21 07:00, reversal - cancelling existing Buy pending order 246 before opening opposite direction.
+21/03/2025 08:00:00.000 | Trade | Cancelling pending order OID246
+21/03/2025 08:00:00.000 | Trade |  Cancelling pending order OID246 SUCCEEDED
+21/03/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 4 UK100.cash (Price: 8677.2, SL: 8692.38554036978, TP: 8637.44)
+21/03/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 4 UK100.cash (Price: 8677.2, SL: 8692.38554036978, TP: 8637.44) SUCCEEDED, PendingOrder OID247
+21/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-21 07:00, executed=2025-03-21 08:00:00, pending Sell placed at 8677.2; SL=8692.385540369783, TP=8637.444255311908; valid for the next 3 chart bar(s).
+24/03/2025 00:00:00.000 | Trade | Placing Stop Order to Buy 3.77 UK100.cash (Price: 8673.2, SL: 8656.45327655687, TP: 8717.04)
+24/03/2025 00:00:00.000 | Trade |  Placing Stop Order to Buy 3.77 UK100.cash (Price: 8673.2, SL: 8656.45327655687, TP: 8717.04) SUCCEEDED, PendingOrder OID250
+24/03/2025 00:00:00.000 | Info | Combo: bartime=2025-03-23 23:00, executed=2025-03-24 00:00:00, pending Buy placed at 8673.2; SL=8656.453276556867, TP=8717.042921974122; valid for the next 3 chart bar(s).
+24/03/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 3.16 UK100.cash (Price: 8636.6, SL: 8656.36577642302, TP: 8584.85)
+24/03/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 3.16 UK100.cash (Price: 8636.6, SL: 8656.36577642302, TP: 8584.85) SUCCEEDED, PendingOrder OID253
+24/03/2025 10:00:00.000 | Info | Combo: bartime=2025-03-24 09:00, executed=2025-03-24 10:00:00, pending Sell placed at 8636.6; SL=8656.365776423025, TP=8584.85319732452; valid for the next 3 chart bar(s).
+24/03/2025 12:00:00.000 | Info | Combo: bartime=2025-03-24 11:00, Sell signal skipped: already have same-direction exposure open.
+25/03/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 4.8 UK100.cash (Price: 8652.9, SL: 8640.04515971781, TP: 8686.55)
+25/03/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 4.8 UK100.cash (Price: 8652.9, SL: 8640.04515971781, TP: 8686.55) SUCCEEDED, PendingOrder OID256
+25/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-25 07:00, executed=2025-03-25 08:00:00, pending Buy placed at 8652.9; SL=8640.045159717813, TP=8686.553971858768; valid for the next 3 chart bar(s).
+26/03/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 3.54 UK100.cash (Price: 8710.2, SL: 8692.34070010624, TP: 8756.96)
+26/03/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 3.54 UK100.cash (Price: 8710.2, SL: 8692.34070010624, TP: 8756.96) SUCCEEDED, PendingOrder OID259
+26/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-26 07:00, executed=2025-03-26 08:00:00, pending Buy placed at 8710.2; SL=8692.340700106242, TP=8756.955647121862; valid for the next 3 chart bar(s).
+26/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-26 08:00, reversal - cancelling existing Buy pending order 259 before opening opposite direction.
+26/03/2025 09:00:00.000 | Trade | Cancelling pending order OID259
+26/03/2025 09:00:00.000 | Trade |  Cancelling pending order OID259 SUCCEEDED
+26/03/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 2.88 UK100.cash (Price: 8658, SL: 8679.92743991501, TP: 8600.59)
+26/03/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 2.88 UK100.cash (Price: 8658, SL: 8679.92743991501, TP: 8600.59) SUCCEEDED, PendingOrder OID260
+26/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-26 08:00, executed=2025-03-26 09:00:00, pending Sell placed at 8658; SL=8679.927439915007, TP=8600.593962302511; valid for the next 3 chart bar(s).
+26/03/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 2.58 UK100.cash (Price: 8695.2, SL: 8670.9744384544, TP: 8758.62)
+26/03/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 2.58 UK100.cash (Price: 8695.2, SL: 8670.9744384544, TP: 8758.62) SUCCEEDED, PendingOrder OID263
+26/03/2025 11:00:00.000 | Info | Combo: bartime=2025-03-26 10:00, executed=2025-03-26 11:00:00, pending Buy placed at 8695.2; SL=8670.974438454396, TP=8758.622520126393; valid for the next 3 chart bar(s).
+26/03/2025 13:00:00.000 | Info | Combo: bartime=2025-03-26 12:00, reversal - cancelling existing Buy pending order 263 before opening opposite direction.
+26/03/2025 13:00:00.000 | Trade | Cancelling pending order OID263
+26/03/2025 13:00:00.000 | Trade |  Cancelling pending order OID263 SUCCEEDED
+26/03/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 2.61 UK100.cash (Price: 8657.1, SL: 8681.07235938919, TP: 8594.34)
+26/03/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 2.61 UK100.cash (Price: 8657.1, SL: 8681.07235938919, TP: 8594.34) SUCCEEDED, PendingOrder OID264
+26/03/2025 13:00:00.000 | Info | Combo: bartime=2025-03-26 12:00, executed=2025-03-26 13:00:00, pending Sell placed at 8657.1; SL=8681.072359389187, TP=8594.340363119109; valid for the next 3 chart bar(s).
+26/03/2025 15:00:00.000 | Info | Combo: bartime=2025-03-26 14:00, reversal - cancelling existing Sell pending order 264 before opening opposite direction.
+26/03/2025 15:00:00.000 | Trade | Cancelling pending order OID264
+26/03/2025 15:00:00.000 | Trade |  Cancelling pending order OID264 SUCCEEDED
+26/03/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 2.29 UK100.cash (Price: 8709.4, SL: 8682.09768999092, TP: 8780.88)
+26/03/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 2.29 UK100.cash (Price: 8709.4, SL: 8682.09768999092, TP: 8780.88) SUCCEEDED, PendingOrder OID265
+26/03/2025 15:00:00.000 | Info | Combo: bartime=2025-03-26 14:00, executed=2025-03-26 15:00:00, pending Buy placed at 8709.4; SL=8682.09768999092, TP=8780.87744760377; valid for the next 3 chart bar(s).
+27/03/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 2.64 UK100.cash (Price: 8658.3, SL: 8634.8916379705, TP: 8719.58)
+27/03/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 2.64 UK100.cash (Price: 8658.3, SL: 8634.8916379705, TP: 8719.58) SUCCEEDED, PendingOrder OID268
+27/03/2025 14:00:00.000 | Info | Combo: bartime=2025-03-27 13:00, executed=2025-03-27 14:00:00, pending Buy placed at 8658.3; SL=8634.891637970502, TP=8719.583091793224; valid for the next 3 chart bar(s).
+28/03/2025 07:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.30 units, which needs about $4268.05 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4210.57 budget, free margin was $8421.14). Size was cut from 5.30 to 5.12 units. Real risk on this trade is now about $81.26 (0.96% of balance) instead of the requested 1.00%.
+28/03/2025 07:00:00.000 | Trade | Placing Stop Order to Sell 5.12 UK100.cash (Price: 8643.7, SL: 8655.24727824574, TP: 8613.47)
+28/03/2025 07:00:00.000 | Trade |  Placing Stop Order to Sell 5.12 UK100.cash (Price: 8643.7, SL: 8655.24727824574, TP: 8613.47) SUCCEEDED, PendingOrder OID271
+28/03/2025 07:00:00.000 | Info | Combo: bartime=2025-03-28 06:00, executed=2025-03-28 07:00:00, pending Sell placed at 8643.7; SL=8655.247278245739, TP=8613.469225552659; valid for the next 3 chart bar(s).
+28/03/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 2.77 UK100.cash (Price: 8694.7, SL: 8672.94974192273, TP: 8751.64)
+28/03/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 2.77 UK100.cash (Price: 8694.7, SL: 8672.94974192273, TP: 8751.64) SUCCEEDED, PendingOrder OID274
+28/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-28 08:00, executed=2025-03-28 09:00:00, pending Buy placed at 8694.7; SL=8672.949741922728, TP=8751.642175646299; valid for the next 3 chart bar(s).
+28/03/2025 10:00:00.000 | Info | Combo: bartime=2025-03-28 09:00, reversal - cancelling existing Buy pending order 274 before opening opposite direction.
+28/03/2025 10:00:00.000 | Trade | Cancelling pending order OID274
+28/03/2025 10:00:00.000 | Trade |  Cancelling pending order OID274 SUCCEEDED
+28/03/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 2.17 UK100.cash (Price: 8635.4, SL: 8663.16020646182, TP: 8562.72)
+28/03/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 2.17 UK100.cash (Price: 8635.4, SL: 8663.16020646182, TP: 8562.72) SUCCEEDED, PendingOrder OID275
+28/03/2025 10:00:00.000 | Info | Combo: bartime=2025-03-28 09:00, executed=2025-03-28 10:00:00, pending Sell placed at 8635.4; SL=8663.160206461818, TP=8562.72377948296; valid for the next 3 chart bar(s).
+28/03/2025 11:00:00.000 | Info | Combo: bartime=2025-03-28 10:00, reversal - cancelling existing Sell pending order 275 before opening opposite direction.
+28/03/2025 11:00:00.000 | Trade | Cancelling pending order OID275
+28/03/2025 11:00:00.000 | Trade |  Cancelling pending order OID275 SUCCEEDED
+28/03/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 2.11 UK100.cash (Price: 8680.7, SL: 8652.13183483055, TP: 8755.49)
+28/03/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 2.11 UK100.cash (Price: 8680.7, SL: 8652.13183483055, TP: 8755.49) SUCCEEDED, PendingOrder OID276
+28/03/2025 11:00:00.000 | Info | Combo: bartime=2025-03-28 10:00, executed=2025-03-28 11:00:00, pending Buy placed at 8680.7; SL=8652.131834830547, TP=8755.491456413632; valid for the next 3 chart bar(s).
+28/03/2025 14:00:00.000 | Info | Combo: bartime=2025-03-28 13:00, reversal - closing existing Buy position 72 before opening opposite direction.
+28/03/2025 14:00:00.000 | Trade | Closing position PID72 (Volume: 2.11)
+28/03/2025 14:00:00.000 | Trade |  Closing position PID72 (Volume: 2.11) SUCCEEDED
+28/03/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 2.32 UK100.cash (Price: 8648.7, SL: 8674.41490056676, TP: 8581.38)
+28/03/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 2.32 UK100.cash (Price: 8648.7, SL: 8674.41490056676, TP: 8581.38) SUCCEEDED, PendingOrder OID280
+28/03/2025 14:00:00.000 | Info | Combo: bartime=2025-03-28 13:00, executed=2025-03-28 14:00:00, pending Sell placed at 8648.7; SL=8674.41490056676, TP=8581.378390316222; valid for the next 3 chart bar(s).
+28/03/2025 17:00:00.000 | Info | Combo: bartime=2025-03-28 16:00, Sell signal skipped: already have same-direction exposure open.
+31/03/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 2.81 UK100.cash (Price: 8602.3, SL: 8580.44061090899, TP: 8659.53)
+31/03/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 2.81 UK100.cash (Price: 8602.3, SL: 8580.44061090899, TP: 8659.53) SUCCEEDED, PendingOrder OID283
+31/03/2025 18:00:00.000 | Info | Combo: bartime=2025-03-31 17:00, executed=2025-03-31 18:00:00, pending Buy placed at 8602.3; SL=8580.440610908994, TP=8659.527880640253; valid for the next 3 chart bar(s).
+01/04/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 2.1 UK100.cash (Price: 8579.4, SL: 8609.27885365793, TP: 8501.18)
+01/04/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 2.1 UK100.cash (Price: 8579.4, SL: 8609.27885365793, TP: 8501.18) SUCCEEDED, PendingOrder OID286
+01/04/2025 14:00:00.000 | Info | Combo: bartime=2025-04-01 13:00, executed=2025-04-01 14:00:00, pending Sell placed at 8579.4; SL=8609.278853657928, TP=8501.177161123542; valid for the next 3 chart bar(s).
+01/04/2025 17:00:00.000 | Trade | Cancelling pending order OID286
+01/04/2025 17:00:00.000 | Trade |  Cancelling pending order OID286 SUCCEEDED
+01/04/2025 17:00:00.000 | Info | Combo: pending order 286 cancelled after 3 chart bars.
+01/04/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 2.02 UK100.cash (Price: 8598.9, SL: 8630.00837307286, TP: 8517.46)
+01/04/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 2.02 UK100.cash (Price: 8598.9, SL: 8630.00837307286, TP: 8517.46) SUCCEEDED, PendingOrder OID287
+01/04/2025 17:00:00.000 | Info | Combo: bartime=2025-04-01 16:00, executed=2025-04-01 17:00:00, pending Sell placed at 8598.9; SL=8630.008373072858, TP=8517.458279295253; valid for the next 3 chart bar(s).
+02/04/2025 20:00:00.000 | Trade | Placing Stop Order to Buy 2.1 UK100.cash (Price: 8611.3, SL: 8581.66247432048, TP: 8688.89)
+02/04/2025 20:00:00.000 | Trade |  Placing Stop Order to Buy 2.1 UK100.cash (Price: 8611.3, SL: 8581.66247432048, TP: 8688.89) SUCCEEDED, PendingOrder OID290
+02/04/2025 20:00:00.000 | Info | Combo: bartime=2025-04-02 19:00, executed=2025-04-02 20:00:00, pending Buy placed at 8611.3; SL=8581.662474320485, TP=8688.89104222897; valid for the next 3 chart bar(s).
+02/04/2025 22:05:00.000 | Trade | Placing Stop Order to Sell 1.22 UK100.cash (Price: 8516.4, SL: 8565.31002054361, TP: 8388.35)
+02/04/2025 22:05:00.000 | Trade |  Placing Stop Order to Sell 1.22 UK100.cash (Price: 8516.4, SL: 8565.31002054361, TP: 8388.35) SUCCEEDED, PendingOrder OID293
+02/04/2025 22:05:00.000 | Info | Combo: bartime=2025-04-02 20:00, executed=2025-04-02 22:05:00, pending Sell placed at 8516.4; SL=8565.310020543611, TP=8388.353566216823; valid for the next 3 chart bar(s).
+03/04/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 1.52 UK100.cash (Price: 8499, SL: 8458.94853065469, TP: 8603.85)
+03/04/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 1.52 UK100.cash (Price: 8499, SL: 8458.94853065469, TP: 8603.85) SUCCEEDED, PendingOrder OID296
+03/04/2025 16:00:00.000 | Info | Combo: bartime=2025-04-03 15:00, executed=2025-04-03 16:00:00, pending Buy placed at 8499; SL=8458.948530654692, TP=8603.854746746016; valid for the next 3 chart bar(s).
+07/04/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 0.41 UK100.cash (Price: 8022.5, SL: 7878.40302979214, TP: 8399.75)
+07/04/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 0.41 UK100.cash (Price: 8022.5, SL: 7878.40302979214, TP: 8399.75) SUCCEEDED, PendingOrder OID299
+07/04/2025 15:00:00.000 | Info | Combo: bartime=2025-04-07 14:00, executed=2025-04-07 15:00:00, pending Buy placed at 8022.5; SL=7878.403029792142, TP=8399.745868004173; valid for the next 3 chart bar(s).
+07/04/2025 18:00:00.000 | Trade | Cancelling pending order OID299
+07/04/2025 18:00:00.000 | Trade |  Cancelling pending order OID299 SUCCEEDED
+07/04/2025 18:00:00.000 | Info | Combo: pending order 299 cancelled after 3 chart bars.
+07/04/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 0.43 UK100.cash (Price: 7831.5, SL: 7692.11675125358, TP: 8196.41)
+07/04/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 0.43 UK100.cash (Price: 7831.5, SL: 7692.11675125358, TP: 8196.41) SUCCEEDED, PendingOrder OID300
+07/04/2025 18:00:00.000 | Info | Combo: bartime=2025-04-07 17:00, executed=2025-04-07 18:00:00, pending Buy placed at 7831.5; SL=7692.116751253577, TP=8196.405345218136; valid for the next 3 chart bar(s).
+08/04/2025 11:00:00.000 | Info | Combo: bartime=2025-04-08 10:00, Buy signal skipped: already have same-direction exposure open.
+08/04/2025 17:00:00.000 | Info | Combo: bartime=2025-04-08 16:00, reversal - closing existing Buy position 79 before opening opposite direction.
+08/04/2025 17:00:00.000 | Trade | Closing position PID79 (Volume: 0.43)
+08/04/2025 17:00:00.000 | Trade |  Closing position PID79 (Volume: 0.43) SUCCEEDED
+08/04/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 0.82 UK100.cash (Price: 7822, SL: 7895.1599001564, TP: 7630.47)
+08/04/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 0.82 UK100.cash (Price: 7822, SL: 7895.1599001564, TP: 7630.47) SUCCEEDED, PendingOrder OID304
+08/04/2025 17:00:00.000 | Info | Combo: bartime=2025-04-08 16:00, executed=2025-04-08 17:00:00, pending Sell placed at 7822; SL=7895.1599001564, TP=7630.467381390546; valid for the next 3 chart bar(s).
+09/04/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 0.96 UK100.cash (Price: 7800.8, SL: 7736.77039446506, TP: 7968.43)
+09/04/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 0.96 UK100.cash (Price: 7800.8, SL: 7736.77039446506, TP: 7968.43) SUCCEEDED, PendingOrder OID307
+09/04/2025 08:00:00.000 | Info | Combo: bartime=2025-04-09 07:00, executed=2025-04-09 08:00:00, pending Buy placed at 7800.8; SL=7736.770394465056, TP=7968.429507290484; valid for the next 3 chart bar(s).
+09/04/2025 11:00:00.000 | Trade | Cancelling pending order OID307
+09/04/2025 11:00:00.000 | Trade |  Cancelling pending order OID307 SUCCEEDED
+09/04/2025 11:00:00.000 | Info | Combo: pending order 307 cancelled after 3 chart bars.
+09/04/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 0.86 UK100.cash (Price: 7729, SL: 7657.70396388665, TP: 7915.65)
+09/04/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 0.86 UK100.cash (Price: 7729, SL: 7657.70396388665, TP: 7915.65) SUCCEEDED, PendingOrder OID308
+09/04/2025 14:00:00.000 | Info | Combo: bartime=2025-04-09 13:00, executed=2025-04-09 14:00:00, pending Buy placed at 7729; SL=7657.703963886647, TP=7915.653022544757; valid for the next 3 chart bar(s).
+09/04/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 0.77 UK100.cash (Price: 7635.5, SL: 7714.29682889068, TP: 7429.21)
+09/04/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 0.77 UK100.cash (Price: 7635.5, SL: 7714.29682889068, TP: 7429.21) SUCCEEDED, PendingOrder OID311
+09/04/2025 15:00:00.000 | Info | Combo: bartime=2025-04-09 14:00, executed=2025-04-09 15:00:00, pending Sell placed at 7635.5; SL=7714.296828890682, TP=7429.209901964195; valid for the next 3 chart bar(s).
+09/04/2025 18:00:00.000 | Trade | Cancelling pending order OID311
+09/04/2025 18:00:00.000 | Trade |  Cancelling pending order OID311 SUCCEEDED
+09/04/2025 18:00:00.000 | Info | Combo: pending order 311 cancelled after 3 chart bars.
+09/04/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 0.44 UK100.cash (Price: 8078.7, SL: 7941.37602360797, TP: 8438.21)
+09/04/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 0.44 UK100.cash (Price: 8078.7, SL: 7941.37602360797, TP: 8438.21) SUCCEEDED, PendingOrder OID312
+09/04/2025 18:00:00.000 | Info | Combo: bartime=2025-04-09 17:00, executed=2025-04-09 18:00:00, pending Buy placed at 8078.7; SL=7941.376023607971, TP=8438.214170194333; valid for the next 3 chart bar(s).
+10/04/2025 09:00:00.000 | Info | Combo: bartime=2025-04-10 08:00, reversal - closing existing Buy position 82 before opening opposite direction.
+10/04/2025 09:00:00.000 | Trade | Closing position PID82 (Volume: 0.44)
+10/04/2025 09:00:00.000 | Trade |  Closing position PID82 (Volume: 0.44) SUCCEEDED
+10/04/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 0.89 UK100.cash (Price: 7959.4, SL: 8027.46450315038, TP: 7781.21)
+10/04/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.89 UK100.cash (Price: 7959.4, SL: 8027.46450315038, TP: 7781.21) SUCCEEDED, PendingOrder OID316
+10/04/2025 09:00:00.000 | Info | Combo: bartime=2025-04-10 08:00, executed=2025-04-10 09:00:00, pending Sell placed at 7959.4; SL=8027.464503150382, TP=7781.207130752297; valid for the next 3 chart bar(s).
+10/04/2025 12:00:00.000 | Trade | Cancelling pending order OID316
+10/04/2025 12:00:00.000 | Trade |  Cancelling pending order OID316 SUCCEEDED
+10/04/2025 12:00:00.000 | Info | Combo: pending order 316 cancelled after 3 chart bars.
+11/04/2025 04:00:00.000 | Trade | Placing Stop Order to Buy 1.3 UK100.cash (Price: 7973.6, SL: 7927.00890342541, TP: 8095.58)
+11/04/2025 04:00:00.000 | Trade |  Placing Stop Order to Buy 1.3 UK100.cash (Price: 7973.6, SL: 7927.00890342541, TP: 8095.58) SUCCEEDED, PendingOrder OID317
+11/04/2025 04:00:00.000 | Info | Combo: bartime=2025-04-11 03:00, executed=2025-04-11 04:00:00, pending Buy placed at 7973.6; SL=7927.0089034254115, TP=8095.575490832274; valid for the next 3 chart bar(s).
+11/04/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 1.11 UK100.cash (Price: 7901.6, SL: 7955.47683315695, TP: 7760.55)
+11/04/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 1.11 UK100.cash (Price: 7901.6, SL: 7955.47683315695, TP: 7760.55) SUCCEEDED, PendingOrder OID320
+11/04/2025 08:00:00.000 | Info | Combo: bartime=2025-04-11 07:00, executed=2025-04-11 08:00:00, pending Sell placed at 7901.6; SL=7955.476833156952, TP=7760.550450795101; valid for the next 3 chart bar(s).
+14/04/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 2.12 UK100.cash (Price: 8087.1, SL: 8114.85770768232, TP: 8014.43)
+14/04/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 2.12 UK100.cash (Price: 8087.1, SL: 8114.85770768232, TP: 8014.43) SUCCEEDED, PendingOrder OID323
+14/04/2025 12:00:00.000 | Info | Combo: bartime=2025-04-14 11:00, executed=2025-04-14 12:00:00, pending Sell placed at 8087.1; SL=8114.857707682324, TP=8014.4303212876775; valid for the next 3 chart bar(s).
+14/04/2025 15:00:00.000 | Trade | Cancelling pending order OID323
+14/04/2025 15:00:00.000 | Trade |  Cancelling pending order OID323 SUCCEEDED
+14/04/2025 15:00:00.000 | Info | Combo: pending order 323 cancelled after 3 chart bars.
+14/04/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 1.43 UK100.cash (Price: 8083.1, SL: 8124.32875706668, TP: 7975.16)
+14/04/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 1.43 UK100.cash (Price: 8083.1, SL: 8124.32875706668, TP: 7975.16) SUCCEEDED, PendingOrder OID324
+14/04/2025 16:00:00.000 | Info | Combo: bartime=2025-04-14 15:00, executed=2025-04-14 16:00:00, pending Sell placed at 8083.1; SL=8124.32875706668, TP=7975.163113999433; valid for the next 3 chart bar(s).
+14/04/2025 23:00:00.000 | Trade | Placing Stop Order to Sell 2.01 UK100.cash (Price: 8108.6, SL: 8137.43120583399, TP: 8033.12)
+14/04/2025 23:00:00.000 | Trade |  Placing Stop Order to Sell 2.01 UK100.cash (Price: 8108.6, SL: 8137.43120583399, TP: 8033.12) SUCCEEDED, PendingOrder OID327
+14/04/2025 23:00:00.000 | Info | Combo: bartime=2025-04-14 22:00, executed=2025-04-14 23:00:00, pending Sell placed at 8108.6; SL=8137.43120583399, TP=8033.119903126615; valid for the next 3 chart bar(s).
+15/04/2025 02:00:00.000 | Trade | Cancelling pending order OID327
+15/04/2025 02:00:00.000 | Trade |  Cancelling pending order OID327 SUCCEEDED
+15/04/2025 02:00:00.000 | Info | Combo: pending order 327 cancelled after 3 chart bars.
+16/04/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 2.12 UK100.cash (Price: 8248.8, SL: 8221.42097864398, TP: 8320.48)
+16/04/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 2.12 UK100.cash (Price: 8248.8, SL: 8221.42097864398, TP: 8320.48) SUCCEEDED, PendingOrder OID328
+16/04/2025 15:00:00.000 | Info | Combo: bartime=2025-04-16 14:00, executed=2025-04-16 15:00:00, pending Buy placed at 8248.8; SL=8221.420978643979, TP=8320.47827791006; valid for the next 3 chart bar(s).
+16/04/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 1.71 UK100.cash (Price: 8195.4, SL: 8228.95245893428, TP: 8107.56)
+16/04/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 1.71 UK100.cash (Price: 8195.4, SL: 8228.95245893428, TP: 8107.56) SUCCEEDED, PendingOrder OID331
+16/04/2025 18:00:00.000 | Info | Combo: bartime=2025-04-16 17:00, executed=2025-04-16 18:00:00, pending Sell placed at 8195.4; SL=8228.952458934282, TP=8107.559662510049; valid for the next 3 chart bar(s).
+17/04/2025 01:00:00.000 | Info | Combo: bartime=2025-04-17 00:00, reversal - closing existing Sell position 87 before opening opposite direction.
+17/04/2025 01:00:00.000 | Trade | Closing position PID87 (Volume: 1.71)
+17/04/2025 01:00:00.000 | Trade |  Closing position PID87 (Volume: 1.71) SUCCEEDED
+17/04/2025 01:00:00.000 | Trade | Placing Stop Order to Buy 2.42 UK100.cash (Price: 8214.4, SL: 8190.7593832041, TP: 8276.29)
+17/04/2025 01:00:00.000 | Trade |  Placing Stop Order to Buy 2.42 UK100.cash (Price: 8214.4, SL: 8190.7593832041, TP: 8276.29) SUCCEEDED, PendingOrder OID335
+17/04/2025 01:00:00.000 | Info | Combo: bartime=2025-04-17 00:00, executed=2025-04-17 01:00:00, pending Buy placed at 8214.4; SL=8190.759383204105, TP=8276.291134771653; valid for the next 3 chart bar(s).
+17/04/2025 09:00:00.000 | Info | Combo: bartime=2025-04-17 08:00, reversal - closing existing Buy position 88 before opening opposite direction.
+17/04/2025 09:00:00.000 | Trade | Closing position PID88 (Volume: 2.42)
+17/04/2025 09:00:00.000 | Trade |  Closing position PID88 (Volume: 2.42) SUCCEEDED
+17/04/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 2.22 UK100.cash (Price: 8204.3, SL: 8230.05301366358, TP: 8136.88)
+17/04/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 2.22 UK100.cash (Price: 8204.3, SL: 8230.05301366358, TP: 8136.88) SUCCEEDED, PendingOrder OID339
+17/04/2025 09:00:00.000 | Info | Combo: bartime=2025-04-17 08:00, executed=2025-04-17 09:00:00, pending Sell placed at 8204.3; SL=8230.053013663579, TP=8136.878610228748; valid for the next 3 chart bar(s).
+17/04/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 1.6 UK100.cash (Price: 8276.4, SL: 8241.38349248272, TP: 8368.07)
+17/04/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 1.6 UK100.cash (Price: 8276.4, SL: 8241.38349248272, TP: 8368.07) SUCCEEDED, PendingOrder OID342
+17/04/2025 14:00:00.000 | Info | Combo: bartime=2025-04-17 13:00, executed=2025-04-17 14:00:00, pending Buy placed at 8276.4; SL=8241.383492482719, TP=8368.073216680243; valid for the next 3 chart bar(s).
+22/04/2025 00:00:00.000 | Info | Combo: bartime=2025-04-20 22:00, reversal - closing existing Buy position 90 before opening opposite direction.
+22/04/2025 00:00:00.000 | Trade | Closing position PID90 (Volume: 1.6)
+22/04/2025 00:00:00.000 | Trade |  Closing position PID90 (Volume: 1.6) SUCCEEDED
+22/04/2025 00:00:00.000 | Trade | Placing Stop Order to Sell 1.91 UK100.cash (Price: 8239, SL: 8267.80353384786, TP: 8163.59)
+22/04/2025 00:00:00.000 | Trade |  Placing Stop Order to Sell 1.91 UK100.cash (Price: 8239, SL: 8267.80353384786, TP: 8163.59) SUCCEEDED, PendingOrder OID346
+22/04/2025 00:00:00.000 | Info | Combo: bartime=2025-04-20 22:00, executed=2025-04-22 00:00:00, pending Sell placed at 8239; SL=8267.803533847864, TP=8163.592348386291; valid for the next 3 chart bar(s).
+22/04/2025 00:00:00.000 | Info | Combo: bartime=2025-04-21 01:00, Sell signal skipped: already have same-direction exposure open.
+22/04/2025 01:00:00.000 | Info | Combo: bartime=2025-04-22 00:00, reversal - closing existing Sell position 91 before opening opposite direction.
+22/04/2025 01:00:00.000 | Trade | Closing position PID91 (Volume: 1.91)
+22/04/2025 01:00:00.000 | Trade |  Closing position PID91 (Volume: 1.91) SUCCEEDED
+22/04/2025 01:00:00.000 | Trade | Placing Stop Order to Buy 2.31 UK100.cash (Price: 8232.7, SL: 8209.00390937285, TP: 8294.74)
+22/04/2025 01:00:00.000 | Trade |  Placing Stop Order to Buy 2.31 UK100.cash (Price: 8232.7, SL: 8209.00390937285, TP: 8294.74) SUCCEEDED, PendingOrder OID350
+22/04/2025 01:00:00.000 | Info | Combo: bartime=2025-04-22 00:00, executed=2025-04-22 01:00:00, pending Buy placed at 8232.7; SL=8209.003909372854, TP=8294.736365261871; valid for the next 3 chart bar(s).
+23/04/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 1.48 UK100.cash (Price: 8380.2, SL: 8418.25178964715, TP: 8280.58)
+23/04/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 1.48 UK100.cash (Price: 8380.2, SL: 8418.25178964715, TP: 8280.58) SUCCEEDED, PendingOrder OID353
+23/04/2025 16:00:00.000 | Info | Combo: bartime=2025-04-23 15:00, executed=2025-04-23 16:00:00, pending Sell placed at 8380.2; SL=8418.251789647147, TP=8280.58041470377; valid for the next 3 chart bar(s).
+24/04/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 2.93 UK100.cash (Price: 8413.6, SL: 8394.64075266349, TP: 8463.24)
+24/04/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 2.93 UK100.cash (Price: 8413.6, SL: 8394.64075266349, TP: 8463.24) SUCCEEDED, PendingOrder OID356
+24/04/2025 11:00:00.000 | Info | Combo: bartime=2025-04-24 10:00, executed=2025-04-24 11:00:00, pending Buy placed at 8413.6; SL=8394.640752663488, TP=8463.235309526986; valid for the next 3 chart bar(s).
+24/04/2025 14:00:00.000 | Trade | Cancelling pending order OID356
+24/04/2025 14:00:00.000 | Trade |  Cancelling pending order OID356 SUCCEEDED
+24/04/2025 14:00:00.000 | Info | Combo: pending order 356 cancelled after 3 chart bars.
+24/04/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 2.28 UK100.cash (Price: 8410.7, SL: 8386.36677229097, TP: 8474.4)
+24/04/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 2.28 UK100.cash (Price: 8410.7, SL: 8386.36677229097, TP: 8474.4) SUCCEEDED, PendingOrder OID357
+24/04/2025 15:00:00.000 | Info | Combo: bartime=2025-04-24 14:00, executed=2025-04-24 15:00:00, pending Buy placed at 8410.7; SL=8386.366772290967, TP=8474.404390142254; valid for the next 3 chart bar(s).
+25/04/2025 08:00:00.000 | Info | Combo: bartime=2025-04-25 07:00, reversal - closing existing Buy position 94 before opening opposite direction.
+25/04/2025 08:00:00.000 | Trade | Closing position PID94 (Volume: 2.28)
+25/04/2025 08:00:00.000 | Trade |  Closing position PID94 (Volume: 2.28) SUCCEEDED
+25/04/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 3.14 UK100.cash (Price: 8390, SL: 8407.72875407431, TP: 8343.59)
+25/04/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 3.14 UK100.cash (Price: 8390, SL: 8407.72875407431, TP: 8343.59) SUCCEEDED, PendingOrder OID361
+25/04/2025 08:00:00.000 | Info | Combo: bartime=2025-04-25 07:00, executed=2025-04-25 08:00:00, pending Sell placed at 8390; SL=8407.728754074313, TP=8343.586121833448; valid for the next 3 chart bar(s).
+25/04/2025 11:00:00.000 | Trade | Cancelling pending order OID361
+25/04/2025 11:00:00.000 | Trade |  Cancelling pending order OID361 SUCCEEDED
+25/04/2025 11:00:00.000 | Info | Combo: pending order 361 cancelled after 3 chart bars.
+25/04/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 2.21 UK100.cash (Price: 8443.5, SL: 8418.29569298684, TP: 8509.48)
+25/04/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 2.21 UK100.cash (Price: 8443.5, SL: 8418.29569298684, TP: 8509.48) SUCCEEDED, PendingOrder OID362
+25/04/2025 16:00:00.000 | Info | Combo: bartime=2025-04-25 15:00, executed=2025-04-25 16:00:00, pending Buy placed at 8443.5; SL=8418.295692986843, TP=8509.484875760443; valid for the next 3 chart bar(s).
+25/04/2025 19:00:00.000 | Trade | Placing Stop Order to Buy 2.06 UK100.cash (Price: 8452.8, SL: 8426.09939480926, TP: 8522.7)
+25/04/2025 19:00:00.000 | Trade |  Placing Stop Order to Buy 2.06 UK100.cash (Price: 8452.8, SL: 8426.09939480926, TP: 8522.7) SUCCEEDED, PendingOrder OID365
+25/04/2025 19:00:00.000 | Info | Combo: bartime=2025-04-25 18:00, executed=2025-04-25 19:00:00, pending Buy placed at 8452.8; SL=8426.099394809264, TP=8522.702184389345; valid for the next 3 chart bar(s).
+28/04/2025 00:00:00.000 | Trade | Cancelling pending order OID365
+28/04/2025 00:00:00.000 | Trade |  Cancelling pending order OID365 SUCCEEDED
+28/04/2025 00:00:00.000 | Info | Combo: pending order 365 cancelled after 3 chart bars.
+28/04/2025 03:00:00.000 | Trade | Placing Stop Order to Sell 3.59 UK100.cash (Price: 8414.8, SL: 8430.1393115577, TP: 8374.64)
+28/04/2025 03:00:00.000 | Trade |  Placing Stop Order to Sell 3.59 UK100.cash (Price: 8414.8, SL: 8430.1393115577, TP: 8374.64) SUCCEEDED, PendingOrder OID366
+28/04/2025 03:00:00.000 | Info | Combo: bartime=2025-04-28 02:00, executed=2025-04-28 03:00:00, pending Sell placed at 8414.8; SL=8430.139311557696, TP=8374.641682341951; valid for the next 3 chart bar(s).
+28/04/2025 13:00:00.000 | Trade | Placing Stop Order to Buy 2.99 UK100.cash (Price: 8450.6, SL: 8432.38470243779, TP: 8498.29)
+28/04/2025 13:00:00.000 | Trade |  Placing Stop Order to Buy 2.99 UK100.cash (Price: 8450.6, SL: 8432.38470243779, TP: 8498.29) SUCCEEDED, PendingOrder OID369
+28/04/2025 13:00:00.000 | Info | Combo: bartime=2025-04-28 12:00, executed=2025-04-28 13:00:00, pending Buy placed at 8450.6; SL=8432.384702437794, TP=8498.287649017857; valid for the next 3 chart bar(s).
+28/04/2025 16:00:00.000 | Trade | Cancelling pending order OID369
+28/04/2025 16:00:00.000 | Trade |  Cancelling pending order OID369 SUCCEEDED
+28/04/2025 16:00:00.000 | Info | Combo: pending order 369 cancelled after 3 chart bars.
+28/04/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 2.54 UK100.cash (Price: 8403.4, SL: 8424.82783235185, TP: 8347.3)
+28/04/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 2.54 UK100.cash (Price: 8403.4, SL: 8424.82783235185, TP: 8347.3) SUCCEEDED, PendingOrder OID370
+28/04/2025 16:00:00.000 | Info | Combo: bartime=2025-04-28 15:00, executed=2025-04-28 16:00:00, pending Sell placed at 8403.4; SL=8424.82783235185, TP=8347.301934902856; valid for the next 3 chart bar(s).
+29/04/2025 00:00:00.000 | Trade | Placing Stop Order to Buy 3.79 UK100.cash (Price: 8436.1, SL: 8421.88413305276, TP: 8473.32)
+29/04/2025 00:00:00.000 | Trade |  Placing Stop Order to Buy 3.79 UK100.cash (Price: 8436.1, SL: 8421.88413305276, TP: 8473.32) SUCCEEDED, PendingOrder OID373
+29/04/2025 00:00:00.000 | Info | Combo: bartime=2025-04-28 23:00, executed=2025-04-29 00:00:00, pending Buy placed at 8436.1; SL=8421.884133052765, TP=8473.317139667863; valid for the next 3 chart bar(s).
+29/04/2025 07:00:00.000 | Info | Combo: bartime=2025-04-29 06:00, reversal - closing existing Buy position 98 before opening opposite direction.
+29/04/2025 07:00:00.000 | Trade | Closing position PID98 (Volume: 3.79)
+29/04/2025 07:00:00.000 | Trade |  Closing position PID98 (Volume: 3.79) SUCCEEDED
+29/04/2025 07:00:00.000 | Trade | Placing Stop Order to Sell 4.4 UK100.cash (Price: 8418.5, SL: 8430.63845842001, TP: 8386.72)
+29/04/2025 07:00:00.000 | Trade |  Placing Stop Order to Sell 4.4 UK100.cash (Price: 8418.5, SL: 8430.63845842001, TP: 8386.72) SUCCEEDED, PendingOrder OID377
+29/04/2025 07:00:00.000 | Info | Combo: bartime=2025-04-29 06:00, executed=2025-04-29 07:00:00, pending Sell placed at 8418.5; SL=8430.638458420013, TP=8386.721515856405; valid for the next 3 chart bar(s).
+30/04/2025 06:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.50 units, which needs about $4429.11 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3633.88 budget, free margin was $7267.76). Size was cut from 5.50 to 4.42 units. Real risk on this trade is now about $58.35 (0.80% of balance) instead of the requested 1.00%.
+30/04/2025 06:00:00.000 | Trade | Placing Stop Order to Sell 4.42 UK100.cash (Price: 8456.9, SL: 8466.50395525046, TP: 8431.76)
+30/04/2025 06:00:00.000 | Trade |  Placing Stop Order to Sell 4.42 UK100.cash (Price: 8456.9, SL: 8466.50395525046, TP: 8431.76) SUCCEEDED, PendingOrder OID380
+30/04/2025 06:00:00.000 | Info | Combo: bartime=2025-04-30 05:00, executed=2025-04-30 06:00:00, pending Sell placed at 8456.9; SL=8466.503955250466, TP=8431.75684515428; valid for the next 3 chart bar(s).
+30/04/2025 08:00:00.000 | Info | Combo: bartime=2025-04-30 07:00, Sell signal skipped: already have same-direction exposure open.
+30/04/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 2.33 UK100.cash (Price: 8430.7, SL: 8453.10139395614, TP: 8372.05)
+30/04/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 2.33 UK100.cash (Price: 8430.7, SL: 8453.10139395614, TP: 8372.05) SUCCEEDED, PendingOrder OID383
+30/04/2025 13:00:00.000 | Info | Combo: bartime=2025-04-30 12:00, executed=2025-04-30 13:00:00, pending Sell placed at 8430.7; SL=8453.101393956144, TP=8372.05315062282; valid for the next 3 chart bar(s).
+30/04/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 1.83 UK100.cash (Price: 8487.1, SL: 8458.91285522845, TP: 8560.89)
+30/04/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 1.83 UK100.cash (Price: 8487.1, SL: 8458.91285522845, TP: 8560.89) SUCCEEDED, PendingOrder OID386
+30/04/2025 18:00:00.000 | Info | Combo: bartime=2025-04-30 17:00, executed=2025-04-30 18:00:00, pending Buy placed at 8487.1; SL=8458.912855228451, TP=8560.893945011916; valid for the next 3 chart bar(s).
+01/05/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 2.16 UK100.cash (Price: 8455, SL: 8478.58699176732, TP: 8393.25)
+01/05/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 2.16 UK100.cash (Price: 8455, SL: 8478.58699176732, TP: 8393.25) SUCCEEDED, PendingOrder OID389
+01/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-01 07:00, executed=2025-05-01 08:00:00, pending Sell placed at 8455; SL=8478.586991767324, TP=8393.249255553144; valid for the next 3 chart bar(s).
+01/05/2025 11:00:00.000 | Trade | Cancelling pending order OID389
+01/05/2025 11:00:00.000 | Trade |  Cancelling pending order OID389 SUCCEEDED
+01/05/2025 11:00:00.000 | Info | Combo: pending order 389 cancelled after 3 chart bars.
+02/05/2025 01:00:00.000 | Trade | Placing Stop Order to Buy 1.83 UK100.cash (Price: 8530.2, SL: 8502.38308818335, TP: 8603.02)
+02/05/2025 01:00:00.000 | Trade |  Placing Stop Order to Buy 1.83 UK100.cash (Price: 8530.2, SL: 8502.38308818335, TP: 8603.02) SUCCEEDED, PendingOrder OID390
+02/05/2025 01:00:00.000 | Info | Combo: bartime=2025-05-02 00:00, executed=2025-05-02 01:00:00, pending Buy placed at 8530.2; SL=8502.383088183353, TP=8603.024675135983; valid for the next 3 chart bar(s).
+06/05/2025 00:00:00.000 | Trade | Placing Stop Order to Sell 3.79 UK100.cash (Price: 8594.9, SL: 8608.70127318372, TP: 8558.77)
+06/05/2025 00:00:00.000 | Trade |  Placing Stop Order to Sell 3.79 UK100.cash (Price: 8594.9, SL: 8608.70127318372, TP: 8558.77) SUCCEEDED, PendingOrder OID393
+06/05/2025 00:00:00.000 | Info | Combo: bartime=2025-05-05 08:00, executed=2025-05-06 00:00:00, pending Sell placed at 8594.9; SL=8608.70127318372, TP=8558.768266805018; valid for the next 3 chart bar(s).
+06/05/2025 03:00:00.000 | Trade | Cancelling pending order OID393
+06/05/2025 03:00:00.000 | Trade |  Cancelling pending order OID393 SUCCEEDED
+06/05/2025 03:00:00.000 | Info | Combo: pending order 393 cancelled after 3 chart bars.
+06/05/2025 06:00:00.000 | Trade | Placing Stop Order to Sell 3.43 UK100.cash (Price: 8601, SL: 8616.234538581, TP: 8561.12)
+06/05/2025 06:00:00.000 | Trade |  Placing Stop Order to Sell 3.43 UK100.cash (Price: 8601, SL: 8616.234538581, TP: 8561.12) SUCCEEDED, PendingOrder OID394
+06/05/2025 06:00:00.000 | Info | Combo: bartime=2025-05-06 05:00, executed=2025-05-06 06:00:00, pending Sell placed at 8601; SL=8616.234538580995, TP=8561.115977994954; valid for the next 3 chart bar(s).
+06/05/2025 07:00:00.000 | Info | Combo: bartime=2025-05-06 06:00, reversal - cancelling existing Sell pending order 394 before opening opposite direction.
+06/05/2025 07:00:00.000 | Trade | Cancelling pending order OID394
+06/05/2025 07:00:00.000 | Trade |  Cancelling pending order OID394 SUCCEEDED
+06/05/2025 07:00:00.000 | Trade | Placing Stop Order to Buy 2.59 UK100.cash (Price: 8653.2, SL: 8633.0123691352, TP: 8706.05)
+06/05/2025 07:00:00.000 | Trade |  Placing Stop Order to Buy 2.59 UK100.cash (Price: 8653.2, SL: 8633.0123691352, TP: 8706.05) SUCCEEDED, PendingOrder OID395
+06/05/2025 07:00:00.000 | Info | Combo: bartime=2025-05-06 06:00, executed=2025-05-06 07:00:00, pending Buy placed at 8653.2; SL=8633.012369135204, TP=8706.051217604037; valid for the next 3 chart bar(s).
+06/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-06 07:00, reversal - cancelling existing Buy pending order 395 before opening opposite direction.
+06/05/2025 08:00:00.000 | Trade | Cancelling pending order OID395
+06/05/2025 08:00:00.000 | Trade |  Cancelling pending order OID395 SUCCEEDED
+06/05/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 2.32 UK100.cash (Price: 8604.8, SL: 8627.33010469184, TP: 8545.82)
+06/05/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 2.32 UK100.cash (Price: 8604.8, SL: 8627.33010469184, TP: 8545.82) SUCCEEDED, PendingOrder OID396
+06/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-06 07:00, executed=2025-05-06 08:00:00, pending Sell placed at 8604.8; SL=8627.330104691837, TP=8545.816185916769; valid for the next 3 chart bar(s).
+06/05/2025 23:00:00.000 | Trade | Placing Stop Order to Buy 1.66 UK100.cash (Price: 8629.1, SL: 8596.83389529976, TP: 8713.57)
+06/05/2025 23:00:00.000 | Trade |  Placing Stop Order to Buy 1.66 UK100.cash (Price: 8629.1, SL: 8596.83389529976, TP: 8713.57) SUCCEEDED, PendingOrder OID399
+06/05/2025 23:00:00.000 | Info | Combo: bartime=2025-05-06 22:00, executed=2025-05-06 23:00:00, pending Buy placed at 8629.1; SL=8596.833895299764, TP=8713.57266210522; valid for the next 3 chart bar(s).
+07/05/2025 02:00:00.000 | Trade | Cancelling pending order OID399
+07/05/2025 02:00:00.000 | Trade |  Cancelling pending order OID399 SUCCEEDED
+07/05/2025 02:00:00.000 | Info | Combo: pending order 399 cancelled after 3 chart bars.
+07/05/2025 06:00:00.000 | Trade | Placing Stop Order to Sell 3.43 UK100.cash (Price: 8578.3, SL: 8593.93790796043, TP: 8537.36)
+07/05/2025 06:00:00.000 | Trade |  Placing Stop Order to Sell 3.43 UK100.cash (Price: 8578.3, SL: 8593.93790796043, TP: 8537.36) SUCCEEDED, PendingOrder OID400
+07/05/2025 06:00:00.000 | Info | Combo: bartime=2025-05-07 05:00, executed=2025-05-07 06:00:00, pending Sell placed at 8578.3; SL=8593.93790796043, TP=8537.35995695959; valid for the next 3 chart bar(s).
+07/05/2025 19:00:00.000 | Trade | Placing Stop Order to Buy 2.21 UK100.cash (Price: 8588.9, SL: 8563.99734970773, TP: 8654.1)
+07/05/2025 19:00:00.000 | Trade |  Placing Stop Order to Buy 2.21 UK100.cash (Price: 8588.9, SL: 8563.99734970773, TP: 8654.1) SUCCEEDED, PendingOrder OID403
+07/05/2025 19:00:00.000 | Info | Combo: bartime=2025-05-07 18:00, executed=2025-05-07 19:00:00, pending Buy placed at 8588.9; SL=8563.997349707726, TP=8654.095138465173; valid for the next 3 chart bar(s).
+08/05/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 2.62 UK100.cash (Price: 8547.8, SL: 8568.61280031965, TP: 8493.31)
+08/05/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 2.62 UK100.cash (Price: 8547.8, SL: 8568.61280031965, TP: 8493.31) SUCCEEDED, PendingOrder OID406
+08/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-08 07:00, executed=2025-05-08 08:00:00, pending Sell placed at 8547.8; SL=8568.612800319654, TP=8493.312088763141; valid for the next 3 chart bar(s).
+08/05/2025 11:00:00.000 | Trade | Cancelling pending order OID406
+08/05/2025 11:00:00.000 | Trade |  Cancelling pending order OID406 SUCCEEDED
+08/05/2025 11:00:00.000 | Info | Combo: pending order 406 cancelled after 3 chart bars.
+08/05/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 2.21 UK100.cash (Price: 8568.7, SL: 8593.31948301093, TP: 8504.25)
+08/05/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 2.21 UK100.cash (Price: 8568.7, SL: 8593.31948301093, TP: 8504.25) SUCCEEDED, PendingOrder OID407
+08/05/2025 12:00:00.000 | Info | Combo: bartime=2025-05-08 11:00, executed=2025-05-08 12:00:00, pending Sell placed at 8568.7; SL=8593.319483010931, TP=8504.246193477384; valid for the next 3 chart bar(s).
+09/05/2025 05:00:00.000 | Info | Combo: bartime=2025-05-09 04:00, reversal - closing existing Sell position 107 before opening opposite direction.
+09/05/2025 05:00:00.000 | Trade | Closing position PID107 (Volume: 2.21)
+09/05/2025 05:00:00.000 | Trade |  Closing position PID107 (Volume: 2.21) SUCCEEDED
+09/05/2025 05:00:00.000 | Trade | Placing Stop Order to Buy 3.72 UK100.cash (Price: 8573.4, SL: 8558.73471861357, TP: 8611.79)
+09/05/2025 05:00:00.000 | Trade |  Placing Stop Order to Buy 3.72 UK100.cash (Price: 8573.4, SL: 8558.73471861357, TP: 8611.79) SUCCEEDED, PendingOrder OID411
+09/05/2025 05:00:00.000 | Info | Combo: bartime=2025-05-09 04:00, executed=2025-05-09 05:00:00, pending Buy placed at 8573.4; SL=8558.734718613574, TP=8611.793706669663; valid for the next 3 chart bar(s).
+09/05/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 3.34 UK100.cash (Price: 8545.9, SL: 8562.05341332721, TP: 8503.61)
+09/05/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 3.34 UK100.cash (Price: 8545.9, SL: 8562.05341332721, TP: 8503.61) SUCCEEDED, PendingOrder OID414
+09/05/2025 13:00:00.000 | Info | Combo: bartime=2025-05-09 12:00, executed=2025-05-09 13:00:00, pending Sell placed at 8545.9; SL=8562.053413327209, TP=8503.610363909367; valid for the next 3 chart bar(s).
+09/05/2025 15:00:00.000 | Info | Combo: bartime=2025-05-09 14:00, Sell signal skipped: already have same-direction exposure open.
+12/05/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 1.57 UK100.cash (Price: 8602.9, SL: 8569.12433180518, TP: 8691.32)
+12/05/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 1.57 UK100.cash (Price: 8602.9, SL: 8569.12433180518, TP: 8691.32) SUCCEEDED, PendingOrder OID417
+12/05/2025 09:00:00.000 | Info | Combo: bartime=2025-05-12 08:00, executed=2025-05-12 09:00:00, pending Buy placed at 8602.9; SL=8569.124331805175, TP=8691.32469933405; valid for the next 3 chart bar(s).
+12/05/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 1.91 UK100.cash (Price: 8564.6, SL: 8592.09205895408, TP: 8492.63)
+12/05/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 1.91 UK100.cash (Price: 8564.6, SL: 8592.09205895408, TP: 8492.63) SUCCEEDED, PendingOrder OID420
+12/05/2025 14:00:00.000 | Info | Combo: bartime=2025-05-12 13:00, executed=2025-05-12 14:00:00, pending Sell placed at 8564.6; SL=8592.09205895408, TP=8492.62578965822; valid for the next 3 chart bar(s).
+12/05/2025 17:00:00.000 | Trade | Placing Stop Order to Buy 1.61 UK100.cash (Price: 8618.7, SL: 8586.31526581551, TP: 8703.48)
+12/05/2025 17:00:00.000 | Trade |  Placing Stop Order to Buy 1.61 UK100.cash (Price: 8618.7, SL: 8586.31526581551, TP: 8703.48) SUCCEEDED, PendingOrder OID423
+12/05/2025 17:00:00.000 | Info | Combo: bartime=2025-05-12 16:00, executed=2025-05-12 17:00:00, pending Buy placed at 8618.7; SL=8586.315265815512, TP=8703.483234094992; valid for the next 3 chart bar(s).
+13/05/2025 02:00:00.000 | Info | Combo: bartime=2025-05-13 01:00, reversal - closing existing Buy position 112 before opening opposite direction.
+13/05/2025 02:00:00.000 | Trade | Closing position PID112 (Volume: 1.61)
+13/05/2025 02:00:00.000 | Trade |  Closing position PID112 (Volume: 1.61) SUCCEEDED
+13/05/2025 02:00:00.000 | Trade | Placing Stop Order to Sell 3.09 UK100.cash (Price: 8590.7, SL: 8607.43081584516, TP: 8546.9)
+13/05/2025 02:00:00.000 | Trade |  Placing Stop Order to Sell 3.09 UK100.cash (Price: 8590.7, SL: 8607.43081584516, TP: 8546.9) SUCCEEDED, PendingOrder OID427
+13/05/2025 02:00:00.000 | Info | Combo: bartime=2025-05-13 01:00, executed=2025-05-13 02:00:00, pending Sell placed at 8590.7; SL=8607.430815845159, TP=8546.898724117378; valid for the next 3 chart bar(s).
+13/05/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 2.26 UK100.cash (Price: 8623, SL: 8600.41579381109, TP: 8682.13)
+13/05/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 2.26 UK100.cash (Price: 8623, SL: 8600.41579381109, TP: 8682.13) SUCCEEDED, PendingOrder OID430
+13/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-13 07:00, executed=2025-05-13 08:00:00, pending Buy placed at 8623; SL=8600.415793811087, TP=8682.125451802573; valid for the next 3 chart bar(s).
+13/05/2025 11:00:00.000 | Trade | Cancelling pending order OID430
+13/05/2025 11:00:00.000 | Trade |  Cancelling pending order OID430 SUCCEEDED
+13/05/2025 11:00:00.000 | Info | Combo: pending order 430 cancelled after 3 chart bars.
+13/05/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 2.61 UK100.cash (Price: 8586.2, SL: 8605.77833899775, TP: 8534.94)
+13/05/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 2.61 UK100.cash (Price: 8586.2, SL: 8605.77833899775, TP: 8534.94) SUCCEEDED, PendingOrder OID431
+13/05/2025 15:00:00.000 | Info | Combo: bartime=2025-05-13 14:00, executed=2025-05-13 15:00:00, pending Sell placed at 8586.2; SL=8605.77833899775, TP=8534.943908503894; valid for the next 3 chart bar(s).
+13/05/2025 20:00:00.000 | Info | Combo: bartime=2025-05-13 19:00, Sell signal skipped: already have same-direction exposure open.
+14/05/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 3.66 UK100.cash (Price: 8616.4, SL: 8602.58352279016, TP: 8652.57)
+14/05/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 3.66 UK100.cash (Price: 8616.4, SL: 8602.58352279016, TP: 8652.57) SUCCEEDED, PendingOrder OID434
+14/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-14 07:00, executed=2025-05-14 08:00:00, pending Buy placed at 8616.4; SL=8602.583522790166, TP=8652.571537335343; valid for the next 3 chart bar(s).
+14/05/2025 11:00:00.000 | Trade | Cancelling pending order OID434
+14/05/2025 11:00:00.000 | Trade |  Cancelling pending order OID434 SUCCEEDED
+14/05/2025 11:00:00.000 | Info | Combo: pending order 434 cancelled after 3 chart bars.
+14/05/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 2.3 UK100.cash (Price: 8563.4, SL: 8585.3323002017, TP: 8505.98)
+14/05/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 2.3 UK100.cash (Price: 8563.4, SL: 8585.3323002017, TP: 8505.98) SUCCEEDED, PendingOrder OID435
+14/05/2025 14:00:00.000 | Info | Combo: bartime=2025-05-14 13:00, executed=2025-05-14 14:00:00, pending Sell placed at 8563.4; SL=8585.332300201695, TP=8505.981238071961; valid for the next 3 chart bar(s).
+15/05/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 3.39 UK100.cash (Price: 8576.1, SL: 8561.34600748518, TP: 8614.73)
+15/05/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 3.39 UK100.cash (Price: 8576.1, SL: 8561.34600748518, TP: 8614.73) SUCCEEDED, PendingOrder OID438
+15/05/2025 09:00:00.000 | Info | Combo: bartime=2025-05-15 08:00, executed=2025-05-15 09:00:00, pending Buy placed at 8576.1; SL=8561.346007485181, TP=8614.7259524038; valid for the next 3 chart bar(s).
+19/05/2025 03:00:00.000 | Trade | Placing Stop Order to Sell 3.49 UK100.cash (Price: 8669, SL: 8683.71564487363, TP: 8630.47)
+19/05/2025 03:00:00.000 | Trade |  Placing Stop Order to Sell 3.49 UK100.cash (Price: 8669, SL: 8683.71564487363, TP: 8630.47) SUCCEEDED, PendingOrder OID441
+19/05/2025 03:00:00.000 | Info | Combo: bartime=2025-05-19 02:00, executed=2025-05-19 03:00:00, pending Sell placed at 8669; SL=8683.715644873631, TP=8630.474441720831; valid for the next 3 chart bar(s).
+19/05/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 2.09 UK100.cash (Price: 8669, SL: 8643.88190794842, TP: 8734.76)
+19/05/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 2.09 UK100.cash (Price: 8669, SL: 8643.88190794842, TP: 8734.76) SUCCEEDED, PendingOrder OID444
+19/05/2025 14:00:00.000 | Info | Combo: bartime=2025-05-19 13:00, executed=2025-05-19 14:00:00, pending Buy placed at 8669; SL=8643.88190794842, TP=8734.759164991036; valid for the next 3 chart bar(s).
+21/05/2025 07:00:00.000 | Trade | Placing Stop Order to Sell 3.76 UK100.cash (Price: 8744.6, SL: 8758.94461630414, TP: 8707.05)
+21/05/2025 07:00:00.000 | Trade |  Placing Stop Order to Sell 3.76 UK100.cash (Price: 8744.6, SL: 8758.94461630414, TP: 8707.05) SUCCEEDED, PendingOrder OID447
+21/05/2025 07:00:00.000 | Info | Combo: bartime=2025-05-21 06:00, executed=2025-05-21 07:00:00, pending Sell placed at 8744.6; SL=8758.944616304143, TP=8707.045794515758; valid for the next 3 chart bar(s).
+21/05/2025 09:00:00.000 | Info | Combo: bartime=2025-05-21 08:00, Sell signal skipped: already have same-direction exposure open.
+21/05/2025 10:00:00.000 | Trade | Cancelling pending order OID447
+21/05/2025 10:00:00.000 | Trade |  Cancelling pending order OID447 SUCCEEDED
+21/05/2025 10:00:00.000 | Info | Combo: pending order 447 cancelled after 3 chart bars.
+21/05/2025 13:00:00.000 | Trade | Placing Stop Order to Buy 3.22 UK100.cash (Price: 8797.2, SL: 8780.46532810357, TP: 8841.01)
+21/05/2025 13:00:00.000 | Trade |  Placing Stop Order to Buy 3.22 UK100.cash (Price: 8797.2, SL: 8780.46532810357, TP: 8841.01) SUCCEEDED, PendingOrder OID448
+21/05/2025 13:00:00.000 | Info | Combo: bartime=2025-05-21 12:00, executed=2025-05-21 13:00:00, pending Buy placed at 8797.2; SL=8780.465328103568, TP=8841.011371024862; valid for the next 3 chart bar(s).
+21/05/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 2.88 UK100.cash (Price: 8767.8, SL: 8786.31855201097, TP: 8719.32)
+21/05/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 2.88 UK100.cash (Price: 8767.8, SL: 8786.31855201097, TP: 8719.32) SUCCEEDED, PendingOrder OID451
+21/05/2025 16:00:00.000 | Info | Combo: bartime=2025-05-21 15:00, executed=2025-05-21 16:00:00, pending Sell placed at 8767.8; SL=8786.318552010973, TP=8719.318430835268; valid for the next 3 chart bar(s).
+22/05/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 2.09 UK100.cash (Price: 8753.4, SL: 8727.26873963187, TP: 8821.81)
+22/05/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 2.09 UK100.cash (Price: 8753.4, SL: 8727.26873963187, TP: 8821.81) SUCCEEDED, PendingOrder OID454
+22/05/2025 16:00:00.000 | Info | Combo: bartime=2025-05-22 15:00, executed=2025-05-22 16:00:00, pending Buy placed at 8753.4; SL=8727.268739631872, TP=8821.811639643756; valid for the next 3 chart bar(s).
+23/05/2025 11:00:00.000 | Info | Combo: bartime=2025-05-23 10:00, reversal - closing existing Buy position 121 before opening opposite direction.
+23/05/2025 11:00:00.000 | Trade | Closing position PID121 (Volume: 2.09)
+23/05/2025 11:00:00.000 | Trade |  Closing position PID121 (Volume: 2.09) SUCCEEDED
+23/05/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 3.08 UK100.cash (Price: 8732.7, SL: 8750.33830973934, TP: 8686.52)
+23/05/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 3.08 UK100.cash (Price: 8732.7, SL: 8750.33830973934, TP: 8686.52) SUCCEEDED, PendingOrder OID458
+23/05/2025 11:00:00.000 | Info | Combo: bartime=2025-05-23 10:00, executed=2025-05-23 11:00:00, pending Sell placed at 8732.7; SL=8750.33830973934, TP=8686.52290510241; valid for the next 3 chart bar(s).
+23/05/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 1.7 UK100.cash (Price: 8746.9, SL: 8713.85033770535, TP: 8833.42)
+23/05/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 1.7 UK100.cash (Price: 8746.9, SL: 8713.85033770535, TP: 8833.42) SUCCEEDED, PendingOrder OID461
+23/05/2025 18:00:00.000 | Info | Combo: bartime=2025-05-23 17:00, executed=2025-05-23 18:00:00, pending Buy placed at 8746.9; SL=8713.850337705351, TP=8833.424015887387; valid for the next 3 chart bar(s).
+27/05/2025 00:00:00.000 | Info | Combo: bartime=2025-05-23 19:00, Buy signal skipped: already have same-direction exposure open.
+27/05/2025 00:00:00.000 | Info | Combo: bartime=2025-05-25 22:00, Buy signal skipped: already have same-direction exposure open.
+27/05/2025 00:00:00.000 | Info | Combo: bartime=2025-05-26 22:00, reversal - closing existing Buy position 123 before opening opposite direction.
+27/05/2025 00:00:00.000 | Trade | Closing position PID123 (Volume: 1.7)
+27/05/2025 00:00:00.000 | Trade |  Closing position PID123 (Volume: 1.7) SUCCEEDED
+27/05/2025 00:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.52 units, which needs about $7666.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3862.15 budget, free margin was $7724.29). Size was cut from 9.52 to 4.70 units. Real risk on this trade is now about $38.13 (0.49% of balance) instead of the requested 1.00%.
+27/05/2025 00:00:00.000 | Trade | Placing Stop Order to Sell 4.7 UK100.cash (Price: 8763.8, SL: 8769.70219771091, TP: 8748.35)
+27/05/2025 00:00:00.000 | Trade |  Placing Stop Order to Sell 4.7 UK100.cash (Price: 8763.8, SL: 8769.70219771091, TP: 8748.35) SUCCEEDED, PendingOrder OID465
+27/05/2025 00:00:00.000 | Info | Combo: bartime=2025-05-26 22:00, executed=2025-05-27 00:00:00, pending Sell placed at 8763.8; SL=8769.70219771091, TP=8748.348046392834; valid for the next 3 chart bar(s).
+27/05/2025 01:00:00.000 | Info | Combo: bartime=2025-05-27 00:00, reversal - cancelling existing Sell pending order 465 before opening opposite direction.
+27/05/2025 01:00:00.000 | Trade | Cancelling pending order OID465
+27/05/2025 01:00:00.000 | Trade |  Cancelling pending order OID465 SUCCEEDED
+27/05/2025 01:00:00.000 | Trade | Placing Stop Order to Buy 3.65 UK100.cash (Price: 8821.4, SL: 8806.01059346502, TP: 8861.69)
+27/05/2025 01:00:00.000 | Trade |  Placing Stop Order to Buy 3.65 UK100.cash (Price: 8821.4, SL: 8806.01059346502, TP: 8861.69) SUCCEEDED, PendingOrder OID466
+27/05/2025 01:00:00.000 | Info | Combo: bartime=2025-05-27 00:00, executed=2025-05-27 01:00:00, pending Buy placed at 8821.4; SL=8806.010593465016, TP=8861.689466308586; valid for the next 3 chart bar(s).
+27/05/2025 04:00:00.000 | Trade | Cancelling pending order OID466
+27/05/2025 04:00:00.000 | Trade |  Cancelling pending order OID466 SUCCEEDED
+27/05/2025 04:00:00.000 | Info | Combo: pending order 466 cancelled after 3 chart bars.
+27/05/2025 05:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.39 units, which needs about $4340.53 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3862.15 budget, free margin was $7724.29). Size was cut from 5.39 to 4.70 units. Real risk on this trade is now about $67.28 (0.87% of balance) instead of the requested 1.00%.
+27/05/2025 05:00:00.000 | Trade | Placing Stop Order to Sell 4.7 UK100.cash (Price: 8772.7, SL: 8783.11470091673, TP: 8745.43)
+27/05/2025 05:00:00.000 | Trade |  Placing Stop Order to Sell 4.7 UK100.cash (Price: 8772.7, SL: 8783.11470091673, TP: 8745.43) SUCCEEDED, PendingOrder OID467
+27/05/2025 05:00:00.000 | Info | Combo: bartime=2025-05-27 04:00, executed=2025-05-27 05:00:00, pending Sell placed at 8772.7; SL=8783.11470091673, TP=8745.434313000003; valid for the next 3 chart bar(s).
+27/05/2025 07:00:00.000 | Info | Combo: bartime=2025-05-27 06:00, Sell signal skipped: already have same-direction exposure open.
+27/05/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 3.21 UK100.cash (Price: 8812.4, SL: 8795.16927313064, TP: 8857.51)
+27/05/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 3.21 UK100.cash (Price: 8812.4, SL: 8795.16927313064, TP: 8857.51) SUCCEEDED, PendingOrder OID470
+27/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-27 07:00, executed=2025-05-27 08:00:00, pending Buy placed at 8812.4; SL=8795.169273130634, TP=8857.510042943997; valid for the next 3 chart bar(s).
+27/05/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 3.22 UK100.cash (Price: 8774.6, SL: 8791.59914572569, TP: 8730.1)
+27/05/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 3.22 UK100.cash (Price: 8774.6, SL: 8791.59914572569, TP: 8730.1) SUCCEEDED, PendingOrder OID473
+27/05/2025 12:00:00.000 | Info | Combo: bartime=2025-05-27 11:00, executed=2025-05-27 12:00:00, pending Sell placed at 8774.6; SL=8791.599145725693, TP=8730.096236490139; valid for the next 3 chart bar(s).
+27/05/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 2.84 UK100.cash (Price: 8767.1, SL: 8786.16797008924, TP: 8717.18)
+27/05/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 2.84 UK100.cash (Price: 8767.1, SL: 8786.16797008924, TP: 8717.18) SUCCEEDED, PendingOrder OID476
+27/05/2025 16:00:00.000 | Info | Combo: bartime=2025-05-27 15:00, executed=2025-05-27 16:00:00, pending Sell placed at 8767.1; SL=8786.167970089244, TP=8717.180054306362; valid for the next 3 chart bar(s).
+27/05/2025 17:00:00.000 | Info | Combo: bartime=2025-05-27 16:00, reversal - cancelling existing Sell pending order 476 before opening opposite direction.
+27/05/2025 17:00:00.000 | Trade | Cancelling pending order OID476
+27/05/2025 17:00:00.000 | Trade |  Cancelling pending order OID476 SUCCEEDED
+27/05/2025 17:00:00.000 | Trade | Placing Stop Order to Buy 2.86 UK100.cash (Price: 8806.6, SL: 8787.68562392861, TP: 8856.12)
+27/05/2025 17:00:00.000 | Trade |  Placing Stop Order to Buy 2.86 UK100.cash (Price: 8806.6, SL: 8787.68562392861, TP: 8856.12) SUCCEEDED, PendingOrder OID477
+27/05/2025 17:00:00.000 | Info | Combo: bartime=2025-05-27 16:00, executed=2025-05-27 17:00:00, pending Buy placed at 8806.6; SL=8787.685623928606, TP=8856.117836554913; valid for the next 3 chart bar(s).
+27/05/2025 20:00:00.000 | Trade | Cancelling pending order OID477
+27/05/2025 20:00:00.000 | Trade |  Cancelling pending order OID477 SUCCEEDED
+27/05/2025 20:00:00.000 | Info | Combo: pending order 477 cancelled after 3 chart bars.
+28/05/2025 03:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.22 units, which needs about $5008.92 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3724.51 budget, free margin was $7449.02). Size was cut from 6.22 to 4.53 units. Real risk on this trade is now about $54.16 (0.73% of balance) instead of the requested 1.00%.
+28/05/2025 03:00:00.000 | Trade | Placing Stop Order to Sell 4.53 UK100.cash (Price: 8785.7, SL: 8794.39913304099, TP: 8762.93)
+28/05/2025 03:00:00.000 | Trade |  Placing Stop Order to Sell 4.53 UK100.cash (Price: 8785.7, SL: 8794.39913304099, TP: 8762.93) SUCCEEDED, PendingOrder OID478
+28/05/2025 03:00:00.000 | Info | Combo: bartime=2025-05-28 02:00, executed=2025-05-28 03:00:00, pending Sell placed at 8785.7; SL=8794.399133040992, TP=8762.925669698683; valid for the next 3 chart bar(s).
+28/05/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 3.67 UK100.cash (Price: 8776.8, SL: 8791.4258015319, TP: 8738.51)
+28/05/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 3.67 UK100.cash (Price: 8776.8, SL: 8791.4258015319, TP: 8738.51) SUCCEEDED, PendingOrder OID481
+28/05/2025 09:00:00.000 | Info | Combo: bartime=2025-05-28 08:00, executed=2025-05-28 09:00:00, pending Sell placed at 8776.8; SL=8791.425801531897, TP=8738.509651589491; valid for the next 3 chart bar(s).
+29/05/2025 00:00:00.000 | Trade | Placing Stop Order to Buy 2.45 UK100.cash (Price: 8801, SL: 8778.44870904808, TP: 8860.04)
+29/05/2025 00:00:00.000 | Trade |  Placing Stop Order to Buy 2.45 UK100.cash (Price: 8801, SL: 8778.44870904808, TP: 8860.04) SUCCEEDED, PendingOrder OID484
+29/05/2025 00:00:00.000 | Info | Combo: bartime=2025-05-28 23:00, executed=2025-05-29 00:00:00, pending Buy placed at 8801; SL=8778.448709048078, TP=8860.039279712133; valid for the next 3 chart bar(s).
+29/05/2025 07:00:00.000 | Trade | Placing Stop Order to Sell 3.04 UK100.cash (Price: 8758.4, SL: 8776.30924225224, TP: 8711.51)
+29/05/2025 07:00:00.000 | Trade |  Placing Stop Order to Sell 3.04 UK100.cash (Price: 8758.4, SL: 8776.30924225224, TP: 8711.51) SUCCEEDED, PendingOrder OID487
+29/05/2025 07:00:00.000 | Info | Combo: bartime=2025-05-29 06:00, executed=2025-05-29 07:00:00, pending Sell placed at 8758.4; SL=8776.30924225224, TP=8711.513603783633; valid for the next 3 chart bar(s).
+29/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-29 07:00, Sell signal skipped: already have same-direction exposure open.
+30/05/2025 01:00:00.000 | Trade | Placing Stop Order to Buy 3.25 UK100.cash (Price: 8747.2, SL: 8729.98441458396, TP: 8792.27)
+30/05/2025 01:00:00.000 | Trade |  Placing Stop Order to Buy 3.25 UK100.cash (Price: 8747.2, SL: 8729.98441458396, TP: 8792.27) SUCCEEDED, PendingOrder OID490
+30/05/2025 01:00:00.000 | Info | Combo: bartime=2025-05-30 00:00, executed=2025-05-30 01:00:00, pending Buy placed at 8747.2; SL=8729.984414583962, TP=8792.270402619191; valid for the next 3 chart bar(s).
+30/05/2025 04:00:00.000 | Trade | Cancelling pending order OID490
+30/05/2025 04:00:00.000 | Trade |  Cancelling pending order OID490 SUCCEEDED
+30/05/2025 04:00:00.000 | Info | Combo: pending order 490 cancelled after 3 chart bars.
+02/06/2025 03:00:00.000 | Trade | Placing Stop Order to Sell 3.51 UK100.cash (Price: 8766.4, SL: 8782.30928016866, TP: 8724.75)
+02/06/2025 03:00:00.000 | Trade |  Placing Stop Order to Sell 3.51 UK100.cash (Price: 8766.4, SL: 8782.30928016866, TP: 8724.75) SUCCEEDED, PendingOrder OID491
+02/06/2025 03:00:00.000 | Info | Combo: bartime=2025-06-02 02:00, executed=2025-06-02 03:00:00, pending Sell placed at 8766.4; SL=8782.309280168663, TP=8724.749504518435; valid for the next 3 chart bar(s).
+02/06/2025 06:00:00.000 | Trade | Cancelling pending order OID491
+02/06/2025 06:00:00.000 | Trade |  Cancelling pending order OID491 SUCCEEDED
+02/06/2025 06:00:00.000 | Info | Combo: pending order 491 cancelled after 3 chart bars.
+02/06/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 2.56 UK100.cash (Price: 8754.9, SL: 8776.71046587243, TP: 8697.8)
+02/06/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 2.56 UK100.cash (Price: 8754.9, SL: 8776.71046587243, TP: 8697.8) SUCCEEDED, PendingOrder OID492
+02/06/2025 10:00:00.000 | Info | Combo: bartime=2025-06-02 09:00, executed=2025-06-02 10:00:00, pending Sell placed at 8754.9; SL=8776.710465872427, TP=8697.800200345984; valid for the next 3 chart bar(s).
+02/06/2025 11:00:00.000 | Info | Combo: bartime=2025-06-02 10:00, reversal - cancelling existing Sell pending order 492 before opening opposite direction.
+02/06/2025 11:00:00.000 | Trade | Cancelling pending order OID492
+02/06/2025 11:00:00.000 | Trade |  Cancelling pending order OID492 SUCCEEDED
+02/06/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 2.62 UK100.cash (Price: 8782.2, SL: 8760.87162730206, TP: 8838.04)
+02/06/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 2.62 UK100.cash (Price: 8782.2, SL: 8760.87162730206, TP: 8838.04) SUCCEEDED, PendingOrder OID493
+02/06/2025 11:00:00.000 | Info | Combo: bartime=2025-06-02 10:00, executed=2025-06-02 11:00:00, pending Buy placed at 8782.2; SL=8760.871627302058, TP=8838.037679723213; valid for the next 3 chart bar(s).
+02/06/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 2.17 UK100.cash (Price: 8733.8, SL: 8759.23772682134, TP: 8667.2)
+02/06/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 2.17 UK100.cash (Price: 8733.8, SL: 8759.23772682134, TP: 8667.2) SUCCEEDED, PendingOrder OID496
+02/06/2025 14:00:00.000 | Info | Combo: bartime=2025-06-02 13:00, executed=2025-06-02 14:00:00, pending Sell placed at 8733.8; SL=8759.237726821346, TP=8667.204031181715; valid for the next 3 chart bar(s).
+03/06/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 2.99 UK100.cash (Price: 8747.5, SL: 8765.73585212577, TP: 8699.76)
+03/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 2.99 UK100.cash (Price: 8747.5, SL: 8765.73585212577, TP: 8699.76) SUCCEEDED, PendingOrder OID499
+03/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-03 07:00, executed=2025-06-03 08:00:00, pending Sell placed at 8747.5; SL=8765.735852125768, TP=8699.758539134737; valid for the next 3 chart bar(s).
+03/06/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 3.55 UK100.cash (Price: 8799.4, SL: 8784.19240457435, TP: 8839.21)
+03/06/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 3.55 UK100.cash (Price: 8799.4, SL: 8784.19240457435, TP: 8839.21) SUCCEEDED, PendingOrder OID502
+03/06/2025 18:00:00.000 | Info | Combo: bartime=2025-06-03 17:00, executed=2025-06-03 18:00:00, pending Buy placed at 8799.4; SL=8784.192404574347, TP=8839.213484824357; valid for the next 3 chart bar(s).
+03/06/2025 22:05:00.000 | Trade | Cancelling pending order OID502
+03/06/2025 22:05:00.000 | Trade |  Cancelling pending order OID502 SUCCEEDED
+03/06/2025 22:05:00.000 | Info | Combo: pending order 502 cancelled after 3 chart bars.
+04/06/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 3.61 UK100.cash (Price: 8773.5, SL: 8788.43163516694, TP: 8734.41)
+04/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 3.61 UK100.cash (Price: 8773.5, SL: 8788.43163516694, TP: 8734.41) SUCCEEDED, PendingOrder OID503
+04/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-04 07:00, executed=2025-06-04 08:00:00, pending Sell placed at 8773.5; SL=8788.431635166946, TP=8734.408979132937; valid for the next 3 chart bar(s).
+04/06/2025 11:00:00.000 | Trade | Cancelling pending order OID503
+04/06/2025 11:00:00.000 | Trade |  Cancelling pending order OID503 SUCCEEDED
+04/06/2025 11:00:00.000 | Info | Combo: pending order 503 cancelled after 3 chart bars.
+04/06/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 2.48 UK100.cash (Price: 8780.8, SL: 8802.52207550029, TP: 8723.93)
+04/06/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 2.48 UK100.cash (Price: 8780.8, SL: 8802.52207550029, TP: 8723.93) SUCCEEDED, PendingOrder OID504
+04/06/2025 16:00:00.000 | Info | Combo: bartime=2025-06-04 15:00, executed=2025-06-04 16:00:00, pending Sell placed at 8780.8; SL=8802.52207550029, TP=8723.931606340238; valid for the next 3 chart bar(s).
+04/06/2025 19:00:00.000 | Trade | Cancelling pending order OID504
+04/06/2025 19:00:00.000 | Trade |  Cancelling pending order OID504 SUCCEEDED
+04/06/2025 19:00:00.000 | Info | Combo: pending order 504 cancelled after 3 chart bars.
+04/06/2025 20:00:00.000 | Trade | Placing Stop Order to Sell 3.59 UK100.cash (Price: 8791.5, SL: 8806.52040212492, TP: 8752.18)
+04/06/2025 20:00:00.000 | Trade |  Placing Stop Order to Sell 3.59 UK100.cash (Price: 8791.5, SL: 8806.52040212492, TP: 8752.18) SUCCEEDED, PendingOrder OID505
+04/06/2025 20:00:00.000 | Info | Combo: bartime=2025-06-04 19:00, executed=2025-06-04 20:00:00, pending Sell placed at 8791.5; SL=8806.52040212492, TP=8752.176587236961; valid for the next 3 chart bar(s).
+05/06/2025 00:00:00.000 | Trade | Cancelling pending order OID505
+05/06/2025 00:00:00.000 | Trade |  Cancelling pending order OID505 SUCCEEDED
+05/06/2025 00:00:00.000 | Info | Combo: pending order 505 cancelled after 3 chart bars.
+05/06/2025 00:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.65 units, which needs about $4549.90 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3710.52 budget, free margin was $7421.04). Size was cut from 5.65 to 4.51 units. Real risk on this trade is now about $59.17 (0.80% of balance) instead of the requested 1.00%.
+05/06/2025 00:00:00.000 | Trade | Placing Stop Order to Sell 4.51 UK100.cash (Price: 8793.5, SL: 8803.04515671037, TP: 8768.51)
+05/06/2025 00:00:00.000 | Trade |  Placing Stop Order to Sell 4.51 UK100.cash (Price: 8793.5, SL: 8803.04515671037, TP: 8768.51) SUCCEEDED, PendingOrder OID506
+05/06/2025 00:00:00.000 | Info | Combo: bartime=2025-06-04 23:00, executed=2025-06-05 00:00:00, pending Sell placed at 8793.5; SL=8803.045156710366, TP=8768.51077973226; valid for the next 3 chart bar(s).
+05/06/2025 03:00:00.000 | Info | Combo: bartime=2025-06-05 02:00, Sell signal skipped: already have same-direction exposure open.
+05/06/2025 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.72 units, which needs about $4606.27 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3665.89 budget, free margin was $7331.78). Size was cut from 5.72 to 4.46 units. Real risk on this trade is now about $57.13 (0.78% of balance) instead of the requested 1.00%.
+05/06/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 4.46 UK100.cash (Price: 8815.4, SL: 8806.07993423316, TP: 8839.8)
+05/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 4.46 UK100.cash (Price: 8815.4, SL: 8806.07993423316, TP: 8839.8) SUCCEEDED, PendingOrder OID509
+05/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-05 07:00, executed=2025-06-05 08:00:00, pending Buy placed at 8815.4; SL=8806.079934233163, TP=8839.799932177579; valid for the next 3 chart bar(s).
+05/06/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 2.52 UK100.cash (Price: 8778.1, SL: 8799.00979772038, TP: 8723.36)
+05/06/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 2.52 UK100.cash (Price: 8778.1, SL: 8799.00979772038, TP: 8723.36) SUCCEEDED, PendingOrder OID512
+05/06/2025 14:00:00.000 | Info | Combo: bartime=2025-06-05 13:00, executed=2025-06-05 14:00:00, pending Sell placed at 8778.1; SL=8799.009797720382, TP=8723.358149568041; valid for the next 3 chart bar(s).
+05/06/2025 16:00:00.000 | Info | Combo: bartime=2025-06-05 15:00, Sell signal skipped: already have same-direction exposure open.
+05/06/2025 17:00:00.000 | Trade | Cancelling pending order OID512
+05/06/2025 17:00:00.000 | Trade |  Cancelling pending order OID512 SUCCEEDED
+05/06/2025 17:00:00.000 | Info | Combo: pending order 512 cancelled after 3 chart bars.
+06/06/2025 05:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.42 units, which needs about $4364.69 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3633.71 budget, free margin was $7267.41). Size was cut from 5.42 to 4.42 units. Real risk on this trade is now about $59.24 (0.82% of balance) instead of the requested 1.00%.
+06/06/2025 05:00:00.000 | Trade | Placing Stop Order to Buy 4.42 UK100.cash (Price: 8805.3, SL: 8795.54922628454, TP: 8830.83)
+06/06/2025 05:00:00.000 | Trade |  Placing Stop Order to Buy 4.42 UK100.cash (Price: 8805.3, SL: 8795.54922628454, TP: 8830.83) SUCCEEDED, PendingOrder OID513
+06/06/2025 05:00:00.000 | Info | Combo: bartime=2025-06-06 04:00, executed=2025-06-06 05:00:00, pending Buy placed at 8805.3; SL=8795.54922628454, TP=8830.827525587074; valid for the next 3 chart bar(s).
+06/06/2025 07:00:00.000 | Info | Combo: bartime=2025-06-06 06:00, Buy signal skipped: already have same-direction exposure open.
+09/06/2025 04:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.11 units, which needs about $4920.34 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3709.34 budget, free margin was $7418.68). Size was cut from 6.11 to 4.51 units. Real risk on this trade is now about $54.73 (0.74% of balance) instead of the requested 1.00%.
+09/06/2025 04:00:00.000 | Trade | Placing Stop Order to Sell 4.51 UK100.cash (Price: 8824, SL: 8832.82827574204, TP: 8800.89)
+09/06/2025 04:00:00.000 | Trade |  Placing Stop Order to Sell 4.51 UK100.cash (Price: 8824, SL: 8832.82827574204, TP: 8800.89) SUCCEEDED, PendingOrder OID516
+09/06/2025 04:00:00.000 | Info | Combo: bartime=2025-06-09 03:00, executed=2025-06-09 04:00:00, pending Sell placed at 8824; SL=8832.82827574204, TP=8800.88757410734; valid for the next 3 chart bar(s).
+09/06/2025 07:00:00.000 | Trade | Cancelling pending order OID516
+09/06/2025 07:00:00.000 | Trade |  Cancelling pending order OID516 SUCCEEDED
+09/06/2025 07:00:00.000 | Info | Combo: pending order 516 cancelled after 3 chart bars.
+09/06/2025 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.70 units, which needs about $3784.88 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3709.34 budget, free margin was $7418.68). Size was cut from 4.70 to 4.51 units. Real risk on this trade is now about $71.16 (0.96% of balance) instead of the requested 1.00%.
+09/06/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 4.51 UK100.cash (Price: 8825.7, SL: 8837.17905739515, TP: 8795.65)
+09/06/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 4.51 UK100.cash (Price: 8825.7, SL: 8837.17905739515, TP: 8795.65) SUCCEEDED, PendingOrder OID517
+09/06/2025 09:00:00.000 | Info | Combo: bartime=2025-06-09 08:00, executed=2025-06-09 09:00:00, pending Sell placed at 8825.7; SL=8837.179057395153, TP=8795.647827739494; valid for the next 3 chart bar(s).
+09/06/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 3.88 UK100.cash (Price: 8844.2, SL: 8830.44053662256, TP: 8880.22)
+09/06/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 3.88 UK100.cash (Price: 8844.2, SL: 8830.44053662256, TP: 8880.22) SUCCEEDED, PendingOrder OID520
+09/06/2025 16:00:00.000 | Info | Combo: bartime=2025-06-09 15:00, executed=2025-06-09 16:00:00, pending Buy placed at 8844.2; SL=8830.440536622566, TP=8880.222275122127; valid for the next 3 chart bar(s).
+09/06/2025 20:00:00.000 | Trade | Placing Stop Order to Sell 3.47 UK100.cash (Price: 8812.2, SL: 8827.4022761994, TP: 8772.4)
+09/06/2025 20:00:00.000 | Trade |  Placing Stop Order to Sell 3.47 UK100.cash (Price: 8812.2, SL: 8827.4022761994, TP: 8772.4) SUCCEEDED, PendingOrder OID523
+09/06/2025 20:00:00.000 | Info | Combo: bartime=2025-06-09 19:00, executed=2025-06-09 20:00:00, pending Sell placed at 8812.2; SL=8827.402276199398, TP=8772.400440909978; valid for the next 3 chart bar(s).
+10/06/2025 00:00:00.000 | Trade | Cancelling pending order OID523
+10/06/2025 00:00:00.000 | Trade |  Cancelling pending order OID523 SUCCEEDED
+10/06/2025 00:00:00.000 | Info | Combo: pending order 523 cancelled after 3 chart bars.
+10/06/2025 01:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.65 units, which needs about $4549.90 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3631.80 budget, free margin was $7263.59). Size was cut from 5.65 to 4.41 units. Real risk on this trade is now about $56.66 (0.78% of balance) instead of the requested 1.00%.
+10/06/2025 01:00:00.000 | Trade | Placing Stop Order to Sell 4.41 UK100.cash (Price: 8812, SL: 8821.34749786502, TP: 8787.53)
+10/06/2025 01:00:00.000 | Trade |  Placing Stop Order to Sell 4.41 UK100.cash (Price: 8812, SL: 8821.34749786502, TP: 8787.53) SUCCEEDED, PendingOrder OID524
+10/06/2025 01:00:00.000 | Info | Combo: bartime=2025-06-10 00:00, executed=2025-06-10 01:00:00, pending Sell placed at 8812; SL=8821.347497865017, TP=8787.528250589383; valid for the next 3 chart bar(s).
+10/06/2025 02:00:00.000 | Info | Combo: bartime=2025-06-10 01:00, reversal - cancelling existing Sell pending order 524 before opening opposite direction.
+10/06/2025 02:00:00.000 | Trade | Cancelling pending order OID524
+10/06/2025 02:00:00.000 | Trade |  Cancelling pending order OID524 SUCCEEDED
+10/06/2025 02:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.04 units, which needs about $4058.67 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3631.80 budget, free margin was $7263.59). Size was cut from 5.04 to 4.41 units. Real risk on this trade is now about $63.51 (0.87% of balance) instead of the requested 1.00%.
+10/06/2025 02:00:00.000 | Trade | Placing Stop Order to Buy 4.41 UK100.cash (Price: 8844, SL: 8833.52200170798, TP: 8871.43)
+10/06/2025 02:00:00.000 | Trade |  Placing Stop Order to Buy 4.41 UK100.cash (Price: 8844, SL: 8833.52200170798, TP: 8871.43) SUCCEEDED, PendingOrder OID525
+10/06/2025 02:00:00.000 | Info | Combo: bartime=2025-06-10 01:00, executed=2025-06-10 02:00:00, pending Buy placed at 8844; SL=8833.522001707985, TP=8871.431399528494; valid for the next 3 chart bar(s).
+10/06/2025 05:00:00.000 | Trade | Cancelling pending order OID525
+10/06/2025 05:00:00.000 | Trade |  Cancelling pending order OID525 SUCCEEDED
+10/06/2025 05:00:00.000 | Info | Combo: pending order 525 cancelled after 3 chart bars.
+10/06/2025 07:00:00.000 | Trade | Placing Stop Order to Buy 3.54 UK100.cash (Price: 8860.5, SL: 8845.58992951967, TP: 8899.53)
+10/06/2025 07:00:00.000 | Trade |  Placing Stop Order to Buy 3.54 UK100.cash (Price: 8860.5, SL: 8845.58992951967, TP: 8899.53) SUCCEEDED, PendingOrder OID526
+10/06/2025 07:00:00.000 | Info | Combo: bartime=2025-06-10 06:00, executed=2025-06-10 07:00:00, pending Buy placed at 8860.5; SL=8845.589929519672, TP=8899.534564517497; valid for the next 3 chart bar(s).
+10/06/2025 22:05:00.000 | Trade | Placing Stop Order to Sell 4.12 UK100.cash (Price: 8848.4, SL: 8861.09270694926, TP: 8815.17)
+10/06/2025 22:05:00.000 | Trade |  Placing Stop Order to Sell 4.12 UK100.cash (Price: 8848.4, SL: 8861.09270694926, TP: 8815.17) SUCCEEDED, PendingOrder OID529
+10/06/2025 22:05:00.000 | Info | Combo: bartime=2025-06-10 20:00, executed=2025-06-10 22:05:00, pending Sell placed at 8848.4; SL=8861.092706949263, TP=8815.170493206826; valid for the next 3 chart bar(s).
+11/06/2025 00:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.55 units, which needs about $3664.08 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3548.15 budget, free margin was $7096.29). Size was cut from 4.55 to 4.31 units. Real risk on this trade is now about $67.10 (0.95% of balance) instead of the requested 1.00%.
+11/06/2025 00:00:00.000 | Trade | Placing Stop Order to Sell 4.31 UK100.cash (Price: 8847, SL: 8858.32666595802, TP: 8817.35)
+11/06/2025 00:00:00.000 | Trade |  Placing Stop Order to Sell 4.31 UK100.cash (Price: 8847, SL: 8858.32666595802, TP: 8817.35) SUCCEEDED, PendingOrder OID532
+11/06/2025 00:00:00.000 | Info | Combo: bartime=2025-06-10 23:00, executed=2025-06-11 00:00:00, pending Sell placed at 8847; SL=8858.326665958024, TP=8817.346788521896; valid for the next 3 chart bar(s).
+11/06/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 3.9 UK100.cash (Price: 8889.5, SL: 8876.40663915462, TP: 8923.78)
+11/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 UK100.cash (Price: 8889.5, SL: 8876.40663915462, TP: 8923.78) SUCCEEDED, PendingOrder OID535
+11/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-11 07:00, executed=2025-06-11 08:00:00, pending Buy placed at 8889.5; SL=8876.406639154624, TP=8923.778418693195; valid for the next 3 chart bar(s).
+11/06/2025 11:00:00.000 | Trade | Cancelling pending order OID535
+11/06/2025 11:00:00.000 | Trade |  Cancelling pending order OID535 SUCCEEDED
+11/06/2025 11:00:00.000 | Info | Combo: pending order 535 cancelled after 3 chart bars.
+11/06/2025 13:00:00.000 | Trade | Placing Stop Order to Buy 2.86 UK100.cash (Price: 8886.8, SL: 8868.93023951819, TP: 8933.58)
+11/06/2025 13:00:00.000 | Trade |  Placing Stop Order to Buy 2.86 UK100.cash (Price: 8886.8, SL: 8868.93023951819, TP: 8933.58) SUCCEEDED, PendingOrder OID536
+11/06/2025 13:00:00.000 | Info | Combo: bartime=2025-06-11 12:00, executed=2025-06-11 13:00:00, pending Buy placed at 8886.8; SL=8868.930239518188, TP=8933.583032941384; valid for the next 3 chart bar(s).
+11/06/2025 16:00:00.000 | Trade | Cancelling pending order OID536
+11/06/2025 16:00:00.000 | Trade |  Cancelling pending order OID536 SUCCEEDED
+11/06/2025 16:00:00.000 | Info | Combo: pending order 536 cancelled after 3 chart bars.
+11/06/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 2.63 UK100.cash (Price: 8847.9, SL: 8867.33331736669, TP: 8797.02)
+11/06/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 2.63 UK100.cash (Price: 8847.9, SL: 8867.33331736669, TP: 8797.02) SUCCEEDED, PendingOrder OID537
+11/06/2025 16:00:00.000 | Info | Combo: bartime=2025-06-11 15:00, executed=2025-06-11 16:00:00, pending Sell placed at 8847.9; SL=8867.333317366687, TP=8797.02357513401; valid for the next 3 chart bar(s).
+12/06/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 3.21 UK100.cash (Price: 8877.7, SL: 8861.96399048059, TP: 8918.9)
+12/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 3.21 UK100.cash (Price: 8877.7, SL: 8861.96399048059, TP: 8918.9) SUCCEEDED, PendingOrder OID540
+12/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-12 07:00, executed=2025-06-12 08:00:00, pending Buy placed at 8877.7; SL=8861.96399048059, TP=8918.896872921818; valid for the next 3 chart bar(s).
+12/06/2025 11:00:00.000 | Trade | Cancelling pending order OID540
+12/06/2025 11:00:00.000 | Trade |  Cancelling pending order OID540 SUCCEEDED
+12/06/2025 11:00:00.000 | Info | Combo: pending order 540 cancelled after 3 chart bars.
+12/06/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 2.98 UK100.cash (Price: 8859.7, SL: 8842.74956312606, TP: 8904.08)
+12/06/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 2.98 UK100.cash (Price: 8859.7, SL: 8842.74956312606, TP: 8904.08) SUCCEEDED, PendingOrder OID541
+12/06/2025 11:00:00.000 | Info | Combo: bartime=2025-06-12 10:00, executed=2025-06-12 11:00:00, pending Buy placed at 8859.7; SL=8842.749563126063, TP=8904.07624373597; valid for the next 3 chart bar(s).
+13/06/2025 00:00:00.000 | Info | Combo: bartime=2025-06-12 23:00, reversal - closing existing Buy position 143 before opening opposite direction.
+13/06/2025 00:00:00.000 | Trade | Closing position PID143 (Volume: 2.98)
+13/06/2025 00:00:00.000 | Trade |  Closing position PID143 (Volume: 2.98) SUCCEEDED
+13/06/2025 00:00:00.000 | Trade | Placing Stop Order to Sell 3.72 UK100.cash (Price: 8859.6, SL: 8873.24302945256, TP: 8823.88)
+13/06/2025 00:00:00.000 | Trade |  Placing Stop Order to Sell 3.72 UK100.cash (Price: 8859.6, SL: 8873.24302945256, TP: 8823.88) SUCCEEDED, PendingOrder OID545
+13/06/2025 00:00:00.000 | Info | Combo: bartime=2025-06-12 23:00, executed=2025-06-13 00:00:00, pending Sell placed at 8859.6; SL=8873.243029452566, TP=8823.882548893183; valid for the next 3 chart bar(s).
+13/06/2025 12:00:00.000 | Trade | Placing Stop Order to Buy 2.4 UK100.cash (Price: 8873, SL: 8851.34159649333, TP: 8929.7)
+13/06/2025 12:00:00.000 | Trade |  Placing Stop Order to Buy 2.4 UK100.cash (Price: 8873, SL: 8851.34159649333, TP: 8929.7) SUCCEEDED, PendingOrder OID548
+13/06/2025 12:00:00.000 | Info | Combo: bartime=2025-06-13 11:00, executed=2025-06-13 12:00:00, pending Buy placed at 8873; SL=8851.341596493332, TP=8929.701700380456; valid for the next 3 chart bar(s).
+13/06/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 2.15 UK100.cash (Price: 8869.5, SL: 8845.70647792367, TP: 8931.79)
+13/06/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 2.15 UK100.cash (Price: 8869.5, SL: 8845.70647792367, TP: 8931.79) SUCCEEDED, PendingOrder OID551
+13/06/2025 16:00:00.000 | Info | Combo: bartime=2025-06-13 15:00, executed=2025-06-13 16:00:00, pending Buy placed at 8869.5; SL=8845.706477923668, TP=8931.791440795834; valid for the next 3 chart bar(s).
+13/06/2025 18:00:00.000 | Info | Combo: bartime=2025-06-13 17:00, reversal - cancelling existing Buy pending order 551 before opening opposite direction.
+13/06/2025 18:00:00.000 | Trade | Cancelling pending order OID551
+13/06/2025 18:00:00.000 | Trade |  Cancelling pending order OID551 SUCCEEDED
+13/06/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 2.52 UK100.cash (Price: 8834, SL: 8854.38785412885, TP: 8780.62)
+13/06/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 2.52 UK100.cash (Price: 8834, SL: 8854.38785412885, TP: 8780.62) SUCCEEDED, PendingOrder OID552
+13/06/2025 18:00:00.000 | Info | Combo: bartime=2025-06-13 17:00, executed=2025-06-13 18:00:00, pending Sell placed at 8834; SL=8854.387854128852, TP=8780.624597890666; valid for the next 3 chart bar(s).
+16/06/2025 06:00:00.000 | Trade | Placing Stop Order to Buy 3.55 UK100.cash (Price: 8852.6, SL: 8838.34031795151, TP: 8889.93)
+16/06/2025 06:00:00.000 | Trade |  Placing Stop Order to Buy 3.55 UK100.cash (Price: 8852.6, SL: 8838.34031795151, TP: 8889.93) SUCCEEDED, PendingOrder OID555
+16/06/2025 06:00:00.000 | Info | Combo: bartime=2025-06-16 05:00, executed=2025-06-16 06:00:00, pending Buy placed at 8852.6; SL=8838.340317951508, TP=8889.931847602955; valid for the next 3 chart bar(s).
+16/06/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 3.1 UK100.cash (Price: 8844.1, SL: 8860.80968713183, TP: 8800.35)
+16/06/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 3.1 UK100.cash (Price: 8844.1, SL: 8860.80968713183, TP: 8800.35) SUCCEEDED, PendingOrder OID558
+16/06/2025 18:00:00.000 | Info | Combo: bartime=2025-06-16 17:00, executed=2025-06-16 18:00:00, pending Sell placed at 8844.1; SL=8860.809687131828, TP=8800.354039088876; valid for the next 3 chart bar(s).
+17/06/2025 12:00:00.000 | Info | Combo: bartime=2025-06-17 11:00, reversal - closing existing Sell position 148 before opening opposite direction.
+17/06/2025 12:00:00.000 | Trade | Closing position PID148 (Volume: 3.1)
+17/06/2025 12:00:00.000 | Trade |  Closing position PID148 (Volume: 3.1) SUCCEEDED
+17/06/2025 12:00:00.000 | Trade | Placing Stop Order to Buy 3.07 UK100.cash (Price: 8856.1, SL: 8839.26118060122, TP: 8900.18)
+17/06/2025 12:00:00.000 | Trade |  Placing Stop Order to Buy 3.07 UK100.cash (Price: 8856.1, SL: 8839.26118060122, TP: 8900.18) SUCCEEDED, PendingOrder OID562
+17/06/2025 12:00:00.000 | Info | Combo: bartime=2025-06-17 11:00, executed=2025-06-17 12:00:00, pending Buy placed at 8856.1; SL=8839.261180601216, TP=8900.184029186017; valid for the next 3 chart bar(s).
+17/06/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 2.68 UK100.cash (Price: 8846.5, SL: 8827.46332446782, TP: 8896.34)
+17/06/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 2.68 UK100.cash (Price: 8846.5, SL: 8827.46332446782, TP: 8896.34) SUCCEEDED, PendingOrder OID565
+17/06/2025 15:00:00.000 | Info | Combo: bartime=2025-06-17 14:00, executed=2025-06-17 15:00:00, pending Buy placed at 8846.5; SL=8827.463324467823, TP=8896.33801654324; valid for the next 3 chart bar(s).
+17/06/2025 23:00:00.000 | Trade | Placing Stop Order to Sell 3.41 UK100.cash (Price: 8822.7, SL: 8837.52321220525, TP: 8783.89)
+17/06/2025 23:00:00.000 | Trade |  Placing Stop Order to Sell 3.41 UK100.cash (Price: 8822.7, SL: 8837.52321220525, TP: 8783.89) SUCCEEDED, PendingOrder OID568
+17/06/2025 23:00:00.000 | Info | Combo: bartime=2025-06-17 22:00, executed=2025-06-17 23:00:00, pending Sell placed at 8822.7; SL=8837.523212205253, TP=8783.89283044665; valid for the next 3 chart bar(s).
+18/06/2025 04:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.68 units, which needs about $3768.77 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3437.78 budget, free margin was $6875.56). Size was cut from 4.68 to 4.18 units. Real risk on this trade is now about $61.41 (0.89% of balance) instead of the requested 1.00%.
+18/06/2025 04:00:00.000 | Trade | Placing Stop Order to Buy 4.18 UK100.cash (Price: 8846.7, SL: 8836.01216982458, TP: 8874.68)
+18/06/2025 04:00:00.000 | Trade |  Placing Stop Order to Buy 4.18 UK100.cash (Price: 8846.7, SL: 8836.01216982458, TP: 8874.68) SUCCEEDED, PendingOrder OID571
+18/06/2025 04:00:00.000 | Info | Combo: bartime=2025-06-18 03:00, executed=2025-06-18 04:00:00, pending Buy placed at 8846.7; SL=8836.012169824584, TP=8874.680739399242; valid for the next 3 chart bar(s).
+18/06/2025 07:00:00.000 | Info | Combo: bartime=2025-06-18 06:00, Buy signal skipped: already have same-direction exposure open.
+18/06/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 3.31 UK100.cash (Price: 8819.9, SL: 8834.8175041228, TP: 8780.85)
+18/06/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 3.31 UK100.cash (Price: 8819.9, SL: 8834.8175041228, TP: 8780.85) SUCCEEDED, PendingOrder OID574
+18/06/2025 11:00:00.000 | Info | Combo: bartime=2025-06-18 10:00, executed=2025-06-18 11:00:00, pending Sell placed at 8819.9; SL=8834.817504122804, TP=8780.845974206499; valid for the next 3 chart bar(s).
+18/06/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 3 UK100.cash (Price: 8828.3, SL: 8844.55997575096, TP: 8785.73)
+18/06/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 3 UK100.cash (Price: 8828.3, SL: 8844.55997575096, TP: 8785.73) SUCCEEDED, PendingOrder OID577
+18/06/2025 16:00:00.000 | Info | Combo: bartime=2025-06-18 15:00, executed=2025-06-18 16:00:00, pending Sell placed at 8828.3; SL=8844.559975750959, TP=8785.731383483984; valid for the next 3 chart bar(s).
+18/06/2025 18:00:00.000 | Info | Combo: bartime=2025-06-18 17:00, reversal - cancelling existing Sell pending order 577 before opening opposite direction.
+18/06/2025 18:00:00.000 | Trade | Cancelling pending order OID577
+18/06/2025 18:00:00.000 | Trade |  Cancelling pending order OID577 SUCCEEDED
+18/06/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 3.43 UK100.cash (Price: 8854.3, SL: 8840.08161551938, TP: 8891.52)
+18/06/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 3.43 UK100.cash (Price: 8854.3, SL: 8840.08161551938, TP: 8891.52) SUCCEEDED, PendingOrder OID578
+18/06/2025 18:00:00.000 | Info | Combo: bartime=2025-06-18 17:00, executed=2025-06-18 18:00:00, pending Buy placed at 8854.3; SL=8840.081615519384, TP=8891.523730570249; valid for the next 3 chart bar(s).
+18/06/2025 19:00:00.000 | Info | Combo: bartime=2025-06-18 18:00, reversal - closing existing Buy position 154 before opening opposite direction.
+18/06/2025 19:00:00.000 | Trade | Closing position PID154 (Volume: 3.43)
+18/06/2025 19:00:00.000 | Trade |  Closing position PID154 (Volume: 3.43) SUCCEEDED
+18/06/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 3.12 UK100.cash (Price: 8831.5, SL: 8847.03470758449, TP: 8790.83)
+18/06/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 3.12 UK100.cash (Price: 8831.5, SL: 8847.03470758449, TP: 8790.83) SUCCEEDED, PendingOrder OID582
+18/06/2025 19:00:00.000 | Info | Combo: bartime=2025-06-18 18:00, executed=2025-06-18 19:00:00, pending Sell placed at 8831.5; SL=8847.034707584491, TP=8790.830135543802; valid for the next 3 chart bar(s).
+18/06/2025 20:00:00.000 | Info | Combo: bartime=2025-06-18 19:00, reversal - cancelling existing Sell pending order 582 before opening opposite direction.
+18/06/2025 20:00:00.000 | Trade | Cancelling pending order OID582
+18/06/2025 20:00:00.000 | Trade |  Cancelling pending order OID582 SUCCEEDED
+18/06/2025 20:00:00.000 | Trade | Placing Stop Order to Buy 3.12 UK100.cash (Price: 8855.5, SL: 8839.97223393241, TP: 8896.15)
+18/06/2025 20:00:00.000 | Trade |  Placing Stop Order to Buy 3.12 UK100.cash (Price: 8855.5, SL: 8839.97223393241, TP: 8896.15) SUCCEEDED, PendingOrder OID583
+18/06/2025 20:00:00.000 | Info | Combo: bartime=2025-06-18 19:00, executed=2025-06-18 20:00:00, pending Buy placed at 8855.5; SL=8839.972233932407, TP=8896.151691564959; valid for the next 3 chart bar(s).
+18/06/2025 23:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.14 units, which needs about $3333.91 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3287.38 budget, free margin was $6574.76). Size was cut from 4.14 to 4.00 units. Real risk on this trade is now about $63.48 (0.97% of balance) instead of the requested 1.00%.
+18/06/2025 23:00:00.000 | Trade | Placing Stop Order to Sell 4 UK100.cash (Price: 8833.3, SL: 8844.84541622661, TP: 8803.07)
+18/06/2025 23:00:00.000 | Trade |  Placing Stop Order to Sell 4 UK100.cash (Price: 8833.3, SL: 8844.84541622661, TP: 8803.07) SUCCEEDED, PendingOrder OID586
+18/06/2025 23:00:00.000 | Info | Combo: bartime=2025-06-18 22:00, executed=2025-06-18 23:00:00, pending Sell placed at 8833.3; SL=8844.845416226608, TP=8803.07410031874; valid for the next 3 chart bar(s).
+19/06/2025 00:00:00.000 | Info | Combo: bartime=2025-06-18 23:00, reversal - cancelling existing Sell pending order 586 before opening opposite direction.
+19/06/2025 00:00:00.000 | Trade | Cancelling pending order OID586
+19/06/2025 00:00:00.000 | Trade |  Cancelling pending order OID586 SUCCEEDED
+19/06/2025 00:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.22 units, which needs about $3398.33 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3287.38 budget, free margin was $6574.76). Size was cut from 4.22 to 4.00 units. Real risk on this trade is now about $62.22 (0.95% of balance) instead of the requested 1.00%.
+19/06/2025 00:00:00.000 | Trade | Placing Stop Order to Buy 4 UK100.cash (Price: 8855.1, SL: 8843.78366701871, TP: 8884.73)
+19/06/2025 00:00:00.000 | Trade |  Placing Stop Order to Buy 4 UK100.cash (Price: 8855.1, SL: 8843.78366701871, TP: 8884.73) SUCCEEDED, PendingOrder OID587
+19/06/2025 00:00:00.000 | Info | Combo: bartime=2025-06-18 23:00, executed=2025-06-19 00:00:00, pending Buy placed at 8855.1; SL=8843.783667018713, TP=8884.726159745007; valid for the next 3 chart bar(s).
+19/06/2025 06:00:00.000 | Trade | Placing Stop Order to Sell 3.04 UK100.cash (Price: 8816.8, SL: 8832.31528959304, TP: 8776.18)
+19/06/2025 06:00:00.000 | Trade |  Placing Stop Order to Sell 3.04 UK100.cash (Price: 8816.8, SL: 8832.31528959304, TP: 8776.18) SUCCEEDED, PendingOrder OID590
+19/06/2025 06:00:00.000 | Info | Combo: bartime=2025-06-19 05:00, executed=2025-06-19 06:00:00, pending Sell placed at 8816.8; SL=8832.315289593045, TP=8776.180971845404; valid for the next 3 chart bar(s).
+20/06/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 2.19 UK100.cash (Price: 8789.2, SL: 8810.46519135671, TP: 8733.53)
+20/06/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 2.19 UK100.cash (Price: 8789.2, SL: 8810.46519135671, TP: 8733.53) SUCCEEDED, PendingOrder OID593
+20/06/2025 14:00:00.000 | Info | Combo: bartime=2025-06-20 13:00, executed=2025-06-20 14:00:00, pending Sell placed at 8789.2; SL=8810.465191356714, TP=8733.527729028125; valid for the next 3 chart bar(s).
+23/06/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 2.59 UK100.cash (Price: 8780.2, SL: 8761.61975380655, TP: 8828.84)
+23/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 2.59 UK100.cash (Price: 8780.2, SL: 8761.61975380655, TP: 8828.84) SUCCEEDED, PendingOrder OID596
+23/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-23 07:00, executed=2025-06-23 08:00:00, pending Buy placed at 8780.2; SL=8761.619753806552, TP=8828.84308453445; valid for the next 3 chart bar(s).
+23/06/2025 13:00:00.000 | Trade | Placing Stop Order to Buy 2.55 UK100.cash (Price: 8772.8, SL: 8754.13418492733, TP: 8821.67)
+23/06/2025 13:00:00.000 | Trade |  Placing Stop Order to Buy 2.55 UK100.cash (Price: 8772.8, SL: 8754.13418492733, TP: 8821.67) SUCCEEDED, PendingOrder OID599
+23/06/2025 13:00:00.000 | Info | Combo: bartime=2025-06-23 12:00, executed=2025-06-23 13:00:00, pending Buy placed at 8772.8; SL=8754.13418492733, TP=8821.667103860247; valid for the next 3 chart bar(s).
+23/06/2025 15:00:00.000 | Info | Combo: bartime=2025-06-23 14:00, reversal - cancelling existing Buy pending order 599 before opening opposite direction.
+23/06/2025 15:00:00.000 | Trade | Cancelling pending order OID599
+23/06/2025 15:00:00.000 | Trade |  Cancelling pending order OID599 SUCCEEDED
+23/06/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 2.4 UK100.cash (Price: 8741.3, SL: 8761.08612164651, TP: 8689.5)
+23/06/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 2.4 UK100.cash (Price: 8741.3, SL: 8761.08612164651, TP: 8689.5) SUCCEEDED, PendingOrder OID600
+23/06/2025 15:00:00.000 | Info | Combo: bartime=2025-06-23 14:00, executed=2025-06-23 15:00:00, pending Sell placed at 8741.3; SL=8761.086121646507, TP=8689.49993352944; valid for the next 3 chart bar(s).
+23/06/2025 17:00:00.000 | Info | Combo: bartime=2025-06-23 16:00, Sell signal skipped: already have same-direction exposure open.
+24/06/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 2.34 UK100.cash (Price: 8753.7, SL: 8773.84219182566, TP: 8700.97)
+24/06/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 2.34 UK100.cash (Price: 8753.7, SL: 8773.84219182566, TP: 8700.97) SUCCEEDED, PendingOrder OID603
+24/06/2025 14:00:00.000 | Info | Combo: bartime=2025-06-24 13:00, executed=2025-06-24 14:00:00, pending Sell placed at 8753.7; SL=8773.842191825655, TP=8700.967741800436; valid for the next 3 chart bar(s).
+25/06/2025 05:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.85 units, which needs about $4710.96 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3206.02 budget, free margin was $6412.03). Size was cut from 5.85 to 3.90 units. Real risk on this trade is now about $42.74 (0.67% of balance) instead of the requested 1.00%.
+25/06/2025 05:00:00.000 | Trade | Placing Stop Order to Buy 3.9 UK100.cash (Price: 8773.4, SL: 8765.4277380941, TP: 8794.27)
+25/06/2025 05:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 UK100.cash (Price: 8773.4, SL: 8765.4277380941, TP: 8794.27) SUCCEEDED, PendingOrder OID606
+25/06/2025 05:00:00.000 | Info | Combo: bartime=2025-06-25 04:00, executed=2025-06-25 05:00:00, pending Buy placed at 8773.4; SL=8765.427738094097, TP=8794.271381669652; valid for the next 3 chart bar(s).
+25/06/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 3.61 UK100.cash (Price: 8796.7, SL: 8783.94220190418, TP: 8830.1)
+25/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 3.61 UK100.cash (Price: 8796.7, SL: 8783.94220190418, TP: 8830.1) SUCCEEDED, PendingOrder OID609
+25/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-25 07:00, executed=2025-06-25 08:00:00, pending Buy placed at 8796.7; SL=8783.94220190418, TP=8830.099915414863; valid for the next 3 chart bar(s).
+25/06/2025 10:00:00.000 | Info | Combo: bartime=2025-06-25 09:00, reversal - cancelling existing Buy pending order 609 before opening opposite direction.
+25/06/2025 10:00:00.000 | Trade | Cancelling pending order OID609
+25/06/2025 10:00:00.000 | Trade |  Cancelling pending order OID609 SUCCEEDED
+25/06/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 3.16 UK100.cash (Price: 8752.1, SL: 8766.71299078133, TP: 8713.84)
+25/06/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 3.16 UK100.cash (Price: 8752.1, SL: 8766.71299078133, TP: 8713.84) SUCCEEDED, PendingOrder OID610
+25/06/2025 10:00:00.000 | Info | Combo: bartime=2025-06-25 09:00, executed=2025-06-25 10:00:00, pending Sell placed at 8752.1; SL=8766.712990781327, TP=8713.843190134488; valid for the next 3 chart bar(s).
+26/06/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 3.72 UK100.cash (Price: 8739, SL: 8726.29426510507, TP: 8772.26)
+26/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 3.72 UK100.cash (Price: 8739, SL: 8726.29426510507, TP: 8772.26) SUCCEEDED, PendingOrder OID613
+26/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-26 07:00, executed=2025-06-26 08:00:00, pending Buy placed at 8739; SL=8726.29426510507, TP=8772.263613954925; valid for the next 3 chart bar(s).
+27/06/2025 04:00:00.000 | Info | Combo: bartime=2025-06-27 03:00, reversal - closing existing Buy position 164 before opening opposite direction.
+27/06/2025 04:00:00.000 | Trade | Closing position PID164 (Volume: 3.72)
+27/06/2025 04:00:00.000 | Trade |  Closing position PID164 (Volume: 3.72) SUCCEEDED
+27/06/2025 04:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.22 units, which needs about $4203.63 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3267.76 budget, free margin was $6535.51). Size was cut from 5.22 to 3.97 units. Real risk on this trade is now about $49.69 (0.76% of balance) instead of the requested 1.00%.
+27/06/2025 04:00:00.000 | Trade | Placing Stop Order to Sell 3.97 UK100.cash (Price: 8741.5, SL: 8750.60633216891, TP: 8717.66)
+27/06/2025 04:00:00.000 | Trade |  Placing Stop Order to Sell 3.97 UK100.cash (Price: 8741.5, SL: 8750.60633216891, TP: 8717.66) SUCCEEDED, PendingOrder OID617
+27/06/2025 04:00:00.000 | Info | Combo: bartime=2025-06-27 03:00, executed=2025-06-27 04:00:00, pending Sell placed at 8741.5; SL=8750.606332168913, TP=8717.659622381789; valid for the next 3 chart bar(s).
+27/06/2025 07:00:00.000 | Trade | Cancelling pending order OID617
+27/06/2025 07:00:00.000 | Trade |  Cancelling pending order OID617 SUCCEEDED
+27/06/2025 07:00:00.000 | Info | Combo: pending order 617 cancelled after 3 chart bars.
+27/06/2025 07:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.05 units, which needs about $4066.73 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3267.76 budget, free margin was $6535.51). Size was cut from 5.05 to 3.97 units. Real risk on this trade is now about $51.32 (0.79% of balance) instead of the requested 1.00%.
+27/06/2025 07:00:00.000 | Trade | Placing Stop Order to Sell 3.97 UK100.cash (Price: 8738.8, SL: 8748.20564207048, TP: 8714.18)
+27/06/2025 07:00:00.000 | Trade |  Placing Stop Order to Sell 3.97 UK100.cash (Price: 8738.8, SL: 8748.20564207048, TP: 8714.18) SUCCEEDED, PendingOrder OID618
+27/06/2025 07:00:00.000 | Info | Combo: bartime=2025-06-27 06:00, executed=2025-06-27 07:00:00, pending Sell placed at 8738.8; SL=8748.205642070483, TP=8714.176029059474; valid for the next 3 chart bar(s).
+27/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-27 07:00, reversal - cancelling existing Sell pending order 618 before opening opposite direction.
+27/06/2025 08:00:00.000 | Trade | Cancelling pending order OID618
+27/06/2025 08:00:00.000 | Trade |  Cancelling pending order OID618 SUCCEEDED
+27/06/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 3.34 UK100.cash (Price: 8785.7, SL: 8771.47548634361, TP: 8822.94)
+27/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 3.34 UK100.cash (Price: 8785.7, SL: 8771.47548634361, TP: 8822.94) SUCCEEDED, PendingOrder OID619
+27/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-27 07:00, executed=2025-06-27 08:00:00, pending Buy placed at 8785.7; SL=8771.475486343614, TP=8822.93977675242; valid for the next 3 chart bar(s).
+27/06/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 2.32 UK100.cash (Price: 8758.8, SL: 8778.9567556634, TP: 8706.03)
+27/06/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 2.32 UK100.cash (Price: 8758.8, SL: 8778.9567556634, TP: 8706.03) SUCCEEDED, PendingOrder OID622
+27/06/2025 19:00:00.000 | Info | Combo: bartime=2025-06-27 18:00, executed=2025-06-27 19:00:00, pending Sell placed at 8758.8; SL=8778.956755663401, TP=8706.029613673212; valid for the next 3 chart bar(s).
+30/06/2025 00:00:00.000 | Trade | Cancelling pending order OID622
+30/06/2025 00:00:00.000 | Trade |  Cancelling pending order OID622 SUCCEEDED
+30/06/2025 00:00:00.000 | Info | Combo: pending order 622 cancelled after 3 chart bars.
+30/06/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 2.88 UK100.cash (Price: 8769, SL: 8785.23308174721, TP: 8726.5)
+30/06/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 2.88 UK100.cash (Price: 8769, SL: 8785.23308174721, TP: 8726.5) SUCCEEDED, PendingOrder OID623
+30/06/2025 09:00:00.000 | Info | Combo: bartime=2025-06-30 08:00, executed=2025-06-30 09:00:00, pending Sell placed at 8769; SL=8785.233081747207, TP=8726.501791985811; valid for the next 3 chart bar(s).
+30/06/2025 12:00:00.000 | Trade | Cancelling pending order OID623
+30/06/2025 12:00:00.000 | Trade |  Cancelling pending order OID623 SUCCEEDED
+30/06/2025 12:00:00.000 | Info | Combo: pending order 623 cancelled after 3 chart bars.
+30/06/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 2.36 UK100.cash (Price: 8775.9, SL: 8795.73213785457, TP: 8723.98)
+30/06/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 2.36 UK100.cash (Price: 8775.9, SL: 8795.73213785457, TP: 8723.98) SUCCEEDED, PendingOrder OID624
+30/06/2025 12:00:00.000 | Info | Combo: bartime=2025-06-30 11:00, executed=2025-06-30 12:00:00, pending Sell placed at 8775.9; SL=8795.73213785457, TP=8723.979463096734; valid for the next 3 chart bar(s).
+01/07/2025 01:00:00.000 | Info | Combo: bartime=2025-07-01 00:00, reversal - closing existing Sell position 166 before opening opposite direction.
+01/07/2025 01:00:00.000 | Trade | Closing position PID166 (Volume: 2.36)
+01/07/2025 01:00:00.000 | Trade |  Closing position PID166 (Volume: 2.36) SUCCEEDED
+01/07/2025 01:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.42 units, which needs about $3559.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3225.26 budget, free margin was $6450.51). Size was cut from 4.42 to 3.92 units. Real risk on this trade is now about $57.14 (0.89% of balance) instead of the requested 1.00%.
+01/07/2025 01:00:00.000 | Trade | Placing Stop Order to Buy 3.92 UK100.cash (Price: 8789, SL: 8778.39447182564, TP: 8816.77)
+01/07/2025 01:00:00.000 | Trade |  Placing Stop Order to Buy 3.92 UK100.cash (Price: 8789, SL: 8778.39447182564, TP: 8816.77) SUCCEEDED, PendingOrder OID628
+01/07/2025 01:00:00.000 | Info | Combo: bartime=2025-07-01 00:00, executed=2025-07-01 01:00:00, pending Buy placed at 8789; SL=8778.394471825644, TP=8816.765272760464; valid for the next 3 chart bar(s).
+01/07/2025 04:00:00.000 | Trade | Cancelling pending order OID628
+01/07/2025 04:00:00.000 | Trade |  Cancelling pending order OID628 SUCCEEDED
+01/07/2025 04:00:00.000 | Info | Combo: pending order 628 cancelled after 3 chart bars.
+01/07/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 3.65 UK100.cash (Price: 8747.1, SL: 8759.94661553775, TP: 8713.47)
+01/07/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 3.65 UK100.cash (Price: 8747.1, SL: 8759.94661553775, TP: 8713.47) SUCCEEDED, PendingOrder OID629
+01/07/2025 09:00:00.000 | Info | Combo: bartime=2025-07-01 08:00, executed=2025-07-01 09:00:00, pending Sell placed at 8747.1; SL=8759.946615537752, TP=8713.467560522166; valid for the next 3 chart bar(s).
+01/07/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 2.41 UK100.cash (Price: 8772.5, SL: 8753.31285302059, TP: 8822.73)
+01/07/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 2.41 UK100.cash (Price: 8772.5, SL: 8753.31285302059, TP: 8822.73) SUCCEEDED, PendingOrder OID632
+01/07/2025 14:00:00.000 | Info | Combo: bartime=2025-07-01 13:00, executed=2025-07-01 14:00:00, pending Buy placed at 8772.5; SL=8753.312853020589, TP=8822.731950792097; valid for the next 3 chart bar(s).
+01/07/2025 23:59:00.000 | Info | Combo: loaded=4824, processed=304, before-start=3879, not-processed=641, placed=273, failed=0, guard-skipped=0, pending-expired=72, same-direction-skipped=31, reversed=58, margin-capped=37, margin-blocked=0.
+Progress | Backtesting | 100.00 % |
+Info | CBot instance [Combo, UK100.cash, h1] stopped.
+{
+	"Equity":6439.02,
+	"NetProfit":-3560.98,
+	"MaxBalanceDrawdownPercentages":36,
+	"MaxEquityDrawdownPercentages":37,
+	"MaxBalanceDrawdown":3683.61,
+	"MaxEquityDrawdown":3802.99,
+	"WinningTrades":42,
+	"LosingTrades":126,
+	"TotalTrades":168,
+	"AverageTrade":-21.19,
+	"ProfitFactor":0.69,
+	"Fitness":0
+}
+

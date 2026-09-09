@@ -1,0 +1,1 @@
+﻿Exception calling "CopyFromScreen" with "5" argument(s): "The handle is invalid"

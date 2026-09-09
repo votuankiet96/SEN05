@@ -1,0 +1,51 @@
+﻿{
+    "SchemaVersion":  1,
+    "CreatedAtUtc":  "2026-09-03T02:24:34.7670776Z",
+    "Success":  true,
+    "FailureReason":  null,
+    "Input":  {
+                  "AlgoPath":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\Combo.algo",
+                  "AlgoSHA256":  "F55E7FBA663B6A212C7F19D6E63E2482F922E0B7865411CE19DA7B66780C04B7",
+                  "SymbolInput":  "BTCUSD",
+                  "ResolvedSymbol":  "BTCUSD",
+                  "Period":  "h4",
+                  "StartDate":  "2025-01-01",
+                  "EndDate":  "2025-01-15",
+                  "DataMode":  "Ticks",
+                  "Broker":  "FTMO Platform",
+                  "Account":  "7563609",
+                  "Parameters":  {
+                                     "RiskPercent":  0.5,
+                                     "SignalFilePath":  "Z:\\Desktop\\og_program\\runtime\\exports\\combo_BTCUSD_H4_full_history_signals.csv"
+                                 },
+                  "SignalFile":  {
+                                     "Path":  "Z:\\Desktop\\og_program\\runtime\\exports\\combo_BTCUSD_H4_full_history_signals.csv",
+                                     "Length":  76011,
+                                     "LastWriteTime":  "2026-09-01T15:48:42.0000000Z",
+                                     "SHA256":  "CF3D09B83223D3E52A15114D8CBF02970E07F6A5DD3F19DEE196CE3D02A51A1E"
+                                 }
+              },
+    "Actual":  {
+                   "StartDate":  "2025-01-01",
+                   "EndDate":  "2025-01-15"
+               },
+    "Metrics":  {
+                    "StartingCapital":  10000,
+                    "EndingBalance":  10170.239999999998,
+                    "NetProfit":  170.24,
+                    "ROI":  1.7,
+                    "ProfitFactor":  0,
+                    "TotalTrades":  4,
+                    "WinningTrades":  4,
+                    "LosingTrades":  0,
+                    "MaxBalanceDrawdownPct":  0,
+                    "MaxEquityDrawdownPct":  0.5746189745505977,
+                    "HistoryItems":  4
+                },
+    "Artifacts":  {
+                      "Params":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_BTCUSD_h4_20260902-192230\\params.cbotset",
+                      "Command":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_BTCUSD_h4_20260902-192230\\command.txt",
+                      "Log":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_BTCUSD_h4_20260902-192230\\log.txt",
+                      "ReportJson":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_BTCUSD_h4_20260902-192230\\report.json"
+                  }
+}

@@ -1,0 +1,118 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_11sym_1wk_20260904\DE40\params.cbotset 
+--start=01/01/2025 --end=08/01/2025 --data-mode=Ticks --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=GER40.cash 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_11sym_1wk_20260904\DE40\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...E40\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | GER40.cash                | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 08/01/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 2                         | cbotset              |
+| KtpLevel             | 4                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 50                        | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+04/09/2026 15:14:13.609 | Establishing connection using votuankiet96@gmail.com...
+04/09/2026 15:14:18.699 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Info | CBot instance [Combo, GER40.cash, h1] started.
+Progress | Backtesting | 12.68 % |
+Progress | Backtesting | 13.54 % |
+Progress | Backtesting | 13.55 % |
+Progress | Backtesting | 16.64 % |
+Progress | Backtesting | 17.55 % |
+Progress | Backtesting | 18.23 % |
+Progress | Backtesting | 20.61 % |
+Progress | Backtesting | 68.87 % |
+Progress | Backtesting | 70.92 % |
+Progress | Backtesting | 73.57 % |
+Progress | Backtesting | 79.20 % |
+Progress | Backtesting | 82.92 % |
+Progress | Backtesting | 85.77 % |
+Progress | Backtesting | 92.51 % |
+Progress | Backtesting | 94.78 % |
+Progress | Backtesting | 96.18 % |
+Progress | Backtesting | 98.79 % |
+02/01/2025 00:20:00.004 | Info | Combo: loaded 3931 valid signal row(s) from CSV.
+02/01/2025 00:20:00.004 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+02/01/2025 02:00:09.770 | Trade | Placing Stop Order to Buy 1.79 GER40.cash (Price: 19894, SL: 19840.046609396, TP: 20035.25)
+02/01/2025 02:00:09.770 | Trade |  Placing Stop Order to Buy 1.79 GER40.cash (Price: 19894, SL: 19840.046609396, TP: 20035.25) SUCCEEDED, PendingOrder OID1
+02/01/2025 02:00:09.770 | Info | Combo: bartime=2025-01-02 01:00, executed=2025-01-02 02:00:09, pending Buy placed at 19894; SL=19840.04660939602, TP=20035.249976601215; valid for the next 3 chart bar(s).
+02/01/2025 11:00:00.179 | Info | Combo: bartime=2025-01-02 10:00, reversal - closing existing Buy position 1 before opening opposite direction.
+02/01/2025 11:00:00.179 | Trade | Closing position PID1 (Volume: 1.79)
+02/01/2025 11:00:00.179 | Trade |  Closing position PID1 (Volume: 1.79) SUCCEEDED
+02/01/2025 11:00:00.179 | Trade | Placing Stop Order to Sell 1.44 GER40.cash (Price: 19825.7, SL: 19892.2721659528, TP: 19651.41)
+02/01/2025 11:00:00.179 | Trade |  Placing Stop Order to Sell 1.44 GER40.cash (Price: 19825.7, SL: 19892.2721659528, TP: 19651.41) SUCCEEDED, PendingOrder OID5
+02/01/2025 11:00:00.179 | Info | Combo: bartime=2025-01-02 10:00, executed=2025-01-02 11:00:00, pending Sell placed at 19825.7; SL=19892.272165952763, TP=19651.41406953567; valid for the next 3 chart bar(s).
+02/01/2025 14:00:00.169 | Trade | Cancelling pending order OID5
+02/01/2025 14:00:00.169 | Trade |  Cancelling pending order OID5 SUCCEEDED
+02/01/2025 14:00:00.169 | Info | Combo: pending order 5 cancelled after 3 chart bars.
+03/01/2025 09:00:00.170 | Trade | Placing Stop Order to Sell 2.18 GER40.cash (Price: 19906.8, SL: 19950.9902849802, TP: 19791.11)
+03/01/2025 09:00:00.170 | Trade |  Placing Stop Order to Sell 2.18 GER40.cash (Price: 19906.8, SL: 19950.9902849802, TP: 19791.11) SUCCEEDED, PendingOrder OID6
+03/01/2025 09:00:00.170 | Info | Combo: bartime=2025-01-03 08:00, executed=2025-01-03 09:00:00, pending Sell placed at 19906.8; SL=19950.99028498022, TP=19791.10983392178; valid for the next 3 chart bar(s).
+03/01/2025 11:00:00.169 | Info | Combo: bartime=2025-01-03 10:00, Sell signal skipped: already have same-direction exposure open.
+03/01/2025 12:00:00.169 | Trade | Cancelling pending order OID6
+03/01/2025 12:00:00.169 | Trade |  Cancelling pending order OID6 SUCCEEDED
+03/01/2025 12:00:00.169 | Info | Combo: pending order 6 cancelled after 3 chart bars.
+06/01/2025 02:00:00.384 | Trade | Placing Stop Order to Buy 3.35 GER40.cash (Price: 19940.1, SL: 19911.3832953226, TP: 20015.28)
+06/01/2025 02:00:00.384 | Trade |  Placing Stop Order to Buy 3.35 GER40.cash (Price: 19940.1, SL: 19911.3832953226, TP: 20015.28) SUCCEEDED, PendingOrder OID7
+06/01/2025 02:00:00.384 | Info | Combo: bartime=2025-01-06 01:00, executed=2025-01-06 02:00:00, pending Buy placed at 19940.1; SL=19911.38329532255, TP=20015.28033284556; valid for the next 3 chart bar(s).
+08/01/2025 07:00:00.190 | Trade | Placing Stop Order to Sell 3.49 GER40.cash (Price: 20284.4, SL: 20312.7018787028, TP: 20210.31)
+08/01/2025 07:00:00.190 | Trade |  Placing Stop Order to Sell 3.49 GER40.cash (Price: 20284.4, SL: 20312.7018787028, TP: 20210.31) SUCCEEDED, PendingOrder OID10
+08/01/2025 07:00:00.190 | Info | Combo: bartime=2025-01-08 06:00, executed=2025-01-08 07:00:00, pending Sell placed at 20284.4; SL=20312.701878702792, TP=20210.305681556092; valid for the next 3 chart bar(s).
+08/01/2025 09:00:01.190 | Trade | Placing Stop Order to Buy 2 GER40.cash (Price: 20415.2, SL: 20366.4267976302, TP: 20542.89)
+08/01/2025 09:00:01.190 | Trade |  Placing Stop Order to Buy 2 GER40.cash (Price: 20415.2, SL: 20366.4267976302, TP: 20542.89) SUCCEEDED, PendingOrder OID13
+08/01/2025 09:00:01.190 | Info | Combo: bartime=2025-01-08 08:00, executed=2025-01-08 09:00:01, pending Buy placed at 20415.2; SL=20366.426797630214, TP=20542.888243804104; valid for the next 3 chart bar(s).
+08/01/2025 13:00:01.185 | Trade | Placing Stop Order to Sell 1.17 GER40.cash (Price: 20268.7, SL: 20351.1055036907, TP: 20052.96)
+08/01/2025 13:00:01.185 | Trade |  Placing Stop Order to Sell 1.17 GER40.cash (Price: 20268.7, SL: 20351.1055036907, TP: 20052.96) SUCCEEDED, PendingOrder OID16
+08/01/2025 13:00:01.185 | Info | Combo: bartime=2025-01-08 12:00, executed=2025-01-08 13:00:01, pending Sell placed at 20268.7; SL=20351.105503690666, TP=20052.962391337842; valid for the next 3 chart bar(s).
+08/01/2025 18:00:00.585 | Trade | Placing Stop Order to Sell 1.27 GER40.cash (Price: 20253.2, SL: 20328.3255154494, TP: 20056.52)
+08/01/2025 18:00:00.585 | Trade |  Placing Stop Order to Sell 1.27 GER40.cash (Price: 20253.2, SL: 20328.3255154494, TP: 20056.52) SUCCEEDED, PendingOrder OID19
+08/01/2025 18:00:00.585 | Info | Combo: bartime=2025-01-08 17:00, executed=2025-01-08 18:00:00, pending Sell placed at 20253.2; SL=20328.325515449356, TP=20056.521400553585; valid for the next 3 chart bar(s).
+08/01/2025 21:00:00.097 | Trade | Cancelling pending order OID19
+08/01/2025 21:00:00.097 | Trade |  Cancelling pending order OID19 SUCCEEDED
+08/01/2025 21:00:00.097 | Info | Combo: pending order 19 cancelled after 3 chart bars.
+08/01/2025 21:00:00.097 | Trade | Placing Stop Order to Buy 1.55 GER40.cash (Price: 20357.7, SL: 20296.0397360899, TP: 20519.13)
+08/01/2025 21:00:00.097 | Trade |  Placing Stop Order to Buy 1.55 GER40.cash (Price: 20357.7, SL: 20296.0397360899, TP: 20519.13) SUCCEEDED, PendingOrder OID20
+08/01/2025 21:00:00.097 | Info | Combo: bartime=2025-01-08 20:00, executed=2025-01-08 21:00:00, pending Buy placed at 20357.7; SL=20296.03973608993, TP=20519.126570916567; valid for the next 3 chart bar(s).
+08/01/2025 23:59:59.486 | Info | Combo: loaded=3931, processed=10, before-start=3064, not-processed=857, placed=9, failed=0, guard-skipped=0, pending-expired=3, same-direction-skipped=1, reversed=1, margin-capped=0, margin-blocked=0.
+Progress | Backtesting | 100.00 % |
+Info | CBot instance [Combo, GER40.cash, h1] stopped.
+{
+	"Equity":9826.98,
+	"NetProfit":-173.02,
+	"MaxBalanceDrawdownPercentages":3,
+	"MaxEquityDrawdownPercentages":4,
+	"MaxBalanceDrawdown":381.47,
+	"MaxEquityDrawdown":446.53,
+	"WinningTrades":1,
+	"LosingTrades":5,
+	"TotalTrades":6,
+	"AverageTrade":-28.83,
+	"ProfitFactor":0.61,
+	"Fitness":0
+}
+

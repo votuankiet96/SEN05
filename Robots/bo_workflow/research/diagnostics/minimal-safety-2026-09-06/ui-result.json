@@ -1,0 +1,15 @@
+﻿{
+    "Request":  {
+                    "Y":  300,
+                    "X":  443,
+                    "Id":  "AlgoTitleButton_AId",
+                    "Action":  "Click",
+                    "Index":  0
+                },
+    "Name":  "",
+    "Patterns":  [
+                     "SelectionItemPatternIdentifiers.Pattern",
+                     "SynchronizedInputPatternIdentifiers.Pattern"
+                 ],
+    "Success":  true
+}

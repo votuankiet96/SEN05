@@ -1,0 +1,111 @@
+﻿{
+    "HasReport":  true,
+    "TimedOut":  false,
+    "ElapsedSeconds":  36.3,
+    "ActualStartUTC":  "2026-01-01 00:00:00",
+    "ActualEndUTC":  "2026-01-07 00:00:00",
+    "RequestedStartUTC":  "2026-01-01 00:00:00",
+    "RequestedEndUTC":  "2026-01-07 23:59:00",
+    "Main":  {
+                 "utcOffset":  0,
+                 "language":  "en",
+                 "depositAsset":  "USD",
+                 "depositAssetDigits":  2,
+                 "period":  "h1",
+                 "symbol":  "XAUUSD",
+                 "brokerTitle":  "",
+                 "cBotName":  "Combo",
+                 "roi":  -0.68,
+                 "netProfit":  -68.24,
+                 "startingCapital":  10000,
+                 "endingEquity":  9931.760000000002,
+                 "endingBalance":  9931.760000000002,
+                 "testingPeriod":  {
+                                       "duration":  "6d",
+                                       "startDate":  1767225600000,
+                                       "endDate":  1767744000000,
+                                       "formatted":  "6d (01/01/2026 - 07/01/2026)"
+                                   },
+                 "accountType":  "hedging",
+                 "accountLeverage":  30,
+                 "data":  {
+                              "type":  "tickDataFromServer",
+                              "isCustom":  false,
+                              "customName":  null
+                          },
+                 "spread":  null,
+                 "commissions":  {
+                                     "type":  "usdPerMillionUsdVolume",
+                                     "value":  0,
+                                     "applyCommissionAutomatically":  false
+                                 },
+                 "theme":  "dark",
+                 "titleKind":  "backtesting",
+                 "authorNickName":  "votuankiet96",
+                 "authorLink":  null,
+                 "cBotLink":  null,
+                 "embedded":  false
+             },
+    "TradeStatistics":  {
+                            "netProfit":  {
+                                              "all":  -68.24,
+                                              "long":  210.68,
+                                              "short":  -278.92
+                                          },
+                            "profitFactor":  {
+                                                 "all":  0.76,
+                                                 "long":  878.83,
+                                                 "short":  0
+                                             },
+                            "commissions":  {
+                                                "all":  0,
+                                                "long":  0,
+                                                "short":  0
+                                            },
+                            "swaps":  {
+                                          "all":  -0.52,
+                                          "long":  0,
+                                          "short":  -0.52
+                                      },
+                            "totalTrades":  {
+                                                "all":  5,
+                                                "long":  2,
+                                                "short":  3
+                                            },
+                            "winningTrades":  {
+                                                  "all":  1,
+                                                  "long":  1,
+                                                  "short":  0
+                                              },
+                            "maxConsecutiveWinningTrades":  {
+                                                                "all":  1,
+                                                                "long":  1,
+                                                                "short":  0
+                                                            },
+                            "largestWinningTrade":  {
+                                                        "all":  210.92,
+                                                        "long":  210.92,
+                                                        "short":  0
+                                                    },
+                            "losingTrades":  {
+                                                 "all":  4,
+                                                 "long":  1,
+                                                 "short":  3
+                                             },
+                            "maxConsecutiveLosingTrades":  {
+                                                               "all":  2,
+                                                               "long":  1,
+                                                               "short":  3
+                                                           },
+                            "largestLosingTrade":  {
+                                                       "all":  -106.47,
+                                                       "long":  -0.24,
+                                                       "short":  -106.47
+                                                   },
+                            "averageTrade":  {
+                                                 "all":  -13.65,
+                                                 "long":  105.34,
+                                                 "short":  -92.97
+                                             }
+                        }
+}

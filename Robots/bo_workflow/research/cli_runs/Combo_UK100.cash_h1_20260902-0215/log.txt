@@ -1,0 +1,73 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_UK100.cash_h1_20260902-0215\params.cbotset 
+--start=01/01/2025 --end=04/01/2025 --data-mode=Ticks --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --symbol=UK100.cash --period=h1 --full-access 
+--report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_UK100.cash_h1_20260902-0215
+\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...215\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | UK100.cash                | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 04/01/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 3                         | default value        |
+| KtpLevel             | 3                         | default value        |
+| RiskPercent          | 0.5                       | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+02/09/2026 09:15:15.749 | Establishing connection using votuankiet96@gmail.com...
+02/09/2026 09:15:18.087 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Info | CBot instance [Combo, UK100.cash, h1] started.
+Progress | Backtesting | 26.13 % |
+Progress | Backtesting | 40.31 % |
+Progress | Backtesting | 42.19 % |
+Progress | Backtesting | 44.89 % |
+Progress | Backtesting | 49.99 % |
+Progress | Backtesting | 58.25 % |
+Progress | Backtesting | 63.52 % |
+Progress | Backtesting | 65.63 % |
+Progress | Backtesting | 65.94 % |
+Progress | Backtesting | 69.16 % |
+02/01/2025 01:05:00.006 | Info | Combo: loaded 4815 valid signal row(s) from CSV.
+02/01/2025 01:05:00.006 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+03/01/2025 15:00:00.167 | Trade | Placing Stop Order to Sell 3.42 UK100.cash (Price: 8217.7, SL: 8229.50705236903, TP: 8205.89)
+03/01/2025 15:00:00.167 | Trade |  Placing Stop Order to Sell 3.42 UK100.cash (Price: 8217.7, SL: 8229.50705236903, TP: 8205.89) SUCCEEDED, PendingOrder OID1
+03/01/2025 15:00:00.167 | Info | Combo: bartime=2025-01-03 14:00, executed=2025-01-03 15:00:00, pending Sell placed at 8217.7; SL=8229.507052369026, TP=8205.892947630975; valid for the next 3 chart bar(s).
+03/01/2025 21:00:00.066 | Info | Combo: loaded=4815, processed=1, before-start=3879, not-processed=935, placed=1, failed=0, guard-skipped=0, pending-expired=0, same-direction-skipped=0, reversed=0.
+Progress | Backtesting | 71.88 % |
+Info | CBot instance [Combo, UK100.cash, h1] stopped.
+{
+	"Equity":9949.02,
+	"NetProfit":-50.98,
+	"MaxBalanceDrawdownPercentages":0,
+	"MaxEquityDrawdownPercentages":0,
+	"MaxBalanceDrawdown":50.97,
+	"MaxEquityDrawdown":60.07,
+	"WinningTrades":0,
+	"LosingTrades":1,
+	"TotalTrades":1,
+	"AverageTrade":-50.98,
+	"ProfitFactor":0,
+	"Fitness":0
+}
+

@@ -1,0 +1,128 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_leverage_crosscheck_2025\DE40\params.cbotset 
+--start=01/01/2025 --end=01/01/2026 --data-mode=M1 --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=GER40.cash 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_leverage_crosscheck_2025\DE40\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...E40\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | GER40.cash                | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 01/01/2026 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | M1                        | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 2                         | cbotset              |
+| KtpLevel             | 4                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 50                        | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+04/09/2026 02:26:33.697 | Establishing connection using votuankiet96@gmail.com...
+04/09/2026 02:26:41.723 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Progress | Loading GER40.cash, h1 | 0.27 % |
+Progress | Loading GER40.cash, h1 | 0.55 % |
+Progress | Loading GER40.cash, h1 | 0.82 % |
+Progress | Loading GER40.cash, h1 | 1.10 % |
+Progress | Loading GER40.cash, h1 | 1.37 % |
+Progress | Loading GER40.cash, h1 | 1.64 % |
+Progress | Loading GER40.cash, h1 | 1.92 % |
+Progress | Loading GER40.cash, h1 | 2.19 % |
+Progress | Loading GER40.cash, h1 | 2.47 % |
+Progress | Loading GER40.cash, h1 | 2.74 % |
+Progress | Loading GER40.cash, h1 | 3.01 % |
+Progress | Loading GER40.cash, h1 | 3.29 % |
+Progress | Loading GER40.cash, h1 | 3.56 % |
+Progress | Loading GER40.cash, h1 | 3.84 % |
+Progress | Loading GER40.cash, h1 | 4.11 % |
+Progress | Loading GER40.cash, h1 | 4.38 % |
+Progress | Loading GER40.cash, h1 | 4.66 % |
+Progress | Loading GER40.cash, h1 | 4.93 % |
+Progress | Loading GER40.cash, h1 | 5.21 % |
+Progress | Loading GER40.cash, h1 | 5.48 % |
+Progress | Loading GER40.cash, h1 | 5.75 % |
+Progress | Loading GER40.cash, h1 | 6.03 % |
+Progress | Loading GER40.cash, h1 | 6.30 % |
+Progress | Loading GER40.cash, h1 | 6.58 % |
+Progress | Loading GER40.cash, h1 | 6.85 % |
+Progress | Loading GER40.cash, h1 | 7.12 % |
+Progress | Loading GER40.cash, h1 | 7.40 % |
+Progress | Loading GER40.cash, h1 | 7.67 % |
+Progress | Loading GER40.cash, h1 | 7.95 % |
+Progress | Loading GER40.cash, h1 | 8.22 % |
+Progress | Loading GER40.cash, h1 | 8.49 % |
+Progress | Loading GER40.cash, h1 | 8.77 % |
+Progress | Loading GER40.cash, h1 | 9.04 % |
+Progress | Loading GER40.cash, h1 | 9.32 % |
+Progress | Loading GER40.cash, h1 | 9.59 % |
+Progress | Loading GER40.cash, h1 | 9.86 % |
+Progress | Loading GER40.cash, h1 | 10.14 % |
+Progress | Loading GER40.cash, h1 | 10.41 % |
+Progress | Loading GER40.cash, h1 | 10.68 % |
+Progress | Loading GER40.cash, h1 | 10.96 % |
+Progress | Loading GER40.cash, h1 | 11.23 % |
+Progress | Loading GER40.cash, h1 | 11.51 % |
+Progress | Loading GER40.cash, h1 | 11.78 % |
+Progress | Loading GER40.cash, h1 | 12.05 % |
+Progress | Loading GER40.cash, h1 | 12.33 % |
+Progress | Loading GER40.cash, h1 | 12.60 % |
+Progress | Loading GER40.cash, h1 | 12.88 % |
+Progress | Loading GER40.cash, h1 | 13.15 % |
+Progress | Loading GER40.cash, h1 | 13.42 % |
+Progress | Loading GER40.cash, h1 | 13.70 % |
+Progress | Loading GER40.cash, h1 | 13.97 % |
+Progress | Loading GER40.cash, h1 | 14.25 % |
+Progress | Loading GER40.cash, h1 | 14.52 % |
+Progress | Loading GER40.cash, h1 | 14.79 % |
+Progress | Loading GER40.cash, h1 | 15.07 % |
+Progress | Loading GER40.cash, h1 | 15.34 % |
+Progress | Loading GER40.cash, h1 | 15.62 % |
+Progress | Loading GER40.cash, h1 | 15.89 % |
+Progress | Loading GER40.cash, h1 | 16.16 % |
+Progress | Loading GER40.cash, h1 | 16.44 % |
+Progress | Loading GER40.cash, h1 | 16.71 % |
+Progress | Loading GER40.cash, h1 | 16.99 % |
+Progress | Loading GER40.cash, h1 | 17.26 % |
+Progress | Loading GER40.cash, h1 | 17.53 % |
+04/09/2026 02:45:30.981 | The connection has been lost. Reconnecting...
+{
+	"Equity":,
+	"NetProfit":-,
+	"MaxBalanceDrawdownPercentages":-,
+	"MaxEquityDrawdownPercentages":-,
+	"MaxBalanceDrawdown":-,
+	"MaxEquityDrawdown":-,
+	"WinningTrades":-,
+	"LosingTrades":-,
+	"TotalTrades":-,
+	"AverageTrade":-,
+	"ProfitFactor":-,
+	"Fitness":0
+}
+Message expected
+System.InvalidOperationException: Message expected
+   at cTrader.Console.Infrastructure.StateMachine.Strategies.BacktestReportSavingStateStrategy.DoEnter()
+   at cTrader.Console.Infrastructure.StateMachine.Strategies.ConsoleStateStrategyBase.Enter()
+   at cTrader.Console.Infrastructure.StateMachine.ConsoleApplicationLifecycleStateMachine.OnMovedToLifecycleState(IConsoleApplicationLifecycleStateStrategy newStateStrategy)
+   at cTrader.Console.Infrastructure.StateMachine.ConsoleApplicationLifecycleStateTransition.InternalMoveTo(ConsoleApplicationLifecycleState state)
+   at cTrader.Console.Infrastructure.StateMachine.ConsoleApplicationLifecycleStateTransition.<>c__DisplayClass7_0.<MoveTo>b__0()
+   at cTrader.Console.Infrastructure.Dispatcher.ConsoleThreadDispatcher.<>c__DisplayClass12_0.<ExecuteInternalAsync>g__ExecuteAction|0()
+

@@ -1,0 +1,203 @@
+Info | CBot instance [MA Cross, GER40.cash, m30] started.
+02/01/2026 00:16:00.417 | Info | MA Cross: loaded 2532 valid signal row(s) from CSV.
+02/01/2026 00:16:00.417 | Info | MA Cross: signal scheduling active with chart timeframe m30 (00:30:00); CSV timeframe must match the chart timeframe.
+02/01/2026 09:00:00.118 | Trade | Executing Market Order to Buy 1.46 GER40.cash (SL: 57.97, TP: 151.75)
+02/01/2026 09:00:00.118 | Trade | → Executing Market Order to Buy 1.46 GER40.cash (SL: 57.97, TP: 151.75) SUCCEEDED, Position PID1
+02/01/2026 09:00:00.118 | Info | MA Cross: bartime=2026-01-02 08:30, executed=2026-01-02 09:00:00, market Buy placed; SL=57.96513066539047 pips, TP=151.75271208199223 pips.
+02/01/2026 19:00:00.618 | Trade | Executing Market Order to Sell 1.81 GER40.cash (SL: 46.23, TP: 121.03)
+02/01/2026 19:00:00.618 | Trade | → Executing Market Order to Sell 1.81 GER40.cash (SL: 46.23, TP: 121.03) SUCCEEDED, Position PID2
+02/01/2026 19:00:00.618 | Info | MA Cross: bartime=2026-01-02 18:30, executed=2026-01-02 19:00:00, market Sell placed; SL=46.23139200705223 pips, TP=121.03378427446273 pips.
+05/01/2026 01:30:00.418 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 2.55 units, which needs about $5063.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4900.45 budget, free margin was $9800.91). Size was cut from 2.55 to 2.41 units. Real risk on this trade is now about $92.51 (0.94% of balance) instead of the requested 1.00%.
+05/01/2026 01:30:00.418 | Trade | Executing Market Order to Buy 2.41 GER40.cash (SL: 32.55, TP: 85.22)
+05/01/2026 01:30:00.418 | Trade | → Executing Market Order to Buy 2.41 GER40.cash (SL: 32.55, TP: 85.22) SUCCEEDED, Position PID3
+05/01/2026 01:30:00.418 | Info | MA Cross: bartime=2026-01-05 01:00, executed=2026-01-05 01:30:00, market Buy placed; SL=32.55064182416916 pips, TP=85.21758029567486 pips.
+08/01/2026 05:30:07.411 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 3.91 units, which needs about $7764.48 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5022.11 budget, free margin was $10044.23). Size was cut from 3.91 to 2.47 units. Real risk on this trade is now about $63.41 (0.63% of balance) instead of the requested 1.00%.
+08/01/2026 05:30:07.411 | Trade | Executing Market Order to Sell 2.47 GER40.cash (SL: 21.77, TP: 56.99)
+08/01/2026 05:30:07.411 | Trade | → Executing Market Order to Sell 2.47 GER40.cash (SL: 21.77, TP: 56.99) SUCCEEDED, Position PID4
+08/01/2026 05:30:07.411 | Info | MA Cross: bartime=2026-01-08 05:00, executed=2026-01-08 05:30:07, market Sell placed; SL=21.768221890883805 pips, TP=56.9892049103338 pips.
+08/01/2026 15:00:00.309 | Trade | Executing Market Order to Sell 1.94 GER40.cash (SL: 44.6, TP: 116.77)
+08/01/2026 15:00:00.309 | Trade | → Executing Market Order to Sell 1.94 GER40.cash (SL: 44.6, TP: 116.77) SUCCEEDED, Position PID5
+08/01/2026 15:00:00.309 | Info | MA Cross: bartime=2026-01-08 14:30, executed=2026-01-08 15:00:00, market Sell placed; SL=44.60324724511664 pips, TP=116.77130128771536 pips.
+08/01/2026 18:30:00.808 | Trade | Executing Market Order to Buy 2.42 GER40.cash (SL: 35.33, TP: 92.49)
+08/01/2026 18:30:00.808 | Trade | → Executing Market Order to Buy 2.42 GER40.cash (SL: 35.33, TP: 92.49) SUCCEEDED, Position PID6
+08/01/2026 18:30:00.808 | Info | MA Cross: bartime=2026-01-08 18:00, executed=2026-01-08 18:30:00, market Buy placed; SL=35.32772355665857 pips, TP=92.48798027133213 pips.
+09/01/2026 07:30:00.212 | Info | MA Cross: bartime=2026-01-09 07:00, reversal - closing existing Buy position 6 before opening opposite direction.
+09/01/2026 07:30:00.212 | Trade | Closing position PID6 (Volume: 2.42)
+09/01/2026 07:30:00.212 | Trade | → Closing position PID6 (Volume: 2.42) SUCCEEDED
+09/01/2026 07:30:00.212 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 3.66 units, which needs about $7268.03 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5039.69 budget, free margin was $10079.39). Size was cut from 3.66 to 2.48 units. Real risk on this trade is now about $68.26 (0.68% of balance) instead of the requested 1.00%.
+09/01/2026 07:30:00.212 | Trade | Executing Market Order to Sell 2.48 GER40.cash (SL: 23.34, TP: 61.1)
+09/01/2026 07:30:00.212 | Trade | → Executing Market Order to Sell 2.48 GER40.cash (SL: 23.34, TP: 61.1) SUCCEEDED, Position PID7
+09/01/2026 07:30:00.212 | Info | MA Cross: bartime=2026-01-09 07:00, executed=2026-01-09 07:30:00, market Sell placed; SL=23.33930588866508 pips, TP=61.10230281652518 pips.
+09/01/2026 13:30:01.112 | Trade | Executing Market Order to Buy 2.4 GER40.cash (SL: 35.36, TP: 92.56)
+09/01/2026 13:30:01.112 | Trade | → Executing Market Order to Buy 2.4 GER40.cash (SL: 35.36, TP: 92.56) SUCCEEDED, Position PID8
+09/01/2026 13:30:01.112 | Info | MA Cross: bartime=2026-01-09 13:00, executed=2026-01-09 13:30:01, market Buy placed; SL=35.35524954597027 pips, TP=92.56004331135016 pips.
+12/01/2026 05:00:00.301 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 4.43 units, which needs about $8797.10 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4954.27 budget, free margin was $9908.54). Size was cut from 4.43 to 2.44 units. Real risk on this trade is now about $54.45 (0.55% of balance) instead of the requested 1.00%.
+12/01/2026 05:00:00.301 | Trade | Executing Market Order to Sell 2.44 GER40.cash (SL: 18.92, TP: 49.54)
+12/01/2026 05:00:00.301 | Trade | → Executing Market Order to Sell 2.44 GER40.cash (SL: 18.92, TP: 49.54) SUCCEEDED, Position PID9
+12/01/2026 05:00:00.301 | Info | MA Cross: bartime=2026-01-12 04:30, executed=2026-01-12 05:00:00, market Sell placed; SL=18.92353457378266 pips, TP=49.541813514163 pips.
+12/01/2026 11:30:00.912 | Trade | Executing Market Order to Buy 2.2 GER40.cash (SL: 37.8, TP: 98.96)
+12/01/2026 11:30:00.912 | Trade | → Executing Market Order to Buy 2.2 GER40.cash (SL: 37.8, TP: 98.96) SUCCEEDED, Position PID10
+12/01/2026 11:30:00.912 | Info | MA Cross: bartime=2026-01-12 11:00, executed=2026-01-12 11:30:00, market Buy placed; SL=37.80165142782842 pips, TP=98.96472343805479 pips.
+13/01/2026 10:00:03.403 | Trade | Executing Market Order to Sell 2.51 GER40.cash (SL: 34.08, TP: 89.22)
+13/01/2026 10:00:03.403 | Trade | → Executing Market Order to Sell 2.51 GER40.cash (SL: 34.08, TP: 89.22) SUCCEEDED, Position PID11
+13/01/2026 10:00:03.403 | Info | MA Cross: bartime=2026-01-13 09:30, executed=2026-01-13 10:00:03, market Sell placed; SL=34.078919583369 pips, TP=89.21861146926004 pips.
+13/01/2026 17:30:01.701 | Trade | Executing Market Order to Buy 2.12 GER40.cash (SL: 39.86, TP: 104.36)
+13/01/2026 17:30:01.701 | Trade | → Executing Market Order to Buy 2.12 GER40.cash (SL: 39.86, TP: 104.36) SUCCEEDED, Position PID12
+13/01/2026 17:30:01.701 | Info | MA Cross: bartime=2026-01-13 17:00, executed=2026-01-13 17:30:01, market Buy placed; SL=39.862323241805626 pips, TP=104.35956224704712 pips.
+13/01/2026 21:00:00.105 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 2.70 units, which needs about $5361.66 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4947.56 budget, free margin was $9895.12). Size was cut from 2.70 to 2.44 units. Real risk on this trade is now about $89.17 (0.90% of balance) instead of the requested 1.00%.
+13/01/2026 21:00:00.105 | Trade | Executing Market Order to Sell 2.44 GER40.cash (SL: 30.99, TP: 81.13)
+13/01/2026 21:00:00.105 | Trade | → Executing Market Order to Sell 2.44 GER40.cash (SL: 30.99, TP: 81.13) SUCCEEDED, Position PID13
+13/01/2026 21:00:00.105 | Info | MA Cross: bartime=2026-01-13 20:30, executed=2026-01-13 21:00:00, market Sell placed; SL=30.989103411120134 pips, TP=81.1294727303125 pips.
+14/01/2026 11:30:00.207 | Trade | Executing Market Order to Sell 2.07 GER40.cash (SL: 39.98, TP: 104.67)
+14/01/2026 11:30:00.207 | Trade | → Executing Market Order to Sell 2.07 GER40.cash (SL: 39.98, TP: 104.67) SUCCEEDED, Position PID14
+14/01/2026 11:30:00.207 | Info | MA Cross: bartime=2026-01-14 11:00, executed=2026-01-14 11:30:00, market Sell placed; SL=39.97963169411584 pips, TP=104.66667577519526 pips.
+15/01/2026 02:30:01.904 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 3.11 units, which needs about $6175.84 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5031.14 budget, free margin was $10062.29). Size was cut from 3.11 to 2.48 units. Real risk on this trade is now about $80.18 (0.80% of balance) instead of the requested 1.00%.
+15/01/2026 02:30:01.904 | Trade | Executing Market Order to Buy 2.48 GER40.cash (SL: 27.41, TP: 71.77)
+15/01/2026 02:30:01.904 | Trade | → Executing Market Order to Buy 2.48 GER40.cash (SL: 27.41, TP: 71.77) SUCCEEDED, Position PID15
+15/01/2026 02:30:01.904 | Info | MA Cross: bartime=2026-01-15 02:00, executed=2026-01-15 02:30:01, market Buy placed; SL=27.41455283554594 pips, TP=71.77129932345927 pips.
+15/01/2026 23:05:00.006 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 4.38 units, which needs about $8697.81 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4990.94 budget, free margin was $9981.89). Size was cut from 4.38 to 2.46 units. Real risk on this trade is now about $55.94 (0.56% of balance) instead of the requested 1.00%.
+15/01/2026 23:05:00.006 | Trade | Executing Market Order to Sell 2.46 GER40.cash (SL: 19.28, TP: 50.48)
+15/01/2026 23:05:00.006 | Trade | → Executing Market Order to Sell 2.46 GER40.cash (SL: 19.28, TP: 50.48) SUCCEEDED, Position PID16
+15/01/2026 23:05:00.006 | Info | MA Cross: bartime=2026-01-15 22:00, executed=2026-01-15 23:05:00, market Sell placed; SL=19.28212030853015 pips, TP=50.48059096773193 pips.
+16/01/2026 08:00:00.007 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 4.08 units, which needs about $8102.07 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4962.34 budget, free margin was $9924.68). Size was cut from 4.08 to 2.44 units. Real risk on this trade is now about $59.25 (0.60% of balance) instead of the requested 1.00%.
+16/01/2026 08:00:00.007 | Trade | Executing Market Order to Buy 2.44 GER40.cash (SL: 20.59, TP: 53.91)
+16/01/2026 08:00:00.007 | Trade | → Executing Market Order to Buy 2.44 GER40.cash (SL: 20.59, TP: 53.91) SUCCEEDED, Position PID17
+16/01/2026 08:00:00.007 | Info | MA Cross: bartime=2026-01-16 07:30, executed=2026-01-16 08:00:00, market Buy placed; SL=20.591887229933853 pips, TP=53.90956076796682 pips.
+16/01/2026 15:30:00.008 | Trade | Executing Market Order to Sell 1.99 GER40.cash (SL: 42.01, TP: 109.97)
+16/01/2026 15:30:00.008 | Trade | → Executing Market Order to Sell 1.99 GER40.cash (SL: 42.01, TP: 109.97) SUCCEEDED, Position PID18
+16/01/2026 15:30:00.008 | Info | MA Cross: bartime=2026-01-16 15:00, executed=2026-01-16 15:30:00, market Sell placed; SL=42.00715816822503 pips, TP=109.97474008441313 pips.
+18/01/2026 23:05:15.106 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 3.31 units, which needs about $6573.00 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4882.55 budget, free margin was $9765.09). Size was cut from 3.31 to 2.40 units. Real risk on this trade is now about $70.65 (0.72% of balance) instead of the requested 1.00%.
+18/01/2026 23:05:15.106 | Trade | Executing Market Order to Buy 2.4 GER40.cash (SL: 24.96, TP: 65.35)
+18/01/2026 23:05:15.106 | Trade | → Executing Market Order to Buy 2.4 GER40.cash (SL: 24.96, TP: 65.35) SUCCEEDED, Position PID19
+18/01/2026 23:05:15.106 | Info | MA Cross: bartime=2026-01-16 21:30, executed=2026-01-18 23:05:15, market Buy placed; SL=24.961316560517993 pips, TP=65.3487267554361 pips.
+18/01/2026 23:30:00.105 | Trade | Executing Market Order to Sell 1.11 GER40.cash (SL: 73.63, TP: 192.76)
+18/01/2026 23:30:00.105 | Trade | → Executing Market Order to Sell 1.11 GER40.cash (SL: 73.63, TP: 192.76) SUCCEEDED, Position PID20
+18/01/2026 23:30:00.105 | Info | MA Cross: bartime=2026-01-18 23:00, executed=2026-01-18 23:30:00, market Sell placed; SL=73.62905324841425 pips, TP=192.7608614043485 pips.
+21/01/2026 06:00:00.303 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 3.03 units, which needs about $6016.98 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4975.09 budget, free margin was $9950.17). Size was cut from 3.03 to 2.45 units. Real risk on this trade is now about $80.38 (0.81% of balance) instead of the requested 1.00%.
+21/01/2026 06:00:00.303 | Trade | Executing Market Order to Buy 2.45 GER40.cash (SL: 27.82, TP: 72.83)
+21/01/2026 06:00:00.303 | Trade | → Executing Market Order to Buy 2.45 GER40.cash (SL: 27.82, TP: 72.83) SUCCEEDED, Position PID21
+21/01/2026 06:00:00.303 | Info | MA Cross: bartime=2026-01-21 05:30, executed=2026-01-21 06:00:00, market Buy placed; SL=27.82032270131428 pips, TP=72.83360483204078 pips.
+21/01/2026 12:00:00.105 | Trade | Executing Market Order to Sell 1.57 GER40.cash (SL: 53.26, TP: 139.43)
+21/01/2026 12:00:00.105 | Trade | → Executing Market Order to Sell 1.57 GER40.cash (SL: 53.26, TP: 139.43) SUCCEEDED, Position PID22
+21/01/2026 12:00:00.105 | Info | MA Cross: bartime=2026-01-21 11:30, executed=2026-01-21 12:00:00, market Sell placed; SL=53.25942790410093 pips, TP=139.43318225293623 pips.
+21/01/2026 20:30:00.105 | Trade | Executing Market Order to Buy 0.71 GER40.cash (SL: 115.96, TP: 303.59)
+21/01/2026 20:30:00.105 | Trade | → Executing Market Order to Buy 0.71 GER40.cash (SL: 115.96, TP: 303.59) SUCCEEDED, Position PID23
+21/01/2026 20:30:00.105 | Info | MA Cross: bartime=2026-01-21 20:00, executed=2026-01-21 20:30:00, market Buy placed; SL=115.96124672663971 pips, TP=303.58654393034277 pips.
+22/01/2026 12:00:00.105 | Info | MA Cross: bartime=2026-01-22 11:30, reversal - closing existing Buy position 23 before opening opposite direction.
+22/01/2026 12:00:00.105 | Trade | Closing position PID23 (Volume: 0.71)
+22/01/2026 12:00:00.105 | Trade | → Closing position PID23 (Volume: 0.71) SUCCEEDED
+22/01/2026 12:00:00.105 | Trade | Executing Market Order to Sell 1.43 GER40.cash (SL: 57.88, TP: 151.53)
+22/01/2026 12:00:00.105 | Trade | → Executing Market Order to Sell 1.43 GER40.cash (SL: 57.88, TP: 151.53) SUCCEEDED, Position PID24
+22/01/2026 12:00:00.105 | Info | MA Cross: bartime=2026-01-22 11:30, executed=2026-01-22 12:00:00, market Sell placed; SL=57.879990995428074 pips, TP=151.5298164260307 pips.
+23/01/2026 06:00:02.705 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 4.01 units, which needs about $7963.06 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4841.03 budget, free margin was $9682.06). Size was cut from 4.01 to 2.38 units. Real risk on this trade is now about $57.38 (0.59% of balance) instead of the requested 1.00%.
+23/01/2026 06:00:02.705 | Trade | Executing Market Order to Buy 2.38 GER40.cash (SL: 20.44, TP: 53.52)
+23/01/2026 06:00:02.705 | Trade | → Executing Market Order to Buy 2.38 GER40.cash (SL: 20.44, TP: 53.52) SUCCEEDED, Position PID25
+23/01/2026 06:00:02.705 | Info | MA Cross: bartime=2026-01-23 05:30, executed=2026-01-23 06:00:02, market Buy placed; SL=20.443917442317712 pips, TP=53.52217586398777 pips.
+26/01/2026 00:30:00.145 | Trade | Executing Market Order to Sell 1.38 GER40.cash (SL: 58.92, TP: 154.26)
+26/01/2026 00:30:00.145 | Trade | → Executing Market Order to Sell 1.38 GER40.cash (SL: 58.92, TP: 154.26) SUCCEEDED, Position PID26
+26/01/2026 00:30:00.145 | Info | MA Cross: bartime=2026-01-26 00:00, executed=2026-01-26 00:30:00, market Sell placed; SL=58.92419421791098 pips, TP=154.26354046249094 pips.
+27/01/2026 12:30:00.244 | Trade | Executing Market Order to Sell 2.21 GER40.cash (SL: 36.42, TP: 95.34)
+27/01/2026 12:30:00.244 | Trade | → Executing Market Order to Sell 2.21 GER40.cash (SL: 36.42, TP: 95.34) SUCCEEDED, Position PID27
+27/01/2026 12:30:00.244 | Info | MA Cross: bartime=2026-01-27 12:00, executed=2026-01-27 12:30:00, market Sell placed; SL=36.41793368501652 pips, TP=95.34215038737325 pips.
+28/01/2026 05:30:42.545 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 3.28 units, which needs about $6513.43 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4711.90 budget, free margin was $9423.79). Size was cut from 3.28 to 2.32 units. Real risk on this trade is now about $66.52 (0.71% of balance) instead of the requested 1.00%.
+28/01/2026 05:30:42.545 | Trade | Executing Market Order to Buy 2.32 GER40.cash (SL: 24.31, TP: 63.65)
+28/01/2026 05:30:42.545 | Trade | → Executing Market Order to Buy 2.32 GER40.cash (SL: 24.31, TP: 63.65) SUCCEEDED, Position PID28
+28/01/2026 05:30:42.545 | Info | MA Cross: bartime=2026-01-28 05:00, executed=2026-01-28 05:30:42, market Buy placed; SL=24.311974613865754 pips, TP=63.64874953910054 pips.
+28/01/2026 11:00:00.144 | Trade | Executing Market Order to Sell 1.78 GER40.cash (SL: 44.35, TP: 116.11)
+28/01/2026 11:00:00.144 | Trade | → Executing Market Order to Sell 1.78 GER40.cash (SL: 44.35, TP: 116.11) SUCCEEDED, Position PID29
+28/01/2026 11:00:00.144 | Info | MA Cross: bartime=2026-01-28 10:30, executed=2026-01-28 11:00:00, market Sell placed; SL=44.35207252522695 pips, TP=116.11372587104415 pips.
+28/01/2026 23:05:00.009 | Trade | Executing Market Order to Buy 1.9 GER40.cash (SL: 41.29, TP: 108.09)
+28/01/2026 23:05:00.009 | Trade | → Executing Market Order to Buy 1.9 GER40.cash (SL: 41.29, TP: 108.09) SUCCEEDED, Position PID30
+28/01/2026 23:05:00.009 | Info | MA Cross: bartime=2026-01-28 21:30, executed=2026-01-28 23:05:00, market Buy placed; SL=41.2854614966633 pips, TP=108.08533819826452 pips.
+29/01/2026 07:30:04.145 | Trade | Executing Market Order to Sell 1.42 GER40.cash (SL: 54.67, TP: 143.14)
+29/01/2026 07:30:04.145 | Trade | → Executing Market Order to Sell 1.42 GER40.cash (SL: 54.67, TP: 143.14) SUCCEEDED, Position PID31
+29/01/2026 07:30:04.145 | Info | MA Cross: bartime=2026-01-29 07:00, executed=2026-01-29 07:30:04, market Sell placed; SL=54.67431816746071 pips, TP=143.13736496241214 pips.
+30/01/2026 08:00:00.045 | Trade | Executing Market Order to Sell 1.43 GER40.cash (SL: 55.58, TP: 145.5)
+30/01/2026 08:00:00.045 | Trade | → Executing Market Order to Sell 1.43 GER40.cash (SL: 55.58, TP: 145.5) SUCCEEDED, Position PID32
+30/01/2026 08:00:00.045 | Info | MA Cross: bartime=2026-01-30 07:30, executed=2026-01-30 08:00:00, market Sell placed; SL=55.57522030239899 pips, TP=145.49592675168054 pips.
+30/01/2026 12:30:00.243 | Trade | Executing Market Order to Buy 1.17 GER40.cash (SL: 67.03, TP: 175.48)
+30/01/2026 12:30:00.243 | Trade | → Executing Market Order to Buy 1.17 GER40.cash (SL: 67.03, TP: 175.48) SUCCEEDED, Position PID33
+30/01/2026 12:30:00.243 | Info | MA Cross: bartime=2026-01-30 12:00, executed=2026-01-30 12:30:00, market Buy placed; SL=67.02967283248788 pips, TP=175.48368347545326 pips.
+02/02/2026 11:30:00.193 | Trade | Executing Market Order to Buy 1.28 GER40.cash (SL: 60.58, TP: 158.6)
+02/02/2026 11:30:00.193 | Trade | → Executing Market Order to Buy 1.28 GER40.cash (SL: 60.58, TP: 158.6) SUCCEEDED, Position PID34
+02/02/2026 11:30:00.193 | Info | MA Cross: bartime=2026-02-02 11:00, executed=2026-02-02 11:30:00, market Buy placed; SL=60.58028598523124 pips, TP=158.59918870933538 pips.
+03/02/2026 15:00:00.294 | Trade | Executing Market Order to Sell 1.15 GER40.cash (SL: 69.19, TP: 181.13)
+03/02/2026 15:00:00.294 | Trade | → Executing Market Order to Sell 1.15 GER40.cash (SL: 69.19, TP: 181.13) SUCCEEDED, Position PID35
+03/02/2026 15:00:00.294 | Info | MA Cross: bartime=2026-02-03 14:30, executed=2026-02-03 15:00:00, market Sell placed; SL=69.18595989165046 pips, TP=181.1288429963409 pips.
+04/02/2026 04:00:21.293 | Trade | Executing Market Order to Buy 2.35 GER40.cash (SL: 33.72, TP: 88.28)
+04/02/2026 04:00:21.293 | Trade | → Executing Market Order to Buy 2.35 GER40.cash (SL: 33.72, TP: 88.28) SUCCEEDED, Position PID36
+04/02/2026 04:00:21.293 | Info | MA Cross: bartime=2026-02-04 03:30, executed=2026-02-04 04:00:21, market Buy placed; SL=33.72224428409322 pips, TP=88.28483553575605 pips.
+06/02/2026 06:30:03.993 | Trade | Executing Market Order to Buy 1.3 GER40.cash (SL: 60.15, TP: 157.47)
+06/02/2026 06:30:03.993 | Trade | → Executing Market Order to Buy 1.3 GER40.cash (SL: 60.15, TP: 157.47) SUCCEEDED, Position PID37
+06/02/2026 06:30:03.993 | Info | MA Cross: bartime=2026-02-06 06:00, executed=2026-02-06 06:30:03, market Buy placed; SL=60.14858674954927 pips, TP=157.46900011031997 pips.
+10/02/2026 07:00:00.113 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 3.85 units, which needs about $7645.34 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4586.58 budget, free margin was $9173.15). Size was cut from 3.85 to 2.26 units. Real risk on this trade is now about $53.75 (0.59% of balance) instead of the requested 1.00%.
+10/02/2026 07:00:00.113 | Trade | Executing Market Order to Sell 2.26 GER40.cash (SL: 20.17, TP: 52.8)
+10/02/2026 07:00:00.113 | Trade | → Executing Market Order to Sell 2.26 GER40.cash (SL: 20.17, TP: 52.8) SUCCEEDED, Position PID38
+10/02/2026 07:00:00.113 | Info | MA Cross: bartime=2026-02-10 06:30, executed=2026-02-10 07:00:00, market Sell placed; SL=20.16747318748509 pips, TP=52.79844480483596 pips.
+10/02/2026 16:30:00.208 | Trade | Executing Market Order to Sell 1.81 GER40.cash (SL: 42.53, TP: 111.35)
+10/02/2026 16:30:00.208 | Trade | → Executing Market Order to Sell 1.81 GER40.cash (SL: 42.53, TP: 111.35) SUCCEEDED, Position PID39
+10/02/2026 16:30:00.208 | Info | MA Cross: bartime=2026-02-10 16:00, executed=2026-02-10 16:30:00, market Sell placed; SL=42.531102685476135 pips, TP=111.34642683057652 pips.
+10/02/2026 20:00:00.014 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 2.49 units, which needs about $4944.65 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4512.99 budget, free margin was $9025.97). Size was cut from 2.49 to 2.22 units. Real risk on this trade is now about $80.18 (0.89% of balance) instead of the requested 1.00%.
+10/02/2026 20:00:00.014 | Trade | Executing Market Order to Buy 2.22 GER40.cash (SL: 30.63, TP: 80.18)
+10/02/2026 20:00:00.014 | Trade | → Executing Market Order to Buy 2.22 GER40.cash (SL: 30.63, TP: 80.18) SUCCEEDED, Position PID40
+10/02/2026 20:00:00.014 | Info | MA Cross: bartime=2026-02-10 19:30, executed=2026-02-10 20:00:00, market Buy placed; SL=30.626512465905748 pips, TP=80.18020963574125 pips.
+11/02/2026 08:30:00.014 | Trade | Executing Market Order to Sell 1.64 GER40.cash (SL: 46.04, TP: 120.53)
+11/02/2026 08:30:00.014 | Trade | → Executing Market Order to Sell 1.64 GER40.cash (SL: 46.04, TP: 120.53) SUCCEEDED, Position PID41
+11/02/2026 08:30:00.014 | Info | MA Cross: bartime=2026-02-11 08:00, executed=2026-02-11 08:30:00, market Sell placed; SL=46.03847180589347 pips, TP=120.52871918782911 pips.
+12/02/2026 00:30:00.114 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 2.91 units, which needs about $5778.68 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4425.79 budget, free margin was $8851.57). Size was cut from 2.91 to 2.18 units. Real risk on this trade is now about $66.30 (0.75% of balance) instead of the requested 1.00%.
+12/02/2026 00:30:00.114 | Trade | Executing Market Order to Buy 2.18 GER40.cash (SL: 25.79, TP: 67.51)
+12/02/2026 00:30:00.114 | Trade | → Executing Market Order to Buy 2.18 GER40.cash (SL: 25.79, TP: 67.51) SUCCEEDED, Position PID42
+12/02/2026 00:30:00.114 | Info | MA Cross: bartime=2026-02-12 00:00, executed=2026-02-12 00:30:00, market Buy placed; SL=25.78772904640976 pips, TP=67.51227464350075 pips.
+12/02/2026 19:00:00.213 | Trade | Executing Market Order to Sell 0.96 GER40.cash (SL: 79.43, TP: 207.95)
+12/02/2026 19:00:00.213 | Trade | → Executing Market Order to Sell 0.96 GER40.cash (SL: 79.43, TP: 207.95) SUCCEEDED, Position PID43
+12/02/2026 19:00:00.213 | Info | MA Cross: bartime=2026-02-12 18:30, executed=2026-02-12 19:00:00, market Sell placed; SL=79.43061112874379 pips, TP=207.94933993505123 pips.
+13/02/2026 17:30:00.214 | Info | MA Cross: bartime=2026-02-13 17:00, reversal - closing existing Sell position 43 before opening opposite direction.
+13/02/2026 17:30:00.214 | Trade | Closing position PID43 (Volume: 0.96)
+13/02/2026 17:30:00.214 | Trade | → Closing position PID43 (Volume: 0.96) SUCCEEDED
+13/02/2026 17:30:00.214 | Trade | Executing Market Order to Buy 1.17 GER40.cash (SL: 64.87, TP: 169.83)
+13/02/2026 17:30:00.214 | Trade | → Executing Market Order to Buy 1.17 GER40.cash (SL: 64.87, TP: 169.83) SUCCEEDED, Position PID44
+13/02/2026 17:30:00.214 | Info | MA Cross: bartime=2026-02-13 17:00, executed=2026-02-13 17:30:00, market Buy placed; SL=64.86915397831491 pips, TP=169.82744511522844 pips.
+16/02/2026 15:00:00.096 | Trade | Executing Market Order to Sell 1.73 GER40.cash (SL: 43.47, TP: 113.81)
+16/02/2026 15:00:00.096 | Trade | → Executing Market Order to Sell 1.73 GER40.cash (SL: 43.47, TP: 113.81) SUCCEEDED, Position PID45
+16/02/2026 15:00:00.096 | Info | MA Cross: bartime=2026-02-16 14:30, executed=2026-02-16 15:00:00, market Sell placed; SL=43.47259671044388 pips, TP=113.81125818794207 pips.
+17/02/2026 12:30:00.094 | Trade | Executing Market Order to Buy 1.61 GER40.cash (SL: 48.16, TP: 126.07)
+17/02/2026 12:30:00.094 | Trade | → Executing Market Order to Buy 1.61 GER40.cash (SL: 48.16, TP: 126.07) SUCCEEDED, Position PID46
+17/02/2026 12:30:00.094 | Info | MA Cross: bartime=2026-02-17 12:00, executed=2026-02-17 12:30:00, market Buy placed; SL=48.15558148575357 pips, TP=126.07131232970285 pips.
+19/02/2026 03:00:01.395 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 3.28 units, which needs about $6513.43 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4530.30 budget, free margin was $9060.60). Size was cut from 3.28 to 2.23 units. Real risk on this trade is now about $61.54 (0.68% of balance) instead of the requested 1.00%.
+19/02/2026 03:00:01.395 | Trade | Executing Market Order to Buy 2.23 GER40.cash (SL: 23.4, TP: 61.26)
+19/02/2026 03:00:01.395 | Trade | → Executing Market Order to Buy 2.23 GER40.cash (SL: 23.4, TP: 61.26) SUCCEEDED, Position PID47
+19/02/2026 03:00:01.395 | Info | MA Cross: bartime=2026-02-19 02:30, executed=2026-02-19 03:00:01, market Buy placed; SL=23.400966698990867 pips, TP=61.26373081795809 pips.
+19/02/2026 07:00:00.095 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 3.68 units, which needs about $7307.75 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4498.76 budget, free margin was $8997.51). Size was cut from 3.68 to 2.22 units. Real risk on this trade is now about $54.22 (0.60% of balance) instead of the requested 1.00%.
+19/02/2026 07:00:00.095 | Trade | Executing Market Order to Sell 2.22 GER40.cash (SL: 20.71, TP: 54.21)
+19/02/2026 07:00:00.095 | Trade | → Executing Market Order to Sell 2.22 GER40.cash (SL: 20.71, TP: 54.21) SUCCEEDED, Position PID48
+19/02/2026 07:00:00.095 | Info | MA Cross: bartime=2026-02-19 06:30, executed=2026-02-19 07:00:00, market Sell placed; SL=20.708400009177645 pips, TP=54.21459122402707 pips.
+20/02/2026 03:00:05.093 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 3.21 units, which needs about $6374.42 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4471.28 budget, free margin was $8942.56). Size was cut from 3.21 to 2.20 units. Real risk on this trade is now about $61.23 (0.68% of balance) instead of the requested 1.00%.
+20/02/2026 03:00:05.093 | Trade | Executing Market Order to Buy 2.2 GER40.cash (SL: 23.6, TP: 61.79)
+20/02/2026 03:00:05.093 | Trade | → Executing Market Order to Buy 2.2 GER40.cash (SL: 23.6, TP: 61.79) SUCCEEDED, Position PID49
+20/02/2026 03:00:05.093 | Info | MA Cross: bartime=2026-02-20 02:30, executed=2026-02-20 03:00:05, market Buy placed; SL=23.600699652099436 pips, TP=61.78663168919632 pips.
+23/02/2026 03:30:00.735 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 2.50 units, which needs about $4964.50 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4440.16 budget, free margin was $8880.32). Size was cut from 2.50 to 2.19 units. Real risk on this trade is now about $77.71 (0.88% of balance) instead of the requested 1.00%.
+23/02/2026 03:30:00.735 | Trade | Executing Market Order to Sell 2.19 GER40.cash (SL: 30.09, TP: 78.77)
+23/02/2026 03:30:00.735 | Trade | → Executing Market Order to Sell 2.19 GER40.cash (SL: 30.09, TP: 78.77) SUCCEEDED, Position PID50
+23/02/2026 03:30:00.735 | Info | MA Cross: bartime=2026-02-23 03:00, executed=2026-02-23 03:30:00, market Sell placed; SL=30.087940138588888 pips, TP=78.7702272828257 pips.
+23/02/2026 14:00:00.735 | Trade | Executing Market Order to Buy 1.75 GER40.cash (SL: 42.6, TP: 111.53)
+23/02/2026 14:00:00.735 | Trade | → Executing Market Order to Buy 1.75 GER40.cash (SL: 42.6, TP: 111.53) SUCCEEDED, Position PID51
+23/02/2026 14:00:00.735 | Info | MA Cross: bartime=2026-02-23 13:30, executed=2026-02-23 14:00:00, market Buy placed; SL=42.59948158811129 pips, TP=111.52544279767535 pips.
+23/02/2026 16:00:00.248 | Trade | Executing Market Order to Sell 1.25 GER40.cash (SL: 58.79, TP: 153.91)
+23/02/2026 16:00:00.248 | Trade | → Executing Market Order to Sell 1.25 GER40.cash (SL: 58.79, TP: 153.91) SUCCEEDED, Position PID52
+23/02/2026 16:00:00.248 | Info | MA Cross: bartime=2026-02-23 15:30, executed=2026-02-23 16:00:00, market Sell placed; SL=58.78826765849061 pips, TP=153.9076847299284 pips.
+24/02/2026 18:00:00.135 | Trade | Executing Market Order to Buy 1.39 GER40.cash (SL: 52.28, TP: 136.88)
+24/02/2026 18:00:00.135 | Trade | → Executing Market Order to Buy 1.39 GER40.cash (SL: 52.28, TP: 136.88) SUCCEEDED, Position PID53
+24/02/2026 18:00:00.135 | Info | MA Cross: bartime=2026-02-24 17:30, executed=2026-02-24 18:00:00, market Buy placed; SL=52.282862325734925 pips, TP=136.87653356877402 pips.
+26/02/2026 05:00:00.337 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 4.22 units, which needs about $8380.08 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4420.07 budget, free margin was $8840.14). Size was cut from 4.22 to 2.18 units. Real risk on this trade is now about $45.60 (0.52% of balance) instead of the requested 1.00%.
+26/02/2026 05:00:00.337 | Trade | Executing Market Order to Sell 2.18 GER40.cash (SL: 17.74, TP: 46.44)
+26/02/2026 05:00:00.337 | Trade | → Executing Market Order to Sell 2.18 GER40.cash (SL: 17.74, TP: 46.44) SUCCEEDED, Position PID54
+26/02/2026 05:00:00.337 | Info | MA Cross: bartime=2026-02-26 04:30, executed=2026-02-26 05:00:00, market Sell placed; SL=17.737808281914 pips, TP=46.437582082050845 pips.
+26/02/2026 12:30:02.734 | Trade | Executing Market Order to Buy 1.86 GER40.cash (SL: 39.99, TP: 104.7)
+26/02/2026 12:30:02.734 | Trade | → Executing Market Order to Buy 1.86 GER40.cash (SL: 39.99, TP: 104.7) SUCCEEDED, Position PID55
+26/02/2026 12:30:02.734 | Info | MA Cross: bartime=2026-02-26 12:00, executed=2026-02-26 12:30:02, market Buy placed; SL=39.99296560389748 pips, TP=104.7015839510036 pips.
+27/02/2026 07:30:01.635 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 2.90 units, which needs about $5758.82 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4351.60 budget, free margin was $8703.19). Size was cut from 2.90 to 2.14 units. Real risk on this trade is now about $64.18 (0.74% of balance) instead of the requested 1.00%.
+27/02/2026 07:30:01.635 | Trade | Executing Market Order to Buy 2.14 GER40.cash (SL: 25.43, TP: 66.57)
+27/02/2026 07:30:01.635 | Trade | → Executing Market Order to Buy 2.14 GER40.cash (SL: 25.43, TP: 66.57) SUCCEEDED, Position PID56
+27/02/2026 07:30:01.635 | Info | MA Cross: bartime=2026-02-27 07:00, executed=2026-02-27 07:30:01, market Buy placed; SL=25.42832543964598 pips, TP=66.57135600099318 pips.
+27/02/2026 20:49:59.836 | Info | MA Cross: loaded=2532, processed=56, before-start=2300, not-processed=176, placed=56, failed=0, guard-skipped=0, same-direction-skipped=0, reversed=3, margin-capped=21, margin-blocked=0.
+Info | CBot instance [MA Cross, GER40.cash, m30] stopped.

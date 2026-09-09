@@ -1,0 +1,990 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_leverage_crosscheck_2025H1\FR40\params.cbotset 
+--start=01/01/2025 --end=01/07/2025 --data-mode=M1 --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=FRA40.cash 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_leverage_crosscheck_2025H1\FR40\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...R40\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | FRA40.cash                | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 01/07/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | M1                        | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 2                         | cbotset              |
+| KtpLevel             | 4                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 50                        | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+04/09/2026 04:54:56.806 | Establishing connection using votuankiet96@gmail.com...
+04/09/2026 04:55:01.529 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Info | CBot instance [Combo, FRA40.cash, h1] started.
+Progress | Backtesting | 0.71 % |
+Progress | Backtesting | 0.76 % |
+Progress | Backtesting | 0.77 % |
+Progress | Backtesting | 1.26 % |
+Progress | Backtesting | 5.11 % |
+Progress | Backtesting | 7.01 % |
+Progress | Backtesting | 8.57 % |
+Progress | Backtesting | 10.87 % |
+Progress | Backtesting | 12.26 % |
+Progress | Backtesting | 15.00 % |
+Progress | Backtesting | 16.69 % |
+Progress | Backtesting | 19.39 % |
+Progress | Backtesting | 22.14 % |
+Progress | Backtesting | 24.04 % |
+Progress | Backtesting | 27.12 % |
+Progress | Backtesting | 30.68 % |
+Progress | Backtesting | 33.68 % |
+Progress | Backtesting | 35.88 % |
+Progress | Backtesting | 38.92 % |
+Progress | Backtesting | 42.47 % |
+Progress | Backtesting | 46.32 % |
+Progress | Backtesting | 50.14 % |
+Progress | Backtesting | 53.44 % |
+Progress | Backtesting | 56.73 % |
+Progress | Backtesting | 61.13 % |
+Progress | Backtesting | 64.42 % |
+Progress | Backtesting | 66.62 % |
+Progress | Backtesting | 69.37 % |
+Progress | Backtesting | 72.12 % |
+Progress | Backtesting | 74.32 % |
+Progress | Backtesting | 77.61 % |
+Progress | Backtesting | 80.36 % |
+Progress | Backtesting | 83.66 % |
+Progress | Backtesting | 85.85 % |
+Progress | Backtesting | 88.12 % |
+Progress | Backtesting | 91.35 % |
+Progress | Backtesting | 93.00 % |
+Progress | Backtesting | 96.02 % |
+Progress | Backtesting | 99.04 % |
+02/01/2025 07:05:00.000 | Info | Combo: loaded 4161 valid signal row(s) from CSV.
+02/01/2025 07:05:00.000 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+02/01/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 2.66 FRA40.cash (Price: 7329.8, SL: 7361.62050051378, TP: 7246.49)
+02/01/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 2.66 FRA40.cash (Price: 7329.8, SL: 7361.62050051378, TP: 7246.49) SUCCEEDED, PendingOrder OID1
+02/01/2025 09:00:00.000 | Info | Combo: bartime=2025-01-02 08:00, executed=2025-01-02 09:00:00, pending Sell placed at 7329.8; SL=7361.6205005137845, TP=7246.493929654912; valid for the next 3 chart bar(s).
+02/01/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 2.53 FRA40.cash (Price: 7380.2, SL: 7347.09609151332, TP: 7466.87)
+02/01/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 2.53 FRA40.cash (Price: 7380.2, SL: 7347.09609151332, TP: 7466.87) SUCCEEDED, PendingOrder OID4
+02/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-02 14:00, executed=2025-01-02 15:00:00, pending Buy placed at 7380.2; SL=7347.096091513315, TP=7466.866032418143; valid for the next 3 chart bar(s).
+03/01/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 3.2 FRA40.cash (Price: 7314.4, SL: 7340.2391192979, TP: 7246.75)
+03/01/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 3.2 FRA40.cash (Price: 7314.4, SL: 7340.2391192979, TP: 7246.75) SUCCEEDED, PendingOrder OID7
+03/01/2025 09:00:00.000 | Info | Combo: bartime=2025-01-03 08:00, executed=2025-01-03 09:00:00, pending Sell placed at 7314.4; SL=7340.239119297905, TP=7246.753185678083; valid for the next 3 chart bar(s).
+03/01/2025 12:00:00.000 | Trade | Cancelling pending order OID7
+03/01/2025 12:00:00.000 | Trade |  Cancelling pending order OID7 SUCCEEDED
+03/01/2025 12:00:00.000 | Info | Combo: pending order 7 cancelled after 3 chart bars.
+08/01/2025 07:05:00.000 | Trade | Placing Stop Order to Sell 6.44 FRA40.cash (Price: 7466, SL: 7478.87025070703, TP: 7432.31)
+08/01/2025 07:05:00.000 | Trade |  Placing Stop Order to Sell 6.44 FRA40.cash (Price: 7466, SL: 7478.87025070703, TP: 7432.31) SUCCEEDED, PendingOrder OID8
+08/01/2025 07:05:00.000 | Info | Combo: bartime=2025-01-08 06:00, executed=2025-01-08 07:05:00, pending Sell placed at 7466; SL=7478.870250707028, TP=7432.3056836490005; valid for the next 3 chart bar(s).
+08/01/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 2.57 FRA40.cash (Price: 7399.3, SL: 7431.14775575168, TP: 7315.92)
+08/01/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 2.57 FRA40.cash (Price: 7399.3, SL: 7431.14775575168, TP: 7315.92) SUCCEEDED, PendingOrder OID11
+08/01/2025 12:00:00.000 | Info | Combo: bartime=2025-01-08 11:00, executed=2025-01-08 12:00:00, pending Sell placed at 7399.3; SL=7431.147755751679, TP=7315.922575442105; valid for the next 3 chart bar(s).
+09/01/2025 07:05:00.000 | Trade | Placing Stop Order to Buy 3.79 FRA40.cash (Price: 7459.1, SL: 7437.73704029511, TP: 7515.03)
+09/01/2025 07:05:00.000 | Trade |  Placing Stop Order to Buy 3.79 FRA40.cash (Price: 7459.1, SL: 7437.73704029511, TP: 7515.03) SUCCEEDED, PendingOrder OID14
+09/01/2025 07:05:00.000 | Info | Combo: bartime=2025-01-09 02:00, executed=2025-01-09 07:05:00, pending Buy placed at 7459.1; SL=7437.737040295111, TP=7515.028228507401; valid for the next 3 chart bar(s).
+09/01/2025 09:00:00.000 | Info | Combo: bartime=2025-01-09 08:00, Buy signal skipped: already have same-direction exposure open.
+10/01/2025 07:05:00.000 | Info | Combo: bartime=2025-01-10 06:00, reversal - closing existing Buy position 5 before opening opposite direction.
+10/01/2025 07:05:00.000 | Trade | Closing position PID5 (Volume: 3.79)
+10/01/2025 07:05:00.000 | Trade |  Closing position PID5 (Volume: 3.79) SUCCEEDED
+10/01/2025 07:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.33 units, which needs about $5045.07 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4822.92 budget, free margin was $9645.83). Size was cut from 8.33 to 7.80 units. Real risk on this trade is now about $90.28 (0.94% of balance) instead of the requested 1.00%.
+10/01/2025 07:05:00.000 | Trade | Placing Stop Order to Sell 7.8 FRA40.cash (Price: 7474.2, SL: 7484.00861618095, TP: 7448.52)
+10/01/2025 07:05:00.000 | Trade |  Placing Stop Order to Sell 7.8 FRA40.cash (Price: 7474.2, SL: 7484.00861618095, TP: 7448.52) SUCCEEDED, PendingOrder OID18
+10/01/2025 07:05:00.000 | Info | Combo: bartime=2025-01-10 06:00, executed=2025-01-10 07:05:00, pending Sell placed at 7474.2; SL=7484.008616180951, TP=7448.52104283827; valid for the next 3 chart bar(s).
+10/01/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 4.88 FRA40.cash (Price: 7518.5, SL: 7502.09048564419, TP: 7561.46)
+10/01/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 4.88 FRA40.cash (Price: 7518.5, SL: 7502.09048564419, TP: 7561.46) SUCCEEDED, PendingOrder OID21
+10/01/2025 09:00:00.000 | Info | Combo: bartime=2025-01-10 08:00, executed=2025-01-10 09:00:00, pending Buy placed at 7518.5; SL=7502.090485644191, TP=7561.4601085835075; valid for the next 3 chart bar(s).
+10/01/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 3.09 FRA40.cash (Price: 7454.4, SL: 7480.06519766411, TP: 7387.21)
+10/01/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 3.09 FRA40.cash (Price: 7454.4, SL: 7480.06519766411, TP: 7387.21) SUCCEEDED, PendingOrder OID24
+10/01/2025 14:00:00.000 | Info | Combo: bartime=2025-01-10 13:00, executed=2025-01-10 14:00:00, pending Sell placed at 7454.4; SL=7480.065197664111, TP=7387.208512515355; valid for the next 3 chart bar(s).
+13/01/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 3.31 FRA40.cash (Price: 7429, SL: 7404.40058832717, TP: 7493.4)
+13/01/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 3.31 FRA40.cash (Price: 7429, SL: 7404.40058832717, TP: 7493.4) SUCCEEDED, PendingOrder OID27
+13/01/2025 16:00:00.000 | Info | Combo: bartime=2025-01-13 15:00, executed=2025-01-13 16:00:00, pending Buy placed at 7429; SL=7404.400588327173, TP=7493.401259759462; valid for the next 3 chart bar(s).
+13/01/2025 18:00:00.000 | Info | Combo: bartime=2025-01-13 17:00, Buy signal skipped: already have same-direction exposure open.
+14/01/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 3.18 FRA40.cash (Price: 7426.4, SL: 7452.69206624108, TP: 7357.57)
+14/01/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 3.18 FRA40.cash (Price: 7426.4, SL: 7452.69206624108, TP: 7357.57) SUCCEEDED, PendingOrder OID30
+14/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-14 14:00, executed=2025-01-14 15:00:00, pending Sell placed at 7426.4; SL=7452.692066241079, TP=7357.567370580853; valid for the next 3 chart bar(s).
+15/01/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 3.97 FRA40.cash (Price: 7457.4, SL: 7436.60522974339, TP: 7511.84)
+15/01/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 3.97 FRA40.cash (Price: 7457.4, SL: 7436.60522974339, TP: 7511.84) SUCCEEDED, PendingOrder OID33
+15/01/2025 11:00:00.000 | Info | Combo: bartime=2025-01-15 10:00, executed=2025-01-15 11:00:00, pending Buy placed at 7457.4; SL=7436.605229743386, TP=7511.840708531815; valid for the next 3 chart bar(s).
+16/01/2025 07:05:00.000 | Trade | Placing Stop Order to Sell 7.22 FRA40.cash (Price: 7463.4, SL: 7475.12283688068, TP: 7432.71)
+16/01/2025 07:05:00.000 | Trade |  Placing Stop Order to Sell 7.22 FRA40.cash (Price: 7463.4, SL: 7475.12283688068, TP: 7432.71) SUCCEEDED, PendingOrder OID36
+16/01/2025 07:05:00.000 | Info | Combo: bartime=2025-01-16 05:00, executed=2025-01-16 07:05:00, pending Sell placed at 7463.4; SL=7475.122836880683, TP=7432.70961304637; valid for the next 3 chart bar(s).
+16/01/2025 07:05:00.000 | Info | Combo: bartime=2025-01-16 06:00, reversal - cancelling existing Sell pending order 36 before opening opposite direction.
+16/01/2025 07:05:00.000 | Trade | Cancelling pending order OID36
+16/01/2025 07:05:00.000 | Trade |  Cancelling pending order OID36 SUCCEEDED
+16/01/2025 07:05:00.000 | Trade | Placing Stop Order to Buy 4.81 FRA40.cash (Price: 7514.4, SL: 7496.82173049545, TP: 7560.42)
+16/01/2025 07:05:00.000 | Trade |  Placing Stop Order to Buy 4.81 FRA40.cash (Price: 7514.4, SL: 7496.82173049545, TP: 7560.42) SUCCEEDED, PendingOrder OID37
+16/01/2025 07:05:00.000 | Info | Combo: bartime=2025-01-16 06:00, executed=2025-01-16 07:05:00, pending Buy placed at 7514.4; SL=7496.821730495452, TP=7560.419909562904; valid for the next 3 chart bar(s).
+20/01/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 6.17 FRA40.cash (Price: 7702.9, SL: 7716.92894967091, TP: 7666.17)
+20/01/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 6.17 FRA40.cash (Price: 7702.9, SL: 7716.92894967091, TP: 7666.17) SUCCEEDED, PendingOrder OID40
+20/01/2025 12:00:00.000 | Info | Combo: bartime=2025-01-20 11:00, executed=2025-01-20 12:00:00, pending Sell placed at 7702.9; SL=7716.928949670909, TP=7666.17220976156; valid for the next 3 chart bar(s).
+20/01/2025 14:00:00.000 | Info | Combo: bartime=2025-01-20 13:00, reversal - cancelling existing Sell pending order 40 before opening opposite direction.
+20/01/2025 14:00:00.000 | Trade | Cancelling pending order OID40
+20/01/2025 14:00:00.000 | Trade |  Cancelling pending order OID40 SUCCEEDED
+20/01/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 4.1 FRA40.cash (Price: 7761.5, SL: 7740.39347221062, TP: 7816.76)
+20/01/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 4.1 FRA40.cash (Price: 7761.5, SL: 7740.39347221062, TP: 7816.76) SUCCEEDED, PendingOrder OID41
+20/01/2025 14:00:00.000 | Info | Combo: bartime=2025-01-20 13:00, executed=2025-01-20 14:00:00, pending Buy placed at 7761.5; SL=7740.393472210619, TP=7816.756889752602; valid for the next 3 chart bar(s).
+20/01/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 3.08 FRA40.cash (Price: 7673.8, SL: 7701.63083378253, TP: 7600.94)
+20/01/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 3.08 FRA40.cash (Price: 7673.8, SL: 7701.63083378253, TP: 7600.94) SUCCEEDED, PendingOrder OID44
+20/01/2025 18:00:00.000 | Info | Combo: bartime=2025-01-20 17:00, executed=2025-01-20 18:00:00, pending Sell placed at 7673.8; SL=7701.630833782531, TP=7600.938877157335; valid for the next 3 chart bar(s).
+21/01/2025 07:05:00.000 | Trade | Cancelling pending order OID44
+21/01/2025 07:05:00.000 | Trade |  Cancelling pending order OID44 SUCCEEDED
+21/01/2025 07:05:00.000 | Info | Combo: pending order 44 cancelled after 3 chart bars.
+21/01/2025 07:05:00.000 | Trade | Placing Stop Order to Sell 4.44 FRA40.cash (Price: 7705.9, SL: 7725.20267623287, TP: 7655.37)
+21/01/2025 07:05:00.000 | Trade |  Placing Stop Order to Sell 4.44 FRA40.cash (Price: 7705.9, SL: 7725.20267623287, TP: 7655.37) SUCCEEDED, PendingOrder OID45
+21/01/2025 07:05:00.000 | Info | Combo: bartime=2025-01-21 04:00, executed=2025-01-21 07:05:00, pending Sell placed at 7705.9; SL=7725.20267623287, TP=7655.365593622346; valid for the next 3 chart bar(s).
+21/01/2025 09:00:00.000 | Info | Combo: bartime=2025-01-21 08:00, reversal - cancelling existing Sell pending order 45 before opening opposite direction.
+21/01/2025 09:00:00.000 | Trade | Cancelling pending order OID45
+21/01/2025 09:00:00.000 | Trade |  Cancelling pending order OID45 SUCCEEDED
+21/01/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 4.1 FRA40.cash (Price: 7750.3, SL: 7729.41106381502, TP: 7804.99)
+21/01/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 4.1 FRA40.cash (Price: 7750.3, SL: 7729.41106381502, TP: 7804.99) SUCCEEDED, PendingOrder OID46
+21/01/2025 09:00:00.000 | Info | Combo: bartime=2025-01-21 08:00, executed=2025-01-21 09:00:00, pending Buy placed at 7750.3; SL=7729.411063815016, TP=7804.987234932288; valid for the next 3 chart bar(s).
+22/01/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 4.48 FRA40.cash (Price: 7826.8, SL: 7807.20668729911, TP: 7878.1)
+22/01/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 4.48 FRA40.cash (Price: 7826.8, SL: 7807.20668729911, TP: 7878.1) SUCCEEDED, PendingOrder OID49
+22/01/2025 09:00:00.000 | Info | Combo: bartime=2025-01-22 08:00, executed=2025-01-22 09:00:00, pending Buy placed at 7826.8; SL=7807.206687299106, TP=7878.095292650941; valid for the next 3 chart bar(s).
+23/01/2025 08:00:00.000 | Info | Combo: bartime=2025-01-23 07:00, Buy signal skipped: already have same-direction exposure open.
+23/01/2025 09:00:00.000 | Info | Combo: bartime=2025-01-23 08:00, reversal - closing existing Buy position 15 before opening opposite direction.
+23/01/2025 09:00:00.000 | Trade | Closing position PID15 (Volume: 4.48)
+23/01/2025 09:00:00.000 | Trade |  Closing position PID15 (Volume: 4.48) SUCCEEDED
+23/01/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 5.08 FRA40.cash (Price: 7822.5, SL: 7839.74016997057, TP: 7777.37)
+23/01/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 5.08 FRA40.cash (Price: 7822.5, SL: 7839.74016997057, TP: 7777.37) SUCCEEDED, PendingOrder OID53
+23/01/2025 09:00:00.000 | Info | Combo: bartime=2025-01-23 08:00, executed=2025-01-23 09:00:00, pending Sell placed at 7822.5; SL=7839.7401699705715, TP=7777.365235017044; valid for the next 3 chart bar(s).
+23/01/2025 10:00:00.000 | Info | Combo: bartime=2025-01-23 09:00, reversal - cancelling existing Sell pending order 53 before opening opposite direction.
+23/01/2025 10:00:00.000 | Trade | Cancelling pending order OID53
+23/01/2025 10:00:00.000 | Trade |  Cancelling pending order OID53 SUCCEEDED
+23/01/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 4.78 FRA40.cash (Price: 7855, SL: 7836.66786402354, TP: 7902.99)
+23/01/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 4.78 FRA40.cash (Price: 7855, SL: 7836.66786402354, TP: 7902.99) SUCCEEDED, PendingOrder OID54
+23/01/2025 10:00:00.000 | Info | Combo: bartime=2025-01-23 09:00, executed=2025-01-23 10:00:00, pending Buy placed at 7855; SL=7836.667864023543, TP=7902.993531986364; valid for the next 3 chart bar(s).
+24/01/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 4.11 FRA40.cash (Price: 7909, SL: 7930.92665523957, TP: 7851.6)
+24/01/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 4.11 FRA40.cash (Price: 7909, SL: 7930.92665523957, TP: 7851.6) SUCCEEDED, PendingOrder OID57
+24/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-24 14:00, executed=2025-01-24 15:00:00, pending Sell placed at 7909; SL=7930.926655239574, TP=7851.596016582795; valid for the next 3 chart bar(s).
+27/01/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 3.27 FRA40.cash (Price: 7895.5, SL: 7868.2888886886, TP: 7966.74)
+27/01/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 3.27 FRA40.cash (Price: 7895.5, SL: 7868.2888886886, TP: 7966.74) SUCCEEDED, PendingOrder OID60
+27/01/2025 14:00:00.000 | Info | Combo: bartime=2025-01-27 13:00, executed=2025-01-27 14:00:00, pending Buy placed at 7895.5; SL=7868.288888688595, TP=7966.738689413258; valid for the next 3 chart bar(s).
+28/01/2025 08:00:00.000 | Info | Combo: bartime=2025-01-28 07:00, reversal - closing existing Buy position 18 before opening opposite direction.
+28/01/2025 08:00:00.000 | Trade | Closing position PID18 (Volume: 3.27)
+28/01/2025 08:00:00.000 | Trade |  Closing position PID18 (Volume: 3.27) SUCCEEDED
+28/01/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 4.03 FRA40.cash (Price: 7876.7, SL: 7898.86904374212, TP: 7818.66)
+28/01/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 4.03 FRA40.cash (Price: 7876.7, SL: 7898.86904374212, TP: 7818.66) SUCCEEDED, PendingOrder OID64
+28/01/2025 08:00:00.000 | Info | Combo: bartime=2025-01-28 07:00, executed=2025-01-28 08:00:00, pending Sell placed at 7876.7; SL=7898.869043742121, TP=7818.661443483127; valid for the next 3 chart bar(s).
+28/01/2025 11:00:00.000 | Trade | Cancelling pending order OID64
+28/01/2025 11:00:00.000 | Trade |  Cancelling pending order OID64 SUCCEEDED
+28/01/2025 11:00:00.000 | Info | Combo: pending order 64 cancelled after 3 chart bars.
+28/01/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 2.21 FRA40.cash (Price: 7820.5, SL: 7860.7570631694, TP: 7715.11)
+28/01/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 2.21 FRA40.cash (Price: 7820.5, SL: 7860.7570631694, TP: 7715.11) SUCCEEDED, PendingOrder OID65
+28/01/2025 17:00:00.000 | Info | Combo: bartime=2025-01-28 16:00, executed=2025-01-28 17:00:00, pending Sell placed at 7820.5; SL=7860.7570631694, TP=7715.107008622511; valid for the next 3 chart bar(s).
+28/01/2025 20:00:00.000 | Trade | Cancelling pending order OID65
+28/01/2025 20:00:00.000 | Trade |  Cancelling pending order OID65 SUCCEEDED
+28/01/2025 20:00:00.000 | Info | Combo: pending order 65 cancelled after 3 chart bars.
+31/01/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 4.32 FRA40.cash (Price: 7935.7, SL: 7956.34123269043, TP: 7881.66)
+31/01/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 4.32 FRA40.cash (Price: 7935.7, SL: 7956.34123269043, TP: 7881.66) SUCCEEDED, PendingOrder OID66
+31/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-31 14:00, executed=2025-01-31 15:00:00, pending Sell placed at 7935.7; SL=7956.341232690426, TP=7881.661252816462; valid for the next 3 chart bar(s).
+31/01/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 2.95 FRA40.cash (Price: 7906.1, SL: 7935.98248891, TP: 7827.87)
+31/01/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 2.95 FRA40.cash (Price: 7906.1, SL: 7935.98248891, TP: 7827.87) SUCCEEDED, PendingOrder OID69
+31/01/2025 19:00:00.000 | Info | Combo: bartime=2025-01-31 18:00, executed=2025-01-31 19:00:00, pending Sell placed at 7906.1; SL=7935.982488909999, TP=7827.867644033624; valid for the next 3 chart bar(s).
+03/02/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 2.09 FRA40.cash (Price: 7881.5, SL: 7837.39521839357, TP: 7996.97)
+03/02/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 2.09 FRA40.cash (Price: 7881.5, SL: 7837.39521839357, TP: 7996.97) SUCCEEDED, PendingOrder OID72
+03/02/2025 16:00:00.000 | Info | Combo: bartime=2025-02-03 15:00, executed=2025-02-03 16:00:00, pending Buy placed at 7881.5; SL=7837.3952183935735, TP=7996.966318245625; valid for the next 3 chart bar(s).
+03/02/2025 19:00:00.000 | Trade | Cancelling pending order OID72
+03/02/2025 19:00:00.000 | Trade |  Cancelling pending order OID72 SUCCEEDED
+03/02/2025 19:00:00.000 | Info | Combo: pending order 72 cancelled after 3 chart bars.
+04/02/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 2.54 FRA40.cash (Price: 7800.7, SL: 7837.07687536802, TP: 7705.47)
+04/02/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 2.54 FRA40.cash (Price: 7800.7, SL: 7837.07687536802, TP: 7705.47) SUCCEEDED, PendingOrder OID73
+04/02/2025 09:00:00.000 | Info | Combo: bartime=2025-02-04 08:00, executed=2025-02-04 09:00:00, pending Sell placed at 7800.7; SL=7837.076875368019, TP=7705.465340286528; valid for the next 3 chart bar(s).
+04/02/2025 10:00:00.000 | Info | Combo: bartime=2025-02-04 09:00, reversal - cancelling existing Sell pending order 73 before opening opposite direction.
+04/02/2025 10:00:00.000 | Trade | Cancelling pending order OID73
+04/02/2025 10:00:00.000 | Trade |  Cancelling pending order OID73 SUCCEEDED
+04/02/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 2.63 FRA40.cash (Price: 7867.2, SL: 7832.09849970558, TP: 7959.1)
+04/02/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 2.63 FRA40.cash (Price: 7867.2, SL: 7832.09849970558, TP: 7959.1) SUCCEEDED, PendingOrder OID74
+04/02/2025 10:00:00.000 | Info | Combo: bartime=2025-02-04 09:00, executed=2025-02-04 10:00:00, pending Buy placed at 7867.2; SL=7832.098499705585, TP=7959.095727770778; valid for the next 3 chart bar(s).
+05/02/2025 07:05:00.000 | Info | Combo: bartime=2025-02-05 05:00, reversal - closing existing Buy position 21 before opening opposite direction.
+05/02/2025 07:05:00.000 | Trade | Closing position PID21 (Volume: 2.63)
+05/02/2025 07:05:00.000 | Trade |  Closing position PID21 (Volume: 2.63) SUCCEEDED
+05/02/2025 07:05:00.000 | Trade | Placing Stop Order to Sell 7.38 FRA40.cash (Price: 7869.8, SL: 7882.34646748398, TP: 7836.95)
+05/02/2025 07:05:00.000 | Trade |  Placing Stop Order to Sell 7.38 FRA40.cash (Price: 7869.8, SL: 7882.34646748398, TP: 7836.95) SUCCEEDED, PendingOrder OID78
+05/02/2025 07:05:00.000 | Info | Combo: bartime=2025-02-05 05:00, executed=2025-02-05 07:05:00, pending Sell placed at 7869.8; SL=7882.346467483977, TP=7836.953348126949; valid for the next 3 chart bar(s).
+05/02/2025 12:00:00.000 | Trade | Placing Stop Order to Buy 5.26 FRA40.cash (Price: 7903.4, SL: 7886.00832442788, TP: 7948.93)
+05/02/2025 12:00:00.000 | Trade |  Placing Stop Order to Buy 5.26 FRA40.cash (Price: 7903.4, SL: 7886.00832442788, TP: 7948.93) SUCCEEDED, PendingOrder OID81
+05/02/2025 12:00:00.000 | Info | Combo: bartime=2025-02-05 11:00, executed=2025-02-05 12:00:00, pending Buy placed at 7903.4; SL=7886.00832442788, TP=7948.931406647808; valid for the next 3 chart bar(s).
+05/02/2025 15:00:00.000 | Trade | Cancelling pending order OID81
+05/02/2025 15:00:00.000 | Trade |  Cancelling pending order OID81 SUCCEEDED
+05/02/2025 15:00:00.000 | Info | Combo: pending order 81 cancelled after 3 chart bars.
+05/02/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 5.77 FRA40.cash (Price: 7867.2, SL: 7883.06853789292, TP: 7825.66)
+05/02/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 5.77 FRA40.cash (Price: 7867.2, SL: 7883.06853789292, TP: 7825.66) SUCCEEDED, PendingOrder OID82
+05/02/2025 15:00:00.000 | Info | Combo: bartime=2025-02-05 14:00, executed=2025-02-05 15:00:00, pending Sell placed at 7867.2; SL=7883.068537892925, TP=7825.656167796322; valid for the next 3 chart bar(s).
+05/02/2025 17:00:00.000 | Trade | Placing Stop Order to Buy 4.7 FRA40.cash (Price: 7901.2, SL: 7882.01213574853, TP: 7951.43)
+05/02/2025 17:00:00.000 | Trade |  Placing Stop Order to Buy 4.7 FRA40.cash (Price: 7901.2, SL: 7882.01213574853, TP: 7951.43) SUCCEEDED, PendingOrder OID85
+05/02/2025 17:00:00.000 | Info | Combo: bartime=2025-02-05 16:00, executed=2025-02-05 17:00:00, pending Buy placed at 7901.2; SL=7882.012135748528, TP=7951.433828610354; valid for the next 3 chart bar(s).
+07/02/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 5.57 FRA40.cash (Price: 7977.6, SL: 7994.22011072008, TP: 7934.09)
+07/02/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 5.57 FRA40.cash (Price: 7977.6, SL: 7994.22011072008, TP: 7934.09) SUCCEEDED, PendingOrder OID88
+07/02/2025 14:00:00.000 | Info | Combo: bartime=2025-02-07 13:00, executed=2025-02-07 14:00:00, pending Sell placed at 7977.6; SL=7994.220110720081, TP=7934.088550134828; valid for the next 3 chart bar(s).
+07/02/2025 16:00:00.000 | Info | Combo: bartime=2025-02-07 15:00, Sell signal skipped: already have same-direction exposure open.
+10/02/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 6.04 FRA40.cash (Price: 8009.3, SL: 7994.18094385764, TP: 8048.88)
+10/02/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 6.04 FRA40.cash (Price: 8009.3, SL: 7994.18094385764, TP: 8048.88) SUCCEEDED, PendingOrder OID91
+10/02/2025 09:00:00.000 | Info | Combo: bartime=2025-02-10 08:00, executed=2025-02-10 09:00:00, pending Buy placed at 8009.3; SL=7994.180943857636, TP=8048.88168898071; valid for the next 3 chart bar(s).
+10/02/2025 11:00:00.000 | Info | Combo: bartime=2025-02-10 10:00, Buy signal skipped: already have same-direction exposure open.
+10/02/2025 12:00:00.000 | Trade | Cancelling pending order OID91
+10/02/2025 12:00:00.000 | Trade |  Cancelling pending order OID91 SUCCEEDED
+10/02/2025 12:00:00.000 | Info | Combo: pending order 91 cancelled after 3 chart bars.
+11/02/2025 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.94 units, which needs about $6020.17 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5389.32 budget, free margin was $10778.65). Size was cut from 9.94 to 8.72 units. Real risk on this trade is now about $94.51 (0.88% of balance) instead of the requested 1.00%.
+11/02/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 8.72 FRA40.cash (Price: 7991, SL: 8000.1848811451, TP: 7966.95)
+11/02/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 8.72 FRA40.cash (Price: 7991, SL: 8000.1848811451, TP: 7966.95) SUCCEEDED, PendingOrder OID92
+11/02/2025 08:00:00.000 | Info | Combo: bartime=2025-02-11 07:00, executed=2025-02-11 08:00:00, pending Sell placed at 7991; SL=8000.184881145097, TP=7966.953981162134; valid for the next 3 chart bar(s).
+11/02/2025 09:00:00.000 | Info | Combo: bartime=2025-02-11 08:00, reversal - cancelling existing Sell pending order 92 before opening opposite direction.
+11/02/2025 09:00:00.000 | Trade | Cancelling pending order OID92
+11/02/2025 09:00:00.000 | Trade |  Cancelling pending order OID92 SUCCEEDED
+11/02/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 5.99 FRA40.cash (Price: 8042.3, SL: 8027.07209508392, TP: 8082.17)
+11/02/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 5.99 FRA40.cash (Price: 8042.3, SL: 8027.07209508392, TP: 8082.17) SUCCEEDED, PendingOrder OID93
+11/02/2025 09:00:00.000 | Info | Combo: bartime=2025-02-11 08:00, executed=2025-02-11 09:00:00, pending Buy placed at 8042.3; SL=8027.072095083922, TP=8082.166655070293; valid for the next 3 chart bar(s).
+11/02/2025 12:00:00.000 | Trade | Cancelling pending order OID93
+11/02/2025 12:00:00.000 | Trade |  Cancelling pending order OID93 SUCCEEDED
+11/02/2025 12:00:00.000 | Info | Combo: pending order 93 cancelled after 3 chart bars.
+12/02/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 5.59 FRA40.cash (Price: 8016.4, SL: 8032.73660032544, TP: 7973.63)
+12/02/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 5.59 FRA40.cash (Price: 8016.4, SL: 8032.73660032544, TP: 7973.63) SUCCEEDED, PendingOrder OID94
+12/02/2025 12:00:00.000 | Info | Combo: bartime=2025-02-12 11:00, executed=2025-02-12 12:00:00, pending Sell placed at 8016.4; SL=8032.736600325436, TP=7973.630780348008; valid for the next 3 chart bar(s).
+12/02/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 3.15 FRA40.cash (Price: 8064.1, SL: 8036.0819685067, TP: 8137.45)
+12/02/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 3.15 FRA40.cash (Price: 8064.1, SL: 8036.0819685067, TP: 8137.45) SUCCEEDED, PendingOrder OID97
+12/02/2025 16:00:00.000 | Info | Combo: bartime=2025-02-12 15:00, executed=2025-02-12 16:00:00, pending Buy placed at 8064.1; SL=8036.081968506702, TP=8137.451206449456; valid for the next 3 chart bar(s).
+13/02/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 3.03 FRA40.cash (Price: 8087.1, SL: 8116.89956217816, TP: 8009.08)
+13/02/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 3.03 FRA40.cash (Price: 8087.1, SL: 8116.89956217816, TP: 8009.08) SUCCEEDED, PendingOrder OID100
+13/02/2025 19:00:00.000 | Info | Combo: bartime=2025-02-13 18:00, executed=2025-02-13 19:00:00, pending Sell placed at 8087.1; SL=8116.89956217816, TP=8009.084746217579; valid for the next 3 chart bar(s).
+14/02/2025 08:00:00.000 | Trade | Cancelling pending order OID100
+14/02/2025 08:00:00.000 | Trade |  Cancelling pending order OID100 SUCCEEDED
+14/02/2025 08:00:00.000 | Info | Combo: pending order 100 cancelled after 3 chart bars.
+14/02/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 4.97 FRA40.cash (Price: 8168.2, SL: 8150.04704387705, TP: 8215.72)
+14/02/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 4.97 FRA40.cash (Price: 8168.2, SL: 8150.04704387705, TP: 8215.72) SUCCEEDED, PendingOrder OID101
+14/02/2025 08:00:00.000 | Info | Combo: bartime=2025-02-14 07:00, executed=2025-02-14 08:00:00, pending Buy placed at 8168.2; SL=8150.047043877053, TP=8215.724439129875; valid for the next 3 chart bar(s).
+17/02/2025 07:05:00.000 | Info | Combo: bartime=2025-02-17 05:00, reversal - closing existing Buy position 28 before opening opposite direction.
+17/02/2025 07:05:00.000 | Trade | Closing position PID28 (Volume: 4.97)
+17/02/2025 07:05:00.000 | Trade |  Closing position PID28 (Volume: 4.97) SUCCEEDED
+17/02/2025 07:05:00.000 | Trade | Placing Stop Order to Sell 8.11 FRA40.cash (Price: 8172.2, SL: 8183.37947871879, TP: 8142.93)
+17/02/2025 07:05:00.000 | Trade |  Placing Stop Order to Sell 8.11 FRA40.cash (Price: 8172.2, SL: 8183.37947871879, TP: 8142.93) SUCCEEDED, PendingOrder OID105
+17/02/2025 07:05:00.000 | Info | Combo: bartime=2025-02-17 05:00, executed=2025-02-17 07:05:00, pending Sell placed at 8172.2; SL=8183.379478718793, TP=8142.9321247142; valid for the next 3 chart bar(s).
+17/02/2025 08:00:00.000 | Info | Combo: bartime=2025-02-17 07:00, Sell signal skipped: already have same-direction exposure open.
+17/02/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 6.3 FRA40.cash (Price: 8169.4, SL: 8183.62354846926, TP: 8132.16)
+17/02/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 6.3 FRA40.cash (Price: 8169.4, SL: 8183.62354846926, TP: 8132.16) SUCCEEDED, PendingOrder OID108
+17/02/2025 12:00:00.000 | Info | Combo: bartime=2025-02-17 11:00, executed=2025-02-17 12:00:00, pending Sell placed at 8169.4; SL=8183.623548469259, TP=8132.162750107478; valid for the next 3 chart bar(s).
+17/02/2025 15:00:00.000 | Trade | Cancelling pending order OID108
+17/02/2025 15:00:00.000 | Trade |  Cancelling pending order OID108 SUCCEEDED
+17/02/2025 15:00:00.000 | Info | Combo: pending order 108 cancelled after 3 chart bars.
+18/02/2025 07:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.19 units, which needs about $5565.93 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5295.14 budget, free margin was $10590.28). Size was cut from 9.19 to 8.56 units. Real risk on this trade is now about $98.61 (0.93% of balance) instead of the requested 1.00%.
+18/02/2025 07:05:00.000 | Trade | Placing Stop Order to Sell 8.56 FRA40.cash (Price: 8173.4, SL: 8183.16280178366, TP: 8147.84)
+18/02/2025 07:05:00.000 | Trade |  Placing Stop Order to Sell 8.56 FRA40.cash (Price: 8173.4, SL: 8183.16280178366, TP: 8147.84) SUCCEEDED, PendingOrder OID109
+18/02/2025 07:05:00.000 | Info | Combo: bartime=2025-02-18 05:00, executed=2025-02-18 07:05:00, pending Sell placed at 8173.4; SL=8183.162801783666, TP=8147.8409849303625; valid for the next 3 chart bar(s).
+18/02/2025 09:00:00.000 | Info | Combo: bartime=2025-02-18 08:00, Sell signal skipped: already have same-direction exposure open.
+18/02/2025 12:00:00.000 | Trade | Placing Stop Order to Buy 5.5 FRA40.cash (Price: 8198.6, SL: 8182.49218328922, TP: 8240.77)
+18/02/2025 12:00:00.000 | Trade |  Placing Stop Order to Buy 5.5 FRA40.cash (Price: 8198.6, SL: 8182.49218328922, TP: 8240.77) SUCCEEDED, PendingOrder OID112
+18/02/2025 12:00:00.000 | Info | Combo: bartime=2025-02-18 11:00, executed=2025-02-18 12:00:00, pending Buy placed at 8198.6; SL=8182.492183289223, TP=8240.770264148816; valid for the next 3 chart bar(s).
+19/02/2025 08:00:00.000 | Info | Combo: bartime=2025-02-19 07:00, reversal - closing existing Buy position 31 before opening opposite direction.
+19/02/2025 08:00:00.000 | Trade | Closing position PID31 (Volume: 5.5)
+19/02/2025 08:00:00.000 | Trade |  Closing position PID31 (Volume: 5.5) SUCCEEDED
+19/02/2025 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 10.33 units, which needs about $6256.37 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5241.07 budget, free margin was $10482.15). Size was cut from 10.33 to 8.48 units. Real risk on this trade is now about $86.05 (0.82% of balance) instead of the requested 1.00%.
+19/02/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 8.48 FRA40.cash (Price: 8195.3, SL: 8203.8991277807, TP: 8172.79)
+19/02/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 8.48 FRA40.cash (Price: 8195.3, SL: 8203.8991277807, TP: 8172.79) SUCCEEDED, PendingOrder OID116
+19/02/2025 08:00:00.000 | Info | Combo: bartime=2025-02-19 07:00, executed=2025-02-19 08:00:00, pending Sell placed at 8195.3; SL=8203.8991277807, TP=8172.787483470123; valid for the next 3 chart bar(s).
+20/02/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 5.51 FRA40.cash (Price: 8148.4, SL: 8131.94890870066, TP: 8191.47)
+20/02/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 5.51 FRA40.cash (Price: 8148.4, SL: 8131.94890870066, TP: 8191.47) SUCCEEDED, PendingOrder OID119
+20/02/2025 08:00:00.000 | Info | Combo: bartime=2025-02-20 07:00, executed=2025-02-20 08:00:00, pending Buy placed at 8148.4; SL=8131.9489087006605, TP=8191.468957021671; valid for the next 3 chart bar(s).
+20/02/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 4.48 FRA40.cash (Price: 8106.9, SL: 8126.85970948965, TP: 8054.65)
+20/02/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 4.48 FRA40.cash (Price: 8106.9, SL: 8126.85970948965, TP: 8054.65) SUCCEEDED, PendingOrder OID122
+20/02/2025 16:00:00.000 | Info | Combo: bartime=2025-02-20 15:00, executed=2025-02-20 16:00:00, pending Sell placed at 8106.9; SL=8126.859709489647, TP=8054.6454805561025; valid for the next 3 chart bar(s).
+20/02/2025 20:00:00.000 | Trade | Placing Stop Order to Buy 5.64 FRA40.cash (Price: 8140.4, SL: 8124.68402299304, TP: 8181.54)
+20/02/2025 20:00:00.000 | Trade |  Placing Stop Order to Buy 5.64 FRA40.cash (Price: 8140.4, SL: 8124.68402299304, TP: 8181.54) SUCCEEDED, PendingOrder OID125
+20/02/2025 20:00:00.000 | Info | Combo: bartime=2025-02-20 19:00, executed=2025-02-20 20:00:00, pending Buy placed at 8140.4; SL=8124.68402299304, TP=8181.54442780422; valid for the next 3 chart bar(s).
+21/02/2025 07:05:00.000 | Info | Combo: bartime=2025-02-21 06:00, Buy signal skipped: already have same-direction exposure open.
+21/02/2025 09:00:00.000 | Info | Combo: bartime=2025-02-21 08:00, Buy signal skipped: already have same-direction exposure open.
+21/02/2025 18:00:00.000 | Info | Combo: bartime=2025-02-21 17:00, reversal - closing existing Buy position 35 before opening opposite direction.
+21/02/2025 18:00:00.000 | Trade | Closing position PID35 (Volume: 5.64)
+21/02/2025 18:00:00.000 | Trade |  Closing position PID35 (Volume: 5.64) SUCCEEDED
+21/02/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 3.94 FRA40.cash (Price: 8126.7, SL: 8149.02636397702, TP: 8068.25)
+21/02/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 3.94 FRA40.cash (Price: 8126.7, SL: 8149.02636397702, TP: 8068.25) SUCCEEDED, PendingOrder OID129
+21/02/2025 18:00:00.000 | Info | Combo: bartime=2025-02-21 17:00, executed=2025-02-21 18:00:00, pending Sell placed at 8126.7; SL=8149.0263639770255, TP=8068.249579108147; valid for the next 3 chart bar(s).
+24/02/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 2.62 FRA40.cash (Price: 8085.7, SL: 8118.74390211859, TP: 7999.19)
+24/02/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 2.62 FRA40.cash (Price: 8085.7, SL: 8118.74390211859, TP: 7999.19) SUCCEEDED, PendingOrder OID132
+24/02/2025 09:00:00.000 | Info | Combo: bartime=2025-02-24 08:00, executed=2025-02-24 09:00:00, pending Sell placed at 8085.7; SL=8118.74390211859, TP=7999.19106425353; valid for the next 3 chart bar(s).
+24/02/2025 12:00:00.000 | Trade | Cancelling pending order OID132
+24/02/2025 12:00:00.000 | Trade |  Cancelling pending order OID132 SUCCEEDED
+24/02/2025 12:00:00.000 | Info | Combo: pending order 132 cancelled after 3 chart bars.
+25/02/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 3.14 FRA40.cash (Price: 8035.6, SL: 8063.19066350961, TP: 7963.37)
+25/02/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 3.14 FRA40.cash (Price: 8035.6, SL: 8063.19066350961, TP: 7963.37) SUCCEEDED, PendingOrder OID133
+25/02/2025 16:00:00.000 | Info | Combo: bartime=2025-02-25 15:00, executed=2025-02-25 16:00:00, pending Sell placed at 8035.6; SL=8063.190663509607, TP=7963.367642931852; valid for the next 3 chart bar(s).
+25/02/2025 19:00:00.000 | Trade | Cancelling pending order OID133
+25/02/2025 19:00:00.000 | Trade |  Cancelling pending order OID133 SUCCEEDED
+25/02/2025 19:00:00.000 | Info | Combo: pending order 133 cancelled after 3 chart bars.
+25/02/2025 19:00:00.000 | Trade | Placing Stop Order to Buy 3.1 FRA40.cash (Price: 8102.8, SL: 8074.82478028308, TP: 8176.04)
+25/02/2025 19:00:00.000 | Trade |  Placing Stop Order to Buy 3.1 FRA40.cash (Price: 8102.8, SL: 8074.82478028308, TP: 8176.04) SUCCEEDED, PendingOrder OID134
+25/02/2025 19:00:00.000 | Info | Combo: bartime=2025-02-25 18:00, executed=2025-02-25 19:00:00, pending Buy placed at 8102.8; SL=8074.824780283082, TP=8176.039125218893; valid for the next 3 chart bar(s).
+26/02/2025 07:05:00.000 | Info | Combo: bartime=2025-02-26 02:00, Buy signal skipped: already have same-direction exposure open.
+26/02/2025 07:05:00.000 | Info | Combo: bartime=2025-02-26 04:00, Buy signal skipped: already have same-direction exposure open.
+26/02/2025 08:00:00.000 | Trade | Cancelling pending order OID134
+26/02/2025 08:00:00.000 | Trade |  Cancelling pending order OID134 SUCCEEDED
+26/02/2025 08:00:00.000 | Info | Combo: pending order 134 cancelled after 3 chart bars.
+26/02/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 3.17 FRA40.cash (Price: 8092.8, SL: 8120.18208490404, TP: 8021.11)
+26/02/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 3.17 FRA40.cash (Price: 8092.8, SL: 8120.18208490404, TP: 8021.11) SUCCEEDED, PendingOrder OID135
+26/02/2025 18:00:00.000 | Info | Combo: bartime=2025-02-26 17:00, executed=2025-02-26 18:00:00, pending Sell placed at 8092.8; SL=8120.18208490404, TP=8021.113701721226; valid for the next 3 chart bar(s).
+27/02/2025 07:05:00.000 | Info | Combo: bartime=2025-02-27 06:00, reversal - closing existing Sell position 37 before opening opposite direction.
+27/02/2025 07:05:00.000 | Trade | Closing position PID37 (Volume: 3.17)
+27/02/2025 07:05:00.000 | Trade |  Closing position PID37 (Volume: 3.17) SUCCEEDED
+27/02/2025 07:05:00.000 | Trade | Placing Stop Order to Buy 5.51 FRA40.cash (Price: 8127.6, SL: 8111.96417993468, TP: 8168.53)
+27/02/2025 07:05:00.000 | Trade |  Placing Stop Order to Buy 5.51 FRA40.cash (Price: 8127.6, SL: 8111.96417993468, TP: 8168.53) SUCCEEDED, PendingOrder OID139
+27/02/2025 07:05:00.000 | Info | Combo: bartime=2025-02-27 06:00, executed=2025-02-27 07:05:00, pending Buy placed at 8127.6; SL=8111.964179934676, TP=8168.534576931018; valid for the next 3 chart bar(s).
+27/02/2025 10:00:00.000 | Info | Combo: bartime=2025-02-27 09:00, Buy signal skipped: already have same-direction exposure open.
+27/02/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 3.04 FRA40.cash (Price: 8060.2, SL: 8088.18190561216, TP: 7986.94)
+27/02/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 3.04 FRA40.cash (Price: 8060.2, SL: 8088.18190561216, TP: 7986.94) SUCCEEDED, PendingOrder OID142
+27/02/2025 14:00:00.000 | Info | Combo: bartime=2025-02-27 13:00, executed=2025-02-27 14:00:00, pending Sell placed at 8060.2; SL=8088.181905612163, TP=7986.943371107356; valid for the next 3 chart bar(s).
+27/02/2025 19:00:00.000 | Trade | Placing Stop Order to Buy 3.05 FRA40.cash (Price: 8120.1, SL: 8092.51069716901, TP: 8192.33)
+27/02/2025 19:00:00.000 | Trade |  Placing Stop Order to Buy 3.05 FRA40.cash (Price: 8120.1, SL: 8092.51069716901, TP: 8192.33) SUCCEEDED, PendingOrder OID145
+27/02/2025 19:00:00.000 | Info | Combo: bartime=2025-02-27 18:00, executed=2025-02-27 19:00:00, pending Buy placed at 8120.1; SL=8092.510697169007, TP=8192.328794811541; valid for the next 3 chart bar(s).
+27/02/2025 20:00:00.000 | Info | Combo: bartime=2025-02-27 19:00, reversal - cancelling existing Buy pending order 145 before opening opposite direction.
+27/02/2025 20:00:00.000 | Trade | Cancelling pending order OID145
+27/02/2025 20:00:00.000 | Trade |  Cancelling pending order OID145 SUCCEEDED
+27/02/2025 20:00:00.000 | Trade | Placing Stop Order to Sell 2.66 FRA40.cash (Price: 8055.9, SL: 8087.5914422648, TP: 7972.93)
+27/02/2025 20:00:00.000 | Trade |  Placing Stop Order to Sell 2.66 FRA40.cash (Price: 8055.9, SL: 8087.5914422648, TP: 7972.93) SUCCEEDED, PendingOrder OID146
+27/02/2025 20:00:00.000 | Info | Combo: bartime=2025-02-27 19:00, executed=2025-02-27 20:00:00, pending Sell placed at 8055.9; SL=8087.591442264795, TP=7972.931804150766; valid for the next 3 chart bar(s).
+28/02/2025 10:00:00.000 | Info | Combo: bartime=2025-02-28 09:00, reversal - closing existing Sell position 40 before opening opposite direction.
+28/02/2025 10:00:00.000 | Trade | Closing position PID40 (Volume: 2.66)
+28/02/2025 10:00:00.000 | Trade |  Closing position PID40 (Volume: 2.66) SUCCEEDED
+28/02/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 3.08 FRA40.cash (Price: 8086.1, SL: 8058.9196339851, TP: 8157.26)
+28/02/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 3.08 FRA40.cash (Price: 8086.1, SL: 8058.9196339851, TP: 8157.26) SUCCEEDED, PendingOrder OID150
+28/02/2025 10:00:00.000 | Info | Combo: bartime=2025-02-28 09:00, executed=2025-02-28 10:00:00, pending Buy placed at 8086.1; SL=8058.919633985101, TP=8157.258198227007; valid for the next 3 chart bar(s).
+28/02/2025 13:00:00.000 | Trade | Cancelling pending order OID150
+28/02/2025 13:00:00.000 | Trade |  Cancelling pending order OID150 SUCCEEDED
+28/02/2025 13:00:00.000 | Info | Combo: pending order 150 cancelled after 3 chart bars.
+28/02/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 2.41 FRA40.cash (Price: 8020.9, SL: 8055.59732995513, TP: 7930.06)
+28/02/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 2.41 FRA40.cash (Price: 8020.9, SL: 8055.59732995513, TP: 7930.06) SUCCEEDED, PendingOrder OID151
+28/02/2025 19:00:00.000 | Info | Combo: bartime=2025-02-28 18:00, executed=2025-02-28 19:00:00, pending Sell placed at 8020.9; SL=8055.597329955128, TP=7930.062390177474; valid for the next 3 chart bar(s).
+03/03/2025 08:00:00.000 | Trade | Cancelling pending order OID151
+03/03/2025 08:00:00.000 | Trade |  Cancelling pending order OID151 SUCCEEDED
+03/03/2025 08:00:00.000 | Info | Combo: pending order 151 cancelled after 3 chart bars.
+03/03/2025 20:00:00.000 | Trade | Placing Stop Order to Sell 2.17 FRA40.cash (Price: 8150.6, SL: 8189.24415561367, TP: 8049.43)
+03/03/2025 20:00:00.000 | Trade |  Placing Stop Order to Sell 2.17 FRA40.cash (Price: 8150.6, SL: 8189.24415561367, TP: 8049.43) SUCCEEDED, PendingOrder OID152
+03/03/2025 20:00:00.000 | Info | Combo: bartime=2025-03-03 19:00, executed=2025-03-03 20:00:00, pending Sell placed at 8150.6; SL=8189.244155613673, TP=8049.4296006034065; valid for the next 3 chart bar(s).
+04/03/2025 19:00:00.000 | Trade | Placing Stop Order to Buy 1.64 FRA40.cash (Price: 8188.6, SL: 8136.3391361621, TP: 8325.42)
+04/03/2025 19:00:00.000 | Trade |  Placing Stop Order to Buy 1.64 FRA40.cash (Price: 8188.6, SL: 8136.3391361621, TP: 8325.42) SUCCEEDED, PendingOrder OID155
+04/03/2025 19:00:00.000 | Info | Combo: bartime=2025-03-04 18:00, executed=2025-03-04 19:00:00, pending Buy placed at 8188.6; SL=8136.339136162103, TP=8325.418941527614; valid for the next 3 chart bar(s).
+06/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-06 08:00, reversal - closing existing Buy position 42 before opening opposite direction.
+06/03/2025 09:00:00.000 | Trade | Closing position PID42 (Volume: 1.64)
+06/03/2025 09:00:00.000 | Trade |  Closing position PID42 (Volume: 1.64) SUCCEEDED
+06/03/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 2.23 FRA40.cash (Price: 8159.1, SL: 8197.26503194163, TP: 8059.18)
+06/03/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 2.23 FRA40.cash (Price: 8159.1, SL: 8197.26503194163, TP: 8059.18) SUCCEEDED, PendingOrder OID159
+06/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-06 08:00, executed=2025-03-06 09:00:00, pending Sell placed at 8159.1; SL=8197.26503194163, TP=8059.183946376815; valid for the next 3 chart bar(s).
+07/03/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 2.89 FRA40.cash (Price: 8183.4, SL: 8154.18695000319, TP: 8259.88)
+07/03/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 2.89 FRA40.cash (Price: 8183.4, SL: 8154.18695000319, TP: 8259.88) SUCCEEDED, PendingOrder OID162
+07/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-07 07:00, executed=2025-03-07 08:00:00, pending Buy placed at 8183.4; SL=8154.1869500031935, TP=8259.879764891639; valid for the next 3 chart bar(s).
+07/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-07 08:00, reversal - cancelling existing Buy pending order 162 before opening opposite direction.
+07/03/2025 09:00:00.000 | Trade | Cancelling pending order OID162
+07/03/2025 09:00:00.000 | Trade |  Cancelling pending order OID162 SUCCEEDED
+07/03/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 2.08 FRA40.cash (Price: 8086.8, SL: 8127.41043999745, TP: 7980.48)
+07/03/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 2.08 FRA40.cash (Price: 8086.8, SL: 8127.41043999745, TP: 7980.48) SUCCEEDED, PendingOrder OID163
+07/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-07 08:00, executed=2025-03-07 09:00:00, pending Sell placed at 8086.8; SL=8127.410439997446, TP=7980.481868086688; valid for the next 3 chart bar(s).
+07/03/2025 12:00:00.000 | Trade | Cancelling pending order OID163
+07/03/2025 12:00:00.000 | Trade |  Cancelling pending order OID163 SUCCEEDED
+07/03/2025 12:00:00.000 | Info | Combo: pending order 163 cancelled after 3 chart bars.
+07/03/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 1.53 FRA40.cash (Price: 8176.8, SL: 8121.73850676086, TP: 8320.95)
+07/03/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 1.53 FRA40.cash (Price: 8176.8, SL: 8121.73850676086, TP: 8320.95) SUCCEEDED, PendingOrder OID164
+07/03/2025 18:00:00.000 | Info | Combo: bartime=2025-03-07 17:00, executed=2025-03-07 18:00:00, pending Buy placed at 8176.8; SL=8121.738506760863, TP=8320.950989300061; valid for the next 3 chart bar(s).
+10/03/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 1.91 FRA40.cash (Price: 8062.3, SL: 8105.88046123497, TP: 7948.21)
+10/03/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 1.91 FRA40.cash (Price: 8062.3, SL: 8105.88046123497, TP: 7948.21) SUCCEEDED, PendingOrder OID167
+10/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-10 08:00, executed=2025-03-10 09:00:00, pending Sell placed at 8062.3; SL=8105.880461234972, TP=7948.206352486843; valid for the next 3 chart bar(s).
+11/03/2025 07:05:00.000 | Trade | Placing Stop Order to Buy 2.36 FRA40.cash (Price: 8075.7, SL: 8040.74033423096, TP: 8167.22)
+11/03/2025 07:05:00.000 | Trade |  Placing Stop Order to Buy 2.36 FRA40.cash (Price: 8075.7, SL: 8040.74033423096, TP: 8167.22) SUCCEEDED, PendingOrder OID170
+11/03/2025 07:05:00.000 | Info | Combo: bartime=2025-03-11 05:00, executed=2025-03-11 07:05:00, pending Buy placed at 8075.7; SL=8040.740334230964, TP=8167.224404983334; valid for the next 3 chart bar(s).
+11/03/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 2.27 FRA40.cash (Price: 8029.7, SL: 8065.63701702336, TP: 7935.62)
+11/03/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 2.27 FRA40.cash (Price: 8029.7, SL: 8065.63701702336, TP: 7935.62) SUCCEEDED, PendingOrder OID173
+11/03/2025 12:00:00.000 | Info | Combo: bartime=2025-03-11 11:00, executed=2025-03-11 12:00:00, pending Sell placed at 8029.7; SL=8065.637017023358, TP=7935.616889432848; valid for the next 3 chart bar(s).
+12/03/2025 07:05:00.000 | Trade | Placing Stop Order to Buy 3.12 FRA40.cash (Price: 8028.7, SL: 8001.82078434724, TP: 8099.07)
+12/03/2025 07:05:00.000 | Trade |  Placing Stop Order to Buy 3.12 FRA40.cash (Price: 8028.7, SL: 8001.82078434724, TP: 8099.07) SUCCEEDED, PendingOrder OID176
+12/03/2025 07:05:00.000 | Info | Combo: bartime=2025-03-12 05:00, executed=2025-03-12 07:05:00, pending Buy placed at 8028.7; SL=8001.820784347243, TP=8099.069786578916; valid for the next 3 chart bar(s).
+12/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-12 07:00, Buy signal skipped: already have same-direction exposure open.
+12/03/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 1.98 FRA40.cash (Price: 7974.3, SL: 8016.06583930117, TP: 7864.96)
+12/03/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 1.98 FRA40.cash (Price: 7974.3, SL: 8016.06583930117, TP: 7864.96) SUCCEEDED, PendingOrder OID179
+12/03/2025 14:00:00.000 | Info | Combo: bartime=2025-03-12 13:00, executed=2025-03-12 14:00:00, pending Sell placed at 7974.3; SL=8016.065839301169, TP=7864.957032709541; valid for the next 3 chart bar(s).
+13/03/2025 10:00:00.000 | Info | Combo: bartime=2025-03-13 09:00, reversal - closing existing Sell position 49 before opening opposite direction.
+13/03/2025 10:00:00.000 | Trade | Closing position PID49 (Volume: 1.98)
+13/03/2025 10:00:00.000 | Trade |  Closing position PID49 (Volume: 1.98) SUCCEEDED
+13/03/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 2.34 FRA40.cash (Price: 8013.5, SL: 7978.38520914305, TP: 8105.43)
+13/03/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 2.34 FRA40.cash (Price: 8013.5, SL: 7978.38520914305, TP: 8105.43) SUCCEEDED, PendingOrder OID183
+13/03/2025 10:00:00.000 | Info | Combo: bartime=2025-03-13 09:00, executed=2025-03-13 10:00:00, pending Buy placed at 8013.5; SL=7978.385209143048, TP=8105.4305224635; valid for the next 3 chart bar(s).
+14/03/2025 07:05:00.000 | Trade | Placing Stop Order to Buy 2.74 FRA40.cash (Price: 7965.4, SL: 7936.0070051971, TP: 8042.35)
+14/03/2025 07:05:00.000 | Trade |  Placing Stop Order to Buy 2.74 FRA40.cash (Price: 7965.4, SL: 7936.0070051971, TP: 8042.35) SUCCEEDED, PendingOrder OID186
+14/03/2025 07:05:00.000 | Info | Combo: bartime=2025-03-14 02:00, executed=2025-03-14 07:05:00, pending Buy placed at 7965.4; SL=7936.007005197101, TP=8042.350860393989; valid for the next 3 chart bar(s).
+14/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-14 07:00, reversal - cancelling existing Buy pending order 186 before opening opposite direction.
+14/03/2025 08:00:00.000 | Trade | Cancelling pending order OID186
+14/03/2025 08:00:00.000 | Trade |  Cancelling pending order OID186 SUCCEEDED
+14/03/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 3.31 FRA40.cash (Price: 7922.5, SL: 7946.86215253701, TP: 7858.72)
+14/03/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 3.31 FRA40.cash (Price: 7922.5, SL: 7946.86215253701, TP: 7858.72) SUCCEEDED, PendingOrder OID187
+14/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-14 07:00, executed=2025-03-14 08:00:00, pending Sell placed at 7922.5; SL=7946.862152537014, TP=7858.719884658098; valid for the next 3 chart bar(s).
+14/03/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 2.21 FRA40.cash (Price: 8001.6, SL: 7965.57027797039, TP: 8095.93)
+14/03/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 2.21 FRA40.cash (Price: 8001.6, SL: 7965.57027797039, TP: 8095.93) SUCCEEDED, PendingOrder OID190
+14/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-14 08:00, executed=2025-03-14 09:00:00, pending Buy placed at 8001.6; SL=7965.570277970389, TP=8095.925812273523; valid for the next 3 chart bar(s).
+18/03/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 3.71 FRA40.cash (Price: 8090.8, SL: 8112.81438149934, TP: 8033.17)
+18/03/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 3.71 FRA40.cash (Price: 8090.8, SL: 8112.81438149934, TP: 8033.17) SUCCEEDED, PendingOrder OID193
+18/03/2025 16:00:00.000 | Info | Combo: bartime=2025-03-18 15:00, executed=2025-03-18 16:00:00, pending Sell placed at 8090.8; SL=8112.814381499343, TP=8033.166349234721; valid for the next 3 chart bar(s).
+18/03/2025 19:00:00.000 | Trade | Cancelling pending order OID193
+18/03/2025 19:00:00.000 | Trade |  Cancelling pending order OID193 SUCCEEDED
+18/03/2025 19:00:00.000 | Info | Combo: pending order 193 cancelled after 3 chart bars.
+19/03/2025 07:05:00.000 | Trade | Placing Stop Order to Sell 5.88 FRA40.cash (Price: 8096.8, SL: 8110.71687007601, TP: 8060.37)
+19/03/2025 07:05:00.000 | Trade |  Placing Stop Order to Sell 5.88 FRA40.cash (Price: 8096.8, SL: 8110.71687007601, TP: 8060.37) SUCCEEDED, PendingOrder OID194
+19/03/2025 07:05:00.000 | Info | Combo: bartime=2025-03-19 06:00, executed=2025-03-19 07:05:00, pending Sell placed at 8096.8; SL=8110.716870076011, TP=8060.365634141003; valid for the next 3 chart bar(s).
+20/03/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 5.22 FRA40.cash (Price: 8151.2, SL: 8166.66477498496, TP: 8110.71)
+20/03/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 5.22 FRA40.cash (Price: 8151.2, SL: 8166.66477498496, TP: 8110.71) SUCCEEDED, PendingOrder OID197
+20/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-20 07:00, executed=2025-03-20 08:00:00, pending Sell placed at 8151.2; SL=8166.664774984962, TP=8110.713219089369; valid for the next 3 chart bar(s).
+24/03/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 2.81 FRA40.cash (Price: 8030.1, SL: 8059.55088431511, TP: 7953)
+24/03/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 2.81 FRA40.cash (Price: 8030.1, SL: 8059.55088431511, TP: 7953) SUCCEEDED, PendingOrder OID200
+24/03/2025 10:00:00.000 | Info | Combo: bartime=2025-03-24 09:00, executed=2025-03-24 10:00:00, pending Sell placed at 8030.1; SL=8059.5508843151065, TP=7952.997584863052; valid for the next 3 chart bar(s).
+24/03/2025 12:00:00.000 | Info | Combo: bartime=2025-03-24 11:00, Sell signal skipped: already have same-direction exposure open.
+25/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-25 07:00, reversal - closing existing Sell position 55 before opening opposite direction.
+25/03/2025 08:00:00.000 | Trade | Closing position PID55 (Volume: 2.81)
+25/03/2025 08:00:00.000 | Trade |  Closing position PID55 (Volume: 2.81) SUCCEEDED
+25/03/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 4.69 FRA40.cash (Price: 8054.6, SL: 8036.97995170311, TP: 8100.73)
+25/03/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 4.69 FRA40.cash (Price: 8054.6, SL: 8036.97995170311, TP: 8100.73) SUCCEEDED, PendingOrder OID204
+25/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-25 07:00, executed=2025-03-25 08:00:00, pending Buy placed at 8054.6; SL=8036.9799517031115, TP=8100.729286441256; valid for the next 3 chart bar(s).
+26/03/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 3.15 FRA40.cash (Price: 8047.7, SL: 8074.62139502931, TP: 7977.22)
+26/03/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 3.15 FRA40.cash (Price: 8047.7, SL: 8074.62139502931, TP: 7977.22) SUCCEEDED, PendingOrder OID207
+26/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-26 08:00, executed=2025-03-26 09:00:00, pending Sell placed at 8047.7; SL=8074.6213950293095, TP=7977.2197878132665; valid for the next 3 chart bar(s).
+27/03/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 2.89 FRA40.cash (Price: 8008.5, SL: 7979.47898829753, TP: 8084.48)
+27/03/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 2.89 FRA40.cash (Price: 8008.5, SL: 7979.47898829753, TP: 8084.48) SUCCEEDED, PendingOrder OID210
+27/03/2025 14:00:00.000 | Info | Combo: bartime=2025-03-27 13:00, executed=2025-03-27 14:00:00, pending Buy placed at 8008.5; SL=7979.478988297527, TP=8084.477008637074; valid for the next 3 chart bar(s).
+01/04/2025 06:05:00.000 | Trade | Placing Stop Order to Buy 3.1 FRA40.cash (Price: 7836.2, SL: 7809.43501202068, TP: 7906.27)
+01/04/2025 06:05:00.000 | Trade |  Placing Stop Order to Buy 3.1 FRA40.cash (Price: 7836.2, SL: 7809.43501202068, TP: 7906.27) SUCCEEDED, PendingOrder OID213
+01/04/2025 06:05:00.000 | Info | Combo: bartime=2025-03-31 19:00, executed=2025-04-01 06:05:00, pending Buy placed at 7836.2; SL=7809.4350120206755, TP=7906.27073852987; valid for the next 3 chart bar(s).
+01/04/2025 06:05:00.000 | Info | Combo: bartime=2025-04-01 02:00, Buy signal skipped: already have same-direction exposure open.
+02/04/2025 07:00:00.000 | Info | Combo: bartime=2025-04-02 06:00, reversal - closing existing Buy position 59 before opening opposite direction.
+02/04/2025 07:00:00.000 | Trade | Closing position PID59 (Volume: 3.1)
+02/04/2025 07:00:00.000 | Trade |  Closing position PID59 (Volume: 3.1) SUCCEEDED
+02/04/2025 07:00:00.000 | Trade | Placing Stop Order to Sell 5.32 FRA40.cash (Price: 7837.3, SL: 7852.95344733328, TP: 7796.32)
+02/04/2025 07:00:00.000 | Trade |  Placing Stop Order to Sell 5.32 FRA40.cash (Price: 7837.3, SL: 7852.95344733328, TP: 7796.32) SUCCEEDED, PendingOrder OID217
+02/04/2025 07:00:00.000 | Info | Combo: bartime=2025-04-02 06:00, executed=2025-04-02 07:00:00, pending Sell placed at 7837.3; SL=7852.9534473332815, TP=7796.31927488147; valid for the next 3 chart bar(s).
+02/04/2025 17:00:00.000 | Trade | Placing Stop Order to Buy 3.17 FRA40.cash (Price: 7868, SL: 7841.11302986845, TP: 7938.39)
+02/04/2025 17:00:00.000 | Trade |  Placing Stop Order to Buy 3.17 FRA40.cash (Price: 7868, SL: 7841.11302986845, TP: 7938.39) SUCCEEDED, PendingOrder OID220
+02/04/2025 17:00:00.000 | Info | Combo: bartime=2025-04-02 16:00, executed=2025-04-02 17:00:00, pending Buy placed at 7868; SL=7841.1130298684475, TP=7938.390087804405; valid for the next 3 chart bar(s).
+03/04/2025 06:05:00.000 | Trade | Placing Stop Order to Buy 2.69 FRA40.cash (Price: 7872.6, SL: 7841.31627129264, TP: 7954.5)
+03/04/2025 06:05:00.000 | Trade |  Placing Stop Order to Buy 2.69 FRA40.cash (Price: 7872.6, SL: 7841.31627129264, TP: 7954.5) SUCCEEDED, PendingOrder OID223
+03/04/2025 06:05:00.000 | Info | Combo: bartime=2025-04-02 19:00, executed=2025-04-03 06:05:00, pending Buy placed at 7872.6; SL=7841.316271292645, TP=7954.500801755857; valid for the next 3 chart bar(s).
+03/04/2025 09:00:00.000 | Trade | Cancelling pending order OID223
+03/04/2025 09:00:00.000 | Trade |  Cancelling pending order OID223 SUCCEEDED
+03/04/2025 09:00:00.000 | Info | Combo: pending order 223 cancelled after 3 chart bars.
+07/04/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 0.49 FRA40.cash (Price: 7302.3, SL: 7131.06610188039, TP: 7750.59)
+07/04/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 0.49 FRA40.cash (Price: 7302.3, SL: 7131.06610188039, TP: 7750.59) SUCCEEDED, PendingOrder OID224
+07/04/2025 15:00:00.000 | Info | Combo: bartime=2025-04-07 14:00, executed=2025-04-07 15:00:00, pending Buy placed at 7302.3; SL=7131.066101880388, TP=7750.590345277145; valid for the next 3 chart bar(s).
+07/04/2025 18:00:00.000 | Trade | Cancelling pending order OID224
+07/04/2025 18:00:00.000 | Trade |  Cancelling pending order OID224 SUCCEEDED
+07/04/2025 18:00:00.000 | Info | Combo: pending order 224 cancelled after 3 chart bars.
+07/04/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 0.56 FRA40.cash (Price: 7048.1, SL: 6897.90824416276, TP: 7441.3)
+07/04/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 0.56 FRA40.cash (Price: 7048.1, SL: 6897.90824416276, TP: 7441.3) SUCCEEDED, PendingOrder OID225
+07/04/2025 18:00:00.000 | Info | Combo: bartime=2025-04-07 17:00, executed=2025-04-07 18:00:00, pending Buy placed at 7048.1; SL=6897.908244162759, TP=7441.302016781899; valid for the next 3 chart bar(s).
+08/04/2025 06:05:00.000 | Info | Combo: bartime=2025-04-07 19:00, Buy signal skipped: already have same-direction exposure open.
+08/04/2025 10:00:00.000 | Info | Combo: bartime=2025-04-08 09:00, reversal - closing existing Buy position 62 before opening opposite direction.
+08/04/2025 10:00:00.000 | Trade | Closing position PID62 (Volume: 0.56)
+08/04/2025 10:00:00.000 | Trade |  Closing position PID62 (Volume: 0.56) SUCCEEDED
+08/04/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 1.11 FRA40.cash (Price: 6966.1, SL: 7041.389435025, TP: 6768.99)
+08/04/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 1.11 FRA40.cash (Price: 6966.1, SL: 7041.389435025, TP: 6768.99) SUCCEEDED, PendingOrder OID229
+08/04/2025 10:00:00.000 | Info | Combo: bartime=2025-04-08 09:00, executed=2025-04-08 10:00:00, pending Sell placed at 6966.1; SL=7041.389435025001, TP=6768.992259104548; valid for the next 3 chart bar(s).
+08/04/2025 12:00:00.000 | Info | Combo: bartime=2025-04-08 11:00, reversal - cancelling existing Sell pending order 229 before opening opposite direction.
+08/04/2025 12:00:00.000 | Trade | Cancelling pending order OID229
+08/04/2025 12:00:00.000 | Trade |  Cancelling pending order OID229 SUCCEEDED
+08/04/2025 12:00:00.000 | Trade | Placing Stop Order to Buy 1.11 FRA40.cash (Price: 7110.3, SL: 7035.214761584, TP: 7306.87)
+08/04/2025 12:00:00.000 | Trade |  Placing Stop Order to Buy 1.11 FRA40.cash (Price: 7110.3, SL: 7035.214761584, TP: 7306.87) SUCCEEDED, PendingOrder OID230
+08/04/2025 12:00:00.000 | Info | Combo: bartime=2025-04-08 11:00, executed=2025-04-08 12:00:00, pending Buy placed at 7110.3; SL=7035.2147615839995, TP=7306.8731541730895; valid for the next 3 chart bar(s).
+08/04/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 1.09 FRA40.cash (Price: 6993.6, SL: 7069.13017092416, TP: 6795.86)
+08/04/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 1.09 FRA40.cash (Price: 6993.6, SL: 7069.13017092416, TP: 6795.86) SUCCEEDED, PendingOrder OID233
+08/04/2025 17:00:00.000 | Info | Combo: bartime=2025-04-08 16:00, executed=2025-04-08 17:00:00, pending Sell placed at 6993.6; SL=7069.130170924155, TP=6795.8620125205625; valid for the next 3 chart bar(s).
+09/04/2025 17:00:00.000 | Trade | Placing Stop Order to Buy 1.22 FRA40.cash (Price: 6913.3, SL: 6843.63444679854, TP: 7095.68)
+09/04/2025 17:00:00.000 | Trade |  Placing Stop Order to Buy 1.22 FRA40.cash (Price: 6913.3, SL: 6843.63444679854, TP: 7095.68) SUCCEEDED, PendingOrder OID236
+09/04/2025 17:00:00.000 | Info | Combo: bartime=2025-04-09 16:00, executed=2025-04-09 17:00:00, pending Buy placed at 6913.3; SL=6843.6344467985355, TP=7095.684418281435; valid for the next 3 chart bar(s).
+09/04/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 0.57 FRA40.cash (Price: 7356.6, SL: 7203.36755743883, TP: 7757.76)
+09/04/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 0.57 FRA40.cash (Price: 7356.6, SL: 7203.36755743883, TP: 7757.76) SUCCEEDED, PendingOrder OID239
+09/04/2025 18:00:00.000 | Info | Combo: bartime=2025-04-09 17:00, executed=2025-04-09 18:00:00, pending Buy placed at 7356.6; SL=7203.367557438829, TP=7757.762534625148; valid for the next 3 chart bar(s).
+10/04/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 1.05 FRA40.cash (Price: 7197.6, SL: 7280.29129144387, TP: 6981.11)
+10/04/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 1.05 FRA40.cash (Price: 7197.6, SL: 7280.29129144387, TP: 6981.11) SUCCEEDED, PendingOrder OID242
+10/04/2025 12:00:00.000 | Info | Combo: bartime=2025-04-10 11:00, executed=2025-04-10 12:00:00, pending Sell placed at 7197.6; SL=7280.291291443872, TP=6981.114198999943; valid for the next 3 chart bar(s).
+11/04/2025 06:05:00.000 | Info | Combo: bartime=2025-04-11 05:00, reversal - closing existing Sell position 67 before opening opposite direction.
+11/04/2025 06:05:00.000 | Trade | Closing position PID67 (Volume: 1.05)
+11/04/2025 06:05:00.000 | Trade |  Closing position PID67 (Volume: 1.05) SUCCEEDED
+11/04/2025 06:05:00.000 | Trade | Placing Stop Order to Buy 1.52 FRA40.cash (Price: 7213.3, SL: 7156.51860828778, TP: 7361.95)
+11/04/2025 06:05:00.000 | Trade |  Placing Stop Order to Buy 1.52 FRA40.cash (Price: 7213.3, SL: 7156.51860828778, TP: 7361.95) SUCCEEDED, PendingOrder OID246
+11/04/2025 06:05:00.000 | Info | Combo: bartime=2025-04-11 05:00, executed=2025-04-11 06:05:00, pending Buy placed at 7213.3; SL=7156.518608287783, TP=7361.953683502586; valid for the next 3 chart bar(s).
+11/04/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 1.44 FRA40.cash (Price: 7114.1, SL: 7173.58009069582, TP: 6958.38)
+11/04/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 1.44 FRA40.cash (Price: 7114.1, SL: 7173.58009069582, TP: 6958.38) SUCCEEDED, PendingOrder OID249
+11/04/2025 08:00:00.000 | Info | Combo: bartime=2025-04-11 07:00, executed=2025-04-11 08:00:00, pending Sell placed at 7114.1; SL=7173.580090695819, TP=6958.381122558346; valid for the next 3 chart bar(s).
+11/04/2025 16:00:00.000 | Info | Combo: bartime=2025-04-11 15:00, reversal - closing existing Sell position 69 before opening opposite direction.
+11/04/2025 16:00:00.000 | Trade | Closing position PID69 (Volume: 1.44)
+11/04/2025 16:00:00.000 | Trade |  Closing position PID69 (Volume: 1.44) SUCCEEDED
+11/04/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 1.2 FRA40.cash (Price: 7157.1, SL: 7086.52490182697, TP: 7341.87)
+11/04/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 1.2 FRA40.cash (Price: 7157.1, SL: 7086.52490182697, TP: 7341.87) SUCCEEDED, PendingOrder OID253
+11/04/2025 16:00:00.000 | Info | Combo: bartime=2025-04-11 15:00, executed=2025-04-11 16:00:00, pending Buy placed at 7157.1; SL=7086.524901826967, TP=7341.865607017002; valid for the next 3 chart bar(s).
+14/04/2025 16:00:00.000 | Info | Combo: bartime=2025-04-14 15:00, reversal - closing existing Buy position 70 before opening opposite direction.
+14/04/2025 16:00:00.000 | Trade | Closing position PID70 (Volume: 1.2)
+14/04/2025 16:00:00.000 | Trade |  Closing position PID70 (Volume: 1.2) SUCCEEDED
+14/04/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 1.5 FRA40.cash (Price: 7158.6, SL: 7215.0841794354, TP: 7010.72)
+14/04/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 1.5 FRA40.cash (Price: 7158.6, SL: 7215.0841794354, TP: 7010.72) SUCCEEDED, PendingOrder OID257
+14/04/2025 16:00:00.000 | Info | Combo: bartime=2025-04-14 15:00, executed=2025-04-14 16:00:00, pending Sell placed at 7158.6; SL=7215.084179435404, TP=7010.724418238115; valid for the next 3 chart bar(s).
+14/04/2025 19:00:00.000 | Trade | Cancelling pending order OID257
+14/04/2025 19:00:00.000 | Trade |  Cancelling pending order OID257 SUCCEEDED
+14/04/2025 19:00:00.000 | Info | Combo: pending order 257 cancelled after 3 chart bars.
+15/04/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 2.6 FRA40.cash (Price: 7284.8, SL: 7252.24974190604, TP: 7370.02)
+15/04/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 2.6 FRA40.cash (Price: 7284.8, SL: 7252.24974190604, TP: 7370.02) SUCCEEDED, PendingOrder OID258
+15/04/2025 08:00:00.000 | Info | Combo: bartime=2025-04-15 07:00, executed=2025-04-15 08:00:00, pending Buy placed at 7284.8; SL=7252.249741906041, TP=7370.016575689986; valid for the next 3 chart bar(s).
+16/04/2025 06:05:00.000 | Info | Combo: bartime=2025-04-16 00:00, reversal - closing existing Buy position 71 before opening opposite direction.
+16/04/2025 06:05:00.000 | Trade | Closing position PID71 (Volume: 2.6)
+16/04/2025 06:05:00.000 | Trade |  Closing position PID71 (Volume: 2.6) SUCCEEDED
+16/04/2025 06:05:00.000 | Trade | Placing Stop Order to Sell 2.77 FRA40.cash (Price: 7264.1, SL: 7294.26190086684, TP: 7185.14)
+16/04/2025 06:05:00.000 | Trade |  Placing Stop Order to Sell 2.77 FRA40.cash (Price: 7264.1, SL: 7294.26190086684, TP: 7185.14) SUCCEEDED, PendingOrder OID262
+16/04/2025 06:05:00.000 | Info | Combo: bartime=2025-04-16 00:00, executed=2025-04-16 06:05:00, pending Sell placed at 7264.1; SL=7294.261900866841, TP=7185.136143530612; valid for the next 3 chart bar(s).
+16/04/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 2.3 FRA40.cash (Price: 7310.4, SL: 7274.90304140663, TP: 7403.33)
+16/04/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 2.3 FRA40.cash (Price: 7310.4, SL: 7274.90304140663, TP: 7403.33) SUCCEEDED, PendingOrder OID265
+16/04/2025 11:00:00.000 | Info | Combo: bartime=2025-04-16 10:00, executed=2025-04-16 11:00:00, pending Buy placed at 7310.4; SL=7274.903041406633, TP=7403.331037597434; valid for the next 3 chart bar(s).
+16/04/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 2.89 FRA40.cash (Price: 7308.1, SL: 7280.16524576016, TP: 7381.23)
+16/04/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 2.89 FRA40.cash (Price: 7308.1, SL: 7280.16524576016, TP: 7381.23) SUCCEEDED, PendingOrder OID268
+16/04/2025 15:00:00.000 | Info | Combo: bartime=2025-04-16 14:00, executed=2025-04-16 15:00:00, pending Buy placed at 7308.1; SL=7280.165245760158, TP=7381.2331865999095; valid for the next 3 chart bar(s).
+16/04/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 2.3 FRA40.cash (Price: 7237.6, SL: 7272.3769941708, TP: 7146.55)
+16/04/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 2.3 FRA40.cash (Price: 7237.6, SL: 7272.3769941708, TP: 7146.55) SUCCEEDED, PendingOrder OID271
+16/04/2025 18:00:00.000 | Info | Combo: bartime=2025-04-16 17:00, executed=2025-04-16 18:00:00, pending Sell placed at 7237.6; SL=7272.3769941708, TP=7146.553829260847; valid for the next 3 chart bar(s).
+17/04/2025 06:05:00.000 | Info | Combo: bartime=2025-04-17 01:00, reversal - closing existing Sell position 75 before opening opposite direction.
+17/04/2025 06:05:00.000 | Trade | Closing position PID75 (Volume: 2.3)
+17/04/2025 06:05:00.000 | Trade |  Closing position PID75 (Volume: 2.3) SUCCEEDED
+17/04/2025 06:05:00.000 | Trade | Placing Stop Order to Buy 2.39 FRA40.cash (Price: 7290.4, SL: 7257.83854318764, TP: 7375.65)
+17/04/2025 06:05:00.000 | Trade |  Placing Stop Order to Buy 2.39 FRA40.cash (Price: 7290.4, SL: 7257.83854318764, TP: 7375.65) SUCCEEDED, PendingOrder OID275
+17/04/2025 06:05:00.000 | Info | Combo: bartime=2025-04-17 01:00, executed=2025-04-17 06:05:00, pending Buy placed at 7290.4; SL=7257.83854318764, TP=7375.645893934757; valid for the next 3 chart bar(s).
+17/04/2025 11:00:00.000 | Info | Combo: bartime=2025-04-17 10:00, reversal - closing existing Buy position 76 before opening opposite direction.
+17/04/2025 11:00:00.000 | Trade | Closing position PID76 (Volume: 2.39)
+17/04/2025 11:00:00.000 | Trade |  Closing position PID76 (Volume: 2.39) SUCCEEDED
+17/04/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 2.53 FRA40.cash (Price: 7255.4, SL: 7285.70268422892, TP: 7176.07)
+17/04/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 2.53 FRA40.cash (Price: 7255.4, SL: 7285.70268422892, TP: 7176.07) SUCCEEDED, PendingOrder OID279
+17/04/2025 11:00:00.000 | Info | Combo: bartime=2025-04-17 10:00, executed=2025-04-17 11:00:00, pending Sell placed at 7255.4; SL=7285.702684228925, TP=7176.067572688673; valid for the next 3 chart bar(s).
+17/04/2025 14:00:00.000 | Trade | Cancelling pending order OID279
+17/04/2025 14:00:00.000 | Trade |  Cancelling pending order OID279 SUCCEEDED
+17/04/2025 14:00:00.000 | Info | Combo: pending order 279 cancelled after 3 chart bars.
+17/04/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 2.59 FRA40.cash (Price: 7262.6, SL: 7292.19517946017, TP: 7185.12)
+17/04/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 2.59 FRA40.cash (Price: 7262.6, SL: 7292.19517946017, TP: 7185.12) SUCCEEDED, PendingOrder OID280
+17/04/2025 15:00:00.000 | Info | Combo: bartime=2025-04-17 14:00, executed=2025-04-17 15:00:00, pending Sell placed at 7262.6; SL=7292.195179460168, TP=7185.119820173281; valid for the next 3 chart bar(s).
+17/04/2025 16:00:00.000 | Info | Combo: bartime=2025-04-17 15:00, reversal - cancelling existing Sell pending order 280 before opening opposite direction.
+17/04/2025 16:00:00.000 | Trade | Cancelling pending order OID280
+17/04/2025 16:00:00.000 | Trade |  Cancelling pending order OID280 SUCCEEDED
+17/04/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 2.68 FRA40.cash (Price: 7302.6, SL: 7274.02385643187, TP: 7377.41)
+17/04/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 2.68 FRA40.cash (Price: 7302.6, SL: 7274.02385643187, TP: 7377.41) SUCCEEDED, PendingOrder OID281
+17/04/2025 16:00:00.000 | Info | Combo: bartime=2025-04-17 15:00, executed=2025-04-17 16:00:00, pending Buy placed at 7302.6; SL=7274.023856431866, TP=7377.412343861376; valid for the next 3 chart bar(s).
+22/04/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 2 FRA40.cash (Price: 7312.6, SL: 7275.21126855176, TP: 7410.48)
+22/04/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 2 FRA40.cash (Price: 7312.6, SL: 7275.21126855176, TP: 7410.48) SUCCEEDED, PendingOrder OID284
+22/04/2025 15:00:00.000 | Info | Combo: bartime=2025-04-22 14:00, executed=2025-04-22 15:00:00, pending Buy placed at 7312.6; SL=7275.211268551756, TP=7410.483698931505; valid for the next 3 chart bar(s).
+24/04/2025 06:05:00.000 | Trade | Placing Stop Order to Sell 2.59 FRA40.cash (Price: 7461.9, SL: 7491.50958955352, TP: 7384.38)
+24/04/2025 06:05:00.000 | Trade |  Placing Stop Order to Sell 2.59 FRA40.cash (Price: 7461.9, SL: 7491.50958955352, TP: 7384.38) SUCCEEDED, PendingOrder OID287
+24/04/2025 06:05:00.000 | Info | Combo: bartime=2025-04-24 01:00, executed=2025-04-24 06:05:00, pending Sell placed at 7461.9; SL=7491.5095895535205, TP=7384.382094548882; valid for the next 3 chart bar(s).
+24/04/2025 13:00:00.000 | Info | Combo: bartime=2025-04-24 12:00, reversal - closing existing Sell position 79 before opening opposite direction.
+24/04/2025 13:00:00.000 | Trade | Closing position PID79 (Volume: 2.59)
+24/04/2025 13:00:00.000 | Trade |  Closing position PID79 (Volume: 2.59) SUCCEEDED
+24/04/2025 13:00:00.000 | Trade | Placing Stop Order to Buy 2.93 FRA40.cash (Price: 7490.5, SL: 7464.50497839918, TP: 7558.55)
+24/04/2025 13:00:00.000 | Trade |  Placing Stop Order to Buy 2.93 FRA40.cash (Price: 7490.5, SL: 7464.50497839918, TP: 7558.55) SUCCEEDED, PendingOrder OID291
+24/04/2025 13:00:00.000 | Info | Combo: bartime=2025-04-24 12:00, executed=2025-04-24 13:00:00, pending Buy placed at 7490.5; SL=7464.504978399177, TP=7558.554966550954; valid for the next 3 chart bar(s).
+25/04/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 2.73 FRA40.cash (Price: 7520.6, SL: 7549.23379582156, TP: 7445.64)
+25/04/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 2.73 FRA40.cash (Price: 7520.6, SL: 7549.23379582156, TP: 7445.64) SUCCEEDED, PendingOrder OID294
+25/04/2025 15:00:00.000 | Info | Combo: bartime=2025-04-25 14:00, executed=2025-04-25 15:00:00, pending Sell placed at 7520.6; SL=7549.233795821565, TP=7445.636722539146; valid for the next 3 chart bar(s).
+25/04/2025 18:00:00.000 | Trade | Cancelling pending order OID294
+25/04/2025 18:00:00.000 | Trade |  Cancelling pending order OID294 SUCCEEDED
+25/04/2025 18:00:00.000 | Info | Combo: pending order 294 cancelled after 3 chart bars.
+25/04/2025 19:00:00.000 | Trade | Placing Stop Order to Buy 2.69 FRA40.cash (Price: 7584.1, SL: 7555.01991723149, TP: 7660.23)
+25/04/2025 19:00:00.000 | Trade |  Placing Stop Order to Buy 2.69 FRA40.cash (Price: 7584.1, SL: 7555.01991723149, TP: 7660.23) SUCCEEDED, PendingOrder OID295
+25/04/2025 19:00:00.000 | Info | Combo: bartime=2025-04-25 18:00, executed=2025-04-25 19:00:00, pending Buy placed at 7584.1; SL=7555.019917231488, TP=7660.231656687966; valid for the next 3 chart bar(s).
+28/04/2025 06:05:00.000 | Info | Combo: bartime=2025-04-28 01:00, reversal - cancelling existing Buy pending order 295 before opening opposite direction.
+28/04/2025 06:05:00.000 | Trade | Cancelling pending order OID295
+28/04/2025 06:05:00.000 | Trade |  Cancelling pending order OID295 SUCCEEDED
+28/04/2025 06:05:00.000 | Trade | Placing Stop Order to Sell 3.11 FRA40.cash (Price: 7534, SL: 7559.15540237748, TP: 7468.14)
+28/04/2025 06:05:00.000 | Trade |  Placing Stop Order to Sell 3.11 FRA40.cash (Price: 7534, SL: 7559.15540237748, TP: 7468.14) SUCCEEDED, PendingOrder OID296
+28/04/2025 06:05:00.000 | Info | Combo: bartime=2025-04-28 01:00, executed=2025-04-28 06:05:00, pending Sell placed at 7534; SL=7559.155402377479, TP=7468.143156575761; valid for the next 3 chart bar(s).
+28/04/2025 09:00:00.000 | Trade | Cancelling pending order OID296
+28/04/2025 09:00:00.000 | Trade |  Cancelling pending order OID296 SUCCEEDED
+28/04/2025 09:00:00.000 | Info | Combo: pending order 296 cancelled after 3 chart bars.
+28/04/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 3.22 FRA40.cash (Price: 7548.3, SL: 7572.60811289336, TP: 7484.66)
+28/04/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 3.22 FRA40.cash (Price: 7548.3, SL: 7572.60811289336, TP: 7484.66) SUCCEEDED, PendingOrder OID297
+28/04/2025 16:00:00.000 | Info | Combo: bartime=2025-04-28 15:00, executed=2025-04-28 16:00:00, pending Sell placed at 7548.3; SL=7572.6081128933565, TP=7484.661360445194; valid for the next 3 chart bar(s).
+29/04/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 4.32 FRA40.cash (Price: 7591.5, SL: 7573.59793768626, TP: 7638.37)
+29/04/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 4.32 FRA40.cash (Price: 7591.5, SL: 7573.59793768626, TP: 7638.37) SUCCEEDED, PendingOrder OID300
+29/04/2025 08:00:00.000 | Info | Combo: bartime=2025-04-29 07:00, executed=2025-04-29 08:00:00, pending Buy placed at 7591.5; SL=7573.597937686265, TP=7638.367599137358; valid for the next 3 chart bar(s).
+29/04/2025 11:00:00.000 | Trade | Cancelling pending order OID300
+29/04/2025 11:00:00.000 | Trade |  Cancelling pending order OID300 SUCCEEDED
+29/04/2025 11:00:00.000 | Info | Combo: pending order 300 cancelled after 3 chart bars.
+29/04/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 3.68 FRA40.cash (Price: 7537, SL: 7558.00345590463, TP: 7482.01)
+29/04/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 3.68 FRA40.cash (Price: 7537, SL: 7558.00345590463, TP: 7482.01) SUCCEEDED, PendingOrder OID301
+29/04/2025 11:00:00.000 | Info | Combo: bartime=2025-04-29 10:00, executed=2025-04-29 11:00:00, pending Sell placed at 7537; SL=7558.003455904633, TP=7482.0129524416725; valid for the next 3 chart bar(s).
+29/04/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 3.53 FRA40.cash (Price: 7573.8, SL: 7552.14498446146, TP: 7630.49)
+29/04/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 3.53 FRA40.cash (Price: 7573.8, SL: 7552.14498446146, TP: 7630.49) SUCCEEDED, PendingOrder OID304
+29/04/2025 15:00:00.000 | Info | Combo: bartime=2025-04-29 14:00, executed=2025-04-29 15:00:00, pending Buy placed at 7573.8; SL=7552.144984461463, TP=7630.492830679891; valid for the next 3 chart bar(s).
+29/04/2025 17:00:00.000 | Info | Combo: bartime=2025-04-29 16:00, reversal - cancelling existing Buy pending order 304 before opening opposite direction.
+29/04/2025 17:00:00.000 | Trade | Cancelling pending order OID304
+29/04/2025 17:00:00.000 | Trade |  Cancelling pending order OID304 SUCCEEDED
+29/04/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 3.43 FRA40.cash (Price: 7540.5, SL: 7562.77120994466, TP: 7482.19)
+29/04/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 3.43 FRA40.cash (Price: 7540.5, SL: 7562.77120994466, TP: 7482.19) SUCCEEDED, PendingOrder OID305
+29/04/2025 17:00:00.000 | Info | Combo: bartime=2025-04-29 16:00, executed=2025-04-29 17:00:00, pending Sell placed at 7540.5; SL=7562.7712099446635, TP=7482.19397236487; valid for the next 3 chart bar(s).
+29/04/2025 18:00:00.000 | Info | Combo: bartime=2025-04-29 17:00, reversal - cancelling existing Sell pending order 305 before opening opposite direction.
+29/04/2025 18:00:00.000 | Trade | Cancelling pending order OID305
+29/04/2025 18:00:00.000 | Trade |  Cancelling pending order OID305 SUCCEEDED
+29/04/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 3.11 FRA40.cash (Price: 7585.5, SL: 7560.94303204427, TP: 7649.79)
+29/04/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 3.11 FRA40.cash (Price: 7585.5, SL: 7560.94303204427, TP: 7649.79) SUCCEEDED, PendingOrder OID306
+29/04/2025 18:00:00.000 | Info | Combo: bartime=2025-04-29 17:00, executed=2025-04-29 18:00:00, pending Buy placed at 7585.5; SL=7560.943032044269, TP=7649.790142108104; valid for the next 3 chart bar(s).
+30/04/2025 06:05:00.000 | Info | Combo: bartime=2025-04-30 05:00, reversal - cancelling existing Buy pending order 306 before opening opposite direction.
+30/04/2025 06:05:00.000 | Trade | Cancelling pending order OID306
+30/04/2025 06:05:00.000 | Trade |  Cancelling pending order OID306 SUCCEEDED
+30/04/2025 06:05:00.000 | Trade | Placing Stop Order to Sell 4.94 FRA40.cash (Price: 7549.9, SL: 7565.36764531698, TP: 7509.41)
+30/04/2025 06:05:00.000 | Trade |  Placing Stop Order to Sell 4.94 FRA40.cash (Price: 7549.9, SL: 7565.36764531698, TP: 7509.41) SUCCEEDED, PendingOrder OID307
+30/04/2025 06:05:00.000 | Info | Combo: bartime=2025-04-30 05:00, executed=2025-04-30 06:05:00, pending Sell placed at 7549.9; SL=7565.367645316984, TP=7509.405704560136; valid for the next 3 chart bar(s).
+30/04/2025 07:00:00.000 | Info | Combo: bartime=2025-04-30 06:00, reversal - cancelling existing Sell pending order 307 before opening opposite direction.
+30/04/2025 07:00:00.000 | Trade | Cancelling pending order OID307
+30/04/2025 07:00:00.000 | Trade |  Cancelling pending order OID307 SUCCEEDED
+30/04/2025 07:00:00.000 | Trade | Placing Stop Order to Buy 3.84 FRA40.cash (Price: 7591, SL: 7571.08588374641, TP: 7643.14)
+30/04/2025 07:00:00.000 | Trade |  Placing Stop Order to Buy 3.84 FRA40.cash (Price: 7591, SL: 7571.08588374641, TP: 7643.14) SUCCEEDED, PendingOrder OID308
+30/04/2025 07:00:00.000 | Info | Combo: bartime=2025-04-30 06:00, executed=2025-04-30 07:00:00, pending Buy placed at 7591; SL=7571.085883746413, TP=7643.135156351891; valid for the next 3 chart bar(s).
+30/04/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 2.55 FRA40.cash (Price: 7529, SL: 7558.62433409118, TP: 7451.44)
+30/04/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 2.55 FRA40.cash (Price: 7529, SL: 7558.62433409118, TP: 7451.44) SUCCEEDED, PendingOrder OID311
+30/04/2025 13:00:00.000 | Info | Combo: bartime=2025-04-30 12:00, executed=2025-04-30 13:00:00, pending Sell placed at 7529; SL=7558.624334091181, TP=7451.443493349289; valid for the next 3 chart bar(s).
+30/04/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 1.93 FRA40.cash (Price: 7615.3, SL: 7576.67234094532, TP: 7716.43)
+30/04/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 1.93 FRA40.cash (Price: 7615.3, SL: 7576.67234094532, TP: 7716.43) SUCCEEDED, PendingOrder OID314
+30/04/2025 16:00:00.000 | Info | Combo: bartime=2025-04-30 15:00, executed=2025-04-30 16:00:00, pending Buy placed at 7615.3; SL=7576.672340945316, TP=7716.427211405164; valid for the next 3 chart bar(s).
+05/05/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 5.46 FRA40.cash (Price: 7723.1, SL: 7737.14485332712, TP: 7686.33)
+05/05/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 5.46 FRA40.cash (Price: 7723.1, SL: 7737.14485332712, TP: 7686.33) SUCCEEDED, PendingOrder OID317
+05/05/2025 18:00:00.000 | Info | Combo: bartime=2025-05-05 17:00, executed=2025-05-05 18:00:00, pending Sell placed at 7723.1; SL=7737.144853327123, TP=7686.330573989591; valid for the next 3 chart bar(s).
+06/05/2025 06:05:00.000 | Info | Combo: bartime=2025-05-05 19:00, Sell signal skipped: already have same-direction exposure open.
+06/05/2025 07:00:00.000 | Info | Combo: bartime=2025-05-06 06:00, reversal - closing existing Sell position 86 before opening opposite direction.
+06/05/2025 07:00:00.000 | Trade | Closing position PID86 (Volume: 5.46)
+06/05/2025 07:00:00.000 | Trade |  Closing position PID86 (Volume: 5.46) SUCCEEDED
+06/05/2025 07:00:00.000 | Trade | Placing Stop Order to Buy 4.3 FRA40.cash (Price: 7748.4, SL: 7730.78730904034, TP: 7794.51)
+06/05/2025 07:00:00.000 | Trade |  Placing Stop Order to Buy 4.3 FRA40.cash (Price: 7748.4, SL: 7730.78730904034, TP: 7794.51) SUCCEEDED, PendingOrder OID321
+06/05/2025 07:00:00.000 | Info | Combo: bartime=2025-05-06 06:00, executed=2025-05-06 07:00:00, pending Buy placed at 7748.4; SL=7730.78730904034, TP=7794.510024932388; valid for the next 3 chart bar(s).
+06/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-06 07:00, reversal - cancelling existing Buy pending order 321 before opening opposite direction.
+06/05/2025 08:00:00.000 | Trade | Cancelling pending order OID321
+06/05/2025 08:00:00.000 | Trade |  Cancelling pending order OID321 SUCCEEDED
+06/05/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 3.34 FRA40.cash (Price: 7698.1, SL: 7720.79015276773, TP: 7638.7)
+06/05/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 3.34 FRA40.cash (Price: 7698.1, SL: 7720.79015276773, TP: 7638.7) SUCCEEDED, PendingOrder OID322
+06/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-06 07:00, executed=2025-05-06 08:00:00, pending Sell placed at 7698.1; SL=7720.790152767728, TP=7638.69718005409; valid for the next 3 chart bar(s).
+06/05/2025 14:00:00.000 | Info | Combo: bartime=2025-05-06 13:00, Sell signal skipped: already have same-direction exposure open.
+07/05/2025 06:05:00.000 | Info | Combo: bartime=2025-05-07 00:00, reversal - closing existing Sell position 87 before opening opposite direction.
+07/05/2025 06:05:00.000 | Trade | Closing position PID87 (Volume: 3.34)
+07/05/2025 06:05:00.000 | Trade |  Closing position PID87 (Volume: 3.34) SUCCEEDED
+07/05/2025 06:05:00.000 | Trade | Placing Stop Order to Buy 2.69 FRA40.cash (Price: 7718.1, SL: 7689.86367539976, TP: 7792.02)
+07/05/2025 06:05:00.000 | Trade |  Placing Stop Order to Buy 2.69 FRA40.cash (Price: 7718.1, SL: 7689.86367539976, TP: 7792.02) SUCCEEDED, PendingOrder OID326
+07/05/2025 06:05:00.000 | Info | Combo: bartime=2025-05-07 00:00, executed=2025-05-07 06:05:00, pending Buy placed at 7718.1; SL=7689.86367539976, TP=7792.022697803432; valid for the next 3 chart bar(s).
+07/05/2025 06:05:00.000 | Info | Combo: bartime=2025-05-07 04:00, Buy signal skipped: already have same-direction exposure open.
+07/05/2025 09:00:00.000 | Trade | Cancelling pending order OID326
+07/05/2025 09:00:00.000 | Trade |  Cancelling pending order OID326 SUCCEEDED
+07/05/2025 09:00:00.000 | Info | Combo: pending order 326 cancelled after 3 chart bars.
+13/05/2025 06:05:00.000 | Trade | Placing Stop Order to Sell 3.02 FRA40.cash (Price: 7814.5, SL: 7839.68614848395, TP: 7748.56)
+13/05/2025 06:05:00.000 | Trade |  Placing Stop Order to Sell 3.02 FRA40.cash (Price: 7814.5, SL: 7839.68614848395, TP: 7748.56) SUCCEEDED, PendingOrder OID327
+13/05/2025 06:05:00.000 | Info | Combo: bartime=2025-05-13 02:00, executed=2025-05-13 06:05:00, pending Sell placed at 7814.5; SL=7839.686148483947, TP=7748.5626632690255; valid for the next 3 chart bar(s).
+13/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-13 07:00, reversal - cancelling existing Sell pending order 327 before opening opposite direction.
+13/05/2025 08:00:00.000 | Trade | Cancelling pending order OID327
+13/05/2025 08:00:00.000 | Trade |  Cancelling pending order OID327 SUCCEEDED
+13/05/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 3.09 FRA40.cash (Price: 7873.9, SL: 7849.31717886478, TP: 7938.26)
+13/05/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 3.09 FRA40.cash (Price: 7873.9, SL: 7849.31717886478, TP: 7938.26) SUCCEEDED, PendingOrder OID328
+13/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-13 07:00, executed=2025-05-13 08:00:00, pending Buy placed at 7873.9; SL=7849.31717886478, TP=7938.257825732006; valid for the next 3 chart bar(s).
+13/05/2025 11:00:00.000 | Trade | Cancelling pending order OID328
+13/05/2025 11:00:00.000 | Trade |  Cancelling pending order OID328 SUCCEEDED
+13/05/2025 11:00:00.000 | Info | Combo: pending order 328 cancelled after 3 chart bars.
+14/05/2025 06:05:00.000 | Trade | Placing Stop Order to Sell 4.75 FRA40.cash (Price: 7842.7, SL: 7858.7162832624, TP: 7800.77)
+14/05/2025 06:05:00.000 | Trade |  Placing Stop Order to Sell 4.75 FRA40.cash (Price: 7842.7, SL: 7858.7162832624, TP: 7800.77) SUCCEEDED, PendingOrder OID329
+14/05/2025 06:05:00.000 | Info | Combo: bartime=2025-05-14 00:00, executed=2025-05-14 06:05:00, pending Sell placed at 7842.7; SL=7858.716283262402, TP=7800.769370419031; valid for the next 3 chart bar(s).
+14/05/2025 06:05:00.000 | Info | Combo: bartime=2025-05-14 05:00, reversal - cancelling existing Sell pending order 329 before opening opposite direction.
+14/05/2025 06:05:00.000 | Trade | Cancelling pending order OID329
+14/05/2025 06:05:00.000 | Trade |  Cancelling pending order OID329 SUCCEEDED
+14/05/2025 06:05:00.000 | Trade | Placing Stop Order to Buy 6.03 FRA40.cash (Price: 7873.7, SL: 7861.08938430058, TP: 7906.71)
+14/05/2025 06:05:00.000 | Trade |  Placing Stop Order to Buy 6.03 FRA40.cash (Price: 7873.7, SL: 7861.08938430058, TP: 7906.71) SUCCEEDED, PendingOrder OID330
+14/05/2025 06:05:00.000 | Info | Combo: bartime=2025-05-14 05:00, executed=2025-05-14 06:05:00, pending Buy placed at 7873.7; SL=7861.089384300576, TP=7906.714591901091; valid for the next 3 chart bar(s).
+14/05/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 3.6 FRA40.cash (Price: 7826.4, SL: 7847.28279404763, TP: 7771.73)
+14/05/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 3.6 FRA40.cash (Price: 7826.4, SL: 7847.28279404763, TP: 7771.73) SUCCEEDED, PendingOrder OID333
+14/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-14 07:00, executed=2025-05-14 08:00:00, pending Sell placed at 7826.4; SL=7847.282794047631, TP=7771.728845183301; valid for the next 3 chart bar(s).
+15/05/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 4.75 FRA40.cash (Price: 7829.2, SL: 7813.54144358289, TP: 7870.19)
+15/05/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 4.75 FRA40.cash (Price: 7829.2, SL: 7813.54144358289, TP: 7870.19) SUCCEEDED, PendingOrder OID336
+15/05/2025 11:00:00.000 | Info | Combo: bartime=2025-05-15 10:00, executed=2025-05-15 11:00:00, pending Buy placed at 7829.2; SL=7813.541443582888, TP=7870.194100699998; valid for the next 3 chart bar(s).
+16/05/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 3.65 FRA40.cash (Price: 7851.4, SL: 7872.39471397112, TP: 7796.44)
+16/05/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 3.65 FRA40.cash (Price: 7851.4, SL: 7872.39471397112, TP: 7796.44) SUCCEEDED, PendingOrder OID339
+16/05/2025 13:00:00.000 | Info | Combo: bartime=2025-05-16 12:00, executed=2025-05-16 13:00:00, pending Sell placed at 7851.4; SL=7872.3947139711245, TP=7796.435838823595; valid for the next 3 chart bar(s).
+16/05/2025 15:00:00.000 | Info | Combo: bartime=2025-05-16 14:00, Sell signal skipped: already have same-direction exposure open.
+16/05/2025 16:00:00.000 | Trade | Cancelling pending order OID339
+16/05/2025 16:00:00.000 | Trade |  Cancelling pending order OID339 SUCCEEDED
+16/05/2025 16:00:00.000 | Info | Combo: pending order 339 cancelled after 3 chart bars.
+19/05/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 4.01 FRA40.cash (Price: 7873.9, SL: 7854.77359863212, TP: 7923.97)
+19/05/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 4.01 FRA40.cash (Price: 7873.9, SL: 7854.77359863212, TP: 7923.97) SUCCEEDED, PendingOrder OID340
+19/05/2025 15:00:00.000 | Info | Combo: bartime=2025-05-19 14:00, executed=2025-05-19 15:00:00, pending Buy placed at 7873.9; SL=7854.773598632116, TP=7923.972918781118; valid for the next 3 chart bar(s).
+22/05/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 3.33 FRA40.cash (Price: 7872.6, SL: 7848.98916788143, TP: 7934.41)
+22/05/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 3.33 FRA40.cash (Price: 7872.6, SL: 7848.98916788143, TP: 7934.41) SUCCEEDED, PendingOrder OID343
+22/05/2025 16:00:00.000 | Info | Combo: bartime=2025-05-22 15:00, executed=2025-05-22 16:00:00, pending Buy placed at 7872.6; SL=7848.989167881429, TP=7934.41315848642; valid for the next 3 chart bar(s).
+23/05/2025 09:00:00.000 | Info | Combo: bartime=2025-05-23 08:00, reversal - closing existing Buy position 92 before opening opposite direction.
+23/05/2025 09:00:00.000 | Trade | Closing position PID92 (Volume: 3.33)
+23/05/2025 09:00:00.000 | Trade |  Closing position PID92 (Volume: 3.33) SUCCEEDED
+23/05/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 4.43 FRA40.cash (Price: 7845.1, SL: 7862.7043796923, TP: 7799.01)
+23/05/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 4.43 FRA40.cash (Price: 7845.1, SL: 7862.7043796923, TP: 7799.01) SUCCEEDED, PendingOrder OID347
+23/05/2025 09:00:00.000 | Info | Combo: bartime=2025-05-23 08:00, executed=2025-05-23 09:00:00, pending Sell placed at 7845.1; SL=7862.704379692296, TP=7799.01173396557; valid for the next 3 chart bar(s).
+27/05/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 4.2 FRA40.cash (Price: 7855.3, SL: 7836.19864341065, TP: 7905.31)
+27/05/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 4.2 FRA40.cash (Price: 7855.3, SL: 7836.19864341065, TP: 7905.31) SUCCEEDED, PendingOrder OID350
+27/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-27 07:00, executed=2025-05-27 08:00:00, pending Buy placed at 7855.3; SL=7836.198643410654, TP=7905.307351550908; valid for the next 3 chart bar(s).
+27/05/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 4.57 FRA40.cash (Price: 7817.3, SL: 7834.66021482176, TP: 7771.85)
+27/05/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 4.57 FRA40.cash (Price: 7817.3, SL: 7834.66021482176, TP: 7771.85) SUCCEEDED, PendingOrder OID353
+27/05/2025 14:00:00.000 | Info | Combo: bartime=2025-05-27 13:00, executed=2025-05-27 14:00:00, pending Sell placed at 7817.3; SL=7834.660214821758, TP=7771.850957596639; valid for the next 3 chart bar(s).
+27/05/2025 17:00:00.000 | Trade | Cancelling pending order OID353
+27/05/2025 17:00:00.000 | Trade |  Cancelling pending order OID353 SUCCEEDED
+27/05/2025 17:00:00.000 | Info | Combo: pending order 353 cancelled after 3 chart bars.
+28/05/2025 06:05:00.000 | Trade | Placing Stop Order to Sell 7.3 FRA40.cash (Price: 7822.4, SL: 7833.27562108078, TP: 7793.93)
+28/05/2025 06:05:00.000 | Trade |  Placing Stop Order to Sell 7.3 FRA40.cash (Price: 7822.4, SL: 7833.27562108078, TP: 7793.93) SUCCEEDED, PendingOrder OID354
+28/05/2025 06:05:00.000 | Info | Combo: bartime=2025-05-28 03:00, executed=2025-05-28 06:05:00, pending Sell placed at 7822.4; SL=7833.275621080775, TP=7793.927624010532; valid for the next 3 chart bar(s).
+28/05/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 4.86 FRA40.cash (Price: 7857, SL: 7840.94998560532, TP: 7899.02)
+28/05/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 4.86 FRA40.cash (Price: 7857, SL: 7840.94998560532, TP: 7899.02) SUCCEEDED, PendingOrder OID357
+28/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-28 07:00, executed=2025-05-28 08:00:00, pending Buy placed at 7857; SL=7840.949985605314, TP=7899.018937685286; valid for the next 3 chart bar(s).
+28/05/2025 09:00:00.000 | Info | Combo: bartime=2025-05-28 08:00, reversal - cancelling existing Buy pending order 357 before opening opposite direction.
+28/05/2025 09:00:00.000 | Trade | Cancelling pending order OID357
+28/05/2025 09:00:00.000 | Trade |  Cancelling pending order OID357 SUCCEEDED
+28/05/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 4.26 FRA40.cash (Price: 7817.5, SL: 7835.84001151575, TP: 7769.49)
+28/05/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 4.26 FRA40.cash (Price: 7817.5, SL: 7835.84001151575, TP: 7769.49) SUCCEEDED, PendingOrder OID358
+28/05/2025 09:00:00.000 | Info | Combo: bartime=2025-05-28 08:00, executed=2025-05-28 09:00:00, pending Sell placed at 7817.5; SL=7835.840011515748, TP=7769.4858498517715; valid for the next 3 chart bar(s).
+29/05/2025 06:05:00.000 | Info | Combo: bartime=2025-05-29 00:00, reversal - closing existing Sell position 96 before opening opposite direction.
+29/05/2025 06:05:00.000 | Trade | Closing position PID96 (Volume: 4.26)
+29/05/2025 06:05:00.000 | Trade |  Closing position PID96 (Volume: 4.26) SUCCEEDED
+29/05/2025 06:05:00.000 | Trade | Placing Stop Order to Buy 2.53 FRA40.cash (Price: 7879.8, SL: 7849.59198227316, TP: 7958.88)
+29/05/2025 06:05:00.000 | Trade |  Placing Stop Order to Buy 2.53 FRA40.cash (Price: 7879.8, SL: 7849.59198227316, TP: 7958.88) SUCCEEDED, PendingOrder OID362
+29/05/2025 06:05:00.000 | Info | Combo: bartime=2025-05-29 00:00, executed=2025-05-29 06:05:00, pending Buy placed at 7879.8; SL=7849.5919822731585, TP=7958.884590408872; valid for the next 3 chart bar(s).
+29/05/2025 09:00:00.000 | Trade | Cancelling pending order OID362
+29/05/2025 09:00:00.000 | Trade |  Cancelling pending order OID362 SUCCEEDED
+29/05/2025 09:00:00.000 | Info | Combo: pending order 362 cancelled after 3 chart bars.
+29/05/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 2.99 FRA40.cash (Price: 7818.8, SL: 7844.31272870335, TP: 7752.01)
+29/05/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 2.99 FRA40.cash (Price: 7818.8, SL: 7844.31272870335, TP: 7752.01) SUCCEEDED, PendingOrder OID363
+29/05/2025 09:00:00.000 | Info | Combo: bartime=2025-05-29 08:00, executed=2025-05-29 09:00:00, pending Sell placed at 7818.8; SL=7844.31272870335, TP=7752.007676254629; valid for the next 3 chart bar(s).
+29/05/2025 12:00:00.000 | Trade | Cancelling pending order OID363
+29/05/2025 12:00:00.000 | Trade |  Cancelling pending order OID363 SUCCEEDED
+29/05/2025 12:00:00.000 | Info | Combo: pending order 363 cancelled after 3 chart bars.
+29/05/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 3.72 FRA40.cash (Price: 7829.1, SL: 7849.64411709612, TP: 7775.32)
+29/05/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 3.72 FRA40.cash (Price: 7829.1, SL: 7849.64411709612, TP: 7775.32) SUCCEEDED, PendingOrder OID364
+29/05/2025 12:00:00.000 | Info | Combo: bartime=2025-05-29 11:00, executed=2025-05-29 12:00:00, pending Sell placed at 7829.1; SL=7849.644117096116, TP=7775.31550144237; valid for the next 3 chart bar(s).
+02/06/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 2.32 FRA40.cash (Price: 7740, SL: 7706.31592062746, TP: 7828.18)
+02/06/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 2.32 FRA40.cash (Price: 7740, SL: 7706.31592062746, TP: 7828.18) SUCCEEDED, PendingOrder OID367
+02/06/2025 15:00:00.000 | Info | Combo: bartime=2025-06-02 14:00, executed=2025-06-02 15:00:00, pending Buy placed at 7740; SL=7706.315920627457, TP=7828.184919797318; valid for the next 3 chart bar(s).
+03/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-03 07:00, reversal - closing existing Buy position 98 before opening opposite direction.
+03/06/2025 08:00:00.000 | Trade | Closing position PID98 (Volume: 2.32)
+03/06/2025 08:00:00.000 | Trade |  Closing position PID98 (Volume: 2.32) SUCCEEDED
+03/06/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 3.56 FRA40.cash (Price: 7705.3, SL: 7727.09783289346, TP: 7648.23)
+03/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 3.56 FRA40.cash (Price: 7705.3, SL: 7727.09783289346, TP: 7648.23) SUCCEEDED, PendingOrder OID371
+03/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-03 07:00, executed=2025-06-03 08:00:00, pending Sell placed at 7705.3; SL=7727.0978328934625, TP=7648.233273484916; valid for the next 3 chart bar(s).
+03/06/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 3.82 FRA40.cash (Price: 7751.6, SL: 7731.54376711518, TP: 7804.11)
+03/06/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 3.82 FRA40.cash (Price: 7751.6, SL: 7731.54376711518, TP: 7804.11) SUCCEEDED, PendingOrder OID374
+03/06/2025 15:00:00.000 | Info | Combo: bartime=2025-06-03 14:00, executed=2025-06-03 15:00:00, pending Buy placed at 7751.6; SL=7731.543767115181, TP=7804.107217692456; valid for the next 3 chart bar(s).
+05/06/2025 06:05:00.000 | Trade | Placing Stop Order to Sell 5.3 FRA40.cash (Price: 7792.1, SL: 7806.93773796661, TP: 7753.25)
+05/06/2025 06:05:00.000 | Trade |  Placing Stop Order to Sell 5.3 FRA40.cash (Price: 7792.1, SL: 7806.93773796661, TP: 7753.25) SUCCEEDED, PendingOrder OID377
+05/06/2025 06:05:00.000 | Info | Combo: bartime=2025-06-04 19:00, executed=2025-06-05 06:05:00, pending Sell placed at 7792.1; SL=7806.937737966612, TP=7753.254802003412; valid for the next 3 chart bar(s).
+05/06/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 5.98 FRA40.cash (Price: 7829.8, SL: 7816.83371981983, TP: 7863.75)
+05/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 5.98 FRA40.cash (Price: 7829.8, SL: 7816.83371981983, TP: 7863.75) SUCCEEDED, PendingOrder OID380
+05/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-05 07:00, executed=2025-06-05 08:00:00, pending Buy placed at 7829.8; SL=7816.833719819828, TP=7863.745721511692; valid for the next 3 chart bar(s).
+05/06/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 2.57 FRA40.cash (Price: 7758.3, SL: 7788.13299735155, TP: 7680.2)
+05/06/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 2.57 FRA40.cash (Price: 7758.3, SL: 7788.13299735155, TP: 7680.2) SUCCEEDED, PendingOrder OID383
+05/06/2025 14:00:00.000 | Info | Combo: bartime=2025-06-05 13:00, executed=2025-06-05 14:00:00, pending Sell placed at 7758.3; SL=7788.132997351551, TP=7680.197212933639; valid for the next 3 chart bar(s).
+06/06/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 4.27 FRA40.cash (Price: 7796.6, SL: 7778.89926766672, TP: 7842.94)
+06/06/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 4.27 FRA40.cash (Price: 7796.6, SL: 7778.89926766672, TP: 7842.94) SUCCEEDED, PendingOrder OID386
+06/06/2025 10:00:00.000 | Info | Combo: bartime=2025-06-06 09:00, executed=2025-06-06 10:00:00, pending Buy placed at 7796.6; SL=7778.899267666723, TP=7842.940517248521; valid for the next 3 chart bar(s).
+09/06/2025 06:05:00.000 | Info | Combo: bartime=2025-06-09 03:00, reversal - closing existing Buy position 104 before opening opposite direction.
+09/06/2025 06:05:00.000 | Trade | Closing position PID104 (Volume: 4.27)
+09/06/2025 06:05:00.000 | Trade |  Closing position PID104 (Volume: 4.27) SUCCEEDED
+09/06/2025 06:05:00.000 | Trade | Placing Stop Order to Sell 7.14 FRA40.cash (Price: 7787.7, SL: 7798.30787688094, TP: 7759.93)
+09/06/2025 06:05:00.000 | Trade |  Placing Stop Order to Sell 7.14 FRA40.cash (Price: 7787.7, SL: 7798.30787688094, TP: 7759.93) SUCCEEDED, PendingOrder OID390
+09/06/2025 06:05:00.000 | Info | Combo: bartime=2025-06-09 03:00, executed=2025-06-09 06:05:00, pending Sell placed at 7787.7; SL=7798.307876880944, TP=7759.928578325688; valid for the next 3 chart bar(s).
+09/06/2025 07:00:00.000 | Info | Combo: bartime=2025-06-09 06:00, Sell signal skipped: already have same-direction exposure open.
+09/06/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 5.16 FRA40.cash (Price: 7817.3, SL: 7802.83335490365, TP: 7855.17)
+09/06/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 5.16 FRA40.cash (Price: 7817.3, SL: 7802.83335490365, TP: 7855.17) SUCCEEDED, PendingOrder OID393
+09/06/2025 09:00:00.000 | Info | Combo: bartime=2025-06-09 08:00, executed=2025-06-09 09:00:00, pending Buy placed at 7817.3; SL=7802.833354903652, TP=7855.173676862239; valid for the next 3 chart bar(s).
+09/06/2025 10:00:00.000 | Info | Combo: bartime=2025-06-09 09:00, reversal - cancelling existing Buy pending order 393 before opening opposite direction.
+09/06/2025 10:00:00.000 | Trade | Cancelling pending order OID393
+09/06/2025 10:00:00.000 | Trade |  Cancelling pending order OID393 SUCCEEDED
+09/06/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 5.04 FRA40.cash (Price: 7788.5, SL: 7803.33331607708, TP: 7749.67)
+09/06/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 5.04 FRA40.cash (Price: 7788.5, SL: 7803.33331607708, TP: 7749.67) SUCCEEDED, PendingOrder OID394
+09/06/2025 10:00:00.000 | Info | Combo: bartime=2025-06-09 09:00, executed=2025-06-09 10:00:00, pending Sell placed at 7788.5; SL=7803.333316077078, TP=7749.666378510209; valid for the next 3 chart bar(s).
+09/06/2025 18:00:00.000 | Info | Combo: bartime=2025-06-09 17:00, reversal - closing existing Sell position 106 before opening opposite direction.
+09/06/2025 18:00:00.000 | Trade | Closing position PID106 (Volume: 5.04)
+09/06/2025 18:00:00.000 | Trade |  Closing position PID106 (Volume: 5.04) SUCCEEDED
+09/06/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 5.6 FRA40.cash (Price: 7806.3, SL: 7793.04758783379, TP: 7840.99)
+09/06/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 5.6 FRA40.cash (Price: 7806.3, SL: 7793.04758783379, TP: 7840.99) SUCCEEDED, PendingOrder OID398
+09/06/2025 18:00:00.000 | Info | Combo: bartime=2025-06-09 17:00, executed=2025-06-09 18:00:00, pending Buy placed at 7806.3; SL=7793.047587833787, TP=7840.994815051148; valid for the next 3 chart bar(s).
+10/06/2025 06:05:00.000 | Info | Combo: bartime=2025-06-09 19:00, reversal - cancelling existing Buy pending order 398 before opening opposite direction.
+10/06/2025 06:05:00.000 | Trade | Cancelling pending order OID398
+10/06/2025 06:05:00.000 | Trade |  Cancelling pending order OID398 SUCCEEDED
+10/06/2025 06:05:00.000 | Trade | Placing Stop Order to Sell 5.45 FRA40.cash (Price: 7774.8, SL: 7788.40954378638, TP: 7739.17)
+10/06/2025 06:05:00.000 | Trade |  Placing Stop Order to Sell 5.45 FRA40.cash (Price: 7774.8, SL: 7788.40954378638, TP: 7739.17) SUCCEEDED, PendingOrder OID399
+10/06/2025 06:05:00.000 | Info | Combo: bartime=2025-06-09 19:00, executed=2025-06-10 06:05:00, pending Sell placed at 7774.8; SL=7788.409543786377, TP=7739.1702143672655; valid for the next 3 chart bar(s).
+10/06/2025 06:05:00.000 | Info | Combo: bartime=2025-06-10 01:00, reversal - cancelling existing Sell pending order 399 before opening opposite direction.
+10/06/2025 06:05:00.000 | Trade | Cancelling pending order OID399
+10/06/2025 06:05:00.000 | Trade |  Cancelling pending order OID399 SUCCEEDED
+10/06/2025 06:05:00.000 | Trade | Placing Stop Order to Buy 5.11 FRA40.cash (Price: 7813.4, SL: 7798.87789197672, TP: 7851.42)
+10/06/2025 06:05:00.000 | Trade |  Placing Stop Order to Buy 5.11 FRA40.cash (Price: 7813.4, SL: 7798.87789197672, TP: 7851.42) SUCCEEDED, PendingOrder OID400
+10/06/2025 06:05:00.000 | Info | Combo: bartime=2025-06-10 01:00, executed=2025-06-10 06:05:00, pending Buy placed at 7813.4; SL=7798.877891976718, TP=7851.41887880495; valid for the next 3 chart bar(s).
+10/06/2025 06:05:00.000 | Info | Combo: bartime=2025-06-10 05:00, reversal - cancelling existing Buy pending order 400 before opening opposite direction.
+10/06/2025 06:05:00.000 | Trade | Cancelling pending order OID400
+10/06/2025 06:05:00.000 | Trade |  Cancelling pending order OID400 SUCCEEDED
+10/06/2025 06:05:00.000 | Trade | Placing Stop Order to Sell 4.98 FRA40.cash (Price: 7771.4, SL: 7786.28569544634, TP: 7732.43)
+10/06/2025 06:05:00.000 | Trade |  Placing Stop Order to Sell 4.98 FRA40.cash (Price: 7771.4, SL: 7786.28569544634, TP: 7732.43) SUCCEEDED, PendingOrder OID401
+10/06/2025 06:05:00.000 | Info | Combo: bartime=2025-06-10 05:00, executed=2025-06-10 06:05:00, pending Sell placed at 7771.4; SL=7786.285695446336, TP=7732.4292493214925; valid for the next 3 chart bar(s).
+10/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-10 07:00, reversal - cancelling existing Sell pending order 401 before opening opposite direction.
+10/06/2025 08:00:00.000 | Trade | Cancelling pending order OID401
+10/06/2025 08:00:00.000 | Trade |  Cancelling pending order OID401 SUCCEEDED
+10/06/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 4 FRA40.cash (Price: 7818.7, SL: 7800.15315491434, TP: 7867.26)
+10/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 4 FRA40.cash (Price: 7818.7, SL: 7800.15315491434, TP: 7867.26) SUCCEEDED, PendingOrder OID402
+10/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-10 07:00, executed=2025-06-10 08:00:00, pending Buy placed at 7818.7; SL=7800.153154914345, TP=7867.255640434245; valid for the next 3 chart bar(s).
+10/06/2025 09:00:00.000 | Info | Combo: bartime=2025-06-10 08:00, reversal - cancelling existing Buy pending order 402 before opening opposite direction.
+10/06/2025 09:00:00.000 | Trade | Cancelling pending order OID402
+10/06/2025 09:00:00.000 | Trade |  Cancelling pending order OID402 SUCCEEDED
+10/06/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 3.03 FRA40.cash (Price: 7762.7, SL: 7787.13747606852, TP: 7698.72)
+10/06/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 3.03 FRA40.cash (Price: 7762.7, SL: 7787.13747606852, TP: 7698.72) SUCCEEDED, PendingOrder OID403
+10/06/2025 09:00:00.000 | Info | Combo: bartime=2025-06-10 08:00, executed=2025-06-10 09:00:00, pending Sell placed at 7762.7; SL=7787.137476068524, TP=7698.722687652604; valid for the next 3 chart bar(s).
+10/06/2025 12:00:00.000 | Trade | Cancelling pending order OID403
+10/06/2025 12:00:00.000 | Trade |  Cancelling pending order OID403 SUCCEEDED
+10/06/2025 12:00:00.000 | Info | Combo: pending order 403 cancelled after 3 chart bars.
+10/06/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 4.14 FRA40.cash (Price: 7807.2, SL: 7789.26880784187, TP: 7854.14)
+10/06/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 4.14 FRA40.cash (Price: 7807.2, SL: 7789.26880784187, TP: 7854.14) SUCCEEDED, PendingOrder OID404
+10/06/2025 14:00:00.000 | Info | Combo: bartime=2025-06-10 13:00, executed=2025-06-10 14:00:00, pending Buy placed at 7807.2; SL=7789.268807841866, TP=7854.143861069994; valid for the next 3 chart bar(s).
+10/06/2025 16:00:00.000 | Info | Combo: bartime=2025-06-10 15:00, Buy signal skipped: already have same-direction exposure open.
+11/06/2025 06:05:00.000 | Info | Combo: bartime=2025-06-11 00:00, reversal - closing existing Buy position 107 before opening opposite direction.
+11/06/2025 06:05:00.000 | Trade | Closing position PID107 (Volume: 4.14)
+11/06/2025 06:05:00.000 | Trade |  Closing position PID107 (Volume: 4.14) SUCCEEDED
+11/06/2025 06:05:00.000 | Trade | Placing Stop Order to Sell 4.8 FRA40.cash (Price: 7787, SL: 7802.29462210968, TP: 7746.96)
+11/06/2025 06:05:00.000 | Trade |  Placing Stop Order to Sell 4.8 FRA40.cash (Price: 7787, SL: 7802.29462210968, TP: 7746.96) SUCCEEDED, PendingOrder OID408
+11/06/2025 06:05:00.000 | Info | Combo: bartime=2025-06-11 00:00, executed=2025-06-11 06:05:00, pending Sell placed at 7787; SL=7802.294622109682, TP=7746.958679316854; valid for the next 3 chart bar(s).
+11/06/2025 07:00:00.000 | Info | Combo: bartime=2025-06-11 06:00, reversal - cancelling existing Sell pending order 408 before opening opposite direction.
+11/06/2025 07:00:00.000 | Trade | Cancelling pending order OID408
+11/06/2025 07:00:00.000 | Trade |  Cancelling pending order OID408 SUCCEEDED
+11/06/2025 07:00:00.000 | Trade | Placing Stop Order to Buy 5.37 FRA40.cash (Price: 7806.9, SL: 7793.24955058168, TP: 7842.64)
+11/06/2025 07:00:00.000 | Trade |  Placing Stop Order to Buy 5.37 FRA40.cash (Price: 7806.9, SL: 7793.24955058168, TP: 7842.64) SUCCEEDED, PendingOrder OID409
+11/06/2025 07:00:00.000 | Info | Combo: bartime=2025-06-11 06:00, executed=2025-06-11 07:00:00, pending Buy placed at 7806.9; SL=7793.24955058168, TP=7842.636876577162; valid for the next 3 chart bar(s).
+11/06/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 3.62 FRA40.cash (Price: 7777.7, SL: 7797.5448192654, TP: 7725.75)
+11/06/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 3.62 FRA40.cash (Price: 7777.7, SL: 7797.5448192654, TP: 7725.75) SUCCEEDED, PendingOrder OID412
+11/06/2025 12:00:00.000 | Info | Combo: bartime=2025-06-11 11:00, executed=2025-06-11 12:00:00, pending Sell placed at 7777.7; SL=7797.544819265395, TP=7725.746263163195; valid for the next 3 chart bar(s).
+11/06/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 2.9 FRA40.cash (Price: 7777.7, SL: 7802.16694746388, TP: 7713.65)
+11/06/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 2.9 FRA40.cash (Price: 7777.7, SL: 7802.16694746388, TP: 7713.65) SUCCEEDED, PendingOrder OID415
+11/06/2025 15:00:00.000 | Info | Combo: bartime=2025-06-11 14:00, executed=2025-06-11 15:00:00, pending Sell placed at 7777.7; SL=7802.166947463882, TP=7713.645531539556; valid for the next 3 chart bar(s).
+13/06/2025 06:05:00.000 | Trade | Placing Stop Order to Sell 1.62 FRA40.cash (Price: 7604.8, SL: 7649.74621795959, TP: 7487.13)
+13/06/2025 06:05:00.000 | Trade |  Placing Stop Order to Sell 1.62 FRA40.cash (Price: 7604.8, SL: 7649.74621795959, TP: 7487.13) SUCCEEDED, PendingOrder OID418
+13/06/2025 06:05:00.000 | Info | Combo: bartime=2025-06-13 00:00, executed=2025-06-13 06:05:00, pending Sell placed at 7604.8; SL=7649.746217959588, TP=7487.130801381799; valid for the next 3 chart bar(s).
+13/06/2025 09:00:00.000 | Trade | Cancelling pending order OID418
+13/06/2025 09:00:00.000 | Trade |  Cancelling pending order OID418 SUCCEEDED
+13/06/2025 09:00:00.000 | Info | Combo: pending order 418 cancelled after 3 chart bars.
+13/06/2025 12:00:00.000 | Trade | Placing Stop Order to Buy 2.03 FRA40.cash (Price: 7715.4, SL: 7679.67206174366, TP: 7808.94)
+13/06/2025 12:00:00.000 | Trade |  Placing Stop Order to Buy 2.03 FRA40.cash (Price: 7715.4, SL: 7679.67206174366, TP: 7808.94) SUCCEEDED, PendingOrder OID419
+13/06/2025 12:00:00.000 | Info | Combo: bartime=2025-06-13 11:00, executed=2025-06-13 12:00:00, pending Buy placed at 7715.4; SL=7679.672061743661, TP=7808.935742355094; valid for the next 3 chart bar(s).
+13/06/2025 15:00:00.000 | Trade | Cancelling pending order OID419
+13/06/2025 15:00:00.000 | Trade |  Cancelling pending order OID419 SUCCEEDED
+13/06/2025 15:00:00.000 | Info | Combo: pending order 419 cancelled after 3 chart bars.
+13/06/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 2.46 FRA40.cash (Price: 7697.4, SL: 7667.8378364902, TP: 7774.79)
+13/06/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 2.46 FRA40.cash (Price: 7697.4, SL: 7667.8378364902, TP: 7774.79) SUCCEEDED, PendingOrder OID420
+13/06/2025 16:00:00.000 | Info | Combo: bartime=2025-06-13 15:00, executed=2025-06-13 16:00:00, pending Buy placed at 7697.4; SL=7667.837836490204, TP=7774.793744068646; valid for the next 3 chart bar(s).
+13/06/2025 19:00:00.000 | Trade | Cancelling pending order OID420
+13/06/2025 19:00:00.000 | Trade |  Cancelling pending order OID420 SUCCEEDED
+13/06/2025 19:00:00.000 | Info | Combo: pending order 420 cancelled after 3 chart bars.
+13/06/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 2.57 FRA40.cash (Price: 7633.9, SL: 7662.16622771702, TP: 7559.9)
+13/06/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 2.57 FRA40.cash (Price: 7633.9, SL: 7662.16622771702, TP: 7559.9) SUCCEEDED, PendingOrder OID421
+13/06/2025 19:00:00.000 | Info | Combo: bartime=2025-06-13 18:00, executed=2025-06-13 19:00:00, pending Sell placed at 7633.9; SL=7662.166227717015, TP=7559.899015836852; valid for the next 3 chart bar(s).
+16/06/2025 07:00:00.000 | Info | Combo: bartime=2025-06-16 06:00, reversal - cancelling existing Sell pending order 421 before opening opposite direction.
+16/06/2025 07:00:00.000 | Trade | Cancelling pending order OID421
+16/06/2025 07:00:00.000 | Trade |  Cancelling pending order OID421 SUCCEEDED
+16/06/2025 07:00:00.000 | Trade | Placing Stop Order to Buy 3.53 FRA40.cash (Price: 7706.4, SL: 7685.80404992086, TP: 7760.32)
+16/06/2025 07:00:00.000 | Trade |  Placing Stop Order to Buy 3.53 FRA40.cash (Price: 7706.4, SL: 7685.80404992086, TP: 7760.32) SUCCEEDED, PendingOrder OID422
+16/06/2025 07:00:00.000 | Info | Combo: bartime=2025-06-16 06:00, executed=2025-06-16 07:00:00, pending Buy placed at 7706.4; SL=7685.804049920864, TP=7760.320197307176; valid for the next 3 chart bar(s).
+17/06/2025 06:05:00.000 | Trade | Placing Stop Order to Sell 4.61 FRA40.cash (Price: 7698.7, SL: 7714.83566344996, TP: 7656.46)
+17/06/2025 06:05:00.000 | Trade |  Placing Stop Order to Sell 4.61 FRA40.cash (Price: 7698.7, SL: 7714.83566344996, TP: 7656.46) SUCCEEDED, PendingOrder OID425
+17/06/2025 06:05:00.000 | Info | Combo: bartime=2025-06-16 19:00, executed=2025-06-17 06:05:00, pending Sell placed at 7698.7; SL=7714.835663449958, TP=7656.456833088011; valid for the next 3 chart bar(s).
+17/06/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 3.28 FRA40.cash (Price: 7701.7, SL: 7678.45716339777, TP: 7762.55)
+17/06/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 3.28 FRA40.cash (Price: 7701.7, SL: 7678.45716339777, TP: 7762.55) SUCCEEDED, PendingOrder OID428
+17/06/2025 16:00:00.000 | Info | Combo: bartime=2025-06-17 15:00, executed=2025-06-17 16:00:00, pending Buy placed at 7701.7; SL=7678.457163397767, TP=7762.549746224645; valid for the next 3 chart bar(s).
+17/06/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 3.34 FRA40.cash (Price: 7661.4, SL: 7683.96741542543, TP: 7602.32)
+17/06/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 3.34 FRA40.cash (Price: 7661.4, SL: 7683.96741542543, TP: 7602.32) SUCCEEDED, PendingOrder OID431
+17/06/2025 18:00:00.000 | Info | Combo: bartime=2025-06-17 17:00, executed=2025-06-17 18:00:00, pending Sell placed at 7661.4; SL=7683.967415425429, TP=7602.318506416227; valid for the next 3 chart bar(s).
+18/06/2025 07:00:00.000 | Trade | Placing Stop Order to Buy 4.96 FRA40.cash (Price: 7707.9, SL: 7692.84791011877, TP: 7747.31)
+18/06/2025 07:00:00.000 | Trade |  Placing Stop Order to Buy 4.96 FRA40.cash (Price: 7707.9, SL: 7692.84791011877, TP: 7747.31) SUCCEEDED, PendingOrder OID434
+18/06/2025 07:00:00.000 | Info | Combo: bartime=2025-06-18 06:00, executed=2025-06-18 07:00:00, pending Buy placed at 7707.9; SL=7692.847910118767, TP=7747.306371309068; valid for the next 3 chart bar(s).
+18/06/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 2.89 FRA40.cash (Price: 7644.9, SL: 7670.38613601535, TP: 7578.18)
+18/06/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 2.89 FRA40.cash (Price: 7644.9, SL: 7670.38613601535, TP: 7578.18) SUCCEEDED, PendingOrder OID437
+18/06/2025 11:00:00.000 | Info | Combo: bartime=2025-06-18 10:00, executed=2025-06-18 11:00:00, pending Sell placed at 7644.9; SL=7670.386136015353, TP=7578.177295911805; valid for the next 3 chart bar(s).
+20/06/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 2.69 FRA40.cash (Price: 7576.1, SL: 7603.12758218865, TP: 7505.34)
+20/06/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 2.69 FRA40.cash (Price: 7576.1, SL: 7603.12758218865, TP: 7505.34) SUCCEEDED, PendingOrder OID440
+20/06/2025 09:00:00.000 | Info | Combo: bartime=2025-06-20 08:00, executed=2025-06-20 09:00:00, pending Sell placed at 7576.1; SL=7603.127582188646, TP=7505.341789830126; valid for the next 3 chart bar(s).
+20/06/2025 10:00:00.000 | Info | Combo: bartime=2025-06-20 09:00, reversal - cancelling existing Sell pending order 440 before opening opposite direction.
+20/06/2025 10:00:00.000 | Trade | Cancelling pending order OID440
+20/06/2025 10:00:00.000 | Trade |  Cancelling pending order OID440 SUCCEEDED
+20/06/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 2.65 FRA40.cash (Price: 7617.1, SL: 7589.67793424908, TP: 7688.89)
+20/06/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 2.65 FRA40.cash (Price: 7617.1, SL: 7589.67793424908, TP: 7688.89) SUCCEEDED, PendingOrder OID441
+20/06/2025 10:00:00.000 | Info | Combo: bartime=2025-06-20 09:00, executed=2025-06-20 10:00:00, pending Buy placed at 7617.1; SL=7589.677934249084, TP=7688.8909681359; valid for the next 3 chart bar(s).
+20/06/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 2.61 FRA40.cash (Price: 7577.1, SL: 7604.53334250526, TP: 7505.28)
+20/06/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 2.61 FRA40.cash (Price: 7577.1, SL: 7604.53334250526, TP: 7505.28) SUCCEEDED, PendingOrder OID444
+20/06/2025 15:00:00.000 | Info | Combo: bartime=2025-06-20 14:00, executed=2025-06-20 15:00:00, pending Sell placed at 7577.1; SL=7604.53334250526, TP=7505.279509321229; valid for the next 3 chart bar(s).
+23/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-23 07:00, reversal - closing existing Sell position 118 before opening opposite direction.
+23/06/2025 08:00:00.000 | Trade | Closing position PID118 (Volume: 2.61)
+23/06/2025 08:00:00.000 | Trade |  Closing position PID118 (Volume: 2.61) SUCCEEDED
+23/06/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 2.59 FRA40.cash (Price: 7587.4, SL: 7559.82197907378, TP: 7659.6)
+23/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 2.59 FRA40.cash (Price: 7587.4, SL: 7559.82197907378, TP: 7659.6) SUCCEEDED, PendingOrder OID448
+23/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-23 07:00, executed=2025-06-23 08:00:00, pending Buy placed at 7587.4; SL=7559.821979073781, TP=7659.5992587848405; valid for the next 3 chart bar(s).
+23/06/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 2.07 FRA40.cash (Price: 7565.4, SL: 7531.27986894124, TP: 7654.73)
+23/06/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 2.07 FRA40.cash (Price: 7565.4, SL: 7531.27986894124, TP: 7654.73) SUCCEEDED, PendingOrder OID451
+23/06/2025 18:00:00.000 | Info | Combo: bartime=2025-06-23 17:00, executed=2025-06-23 18:00:00, pending Buy placed at 7565.4; SL=7531.279868941237, TP=7654.72650311184; valid for the next 3 chart bar(s).
+24/06/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 2.72 FRA40.cash (Price: 7600.9, SL: 7627.61969088946, TP: 7530.95)
+24/06/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 2.72 FRA40.cash (Price: 7600.9, SL: 7627.61969088946, TP: 7530.95) SUCCEEDED, PendingOrder OID454
+24/06/2025 16:00:00.000 | Info | Combo: bartime=2025-06-24 15:00, executed=2025-06-24 16:00:00, pending Sell placed at 7600.9; SL=7627.619690889458, TP=7530.947849251396; valid for the next 3 chart bar(s).
+24/06/2025 19:00:00.000 | Trade | Cancelling pending order OID454
+24/06/2025 19:00:00.000 | Trade |  Cancelling pending order OID454 SUCCEEDED
+24/06/2025 19:00:00.000 | Info | Combo: pending order 454 cancelled after 3 chart bars.
+25/06/2025 06:05:00.000 | Trade | Placing Stop Order to Sell 4.6 FRA40.cash (Price: 7619.8, SL: 7635.60990831066, TP: 7578.41)
+25/06/2025 06:05:00.000 | Trade |  Placing Stop Order to Sell 4.6 FRA40.cash (Price: 7619.8, SL: 7635.60990831066, TP: 7578.41) SUCCEEDED, PendingOrder OID455
+25/06/2025 06:05:00.000 | Info | Combo: bartime=2025-06-25 00:00, executed=2025-06-25 06:05:00, pending Sell placed at 7619.8; SL=7635.609908310658, TP=7578.409660042698; valid for the next 3 chart bar(s).
+25/06/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 4.34 FRA40.cash (Price: 7664.1, SL: 7647.56185423665, TP: 7707.4)
+25/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 4.34 FRA40.cash (Price: 7664.1, SL: 7647.56185423665, TP: 7707.4) SUCCEEDED, PendingOrder OID458
+25/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-25 07:00, executed=2025-06-25 08:00:00, pending Buy placed at 7664.1; SL=7647.561854236649, TP=7707.396865608454; valid for the next 3 chart bar(s).
+25/06/2025 09:00:00.000 | Info | Combo: bartime=2025-06-25 08:00, reversal - cancelling existing Buy pending order 458 before opening opposite direction.
+25/06/2025 09:00:00.000 | Trade | Cancelling pending order OID458
+25/06/2025 09:00:00.000 | Trade |  Cancelling pending order OID458 SUCCEEDED
+25/06/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 3.94 FRA40.cash (Price: 7610.9, SL: 7629.13051661068, TP: 7563.17)
+25/06/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 3.94 FRA40.cash (Price: 7610.9, SL: 7629.13051661068, TP: 7563.17) SUCCEEDED, PendingOrder OID459
+25/06/2025 09:00:00.000 | Info | Combo: bartime=2025-06-25 08:00, executed=2025-06-25 09:00:00, pending Sell placed at 7610.9; SL=7629.13051661068, TP=7563.172507513236; valid for the next 3 chart bar(s).
+26/06/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 3.86 FRA40.cash (Price: 7542.4, SL: 7561.50147126919, TP: 7492.39)
+26/06/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 3.86 FRA40.cash (Price: 7542.4, SL: 7561.50147126919, TP: 7492.39) SUCCEEDED, PendingOrder OID462
+26/06/2025 13:00:00.000 | Info | Combo: bartime=2025-06-26 12:00, executed=2025-06-26 13:00:00, pending Sell placed at 7542.4; SL=7561.501471269188, TP=7492.392348217265; valid for the next 3 chart bar(s).
+26/06/2025 17:00:00.000 | Trade | Placing Stop Order to Buy 3.89 FRA40.cash (Price: 7574.4, SL: 7555.63715736814, TP: 7623.52)
+26/06/2025 17:00:00.000 | Trade |  Placing Stop Order to Buy 3.89 FRA40.cash (Price: 7574.4, SL: 7555.63715736814, TP: 7623.52) SUCCEEDED, PendingOrder OID465
+26/06/2025 17:00:00.000 | Info | Combo: bartime=2025-06-26 16:00, executed=2025-06-26 17:00:00, pending Buy placed at 7574.4; SL=7555.63715736814, TP=7623.521122010207; valid for the next 3 chart bar(s).
+30/06/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 3.31 FRA40.cash (Price: 7670.4, SL: 7692.94308634787, TP: 7611.38)
+30/06/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 3.31 FRA40.cash (Price: 7670.4, SL: 7692.94308634787, TP: 7611.38) SUCCEEDED, PendingOrder OID468
+30/06/2025 09:00:00.000 | Info | Combo: bartime=2025-06-30 08:00, executed=2025-06-30 09:00:00, pending Sell placed at 7670.4; SL=7692.943086347871, TP=7611.382199941273; valid for the next 3 chart bar(s).
+30/06/2025 12:00:00.000 | Trade | Cancelling pending order OID468
+30/06/2025 12:00:00.000 | Trade |  Cancelling pending order OID468 SUCCEEDED
+30/06/2025 12:00:00.000 | Info | Combo: pending order 468 cancelled after 3 chart bars.
+30/06/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 3.62 FRA40.cash (Price: 7676.1, SL: 7696.72884816809, TP: 7622.09)
+30/06/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 3.62 FRA40.cash (Price: 7676.1, SL: 7696.72884816809, TP: 7622.09) SUCCEEDED, PendingOrder OID469
+30/06/2025 13:00:00.000 | Info | Combo: bartime=2025-06-30 12:00, executed=2025-06-30 13:00:00, pending Sell placed at 7676.1; SL=7696.728848168088, TP=7622.093675495947; valid for the next 3 chart bar(s).
+01/07/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 3.22 FRA40.cash (Price: 7673.2, SL: 7649.35491108147, TP: 7735.63)
+01/07/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 3.22 FRA40.cash (Price: 7673.2, SL: 7649.35491108147, TP: 7735.63) SUCCEEDED, PendingOrder OID472
+01/07/2025 16:00:00.000 | Info | Combo: bartime=2025-07-01 15:00, executed=2025-07-01 16:00:00, pending Buy placed at 7673.2; SL=7649.354911081469, TP=7735.626442788714; valid for the next 3 chart bar(s).
+01/07/2025 19:59:00.000 | Info | Combo: loaded=4161, processed=214, before-start=3422, not-processed=525, placed=192, failed=0, guard-skipped=0, pending-expired=36, same-direction-skipped=22, reversed=60, margin-capped=4, margin-blocked=0.
+Progress | Backtesting | 99.91 % |
+Info | CBot instance [Combo, FRA40.cash, h1] stopped.
+{
+	"Equity":9062.99,
+	"NetProfit":-937.01,
+	"MaxBalanceDrawdownPercentages":23,
+	"MaxEquityDrawdownPercentages":24,
+	"MaxBalanceDrawdown":2561.44,
+	"MaxEquityDrawdown":2729.19,
+	"WinningTrades":42,
+	"LosingTrades":84,
+	"TotalTrades":126,
+	"AverageTrade":-7.43,
+	"ProfitFactor":0.9,
+	"Fitness":0
+}
+

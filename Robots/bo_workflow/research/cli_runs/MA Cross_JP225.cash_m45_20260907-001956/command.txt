@@ -1,0 +1,15 @@
+﻿backtest
+C:\Users\Administrator\Documents\cAlgo\Sources\Robots\MA Cross.algo
+C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\MA Cross_JP225.cash_m45_20260907-001956\params.cbotset
+--start=01/01/2025
+--end=08/01/2025
+--data-mode=Ticks
+--ctid=votuankiet96@gmail.com
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt
+--account=7563609
+--broker=FTMO Platform
+--symbol=JP225.cash
+--period=m45
+--full-access
+--report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\MA Cross_JP225.cash_m45_20260907-001956\report.json
+

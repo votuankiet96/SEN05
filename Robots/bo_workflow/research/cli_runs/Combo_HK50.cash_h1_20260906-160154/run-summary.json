@@ -1,0 +1,54 @@
+﻿{
+    "SchemaVersion":  1,
+    "CreatedAtUtc":  "2026-09-06T23:02:28.1347532Z",
+    "Success":  true,
+    "FailureReason":  null,
+    "Input":  {
+                  "AlgoPath":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\Combo.algo",
+                  "AlgoSHA256":  "56EABD6E7FEDEF1691A35A76FC237A884000A64974B9A61A06988F55F65536DD",
+                  "SymbolInput":  "HK50",
+                  "ResolvedSymbol":  "HK50.cash",
+                  "Period":  "h1",
+                  "StartDate":  "2025-01-01",
+                  "EndDate":  "2025-01-08",
+                  "DataMode":  "Ticks",
+                  "Broker":  "FTMO Platform",
+                  "Account":  "7563609",
+                  "Parameters":  {
+                                     "KslLevel":  "2",
+                                     "MaxMarginPercent":  "50",
+                                     "SignalFilePath":  "Z:\\Desktop\\og_program\\runtime\\exports\\combo_HK50_H1_full_history_signals.csv",
+                                     "KtpLevel":  "4",
+                                     "RiskPercent":  "1"
+                                 },
+                  "SignalFile":  {
+                                     "Path":  "Z:\\Desktop\\og_program\\runtime\\exports\\combo_HK50_H1_full_history_signals.csv",
+                                     "Length":  120675,
+                                     "LastWriteTime":  "2026-09-03T08:27:38.0000000Z",
+                                     "SHA256":  "6D4D5F0330AFC184B2C76C36C053DF81A87826AEDB224A8E03465D4328D4DE42"
+                                 }
+              },
+    "Actual":  {
+                   "StartDate":  "2025-01-01",
+                   "EndDate":  "2025-01-08"
+               },
+    "Metrics":  {
+                    "StartingCapital":  10000,
+                    "EndingBalance":  10008.349999999999,
+                    "NetProfit":  8.35,
+                    "ROI":  0.08,
+                    "ProfitFactor":  1.02,
+                    "TotalTrades":  5,
+                    "WinningTrades":  2,
+                    "LosingTrades":  3,
+                    "MaxBalanceDrawdownPct":  1.5989609654133725,
+                    "MaxEquityDrawdownPct":  3.116653808065789,
+                    "HistoryItems":  5
+                },
+    "Artifacts":  {
+                      "Params":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_HK50.cash_h1_20260906-160154\\params.cbotset",
+                      "Command":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_HK50.cash_h1_20260906-160154\\command.txt",
+                      "Log":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_HK50.cash_h1_20260906-160154\\log.txt",
+                      "ReportJson":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_HK50.cash_h1_20260906-160154\\report.json"
+                  }
+}

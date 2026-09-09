@@ -1,0 +1,539 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_leverage_probe_20260903-102224\UK100\params.cbotset 
+--start=01/01/2026 --end=28/02/2026 --data-mode=M1 --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=UK100.cash 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_leverage_probe_20260903-102224\UK100\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...100\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | UK100.cash                | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2026 00:00          | cmd arg              |
+| End                  | 28/02/2026 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | M1                        | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 3                         | cbotset              |
+| KtpLevel             | 7                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 1                         | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+03/09/2026 17:22:27.953 | Establishing connection using votuankiet96@gmail.com...
+03/09/2026 17:22:30.233 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Progress | Loading UK100.cash, h1 | 2.00 % |
+Progress | Loading UK100.cash, h1 | 4.00 % |
+Progress | Loading UK100.cash, h1 | 6.00 % |
+Progress | Loading UK100.cash, h1 | 8.00 % |
+Progress | Loading UK100.cash, h1 | 10.00 % |
+Progress | Loading UK100.cash, h1 | 12.00 % |
+Progress | Loading UK100.cash, h1 | 14.00 % |
+Progress | Loading UK100.cash, h1 | 16.00 % |
+Progress | Loading UK100.cash, h1 | 18.00 % |
+Progress | Loading UK100.cash, h1 | 20.00 % |
+Progress | Loading UK100.cash, h1 | 22.00 % |
+Progress | Loading UK100.cash, h1 | 24.00 % |
+Progress | Loading UK100.cash, h1 | 26.00 % |
+Progress | Loading UK100.cash, h1 | 28.00 % |
+Progress | Loading UK100.cash, h1 | 30.00 % |
+Progress | Loading UK100.cash, h1 | 32.00 % |
+Progress | Loading UK100.cash, h1 | 34.00 % |
+Progress | Loading UK100.cash, h1 | 36.00 % |
+Progress | Loading UK100.cash, h1 | 38.00 % |
+Progress | Loading UK100.cash, h1 | 40.00 % |
+Progress | Loading UK100.cash, h1 | 42.00 % |
+Progress | Loading UK100.cash, h1 | 44.00 % |
+Progress | Loading UK100.cash, h1 | 46.00 % |
+Progress | Loading UK100.cash, h1 | 48.00 % |
+Progress | Loading UK100.cash, h1 | 50.00 % |
+Progress | Loading UK100.cash, h1 | 52.00 % |
+Progress | Loading UK100.cash, h1 | 54.00 % |
+Progress | Loading UK100.cash, h1 | 56.00 % |
+Progress | Loading UK100.cash, h1 | 58.00 % |
+Progress | Loading UK100.cash, h1 | 60.00 % |
+Progress | Loading UK100.cash, h1 | 62.00 % |
+Progress | Loading UK100.cash, h1 | 64.00 % |
+Progress | Loading UK100.cash, h1 | 66.00 % |
+Progress | Loading UK100.cash, h1 | 68.00 % |
+Progress | Loading UK100.cash, h1 | 70.00 % |
+Progress | Loading UK100.cash, h1 | 72.00 % |
+Progress | Loading UK100.cash, h1 | 74.00 % |
+Progress | Loading UK100.cash, h1 | 76.00 % |
+Progress | Loading UK100.cash, h1 | 78.00 % |
+Progress | Loading UK100.cash, h1 | 80.00 % |
+Progress | Loading UK100.cash, h1 | 82.00 % |
+Progress | Loading UK100.cash, h1 | 84.00 % |
+Progress | Loading UK100.cash, h1 | 86.00 % |
+Progress | Loading UK100.cash, h1 | 88.00 % |
+Progress | Loading UK100.cash, h1 | 90.00 % |
+Progress | Loading UK100.cash, h1 | 92.00 % |
+Progress | Loading UK100.cash, h1 | 94.00 % |
+Progress | Loading UK100.cash, h1 | 96.00 % |
+Progress | Loading UK100.cash, h1 | 98.00 % |
+Progress | Loading UK100.cash, h1 | 100.00 % |
+Info | CBot instance [Combo, UK100.cash, h1] started.
+Progress | Backtesting | 1.77 % |
+Progress | Backtesting | 1.84 % |
+Progress | Loading GBPUSD, h1 | 2.00 % |
+Progress | Loading GBPUSD, h1 | 4.00 % |
+Progress | Loading GBPUSD, h1 | 6.00 % |
+Progress | Loading GBPUSD, h1 | 8.00 % |
+Progress | Loading GBPUSD, h1 | 10.00 % |
+Progress | Loading GBPUSD, h1 | 12.00 % |
+Progress | Loading GBPUSD, h1 | 14.00 % |
+Progress | Loading GBPUSD, h1 | 16.00 % |
+Progress | Loading GBPUSD, h1 | 18.00 % |
+Progress | Loading GBPUSD, h1 | 20.00 % |
+Progress | Loading GBPUSD, h1 | 22.00 % |
+Progress | Loading GBPUSD, h1 | 24.00 % |
+Progress | Loading GBPUSD, h1 | 26.00 % |
+Progress | Loading GBPUSD, h1 | 28.00 % |
+Progress | Loading GBPUSD, h1 | 30.00 % |
+Progress | Loading GBPUSD, h1 | 32.00 % |
+Progress | Loading GBPUSD, h1 | 34.00 % |
+Progress | Loading GBPUSD, h1 | 36.00 % |
+Progress | Loading GBPUSD, h1 | 38.00 % |
+Progress | Loading GBPUSD, h1 | 40.00 % |
+Progress | Loading GBPUSD, h1 | 42.00 % |
+Progress | Loading GBPUSD, h1 | 44.00 % |
+Progress | Loading GBPUSD, h1 | 46.00 % |
+Progress | Loading GBPUSD, h1 | 48.00 % |
+Progress | Loading GBPUSD, h1 | 50.00 % |
+Progress | Loading GBPUSD, h1 | 52.00 % |
+Progress | Loading GBPUSD, h1 | 54.00 % |
+Progress | Loading GBPUSD, h1 | 56.00 % |
+Progress | Loading GBPUSD, h1 | 58.00 % |
+Progress | Loading GBPUSD, h1 | 60.00 % |
+Progress | Loading GBPUSD, h1 | 62.00 % |
+Progress | Loading GBPUSD, h1 | 64.00 % |
+Progress | Loading GBPUSD, h1 | 66.00 % |
+Progress | Loading GBPUSD, h1 | 68.00 % |
+Progress | Loading GBPUSD, h1 | 70.00 % |
+Progress | Loading GBPUSD, h1 | 72.00 % |
+Progress | Loading GBPUSD, h1 | 74.00 % |
+Progress | Loading GBPUSD, h1 | 76.00 % |
+Progress | Loading GBPUSD, h1 | 78.00 % |
+Progress | Loading GBPUSD, h1 | 80.00 % |
+Progress | Loading GBPUSD, h1 | 82.00 % |
+Progress | Loading GBPUSD, h1 | 84.00 % |
+Progress | Loading GBPUSD, h1 | 86.00 % |
+Progress | Loading GBPUSD, h1 | 88.00 % |
+Progress | Loading GBPUSD, h1 | 90.00 % |
+Progress | Loading GBPUSD, h1 | 92.00 % |
+Progress | Loading GBPUSD, h1 | 94.00 % |
+Progress | Loading GBPUSD, h1 | 96.00 % |
+Progress | Loading GBPUSD, h1 | 98.00 % |
+Progress | Loading GBPUSD, h1 | 100.00 % |
+Progress | Backtesting | 2.33 % |
+Progress | Backtesting | 6.71 % |
+Progress | Backtesting | 19.94 % |
+Progress | Backtesting | 25.66 % |
+Progress | Backtesting | 34.14 % |
+Progress | Backtesting | 43.58 % |
+Progress | Backtesting | 49.15 % |
+Progress | Backtesting | 58.64 % |
+Progress | Backtesting | 77.97 % |
+Progress | Backtesting | 92.26 % |
+02/01/2026 01:00:00.000 | Info | Combo: loaded 4824 valid signal row(s) from CSV.
+02/01/2026 01:00:00.000 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+02/01/2026 02:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.70 units, which needs about $6518.54 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.00 budget, free margin was $10000.00). Size was cut from 6.70 to 0.10 units. Real risk on this trade is now about $1.49 (0.01% of balance) instead of the requested 1.00%.
+02/01/2026 02:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 9891.3, SL: 9902.36619047542, TP: 9862.33)
+02/01/2026 02:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 9891.3, SL: 9902.36619047542, TP: 9862.33) SUCCEEDED, PendingOrder OID1
+02/01/2026 02:00:00.000 | Info | Combo: bartime=2026-01-02 01:00, executed=2026-01-02 02:00:00, pending Sell placed at 9891.3; SL=9902.366190475417, TP=9862.327352444618; valid for the next 3 chart bar(s).
+02/01/2026 05:00:00.000 | Trade | Cancelling pending order OID1
+02/01/2026 05:00:00.000 | Trade |  Cancelling pending order OID1 SUCCEEDED
+02/01/2026 05:00:00.000 | Info | Combo: pending order 1 cancelled after 3 chart bars.
+02/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.57 units, which needs about $3473.31 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.00 budget, free margin was $10000.00). Size was cut from 3.57 to 0.10 units. Real risk on this trade is now about $2.79 (0.03% of balance) instead of the requested 1.00%.
+02/01/2026 09:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10051, SL: 10030.2653125766, TP: 10105.29)
+02/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10051, SL: 10030.2653125766, TP: 10105.29) SUCCEEDED, PendingOrder OID2
+02/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-02 08:00, executed=2026-01-02 09:00:00, pending Buy placed at 10051; SL=10030.26531257665, TP=10105.285961571168; valid for the next 3 chart bar(s).
+02/01/2026 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.68 units, which needs about $3580.33 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.97 budget, free margin was $9997.10). Size was cut from 3.68 to 0.10 units. Real risk on this trade is now about $2.71 (0.03% of balance) instead of the requested 1.00%.
+02/01/2026 15:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 9951.8, SL: 9971.93202807591, TP: 9899.09)
+02/01/2026 15:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 9951.8, SL: 9971.93202807591, TP: 9899.09) SUCCEEDED, PendingOrder OID5
+02/01/2026 15:00:00.000 | Info | Combo: bartime=2026-01-02 14:00, executed=2026-01-02 15:00:00, pending Sell placed at 9951.8; SL=9971.932028075906, TP=9899.091874713888; valid for the next 3 chart bar(s).
+02/01/2026 20:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.55 units, which needs about $4426.77 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.94 budget, free margin was $9994.27). Size was cut from 4.55 to 0.10 units. Real risk on this trade is now about $2.19 (0.02% of balance) instead of the requested 1.00%.
+02/01/2026 20:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10000.4, SL: 9984.12122273609, TP: 10043.02)
+02/01/2026 20:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10000.4, SL: 9984.12122273609, TP: 10043.02) SUCCEEDED, PendingOrder OID8
+02/01/2026 20:00:00.000 | Info | Combo: bartime=2026-01-02 19:00, executed=2026-01-02 20:00:00, pending Buy placed at 10000.4; SL=9984.121222736087, TP=10043.019840797753; valid for the next 3 chart bar(s).
+05/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.49 units, which needs about $5341.31 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.91 budget, free margin was $9990.93). Size was cut from 5.49 to 0.10 units. Real risk on this trade is now about $1.82 (0.02% of balance) instead of the requested 1.00%.
+05/01/2026 09:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 9958.8, SL: 9972.28137310712, TP: 9923.5)
+05/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 9958.8, SL: 9972.28137310712, TP: 9923.5) SUCCEEDED, PendingOrder OID11
+05/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-05 08:00, executed=2026-01-05 09:00:00, pending Sell placed at 9958.8; SL=9972.281373107126, TP=9923.504107302057; valid for the next 3 chart bar(s).
+05/01/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.53 units, which needs about $4407.31 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.89 budget, free margin was $9988.69). Size was cut from 4.53 to 0.10 units. Real risk on this trade is now about $2.20 (0.02% of balance) instead of the requested 1.00%.
+05/01/2026 16:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10005, SL: 9988.6523674472, TP: 10047.8)
+05/01/2026 16:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10005, SL: 9988.6523674472, TP: 10047.8) SUCCEEDED, PendingOrder OID14
+05/01/2026 16:00:00.000 | Info | Combo: bartime=2026-01-05 15:00, executed=2026-01-05 16:00:00, pending Buy placed at 10005; SL=9988.652367447205, TP=10047.800112411687; valid for the next 3 chart bar(s).
+07/01/2026 06:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 13.06 units, which needs about $12706.30 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.94 budget, free margin was $9994.13). Size was cut from 13.06 to 0.10 units. Real risk on this trade is now about $0.77 (0.01% of balance) instead of the requested 1.00%.
+07/01/2026 06:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10097, SL: 10102.6768196419, TP: 10082.14)
+07/01/2026 06:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10097, SL: 10102.6768196419, TP: 10082.14) SUCCEEDED, PendingOrder OID17
+07/01/2026 06:00:00.000 | Info | Combo: bartime=2026-01-07 05:00, executed=2026-01-07 06:00:00, pending Sell placed at 10097; SL=10102.676819641925, TP=10082.137388057225; valid for the next 3 chart bar(s).
+08/01/2026 12:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.99 units, which needs about $7773.61 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.93 budget, free margin was $9992.74). Size was cut from 7.99 to 0.10 units. Real risk on this trade is now about $1.25 (0.01% of balance) instead of the requested 1.00%.
+08/01/2026 12:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10037, SL: 10027.7312726148, TP: 10061.27)
+08/01/2026 12:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10037, SL: 10027.7312726148, TP: 10061.27) SUCCEEDED, PendingOrder OID20
+08/01/2026 12:00:00.000 | Info | Combo: bartime=2026-01-08 11:00, executed=2026-01-08 12:00:00, pending Buy placed at 10037; SL=10027.731272614807, TP=10061.266668137936; valid for the next 3 chart bar(s).
+08/01/2026 15:00:00.000 | Info | Combo: bartime=2026-01-08 14:00, Buy signal skipped: already have same-direction exposure open.
+12/01/2026 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.79 units, which needs about $7579.02 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.96 budget, free margin was $9996.03). Size was cut from 7.79 to 0.10 units. Real risk on this trade is now about $1.28 (0.01% of balance) instead of the requested 1.00%.
+12/01/2026 10:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10138.7, SL: 10129.1809807657, TP: 10163.62)
+12/01/2026 10:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10138.7, SL: 10129.1809807657, TP: 10163.62) SUCCEEDED, PendingOrder OID23
+12/01/2026 10:00:00.000 | Info | Combo: bartime=2026-01-12 09:00, executed=2026-01-12 10:00:00, pending Buy placed at 10138.7; SL=10129.180980765728, TP=10163.621962979048; valid for the next 3 chart bar(s).
+12/01/2026 13:00:00.000 | Trade | Cancelling pending order OID23
+12/01/2026 13:00:00.000 | Trade |  Cancelling pending order OID23 SUCCEEDED
+12/01/2026 13:00:00.000 | Info | Combo: pending order 23 cancelled after 3 chart bars.
+12/01/2026 13:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.68 units, which needs about $7472.00 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.96 budget, free margin was $9996.03). Size was cut from 7.68 to 0.10 units. Real risk on this trade is now about $1.30 (0.01% of balance) instead of the requested 1.00%.
+12/01/2026 13:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10143.3, SL: 10133.6488749521, TP: 10168.57)
+12/01/2026 13:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10143.3, SL: 10133.6488749521, TP: 10168.57) SUCCEEDED, PendingOrder OID24
+12/01/2026 13:00:00.000 | Info | Combo: bartime=2026-01-12 12:00, executed=2026-01-12 13:00:00, pending Buy placed at 10143.3; SL=10133.648874952052, TP=10168.567832245271; valid for the next 3 chart bar(s).
+12/01/2026 18:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.86 units, which needs about $7647.13 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.94 budget, free margin was $9994.35). Size was cut from 7.86 to 0.10 units. Real risk on this trade is now about $1.27 (0.01% of balance) instead of the requested 1.00%.
+12/01/2026 18:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10119.6, SL: 10129.0244917277, TP: 10094.93)
+12/01/2026 18:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10119.6, SL: 10129.0244917277, TP: 10094.93) SUCCEEDED, PendingOrder OID27
+12/01/2026 18:00:00.000 | Info | Combo: bartime=2026-01-12 17:00, executed=2026-01-12 18:00:00, pending Sell placed at 10119.6; SL=10129.024491727712, TP=10094.92552165787; valid for the next 3 chart bar(s).
+12/01/2026 21:00:00.000 | Trade | Cancelling pending order OID27
+12/01/2026 21:00:00.000 | Trade |  Cancelling pending order OID27 SUCCEEDED
+12/01/2026 21:00:00.000 | Info | Combo: pending order 27 cancelled after 3 chart bars.
+13/01/2026 07:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 12.26 units, which needs about $11927.96 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.94 budget, free margin was $9994.35). Size was cut from 12.26 to 0.10 units. Real risk on this trade is now about $0.81 (0.01% of balance) instead of the requested 1.00%.
+13/01/2026 07:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10128.1, SL: 10134.1454819561, TP: 10112.27)
+13/01/2026 07:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10128.1, SL: 10134.1454819561, TP: 10112.27) SUCCEEDED, PendingOrder OID28
+13/01/2026 07:00:00.000 | Info | Combo: bartime=2026-01-13 06:00, executed=2026-01-13 07:00:00, pending Sell placed at 10128.1; SL=10134.145481956066, TP=10112.272184781696; valid for the next 3 chart bar(s).
+13/01/2026 10:00:00.000 | Trade | Cancelling pending order OID28
+13/01/2026 10:00:00.000 | Trade |  Cancelling pending order OID28 SUCCEEDED
+13/01/2026 10:00:00.000 | Info | Combo: pending order 28 cancelled after 3 chart bars.
+13/01/2026 12:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.55 units, which needs about $8318.44 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.94 budget, free margin was $9994.35). Size was cut from 8.55 to 0.10 units. Real risk on this trade is now about $1.17 (0.01% of balance) instead of the requested 1.00%.
+13/01/2026 12:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10124.9, SL: 10133.5641245194, TP: 10102.22)
+13/01/2026 12:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10124.9, SL: 10133.5641245194, TP: 10102.22) SUCCEEDED, PendingOrder OID29
+13/01/2026 12:00:00.000 | Info | Combo: bartime=2026-01-13 11:00, executed=2026-01-13 12:00:00, pending Sell placed at 10124.9; SL=10133.564124519362, TP=10102.216256517266; valid for the next 3 chart bar(s).
+13/01/2026 14:00:00.000 | Info | Combo: bartime=2026-01-13 13:00, Sell signal skipped: already have same-direction exposure open.
+14/01/2026 06:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 14.05 units, which needs about $13669.49 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.93 budget, free margin was $9992.93). Size was cut from 14.05 to 0.10 units. Real risk on this trade is now about $0.71 (0.01% of balance) instead of the requested 1.00%.
+14/01/2026 06:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10134.8, SL: 10140.0750122177, TP: 10120.99)
+14/01/2026 06:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10134.8, SL: 10140.0750122177, TP: 10120.99) SUCCEEDED, PendingOrder OID32
+14/01/2026 06:00:00.000 | Info | Combo: bartime=2026-01-14 05:00, executed=2026-01-14 06:00:00, pending Sell placed at 10134.8; SL=10140.075012217721, TP=10120.989369306997; valid for the next 3 chart bar(s).
+15/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.99 units, which needs about $6800.69 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.92 budget, free margin was $9992.09). Size was cut from 6.99 to 0.10 units. Real risk on this trade is now about $1.43 (0.01% of balance) instead of the requested 1.00%.
+15/01/2026 09:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10167.7, SL: 10178.2895661711, TP: 10139.98)
+15/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10167.7, SL: 10178.2895661711, TP: 10139.98) SUCCEEDED, PendingOrder OID35
+15/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-15 08:00, executed=2026-01-15 09:00:00, pending Sell placed at 10167.7; SL=10178.289566171075, TP=10139.975213487382; valid for the next 3 chart bar(s).
+15/01/2026 12:00:00.000 | Trade | Cancelling pending order OID35
+15/01/2026 12:00:00.000 | Trade |  Cancelling pending order OID35 SUCCEEDED
+15/01/2026 12:00:00.000 | Info | Combo: pending order 35 cancelled after 3 chart bars.
+15/01/2026 21:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.66 units, which needs about $7452.55 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.92 budget, free margin was $9992.09). Size was cut from 7.66 to 0.10 units. Real risk on this trade is now about $1.30 (0.01% of balance) instead of the requested 1.00%.
+15/01/2026 21:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10213.6, SL: 10223.272870007, TP: 10188.28)
+15/01/2026 21:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10213.6, SL: 10223.272870007, TP: 10188.28) SUCCEEDED, PendingOrder OID36
+15/01/2026 21:00:00.000 | Info | Combo: bartime=2026-01-15 20:00, executed=2026-01-15 21:00:00, pending Sell placed at 10213.6; SL=10223.272870006958, TP=10188.275236777903; valid for the next 3 chart bar(s).
+16/01/2026 01:00:00.000 | Trade | Cancelling pending order OID36
+16/01/2026 01:00:00.000 | Trade |  Cancelling pending order OID36 SUCCEEDED
+16/01/2026 01:00:00.000 | Info | Combo: pending order 36 cancelled after 3 chart bars.
+16/01/2026 02:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 12.48 units, which needs about $12142.01 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.92 budget, free margin was $9992.09). Size was cut from 12.48 to 0.10 units. Real risk on this trade is now about $0.80 (0.01% of balance) instead of the requested 1.00%.
+16/01/2026 02:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10213.5, SL: 10219.4391557399, TP: 10197.95)
+16/01/2026 02:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10213.5, SL: 10219.4391557399, TP: 10197.95) SUCCEEDED, PendingOrder OID37
+16/01/2026 02:00:00.000 | Info | Combo: bartime=2026-01-16 01:00, executed=2026-01-16 02:00:00, pending Sell placed at 10213.5; SL=10219.43915573988, TP=10197.950559891384; valid for the next 3 chart bar(s).
+16/01/2026 05:00:00.000 | Trade | Cancelling pending order OID37
+16/01/2026 05:00:00.000 | Trade |  Cancelling pending order OID37 SUCCEEDED
+16/01/2026 05:00:00.000 | Info | Combo: pending order 37 cancelled after 3 chart bars.
+16/01/2026 06:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 14.27 units, which needs about $13883.53 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.92 budget, free margin was $9992.09). Size was cut from 14.27 to 0.10 units. Real risk on this trade is now about $0.70 (0.01% of balance) instead of the requested 1.00%.
+16/01/2026 06:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10223.8, SL: 10228.9944954711, TP: 10210.2)
+16/01/2026 06:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10223.8, SL: 10228.9944954711, TP: 10210.2) SUCCEEDED, PendingOrder OID38
+16/01/2026 06:00:00.000 | Info | Combo: bartime=2026-01-16 05:00, executed=2026-01-16 06:00:00, pending Sell placed at 10223.8; SL=10228.994495471054, TP=10210.200172051509; valid for the next 3 chart bar(s).
+16/01/2026 08:00:00.000 | Info | Combo: bartime=2026-01-16 07:00, Sell signal skipped: already have same-direction exposure open.
+16/01/2026 14:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.67 units, which needs about $7462.27 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.94 budget, free margin was $9993.91). Size was cut from 7.67 to 0.10 units. Real risk on this trade is now about $1.30 (0.01% of balance) instead of the requested 1.00%.
+16/01/2026 14:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10212.1, SL: 10221.7660548526, TP: 10186.79)
+16/01/2026 14:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10212.1, SL: 10221.7660548526, TP: 10186.79) SUCCEEDED, PendingOrder OID41
+16/01/2026 14:00:00.000 | Info | Combo: bartime=2026-01-16 13:00, executed=2026-01-16 14:00:00, pending Sell placed at 10212.1; SL=10221.766054852586, TP=10186.793079690158; valid for the next 3 chart bar(s).
+16/01/2026 17:00:00.000 | Trade | Cancelling pending order OID41
+16/01/2026 17:00:00.000 | Trade |  Cancelling pending order OID41 SUCCEEDED
+16/01/2026 17:00:00.000 | Info | Combo: pending order 41 cancelled after 3 chart bars.
+16/01/2026 17:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.69 units, which needs about $6508.82 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.94 budget, free margin was $9993.91). Size was cut from 6.69 to 0.10 units. Real risk on this trade is now about $1.49 (0.01% of balance) instead of the requested 1.00%.
+16/01/2026 17:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10248.9, SL: 10237.8238807155, TP: 10277.9)
+16/01/2026 17:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10248.9, SL: 10237.8238807155, TP: 10277.9) SUCCEEDED, PendingOrder OID42
+16/01/2026 17:00:00.000 | Info | Combo: bartime=2026-01-16 16:00, executed=2026-01-16 17:00:00, pending Buy placed at 10248.9; SL=10237.823880715476, TP=10277.898642398639; valid for the next 3 chart bar(s).
+19/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.54 units, which needs about $4417.04 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.88 budget, free margin was $9987.68). Size was cut from 4.54 to 0.10 units. Real risk on this trade is now about $2.20 (0.02% of balance) instead of the requested 1.00%.
+19/01/2026 09:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10236.8, SL: 10220.5100082245, TP: 10279.45)
+19/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10236.8, SL: 10220.5100082245, TP: 10279.45) SUCCEEDED, PendingOrder OID45
+19/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-19 08:00, executed=2026-01-19 09:00:00, pending Buy placed at 10236.8; SL=10220.510008224546, TP=10279.449201768095; valid for the next 3 chart bar(s).
+19/01/2026 12:00:00.000 | Trade | Cancelling pending order OID45
+19/01/2026 12:00:00.000 | Trade |  Cancelling pending order OID45 SUCCEEDED
+19/01/2026 12:00:00.000 | Info | Combo: pending order 45 cancelled after 3 chart bars.
+19/01/2026 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.12 units, which needs about $4981.34 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.88 budget, free margin was $9987.68). Size was cut from 5.12 to 0.10 units. Real risk on this trade is now about $1.95 (0.02% of balance) instead of the requested 1.00%.
+19/01/2026 15:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10211.2, SL: 10196.741536044, TP: 10249.05)
+19/01/2026 15:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10211.2, SL: 10196.741536044, TP: 10249.05) SUCCEEDED, PendingOrder OID46
+19/01/2026 15:00:00.000 | Info | Combo: bartime=2026-01-19 14:00, executed=2026-01-19 15:00:00, pending Buy placed at 10211.2; SL=10196.741536044015, TP=10249.054036700296; valid for the next 3 chart bar(s).
+19/01/2026 18:00:00.000 | Trade | Cancelling pending order OID46
+19/01/2026 18:00:00.000 | Trade |  Cancelling pending order OID46 SUCCEEDED
+19/01/2026 18:00:00.000 | Info | Combo: pending order 46 cancelled after 3 chart bars.
+19/01/2026 20:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.62 units, which needs about $8386.55 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.88 budget, free margin was $9987.68). Size was cut from 8.62 to 0.10 units. Real risk on this trade is now about $1.16 (0.01% of balance) instead of the requested 1.00%.
+19/01/2026 20:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10176.1, SL: 10184.6886706211, TP: 10153.61)
+19/01/2026 20:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10176.1, SL: 10184.6886706211, TP: 10153.61) SUCCEEDED, PendingOrder OID47
+19/01/2026 20:00:00.000 | Info | Combo: bartime=2026-01-19 19:00, executed=2026-01-19 20:00:00, pending Sell placed at 10176.1; SL=10184.688670621097, TP=10153.613804102048; valid for the next 3 chart bar(s).
+21/01/2026 01:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.38 units, which needs about $7180.13 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.86 budget, free margin was $9986.23). Size was cut from 7.38 to 0.10 units. Real risk on this trade is now about $1.35 (0.01% of balance) instead of the requested 1.00%.
+21/01/2026 01:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10116.3, SL: 10106.2698168516, TP: 10142.56)
+21/01/2026 01:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10116.3, SL: 10106.2698168516, TP: 10142.56) SUCCEEDED, PendingOrder OID50
+21/01/2026 01:00:00.000 | Info | Combo: bartime=2026-01-21 00:00, executed=2026-01-21 01:00:00, pending Buy placed at 10116.3; SL=10106.269816851567, TP=10142.5602529679; valid for the next 3 chart bar(s).
+21/01/2026 12:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.71 units, which needs about $5555.36 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.85 budget, free margin was $9984.80). Size was cut from 5.71 to 0.10 units. Real risk on this trade is now about $1.75 (0.02% of balance) instead of the requested 1.00%.
+21/01/2026 12:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10087.4, SL: 10100.3543450685, TP: 10053.48)
+21/01/2026 12:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10087.4, SL: 10100.3543450685, TP: 10053.48) SUCCEEDED, PendingOrder OID53
+21/01/2026 12:00:00.000 | Info | Combo: bartime=2026-01-21 11:00, executed=2026-01-21 12:00:00, pending Sell placed at 10087.4; SL=10100.354345068457, TP=10053.483931519797; valid for the next 3 chart bar(s).
+21/01/2026 14:00:00.000 | Info | Combo: bartime=2026-01-21 13:00, reversal - cancelling existing Sell pending order 53 before opening opposite direction.
+21/01/2026 14:00:00.000 | Trade | Cancelling pending order OID53
+21/01/2026 14:00:00.000 | Trade |  Cancelling pending order OID53 SUCCEEDED
+21/01/2026 14:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.98 units, which needs about $5818.04 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.85 budget, free margin was $9984.80). Size was cut from 5.98 to 0.10 units. Real risk on this trade is now about $1.67 (0.02% of balance) instead of the requested 1.00%.
+21/01/2026 14:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10127.4, SL: 10115.0155871562, TP: 10159.82)
+21/01/2026 14:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10127.4, SL: 10115.0155871562, TP: 10159.82) SUCCEEDED, PendingOrder OID54
+21/01/2026 14:00:00.000 | Info | Combo: bartime=2026-01-21 13:00, executed=2026-01-21 14:00:00, pending Buy placed at 10127.4; SL=10115.015587156186, TP=10159.82391582733; valid for the next 3 chart bar(s).
+22/01/2026 12:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.76 units, which needs about $4631.09 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.82 budget, free margin was $9981.61). Size was cut from 4.76 to 0.10 units. Real risk on this trade is now about $2.09 (0.02% of balance) instead of the requested 1.00%.
+22/01/2026 12:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10149.4, SL: 10164.9331198726, TP: 10108.73)
+22/01/2026 12:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10149.4, SL: 10164.9331198726, TP: 10108.73) SUCCEEDED, PendingOrder OID57
+22/01/2026 12:00:00.000 | Info | Combo: bartime=2026-01-22 11:00, executed=2026-01-22 12:00:00, pending Sell placed at 10149.4; SL=10164.933119872567, TP=10108.73238195176; valid for the next 3 chart bar(s).
+22/01/2026 15:00:00.000 | Trade | Cancelling pending order OID57
+22/01/2026 15:00:00.000 | Trade |  Cancelling pending order OID57 SUCCEEDED
+22/01/2026 15:00:00.000 | Info | Combo: pending order 57 cancelled after 3 chart bars.
+23/01/2026 06:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 13.24 units, which needs about $12881.42 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.82 budget, free margin was $9981.61). Size was cut from 13.24 to 0.10 units. Real risk on this trade is now about $0.75 (0.01% of balance) instead of the requested 1.00%.
+23/01/2026 06:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10166.1, SL: 10160.5102037837, TP: 10180.73)
+23/01/2026 06:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10166.1, SL: 10160.5102037837, TP: 10180.73) SUCCEEDED, PendingOrder OID58
+23/01/2026 06:00:00.000 | Info | Combo: bartime=2026-01-23 05:00, executed=2026-01-23 06:00:00, pending Buy placed at 10166.1; SL=10160.510203783748, TP=10180.734773912454; valid for the next 3 chart bar(s).
+23/01/2026 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.75 units, which needs about $5594.27 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.83 budget, free margin was $9983.05). Size was cut from 5.75 to 0.10 units. Real risk on this trade is now about $1.74 (0.02% of balance) instead of the requested 1.00%.
+23/01/2026 15:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10132.2, SL: 10145.0740929197, TP: 10098.49)
+23/01/2026 15:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10132.2, SL: 10145.0740929197, TP: 10098.49) SUCCEEDED, PendingOrder OID61
+23/01/2026 15:00:00.000 | Info | Combo: bartime=2026-01-23 14:00, executed=2026-01-23 15:00:00, pending Sell placed at 10132.2; SL=10145.074092919662, TP=10098.494041514545; valid for the next 3 chart bar(s).
+26/01/2026 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.54 units, which needs about $7335.80 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.81 budget, free margin was $9981.12). Size was cut from 7.54 to 0.10 units. Real risk on this trade is now about $1.32 (0.01% of balance) instead of the requested 1.00%.
+26/01/2026 08:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10164.7, SL: 10154.8824746984, TP: 10190.4)
+26/01/2026 08:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10164.7, SL: 10154.8824746984, TP: 10190.4) SUCCEEDED, PendingOrder OID64
+26/01/2026 08:00:00.000 | Info | Combo: bartime=2026-01-26 07:00, executed=2026-01-26 08:00:00, pending Buy placed at 10164.7; SL=10154.882474698426, TP=10190.40348857273; valid for the next 3 chart bar(s).
+26/01/2026 11:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.53 units, which needs about $5380.23 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.80 budget, free margin was $9979.60). Size was cut from 5.53 to 0.10 units. Real risk on this trade is now about $1.80 (0.02% of balance) instead of the requested 1.00%.
+26/01/2026 11:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10163.7, SL: 10150.3146062456, TP: 10198.74)
+26/01/2026 11:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10163.7, SL: 10150.3146062456, TP: 10198.74) SUCCEEDED, PendingOrder OID67
+26/01/2026 11:00:00.000 | Info | Combo: bartime=2026-01-26 10:00, executed=2026-01-26 11:00:00, pending Buy placed at 10163.7; SL=10150.314606245594, TP=10198.744606949238; valid for the next 3 chart bar(s).
+27/01/2026 18:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.13 units, which needs about $4991.06 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.77 budget, free margin was $9977.43). Size was cut from 5.13 to 0.10 units. Real risk on this trade is now about $1.94 (0.02% of balance) instead of the requested 1.00%.
+27/01/2026 18:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10177, SL: 10191.4166710849, TP: 10139.26)
+27/01/2026 18:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10177, SL: 10191.4166710849, TP: 10139.26) SUCCEEDED, PendingOrder OID70
+27/01/2026 18:00:00.000 | Info | Combo: bartime=2026-01-27 17:00, executed=2026-01-27 18:00:00, pending Sell placed at 10177; SL=10191.416671084895, TP=10139.255382175794; valid for the next 3 chart bar(s).
+27/01/2026 21:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.67 units, which needs about $5516.44 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.75 budget, free margin was $9975.30). Size was cut from 5.67 to 0.10 units. Real risk on this trade is now about $1.76 (0.02% of balance) instead of the requested 1.00%.
+27/01/2026 21:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10174.8, SL: 10187.8436987955, TP: 10140.65)
+27/01/2026 21:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10174.8, SL: 10187.8436987955, TP: 10140.65) SUCCEEDED, PendingOrder OID73
+27/01/2026 21:00:00.000 | Info | Combo: bartime=2026-01-27 20:00, executed=2026-01-27 21:00:00, pending Sell placed at 10174.8; SL=10187.843698795465, TP=10140.649992474006; valid for the next 3 chart bar(s).
+28/01/2026 01:00:00.000 | Trade | Cancelling pending order OID73
+28/01/2026 01:00:00.000 | Trade |  Cancelling pending order OID73 SUCCEEDED
+28/01/2026 01:00:00.000 | Info | Combo: pending order 73 cancelled after 3 chart bars.
+28/01/2026 02:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.84 units, which needs about $8600.59 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.75 budget, free margin was $9975.30). Size was cut from 8.84 to 0.10 units. Real risk on this trade is now about $1.13 (0.01% of balance) instead of the requested 1.00%.
+28/01/2026 02:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10179.6, SL: 10187.9675341333, TP: 10157.69)
+28/01/2026 02:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10179.6, SL: 10187.9675341333, TP: 10157.69) SUCCEEDED, PendingOrder OID74
+28/01/2026 02:00:00.000 | Info | Combo: bartime=2026-01-28 01:00, executed=2026-01-28 02:00:00, pending Sell placed at 10179.6; SL=10187.967534133299, TP=10157.692766621883; valid for the next 3 chart bar(s).
+28/01/2026 05:00:00.000 | Trade | Cancelling pending order OID74
+28/01/2026 05:00:00.000 | Trade |  Cancelling pending order OID74 SUCCEEDED
+28/01/2026 05:00:00.000 | Info | Combo: pending order 74 cancelled after 3 chart bars.
+28/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.40 units, which needs about $6226.67 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.75 budget, free margin was $9975.30). Size was cut from 6.40 to 0.10 units. Real risk on this trade is now about $1.56 (0.02% of balance) instead of the requested 1.00%.
+28/01/2026 09:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10186.3, SL: 10197.8496232837, TP: 10156.06)
+28/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10186.3, SL: 10197.8496232837, TP: 10156.06) SUCCEEDED, PendingOrder OID75
+28/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-28 08:00, executed=2026-01-28 09:00:00, pending Sell placed at 10186.3; SL=10197.849623283711, TP=10156.06166590122; valid for the next 3 chart bar(s).
+29/01/2026 03:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.87 units, which needs about $6683.94 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.79 budget, free margin was $9979.37). Size was cut from 6.87 to 0.10 units. Real risk on this trade is now about $1.45 (0.01% of balance) instead of the requested 1.00%.
+29/01/2026 03:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10180.4, SL: 10169.634990569, TP: 10208.58)
+29/01/2026 03:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10180.4, SL: 10169.634990569, TP: 10208.58) SUCCEEDED, PendingOrder OID78
+29/01/2026 03:00:00.000 | Info | Combo: bartime=2026-01-29 02:00, executed=2026-01-29 03:00:00, pending Buy placed at 10180.4; SL=10169.634990568955, TP=10208.584118542767; valid for the next 3 chart bar(s).
+29/01/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.27 units, which needs about $3181.44 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.83 budget, free margin was $9983.39). Size was cut from 3.27 to 0.10 units. Real risk on this trade is now about $3.05 (0.03% of balance) instead of the requested 1.00%.
+29/01/2026 16:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10171, SL: 10193.6173526906, TP: 10111.78)
+29/01/2026 16:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10171, SL: 10193.6173526906, TP: 10111.78) SUCCEEDED, PendingOrder OID81
+29/01/2026 16:00:00.000 | Info | Combo: bartime=2026-01-29 15:00, executed=2026-01-29 16:00:00, pending Sell placed at 10171; SL=10193.617352690626, TP=10111.784989233927; valid for the next 3 chart bar(s).
+30/01/2026 01:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.43 units, which needs about $6255.86 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.80 budget, free margin was $9980.17). Size was cut from 6.43 to 0.10 units. Real risk on this trade is now about $1.55 (0.02% of balance) instead of the requested 1.00%.
+30/01/2026 01:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10195.3, SL: 10206.8099004405, TP: 10165.17)
+30/01/2026 01:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10195.3, SL: 10206.8099004405, TP: 10165.17) SUCCEEDED, PendingOrder OID84
+30/01/2026 01:00:00.000 | Info | Combo: bartime=2026-01-30 00:00, executed=2026-01-30 01:00:00, pending Sell placed at 10195.3; SL=10206.80990044054, TP=10165.16566518965; valid for the next 3 chart bar(s).
+30/01/2026 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.30 units, which needs about $4183.54 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.84 budget, free margin was $9984.28). Size was cut from 4.30 to 0.10 units. Real risk on this trade is now about $2.32 (0.02% of balance) instead of the requested 1.00%.
+30/01/2026 10:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10168.7, SL: 10185.8993273797, TP: 10123.67)
+30/01/2026 10:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10168.7, SL: 10185.8993273797, TP: 10123.67) SUCCEEDED, PendingOrder OID87
+30/01/2026 10:00:00.000 | Info | Combo: bartime=2026-01-30 09:00, executed=2026-01-30 10:00:00, pending Sell placed at 10168.7; SL=10185.899327379706, TP=10123.670045792296; valid for the next 3 chart bar(s).
+30/01/2026 12:00:00.000 | Info | Combo: bartime=2026-01-30 11:00, reversal - cancelling existing Sell pending order 87 before opening opposite direction.
+30/01/2026 12:00:00.000 | Trade | Cancelling pending order OID87
+30/01/2026 12:00:00.000 | Trade |  Cancelling pending order OID87 SUCCEEDED
+30/01/2026 12:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.41 units, which needs about $4290.56 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.84 budget, free margin was $9984.28). Size was cut from 4.41 to 0.10 units. Real risk on this trade is now about $2.26 (0.02% of balance) instead of the requested 1.00%.
+30/01/2026 12:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10222.6, SL: 10205.810422477, TP: 10266.56)
+30/01/2026 12:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10222.6, SL: 10205.810422477, TP: 10266.56) SUCCEEDED, PendingOrder OID88
+30/01/2026 12:00:00.000 | Info | Combo: bartime=2026-01-30 11:00, executed=2026-01-30 12:00:00, pending Buy placed at 10222.6; SL=10205.810422476989, TP=10266.557178692932; valid for the next 3 chart bar(s).
+02/02/2026 02:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.72 units, which needs about $3619.25 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.82 budget, free margin was $9981.99). Size was cut from 3.72 to 0.10 units. Real risk on this trade is now about $2.68 (0.03% of balance) instead of the requested 1.00%.
+02/02/2026 02:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10180, SL: 10199.8717680514, TP: 10127.97)
+02/02/2026 02:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10180, SL: 10199.8717680514, TP: 10127.97) SUCCEEDED, PendingOrder OID91
+02/02/2026 02:00:00.000 | Info | Combo: bartime=2026-02-02 01:00, executed=2026-02-02 02:00:00, pending Sell placed at 10180; SL=10199.871768051435, TP=10127.973267464045; valid for the next 3 chart bar(s).
+02/02/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.51 units, which needs about $3414.94 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.89 budget, free margin was $9989.07). Size was cut from 3.51 to 0.10 units. Real risk on this trade is now about $2.84 (0.03% of balance) instead of the requested 1.00%.
+02/02/2026 09:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10207, SL: 10185.9236367289, TP: 10262.18)
+02/02/2026 09:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10207, SL: 10185.9236367289, TP: 10262.18) SUCCEEDED, PendingOrder OID94
+02/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-02 08:00, executed=2026-02-02 09:00:00, pending Buy placed at 10207; SL=10185.9236367289, TP=10262.180510958964; valid for the next 3 chart bar(s).
+03/02/2026 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.08 units, which needs about $4942.42 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.96 budget, free margin was $9995.96). Size was cut from 5.08 to 0.10 units. Real risk on this trade is now about $1.97 (0.02% of balance) instead of the requested 1.00%.
+03/02/2026 10:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10318.2, SL: 10332.7879091919, TP: 10280.01)
+03/02/2026 10:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10318.2, SL: 10332.7879091919, TP: 10280.01) SUCCEEDED, PendingOrder OID97
+03/02/2026 10:00:00.000 | Info | Combo: bartime=2026-02-03 09:00, executed=2026-02-03 10:00:00, pending Sell placed at 10318.2; SL=10332.787909191902, TP=10280.007059753241; valid for the next 3 chart bar(s).
+04/02/2026 02:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.48 units, which needs about $6304.50 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.01 budget, free margin was $10001.01). Size was cut from 6.48 to 0.10 units. Real risk on this trade is now about $1.54 (0.02% of balance) instead of the requested 1.00%.
+04/02/2026 02:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10318.4, SL: 10306.9536072265, TP: 10348.37)
+04/02/2026 02:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10318.4, SL: 10306.9536072265, TP: 10348.37) SUCCEEDED, PendingOrder OID100
+04/02/2026 02:00:00.000 | Info | Combo: bartime=2026-02-04 01:00, executed=2026-02-04 02:00:00, pending Buy placed at 10318.4; SL=10306.953607226467, TP=10348.368063928114; valid for the next 3 chart bar(s).
+05/02/2026 03:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.26 units, which needs about $5117.54 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.99 budget, free margin was $9999.24). Size was cut from 5.26 to 0.10 units. Real risk on this trade is now about $1.90 (0.02% of balance) instead of the requested 1.00%.
+05/02/2026 03:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10386.9, SL: 10400.983050338, TP: 10350.03)
+05/02/2026 03:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10386.9, SL: 10400.983050338, TP: 10350.03) SUCCEEDED, PendingOrder OID103
+05/02/2026 03:00:00.000 | Info | Combo: bartime=2026-02-05 02:00, executed=2026-02-05 03:00:00, pending Sell placed at 10386.9; SL=10400.983050337978, TP=10350.028842319014; valid for the next 3 chart bar(s).
+06/02/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.62 units, which needs about $3521.96 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.97 budget, free margin was $9997.22). Size was cut from 3.62 to 0.10 units. Real risk on this trade is now about $2.76 (0.03% of balance) instead of the requested 1.00%.
+06/02/2026 09:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10294.2, SL: 10273.7440516854, TP: 10347.76)
+06/02/2026 09:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10294.2, SL: 10273.7440516854, TP: 10347.76) SUCCEEDED, PendingOrder OID106
+06/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-06 08:00, executed=2026-02-06 09:00:00, pending Buy placed at 10294.2; SL=10273.744051685384, TP=10347.756188305906; valid for the next 3 chart bar(s).
+09/02/2026 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.12 units, which needs about $5954.25 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.05 budget, free margin was $10004.63). Size was cut from 6.12 to 0.10 units. Real risk on this trade is now about $1.63 (0.02% of balance) instead of the requested 1.00%.
+09/02/2026 10:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10379.7, SL: 10391.8162567537, TP: 10347.98)
+09/02/2026 10:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10379.7, SL: 10391.8162567537, TP: 10347.98) SUCCEEDED, PendingOrder OID109
+09/02/2026 10:00:00.000 | Info | Combo: bartime=2026-02-09 09:00, executed=2026-02-09 10:00:00, pending Sell placed at 10379.7; SL=10391.816256753722, TP=10347.978149793655; valid for the next 3 chart bar(s).
+09/02/2026 20:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.39 units, which needs about $5244.02 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.09 budget, free margin was $10008.90). Size was cut from 5.39 to 0.10 units. Real risk on this trade is now about $1.86 (0.02% of balance) instead of the requested 1.00%.
+09/02/2026 20:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10399.2, SL: 10385.4284755357, TP: 10435.26)
+09/02/2026 20:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10399.2, SL: 10385.4284755357, TP: 10435.26) SUCCEEDED, PendingOrder OID112
+09/02/2026 20:00:00.000 | Info | Combo: bartime=2026-02-09 19:00, executed=2026-02-09 20:00:00, pending Buy placed at 10399.2; SL=10385.428475535731, TP=10435.255544632993; valid for the next 3 chart bar(s).
+10/02/2026 00:00:00.000 | Trade | Cancelling pending order OID112
+10/02/2026 00:00:00.000 | Trade |  Cancelling pending order OID112 SUCCEEDED
+10/02/2026 00:00:00.000 | Info | Combo: pending order 112 cancelled after 3 chart bars.
+10/02/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.52 units, which needs about $4397.59 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.09 budget, free margin was $10008.90). Size was cut from 4.52 to 0.10 units. Real risk on this trade is now about $2.21 (0.02% of balance) instead of the requested 1.00%.
+10/02/2026 09:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10325.2, SL: 10341.6073713314, TP: 10282.24)
+10/02/2026 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10325.2, SL: 10341.6073713314, TP: 10282.24) SUCCEEDED, PendingOrder OID113
+10/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-10 08:00, executed=2026-02-10 09:00:00, pending Sell placed at 10325.2; SL=10341.607371331402, TP=10282.243484119408; valid for the next 3 chart bar(s).
+10/02/2026 12:00:00.000 | Trade | Cancelling pending order OID113
+10/02/2026 12:00:00.000 | Trade |  Cancelling pending order OID113 SUCCEEDED
+10/02/2026 12:00:00.000 | Info | Combo: pending order 113 cancelled after 3 chart bars.
+10/02/2026 18:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.67 units, which needs about $4543.52 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.09 budget, free margin was $10008.90). Size was cut from 4.67 to 0.10 units. Real risk on this trade is now about $2.14 (0.02% of balance) instead of the requested 1.00%.
+10/02/2026 18:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10390.5, SL: 10374.6247927913, TP: 10432.06)
+10/02/2026 18:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10390.5, SL: 10374.6247927913, TP: 10432.06) SUCCEEDED, PendingOrder OID114
+10/02/2026 18:00:00.000 | Info | Combo: bartime=2026-02-10 17:00, executed=2026-02-10 18:00:00, pending Buy placed at 10390.5; SL=10374.624792791297, TP=10432.06324476324; valid for the next 3 chart bar(s).
+10/02/2026 23:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.44 units, which needs about $5292.67 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.07 budget, free margin was $10006.66). Size was cut from 5.44 to 0.10 units. Real risk on this trade is now about $1.84 (0.02% of balance) instead of the requested 1.00%.
+10/02/2026 23:05:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10388.3, SL: 10374.6727167273, TP: 10423.98)
+10/02/2026 23:05:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10388.3, SL: 10374.6727167273, TP: 10423.98) SUCCEEDED, PendingOrder OID117
+10/02/2026 23:05:00.000 | Info | Combo: bartime=2026-02-10 21:00, executed=2026-02-10 23:05:00, pending Buy placed at 10388.3; SL=10374.672716727315, TP=10423.977903455023; valid for the next 3 chart bar(s).
+11/02/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.64 units, which needs about $5487.25 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.05 budget, free margin was $10004.72). Size was cut from 5.64 to 0.10 units. Real risk on this trade is now about $1.77 (0.02% of balance) instead of the requested 1.00%.
+11/02/2026 09:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10360.7, SL: 10373.856379099, TP: 10326.25)
+11/02/2026 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10360.7, SL: 10373.856379099, TP: 10326.25) SUCCEEDED, PendingOrder OID120
+11/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-11 08:00, executed=2026-02-11 09:00:00, pending Sell placed at 10360.7; SL=10373.856379098956, TP=10326.25498158235; valid for the next 3 chart bar(s).
+11/02/2026 11:00:00.000 | Info | Combo: bartime=2026-02-11 10:00, reversal - cancelling existing Sell pending order 120 before opening opposite direction.
+11/02/2026 11:00:00.000 | Trade | Cancelling pending order OID120
+11/02/2026 11:00:00.000 | Trade |  Cancelling pending order OID120 SUCCEEDED
+11/02/2026 11:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.66 units, which needs about $4533.79 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.05 budget, free margin was $10004.72). Size was cut from 4.66 to 0.10 units. Real risk on this trade is now about $2.14 (0.02% of balance) instead of the requested 1.00%.
+11/02/2026 11:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10415, SL: 10399.0897573767, TP: 10456.65)
+11/02/2026 11:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10415, SL: 10399.0897573767, TP: 10456.65) SUCCEEDED, PendingOrder OID121
+11/02/2026 11:00:00.000 | Info | Combo: bartime=2026-02-11 10:00, executed=2026-02-11 11:00:00, pending Buy placed at 10415; SL=10399.089757376669, TP=10456.654971787297; valid for the next 3 chart bar(s).
+12/02/2026 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.73 units, which needs about $4601.90 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.11 budget, free margin was $10010.58). Size was cut from 4.73 to 0.10 units. Real risk on this trade is now about $2.12 (0.02% of balance) instead of the requested 1.00%.
+12/02/2026 10:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10490.6, SL: 10506.2925152674, TP: 10449.52)
+12/02/2026 10:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10490.6, SL: 10506.2925152674, TP: 10449.52) SUCCEEDED, PendingOrder OID124
+12/02/2026 10:00:00.000 | Info | Combo: bartime=2026-02-12 09:00, executed=2026-02-12 10:00:00, pending Sell placed at 10490.6; SL=10506.29251526737, TP=10449.515065206138; valid for the next 3 chart bar(s).
+13/02/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.53 units, which needs about $3434.40 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.16 budget, free margin was $10016.35). Size was cut from 3.53 to 0.10 units. Real risk on this trade is now about $2.83 (0.03% of balance) instead of the requested 1.00%.
+13/02/2026 16:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10454.5, SL: 10433.4865013426, TP: 10509.52)
+13/02/2026 16:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10454.5, SL: 10433.4865013426, TP: 10509.52) SUCCEEDED, PendingOrder OID127
+13/02/2026 16:00:00.000 | Info | Combo: bartime=2026-02-13 15:00, executed=2026-02-13 16:00:00, pending Buy placed at 10454.5; SL=10433.48650134257, TP=10509.515923669453; valid for the next 3 chart bar(s).
+16/02/2026 20:02:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.54 units, which needs about $8308.71 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.13 budget, free margin was $10013.34). Size was cut from 8.54 to 0.10 units. Real risk on this trade is now about $1.17 (0.01% of balance) instead of the requested 1.00%.
+16/02/2026 20:02:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10459.5, SL: 10468.1972097051, TP: 10436.73)
+16/02/2026 20:02:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10459.5, SL: 10468.1972097051, TP: 10436.73) SUCCEEDED, PendingOrder OID130
+16/02/2026 20:02:00.000 | Info | Combo: bartime=2026-02-16 19:00, executed=2026-02-16 20:02:00, pending Sell placed at 10459.5; SL=10468.197209705064, TP=10436.729635432372; valid for the next 3 chart bar(s).
+17/02/2026 01:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.88 units, which needs about $8639.50 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.12 budget, free margin was $10011.94). Size was cut from 8.88 to 0.10 units. Real risk on this trade is now about $1.13 (0.01% of balance) instead of the requested 1.00%.
+17/02/2026 01:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10455.1, SL: 10463.460214569, TP: 10433.21)
+17/02/2026 01:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10455.1, SL: 10463.460214569, TP: 10433.21) SUCCEEDED, PendingOrder OID133
+17/02/2026 01:00:00.000 | Info | Combo: bartime=2026-02-17 00:00, executed=2026-02-17 01:00:00, pending Sell placed at 10455.1; SL=10463.460214568993, TP=10433.211930141375; valid for the next 3 chart bar(s).
+17/02/2026 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.18 units, which needs about $6012.63 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.11 budget, free margin was $10010.67). Size was cut from 6.18 to 0.10 units. Real risk on this trade is now about $1.62 (0.02% of balance) instead of the requested 1.00%.
+17/02/2026 08:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10502.4, SL: 10490.3925453197, TP: 10533.84)
+17/02/2026 08:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10502.4, SL: 10490.3925453197, TP: 10533.84) SUCCEEDED, PendingOrder OID136
+17/02/2026 08:00:00.000 | Info | Combo: bartime=2026-02-17 07:00, executed=2026-02-17 08:00:00, pending Buy placed at 10502.4; SL=10490.3925453197, TP=10533.836992997936; valid for the next 3 chart bar(s).
+19/02/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.02 units, which needs about $5856.96 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.08 budget, free margin was $10007.85). Size was cut from 6.02 to 0.10 units. Real risk on this trade is now about $1.66 (0.02% of balance) instead of the requested 1.00%.
+19/02/2026 09:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10636.4, SL: 10648.7328520932, TP: 10604.11)
+19/02/2026 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10636.4, SL: 10648.7328520932, TP: 10604.11) SUCCEEDED, PendingOrder OID139
+19/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-19 08:00, executed=2026-02-19 09:00:00, pending Sell placed at 10636.4; SL=10648.732852093159, TP=10604.111076558685; valid for the next 3 chart bar(s).
+19/02/2026 21:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.92 units, which needs about $4786.75 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.12 budget, free margin was $10012.22). Size was cut from 4.92 to 0.10 units. Real risk on this trade is now about $2.03 (0.02% of balance) instead of the requested 1.00%.
+19/02/2026 21:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10670.6, SL: 10655.5035064174, TP: 10710.12)
+19/02/2026 21:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10670.6, SL: 10655.5035064174, TP: 10710.12) SUCCEEDED, PendingOrder OID142
+19/02/2026 21:00:00.000 | Info | Combo: bartime=2026-02-19 20:00, executed=2026-02-19 21:00:00, pending Buy placed at 10670.6; SL=10655.503506417379, TP=10710.124476726023; valid for the next 3 chart bar(s).
+23/02/2026 01:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.80 units, which needs about $5642.92 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.10 budget, free margin was $10010.04). Size was cut from 5.80 to 0.10 units. Real risk on this trade is now about $1.72 (0.02% of balance) instead of the requested 1.00%.
+23/02/2026 01:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10676, SL: 10688.7838111551, TP: 10642.53)
+23/02/2026 01:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10676, SL: 10688.7838111551, TP: 10642.53) SUCCEEDED, PendingOrder OID145
+23/02/2026 01:00:00.000 | Info | Combo: bartime=2026-02-23 00:00, executed=2026-02-23 01:00:00, pending Sell placed at 10676; SL=10688.783811155085, TP=10642.530410276817; valid for the next 3 chart bar(s).
+23/02/2026 11:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.83 units, which needs about $5672.11 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.06 budget, free margin was $10006.29). Size was cut from 5.83 to 0.10 units. Real risk on this trade is now about $1.71 (0.02% of balance) instead of the requested 1.00%.
+23/02/2026 11:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10696, SL: 10683.2791560391, TP: 10729.3)
+23/02/2026 11:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10696, SL: 10683.2791560391, TP: 10729.3) SUCCEEDED, PendingOrder OID148
+23/02/2026 11:00:00.000 | Info | Combo: bartime=2026-02-23 10:00, executed=2026-02-23 11:00:00, pending Buy placed at 10696; SL=10683.27915603907, TP=10729.304733865347; valid for the next 3 chart bar(s).
+23/02/2026 12:00:00.000 | Info | Combo: bartime=2026-02-23 11:00, Buy signal skipped: already have same-direction exposure open.
+23/02/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.54 units, which needs about $4417.04 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.11 budget, free margin was $10010.93). Size was cut from 4.54 to 0.10 units. Real risk on this trade is now about $2.20 (0.02% of balance) instead of the requested 1.00%.
+23/02/2026 16:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10670.9, SL: 10687.2529530291, TP: 10628.09)
+23/02/2026 16:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10670.9, SL: 10687.2529530291, TP: 10628.09) SUCCEEDED, PendingOrder OID151
+23/02/2026 16:00:00.000 | Info | Combo: bartime=2026-02-23 15:00, executed=2026-02-23 16:00:00, pending Sell placed at 10670.9; SL=10687.252953029118, TP=10628.085957927004; valid for the next 3 chart bar(s).
+24/02/2026 02:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.18 units, which needs about $6985.54 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.08 budget, free margin was $10008.34). Size was cut from 7.18 to 0.10 units. Real risk on this trade is now about $1.39 (0.01% of balance) instead of the requested 1.00%.
+24/02/2026 02:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10655.8, SL: 10666.1404557562, TP: 10628.73)
+24/02/2026 02:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10655.8, SL: 10666.1404557562, TP: 10628.73) SUCCEEDED, PendingOrder OID154
+24/02/2026 02:00:00.000 | Info | Combo: bartime=2026-02-24 01:00, executed=2026-02-24 02:00:00, pending Sell placed at 10655.8; SL=10666.140455756151, TP=10628.727415188589; valid for the next 3 chart bar(s).
+24/02/2026 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.24 units, which needs about $8989.75 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.07 budget, free margin was $10006.82). Size was cut from 9.24 to 0.10 units. Real risk on this trade is now about $1.08 (0.01% of balance) instead of the requested 1.00%.
+24/02/2026 08:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10693.6, SL: 10685.5692313743, TP: 10714.63)
+24/02/2026 08:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10693.6, SL: 10685.5692313743, TP: 10714.63) SUCCEEDED, PendingOrder OID157
+24/02/2026 08:00:00.000 | Info | Combo: bartime=2026-02-24 07:00, executed=2026-02-24 08:00:00, pending Buy placed at 10693.6; SL=10685.56923137426, TP=10714.625539864803; valid for the next 3 chart bar(s).
+24/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-24 08:00, reversal - cancelling existing Buy pending order 157 before opening opposite direction.
+24/02/2026 09:00:00.000 | Trade | Cancelling pending order OID157
+24/02/2026 09:00:00.000 | Trade |  Cancelling pending order OID157 SUCCEEDED
+24/02/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.43 units, which needs about $6255.86 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.07 budget, free margin was $10006.82). Size was cut from 6.43 to 0.10 units. Real risk on this trade is now about $1.56 (0.02% of balance) instead of the requested 1.00%.
+24/02/2026 09:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10638.8, SL: 10650.3416549006, TP: 10608.58)
+24/02/2026 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10638.8, SL: 10650.3416549006, TP: 10608.58) SUCCEEDED, PendingOrder OID158
+24/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-24 08:00, executed=2026-02-24 09:00:00, pending Sell placed at 10638.8; SL=10650.341654900592, TP=10608.582528108156; valid for the next 3 chart bar(s).
+24/02/2026 12:00:00.000 | Trade | Cancelling pending order OID158
+24/02/2026 12:00:00.000 | Trade |  Cancelling pending order OID158 SUCCEEDED
+24/02/2026 12:00:00.000 | Info | Combo: pending order 158 cancelled after 3 chart bars.
+24/02/2026 12:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.80 units, which needs about $5642.92 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.07 budget, free margin was $10006.82). Size was cut from 5.80 to 0.10 units. Real risk on this trade is now about $1.72 (0.02% of balance) instead of the requested 1.00%.
+24/02/2026 12:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10687.5, SL: 10674.7056582909, TP: 10721)
+24/02/2026 12:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10687.5, SL: 10674.7056582909, TP: 10721) SUCCEEDED, PendingOrder OID159
+24/02/2026 12:00:00.000 | Info | Combo: bartime=2026-02-24 11:00, executed=2026-02-24 12:00:00, pending Buy placed at 10687.5; SL=10674.705658290897, TP=10720.997160008623; valid for the next 3 chart bar(s).
+24/02/2026 14:00:00.000 | Info | Combo: bartime=2026-02-24 13:00, Buy signal skipped: already have same-direction exposure open.
+25/02/2026 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.66 units, which needs about $6479.63 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.05 budget, free margin was $10004.62). Size was cut from 6.66 to 0.10 units. Real risk on this trade is now about $1.50 (0.01% of balance) instead of the requested 1.00%.
+25/02/2026 08:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10696.3, SL: 10707.4329569209, TP: 10667.15)
+25/02/2026 08:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10696.3, SL: 10707.4329569209, TP: 10667.15) SUCCEEDED, PendingOrder OID162
+25/02/2026 08:00:00.000 | Info | Combo: bartime=2026-02-25 07:00, executed=2026-02-25 08:00:00, pending Sell placed at 10696.3; SL=10707.432956920917, TP=10667.152549679538; valid for the next 3 chart bar(s).
+25/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-25 08:00, reversal - cancelling existing Sell pending order 162 before opening opposite direction.
+25/02/2026 09:00:00.000 | Trade | Cancelling pending order OID162
+25/02/2026 09:00:00.000 | Trade |  Cancelling pending order OID162 SUCCEEDED
+25/02/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.22 units, which needs about $4105.71 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.05 budget, free margin was $10004.62). Size was cut from 4.22 to 0.10 units. Real risk on this trade is now about $2.37 (0.02% of balance) instead of the requested 1.00%.
+25/02/2026 09:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10781.1, SL: 10763.5416344633, TP: 10827.07)
+25/02/2026 09:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10781.1, SL: 10763.5416344633, TP: 10827.07) SUCCEEDED, PendingOrder OID163
+25/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-25 08:00, executed=2026-02-25 09:00:00, pending Buy placed at 10781.1; SL=10763.541634463267, TP=10827.069960256369; valid for the next 3 chart bar(s).
+26/02/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.40 units, which needs about $7199.59 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.02 budget, free margin was $10002.02). Size was cut from 7.40 to 0.10 units. Real risk on this trade is now about $1.35 (0.01% of balance) instead of the requested 1.00%.
+26/02/2026 09:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10840.3, SL: 10830.2793466583, TP: 10866.54)
+26/02/2026 09:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10840.3, SL: 10830.2793466583, TP: 10866.54) SUCCEEDED, PendingOrder OID166
+26/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-26 08:00, executed=2026-02-26 09:00:00, pending Buy placed at 10840.3; SL=10830.27934665831, TP=10866.535302761897; valid for the next 3 chart bar(s).
+26/02/2026 12:00:00.000 | Trade | Cancelling pending order OID166
+26/02/2026 12:00:00.000 | Trade |  Cancelling pending order OID166 SUCCEEDED
+26/02/2026 12:00:00.000 | Info | Combo: pending order 166 cancelled after 3 chart bars.
+26/02/2026 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.37 units, which needs about $7170.40 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.02 budget, free margin was $10002.02). Size was cut from 7.37 to 0.10 units. Real risk on this trade is now about $1.36 (0.01% of balance) instead of the requested 1.00%.
+26/02/2026 15:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10796.4, SL: 10806.4678866104, TP: 10770.04)
+26/02/2026 15:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10796.4, SL: 10806.4678866104, TP: 10770.04) SUCCEEDED, PendingOrder OID167
+26/02/2026 15:00:00.000 | Info | Combo: bartime=2026-02-26 14:00, executed=2026-02-26 15:00:00, pending Sell placed at 10796.4; SL=10806.467886610404, TP=10770.041034731985; valid for the next 3 chart bar(s).
+26/02/2026 16:00:00.000 | Info | Combo: bartime=2026-02-26 15:00, reversal - cancelling existing Sell pending order 167 before opening opposite direction.
+26/02/2026 16:00:00.000 | Trade | Cancelling pending order OID167
+26/02/2026 16:00:00.000 | Trade |  Cancelling pending order OID167 SUCCEEDED
+26/02/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.38 units, which needs about $5234.29 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.02 budget, free margin was $10002.02). Size was cut from 5.38 to 0.10 units. Real risk on this trade is now about $1.86 (0.02% of balance) instead of the requested 1.00%.
+26/02/2026 16:00:00.000 | Trade | Placing Stop Order to Buy 0.1 UK100.cash (Price: 10851.4, SL: 10837.6106507117, TP: 10887.5)
+26/02/2026 16:00:00.000 | Trade |  Placing Stop Order to Buy 0.1 UK100.cash (Price: 10851.4, SL: 10837.6106507117, TP: 10887.5) SUCCEEDED, PendingOrder OID168
+26/02/2026 16:00:00.000 | Info | Combo: bartime=2026-02-26 15:00, executed=2026-02-26 16:00:00, pending Buy placed at 10851.4; SL=10837.610650711676, TP=10887.502212214411; valid for the next 3 chart bar(s).
+27/02/2026 20:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.94 units, which needs about $3833.29 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.99 budget, free margin was $9999.43). Size was cut from 3.94 to 0.10 units. Real risk on this trade is now about $2.54 (0.03% of balance) instead of the requested 1.00%.
+27/02/2026 20:00:00.000 | Trade | Placing Stop Order to Sell 0.1 UK100.cash (Price: 10863.8, SL: 10882.6246479123, TP: 10814.51)
+27/02/2026 20:00:00.000 | Trade |  Placing Stop Order to Sell 0.1 UK100.cash (Price: 10863.8, SL: 10882.6246479123, TP: 10814.51) SUCCEEDED, PendingOrder OID171
+27/02/2026 20:00:00.000 | Info | Combo: bartime=2026-02-27 19:00, executed=2026-02-27 20:00:00, pending Sell placed at 10863.8; SL=10882.624647912276, TP=10814.514756760413; valid for the next 3 chart bar(s).
+27/02/2026 20:49:00.000 | Info | Combo: loaded=4824, processed=78, before-start=4448, not-processed=298, placed=73, failed=0, guard-skipped=0, pending-expired=17, same-direction-skipped=5, reversed=6, margin-capped=73, margin-blocked=0.
+Progress | Backtesting | 98.08 % |
+Info | CBot instance [Combo, UK100.cash, h1] stopped.
+{
+	"Equity":9999.42,
+	"NetProfit":-0.56,
+	"MaxBalanceDrawdownPercentages":0,
+	"MaxEquityDrawdownPercentages":0,
+	"MaxBalanceDrawdown":24.69,
+	"MaxEquityDrawdown":25.29,
+	"WinningTrades":16,
+	"LosingTrades":33,
+	"TotalTrades":49,
+	"AverageTrade":-0.01,
+	"ProfitFactor":0.99,
+	"Fitness":0
+}
+

@@ -1,0 +1,14 @@
+﻿backtest
+C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo
+C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_US30.cash_h4_20260902-0001\params.cbotset
+--start=01/01/2024
+--end=09/01/2026
+--data-mode=Ticks
+--ctid=votuankiet96@gmail.com
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt
+--account=7563609
+--symbol=US30.cash
+--period=h4
+--full-access
+--report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_US30.cash_h4_20260902-0001\report.json
+

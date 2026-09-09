@@ -1,0 +1,518 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_leverage_probe_20260903-102224\DE40\params.cbotset 
+--start=01/01/2026 --end=28/02/2026 --data-mode=M1 --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=GER40.cash 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_leverage_probe_20260903-102224\DE40\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...E40\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | GER40.cash                | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2026 00:00          | cmd arg              |
+| End                  | 28/02/2026 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | M1                        | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 3                         | cbotset              |
+| KtpLevel             | 7                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 1                         | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+03/09/2026 17:22:27.752 | Establishing connection using votuankiet96@gmail.com...
+03/09/2026 17:22:30.001 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Progress | Loading GER40.cash, h1 | 1.64 % |
+Progress | Loading GER40.cash, h1 | 3.28 % |
+Progress | Loading GER40.cash, h1 | 4.92 % |
+Progress | Loading GER40.cash, h1 | 6.56 % |
+Progress | Loading GER40.cash, h1 | 8.20 % |
+Progress | Loading GER40.cash, h1 | 9.84 % |
+Progress | Loading GER40.cash, h1 | 11.48 % |
+Progress | Loading GER40.cash, h1 | 13.11 % |
+Progress | Loading GER40.cash, h1 | 14.75 % |
+Progress | Loading GER40.cash, h1 | 16.39 % |
+Progress | Loading GER40.cash, h1 | 18.03 % |
+Progress | Loading GER40.cash, h1 | 19.67 % |
+Progress | Loading GER40.cash, h1 | 21.31 % |
+Progress | Loading GER40.cash, h1 | 22.95 % |
+Progress | Loading GER40.cash, h1 | 24.59 % |
+Progress | Loading GER40.cash, h1 | 26.23 % |
+Progress | Loading GER40.cash, h1 | 27.87 % |
+Progress | Loading GER40.cash, h1 | 29.51 % |
+Progress | Loading GER40.cash, h1 | 31.15 % |
+Progress | Loading GER40.cash, h1 | 32.79 % |
+Progress | Loading GER40.cash, h1 | 34.43 % |
+Progress | Loading GER40.cash, h1 | 36.07 % |
+Progress | Loading GER40.cash, h1 | 37.70 % |
+Progress | Loading GER40.cash, h1 | 39.34 % |
+Progress | Loading GER40.cash, h1 | 40.98 % |
+Progress | Loading GER40.cash, h1 | 42.62 % |
+Progress | Loading GER40.cash, h1 | 44.26 % |
+Progress | Loading GER40.cash, h1 | 45.90 % |
+Progress | Loading GER40.cash, h1 | 47.54 % |
+Progress | Loading GER40.cash, h1 | 49.18 % |
+Progress | Loading GER40.cash, h1 | 50.82 % |
+Progress | Loading GER40.cash, h1 | 52.46 % |
+Progress | Loading GER40.cash, h1 | 54.10 % |
+Progress | Loading GER40.cash, h1 | 55.74 % |
+Progress | Loading GER40.cash, h1 | 57.38 % |
+Progress | Loading GER40.cash, h1 | 59.02 % |
+Progress | Loading GER40.cash, h1 | 60.66 % |
+Progress | Loading GER40.cash, h1 | 62.30 % |
+Progress | Loading GER40.cash, h1 | 63.93 % |
+Progress | Loading GER40.cash, h1 | 65.57 % |
+Progress | Loading GER40.cash, h1 | 67.21 % |
+Progress | Loading GER40.cash, h1 | 68.85 % |
+Progress | Loading GER40.cash, h1 | 70.49 % |
+Progress | Loading GER40.cash, h1 | 72.13 % |
+Progress | Loading GER40.cash, h1 | 73.77 % |
+Progress | Loading GER40.cash, h1 | 75.41 % |
+Progress | Loading GER40.cash, h1 | 77.05 % |
+Progress | Loading GER40.cash, h1 | 78.69 % |
+Progress | Loading GER40.cash, h1 | 80.33 % |
+Progress | Loading GER40.cash, h1 | 81.97 % |
+Progress | Loading GER40.cash, h1 | 83.61 % |
+Progress | Loading GER40.cash, h1 | 85.25 % |
+Progress | Loading GER40.cash, h1 | 86.89 % |
+Progress | Loading GER40.cash, h1 | 88.52 % |
+Progress | Loading GER40.cash, h1 | 90.16 % |
+Progress | Loading GER40.cash, h1 | 91.80 % |
+Progress | Loading GER40.cash, h1 | 93.44 % |
+Progress | Loading GER40.cash, h1 | 95.08 % |
+Progress | Loading GER40.cash, h1 | 96.72 % |
+Progress | Loading GER40.cash, h1 | 98.36 % |
+Progress | Loading GER40.cash, h1 | 100.00 % |
+Info | CBot instance [Combo, GER40.cash, h1] started.
+Progress | Backtesting | 1.71 % |
+Progress | Backtesting | 2.12 % |
+Progress | Loading EURUSD, h1 | 2.13 % |
+Progress | Loading EURUSD, h1 | 4.26 % |
+Progress | Loading EURUSD, h1 | 6.38 % |
+Progress | Loading EURUSD, h1 | 8.51 % |
+Progress | Loading EURUSD, h1 | 10.64 % |
+Progress | Loading EURUSD, h1 | 12.77 % |
+Progress | Loading EURUSD, h1 | 14.89 % |
+Progress | Loading EURUSD, h1 | 17.02 % |
+Progress | Loading EURUSD, h1 | 19.15 % |
+Progress | Loading EURUSD, h1 | 21.28 % |
+Progress | Loading EURUSD, h1 | 23.40 % |
+Progress | Loading EURUSD, h1 | 27.66 % |
+Progress | Loading EURUSD, h1 | 27.66 % |
+Progress | Loading EURUSD, h1 | 31.91 % |
+Progress | Loading EURUSD, h1 | 31.91 % |
+Progress | Loading EURUSD, h1 | 34.04 % |
+Progress | Loading EURUSD, h1 | 36.17 % |
+Progress | Loading EURUSD, h1 | 38.30 % |
+Progress | Loading EURUSD, h1 | 40.43 % |
+Progress | Loading EURUSD, h1 | 42.55 % |
+Progress | Loading EURUSD, h1 | 44.68 % |
+Progress | Loading EURUSD, h1 | 46.81 % |
+Progress | Loading EURUSD, h1 | 48.94 % |
+Progress | Loading EURUSD, h1 | 51.06 % |
+Progress | Loading EURUSD, h1 | 53.19 % |
+Progress | Loading EURUSD, h1 | 55.32 % |
+Progress | Loading EURUSD, h1 | 57.45 % |
+Progress | Loading EURUSD, h1 | 59.57 % |
+Progress | Loading EURUSD, h1 | 61.70 % |
+Progress | Loading EURUSD, h1 | 63.83 % |
+Progress | Loading EURUSD, h1 | 65.96 % |
+Progress | Loading EURUSD, h1 | 68.09 % |
+Progress | Loading EURUSD, h1 | 70.21 % |
+Progress | Loading EURUSD, h1 | 72.34 % |
+Progress | Loading EURUSD, h1 | 74.47 % |
+Progress | Loading EURUSD, h1 | 76.60 % |
+Progress | Loading EURUSD, h1 | 78.72 % |
+Progress | Loading EURUSD, h1 | 80.85 % |
+Progress | Loading EURUSD, h1 | 82.98 % |
+Progress | Loading EURUSD, h1 | 85.11 % |
+Progress | Loading EURUSD, h1 | 87.23 % |
+Progress | Loading EURUSD, h1 | 89.36 % |
+Progress | Loading EURUSD, h1 | 91.49 % |
+Progress | Loading EURUSD, h1 | 93.62 % |
+Progress | Loading EURUSD, h1 | 95.74 % |
+Progress | Loading EURUSD, h1 | 97.87 % |
+Progress | Loading EURUSD, h1 | 100.00 % |
+Progress | Backtesting | 2.12 % |
+Progress | Backtesting | 6.78 % |
+Progress | Backtesting | 20.34 % |
+Progress | Backtesting | 24.18 % |
+Progress | Backtesting | 33.19 % |
+Progress | Backtesting | 38.64 % |
+Progress | Backtesting | 47.46 % |
+Progress | Backtesting | 55.74 % |
+Progress | Backtesting | 66.98 % |
+Progress | Backtesting | 80.09 % |
+Progress | Backtesting | 94.92 % |
+02/01/2026 00:16:00.000 | Info | Combo: loaded 3931 valid signal row(s) from CSV.
+02/01/2026 00:16:00.000 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+02/01/2026 06:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.82 units, which needs about $7585.76 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.00 budget, free margin was $10000.00). Size was cut from 3.82 to 0.04 units. Real risk on this trade is now about $1.05 (0.01% of balance) instead of the requested 1.00%.
+02/01/2026 06:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24542.5, SL: 24520.3375604136, TP: 24600.52)
+02/01/2026 06:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24542.5, SL: 24520.3375604136, TP: 24600.52) SUCCEEDED, PendingOrder OID1
+02/01/2026 06:00:00.000 | Info | Combo: bartime=2026-01-02 05:00, executed=2026-01-02 06:00:00, pending Buy placed at 24542.5; SL=24520.337560413558, TP=24600.523992315313; valid for the next 3 chart bar(s).
+02/01/2026 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.81 units, which needs about $5580.10 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.99 budget, free margin was $9998.83). Size was cut from 2.81 to 0.04 units. Real risk on this trade is now about $1.42 (0.01% of balance) instead of the requested 1.00%.
+02/01/2026 08:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 24466.8, SL: 24496.9530813353, TP: 24387.86)
+02/01/2026 08:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 24466.8, SL: 24496.9530813353, TP: 24387.86) SUCCEEDED, PendingOrder OID4
+02/01/2026 08:00:00.000 | Info | Combo: bartime=2026-01-02 07:00, executed=2026-01-02 08:00:00, pending Sell placed at 24466.8; SL=24496.953081335323, TP=24387.8555249182; valid for the next 3 chart bar(s).
+02/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.82 units, which needs about $3614.16 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.97 budget, free margin was $9996.57). Size was cut from 1.82 to 0.04 units. Real risk on this trade is now about $2.19 (0.02% of balance) instead of the requested 1.00%.
+02/01/2026 09:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24636.1, SL: 24589.6677349317, TP: 24757.67)
+02/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24636.1, SL: 24589.6677349317, TP: 24757.67) SUCCEEDED, PendingOrder OID7
+02/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-02 08:00, executed=2026-01-02 09:00:00, pending Buy placed at 24636.1; SL=24589.66773493174, TP=24757.66538006544; valid for the next 3 chart bar(s).
+02/01/2026 12:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.71 units, which needs about $3395.72 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.94 budget, free margin was $9993.55). Size was cut from 1.71 to 0.04 units. Real risk on this trade is now about $2.33 (0.02% of balance) instead of the requested 1.00%.
+02/01/2026 12:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24570.1, SL: 24520.6154082851, TP: 24699.66)
+02/01/2026 12:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24570.1, SL: 24520.6154082851, TP: 24699.66) SUCCEEDED, PendingOrder OID10
+02/01/2026 12:00:00.000 | Info | Combo: bartime=2026-01-02 11:00, executed=2026-01-02 12:00:00, pending Buy placed at 24570.1; SL=24520.61540828505, TP=24699.656746593504; valid for the next 3 chart bar(s).
+02/01/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.78 units, which needs about $3534.73 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.91 budget, free margin was $9991.03). Size was cut from 1.78 to 0.04 units. Real risk on this trade is now about $2.24 (0.02% of balance) instead of the requested 1.00%.
+02/01/2026 16:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 24459.4, SL: 24506.8027473264, TP: 24335.29)
+02/01/2026 16:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 24459.4, SL: 24506.8027473264, TP: 24335.29) SUCCEEDED, PendingOrder OID13
+02/01/2026 16:00:00.000 | Info | Combo: bartime=2026-01-02 15:00, executed=2026-01-02 16:00:00, pending Sell placed at 24459.4; SL=24506.802747326445, TP=24335.293778035302; valid for the next 3 chart bar(s).
+06/01/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.44 units, which needs about $4845.36 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.88 budget, free margin was $9988.29). Size was cut from 2.44 to 0.04 units. Real risk on this trade is now about $1.63 (0.02% of balance) instead of the requested 1.00%.
+06/01/2026 16:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 24860.9, SL: 24895.5089294276, TP: 24770.29)
+06/01/2026 16:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 24860.9, SL: 24895.5089294276, TP: 24770.29) SUCCEEDED, PendingOrder OID16
+06/01/2026 16:00:00.000 | Info | Combo: bartime=2026-01-06 15:00, executed=2026-01-06 16:00:00, pending Sell placed at 24860.9; SL=24895.508929427553, TP=24770.289566644376; valid for the next 3 chart bar(s).
+06/01/2026 19:00:00.000 | Trade | Cancelling pending order OID16
+06/01/2026 19:00:00.000 | Trade |  Cancelling pending order OID16 SUCCEEDED
+06/01/2026 19:00:00.000 | Info | Combo: pending order 16 cancelled after 3 chart bars.
+08/01/2026 05:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.18 units, which needs about $8300.65 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.88 budget, free margin was $9988.29). Size was cut from 4.18 to 0.04 units. Real risk on this trade is now about $0.96 (0.01% of balance) instead of the requested 1.00%.
+08/01/2026 05:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 25080.7, SL: 25100.9511799779, TP: 25027.68)
+08/01/2026 05:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 25080.7, SL: 25100.9511799779, TP: 25027.68) SUCCEEDED, PendingOrder OID17
+08/01/2026 05:00:00.000 | Info | Combo: bartime=2026-01-08 04:00, executed=2026-01-08 05:00:00, pending Sell placed at 25080.7; SL=25100.95117997792, TP=25027.67992038143; valid for the next 3 chart bar(s).
+08/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.09 units, which needs about $4150.33 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.91 budget, free margin was $9990.70). Size was cut from 2.09 to 0.04 units. Real risk on this trade is now about $1.91 (0.02% of balance) instead of the requested 1.00%.
+08/01/2026 09:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 25224.9, SL: 25184.400395081, TP: 25330.93)
+08/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 25224.9, SL: 25184.400395081, TP: 25330.93) SUCCEEDED, PendingOrder OID20
+08/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-08 08:00, executed=2026-01-08 09:00:00, pending Buy placed at 25224.9; SL=25184.400395081044, TP=25330.932946211768; valid for the next 3 chart bar(s).
+08/01/2026 11:00:00.000 | Info | Combo: bartime=2026-01-08 10:00, reversal - cancelling existing Buy pending order 20 before opening opposite direction.
+08/01/2026 11:00:00.000 | Trade | Cancelling pending order OID20
+08/01/2026 11:00:00.000 | Trade |  Cancelling pending order OID20 SUCCEEDED
+08/01/2026 11:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.05 units, which needs about $4070.89 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.91 budget, free margin was $9990.70). Size was cut from 2.05 to 0.04 units. Real risk on this trade is now about $1.94 (0.02% of balance) instead of the requested 1.00%.
+08/01/2026 11:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 25061.6, SL: 25102.7991791481, TP: 24953.74)
+08/01/2026 11:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 25061.6, SL: 25102.7991791481, TP: 24953.74) SUCCEEDED, PendingOrder OID21
+08/01/2026 11:00:00.000 | Info | Combo: bartime=2026-01-08 10:00, executed=2026-01-08 11:00:00, pending Sell placed at 25061.6; SL=25102.799179148133, TP=24953.735482424465; valid for the next 3 chart bar(s).
+08/01/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.02 units, which needs about $4011.32 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.89 budget, free margin was $9988.71). Size was cut from 2.02 to 0.04 units. Real risk on this trade is now about $1.97 (0.02% of balance) instead of the requested 1.00%.
+08/01/2026 16:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 25167.8, SL: 25125.9977469927, TP: 25277.24)
+08/01/2026 16:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 25167.8, SL: 25125.9977469927, TP: 25277.24) SUCCEEDED, PendingOrder OID24
+08/01/2026 16:00:00.000 | Info | Combo: bartime=2026-01-08 15:00, executed=2026-01-08 16:00:00, pending Buy placed at 25167.8; SL=25125.99774699274, TP=25277.24343910315; valid for the next 3 chart bar(s).
+09/01/2026 08:00:00.000 | Info | Combo: bartime=2026-01-09 07:00, reversal - closing existing Buy position 8 before opening opposite direction.
+09/01/2026 08:00:00.000 | Trade | Closing position PID8 (Volume: 0.04)
+09/01/2026 08:00:00.000 | Trade |  Closing position PID8 (Volume: 0.04) SUCCEEDED
+09/01/2026 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.49 units, which needs about $8916.25 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.87 budget, free margin was $9987.34). Size was cut from 4.49 to 0.04 units. Real risk on this trade is now about $0.89 (0.01% of balance) instead of the requested 1.00%.
+09/01/2026 08:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 25131.7, SL: 25150.537000239, TP: 25082.38)
+09/01/2026 08:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 25131.7, SL: 25150.537000239, TP: 25082.38) SUCCEEDED, PendingOrder OID28
+09/01/2026 08:00:00.000 | Info | Combo: bartime=2026-01-09 07:00, executed=2026-01-09 08:00:00, pending Sell placed at 25131.7; SL=25150.537000238954, TP=25082.382416850116; valid for the next 3 chart bar(s).
+12/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.13 units, which needs about $6215.56 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.86 budget, free margin was $9986.11). Size was cut from 3.13 to 0.04 units. Real risk on this trade is now about $1.27 (0.01% of balance) instead of the requested 1.00%.
+12/01/2026 09:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 25287.4, SL: 25260.4228971407, TP: 25358.03)
+12/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 25287.4, SL: 25260.4228971407, TP: 25358.03) SUCCEEDED, PendingOrder OID31
+12/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-12 08:00, executed=2026-01-12 09:00:00, pending Buy placed at 25287.4; SL=25260.42289714074, TP=25358.029372858073; valid for the next 3 chart bar(s).
+13/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.01 units, which needs about $7963.06 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.89 budget, free margin was $9989.34). Size was cut from 4.01 to 0.04 units. Real risk on this trade is now about $1.00 (0.01% of balance) instead of the requested 1.00%.
+13/01/2026 09:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 25384, SL: 25405.1040873927, TP: 25328.75)
+13/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 25384, SL: 25405.1040873927, TP: 25328.75) SUCCEEDED, PendingOrder OID34
+13/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-13 08:00, executed=2026-01-13 09:00:00, pending Sell placed at 25384; SL=25405.104087392683, TP=25328.746903881292; valid for the next 3 chart bar(s).
+13/01/2026 18:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.83 units, which needs about $5619.82 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.88 budget, free margin was $9988.16). Size was cut from 2.83 to 0.04 units. Real risk on this trade is now about $1.41 (0.01% of balance) instead of the requested 1.00%.
+13/01/2026 18:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 25409.4, SL: 25439.2601097145, TP: 25331.22)
+13/01/2026 18:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 25409.4, SL: 25439.2601097145, TP: 25331.22) SUCCEEDED, PendingOrder OID37
+13/01/2026 18:00:00.000 | Info | Combo: bartime=2026-01-13 17:00, executed=2026-01-13 18:00:00, pending Sell placed at 25409.4; SL=25439.26010971447, TP=25331.222560650476; valid for the next 3 chart bar(s).
+14/01/2026 02:00:00.000 | Info | Combo: bartime=2026-01-14 01:00, Sell signal skipped: already have same-direction exposure open.
+14/01/2026 08:00:00.000 | Info | Combo: bartime=2026-01-14 07:00, reversal - closing existing Sell position 12 before opening opposite direction.
+14/01/2026 08:00:00.000 | Trade | Closing position PID12 (Volume: 0.04)
+14/01/2026 08:00:00.000 | Trade |  Closing position PID12 (Volume: 0.04) SUCCEEDED
+14/01/2026 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.65 units, which needs about $9233.98 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.87 budget, free margin was $9987.43). Size was cut from 4.65 to 0.04 units. Real risk on this trade is now about $0.86 (0.01% of balance) instead of the requested 1.00%.
+14/01/2026 08:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 25426.2, SL: 25407.9888318765, TP: 25473.88)
+14/01/2026 08:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 25426.2, SL: 25407.9888318765, TP: 25473.88) SUCCEEDED, PendingOrder OID41
+14/01/2026 08:00:00.000 | Info | Combo: bartime=2026-01-14 07:00, executed=2026-01-14 08:00:00, pending Buy placed at 25426.2; SL=25407.988831876493, TP=25473.87907770847; valid for the next 3 chart bar(s).
+15/01/2026 01:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.04 units, which needs about $6036.84 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.86 budget, free margin was $9986.25). Size was cut from 3.04 to 0.04 units. Real risk on this trade is now about $1.31 (0.01% of balance) instead of the requested 1.00%.
+15/01/2026 01:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 25341, SL: 25313.1857486617, TP: 25413.82)
+15/01/2026 01:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 25341, SL: 25313.1857486617, TP: 25413.82) SUCCEEDED, PendingOrder OID44
+15/01/2026 01:00:00.000 | Info | Combo: bartime=2026-01-15 00:00, executed=2026-01-15 01:00:00, pending Buy placed at 25341; SL=25313.18574866166, TP=25413.821130526594; valid for the next 3 chart bar(s).
+15/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.49 units, which needs about $4944.65 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.85 budget, free margin was $9984.58). Size was cut from 2.49 to 0.04 units. Real risk on this trade is now about $1.60 (0.02% of balance) instead of the requested 1.00%.
+15/01/2026 09:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 25226.6, SL: 25260.4949902969, TP: 25137.86)
+15/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 25226.6, SL: 25260.4949902969, TP: 25137.86) SUCCEEDED, PendingOrder OID47
+15/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-15 08:00, executed=2026-01-15 09:00:00, pending Sell placed at 25226.6; SL=25260.494990296855, TP=25137.85874708687; valid for the next 3 chart bar(s).
+15/01/2026 12:00:00.000 | Trade | Cancelling pending order OID47
+15/01/2026 12:00:00.000 | Trade |  Cancelling pending order OID47 SUCCEEDED
+15/01/2026 12:00:00.000 | Info | Combo: pending order 47 cancelled after 3 chart bars.
+15/01/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.52 units, which needs about $5004.22 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.85 budget, free margin was $9984.58). Size was cut from 2.52 to 0.04 units. Real risk on this trade is now about $1.58 (0.02% of balance) instead of the requested 1.00%.
+15/01/2026 16:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 25362.3, SL: 25328.7198792215, TP: 25450.22)
+15/01/2026 16:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 25362.3, SL: 25328.7198792215, TP: 25450.22) SUCCEEDED, PendingOrder OID48
+15/01/2026 16:00:00.000 | Info | Combo: bartime=2026-01-15 15:00, executed=2026-01-15 16:00:00, pending Buy placed at 25362.3; SL=25328.719879221455, TP=25450.216885792368; valid for the next 3 chart bar(s).
+16/01/2026 05:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.34 units, which needs about $12589.98 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.83 budget, free margin was $9982.90). Size was cut from 6.34 to 0.04 units. Real risk on this trade is now about $0.63 (0.01% of balance) instead of the requested 1.00%.
+16/01/2026 05:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 25304.4, SL: 25291.0513207762, TP: 25339.35)
+16/01/2026 05:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 25304.4, SL: 25291.0513207762, TP: 25339.35) SUCCEEDED, PendingOrder OID51
+16/01/2026 05:00:00.000 | Info | Combo: bartime=2026-01-16 04:00, executed=2026-01-16 05:00:00, pending Buy placed at 25304.4; SL=25291.051320776234, TP=25339.34848379297; valid for the next 3 chart bar(s).
+16/01/2026 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.54 units, which needs about $11001.34 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.82 budget, free margin was $9982.24). Size was cut from 5.54 to 0.04 units. Real risk on this trade is now about $0.72 (0.01% of balance) instead of the requested 1.00%.
+16/01/2026 08:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 25325.6, SL: 25310.3260682374, TP: 25365.59)
+16/01/2026 08:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 25325.6, SL: 25310.3260682374, TP: 25365.59) SUCCEEDED, PendingOrder OID54
+16/01/2026 08:00:00.000 | Info | Combo: bartime=2026-01-16 07:00, executed=2026-01-16 08:00:00, pending Buy placed at 25325.6; SL=25310.32606823743, TP=25365.589031702; valid for the next 3 chart bar(s).
+16/01/2026 14:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.07 units, which needs about $8082.21 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.81 budget, free margin was $9980.62). Size was cut from 4.07 to 0.04 units. Real risk on this trade is now about $0.98 (0.01% of balance) instead of the requested 1.00%.
+16/01/2026 14:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 25271.4, SL: 25292.1540517184, TP: 25217.06)
+16/01/2026 14:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 25271.4, SL: 25292.1540517184, TP: 25217.06) SUCCEEDED, PendingOrder OID57
+16/01/2026 14:00:00.000 | Info | Combo: bartime=2026-01-16 13:00, executed=2026-01-16 14:00:00, pending Sell placed at 25271.4; SL=25292.154051718368, TP=25217.06334032311; valid for the next 3 chart bar(s).
+16/01/2026 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.16 units, which needs about $6275.13 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.83 budget, free margin was $9983.08). Size was cut from 3.16 to 0.04 units. Real risk on this trade is now about $1.26 (0.01% of balance) instead of the requested 1.00%.
+16/01/2026 15:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 25206.4, SL: 25233.1508013747, TP: 25136.36)
+16/01/2026 15:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 25206.4, SL: 25233.1508013747, TP: 25136.36) SUCCEEDED, PendingOrder OID60
+16/01/2026 15:00:00.000 | Info | Combo: bartime=2026-01-16 14:00, executed=2026-01-16 15:00:00, pending Sell placed at 25206.4; SL=25233.150801374693, TP=25136.363112258492; valid for the next 3 chart bar(s).
+16/01/2026 20:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.01 units, which needs about $5977.26 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.82 budget, free margin was $9981.57). Size was cut from 3.01 to 0.04 units. Real risk on this trade is now about $1.33 (0.01% of balance) instead of the requested 1.00%.
+16/01/2026 20:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 25344.4, SL: 25316.2909765095, TP: 25417.99)
+16/01/2026 20:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 25344.4, SL: 25316.2909765095, TP: 25417.99) SUCCEEDED, PendingOrder OID63
+16/01/2026 20:00:00.000 | Info | Combo: bartime=2026-01-16 19:00, executed=2026-01-16 20:00:00, pending Buy placed at 25344.4; SL=25316.290976509543, TP=25417.99288027114; valid for the next 3 chart bar(s).
+19/01/2026 01:00:00.000 | Trade | Cancelling pending order OID63
+19/01/2026 01:00:00.000 | Trade |  Cancelling pending order OID63 SUCCEEDED
+19/01/2026 01:00:00.000 | Info | Combo: pending order 63 cancelled after 3 chart bars.
+21/01/2026 03:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.01 units, which needs about $5977.26 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.82 budget, free margin was $9981.57). Size was cut from 3.01 to 0.04 units. Real risk on this trade is now about $1.33 (0.01% of balance) instead of the requested 1.00%.
+21/01/2026 03:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24642, SL: 24613.8891157393, TP: 24715.6)
+21/01/2026 03:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24642, SL: 24613.8891157393, TP: 24715.6) SUCCEEDED, PendingOrder OID64
+21/01/2026 03:00:00.000 | Info | Combo: bartime=2026-01-21 02:00, executed=2026-01-21 03:00:00, pending Buy placed at 24642; SL=24613.889115739275, TP=24715.597751996524; valid for the next 3 chart bar(s).
+21/01/2026 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.11 units, which needs about $4190.04 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.80 budget, free margin was $9980.04). Size was cut from 2.11 to 0.04 units. Real risk on this trade is now about $1.89 (0.02% of balance) instead of the requested 1.00%.
+21/01/2026 10:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 24536.7, SL: 24576.7974690756, TP: 24431.72)
+21/01/2026 10:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 24536.7, SL: 24576.7974690756, TP: 24431.72) SUCCEEDED, PendingOrder OID67
+21/01/2026 10:00:00.000 | Info | Combo: bartime=2026-01-21 09:00, executed=2026-01-21 10:00:00, pending Sell placed at 24536.7; SL=24576.797469075555, TP=24431.719894879858; valid for the next 3 chart bar(s).
+21/01/2026 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.30 units, which needs about $2581.54 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.78 budget, free margin was $9977.89). Size was cut from 1.30 to 0.04 units. Real risk on this trade is now about $3.06 (0.03% of balance) instead of the requested 1.00%.
+21/01/2026 15:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24610.2, SL: 24545.3658040533, TP: 24779.94)
+21/01/2026 15:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24610.2, SL: 24545.3658040533, TP: 24779.94) SUCCEEDED, PendingOrder OID70
+21/01/2026 15:00:00.000 | Info | Combo: bartime=2026-01-21 14:00, executed=2026-01-21 15:00:00, pending Buy placed at 24610.2; SL=24545.365804053323, TP=24779.94389812577; valid for the next 3 chart bar(s).
+21/01/2026 20:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.86 units, which needs about $1707.79 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.75 budget, free margin was $9974.61). Size was cut from 0.86 to 0.04 units. Real risk on this trade is now about $4.59 (0.05% of balance) instead of the requested 1.00%.
+21/01/2026 20:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24885.9, SL: 24788.5742877922, TP: 25140.71)
+21/01/2026 20:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24885.9, SL: 24788.5742877922, TP: 25140.71) SUCCEEDED, PendingOrder OID73
+21/01/2026 20:00:00.000 | Info | Combo: bartime=2026-01-21 19:00, executed=2026-01-21 20:00:00, pending Buy placed at 24885.9; SL=24788.574287792195, TP=25140.710683417856; valid for the next 3 chart bar(s).
+23/01/2026 03:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.43 units, which needs about $6811.30 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.69 budget, free margin was $9969.49). Size was cut from 3.43 to 0.04 units. Real risk on this trade is now about $1.16 (0.01% of balance) instead of the requested 1.00%.
+23/01/2026 03:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 24805.7, SL: 24830.2912116635, TP: 24741.32)
+23/01/2026 03:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 24805.7, SL: 24830.2912116635, TP: 24741.32) SUCCEEDED, PendingOrder OID76
+23/01/2026 03:00:00.000 | Info | Combo: bartime=2026-01-23 02:00, executed=2026-01-23 03:00:00, pending Sell placed at 24805.7; SL=24830.29121166346, TP=24741.31718370311; valid for the next 3 chart bar(s).
+23/01/2026 04:00:00.000 | Info | Combo: bartime=2026-01-23 03:00, reversal - cancelling existing Sell pending order 76 before opening opposite direction.
+23/01/2026 04:00:00.000 | Trade | Cancelling pending order OID76
+23/01/2026 04:00:00.000 | Trade |  Cancelling pending order OID76 SUCCEEDED
+23/01/2026 04:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.58 units, which needs about $7109.17 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.69 budget, free margin was $9969.49). Size was cut from 3.58 to 0.04 units. Real risk on this trade is now about $1.11 (0.01% of balance) instead of the requested 1.00%.
+23/01/2026 04:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24851, SL: 24827.3965506692, TP: 24912.8)
+23/01/2026 04:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24851, SL: 24827.3965506692, TP: 24912.8) SUCCEEDED, PendingOrder OID77
+23/01/2026 04:00:00.000 | Info | Combo: bartime=2026-01-23 03:00, executed=2026-01-23 04:00:00, pending Buy placed at 24851; SL=24827.396550669233, TP=24912.79673303751; valid for the next 3 chart bar(s).
+23/01/2026 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.73 units, which needs about $7407.04 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.68 budget, free margin was $9968.21). Size was cut from 3.73 to 0.04 units. Real risk on this trade is now about $1.07 (0.01% of balance) instead of the requested 1.00%.
+23/01/2026 08:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 24812.6, SL: 24835.2205606859, TP: 24753.38)
+23/01/2026 08:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 24812.6, SL: 24835.2205606859, TP: 24753.38) SUCCEEDED, PendingOrder OID80
+23/01/2026 08:00:00.000 | Info | Combo: bartime=2026-01-23 07:00, executed=2026-01-23 08:00:00, pending Sell placed at 24812.6; SL=24835.22056068588, TP=24753.376590307835; valid for the next 3 chart bar(s).
+25/01/2026 23:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.63 units, which needs about $5222.66 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.67 budget, free margin was $9966.56). Size was cut from 2.63 to 0.04 units. Real risk on this trade is now about $1.51 (0.02% of balance) instead of the requested 1.00%.
+25/01/2026 23:05:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 24831.1, SL: 24863.1862833052, TP: 24747.09)
+25/01/2026 23:05:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 24831.1, SL: 24863.1862833052, TP: 24747.09) SUCCEEDED, PendingOrder OID83
+25/01/2026 23:05:00.000 | Info | Combo: bartime=2026-01-23 21:00, executed=2026-01-25 23:05:00, pending Sell placed at 24831.1; SL=24863.186283305164, TP=24747.094164421105; valid for the next 3 chart bar(s).
+26/01/2026 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.70 units, which needs about $5361.66 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.58 budget, free margin was $9958.31). Size was cut from 2.70 to 0.04 units. Real risk on this trade is now about $1.47 (0.01% of balance) instead of the requested 1.00%.
+26/01/2026 08:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24880, SL: 24848.7653814383, TP: 24961.78)
+26/01/2026 08:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24880, SL: 24848.7653814383, TP: 24961.78) SUCCEEDED, PendingOrder OID86
+26/01/2026 08:00:00.000 | Info | Combo: bartime=2026-01-26 07:00, executed=2026-01-26 08:00:00, pending Buy placed at 24880; SL=24848.765381438287, TP=24961.77607254507; valid for the next 3 chart bar(s).
+26/01/2026 12:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.34 units, which needs about $4646.78 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.56 budget, free margin was $9956.22). Size was cut from 2.34 to 0.04 units. Real risk on this trade is now about $1.70 (0.02% of balance) instead of the requested 1.00%.
+26/01/2026 12:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24862.2, SL: 24826.2488019971, TP: 24956.32)
+26/01/2026 12:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24862.2, SL: 24826.2488019971, TP: 24956.32) SUCCEEDED, PendingOrder OID89
+26/01/2026 12:00:00.000 | Info | Combo: bartime=2026-01-26 11:00, executed=2026-01-26 12:00:00, pending Buy placed at 24862.2; SL=24826.248801997124, TP=24956.32465755446; valid for the next 3 chart bar(s).
+27/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.87 units, which needs about $5699.25 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.60 budget, free margin was $9960.32). Size was cut from 2.87 to 0.04 units. Real risk on this trade is now about $1.39 (0.01% of balance) instead of the requested 1.00%.
+27/01/2026 09:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 24897.7, SL: 24927.0821058145, TP: 24820.77)
+27/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 24897.7, SL: 24927.0821058145, TP: 24820.77) SUCCEEDED, PendingOrder OID92
+27/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-27 08:00, executed=2026-01-27 09:00:00, pending Sell placed at 24897.7; SL=24927.082105814537, TP=24820.77403364414; valid for the next 3 chart bar(s).
+28/01/2026 05:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.28 units, which needs about $8499.23 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.59 budget, free margin was $9958.55). Size was cut from 4.28 to 0.04 units. Real risk on this trade is now about $0.93 (0.01% of balance) instead of the requested 1.00%.
+28/01/2026 05:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24920.7, SL: 24901.0101282462, TP: 24972.25)
+28/01/2026 05:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24920.7, SL: 24901.0101282462, TP: 24972.25) SUCCEEDED, PendingOrder OID95
+28/01/2026 05:00:00.000 | Info | Combo: bartime=2026-01-28 04:00, executed=2026-01-28 05:00:00, pending Buy placed at 24920.7; SL=24901.01012824619, TP=24972.250505659646; valid for the next 3 chart bar(s).
+28/01/2026 20:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.44 units, which needs about $4845.36 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.57 budget, free margin was $9957.43). Size was cut from 2.44 to 0.04 units. Real risk on this trade is now about $1.63 (0.02% of balance) instead of the requested 1.00%.
+28/01/2026 20:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24875.5, SL: 24840.9928006369, TP: 24965.84)
+28/01/2026 20:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24875.5, SL: 24840.9928006369, TP: 24965.84) SUCCEEDED, PendingOrder OID98
+28/01/2026 20:00:00.000 | Info | Combo: bartime=2026-01-28 19:00, executed=2026-01-28 20:00:00, pending Buy placed at 24875.5; SL=24840.992800636934, TP=24965.844091536313; valid for the next 3 chart bar(s).
+29/01/2026 01:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.49 units, which needs about $4944.65 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.54 budget, free margin was $9954.00). Size was cut from 2.49 to 0.04 units. Real risk on this trade is now about $1.59 (0.02% of balance) instead of the requested 1.00%.
+29/01/2026 01:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24887.5, SL: 24853.6926160167, TP: 24976.01)
+29/01/2026 01:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24887.5, SL: 24853.6926160167, TP: 24976.01) SUCCEEDED, PendingOrder OID101
+29/01/2026 01:00:00.000 | Info | Combo: bartime=2026-01-29 00:00, executed=2026-01-29 01:00:00, pending Buy placed at 24887.5; SL=24853.69261601671, TP=24976.01188881062; valid for the next 3 chart bar(s).
+29/01/2026 06:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.89 units, which needs about $3753.16 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.52 budget, free margin was $9952.34). Size was cut from 1.89 to 0.04 units. Real risk on this trade is now about $2.10 (0.02% of balance) instead of the requested 1.00%.
+29/01/2026 06:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 24750.5, SL: 24794.9535039356, TP: 24634.12)
+29/01/2026 06:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 24750.5, SL: 24794.9535039356, TP: 24634.12) SUCCEEDED, PendingOrder OID104
+29/01/2026 06:00:00.000 | Info | Combo: bartime=2026-01-29 05:00, executed=2026-01-29 06:00:00, pending Sell placed at 24750.5; SL=24794.953503935645, TP=24634.115259922535; valid for the next 3 chart bar(s).
+30/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.40 units, which needs about $2780.12 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.50 budget, free margin was $9950.03). Size was cut from 1.40 to 0.04 units. Real risk on this trade is now about $2.84 (0.03% of balance) instead of the requested 1.00%.
+30/01/2026 09:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24532.4, SL: 24472.2484543874, TP: 24689.88)
+30/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24532.4, SL: 24472.2484543874, TP: 24689.88) SUCCEEDED, PendingOrder OID107
+30/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-30 08:00, executed=2026-01-30 09:00:00, pending Buy placed at 24532.4; SL=24472.248454387365, TP=24689.884143691335; valid for the next 3 chart bar(s).
+02/02/2026 02:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.55 units, which needs about $3077.99 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.47 budget, free margin was $9946.92). Size was cut from 1.55 to 0.04 units. Real risk on this trade is now about $2.55 (0.03% of balance) instead of the requested 1.00%.
+02/02/2026 02:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 24355.1, SL: 24409.2073631159, TP: 24213.44)
+02/02/2026 02:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 24355.1, SL: 24409.2073631159, TP: 24213.44) SUCCEEDED, PendingOrder OID110
+02/02/2026 02:00:00.000 | Info | Combo: bartime=2026-02-02 01:00, executed=2026-02-02 02:00:00, pending Sell placed at 24355.1; SL=24409.207363115896, TP=24213.440269382652; valid for the next 3 chart bar(s).
+02/02/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.17 units, which needs about $2323.39 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.53 budget, free margin was $9953.31). Size was cut from 1.17 to 0.04 units. Real risk on this trade is now about $3.39 (0.03% of balance) instead of the requested 1.00%.
+02/02/2026 09:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24564.5, SL: 24492.7047034203, TP: 24752.47)
+02/02/2026 09:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24564.5, SL: 24492.7047034203, TP: 24752.47) SUCCEEDED, PendingOrder OID113
+02/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-02 08:00, executed=2026-02-02 09:00:00, pending Buy placed at 24564.5; SL=24492.704703420277, TP=24752.468915640762; valid for the next 3 chart bar(s).
+03/02/2026 11:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.40 units, which needs about $2780.12 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.62 budget, free margin was $9962.11). Size was cut from 1.40 to 0.04 units. Real risk on this trade is now about $2.84 (0.03% of balance) instead of the requested 1.00%.
+03/02/2026 11:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 24842.7, SL: 24902.8003143174, TP: 24685.35)
+03/02/2026 11:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 24842.7, SL: 24902.8003143174, TP: 24685.35) SUCCEEDED, PendingOrder OID116
+03/02/2026 11:00:00.000 | Info | Combo: bartime=2026-02-03 10:00, executed=2026-02-03 11:00:00, pending Sell placed at 24842.7; SL=24902.800314317432, TP=24685.349986139805; valid for the next 3 chart bar(s).
+04/02/2026 04:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.54 units, which needs about $5043.94 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.59 budget, free margin was $9959.04). Size was cut from 2.54 to 0.04 units. Real risk on this trade is now about $1.56 (0.02% of balance) instead of the requested 1.00%.
+04/02/2026 04:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24816.7, SL: 24783.5775123103, TP: 24903.42)
+04/02/2026 04:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24816.7, SL: 24783.5775123103, TP: 24903.42) SUCCEEDED, PendingOrder OID119
+04/02/2026 04:00:00.000 | Info | Combo: bartime=2026-02-04 03:00, executed=2026-02-04 04:00:00, pending Buy placed at 24816.7; SL=24783.577512310265, TP=24903.41874608737; valid for the next 3 chart bar(s).
+04/02/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.75 units, which needs about $3475.15 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.57 budget, free margin was $9956.95). Size was cut from 1.75 to 0.04 units. Real risk on this trade is now about $2.27 (0.02% of balance) instead of the requested 1.00%.
+04/02/2026 09:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 24687.1, SL: 24735.2190756462, TP: 24561.12)
+04/02/2026 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 24687.1, SL: 24735.2190756462, TP: 24561.12) SUCCEEDED, PendingOrder OID122
+04/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-04 08:00, executed=2026-02-04 09:00:00, pending Sell placed at 24687.1; SL=24735.21907564617, TP=24561.11834240209; valid for the next 3 chart bar(s).
+04/02/2026 13:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.58 units, which needs about $3137.57 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.54 budget, free margin was $9953.93). Size was cut from 1.58 to 0.04 units. Real risk on this trade is now about $2.52 (0.03% of balance) instead of the requested 1.00%.
+04/02/2026 13:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 24675.6, SL: 24728.9279823447, TP: 24535.98)
+04/02/2026 13:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 24675.6, SL: 24728.9279823447, TP: 24535.98) SUCCEEDED, PendingOrder OID125
+04/02/2026 13:00:00.000 | Info | Combo: bartime=2026-02-04 12:00, executed=2026-02-04 13:00:00, pending Sell placed at 24675.6; SL=24728.92798234467, TP=24535.980784087897; valid for the next 3 chart bar(s).
+05/02/2026 02:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.91 units, which needs about $3792.88 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.51 budget, free margin was $9951.30). Size was cut from 1.91 to 0.04 units. Real risk on this trade is now about $2.07 (0.02% of balance) instead of the requested 1.00%.
+05/02/2026 02:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24721.7, SL: 24677.746447184, TP: 24836.78)
+05/02/2026 02:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24721.7, SL: 24677.746447184, TP: 24836.78) SUCCEEDED, PendingOrder OID128
+05/02/2026 02:00:00.000 | Info | Combo: bartime=2026-02-05 01:00, executed=2026-02-05 02:00:00, pending Buy placed at 24721.7; SL=24677.74644718397, TP=24836.77580656366; valid for the next 3 chart bar(s).
+05/02/2026 05:00:00.000 | Trade | Cancelling pending order OID128
+05/02/2026 05:00:00.000 | Trade |  Cancelling pending order OID128 SUCCEEDED
+05/02/2026 05:00:00.000 | Info | Combo: pending order 128 cancelled after 3 chart bars.
+06/02/2026 02:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.23 units, which needs about $2442.54 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.51 budget, free margin was $9951.30). Size was cut from 1.23 to 0.04 units. Real risk on this trade is now about $3.22 (0.03% of balance) instead of the requested 1.00%.
+06/02/2026 02:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24479.5, SL: 24411.3256718762, TP: 24657.99)
+06/02/2026 02:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24479.5, SL: 24411.3256718762, TP: 24657.99) SUCCEEDED, PendingOrder OID129
+06/02/2026 02:00:00.000 | Info | Combo: bartime=2026-02-06 01:00, executed=2026-02-06 02:00:00, pending Buy placed at 24479.5; SL=24411.325671876235, TP=24657.98877492597; valid for the next 3 chart bar(s).
+06/02/2026 06:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.42 units, which needs about $2819.84 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.47 budget, free margin was $9947.43). Size was cut from 1.42 to 0.04 units. Real risk on this trade is now about $2.80 (0.03% of balance) instead of the requested 1.00%.
+06/02/2026 06:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24536, SL: 24476.6592460805, TP: 24691.36)
+06/02/2026 06:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24536, SL: 24476.6592460805, TP: 24691.36) SUCCEEDED, PendingOrder OID132
+06/02/2026 06:00:00.000 | Info | Combo: bartime=2026-02-06 05:00, executed=2026-02-06 06:00:00, pending Buy placed at 24536; SL=24476.659246080508, TP=24691.361391329676; valid for the next 3 chart bar(s).
+10/02/2026 13:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.43 units, which needs about $4825.50 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.44 budget, free margin was $9944.48). Size was cut from 2.43 to 0.04 units. Real risk on this trade is now about $1.64 (0.02% of balance) instead of the requested 1.00%.
+10/02/2026 13:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 24959, SL: 24993.6595214816, TP: 24868.26)
+10/02/2026 13:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 24959, SL: 24993.6595214816, TP: 24868.26) SUCCEEDED, PendingOrder OID135
+10/02/2026 13:00:00.000 | Info | Combo: bartime=2026-02-10 12:00, executed=2026-02-10 13:00:00, pending Sell placed at 24959; SL=24993.659521481626, TP=24868.257110425126; valid for the next 3 chart bar(s).
+10/02/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.47 units, which needs about $4904.93 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.43 budget, free margin was $9942.64). Size was cut from 2.47 to 0.04 units. Real risk on this trade is now about $1.61 (0.02% of balance) instead of the requested 1.00%.
+10/02/2026 16:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 24984.9, SL: 25019.0073485986, TP: 24895.6)
+10/02/2026 16:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 24984.9, SL: 25019.0073485986, TP: 24895.6) SUCCEEDED, PendingOrder OID138
+10/02/2026 16:00:00.000 | Info | Combo: bartime=2026-02-10 15:00, executed=2026-02-10 16:00:00, pending Sell placed at 24984.9; SL=25019.007348598596, TP=24895.602766937667; valid for the next 3 chart bar(s).
+10/02/2026 21:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.90 units, which needs about $5758.82 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.41 budget, free margin was $9940.79). Size was cut from 2.90 to 0.04 units. Real risk on this trade is now about $1.37 (0.01% of balance) instead of the requested 1.00%.
+10/02/2026 21:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 24967.1, SL: 24996.1611566608, TP: 24891.01)
+10/02/2026 21:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 24967.1, SL: 24996.1611566608, TP: 24891.01) SUCCEEDED, PendingOrder OID141
+10/02/2026 21:00:00.000 | Info | Combo: bartime=2026-02-10 20:00, executed=2026-02-10 21:00:00, pending Sell placed at 24967.1; SL=24996.161156660786, TP=24891.01431799813; valid for the next 3 chart bar(s).
+11/02/2026 01:00:00.000 | Trade | Cancelling pending order OID141
+11/02/2026 01:00:00.000 | Trade |  Cancelling pending order OID141 SUCCEEDED
+11/02/2026 01:00:00.000 | Info | Combo: pending order 141 cancelled after 3 chart bars.
+11/02/2026 05:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.65 units, which needs about $9233.98 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.41 budget, free margin was $9940.79). Size was cut from 4.65 to 0.04 units. Real risk on this trade is now about $0.85 (0.01% of balance) instead of the requested 1.00%.
+11/02/2026 05:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 24979.7, SL: 24997.820762869, TP: 24932.26)
+11/02/2026 05:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 24979.7, SL: 24997.820762869, TP: 24932.26) SUCCEEDED, PendingOrder OID142
+11/02/2026 05:00:00.000 | Info | Combo: bartime=2026-02-11 04:00, executed=2026-02-11 05:00:00, pending Sell placed at 24979.7; SL=24997.820762869047, TP=24932.257614365506; valid for the next 3 chart bar(s).
+11/02/2026 08:00:00.000 | Info | Combo: bartime=2026-02-11 07:00, Sell signal skipped: already have same-direction exposure open.
+12/02/2026 01:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.86 units, which needs about $5679.39 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.43 budget, free margin was $9943.29). Size was cut from 2.86 to 0.04 units. Real risk on this trade is now about $1.39 (0.01% of balance) instead of the requested 1.00%.
+12/02/2026 01:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24939.3, SL: 24909.8804949508, TP: 25016.32)
+12/02/2026 01:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24939.3, SL: 24909.8804949508, TP: 25016.32) SUCCEEDED, PendingOrder OID145
+12/02/2026 01:00:00.000 | Info | Combo: bartime=2026-02-12 00:00, executed=2026-02-12 01:00:00, pending Buy placed at 24939.3; SL=24909.880494950845, TP=25016.323882151348; valid for the next 3 chart bar(s).
+12/02/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.51 units, which needs about $2998.56 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.47 budget, free margin was $9947.06). Size was cut from 1.51 to 0.04 units. Real risk on this trade is now about $2.62 (0.03% of balance) instead of the requested 1.00%.
+12/02/2026 16:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 24981.9, SL: 25037.4929477523, TP: 24836.35)
+12/02/2026 16:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 24981.9, SL: 25037.4929477523, TP: 24836.35) SUCCEEDED, PendingOrder OID148
+12/02/2026 16:00:00.000 | Info | Combo: bartime=2026-02-12 15:00, executed=2026-02-12 16:00:00, pending Sell placed at 24981.9; SL=25037.492947752336, TP=24836.350826111207; valid for the next 3 chart bar(s).
+13/02/2026 14:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.68 units, which needs about $3336.15 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.54 budget, free margin was $9953.74). Size was cut from 1.68 to 0.04 units. Real risk on this trade is now about $2.37 (0.02% of balance) instead of the requested 1.00%.
+13/02/2026 14:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24939.3, SL: 24889.0969675128, TP: 25070.74)
+13/02/2026 14:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24939.3, SL: 24889.0969675128, TP: 25070.74) SUCCEEDED, PendingOrder OID151
+13/02/2026 14:00:00.000 | Info | Combo: bartime=2026-02-13 13:00, executed=2026-02-13 14:00:00, pending Buy placed at 24939.3; SL=24889.096967512774, TP=25070.73771288726; valid for the next 3 chart bar(s).
+13/02/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.40 units, which needs about $2780.12 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.51 budget, free margin was $9951.03). Size was cut from 1.40 to 0.04 units. Real risk on this trade is now about $2.84 (0.03% of balance) instead of the requested 1.00%.
+13/02/2026 16:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24954.8, SL: 24894.6202752082, TP: 25112.36)
+13/02/2026 16:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24954.8, SL: 24894.6202752082, TP: 25112.36) SUCCEEDED, PendingOrder OID154
+13/02/2026 16:00:00.000 | Info | Combo: bartime=2026-02-13 15:00, executed=2026-02-13 16:00:00, pending Buy placed at 24954.8; SL=24894.620275208177, TP=25112.357920247847; valid for the next 3 chart bar(s).
+16/02/2026 13:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.66 units, which needs about $5282.23 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.48 budget, free margin was $9947.70). Size was cut from 2.66 to 0.04 units. Real risk on this trade is now about $1.49 (0.02% of balance) instead of the requested 1.00%.
+16/02/2026 13:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 24908.2, SL: 24939.8711716814, TP: 24825.28)
+16/02/2026 13:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 24908.2, SL: 24939.8711716814, TP: 24825.28) SUCCEEDED, PendingOrder OID157
+16/02/2026 13:00:00.000 | Info | Combo: bartime=2026-02-16 12:00, executed=2026-02-16 13:00:00, pending Sell placed at 24908.2; SL=24939.871171681385, TP=24825.280977701488; valid for the next 3 chart bar(s).
+17/02/2026 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.20 units, which needs about $4368.76 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.52 budget, free margin was $9951.73). Size was cut from 2.20 to 0.04 units. Real risk on this trade is now about $1.80 (0.02% of balance) instead of the requested 1.00%.
+17/02/2026 10:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24882, SL: 24843.737927044, TP: 24982.17)
+17/02/2026 10:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24882, SL: 24843.737927044, TP: 24982.17) SUCCEEDED, PendingOrder OID160
+17/02/2026 10:00:00.000 | Info | Combo: bartime=2026-02-17 09:00, executed=2026-02-17 10:00:00, pending Buy placed at 24882; SL=24843.737927043967, TP=24982.174812367088; valid for the next 3 chart bar(s).
+17/02/2026 13:00:00.000 | Trade | Cancelling pending order OID160
+17/02/2026 13:00:00.000 | Trade |  Cancelling pending order OID160 SUCCEEDED
+17/02/2026 13:00:00.000 | Info | Combo: pending order 160 cancelled after 3 chart bars.
+17/02/2026 14:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.53 units, which needs about $3038.28 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.52 budget, free margin was $9951.73). Size was cut from 1.53 to 0.04 units. Real risk on this trade is now about $2.59 (0.03% of balance) instead of the requested 1.00%.
+17/02/2026 14:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 24878, SL: 24823.0309653172, TP: 25021.92)
+17/02/2026 14:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 24878, SL: 24823.0309653172, TP: 25021.92) SUCCEEDED, PendingOrder OID161
+17/02/2026 14:00:00.000 | Info | Combo: bartime=2026-02-17 13:00, executed=2026-02-17 14:00:00, pending Buy placed at 24878; SL=24823.030965317208, TP=25021.91569274556; valid for the next 3 chart bar(s).
+23/02/2026 01:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.27 units, which needs about $4507.77 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.49 budget, free margin was $9948.92). Size was cut from 2.27 to 0.04 units. Real risk on this trade is now about $1.75 (0.02% of balance) instead of the requested 1.00%.
+23/02/2026 01:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 25110.2, SL: 25147.2281392897, TP: 25013.26)
+23/02/2026 01:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 25110.2, SL: 25147.2281392897, TP: 25013.26) SUCCEEDED, PendingOrder OID164
+23/02/2026 01:00:00.000 | Info | Combo: bartime=2026-02-23 00:00, executed=2026-02-23 01:00:00, pending Sell placed at 25110.2; SL=25147.228139289677, TP=25013.25577771732; valid for the next 3 chart bar(s).
+23/02/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.53 units, which needs about $5024.08 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.47 budget, free margin was $9946.91). Size was cut from 2.53 to 0.04 units. Real risk on this trade is now about $1.57 (0.02% of balance) instead of the requested 1.00%.
+23/02/2026 09:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 25180.3, SL: 25147.0200572562, TP: 25267.43)
+23/02/2026 09:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 25180.3, SL: 25147.0200572562, TP: 25267.43) SUCCEEDED, PendingOrder OID167
+23/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-23 08:00, executed=2026-02-23 09:00:00, pending Buy placed at 25180.3; SL=25147.02005725622, TP=25267.430982782254; valid for the next 3 chart bar(s).
+23/02/2026 14:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.97 units, which needs about $3912.03 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.44 budget, free margin was $9944.20). Size was cut from 1.97 to 0.04 units. Real risk on this trade is now about $2.01 (0.02% of balance) instead of the requested 1.00%.
+23/02/2026 14:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 25180.6, SL: 25138.0030368737, TP: 25292.12)
+23/02/2026 14:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 25180.6, SL: 25138.0030368737, TP: 25292.12) SUCCEEDED, PendingOrder OID170
+23/02/2026 14:00:00.000 | Info | Combo: bartime=2026-02-23 13:00, executed=2026-02-23 14:00:00, pending Buy placed at 25180.6; SL=25138.003036873717, TP=25292.124087926088; valid for the next 3 chart bar(s).
+23/02/2026 15:00:00.000 | Info | Combo: bartime=2026-02-23 14:00, reversal - cancelling existing Buy pending order 170 before opening opposite direction.
+23/02/2026 15:00:00.000 | Trade | Cancelling pending order OID170
+23/02/2026 15:00:00.000 | Trade |  Cancelling pending order OID170 SUCCEEDED
+23/02/2026 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.95 units, which needs about $3872.31 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.44 budget, free margin was $9944.20). Size was cut from 1.95 to 0.04 units. Real risk on this trade is now about $2.04 (0.02% of balance) instead of the requested 1.00%.
+23/02/2026 15:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 25095.7, SL: 25138.886890501, TP: 24982.63)
+23/02/2026 15:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 25095.7, SL: 25138.886890501, TP: 24982.63) SUCCEEDED, PendingOrder OID171
+23/02/2026 15:00:00.000 | Info | Combo: bartime=2026-02-23 14:00, executed=2026-02-23 15:00:00, pending Sell placed at 25095.7; SL=25138.886890501024, TP=24982.63140965913; valid for the next 3 chart bar(s).
+24/02/2026 05:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.27 units, which needs about $8479.37 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.50 budget, free margin was $9949.67). Size was cut from 4.27 to 0.04 units. Real risk on this trade is now about $0.93 (0.01% of balance) instead of the requested 1.00%.
+24/02/2026 05:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 25054.7, SL: 25034.956333935, TP: 25106.39)
+24/02/2026 05:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 25054.7, SL: 25034.956333935, TP: 25106.39) SUCCEEDED, PendingOrder OID174
+24/02/2026 05:00:00.000 | Info | Combo: bartime=2026-02-24 04:00, executed=2026-02-24 05:00:00, pending Buy placed at 25054.7; SL=25034.95633393505, TP=25106.391345781696; valid for the next 3 chart bar(s).
+24/02/2026 08:00:00.000 | Trade | Cancelling pending order OID174
+24/02/2026 08:00:00.000 | Trade |  Cancelling pending order OID174 SUCCEEDED
+24/02/2026 08:00:00.000 | Info | Combo: pending order 174 cancelled after 3 chart bars.
+24/02/2026 12:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.82 units, which needs about $5599.96 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.50 budget, free margin was $9949.67). Size was cut from 2.82 to 0.04 units. Real risk on this trade is now about $1.41 (0.01% of balance) instead of the requested 1.00%.
+24/02/2026 12:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 25001.8, SL: 24971.9053652914, TP: 25080.07)
+24/02/2026 12:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 25001.8, SL: 24971.9053652914, TP: 25080.07) SUCCEEDED, PendingOrder OID175
+24/02/2026 12:00:00.000 | Info | Combo: bartime=2026-02-24 11:00, executed=2026-02-24 12:00:00, pending Buy placed at 25001.8; SL=24971.905365291415, TP=25080.067830029915; valid for the next 3 chart bar(s).
+24/02/2026 13:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.36 units, which needs about $4686.49 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.48 budget, free margin was $9948.20). Size was cut from 2.36 to 0.04 units. Real risk on this trade is now about $1.68 (0.02% of balance) instead of the requested 1.00%.
+24/02/2026 13:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 24908.3, SL: 24943.9700677669, TP: 24814.91)
+24/02/2026 13:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 24908.3, SL: 24943.9700677669, TP: 24814.91) SUCCEEDED, PendingOrder OID178
+24/02/2026 13:00:00.000 | Info | Combo: bartime=2026-02-24 12:00, executed=2026-02-24 13:00:00, pending Sell placed at 24908.3; SL=24943.970067766866, TP=24814.911375976066; valid for the next 3 chart bar(s).
+24/02/2026 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.72 units, which needs about $3415.58 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.46 budget, free margin was $9945.96). Size was cut from 1.72 to 0.04 units. Real risk on this trade is now about $2.31 (0.02% of balance) instead of the requested 1.00%.
+24/02/2026 15:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 25059.7, SL: 25010.7693086292, TP: 25187.81)
+24/02/2026 15:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 25059.7, SL: 25010.7693086292, TP: 25187.81) SUCCEEDED, PendingOrder OID181
+24/02/2026 15:00:00.000 | Info | Combo: bartime=2026-02-24 14:00, executed=2026-02-24 15:00:00, pending Buy placed at 25059.7; SL=25010.769308629206, TP=25187.80656737532; valid for the next 3 chart bar(s).
+25/02/2026 07:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.71 units, which needs about $9353.12 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.43 budget, free margin was $9943.37). Size was cut from 4.71 to 0.04 units. Real risk on this trade is now about $0.84 (0.01% of balance) instead of the requested 1.00%.
+25/02/2026 07:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 25013.8, SL: 25031.6825515789, TP: 24966.98)
+25/02/2026 07:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 25013.8, SL: 25031.6825515789, TP: 24966.98) SUCCEEDED, PendingOrder OID184
+25/02/2026 07:00:00.000 | Info | Combo: bartime=2026-02-25 06:00, executed=2026-02-25 07:00:00, pending Sell placed at 25013.8; SL=25031.68255157887, TP=24966.981280817778; valid for the next 3 chart bar(s).
+26/02/2026 04:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.42 units, which needs about $8777.24 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.42 budget, free margin was $9942.19). Size was cut from 4.42 to 0.04 units. Real risk on this trade is now about $0.90 (0.01% of balance) instead of the requested 1.00%.
+26/02/2026 04:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 25145.5, SL: 25164.559889009, TP: 25095.6)
+26/02/2026 04:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 25145.5, SL: 25164.559889009, TP: 25095.6) SUCCEEDED, PendingOrder OID187
+26/02/2026 04:00:00.000 | Info | Combo: bartime=2026-02-26 03:00, executed=2026-02-26 04:00:00, pending Sell placed at 25145.5; SL=25164.559889008986, TP=25095.598866639903; valid for the next 3 chart bar(s).
+26/02/2026 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.47 units, which needs about $4904.93 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.45 budget, free margin was $9944.64). Size was cut from 2.47 to 0.04 units. Real risk on this trade is now about $1.61 (0.02% of balance) instead of the requested 1.00%.
+26/02/2026 10:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 25219.1, SL: 25185.0459598988, TP: 25308.26)
+26/02/2026 10:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 25219.1, SL: 25185.0459598988, TP: 25308.26) SUCCEEDED, PendingOrder OID190
+26/02/2026 10:00:00.000 | Info | Combo: bartime=2026-02-26 09:00, executed=2026-02-26 10:00:00, pending Buy placed at 25219.1; SL=25185.045959898827, TP=25308.257664860346; valid for the next 3 chart bar(s).
+27/02/2026 07:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.93 units, which needs about $7804.20 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.49 budget, free margin was $9948.60). Size was cut from 3.93 to 0.04 units. Real risk on this trade is now about $1.01 (0.01% of balance) instead of the requested 1.00%.
+27/02/2026 07:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 25248.6, SL: 25270.0601905, TP: 25192.41)
+27/02/2026 07:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 25248.6, SL: 25270.0601905, TP: 25192.41) SUCCEEDED, PendingOrder OID193
+27/02/2026 07:00:00.000 | Info | Combo: bartime=2026-02-27 06:00, executed=2026-02-27 07:00:00, pending Sell placed at 25248.6; SL=25270.060190500044, TP=25192.4145821536; valid for the next 3 chart bar(s).
+27/02/2026 08:00:00.000 | Info | Combo: bartime=2026-02-27 07:00, reversal - cancelling existing Sell pending order 193 before opening opposite direction.
+27/02/2026 08:00:00.000 | Trade | Cancelling pending order OID193
+27/02/2026 08:00:00.000 | Trade |  Cancelling pending order OID193 SUCCEEDED
+27/02/2026 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.68 units, which needs about $7307.75 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.49 budget, free margin was $9948.60). Size was cut from 3.68 to 0.04 units. Real risk on this trade is now about $1.08 (0.01% of balance) instead of the requested 1.00%.
+27/02/2026 08:00:00.000 | Trade | Placing Stop Order to Buy 0.04 GER40.cash (Price: 25323, SL: 25300.1338876, TP: 25382.87)
+27/02/2026 08:00:00.000 | Trade |  Placing Stop Order to Buy 0.04 GER40.cash (Price: 25323, SL: 25300.1338876, TP: 25382.87) SUCCEEDED, PendingOrder OID194
+27/02/2026 08:00:00.000 | Info | Combo: bartime=2026-02-27 07:00, executed=2026-02-27 08:00:00, pending Buy placed at 25323; SL=25300.133887599965, TP=25382.86629427712; valid for the next 3 chart bar(s).
+27/02/2026 14:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 1.82 units, which needs about $3614.16 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.47 budget, free margin was $9947.26). Size was cut from 1.82 to 0.04 units. Real risk on this trade is now about $2.18 (0.02% of balance) instead of the requested 1.00%.
+27/02/2026 14:00:00.000 | Trade | Placing Stop Order to Sell 0.04 GER40.cash (Price: 25183.7, SL: 25229.8876131322, TP: 25062.78)
+27/02/2026 14:00:00.000 | Trade |  Placing Stop Order to Sell 0.04 GER40.cash (Price: 25183.7, SL: 25229.8876131322, TP: 25062.78) SUCCEEDED, PendingOrder OID197
+27/02/2026 14:00:00.000 | Info | Combo: bartime=2026-02-27 13:00, executed=2026-02-27 14:00:00, pending Sell placed at 25183.7; SL=25229.887613132196, TP=25062.77514878982; valid for the next 3 chart bar(s).
+27/02/2026 17:00:00.000 | Trade | Cancelling pending order OID197
+27/02/2026 17:00:00.000 | Trade |  Cancelling pending order OID197 SUCCEEDED
+27/02/2026 17:00:00.000 | Info | Combo: pending order 197 cancelled after 3 chart bars.
+27/02/2026 20:49:00.000 | Info | Combo: loaded=3931, processed=75, before-start=3568, not-processed=288, placed=73, failed=0, guard-skipped=0, pending-expired=8, same-direction-skipped=2, reversed=6, margin-capped=73, margin-blocked=0.
+Progress | Backtesting | 98.08 % |
+Info | CBot instance [Combo, GER40.cash, h1] stopped.
+{
+	"Equity":9947.25,
+	"NetProfit":-52.74,
+	"MaxBalanceDrawdownPercentages":0,
+	"MaxEquityDrawdownPercentages":0,
+	"MaxBalanceDrawdown":59.21,
+	"MaxEquityDrawdown":61.29,
+	"WinningTrades":13,
+	"LosingTrades":48,
+	"TotalTrades":61,
+	"AverageTrade":-0.86,
+	"ProfitFactor":0.52,
+	"Fitness":0
+}
+

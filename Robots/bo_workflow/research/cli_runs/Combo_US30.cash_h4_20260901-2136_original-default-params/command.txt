@@ -1,0 +1,6 @@
+﻿ctrader-cli backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo --start=01/01/2025 --end=09/01/2026 --data-mode=Ticks --ctid=votuankiet96@gmail.com --pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --symbol=US30.cash --period=h4 --full-access --SignalFilePath=Z:\Desktop\og_program\runtime\exports\combo_US30_H4_full_history_signals.csv --RiskPercent=0.5 --report-json=report.json
+
+Ghi chu: day la LUOT GOC (dau tien chay thanh cong qua CLI trong phien 2026-09-01),
+dung tham so MAC DINH (KslLevel=3, KtpLevel=3, cac Position Management tat)
+ngoai tru RiskPercent=0.5 duoc chi dinh rieng. Da di chuyen tu vi tri tam
+scratchpad sang day de luu vinh vien, khong doi noi dung.

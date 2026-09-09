@@ -1,0 +1,118 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_11sym_1wk_20260904\US500\params.cbotset 
+--start=01/01/2025 --end=08/01/2025 --data-mode=Ticks --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=US500.cash 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_11sym_1wk_20260904\US500\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...500\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | US500.cash                | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 08/01/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 2                         | cbotset              |
+| KtpLevel             | 4                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 50                        | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+04/09/2026 15:53:22.542 | Establishing connection using votuankiet96@gmail.com...
+04/09/2026 15:53:28.776 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Info | CBot instance [Combo, US500.cash, h1] started.
+Progress | Backtesting | 12.02 % |
+Progress | Backtesting | 14.06 % |
+Progress | Backtesting | 14.06 % |
+Progress | Backtesting | 15.12 % |
+Progress | Backtesting | 16.61 % |
+Progress | Backtesting | 16.96 % |
+Progress | Backtesting | 17.26 % |
+Progress | Backtesting | 18.28 % |
+Progress | Backtesting | 19.46 % |
+Progress | Backtesting | 20.14 % |
+Progress | Backtesting | 28.66 % |
+Progress | Backtesting | 32.28 % |
+Progress | Backtesting | 33.38 % |
+Progress | Backtesting | 35.05 % |
+Progress | Backtesting | 63.25 % |
+Progress | Backtesting | 68.81 % |
+Progress | Backtesting | 70.36 % |
+Progress | Backtesting | 71.81 % |
+Progress | Backtesting | 73.34 % |
+Progress | Backtesting | 79.23 % |
+Progress | Backtesting | 82.75 % |
+Progress | Backtesting | 83.46 % |
+Progress | Backtesting | 84.53 % |
+Progress | Backtesting | 96.08 % |
+Progress | Backtesting | 97.12 % |
+Progress | Backtesting | 97.91 % |
+01/01/2025 23:05:00.003 | Info | Combo: loaded 4530 valid signal row(s) from CSV.
+01/01/2025 23:05:00.003 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+02/01/2025 03:00:00.067 | Trade | Placing Stop Order to Buy 5.32 US500.cash (Price: 5903.7, SL: 5884.93339904153, TP: 5952.83)
+02/01/2025 03:00:00.067 | Trade |  Placing Stop Order to Buy 5.32 US500.cash (Price: 5903.7, SL: 5884.93339904153, TP: 5952.83) SUCCEEDED, PendingOrder OID1
+02/01/2025 03:00:00.067 | Info | Combo: bartime=2025-01-02 02:00, executed=2025-01-02 03:00:00, pending Buy placed at 5903.7; SL=5884.933399041534, TP=5952.830961309263; valid for the next 3 chart bar(s).
+02/01/2025 05:00:00.931 | Info | Combo: bartime=2025-01-02 04:00, Buy signal skipped: already have same-direction exposure open.
+02/01/2025 16:00:00.274 | Trade | Placing Stop Order to Sell 3.72 US500.cash (Price: 5879.7, SL: 5906.23146014733, TP: 5810.24)
+02/01/2025 16:00:00.274 | Trade |  Placing Stop Order to Sell 3.72 US500.cash (Price: 5879.7, SL: 5906.23146014733, TP: 5810.24) SUCCEEDED, PendingOrder OID4
+02/01/2025 16:00:00.274 | Info | Combo: bartime=2025-01-02 15:00, executed=2025-01-02 16:00:00, pending Sell placed at 5879.7; SL=5906.231460147334, TP=5810.240637334279; valid for the next 3 chart bar(s).
+06/01/2025 20:00:00.150 | Trade | Placing Stop Order to Sell 5.61 US500.cash (Price: 5960.7, SL: 5978.13353928616, TP: 5915.06)
+06/01/2025 20:00:00.150 | Trade |  Placing Stop Order to Sell 5.61 US500.cash (Price: 5960.7, SL: 5978.13353928616, TP: 5915.06) SUCCEEDED, PendingOrder OID7
+06/01/2025 20:00:00.150 | Info | Combo: bartime=2025-01-06 19:00, executed=2025-01-06 20:00:00, pending Sell placed at 5960.7; SL=5978.1335392861565, TP=5915.0589941488415; valid for the next 3 chart bar(s).
+07/01/2025 11:00:00.386 | Trade | Placing Stop Order to Buy 10.16 US500.cash (Price: 5982.1, SL: 5972.56713177031, TP: 6007.06)
+07/01/2025 11:00:00.386 | Trade |  Placing Stop Order to Buy 10.16 US500.cash (Price: 5982.1, SL: 5972.56713177031, TP: 6007.06) SUCCEEDED, PendingOrder OID10
+07/01/2025 11:00:00.386 | Info | Combo: bartime=2025-01-07 10:00, executed=2025-01-07 11:00:00, pending Buy placed at 5982.1; SL=5972.567131770311, TP=6007.057049025327; valid for the next 3 chart bar(s).
+07/01/2025 16:00:00.306 | Trade | Placing Stop Order to Sell 4.47 US500.cash (Price: 5921.4, SL: 5942.8003702615, TP: 5865.37)
+07/01/2025 16:00:00.306 | Trade |  Placing Stop Order to Sell 4.47 US500.cash (Price: 5921.4, SL: 5942.8003702615, TP: 5865.37) SUCCEEDED, PendingOrder OID13
+07/01/2025 16:00:00.306 | Info | Combo: bartime=2025-01-07 15:00, executed=2025-01-07 16:00:00, pending Sell placed at 5921.4; SL=5942.800370261504, TP=5865.373830655381; valid for the next 3 chart bar(s).
+08/01/2025 17:00:00.385 | Trade | Placing Stop Order to Buy 4.03 US500.cash (Price: 5920.3, SL: 5896.79162035567, TP: 5981.84)
+08/01/2025 17:00:00.385 | Trade |  Placing Stop Order to Buy 4.03 US500.cash (Price: 5920.3, SL: 5896.79162035567, TP: 5981.84) SUCCEEDED, PendingOrder OID16
+08/01/2025 17:00:00.385 | Info | Combo: bartime=2025-01-08 16:00, executed=2025-01-08 17:00:00, pending Buy placed at 5920.3; SL=5896.791620355674, TP=5981.844937908845; valid for the next 3 chart bar(s).
+08/01/2025 18:00:00.091 | Info | Combo: bartime=2025-01-08 17:00, reversal - cancelling existing Buy pending order 16 before opening opposite direction.
+08/01/2025 18:00:00.091 | Trade | Cancelling pending order OID16
+08/01/2025 18:00:00.091 | Trade |  Cancelling pending order OID16 SUCCEEDED
+08/01/2025 18:00:00.091 | Trade | Placing Stop Order to Sell 3.44 US500.cash (Price: 5870.2, SL: 5897.70670371546, TP: 5798.19)
+08/01/2025 18:00:00.091 | Trade |  Placing Stop Order to Sell 3.44 US500.cash (Price: 5870.2, SL: 5897.70670371546, TP: 5798.19) SUCCEEDED, PendingOrder OID17
+08/01/2025 18:00:00.091 | Info | Combo: bartime=2025-01-08 17:00, executed=2025-01-08 18:00:00, pending Sell placed at 5870.2; SL=5897.70670371546, TP=5798.187449672923; valid for the next 3 chart bar(s).
+08/01/2025 21:00:00.097 | Trade | Cancelling pending order OID17
+08/01/2025 21:00:00.097 | Trade |  Cancelling pending order OID17 SUCCEEDED
+08/01/2025 21:00:00.097 | Info | Combo: pending order 17 cancelled after 3 chart bars.
+08/01/2025 21:00:00.097 | Trade | Placing Stop Order to Buy 3.52 US500.cash (Price: 5918.2, SL: 5891.33816769768, TP: 5988.52)
+08/01/2025 21:00:00.097 | Trade |  Placing Stop Order to Buy 3.52 US500.cash (Price: 5918.2, SL: 5891.33816769768, TP: 5988.52) SUCCEEDED, PendingOrder OID18
+08/01/2025 21:00:00.097 | Info | Combo: bartime=2025-01-08 20:00, executed=2025-01-08 21:00:00, pending Buy placed at 5918.2; SL=5891.338167697684, TP=5988.524276967463; valid for the next 3 chart bar(s).
+08/01/2025 23:59:59.487 | Info | Combo: loaded=4530, processed=9, before-start=3669, not-processed=852, placed=8, failed=0, guard-skipped=0, pending-expired=1, same-direction-skipped=1, reversed=1, margin-capped=0, margin-blocked=0.
+Progress | Backtesting | 100.00 % |
+Info | CBot instance [Combo, US500.cash, h1] stopped.
+{
+	"Equity":9439.36,
+	"NetProfit":-560.63,
+	"MaxBalanceDrawdownPercentages":5,
+	"MaxEquityDrawdownPercentages":7,
+	"MaxBalanceDrawdown":560.63,
+	"MaxEquityDrawdown":768.49,
+	"WinningTrades":0,
+	"LosingTrades":6,
+	"TotalTrades":6,
+	"AverageTrade":-93.43,
+	"ProfitFactor":0,
+	"Fitness":0
+}
+

@@ -1,0 +1,52 @@
+﻿{
+    "SchemaVersion":  1,
+    "ExperimentId":  "Combo_US30_h4_2025_KSL-KTP_20260902-052051",
+    "Status":  "completed",
+    "CreatedAtUtc":  "2026-09-02T12:20:51.8469452Z",
+    "Bot":  "Combo",
+    "AlgoPath":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\Combo.algo",
+    "AlgoSHA256":  "206A64B72134352FD83EB8947A7B62A3BEEF7ED36234C23B43073FB4FF09A62A",
+    "Broker":  "FTMO Platform",
+    "Account":  "7563609",
+    "Symbol":  "US30.cash",
+    "Period":  "h4",
+    "StartDate":  "2025-01-01",
+    "EndDate":  "2026-01-01",
+    "DataMode":  "Ticks",
+    "SignalFilePath":  "Z:\\Desktop\\og_program\\runtime\\exports\\combo_US30_H4_full_history_signals.csv",
+    "SignalSHA256":  "78CA9AE7F2751ADFBD81B6E5016C29F7BFA3A1995A3149956E6B841A3DA85639",
+    "Defaults":  "All parameters except KslLevel/KtpLevel",
+    "Grid":  {
+                 "KslLevel":  [
+                                  "Fib0236",
+                                  "Fib0382",
+                                  "Fib0500",
+                                  "Fib0618",
+                                  "Fib0786",
+                                  "Fib1000",
+                                  "Fib1272",
+                                  "Fib1618",
+                                  "Fib2000",
+                                  "Fib2618"
+                              ],
+                 "KtpLevel":  [
+                                  "Fib0236",
+                                  "Fib0382",
+                                  "Fib0500",
+                                  "Fib0618",
+                                  "Fib0786",
+                                  "Fib1000",
+                                  "Fib1272",
+                                  "Fib1618",
+                                  "Fib2000",
+                                  "Fib2618"
+                              ]
+             },
+    "TotalRuns":  100,
+    "MaxParallel":  10,
+    "CompletedRuns":  100,
+    "SuccessfulRuns":  100,
+    "FailedRuns":  0,
+    "LastCheckpointUtc":  "2026-09-02T12:49:58.1581815Z",
+    "CompletedAtUtc":  "2026-09-02T12:49:58.1581815Z"
+}

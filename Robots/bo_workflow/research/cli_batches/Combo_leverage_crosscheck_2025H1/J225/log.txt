@@ -1,0 +1,1167 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_leverage_crosscheck_2025H1\J225\params.cbotset 
+--start=01/01/2025 --end=01/07/2025 --data-mode=M1 --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=JP225.cash 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_leverage_crosscheck_2025H1\J225\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...225\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | JP225.cash                | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 01/07/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | M1                        | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 2                         | cbotset              |
+| KtpLevel             | 4                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 50                        | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+04/09/2026 04:54:56.806 | Establishing connection using votuankiet96@gmail.com...
+04/09/2026 04:55:01.516 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Info | CBot instance [Combo, JP225.cash, h1] started.
+Progress | Backtesting | 0.53 % |
+Progress | Backtesting | 0.57 % |
+Progress | Loading USDJPY, h1 | 1.56 % |
+Progress | Loading USDJPY, h1 | 3.12 % |
+Progress | Loading USDJPY, h1 | 4.69 % |
+Progress | Loading USDJPY, h1 | 6.25 % |
+Progress | Loading USDJPY, h1 | 7.81 % |
+Progress | Loading USDJPY, h1 | 9.38 % |
+Progress | Loading USDJPY, h1 | 10.94 % |
+Progress | Loading USDJPY, h1 | 12.50 % |
+Progress | Loading USDJPY, h1 | 14.06 % |
+Progress | Loading USDJPY, h1 | 15.62 % |
+Progress | Loading USDJPY, h1 | 17.19 % |
+Progress | Loading USDJPY, h1 | 18.75 % |
+Progress | Loading USDJPY, h1 | 20.31 % |
+Progress | Loading USDJPY, h1 | 21.88 % |
+Progress | Loading USDJPY, h1 | 23.44 % |
+Progress | Loading USDJPY, h1 | 25.00 % |
+Progress | Loading USDJPY, h1 | 26.56 % |
+Progress | Loading USDJPY, h1 | 28.12 % |
+Progress | Loading USDJPY, h1 | 29.69 % |
+Progress | Loading USDJPY, h1 | 31.25 % |
+Progress | Loading USDJPY, h1 | 32.81 % |
+Progress | Loading USDJPY, h1 | 34.38 % |
+Progress | Loading USDJPY, h1 | 35.94 % |
+Progress | Loading USDJPY, h1 | 37.50 % |
+Progress | Loading USDJPY, h1 | 39.06 % |
+Progress | Loading USDJPY, h1 | 40.62 % |
+Progress | Loading USDJPY, h1 | 42.19 % |
+Progress | Loading USDJPY, h1 | 43.75 % |
+Progress | Loading USDJPY, h1 | 45.31 % |
+Progress | Loading USDJPY, h1 | 46.88 % |
+Progress | Loading USDJPY, h1 | 48.44 % |
+Progress | Loading USDJPY, h1 | 50.00 % |
+Progress | Loading USDJPY, h1 | 51.56 % |
+Progress | Loading USDJPY, h1 | 53.12 % |
+Progress | Loading USDJPY, h1 | 54.69 % |
+Progress | Loading USDJPY, h1 | 56.25 % |
+Progress | Loading USDJPY, h1 | 57.81 % |
+Progress | Loading USDJPY, h1 | 59.38 % |
+Progress | Loading USDJPY, h1 | 60.94 % |
+Progress | Loading USDJPY, h1 | 62.50 % |
+Progress | Loading USDJPY, h1 | 64.06 % |
+Progress | Loading USDJPY, h1 | 65.62 % |
+Progress | Loading USDJPY, h1 | 67.19 % |
+Progress | Loading USDJPY, h1 | 68.75 % |
+Progress | Loading USDJPY, h1 | 70.31 % |
+Progress | Loading USDJPY, h1 | 71.88 % |
+Progress | Loading USDJPY, h1 | 73.44 % |
+Progress | Loading USDJPY, h1 | 75.00 % |
+Progress | Loading USDJPY, h1 | 76.56 % |
+Progress | Loading USDJPY, h1 | 78.12 % |
+Progress | Loading USDJPY, h1 | 79.69 % |
+Progress | Loading USDJPY, h1 | 81.25 % |
+Progress | Loading USDJPY, h1 | 82.81 % |
+Progress | Loading USDJPY, h1 | 84.38 % |
+Progress | Loading USDJPY, h1 | 85.94 % |
+Progress | Loading USDJPY, h1 | 87.50 % |
+Progress | Loading USDJPY, h1 | 89.06 % |
+Progress | Loading USDJPY, h1 | 90.62 % |
+Progress | Loading USDJPY, h1 | 92.19 % |
+Progress | Loading USDJPY, h1 | 93.75 % |
+Progress | Loading USDJPY, h1 | 95.31 % |
+Progress | Loading USDJPY, h1 | 96.88 % |
+Progress | Loading USDJPY, h1 | 98.44 % |
+Progress | Loading USDJPY, h1 | 100.00 % |
+Progress | Backtesting | 0.65 % |
+Progress | Backtesting | 1.10 % |
+Progress | Backtesting | 7.69 % |
+Progress | Backtesting | 8.79 % |
+Progress | Backtesting | 10.52 % |
+Progress | Backtesting | 12.09 % |
+Progress | Backtesting | 14.29 % |
+Progress | Backtesting | 15.93 % |
+Progress | Backtesting | 18.18 % |
+Progress | Backtesting | 19.63 % |
+Progress | Backtesting | 21.98 % |
+Progress | Backtesting | 23.08 % |
+Progress | Backtesting | 25.80 % |
+Progress | Backtesting | 27.47 % |
+Progress | Backtesting | 30.22 % |
+Progress | Backtesting | 31.87 % |
+Progress | Backtesting | 34.45 % |
+Progress | Backtesting | 35.71 % |
+Progress | Backtesting | 37.91 % |
+Progress | Backtesting | 39.01 % |
+Progress | Backtesting | 41.76 % |
+Progress | Backtesting | 43.12 % |
+Progress | Backtesting | 45.63 % |
+Progress | Backtesting | 47.25 % |
+Progress | Backtesting | 49.47 % |
+Progress | Backtesting | 50.55 % |
+Progress | Backtesting | 52.85 % |
+Progress | Backtesting | 54.40 % |
+Progress | Backtesting | 57.14 % |
+Progress | Backtesting | 60.40 % |
+Progress | Backtesting | 61.54 % |
+Progress | Backtesting | 64.29 % |
+Progress | Backtesting | 66.32 % |
+Progress | Backtesting | 68.68 % |
+Progress | Backtesting | 70.31 % |
+Progress | Backtesting | 72.53 % |
+Progress | Backtesting | 75.78 % |
+Progress | Backtesting | 77.72 % |
+Progress | Backtesting | 79.67 % |
+Progress | Backtesting | 81.48 % |
+Progress | Backtesting | 83.47 % |
+Progress | Backtesting | 85.40 % |
+Progress | Backtesting | 87.36 % |
+Progress | Backtesting | 89.11 % |
+Progress | Backtesting | 91.76 % |
+Progress | Backtesting | 93.41 % |
+Progress | Backtesting | 96.15 % |
+Progress | Backtesting | 98.90 % |
+01/01/2025 23:05:00.000 | Info | Combo: loaded 4542 valid signal row(s) from CSV.
+01/01/2025 23:05:00.000 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+02/01/2025 01:00:00.000 | Trade | Placing Stop Order to Sell 75.1 JP225.cash (Price: 39143.4, SL: 39334.1804600723, TP: 38643.94)
+02/01/2025 01:00:00.000 | Trade |  Placing Stop Order to Sell 75.1 JP225.cash (Price: 39143.4, SL: 39334.1804600723, TP: 38643.94) SUCCEEDED, PendingOrder OID1
+02/01/2025 01:00:00.000 | Info | Combo: bartime=2025-01-02 00:00, executed=2025-01-02 01:00:00, pending Sell placed at 39143.4; SL=39334.18046007234, TP=38643.936755530616; valid for the next 3 chart bar(s).
+02/01/2025 04:00:00.000 | Trade | Cancelling pending order OID1
+02/01/2025 04:00:00.000 | Trade |  Cancelling pending order OID1 SUCCEEDED
+02/01/2025 04:00:00.000 | Info | Combo: pending order 1 cancelled after 3 chart bars.
+02/01/2025 04:00:00.000 | Trade | Placing Stop Order to Sell 105.3 JP225.cash (Price: 39323.4, SL: 39459.519595557, TP: 38967.04)
+02/01/2025 04:00:00.000 | Trade |  Placing Stop Order to Sell 105.3 JP225.cash (Price: 39323.4, SL: 39459.519595557, TP: 38967.04) SUCCEEDED, PendingOrder OID2
+02/01/2025 04:00:00.000 | Info | Combo: bartime=2025-01-02 03:00, executed=2025-01-02 04:00:00, pending Sell placed at 39323.4; SL=39459.51959555704, TP=38967.03889883168; valid for the next 3 chart bar(s).
+02/01/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 106.3 JP225.cash (Price: 39453.4, SL: 39320.0063447423, TP: 39802.62)
+02/01/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 106.3 JP225.cash (Price: 39453.4, SL: 39320.0063447423, TP: 39802.62) SUCCEEDED, PendingOrder OID5
+02/01/2025 10:00:00.000 | Info | Combo: bartime=2025-01-02 09:00, executed=2025-01-02 10:00:00, pending Buy placed at 39453.4; SL=39320.006344742294, TP=39802.62458946467; valid for the next 3 chart bar(s).
+02/01/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 104.4 JP225.cash (Price: 39288.4, SL: 39422.7620411936, TP: 38936.64)
+02/01/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 104.4 JP225.cash (Price: 39288.4, SL: 39422.7620411936, TP: 38936.64) SUCCEEDED, PendingOrder OID8
+02/01/2025 14:00:00.000 | Info | Combo: bartime=2025-01-02 13:00, executed=2025-01-02 14:00:00, pending Sell placed at 39288.4; SL=39422.76204119356, TP=38936.64017615527; valid for the next 3 chart bar(s).
+02/01/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 83.3 JP225.cash (Price: 39463.4, SL: 39296.9103670452, TP: 39899.27)
+02/01/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 83.3 JP225.cash (Price: 39463.4, SL: 39296.9103670452, TP: 39899.27) SUCCEEDED, PendingOrder OID11
+02/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-02 14:00, executed=2025-01-02 15:00:00, pending Buy placed at 39463.4; SL=39296.91036704516, TP=39899.26985907579; valid for the next 3 chart bar(s).
+02/01/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 53.4 JP225.cash (Price: 39163.4, SL: 39420.2226920729, TP: 38491.04)
+02/01/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 53.4 JP225.cash (Price: 39163.4, SL: 39420.2226920729, TP: 38491.04) SUCCEEDED, PendingOrder OID14
+02/01/2025 18:00:00.000 | Info | Combo: bartime=2025-01-02 17:00, executed=2025-01-02 18:00:00, pending Sell placed at 39163.4; SL=39420.22269207288, TP=38491.0381921532; valid for the next 3 chart bar(s).
+03/01/2025 13:00:00.000 | Trade | Placing Stop Order to Buy 154.4 JP225.cash (Price: 39330.9, SL: 39242.9754190197, TP: 39561.09)
+03/01/2025 13:00:00.000 | Trade |  Placing Stop Order to Buy 154.4 JP225.cash (Price: 39330.9, SL: 39242.9754190197, TP: 39561.09) SUCCEEDED, PendingOrder OID17
+03/01/2025 13:00:00.000 | Info | Combo: bartime=2025-01-03 12:00, executed=2025-01-03 13:00:00, pending Buy placed at 39330.9; SL=39242.97541901967, TP=39561.08655300651; valid for the next 3 chart bar(s).
+03/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-03 14:00, Buy signal skipped: already have same-direction exposure open.
+06/01/2025 02:00:00.000 | Trade | Placing Stop Order to Sell 68.8 JP225.cash (Price: 39362, SL: 39564.2498069988, TP: 38832.51)
+06/01/2025 02:00:00.000 | Trade |  Placing Stop Order to Sell 68.8 JP225.cash (Price: 39362, SL: 39564.2498069988, TP: 38832.51) SUCCEEDED, PendingOrder OID20
+06/01/2025 02:00:00.000 | Info | Combo: bartime=2025-01-06 01:00, executed=2025-01-06 02:00:00, pending Sell placed at 39362; SL=39564.2498069988, TP=38832.51000527714; valid for the next 3 chart bar(s).
+06/01/2025 10:00:00.000 | Info | Combo: bartime=2025-01-06 09:00, reversal - closing existing Sell position 7 before opening opposite direction.
+06/01/2025 10:00:00.000 | Trade | Closing position PID7 (Volume: 68.8)
+06/01/2025 10:00:00.000 | Trade |  Closing position PID7 (Volume: 68.8) SUCCEEDED
+06/01/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 118.5 JP225.cash (Price: 39496.5, SL: 39379.6887671002, TP: 39802.31)
+06/01/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 118.5 JP225.cash (Price: 39496.5, SL: 39379.6887671002, TP: 39802.31) SUCCEEDED, PendingOrder OID24
+06/01/2025 10:00:00.000 | Info | Combo: bartime=2025-01-06 09:00, executed=2025-01-06 10:00:00, pending Buy placed at 39496.5; SL=39379.688767100226, TP=39802.3118077316; valid for the next 3 chart bar(s).
+07/01/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 75.9 JP225.cash (Price: 39749, SL: 39936.1473130025, TP: 39259.05)
+07/01/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 75.9 JP225.cash (Price: 39749, SL: 39936.1473130025, TP: 39259.05) SUCCEEDED, PendingOrder OID27
+07/01/2025 16:00:00.000 | Info | Combo: bartime=2025-01-07 15:00, executed=2025-01-07 16:00:00, pending Sell placed at 39749; SL=39936.14731300248, TP=39259.0483345595; valid for the next 3 chart bar(s).
+07/01/2025 19:00:00.000 | Trade | Cancelling pending order OID27
+07/01/2025 19:00:00.000 | Trade |  Cancelling pending order OID27 SUCCEEDED
+07/01/2025 19:00:00.000 | Info | Combo: pending order 27 cancelled after 3 chart bars.
+08/01/2025 03:00:00.000 | Trade | Placing Stop Order to Buy 92.1 JP225.cash (Price: 40024, SL: 39869.82160119, TP: 40427.64)
+08/01/2025 03:00:00.000 | Trade |  Placing Stop Order to Buy 92.1 JP225.cash (Price: 40024, SL: 39869.82160119, TP: 40427.64) SUCCEEDED, PendingOrder OID28
+08/01/2025 03:00:00.000 | Info | Combo: bartime=2025-01-08 02:00, executed=2025-01-08 03:00:00, pending Buy placed at 40024; SL=39869.82160119, TP=40427.63904808457; valid for the next 3 chart bar(s).
+08/01/2025 08:00:00.000 | Info | Combo: bartime=2025-01-08 07:00, Buy signal skipped: already have same-direction exposure open.
+08/01/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 99.1 JP225.cash (Price: 39729, SL: 39870.419457115, TP: 39358.76)
+08/01/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 99.1 JP225.cash (Price: 39729, SL: 39870.419457115, TP: 39358.76) SUCCEEDED, PendingOrder OID31
+08/01/2025 12:00:00.000 | Info | Combo: bartime=2025-01-08 11:00, executed=2025-01-08 12:00:00, pending Sell placed at 39729; SL=39870.41945711496, TP=39358.763861273044; valid for the next 3 chart bar(s).
+08/01/2025 17:00:00.000 | Trade | Placing Stop Order to Buy 93.9 JP225.cash (Price: 40006.5, SL: 39858.8284722926, TP: 40393.1)
+08/01/2025 17:00:00.000 | Trade |  Placing Stop Order to Buy 93.9 JP225.cash (Price: 40006.5, SL: 39858.8284722926, TP: 40393.1) SUCCEEDED, PendingOrder OID34
+08/01/2025 17:00:00.000 | Info | Combo: bartime=2025-01-08 16:00, executed=2025-01-08 17:00:00, pending Buy placed at 40006.5; SL=39858.828472292575, TP=40393.10405953805; valid for the next 3 chart bar(s).
+08/01/2025 20:00:00.000 | Info | Combo: bartime=2025-01-08 19:00, Buy signal skipped: already have same-direction exposure open.
+10/01/2025 00:00:00.000 | Trade | Placing Stop Order to Sell 147.9 JP225.cash (Price: 39239, SL: 39331.7421599264, TP: 38996.2)
+10/01/2025 00:00:00.000 | Trade |  Placing Stop Order to Sell 147.9 JP225.cash (Price: 39239, SL: 39331.7421599264, TP: 38996.2) SUCCEEDED, PendingOrder OID37
+10/01/2025 00:00:00.000 | Info | Combo: bartime=2025-01-09 23:00, executed=2025-01-10 00:00:00, pending Sell placed at 39239; SL=39331.742159926405, TP=38996.20102531267; valid for the next 3 chart bar(s).
+13/01/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 79.9 JP225.cash (Price: 38496.5, SL: 38326.8294593849, TP: 38940.7)
+13/01/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 79.9 JP225.cash (Price: 38496.5, SL: 38326.8294593849, TP: 38940.7) SUCCEEDED, PendingOrder OID40
+13/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-13 14:00, executed=2025-01-13 15:00:00, pending Buy placed at 38496.5; SL=38326.829459384855, TP=38940.69747533046; valid for the next 3 chart bar(s).
+13/01/2025 18:00:00.000 | Info | Combo: bartime=2025-01-13 17:00, Buy signal skipped: already have same-direction exposure open.
+14/01/2025 02:00:00.000 | Trade | Placing Stop Order to Sell 61.9 JP225.cash (Price: 38374, SL: 38598.6952311599, TP: 37785.75)
+14/01/2025 02:00:00.000 | Trade |  Placing Stop Order to Sell 61.9 JP225.cash (Price: 38374, SL: 38598.6952311599, TP: 37785.75) SUCCEEDED, PendingOrder OID43
+14/01/2025 02:00:00.000 | Info | Combo: bartime=2025-01-14 01:00, executed=2025-01-14 02:00:00, pending Sell placed at 38374; SL=38598.695231159916, TP=37785.74788482334; valid for the next 3 chart bar(s).
+14/01/2025 04:00:00.000 | Info | Combo: bartime=2025-01-14 03:00, Sell signal skipped: already have same-direction exposure open.
+14/01/2025 08:00:00.000 | Info | Combo: bartime=2025-01-14 07:00, reversal - closing existing Sell position 14 before opening opposite direction.
+14/01/2025 08:00:00.000 | Trade | Closing position PID14 (Volume: 61.9)
+14/01/2025 08:00:00.000 | Trade |  Closing position PID14 (Volume: 61.9) SUCCEEDED
+14/01/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 85.9 JP225.cash (Price: 38568.5, SL: 38407.7691413228, TP: 38989.29)
+14/01/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 85.9 JP225.cash (Price: 38568.5, SL: 38407.7691413228, TP: 38989.29) SUCCEEDED, PendingOrder OID47
+14/01/2025 08:00:00.000 | Info | Combo: bartime=2025-01-14 07:00, executed=2025-01-14 08:00:00, pending Buy placed at 38568.5; SL=38407.76914132282, TP=38989.29338801687; valid for the next 3 chart bar(s).
+14/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-14 14:00, reversal - closing existing Buy position 15 before opening opposite direction.
+14/01/2025 15:00:00.000 | Trade | Closing position PID15 (Volume: 85.9)
+14/01/2025 15:00:00.000 | Trade |  Closing position PID15 (Volume: 85.9) SUCCEEDED
+14/01/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 89.9 JP225.cash (Price: 38481, SL: 38634.0045361737, TP: 38080.43)
+14/01/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 89.9 JP225.cash (Price: 38481, SL: 38634.0045361737, TP: 38080.43) SUCCEEDED, PendingOrder OID51
+14/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-14 14:00, executed=2025-01-14 15:00:00, pending Sell placed at 38481; SL=38634.004536173656, TP=38080.43412429736; valid for the next 3 chart bar(s).
+14/01/2025 17:00:00.000 | Info | Combo: bartime=2025-01-14 16:00, Sell signal skipped: already have same-direction exposure open.
+15/01/2025 01:00:00.000 | Trade | Placing Stop Order to Sell 71.7 JP225.cash (Price: 38476, SL: 38665.7366661789, TP: 37979.27)
+15/01/2025 01:00:00.000 | Trade |  Placing Stop Order to Sell 71.7 JP225.cash (Price: 38476, SL: 38665.7366661789, TP: 37979.27) SUCCEEDED, PendingOrder OID54
+15/01/2025 01:00:00.000 | Info | Combo: bartime=2025-01-15 00:00, executed=2025-01-15 01:00:00, pending Sell placed at 38476; SL=38665.73666617892, TP=37979.26940794358; valid for the next 3 chart bar(s).
+15/01/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 86.6 JP225.cash (Price: 38779, SL: 38623.6016948413, TP: 39185.83)
+15/01/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 86.6 JP225.cash (Price: 38779, SL: 38623.6016948413, TP: 39185.83) SUCCEEDED, PendingOrder OID57
+15/01/2025 14:00:00.000 | Info | Combo: bartime=2025-01-15 13:00, executed=2025-01-15 14:00:00, pending Buy placed at 38779; SL=38623.60169484131, TP=39185.83276290545; valid for the next 3 chart bar(s).
+15/01/2025 17:00:00.000 | Trade | Cancelling pending order OID57
+15/01/2025 17:00:00.000 | Trade |  Cancelling pending order OID57 SUCCEEDED
+15/01/2025 17:00:00.000 | Info | Combo: pending order 57 cancelled after 3 chart bars.
+16/01/2025 04:00:00.000 | Trade | Placing Stop Order to Sell 90.6 JP225.cash (Price: 38558.8, SL: 38707.2681515145, TP: 38170.11)
+16/01/2025 04:00:00.000 | Trade |  Placing Stop Order to Sell 90.6 JP225.cash (Price: 38558.8, SL: 38707.2681515145, TP: 38170.11) SUCCEEDED, PendingOrder OID58
+16/01/2025 04:00:00.000 | Info | Combo: bartime=2025-01-16 03:00, executed=2025-01-16 04:00:00, pending Sell placed at 38558.8; SL=38707.2681515145, TP=38170.11037933504; valid for the next 3 chart bar(s).
+16/01/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 89.8 JP225.cash (Price: 38786.3, SL: 38638.1874451397, TP: 39174.06)
+16/01/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 89.8 JP225.cash (Price: 38786.3, SL: 38638.1874451397, TP: 39174.06) SUCCEEDED, PendingOrder OID61
+16/01/2025 08:00:00.000 | Info | Combo: bartime=2025-01-16 07:00, executed=2025-01-16 08:00:00, pending Buy placed at 38786.3; SL=38638.187445139665, TP=39174.05866862437; valid for the next 3 chart bar(s).
+16/01/2025 11:00:00.000 | Trade | Cancelling pending order OID61
+16/01/2025 11:00:00.000 | Trade |  Cancelling pending order OID61 SUCCEEDED
+16/01/2025 11:00:00.000 | Info | Combo: pending order 61 cancelled after 3 chart bars.
+17/01/2025 07:00:00.000 | Trade | Placing Stop Order to Buy 93.1 JP225.cash (Price: 38497, SL: 38354.1099926394, TP: 38871.09)
+17/01/2025 07:00:00.000 | Trade |  Placing Stop Order to Buy 93.1 JP225.cash (Price: 38497, SL: 38354.1099926394, TP: 38871.09) SUCCEEDED, PendingOrder OID62
+17/01/2025 07:00:00.000 | Info | Combo: bartime=2025-01-17 06:00, executed=2025-01-17 07:00:00, pending Buy placed at 38497; SL=38354.109992639394, TP=38871.086039270056; valid for the next 3 chart bar(s).
+20/01/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 170.5 JP225.cash (Price: 38824, SL: 38903.9735359393, TP: 38614.63)
+20/01/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 170.5 JP225.cash (Price: 38824, SL: 38903.9735359393, TP: 38614.63) SUCCEEDED, PendingOrder OID65
+20/01/2025 12:00:00.000 | Info | Combo: bartime=2025-01-20 11:00, executed=2025-01-20 12:00:00, pending Sell placed at 38824; SL=38903.97353593934, TP=38614.62928291081; valid for the next 3 chart bar(s).
+20/01/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 119.2 JP225.cash (Price: 39039, SL: 38926.0169369988, TP: 39334.79)
+20/01/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 119.2 JP225.cash (Price: 39039, SL: 38926.0169369988, TP: 39334.79) SUCCEEDED, PendingOrder OID68
+20/01/2025 14:00:00.000 | Info | Combo: bartime=2025-01-20 13:00, executed=2025-01-20 14:00:00, pending Buy placed at 39039; SL=38926.01693699882, TP=39334.78965893708; valid for the next 3 chart bar(s).
+21/01/2025 01:00:00.000 | Trade | Placing Stop Order to Sell 69.1 JP225.cash (Price: 38696.5, SL: 38888.8570048788, TP: 38192.91)
+21/01/2025 01:00:00.000 | Trade |  Placing Stop Order to Sell 69.1 JP225.cash (Price: 38696.5, SL: 38888.8570048788, TP: 38192.91) SUCCEEDED, PendingOrder OID71
+21/01/2025 01:00:00.000 | Info | Combo: bartime=2025-01-21 00:00, executed=2025-01-21 01:00:00, pending Sell placed at 38696.5; SL=38888.857004878795, TP=38192.90936122731; valid for the next 3 chart bar(s).
+21/01/2025 05:00:00.000 | Trade | Placing Stop Order to Sell 77.7 JP225.cash (Price: 38891.5, SL: 39060.4134291984, TP: 38449.28)
+21/01/2025 05:00:00.000 | Trade |  Placing Stop Order to Sell 77.7 JP225.cash (Price: 38891.5, SL: 39060.4134291984, TP: 38449.28) SUCCEEDED, PendingOrder OID74
+21/01/2025 05:00:00.000 | Info | Combo: bartime=2025-01-21 04:00, executed=2025-01-21 05:00:00, pending Sell placed at 38891.5; SL=39060.41342919836, TP=38449.2846423587; valid for the next 3 chart bar(s).
+21/01/2025 08:00:00.000 | Trade | Cancelling pending order OID74
+21/01/2025 08:00:00.000 | Trade |  Cancelling pending order OID74 SUCCEEDED
+21/01/2025 08:00:00.000 | Info | Combo: pending order 74 cancelled after 3 chart bars.
+23/01/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 123.5 JP225.cash (Price: 39771.5, SL: 39877.8118730308, TP: 39493.18)
+23/01/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 123.5 JP225.cash (Price: 39771.5, SL: 39877.8118730308, TP: 39493.18) SUCCEEDED, PendingOrder OID75
+23/01/2025 09:00:00.000 | Info | Combo: bartime=2025-01-23 08:00, executed=2025-01-23 09:00:00, pending Sell placed at 39771.5; SL=39877.8118730308, TP=39493.17551640537; valid for the next 3 chart bar(s).
+23/01/2025 12:00:00.000 | Trade | Cancelling pending order OID75
+23/01/2025 12:00:00.000 | Trade |  Cancelling pending order OID75 SUCCEEDED
+23/01/2025 12:00:00.000 | Info | Combo: pending order 75 cancelled after 3 chart bars.
+23/01/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 174 JP225.cash (Price: 39819, SL: 39894.4573431934, TP: 39621.45)
+23/01/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 174 JP225.cash (Price: 39819, SL: 39894.4573431934, TP: 39621.45) SUCCEEDED, PendingOrder OID76
+23/01/2025 13:00:00.000 | Info | Combo: bartime=2025-01-23 12:00, executed=2025-01-23 13:00:00, pending Sell placed at 39819; SL=39894.45734319342, TP=39621.452675519635; valid for the next 3 chart bar(s).
+23/01/2025 21:00:00.000 | Trade | Placing Stop Order to Buy 150.8 JP225.cash (Price: 39946.5, SL: 39860.3964929446, TP: 40171.92)
+23/01/2025 21:00:00.000 | Trade |  Placing Stop Order to Buy 150.8 JP225.cash (Price: 39946.5, SL: 39860.3964929446, TP: 40171.92) SUCCEEDED, PendingOrder OID79
+23/01/2025 21:00:00.000 | Info | Combo: bartime=2025-01-23 20:00, executed=2025-01-23 21:00:00, pending Buy placed at 39946.5; SL=39860.39649294458, TP=40171.91898147109; valid for the next 3 chart bar(s).
+27/01/2025 00:00:00.000 | Trade | Placing Stop Order to Sell 78.4 JP225.cash (Price: 40089.5, SL: 40252.9119871713, TP: 39661.69)
+27/01/2025 00:00:00.000 | Trade |  Placing Stop Order to Sell 78.4 JP225.cash (Price: 40089.5, SL: 40252.9119871713, TP: 39661.69) SUCCEEDED, PendingOrder OID82
+27/01/2025 00:00:00.000 | Info | Combo: bartime=2025-01-26 23:00, executed=2025-01-27 00:00:00, pending Sell placed at 40089.5; SL=40252.91198717131, TP=39661.68741758551; valid for the next 3 chart bar(s).
+28/01/2025 02:00:00.000 | Trade | Placing Stop Order to Buy 64 JP225.cash (Price: 39362, SL: 39156.4107480484, TP: 39900.23)
+28/01/2025 02:00:00.000 | Trade |  Placing Stop Order to Buy 64 JP225.cash (Price: 39362, SL: 39156.4107480484, TP: 39900.23) SUCCEEDED, PendingOrder OID85
+28/01/2025 02:00:00.000 | Info | Combo: bartime=2025-01-28 01:00, executed=2025-01-28 02:00:00, pending Buy placed at 39362; SL=39156.41074804839, TP=39900.23266160932; valid for the next 3 chart bar(s).
+28/01/2025 05:00:00.000 | Trade | Cancelling pending order OID85
+28/01/2025 05:00:00.000 | Trade |  Cancelling pending order OID85 SUCCEEDED
+28/01/2025 05:00:00.000 | Info | Combo: pending order 85 cancelled after 3 chart bars.
+28/01/2025 07:00:00.000 | Trade | Placing Stop Order to Buy 72.5 JP225.cash (Price: 39114.5, SL: 38933.0181139205, TP: 39589.62)
+28/01/2025 07:00:00.000 | Trade |  Placing Stop Order to Buy 72.5 JP225.cash (Price: 39114.5, SL: 38933.0181139205, TP: 39589.62) SUCCEEDED, PendingOrder OID86
+28/01/2025 07:00:00.000 | Info | Combo: bartime=2025-01-28 06:00, executed=2025-01-28 07:00:00, pending Buy placed at 39114.5; SL=38933.018113920494, TP=39589.619577756144; valid for the next 3 chart bar(s).
+28/01/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 81.1 JP225.cash (Price: 38927, SL: 39087.4727088284, TP: 38506.88)
+28/01/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 81.1 JP225.cash (Price: 38927, SL: 39087.4727088284, TP: 38506.88) SUCCEEDED, PendingOrder OID89
+28/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-28 14:00, executed=2025-01-28 15:00:00, pending Sell placed at 38927; SL=39087.472708828434, TP=38506.882448287164; valid for the next 3 chart bar(s).
+28/01/2025 16:00:00.000 | Info | Combo: bartime=2025-01-28 15:00, reversal - cancelling existing Sell pending order 89 before opening opposite direction.
+28/01/2025 16:00:00.000 | Trade | Cancelling pending order OID89
+28/01/2025 16:00:00.000 | Trade |  Cancelling pending order OID89 SUCCEEDED
+28/01/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 70.6 JP225.cash (Price: 39374.5, SL: 39190.1218329373, TP: 39857.2)
+28/01/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 70.6 JP225.cash (Price: 39374.5, SL: 39190.1218329373, TP: 39857.2) SUCCEEDED, PendingOrder OID90
+28/01/2025 16:00:00.000 | Info | Combo: bartime=2025-01-28 15:00, executed=2025-01-28 16:00:00, pending Buy placed at 39374.5; SL=39190.12183293726, TP=39857.20204137027; valid for the next 3 chart bar(s).
+28/01/2025 19:00:00.000 | Trade | Cancelling pending order OID90
+28/01/2025 19:00:00.000 | Trade |  Cancelling pending order OID90 SUCCEEDED
+28/01/2025 19:00:00.000 | Info | Combo: pending order 90 cancelled after 3 chart bars.
+29/01/2025 07:00:00.000 | Trade | Placing Stop Order to Buy 75.1 JP225.cash (Price: 39635.4, SL: 39462.0983591466, TP: 40089.1)
+29/01/2025 07:00:00.000 | Trade |  Placing Stop Order to Buy 75.1 JP225.cash (Price: 39635.4, SL: 39462.0983591466, TP: 40089.1) SUCCEEDED, PendingOrder OID91
+29/01/2025 07:00:00.000 | Info | Combo: bartime=2025-01-29 06:00, executed=2025-01-29 07:00:00, pending Buy placed at 39635.4; SL=39462.09835914659, TP=40089.10369575423; valid for the next 3 chart bar(s).
+29/01/2025 10:00:00.000 | Trade | Cancelling pending order OID91
+29/01/2025 10:00:00.000 | Trade |  Cancelling pending order OID91 SUCCEEDED
+29/01/2025 10:00:00.000 | Info | Combo: pending order 91 cancelled after 3 chart bars.
+29/01/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 105.3 JP225.cash (Price: 39300.4, SL: 39424.0184842719, TP: 38976.77)
+29/01/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 105.3 JP225.cash (Price: 39300.4, SL: 39424.0184842719, TP: 38976.77) SUCCEEDED, PendingOrder OID92
+29/01/2025 14:00:00.000 | Info | Combo: bartime=2025-01-29 13:00, executed=2025-01-29 14:00:00, pending Sell placed at 39300.4; SL=39424.0184842719, TP=38976.766808176166; valid for the next 3 chart bar(s).
+30/01/2025 02:00:00.000 | Trade | Placing Stop Order to Buy 71.9 JP225.cash (Price: 39493.5, SL: 39314.5459150734, TP: 39962)
+30/01/2025 02:00:00.000 | Trade |  Placing Stop Order to Buy 71.9 JP225.cash (Price: 39493.5, SL: 39314.5459150734, TP: 39962) SUCCEEDED, PendingOrder OID95
+30/01/2025 02:00:00.000 | Info | Combo: bartime=2025-01-30 01:00, executed=2025-01-30 02:00:00, pending Buy placed at 39493.5; SL=39314.545915073424, TP=39962.00179433778; valid for the next 3 chart bar(s).
+30/01/2025 16:00:00.000 | Info | Combo: bartime=2025-01-30 15:00, reversal - closing existing Buy position 28 before opening opposite direction.
+30/01/2025 16:00:00.000 | Trade | Closing position PID28 (Volume: 71.9)
+30/01/2025 16:00:00.000 | Trade |  Closing position PID28 (Volume: 71.9) SUCCEEDED
+30/01/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 122 JP225.cash (Price: 39331, SL: 39435.8904842634, TP: 39056.4)
+30/01/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 122 JP225.cash (Price: 39331, SL: 39435.8904842634, TP: 39056.4) SUCCEEDED, PendingOrder OID99
+30/01/2025 16:00:00.000 | Info | Combo: bartime=2025-01-30 15:00, executed=2025-01-30 16:00:00, pending Sell placed at 39331; SL=39435.89048426338, TP=39056.39671219848; valid for the next 3 chart bar(s).
+30/01/2025 17:00:00.000 | Info | Combo: bartime=2025-01-30 16:00, reversal - cancelling existing Sell pending order 99 before opening opposite direction.
+30/01/2025 17:00:00.000 | Trade | Cancelling pending order OID99
+30/01/2025 17:00:00.000 | Trade |  Cancelling pending order OID99 SUCCEEDED
+30/01/2025 17:00:00.000 | Trade | Placing Stop Order to Buy 93.4 JP225.cash (Price: 39656, SL: 39519.0876125893, TP: 40014.44)
+30/01/2025 17:00:00.000 | Trade |  Placing Stop Order to Buy 93.4 JP225.cash (Price: 39656, SL: 39519.0876125893, TP: 40014.44) SUCCEEDED, PendingOrder OID100
+30/01/2025 17:00:00.000 | Info | Combo: bartime=2025-01-30 16:00, executed=2025-01-30 17:00:00, pending Buy placed at 39656; SL=39519.0876125893, TP=40014.436630241216; valid for the next 3 chart bar(s).
+31/01/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 164.3 JP225.cash (Price: 39526.5, SL: 39603.4970071316, TP: 39324.92)
+31/01/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 164.3 JP225.cash (Price: 39526.5, SL: 39603.4970071316, TP: 39324.92) SUCCEEDED, PendingOrder OID103
+31/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-31 14:00, executed=2025-01-31 15:00:00, pending Sell placed at 39526.5; SL=39603.49700713157, TP=39324.92183532956; valid for the next 3 chart bar(s).
+31/01/2025 18:00:00.000 | Trade | Cancelling pending order OID103
+31/01/2025 18:00:00.000 | Trade |  Cancelling pending order OID103 SUCCEEDED
+31/01/2025 18:00:00.000 | Info | Combo: pending order 103 cancelled after 3 chart bars.
+31/01/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 87.5 JP225.cash (Price: 39466.5, SL: 39610.9659741211, TP: 39088.29)
+31/01/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 87.5 JP225.cash (Price: 39466.5, SL: 39610.9659741211, TP: 39088.29) SUCCEEDED, PendingOrder OID104
+31/01/2025 19:00:00.000 | Info | Combo: bartime=2025-01-31 18:00, executed=2025-01-31 19:00:00, pending Sell placed at 39466.5; SL=39610.96597412109, TP=39088.288079750986; valid for the next 3 chart bar(s).
+03/02/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 51.8 JP225.cash (Price: 39119, SL: 38861.1690531352, TP: 39794)
+03/02/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 51.8 JP225.cash (Price: 39119, SL: 38861.1690531352, TP: 39794) SUCCEEDED, PendingOrder OID107
+03/02/2025 16:00:00.000 | Info | Combo: bartime=2025-02-03 15:00, executed=2025-02-03 16:00:00, pending Buy placed at 39119; SL=38861.16905313518, TP=39794.001418892105; valid for the next 3 chart bar(s).
+04/02/2025 06:00:00.000 | Trade | Placing Stop Order to Sell 62.7 JP225.cash (Price: 38561.4, SL: 38771.9853188265, TP: 38010.09)
+04/02/2025 06:00:00.000 | Trade |  Placing Stop Order to Sell 62.7 JP225.cash (Price: 38561.4, SL: 38771.9853188265, TP: 38010.09) SUCCEEDED, PendingOrder OID110
+04/02/2025 06:00:00.000 | Info | Combo: bartime=2025-02-04 05:00, executed=2025-02-04 06:00:00, pending Sell placed at 38561.4; SL=38771.98531882651, TP=38010.0876353122; valid for the next 3 chart bar(s).
+04/02/2025 09:00:00.000 | Trade | Cancelling pending order OID110
+04/02/2025 09:00:00.000 | Trade |  Cancelling pending order OID110 SUCCEEDED
+04/02/2025 09:00:00.000 | Info | Combo: pending order 110 cancelled after 3 chart bars.
+04/02/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 110.6 JP225.cash (Price: 39038.9, SL: 38919.469411677, TP: 39351.57)
+04/02/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 110.6 JP225.cash (Price: 39038.9, SL: 38919.469411677, TP: 39351.57) SUCCEEDED, PendingOrder OID111
+04/02/2025 15:00:00.000 | Info | Combo: bartime=2025-02-04 14:00, executed=2025-02-04 15:00:00, pending Buy placed at 39038.9; SL=38919.46941167695, TP=39351.56928022975; valid for the next 3 chart bar(s).
+05/02/2025 01:00:00.000 | Trade | Placing Stop Order to Sell 102.9 JP225.cash (Price: 38884.6, SL: 39011.4703012584, TP: 38552.45)
+05/02/2025 01:00:00.000 | Trade |  Placing Stop Order to Sell 102.9 JP225.cash (Price: 38884.6, SL: 39011.4703012584, TP: 38552.45) SUCCEEDED, PendingOrder OID114
+05/02/2025 01:00:00.000 | Info | Combo: bartime=2025-02-05 00:00, executed=2025-02-05 01:00:00, pending Sell placed at 38884.6; SL=39011.47030125842, TP=38552.45355130544; valid for the next 3 chart bar(s).
+05/02/2025 17:00:00.000 | Info | Combo: bartime=2025-02-05 16:00, reversal - closing existing Sell position 33 before opening opposite direction.
+05/02/2025 17:00:00.000 | Trade | Closing position PID33 (Volume: 102.9)
+05/02/2025 17:00:00.000 | Trade |  Closing position PID33 (Volume: 102.9) SUCCEEDED
+05/02/2025 17:00:00.000 | Trade | Placing Stop Order to Buy 93.3 JP225.cash (Price: 38862.1, SL: 38721.8773899245, TP: 39229.2)
+05/02/2025 17:00:00.000 | Trade |  Placing Stop Order to Buy 93.3 JP225.cash (Price: 38862.1, SL: 38721.8773899245, TP: 39229.2) SUCCEEDED, PendingOrder OID118
+05/02/2025 17:00:00.000 | Info | Combo: bartime=2025-02-05 16:00, executed=2025-02-05 17:00:00, pending Buy placed at 38862.1; SL=38721.87738992448, TP=39229.20279317772; valid for the next 3 chart bar(s).
+06/02/2025 19:00:00.000 | Info | Combo: bartime=2025-02-06 18:00, reversal - closing existing Buy position 34 before opening opposite direction.
+06/02/2025 19:00:00.000 | Trade | Closing position PID34 (Volume: 93.3)
+06/02/2025 19:00:00.000 | Trade |  Closing position PID34 (Volume: 93.3) SUCCEEDED
+06/02/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 127.4 JP225.cash (Price: 38945, SL: 39048.3749663553, TP: 38674.36)
+06/02/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 127.4 JP225.cash (Price: 38945, SL: 39048.3749663553, TP: 38674.36) SUCCEEDED, PendingOrder OID122
+06/02/2025 19:00:00.000 | Info | Combo: bartime=2025-02-06 18:00, executed=2025-02-06 19:00:00, pending Sell placed at 38945; SL=39048.37496635529, TP=38674.36433808185; valid for the next 3 chart bar(s).
+07/02/2025 14:00:00.000 | Info | Combo: bartime=2025-02-07 13:00, reversal - closing existing Sell position 35 before opening opposite direction.
+07/02/2025 14:00:00.000 | Trade | Closing position PID35 (Volume: 127.4)
+07/02/2025 14:00:00.000 | Trade |  Closing position PID35 (Volume: 127.4) SUCCEEDED
+07/02/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 187.2 JP225.cash (Price: 38958, SL: 38887.5904847498, TP: 39142.33)
+07/02/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 187.2 JP225.cash (Price: 38958, SL: 38887.5904847498, TP: 39142.33) SUCCEEDED, PendingOrder OID126
+07/02/2025 14:00:00.000 | Info | Combo: bartime=2025-02-07 13:00, executed=2025-02-07 14:00:00, pending Buy placed at 38958; SL=38887.59048474984, TP=39142.33211092492; valid for the next 3 chart bar(s).
+07/02/2025 16:00:00.000 | Info | Combo: bartime=2025-02-07 15:00, reversal - cancelling existing Buy pending order 126 before opening opposite direction.
+07/02/2025 16:00:00.000 | Trade | Cancelling pending order OID126
+07/02/2025 16:00:00.000 | Trade |  Cancelling pending order OID126 SUCCEEDED
+07/02/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 100.2 JP225.cash (Price: 38498, SL: 38629.5620897601, TP: 38153.57)
+07/02/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 100.2 JP225.cash (Price: 38498, SL: 38629.5620897601, TP: 38153.57) SUCCEEDED, PendingOrder OID127
+07/02/2025 16:00:00.000 | Info | Combo: bartime=2025-02-07 15:00, executed=2025-02-07 16:00:00, pending Sell placed at 38498; SL=38629.562089760104, TP=38153.570449008046; valid for the next 3 chart bar(s).
+10/02/2025 00:00:00.000 | Trade | Placing Stop Order to Buy 65.4 JP225.cash (Price: 38764.6, SL: 38565.7946780335, TP: 39285.07)
+10/02/2025 00:00:00.000 | Trade |  Placing Stop Order to Buy 65.4 JP225.cash (Price: 38764.6, SL: 38565.7946780335, TP: 39285.07) SUCCEEDED, PendingOrder OID130
+10/02/2025 00:00:00.000 | Info | Combo: bartime=2025-02-09 23:00, executed=2025-02-10 00:00:00, pending Buy placed at 38764.6; SL=38565.79467803354, TP=39285.07233290819; valid for the next 3 chart bar(s).
+11/02/2025 00:00:00.000 | Info | Combo: bartime=2025-02-10 23:00, reversal - closing existing Buy position 37 before opening opposite direction.
+11/02/2025 00:00:00.000 | Trade | Closing position PID37 (Volume: 65.4)
+11/02/2025 00:00:00.000 | Trade |  Closing position PID37 (Volume: 65.4) SUCCEEDED
+11/02/2025 00:00:00.000 | Trade | Placing Stop Order to Sell 190.5 JP225.cash (Price: 38788.1, SL: 38856.6361728256, TP: 38608.67)
+11/02/2025 00:00:00.000 | Trade |  Placing Stop Order to Sell 190.5 JP225.cash (Price: 38788.1, SL: 38856.6361728256, TP: 38608.67) SUCCEEDED, PendingOrder OID134
+11/02/2025 00:00:00.000 | Info | Combo: bartime=2025-02-10 23:00, executed=2025-02-11 00:00:00, pending Sell placed at 38788.1; SL=38856.636172825645, TP=38608.672299542464; valid for the next 3 chart bar(s).
+11/02/2025 12:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 255.20 units, which needs about $4694.62 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4503.25 budget, free margin was $9006.49). Size was cut from 255.20 to 239.90 units. Real risk on this trade is now about $84.64 (0.94% of balance) instead of the requested 1.00%.
+11/02/2025 12:00:00.000 | Trade | Placing Stop Order to Buy 239.9 JP225.cash (Price: 38887.6, SL: 38837.0153901453, TP: 39020.03)
+11/02/2025 12:00:00.000 | Trade |  Placing Stop Order to Buy 239.9 JP225.cash (Price: 38887.6, SL: 38837.0153901453, TP: 39020.03) SUCCEEDED, PendingOrder OID137
+11/02/2025 12:00:00.000 | Info | Combo: bartime=2025-02-11 11:00, executed=2025-02-11 12:00:00, pending Buy placed at 38887.6; SL=38837.015390145294, TP=39020.03050859962; valid for the next 3 chart bar(s).
+11/02/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 201.3 JP225.cash (Price: 38930.1, SL: 38866.6006797544, TP: 39096.34)
+11/02/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 201.3 JP225.cash (Price: 38930.1, SL: 38866.6006797544, TP: 39096.34) SUCCEEDED, PendingOrder OID140
+11/02/2025 15:00:00.000 | Info | Combo: bartime=2025-02-11 14:00, executed=2025-02-11 15:00:00, pending Buy placed at 38930.1; SL=38866.60067975439, TP=39096.341220403; valid for the next 3 chart bar(s).
+12/02/2025 01:00:00.000 | Trade | Placing Stop Order to Sell 120.6 JP225.cash (Price: 38843.1, SL: 38951.6933623329, TP: 38558.8)
+12/02/2025 01:00:00.000 | Trade |  Placing Stop Order to Sell 120.6 JP225.cash (Price: 38843.1, SL: 38951.6933623329, TP: 38558.8) SUCCEEDED, PendingOrder OID143
+12/02/2025 01:00:00.000 | Info | Combo: bartime=2025-02-12 00:00, executed=2025-02-12 01:00:00, pending Sell placed at 38843.1; SL=38951.69336233291, TP=38558.80257741244; valid for the next 3 chart bar(s).
+12/02/2025 03:00:00.000 | Trade | Placing Stop Order to Sell 112 JP225.cash (Price: 38843.1, SL: 38958.5997518931, TP: 38540.72)
+12/02/2025 03:00:00.000 | Trade |  Placing Stop Order to Sell 112 JP225.cash (Price: 38843.1, SL: 38958.5997518931, TP: 38540.72) SUCCEEDED, PendingOrder OID146
+12/02/2025 03:00:00.000 | Info | Combo: bartime=2025-02-12 02:00, executed=2025-02-12 03:00:00, pending Sell placed at 38843.1; SL=38958.59975189306, TP=38540.721649543964; valid for the next 3 chart bar(s).
+12/02/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 154.9 JP225.cash (Price: 39038.1, SL: 38955.4175187454, TP: 39254.56)
+12/02/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 154.9 JP225.cash (Price: 39038.1, SL: 38955.4175187454, TP: 39254.56) SUCCEEDED, PendingOrder OID149
+12/02/2025 11:00:00.000 | Info | Combo: bartime=2025-02-12 10:00, executed=2025-02-12 11:00:00, pending Buy placed at 39038.1; SL=38955.41751874544, TP=39254.562735924446; valid for the next 3 chart bar(s).
+12/02/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 116.2 JP225.cash (Price: 38770.6, SL: 38878.1334304023, TP: 38489.08)
+12/02/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 116.2 JP225.cash (Price: 38770.6, SL: 38878.1334304023, TP: 38489.08) SUCCEEDED, PendingOrder OID152
+12/02/2025 14:00:00.000 | Info | Combo: bartime=2025-02-12 13:00, executed=2025-02-12 14:00:00, pending Sell placed at 38770.6; SL=38878.13343040233, TP=38489.07747920668; valid for the next 3 chart bar(s).
+13/02/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 119.7 JP225.cash (Price: 39318.6, SL: 39421.7131704066, TP: 39048.65)
+13/02/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 119.7 JP225.cash (Price: 39318.6, SL: 39421.7131704066, TP: 39048.65) SUCCEEDED, PendingOrder OID155
+13/02/2025 17:00:00.000 | Info | Combo: bartime=2025-02-13 16:00, executed=2025-02-13 17:00:00, pending Sell placed at 39318.6; SL=39421.713170406634, TP=39048.64971987544; valid for the next 3 chart bar(s).
+14/02/2025 01:00:00.000 | Trade | Placing Stop Order to Sell 94.6 JP225.cash (Price: 39263.9, SL: 39392.8384791545, TP: 38926.34)
+14/02/2025 01:00:00.000 | Trade |  Placing Stop Order to Sell 94.6 JP225.cash (Price: 39263.9, SL: 39392.8384791545, TP: 38926.34) SUCCEEDED, PendingOrder OID158
+14/02/2025 01:00:00.000 | Info | Combo: bartime=2025-02-14 00:00, executed=2025-02-14 01:00:00, pending Sell placed at 39263.9; SL=39392.83847915446, TP=38926.33906157362; valid for the next 3 chart bar(s).
+17/02/2025 02:00:00.000 | Info | Combo: bartime=2025-02-17 01:00, reversal - closing existing Sell position 46 before opening opposite direction.
+17/02/2025 02:00:00.000 | Trade | Closing position PID46 (Volume: 94.6)
+17/02/2025 02:00:00.000 | Trade |  Closing position PID46 (Volume: 94.6) SUCCEEDED
+17/02/2025 02:00:00.000 | Trade | Placing Stop Order to Buy 100.9 JP225.cash (Price: 39200.5, SL: 39078.9977816795, TP: 39518.59)
+17/02/2025 02:00:00.000 | Trade |  Placing Stop Order to Buy 100.9 JP225.cash (Price: 39200.5, SL: 39078.9977816795, TP: 39518.59) SUCCEEDED, PendingOrder OID162
+17/02/2025 02:00:00.000 | Info | Combo: bartime=2025-02-17 01:00, executed=2025-02-17 02:00:00, pending Buy placed at 39200.5; SL=39078.99778167952, TP=39518.59280756302; valid for the next 3 chart bar(s).
+17/02/2025 04:00:00.000 | Info | Combo: bartime=2025-02-17 03:00, Buy signal skipped: already have same-direction exposure open.
+17/02/2025 23:05:00.000 | Info | Combo: bartime=2025-02-17 18:00, reversal - closing existing Buy position 47 before opening opposite direction.
+17/02/2025 23:05:00.000 | Trade | Closing position PID47 (Volume: 100.9)
+17/02/2025 23:05:00.000 | Trade |  Closing position PID47 (Volume: 100.9) SUCCEEDED
+17/02/2025 23:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 330.90 units, which needs about $6087.18 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4261.82 budget, free margin was $8523.63). Size was cut from 330.90 to 227.00 units. Real risk on this trade is now about $58.47 (0.69% of balance) instead of the requested 1.00%.
+17/02/2025 23:05:00.000 | Trade | Placing Stop Order to Sell 227 JP225.cash (Price: 39148, SL: 39184.9292866185, TP: 39051.32)
+17/02/2025 23:05:00.000 | Trade |  Placing Stop Order to Sell 227 JP225.cash (Price: 39148, SL: 39184.9292866185, TP: 39051.32) SUCCEEDED, PendingOrder OID166
+17/02/2025 23:05:00.000 | Info | Combo: bartime=2025-02-17 18:00, executed=2025-02-17 23:05:00, pending Sell placed at 39148; SL=39184.92928661847, TP=39051.319127632836; valid for the next 3 chart bar(s).
+17/02/2025 23:05:00.000 | Info | Combo: bartime=2025-02-17 20:00, reversal - cancelling existing Sell pending order 166 before opening opposite direction.
+17/02/2025 23:05:00.000 | Trade | Cancelling pending order OID166
+17/02/2025 23:05:00.000 | Trade |  Cancelling pending order OID166 SUCCEEDED
+17/02/2025 23:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 419.40 units, which needs about $7715.21 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4261.82 budget, free margin was $8523.63). Size was cut from 419.40 to 227.00 units. Real risk on this trade is now about $46.13 (0.54% of balance) instead of the requested 1.00%.
+17/02/2025 23:05:00.000 | Trade | Placing Stop Order to Buy 227 JP225.cash (Price: 39195.5, SL: 39166.3652565642, TP: 39271.77)
+17/02/2025 23:05:00.000 | Trade |  Placing Stop Order to Buy 227 JP225.cash (Price: 39195.5, SL: 39166.3652565642, TP: 39271.77) SUCCEEDED, PendingOrder OID167
+17/02/2025 23:05:00.000 | Info | Combo: bartime=2025-02-17 20:00, executed=2025-02-17 23:05:00, pending Buy placed at 39195.5; SL=39166.365256564175, TP=39271.77475831498; valid for the next 3 chart bar(s).
+17/02/2025 23:05:00.000 | Info | Combo: bartime=2025-02-17 21:00, reversal - cancelling existing Buy pending order 167 before opening opposite direction.
+17/02/2025 23:05:00.000 | Trade | Cancelling pending order OID167
+17/02/2025 23:05:00.000 | Trade |  Cancelling pending order OID167 SUCCEEDED
+17/02/2025 23:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 483.20 units, which needs about $8888.87 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4261.82 budget, free margin was $8523.63). Size was cut from 483.20 to 227.00 units. Real risk on this trade is now about $40.04 (0.47% of balance) instead of the requested 1.00%.
+17/02/2025 23:05:00.000 | Trade | Placing Stop Order to Sell 227 JP225.cash (Price: 39153.1, SL: 39178.3877947487, TP: 39086.9)
+17/02/2025 23:05:00.000 | Trade |  Placing Stop Order to Sell 227 JP225.cash (Price: 39153.1, SL: 39178.3877947487, TP: 39086.9) SUCCEEDED, PendingOrder OID168
+17/02/2025 23:05:00.000 | Info | Combo: bartime=2025-02-17 21:00, executed=2025-02-17 23:05:00, pending Sell placed at 39153.1; SL=39178.387794748654, TP=39086.89655334801; valid for the next 3 chart bar(s).
+18/02/2025 01:00:00.000 | Trade | Placing Stop Order to Buy 187.1 JP225.cash (Price: 39358.5, SL: 39293.6158113609, TP: 39528.37)
+18/02/2025 01:00:00.000 | Trade |  Placing Stop Order to Buy 187.1 JP225.cash (Price: 39358.5, SL: 39293.6158113609, TP: 39528.37) SUCCEEDED, PendingOrder OID171
+18/02/2025 01:00:00.000 | Info | Combo: bartime=2025-02-18 00:00, executed=2025-02-18 01:00:00, pending Buy placed at 39358.5; SL=39293.61581136086, TP=39528.36680585727; valid for the next 3 chart bar(s).
+18/02/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 212.5 JP225.cash (Price: 39198.5, SL: 39255.0543025893, TP: 39050.44)
+18/02/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 212.5 JP225.cash (Price: 39198.5, SL: 39255.0543025893, TP: 39050.44) SUCCEEDED, PendingOrder OID174
+18/02/2025 15:00:00.000 | Info | Combo: bartime=2025-02-18 14:00, executed=2025-02-18 15:00:00, pending Sell placed at 39198.5; SL=39255.05430258926, TP=39050.44083582131; valid for the next 3 chart bar(s).
+18/02/2025 18:00:00.000 | Trade | Cancelling pending order OID174
+18/02/2025 18:00:00.000 | Trade |  Cancelling pending order OID174 SUCCEEDED
+18/02/2025 18:00:00.000 | Info | Combo: pending order 174 cancelled after 3 chart bars.
+18/02/2025 23:05:00.000 | Trade | Placing Stop Order to Buy 187.3 JP225.cash (Price: 39388.5, SL: 39324.3642151216, TP: 39556.41)
+18/02/2025 23:05:00.000 | Trade |  Placing Stop Order to Buy 187.3 JP225.cash (Price: 39388.5, SL: 39324.3642151216, TP: 39556.41) SUCCEEDED, PendingOrder OID175
+18/02/2025 23:05:00.000 | Info | Combo: bartime=2025-02-18 21:00, executed=2025-02-18 23:05:00, pending Buy placed at 39388.5; SL=39324.36421512163, TP=39556.40748481156; valid for the next 3 chart bar(s).
+19/02/2025 00:00:00.000 | Info | Combo: bartime=2025-02-18 23:00, reversal - cancelling existing Buy pending order 175 before opening opposite direction.
+19/02/2025 00:00:00.000 | Trade | Cancelling pending order OID175
+19/02/2025 00:00:00.000 | Trade |  Cancelling pending order OID175 SUCCEEDED
+19/02/2025 00:00:00.000 | Trade | Placing Stop Order to Sell 144.5 JP225.cash (Price: 39186.5, SL: 39269.6286279027, TP: 38968.87)
+19/02/2025 00:00:00.000 | Trade |  Placing Stop Order to Sell 144.5 JP225.cash (Price: 39186.5, SL: 39269.6286279027, TP: 38968.87) SUCCEEDED, PendingOrder OID176
+19/02/2025 00:00:00.000 | Info | Combo: bartime=2025-02-18 23:00, executed=2025-02-19 00:00:00, pending Sell placed at 39186.5; SL=39269.6286279027, TP=38968.86925215075; valid for the next 3 chart bar(s).
+21/02/2025 02:00:00.000 | Trade | Placing Stop Order to Buy 74.1 JP225.cash (Price: 38832.7, SL: 38672.6069359506, TP: 39251.82)
+21/02/2025 02:00:00.000 | Trade |  Placing Stop Order to Buy 74.1 JP225.cash (Price: 38832.7, SL: 38672.6069359506, TP: 39251.82) SUCCEEDED, PendingOrder OID179
+21/02/2025 02:00:00.000 | Info | Combo: bartime=2025-02-21 01:00, executed=2025-02-21 02:00:00, pending Buy placed at 38832.7; SL=38672.60693595059, TP=39251.82364168134; valid for the next 3 chart bar(s).
+21/02/2025 05:00:00.000 | Trade | Cancelling pending order OID179
+21/02/2025 05:00:00.000 | Trade |  Cancelling pending order OID179 SUCCEEDED
+21/02/2025 05:00:00.000 | Info | Combo: pending order 179 cancelled after 3 chart bars.
+21/02/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 110.1 JP225.cash (Price: 38562.7, SL: 38670.4423814841, TP: 38280.63)
+21/02/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 110.1 JP225.cash (Price: 38562.7, SL: 38670.4423814841, TP: 38280.63) SUCCEEDED, PendingOrder OID180
+21/02/2025 15:00:00.000 | Info | Combo: bartime=2025-02-21 14:00, executed=2025-02-21 15:00:00, pending Sell placed at 38562.7; SL=38670.44238148414, TP=38280.63044527451; valid for the next 3 chart bar(s).
+24/02/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 88.9 JP225.cash (Price: 38019.2, SL: 38156.0458570798, TP: 37660.94)
+24/02/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 88.9 JP225.cash (Price: 38019.2, SL: 38156.0458570798, TP: 37660.94) SUCCEEDED, PendingOrder OID183
+24/02/2025 15:00:00.000 | Info | Combo: bartime=2025-02-24 14:00, executed=2025-02-24 15:00:00, pending Sell placed at 38019.2; SL=38156.04585707983, TP=37660.93754616499; valid for the next 3 chart bar(s).
+25/02/2025 01:00:00.000 | Trade | Placing Stop Order to Buy 73.1 JP225.cash (Price: 38436.7, SL: 38272.2112254165, TP: 38867.33)
+25/02/2025 01:00:00.000 | Trade |  Placing Stop Order to Buy 73.1 JP225.cash (Price: 38436.7, SL: 38272.2112254165, TP: 38867.33) SUCCEEDED, PendingOrder OID186
+25/02/2025 01:00:00.000 | Info | Combo: bartime=2025-02-25 00:00, executed=2025-02-25 01:00:00, pending Buy placed at 38436.7; SL=38272.21122541653, TP=38867.33161185952; valid for the next 3 chart bar(s).
+25/02/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 72.2 JP225.cash (Price: 38004.8, SL: 38169.3808522595, TP: 37573.93)
+25/02/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 72.2 JP225.cash (Price: 38004.8, SL: 38169.3808522595, TP: 37573.93) SUCCEEDED, PendingOrder OID189
+25/02/2025 08:00:00.000 | Info | Combo: bartime=2025-02-25 07:00, executed=2025-02-25 08:00:00, pending Sell placed at 38004.8; SL=38169.38085225953, TP=37573.927328784564; valid for the next 3 chart bar(s).
+25/02/2025 12:00:00.000 | Trade | Placing Stop Order to Buy 76.2 JP225.cash (Price: 38264.8, SL: 38110.4356829145, TP: 38668.93)
+25/02/2025 12:00:00.000 | Trade |  Placing Stop Order to Buy 76.2 JP225.cash (Price: 38264.8, SL: 38110.4356829145, TP: 38668.93) SUCCEEDED, PendingOrder OID192
+25/02/2025 12:00:00.000 | Info | Combo: bartime=2025-02-25 11:00, executed=2025-02-25 12:00:00, pending Buy placed at 38264.8; SL=38110.4356829145, TP=38668.925782129845; valid for the next 3 chart bar(s).
+26/02/2025 06:00:00.000 | Trade | Placing Stop Order to Buy 69.1 JP225.cash (Price: 38095.3, SL: 37927.1980205539, TP: 38535.39)
+26/02/2025 06:00:00.000 | Trade |  Placing Stop Order to Buy 69.1 JP225.cash (Price: 38095.3, SL: 37927.1980205539, TP: 38535.39) SUCCEEDED, PendingOrder OID195
+26/02/2025 06:00:00.000 | Info | Combo: bartime=2025-02-26 05:00, executed=2025-02-26 06:00:00, pending Buy placed at 38095.3; SL=37927.198020553944, TP=38535.3909821898; valid for the next 3 chart bar(s).
+26/02/2025 19:00:00.000 | Info | Combo: bartime=2025-02-26 18:00, reversal - closing existing Buy position 56 before opening opposite direction.
+26/02/2025 19:00:00.000 | Trade | Closing position PID56 (Volume: 69.1)
+26/02/2025 19:00:00.000 | Trade |  Closing position PID56 (Volume: 69.1) SUCCEEDED
+26/02/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 67.8 JP225.cash (Price: 37975, SL: 38145.3709365858, TP: 37528.97)
+26/02/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 67.8 JP225.cash (Price: 37975, SL: 38145.3709365858, TP: 37528.97) SUCCEEDED, PendingOrder OID199
+26/02/2025 19:00:00.000 | Info | Combo: bartime=2025-02-26 18:00, executed=2025-02-26 19:00:00, pending Sell placed at 37975; SL=38145.37093658581, TP=37528.968888018346; valid for the next 3 chart bar(s).
+27/02/2025 00:00:00.000 | Trade | Placing Stop Order to Buy 59.2 JP225.cash (Price: 38313, SL: 38120.4120643745, TP: 38817.2)
+27/02/2025 00:00:00.000 | Trade |  Placing Stop Order to Buy 59.2 JP225.cash (Price: 38313, SL: 38120.4120643745, TP: 38817.2) SUCCEEDED, PendingOrder OID202
+27/02/2025 00:00:00.000 | Info | Combo: bartime=2025-02-26 23:00, executed=2025-02-27 00:00:00, pending Buy placed at 38313; SL=38120.41206437445, TP=38817.195215467684; valid for the next 3 chart bar(s).
+27/02/2025 06:00:00.000 | Trade | Placing Stop Order to Buy 71.4 JP225.cash (Price: 38268, SL: 38110.1982282034, TP: 38681.13)
+27/02/2025 06:00:00.000 | Trade |  Placing Stop Order to Buy 71.4 JP225.cash (Price: 38268, SL: 38110.1982282034, TP: 38681.13) SUCCEEDED, PendingOrder OID205
+27/02/2025 06:00:00.000 | Info | Combo: bartime=2025-02-27 05:00, executed=2025-02-27 06:00:00, pending Buy placed at 38268; SL=38110.19822820338, TP=38681.12503856356; valid for the next 3 chart bar(s).
+27/02/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 70.5 JP225.cash (Price: 37968, SL: 38125.9951258449, TP: 37554.37)
+27/02/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 70.5 JP225.cash (Price: 37968, SL: 38125.9951258449, TP: 37554.37) SUCCEEDED, PendingOrder OID208
+27/02/2025 15:00:00.000 | Info | Combo: bartime=2025-02-27 14:00, executed=2025-02-27 15:00:00, pending Sell placed at 37968; SL=38125.995125844915, TP=37554.368760538004; valid for the next 3 chart bar(s).
+28/02/2025 20:00:00.000 | Trade | Placing Stop Order to Buy 49.6 JP225.cash (Price: 37388.7, SL: 37168.4125422502, TP: 37965.41)
+28/02/2025 20:00:00.000 | Trade |  Placing Stop Order to Buy 49.6 JP225.cash (Price: 37388.7, SL: 37168.4125422502, TP: 37965.41) SUCCEEDED, PendingOrder OID211
+28/02/2025 20:00:00.000 | Info | Combo: bartime=2025-02-28 19:00, executed=2025-02-28 20:00:00, pending Buy placed at 37388.7; SL=37168.412542250204, TP=37965.41256438895; valid for the next 3 chart bar(s).
+03/03/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 57.5 JP225.cash (Price: 37670.1, SL: 37864.8418139071, TP: 37160.27)
+03/03/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 57.5 JP225.cash (Price: 37670.1, SL: 37864.8418139071, TP: 37160.27) SUCCEEDED, PendingOrder OID214
+03/03/2025 19:00:00.000 | Info | Combo: bartime=2025-03-03 18:00, executed=2025-03-03 19:00:00, pending Sell placed at 37670.1; SL=37864.841813907144, TP=37160.26593119108; valid for the next 3 chart bar(s).
+04/03/2025 19:00:00.000 | Trade | Placing Stop Order to Buy 40.3 JP225.cash (Price: 37075.6, SL: 36790.1916635287, TP: 37822.8)
+04/03/2025 19:00:00.000 | Trade |  Placing Stop Order to Buy 40.3 JP225.cash (Price: 37075.6, SL: 36790.1916635287, TP: 37822.8) SUCCEEDED, PendingOrder OID217
+04/03/2025 19:00:00.000 | Info | Combo: bartime=2025-03-04 18:00, executed=2025-03-04 19:00:00, pending Buy placed at 37075.6; SL=36790.1916635287, TP=37822.79902488185; valid for the next 3 chart bar(s).
+04/03/2025 23:05:00.000 | Info | Combo: bartime=2025-03-04 21:00, Buy signal skipped: already have same-direction exposure open.
+05/03/2025 14:00:00.000 | Info | Combo: bartime=2025-03-05 13:00, reversal - closing existing Buy position 63 before opening opposite direction.
+05/03/2025 14:00:00.000 | Trade | Closing position PID63 (Volume: 40.3)
+05/03/2025 14:00:00.000 | Trade |  Closing position PID63 (Volume: 40.3) SUCCEEDED
+05/03/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 62.7 JP225.cash (Price: 37211.1, SL: 37395.6622223294, TP: 36727.92)
+05/03/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 62.7 JP225.cash (Price: 37211.1, SL: 37395.6622223294, TP: 36727.92) SUCCEEDED, PendingOrder OID221
+05/03/2025 14:00:00.000 | Info | Combo: bartime=2025-03-05 13:00, executed=2025-03-05 14:00:00, pending Sell placed at 37211.1; SL=37395.66222232936, TP=36727.91610194172; valid for the next 3 chart bar(s).
+05/03/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 50.8 JP225.cash (Price: 37118.6, SL: 37343.6958578326, TP: 36529.3)
+05/03/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 50.8 JP225.cash (Price: 37118.6, SL: 37343.6958578326, TP: 36529.3) SUCCEEDED, PendingOrder OID224
+05/03/2025 17:00:00.000 | Info | Combo: bartime=2025-03-05 16:00, executed=2025-03-05 17:00:00, pending Sell placed at 37118.6; SL=37343.69585783263, TP=36529.299044194166; valid for the next 3 chart bar(s).
+05/03/2025 18:00:00.000 | Info | Combo: bartime=2025-03-05 17:00, reversal - cancelling existing Sell pending order 224 before opening opposite direction.
+05/03/2025 18:00:00.000 | Trade | Cancelling pending order OID224
+05/03/2025 18:00:00.000 | Trade |  Cancelling pending order OID224 SUCCEEDED
+05/03/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 50.1 JP225.cash (Price: 37556.1, SL: 37328.0233137339, TP: 38153.2)
+05/03/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 50.1 JP225.cash (Price: 37556.1, SL: 37328.0233137339, TP: 38153.2) SUCCEEDED, PendingOrder OID225
+05/03/2025 18:00:00.000 | Info | Combo: bartime=2025-03-05 17:00, executed=2025-03-05 18:00:00, pending Buy placed at 37556.1; SL=37328.023313733895, TP=38153.204764644666; valid for the next 3 chart bar(s).
+06/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-06 08:00, reversal - closing existing Buy position 65 before opening opposite direction.
+06/03/2025 09:00:00.000 | Trade | Closing position PID65 (Volume: 50.1)
+06/03/2025 09:00:00.000 | Trade |  Closing position PID65 (Volume: 50.1) SUCCEEDED
+06/03/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 65.9 JP225.cash (Price: 37319.1, SL: 37490.6880923522, TP: 36869.88)
+06/03/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 65.9 JP225.cash (Price: 37319.1, SL: 37490.6880923522, TP: 36869.88) SUCCEEDED, PendingOrder OID229
+06/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-06 08:00, executed=2025-03-06 09:00:00, pending Sell placed at 37319.1; SL=37490.68809235223, TP=36869.882374221845; valid for the next 3 chart bar(s).
+07/03/2025 12:00:00.000 | Trade | Placing Stop Order to Buy 82.8 JP225.cash (Price: 37029.6, SL: 36889.4959770471, TP: 37396.39)
+07/03/2025 12:00:00.000 | Trade |  Placing Stop Order to Buy 82.8 JP225.cash (Price: 37029.6, SL: 36889.4959770471, TP: 37396.39) SUCCEEDED, PendingOrder OID232
+07/03/2025 12:00:00.000 | Info | Combo: bartime=2025-03-07 11:00, executed=2025-03-07 12:00:00, pending Buy placed at 37029.6; SL=36889.49597704709, TP=37396.39233209073; valid for the next 3 chart bar(s).
+07/03/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 38.3 JP225.cash (Price: 36532.1, SL: 36830.6466078015, TP: 35750.5)
+07/03/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 38.3 JP225.cash (Price: 36532.1, SL: 36830.6466078015, TP: 35750.5) SUCCEEDED, PendingOrder OID235
+07/03/2025 16:00:00.000 | Info | Combo: bartime=2025-03-07 15:00, executed=2025-03-07 16:00:00, pending Sell placed at 36532.1; SL=36830.646607801515, TP=35750.50498077564; valid for the next 3 chart bar(s).
+07/03/2025 19:00:00.000 | Trade | Placing Stop Order to Buy 34.3 JP225.cash (Price: 37109.6, SL: 36779.4441368056, TP: 37973.95)
+07/03/2025 19:00:00.000 | Trade |  Placing Stop Order to Buy 34.3 JP225.cash (Price: 37109.6, SL: 36779.4441368056, TP: 37973.95) SUCCEEDED, PendingOrder OID238
+07/03/2025 19:00:00.000 | Info | Combo: bartime=2025-03-07 18:00, executed=2025-03-07 19:00:00, pending Buy placed at 37109.6; SL=36779.44413680562, TP=37973.948049842875; valid for the next 3 chart bar(s).
+10/03/2025 01:00:00.000 | Trade | Placing Stop Order to Sell 40.6 JP225.cash (Price: 36674.6, SL: 36950.4806986012, TP: 35952.34)
+10/03/2025 01:00:00.000 | Trade |  Placing Stop Order to Sell 40.6 JP225.cash (Price: 36674.6, SL: 36950.4806986012, TP: 35952.34) SUCCEEDED, PendingOrder OID241
+10/03/2025 01:00:00.000 | Info | Combo: bartime=2025-03-10 00:00, executed=2025-03-10 01:00:00, pending Sell placed at 36674.6; SL=36950.480698601226, TP=35952.34433106199; valid for the next 3 chart bar(s).
+10/03/2025 04:00:00.000 | Trade | Cancelling pending order OID241
+10/03/2025 04:00:00.000 | Trade |  Cancelling pending order OID241 SUCCEEDED
+10/03/2025 04:00:00.000 | Info | Combo: pending order 241 cancelled after 3 chart bars.
+10/03/2025 05:00:00.000 | Trade | Placing Stop Order to Sell 57.3 JP225.cash (Price: 36906, SL: 37101.3360941471, TP: 36394.61)
+10/03/2025 05:00:00.000 | Trade |  Placing Stop Order to Sell 57.3 JP225.cash (Price: 36906, SL: 37101.3360941471, TP: 36394.61) SUCCEEDED, PendingOrder OID242
+10/03/2025 05:00:00.000 | Info | Combo: bartime=2025-03-10 04:00, executed=2025-03-10 05:00:00, pending Sell placed at 36906; SL=37101.33609414706, TP=36394.61010552299; valid for the next 3 chart bar(s).
+10/03/2025 08:00:00.000 | Trade | Cancelling pending order OID242
+10/03/2025 08:00:00.000 | Trade |  Cancelling pending order OID242 SUCCEEDED
+10/03/2025 08:00:00.000 | Info | Combo: pending order 242 cancelled after 3 chart bars.
+10/03/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 55.3 JP225.cash (Price: 36651, SL: 36853.5496641626, TP: 36120.72)
+10/03/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 55.3 JP225.cash (Price: 36651, SL: 36853.5496641626, TP: 36120.72) SUCCEEDED, PendingOrder OID243
+10/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-10 08:00, executed=2025-03-10 09:00:00, pending Sell placed at 36651; SL=36853.54966416264, TP=36120.724979222214; valid for the next 3 chart bar(s).
+11/03/2025 05:00:00.000 | Trade | Placing Stop Order to Buy 51.9 JP225.cash (Price: 36596.6, SL: 36375.1229208406, TP: 37176.43)
+11/03/2025 05:00:00.000 | Trade |  Placing Stop Order to Buy 51.9 JP225.cash (Price: 36596.6, SL: 36375.1229208406, TP: 37176.43) SUCCEEDED, PendingOrder OID246
+11/03/2025 05:00:00.000 | Info | Combo: bartime=2025-03-11 04:00, executed=2025-03-11 05:00:00, pending Buy placed at 36596.6; SL=36375.12292084055, TP=37176.42699323942; valid for the next 3 chart bar(s).
+11/03/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 42.2 JP225.cash (Price: 36276.6, SL: 36545.9301877511, TP: 35571.49)
+11/03/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 42.2 JP225.cash (Price: 36276.6, SL: 36545.9301877511, TP: 35571.49) SUCCEEDED, PendingOrder OID249
+11/03/2025 15:00:00.000 | Info | Combo: bartime=2025-03-11 14:00, executed=2025-03-11 15:00:00, pending Sell placed at 36276.6; SL=36545.93018775108, TP=35571.49356846765; valid for the next 3 chart bar(s).
+11/03/2025 19:00:00.000 | Trade | Placing Stop Order to Buy 35.4 JP225.cash (Price: 36801.6, SL: 36484.1823550972, TP: 37632.6)
+11/03/2025 19:00:00.000 | Trade |  Placing Stop Order to Buy 35.4 JP225.cash (Price: 36801.6, SL: 36484.1823550972, TP: 37632.6) SUCCEEDED, PendingOrder OID252
+11/03/2025 19:00:00.000 | Info | Combo: bartime=2025-03-11 18:00, executed=2025-03-11 19:00:00, pending Buy placed at 36801.6; SL=36484.18235509715, TP=37632.599394355646; valid for the next 3 chart bar(s).
+11/03/2025 23:00:00.000 | Trade | Placing Stop Order to Buy 44.2 JP225.cash (Price: 36687.1, SL: 36435.5421658097, TP: 37345.68)
+11/03/2025 23:00:00.000 | Trade |  Placing Stop Order to Buy 44.2 JP225.cash (Price: 36687.1, SL: 36435.5421658097, TP: 37345.68) SUCCEEDED, PendingOrder OID255
+11/03/2025 23:00:00.000 | Info | Combo: bartime=2025-03-11 22:00, executed=2025-03-11 23:00:00, pending Buy placed at 36687.1; SL=36435.54216580974, TP=37345.67840991009; valid for the next 3 chart bar(s).
+13/03/2025 04:00:00.000 | Info | Combo: bartime=2025-03-13 03:00, reversal - closing existing Buy position 74 before opening opposite direction.
+13/03/2025 04:00:00.000 | Trade | Closing position PID74 (Volume: 44.2)
+13/03/2025 04:00:00.000 | Trade |  Closing position PID74 (Volume: 44.2) SUCCEEDED
+13/03/2025 04:00:00.000 | Trade | Placing Stop Order to Sell 66.5 JP225.cash (Price: 36943, SL: 37111.9137792068, TP: 36500.78)
+13/03/2025 04:00:00.000 | Trade |  Placing Stop Order to Sell 66.5 JP225.cash (Price: 36943, SL: 37111.9137792068, TP: 36500.78) SUCCEEDED, PendingOrder OID259
+13/03/2025 04:00:00.000 | Info | Combo: bartime=2025-03-13 03:00, executed=2025-03-13 04:00:00, pending Sell placed at 36943; SL=37111.9137792068, TP=36500.78372603659; valid for the next 3 chart bar(s).
+14/03/2025 01:00:00.000 | Info | Combo: bartime=2025-03-14 00:00, reversal - closing existing Sell position 75 before opening opposite direction.
+14/03/2025 01:00:00.000 | Trade | Closing position PID75 (Volume: 66.5)
+14/03/2025 01:00:00.000 | Trade |  Closing position PID75 (Volume: 66.5) SUCCEEDED
+14/03/2025 01:00:00.000 | Trade | Placing Stop Order to Buy 50.6 JP225.cash (Price: 36963, SL: 36741.1255322685, TP: 37543.87)
+14/03/2025 01:00:00.000 | Trade |  Placing Stop Order to Buy 50.6 JP225.cash (Price: 36963, SL: 36741.1255322685, TP: 37543.87) SUCCEEDED, PendingOrder OID263
+14/03/2025 01:00:00.000 | Info | Combo: bartime=2025-03-14 00:00, executed=2025-03-14 01:00:00, pending Buy placed at 36963; SL=36741.12553226846, TP=37543.86735652118; valid for the next 3 chart bar(s).
+17/03/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 115.7 JP225.cash (Price: 37418.5, SL: 37517.9839373111, TP: 37158.05)
+17/03/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 115.7 JP225.cash (Price: 37418.5, SL: 37517.9839373111, TP: 37158.05) SUCCEEDED, PendingOrder OID266
+17/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-17 08:00, executed=2025-03-17 09:00:00, pending Sell placed at 37418.5; SL=37517.983937311146, TP=37158.05105211942; valid for the next 3 chart bar(s).
+17/03/2025 12:00:00.000 | Trade | Cancelling pending order OID266
+17/03/2025 12:00:00.000 | Trade |  Cancelling pending order OID266 SUCCEEDED
+17/03/2025 12:00:00.000 | Info | Combo: pending order 266 cancelled after 3 chart bars.
+17/03/2025 13:00:00.000 | Trade | Placing Stop Order to Buy 115.7 JP225.cash (Price: 37666, SL: 37566.5033792774, TP: 37926.48)
+17/03/2025 13:00:00.000 | Trade |  Placing Stop Order to Buy 115.7 JP225.cash (Price: 37666, SL: 37566.5033792774, TP: 37926.48) SUCCEEDED, PendingOrder OID267
+17/03/2025 13:00:00.000 | Info | Combo: bartime=2025-03-17 12:00, executed=2025-03-17 13:00:00, pending Buy placed at 37666; SL=37566.503379277354, TP=37926.48215305188; valid for the next 3 chart bar(s).
+18/03/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 129.2 JP225.cash (Price: 37824.8, SL: 37916.1289312479, TP: 37585.7)
+18/03/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 129.2 JP225.cash (Price: 37824.8, SL: 37916.1289312479, TP: 37585.7) SUCCEEDED, PendingOrder OID270
+18/03/2025 11:00:00.000 | Info | Combo: bartime=2025-03-18 10:00, executed=2025-03-18 11:00:00, pending Sell placed at 37824.8; SL=37916.12893124786, TP=37585.700857993106; valid for the next 3 chart bar(s).
+19/03/2025 01:00:00.000 | Trade | Placing Stop Order to Buy 85.3 JP225.cash (Price: 38124.8, SL: 37988.0773165065, TP: 38482.74)
+19/03/2025 01:00:00.000 | Trade |  Placing Stop Order to Buy 85.3 JP225.cash (Price: 38124.8, SL: 37988.0773165065, TP: 38482.74) SUCCEEDED, PendingOrder OID273
+19/03/2025 01:00:00.000 | Info | Combo: bartime=2025-03-19 00:00, executed=2025-03-19 01:00:00, pending Buy placed at 38124.8; SL=37988.077316506526, TP=38482.73998538594; valid for the next 3 chart bar(s).
+19/03/2025 04:00:00.000 | Trade | Cancelling pending order OID273
+19/03/2025 04:00:00.000 | Trade |  Cancelling pending order OID273 SUCCEEDED
+19/03/2025 04:00:00.000 | Info | Combo: pending order 273 cancelled after 3 chart bars.
+19/03/2025 06:00:00.000 | Trade | Placing Stop Order to Sell 104.4 JP225.cash (Price: 37810, SL: 37921.7257689271, TP: 37517.5)
+19/03/2025 06:00:00.000 | Trade |  Placing Stop Order to Sell 104.4 JP225.cash (Price: 37810, SL: 37921.7257689271, TP: 37517.5) SUCCEEDED, PendingOrder OID274
+19/03/2025 06:00:00.000 | Info | Combo: bartime=2025-03-19 05:00, executed=2025-03-19 06:00:00, pending Sell placed at 37810; SL=37921.72576892714, TP=37517.50193694874; valid for the next 3 chart bar(s).
+19/03/2025 07:00:00.000 | Info | Combo: bartime=2025-03-19 06:00, Sell signal skipped: already have same-direction exposure open.
+19/03/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 91.5 JP225.cash (Price: 37952.5, SL: 37826.3263296194, TP: 38282.82)
+19/03/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 91.5 JP225.cash (Price: 37952.5, SL: 37826.3263296194, TP: 38282.82) SUCCEEDED, PendingOrder OID277
+19/03/2025 14:00:00.000 | Info | Combo: bartime=2025-03-19 13:00, executed=2025-03-19 14:00:00, pending Buy placed at 37952.5; SL=37826.326329619435, TP=38282.822669056324; valid for the next 3 chart bar(s).
+19/03/2025 16:00:00.000 | Info | Combo: bartime=2025-03-19 15:00, Buy signal skipped: already have same-direction exposure open.
+19/03/2025 19:00:00.000 | Trade | Placing Stop Order to Buy 91 JP225.cash (Price: 37960, SL: 37834.6266116897, TP: 38288.23)
+19/03/2025 19:00:00.000 | Trade |  Placing Stop Order to Buy 91 JP225.cash (Price: 37960, SL: 37834.6266116897, TP: 38288.23) SUCCEEDED, PendingOrder OID280
+19/03/2025 19:00:00.000 | Info | Combo: bartime=2025-03-19 18:00, executed=2025-03-19 19:00:00, pending Buy placed at 37960; SL=37834.626611689695, TP=38288.22753059638; valid for the next 3 chart bar(s).
+19/03/2025 22:05:00.000 | Info | Combo: bartime=2025-03-19 20:00, reversal - closing existing Buy position 81 before opening opposite direction.
+19/03/2025 22:05:00.000 | Trade | Closing position PID81 (Volume: 91)
+19/03/2025 22:05:00.000 | Trade |  Closing position PID81 (Volume: 91) SUCCEEDED
+19/03/2025 22:05:00.000 | Trade | Placing Stop Order to Sell 91.3 JP225.cash (Price: 37840, SL: 37964.2389685186, TP: 37514.74)
+19/03/2025 22:05:00.000 | Trade |  Placing Stop Order to Sell 91.3 JP225.cash (Price: 37840, SL: 37964.2389685186, TP: 37514.74) SUCCEEDED, PendingOrder OID284
+19/03/2025 22:05:00.000 | Info | Combo: bartime=2025-03-19 20:00, executed=2025-03-19 22:05:00, pending Sell placed at 37840; SL=37964.23896851859, TP=37514.74238041832; valid for the next 3 chart bar(s).
+19/03/2025 23:00:00.000 | Info | Combo: bartime=2025-03-19 22:00, reversal - cancelling existing Sell pending order 284 before opening opposite direction.
+19/03/2025 23:00:00.000 | Trade | Cancelling pending order OID284
+19/03/2025 23:00:00.000 | Trade |  Cancelling pending order OID284 SUCCEEDED
+19/03/2025 23:00:00.000 | Trade | Placing Stop Order to Buy 95.9 JP225.cash (Price: 37963, SL: 37844.7088251851, TP: 38272.69)
+19/03/2025 23:00:00.000 | Trade |  Placing Stop Order to Buy 95.9 JP225.cash (Price: 37963, SL: 37844.7088251851, TP: 38272.69) SUCCEEDED, PendingOrder OID285
+19/03/2025 23:00:00.000 | Info | Combo: bartime=2025-03-19 22:00, executed=2025-03-19 23:00:00, pending Buy placed at 37963; SL=37844.708825185124, TP=38272.68629566534; valid for the next 3 chart bar(s).
+20/03/2025 02:00:00.000 | Trade | Cancelling pending order OID285
+20/03/2025 02:00:00.000 | Trade |  Cancelling pending order OID285 SUCCEEDED
+20/03/2025 02:00:00.000 | Info | Combo: pending order 285 cancelled after 3 chart bars.
+20/03/2025 02:00:00.000 | Trade | Placing Stop Order to Sell 114 JP225.cash (Price: 37795, SL: 37894.5050815052, TP: 37534.5)
+20/03/2025 02:00:00.000 | Trade |  Placing Stop Order to Sell 114 JP225.cash (Price: 37795, SL: 37894.5050815052, TP: 37534.5) SUCCEEDED, PendingOrder OID286
+20/03/2025 02:00:00.000 | Info | Combo: bartime=2025-03-20 01:00, executed=2025-03-20 02:00:00, pending Sell placed at 37795; SL=37894.50508150522, TP=37534.49569661934; valid for the next 3 chart bar(s).
+20/03/2025 05:00:00.000 | Trade | Cancelling pending order OID286
+20/03/2025 05:00:00.000 | Trade |  Cancelling pending order OID286 SUCCEEDED
+20/03/2025 05:00:00.000 | Info | Combo: pending order 286 cancelled after 3 chart bars.
+20/03/2025 07:00:00.000 | Trade | Placing Stop Order to Sell 168.1 JP225.cash (Price: 37785.7, SL: 37853.2295691076, TP: 37608.91)
+20/03/2025 07:00:00.000 | Trade |  Placing Stop Order to Sell 168.1 JP225.cash (Price: 37785.7, SL: 37853.2295691076, TP: 37608.91) SUCCEEDED, PendingOrder OID287
+20/03/2025 07:00:00.000 | Info | Combo: bartime=2025-03-20 06:00, executed=2025-03-20 07:00:00, pending Sell placed at 37785.7; SL=37853.22956910763, TP=37608.907588076225; valid for the next 3 chart bar(s).
+20/03/2025 22:05:00.000 | Trade | Placing Stop Order to Buy 105.7 JP225.cash (Price: 37743.2, SL: 37633.0761597388, TP: 38031.5)
+20/03/2025 22:05:00.000 | Trade |  Placing Stop Order to Buy 105.7 JP225.cash (Price: 37743.2, SL: 37633.0761597388, TP: 38031.5) SUCCEEDED, PendingOrder OID290
+20/03/2025 22:05:00.000 | Info | Combo: bartime=2025-03-20 20:00, executed=2025-03-20 22:05:00, pending Buy placed at 37743.2; SL=37633.076159738775, TP=38031.504213803884; valid for the next 3 chart bar(s).
+21/03/2025 01:00:00.000 | Info | Combo: bartime=2025-03-21 00:00, Buy signal skipped: already have same-direction exposure open.
+21/03/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 94.7 JP225.cash (Price: 37608, SL: 37729.50300405, TP: 37289.91)
+21/03/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 94.7 JP225.cash (Price: 37608, SL: 37729.50300405, TP: 37289.91) SUCCEEDED, PendingOrder OID293
+21/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-21 07:00, executed=2025-03-21 08:00:00, pending Sell placed at 37608; SL=37729.50300405, TP=37289.90513539711; valid for the next 3 chart bar(s).
+23/03/2025 23:00:00.000 | Trade | Placing Stop Order to Buy 83.2 JP225.cash (Price: 37848.5, SL: 37712.0449217876, TP: 38205.74)
+23/03/2025 23:00:00.000 | Trade |  Placing Stop Order to Buy 83.2 JP225.cash (Price: 37848.5, SL: 37712.0449217876, TP: 38205.74) SUCCEEDED, PendingOrder OID296
+23/03/2025 23:00:00.000 | Info | Combo: bartime=2025-03-23 22:00, executed=2025-03-23 23:00:00, pending Buy placed at 37848.5; SL=37712.044921787594, TP=38205.73939476009; valid for the next 3 chart bar(s).
+24/03/2025 02:00:00.000 | Trade | Cancelling pending order OID296
+24/03/2025 02:00:00.000 | Trade |  Cancelling pending order OID296 SUCCEEDED
+24/03/2025 02:00:00.000 | Info | Combo: pending order 296 cancelled after 3 chart bars.
+24/03/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 122.5 JP225.cash (Price: 37582.3, SL: 37674.9783211329, TP: 37339.67)
+24/03/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 122.5 JP225.cash (Price: 37582.3, SL: 37674.9783211329, TP: 37339.67) SUCCEEDED, PendingOrder OID297
+24/03/2025 10:00:00.000 | Info | Combo: bartime=2025-03-24 09:00, executed=2025-03-24 10:00:00, pending Sell placed at 37582.3; SL=37674.97832113289, TP=37339.668155274114; valid for the next 3 chart bar(s).
+24/03/2025 13:00:00.000 | Trade | Cancelling pending order OID297
+24/03/2025 13:00:00.000 | Trade |  Cancelling pending order OID297 SUCCEEDED
+24/03/2025 13:00:00.000 | Info | Combo: pending order 297 cancelled after 3 chart bars.
+25/03/2025 04:00:00.000 | Trade | Placing Stop Order to Sell 97.3 JP225.cash (Price: 37765.3, SL: 37881.970033884, TP: 37459.86)
+25/03/2025 04:00:00.000 | Trade |  Placing Stop Order to Sell 97.3 JP225.cash (Price: 37765.3, SL: 37881.970033884, TP: 37459.86) SUCCEEDED, PendingOrder OID298
+25/03/2025 04:00:00.000 | Info | Combo: bartime=2025-03-25 03:00, executed=2025-03-25 04:00:00, pending Sell placed at 37765.3; SL=37881.97003388404, TP=37459.85785129159; valid for the next 3 chart bar(s).
+25/03/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 128.3 JP225.cash (Price: 37942.8, SL: 37855.2919706375, TP: 38171.9)
+25/03/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 128.3 JP225.cash (Price: 37942.8, SL: 37855.2919706375, TP: 38171.9) SUCCEEDED, PendingOrder OID301
+25/03/2025 10:00:00.000 | Info | Combo: bartime=2025-03-25 09:00, executed=2025-03-25 10:00:00, pending Buy placed at 37942.8; SL=37855.2919706375, TP=38171.89602087102; valid for the next 3 chart bar(s).
+25/03/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 117.6 JP225.cash (Price: 37837.8, SL: 37932.2952888269, TP: 37590.41)
+25/03/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 117.6 JP225.cash (Price: 37837.8, SL: 37932.2952888269, TP: 37590.41) SUCCEEDED, PendingOrder OID304
+25/03/2025 14:00:00.000 | Info | Combo: bartime=2025-03-25 13:00, executed=2025-03-25 14:00:00, pending Sell placed at 37837.8; SL=37932.295288826885, TP=37590.41133385123; valid for the next 3 chart bar(s).
+25/03/2025 17:00:00.000 | Trade | Placing Stop Order to Buy 115.5 JP225.cash (Price: 37997.8, SL: 37902.7184121206, TP: 38246.72)
+25/03/2025 17:00:00.000 | Trade |  Placing Stop Order to Buy 115.5 JP225.cash (Price: 37997.8, SL: 37902.7184121206, TP: 38246.72) SUCCEEDED, PendingOrder OID307
+25/03/2025 17:00:00.000 | Info | Combo: bartime=2025-03-25 16:00, executed=2025-03-25 17:00:00, pending Buy placed at 37997.8; SL=37902.71841212064, TP=38246.72359706817; valid for the next 3 chart bar(s).
+26/03/2025 02:00:00.000 | Trade | Placing Stop Order to Sell 94.2 JP225.cash (Price: 37864.7, SL: 37979.9538737748, TP: 37562.97)
+26/03/2025 02:00:00.000 | Trade |  Placing Stop Order to Sell 94.2 JP225.cash (Price: 37864.7, SL: 37979.9538737748, TP: 37562.97) SUCCEEDED, PendingOrder OID310
+26/03/2025 02:00:00.000 | Info | Combo: bartime=2025-03-26 01:00, executed=2025-03-26 02:00:00, pending Sell placed at 37864.7; SL=37979.95387377475, TP=37562.965358457695; valid for the next 3 chart bar(s).
+26/03/2025 05:00:00.000 | Trade | Cancelling pending order OID310
+26/03/2025 05:00:00.000 | Trade |  Cancelling pending order OID310 SUCCEEDED
+26/03/2025 05:00:00.000 | Info | Combo: pending order 310 cancelled after 3 chart bars.
+26/03/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 103.3 JP225.cash (Price: 37944.7, SL: 38049.8132411894, TP: 37669.51)
+26/03/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 103.3 JP225.cash (Price: 37944.7, SL: 38049.8132411894, TP: 37669.51) SUCCEEDED, PendingOrder OID311
+26/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-26 08:00, executed=2025-03-26 09:00:00, pending Sell placed at 37944.7; SL=38049.81324118944, TP=37669.513534566024; valid for the next 3 chart bar(s).
+26/03/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 112.5 JP225.cash (Price: 37877.2, SL: 37972.640306873, TP: 37627.34)
+26/03/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 112.5 JP225.cash (Price: 37877.2, SL: 37972.640306873, TP: 37627.34) SUCCEEDED, PendingOrder OID314
+26/03/2025 14:00:00.000 | Info | Combo: bartime=2025-03-26 13:00, executed=2025-03-26 14:00:00, pending Sell placed at 37877.2; SL=37972.640306872956, TP=37627.337276606595; valid for the next 3 chart bar(s).
+31/03/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 58.9 JP225.cash (Price: 35932.4, SL: 35745.0545696785, TP: 36422.87)
+31/03/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 58.9 JP225.cash (Price: 35932.4, SL: 35745.0545696785, TP: 36422.87) SUCCEEDED, PendingOrder OID317
+31/03/2025 16:00:00.000 | Info | Combo: bartime=2025-03-31 15:00, executed=2025-03-31 16:00:00, pending Buy placed at 35932.4; SL=35745.054569678454, TP=36422.87033658182; valid for the next 3 chart bar(s).
+01/04/2025 04:00:00.000 | Trade | Placing Stop Order to Sell 65 JP225.cash (Price: 35646.1, SL: 35813.8949069881, TP: 35206.81)
+01/04/2025 04:00:00.000 | Trade |  Placing Stop Order to Sell 65 JP225.cash (Price: 35646.1, SL: 35813.8949069881, TP: 35206.81) SUCCEEDED, PendingOrder OID320
+01/04/2025 04:00:00.000 | Info | Combo: bartime=2025-04-01 03:00, executed=2025-04-01 04:00:00, pending Sell placed at 35646.1; SL=35813.89490698812, TP=35206.81293350509; valid for the next 3 chart bar(s).
+01/04/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 53.6 JP225.cash (Price: 35691.1, SL: 35482.5782296955, TP: 36237.01)
+01/04/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 53.6 JP225.cash (Price: 35691.1, SL: 35482.5782296955, TP: 36237.01) SUCCEEDED, PendingOrder OID323
+01/04/2025 16:00:00.000 | Info | Combo: bartime=2025-04-01 15:00, executed=2025-04-01 16:00:00, pending Buy placed at 35691.1; SL=35482.57822969553, TP=36237.0099946571; valid for the next 3 chart bar(s).
+01/04/2025 20:00:00.000 | Trade | Placing Stop Order to Buy 54 JP225.cash (Price: 35731.1, SL: 35526.3014828833, TP: 36267.26)
+01/04/2025 20:00:00.000 | Trade |  Placing Stop Order to Buy 54 JP225.cash (Price: 35731.1, SL: 35526.3014828833, TP: 36267.26) SUCCEEDED, PendingOrder OID326
+01/04/2025 20:00:00.000 | Info | Combo: bartime=2025-04-01 19:00, executed=2025-04-01 20:00:00, pending Buy placed at 35731.1; SL=35526.30148288329, TP=36267.26251781155; valid for the next 3 chart bar(s).
+02/04/2025 01:00:00.000 | Trade | Placing Stop Order to Sell 54.8 JP225.cash (Price: 35406.5, SL: 35605.994272611, TP: 34884.22)
+02/04/2025 01:00:00.000 | Trade |  Placing Stop Order to Sell 54.8 JP225.cash (Price: 35406.5, SL: 35605.994272611, TP: 34884.22) SUCCEEDED, PendingOrder OID329
+02/04/2025 01:00:00.000 | Info | Combo: bartime=2025-04-02 00:00, executed=2025-04-02 01:00:00, pending Sell placed at 35406.5; SL=35605.994272611, TP=34884.22399430439; valid for the next 3 chart bar(s).
+02/04/2025 04:00:00.000 | Trade | Cancelling pending order OID329
+02/04/2025 04:00:00.000 | Trade |  Cancelling pending order OID329 SUCCEEDED
+02/04/2025 04:00:00.000 | Info | Combo: pending order 329 cancelled after 3 chart bars.
+02/04/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 75.5 JP225.cash (Price: 35519, SL: 35663.6831530236, TP: 35140.22)
+02/04/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 75.5 JP225.cash (Price: 35519, SL: 35663.6831530236, TP: 35140.22) SUCCEEDED, PendingOrder OID330
+02/04/2025 09:00:00.000 | Info | Combo: bartime=2025-04-02 08:00, executed=2025-04-02 09:00:00, pending Sell placed at 35519; SL=35663.68315302358, TP=35140.21950538427; valid for the next 3 chart bar(s).
+02/04/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 64.2 JP225.cash (Price: 35744, SL: 35575.9100995338, TP: 36184.06)
+02/04/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 64.2 JP225.cash (Price: 35744, SL: 35575.9100995338, TP: 36184.06) SUCCEEDED, PendingOrder OID333
+02/04/2025 15:00:00.000 | Info | Combo: bartime=2025-04-02 14:00, executed=2025-04-02 15:00:00, pending Buy placed at 35744; SL=35575.91009953379, TP=36184.05935942054; valid for the next 3 chart bar(s).
+02/04/2025 22:05:00.000 | Trade | Placing Stop Order to Sell 22.3 JP225.cash (Price: 34761.5, SL: 35258.3786388678, TP: 33460.67)
+02/04/2025 22:05:00.000 | Trade |  Placing Stop Order to Sell 22.3 JP225.cash (Price: 34761.5, SL: 35258.3786388678, TP: 33460.67) SUCCEEDED, PendingOrder OID336
+02/04/2025 22:05:00.000 | Info | Combo: bartime=2025-04-02 20:00, executed=2025-04-02 22:05:00, pending Sell placed at 34761.5; SL=35258.37863886781, TP=33460.67172344406; valid for the next 3 chart bar(s).
+07/04/2025 13:00:00.000 | Trade | Placing Stop Order to Buy 22.5 JP225.cash (Price: 31831, SL: 31326.5009550287, TP: 33151.78)
+07/04/2025 13:00:00.000 | Trade |  Placing Stop Order to Buy 22.5 JP225.cash (Price: 31831, SL: 31326.5009550287, TP: 33151.78) SUCCEEDED, PendingOrder OID339
+07/04/2025 13:00:00.000 | Info | Combo: bartime=2025-04-07 12:00, executed=2025-04-07 13:00:00, pending Buy placed at 31831; SL=31326.500955028692, TP=33151.778499734886; valid for the next 3 chart bar(s).
+08/04/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 26.1 JP225.cash (Price: 32841.4, SL: 33288.4947867138, TP: 31670.91)
+08/04/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 26.1 JP225.cash (Price: 32841.4, SL: 33288.4947867138, TP: 31670.91) SUCCEEDED, PendingOrder OID342
+08/04/2025 17:00:00.000 | Info | Combo: bartime=2025-04-08 16:00, executed=2025-04-08 17:00:00, pending Sell placed at 32841.4; SL=33288.49478671376, TP=31670.90584838338; valid for the next 3 chart bar(s).
+09/04/2025 17:00:00.000 | Trade | Placing Stop Order to Buy 24 JP225.cash (Price: 32029.3, SL: 31529.3210159814, TP: 33338.24)
+09/04/2025 17:00:00.000 | Trade |  Placing Stop Order to Buy 24 JP225.cash (Price: 32029.3, SL: 31529.3210159814, TP: 33338.24) SUCCEEDED, PendingOrder OID345
+09/04/2025 17:00:00.000 | Info | Combo: bartime=2025-04-09 16:00, executed=2025-04-09 17:00:00, pending Buy placed at 32029.3; SL=31529.32101598145, TP=33338.244980160554; valid for the next 3 chart bar(s).
+09/04/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 13.4 JP225.cash (Price: 34332.3, SL: 33417.7168127852, TP: 36726.68)
+09/04/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 13.4 JP225.cash (Price: 34332.3, SL: 33417.7168127852, TP: 36726.68) SUCCEEDED, PendingOrder OID348
+09/04/2025 18:00:00.000 | Info | Combo: bartime=2025-04-09 17:00, executed=2025-04-09 18:00:00, pending Buy placed at 34332.3; SL=33417.71681278516, TP=36726.67878412845; valid for the next 3 chart bar(s).
+10/04/2025 10:00:00.000 | Info | Combo: bartime=2025-04-10 09:00, reversal - closing existing Buy position 101 before opening opposite direction.
+10/04/2025 10:00:00.000 | Trade | Closing position PID101 (Volume: 13.4)
+10/04/2025 10:00:00.000 | Trade |  Closing position PID101 (Volume: 13.4) SUCCEEDED
+10/04/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 34.3 JP225.cash (Price: 33709.5, SL: 34064.5903875219, TP: 32779.87)
+10/04/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 34.3 JP225.cash (Price: 33709.5, SL: 34064.5903875219, TP: 32779.87) SUCCEEDED, PendingOrder OID352
+10/04/2025 10:00:00.000 | Info | Combo: bartime=2025-04-10 09:00, executed=2025-04-10 10:00:00, pending Sell placed at 33709.5; SL=34064.59038752194, TP=32779.87336546757; valid for the next 3 chart bar(s).
+11/04/2025 06:00:00.000 | Trade | Placing Stop Order to Buy 38 JP225.cash (Price: 33492.4, SL: 33162.8622168392, TP: 34355.13)
+11/04/2025 06:00:00.000 | Trade |  Placing Stop Order to Buy 38 JP225.cash (Price: 33492.4, SL: 33162.8622168392, TP: 34355.13) SUCCEEDED, PendingOrder OID355
+11/04/2025 06:00:00.000 | Info | Combo: bartime=2025-04-11 05:00, executed=2025-04-11 06:00:00, pending Buy placed at 33492.4; SL=33162.86221683925, TP=34355.12991631486; valid for the next 3 chart bar(s).
+11/04/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 35.1 JP225.cash (Price: 33234.9, SL: 32882.2906592139, TP: 34158.03)
+11/04/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 35.1 JP225.cash (Price: 33234.9, SL: 32882.2906592139, TP: 34158.03) SUCCEEDED, PendingOrder OID358
+11/04/2025 11:00:00.000 | Info | Combo: bartime=2025-04-11 10:00, executed=2025-04-11 11:00:00, pending Buy placed at 33234.9; SL=32882.29065921388, TP=34158.03125417805; valid for the next 3 chart bar(s).
+11/04/2025 12:00:00.000 | Info | Combo: bartime=2025-04-11 11:00, reversal - cancelling existing Buy pending order 358 before opening opposite direction.
+11/04/2025 12:00:00.000 | Trade | Cancelling pending order OID358
+11/04/2025 12:00:00.000 | Trade |  Cancelling pending order OID358 SUCCEEDED
+11/04/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 35.5 JP225.cash (Price: 32854.9, SL: 33203.4874726289, TP: 31942.3)
+11/04/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 35.5 JP225.cash (Price: 32854.9, SL: 33203.4874726289, TP: 31942.3) SUCCEEDED, PendingOrder OID359
+11/04/2025 12:00:00.000 | Info | Combo: bartime=2025-04-11 11:00, executed=2025-04-11 12:00:00, pending Sell placed at 32854.9; SL=33203.4874726289, TP=31942.29799665756; valid for the next 3 chart bar(s).
+11/04/2025 17:00:00.000 | Trade | Placing Stop Order to Buy 34.1 JP225.cash (Price: 33487.4, SL: 33127.997256969, TP: 34428.32)
+11/04/2025 17:00:00.000 | Trade |  Placing Stop Order to Buy 34.1 JP225.cash (Price: 33487.4, SL: 33127.997256969, TP: 34428.32) SUCCEEDED, PendingOrder OID362
+11/04/2025 17:00:00.000 | Info | Combo: bartime=2025-04-11 16:00, executed=2025-04-11 17:00:00, pending Buy placed at 33487.4; SL=33127.99725696896, TP=34428.31638125525; valid for the next 3 chart bar(s).
+14/04/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 55.5 JP225.cash (Price: 33992.8, SL: 34219.0578966056, TP: 33400.46)
+14/04/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 55.5 JP225.cash (Price: 33992.8, SL: 34219.0578966056, TP: 33400.46) SUCCEEDED, PendingOrder OID365
+14/04/2025 16:00:00.000 | Info | Combo: bartime=2025-04-14 15:00, executed=2025-04-14 16:00:00, pending Sell placed at 33992.8; SL=34219.05789660559, TP=33400.45682668658; valid for the next 3 chart bar(s).
+15/04/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 109.9 JP225.cash (Price: 34190.7, SL: 34303.2745820295, TP: 33895.98)
+15/04/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 109.9 JP225.cash (Price: 34190.7, SL: 34303.2745820295, TP: 33895.98) SUCCEEDED, PendingOrder OID368
+15/04/2025 12:00:00.000 | Info | Combo: bartime=2025-04-15 11:00, executed=2025-04-15 12:00:00, pending Sell placed at 34190.7; SL=34303.27458202948, TP=33895.97974424682; valid for the next 3 chart bar(s).
+15/04/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 87.1 JP225.cash (Price: 34555.7, SL: 34415.1522675011, TP: 34923.65)
+15/04/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 87.1 JP225.cash (Price: 34555.7, SL: 34415.1522675011, TP: 34923.65) SUCCEEDED, PendingOrder OID371
+15/04/2025 14:00:00.000 | Info | Combo: bartime=2025-04-15 13:00, executed=2025-04-15 14:00:00, pending Buy placed at 34555.7; SL=34415.15226750113, TP=34923.65396368203; valid for the next 3 chart bar(s).
+15/04/2025 23:00:00.000 | Trade | Placing Stop Order to Sell 79.3 JP225.cash (Price: 34173.6, SL: 34326.1825246644, TP: 33774.14)
+15/04/2025 23:00:00.000 | Trade |  Placing Stop Order to Sell 79.3 JP225.cash (Price: 34173.6, SL: 34326.1825246644, TP: 33774.14) SUCCEEDED, PendingOrder OID374
+15/04/2025 23:00:00.000 | Info | Combo: bartime=2025-04-15 22:00, executed=2025-04-15 23:00:00, pending Sell placed at 34173.6; SL=34326.18252466444, TP=33774.1389504285; valid for the next 3 chart bar(s).
+16/04/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 69.4 JP225.cash (Price: 34181.1, SL: 34002.43074404, TP: 34648.86)
+16/04/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 69.4 JP225.cash (Price: 34181.1, SL: 34002.43074404, TP: 34648.86) SUCCEEDED, PendingOrder OID377
+16/04/2025 15:00:00.000 | Info | Combo: bartime=2025-04-16 14:00, executed=2025-04-16 15:00:00, pending Buy placed at 34181.1; SL=34002.43074403999, TP=34648.85611210328; valid for the next 3 chart bar(s).
+16/04/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 57.2 JP225.cash (Price: 33741.1, SL: 33955.4186590515, TP: 33180.01)
+16/04/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 57.2 JP225.cash (Price: 33741.1, SL: 33955.4186590515, TP: 33180.01) SUCCEEDED, PendingOrder OID380
+16/04/2025 18:00:00.000 | Info | Combo: bartime=2025-04-16 17:00, executed=2025-04-16 18:00:00, pending Sell placed at 33741.1; SL=33955.41865905152, TP=33180.01375060312; valid for the next 3 chart bar(s).
+17/04/2025 00:00:00.000 | Trade | Placing Stop Order to Buy 57.7 JP225.cash (Price: 34059.9, SL: 33850.096061802, TP: 34609.17)
+17/04/2025 00:00:00.000 | Trade |  Placing Stop Order to Buy 57.7 JP225.cash (Price: 34059.9, SL: 33850.096061802, TP: 34609.17) SUCCEEDED, PendingOrder OID383
+17/04/2025 00:00:00.000 | Info | Combo: bartime=2025-04-16 23:00, executed=2025-04-17 00:00:00, pending Buy placed at 34059.9; SL=33850.096061801996, TP=34609.16671020237; valid for the next 3 chart bar(s).
+20/04/2025 22:05:00.000 | Trade | Placing Stop Order to Sell 139 JP225.cash (Price: 34572.4, SL: 34661.7328676252, TP: 34338.53)
+20/04/2025 22:05:00.000 | Trade |  Placing Stop Order to Sell 139 JP225.cash (Price: 34572.4, SL: 34661.7328676252, TP: 34338.53) SUCCEEDED, PendingOrder OID386
+20/04/2025 22:05:00.000 | Info | Combo: bartime=2025-04-18 15:00, executed=2025-04-20 22:05:00, pending Sell placed at 34572.4; SL=34661.73286762515, TP=34338.52655255737; valid for the next 3 chart bar(s).
+20/04/2025 22:05:00.000 | Info | Combo: bartime=2025-04-18 17:00, Sell signal skipped: already have same-direction exposure open.
+22/04/2025 00:00:00.000 | Trade | Placing Stop Order to Buy 74.8 JP225.cash (Price: 34225.3, SL: 34058.494282925, TP: 34662)
+22/04/2025 00:00:00.000 | Trade |  Placing Stop Order to Buy 74.8 JP225.cash (Price: 34225.3, SL: 34058.494282925, TP: 34662) SUCCEEDED, PendingOrder OID389
+22/04/2025 00:00:00.000 | Info | Combo: bartime=2025-04-21 23:00, executed=2025-04-22 00:00:00, pending Buy placed at 34225.3; SL=34058.49428292496, TP=34661.997367302465; valid for the next 3 chart bar(s).
+24/04/2025 01:00:00.000 | Trade | Placing Stop Order to Sell 68.7 JP225.cash (Price: 35093.2, SL: 35279.4541634419, TP: 34605.59)
+24/04/2025 01:00:00.000 | Trade |  Placing Stop Order to Sell 68.7 JP225.cash (Price: 35093.2, SL: 35279.4541634419, TP: 34605.59) SUCCEEDED, PendingOrder OID392
+24/04/2025 01:00:00.000 | Info | Combo: bartime=2025-04-24 00:00, executed=2025-04-24 01:00:00, pending Sell placed at 35093.2; SL=35279.45416344187, TP=34605.58660010918; valid for the next 3 chart bar(s).
+24/04/2025 04:00:00.000 | Trade | Cancelling pending order OID392
+24/04/2025 04:00:00.000 | Trade |  Cancelling pending order OID392 SUCCEEDED
+24/04/2025 04:00:00.000 | Info | Combo: pending order 392 cancelled after 3 chart bars.
+24/04/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 91.8 JP225.cash (Price: 35211, SL: 35071.5295424747, TP: 35576.13)
+24/04/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 91.8 JP225.cash (Price: 35211, SL: 35071.5295424747, TP: 35576.13) SUCCEEDED, PendingOrder OID393
+24/04/2025 14:00:00.000 | Info | Combo: bartime=2025-04-24 13:00, executed=2025-04-24 14:00:00, pending Buy placed at 35211; SL=35071.529542474666, TP=35576.13365780132; valid for the next 3 chart bar(s).
+25/04/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 74.7 JP225.cash (Price: 35434, SL: 35610.2482398182, TP: 34972.58)
+25/04/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 74.7 JP225.cash (Price: 35434, SL: 35610.2482398182, TP: 34972.58) SUCCEEDED, PendingOrder OID396
+25/04/2025 11:00:00.000 | Info | Combo: bartime=2025-04-25 10:00, executed=2025-04-25 11:00:00, pending Sell placed at 35434; SL=35610.248239818204, TP=34972.58210815594; valid for the next 3 chart bar(s).
+25/04/2025 14:00:00.000 | Trade | Cancelling pending order OID396
+25/04/2025 14:00:00.000 | Trade |  Cancelling pending order OID396 SUCCEEDED
+25/04/2025 14:00:00.000 | Info | Combo: pending order 396 cancelled after 3 chart bars.
+28/04/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 120.3 JP225.cash (Price: 35811.9, SL: 35921.3701811922, TP: 35525.31)
+28/04/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 120.3 JP225.cash (Price: 35811.9, SL: 35921.3701811922, TP: 35525.31) SUCCEEDED, PendingOrder OID397
+28/04/2025 08:00:00.000 | Info | Combo: bartime=2025-04-28 07:00, executed=2025-04-28 08:00:00, pending Sell placed at 35811.9; SL=35921.3701811922, TP=35525.307065638815; valid for the next 3 chart bar(s).
+28/04/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 133.9 JP225.cash (Price: 35834.4, SL: 35931.6687327704, TP: 35579.75)
+28/04/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 133.9 JP225.cash (Price: 35834.4, SL: 35931.6687327704, TP: 35579.75) SUCCEEDED, PendingOrder OID400
+28/04/2025 11:00:00.000 | Info | Combo: bartime=2025-04-28 10:00, executed=2025-04-28 11:00:00, pending Sell placed at 35834.4; SL=35931.668732770406, TP=35579.75045760708; valid for the next 3 chart bar(s).
+28/04/2025 12:00:00.000 | Info | Combo: bartime=2025-04-28 11:00, reversal - cancelling existing Sell pending order 400 before opening opposite direction.
+28/04/2025 12:00:00.000 | Trade | Cancelling pending order OID400
+28/04/2025 12:00:00.000 | Trade |  Cancelling pending order OID400 SUCCEEDED
+28/04/2025 12:00:00.000 | Trade | Placing Stop Order to Buy 130.5 JP225.cash (Price: 35966.9, SL: 35867.0850137837, TP: 36228.22)
+28/04/2025 12:00:00.000 | Trade |  Placing Stop Order to Buy 130.5 JP225.cash (Price: 35966.9, SL: 35867.0850137837, TP: 36228.22) SUCCEEDED, PendingOrder OID401
+28/04/2025 12:00:00.000 | Info | Combo: bartime=2025-04-28 11:00, executed=2025-04-28 12:00:00, pending Buy placed at 35966.9; SL=35867.085013783675, TP=36228.21563391434; valid for the next 3 chart bar(s).
+28/04/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 109 JP225.cash (Price: 35781.9, SL: 35900.1452729428, TP: 35472.33)
+28/04/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 109 JP225.cash (Price: 35781.9, SL: 35900.1452729428, TP: 35472.33) SUCCEEDED, PendingOrder OID404
+28/04/2025 15:00:00.000 | Info | Combo: bartime=2025-04-28 14:00, executed=2025-04-28 15:00:00, pending Sell placed at 35781.9; SL=35900.14527294276, TP=35472.333875435856; valid for the next 3 chart bar(s).
+28/04/2025 22:05:00.000 | Trade | Placing Stop Order to Sell 121.7 JP225.cash (Price: 35826.9, SL: 35931.6868888303, TP: 35552.57)
+28/04/2025 22:05:00.000 | Trade |  Placing Stop Order to Sell 121.7 JP225.cash (Price: 35826.9, SL: 35931.6868888303, TP: 35552.57) SUCCEEDED, PendingOrder OID407
+28/04/2025 22:05:00.000 | Info | Combo: bartime=2025-04-28 20:00, executed=2025-04-28 22:05:00, pending Sell placed at 35826.9; SL=35931.68688883031, TP=35552.56792504226; valid for the next 3 chart bar(s).
+29/04/2025 00:00:00.000 | Info | Combo: bartime=2025-04-28 23:00, reversal - cancelling existing Sell pending order 407 before opening opposite direction.
+29/04/2025 00:00:00.000 | Trade | Cancelling pending order OID407
+29/04/2025 00:00:00.000 | Trade |  Cancelling pending order OID407 SUCCEEDED
+29/04/2025 00:00:00.000 | Trade | Placing Stop Order to Buy 128.7 JP225.cash (Price: 35964.4, SL: 35865.3363911486, TP: 36223.75)
+29/04/2025 00:00:00.000 | Trade |  Placing Stop Order to Buy 128.7 JP225.cash (Price: 35964.4, SL: 35865.3363911486, TP: 36223.75) SUCCEEDED, PendingOrder OID408
+29/04/2025 00:00:00.000 | Info | Combo: bartime=2025-04-28 23:00, executed=2025-04-29 00:00:00, pending Buy placed at 35964.4; SL=35865.33639114861, TP=36223.74852797296; valid for the next 3 chart bar(s).
+29/04/2025 13:00:00.000 | Info | Combo: bartime=2025-04-29 12:00, reversal - closing existing Buy position 119 before opening opposite direction.
+29/04/2025 13:00:00.000 | Trade | Closing position PID119 (Volume: 128.7)
+29/04/2025 13:00:00.000 | Trade |  Closing position PID119 (Volume: 128.7) SUCCEEDED
+29/04/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 115.7 JP225.cash (Price: 35899.1, SL: 36008.7613211699, TP: 35612.01)
+29/04/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 115.7 JP225.cash (Price: 35899.1, SL: 36008.7613211699, TP: 35612.01) SUCCEEDED, PendingOrder OID412
+29/04/2025 13:00:00.000 | Info | Combo: bartime=2025-04-29 12:00, executed=2025-04-29 13:00:00, pending Sell placed at 35899.1; SL=36008.76132116993, TP=35612.00666117713; valid for the next 3 chart bar(s).
+29/04/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 92.6 JP225.cash (Price: 35879.1, SL: 36014.506596439, TP: 35524.61)
+29/04/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 92.6 JP225.cash (Price: 35879.1, SL: 36014.506596439, TP: 35524.61) SUCCEEDED, PendingOrder OID415
+29/04/2025 16:00:00.000 | Info | Combo: bartime=2025-04-29 15:00, executed=2025-04-29 16:00:00, pending Sell placed at 35879.1; SL=36014.506596439, TP=35524.60553052269; valid for the next 3 chart bar(s).
+29/04/2025 18:00:00.000 | Info | Combo: bartime=2025-04-29 17:00, reversal - cancelling existing Sell pending order 415 before opening opposite direction.
+29/04/2025 18:00:00.000 | Trade | Cancelling pending order OID415
+29/04/2025 18:00:00.000 | Trade |  Cancelling pending order OID415 SUCCEEDED
+29/04/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 78.9 JP225.cash (Price: 36144.1, SL: 35985.139778279, TP: 36560.26)
+29/04/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 78.9 JP225.cash (Price: 36144.1, SL: 35985.139778279, TP: 36560.26) SUCCEEDED, PendingOrder OID416
+29/04/2025 18:00:00.000 | Info | Combo: bartime=2025-04-29 17:00, executed=2025-04-29 18:00:00, pending Buy placed at 36144.1; SL=35985.13977827904, TP=36560.25786046548; valid for the next 3 chart bar(s).
+29/04/2025 22:05:00.000 | Trade | Cancelling pending order OID416
+29/04/2025 22:05:00.000 | Trade |  Cancelling pending order OID416 SUCCEEDED
+29/04/2025 22:05:00.000 | Info | Combo: pending order 416 cancelled after 3 chart bars.
+29/04/2025 22:05:00.000 | Trade | Placing Stop Order to Sell 97 JP225.cash (Price: 35971.6, SL: 36100.7876335211, TP: 35633.39)
+29/04/2025 22:05:00.000 | Trade |  Placing Stop Order to Sell 97 JP225.cash (Price: 35971.6, SL: 36100.7876335211, TP: 35633.39) SUCCEEDED, PendingOrder OID417
+29/04/2025 22:05:00.000 | Info | Combo: bartime=2025-04-29 20:00, executed=2025-04-29 22:05:00, pending Sell placed at 35971.6; SL=36100.78763352113, TP=35633.38677544167; valid for the next 3 chart bar(s).
+30/04/2025 06:00:00.000 | Info | Combo: bartime=2025-04-30 05:00, reversal - closing existing Sell position 121 before opening opposite direction.
+30/04/2025 06:00:00.000 | Trade | Closing position PID121 (Volume: 97)
+30/04/2025 06:00:00.000 | Trade |  Closing position PID121 (Volume: 97) SUCCEEDED
+30/04/2025 06:00:00.000 | Trade | Placing Stop Order to Buy 134.8 JP225.cash (Price: 36012.1, SL: 35919.1935582711, TP: 36255.33)
+30/04/2025 06:00:00.000 | Trade |  Placing Stop Order to Buy 134.8 JP225.cash (Price: 36012.1, SL: 35919.1935582711, TP: 36255.33) SUCCEEDED, PendingOrder OID421
+30/04/2025 06:00:00.000 | Info | Combo: bartime=2025-04-30 05:00, executed=2025-04-30 06:00:00, pending Buy placed at 36012.1; SL=35919.193558271094, TP=36255.32906444627; valid for the next 3 chart bar(s).
+30/04/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 86.8 JP225.cash (Price: 35699.6, SL: 35842.0835410085, TP: 35326.58)
+30/04/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 86.8 JP225.cash (Price: 35699.6, SL: 35842.0835410085, TP: 35326.58) SUCCEEDED, PendingOrder OID424
+30/04/2025 13:00:00.000 | Info | Combo: bartime=2025-04-30 12:00, executed=2025-04-30 13:00:00, pending Sell placed at 35699.6; SL=35842.08354100846, TP=35326.578089639836; valid for the next 3 chart bar(s).
+30/04/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 74 JP225.cash (Price: 36062.1, SL: 35897.0365932824, TP: 36494.24)
+30/04/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 74 JP225.cash (Price: 36062.1, SL: 35897.0365932824, TP: 36494.24) SUCCEEDED, PendingOrder OID427
+30/04/2025 18:00:00.000 | Info | Combo: bartime=2025-04-30 17:00, executed=2025-04-30 18:00:00, pending Buy placed at 36062.1; SL=35897.03659328235, TP=36494.23599878682; valid for the next 3 chart bar(s).
+02/05/2025 00:00:00.000 | Trade | Placing Stop Order to Sell 93.6 JP225.cash (Price: 36607.9, SL: 36741.1256341346, TP: 36259.12)
+02/05/2025 00:00:00.000 | Trade |  Placing Stop Order to Sell 93.6 JP225.cash (Price: 36607.9, SL: 36741.1256341346, TP: 36259.12) SUCCEEDED, PendingOrder OID430
+02/05/2025 00:00:00.000 | Info | Combo: bartime=2025-05-01 23:00, executed=2025-05-02 00:00:00, pending Sell placed at 36607.9; SL=36741.12563413463, TP=36259.115289835536; valid for the next 3 chart bar(s).
+02/05/2025 02:00:00.000 | Info | Combo: bartime=2025-05-02 01:00, Sell signal skipped: already have same-direction exposure open.
+02/05/2025 03:00:00.000 | Trade | Cancelling pending order OID430
+02/05/2025 03:00:00.000 | Trade |  Cancelling pending order OID430 SUCCEEDED
+02/05/2025 03:00:00.000 | Info | Combo: pending order 430 cancelled after 3 chart bars.
+02/05/2025 05:00:00.000 | Trade | Placing Stop Order to Buy 72.2 JP225.cash (Price: 36922.7, SL: 36749.9489442068, TP: 37374.96)
+02/05/2025 05:00:00.000 | Trade |  Placing Stop Order to Buy 72.2 JP225.cash (Price: 36922.7, SL: 36749.9489442068, TP: 37374.96) SUCCEEDED, PendingOrder OID431
+02/05/2025 05:00:00.000 | Info | Combo: bartime=2025-05-02 04:00, executed=2025-05-02 05:00:00, pending Buy placed at 36922.7; SL=36749.948944206764, TP=37374.96226406669; valid for the next 3 chart bar(s).
+02/05/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 82.3 JP225.cash (Price: 36650.2, SL: 36800.1668324529, TP: 36257.59)
+02/05/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 82.3 JP225.cash (Price: 36650.2, SL: 36800.1668324529, TP: 36257.59) SUCCEEDED, PendingOrder OID434
+02/05/2025 09:00:00.000 | Info | Combo: bartime=2025-05-02 08:00, executed=2025-05-02 09:00:00, pending Sell placed at 36650.2; SL=36800.16683245291, TP=36257.58683263828; valid for the next 3 chart bar(s).
+02/05/2025 13:00:00.000 | Trade | Placing Stop Order to Buy 84.7 JP225.cash (Price: 36927.7, SL: 36783.7495854273, TP: 37304.56)
+02/05/2025 13:00:00.000 | Trade |  Placing Stop Order to Buy 84.7 JP225.cash (Price: 36927.7, SL: 36783.7495854273, TP: 37304.56) SUCCEEDED, PendingOrder OID437
+02/05/2025 13:00:00.000 | Info | Combo: bartime=2025-05-02 12:00, executed=2025-05-02 13:00:00, pending Buy placed at 36927.7; SL=36783.749585427286, TP=37304.56218535136; valid for the next 3 chart bar(s).
+02/05/2025 14:00:00.000 | Info | Combo: bartime=2025-05-02 13:00, reversal - cancelling existing Buy pending order 437 before opening opposite direction.
+02/05/2025 14:00:00.000 | Trade | Cancelling pending order OID437
+02/05/2025 14:00:00.000 | Trade |  Cancelling pending order OID437 SUCCEEDED
+02/05/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 74.5 JP225.cash (Price: 36645.2, SL: 36808.8603316582, TP: 36216.74)
+02/05/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 74.5 JP225.cash (Price: 36645.2, SL: 36808.8603316582, TP: 36216.74) SUCCEEDED, PendingOrder OID438
+02/05/2025 14:00:00.000 | Info | Combo: bartime=2025-05-02 13:00, executed=2025-05-02 14:00:00, pending Sell placed at 36645.2; SL=36808.860331658165, TP=36216.73725171891; valid for the next 3 chart bar(s).
+02/05/2025 15:00:00.000 | Info | Combo: bartime=2025-05-02 14:00, reversal - cancelling existing Sell pending order 438 before opening opposite direction.
+02/05/2025 15:00:00.000 | Trade | Cancelling pending order OID438
+02/05/2025 15:00:00.000 | Trade |  Cancelling pending order OID438 SUCCEEDED
+02/05/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 69.5 JP225.cash (Price: 36962.7, SL: 36787.2717346735, TP: 37421.97)
+02/05/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 69.5 JP225.cash (Price: 36962.7, SL: 36787.2717346735, TP: 37421.97) SUCCEEDED, PendingOrder OID439
+02/05/2025 15:00:00.000 | Info | Combo: bartime=2025-05-02 14:00, executed=2025-05-02 15:00:00, pending Buy placed at 36962.7; SL=36787.271734673464, TP=37421.971198624866; valid for the next 3 chart bar(s).
+05/05/2025 05:00:00.000 | Info | Combo: bartime=2025-05-05 04:00, reversal - closing existing Buy position 127 before opening opposite direction.
+05/05/2025 05:00:00.000 | Trade | Closing position PID127 (Volume: 69.5)
+05/05/2025 05:00:00.000 | Trade |  Closing position PID127 (Volume: 69.5) SUCCEEDED
+05/05/2025 05:00:00.000 | Trade | Placing Stop Order to Sell 109.2 JP225.cash (Price: 36880.2, SL: 36991.3745114088, TP: 36589.15)
+05/05/2025 05:00:00.000 | Trade |  Placing Stop Order to Sell 109.2 JP225.cash (Price: 36880.2, SL: 36991.3745114088, TP: 36589.15) SUCCEEDED, PendingOrder OID443
+05/05/2025 05:00:00.000 | Info | Combo: bartime=2025-05-05 04:00, executed=2025-05-05 05:00:00, pending Sell placed at 36880.2; SL=36991.37451140879, TP=36589.14512913179; valid for the next 3 chart bar(s).
+05/05/2025 08:00:00.000 | Trade | Cancelling pending order OID443
+05/05/2025 08:00:00.000 | Trade |  Cancelling pending order OID443 SUCCEEDED
+05/05/2025 08:00:00.000 | Info | Combo: pending order 443 cancelled after 3 chart bars.
+05/05/2025 13:00:00.000 | Trade | Placing Stop Order to Buy 164.5 JP225.cash (Price: 37077.7, SL: 37003.875820084, TP: 37270.97)
+05/05/2025 13:00:00.000 | Trade |  Placing Stop Order to Buy 164.5 JP225.cash (Price: 37077.7, SL: 37003.875820084, TP: 37270.97) SUCCEEDED, PendingOrder OID444
+05/05/2025 13:00:00.000 | Info | Combo: bartime=2025-05-05 12:00, executed=2025-05-05 13:00:00, pending Buy placed at 37077.7; SL=37003.875820084, TP=37270.97170302008; valid for the next 3 chart bar(s).
+06/05/2025 00:00:00.000 | Trade | Placing Stop Order to Sell 187.1 JP225.cash (Price: 37047.2, SL: 37113.8400986239, TP: 36872.74)
+06/05/2025 00:00:00.000 | Trade |  Placing Stop Order to Sell 187.1 JP225.cash (Price: 37047.2, SL: 37113.8400986239, TP: 36872.74) SUCCEEDED, PendingOrder OID447
+06/05/2025 00:00:00.000 | Info | Combo: bartime=2025-05-05 23:00, executed=2025-05-06 00:00:00, pending Sell placed at 37047.2; SL=37113.84009862386, TP=36872.73622180272; valid for the next 3 chart bar(s).
+06/05/2025 03:00:00.000 | Trade | Cancelling pending order OID447
+06/05/2025 03:00:00.000 | Trade |  Cancelling pending order OID447 SUCCEEDED
+06/05/2025 03:00:00.000 | Info | Combo: pending order 447 cancelled after 3 chart bars.
+06/05/2025 03:00:00.000 | Trade | Placing Stop Order to Sell 167 JP225.cash (Price: 37057.2, SL: 37131.8397304954, TP: 36861.79)
+06/05/2025 03:00:00.000 | Trade |  Placing Stop Order to Sell 167 JP225.cash (Price: 37057.2, SL: 37131.8397304954, TP: 36861.79) SUCCEEDED, PendingOrder OID448
+06/05/2025 03:00:00.000 | Info | Combo: bartime=2025-05-06 02:00, executed=2025-05-06 03:00:00, pending Sell placed at 37057.2; SL=37131.83973049541, TP=36861.793185562994; valid for the next 3 chart bar(s).
+06/05/2025 06:00:00.000 | Trade | Cancelling pending order OID448
+06/05/2025 06:00:00.000 | Trade |  Cancelling pending order OID448 SUCCEEDED
+06/05/2025 06:00:00.000 | Info | Combo: pending order 448 cancelled after 3 chart bars.
+06/05/2025 23:00:00.000 | Trade | Placing Stop Order to Buy 58.8 JP225.cash (Price: 37154.7, SL: 36942.8355081843, TP: 37709.36)
+06/05/2025 23:00:00.000 | Trade |  Placing Stop Order to Buy 58.8 JP225.cash (Price: 37154.7, SL: 36942.8355081843, TP: 37709.36) SUCCEEDED, PendingOrder OID449
+06/05/2025 23:00:00.000 | Info | Combo: bartime=2025-05-06 22:00, executed=2025-05-06 23:00:00, pending Buy placed at 37154.7; SL=36942.835508184275, TP=37709.36123957356; valid for the next 3 chart bar(s).
+07/05/2025 02:00:00.000 | Trade | Cancelling pending order OID449
+07/05/2025 02:00:00.000 | Trade |  Cancelling pending order OID449 SUCCEEDED
+07/05/2025 02:00:00.000 | Info | Combo: pending order 449 cancelled after 3 chart bars.
+07/05/2025 04:00:00.000 | Trade | Placing Stop Order to Buy 81 JP225.cash (Price: 36885.2, SL: 36731.2322433218, TP: 37288.29)
+07/05/2025 04:00:00.000 | Trade |  Placing Stop Order to Buy 81 JP225.cash (Price: 36885.2, SL: 36731.2322433218, TP: 37288.29) SUCCEEDED, PendingOrder OID450
+07/05/2025 04:00:00.000 | Info | Combo: bartime=2025-05-07 03:00, executed=2025-05-07 04:00:00, pending Buy placed at 36885.2; SL=36731.23224332182, TP=37288.28758698346; valid for the next 3 chart bar(s).
+07/05/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 104.2 JP225.cash (Price: 36920.2, SL: 36801.8438454917, TP: 37230.06)
+07/05/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 104.2 JP225.cash (Price: 36920.2, SL: 36801.8438454917, TP: 37230.06) SUCCEEDED, PendingOrder OID453
+07/05/2025 09:00:00.000 | Info | Combo: bartime=2025-05-07 08:00, executed=2025-05-07 09:00:00, pending Buy placed at 36920.2; SL=36801.84384549169, TP=37230.05641250274; valid for the next 3 chart bar(s).
+07/05/2025 12:00:00.000 | Trade | Cancelling pending order OID453
+07/05/2025 12:00:00.000 | Trade |  Cancelling pending order OID453 SUCCEEDED
+07/05/2025 12:00:00.000 | Info | Combo: pending order 453 cancelled after 3 chart bars.
+07/05/2025 19:00:00.000 | Trade | Placing Stop Order to Buy 82.7 JP225.cash (Price: 36895.2, SL: 36746.0362536377, TP: 37285.71)
+07/05/2025 19:00:00.000 | Trade |  Placing Stop Order to Buy 82.7 JP225.cash (Price: 36895.2, SL: 36746.0362536377, TP: 37285.71) SUCCEEDED, PendingOrder OID454
+07/05/2025 19:00:00.000 | Info | Combo: bartime=2025-05-07 18:00, executed=2025-05-07 19:00:00, pending Buy placed at 36895.2; SL=36746.03625363766, TP=37285.7106879766; valid for the next 3 chart bar(s).
+09/05/2025 01:00:00.000 | Trade | Placing Stop Order to Sell 97.3 JP225.cash (Price: 37248.1, SL: 37373.4281598632, TP: 36919.99)
+09/05/2025 01:00:00.000 | Trade |  Placing Stop Order to Sell 97.3 JP225.cash (Price: 37248.1, SL: 37373.4281598632, TP: 36919.99) SUCCEEDED, PendingOrder OID457
+09/05/2025 01:00:00.000 | Info | Combo: bartime=2025-05-09 00:00, executed=2025-05-09 01:00:00, pending Sell placed at 37248.1; SL=37373.42815986321, TP=36919.990877478114; valid for the next 3 chart bar(s).
+09/05/2025 04:00:00.000 | Trade | Cancelling pending order OID457
+09/05/2025 04:00:00.000 | Trade |  Cancelling pending order OID457 SUCCEEDED
+09/05/2025 04:00:00.000 | Info | Combo: pending order 457 cancelled after 3 chart bars.
+09/05/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 94.3 JP225.cash (Price: 37355.9, SL: 37485.2283686011, TP: 37017.32)
+09/05/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 94.3 JP225.cash (Price: 37355.9, SL: 37485.2283686011, TP: 37017.32) SUCCEEDED, PendingOrder OID458
+09/05/2025 09:00:00.000 | Info | Combo: bartime=2025-05-09 08:00, executed=2025-05-09 09:00:00, pending Sell placed at 37355.9; SL=37485.22836860108, TP=37017.31833100238; valid for the next 3 chart bar(s).
+09/05/2025 12:00:00.000 | Trade | Cancelling pending order OID458
+09/05/2025 12:00:00.000 | Trade |  Cancelling pending order OID458 SUCCEEDED
+09/05/2025 12:00:00.000 | Info | Combo: pending order 458 cancelled after 3 chart bars.
+09/05/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 84 JP225.cash (Price: 37325.9, SL: 37471.1223358586, TP: 36945.71)
+09/05/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 84 JP225.cash (Price: 37325.9, SL: 37471.1223358586, TP: 36945.71) SUCCEEDED, PendingOrder OID459
+09/05/2025 15:00:00.000 | Info | Combo: bartime=2025-05-09 14:00, executed=2025-05-09 15:00:00, pending Sell placed at 37325.9; SL=37471.12233585856, TP=36945.70792472229; valid for the next 3 chart bar(s).
+09/05/2025 17:00:00.000 | Info | Combo: bartime=2025-05-09 16:00, Sell signal skipped: already have same-direction exposure open.
+12/05/2025 03:00:00.000 | Trade | Placing Stop Order to Sell 80.7 JP225.cash (Price: 37472.2, SL: 37621.8729977176, TP: 37080.36)
+12/05/2025 03:00:00.000 | Trade |  Placing Stop Order to Sell 80.7 JP225.cash (Price: 37472.2, SL: 37621.8729977176, TP: 37080.36) SUCCEEDED, PendingOrder OID462
+12/05/2025 03:00:00.000 | Info | Combo: bartime=2025-05-12 02:00, executed=2025-05-12 03:00:00, pending Sell placed at 37472.2; SL=37621.87299771762, TP=37080.356091975256; valid for the next 3 chart bar(s).
+13/05/2025 01:00:00.000 | Trade | Placing Stop Order to Sell 83.8 JP225.cash (Price: 38290.3, SL: 38432.8057698378, TP: 37917.22)
+13/05/2025 01:00:00.000 | Trade |  Placing Stop Order to Sell 83.8 JP225.cash (Price: 38290.3, SL: 38432.8057698378, TP: 37917.22) SUCCEEDED, PendingOrder OID465
+13/05/2025 01:00:00.000 | Info | Combo: bartime=2025-05-13 00:00, executed=2025-05-13 01:00:00, pending Sell placed at 38290.3; SL=38432.80576983777, TP=37917.21989456474; valid for the next 3 chart bar(s).
+13/05/2025 15:00:00.000 | Info | Combo: bartime=2025-05-13 14:00, reversal - closing existing Sell position 133 before opening opposite direction.
+13/05/2025 15:00:00.000 | Trade | Closing position PID133 (Volume: 83.8)
+13/05/2025 15:00:00.000 | Trade |  Closing position PID133 (Volume: 83.8) SUCCEEDED
+13/05/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 102.6 JP225.cash (Price: 38407.8, SL: 38291.6892010248, TP: 38711.78)
+13/05/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 102.6 JP225.cash (Price: 38407.8, SL: 38291.6892010248, TP: 38711.78) SUCCEEDED, PendingOrder OID469
+13/05/2025 15:00:00.000 | Info | Combo: bartime=2025-05-13 14:00, executed=2025-05-13 15:00:00, pending Buy placed at 38407.8; SL=38291.689201024776, TP=38711.77807171715; valid for the next 3 chart bar(s).
+14/05/2025 01:00:00.000 | Trade | Placing Stop Order to Sell 79.4 JP225.cash (Price: 37973.1, SL: 38121.3338185147, TP: 37585.02)
+14/05/2025 01:00:00.000 | Trade |  Placing Stop Order to Sell 79.4 JP225.cash (Price: 37973.1, SL: 38121.3338185147, TP: 37585.02) SUCCEEDED, PendingOrder OID472
+14/05/2025 01:00:00.000 | Info | Combo: bartime=2025-05-14 00:00, executed=2025-05-14 01:00:00, pending Sell placed at 37973.1; SL=38121.333818514715, TP=37585.02386312847; valid for the next 3 chart bar(s).
+15/05/2025 05:00:00.000 | Trade | Placing Stop Order to Buy 106.1 JP225.cash (Price: 37793.5, SL: 37683.9491791168, TP: 38080.3)
+15/05/2025 05:00:00.000 | Trade |  Placing Stop Order to Buy 106.1 JP225.cash (Price: 37793.5, SL: 37683.9491791168, TP: 38080.3) SUCCEEDED, PendingOrder OID475
+15/05/2025 05:00:00.000 | Info | Combo: bartime=2025-05-15 04:00, executed=2025-05-15 05:00:00, pending Buy placed at 37793.5; SL=37683.949179116775, TP=38080.304049072285; valid for the next 3 chart bar(s).
+15/05/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 107.9 JP225.cash (Price: 37743.5, SL: 37637.0693364164, TP: 38022.14)
+15/05/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 107.9 JP225.cash (Price: 37743.5, SL: 37637.0693364164, TP: 38022.14) SUCCEEDED, PendingOrder OID478
+15/05/2025 15:00:00.000 | Info | Combo: bartime=2025-05-15 14:00, executed=2025-05-15 15:00:00, pending Buy placed at 37743.5; SL=37637.06933641642, TP=38022.13547726183; valid for the next 3 chart bar(s).
+16/05/2025 01:00:00.000 | Trade | Placing Stop Order to Sell 91.7 JP225.cash (Price: 37489, SL: 37612.7596645757, TP: 37165)
+16/05/2025 01:00:00.000 | Trade |  Placing Stop Order to Sell 91.7 JP225.cash (Price: 37489, SL: 37612.7596645757, TP: 37165) SUCCEEDED, PendingOrder OID481
+16/05/2025 01:00:00.000 | Info | Combo: bartime=2025-05-16 00:00, executed=2025-05-16 01:00:00, pending Sell placed at 37489; SL=37612.75966457572, TP=37164.997198140765; valid for the next 3 chart bar(s).
+16/05/2025 04:00:00.000 | Trade | Placing Stop Order to Sell 88.7 JP225.cash (Price: 37589.2, SL: 37715.8449482628, TP: 37257.64)
+16/05/2025 04:00:00.000 | Trade |  Placing Stop Order to Sell 88.7 JP225.cash (Price: 37589.2, SL: 37715.8449482628, TP: 37257.64) SUCCEEDED, PendingOrder OID484
+16/05/2025 04:00:00.000 | Info | Combo: bartime=2025-05-16 03:00, executed=2025-05-16 04:00:00, pending Sell placed at 37589.2; SL=37715.84494826277, TP=37257.64352544807; valid for the next 3 chart bar(s).
+16/05/2025 05:00:00.000 | Info | Combo: bartime=2025-05-16 04:00, reversal - cancelling existing Sell pending order 484 before opening opposite direction.
+16/05/2025 05:00:00.000 | Trade | Cancelling pending order OID484
+16/05/2025 05:00:00.000 | Trade |  Cancelling pending order OID484 SUCCEEDED
+16/05/2025 05:00:00.000 | Trade | Placing Stop Order to Buy 85.8 JP225.cash (Price: 37794.2, SL: 37663.3840413898, TP: 38136.68)
+16/05/2025 05:00:00.000 | Trade |  Placing Stop Order to Buy 85.8 JP225.cash (Price: 37794.2, SL: 37663.3840413898, TP: 38136.68) SUCCEEDED, PendingOrder OID485
+16/05/2025 05:00:00.000 | Info | Combo: bartime=2025-05-16 04:00, executed=2025-05-16 05:00:00, pending Buy placed at 37794.2; SL=37663.38404138978, TP=38136.676179641545; valid for the next 3 chart bar(s).
+18/05/2025 22:05:00.000 | Info | Combo: bartime=2025-05-16 20:00, reversal - closing existing Buy position 139 before opening opposite direction.
+18/05/2025 22:05:00.000 | Trade | Closing position PID139 (Volume: 85.8)
+18/05/2025 22:05:00.000 | Trade |  Closing position PID139 (Volume: 85.8) SUCCEEDED
+18/05/2025 22:05:00.000 | Trade | Placing Stop Order to Sell 115.9 JP225.cash (Price: 37769.2, SL: 37865.39123758, TP: 37517.37)
+18/05/2025 22:05:00.000 | Trade |  Placing Stop Order to Sell 115.9 JP225.cash (Price: 37769.2, SL: 37865.39123758, TP: 37517.37) SUCCEEDED, PendingOrder OID489
+18/05/2025 22:05:00.000 | Info | Combo: bartime=2025-05-16 20:00, executed=2025-05-18 22:05:00, pending Sell placed at 37769.2; SL=37865.391237580036, TP=37517.37134001547; valid for the next 3 chart bar(s).
+20/05/2025 06:00:00.000 | Trade | Placing Stop Order to Sell 89.7 JP225.cash (Price: 37456.2, SL: 37583.3377413441, TP: 37123.35)
+20/05/2025 06:00:00.000 | Trade |  Placing Stop Order to Sell 89.7 JP225.cash (Price: 37456.2, SL: 37583.3377413441, TP: 37123.35) SUCCEEDED, PendingOrder OID492
+20/05/2025 06:00:00.000 | Info | Combo: bartime=2025-05-20 05:00, executed=2025-05-20 06:00:00, pending Sell placed at 37456.2; SL=37583.33774134414, TP=37123.35339316102; valid for the next 3 chart bar(s).
+20/05/2025 12:00:00.000 | Trade | Placing Stop Order to Buy 118.5 JP225.cash (Price: 37616.2, SL: 37520.8815239331, TP: 37865.74)
+20/05/2025 12:00:00.000 | Trade |  Placing Stop Order to Buy 118.5 JP225.cash (Price: 37616.2, SL: 37520.8815239331, TP: 37865.74) SUCCEEDED, PendingOrder OID495
+20/05/2025 12:00:00.000 | Info | Combo: bartime=2025-05-20 11:00, executed=2025-05-20 12:00:00, pending Buy placed at 37616.2; SL=37520.88152393308, TP=37865.74377034319; valid for the next 3 chart bar(s).
+20/05/2025 13:00:00.000 | Info | Combo: bartime=2025-05-20 12:00, Buy signal skipped: already have same-direction exposure open.
+20/05/2025 16:00:00.000 | Info | Combo: bartime=2025-05-20 15:00, Buy signal skipped: already have same-direction exposure open.
+20/05/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 106 JP225.cash (Price: 37468.7, SL: 37574.0150132721, TP: 37192.99)
+20/05/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 106 JP225.cash (Price: 37468.7, SL: 37574.0150132721, TP: 37192.99) SUCCEEDED, PendingOrder OID498
+20/05/2025 19:00:00.000 | Info | Combo: bartime=2025-05-20 18:00, executed=2025-05-20 19:00:00, pending Sell placed at 37468.7; SL=37574.01501327207, TP=37192.98529525372; valid for the next 3 chart bar(s).
+20/05/2025 23:00:00.000 | Trade | Placing Stop Order to Sell 97.3 JP225.cash (Price: 37434.2, SL: 37547.7812867953, TP: 37136.84)
+20/05/2025 23:00:00.000 | Trade |  Placing Stop Order to Sell 97.3 JP225.cash (Price: 37434.2, SL: 37547.7812867953, TP: 37136.84) SUCCEEDED, PendingOrder OID501
+20/05/2025 23:00:00.000 | Info | Combo: bartime=2025-05-20 22:00, executed=2025-05-20 23:00:00, pending Sell placed at 37434.2; SL=37547.781286795296, TP=37136.844191169905; valid for the next 3 chart bar(s).
+21/05/2025 01:00:00.000 | Info | Combo: bartime=2025-05-21 00:00, Sell signal skipped: already have same-direction exposure open.
+22/05/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 76.5 JP225.cash (Price: 37003.1, SL: 36854.966254888, TP: 37390.91)
+22/05/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 76.5 JP225.cash (Price: 37003.1, SL: 36854.966254888, TP: 37390.91) SUCCEEDED, PendingOrder OID504
+22/05/2025 14:00:00.000 | Info | Combo: bartime=2025-05-22 13:00, executed=2025-05-22 14:00:00, pending Buy placed at 37003.1; SL=36854.96625488798, TP=37390.91414470326; valid for the next 3 chart bar(s).
+23/05/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 54.8 JP225.cash (Price: 36573.6, SL: 36777.9600375592, TP: 36038.59)
+23/05/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 54.8 JP225.cash (Price: 36573.6, SL: 36777.9600375592, TP: 36038.59) SUCCEEDED, PendingOrder OID507
+23/05/2025 12:00:00.000 | Info | Combo: bartime=2025-05-23 11:00, executed=2025-05-23 12:00:00, pending Sell placed at 36573.6; SL=36777.960037559205, TP=36038.58542167; valid for the next 3 chart bar(s).
+25/05/2025 23:00:00.000 | Trade | Placing Stop Order to Buy 61.8 JP225.cash (Price: 37196.6, SL: 37017.2107675398, TP: 37666.24)
+25/05/2025 23:00:00.000 | Trade |  Placing Stop Order to Buy 61.8 JP225.cash (Price: 37196.6, SL: 37017.2107675398, TP: 37666.24) SUCCEEDED, PendingOrder OID510
+25/05/2025 23:00:00.000 | Info | Combo: bartime=2025-05-25 22:00, executed=2025-05-25 23:00:00, pending Buy placed at 37196.6; SL=37017.210767539844, TP=37666.24101058068; valid for the next 3 chart bar(s).
+26/05/2025 23:00:00.000 | Info | Combo: bartime=2025-05-26 22:00, reversal - closing existing Buy position 147 before opening opposite direction.
+26/05/2025 23:00:00.000 | Trade | Closing position PID147 (Volume: 61.8)
+26/05/2025 23:00:00.000 | Trade |  Closing position PID147 (Volume: 61.8) SUCCEEDED
+26/05/2025 23:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 222.70 units, which needs about $4096.75 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3940.61 budget, free margin was $7881.21). Size was cut from 222.70 to 209.90 units. Real risk on this trade is now about $74.26 (0.94% of balance) instead of the requested 1.00%.
+26/05/2025 23:00:00.000 | Trade | Placing Stop Order to Sell 209.9 JP225.cash (Price: 37512.1, SL: 37562.8198802736, TP: 37379.32)
+26/05/2025 23:00:00.000 | Trade |  Placing Stop Order to Sell 209.9 JP225.cash (Price: 37512.1, SL: 37562.8198802736, TP: 37379.32) SUCCEEDED, PendingOrder OID514
+26/05/2025 23:00:00.000 | Info | Combo: bartime=2025-05-26 22:00, executed=2025-05-26 23:00:00, pending Sell placed at 37512.1; SL=37562.81988027361, TP=37379.3153534437; valid for the next 3 chart bar(s).
+27/05/2025 06:00:00.000 | Trade | Placing Stop Order to Buy 98.9 JP225.cash (Price: 37774.6, SL: 37661.5683581644, TP: 38070.52)
+27/05/2025 06:00:00.000 | Trade |  Placing Stop Order to Buy 98.9 JP225.cash (Price: 37774.6, SL: 37661.5683581644, TP: 38070.52) SUCCEEDED, PendingOrder OID517
+27/05/2025 06:00:00.000 | Info | Combo: bartime=2025-05-27 05:00, executed=2025-05-27 06:00:00, pending Buy placed at 37774.6; SL=37661.56835816444, TP=38070.516838325486; valid for the next 3 chart bar(s).
+28/05/2025 01:00:00.000 | Trade | Placing Stop Order to Sell 94.8 JP225.cash (Price: 37930.1, SL: 38050.9991178749, TP: 37613.59)
+28/05/2025 01:00:00.000 | Trade |  Placing Stop Order to Sell 94.8 JP225.cash (Price: 37930.1, SL: 38050.9991178749, TP: 37613.59) SUCCEEDED, PendingOrder OID520
+28/05/2025 01:00:00.000 | Info | Combo: bartime=2025-05-28 00:00, executed=2025-05-28 01:00:00, pending Sell placed at 37930.1; SL=38050.99911787493, TP=37613.58610940341; valid for the next 3 chart bar(s).
+29/05/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 92.6 JP225.cash (Price: 38044.5, SL: 38166.8882994545, TP: 37724.09)
+29/05/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 92.6 JP225.cash (Price: 38044.5, SL: 38166.8882994545, TP: 37724.09) SUCCEEDED, PendingOrder OID523
+29/05/2025 11:00:00.000 | Info | Combo: bartime=2025-05-29 10:00, executed=2025-05-29 11:00:00, pending Sell placed at 38044.5; SL=38166.8882994545, TP=37724.08743202812; valid for the next 3 chart bar(s).
+30/05/2025 05:00:00.000 | Trade | Placing Stop Order to Buy 108.9 JP225.cash (Price: 37970, SL: 37863.1181781168, TP: 38249.82)
+30/05/2025 05:00:00.000 | Trade |  Placing Stop Order to Buy 108.9 JP225.cash (Price: 37970, SL: 37863.1181781168, TP: 38249.82) SUCCEEDED, PendingOrder OID526
+30/05/2025 05:00:00.000 | Info | Combo: bartime=2025-05-30 04:00, executed=2025-05-30 05:00:00, pending Buy placed at 37970; SL=37863.118178116776, TP=38249.81660969028; valid for the next 3 chart bar(s).
+30/05/2025 10:00:00.000 | Info | Combo: bartime=2025-05-30 09:00, reversal - closing existing Buy position 152 before opening opposite direction.
+30/05/2025 10:00:00.000 | Trade | Closing position PID152 (Volume: 108.9)
+30/05/2025 10:00:00.000 | Trade |  Closing position PID152 (Volume: 108.9) SUCCEEDED
+30/05/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 96.9 JP225.cash (Price: 37875, SL: 37994.2822353947, TP: 37562.72)
+30/05/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 96.9 JP225.cash (Price: 37875, SL: 37994.2822353947, TP: 37562.72) SUCCEEDED, PendingOrder OID530
+30/05/2025 10:00:00.000 | Info | Combo: bartime=2025-05-30 09:00, executed=2025-05-30 10:00:00, pending Sell placed at 37875; SL=37994.2822353947, TP=37562.71910773669; valid for the next 3 chart bar(s).
+02/06/2025 12:00:00.000 | Trade | Placing Stop Order to Buy 119.6 JP225.cash (Price: 37562.6, SL: 37462.9424760685, TP: 37823.5)
+02/06/2025 12:00:00.000 | Trade |  Placing Stop Order to Buy 119.6 JP225.cash (Price: 37562.6, SL: 37462.9424760685, TP: 37823.5) SUCCEEDED, PendingOrder OID533
+02/06/2025 12:00:00.000 | Info | Combo: bartime=2025-06-02 11:00, executed=2025-06-02 12:00:00, pending Buy placed at 37562.6; SL=37462.942476068485, TP=37823.5033976527; valid for the next 3 chart bar(s).
+02/06/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 73.7 JP225.cash (Price: 37580.1, SL: 37420.3153477471, TP: 37998.42)
+02/06/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 73.7 JP225.cash (Price: 37580.1, SL: 37420.3153477471, TP: 37998.42) SUCCEEDED, PendingOrder OID536
+02/06/2025 15:00:00.000 | Info | Combo: bartime=2025-06-02 14:00, executed=2025-06-02 15:00:00, pending Buy placed at 37580.1; SL=37420.31534774706, TP=37998.41621959818; valid for the next 3 chart bar(s).
+03/06/2025 03:00:00.000 | Info | Combo: bartime=2025-06-03 02:00, reversal - closing existing Buy position 155 before opening opposite direction.
+03/06/2025 03:00:00.000 | Trade | Closing position PID155 (Volume: 73.7)
+03/06/2025 03:00:00.000 | Trade |  Closing position PID155 (Volume: 73.7) SUCCEEDED
+03/06/2025 03:00:00.000 | Trade | Placing Stop Order to Sell 91.9 JP225.cash (Price: 37503, SL: 37630.9365498443, TP: 37168.06)
+03/06/2025 03:00:00.000 | Trade |  Placing Stop Order to Sell 91.9 JP225.cash (Price: 37503, SL: 37630.9365498443, TP: 37168.06) SUCCEEDED, PendingOrder OID540
+03/06/2025 03:00:00.000 | Info | Combo: bartime=2025-06-03 02:00, executed=2025-06-03 03:00:00, pending Sell placed at 37503; SL=37630.93654984431, TP=37168.06211250761; valid for the next 3 chart bar(s).
+03/06/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 126 JP225.cash (Price: 37675.5, SL: 37583.2735420875, TP: 37916.95)
+03/06/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 126 JP225.cash (Price: 37675.5, SL: 37583.2735420875, TP: 37916.95) SUCCEEDED, PendingOrder OID543
+03/06/2025 14:00:00.000 | Info | Combo: bartime=2025-06-03 13:00, executed=2025-06-03 14:00:00, pending Buy placed at 37675.5; SL=37583.27354208751, TP=37916.94886681489; valid for the next 3 chart bar(s).
+04/06/2025 13:00:00.000 | Info | Combo: bartime=2025-06-04 12:00, reversal - closing existing Buy position 157 before opening opposite direction.
+04/06/2025 13:00:00.000 | Trade | Closing position PID157 (Volume: 126)
+04/06/2025 13:00:00.000 | Trade |  Closing position PID157 (Volume: 126) SUCCEEDED
+04/06/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 116.5 JP225.cash (Price: 37593.5, SL: 37693.0333678289, TP: 37332.92)
+04/06/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 116.5 JP225.cash (Price: 37593.5, SL: 37693.0333678289, TP: 37332.92) SUCCEEDED, PendingOrder OID547
+04/06/2025 13:00:00.000 | Info | Combo: bartime=2025-06-04 12:00, executed=2025-06-04 13:00:00, pending Sell placed at 37593.5; SL=37693.033367828895, TP=37332.92164302395; valid for the next 3 chart bar(s).
+05/06/2025 02:00:00.000 | Trade | Placing Stop Order to Buy 125.5 JP225.cash (Price: 37739, SL: 37648.1887040593, TP: 37976.74)
+05/06/2025 02:00:00.000 | Trade |  Placing Stop Order to Buy 125.5 JP225.cash (Price: 37739, SL: 37648.1887040593, TP: 37976.74) SUCCEEDED, PendingOrder OID550
+05/06/2025 02:00:00.000 | Info | Combo: bartime=2025-06-05 01:00, executed=2025-06-05 02:00:00, pending Buy placed at 37739; SL=37648.188704059314, TP=37976.74397277271; valid for the next 3 chart bar(s).
+05/06/2025 05:00:00.000 | Trade | Cancelling pending order OID550
+05/06/2025 05:00:00.000 | Trade |  Cancelling pending order OID550 SUCCEEDED
+05/06/2025 05:00:00.000 | Info | Combo: pending order 550 cancelled after 3 chart bars.
+05/06/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 115.8 JP225.cash (Price: 37664, SL: 37565.5231636369, TP: 37921.81)
+05/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 115.8 JP225.cash (Price: 37664, SL: 37565.5231636369, TP: 37921.81) SUCCEEDED, PendingOrder OID551
+05/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-05 07:00, executed=2025-06-05 08:00:00, pending Buy placed at 37664; SL=37565.52316363693, TP=37921.81235759853; valid for the next 3 chart bar(s).
+05/06/2025 11:00:00.000 | Trade | Cancelling pending order OID551
+05/06/2025 11:00:00.000 | Trade |  Cancelling pending order OID551 SUCCEEDED
+05/06/2025 11:00:00.000 | Info | Combo: pending order 551 cancelled after 3 chart bars.
+05/06/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 64.8 JP225.cash (Price: 37624, SL: 37448.2738305668, TP: 38084.05)
+05/06/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 64.8 JP225.cash (Price: 37624, SL: 37448.2738305668, TP: 38084.05) SUCCEEDED, PendingOrder OID552
+05/06/2025 15:00:00.000 | Info | Combo: bartime=2025-06-05 14:00, executed=2025-06-05 15:00:00, pending Buy placed at 37624; SL=37448.27383056675, TP=38084.05111157625; valid for the next 3 chart bar(s).
+06/06/2025 00:00:00.000 | Trade | Placing Stop Order to Buy 89.2 JP225.cash (Price: 37584.5, SL: 37458.1471739085, TP: 37915.29)
+06/06/2025 00:00:00.000 | Trade |  Placing Stop Order to Buy 89.2 JP225.cash (Price: 37584.5, SL: 37458.1471739085, TP: 37915.29) SUCCEEDED, PendingOrder OID555
+06/06/2025 00:00:00.000 | Info | Combo: bartime=2025-06-05 23:00, executed=2025-06-06 00:00:00, pending Buy placed at 37584.5; SL=37458.147173908525, TP=37915.29169870748; valid for the next 3 chart bar(s).
+10/06/2025 06:00:00.000 | Trade | Placing Stop Order to Sell 89.9 JP225.cash (Price: 38119, SL: 38248.3363037092, TP: 37780.4)
+10/06/2025 06:00:00.000 | Trade |  Placing Stop Order to Sell 89.9 JP225.cash (Price: 38119, SL: 38248.3363037092, TP: 37780.4) SUCCEEDED, PendingOrder OID558
+10/06/2025 06:00:00.000 | Info | Combo: bartime=2025-06-10 05:00, executed=2025-06-10 06:00:00, pending Sell placed at 38119; SL=38248.33630370918, TP=37780.39755688937; valid for the next 3 chart bar(s).
+10/06/2025 09:00:00.000 | Trade | Cancelling pending order OID558
+10/06/2025 09:00:00.000 | Trade |  Cancelling pending order OID558 SUCCEEDED
+10/06/2025 09:00:00.000 | Info | Combo: pending order 558 cancelled after 3 chart bars.
+10/06/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 116.1 JP225.cash (Price: 38314, SL: 38213.8006644226, TP: 38576.32)
+10/06/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 116.1 JP225.cash (Price: 38314, SL: 38213.8006644226, TP: 38576.32) SUCCEEDED, PendingOrder OID559
+10/06/2025 16:00:00.000 | Info | Combo: bartime=2025-06-10 15:00, executed=2025-06-10 16:00:00, pending Buy placed at 38314; SL=38213.80066442259, TP=38576.32186054166; valid for the next 3 chart bar(s).
+11/06/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 108.3 JP225.cash (Price: 38300, SL: 38410.0664457584, TP: 38011.85)
+11/06/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 108.3 JP225.cash (Price: 38300, SL: 38410.0664457584, TP: 38011.85) SUCCEEDED, PendingOrder OID562
+11/06/2025 19:00:00.000 | Info | Combo: bartime=2025-06-11 18:00, executed=2025-06-11 19:00:00, pending Sell placed at 38300; SL=38410.06644575843, TP=38011.84604500443; valid for the next 3 chart bar(s).
+12/06/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 106.6 JP225.cash (Price: 38303.3, SL: 38192.6264064925, TP: 38593.04)
+12/06/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 106.6 JP225.cash (Price: 38303.3, SL: 38192.6264064925, TP: 38593.04) SUCCEEDED, PendingOrder OID565
+12/06/2025 15:00:00.000 | Info | Combo: bartime=2025-06-12 14:00, executed=2025-06-12 15:00:00, pending Buy placed at 38303.3; SL=38192.62640649247, TP=38593.04346780273; valid for the next 3 chart bar(s).
+12/06/2025 18:00:00.000 | Trade | Cancelling pending order OID565
+12/06/2025 18:00:00.000 | Trade |  Cancelling pending order OID565 SUCCEEDED
+12/06/2025 18:00:00.000 | Info | Combo: pending order 565 cancelled after 3 chart bars.
+13/06/2025 00:00:00.000 | Trade | Placing Stop Order to Sell 131.4 JP225.cash (Price: 37975.7, SL: 38065.4878231534, TP: 37740.64)
+13/06/2025 00:00:00.000 | Trade |  Placing Stop Order to Sell 131.4 JP225.cash (Price: 37975.7, SL: 38065.4878231534, TP: 37740.64) SUCCEEDED, PendingOrder OID566
+13/06/2025 00:00:00.000 | Info | Combo: bartime=2025-06-12 23:00, executed=2025-06-13 00:00:00, pending Sell placed at 37975.7; SL=38065.48782315337, TP=37740.63547898445; valid for the next 3 chart bar(s).
+13/06/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 89 JP225.cash (Price: 38018.2, SL: 37882.1090551346, TP: 38374.49)
+13/06/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 89 JP225.cash (Price: 38018.2, SL: 37882.1090551346, TP: 38374.49) SUCCEEDED, PendingOrder OID569
+13/06/2025 10:00:00.000 | Info | Combo: bartime=2025-06-13 09:00, executed=2025-06-13 10:00:00, pending Buy placed at 38018.2; SL=37882.10905513463, TP=38374.486093657535; valid for the next 3 chart bar(s).
+17/06/2025 00:00:00.000 | Trade | Placing Stop Order to Sell 101 JP225.cash (Price: 38338.5, SL: 38457.1699510169, TP: 38027.82)
+17/06/2025 00:00:00.000 | Trade |  Placing Stop Order to Sell 101 JP225.cash (Price: 38338.5, SL: 38457.1699510169, TP: 38027.82) SUCCEEDED, PendingOrder OID572
+17/06/2025 00:00:00.000 | Info | Combo: bartime=2025-06-16 23:00, executed=2025-06-17 00:00:00, pending Sell placed at 38338.5; SL=38457.169951016884, TP=38027.82206823781; valid for the next 3 chart bar(s).
+17/06/2025 06:00:00.000 | Trade | Placing Stop Order to Sell 111.5 JP225.cash (Price: 38445.8, SL: 38552.1443276394, TP: 38167.39)
+17/06/2025 06:00:00.000 | Trade |  Placing Stop Order to Sell 111.5 JP225.cash (Price: 38445.8, SL: 38552.1443276394, TP: 38167.39) SUCCEEDED, PendingOrder OID575
+17/06/2025 06:00:00.000 | Info | Combo: bartime=2025-06-17 05:00, executed=2025-06-17 06:00:00, pending Sell placed at 38445.8; SL=38552.14432763937, TP=38167.39055024014; valid for the next 3 chart bar(s).
+17/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-17 07:00, Sell signal skipped: already have same-direction exposure open.
+18/06/2025 01:00:00.000 | Trade | Placing Stop Order to Buy 85.5 JP225.cash (Price: 38648.9, SL: 38506.6661015247, TP: 39021.27)
+18/06/2025 01:00:00.000 | Trade |  Placing Stop Order to Buy 85.5 JP225.cash (Price: 38648.9, SL: 38506.6661015247, TP: 39021.27) SUCCEEDED, PendingOrder OID578
+18/06/2025 01:00:00.000 | Info | Combo: bartime=2025-06-18 00:00, executed=2025-06-18 01:00:00, pending Buy placed at 38648.9; SL=38506.66610152472, TP=39021.26834620828; valid for the next 3 chart bar(s).
+19/06/2025 00:00:00.000 | Info | Combo: bartime=2025-06-18 23:00, Buy signal skipped: already have same-direction exposure open.
+19/06/2025 01:00:00.000 | Info | Combo: bartime=2025-06-19 00:00, reversal - closing existing Buy position 167 before opening opposite direction.
+19/06/2025 01:00:00.000 | Trade | Closing position PID167 (Volume: 85.5)
+19/06/2025 01:00:00.000 | Trade |  Closing position PID167 (Volume: 85.5) SUCCEEDED
+19/06/2025 01:00:00.000 | Trade | Placing Stop Order to Sell 84 JP225.cash (Price: 38549.4, SL: 38693.793609373, TP: 38171.38)
+19/06/2025 01:00:00.000 | Trade |  Placing Stop Order to Sell 84 JP225.cash (Price: 38549.4, SL: 38693.793609373, TP: 38171.38) SUCCEEDED, PendingOrder OID582
+19/06/2025 01:00:00.000 | Info | Combo: bartime=2025-06-19 00:00, executed=2025-06-19 01:00:00, pending Sell placed at 38549.4; SL=38693.79360937296, TP=38171.37753066159; valid for the next 3 chart bar(s).
+19/06/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 133 JP225.cash (Price: 38732.2, SL: 38642.0447574895, TP: 38968.23)
+19/06/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 133 JP225.cash (Price: 38732.2, SL: 38642.0447574895, TP: 38968.23) SUCCEEDED, PendingOrder OID585
+19/06/2025 11:00:00.000 | Info | Combo: bartime=2025-06-19 10:00, executed=2025-06-19 11:00:00, pending Buy placed at 38732.2; SL=38642.04475748947, TP=38968.22642489256; valid for the next 3 chart bar(s).
+19/06/2025 14:00:00.000 | Trade | Cancelling pending order OID585
+19/06/2025 14:00:00.000 | Trade |  Cancelling pending order OID585 SUCCEEDED
+19/06/2025 14:00:00.000 | Info | Combo: pending order 585 cancelled after 3 chart bars.
+19/06/2025 23:00:00.000 | Trade | Placing Stop Order to Buy 141.6 JP225.cash (Price: 38699.2, SL: 38614.5543817608, TP: 38920.8)
+19/06/2025 23:00:00.000 | Trade |  Placing Stop Order to Buy 141.6 JP225.cash (Price: 38699.2, SL: 38614.5543817608, TP: 38920.8) SUCCEEDED, PendingOrder OID586
+19/06/2025 23:00:00.000 | Info | Combo: bartime=2025-06-19 22:00, executed=2025-06-19 23:00:00, pending Buy placed at 38699.2; SL=38614.55438176079, TP=38920.80222855024; valid for the next 3 chart bar(s).
+20/06/2025 01:00:00.000 | Info | Combo: bartime=2025-06-20 00:00, Buy signal skipped: already have same-direction exposure open.
+20/06/2025 02:00:00.000 | Trade | Cancelling pending order OID586
+20/06/2025 02:00:00.000 | Trade |  Cancelling pending order OID586 SUCCEEDED
+20/06/2025 02:00:00.000 | Info | Combo: pending order 586 cancelled after 3 chart bars.
+20/06/2025 04:00:00.000 | Trade | Placing Stop Order to Buy 90.8 JP225.cash (Price: 38556.4, SL: 38424.3476758154, TP: 38902.11)
+20/06/2025 04:00:00.000 | Trade |  Placing Stop Order to Buy 90.8 JP225.cash (Price: 38556.4, SL: 38424.3476758154, TP: 38902.11) SUCCEEDED, PendingOrder OID587
+20/06/2025 04:00:00.000 | Info | Combo: bartime=2025-06-20 03:00, executed=2025-06-20 04:00:00, pending Buy placed at 38556.4; SL=38424.34767581538, TP=38902.11298471534; valid for the next 3 chart bar(s).
+20/06/2025 07:00:00.000 | Trade | Cancelling pending order OID587
+20/06/2025 07:00:00.000 | Trade |  Cancelling pending order OID587 SUCCEEDED
+20/06/2025 07:00:00.000 | Info | Combo: pending order 587 cancelled after 3 chart bars.
+20/06/2025 07:00:00.000 | Trade | Placing Stop Order to Sell 100.3 JP225.cash (Price: 38361.1, SL: 38480.5475899825, TP: 38048.39)
+20/06/2025 07:00:00.000 | Trade |  Placing Stop Order to Sell 100.3 JP225.cash (Price: 38361.1, SL: 38480.5475899825, TP: 38048.39) SUCCEEDED, PendingOrder OID588
+20/06/2025 07:00:00.000 | Info | Combo: bartime=2025-06-20 06:00, executed=2025-06-20 07:00:00, pending Sell placed at 38361.1; SL=38480.547589982525, TP=38048.38620942574; valid for the next 3 chart bar(s).
+20/06/2025 09:00:00.000 | Info | Combo: bartime=2025-06-20 08:00, Sell signal skipped: already have same-direction exposure open.
+20/06/2025 10:00:00.000 | Trade | Cancelling pending order OID588
+20/06/2025 10:00:00.000 | Trade |  Cancelling pending order OID588 SUCCEEDED
+20/06/2025 10:00:00.000 | Info | Combo: pending order 588 cancelled after 3 chart bars.
+20/06/2025 12:00:00.000 | Trade | Placing Stop Order to Buy 106.5 JP225.cash (Price: 38635.9, SL: 38523.3265817145, TP: 38930.62)
+20/06/2025 12:00:00.000 | Trade |  Placing Stop Order to Buy 106.5 JP225.cash (Price: 38635.9, SL: 38523.3265817145, TP: 38930.62) SUCCEEDED, PendingOrder OID589
+20/06/2025 12:00:00.000 | Info | Combo: bartime=2025-06-20 11:00, executed=2025-06-20 12:00:00, pending Buy placed at 38635.9; SL=38523.32658171453, TP=38930.61720907137; valid for the next 3 chart bar(s).
+20/06/2025 15:00:00.000 | Trade | Cancelling pending order OID589
+20/06/2025 15:00:00.000 | Trade |  Cancelling pending order OID589 SUCCEEDED
+20/06/2025 15:00:00.000 | Info | Combo: pending order 589 cancelled after 3 chart bars.
+23/06/2025 07:00:00.000 | Trade | Placing Stop Order to Buy 110.7 JP225.cash (Price: 38447.8, SL: 38339.5382587881, TP: 38731.23)
+23/06/2025 07:00:00.000 | Trade |  Placing Stop Order to Buy 110.7 JP225.cash (Price: 38447.8, SL: 38339.5382587881, TP: 38731.23) SUCCEEDED, PendingOrder OID590
+23/06/2025 07:00:00.000 | Info | Combo: bartime=2025-06-23 06:00, executed=2025-06-23 07:00:00, pending Buy placed at 38447.8; SL=38339.53825878807, TP=38731.22923849285; valid for the next 3 chart bar(s).
+23/06/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 100.6 JP225.cash (Price: 38231.4, SL: 38349.1317640861, TP: 37923.18)
+23/06/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 100.6 JP225.cash (Price: 38231.4, SL: 38349.1317640861, TP: 37923.18) SUCCEEDED, PendingOrder OID593
+23/06/2025 17:00:00.000 | Info | Combo: bartime=2025-06-23 16:00, executed=2025-06-23 17:00:00, pending Sell placed at 38231.4; SL=38349.13176408607, TP=37923.17824162267; valid for the next 3 chart bar(s).
+23/06/2025 18:00:00.000 | Info | Combo: bartime=2025-06-23 17:00, reversal - cancelling existing Sell pending order 593 before opening opposite direction.
+23/06/2025 18:00:00.000 | Trade | Cancelling pending order OID593
+23/06/2025 18:00:00.000 | Trade |  Cancelling pending order OID593 SUCCEEDED
+23/06/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 73.7 JP225.cash (Price: 38652.3, SL: 38491.5745887311, TP: 39073.08)
+23/06/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 73.7 JP225.cash (Price: 38652.3, SL: 38491.5745887311, TP: 39073.08) SUCCEEDED, PendingOrder OID594
+23/06/2025 18:00:00.000 | Info | Combo: bartime=2025-06-23 17:00, executed=2025-06-23 18:00:00, pending Buy placed at 38652.3; SL=38491.57458873114, TP=39073.07912670187; valid for the next 3 chart bar(s).
+23/06/2025 22:05:00.000 | Trade | Cancelling pending order OID594
+23/06/2025 22:05:00.000 | Trade |  Cancelling pending order OID594 SUCCEEDED
+23/06/2025 22:05:00.000 | Info | Combo: pending order 594 cancelled after 3 chart bars.
+24/06/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 147 JP225.cash (Price: 38779.7, SL: 38699.1163516062, TP: 38990.67)
+24/06/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 147 JP225.cash (Price: 38779.7, SL: 38699.1163516062, TP: 38990.67) SUCCEEDED, PendingOrder OID595
+24/06/2025 18:00:00.000 | Info | Combo: bartime=2025-06-24 17:00, executed=2025-06-24 18:00:00, pending Buy placed at 38779.7; SL=38699.11635160622, TP=38990.6679914949; valid for the next 3 chart bar(s).
+25/06/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 155.1 JP225.cash (Price: 38899.2, SL: 38977.4696396137, TP: 38694.29)
+25/06/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 155.1 JP225.cash (Price: 38899.2, SL: 38977.4696396137, TP: 38694.29) SUCCEEDED, PendingOrder OID598
+25/06/2025 18:00:00.000 | Info | Combo: bartime=2025-06-25 17:00, executed=2025-06-25 18:00:00, pending Sell placed at 38899.2; SL=38977.46963961373, TP=38694.29008349124; valid for the next 3 chart bar(s).
+25/06/2025 22:05:00.000 | Trade | Cancelling pending order OID598
+25/06/2025 22:05:00.000 | Trade |  Cancelling pending order OID598 SUCCEEDED
+25/06/2025 22:05:00.000 | Info | Combo: pending order 598 cancelled after 3 chart bars.
+25/06/2025 22:05:00.000 | Trade | Placing Stop Order to Sell 200.2 JP225.cash (Price: 38963.8, SL: 39024.4706043858, TP: 38804.96)
+25/06/2025 22:05:00.000 | Trade |  Placing Stop Order to Sell 200.2 JP225.cash (Price: 38963.8, SL: 39024.4706043858, TP: 38804.96) SUCCEEDED, PendingOrder OID599
+25/06/2025 22:05:00.000 | Info | Combo: bartime=2025-06-25 21:00, executed=2025-06-25 22:05:00, pending Sell placed at 38963.8; SL=39024.47060438579, TP=38804.96435771802; valid for the next 3 chart bar(s).
+26/06/2025 00:00:00.000 | Trade | Placing Stop Order to Buy 179.6 JP225.cash (Price: 39096, SL: 39029.1188131931, TP: 39271.09)
+26/06/2025 00:00:00.000 | Trade |  Placing Stop Order to Buy 179.6 JP225.cash (Price: 39096, SL: 39029.1188131931, TP: 39271.09) SUCCEEDED, PendingOrder OID602
+26/06/2025 00:00:00.000 | Info | Combo: bartime=2025-06-25 23:00, executed=2025-06-26 00:00:00, pending Buy placed at 39096; SL=39029.1188131931, TP=39271.09494706047; valid for the next 3 chart bar(s).
+30/06/2025 06:00:00.000 | Trade | Placing Stop Order to Sell 76.6 JP225.cash (Price: 40364.2, SL: 40525.4696536121, TP: 39942)
+30/06/2025 06:00:00.000 | Trade |  Placing Stop Order to Sell 76.6 JP225.cash (Price: 40364.2, SL: 40525.4696536121, TP: 39942) SUCCEEDED, PendingOrder OID605
+30/06/2025 06:00:00.000 | Info | Combo: bartime=2025-06-30 05:00, executed=2025-06-30 06:00:00, pending Sell placed at 40364.2; SL=40525.46965361213, TP=39941.996046843444; valid for the next 3 chart bar(s).
+01/07/2025 23:59:00.000 | Info | Combo: loaded=4542, processed=255, before-start=3718, not-processed=569, placed=234, failed=0, guard-skipped=0, pending-expired=45, same-direction-skipped=21, reversed=43, margin-capped=5, margin-blocked=0.
+Progress | Backtesting | 100.00 % |
+Info | CBot instance [Combo, JP225.cash, h1] stopped.
+{
+	"Equity":8861.35,
+	"NetProfit":-1138.65,
+	"MaxBalanceDrawdownPercentages":25,
+	"MaxEquityDrawdownPercentages":25,
+	"MaxBalanceDrawdown":2506.85,
+	"MaxEquityDrawdown":2583.75,
+	"WinningTrades":51,
+	"LosingTrades":122,
+	"TotalTrades":173,
+	"AverageTrade":-6.58,
+	"ProfitFactor":0.9,
+	"Fitness":0
+}
+

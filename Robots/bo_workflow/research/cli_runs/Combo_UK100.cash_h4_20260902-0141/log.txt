@@ -1,0 +1,65 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_UK100.cash_h4_20260902-0141\params.cbotset 
+--start=01/01/2025 --end=02/01/2025 --data-mode=Ticks --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --symbol=UK100.cash --period=h4 --full-access 
+--report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_UK100.cash_h4_20260902-0141
+\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...141\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | UK100.cash                | cmd arg              |
+| Period               | h4                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 02/01/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 3                         | default value        |
+| KtpLevel             | 3                         | default value        |
+| RiskPercent          | 0.5                       | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+02/09/2026 08:41:17.018 | Establishing connection using votuankiet96@gmail.com...
+02/09/2026 08:41:19.381 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Info | CBot instance [Combo, UK100.cash, h4] started.
+Progress | Backtesting | 52.26 % |
+Progress | Backtesting | 79.27 % |
+Progress | Backtesting | 83.02 % |
+Progress | Backtesting | 88.20 % |
+Progress | Backtesting | 94.77 % |
+02/01/2025 01:05:00.006 | Info | Combo: loaded 1243 valid signal row(s) from CSV.
+02/01/2025 01:05:00.006 | Info | Combo: signal scheduling active with chart timeframe h4 (04:00:00); CSV timeframe must match the chart timeframe.
+02/01/2025 23:59:57.268 | Info | Combo: loaded=1243, processed=0, before-start=1024, not-processed=219, placed=0, failed=0, guard-skipped=0, pending-expired=0, same-direction-skipped=0, reversed=0.
+Progress | Backtesting | 100.00 % |
+Info | CBot instance [Combo, UK100.cash, h4] stopped.
+{
+	"Equity":10000,
+	"NetProfit":0,
+	"MaxBalanceDrawdownPercentages":0,
+	"MaxEquityDrawdownPercentages":0,
+	"MaxBalanceDrawdown":0,
+	"MaxEquityDrawdown":0,
+	"WinningTrades":0,
+	"LosingTrades":0,
+	"TotalTrades":0,
+	"AverageTrade":-,
+	"ProfitFactor":-,
+	"Fitness":0
+}
+

@@ -1,0 +1,252 @@
+﻿{
+    "utc":  "2026-09-06T11:52:39.9869014Z",
+    "description":  "Read-only source/assembly/report audit plus explicitly labelled arithmetic and state-machine models. No cBot compilation, broker order, or new backtest.",
+    "checks":  [
+                   {
+                       "name":  "Sizing regions identical after removing comments/whitespace/log prefix",
+                       "pass":  true,
+                       "detail":  "Direct comparison of complete regions, not report summaries."
+                   },
+                   {
+                       "name":  "Installed API margin return is nonnullable System.Double",
+                       "pass":  true,
+                       "detail":  "Double GetEstimatedMargin(cAlgo.API.TradeType, Double)"
+                   },
+                   {
+                       "name":  "Installed API has Account.Credit double",
+                       "pass":  true,
+                       "detail":  "Double Credit"
+                   },
+                   {
+                       "name":  "Reference assembly cannot execute normalization",
+                       "pass":  true,
+                       "detail":  "Abstract contract; this script makes NO claim to exercise broker normalization."
+                   },
+                   {
+                       "name":  "NaN parses and bypasses \u003c=0 guard",
+                       "pass":  true,
+                       "detail":  "Actual .NET TryParse/comparison; downstream API behavior not simulated."
+                   },
+                   {
+                       "name":  "Infinite pip value passes \u003c=0 guard",
+                       "pass":  true,
+                       "detail":  "Must check all finite positive inputs, not only zero."
+                   },
+                   {
+                       "name":  "B7 profit restart is tighter, loss restart looser",
+                       "pass":  true,
+                       "detail":  [
+                                      {
+                                          "balance":  10800,
+                                          "botFloor":  9720,
+                                          "contractFloor":  9000,
+                                          "effect":  "tighter"
+                                      },
+                                      {
+                                          "balance":  9200,
+                                          "botFloor":  8280,
+                                          "contractFloor":  9000,
+                                          "effect":  "looser"
+                                      }
+                                  ]
+                   },
+                   {
+                       "name":  "Progressive-tier scaling is conservative in fixed-state example",
+                       "pass":  true,
+                       "detail":  {
+                                      "budget":  150,
+                                      "original":  200,
+                                      "scaledMargin":  98,
+                                      "scaled":  98,
+                                      "margin":  300
+                                  }
+                   },
+                   {
+                       "name":  "D1 example 25pct gap allowance exceeds both FTMO total-loss budgets",
+                       "pass":  true,
+                       "detail":  "Risk preference example is unsuitable as FTMO protection default."
+                   },
+                   {
+                       "name":  "Separate stress knob cannot preserve nominal risk when stress cap binds",
+                       "pass":  true,
+                       "detail":  {
+                                      "price":  100,
+                                      "stopRiskVolume":  100,
+                                      "stressRiskVolume":  10,
+                                      "gap":  0.1,
+                                      "stopDistance":  1
+                                  }
+                   },
+                   {
+                       "name":  "Clamping normalized quantity upward may violate cap",
+                       "pass":  true,
+                       "detail":  {
+                                      "unitLoss":  100,
+                                      "clampedLoss":  100,
+                                      "capLoss":  60,
+                                      "capVolume":  0.6,
+                                      "brokerMin":  1
+                                  }
+                   },
+                   {
+                       "name":  "Two 50pct per-order caps are not 50pct portfolio cap",
+                       "pass":  true,
+                       "detail":  "Second order can consume almost all remaining margin."
+                   },
+                   {
+                       "name":  "Model: ignored Close failure permits opposing order request",
+                       "pass":  true,
+                       "detail":  "Mirrors unconditional return true in both reconciliation functions."
+                   },
+                   {
+                       "name":  "Model: successful close then rejected entry leaves flat exposure",
+                       "pass":  true,
+                       "detail":  "No rollback; signal is already IsHandled."
+                   },
+                   {
+                       "name":  "Model: latched PM does not retry failed close",
+                       "pass":  true,
+                       "detail":  "Three checks; actual ForceClose return ignored."
+                   },
+                   {
+                       "name":  "Windows Prague-compatible timezone applies 2026 DST transitions",
+                       "pass":  true,
+                       "detail":  [
+                                      {
+                                          "utc":  "2026-01-01T23:00:00.0000000Z",
+                                          "prague":  "2026-01-02 00:00:00",
+                                          "offset":  1
+                                      },
+                                      {
+                                          "utc":  "2026-07-01T22:00:00.0000000Z",
+                                          "prague":  "2026-07-02 00:00:00",
+                                          "offset":  2
+                                      },
+                                      {
+                                          "utc":  "2026-03-29T00:59:59.0000000Z",
+                                          "prague":  "2026-03-29 01:59:59",
+                                          "offset":  1
+                                      },
+                                      {
+                                          "utc":  "2026-03-29T01:00:00.0000000Z",
+                                          "prague":  "2026-03-29 03:00:00",
+                                          "offset":  2
+                                      },
+                                      {
+                                          "utc":  "2026-10-25T00:59:59.0000000Z",
+                                          "prague":  "2026-10-25 02:59:59",
+                                          "offset":  2
+                                      },
+                                      {
+                                          "utc":  "2026-10-25T01:00:00.0000000Z",
+                                          "prague":  "2026-10-25 02:00:00",
+                                          "offset":  1
+                                      }
+                                  ]
+                   },
+                   {
+                       "name":  "Raw gold net loss decomposes into nominal SL + entry slip + exit slip + cost",
+                       "pass":  true,
+                       "detail":  {
+                                      "netLoss":  106.4700000000198,
+                                      "overTargetPercent":  6.4725553413479923518164435900,
+                                      "entrySlipPercentOfPrice":  0.041172898572059469,
+                                      "cost":  0.52,
+                                      "entrySlipPercentOfSL":  9.2635404733551177,
+                                      "target":  99.9976,
+                                      "entrySlippage":  8.95,
+                                      "nominal":  96.615327862419775,
+                                      "exitSlippage":  0.38467213760
+                                  }
+                   },
+                   {
+                       "name":  "Raw fill event corroborates CSV trace",
+                       "pass":  true,
+                       "detail":  "Order 5, raw native event plus independent report.history entry price."
+                   },
+                   {
+                       "name":  "Gold gross P/L confirms one account dollar per price point per volume unit",
+                       "pass":  true,
+                       "detail":  {
+                                      "units":  5,
+                                      "lots":  0.05,
+                                      "deposit":  "USD",
+                                      "lotSize":  100
+                                  }
+                   },
+                   {
+                       "name":  "Gold backtest disabled automatic commissions",
+                       "pass":  true,
+                       "detail":  {
+                                      "type":  "usdPerMillionUsdVolume",
+                                      "value":  0,
+                                      "applyCommissionAutomatically":  false
+                                  }
+                   },
+                   {
+                       "name":  "BTC historical estimator samples exist for independent confound check",
+                       "pass":  true,
+                       "detail":  {
+                                      "mean":  105764.11206192673,
+                                      "firstFive":  [
+                                                        {
+                                                            "wanted":  0.14,
+                                                            "estimate":  14806.98,
+                                                            "marginPerUnit":  105764.14285714284
+                                                        },
+                                                        {
+                                                            "wanted":  0.25,
+                                                            "estimate":  26441.03,
+                                                            "marginPerUnit":  105764.12
+                                                        },
+                                                        {
+                                                            "wanted":  0.25,
+                                                            "estimate":  26441.03,
+                                                            "marginPerUnit":  105764.12
+                                                        },
+                                                        {
+                                                            "wanted":  0.24,
+                                                            "estimate":  25383.39,
+                                                            "marginPerUnit":  105764.125
+                                                        },
+                                                        {
+                                                            "wanted":  0.3,
+                                                            "estimate":  31729.23,
+                                                            "marginPerUnit":  105764.1
+                                                        }
+                                                    ],
+                                      "min":  105764.07692307692,
+                                      "count":  338,
+                                      "max":  105764.2
+                                  }
+                   }
+               ],
+    "hashes":  [
+                   {
+                       "Algorithm":  "SHA256",
+                       "Hash":  "B2C94C3A7A8AB08B2E67600A81D66AF6C792E1A3A30DD75189D5EB7D67CED4DC",
+                       "Path":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\Combo\\Combo\\Combo.cs"
+                   },
+                   {
+                       "Algorithm":  "SHA256",
+                       "Hash":  "46E937994E209564D1A44A1D48E41A4014056832DBCC9BF25C72B766C5CCB356",
+                       "Path":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\MA Cross\\MA Cross\\MA Cross.cs"
+                   },
+                   {
+                       "Algorithm":  "SHA256",
+                       "Hash":  "81897318EE22DAD19257AF80026DAD48172DEC2F1FAF4D416A63D25F715C4DC8",
+                       "Path":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\Combo.algo"
+                   },
+                   {
+                       "Algorithm":  "SHA256",
+                       "Hash":  "164AE15A2C5E9D9CE4A11AA706894B7201E5F82EB956C1725F9B9725C618A3FC",
+                       "Path":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\MA Cross.algo"
+                   }
+               ],
+    "apiHash":  {
+                    "Algorithm":  "SHA256",
+                    "Hash":  "E8D8EA6C0DDCB566C8E1D78E8FB0F2789E2A4A264840EDC89ECDC90A374C7150",
+                    "Path":  "C:\\Users\\Administrator\\Documents\\cAlgo\\API\\cAlgo.API.dll"
+                },
+    "passCount":  21
+}

@@ -1,0 +1,50 @@
+﻿{
+    "SchemaVersion":  1,
+    "CreatedAtUtc":  "2026-09-07T07:19:47.0254727Z",
+    "Success":  true,
+    "FailureReason":  null,
+    "Input":  {
+                  "AlgoPath":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\Combo.algo",
+                  "AlgoSHA256":  "C4996CCE46E213A85E3E782002E5CD131B3FBB2FC43E363112F5C340CD93D561",
+                  "SymbolInput":  "US30.cash",
+                  "ResolvedSymbol":  "US30.cash",
+                  "Period":  "h1",
+                  "StartDate":  "2025-01-01",
+                  "EndDate":  "2025-01-08",
+                  "DataMode":  "Ticks",
+                  "Broker":  "FTMO Platform",
+                  "Account":  "7563609",
+                  "Parameters":  {
+                                     "SignalFilePath":  "Z:\\Desktop\\og_program\\runtime\\exports\\combo_US30_H1_full_history_signals.csv"
+                                 },
+                  "SignalFile":  {
+                                     "Path":  "Z:\\Desktop\\og_program\\runtime\\exports\\combo_US30_H1_full_history_signals.csv",
+                                     "Length":  204588,
+                                     "LastWriteTime":  "2026-09-03T08:27:02.0000000Z",
+                                     "SHA256":  "4D862726DA902778409544948301FE07B020B540A90D55C15E8425FA4AD430F4"
+                                 }
+              },
+    "Actual":  {
+                   "StartDate":  "2025-01-01",
+                   "EndDate":  "2025-01-08"
+               },
+    "Metrics":  {
+                    "StartingCapital":  10000,
+                    "EndingBalance":  9674.41,
+                    "NetProfit":  -325.59,
+                    "ROI":  -3.26,
+                    "ProfitFactor":  0,
+                    "TotalTrades":  6,
+                    "WinningTrades":  0,
+                    "LosingTrades":  6,
+                    "MaxBalanceDrawdownPct":  3.2559000000000013,
+                    "MaxEquityDrawdownPct":  5.6304271910195745,
+                    "HistoryItems":  6
+                },
+    "Artifacts":  {
+                      "Params":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_US30.cash_h1_20260907-001919\\params.cbotset",
+                      "Command":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_US30.cash_h1_20260907-001919\\command.txt",
+                      "Log":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_US30.cash_h1_20260907-001919\\log.txt",
+                      "ReportJson":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_US30.cash_h1_20260907-001919\\report.json"
+                  }
+}

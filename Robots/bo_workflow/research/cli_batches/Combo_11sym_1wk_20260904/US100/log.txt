@@ -1,0 +1,67 @@
+﻿ctrader-cli.exe : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Ad
+ministrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_11sym_1wk_20260904\US100\params.cbotset 
+--start=01/01/2025 --end=08/01/2025 --data-mode=Ticks --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=US100.cash 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_11sym_1wk_20260904\US100\report.json
+At C:\Users\Administrator\AppData\Local\Temp\claude\c--Users-Administrator-Documents-cAlgo-Sources-Robots\b31e021f-795a
+-471c-904c-56646d43ff9c\scratchpad\retry-4sym.ps1:29 char:15
++     $output = & "ctrader-cli" @argList 2>&1
++               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...100\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | US100.cash                | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 08/01/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 2                         | cbotset              |
+| KtpLevel             | 4                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 50                        | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+04/09/2026 14:44:27.801 | Establishing connection using votuankiet96@gmail.com...
+04/09/2026 14:44:33.462 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+{
+	"Equity":,
+	"NetProfit":-,
+	"MaxBalanceDrawdownPercentages":-,
+	"MaxEquityDrawdownPercentages":-,
+	"MaxBalanceDrawdown":-,
+	"MaxEquityDrawdown":-,
+	"WinningTrades":-,
+	"LosingTrades":-,
+	"TotalTrades":-,
+	"AverageTrade":-,
+	"ProfitFactor":-,
+	"Fitness":0
+}
+Message expected
+System.InvalidOperationException: Message expected
+   at cTrader.Console.Infrastructure.StateMachine.Strategies.BacktestReportSavingStateStrategy.DoEnter()
+   at cTrader.Console.Infrastructure.StateMachine.Strategies.ConsoleStateStrategyBase.Enter()
+   at cTrader.Console.Infrastructure.StateMachine.ConsoleApplicationLifecycleStateMachine.OnMovedToLifecycleState(IConsoleApplicationLifecycleStateStrategy newStateStrategy)
+   at cTrader.Console.Infrastructure.StateMachine.ConsoleApplicationLifecycleStateTransition.InternalMoveTo(ConsoleApplicationLifecycleState state)
+   at cTrader.Console.Infrastructure.StateMachine.ConsoleApplicationLifecycleStateTransition.<>c__DisplayClass7_0.<MoveTo>b__0()
+   at cTrader.Console.Infrastructure.Dispatcher.ConsoleThreadDispatcher.<>c__DisplayClass12_0.<ExecuteInternalAsync>g__ExecuteAction|0()
+

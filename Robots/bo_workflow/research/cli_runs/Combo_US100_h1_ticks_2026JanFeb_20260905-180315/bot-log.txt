@@ -1,0 +1,322 @@
+Info | CBot instance [Combo, US100.cash, h1] started.
+01/01/2026 23:05:00.004 | Info | Combo: loaded 4461 valid signal row(s) from CSV.
+01/01/2026 23:05:00.004 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+02/01/2026 03:00:00.118 | Trade | Placing Stop Order to Buy 1.73 US100.cash (Price: 25401.4, SL: 25343.8853731501, TP: 25551.97)
+02/01/2026 03:00:00.118 | Trade | → Placing Stop Order to Buy 1.73 US100.cash (Price: 25401.4, SL: 25343.8853731501, TP: 25551.97) SUCCEEDED, PendingOrder OID1
+02/01/2026 03:00:00.118 | Info | Combo: bartime=2026-01-02 02:00, executed=2026-01-02 03:00:00, pending Buy placed at 25401.4; SL=25343.885373150126, TP=25551.97329309298; valid for the next 3 chart bar(s).
+02/01/2026 16:00:00.000 | Trade | Placing Stop Order to Sell 0.78 US100.cash (Price: 25160.5, SL: 25290.933995779, TP: 24819.02)
+02/01/2026 16:00:00.000 | Trade | → Placing Stop Order to Sell 0.78 US100.cash (Price: 25160.5, SL: 25290.933995779, TP: 24819.02) SUCCEEDED, PendingOrder OID4
+02/01/2026 16:00:00.000 | Info | Combo: bartime=2026-01-02 15:00, executed=2026-01-02 16:00:00, pending Sell placed at 25160.5; SL=25290.933995779014, TP=24819.02379905054; valid for the next 3 chart bar(s).
+06/01/2026 09:00:00.109 | Trade | Placing Stop Order to Sell 2.11 US100.cash (Price: 25338.5, SL: 25386.5971376342, TP: 25212.58)
+06/01/2026 09:00:00.109 | Trade | → Placing Stop Order to Sell 2.11 US100.cash (Price: 25338.5, SL: 25386.5971376342, TP: 25212.58) SUCCEEDED, PendingOrder OID7
+06/01/2026 09:00:00.109 | Info | Combo: bartime=2026-01-06 08:00, executed=2026-01-06 09:00:00, pending Sell placed at 25338.5; SL=25386.59713763418, TP=25212.581693673717; valid for the next 3 chart bar(s).
+06/01/2026 12:00:00.008 | Trade | Cancelling pending order OID7
+06/01/2026 12:00:00.008 | Trade | → Cancelling pending order OID7 SUCCEEDED
+06/01/2026 12:00:00.008 | Info | Combo: pending order 7 cancelled after 3 chart bars.
+07/01/2026 15:00:00.011 | Trade | Placing Stop Order to Buy 1.99 US100.cash (Price: 25706.1, SL: 25655.2285292297, TP: 25839.28)
+07/01/2026 15:00:00.011 | Trade | → Placing Stop Order to Buy 1.99 US100.cash (Price: 25706.1, SL: 25655.2285292297, TP: 25839.28) SUCCEEDED, PendingOrder OID8
+07/01/2026 15:00:00.011 | Info | Combo: bartime=2026-01-07 14:00, executed=2026-01-07 15:00:00, pending Buy placed at 25706.1; SL=25655.228529229735, TP=25839.28151047655; valid for the next 3 chart bar(s).
+08/01/2026 00:00:00.108 | Trade | Placing Stop Order to Sell 2.21 US100.cash (Price: 25636.8, SL: 25682.2447729324, TP: 25517.83)
+08/01/2026 00:00:00.108 | Trade | → Placing Stop Order to Sell 2.21 US100.cash (Price: 25636.8, SL: 25682.2447729324, TP: 25517.83) SUCCEEDED, PendingOrder OID11
+08/01/2026 00:00:00.108 | Info | Combo: bartime=2026-01-07 23:00, executed=2026-01-08 00:00:00, pending Sell placed at 25636.8; SL=25682.2447729324, TP=25517.825584462968; valid for the next 3 chart bar(s).
+08/01/2026 03:00:00.007 | Info | Combo: bartime=2026-01-08 02:00, Sell signal skipped: already have same-direction exposure open.
+08/01/2026 15:00:00.009 | Trade | Placing Stop Order to Sell 1.25 US100.cash (Price: 25417.3, SL: 25499.1934362121, TP: 25202.9)
+08/01/2026 15:00:00.009 | Trade | → Placing Stop Order to Sell 1.25 US100.cash (Price: 25417.3, SL: 25499.1934362121, TP: 25202.9) SUCCEEDED, PendingOrder OID14
+08/01/2026 15:00:00.009 | Info | Combo: bartime=2026-01-08 14:00, executed=2026-01-08 15:00:00, pending Sell placed at 25417.3; SL=25499.193436212085, TP=25202.90298399676; valid for the next 3 chart bar(s).
+08/01/2026 23:05:00.007 | Trade | Placing Stop Order to Buy 1.51 US100.cash (Price: 25572, SL: 25504.8288490609, TP: 25747.85)
+08/01/2026 23:05:00.007 | Trade | → Placing Stop Order to Buy 1.51 US100.cash (Price: 25572, SL: 25504.8288490609, TP: 25747.85) SUCCEEDED, PendingOrder OID17
+08/01/2026 23:05:00.007 | Info | Combo: bartime=2026-01-08 22:00, executed=2026-01-08 23:05:00, pending Buy placed at 25572; SL=25504.828849060876, TP=25747.85407315863; valid for the next 3 chart bar(s).
+09/01/2026 02:00:00.107 | Trade | Cancelling pending order OID17
+09/01/2026 02:00:00.107 | Trade | → Cancelling pending order OID17 SUCCEEDED
+09/01/2026 02:00:00.107 | Info | Combo: pending order 17 cancelled after 3 chart bars.
+09/01/2026 06:00:00.230 | Trade | Placing Stop Order to Buy 2.51 US100.cash (Price: 25526.1, SL: 25485.5326817666, TP: 25632.31)
+09/01/2026 06:00:00.230 | Trade | → Placing Stop Order to Buy 2.51 US100.cash (Price: 25526.1, SL: 25485.5326817666, TP: 25632.31) SUCCEEDED, PendingOrder OID18
+09/01/2026 06:00:00.230 | Info | Combo: bartime=2026-01-09 05:00, executed=2026-01-09 06:00:00, pending Buy placed at 25526.1; SL=25485.53268176657, TP=25632.305239135112; valid for the next 3 chart bar(s).
+09/01/2026 10:00:00.102 | Trade | Placing Stop Order to Buy 2.34 US100.cash (Price: 25555.4, SL: 25512.2869864516, TP: 25668.27)
+09/01/2026 10:00:00.102 | Trade | → Placing Stop Order to Buy 2.34 US100.cash (Price: 25555.4, SL: 25512.2869864516, TP: 25668.27) SUCCEEDED, PendingOrder OID21
+09/01/2026 10:00:00.102 | Info | Combo: bartime=2026-01-09 09:00, executed=2026-01-09 10:00:00, pending Buy placed at 25555.4; SL=25512.28698645159, TP=25668.269869469746; valid for the next 3 chart bar(s).
+12/01/2026 01:00:00.111 | Trade | Placing Stop Order to Sell 1.28 US100.cash (Price: 25598.4, SL: 25676.1321597971, TP: 25394.9)
+12/01/2026 01:00:00.111 | Trade | → Placing Stop Order to Sell 1.28 US100.cash (Price: 25598.4, SL: 25676.1321597971, TP: 25394.9) SUCCEEDED, PendingOrder OID24
+12/01/2026 01:00:00.111 | Info | Combo: bartime=2026-01-12 00:00, executed=2026-01-12 01:00:00, pending Sell placed at 25598.4; SL=25676.132159797053, TP=25394.897205651323; valid for the next 3 chart bar(s).
+12/01/2026 15:00:00.000 | Trade | Placing Stop Order to Buy 1.27 US100.cash (Price: 25759.8, SL: 25682.4055468804, TP: 25962.42)
+12/01/2026 15:00:00.000 | Trade | → Placing Stop Order to Buy 1.27 US100.cash (Price: 25759.8, SL: 25682.4055468804, TP: 25962.42) SUCCEEDED, PendingOrder OID27
+12/01/2026 15:00:00.000 | Info | Combo: bartime=2026-01-12 14:00, executed=2026-01-12 15:00:00, pending Buy placed at 25759.8; SL=25682.40554688045, TP=25962.418678266975; valid for the next 3 chart bar(s).
+13/01/2026 09:00:00.006 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.20 units, which needs about $5319.20 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4893.35 budget, free margin was $9786.71). Size was cut from 3.20 to 2.88 units. Real risk on this trade is now about $87.87 (0.90% of balance) instead of the requested 1.00%.
+13/01/2026 09:00:00.006 | Trade | Placing Stop Order to Sell 2.88 US100.cash (Price: 25725.8, SL: 25756.3100608772, TP: 25645.92)
+13/01/2026 09:00:00.006 | Trade | → Placing Stop Order to Sell 2.88 US100.cash (Price: 25725.8, SL: 25756.3100608772, TP: 25645.92) SUCCEEDED, PendingOrder OID30
+13/01/2026 09:00:00.006 | Info | Combo: bartime=2026-01-13 08:00, executed=2026-01-13 09:00:00, pending Sell placed at 25725.8; SL=25756.31006087721, TP=25645.92466062346; valid for the next 3 chart bar(s).
+13/01/2026 14:00:00.102 | Trade | Placing Stop Order to Buy 1.65 US100.cash (Price: 25884.2, SL: 25826.1123512518, TP: 26036.27)
+13/01/2026 14:00:00.102 | Trade | → Placing Stop Order to Buy 1.65 US100.cash (Price: 25884.2, SL: 25826.1123512518, TP: 26036.27) SUCCEEDED, PendingOrder OID33
+13/01/2026 14:00:00.102 | Info | Combo: bartime=2026-01-13 13:00, executed=2026-01-13 14:00:00, pending Buy placed at 25884.2; SL=25826.112351251755, TP=26036.273464422902; valid for the next 3 chart bar(s).
+13/01/2026 16:00:00.008 | Info | Combo: bartime=2026-01-13 15:00, reversal - cancelling existing Buy pending order 33 before opening opposite direction.
+13/01/2026 16:00:00.008 | Trade | Cancelling pending order OID33
+13/01/2026 16:00:00.008 | Trade | → Cancelling pending order OID33 SUCCEEDED
+13/01/2026 16:00:00.008 | Trade | Placing Stop Order to Sell 1.11 US100.cash (Price: 25642.3, SL: 25728.2800951989, TP: 25417.2)
+13/01/2026 16:00:00.008 | Trade | → Placing Stop Order to Sell 1.11 US100.cash (Price: 25642.3, SL: 25728.2800951989, TP: 25417.2) SUCCEEDED, PendingOrder OID34
+13/01/2026 16:00:00.008 | Info | Combo: bartime=2026-01-13 15:00, executed=2026-01-13 16:00:00, pending Sell placed at 25642.3; SL=25728.280095198876, TP=25417.20411076934; valid for the next 3 chart bar(s).
+13/01/2026 17:00:00.205 | Info | Combo: bartime=2026-01-13 16:00, reversal - cancelling existing Sell pending order 34 before opening opposite direction.
+13/01/2026 17:00:00.205 | Trade | Cancelling pending order OID34
+13/01/2026 17:00:00.205 | Trade | → Cancelling pending order OID34 SUCCEEDED
+13/01/2026 17:00:00.205 | Trade | Placing Stop Order to Buy 0.92 US100.cash (Price: 25864.3, SL: 25760.3559238409, TP: 26136.43)
+13/01/2026 17:00:00.205 | Trade | → Placing Stop Order to Buy 0.92 US100.cash (Price: 25864.3, SL: 25760.3559238409, TP: 26136.43) SUCCEEDED, PendingOrder OID35
+13/01/2026 17:00:00.205 | Info | Combo: bartime=2026-01-13 16:00, executed=2026-01-13 17:00:00, pending Buy placed at 25864.3; SL=25760.3559238409, TP=26136.425591384526; valid for the next 3 chart bar(s).
+13/01/2026 18:00:00.002 | Info | Combo: bartime=2026-01-13 17:00, reversal - cancelling existing Buy pending order 35 before opening opposite direction.
+13/01/2026 18:00:00.002 | Trade | Cancelling pending order OID35
+13/01/2026 18:00:00.002 | Trade | → Cancelling pending order OID35 SUCCEEDED
+13/01/2026 18:00:00.002 | Trade | Placing Stop Order to Sell 0.83 US100.cash (Price: 25687.3, SL: 25802.1152609273, TP: 25386.71)
+13/01/2026 18:00:00.002 | Trade | → Placing Stop Order to Sell 0.83 US100.cash (Price: 25687.3, SL: 25802.1152609273, TP: 25386.71) SUCCEEDED, PendingOrder OID36
+13/01/2026 18:00:00.002 | Info | Combo: bartime=2026-01-13 17:00, executed=2026-01-13 18:00:00, pending Sell placed at 25687.3; SL=25802.11526092728, TP=25386.713646892378; valid for the next 3 chart bar(s).
+14/01/2026 01:00:00.004 | Info | Combo: bartime=2026-01-14 00:00, reversal - closing existing Sell position 11 before opening opposite direction.
+14/01/2026 01:00:00.004 | Trade | Closing position PID11 (Volume: 0.83)
+14/01/2026 01:00:00.004 | Trade | → Closing position PID11 (Volume: 0.83) SUCCEEDED
+14/01/2026 01:00:00.004 | Trade | Placing Stop Order to Buy 1.65 US100.cash (Price: 25764.6, SL: 25706.8044949116, TP: 25915.91)
+14/01/2026 01:00:00.004 | Trade | → Placing Stop Order to Buy 1.65 US100.cash (Price: 25764.6, SL: 25706.8044949116, TP: 25915.91) SUCCEEDED, PendingOrder OID40
+14/01/2026 01:00:00.004 | Info | Combo: bartime=2026-01-14 00:00, executed=2026-01-14 01:00:00, pending Buy placed at 25764.6; SL=25706.804494911583, TP=25915.908632321472; valid for the next 3 chart bar(s).
+14/01/2026 02:00:00.012 | Info | Combo: bartime=2026-01-14 01:00, reversal - cancelling existing Buy pending order 40 before opening opposite direction.
+14/01/2026 02:00:00.012 | Trade | Cancelling pending order OID40
+14/01/2026 02:00:00.012 | Trade | → Cancelling pending order OID40 SUCCEEDED
+14/01/2026 02:00:00.012 | Trade | Placing Stop Order to Sell 1.72 US100.cash (Price: 25709, SL: 25764.3964040707, TP: 25563.97)
+14/01/2026 02:00:00.012 | Trade | → Placing Stop Order to Sell 1.72 US100.cash (Price: 25709, SL: 25764.3964040707, TP: 25563.97) SUCCEEDED, PendingOrder OID41
+14/01/2026 02:00:00.012 | Info | Combo: bartime=2026-01-14 01:00, executed=2026-01-14 02:00:00, pending Sell placed at 25709; SL=25764.396404070732, TP=25563.97221414282; valid for the next 3 chart bar(s).
+14/01/2026 04:00:00.210 | Info | Combo: bartime=2026-01-14 03:00, reversal - cancelling existing Sell pending order 41 before opening opposite direction.
+14/01/2026 04:00:00.210 | Trade | Cancelling pending order OID41
+14/01/2026 04:00:00.210 | Trade | → Cancelling pending order OID41 SUCCEEDED
+14/01/2026 04:00:00.210 | Trade | Placing Stop Order to Buy 2.08 US100.cash (Price: 25766.6, SL: 25720.6423013947, TP: 25886.92)
+14/01/2026 04:00:00.210 | Trade | → Placing Stop Order to Buy 2.08 US100.cash (Price: 25766.6, SL: 25720.6423013947, TP: 25886.92) SUCCEEDED, PendingOrder OID42
+14/01/2026 04:00:00.210 | Info | Combo: bartime=2026-01-14 03:00, executed=2026-01-14 04:00:00, pending Buy placed at 25766.6; SL=25720.64230139473, TP=25886.917254948592; valid for the next 3 chart bar(s).
+14/01/2026 05:00:00.409 | Info | Combo: bartime=2026-01-14 04:00, reversal - cancelling existing Buy pending order 42 before opening opposite direction.
+14/01/2026 05:00:00.409 | Trade | Cancelling pending order OID42
+14/01/2026 05:00:00.409 | Trade | → Cancelling pending order OID42 SUCCEEDED
+14/01/2026 05:00:00.409 | Trade | Placing Stop Order to Sell 2.07 US100.cash (Price: 25703.2, SL: 25749.3861588842, TP: 25582.28)
+14/01/2026 05:00:00.409 | Trade | → Placing Stop Order to Sell 2.07 US100.cash (Price: 25703.2, SL: 25749.3861588842, TP: 25582.28) SUCCEEDED, PendingOrder OID43
+14/01/2026 05:00:00.409 | Info | Combo: bartime=2026-01-14 04:00, executed=2026-01-14 05:00:00, pending Sell placed at 25703.2; SL=25749.386158884216, TP=25582.284636041128; valid for the next 3 chart bar(s).
+15/01/2026 06:00:00.102 | Trade | Placing Stop Order to Buy 1.62 US100.cash (Price: 25492.9, SL: 25432.485544325, TP: 25651.07)
+15/01/2026 06:00:00.102 | Trade | → Placing Stop Order to Buy 1.62 US100.cash (Price: 25492.9, SL: 25432.485544325, TP: 25651.07) SUCCEEDED, PendingOrder OID46
+15/01/2026 06:00:00.102 | Info | Combo: bartime=2026-01-15 05:00, executed=2026-01-15 06:00:00, pending Buy placed at 25492.9; SL=25432.485544325027, TP=25651.065044957086; valid for the next 3 chart bar(s).
+15/01/2026 20:00:00.209 | Trade | Placing Stop Order to Sell 1.15 US100.cash (Price: 25577.1, SL: 25664.3270045697, TP: 25348.74)
+15/01/2026 20:00:00.209 | Trade | → Placing Stop Order to Sell 1.15 US100.cash (Price: 25577.1, SL: 25664.3270045697, TP: 25348.74) SUCCEEDED, PendingOrder OID49
+15/01/2026 20:00:00.209 | Info | Combo: bartime=2026-01-15 19:00, executed=2026-01-15 20:00:00, pending Sell placed at 25577.1; SL=25664.327004569714, TP=25348.739702036488; valid for the next 3 chart bar(s).
+16/01/2026 05:00:00.102 | Info | Combo: bartime=2026-01-16 04:00, reversal - closing existing Sell position 14 before opening opposite direction.
+16/01/2026 05:00:00.102 | Trade | Closing position PID14 (Volume: 1.15)
+16/01/2026 05:00:00.102 | Trade | → Closing position PID14 (Volume: 1.15) SUCCEEDED
+16/01/2026 05:00:00.102 | Trade | Placing Stop Order to Buy 2.47 US100.cash (Price: 25660.2, SL: 25619.8350106184, TP: 25765.88)
+16/01/2026 05:00:00.102 | Trade | → Placing Stop Order to Buy 2.47 US100.cash (Price: 25660.2, SL: 25619.8350106184, TP: 25765.88) SUCCEEDED, PendingOrder OID53
+16/01/2026 05:00:00.102 | Info | Combo: bartime=2026-01-16 04:00, executed=2026-01-16 05:00:00, pending Buy placed at 25660.2; SL=25619.835010618408, TP=25765.87554220101; valid for the next 3 chart bar(s).
+16/01/2026 15:00:00.008 | Trade | Placing Stop Order to Sell 1.52 US100.cash (Price: 25568, SL: 25632.9932696992, TP: 25397.85)
+16/01/2026 15:00:00.008 | Trade | → Placing Stop Order to Sell 1.52 US100.cash (Price: 25568, SL: 25632.9932696992, TP: 25397.85) SUCCEEDED, PendingOrder OID56
+16/01/2026 15:00:00.008 | Info | Combo: bartime=2026-01-16 14:00, executed=2026-01-16 15:00:00, pending Sell placed at 25568; SL=25632.993269699153, TP=25397.84761992762; valid for the next 3 chart bar(s).
+19/01/2026 23:05:00.007 | Trade | Placing Stop Order to Buy 1.6 US100.cash (Price: 25265.4, SL: 25201.0988569983, TP: 25433.74)
+19/01/2026 23:05:00.007 | Trade | → Placing Stop Order to Buy 1.6 US100.cash (Price: 25265.4, SL: 25201.0988569983, TP: 25433.74) SUCCEEDED, PendingOrder OID59
+19/01/2026 23:05:00.007 | Info | Combo: bartime=2026-01-19 17:00, executed=2026-01-19 23:05:00, pending Buy placed at 25265.4; SL=25201.098856998255, TP=25433.74039237857; valid for the next 3 chart bar(s).
+20/01/2026 07:00:00.104 | Trade | Placing Stop Order to Sell 1.62 US100.cash (Price: 25104.5, SL: 25167.6538299268, TP: 24939.16)
+20/01/2026 07:00:00.104 | Trade | → Placing Stop Order to Sell 1.62 US100.cash (Price: 25104.5, SL: 25167.6538299268, TP: 24939.16) SUCCEEDED, PendingOrder OID62
+20/01/2026 07:00:00.104 | Info | Combo: bartime=2026-01-20 06:00, executed=2026-01-20 07:00:00, pending Sell placed at 25104.5; SL=25167.653829926847, TP=24939.163273251517; valid for the next 3 chart bar(s).
+20/01/2026 15:00:00.010 | Trade | Placing Stop Order to Buy 0.98 US100.cash (Price: 25230.4, SL: 25127.5907581489, TP: 25499.55)
+20/01/2026 15:00:00.010 | Trade | → Placing Stop Order to Buy 0.98 US100.cash (Price: 25230.4, SL: 25127.5907581489, TP: 25499.55) SUCCEEDED, PendingOrder OID65
+20/01/2026 15:00:00.010 | Info | Combo: bartime=2026-01-20 14:00, executed=2026-01-20 15:00:00, pending Buy placed at 25230.4; SL=25127.5907581489, TP=25499.55459516618; valid for the next 3 chart bar(s).
+21/01/2026 06:00:00.303 | Trade | Placing Stop Order to Buy 1.94 US100.cash (Price: 25086.5, SL: 25034.9266016124, TP: 25221.52)
+21/01/2026 06:00:00.303 | Trade | → Placing Stop Order to Buy 1.94 US100.cash (Price: 25086.5, SL: 25034.9266016124, TP: 25221.52) SUCCEEDED, PendingOrder OID68
+21/01/2026 06:00:00.303 | Info | Combo: bartime=2026-01-21 05:00, executed=2026-01-21 06:00:00, pending Buy placed at 25086.5; SL=25034.92660161243, TP=25221.519156978655; valid for the next 3 chart bar(s).
+21/01/2026 15:00:00.006 | Trade | Placing Stop Order to Buy 0.89 US100.cash (Price: 25200.2, SL: 25089.1045441296, TP: 25491.05)
+21/01/2026 15:00:00.006 | Trade | → Placing Stop Order to Buy 0.89 US100.cash (Price: 25200.2, SL: 25089.1045441296, TP: 25491.05) SUCCEEDED, PendingOrder OID71
+21/01/2026 15:00:00.006 | Info | Combo: bartime=2026-01-21 14:00, executed=2026-01-21 15:00:00, pending Buy placed at 25200.2; SL=25089.104544129583, TP=25491.047903468756; valid for the next 3 chart bar(s).
+22/01/2026 15:00:00.010 | Trade | Placing Stop Order to Sell 1.18 US100.cash (Price: 25405.7, SL: 25488.5263535757, TP: 25188.86)
+22/01/2026 15:00:00.010 | Trade | → Placing Stop Order to Sell 1.18 US100.cash (Price: 25405.7, SL: 25488.5263535757, TP: 25188.86) SUCCEEDED, PendingOrder OID74
+22/01/2026 15:00:00.010 | Info | Combo: bartime=2026-01-22 14:00, executed=2026-01-22 15:00:00, pending Sell placed at 25405.7; SL=25488.526353575715, TP=25188.860606338785; valid for the next 3 chart bar(s).
+22/01/2026 23:05:00.006 | Trade | Placing Stop Order to Sell 1.26 US100.cash (Price: 25461.4, SL: 25538.3503101054, TP: 25259.94)
+22/01/2026 23:05:00.006 | Trade | → Placing Stop Order to Sell 1.26 US100.cash (Price: 25461.4, SL: 25538.3503101054, TP: 25259.94) SUCCEEDED, PendingOrder OID77
+22/01/2026 23:05:00.006 | Info | Combo: bartime=2026-01-22 21:00, executed=2026-01-22 23:05:00, pending Sell placed at 25461.4; SL=25538.3503101054, TP=25259.94408814406; valid for the next 3 chart bar(s).
+23/01/2026 09:00:00.105 | Trade | Placing Stop Order to Sell 1.83 US100.cash (Price: 25440.8, SL: 25493.1159475379, TP: 25303.84)
+23/01/2026 09:00:00.105 | Trade | → Placing Stop Order to Sell 1.83 US100.cash (Price: 25440.8, SL: 25493.1159475379, TP: 25303.84) SUCCEEDED, PendingOrder OID80
+23/01/2026 09:00:00.105 | Info | Combo: bartime=2026-01-23 08:00, executed=2026-01-23 09:00:00, pending Sell placed at 25440.8; SL=25493.115947537946, TP=25303.836849345655; valid for the next 3 chart bar(s).
+23/01/2026 15:00:00.209 | Trade | Placing Stop Order to Buy 1.32 US100.cash (Price: 25540.7, SL: 25468.8861298486, TP: 25728.71)
+23/01/2026 15:00:00.209 | Trade | → Placing Stop Order to Buy 1.32 US100.cash (Price: 25540.7, SL: 25468.8861298486, TP: 25728.71) SUCCEEDED, PendingOrder OID83
+23/01/2026 15:00:00.209 | Info | Combo: bartime=2026-01-23 14:00, executed=2026-01-23 15:00:00, pending Buy placed at 25540.7; SL=25468.88612984861, TP=25728.708712056334; valid for the next 3 chart bar(s).
+26/01/2026 06:00:00.143 | Trade | Placing Stop Order to Buy 1.26 US100.cash (Price: 25549.6, SL: 25476.9057306346, TP: 25739.91)
+26/01/2026 06:00:00.143 | Trade | → Placing Stop Order to Buy 1.26 US100.cash (Price: 25549.6, SL: 25476.9057306346, TP: 25739.91) SUCCEEDED, PendingOrder OID86
+26/01/2026 06:00:00.143 | Info | Combo: bartime=2026-01-26 05:00, executed=2026-01-26 06:00:00, pending Buy placed at 25549.6; SL=25476.905730634608, TP=25739.91359719859; valid for the next 3 chart bar(s).
+26/01/2026 10:00:00.143 | Trade | Placing Stop Order to Sell 1.19 US100.cash (Price: 25445.4, SL: 25522.0045327321, TP: 25244.85)
+26/01/2026 10:00:00.143 | Trade | → Placing Stop Order to Sell 1.19 US100.cash (Price: 25445.4, SL: 25522.0045327321, TP: 25244.85) SUCCEEDED, PendingOrder OID89
+26/01/2026 10:00:00.143 | Info | Combo: bartime=2026-01-26 09:00, executed=2026-01-26 10:00:00, pending Sell placed at 25445.4; SL=25522.004532732066, TP=25244.849333307462; valid for the next 3 chart bar(s).
+26/01/2026 13:00:00.043 | Trade | Cancelling pending order OID89
+26/01/2026 13:00:00.043 | Trade | → Cancelling pending order OID89 SUCCEEDED
+26/01/2026 13:00:00.043 | Info | Combo: pending order 89 cancelled after 3 chart bars.
+28/01/2026 16:00:00.007 | Trade | Placing Stop Order to Sell 1.41 US100.cash (Price: 26026.5, SL: 26091.209302143, TP: 25857.09)
+28/01/2026 16:00:00.007 | Trade | → Placing Stop Order to Sell 1.41 US100.cash (Price: 26026.5, SL: 26091.209302143, TP: 25857.09) SUCCEEDED, PendingOrder OID90
+28/01/2026 16:00:00.007 | Info | Combo: bartime=2026-01-28 15:00, executed=2026-01-28 16:00:00, pending Sell placed at 26026.5; SL=26091.209302142965, TP=25857.091046989724; valid for the next 3 chart bar(s).
+28/01/2026 23:05:00.009 | Trade | Placing Stop Order to Buy 0.77 US100.cash (Price: 26162.4, SL: 26046.460607899, TP: 26465.93)
+28/01/2026 23:05:00.009 | Trade | → Placing Stop Order to Buy 0.77 US100.cash (Price: 26162.4, SL: 26046.460607899, TP: 26465.93) SUCCEEDED, PendingOrder OID93
+28/01/2026 23:05:00.009 | Info | Combo: bartime=2026-01-28 21:00, executed=2026-01-28 23:05:00, pending Buy placed at 26162.4; SL=26046.460607899036, TP=26465.929328520328; valid for the next 3 chart bar(s).
+29/01/2026 02:00:00.209 | Trade | Cancelling pending order OID93
+29/01/2026 02:00:00.209 | Trade | → Cancelling pending order OID93 SUCCEEDED
+29/01/2026 02:00:00.209 | Info | Combo: pending order 93 cancelled after 3 chart bars.
+29/01/2026 05:00:00.042 | Trade | Placing Stop Order to Buy 1.27 US100.cash (Price: 26110.4, SL: 26039.7407039977, TP: 26295.39)
+29/01/2026 05:00:00.042 | Trade | → Placing Stop Order to Buy 1.27 US100.cash (Price: 26110.4, SL: 26039.7407039977, TP: 26295.39) SUCCEEDED, PendingOrder OID94
+29/01/2026 05:00:00.042 | Info | Combo: bartime=2026-01-29 04:00, executed=2026-01-29 05:00:00, pending Buy placed at 26110.4; SL=26039.740703997668, TP=26295.38603693411; valid for the next 3 chart bar(s).
+29/01/2026 11:00:00.009 | Info | Combo: bartime=2026-01-29 10:00, reversal - closing existing Buy position 28 before opening opposite direction.
+29/01/2026 11:00:00.009 | Trade | Closing position PID28 (Volume: 1.27)
+29/01/2026 11:00:00.009 | Trade | → Closing position PID28 (Volume: 1.27) SUCCEEDED
+29/01/2026 11:00:00.009 | Trade | Placing Stop Order to Sell 1.61 US100.cash (Price: 26053.1, SL: 26108.6803568912, TP: 25907.59)
+29/01/2026 11:00:00.009 | Trade | → Placing Stop Order to Sell 1.61 US100.cash (Price: 26053.1, SL: 26108.6803568912, TP: 25907.59) SUCCEEDED, PendingOrder OID98
+29/01/2026 11:00:00.009 | Info | Combo: bartime=2026-01-29 10:00, executed=2026-01-29 11:00:00, pending Sell placed at 26053.1; SL=26108.680356891233, TP=25907.590625658748; valid for the next 3 chart bar(s).
+29/01/2026 13:00:00.043 | Info | Combo: bartime=2026-01-29 12:00, Sell signal skipped: already have same-direction exposure open.
+29/01/2026 15:00:00.011 | Trade | Placing Stop Order to Sell 0.83 US100.cash (Price: 25726.1, SL: 25836.1642741826, TP: 25437.95)
+29/01/2026 15:00:00.011 | Trade | → Placing Stop Order to Sell 0.83 US100.cash (Price: 25726.1, SL: 25836.1642741826, TP: 25437.95) SUCCEEDED, PendingOrder OID101
+29/01/2026 15:00:00.011 | Info | Combo: bartime=2026-01-29 14:00, executed=2026-01-29 15:00:00, pending Sell placed at 25726.1; SL=25836.16427418265, TP=25437.95173018982; valid for the next 3 chart bar(s).
+30/01/2026 12:00:00.065 | Trade | Placing Stop Order to Buy 0.89 US100.cash (Price: 25768.2, SL: 25662.5787460022, TP: 26044.72)
+30/01/2026 12:00:00.065 | Trade | → Placing Stop Order to Buy 0.89 US100.cash (Price: 25768.2, SL: 25662.5787460022, TP: 26044.72) SUCCEEDED, PendingOrder OID104
+30/01/2026 12:00:00.065 | Info | Combo: bartime=2026-01-30 11:00, executed=2026-01-30 12:00:00, pending Buy placed at 25768.2; SL=25662.57874600222, TP=26044.716442966197; valid for the next 3 chart bar(s).
+02/02/2026 13:00:00.008 | Trade | Placing Stop Order to Buy 0.93 US100.cash (Price: 25415.4, SL: 25315.3130832187, TP: 25677.43)
+02/02/2026 13:00:00.008 | Trade | → Placing Stop Order to Buy 0.93 US100.cash (Price: 25415.4, SL: 25315.3130832187, TP: 25677.43) SUCCEEDED, PendingOrder OID107
+02/02/2026 13:00:00.008 | Info | Combo: bartime=2026-02-02 12:00, executed=2026-02-02 13:00:00, pending Buy placed at 25415.4; SL=25315.3130832187, TP=25677.427548133444; valid for the next 3 chart bar(s).
+03/02/2026 15:00:00.093 | Trade | Placing Stop Order to Sell 0.86 US100.cash (Price: 25508.6, SL: 25619.1504144313, TP: 25219.18)
+03/02/2026 15:00:00.093 | Trade | → Placing Stop Order to Sell 0.86 US100.cash (Price: 25508.6, SL: 25619.1504144313, TP: 25219.18) SUCCEEDED, PendingOrder OID110
+03/02/2026 15:00:00.093 | Info | Combo: bartime=2026-02-03 14:00, executed=2026-02-03 15:00:00, pending Sell placed at 25508.6; SL=25619.150414431344, TP=25219.17901501874; valid for the next 3 chart bar(s).
+04/02/2026 08:00:00.009 | Trade | Placing Stop Order to Buy 1.65 US100.cash (Price: 25415.4, SL: 25355.8110029997, TP: 25571.4)
+04/02/2026 08:00:00.009 | Trade | → Placing Stop Order to Buy 1.65 US100.cash (Price: 25415.4, SL: 25355.8110029997, TP: 25571.4) SUCCEEDED, PendingOrder OID113
+04/02/2026 08:00:00.009 | Info | Combo: bartime=2026-02-04 07:00, executed=2026-02-04 08:00:00, pending Buy placed at 25415.4; SL=25355.811002999737, TP=25571.40399414669; valid for the next 3 chart bar(s).
+04/02/2026 11:00:00.094 | Trade | Cancelling pending order OID113
+04/02/2026 11:00:00.094 | Trade | → Cancelling pending order OID113 SUCCEEDED
+04/02/2026 11:00:00.094 | Info | Combo: pending order 113 cancelled after 3 chart bars.
+04/02/2026 11:00:00.094 | Trade | Placing Stop Order to Buy 1.33 US100.cash (Price: 25366.9, SL: 25293.1200335359, TP: 25560.06)
+04/02/2026 11:00:00.094 | Trade | → Placing Stop Order to Buy 1.33 US100.cash (Price: 25366.9, SL: 25293.1200335359, TP: 25560.06) SUCCEEDED, PendingOrder OID114
+04/02/2026 11:00:00.094 | Info | Combo: bartime=2026-02-04 10:00, executed=2026-02-04 11:00:00, pending Buy placed at 25366.9; SL=25293.120033535866, TP=25560.055952203107; valid for the next 3 chart bar(s).
+05/02/2026 11:00:00.293 | Trade | Placing Stop Order to Buy 0.97 US100.cash (Price: 24997.4, SL: 24897.8122321665, TP: 25258.12)
+05/02/2026 11:00:00.293 | Trade | → Placing Stop Order to Buy 0.97 US100.cash (Price: 24997.4, SL: 24897.8122321665, TP: 25258.12) SUCCEEDED, PendingOrder OID117
+05/02/2026 11:00:00.293 | Info | Combo: bartime=2026-02-05 10:00, executed=2026-02-05 11:00:00, pending Buy placed at 24997.4; SL=24897.81223216647, TP=25258.120776188185; valid for the next 3 chart bar(s).
+05/02/2026 13:00:00.094 | Info | Combo: bartime=2026-02-05 12:00, reversal - cancelling existing Buy pending order 117 before opening opposite direction.
+05/02/2026 13:00:00.094 | Trade | Cancelling pending order OID117
+05/02/2026 13:00:00.094 | Trade | → Cancelling pending order OID117 SUCCEEDED
+05/02/2026 13:00:00.094 | Trade | Placing Stop Order to Sell 0.67 US100.cash (Price: 24605.4, SL: 24750.4761714135, TP: 24225.59)
+05/02/2026 13:00:00.094 | Trade | → Placing Stop Order to Sell 0.67 US100.cash (Price: 24605.4, SL: 24750.4761714135, TP: 24225.59) SUCCEEDED, PendingOrder OID118
+05/02/2026 13:00:00.094 | Info | Combo: bartime=2026-02-05 12:00, executed=2026-02-05 13:00:00, pending Sell placed at 24605.4; SL=24750.476171413462, TP=24225.590583239566; valid for the next 3 chart bar(s).
+06/02/2026 09:00:00.093 | Trade | Placing Stop Order to Buy 0.82 US100.cash (Price: 24517.4, SL: 24400.1677874789, TP: 24824.31)
+06/02/2026 09:00:00.093 | Trade | → Placing Stop Order to Buy 0.82 US100.cash (Price: 24517.4, SL: 24400.1677874789, TP: 24824.31) SUCCEEDED, PendingOrder OID121
+06/02/2026 09:00:00.093 | Info | Combo: bartime=2026-02-06 08:00, executed=2026-02-06 09:00:00, pending Buy placed at 24517.4; SL=24400.167787478877, TP=24824.31393238031; valid for the next 3 chart bar(s).
+09/02/2026 10:00:00.012 | Trade | Placing Stop Order to Sell 1.26 US100.cash (Price: 24980, SL: 25058.4206365849, TP: 24774.69)
+09/02/2026 10:00:00.012 | Trade | → Placing Stop Order to Sell 1.26 US100.cash (Price: 24980, SL: 25058.4206365849, TP: 24774.69) SUCCEEDED, PendingOrder OID124
+09/02/2026 10:00:00.012 | Info | Combo: bartime=2026-02-09 09:00, executed=2026-02-09 10:00:00, pending Sell placed at 24980; SL=25058.42063658487, TP=24774.694773420808; valid for the next 3 chart bar(s).
+09/02/2026 16:00:00.211 | Trade | Placing Stop Order to Buy 0.72 US100.cash (Price: 25246.8, SL: 25111.5670830431, TP: 25600.84)
+09/02/2026 16:00:00.211 | Trade | → Placing Stop Order to Buy 0.72 US100.cash (Price: 25246.8, SL: 25111.5670830431, TP: 25600.84) SUCCEEDED, PendingOrder OID127
+09/02/2026 16:00:00.211 | Info | Combo: bartime=2026-02-09 15:00, executed=2026-02-09 16:00:00, pending Buy placed at 25246.8; SL=25111.567083043094, TP=25600.839776593173; valid for the next 3 chart bar(s).
+10/02/2026 13:00:00.006 | Info | Combo: bartime=2026-02-10 12:00, reversal - closing existing Buy position 38 before opening opposite direction.
+10/02/2026 13:00:00.006 | Trade | Closing position PID38 (Volume: 0.72)
+10/02/2026 13:00:00.006 | Trade | → Closing position PID38 (Volume: 0.72) SUCCEEDED
+10/02/2026 13:00:00.006 | Trade | Placing Stop Order to Sell 1.76 US100.cash (Price: 25246.3, SL: 25301.6898886769, TP: 25101.29)
+10/02/2026 13:00:00.006 | Trade | → Placing Stop Order to Sell 1.76 US100.cash (Price: 25246.3, SL: 25301.6898886769, TP: 25101.29) SUCCEEDED, PendingOrder OID131
+10/02/2026 13:00:00.006 | Info | Combo: bartime=2026-02-10 12:00, executed=2026-02-10 13:00:00, pending Sell placed at 25246.3; SL=25301.68988867692, TP=25101.28927144382; valid for the next 3 chart bar(s).
+10/02/2026 17:00:00.008 | Trade | Placing Stop Order to Sell 1.16 US100.cash (Price: 25225.2, SL: 25308.6219384021, TP: 25006.8)
+10/02/2026 17:00:00.008 | Trade | → Placing Stop Order to Sell 1.16 US100.cash (Price: 25225.2, SL: 25308.6219384021, TP: 25006.8) SUCCEEDED, PendingOrder OID134
+10/02/2026 17:00:00.008 | Info | Combo: bartime=2026-02-10 16:00, executed=2026-02-10 17:00:00, pending Sell placed at 25225.2; SL=25308.621938402066, TP=25006.80136526339; valid for the next 3 chart bar(s).
+10/02/2026 19:00:00.013 | Trade | Placing Stop Order to Sell 1.05 US100.cash (Price: 25181.1, SL: 25271.8180405773, TP: 24943.6)
+10/02/2026 19:00:00.013 | Trade | → Placing Stop Order to Sell 1.05 US100.cash (Price: 25181.1, SL: 25271.8180405773, TP: 24943.6) SUCCEEDED, PendingOrder OID137
+10/02/2026 19:00:00.013 | Info | Combo: bartime=2026-02-10 18:00, executed=2026-02-10 19:00:00, pending Sell placed at 25181.1; SL=25271.818040577324, TP=24943.600169768564; valid for the next 3 chart bar(s).
+11/02/2026 04:00:00.212 | Info | Combo: bartime=2026-02-11 03:00, reversal - closing existing Sell position 41 before opening opposite direction.
+11/02/2026 04:00:00.212 | Trade | Closing position PID41 (Volume: 1.05)
+11/02/2026 04:00:00.212 | Trade | → Closing position PID41 (Volume: 1.05) SUCCEEDED
+11/02/2026 04:00:00.212 | Trade | Placing Stop Order to Buy 2.06 US100.cash (Price: 25267.2, SL: 25221.1842590571, TP: 25387.67)
+11/02/2026 04:00:00.212 | Trade | → Placing Stop Order to Buy 2.06 US100.cash (Price: 25267.2, SL: 25221.1842590571, TP: 25387.67) SUCCEEDED, PendingOrder OID141
+11/02/2026 04:00:00.212 | Info | Combo: bartime=2026-02-11 03:00, executed=2026-02-11 04:00:00, pending Buy placed at 25267.2; SL=25221.1842590571, TP=25387.669209788513; valid for the next 3 chart bar(s).
+11/02/2026 07:00:00.012 | Trade | Cancelling pending order OID141
+11/02/2026 07:00:00.012 | Trade | → Cancelling pending order OID141 SUCCEEDED
+11/02/2026 07:00:00.012 | Info | Combo: pending order 141 cancelled after 3 chart bars.
+11/02/2026 14:00:00.007 | Trade | Placing Stop Order to Buy 1.07 US100.cash (Price: 25373.2, SL: 25285.0213920077, TP: 25604.05)
+11/02/2026 14:00:00.007 | Trade | → Placing Stop Order to Buy 1.07 US100.cash (Price: 25373.2, SL: 25285.0213920077, TP: 25604.05) SUCCEEDED, PendingOrder OID142
+11/02/2026 14:00:00.007 | Info | Combo: bartime=2026-02-11 13:00, executed=2026-02-11 14:00:00, pending Buy placed at 25373.2; SL=25285.021392007686, TP=25604.051595723882; valid for the next 3 chart bar(s).
+11/02/2026 19:00:00.015 | Trade | Placing Stop Order to Buy 0.69 US100.cash (Price: 25235.4, SL: 25099.5417617331, TP: 25591.08)
+11/02/2026 19:00:00.015 | Trade | → Placing Stop Order to Buy 0.69 US100.cash (Price: 25235.4, SL: 25099.5417617331, TP: 25591.08) SUCCEEDED, PendingOrder OID145
+11/02/2026 19:00:00.015 | Info | Combo: bartime=2026-02-11 18:00, executed=2026-02-11 19:00:00, pending Buy placed at 25235.4; SL=25099.54176173308, TP=25591.076867782802; valid for the next 3 chart bar(s).
+12/02/2026 00:00:00.092 | Info | Combo: bartime=2026-02-11 23:00, reversal - closing existing Buy position 43 before opening opposite direction.
+12/02/2026 00:00:00.092 | Trade | Closing position PID43 (Volume: 0.69)
+12/02/2026 00:00:00.092 | Trade | → Closing position PID43 (Volume: 0.69) SUCCEEDED
+12/02/2026 00:00:00.092 | Trade | Placing Stop Order to Sell 1.13 US100.cash (Price: 25119.3, SL: 25201.4510515153, TP: 24904.23)
+12/02/2026 00:00:00.092 | Trade | → Placing Stop Order to Sell 1.13 US100.cash (Price: 25119.3, SL: 25201.4510515153, TP: 24904.23) SUCCEEDED, PendingOrder OID149
+12/02/2026 00:00:00.092 | Info | Combo: bartime=2026-02-11 23:00, executed=2026-02-12 00:00:00, pending Sell placed at 25119.3; SL=25201.451051515305, TP=24904.22854713293; valid for the next 3 chart bar(s).
+12/02/2026 02:00:00.414 | Info | Combo: bartime=2026-02-12 01:00, reversal - cancelling existing Sell pending order 149 before opening opposite direction.
+12/02/2026 02:00:00.414 | Trade | Cancelling pending order OID149
+12/02/2026 02:00:00.414 | Trade | → Cancelling pending order OID149 SUCCEEDED
+12/02/2026 02:00:00.414 | Trade | Placing Stop Order to Buy 1.22 US100.cash (Price: 25239.2, SL: 25162.5553270302, TP: 25439.86)
+12/02/2026 02:00:00.414 | Trade | → Placing Stop Order to Buy 1.22 US100.cash (Price: 25239.2, SL: 25162.5553270302, TP: 25439.86) SUCCEEDED, PendingOrder OID150
+12/02/2026 02:00:00.414 | Info | Combo: bartime=2026-02-12 01:00, executed=2026-02-12 02:00:00, pending Buy placed at 25239.2; SL=25162.555327030204, TP=25439.855753834927; valid for the next 3 chart bar(s).
+12/02/2026 15:00:00.010 | Trade | Placing Stop Order to Sell 1.08 US100.cash (Price: 25100.9, SL: 25186.1408468212, TP: 24877.74)
+12/02/2026 15:00:00.010 | Trade | → Placing Stop Order to Sell 1.08 US100.cash (Price: 25100.9, SL: 25186.1408468212, TP: 24877.74) SUCCEEDED, PendingOrder OID153
+12/02/2026 15:00:00.010 | Info | Combo: bartime=2026-02-12 14:00, executed=2026-02-12 15:00:00, pending Sell placed at 25100.9; SL=25186.140846821178, TP=24877.739463022168; valid for the next 3 chart bar(s).
+13/02/2026 14:00:00.013 | Trade | Placing Stop Order to Buy 0.88 US100.cash (Price: 24755.5, SL: 24647.4782605062, TP: 25038.3)
+13/02/2026 14:00:00.013 | Trade | → Placing Stop Order to Buy 0.88 US100.cash (Price: 24755.5, SL: 24647.4782605062, TP: 25038.3) SUCCEEDED, PendingOrder OID156
+13/02/2026 14:00:00.013 | Info | Combo: bartime=2026-02-13 13:00, executed=2026-02-13 14:00:00, pending Buy placed at 24755.5; SL=24647.47826050616, TP=25038.300913994874; valid for the next 3 chart bar(s).
+13/02/2026 16:00:00.209 | Trade | Placing Stop Order to Buy 0.59 US100.cash (Price: 24863.6, SL: 24704.3060867239, TP: 25280.63)
+13/02/2026 16:00:00.209 | Trade | → Placing Stop Order to Buy 0.59 US100.cash (Price: 24863.6, SL: 24704.3060867239, TP: 25280.63) SUCCEEDED, PendingOrder OID159
+13/02/2026 16:00:00.209 | Info | Combo: bartime=2026-02-13 15:00, executed=2026-02-13 16:00:00, pending Buy placed at 24863.6; SL=24704.30608672394, TP=25280.631464956718; valid for the next 3 chart bar(s).
+15/02/2026 23:05:00.006 | Trade | Placing Stop Order to Sell 0.75 US100.cash (Price: 24693.3, SL: 24816.4756652018, TP: 24370.83)
+15/02/2026 23:05:00.006 | Trade | → Placing Stop Order to Sell 0.75 US100.cash (Price: 24693.3, SL: 24816.4756652018, TP: 24370.83) SUCCEEDED, PendingOrder OID162
+15/02/2026 23:05:00.006 | Info | Combo: bartime=2026-02-13 21:00, executed=2026-02-15 23:05:00, pending Sell placed at 24693.3; SL=24816.475665201837, TP=24370.826108501584; valid for the next 3 chart bar(s).
+16/02/2026 06:00:00.095 | Info | Combo: bartime=2026-02-16 05:00, Sell signal skipped: already have same-direction exposure open.
+16/02/2026 14:00:00.094 | Trade | Placing Stop Order to Sell 2.25 US100.cash (Price: 24766.5, SL: 24807.4586423686, TP: 24659.27)
+16/02/2026 14:00:00.094 | Trade | → Placing Stop Order to Sell 2.25 US100.cash (Price: 24766.5, SL: 24807.4586423686, TP: 24659.27) SUCCEEDED, PendingOrder OID165
+16/02/2026 14:00:00.094 | Info | Combo: bartime=2026-02-16 13:00, executed=2026-02-16 14:00:00, pending Sell placed at 24766.5; SL=24807.458642368645, TP=24659.270274278882; valid for the next 3 chart bar(s).
+16/02/2026 15:00:00.094 | Trade | Placing Stop Order to Sell 1.49 US100.cash (Price: 24615.6, SL: 24678.9669138949, TP: 24449.71)
+16/02/2026 15:00:00.094 | Trade | → Placing Stop Order to Sell 1.49 US100.cash (Price: 24615.6, SL: 24678.9669138949, TP: 24449.71) SUCCEEDED, PendingOrder OID168
+16/02/2026 15:00:00.094 | Info | Combo: bartime=2026-02-16 14:00, executed=2026-02-16 15:00:00, pending Sell placed at 24615.6; SL=24678.966913894918, TP=24449.705419423106; valid for the next 3 chart bar(s).
+17/02/2026 00:00:00.012 | Trade | Placing Stop Order to Buy 1.75 US100.cash (Price: 24774.6, SL: 24721.0696637791, TP: 24914.74)
+17/02/2026 00:00:00.012 | Trade | → Placing Stop Order to Buy 1.75 US100.cash (Price: 24774.6, SL: 24721.0696637791, TP: 24914.74) SUCCEEDED, PendingOrder OID171
+17/02/2026 00:00:00.012 | Info | Combo: bartime=2026-02-16 23:00, executed=2026-02-17 00:00:00, pending Buy placed at 24774.6; SL=24721.069663779144, TP=24914.742420226197; valid for the next 3 chart bar(s).
+17/02/2026 03:00:00.005 | Trade | Cancelling pending order OID171
+17/02/2026 03:00:00.005 | Trade | → Cancelling pending order OID171 SUCCEEDED
+17/02/2026 03:00:00.005 | Info | Combo: pending order 171 cancelled after 3 chart bars.
+17/02/2026 17:00:00.007 | Trade | Placing Stop Order to Buy 0.56 US100.cash (Price: 24730.7, SL: 24565.1215454693, TP: 25164.18)
+17/02/2026 17:00:00.007 | Trade | → Placing Stop Order to Buy 0.56 US100.cash (Price: 24730.7, SL: 24565.1215454693, TP: 25164.18) SUCCEEDED, PendingOrder OID172
+17/02/2026 17:00:00.007 | Info | Combo: bartime=2026-02-17 16:00, executed=2026-02-17 17:00:00, pending Buy placed at 24730.7; SL=24565.121545469334, TP=25164.184393961285; valid for the next 3 chart bar(s).
+18/02/2026 20:00:00.007 | Info | Combo: bartime=2026-02-18 19:00, reversal - closing existing Buy position 51 before opening opposite direction.
+18/02/2026 20:00:00.007 | Trade | Closing position PID51 (Volume: 0.56)
+18/02/2026 20:00:00.007 | Trade | → Closing position PID51 (Volume: 0.56) SUCCEEDED
+18/02/2026 20:00:00.007 | Trade | Placing Stop Order to Sell 0.79 US100.cash (Price: 24792.4, SL: 24910.5299587305, TP: 24483.14)
+18/02/2026 20:00:00.007 | Trade | → Placing Stop Order to Sell 0.79 US100.cash (Price: 24792.4, SL: 24910.5299587305, TP: 24483.14) SUCCEEDED, PendingOrder OID176
+18/02/2026 20:00:00.007 | Info | Combo: bartime=2026-02-18 19:00, executed=2026-02-18 20:00:00, pending Sell placed at 24792.4; SL=24910.529958730513, TP=24483.13576804352; valid for the next 3 chart bar(s).
+19/02/2026 05:00:00.195 | Trade | Placing Stop Order to Sell 1.68 US100.cash (Price: 24880.7, SL: 24936.1128297479, TP: 24735.63)
+19/02/2026 05:00:00.195 | Trade | → Placing Stop Order to Sell 1.68 US100.cash (Price: 24880.7, SL: 24936.1128297479, TP: 24735.63) SUCCEEDED, PendingOrder OID179
+19/02/2026 05:00:00.195 | Info | Combo: bartime=2026-02-19 04:00, executed=2026-02-19 05:00:00, pending Sell placed at 24880.7; SL=24936.112829747944, TP=24735.629211719886; valid for the next 3 chart bar(s).
+19/02/2026 09:00:00.006 | Trade | Placing Stop Order to Sell 1.49 US100.cash (Price: 24871.9, SL: 24933.8137350648, TP: 24709.81)
+19/02/2026 09:00:00.006 | Trade | → Placing Stop Order to Sell 1.49 US100.cash (Price: 24871.9, SL: 24933.8137350648, TP: 24709.81) SUCCEEDED, PendingOrder OID182
+19/02/2026 09:00:00.006 | Info | Combo: bartime=2026-02-19 08:00, executed=2026-02-19 09:00:00, pending Sell placed at 24871.9; SL=24933.81373506476, TP=24709.80984160047; valid for the next 3 chart bar(s).
+20/02/2026 01:00:00.006 | Trade | Placing Stop Order to Buy 1.36 US100.cash (Price: 24857.9, SL: 24788.4866360785, TP: 25039.62)
+20/02/2026 01:00:00.006 | Trade | → Placing Stop Order to Buy 1.36 US100.cash (Price: 24857.9, SL: 24788.4866360785, TP: 25039.62) SUCCEEDED, PendingOrder OID185
+20/02/2026 01:00:00.006 | Info | Combo: bartime=2026-02-20 00:00, executed=2026-02-20 01:00:00, pending Buy placed at 24857.9; SL=24788.486636078458, TP=25039.624186746598; valid for the next 3 chart bar(s).
+20/02/2026 12:00:00.095 | Trade | Placing Stop Order to Sell 1.69 US100.cash (Price: 24746.7, SL: 24802.0584041462, TP: 24601.77)
+20/02/2026 12:00:00.095 | Trade | → Placing Stop Order to Sell 1.69 US100.cash (Price: 24746.7, SL: 24802.0584041462, TP: 24601.77) SUCCEEDED, PendingOrder OID188
+20/02/2026 12:00:00.095 | Info | Combo: bartime=2026-02-20 11:00, executed=2026-02-20 12:00:00, pending Sell placed at 24746.7; SL=24802.05840414617, TP=24601.771697945336; valid for the next 3 chart bar(s).
+23/02/2026 01:00:00.137 | Trade | Placing Stop Order to Sell 0.77 US100.cash (Price: 24785.5, SL: 24905.9176648113, TP: 24470.25)
+23/02/2026 01:00:00.137 | Trade | → Placing Stop Order to Sell 0.77 US100.cash (Price: 24785.5, SL: 24905.9176648113, TP: 24470.25) SUCCEEDED, PendingOrder OID191
+23/02/2026 01:00:00.137 | Info | Combo: bartime=2026-02-23 00:00, executed=2026-02-23 01:00:00, pending Sell placed at 24785.5; SL=24905.917664811317, TP=24470.24655352397; valid for the next 3 chart bar(s).
+23/02/2026 10:00:00.136 | Trade | Placing Stop Order to Buy 1.48 US100.cash (Price: 24950.1, SL: 24888.2165587332, TP: 25112.11)
+23/02/2026 10:00:00.136 | Trade | → Placing Stop Order to Buy 1.48 US100.cash (Price: 24950.1, SL: 24888.2165587332, TP: 25112.11) SUCCEEDED, PendingOrder OID194
+23/02/2026 10:00:00.136 | Info | Combo: bartime=2026-02-23 09:00, executed=2026-02-23 10:00:00, pending Buy placed at 24950.1; SL=24888.21655873316, TP=25112.110849236586; valid for the next 3 chart bar(s).
+23/02/2026 13:00:00.005 | Trade | Cancelling pending order OID194
+23/02/2026 13:00:00.005 | Trade | → Cancelling pending order OID194 SUCCEEDED
+23/02/2026 13:00:00.005 | Info | Combo: pending order 194 cancelled after 3 chart bars.
+23/02/2026 15:00:00.036 | Trade | Placing Stop Order to Sell 1.06 US100.cash (Price: 24795.7, SL: 24882.4435020343, TP: 24568.61)
+23/02/2026 15:00:00.036 | Trade | → Placing Stop Order to Sell 1.06 US100.cash (Price: 24795.7, SL: 24882.4435020343, TP: 24568.61) SUCCEEDED, PendingOrder OID195
+23/02/2026 15:00:00.036 | Info | Combo: bartime=2026-02-23 14:00, executed=2026-02-23 15:00:00, pending Sell placed at 24795.7; SL=24882.44350203432, TP=24568.605511674155; valid for the next 3 chart bar(s).
+23/02/2026 16:00:00.010 | Info | Combo: bartime=2026-02-23 15:00, Sell signal skipped: already have same-direction exposure open.
+24/02/2026 03:00:00.406 | Info | Combo: bartime=2026-02-24 02:00, reversal - closing existing Sell position 58 before opening opposite direction.
+24/02/2026 03:00:00.406 | Trade | Closing position PID58 (Volume: 1.06)
+24/02/2026 03:00:00.406 | Trade | → Closing position PID58 (Volume: 1.06) SUCCEEDED
+24/02/2026 03:00:00.406 | Trade | Placing Stop Order to Buy 1.52 US100.cash (Price: 24830.3, SL: 24770.0925240286, TP: 24987.92)
+24/02/2026 03:00:00.406 | Trade | → Placing Stop Order to Buy 1.52 US100.cash (Price: 24830.3, SL: 24770.0925240286, TP: 24987.92) SUCCEEDED, PendingOrder OID199
+24/02/2026 03:00:00.406 | Info | Combo: bartime=2026-02-24 02:00, executed=2026-02-24 03:00:00, pending Buy placed at 24830.3; SL=24770.092524028616, TP=24987.923172093084; valid for the next 3 chart bar(s).
+24/02/2026 09:00:00.135 | Trade | Placing Stop Order to Sell 1.83 US100.cash (Price: 24702.3, SL: 24751.735790181, TP: 24572.88)
+24/02/2026 09:00:00.135 | Trade | → Placing Stop Order to Sell 1.83 US100.cash (Price: 24702.3, SL: 24751.735790181, TP: 24572.88) SUCCEEDED, PendingOrder OID202
+24/02/2026 09:00:00.135 | Info | Combo: bartime=2026-02-24 08:00, executed=2026-02-24 09:00:00, pending Sell placed at 24702.3; SL=24751.735790181043, TP=24572.87710130603; valid for the next 3 chart bar(s).
+24/02/2026 12:00:00.136 | Trade | Cancelling pending order OID202
+24/02/2026 12:00:00.136 | Trade | → Cancelling pending order OID202 SUCCEEDED
+24/02/2026 12:00:00.136 | Info | Combo: pending order 202 cancelled after 3 chart bars.
+26/02/2026 15:00:00.010 | Trade | Placing Stop Order to Sell 1.18 US100.cash (Price: 25129.9, SL: 25206.511681312, TP: 24929.33)
+26/02/2026 15:00:00.010 | Trade | → Placing Stop Order to Sell 1.18 US100.cash (Price: 25129.9, SL: 25206.511681312, TP: 24929.33) SUCCEEDED, PendingOrder OID203
+26/02/2026 15:00:00.010 | Info | Combo: bartime=2026-02-26 14:00, executed=2026-02-26 15:00:00, pending Sell placed at 25129.9; SL=25206.51168131203, TP=24929.33061832511; valid for the next 3 chart bar(s).
+27/02/2026 08:00:00.001 | Trade | Placing Stop Order to Buy 1.76 US100.cash (Price: 25041.2, SL: 24988.4014833229, TP: 25179.43)
+27/02/2026 08:00:00.001 | Trade | → Placing Stop Order to Buy 1.76 US100.cash (Price: 25041.2, SL: 24988.4014833229, TP: 25179.43) SUCCEEDED, PendingOrder OID206
+27/02/2026 08:00:00.001 | Info | Combo: bartime=2026-02-27 07:00, executed=2026-02-27 08:00:00, pending Buy placed at 25041.2; SL=24988.401483322923, TP=25179.426516660595; valid for the next 3 chart bar(s).
+27/02/2026 21:00:00.011 | Trade | Placing Stop Order to Buy 0.85 US100.cash (Price: 24985, SL: 24877.3738417011, TP: 25266.77)
+27/02/2026 21:00:00.011 | Trade | → Placing Stop Order to Buy 0.85 US100.cash (Price: 24985, SL: 24877.3738417011, TP: 25266.77) SUCCEEDED, PendingOrder OID209
+27/02/2026 21:00:00.011 | Info | Combo: bartime=2026-02-27 20:00, executed=2026-02-27 21:00:00, pending Buy placed at 24985; SL=24877.373841701123, TP=25266.76528242646; valid for the next 3 chart bar(s).
+27/02/2026 21:49:59.435 | Info | Combo: loaded=4461, processed=83, before-start=4136, not-processed=242, placed=79, failed=0, guard-skipped=0, pending-expired=9, same-direction-skipped=4, reversed=16, margin-capped=1, margin-blocked=0.
+Info | CBot instance [Combo, US100.cash, h1] stopped.

@@ -1,0 +1,51 @@
+﻿{
+    "SchemaVersion":  1,
+    "CreatedAtUtc":  "2026-09-02T10:23:53.1283102Z",
+    "Success":  true,
+    "FailureReason":  null,
+    "Input":  {
+                  "AlgoPath":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\Combo.algo",
+                  "AlgoSHA256":  "206A64B72134352FD83EB8947A7B62A3BEEF7ED36234C23B43073FB4FF09A62A",
+                  "SymbolInput":  "UK100.cash",
+                  "ResolvedSymbol":  "UK100.cash",
+                  "Period":  "h4",
+                  "StartDate":  "2025-01-01",
+                  "EndDate":  "2025-01-03",
+                  "DataMode":  "Ticks",
+                  "Broker":  "FTMO Platform",
+                  "Account":  "7563609",
+                  "Parameters":  {
+                                     "RiskPercent":  0.45,
+                                     "SignalFilePath":  "Z:\\Desktop\\og_program\\runtime\\exports\\combo_UK100_H4_full_history_signals.csv"
+                                 },
+                  "SignalFile":  {
+                                     "Path":  "Z:\\Desktop\\og_program\\runtime\\exports\\combo_UK100_H4_full_history_signals.csv",
+                                     "Length":  55903,
+                                     "LastWriteTime":  "2026-09-02T04:25:10.0000000Z",
+                                     "SHA256":  "49F11BA83947348D6882626881300E6B1BE01AB45FBAF2AF684648D4521A62AE"
+                                 }
+              },
+    "Actual":  {
+                   "StartDate":  "2025-01-01",
+                   "EndDate":  "2025-01-03"
+               },
+    "Metrics":  {
+                    "StartingCapital":  10000,
+                    "EndingBalance":  10000,
+                    "NetProfit":  0,
+                    "ROI":  0,
+                    "ProfitFactor":  0,
+                    "TotalTrades":  0,
+                    "WinningTrades":  0,
+                    "LosingTrades":  0,
+                    "MaxBalanceDrawdownPct":  0,
+                    "MaxEquityDrawdownPct":  0,
+                    "HistoryItems":  0
+                },
+    "Artifacts":  {
+                      "Params":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_UK100.cash_h4_20260902-032326\\params.cbotset",
+                      "Command":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_UK100.cash_h4_20260902-032326\\command.txt",
+                      "Log":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_UK100.cash_h4_20260902-032326\\log.txt",
+                      "ReportJson":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_UK100.cash_h4_20260902-032326\\report.json"
+                  }
+}

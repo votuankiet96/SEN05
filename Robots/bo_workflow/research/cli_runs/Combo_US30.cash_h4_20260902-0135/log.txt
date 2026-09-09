@@ -1,0 +1,85 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_US30.cash_h4_20260902-0135\params.cbotset 
+--start=01/01/2025 --end=02/01/2025 --data-mode=Ticks --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --symbol=US30.cash --period=h4 --full-access -
+-report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_US30.cash_h4_20260902-0135\r
+eport.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...135\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | US30.cash                 | cmd arg              |
+| Period               | h4                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 02/01/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 3                         | default value        |
+| KtpLevel             | 3                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+02/09/2026 08:35:20.525 | Establishing connection using votuankiet96@gmail.com...
+02/09/2026 08:35:22.845 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Info | CBot instance [Combo, US30.cash, h4] started.
+Progress | Backtesting | 48.09 % |
+Progress | Backtesting | 52.91 % |
+Progress | Backtesting | 55.50 % |
+Progress | Backtesting | 62.87 % |
+Progress | Backtesting | 67.88 % |
+Progress | Backtesting | 70.07 % |
+Progress | Backtesting | 76.74 % |
+Progress | Backtesting | 79.17 % |
+Progress | Backtesting | 80.91 % |
+Progress | Backtesting | 82.40 % |
+Progress | Backtesting | 83.87 % |
+Progress | Backtesting | 85.94 % |
+Progress | Backtesting | 87.59 % |
+Progress | Backtesting | 89.38 % |
+Progress | Backtesting | 90.84 % |
+Progress | Backtesting | 91.86 % |
+01/01/2025 23:05:00.003 | Info | Combo: loaded 1101 valid signal row(s) from CSV.
+01/01/2025 23:05:00.003 | Info | Combo: signal scheduling active with chart timeframe h4 (04:00:00); CSV timeframe must match the chart timeframe.
+02/01/2025 14:00:00.233 | Trade | Placing Stop Order to Buy 0.81 US30.cash (Price: 42899.9, SL: 42776.8983284717, TP: 43022.9)
+02/01/2025 14:00:00.233 | Trade |  Placing Stop Order to Buy 0.81 US30.cash (Price: 42899.9, SL: 42776.8983284717, TP: 43022.9) SUCCEEDED, PendingOrder OID1
+02/01/2025 14:00:00.233 | Info | Combo: bartime=2025-01-02 10:00, executed=2025-01-02 14:00:00, pending Buy placed at 42899.9; SL=42776.8983284717, TP=43022.9016715283; valid for the next 3 chart bar(s).
+02/01/2025 18:00:00.067 | Info | Combo: bartime=2025-01-02 14:00, reversal - cancelling existing Buy pending order 1 before opening opposite direction.
+02/01/2025 18:00:00.067 | Trade | Cancelling pending order OID1
+02/01/2025 18:00:00.067 | Trade |  Cancelling pending order OID1 SUCCEEDED
+02/01/2025 18:00:00.067 | Trade | Placing Stop Order to Sell 0.53 US30.cash (Price: 42125.9, SL: 42313.9731372226, TP: 41937.83)
+02/01/2025 18:00:00.067 | Trade |  Placing Stop Order to Sell 0.53 US30.cash (Price: 42125.9, SL: 42313.9731372226, TP: 41937.83) SUCCEEDED, PendingOrder OID2
+02/01/2025 18:00:00.067 | Info | Combo: bartime=2025-01-02 14:00, executed=2025-01-02 18:00:00, pending Sell placed at 42125.9; SL=42313.97313722264, TP=41937.826862777365; valid for the next 3 chart bar(s).
+02/01/2025 23:59:57.268 | Info | Combo: loaded=1101, processed=2, before-start=900, not-processed=199, placed=2, failed=0, guard-skipped=0, pending-expired=0, same-direction-skipped=0, reversed=1.
+Progress | Backtesting | 100.00 % |
+Info | CBot instance [Combo, US30.cash, h4] stopped.
+{
+	"Equity":9899.52,
+	"NetProfit":-100.48,
+	"MaxBalanceDrawdownPercentages":1,
+	"MaxEquityDrawdownPercentages":1,
+	"MaxBalanceDrawdown":100.47,
+	"MaxEquityDrawdown":100.47,
+	"WinningTrades":0,
+	"LosingTrades":1,
+	"TotalTrades":1,
+	"AverageTrade":-100.48,
+	"ProfitFactor":0,
+	"Fitness":0
+}
+

@@ -1,0 +1,311 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_leverage_crosscheck_2025\GOLD\params.cbotset 
+--start=01/01/2025 --end=01/01/2026 --data-mode=M1 --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=XAUUSD 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_leverage_crosscheck_2025\GOLD\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...OLD\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | XAUUSD                    | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 01/01/2026 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | M1                        | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 2                         | cbotset              |
+| KtpLevel             | 4                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 50                        | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+04/09/2026 02:26:34.209 | Establishing connection using votuankiet96@gmail.com...
+04/09/2026 02:26:44.099 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Progress | Loading XAUUSD, h1 | 0.27 % |
+Progress | Loading XAUUSD, h1 | 0.54 % |
+Progress | Loading XAUUSD, h1 | 0.82 % |
+Progress | Loading XAUUSD, h1 | 1.09 % |
+Progress | Loading XAUUSD, h1 | 1.36 % |
+Progress | Loading XAUUSD, h1 | 1.63 % |
+Progress | Loading XAUUSD, h1 | 1.91 % |
+Progress | Loading XAUUSD, h1 | 2.18 % |
+Progress | Loading XAUUSD, h1 | 2.45 % |
+Progress | Loading XAUUSD, h1 | 2.72 % |
+Progress | Loading XAUUSD, h1 | 3.00 % |
+Progress | Loading XAUUSD, h1 | 3.27 % |
+Progress | Loading XAUUSD, h1 | 3.54 % |
+Progress | Loading XAUUSD, h1 | 3.81 % |
+Progress | Loading XAUUSD, h1 | 4.09 % |
+Progress | Loading XAUUSD, h1 | 4.36 % |
+Progress | Loading XAUUSD, h1 | 4.63 % |
+Progress | Loading XAUUSD, h1 | 4.90 % |
+Progress | Loading XAUUSD, h1 | 5.18 % |
+Progress | Loading XAUUSD, h1 | 5.45 % |
+Progress | Loading XAUUSD, h1 | 5.72 % |
+Progress | Loading XAUUSD, h1 | 5.99 % |
+Progress | Loading XAUUSD, h1 | 6.27 % |
+Progress | Loading XAUUSD, h1 | 6.54 % |
+Progress | Loading XAUUSD, h1 | 6.81 % |
+Progress | Loading XAUUSD, h1 | 7.08 % |
+Progress | Loading XAUUSD, h1 | 7.36 % |
+Progress | Loading XAUUSD, h1 | 7.63 % |
+Progress | Loading XAUUSD, h1 | 7.90 % |
+Progress | Loading XAUUSD, h1 | 8.17 % |
+Progress | Loading XAUUSD, h1 | 8.45 % |
+Progress | Loading XAUUSD, h1 | 8.72 % |
+Progress | Loading XAUUSD, h1 | 8.99 % |
+Progress | Loading XAUUSD, h1 | 9.26 % |
+Progress | Loading XAUUSD, h1 | 9.54 % |
+Progress | Loading XAUUSD, h1 | 9.81 % |
+Progress | Loading XAUUSD, h1 | 10.08 % |
+Progress | Loading XAUUSD, h1 | 10.35 % |
+Progress | Loading XAUUSD, h1 | 10.63 % |
+Progress | Loading XAUUSD, h1 | 10.90 % |
+Progress | Loading XAUUSD, h1 | 11.17 % |
+Progress | Loading XAUUSD, h1 | 11.44 % |
+Progress | Loading XAUUSD, h1 | 11.72 % |
+Progress | Loading XAUUSD, h1 | 11.99 % |
+Progress | Loading XAUUSD, h1 | 12.26 % |
+Progress | Loading XAUUSD, h1 | 12.53 % |
+Progress | Loading XAUUSD, h1 | 12.81 % |
+Progress | Loading XAUUSD, h1 | 13.08 % |
+Progress | Loading XAUUSD, h1 | 13.35 % |
+Progress | Loading XAUUSD, h1 | 13.62 % |
+Progress | Loading XAUUSD, h1 | 13.90 % |
+Progress | Loading XAUUSD, h1 | 14.17 % |
+Progress | Loading XAUUSD, h1 | 14.44 % |
+Progress | Loading XAUUSD, h1 | 14.71 % |
+Progress | Loading XAUUSD, h1 | 14.99 % |
+Progress | Loading XAUUSD, h1 | 15.26 % |
+Progress | Loading XAUUSD, h1 | 15.53 % |
+Progress | Loading XAUUSD, h1 | 15.80 % |
+Progress | Loading XAUUSD, h1 | 16.08 % |
+Progress | Loading XAUUSD, h1 | 16.35 % |
+Progress | Loading XAUUSD, h1 | 16.62 % |
+Progress | Loading XAUUSD, h1 | 16.89 % |
+Progress | Loading XAUUSD, h1 | 17.17 % |
+Progress | Loading XAUUSD, h1 | 17.44 % |
+Progress | Loading XAUUSD, h1 | 17.71 % |
+Progress | Loading XAUUSD, h1 | 17.98 % |
+Progress | Loading XAUUSD, h1 | 18.26 % |
+Progress | Loading XAUUSD, h1 | 18.53 % |
+Progress | Loading XAUUSD, h1 | 18.80 % |
+Progress | Loading XAUUSD, h1 | 19.07 % |
+Progress | Loading XAUUSD, h1 | 19.35 % |
+Progress | Loading XAUUSD, h1 | 19.62 % |
+Progress | Loading XAUUSD, h1 | 19.89 % |
+Progress | Loading XAUUSD, h1 | 20.16 % |
+Progress | Loading XAUUSD, h1 | 20.44 % |
+Progress | Loading XAUUSD, h1 | 20.71 % |
+Progress | Loading XAUUSD, h1 | 20.98 % |
+Progress | Loading XAUUSD, h1 | 21.25 % |
+Progress | Loading XAUUSD, h1 | 21.53 % |
+Progress | Loading XAUUSD, h1 | 21.80 % |
+Progress | Loading XAUUSD, h1 | 22.07 % |
+Progress | Loading XAUUSD, h1 | 22.34 % |
+Progress | Loading XAUUSD, h1 | 22.62 % |
+Progress | Loading XAUUSD, h1 | 22.89 % |
+Progress | Loading XAUUSD, h1 | 23.16 % |
+Progress | Loading XAUUSD, h1 | 23.43 % |
+Progress | Loading XAUUSD, h1 | 23.71 % |
+Progress | Loading XAUUSD, h1 | 23.98 % |
+Progress | Loading XAUUSD, h1 | 24.25 % |
+Progress | Loading XAUUSD, h1 | 24.52 % |
+Progress | Loading XAUUSD, h1 | 24.80 % |
+Progress | Loading XAUUSD, h1 | 25.07 % |
+Progress | Loading XAUUSD, h1 | 25.34 % |
+Progress | Loading XAUUSD, h1 | 25.61 % |
+Progress | Loading XAUUSD, h1 | 25.89 % |
+Progress | Loading XAUUSD, h1 | 26.16 % |
+Progress | Loading XAUUSD, h1 | 26.43 % |
+Progress | Loading XAUUSD, h1 | 26.70 % |
+Progress | Loading XAUUSD, h1 | 26.98 % |
+Progress | Loading XAUUSD, h1 | 27.25 % |
+Progress | Loading XAUUSD, h1 | 27.52 % |
+Progress | Loading XAUUSD, h1 | 27.79 % |
+Progress | Loading XAUUSD, h1 | 28.07 % |
+Progress | Loading XAUUSD, h1 | 28.34 % |
+Progress | Loading XAUUSD, h1 | 28.61 % |
+Progress | Loading XAUUSD, h1 | 28.88 % |
+Progress | Loading XAUUSD, h1 | 29.16 % |
+Progress | Loading XAUUSD, h1 | 29.43 % |
+Progress | Loading XAUUSD, h1 | 29.70 % |
+Progress | Loading XAUUSD, h1 | 29.97 % |
+Progress | Loading XAUUSD, h1 | 30.25 % |
+Progress | Loading XAUUSD, h1 | 30.52 % |
+Progress | Loading XAUUSD, h1 | 30.79 % |
+Progress | Loading XAUUSD, h1 | 31.06 % |
+Progress | Loading XAUUSD, h1 | 31.34 % |
+Progress | Loading XAUUSD, h1 | 31.61 % |
+Progress | Loading XAUUSD, h1 | 31.88 % |
+Progress | Loading XAUUSD, h1 | 32.15 % |
+Progress | Loading XAUUSD, h1 | 32.43 % |
+Progress | Loading XAUUSD, h1 | 32.70 % |
+Progress | Loading XAUUSD, h1 | 32.97 % |
+Progress | Loading XAUUSD, h1 | 33.24 % |
+Progress | Loading XAUUSD, h1 | 33.51 % |
+Progress | Loading XAUUSD, h1 | 33.79 % |
+Progress | Loading XAUUSD, h1 | 34.06 % |
+Progress | Loading XAUUSD, h1 | 34.33 % |
+Progress | Loading XAUUSD, h1 | 34.60 % |
+Progress | Loading XAUUSD, h1 | 34.88 % |
+Progress | Loading XAUUSD, h1 | 35.15 % |
+Progress | Loading XAUUSD, h1 | 35.42 % |
+Progress | Loading XAUUSD, h1 | 35.69 % |
+Progress | Loading XAUUSD, h1 | 35.97 % |
+Progress | Loading XAUUSD, h1 | 36.24 % |
+Progress | Loading XAUUSD, h1 | 36.51 % |
+Progress | Loading XAUUSD, h1 | 36.78 % |
+Progress | Loading XAUUSD, h1 | 37.06 % |
+Progress | Loading XAUUSD, h1 | 37.33 % |
+Progress | Loading XAUUSD, h1 | 37.60 % |
+Progress | Loading XAUUSD, h1 | 37.87 % |
+Progress | Loading XAUUSD, h1 | 38.15 % |
+Progress | Loading XAUUSD, h1 | 38.42 % |
+Progress | Loading XAUUSD, h1 | 38.69 % |
+Progress | Loading XAUUSD, h1 | 38.96 % |
+Progress | Loading XAUUSD, h1 | 39.24 % |
+Progress | Loading XAUUSD, h1 | 39.51 % |
+Progress | Loading XAUUSD, h1 | 39.78 % |
+Progress | Loading XAUUSD, h1 | 40.05 % |
+Progress | Loading XAUUSD, h1 | 40.33 % |
+Progress | Loading XAUUSD, h1 | 40.60 % |
+Progress | Loading XAUUSD, h1 | 40.87 % |
+Progress | Loading XAUUSD, h1 | 41.14 % |
+Progress | Loading XAUUSD, h1 | 41.42 % |
+Progress | Loading XAUUSD, h1 | 41.69 % |
+Progress | Loading XAUUSD, h1 | 41.96 % |
+Progress | Loading XAUUSD, h1 | 42.23 % |
+Progress | Loading XAUUSD, h1 | 42.51 % |
+Progress | Loading XAUUSD, h1 | 42.78 % |
+Progress | Loading XAUUSD, h1 | 43.05 % |
+Progress | Loading XAUUSD, h1 | 43.32 % |
+Progress | Loading XAUUSD, h1 | 43.60 % |
+Progress | Loading XAUUSD, h1 | 43.87 % |
+Progress | Loading XAUUSD, h1 | 44.14 % |
+Progress | Loading XAUUSD, h1 | 44.41 % |
+Progress | Loading XAUUSD, h1 | 44.69 % |
+Progress | Loading XAUUSD, h1 | 44.96 % |
+Progress | Loading XAUUSD, h1 | 45.23 % |
+Progress | Loading XAUUSD, h1 | 45.50 % |
+Progress | Loading XAUUSD, h1 | 45.78 % |
+Progress | Loading XAUUSD, h1 | 46.05 % |
+Progress | Loading XAUUSD, h1 | 46.32 % |
+Progress | Loading XAUUSD, h1 | 46.59 % |
+Progress | Loading XAUUSD, h1 | 46.87 % |
+Progress | Loading XAUUSD, h1 | 47.14 % |
+Progress | Loading XAUUSD, h1 | 47.41 % |
+Progress | Loading XAUUSD, h1 | 47.68 % |
+Progress | Loading XAUUSD, h1 | 47.96 % |
+Progress | Loading XAUUSD, h1 | 48.23 % |
+Progress | Loading XAUUSD, h1 | 48.50 % |
+Progress | Loading XAUUSD, h1 | 48.77 % |
+Progress | Loading XAUUSD, h1 | 49.05 % |
+Progress | Loading XAUUSD, h1 | 49.32 % |
+Progress | Loading XAUUSD, h1 | 49.59 % |
+Progress | Loading XAUUSD, h1 | 49.86 % |
+Progress | Loading XAUUSD, h1 | 50.14 % |
+Progress | Loading XAUUSD, h1 | 50.41 % |
+Progress | Loading XAUUSD, h1 | 50.68 % |
+Progress | Loading XAUUSD, h1 | 50.95 % |
+Progress | Loading XAUUSD, h1 | 51.23 % |
+Progress | Loading XAUUSD, h1 | 51.50 % |
+Progress | Loading XAUUSD, h1 | 51.77 % |
+Progress | Loading XAUUSD, h1 | 52.04 % |
+Progress | Loading XAUUSD, h1 | 52.32 % |
+Progress | Loading XAUUSD, h1 | 52.59 % |
+Progress | Loading XAUUSD, h1 | 52.86 % |
+Progress | Loading XAUUSD, h1 | 53.13 % |
+Progress | Loading XAUUSD, h1 | 53.41 % |
+Progress | Loading XAUUSD, h1 | 53.68 % |
+Progress | Loading XAUUSD, h1 | 53.95 % |
+Progress | Loading XAUUSD, h1 | 54.22 % |
+Progress | Loading XAUUSD, h1 | 54.50 % |
+Progress | Loading XAUUSD, h1 | 54.77 % |
+Progress | Loading XAUUSD, h1 | 55.04 % |
+Progress | Loading XAUUSD, h1 | 55.31 % |
+Progress | Loading XAUUSD, h1 | 55.59 % |
+Progress | Loading XAUUSD, h1 | 55.86 % |
+Progress | Loading XAUUSD, h1 | 56.13 % |
+Progress | Loading XAUUSD, h1 | 56.40 % |
+Progress | Loading XAUUSD, h1 | 56.68 % |
+Progress | Loading XAUUSD, h1 | 56.95 % |
+Progress | Loading XAUUSD, h1 | 57.22 % |
+Progress | Loading XAUUSD, h1 | 57.49 % |
+Progress | Loading XAUUSD, h1 | 57.77 % |
+Progress | Loading XAUUSD, h1 | 58.04 % |
+Progress | Loading XAUUSD, h1 | 58.31 % |
+Progress | Loading XAUUSD, h1 | 58.58 % |
+Progress | Loading XAUUSD, h1 | 58.86 % |
+Progress | Loading XAUUSD, h1 | 59.13 % |
+Progress | Loading XAUUSD, h1 | 59.40 % |
+Progress | Loading XAUUSD, h1 | 59.67 % |
+Progress | Loading XAUUSD, h1 | 59.95 % |
+Progress | Loading XAUUSD, h1 | 60.22 % |
+Progress | Loading XAUUSD, h1 | 60.49 % |
+Progress | Loading XAUUSD, h1 | 60.76 % |
+Progress | Loading XAUUSD, h1 | 61.04 % |
+Progress | Loading XAUUSD, h1 | 61.31 % |
+Progress | Loading XAUUSD, h1 | 61.58 % |
+Progress | Loading XAUUSD, h1 | 61.85 % |
+Progress | Loading XAUUSD, h1 | 62.13 % |
+Progress | Loading XAUUSD, h1 | 62.40 % |
+Progress | Loading XAUUSD, h1 | 62.67 % |
+Progress | Loading XAUUSD, h1 | 62.94 % |
+Progress | Loading XAUUSD, h1 | 63.22 % |
+Progress | Loading XAUUSD, h1 | 63.49 % |
+Progress | Loading XAUUSD, h1 | 63.76 % |
+Progress | Loading XAUUSD, h1 | 64.03 % |
+Progress | Loading XAUUSD, h1 | 64.31 % |
+Progress | Loading XAUUSD, h1 | 64.58 % |
+Progress | Loading XAUUSD, h1 | 64.85 % |
+Progress | Loading XAUUSD, h1 | 65.12 % |
+Progress | Loading XAUUSD, h1 | 65.40 % |
+Progress | Loading XAUUSD, h1 | 65.67 % |
+Progress | Loading XAUUSD, h1 | 65.94 % |
+Progress | Loading XAUUSD, h1 | 66.21 % |
+Progress | Loading XAUUSD, h1 | 66.49 % |
+Progress | Loading XAUUSD, h1 | 66.76 % |
+Progress | Loading XAUUSD, h1 | 67.03 % |
+Progress | Loading XAUUSD, h1 | 67.30 % |
+Progress | Loading XAUUSD, h1 | 67.57 % |
+{
+	"Equity":,
+	"NetProfit":-,
+	"MaxBalanceDrawdownPercentages":-,
+	"MaxEquityDrawdownPercentages":-,
+	"MaxBalanceDrawdown":-,
+	"MaxEquityDrawdown":-,
+	"WinningTrades":-,
+	"LosingTrades":-,
+	"TotalTrades":-,
+	"AverageTrade":-,
+	"ProfitFactor":-,
+	"Fitness":0
+}
+Message expected
+System.InvalidOperationException: Message expected
+   at cTrader.Console.Infrastructure.StateMachine.Strategies.BacktestReportSavingStateStrategy.DoEnter()
+   at cTrader.Console.Infrastructure.StateMachine.Strategies.ConsoleStateStrategyBase.Enter()
+   at cTrader.Console.Infrastructure.StateMachine.ConsoleApplicationLifecycleStateMachine.OnMovedToLifecycleState(IConsoleApplicationLifecycleStateStrategy newStateStrategy)
+   at cTrader.Console.Infrastructure.StateMachine.ConsoleApplicationLifecycleStateTransition.InternalMoveTo(ConsoleApplicationLifecycleState state)
+   at cTrader.Console.Infrastructure.StateMachine.ConsoleApplicationLifecycleStateTransition.<>c__DisplayClass7_0.<MoveTo>b__0()
+   at cTrader.Console.Infrastructure.Dispatcher.ConsoleThreadDispatcher.<>c__DisplayClass12_0.<ExecuteInternalAsync>g__ExecuteAction|0()
+

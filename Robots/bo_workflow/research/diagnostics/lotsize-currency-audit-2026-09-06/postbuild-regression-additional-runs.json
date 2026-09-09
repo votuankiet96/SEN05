@@ -1,0 +1,20 @@
+﻿[
+    {
+        "Case":  "Combo-GER40",
+        "Success":  true,
+        "FailureReason":  null,
+        "RunDirectory":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_GER40.cash_h1_20260907-002138"
+    },
+    {
+        "Case":  "Combo-XAUUSD",
+        "Success":  true,
+        "FailureReason":  null,
+        "RunDirectory":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_XAUUSD_h1_20260907-002218"
+    },
+    {
+        "Case":  "MA-Cross-HK50",
+        "Success":  true,
+        "FailureReason":  null,
+        "RunDirectory":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\MA Cross_HK50.cash_m45_20260907-002257"
+    }
+]

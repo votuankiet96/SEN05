@@ -1,0 +1,184 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_JP225.cash_h1_20260907-001755\params.cbotset 
+--start=01/01/2025 --end=08/01/2025 --data-mode=Ticks --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=JP225.cash 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_J
+P225.cash_h1_20260907-001755\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...755\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | JP225.cash                | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 08/01/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 2                         | default value        |
+| KtpLevel             | 4                         | default value        |
+| RiskPercent          | 1                         | default value        |
+| MaxMarginPercent     | 50                        | default value        |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+07/09/2026 07:17:58.075 | Establishing connection using votuankiet96@gmail.com...
+07/09/2026 07:18:00.282 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Info | CBot instance [Combo, JP225.cash, h1] started.
+Progress | Backtesting | 12.02 % |
+Progress | Loading USDJPY, h1 | 100.00 % |
+Progress | Backtesting | 13.02 % |
+Progress | Backtesting | 13.61 % |
+Progress | Backtesting | 14.58 % |
+Progress | Backtesting | 14.77 % |
+Progress | Backtesting | 15.45 % |
+Progress | Backtesting | 15.88 % |
+Progress | Backtesting | 17.72 % |
+Progress | Backtesting | 18.46 % |
+Progress | Backtesting | 19.18 % |
+Progress | Backtesting | 19.71 % |
+Progress | Backtesting | 20.10 % |
+Progress | Backtesting | 20.34 % |
+Progress | Backtesting | 20.63 % |
+Progress | Backtesting | 21.01 % |
+Progress | Backtesting | 21.51 % |
+Progress | Backtesting | 22.07 % |
+Progress | Backtesting | 22.97 % |
+Progress | Backtesting | 25.00 % |
+Progress | Backtesting | 25.00 % |
+Progress | Backtesting | 26.18 % |
+Progress | Backtesting | 27.65 % |
+Progress | Backtesting | 29.01 % |
+Progress | Backtesting | 29.91 % |
+Progress | Backtesting | 31.26 % |
+Progress | Backtesting | 32.65 % |
+Progress | Backtesting | 33.17 % |
+Progress | Backtesting | 33.80 % |
+Progress | Backtesting | 34.65 % |
+Progress | Backtesting | 36.37 % |
+Progress | Backtesting | 62.38 % |
+Progress | Backtesting | 62.50 % |
+Progress | Backtesting | 62.69 % |
+Progress | Backtesting | 63.33 % |
+Progress | Backtesting | 64.15 % |
+Progress | Backtesting | 65.30 % |
+Progress | Backtesting | 66.41 % |
+Progress | Backtesting | 67.21 % |
+Progress | Backtesting | 68.26 % |
+Progress | Backtesting | 68.93 % |
+Progress | Backtesting | 69.62 % |
+Progress | Backtesting | 70.16 % |
+Progress | Backtesting | 70.72 % |
+Progress | Backtesting | 71.37 % |
+Progress | Backtesting | 72.70 % |
+Progress | Backtesting | 75.00 % |
+Progress | Backtesting | 75.00 % |
+Progress | Backtesting | 75.64 % |
+Progress | Backtesting | 76.51 % |
+Progress | Backtesting | 77.72 % |
+Progress | Backtesting | 78.71 % |
+Progress | Backtesting | 79.37 % |
+Progress | Backtesting | 80.16 % |
+Progress | Backtesting | 81.13 % |
+Progress | Backtesting | 81.81 % |
+Progress | Backtesting | 82.47 % |
+Progress | Backtesting | 83.16 % |
+Progress | Backtesting | 83.79 % |
+Progress | Backtesting | 84.87 % |
+Progress | Backtesting | 87.50 % |
+Progress | Backtesting | 87.77 % |
+Progress | Backtesting | 89.44 % |
+Progress | Backtesting | 91.00 % |
+Progress | Backtesting | 91.94 % |
+Progress | Backtesting | 93.37 % |
+Progress | Backtesting | 94.39 % |
+Progress | Backtesting | 95.20 % |
+Progress | Backtesting | 95.81 % |
+Progress | Backtesting | 96.96 % |
+Progress | Backtesting | 98.03 % |
+Progress | Backtesting | 100.00 % |
+01/01/2025 23:05:00.003 | Info | Combo: loaded 4542 valid signal row(s) from CSV.
+01/01/2025 23:05:00.003 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+02/01/2025 01:00:00.269 | Trade | Placing Stop Order to Sell 82.5 JP225.cash (Price: 39143.4, SL: 39334.1804600723, TP: 38643.94)
+02/01/2025 01:00:00.269 | Trade |  Placing Stop Order to Sell 82.5 JP225.cash (Price: 39143.4, SL: 39334.1804600723, TP: 38643.94) SUCCEEDED, PendingOrder OID1
+02/01/2025 01:00:00.269 | Info | Combo: bartime=2025-01-02 00:00, executed=2025-01-02 01:00:00, pending Sell placed at 39143.4; SL=39334.18046007234, TP=38643.936755530616; valid for the next 3 chart bar(s).
+02/01/2025 04:00:01.267 | Trade | Cancelling pending order OID1
+02/01/2025 04:00:01.267 | Trade |  Cancelling pending order OID1 SUCCEEDED
+02/01/2025 04:00:01.267 | Info | Combo: pending order 1 cancelled after 3 chart bars.
+02/01/2025 04:00:01.267 | Trade | Placing Stop Order to Sell 115.4 JP225.cash (Price: 39323.4, SL: 39459.519595557, TP: 38967.04)
+02/01/2025 04:00:01.267 | Trade |  Placing Stop Order to Sell 115.4 JP225.cash (Price: 39323.4, SL: 39459.519595557, TP: 38967.04) SUCCEEDED, PendingOrder OID2
+02/01/2025 04:00:01.267 | Info | Combo: bartime=2025-01-02 03:00, executed=2025-01-02 04:00:01, pending Sell placed at 39323.4; SL=39459.51959555704, TP=38967.03889883168; valid for the next 3 chart bar(s).
+02/01/2025 10:00:00.272 | Trade | Placing Stop Order to Buy 116.3 JP225.cash (Price: 39453.4, SL: 39320.0063447423, TP: 39802.62)
+02/01/2025 10:00:00.272 | Trade |  Placing Stop Order to Buy 116.3 JP225.cash (Price: 39453.4, SL: 39320.0063447423, TP: 39802.62) SUCCEEDED, PendingOrder OID5
+02/01/2025 10:00:00.272 | Info | Combo: bartime=2025-01-02 09:00, executed=2025-01-02 10:00:00, pending Buy placed at 39453.4; SL=39320.006344742294, TP=39802.62458946467; valid for the next 3 chart bar(s).
+02/01/2025 14:00:00.869 | Trade | Placing Stop Order to Sell 114.3 JP225.cash (Price: 39288.4, SL: 39422.7620411936, TP: 38936.64)
+02/01/2025 14:00:00.869 | Trade |  Placing Stop Order to Sell 114.3 JP225.cash (Price: 39288.4, SL: 39422.7620411936, TP: 38936.64) SUCCEEDED, PendingOrder OID8
+02/01/2025 14:00:00.869 | Info | Combo: bartime=2025-01-02 13:00, executed=2025-01-02 14:00:00, pending Sell placed at 39288.4; SL=39422.76204119356, TP=38936.64017615527; valid for the next 3 chart bar(s).
+02/01/2025 15:00:00.271 | Trade | Placing Stop Order to Buy 91.4 JP225.cash (Price: 39463.4, SL: 39296.9103670452, TP: 39899.27)
+02/01/2025 15:00:00.271 | Trade |  Placing Stop Order to Buy 91.4 JP225.cash (Price: 39463.4, SL: 39296.9103670452, TP: 39899.27) SUCCEEDED, PendingOrder OID11
+02/01/2025 15:00:00.271 | Info | Combo: bartime=2025-01-02 14:00, executed=2025-01-02 15:00:00, pending Buy placed at 39463.4; SL=39296.91036704516, TP=39899.26985907579; valid for the next 3 chart bar(s).
+02/01/2025 18:00:00.214 | Trade | Placing Stop Order to Sell 58.8 JP225.cash (Price: 39163.4, SL: 39420.2226920729, TP: 38491.04)
+02/01/2025 18:00:00.214 | Trade |  Placing Stop Order to Sell 58.8 JP225.cash (Price: 39163.4, SL: 39420.2226920729, TP: 38491.04) SUCCEEDED, PendingOrder OID14
+02/01/2025 18:00:00.214 | Info | Combo: bartime=2025-01-02 17:00, executed=2025-01-02 18:00:00, pending Sell placed at 39163.4; SL=39420.22269207288, TP=38491.0381921532; valid for the next 3 chart bar(s).
+03/01/2025 13:00:00.167 | Trade | Placing Stop Order to Buy 169.6 JP225.cash (Price: 39330.9, SL: 39242.9754190197, TP: 39561.09)
+03/01/2025 13:00:00.167 | Trade |  Placing Stop Order to Buy 169.6 JP225.cash (Price: 39330.9, SL: 39242.9754190197, TP: 39561.09) SUCCEEDED, PendingOrder OID17
+03/01/2025 13:00:00.167 | Info | Combo: bartime=2025-01-03 12:00, executed=2025-01-03 13:00:00, pending Buy placed at 39330.9; SL=39242.97541901967, TP=39561.08655300651; valid for the next 3 chart bar(s).
+03/01/2025 15:00:02.568 | Info | Combo: bartime=2025-01-03 14:00, Buy signal skipped: already have same-direction exposure open.
+06/01/2025 02:00:00.085 | Trade | Placing Stop Order to Sell 75.8 JP225.cash (Price: 39362, SL: 39564.2498069988, TP: 38832.51)
+06/01/2025 02:00:00.085 | Trade |  Placing Stop Order to Sell 75.8 JP225.cash (Price: 39362, SL: 39564.2498069988, TP: 38832.51) SUCCEEDED, PendingOrder OID20
+06/01/2025 02:00:00.085 | Info | Combo: bartime=2025-01-06 01:00, executed=2025-01-06 02:00:00, pending Sell placed at 39362; SL=39564.2498069988, TP=38832.51000527714; valid for the next 3 chart bar(s).
+06/01/2025 10:00:01.685 | Info | Combo: bartime=2025-01-06 09:00, reversal - closing existing Sell position 7 before opening opposite direction.
+06/01/2025 10:00:01.685 | Trade | Closing position PID7 (Volume: 75.8)
+06/01/2025 10:00:01.685 | Trade |  Closing position PID7 (Volume: 75.8) SUCCEEDED
+06/01/2025 10:00:01.685 | Trade | Placing Stop Order to Buy 130.7 JP225.cash (Price: 39496.5, SL: 39379.6887671002, TP: 39802.31)
+06/01/2025 10:00:01.685 | Trade |  Placing Stop Order to Buy 130.7 JP225.cash (Price: 39496.5, SL: 39379.6887671002, TP: 39802.31) SUCCEEDED, PendingOrder OID24
+06/01/2025 10:00:01.685 | Info | Combo: bartime=2025-01-06 09:00, executed=2025-01-06 10:00:01, pending Buy placed at 39496.5; SL=39379.688767100226, TP=39802.3118077316; valid for the next 3 chart bar(s).
+07/01/2025 16:00:00.785 | Trade | Placing Stop Order to Sell 83.8 JP225.cash (Price: 39749, SL: 39936.1473130025, TP: 39259.05)
+07/01/2025 16:00:00.785 | Trade |  Placing Stop Order to Sell 83.8 JP225.cash (Price: 39749, SL: 39936.1473130025, TP: 39259.05) SUCCEEDED, PendingOrder OID27
+07/01/2025 16:00:00.785 | Info | Combo: bartime=2025-01-07 15:00, executed=2025-01-07 16:00:00, pending Sell placed at 39749; SL=39936.14731300248, TP=39259.0483345595; valid for the next 3 chart bar(s).
+07/01/2025 19:00:00.086 | Trade | Cancelling pending order OID27
+07/01/2025 19:00:00.086 | Trade |  Cancelling pending order OID27 SUCCEEDED
+07/01/2025 19:00:00.086 | Info | Combo: pending order 27 cancelled after 3 chart bars.
+08/01/2025 03:00:02.284 | Trade | Placing Stop Order to Buy 101.9 JP225.cash (Price: 40024, SL: 39869.82160119, TP: 40427.64)
+08/01/2025 03:00:02.284 | Trade |  Placing Stop Order to Buy 101.9 JP225.cash (Price: 40024, SL: 39869.82160119, TP: 40427.64) SUCCEEDED, PendingOrder OID28
+08/01/2025 03:00:02.284 | Info | Combo: bartime=2025-01-08 02:00, executed=2025-01-08 03:00:02, pending Buy placed at 40024; SL=39869.82160119, TP=40427.63904808457; valid for the next 3 chart bar(s).
+08/01/2025 08:00:00.252 | Info | Combo: bartime=2025-01-08 07:00, Buy signal skipped: already have same-direction exposure open.
+08/01/2025 12:00:00.097 | Trade | Placing Stop Order to Sell 110.1 JP225.cash (Price: 39729, SL: 39870.419457115, TP: 39358.76)
+08/01/2025 12:00:00.097 | Trade |  Placing Stop Order to Sell 110.1 JP225.cash (Price: 39729, SL: 39870.419457115, TP: 39358.76) SUCCEEDED, PendingOrder OID31
+08/01/2025 12:00:00.097 | Info | Combo: bartime=2025-01-08 11:00, executed=2025-01-08 12:00:00, pending Sell placed at 39729; SL=39870.41945711496, TP=39358.763861273044; valid for the next 3 chart bar(s).
+08/01/2025 17:00:00.586 | Trade | Placing Stop Order to Buy 104.3 JP225.cash (Price: 40006.5, SL: 39858.8284722926, TP: 40393.1)
+08/01/2025 17:00:00.586 | Trade |  Placing Stop Order to Buy 104.3 JP225.cash (Price: 40006.5, SL: 39858.8284722926, TP: 40393.1) SUCCEEDED, PendingOrder OID34
+08/01/2025 17:00:00.586 | Info | Combo: bartime=2025-01-08 16:00, executed=2025-01-08 17:00:00, pending Buy placed at 40006.5; SL=39858.828472292575, TP=40393.10405953805; valid for the next 3 chart bar(s).
+08/01/2025 20:00:00.086 | Info | Combo: bartime=2025-01-08 19:00, Buy signal skipped: already have same-direction exposure open.
+08/01/2025 23:59:59.985 | Info | Combo: loaded=4542, processed=16, before-start=3718, not-processed=808, placed=13, failed=0, guard-skipped=0, pending-expired=2, same-direction-skipped=3, reversed=1, margin-capped=0, margin-blocked=0.
+Progress | Backtesting | 100.00 % |
+Info | CBot instance [Combo, JP225.cash, h1] stopped.
+{
+	"Equity":9631.91,
+	"NetProfit":-368.08,
+	"MaxBalanceDrawdownPercentages":5,
+	"MaxEquityDrawdownPercentages":5,
+	"MaxBalanceDrawdown":509.19,
+	"MaxEquityDrawdown":517.69,
+	"WinningTrades":2,
+	"LosingTrades":9,
+	"TotalTrades":11,
+	"AverageTrade":-33.46,
+	"ProfitFactor":0.57,
+	"Fitness":0
+}
+

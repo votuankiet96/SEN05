@@ -1,0 +1,23 @@
+Info | CBot instance [Combo, XAUUSD, h1] started.
+01/01/2026 23:05:00.002 | Info | Combo: loaded 4593 valid signal row(s) from CSV.
+01/01/2026 23:05:00.002 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+02/01/2026 00:00:00.395 | Trade | Placing Stop Order to Buy 4 XAUUSD (Price: 4351.83, SL: 4330.94600345045, TP: 4406.5)
+02/01/2026 00:00:00.395 | Trade | → Placing Stop Order to Buy 4 XAUUSD (Price: 4351.83, SL: 4330.94600345045, TP: 4406.5) SUCCEEDED, PendingOrder OID1
+02/01/2026 00:00:00.395 | Info | Combo: bartime=2026-01-01 23:00, executed=2026-01-02 00:00:00, pending Buy placed at 4351.83; SL=4330.946003450446, TP=4406.504302966732; valid for the next 3 chart bar(s).
+02/01/2026 15:00:00.208 | Info | Combo: bartime=2026-01-02 14:00, reversal - closing existing Buy position 1 before opening opposite direction.
+02/01/2026 15:00:00.208 | Trade | Closing position PID1 (Volume: 4)
+02/01/2026 15:00:00.208 | Trade | → Closing position PID1 (Volume: 4) SUCCEEDED
+02/01/2026 15:00:00.208 | Trade | Placing Stop Order to Sell 5 XAUUSD (Price: 4347.52, SL: 4366.84306557248, TP: 4296.93)
+02/01/2026 15:00:00.208 | Trade | → Placing Stop Order to Sell 5 XAUUSD (Price: 4347.52, SL: 4366.84306557248, TP: 4296.93) SUCCEEDED, PendingOrder OID5
+02/01/2026 15:00:00.208 | Info | Combo: bartime=2026-01-02 14:00, executed=2026-01-02 15:00:00, pending Sell placed at 4347.52; SL=4366.843065572484, TP=4296.932214331237; valid for the next 3 chart bar(s).
+05/01/2026 00:00:00.204 | Trade | Placing Stop Order to Buy 4 XAUUSD (Price: 4376.36, SL: 4356.04816446628, TP: 4429.54)
+05/01/2026 00:00:00.204 | Trade | → Placing Stop Order to Buy 4 XAUUSD (Price: 4376.36, SL: 4356.04816446628, TP: 4429.54) SUCCEEDED, PendingOrder OID8
+05/01/2026 00:00:00.204 | Info | Combo: bartime=2026-01-04 23:00, executed=2026-01-05 00:00:00, pending Buy placed at 4376.36; SL=4356.048164466283, TP=4429.536385427271; valid for the next 3 chart bar(s).
+06/01/2026 10:00:00.000 | Trade | Placing Stop Order to Sell 5 XAUUSD (Price: 4444.29, SL: 4461.74668815235, TP: 4398.59)
+06/01/2026 10:00:00.000 | Trade | → Placing Stop Order to Sell 5 XAUUSD (Price: 4444.29, SL: 4461.74668815235, TP: 4398.59) SUCCEEDED, PendingOrder OID11
+06/01/2026 10:00:00.000 | Info | Combo: bartime=2026-01-06 09:00, executed=2026-01-06 10:00:00, pending Sell placed at 4444.29; SL=4461.746688152353, TP=4398.58839041714; valid for the next 3 chart bar(s).
+07/01/2026 02:00:00.204 | Trade | Placing Stop Order to Sell 5 XAUUSD (Price: 4460.57, SL: 4477.41270886253, TP: 4416.48)
+07/01/2026 02:00:00.204 | Trade | → Placing Stop Order to Sell 5 XAUUSD (Price: 4460.57, SL: 4477.41270886253, TP: 4416.48) SUCCEEDED, PendingOrder OID14
+07/01/2026 02:00:00.204 | Info | Combo: bartime=2026-01-07 01:00, executed=2026-01-07 02:00:00, pending Sell placed at 4460.57; SL=4477.412708862526, TP=4416.475788197906; valid for the next 3 chart bar(s).
+07/01/2026 23:59:56.002 | Info | Combo: loaded=4593, processed=5, before-start=4265, not-processed=323, placed=5, failed=0, guard-skipped=0, pending-expired=0, same-direction-skipped=0, reversed=1, margin-capped=0, margin-blocked=0.
+Info | CBot instance [Combo, XAUUSD, h1] stopped.

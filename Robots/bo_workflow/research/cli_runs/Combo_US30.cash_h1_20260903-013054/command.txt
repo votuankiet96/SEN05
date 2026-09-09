@@ -1,0 +1,15 @@
+﻿backtest
+C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo
+C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_US30.cash_h1_20260903-013054\params.cbotset
+--start=01/01/2026
+--end=30/01/2026
+--data-mode=Ticks
+--ctid=votuankiet96@gmail.com
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt
+--account=7563609
+--broker=FTMO Platform
+--symbol=US30.cash
+--period=h1
+--full-access
+--report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_US30.cash_h1_20260903-013054\report.json
+

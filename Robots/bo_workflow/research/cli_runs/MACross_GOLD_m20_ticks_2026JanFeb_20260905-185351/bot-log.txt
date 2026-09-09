@@ -1,0 +1,248 @@
+Info | CBot instance [MA Cross, XAUUSD, m20] started.
+01/01/2026 23:05:00.002 | Info | MA Cross: loaded 4494 valid signal row(s) from CSV.
+01/01/2026 23:05:00.002 | Info | MA Cross: signal scheduling active with chart timeframe m20 (00:20:00); CSV timeframe must match the chart timeframe.
+02/01/2026 01:00:00.200 | Trade | Executing Market Order to Buy 9 XAUUSD (SL: 11.07, TP: 28.99)
+02/01/2026 01:00:00.200 | Trade | → Executing Market Order to Buy 9 XAUUSD (SL: 11.07, TP: 28.99) SUCCEEDED, Position PID1
+02/01/2026 01:00:00.200 | Info | MA Cross: bartime=2026-01-02 00:40, executed=2026-01-02 01:00:00, market Buy placed; SL=11.072986878321618 pips, TP=28.989079647445994 pips.
+02/01/2026 15:20:00.005 | Trade | Executing Market Order to Sell 6 XAUUSD (SL: 16.41, TP: 42.95)
+02/01/2026 15:20:00.005 | Trade | → Executing Market Order to Sell 6 XAUUSD (SL: 16.41, TP: 42.95) SUCCEEDED, Position PID2
+02/01/2026 15:20:00.005 | Info | MA Cross: bartime=2026-01-02 15:00, executed=2026-01-02 15:20:00, market Sell placed; SL=16.40639373225697 pips, TP=42.95193879104875 pips.
+05/01/2026 00:40:00.206 | Trade | Executing Market Order to Buy 7 XAUUSD (SL: 13.97, TP: 36.56)
+05/01/2026 00:40:00.206 | Trade | → Executing Market Order to Buy 7 XAUUSD (SL: 13.97, TP: 36.56) SUCCEEDED, Position PID3
+05/01/2026 00:40:00.206 | Info | MA Cross: bartime=2026-01-05 00:20, executed=2026-01-05 00:40:00, market Buy placed; SL=13.965931155099891 pips, TP=36.56280776405151 pips.
+06/01/2026 15:00:00.199 | Trade | Executing Market Order to Buy 9 XAUUSD (SL: 11.53, TP: 30.19)
+06/01/2026 15:00:00.199 | Trade | → Executing Market Order to Buy 9 XAUUSD (SL: 11.53, TP: 30.19) SUCCEEDED, Position PID4
+06/01/2026 15:00:00.199 | Info | MA Cross: bartime=2026-01-06 14:40, executed=2026-01-06 15:00:00, market Buy placed; SL=11.532648744881836 pips, TP=30.192474414100644 pips.
+07/01/2026 03:00:00.202 | Trade | Executing Market Order to Sell 10 XAUUSD (SL: 10.3, TP: 26.96)
+07/01/2026 03:00:00.202 | Trade | → Executing Market Order to Sell 10 XAUUSD (SL: 10.3, TP: 26.96) SUCCEEDED, Position PID5
+07/01/2026 03:00:00.202 | Info | MA Cross: bartime=2026-01-07 02:40, executed=2026-01-07 03:00:00, market Sell placed; SL=10.298145469909413 pips, TP=26.96054484022284 pips.
+08/01/2026 03:20:00.400 | Trade | Executing Market Order to Sell 11 XAUUSD (SL: 9.17, TP: 24.01)
+08/01/2026 03:20:00.400 | Trade | → Executing Market Order to Sell 11 XAUUSD (SL: 9.17, TP: 24.01) SUCCEEDED, Position PID6
+08/01/2026 03:20:00.400 | Info | MA Cross: bartime=2026-01-08 03:00, executed=2026-01-08 03:20:00, market Sell placed; SL=9.170577599786812 pips, TP=24.008572156241872 pips.
+08/01/2026 16:00:00.202 | Trade | Executing Market Order to Buy 8 XAUUSD (SL: 12.74, TP: 33.35)
+08/01/2026 16:00:00.202 | Trade | → Executing Market Order to Buy 8 XAUUSD (SL: 12.74, TP: 33.35) SUCCEEDED, Position PID7
+08/01/2026 16:00:00.202 | Info | MA Cross: bartime=2026-01-08 15:40, executed=2026-01-08 16:00:00, market Buy placed; SL=12.739497300345672 pips, TP=33.35200393230497 pips.
+09/01/2026 05:00:00.205 | Info | MA Cross: bartime=2026-01-09 04:40, reversal - closing existing Buy position 7 before opening opposite direction.
+09/01/2026 05:00:00.205 | Trade | Closing position PID7 (Volume: 8)
+09/01/2026 05:00:00.205 | Trade | → Closing position PID7 (Volume: 8) SUCCEEDED
+09/01/2026 05:00:00.205 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 19.00 units, which needs about $6563.66 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5458.53 budget, free margin was $10917.05). Size was cut from 19.00 to 15.00 units. Real risk on this trade is now about $85.40 (0.78% of balance) instead of the requested 1.00%.
+09/01/2026 05:00:00.205 | Trade | Executing Market Order to Sell 15 XAUUSD (SL: 5.69, TP: 14.91)
+09/01/2026 05:00:00.205 | Trade | → Executing Market Order to Sell 15 XAUUSD (SL: 5.69, TP: 14.91) SUCCEEDED, Position PID8
+09/01/2026 05:00:00.205 | Info | MA Cross: bartime=2026-01-09 04:40, executed=2026-01-09 05:00:00, market Sell placed; SL=5.693659983450741 pips, TP=14.906001836674038 pips.
+09/01/2026 05:40:00.006 | Trade | Executing Market Order to Buy 14 XAUUSD (SL: 7.43, TP: 19.45)
+09/01/2026 05:40:00.006 | Trade | → Executing Market Order to Buy 14 XAUUSD (SL: 7.43, TP: 19.45) SUCCEEDED, Position PID9
+09/01/2026 05:40:00.006 | Info | MA Cross: bartime=2026-01-09 05:20, executed=2026-01-09 05:40:00, market Buy placed; SL=7.4311423894086674 pips, TP=19.45473077547189 pips.
+09/01/2026 08:00:00.204 | Info | MA Cross: bartime=2026-01-09 07:40, reversal - closing existing Buy position 9 before opening opposite direction.
+09/01/2026 08:00:00.204 | Trade | Closing position PID9 (Volume: 14)
+09/01/2026 08:00:00.204 | Trade | → Closing position PID9 (Volume: 14) SUCCEEDED
+09/01/2026 08:00:00.204 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 19.00 units, which needs about $6563.66 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5410.66 budget, free margin was $10821.31). Size was cut from 19.00 to 15.00 units. Real risk on this trade is now about $82.28 (0.76% of balance) instead of the requested 1.00%.
+09/01/2026 08:00:00.204 | Trade | Executing Market Order to Sell 15 XAUUSD (SL: 5.49, TP: 14.36)
+09/01/2026 08:00:00.204 | Trade | → Executing Market Order to Sell 15 XAUUSD (SL: 5.49, TP: 14.36) SUCCEEDED, Position PID10
+09/01/2026 08:00:00.204 | Info | MA Cross: bartime=2026-01-09 07:40, executed=2026-01-09 08:00:00, market Sell placed; SL=5.485387736423159 pips, TP=14.36074509395583 pips.
+09/01/2026 08:20:00.004 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 16.00 units, which needs about $5527.30 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5369.48 budget, free margin was $10738.96). Size was cut from 16.00 to 15.00 units. Real risk on this trade is now about $97.44 (0.91% of balance) instead of the requested 1.00%.
+09/01/2026 08:20:00.004 | Trade | Executing Market Order to Buy 15 XAUUSD (SL: 6.5, TP: 17.01)
+09/01/2026 08:20:00.004 | Trade | → Executing Market Order to Buy 15 XAUUSD (SL: 6.5, TP: 17.01) SUCCEEDED, Position PID11
+09/01/2026 08:20:00.004 | Info | MA Cross: bartime=2026-01-09 08:00, executed=2026-01-09 08:20:00, market Buy placed; SL=6.496310189138521 pips, TP=17.00734007516465 pips.
+12/01/2026 23:05:00.006 | Trade | Executing Market Order to Sell 14 XAUUSD (SL: 7.59, TP: 19.87)
+12/01/2026 23:05:00.006 | Trade | → Executing Market Order to Sell 14 XAUUSD (SL: 7.59, TP: 19.87) SUCCEEDED, Position PID12
+12/01/2026 23:05:00.006 | Info | MA Cross: bartime=2026-01-12 21:40, executed=2026-01-12 23:05:00, market Sell placed; SL=7.5911072238549755 pips, TP=19.873518712052324 pips.
+13/01/2026 14:00:00.208 | Trade | Executing Market Order to Buy 9 XAUUSD (SL: 11.07, TP: 28.99)
+13/01/2026 14:00:00.208 | Trade | → Executing Market Order to Buy 9 XAUUSD (SL: 11.07, TP: 28.99) SUCCEEDED, Position PID13
+13/01/2026 14:00:00.208 | Info | MA Cross: bartime=2026-01-13 13:40, executed=2026-01-13 14:00:00, market Buy placed; SL=11.073343964989805 pips, TP=28.990014500343307 pips.
+13/01/2026 20:40:00.204 | Trade | Executing Market Order to Sell 7 XAUUSD (SL: 13.63, TP: 35.67)
+13/01/2026 20:40:00.204 | Trade | → Executing Market Order to Sell 7 XAUUSD (SL: 13.63, TP: 35.67) SUCCEEDED, Position PID14
+13/01/2026 20:40:00.204 | Info | MA Cross: bartime=2026-01-13 20:20, executed=2026-01-13 20:40:00, market Sell placed; SL=13.626725458830595 pips, TP=35.6747672512185 pips.
+14/01/2026 02:20:00.012 | Trade | Executing Market Order to Buy 14 XAUUSD (SL: 7.53, TP: 19.72)
+14/01/2026 02:20:00.012 | Trade | → Executing Market Order to Buy 14 XAUUSD (SL: 7.53, TP: 19.72) SUCCEEDED, Position PID15
+14/01/2026 02:20:00.012 | Info | MA Cross: bartime=2026-01-14 02:00, executed=2026-01-14 02:20:00, market Buy placed; SL=7.53155782765733 pips, TP=19.717618392806887 pips.
+14/01/2026 15:00:00.003 | Trade | Executing Market Order to Sell 8 XAUUSD (SL: 12.41, TP: 32.48)
+14/01/2026 15:00:00.003 | Trade | → Executing Market Order to Sell 8 XAUUSD (SL: 12.41, TP: 32.48) SUCCEEDED, Position PID16
+14/01/2026 15:00:00.003 | Info | MA Cross: bartime=2026-01-14 14:40, executed=2026-01-14 15:00:00, market Sell placed; SL=12.408122857046475 pips, TP=32.48446563974767 pips.
+15/01/2026 00:40:00.003 | Trade | Executing Market Order to Sell 11 XAUUSD (SL: 9.09, TP: 23.79)
+15/01/2026 00:40:00.003 | Trade | → Executing Market Order to Sell 11 XAUUSD (SL: 9.09, TP: 23.79) SUCCEEDED, Position PID17
+15/01/2026 00:40:00.003 | Info | MA Cross: bartime=2026-01-15 00:20, executed=2026-01-15 00:40:00, market Sell placed; SL=9.08550882847487 pips, TP=23.785862112947207 pips.
+15/01/2026 10:00:00.001 | Trade | Executing Market Order to Buy 15 XAUUSD (SL: 7.09, TP: 18.57)
+15/01/2026 10:00:00.001 | Trade | → Executing Market Order to Buy 15 XAUUSD (SL: 7.09, TP: 18.57) SUCCEEDED, Position PID18
+15/01/2026 10:00:00.001 | Info | MA Cross: bartime=2026-01-15 09:40, executed=2026-01-15 10:00:00, market Buy placed; SL=7.094084099365336 pips, TP=18.57231217213845 pips.
+15/01/2026 18:20:00.207 | Trade | Executing Market Order to Buy 14 XAUUSD (SL: 7.56, TP: 19.79)
+15/01/2026 18:20:00.207 | Trade | → Executing Market Order to Buy 14 XAUUSD (SL: 7.56, TP: 19.79) SUCCEEDED, Position PID19
+15/01/2026 18:20:00.207 | Info | MA Cross: bartime=2026-01-15 18:00, executed=2026-01-15 18:20:00, market Buy placed; SL=7.560322084417049 pips, TP=19.792923217003832 pips.
+16/01/2026 00:40:01.400 | Trade | Executing Market Order to Sell 15 XAUUSD (SL: 7.01, TP: 18.36)
+16/01/2026 00:40:01.400 | Trade | → Executing Market Order to Sell 15 XAUUSD (SL: 7.01, TP: 18.36) SUCCEEDED, Position PID20
+16/01/2026 00:40:01.400 | Info | MA Cross: bartime=2026-01-16 00:20, executed=2026-01-16 00:40:01, market Sell placed; SL=7.014261392681562 pips, TP=18.36333632604033 pips.
+16/01/2026 08:40:00.000 | Trade | Executing Market Order to Buy 13 XAUUSD (SL: 8.22, TP: 21.53)
+16/01/2026 08:40:00.000 | Trade | → Executing Market Order to Buy 13 XAUUSD (SL: 8.22, TP: 21.53) SUCCEEDED, Position PID21
+16/01/2026 08:40:00.000 | Info | MA Cross: bartime=2026-01-16 08:20, executed=2026-01-16 08:40:00, market Buy placed; SL=8.22382009492213 pips, TP=21.529961008506138 pips.
+18/01/2026 23:40:00.004 | Trade | Executing Market Order to Buy 4 XAUUSD (SL: 23.14, TP: 60.57)
+18/01/2026 23:40:00.004 | Trade | → Executing Market Order to Buy 4 XAUUSD (SL: 23.14, TP: 60.57) SUCCEEDED, Position PID22
+18/01/2026 23:40:00.004 | Info | MA Cross: bartime=2026-01-18 23:20, executed=2026-01-18 23:40:00, market Buy placed; SL=23.137263851208537 pips, TP=60.573356762463945 pips.
+19/01/2026 14:20:01.205 | Info | MA Cross: bartime=2026-01-19 14:00, reversal - closing existing Buy position 22 before opening opposite direction.
+19/01/2026 14:20:01.205 | Trade | Closing position PID22 (Volume: 4)
+19/01/2026 14:20:01.205 | Trade | → Closing position PID22 (Volume: 4) SUCCEEDED
+19/01/2026 14:20:01.205 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 17.00 units, which needs about $5872.75 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5364.06 budget, free margin was $10728.13). Size was cut from 17.00 to 15.00 units. Real risk on this trade is now about $89.91 (0.84% of balance) instead of the requested 1.00%.
+19/01/2026 14:20:01.205 | Trade | Executing Market Order to Sell 15 XAUUSD (SL: 5.99, TP: 15.69)
+19/01/2026 14:20:01.205 | Trade | → Executing Market Order to Sell 15 XAUUSD (SL: 5.99, TP: 15.69) SUCCEEDED, Position PID23
+19/01/2026 14:20:01.205 | Info | MA Cross: bartime=2026-01-19 14:00, executed=2026-01-19 14:20:01, market Sell placed; SL=5.993934379424455 pips, TP=15.692120205333222 pips.
+20/01/2026 04:20:00.002 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 17.00 units, which needs about $5872.75 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5317.04 budget, free margin was $10634.08). Size was cut from 17.00 to 15.00 units. Real risk on this trade is now about $89.34 (0.84% of balance) instead of the requested 1.00%.
+20/01/2026 04:20:00.002 | Trade | Executing Market Order to Buy 15 XAUUSD (SL: 5.96, TP: 15.59)
+20/01/2026 04:20:00.002 | Trade | → Executing Market Order to Buy 15 XAUUSD (SL: 5.96, TP: 15.59) SUCCEEDED, Position PID24
+20/01/2026 04:20:00.002 | Info | MA Cross: bartime=2026-01-20 04:00, executed=2026-01-20 04:20:00, market Buy placed; SL=5.956304028168409 pips, TP=15.593603945744894 pips.
+21/01/2026 15:40:00.201 | Trade | Executing Market Order to Sell 4 XAUUSD (SL: 26.28, TP: 68.81)
+21/01/2026 15:40:00.201 | Trade | → Executing Market Order to Sell 4 XAUUSD (SL: 26.28, TP: 68.81) SUCCEEDED, Position PID25
+21/01/2026 15:40:00.201 | Info | MA Cross: bartime=2026-01-21 15:20, executed=2026-01-21 15:40:00, market Sell placed; SL=26.28194525711879 pips, TP=68.80613268313698 pips.
+22/01/2026 07:20:00.001 | Trade | Executing Market Order to Buy 11 XAUUSD (SL: 9.6, TP: 25.13)
+22/01/2026 07:20:00.001 | Trade | → Executing Market Order to Buy 11 XAUUSD (SL: 9.6, TP: 25.13) SUCCEEDED, Position PID26
+22/01/2026 07:20:00.001 | Info | MA Cross: bartime=2026-01-22 07:00, executed=2026-01-22 07:20:00, market Buy placed; SL=9.600029537202403 pips, TP=25.13287732839589 pips.
+23/01/2026 09:20:00.206 | Trade | Executing Market Order to Sell 7 XAUUSD (SL: 14.96, TP: 39.16)
+23/01/2026 09:20:00.206 | Trade | → Executing Market Order to Sell 7 XAUUSD (SL: 14.96, TP: 39.16) SUCCEEDED, Position PID27
+23/01/2026 09:20:00.206 | Info | MA Cross: bartime=2026-01-23 09:00, executed=2026-01-23 09:20:00, market Sell placed; SL=14.958299251515898 pips, TP=39.16082744046862 pips.
+23/01/2026 16:00:00.205 | Trade | Executing Market Order to Buy 8 XAUUSD (SL: 13.58, TP: 35.55)
+23/01/2026 16:00:00.205 | Trade | → Executing Market Order to Buy 8 XAUUSD (SL: 13.58, TP: 35.55) SUCCEEDED, Position PID28
+23/01/2026 16:00:00.205 | Info | MA Cross: bartime=2026-01-23 15:40, executed=2026-01-23 16:00:00, market Buy placed; SL=13.578814501973243 pips, TP=35.549336366165946 pips.
+26/01/2026 18:20:00.003 | Trade | Executing Market Order to Buy 5 XAUUSD (SL: 19.2, TP: 50.28)
+26/01/2026 18:20:00.003 | Trade | → Executing Market Order to Buy 5 XAUUSD (SL: 19.2, TP: 50.28) SUCCEEDED, Position PID29
+26/01/2026 18:20:00.003 | Info | MA Cross: bartime=2026-01-26 18:00, executed=2026-01-26 18:20:00, market Buy placed; SL=19.204090498071785 pips, TP=50.27630892395193 pips.
+26/01/2026 19:20:00.001 | Trade | Executing Market Order to Sell 4 XAUUSD (SL: 23.56, TP: 61.69)
+26/01/2026 19:20:00.001 | Trade | → Executing Market Order to Sell 4 XAUUSD (SL: 23.56, TP: 61.69) SUCCEEDED, Position PID30
+26/01/2026 19:20:00.001 | Info | MA Cross: bartime=2026-01-26 19:00, executed=2026-01-26 19:20:00, market Sell placed; SL=23.564734335012695 pips, TP=61.69247448906323 pips.
+27/01/2026 04:00:00.202 | Trade | Executing Market Order to Buy 7 XAUUSD (SL: 15.09, TP: 39.5)
+27/01/2026 04:00:00.202 | Trade | → Executing Market Order to Buy 7 XAUUSD (SL: 15.09, TP: 39.5) SUCCEEDED, Position PID31
+27/01/2026 04:00:00.202 | Info | MA Cross: bartime=2026-01-27 03:40, executed=2026-01-27 04:00:00, market Buy placed; SL=15.0895355127133 pips, TP=39.50440397228342 pips.
+27/01/2026 14:40:00.007 | Trade | Executing Market Order to Sell 6 XAUUSD (SL: 17.84, TP: 46.7)
+27/01/2026 14:40:00.007 | Trade | → Executing Market Order to Sell 6 XAUUSD (SL: 17.84, TP: 46.7) SUCCEEDED, Position PID32
+27/01/2026 14:40:00.007 | Info | MA Cross: bartime=2026-01-27 14:20, executed=2026-01-27 14:40:00, market Sell placed; SL=17.839524550987946 pips, TP=46.70387527448644 pips.
+27/01/2026 19:00:00.204 | Trade | Executing Market Order to Buy 8 XAUUSD (SL: 12.55, TP: 32.87)
+27/01/2026 19:00:00.204 | Trade | → Executing Market Order to Buy 8 XAUUSD (SL: 12.55, TP: 32.87) SUCCEEDED, Position PID33
+27/01/2026 19:00:00.204 | Info | MA Cross: bartime=2026-01-27 18:40, executed=2026-01-27 19:00:00, market Buy placed; SL=12.55384445837072 pips, TP=32.865964792014545 pips.
+28/01/2026 15:20:00.205 | Trade | Executing Market Order to Sell 3 XAUUSD (SL: 28.27, TP: 74)
+28/01/2026 15:20:00.205 | Trade | → Executing Market Order to Sell 3 XAUUSD (SL: 28.27, TP: 74) SUCCEEDED, Position PID34
+28/01/2026 15:20:00.205 | Info | MA Cross: bartime=2026-01-28 15:00, executed=2026-01-28 15:20:00, market Sell placed; SL=28.267610391404915 pips, TP=74.00460400469807 pips.
+28/01/2026 16:40:00.203 | Trade | Executing Market Order to Buy 5 XAUUSD (SL: 21.97, TP: 57.51)
+28/01/2026 16:40:00.203 | Trade | → Executing Market Order to Buy 5 XAUUSD (SL: 21.97, TP: 57.51) SUCCEEDED, Position PID35
+28/01/2026 16:40:00.203 | Info | MA Cross: bartime=2026-01-28 16:20, executed=2026-01-28 16:40:00, market Buy placed; SL=21.968573216319196 pips, TP=57.513724680323655 pips.
+29/01/2026 10:40:00.204 | Trade | Executing Market Order to Sell 4 XAUUSD (SL: 22.97, TP: 60.13)
+29/01/2026 10:40:00.204 | Trade | → Executing Market Order to Sell 4 XAUUSD (SL: 22.97, TP: 60.13) SUCCEEDED, Position PID36
+29/01/2026 10:40:00.204 | Info | MA Cross: bartime=2026-01-29 10:20, executed=2026-01-29 10:40:00, market Sell placed; SL=22.96774878147543 pips, TP=60.12956630990267 pips.
+30/01/2026 01:00:00.201 | Trade | Executing Market Order to Buy 3 XAUUSD (SL: 36.36, TP: 95.19)
+30/01/2026 01:00:00.201 | Trade | → Executing Market Order to Buy 3 XAUUSD (SL: 36.36, TP: 95.19) SUCCEEDED, Position PID37
+30/01/2026 01:00:00.201 | Info | MA Cross: bartime=2026-01-30 00:40, executed=2026-01-30 01:00:00, market Buy placed; SL=36.36144181321495 pips, TP=95.19425466699674 pips.
+30/01/2026 03:40:00.004 | Trade | Executing Market Order to Sell 1 XAUUSD (SL: 70.64, TP: 184.94)
+30/01/2026 03:40:00.004 | Trade | → Executing Market Order to Sell 1 XAUUSD (SL: 70.64, TP: 184.94) SUCCEEDED, Position PID38
+30/01/2026 03:40:00.004 | Info | MA Cross: bartime=2026-01-30 03:20, executed=2026-01-30 03:40:00, market Sell placed; SL=70.64142441131725 pips, TP=184.93924910882853 pips.
+02/02/2026 11:40:00.005 | Trade | Executing Market Order to Buy 2 XAUUSD (SL: 49.97, TP: 130.83)
+02/02/2026 11:40:00.005 | Trade | → Executing Market Order to Buy 2 XAUUSD (SL: 49.97, TP: 130.83) SUCCEEDED, Position PID39
+02/02/2026 11:40:00.005 | Info | MA Cross: bartime=2026-02-02 11:20, executed=2026-02-02 11:40:00, market Buy placed; SL=49.9725956535412 pips, TP=130.82825542097086 pips.
+02/02/2026 18:20:00.002 | Trade | Executing Market Order to Sell 2 XAUUSD (SL: 52.58, TP: 137.66)
+02/02/2026 18:20:00.002 | Trade | → Executing Market Order to Sell 2 XAUUSD (SL: 52.58, TP: 137.66) SUCCEEDED, Position PID40
+02/02/2026 18:20:00.002 | Info | MA Cross: bartime=2026-02-02 18:00, executed=2026-02-02 18:20:00, market Sell placed; SL=52.581355312026616 pips, TP=137.65798820688568 pips.
+03/02/2026 00:40:00.005 | Trade | Executing Market Order to Buy 2 XAUUSD (SL: 42.38, TP: 110.96)
+03/02/2026 00:40:00.005 | Trade | → Executing Market Order to Buy 2 XAUUSD (SL: 42.38, TP: 110.96) SUCCEEDED, Position PID41
+03/02/2026 00:40:00.005 | Info | MA Cross: bartime=2026-02-03 00:20, executed=2026-02-03 00:40:00, market Buy placed; SL=42.384864480792075 pips, TP=110.96357521071364 pips.
+04/02/2026 12:20:00.004 | Trade | Executing Market Order to Sell 5 XAUUSD (SL: 21.06, TP: 55.14)
+04/02/2026 12:20:00.004 | Trade | → Executing Market Order to Sell 5 XAUUSD (SL: 21.06, TP: 55.14) SUCCEEDED, Position PID42
+04/02/2026 12:20:00.004 | Info | MA Cross: bartime=2026-02-04 12:00, executed=2026-02-04 12:20:00, market Sell placed; SL=21.062928415373097 pips, TP=55.142746591446766 pips.
+05/02/2026 00:20:00.002 | Trade | Executing Market Order to Buy 4 XAUUSD (SL: 24.37, TP: 63.79)
+05/02/2026 00:20:00.002 | Trade | → Executing Market Order to Buy 4 XAUUSD (SL: 24.37, TP: 63.79) SUCCEEDED, Position PID43
+05/02/2026 00:20:00.002 | Info | MA Cross: bartime=2026-02-05 00:00, executed=2026-02-05 00:20:00, market Buy placed; SL=24.366570104907034 pips, TP=63.79168053464661 pips.
+05/02/2026 04:20:00.003 | Trade | Executing Market Order to Sell 2 XAUUSD (SL: 45.72, TP: 119.7)
+05/02/2026 04:20:00.003 | Trade | → Executing Market Order to Sell 2 XAUUSD (SL: 45.72, TP: 119.7) SUCCEEDED, Position PID44
+05/02/2026 04:20:00.003 | Info | MA Cross: bartime=2026-02-05 04:00, executed=2026-02-05 04:20:00, market Sell placed; SL=45.723220453741206 pips, TP=119.70339114789448 pips.
+05/02/2026 21:00:00.011 | Trade | Executing Market Order to Sell 4 XAUUSD (SL: 25.78, TP: 67.48)
+05/02/2026 21:00:00.011 | Trade | → Executing Market Order to Sell 4 XAUUSD (SL: 25.78, TP: 67.48) SUCCEEDED, Position PID45
+05/02/2026 21:00:00.011 | Info | MA Cross: bartime=2026-02-05 20:40, executed=2026-02-05 21:00:00, market Sell placed; SL=25.775916080817804 pips, TP=67.48134829958101 pips.
+06/02/2026 05:40:00.006 | Trade | Executing Market Order to Buy 3 XAUUSD (SL: 28.25, TP: 73.97)
+06/02/2026 05:40:00.006 | Trade | → Executing Market Order to Buy 3 XAUUSD (SL: 28.25, TP: 73.97) SUCCEEDED, Position PID46
+06/02/2026 05:40:00.006 | Info | MA Cross: bartime=2026-02-06 05:20, executed=2026-02-06 05:40:00, market Buy placed; SL=28.25291049541557 pips, TP=73.96611967699796 pips.
+09/02/2026 10:40:00.400 | Trade | Executing Market Order to Sell 5 XAUUSD (SL: 19.75, TP: 51.69)
+09/02/2026 10:40:00.400 | Trade | → Executing Market Order to Sell 5 XAUUSD (SL: 19.75, TP: 51.69) SUCCEEDED, Position PID47
+09/02/2026 10:40:00.400 | Info | MA Cross: bartime=2026-02-09 10:20, executed=2026-02-09 10:40:00, market Sell placed; SL=19.745782102338243 pips, TP=51.694457543921516 pips.
+09/02/2026 15:40:00.206 | Trade | Executing Market Order to Buy 5 XAUUSD (SL: 19.76, TP: 51.73)
+09/02/2026 15:40:00.206 | Trade | → Executing Market Order to Buy 5 XAUUSD (SL: 19.76, TP: 51.73) SUCCEEDED, Position PID48
+09/02/2026 15:40:00.206 | Info | MA Cross: bartime=2026-02-09 15:20, executed=2026-02-09 15:40:00, market Buy placed; SL=19.761068141388158 pips, TP=51.73447639415419 pips.
+10/02/2026 01:20:00.007 | Trade | Executing Market Order to Sell 4 XAUUSD (SL: 24.16, TP: 63.24)
+10/02/2026 01:20:00.007 | Trade | → Executing Market Order to Sell 4 XAUUSD (SL: 24.16, TP: 63.24) SUCCEEDED, Position PID49
+10/02/2026 01:20:00.007 | Info | MA Cross: bartime=2026-02-10 01:00, executed=2026-02-10 01:20:00, market Sell placed; SL=24.156860175856195 pips, TP=63.24265994039152 pips.
+10/02/2026 09:20:00.199 | Trade | Executing Market Order to Buy 6 XAUUSD (SL: 15.42, TP: 40.37)
+10/02/2026 09:20:00.199 | Trade | → Executing Market Order to Buy 6 XAUUSD (SL: 15.42, TP: 40.37) SUCCEEDED, Position PID50
+10/02/2026 09:20:00.199 | Info | MA Cross: bartime=2026-02-10 09:00, executed=2026-02-10 09:20:00, market Buy placed; SL=15.420740358167231 pips, TP=40.37149825768181 pips.
+10/02/2026 16:40:00.004 | Trade | Executing Market Order to Sell 4 XAUUSD (SL: 23.17, TP: 60.66)
+10/02/2026 16:40:00.004 | Trade | → Executing Market Order to Sell 4 XAUUSD (SL: 23.17, TP: 60.66) SUCCEEDED, Position PID51
+10/02/2026 16:40:00.004 | Info | MA Cross: bartime=2026-02-10 16:20, executed=2026-02-10 16:40:00, market Sell placed; SL=23.169489678853267 pips, TP=60.65772397923785 pips.
+11/02/2026 00:40:00.000 | Trade | Executing Market Order to Buy 7 XAUUSD (SL: 13.53, TP: 35.42)
+11/02/2026 00:40:00.000 | Trade | → Executing Market Order to Buy 7 XAUUSD (SL: 13.53, TP: 35.42) SUCCEEDED, Position PID52
+11/02/2026 00:40:00.000 | Info | MA Cross: bartime=2026-02-11 00:20, executed=2026-02-11 00:40:00, market Buy placed; SL=13.528159220667398 pips, TP=35.416720839707246 pips.
+11/02/2026 19:20:00.000 | Trade | Executing Market Order to Buy 6 XAUUSD (SL: 15.86, TP: 41.52)
+11/02/2026 19:20:00.000 | Trade | → Executing Market Order to Buy 6 XAUUSD (SL: 15.86, TP: 41.52) SUCCEEDED, Position PID53
+11/02/2026 19:20:00.000 | Info | MA Cross: bartime=2026-02-11 19:00, executed=2026-02-11 19:20:00, market Buy placed; SL=15.8577495987231 pips, TP=41.51558844945707 pips.
+12/02/2026 01:40:00.406 | Trade | Executing Market Order to Sell 7 XAUUSD (SL: 14.41, TP: 37.73)
+12/02/2026 01:40:00.406 | Trade | → Executing Market Order to Sell 7 XAUUSD (SL: 14.41, TP: 37.73) SUCCEEDED, Position PID54
+12/02/2026 01:40:00.406 | Info | MA Cross: bartime=2026-02-12 01:20, executed=2026-02-12 01:40:00, market Sell placed; SL=14.41267743677742 pips, TP=37.732389529483285 pips.
+12/02/2026 09:40:00.007 | Trade | Executing Market Order to Buy 9 XAUUSD (SL: 11.17, TP: 29.25)
+12/02/2026 09:40:00.007 | Trade | → Executing Market Order to Buy 9 XAUUSD (SL: 11.17, TP: 29.25) SUCCEEDED, Position PID55
+12/02/2026 09:40:00.007 | Info | MA Cross: bartime=2026-02-12 09:20, executed=2026-02-12 09:40:00, market Buy placed; SL=11.17320188250683 pips, TP=29.251442528402883 pips.
+12/02/2026 14:20:00.606 | Trade | Executing Market Order to Sell 7 XAUUSD (SL: 14.2, TP: 37.18)
+12/02/2026 14:20:00.606 | Trade | → Executing Market Order to Sell 7 XAUUSD (SL: 14.2, TP: 37.18) SUCCEEDED, Position PID56
+12/02/2026 14:20:00.606 | Info | MA Cross: bartime=2026-02-12 14:00, executed=2026-02-12 14:20:00, market Sell placed; SL=14.200285317883294 pips, TP=37.17634696221846 pips.
+13/02/2026 03:40:00.203 | Trade | Executing Market Order to Buy 6 XAUUSD (SL: 15.74, TP: 41.2)
+13/02/2026 03:40:00.203 | Trade | → Executing Market Order to Buy 6 XAUUSD (SL: 15.74, TP: 41.2) SUCCEEDED, Position PID57
+13/02/2026 03:40:00.203 | Info | MA Cross: bartime=2026-02-13 03:20, executed=2026-02-13 03:40:00, market Buy placed; SL=15.736405817826256 pips, TP=41.19791043106914 pips.
+13/02/2026 11:40:00.005 | Trade | Executing Market Order to Sell 6 XAUUSD (SL: 16.27, TP: 42.6)
+13/02/2026 11:40:00.005 | Trade | → Executing Market Order to Sell 6 XAUUSD (SL: 16.27, TP: 42.6) SUCCEEDED, Position PID58
+13/02/2026 11:40:00.005 | Info | MA Cross: bartime=2026-02-13 11:20, executed=2026-02-13 11:40:00, market Sell placed; SL=16.27219246180453 pips, TP=42.600599865004256 pips.
+13/02/2026 15:20:00.004 | Trade | Executing Market Order to Buy 4 XAUUSD (SL: 24.27, TP: 63.54)
+13/02/2026 15:20:00.004 | Trade | → Executing Market Order to Buy 4 XAUUSD (SL: 24.27, TP: 63.54) SUCCEEDED, Position PID59
+13/02/2026 15:20:00.004 | Info | MA Cross: bartime=2026-02-13 15:00, executed=2026-02-13 15:20:00, market Buy placed; SL=24.26980807580317 pips, TP=63.538357542452694 pips.
+16/02/2026 03:20:00.416 | Trade | Executing Market Order to Sell 6 XAUUSD (SL: 14.35, TP: 37.56)
+16/02/2026 03:20:00.416 | Trade | → Executing Market Order to Sell 6 XAUUSD (SL: 14.35, TP: 37.56) SUCCEEDED, Position PID60
+16/02/2026 03:20:00.416 | Info | MA Cross: bartime=2026-02-16 03:00, executed=2026-02-16 03:20:00, market Sell placed; SL=14.3483925622612 pips, TP=37.564091727999816 pips.
+16/02/2026 15:20:01.201 | Trade | Executing Market Order to Sell 9 XAUUSD (SL: 10.61, TP: 27.78)
+16/02/2026 15:20:01.201 | Trade | → Executing Market Order to Sell 9 XAUUSD (SL: 10.61, TP: 27.78) SUCCEEDED, Position PID61
+16/02/2026 15:20:01.201 | Info | MA Cross: bartime=2026-02-16 15:00, executed=2026-02-16 15:20:01, market Sell placed; SL=10.612640026118203 pips, TP=27.783891588377454 pips.
+18/02/2026 02:20:00.001 | Trade | Executing Market Order to Buy 6 XAUUSD (SL: 14.6, TP: 38.21)
+18/02/2026 02:20:00.001 | Trade | → Executing Market Order to Buy 6 XAUUSD (SL: 14.6, TP: 38.21) SUCCEEDED, Position PID62
+18/02/2026 02:20:00.001 | Info | MA Cross: bartime=2026-02-18 02:00, executed=2026-02-18 02:20:00, market Buy placed; SL=14.596001307642242 pips, TP=38.212331423407385 pips.
+18/02/2026 13:40:00.001 | Trade | Executing Market Order to Buy 7 XAUUSD (SL: 13.85, TP: 36.26)
+18/02/2026 13:40:00.001 | Trade | → Executing Market Order to Buy 7 XAUUSD (SL: 13.85, TP: 36.26) SUCCEEDED, Position PID63
+18/02/2026 13:40:00.001 | Info | MA Cross: bartime=2026-02-18 13:20, executed=2026-02-18 13:40:00, market Buy placed; SL=13.85128074241271 pips, TP=36.26265298363647 pips.
+19/02/2026 00:40:00.200 | Trade | Executing Market Order to Sell 8 XAUUSD (SL: 12.07, TP: 31.6)
+19/02/2026 00:40:00.200 | Trade | → Executing Market Order to Sell 8 XAUUSD (SL: 12.07, TP: 31.6) SUCCEEDED, Position PID64
+19/02/2026 00:40:00.200 | Info | MA Cross: bartime=2026-02-19 00:20, executed=2026-02-19 00:40:00, market Sell placed; SL=12.070369473176553 pips, TP=31.600227280776217 pips.
+19/02/2026 06:20:00.202 | Trade | Executing Market Order to Buy 13 XAUUSD (SL: 7.09, TP: 18.57)
+19/02/2026 06:20:00.202 | Trade | → Executing Market Order to Buy 13 XAUUSD (SL: 7.09, TP: 18.57) SUCCEEDED, Position PID65
+19/02/2026 06:20:00.202 | Info | MA Cross: bartime=2026-02-19 06:00, executed=2026-02-19 06:20:00, market Buy placed; SL=7.094428570897679 pips, TP=18.57321399861012 pips.
+19/02/2026 13:20:00.206 | Trade | Executing Market Order to Sell 10 XAUUSD (SL: 10.04, TP: 26.27)
+19/02/2026 13:20:00.206 | Trade | → Executing Market Order to Sell 10 XAUUSD (SL: 10.04, TP: 26.27) SUCCEEDED, Position PID66
+19/02/2026 13:20:00.206 | Info | MA Cross: bartime=2026-02-19 13:00, executed=2026-02-19 13:20:00, market Sell placed; SL=10.03617158161785 pips, TP=26.27469720067553 pips.
+19/02/2026 19:40:00.404 | Trade | Executing Market Order to Sell 8 XAUUSD (SL: 11.21, TP: 29.35)
+19/02/2026 19:40:00.404 | Trade | → Executing Market Order to Sell 8 XAUUSD (SL: 11.21, TP: 29.35) SUCCEEDED, Position PID67
+19/02/2026 19:40:00.404 | Info | MA Cross: bartime=2026-02-19 19:20, executed=2026-02-19 19:40:00, market Sell placed; SL=11.21070087758036 pips, TP=29.34961489750538 pips.
+23/02/2026 09:20:00.204 | Trade | Executing Market Order to Sell 8 XAUUSD (SL: 12.06, TP: 31.56)
+23/02/2026 09:20:00.204 | Trade | → Executing Market Order to Sell 8 XAUUSD (SL: 12.06, TP: 31.56) SUCCEEDED, Position PID68
+23/02/2026 09:20:00.204 | Info | MA Cross: bartime=2026-02-23 09:00, executed=2026-02-23 09:20:00, market Sell placed; SL=12.056197519300463 pips, TP=31.56312510552861 pips.
+24/02/2026 02:40:00.204 | Trade | Executing Market Order to Sell 4 XAUUSD (SL: 22.34, TP: 58.49)
+24/02/2026 02:40:00.204 | Trade | → Executing Market Order to Sell 4 XAUUSD (SL: 22.34, TP: 58.49) SUCCEEDED, Position PID69
+24/02/2026 02:40:00.204 | Info | MA Cross: bartime=2026-02-24 02:20, executed=2026-02-24 02:40:00, market Sell placed; SL=22.341335048321145 pips, TP=58.489615156504755 pips.
+25/02/2026 11:40:00.003 | Trade | Executing Market Order to Sell 7 XAUUSD (SL: 12.82, TP: 33.55)
+25/02/2026 11:40:00.003 | Trade | → Executing Market Order to Sell 7 XAUUSD (SL: 12.82, TP: 33.55) SUCCEEDED, Position PID70
+25/02/2026 11:40:00.003 | Info | MA Cross: bartime=2026-02-25 11:20, executed=2026-02-25 11:40:00, market Sell placed; SL=12.815825907046865 pips, TP=33.55183222464869 pips.
+25/02/2026 16:40:00.001 | Trade | Executing Market Order to Buy 7 XAUUSD (SL: 13.6, TP: 35.6)
+25/02/2026 16:40:00.001 | Trade | → Executing Market Order to Buy 7 XAUUSD (SL: 13.6, TP: 35.6) SUCCEEDED, Position PID71
+25/02/2026 16:40:00.001 | Info | MA Cross: bartime=2026-02-25 16:20, executed=2026-02-25 16:40:00, market Buy placed; SL=13.598177394725187 pips, TP=35.60002841939054 pips.
+25/02/2026 23:20:00.005 | Trade | Executing Market Order to Sell 5 XAUUSD (SL: 16.7, TP: 43.73)
+25/02/2026 23:20:00.005 | Trade | → Executing Market Order to Sell 5 XAUUSD (SL: 16.7, TP: 43.73) SUCCEEDED, Position PID72
+25/02/2026 23:20:00.005 | Info | MA Cross: bartime=2026-02-25 23:00, executed=2026-02-25 23:20:00, market Sell placed; SL=16.703367661932557 pips, TP=43.72941653893943 pips.
+26/02/2026 05:00:00.207 | Trade | Executing Market Order to Buy 11 XAUUSD (SL: 8.47, TP: 22.19)
+26/02/2026 05:00:00.207 | Trade | → Executing Market Order to Buy 11 XAUUSD (SL: 8.47, TP: 22.19) SUCCEEDED, Position PID73
+26/02/2026 05:00:00.207 | Info | MA Cross: bartime=2026-02-26 04:40, executed=2026-02-26 05:00:00, market Buy placed; SL=8.474192475866545 pips, TP=22.185435901818614 pips.
+26/02/2026 19:20:00.201 | Trade | Executing Market Order to Buy 7 XAUUSD (SL: 13.73, TP: 35.93)
+26/02/2026 19:20:00.201 | Trade | → Executing Market Order to Buy 7 XAUUSD (SL: 13.73, TP: 35.93) SUCCEEDED, Position PID74
+26/02/2026 19:20:00.201 | Info | MA Cross: bartime=2026-02-26 19:00, executed=2026-02-26 19:20:00, market Buy placed; SL=13.725357502962101 pips, TP=35.932985942754776 pips.
+27/02/2026 08:00:00.205 | Trade | Executing Market Order to Sell 10 XAUUSD (SL: 8.81, TP: 23.06)
+27/02/2026 08:00:00.205 | Trade | → Executing Market Order to Sell 10 XAUUSD (SL: 8.81, TP: 23.06) SUCCEEDED, Position PID75
+27/02/2026 08:00:00.205 | Info | MA Cross: bartime=2026-02-27 07:40, executed=2026-02-27 08:00:00, market Sell placed; SL=8.808116648513359 pips, TP=23.059649385807973 pips.
+27/02/2026 09:40:00.800 | Info | MA Cross: bartime=2026-02-27 09:20, Sell signal skipped: already have same-direction exposure open.
+27/02/2026 13:40:00.010 | Trade | Executing Market Order to Buy 6 XAUUSD (SL: 15.11, TP: 39.57)
+27/02/2026 13:40:00.010 | Trade | → Executing Market Order to Buy 6 XAUUSD (SL: 15.11, TP: 39.57) SUCCEEDED, Position PID76
+27/02/2026 13:40:00.010 | Info | MA Cross: bartime=2026-02-27 13:20, executed=2026-02-27 13:40:00, market Buy placed; SL=15.11311157971654 pips, TP=39.5661261156979 pips.
+27/02/2026 21:49:59.404 | Info | MA Cross: loaded=4494, processed=77, before-start=4175, not-processed=242, placed=76, failed=0, guard-skipped=0, same-direction-skipped=1, reversed=3, margin-capped=5, margin-blocked=0.
+Info | CBot instance [MA Cross, XAUUSD, m20] stopped.

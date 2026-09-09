@@ -1,0 +1,111 @@
+﻿{
+    "HasReport":  true,
+    "TimedOut":  false,
+    "ElapsedSeconds":  42,
+    "ActualStartUTC":  "2026-01-01 00:00:00",
+    "ActualEndUTC":  "2026-02-01 00:00:00",
+    "RequestedStartUTC":  "2026-01-01 00:00:00",
+    "RequestedEndUTC":  "2026-02-01 00:00:00",
+    "Main":  {
+                 "utcOffset":  0,
+                 "language":  "en",
+                 "depositAsset":  "USD",
+                 "depositAssetDigits":  2,
+                 "period":  "m30",
+                 "symbol":  "US30.cash",
+                 "brokerTitle":  "",
+                 "cBotName":  "MA Cross",
+                 "roi":  5.88,
+                 "netProfit":  588.48,
+                 "startingCapital":  10000,
+                 "endingEquity":  10588.48,
+                 "endingBalance":  10588.48,
+                 "testingPeriod":  {
+                                       "duration":  "1m",
+                                       "startDate":  1767225600000,
+                                       "endDate":  1769904000000,
+                                       "formatted":  "1m (01/01/2026 - 01/02/2026)"
+                                   },
+                 "accountType":  "hedging",
+                 "accountLeverage":  30,
+                 "data":  {
+                              "type":  "tickDataFromServer",
+                              "isCustom":  false,
+                              "customName":  null
+                          },
+                 "spread":  null,
+                 "commissions":  {
+                                     "type":  "usdPerMillionUsdVolume",
+                                     "value":  0,
+                                     "applyCommissionAutomatically":  false
+                                 },
+                 "theme":  "dark",
+                 "titleKind":  "backtesting",
+                 "authorNickName":  "votuankiet96",
+                 "authorLink":  null,
+                 "cBotLink":  null,
+                 "embedded":  false
+             },
+    "TradeStatistics":  {
+                            "netProfit":  {
+                                              "all":  588.48,
+                                              "long":  304.77,
+                                              "short":  283.71
+                                          },
+                            "profitFactor":  {
+                                                 "all":  1.55,
+                                                 "long":  1.51,
+                                                 "short":  1.6
+                                             },
+                            "commissions":  {
+                                                "all":  0,
+                                                "long":  0,
+                                                "short":  0
+                                            },
+                            "swaps":  {
+                                          "all":  -22.37,
+                                          "long":  -22.68,
+                                          "short":  0.31
+                                      },
+                            "totalTrades":  {
+                                                "all":  24,
+                                                "long":  13,
+                                                "short":  11
+                                            },
+                            "winningTrades":  {
+                                                  "all":  8,
+                                                  "long":  4,
+                                                  "short":  4
+                                              },
+                            "maxConsecutiveWinningTrades":  {
+                                                                "all":  3,
+                                                                "long":  2,
+                                                                "short":  3
+                                                            },
+                            "largestWinningTrade":  {
+                                                        "all":  271.01,
+                                                        "long":  271.01,
+                                                        "short":  269.5
+                                                    },
+                            "losingTrades":  {
+                                                 "all":  16,
+                                                 "long":  9,
+                                                 "short":  7
+                                             },
+                            "maxConsecutiveLosingTrades":  {
+                                                               "all":  5,
+                                                               "long":  7,
+                                                               "short":  6
+                                                           },
+                            "largestLosingTrade":  {
+                                                       "all":  -106.76,
+                                                       "long":  -105.78,
+                                                       "short":  -106.76
+                                                   },
+                            "averageTrade":  {
+                                                 "all":  24.52,
+                                                 "long":  23.44,
+                                                 "short":  25.79
+                                             }
+                        }
+}

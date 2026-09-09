@@ -1,0 +1,17 @@
+﻿[
+    "backtest",
+    "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\diagnostics\\minimal-safety-2026-09-06\\before\\MA Cross.algo",
+    "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\MACross_US30.cash_m30_control_before_20260906-060733\\params.cbotset",
+    "--start=01/01/2026 00:00",
+    "--end=01/02/2026",
+    "--data-mode=Ticks",
+    "--balance=10000",
+    "--ctid=votuankiet96@gmail.com",
+    "--pwd-file=C:\\Users\\Administrator\\.ctrader-cli-pwd.txt",
+    "--account=7563609",
+    "--broker=FTMO Platform",
+    "--symbol=US30.cash",
+    "--period=m30",
+    "--full-access",
+    "--report-json=C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\MACross_US30.cash_m30_control_before_20260906-060733\\report.json"
+]

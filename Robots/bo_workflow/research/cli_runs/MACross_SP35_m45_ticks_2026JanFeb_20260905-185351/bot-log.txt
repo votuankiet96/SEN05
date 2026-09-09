@@ -1,0 +1,70 @@
+Info | CBot instance [MA Cross, SPN35.cash, m45] started.
+02/01/2026 08:05:00.009 | Info | MA Cross: loaded 1012 valid signal row(s) from CSV.
+02/01/2026 08:05:00.009 | Info | MA Cross: signal scheduling active with chart timeframe m45 (00:45:00); CSV timeframe must match the chart timeframe.
+07/01/2026 14:30:00.009 | Trade | Executing Market Order to Sell 2.03 SPN35.cash (SL: 41.61, TP: 108.94)
+07/01/2026 14:30:00.009 | Trade | → Executing Market Order to Sell 2.03 SPN35.cash (SL: 41.61, TP: 108.94) SUCCEEDED, Position PID1
+07/01/2026 14:30:00.009 | Info | MA Cross: bartime=2026-01-07 13:45, executed=2026-01-07 14:30:00, market Sell placed; SL=41.61310486445417 pips, TP=108.94310853514102 pips.
+08/01/2026 17:30:14.408 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 2.36 units, which needs about $5709.74 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4949.59 budget, free margin was $9899.17). Size was cut from 2.36 to 2.00 units. Real risk on this trade is now about $83.68 (0.85% of balance) instead of the requested 1.00%.
+08/01/2026 17:30:14.408 | Trade | Executing Market Order to Buy 2 SPN35.cash (SL: 35.48, TP: 92.88)
+08/01/2026 17:30:14.408 | Trade | → Executing Market Order to Buy 2 SPN35.cash (SL: 35.48, TP: 92.88) SUCCEEDED, Position PID2
+08/01/2026 17:30:14.408 | Info | MA Cross: bartime=2026-01-08 16:45, executed=2026-01-08 17:30:14, market Buy placed; SL=35.477725738369266 pips, TP=92.88068598305074 pips.
+13/01/2026 08:05:00.005 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 2.95 units, which needs about $7137.18 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4903.12 budget, free margin was $9806.24). Size was cut from 2.95 to 1.98 units. Real risk on this trade is now about $65.76 (0.67% of balance) instead of the requested 1.00%.
+13/01/2026 08:05:00.005 | Trade | Executing Market Order to Buy 1.98 SPN35.cash (SL: 28.16, TP: 73.73)
+13/01/2026 08:05:00.005 | Trade | → Executing Market Order to Buy 1.98 SPN35.cash (SL: 28.16, TP: 73.73) SUCCEEDED, Position PID3
+13/01/2026 08:05:00.005 | Info | MA Cross: bartime=2026-01-12 18:15, executed=2026-01-13 08:05:00, market Buy placed; SL=28.16124403272726 pips, TP=73.72613687767996 pips.
+15/01/2026 08:30:15.407 | Trade | Executing Market Order to Sell 1.49 SPN35.cash (SL: 55.4, TP: 145.03)
+15/01/2026 08:30:15.407 | Trade | → Executing Market Order to Sell 1.49 SPN35.cash (SL: 55.4, TP: 145.03) SUCCEEDED, Position PID4
+15/01/2026 08:30:15.407 | Info | MA Cross: bartime=2026-01-15 07:45, executed=2026-01-15 08:30:15, market Sell placed; SL=55.3954476208171 pips, TP=145.02528187129917 pips.
+20/01/2026 09:15:00.823 | Trade | Executing Market Order to Sell 1.11 SPN35.cash (SL: 73.17, TP: 191.56)
+20/01/2026 09:15:00.823 | Trade | → Executing Market Order to Sell 1.11 SPN35.cash (SL: 73.17, TP: 191.56) SUCCEEDED, Position PID5
+20/01/2026 09:15:00.823 | Info | MA Cross: bartime=2026-01-20 08:30, executed=2026-01-20 09:15:00, market Sell placed; SL=73.17107169915934 pips, TP=191.56186570839915 pips.
+22/01/2026 09:15:00.410 | Trade | Executing Market Order to Buy 0.77 SPN35.cash (SL: 104.71, TP: 274.13)
+22/01/2026 09:15:00.410 | Trade | → Executing Market Order to Buy 0.77 SPN35.cash (SL: 104.71, TP: 274.13) SUCCEEDED, Position PID6
+22/01/2026 09:15:00.410 | Info | MA Cross: bartime=2026-01-22 08:30, executed=2026-01-22 09:15:00, market Buy placed; SL=104.71000854681844 pips, TP=274.1308023755707 pips.
+23/01/2026 18:15:28.607 | Trade | Executing Market Order to Sell 1.9 SPN35.cash (SL: 42.11, TP: 110.23)
+23/01/2026 18:15:28.607 | Trade | → Executing Market Order to Sell 1.9 SPN35.cash (SL: 42.11, TP: 110.23) SUCCEEDED, Position PID7
+23/01/2026 18:15:28.607 | Info | MA Cross: bartime=2026-01-23 17:30, executed=2026-01-23 18:15:28, market Sell placed; SL=42.106027102583454 pips, TP=110.23357895456348 pips.
+26/01/2026 13:45:00.342 | Trade | Executing Market Order to Buy 1.92 SPN35.cash (SL: 41.18, TP: 107.81)
+26/01/2026 13:45:00.342 | Trade | → Executing Market Order to Buy 1.92 SPN35.cash (SL: 41.18, TP: 107.81) SUCCEEDED, Position PID8
+26/01/2026 13:45:00.342 | Info | MA Cross: bartime=2026-01-26 13:00, executed=2026-01-26 13:45:00, market Buy placed; SL=41.179646051852416 pips, TP=107.80831336374962 pips.
+28/01/2026 13:00:00.244 | Trade | Executing Market Order to Sell 1.44 SPN35.cash (SL: 56.25, TP: 147.25)
+28/01/2026 13:00:00.244 | Trade | → Executing Market Order to Sell 1.44 SPN35.cash (SL: 56.25, TP: 147.25) SUCCEEDED, Position PID9
+28/01/2026 13:00:00.244 | Info | MA Cross: bartime=2026-01-28 12:15, executed=2026-01-28 13:00:00, market Sell placed; SL=56.24677248165172 pips, TP=147.2540503569642 pips.
+29/01/2026 14:30:01.248 | Trade | Executing Market Order to Buy 1.71 SPN35.cash (SL: 46.89, TP: 122.75)
+29/01/2026 14:30:01.248 | Trade | → Executing Market Order to Buy 1.71 SPN35.cash (SL: 46.89, TP: 122.75) SUCCEEDED, Position PID10
+29/01/2026 14:30:01.248 | Info | MA Cross: bartime=2026-01-29 13:45, executed=2026-01-29 14:30:01, market Buy placed; SL=46.88505930689111 pips, TP=122.74508526544092 pips.
+04/02/2026 16:00:00.793 | Trade | Executing Market Order to Buy 1.08 SPN35.cash (SL: 73.73, TP: 193.02)
+04/02/2026 16:00:00.793 | Trade | → Executing Market Order to Buy 1.08 SPN35.cash (SL: 73.73, TP: 193.02) SUCCEEDED, Position PID11
+04/02/2026 16:00:00.793 | Info | MA Cross: bartime=2026-02-04 15:15, executed=2026-02-04 16:00:00, market Buy placed; SL=73.72945342015242 pips, TP=193.02370905395904 pips.
+05/02/2026 09:15:03.494 | Trade | Executing Market Order to Sell 0.68 SPN35.cash (SL: 115.05, TP: 301.2)
+05/02/2026 09:15:03.494 | Trade | → Executing Market Order to Sell 0.68 SPN35.cash (SL: 115.05, TP: 301.2) SUCCEEDED, Position PID12
+05/02/2026 09:15:03.494 | Info | MA Cross: bartime=2026-02-05 08:30, executed=2026-02-05 09:15:03, market Sell placed; SL=115.04925138989823 pips, TP=301.1989401387535 pips.
+06/02/2026 17:30:02.794 | Info | MA Cross: bartime=2026-02-06 16:45, reversal - closing existing Sell position 12 before opening opposite direction.
+06/02/2026 17:30:02.794 | Trade | Closing position PID12 (Volume: 0.68)
+06/02/2026 17:30:02.794 | Trade | → Closing position PID12 (Volume: 0.68) SUCCEEDED
+06/02/2026 17:30:02.794 | Trade | Executing Market Order to Buy 1.45 SPN35.cash (SL: 53.67, TP: 140.52)
+06/02/2026 17:30:02.794 | Trade | → Executing Market Order to Buy 1.45 SPN35.cash (SL: 53.67, TP: 140.52) SUCCEEDED, Position PID13
+06/02/2026 17:30:02.794 | Info | MA Cross: bartime=2026-02-06 16:45, executed=2026-02-06 17:30:02, market Buy placed; SL=53.67300266527445 pips, TP=140.51592097768852 pips.
+11/02/2026 10:45:01.114 | Trade | Executing Market Order to Sell 1.02 SPN35.cash (SL: 78.2, TP: 204.74)
+11/02/2026 10:45:01.114 | Trade | → Executing Market Order to Sell 1.02 SPN35.cash (SL: 78.2, TP: 204.74) SUCCEEDED, Position PID14
+11/02/2026 10:45:01.114 | Info | MA Cross: bartime=2026-02-11 10:00, executed=2026-02-11 10:45:01, market Sell placed; SL=78.20348168125872 pips, TP=204.73671504153532 pips.
+16/02/2026 15:15:01.995 | Trade | Executing Market Order to Buy 1.65 SPN35.cash (SL: 48.03, TP: 125.73)
+16/02/2026 15:15:01.995 | Trade | → Executing Market Order to Buy 1.65 SPN35.cash (SL: 48.03, TP: 125.73) SUCCEEDED, Position PID15
+16/02/2026 15:15:01.995 | Info | MA Cross: bartime=2026-02-16 14:30, executed=2026-02-16 15:15:01, market Buy placed; SL=48.02589254861708 pips, TP=125.73178669227951 pips.
+19/02/2026 15:15:00.396 | Trade | Executing Market Order to Sell 1.43 SPN35.cash (SL: 57.76, TP: 151.2)
+19/02/2026 15:15:00.396 | Trade | → Executing Market Order to Sell 1.43 SPN35.cash (SL: 57.76, TP: 151.2) SUCCEEDED, Position PID16
+19/02/2026 15:15:00.396 | Info | MA Cross: bartime=2026-02-19 14:30, executed=2026-02-19 15:15:00, market Sell placed; SL=57.75534024255127 pips, TP=151.20348075499922 pips.
+20/02/2026 16:00:00.496 | Trade | Executing Market Order to Buy 1.09 SPN35.cash (SL: 74.65, TP: 195.43)
+20/02/2026 16:00:00.496 | Trade | → Executing Market Order to Buy 1.09 SPN35.cash (SL: 74.65, TP: 195.43) SUCCEEDED, Position PID17
+20/02/2026 16:00:00.496 | Info | MA Cross: bartime=2026-02-20 15:15, executed=2026-02-20 16:00:00, market Buy placed; SL=74.64761043705458 pips, TP=195.42744412420888 pips.
+24/02/2026 13:00:00.438 | Trade | Executing Market Order to Sell 1.27 SPN35.cash (SL: 65.84, TP: 172.36)
+24/02/2026 13:00:00.438 | Trade | → Executing Market Order to Sell 1.27 SPN35.cash (SL: 65.84, TP: 172.36) SUCCEEDED, Position PID18
+24/02/2026 13:00:00.438 | Info | MA Cross: bartime=2026-02-24 12:15, executed=2026-02-24 13:00:00, market Sell placed; SL=65.83690188109202 pips, TP=172.36100912469888 pips.
+25/02/2026 13:00:00.737 | Trade | Executing Market Order to Buy 1.75 SPN35.cash (SL: 47.34, TP: 123.93)
+25/02/2026 13:00:00.737 | Trade | → Executing Market Order to Buy 1.75 SPN35.cash (SL: 47.34, TP: 123.93) SUCCEEDED, Position PID19
+25/02/2026 13:00:00.737 | Info | MA Cross: bartime=2026-02-25 12:15, executed=2026-02-25 13:00:00, market Buy placed; SL=47.33594057581462 pips, TP=123.92549242748267 pips.
+27/02/2026 17:30:07.137 | Trade | Executing Market Order to Sell 1.02 SPN35.cash (SL: 82.72, TP: 216.55)
+27/02/2026 17:30:07.137 | Trade | → Executing Market Order to Sell 1.02 SPN35.cash (SL: 82.72, TP: 216.55) SUCCEEDED, Position PID20
+27/02/2026 17:30:07.137 | Info | MA Cross: bartime=2026-02-27 16:45, executed=2026-02-27 17:30:07, market Sell placed; SL=82.71691169895337 pips, TP=216.5528748278599 pips.
+27/02/2026 18:59:42.036 | Info | MA Cross: loaded=1012, processed=20, before-start=927, not-processed=65, placed=20, failed=0, guard-skipped=0, same-direction-skipped=0, reversed=1, margin-capped=2, margin-blocked=0.
+Info | CBot instance [MA Cross, SPN35.cash, m45] stopped.

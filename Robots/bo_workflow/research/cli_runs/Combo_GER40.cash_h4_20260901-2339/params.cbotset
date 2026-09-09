@@ -1,0 +1,6 @@
+﻿{
+    "Parameters":  {
+                       "RiskPercent":  "0.5",
+                       "SignalFilePath":  "Z:\\Desktop\\og_program\\runtime\\exports\\combo_DE40_H4_full_history_signals.csv"
+                   }
+}

@@ -1,0 +1,19 @@
+{
+  "Chart": {
+    "Symbol": "JP225.cash",
+    "Period": "m45"
+  },
+  "Parameters": {
+    "SignalFilePath": "Z:\\Desktop\\og_program\\runtime\\exports\\ma_cross_J225_M45_full_history_signals.csv",
+    "KslLevel": "2",
+    "KtpLevel": "4",
+    "RiskPercent": "1",
+    "MaxMarginPercent": "50",
+    "EnableDailyLossLimit": "False",
+    "MaxDailyLossPercent": "5",
+    "EnableMaxDrawdown": "False",
+    "MaxTotalDrawdownPercent": "10",
+    "EnableMaxConsecutiveLosses": "False",
+    "MaxConsecutiveLosses": "5"
+  }
+}

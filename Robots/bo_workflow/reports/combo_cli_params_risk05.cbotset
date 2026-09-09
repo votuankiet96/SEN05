@@ -1,0 +1,14 @@
+{
+  "Parameters": {
+    "SignalFilePath": "Z:\\Desktop\\og_program\\runtime\\exports\\combo_US30_H4_full_history_signals.csv",
+    "KslLevel": "3",
+    "KtpLevel": "3",
+    "RiskPercent": "0.5",
+    "EnableDailyLossLimit": "False",
+    "MaxDailyLossPercent": "5",
+    "EnableMaxDrawdown": "False",
+    "MaxTotalDrawdownPercent": "10",
+    "EnableMaxConsecutiveLosses": "False",
+    "MaxConsecutiveLosses": "5"
+  }
+}

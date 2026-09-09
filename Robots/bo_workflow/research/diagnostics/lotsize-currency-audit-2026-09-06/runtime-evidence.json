@@ -1,0 +1,132 @@
+[
+  {
+    "group": "DE40",
+    "symbol": "GER40.cash",
+    "base_asset": "German 30 Index",
+    "quote_asset": "EUR",
+    "lot_size_units": 1.0,
+    "step_volume_units": 0.01,
+    "pip_position": 0,
+    "closed_trades": 6,
+    "money_per_point_per_unit_median": 1.0315585780033603,
+    "money_per_point_per_unit_min": 1.0315186246418595,
+    "money_per_point_per_unit_max": 1.0315629969444646,
+    "conversion_symbols": [
+      "EURUSD"
+    ],
+    "source_report": "research/cli_batches/Combo_11sym_1wk_20260904/DE40/report.json"
+  },
+  {
+    "group": "FR40",
+    "symbol": "FRA40.cash",
+    "base_asset": "France 40 Index",
+    "quote_asset": "EUR",
+    "lot_size_units": 1.0,
+    "step_volume_units": 0.01,
+    "pip_position": 0,
+    "closed_trades": 4,
+    "money_per_point_per_unit_median": 1.0315708547768225,
+    "money_per_point_per_unit_min": 1.0315177171692749,
+    "money_per_point_per_unit_max": 1.0315763248085972,
+    "conversion_symbols": [
+      "EURUSD"
+    ],
+    "source_report": "research/cli_batches/Combo_11sym_1wk_20260904/FR40/report.json"
+  },
+  {
+    "group": "SP35",
+    "symbol": "SPN35.cash",
+    "base_asset": "Spain 35 Cash Index",
+    "quote_asset": "EUR",
+    "lot_size_units": 1.0,
+    "step_volume_units": 0.01,
+    "pip_position": 0,
+    "closed_trades": 3,
+    "money_per_point_per_unit_median": 1.0315343661662486,
+    "money_per_point_per_unit_min": 1.031532446430374,
+    "money_per_point_per_unit_max": 1.0315440164413485,
+    "conversion_symbols": [
+      "EURUSD"
+    ],
+    "source_report": "research/cli_batches/Combo_11sym_1wk_20260904/SP35/report.json"
+  },
+  {
+    "group": "HK50",
+    "symbol": "HK50.cash",
+    "base_asset": "Hong Kong Index",
+    "quote_asset": "HKD",
+    "lot_size_units": 1.0,
+    "step_volume_units": 0.01,
+    "pip_position": 0,
+    "closed_trades": 5,
+    "money_per_point_per_unit_median": 0.12857069708199792,
+    "money_per_point_per_unit_min": 0.1285686808881319,
+    "money_per_point_per_unit_max": 0.1285765775756889,
+    "conversion_symbols": [
+      "USDHKD"
+    ],
+    "source_report": "research/cli_batches/Combo_11sym_1wk_20260904/HK50/report.json"
+  },
+  {
+    "group": "JP225",
+    "symbol": "JP225.cash",
+    "base_asset": "Japan 225 Index",
+    "quote_asset": "JPY",
+    "lot_size_units": 10.0,
+    "step_volume_units": 0.1,
+    "pip_position": 0,
+    "closed_trades": 11,
+    "money_per_point_per_unit_median": 0.00631752948180453,
+    "money_per_point_per_unit_min": 0.006317272352405864,
+    "money_per_point_per_unit_max": 0.006317900053225407,
+    "conversion_symbols": [
+      "USDJPY"
+    ],
+    "source_report": "research/cli_batches/Combo_11sym_1wk_20260904/J225/report.json"
+  },
+  {
+    "group": "US30",
+    "symbol": "US30.cash",
+    "base_asset": "US 30 Index",
+    "quote_asset": "USD",
+    "lot_size_units": 1.0,
+    "step_volume_units": 0.01,
+    "pip_position": 0,
+    "closed_trades": 6,
+    "money_per_point_per_unit_median": 1.000029789158198,
+    "money_per_point_per_unit_min": 0.9991197183110878,
+    "money_per_point_per_unit_max": 1.0004642525543623,
+    "conversion_symbols": [],
+    "source_report": "research/cli_batches/Combo_11sym_1wk_20260904/US30/report.json"
+  },
+  {
+    "group": "BTCUSD",
+    "symbol": "BTCUSD",
+    "base_asset": "BTCUSD",
+    "quote_asset": "USD",
+    "lot_size_units": 1.0,
+    "step_volume_units": 0.01,
+    "pip_position": 0,
+    "closed_trades": 7,
+    "money_per_point_per_unit_median": 1.0000700656281423,
+    "money_per_point_per_unit_min": 0.9998570271172164,
+    "money_per_point_per_unit_max": 1.000319704451015,
+    "conversion_symbols": [],
+    "source_report": "research/cli_batches/Combo_11sym_1wk_20260904/BTCUSD/report.json"
+  },
+  {
+    "group": "GOLD",
+    "symbol": "XAUUSD",
+    "base_asset": "XAU",
+    "quote_asset": "USD",
+    "lot_size_units": 100.0,
+    "step_volume_units": 1.0,
+    "pip_position": 0,
+    "closed_trades": 4,
+    "money_per_point_per_unit_median": 0.9999999999999796,
+    "money_per_point_per_unit_min": 0.9999999999999245,
+    "money_per_point_per_unit_max": 1.000000000000001,
+    "conversion_symbols": [],
+    "source_report": "research/cli_batches/Combo_11sym_1wk_20260904/GOLD/report.json"
+  }
+]

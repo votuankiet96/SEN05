@@ -1,0 +1,1668 @@
+﻿ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\MA Cross.algo C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\MACross_BTCUSD_m20_ticks_2026JanFeb_20260905-185351\params.cbotset --start=01/01/2026 00:00 --end=28/02/2026 23:59 --data-mode=Ticks --balance=10000 --ctid=votuankiet96@gmail.com --pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=BTCUSD --period=m20 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\MACross_BTCUSD_m20_ticks_2026JanFeb_20260905-185351\report.json
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | BTCUSD                    | cmd arg              |
+| Period               | m20                       | cmd arg              |
+| Start                | 01/01/2026 00:00          | cmd arg              |
+| End                  | 28/02/2026 23:59          | cmd arg              |
+| Balance              | 10000                     | cmd arg              |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 2                         | cbotset              |
+| KtpLevel             | 4                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 50                        | cbotset              |
+| EnableDailyLossLimit | False                     | cbotset              |
+| MaxDailyLossPercent  | 5                         | cbotset              |
+| EnableMaxDrawdown    | False                     | cbotset              |
+| MaxTotalDrawdownP... | 10                        | cbotset              |
+| EnableMaxConsecut... | False                     | cbotset              |
+| MaxConsecutiveLosses | 5                         | cbotset              |
+---------------------------------------------------------------------------
+06/09/2026 01:57:20.297 | Establishing connection using votuankiet96@gmail.com...
+06/09/2026 01:57:22.887 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Info | CBot instance [MA Cross, BTCUSD, m20] started.
+Progress | Backtesting | 0.00 % |
+Progress | Backtesting | 0.11 % |
+Progress | Backtesting | 0.14 % |
+Progress | Backtesting | 0.16 % |
+Progress | Backtesting | 0.19 % |
+Progress | Backtesting | 0.24 % |
+Progress | Backtesting | 0.28 % |
+Progress | Backtesting | 0.48 % |
+Progress | Backtesting | 0.59 % |
+Progress | Backtesting | 0.70 % |
+Progress | Backtesting | 0.84 % |
+Progress | Backtesting | 0.92 % |
+Progress | Backtesting | 1.07 % |
+Progress | Backtesting | 1.15 % |
+Progress | Backtesting | 1.31 % |
+Progress | Backtesting | 1.69 % |
+Progress | Backtesting | 1.81 % |
+Progress | Backtesting | 1.95 % |
+Progress | Backtesting | 2.07 % |
+Progress | Backtesting | 2.27 % |
+Progress | Backtesting | 2.40 % |
+Progress | Backtesting | 2.52 % |
+Progress | Backtesting | 2.67 % |
+Progress | Backtesting | 2.74 % |
+Progress | Backtesting | 2.79 % |
+Progress | Backtesting | 2.84 % |
+Progress | Backtesting | 2.89 % |
+Progress | Backtesting | 2.94 % |
+Progress | Backtesting | 3.09 % |
+Progress | Backtesting | 3.15 % |
+Progress | Backtesting | 3.29 % |
+Progress | Backtesting | 3.39 % |
+Progress | Backtesting | 3.55 % |
+Progress | Backtesting | 3.74 % |
+Progress | Backtesting | 3.89 % |
+Progress | Backtesting | 3.99 % |
+Progress | Backtesting | 4.09 % |
+Progress | Backtesting | 4.28 % |
+Progress | Backtesting | 4.43 % |
+Progress | Backtesting | 4.65 % |
+Progress | Backtesting | 4.69 % |
+Progress | Backtesting | 4.88 % |
+Progress | Backtesting | 5.08 % |
+Progress | Backtesting | 5.15 % |
+Progress | Backtesting | 5.28 % |
+Progress | Backtesting | 5.42 % |
+Progress | Backtesting | 5.55 % |
+Progress | Backtesting | 5.70 % |
+Progress | Backtesting | 5.86 % |
+Progress | Backtesting | 6.05 % |
+Progress | Backtesting | 6.24 % |
+Progress | Backtesting | 6.44 % |
+Progress | Backtesting | 6.70 % |
+Progress | Backtesting | 6.78 % |
+Progress | Backtesting | 6.84 % |
+Progress | Backtesting | 6.91 % |
+Progress | Backtesting | 6.99 % |
+Progress | Backtesting | 7.12 % |
+Progress | Backtesting | 7.25 % |
+Progress | Backtesting | 7.43 % |
+Progress | Backtesting | 7.59 % |
+Progress | Backtesting | 7.74 % |
+Progress | Backtesting | 7.83 % |
+Progress | Backtesting | 7.88 % |
+Progress | Backtesting | 7.96 % |
+Progress | Backtesting | 8.03 % |
+Progress | Backtesting | 8.12 % |
+Progress | Backtesting | 8.21 % |
+Progress | Backtesting | 8.31 % |
+Progress | Backtesting | 8.47 % |
+Progress | Backtesting | 8.56 % |
+Progress | Backtesting | 8.64 % |
+Progress | Backtesting | 8.73 % |
+Progress | Backtesting | 8.87 % |
+Progress | Backtesting | 9.00 % |
+Progress | Backtesting | 9.09 % |
+Progress | Backtesting | 9.20 % |
+Progress | Backtesting | 9.34 % |
+Progress | Backtesting | 9.44 % |
+Progress | Backtesting | 9.49 % |
+Progress | Backtesting | 9.52 % |
+Progress | Backtesting | 9.56 % |
+Progress | Backtesting | 9.60 % |
+Progress | Backtesting | 9.64 % |
+Progress | Backtesting | 9.68 % |
+Progress | Backtesting | 9.72 % |
+Progress | Backtesting | 9.75 % |
+Progress | Backtesting | 9.79 % |
+Progress | Backtesting | 9.83 % |
+Progress | Backtesting | 9.89 % |
+Progress | Backtesting | 9.94 % |
+Progress | Backtesting | 9.99 % |
+Progress | Backtesting | 10.08 % |
+Progress | Backtesting | 10.15 % |
+Progress | Backtesting | 10.17 % |
+Progress | Backtesting | 10.21 % |
+Progress | Backtesting | 10.27 % |
+Progress | Backtesting | 10.33 % |
+Progress | Backtesting | 10.41 % |
+Progress | Backtesting | 10.50 % |
+Progress | Backtesting | 10.59 % |
+Progress | Backtesting | 10.69 % |
+Progress | Backtesting | 10.78 % |
+Progress | Backtesting | 10.86 % |
+Progress | Backtesting | 10.95 % |
+Progress | Backtesting | 11.07 % |
+Progress | Backtesting | 11.16 % |
+Progress | Backtesting | 11.20 % |
+Progress | Backtesting | 11.23 % |
+Progress | Backtesting | 11.27 % |
+Progress | Backtesting | 11.32 % |
+Progress | Backtesting | 11.37 % |
+Progress | Backtesting | 11.42 % |
+Progress | Backtesting | 11.47 % |
+Progress | Backtesting | 11.52 % |
+Progress | Backtesting | 11.59 % |
+Progress | Backtesting | 11.65 % |
+Progress | Backtesting | 11.78 % |
+Progress | Backtesting | 11.86 % |
+Progress | Backtesting | 11.86 % |
+Progress | Backtesting | 11.93 % |
+Progress | Backtesting | 12.01 % |
+Progress | Backtesting | 12.06 % |
+Progress | Backtesting | 12.11 % |
+Progress | Backtesting | 12.16 % |
+Progress | Backtesting | 12.21 % |
+Progress | Backtesting | 12.28 % |
+Progress | Backtesting | 12.31 % |
+Progress | Backtesting | 12.38 % |
+Progress | Backtesting | 12.43 % |
+Progress | Backtesting | 12.49 % |
+Progress | Backtesting | 12.55 % |
+Progress | Backtesting | 12.61 % |
+Progress | Backtesting | 12.65 % |
+Progress | Backtesting | 12.71 % |
+Progress | Backtesting | 12.74 % |
+Progress | Backtesting | 12.82 % |
+Progress | Backtesting | 12.89 % |
+Progress | Backtesting | 12.94 % |
+Progress | Backtesting | 12.98 % |
+Progress | Backtesting | 13.04 % |
+Progress | Backtesting | 13.11 % |
+Progress | Backtesting | 13.17 % |
+Progress | Backtesting | 13.26 % |
+Progress | Backtesting | 13.32 % |
+Progress | Backtesting | 13.41 % |
+Progress | Backtesting | 13.55 % |
+Progress | Backtesting | 13.56 % |
+Progress | Backtesting | 13.65 % |
+Progress | Backtesting | 13.74 % |
+Progress | Backtesting | 13.85 % |
+Progress | Backtesting | 13.95 % |
+Progress | Backtesting | 14.07 % |
+Progress | Backtesting | 14.19 % |
+Progress | Backtesting | 14.28 % |
+Progress | Backtesting | 14.43 % |
+Progress | Backtesting | 14.54 % |
+Progress | Backtesting | 14.62 % |
+Progress | Backtesting | 14.67 % |
+Progress | Backtesting | 14.73 % |
+Progress | Backtesting | 14.79 % |
+Progress | Backtesting | 14.85 % |
+Progress | Backtesting | 14.93 % |
+Progress | Backtesting | 15.03 % |
+Progress | Backtesting | 15.15 % |
+Progress | Backtesting | 15.26 % |
+Progress | Backtesting | 15.43 % |
+Progress | Backtesting | 15.65 % |
+Progress | Backtesting | 16.95 % |
+Progress | Backtesting | 17.24 % |
+Progress | Backtesting | 17.65 % |
+Progress | Backtesting | 17.98 % |
+Progress | Backtesting | 18.12 % |
+Progress | Backtesting | 18.28 % |
+Progress | Backtesting | 18.44 % |
+Progress | Backtesting | 18.56 % |
+Progress | Backtesting | 18.64 % |
+Progress | Backtesting | 18.73 % |
+Progress | Backtesting | 18.80 % |
+Progress | Backtesting | 18.86 % |
+Progress | Backtesting | 18.97 % |
+Progress | Backtesting | 19.16 % |
+Progress | Backtesting | 19.27 % |
+Progress | Backtesting | 19.40 % |
+Progress | Backtesting | 19.56 % |
+Progress | Backtesting | 19.67 % |
+Progress | Backtesting | 19.73 % |
+Progress | Backtesting | 19.81 % |
+Progress | Backtesting | 19.89 % |
+Progress | Backtesting | 19.99 % |
+Progress | Backtesting | 20.14 % |
+Progress | Backtesting | 20.34 % |
+Progress | Backtesting | 20.46 % |
+Progress | Backtesting | 20.65 % |
+Progress | Backtesting | 20.77 % |
+Progress | Backtesting | 20.87 % |
+Progress | Backtesting | 21.00 % |
+Progress | Backtesting | 21.15 % |
+Progress | Backtesting | 21.31 % |
+Progress | Backtesting | 21.39 % |
+Progress | Backtesting | 21.44 % |
+Progress | Backtesting | 21.51 % |
+Progress | Backtesting | 21.61 % |
+Progress | Backtesting | 21.82 % |
+Progress | Backtesting | 21.91 % |
+Progress | Backtesting | 21.96 % |
+Progress | Backtesting | 22.03 % |
+Progress | Backtesting | 22.13 % |
+Progress | Backtesting | 22.26 % |
+Progress | Backtesting | 22.43 % |
+Progress | Backtesting | 22.56 % |
+Progress | Backtesting | 22.73 % |
+Progress | Backtesting | 22.87 % |
+Progress | Backtesting | 23.02 % |
+Progress | Backtesting | 23.09 % |
+Progress | Backtesting | 23.14 % |
+Progress | Backtesting | 23.19 % |
+Progress | Backtesting | 23.25 % |
+Progress | Backtesting | 23.33 % |
+Progress | Backtesting | 23.41 % |
+Progress | Backtesting | 23.50 % |
+Progress | Backtesting | 23.64 % |
+Progress | Backtesting | 23.73 % |
+Progress | Backtesting | 23.84 % |
+Progress | Backtesting | 23.93 % |
+Progress | Backtesting | 23.99 % |
+Progress | Backtesting | 24.09 % |
+Progress | Backtesting | 24.20 % |
+Progress | Backtesting | 24.28 % |
+Progress | Backtesting | 24.37 % |
+Progress | Backtesting | 24.47 % |
+Progress | Backtesting | 24.63 % |
+Progress | Backtesting | 24.75 % |
+Progress | Backtesting | 24.81 % |
+Progress | Backtesting | 24.87 % |
+Progress | Backtesting | 24.93 % |
+Progress | Backtesting | 24.99 % |
+Progress | Backtesting | 25.05 % |
+Progress | Backtesting | 25.08 % |
+Progress | Backtesting | 25.11 % |
+Progress | Backtesting | 25.16 % |
+Progress | Backtesting | 25.21 % |
+Progress | Backtesting | 25.32 % |
+Progress | Backtesting | 25.42 % |
+Progress | Backtesting | 25.42 % |
+Progress | Backtesting | 25.53 % |
+Progress | Backtesting | 25.64 % |
+Progress | Backtesting | 25.76 % |
+Progress | Backtesting | 25.90 % |
+Progress | Backtesting | 26.07 % |
+Progress | Backtesting | 26.26 % |
+Progress | Backtesting | 26.44 % |
+Progress | Backtesting | 26.49 % |
+Progress | Backtesting | 26.57 % |
+Progress | Backtesting | 26.64 % |
+Progress | Backtesting | 26.78 % |
+Progress | Backtesting | 26.87 % |
+Progress | Backtesting | 27.05 % |
+Progress | Backtesting | 27.13 % |
+Progress | Backtesting | 27.40 % |
+Progress | Backtesting | 27.96 % |
+Progress | Backtesting | 28.38 % |
+Progress | Backtesting | 28.76 % |
+Progress | Backtesting | 28.85 % |
+Progress | Backtesting | 29.18 % |
+Progress | Backtesting | 29.60 % |
+Progress | Backtesting | 29.91 % |
+Progress | Backtesting | 30.27 % |
+Progress | Backtesting | 30.48 % |
+Progress | Backtesting | 30.51 % |
+Progress | Backtesting | 30.55 % |
+Progress | Backtesting | 30.62 % |
+Progress | Backtesting | 30.72 % |
+Progress | Backtesting | 30.85 % |
+Progress | Backtesting | 30.97 % |
+Progress | Backtesting | 31.10 % |
+Progress | Backtesting | 31.17 % |
+Progress | Backtesting | 31.27 % |
+Progress | Backtesting | 31.43 % |
+Progress | Backtesting | 31.55 % |
+Progress | Backtesting | 31.64 % |
+Progress | Backtesting | 31.75 % |
+Progress | Backtesting | 31.89 % |
+Progress | Backtesting | 32.08 % |
+Progress | Backtesting | 32.16 % |
+Progress | Backtesting | 32.20 % |
+Progress | Backtesting | 32.31 % |
+Progress | Backtesting | 32.44 % |
+Progress | Backtesting | 32.57 % |
+Progress | Backtesting | 32.66 % |
+Progress | Backtesting | 32.77 % |
+Progress | Backtesting | 32.84 % |
+Progress | Backtesting | 32.97 % |
+Progress | Backtesting | 33.14 % |
+Progress | Backtesting | 33.24 % |
+Progress | Backtesting | 33.30 % |
+Progress | Backtesting | 33.38 % |
+Progress | Backtesting | 33.46 % |
+Progress | Backtesting | 33.54 % |
+Progress | Backtesting | 33.63 % |
+Progress | Backtesting | 33.74 % |
+Progress | Backtesting | 33.85 % |
+Progress | Backtesting | 33.90 % |
+Progress | Backtesting | 33.98 % |
+Progress | Backtesting | 34.11 % |
+Progress | Backtesting | 34.29 % |
+Progress | Backtesting | 34.45 % |
+Progress | Backtesting | 34.55 % |
+Progress | Backtesting | 34.73 % |
+Progress | Backtesting | 34.79 % |
+Progress | Backtesting | 34.84 % |
+Progress | Backtesting | 34.91 % |
+Progress | Backtesting | 34.95 % |
+Progress | Backtesting | 35.00 % |
+Progress | Backtesting | 35.06 % |
+Progress | Backtesting | 35.10 % |
+Progress | Backtesting | 35.14 % |
+Progress | Backtesting | 35.19 % |
+Progress | Backtesting | 35.25 % |
+Progress | Backtesting | 35.31 % |
+Progress | Backtesting | 35.38 % |
+Progress | Backtesting | 35.50 % |
+Progress | Backtesting | 35.59 % |
+Progress | Backtesting | 35.72 % |
+Progress | Backtesting | 35.85 % |
+Progress | Backtesting | 36.03 % |
+Progress | Backtesting | 36.18 % |
+Progress | Backtesting | 36.41 % |
+Progress | Backtesting | 36.55 % |
+Progress | Backtesting | 36.63 % |
+Progress | Backtesting | 36.68 % |
+Progress | Backtesting | 36.74 % |
+Progress | Backtesting | 36.81 % |
+Progress | Backtesting | 36.89 % |
+Progress | Backtesting | 36.97 % |
+Progress | Backtesting | 37.07 % |
+Progress | Backtesting | 37.23 % |
+Progress | Backtesting | 37.29 % |
+Progress | Backtesting | 37.41 % |
+Progress | Backtesting | 37.59 % |
+Progress | Backtesting | 37.77 % |
+Progress | Backtesting | 37.90 % |
+Progress | Backtesting | 37.98 % |
+Progress | Backtesting | 38.12 % |
+Progress | Backtesting | 38.20 % |
+Progress | Backtesting | 38.32 % |
+Progress | Backtesting | 38.38 % |
+Progress | Backtesting | 38.45 % |
+Progress | Backtesting | 38.50 % |
+Progress | Backtesting | 38.55 % |
+Progress | Backtesting | 38.65 % |
+Progress | Backtesting | 38.72 % |
+Progress | Backtesting | 38.78 % |
+Progress | Backtesting | 38.98 % |
+Progress | Backtesting | 39.15 % |
+Progress | Backtesting | 39.40 % |
+Progress | Backtesting | 39.87 % |
+Progress | Backtesting | 40.23 % |
+Progress | Backtesting | 40.68 % |
+Progress | Backtesting | 40.89 % |
+Progress | Backtesting | 41.12 % |
+Progress | Backtesting | 41.32 % |
+Progress | Backtesting | 41.51 % |
+Progress | Backtesting | 41.70 % |
+Progress | Backtesting | 41.84 % |
+Progress | Backtesting | 41.91 % |
+Progress | Backtesting | 41.98 % |
+Progress | Backtesting | 42.06 % |
+Progress | Backtesting | 42.15 % |
+Progress | Backtesting | 42.27 % |
+Progress | Backtesting | 42.37 % |
+Progress | Backtesting | 42.37 % |
+Progress | Backtesting | 42.44 % |
+Progress | Backtesting | 42.54 % |
+Progress | Backtesting | 42.64 % |
+Progress | Backtesting | 42.77 % |
+Progress | Backtesting | 42.89 % |
+Progress | Backtesting | 42.97 % |
+Progress | Backtesting | 43.05 % |
+Progress | Backtesting | 43.18 % |
+Progress | Backtesting | 43.33 % |
+Progress | Backtesting | 43.41 % |
+Progress | Backtesting | 43.45 % |
+Progress | Backtesting | 43.49 % |
+Progress | Backtesting | 43.54 % |
+Progress | Backtesting | 43.61 % |
+Progress | Backtesting | 43.68 % |
+Progress | Backtesting | 43.78 % |
+Progress | Backtesting | 43.91 % |
+Progress | Backtesting | 44.07 % |
+Progress | Backtesting | 44.22 % |
+Progress | Backtesting | 44.38 % |
+Progress | Backtesting | 44.59 % |
+Progress | Backtesting | 44.75 % |
+Progress | Backtesting | 44.97 % |
+Progress | Backtesting | 45.11 % |
+Progress | Backtesting | 45.19 % |
+Progress | Backtesting | 45.26 % |
+Progress | Backtesting | 45.34 % |
+Progress | Backtesting | 45.42 % |
+Progress | Backtesting | 45.51 % |
+Progress | Backtesting | 45.59 % |
+Progress | Backtesting | 45.74 % |
+Progress | Backtesting | 45.76 % |
+Progress | Backtesting | 45.90 % |
+Progress | Backtesting | 46.05 % |
+Progress | Backtesting | 46.23 % |
+Progress | Backtesting | 46.41 % |
+Progress | Backtesting | 46.53 % |
+Progress | Backtesting | 46.63 % |
+Progress | Backtesting | 46.74 % |
+Progress | Backtesting | 46.81 % |
+Progress | Backtesting | 46.84 % |
+Progress | Backtesting | 46.90 % |
+Progress | Backtesting | 46.97 % |
+Progress | Backtesting | 47.04 % |
+Progress | Backtesting | 47.11 % |
+Progress | Backtesting | 47.15 % |
+Progress | Backtesting | 47.18 % |
+Progress | Backtesting | 47.24 % |
+Progress | Backtesting | 47.37 % |
+Progress | Backtesting | 47.46 % |
+Progress | Backtesting | 47.56 % |
+Progress | Backtesting | 47.66 % |
+Progress | Backtesting | 47.77 % |
+Progress | Backtesting | 47.94 % |
+Progress | Backtesting | 48.11 % |
+Progress | Backtesting | 48.28 % |
+Progress | Backtesting | 48.46 % |
+Progress | Backtesting | 48.54 % |
+Progress | Backtesting | 48.59 % |
+Progress | Backtesting | 48.65 % |
+Progress | Backtesting | 48.73 % |
+Progress | Backtesting | 48.79 % |
+Progress | Backtesting | 48.87 % |
+Progress | Backtesting | 48.96 % |
+Progress | Backtesting | 49.13 % |
+Progress | Backtesting | 49.15 % |
+Progress | Backtesting | 49.27 % |
+Progress | Backtesting | 49.32 % |
+Progress | Backtesting | 49.38 % |
+Progress | Backtesting | 49.51 % |
+Progress | Backtesting | 49.62 % |
+Progress | Backtesting | 49.71 % |
+Progress | Backtesting | 49.81 % |
+Progress | Backtesting | 49.87 % |
+Progress | Backtesting | 49.95 % |
+Progress | Backtesting | 50.05 % |
+Progress | Backtesting | 50.13 % |
+Progress | Backtesting | 50.21 % |
+Progress | Backtesting | 50.26 % |
+Progress | Backtesting | 50.32 % |
+Progress | Backtesting | 50.38 % |
+Progress | Backtesting | 50.45 % |
+Progress | Backtesting | 50.50 % |
+Progress | Backtesting | 50.56 % |
+Progress | Backtesting | 50.62 % |
+Progress | Backtesting | 50.73 % |
+Progress | Backtesting | 50.85 % |
+Progress | Backtesting | 51.05 % |
+Progress | Backtesting | 51.30 % |
+Progress | Backtesting | 51.46 % |
+Progress | Backtesting | 51.55 % |
+Progress | Backtesting | 51.94 % |
+Progress | Backtesting | 52.00 % |
+Progress | Backtesting | 52.06 % |
+Progress | Backtesting | 52.12 % |
+Progress | Backtesting | 52.17 % |
+Progress | Backtesting | 52.23 % |
+Progress | Backtesting | 52.29 % |
+Progress | Backtesting | 52.34 % |
+Progress | Backtesting | 52.43 % |
+Progress | Backtesting | 52.51 % |
+Progress | Backtesting | 52.54 % |
+Progress | Backtesting | 52.59 % |
+Progress | Backtesting | 52.80 % |
+Progress | Backtesting | 52.84 % |
+Progress | Backtesting | 52.89 % |
+Progress | Backtesting | 52.95 % |
+Progress | Backtesting | 53.04 % |
+Progress | Backtesting | 53.10 % |
+Progress | Backtesting | 53.15 % |
+Progress | Backtesting | 53.23 % |
+Progress | Backtesting | 53.30 % |
+Progress | Backtesting | 53.40 % |
+Progress | Backtesting | 53.50 % |
+Progress | Backtesting | 53.58 % |
+Progress | Backtesting | 53.63 % |
+Progress | Backtesting | 53.69 % |
+Progress | Backtesting | 53.75 % |
+Progress | Backtesting | 53.81 % |
+Progress | Backtesting | 53.88 % |
+Progress | Backtesting | 53.96 % |
+Progress | Backtesting | 54.03 % |
+Progress | Backtesting | 54.11 % |
+Progress | Backtesting | 54.18 % |
+Progress | Backtesting | 54.24 % |
+Progress | Backtesting | 54.28 % |
+Progress | Backtesting | 54.34 % |
+Progress | Backtesting | 54.40 % |
+Progress | Backtesting | 54.45 % |
+Progress | Backtesting | 54.50 % |
+Progress | Backtesting | 54.56 % |
+Progress | Backtesting | 54.62 % |
+Progress | Backtesting | 54.67 % |
+Progress | Backtesting | 54.73 % |
+Progress | Backtesting | 54.77 % |
+Progress | Backtesting | 54.81 % |
+Progress | Backtesting | 54.85 % |
+Progress | Backtesting | 54.91 % |
+Progress | Backtesting | 54.95 % |
+Progress | Backtesting | 55.00 % |
+Progress | Backtesting | 55.05 % |
+Progress | Backtesting | 55.11 % |
+Progress | Backtesting | 55.16 % |
+Progress | Backtesting | 55.21 % |
+Progress | Backtesting | 55.26 % |
+Progress | Backtesting | 55.30 % |
+Progress | Backtesting | 55.36 % |
+Progress | Backtesting | 55.42 % |
+Progress | Backtesting | 55.49 % |
+Progress | Backtesting | 55.57 % |
+Progress | Backtesting | 55.65 % |
+Progress | Backtesting | 55.73 % |
+Progress | Backtesting | 55.83 % |
+Progress | Backtesting | 55.93 % |
+Progress | Backtesting | 55.98 % |
+Progress | Backtesting | 56.06 % |
+Progress | Backtesting | 56.14 % |
+Progress | Backtesting | 56.22 % |
+Progress | Backtesting | 56.31 % |
+Progress | Backtesting | 56.38 % |
+Progress | Backtesting | 56.46 % |
+Progress | Backtesting | 56.54 % |
+Progress | Backtesting | 56.63 % |
+Progress | Backtesting | 56.72 % |
+Progress | Backtesting | 56.80 % |
+Progress | Backtesting | 56.90 % |
+Progress | Backtesting | 56.96 % |
+Progress | Backtesting | 57.00 % |
+Progress | Backtesting | 57.04 % |
+Progress | Backtesting | 57.08 % |
+Progress | Backtesting | 57.13 % |
+Progress | Backtesting | 57.18 % |
+Progress | Backtesting | 57.24 % |
+Progress | Backtesting | 57.30 % |
+Progress | Backtesting | 57.35 % |
+Progress | Backtesting | 57.42 % |
+Progress | Backtesting | 57.50 % |
+Progress | Backtesting | 57.58 % |
+Progress | Backtesting | 57.63 % |
+Progress | Backtesting | 57.71 % |
+Progress | Backtesting | 57.77 % |
+Progress | Backtesting | 57.86 % |
+Progress | Backtesting | 57.96 % |
+Progress | Backtesting | 58.07 % |
+Progress | Backtesting | 58.18 % |
+Progress | Backtesting | 58.24 % |
+Progress | Backtesting | 58.32 % |
+Progress | Backtesting | 58.41 % |
+Progress | Backtesting | 58.47 % |
+Progress | Backtesting | 58.57 % |
+Progress | Backtesting | 58.64 % |
+Progress | Backtesting | 58.70 % |
+Progress | Backtesting | 58.74 % |
+Progress | Backtesting | 58.77 % |
+Progress | Backtesting | 58.83 % |
+Progress | Backtesting | 58.88 % |
+Progress | Backtesting | 58.94 % |
+Progress | Backtesting | 58.99 % |
+Progress | Backtesting | 59.05 % |
+Progress | Backtesting | 59.12 % |
+Progress | Backtesting | 59.21 % |
+Progress | Backtesting | 59.27 % |
+Progress | Backtesting | 59.32 % |
+Progress | Backtesting | 59.40 % |
+Progress | Backtesting | 59.46 % |
+Progress | Backtesting | 59.51 % |
+Progress | Backtesting | 59.57 % |
+Progress | Backtesting | 59.69 % |
+Progress | Backtesting | 59.75 % |
+Progress | Backtesting | 59.81 % |
+Progress | Backtesting | 59.87 % |
+Progress | Backtesting | 59.94 % |
+Progress | Backtesting | 59.99 % |
+Progress | Backtesting | 60.05 % |
+Progress | Backtesting | 60.11 % |
+Progress | Backtesting | 60.17 % |
+Progress | Backtesting | 60.22 % |
+Progress | Backtesting | 60.28 % |
+Progress | Backtesting | 60.34 % |
+Progress | Backtesting | 60.36 % |
+Progress | Backtesting | 60.42 % |
+Progress | Backtesting | 60.47 % |
+Progress | Backtesting | 60.52 % |
+Progress | Backtesting | 60.58 % |
+Progress | Backtesting | 60.64 % |
+Progress | Backtesting | 60.69 % |
+Progress | Backtesting | 60.74 % |
+Progress | Backtesting | 60.80 % |
+Progress | Backtesting | 60.85 % |
+Progress | Backtesting | 60.92 % |
+Progress | Backtesting | 60.98 % |
+Progress | Backtesting | 61.02 % |
+Progress | Backtesting | 61.06 % |
+Progress | Backtesting | 61.11 % |
+Progress | Backtesting | 61.17 % |
+Progress | Backtesting | 61.21 % |
+Progress | Backtesting | 61.28 % |
+Progress | Backtesting | 61.33 % |
+Progress | Backtesting | 61.38 % |
+Progress | Backtesting | 61.43 % |
+Progress | Backtesting | 61.47 % |
+Progress | Backtesting | 61.51 % |
+Progress | Backtesting | 61.56 % |
+Progress | Backtesting | 61.60 % |
+Progress | Backtesting | 61.65 % |
+Progress | Backtesting | 61.69 % |
+Progress | Backtesting | 61.73 % |
+Progress | Backtesting | 61.78 % |
+Progress | Backtesting | 61.80 % |
+Progress | Backtesting | 61.82 % |
+Progress | Backtesting | 61.86 % |
+Progress | Backtesting | 61.89 % |
+Progress | Backtesting | 61.93 % |
+Progress | Backtesting | 61.97 % |
+Progress | Backtesting | 62.01 % |
+Progress | Backtesting | 62.06 % |
+Progress | Backtesting | 62.11 % |
+Progress | Backtesting | 62.16 % |
+Progress | Backtesting | 62.22 % |
+Progress | Backtesting | 62.27 % |
+Progress | Backtesting | 62.32 % |
+Progress | Backtesting | 62.38 % |
+Progress | Backtesting | 62.43 % |
+Progress | Backtesting | 62.49 % |
+Progress | Backtesting | 62.55 % |
+Progress | Backtesting | 62.63 % |
+Progress | Backtesting | 62.70 % |
+Progress | Backtesting | 62.71 % |
+Progress | Backtesting | 62.75 % |
+Progress | Backtesting | 62.81 % |
+Progress | Backtesting | 62.88 % |
+Progress | Backtesting | 62.96 % |
+Progress | Backtesting | 63.03 % |
+Progress | Backtesting | 63.08 % |
+Progress | Backtesting | 64.13 % |
+Progress | Backtesting | 64.21 % |
+Progress | Backtesting | 64.30 % |
+Progress | Backtesting | 64.38 % |
+Progress | Backtesting | 64.41 % |
+Progress | Backtesting | 64.48 % |
+Progress | Backtesting | 64.58 % |
+Progress | Backtesting | 64.65 % |
+Progress | Backtesting | 64.71 % |
+Progress | Backtesting | 64.79 % |
+Progress | Backtesting | 64.86 % |
+Progress | Backtesting | 64.95 % |
+Progress | Backtesting | 65.01 % |
+Progress | Backtesting | 65.07 % |
+Progress | Backtesting | 65.15 % |
+Progress | Backtesting | 65.22 % |
+Progress | Backtesting | 65.29 % |
+Progress | Backtesting | 65.36 % |
+Progress | Backtesting | 65.43 % |
+Progress | Backtesting | 65.51 % |
+Progress | Backtesting | 65.58 % |
+Progress | Backtesting | 65.64 % |
+Progress | Backtesting | 65.72 % |
+Progress | Backtesting | 65.81 % |
+Progress | Backtesting | 65.89 % |
+Progress | Backtesting | 66.00 % |
+Progress | Backtesting | 66.06 % |
+Progress | Backtesting | 66.10 % |
+Progress | Backtesting | 66.15 % |
+Progress | Backtesting | 66.22 % |
+Progress | Backtesting | 66.29 % |
+Progress | Backtesting | 66.37 % |
+Progress | Backtesting | 66.45 % |
+Progress | Backtesting | 66.54 % |
+Progress | Backtesting | 66.63 % |
+Progress | Backtesting | 66.69 % |
+Progress | Backtesting | 66.76 % |
+Progress | Backtesting | 66.82 % |
+Progress | Backtesting | 66.88 % |
+Progress | Backtesting | 66.94 % |
+Progress | Backtesting | 67.00 % |
+Progress | Backtesting | 67.05 % |
+Progress | Backtesting | 67.10 % |
+Progress | Backtesting | 67.15 % |
+Progress | Backtesting | 67.19 % |
+Progress | Backtesting | 67.24 % |
+Progress | Backtesting | 67.30 % |
+Progress | Backtesting | 67.35 % |
+Progress | Backtesting | 67.39 % |
+Progress | Backtesting | 67.43 % |
+Progress | Backtesting | 67.49 % |
+Progress | Backtesting | 67.52 % |
+Progress | Backtesting | 67.56 % |
+Progress | Backtesting | 67.61 % |
+Progress | Backtesting | 67.70 % |
+Progress | Backtesting | 67.79 % |
+Progress | Backtesting | 67.80 % |
+Progress | Backtesting | 67.86 % |
+Progress | Backtesting | 67.94 % |
+Progress | Backtesting | 68.01 % |
+Progress | Backtesting | 68.06 % |
+Progress | Backtesting | 68.15 % |
+Progress | Backtesting | 68.23 % |
+Progress | Backtesting | 68.29 % |
+Progress | Backtesting | 68.36 % |
+Progress | Backtesting | 68.44 % |
+Progress | Backtesting | 68.52 % |
+Progress | Backtesting | 68.60 % |
+Progress | Backtesting | 68.66 % |
+Progress | Backtesting | 68.73 % |
+Progress | Backtesting | 68.79 % |
+Progress | Backtesting | 68.84 % |
+Progress | Backtesting | 68.88 % |
+Progress | Backtesting | 68.92 % |
+Progress | Backtesting | 68.96 % |
+Progress | Backtesting | 69.01 % |
+Progress | Backtesting | 69.04 % |
+Progress | Backtesting | 69.07 % |
+Progress | Backtesting | 69.10 % |
+Progress | Backtesting | 69.15 % |
+Progress | Backtesting | 69.20 % |
+Progress | Backtesting | 69.27 % |
+Progress | Backtesting | 69.34 % |
+Progress | Backtesting | 69.46 % |
+Progress | Backtesting | 69.49 % |
+Progress | Backtesting | 69.56 % |
+Progress | Backtesting | 69.66 % |
+Progress | Backtesting | 69.75 % |
+Progress | Backtesting | 69.83 % |
+Progress | Backtesting | 69.90 % |
+Progress | Backtesting | 69.97 % |
+Progress | Backtesting | 70.04 % |
+Progress | Backtesting | 70.11 % |
+Progress | Backtesting | 70.19 % |
+Progress | Backtesting | 70.27 % |
+Progress | Backtesting | 70.34 % |
+Progress | Backtesting | 70.42 % |
+Progress | Backtesting | 70.49 % |
+Progress | Backtesting | 70.55 % |
+Progress | Backtesting | 70.59 % |
+Progress | Backtesting | 70.64 % |
+Progress | Backtesting | 70.70 % |
+Progress | Backtesting | 70.74 % |
+Progress | Backtesting | 70.80 % |
+Progress | Backtesting | 70.86 % |
+Progress | Backtesting | 70.93 % |
+Progress | Backtesting | 70.98 % |
+Progress | Backtesting | 71.03 % |
+Progress | Backtesting | 71.10 % |
+Progress | Backtesting | 71.15 % |
+Progress | Backtesting | 71.19 % |
+Progress | Backtesting | 71.25 % |
+Progress | Backtesting | 71.33 % |
+Progress | Backtesting | 71.42 % |
+Progress | Backtesting | 71.49 % |
+Progress | Backtesting | 71.57 % |
+Progress | Backtesting | 71.65 % |
+Progress | Backtesting | 71.73 % |
+Progress | Backtesting | 71.82 % |
+Progress | Backtesting | 71.90 % |
+Progress | Backtesting | 71.99 % |
+Progress | Backtesting | 72.04 % |
+Progress | Backtesting | 72.12 % |
+Progress | Backtesting | 72.17 % |
+Progress | Backtesting | 72.22 % |
+Progress | Backtesting | 72.27 % |
+Progress | Backtesting | 72.33 % |
+Progress | Backtesting | 72.38 % |
+Progress | Backtesting | 72.42 % |
+Progress | Backtesting | 72.46 % |
+Progress | Backtesting | 72.50 % |
+Progress | Backtesting | 72.54 % |
+Progress | Backtesting | 72.59 % |
+Progress | Backtesting | 72.64 % |
+Progress | Backtesting | 72.69 % |
+Progress | Backtesting | 72.78 % |
+Progress | Backtesting | 72.86 % |
+Progress | Backtesting | 72.88 % |
+Progress | Backtesting | 72.93 % |
+Progress | Backtesting | 72.98 % |
+Progress | Backtesting | 73.04 % |
+Progress | Backtesting | 73.10 % |
+Progress | Backtesting | 73.16 % |
+Progress | Backtesting | 73.23 % |
+Progress | Backtesting | 73.29 % |
+Progress | Backtesting | 73.34 % |
+Progress | Backtesting | 73.40 % |
+Progress | Backtesting | 73.47 % |
+Progress | Backtesting | 73.53 % |
+Progress | Backtesting | 73.60 % |
+Progress | Backtesting | 73.69 % |
+Progress | Backtesting | 73.77 % |
+Progress | Backtesting | 73.85 % |
+Progress | Backtesting | 73.91 % |
+Progress | Backtesting | 73.96 % |
+Progress | Backtesting | 74.03 % |
+Progress | Backtesting | 74.08 % |
+Progress | Backtesting | 74.15 % |
+Progress | Backtesting | 74.22 % |
+Progress | Backtesting | 74.30 % |
+Progress | Backtesting | 74.38 % |
+Progress | Backtesting | 74.52 % |
+Progress | Backtesting | 74.58 % |
+Progress | Backtesting | 74.77 % |
+Progress | Backtesting | 74.90 % |
+Progress | Backtesting | 75.02 % |
+Progress | Backtesting | 75.14 % |
+Progress | Backtesting | 75.20 % |
+Progress | Backtesting | 75.29 % |
+Progress | Backtesting | 75.38 % |
+Progress | Backtesting | 75.45 % |
+Progress | Backtesting | 75.52 % |
+Progress | Backtesting | 75.61 % |
+Progress | Backtesting | 75.71 % |
+Progress | Backtesting | 75.80 % |
+Progress | Backtesting | 75.89 % |
+Progress | Backtesting | 75.95 % |
+Progress | Backtesting | 76.01 % |
+Progress | Backtesting | 76.07 % |
+Progress | Backtesting | 76.15 % |
+Progress | Backtesting | 76.24 % |
+Progress | Backtesting | 76.27 % |
+Progress | Backtesting | 76.35 % |
+Progress | Backtesting | 76.45 % |
+Progress | Backtesting | 76.52 % |
+Progress | Backtesting | 76.60 % |
+Progress | Backtesting | 76.69 % |
+Progress | Backtesting | 76.79 % |
+Progress | Backtesting | 76.84 % |
+Progress | Backtesting | 76.90 % |
+Progress | Backtesting | 76.98 % |
+Progress | Backtesting | 77.05 % |
+Progress | Backtesting | 77.14 % |
+Progress | Backtesting | 77.21 % |
+Progress | Backtesting | 77.27 % |
+Progress | Backtesting | 77.34 % |
+Progress | Backtesting | 77.46 % |
+Progress | Backtesting | 77.53 % |
+Progress | Backtesting | 77.58 % |
+Progress | Backtesting | 77.64 % |
+Progress | Backtesting | 77.72 % |
+Progress | Backtesting | 77.81 % |
+Progress | Backtesting | 77.91 % |
+Progress | Backtesting | 77.97 % |
+Progress | Backtesting | 78.03 % |
+Progress | Backtesting | 78.11 % |
+Progress | Backtesting | 78.19 % |
+Progress | Backtesting | 78.27 % |
+Progress | Backtesting | 78.37 % |
+Progress | Backtesting | 78.48 % |
+Progress | Backtesting | 78.61 % |
+Progress | Backtesting | 78.67 % |
+Progress | Backtesting | 78.73 % |
+Progress | Backtesting | 78.82 % |
+Progress | Backtesting | 78.89 % |
+Progress | Backtesting | 78.95 % |
+Progress | Backtesting | 79.00 % |
+Progress | Backtesting | 79.07 % |
+Progress | Backtesting | 79.12 % |
+Progress | Backtesting | 79.18 % |
+Progress | Backtesting | 79.26 % |
+Progress | Backtesting | 79.37 % |
+Progress | Backtesting | 79.49 % |
+Progress | Backtesting | 79.61 % |
+Progress | Backtesting | 79.66 % |
+Progress | Backtesting | 79.72 % |
+Progress | Backtesting | 79.79 % |
+Progress | Backtesting | 79.88 % |
+Progress | Backtesting | 79.98 % |
+Progress | Backtesting | 80.07 % |
+Progress | Backtesting | 80.17 % |
+Progress | Backtesting | 80.26 % |
+Progress | Backtesting | 80.32 % |
+Progress | Backtesting | 80.41 % |
+Progress | Backtesting | 80.50 % |
+Progress | Backtesting | 80.60 % |
+Progress | Backtesting | 80.69 % |
+Progress | Backtesting | 80.74 % |
+Progress | Backtesting | 80.80 % |
+Progress | Backtesting | 80.86 % |
+Progress | Backtesting | 80.92 % |
+Progress | Backtesting | 80.96 % |
+Progress | Backtesting | 80.99 % |
+Progress | Backtesting | 81.04 % |
+Progress | Backtesting | 81.09 % |
+Progress | Backtesting | 81.14 % |
+Progress | Backtesting | 81.24 % |
+Progress | Backtesting | 81.32 % |
+Progress | Backtesting | 81.36 % |
+Progress | Backtesting | 81.43 % |
+Progress | Backtesting | 81.50 % |
+Progress | Backtesting | 81.58 % |
+Progress | Backtesting | 81.69 % |
+Progress | Backtesting | 81.82 % |
+Progress | Backtesting | 81.90 % |
+Progress | Backtesting | 81.98 % |
+Progress | Backtesting | 82.09 % |
+Progress | Backtesting | 82.19 % |
+Progress | Backtesting | 82.28 % |
+Progress | Backtesting | 82.35 % |
+Progress | Backtesting | 82.41 % |
+Progress | Backtesting | 82.46 % |
+Progress | Backtesting | 82.53 % |
+Progress | Backtesting | 82.61 % |
+Progress | Backtesting | 82.69 % |
+Progress | Backtesting | 82.75 % |
+Progress | Backtesting | 82.81 % |
+Progress | Backtesting | 82.95 % |
+Progress | Backtesting | 83.05 % |
+Progress | Backtesting | 83.14 % |
+Progress | Backtesting | 83.21 % |
+Progress | Backtesting | 83.31 % |
+Progress | Backtesting | 83.39 % |
+Progress | Backtesting | 83.47 % |
+Progress | Backtesting | 83.55 % |
+Progress | Backtesting | 83.63 % |
+Progress | Backtesting | 83.67 % |
+Progress | Backtesting | 83.72 % |
+Progress | Backtesting | 83.77 % |
+Progress | Backtesting | 83.84 % |
+Progress | Backtesting | 83.93 % |
+Progress | Backtesting | 84.00 % |
+Progress | Backtesting | 84.07 % |
+Progress | Backtesting | 84.12 % |
+Progress | Backtesting | 84.18 % |
+Progress | Backtesting | 84.25 % |
+Progress | Backtesting | 84.31 % |
+Progress | Backtesting | 84.38 % |
+Progress | Backtesting | 84.44 % |
+Progress | Backtesting | 84.50 % |
+Progress | Backtesting | 84.57 % |
+Progress | Backtesting | 84.67 % |
+Progress | Backtesting | 84.75 % |
+Progress | Backtesting | 84.81 % |
+Progress | Backtesting | 84.90 % |
+Progress | Backtesting | 85.00 % |
+Progress | Backtesting | 85.11 % |
+Progress | Backtesting | 85.19 % |
+Progress | Backtesting | 85.33 % |
+Progress | Backtesting | 85.45 % |
+Progress | Backtesting | 85.54 % |
+Progress | Backtesting | 85.67 % |
+Progress | Backtesting | 85.74 % |
+Progress | Backtesting | 85.79 % |
+Progress | Backtesting | 85.83 % |
+Progress | Backtesting | 85.88 % |
+Progress | Backtesting | 85.95 % |
+Progress | Backtesting | 86.01 % |
+Progress | Backtesting | 86.05 % |
+Progress | Backtesting | 86.08 % |
+Progress | Backtesting | 86.16 % |
+Progress | Backtesting | 86.24 % |
+Progress | Backtesting | 86.36 % |
+Progress | Backtesting | 86.44 % |
+Progress | Backtesting | 86.55 % |
+Progress | Backtesting | 86.69 % |
+Progress | Backtesting | 86.84 % |
+Progress | Backtesting | 86.99 % |
+Progress | Backtesting | 87.13 % |
+Progress | Backtesting | 87.24 % |
+Progress | Backtesting | 87.36 % |
+Progress | Backtesting | 87.67 % |
+Progress | Backtesting | 87.82 % |
+Progress | Backtesting | 87.97 % |
+Progress | Backtesting | 88.10 % |
+Progress | Backtesting | 88.14 % |
+Progress | Backtesting | 88.24 % |
+Progress | Backtesting | 88.34 % |
+Progress | Backtesting | 88.52 % |
+Progress | Backtesting | 88.73 % |
+Progress | Backtesting | 88.92 % |
+Progress | Backtesting | 89.07 % |
+Progress | Backtesting | 89.19 % |
+Progress | Backtesting | 89.27 % |
+Progress | Backtesting | 89.45 % |
+Progress | Backtesting | 89.72 % |
+Progress | Backtesting | 89.83 % |
+Progress | Backtesting | 89.91 % |
+Progress | Backtesting | 89.96 % |
+Progress | Backtesting | 90.04 % |
+Progress | Backtesting | 90.15 % |
+Progress | Backtesting | 90.27 % |
+Progress | Backtesting | 90.31 % |
+Progress | Backtesting | 90.37 % |
+Progress | Backtesting | 90.44 % |
+Progress | Backtesting | 90.52 % |
+Progress | Backtesting | 90.59 % |
+Progress | Backtesting | 90.67 % |
+Progress | Backtesting | 90.79 % |
+Progress | Backtesting | 90.87 % |
+Progress | Backtesting | 90.93 % |
+Progress | Backtesting | 90.99 % |
+Progress | Backtesting | 91.05 % |
+Progress | Backtesting | 91.10 % |
+Progress | Backtesting | 91.17 % |
+Progress | Backtesting | 91.24 % |
+Progress | Backtesting | 91.53 % |
+Progress | Backtesting | 91.62 % |
+Progress | Backtesting | 91.68 % |
+Progress | Backtesting | 91.75 % |
+Progress | Backtesting | 91.82 % |
+Progress | Backtesting | 91.89 % |
+Progress | Backtesting | 91.96 % |
+Progress | Backtesting | 92.03 % |
+Progress | Backtesting | 92.11 % |
+Progress | Backtesting | 92.19 % |
+Progress | Backtesting | 92.30 % |
+Progress | Backtesting | 92.42 % |
+Progress | Backtesting | 92.53 % |
+Progress | Backtesting | 92.57 % |
+Progress | Backtesting | 92.60 % |
+Progress | Backtesting | 92.64 % |
+Progress | Backtesting | 92.67 % |
+Progress | Backtesting | 92.70 % |
+Progress | Backtesting | 92.74 % |
+Progress | Backtesting | 92.79 % |
+Progress | Backtesting | 92.85 % |
+Progress | Backtesting | 92.91 % |
+Progress | Backtesting | 92.99 % |
+Progress | Backtesting | 93.10 % |
+Progress | Backtesting | 93.22 % |
+Progress | Backtesting | 93.22 % |
+Progress | Backtesting | 93.31 % |
+Progress | Backtesting | 93.36 % |
+Progress | Backtesting | 93.44 % |
+Progress | Backtesting | 93.52 % |
+Progress | Backtesting | 93.62 % |
+Progress | Backtesting | 93.73 % |
+Progress | Backtesting | 93.83 % |
+Progress | Backtesting | 93.95 % |
+Progress | Backtesting | 94.07 % |
+Progress | Backtesting | 94.14 % |
+Progress | Backtesting | 94.20 % |
+Progress | Backtesting | 94.27 % |
+Progress | Backtesting | 94.32 % |
+Progress | Backtesting | 94.37 % |
+Progress | Backtesting | 94.43 % |
+Progress | Backtesting | 94.49 % |
+Progress | Backtesting | 94.55 % |
+Progress | Backtesting | 94.61 % |
+Progress | Backtesting | 94.69 % |
+Progress | Backtesting | 94.76 % |
+Progress | Backtesting | 94.86 % |
+Progress | Backtesting | 94.92 % |
+Progress | Backtesting | 94.96 % |
+Progress | Backtesting | 95.01 % |
+Progress | Backtesting | 95.07 % |
+Progress | Backtesting | 95.10 % |
+Progress | Backtesting | 95.17 % |
+Progress | Backtesting | 95.24 % |
+Progress | Backtesting | 95.33 % |
+Progress | Backtesting | 95.42 % |
+Progress | Backtesting | 95.52 % |
+Progress | Backtesting | 95.61 % |
+Progress | Backtesting | 95.72 % |
+Progress | Backtesting | 95.83 % |
+Progress | Backtesting | 95.92 % |
+Progress | Backtesting | 95.97 % |
+Progress | Backtesting | 96.02 % |
+Progress | Backtesting | 96.07 % |
+Progress | Backtesting | 96.13 % |
+Progress | Backtesting | 96.19 % |
+Progress | Backtesting | 96.26 % |
+Progress | Backtesting | 96.34 % |
+Progress | Backtesting | 96.43 % |
+Progress | Backtesting | 96.61 % |
+Progress | Backtesting | 96.70 % |
+Progress | Backtesting | 96.80 % |
+Progress | Backtesting | 96.91 % |
+Progress | Backtesting | 97.00 % |
+Progress | Backtesting | 97.12 % |
+Progress | Backtesting | 97.21 % |
+Progress | Backtesting | 97.29 % |
+Progress | Backtesting | 97.35 % |
+Progress | Backtesting | 97.43 % |
+Progress | Backtesting | 97.47 % |
+Progress | Backtesting | 97.52 % |
+Progress | Backtesting | 97.55 % |
+Progress | Backtesting | 97.66 % |
+Progress | Backtesting | 97.69 % |
+Progress | Backtesting | 97.73 % |
+Progress | Backtesting | 97.78 % |
+Progress | Backtesting | 97.84 % |
+Progress | Backtesting | 97.90 % |
+Progress | Backtesting | 97.98 % |
+Progress | Backtesting | 98.08 % |
+Progress | Backtesting | 98.21 % |
+Progress | Backtesting | 98.31 % |
+Progress | Backtesting | 98.41 % |
+Progress | Backtesting | 98.52 % |
+Progress | Backtesting | 98.63 % |
+Progress | Backtesting | 98.75 % |
+Progress | Backtesting | 98.81 % |
+Progress | Backtesting | 98.87 % |
+Progress | Backtesting | 98.93 % |
+Progress | Backtesting | 98.99 % |
+Progress | Backtesting | 99.05 % |
+Progress | Backtesting | 99.49 % |
+Progress | Backtesting | 99.56 % |
+Progress | Backtesting | 99.63 % |
+Progress | Backtesting | 99.70 % |
+Progress | Backtesting | 99.76 % |
+Progress | Backtesting | 99.84 % |
+Progress | Backtesting | 99.92 % |
+01/01/2026 00:00:02.002 | Info | MA Cross: loaded 974 valid signal row(s) from CSV.
+01/01/2026 00:00:02.002 | Info | MA Cross: signal scheduling active with chart timeframe m20 (00:20:00); CSV timeframe must match the chart timeframe.
+01/01/2026 02:20:00.206 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.69 units, which needs about $46105.77 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5000.00 budget, free margin was $10000.00). Size was cut from 0.69 to 0.07 units. Real risk on this trade is now about $10.10 (0.10% of balance) instead of the requested 1.00%.
+01/01/2026 02:20:00.206 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 144.34, TP: 377.89)
+01/01/2026 02:20:00.206 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 144.34, TP: 377.89) SUCCEEDED, Position PID1
+01/01/2026 02:20:00.206 | Info | MA Cross: bartime=2026-01-01 02:00, executed=2026-01-01 02:20:00, market Buy placed; SL=144.34249183883648 pips, TP=377.8886436340739 pips.
+01/01/2026 11:20:00.001 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 1.26 units, which needs about $84193.14 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4994.83 budget, free margin was $9989.66). Size was cut from 1.26 to 0.07 units. Real risk on this trade is now about $5.52 (0.06% of balance) instead of the requested 1.00%.
+01/01/2026 11:20:00.001 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 78.85, TP: 206.44)
+01/01/2026 11:20:00.001 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 78.85, TP: 206.44) SUCCEEDED, Position PID2
+01/01/2026 11:20:00.001 | Info | MA Cross: bartime=2026-01-01 11:00, executed=2026-01-01 11:20:00, market Buy placed; SL=78.85328234251567 pips, TP=206.43789317270603 pips.
+03/01/2026 09:00:00.801 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.43 units, which needs about $28732.58 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4991.71 budget, free margin was $9983.42). Size was cut from 0.43 to 0.07 units. Real risk on this trade is now about $16.07 (0.16% of balance) instead of the requested 1.00%.
+03/01/2026 09:00:00.801 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 229.62, TP: 601.15)
+03/01/2026 09:00:00.801 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 229.62, TP: 601.15) SUCCEEDED, Position PID3
+03/01/2026 09:00:00.801 | Info | MA Cross: bartime=2026-01-03 08:40, executed=2026-01-03 09:00:00, market Sell placed; SL=229.62248581294716 pips, TP=601.1516678582957 pips.
+04/01/2026 13:20:00.201 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.66 units, which needs about $44101.17 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4983.14 budget, free margin was $9966.27). Size was cut from 0.66 to 0.07 units. Real risk on this trade is now about $10.48 (0.11% of balance) instead of the requested 1.00%.
+04/01/2026 13:20:00.201 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 149.72, TP: 391.98)
+04/01/2026 13:20:00.201 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 149.72, TP: 391.98) SUCCEEDED, Position PID4
+04/01/2026 13:20:00.201 | Info | MA Cross: bartime=2026-01-04 13:00, executed=2026-01-04 13:20:00, market Sell placed; SL=149.72377343666506 pips, TP=391.9768388571891 pips.
+04/01/2026 23:40:00.005 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.56 units, which needs about $37419.17 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4977.86 budget, free margin was $9955.72). Size was cut from 0.56 to 0.07 units. Real risk on this trade is now about $12.26 (0.12% of balance) instead of the requested 1.00%.
+04/01/2026 23:40:00.005 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 175.15, TP: 458.55)
+04/01/2026 23:40:00.005 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 175.15, TP: 458.55) SUCCEEDED, Position PID5
+04/01/2026 23:40:00.005 | Info | MA Cross: bartime=2026-01-04 23:20, executed=2026-01-04 23:40:00, market Buy placed; SL=175.15238398856337 pips, TP=458.5489412820589 pips.
+06/01/2026 02:00:00.007 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.40 units, which needs about $26727.98 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4994.82 budget, free margin was $9989.63). Size was cut from 0.40 to 0.07 units. Real risk on this trade is now about $17.07 (0.17% of balance) instead of the requested 1.00%.
+06/01/2026 02:00:00.007 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 243.88, TP: 638.49)
+06/01/2026 02:00:00.007 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 243.88, TP: 638.49) SUCCEEDED, Position PID6
+06/01/2026 02:00:00.007 | Info | MA Cross: bartime=2026-01-06 01:40, executed=2026-01-06 02:00:00, market Sell placed; SL=243.8839753987798 pips, TP=638.4882475940054 pips.
+06/01/2026 13:20:01.208 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.67 units, which needs about $44769.37 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5017.36 budget, free margin was $10034.71). Size was cut from 0.67 to 0.07 units. Real risk on this trade is now about $10.45 (0.10% of balance) instead of the requested 1.00%.
+06/01/2026 13:20:01.208 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 149.34, TP: 390.98)
+06/01/2026 13:20:01.208 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 149.34, TP: 390.98) SUCCEEDED, Position PID7
+06/01/2026 13:20:01.208 | Info | MA Cross: bartime=2026-01-06 13:00, executed=2026-01-06 13:20:01, market Buy placed; SL=149.34332642465304 pips, TP=390.9808285797416 pips.
+06/01/2026 17:20:00.007 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.22 units, which needs about $14700.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5031.06 budget, free margin was $10062.12). Size was cut from 0.22 to 0.07 units. Real risk on this trade is now about $31.42 (0.31% of balance) instead of the requested 1.00%.
+06/01/2026 17:20:00.007 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 448.86, TP: 1175.13)
+06/01/2026 17:20:00.007 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 448.86, TP: 1175.13) SUCCEEDED, Position PID8
+06/01/2026 17:20:00.007 | Info | MA Cross: bartime=2026-01-06 17:00, executed=2026-01-06 17:20:00, market Sell placed; SL=448.8640098073994 pips, TP=1175.1259776757715 pips.
+07/01/2026 00:00:00.412 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.28 units, which needs about $18709.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5012.62 budget, free margin was $10025.24). Size was cut from 0.28 to 0.07 units. Real risk on this trade is now about $24.34 (0.24% of balance) instead of the requested 1.00%.
+07/01/2026 00:00:00.412 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 347.71, TP: 910.31)
+07/01/2026 00:00:00.412 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 347.71, TP: 910.31) SUCCEEDED, Position PID9
+07/01/2026 00:00:00.412 | Info | MA Cross: bartime=2026-01-06 23:40, executed=2026-01-07 00:00:00, market Buy placed; SL=347.71268380076225 pips, TP=910.3118061903955 pips.
+07/01/2026 04:40:00.605 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.39 units, which needs about $26059.78 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5000.43 budget, free margin was $10000.86). Size was cut from 0.39 to 0.07 units. Real risk on this trade is now about $17.67 (0.18% of balance) instead of the requested 1.00%.
+07/01/2026 04:40:00.605 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 252.49, TP: 661.03)
+07/01/2026 04:40:00.605 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 252.49, TP: 661.03) SUCCEEDED, Position PID10
+07/01/2026 04:40:00.605 | Info | MA Cross: bartime=2026-01-07 04:20, executed=2026-01-07 04:40:00, market Sell placed; SL=252.4924241187384 pips, TP=661.0251663428571 pips.
+08/01/2026 02:20:00.092 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.46 units, which needs about $30737.18 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4991.57 budget, free margin was $9983.13). Size was cut from 0.46 to 0.07 units. Real risk on this trade is now about $15.09 (0.15% of balance) instead of the requested 1.00%.
+08/01/2026 02:20:00.092 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 215.5, TP: 564.19)
+08/01/2026 02:20:00.092 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 215.5, TP: 564.19) SUCCEEDED, Position PID11
+08/01/2026 02:20:00.092 | Info | MA Cross: bartime=2026-01-08 02:00, executed=2026-01-08 02:20:00, market Buy placed; SL=215.5040333371546 pips, TP=564.1895592766707 pips.
+08/01/2026 04:00:00.255 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.36 units, which needs about $24055.18 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4983.75 budget, free margin was $9967.50). Size was cut from 0.36 to 0.07 units. Real risk on this trade is now about $18.91 (0.19% of balance) instead of the requested 1.00%.
+08/01/2026 04:00:00.255 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 270.14, TP: 707.22)
+08/01/2026 04:00:00.255 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 270.14, TP: 707.22) SUCCEEDED, Position PID12
+08/01/2026 04:00:00.255 | Info | MA Cross: bartime=2026-01-08 03:40, executed=2026-01-08 04:00:00, market Sell placed; SL=270.1378816439168 pips, TP=707.2209741437741 pips.
+08/01/2026 17:00:00.605 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.21 units, which needs about $14032.19 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4974.28 budget, free margin was $9948.56). Size was cut from 0.21 to 0.07 units. Real risk on this trade is now about $31.70 (0.32% of balance) instead of the requested 1.00%.
+08/01/2026 17:00:00.605 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 452.91, TP: 1185.71)
+08/01/2026 17:00:00.605 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 452.91, TP: 1185.71) SUCCEEDED, Position PID13
+08/01/2026 17:00:00.605 | Info | MA Cross: bartime=2026-01-08 16:40, executed=2026-01-08 17:00:00, market Buy placed; SL=452.9069963560531 pips, TP=1185.7105164601471 pips.
+09/01/2026 05:00:00.043 | Info | MA Cross: bartime=2026-01-09 04:40, reversal - closing existing Buy position 13 before opening opposite direction.
+09/01/2026 05:00:00.043 | Trade | Closing position PID13 (Volume: 0.07)
+09/01/2026 05:00:00.043 | Trade |  Closing position PID13 (Volume: 0.07) SUCCEEDED
+09/01/2026 05:00:00.043 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.50 units, which needs about $33409.97 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4974.81 budget, free margin was $9949.61). Size was cut from 0.50 to 0.07 units. Real risk on this trade is now about $13.79 (0.14% of balance) instead of the requested 1.00%.
+09/01/2026 05:00:00.043 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 197.01, TP: 515.77)
+09/01/2026 05:00:00.043 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 197.01, TP: 515.77) SUCCEEDED, Position PID14
+09/01/2026 05:00:00.043 | Info | MA Cross: bartime=2026-01-09 04:40, executed=2026-01-09 05:00:00, market Sell placed; SL=197.0080559440118 pips, TP=515.7670904614229 pips.
+09/01/2026 16:20:00.018 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.14 units, which needs about $9354.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4992.92 budget, free margin was $9985.84). Size was cut from 0.14 to 0.07 units. Real risk on this trade is now about $47.87 (0.48% of balance) instead of the requested 1.00%.
+09/01/2026 16:20:00.018 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 683.85, TP: 1790.32)
+09/01/2026 16:20:00.018 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 683.85, TP: 1790.32) SUCCEEDED, Position PID15
+09/01/2026 16:20:00.018 | Info | MA Cross: bartime=2026-01-09 16:00, executed=2026-01-09 16:20:00, market Buy placed; SL=683.8514587658734 pips, TP=1790.3231190490565 pips.
+09/01/2026 21:20:00.490 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.31 units, which needs about $20714.18 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4968.93 budget, free margin was $9937.85). Size was cut from 0.31 to 0.07 units. Real risk on this trade is now about $22.28 (0.22% of balance) instead of the requested 1.00%.
+09/01/2026 21:20:00.490 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 318.28, TP: 833.25)
+09/01/2026 21:20:00.490 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 318.28, TP: 833.25) SUCCEEDED, Position PID16
+09/01/2026 21:20:00.490 | Info | MA Cross: bartime=2026-01-09 21:00, executed=2026-01-09 21:20:00, market Sell placed; SL=318.2755246184486 pips, TP=833.2453234510984 pips.
+11/01/2026 03:20:01.696 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 1.46 units, which needs about $97557.13 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4957.64 budget, free margin was $9915.27). Size was cut from 1.46 to 0.07 units. Real risk on this trade is now about $4.72 (0.05% of balance) instead of the requested 1.00%.
+11/01/2026 03:20:01.696 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 67.46, TP: 176.6)
+11/01/2026 03:20:01.696 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 67.46, TP: 176.6) SUCCEEDED, Position PID17
+11/01/2026 03:20:01.696 | Info | MA Cross: bartime=2026-01-11 03:00, executed=2026-01-11 03:20:01, market Buy placed; SL=67.45586386293938 pips, TP=176.5994515931753 pips.
+11/01/2026 21:00:00.252 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.61 units, which needs about $40760.17 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4955.26 budget, free margin was $9910.52). Size was cut from 0.61 to 0.07 units. Real risk on this trade is now about $11.33 (0.11% of balance) instead of the requested 1.00%.
+11/01/2026 21:00:00.252 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 161.89, TP: 423.84)
+11/01/2026 21:00:00.252 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 161.89, TP: 423.84) SUCCEEDED, Position PID18
+11/01/2026 21:00:00.252 | Info | MA Cross: bartime=2026-01-11 20:40, executed=2026-01-11 21:00:00, market Sell placed; SL=161.89355659427505 pips, TP=423.83733116381205 pips.
+12/01/2026 01:40:00.066 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.23 units, which needs about $15368.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4970.20 budget, free margin was $9940.39). Size was cut from 0.23 to 0.07 units. Real risk on this trade is now about $30.22 (0.30% of balance) instead of the requested 1.00%.
+12/01/2026 01:40:00.066 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 431.64, TP: 1130.05)
+12/01/2026 01:40:00.066 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 431.64, TP: 1130.05) SUCCEEDED, Position PID19
+12/01/2026 01:40:00.066 | Info | MA Cross: bartime=2026-01-12 01:20, executed=2026-01-12 01:40:00, market Buy placed; SL=431.6444004812086 pips, TP=1130.045040459804 pips.
+12/01/2026 09:40:00.601 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.30 units, which needs about $20045.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5009.91 budget, free margin was $10019.82). Size was cut from 0.30 to 0.07 units. Real risk on this trade is now about $22.85 (0.23% of balance) instead of the requested 1.00%.
+12/01/2026 09:40:00.601 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 326.38, TP: 854.46)
+12/01/2026 09:40:00.601 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 326.38, TP: 854.46) SUCCEEDED, Position PID20
+12/01/2026 09:40:00.601 | Info | MA Cross: bartime=2026-01-12 09:20, executed=2026-01-12 09:40:00, market Sell placed; SL=326.3773850587703 pips, TP=854.4559940838606 pips.
+12/01/2026 17:00:01.408 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.24 units, which needs about $16036.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4997.87 budget, free margin was $9995.73). Size was cut from 0.24 to 0.07 units. Real risk on this trade is now about $28.11 (0.28% of balance) instead of the requested 1.00%.
+12/01/2026 17:00:01.408 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 401.61, TP: 1051.43)
+12/01/2026 17:00:01.408 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 401.61, TP: 1051.43) SUCCEEDED, Position PID21
+12/01/2026 17:00:01.408 | Info | MA Cross: bartime=2026-01-12 16:40, executed=2026-01-12 17:00:01, market Buy placed; SL=401.61494414240826 pips, TP=1051.4279237648248 pips.
+13/01/2026 06:00:00.006 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.35 units, which needs about $23386.98 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4983.79 budget, free margin was $9967.58). Size was cut from 0.35 to 0.07 units. Real risk on this trade is now about $19.48 (0.20% of balance) instead of the requested 1.00%.
+13/01/2026 06:00:00.006 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 278.24, TP: 728.44)
+13/01/2026 06:00:00.006 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 278.24, TP: 728.44) SUCCEEDED, Position PID22
+13/01/2026 06:00:00.006 | Info | MA Cross: bartime=2026-01-13 05:40, executed=2026-01-13 06:00:00, market Buy placed; SL=278.244204366636 pips, TP=728.443327031853 pips.
+14/01/2026 15:00:00.008 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.20 units, which needs about $13363.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5009.59 budget, free margin was $10019.17). Size was cut from 0.20 to 0.07 units. Real risk on this trade is now about $34.23 (0.34% of balance) instead of the requested 1.00%.
+14/01/2026 15:00:00.008 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 488.93, TP: 1280.03)
+14/01/2026 15:00:00.008 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 488.93, TP: 1280.03) SUCCEEDED, Position PID23
+14/01/2026 15:00:00.008 | Info | MA Cross: bartime=2026-01-14 14:40, executed=2026-01-14 15:00:00, market Buy placed; SL=488.9334359209838 pips, TP=1280.0277352411356 pips.
+15/01/2026 01:40:00.206 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.31 units, which needs about $20714.18 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5054.43 budget, free margin was $10108.85). Size was cut from 0.31 to 0.07 units. Real risk on this trade is now about $22.67 (0.22% of balance) instead of the requested 1.00%.
+15/01/2026 01:40:00.206 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 323.92, TP: 848.02)
+15/01/2026 01:40:00.206 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 323.92, TP: 848.02) SUCCEEDED, Position PID24
+15/01/2026 01:40:00.206 | Info | MA Cross: bartime=2026-01-15 01:20, executed=2026-01-15 01:40:00, market Sell placed; SL=323.92040019665166 pips, TP=848.023607714834 pips.
+15/01/2026 10:00:00.210 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.41 units, which needs about $27396.18 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5043.01 budget, free margin was $10086.01). Size was cut from 0.41 to 0.07 units. Real risk on this trade is now about $16.95 (0.17% of balance) instead of the requested 1.00%.
+15/01/2026 10:00:00.210 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 242.19, TP: 634.06)
+15/01/2026 10:00:00.210 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 242.19, TP: 634.06) SUCCEEDED, Position PID25
+15/01/2026 10:00:00.210 | Info | MA Cross: bartime=2026-01-15 09:40, executed=2026-01-15 10:00:00, market Buy placed; SL=242.19327197513968 pips, TP=634.0619860309157 pips.
+15/01/2026 16:00:00.038 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.14 units, which needs about $9354.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5034.40 budget, free margin was $10068.79). Size was cut from 0.14 to 0.07 units. Real risk on this trade is now about $48.47 (0.48% of balance) instead of the requested 1.00%.
+15/01/2026 16:00:00.038 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 692.47, TP: 1812.88)
+15/01/2026 16:00:00.038 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 692.47, TP: 1812.88) SUCCEEDED, Position PID26
+15/01/2026 16:00:00.038 | Info | MA Cross: bartime=2026-01-15 15:40, executed=2026-01-15 16:00:00, market Sell placed; SL=692.4664183101654 pips, TP=1812.877083136013 pips.
+16/01/2026 09:00:00.210 | Info | MA Cross: bartime=2026-01-16 08:40, reversal - closing existing Sell position 26 before opening opposite direction.
+16/01/2026 09:00:00.210 | Trade | Closing position PID26 (Volume: 0.07)
+16/01/2026 09:00:00.210 | Trade |  Closing position PID26 (Volume: 0.07) SUCCEEDED
+16/01/2026 09:00:00.210 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.60 units, which needs about $40091.97 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5070.18 budget, free margin was $10140.35). Size was cut from 0.60 to 0.07 units. Real risk on this trade is now about $11.82 (0.12% of balance) instead of the requested 1.00%.
+16/01/2026 09:00:00.210 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 168.87, TP: 442.1)
+16/01/2026 09:00:00.210 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 168.87, TP: 442.1) SUCCEEDED, Position PID27
+16/01/2026 09:00:00.210 | Info | MA Cross: bartime=2026-01-16 08:40, executed=2026-01-16 09:00:00, market Buy placed; SL=168.8681314660291 pips, TP=442.09676817806417 pips.
+16/01/2026 22:05:00.002 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.46 units, which needs about $30737.18 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5064.25 budget, free margin was $10128.49). Size was cut from 0.46 to 0.07 units. Real risk on this trade is now about $15.13 (0.15% of balance) instead of the requested 1.00%.
+16/01/2026 22:05:00.002 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 216.2, TP: 566.02)
+16/01/2026 22:05:00.002 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 216.2, TP: 566.02) SUCCEEDED, Position PID28
+16/01/2026 22:05:00.002 | Info | MA Cross: bartime=2026-01-16 21:40, executed=2026-01-16 22:05:00, market Buy placed; SL=216.20450440809776 pips, TP=566.0233925403999 pips.
+17/01/2026 05:40:00.282 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 1.28 units, which needs about $85529.54 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5056.39 budget, free margin was $10112.78). Size was cut from 1.28 to 0.07 units. Real risk on this trade is now about $5.50 (0.05% of balance) instead of the requested 1.00%.
+17/01/2026 05:40:00.282 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 78.56, TP: 205.66)
+17/01/2026 05:40:00.282 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 78.56, TP: 205.66) SUCCEEDED, Position PID29
+17/01/2026 05:40:00.282 | Info | MA Cross: bartime=2026-01-17 05:20, executed=2026-01-17 05:40:00, market Sell placed; SL=78.55506927368477 pips, TP=205.6571713585067 pips.
+17/01/2026 14:40:00.065 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 1.01 units, which needs about $67488.15 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5063.69 budget, free margin was $10127.38). Size was cut from 1.01 to 0.07 units. Real risk on this trade is now about $6.95 (0.07% of balance) instead of the requested 1.00%.
+17/01/2026 14:40:00.065 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 99.31, TP: 260.01)
+17/01/2026 14:40:00.065 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 99.31, TP: 260.01) SUCCEEDED, Position PID30
+17/01/2026 14:40:00.065 | Info | MA Cross: bartime=2026-01-17 14:20, executed=2026-01-17 14:40:00, market Buy placed; SL=99.31442300001908 pips, TP=260.00515941404996 pips.
+17/01/2026 22:05:00.003 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 1.58 units, which needs about $105575.52 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5059.79 budget, free margin was $10119.57). Size was cut from 1.58 to 0.07 units. Real risk on this trade is now about $4.48 (0.04% of balance) instead of the requested 1.00%.
+17/01/2026 22:05:00.003 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 64, TP: 167.54)
+17/01/2026 22:05:00.003 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 64, TP: 167.54) SUCCEEDED, Position PID31
+17/01/2026 22:05:00.003 | Info | MA Cross: bartime=2026-01-17 21:40, executed=2026-01-17 22:05:00, market Sell placed; SL=63.995227065199 pips, TP=167.539504456691 pips.
+18/01/2026 09:00:00.216 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 1.51 units, which needs about $100898.12 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5065.75 budget, free margin was $10131.50). Size was cut from 1.51 to 0.07 units. Real risk on this trade is now about $4.68 (0.05% of balance) instead of the requested 1.00%.
+18/01/2026 09:00:00.216 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 66.79, TP: 174.87)
+18/01/2026 09:00:00.216 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 66.79, TP: 174.87) SUCCEEDED, Position PID32
+18/01/2026 09:00:00.216 | Info | MA Cross: bartime=2026-01-18 08:40, executed=2026-01-18 09:00:00, market Buy placed; SL=66.79346897907061 pips, TP=174.86530178720685 pips.
+18/01/2026 14:00:00.201 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.88 units, which needs about $58801.56 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5063.34 budget, free margin was $10126.67). Size was cut from 0.88 to 0.07 units. Real risk on this trade is now about $7.99 (0.08% of balance) instead of the requested 1.00%.
+18/01/2026 14:00:00.201 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 114.18, TP: 298.91)
+18/01/2026 14:00:00.201 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 114.18, TP: 298.91) SUCCEEDED, Position PID33
+18/01/2026 14:00:00.201 | Info | MA Cross: bartime=2026-01-18 13:40, executed=2026-01-18 14:00:00, market Sell placed; SL=114.17551713576283 pips, TP=298.9115038614271 pips.
+18/01/2026 18:00:03.002 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 1.10 units, which needs about $73501.95 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5059.33 budget, free margin was $10118.66). Size was cut from 1.10 to 0.07 units. Real risk on this trade is now about $6.42 (0.06% of balance) instead of the requested 1.00%.
+18/01/2026 18:00:03.002 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 91.68, TP: 240.02)
+18/01/2026 18:00:03.002 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 91.68, TP: 240.02) SUCCEEDED, Position PID34
+18/01/2026 18:00:03.002 | Info | MA Cross: bartime=2026-01-18 17:40, executed=2026-01-18 18:00:03, market Buy placed; SL=91.68153144954098 pips, TP=240.02224933489828 pips.
+19/01/2026 00:00:00.011 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.24 units, which needs about $16036.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5056.11 budget, free margin was $10112.22). Size was cut from 0.24 to 0.07 units. Real risk on this trade is now about $28.55 (0.28% of balance) instead of the requested 1.00%.
+19/01/2026 00:00:00.011 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 407.88, TP: 1067.84)
+19/01/2026 00:00:00.011 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 407.88, TP: 1067.84) SUCCEEDED, Position PID35
+19/01/2026 00:00:00.011 | Info | MA Cross: bartime=2026-01-18 23:40, executed=2026-01-19 00:00:00, market Sell placed; SL=407.88273601330775 pips, TP=1067.8370028828397 pips.
+19/01/2026 10:40:02.405 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.53 units, which needs about $35414.57 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5094.12 budget, free margin was $10188.23). Size was cut from 0.53 to 0.07 units. Real risk on this trade is now about $13.21 (0.13% of balance) instead of the requested 1.00%.
+19/01/2026 10:40:02.405 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 188.7, TP: 494.01)
+19/01/2026 10:40:02.405 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 188.7, TP: 494.01) SUCCEEDED, Position PID36
+19/01/2026 10:40:02.405 | Info | MA Cross: bartime=2026-01-19 10:20, executed=2026-01-19 10:40:02, market Buy placed; SL=188.69829205929514 pips, TP=494.0121286112347 pips.
+19/01/2026 22:40:00.004 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.53 units, which needs about $35414.57 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5087.03 budget, free margin was $10174.05). Size was cut from 0.53 to 0.07 units. Real risk on this trade is now about $13.19 (0.13% of balance) instead of the requested 1.00%.
+19/01/2026 22:40:00.004 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 188.49, TP: 493.47)
+19/01/2026 22:40:00.004 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 188.49, TP: 493.47) SUCCEEDED, Position PID37
+19/01/2026 22:40:00.004 | Info | MA Cross: bartime=2026-01-19 22:20, executed=2026-01-19 22:40:00, market Sell placed; SL=188.49051203786064 pips, TP=493.4681605151191 pips.
+21/01/2026 05:20:00.803 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.52 units, which needs about $34746.37 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5105.24 budget, free margin was $10210.47). Size was cut from 0.52 to 0.07 units. Real risk on this trade is now about $13.58 (0.13% of balance) instead of the requested 1.00%.
+21/01/2026 05:20:00.803 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 193.99, TP: 507.87)
+21/01/2026 05:20:00.803 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 193.99, TP: 507.87) SUCCEEDED, Position PID38
+21/01/2026 05:20:00.803 | Info | MA Cross: bartime=2026-01-21 05:00, executed=2026-01-21 05:20:00, market Buy placed; SL=193.991710045636 pips, TP=507.8702968994751 pips.
+21/01/2026 17:40:00.008 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.14 units, which needs about $9354.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5123.06 budget, free margin was $10246.11). Size was cut from 0.14 to 0.07 units. Real risk on this trade is now about $50.56 (0.49% of balance) instead of the requested 1.00%.
+21/01/2026 17:40:00.008 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 722.26, TP: 1890.88)
+21/01/2026 17:40:00.008 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 722.26, TP: 1890.88) SUCCEEDED, Position PID39
+21/01/2026 17:40:00.008 | Info | MA Cross: bartime=2026-01-21 17:20, executed=2026-01-21 17:40:00, market Sell placed; SL=722.2599179301573 pips, TP=1890.8764651411516 pips.
+21/01/2026 21:40:01.100 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.19 units, which needs about $12695.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5097.46 budget, free margin was $10194.91). Size was cut from 0.19 to 0.07 units. Real risk on this trade is now about $37.04 (0.36% of balance) instead of the requested 1.00%.
+21/01/2026 21:40:01.100 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 529.14, TP: 1385.3)
+21/01/2026 21:40:01.100 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 529.14, TP: 1385.3) SUCCEEDED, Position PID40
+21/01/2026 21:40:01.100 | Info | MA Cross: bartime=2026-01-21 21:20, executed=2026-01-21 21:40:01, market Buy placed; SL=529.1431333716238 pips, TP=1385.296723166911 pips.
+22/01/2026 14:20:00.610 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.39 units, which needs about $26059.78 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5078.80 budget, free margin was $10157.59). Size was cut from 0.39 to 0.07 units. Real risk on this trade is now about $17.79 (0.18% of balance) instead of the requested 1.00%.
+22/01/2026 14:20:00.610 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 254.08, TP: 665.17)
+22/01/2026 14:20:00.610 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 254.08, TP: 665.17) SUCCEEDED, Position PID41
+22/01/2026 14:20:00.610 | Info | MA Cross: bartime=2026-01-22 14:00, executed=2026-01-22 14:20:00, market Sell placed; SL=254.07684317632504 pips, TP=665.1731754356189 pips.
+23/01/2026 08:40:00.007 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.48 units, which needs about $32073.58 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5102.39 budget, free margin was $10204.77). Size was cut from 0.48 to 0.07 units. Real risk on this trade is now about $14.69 (0.14% of balance) instead of the requested 1.00%.
+23/01/2026 08:40:00.007 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 209.89, TP: 549.5)
+23/01/2026 08:40:00.007 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 209.89, TP: 549.5) SUCCEEDED, Position PID42
+23/01/2026 08:40:00.007 | Info | MA Cross: bartime=2026-01-23 08:20, executed=2026-01-23 08:40:00, market Sell placed; SL=209.89444709756907 pips, TP=549.5036625014358 pips.
+23/01/2026 17:00:00.005 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.20 units, which needs about $13363.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5094.99 budget, free margin was $10189.97). Size was cut from 0.20 to 0.07 units. Real risk on this trade is now about $34.97 (0.34% of balance) instead of the requested 1.00%.
+23/01/2026 17:00:00.005 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 499.58, TP: 1307.89)
+23/01/2026 17:00:00.005 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 499.58, TP: 1307.89) SUCCEEDED, Position PID43
+23/01/2026 17:00:00.005 | Info | MA Cross: bartime=2026-01-23 16:40, executed=2026-01-23 17:00:00, market Buy placed; SL=499.5776014758157 pips, TP=1307.8941606636854 pips.
+23/01/2026 23:20:00.225 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.39 units, which needs about $26059.78 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5076.73 budget, free margin was $10153.46). Size was cut from 0.39 to 0.07 units. Real risk on this trade is now about $17.92 (0.18% of balance) instead of the requested 1.00%.
+23/01/2026 23:20:00.225 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 256.03, TP: 670.28)
+23/01/2026 23:20:00.225 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 256.03, TP: 670.28) SUCCEEDED, Position PID44
+23/01/2026 23:20:00.225 | Info | MA Cross: bartime=2026-01-23 23:00, executed=2026-01-23 23:20:00, market Sell placed; SL=256.0265603856541 pips, TP=670.2775350896424 pips.
+24/01/2026 11:20:00.000 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 2.60 units, which needs about $173731.87 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5066.84 budget, free margin was $10133.67). Size was cut from 2.60 to 0.07 units. Real risk on this trade is now about $2.72 (0.03% of balance) instead of the requested 1.00%.
+24/01/2026 11:20:00.000 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 38.9, TP: 101.85)
+24/01/2026 11:20:00.000 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 38.9, TP: 101.85) SUCCEEDED, Position PID45
+24/01/2026 11:20:00.000 | Info | MA Cross: bartime=2026-01-24 11:00, executed=2026-01-24 11:20:00, market Sell placed; SL=38.90435103685918 pips, TP=101.85159101449733 pips.
+25/01/2026 16:40:00.201 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.29 units, which needs about $19377.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5065.03 budget, free margin was $10130.05). Size was cut from 0.29 to 0.07 units. Real risk on this trade is now about $24.07 (0.24% of balance) instead of the requested 1.00%.
+25/01/2026 16:40:00.201 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 343.92, TP: 900.39)
+25/01/2026 16:40:00.201 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 343.92, TP: 900.39) SUCCEEDED, Position PID46
+25/01/2026 16:40:00.201 | Info | MA Cross: bartime=2026-01-25 16:20, executed=2026-01-25 16:40:00, market Sell placed; SL=343.9209959052964 pips, TP=900.385167280066 pips.
+26/01/2026 03:20:00.208 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.29 units, which needs about $19377.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5099.81 budget, free margin was $10199.62). Size was cut from 0.29 to 0.07 units. Real risk on this trade is now about $24.07 (0.24% of balance) instead of the requested 1.00%.
+26/01/2026 03:20:00.208 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 343.79, TP: 900.04)
+26/01/2026 03:20:00.208 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 343.79, TP: 900.04) SUCCEEDED, Position PID47
+26/01/2026 03:20:00.208 | Info | MA Cross: bartime=2026-01-26 03:00, executed=2026-01-26 03:20:00, market Buy placed; SL=343.78903262102807 pips, TP=900.0396874018514 pips.
+26/01/2026 17:20:00.253 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.18 units, which needs about $12027.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5087.64 budget, free margin was $10175.28). Size was cut from 0.18 to 0.07 units. Real risk on this trade is now about $38.64 (0.38% of balance) instead of the requested 1.00%.
+26/01/2026 17:20:00.253 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 551.97, TP: 1445.06)
+26/01/2026 17:20:00.253 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 551.97, TP: 1445.06) SUCCEEDED, Position PID48
+26/01/2026 17:20:00.253 | Info | MA Cross: bartime=2026-01-26 17:00, executed=2026-01-26 17:20:00, market Sell placed; SL=551.9703780299642 pips, TP=1445.0584496824463 pips.
+27/01/2026 08:40:00.607 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.65 units, which needs about $43432.97 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5068.30 budget, free margin was $10136.60). Size was cut from 0.65 to 0.07 units. Real risk on this trade is now about $10.87 (0.11% of balance) instead of the requested 1.00%.
+27/01/2026 08:40:00.607 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 155.35, TP: 406.71)
+27/01/2026 08:40:00.607 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 155.35, TP: 406.71) SUCCEEDED, Position PID49
+27/01/2026 08:40:00.607 | Info | MA Cross: bartime=2026-01-27 08:20, executed=2026-01-27 08:40:00, market Sell placed; SL=155.35078673734722 pips, TP=406.708359678375 pips.
+27/01/2026 19:20:00.005 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.23 units, which needs about $15368.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5082.60 budget, free margin was $10165.19). Size was cut from 0.23 to 0.07 units. Real risk on this trade is now about $30.82 (0.30% of balance) instead of the requested 1.00%.
+27/01/2026 19:20:00.005 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 440.3, TP: 1152.71)
+27/01/2026 19:20:00.005 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 440.3, TP: 1152.71) SUCCEEDED, Position PID50
+27/01/2026 19:20:00.005 | Info | MA Cross: bartime=2026-01-27 19:00, executed=2026-01-27 19:20:00, market Buy placed; SL=440.30302345676836 pips, TP=1152.7133154098194 pips.
+28/01/2026 10:20:00.008 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.39 units, which needs about $26059.78 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5123.45 budget, free margin was $10246.90). Size was cut from 0.39 to 0.07 units. Real risk on this trade is now about $17.99 (0.18% of balance) instead of the requested 1.00%.
+28/01/2026 10:20:00.008 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 256.93, TP: 672.65)
+28/01/2026 10:20:00.008 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 256.93, TP: 672.65) SUCCEEDED, Position PID51
+28/01/2026 10:20:00.008 | Info | MA Cross: bartime=2026-01-28 10:00, executed=2026-01-28 10:20:00, market Buy placed; SL=256.9318486726188 pips, TP=672.647579824916 pips.
+28/01/2026 19:20:00.056 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.21 units, which needs about $14032.19 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5147.06 budget, free margin was $10294.11). Size was cut from 0.21 to 0.07 units. Real risk on this trade is now about $33.42 (0.32% of balance) instead of the requested 1.00%.
+28/01/2026 19:20:00.056 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 477.36, TP: 1249.73)
+28/01/2026 19:20:00.056 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 477.36, TP: 1249.73) SUCCEEDED, Position PID52
+28/01/2026 19:20:00.056 | Info | MA Cross: bartime=2026-01-28 19:00, executed=2026-01-28 19:20:00, market Sell placed; SL=477.35950247389195 pips, TP=1249.727177476649 pips.
+30/01/2026 12:40:00.007 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.30 units, which needs about $20045.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5130.02 budget, free margin was $10260.03). Size was cut from 0.30 to 0.07 units. Real risk on this trade is now about $23.83 (0.23% of balance) instead of the requested 1.00%.
+30/01/2026 12:40:00.007 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 340.41, TP: 891.21)
+30/01/2026 12:40:00.007 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 340.41, TP: 891.21) SUCCEEDED, Position PID53
+30/01/2026 12:40:00.007 | Info | MA Cross: bartime=2026-01-30 12:20, executed=2026-01-30 12:40:00, market Buy placed; SL=340.4148907674324 pips, TP=891.206184029138 pips.
+31/01/2026 05:40:00.099 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.65 units, which needs about $43432.97 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5117.92 budget, free margin was $10235.84). Size was cut from 0.65 to 0.07 units. Real risk on this trade is now about $11.00 (0.11% of balance) instead of the requested 1.00%.
+31/01/2026 05:40:00.099 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 157.11, TP: 411.32)
+31/01/2026 05:40:00.099 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 157.11, TP: 411.32) SUCCEEDED, Position PID54
+31/01/2026 05:40:00.099 | Info | MA Cross: bartime=2026-01-31 05:20, executed=2026-01-31 05:40:00, market Sell placed; SL=157.11065357042122 pips, TP=411.31569104736275 pips.
+01/02/2026 03:00:00.002 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.24 units, which needs about $16036.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5132.57 budget, free margin was $10265.14). Size was cut from 0.24 to 0.07 units. Real risk on this trade is now about $29.72 (0.29% of balance) instead of the requested 1.00%.
+01/02/2026 03:00:00.002 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 424.58, TP: 1111.55)
+01/02/2026 03:00:00.002 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 424.58, TP: 1111.55) SUCCEEDED, Position PID55
+01/02/2026 03:00:00.002 | Info | MA Cross: bartime=2026-02-01 02:40, executed=2026-02-01 03:00:00, market Buy placed; SL=424.5788764800504 pips, TP=1111.5474986247718 pips.
+01/02/2026 12:20:00.025 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.32 units, which needs about $21382.38 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5117.12 budget, free margin was $10234.24). Size was cut from 0.32 to 0.07 units. Real risk on this trade is now about $22.17 (0.22% of balance) instead of the requested 1.00%.
+01/02/2026 12:20:00.025 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 316.78, TP: 829.33)
+01/02/2026 12:20:00.025 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 316.78, TP: 829.33) SUCCEEDED, Position PID56
+01/02/2026 12:20:00.025 | Info | MA Cross: bartime=2026-02-01 12:00, executed=2026-02-01 12:20:00, market Buy placed; SL=316.7815885897605 pips, TP=829.3341989279929 pips.
+01/02/2026 13:00:00.245 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.34 units, which needs about $22718.78 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5105.99 budget, free margin was $10211.99). Size was cut from 0.34 to 0.07 units. Real risk on this trade is now about $21.02 (0.21% of balance) instead of the requested 1.00%.
+01/02/2026 13:00:00.245 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 300.33, TP: 786.27)
+01/02/2026 13:00:00.245 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 300.33, TP: 786.27) SUCCEEDED, Position PID57
+01/02/2026 13:00:00.245 | Info | MA Cross: bartime=2026-02-01 12:40, executed=2026-02-01 13:00:00, market Sell placed; SL=300.3322166974486 pips, TP=786.2697433139203 pips.
+02/02/2026 10:20:00.007 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.19 units, which needs about $12695.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5095.46 budget, free margin was $10190.92). Size was cut from 0.19 to 0.07 units. Real risk on this trade is now about $36.63 (0.36% of balance) instead of the requested 1.00%.
+02/02/2026 10:20:00.007 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 523.31, TP: 1370.02)
+02/02/2026 10:20:00.007 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 523.31, TP: 1370.02) SUCCEEDED, Position PID58
+02/02/2026 10:20:00.007 | Info | MA Cross: bartime=2026-02-02 10:00, executed=2026-02-02 10:20:00, market Buy placed; SL=523.3076229733722 pips, TP=1370.0193569442883 pips.
+03/02/2026 04:40:00.008 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.25 units, which needs about $16704.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5143.56 budget, free margin was $10287.11). Size was cut from 0.25 to 0.07 units. Real risk on this trade is now about $27.96 (0.27% of balance) instead of the requested 1.00%.
+03/02/2026 04:40:00.008 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 399.41, TP: 1045.65)
+03/02/2026 04:40:00.008 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 399.41, TP: 1045.65) SUCCEEDED, Position PID59
+03/02/2026 04:40:00.008 | Info | MA Cross: bartime=2026-02-03 04:20, executed=2026-02-03 04:40:00, market Buy placed; SL=399.4065210881037 pips, TP=1045.6462722086555 pips.
+03/02/2026 05:20:00.007 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.25 units, which needs about $16704.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5129.56 budget, free margin was $10259.11). Size was cut from 0.25 to 0.07 units. Real risk on this trade is now about $28.02 (0.27% of balance) instead of the requested 1.00%.
+03/02/2026 05:20:00.007 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 400.23, TP: 1047.8)
+03/02/2026 05:20:00.007 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 400.23, TP: 1047.8) SUCCEEDED, Position PID60
+03/02/2026 05:20:00.007 | Info | MA Cross: bartime=2026-02-03 05:00, executed=2026-02-03 05:20:00, market Sell placed; SL=400.22817349638456 pips, TP=1047.7973582135348 pips.
+04/02/2026 01:40:00.009 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.20 units, which needs about $13363.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5115.33 budget, free margin was $10230.66). Size was cut from 0.20 to 0.07 units. Real risk on this trade is now about $34.18 (0.33% of balance) instead of the requested 1.00%.
+04/02/2026 01:40:00.009 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 488.22, TP: 1278.16)
+04/02/2026 01:40:00.009 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 488.22, TP: 1278.16) SUCCEEDED, Position PID61
+04/02/2026 01:40:00.009 | Info | MA Cross: bartime=2026-02-04 01:20, executed=2026-02-04 01:40:00, market Buy placed; SL=488.2211192237845 pips, TP=1278.1628901278677 pips.
+04/02/2026 11:00:00.006 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.46 units, which needs about $30737.18 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5098.14 budget, free margin was $10196.28). Size was cut from 0.46 to 0.07 units. Real risk on this trade is now about $15.47 (0.15% of balance) instead of the requested 1.00%.
+04/02/2026 11:00:00.006 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 220.97, TP: 578.5)
+04/02/2026 11:00:00.006 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 220.97, TP: 578.5) SUCCEEDED, Position PID62
+04/02/2026 11:00:00.006 | Info | MA Cross: bartime=2026-02-04 10:40, executed=2026-02-04 11:00:00, market Sell placed; SL=220.9703948407267 pips, TP=578.5004936930225 pips.
+06/02/2026 04:40:00.205 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.12 units, which needs about $8018.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5118.41 budget, free margin was $10236.82). Size was cut from 0.12 to 0.07 units. Real risk on this trade is now about $58.54 (0.57% of balance) instead of the requested 1.00%.
+06/02/2026 04:40:00.205 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 836.31, TP: 2189.47)
+06/02/2026 04:40:00.205 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 836.31, TP: 2189.47) SUCCEEDED, Position PID63
+06/02/2026 04:40:00.205 | Info | MA Cross: bartime=2026-02-06 04:20, executed=2026-02-06 04:40:00, market Buy placed; SL=836.3140990645779 pips, TP=2189.470311351065 pips.
+07/02/2026 04:40:00.000 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.20 units, which needs about $13363.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5195.40 budget, free margin was $10390.79). Size was cut from 0.20 to 0.07 units. Real risk on this trade is now about $34.77 (0.33% of balance) instead of the requested 1.00%.
+07/02/2026 04:40:00.000 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 496.67, TP: 1300.29)
+07/02/2026 04:40:00.000 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 496.67, TP: 1300.29) SUCCEEDED, Position PID64
+07/02/2026 04:40:00.000 | Info | MA Cross: bartime=2026-02-07 04:20, executed=2026-02-07 04:40:00, market Buy placed; SL=496.67467342737297 pips, TP=1300.2942950328625 pips.
+07/02/2026 20:00:00.053 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.12 units, which needs about $8018.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5177.74 budget, free margin was $10355.47). Size was cut from 0.12 to 0.07 units. Real risk on this trade is now about $56.64 (0.55% of balance) instead of the requested 1.00%.
+07/02/2026 20:00:00.053 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 809.2, TP: 2118.49)
+07/02/2026 20:00:00.053 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 809.2, TP: 2118.49) SUCCEEDED, Position PID65
+07/02/2026 20:00:00.053 | Info | MA Cross: bartime=2026-02-07 08:20, executed=2026-02-07 20:00:00, market Sell placed; SL=809.2027847909451 pips, TP=2118.492890582694 pips.
+07/02/2026 20:00:00.053 | Info | MA Cross: bartime=2026-02-07 17:20, reversal - closing existing Sell position 65 before opening opposite direction.
+07/02/2026 20:00:00.053 | Trade | Closing position PID65 (Volume: 0.07)
+07/02/2026 20:00:00.053 | Trade |  Closing position PID65 (Volume: 0.07) SUCCEEDED
+07/02/2026 20:00:00.053 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.18 units, which needs about $12027.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5177.67 budget, free margin was $10355.34). Size was cut from 0.18 to 0.07 units. Real risk on this trade is now about $38.38 (0.37% of balance) instead of the requested 1.00%.
+07/02/2026 20:00:00.053 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 548.34, TP: 1435.56)
+07/02/2026 20:00:00.053 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 548.34, TP: 1435.56) SUCCEEDED, Position PID66
+07/02/2026 20:00:00.053 | Info | MA Cross: bartime=2026-02-07 17:20, executed=2026-02-07 20:00:00, market Buy placed; SL=548.3413959691048 pips, TP=1435.5577746471165 pips.
+08/02/2026 08:00:00.001 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.47 units, which needs about $31405.38 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5157.83 budget, free margin was $10315.66). Size was cut from 0.47 to 0.07 units. Real risk on this trade is now about $15.24 (0.15% of balance) instead of the requested 1.00%.
+08/02/2026 08:00:00.001 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 217.65, TP: 569.8)
+08/02/2026 08:00:00.001 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 217.65, TP: 569.8) SUCCEEDED, Position PID67
+08/02/2026 08:00:00.001 | Info | MA Cross: bartime=2026-02-08 07:40, executed=2026-02-08 08:00:00, market Buy placed; SL=217.64549634041936 pips, TP=569.7959094192179 pips.
+08/02/2026 22:40:00.203 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.30 units, which needs about $20045.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5178.32 budget, free margin was $10356.63). Size was cut from 0.30 to 0.07 units. Real risk on this trade is now about $23.68 (0.23% of balance) instead of the requested 1.00%.
+08/02/2026 22:40:00.203 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 338.26, TP: 885.57)
+08/02/2026 22:40:00.203 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 338.26, TP: 885.57) SUCCEEDED, Position PID68
+08/02/2026 22:40:00.203 | Info | MA Cross: bartime=2026-02-08 22:20, executed=2026-02-08 22:40:00, market Sell placed; SL=338.26136885372046 pips, TP=885.5682636590401 pips.
+09/02/2026 06:00:00.272 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.35 units, which needs about $23386.98 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5166.37 budget, free margin was $10332.74). Size was cut from 0.35 to 0.07 units. Real risk on this trade is now about $20.26 (0.20% of balance) instead of the requested 1.00%.
+09/02/2026 06:00:00.272 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 289.48, TP: 757.86)
+09/02/2026 06:00:00.272 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 289.48, TP: 757.86) SUCCEEDED, Position PID69
+09/02/2026 06:00:00.272 | Info | MA Cross: bartime=2026-02-09 05:40, executed=2026-02-09 06:00:00, market Buy placed; SL=289.48001976976803 pips, TP=757.8586917572527 pips.
+09/02/2026 08:40:00.007 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.22 units, which needs about $14700.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5156.24 budget, free margin was $10312.47). Size was cut from 0.22 to 0.07 units. Real risk on this trade is now about $31.72 (0.31% of balance) instead of the requested 1.00%.
+09/02/2026 08:40:00.007 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 453.14, TP: 1186.31)
+09/02/2026 08:40:00.007 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 453.14, TP: 1186.31) SUCCEEDED, Position PID70
+09/02/2026 08:40:00.007 | Info | MA Cross: bartime=2026-02-09 08:20, executed=2026-02-09 08:40:00, market Sell placed; SL=453.13580908961956 pips, TP=1186.3095481966238 pips.
+09/02/2026 18:00:00.093 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.17 units, which needs about $11359.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5197.92 budget, free margin was $10395.84). Size was cut from 0.17 to 0.07 units. Real risk on this trade is now about $41.25 (0.40% of balance) instead of the requested 1.00%.
+09/02/2026 18:00:00.093 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 589.34, TP: 1542.89)
+09/02/2026 18:00:00.093 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 589.34, TP: 1542.89) SUCCEEDED, Position PID71
+09/02/2026 18:00:00.093 | Info | MA Cross: bartime=2026-02-09 17:40, executed=2026-02-09 18:00:00, market Buy placed; SL=589.339846790965 pips, TP=1542.8917188987464 pips.
+10/02/2026 02:40:00.005 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.36 units, which needs about $24055.18 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5174.93 budget, free margin was $10349.85). Size was cut from 0.36 to 0.07 units. Real risk on this trade is now about $19.72 (0.19% of balance) instead of the requested 1.00%.
+10/02/2026 02:40:00.005 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 281.75, TP: 737.63)
+10/02/2026 02:40:00.005 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 281.75, TP: 737.63) SUCCEEDED, Position PID72
+10/02/2026 02:40:00.005 | Info | MA Cross: bartime=2026-02-10 02:20, executed=2026-02-10 02:40:00, market Sell placed; SL=281.7544005278358 pips, TP=737.6330205818741 pips.
+10/02/2026 17:00:00.212 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.19 units, which needs about $12695.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5201.78 budget, free margin was $10403.56). Size was cut from 0.19 to 0.07 units. Real risk on this trade is now about $37.58 (0.36% of balance) instead of the requested 1.00%.
+10/02/2026 17:00:00.212 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 536.88, TP: 1405.55)
+10/02/2026 17:00:00.212 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 536.88, TP: 1405.55) SUCCEEDED, Position PID73
+10/02/2026 17:00:00.212 | Info | MA Cross: bartime=2026-02-10 16:40, executed=2026-02-10 17:00:00, market Buy placed; SL=536.8795437609133 pips, TP=1405.550645566071 pips.
+10/02/2026 22:05:00.007 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.26 units, which needs about $17373.19 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5182.85 budget, free margin was $10365.70). Size was cut from 0.26 to 0.07 units. Real risk on this trade is now about $27.07 (0.26% of balance) instead of the requested 1.00%.
+10/02/2026 22:05:00.007 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 386.74, TP: 1012.49)
+10/02/2026 22:05:00.007 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 386.74, TP: 1012.49) SUCCEEDED, Position PID74
+10/02/2026 22:05:00.007 | Info | MA Cross: bartime=2026-02-10 21:40, executed=2026-02-10 22:05:00, market Sell placed; SL=386.74328656772377 pips, TP=1012.4939242343008 pips.
+11/02/2026 17:00:00.009 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.13 units, which needs about $8686.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5168.91 budget, free margin was $10337.82). Size was cut from 0.13 to 0.07 units. Real risk on this trade is now about $53.19 (0.51% of balance) instead of the requested 1.00%.
+11/02/2026 17:00:00.009 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 759.91, TP: 1989.43)
+11/02/2026 17:00:00.009 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 759.91, TP: 1989.43) SUCCEEDED, Position PID75
+11/02/2026 17:00:00.009 | Info | MA Cross: bartime=2026-02-11 16:40, executed=2026-02-11 17:00:00, market Sell placed; SL=759.905475909239 pips, TP=1989.4325359303878 pips.
+11/02/2026 20:20:00.008 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.22 units, which needs about $14700.39 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5142.14 budget, free margin was $10284.27). Size was cut from 0.22 to 0.07 units. Real risk on this trade is now about $32.18 (0.31% of balance) instead of the requested 1.00%.
+11/02/2026 20:20:00.008 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 459.78, TP: 1203.72)
+11/02/2026 20:20:00.008 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 459.78, TP: 1203.72) SUCCEEDED, Position PID76
+11/02/2026 20:20:00.008 | Info | MA Cross: bartime=2026-02-11 20:00, executed=2026-02-11 20:20:00, market Buy placed; SL=459.7848789459973 pips, TP=1203.716813080621 pips.
+12/02/2026 05:20:00.006 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.29 units, which needs about $19377.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5118.73 budget, free margin was $10237.46). Size was cut from 0.29 to 0.07 units. Real risk on this trade is now about $24.17 (0.24% of balance) instead of the requested 1.00%.
+12/02/2026 05:20:00.006 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 345.27, TP: 903.91)
+12/02/2026 05:20:00.006 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 345.27, TP: 903.91) SUCCEEDED, Position PID77
+12/02/2026 05:20:00.006 | Info | MA Cross: bartime=2026-02-12 05:00, executed=2026-02-12 05:20:00, market Sell placed; SL=345.26593884980326 pips, TP=903.9062279087849 pips.
+12/02/2026 11:20:00.006 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.32 units, which needs about $21382.38 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5106.63 budget, free margin was $10213.25). Size was cut from 0.32 to 0.07 units. Real risk on this trade is now about $21.85 (0.21% of balance) instead of the requested 1.00%.
+12/02/2026 11:20:00.006 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 312.07, TP: 817.01)
+12/02/2026 11:20:00.006 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 312.07, TP: 817.01) SUCCEEDED, Position PID78
+12/02/2026 11:20:00.006 | Info | MA Cross: bartime=2026-02-12 11:00, executed=2026-02-12 11:20:00, market Buy placed; SL=312.07219780546745 pips, TP=817.0050138547138 pips.
+12/02/2026 17:00:00.007 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.14 units, which needs about $9354.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5095.61 budget, free margin was $10191.21). Size was cut from 0.14 to 0.07 units. Real risk on this trade is now about $47.62 (0.47% of balance) instead of the requested 1.00%.
+12/02/2026 17:00:00.007 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 680.27, TP: 1780.94)
+12/02/2026 17:00:00.007 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 680.27, TP: 1780.94) SUCCEEDED, Position PID79
+12/02/2026 17:00:00.007 | Info | MA Cross: bartime=2026-02-12 16:40, executed=2026-02-12 17:00:00, market Sell placed; SL=680.2691087350795 pips, TP=1780.9445266684381 pips.
+13/02/2026 02:00:00.005 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.31 units, which needs about $20714.18 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5069.15 budget, free margin was $10138.30). Size was cut from 0.31 to 0.07 units. Real risk on this trade is now about $22.48 (0.22% of balance) instead of the requested 1.00%.
+13/02/2026 02:00:00.005 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 321.09, TP: 840.61)
+13/02/2026 02:00:00.005 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 321.09, TP: 840.61) SUCCEEDED, Position PID80
+13/02/2026 02:00:00.005 | Info | MA Cross: bartime=2026-02-13 01:40, executed=2026-02-13 02:00:00, market Buy placed; SL=321.0890192713114 pips, TP=840.6110524522932 pips.
+14/02/2026 02:30:00.002 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.72 units, which needs about $48110.36 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5057.63 budget, free margin was $10115.26). Size was cut from 0.72 to 0.07 units. Real risk on this trade is now about $9.76 (0.10% of balance) instead of the requested 1.00%.
+14/02/2026 02:30:00.002 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 139.49, TP: 365.17)
+14/02/2026 02:30:00.002 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 139.49, TP: 365.17) SUCCEEDED, Position PID81
+14/02/2026 02:30:00.002 | Info | MA Cross: bartime=2026-02-14 02:00, executed=2026-02-14 02:30:00, market Sell placed; SL=139.4853035095992 pips, TP=365.17252458813067 pips.
+14/02/2026 05:20:00.003 | Info | MA Cross: bartime=2026-02-14 05:00, Sell signal skipped: already have same-direction exposure open.
+14/02/2026 08:20:00.002 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.36 units, which needs about $24055.18 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5052.71 budget, free margin was $10105.42). Size was cut from 0.36 to 0.07 units. Real risk on this trade is now about $19.30 (0.19% of balance) instead of the requested 1.00%.
+14/02/2026 08:20:00.002 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 275.74, TP: 721.89)
+14/02/2026 08:20:00.002 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 275.74, TP: 721.89) SUCCEEDED, Position PID82
+14/02/2026 08:20:00.002 | Info | MA Cross: bartime=2026-02-14 08:00, executed=2026-02-14 08:20:00, market Buy placed; SL=275.74200411752713 pips, TP=721.892566779686 pips.
+14/02/2026 19:20:00.000 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.50 units, which needs about $33409.97 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5078.00 budget, free margin was $10155.99). Size was cut from 0.50 to 0.07 units. Real risk on this trade is now about $14.12 (0.14% of balance) instead of the requested 1.00%.
+14/02/2026 19:20:00.000 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 201.76, TP: 528.22)
+14/02/2026 19:20:00.000 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 201.76, TP: 528.22) SUCCEEDED, Position PID83
+14/02/2026 19:20:00.000 | Info | MA Cross: bartime=2026-02-14 19:00, executed=2026-02-14 19:20:00, market Sell placed; SL=201.76411097502938 pips, TP=528.2184425326269 pips.
+14/02/2026 20:40:00.001 | Info | MA Cross: bartime=2026-02-14 20:20, reversal - closing existing Sell position 83 before opening opposite direction.
+14/02/2026 20:40:00.001 | Trade | Closing position PID83 (Volume: 0.07)
+14/02/2026 20:40:00.001 | Trade |  Closing position PID83 (Volume: 0.07) SUCCEEDED
+14/02/2026 20:40:00.001 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.59 units, which needs about $39423.77 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5074.72 budget, free margin was $10149.43). Size was cut from 0.59 to 0.07 units. Real risk on this trade is now about $11.94 (0.12% of balance) instead of the requested 1.00%.
+14/02/2026 20:40:00.001 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 170.61, TP: 446.67)
+14/02/2026 20:40:00.001 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 170.61, TP: 446.67) SUCCEEDED, Position PID84
+14/02/2026 20:40:00.001 | Info | MA Cross: bartime=2026-02-14 20:20, executed=2026-02-14 20:40:00, market Buy placed; SL=170.61345985537207 pips, TP=446.66603790136406 pips.
+15/02/2026 02:20:00.003 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.40 units, which needs about $26727.98 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5068.45 budget, free margin was $10136.89). Size was cut from 0.40 to 0.07 units. Real risk on this trade is now about $17.33 (0.17% of balance) instead of the requested 1.00%.
+15/02/2026 02:20:00.003 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 247.57, TP: 648.13)
+15/02/2026 02:20:00.003 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 247.57, TP: 648.13) SUCCEEDED, Position PID85
+15/02/2026 02:20:00.003 | Info | MA Cross: bartime=2026-02-15 02:00, executed=2026-02-15 02:20:00, market Sell placed; SL=247.5653770915749 pips, TP=648.1261572257431 pips.
+15/02/2026 05:40:00.001 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.35 units, which needs about $23386.98 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5058.99 budget, free margin was $10117.97). Size was cut from 0.35 to 0.07 units. Real risk on this trade is now about $20.08 (0.20% of balance) instead of the requested 1.00%.
+15/02/2026 05:40:00.001 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 286.89, TP: 751.08)
+15/02/2026 05:40:00.001 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 286.89, TP: 751.08) SUCCEEDED, Position PID86
+15/02/2026 05:40:00.001 | Info | MA Cross: bartime=2026-02-15 05:20, executed=2026-02-15 05:40:00, market Buy placed; SL=286.8891457637568 pips, TP=751.0757836095153 pips.
+15/02/2026 13:40:00.000 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.24 units, which needs about $16036.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5047.92 budget, free margin was $10095.83). Size was cut from 0.24 to 0.07 units. Real risk on this trade is now about $29.02 (0.29% of balance) instead of the requested 1.00%.
+15/02/2026 13:40:00.000 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 414.61, TP: 1085.45)
+15/02/2026 13:40:00.000 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 414.61, TP: 1085.45) SUCCEEDED, Position PID87
+15/02/2026 13:40:00.000 | Info | MA Cross: bartime=2026-02-15 13:20, executed=2026-02-15 13:40:00, market Sell placed; SL=414.61183351422886 pips, TP=1085.4537801402512 pips.
+16/02/2026 01:00:00.209 | Info | MA Cross: bartime=2026-02-16 00:40, reversal - closing existing Sell position 87 before opening opposite direction.
+16/02/2026 01:00:00.209 | Trade | Closing position PID87 (Volume: 0.07)
+16/02/2026 01:00:00.209 | Trade |  Closing position PID87 (Volume: 0.07) SUCCEEDED
+16/02/2026 01:00:00.209 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.35 units, which needs about $23386.98 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5053.47 budget, free margin was $10106.93). Size was cut from 0.35 to 0.07 units. Real risk on this trade is now about $20.02 (0.20% of balance) instead of the requested 1.00%.
+16/02/2026 01:00:00.209 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 285.98, TP: 748.69)
+16/02/2026 01:00:00.209 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 285.98, TP: 748.69) SUCCEEDED, Position PID88
+16/02/2026 01:00:00.209 | Info | MA Cross: bartime=2026-02-16 00:40, executed=2026-02-16 01:00:00, market Buy placed; SL=285.97856775670704 pips, TP=748.691890387059 pips.
+16/02/2026 03:00:00.005 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.38 units, which needs about $25391.58 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5043.44 budget, free margin was $10086.87). Size was cut from 0.38 to 0.07 units. Real risk on this trade is now about $18.36 (0.18% of balance) instead of the requested 1.00%.
+16/02/2026 03:00:00.005 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 262.27, TP: 686.63)
+16/02/2026 03:00:00.005 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 262.27, TP: 686.63) SUCCEEDED, Position PID89
+16/02/2026 03:00:00.005 | Info | MA Cross: bartime=2026-02-16 02:40, executed=2026-02-16 03:00:00, market Sell placed; SL=262.2709224660157 pips, TP=686.625275016029 pips.
+16/02/2026 10:00:00.009 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.60 units, which needs about $40091.97 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5034.19 budget, free margin was $10068.38). Size was cut from 0.60 to 0.07 units. Real risk on this trade is now about $11.63 (0.12% of balance) instead of the requested 1.00%.
+16/02/2026 10:00:00.009 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 166.12, TP: 434.9)
+16/02/2026 10:00:00.009 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 166.12, TP: 434.9) SUCCEEDED, Position PID90
+16/02/2026 10:00:00.009 | Info | MA Cross: bartime=2026-02-16 09:40, executed=2026-02-16 10:00:00, market Buy placed; SL=166.1181275323226 pips, TP=434.89725787962055 pips.
+16/02/2026 16:00:00.007 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.19 units, which needs about $12695.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5028.35 budget, free margin was $10056.70). Size was cut from 0.19 to 0.07 units. Real risk on this trade is now about $36.98 (0.37% of balance) instead of the requested 1.00%.
+16/02/2026 16:00:00.007 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 528.23, TP: 1382.9)
+16/02/2026 16:00:00.007 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 528.23, TP: 1382.9) SUCCEEDED, Position PID91
+16/02/2026 16:00:00.007 | Info | MA Cross: bartime=2026-02-16 15:40, executed=2026-02-16 16:00:00, market Sell placed; SL=528.229316994915 pips, TP=1382.9043518926876 pips.
+16/02/2026 23:20:00.208 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.38 units, which needs about $25391.58 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5009.81 budget, free margin was $10019.61). Size was cut from 0.38 to 0.07 units. Real risk on this trade is now about $18.42 (0.18% of balance) instead of the requested 1.00%.
+16/02/2026 23:20:00.208 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 263.12, TP: 688.85)
+16/02/2026 23:20:00.208 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 263.12, TP: 688.85) SUCCEEDED, Position PID92
+16/02/2026 23:20:00.208 | Info | MA Cross: bartime=2026-02-16 23:00, executed=2026-02-16 23:20:00, market Buy placed; SL=263.12200891311653 pips, TP=688.853419334539 pips.
+17/02/2026 06:20:01.083 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.39 units, which needs about $26059.78 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5000.53 budget, free margin was $10001.06). Size was cut from 0.39 to 0.07 units. Real risk on this trade is now about $17.78 (0.18% of balance) instead of the requested 1.00%.
+17/02/2026 06:20:01.083 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 253.94, TP: 664.81)
+17/02/2026 06:20:01.083 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 253.94, TP: 664.81) SUCCEEDED, Position PID93
+17/02/2026 06:20:01.083 | Info | MA Cross: bartime=2026-02-17 06:00, executed=2026-02-17 06:20:01, market Sell placed; SL=253.93950696441232 pips, TP=664.8136292328314 pips.
+18/02/2026 00:00:00.009 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.49 units, which needs about $32741.78 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5023.90 budget, free margin was $10047.79). Size was cut from 0.49 to 0.07 units. Real risk on this trade is now about $14.29 (0.14% of balance) instead of the requested 1.00%.
+18/02/2026 00:00:00.009 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 204.09, TP: 534.31)
+18/02/2026 00:00:00.009 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 204.09, TP: 534.31) SUCCEEDED, Position PID94
+18/02/2026 00:00:00.009 | Info | MA Cross: bartime=2026-02-17 23:40, executed=2026-02-18 00:00:00, market Sell placed; SL=204.08962483948937 pips, TP=534.3066378297832 pips.
+18/02/2026 00:40:00.207 | Info | MA Cross: bartime=2026-02-18 00:20, reversal - closing existing Sell position 94 before opening opposite direction.
+18/02/2026 00:40:00.207 | Trade | Closing position PID94 (Volume: 0.07)
+18/02/2026 00:40:00.207 | Trade |  Closing position PID94 (Volume: 0.07) SUCCEEDED
+18/02/2026 00:40:00.207 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.54 units, which needs about $36082.77 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5021.39 budget, free margin was $10042.77). Size was cut from 0.54 to 0.07 units. Real risk on this trade is now about $12.80 (0.13% of balance) instead of the requested 1.00%.
+18/02/2026 00:40:00.207 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 182.8, TP: 478.58)
+18/02/2026 00:40:00.207 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 182.8, TP: 478.58) SUCCEEDED, Position PID95
+18/02/2026 00:40:00.207 | Info | MA Cross: bartime=2026-02-18 00:20, executed=2026-02-18 00:40:00, market Buy placed; SL=182.80335989727243 pips, TP=478.5791962110592 pips.
+18/02/2026 01:00:00.008 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.48 units, which needs about $32073.58 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5014.89 budget, free margin was $10029.78). Size was cut from 0.48 to 0.07 units. Real risk on this trade is now about $14.41 (0.14% of balance) instead of the requested 1.00%.
+18/02/2026 01:00:00.008 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 205.85, TP: 538.92)
+18/02/2026 01:00:00.008 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 205.85, TP: 538.92) SUCCEEDED, Position PID96
+18/02/2026 01:00:00.008 | Info | MA Cross: bartime=2026-02-18 00:40, executed=2026-02-18 01:00:00, market Sell placed; SL=205.85268791781564 pips, TP=538.9223369688414 pips.
+18/02/2026 06:20:00.206 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.53 units, which needs about $35414.57 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5007.51 budget, free margin was $10015.01). Size was cut from 0.53 to 0.07 units. Real risk on this trade is now about $13.08 (0.13% of balance) instead of the requested 1.00%.
+18/02/2026 06:20:00.206 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 186.88, TP: 489.25)
+18/02/2026 06:20:00.206 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 186.88, TP: 489.25) SUCCEEDED, Position PID97
+18/02/2026 06:20:00.206 | Info | MA Cross: bartime=2026-02-18 06:00, executed=2026-02-18 06:20:00, market Buy placed; SL=186.87790336145764 pips, TP=489.2463510002961 pips.
+18/02/2026 13:20:00.210 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.41 units, which needs about $27396.18 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5024.64 budget, free margin was $10049.27). Size was cut from 0.41 to 0.07 units. Real risk on this trade is now about $16.80 (0.17% of balance) instead of the requested 1.00%.
+18/02/2026 13:20:00.210 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 239.97, TP: 628.24)
+18/02/2026 13:20:00.210 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 239.97, TP: 628.24) SUCCEEDED, Position PID98
+18/02/2026 13:20:00.210 | Info | MA Cross: bartime=2026-02-18 13:00, executed=2026-02-18 13:20:00, market Sell placed; SL=239.97100199336384 pips, TP=628.2440832186265 pips.
+19/02/2026 03:40:00.065 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.53 units, which needs about $35414.57 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5046.66 budget, free margin was $10093.32). Size was cut from 0.53 to 0.07 units. Real risk on this trade is now about $13.13 (0.13% of balance) instead of the requested 1.00%.
+19/02/2026 03:40:00.065 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 187.61, TP: 491.15)
+19/02/2026 03:40:00.065 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 187.61, TP: 491.15) SUCCEEDED, Position PID99
+19/02/2026 03:40:00.065 | Info | MA Cross: bartime=2026-02-19 03:20, executed=2026-02-19 03:40:00, market Buy placed; SL=187.6052097795451 pips, TP=491.15043920284904 pips.
+19/02/2026 12:20:00.007 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.47 units, which needs about $31405.38 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5040.04 budget, free margin was $10080.08). Size was cut from 0.47 to 0.07 units. Real risk on this trade is now about $14.82 (0.15% of balance) instead of the requested 1.00%.
+19/02/2026 12:20:00.007 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 211.76, TP: 554.37)
+19/02/2026 12:20:00.007 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 211.76, TP: 554.37) SUCCEEDED, Position PID100
+19/02/2026 12:20:00.007 | Info | MA Cross: bartime=2026-02-19 12:00, executed=2026-02-19 12:20:00, market Sell placed; SL=211.7550727526887 pips, TP=554.374780466539 pips.
+19/02/2026 19:40:00.008 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.25 units, which needs about $16704.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5059.49 budget, free margin was $10118.97). Size was cut from 0.25 to 0.07 units. Real risk on this trade is now about $28.25 (0.28% of balance) instead of the requested 1.00%.
+19/02/2026 19:40:00.008 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 403.55, TP: 1056.49)
+19/02/2026 19:40:00.008 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 403.55, TP: 1056.49) SUCCEEDED, Position PID101
+19/02/2026 19:40:00.008 | Info | MA Cross: bartime=2026-02-19 19:20, executed=2026-02-19 19:40:00, market Buy placed; SL=403.548821840656 pips, TP=1056.4908155788373 pips.
+20/02/2026 14:00:00.214 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.26 units, which needs about $17373.19 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5094.59 budget, free margin was $10189.18). Size was cut from 0.26 to 0.07 units. Real risk on this trade is now about $27.13 (0.27% of balance) instead of the requested 1.00%.
+20/02/2026 14:00:00.214 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 387.63, TP: 1014.82)
+20/02/2026 14:00:00.214 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 387.63, TP: 1014.82) SUCCEEDED, Position PID102
+20/02/2026 14:00:00.214 | Info | MA Cross: bartime=2026-02-20 13:40, executed=2026-02-20 14:00:00, market Sell placed; SL=387.6330993730785 pips, TP=1014.8234541587194 pips.
+20/02/2026 19:40:00.006 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.25 units, which needs about $16704.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5080.89 budget, free margin was $10161.77). Size was cut from 0.25 to 0.07 units. Real risk on this trade is now about $28.32 (0.28% of balance) instead of the requested 1.00%.
+20/02/2026 19:40:00.006 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 404.55, TP: 1059.11)
+20/02/2026 19:40:00.006 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 404.55, TP: 1059.11) SUCCEEDED, Position PID103
+20/02/2026 19:40:00.006 | Info | MA Cross: bartime=2026-02-20 19:20, executed=2026-02-20 19:40:00, market Buy placed; SL=404.5495114499607 pips, TP=1059.110620975997 pips.
+21/02/2026 10:00:00.002 | Info | MA Cross: bartime=2026-02-21 09:40, Buy signal skipped: already have same-direction exposure open.
+21/02/2026 23:40:00.003 | Info | MA Cross: bartime=2026-02-21 23:20, reversal - closing existing Buy position 103 before opening opposite direction.
+21/02/2026 23:40:00.003 | Trade | Closing position PID103 (Volume: 0.07)
+21/02/2026 23:40:00.003 | Trade |  Closing position PID103 (Volume: 0.07) SUCCEEDED
+21/02/2026 23:40:00.003 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.70 units, which needs about $46773.96 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5087.76 budget, free margin was $10175.52). Size was cut from 0.70 to 0.07 units. Real risk on this trade is now about $10.05 (0.10% of balance) instead of the requested 1.00%.
+21/02/2026 23:40:00.003 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 143.56, TP: 375.85)
+21/02/2026 23:40:00.003 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 143.56, TP: 375.85) SUCCEEDED, Position PID104
+21/02/2026 23:40:00.003 | Info | MA Cross: bartime=2026-02-21 23:20, executed=2026-02-21 23:40:00, market Sell placed; SL=143.5627225544351 pips, TP=375.8472076475111 pips.
+22/02/2026 09:40:00.101 | Info | MA Cross: bartime=2026-02-22 09:20, reversal - closing existing Sell position 104 before opening opposite direction.
+22/02/2026 09:40:00.101 | Trade | Closing position PID104 (Volume: 0.07)
+22/02/2026 09:40:00.101 | Trade |  Closing position PID104 (Volume: 0.07) SUCCEEDED
+22/02/2026 09:40:00.101 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 1.45 units, which needs about $96888.93 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5091.24 budget, free margin was $10182.49). Size was cut from 1.45 to 0.07 units. Real risk on this trade is now about $4.88 (0.05% of balance) instead of the requested 1.00%.
+22/02/2026 09:40:00.101 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 69.78, TP: 182.69)
+22/02/2026 09:40:00.101 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 69.78, TP: 182.69) SUCCEEDED, Position PID105
+22/02/2026 09:40:00.101 | Info | MA Cross: bartime=2026-02-22 09:20, executed=2026-02-22 09:40:00, market Buy placed; SL=69.78239870465109 pips, TP=182.69031980877654 pips.
+22/02/2026 14:20:00.001 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.62 units, which needs about $41428.37 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5097.82 budget, free margin was $10195.64). Size was cut from 0.62 to 0.07 units. Real risk on this trade is now about $11.39 (0.11% of balance) instead of the requested 1.00%.
+22/02/2026 14:20:00.001 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 162.77, TP: 426.14)
+22/02/2026 14:20:00.001 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 162.77, TP: 426.14) SUCCEEDED, Position PID106
+22/02/2026 14:20:00.001 | Info | MA Cross: bartime=2026-02-22 14:00, executed=2026-02-22 14:20:00, market Sell placed; SL=162.7749506758346 pips, TP=426.1448208693349 pips.
+23/02/2026 01:00:00.078 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.37 units, which needs about $24723.38 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5091.88 budget, free margin was $10183.75). Size was cut from 0.37 to 0.07 units. Real risk on this trade is now about $19.00 (0.19% of balance) instead of the requested 1.00%.
+23/02/2026 01:00:00.078 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 271.42, TP: 710.59)
+23/02/2026 01:00:00.078 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 271.42, TP: 710.59) SUCCEEDED, Position PID107
+23/02/2026 01:00:00.078 | Info | MA Cross: bartime=2026-02-23 00:40, executed=2026-02-23 01:00:00, market Sell placed; SL=271.4248408718344 pips, TP=710.5902334024624 pips.
+23/02/2026 10:00:00.007 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.38 units, which needs about $25391.58 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5116.92 budget, free margin was $10233.84). Size was cut from 0.38 to 0.07 units. Real risk on this trade is now about $18.83 (0.18% of balance) instead of the requested 1.00%.
+23/02/2026 10:00:00.007 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 269.01, TP: 704.27)
+23/02/2026 10:00:00.007 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 269.01, TP: 704.27) SUCCEEDED, Position PID108
+23/02/2026 10:00:00.007 | Info | MA Cross: bartime=2026-02-23 09:40, executed=2026-02-23 10:00:00, market Buy placed; SL=269.01017189630016 pips, TP=704.2686300245138 pips.
+23/02/2026 17:00:00.005 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.28 units, which needs about $18709.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5107.48 budget, free margin was $10214.96). Size was cut from 0.28 to 0.07 units. Real risk on this trade is now about $25.51 (0.25% of balance) instead of the requested 1.00%.
+23/02/2026 17:00:00.005 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 364.44, TP: 954.12)
+23/02/2026 17:00:00.005 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 364.44, TP: 954.12) SUCCEEDED, Position PID109
+23/02/2026 17:00:00.005 | Info | MA Cross: bartime=2026-02-23 16:40, executed=2026-02-23 17:00:00, market Sell placed; SL=364.4443971415044 pips, TP=954.1154317164585 pips.
+24/02/2026 15:40:00.256 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.26 units, which needs about $17373.19 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5141.18 budget, free margin was $10282.35). Size was cut from 0.26 to 0.07 units. Real risk on this trade is now about $26.89 (0.26% of balance) instead of the requested 1.00%.
+24/02/2026 15:40:00.256 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 384.12, TP: 1005.63)
+24/02/2026 15:40:00.256 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 384.12, TP: 1005.63) SUCCEEDED, Position PID110
+24/02/2026 15:40:00.256 | Info | MA Cross: bartime=2026-02-24 15:20, executed=2026-02-24 15:40:00, market Buy placed; SL=384.12233677920335 pips, TP=1005.6322776879543 pips.
+25/02/2026 11:40:00.204 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.50 units, which needs about $33409.97 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5175.76 budget, free margin was $10351.51). Size was cut from 0.50 to 0.07 units. Real risk on this trade is now about $14.32 (0.14% of balance) instead of the requested 1.00%.
+25/02/2026 11:40:00.204 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 204.64, TP: 535.75)
+25/02/2026 11:40:00.204 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 204.64, TP: 535.75) SUCCEEDED, Position PID111
+25/02/2026 11:40:00.204 | Info | MA Cross: bartime=2026-02-25 11:20, executed=2026-02-25 11:40:00, market Sell placed; SL=204.64282784856994 pips, TP=535.754923307556 pips.
+25/02/2026 12:20:00.005 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.44 units, which needs about $29400.78 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5168.47 budget, free margin was $10336.94). Size was cut from 0.44 to 0.07 units. Real risk on this trade is now about $16.42 (0.16% of balance) instead of the requested 1.00%.
+25/02/2026 12:20:00.005 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 234.61, TP: 614.22)
+25/02/2026 12:20:00.005 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 234.61, TP: 614.22) SUCCEEDED, Position PID112
+25/02/2026 12:20:00.005 | Info | MA Cross: bartime=2026-02-25 12:00, executed=2026-02-25 12:20:00, market Buy placed; SL=234.61340982308374 pips, TP=614.2179069168332 pips.
+26/02/2026 02:00:00.004 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.25 units, which needs about $16704.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5190.12 budget, free margin was $10380.23). Size was cut from 0.25 to 0.07 units. Real risk on this trade is now about $28.79 (0.28% of balance) instead of the requested 1.00%.
+26/02/2026 02:00:00.004 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 411.31, TP: 1076.82)
+26/02/2026 02:00:00.004 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 411.31, TP: 1076.82) SUCCEEDED, Position PID113
+26/02/2026 02:00:00.004 | Info | MA Cross: bartime=2026-02-26 01:40, executed=2026-02-26 02:00:00, market Sell placed; SL=411.31333894835103 pips, TP=1076.818321366783 pips.
+26/02/2026 14:00:00.010 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.41 units, which needs about $27396.18 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5175.49 budget, free margin was $10350.97). Size was cut from 0.41 to 0.07 units. Real risk on this trade is now about $17.52 (0.17% of balance) instead of the requested 1.00%.
+26/02/2026 14:00:00.010 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 250.22, TP: 655.08)
+26/02/2026 14:00:00.010 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 250.22, TP: 655.08) SUCCEEDED, Position PID114
+26/02/2026 14:00:00.010 | Info | MA Cross: bartime=2026-02-26 13:40, executed=2026-02-26 14:00:00, market Sell placed; SL=250.22113440637133 pips, TP=655.0789298758801 pips.
+26/02/2026 23:20:00.406 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.46 units, which needs about $30737.18 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5166.55 budget, free margin was $10333.10). Size was cut from 0.46 to 0.07 units. Real risk on this trade is now about $15.54 (0.15% of balance) instead of the requested 1.00%.
+26/02/2026 23:20:00.406 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 221.99, TP: 581.18)
+26/02/2026 23:20:00.406 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 221.99, TP: 581.18) SUCCEEDED, Position PID115
+26/02/2026 23:20:00.406 | Info | MA Cross: bartime=2026-02-26 23:00, executed=2026-02-26 23:20:00, market Buy placed; SL=221.99413787055175 pips, TP=581.1806529451045 pips.
+27/02/2026 04:20:00.006 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.30 units, which needs about $20045.99 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5158.76 budget, free margin was $10317.51). Size was cut from 0.30 to 0.07 units. Real risk on this trade is now about $23.89 (0.23% of balance) instead of the requested 1.00%.
+27/02/2026 04:20:00.006 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 341.3, TP: 893.53)
+27/02/2026 04:20:00.006 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 341.3, TP: 893.53) SUCCEEDED, Position PID116
+27/02/2026 04:20:00.006 | Info | MA Cross: bartime=2026-02-27 04:00, executed=2026-02-27 04:20:00, market Buy placed; SL=341.3007986646867 pips, TP=893.5254909041497 pips.
+27/02/2026 11:20:00.005 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.28 units, which needs about $18709.59 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5146.53 budget, free margin was $10293.07). Size was cut from 0.28 to 0.07 units. Real risk on this trade is now about $25.00 (0.24% of balance) instead of the requested 1.00%.
+27/02/2026 11:20:00.005 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 357.19, TP: 935.13)
+27/02/2026 11:20:00.005 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 357.19, TP: 935.13) SUCCEEDED, Position PID117
+27/02/2026 11:20:00.005 | Info | MA Cross: bartime=2026-02-27 11:00, executed=2026-02-27 11:20:00, market Sell placed; SL=357.1927248711468 pips, TP=935.1305537126624 pips.
+28/02/2026 01:20:00.000 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.52 units, which needs about $34746.37 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5179.26 budget, free margin was $10358.53). Size was cut from 0.52 to 0.07 units. Real risk on this trade is now about $13.87 (0.13% of balance) instead of the requested 1.00%.
+28/02/2026 01:20:00.000 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 198.14, TP: 518.73)
+28/02/2026 01:20:00.000 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 198.14, TP: 518.73) SUCCEEDED, Position PID118
+28/02/2026 01:20:00.000 | Info | MA Cross: bartime=2026-02-28 01:00, executed=2026-02-28 01:20:00, market Buy placed; SL=198.140593108193 pips, TP=518.7320727572493 pips.
+28/02/2026 08:20:00.002 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.19 units, which needs about $12695.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5172.29 budget, free margin was $10344.59). Size was cut from 0.19 to 0.07 units. Real risk on this trade is now about $36.66 (0.35% of balance) instead of the requested 1.00%.
+28/02/2026 08:20:00.002 | Trade | Executing Market Order to Sell 0.07 BTCUSD (SL: 523.66, TP: 1370.93)
+28/02/2026 08:20:00.002 | Trade |  Executing Market Order to Sell 0.07 BTCUSD (SL: 523.66, TP: 1370.93) SUCCEEDED, Position PID119
+28/02/2026 08:20:00.002 | Info | MA Cross: bartime=2026-02-28 08:00, executed=2026-02-28 08:20:00, market Sell placed; SL=523.6568206722352 pips, TP=1370.9335565199117 pips.
+28/02/2026 16:40:00.200 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 0.26 units, which needs about $17373.19 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5129.84 budget, free margin was $10259.69). Size was cut from 0.26 to 0.07 units. Real risk on this trade is now about $27.25 (0.27% of balance) instead of the requested 1.00%.
+28/02/2026 16:40:00.200 | Trade | Executing Market Order to Buy 0.07 BTCUSD (SL: 389.32, TP: 1019.24)
+28/02/2026 16:40:00.200 | Trade |  Executing Market Order to Buy 0.07 BTCUSD (SL: 389.32, TP: 1019.24) SUCCEEDED, Position PID120
+28/02/2026 16:40:00.200 | Info | MA Cross: bartime=2026-02-28 16:20, executed=2026-02-28 16:40:00, market Buy placed; SL=389.32096958491036 pips, TP=1019.2422983732953 pips.
+28/02/2026 23:59:59.844 | Info | MA Cross: loaded=974, processed=122, before-start=491, not-processed=361, placed=120, failed=0, guard-skipped=0, same-direction-skipped=2, reversed=8, margin-capped=120, margin-blocked=0.
+Progress | Backtesting | 100.00 % |
+Info | CBot instance [MA Cross, BTCUSD, m20] stopped.
+{
+	"Equity":10331.1,
+	"NetProfit":331.11,
+	"MaxBalanceDrawdownPercentages":3,
+	"MaxEquityDrawdownPercentages":4,
+	"MaxBalanceDrawdown":402.49,
+	"MaxEquityDrawdown":448.04,
+	"WinningTrades":43,
+	"LosingTrades":77,
+	"TotalTrades":120,
+	"AverageTrade":2.75,
+	"ProfitFactor":1.19,
+	"Fitness":0
+}

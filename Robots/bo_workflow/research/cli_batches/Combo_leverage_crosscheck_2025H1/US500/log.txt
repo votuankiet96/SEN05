@@ -1,0 +1,1145 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_leverage_crosscheck_2025H1\US500\params.cbotset 
+--start=01/01/2025 --end=01/07/2025 --data-mode=M1 --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=US500.cash 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_leverage_crosscheck_2025H1\US500\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...500\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | US500.cash                | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 01/07/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | M1                        | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 2                         | cbotset              |
+| KtpLevel             | 4                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 50                        | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+04/09/2026 04:54:56.825 | Establishing connection using votuankiet96@gmail.com...
+04/09/2026 04:55:01.594 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Info | CBot instance [Combo, US500.cash, h1] started.
+Progress | Backtesting | 0.53 % |
+Progress | Backtesting | 0.62 % |
+Progress | Backtesting | 0.62 % |
+Progress | Backtesting | 1.10 % |
+Progress | Backtesting | 4.14 % |
+Progress | Backtesting | 5.00 % |
+Progress | Backtesting | 6.60 % |
+Progress | Backtesting | 7.69 % |
+Progress | Backtesting | 8.29 % |
+Progress | Backtesting | 10.42 % |
+Progress | Backtesting | 11.54 % |
+Progress | Backtesting | 12.96 % |
+Progress | Backtesting | 14.88 % |
+Progress | Backtesting | 16.15 % |
+Progress | Backtesting | 18.18 % |
+Progress | Backtesting | 19.78 % |
+Progress | Backtesting | 22.53 % |
+Progress | Backtesting | 24.60 % |
+Progress | Backtesting | 27.17 % |
+Progress | Backtesting | 29.67 % |
+Progress | Backtesting | 31.35 % |
+Progress | Backtesting | 34.07 % |
+Progress | Backtesting | 35.76 % |
+Progress | Backtesting | 38.46 % |
+Progress | Backtesting | 39.56 % |
+Progress | Backtesting | 42.31 % |
+Progress | Backtesting | 45.05 % |
+Progress | Backtesting | 46.70 % |
+Progress | Backtesting | 49.45 % |
+Progress | Backtesting | 51.10 % |
+Progress | Backtesting | 53.33 % |
+Progress | Backtesting | 55.24 % |
+Progress | Backtesting | 57.69 % |
+Progress | Backtesting | 60.44 % |
+Progress | Backtesting | 62.17 % |
+Progress | Backtesting | 64.84 % |
+Progress | Backtesting | 65.93 % |
+Progress | Backtesting | 68.68 % |
+Progress | Backtesting | 69.93 % |
+Progress | Backtesting | 72.05 % |
+Progress | Backtesting | 73.63 % |
+Progress | Backtesting | 75.99 % |
+Progress | Backtesting | 77.47 % |
+Progress | Backtesting | 79.87 % |
+Progress | Backtesting | 81.47 % |
+Progress | Backtesting | 83.59 % |
+Progress | Backtesting | 84.74 % |
+Progress | Backtesting | 85.80 % |
+Progress | Backtesting | 88.03 % |
+Progress | Backtesting | 89.56 % |
+Progress | Backtesting | 91.76 % |
+Progress | Backtesting | 93.41 % |
+Progress | Backtesting | 95.44 % |
+Progress | Backtesting | 96.16 % |
+Progress | Backtesting | 98.86 % |
+Progress | Backtesting | 99.92 % |
+01/01/2025 23:05:00.000 | Info | Combo: loaded 4530 valid signal row(s) from CSV.
+01/01/2025 23:05:00.000 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+02/01/2025 03:00:00.000 | Trade | Placing Stop Order to Buy 5.32 US500.cash (Price: 5903.7, SL: 5884.93339904153, TP: 5952.83)
+02/01/2025 03:00:00.000 | Trade |  Placing Stop Order to Buy 5.32 US500.cash (Price: 5903.7, SL: 5884.93339904153, TP: 5952.83) SUCCEEDED, PendingOrder OID1
+02/01/2025 03:00:00.000 | Info | Combo: bartime=2025-01-02 02:00, executed=2025-01-02 03:00:00, pending Buy placed at 5903.7; SL=5884.933399041534, TP=5952.830961309263; valid for the next 3 chart bar(s).
+02/01/2025 05:00:00.000 | Info | Combo: bartime=2025-01-02 04:00, Buy signal skipped: already have same-direction exposure open.
+02/01/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 3.72 US500.cash (Price: 5879.7, SL: 5906.23146014733, TP: 5810.24)
+02/01/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 3.72 US500.cash (Price: 5879.7, SL: 5906.23146014733, TP: 5810.24) SUCCEEDED, PendingOrder OID4
+02/01/2025 16:00:00.000 | Info | Combo: bartime=2025-01-02 15:00, executed=2025-01-02 16:00:00, pending Sell placed at 5879.7; SL=5906.231460147334, TP=5810.240637334279; valid for the next 3 chart bar(s).
+06/01/2025 20:00:00.000 | Trade | Placing Stop Order to Sell 5.6 US500.cash (Price: 5960.7, SL: 5978.13353928616, TP: 5915.06)
+06/01/2025 20:00:00.000 | Trade |  Placing Stop Order to Sell 5.6 US500.cash (Price: 5960.7, SL: 5978.13353928616, TP: 5915.06) SUCCEEDED, PendingOrder OID7
+06/01/2025 20:00:00.000 | Info | Combo: bartime=2025-01-06 19:00, executed=2025-01-06 20:00:00, pending Sell placed at 5960.7; SL=5978.1335392861565, TP=5915.0589941488415; valid for the next 3 chart bar(s).
+07/01/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 10.13 US500.cash (Price: 5982.1, SL: 5972.56713177031, TP: 6007.06)
+07/01/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 10.13 US500.cash (Price: 5982.1, SL: 5972.56713177031, TP: 6007.06) SUCCEEDED, PendingOrder OID10
+07/01/2025 11:00:00.000 | Info | Combo: bartime=2025-01-07 10:00, executed=2025-01-07 11:00:00, pending Buy placed at 5982.1; SL=5972.567131770311, TP=6007.057049025327; valid for the next 3 chart bar(s).
+07/01/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 4.41 US500.cash (Price: 5921.4, SL: 5942.8003702615, TP: 5865.37)
+07/01/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 4.41 US500.cash (Price: 5921.4, SL: 5942.8003702615, TP: 5865.37) SUCCEEDED, PendingOrder OID13
+07/01/2025 16:00:00.000 | Info | Combo: bartime=2025-01-07 15:00, executed=2025-01-07 16:00:00, pending Sell placed at 5921.4; SL=5942.800370261504, TP=5865.373830655381; valid for the next 3 chart bar(s).
+08/01/2025 17:00:00.000 | Trade | Placing Stop Order to Buy 3.97 US500.cash (Price: 5920.3, SL: 5896.79162035567, TP: 5981.84)
+08/01/2025 17:00:00.000 | Trade |  Placing Stop Order to Buy 3.97 US500.cash (Price: 5920.3, SL: 5896.79162035567, TP: 5981.84) SUCCEEDED, PendingOrder OID16
+08/01/2025 17:00:00.000 | Info | Combo: bartime=2025-01-08 16:00, executed=2025-01-08 17:00:00, pending Buy placed at 5920.3; SL=5896.791620355674, TP=5981.844937908845; valid for the next 3 chart bar(s).
+08/01/2025 18:00:00.000 | Info | Combo: bartime=2025-01-08 17:00, reversal - cancelling existing Buy pending order 16 before opening opposite direction.
+08/01/2025 18:00:00.000 | Trade | Cancelling pending order OID16
+08/01/2025 18:00:00.000 | Trade |  Cancelling pending order OID16 SUCCEEDED
+08/01/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 3.39 US500.cash (Price: 5870.2, SL: 5897.70670371546, TP: 5798.19)
+08/01/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 3.39 US500.cash (Price: 5870.2, SL: 5897.70670371546, TP: 5798.19) SUCCEEDED, PendingOrder OID17
+08/01/2025 18:00:00.000 | Info | Combo: bartime=2025-01-08 17:00, executed=2025-01-08 18:00:00, pending Sell placed at 5870.2; SL=5897.70670371546, TP=5798.187449672923; valid for the next 3 chart bar(s).
+08/01/2025 21:00:00.000 | Trade | Cancelling pending order OID17
+08/01/2025 21:00:00.000 | Trade |  Cancelling pending order OID17 SUCCEEDED
+08/01/2025 21:00:00.000 | Info | Combo: pending order 17 cancelled after 3 chart bars.
+08/01/2025 21:00:00.000 | Trade | Placing Stop Order to Buy 3.47 US500.cash (Price: 5918.2, SL: 5891.33816769768, TP: 5988.52)
+08/01/2025 21:00:00.000 | Trade |  Placing Stop Order to Buy 3.47 US500.cash (Price: 5918.2, SL: 5891.33816769768, TP: 5988.52) SUCCEEDED, PendingOrder OID18
+08/01/2025 21:00:00.000 | Info | Combo: bartime=2025-01-08 20:00, executed=2025-01-08 21:00:00, pending Buy placed at 5918.2; SL=5891.338167697684, TP=5988.524276967463; valid for the next 3 chart bar(s).
+09/01/2025 03:00:00.000 | Info | Combo: bartime=2025-01-09 02:00, Buy signal skipped: already have same-direction exposure open.
+09/01/2025 06:00:00.000 | Info | Combo: bartime=2025-01-09 05:00, Buy signal skipped: already have same-direction exposure open.
+09/01/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 9.04 US500.cash (Price: 5889.5, SL: 5899.71666795195, TP: 5862.75)
+09/01/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 9.04 US500.cash (Price: 5889.5, SL: 5899.71666795195, TP: 5862.75) SUCCEEDED, PendingOrder OID21
+09/01/2025 08:00:00.000 | Info | Combo: bartime=2025-01-09 07:00, executed=2025-01-09 08:00:00, pending Sell placed at 5889.5; SL=5899.716667951947, TP=5862.752763301803; valid for the next 3 chart bar(s).
+09/01/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 7.16 US500.cash (Price: 5909.8, SL: 5897.06666563844, TP: 5943.14)
+09/01/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 7.16 US500.cash (Price: 5909.8, SL: 5897.06666563844, TP: 5943.14) SUCCEEDED, PendingOrder OID24
+09/01/2025 09:00:00.000 | Info | Combo: bartime=2025-01-09 08:00, executed=2025-01-09 09:00:00, pending Buy placed at 5909.8; SL=5897.066665638443, TP=5943.135869358558; valid for the next 3 chart bar(s).
+09/01/2025 13:00:00.000 | Info | Combo: bartime=2025-01-09 12:00, Buy signal skipped: already have same-direction exposure open.
+10/01/2025 04:00:00.000 | Trade | Placing Stop Order to Buy 10.34 US500.cash (Price: 5905.6, SL: 5896.87315371256, TP: 5928.45)
+10/01/2025 04:00:00.000 | Trade |  Placing Stop Order to Buy 10.34 US500.cash (Price: 5905.6, SL: 5896.87315371256, TP: 5928.45) SUCCEEDED, PendingOrder OID27
+10/01/2025 04:00:00.000 | Info | Combo: bartime=2025-01-10 03:00, executed=2025-01-10 04:00:00, pending Buy placed at 5905.6; SL=5896.873153712563, TP=5928.44688358051; valid for the next 3 chart bar(s).
+10/01/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 10.62 US500.cash (Price: 5907.1, SL: 5898.69700376067, TP: 5929.1)
+10/01/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 10.62 US500.cash (Price: 5907.1, SL: 5898.69700376067, TP: 5929.1) SUCCEEDED, PendingOrder OID30
+10/01/2025 08:00:00.000 | Info | Combo: bartime=2025-01-10 07:00, executed=2025-01-10 08:00:00, pending Buy placed at 5907.1; SL=5898.697003760666, TP=5929.099044154577; valid for the next 3 chart bar(s).
+10/01/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 8.9 US500.cash (Price: 5909.2, SL: 5899.32726592546, TP: 5935.05)
+10/01/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 8.9 US500.cash (Price: 5909.2, SL: 5899.32726592546, TP: 5935.05) SUCCEEDED, PendingOrder OID33
+10/01/2025 11:00:00.000 | Info | Combo: bartime=2025-01-10 10:00, executed=2025-01-10 11:00:00, pending Buy placed at 5909.2; SL=5899.327265925461, TP=5935.046817807143; valid for the next 3 chart bar(s).
+10/01/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 4.01 US500.cash (Price: 5846.3, SL: 5867.91883984616, TP: 5789.7)
+10/01/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 4.01 US500.cash (Price: 5846.3, SL: 5867.91883984616, TP: 5789.7) SUCCEEDED, PendingOrder OID36
+10/01/2025 14:00:00.000 | Info | Combo: bartime=2025-01-10 13:00, executed=2025-01-10 14:00:00, pending Sell placed at 5846.3; SL=5867.918839846165, TP=5789.701877282742; valid for the next 3 chart bar(s).
+13/01/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 3.58 US500.cash (Price: 5818.2, SL: 5793.3379861881, TP: 5883.29)
+13/01/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 3.58 US500.cash (Price: 5818.2, SL: 5793.3379861881, TP: 5883.29) SUCCEEDED, PendingOrder OID39
+13/01/2025 18:00:00.000 | Info | Combo: bartime=2025-01-13 17:00, executed=2025-01-13 18:00:00, pending Buy placed at 5818.2; SL=5793.337986188098, TP=5883.28875215956; valid for the next 3 chart bar(s).
+14/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-14 14:00, reversal - closing existing Buy position 13 before opening opposite direction.
+14/01/2025 15:00:00.000 | Trade | Closing position PID13 (Volume: 3.58)
+14/01/2025 15:00:00.000 | Trade |  Closing position PID13 (Volume: 3.58) SUCCEEDED
+14/01/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 4.41 US500.cash (Price: 5839.2, SL: 5859.57153082012, TP: 5785.87)
+14/01/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 4.41 US500.cash (Price: 5839.2, SL: 5859.57153082012, TP: 5785.87) SUCCEEDED, PendingOrder OID43
+14/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-14 14:00, executed=2025-01-14 15:00:00, pending Sell placed at 5839.2; SL=5859.571530820117, TP=5785.867332312932; valid for the next 3 chart bar(s).
+14/01/2025 20:00:00.000 | Trade | Placing Stop Order to Sell 3.16 US500.cash (Price: 5824.2, SL: 5852.32875121914, TP: 5750.56)
+14/01/2025 20:00:00.000 | Trade |  Placing Stop Order to Sell 3.16 US500.cash (Price: 5824.2, SL: 5852.32875121914, TP: 5750.56) SUCCEEDED, PendingOrder OID46
+14/01/2025 20:00:00.000 | Info | Combo: bartime=2025-01-14 19:00, executed=2025-01-14 20:00:00, pending Sell placed at 5824.2; SL=5852.3287512191355, TP=5750.558929308301; valid for the next 3 chart bar(s).
+14/01/2025 23:05:00.000 | Trade | Placing Stop Order to Buy 3.34 US500.cash (Price: 5856.5, SL: 5830.22559921975, TP: 5925.29)
+14/01/2025 23:05:00.000 | Trade |  Placing Stop Order to Buy 3.34 US500.cash (Price: 5856.5, SL: 5830.22559921975, TP: 5925.29) SUCCEEDED, PendingOrder OID49
+14/01/2025 23:05:00.000 | Info | Combo: bartime=2025-01-14 21:00, executed=2025-01-14 23:05:00, pending Buy placed at 5856.5; SL=5830.225599219753, TP=5925.286381242687; valid for the next 3 chart bar(s).
+15/01/2025 02:00:00.000 | Trade | Cancelling pending order OID49
+15/01/2025 02:00:00.000 | Trade |  Cancelling pending order OID49 SUCCEEDED
+15/01/2025 02:00:00.000 | Info | Combo: pending order 49 cancelled after 3 chart bars.
+15/01/2025 02:00:00.000 | Trade | Placing Stop Order to Buy 5.74 US500.cash (Price: 5850.8, SL: 5835.48030680051, TP: 5890.91)
+15/01/2025 02:00:00.000 | Trade |  Placing Stop Order to Buy 5.74 US500.cash (Price: 5850.8, SL: 5835.48030680051, TP: 5890.91) SUCCEEDED, PendingOrder OID50
+15/01/2025 02:00:00.000 | Info | Combo: bartime=2025-01-15 01:00, executed=2025-01-15 02:00:00, pending Buy placed at 5850.8; SL=5835.480306800514, TP=5890.906956796256; valid for the next 3 chart bar(s).
+15/01/2025 05:00:00.000 | Trade | Cancelling pending order OID50
+15/01/2025 05:00:00.000 | Trade |  Cancelling pending order OID50 SUCCEEDED
+15/01/2025 05:00:00.000 | Info | Combo: pending order 50 cancelled after 3 chart bars.
+16/01/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 6.96 US500.cash (Price: 5949.7, SL: 5962.32487912504, TP: 5916.65)
+16/01/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 6.96 US500.cash (Price: 5949.7, SL: 5962.32487912504, TP: 5916.65) SUCCEEDED, PendingOrder OID51
+16/01/2025 13:00:00.000 | Info | Combo: bartime=2025-01-16 12:00, executed=2025-01-16 13:00:00, pending Sell placed at 5949.7; SL=5962.324879125039, TP=5916.648066450648; valid for the next 3 chart bar(s).
+16/01/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 6.05 US500.cash (Price: 5941, SL: 5955.35592264002, TP: 5903.42)
+16/01/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 6.05 US500.cash (Price: 5941, SL: 5955.35592264002, TP: 5903.42) SUCCEEDED, PendingOrder OID54
+16/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-16 14:00, executed=2025-01-16 15:00:00, pending Sell placed at 5941; SL=5955.355922640025, TP=5903.416194528415; valid for the next 3 chart bar(s).
+20/01/2025 13:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 12.66 units, which needs about $5232.53 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4284.19 budget, free margin was $8568.39). Size was cut from 12.66 to 10.15 units. Real risk on this trade is now about $68.64 (0.80% of balance) instead of the requested 1.00%.
+20/01/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 10.15 US500.cash (Price: 5989.1, SL: 5995.86302317219, TP: 5971.39)
+20/01/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 10.15 US500.cash (Price: 5989.1, SL: 5995.86302317219, TP: 5971.39) SUCCEEDED, PendingOrder OID57
+20/01/2025 13:00:00.000 | Info | Combo: bartime=2025-01-20 12:00, executed=2025-01-20 13:00:00, pending Sell placed at 5989.1; SL=5995.86302317219, TP=5971.394405335207; valid for the next 3 chart bar(s).
+20/01/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 6.34 US500.cash (Price: 6023.7, SL: 6010.44958146225, TP: 6058.39)
+20/01/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 6.34 US500.cash (Price: 6023.7, SL: 6010.44958146225, TP: 6058.39) SUCCEEDED, PendingOrder OID60
+20/01/2025 14:00:00.000 | Info | Combo: bartime=2025-01-20 13:00, executed=2025-01-20 14:00:00, pending Buy placed at 6023.7; SL=6010.449581462248, TP=6058.389595731835; valid for the next 3 chart bar(s).
+21/01/2025 01:00:00.000 | Trade | Placing Stop Order to Sell 3.82 US500.cash (Price: 5970.7, SL: 5992.44802927295, TP: 5913.76)
+21/01/2025 01:00:00.000 | Trade |  Placing Stop Order to Sell 3.82 US500.cash (Price: 5970.7, SL: 5992.44802927295, TP: 5913.76) SUCCEEDED, PendingOrder OID63
+21/01/2025 01:00:00.000 | Info | Combo: bartime=2025-01-21 00:00, executed=2025-01-21 01:00:00, pending Sell placed at 5970.7; SL=5992.448029272949, TP=5913.76365936342; valid for the next 3 chart bar(s).
+21/01/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 5.81 US500.cash (Price: 6020.4, SL: 6006.33449511313, TP: 6057.22)
+21/01/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 5.81 US500.cash (Price: 6020.4, SL: 6006.33449511313, TP: 6057.22) SUCCEEDED, PendingOrder OID66
+21/01/2025 09:00:00.000 | Info | Combo: bartime=2025-01-21 08:00, executed=2025-01-21 09:00:00, pending Buy placed at 6020.4; SL=6006.334495113134, TP=6057.223491793815; valid for the next 3 chart bar(s).
+21/01/2025 10:00:00.000 | Info | Combo: bartime=2025-01-21 09:00, Buy signal skipped: already have same-direction exposure open.
+23/01/2025 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 12.42 units, which needs about $5133.34 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4194.85 budget, free margin was $8389.69). Size was cut from 12.42 to 9.94 units. Real risk on this trade is now about $67.10 (0.80% of balance) instead of the requested 1.00%.
+23/01/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 9.94 US500.cash (Price: 6084.5, SL: 6077.74997591549, TP: 6102.17)
+23/01/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 9.94 US500.cash (Price: 6084.5, SL: 6077.74997591549, TP: 6102.17) SUCCEEDED, PendingOrder OID69
+23/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-23 14:00, executed=2025-01-23 15:00:00, pending Buy placed at 6084.5; SL=6077.749975915486, TP=6102.171563053258; valid for the next 3 chart bar(s).
+24/01/2025 14:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 16.28 units, which needs about $6728.72 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4280.82 budget, free margin was $8561.65). Size was cut from 16.28 to 10.15 units. Real risk on this trade is now about $53.36 (0.62% of balance) instead of the requested 1.00%.
+24/01/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 10.15 US500.cash (Price: 6105.9, SL: 6111.1571471603, TP: 6092.14)
+24/01/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 10.15 US500.cash (Price: 6105.9, SL: 6111.1571471603, TP: 6092.14) SUCCEEDED, PendingOrder OID72
+24/01/2025 14:00:00.000 | Info | Combo: bartime=2025-01-24 13:00, executed=2025-01-24 14:00:00, pending Sell placed at 6105.9; SL=6111.157147160303, TP=6092.136788734325; valid for the next 3 chart bar(s).
+24/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-24 14:00, reversal - cancelling existing Sell pending order 72 before opening opposite direction.
+24/01/2025 15:00:00.000 | Trade | Cancelling pending order OID72
+24/01/2025 15:00:00.000 | Trade |  Cancelling pending order OID72 SUCCEEDED
+24/01/2025 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 10.72 units, which needs about $4430.70 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4280.82 budget, free margin was $8561.65). Size was cut from 10.72 to 10.15 units. Real risk on this trade is now about $81.06 (0.95% of balance) instead of the requested 1.00%.
+24/01/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 10.15 US500.cash (Price: 6129.1, SL: 6121.11428227176, TP: 6150.01)
+24/01/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 10.15 US500.cash (Price: 6129.1, SL: 6121.11428227176, TP: 6150.01) SUCCEEDED, PendingOrder OID73
+24/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-24 14:00, executed=2025-01-24 15:00:00, pending Buy placed at 6129.1; SL=6121.1142822717575, TP=6150.00660901254; valid for the next 3 chart bar(s).
+24/01/2025 16:00:00.000 | Info | Combo: bartime=2025-01-24 15:00, reversal - cancelling existing Buy pending order 73 before opening opposite direction.
+24/01/2025 16:00:00.000 | Trade | Cancelling pending order OID73
+24/01/2025 16:00:00.000 | Trade |  Cancelling pending order OID73 SUCCEEDED
+24/01/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 9.21 US500.cash (Price: 6109.8, SL: 6119.08857418259, TP: 6085.48)
+24/01/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 9.21 US500.cash (Price: 6109.8, SL: 6119.08857418259, TP: 6085.48) SUCCEEDED, PendingOrder OID74
+24/01/2025 16:00:00.000 | Info | Combo: bartime=2025-01-24 15:00, executed=2025-01-24 16:00:00, pending Sell placed at 6109.8; SL=6119.088574182594, TP=6085.4825127899685; valid for the next 3 chart bar(s).
+24/01/2025 18:00:00.000 | Info | Combo: bartime=2025-01-24 17:00, Sell signal skipped: already have same-direction exposure open.
+27/01/2025 21:00:00.000 | Trade | Placing Stop Order to Buy 3.45 US500.cash (Price: 6016.4, SL: 5990.58019006696, TP: 6084)
+27/01/2025 21:00:00.000 | Trade |  Placing Stop Order to Buy 3.45 US500.cash (Price: 6016.4, SL: 5990.58019006696, TP: 6084) SUCCEEDED, PendingOrder OID77
+27/01/2025 21:00:00.000 | Info | Combo: bartime=2025-01-27 20:00, executed=2025-01-27 21:00:00, pending Buy placed at 6016.4; SL=5990.580190066959, TP=6083.996262404698; valid for the next 3 chart bar(s).
+28/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-28 14:00, reversal - closing existing Buy position 24 before opening opposite direction.
+28/01/2025 15:00:00.000 | Trade | Closing position PID24 (Volume: 3.45)
+28/01/2025 15:00:00.000 | Trade |  Closing position PID24 (Volume: 3.45) SUCCEEDED
+28/01/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 4.9 US500.cash (Price: 5990.6, SL: 6008.70175119543, TP: 5943.21)
+28/01/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 4.9 US500.cash (Price: 5990.6, SL: 6008.70175119543, TP: 5943.21) SUCCEEDED, PendingOrder OID81
+28/01/2025 15:00:00.000 | Info | Combo: bartime=2025-01-28 14:00, executed=2025-01-28 15:00:00, pending Sell placed at 5990.6; SL=6008.701751195426, TP=5943.209615370376; valid for the next 3 chart bar(s).
+28/01/2025 16:00:00.000 | Info | Combo: bartime=2025-01-28 15:00, reversal - cancelling existing Sell pending order 81 before opening opposite direction.
+28/01/2025 16:00:00.000 | Trade | Cancelling pending order OID81
+28/01/2025 16:00:00.000 | Trade |  Cancelling pending order OID81 SUCCEEDED
+28/01/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 3.84 US500.cash (Price: 6051.1, SL: 6028.03859904366, TP: 6111.47)
+28/01/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 3.84 US500.cash (Price: 6051.1, SL: 6028.03859904366, TP: 6111.47) SUCCEEDED, PendingOrder OID82
+28/01/2025 16:00:00.000 | Info | Combo: bartime=2025-01-28 15:00, executed=2025-01-28 16:00:00, pending Buy placed at 6051.1; SL=6028.03859904366, TP=6111.4747477037; valid for the next 3 chart bar(s).
+29/01/2025 14:00:00.000 | Info | Combo: bartime=2025-01-29 13:00, reversal - closing existing Buy position 25 before opening opposite direction.
+29/01/2025 14:00:00.000 | Trade | Closing position PID25 (Volume: 3.84)
+29/01/2025 14:00:00.000 | Trade |  Closing position PID25 (Volume: 3.84) SUCCEEDED
+29/01/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 8.71 US500.cash (Price: 6047.1, SL: 6057.27610462213, TP: 6020.46)
+29/01/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 8.71 US500.cash (Price: 6047.1, SL: 6057.27610462213, TP: 6020.46) SUCCEEDED, PendingOrder OID86
+29/01/2025 14:00:00.000 | Info | Combo: bartime=2025-01-29 13:00, executed=2025-01-29 14:00:00, pending Sell placed at 6047.1; SL=6057.276104622132, TP=6020.458958099258; valid for the next 3 chart bar(s).
+30/01/2025 02:00:00.000 | Trade | Placing Stop Order to Buy 4.38 US500.cash (Price: 6063.3, SL: 6043.30935253563, TP: 6115.64)
+30/01/2025 02:00:00.000 | Trade |  Placing Stop Order to Buy 4.38 US500.cash (Price: 6063.3, SL: 6043.30935253563, TP: 6115.64) SUCCEEDED, PendingOrder OID89
+30/01/2025 02:00:00.000 | Info | Combo: bartime=2025-01-30 01:00, executed=2025-01-30 02:00:00, pending Buy placed at 6063.3; SL=6043.3093525356335, TP=6115.635515061712; valid for the next 3 chart bar(s).
+30/01/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 4.59 US500.cash (Price: 6032.6, SL: 6051.4654980981, TP: 5983.21)
+30/01/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 4.59 US500.cash (Price: 6032.6, SL: 6051.4654980981, TP: 5983.21) SUCCEEDED, PendingOrder OID92
+30/01/2025 16:00:00.000 | Info | Combo: bartime=2025-01-30 15:00, executed=2025-01-30 16:00:00, pending Sell placed at 6032.6; SL=6051.465498098096, TP=5983.210125979187; valid for the next 3 chart bar(s).
+30/01/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 3.9 US500.cash (Price: 6039.1, SL: 6061.05391878278, TP: 5981.62)
+30/01/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 3.9 US500.cash (Price: 6039.1, SL: 6061.05391878278, TP: 5981.62) SUCCEEDED, PendingOrder OID95
+30/01/2025 18:00:00.000 | Info | Combo: bartime=2025-01-30 17:00, executed=2025-01-30 18:00:00, pending Sell placed at 6039.1; SL=6061.053918782782, TP=5981.62464062668; valid for the next 3 chart bar(s).
+30/01/2025 19:00:00.000 | Info | Combo: bartime=2025-01-30 18:00, reversal - cancelling existing Sell pending order 95 before opening opposite direction.
+30/01/2025 19:00:00.000 | Trade | Cancelling pending order OID95
+30/01/2025 19:00:00.000 | Trade |  Cancelling pending order OID95 SUCCEEDED
+30/01/2025 19:00:00.000 | Trade | Placing Stop Order to Buy 4 US500.cash (Price: 6071.8, SL: 6050.39686497378, TP: 6127.83)
+30/01/2025 19:00:00.000 | Trade |  Placing Stop Order to Buy 4 US500.cash (Price: 6071.8, SL: 6050.39686497378, TP: 6127.83) SUCCEEDED, PendingOrder OID96
+30/01/2025 19:00:00.000 | Info | Combo: bartime=2025-01-30 18:00, executed=2025-01-30 19:00:00, pending Buy placed at 6071.8; SL=6050.396864973775, TP=6127.833407498656; valid for the next 3 chart bar(s).
+31/01/2025 00:00:00.000 | Trade | Placing Stop Order to Buy 3.52 US500.cash (Price: 6084.6, SL: 6060.52815589326, TP: 6147.62)
+31/01/2025 00:00:00.000 | Trade |  Placing Stop Order to Buy 3.52 US500.cash (Price: 6084.6, SL: 6060.52815589326, TP: 6147.62) SUCCEEDED, PendingOrder OID99
+31/01/2025 00:00:00.000 | Info | Combo: bartime=2025-01-30 23:00, executed=2025-01-31 00:00:00, pending Buy placed at 6084.6; SL=6060.528155893258, TP=6147.62008787145; valid for the next 3 chart bar(s).
+31/01/2025 19:00:00.000 | Info | Combo: bartime=2025-01-31 18:00, reversal - closing existing Buy position 30 before opening opposite direction.
+31/01/2025 19:00:00.000 | Trade | Closing position PID30 (Volume: 3.52)
+31/01/2025 19:00:00.000 | Trade |  Closing position PID30 (Volume: 3.52) SUCCEEDED
+31/01/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 4.5 US500.cash (Price: 6065.9, SL: 6084.59932890052, TP: 6016.95)
+31/01/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 4.5 US500.cash (Price: 6065.9, SL: 6084.59932890052, TP: 6016.95) SUCCEEDED, PendingOrder OID103
+31/01/2025 19:00:00.000 | Info | Combo: bartime=2025-01-31 18:00, executed=2025-01-31 19:00:00, pending Sell placed at 6065.9; SL=6084.599328900522, TP=6016.945156938432; valid for the next 3 chart bar(s).
+03/02/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 2.67 US500.cash (Price: 6006.2, SL: 5972.49933930757, TP: 6094.43)
+03/02/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 2.67 US500.cash (Price: 6006.2, SL: 5972.49933930757, TP: 6094.43) SUCCEEDED, PendingOrder OID106
+03/02/2025 16:00:00.000 | Info | Combo: bartime=2025-02-03 15:00, executed=2025-02-03 16:00:00, pending Buy placed at 6006.2; SL=5972.499339307568, TP=6094.428329692785; valid for the next 3 chart bar(s).
+04/02/2025 06:00:00.000 | Trade | Placing Stop Order to Sell 4.24 US500.cash (Price: 5960.2, SL: 5981.14847363172, TP: 5905.36)
+04/02/2025 06:00:00.000 | Trade |  Placing Stop Order to Sell 4.24 US500.cash (Price: 5960.2, SL: 5981.14847363172, TP: 5905.36) SUCCEEDED, PendingOrder OID109
+04/02/2025 06:00:00.000 | Info | Combo: bartime=2025-02-04 05:00, executed=2025-02-04 06:00:00, pending Sell placed at 5960.2; SL=5981.148473631718, TP=5905.356896032161; valid for the next 3 chart bar(s).
+04/02/2025 08:00:00.000 | Info | Combo: bartime=2025-02-04 07:00, Sell signal skipped: already have same-direction exposure open.
+04/02/2025 09:00:00.000 | Trade | Cancelling pending order OID109
+04/02/2025 09:00:00.000 | Trade |  Cancelling pending order OID109 SUCCEEDED
+04/02/2025 09:00:00.000 | Info | Combo: pending order 109 cancelled after 3 chart bars.
+04/02/2025 13:00:00.000 | Trade | Placing Stop Order to Buy 5.72 US500.cash (Price: 6005.8, SL: 5990.27059978263, TP: 6046.46)
+04/02/2025 13:00:00.000 | Trade |  Placing Stop Order to Buy 5.72 US500.cash (Price: 6005.8, SL: 5990.27059978263, TP: 6046.46) SUCCEEDED, PendingOrder OID110
+04/02/2025 13:00:00.000 | Info | Combo: bartime=2025-02-04 12:00, executed=2025-02-04 13:00:00, pending Buy placed at 6005.8; SL=5990.27059978263, TP=6046.455969769076; valid for the next 3 chart bar(s).
+04/02/2025 15:00:00.000 | Info | Combo: bartime=2025-02-04 14:00, Buy signal skipped: already have same-direction exposure open.
+05/02/2025 04:00:00.000 | Info | Combo: bartime=2025-02-05 03:00, reversal - closing existing Buy position 33 before opening opposite direction.
+05/02/2025 04:00:00.000 | Trade | Closing position PID33 (Volume: 5.72)
+05/02/2025 04:00:00.000 | Trade |  Closing position PID33 (Volume: 5.72) SUCCEEDED
+05/02/2025 04:00:00.000 | Trade | Placing Stop Order to Sell 7.7 US500.cash (Price: 6008.2, SL: 6019.76452833579, TP: 5977.92)
+05/02/2025 04:00:00.000 | Trade |  Placing Stop Order to Sell 7.7 US500.cash (Price: 6008.2, SL: 6019.76452833579, TP: 5977.92) SUCCEEDED, PendingOrder OID114
+05/02/2025 04:00:00.000 | Info | Combo: bartime=2025-02-05 03:00, executed=2025-02-05 04:00:00, pending Sell placed at 6008.2; SL=6019.764528335791, TP=5977.924064816899; valid for the next 3 chart bar(s).
+05/02/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 8.66 US500.cash (Price: 6021.6, SL: 6011.43941072238, TP: 6048.2)
+05/02/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 8.66 US500.cash (Price: 6021.6, SL: 6011.43941072238, TP: 6048.2) SUCCEEDED, PendingOrder OID117
+05/02/2025 14:00:00.000 | Info | Combo: bartime=2025-02-05 13:00, executed=2025-02-05 14:00:00, pending Buy placed at 6021.6; SL=6011.439410722383, TP=6048.200422728803; valid for the next 3 chart bar(s).
+06/02/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 8.27 US500.cash (Price: 6059.7, SL: 6070.19303968791, TP: 6032.23)
+06/02/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 8.27 US500.cash (Price: 6059.7, SL: 6070.19303968791, TP: 6032.23) SUCCEEDED, PendingOrder OID120
+06/02/2025 16:00:00.000 | Info | Combo: bartime=2025-02-06 15:00, executed=2025-02-06 16:00:00, pending Sell placed at 6059.7; SL=6070.193039687907, TP=6032.229222097058; valid for the next 3 chart bar(s).
+06/02/2025 19:00:00.000 | Trade | Cancelling pending order OID120
+06/02/2025 19:00:00.000 | Trade |  Cancelling pending order OID120 SUCCEEDED
+06/02/2025 19:00:00.000 | Info | Combo: pending order 120 cancelled after 3 chart bars.
+06/02/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 8.32 US500.cash (Price: 6068.5, SL: 6078.93243632021, TP: 6041.19)
+06/02/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 8.32 US500.cash (Price: 6068.5, SL: 6078.93243632021, TP: 6041.19) SUCCEEDED, PendingOrder OID121
+06/02/2025 19:00:00.000 | Info | Combo: bartime=2025-02-06 18:00, executed=2025-02-06 19:00:00, pending Sell placed at 6068.5; SL=6078.932436320209, TP=6041.187881713694; valid for the next 3 chart bar(s).
+06/02/2025 20:00:00.000 | Info | Combo: bartime=2025-02-06 19:00, Sell signal skipped: already have same-direction exposure open.
+06/02/2025 23:05:00.000 | Trade | Placing Stop Order to Sell 4.31 US500.cash (Price: 6050.1, SL: 6069.94300739595, TP: 5998.15)
+06/02/2025 23:05:00.000 | Trade |  Placing Stop Order to Sell 4.31 US500.cash (Price: 6050.1, SL: 6069.94300739595, TP: 5998.15) SUCCEEDED, PendingOrder OID124
+06/02/2025 23:05:00.000 | Info | Combo: bartime=2025-02-06 21:00, executed=2025-02-06 23:05:00, pending Sell placed at 6050.1; SL=6069.9430073959475, TP=5998.151006637412; valid for the next 3 chart bar(s).
+07/02/2025 00:00:00.000 | Info | Combo: bartime=2025-02-06 23:00, reversal - cancelling existing Sell pending order 124 before opening opposite direction.
+07/02/2025 00:00:00.000 | Trade | Cancelling pending order OID124
+07/02/2025 00:00:00.000 | Trade |  Cancelling pending order OID124 SUCCEEDED
+07/02/2025 00:00:00.000 | Trade | Placing Stop Order to Buy 4.61 US500.cash (Price: 6079.5, SL: 6060.92559408324, TP: 6128.13)
+07/02/2025 00:00:00.000 | Trade |  Placing Stop Order to Buy 4.61 US500.cash (Price: 6079.5, SL: 6060.92559408324, TP: 6128.13) SUCCEEDED, PendingOrder OID125
+07/02/2025 00:00:00.000 | Info | Combo: bartime=2025-02-06 23:00, executed=2025-02-07 00:00:00, pending Buy placed at 6079.5; SL=6060.925594083243, TP=6128.127794690071; valid for the next 3 chart bar(s).
+07/02/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 3.7 US500.cash (Price: 6029, SL: 6051.84668754784, TP: 5969.19)
+07/02/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 3.7 US500.cash (Price: 6029, SL: 6051.84668754784, TP: 5969.19) SUCCEEDED, PendingOrder OID128
+07/02/2025 16:00:00.000 | Info | Combo: bartime=2025-02-07 15:00, executed=2025-02-07 16:00:00, pending Sell placed at 6029; SL=6051.846687547845, TP=5969.187371999742; valid for the next 3 chart bar(s).
+11/02/2025 02:00:00.000 | Trade | Placing Stop Order to Sell 9.33 US500.cash (Price: 6051.4, SL: 6060.36826989802, TP: 6027.92)
+11/02/2025 02:00:00.000 | Trade |  Placing Stop Order to Sell 9.33 US500.cash (Price: 6051.4, SL: 6060.36826989802, TP: 6027.92) SUCCEEDED, PendingOrder OID131
+11/02/2025 02:00:00.000 | Info | Combo: bartime=2025-02-11 01:00, executed=2025-02-11 02:00:00, pending Sell placed at 6051.4; SL=6060.368269898023, TP=6027.921069406976; valid for the next 3 chart bar(s).
+11/02/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 6.02 US500.cash (Price: 6070.7, SL: 6056.95841951934, TP: 6106.68)
+11/02/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 6.02 US500.cash (Price: 6070.7, SL: 6056.95841951934, TP: 6106.68) SUCCEEDED, PendingOrder OID134
+11/02/2025 16:00:00.000 | Info | Combo: bartime=2025-02-11 15:00, executed=2025-02-11 16:00:00, pending Buy placed at 6070.7; SL=6056.958419519339, TP=6106.675457698369; valid for the next 3 chart bar(s).
+11/02/2025 19:00:00.000 | Trade | Cancelling pending order OID134
+11/02/2025 19:00:00.000 | Trade |  Cancelling pending order OID134 SUCCEEDED
+11/02/2025 19:00:00.000 | Info | Combo: pending order 134 cancelled after 3 chart bars.
+12/02/2025 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 12.93 units, which needs about $5344.12 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4137.98 budget, free margin was $8275.97). Size was cut from 12.93 to 9.81 units. Real risk on this trade is now about $62.75 (0.76% of balance) instead of the requested 1.00%.
+12/02/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 9.81 US500.cash (Price: 6052.1, SL: 6058.49667877922, TP: 6035.35)
+12/02/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 9.81 US500.cash (Price: 6052.1, SL: 6058.49667877922, TP: 6035.35) SUCCEEDED, PendingOrder OID135
+12/02/2025 10:00:00.000 | Info | Combo: bartime=2025-02-12 09:00, executed=2025-02-12 10:00:00, pending Sell placed at 6052.1; SL=6058.496678779222, TP=6035.353494955998; valid for the next 3 chart bar(s).
+12/02/2025 13:00:00.000 | Trade | Cancelling pending order OID135
+12/02/2025 13:00:00.000 | Trade |  Cancelling pending order OID135 SUCCEEDED
+12/02/2025 13:00:00.000 | Info | Combo: pending order 135 cancelled after 3 chart bars.
+12/02/2025 13:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 12.25 units, which needs about $5063.07 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4137.98 budget, free margin was $8275.97). Size was cut from 12.25 to 9.81 units. Real risk on this trade is now about $66.23 (0.80% of balance) instead of the requested 1.00%.
+12/02/2025 13:00:00.000 | Trade | Placing Stop Order to Buy 9.81 US500.cash (Price: 6072.1, SL: 6065.34890046504, TP: 6089.77)
+12/02/2025 13:00:00.000 | Trade |  Placing Stop Order to Buy 9.81 US500.cash (Price: 6072.1, SL: 6065.34890046504, TP: 6089.77) SUCCEEDED, PendingOrder OID136
+12/02/2025 13:00:00.000 | Info | Combo: bartime=2025-02-12 12:00, executed=2025-02-12 13:00:00, pending Buy placed at 6072.1; SL=6065.348900465039, TP=6089.77437858253; valid for the next 3 chart bar(s).
+12/02/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 3.86 US500.cash (Price: 6001.4, SL: 6021.24087962797, TP: 5949.46)
+12/02/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 3.86 US500.cash (Price: 6001.4, SL: 6021.24087962797, TP: 5949.46) SUCCEEDED, PendingOrder OID139
+12/02/2025 14:00:00.000 | Info | Combo: bartime=2025-02-12 13:00, executed=2025-02-12 14:00:00, pending Sell placed at 6001.4; SL=6021.240879627969, TP=5949.456577133976; valid for the next 3 chart bar(s).
+12/02/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 3.05 US500.cash (Price: 6063.2, SL: 6038.33893570438, TP: 6128.29)
+12/02/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 3.05 US500.cash (Price: 6063.2, SL: 6038.33893570438, TP: 6128.29) SUCCEEDED, PendingOrder OID142
+12/02/2025 18:00:00.000 | Info | Combo: bartime=2025-02-12 17:00, executed=2025-02-12 18:00:00, pending Buy placed at 6063.2; SL=6038.338935704383, TP=6128.286266325923; valid for the next 3 chart bar(s).
+12/02/2025 23:05:00.000 | Info | Combo: bartime=2025-02-12 21:00, Buy signal skipped: already have same-direction exposure open.
+13/02/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 7.21 US500.cash (Price: 6033.3, SL: 6043.70830453082, TP: 6006.05)
+13/02/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 7.21 US500.cash (Price: 6033.3, SL: 6043.70830453082, TP: 6006.05) SUCCEEDED, PendingOrder OID145
+13/02/2025 09:00:00.000 | Info | Combo: bartime=2025-02-13 08:00, executed=2025-02-13 09:00:00, pending Sell placed at 6033.3; SL=6043.708304530824, TP=6006.051058738304; valid for the next 3 chart bar(s).
+13/02/2025 12:00:00.000 | Trade | Cancelling pending order OID145
+13/02/2025 12:00:00.000 | Trade |  Cancelling pending order OID145 SUCCEEDED
+13/02/2025 12:00:00.000 | Info | Combo: pending order 145 cancelled after 3 chart bars.
+13/02/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 5.71 US500.cash (Price: 6066, SL: 6052.86371077134, TP: 6100.39)
+13/02/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 5.71 US500.cash (Price: 6066, SL: 6052.86371077134, TP: 6100.39) SUCCEEDED, PendingOrder OID146
+13/02/2025 14:00:00.000 | Info | Combo: bartime=2025-02-13 13:00, executed=2025-02-13 14:00:00, pending Buy placed at 6066; SL=6052.86371077134, TP=6100.390805200633; valid for the next 3 chart bar(s).
+14/02/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 7.36 US500.cash (Price: 6104.2, SL: 6114.24551499786, TP: 6077.9)
+14/02/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 7.36 US500.cash (Price: 6104.2, SL: 6114.24551499786, TP: 6077.9) SUCCEEDED, PendingOrder OID149
+14/02/2025 18:00:00.000 | Info | Combo: bartime=2025-02-14 17:00, executed=2025-02-14 18:00:00, pending Sell placed at 6104.2; SL=6114.245514997865, TP=6077.900841735588; valid for the next 3 chart bar(s).
+14/02/2025 21:00:00.000 | Trade | Cancelling pending order OID149
+14/02/2025 21:00:00.000 | Trade |  Cancelling pending order OID149 SUCCEEDED
+14/02/2025 21:00:00.000 | Info | Combo: pending order 149 cancelled after 3 chart bars.
+14/02/2025 21:00:00.000 | Trade | Placing Stop Order to Sell 7.89 US500.cash (Price: 6108.7, SL: 6118.07370367891, TP: 6084.16)
+14/02/2025 21:00:00.000 | Trade |  Placing Stop Order to Sell 7.89 US500.cash (Price: 6108.7, SL: 6118.07370367891, TP: 6084.16) SUCCEEDED, PendingOrder OID150
+14/02/2025 21:00:00.000 | Info | Combo: bartime=2025-02-14 20:00, executed=2025-02-14 21:00:00, pending Sell placed at 6108.7; SL=6118.073703678907, TP=6084.159643768621; valid for the next 3 chart bar(s).
+17/02/2025 01:00:00.000 | Trade | Cancelling pending order OID150
+17/02/2025 01:00:00.000 | Trade |  Cancelling pending order OID150 SUCCEEDED
+17/02/2025 01:00:00.000 | Info | Combo: pending order 150 cancelled after 3 chart bars.
+17/02/2025 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 14.52 units, which needs about $6001.29 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3701.22 budget, free margin was $7402.45). Size was cut from 14.52 to 8.77 units. Real risk on this trade is now about $44.69 (0.60% of balance) instead of the requested 1.00%.
+17/02/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 8.77 US500.cash (Price: 6113.8, SL: 6118.89605679336, TP: 6100.46)
+17/02/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 8.77 US500.cash (Price: 6113.8, SL: 6118.89605679336, TP: 6100.46) SUCCEEDED, PendingOrder OID151
+17/02/2025 15:00:00.000 | Info | Combo: bartime=2025-02-17 14:00, executed=2025-02-17 15:00:00, pending Sell placed at 6113.8; SL=6118.896056793364, TP=6100.458523314975; valid for the next 3 chart bar(s).
+17/02/2025 23:05:00.000 | Trade | Cancelling pending order OID151
+17/02/2025 23:05:00.000 | Trade |  Cancelling pending order OID151 SUCCEEDED
+17/02/2025 23:05:00.000 | Info | Combo: pending order 151 cancelled after 3 chart bars.
+18/02/2025 00:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 13.29 units, which needs about $5492.92 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3701.22 budget, free margin was $7402.45). Size was cut from 13.29 to 8.77 units. Real risk on this trade is now about $48.82 (0.66% of balance) instead of the requested 1.00%.
+18/02/2025 00:00:00.000 | Trade | Placing Stop Order to Sell 8.77 US500.cash (Price: 6115.2, SL: 6120.7671543757, TP: 6100.63)
+18/02/2025 00:00:00.000 | Trade |  Placing Stop Order to Sell 8.77 US500.cash (Price: 6115.2, SL: 6120.7671543757, TP: 6100.63) SUCCEEDED, PendingOrder OID152
+18/02/2025 00:00:00.000 | Info | Combo: bartime=2025-02-17 23:00, executed=2025-02-18 00:00:00, pending Sell placed at 6115.2; SL=6120.767154375705, TP=6100.625189844403; valid for the next 3 chart bar(s).
+18/02/2025 03:00:00.000 | Trade | Cancelling pending order OID152
+18/02/2025 03:00:00.000 | Trade |  Cancelling pending order OID152 SUCCEEDED
+18/02/2025 03:00:00.000 | Info | Combo: pending order 152 cancelled after 3 chart bars.
+18/02/2025 07:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 15.91 units, which needs about $6575.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3701.22 budget, free margin was $7402.45). Size was cut from 15.91 to 8.77 units. Real risk on this trade is now about $40.78 (0.55% of balance) instead of the requested 1.00%.
+18/02/2025 07:00:00.000 | Trade | Placing Stop Order to Buy 8.77 US500.cash (Price: 6135.2, SL: 6130.55010230667, TP: 6147.37)
+18/02/2025 07:00:00.000 | Trade |  Placing Stop Order to Buy 8.77 US500.cash (Price: 6135.2, SL: 6130.55010230667, TP: 6147.37) SUCCEEDED, PendingOrder OID153
+18/02/2025 07:00:00.000 | Info | Combo: bartime=2025-02-18 06:00, executed=2025-02-18 07:00:00, pending Buy placed at 6135.2; SL=6130.550102306668, TP=6147.373432161143; valid for the next 3 chart bar(s).
+18/02/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 7.95 US500.cash (Price: 6112.8, SL: 6122.03808741179, TP: 6088.61)
+18/02/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 7.95 US500.cash (Price: 6112.8, SL: 6122.03808741179, TP: 6088.61) SUCCEEDED, PendingOrder OID156
+18/02/2025 15:00:00.000 | Info | Combo: bartime=2025-02-18 14:00, executed=2025-02-18 15:00:00, pending Sell placed at 6112.8; SL=6122.03808741179, TP=6088.614687155936; valid for the next 3 chart bar(s).
+18/02/2025 21:00:00.000 | Trade | Placing Stop Order to Buy 5.82 US500.cash (Price: 6128.8, SL: 6116.30149081352, TP: 6161.52)
+18/02/2025 21:00:00.000 | Trade |  Placing Stop Order to Buy 5.82 US500.cash (Price: 6128.8, SL: 6116.30149081352, TP: 6161.52) SUCCEEDED, PendingOrder OID159
+18/02/2025 21:00:00.000 | Info | Combo: bartime=2025-02-18 20:00, executed=2025-02-18 21:00:00, pending Buy placed at 6128.8; SL=6116.301490813524, TP=6161.521097050195; valid for the next 3 chart bar(s).
+19/02/2025 00:00:00.000 | Info | Combo: bartime=2025-02-18 23:00, Buy signal skipped: already have same-direction exposure open.
+19/02/2025 11:00:00.000 | Info | Combo: bartime=2025-02-19 10:00, reversal - closing existing Buy position 46 before opening opposite direction.
+19/02/2025 11:00:00.000 | Trade | Closing position PID46 (Volume: 5.82)
+19/02/2025 11:00:00.000 | Trade |  Closing position PID46 (Volume: 5.82) SUCCEEDED
+19/02/2025 11:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 12.69 units, which needs about $5244.93 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3619.58 budget, free margin was $7239.17). Size was cut from 12.69 to 8.58 units. Real risk on this trade is now about $48.92 (0.68% of balance) instead of the requested 1.00%.
+19/02/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 8.58 US500.cash (Price: 6118.9, SL: 6124.60184610996, TP: 6103.97)
+19/02/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 8.58 US500.cash (Price: 6118.9, SL: 6124.60184610996, TP: 6103.97) SUCCEEDED, PendingOrder OID163
+19/02/2025 11:00:00.000 | Info | Combo: bartime=2025-02-19 10:00, executed=2025-02-19 11:00:00, pending Sell placed at 6118.9; SL=6124.60184610996, TP=6103.972566884123; valid for the next 3 chart bar(s).
+19/02/2025 17:00:00.000 | Trade | Placing Stop Order to Buy 7.06 US500.cash (Price: 6133.4, SL: 6123.24420725335, TP: 6159.99)
+19/02/2025 17:00:00.000 | Trade |  Placing Stop Order to Buy 7.06 US500.cash (Price: 6133.4, SL: 6123.24420725335, TP: 6159.99) SUCCEEDED, PendingOrder OID166
+19/02/2025 17:00:00.000 | Info | Combo: bartime=2025-02-19 16:00, executed=2025-02-19 17:00:00, pending Buy placed at 6133.4; SL=6123.24420725335, TP=6159.987865410728; valid for the next 3 chart bar(s).
+20/02/2025 02:00:00.000 | Trade | Placing Stop Order to Sell 7.14 US500.cash (Price: 6126.3, SL: 6136.22929749362, TP: 6100.31)
+20/02/2025 02:00:00.000 | Trade |  Placing Stop Order to Sell 7.14 US500.cash (Price: 6126.3, SL: 6136.22929749362, TP: 6100.31) SUCCEEDED, PendingOrder OID169
+20/02/2025 02:00:00.000 | Info | Combo: bartime=2025-02-20 01:00, executed=2025-02-20 02:00:00, pending Sell placed at 6126.3; SL=6136.229297493618, TP=6100.305099161709; valid for the next 3 chart bar(s).
+20/02/2025 04:00:00.000 | Info | Combo: bartime=2025-02-20 03:00, Sell signal skipped: already have same-direction exposure open.
+20/02/2025 10:00:00.000 | Info | Combo: bartime=2025-02-20 09:00, reversal - closing existing Sell position 49 before opening opposite direction.
+20/02/2025 10:00:00.000 | Trade | Closing position PID49 (Volume: 7.14)
+20/02/2025 10:00:00.000 | Trade |  Closing position PID49 (Volume: 7.14) SUCCEEDED
+20/02/2025 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 12.90 units, which needs about $5331.72 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3513.34 budget, free margin was $7026.68). Size was cut from 12.90 to 8.33 units. Real risk on this trade is now about $45.37 (0.65% of balance) instead of the requested 1.00%.
+20/02/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 8.33 US500.cash (Price: 6134.8, SL: 6129.35323868021, TP: 6149.06)
+20/02/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 8.33 US500.cash (Price: 6134.8, SL: 6129.35323868021, TP: 6149.06) SUCCEEDED, PendingOrder OID173
+20/02/2025 10:00:00.000 | Info | Combo: bartime=2025-02-20 09:00, executed=2025-02-20 10:00:00, pending Buy placed at 6134.8; SL=6129.3532386802135, TP=6149.059621135202; valid for the next 3 chart bar(s).
+20/02/2025 12:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 11.81 units, which needs about $4881.21 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3483.35 budget, free margin was $6966.70). Size was cut from 11.81 to 8.25 units. Real risk on this trade is now about $48.66 (0.70% of balance) instead of the requested 1.00%.
+20/02/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 8.25 US500.cash (Price: 6123.1, SL: 6128.99792724466, TP: 6107.66)
+20/02/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 8.25 US500.cash (Price: 6123.1, SL: 6128.99792724466, TP: 6107.66) SUCCEEDED, PendingOrder OID176
+20/02/2025 12:00:00.000 | Info | Combo: bartime=2025-02-20 11:00, executed=2025-02-20 12:00:00, pending Sell placed at 6123.1; SL=6128.9979272446635, TP=6107.659226473471; valid for the next 3 chart bar(s).
+20/02/2025 21:00:00.000 | Trade | Placing Stop Order to Buy 4.74 US500.cash (Price: 6121.6, SL: 6107.02697920531, TP: 6159.75)
+20/02/2025 21:00:00.000 | Trade |  Placing Stop Order to Buy 4.74 US500.cash (Price: 6121.6, SL: 6107.02697920531, TP: 6159.75) SUCCEEDED, PendingOrder OID179
+20/02/2025 21:00:00.000 | Info | Combo: bartime=2025-02-20 20:00, executed=2025-02-20 21:00:00, pending Buy placed at 6121.6; SL=6107.026979205312, TP=6159.752168440494; valid for the next 3 chart bar(s).
+21/02/2025 00:00:00.000 | Info | Combo: bartime=2025-02-20 23:00, Buy signal skipped: already have same-direction exposure open.
+21/02/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 6.72 US500.cash (Price: 6095.5, SL: 6105.65819694902, TP: 6068.91)
+21/02/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 6.72 US500.cash (Price: 6095.5, SL: 6105.65819694902, TP: 6068.91) SUCCEEDED, PendingOrder OID182
+21/02/2025 15:00:00.000 | Info | Combo: bartime=2025-02-21 14:00, executed=2025-02-21 15:00:00, pending Sell placed at 6095.5; SL=6105.658196949016, TP=6068.905840387476; valid for the next 3 chart bar(s).
+24/02/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 4.56 US500.cash (Price: 5999.1, SL: 6014.47646448533, TP: 5958.84)
+24/02/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 4.56 US500.cash (Price: 5999.1, SL: 6014.47646448533, TP: 5958.84) SUCCEEDED, PendingOrder OID185
+24/02/2025 15:00:00.000 | Info | Combo: bartime=2025-02-24 14:00, executed=2025-02-24 15:00:00, pending Sell placed at 5999.1; SL=6014.476464485333, TP=5958.8444159774; valid for the next 3 chart bar(s).
+26/02/2025 03:00:00.000 | Trade | Placing Stop Order to Buy 4.49 US500.cash (Price: 5973.2, SL: 5957.82484144941, TP: 6013.45)
+26/02/2025 03:00:00.000 | Trade |  Placing Stop Order to Buy 4.49 US500.cash (Price: 5973.2, SL: 5957.82484144941, TP: 6013.45) SUCCEEDED, PendingOrder OID188
+26/02/2025 03:00:00.000 | Info | Combo: bartime=2025-02-26 02:00, executed=2025-02-26 03:00:00, pending Buy placed at 5973.2; SL=5957.824841449409, TP=6013.452165085447; valid for the next 3 chart bar(s).
+26/02/2025 18:00:00.000 | Info | Combo: bartime=2025-02-26 17:00, reversal - closing existing Buy position 55 before opening opposite direction.
+26/02/2025 18:00:00.000 | Trade | Closing position PID55 (Volume: 4.49)
+26/02/2025 18:00:00.000 | Trade |  Closing position PID55 (Volume: 4.49) SUCCEEDED
+26/02/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 3.34 US500.cash (Price: 5962.7, SL: 5983.26369226127, TP: 5908.86)
+26/02/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 3.34 US500.cash (Price: 5962.7, SL: 5983.26369226127, TP: 5908.86) SUCCEEDED, PendingOrder OID192
+26/02/2025 18:00:00.000 | Info | Combo: bartime=2025-02-26 17:00, executed=2025-02-26 18:00:00, pending Sell placed at 5962.7; SL=5983.263692261271, TP=5908.864253659992; valid for the next 3 chart bar(s).
+27/02/2025 06:00:00.000 | Info | Combo: bartime=2025-02-27 05:00, reversal - closing existing Sell position 56 before opening opposite direction.
+27/02/2025 06:00:00.000 | Trade | Closing position PID56 (Volume: 3.34)
+27/02/2025 06:00:00.000 | Trade |  Closing position PID56 (Volume: 3.34) SUCCEEDED
+27/02/2025 06:00:00.000 | Trade | Placing Stop Order to Buy 4.17 US500.cash (Price: 5980.4, SL: 5964.03010781786, TP: 6023.26)
+27/02/2025 06:00:00.000 | Trade |  Placing Stop Order to Buy 4.17 US500.cash (Price: 5980.4, SL: 5964.03010781786, TP: 6023.26) SUCCEEDED, PendingOrder OID196
+27/02/2025 06:00:00.000 | Info | Combo: bartime=2025-02-27 05:00, executed=2025-02-27 06:00:00, pending Buy placed at 5980.4; SL=5964.030107817856, TP=6023.2563777328505; valid for the next 3 chart bar(s).
+27/02/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 2.87 US500.cash (Price: 5933.4, SL: 5956.89126697789, TP: 5871.9)
+27/02/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 2.87 US500.cash (Price: 5933.4, SL: 5956.89126697789, TP: 5871.9) SUCCEEDED, PendingOrder OID199
+27/02/2025 15:00:00.000 | Info | Combo: bartime=2025-02-27 14:00, executed=2025-02-27 15:00:00, pending Sell placed at 5933.4; SL=5956.891266977892, TP=5871.899863051877; valid for the next 3 chart bar(s).
+28/02/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 3.13 US500.cash (Price: 5901.5, SL: 5880.23412530817, TP: 5957.17)
+28/02/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 3.13 US500.cash (Price: 5901.5, SL: 5880.23412530817, TP: 5957.17) SUCCEEDED, PendingOrder OID202
+28/02/2025 16:00:00.000 | Info | Combo: bartime=2025-02-28 15:00, executed=2025-02-28 16:00:00, pending Buy placed at 5901.5; SL=5880.234125308171, TP=5957.174059943207; valid for the next 3 chart bar(s).
+28/02/2025 18:00:00.000 | Info | Combo: bartime=2025-02-28 17:00, reversal - cancelling existing Buy pending order 202 before opening opposite direction.
+28/02/2025 18:00:00.000 | Trade | Cancelling pending order OID202
+28/02/2025 18:00:00.000 | Trade |  Cancelling pending order OID202 SUCCEEDED
+28/02/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 2.36 US500.cash (Price: 5846.3, SL: 5874.47015980277, TP: 5772.55)
+28/02/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 2.36 US500.cash (Price: 5846.3, SL: 5874.47015980277, TP: 5772.55) SUCCEEDED, PendingOrder OID203
+28/02/2025 18:00:00.000 | Info | Combo: bartime=2025-02-28 17:00, executed=2025-02-28 18:00:00, pending Sell placed at 5846.3; SL=5874.4701598027705, TP=5772.550521636348; valid for the next 3 chart bar(s).
+28/02/2025 20:00:00.000 | Trade | Placing Stop Order to Buy 1.93 US500.cash (Price: 5894.8, SL: 5860.85909772623, TP: 5983.66)
+28/02/2025 20:00:00.000 | Trade |  Placing Stop Order to Buy 1.93 US500.cash (Price: 5894.8, SL: 5860.85909772623, TP: 5983.66) SUCCEEDED, PendingOrder OID206
+28/02/2025 20:00:00.000 | Info | Combo: bartime=2025-02-28 19:00, executed=2025-02-28 20:00:00, pending Buy placed at 5894.8; SL=5860.859097726227, TP=5983.657282152738; valid for the next 3 chart bar(s).
+03/03/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 3.23 US500.cash (Price: 5935.2, SL: 5956.10254690048, TP: 5880.48)
+03/03/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 3.23 US500.cash (Price: 5935.2, SL: 5956.10254690048, TP: 5880.48) SUCCEEDED, PendingOrder OID209
+03/03/2025 15:00:00.000 | Info | Combo: bartime=2025-03-03 14:00, executed=2025-03-03 15:00:00, pending Sell placed at 5935.2; SL=5956.102546900477, TP=5880.47713221455; valid for the next 3 chart bar(s).
+04/03/2025 20:00:00.000 | Trade | Placing Stop Order to Buy 1.94 US500.cash (Price: 5842.5, SL: 5808.41252153188, TP: 5931.74)
+04/03/2025 20:00:00.000 | Trade |  Placing Stop Order to Buy 1.94 US500.cash (Price: 5842.5, SL: 5808.41252153188, TP: 5931.74) SUCCEEDED, PendingOrder OID212
+04/03/2025 20:00:00.000 | Info | Combo: bartime=2025-03-04 19:00, executed=2025-03-04 20:00:00, pending Buy placed at 5842.5; SL=5808.412521531878, TP=5931.741018629543; valid for the next 3 chart bar(s).
+05/03/2025 00:00:00.000 | Trade | Placing Stop Order to Buy 1.55 US500.cash (Price: 5827.9, SL: 5785.83121102432, TP: 5938.04)
+05/03/2025 00:00:00.000 | Trade |  Placing Stop Order to Buy 1.55 US500.cash (Price: 5827.9, SL: 5785.83121102432, TP: 5938.04) SUCCEEDED, PendingOrder OID215
+05/03/2025 00:00:00.000 | Info | Combo: bartime=2025-03-04 23:00, executed=2025-03-05 00:00:00, pending Buy placed at 5827.9; SL=5785.831211024321, TP=5938.0360895383255; valid for the next 3 chart bar(s).
+05/03/2025 03:00:00.000 | Trade | Cancelling pending order OID215
+05/03/2025 03:00:00.000 | Trade |  Cancelling pending order OID215 SUCCEEDED
+05/03/2025 03:00:00.000 | Info | Combo: pending order 215 cancelled after 3 chart bars.
+05/03/2025 04:00:00.000 | Trade | Placing Stop Order to Buy 2.26 US500.cash (Price: 5821.9, SL: 5792.92942403556, TP: 5897.74)
+05/03/2025 04:00:00.000 | Trade |  Placing Stop Order to Buy 2.26 US500.cash (Price: 5821.9, SL: 5792.92942403556, TP: 5897.74) SUCCEEDED, PendingOrder OID216
+05/03/2025 04:00:00.000 | Info | Combo: bartime=2025-03-05 03:00, executed=2025-03-05 04:00:00, pending Buy placed at 5821.9; SL=5792.929424035562, TP=5897.744967874897; valid for the next 3 chart bar(s).
+05/03/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 3.01 US500.cash (Price: 5784.4, SL: 5805.871548586, TP: 5728.19)
+05/03/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 3.01 US500.cash (Price: 5784.4, SL: 5805.871548586, TP: 5728.19) SUCCEEDED, PendingOrder OID219
+05/03/2025 12:00:00.000 | Info | Combo: bartime=2025-03-05 11:00, executed=2025-03-05 12:00:00, pending Sell placed at 5784.4; SL=5805.8715485859975, TP=5728.187485801857; valid for the next 3 chart bar(s).
+05/03/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 1.81 US500.cash (Price: 5819.7, SL: 5784.37892716747, TP: 5912.17)
+05/03/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 1.81 US500.cash (Price: 5819.7, SL: 5784.37892716747, TP: 5912.17) SUCCEEDED, PendingOrder OID222
+05/03/2025 18:00:00.000 | Info | Combo: bartime=2025-03-05 17:00, executed=2025-03-05 18:00:00, pending Buy placed at 5819.7; SL=5784.378927167472, TP=5912.170568675558; valid for the next 3 chart bar(s).
+06/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-06 07:00, reversal - closing existing Buy position 65 before opening opposite direction.
+06/03/2025 08:00:00.000 | Trade | Closing position PID65 (Volume: 1.81)
+06/03/2025 08:00:00.000 | Trade |  Closing position PID65 (Volume: 1.81) SUCCEEDED
+06/03/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 4.45 US500.cash (Price: 5812.7, SL: 5827.05508066521, TP: 5775.12)
+06/03/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 4.45 US500.cash (Price: 5812.7, SL: 5827.05508066521, TP: 5775.12) SUCCEEDED, PendingOrder OID226
+06/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-06 07:00, executed=2025-03-06 08:00:00, pending Sell placed at 5812.7; SL=5827.055080665213, TP=5775.118398818473; valid for the next 3 chart bar(s).
+07/03/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 4.75 US500.cash (Price: 5764.8, SL: 5751.01510226072, TP: 5800.89)
+07/03/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 4.75 US500.cash (Price: 5764.8, SL: 5751.01510226072, TP: 5800.89) SUCCEEDED, PendingOrder OID229
+07/03/2025 10:00:00.000 | Info | Combo: bartime=2025-03-07 09:00, executed=2025-03-07 10:00:00, pending Buy placed at 5764.8; SL=5751.015102260715, TP=5800.888862281448; valid for the next 3 chart bar(s).
+07/03/2025 13:00:00.000 | Trade | Cancelling pending order OID229
+07/03/2025 13:00:00.000 | Trade |  Cancelling pending order OID229 SUCCEEDED
+07/03/2025 13:00:00.000 | Info | Combo: pending order 229 cancelled after 3 chart bars.
+07/03/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 1.77 US500.cash (Price: 5691.3, SL: 5728.20946823297, TP: 5594.67)
+07/03/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 1.77 US500.cash (Price: 5691.3, SL: 5728.20946823297, TP: 5594.67) SUCCEEDED, PendingOrder OID230
+07/03/2025 16:00:00.000 | Info | Combo: bartime=2025-03-07 15:00, executed=2025-03-07 16:00:00, pending Sell placed at 5691.3; SL=5728.209468232967, TP=5594.671012166093; valid for the next 3 chart bar(s).
+07/03/2025 19:00:00.000 | Trade | Placing Stop Order to Buy 1.34 US500.cash (Price: 5761.8, SL: 5713.68875226472, TP: 5887.76)
+07/03/2025 19:00:00.000 | Trade |  Placing Stop Order to Buy 1.34 US500.cash (Price: 5761.8, SL: 5713.68875226472, TP: 5887.76) SUCCEEDED, PendingOrder OID233
+07/03/2025 19:00:00.000 | Info | Combo: bartime=2025-03-07 18:00, executed=2025-03-07 19:00:00, pending Buy placed at 5761.8; SL=5713.688752264721, TP=5887.7552465709605; valid for the next 3 chart bar(s).
+10/03/2025 02:00:00.000 | Trade | Placing Stop Order to Buy 2.16 US500.cash (Price: 5744, SL: 5714.36209301895, TP: 5821.59)
+10/03/2025 02:00:00.000 | Trade |  Placing Stop Order to Buy 2.16 US500.cash (Price: 5744, SL: 5714.36209301895, TP: 5821.59) SUCCEEDED, PendingOrder OID236
+10/03/2025 02:00:00.000 | Info | Combo: bartime=2025-03-10 01:00, executed=2025-03-10 02:00:00, pending Buy placed at 5744; SL=5714.362093018946, TP=5821.592040476398; valid for the next 3 chart bar(s).
+10/03/2025 07:00:00.000 | Info | Combo: bartime=2025-03-10 06:00, Buy signal skipped: already have same-direction exposure open.
+10/03/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 2.98 US500.cash (Price: 5692.7, SL: 5713.98674903011, TP: 5636.97)
+10/03/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 2.98 US500.cash (Price: 5692.7, SL: 5713.98674903011, TP: 5636.97) SUCCEEDED, PendingOrder OID239
+10/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-10 08:00, executed=2025-03-10 09:00:00, pending Sell placed at 5692.7; SL=5713.986749030113, TP=5636.971291039164; valid for the next 3 chart bar(s).
+10/03/2025 12:00:00.000 | Trade | Cancelling pending order OID239
+10/03/2025 12:00:00.000 | Trade |  Cancelling pending order OID239 SUCCEEDED
+10/03/2025 12:00:00.000 | Info | Combo: pending order 239 cancelled after 3 chart bars.
+11/03/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 2.85 US500.cash (Price: 5628.7, SL: 5606.44870027395, TP: 5686.95)
+11/03/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 2.85 US500.cash (Price: 5628.7, SL: 5606.44870027395, TP: 5686.95) SUCCEEDED, PendingOrder OID240
+11/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-11 07:00, executed=2025-03-11 08:00:00, pending Buy placed at 5628.7; SL=5606.448700273951, TP=5686.953902682796; valid for the next 3 chart bar(s).
+11/03/2025 19:00:00.000 | Trade | Placing Stop Order to Buy 1.28 US500.cash (Price: 5635.7, SL: 5587.01463180193, TP: 5763.16)
+11/03/2025 19:00:00.000 | Trade |  Placing Stop Order to Buy 1.28 US500.cash (Price: 5635.7, SL: 5587.01463180193, TP: 5763.16) SUCCEEDED, PendingOrder OID243
+11/03/2025 19:00:00.000 | Info | Combo: bartime=2025-03-11 18:00, executed=2025-03-11 19:00:00, pending Buy placed at 5635.7; SL=5587.014631801934, TP=5763.158293942535; valid for the next 3 chart bar(s).
+11/03/2025 23:00:00.000 | Trade | Cancelling pending order OID243
+11/03/2025 23:00:00.000 | Trade |  Cancelling pending order OID243 SUCCEEDED
+11/03/2025 23:00:00.000 | Info | Combo: pending order 243 cancelled after 3 chart bars.
+12/03/2025 06:00:00.000 | Trade | Placing Stop Order to Buy 4.45 US500.cash (Price: 5590.7, SL: 5576.60997892762, TP: 5627.59)
+12/03/2025 06:00:00.000 | Trade |  Placing Stop Order to Buy 4.45 US500.cash (Price: 5590.7, SL: 5576.60997892762, TP: 5627.59) SUCCEEDED, PendingOrder OID244
+12/03/2025 06:00:00.000 | Info | Combo: bartime=2025-03-12 05:00, executed=2025-03-12 06:00:00, pending Buy placed at 5590.7; SL=5576.609978927623, TP=5627.5876751674805; valid for the next 3 chart bar(s).
+12/03/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 3.9 US500.cash (Price: 5590.5, SL: 5574.60238651368, TP: 5632.12)
+12/03/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 3.9 US500.cash (Price: 5590.5, SL: 5574.60238651368, TP: 5632.12) SUCCEEDED, PendingOrder OID247
+12/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-12 07:00, executed=2025-03-12 08:00:00, pending Buy placed at 5590.5; SL=5574.602386513679, TP=5632.119952107188; valid for the next 3 chart bar(s).
+12/03/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 1.95 US500.cash (Price: 5559.5, SL: 5592.61598207181, TP: 5472.8)
+12/03/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 1.95 US500.cash (Price: 5559.5, SL: 5592.61598207181, TP: 5472.8) SUCCEEDED, PendingOrder OID250
+12/03/2025 15:00:00.000 | Info | Combo: bartime=2025-03-12 14:00, executed=2025-03-12 15:00:00, pending Sell placed at 5559.5; SL=5592.615982071807, TP=5472.802358936011; valid for the next 3 chart bar(s).
+12/03/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 1.75 US500.cash (Price: 5584, SL: 5620.59138282076, TP: 5488.2)
+12/03/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 1.75 US500.cash (Price: 5584, SL: 5620.59138282076, TP: 5488.2) SUCCEEDED, PendingOrder OID253
+12/03/2025 18:00:00.000 | Info | Combo: bartime=2025-03-12 17:00, executed=2025-03-12 18:00:00, pending Sell placed at 5584; SL=5620.591382820765, TP=5488.203759775238; valid for the next 3 chart bar(s).
+12/03/2025 19:00:00.000 | Info | Combo: bartime=2025-03-12 18:00, reversal - cancelling existing Sell pending order 253 before opening opposite direction.
+12/03/2025 19:00:00.000 | Trade | Cancelling pending order OID253
+12/03/2025 19:00:00.000 | Trade |  Cancelling pending order OID253 SUCCEEDED
+12/03/2025 19:00:00.000 | Trade | Placing Stop Order to Buy 1.71 US500.cash (Price: 5626, SL: 5588.52689374339, TP: 5724.1)
+12/03/2025 19:00:00.000 | Trade |  Placing Stop Order to Buy 1.71 US500.cash (Price: 5626, SL: 5588.52689374339, TP: 5724.1) SUCCEEDED, PendingOrder OID254
+12/03/2025 19:00:00.000 | Info | Combo: bartime=2025-03-12 18:00, executed=2025-03-12 19:00:00, pending Buy placed at 5626; SL=5588.526893743388, TP=5724.1045921798095; valid for the next 3 chart bar(s).
+12/03/2025 22:05:00.000 | Info | Combo: bartime=2025-03-12 20:00, reversal - cancelling existing Buy pending order 254 before opening opposite direction.
+12/03/2025 22:05:00.000 | Trade | Cancelling pending order OID254
+12/03/2025 22:05:00.000 | Trade |  Cancelling pending order OID254 SUCCEEDED
+12/03/2025 22:05:00.000 | Trade | Placing Stop Order to Sell 2.08 US500.cash (Price: 5585.5, SL: 5616.21078800423, TP: 5505.1)
+12/03/2025 22:05:00.000 | Trade |  Placing Stop Order to Sell 2.08 US500.cash (Price: 5585.5, SL: 5616.21078800423, TP: 5505.1) SUCCEEDED, PendingOrder OID255
+12/03/2025 22:05:00.000 | Info | Combo: bartime=2025-03-12 20:00, executed=2025-03-12 22:05:00, pending Sell placed at 5585.5; SL=5616.210788004231, TP=5505.099157004922; valid for the next 3 chart bar(s).
+12/03/2025 23:00:00.000 | Info | Combo: bartime=2025-03-12 22:00, reversal - cancelling existing Sell pending order 255 before opening opposite direction.
+12/03/2025 23:00:00.000 | Trade | Cancelling pending order OID255
+12/03/2025 23:00:00.000 | Trade |  Cancelling pending order OID255 SUCCEEDED
+12/03/2025 23:00:00.000 | Trade | Placing Stop Order to Buy 2.31 US500.cash (Price: 5604, SL: 5576.33136959661, TP: 5676.44)
+12/03/2025 23:00:00.000 | Trade |  Placing Stop Order to Buy 2.31 US500.cash (Price: 5604, SL: 5576.33136959661, TP: 5676.44) SUCCEEDED, PendingOrder OID256
+12/03/2025 23:00:00.000 | Info | Combo: bartime=2025-03-12 22:00, executed=2025-03-12 23:00:00, pending Buy placed at 5604; SL=5576.331369596614, TP=5676.436474396063; valid for the next 3 chart bar(s).
+13/03/2025 03:00:00.000 | Info | Combo: bartime=2025-03-13 02:00, reversal - closing existing Buy position 74 before opening opposite direction.
+13/03/2025 03:00:00.000 | Trade | Closing position PID74 (Volume: 2.31)
+13/03/2025 03:00:00.000 | Trade |  Closing position PID74 (Volume: 2.31) SUCCEEDED
+13/03/2025 03:00:00.000 | Trade | Placing Stop Order to Sell 3.58 US500.cash (Price: 5594.3, SL: 5612.13067101323, TP: 5547.62)
+13/03/2025 03:00:00.000 | Trade |  Placing Stop Order to Sell 3.58 US500.cash (Price: 5594.3, SL: 5612.13067101323, TP: 5547.62) SUCCEEDED, PendingOrder OID260
+13/03/2025 03:00:00.000 | Info | Combo: bartime=2025-03-13 02:00, executed=2025-03-13 03:00:00, pending Sell placed at 5594.3; SL=5612.130671013227, TP=5547.619303287373; valid for the next 3 chart bar(s).
+13/03/2025 10:00:00.000 | Info | Combo: bartime=2025-03-13 09:00, reversal - closing existing Sell position 75 before opening opposite direction.
+13/03/2025 10:00:00.000 | Trade | Closing position PID75 (Volume: 3.58)
+13/03/2025 10:00:00.000 | Trade |  Closing position PID75 (Volume: 3.58) SUCCEEDED
+13/03/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 2.94 US500.cash (Price: 5599, SL: 5577.39761262233, TP: 5655.56)
+13/03/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 2.94 US500.cash (Price: 5599, SL: 5577.39761262233, TP: 5655.56) SUCCEEDED, PendingOrder OID264
+13/03/2025 10:00:00.000 | Info | Combo: bartime=2025-03-13 09:00, executed=2025-03-13 10:00:00, pending Buy placed at 5599; SL=5577.397612622327, TP=5655.555050154748; valid for the next 3 chart bar(s).
+14/03/2025 03:00:00.000 | Trade | Placing Stop Order to Buy 3.27 US500.cash (Price: 5564.5, SL: 5545.26995537216, TP: 5614.84)
+14/03/2025 03:00:00.000 | Trade |  Placing Stop Order to Buy 3.27 US500.cash (Price: 5564.5, SL: 5545.26995537216, TP: 5614.84) SUCCEEDED, PendingOrder OID267
+14/03/2025 03:00:00.000 | Info | Combo: bartime=2025-03-14 02:00, executed=2025-03-14 03:00:00, pending Buy placed at 5564.5; SL=5545.269955372162, TP=5614.84425683568; valid for the next 3 chart bar(s).
+17/03/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 6 US500.cash (Price: 5624.8, SL: 5614.01992952017, TP: 5653.02)
+17/03/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 6 US500.cash (Price: 5624.8, SL: 5614.01992952017, TP: 5653.02) SUCCEEDED, PendingOrder OID270
+17/03/2025 11:00:00.000 | Info | Combo: bartime=2025-03-17 10:00, executed=2025-03-17 11:00:00, pending Buy placed at 5624.8; SL=5614.019929520173, TP=5653.0222245161885; valid for the next 3 chart bar(s).
+18/03/2025 05:00:00.000 | Trade | Placing Stop Order to Sell 5.99 US500.cash (Price: 5650.1, SL: 5660.75983679525, TP: 5622.19)
+18/03/2025 05:00:00.000 | Trade |  Placing Stop Order to Sell 5.99 US500.cash (Price: 5650.1, SL: 5660.75983679525, TP: 5622.19) SUCCEEDED, PendingOrder OID273
+18/03/2025 05:00:00.000 | Info | Combo: bartime=2025-03-18 04:00, executed=2025-03-18 05:00:00, pending Sell placed at 5650.1; SL=5660.759836795248, TP=5622.192547270042; valid for the next 3 chart bar(s).
+18/03/2025 08:00:00.000 | Trade | Cancelling pending order OID273
+18/03/2025 08:00:00.000 | Trade |  Cancelling pending order OID273 SUCCEEDED
+18/03/2025 08:00:00.000 | Info | Combo: pending order 273 cancelled after 3 chart bars.
+18/03/2025 09:00:00.000 | Trade | Placing Stop Order to Buy 6.1 US500.cash (Price: 5679.6, SL: 5669.12701084867, TP: 5707.02)
+18/03/2025 09:00:00.000 | Trade |  Placing Stop Order to Buy 6.1 US500.cash (Price: 5679.6, SL: 5669.12701084867, TP: 5707.02) SUCCEEDED, PendingOrder OID274
+18/03/2025 09:00:00.000 | Info | Combo: bartime=2025-03-18 08:00, executed=2025-03-18 09:00:00, pending Buy placed at 5679.6; SL=5669.127010848667, TP=5707.018285598191; valid for the next 3 chart bar(s).
+18/03/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 5.09 US500.cash (Price: 5647.6, SL: 5660.00271305685, TP: 5615.13)
+18/03/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 5.09 US500.cash (Price: 5647.6, SL: 5660.00271305685, TP: 5615.13) SUCCEEDED, PendingOrder OID277
+18/03/2025 11:00:00.000 | Info | Combo: bartime=2025-03-18 10:00, executed=2025-03-18 11:00:00, pending Sell placed at 5647.6; SL=5660.002713056853, TP=5615.1296972171585; valid for the next 3 chart bar(s).
+20/03/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 5.05 US500.cash (Price: 5670.4, SL: 5683.24256283797, TP: 5636.78)
+20/03/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 5.05 US500.cash (Price: 5670.4, SL: 5683.24256283797, TP: 5636.78) SUCCEEDED, PendingOrder OID280
+20/03/2025 10:00:00.000 | Info | Combo: bartime=2025-03-20 09:00, executed=2025-03-20 10:00:00, pending Sell placed at 5670.4; SL=5683.242562837973, TP=5636.778170490184; valid for the next 3 chart bar(s).
+20/03/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 2.55 US500.cash (Price: 5711.9, SL: 5685.89574900925, TP: 5779.98)
+20/03/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 2.55 US500.cash (Price: 5711.9, SL: 5685.89574900925, TP: 5779.98) SUCCEEDED, PendingOrder OID283
+20/03/2025 15:00:00.000 | Info | Combo: bartime=2025-03-20 14:00, executed=2025-03-20 15:00:00, pending Buy placed at 5711.9; SL=5685.8957490092525, TP=5779.979129093776; valid for the next 3 chart bar(s).
+20/03/2025 17:00:00.000 | Info | Combo: bartime=2025-03-20 16:00, reversal - cancelling existing Buy pending order 283 before opening opposite direction.
+20/03/2025 17:00:00.000 | Trade | Cancelling pending order OID283
+20/03/2025 17:00:00.000 | Trade |  Cancelling pending order OID283 SUCCEEDED
+20/03/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 2.38 US500.cash (Price: 5659.4, SL: 5687.34272063408, TP: 5586.25)
+20/03/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 2.38 US500.cash (Price: 5659.4, SL: 5687.34272063408, TP: 5586.25) SUCCEEDED, PendingOrder OID284
+20/03/2025 17:00:00.000 | Info | Combo: bartime=2025-03-20 16:00, executed=2025-03-20 17:00:00, pending Sell placed at 5659.4; SL=5687.3427206340775, TP=5586.245957379982; valid for the next 3 chart bar(s).
+21/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-21 07:00, Sell signal skipped: already have same-direction exposure open.
+21/03/2025 17:00:00.000 | Info | Combo: bartime=2025-03-21 16:00, reversal - closing existing Sell position 82 before opening opposite direction.
+21/03/2025 17:00:00.000 | Trade | Closing position PID82 (Volume: 2.38)
+21/03/2025 17:00:00.000 | Trade |  Closing position PID82 (Volume: 2.38) SUCCEEDED
+21/03/2025 17:00:00.000 | Trade | Placing Stop Order to Buy 2.27 US500.cash (Price: 5659.8, SL: 5630.49523028816, TP: 5736.52)
+21/03/2025 17:00:00.000 | Trade |  Placing Stop Order to Buy 2.27 US500.cash (Price: 5659.8, SL: 5630.49523028816, TP: 5736.52) SUCCEEDED, PendingOrder OID288
+21/03/2025 17:00:00.000 | Info | Combo: bartime=2025-03-21 16:00, executed=2025-03-21 17:00:00, pending Buy placed at 5659.8; SL=5630.495230288164, TP=5736.519887105587; valid for the next 3 chart bar(s).
+21/03/2025 20:00:00.000 | Info | Combo: bartime=2025-03-21 19:00, Buy signal skipped: already have same-direction exposure open.
+25/03/2025 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 12.41 units, which needs about $5129.20 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3411.23 budget, free margin was $6822.47). Size was cut from 12.41 to 8.08 units. Real risk on this trade is now about $44.39 (0.65% of balance) instead of the requested 1.00%.
+25/03/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 8.08 US500.cash (Price: 5754.7, SL: 5760.19329837418, TP: 5740.32)
+25/03/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 8.08 US500.cash (Price: 5754.7, SL: 5760.19329837418, TP: 5740.32) SUCCEEDED, PendingOrder OID291
+25/03/2025 08:00:00.000 | Info | Combo: bartime=2025-03-25 07:00, executed=2025-03-25 08:00:00, pending Sell placed at 5754.7; SL=5760.193298374183, TP=5740.318544856389; valid for the next 3 chart bar(s).
+25/03/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 4.94 US500.cash (Price: 5761.3, SL: 5775.01033534833, TP: 5725.41)
+25/03/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 4.94 US500.cash (Price: 5761.3, SL: 5775.01033534833, TP: 5725.41) SUCCEEDED, PendingOrder OID294
+25/03/2025 18:00:00.000 | Info | Combo: bartime=2025-03-25 17:00, executed=2025-03-25 18:00:00, pending Sell placed at 5761.3; SL=5775.010335348327, TP=5725.40634205808; valid for the next 3 chart bar(s).
+26/03/2025 06:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.85 units, which needs about $4071.12 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3349.27 budget, free margin was $6698.55). Size was cut from 9.85 to 7.94 units. Real risk on this trade is now about $53.98 (0.81% of balance) instead of the requested 1.00%.
+26/03/2025 06:00:00.000 | Trade | Placing Stop Order to Sell 7.94 US500.cash (Price: 5768.2, SL: 5774.99787935934, TP: 5750.4)
+26/03/2025 06:00:00.000 | Trade |  Placing Stop Order to Sell 7.94 US500.cash (Price: 5768.2, SL: 5774.99787935934, TP: 5750.4) SUCCEEDED, PendingOrder OID297
+26/03/2025 06:00:00.000 | Info | Combo: bartime=2025-03-26 05:00, executed=2025-03-26 06:00:00, pending Sell placed at 5768.2; SL=5774.997879359341, TP=5750.403151837245; valid for the next 3 chart bar(s).
+26/03/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 5.38 US500.cash (Price: 5755, SL: 5767.32601989554, TP: 5722.73)
+26/03/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 5.38 US500.cash (Price: 5755, SL: 5767.32601989554, TP: 5722.73) SUCCEEDED, PendingOrder OID300
+26/03/2025 14:00:00.000 | Info | Combo: bartime=2025-03-26 13:00, executed=2025-03-26 14:00:00, pending Sell placed at 5755; SL=5767.326019895536, TP=5722.730479913486; valid for the next 3 chart bar(s).
+27/03/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 5.28 US500.cash (Price: 5699.1, SL: 5711.96787367801, TP: 5665.41)
+27/03/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 5.28 US500.cash (Price: 5699.1, SL: 5711.96787367801, TP: 5665.41) SUCCEEDED, PendingOrder OID303
+27/03/2025 13:00:00.000 | Info | Combo: bartime=2025-03-27 12:00, executed=2025-03-27 13:00:00, pending Sell placed at 5699.1; SL=5711.967873678014, TP=5665.4119067109605; valid for the next 3 chart bar(s).
+27/03/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 3.3 US500.cash (Price: 5730.4, SL: 5710.02456084607, TP: 5783.74)
+27/03/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 3.3 US500.cash (Price: 5730.4, SL: 5710.02456084607, TP: 5783.74) SUCCEEDED, PendingOrder OID306
+27/03/2025 15:00:00.000 | Info | Combo: bartime=2025-03-27 14:00, executed=2025-03-27 15:00:00, pending Buy placed at 5730.4; SL=5710.024560846071, TP=5783.742899704986; valid for the next 3 chart bar(s).
+31/03/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 2.8 US500.cash (Price: 5561, SL: 5537.25284837912, TP: 5623.17)
+31/03/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 2.8 US500.cash (Price: 5561, SL: 5537.25284837912, TP: 5623.17) SUCCEEDED, PendingOrder OID309
+31/03/2025 16:00:00.000 | Info | Combo: bartime=2025-03-31 15:00, executed=2025-03-31 16:00:00, pending Buy placed at 5561; SL=5537.252848379125, TP=5623.170042943452; valid for the next 3 chart bar(s).
+01/04/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 3.4 US500.cash (Price: 5571.3, SL: 5591.31153085065, TP: 5518.91)
+01/04/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 3.4 US500.cash (Price: 5571.3, SL: 5591.31153085065, TP: 5518.91) SUCCEEDED, PendingOrder OID312
+01/04/2025 12:00:00.000 | Info | Combo: bartime=2025-04-01 11:00, executed=2025-04-01 12:00:00, pending Sell placed at 5571.3; SL=5591.311530850648, TP=5518.909812233005; valid for the next 3 chart bar(s).
+01/04/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 2.37 US500.cash (Price: 5617.7, SL: 5589.26769620447, TP: 5692.14)
+01/04/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 2.37 US500.cash (Price: 5617.7, SL: 5589.26769620447, TP: 5692.14) SUCCEEDED, PendingOrder OID315
+01/04/2025 15:00:00.000 | Info | Combo: bartime=2025-04-01 14:00, executed=2025-04-01 15:00:00, pending Buy placed at 5617.7; SL=5589.267696204469, TP=5692.135771336701; valid for the next 3 chart bar(s).
+01/04/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 2.33 US500.cash (Price: 5580.2, SL: 5608.77707163465, TP: 5505.39)
+01/04/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 2.33 US500.cash (Price: 5580.2, SL: 5608.77707163465, TP: 5505.39) SUCCEEDED, PendingOrder OID318
+01/04/2025 19:00:00.000 | Info | Combo: bartime=2025-04-01 18:00, executed=2025-04-01 19:00:00, pending Sell placed at 5580.2; SL=5608.7770716346495, TP=5505.385226460487; valid for the next 3 chart bar(s).
+01/04/2025 20:00:00.000 | Info | Combo: bartime=2025-04-01 19:00, reversal - cancelling existing Sell pending order 318 before opening opposite direction.
+01/04/2025 20:00:00.000 | Trade | Cancelling pending order OID318
+01/04/2025 20:00:00.000 | Trade |  Cancelling pending order OID318 SUCCEEDED
+01/04/2025 20:00:00.000 | Trade | Placing Stop Order to Buy 2.14 US500.cash (Price: 5635.7, SL: 5604.63834269228, TP: 5717.02)
+01/04/2025 20:00:00.000 | Trade |  Placing Stop Order to Buy 2.14 US500.cash (Price: 5635.7, SL: 5604.63834269228, TP: 5717.02) SUCCEEDED, PendingOrder OID319
+01/04/2025 20:00:00.000 | Info | Combo: bartime=2025-04-01 19:00, executed=2025-04-01 20:00:00, pending Buy placed at 5635.7; SL=5604.63834269228, TP=5717.01941883161; valid for the next 3 chart bar(s).
+02/04/2025 08:00:00.000 | Info | Combo: bartime=2025-04-02 07:00, reversal - closing existing Buy position 93 before opening opposite direction.
+02/04/2025 08:00:00.000 | Trade | Closing position PID93 (Volume: 2.14)
+02/04/2025 08:00:00.000 | Trade |  Closing position PID93 (Volume: 2.14) SUCCEEDED
+02/04/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 5.53 US500.cash (Price: 5611.3, SL: 5623.27273305072, TP: 5579.96)
+02/04/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 5.53 US500.cash (Price: 5611.3, SL: 5623.27273305072, TP: 5579.96) SUCCEEDED, PendingOrder OID323
+02/04/2025 08:00:00.000 | Info | Combo: bartime=2025-04-02 07:00, executed=2025-04-02 08:00:00, pending Sell placed at 5611.3; SL=5623.272733050724, TP=5579.955384873204; valid for the next 3 chart bar(s).
+02/04/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 2.65 US500.cash (Price: 5644.1, SL: 5618.47659445372, TP: 5711.18)
+02/04/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 2.65 US500.cash (Price: 5644.1, SL: 5618.47659445372, TP: 5711.18) SUCCEEDED, PendingOrder OID326
+02/04/2025 15:00:00.000 | Info | Combo: bartime=2025-04-02 14:00, executed=2025-04-02 15:00:00, pending Buy placed at 5644.1; SL=5618.476594453721, TP=5711.182075720159; valid for the next 3 chart bar(s).
+02/04/2025 22:05:00.000 | Trade | Placing Stop Order to Sell 1 US500.cash (Price: 5521.2, SL: 5590.31734202352, TP: 5340.25)
+02/04/2025 22:05:00.000 | Trade |  Placing Stop Order to Sell 1 US500.cash (Price: 5521.2, SL: 5590.31734202352, TP: 5340.25) SUCCEEDED, PendingOrder OID329
+02/04/2025 22:05:00.000 | Info | Combo: bartime=2025-04-02 20:00, executed=2025-04-02 22:05:00, pending Sell placed at 5521.2; SL=5590.317342023523, TP=5340.250798582414; valid for the next 3 chart bar(s).
+07/04/2025 13:00:00.000 | Trade | Placing Stop Order to Buy 0.96 US500.cash (Price: 4993.9, SL: 4920.44479561531, TP: 5186.21)
+07/04/2025 13:00:00.000 | Trade |  Placing Stop Order to Buy 0.96 US500.cash (Price: 4993.9, SL: 4920.44479561531, TP: 5186.21) SUCCEEDED, PendingOrder OID332
+07/04/2025 13:00:00.000 | Info | Combo: bartime=2025-04-07 12:00, executed=2025-04-07 13:00:00, pending Buy placed at 4993.9; SL=4920.444795615309, TP=5186.2057250791195; valid for the next 3 chart bar(s).
+08/04/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 1.17 US500.cash (Price: 5085.8, SL: 5147.60653401109, TP: 4923.99)
+08/04/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 1.17 US500.cash (Price: 5085.8, SL: 5147.60653401109, TP: 4923.99) SUCCEEDED, PendingOrder OID335
+08/04/2025 17:00:00.000 | Info | Combo: bartime=2025-04-08 16:00, executed=2025-04-08 17:00:00, pending Sell placed at 5085.8; SL=5147.6065340110945, TP=4923.990493958956; valid for the next 3 chart bar(s).
+09/04/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 0.93 US500.cash (Price: 5039.7, SL: 4960.31295362522, TP: 5247.54)
+09/04/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 0.93 US500.cash (Price: 5039.7, SL: 4960.31295362522, TP: 5247.54) SUCCEEDED, PendingOrder OID338
+09/04/2025 14:00:00.000 | Info | Combo: bartime=2025-04-09 13:00, executed=2025-04-09 14:00:00, pending Buy placed at 5039.7; SL=4960.312953625223, TP=5247.535287409165; valid for the next 3 chart bar(s).
+11/04/2025 06:00:00.000 | Trade | Placing Stop Order to Buy 1.38 US500.cash (Price: 5327.9, SL: 5274.88682912914, TP: 5466.69)
+11/04/2025 06:00:00.000 | Trade |  Placing Stop Order to Buy 1.38 US500.cash (Price: 5327.9, SL: 5274.88682912914, TP: 5466.69) SUCCEEDED, PendingOrder OID341
+11/04/2025 06:00:00.000 | Info | Combo: bartime=2025-04-11 05:00, executed=2025-04-11 06:00:00, pending Buy placed at 5327.9; SL=5274.886829129139, TP=5466.688481339912; valid for the next 3 chart bar(s).
+11/04/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 1.4 US500.cash (Price: 5223.2, SL: 5274.90674348588, TP: 5087.83)
+11/04/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 1.4 US500.cash (Price: 5223.2, SL: 5274.90674348588, TP: 5087.83) SUCCEEDED, PendingOrder OID344
+11/04/2025 09:00:00.000 | Info | Combo: bartime=2025-04-11 08:00, executed=2025-04-11 09:00:00, pending Sell placed at 5223.2; SL=5274.906743485881, TP=5087.8317455539645; valid for the next 3 chart bar(s).
+11/04/2025 10:00:00.000 | Info | Combo: bartime=2025-04-11 09:00, reversal - cancelling existing Sell pending order 344 before opening opposite direction.
+11/04/2025 10:00:00.000 | Trade | Cancelling pending order OID344
+11/04/2025 10:00:00.000 | Trade |  Cancelling pending order OID344 SUCCEEDED
+11/04/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 1.28 US500.cash (Price: 5309.2, SL: 5252.6546052113, TP: 5457.24)
+11/04/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 1.28 US500.cash (Price: 5309.2, SL: 5252.6546052113, TP: 5457.24) SUCCEEDED, PendingOrder OID345
+11/04/2025 10:00:00.000 | Info | Combo: bartime=2025-04-11 09:00, executed=2025-04-11 10:00:00, pending Buy placed at 5309.2; SL=5252.654605211295, TP=5457.235843556828; valid for the next 3 chart bar(s).
+11/04/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 1.16 US500.cash (Price: 5217.2, SL: 5278.81727496436, TP: 5055.89)
+11/04/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 1.16 US500.cash (Price: 5217.2, SL: 5278.81727496436, TP: 5055.89) SUCCEEDED, PendingOrder OID348
+11/04/2025 15:00:00.000 | Info | Combo: bartime=2025-04-11 14:00, executed=2025-04-11 15:00:00, pending Sell placed at 5217.2; SL=5278.817274964363, TP=5055.885974143298; valid for the next 3 chart bar(s).
+11/04/2025 18:00:00.000 | Trade | Cancelling pending order OID348
+11/04/2025 18:00:00.000 | Trade |  Cancelling pending order OID348 SUCCEEDED
+11/04/2025 18:00:00.000 | Info | Combo: pending order 348 cancelled after 3 chart bars.
+14/04/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 1.7 US500.cash (Price: 5369.8, SL: 5412.00530080316, TP: 5259.31)
+14/04/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 1.7 US500.cash (Price: 5369.8, SL: 5412.00530080316, TP: 5259.31) SUCCEEDED, PendingOrder OID349
+14/04/2025 16:00:00.000 | Info | Combo: bartime=2025-04-14 15:00, executed=2025-04-14 16:00:00, pending Sell placed at 5369.8; SL=5412.005300803156, TP=5259.306522497338; valid for the next 3 chart bar(s).
+14/04/2025 20:00:00.000 | Trade | Placing Stop Order to Sell 1.8 US500.cash (Price: 5400.6, SL: 5439.93081120897, TP: 5297.63)
+14/04/2025 20:00:00.000 | Trade |  Placing Stop Order to Sell 1.8 US500.cash (Price: 5400.6, SL: 5439.93081120897, TP: 5297.63) SUCCEEDED, PendingOrder OID352
+14/04/2025 20:00:00.000 | Info | Combo: bartime=2025-04-14 19:00, executed=2025-04-14 20:00:00, pending Sell placed at 5400.6; SL=5439.930811208973, TP=5297.63193625491; valid for the next 3 chart bar(s).
+15/04/2025 08:00:00.000 | Info | Combo: bartime=2025-04-15 07:00, reversal - closing existing Sell position 103 before opening opposite direction.
+15/04/2025 08:00:00.000 | Trade | Closing position PID103 (Volume: 1.8)
+15/04/2025 08:00:00.000 | Trade |  Closing position PID103 (Volume: 1.8) SUCCEEDED
+15/04/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 3.92 US500.cash (Price: 5430.2, SL: 5412.26311879727, TP: 5477.16)
+15/04/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 3.92 US500.cash (Price: 5430.2, SL: 5412.26311879727, TP: 5477.16) SUCCEEDED, PendingOrder OID356
+15/04/2025 08:00:00.000 | Info | Combo: bartime=2025-04-15 07:00, executed=2025-04-15 08:00:00, pending Buy placed at 5430.2; SL=5412.26311879727, TP=5477.158754988746; valid for the next 3 chart bar(s).
+15/04/2025 11:00:00.000 | Trade | Cancelling pending order OID356
+15/04/2025 11:00:00.000 | Trade |  Cancelling pending order OID356 SUCCEEDED
+15/04/2025 11:00:00.000 | Info | Combo: pending order 356 cancelled after 3 chart bars.
+15/04/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 3.39 US500.cash (Price: 5384.2, SL: 5404.93414654064, TP: 5329.92)
+15/04/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 3.39 US500.cash (Price: 5384.2, SL: 5404.93414654064, TP: 5329.92) SUCCEEDED, PendingOrder OID357
+15/04/2025 12:00:00.000 | Info | Combo: bartime=2025-04-15 11:00, executed=2025-04-15 12:00:00, pending Sell placed at 5384.2; SL=5404.934146540638, TP=5329.918004356609; valid for the next 3 chart bar(s).
+15/04/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 2.62 US500.cash (Price: 5448.6, SL: 5422.15414621399, TP: 5517.84)
+15/04/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 2.62 US500.cash (Price: 5448.6, SL: 5422.15414621399, TP: 5517.84) SUCCEEDED, PendingOrder OID360
+15/04/2025 14:00:00.000 | Info | Combo: bartime=2025-04-15 13:00, executed=2025-04-15 14:00:00, pending Buy placed at 5448.6; SL=5422.154146213992, TP=5517.835245211771; valid for the next 3 chart bar(s).
+15/04/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 2.32 US500.cash (Price: 5390.5, SL: 5420.06102171075, TP: 5313.11)
+15/04/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 2.32 US500.cash (Price: 5390.5, SL: 5420.06102171075, TP: 5313.11) SUCCEEDED, PendingOrder OID363
+15/04/2025 18:00:00.000 | Info | Combo: bartime=2025-04-15 17:00, executed=2025-04-15 18:00:00, pending Sell placed at 5390.5; SL=5420.061021710749, TP=5313.1092451612585; valid for the next 3 chart bar(s).
+17/04/2025 04:00:00.000 | Trade | Placing Stop Order to Buy 3.38 US500.cash (Price: 5315.4, SL: 5294.54697702525, TP: 5369.99)
+17/04/2025 04:00:00.000 | Trade |  Placing Stop Order to Buy 3.38 US500.cash (Price: 5315.4, SL: 5294.54697702525, TP: 5369.99) SUCCEEDED, PendingOrder OID366
+17/04/2025 04:00:00.000 | Info | Combo: bartime=2025-04-17 03:00, executed=2025-04-17 04:00:00, pending Buy placed at 5315.4; SL=5294.546977025251, TP=5369.99321414789; valid for the next 3 chart bar(s).
+17/04/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 2.44 US500.cash (Price: 5255, SL: 5283.5138909097, TP: 5180.35)
+17/04/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 2.44 US500.cash (Price: 5255, SL: 5283.5138909097, TP: 5180.35) SUCCEEDED, PendingOrder OID369
+17/04/2025 15:00:00.000 | Info | Combo: bartime=2025-04-17 14:00, executed=2025-04-17 15:00:00, pending Sell placed at 5255; SL=5283.513890909698, TP=5180.350633598412; valid for the next 3 chart bar(s).
+17/04/2025 17:00:00.000 | Info | Combo: bartime=2025-04-17 16:00, reversal - cancelling existing Sell pending order 369 before opening opposite direction.
+17/04/2025 17:00:00.000 | Trade | Cancelling pending order OID369
+17/04/2025 17:00:00.000 | Trade |  Cancelling pending order OID369 SUCCEEDED
+17/04/2025 17:00:00.000 | Trade | Placing Stop Order to Buy 2.12 US500.cash (Price: 5323.2, SL: 5290.39910981779, TP: 5409.07)
+17/04/2025 17:00:00.000 | Trade |  Placing Stop Order to Buy 2.12 US500.cash (Price: 5323.2, SL: 5290.39910981779, TP: 5409.07) SUCCEEDED, PendingOrder OID370
+17/04/2025 17:00:00.000 | Info | Combo: bartime=2025-04-17 16:00, executed=2025-04-17 17:00:00, pending Buy placed at 5323.2; SL=5290.399109817793, TP=5409.072730497016; valid for the next 3 chart bar(s).
+22/04/2025 02:00:00.000 | Trade | Placing Stop Order to Buy 3.14 US500.cash (Price: 5196.2, SL: 5174.24089281218, TP: 5253.69)
+22/04/2025 02:00:00.000 | Trade |  Placing Stop Order to Buy 3.14 US500.cash (Price: 5196.2, SL: 5174.24089281218, TP: 5253.69) SUCCEEDED, PendingOrder OID373
+22/04/2025 02:00:00.000 | Info | Combo: bartime=2025-04-22 01:00, executed=2025-04-22 02:00:00, pending Buy placed at 5196.2; SL=5174.240892812182, TP=5253.688942617705; valid for the next 3 chart bar(s).
+22/04/2025 05:00:00.000 | Trade | Cancelling pending order OID373
+22/04/2025 05:00:00.000 | Trade |  Cancelling pending order OID373 SUCCEEDED
+22/04/2025 05:00:00.000 | Info | Combo: pending order 373 cancelled after 3 chart bars.
+23/04/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 1.77 US500.cash (Price: 5374.3, SL: 5413.24761497198, TP: 5272.34)
+23/04/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 1.77 US500.cash (Price: 5374.3, SL: 5413.24761497198, TP: 5272.34) SUCCEEDED, PendingOrder OID374
+23/04/2025 19:00:00.000 | Info | Combo: bartime=2025-04-23 18:00, executed=2025-04-23 19:00:00, pending Sell placed at 5374.3; SL=5413.247614971985, TP=5272.335144003345; valid for the next 3 chart bar(s).
+24/04/2025 11:00:00.000 | Info | Combo: bartime=2025-04-24 10:00, reversal - closing existing Sell position 109 before opening opposite direction.
+24/04/2025 11:00:00.000 | Trade | Closing position PID109 (Volume: 1.77)
+24/04/2025 11:00:00.000 | Trade |  Closing position PID109 (Volume: 1.77) SUCCEEDED
+24/04/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 3.02 US500.cash (Price: 5383, SL: 5360.19982442262, TP: 5442.69)
+24/04/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 3.02 US500.cash (Price: 5383, SL: 5360.19982442262, TP: 5442.69) SUCCEEDED, PendingOrder OID378
+24/04/2025 11:00:00.000 | Info | Combo: bartime=2025-04-24 10:00, executed=2025-04-24 11:00:00, pending Buy placed at 5383; SL=5360.199824422618, TP=5442.690859661586; valid for the next 3 chart bar(s).
+24/04/2025 13:00:00.000 | Info | Combo: bartime=2025-04-24 12:00, Buy signal skipped: already have same-direction exposure open.
+25/04/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 2.96 US500.cash (Price: 5459.8, SL: 5483.65039441633, TP: 5397.36)
+25/04/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 2.96 US500.cash (Price: 5459.8, SL: 5483.65039441633, TP: 5397.36) SUCCEEDED, PendingOrder OID381
+25/04/2025 11:00:00.000 | Info | Combo: bartime=2025-04-25 10:00, executed=2025-04-25 11:00:00, pending Sell placed at 5459.8; SL=5483.6503944163305, TP=5397.359667418046; valid for the next 3 chart bar(s).
+25/04/2025 14:00:00.000 | Trade | Cancelling pending order OID381
+25/04/2025 14:00:00.000 | Trade |  Cancelling pending order OID381 SUCCEEDED
+25/04/2025 14:00:00.000 | Info | Combo: pending order 381 cancelled after 3 chart bars.
+25/04/2025 17:00:00.000 | Trade | Placing Stop Order to Buy 2.77 US500.cash (Price: 5511, SL: 5485.53165340613, TP: 5577.68)
+25/04/2025 17:00:00.000 | Trade |  Placing Stop Order to Buy 2.77 US500.cash (Price: 5511, SL: 5485.53165340613, TP: 5577.68) SUCCEEDED, PendingOrder OID382
+25/04/2025 17:00:00.000 | Info | Combo: bartime=2025-04-25 16:00, executed=2025-04-25 17:00:00, pending Buy placed at 5511; SL=5485.531653406126, TP=5577.676131382764; valid for the next 3 chart bar(s).
+25/04/2025 19:00:00.000 | Info | Combo: bartime=2025-04-25 18:00, Buy signal skipped: already have same-direction exposure open.
+28/04/2025 01:00:00.000 | Info | Combo: bartime=2025-04-28 00:00, reversal - closing existing Buy position 111 before opening opposite direction.
+28/04/2025 01:00:00.000 | Trade | Closing position PID111 (Volume: 2.77)
+28/04/2025 01:00:00.000 | Trade |  Closing position PID111 (Volume: 2.77) SUCCEEDED
+28/04/2025 01:00:00.000 | Trade | Placing Stop Order to Sell 3.63 US500.cash (Price: 5493, SL: 5512.3119755596, TP: 5442.44)
+28/04/2025 01:00:00.000 | Trade |  Placing Stop Order to Sell 3.63 US500.cash (Price: 5493, SL: 5512.3119755596, TP: 5442.44) SUCCEEDED, PendingOrder OID386
+28/04/2025 01:00:00.000 | Info | Combo: bartime=2025-04-28 00:00, executed=2025-04-28 01:00:00, pending Sell placed at 5493; SL=5512.3119755596035, TP=5442.441247984958; valid for the next 3 chart bar(s).
+28/04/2025 03:00:00.000 | Info | Combo: bartime=2025-04-28 02:00, Sell signal skipped: already have same-direction exposure open.
+28/04/2025 04:00:00.000 | Info | Combo: bartime=2025-04-28 03:00, Sell signal skipped: already have same-direction exposure open.
+28/04/2025 07:00:00.000 | Trade | Placing Stop Order to Buy 5.61 US500.cash (Price: 5513.9, SL: 5501.5240862789, TP: 5546.3)
+28/04/2025 07:00:00.000 | Trade |  Placing Stop Order to Buy 5.61 US500.cash (Price: 5513.9, SL: 5501.5240862789, TP: 5546.3) SUCCEEDED, PendingOrder OID389
+28/04/2025 07:00:00.000 | Info | Combo: bartime=2025-04-28 06:00, executed=2025-04-28 07:00:00, pending Buy placed at 5513.9; SL=5501.524086278903, TP=5546.3001421218305; valid for the next 3 chart bar(s).
+28/04/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 2.97 US500.cash (Price: 5486.6, SL: 5510.59772017997, TP: 5423.77)
+28/04/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 2.97 US500.cash (Price: 5486.6, SL: 5510.59772017997, TP: 5423.77) SUCCEEDED, PendingOrder OID392
+28/04/2025 16:00:00.000 | Info | Combo: bartime=2025-04-28 15:00, executed=2025-04-28 16:00:00, pending Sell placed at 5486.6; SL=5510.59772017997, TP=5423.77396856884; valid for the next 3 chart bar(s).
+28/04/2025 20:00:00.000 | Trade | Placing Stop Order to Buy 2.8 US500.cash (Price: 5540.7, SL: 5515.54829381428, TP: 5606.55)
+28/04/2025 20:00:00.000 | Trade |  Placing Stop Order to Buy 2.8 US500.cash (Price: 5540.7, SL: 5515.54829381428, TP: 5606.55) SUCCEEDED, PendingOrder OID395
+28/04/2025 20:00:00.000 | Info | Combo: bartime=2025-04-28 19:00, executed=2025-04-28 20:00:00, pending Buy placed at 5540.7; SL=5515.548293814284, TP=5606.547166794203; valid for the next 3 chart bar(s).
+29/04/2025 00:00:00.000 | Trade | Cancelling pending order OID395
+29/04/2025 00:00:00.000 | Trade |  Cancelling pending order OID395 SUCCEEDED
+29/04/2025 00:00:00.000 | Info | Combo: pending order 395 cancelled after 3 chart bars.
+29/04/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 4.18 US500.cash (Price: 5507.1, SL: 5523.92032771902, TP: 5463.06)
+29/04/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 4.18 US500.cash (Price: 5507.1, SL: 5523.92032771902, TP: 5463.06) SUCCEEDED, PendingOrder OID396
+29/04/2025 11:00:00.000 | Info | Combo: bartime=2025-04-29 10:00, executed=2025-04-29 11:00:00, pending Sell placed at 5507.1; SL=5523.920327719017, TP=5463.0643820316145; valid for the next 3 chart bar(s).
+29/04/2025 13:00:00.000 | Info | Combo: bartime=2025-04-29 12:00, Sell signal skipped: already have same-direction exposure open.
+29/04/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 2.89 US500.cash (Price: 5549.5, SL: 5525.47759376629, TP: 5612.39)
+29/04/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 2.89 US500.cash (Price: 5549.5, SL: 5525.47759376629, TP: 5612.39) SUCCEEDED, PendingOrder OID399
+29/04/2025 15:00:00.000 | Info | Combo: bartime=2025-04-29 14:00, executed=2025-04-29 15:00:00, pending Buy placed at 5549.5; SL=5525.477593766291, TP=5612.390659519851; valid for the next 3 chart bar(s).
+29/04/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 2.72 US500.cash (Price: 5521.7, SL: 5546.91433998957, TP: 5455.69)
+29/04/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 2.72 US500.cash (Price: 5521.7, SL: 5546.91433998957, TP: 5455.69) SUCCEEDED, PendingOrder OID402
+29/04/2025 17:00:00.000 | Info | Combo: bartime=2025-04-29 16:00, executed=2025-04-29 17:00:00, pending Sell placed at 5521.7; SL=5546.914339989574, TP=5455.688857907295; valid for the next 3 chart bar(s).
+29/04/2025 18:00:00.000 | Info | Combo: bartime=2025-04-29 17:00, reversal - cancelling existing Sell pending order 402 before opening opposite direction.
+29/04/2025 18:00:00.000 | Trade | Cancelling pending order OID402
+29/04/2025 18:00:00.000 | Trade |  Cancelling pending order OID402 SUCCEEDED
+29/04/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 2.38 US500.cash (Price: 5569.4, SL: 5540.58852800834, TP: 5644.83)
+29/04/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 2.38 US500.cash (Price: 5569.4, SL: 5540.58852800834, TP: 5644.83) SUCCEEDED, PendingOrder OID403
+29/04/2025 18:00:00.000 | Info | Combo: bartime=2025-04-29 17:00, executed=2025-04-29 18:00:00, pending Buy placed at 5569.4; SL=5540.58852800834, TP=5644.8284336741635; valid for the next 3 chart bar(s).
+30/04/2025 01:00:00.000 | Trade | Placing Stop Order to Sell 4.14 US500.cash (Price: 5534.5, SL: 5550.92865851378, TP: 5491.49)
+30/04/2025 01:00:00.000 | Trade |  Placing Stop Order to Sell 4.14 US500.cash (Price: 5534.5, SL: 5550.92865851378, TP: 5491.49) SUCCEEDED, PendingOrder OID406
+30/04/2025 01:00:00.000 | Info | Combo: bartime=2025-04-30 00:00, executed=2025-04-30 01:00:00, pending Sell placed at 5534.5; SL=5550.928658513782, TP=5491.489772010919; valid for the next 3 chart bar(s).
+30/04/2025 07:00:00.000 | Info | Combo: bartime=2025-04-30 06:00, reversal - closing existing Sell position 118 before opening opposite direction.
+30/04/2025 07:00:00.000 | Trade | Closing position PID118 (Volume: 4.14)
+30/04/2025 07:00:00.000 | Trade |  Closing position PID118 (Volume: 4.14) SUCCEEDED
+30/04/2025 07:00:00.000 | Trade | Placing Stop Order to Buy 6.55 US500.cash (Price: 5547.5, SL: 5537.18922974256, TP: 5574.49)
+30/04/2025 07:00:00.000 | Trade |  Placing Stop Order to Buy 6.55 US500.cash (Price: 5547.5, SL: 5537.18922974256, TP: 5574.49) SUCCEEDED, PendingOrder OID410
+30/04/2025 07:00:00.000 | Info | Combo: bartime=2025-04-30 06:00, executed=2025-04-30 07:00:00, pending Buy placed at 5547.5; SL=5537.189229742563, TP=5574.49359653397; valid for the next 3 chart bar(s).
+30/04/2025 12:00:00.000 | Info | Combo: bartime=2025-04-30 11:00, reversal - closing existing Buy position 119 before opening opposite direction.
+30/04/2025 12:00:00.000 | Trade | Closing position PID119 (Volume: 6.55)
+30/04/2025 12:00:00.000 | Trade |  Closing position PID119 (Volume: 6.55) SUCCEEDED
+30/04/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 5.65 US500.cash (Price: 5537.5, SL: 5549.35354519796, TP: 5506.47)
+30/04/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 5.65 US500.cash (Price: 5537.5, SL: 5549.35354519796, TP: 5506.47) SUCCEEDED, PendingOrder OID414
+30/04/2025 12:00:00.000 | Info | Combo: bartime=2025-04-30 11:00, executed=2025-04-30 12:00:00, pending Sell placed at 5537.5; SL=5549.353545197957, TP=5506.467418671748; valid for the next 3 chart bar(s).
+30/04/2025 20:00:00.000 | Trade | Placing Stop Order to Buy 1.62 US500.cash (Price: 5583.1, SL: 5540.59215836648, TP: 5694.39)
+30/04/2025 20:00:00.000 | Trade |  Placing Stop Order to Buy 1.62 US500.cash (Price: 5583.1, SL: 5540.59215836648, TP: 5694.39) SUCCEEDED, PendingOrder OID417
+30/04/2025 20:00:00.000 | Info | Combo: bartime=2025-04-30 19:00, executed=2025-04-30 20:00:00, pending Buy placed at 5583.1; SL=5540.592158366481, TP=5694.3855293965535; valid for the next 3 chart bar(s).
+01/05/2025 17:00:00.000 | Info | Combo: bartime=2025-05-01 16:00, reversal - closing existing Buy position 121 before opening opposite direction.
+01/05/2025 17:00:00.000 | Trade | Closing position PID121 (Volume: 1.62)
+01/05/2025 17:00:00.000 | Trade |  Closing position PID121 (Volume: 1.62) SUCCEEDED
+01/05/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 2.6 US500.cash (Price: 5606.9, SL: 5633.56677605576, TP: 5537.09)
+01/05/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 2.6 US500.cash (Price: 5606.9, SL: 5633.56677605576, TP: 5537.09) SUCCEEDED, PendingOrder OID421
+01/05/2025 17:00:00.000 | Info | Combo: bartime=2025-05-01 16:00, executed=2025-05-01 17:00:00, pending Sell placed at 5606.9; SL=5633.566776055759, TP=5537.086380286022; valid for the next 3 chart bar(s).
+01/05/2025 20:00:00.000 | Info | Combo: bartime=2025-05-01 19:00, Sell signal skipped: already have same-direction exposure open.
+02/05/2025 01:00:00.000 | Trade | Placing Stop Order to Buy 2.25 US500.cash (Price: 5641.9, SL: 5611.46532404611, TP: 5721.58)
+02/05/2025 01:00:00.000 | Trade |  Placing Stop Order to Buy 2.25 US500.cash (Price: 5641.9, SL: 5611.46532404611, TP: 5721.58) SUCCEEDED, PendingOrder OID424
+02/05/2025 01:00:00.000 | Info | Combo: bartime=2025-05-02 00:00, executed=2025-05-02 01:00:00, pending Buy placed at 5641.9; SL=5611.465324046111, TP=5721.5779816472805; valid for the next 3 chart bar(s).
+02/05/2025 09:00:00.000 | Info | Combo: bartime=2025-05-02 08:00, reversal - closing existing Buy position 123 before opening opposite direction.
+02/05/2025 09:00:00.000 | Trade | Closing position PID123 (Volume: 2.25)
+02/05/2025 09:00:00.000 | Trade |  Closing position PID123 (Volume: 2.25) SUCCEEDED
+02/05/2025 09:00:00.000 | Trade | Placing Stop Order to Sell 3.96 US500.cash (Price: 5612.4, SL: 5629.57962143568, TP: 5567.42)
+02/05/2025 09:00:00.000 | Trade |  Placing Stop Order to Sell 3.96 US500.cash (Price: 5612.4, SL: 5629.57962143568, TP: 5567.42) SUCCEEDED, PendingOrder OID428
+02/05/2025 09:00:00.000 | Info | Combo: bartime=2025-05-02 08:00, executed=2025-05-02 09:00:00, pending Sell placed at 5612.4; SL=5629.579621435683, TP=5567.423751081379; valid for the next 3 chart bar(s).
+02/05/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 4.47 US500.cash (Price: 5617.1, SL: 5632.16316617507, TP: 5577.66)
+02/05/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 4.47 US500.cash (Price: 5617.1, SL: 5632.16316617507, TP: 5577.66) SUCCEEDED, PendingOrder OID431
+02/05/2025 12:00:00.000 | Info | Combo: bartime=2025-05-02 11:00, executed=2025-05-02 12:00:00, pending Sell placed at 5617.1; SL=5632.163166175071, TP=5577.664630953666; valid for the next 3 chart bar(s).
+02/05/2025 13:00:00.000 | Info | Combo: bartime=2025-05-02 12:00, reversal - cancelling existing Sell pending order 431 before opening opposite direction.
+02/05/2025 13:00:00.000 | Trade | Cancelling pending order OID431
+02/05/2025 13:00:00.000 | Trade |  Cancelling pending order OID431 SUCCEEDED
+02/05/2025 13:00:00.000 | Trade | Placing Stop Order to Buy 3.01 US500.cash (Price: 5671.4, SL: 5649.08946705994, TP: 5729.81)
+02/05/2025 13:00:00.000 | Trade |  Placing Stop Order to Buy 3.01 US500.cash (Price: 5671.4, SL: 5649.08946705994, TP: 5729.81) SUCCEEDED, PendingOrder OID432
+02/05/2025 13:00:00.000 | Info | Combo: bartime=2025-05-02 12:00, executed=2025-05-02 13:00:00, pending Buy placed at 5671.4; SL=5649.089467059944, TP=5729.808975237066; valid for the next 3 chart bar(s).
+05/05/2025 02:00:00.000 | Trade | Placing Stop Order to Sell 3.76 US500.cash (Price: 5637, SL: 5654.67620611527, TP: 5590.72)
+05/05/2025 02:00:00.000 | Trade |  Placing Stop Order to Sell 3.76 US500.cash (Price: 5637, SL: 5654.67620611527, TP: 5590.72) SUCCEEDED, PendingOrder OID435
+05/05/2025 02:00:00.000 | Info | Combo: bartime=2025-05-05 01:00, executed=2025-05-05 02:00:00, pending Sell placed at 5637; SL=5654.6762061152685, TP=5590.723692390227; valid for the next 3 chart bar(s).
+05/05/2025 05:00:00.000 | Trade | Cancelling pending order OID435
+05/05/2025 05:00:00.000 | Trade |  Cancelling pending order OID435 SUCCEEDED
+05/05/2025 05:00:00.000 | Info | Combo: pending order 435 cancelled after 3 chart bars.
+05/05/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 4.36 US500.cash (Price: 5670.2, SL: 5654.93901305985, TP: 5710.15)
+05/05/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 4.36 US500.cash (Price: 5670.2, SL: 5654.93901305985, TP: 5710.15) SUCCEEDED, PendingOrder OID436
+05/05/2025 15:00:00.000 | Info | Combo: bartime=2025-05-05 14:00, executed=2025-05-05 15:00:00, pending Buy placed at 5670.2; SL=5654.9390130598495, TP=5710.153263809313; valid for the next 3 chart bar(s).
+05/05/2025 22:05:00.000 | Trade | Placing Stop Order to Sell 4.39 US500.cash (Price: 5642.5, SL: 5657.49845136044, TP: 5603.23)
+05/05/2025 22:05:00.000 | Trade |  Placing Stop Order to Sell 4.39 US500.cash (Price: 5642.5, SL: 5657.49845136044, TP: 5603.23) SUCCEEDED, PendingOrder OID439
+05/05/2025 22:05:00.000 | Info | Combo: bartime=2025-05-05 20:00, executed=2025-05-05 22:05:00, pending Sell placed at 5642.5; SL=5657.498451360439, TP=5603.234054338372; valid for the next 3 chart bar(s).
+06/05/2025 19:00:00.000 | Trade | Placing Stop Order to Buy 2.7 US500.cash (Price: 5628.5, SL: 5603.41544052977, TP: 5694.17)
+06/05/2025 19:00:00.000 | Trade |  Placing Stop Order to Buy 2.7 US500.cash (Price: 5628.5, SL: 5603.41544052977, TP: 5694.17) SUCCEEDED, PendingOrder OID442
+06/05/2025 19:00:00.000 | Info | Combo: bartime=2025-05-06 18:00, executed=2025-05-06 19:00:00, pending Buy placed at 5628.5; SL=5603.415440529769, TP=5694.171376693066; valid for the next 3 chart bar(s).
+06/05/2025 23:00:00.000 | Trade | Placing Stop Order to Buy 1.86 US500.cash (Price: 5669.4, SL: 5633.46870555124, TP: 5763.47)
+06/05/2025 23:00:00.000 | Trade |  Placing Stop Order to Buy 1.86 US500.cash (Price: 5669.4, SL: 5633.46870555124, TP: 5763.47) SUCCEEDED, PendingOrder OID445
+06/05/2025 23:00:00.000 | Info | Combo: bartime=2025-05-06 22:00, executed=2025-05-06 23:00:00, pending Buy placed at 5669.4; SL=5633.468705551241, TP=5763.46812886685; valid for the next 3 chart bar(s).
+07/05/2025 02:00:00.000 | Trade | Cancelling pending order OID445
+07/05/2025 02:00:00.000 | Trade |  Cancelling pending order OID445 SUCCEEDED
+07/05/2025 02:00:00.000 | Info | Combo: pending order 445 cancelled after 3 chart bars.
+07/05/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 4.91 US500.cash (Price: 5620.9, SL: 5634.56114044406, TP: 5585.14)
+07/05/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 4.91 US500.cash (Price: 5620.9, SL: 5634.56114044406, TP: 5585.14) SUCCEEDED, PendingOrder OID446
+07/05/2025 13:00:00.000 | Info | Combo: bartime=2025-05-07 12:00, executed=2025-05-07 13:00:00, pending Sell placed at 5620.9; SL=5634.561140444057, TP=5585.135134317458; valid for the next 3 chart bar(s).
+08/05/2025 01:00:00.000 | Trade | Placing Stop Order to Buy 2.73 US500.cash (Price: 5651.3, SL: 5627.0351379106, TP: 5714.83)
+08/05/2025 01:00:00.000 | Trade |  Placing Stop Order to Buy 2.73 US500.cash (Price: 5651.3, SL: 5627.0351379106, TP: 5714.83) SUCCEEDED, PendingOrder OID449
+08/05/2025 01:00:00.000 | Info | Combo: bartime=2025-05-08 00:00, executed=2025-05-08 01:00:00, pending Buy placed at 5651.3; SL=5627.035137910599, TP=5714.825408950054; valid for the next 3 chart bar(s).
+08/05/2025 20:00:00.000 | Trade | Placing Stop Order to Sell 2.19 US500.cash (Price: 5661.2, SL: 5692.1715259266, TP: 5580.12)
+08/05/2025 20:00:00.000 | Trade |  Placing Stop Order to Sell 2.19 US500.cash (Price: 5661.2, SL: 5692.1715259266, TP: 5580.12) SUCCEEDED, PendingOrder OID452
+08/05/2025 20:00:00.000 | Info | Combo: bartime=2025-05-08 19:00, executed=2025-05-08 20:00:00, pending Sell placed at 5661.2; SL=5692.171525926603, TP=5580.116545124153; valid for the next 3 chart bar(s).
+09/05/2025 10:00:00.000 | Info | Combo: bartime=2025-05-09 09:00, reversal - closing existing Sell position 131 before opening opposite direction.
+09/05/2025 10:00:00.000 | Trade | Closing position PID131 (Volume: 2.19)
+09/05/2025 10:00:00.000 | Trade |  Closing position PID131 (Volume: 2.19) SUCCEEDED
+09/05/2025 10:00:00.000 | Trade | Placing Stop Order to Buy 6.22 US500.cash (Price: 5674.5, SL: 5663.60141217441, TP: 5703.03)
+09/05/2025 10:00:00.000 | Trade |  Placing Stop Order to Buy 6.22 US500.cash (Price: 5674.5, SL: 5663.60141217441, TP: 5703.03) SUCCEEDED, PendingOrder OID456
+09/05/2025 10:00:00.000 | Info | Combo: bartime=2025-05-09 09:00, executed=2025-05-09 10:00:00, pending Buy placed at 5674.5; SL=5663.601412174413, TP=5703.032502927386; valid for the next 3 chart bar(s).
+09/05/2025 11:00:00.000 | Info | Combo: bartime=2025-05-09 10:00, Buy signal skipped: already have same-direction exposure open.
+09/05/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 3.05 US500.cash (Price: 5642.9, SL: 5664.81454525869, TP: 5585.53)
+09/05/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 3.05 US500.cash (Price: 5642.9, SL: 5664.81454525869, TP: 5585.53) SUCCEEDED, PendingOrder OID459
+09/05/2025 15:00:00.000 | Info | Combo: bartime=2025-05-09 14:00, executed=2025-05-09 15:00:00, pending Sell placed at 5642.9; SL=5664.814545258688, TP=5585.527720512754; valid for the next 3 chart bar(s).
+09/05/2025 17:00:00.000 | Info | Combo: bartime=2025-05-09 16:00, Sell signal skipped: already have same-direction exposure open.
+09/05/2025 18:00:00.000 | Trade | Cancelling pending order OID459
+09/05/2025 18:00:00.000 | Trade |  Cancelling pending order OID459 SUCCEEDED
+09/05/2025 18:00:00.000 | Info | Combo: pending order 459 cancelled after 3 chart bars.
+13/05/2025 04:00:00.000 | Trade | Placing Stop Order to Sell 5.66 US500.cash (Price: 5821.1, SL: 5832.93075152152, TP: 5790.13)
+13/05/2025 04:00:00.000 | Trade |  Placing Stop Order to Sell 5.66 US500.cash (Price: 5821.1, SL: 5832.93075152152, TP: 5790.13) SUCCEEDED, PendingOrder OID460
+13/05/2025 04:00:00.000 | Info | Combo: bartime=2025-05-13 03:00, executed=2025-05-13 04:00:00, pending Sell placed at 5821.1; SL=5832.930751521519, TP=5790.1270925166655; valid for the next 3 chart bar(s).
+14/05/2025 22:05:00.000 | Trade | Placing Stop Order to Sell 4.51 US500.cash (Price: 5883.3, SL: 5897.99658988484, TP: 5844.82)
+14/05/2025 22:05:00.000 | Trade |  Placing Stop Order to Sell 4.51 US500.cash (Price: 5883.3, SL: 5897.99658988484, TP: 5844.82) SUCCEEDED, PendingOrder OID463
+14/05/2025 22:05:00.000 | Info | Combo: bartime=2025-05-14 20:00, executed=2025-05-14 22:05:00, pending Sell placed at 5883.3; SL=5897.996589884837, TP=5844.824327681497; valid for the next 3 chart bar(s).
+15/05/2025 14:00:00.000 | Info | Combo: bartime=2025-05-15 13:00, reversal - closing existing Sell position 134 before opening opposite direction.
+15/05/2025 14:00:00.000 | Trade | Closing position PID134 (Volume: 4.51)
+15/05/2025 14:00:00.000 | Trade |  Closing position PID134 (Volume: 4.51) SUCCEEDED
+15/05/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 5.12 US500.cash (Price: 5879.3, SL: 5866.31108807045, TP: 5913.3)
+15/05/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 5.12 US500.cash (Price: 5879.3, SL: 5866.31108807045, TP: 5913.3) SUCCEEDED, PendingOrder OID467
+15/05/2025 14:00:00.000 | Info | Combo: bartime=2025-05-15 13:00, executed=2025-05-15 14:00:00, pending Buy placed at 5879.3; SL=5866.31108807045, TP=5913.304971431563; valid for the next 3 chart bar(s).
+16/05/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 4.87 US500.cash (Price: 5905.7, SL: 5919.72321514205, TP: 5868.99)
+16/05/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 4.87 US500.cash (Price: 5905.7, SL: 5919.72321514205, TP: 5868.99) SUCCEEDED, PendingOrder OID470
+16/05/2025 15:00:00.000 | Info | Combo: bartime=2025-05-16 14:00, executed=2025-05-16 15:00:00, pending Sell placed at 5905.7; SL=5919.723215142053, TP=5868.987222758104; valid for the next 3 chart bar(s).
+16/05/2025 18:00:00.000 | Trade | Cancelling pending order OID470
+16/05/2025 18:00:00.000 | Trade |  Cancelling pending order OID470 SUCCEEDED
+16/05/2025 18:00:00.000 | Info | Combo: pending order 470 cancelled after 3 chart bars.
+19/05/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 3.58 US500.cash (Price: 5928.3, SL: 5909.24127716722, TP: 5978.2)
+19/05/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 3.58 US500.cash (Price: 5928.3, SL: 5909.24127716722, TP: 5978.2) SUCCEEDED, PendingOrder OID471
+19/05/2025 14:00:00.000 | Info | Combo: bartime=2025-05-19 13:00, executed=2025-05-19 14:00:00, pending Buy placed at 5928.3; SL=5909.2412771672225, TP=5978.195736376213; valid for the next 3 chart bar(s).
+20/05/2025 06:00:00.000 | Info | Combo: bartime=2025-05-20 05:00, reversal - closing existing Buy position 136 before opening opposite direction.
+20/05/2025 06:00:00.000 | Trade | Closing position PID136 (Volume: 3.58)
+20/05/2025 06:00:00.000 | Trade |  Closing position PID136 (Volume: 3.58) SUCCEEDED
+20/05/2025 06:00:00.000 | Trade | Placing Stop Order to Sell 6.79 US500.cash (Price: 5939.9, SL: 5950.00527530337, TP: 5913.44)
+20/05/2025 06:00:00.000 | Trade |  Placing Stop Order to Sell 6.79 US500.cash (Price: 5939.9, SL: 5950.00527530337, TP: 5913.44) SUCCEEDED, PendingOrder OID475
+20/05/2025 06:00:00.000 | Info | Combo: bartime=2025-05-20 05:00, executed=2025-05-20 06:00:00, pending Sell placed at 5939.9; SL=5950.005275303371, TP=5913.444389255774; valid for the next 3 chart bar(s).
+21/05/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 3.77 US500.cash (Price: 5936.2, SL: 5918.20905724624, TP: 5983.3)
+21/05/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 3.77 US500.cash (Price: 5936.2, SL: 5918.20905724624, TP: 5983.3) SUCCEEDED, PendingOrder OID478
+21/05/2025 16:00:00.000 | Info | Combo: bartime=2025-05-21 15:00, executed=2025-05-21 16:00:00, pending Buy placed at 5936.2; SL=5918.209057246235, TP=5983.300288129356; valid for the next 3 chart bar(s).
+21/05/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 2.27 US500.cash (Price: 5849, SL: 5878.47020336241, TP: 5771.85)
+21/05/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 2.27 US500.cash (Price: 5849, SL: 5878.47020336241, TP: 5771.85) SUCCEEDED, PendingOrder OID481
+21/05/2025 18:00:00.000 | Info | Combo: bartime=2025-05-21 17:00, executed=2025-05-21 18:00:00, pending Sell placed at 5849; SL=5878.470203362409, TP=5771.847007597213; valid for the next 3 chart bar(s).
+22/05/2025 14:00:00.000 | Info | Combo: bartime=2025-05-22 13:00, reversal - closing existing Sell position 139 before opening opposite direction.
+22/05/2025 14:00:00.000 | Trade | Closing position PID139 (Volume: 2.27)
+22/05/2025 14:00:00.000 | Trade |  Closing position PID139 (Volume: 2.27) SUCCEEDED
+22/05/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 3.26 US500.cash (Price: 5856.6, SL: 5836.09556511, TP: 5910.28)
+22/05/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 3.26 US500.cash (Price: 5856.6, SL: 5836.09556511, TP: 5910.28) SUCCEEDED, PendingOrder OID485
+22/05/2025 14:00:00.000 | Info | Combo: bartime=2025-05-22 13:00, executed=2025-05-22 14:00:00, pending Buy placed at 5856.6; SL=5836.095565109997, TP=5910.28061054203; valid for the next 3 chart bar(s).
+22/05/2025 16:00:00.000 | Trade | Placing Stop Order to Buy 2.86 US500.cash (Price: 5856.8, SL: 5833.6931616704, TP: 5917.29)
+22/05/2025 16:00:00.000 | Trade |  Placing Stop Order to Buy 2.86 US500.cash (Price: 5856.8, SL: 5833.6931616704, TP: 5917.29) SUCCEEDED, PendingOrder OID488
+22/05/2025 16:00:00.000 | Info | Combo: bartime=2025-05-22 15:00, executed=2025-05-22 16:00:00, pending Buy placed at 5856.8; SL=5833.693161670398, TP=5917.2937027469; valid for the next 3 chart bar(s).
+22/05/2025 18:00:00.000 | Info | Combo: bartime=2025-05-22 17:00, Buy signal skipped: already have same-direction exposure open.
+22/05/2025 22:05:00.000 | Info | Combo: bartime=2025-05-22 20:00, Buy signal skipped: already have same-direction exposure open.
+22/05/2025 23:00:00.000 | Info | Combo: bartime=2025-05-22 22:00, reversal - closing existing Buy position 141 before opening opposite direction.
+22/05/2025 23:00:00.000 | Trade | Closing position PID141 (Volume: 2.86)
+22/05/2025 23:00:00.000 | Trade |  Closing position PID141 (Volume: 2.86) SUCCEEDED
+22/05/2025 23:00:00.000 | Trade | Placing Stop Order to Sell 2.88 US500.cash (Price: 5833.2, SL: 5855.92989502708, TP: 5773.69)
+22/05/2025 23:00:00.000 | Trade |  Placing Stop Order to Sell 2.88 US500.cash (Price: 5833.2, SL: 5855.92989502708, TP: 5773.69) SUCCEEDED, PendingOrder OID492
+22/05/2025 23:00:00.000 | Info | Combo: bartime=2025-05-22 22:00, executed=2025-05-22 23:00:00, pending Sell placed at 5833.2; SL=5855.929895027075, TP=5773.6931348191165; valid for the next 3 chart bar(s).
+23/05/2025 02:00:00.000 | Trade | Cancelling pending order OID492
+23/05/2025 02:00:00.000 | Trade |  Cancelling pending order OID492 SUCCEEDED
+23/05/2025 02:00:00.000 | Info | Combo: pending order 492 cancelled after 3 chart bars.
+23/05/2025 03:00:00.000 | Trade | Placing Stop Order to Buy 4.62 US500.cash (Price: 5855.5, SL: 5841.31751499691, TP: 5892.63)
+23/05/2025 03:00:00.000 | Trade |  Placing Stop Order to Buy 4.62 US500.cash (Price: 5855.5, SL: 5841.31751499691, TP: 5892.63) SUCCEEDED, PendingOrder OID493
+23/05/2025 03:00:00.000 | Info | Combo: bartime=2025-05-23 02:00, executed=2025-05-23 03:00:00, pending Buy placed at 5855.5; SL=5841.31751499691, TP=5892.62974573809; valid for the next 3 chart bar(s).
+23/05/2025 06:00:00.000 | Trade | Cancelling pending order OID493
+23/05/2025 06:00:00.000 | Trade |  Cancelling pending order OID493 SUCCEEDED
+23/05/2025 06:00:00.000 | Info | Combo: pending order 493 cancelled after 3 chart bars.
+23/05/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 4.87 US500.cash (Price: 5857.7, SL: 5844.23604331419, TP: 5892.95)
+23/05/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 4.87 US500.cash (Price: 5857.7, SL: 5844.23604331419, TP: 5892.95) SUCCEEDED, PendingOrder OID494
+23/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-23 07:00, executed=2025-05-23 08:00:00, pending Buy placed at 5857.7; SL=5844.236043314188, TP=5892.948638603458; valid for the next 3 chart bar(s).
+23/05/2025 11:00:00.000 | Trade | Cancelling pending order OID494
+23/05/2025 11:00:00.000 | Trade |  Cancelling pending order OID494 SUCCEEDED
+23/05/2025 11:00:00.000 | Info | Combo: pending order 494 cancelled after 3 chart bars.
+25/05/2025 23:00:00.000 | Trade | Placing Stop Order to Buy 2.1 US500.cash (Price: 5863.2, SL: 5831.97162529739, TP: 5944.96)
+25/05/2025 23:00:00.000 | Trade |  Placing Stop Order to Buy 2.1 US500.cash (Price: 5863.2, SL: 5831.97162529739, TP: 5944.96) SUCCEEDED, PendingOrder OID495
+25/05/2025 23:00:00.000 | Info | Combo: bartime=2025-05-25 22:00, executed=2025-05-25 23:00:00, pending Buy placed at 5863.2; SL=5831.971625297392, TP=5944.955884971426; valid for the next 3 chart bar(s).
+26/05/2025 02:00:00.000 | Trade | Cancelling pending order OID495
+26/05/2025 02:00:00.000 | Trade |  Cancelling pending order OID495 SUCCEEDED
+26/05/2025 02:00:00.000 | Info | Combo: pending order 495 cancelled after 3 chart bars.
+26/05/2025 23:00:00.000 | Trade | Placing Stop Order to Sell 7.72 US500.cash (Price: 5862.8, SL: 5871.29792725092, TP: 5840.55)
+26/05/2025 23:00:00.000 | Trade |  Placing Stop Order to Sell 7.72 US500.cash (Price: 5862.8, SL: 5871.29792725092, TP: 5840.55) SUCCEEDED, PendingOrder OID496
+26/05/2025 23:00:00.000 | Info | Combo: bartime=2025-05-26 22:00, executed=2025-05-26 23:00:00, pending Sell placed at 5862.8; SL=5871.297927250915, TP=5840.552426457106; valid for the next 3 chart bar(s).
+27/05/2025 07:00:00.000 | Trade | Placing Stop Order to Buy 7.19 US500.cash (Price: 5873.4, SL: 5864.36876989359, TP: 5897.04)
+27/05/2025 07:00:00.000 | Trade |  Placing Stop Order to Buy 7.19 US500.cash (Price: 5873.4, SL: 5864.36876989359, TP: 5897.04) SUCCEEDED, PendingOrder OID499
+27/05/2025 07:00:00.000 | Info | Combo: bartime=2025-05-27 06:00, executed=2025-05-27 07:00:00, pending Buy placed at 5873.4; SL=5864.368769893591, TP=5897.043760418578; valid for the next 3 chart bar(s).
+27/05/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 3.71 US500.cash (Price: 5898.6, SL: 5880.62610509759, TP: 5945.66)
+27/05/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 3.71 US500.cash (Price: 5898.6, SL: 5880.62610509759, TP: 5945.66) SUCCEEDED, PendingOrder OID502
+27/05/2025 15:00:00.000 | Info | Combo: bartime=2025-05-27 14:00, executed=2025-05-27 15:00:00, pending Buy placed at 5898.6; SL=5880.626105097591, TP=5945.6556568545075; valid for the next 3 chart bar(s).
+28/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-28 07:00, reversal - closing existing Buy position 144 before opening opposite direction.
+28/05/2025 08:00:00.000 | Trade | Closing position PID144 (Volume: 3.71)
+28/05/2025 08:00:00.000 | Trade |  Closing position PID144 (Volume: 3.71) SUCCEEDED
+28/05/2025 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 10.59 units, which needs about $4376.97 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3360.17 budget, free margin was $6720.34). Size was cut from 10.59 to 7.96 units. Real risk on this trade is now about $50.50 (0.75% of balance) instead of the requested 1.00%.
+28/05/2025 08:00:00.000 | Trade | Placing Stop Order to Sell 7.96 US500.cash (Price: 5908.7, SL: 5915.04385825721, TP: 5892.09)
+28/05/2025 08:00:00.000 | Trade |  Placing Stop Order to Sell 7.96 US500.cash (Price: 5908.7, SL: 5915.04385825721, TP: 5892.09) SUCCEEDED, PendingOrder OID506
+28/05/2025 08:00:00.000 | Info | Combo: bartime=2025-05-28 07:00, executed=2025-05-28 08:00:00, pending Sell placed at 5908.7; SL=5915.043858257214, TP=5892.0917790826115; valid for the next 3 chart bar(s).
+28/05/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 7.47 US500.cash (Price: 5931.7, SL: 5922.77994457231, TP: 5955.05)
+28/05/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 7.47 US500.cash (Price: 5931.7, SL: 5922.77994457231, TP: 5955.05) SUCCEEDED, PendingOrder OID509
+28/05/2025 11:00:00.000 | Info | Combo: bartime=2025-05-28 10:00, executed=2025-05-28 11:00:00, pending Buy placed at 5931.7; SL=5922.779944572306, TP=5955.052705109702; valid for the next 3 chart bar(s).
+28/05/2025 15:00:00.000 | Trade | Placing Stop Order to Sell 5.08 US500.cash (Price: 5902.9, SL: 5915.87957470318, TP: 5868.92)
+28/05/2025 15:00:00.000 | Trade |  Placing Stop Order to Sell 5.08 US500.cash (Price: 5902.9, SL: 5915.87957470318, TP: 5868.92) SUCCEEDED, PendingOrder OID512
+28/05/2025 15:00:00.000 | Info | Combo: bartime=2025-05-28 14:00, executed=2025-05-28 15:00:00, pending Sell placed at 5902.9; SL=5915.879574703184, TP=5868.919473427065; valid for the next 3 chart bar(s).
+28/05/2025 23:00:00.000 | Trade | Placing Stop Order to Buy 2.73 US500.cash (Price: 5934.8, SL: 5910.95565373521, TP: 5997.22)
+28/05/2025 23:00:00.000 | Trade |  Placing Stop Order to Buy 2.73 US500.cash (Price: 5934.8, SL: 5910.95565373521, TP: 5997.22) SUCCEEDED, PendingOrder OID515
+28/05/2025 23:00:00.000 | Info | Combo: bartime=2025-05-28 22:00, executed=2025-05-28 23:00:00, pending Buy placed at 5934.8; SL=5910.955653735207, TP=5997.224498521228; valid for the next 3 chart bar(s).
+29/05/2025 12:00:00.000 | Info | Combo: bartime=2025-05-29 11:00, reversal - closing existing Buy position 148 before opening opposite direction.
+29/05/2025 12:00:00.000 | Trade | Closing position PID148 (Volume: 2.73)
+29/05/2025 12:00:00.000 | Trade |  Closing position PID148 (Volume: 2.73) SUCCEEDED
+29/05/2025 12:00:00.000 | Trade | Placing Stop Order to Sell 3.95 US500.cash (Price: 5937.3, SL: 5953.8309059337, TP: 5894.02)
+29/05/2025 12:00:00.000 | Trade |  Placing Stop Order to Sell 3.95 US500.cash (Price: 5937.3, SL: 5953.8309059337, TP: 5894.02) SUCCEEDED, PendingOrder OID519
+29/05/2025 12:00:00.000 | Info | Combo: bartime=2025-05-29 11:00, executed=2025-05-29 12:00:00, pending Sell placed at 5937.3; SL=5953.830905933703, TP=5894.022088265564; valid for the next 3 chart bar(s).
+30/05/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 6.13 US500.cash (Price: 5908.1, SL: 5897.12444233486, TP: 5936.83)
+30/05/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 6.13 US500.cash (Price: 5908.1, SL: 5897.12444233486, TP: 5936.83) SUCCEEDED, PendingOrder OID522
+30/05/2025 11:00:00.000 | Info | Combo: bartime=2025-05-30 10:00, executed=2025-05-30 11:00:00, pending Buy placed at 5908.1; SL=5897.124442334861, TP=5936.834009967336; valid for the next 3 chart bar(s).
+30/05/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 3.74 US500.cash (Price: 5865.2, SL: 5882.60835690569, TP: 5819.62)
+30/05/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 3.74 US500.cash (Price: 5865.2, SL: 5882.60835690569, TP: 5819.62) SUCCEEDED, PendingOrder OID525
+30/05/2025 13:00:00.000 | Info | Combo: bartime=2025-05-30 12:00, executed=2025-05-30 13:00:00, pending Sell placed at 5865.2; SL=5882.608356905689, TP=5819.624921620904; valid for the next 3 chart bar(s).
+30/05/2025 16:00:00.000 | Trade | Cancelling pending order OID525
+30/05/2025 16:00:00.000 | Trade |  Cancelling pending order OID525 SUCCEEDED
+30/05/2025 16:00:00.000 | Info | Combo: pending order 525 cancelled after 3 chart bars.
+30/05/2025 19:00:00.000 | Trade | Placing Stop Order to Buy 2.31 US500.cash (Price: 5900.8, SL: 5872.64395968732, TP: 5974.51)
+30/05/2025 19:00:00.000 | Trade |  Placing Stop Order to Buy 2.31 US500.cash (Price: 5900.8, SL: 5872.64395968732, TP: 5974.51) SUCCEEDED, PendingOrder OID526
+30/05/2025 19:00:00.000 | Info | Combo: bartime=2025-05-30 18:00, executed=2025-05-30 19:00:00, pending Buy placed at 5900.8; SL=5872.643959687315, TP=5974.51251353861; valid for the next 3 chart bar(s).
+02/06/2025 13:00:00.000 | Trade | Placing Stop Order to Buy 5.1 US500.cash (Price: 5891.9, SL: 5879.26588677037, TP: 5924.98)
+02/06/2025 13:00:00.000 | Trade |  Placing Stop Order to Buy 5.1 US500.cash (Price: 5891.9, SL: 5879.26588677037, TP: 5924.98) SUCCEEDED, PendingOrder OID529
+02/06/2025 13:00:00.000 | Info | Combo: bartime=2025-06-02 12:00, executed=2025-06-02 13:00:00, pending Buy placed at 5891.9; SL=5879.265886770368, TP=5924.976108435178; valid for the next 3 chart bar(s).
+02/06/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 2.87 US500.cash (Price: 5907, SL: 5884.87016753304, TP: 5964.94)
+02/06/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 2.87 US500.cash (Price: 5907, SL: 5884.87016753304, TP: 5964.94) SUCCEEDED, PendingOrder OID532
+02/06/2025 15:00:00.000 | Info | Combo: bartime=2025-06-02 14:00, executed=2025-06-02 15:00:00, pending Buy placed at 5907; SL=5884.870167533036, TP=5964.935901398513; valid for the next 3 chart bar(s).
+03/06/2025 12:00:00.000 | Info | Combo: bartime=2025-06-03 11:00, Buy signal skipped: already have same-direction exposure open.
+04/06/2025 13:00:00.000 | Trade | Placing Stop Order to Sell 6.28 US500.cash (Price: 5963.4, SL: 5973.7908239523, TP: 5936.2)
+04/06/2025 13:00:00.000 | Trade |  Placing Stop Order to Sell 6.28 US500.cash (Price: 5963.4, SL: 5973.7908239523, TP: 5936.2) SUCCEEDED, PendingOrder OID535
+04/06/2025 13:00:00.000 | Info | Combo: bartime=2025-06-04 12:00, executed=2025-06-04 13:00:00, pending Sell placed at 5963.4; SL=5973.790823952302, TP=5936.196822892872; valid for the next 3 chart bar(s).
+04/06/2025 16:00:00.000 | Trade | Cancelling pending order OID535
+04/06/2025 16:00:00.000 | Trade |  Cancelling pending order OID535 SUCCEEDED
+04/06/2025 16:00:00.000 | Info | Combo: pending order 535 cancelled after 3 chart bars.
+04/06/2025 20:00:00.000 | Trade | Placing Stop Order to Sell 5.09 US500.cash (Price: 5968.2, SL: 5981.02718924332, TP: 5934.62)
+04/06/2025 20:00:00.000 | Trade |  Placing Stop Order to Sell 5.09 US500.cash (Price: 5968.2, SL: 5981.02718924332, TP: 5934.62) SUCCEEDED, PendingOrder OID536
+04/06/2025 20:00:00.000 | Info | Combo: bartime=2025-06-04 19:00, executed=2025-06-04 20:00:00, pending Sell placed at 5968.2; SL=5981.027189243322, TP=5934.618418560983; valid for the next 3 chart bar(s).
+05/06/2025 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.93 units, which needs about $3277.56 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3221.17 budget, free margin was $6442.35). Size was cut from 7.93 to 7.63 units. Real risk on this trade is now about $61.97 (0.96% of balance) instead of the requested 1.00%.
+05/06/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 7.63 US500.cash (Price: 5986.1, SL: 5977.97793133073, TP: 6007.36)
+05/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 7.63 US500.cash (Price: 5986.1, SL: 5977.97793133073, TP: 6007.36) SUCCEEDED, PendingOrder OID539
+05/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-05 07:00, executed=2025-06-05 08:00:00, pending Buy placed at 5986.1; SL=5977.977931330732, TP=6007.363575776145; valid for the next 3 chart bar(s).
+05/06/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 3.13 US500.cash (Price: 5947.5, SL: 5967.79678676924, TP: 5894.36)
+05/06/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 3.13 US500.cash (Price: 5947.5, SL: 5967.79678676924, TP: 5894.36) SUCCEEDED, PendingOrder OID542
+05/06/2025 14:00:00.000 | Info | Combo: bartime=2025-06-05 13:00, executed=2025-06-05 14:00:00, pending Sell placed at 5947.5; SL=5967.796786769237, TP=5894.363012238138; valid for the next 3 chart bar(s).
+05/06/2025 15:00:00.000 | Info | Combo: bartime=2025-06-05 14:00, reversal - cancelling existing Sell pending order 542 before opening opposite direction.
+05/06/2025 15:00:00.000 | Trade | Cancelling pending order OID542
+05/06/2025 15:00:00.000 | Trade |  Cancelling pending order OID542 SUCCEEDED
+05/06/2025 15:00:00.000 | Trade | Placing Stop Order to Buy 2.72 US500.cash (Price: 5986.6, SL: 5963.26257058461, TP: 6047.7)
+05/06/2025 15:00:00.000 | Trade |  Placing Stop Order to Buy 2.72 US500.cash (Price: 5986.6, SL: 5963.26257058461, TP: 6047.7) SUCCEEDED, PendingOrder OID543
+05/06/2025 15:00:00.000 | Info | Combo: bartime=2025-06-05 14:00, executed=2025-06-05 15:00:00, pending Buy placed at 5986.6; SL=5963.262570584611, TP=6047.69739020949; valid for the next 3 chart bar(s).
+05/06/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 2.29 US500.cash (Price: 5951.5, SL: 5978.88395482585, TP: 5879.81)
+05/06/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 2.29 US500.cash (Price: 5951.5, SL: 5978.88395482585, TP: 5879.81) SUCCEEDED, PendingOrder OID546
+05/06/2025 17:00:00.000 | Info | Combo: bartime=2025-06-05 16:00, executed=2025-06-05 17:00:00, pending Sell placed at 5951.5; SL=5978.883954825849, TP=5879.808806265926; valid for the next 3 chart bar(s).
+06/06/2025 05:00:00.000 | Info | Combo: bartime=2025-06-06 04:00, reversal - closing existing Sell position 157 before opening opposite direction.
+06/06/2025 05:00:00.000 | Trade | Closing position PID157 (Volume: 2.29)
+06/06/2025 05:00:00.000 | Trade |  Closing position PID157 (Volume: 2.29) SUCCEEDED
+06/06/2025 05:00:00.000 | Trade | Placing Stop Order to Buy 5.35 US500.cash (Price: 5960.5, SL: 5948.81660542424, TP: 5991.09)
+06/06/2025 05:00:00.000 | Trade |  Placing Stop Order to Buy 5.35 US500.cash (Price: 5960.5, SL: 5948.81660542424, TP: 5991.09) SUCCEEDED, PendingOrder OID550
+06/06/2025 05:00:00.000 | Info | Combo: bartime=2025-06-06 04:00, executed=2025-06-06 05:00:00, pending Buy placed at 5960.5; SL=5948.81660542424, TP=5991.087126999339; valid for the next 3 chart bar(s).
+09/06/2025 14:00:00.000 | Trade | Placing Stop Order to Sell 6.75 US500.cash (Price: 5992.3, SL: 6001.78810197716, TP: 5967.46)
+09/06/2025 14:00:00.000 | Trade |  Placing Stop Order to Sell 6.75 US500.cash (Price: 5992.3, SL: 6001.78810197716, TP: 5967.46) SUCCEEDED, PendingOrder OID553
+09/06/2025 14:00:00.000 | Info | Combo: bartime=2025-06-09 13:00, executed=2025-06-09 14:00:00, pending Sell placed at 5992.3; SL=6001.788101977158, TP=5967.460149023803; valid for the next 3 chart bar(s).
+09/06/2025 17:00:00.000 | Trade | Cancelling pending order OID553
+09/06/2025 17:00:00.000 | Trade |  Cancelling pending order OID553 SUCCEEDED
+09/06/2025 17:00:00.000 | Info | Combo: pending order 553 cancelled after 3 chart bars.
+10/06/2025 06:00:00.000 | Trade | Placing Stop Order to Sell 4.63 US500.cash (Price: 5990.4, SL: 6004.24137145133, TP: 5954.16)
+10/06/2025 06:00:00.000 | Trade |  Placing Stop Order to Sell 4.63 US500.cash (Price: 5990.4, SL: 6004.24137145133, TP: 5954.16) SUCCEEDED, PendingOrder OID554
+10/06/2025 06:00:00.000 | Info | Combo: bartime=2025-06-10 05:00, executed=2025-06-10 06:00:00, pending Sell placed at 5990.4; SL=6004.2413714513295, TP=5954.163289540418; valid for the next 3 chart bar(s).
+11/06/2025 03:00:00.000 | Trade | Placing Stop Order to Sell 5.89 US500.cash (Price: 6020.1, SL: 6030.86157588656, TP: 5991.93)
+11/06/2025 03:00:00.000 | Trade |  Placing Stop Order to Sell 5.89 US500.cash (Price: 6020.1, SL: 6030.86157588656, TP: 5991.93) SUCCEEDED, PendingOrder OID557
+11/06/2025 03:00:00.000 | Info | Combo: bartime=2025-06-11 02:00, executed=2025-06-11 03:00:00, pending Sell placed at 6020.1; SL=6030.861575886559, TP=5991.92619432899; valid for the next 3 chart bar(s).
+11/06/2025 05:00:00.000 | Info | Combo: bartime=2025-06-11 04:00, Sell signal skipped: already have same-direction exposure open.
+11/06/2025 11:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.79 units, which needs about $3219.70 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3136.01 budget, free margin was $6272.03). Size was cut from 7.79 to 7.43 units. Real risk on this trade is now about $59.81 (0.95% of balance) instead of the requested 1.00%.
+11/06/2025 11:00:00.000 | Trade | Placing Stop Order to Buy 7.43 US500.cash (Price: 6033, SL: 6024.95021481651, TP: 6054.07)
+11/06/2025 11:00:00.000 | Trade |  Placing Stop Order to Buy 7.43 US500.cash (Price: 6033, SL: 6024.95021481651, TP: 6054.07) SUCCEEDED, PendingOrder OID560
+11/06/2025 11:00:00.000 | Info | Combo: bartime=2025-06-11 10:00, executed=2025-06-11 11:00:00, pending Buy placed at 6033; SL=6024.950214816508, TP=6054.074337610382; valid for the next 3 chart bar(s).
+11/06/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 2.79 US500.cash (Price: 6000.2, SL: 6022.28401695177, TP: 5942.38)
+11/06/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 2.79 US500.cash (Price: 6000.2, SL: 6022.28401695177, TP: 5942.38) SUCCEEDED, PendingOrder OID563
+11/06/2025 19:00:00.000 | Info | Combo: bartime=2025-06-11 18:00, executed=2025-06-11 19:00:00, pending Sell placed at 6000.2; SL=6022.28401695177, TP=5942.384043620265; valid for the next 3 chart bar(s).
+11/06/2025 23:00:00.000 | Trade | Cancelling pending order OID563
+11/06/2025 23:00:00.000 | Trade |  Cancelling pending order OID563 SUCCEEDED
+11/06/2025 23:00:00.000 | Info | Combo: pending order 563 cancelled after 3 chart bars.
+12/06/2025 13:00:00.000 | Trade | Placing Stop Order to Buy 4.22 US500.cash (Price: 6011.3, SL: 5996.67268962287, TP: 6049.59)
+12/06/2025 13:00:00.000 | Trade |  Placing Stop Order to Buy 4.22 US500.cash (Price: 6011.3, SL: 5996.67268962287, TP: 6049.59) SUCCEEDED, PendingOrder OID564
+12/06/2025 13:00:00.000 | Info | Combo: bartime=2025-06-12 12:00, executed=2025-06-12 13:00:00, pending Buy placed at 6011.3; SL=5996.6726896228665, TP=6049.594298567336; valid for the next 3 chart bar(s).
+13/06/2025 00:00:00.000 | Info | Combo: bartime=2025-06-12 23:00, reversal - closing existing Buy position 162 before opening opposite direction.
+13/06/2025 00:00:00.000 | Trade | Closing position PID162 (Volume: 4.22)
+13/06/2025 00:00:00.000 | Trade |  Closing position PID162 (Volume: 4.22) SUCCEEDED
+13/06/2025 00:00:00.000 | Trade | Placing Stop Order to Sell 4.37 US500.cash (Price: 6009.8, SL: 6023.8477485962, TP: 5973.02)
+13/06/2025 00:00:00.000 | Trade |  Placing Stop Order to Sell 4.37 US500.cash (Price: 6009.8, SL: 6023.8477485962, TP: 5973.02) SUCCEEDED, PendingOrder OID568
+13/06/2025 00:00:00.000 | Info | Combo: bartime=2025-06-12 23:00, executed=2025-06-13 00:00:00, pending Sell placed at 6009.8; SL=6023.847748596205, TP=5973.022994175137; valid for the next 3 chart bar(s).
+13/06/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 3.35 US500.cash (Price: 6012.6, SL: 5993.86717811891, TP: 6061.64)
+13/06/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 3.35 US500.cash (Price: 6012.6, SL: 5993.86717811891, TP: 6061.64) SUCCEEDED, PendingOrder OID571
+13/06/2025 14:00:00.000 | Info | Combo: bartime=2025-06-13 13:00, executed=2025-06-13 14:00:00, pending Buy placed at 6012.6; SL=5993.867178118907, TP=6061.642527684703; valid for the next 3 chart bar(s).
+13/06/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 2.38 US500.cash (Price: 5962.8, SL: 5988.832611074, TP: 5894.65)
+13/06/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 2.38 US500.cash (Price: 5962.8, SL: 5988.832611074, TP: 5894.65) SUCCEEDED, PendingOrder OID574
+13/06/2025 19:00:00.000 | Info | Combo: bartime=2025-06-13 18:00, executed=2025-06-13 19:00:00, pending Sell placed at 5962.8; SL=5988.832611073997, TP=5894.646624208277; valid for the next 3 chart bar(s).
+13/06/2025 20:00:00.000 | Info | Combo: bartime=2025-06-13 19:00, Sell signal skipped: already have same-direction exposure open.
+16/06/2025 02:00:00.000 | Info | Combo: bartime=2025-06-16 01:00, Sell signal skipped: already have same-direction exposure open.
+16/06/2025 03:00:00.000 | Trade | Placing Stop Order to Buy 3.94 US500.cash (Price: 5992.2, SL: 5976.62657920209, TP: 6032.97)
+16/06/2025 03:00:00.000 | Trade |  Placing Stop Order to Buy 3.94 US500.cash (Price: 5992.2, SL: 5976.62657920209, TP: 6032.97) SUCCEEDED, PendingOrder OID577
+16/06/2025 03:00:00.000 | Info | Combo: bartime=2025-06-16 02:00, executed=2025-06-16 03:00:00, pending Buy placed at 5992.2; SL=5976.626579202094, TP=6032.971215648916; valid for the next 3 chart bar(s).
+16/06/2025 06:00:00.000 | Info | Combo: bartime=2025-06-16 05:00, Buy signal skipped: already have same-direction exposure open.
+16/06/2025 23:00:00.000 | Trade | Placing Stop Order to Sell 4.69 US500.cash (Price: 6008.5, SL: 6021.94076003534, TP: 5973.31)
+16/06/2025 23:00:00.000 | Trade |  Placing Stop Order to Sell 4.69 US500.cash (Price: 6008.5, SL: 6021.94076003534, TP: 5973.31) SUCCEEDED, PendingOrder OID580
+16/06/2025 23:00:00.000 | Info | Combo: bartime=2025-06-16 22:00, executed=2025-06-16 23:00:00, pending Sell placed at 6008.5; SL=6021.940760035335, TP=5973.312090227492; valid for the next 3 chart bar(s).
+17/06/2025 14:00:00.000 | Info | Combo: bartime=2025-06-17 13:00, reversal - closing existing Sell position 167 before opening opposite direction.
+17/06/2025 14:00:00.000 | Trade | Closing position PID167 (Volume: 4.69)
+17/06/2025 14:00:00.000 | Trade |  Closing position PID167 (Volume: 4.69) SUCCEEDED
+17/06/2025 14:00:00.000 | Trade | Placing Stop Order to Buy 4.22 US500.cash (Price: 6017.5, SL: 6002.65713411944, TP: 6056.36)
+17/06/2025 14:00:00.000 | Trade |  Placing Stop Order to Buy 4.22 US500.cash (Price: 6017.5, SL: 6002.65713411944, TP: 6056.36) SUCCEEDED, PendingOrder OID584
+17/06/2025 14:00:00.000 | Info | Combo: bartime=2025-06-17 13:00, executed=2025-06-17 14:00:00, pending Buy placed at 6017.5; SL=6002.657134119437, TP=6056.358622875315; valid for the next 3 chart bar(s).
+18/06/2025 07:00:00.000 | Trade | Placing Stop Order to Buy 6.3 US500.cash (Price: 6002.4, SL: 5992.57429093348, TP: 6028.12)
+18/06/2025 07:00:00.000 | Trade |  Placing Stop Order to Buy 6.3 US500.cash (Price: 6002.4, SL: 5992.57429093348, TP: 6028.12) SUCCEEDED, PendingOrder OID587
+18/06/2025 07:00:00.000 | Info | Combo: bartime=2025-06-18 06:00, executed=2025-06-18 07:00:00, pending Buy placed at 6002.4; SL=5992.57429093348, TP=6028.123706336148; valid for the next 3 chart bar(s).
+18/06/2025 11:00:00.000 | Trade | Placing Stop Order to Sell 5.49 US500.cash (Price: 5977.9, SL: 5989.06445043365, TP: 5948.67)
+18/06/2025 11:00:00.000 | Trade |  Placing Stop Order to Sell 5.49 US500.cash (Price: 5977.9, SL: 5989.06445043365, TP: 5948.67) SUCCEEDED, PendingOrder OID590
+18/06/2025 11:00:00.000 | Info | Combo: bartime=2025-06-18 10:00, executed=2025-06-18 11:00:00, pending Sell placed at 5977.9; SL=5989.064450433646, TP=5948.671468764714; valid for the next 3 chart bar(s).
+18/06/2025 12:00:00.000 | Info | Combo: bartime=2025-06-18 11:00, reversal - cancelling existing Sell pending order 590 before opening opposite direction.
+18/06/2025 12:00:00.000 | Trade | Cancelling pending order OID590
+18/06/2025 12:00:00.000 | Trade |  Cancelling pending order OID590 SUCCEEDED
+18/06/2025 12:00:00.000 | Trade | Placing Stop Order to Buy 4.78 US500.cash (Price: 5999.3, SL: 5986.48843965308, TP: 6032.84)
+18/06/2025 12:00:00.000 | Trade |  Placing Stop Order to Buy 4.78 US500.cash (Price: 5999.3, SL: 5986.48843965308, TP: 6032.84) SUCCEEDED, PendingOrder OID591
+18/06/2025 12:00:00.000 | Info | Combo: bartime=2025-06-18 11:00, executed=2025-06-18 12:00:00, pending Buy placed at 5999.3; SL=5986.488439653083, TP=6032.84066498823; valid for the next 3 chart bar(s).
+18/06/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 2.89 US500.cash (Price: 5971.7, SL: 5992.65822342047, TP: 5916.83)
+18/06/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 2.89 US500.cash (Price: 5971.7, SL: 5992.65822342047, TP: 5916.83) SUCCEEDED, PendingOrder OID594
+18/06/2025 19:00:00.000 | Info | Combo: bartime=2025-06-18 18:00, executed=2025-06-18 19:00:00, pending Sell placed at 5971.7; SL=5992.658223420466, TP=5916.83137108522; valid for the next 3 chart bar(s).
+19/06/2025 23:00:00.000 | Trade | Placing Stop Order to Buy 3.01 US500.cash (Price: 5971.8, SL: 5951.89909281059, TP: 6023.9)
+19/06/2025 23:00:00.000 | Trade |  Placing Stop Order to Buy 3.01 US500.cash (Price: 5971.8, SL: 5951.89909281059, TP: 6023.9) SUCCEEDED, PendingOrder OID597
+19/06/2025 23:00:00.000 | Info | Combo: bartime=2025-06-19 22:00, executed=2025-06-19 23:00:00, pending Buy placed at 5971.8; SL=5951.899092810592, TP=6023.90057502187; valid for the next 3 chart bar(s).
+20/06/2025 18:00:00.000 | Trade | Placing Stop Order to Sell 2.57 US500.cash (Price: 5950.6, SL: 5973.66963701253, TP: 5890.2)
+20/06/2025 18:00:00.000 | Trade |  Placing Stop Order to Sell 2.57 US500.cash (Price: 5950.6, SL: 5973.66963701253, TP: 5890.2) SUCCEEDED, PendingOrder OID600
+20/06/2025 18:00:00.000 | Info | Combo: bartime=2025-06-20 17:00, executed=2025-06-20 18:00:00, pending Sell placed at 5950.6; SL=5973.669637012529, TP=5890.2036903011995; valid for the next 3 chart bar(s).
+22/06/2025 22:05:00.000 | Trade | Cancelling pending order OID600
+22/06/2025 22:05:00.000 | Trade |  Cancelling pending order OID600 SUCCEEDED
+22/06/2025 22:05:00.000 | Info | Combo: pending order 600 cancelled after 3 chart bars.
+23/06/2025 08:00:00.000 | Trade | Placing Stop Order to Buy 4.71 US500.cash (Price: 5979.9, SL: 5967.31038671773, TP: 6012.86)
+23/06/2025 08:00:00.000 | Trade |  Placing Stop Order to Buy 4.71 US500.cash (Price: 5979.9, SL: 5967.31038671773, TP: 6012.86) SUCCEEDED, PendingOrder OID601
+23/06/2025 08:00:00.000 | Info | Combo: bartime=2025-06-23 07:00, executed=2025-06-23 08:00:00, pending Buy placed at 5979.9; SL=5967.310386717734, TP=6012.859607572971; valid for the next 3 chart bar(s).
+23/06/2025 17:00:00.000 | Trade | Placing Stop Order to Sell 2.49 US500.cash (Price: 5941.1, SL: 5964.56801038554, TP: 5879.66)
+23/06/2025 17:00:00.000 | Trade |  Placing Stop Order to Sell 2.49 US500.cash (Price: 5941.1, SL: 5964.56801038554, TP: 5879.66) SUCCEEDED, PendingOrder OID604
+23/06/2025 17:00:00.000 | Info | Combo: bartime=2025-06-23 16:00, executed=2025-06-23 17:00:00, pending Sell placed at 5941.1; SL=5964.568010385545, TP=5879.660748810646; valid for the next 3 chart bar(s).
+23/06/2025 18:00:00.000 | Info | Combo: bartime=2025-06-23 17:00, reversal - cancelling existing Sell pending order 604 before opening opposite direction.
+23/06/2025 18:00:00.000 | Trade | Cancelling pending order OID604
+23/06/2025 18:00:00.000 | Trade |  Cancelling pending order OID604 SUCCEEDED
+23/06/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 1.88 US500.cash (Price: 6017.9, SL: 5986.82559169156, TP: 6099.25)
+23/06/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 1.88 US500.cash (Price: 6017.9, SL: 5986.82559169156, TP: 6099.25) SUCCEEDED, PendingOrder OID605
+23/06/2025 18:00:00.000 | Info | Combo: bartime=2025-06-23 17:00, executed=2025-06-23 18:00:00, pending Buy placed at 6017.9; SL=5986.825591691564, TP=6099.252800951484; valid for the next 3 chart bar(s).
+25/06/2025 16:00:00.000 | Trade | Placing Stop Order to Sell 6.46 US500.cash (Price: 6087.4, SL: 6096.70054450333, TP: 6063.05)
+25/06/2025 16:00:00.000 | Trade |  Placing Stop Order to Sell 6.46 US500.cash (Price: 6087.4, SL: 6096.70054450333, TP: 6063.05) SUCCEEDED, PendingOrder OID608
+25/06/2025 16:00:00.000 | Info | Combo: bartime=2025-06-25 15:00, executed=2025-06-25 16:00:00, pending Sell placed at 6087.4; SL=6096.700544503329, TP=6063.051174490282; valid for the next 3 chart bar(s).
+25/06/2025 22:05:00.000 | Trade | Placing Stop Order to Sell 6.91 US500.cash (Price: 6090, SL: 6098.60917042285, TP: 6067.46)
+25/06/2025 22:05:00.000 | Trade |  Placing Stop Order to Sell 6.91 US500.cash (Price: 6090, SL: 6098.60917042285, TP: 6067.46) SUCCEEDED, PendingOrder OID611
+25/06/2025 22:05:00.000 | Info | Combo: bartime=2025-06-25 20:00, executed=2025-06-25 22:05:00, pending Sell placed at 6090; SL=6098.609170422851, TP=6067.461191832976; valid for the next 3 chart bar(s).
+26/06/2025 00:00:00.000 | Info | Combo: bartime=2025-06-25 23:00, Sell signal skipped: already have same-direction exposure open.
+26/06/2025 01:00:00.000 | Info | Combo: bartime=2025-06-26 00:00, reversal - closing existing Sell position 176 before opening opposite direction.
+26/06/2025 01:00:00.000 | Trade | Closing position PID176 (Volume: 6.91)
+26/06/2025 01:00:00.000 | Trade |  Closing position PID176 (Volume: 6.91) SUCCEEDED
+26/06/2025 01:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.35 units, which needs about $3451.16 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $2951.18 budget, free margin was $5902.37). Size was cut from 8.35 to 6.99 units. Real risk on this trade is now about $49.39 (0.84% of balance) instead of the requested 1.00%.
+26/06/2025 01:00:00.000 | Trade | Placing Stop Order to Buy 6.99 US500.cash (Price: 6099, SL: 6091.9340037948, TP: 6117.5)
+26/06/2025 01:00:00.000 | Trade |  Placing Stop Order to Buy 6.99 US500.cash (Price: 6099, SL: 6091.9340037948, TP: 6117.5) SUCCEEDED, PendingOrder OID615
+26/06/2025 01:00:00.000 | Info | Combo: bartime=2025-06-26 00:00, executed=2025-06-26 01:00:00, pending Buy placed at 6099; SL=6091.9340037948, TP=6117.498778065214; valid for the next 3 chart bar(s).
+26/06/2025 03:00:00.000 | Info | Combo: bartime=2025-06-26 02:00, Buy signal skipped: already have same-direction exposure open.
+27/06/2025 19:00:00.000 | Trade | Placing Stop Order to Sell 3.34 US500.cash (Price: 6130.5, SL: 6148.5560435955, TP: 6083.23)
+27/06/2025 19:00:00.000 | Trade |  Placing Stop Order to Sell 3.34 US500.cash (Price: 6130.5, SL: 6148.5560435955, TP: 6083.23) SUCCEEDED, PendingOrder OID618
+27/06/2025 19:00:00.000 | Info | Combo: bartime=2025-06-27 18:00, executed=2025-06-27 19:00:00, pending Sell placed at 6130.5; SL=6148.556043595497, TP=6083.22927786699; valid for the next 3 chart bar(s).
+29/06/2025 23:00:00.000 | Trade | Cancelling pending order OID618
+29/06/2025 23:00:00.000 | Trade |  Cancelling pending order OID618 SUCCEEDED
+29/06/2025 23:00:00.000 | Info | Combo: pending order 618 cancelled after 3 chart bars.
+30/06/2025 20:00:00.000 | Trade | Placing Stop Order to Buy 4.1 US500.cash (Price: 6216.1, SL: 6201.40055886811, TP: 6254.58)
+30/06/2025 20:00:00.000 | Trade |  Placing Stop Order to Buy 4.1 US500.cash (Price: 6216.1, SL: 6201.40055886811, TP: 6254.58) SUCCEEDED, PendingOrder OID619
+30/06/2025 20:00:00.000 | Info | Combo: bartime=2025-06-30 19:00, executed=2025-06-30 20:00:00, pending Buy placed at 6216.1; SL=6201.40055886811, TP=6254.583136883288; valid for the next 3 chart bar(s).
+01/07/2025 00:00:00.000 | Trade | Cancelling pending order OID619
+01/07/2025 00:00:00.000 | Trade |  Cancelling pending order OID619 SUCCEEDED
+01/07/2025 00:00:00.000 | Info | Combo: pending order 619 cancelled after 3 chart bars.
+01/07/2025 06:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.18 units, which needs about $3794.20 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $3020.03 budget, free margin was $6040.07). Size was cut from 9.18 to 7.16 units. Real risk on this trade is now about $47.07 (0.78% of balance) instead of the requested 1.00%.
+01/07/2025 06:00:00.000 | Trade | Placing Stop Order to Sell 7.16 US500.cash (Price: 6191.6, SL: 6198.17467028319, TP: 6174.39)
+01/07/2025 06:00:00.000 | Trade |  Placing Stop Order to Sell 7.16 US500.cash (Price: 6191.6, SL: 6198.17467028319, TP: 6174.39) SUCCEEDED, PendingOrder OID620
+01/07/2025 06:00:00.000 | Info | Combo: bartime=2025-07-01 05:00, executed=2025-07-01 06:00:00, pending Sell placed at 6191.6; SL=6198.174670283194, TP=6174.3875131986; valid for the next 3 chart bar(s).
+01/07/2025 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.71 units, which needs about $3186.64 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $2992.11 budget, free margin was $5984.22). Size was cut from 7.71 to 7.09 units. Real risk on this trade is now about $55.03 (0.92% of balance) instead of the requested 1.00%.
+01/07/2025 10:00:00.000 | Trade | Placing Stop Order to Sell 7.09 US500.cash (Price: 6185.9, SL: 6193.661624948, TP: 6165.58)
+01/07/2025 10:00:00.000 | Trade |  Placing Stop Order to Sell 7.09 US500.cash (Price: 6185.9, SL: 6193.661624948, TP: 6165.58) SUCCEEDED, PendingOrder OID623
+01/07/2025 10:00:00.000 | Info | Combo: bartime=2025-07-01 09:00, executed=2025-07-01 10:00:00, pending Sell placed at 6185.9; SL=6193.661624947996, TP=6165.580065886145; valid for the next 3 chart bar(s).
+01/07/2025 18:00:00.000 | Trade | Placing Stop Order to Buy 3.96 US500.cash (Price: 6212.2, SL: 6197.28845426536, TP: 6251.24)
+01/07/2025 18:00:00.000 | Trade |  Placing Stop Order to Buy 3.96 US500.cash (Price: 6212.2, SL: 6197.28845426536, TP: 6251.24) SUCCEEDED, PendingOrder OID626
+01/07/2025 18:00:00.000 | Info | Combo: bartime=2025-07-01 17:00, executed=2025-07-01 18:00:00, pending Buy placed at 6212.2; SL=6197.288454265365, TP=6251.2384267332745; valid for the next 3 chart bar(s).
+01/07/2025 22:05:00.000 | Trade | Cancelling pending order OID626
+01/07/2025 22:05:00.000 | Trade |  Cancelling pending order OID626 SUCCEEDED
+01/07/2025 22:05:00.000 | Info | Combo: pending order 626 cancelled after 3 chart bars.
+01/07/2025 23:59:00.000 | Info | Combo: loaded=4530, processed=269, before-start=3669, not-processed=592, placed=236, failed=0, guard-skipped=0, pending-expired=38, same-direction-skipped=33, reversed=51, margin-capped=20, margin-blocked=0.
+Progress | Backtesting | 100.00 % |
+Info | CBot instance [Combo, US500.cash, h1] stopped.
+{
+	"Equity":5914.09,
+	"NetProfit":-4085.9,
+	"MaxBalanceDrawdownPercentages":41,
+	"MaxEquityDrawdownPercentages":42,
+	"MaxBalanceDrawdown":4134.52,
+	"MaxEquityDrawdown":4354.1,
+	"WinningTrades":42,
+	"LosingTrades":137,
+	"TotalTrades":179,
+	"AverageTrade":-22.82,
+	"ProfitFactor":0.63,
+	"Fitness":0
+}
+

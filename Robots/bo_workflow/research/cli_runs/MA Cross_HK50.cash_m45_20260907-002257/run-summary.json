@@ -1,0 +1,50 @@
+﻿{
+    "SchemaVersion":  1,
+    "CreatedAtUtc":  "2026-09-07T07:23:30.7927792Z",
+    "Success":  true,
+    "FailureReason":  null,
+    "Input":  {
+                  "AlgoPath":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\MA Cross.algo",
+                  "AlgoSHA256":  "55C88E48DEDFC62FF99680CDA388E51E3772CDD2787E112993F11DB73FFAB6B6",
+                  "SymbolInput":  "HK50.cash",
+                  "ResolvedSymbol":  "HK50.cash",
+                  "Period":  "m45",
+                  "StartDate":  "2025-01-01",
+                  "EndDate":  "2025-01-08",
+                  "DataMode":  "Ticks",
+                  "Broker":  "FTMO Platform",
+                  "Account":  "7563609",
+                  "Parameters":  {
+                                     "SignalFilePath":  "Z:\\Desktop\\og_program\\runtime\\exports\\ma_cross_HK50_M45_full_history_signals.csv"
+                                 },
+                  "SignalFile":  {
+                                     "Path":  "Z:\\Desktop\\og_program\\runtime\\exports\\ma_cross_HK50_M45_full_history_signals.csv",
+                                     "Length":  45360,
+                                     "LastWriteTime":  "2026-09-03T08:29:53.0000000Z",
+                                     "SHA256":  "F65C3749563277D0B89A36B7ABCF009D4EEB36CAC26DC71CE7097FC3D46C4727"
+                                 }
+              },
+    "Actual":  {
+                   "StartDate":  "2025-01-01",
+                   "EndDate":  "2025-01-08"
+               },
+    "Metrics":  {
+                    "StartingCapital":  10000,
+                    "EndingBalance":  9556.43,
+                    "NetProfit":  -443.57,
+                    "ROI":  -4.44,
+                    "ProfitFactor":  0,
+                    "TotalTrades":  5,
+                    "WinningTrades":  0,
+                    "LosingTrades":  5,
+                    "MaxBalanceDrawdownPct":  4.435699999999997,
+                    "MaxEquityDrawdownPct":  4.744803113895413,
+                    "HistoryItems":  5
+                },
+    "Artifacts":  {
+                      "Params":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\MA Cross_HK50.cash_m45_20260907-002257\\params.cbotset",
+                      "Command":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\MA Cross_HK50.cash_m45_20260907-002257\\command.txt",
+                      "Log":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\MA Cross_HK50.cash_m45_20260907-002257\\log.txt",
+                      "ReportJson":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\MA Cross_HK50.cash_m45_20260907-002257\\report.json"
+                  }
+}

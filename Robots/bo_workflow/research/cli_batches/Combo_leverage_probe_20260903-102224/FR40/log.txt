@@ -1,0 +1,524 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_leverage_probe_20260903-102224\FR40\params.cbotset 
+--start=01/01/2026 --end=28/02/2026 --data-mode=M1 --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=FRA40.cash 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_leverage_probe_20260903-102224\FR40\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...R40\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | FRA40.cash                | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2026 00:00          | cmd arg              |
+| End                  | 28/02/2026 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | M1                        | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 3                         | cbotset              |
+| KtpLevel             | 7                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 1                         | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+03/09/2026 17:22:27.904 | Establishing connection using votuankiet96@gmail.com...
+03/09/2026 17:22:30.031 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Progress | Loading FRA40.cash, h1 | 1.67 % |
+Progress | Loading FRA40.cash, h1 | 3.33 % |
+Progress | Loading FRA40.cash, h1 | 5.00 % |
+Progress | Loading FRA40.cash, h1 | 6.67 % |
+Progress | Loading FRA40.cash, h1 | 8.33 % |
+Progress | Loading FRA40.cash, h1 | 10.00 % |
+Progress | Loading FRA40.cash, h1 | 11.67 % |
+Progress | Loading FRA40.cash, h1 | 13.33 % |
+Progress | Loading FRA40.cash, h1 | 15.00 % |
+Progress | Loading FRA40.cash, h1 | 16.67 % |
+Progress | Loading FRA40.cash, h1 | 18.33 % |
+Progress | Loading FRA40.cash, h1 | 20.00 % |
+Progress | Loading FRA40.cash, h1 | 21.67 % |
+Progress | Loading FRA40.cash, h1 | 23.33 % |
+Progress | Loading FRA40.cash, h1 | 25.00 % |
+Progress | Loading FRA40.cash, h1 | 26.67 % |
+Progress | Loading FRA40.cash, h1 | 28.33 % |
+Progress | Loading FRA40.cash, h1 | 30.00 % |
+Progress | Loading FRA40.cash, h1 | 31.67 % |
+Progress | Loading FRA40.cash, h1 | 33.33 % |
+Progress | Loading FRA40.cash, h1 | 35.00 % |
+Progress | Loading FRA40.cash, h1 | 36.67 % |
+Progress | Loading FRA40.cash, h1 | 38.33 % |
+Progress | Loading FRA40.cash, h1 | 40.00 % |
+Progress | Loading FRA40.cash, h1 | 41.67 % |
+Progress | Loading FRA40.cash, h1 | 43.33 % |
+Progress | Loading FRA40.cash, h1 | 45.00 % |
+Progress | Loading FRA40.cash, h1 | 46.67 % |
+Progress | Loading FRA40.cash, h1 | 48.33 % |
+Progress | Loading FRA40.cash, h1 | 50.00 % |
+Progress | Loading FRA40.cash, h1 | 51.67 % |
+Progress | Loading FRA40.cash, h1 | 53.33 % |
+Progress | Loading FRA40.cash, h1 | 55.00 % |
+Progress | Loading FRA40.cash, h1 | 56.67 % |
+Progress | Loading FRA40.cash, h1 | 58.33 % |
+Progress | Loading FRA40.cash, h1 | 60.00 % |
+Progress | Loading FRA40.cash, h1 | 61.67 % |
+Progress | Loading FRA40.cash, h1 | 63.33 % |
+Progress | Loading FRA40.cash, h1 | 65.00 % |
+Progress | Loading FRA40.cash, h1 | 66.67 % |
+Progress | Loading FRA40.cash, h1 | 68.33 % |
+Progress | Loading FRA40.cash, h1 | 70.00 % |
+Progress | Loading FRA40.cash, h1 | 71.67 % |
+Progress | Loading FRA40.cash, h1 | 73.33 % |
+Progress | Loading FRA40.cash, h1 | 75.00 % |
+Progress | Loading FRA40.cash, h1 | 76.67 % |
+Progress | Loading FRA40.cash, h1 | 78.33 % |
+Progress | Loading FRA40.cash, h1 | 80.00 % |
+Progress | Loading FRA40.cash, h1 | 81.67 % |
+Progress | Loading FRA40.cash, h1 | 83.33 % |
+Progress | Loading FRA40.cash, h1 | 85.00 % |
+Progress | Loading FRA40.cash, h1 | 86.67 % |
+Progress | Loading FRA40.cash, h1 | 88.33 % |
+Progress | Loading FRA40.cash, h1 | 90.00 % |
+Progress | Loading FRA40.cash, h1 | 91.67 % |
+Progress | Loading FRA40.cash, h1 | 93.33 % |
+Progress | Loading FRA40.cash, h1 | 95.00 % |
+Progress | Loading FRA40.cash, h1 | 96.67 % |
+Progress | Loading FRA40.cash, h1 | 98.33 % |
+Progress | Loading FRA40.cash, h1 | 100.00 % |
+Info | CBot instance [Combo, FRA40.cash, h1] started.
+Progress | Backtesting | 2.20 % |
+Progress | Backtesting | 2.33 % |
+Progress | Loading EURUSD, h1 | 1.72 % |
+Progress | Loading EURUSD, h1 | 3.45 % |
+Progress | Loading EURUSD, h1 | 5.17 % |
+Progress | Loading EURUSD, h1 | 6.90 % |
+Progress | Loading EURUSD, h1 | 8.62 % |
+Progress | Loading EURUSD, h1 | 10.34 % |
+Progress | Loading EURUSD, h1 | 12.07 % |
+Progress | Loading EURUSD, h1 | 13.79 % |
+Progress | Loading EURUSD, h1 | 15.52 % |
+Progress | Loading EURUSD, h1 | 17.24 % |
+Progress | Loading EURUSD, h1 | 18.97 % |
+Progress | Loading EURUSD, h1 | 20.69 % |
+Progress | Loading EURUSD, h1 | 22.41 % |
+Progress | Loading EURUSD, h1 | 24.14 % |
+Progress | Loading EURUSD, h1 | 25.86 % |
+Progress | Loading EURUSD, h1 | 27.59 % |
+Progress | Loading EURUSD, h1 | 29.31 % |
+Progress | Loading EURUSD, h1 | 31.03 % |
+Progress | Loading EURUSD, h1 | 32.76 % |
+Progress | Loading EURUSD, h1 | 34.48 % |
+Progress | Loading EURUSD, h1 | 36.21 % |
+Progress | Loading EURUSD, h1 | 37.93 % |
+Progress | Loading EURUSD, h1 | 39.66 % |
+Progress | Loading EURUSD, h1 | 41.38 % |
+Progress | Loading EURUSD, h1 | 43.10 % |
+Progress | Loading EURUSD, h1 | 44.83 % |
+Progress | Loading EURUSD, h1 | 46.55 % |
+Progress | Loading EURUSD, h1 | 48.28 % |
+Progress | Loading EURUSD, h1 | 50.00 % |
+Progress | Loading EURUSD, h1 | 51.72 % |
+Progress | Loading EURUSD, h1 | 53.45 % |
+Progress | Loading EURUSD, h1 | 55.17 % |
+Progress | Loading EURUSD, h1 | 56.90 % |
+Progress | Loading EURUSD, h1 | 58.62 % |
+Progress | Loading EURUSD, h1 | 60.34 % |
+Progress | Loading EURUSD, h1 | 62.07 % |
+Progress | Loading EURUSD, h1 | 63.79 % |
+Progress | Loading EURUSD, h1 | 65.52 % |
+Progress | Loading EURUSD, h1 | 67.24 % |
+Progress | Loading EURUSD, h1 | 68.97 % |
+Progress | Loading EURUSD, h1 | 70.69 % |
+Progress | Loading EURUSD, h1 | 72.41 % |
+Progress | Loading EURUSD, h1 | 74.14 % |
+Progress | Loading EURUSD, h1 | 75.86 % |
+Progress | Loading EURUSD, h1 | 77.59 % |
+Progress | Loading EURUSD, h1 | 79.31 % |
+Progress | Loading EURUSD, h1 | 81.03 % |
+Progress | Loading EURUSD, h1 | 82.76 % |
+Progress | Loading EURUSD, h1 | 84.48 % |
+Progress | Loading EURUSD, h1 | 86.21 % |
+Progress | Loading EURUSD, h1 | 87.93 % |
+Progress | Loading EURUSD, h1 | 89.66 % |
+Progress | Loading EURUSD, h1 | 91.38 % |
+Progress | Loading EURUSD, h1 | 93.10 % |
+Progress | Loading EURUSD, h1 | 94.83 % |
+Progress | Loading EURUSD, h1 | 96.55 % |
+Progress | Loading EURUSD, h1 | 98.28 % |
+Progress | Loading EURUSD, h1 | 100.00 % |
+Progress | Backtesting | 2.34 % |
+Progress | Backtesting | 8.21 % |
+Progress | Backtesting | 31.95 % |
+Progress | Backtesting | 42.87 % |
+Progress | Backtesting | 54.80 % |
+Progress | Backtesting | 66.76 % |
+Progress | Backtesting | 81.86 % |
+Progress | Backtesting | 97.11 % |
+02/01/2026 07:05:00.000 | Info | Combo: loaded 4161 valid signal row(s) from CSV.
+02/01/2026 07:05:00.000 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+02/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.06 units, which needs about $2077.75 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.00 budget, free margin was $10000.00). Size was cut from 3.06 to 0.14 units. Real risk on this trade is now about $4.56 (0.05% of balance) instead of the requested 1.00%.
+02/01/2026 09:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8221.3, SL: 8193.66841749852, TP: 8293.64)
+02/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8221.3, SL: 8193.66841749852, TP: 8293.64) SUCCEEDED, PendingOrder OID1
+02/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-02 08:00, executed=2026-01-02 09:00:00, pending Buy placed at 8221.3; SL=8193.668417498518, TP=8293.642881047566; valid for the next 3 chart bar(s).
+05/01/2026 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.95 units, which needs about $4040.08 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.95 budget, free margin was $9995.26). Size was cut from 5.95 to 0.14 units. Real risk on this trade is now about $2.35 (0.02% of balance) instead of the requested 1.00%.
+05/01/2026 10:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8205.3, SL: 8219.53358256136, TP: 8168.03)
+05/01/2026 10:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8205.3, SL: 8219.53358256136, TP: 8168.03) SUCCEEDED, PendingOrder OID4
+05/01/2026 10:00:00.000 | Info | Combo: bartime=2026-01-05 09:00, executed=2026-01-05 10:00:00, pending Sell placed at 8205.3; SL=8219.533582561362, TP=8168.034730446142; valid for the next 3 chart bar(s).
+06/01/2026 07:05:00.000 | Info | Combo: bartime=2026-01-06 01:00, reversal - closing existing Sell position 2 before opening opposite direction.
+06/01/2026 07:05:00.000 | Trade | Closing position PID2 (Volume: 0.14)
+06/01/2026 07:05:00.000 | Trade |  Closing position PID2 (Volume: 0.14) SUCCEEDED
+06/01/2026 07:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.89 units, which needs about $6715.36 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.93 budget, free margin was $9992.81). Size was cut from 9.89 to 0.14 units. Real risk on this trade is now about $1.41 (0.01% of balance) instead of the requested 1.00%.
+06/01/2026 07:05:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8229.5, SL: 8220.93421449637, TP: 8251.93)
+06/01/2026 07:05:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8229.5, SL: 8220.93421449637, TP: 8251.93) SUCCEEDED, PendingOrder OID8
+06/01/2026 07:05:00.000 | Info | Combo: bartime=2026-01-06 01:00, executed=2026-01-06 07:05:00, pending Buy placed at 8229.5; SL=8220.934214496368, TP=8251.926279846079; valid for the next 3 chart bar(s).
+06/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-06 08:00, reversal - cancelling existing Buy pending order 8 before opening opposite direction.
+06/01/2026 09:00:00.000 | Trade | Cancelling pending order OID8
+06/01/2026 09:00:00.000 | Trade |  Cancelling pending order OID8 SUCCEEDED
+06/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.57 units, which needs about $5819.07 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.93 budget, free margin was $9992.81). Size was cut from 8.57 to 0.14 units. Real risk on this trade is now about $1.63 (0.02% of balance) instead of the requested 1.00%.
+06/01/2026 09:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8182.3, SL: 8192.18190297461, TP: 8156.43)
+06/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8182.3, SL: 8192.18190297461, TP: 8156.43) SUCCEEDED, PendingOrder OID9
+06/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-06 08:00, executed=2026-01-06 09:00:00, pending Sell placed at 8182.3; SL=8192.181902974611, TP=8156.4279627622645; valid for the next 3 chart bar(s).
+06/01/2026 14:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.52 units, which needs about $4427.11 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.91 budget, free margin was $9991.03). Size was cut from 6.52 to 0.14 units. Real risk on this trade is now about $2.14 (0.02% of balance) instead of the requested 1.00%.
+06/01/2026 14:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8218.8, SL: 8205.81693784128, TP: 8252.79)
+06/01/2026 14:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8218.8, SL: 8205.81693784128, TP: 8252.79) SUCCEEDED, PendingOrder OID12
+06/01/2026 14:00:00.000 | Info | Combo: bartime=2026-01-06 13:00, executed=2026-01-06 14:00:00, pending Buy placed at 8218.8; SL=8205.816937841279, TP=8252.79125335406; valid for the next 3 chart bar(s).
+07/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.79 units, which needs about $4610.44 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.97 budget, free margin was $9996.79). Size was cut from 6.79 to 0.14 units. Real risk on this trade is now about $2.06 (0.02% of balance) instead of the requested 1.00%.
+07/01/2026 09:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8206.3, SL: 8218.76653499337, TP: 8173.66)
+07/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8206.3, SL: 8218.76653499337, TP: 8173.66) SUCCEEDED, PendingOrder OID15
+07/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-07 08:00, executed=2026-01-07 09:00:00, pending Sell placed at 8206.3; SL=8218.766534993367, TP=8173.661078285973; valid for the next 3 chart bar(s).
+07/01/2026 12:00:00.000 | Trade | Cancelling pending order OID15
+07/01/2026 12:00:00.000 | Trade |  Cancelling pending order OID15 SUCCEEDED
+07/01/2026 12:00:00.000 | Info | Combo: pending order 15 cancelled after 3 chart bars.
+07/01/2026 20:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.96 units, which needs about $5404.88 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.97 budget, free margin was $9996.79). Size was cut from 7.96 to 0.14 units. Real risk on this trade is now about $1.76 (0.02% of balance) instead of the requested 1.00%.
+07/01/2026 20:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8258.3, SL: 8247.65264268583, TP: 8286.18)
+07/01/2026 20:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8258.3, SL: 8247.65264268583, TP: 8286.18) SUCCEEDED, PendingOrder OID16
+07/01/2026 20:00:00.000 | Info | Combo: bartime=2026-01-07 19:00, executed=2026-01-07 20:00:00, pending Buy placed at 8258.3; SL=8247.652642685833, TP=8286.176090832236; valid for the next 3 chart bar(s).
+08/01/2026 07:05:00.000 | Info | Combo: bartime=2026-01-08 01:00, Buy signal skipped: already have same-direction exposure open.
+08/01/2026 07:05:00.000 | Info | Combo: bartime=2026-01-08 02:00, reversal - cancelling existing Buy pending order 16 before opening opposite direction.
+08/01/2026 07:05:00.000 | Trade | Cancelling pending order OID16
+08/01/2026 07:05:00.000 | Trade |  Cancelling pending order OID16 SUCCEEDED
+08/01/2026 07:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.39 units, which needs about $5696.85 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.97 budget, free margin was $9996.79). Size was cut from 8.39 to 0.14 units. Real risk on this trade is now about $1.67 (0.02% of balance) instead of the requested 1.00%.
+08/01/2026 07:05:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8229.5, SL: 8239.59451659588, TP: 8203.07)
+08/01/2026 07:05:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8229.5, SL: 8239.59451659588, TP: 8203.07) SUCCEEDED, PendingOrder OID17
+08/01/2026 07:05:00.000 | Info | Combo: bartime=2026-01-08 02:00, executed=2026-01-08 07:05:00, pending Sell placed at 8229.5; SL=8239.594516595884, TP=8203.071314155115; valid for the next 3 chart bar(s).
+08/01/2026 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.78 units, which needs about $5282.66 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.99 budget, free margin was $9999.15). Size was cut from 7.78 to 0.14 units. Real risk on this trade is now about $1.80 (0.02% of balance) instead of the requested 1.00%.
+08/01/2026 15:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8242.1, SL: 8231.21155547538, TP: 8270.61)
+08/01/2026 15:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8242.1, SL: 8231.21155547538, TP: 8270.61) SUCCEEDED, PendingOrder OID20
+08/01/2026 15:00:00.000 | Info | Combo: bartime=2026-01-08 14:00, executed=2026-01-08 15:00:00, pending Buy placed at 8242.1; SL=8231.211555475376, TP=8270.60728679748; valid for the next 3 chart bar(s).
+12/01/2026 13:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.52 units, which needs about $5785.12 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.04 budget, free margin was $10003.89). Size was cut from 8.52 to 0.14 units. Real risk on this trade is now about $1.64 (0.02% of balance) instead of the requested 1.00%.
+12/01/2026 13:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8367.6, SL: 8357.64476637566, TP: 8393.66)
+12/01/2026 13:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8367.6, SL: 8357.64476637566, TP: 8393.66) SUCCEEDED, PendingOrder OID23
+12/01/2026 13:00:00.000 | Info | Combo: bartime=2026-01-12 12:00, executed=2026-01-12 13:00:00, pending Buy placed at 8367.6; SL=8357.644766375663, TP=8393.66402589673; valid for the next 3 chart bar(s).
+12/01/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.79 units, which needs about $4610.44 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.02 budget, free margin was $10002.11). Size was cut from 6.79 to 0.14 units. Real risk on this trade is now about $2.06 (0.02% of balance) instead of the requested 1.00%.
+12/01/2026 16:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8325.6, SL: 8338.08737081566, TP: 8292.91)
+12/01/2026 16:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8325.6, SL: 8338.08737081566, TP: 8292.91) SUCCEEDED, PendingOrder OID26
+12/01/2026 16:00:00.000 | Info | Combo: bartime=2026-01-12 15:00, executed=2026-01-12 16:00:00, pending Sell placed at 8325.6; SL=8338.087370815661, TP=8292.906527540874; valid for the next 3 chart bar(s).
+12/01/2026 19:00:00.000 | Trade | Cancelling pending order OID26
+12/01/2026 19:00:00.000 | Trade |  Cancelling pending order OID26 SUCCEEDED
+12/01/2026 19:00:00.000 | Info | Combo: pending order 26 cancelled after 3 chart bars.
+13/01/2026 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 11.32 units, which needs about $7686.33 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.02 budget, free margin was $10002.11). Size was cut from 11.32 to 0.14 units. Real risk on this trade is now about $1.24 (0.01% of balance) instead of the requested 1.00%.
+13/01/2026 08:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8348.5, SL: 8355.98942310746, TP: 8328.89)
+13/01/2026 08:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8348.5, SL: 8355.98942310746, TP: 8328.89) SUCCEEDED, PendingOrder OID27
+13/01/2026 08:00:00.000 | Info | Combo: bartime=2026-01-13 07:00, executed=2026-01-13 08:00:00, pending Sell placed at 8348.5; SL=8355.989423107465, TP=8328.891769275275; valid for the next 3 chart bar(s).
+13/01/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.80 units, which needs about $4617.23 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.04 budget, free margin was $10004.32). Size was cut from 6.80 to 0.14 units. Real risk on this trade is now about $2.06 (0.02% of balance) instead of the requested 1.00%.
+13/01/2026 16:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8357.8, SL: 8345.32493978938, TP: 8390.46)
+13/01/2026 16:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8357.8, SL: 8345.32493978938, TP: 8390.46) SUCCEEDED, PendingOrder OID30
+13/01/2026 16:00:00.000 | Info | Combo: bartime=2026-01-13 15:00, executed=2026-01-13 16:00:00, pending Buy placed at 8357.8; SL=8345.324939789385, TP=8390.461241781184; valid for the next 3 chart bar(s).
+15/01/2026 07:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.84 units, which needs about $6002.40 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.02 budget, free margin was $10002.16). Size was cut from 8.84 to 0.14 units. Real risk on this trade is now about $1.58 (0.02% of balance) instead of the requested 1.00%.
+15/01/2026 07:05:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8361.4, SL: 8351.80799530898, TP: 8386.51)
+15/01/2026 07:05:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8361.4, SL: 8351.80799530898, TP: 8386.51) SUCCEEDED, PendingOrder OID33
+15/01/2026 07:05:00.000 | Info | Combo: bartime=2026-01-15 01:00, executed=2026-01-15 07:05:00, pending Buy placed at 8361.4; SL=8351.807995308984, TP=8386.51304788036; valid for the next 3 chart bar(s).
+15/01/2026 07:05:00.000 | Info | Combo: bartime=2026-01-15 05:00, Buy signal skipped: already have same-direction exposure open.
+15/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.66 units, which needs about $3164.16 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.96 budget, free margin was $9995.84). Size was cut from 4.66 to 0.14 units. Real risk on this trade is now about $3.00 (0.03% of balance) instead of the requested 1.00%.
+15/01/2026 09:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8294.5, SL: 8312.6735591969, TP: 8246.92)
+15/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8294.5, SL: 8312.6735591969, TP: 8246.92) SUCCEEDED, PendingOrder OID36
+15/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-15 08:00, executed=2026-01-15 09:00:00, pending Sell placed at 8294.5; SL=8312.673559196897, TP=8246.91938708644; valid for the next 3 chart bar(s).
+16/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.75 units, which needs about $5262.29 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.93 budget, free margin was $9992.74). Size was cut from 7.75 to 0.14 units. Real risk on this trade is now about $1.80 (0.02% of balance) instead of the requested 1.00%.
+16/01/2026 09:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8264.9, SL: 8275.8220500499, TP: 8236.3)
+16/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8264.9, SL: 8275.8220500499, TP: 8236.3) SUCCEEDED, PendingOrder OID39
+16/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-16 08:00, executed=2026-01-16 09:00:00, pending Sell placed at 8264.9; SL=8275.8220500499, TP=8236.304729804633; valid for the next 3 chart bar(s).
+20/01/2026 17:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.10 units, which needs about $3462.92 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.91 budget, free margin was $9990.61). Size was cut from 5.10 to 0.14 units. Real risk on this trade is now about $2.74 (0.03% of balance) instead of the requested 1.00%.
+20/01/2026 17:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8069.4, SL: 8052.80942211202, TP: 8112.84)
+20/01/2026 17:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8069.4, SL: 8052.80942211202, TP: 8112.84) SUCCEEDED, PendingOrder OID42
+20/01/2026 17:00:00.000 | Info | Combo: bartime=2026-01-20 16:00, executed=2026-01-20 17:00:00, pending Buy placed at 8069.4; SL=8052.809422112015, TP=8112.836173175983; valid for the next 3 chart bar(s).
+20/01/2026 20:00:00.000 | Trade | Cancelling pending order OID42
+20/01/2026 20:00:00.000 | Trade |  Cancelling pending order OID42 SUCCEEDED
+20/01/2026 20:00:00.000 | Info | Combo: pending order 42 cancelled after 3 chart bars.
+21/01/2026 07:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.29 units, which needs about $4270.94 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.91 budget, free margin was $9990.61). Size was cut from 6.29 to 0.14 units. Real risk on this trade is now about $2.22 (0.02% of balance) instead of the requested 1.00%.
+21/01/2026 07:05:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8058.9, SL: 8045.45155079766, TP: 8094.11)
+21/01/2026 07:05:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8058.9, SL: 8045.45155079766, TP: 8094.11) SUCCEEDED, PendingOrder OID43
+21/01/2026 07:05:00.000 | Info | Combo: bartime=2026-01-21 00:00, executed=2026-01-21 07:05:00, pending Buy placed at 8058.9; SL=8045.451550797665, TP=8094.109693866306; valid for the next 3 chart bar(s).
+21/01/2026 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.55 units, which needs about $4447.48 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.87 budget, free margin was $9987.19). Size was cut from 6.55 to 0.14 units. Real risk on this trade is now about $2.13 (0.02% of balance) instead of the requested 1.00%.
+21/01/2026 10:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8034.4, SL: 8047.31823127086, TP: 8000.58)
+21/01/2026 10:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8034.4, SL: 8047.31823127086, TP: 8000.58) SUCCEEDED, PendingOrder OID46
+21/01/2026 10:00:00.000 | Info | Combo: bartime=2026-01-21 09:00, executed=2026-01-21 10:00:00, pending Sell placed at 8034.4; SL=8047.318231270859, TP=8000.57848188309; valid for the next 3 chart bar(s).
+21/01/2026 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.53 units, which needs about $3075.89 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.83 budget, free margin was $9983.31). Size was cut from 4.53 to 0.14 units. Real risk on this trade is now about $3.08 (0.03% of balance) instead of the requested 1.00%.
+21/01/2026 15:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8093.1, SL: 8074.42390834516, TP: 8142)
+21/01/2026 15:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8093.1, SL: 8074.42390834516, TP: 8142) SUCCEEDED, PendingOrder OID49
+21/01/2026 15:00:00.000 | Info | Combo: bartime=2026-01-21 14:00, executed=2026-01-21 15:00:00, pending Buy placed at 8093.1; SL=8074.423908345165, TP=8141.99630468855; valid for the next 3 chart bar(s).
+21/01/2026 18:00:00.000 | Trade | Cancelling pending order OID49
+21/01/2026 18:00:00.000 | Trade |  Cancelling pending order OID49 SUCCEEDED
+21/01/2026 18:00:00.000 | Info | Combo: pending order 49 cancelled after 3 chart bars.
+21/01/2026 20:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.40 units, which needs about $1629.61 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.83 budget, free margin was $9983.31). Size was cut from 2.40 to 0.14 units. Real risk on this trade is now about $5.82 (0.06% of balance) instead of the requested 1.00%.
+21/01/2026 20:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8209.4, SL: 8174.16041425454, TP: 8301.66)
+21/01/2026 20:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8209.4, SL: 8174.16041425454, TP: 8301.66) SUCCEEDED, PendingOrder OID50
+21/01/2026 20:00:00.000 | Info | Combo: bartime=2026-01-21 19:00, executed=2026-01-21 20:00:00, pending Buy placed at 8209.4; SL=8174.160414254543, TP=8301.661569152344; valid for the next 3 chart bar(s).
+22/01/2026 09:00:00.000 | Trade | Cancelling pending order OID50
+22/01/2026 09:00:00.000 | Trade |  Cancelling pending order OID50 SUCCEEDED
+22/01/2026 09:00:00.000 | Info | Combo: pending order 50 cancelled after 3 chart bars.
+22/01/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.02 units, which needs about $3408.60 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.83 budget, free margin was $9983.31). Size was cut from 5.02 to 0.14 units. Real risk on this trade is now about $2.78 (0.03% of balance) instead of the requested 1.00%.
+22/01/2026 16:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8138.1, SL: 8154.93266769854, TP: 8094.03)
+22/01/2026 16:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8138.1, SL: 8154.93266769854, TP: 8094.03) SUCCEEDED, PendingOrder OID51
+22/01/2026 16:00:00.000 | Info | Combo: bartime=2026-01-22 15:00, executed=2026-01-22 16:00:00, pending Sell placed at 8138.1; SL=8154.932667698545, TP=8094.030005928407; valid for the next 3 chart bar(s).
+23/01/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.35 units, which needs about $4311.68 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.80 budget, free margin was $9980.44). Size was cut from 6.35 to 0.14 units. Real risk on this trade is now about $2.20 (0.02% of balance) instead of the requested 1.00%.
+23/01/2026 16:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8148.9, SL: 8135.57297233056, TP: 8183.79)
+23/01/2026 16:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8148.9, SL: 8135.57297233056, TP: 8183.79) SUCCEEDED, PendingOrder OID54
+23/01/2026 16:00:00.000 | Info | Combo: bartime=2026-01-23 15:00, executed=2026-01-23 16:00:00, pending Buy placed at 8148.9; SL=8135.572972330562, TP=8183.791797361084; valid for the next 3 chart bar(s).
+26/01/2026 07:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.98 units, which needs about $4739.45 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.78 budget, free margin was $9978.05). Size was cut from 6.98 to 0.14 units. Real risk on this trade is now about $2.00 (0.02% of balance) instead of the requested 1.00%.
+26/01/2026 07:05:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8110.4, SL: 8122.51411694938, TP: 8078.68)
+26/01/2026 07:05:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8110.4, SL: 8122.51411694938, TP: 8078.68) SUCCEEDED, PendingOrder OID57
+26/01/2026 07:05:00.000 | Info | Combo: bartime=2026-01-26 00:00, executed=2026-01-26 07:05:00, pending Sell placed at 8110.4; SL=8122.514116949376, TP=8078.683752064576; valid for the next 3 chart bar(s).
+26/01/2026 07:05:00.000 | Info | Combo: bartime=2026-01-26 06:00, reversal - cancelling existing Sell pending order 57 before opening opposite direction.
+26/01/2026 07:05:00.000 | Trade | Cancelling pending order OID57
+26/01/2026 07:05:00.000 | Trade |  Cancelling pending order OID57 SUCCEEDED
+26/01/2026 07:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.33 units, which needs about $6335.11 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.78 budget, free margin was $9978.05). Size was cut from 9.33 to 0.14 units. Real risk on this trade is now about $1.50 (0.01% of balance) instead of the requested 1.00%.
+26/01/2026 07:05:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8149.3, SL: 8140.23585121122, TP: 8173.03)
+26/01/2026 07:05:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8149.3, SL: 8140.23585121122, TP: 8173.03) SUCCEEDED, PendingOrder OID58
+26/01/2026 07:05:00.000 | Info | Combo: bartime=2026-01-26 06:00, executed=2026-01-26 07:05:00, pending Buy placed at 8149.3; SL=8140.235851211222, TP=8173.031056213984; valid for the next 3 chart bar(s).
+26/01/2026 14:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.28 units, which needs about $5622.16 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.74 budget, free margin was $9974.05). Size was cut from 8.28 to 0.14 units. Real risk on this trade is now about $1.69 (0.02% of balance) instead of the requested 1.00%.
+26/01/2026 14:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8141.9, SL: 8131.68656130873, TP: 8168.64)
+26/01/2026 14:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8141.9, SL: 8131.68656130873, TP: 8168.64) SUCCEEDED, PendingOrder OID61
+26/01/2026 14:00:00.000 | Info | Combo: bartime=2026-01-26 13:00, executed=2026-01-26 14:00:00, pending Buy placed at 8141.9; SL=8131.686561308731, TP=8168.640038515326; valid for the next 3 chart bar(s).
+27/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.63 units, which needs about $5180.81 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.72 budget, free margin was $9972.02). Size was cut from 7.63 to 0.14 units. Real risk on this trade is now about $1.83 (0.02% of balance) instead of the requested 1.00%.
+27/01/2026 09:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8110.1, SL: 8121.17995765683, TP: 8081.09)
+27/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8110.1, SL: 8121.17995765683, TP: 8081.09) SUCCEEDED, PendingOrder OID64
+27/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-27 08:00, executed=2026-01-27 09:00:00, pending Sell placed at 8110.1; SL=8121.179957656833, TP=8081.091308270624; valid for the next 3 chart bar(s).
+27/01/2026 12:00:00.000 | Trade | Cancelling pending order OID64
+27/01/2026 12:00:00.000 | Trade |  Cancelling pending order OID64 SUCCEEDED
+27/01/2026 12:00:00.000 | Info | Combo: pending order 64 cancelled after 3 chart bars.
+27/01/2026 12:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.31 units, which needs about $4963.52 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.72 budget, free margin was $9972.02). Size was cut from 7.31 to 0.14 units. Real risk on this trade is now about $1.91 (0.02% of balance) instead of the requested 1.00%.
+27/01/2026 12:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8164.9, SL: 8153.3412296797, TP: 8195.16)
+27/01/2026 12:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8164.9, SL: 8153.3412296797, TP: 8195.16) SUCCEEDED, PendingOrder OID65
+27/01/2026 12:00:00.000 | Info | Combo: bartime=2026-01-27 11:00, executed=2026-01-27 12:00:00, pending Buy placed at 8164.9; SL=8153.341229679701, TP=8195.16228216544; valid for the next 3 chart bar(s).
+27/01/2026 17:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.95 units, which needs about $4040.08 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.70 budget, free margin was $9970.07). Size was cut from 5.95 to 0.14 units. Real risk on this trade is now about $2.35 (0.02% of balance) instead of the requested 1.00%.
+27/01/2026 17:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8119.4, SL: 8133.60775001856, TP: 8082.2)
+27/01/2026 17:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8119.4, SL: 8133.60775001856, TP: 8082.2) SUCCEEDED, PendingOrder OID68
+27/01/2026 17:00:00.000 | Info | Combo: bartime=2026-01-27 16:00, executed=2026-01-27 17:00:00, pending Sell placed at 8119.4; SL=8133.607750018555, TP=8082.202363220027; valid for the next 3 chart bar(s).
+27/01/2026 20:00:00.000 | Trade | Cancelling pending order OID68
+27/01/2026 20:00:00.000 | Trade |  Cancelling pending order OID68 SUCCEEDED
+27/01/2026 20:00:00.000 | Info | Combo: pending order 68 cancelled after 3 chart bars.
+28/01/2026 07:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 10.26 units, which needs about $6966.59 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.70 budget, free margin was $9970.07). Size was cut from 10.26 to 0.14 units. Real risk on this trade is now about $1.36 (0.01% of balance) instead of the requested 1.00%.
+28/01/2026 07:05:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8151.4, SL: 8143.16700746471, TP: 8172.95)
+28/01/2026 07:05:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8151.4, SL: 8143.16700746471, TP: 8172.95) SUCCEEDED, PendingOrder OID69
+28/01/2026 07:05:00.000 | Info | Combo: bartime=2026-01-28 05:00, executed=2026-01-28 07:05:00, pending Buy placed at 8151.4; SL=8143.167007464708, TP=8172.954986928967; valid for the next 3 chart bar(s).
+28/01/2026 08:00:00.000 | Info | Combo: bartime=2026-01-28 07:00, reversal - cancelling existing Buy pending order 69 before opening opposite direction.
+28/01/2026 08:00:00.000 | Trade | Cancelling pending order OID69
+28/01/2026 08:00:00.000 | Trade |  Cancelling pending order OID69 SUCCEEDED
+28/01/2026 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.04 units, which needs about $3422.18 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.70 budget, free margin was $9970.07). Size was cut from 5.04 to 0.14 units. Real risk on this trade is now about $2.76 (0.03% of balance) instead of the requested 1.00%.
+28/01/2026 08:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8092.6, SL: 8109.34661122259, TP: 8048.76)
+28/01/2026 08:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8092.6, SL: 8109.34661122259, TP: 8048.76) SUCCEEDED, PendingOrder OID70
+28/01/2026 08:00:00.000 | Info | Combo: bartime=2026-01-28 07:00, executed=2026-01-28 08:00:00, pending Sell placed at 8092.6; SL=8109.346611222587, TP=8048.755312365462; valid for the next 3 chart bar(s).
+29/01/2026 15:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.24 units, which needs about $2878.98 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.66 budget, free margin was $9966.32). Size was cut from 4.24 to 0.14 units. Real risk on this trade is now about $3.29 (0.03% of balance) instead of the requested 1.00%.
+29/01/2026 15:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8080.6, SL: 8100.50359124249, TP: 8028.49)
+29/01/2026 15:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8080.6, SL: 8100.50359124249, TP: 8028.49) SUCCEEDED, PendingOrder OID73
+29/01/2026 15:00:00.000 | Info | Combo: bartime=2026-01-29 14:00, executed=2026-01-29 15:00:00, pending Sell placed at 8080.6; SL=8100.503591242492, TP=8028.489950436324; valid for the next 3 chart bar(s).
+30/01/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.96 units, which needs about $3367.86 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.63 budget, free margin was $9962.56). Size was cut from 4.96 to 0.14 units. Real risk on this trade is now about $2.81 (0.03% of balance) instead of the requested 1.00%.
+30/01/2026 09:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8110.4, SL: 8093.37506701103, TP: 8154.97)
+30/01/2026 09:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8110.4, SL: 8093.37506701103, TP: 8154.97) SUCCEEDED, PendingOrder OID76
+30/01/2026 09:00:00.000 | Info | Combo: bartime=2026-01-30 08:00, executed=2026-01-30 09:00:00, pending Buy placed at 8110.4; SL=8093.37506701103, TP=8154.9733682462; valid for the next 3 chart bar(s).
+30/01/2026 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.86 units, which needs about $3299.96 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.60 budget, free margin was $9959.67). Size was cut from 4.86 to 0.14 units. Real risk on this trade is now about $2.87 (0.03% of balance) instead of the requested 1.00%.
+30/01/2026 10:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8079.9, SL: 8097.25266639118, TP: 8034.47)
+30/01/2026 10:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8079.9, SL: 8097.25266639118, TP: 8034.47) SUCCEEDED, PendingOrder OID79
+30/01/2026 10:00:00.000 | Info | Combo: bartime=2026-01-30 09:00, executed=2026-01-30 10:00:00, pending Sell placed at 8079.9; SL=8097.252666391175, TP=8034.468585403039; valid for the next 3 chart bar(s).
+30/01/2026 11:00:00.000 | Info | Combo: bartime=2026-01-30 10:00, reversal - cancelling existing Sell pending order 79 before opening opposite direction.
+30/01/2026 11:00:00.000 | Trade | Cancelling pending order OID79
+30/01/2026 11:00:00.000 | Trade |  Cancelling pending order OID79 SUCCEEDED
+30/01/2026 11:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.17 units, which needs about $3510.45 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.60 budget, free margin was $9959.67). Size was cut from 5.17 to 0.14 units. Real risk on this trade is now about $2.70 (0.03% of balance) instead of the requested 1.00%.
+30/01/2026 11:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8113.9, SL: 8097.57058688706, TP: 8156.65)
+30/01/2026 11:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8113.9, SL: 8097.57058688706, TP: 8156.65) SUCCEEDED, PendingOrder OID80
+30/01/2026 11:00:00.000 | Info | Combo: bartime=2026-01-30 10:00, executed=2026-01-30 11:00:00, pending Buy placed at 8113.9; SL=8097.570586887059, TP=8156.652411677568; valid for the next 3 chart bar(s).
+30/01/2026 12:00:00.000 | Info | Combo: bartime=2026-01-30 11:00, Buy signal skipped: already have same-direction exposure open.
+02/02/2026 07:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.19 units, which needs about $3524.03 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.56 budget, free margin was $9956.27). Size was cut from 5.19 to 0.14 units. Real risk on this trade is now about $2.68 (0.03% of balance) instead of the requested 1.00%.
+02/02/2026 07:05:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8064.4, SL: 8080.65765024928, TP: 8021.84)
+02/02/2026 07:05:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8064.4, SL: 8080.65765024928, TP: 8021.84) SUCCEEDED, PendingOrder OID83
+02/02/2026 07:05:00.000 | Info | Combo: bartime=2026-02-02 01:00, executed=2026-02-02 07:05:00, pending Sell placed at 8064.4; SL=8080.657650249279, TP=8021.835472324702; valid for the next 3 chart bar(s).
+02/02/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.04 units, which needs about $2743.18 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.48 budget, free margin was $9947.85). Size was cut from 4.04 to 0.14 units. Real risk on this trade is now about $3.45 (0.03% of balance) instead of the requested 1.00%.
+02/02/2026 09:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8124.1, SL: 8103.23292976276, TP: 8178.73)
+02/02/2026 09:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8124.1, SL: 8103.23292976276, TP: 8178.73) SUCCEEDED, PendingOrder OID86
+02/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-02 08:00, executed=2026-02-02 09:00:00, pending Buy placed at 8124.1; SL=8103.232929762763, TP=8178.732556058011; valid for the next 3 chart bar(s).
+03/02/2026 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.88 units, which needs about $3313.54 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.57 budget, free margin was $9957.11). Size was cut from 4.88 to 0.14 units. Real risk on this trade is now about $2.85 (0.03% of balance) instead of the requested 1.00%.
+03/02/2026 10:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8177.1, SL: 8194.38165099479, TP: 8131.85)
+03/02/2026 10:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8177.1, SL: 8194.38165099479, TP: 8131.85) SUCCEEDED, PendingOrder OID89
+03/02/2026 10:00:00.000 | Info | Combo: bartime=2026-02-03 09:00, executed=2026-02-03 10:00:00, pending Sell placed at 8177.1; SL=8194.38165099479, TP=8131.854512444064; valid for the next 3 chart bar(s).
+04/02/2026 07:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.32 units, which needs about $4291.31 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.65 budget, free margin was $9964.77). Size was cut from 6.32 to 0.14 units. Real risk on this trade is now about $2.21 (0.02% of balance) instead of the requested 1.00%.
+04/02/2026 07:05:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8207.6, SL: 8194.23328624399, TP: 8242.6)
+04/02/2026 07:05:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8207.6, SL: 8194.23328624399, TP: 8242.6) SUCCEEDED, PendingOrder OID92
+04/02/2026 07:05:00.000 | Info | Combo: bartime=2026-02-04 01:00, executed=2026-02-04 07:05:00, pending Buy placed at 8207.6; SL=8194.23328624399, TP=8242.59570041622; valid for the next 3 chart bar(s).
+05/02/2026 13:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.03 units, which needs about $2736.39 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.71 budget, free margin was $9970.57). Size was cut from 4.03 to 0.14 units. Real risk on this trade is now about $3.46 (0.03% of balance) instead of the requested 1.00%.
+05/02/2026 13:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8226.4, SL: 8247.33075401622, TP: 8171.6)
+05/02/2026 13:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8226.4, SL: 8247.33075401622, TP: 8171.6) SUCCEEDED, PendingOrder OID95
+05/02/2026 13:00:00.000 | Info | Combo: bartime=2026-02-05 12:00, executed=2026-02-05 13:00:00, pending Sell placed at 8226.4; SL=8247.330754016215, TP=8171.600711976964; valid for the next 3 chart bar(s).
+06/02/2026 07:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.35 units, which needs about $2953.67 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.67 budget, free margin was $9966.62). Size was cut from 4.35 to 0.14 units. Real risk on this trade is now about $3.21 (0.03% of balance) instead of the requested 1.00%.
+06/02/2026 07:05:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8249.6, SL: 8230.18596678124, TP: 8300.43)
+06/02/2026 07:05:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8249.6, SL: 8230.18596678124, TP: 8300.43) SUCCEEDED, PendingOrder OID98
+06/02/2026 07:05:00.000 | Info | Combo: bartime=2026-02-06 05:00, executed=2026-02-06 07:05:00, pending Buy placed at 8249.6; SL=8230.185966781244, TP=8300.42832645299; valid for the next 3 chart bar(s).
+06/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-06 08:00, reversal - cancelling existing Buy pending order 98 before opening opposite direction.
+06/02/2026 09:00:00.000 | Trade | Cancelling pending order OID98
+06/02/2026 09:00:00.000 | Trade |  Cancelling pending order OID98 SUCCEEDED
+06/02/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.86 units, which needs about $2620.96 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.67 budget, free margin was $9966.62). Size was cut from 3.86 to 0.14 units. Real risk on this trade is now about $3.61 (0.04% of balance) instead of the requested 1.00%.
+06/02/2026 09:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8167.6, SL: 8189.482217008, TP: 8110.31)
+06/02/2026 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8167.6, SL: 8189.482217008, TP: 8110.31) SUCCEEDED, PendingOrder OID99
+06/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-06 08:00, executed=2026-02-06 09:00:00, pending Sell placed at 8167.6; SL=8189.482217008003, TP=8110.30966485607; valid for the next 3 chart bar(s).
+06/02/2026 11:00:00.000 | Info | Combo: bartime=2026-02-06 10:00, reversal - cancelling existing Sell pending order 99 before opening opposite direction.
+06/02/2026 11:00:00.000 | Trade | Cancelling pending order OID99
+06/02/2026 11:00:00.000 | Trade |  Cancelling pending order OID99 SUCCEEDED
+06/02/2026 11:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.69 units, which needs about $2505.53 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.67 budget, free margin was $9966.62). Size was cut from 3.69 to 0.14 units. Real risk on this trade is now about $3.78 (0.04% of balance) instead of the requested 1.00%.
+06/02/2026 11:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8247.6, SL: 8224.73326111488, TP: 8307.47)
+06/02/2026 11:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8247.6, SL: 8224.73326111488, TP: 8307.47) SUCCEEDED, PendingOrder OID100
+06/02/2026 11:00:00.000 | Info | Combo: bartime=2026-02-06 10:00, executed=2026-02-06 11:00:00, pending Buy placed at 8247.6; SL=8224.733261114878, TP=8307.467934492117; valid for the next 3 chart bar(s).
+09/02/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.70 units, which needs about $3870.33 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.77 budget, free margin was $9976.55). Size was cut from 5.70 to 0.14 units. Real risk on this trade is now about $2.45 (0.02% of balance) instead of the requested 1.00%.
+09/02/2026 09:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8266.1, SL: 8280.93256318392, TP: 8227.27)
+09/02/2026 09:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8266.1, SL: 8280.93256318392, TP: 8227.27) SUCCEEDED, PendingOrder OID103
+09/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-09 08:00, executed=2026-02-09 09:00:00, pending Sell placed at 8266.1; SL=8280.932563183924, TP=8227.26652551523; valid for the next 3 chart bar(s).
+09/02/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.34 units, which needs about $4304.89 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.74 budget, free margin was $9973.94). Size was cut from 6.34 to 0.14 units. Real risk on this trade is now about $2.20 (0.02% of balance) instead of the requested 1.00%.
+09/02/2026 16:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8316.6, SL: 8303.27791396857, TP: 8351.48)
+09/02/2026 16:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8316.6, SL: 8303.27791396857, TP: 8351.48) SUCCEEDED, PendingOrder OID106
+09/02/2026 16:00:00.000 | Info | Combo: bartime=2026-02-09 15:00, executed=2026-02-09 16:00:00, pending Buy placed at 8316.6; SL=8303.277913968572, TP=8351.47885954507; valid for the next 3 chart bar(s).
+10/02/2026 13:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.51 units, which needs about $4420.32 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.80 budget, free margin was $9979.54). Size was cut from 6.51 to 0.14 units. Real risk on this trade is now about $2.14 (0.02% of balance) instead of the requested 1.00%.
+10/02/2026 13:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8322.1, SL: 8335.08248213395, TP: 8288.11)
+10/02/2026 13:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8322.1, SL: 8335.08248213395, TP: 8288.11) SUCCEEDED, PendingOrder OID109
+10/02/2026 13:00:00.000 | Info | Combo: bartime=2026-02-10 12:00, executed=2026-02-10 13:00:00, pending Sell placed at 8322.1; SL=8335.082482133954, TP=8288.110265222109; valid for the next 3 chart bar(s).
+11/02/2026 07:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.82 units, which needs about $5309.82 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.77 budget, free margin was $9977.28). Size was cut from 7.82 to 0.14 units. Real risk on this trade is now about $1.79 (0.02% of balance) instead of the requested 1.00%.
+11/02/2026 07:05:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8316.1, SL: 8326.91458313659, TP: 8287.79)
+11/02/2026 07:05:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8316.1, SL: 8326.91458313659, TP: 8287.79) SUCCEEDED, PendingOrder OID112
+11/02/2026 07:05:00.000 | Info | Combo: bartime=2026-02-10 20:00, executed=2026-02-11 07:05:00, pending Sell placed at 8316.1; SL=8326.914583136591, TP=8287.78609139967; valid for the next 3 chart bar(s).
+11/02/2026 07:05:00.000 | Info | Combo: bartime=2026-02-11 04:00, Sell signal skipped: already have same-direction exposure open.
+11/02/2026 14:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.34 units, which needs about $3625.89 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.75 budget, free margin was $9975.30). Size was cut from 5.34 to 0.14 units. Real risk on this trade is now about $2.61 (0.03% of balance) instead of the requested 1.00%.
+11/02/2026 14:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8356.1, SL: 8340.26236143456, TP: 8397.56)
+11/02/2026 14:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8356.1, SL: 8340.26236143456, TP: 8397.56) SUCCEEDED, PendingOrder OID115
+11/02/2026 14:00:00.000 | Info | Combo: bartime=2026-02-11 13:00, executed=2026-02-11 14:00:00, pending Buy placed at 8356.1; SL=8340.262361434565, TP=8397.564885435071; valid for the next 3 chart bar(s).
+11/02/2026 18:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.66 units, which needs about $2485.16 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.72 budget, free margin was $9972.41). Size was cut from 3.66 to 0.14 units. Real risk on this trade is now about $3.81 (0.04% of balance) instead of the requested 1.00%.
+11/02/2026 18:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8387.4, SL: 8364.3045240436, TP: 8447.87)
+11/02/2026 18:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8387.4, SL: 8364.3045240436, TP: 8447.87) SUCCEEDED, PendingOrder OID118
+11/02/2026 18:00:00.000 | Info | Combo: bartime=2026-02-11 17:00, executed=2026-02-11 18:00:00, pending Buy placed at 8387.4; SL=8364.304524043599, TP=8447.866796274204; valid for the next 3 chart bar(s).
+12/02/2026 14:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.40 units, which needs about $3666.63 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.82 budget, free margin was $9982.15). Size was cut from 5.40 to 0.14 units. Real risk on this trade is now about $2.59 (0.03% of balance) instead of the requested 1.00%.
+12/02/2026 14:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8376.9, SL: 8392.55910762128, TP: 8335.9)
+12/02/2026 14:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8376.9, SL: 8392.55910762128, TP: 8335.9) SUCCEEDED, PendingOrder OID121
+12/02/2026 14:00:00.000 | Info | Combo: bartime=2026-02-12 13:00, executed=2026-02-12 14:00:00, pending Sell placed at 8376.9; SL=8392.559107621277, TP=8335.902530531996; valid for the next 3 chart bar(s).
+12/02/2026 16:00:00.000 | Info | Combo: bartime=2026-02-12 15:00, Sell signal skipped: already have same-direction exposure open.
+13/02/2026 18:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 4.81 units, which needs about $3266.01 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.89 budget, free margin was $9988.84). Size was cut from 4.81 to 0.14 units. Real risk on this trade is now about $2.90 (0.03% of balance) instead of the requested 1.00%.
+13/02/2026 18:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8335.9, SL: 8318.31567390035, TP: 8381.94)
+13/02/2026 18:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8335.9, SL: 8318.31567390035, TP: 8381.94) SUCCEEDED, PendingOrder OID124
+13/02/2026 18:00:00.000 | Info | Combo: bartime=2026-02-13 17:00, executed=2026-02-13 18:00:00, pending Buy placed at 8335.9; SL=8318.31567390035, TP=8381.93792820264; valid for the next 3 chart bar(s).
+16/02/2026 07:05:00.000 | Trade | Cancelling pending order OID124
+16/02/2026 07:05:00.000 | Trade |  Cancelling pending order OID124 SUCCEEDED
+16/02/2026 07:05:00.000 | Info | Combo: pending order 124 cancelled after 3 chart bars.
+16/02/2026 07:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.97 units, which needs about $6090.67 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.89 budget, free margin was $9988.84). Size was cut from 8.97 to 0.14 units. Real risk on this trade is now about $1.56 (0.02% of balance) instead of the requested 1.00%.
+16/02/2026 07:05:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8318.4, SL: 8308.96140411426, TP: 8343.11)
+16/02/2026 07:05:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8318.4, SL: 8308.96140411426, TP: 8343.11) SUCCEEDED, PendingOrder OID125
+16/02/2026 07:05:00.000 | Info | Combo: bartime=2026-02-16 04:00, executed=2026-02-16 07:05:00, pending Buy placed at 8318.4; SL=8308.961404114261, TP=8343.111404762338; valid for the next 3 chart bar(s).
+16/02/2026 08:00:00.000 | Info | Combo: bartime=2026-02-16 07:00, Buy signal skipped: already have same-direction exposure open.
+17/02/2026 09:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.22 units, which needs about $4223.41 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.90 budget, free margin was $9990.49). Size was cut from 6.22 to 0.14 units. Real risk on this trade is now about $2.25 (0.02% of balance) instead of the requested 1.00%.
+17/02/2026 09:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8341.6, SL: 8327.99286970636, TP: 8377.23)
+17/02/2026 09:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8341.6, SL: 8327.99286970636, TP: 8377.23) SUCCEEDED, PendingOrder OID128
+17/02/2026 09:00:00.000 | Info | Combo: bartime=2026-02-17 08:00, executed=2026-02-17 09:00:00, pending Buy placed at 8341.6; SL=8327.99286970636, TP=8377.225140477522; valid for the next 3 chart bar(s).
+17/02/2026 12:00:00.000 | Trade | Cancelling pending order OID128
+17/02/2026 12:00:00.000 | Trade |  Cancelling pending order OID128 SUCCEEDED
+17/02/2026 12:00:00.000 | Info | Combo: pending order 128 cancelled after 3 chart bars.
+17/02/2026 12:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.42 units, which needs about $3680.21 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.90 budget, free margin was $9990.49). Size was cut from 5.42 to 0.14 units. Real risk on this trade is now about $2.58 (0.03% of balance) instead of the requested 1.00%.
+17/02/2026 12:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8334.9, SL: 8319.28757648966, TP: 8375.78)
+17/02/2026 12:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8334.9, SL: 8319.28757648966, TP: 8375.78) SUCCEEDED, PendingOrder OID129
+17/02/2026 12:00:00.000 | Info | Combo: bartime=2026-02-17 11:00, executed=2026-02-17 12:00:00, pending Buy placed at 8334.9; SL=8319.287576489656, TP=8375.775244724491; valid for the next 3 chart bar(s).
+17/02/2026 15:00:00.000 | Info | Combo: bartime=2026-02-17 14:00, Buy signal skipped: already have same-direction exposure open.
+18/02/2026 14:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.15 units, which needs about $4175.88 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.87 budget, free margin was $9986.58). Size was cut from 6.15 to 0.14 units. Real risk on this trade is now about $2.27 (0.02% of balance) instead of the requested 1.00%.
+18/02/2026 14:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8367.1, SL: 8380.85191892609, TP: 8331.1)
+18/02/2026 14:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8367.1, SL: 8380.85191892609, TP: 8331.1) SUCCEEDED, PendingOrder OID132
+18/02/2026 14:00:00.000 | Info | Combo: bartime=2026-02-18 13:00, executed=2026-02-18 14:00:00, pending Sell placed at 8367.1; SL=8380.851918926093, TP=8331.095785076996; valid for the next 3 chart bar(s).
+18/02/2026 17:00:00.000 | Trade | Cancelling pending order OID132
+18/02/2026 17:00:00.000 | Trade |  Cancelling pending order OID132 SUCCEEDED
+18/02/2026 17:00:00.000 | Info | Combo: pending order 132 cancelled after 3 chart bars.
+19/02/2026 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.66 units, which needs about $5880.18 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.87 budget, free margin was $9986.58). Size was cut from 8.66 to 0.14 units. Real risk on this trade is now about $1.61 (0.02% of balance) instead of the requested 1.00%.
+19/02/2026 08:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8384.9, SL: 8394.67757469978, TP: 8359.3)
+19/02/2026 08:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8384.9, SL: 8394.67757469978, TP: 8359.3) SUCCEEDED, PendingOrder OID133
+19/02/2026 08:00:00.000 | Info | Combo: bartime=2026-02-19 07:00, executed=2026-02-19 08:00:00, pending Sell placed at 8384.9; SL=8394.677574699785, TP=8359.301107015774; valid for the next 3 chart bar(s).
+19/02/2026 19:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.58 units, which needs about $4467.85 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.92 budget, free margin was $9991.76). Size was cut from 6.58 to 0.14 units. Real risk on this trade is now about $2.12 (0.02% of balance) instead of the requested 1.00%.
+19/02/2026 19:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8407.4, SL: 8394.54072460069, TP: 8441.07)
+19/02/2026 19:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8407.4, SL: 8394.54072460069, TP: 8441.07) SUCCEEDED, PendingOrder OID136
+19/02/2026 19:00:00.000 | Info | Combo: bartime=2026-02-19 18:00, executed=2026-02-19 19:00:00, pending Buy placed at 8407.4; SL=8394.540724600689, TP=8441.06716439496; valid for the next 3 chart bar(s).
+23/02/2026 16:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.18 units, which needs about $4196.25 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.97 budget, free margin was $9997.01). Size was cut from 6.18 to 0.14 units. Real risk on this trade is now about $2.26 (0.02% of balance) instead of the requested 1.00%.
+23/02/2026 16:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8495.4, SL: 8509.11110580553, TP: 8459.5)
+23/02/2026 16:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8495.4, SL: 8509.11110580553, TP: 8459.5) SUCCEEDED, PendingOrder OID139
+23/02/2026 16:00:00.000 | Info | Combo: bartime=2026-02-23 15:00, executed=2026-02-23 16:00:00, pending Sell placed at 8495.4; SL=8509.111105805527, TP=8459.502638845723; valid for the next 3 chart bar(s).
+23/02/2026 18:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 5.95 units, which needs about $4040.08 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.95 budget, free margin was $9994.58). Size was cut from 5.95 to 0.14 units. Real risk on this trade is now about $2.35 (0.02% of balance) instead of the requested 1.00%.
+23/02/2026 18:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8478.4, SL: 8492.62586771554, TP: 8441.15)
+23/02/2026 18:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8478.4, SL: 8492.62586771554, TP: 8441.15) SUCCEEDED, PendingOrder OID142
+23/02/2026 18:00:00.000 | Info | Combo: bartime=2026-02-23 17:00, executed=2026-02-23 18:00:00, pending Sell placed at 8478.4; SL=8492.625867715537, TP=8441.154928861262; valid for the next 3 chart bar(s).
+23/02/2026 20:00:00.000 | Info | Combo: bartime=2026-02-23 19:00, Sell signal skipped: already have same-direction exposure open.
+24/02/2026 07:05:00.000 | Trade | Cancelling pending order OID142
+24/02/2026 07:05:00.000 | Trade |  Cancelling pending order OID142 SUCCEEDED
+24/02/2026 07:05:00.000 | Info | Combo: pending order 142 cancelled after 3 chart bars.
+24/02/2026 07:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 8.71 units, which needs about $5914.13 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.95 budget, free margin was $9994.58). Size was cut from 8.71 to 0.14 units. Real risk on this trade is now about $1.60 (0.02% of balance) instead of the requested 1.00%.
+24/02/2026 07:05:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8517.6, SL: 8507.87934620398, TP: 8543.05)
+24/02/2026 07:05:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8517.6, SL: 8507.87934620398, TP: 8543.05) SUCCEEDED, PendingOrder OID143
+24/02/2026 07:05:00.000 | Info | Combo: bartime=2026-02-24 02:00, executed=2026-02-24 07:05:00, pending Buy placed at 8517.6; SL=8507.87934620398, TP=8543.049867058193; valid for the next 3 chart bar(s).
+24/02/2026 10:00:00.000 | Trade | Cancelling pending order OID143
+24/02/2026 10:00:00.000 | Trade |  Cancelling pending order OID143 SUCCEEDED
+24/02/2026 10:00:00.000 | Info | Combo: pending order 143 cancelled after 3 chart bars.
+24/02/2026 12:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.50 units, which needs about $5092.54 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.95 budget, free margin was $9994.58). Size was cut from 7.50 to 0.14 units. Real risk on this trade is now about $1.87 (0.02% of balance) instead of the requested 1.00%.
+24/02/2026 12:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8517.6, SL: 8506.30277195986, TP: 8547.18)
+24/02/2026 12:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8517.6, SL: 8506.30277195986, TP: 8547.18) SUCCEEDED, PendingOrder OID144
+24/02/2026 12:00:00.000 | Info | Combo: bartime=2026-02-24 11:00, executed=2026-02-24 12:00:00, pending Buy placed at 8517.6; SL=8506.302771959858, TP=8547.17753231222; valid for the next 3 chart bar(s).
+24/02/2026 14:00:00.000 | Info | Combo: bartime=2026-02-24 13:00, Buy signal skipped: already have same-direction exposure open.
+25/02/2026 17:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 7.72 units, which needs about $5241.92 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.99 budget, free margin was $9999.17). Size was cut from 7.72 to 0.14 units. Real risk on this trade is now about $1.81 (0.02% of balance) instead of the requested 1.00%.
+25/02/2026 17:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8569.9, SL: 8558.918067184, TP: 8598.65)
+25/02/2026 17:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8569.9, SL: 8558.918067184, TP: 8598.65) SUCCEEDED, PendingOrder OID147
+25/02/2026 17:00:00.000 | Info | Combo: bartime=2026-02-25 16:00, executed=2026-02-25 17:00:00, pending Buy placed at 8569.9; SL=8558.918067184, TP=8598.652050641238; valid for the next 3 chart bar(s).
+26/02/2026 07:05:00.000 | Info | Combo: bartime=2026-02-26 03:00, reversal - closing existing Buy position 43 before opening opposite direction.
+26/02/2026 07:05:00.000 | Trade | Closing position PID43 (Volume: 0.14)
+26/02/2026 07:05:00.000 | Trade |  Closing position PID43 (Volume: 0.14) SUCCEEDED
+26/02/2026 07:05:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 11.62 units, which needs about $7890.04 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.99 budget, free margin was $9999.48). Size was cut from 11.62 to 0.14 units. Real risk on this trade is now about $1.20 (0.01% of balance) instead of the requested 1.00%.
+26/02/2026 07:05:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8546.6, SL: 8553.89133516808, TP: 8527.51)
+26/02/2026 07:05:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8546.6, SL: 8553.89133516808, TP: 8527.51) SUCCEEDED, PendingOrder OID151
+26/02/2026 07:05:00.000 | Info | Combo: bartime=2026-02-26 03:00, executed=2026-02-26 07:05:00, pending Sell placed at 8546.6; SL=8553.891335168075, TP=8527.51038786093; valid for the next 3 chart bar(s).
+26/02/2026 08:00:00.000 | Info | Combo: bartime=2026-02-26 07:00, reversal - cancelling existing Sell pending order 151 before opening opposite direction.
+26/02/2026 08:00:00.000 | Trade | Cancelling pending order OID151
+26/02/2026 08:00:00.000 | Trade |  Cancelling pending order OID151 SUCCEEDED
+26/02/2026 08:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 9.77 units, which needs about $6633.88 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $99.99 budget, free margin was $9999.48). Size was cut from 9.77 to 0.14 units. Real risk on this trade is now about $1.43 (0.01% of balance) instead of the requested 1.00%.
+26/02/2026 08:00:00.000 | Trade | Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8587.9, SL: 8579.22599039516, TP: 8610.61)
+26/02/2026 08:00:00.000 | Trade |  Placing Stop Order to Buy 0.14 FRA40.cash (Price: 8587.9, SL: 8579.22599039516, TP: 8610.61) SUCCEEDED, PendingOrder OID152
+26/02/2026 08:00:00.000 | Info | Combo: bartime=2026-02-26 07:00, executed=2026-02-26 08:00:00, pending Buy placed at 8587.9; SL=8579.225990395156, TP=8610.609623852162; valid for the next 3 chart bar(s).
+27/02/2026 10:00:00.000 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 6.57 units, which needs about $4461.06 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.03 budget, free margin was $10002.96). Size was cut from 6.57 to 0.14 units. Real risk on this trade is now about $2.13 (0.02% of balance) instead of the requested 1.00%.
+27/02/2026 10:00:00.000 | Trade | Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8604.9, SL: 8617.80434617006, TP: 8571.11)
+27/02/2026 10:00:00.000 | Trade |  Placing Stop Order to Sell 0.14 FRA40.cash (Price: 8604.9, SL: 8617.80434617006, TP: 8571.11) SUCCEEDED, PendingOrder OID155
+27/02/2026 10:00:00.000 | Info | Combo: bartime=2026-02-27 09:00, executed=2026-02-27 10:00:00, pending Sell placed at 8604.9; SL=8617.804346170064, TP=8571.114834784526; valid for the next 3 chart bar(s).
+27/02/2026 20:59:00.000 | Info | Combo: loaded=4161, processed=74, before-start=3846, not-processed=241, placed=65, failed=0, guard-skipped=0, pending-expired=12, same-direction-skipped=9, reversed=10, margin-capped=65, margin-blocked=0.
+Progress | Backtesting | 98.09 % |
+Info | CBot instance [Combo, FRA40.cash, h1] stopped.
+{
+	"Equity":10009.29,
+	"NetProfit":9.3,
+	"MaxBalanceDrawdownPercentages":0,
+	"MaxEquityDrawdownPercentages":0,
+	"MaxBalanceDrawdown":56.46,
+	"MaxEquityDrawdown":58.44,
+	"WinningTrades":18,
+	"LosingTrades":27,
+	"TotalTrades":45,
+	"AverageTrade":0.2,
+	"ProfitFactor":1.11,
+	"Fitness":0
+}
+

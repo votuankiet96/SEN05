@@ -1,0 +1,50 @@
+﻿{
+    "SchemaVersion":  1,
+    "CreatedAtUtc":  "2026-09-02T11:10:29.3225486Z",
+    "Success":  true,
+    "FailureReason":  null,
+    "Input":  {
+                  "AlgoPath":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\MA Cross.algo",
+                  "AlgoSHA256":  "381B32675BD1A6B09E141521BC1B8452FB5B6DC3D06D9A107CB03509856C2EE3",
+                  "SymbolInput":  "US30.cash",
+                  "ResolvedSymbol":  "US30.cash",
+                  "Period":  "m30",
+                  "StartDate":  "2025-01-01",
+                  "EndDate":  "2026-09-02",
+                  "DataMode":  "Ticks",
+                  "Broker":  "FTMO Platform",
+                  "Account":  "7563609",
+                  "Parameters":  {
+                                     "SignalFilePath":  "Z:\\Desktop\\og_program\\runtime\\exports\\ma_cross_US30_M30_full_history_signals.csv"
+                                 },
+                  "SignalFile":  {
+                                     "Path":  "Z:\\Desktop\\og_program\\runtime\\exports\\ma_cross_US30_M30_full_history_signals.csv",
+                                     "Length":  111038,
+                                     "LastWriteTime":  "2026-09-01T16:27:24.0000000Z",
+                                     "SHA256":  "66A01B82224168131206EC15E1E29A72C2727670E6F0238034EFE82E55D8668E"
+                                 }
+              },
+    "Actual":  {
+                   "StartDate":  "2025-01-01",
+                   "EndDate":  "2026-09-02"
+               },
+    "Metrics":  {
+                    "StartingCapital":  10000,
+                    "EndingBalance":  10408.529999999993,
+                    "NetProfit":  408.53,
+                    "ROI":  4.09,
+                    "ProfitFactor":  1.03,
+                    "TotalTrades":  310,
+                    "WinningTrades":  157,
+                    "LosingTrades":  153,
+                    "MaxBalanceDrawdownPct":  18.000265536473098,
+                    "MaxEquityDrawdownPct":  18.93955626729216,
+                    "HistoryItems":  310
+                },
+    "Artifacts":  {
+                      "Params":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\MA Cross_US30.cash_m30_20260902-040711\\params.cbotset",
+                      "Command":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\MA Cross_US30.cash_m30_20260902-040711\\command.txt",
+                      "Log":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\MA Cross_US30.cash_m30_20260902-040711\\log.txt",
+                      "ReportJson":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\MA Cross_US30.cash_m30_20260902-040711\\report.json"
+                  }
+}

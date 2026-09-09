@@ -1,0 +1,50 @@
+﻿{
+    "SchemaVersion":  1,
+    "CreatedAtUtc":  "2026-09-07T07:22:08.4868900Z",
+    "Success":  true,
+    "FailureReason":  null,
+    "Input":  {
+                  "AlgoPath":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\Combo.algo",
+                  "AlgoSHA256":  "C4996CCE46E213A85E3E782002E5CD131B3FBB2FC43E363112F5C340CD93D561",
+                  "SymbolInput":  "GER40.cash",
+                  "ResolvedSymbol":  "GER40.cash",
+                  "Period":  "h1",
+                  "StartDate":  "2025-01-01",
+                  "EndDate":  "2025-01-08",
+                  "DataMode":  "Ticks",
+                  "Broker":  "FTMO Platform",
+                  "Account":  "7563609",
+                  "Parameters":  {
+                                     "SignalFilePath":  "Z:\\Desktop\\og_program\\runtime\\exports\\combo_DE40_H1_full_history_signals.csv"
+                                 },
+                  "SignalFile":  {
+                                     "Path":  "Z:\\Desktop\\og_program\\runtime\\exports\\combo_DE40_H1_full_history_signals.csv",
+                                     "Length":  180065,
+                                     "LastWriteTime":  "2026-09-03T08:27:17.0000000Z",
+                                     "SHA256":  "6D2E9D60AA173C2BD111CF2AC1F21535DB963C18702D5AA12D90D43F44A7301D"
+                                 }
+              },
+    "Actual":  {
+                   "StartDate":  "2025-01-01",
+                   "EndDate":  "2025-01-08"
+               },
+    "Metrics":  {
+                    "StartingCapital":  10000,
+                    "EndingBalance":  9827.63,
+                    "NetProfit":  -172.37,
+                    "ROI":  -1.72,
+                    "ProfitFactor":  0.61,
+                    "TotalTrades":  6,
+                    "WinningTrades":  1,
+                    "LosingTrades":  5,
+                    "MaxBalanceDrawdownPct":  3.733833816086305,
+                    "MaxEquityDrawdownPct":  4.3427169484347345,
+                    "HistoryItems":  6
+                },
+    "Artifacts":  {
+                      "Params":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_GER40.cash_h1_20260907-002138\\params.cbotset",
+                      "Command":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_GER40.cash_h1_20260907-002138\\command.txt",
+                      "Log":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_GER40.cash_h1_20260907-002138\\log.txt",
+                      "ReportJson":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_GER40.cash_h1_20260907-002138\\report.json"
+                  }
+}

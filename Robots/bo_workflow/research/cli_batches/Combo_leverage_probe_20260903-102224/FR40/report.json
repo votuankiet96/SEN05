@@ -1,0 +1,5769 @@
+{
+  "main": {
+    "utcOffset": 0,
+    "language": "en",
+    "depositAsset": "USD",
+    "depositAssetDigits": 2,
+    "period": "h1",
+    "symbol": "FRA40.cash",
+    "brokerTitle": "",
+    "cBotName": "Combo",
+    "roi": 0.09,
+    "netProfit": 9.3,
+    "startingCapital": 10000,
+    "endingEquity": 10009.299999999997,
+    "endingBalance": 10009.299999999997,
+    "testingPeriod": {
+      "duration": "1m 27d",
+      "startDate": 1767225600000,
+      "endDate": 1772236800000,
+      "formatted": "1m 27d (01/01/2026 - 28/02/2026)"
+    },
+    "accountType": "hedging",
+    "accountLeverage": 30,
+    "data": {
+      "type": "m1BarsFromServer",
+      "isCustom": false,
+      "customName": null
+    },
+    "spread": {
+      "type": "fixed",
+      "min": null,
+      "max": null,
+      "value": 0
+    },
+    "commissions": {
+      "type": "usdPerMillionUsdVolume",
+      "value": 0,
+      "applyCommissionAutomatically": false
+    },
+    "theme": "dark",
+    "titleKind": "backtesting",
+    "authorNickName": "votuankiet96",
+    "authorLink": null,
+    "cBotLink": null,
+    "embedded": false
+  },
+  "equity": {
+    "points": [
+      {
+        "balance": 10000,
+        "minEquity": 10000,
+        "maxEquity": 10000,
+        "timestamp": 1767225600000
+      },
+      {
+        "balance": 10000,
+        "minEquity": 10000,
+        "maxEquity": 10000,
+        "timestamp": 1767340800000
+      },
+      {
+        "balance": 10000,
+        "minEquity": 10000,
+        "maxEquity": 10000,
+        "timestamp": 1767344400000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9995.26,
+        "maxEquity": 10000,
+        "timestamp": 1767348000000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9995.26,
+        "maxEquity": 9995.26,
+        "timestamp": 1767351600000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9995.26,
+        "maxEquity": 9995.26,
+        "timestamp": 1767355200000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9995.26,
+        "maxEquity": 9995.26,
+        "timestamp": 1767358800000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9995.26,
+        "maxEquity": 9995.26,
+        "timestamp": 1767362400000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9995.26,
+        "maxEquity": 9995.26,
+        "timestamp": 1767366000000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9995.26,
+        "maxEquity": 9995.26,
+        "timestamp": 1767369600000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9995.26,
+        "maxEquity": 9995.26,
+        "timestamp": 1767373200000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9995.26,
+        "maxEquity": 9995.26,
+        "timestamp": 1767376800000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9995.26,
+        "maxEquity": 9995.26,
+        "timestamp": 1767380400000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9995.26,
+        "maxEquity": 9995.26,
+        "timestamp": 1767384000000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9995.26,
+        "maxEquity": 9995.26,
+        "timestamp": 1767596400000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9995.26,
+        "maxEquity": 9995.26,
+        "timestamp": 1767600000000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9995.26,
+        "maxEquity": 9995.26,
+        "timestamp": 1767603600000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9995.26,
+        "maxEquity": 9995.26,
+        "timestamp": 1767607200000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9994.93,
+        "maxEquity": 9998.35,
+        "timestamp": 1767610800000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9995.39,
+        "maxEquity": 9997.57,
+        "timestamp": 1767614400000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9994.76,
+        "maxEquity": 9997.04,
+        "timestamp": 1767618000000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9995.800000000001,
+        "maxEquity": 9998.68,
+        "timestamp": 1767621600000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9995.16,
+        "maxEquity": 9997.82,
+        "timestamp": 1767625200000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9997.16,
+        "maxEquity": 10000.41,
+        "timestamp": 1767628800000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9993.53,
+        "maxEquity": 9997.79,
+        "timestamp": 1767632400000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9993.53,
+        "maxEquity": 9994.43,
+        "timestamp": 1767636000000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9994.1,
+        "maxEquity": 9995.43,
+        "timestamp": 1767639600000
+      },
+      {
+        "balance": 9995.26,
+        "minEquity": 9994.02,
+        "maxEquity": 9994.93,
+        "timestamp": 1767643200000
+      },
+      {
+        "balance": 9992.81,
+        "minEquity": 9992.81,
+        "maxEquity": 9994.960000000001,
+        "timestamp": 1767682800000
+      },
+      {
+        "balance": 9992.81,
+        "minEquity": 9992.81,
+        "maxEquity": 9992.81,
+        "timestamp": 1767686400000
+      },
+      {
+        "balance": 9992.81,
+        "minEquity": 9992.81,
+        "maxEquity": 9992.81,
+        "timestamp": 1767690000000
+      },
+      {
+        "balance": 9992.81,
+        "minEquity": 9991.359999999999,
+        "maxEquity": 9996.81,
+        "timestamp": 1767693600000
+      },
+      {
+        "balance": 9992.81,
+        "minEquity": 9994.33,
+        "maxEquity": 9996.38,
+        "timestamp": 1767697200000
+      },
+      {
+        "balance": 9992.81,
+        "minEquity": 9993.039999999999,
+        "maxEquity": 9996.13,
+        "timestamp": 1767700800000
+      },
+      {
+        "balance": 9992.81,
+        "minEquity": 9992.359999999999,
+        "maxEquity": 9994.81,
+        "timestamp": 1767704400000
+      },
+      {
+        "balance": 9991.029999999999,
+        "minEquity": 9991.029999999999,
+        "maxEquity": 9992.359999999999,
+        "timestamp": 1767708000000
+      },
+      {
+        "balance": 9991.029999999999,
+        "minEquity": 9989.509999999998,
+        "maxEquity": 9993.539999999999,
+        "timestamp": 1767711600000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9993.46,
+        "maxEquity": 9996.789999999999,
+        "timestamp": 1767715200000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9996.789999999999,
+        "maxEquity": 9996.789999999999,
+        "timestamp": 1767718800000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9996.789999999999,
+        "maxEquity": 9996.789999999999,
+        "timestamp": 1767722400000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9996.789999999999,
+        "maxEquity": 9996.789999999999,
+        "timestamp": 1767726000000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9996.789999999999,
+        "maxEquity": 9996.789999999999,
+        "timestamp": 1767729600000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9996.789999999999,
+        "maxEquity": 9996.789999999999,
+        "timestamp": 1767769200000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9996.789999999999,
+        "maxEquity": 9996.789999999999,
+        "timestamp": 1767772800000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9996.789999999999,
+        "maxEquity": 9996.789999999999,
+        "timestamp": 1767776400000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9996.789999999999,
+        "maxEquity": 9996.789999999999,
+        "timestamp": 1767780000000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9996.789999999999,
+        "maxEquity": 9996.789999999999,
+        "timestamp": 1767783600000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9996.789999999999,
+        "maxEquity": 9996.789999999999,
+        "timestamp": 1767787200000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9996.789999999999,
+        "maxEquity": 9996.789999999999,
+        "timestamp": 1767790800000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9996.789999999999,
+        "maxEquity": 9996.789999999999,
+        "timestamp": 1767794400000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9996.789999999999,
+        "maxEquity": 9996.789999999999,
+        "timestamp": 1767798000000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9996.789999999999,
+        "maxEquity": 9996.789999999999,
+        "timestamp": 1767801600000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9996.789999999999,
+        "maxEquity": 9996.789999999999,
+        "timestamp": 1767805200000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9996.789999999999,
+        "maxEquity": 9996.789999999999,
+        "timestamp": 1767808800000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9996.789999999999,
+        "maxEquity": 9996.789999999999,
+        "timestamp": 1767812400000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9996.789999999999,
+        "maxEquity": 9996.789999999999,
+        "timestamp": 1767816000000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9996.789999999999,
+        "maxEquity": 9996.789999999999,
+        "timestamp": 1767855600000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9994.679999999998,
+        "maxEquity": 9996.859999999999,
+        "timestamp": 1767859200000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9994.31,
+        "maxEquity": 9996.91,
+        "timestamp": 1767862800000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9994.609999999999,
+        "maxEquity": 9996.869999999999,
+        "timestamp": 1767866400000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9996.259999999998,
+        "maxEquity": 9998.06,
+        "timestamp": 1767870000000
+      },
+      {
+        "balance": 9996.789999999999,
+        "minEquity": 9995.369999999999,
+        "maxEquity": 9997.9,
+        "timestamp": 1767873600000
+      },
+      {
+        "balance": 9999.15,
+        "minEquity": 9996.21,
+        "maxEquity": 9999.15,
+        "timestamp": 1767877200000
+      },
+      {
+        "balance": 9999.15,
+        "minEquity": 9999.15,
+        "maxEquity": 9999.15,
+        "timestamp": 1767880800000
+      },
+      {
+        "balance": 9999.15,
+        "minEquity": 9999.15,
+        "maxEquity": 9999.15,
+        "timestamp": 1767884400000
+      },
+      {
+        "balance": 9999.15,
+        "minEquity": 9998.98,
+        "maxEquity": 10001.279999999999,
+        "timestamp": 1767888000000
+      },
+      {
+        "balance": 9999.15,
+        "minEquity": 9997.8,
+        "maxEquity": 10001.1,
+        "timestamp": 1767891600000
+      },
+      {
+        "balance": 9999.15,
+        "minEquity": 9999.96,
+        "maxEquity": 10001.48,
+        "timestamp": 1767895200000
+      },
+      {
+        "balance": 9999.15,
+        "minEquity": 10000.289999999999,
+        "maxEquity": 10002.14,
+        "timestamp": 1767898800000
+      },
+      {
+        "balance": 9999.15,
+        "minEquity": 10001.73,
+        "maxEquity": 10003.31,
+        "timestamp": 1767902400000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10002.57,
+        "maxEquity": 10003.89,
+        "timestamp": 1767942000000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10003.89,
+        "maxEquity": 10003.89,
+        "timestamp": 1767945600000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10003.89,
+        "maxEquity": 10003.89,
+        "timestamp": 1767949200000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10003.89,
+        "maxEquity": 10003.89,
+        "timestamp": 1767952800000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10003.89,
+        "maxEquity": 10003.89,
+        "timestamp": 1767956400000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10003.89,
+        "maxEquity": 10003.89,
+        "timestamp": 1767960000000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10003.89,
+        "maxEquity": 10003.89,
+        "timestamp": 1767963600000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10003.89,
+        "maxEquity": 10003.89,
+        "timestamp": 1767967200000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10003.89,
+        "maxEquity": 10003.89,
+        "timestamp": 1767970800000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10003.89,
+        "maxEquity": 10003.89,
+        "timestamp": 1767974400000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10003.89,
+        "maxEquity": 10003.89,
+        "timestamp": 1767978000000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10003.89,
+        "maxEquity": 10003.89,
+        "timestamp": 1767981600000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10003.89,
+        "maxEquity": 10003.89,
+        "timestamp": 1767985200000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10003.89,
+        "maxEquity": 10003.89,
+        "timestamp": 1767988800000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10003.89,
+        "maxEquity": 10003.89,
+        "timestamp": 1768201200000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10003.89,
+        "maxEquity": 10003.89,
+        "timestamp": 1768204800000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10003.89,
+        "maxEquity": 10003.89,
+        "timestamp": 1768208400000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10003.89,
+        "maxEquity": 10003.89,
+        "timestamp": 1768212000000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10003.89,
+        "maxEquity": 10003.89,
+        "timestamp": 1768215600000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10003.89,
+        "maxEquity": 10003.89,
+        "timestamp": 1768219200000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10003.89,
+        "maxEquity": 10003.89,
+        "timestamp": 1768222800000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10003.89,
+        "maxEquity": 10004.42,
+        "timestamp": 1768226400000
+      },
+      {
+        "balance": 10003.89,
+        "minEquity": 10002.83,
+        "maxEquity": 10005.38,
+        "timestamp": 1768230000000
+      },
+      {
+        "balance": 10002.109999999999,
+        "minEquity": 10002.109999999999,
+        "maxEquity": 10003.13,
+        "timestamp": 1768233600000
+      },
+      {
+        "balance": 10002.109999999999,
+        "minEquity": 10002.109999999999,
+        "maxEquity": 10002.109999999999,
+        "timestamp": 1768237200000
+      },
+      {
+        "balance": 10002.109999999999,
+        "minEquity": 10002.109999999999,
+        "maxEquity": 10002.109999999999,
+        "timestamp": 1768240800000
+      },
+      {
+        "balance": 10002.109999999999,
+        "minEquity": 10002.109999999999,
+        "maxEquity": 10002.109999999999,
+        "timestamp": 1768244400000
+      },
+      {
+        "balance": 10002.109999999999,
+        "minEquity": 10002.109999999999,
+        "maxEquity": 10002.109999999999,
+        "timestamp": 1768248000000
+      },
+      {
+        "balance": 10002.109999999999,
+        "minEquity": 10002.109999999999,
+        "maxEquity": 10002.109999999999,
+        "timestamp": 1768287600000
+      },
+      {
+        "balance": 10002.109999999999,
+        "minEquity": 10002.109999999999,
+        "maxEquity": 10002.109999999999,
+        "timestamp": 1768291200000
+      },
+      {
+        "balance": 10004.319999999998,
+        "minEquity": 10001.779999999999,
+        "maxEquity": 10004.319999999998,
+        "timestamp": 1768294800000
+      },
+      {
+        "balance": 10004.319999999998,
+        "minEquity": 10004.319999999998,
+        "maxEquity": 10004.319999999998,
+        "timestamp": 1768298400000
+      },
+      {
+        "balance": 10004.319999999998,
+        "minEquity": 10004.319999999998,
+        "maxEquity": 10004.319999999998,
+        "timestamp": 1768302000000
+      },
+      {
+        "balance": 10004.319999999998,
+        "minEquity": 10004.319999999998,
+        "maxEquity": 10004.319999999998,
+        "timestamp": 1768305600000
+      },
+      {
+        "balance": 10004.319999999998,
+        "minEquity": 10004.319999999998,
+        "maxEquity": 10004.319999999998,
+        "timestamp": 1768309200000
+      },
+      {
+        "balance": 10004.319999999998,
+        "minEquity": 10004.319999999998,
+        "maxEquity": 10004.319999999998,
+        "timestamp": 1768312800000
+      },
+      {
+        "balance": 10004.319999999998,
+        "minEquity": 10004.319999999998,
+        "maxEquity": 10004.319999999998,
+        "timestamp": 1768316400000
+      },
+      {
+        "balance": 10004.319999999998,
+        "minEquity": 10004.319999999998,
+        "maxEquity": 10004.319999999998,
+        "timestamp": 1768320000000
+      },
+      {
+        "balance": 10004.319999999998,
+        "minEquity": 10004.319999999998,
+        "maxEquity": 10004.319999999998,
+        "timestamp": 1768323600000
+      },
+      {
+        "balance": 10004.319999999998,
+        "minEquity": 10003.409999999998,
+        "maxEquity": 10004.649999999998,
+        "timestamp": 1768327200000
+      },
+      {
+        "balance": 10004.319999999998,
+        "minEquity": 10002.829999999998,
+        "maxEquity": 10004.069999999998,
+        "timestamp": 1768330800000
+      },
+      {
+        "balance": 10004.319999999998,
+        "minEquity": 10002.549999999997,
+        "maxEquity": 10003.809999999998,
+        "timestamp": 1768334400000
+      },
+      {
+        "balance": 10002.159999999998,
+        "minEquity": 10002.159999999998,
+        "maxEquity": 10003.639999999998,
+        "timestamp": 1768374000000
+      },
+      {
+        "balance": 10002.159999999998,
+        "minEquity": 10002.159999999998,
+        "maxEquity": 10002.159999999998,
+        "timestamp": 1768377600000
+      },
+      {
+        "balance": 10002.159999999998,
+        "minEquity": 10002.159999999998,
+        "maxEquity": 10002.159999999998,
+        "timestamp": 1768381200000
+      },
+      {
+        "balance": 10002.159999999998,
+        "minEquity": 10002.159999999998,
+        "maxEquity": 10002.159999999998,
+        "timestamp": 1768384800000
+      },
+      {
+        "balance": 10002.159999999998,
+        "minEquity": 10002.159999999998,
+        "maxEquity": 10002.159999999998,
+        "timestamp": 1768388400000
+      },
+      {
+        "balance": 10002.159999999998,
+        "minEquity": 10002.159999999998,
+        "maxEquity": 10002.159999999998,
+        "timestamp": 1768392000000
+      },
+      {
+        "balance": 10002.159999999998,
+        "minEquity": 10002.159999999998,
+        "maxEquity": 10002.159999999998,
+        "timestamp": 1768395600000
+      },
+      {
+        "balance": 10002.159999999998,
+        "minEquity": 10002.159999999998,
+        "maxEquity": 10002.159999999998,
+        "timestamp": 1768399200000
+      },
+      {
+        "balance": 10002.159999999998,
+        "minEquity": 10002.159999999998,
+        "maxEquity": 10002.159999999998,
+        "timestamp": 1768402800000
+      },
+      {
+        "balance": 10002.159999999998,
+        "minEquity": 10002.159999999998,
+        "maxEquity": 10002.159999999998,
+        "timestamp": 1768406400000
+      },
+      {
+        "balance": 10002.159999999998,
+        "minEquity": 10002.159999999998,
+        "maxEquity": 10002.159999999998,
+        "timestamp": 1768410000000
+      },
+      {
+        "balance": 10002.159999999998,
+        "minEquity": 10002.159999999998,
+        "maxEquity": 10002.159999999998,
+        "timestamp": 1768413600000
+      },
+      {
+        "balance": 10002.159999999998,
+        "minEquity": 10002.159999999998,
+        "maxEquity": 10002.159999999998,
+        "timestamp": 1768417200000
+      },
+      {
+        "balance": 10002.159999999998,
+        "minEquity": 10002.159999999998,
+        "maxEquity": 10002.159999999998,
+        "timestamp": 1768420800000
+      },
+      {
+        "balance": 10002.159999999998,
+        "minEquity": 10002.159999999998,
+        "maxEquity": 10002.159999999998,
+        "timestamp": 1768460400000
+      },
+      {
+        "balance": 10002.159999999998,
+        "minEquity": 9999.529999999999,
+        "maxEquity": 10002.739999999998,
+        "timestamp": 1768464000000
+      },
+      {
+        "balance": 9995.839999999998,
+        "minEquity": 9995.839999999998,
+        "maxEquity": 9999.619999999997,
+        "timestamp": 1768467600000
+      },
+      {
+        "balance": 9995.839999999998,
+        "minEquity": 9995.839999999998,
+        "maxEquity": 9995.839999999998,
+        "timestamp": 1768471200000
+      },
+      {
+        "balance": 9992.739999999998,
+        "minEquity": 9992.739999999998,
+        "maxEquity": 9996.569999999998,
+        "timestamp": 1768474800000
+      },
+      {
+        "balance": 9992.739999999998,
+        "minEquity": 9992.739999999998,
+        "maxEquity": 9992.739999999998,
+        "timestamp": 1768478400000
+      },
+      {
+        "balance": 9992.739999999998,
+        "minEquity": 9992.739999999998,
+        "maxEquity": 9992.739999999998,
+        "timestamp": 1768482000000
+      },
+      {
+        "balance": 9992.739999999998,
+        "minEquity": 9992.739999999998,
+        "maxEquity": 9992.739999999998,
+        "timestamp": 1768485600000
+      },
+      {
+        "balance": 9992.739999999998,
+        "minEquity": 9992.739999999998,
+        "maxEquity": 9992.739999999998,
+        "timestamp": 1768489200000
+      },
+      {
+        "balance": 9992.739999999998,
+        "minEquity": 9992.739999999998,
+        "maxEquity": 9992.739999999998,
+        "timestamp": 1768492800000
+      },
+      {
+        "balance": 9992.739999999998,
+        "minEquity": 9992.739999999998,
+        "maxEquity": 9992.739999999998,
+        "timestamp": 1768496400000
+      },
+      {
+        "balance": 9992.739999999998,
+        "minEquity": 9992.739999999998,
+        "maxEquity": 9992.739999999998,
+        "timestamp": 1768500000000
+      },
+      {
+        "balance": 9992.739999999998,
+        "minEquity": 9992.739999999998,
+        "maxEquity": 9992.739999999998,
+        "timestamp": 1768503600000
+      },
+      {
+        "balance": 9992.739999999998,
+        "minEquity": 9992.739999999998,
+        "maxEquity": 9992.739999999998,
+        "timestamp": 1768507200000
+      },
+      {
+        "balance": 9992.739999999998,
+        "minEquity": 9992.739999999998,
+        "maxEquity": 9992.739999999998,
+        "timestamp": 1768546800000
+      },
+      {
+        "balance": 9992.739999999998,
+        "minEquity": 9992.739999999998,
+        "maxEquity": 9992.739999999998,
+        "timestamp": 1768550400000
+      },
+      {
+        "balance": 9992.739999999998,
+        "minEquity": 9992.739999999998,
+        "maxEquity": 9992.739999999998,
+        "timestamp": 1768554000000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9992.739999999998,
+        "timestamp": 1768557600000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768561200000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768564800000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768568400000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768572000000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768575600000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768579200000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768582800000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768586400000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768590000000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768593600000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768806000000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768809600000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768813200000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768816800000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768820400000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768824000000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768827600000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768831200000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768834800000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768838400000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768842000000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768845600000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768849200000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768852800000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768892400000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768896000000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768899600000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768903200000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768906800000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768910400000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768914000000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768917600000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768921200000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768924800000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768928400000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768932000000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768935600000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768939200000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9990.609999999999,
+        "maxEquity": 9990.609999999999,
+        "timestamp": 1768978800000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9989.289999999999,
+        "maxEquity": 9992.05,
+        "timestamp": 1768982400000
+      },
+      {
+        "balance": 9990.609999999999,
+        "minEquity": 9988.349999999999,
+        "maxEquity": 9992.099999999999,
+        "timestamp": 1768986000000
+      },
+      {
+        "balance": 9987.189999999999,
+        "minEquity": 9987.189999999999,
+        "maxEquity": 9990.329999999998,
+        "timestamp": 1768989600000
+      },
+      {
+        "balance": 9987.189999999999,
+        "minEquity": 9987.189999999999,
+        "maxEquity": 9987.189999999999,
+        "timestamp": 1768993200000
+      },
+      {
+        "balance": 9987.189999999999,
+        "minEquity": 9987.019999999999,
+        "maxEquity": 9987.769999999999,
+        "timestamp": 1768996800000
+      },
+      {
+        "balance": 9987.189999999999,
+        "minEquity": 9985.869999999999,
+        "maxEquity": 9988.509999999998,
+        "timestamp": 1769000400000
+      },
+      {
+        "balance": 9987.189999999999,
+        "minEquity": 9987.069999999998,
+        "maxEquity": 9990.56,
+        "timestamp": 1769004000000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9983.31,
+        "maxEquity": 9987.829999999998,
+        "timestamp": 1769007600000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9983.31,
+        "maxEquity": 9983.31,
+        "timestamp": 1769011200000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9983.31,
+        "maxEquity": 9983.31,
+        "timestamp": 1769014800000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9983.31,
+        "maxEquity": 9983.31,
+        "timestamp": 1769018400000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9983.31,
+        "maxEquity": 9983.31,
+        "timestamp": 1769022000000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9983.31,
+        "maxEquity": 9983.31,
+        "timestamp": 1769025600000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9983.31,
+        "maxEquity": 9983.31,
+        "timestamp": 1769065200000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9983.31,
+        "maxEquity": 9983.31,
+        "timestamp": 1769068800000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9983.31,
+        "maxEquity": 9983.31,
+        "timestamp": 1769072400000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9983.31,
+        "maxEquity": 9983.31,
+        "timestamp": 1769076000000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9983.31,
+        "maxEquity": 9983.31,
+        "timestamp": 1769079600000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9983.31,
+        "maxEquity": 9983.31,
+        "timestamp": 1769083200000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9983.31,
+        "maxEquity": 9983.31,
+        "timestamp": 1769086800000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9983.31,
+        "maxEquity": 9983.31,
+        "timestamp": 1769090400000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9983.31,
+        "maxEquity": 9983.31,
+        "timestamp": 1769094000000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9983.31,
+        "maxEquity": 9983.31,
+        "timestamp": 1769097600000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9983.31,
+        "maxEquity": 9983.31,
+        "timestamp": 1769101200000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9981.529999999999,
+        "maxEquity": 9983.31,
+        "timestamp": 1769104800000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9981.609999999999,
+        "maxEquity": 9982.93,
+        "timestamp": 1769108400000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9981.199999999999,
+        "maxEquity": 9984.09,
+        "timestamp": 1769112000000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9982.519999999999,
+        "maxEquity": 9986.01,
+        "timestamp": 1769151600000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9986.01,
+        "maxEquity": 9988.81,
+        "timestamp": 1769155200000
+      },
+      {
+        "balance": 9983.31,
+        "minEquity": 9982.31,
+        "maxEquity": 9987.859999999999,
+        "timestamp": 1769158800000
+      },
+      {
+        "balance": 9980.439999999999,
+        "minEquity": 9980.439999999999,
+        "maxEquity": 9984.84,
+        "timestamp": 1769162400000
+      },
+      {
+        "balance": 9980.439999999999,
+        "minEquity": 9980.439999999999,
+        "maxEquity": 9980.439999999999,
+        "timestamp": 1769166000000
+      },
+      {
+        "balance": 9980.439999999999,
+        "minEquity": 9980.439999999999,
+        "maxEquity": 9980.439999999999,
+        "timestamp": 1769169600000
+      },
+      {
+        "balance": 9980.439999999999,
+        "minEquity": 9980.439999999999,
+        "maxEquity": 9980.439999999999,
+        "timestamp": 1769173200000
+      },
+      {
+        "balance": 9980.439999999999,
+        "minEquity": 9980.439999999999,
+        "maxEquity": 9980.439999999999,
+        "timestamp": 1769176800000
+      },
+      {
+        "balance": 9980.439999999999,
+        "minEquity": 9980.439999999999,
+        "maxEquity": 9980.439999999999,
+        "timestamp": 1769180400000
+      },
+      {
+        "balance": 9980.439999999999,
+        "minEquity": 9980.439999999999,
+        "maxEquity": 9980.439999999999,
+        "timestamp": 1769184000000
+      },
+      {
+        "balance": 9980.439999999999,
+        "minEquity": 9979.449999999999,
+        "maxEquity": 9980.439999999999,
+        "timestamp": 1769187600000
+      },
+      {
+        "balance": 9978.05,
+        "minEquity": 9978.05,
+        "maxEquity": 9980.56,
+        "timestamp": 1769191200000
+      },
+      {
+        "balance": 9978.05,
+        "minEquity": 9978.05,
+        "maxEquity": 9978.05,
+        "timestamp": 1769194800000
+      },
+      {
+        "balance": 9978.05,
+        "minEquity": 9978.05,
+        "maxEquity": 9978.05,
+        "timestamp": 1769198400000
+      },
+      {
+        "balance": 9978.05,
+        "minEquity": 9978.05,
+        "maxEquity": 9978.05,
+        "timestamp": 1769410800000
+      },
+      {
+        "balance": 9978.05,
+        "minEquity": 9977.359999999999,
+        "maxEquity": 9979.699999999999,
+        "timestamp": 1769414400000
+      },
+      {
+        "balance": 9974.05,
+        "minEquity": 9974.05,
+        "maxEquity": 9977.519999999999,
+        "timestamp": 1769418000000
+      },
+      {
+        "balance": 9974.05,
+        "minEquity": 9974.05,
+        "maxEquity": 9974.05,
+        "timestamp": 1769421600000
+      },
+      {
+        "balance": 9974.05,
+        "minEquity": 9974.05,
+        "maxEquity": 9974.05,
+        "timestamp": 1769425200000
+      },
+      {
+        "balance": 9974.05,
+        "minEquity": 9974.05,
+        "maxEquity": 9974.05,
+        "timestamp": 1769428800000
+      },
+      {
+        "balance": 9974.05,
+        "minEquity": 9974.05,
+        "maxEquity": 9974.05,
+        "timestamp": 1769432400000
+      },
+      {
+        "balance": 9974.05,
+        "minEquity": 9974.05,
+        "maxEquity": 9974.05,
+        "timestamp": 1769436000000
+      },
+      {
+        "balance": 9974.05,
+        "minEquity": 9973.97,
+        "maxEquity": 9976.48,
+        "timestamp": 1769439600000
+      },
+      {
+        "balance": 9972.019999999999,
+        "minEquity": 9972.019999999999,
+        "maxEquity": 9976.25,
+        "timestamp": 1769443200000
+      },
+      {
+        "balance": 9972.019999999999,
+        "minEquity": 9972.019999999999,
+        "maxEquity": 9972.019999999999,
+        "timestamp": 1769446800000
+      },
+      {
+        "balance": 9972.019999999999,
+        "minEquity": 9972.019999999999,
+        "maxEquity": 9972.019999999999,
+        "timestamp": 1769450400000
+      },
+      {
+        "balance": 9972.019999999999,
+        "minEquity": 9972.019999999999,
+        "maxEquity": 9972.019999999999,
+        "timestamp": 1769454000000
+      },
+      {
+        "balance": 9972.019999999999,
+        "minEquity": 9972.019999999999,
+        "maxEquity": 9972.019999999999,
+        "timestamp": 1769457600000
+      },
+      {
+        "balance": 9972.019999999999,
+        "minEquity": 9972.019999999999,
+        "maxEquity": 9972.019999999999,
+        "timestamp": 1769497200000
+      },
+      {
+        "balance": 9972.019999999999,
+        "minEquity": 9972.019999999999,
+        "maxEquity": 9972.019999999999,
+        "timestamp": 1769500800000
+      },
+      {
+        "balance": 9972.019999999999,
+        "minEquity": 9972.019999999999,
+        "maxEquity": 9972.019999999999,
+        "timestamp": 1769504400000
+      },
+      {
+        "balance": 9972.019999999999,
+        "minEquity": 9972.019999999999,
+        "maxEquity": 9972.019999999999,
+        "timestamp": 1769508000000
+      },
+      {
+        "balance": 9972.019999999999,
+        "minEquity": 9972.019999999999,
+        "maxEquity": 9972.019999999999,
+        "timestamp": 1769511600000
+      },
+      {
+        "balance": 9972.019999999999,
+        "minEquity": 9972.019999999999,
+        "maxEquity": 9972.019999999999,
+        "timestamp": 1769515200000
+      },
+      {
+        "balance": 9972.019999999999,
+        "minEquity": 9971.409999999998,
+        "maxEquity": 9972.47,
+        "timestamp": 1769518800000
+      },
+      {
+        "balance": 9972.019999999999,
+        "minEquity": 9970.96,
+        "maxEquity": 9973.269999999999,
+        "timestamp": 1769522400000
+      },
+      {
+        "balance": 9972.019999999999,
+        "minEquity": 9970.529999999999,
+        "maxEquity": 9972.47,
+        "timestamp": 1769526000000
+      },
+      {
+        "balance": 9970.069999999998,
+        "minEquity": 9970.069999999998,
+        "maxEquity": 9971.179999999998,
+        "timestamp": 1769529600000
+      },
+      {
+        "balance": 9970.069999999998,
+        "minEquity": 9970.069999999998,
+        "maxEquity": 9970.069999999998,
+        "timestamp": 1769533200000
+      },
+      {
+        "balance": 9970.069999999998,
+        "minEquity": 9970.069999999998,
+        "maxEquity": 9970.069999999998,
+        "timestamp": 1769536800000
+      },
+      {
+        "balance": 9970.069999999998,
+        "minEquity": 9970.069999999998,
+        "maxEquity": 9970.069999999998,
+        "timestamp": 1769540400000
+      },
+      {
+        "balance": 9970.069999999998,
+        "minEquity": 9970.069999999998,
+        "maxEquity": 9970.069999999998,
+        "timestamp": 1769544000000
+      },
+      {
+        "balance": 9970.069999999998,
+        "minEquity": 9970.069999999998,
+        "maxEquity": 9970.069999999998,
+        "timestamp": 1769583600000
+      },
+      {
+        "balance": 9970.069999999998,
+        "minEquity": 9970.069999999998,
+        "maxEquity": 9970.069999999998,
+        "timestamp": 1769587200000
+      },
+      {
+        "balance": 9966.319999999998,
+        "minEquity": 9966.319999999998,
+        "maxEquity": 9970.069999999998,
+        "timestamp": 1769590800000
+      },
+      {
+        "balance": 9966.319999999998,
+        "minEquity": 9966.319999999998,
+        "maxEquity": 9966.319999999998,
+        "timestamp": 1769594400000
+      },
+      {
+        "balance": 9966.319999999998,
+        "minEquity": 9966.319999999998,
+        "maxEquity": 9966.319999999998,
+        "timestamp": 1769598000000
+      },
+      {
+        "balance": 9966.319999999998,
+        "minEquity": 9966.319999999998,
+        "maxEquity": 9966.319999999998,
+        "timestamp": 1769601600000
+      },
+      {
+        "balance": 9966.319999999998,
+        "minEquity": 9966.319999999998,
+        "maxEquity": 9966.319999999998,
+        "timestamp": 1769605200000
+      },
+      {
+        "balance": 9966.319999999998,
+        "minEquity": 9966.319999999998,
+        "maxEquity": 9966.319999999998,
+        "timestamp": 1769608800000
+      },
+      {
+        "balance": 9966.319999999998,
+        "minEquity": 9966.319999999998,
+        "maxEquity": 9966.319999999998,
+        "timestamp": 1769612400000
+      },
+      {
+        "balance": 9966.319999999998,
+        "minEquity": 9966.319999999998,
+        "maxEquity": 9966.319999999998,
+        "timestamp": 1769616000000
+      },
+      {
+        "balance": 9966.319999999998,
+        "minEquity": 9966.319999999998,
+        "maxEquity": 9966.319999999998,
+        "timestamp": 1769619600000
+      },
+      {
+        "balance": 9966.319999999998,
+        "minEquity": 9966.319999999998,
+        "maxEquity": 9966.319999999998,
+        "timestamp": 1769623200000
+      },
+      {
+        "balance": 9966.319999999998,
+        "minEquity": 9966.319999999998,
+        "maxEquity": 9966.319999999998,
+        "timestamp": 1769626800000
+      },
+      {
+        "balance": 9966.319999999998,
+        "minEquity": 9966.319999999998,
+        "maxEquity": 9966.319999999998,
+        "timestamp": 1769630400000
+      },
+      {
+        "balance": 9966.319999999998,
+        "minEquity": 9966.319999999998,
+        "maxEquity": 9966.319999999998,
+        "timestamp": 1769670000000
+      },
+      {
+        "balance": 9966.319999999998,
+        "minEquity": 9966.319999999998,
+        "maxEquity": 9966.319999999998,
+        "timestamp": 1769673600000
+      },
+      {
+        "balance": 9966.319999999998,
+        "minEquity": 9966.319999999998,
+        "maxEquity": 9966.319999999998,
+        "timestamp": 1769677200000
+      },
+      {
+        "balance": 9966.319999999998,
+        "minEquity": 9966.319999999998,
+        "maxEquity": 9966.319999999998,
+        "timestamp": 1769680800000
+      },
+      {
+        "balance": 9966.319999999998,
+        "minEquity": 9966.319999999998,
+        "maxEquity": 9966.319999999998,
+        "timestamp": 1769684400000
+      },
+      {
+        "balance": 9966.319999999998,
+        "minEquity": 9966.319999999998,
+        "maxEquity": 9966.319999999998,
+        "timestamp": 1769688000000
+      },
+      {
+        "balance": 9966.319999999998,
+        "minEquity": 9966.319999999998,
+        "maxEquity": 9966.319999999998,
+        "timestamp": 1769691600000
+      },
+      {
+        "balance": 9966.319999999998,
+        "minEquity": 9966.319999999998,
+        "maxEquity": 9966.319999999998,
+        "timestamp": 1769695200000
+      },
+      {
+        "balance": 9966.319999999998,
+        "minEquity": 9966.319999999998,
+        "maxEquity": 9966.319999999998,
+        "timestamp": 1769698800000
+      },
+      {
+        "balance": 9962.559999999998,
+        "minEquity": 9962.559999999998,
+        "maxEquity": 9966.319999999998,
+        "timestamp": 1769702400000
+      },
+      {
+        "balance": 9962.559999999998,
+        "minEquity": 9962.559999999998,
+        "maxEquity": 9962.559999999998,
+        "timestamp": 1769706000000
+      },
+      {
+        "balance": 9962.559999999998,
+        "minEquity": 9962.559999999998,
+        "maxEquity": 9962.559999999998,
+        "timestamp": 1769709600000
+      },
+      {
+        "balance": 9962.559999999998,
+        "minEquity": 9962.559999999998,
+        "maxEquity": 9962.559999999998,
+        "timestamp": 1769713200000
+      },
+      {
+        "balance": 9962.559999999998,
+        "minEquity": 9962.559999999998,
+        "maxEquity": 9962.559999999998,
+        "timestamp": 1769716800000
+      },
+      {
+        "balance": 9962.559999999998,
+        "minEquity": 9962.559999999998,
+        "maxEquity": 9962.559999999998,
+        "timestamp": 1769756400000
+      },
+      {
+        "balance": 9962.559999999998,
+        "minEquity": 9962.559999999998,
+        "maxEquity": 9962.559999999998,
+        "timestamp": 1769760000000
+      },
+      {
+        "balance": 9962.559999999998,
+        "minEquity": 9962.559999999998,
+        "maxEquity": 9962.559999999998,
+        "timestamp": 1769763600000
+      },
+      {
+        "balance": 9959.669999999998,
+        "minEquity": 9959.669999999998,
+        "maxEquity": 9962.969999999998,
+        "timestamp": 1769767200000
+      },
+      {
+        "balance": 9959.669999999998,
+        "minEquity": 9959.669999999998,
+        "maxEquity": 9959.669999999998,
+        "timestamp": 1769770800000
+      },
+      {
+        "balance": 9959.669999999998,
+        "minEquity": 9959.499999999998,
+        "maxEquity": 9962.429999999998,
+        "timestamp": 1769774400000
+      },
+      {
+        "balance": 9959.669999999998,
+        "minEquity": 9961.679999999998,
+        "maxEquity": 9963.829999999998,
+        "timestamp": 1769778000000
+      },
+      {
+        "balance": 9959.669999999998,
+        "minEquity": 9959.549999999997,
+        "maxEquity": 9962.149999999998,
+        "timestamp": 1769781600000
+      },
+      {
+        "balance": 9959.669999999998,
+        "minEquity": 9959.549999999997,
+        "maxEquity": 9963.339999999998,
+        "timestamp": 1769785200000
+      },
+      {
+        "balance": 9959.669999999998,
+        "minEquity": 9960.479999999998,
+        "maxEquity": 9964.159999999998,
+        "timestamp": 1769788800000
+      },
+      {
+        "balance": 9959.669999999998,
+        "minEquity": 9958.939999999999,
+        "maxEquity": 9963.649999999998,
+        "timestamp": 1769792400000
+      },
+      {
+        "balance": 9959.669999999998,
+        "minEquity": 9958.749999999998,
+        "maxEquity": 9961.779999999999,
+        "timestamp": 1769796000000
+      },
+      {
+        "balance": 9956.269999999999,
+        "minEquity": 9956.269999999999,
+        "maxEquity": 9959.979999999998,
+        "timestamp": 1769799600000
+      },
+      {
+        "balance": 9956.269999999999,
+        "minEquity": 9956.269999999999,
+        "maxEquity": 9956.269999999999,
+        "timestamp": 1769803200000
+      },
+      {
+        "balance": 9956.269999999999,
+        "minEquity": 9956.269999999999,
+        "maxEquity": 9956.269999999999,
+        "timestamp": 1770015600000
+      },
+      {
+        "balance": 9956.269999999999,
+        "minEquity": 9949.779999999999,
+        "maxEquity": 9958.449999999999,
+        "timestamp": 1770019200000
+      },
+      {
+        "balance": 9947.849999999999,
+        "minEquity": 9947.849999999999,
+        "maxEquity": 9949.779999999999,
+        "timestamp": 1770022800000
+      },
+      {
+        "balance": 9947.849999999999,
+        "minEquity": 9946.939999999999,
+        "maxEquity": 9949.479999999998,
+        "timestamp": 1770026400000
+      },
+      {
+        "balance": 9947.849999999999,
+        "minEquity": 9948.029999999999,
+        "maxEquity": 9951.319999999998,
+        "timestamp": 1770030000000
+      },
+      {
+        "balance": 9947.849999999999,
+        "minEquity": 9951.229999999998,
+        "maxEquity": 9953.809999999998,
+        "timestamp": 1770033600000
+      },
+      {
+        "balance": 9957.109999999999,
+        "minEquity": 9953.329999999998,
+        "maxEquity": 9957.109999999999,
+        "timestamp": 1770037200000
+      },
+      {
+        "balance": 9957.109999999999,
+        "minEquity": 9957.109999999999,
+        "maxEquity": 9957.109999999999,
+        "timestamp": 1770040800000
+      },
+      {
+        "balance": 9957.109999999999,
+        "minEquity": 9957.109999999999,
+        "maxEquity": 9957.109999999999,
+        "timestamp": 1770044400000
+      },
+      {
+        "balance": 9957.109999999999,
+        "minEquity": 9957.109999999999,
+        "maxEquity": 9957.109999999999,
+        "timestamp": 1770048000000
+      },
+      {
+        "balance": 9957.109999999999,
+        "minEquity": 9957.109999999999,
+        "maxEquity": 9957.109999999999,
+        "timestamp": 1770051600000
+      },
+      {
+        "balance": 9957.109999999999,
+        "minEquity": 9957.109999999999,
+        "maxEquity": 9957.109999999999,
+        "timestamp": 1770055200000
+      },
+      {
+        "balance": 9957.109999999999,
+        "minEquity": 9957.109999999999,
+        "maxEquity": 9957.109999999999,
+        "timestamp": 1770058800000
+      },
+      {
+        "balance": 9957.109999999999,
+        "minEquity": 9957.109999999999,
+        "maxEquity": 9957.109999999999,
+        "timestamp": 1770062400000
+      },
+      {
+        "balance": 9957.109999999999,
+        "minEquity": 9957.109999999999,
+        "maxEquity": 9957.109999999999,
+        "timestamp": 1770102000000
+      },
+      {
+        "balance": 9957.109999999999,
+        "minEquity": 9957.109999999999,
+        "maxEquity": 9957.109999999999,
+        "timestamp": 1770105600000
+      },
+      {
+        "balance": 9957.109999999999,
+        "minEquity": 9957.109999999999,
+        "maxEquity": 9957.109999999999,
+        "timestamp": 1770109200000
+      },
+      {
+        "balance": 9957.109999999999,
+        "minEquity": 9957.109999999999,
+        "maxEquity": 9957.109999999999,
+        "timestamp": 1770112800000
+      },
+      {
+        "balance": 9957.109999999999,
+        "minEquity": 9957.109999999999,
+        "maxEquity": 9957.109999999999,
+        "timestamp": 1770116400000
+      },
+      {
+        "balance": 9957.109999999999,
+        "minEquity": 9956.579999999998,
+        "maxEquity": 9960.31,
+        "timestamp": 1770120000000
+      },
+      {
+        "balance": 9957.109999999999,
+        "minEquity": 9956.419999999998,
+        "maxEquity": 9958.929999999998,
+        "timestamp": 1770123600000
+      },
+      {
+        "balance": 9957.109999999999,
+        "minEquity": 9957.949999999999,
+        "maxEquity": 9961.159999999998,
+        "timestamp": 1770127200000
+      },
+      {
+        "balance": 9964.769999999999,
+        "minEquity": 9960.589999999998,
+        "maxEquity": 9964.769999999999,
+        "timestamp": 1770130800000
+      },
+      {
+        "balance": 9964.769999999999,
+        "minEquity": 9964.769999999999,
+        "maxEquity": 9964.769999999999,
+        "timestamp": 1770134400000
+      },
+      {
+        "balance": 9964.769999999999,
+        "minEquity": 9964.769999999999,
+        "maxEquity": 9964.769999999999,
+        "timestamp": 1770138000000
+      },
+      {
+        "balance": 9964.769999999999,
+        "minEquity": 9964.769999999999,
+        "maxEquity": 9964.769999999999,
+        "timestamp": 1770141600000
+      },
+      {
+        "balance": 9964.769999999999,
+        "minEquity": 9964.769999999999,
+        "maxEquity": 9964.769999999999,
+        "timestamp": 1770145200000
+      },
+      {
+        "balance": 9964.769999999999,
+        "minEquity": 9964.769999999999,
+        "maxEquity": 9964.769999999999,
+        "timestamp": 1770148800000
+      },
+      {
+        "balance": 9964.769999999999,
+        "minEquity": 9964.769999999999,
+        "maxEquity": 9964.769999999999,
+        "timestamp": 1770188400000
+      },
+      {
+        "balance": 9964.769999999999,
+        "minEquity": 9964.769999999999,
+        "maxEquity": 9967.279999999999,
+        "timestamp": 1770192000000
+      },
+      {
+        "balance": 9964.769999999999,
+        "minEquity": 9964.689999999999,
+        "maxEquity": 9969.839999999998,
+        "timestamp": 1770195600000
+      },
+      {
+        "balance": 9964.769999999999,
+        "minEquity": 9964.13,
+        "maxEquity": 9967.259999999998,
+        "timestamp": 1770199200000
+      },
+      {
+        "balance": 9970.569999999998,
+        "minEquity": 9966.689999999999,
+        "maxEquity": 9970.569999999998,
+        "timestamp": 1770202800000
+      },
+      {
+        "balance": 9970.569999999998,
+        "minEquity": 9970.569999999998,
+        "maxEquity": 9970.569999999998,
+        "timestamp": 1770206400000
+      },
+      {
+        "balance": 9970.569999999998,
+        "minEquity": 9970.569999999998,
+        "maxEquity": 9970.569999999998,
+        "timestamp": 1770210000000
+      },
+      {
+        "balance": 9970.569999999998,
+        "minEquity": 9970.569999999998,
+        "maxEquity": 9970.569999999998,
+        "timestamp": 1770213600000
+      },
+      {
+        "balance": 9970.569999999998,
+        "minEquity": 9970.569999999998,
+        "maxEquity": 9970.569999999998,
+        "timestamp": 1770217200000
+      },
+      {
+        "balance": 9970.569999999998,
+        "minEquity": 9970.569999999998,
+        "maxEquity": 9970.569999999998,
+        "timestamp": 1770220800000
+      },
+      {
+        "balance": 9970.569999999998,
+        "minEquity": 9970.569999999998,
+        "maxEquity": 9970.569999999998,
+        "timestamp": 1770224400000
+      },
+      {
+        "balance": 9970.569999999998,
+        "minEquity": 9970.569999999998,
+        "maxEquity": 9970.569999999998,
+        "timestamp": 1770228000000
+      },
+      {
+        "balance": 9970.569999999998,
+        "minEquity": 9970.569999999998,
+        "maxEquity": 9970.569999999998,
+        "timestamp": 1770231600000
+      },
+      {
+        "balance": 9970.569999999998,
+        "minEquity": 9970.569999999998,
+        "maxEquity": 9970.569999999998,
+        "timestamp": 1770235200000
+      },
+      {
+        "balance": 9970.569999999998,
+        "minEquity": 9970.569999999998,
+        "maxEquity": 9970.569999999998,
+        "timestamp": 1770274800000
+      },
+      {
+        "balance": 9970.569999999998,
+        "minEquity": 9970.569999999998,
+        "maxEquity": 9970.569999999998,
+        "timestamp": 1770278400000
+      },
+      {
+        "balance": 9970.569999999998,
+        "minEquity": 9970.569999999998,
+        "maxEquity": 9970.569999999998,
+        "timestamp": 1770282000000
+      },
+      {
+        "balance": 9970.569999999998,
+        "minEquity": 9970.569999999998,
+        "maxEquity": 9970.569999999998,
+        "timestamp": 1770285600000
+      },
+      {
+        "balance": 9970.569999999998,
+        "minEquity": 9970.569999999998,
+        "maxEquity": 9970.569999999998,
+        "timestamp": 1770289200000
+      },
+      {
+        "balance": 9970.569999999998,
+        "minEquity": 9970.569999999998,
+        "maxEquity": 9970.569999999998,
+        "timestamp": 1770292800000
+      },
+      {
+        "balance": 9970.569999999998,
+        "minEquity": 9970.569999999998,
+        "maxEquity": 9970.569999999998,
+        "timestamp": 1770296400000
+      },
+      {
+        "balance": 9970.569999999998,
+        "minEquity": 9970.489999999998,
+        "maxEquity": 9971.479999999998,
+        "timestamp": 1770300000000
+      },
+      {
+        "balance": 9970.569999999998,
+        "minEquity": 9968.999999999998,
+        "maxEquity": 9973.949999999997,
+        "timestamp": 1770303600000
+      },
+      {
+        "balance": 9970.569999999998,
+        "minEquity": 9972.019999999999,
+        "maxEquity": 9975.999999999998,
+        "timestamp": 1770307200000
+      },
+      {
+        "balance": 9966.619999999997,
+        "minEquity": 9966.619999999997,
+        "maxEquity": 9974.679999999998,
+        "timestamp": 1770310800000
+      },
+      {
+        "balance": 9966.619999999997,
+        "minEquity": 9966.619999999997,
+        "maxEquity": 9966.619999999997,
+        "timestamp": 1770314400000
+      },
+      {
+        "balance": 9966.619999999997,
+        "minEquity": 9966.619999999997,
+        "maxEquity": 9966.619999999997,
+        "timestamp": 1770318000000
+      },
+      {
+        "balance": 9966.619999999997,
+        "minEquity": 9966.619999999997,
+        "maxEquity": 9966.619999999997,
+        "timestamp": 1770321600000
+      },
+      {
+        "balance": 9966.619999999997,
+        "minEquity": 9966.619999999997,
+        "maxEquity": 9966.619999999997,
+        "timestamp": 1770361200000
+      },
+      {
+        "balance": 9966.619999999997,
+        "minEquity": 9966.619999999997,
+        "maxEquity": 9966.619999999997,
+        "timestamp": 1770364800000
+      },
+      {
+        "balance": 9966.619999999997,
+        "minEquity": 9966.619999999997,
+        "maxEquity": 9966.619999999997,
+        "timestamp": 1770368400000
+      },
+      {
+        "balance": 9966.619999999997,
+        "minEquity": 9966.619999999997,
+        "maxEquity": 9966.619999999997,
+        "timestamp": 1770372000000
+      },
+      {
+        "balance": 9966.619999999997,
+        "minEquity": 9966.619999999997,
+        "maxEquity": 9966.619999999997,
+        "timestamp": 1770375600000
+      },
+      {
+        "balance": 9966.619999999997,
+        "minEquity": 9964.229999999998,
+        "maxEquity": 9966.619999999997,
+        "timestamp": 1770379200000
+      },
+      {
+        "balance": 9966.619999999997,
+        "minEquity": 9963.959999999997,
+        "maxEquity": 9966.879999999997,
+        "timestamp": 1770382800000
+      },
+      {
+        "balance": 9966.619999999997,
+        "minEquity": 9963.599999999997,
+        "maxEquity": 9966.449999999997,
+        "timestamp": 1770386400000
+      },
+      {
+        "balance": 9966.619999999997,
+        "minEquity": 9963.749999999996,
+        "maxEquity": 9970.679999999997,
+        "timestamp": 1770390000000
+      },
+      {
+        "balance": 9966.619999999997,
+        "minEquity": 9968.289999999997,
+        "maxEquity": 9971.359999999997,
+        "timestamp": 1770393600000
+      },
+      {
+        "balance": 9966.619999999997,
+        "minEquity": 9969.999999999996,
+        "maxEquity": 9972.959999999997,
+        "timestamp": 1770397200000
+      },
+      {
+        "balance": 9966.619999999997,
+        "minEquity": 9970.249999999996,
+        "maxEquity": 9972.939999999997,
+        "timestamp": 1770400800000
+      },
+      {
+        "balance": 9966.619999999997,
+        "minEquity": 9971.329999999996,
+        "maxEquity": 9973.079999999996,
+        "timestamp": 1770404400000
+      },
+      {
+        "balance": 9966.619999999997,
+        "minEquity": 9972.199999999997,
+        "maxEquity": 9972.989999999998,
+        "timestamp": 1770408000000
+      },
+      {
+        "balance": 9976.549999999997,
+        "minEquity": 9972.529999999997,
+        "maxEquity": 9976.549999999997,
+        "timestamp": 1770620400000
+      },
+      {
+        "balance": 9976.549999999997,
+        "minEquity": 9976.549999999997,
+        "maxEquity": 9976.549999999997,
+        "timestamp": 1770624000000
+      },
+      {
+        "balance": 9976.549999999997,
+        "minEquity": 9976.549999999997,
+        "maxEquity": 9976.549999999997,
+        "timestamp": 1770627600000
+      },
+      {
+        "balance": 9976.549999999997,
+        "minEquity": 9976.549999999997,
+        "maxEquity": 9976.549999999997,
+        "timestamp": 1770631200000
+      },
+      {
+        "balance": 9976.549999999997,
+        "minEquity": 9975.659999999998,
+        "maxEquity": 9977.639999999998,
+        "timestamp": 1770634800000
+      },
+      {
+        "balance": 9976.549999999997,
+        "minEquity": 9974.319999999998,
+        "maxEquity": 9976.549999999997,
+        "timestamp": 1770638400000
+      },
+      {
+        "balance": 9973.939999999997,
+        "minEquity": 9973.939999999997,
+        "maxEquity": 9975.049999999997,
+        "timestamp": 1770642000000
+      },
+      {
+        "balance": 9973.939999999997,
+        "minEquity": 9973.939999999997,
+        "maxEquity": 9973.939999999997,
+        "timestamp": 1770645600000
+      },
+      {
+        "balance": 9973.939999999997,
+        "minEquity": 9973.939999999997,
+        "maxEquity": 9973.939999999997,
+        "timestamp": 1770649200000
+      },
+      {
+        "balance": 9973.939999999997,
+        "minEquity": 9973.939999999997,
+        "maxEquity": 9973.939999999997,
+        "timestamp": 1770652800000
+      },
+      {
+        "balance": 9973.939999999997,
+        "minEquity": 9973.429999999997,
+        "maxEquity": 9976.019999999997,
+        "timestamp": 1770656400000
+      },
+      {
+        "balance": 9973.939999999997,
+        "minEquity": 9974.829999999996,
+        "maxEquity": 9976.269999999997,
+        "timestamp": 1770660000000
+      },
+      {
+        "balance": 9973.939999999997,
+        "minEquity": 9974.499999999996,
+        "maxEquity": 9976.269999999997,
+        "timestamp": 1770663600000
+      },
+      {
+        "balance": 9973.939999999997,
+        "minEquity": 9975.709999999997,
+        "maxEquity": 9977.689999999997,
+        "timestamp": 1770667200000
+      },
+      {
+        "balance": 9973.939999999997,
+        "minEquity": 9975.329999999996,
+        "maxEquity": 9977.519999999997,
+        "timestamp": 1770706800000
+      },
+      {
+        "balance": 9979.539999999997,
+        "minEquity": 9975.329999999996,
+        "maxEquity": 9979.539999999997,
+        "timestamp": 1770710400000
+      },
+      {
+        "balance": 9979.539999999997,
+        "minEquity": 9979.539999999997,
+        "maxEquity": 9979.539999999997,
+        "timestamp": 1770714000000
+      },
+      {
+        "balance": 9979.539999999997,
+        "minEquity": 9979.539999999997,
+        "maxEquity": 9979.539999999997,
+        "timestamp": 1770717600000
+      },
+      {
+        "balance": 9979.539999999997,
+        "minEquity": 9979.539999999997,
+        "maxEquity": 9979.539999999997,
+        "timestamp": 1770721200000
+      },
+      {
+        "balance": 9979.539999999997,
+        "minEquity": 9979.539999999997,
+        "maxEquity": 9979.539999999997,
+        "timestamp": 1770724800000
+      },
+      {
+        "balance": 9979.539999999997,
+        "minEquity": 9979.539999999997,
+        "maxEquity": 9979.539999999997,
+        "timestamp": 1770728400000
+      },
+      {
+        "balance": 9977.279999999997,
+        "minEquity": 9977.279999999997,
+        "maxEquity": 9980.659999999998,
+        "timestamp": 1770732000000
+      },
+      {
+        "balance": 9977.279999999997,
+        "minEquity": 9977.279999999997,
+        "maxEquity": 9977.279999999997,
+        "timestamp": 1770735600000
+      },
+      {
+        "balance": 9977.279999999997,
+        "minEquity": 9977.279999999997,
+        "maxEquity": 9977.279999999997,
+        "timestamp": 1770739200000
+      },
+      {
+        "balance": 9977.279999999997,
+        "minEquity": 9977.279999999997,
+        "maxEquity": 9977.279999999997,
+        "timestamp": 1770742800000
+      },
+      {
+        "balance": 9977.279999999997,
+        "minEquity": 9977.279999999997,
+        "maxEquity": 9977.279999999997,
+        "timestamp": 1770746400000
+      },
+      {
+        "balance": 9977.279999999997,
+        "minEquity": 9977.279999999997,
+        "maxEquity": 9977.279999999997,
+        "timestamp": 1770750000000
+      },
+      {
+        "balance": 9977.279999999997,
+        "minEquity": 9977.279999999997,
+        "maxEquity": 9977.279999999997,
+        "timestamp": 1770753600000
+      },
+      {
+        "balance": 9977.279999999997,
+        "minEquity": 9977.279999999997,
+        "maxEquity": 9977.279999999997,
+        "timestamp": 1770793200000
+      },
+      {
+        "balance": 9977.279999999997,
+        "minEquity": 9976.499999999996,
+        "maxEquity": 9979.339999999997,
+        "timestamp": 1770796800000
+      },
+      {
+        "balance": 9975.299999999997,
+        "minEquity": 9975.299999999997,
+        "maxEquity": 9979.539999999997,
+        "timestamp": 1770800400000
+      },
+      {
+        "balance": 9975.299999999997,
+        "minEquity": 9975.299999999997,
+        "maxEquity": 9975.299999999997,
+        "timestamp": 1770804000000
+      },
+      {
+        "balance": 9975.299999999997,
+        "minEquity": 9975.299999999997,
+        "maxEquity": 9975.299999999997,
+        "timestamp": 1770807600000
+      },
+      {
+        "balance": 9975.299999999997,
+        "minEquity": 9975.299999999997,
+        "maxEquity": 9975.299999999997,
+        "timestamp": 1770811200000
+      },
+      {
+        "balance": 9975.299999999997,
+        "minEquity": 9975.299999999997,
+        "maxEquity": 9975.299999999997,
+        "timestamp": 1770814800000
+      },
+      {
+        "balance": 9975.299999999997,
+        "minEquity": 9975.299999999997,
+        "maxEquity": 9975.299999999997,
+        "timestamp": 1770818400000
+      },
+      {
+        "balance": 9975.299999999997,
+        "minEquity": 9973.949999999997,
+        "maxEquity": 9975.329999999998,
+        "timestamp": 1770822000000
+      },
+      {
+        "balance": 9972.409999999998,
+        "minEquity": 9972.409999999998,
+        "maxEquity": 9974.159999999998,
+        "timestamp": 1770825600000
+      },
+      {
+        "balance": 9972.409999999998,
+        "minEquity": 9972.409999999998,
+        "maxEquity": 9972.409999999998,
+        "timestamp": 1770829200000
+      },
+      {
+        "balance": 9972.409999999998,
+        "minEquity": 9972.409999999998,
+        "maxEquity": 9972.409999999998,
+        "timestamp": 1770832800000
+      },
+      {
+        "balance": 9972.409999999998,
+        "minEquity": 9972.409999999998,
+        "maxEquity": 9972.409999999998,
+        "timestamp": 1770836400000
+      },
+      {
+        "balance": 9972.409999999998,
+        "minEquity": 9972.239999999998,
+        "maxEquity": 9975.099999999999,
+        "timestamp": 1770840000000
+      },
+      {
+        "balance": 9972.409999999998,
+        "minEquity": 9973.369999999997,
+        "maxEquity": 9975.979999999998,
+        "timestamp": 1770879600000
+      },
+      {
+        "balance": 9972.409999999998,
+        "minEquity": 9973.899999999998,
+        "maxEquity": 9980.829999999998,
+        "timestamp": 1770883200000
+      },
+      {
+        "balance": 9982.149999999998,
+        "minEquity": 9980.249999999998,
+        "maxEquity": 9982.149999999998,
+        "timestamp": 1770886800000
+      },
+      {
+        "balance": 9982.149999999998,
+        "minEquity": 9982.149999999998,
+        "maxEquity": 9982.149999999998,
+        "timestamp": 1770890400000
+      },
+      {
+        "balance": 9982.149999999998,
+        "minEquity": 9982.149999999998,
+        "maxEquity": 9982.149999999998,
+        "timestamp": 1770894000000
+      },
+      {
+        "balance": 9982.149999999998,
+        "minEquity": 9982.149999999998,
+        "maxEquity": 9982.149999999998,
+        "timestamp": 1770897600000
+      },
+      {
+        "balance": 9982.149999999998,
+        "minEquity": 9982.149999999998,
+        "maxEquity": 9982.149999999998,
+        "timestamp": 1770901200000
+      },
+      {
+        "balance": 9982.149999999998,
+        "minEquity": 9982.149999999998,
+        "maxEquity": 9982.149999999998,
+        "timestamp": 1770904800000
+      },
+      {
+        "balance": 9982.149999999998,
+        "minEquity": 9982.149999999998,
+        "maxEquity": 9982.149999999998,
+        "timestamp": 1770908400000
+      },
+      {
+        "balance": 9982.149999999998,
+        "minEquity": 9982.149999999998,
+        "maxEquity": 9982.149999999998,
+        "timestamp": 1770912000000
+      },
+      {
+        "balance": 9988.839999999998,
+        "minEquity": 9982.149999999998,
+        "maxEquity": 9988.839999999998,
+        "timestamp": 1770915600000
+      },
+      {
+        "balance": 9988.839999999998,
+        "minEquity": 9988.839999999998,
+        "maxEquity": 9988.839999999998,
+        "timestamp": 1770919200000
+      },
+      {
+        "balance": 9988.839999999998,
+        "minEquity": 9988.839999999998,
+        "maxEquity": 9988.839999999998,
+        "timestamp": 1770922800000
+      },
+      {
+        "balance": 9988.839999999998,
+        "minEquity": 9988.839999999998,
+        "maxEquity": 9988.839999999998,
+        "timestamp": 1770926400000
+      },
+      {
+        "balance": 9988.839999999998,
+        "minEquity": 9988.839999999998,
+        "maxEquity": 9988.839999999998,
+        "timestamp": 1770966000000
+      },
+      {
+        "balance": 9988.839999999998,
+        "minEquity": 9988.839999999998,
+        "maxEquity": 9988.839999999998,
+        "timestamp": 1770969600000
+      },
+      {
+        "balance": 9988.839999999998,
+        "minEquity": 9988.839999999998,
+        "maxEquity": 9988.839999999998,
+        "timestamp": 1770973200000
+      },
+      {
+        "balance": 9988.839999999998,
+        "minEquity": 9988.839999999998,
+        "maxEquity": 9988.839999999998,
+        "timestamp": 1770976800000
+      },
+      {
+        "balance": 9988.839999999998,
+        "minEquity": 9988.839999999998,
+        "maxEquity": 9988.839999999998,
+        "timestamp": 1770980400000
+      },
+      {
+        "balance": 9988.839999999998,
+        "minEquity": 9988.839999999998,
+        "maxEquity": 9988.839999999998,
+        "timestamp": 1770984000000
+      },
+      {
+        "balance": 9988.839999999998,
+        "minEquity": 9988.839999999998,
+        "maxEquity": 9988.839999999998,
+        "timestamp": 1770987600000
+      },
+      {
+        "balance": 9988.839999999998,
+        "minEquity": 9988.839999999998,
+        "maxEquity": 9988.839999999998,
+        "timestamp": 1770991200000
+      },
+      {
+        "balance": 9988.839999999998,
+        "minEquity": 9988.839999999998,
+        "maxEquity": 9988.839999999998,
+        "timestamp": 1770994800000
+      },
+      {
+        "balance": 9988.839999999998,
+        "minEquity": 9988.839999999998,
+        "maxEquity": 9988.839999999998,
+        "timestamp": 1770998400000
+      },
+      {
+        "balance": 9988.839999999998,
+        "minEquity": 9988.839999999998,
+        "maxEquity": 9988.839999999998,
+        "timestamp": 1771002000000
+      },
+      {
+        "balance": 9988.839999999998,
+        "minEquity": 9988.839999999998,
+        "maxEquity": 9988.839999999998,
+        "timestamp": 1771005600000
+      },
+      {
+        "balance": 9988.839999999998,
+        "minEquity": 9988.839999999998,
+        "maxEquity": 9988.839999999998,
+        "timestamp": 1771009200000
+      },
+      {
+        "balance": 9988.839999999998,
+        "minEquity": 9988.839999999998,
+        "maxEquity": 9988.839999999998,
+        "timestamp": 1771012800000
+      },
+      {
+        "balance": 9988.839999999998,
+        "minEquity": 9988.839999999998,
+        "maxEquity": 9988.839999999998,
+        "timestamp": 1771225200000
+      },
+      {
+        "balance": 9988.839999999998,
+        "minEquity": 9987.899999999998,
+        "maxEquity": 9990.049999999997,
+        "timestamp": 1771228800000
+      },
+      {
+        "balance": 9988.839999999998,
+        "minEquity": 9985.639999999998,
+        "maxEquity": 9989.349999999999,
+        "timestamp": 1771232400000
+      },
+      {
+        "balance": 9990.489999999998,
+        "minEquity": 9988.409999999998,
+        "maxEquity": 9990.489999999998,
+        "timestamp": 1771236000000
+      },
+      {
+        "balance": 9990.489999999998,
+        "minEquity": 9990.489999999998,
+        "maxEquity": 9990.489999999998,
+        "timestamp": 1771239600000
+      },
+      {
+        "balance": 9990.489999999998,
+        "minEquity": 9990.489999999998,
+        "maxEquity": 9990.489999999998,
+        "timestamp": 1771243200000
+      },
+      {
+        "balance": 9990.489999999998,
+        "minEquity": 9990.489999999998,
+        "maxEquity": 9990.489999999998,
+        "timestamp": 1771246800000
+      },
+      {
+        "balance": 9990.489999999998,
+        "minEquity": 9990.489999999998,
+        "maxEquity": 9990.489999999998,
+        "timestamp": 1771250400000
+      },
+      {
+        "balance": 9990.489999999998,
+        "minEquity": 9990.489999999998,
+        "maxEquity": 9990.489999999998,
+        "timestamp": 1771254000000
+      },
+      {
+        "balance": 9990.489999999998,
+        "minEquity": 9990.489999999998,
+        "maxEquity": 9990.489999999998,
+        "timestamp": 1771257600000
+      },
+      {
+        "balance": 9990.489999999998,
+        "minEquity": 9990.489999999998,
+        "maxEquity": 9990.489999999998,
+        "timestamp": 1771261200000
+      },
+      {
+        "balance": 9990.489999999998,
+        "minEquity": 9990.489999999998,
+        "maxEquity": 9990.489999999998,
+        "timestamp": 1771264800000
+      },
+      {
+        "balance": 9990.489999999998,
+        "minEquity": 9990.489999999998,
+        "maxEquity": 9990.489999999998,
+        "timestamp": 1771268400000
+      },
+      {
+        "balance": 9990.489999999998,
+        "minEquity": 9990.489999999998,
+        "maxEquity": 9990.489999999998,
+        "timestamp": 1771272000000
+      },
+      {
+        "balance": 9990.489999999998,
+        "minEquity": 9990.489999999998,
+        "maxEquity": 9990.489999999998,
+        "timestamp": 1771311600000
+      },
+      {
+        "balance": 9990.489999999998,
+        "minEquity": 9990.489999999998,
+        "maxEquity": 9990.489999999998,
+        "timestamp": 1771315200000
+      },
+      {
+        "balance": 9990.489999999998,
+        "minEquity": 9990.489999999998,
+        "maxEquity": 9990.489999999998,
+        "timestamp": 1771318800000
+      },
+      {
+        "balance": 9990.489999999998,
+        "minEquity": 9990.489999999998,
+        "maxEquity": 9990.489999999998,
+        "timestamp": 1771322400000
+      },
+      {
+        "balance": 9990.489999999998,
+        "minEquity": 9990.489999999998,
+        "maxEquity": 9990.489999999998,
+        "timestamp": 1771326000000
+      },
+      {
+        "balance": 9990.489999999998,
+        "minEquity": 9990.489999999998,
+        "maxEquity": 9990.489999999998,
+        "timestamp": 1771329600000
+      },
+      {
+        "balance": 9990.489999999998,
+        "minEquity": 9990.489999999998,
+        "maxEquity": 9990.489999999998,
+        "timestamp": 1771333200000
+      },
+      {
+        "balance": 9990.489999999998,
+        "minEquity": 9990.489999999998,
+        "maxEquity": 9990.489999999998,
+        "timestamp": 1771336800000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9990.999999999998,
+        "timestamp": 1771340400000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9986.579999999998,
+        "timestamp": 1771344000000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9986.579999999998,
+        "timestamp": 1771347600000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9986.579999999998,
+        "timestamp": 1771351200000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9986.579999999998,
+        "timestamp": 1771354800000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9986.579999999998,
+        "timestamp": 1771358400000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9986.579999999998,
+        "timestamp": 1771398000000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9986.579999999998,
+        "timestamp": 1771401600000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9986.579999999998,
+        "timestamp": 1771405200000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9986.579999999998,
+        "timestamp": 1771408800000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9986.579999999998,
+        "timestamp": 1771412400000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9986.579999999998,
+        "timestamp": 1771416000000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9986.579999999998,
+        "timestamp": 1771419600000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9986.579999999998,
+        "timestamp": 1771423200000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9986.579999999998,
+        "timestamp": 1771426800000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9986.579999999998,
+        "timestamp": 1771430400000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9986.579999999998,
+        "timestamp": 1771434000000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9986.579999999998,
+        "timestamp": 1771437600000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9986.579999999998,
+        "timestamp": 1771441200000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9986.579999999998,
+        "timestamp": 1771444800000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9986.579999999998,
+        "timestamp": 1771484400000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.579999999998,
+        "maxEquity": 9986.579999999998,
+        "timestamp": 1771488000000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9985.719999999998,
+        "maxEquity": 9988.119999999999,
+        "timestamp": 1771491600000
+      },
+      {
+        "balance": 9986.579999999998,
+        "minEquity": 9986.219999999998,
+        "maxEquity": 9990.309999999998,
+        "timestamp": 1771495200000
+      },
+      {
+        "balance": 9991.759999999998,
+        "minEquity": 9990.059999999998,
+        "maxEquity": 9991.759999999998,
+        "timestamp": 1771498800000
+      },
+      {
+        "balance": 9991.759999999998,
+        "minEquity": 9991.759999999998,
+        "maxEquity": 9991.759999999998,
+        "timestamp": 1771502400000
+      },
+      {
+        "balance": 9991.759999999998,
+        "minEquity": 9991.759999999998,
+        "maxEquity": 9991.759999999998,
+        "timestamp": 1771506000000
+      },
+      {
+        "balance": 9991.759999999998,
+        "minEquity": 9991.759999999998,
+        "maxEquity": 9991.759999999998,
+        "timestamp": 1771509600000
+      },
+      {
+        "balance": 9991.759999999998,
+        "minEquity": 9991.759999999998,
+        "maxEquity": 9991.759999999998,
+        "timestamp": 1771513200000
+      },
+      {
+        "balance": 9991.759999999998,
+        "minEquity": 9991.759999999998,
+        "maxEquity": 9991.759999999998,
+        "timestamp": 1771516800000
+      },
+      {
+        "balance": 9991.759999999998,
+        "minEquity": 9991.759999999998,
+        "maxEquity": 9991.759999999998,
+        "timestamp": 1771520400000
+      },
+      {
+        "balance": 9991.759999999998,
+        "minEquity": 9991.759999999998,
+        "maxEquity": 9991.759999999998,
+        "timestamp": 1771524000000
+      },
+      {
+        "balance": 9991.759999999998,
+        "minEquity": 9991.759999999998,
+        "maxEquity": 9991.759999999998,
+        "timestamp": 1771527600000
+      },
+      {
+        "balance": 9991.759999999998,
+        "minEquity": 9991.759999999998,
+        "maxEquity": 9991.759999999998,
+        "timestamp": 1771531200000
+      },
+      {
+        "balance": 9991.759999999998,
+        "minEquity": 9990.929999999998,
+        "maxEquity": 9993.969999999998,
+        "timestamp": 1771570800000
+      },
+      {
+        "balance": 9991.759999999998,
+        "minEquity": 9992.409999999998,
+        "maxEquity": 9995.329999999998,
+        "timestamp": 1771574400000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9995.329999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771578000000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9997.009999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771581600000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9997.009999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771585200000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9997.009999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771588800000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9997.009999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771592400000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9997.009999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771596000000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9997.009999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771599600000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9997.009999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771603200000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9997.009999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771606800000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9997.009999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771610400000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9997.009999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771614000000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9997.009999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771617600000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9997.009999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771830000000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9997.009999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771833600000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9997.009999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771837200000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9997.009999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771840800000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9997.009999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771844400000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9997.009999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771848000000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9997.009999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771851600000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9997.009999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771855200000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9997.009999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771858800000
+      },
+      {
+        "balance": 9997.009999999998,
+        "minEquity": 9997.009999999998,
+        "maxEquity": 9997.009999999998,
+        "timestamp": 1771862400000
+      },
+      {
+        "balance": 9994.579999999998,
+        "minEquity": 9994.579999999998,
+        "maxEquity": 9997.769999999999,
+        "timestamp": 1771866000000
+      },
+      {
+        "balance": 9994.579999999998,
+        "minEquity": 9994.579999999998,
+        "maxEquity": 9994.579999999998,
+        "timestamp": 1771869600000
+      },
+      {
+        "balance": 9994.579999999998,
+        "minEquity": 9994.579999999998,
+        "maxEquity": 9994.579999999998,
+        "timestamp": 1771873200000
+      },
+      {
+        "balance": 9994.579999999998,
+        "minEquity": 9994.579999999998,
+        "maxEquity": 9994.579999999998,
+        "timestamp": 1771876800000
+      },
+      {
+        "balance": 9994.579999999998,
+        "minEquity": 9994.579999999998,
+        "maxEquity": 9994.579999999998,
+        "timestamp": 1771916400000
+      },
+      {
+        "balance": 9994.579999999998,
+        "minEquity": 9994.579999999998,
+        "maxEquity": 9994.579999999998,
+        "timestamp": 1771920000000
+      },
+      {
+        "balance": 9994.579999999998,
+        "minEquity": 9994.579999999998,
+        "maxEquity": 9994.579999999998,
+        "timestamp": 1771923600000
+      },
+      {
+        "balance": 9994.579999999998,
+        "minEquity": 9994.579999999998,
+        "maxEquity": 9994.579999999998,
+        "timestamp": 1771927200000
+      },
+      {
+        "balance": 9994.579999999998,
+        "minEquity": 9994.579999999998,
+        "maxEquity": 9994.579999999998,
+        "timestamp": 1771930800000
+      },
+      {
+        "balance": 9994.579999999998,
+        "minEquity": 9994.579999999998,
+        "maxEquity": 9994.579999999998,
+        "timestamp": 1771934400000
+      },
+      {
+        "balance": 9994.579999999998,
+        "minEquity": 9994.579999999998,
+        "maxEquity": 9994.579999999998,
+        "timestamp": 1771938000000
+      },
+      {
+        "balance": 9994.579999999998,
+        "minEquity": 9994.399999999998,
+        "maxEquity": 9994.889999999998,
+        "timestamp": 1771941600000
+      },
+      {
+        "balance": 9994.579999999998,
+        "minEquity": 9992.699999999999,
+        "maxEquity": 9996.559999999998,
+        "timestamp": 1771945200000
+      },
+      {
+        "balance": 9999.169999999998,
+        "minEquity": 9995.309999999998,
+        "maxEquity": 9999.169999999998,
+        "timestamp": 1771948800000
+      },
+      {
+        "balance": 9999.169999999998,
+        "minEquity": 9999.169999999998,
+        "maxEquity": 9999.169999999998,
+        "timestamp": 1771952400000
+      },
+      {
+        "balance": 9999.169999999998,
+        "minEquity": 9999.169999999998,
+        "maxEquity": 9999.169999999998,
+        "timestamp": 1771956000000
+      },
+      {
+        "balance": 9999.169999999998,
+        "minEquity": 9999.169999999998,
+        "maxEquity": 9999.169999999998,
+        "timestamp": 1771959600000
+      },
+      {
+        "balance": 9999.169999999998,
+        "minEquity": 9999.169999999998,
+        "maxEquity": 9999.169999999998,
+        "timestamp": 1771963200000
+      },
+      {
+        "balance": 9999.169999999998,
+        "minEquity": 9999.169999999998,
+        "maxEquity": 9999.169999999998,
+        "timestamp": 1772002800000
+      },
+      {
+        "balance": 9999.169999999998,
+        "minEquity": 9999.169999999998,
+        "maxEquity": 9999.169999999998,
+        "timestamp": 1772006400000
+      },
+      {
+        "balance": 9999.169999999998,
+        "minEquity": 9999.169999999998,
+        "maxEquity": 9999.169999999998,
+        "timestamp": 1772010000000
+      },
+      {
+        "balance": 9999.169999999998,
+        "minEquity": 9999.169999999998,
+        "maxEquity": 9999.169999999998,
+        "timestamp": 1772013600000
+      },
+      {
+        "balance": 9999.169999999998,
+        "minEquity": 9999.169999999998,
+        "maxEquity": 9999.169999999998,
+        "timestamp": 1772017200000
+      },
+      {
+        "balance": 9999.169999999998,
+        "minEquity": 9999.169999999998,
+        "maxEquity": 9999.169999999998,
+        "timestamp": 1772020800000
+      },
+      {
+        "balance": 9999.169999999998,
+        "minEquity": 9999.169999999998,
+        "maxEquity": 9999.169999999998,
+        "timestamp": 1772024400000
+      },
+      {
+        "balance": 9999.169999999998,
+        "minEquity": 9999.169999999998,
+        "maxEquity": 9999.169999999998,
+        "timestamp": 1772028000000
+      },
+      {
+        "balance": 9999.169999999998,
+        "minEquity": 9999.169999999998,
+        "maxEquity": 9999.169999999998,
+        "timestamp": 1772031600000
+      },
+      {
+        "balance": 9999.169999999998,
+        "minEquity": 9999.169999999998,
+        "maxEquity": 9999.169999999998,
+        "timestamp": 1772035200000
+      },
+      {
+        "balance": 9999.169999999998,
+        "minEquity": 9999.169999999998,
+        "maxEquity": 9999.169999999998,
+        "timestamp": 1772038800000
+      },
+      {
+        "balance": 9999.169999999998,
+        "minEquity": 9998.999999999998,
+        "maxEquity": 10000.689999999999,
+        "timestamp": 1772042400000
+      },
+      {
+        "balance": 9999.169999999998,
+        "minEquity": 9999.049999999997,
+        "maxEquity": 10000.029999999999,
+        "timestamp": 1772046000000
+      },
+      {
+        "balance": 9999.169999999998,
+        "minEquity": 9999.219999999998,
+        "maxEquity": 10000.539999999999,
+        "timestamp": 1772049600000
+      },
+      {
+        "balance": 9999.169999999998,
+        "minEquity": 9999.479999999998,
+        "maxEquity": 10001.119999999999,
+        "timestamp": 1772089200000
+      },
+      {
+        "balance": 9999.479999999998,
+        "minEquity": 9999.479999999998,
+        "maxEquity": 9999.479999999998,
+        "timestamp": 1772092800000
+      },
+      {
+        "balance": 9999.479999999998,
+        "minEquity": 9998.039999999997,
+        "maxEquity": 10000.819999999998,
+        "timestamp": 1772096400000
+      },
+      {
+        "balance": 10002.959999999997,
+        "minEquity": 9998.359999999997,
+        "maxEquity": 10002.959999999997,
+        "timestamp": 1772100000000
+      },
+      {
+        "balance": 10002.959999999997,
+        "minEquity": 10002.959999999997,
+        "maxEquity": 10002.959999999997,
+        "timestamp": 1772103600000
+      },
+      {
+        "balance": 10002.959999999997,
+        "minEquity": 10002.959999999997,
+        "maxEquity": 10002.959999999997,
+        "timestamp": 1772107200000
+      },
+      {
+        "balance": 10002.959999999997,
+        "minEquity": 10002.959999999997,
+        "maxEquity": 10002.959999999997,
+        "timestamp": 1772110800000
+      },
+      {
+        "balance": 10002.959999999997,
+        "minEquity": 10002.959999999997,
+        "maxEquity": 10002.959999999997,
+        "timestamp": 1772114400000
+      },
+      {
+        "balance": 10002.959999999997,
+        "minEquity": 10002.959999999997,
+        "maxEquity": 10002.959999999997,
+        "timestamp": 1772118000000
+      },
+      {
+        "balance": 10002.959999999997,
+        "minEquity": 10002.959999999997,
+        "maxEquity": 10002.959999999997,
+        "timestamp": 1772121600000
+      },
+      {
+        "balance": 10002.959999999997,
+        "minEquity": 10002.959999999997,
+        "maxEquity": 10002.959999999997,
+        "timestamp": 1772125200000
+      },
+      {
+        "balance": 10002.959999999997,
+        "minEquity": 10002.959999999997,
+        "maxEquity": 10002.959999999997,
+        "timestamp": 1772128800000
+      },
+      {
+        "balance": 10002.959999999997,
+        "minEquity": 10002.959999999997,
+        "maxEquity": 10002.959999999997,
+        "timestamp": 1772132400000
+      },
+      {
+        "balance": 10002.959999999997,
+        "minEquity": 10002.959999999997,
+        "maxEquity": 10002.959999999997,
+        "timestamp": 1772136000000
+      },
+      {
+        "balance": 10002.959999999997,
+        "minEquity": 10002.959999999997,
+        "maxEquity": 10002.959999999997,
+        "timestamp": 1772175600000
+      },
+      {
+        "balance": 10002.959999999997,
+        "minEquity": 10002.959999999997,
+        "maxEquity": 10002.959999999997,
+        "timestamp": 1772179200000
+      },
+      {
+        "balance": 10002.959999999997,
+        "minEquity": 10002.959999999997,
+        "maxEquity": 10002.959999999997,
+        "timestamp": 1772182800000
+      },
+      {
+        "balance": 10002.959999999997,
+        "minEquity": 10002.959999999997,
+        "maxEquity": 10002.959999999997,
+        "timestamp": 1772186400000
+      },
+      {
+        "balance": 10002.959999999997,
+        "minEquity": 10002.679999999997,
+        "maxEquity": 10003.839999999997,
+        "timestamp": 1772190000000
+      },
+      {
+        "balance": 10002.959999999997,
+        "minEquity": 10001.039999999997,
+        "maxEquity": 10003.519999999997,
+        "timestamp": 1772193600000
+      },
+      {
+        "balance": 10002.959999999997,
+        "minEquity": 10001.489999999998,
+        "maxEquity": 10003.819999999998,
+        "timestamp": 1772197200000
+      },
+      {
+        "balance": 10009.299999999997,
+        "minEquity": 10001.949999999997,
+        "maxEquity": 10009.299999999997,
+        "timestamp": 1772200800000
+      },
+      {
+        "balance": 10009.299999999997,
+        "minEquity": 10009.299999999997,
+        "maxEquity": 10009.299999999997,
+        "timestamp": 1772204400000
+      },
+      {
+        "balance": 10009.299999999997,
+        "minEquity": 10009.299999999997,
+        "maxEquity": 10009.299999999997,
+        "timestamp": 1772208000000
+      },
+      {
+        "balance": 10009.299999999997,
+        "minEquity": 10009.299999999997,
+        "maxEquity": 10009.299999999997,
+        "timestamp": 1772211600000
+      },
+      {
+        "balance": 10009.299999999997,
+        "minEquity": 10009.299999999997,
+        "maxEquity": 10009.299999999997,
+        "timestamp": 1772215200000
+      },
+      {
+        "balance": 10009.299999999997,
+        "minEquity": 10009.299999999997,
+        "maxEquity": 10009.299999999997,
+        "timestamp": 1772218800000
+      },
+      {
+        "balance": 10009.299999999997,
+        "minEquity": 10009.299999999997,
+        "maxEquity": 10009.299999999997,
+        "timestamp": 1772222400000
+      },
+      {
+        "balance": 10009.299999999997,
+        "minEquity": 10009.299999999997,
+        "maxEquity": 10009.299999999997,
+        "timestamp": 1772225940000
+      }
+    ],
+    "maxBalanceDrawdownPercent": 0.564456154941059,
+    "maxEquityDrawdownPercent": 0.5840857618601244,
+    "maxBalanceDrawdownAbsolute": 56.469999999999345,
+    "maxEquityDrawdownAbsolute": 58.44000000000051
+  },
+  "tradeStatistics": {
+    "netProfit": {
+      "all": 9.3,
+      "long": 24.23,
+      "short": -14.93
+    },
+    "profitFactor": {
+      "all": 1.11,
+      "long": 1.58,
+      "short": 0.67
+    },
+    "commissions": {
+      "all": 0,
+      "long": 0,
+      "short": 0
+    },
+    "swaps": {
+      "all": -1.64,
+      "long": -1.62,
+      "short": -0.02
+    },
+    "totalTrades": {
+      "all": 45,
+      "long": 25,
+      "short": 20
+    },
+    "winningTrades": {
+      "all": 18,
+      "long": 12,
+      "short": 6
+    },
+    "maxConsecutiveWinningTrades": {
+      "all": 4,
+      "long": 4,
+      "short": 2
+    },
+    "largestWinningTrade": {
+      "all": 9.93,
+      "long": 9.93,
+      "short": 7.66
+    },
+    "losingTrades": {
+      "all": 27,
+      "long": 13,
+      "short": 14
+    },
+    "maxConsecutiveLosingTrades": {
+      "all": 16,
+      "long": 10,
+      "short": 7
+    },
+    "largestLosingTrade": {
+      "all": -8.42,
+      "long": -6.32,
+      "short": -8.42
+    },
+    "averageTrade": {
+      "all": 0.21,
+      "long": 0.97,
+      "short": -0.75
+    }
+  },
+  "parameters": [
+    {
+      "group": "Data Source",
+      "displayName": "Signal File Path",
+      "propertyName": "SignalFilePath",
+      "value": "Z:\\Desktop\\og_program\\runtime\\exports\\combo_FR40_H1_full_history_signals.csv"
+    },
+    {
+      "group": "Protection",
+      "displayName": "KSL Level (SL = KSL x ATR)",
+      "propertyName": "KslLevel",
+      "value": "Fib0618"
+    },
+    {
+      "group": "Protection",
+      "displayName": "KTP Level (TP = KTP x ATR)",
+      "propertyName": "KtpLevel",
+      "value": "Fib1618"
+    },
+    {
+      "group": "Risk Management",
+      "displayName": "Risk % Balance",
+      "propertyName": "RiskPercent",
+      "value": 1
+    },
+    {
+      "group": "Risk Management",
+      "displayName": "Max Margin % Equity Per Trade",
+      "propertyName": "MaxMarginPercent",
+      "value": 1
+    },
+    {
+      "group": "Position Management",
+      "displayName": "Enable Daily Loss Limit",
+      "propertyName": "EnableDailyLossLimit",
+      "value": "false"
+    },
+    {
+      "group": "Position Management",
+      "displayName": "Max Daily Loss %",
+      "propertyName": "MaxDailyLossPercent",
+      "value": 5
+    },
+    {
+      "group": "Position Management",
+      "displayName": "Enable Max Drawdown",
+      "propertyName": "EnableMaxDrawdown",
+      "value": "false"
+    },
+    {
+      "group": "Position Management",
+      "displayName": "Max Total Drawdown %",
+      "propertyName": "MaxTotalDrawdownPercent",
+      "value": 10
+    },
+    {
+      "group": "Position Management",
+      "displayName": "Enable Max Consecutive Losses",
+      "propertyName": "EnableMaxConsecutiveLosses",
+      "value": "false"
+    },
+    {
+      "group": "Position Management",
+      "displayName": "Max Consecutive Losses",
+      "propertyName": "MaxConsecutiveLosses",
+      "value": 5
+    }
+  ],
+  "usedSymbols": [
+    {
+      "symbol": "FRA40.cash",
+      "period": "h1",
+      "swapTime": "20:59",
+      "baseAsset": "France 40 Index",
+      "baseAssetDigits": 2,
+      "quoteAsset": "EUR",
+      "quoteAssetDigits": 2,
+      "commissions": {
+        "type": "usdPerMillionUsdVolume",
+        "value": 0,
+        "applyCommissionAutomatically": false
+      },
+      "swapLong": -1.4063,
+      "swapShort": -0.0898,
+      "threeDaySwaps": "friday",
+      "weekendSwaps": false,
+      "swapPeriods": 24,
+      "gracePeriods": 0,
+      "digits": 2,
+      "lotSize": 1,
+      "stepVolume": 0.01,
+      "pipPosition": 0,
+      "swapCalculationType": "pips"
+    },
+    {
+      "symbol": "EURUSD",
+      "period": "h1",
+      "swapTime": "20:59",
+      "baseAsset": "EUR",
+      "baseAssetDigits": 2,
+      "quoteAsset": "USD",
+      "quoteAssetDigits": 2,
+      "commissions": {
+        "type": "usdPerMillionUsdVolume",
+        "value": 0,
+        "applyCommissionAutomatically": false
+      },
+      "swapLong": -1.022,
+      "swapShort": 0.034,
+      "threeDaySwaps": "wednesday",
+      "weekendSwaps": false,
+      "swapPeriods": 24,
+      "gracePeriods": 0,
+      "digits": 5,
+      "lotSize": 100000,
+      "stepVolume": 1000,
+      "pipPosition": 4,
+      "swapCalculationType": "pips"
+    }
+  ],
+  "positions": {
+    "columns": [
+      "id",
+      "symbol",
+      "quantity",
+      "volume",
+      "direction",
+      "entryPrice",
+      "tp",
+      "sl",
+      "commissions",
+      "closingCommissions",
+      "created",
+      "label",
+      "comment",
+      "pips",
+      "net",
+      "gross",
+      "swaps"
+    ],
+    "items": [],
+    "marginUsed": 0,
+    "freeMargin": 10009.299999999997,
+    "marginLevel": null,
+    "unrealizedNet": 0,
+    "unrealizedGross": 0
+  },
+  "orders": {
+    "columns": [
+      "id",
+      "symbol",
+      "direction",
+      "created",
+      "quantity",
+      "volume",
+      "orderType",
+      "submittedPrice",
+      "distance",
+      "tp",
+      "sl",
+      "expiryDate",
+      "currentPrice",
+      "limitRange",
+      "comment",
+      "label"
+    ],
+    "items": []
+  },
+  "history": {
+    "columns": [
+      "id",
+      "symbol",
+      "direction",
+      "net",
+      "gross",
+      "entryTime",
+      "closeTime",
+      "entryPrice",
+      "closePrice",
+      "swaps",
+      "commissions",
+      "volume",
+      "label",
+      "comment",
+      "quantity",
+      "pips"
+    ],
+    "items": [
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 2,
+        "net": -4.74,
+        "gross": -4.74,
+        "entryTime": 1767345120000,
+        "closeTime": 1767346680000,
+        "entryPrice": 8221.82,
+        "closePrice": 8193.12,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9995.26,
+        "quantity": 0.14,
+        "pips": -28.7
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "sell",
+        "id": 4,
+        "net": -2.4499999999999997,
+        "gross": -2.44,
+        "entryTime": 1767607500000,
+        "closeTime": 1767683100000,
+        "entryPrice": 8204.92,
+        "closePrice": 8219.72,
+        "commissions": 0,
+        "swaps": -0.01,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9992.81,
+        "quantity": 0.14,
+        "pips": -14.8
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "sell",
+        "id": 6,
+        "net": -1.78,
+        "gross": -1.78,
+        "entryTime": 1767690720000,
+        "closeTime": 1767704700000,
+        "entryPrice": 8181.52,
+        "closePrice": 8192.32,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9991.029999999999,
+        "quantity": 0.14,
+        "pips": -10.8
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 8,
+        "net": 5.76,
+        "gross": 5.76,
+        "entryTime": 1767709440000,
+        "closeTime": 1767714300000,
+        "entryPrice": 8219.42,
+        "closePrice": 8254.32,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9996.789999999999,
+        "quantity": 0.14,
+        "pips": 34.9
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "sell",
+        "id": 10,
+        "net": 2.36,
+        "gross": 2.36,
+        "entryTime": 1767855900000,
+        "closeTime": 1767876180000,
+        "entryPrice": 8216.02,
+        "closePrice": 8201.72,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9999.15,
+        "quantity": 0.14,
+        "pips": 14.3
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 12,
+        "net": 4.74,
+        "gross": 4.74,
+        "entryTime": 1767884940000,
+        "closeTime": 1767904320000,
+        "entryPrice": 8242.12,
+        "closePrice": 8270.82,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 10003.89,
+        "quantity": 0.14,
+        "pips": 28.7
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 14,
+        "net": -1.78,
+        "gross": -1.78,
+        "entryTime": 1768226160000,
+        "closeTime": 1768230480000,
+        "entryPrice": 8368.02,
+        "closePrice": 8357.22,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 10002.109999999999,
+        "quantity": 0.14,
+        "pips": -10.8
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "sell",
+        "id": 16,
+        "net": 2.21,
+        "gross": 2.21,
+        "entryTime": 1768291260000,
+        "closeTime": 1768292040000,
+        "entryPrice": 8341.92,
+        "closePrice": 8328.52,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 10004.319999999998,
+        "quantity": 0.14,
+        "pips": 13.4
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 18,
+        "net": -2.16,
+        "gross": -2.16,
+        "entryTime": 1768324500000,
+        "closeTime": 1768336080000,
+        "entryPrice": 8358.32,
+        "closePrice": 8345.22,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 10002.159999999998,
+        "quantity": 0.14,
+        "pips": -13.1
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 20,
+        "net": -6.32,
+        "gross": -6.32,
+        "entryTime": 1768460700000,
+        "closeTime": 1768464120000,
+        "entryPrice": 8381.42,
+        "closePrice": 8343.12,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9995.839999999998,
+        "quantity": 0.14,
+        "pips": -38.3
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "sell",
+        "id": 22,
+        "net": -3.1,
+        "gross": -3.1,
+        "entryTime": 1768471380000,
+        "closeTime": 1768474740000,
+        "entryPrice": 8294.22,
+        "closePrice": 8313.02,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9992.739999999998,
+        "quantity": 0.14,
+        "pips": -18.8
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "sell",
+        "id": 24,
+        "net": -2.13,
+        "gross": -2.13,
+        "entryTime": 1768555080000,
+        "closeTime": 1768555500000,
+        "entryPrice": 8264.02,
+        "closePrice": 8276.92,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9990.609999999999,
+        "quantity": 0.14,
+        "pips": -12.9
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 26,
+        "net": -3.42,
+        "gross": -3.42,
+        "entryTime": 1768979100000,
+        "closeTime": 1768988760000,
+        "entryPrice": 8064.82,
+        "closePrice": 8044.12,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9987.189999999999,
+        "quantity": 0.14,
+        "pips": -20.7
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "sell",
+        "id": 28,
+        "net": -3.88,
+        "gross": -3.88,
+        "entryTime": 1768996380000,
+        "closeTime": 1769004300000,
+        "entryPrice": 8033.72,
+        "closePrice": 8057.22,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9983.31,
+        "quantity": 0.14,
+        "pips": -23.5
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "sell",
+        "id": 30,
+        "net": -2.8699999999999997,
+        "gross": -2.86,
+        "entryTime": 1769102940000,
+        "closeTime": 1769160660000,
+        "entryPrice": 8138.02,
+        "closePrice": 8155.32,
+        "commissions": 0,
+        "swaps": -0.01,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9980.439999999999,
+        "quantity": 0.14,
+        "pips": -17.3
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 32,
+        "net": -2.39,
+        "gross": -2.39,
+        "entryTime": 1769186460000,
+        "closeTime": 1769190780000,
+        "entryPrice": 8149.82,
+        "closePrice": 8135.32,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9978.05,
+        "quantity": 0.14,
+        "pips": -14.5
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 34,
+        "net": -4,
+        "gross": -4,
+        "entryTime": 1769412180000,
+        "closeTime": 1769414460000,
+        "entryPrice": 8149.32,
+        "closePrice": 8125.12,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9974.05,
+        "quantity": 0.14,
+        "pips": -24.2
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 36,
+        "net": -2.03,
+        "gross": -2.03,
+        "entryTime": 1769436420000,
+        "closeTime": 1769442240000,
+        "entryPrice": 8142.82,
+        "closePrice": 8130.52,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9972.019999999999,
+        "quantity": 0.14,
+        "pips": -12.3
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 38,
+        "net": -1.95,
+        "gross": -1.95,
+        "entryTime": 1769517420000,
+        "closeTime": 1769527200000,
+        "entryPrice": 8165.02,
+        "closePrice": 8153.22,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9970.069999999998,
+        "quantity": 0.14,
+        "pips": -11.8
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "sell",
+        "id": 40,
+        "net": -3.75,
+        "gross": -3.75,
+        "entryTime": 1769587260000,
+        "closeTime": 1769587320000,
+        "entryPrice": 8089.42,
+        "closePrice": 8112.12,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9966.319999999998,
+        "quantity": 0.14,
+        "pips": -22.7
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "sell",
+        "id": 42,
+        "net": -3.76,
+        "gross": -3.76,
+        "entryTime": 1769699400000,
+        "closeTime": 1769700120000,
+        "entryPrice": 8079.52,
+        "closePrice": 8102.32,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9962.559999999998,
+        "quantity": 0.14,
+        "pips": -22.8
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 44,
+        "net": -2.89,
+        "gross": -2.89,
+        "entryTime": 1769764020000,
+        "closeTime": 1769766420000,
+        "entryPrice": 8110.52,
+        "closePrice": 8093.02,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9959.669999999998,
+        "quantity": 0.14,
+        "pips": -17.5
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 46,
+        "net": -3.4,
+        "gross": -3.4,
+        "entryTime": 1769772720000,
+        "closeTime": 1769797200000,
+        "entryPrice": 8115.42,
+        "closePrice": 8094.82,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9956.269999999999,
+        "quantity": 0.14,
+        "pips": -20.6
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "sell",
+        "id": 48,
+        "net": -8.42,
+        "gross": -8.42,
+        "entryTime": 1770015900000,
+        "closeTime": 1770019260000,
+        "entryPrice": 8039.62,
+        "closePrice": 8090.62,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9947.849999999999,
+        "quantity": 0.14,
+        "pips": -51
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 50,
+        "net": 9.26,
+        "gross": 9.26,
+        "entryTime": 1770024180000,
+        "closeTime": 1770036420000,
+        "entryPrice": 8124.72,
+        "closePrice": 8180.82,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9957.109999999999,
+        "quantity": 0.14,
+        "pips": 56.1
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "sell",
+        "id": 52,
+        "net": 7.66,
+        "gross": 7.66,
+        "entryTime": 1770116640000,
+        "closeTime": 1770128700000,
+        "entryPrice": 8176.82,
+        "closePrice": 8130.42,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9964.769999999999,
+        "quantity": 0.14,
+        "pips": 46.4
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 54,
+        "net": 5.8,
+        "gross": 5.8,
+        "entryTime": 1770189780000,
+        "closeTime": 1770200580000,
+        "entryPrice": 8207.72,
+        "closePrice": 8242.82,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9970.569999999998,
+        "quantity": 0.14,
+        "pips": 35.1
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "sell",
+        "id": 56,
+        "net": -3.95,
+        "gross": -3.95,
+        "entryTime": 1770299460000,
+        "closeTime": 1770310800000,
+        "entryPrice": 8224.32,
+        "closePrice": 8248.22,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9966.619999999997,
+        "quantity": 0.14,
+        "pips": -23.9
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 58,
+        "net": 9.930000000000001,
+        "gross": 10.63,
+        "entryTime": 1770376860000,
+        "closeTime": 1770620700000,
+        "entryPrice": 8248.72,
+        "closePrice": 8313.12,
+        "commissions": 0,
+        "swaps": -0.7,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9976.549999999997,
+        "quantity": 0.14,
+        "pips": 64.4
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "sell",
+        "id": 60,
+        "net": -2.61,
+        "gross": -2.61,
+        "entryTime": 1770632220000,
+        "closeTime": 1770638820000,
+        "entryPrice": 8265.82,
+        "closePrice": 8281.62,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9973.939999999997,
+        "quantity": 0.14,
+        "pips": -15.8
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 62,
+        "net": 5.6,
+        "gross": 5.83,
+        "entryTime": 1770654360000,
+        "closeTime": 1770709620000,
+        "entryPrice": 8316.72,
+        "closePrice": 8352.02,
+        "commissions": 0,
+        "swaps": -0.23,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9979.539999999997,
+        "quantity": 0.14,
+        "pips": 35.3
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "sell",
+        "id": 64,
+        "net": -2.26,
+        "gross": -2.26,
+        "entryTime": 1770728880000,
+        "closeTime": 1770731160000,
+        "entryPrice": 8321.92,
+        "closePrice": 8335.62,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9977.279999999997,
+        "quantity": 0.14,
+        "pips": -13.7
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "sell",
+        "id": 66,
+        "net": -1.98,
+        "gross": -1.98,
+        "entryTime": 1770793800000,
+        "closeTime": 1770797100000,
+        "entryPrice": 8315.92,
+        "closePrice": 8327.92,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9975.299999999997,
+        "quantity": 0.14,
+        "pips": -12
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 68,
+        "net": -2.89,
+        "gross": -2.89,
+        "entryTime": 1770821400000,
+        "closeTime": 1770822180000,
+        "entryPrice": 8356.12,
+        "closePrice": 8338.62,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9972.409999999998,
+        "quantity": 0.14,
+        "pips": -17.5
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 70,
+        "net": 9.74,
+        "gross": 9.97,
+        "entryTime": 1770837000000,
+        "closeTime": 1770883260000,
+        "entryPrice": 8387.72,
+        "closePrice": 8448.12,
+        "commissions": 0,
+        "swaps": -0.23,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9982.149999999998,
+        "quantity": 0.14,
+        "pips": 60.4
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "sell",
+        "id": 72,
+        "net": 6.69,
+        "gross": 6.69,
+        "entryTime": 1770912240000,
+        "closeTime": 1770913500000,
+        "entryPrice": 8376.22,
+        "closePrice": 8335.72,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9988.839999999998,
+        "quantity": 0.14,
+        "pips": 40.5
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 74,
+        "net": 1.65,
+        "gross": 1.65,
+        "entryTime": 1771225500000,
+        "closeTime": 1771233180000,
+        "entryPrice": 8333.52,
+        "closePrice": 8343.52,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9990.489999999998,
+        "quantity": 0.14,
+        "pips": 10
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 76,
+        "net": -3.91,
+        "gross": -3.91,
+        "entryTime": 1771338660000,
+        "closeTime": 1771340400000,
+        "entryPrice": 8342.42,
+        "closePrice": 8318.72,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9986.579999999998,
+        "quantity": 0.14,
+        "pips": -23.7
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "sell",
+        "id": 78,
+        "net": 5.18,
+        "gross": 5.18,
+        "entryTime": 1771490160000,
+        "closeTime": 1771495440000,
+        "entryPrice": 8384.82,
+        "closePrice": 8353.42,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9991.759999999998,
+        "quantity": 0.14,
+        "pips": 31.4
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 80,
+        "net": 5.25,
+        "gross": 5.48,
+        "entryTime": 1771532580000,
+        "closeTime": 1771574520000,
+        "entryPrice": 8408.62,
+        "closePrice": 8441.82,
+        "commissions": 0,
+        "swaps": -0.23,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9997.009999999998,
+        "quantity": 0.14,
+        "pips": 33.2
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "sell",
+        "id": 82,
+        "net": -2.43,
+        "gross": -2.43,
+        "entryTime": 1771862640000,
+        "closeTime": 1771865040000,
+        "entryPrice": 8495.22,
+        "closePrice": 8509.92,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9994.579999999998,
+        "quantity": 0.14,
+        "pips": -14.7
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 84,
+        "net": 4.59,
+        "gross": 4.59,
+        "entryTime": 1771941360000,
+        "closeTime": 1771947000000,
+        "entryPrice": 8520.82,
+        "closePrice": 8548.62,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9999.169999999998,
+        "quantity": 0.14,
+        "pips": 27.8
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 86,
+        "net": 0.31000000000000005,
+        "gross": 0.54,
+        "entryTime": 1772039940000,
+        "closeTime": 1772089500000,
+        "entryPrice": 8570.12,
+        "closePrice": 8573.42,
+        "commissions": 0,
+        "swaps": -0.23,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 9999.479999999998,
+        "quantity": 0.14,
+        "pips": 3.3
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "buy",
+        "id": 88,
+        "net": 3.48,
+        "gross": 3.48,
+        "entryTime": 1772093700000,
+        "closeTime": 1772098560000,
+        "entryPrice": 8590.32,
+        "closePrice": 8611.42,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 10002.959999999997,
+        "quantity": 0.14,
+        "pips": 21.1
+      },
+      {
+        "symbol": "FRA40.cash",
+        "direction": "sell",
+        "id": 90,
+        "net": 6.34,
+        "gross": 6.34,
+        "entryTime": 1772189460000,
+        "closeTime": 1772199060000,
+        "entryPrice": 8602.52,
+        "closePrice": 8564.12,
+        "commissions": 0,
+        "swaps": 0,
+        "volume": 0.14,
+        "label": "ComboCsvPending",
+        "comment": null,
+        "balance": 10009.299999999997,
+        "quantity": 0.14,
+        "pips": 38.4
+      }
+    ]
+  },
+  "entries": {
+    "entriesByHours": {
+      "zero": {
+        "totalTrades": 0
+      },
+      "one": {
+        "totalTrades": 0
+      },
+      "two": {
+        "totalTrades": 0
+      },
+      "three": {
+        "totalTrades": 0
+      },
+      "four": {
+        "totalTrades": 0
+      },
+      "five": {
+        "totalTrades": 0
+      },
+      "six": {
+        "totalTrades": 0
+      },
+      "seven": {
+        "totalTrades": 8
+      },
+      "eight": {
+        "totalTrades": 4
+      },
+      "nine": {
+        "totalTrades": 5
+      },
+      "ten": {
+        "totalTrades": 4
+      },
+      "eleven": {
+        "totalTrades": 4
+      },
+      "twelve": {
+        "totalTrades": 1
+      },
+      "thirteen": {
+        "totalTrades": 4
+      },
+      "fourteen": {
+        "totalTrades": 4
+      },
+      "fifteen": {
+        "totalTrades": 2
+      },
+      "sixteen": {
+        "totalTrades": 4
+      },
+      "seventeen": {
+        "totalTrades": 3
+      },
+      "eighteen": {
+        "totalTrades": 0
+      },
+      "nineteen": {
+        "totalTrades": 1
+      },
+      "twenty": {
+        "totalTrades": 1
+      },
+      "twentyOne": {
+        "totalTrades": 0
+      },
+      "twentyTwo": {
+        "totalTrades": 0
+      },
+      "twentyThree": {
+        "totalTrades": 0
+      }
+    },
+    "entriesByWeekdays": {
+      "sunday": {
+        "totalTrades": 0
+      },
+      "monday": {
+        "totalTrades": 10
+      },
+      "tuesday": {
+        "totalTrades": 9
+      },
+      "wednesday": {
+        "totalTrades": 8
+      },
+      "thursday": {
+        "totalTrades": 11
+      },
+      "friday": {
+        "totalTrades": 7
+      },
+      "saturday": {
+        "totalTrades": 0
+      }
+    },
+    "entriesByMonths": {
+      "january": {
+        "totalTrades": 23
+      },
+      "february": {
+        "totalTrades": 22
+      },
+      "march": {
+        "totalTrades": 0
+      },
+      "april": {
+        "totalTrades": 0
+      },
+      "may": {
+        "totalTrades": 0
+      },
+      "june": {
+        "totalTrades": 0
+      },
+      "july": {
+        "totalTrades": 0
+      },
+      "august": {
+        "totalTrades": 0
+      },
+      "september": {
+        "totalTrades": 0
+      },
+      "october": {
+        "totalTrades": 0
+      },
+      "november": {
+        "totalTrades": 0
+      },
+      "december": {
+        "totalTrades": 0
+      }
+    }
+  },
+  "profitsLosses": {
+    "profitsLossesByHours": {
+      "zero": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      },
+      "one": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      },
+      "two": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      },
+      "three": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      },
+      "four": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      },
+      "five": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      },
+      "six": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      },
+      "seven": {
+        "winningTrades": 3,
+        "losingTrades": 5
+      },
+      "eight": {
+        "winningTrades": 3,
+        "losingTrades": 1
+      },
+      "nine": {
+        "winningTrades": 1,
+        "losingTrades": 4
+      },
+      "ten": {
+        "winningTrades": 1,
+        "losingTrades": 3
+      },
+      "eleven": {
+        "winningTrades": 2,
+        "losingTrades": 2
+      },
+      "twelve": {
+        "winningTrades": 0,
+        "losingTrades": 1
+      },
+      "thirteen": {
+        "winningTrades": 1,
+        "losingTrades": 3
+      },
+      "fourteen": {
+        "winningTrades": 1,
+        "losingTrades": 3
+      },
+      "fifteen": {
+        "winningTrades": 1,
+        "losingTrades": 1
+      },
+      "sixteen": {
+        "winningTrades": 2,
+        "losingTrades": 2
+      },
+      "seventeen": {
+        "winningTrades": 1,
+        "losingTrades": 2
+      },
+      "eighteen": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      },
+      "nineteen": {
+        "winningTrades": 1,
+        "losingTrades": 0
+      },
+      "twenty": {
+        "winningTrades": 1,
+        "losingTrades": 0
+      },
+      "twentyOne": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      },
+      "twentyTwo": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      },
+      "twentyThree": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      }
+    },
+    "profitsLossesByWeekdays": {
+      "sunday": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      },
+      "monday": {
+        "winningTrades": 3,
+        "losingTrades": 7
+      },
+      "tuesday": {
+        "winningTrades": 4,
+        "losingTrades": 5
+      },
+      "wednesday": {
+        "winningTrades": 3,
+        "losingTrades": 5
+      },
+      "thursday": {
+        "winningTrades": 6,
+        "losingTrades": 5
+      },
+      "friday": {
+        "winningTrades": 2,
+        "losingTrades": 5
+      },
+      "saturday": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      }
+    },
+    "profitsLossesByMonth": {
+      "january": {
+        "winningTrades": 4,
+        "losingTrades": 19
+      },
+      "february": {
+        "winningTrades": 14,
+        "losingTrades": 8
+      },
+      "march": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      },
+      "april": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      },
+      "may": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      },
+      "june": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      },
+      "july": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      },
+      "august": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      },
+      "september": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      },
+      "october": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      },
+      "november": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      },
+      "december": {
+        "winningTrades": 0,
+        "losingTrades": 0
+      }
+    }
+  },
+  "roi": {
+    "period1w": {
+      "totalRoi": 0.12293675809065968,
+      "points": [
+        {
+          "timestamp": 1771830000000,
+          "roi": 0
+        },
+        {
+          "timestamp": 1771891200000,
+          "roi": -0.02430726787309697
+        },
+        {
+          "timestamp": 1771977600000,
+          "roi": 0.021606460331637708
+        },
+        {
+          "timestamp": 1772064000000,
+          "roi": 0.021606460331637708
+        },
+        {
+          "timestamp": 1772150400000,
+          "roi": 0.05951779582093955
+        },
+        {
+          "timestamp": 1772225940000,
+          "roi": 0.12293675809065968
+        }
+      ]
+    },
+    "period1m": {
+      "totalRoi": 0.39347767869232186,
+      "points": [
+        {
+          "timestamp": 1769583600000,
+          "roi": 0
+        },
+        {
+          "timestamp": 1769644800000,
+          "roi": -0.03761257443528482
+        },
+        {
+          "timestamp": 1769731200000,
+          "roi": -0.07532544906906591
+        },
+        {
+          "timestamp": 1769817600000,
+          "roi": -0.1384142739218408
+        },
+        {
+          "timestamp": 1770076800000,
+          "roi": -0.12998905724833557
+        },
+        {
+          "timestamp": 1770163200000,
+          "roi": -0.053159105201861914
+        },
+        {
+          "timestamp": 1770249600000,
+          "roi": 0.005015009924704642
+        },
+        {
+          "timestamp": 1770336000000,
+          "roi": -0.034603568480469325
+        },
+        {
+          "timestamp": 1770422400000,
+          "roi": -0.034603568480469325
+        },
+        {
+          "timestamp": 1770681600000,
+          "roi": 0.038816176817203715
+        },
+        {
+          "timestamp": 1770768000000,
+          "roi": 0.07231644311423219
+        },
+        {
+          "timestamp": 1770854400000,
+          "roi": 0.023470246447619185
+        },
+        {
+          "timestamp": 1770940800000,
+          "roi": 0.18826347257341663
+        },
+        {
+          "timestamp": 1771027200000,
+          "roi": 0.18826347257341663
+        },
+        {
+          "timestamp": 1771286400000,
+          "roi": 0.20481300532493832
+        },
+        {
+          "timestamp": 1771372800000,
+          "roi": 0.16559562771374947
+        },
+        {
+          "timestamp": 1771459200000,
+          "roi": 0.16559562771374947
+        },
+        {
+          "timestamp": 1771545600000,
+          "roi": 0.2175511305336925
+        },
+        {
+          "timestamp": 1771632000000,
+          "roi": 0.2702087347430912
+        },
+        {
+          "timestamp": 1771891200000,
+          "roi": 0.24583578650902374
+        },
+        {
+          "timestamp": 1771977600000,
+          "roi": 0.29187357761781385
+        },
+        {
+          "timestamp": 1772064000000,
+          "roi": 0.29187357761781385
+        },
+        {
+          "timestamp": 1772150400000,
+          "roi": 0.3298873528470655
+        },
+        {
+          "timestamp": 1772225940000,
+          "roi": 0.39347767869232186
+        }
+      ]
+    },
+    "period3m": {
+      "totalRoi": 0.09299999999997453,
+      "points": [
+        {
+          "timestamp": 1767225600000,
+          "roi": 0
+        },
+        {
+          "timestamp": 1767312000000,
+          "roi": 0
+        },
+        {
+          "timestamp": 1767398400000,
+          "roi": -0.04739999999999782
+        },
+        {
+          "timestamp": 1767657600000,
+          "roi": -0.04739999999999782
+        },
+        {
+          "timestamp": 1767744000000,
+          "roi": -0.03210000000000946
+        },
+        {
+          "timestamp": 1767830400000,
+          "roi": -0.03210000000000946
+        },
+        {
+          "timestamp": 1767916800000,
+          "roi": -0.008500000000003638
+        },
+        {
+          "timestamp": 1768003200000,
+          "roi": 0.03889999999999418
+        },
+        {
+          "timestamp": 1768262400000,
+          "roi": 0.02109999999998763
+        },
+        {
+          "timestamp": 1768348800000,
+          "roi": 0.0431999999999789
+        },
+        {
+          "timestamp": 1768435200000,
+          "roi": 0.021599999999980357
+        },
+        {
+          "timestamp": 1768521600000,
+          "roi": -0.07260000000002037
+        },
+        {
+          "timestamp": 1768608000000,
+          "roi": -0.09390000000001236
+        },
+        {
+          "timestamp": 1768867200000,
+          "roi": -0.09390000000001236
+        },
+        {
+          "timestamp": 1768953600000,
+          "roi": -0.09390000000001236
+        },
+        {
+          "timestamp": 1769040000000,
+          "roi": -0.1669000000000051
+        },
+        {
+          "timestamp": 1769126400000,
+          "roi": -0.1669000000000051
+        },
+        {
+          "timestamp": 1769212800000,
+          "roi": -0.21950000000000727
+        },
+        {
+          "timestamp": 1769472000000,
+          "roi": -0.2798000000000138
+        },
+        {
+          "timestamp": 1769558400000,
+          "roi": -0.2993000000000211
+        },
+        {
+          "timestamp": 1769644800000,
+          "roi": -0.3368000000000211
+        },
+        {
+          "timestamp": 1769731200000,
+          "roi": -0.37440000000002327
+        },
+        {
+          "timestamp": 1769817600000,
+          "roi": -0.4373000000000138
+        },
+        {
+          "timestamp": 1770076800000,
+          "roi": -0.4289000000000123
+        },
+        {
+          "timestamp": 1770163200000,
+          "roi": -0.3523000000000138
+        },
+        {
+          "timestamp": 1770249600000,
+          "roi": -0.2943000000000211
+        },
+        {
+          "timestamp": 1770336000000,
+          "roi": -0.3338000000000284
+        },
+        {
+          "timestamp": 1770422400000,
+          "roi": -0.3338000000000284
+        },
+        {
+          "timestamp": 1770681600000,
+          "roi": -0.2606000000000313
+        },
+        {
+          "timestamp": 1770768000000,
+          "roi": -0.22720000000002985
+        },
+        {
+          "timestamp": 1770854400000,
+          "roi": -0.2759000000000197
+        },
+        {
+          "timestamp": 1770940800000,
+          "roi": -0.11160000000001674
+        },
+        {
+          "timestamp": 1771027200000,
+          "roi": -0.11160000000001674
+        },
+        {
+          "timestamp": 1771286400000,
+          "roi": -0.09510000000002038
+        },
+        {
+          "timestamp": 1771372800000,
+          "roi": -0.13420000000001892
+        },
+        {
+          "timestamp": 1771459200000,
+          "roi": -0.13420000000001892
+        },
+        {
+          "timestamp": 1771545600000,
+          "roi": -0.08240000000001602
+        },
+        {
+          "timestamp": 1771632000000,
+          "roi": -0.029900000000016008
+        },
+        {
+          "timestamp": 1771891200000,
+          "roi": -0.054200000000018914
+        },
+        {
+          "timestamp": 1771977600000,
+          "roi": -0.008300000000017462
+        },
+        {
+          "timestamp": 1772064000000,
+          "roi": -0.008300000000017462
+        },
+        {
+          "timestamp": 1772150400000,
+          "roi": 0.02959999999997308
+        },
+        {
+          "timestamp": 1772225940000,
+          "roi": 0.09299999999997453
+        }
+      ]
+    },
+    "period6m": {
+      "totalRoi": 0.09299999999997453,
+      "points": [
+        {
+          "timestamp": 1767225600000,
+          "roi": 0
+        },
+        {
+          "timestamp": 1767312000000,
+          "roi": 0
+        },
+        {
+          "timestamp": 1767398400000,
+          "roi": -0.04739999999999782
+        },
+        {
+          "timestamp": 1767657600000,
+          "roi": -0.04739999999999782
+        },
+        {
+          "timestamp": 1767744000000,
+          "roi": -0.03210000000000946
+        },
+        {
+          "timestamp": 1767830400000,
+          "roi": -0.03210000000000946
+        },
+        {
+          "timestamp": 1767916800000,
+          "roi": -0.008500000000003638
+        },
+        {
+          "timestamp": 1768003200000,
+          "roi": 0.03889999999999418
+        },
+        {
+          "timestamp": 1768262400000,
+          "roi": 0.02109999999998763
+        },
+        {
+          "timestamp": 1768348800000,
+          "roi": 0.0431999999999789
+        },
+        {
+          "timestamp": 1768435200000,
+          "roi": 0.021599999999980357
+        },
+        {
+          "timestamp": 1768521600000,
+          "roi": -0.07260000000002037
+        },
+        {
+          "timestamp": 1768608000000,
+          "roi": -0.09390000000001236
+        },
+        {
+          "timestamp": 1768867200000,
+          "roi": -0.09390000000001236
+        },
+        {
+          "timestamp": 1768953600000,
+          "roi": -0.09390000000001236
+        },
+        {
+          "timestamp": 1769040000000,
+          "roi": -0.1669000000000051
+        },
+        {
+          "timestamp": 1769126400000,
+          "roi": -0.1669000000000051
+        },
+        {
+          "timestamp": 1769212800000,
+          "roi": -0.21950000000000727
+        },
+        {
+          "timestamp": 1769472000000,
+          "roi": -0.2798000000000138
+        },
+        {
+          "timestamp": 1769558400000,
+          "roi": -0.2993000000000211
+        },
+        {
+          "timestamp": 1769644800000,
+          "roi": -0.3368000000000211
+        },
+        {
+          "timestamp": 1769731200000,
+          "roi": -0.37440000000002327
+        },
+        {
+          "timestamp": 1769817600000,
+          "roi": -0.4373000000000138
+        },
+        {
+          "timestamp": 1770076800000,
+          "roi": -0.4289000000000123
+        },
+        {
+          "timestamp": 1770163200000,
+          "roi": -0.3523000000000138
+        },
+        {
+          "timestamp": 1770249600000,
+          "roi": -0.2943000000000211
+        },
+        {
+          "timestamp": 1770336000000,
+          "roi": -0.3338000000000284
+        },
+        {
+          "timestamp": 1770422400000,
+          "roi": -0.3338000000000284
+        },
+        {
+          "timestamp": 1770681600000,
+          "roi": -0.2606000000000313
+        },
+        {
+          "timestamp": 1770768000000,
+          "roi": -0.22720000000002985
+        },
+        {
+          "timestamp": 1770854400000,
+          "roi": -0.2759000000000197
+        },
+        {
+          "timestamp": 1770940800000,
+          "roi": -0.11160000000001674
+        },
+        {
+          "timestamp": 1771027200000,
+          "roi": -0.11160000000001674
+        },
+        {
+          "timestamp": 1771286400000,
+          "roi": -0.09510000000002038
+        },
+        {
+          "timestamp": 1771372800000,
+          "roi": -0.13420000000001892
+        },
+        {
+          "timestamp": 1771459200000,
+          "roi": -0.13420000000001892
+        },
+        {
+          "timestamp": 1771545600000,
+          "roi": -0.08240000000001602
+        },
+        {
+          "timestamp": 1771632000000,
+          "roi": -0.029900000000016008
+        },
+        {
+          "timestamp": 1771891200000,
+          "roi": -0.054200000000018914
+        },
+        {
+          "timestamp": 1771977600000,
+          "roi": -0.008300000000017462
+        },
+        {
+          "timestamp": 1772064000000,
+          "roi": -0.008300000000017462
+        },
+        {
+          "timestamp": 1772150400000,
+          "roi": 0.02959999999997308
+        },
+        {
+          "timestamp": 1772225940000,
+          "roi": 0.09299999999997453
+        }
+      ]
+    },
+    "period1y": {
+      "totalRoi": 0.09299999999997453,
+      "points": [
+        {
+          "timestamp": 1767225600000,
+          "roi": 0
+        },
+        {
+          "timestamp": 1767312000000,
+          "roi": 0
+        },
+        {
+          "timestamp": 1767398400000,
+          "roi": -0.04739999999999782
+        },
+        {
+          "timestamp": 1767657600000,
+          "roi": -0.04739999999999782
+        },
+        {
+          "timestamp": 1767744000000,
+          "roi": -0.03210000000000946
+        },
+        {
+          "timestamp": 1767830400000,
+          "roi": -0.03210000000000946
+        },
+        {
+          "timestamp": 1767916800000,
+          "roi": -0.008500000000003638
+        },
+        {
+          "timestamp": 1768003200000,
+          "roi": 0.03889999999999418
+        },
+        {
+          "timestamp": 1768262400000,
+          "roi": 0.02109999999998763
+        },
+        {
+          "timestamp": 1768348800000,
+          "roi": 0.0431999999999789
+        },
+        {
+          "timestamp": 1768435200000,
+          "roi": 0.021599999999980357
+        },
+        {
+          "timestamp": 1768521600000,
+          "roi": -0.07260000000002037
+        },
+        {
+          "timestamp": 1768608000000,
+          "roi": -0.09390000000001236
+        },
+        {
+          "timestamp": 1768867200000,
+          "roi": -0.09390000000001236
+        },
+        {
+          "timestamp": 1768953600000,
+          "roi": -0.09390000000001236
+        },
+        {
+          "timestamp": 1769040000000,
+          "roi": -0.1669000000000051
+        },
+        {
+          "timestamp": 1769126400000,
+          "roi": -0.1669000000000051
+        },
+        {
+          "timestamp": 1769212800000,
+          "roi": -0.21950000000000727
+        },
+        {
+          "timestamp": 1769472000000,
+          "roi": -0.2798000000000138
+        },
+        {
+          "timestamp": 1769558400000,
+          "roi": -0.2993000000000211
+        },
+        {
+          "timestamp": 1769644800000,
+          "roi": -0.3368000000000211
+        },
+        {
+          "timestamp": 1769731200000,
+          "roi": -0.37440000000002327
+        },
+        {
+          "timestamp": 1769817600000,
+          "roi": -0.4373000000000138
+        },
+        {
+          "timestamp": 1770076800000,
+          "roi": -0.4289000000000123
+        },
+        {
+          "timestamp": 1770163200000,
+          "roi": -0.3523000000000138
+        },
+        {
+          "timestamp": 1770249600000,
+          "roi": -0.2943000000000211
+        },
+        {
+          "timestamp": 1770336000000,
+          "roi": -0.3338000000000284
+        },
+        {
+          "timestamp": 1770422400000,
+          "roi": -0.3338000000000284
+        },
+        {
+          "timestamp": 1770681600000,
+          "roi": -0.2606000000000313
+        },
+        {
+          "timestamp": 1770768000000,
+          "roi": -0.22720000000002985
+        },
+        {
+          "timestamp": 1770854400000,
+          "roi": -0.2759000000000197
+        },
+        {
+          "timestamp": 1770940800000,
+          "roi": -0.11160000000001674
+        },
+        {
+          "timestamp": 1771027200000,
+          "roi": -0.11160000000001674
+        },
+        {
+          "timestamp": 1771286400000,
+          "roi": -0.09510000000002038
+        },
+        {
+          "timestamp": 1771372800000,
+          "roi": -0.13420000000001892
+        },
+        {
+          "timestamp": 1771459200000,
+          "roi": -0.13420000000001892
+        },
+        {
+          "timestamp": 1771545600000,
+          "roi": -0.08240000000001602
+        },
+        {
+          "timestamp": 1771632000000,
+          "roi": -0.029900000000016008
+        },
+        {
+          "timestamp": 1771891200000,
+          "roi": -0.054200000000018914
+        },
+        {
+          "timestamp": 1771977600000,
+          "roi": -0.008300000000017462
+        },
+        {
+          "timestamp": 1772064000000,
+          "roi": -0.008300000000017462
+        },
+        {
+          "timestamp": 1772150400000,
+          "roi": 0.02959999999997308
+        },
+        {
+          "timestamp": 1772225940000,
+          "roi": 0.09299999999997453
+        }
+      ]
+    },
+    "periodAll": {
+      "totalRoi": 0.09299999999997453,
+      "points": [
+        {
+          "timestamp": 1767225600000,
+          "roi": 0
+        },
+        {
+          "timestamp": 1767312000000,
+          "roi": 0
+        },
+        {
+          "timestamp": 1767398400000,
+          "roi": -0.04739999999999782
+        },
+        {
+          "timestamp": 1767657600000,
+          "roi": -0.04739999999999782
+        },
+        {
+          "timestamp": 1767744000000,
+          "roi": -0.03210000000000946
+        },
+        {
+          "timestamp": 1767830400000,
+          "roi": -0.03210000000000946
+        },
+        {
+          "timestamp": 1767916800000,
+          "roi": -0.008500000000003638
+        },
+        {
+          "timestamp": 1768003200000,
+          "roi": 0.03889999999999418
+        },
+        {
+          "timestamp": 1768262400000,
+          "roi": 0.02109999999998763
+        },
+        {
+          "timestamp": 1768348800000,
+          "roi": 0.0431999999999789
+        },
+        {
+          "timestamp": 1768435200000,
+          "roi": 0.021599999999980357
+        },
+        {
+          "timestamp": 1768521600000,
+          "roi": -0.07260000000002037
+        },
+        {
+          "timestamp": 1768608000000,
+          "roi": -0.09390000000001236
+        },
+        {
+          "timestamp": 1768867200000,
+          "roi": -0.09390000000001236
+        },
+        {
+          "timestamp": 1768953600000,
+          "roi": -0.09390000000001236
+        },
+        {
+          "timestamp": 1769040000000,
+          "roi": -0.1669000000000051
+        },
+        {
+          "timestamp": 1769126400000,
+          "roi": -0.1669000000000051
+        },
+        {
+          "timestamp": 1769212800000,
+          "roi": -0.21950000000000727
+        },
+        {
+          "timestamp": 1769472000000,
+          "roi": -0.2798000000000138
+        },
+        {
+          "timestamp": 1769558400000,
+          "roi": -0.2993000000000211
+        },
+        {
+          "timestamp": 1769644800000,
+          "roi": -0.3368000000000211
+        },
+        {
+          "timestamp": 1769731200000,
+          "roi": -0.37440000000002327
+        },
+        {
+          "timestamp": 1769817600000,
+          "roi": -0.4373000000000138
+        },
+        {
+          "timestamp": 1770076800000,
+          "roi": -0.4289000000000123
+        },
+        {
+          "timestamp": 1770163200000,
+          "roi": -0.3523000000000138
+        },
+        {
+          "timestamp": 1770249600000,
+          "roi": -0.2943000000000211
+        },
+        {
+          "timestamp": 1770336000000,
+          "roi": -0.3338000000000284
+        },
+        {
+          "timestamp": 1770422400000,
+          "roi": -0.3338000000000284
+        },
+        {
+          "timestamp": 1770681600000,
+          "roi": -0.2606000000000313
+        },
+        {
+          "timestamp": 1770768000000,
+          "roi": -0.22720000000002985
+        },
+        {
+          "timestamp": 1770854400000,
+          "roi": -0.2759000000000197
+        },
+        {
+          "timestamp": 1770940800000,
+          "roi": -0.11160000000001674
+        },
+        {
+          "timestamp": 1771027200000,
+          "roi": -0.11160000000001674
+        },
+        {
+          "timestamp": 1771286400000,
+          "roi": -0.09510000000002038
+        },
+        {
+          "timestamp": 1771372800000,
+          "roi": -0.13420000000001892
+        },
+        {
+          "timestamp": 1771459200000,
+          "roi": -0.13420000000001892
+        },
+        {
+          "timestamp": 1771545600000,
+          "roi": -0.08240000000001602
+        },
+        {
+          "timestamp": 1771632000000,
+          "roi": -0.029900000000016008
+        },
+        {
+          "timestamp": 1771891200000,
+          "roi": -0.054200000000018914
+        },
+        {
+          "timestamp": 1771977600000,
+          "roi": -0.008300000000017462
+        },
+        {
+          "timestamp": 1772064000000,
+          "roi": -0.008300000000017462
+        },
+        {
+          "timestamp": 1772150400000,
+          "roi": 0.02959999999997308
+        },
+        {
+          "timestamp": 1772225940000,
+          "roi": 0.09299999999997453
+        }
+      ]
+    }
+  }
+}

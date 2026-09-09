@@ -1,0 +1,110 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_JP225.cash_h4_20260902-192536\params.cbotset 
+--start=01/01/2025 --end=15/01/2025 --data-mode=Ticks --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=JP225.cash 
+--period=h4 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_J
+P225.cash_h4_20260902-192536\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...536\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | JP225.cash                | cmd arg              |
+| Period               | h4                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 15/01/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 3                         | default value        |
+| KtpLevel             | 3                         | default value        |
+| RiskPercent          | 0.5                       | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+03/09/2026 02:25:39.236 | Establishing connection using votuankiet96@gmail.com...
+03/09/2026 02:25:41.429 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Progress | Loading JP225.cash, h4 | 100.00 % |
+Info | CBot instance [Combo, JP225.cash, h4] started.
+Progress | Backtesting | 6.41 % |
+Progress | Backtesting | 10.07 % |
+Progress | Backtesting | 10.77 % |
+Progress | Backtesting | 11.17 % |
+Progress | Backtesting | 11.65 % |
+Progress | Backtesting | 12.34 % |
+Progress | Backtesting | 14.85 % |
+Progress | Backtesting | 17.39 % |
+Progress | Backtesting | 18.23 % |
+Progress | Backtesting | 18.33 % |
+Progress | Loading USDJPY, h4 | 100.00 % |
+Progress | Backtesting | 18.46 % |
+Progress | Backtesting | 33.33 % |
+Progress | Backtesting | 38.75 % |
+Progress | Backtesting | 40.86 % |
+Progress | Backtesting | 42.76 % |
+Progress | Backtesting | 44.36 % |
+Progress | Backtesting | 45.15 % |
+Progress | Backtesting | 46.80 % |
+Progress | Backtesting | 49.59 % |
+Progress | Backtesting | 50.92 % |
+Progress | Backtesting | 52.33 % |
+Progress | Backtesting | 55.15 % |
+Progress | Backtesting | 60.00 % |
+Progress | Backtesting | 62.49 % |
+Progress | Backtesting | 64.19 % |
+Progress | Backtesting | 65.02 % |
+Progress | Backtesting | 80.70 % |
+Progress | Backtesting | 83.65 % |
+Progress | Backtesting | 84.54 % |
+Progress | Backtesting | 86.60 % |
+Progress | Backtesting | 87.91 % |
+Progress | Backtesting | 90.45 % |
+Progress | Backtesting | 91.63 % |
+Progress | Backtesting | 93.80 % |
+Progress | Backtesting | 97.31 % |
+Progress | Backtesting | 99.14 % |
+01/01/2025 23:05:00.003 | Info | Combo: loaded 1223 valid signal row(s) from CSV.
+01/01/2025 23:05:00.003 | Info | Combo: signal scheduling active with chart timeframe h4 (04:00:00); CSV timeframe must match the chart timeframe.
+03/01/2025 18:00:00.968 | Trade | Placing Stop Order to Buy 59.6 JP225.cash (Price: 39560.9, SL: 39429.7359917193, TP: 39692.06)
+03/01/2025 18:00:00.968 | Trade |  Placing Stop Order to Buy 59.6 JP225.cash (Price: 39560.9, SL: 39429.7359917193, TP: 39692.06) SUCCEEDED, PendingOrder OID1
+03/01/2025 18:00:00.968 | Info | Combo: bartime=2025-01-03 14:00, executed=2025-01-03 18:00:00, pending Buy placed at 39560.9; SL=39429.73599171928, TP=39692.06400828072; valid for the next 3 chart bar(s).
+06/01/2025 11:00:00.187 | Trade | Placing Stop Order to Buy 49.9 JP225.cash (Price: 39536.5, SL: 39379.2676382082, TP: 39693.73)
+06/01/2025 11:00:00.187 | Trade |  Placing Stop Order to Buy 49.9 JP225.cash (Price: 39536.5, SL: 39379.2676382082, TP: 39693.73) SUCCEEDED, PendingOrder OID4
+06/01/2025 11:00:00.187 | Info | Combo: bartime=2025-01-06 07:00, executed=2025-01-06 11:00:00, pending Buy placed at 39536.5; SL=39379.26763820822, TP=39693.73236179178; valid for the next 3 chart bar(s).
+09/01/2025 02:00:08.884 | Trade | Placing Stop Order to Sell 46.9 JP225.cash (Price: 39571.5, SL: 39739.6901931683, TP: 39403.31)
+09/01/2025 02:00:08.884 | Trade |  Placing Stop Order to Sell 46.9 JP225.cash (Price: 39571.5, SL: 39739.6901931683, TP: 39403.31) SUCCEEDED, PendingOrder OID7
+09/01/2025 02:00:08.884 | Info | Combo: bartime=2025-01-08 22:00, executed=2025-01-09 02:00:08, pending Sell placed at 39571.5; SL=39739.69019316828, TP=39403.30980683172; valid for the next 3 chart bar(s).
+15/01/2025 14:00:00.219 | Trade | Placing Stop Order to Buy 37.4 JP225.cash (Price: 38779, SL: 38567.1399902106, TP: 38990.86)
+15/01/2025 14:00:00.219 | Trade |  Placing Stop Order to Buy 37.4 JP225.cash (Price: 38779, SL: 38567.1399902106, TP: 38990.86) SUCCEEDED, PendingOrder OID10
+15/01/2025 14:00:00.219 | Info | Combo: bartime=2025-01-15 10:00, executed=2025-01-15 14:00:00, pending Buy placed at 38779; SL=38567.13999021059, TP=38990.86000978941; valid for the next 3 chart bar(s).
+15/01/2025 23:59:59.913 | Info | Combo: loaded=1223, processed=4, before-start=1003, not-processed=216, placed=4, failed=0, guard-skipped=0, pending-expired=0, same-direction-skipped=0, reversed=0, margin-capped=0, margin-blocked=0.
+Progress | Backtesting | 100.00 % |
+Info | CBot instance [Combo, JP225.cash, h4] stopped.
+{
+	"Equity":10133.51,
+	"NetProfit":133.52,
+	"MaxBalanceDrawdownPercentages":0,
+	"MaxEquityDrawdownPercentages":0,
+	"MaxBalanceDrawdown":10.94,
+	"MaxEquityDrawdown":71.14,
+	"WinningTrades":3,
+	"LosingTrades":1,
+	"TotalTrades":4,
+	"AverageTrade":33.38,
+	"ProfitFactor":13.2,
+	"Fitness":0
+}
+

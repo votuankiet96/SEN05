@@ -1,0 +1,14 @@
+﻿backtest
+C:\Users\Administrator\Documents\cAlgo\Sources\Robots\MA Cross.algo
+C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\MA Cross_UK100.cash_m30_20260901-2129\params.cbotset
+--start=01/01/2025
+--end=09/01/2026
+--data-mode=Ticks
+--ctid=votuankiet96@gmail.com
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt
+--account=7563609
+--symbol=UK100.cash
+--period=m30
+--full-access
+--report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\MA Cross_UK100.cash_m30_20260901-2129\report.json
+

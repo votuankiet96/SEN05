@@ -1,0 +1,168 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo 
+C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_BTCUSD_h4_20260902-192230\params.cbotset 
+--start=01/01/2025 --end=15/01/2025 --data-mode=Ticks --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=BTCUSD 
+--period=h4 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_B
+TCUSD_h4_20260902-192230\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...230\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | BTCUSD                    | cmd arg              |
+| Period               | h4                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 15/01/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 3                         | default value        |
+| KtpLevel             | 3                         | default value        |
+| RiskPercent          | 0.5                       | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+03/09/2026 02:22:33.861 | Establishing connection using votuankiet96@gmail.com...
+03/09/2026 02:22:36.179 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Progress | Loading BTCUSD, h4 | 100.00 % |
+Info | CBot instance [Combo, BTCUSD, h4] started.
+Progress | Backtesting | 0.00 % |
+Progress | Backtesting | 3.47 % |
+Progress | Backtesting | 3.89 % |
+Progress | Backtesting | 3.89 % |
+Progress | Backtesting | 4.08 % |
+Progress | Backtesting | 4.41 % |
+Progress | Backtesting | 4.71 % |
+Progress | Backtesting | 5.21 % |
+Progress | Backtesting | 5.56 % |
+Progress | Backtesting | 6.79 % |
+Progress | Backtesting | 7.05 % |
+Progress | Backtesting | 7.54 % |
+Progress | Backtesting | 8.43 % |
+Progress | Backtesting | 9.42 % |
+Progress | Backtesting | 10.29 % |
+Progress | Backtesting | 10.75 % |
+Progress | Backtesting | 10.95 % |
+Progress | Backtesting | 11.30 % |
+Progress | Backtesting | 11.77 % |
+Progress | Backtesting | 13.33 % |
+Progress | Backtesting | 16.02 % |
+Progress | Backtesting | 17.68 % |
+Progress | Backtesting | 18.80 % |
+Progress | Backtesting | 23.64 % |
+Progress | Backtesting | 26.67 % |
+Progress | Backtesting | 30.09 % |
+Progress | Backtesting | 33.13 % |
+Progress | Backtesting | 33.86 % |
+Progress | Backtesting | 36.31 % |
+Progress | Backtesting | 37.57 % |
+Progress | Backtesting | 38.14 % |
+Progress | Backtesting | 39.89 % |
+Progress | Backtesting | 41.12 % |
+Progress | Backtesting | 44.14 % |
+Progress | Backtesting | 44.49 % |
+Progress | Backtesting | 45.45 % |
+Progress | Backtesting | 46.27 % |
+Progress | Backtesting | 46.67 % |
+Progress | Backtesting | 47.67 % |
+Progress | Backtesting | 48.57 % |
+Progress | Backtesting | 49.96 % |
+Progress | Backtesting | 50.83 % |
+Progress | Backtesting | 51.41 % |
+Progress | Backtesting | 51.79 % |
+Progress | Backtesting | 52.36 % |
+Progress | Backtesting | 53.33 % |
+Progress | Backtesting | 54.07 % |
+Progress | Backtesting | 55.38 % |
+Progress | Backtesting | 56.24 % |
+Progress | Backtesting | 57.33 % |
+Progress | Backtesting | 57.90 % |
+Progress | Backtesting | 58.84 % |
+Progress | Backtesting | 59.54 % |
+Progress | Backtesting | 60.00 % |
+Progress | Backtesting | 61.46 % |
+Progress | Backtesting | 63.06 % |
+Progress | Backtesting | 64.07 % |
+Progress | Backtesting | 64.50 % |
+Progress | Backtesting | 65.10 % |
+Progress | Backtesting | 66.25 % |
+Progress | Backtesting | 68.20 % |
+Progress | Backtesting | 72.89 % |
+Progress | Backtesting | 74.49 % |
+Progress | Backtesting | 77.36 % |
+Progress | Backtesting | 79.31 % |
+Progress | Backtesting | 80.00 % |
+Progress | Backtesting | 81.10 % |
+Progress | Backtesting | 82.56 % |
+Progress | Backtesting | 83.44 % |
+Progress | Backtesting | 84.08 % |
+Progress | Backtesting | 84.52 % |
+Progress | Backtesting | 85.23 % |
+Progress | Backtesting | 85.99 % |
+Progress | Backtesting | 86.67 % |
+Progress | Backtesting | 87.70 % |
+Progress | Backtesting | 89.50 % |
+Progress | Backtesting | 90.70 % |
+Progress | Backtesting | 91.57 % |
+Progress | Backtesting | 93.33 % |
+Progress | Backtesting | 94.85 % |
+Progress | Backtesting | 97.11 % |
+Progress | Backtesting | 97.74 % |
+Progress | Backtesting | 99.07 % |
+01/01/2025 00:00:05.297 | Info | Combo: loaded 1645 valid signal row(s) from CSV.
+01/01/2025 00:00:05.297 | Info | Combo: signal scheduling active with chart timeframe h4 (04:00:00); CSV timeframe must match the chart timeframe.
+01/01/2025 14:00:10.032 | Trade | Placing Stop Order to Buy 0.07 BTCUSD (Price: 93800, SL: 93097.2630858611, TP: 94502.74)
+01/01/2025 14:00:10.032 | Trade |  Placing Stop Order to Buy 0.07 BTCUSD (Price: 93800, SL: 93097.2630858611, TP: 94502.74) SUCCEEDED, PendingOrder OID1
+01/01/2025 14:00:10.032 | Info | Combo: bartime=2025-01-01 10:00, executed=2025-01-01 14:00:10, pending Buy placed at 93800; SL=93097.26308586108, TP=94502.73691413892; valid for the next 3 chart bar(s).
+07/01/2025 18:00:00.244 | Trade | Placing Stop Order to Sell 0.05 BTCUSD (Price: 96721.25, SL: 97716.0016422216, TP: 95726.5)
+07/01/2025 18:00:00.244 | Trade |  Placing Stop Order to Sell 0.05 BTCUSD (Price: 96721.25, SL: 97716.0016422216, TP: 95726.5) SUCCEEDED, PendingOrder OID4
+07/01/2025 18:00:00.244 | Info | Combo: bartime=2025-01-07 14:00, executed=2025-01-07 18:00:00, pending Sell placed at 96721.25; SL=97716.00164222157, TP=95726.49835777843; valid for the next 3 chart bar(s).
+10/01/2025 18:00:00.399 | Trade | Placing Stop Order to Buy 0.03 BTCUSD (Price: 95770.1, SL: 94471.6027813195, TP: 97068.6)
+10/01/2025 18:00:00.399 | Trade |  Placing Stop Order to Buy 0.03 BTCUSD (Price: 95770.1, SL: 94471.6027813195, TP: 97068.6) SUCCEEDED, PendingOrder OID7
+10/01/2025 18:00:00.399 | Info | Combo: bartime=2025-01-10 14:00, executed=2025-01-10 18:00:00, pending Buy placed at 95770.1; SL=94471.60278131953, TP=97068.59721868049; valid for the next 3 chart bar(s).
+11/01/2025 19:00:00.004 | Trade | Cancelling pending order OID7
+11/01/2025 19:00:00.004 | Trade |  Cancelling pending order OID7 SUCCEEDED
+11/01/2025 19:00:00.004 | Info | Combo: pending order 7 cancelled after 3 chart bars.
+12/01/2025 10:00:01.170 | Trade | Placing Stop Order to Sell 0.1 BTCUSD (Price: 93621.65, SL: 94111.9213874682, TP: 93131.38)
+12/01/2025 10:00:01.170 | Trade |  Placing Stop Order to Sell 0.1 BTCUSD (Price: 93621.65, SL: 94111.9213874682, TP: 93131.38) SUCCEEDED, PendingOrder OID8
+12/01/2025 10:00:01.170 | Info | Combo: bartime=2025-01-12 06:00, executed=2025-01-12 10:00:01, pending Sell placed at 93621.65; SL=94111.9213874682, TP=93131.37861253179; valid for the next 3 chart bar(s).
+12/01/2025 14:00:01.382 | Info | Combo: bartime=2025-01-12 10:00, reversal - cancelling existing Sell pending order 8 before opening opposite direction.
+12/01/2025 14:00:01.382 | Trade | Cancelling pending order OID8
+12/01/2025 14:00:01.382 | Trade |  Cancelling pending order OID8 SUCCEEDED
+12/01/2025 14:00:01.382 | Trade | Placing Stop Order to Buy 0.1 BTCUSD (Price: 94681.9, SL: 94182.0767300254, TP: 95181.72)
+12/01/2025 14:00:01.382 | Trade |  Placing Stop Order to Buy 0.1 BTCUSD (Price: 94681.9, SL: 94182.0767300254, TP: 95181.72) SUCCEEDED, PendingOrder OID9
+12/01/2025 14:00:01.382 | Info | Combo: bartime=2025-01-12 10:00, executed=2025-01-12 14:00:01, pending Buy placed at 94681.9; SL=94182.07673002542, TP=95181.72326997457; valid for the next 3 chart bar(s).
+13/01/2025 22:05:00.014 | Trade | Placing Stop Order to Buy 0.03 BTCUSD (Price: 94438.65, SL: 93146.4794244814, TP: 95730.82)
+13/01/2025 22:05:00.014 | Trade |  Placing Stop Order to Buy 0.03 BTCUSD (Price: 94438.65, SL: 93146.4794244814, TP: 95730.82) SUCCEEDED, PendingOrder OID12
+13/01/2025 22:05:00.014 | Info | Combo: bartime=2025-01-13 18:00, executed=2025-01-13 22:05:00, pending Buy placed at 94438.65; SL=93146.4794244814, TP=95730.82057551859; valid for the next 3 chart bar(s).
+15/01/2025 23:59:53.384 | Info | Combo: loaded=1645, processed=6, before-start=1327, not-processed=312, placed=6, failed=0, guard-skipped=0, pending-expired=1, same-direction-skipped=0, reversed=1, margin-capped=0, margin-blocked=0.
+Progress | Backtesting | 100.00 % |
+Info | CBot instance [Combo, BTCUSD, h4] stopped.
+{
+	"Equity":10170.23,
+	"NetProfit":170.24,
+	"MaxBalanceDrawdownPercentages":0,
+	"MaxEquityDrawdownPercentages":0,
+	"MaxBalanceDrawdown":0,
+	"MaxEquityDrawdown":57.81,
+	"WinningTrades":4,
+	"LosingTrades":0,
+	"TotalTrades":4,
+	"AverageTrade":42.56,
+	"ProfitFactor":-,
+	"Fitness":0
+}
+

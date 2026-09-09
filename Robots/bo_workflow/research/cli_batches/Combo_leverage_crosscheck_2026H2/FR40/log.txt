@@ -1,0 +1,437 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_leverage_crosscheck_2026H2\FR40\params.cbotset 
+--start=01/03/2026 --end=31/08/2026 --data-mode=M1 --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=FRA40.cash 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_leverage_crosscheck_2026H2\FR40\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...R40\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | FRA40.cash                | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/03/2026 00:00          | cmd arg              |
+| End                  | 31/08/2026 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | M1                        | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 2                         | cbotset              |
+| KtpLevel             | 4                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 50                        | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+04/09/2026 06:24:19.974 | Establishing connection using votuankiet96@gmail.com...
+04/09/2026 06:24:26.473 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Progress | Loading FRA40.cash, h1 | 0.54 % |
+Progress | Loading FRA40.cash, h1 | 1.09 % |
+Progress | Loading FRA40.cash, h1 | 1.63 % |
+Progress | Loading FRA40.cash, h1 | 2.17 % |
+Progress | Loading FRA40.cash, h1 | 2.72 % |
+Progress | Loading FRA40.cash, h1 | 3.26 % |
+Progress | Loading FRA40.cash, h1 | 3.80 % |
+Progress | Loading FRA40.cash, h1 | 4.35 % |
+Progress | Loading FRA40.cash, h1 | 4.89 % |
+Progress | Loading FRA40.cash, h1 | 5.43 % |
+Progress | Loading FRA40.cash, h1 | 5.98 % |
+Progress | Loading FRA40.cash, h1 | 6.52 % |
+Progress | Loading FRA40.cash, h1 | 7.07 % |
+Progress | Loading FRA40.cash, h1 | 7.61 % |
+Progress | Loading FRA40.cash, h1 | 8.15 % |
+Progress | Loading FRA40.cash, h1 | 8.70 % |
+Progress | Loading FRA40.cash, h1 | 9.24 % |
+Progress | Loading FRA40.cash, h1 | 9.78 % |
+Progress | Loading FRA40.cash, h1 | 10.33 % |
+Progress | Loading FRA40.cash, h1 | 10.87 % |
+Progress | Loading FRA40.cash, h1 | 11.41 % |
+Progress | Loading FRA40.cash, h1 | 11.96 % |
+Progress | Loading FRA40.cash, h1 | 12.50 % |
+Progress | Loading FRA40.cash, h1 | 13.04 % |
+Progress | Loading FRA40.cash, h1 | 13.59 % |
+Progress | Loading FRA40.cash, h1 | 14.13 % |
+Progress | Loading FRA40.cash, h1 | 14.67 % |
+Progress | Loading FRA40.cash, h1 | 15.22 % |
+Progress | Loading FRA40.cash, h1 | 15.76 % |
+Progress | Loading FRA40.cash, h1 | 16.30 % |
+Progress | Loading FRA40.cash, h1 | 16.85 % |
+Progress | Loading FRA40.cash, h1 | 17.39 % |
+Progress | Loading FRA40.cash, h1 | 17.93 % |
+Progress | Loading FRA40.cash, h1 | 18.48 % |
+Progress | Loading FRA40.cash, h1 | 19.02 % |
+Progress | Loading FRA40.cash, h1 | 19.57 % |
+Progress | Loading FRA40.cash, h1 | 20.11 % |
+Progress | Loading FRA40.cash, h1 | 20.65 % |
+Progress | Loading FRA40.cash, h1 | 21.20 % |
+Progress | Loading FRA40.cash, h1 | 21.74 % |
+Progress | Loading FRA40.cash, h1 | 22.28 % |
+Progress | Loading FRA40.cash, h1 | 22.83 % |
+Progress | Loading FRA40.cash, h1 | 23.37 % |
+Progress | Loading FRA40.cash, h1 | 23.91 % |
+Progress | Loading FRA40.cash, h1 | 24.46 % |
+Progress | Loading FRA40.cash, h1 | 25.00 % |
+Progress | Loading FRA40.cash, h1 | 25.54 % |
+Progress | Loading FRA40.cash, h1 | 26.09 % |
+Progress | Loading FRA40.cash, h1 | 26.63 % |
+Progress | Loading FRA40.cash, h1 | 27.17 % |
+Progress | Loading FRA40.cash, h1 | 27.72 % |
+Progress | Loading FRA40.cash, h1 | 28.26 % |
+Progress | Loading FRA40.cash, h1 | 28.80 % |
+Progress | Loading FRA40.cash, h1 | 29.35 % |
+Progress | Loading FRA40.cash, h1 | 29.89 % |
+Progress | Loading FRA40.cash, h1 | 30.43 % |
+Progress | Loading FRA40.cash, h1 | 30.98 % |
+Progress | Loading FRA40.cash, h1 | 31.52 % |
+Progress | Loading FRA40.cash, h1 | 32.07 % |
+Progress | Loading FRA40.cash, h1 | 32.61 % |
+Progress | Loading FRA40.cash, h1 | 33.15 % |
+Progress | Loading FRA40.cash, h1 | 33.70 % |
+Progress | Loading FRA40.cash, h1 | 34.24 % |
+Progress | Loading FRA40.cash, h1 | 34.78 % |
+Progress | Loading FRA40.cash, h1 | 35.33 % |
+Progress | Loading FRA40.cash, h1 | 35.87 % |
+Progress | Loading FRA40.cash, h1 | 36.41 % |
+Progress | Loading FRA40.cash, h1 | 36.96 % |
+Progress | Loading FRA40.cash, h1 | 37.50 % |
+Progress | Loading FRA40.cash, h1 | 38.04 % |
+Progress | Loading FRA40.cash, h1 | 38.59 % |
+Progress | Loading FRA40.cash, h1 | 39.13 % |
+Progress | Loading FRA40.cash, h1 | 39.67 % |
+Progress | Loading FRA40.cash, h1 | 40.22 % |
+Progress | Loading FRA40.cash, h1 | 40.76 % |
+Progress | Loading FRA40.cash, h1 | 41.30 % |
+Progress | Loading FRA40.cash, h1 | 41.85 % |
+Progress | Loading FRA40.cash, h1 | 42.39 % |
+Progress | Loading FRA40.cash, h1 | 42.93 % |
+Progress | Loading FRA40.cash, h1 | 43.48 % |
+Progress | Loading FRA40.cash, h1 | 44.02 % |
+Progress | Loading FRA40.cash, h1 | 44.57 % |
+Progress | Loading FRA40.cash, h1 | 45.11 % |
+Progress | Loading FRA40.cash, h1 | 45.65 % |
+Progress | Loading FRA40.cash, h1 | 46.20 % |
+Progress | Loading FRA40.cash, h1 | 46.74 % |
+Progress | Loading FRA40.cash, h1 | 47.28 % |
+Progress | Loading FRA40.cash, h1 | 47.83 % |
+Progress | Loading FRA40.cash, h1 | 48.37 % |
+Progress | Loading FRA40.cash, h1 | 48.91 % |
+Progress | Loading FRA40.cash, h1 | 49.46 % |
+Progress | Loading FRA40.cash, h1 | 50.00 % |
+Progress | Loading FRA40.cash, h1 | 50.54 % |
+Progress | Loading FRA40.cash, h1 | 51.09 % |
+Progress | Loading FRA40.cash, h1 | 51.63 % |
+Progress | Loading FRA40.cash, h1 | 52.17 % |
+Progress | Loading FRA40.cash, h1 | 52.72 % |
+Progress | Loading FRA40.cash, h1 | 53.26 % |
+Progress | Loading FRA40.cash, h1 | 53.80 % |
+Progress | Loading FRA40.cash, h1 | 54.35 % |
+Progress | Loading FRA40.cash, h1 | 54.89 % |
+Progress | Loading FRA40.cash, h1 | 55.43 % |
+Progress | Loading FRA40.cash, h1 | 55.98 % |
+Progress | Loading FRA40.cash, h1 | 56.52 % |
+Progress | Loading FRA40.cash, h1 | 57.07 % |
+Progress | Loading FRA40.cash, h1 | 57.61 % |
+Progress | Loading FRA40.cash, h1 | 58.15 % |
+Progress | Loading FRA40.cash, h1 | 58.70 % |
+Progress | Loading FRA40.cash, h1 | 59.24 % |
+Progress | Loading FRA40.cash, h1 | 59.78 % |
+Progress | Loading FRA40.cash, h1 | 60.33 % |
+Progress | Loading FRA40.cash, h1 | 60.87 % |
+Progress | Loading FRA40.cash, h1 | 61.41 % |
+Progress | Loading FRA40.cash, h1 | 61.96 % |
+Progress | Loading FRA40.cash, h1 | 62.50 % |
+Progress | Loading FRA40.cash, h1 | 63.04 % |
+Progress | Loading FRA40.cash, h1 | 63.59 % |
+Progress | Loading FRA40.cash, h1 | 64.13 % |
+Progress | Loading FRA40.cash, h1 | 64.67 % |
+Progress | Loading FRA40.cash, h1 | 65.22 % |
+Progress | Loading FRA40.cash, h1 | 65.76 % |
+Progress | Loading FRA40.cash, h1 | 66.30 % |
+Progress | Loading FRA40.cash, h1 | 66.85 % |
+Progress | Loading FRA40.cash, h1 | 67.39 % |
+Progress | Loading FRA40.cash, h1 | 67.93 % |
+Progress | Loading FRA40.cash, h1 | 68.48 % |
+Progress | Loading FRA40.cash, h1 | 69.02 % |
+Progress | Loading FRA40.cash, h1 | 69.57 % |
+Progress | Loading FRA40.cash, h1 | 70.11 % |
+Progress | Loading FRA40.cash, h1 | 70.65 % |
+Progress | Loading FRA40.cash, h1 | 71.20 % |
+Progress | Loading FRA40.cash, h1 | 71.74 % |
+Progress | Loading FRA40.cash, h1 | 72.28 % |
+Progress | Loading FRA40.cash, h1 | 72.83 % |
+Progress | Loading FRA40.cash, h1 | 73.37 % |
+Progress | Loading FRA40.cash, h1 | 73.91 % |
+Progress | Loading FRA40.cash, h1 | 74.46 % |
+Progress | Loading FRA40.cash, h1 | 75.00 % |
+Progress | Loading FRA40.cash, h1 | 75.54 % |
+Progress | Loading FRA40.cash, h1 | 76.09 % |
+Progress | Loading FRA40.cash, h1 | 76.63 % |
+Progress | Loading FRA40.cash, h1 | 77.17 % |
+Progress | Loading FRA40.cash, h1 | 77.72 % |
+Progress | Loading FRA40.cash, h1 | 78.26 % |
+Progress | Loading FRA40.cash, h1 | 78.80 % |
+Progress | Loading FRA40.cash, h1 | 79.35 % |
+Progress | Loading FRA40.cash, h1 | 79.89 % |
+Progress | Loading FRA40.cash, h1 | 80.43 % |
+Progress | Loading FRA40.cash, h1 | 80.98 % |
+Progress | Loading FRA40.cash, h1 | 81.52 % |
+Progress | Loading FRA40.cash, h1 | 82.07 % |
+Progress | Loading FRA40.cash, h1 | 82.61 % |
+Progress | Loading FRA40.cash, h1 | 83.15 % |
+Progress | Loading FRA40.cash, h1 | 83.70 % |
+Progress | Loading FRA40.cash, h1 | 84.24 % |
+Progress | Loading FRA40.cash, h1 | 84.78 % |
+Progress | Loading FRA40.cash, h1 | 85.33 % |
+Progress | Loading FRA40.cash, h1 | 85.87 % |
+Progress | Loading FRA40.cash, h1 | 86.41 % |
+Progress | Loading FRA40.cash, h1 | 86.96 % |
+Progress | Loading FRA40.cash, h1 | 87.50 % |
+Progress | Loading FRA40.cash, h1 | 88.04 % |
+Progress | Loading FRA40.cash, h1 | 88.59 % |
+Progress | Loading FRA40.cash, h1 | 89.13 % |
+Progress | Loading FRA40.cash, h1 | 89.67 % |
+Progress | Loading FRA40.cash, h1 | 90.22 % |
+Progress | Loading FRA40.cash, h1 | 90.76 % |
+Progress | Loading FRA40.cash, h1 | 91.30 % |
+Progress | Loading FRA40.cash, h1 | 91.85 % |
+Progress | Loading FRA40.cash, h1 | 92.39 % |
+Progress | Loading FRA40.cash, h1 | 92.93 % |
+Progress | Loading FRA40.cash, h1 | 93.48 % |
+Progress | Loading FRA40.cash, h1 | 94.02 % |
+Progress | Loading FRA40.cash, h1 | 94.57 % |
+Progress | Loading FRA40.cash, h1 | 95.11 % |
+Progress | Loading FRA40.cash, h1 | 95.65 % |
+Progress | Loading FRA40.cash, h1 | 96.20 % |
+Progress | Loading FRA40.cash, h1 | 96.74 % |
+Progress | Loading FRA40.cash, h1 | 97.28 % |
+Progress | Loading FRA40.cash, h1 | 97.83 % |
+Progress | Loading FRA40.cash, h1 | 98.37 % |
+Progress | Loading FRA40.cash, h1 | 98.91 % |
+Progress | Loading FRA40.cash, h1 | 99.46 % |
+Progress | Loading FRA40.cash, h1 | 100.00 % |
+Info | CBot instance [Combo, FRA40.cash, h1] started.
+Progress | Backtesting | 0.70 % |
+Progress | Backtesting | 1.86 % |
+Progress | Loading EURUSD, h1 | 0.55 % |
+Progress | Loading EURUSD, h1 | 1.10 % |
+Progress | Loading EURUSD, h1 | 1.66 % |
+Progress | Loading EURUSD, h1 | 2.21 % |
+Progress | Loading EURUSD, h1 | 2.76 % |
+Progress | Loading EURUSD, h1 | 3.31 % |
+Progress | Loading EURUSD, h1 | 3.87 % |
+Progress | Loading EURUSD, h1 | 4.42 % |
+Progress | Loading EURUSD, h1 | 4.97 % |
+Progress | Loading EURUSD, h1 | 5.52 % |
+Progress | Loading EURUSD, h1 | 6.08 % |
+Progress | Loading EURUSD, h1 | 6.63 % |
+Progress | Loading EURUSD, h1 | 7.18 % |
+Progress | Loading EURUSD, h1 | 7.73 % |
+Progress | Loading EURUSD, h1 | 8.29 % |
+Progress | Loading EURUSD, h1 | 8.84 % |
+Progress | Loading EURUSD, h1 | 9.39 % |
+Progress | Loading EURUSD, h1 | 9.94 % |
+Progress | Loading EURUSD, h1 | 10.50 % |
+Progress | Loading EURUSD, h1 | 11.05 % |
+Progress | Loading EURUSD, h1 | 11.60 % |
+Progress | Loading EURUSD, h1 | 12.15 % |
+Progress | Loading EURUSD, h1 | 12.71 % |
+Progress | Loading EURUSD, h1 | 13.26 % |
+Progress | Loading EURUSD, h1 | 13.81 % |
+Progress | Loading EURUSD, h1 | 14.36 % |
+Progress | Loading EURUSD, h1 | 14.92 % |
+Progress | Loading EURUSD, h1 | 15.47 % |
+Progress | Loading EURUSD, h1 | 16.02 % |
+Progress | Loading EURUSD, h1 | 16.57 % |
+Progress | Loading EURUSD, h1 | 17.13 % |
+Progress | Loading EURUSD, h1 | 17.68 % |
+Progress | Loading EURUSD, h1 | 18.23 % |
+Progress | Loading EURUSD, h1 | 18.78 % |
+Progress | Loading EURUSD, h1 | 19.34 % |
+Progress | Loading EURUSD, h1 | 19.89 % |
+Progress | Loading EURUSD, h1 | 20.44 % |
+Progress | Loading EURUSD, h1 | 20.99 % |
+Progress | Loading EURUSD, h1 | 21.55 % |
+Progress | Loading EURUSD, h1 | 22.10 % |
+Progress | Loading EURUSD, h1 | 22.65 % |
+Progress | Loading EURUSD, h1 | 23.20 % |
+Progress | Loading EURUSD, h1 | 23.76 % |
+Progress | Loading EURUSD, h1 | 24.31 % |
+Progress | Loading EURUSD, h1 | 24.86 % |
+Progress | Loading EURUSD, h1 | 25.41 % |
+Progress | Loading EURUSD, h1 | 25.97 % |
+Progress | Loading EURUSD, h1 | 26.52 % |
+Progress | Loading EURUSD, h1 | 27.07 % |
+Progress | Loading EURUSD, h1 | 27.62 % |
+Progress | Loading EURUSD, h1 | 28.18 % |
+Progress | Loading EURUSD, h1 | 28.73 % |
+Progress | Loading EURUSD, h1 | 29.28 % |
+Progress | Loading EURUSD, h1 | 29.83 % |
+Progress | Loading EURUSD, h1 | 30.39 % |
+Progress | Loading EURUSD, h1 | 30.94 % |
+Progress | Loading EURUSD, h1 | 31.49 % |
+Progress | Loading EURUSD, h1 | 32.04 % |
+Progress | Loading EURUSD, h1 | 32.60 % |
+Progress | Loading EURUSD, h1 | 33.15 % |
+Progress | Loading EURUSD, h1 | 33.70 % |
+Progress | Loading EURUSD, h1 | 34.25 % |
+Progress | Loading EURUSD, h1 | 34.81 % |
+Progress | Loading EURUSD, h1 | 35.36 % |
+Progress | Loading EURUSD, h1 | 35.91 % |
+Progress | Loading EURUSD, h1 | 36.46 % |
+Progress | Loading EURUSD, h1 | 37.02 % |
+Progress | Loading EURUSD, h1 | 37.57 % |
+Progress | Loading EURUSD, h1 | 38.12 % |
+Progress | Loading EURUSD, h1 | 38.67 % |
+Progress | Loading EURUSD, h1 | 39.23 % |
+Progress | Loading EURUSD, h1 | 39.78 % |
+Progress | Loading EURUSD, h1 | 40.33 % |
+Progress | Loading EURUSD, h1 | 40.88 % |
+Progress | Loading EURUSD, h1 | 41.44 % |
+Progress | Loading EURUSD, h1 | 41.99 % |
+Progress | Loading EURUSD, h1 | 42.54 % |
+Progress | Loading EURUSD, h1 | 43.09 % |
+Progress | Loading EURUSD, h1 | 43.65 % |
+Progress | Loading EURUSD, h1 | 44.20 % |
+Progress | Loading EURUSD, h1 | 44.75 % |
+Progress | Loading EURUSD, h1 | 45.30 % |
+Progress | Loading EURUSD, h1 | 45.86 % |
+Progress | Loading EURUSD, h1 | 46.41 % |
+Progress | Loading EURUSD, h1 | 46.96 % |
+Progress | Loading EURUSD, h1 | 47.51 % |
+Progress | Loading EURUSD, h1 | 48.07 % |
+Progress | Loading EURUSD, h1 | 48.62 % |
+Progress | Loading EURUSD, h1 | 49.17 % |
+Progress | Loading EURUSD, h1 | 49.72 % |
+Progress | Loading EURUSD, h1 | 50.28 % |
+Progress | Loading EURUSD, h1 | 50.83 % |
+Progress | Loading EURUSD, h1 | 51.38 % |
+Progress | Loading EURUSD, h1 | 51.93 % |
+Progress | Loading EURUSD, h1 | 52.49 % |
+Progress | Loading EURUSD, h1 | 53.04 % |
+Progress | Loading EURUSD, h1 | 53.59 % |
+Progress | Loading EURUSD, h1 | 54.14 % |
+Progress | Loading EURUSD, h1 | 54.70 % |
+Progress | Loading EURUSD, h1 | 55.25 % |
+Progress | Loading EURUSD, h1 | 55.80 % |
+Progress | Loading EURUSD, h1 | 56.35 % |
+Progress | Loading EURUSD, h1 | 56.91 % |
+Progress | Loading EURUSD, h1 | 57.46 % |
+Progress | Loading EURUSD, h1 | 58.01 % |
+Progress | Loading EURUSD, h1 | 58.56 % |
+Progress | Loading EURUSD, h1 | 59.12 % |
+Progress | Loading EURUSD, h1 | 59.67 % |
+Progress | Loading EURUSD, h1 | 60.22 % |
+Progress | Loading EURUSD, h1 | 60.77 % |
+Progress | Loading EURUSD, h1 | 61.33 % |
+Progress | Loading EURUSD, h1 | 61.88 % |
+Progress | Loading EURUSD, h1 | 62.43 % |
+Progress | Loading EURUSD, h1 | 62.98 % |
+Progress | Loading EURUSD, h1 | 63.54 % |
+Progress | Loading EURUSD, h1 | 64.09 % |
+Progress | Loading EURUSD, h1 | 64.64 % |
+Progress | Loading EURUSD, h1 | 65.19 % |
+Progress | Loading EURUSD, h1 | 65.75 % |
+Progress | Loading EURUSD, h1 | 66.30 % |
+Progress | Loading EURUSD, h1 | 66.85 % |
+Progress | Loading EURUSD, h1 | 67.40 % |
+Progress | Loading EURUSD, h1 | 67.96 % |
+Progress | Loading EURUSD, h1 | 68.51 % |
+Progress | Loading EURUSD, h1 | 69.06 % |
+Progress | Loading EURUSD, h1 | 69.61 % |
+Progress | Loading EURUSD, h1 | 70.17 % |
+Progress | Loading EURUSD, h1 | 70.72 % |
+Progress | Loading EURUSD, h1 | 71.27 % |
+Progress | Loading EURUSD, h1 | 71.82 % |
+Progress | Loading EURUSD, h1 | 72.38 % |
+Progress | Loading EURUSD, h1 | 72.93 % |
+Progress | Loading EURUSD, h1 | 73.48 % |
+Progress | Loading EURUSD, h1 | 74.03 % |
+Progress | Loading EURUSD, h1 | 74.59 % |
+Progress | Loading EURUSD, h1 | 75.14 % |
+Progress | Loading EURUSD, h1 | 75.69 % |
+Progress | Loading EURUSD, h1 | 76.24 % |
+Progress | Loading EURUSD, h1 | 76.80 % |
+Progress | Loading EURUSD, h1 | 77.35 % |
+Progress | Loading EURUSD, h1 | 77.90 % |
+Progress | Loading EURUSD, h1 | 78.45 % |
+Progress | Loading EURUSD, h1 | 79.01 % |
+Progress | Loading EURUSD, h1 | 79.56 % |
+Progress | Loading EURUSD, h1 | 80.11 % |
+Progress | Loading EURUSD, h1 | 80.66 % |
+Progress | Loading EURUSD, h1 | 81.22 % |
+Progress | Loading EURUSD, h1 | 81.77 % |
+Progress | Loading EURUSD, h1 | 82.32 % |
+Progress | Loading EURUSD, h1 | 82.87 % |
+Progress | Loading EURUSD, h1 | 83.43 % |
+Progress | Loading EURUSD, h1 | 83.98 % |
+Progress | Loading EURUSD, h1 | 84.53 % |
+Progress | Loading EURUSD, h1 | 85.08 % |
+Progress | Loading EURUSD, h1 | 85.64 % |
+Progress | Loading EURUSD, h1 | 86.19 % |
+Progress | Loading EURUSD, h1 | 86.74 % |
+Progress | Loading EURUSD, h1 | 87.29 % |
+Progress | Loading EURUSD, h1 | 87.85 % |
+Progress | Loading EURUSD, h1 | 88.40 % |
+Progress | Loading EURUSD, h1 | 88.95 % |
+Progress | Loading EURUSD, h1 | 89.50 % |
+Progress | Loading EURUSD, h1 | 90.06 % |
+Progress | Loading EURUSD, h1 | 90.61 % |
+Progress | Loading EURUSD, h1 | 91.16 % |
+Progress | Loading EURUSD, h1 | 91.71 % |
+Progress | Loading EURUSD, h1 | 92.27 % |
+Progress | Loading EURUSD, h1 | 92.82 % |
+Progress | Loading EURUSD, h1 | 93.37 % |
+Progress | Loading EURUSD, h1 | 93.92 % |
+Progress | Loading EURUSD, h1 | 94.48 % |
+Progress | Loading EURUSD, h1 | 95.03 % |
+Progress | Loading EURUSD, h1 | 95.58 % |
+Progress | Loading EURUSD, h1 | 96.13 % |
+Progress | Loading EURUSD, h1 | 96.69 % |
+Progress | Loading EURUSD, h1 | 97.24 % |
+Progress | Loading EURUSD, h1 | 97.79 % |
+Progress | Loading EURUSD, h1 | 98.34 % |
+Progress | Loading EURUSD, h1 | 98.90 % |
+Progress | Loading EURUSD, h1 | 99.45 % |
+Progress | Loading EURUSD, h1 | 100.00 % |
+02/03/2026 07:05:00.000 | Info | Combo: loaded 4161 valid signal row(s) from CSV.
+02/03/2026 07:05:00.000 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+04/03/2026 10:00:00.000 | Trade | Placing Stop Order to Buy 1.54 FRA40.cash (Price: 8163.4, SL: 8107.53104520269, TP: 8309.66)
+04/03/2026 10:00:00.000 | Trade |  Placing Stop Order to Buy 1.54 FRA40.cash (Price: 8163.4, SL: 8107.53104520269, TP: 8309.66) SUCCEEDED, PendingOrder OID1
+04/03/2026 10:00:00.000 | Info | Combo: bartime=2026-03-04 09:00, executed=2026-03-04 10:00:00, pending Buy placed at 8163.4; SL=8107.531045202689, TP=8309.664923659358; valid for the next 3 chart bar(s).
+Error | CBot instance [Combo, FRA40.cash, h1] aborted by timeout.
+{
+	"Equity":,
+	"NetProfit":-,
+	"MaxBalanceDrawdownPercentages":-,
+	"MaxEquityDrawdownPercentages":-,
+	"MaxBalanceDrawdown":-,
+	"MaxEquityDrawdown":-,
+	"WinningTrades":-,
+	"LosingTrades":-,
+	"TotalTrades":-,
+	"AverageTrade":-,
+	"ProfitFactor":-,
+	"Fitness":0
+}
+Message expected
+System.InvalidOperationException: Message expected
+   at cTrader.Console.Infrastructure.StateMachine.Strategies.BacktestReportSavingStateStrategy.DoEnter()
+   at cTrader.Console.Infrastructure.StateMachine.Strategies.ConsoleStateStrategyBase.Enter()
+   at cTrader.Console.Infrastructure.StateMachine.ConsoleApplicationLifecycleStateMachine.OnMovedToLifecycleState(IConsoleApplicationLifecycleStateStrategy newStateStrategy)
+   at cTrader.Console.Infrastructure.StateMachine.ConsoleApplicationLifecycleStateTransition.InternalMoveTo(ConsoleApplicationLifecycleState state)
+   at cTrader.Console.Infrastructure.StateMachine.ConsoleApplicationLifecycleStateTransition.<>c__DisplayClass7_0.<MoveTo>b__0()
+   at cTrader.Console.Infrastructure.Dispatcher.ConsoleThreadDispatcher.<>c__DisplayClass12_0.<ExecuteInternalAsync>g__ExecuteAction|0()
+

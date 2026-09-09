@@ -1,0 +1,5 @@
+01/01/2026 00:00:00.000 | Info | CBot instance [Combo, JP225.cash, h1] started.
+01/01/2026 23:05:00.004 | Info | Combo: loaded 4542 valid signal row(s) from CSV.
+01/01/2026 23:05:00.004 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+01/02/2026 23:59:59.993 | Info | Combo: loaded=4542, processed=33, before-start=4213, not-processed=296, placed=0, failed=33, guard-skipped=0, pending-expired=0, same-direction-skipped=0, reversed=0, margin-capped=0, margin-blocked=0.
+01/02/2026 23:59:59.993 | Info | CBot instance [Combo, JP225.cash, h1] stopped.

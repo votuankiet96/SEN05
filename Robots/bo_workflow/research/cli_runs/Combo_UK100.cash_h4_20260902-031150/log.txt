@@ -1,0 +1,314 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_UK100.cash_h4_20260902-031150\params.cbotset 
+--start=01/01/2025 --end=01/04/2025 --data-mode=Ticks --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --symbol=UK100.cash --period=h4 --full-access 
+--report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_UK100.cash_h4_20260902-0311
+50\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...150\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | UK100.cash                | cmd arg              |
+| Period               | h4                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 01/04/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 3                         | default value        |
+| KtpLevel             | 3                         | default value        |
+| RiskPercent          | 0.5                       | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+02/09/2026 10:11:53.971 | Establishing connection using votuankiet96@gmail.com...
+02/09/2026 10:11:56.286 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Info | CBot instance [Combo, UK100.cash, h4] started.
+Progress | Backtesting | 1.15 % |
+Progress | Backtesting | 1.67 % |
+Progress | Backtesting | 1.78 % |
+Progress | Backtesting | 1.84 % |
+Progress | Backtesting | 1.94 % |
+Progress | Backtesting | 2.08 % |
+Progress | Backtesting | 2.37 % |
+Progress | Backtesting | 2.73 % |
+Progress | Backtesting | 2.91 % |
+Progress | Backtesting | 5.49 % |
+Progress | Backtesting | 5.96 % |
+Progress | Backtesting | 6.18 % |
+Progress | Backtesting | 6.55 % |
+Progress | Backtesting | 6.97 % |
+Progress | Backtesting | 7.01 % |
+Progress | Backtesting | 7.71 % |
+Progress | Backtesting | 8.25 % |
+Progress | Backtesting | 8.53 % |
+Progress | Backtesting | 9.18 % |
+Progress | Backtesting | 9.89 % |
+Progress | Backtesting | 10.45 % |
+Progress | Backtesting | 10.59 % |
+Progress | Backtesting | 13.15 % |
+Progress | Backtesting | 13.57 % |
+Progress | Backtesting | 13.91 % |
+Progress | Backtesting | 14.45 % |
+Progress | Backtesting | 14.96 % |
+Progress | Backtesting | 15.38 % |
+Progress | Backtesting | 16.02 % |
+Progress | Backtesting | 16.35 % |
+Progress | Backtesting | 16.96 % |
+Progress | Backtesting | 17.46 % |
+Progress | Backtesting | 18.05 % |
+Progress | Backtesting | 18.34 % |
+Progress | Backtesting | 21.33 % |
+Progress | Backtesting | 21.98 % |
+Progress | Backtesting | 22.57 % |
+Progress | Backtesting | 23.09 % |
+Progress | Backtesting | 23.81 % |
+Progress | Backtesting | 24.19 % |
+Progress | Backtesting | 24.64 % |
+Progress | Backtesting | 25.27 % |
+Progress | Backtesting | 25.84 % |
+Progress | Backtesting | 28.57 % |
+Progress | Backtesting | 29.00 % |
+Progress | Backtesting | 29.42 % |
+Progress | Backtesting | 29.87 % |
+Progress | Backtesting | 30.45 % |
+Progress | Backtesting | 31.41 % |
+Progress | Backtesting | 31.83 % |
+Progress | Backtesting | 32.59 % |
+Progress | Backtesting | 33.38 % |
+Progress | Backtesting | 36.22 % |
+Progress | Backtesting | 36.45 % |
+Progress | Backtesting | 36.71 % |
+Progress | Backtesting | 36.93 % |
+Progress | Backtesting | 37.11 % |
+Progress | Backtesting | 37.43 % |
+Progress | Backtesting | 37.97 % |
+Progress | Backtesting | 38.42 % |
+Progress | Backtesting | 38.90 % |
+Progress | Backtesting | 39.56 % |
+Progress | Backtesting | 40.20 % |
+Progress | Backtesting | 40.74 % |
+Progress | Backtesting | 41.46 % |
+Progress | Backtesting | 44.61 % |
+Progress | Backtesting | 45.51 % |
+Progress | Backtesting | 46.40 % |
+Progress | Backtesting | 47.12 % |
+Progress | Backtesting | 47.82 % |
+Progress | Backtesting | 48.38 % |
+Progress | Backtesting | 49.25 % |
+Progress | Backtesting | 52.75 % |
+Progress | Backtesting | 53.63 % |
+Progress | Backtesting | 54.42 % |
+Progress | Backtesting | 54.95 % |
+Progress | Backtesting | 55.33 % |
+Progress | Backtesting | 55.71 % |
+Progress | Backtesting | 56.35 % |
+Progress | Backtesting | 56.84 % |
+Progress | Backtesting | 59.68 % |
+Progress | Backtesting | 60.08 % |
+Progress | Backtesting | 60.69 % |
+Progress | Backtesting | 61.12 % |
+Progress | Backtesting | 61.54 % |
+Progress | Backtesting | 62.22 % |
+Progress | Backtesting | 62.61 % |
+Progress | Backtesting | 63.17 % |
+Progress | Backtesting | 63.33 % |
+Progress | Backtesting | 63.59 % |
+Progress | Backtesting | 63.91 % |
+Progress | Backtesting | 64.30 % |
+Progress | Backtesting | 64.52 % |
+Progress | Backtesting | 67.03 % |
+Progress | Backtesting | 67.40 % |
+Progress | Backtesting | 67.78 % |
+Progress | Backtesting | 68.13 % |
+Progress | Backtesting | 68.55 % |
+Progress | Backtesting | 68.84 % |
+Progress | Backtesting | 68.96 % |
+Progress | Backtesting | 69.23 % |
+Progress | Backtesting | 69.65 % |
+Progress | Backtesting | 69.96 % |
+Progress | Backtesting | 70.33 % |
+Progress | Backtesting | 70.86 % |
+Progress | Backtesting | 71.15 % |
+Progress | Backtesting | 71.48 % |
+Progress | Backtesting | 72.09 % |
+Progress | Backtesting | 72.34 % |
+Progress | Backtesting | 74.75 % |
+Progress | Backtesting | 75.21 % |
+Progress | Backtesting | 75.49 % |
+Progress | Backtesting | 75.82 % |
+Progress | Backtesting | 76.20 % |
+Progress | Backtesting | 76.48 % |
+Progress | Backtesting | 76.61 % |
+Progress | Backtesting | 76.91 % |
+Progress | Backtesting | 77.31 % |
+Progress | Backtesting | 77.58 % |
+Progress | Backtesting | 77.97 % |
+Progress | Backtesting | 78.22 % |
+Progress | Backtesting | 78.60 % |
+Progress | Backtesting | 78.77 % |
+Progress | Backtesting | 79.08 % |
+Progress | Backtesting | 79.24 % |
+Progress | Backtesting | 79.61 % |
+Progress | Backtesting | 79.88 % |
+Progress | Backtesting | 82.83 % |
+Progress | Backtesting | 83.16 % |
+Progress | Backtesting | 83.91 % |
+Progress | Backtesting | 84.31 % |
+Progress | Backtesting | 85.01 % |
+Progress | Backtesting | 85.46 % |
+Progress | Backtesting | 86.10 % |
+Progress | Backtesting | 86.39 % |
+Progress | Backtesting | 86.98 % |
+Progress | Backtesting | 87.49 % |
+Progress | Backtesting | 90.43 % |
+Progress | Backtesting | 90.97 % |
+Progress | Backtesting | 91.81 % |
+Progress | Backtesting | 92.61 % |
+Progress | Backtesting | 93.12 % |
+Progress | Backtesting | 93.78 % |
+Progress | Backtesting | 94.23 % |
+Progress | Backtesting | 94.88 % |
+Progress | Backtesting | 95.10 % |
+Progress | Backtesting | 95.33 % |
+Progress | Backtesting | 98.02 % |
+Progress | Backtesting | 98.39 % |
+Progress | Backtesting | 98.83 % |
+Progress | Backtesting | 99.32 % |
+Progress | Backtesting | 99.66 % |
+02/01/2025 01:05:00.006 | Info | Combo: loaded 1243 valid signal row(s) from CSV.
+02/01/2025 01:05:00.006 | Info | Combo: signal scheduling active with chart timeframe h4 (04:00:00); CSV timeframe must match the chart timeframe.
+06/01/2025 23:05:00.003 | Trade | Placing Stop Order to Sell 2.09 UK100.cash (Price: 8187.9, SL: 8206.37642642193, TP: 8169.42)
+06/01/2025 23:05:00.003 | Trade |  Placing Stop Order to Sell 2.09 UK100.cash (Price: 8187.9, SL: 8206.37642642193, TP: 8169.42) SUCCEEDED, PendingOrder OID1
+06/01/2025 23:05:00.003 | Info | Combo: bartime=2025-01-06 19:00, executed=2025-01-06 23:05:00, pending Sell placed at 8187.9; SL=8206.376426421932, TP=8169.423573578068; valid for the next 3 chart bar(s).
+08/01/2025 14:00:00.090 | Trade | Placing Stop Order to Sell 1.64 UK100.cash (Price: 8182.9, SL: 8206.35083918717, TP: 8159.45)
+08/01/2025 14:00:00.090 | Trade |  Placing Stop Order to Sell 1.64 UK100.cash (Price: 8182.9, SL: 8206.35083918717, TP: 8159.45) SUCCEEDED, PendingOrder OID4
+08/01/2025 14:00:00.090 | Info | Combo: bartime=2025-01-08 10:00, executed=2025-01-08 14:00:00, pending Sell placed at 8182.9; SL=8206.35083918717, TP=8159.44916081283; valid for the next 3 chart bar(s).
+09/01/2025 02:00:00.185 | Trade | Cancelling pending order OID4
+09/01/2025 02:00:00.185 | Trade |  Cancelling pending order OID4 SUCCEEDED
+09/01/2025 02:00:00.185 | Info | Combo: pending order 4 cancelled after 3 chart bars.
+10/01/2025 18:00:00.250 | Trade | Placing Stop Order to Sell 1.61 UK100.cash (Price: 8234.4, SL: 8258.29106641941, TP: 8210.51)
+10/01/2025 18:00:00.250 | Trade |  Placing Stop Order to Sell 1.61 UK100.cash (Price: 8234.4, SL: 8258.29106641941, TP: 8210.51) SUCCEEDED, PendingOrder OID5
+10/01/2025 18:00:00.250 | Info | Combo: bartime=2025-01-10 14:00, executed=2025-01-10 18:00:00, pending Sell placed at 8234.4; SL=8258.291066419406, TP=8210.508933580593; valid for the next 3 chart bar(s).
+15/01/2025 10:00:00.710 | Trade | Placing Stop Order to Buy 2.07 UK100.cash (Price: 8269.4, SL: 8250.94644111663, TP: 8287.85)
+15/01/2025 10:00:00.710 | Trade |  Placing Stop Order to Buy 2.07 UK100.cash (Price: 8269.4, SL: 8250.94644111663, TP: 8287.85) SUCCEEDED, PendingOrder OID8
+15/01/2025 10:00:00.710 | Info | Combo: bartime=2025-01-15 06:00, executed=2025-01-15 10:00:00, pending Buy placed at 8269.4; SL=8250.94644111663, TP=8287.85355888337; valid for the next 3 chart bar(s).
+22/01/2025 23:05:00.002 | Trade | Placing Stop Order to Sell 2.2 UK100.cash (Price: 8502.9, SL: 8520.15715796268, TP: 8485.64)
+22/01/2025 23:05:00.002 | Trade |  Placing Stop Order to Sell 2.2 UK100.cash (Price: 8502.9, SL: 8520.15715796268, TP: 8485.64) SUCCEEDED, PendingOrder OID11
+22/01/2025 23:05:00.002 | Info | Combo: bartime=2025-01-22 18:00, executed=2025-01-22 23:05:00, pending Sell placed at 8502.9; SL=8520.157157962674, TP=8485.642842037325; valid for the next 3 chart bar(s).
+23/01/2025 10:00:00.127 | Trade | Cancelling pending order OID11
+23/01/2025 10:00:00.127 | Trade |  Cancelling pending order OID11 SUCCEEDED
+23/01/2025 10:00:00.127 | Info | Combo: pending order 11 cancelled after 3 chart bars.
+24/01/2025 10:00:00.320 | Trade | Placing Stop Order to Sell 2.27 UK100.cash (Price: 8524.2, SL: 8540.93423603301, TP: 8507.47)
+24/01/2025 10:00:00.320 | Trade |  Placing Stop Order to Sell 2.27 UK100.cash (Price: 8524.2, SL: 8540.93423603301, TP: 8507.47) SUCCEEDED, PendingOrder OID12
+24/01/2025 10:00:00.320 | Info | Combo: bartime=2025-01-24 06:00, executed=2025-01-24 10:00:00, pending Sell placed at 8524.2; SL=8540.934236033008, TP=8507.465763966993; valid for the next 3 chart bar(s).
+27/01/2025 23:05:00.002 | Trade | Placing Stop Order to Buy 1.87 UK100.cash (Price: 8534.1, SL: 8513.62148028076, TP: 8554.58)
+27/01/2025 23:05:00.002 | Trade |  Placing Stop Order to Buy 1.87 UK100.cash (Price: 8534.1, SL: 8513.62148028076, TP: 8554.58) SUCCEEDED, PendingOrder OID15
+27/01/2025 23:05:00.002 | Info | Combo: bartime=2025-01-27 19:00, executed=2025-01-27 23:05:00, pending Buy placed at 8534.1; SL=8513.621480280763, TP=8554.578519719238; valid for the next 3 chart bar(s).
+28/01/2025 10:00:00.217 | Trade | Placing Stop Order to Buy 1.73 UK100.cash (Price: 8557, SL: 8535.06073870375, TP: 8578.94)
+28/01/2025 10:00:00.217 | Trade |  Placing Stop Order to Buy 1.73 UK100.cash (Price: 8557, SL: 8535.06073870375, TP: 8578.94) SUCCEEDED, PendingOrder OID18
+28/01/2025 10:00:00.217 | Info | Combo: bartime=2025-01-28 06:00, executed=2025-01-28 10:00:00, pending Buy placed at 8557; SL=8535.06073870375, TP=8578.93926129625; valid for the next 3 chart bar(s).
+05/02/2025 14:00:00.098 | Trade | Placing Stop Order to Buy 1.67 UK100.cash (Price: 8609.9, SL: 8587.29067028711, TP: 8632.51)
+05/02/2025 14:00:00.098 | Trade |  Placing Stop Order to Buy 1.67 UK100.cash (Price: 8609.9, SL: 8587.29067028711, TP: 8632.51) SUCCEEDED, PendingOrder OID21
+05/02/2025 14:00:00.098 | Info | Combo: bartime=2025-02-05 10:00, executed=2025-02-05 14:00:00, pending Buy placed at 8609.9; SL=8587.290670287108, TP=8632.509329712891; valid for the next 3 chart bar(s).
+13/02/2025 10:00:00.056 | Trade | Placing Stop Order to Sell 1.74 UK100.cash (Price: 8725.4, SL: 8747.03623594224, TP: 8703.76)
+13/02/2025 10:00:00.056 | Trade |  Placing Stop Order to Sell 1.74 UK100.cash (Price: 8725.4, SL: 8747.03623594224, TP: 8703.76) SUCCEEDED, PendingOrder OID24
+13/02/2025 10:00:00.056 | Info | Combo: bartime=2025-02-13 06:00, executed=2025-02-13 10:00:00, pending Sell placed at 8725.4; SL=8747.036235942242, TP=8703.763764057758; valid for the next 3 chart bar(s).
+13/02/2025 23:05:00.009 | Trade | Cancelling pending order OID24
+13/02/2025 23:05:00.009 | Trade |  Cancelling pending order OID24 SUCCEEDED
+13/02/2025 23:05:00.009 | Info | Combo: pending order 24 cancelled after 3 chart bars.
+17/02/2025 19:00:11.573 | Trade | Placing Stop Order to Buy 2.39 UK100.cash (Price: 8786.4, SL: 8770.65183266992, TP: 8802.15)
+17/02/2025 19:00:11.573 | Trade |  Placing Stop Order to Buy 2.39 UK100.cash (Price: 8786.4, SL: 8770.65183266992, TP: 8802.15) SUCCEEDED, PendingOrder OID25
+17/02/2025 19:00:11.573 | Info | Combo: bartime=2025-02-17 15:00, executed=2025-02-17 19:00:11, pending Buy placed at 8786.4; SL=8770.651832669919, TP=8802.14816733008; valid for the next 3 chart bar(s).
+18/02/2025 06:00:00.277 | Trade | Cancelling pending order OID25
+18/02/2025 06:00:00.277 | Trade |  Cancelling pending order OID25 SUCCEEDED
+18/02/2025 06:00:00.277 | Info | Combo: pending order 25 cancelled after 3 chart bars.
+19/02/2025 14:00:01.093 | Trade | Placing Stop Order to Sell 2 UK100.cash (Price: 8699.4, SL: 8718.24291636394, TP: 8680.56)
+19/02/2025 14:00:01.093 | Trade |  Placing Stop Order to Sell 2 UK100.cash (Price: 8699.4, SL: 8718.24291636394, TP: 8680.56) SUCCEEDED, PendingOrder OID26
+19/02/2025 14:00:01.093 | Info | Combo: bartime=2025-02-19 10:00, executed=2025-02-19 14:00:01, pending Sell placed at 8699.4; SL=8718.242916363935, TP=8680.557083636064; valid for the next 3 chart bar(s).
+25/02/2025 10:00:00.224 | Trade | Placing Stop Order to Buy 1.69 UK100.cash (Price: 8697, SL: 8674.80071932607, TP: 8719.2)
+25/02/2025 10:00:00.224 | Trade |  Placing Stop Order to Buy 1.69 UK100.cash (Price: 8697, SL: 8674.80071932607, TP: 8719.2) SUCCEEDED, PendingOrder OID29
+25/02/2025 10:00:00.224 | Info | Combo: bartime=2025-02-25 06:00, executed=2025-02-25 10:00:00, pending Buy placed at 8697; SL=8674.800719326067, TP=8719.199280673933; valid for the next 3 chart bar(s).
+28/02/2025 06:00:01.369 | Trade | Placing Stop Order to Sell 1.49 UK100.cash (Price: 8687.5, SL: 8712.52653770226, TP: 8662.47)
+28/02/2025 06:00:01.369 | Trade |  Placing Stop Order to Sell 1.49 UK100.cash (Price: 8687.5, SL: 8712.52653770226, TP: 8662.47) SUCCEEDED, PendingOrder OID32
+28/02/2025 06:00:01.369 | Info | Combo: bartime=2025-02-28 02:00, executed=2025-02-28 06:00:01, pending Sell placed at 8687.5; SL=8712.526537702266, TP=8662.473462297734; valid for the next 3 chart bar(s).
+28/02/2025 10:00:00.229 | Trade | Placing Stop Order to Buy 1.19 UK100.cash (Price: 8773, SL: 8741.85476983819, TP: 8804.15)
+28/02/2025 10:00:00.229 | Trade |  Placing Stop Order to Buy 1.19 UK100.cash (Price: 8773, SL: 8741.85476983819, TP: 8804.15) SUCCEEDED, PendingOrder OID35
+28/02/2025 10:00:00.229 | Info | Combo: bartime=2025-02-28 06:00, executed=2025-02-28 10:00:00, pending Buy placed at 8773; SL=8741.854769838186, TP=8804.145230161814; valid for the next 3 chart bar(s).
+04/03/2025 14:00:00.209 | Trade | Placing Stop Order to Sell 1.22 UK100.cash (Price: 8779.1, SL: 8809.65187737788, TP: 8748.55)
+04/03/2025 14:00:00.209 | Trade |  Placing Stop Order to Sell 1.22 UK100.cash (Price: 8779.1, SL: 8809.65187737788, TP: 8748.55) SUCCEEDED, PendingOrder OID38
+04/03/2025 14:00:00.209 | Info | Combo: bartime=2025-03-04 10:00, executed=2025-03-04 14:00:00, pending Sell placed at 8779.1; SL=8809.651877377875, TP=8748.548122622125; valid for the next 3 chart bar(s).
+05/03/2025 14:00:00.110 | Trade | Placing Stop Order to Sell 1.22 UK100.cash (Price: 8776.8, SL: 8807.54081118334, TP: 8746.06)
+05/03/2025 14:00:00.110 | Trade |  Placing Stop Order to Sell 1.22 UK100.cash (Price: 8776.8, SL: 8807.54081118334, TP: 8746.06) SUCCEEDED, PendingOrder OID41
+05/03/2025 14:00:00.110 | Info | Combo: bartime=2025-03-05 10:00, executed=2025-03-05 14:00:00, pending Sell placed at 8776.8; SL=8807.540811183346, TP=8746.059188816653; valid for the next 3 chart bar(s).
+09/03/2025 22:05:15.043 | Trade | Placing Stop Order to Buy 1.23 UK100.cash (Price: 8754, SL: 8723.48165046752, TP: 8784.52)
+09/03/2025 22:05:15.043 | Trade |  Placing Stop Order to Buy 1.23 UK100.cash (Price: 8754, SL: 8723.48165046752, TP: 8784.52) SUCCEEDED, PendingOrder OID44
+09/03/2025 22:05:15.043 | Info | Combo: bartime=2025-03-07 18:00, executed=2025-03-09 22:05:15, pending Buy placed at 8754; SL=8723.481650467516, TP=8784.518349532484; valid for the next 3 chart bar(s).
+10/03/2025 09:00:00.044 | Trade | Cancelling pending order OID44
+10/03/2025 09:00:00.044 | Trade |  Cancelling pending order OID44 SUCCEEDED
+10/03/2025 09:00:00.044 | Info | Combo: pending order 44 cancelled after 3 chart bars.
+13/03/2025 10:00:01.138 | Trade | Placing Stop Order to Buy 1.2 UK100.cash (Price: 8586.3, SL: 8555.02496748056, TP: 8617.58)
+13/03/2025 10:00:01.138 | Trade |  Placing Stop Order to Buy 1.2 UK100.cash (Price: 8586.3, SL: 8555.02496748056, TP: 8617.58) SUCCEEDED, PendingOrder OID45
+13/03/2025 10:00:01.138 | Info | Combo: bartime=2025-03-13 06:00, executed=2025-03-13 10:00:01, pending Buy placed at 8586.3; SL=8555.024967480556, TP=8617.575032519442; valid for the next 3 chart bar(s).
+13/03/2025 22:05:00.004 | Trade | Cancelling pending order OID45
+13/03/2025 22:05:00.004 | Trade |  Cancelling pending order OID45 SUCCEEDED
+13/03/2025 22:05:00.004 | Info | Combo: pending order 45 cancelled after 3 chart bars.
+13/03/2025 22:05:00.004 | Trade | Placing Stop Order to Buy 1.25 UK100.cash (Price: 8553.2, SL: 8523.08343455005, TP: 8583.32)
+13/03/2025 22:05:00.004 | Trade |  Placing Stop Order to Buy 1.25 UK100.cash (Price: 8553.2, SL: 8523.08343455005, TP: 8583.32) SUCCEEDED, PendingOrder OID46
+13/03/2025 22:05:00.004 | Info | Combo: bartime=2025-03-13 18:00, executed=2025-03-13 22:05:00, pending Buy placed at 8553.2; SL=8523.083434550046, TP=8583.316565449955; valid for the next 3 chart bar(s).
+20/03/2025 10:00:00.137 | Trade | Placing Stop Order to Sell 1.94 UK100.cash (Price: 8678.5, SL: 8697.97071289322, TP: 8659.03)
+20/03/2025 10:00:00.137 | Trade |  Placing Stop Order to Sell 1.94 UK100.cash (Price: 8678.5, SL: 8697.97071289322, TP: 8659.03) SUCCEEDED, PendingOrder OID49
+20/03/2025 10:00:00.137 | Info | Combo: bartime=2025-03-20 06:00, executed=2025-03-20 10:00:00, pending Sell placed at 8678.5; SL=8697.97071289322, TP=8659.02928710678; valid for the next 3 chart bar(s).
+21/03/2025 06:00:00.439 | Trade | Placing Stop Order to Sell 2.31 UK100.cash (Price: 8687.5, SL: 8703.77888179285, TP: 8671.22)
+21/03/2025 06:00:00.439 | Trade |  Placing Stop Order to Sell 2.31 UK100.cash (Price: 8687.5, SL: 8703.77888179285, TP: 8671.22) SUCCEEDED, PendingOrder OID52
+21/03/2025 06:00:00.439 | Info | Combo: bartime=2025-03-21 02:00, executed=2025-03-21 06:00:00, pending Sell placed at 8687.5; SL=8703.77888179285, TP=8671.22111820715; valid for the next 3 chart bar(s).
+25/03/2025 10:00:00.189 | Trade | Placing Stop Order to Buy 1.59 UK100.cash (Price: 8690.8, SL: 8667.00105409787, TP: 8714.6)
+25/03/2025 10:00:00.189 | Trade |  Placing Stop Order to Buy 1.59 UK100.cash (Price: 8690.8, SL: 8667.00105409787, TP: 8714.6) SUCCEEDED, PendingOrder OID55
+25/03/2025 10:00:00.189 | Info | Combo: bartime=2025-03-25 06:00, executed=2025-03-25 10:00:00, pending Buy placed at 8690.8; SL=8667.001054097873, TP=8714.598945902126; valid for the next 3 chart bar(s).
+26/03/2025 10:00:00.185 | Trade | Placing Stop Order to Sell 1.88 UK100.cash (Price: 8650, SL: 8670.23214563937, TP: 8629.77)
+26/03/2025 10:00:00.185 | Trade |  Placing Stop Order to Sell 1.88 UK100.cash (Price: 8650, SL: 8670.23214563937, TP: 8629.77) SUCCEEDED, PendingOrder OID58
+26/03/2025 10:00:00.185 | Info | Combo: bartime=2025-03-26 06:00, executed=2025-03-26 10:00:00, pending Sell placed at 8650; SL=8670.232145639367, TP=8629.767854360633; valid for the next 3 chart bar(s).
+26/03/2025 22:05:00.009 | Trade | Cancelling pending order OID58
+26/03/2025 22:05:00.009 | Trade |  Cancelling pending order OID58 SUCCEEDED
+26/03/2025 22:05:00.009 | Info | Combo: pending order 58 cancelled after 3 chart bars.
+27/03/2025 22:05:00.004 | Trade | Placing Stop Order to Buy 1.95 UK100.cash (Price: 8669.3, SL: 8649.77472752636, TP: 8688.83)
+27/03/2025 22:05:00.004 | Trade |  Placing Stop Order to Buy 1.95 UK100.cash (Price: 8669.3, SL: 8649.77472752636, TP: 8688.83) SUCCEEDED, PendingOrder OID59
+27/03/2025 22:05:00.004 | Info | Combo: bartime=2025-03-27 18:00, executed=2025-03-27 22:05:00, pending Buy placed at 8669.3; SL=8649.774727526355, TP=8688.825272473643; valid for the next 3 chart bar(s).
+01/04/2025 09:00:00.166 | Trade | Placing Stop Order to Buy 1.61 UK100.cash (Price: 8675.1, SL: 8651.63402555951, TP: 8698.57)
+01/04/2025 09:00:00.166 | Trade |  Placing Stop Order to Buy 1.61 UK100.cash (Price: 8675.1, SL: 8651.63402555951, TP: 8698.57) SUCCEEDED, PendingOrder OID62
+01/04/2025 09:00:00.166 | Info | Combo: bartime=2025-04-01 05:00, executed=2025-04-01 09:00:00, pending Buy placed at 8675.1; SL=8651.63402555951, TP=8698.565974440491; valid for the next 3 chart bar(s).
+01/04/2025 22:05:00.007 | Trade | Cancelling pending order OID62
+01/04/2025 22:05:00.007 | Trade |  Cancelling pending order OID62 SUCCEEDED
+01/04/2025 22:05:00.007 | Info | Combo: pending order 62 cancelled after 3 chart bars.
+01/04/2025 23:59:58.564 | Info | Combo: loaded=1243, processed=26, before-start=1024, not-processed=193, placed=26, failed=0, guard-skipped=0, pending-expired=8, same-direction-skipped=0, reversed=0.
+Progress | Backtesting | 100.00 % |
+Info | CBot instance [Combo, UK100.cash, h4] stopped.
+{
+	"Equity":9789.08,
+	"NetProfit":-210.91,
+	"MaxBalanceDrawdownPercentages":4,
+	"MaxEquityDrawdownPercentages":4,
+	"MaxBalanceDrawdown":400.89,
+	"MaxEquityDrawdown":415.7,
+	"WinningTrades":7,
+	"LosingTrades":11,
+	"TotalTrades":18,
+	"AverageTrade":-11.71,
+	"ProfitFactor":0.62,
+	"Fitness":0
+}
+

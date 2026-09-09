@@ -1,0 +1,113 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_11sym_1wk_20260904\HK50\params.cbotset 
+--start=01/01/2025 --end=08/01/2025 --data-mode=Ticks --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=HK50.cash 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_11sym_1wk_20260904\HK50\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...K50\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | HK50.cash                 | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 08/01/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 2                         | cbotset              |
+| KtpLevel             | 4                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 50                        | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+04/09/2026 15:14:13.949 | Establishing connection using votuankiet96@gmail.com...
+04/09/2026 15:14:18.700 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Info | CBot instance [Combo, HK50.cash, h1] started.
+Progress | Backtesting | 13.19 % |
+Progress | Backtesting | 13.54 % |
+Progress | Backtesting | 13.57 % |
+Progress | Backtesting | 13.84 % |
+Progress | Backtesting | 14.04 % |
+Progress | Backtesting | 15.75 % |
+Progress | Backtesting | 30.56 % |
+Progress | Backtesting | 33.61 % |
+Progress | Backtesting | 63.35 % |
+Progress | Backtesting | 63.92 % |
+Progress | Backtesting | 65.67 % |
+Progress | Backtesting | 68.60 % |
+Progress | Backtesting | 70.27 % |
+Progress | Backtesting | 72.27 % |
+Progress | Backtesting | 75.96 % |
+Progress | Backtesting | 76.56 % |
+Progress | Backtesting | 77.02 % |
+Progress | Backtesting | 78.44 % |
+Progress | Backtesting | 80.65 % |
+Progress | Backtesting | 82.99 % |
+Progress | Backtesting | 83.98 % |
+Progress | Backtesting | 88.37 % |
+Progress | Backtesting | 88.82 % |
+Progress | Backtesting | 90.27 % |
+Progress | Backtesting | 91.19 % |
+Progress | Backtesting | 94.41 % |
+Progress | Backtesting | 96.83 % |
+02/01/2025 01:20:00.002 | Info | Combo: loaded 2638 valid signal row(s) from CSV.
+02/01/2025 01:20:00.002 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+02/01/2025 02:00:00.167 | Trade | Placing Stop Order to Sell 5.42 HK50.cash (Price: 19597.2, SL: 19740.6889164468, TP: 19221.55)
+02/01/2025 02:00:00.167 | Trade |  Placing Stop Order to Sell 5.42 HK50.cash (Price: 19597.2, SL: 19740.6889164468, TP: 19221.55) SUCCEEDED, PendingOrder OID1
+02/01/2025 02:00:00.167 | Info | Combo: bartime=2025-01-02 01:00, executed=2025-01-02 02:00:00, pending Sell placed at 19597.2; SL=19740.68891644679, TP=19221.546016742308; valid for the next 3 chart bar(s).
+03/01/2025 02:00:00.167 | Trade | Placing Stop Order to Buy 12.8 HK50.cash (Price: 19676.7, SL: 19616.5911777389, TP: 19834.06)
+03/01/2025 02:00:00.167 | Trade |  Placing Stop Order to Buy 12.8 HK50.cash (Price: 19676.7, SL: 19616.5911777389, TP: 19834.06) SUCCEEDED, PendingOrder OID4
+03/01/2025 02:00:00.167 | Info | Combo: bartime=2025-01-03 01:00, executed=2025-01-03 02:00:00, pending Buy placed at 19676.7; SL=19616.59117773887, TP=19834.064896679643; valid for the next 3 chart bar(s).
+06/01/2025 02:00:00.123 | Trade | Placing Stop Order to Sell 9.67 HK50.cash (Price: 19595.2, SL: 19676.8535215229, TP: 19381.43)
+06/01/2025 02:00:00.123 | Trade |  Placing Stop Order to Sell 9.67 HK50.cash (Price: 19595.2, SL: 19676.8535215229, TP: 19381.43) SUCCEEDED, PendingOrder OID7
+06/01/2025 02:00:00.123 | Info | Combo: bartime=2025-01-06 01:00, executed=2025-01-06 02:00:00, pending Sell placed at 19595.2; SL=19676.85352152292, TP=19381.431080652994; valid for the next 3 chart bar(s).
+06/01/2025 05:05:00.004 | Info | Combo: bartime=2025-01-06 03:00, Sell signal skipped: already have same-direction exposure open.
+06/01/2025 06:00:00.085 | Trade | Cancelling pending order OID7
+06/01/2025 06:00:00.085 | Trade |  Cancelling pending order OID7 SUCCEEDED
+06/01/2025 06:00:00.085 | Info | Combo: pending order 7 cancelled after 3 chart bars.
+06/01/2025 12:00:00.485 | Trade | Placing Stop Order to Buy 5.68 HK50.cash (Price: 20086.6, SL: 19947.6243562512, TP: 20450.44)
+06/01/2025 12:00:00.485 | Trade |  Placing Stop Order to Buy 5.68 HK50.cash (Price: 20086.6, SL: 19947.6243562512, TP: 20450.44) SUCCEEDED, PendingOrder OID8
+06/01/2025 12:00:00.485 | Info | Combo: bartime=2025-01-06 11:00, executed=2025-01-06 12:00:00, pending Buy placed at 20086.6; SL=19947.624356251195, TP=20450.438235334368; valid for the next 3 chart bar(s).
+06/01/2025 16:00:00.391 | Trade | Placing Stop Order to Sell 4.56 HK50.cash (Price: 19678.6, SL: 19849.7612236795, TP: 19230.5)
+06/01/2025 16:00:00.391 | Trade |  Placing Stop Order to Sell 4.56 HK50.cash (Price: 19678.6, SL: 19849.7612236795, TP: 19230.5) SUCCEEDED, PendingOrder OID11
+06/01/2025 16:00:00.391 | Info | Combo: bartime=2025-01-06 15:00, executed=2025-01-06 16:00:00, pending Sell placed at 19678.6; SL=19849.76122367951, TP=19230.49991640704; valid for the next 3 chart bar(s).
+07/01/2025 14:00:01.354 | Info | Combo: bartime=2025-01-07 13:00, reversal - closing existing Sell position 4 before opening opposite direction.
+07/01/2025 14:00:01.354 | Trade | Closing position PID4 (Volume: 4.56)
+07/01/2025 14:00:01.354 | Trade |  Closing position PID4 (Volume: 4.56) SUCCEEDED
+07/01/2025 14:00:01.354 | Trade | Placing Stop Order to Buy 12.37 HK50.cash (Price: 19490.7, SL: 19426.8882330845, TP: 19657.76)
+07/01/2025 14:00:01.354 | Trade |  Placing Stop Order to Buy 12.37 HK50.cash (Price: 19490.7, SL: 19426.8882330845, TP: 19657.76) SUCCEEDED, PendingOrder OID15
+07/01/2025 14:00:01.354 | Info | Combo: bartime=2025-01-07 13:00, executed=2025-01-07 14:00:01, pending Buy placed at 19490.7; SL=19426.888233084497, TP=19657.75920578479; valid for the next 3 chart bar(s).
+08/01/2025 18:59:41.584 | Info | Combo: loaded=2638, processed=7, before-start=1861, not-processed=770, placed=6, failed=0, guard-skipped=0, pending-expired=1, same-direction-skipped=1, reversed=1, margin-capped=0, margin-blocked=0.
+Progress | Backtesting | 97.39 % |
+Info | CBot instance [Combo, HK50.cash, h1] stopped.
+{
+	"Equity":10007.9,
+	"NetProfit":7.9,
+	"MaxBalanceDrawdownPercentages":1,
+	"MaxEquityDrawdownPercentages":2,
+	"MaxBalanceDrawdown":151.63,
+	"MaxEquityDrawdown":300.19,
+	"WinningTrades":2,
+	"LosingTrades":3,
+	"TotalTrades":5,
+	"AverageTrade":1.58,
+	"ProfitFactor":1.02,
+	"Fitness":0
+}
+

@@ -1,0 +1,83 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_leverage_probe_20260903-093610\HK50\params.cbotset 
+--start=01/01/2026 --end=28/02/2026 --data-mode=Ticks --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=HK50.cash 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_leverage_probe_20260903-093610\HK50\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...K50\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | HK50.cash                 | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2026 00:00          | cmd arg              |
+| End                  | 28/02/2026 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 3                         | cbotset              |
+| KtpLevel             | 7                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 1                         | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+03/09/2026 16:36:14.450 | Establishing connection using votuankiet96@gmail.com...
+03/09/2026 16:36:16.629 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Progress | Loading HK50.cash, h1 | 100.00 % |
+Info | CBot instance [Combo, HK50.cash, h1] started.
+Progress | Backtesting | 1.79 % |
+Progress | Backtesting | 2.09 % |
+Progress | Backtesting | 2.18 % |
+Progress | Backtesting | 2.29 % |
+Progress | Backtesting | 2.58 % |
+Progress | Backtesting | 2.74 % |
+Progress | Backtesting | 2.85 % |
+Progress | Backtesting | 6.87 % |
+Progress | Backtesting | 6.98 % |
+Progress | Backtesting | 6.99 % |
+Progress | Loading USDHKD, h1 | 100.00 % |
+02/01/2026 01:20:00.005 | Info | Combo: loaded 2638 valid signal row(s) from CSV.
+02/01/2026 01:20:00.005 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+05/01/2026 03:00:00.107 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 11.85 units, which needs about $4444.04 margin. Limit hit: MaxMarginPercent limit hit (1.0% of equity = $100.00 budget, free margin was $10000.00). Size was cut from 11.85 to 0.26 units. Real risk on this trade is now about $2.19 (0.02% of balance) instead of the requested 1.00%.
+05/01/2026 03:00:00.107 | Trade | Placing Stop Order to Sell 0.26 HK50.cash (Price: 26309.7, SL: 26375.708097554, TP: 26136.88)
+05/01/2026 03:00:00.107 | Trade |  Placing Stop Order to Sell 0.26 HK50.cash (Price: 26309.7, SL: 26375.708097554, TP: 26136.88) SUCCEEDED, PendingOrder OID1
+05/01/2026 03:00:00.107 | Info | Combo: bartime=2026-01-05 02:00, executed=2026-01-05 03:00:00, pending Sell placed at 26309.7; SL=26375.708097554045, TP=26136.882683102842; valid for the next 3 chart bar(s).
+Error | CBot instance [Combo, HK50.cash, h1] aborted by timeout.
+{
+	"Equity":,
+	"NetProfit":-,
+	"MaxBalanceDrawdownPercentages":-,
+	"MaxEquityDrawdownPercentages":-,
+	"MaxBalanceDrawdown":-,
+	"MaxEquityDrawdown":-,
+	"WinningTrades":-,
+	"LosingTrades":-,
+	"TotalTrades":-,
+	"AverageTrade":-,
+	"ProfitFactor":-,
+	"Fitness":0
+}
+Message expected
+System.InvalidOperationException: Message expected
+   at cTrader.Console.Infrastructure.StateMachine.Strategies.BacktestReportSavingStateStrategy.DoEnter()
+   at cTrader.Console.Infrastructure.StateMachine.Strategies.ConsoleStateStrategyBase.Enter()
+   at cTrader.Console.Infrastructure.StateMachine.ConsoleApplicationLifecycleStateMachine.OnMovedToLifecycleState(IConsoleApplicationLifecycleStateStrategy newStateStrategy)
+   at cTrader.Console.Infrastructure.StateMachine.ConsoleApplicationLifecycleStateTransition.InternalMoveTo(ConsoleApplicationLifecycleState state)
+   at cTrader.Console.Infrastructure.StateMachine.ConsoleApplicationLifecycleStateTransition.<>c__DisplayClass7_0.<MoveTo>b__0()
+   at cTrader.Console.Infrastructure.Dispatcher.ConsoleThreadDispatcher.<>c__DisplayClass12_0.<ExecuteInternalAsync>g__ExecuteAction|0()
+

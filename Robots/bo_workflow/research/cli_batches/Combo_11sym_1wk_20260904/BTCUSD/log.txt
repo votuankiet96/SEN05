@@ -1,0 +1,138 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_11sym_1wk_20260904\BTCUSD\params.cbotset 
+--start=01/01/2025 --end=08/01/2025 --data-mode=Ticks --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=BTCUSD 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_11sym_1wk_20260904\BTCUSD\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...USD\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | BTCUSD                    | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 08/01/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 2                         | cbotset              |
+| KtpLevel             | 4                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 50                        | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+04/09/2026 15:14:14.045 | Establishing connection using votuankiet96@gmail.com...
+04/09/2026 15:14:18.530 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Info | CBot instance [Combo, BTCUSD, h1] started.
+Progress | Backtesting | 0.00 % |
+Progress | Backtesting | 1.04 % |
+Progress | Backtesting | 4.09 % |
+Progress | Backtesting | 5.79 % |
+Progress | Backtesting | 6.77 % |
+Progress | Backtesting | 16.54 % |
+Progress | Backtesting | 20.16 % |
+Progress | Backtesting | 20.61 % |
+Progress | Backtesting | 21.20 % |
+Progress | Backtesting | 22.10 % |
+Progress | Backtesting | 24.73 % |
+Progress | Backtesting | 26.78 % |
+Progress | Backtesting | 30.44 % |
+Progress | Backtesting | 66.22 % |
+Progress | Backtesting | 69.94 % |
+Progress | Backtesting | 71.01 % |
+Progress | Backtesting | 73.43 % |
+Progress | Backtesting | 75.00 % |
+Progress | Backtesting | 81.71 % |
+Progress | Backtesting | 83.16 % |
+Progress | Backtesting | 83.78 % |
+Progress | Backtesting | 85.47 % |
+Progress | Backtesting | 97.40 % |
+Progress | Backtesting | 98.83 % |
+01/01/2025 00:00:05.297 | Info | Combo: loaded 6222 valid signal row(s) from CSV.
+01/01/2025 00:00:05.297 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+01/01/2025 02:00:01.410 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.14 units, which needs about $13229.67 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5000.00 budget, free margin was $10000.00). Size was cut from 0.14 to 0.05 units. Real risk on this trade is now about $33.73 (0.34% of balance) instead of the requested 1.00%.
+01/01/2025 02:00:01.410 | Trade | Placing Stop Order to Sell 0.05 BTCUSD (Price: 93334.85, SL: 94009.4068576072, TP: 91568.86)
+01/01/2025 02:00:01.410 | Trade |  Placing Stop Order to Sell 0.05 BTCUSD (Price: 93334.85, SL: 94009.4068576072, TP: 91568.86) SUCCEEDED, PendingOrder OID1
+01/01/2025 02:00:01.410 | Info | Combo: bartime=2025-01-01 01:00, executed=2025-01-01 02:00:01, pending Sell placed at 93334.85; SL=94009.40685760717, TP=91568.86014678446; valid for the next 3 chart bar(s).
+01/01/2025 05:00:01.321 | Trade | Cancelling pending order OID1
+01/01/2025 05:00:01.321 | Trade |  Cancelling pending order OID1 SUCCEEDED
+01/01/2025 05:00:01.321 | Info | Combo: pending order 1 cancelled after 3 chart bars.
+01/01/2025 13:00:00.818 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.25 units, which needs about $23624.41 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5000.00 budget, free margin was $10000.00). Size was cut from 0.25 to 0.05 units. Real risk on this trade is now about $19.98 (0.20% of balance) instead of the requested 1.00%.
+01/01/2025 13:00:00.818 | Trade | Placing Stop Order to Buy 0.05 BTCUSD (Price: 93710.5, SL: 93310.9114192058, TP: 94756.62)
+01/01/2025 13:00:00.818 | Trade |  Placing Stop Order to Buy 0.05 BTCUSD (Price: 93710.5, SL: 93310.9114192058, TP: 94756.62) SUCCEEDED, PendingOrder OID2
+01/01/2025 13:00:00.818 | Info | Combo: bartime=2025-01-01 12:00, executed=2025-01-01 13:00:00, pending Buy placed at 93710.5; SL=93310.91141920585, TP=94756.62290451908; valid for the next 3 chart bar(s).
+03/01/2025 05:00:00.212 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.25 units, which needs about $23624.41 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5024.30 budget, free margin was $10048.59). Size was cut from 0.25 to 0.05 units. Real risk on this trade is now about $19.34 (0.19% of balance) instead of the requested 1.00%.
+03/01/2025 05:00:00.212 | Trade | Placing Stop Order to Sell 0.05 BTCUSD (Price: 96629.35, SL: 97016.1041156877, TP: 95616.83)
+03/01/2025 05:00:00.212 | Trade |  Placing Stop Order to Sell 0.05 BTCUSD (Price: 96629.35, SL: 97016.1041156877, TP: 95616.83) SUCCEEDED, PendingOrder OID5
+03/01/2025 05:00:00.212 | Info | Combo: bartime=2025-01-03 04:00, executed=2025-01-03 05:00:00, pending Sell placed at 96629.35; SL=97016.10411568767, TP=95616.8277251297; valid for the next 3 chart bar(s).
+03/01/2025 15:00:00.015 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.24 units, which needs about $22679.43 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5014.24 budget, free margin was $10028.49). Size was cut from 0.24 to 0.05 units. Real risk on this trade is now about $20.68 (0.21% of balance) instead of the requested 1.00%.
+03/01/2025 15:00:00.015 | Trade | Placing Stop Order to Buy 0.05 BTCUSD (Price: 97233.4, SL: 96819.772179634, TP: 98316.28)
+03/01/2025 15:00:00.015 | Trade |  Placing Stop Order to Buy 0.05 BTCUSD (Price: 97233.4, SL: 96819.772179634, TP: 98316.28) SUCCEEDED, PendingOrder OID8
+03/01/2025 15:00:00.015 | Info | Combo: bartime=2025-01-03 14:00, executed=2025-01-03 15:00:00, pending Buy placed at 97233.4; SL=96819.77217963403, TP=98316.27763371808; valid for the next 3 chart bar(s).
+04/01/2025 12:00:00.005 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.30 units, which needs about $28349.29 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5003.76 budget, free margin was $10007.51). Size was cut from 0.30 to 0.05 units. Real risk on this trade is now about $16.52 (0.17% of balance) instead of the requested 1.00%.
+04/01/2025 12:00:00.005 | Trade | Placing Stop Order to Sell 0.05 BTCUSD (Price: 97519.85, SL: 97850.2714568524, TP: 96654.81)
+04/01/2025 12:00:00.005 | Trade |  Placing Stop Order to Sell 0.05 BTCUSD (Price: 97519.85, SL: 97850.2714568524, TP: 96654.81) SUCCEEDED, PendingOrder OID11
+04/01/2025 12:00:00.005 | Info | Combo: bartime=2025-01-04 09:00, executed=2025-01-04 12:00:00, pending Sell placed at 97519.85; SL=97850.27145685234, TP=96654.80662596061; valid for the next 3 chart bar(s).
+04/01/2025 15:00:20.971 | Trade | Cancelling pending order OID11
+04/01/2025 15:00:20.971 | Trade |  Cancelling pending order OID11 SUCCEEDED
+04/01/2025 15:00:20.971 | Info | Combo: pending order 11 cancelled after 3 chart bars.
+04/01/2025 19:00:01.712 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.35 units, which needs about $33074.17 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5003.76 budget, free margin was $10007.51). Size was cut from 0.35 to 0.05 units. Real risk on this trade is now about $14.12 (0.14% of balance) instead of the requested 1.00%.
+04/01/2025 19:00:01.712 | Trade | Placing Stop Order to Sell 0.05 BTCUSD (Price: 97815.35, SL: 98097.7718871476, TP: 97075.97)
+04/01/2025 19:00:01.712 | Trade |  Placing Stop Order to Sell 0.05 BTCUSD (Price: 97815.35, SL: 98097.7718871476, TP: 97075.97) SUCCEEDED, PendingOrder OID12
+04/01/2025 19:00:01.712 | Info | Combo: bartime=2025-01-04 18:00, executed=2025-01-04 19:00:01, pending Sell placed at 97815.35; SL=98097.77188714757, TP=97075.96949944767; valid for the next 3 chart bar(s).
+04/01/2025 20:00:02.671 | Info | Combo: bartime=2025-01-04 19:00, reversal - cancelling existing Sell pending order 12 before opening opposite direction.
+04/01/2025 20:00:02.671 | Trade | Cancelling pending order OID12
+04/01/2025 20:00:02.671 | Trade |  Cancelling pending order OID12 SUCCEEDED
+04/01/2025 20:00:02.671 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.32 units, which needs about $30239.24 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5003.76 budget, free margin was $10007.51). Size was cut from 0.32 to 0.05 units. Real risk on this trade is now about $15.42 (0.15% of balance) instead of the requested 1.00%.
+04/01/2025 20:00:02.671 | Trade | Placing Stop Order to Buy 0.05 BTCUSD (Price: 98356.35, SL: 98048.032490282, TP: 99163.53)
+04/01/2025 20:00:02.671 | Trade |  Placing Stop Order to Buy 0.05 BTCUSD (Price: 98356.35, SL: 98048.032490282, TP: 99163.53) SUCCEEDED, PendingOrder OID13
+04/01/2025 20:00:02.671 | Info | Combo: bartime=2025-01-04 19:00, executed=2025-01-04 20:00:02, pending Buy placed at 98356.35; SL=98048.03249028196, TP=99163.52524044187; valid for the next 3 chart bar(s).
+05/01/2025 09:00:00.631 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.37 units, which needs about $34964.13 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4995.77 budget, free margin was $9991.54). Size was cut from 0.37 to 0.05 units. Real risk on this trade is now about $13.23 (0.13% of balance) instead of the requested 1.00%.
+05/01/2025 09:00:00.631 | Trade | Placing Stop Order to Sell 0.05 BTCUSD (Price: 97728.4, SL: 97992.9100467403, TP: 97035.91)
+05/01/2025 09:00:00.631 | Trade |  Placing Stop Order to Sell 0.05 BTCUSD (Price: 97728.4, SL: 97992.9100467403, TP: 97035.91) SUCCEEDED, PendingOrder OID16
+05/01/2025 09:00:00.631 | Info | Combo: bartime=2025-01-05 08:00, executed=2025-01-05 09:00:00, pending Sell placed at 97728.4; SL=97992.91004674026, TP=97035.91269763398; valid for the next 3 chart bar(s).
+05/01/2025 20:00:02.940 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.30 units, which needs about $28349.29 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4988.73 budget, free margin was $9977.46). Size was cut from 0.30 to 0.05 units. Real risk on this trade is now about $16.44 (0.16% of balance) instead of the requested 1.00%.
+05/01/2025 20:00:02.940 | Trade | Placing Stop Order to Buy 0.05 BTCUSD (Price: 98097.35, SL: 97768.4829853249, TP: 98958.32)
+05/01/2025 20:00:02.940 | Trade |  Placing Stop Order to Buy 0.05 BTCUSD (Price: 98097.35, SL: 97768.4829853249, TP: 98958.32) SUCCEEDED, PendingOrder OID19
+05/01/2025 20:00:02.940 | Info | Combo: bartime=2025-01-05 19:00, executed=2025-01-05 20:00:02, pending Buy placed at 98097.35; SL=97768.4829853249, TP=98958.32384441944; valid for the next 3 chart bar(s).
+07/01/2025 10:00:00.483 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.30 units, which needs about $28349.29 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5010.21 budget, free margin was $10020.42). Size was cut from 0.30 to 0.05 units. Real risk on this trade is now about $16.19 (0.16% of balance) instead of the requested 1.00%.
+07/01/2025 10:00:00.483 | Trade | Placing Stop Order to Sell 0.05 BTCUSD (Price: 101572.45, SL: 101896.166413053, TP: 100724.96)
+07/01/2025 10:00:00.483 | Trade |  Placing Stop Order to Sell 0.05 BTCUSD (Price: 101572.45, SL: 101896.166413053, TP: 100724.96) SUCCEEDED, PendingOrder OID22
+07/01/2025 10:00:00.483 | Info | Combo: bartime=2025-01-07 09:00, executed=2025-01-07 10:00:00, pending Sell placed at 101572.45; SL=101896.16641305282, TP=100724.9604306277; valid for the next 3 chart bar(s).
+08/01/2025 23:00:03.993 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 0.10 units, which needs about $9449.76 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5031.62 budget, free margin was $10063.24). Size was cut from 0.10 to 0.05 units. Real risk on this trade is now about $46.02 (0.46% of balance) instead of the requested 1.00%.
+08/01/2025 23:00:03.993 | Trade | Placing Stop Order to Buy 0.05 BTCUSD (Price: 95284.25, SL: 94363.9223282995, TP: 97693.67)
+08/01/2025 23:00:03.993 | Trade |  Placing Stop Order to Buy 0.05 BTCUSD (Price: 95284.25, SL: 94363.9223282995, TP: 97693.67) SUCCEEDED, PendingOrder OID25
+08/01/2025 23:00:03.993 | Info | Combo: bartime=2025-01-08 22:00, executed=2025-01-08 23:00:03, pending Buy placed at 95284.25; SL=94363.92232829946, TP=97693.66784451202; valid for the next 3 chart bar(s).
+08/01/2025 23:59:59.728 | Info | Combo: loaded=6222, processed=11, before-start=4984, not-processed=1227, placed=11, failed=0, guard-skipped=0, pending-expired=2, same-direction-skipped=0, reversed=1, margin-capped=11, margin-blocked=0.
+Progress | Backtesting | 100.00 % |
+Info | CBot instance [Combo, BTCUSD, h1] stopped.
+{
+	"Equity":10063.24,
+	"NetProfit":63.24,
+	"MaxBalanceDrawdownPercentages":0,
+	"MaxEquityDrawdownPercentages":1,
+	"MaxBalanceDrawdown":71.12,
+	"MaxEquityDrawdown":110.75,
+	"WinningTrades":3,
+	"LosingTrades":4,
+	"TotalTrades":7,
+	"AverageTrade":9.03,
+	"ProfitFactor":1.89,
+	"Fitness":0
+}
+

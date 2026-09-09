@@ -1,0 +1,4530 @@
+﻿[
+    {
+        "Depth":  0,
+        "Name":  "",
+        "Type":  "ControlType.Window",
+        "Id":  "Controls_PopupNotifications_PopupNotificationWindow__Window_Manual_AId",
+        "ProcessId":  8872
+    },
+    {
+        "Depth":  0,
+        "Name":  "",
+        "Type":  "ControlType.Pane",
+        "Id":  "",
+        "ProcessId":  8444
+    },
+    {
+        "Depth":  0,
+        "Name":  "cTrader 5.9.10",
+        "Type":  "ControlType.Window",
+        "Id":  "MainWindow_AId",
+        "ProcessId":  8872
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "MenuControl_AId",
+        "ProcessId":  8872,
+        "Bounds":  "0,23,380,705",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "HamburgerMenuButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "0,23,380,39",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "10,33,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "Apps_TradeApp_MergedMenu_ExpandedMergedMenuButtonControl__Button_Content_AId",
+        "ProcessId":  8872,
+        "Bounds":  "39,23,341,39",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.CheckBox",
+        "Id":  "ScreenModeSwitchBox_AId",
+        "ProcessId":  8872,
+        "Bounds":  "248,23,25,39",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "Controls_SwitchBox_SwitchBox__Image_ImageState_AId",
+        "ProcessId":  8872,
+        "Bounds":  "251,33,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SwitchThemeButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "273,23,25,39",
+        "Help":  "Switch colour theme",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "Apps_TradeApp_MergedMenu_MergedMenu__Image_SwitchTheme_AId",
+        "ProcessId":  8872,
+        "Bounds":  "276,33,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.CheckBox",
+        "Id":  "SoundSwitchBox_AId",
+        "ProcessId":  8872,
+        "Bounds":  "298,23,25,39",
+        "Help":  "Sound is on",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "Controls_SwitchBox_SwitchBox__Image_ImageState_AId",
+        "ProcessId":  8872,
+        "Bounds":  "301,33,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "RunningPluginsButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "323,23,25,39",
+        "Help":  "Running plugins: 0",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "326,33,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "LanguageSelector_AId",
+        "ProcessId":  8872,
+        "Bounds":  "348,23,25,39",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "348,23,25,39",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "352,37,17,11",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "Empty",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "TradeTab_AId",
+        "ProcessId":  8872,
+        "Bounds":  "0,62,380,39",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "10,72,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "Empty",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "AlgoTab_AId",
+        "ProcessId":  8872,
+        "Bounds":  "0,102,380,39",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "10,112,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "Empty",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Apps_Automate2App_AutomateMenu__TabRadioButton_CBotsTab_AId",
+        "ProcessId":  8872,
+        "Bounds":  "5,147,93,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Apps_Automate2App_AutomateMenu__TabRadioButton_IndicatorsTab_AId",
+        "ProcessId":  8872,
+        "Bounds":  "99,147,93,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Apps_Automate2App_AutomateMenu__TabRadioButton_PluginsTab_AId",
+        "ProcessId":  8872,
+        "Bounds":  "193,147,93,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Apps_Automate2App_AutomateMenu__TabRadioButton_WebPluginsTab_AId",
+        "ProcessId":  8872,
+        "Bounds":  "287,147,93,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Edit",
+        "Id":  "AlgoApplicationSearchField_AId",
+        "ProcessId":  8872,
+        "Bounds":  "5,171,287,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "New",
+        "Type":  "ControlType.Button",
+        "Id":  "AlgoApplicationCreateAlgoButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "297,171,33,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "New",
+        "Type":  "ControlType.Text",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "302,174,23,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Stop all",
+        "Type":  "ControlType.Button",
+        "Id":  "Apps_Automate2App_AutomateMenu__Button_AlgoMainWindowStopAll_AId",
+        "ProcessId":  8872,
+        "Bounds":  "335,171,45,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Stop all",
+        "Type":  "ControlType.Text",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "340,174,35,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "Apps_Automate2App_AutomateMenu__Button_GetAlgosFromStoreCommand_AId",
+        "ProcessId":  8872,
+        "Bounds":  "5,195,375,29",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Get algos from Store",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_AutomateMenu__TextBlock_GetAlgosFromStore_AId",
+        "ProcessId":  8872,
+        "Bounds":  "131,203,100,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "241,203,13,13",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.List",
+        "Id":  "AlgoInstancesScrollView_AId",
+        "ProcessId":  8872,
+        "Bounds":  "5,224,375,381",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "cTrader.ViewModels.Apps.AutomateApp.AutomateTypes.Robots.AutomateRobotViewModel",
+        "Type":  "ControlType.ListItem",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "6,225,362,34",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "AlgoTitleButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "6,230,362,29",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "296,235,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "Apps_Automate2App_AutomateMenu__Button_ExportButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "320,235,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "320,235,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "344,235,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "cTrader.ViewModels.Apps.AutomateApp.AutomateInstances.Robots.Group.AutomateRobotGroupViewModel",
+        "Type":  "ControlType.ListItem",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "6,259,362,64",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Content",
+        "ProcessId":  8872,
+        "Bounds":  "6,264,362,59",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "11,284,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "StartBotButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "334,284,29,19",
+        "Help":  "Start cBot",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "339,284,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Demo • ",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountType_AId",
+        "ProcessId":  8872,
+        "Bounds":  "45,275,37,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "7563609",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "82,275,42,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "FTMO Platform",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountBroker_AId",
+        "ProcessId":  8872,
+        "Bounds":  "124,275,83,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "SymbolSelectorControl_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,296,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SymbolSelectorControlButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,296,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "TimeframeSelectorButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "166,296,61,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SettingsButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "232,296,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "232,296,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "cTrader.ViewModels.Apps.AutomateApp.AutomateInstances.Robots.Group.AutomateRobotGroupViewModel",
+        "Type":  "ControlType.ListItem",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "6,323,362,64",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Content",
+        "ProcessId":  8872,
+        "Bounds":  "6,328,362,59",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "11,348,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "StartBotButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "334,348,29,19",
+        "Help":  "Start cBot",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "339,348,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Demo • ",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountType_AId",
+        "ProcessId":  8872,
+        "Bounds":  "45,339,37,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "7563609",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "82,339,42,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "FTMO Platform",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountBroker_AId",
+        "ProcessId":  8872,
+        "Bounds":  "124,339,83,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "SymbolSelectorControl_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,360,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SymbolSelectorControlButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,360,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "TimeframeSelectorButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "166,360,61,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SettingsButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "232,360,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "232,360,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "cTrader.ViewModels.Apps.AutomateApp.AutomateInstances.Robots.Group.AutomateRobotGroupViewModel",
+        "Type":  "ControlType.ListItem",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "6,387,362,64",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Content",
+        "ProcessId":  8872,
+        "Bounds":  "6,392,362,59",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "11,412,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "StartBotButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "334,412,29,19",
+        "Help":  "Start cBot",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "339,412,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Demo • ",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountType_AId",
+        "ProcessId":  8872,
+        "Bounds":  "45,403,37,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "7563609",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "82,403,42,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "FTMO Platform",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountBroker_AId",
+        "ProcessId":  8872,
+        "Bounds":  "124,403,83,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "SymbolSelectorControl_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,424,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SymbolSelectorControlButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,424,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "TimeframeSelectorButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "166,424,61,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SettingsButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "232,424,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "232,424,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "cTrader.ViewModels.Apps.AutomateApp.AutomateInstances.Robots.Group.AutomateRobotGroupViewModel",
+        "Type":  "ControlType.ListItem",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "6,451,362,64",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Content",
+        "ProcessId":  8872,
+        "Bounds":  "6,456,362,59",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "11,476,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "StartBotButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "334,476,29,19",
+        "Help":  "Start cBot",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "339,476,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Demo • ",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountType_AId",
+        "ProcessId":  8872,
+        "Bounds":  "45,467,37,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "7563609",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "82,467,42,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "FTMO Platform",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountBroker_AId",
+        "ProcessId":  8872,
+        "Bounds":  "124,467,83,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "SymbolSelectorControl_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,488,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SymbolSelectorControlButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,488,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "TimeframeSelectorButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "166,488,61,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SettingsButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "232,488,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "232,488,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "cTrader.ViewModels.Apps.AutomateApp.AutomateInstances.Robots.Group.AutomateRobotGroupViewModel",
+        "Type":  "ControlType.ListItem",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "6,515,362,64",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Content",
+        "ProcessId":  8872,
+        "Bounds":  "6,520,362,59",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "11,540,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "StartBotButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "334,540,29,19",
+        "Help":  "Start cBot",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "339,540,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Demo • ",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountType_AId",
+        "ProcessId":  8872,
+        "Bounds":  "45,531,37,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "7563609",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "82,531,42,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "FTMO Platform",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountBroker_AId",
+        "ProcessId":  8872,
+        "Bounds":  "124,531,83,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "SymbolSelectorControl_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,552,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SymbolSelectorControlButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,552,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "TimeframeSelectorButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "166,552,61,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SettingsButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "232,552,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "232,552,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "cTrader.ViewModels.Apps.AutomateApp.AutomateInstances.Robots.Group.AutomateRobotGroupViewModel",
+        "Type":  "ControlType.ListItem",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "6,579,362,64",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Content",
+        "ProcessId":  8872,
+        "Bounds":  "6,584,362,59",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "11,604,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "StartBotButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "334,604,29,19",
+        "Help":  "Start cBot",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "339,604,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Demo • ",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountType_AId",
+        "ProcessId":  8872,
+        "Bounds":  "45,595,37,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "7563609",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "82,595,42,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "FTMO Platform",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountBroker_AId",
+        "ProcessId":  8872,
+        "Bounds":  "124,595,83,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "SymbolSelectorControl_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,616,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SymbolSelectorControlButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,616,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "TimeframeSelectorButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "166,616,61,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SettingsButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "232,616,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "232,616,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "cTrader.ViewModels.Apps.AutomateApp.AutomateInstances.Robots.Group.AutomateRobotGroupViewModel",
+        "Type":  "ControlType.ListItem",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "6,643,362,64",
+        "Help":  "",
+        "Offscreen":  true
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Content",
+        "ProcessId":  8872,
+        "Bounds":  "6,648,362,59",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "11,668,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "StartBotButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "334,668,29,19",
+        "Help":  "Start cBot",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "339,668,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Demo • ",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountType_AId",
+        "ProcessId":  8872,
+        "Bounds":  "45,659,37,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "7563609",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "82,659,42,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "FTMO Platform",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountBroker_AId",
+        "ProcessId":  8872,
+        "Bounds":  "124,659,83,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "SymbolSelectorControl_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,680,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SymbolSelectorControlButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,680,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "TimeframeSelectorButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "166,680,61,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SettingsButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "232,680,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "232,680,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "cTrader.ViewModels.Apps.AutomateApp.AutomateInstances.Robots.Group.AutomateRobotGroupViewModel",
+        "Type":  "ControlType.ListItem",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "6,707,362,64",
+        "Help":  "",
+        "Offscreen":  true
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Content",
+        "ProcessId":  8872,
+        "Bounds":  "6,712,362,59",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "11,732,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "StartBotButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "334,732,29,19",
+        "Help":  "Start cBot",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "339,732,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Demo • ",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountType_AId",
+        "ProcessId":  8872,
+        "Bounds":  "45,723,37,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "7563609",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "82,723,42,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "FTMO Platform",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountBroker_AId",
+        "ProcessId":  8872,
+        "Bounds":  "124,723,83,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "SymbolSelectorControl_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,744,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SymbolSelectorControlButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,744,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "TimeframeSelectorButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "166,744,61,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SettingsButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "232,744,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "232,744,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "cTrader.ViewModels.Apps.AutomateApp.AutomateInstances.Robots.Group.AutomateRobotGroupViewModel",
+        "Type":  "ControlType.ListItem",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "6,771,362,64",
+        "Help":  "",
+        "Offscreen":  true
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Content",
+        "ProcessId":  8872,
+        "Bounds":  "6,776,362,59",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "11,796,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "StartBotButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "334,796,29,19",
+        "Help":  "Start cBot",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "339,796,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Demo • ",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountType_AId",
+        "ProcessId":  8872,
+        "Bounds":  "45,787,37,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "7563609",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "82,787,42,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "FTMO Platform",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountBroker_AId",
+        "ProcessId":  8872,
+        "Bounds":  "124,787,83,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "SymbolSelectorControl_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,808,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SymbolSelectorControlButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,808,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "TimeframeSelectorButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "166,808,61,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SettingsButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "232,808,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "232,808,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "cTrader.ViewModels.Apps.AutomateApp.AutomateInstances.Robots.Group.AutomateRobotGroupViewModel",
+        "Type":  "ControlType.ListItem",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "6,835,362,64",
+        "Help":  "",
+        "Offscreen":  true
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Content",
+        "ProcessId":  8872,
+        "Bounds":  "6,840,362,59",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "11,860,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "StartBotButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "334,860,29,19",
+        "Help":  "Start cBot",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "339,860,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Demo • ",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountType_AId",
+        "ProcessId":  8872,
+        "Bounds":  "45,851,37,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "7563609",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "82,851,42,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "FTMO Platform",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountBroker_AId",
+        "ProcessId":  8872,
+        "Bounds":  "124,851,83,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "SymbolSelectorControl_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,872,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SymbolSelectorControlButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,872,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "TimeframeSelectorButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "166,872,61,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SettingsButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "232,872,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "232,872,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "cTrader.ViewModels.Apps.AutomateApp.AutomateInstances.Robots.Group.AutomateRobotGroupViewModel",
+        "Type":  "ControlType.ListItem",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "6,899,362,64",
+        "Help":  "",
+        "Offscreen":  true
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Content",
+        "ProcessId":  8872,
+        "Bounds":  "6,904,362,59",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "11,924,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "StartBotButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "334,924,29,19",
+        "Help":  "Start cBot",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "339,924,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Demo • ",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountType_AId",
+        "ProcessId":  8872,
+        "Bounds":  "45,915,37,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "7563609",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "82,915,42,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "FTMO Platform",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountBroker_AId",
+        "ProcessId":  8872,
+        "Bounds":  "124,915,83,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "SymbolSelectorControl_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,936,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SymbolSelectorControlButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,936,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "TimeframeSelectorButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "166,936,61,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SettingsButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "232,936,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "232,936,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "cTrader.ViewModels.Apps.AutomateApp.AutomateTypes.Robots.AddRobotInstanceViewModel",
+        "Type":  "ControlType.ListItem",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "6,963,362,34",
+        "Help":  "",
+        "Offscreen":  true
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "AlgoAddInstanceButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "6,968,362,29",
+        "Help":  "Build the algorithm first to be able to work with it",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "144,973,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Add instance",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_AutomateMenu__TextBlock_AlgoMainWindowAddInstance_AId",
+        "ProcessId":  8872,
+        "Bounds":  "167,975,64,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "cTrader.ViewModels.Apps.AutomateApp.AutomateTypes.Robots.AutomateRobotViewModel",
+        "Type":  "ControlType.ListItem",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "6,997,362,34",
+        "Help":  "",
+        "Offscreen":  true
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "AlgoTitleButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "6,1002,362,29",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "296,1007,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "Apps_Automate2App_AutomateMenu__Button_ExportButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "320,1007,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "320,1007,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "344,1007,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "cTrader.ViewModels.Apps.AutomateApp.AutomateInstances.Robots.Group.AutomateRobotGroupViewModel",
+        "Type":  "ControlType.ListItem",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "6,1031,362,64",
+        "Help":  "",
+        "Offscreen":  true
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Content",
+        "ProcessId":  8872,
+        "Bounds":  "6,1036,362,59",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "11,1056,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "StartBotButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "334,1056,29,19",
+        "Help":  "Start cBot",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "339,1056,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Demo • ",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountType_AId",
+        "ProcessId":  8872,
+        "Bounds":  "45,1047,37,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "7563609",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "82,1047,42,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "FTMO Platform",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountBroker_AId",
+        "ProcessId":  8872,
+        "Bounds":  "124,1047,83,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "SymbolSelectorControl_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,1068,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SymbolSelectorControlButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,1068,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "TimeframeSelectorButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "166,1068,61,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SettingsButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "232,1068,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "232,1068,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "cTrader.ViewModels.Apps.AutomateApp.AutomateInstances.Robots.Group.AutomateRobotGroupViewModel",
+        "Type":  "ControlType.ListItem",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "6,1095,362,64",
+        "Help":  "",
+        "Offscreen":  true
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Content",
+        "ProcessId":  8872,
+        "Bounds":  "6,1100,362,59",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "11,1120,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "StartBotButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "334,1120,29,19",
+        "Help":  "Start cBot",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "339,1120,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Demo • ",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountType_AId",
+        "ProcessId":  8872,
+        "Bounds":  "45,1111,37,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "7563609",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "82,1111,42,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "FTMO Platform",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountBroker_AId",
+        "ProcessId":  8872,
+        "Bounds":  "124,1111,83,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "SymbolSelectorControl_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,1132,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SymbolSelectorControlButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,1132,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "TimeframeSelectorButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "166,1132,61,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SettingsButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "232,1132,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "232,1132,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "cTrader.ViewModels.Apps.AutomateApp.AutomateInstances.Robots.Group.AutomateRobotGroupViewModel",
+        "Type":  "ControlType.ListItem",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "6,1159,362,64",
+        "Help":  "",
+        "Offscreen":  true
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Content",
+        "ProcessId":  8872,
+        "Bounds":  "6,1164,362,59",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "11,1184,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "StartBotButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "334,1184,29,19",
+        "Help":  "Start cBot",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "339,1184,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Demo • ",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountType_AId",
+        "ProcessId":  8872,
+        "Bounds":  "45,1175,37,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "7563609",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "82,1175,42,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "FTMO Platform",
+        "Type":  "ControlType.Text",
+        "Id":  "AccountBroker_AId",
+        "ProcessId":  8872,
+        "Bounds":  "124,1175,83,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "SymbolSelectorControl_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,1196,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SymbolSelectorControlButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "40,1196,121,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "TimeframeSelectorButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "166,1196,61,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SettingsButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "232,1196,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "232,1196,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "cTrader.ViewModels.Apps.AutomateApp.AutomateTypes.Robots.AddRobotInstanceViewModel",
+        "Type":  "ControlType.ListItem",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "6,1223,362,34",
+        "Help":  "",
+        "Offscreen":  true
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "AlgoAddInstanceButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "6,1228,362,29",
+        "Help":  "Build the algorithm first to be able to work with it",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "144,1233,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Add instance",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_AutomateMenu__TextBlock_AlgoMainWindowAddInstance_AId",
+        "ProcessId":  8872,
+        "Bounds":  "167,1235,64,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "10,620,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Synchronisation complete",
+        "Type":  "ControlType.Text",
+        "Id":  "CloudSynchronisationStateText_AId",
+        "ProcessId":  8872,
+        "Bounds":  "39,622,124,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "AnalyzeTab_AId",
+        "ProcessId":  8872,
+        "Bounds":  "0,648,380,39",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "10,658,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "Empty",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Separator",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "0,688,380,1",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "DepositButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "0,689,39,39",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "10,699,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "WithdrawalButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "39,689,39,39",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "49,699,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SettingsButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "78,689,39,39",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "88,699,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "HelpCenterButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "117,689,39,39",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "127,699,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "Apps_TradeApp_MergedMenu_MergedMenu__ToggleButton_IsLowerMenuExpanded_AId",
+        "ProcessId":  8872,
+        "Bounds":  "356,679,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "356,679,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "ChartGroupToolbarMenu_AId",
+        "ProcessId":  8872,
+        "Bounds":  "385,23,325,39",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "Empty",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Menu",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "Empty",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "TopRightMenuView_AId",
+        "ProcessId":  8872,
+        "Bounds":  "710,23,314,39",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "CTraderTopRightMenuAccountSelector_AId",
+        "ProcessId":  8872,
+        "Bounds":  "710,23,314,39",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "CTraderAccountSelectorButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "715,28,304,28",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Tab",
+        "Id":  "AutomateBacktestingInstanceTabControl_AId",
+        "ProcessId":  8872,
+        "Bounds":  "385,343,324,362",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Equity",
+        "Type":  "ControlType.TabItem",
+        "Id":  "AutomateBacktestingInstanceEquityTabItem_AId",
+        "ProcessId":  8872,
+        "Bounds":  "385,343,55,24",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Equity",
+        "Type":  "ControlType.Text",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "396,349,29,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Trade statistics",
+        "Type":  "ControlType.TabItem",
+        "Id":  "AutomateBacktestingInstanceTradeStatisticsTabItem_AId",
+        "ProcessId":  8872,
+        "Bounds":  "440,343,91,24",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Trade statistics",
+        "Type":  "ControlType.Text",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "446,349,74,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "System.Windows.Controls.TabItem Header: Content:cTrader.ViewModels.Apps.AutomateApp.AutomateInstances.Robots.Backtesting.ArenaWatch.Positions.AutomateBacktestingArenaPositionsCollectionViewModel",
+        "Type":  "ControlType.TabItem",
+        "Id":  "AutomateBacktestingInstancePositionsTabItem_AId",
+        "ProcessId":  8872,
+        "Bounds":  "531,343,82,24",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Positions",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_ArenaWatch_AutomateAppArenaWatchStyles__TextBlock_Positions_AId",
+        "ProcessId":  8872,
+        "Bounds":  "537,349,43,16",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "0",
+        "Type":  "ControlType.Text",
+        "Id":  "Resources_CTraderDictionary__TextBlock_Number_AId",
+        "ProcessId":  8872,
+        "Bounds":  "590,349,6,13",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "System.Windows.Controls.TabItem Header: Content:cTrader.ViewModels.Apps.AutomateApp.AutomateInstances.Robots.Backtesting.ArenaWatch.Orders.AutomateBacktestingArenaPendingOrdersCollectionViewModel",
+        "Type":  "ControlType.TabItem",
+        "Id":  "AutomateBacktestingInstancePendingOrdersTabItem_AId",
+        "ProcessId":  8872,
+        "Bounds":  "613,343,73,24",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Orders",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_ArenaWatch_AutomateAppArenaWatchStyles__TextBlock_Orders_AId",
+        "ProcessId":  8872,
+        "Bounds":  "619,349,34,16",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "0",
+        "Type":  "ControlType.Text",
+        "Id":  "Resources_CTraderDictionary__TextBlock_Number_AId",
+        "ProcessId":  8872,
+        "Bounds":  "663,349,6,13",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "History",
+        "Type":  "ControlType.TabItem",
+        "Id":  "AutomateBacktestingInstanceHistoryTabItem_AId",
+        "ProcessId":  8872,
+        "Bounds":  "686,343,55,24",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "History",
+        "Type":  "ControlType.Text",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "694,349,34,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Events",
+        "Type":  "ControlType.TabItem",
+        "Id":  "AutomateBacktestingInstanceEventsTabItem_AId",
+        "ProcessId":  8872,
+        "Bounds":  "741,343,55,24",
+        "Help":  "",
+        "Offscreen":  true
+    },
+    {
+        "Depth":  1,
+        "Name":  "Events",
+        "Type":  "ControlType.Text",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "750,349,33,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Logs",
+        "Type":  "ControlType.TabItem",
+        "Id":  "AutomateBacktestingInstanceLogTabItem_AId",
+        "ProcessId":  8872,
+        "Bounds":  "796,343,55,24",
+        "Help":  "",
+        "Offscreen":  true
+    },
+    {
+        "Depth":  1,
+        "Name":  "Logs",
+        "Type":  "ControlType.Text",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "809,349,24,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Edit",
+        "Id":  "AlgoInstanceLogFilterTextBox_AId",
+        "ProcessId":  8872,
+        "Bounds":  "391,373,180,25",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.ComboBox",
+        "Id":  "Apps_Automate2App_ArenaWatch_AutomateAppArenaWatchStyles__ComboBox_Instances_AId",
+        "ProcessId":  8872,
+        "Bounds":  "576,373,245,25",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Autoscroll",
+        "Type":  "ControlType.CheckBox",
+        "Id":  "Apps_Automate2App_ArenaWatch_AutomateAppArenaWatchStyles__CheckBox_AutoscrollCheckbox_AId",
+        "ProcessId":  8872,
+        "Bounds":  "826,379,66,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Autoscroll",
+        "Type":  "ControlType.Text",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "843,379,49,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "Apps_Automate2App_ArenaWatch_AutomateAppArenaWatchStyles__Button_ShowInFolderCommand_AId",
+        "ProcessId":  8872,
+        "Bounds":  "892,376,19,19",
+        "Help":  "Show in folder",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "892,376,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "Apps_Automate2App_ArenaWatch_AutomateAppArenaWatchStyles__Button_RefreshCommand_AId",
+        "ProcessId":  8872,
+        "Bounds":  "916,376,19,19",
+        "Help":  "Refresh",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "916,376,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "Apps_Automate2App_ArenaWatch_AutomateAppArenaWatchStyles__Button_ClearCommand_AId",
+        "ProcessId":  8872,
+        "Bounds":  "940,376,19,19",
+        "Help":  "Clear",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "940,376,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Edit",
+        "Id":  "Apps_Automate2App_ArenaWatch_AutomateAppArenaWatchStyles__TextBox_Content_AId",
+        "ProcessId":  8872,
+        "Bounds":  "391,403,312,256",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "414,664,15,15",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Separator",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "391,681,39,1",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Separator",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "435,664,1,35",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "464,664,15,15",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Separator",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "441,681,39,1",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Separator",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "485,664,1,35",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "514,664,15,15",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Separator",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "491,681,38,1",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Separator",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "534,664,1,35",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "563,664,15,15",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Separator",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "540,681,39,1",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Separator",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "584,664,1,35",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "614,664,15,15",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Separator",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "590,681,39,1",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Separator",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "634,664,1,35",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "635,664,15,15",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Separator",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "Empty",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Separator",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "645,664,1,35",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "663,664,15,15",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Separator",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "640,681,39,1",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "Apps_Automate2App_ArenaWatch_BacktestingBalanceLineView__ToggleButton_SettingsButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "684,672,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "684,672,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Thumb",
+        "Id":  "BottomRightDockZoneSplitter",
+        "ProcessId":  8872,
+        "Bounds":  "709,343,5,362",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "AutomateParametersLoadSettingsButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "971,348,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "971,348,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "AutomateParametersSaveSettingsButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "995,348,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "995,348,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "cTrader.ViewModels.Apps.AutomateApp.AutomateInstances.Parameters.AutomateParameterCollectionViewModel",
+        "Type":  "ControlType.Pane",
+        "Id":  "Apps_Automate2App_AutomateParameters__ScrollViewer_Parameters_AId",
+        "ProcessId":  8872,
+        "Bounds":  "729,382,275,303",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Data Source",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_AutomateParameters__TextBlock_GroupName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "734,394,60,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Separator",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "734,411,253,1",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Signal File Path",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_AutomateParameters__TextBlock_FriendlyName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "744,422,72,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Edit",
+        "Id":  "Apps_Automate2App_AutomateParameters__TextBox_Value_AId",
+        "ProcessId":  8872,
+        "Bounds":  "844,420,143,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Protection",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_AutomateParameters__TextBlock_GroupName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "734,449,48,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Separator",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "734,466,253,1",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "KSL Level (SL = KSL x ATR)",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_AutomateParameters__TextBlock_FriendlyName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "744,478,89,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.ComboBox",
+        "Id":  "Apps_Automate2App_AutomateParameters__ComboBox_AllValues_AId",
+        "ProcessId":  8872,
+        "Bounds":  "844,475,143,20",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "KTP Level (TP = KTP x ATR)",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_AutomateParameters__TextBlock_FriendlyName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "744,503,87,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.ComboBox",
+        "Id":  "Apps_Automate2App_AutomateParameters__ComboBox_AllValues_AId",
+        "ProcessId":  8872,
+        "Bounds":  "844,500,143,20",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Risk Management",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_AutomateParameters__TextBlock_GroupName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "734,530,84,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Separator",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "734,547,253,1",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Risk % Balance",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_AutomateParameters__TextBlock_FriendlyName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "744,558,75,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Edit",
+        "Id":  "SpinnerContent_AId",
+        "ProcessId":  8872,
+        "Bounds":  "844,557,130,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SpinnerContentArrowUpButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "974,557,12,8",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SpinnerContentArrowDownButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "974,565,12,8",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Max Margin % Equity Per Trade",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_AutomateParameters__TextBlock_FriendlyName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "744,582,94,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Edit",
+        "Id":  "SpinnerContent_AId",
+        "ProcessId":  8872,
+        "Bounds":  "844,581,130,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SpinnerContentArrowUpButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "974,581,12,8",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SpinnerContentArrowDownButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "974,589,12,8",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Position Management",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_AutomateParameters__TextBlock_GroupName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "734,609,101,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Separator",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "734,626,253,1",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Enable Daily Loss Limit",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_AutomateParameters__TextBlock_FriendlyName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "744,638,90,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.ComboBox",
+        "Id":  "Apps_Automate2App_AutomateParameters__ComboBox_AllValues_AId",
+        "ProcessId":  8872,
+        "Bounds":  "844,635,143,20",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Max Daily Loss %",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_AutomateParameters__TextBlock_FriendlyName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "744,662,86,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Edit",
+        "Id":  "SpinnerContent_AId",
+        "ProcessId":  8872,
+        "Bounds":  "844,661,130,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SpinnerContentArrowUpButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "974,661,12,8",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SpinnerContentArrowDownButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "974,669,12,8",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Enable Max Drawdown",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_AutomateParameters__TextBlock_FriendlyName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "744,687,86,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.ComboBox",
+        "Id":  "Apps_Automate2App_AutomateParameters__ComboBox_AllValues_AId",
+        "ProcessId":  8872,
+        "Bounds":  "844,684,143,20",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Max Total Drawdown %",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_AutomateParameters__TextBlock_FriendlyName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "744,711,92,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Edit",
+        "Id":  "SpinnerContent_AId",
+        "ProcessId":  8872,
+        "Bounds":  "844,710,130,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SpinnerContentArrowUpButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "974,710,12,8",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SpinnerContentArrowDownButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "974,718,12,8",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Enable Max Consecutive Losses",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_AutomateParameters__TextBlock_FriendlyName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "744,736,94,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.ComboBox",
+        "Id":  "Apps_Automate2App_AutomateParameters__ComboBox_AllValues_AId",
+        "ProcessId":  8872,
+        "Bounds":  "844,733,143,20",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Max Consecutive Losses",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_AutomateParameters__TextBlock_FriendlyName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "744,760,94,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Edit",
+        "Id":  "SpinnerContent_AId",
+        "ProcessId":  8872,
+        "Bounds":  "844,759,130,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SpinnerContentArrowUpButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "974,759,12,8",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SpinnerContentArrowDownButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "974,767,12,8",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.ScrollBar",
+        "Id":  "Resources_CTraderDictionary__ScrollBar_PARTVerticalScrollBar_AId",
+        "ProcessId":  8872,
+        "Bounds":  "992,382,17,303",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "DecreaseRepeat",
+        "ProcessId":  8872,
+        "Bounds":  "997,382,7,12",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Thumb",
+        "Id":  "Resources_CTraderDictionary__Thumb_Thumb_AId",
+        "ProcessId":  8872,
+        "Bounds":  "997,394,7,212",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "PageUp",
+        "ProcessId":  8872,
+        "Bounds":  "997,606,7,67",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "PageDown",
+        "ProcessId":  8872,
+        "Bounds":  "Empty",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "IncreaseRepeat",
+        "ProcessId":  8872,
+        "Bounds":  "997,673,7,12",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Thumb",
+        "Id":  "Controls_SplitPanel_SplitPanel__Thumb_PARTSplitter_AId",
+        "ProcessId":  8872,
+        "Bounds":  "385,338,634,5",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Tab",
+        "Id":  "AutomateModeTabControl_AId",
+        "ProcessId":  8872,
+        "Bounds":  "385,62,599,276",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "System.Windows.Controls.TabItem Header: Content:cTrader.ViewModels.Apps.AutomateApp.AutomateInstances.Robots.Backtesting.AutomateRobotBacktestingInstanceViewModel",
+        "Type":  "ControlType.TabItem",
+        "Id":  "AutomateRealtimeTabItem_AId",
+        "ProcessId":  8872,
+        "Bounds":  "385,62,125,24",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "FRA40.cash",
+        "Type":  "ControlType.Text",
+        "Id":  "AutomateRealtimeSymbolTextBlock_AId",
+        "ProcessId":  8872,
+        "Bounds":  "411,68,60,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Separator",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "476,68,1,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "h1",
+        "Type":  "ControlType.Text",
+        "Id":  "AutomateRealtimeFramePeriodTextBlock_AId",
+        "ProcessId":  8872,
+        "Bounds":  "482,68,12,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "System.Windows.Controls.TabItem Header: Content:cTrader.ViewModels.Apps.AutomateApp.AutomateInstances.Robots.Backtesting.AutomateRobotBacktestingInstanceViewModel",
+        "Type":  "ControlType.TabItem",
+        "Id":  "AutomateBacktestingTabItem_AId",
+        "ProcessId":  8872,
+        "Bounds":  "510,62,83,24",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Backtesting",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_AutomateApp__TextBlock_Backtesting_AId",
+        "ProcessId":  8872,
+        "Bounds":  "521,68,56,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SettingsButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "391,92,29,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "396,92,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "DatePickerBegin_AId",
+        "ProcessId":  8872,
+        "Bounds":  "425,92,102,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Show Calendar",
+        "Type":  "ControlType.Button",
+        "Id":  "Resources_CTraderDictionary__Button_PARTButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "511,93,16,16",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Edit",
+        "Id":  "Resources_CTraderDictionary__DatePickerTextBox_PARTTextBox_AId",
+        "ProcessId":  8872,
+        "Bounds":  "428,95,83,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "\u003cEnter text here\u003e",
+        "Type":  "ControlType.Text",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "428,95,83,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "RangeSlider",
+        "ProcessId":  8872,
+        "Bounds":  "532,92,237,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Slider",
+        "Id":  "Controls_Slider_RangeSliderControl__Slider_PARTStartSlider_AId",
+        "ProcessId":  8872,
+        "Bounds":  "532,96,226,11",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Thumb",
+        "Id":  "Controls_Slider_RangeSliderControl__Thumb_Thumb_AId",
+        "ProcessId":  8872,
+        "Bounds":  "722,96,11,11",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Slider",
+        "Id":  "Controls_Slider_RangeSliderControl__Slider_PARTEndSlider_AId",
+        "ProcessId":  8872,
+        "Bounds":  "543,96,226,11",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Thumb",
+        "Id":  "Controls_Slider_RangeSliderControl__Thumb_Thumb_AId",
+        "ProcessId":  8872,
+        "Bounds":  "739,96,11,11",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "DatePickerEnd_AId",
+        "ProcessId":  8872,
+        "Bounds":  "774,92,102,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Show Calendar",
+        "Type":  "ControlType.Button",
+        "Id":  "Resources_CTraderDictionary__Button_PARTButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "860,93,16,16",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Edit",
+        "Id":  "Resources_CTraderDictionary__DatePickerTextBox_PARTTextBox_AId",
+        "ProcessId":  8872,
+        "Bounds":  "777,95,83,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "\u003cEnter text here\u003e",
+        "Type":  "ControlType.Text",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "777,95,83,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "BacktestingStartButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "881,92,29,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "886,92,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "BacktestingStopButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "915,92,29,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "920,92,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "BacktestingStartButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "949,92,29,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "954,92,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Visual Mode",
+        "Type":  "ControlType.CheckBox",
+        "Id":  "IsVisualBacktestingCheckBox_AId",
+        "ProcessId":  8872,
+        "Bounds":  "391,123,76,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Visual Mode",
+        "Type":  "ControlType.Text",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "408,123,59,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "VisualBacktestingDateTimeSliderControl_AId",
+        "ProcessId":  8872,
+        "Bounds":  "477,121,256,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Slider",
+        "Id":  "VisualBacktestingDateTimeSlider_AId",
+        "ProcessId":  8872,
+        "Bounds":  "477,121,155,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Thumb",
+        "Id":  "Apps_AutomateApp_Backtesting_VisualBacktesting_DateTimeSliderControl__Thumb_Thumb_AId",
+        "ProcessId":  8872,
+        "Bounds":  "616,121,11,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Slider",
+        "Id":  "VisualBacktestingSpeedControl_AId",
+        "ProcessId":  8872,
+        "Bounds":  "743,121,235,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SliderDecreseButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "782,121,43,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SliderIncreaseButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "836,121,66,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Thumb",
+        "Id":  "SliderThumb_AId",
+        "ProcessId":  8872,
+        "Bounds":  "825,121,11,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Edit",
+        "Id":  "SpinnerContent_AId",
+        "ProcessId":  8872,
+        "Bounds":  "907,121,58,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SpinnerContentIncreaseButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "965,122,12,8",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "SpinnerContentDecreaseButton_AId",
+        "ProcessId":  8872,
+        "Bounds":  "965,130,12,8",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "ChartView_AId",
+        "ProcessId":  8872,
+        "Bounds":  "391,148,587,188",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "Controls_Themes_DrawingPanel__DealMapControl_PARTDealMap_AId",
+        "ProcessId":  8872,
+        "Bounds":  "391,148,541,155",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "50 pips",
+        "Type":  "ControlType.Text",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "907,160,13,21",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "Empty",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.ScrollBar",
+        "Id":  "ChartScrollBar_AId",
+        "ProcessId":  8872,
+        "Bounds":  "390,319,589,17",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "DecreaseRepeat_AId",
+        "ProcessId":  8872,
+        "Bounds":  "390,319,6,17",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "PageLeft",
+        "ProcessId":  8872,
+        "Bounds":  "398,319,523,17",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "PageRight",
+        "ProcessId":  8872,
+        "Bounds":  "Empty",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Thumb",
+        "Id":  "Resources_ResourceDictionaryTemplates__Thumb_Thumb_AId",
+        "ProcessId":  8872,
+        "Bounds":  "921,324,50,7",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "IncreaseRepeat_AId",
+        "ProcessId":  8872,
+        "Bounds":  "973,319,6,17",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "0.00 $ (0%)",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_ArenaWatch_AutomateBalanceEquityChartControlTemplate__TextBlock_NetProfit_AId",
+        "ProcessId":  8872,
+        "Bounds":  "646,155,61,15",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "System.Windows.Controls.TabItem Header: Content:cTrader.ViewModels.Apps.AutomateApp.AutomateInstances.Robots.Backtesting.AutomateRobotBacktestingInstanceViewModel",
+        "Type":  "ControlType.TabItem",
+        "Id":  "AutomateOptimizationTabItem_AId",
+        "ProcessId":  8872,
+        "Bounds":  "593,62,85,24",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Optimisation",
+        "Type":  "ControlType.Text",
+        "Id":  "Apps_Automate2App_AutomateApp__TextBlock_CBotOptimization_AId",
+        "ProcessId":  8872,
+        "Bounds":  "604,68,58,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "InstrumentalToolbar_AId",
+        "ProcessId":  8872,
+        "Bounds":  "989,62,30,274",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.ToolBar",
+        "Id":  "Toolbar_AId",
+        "ProcessId":  8872,
+        "Bounds":  "989,62,30,274",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Controls_Toolbar_ToolbarView__RadioButton_RB_AId",
+        "ProcessId":  8872,
+        "Bounds":  "990,70,27,25",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "994,73,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Controls_Toolbar_ToolbarView__RadioButton_RB_AId",
+        "ProcessId":  8872,
+        "Bounds":  "990,95,27,25",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "994,98,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Controls_Toolbar_ToolbarView__RadioButton_RB_AId",
+        "ProcessId":  8872,
+        "Bounds":  "990,120,27,25",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "994,123,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Controls_Toolbar_ToolbarView__RadioButton_RB_AId",
+        "ProcessId":  8872,
+        "Bounds":  "990,145,27,25",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "994,148,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Controls_Toolbar_ToolbarView__RadioButton_PARTDropDown_AId",
+        "ProcessId":  8872,
+        "Bounds":  "990,171,27,25",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "994,174,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Controls_Toolbar_ToolbarView__RadioButton_RB_AId",
+        "ProcessId":  8872,
+        "Bounds":  "990,196,27,25",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "994,199,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Controls_Toolbar_ToolbarView__RadioButton_RB_AId",
+        "ProcessId":  8872,
+        "Bounds":  "990,221,27,25",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "994,224,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Controls_Toolbar_ToolbarView__RadioButton_RB_AId",
+        "ProcessId":  8872,
+        "Bounds":  "990,246,27,25",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "994,249,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.RadioButton",
+        "Id":  "Controls_Toolbar_ToolbarView__RadioButton_PARTDropDown_AId",
+        "ProcessId":  8872,
+        "Bounds":  "990,271,27,25",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "994,274,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Separator",
+        "Id":  "OverflowButtonSeparator",
+        "ProcessId":  8872,
+        "Bounds":  "992,295,24,1",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "OverflowButton",
+        "ProcessId":  8872,
+        "Bounds":  "995,301,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Image",
+        "Id":  "PART_IMAGE",
+        "ProcessId":  8872,
+        "Bounds":  "995,301,19,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "385,705,634,23",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.StatusBar",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "385,707,634,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Inactive (Starts in 7:18:54)",
+        "Type":  "ControlType.Text",
+        "Id":  "MainWindowViews_StatusBarView__TextBlock_MarketSessionsViewModel_AId",
+        "ProcessId":  8872,
+        "Bounds":  "395,709,127,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "|",
+        "Type":  "ControlType.Text",
+        "Id":  "MainWindowViews_StatusBarView__TextBlock_StatusBarView_AId",
+        "ProcessId":  8872,
+        "Bounds":  "933,709,2,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "940,707,79,18",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Button",
+        "Id":  "",
+        "ProcessId":  8872,
+        "Bounds":  "937,707,85,18",
+        "Help":  "Proxy / Server latency (one-way), Connection quality",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "140 ms / 140 ms",
+        "Type":  "ControlType.Text",
+        "Id":  "Controls_Toolbar_ConnectionStatusBarItemView__TextBlock_ConnectionStatusBarItemView_AId",
+        "ProcessId":  8872,
+        "Bounds":  "940,709,79,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "userTimeView",
+        "ProcessId":  8872,
+        "Bounds":  "702,709,165,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "Current time:",
+        "Type":  "ControlType.Text",
+        "Id":  "Controls_StatusBar_UserTimeView__TextBlock_UserTimeName_AId",
+        "ProcessId":  8872,
+        "Bounds":  "702,709,61,14",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "06/09/2026 12:41:05",
+        "Type":  "ControlType.Text",
+        "Id":  "Controls_StatusBar_UserTimeView__TextBlock_UserTime_AId",
+        "ProcessId":  8872,
+        "Bounds":  "768,709,99,14",
+        "Help":  "Set your local time in cTrader by selecting your country\u0027s time shift",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.Custom",
+        "Id":  "root",
+        "ProcessId":  8872,
+        "Bounds":  "872,707,56,19",
+        "Help":  "",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  1,
+        "Name":  "",
+        "Type":  "ControlType.ComboBox",
+        "Id":  "Controls_StatusBar_UserTimeOffsetView__ComboBox_Offsets_AId",
+        "ProcessId":  8872,
+        "Bounds":  "872,707,56,19",
+        "Help":  "Set your local time in cTrader by selecting your country\u0027s time shift",
+        "Offscreen":  false
+    },
+    {
+        "Depth":  0,
+        "Name":  "Program Manager",
+        "Type":  "ControlType.Pane",
+        "Id":  "",
+        "ProcessId":  8444
+    }
+]

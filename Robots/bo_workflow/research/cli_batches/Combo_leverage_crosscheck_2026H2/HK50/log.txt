@@ -1,0 +1,73 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo C:\Users\Admini
+strator\Documents\cAlgo\Sources\Robots\research\cli_batches\Combo_leverage_crosscheck_2026H2\HK50\params.cbotset 
+--start=01/03/2026 --end=31/08/2026 --data-mode=M1 --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=HK50.cash 
+--period=h1 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Comb
+o_leverage_crosscheck_2026H2\HK50\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...K50\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | HK50.cash                 | cmd arg              |
+| Period               | h1                        | cmd arg              |
+| Start                | 01/03/2026 00:00          | cmd arg              |
+| End                  | 31/08/2026 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | M1                        | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 2                         | cbotset              |
+| KtpLevel             | 4                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 50                        | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+04/09/2026 06:24:20.238 | Establishing connection using votuankiet96@gmail.com...
+04/09/2026 06:24:26.481 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Progress | Loading HK50.cash, h1 | 1.32 % |
+Progress | Loading HK50.cash, h1 | 1.32 % |
+Progress | Loading HK50.cash, h1 | 1.99 % |
+Progress | Loading HK50.cash, h1 | 2.65 % |
+Progress | Loading HK50.cash, h1 | 3.31 % |
+Progress | Loading HK50.cash, h1 | 3.97 % |
+Progress | Loading HK50.cash, h1 | 4.64 % |
+Progress | Loading HK50.cash, h1 | 5.30 % |
+Progress | Loading HK50.cash, h1 | 5.96 % |
+Progress | Loading HK50.cash, h1 | 6.62 % |
+Progress | Loading HK50.cash, h1 | 7.28 % |
+Progress | Loading HK50.cash, h1 | 7.95 % |
+Progress | Loading HK50.cash, h1 | 8.61 % |
+Progress | Loading HK50.cash, h1 | 9.27 % |
+Progress | Loading HK50.cash, h1 | 9.93 % |
+Progress | Loading HK50.cash, h1 | 10.60 % |
+Progress | Loading HK50.cash, h1 | 11.26 % |
+Progress | Loading HK50.cash, h1 | 11.92 % |
+Progress | Loading HK50.cash, h1 | 12.58 % |
+Progress | Loading HK50.cash, h1 | 13.25 % |
+Progress | Loading HK50.cash, h1 | 13.91 % |
+Progress | Loading HK50.cash, h1 | 14.57 % |
+Progress | Loading HK50.cash, h1 | 15.23 % |
+Progress | Loading HK50.cash, h1 | 15.89 % |
+Progress | Loading HK50.cash, h1 | 16.56 % |
+Progress | Loading HK50.cash, h1 | 17.22 % |
+Progress | Loading HK50.cash, h1 | 17.88 % |
+Progress | Loading HK50.cash, h1 | 19.21 % |
+Progress | Loading HK50.cash, h1 | 19.21 % |
+Progress | Loading HK50.cash, h1 | 19.87 % |
+Progress | Loading HK50.cash, h1 | 20.53 % |
+Progress | Loading HK50.cash, h1 | 21.19 % |
+

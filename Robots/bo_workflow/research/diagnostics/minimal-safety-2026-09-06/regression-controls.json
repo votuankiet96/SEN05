@@ -1,0 +1,10 @@
+﻿[
+    {
+        "Bot":  "MA Cross",
+        "OutputDir":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\MACross_US30.cash_m30_control_before_20260906-060733"
+    },
+    {
+        "Bot":  "Combo",
+        "OutputDir":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_runs\\Combo_US30.cash_h1_control_before_20260906-060815"
+    }
+]

@@ -1,0 +1,15 @@
+﻿backtest
+C:\Users\Administrator\Documents\cAlgo\Sources\Robots\Combo.algo
+C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_BTCUSD_h4_20260902-192230\params.cbotset
+--start=01/01/2025
+--end=15/01/2025
+--data-mode=Ticks
+--ctid=votuankiet96@gmail.com
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt
+--account=7563609
+--broker=FTMO Platform
+--symbol=BTCUSD
+--period=h4
+--full-access
+--report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\Combo_BTCUSD_h4_20260902-192230\report.json
+

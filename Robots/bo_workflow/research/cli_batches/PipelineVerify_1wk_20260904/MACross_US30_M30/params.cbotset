@@ -1,0 +1,9 @@
+﻿{
+    "Parameters":  {
+                       "RiskPercent":  "1",
+                       "MaxMarginPercent":  "50",
+                       "SignalFilePath":  "Z:\\Desktop\\og_program\\runtime\\exports\\ma_cross_US30_M30_full_history_signals.csv",
+                       "KslLevel":  "2",
+                       "KtpLevel":  "4"
+                   }
+}

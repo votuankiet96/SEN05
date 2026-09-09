@@ -1,0 +1,122 @@
+﻿[
+    {
+        "Run":  1,
+        "KslLevel":  "Fib0382",
+        "KtpLevel":  "Fib0236",
+        "Success":  true,
+        "NetProfit":  -1102.25,
+        "ROI":  -11.02,
+        "ProfitFactor":  0.73,
+        "Trades":  86,
+        "MaxEquityDrawdownPct":  17.497547463789015,
+        "RunDir":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_parallel_tests\\Combo_US30_h4_parallel10_20260902-051600\\run_01_KSL0382_KTP_Fib0236"
+    },
+    {
+        "Run":  2,
+        "KslLevel":  "Fib0382",
+        "KtpLevel":  "Fib0382",
+        "Success":  true,
+        "NetProfit":  -1873.09,
+        "ROI":  -18.73,
+        "ProfitFactor":  0.63,
+        "Trades":  86,
+        "MaxEquityDrawdownPct":  24.32722180895285,
+        "RunDir":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_parallel_tests\\Combo_US30_h4_parallel10_20260902-051600\\run_02_KSL0382_KTP_Fib0382"
+    },
+    {
+        "Run":  3,
+        "KslLevel":  "Fib0382",
+        "KtpLevel":  "Fib0500",
+        "Success":  true,
+        "NetProfit":  -1373.76,
+        "ROI":  -13.74,
+        "ProfitFactor":  0.74,
+        "Trades":  86,
+        "MaxEquityDrawdownPct":  20.581714919929603,
+        "RunDir":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_parallel_tests\\Combo_US30_h4_parallel10_20260902-051600\\run_03_KSL0382_KTP_Fib0500"
+    },
+    {
+        "Run":  4,
+        "KslLevel":  "Fib0382",
+        "KtpLevel":  "Fib0618",
+        "Success":  true,
+        "NetProfit":  -1669.78,
+        "ROI":  -16.7,
+        "ProfitFactor":  0.71,
+        "Trades":  86,
+        "MaxEquityDrawdownPct":  24.367831092260726,
+        "RunDir":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_parallel_tests\\Combo_US30_h4_parallel10_20260902-051600\\run_04_KSL0382_KTP_Fib0618"
+    },
+    {
+        "Run":  5,
+        "KslLevel":  "Fib0382",
+        "KtpLevel":  "Fib0786",
+        "Success":  true,
+        "NetProfit":  -1062.6,
+        "ROI":  -10.63,
+        "ProfitFactor":  0.82,
+        "Trades":  86,
+        "MaxEquityDrawdownPct":  23.56819871189039,
+        "RunDir":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_parallel_tests\\Combo_US30_h4_parallel10_20260902-051600\\run_05_KSL0382_KTP_Fib0786"
+    },
+    {
+        "Run":  6,
+        "KslLevel":  "Fib0382",
+        "KtpLevel":  "Fib1000",
+        "Success":  true,
+        "NetProfit":  -1155.72,
+        "ROI":  -11.56,
+        "ProfitFactor":  0.82,
+        "Trades":  86,
+        "MaxEquityDrawdownPct":  27.23716910795646,
+        "RunDir":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_parallel_tests\\Combo_US30_h4_parallel10_20260902-051600\\run_06_KSL0382_KTP_Fib1000"
+    },
+    {
+        "Run":  7,
+        "KslLevel":  "Fib0382",
+        "KtpLevel":  "Fib1272",
+        "Success":  true,
+        "NetProfit":  -1741.83,
+        "ROI":  -17.42,
+        "ProfitFactor":  0.75,
+        "Trades":  86,
+        "MaxEquityDrawdownPct":  23.646244041971226,
+        "RunDir":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_parallel_tests\\Combo_US30_h4_parallel10_20260902-051600\\run_07_KSL0382_KTP_Fib1272"
+    },
+    {
+        "Run":  8,
+        "KslLevel":  "Fib0382",
+        "KtpLevel":  "Fib1618",
+        "Success":  true,
+        "NetProfit":  -1503.75,
+        "ROI":  -15.04,
+        "ProfitFactor":  0.8,
+        "Trades":  86,
+        "MaxEquityDrawdownPct":  24.641457737435044,
+        "RunDir":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_parallel_tests\\Combo_US30_h4_parallel10_20260902-051600\\run_08_KSL0382_KTP_Fib1618"
+    },
+    {
+        "Run":  9,
+        "KslLevel":  "Fib0382",
+        "KtpLevel":  "Fib2000",
+        "Success":  true,
+        "NetProfit":  -767.04,
+        "ROI":  -7.67,
+        "ProfitFactor":  0.9,
+        "Trades":  86,
+        "MaxEquityDrawdownPct":  20.69675707752993,
+        "RunDir":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_parallel_tests\\Combo_US30_h4_parallel10_20260902-051600\\run_09_KSL0382_KTP_Fib2000"
+    },
+    {
+        "Run":  10,
+        "KslLevel":  "Fib0382",
+        "KtpLevel":  "Fib2618",
+        "Success":  true,
+        "NetProfit":  -1237.5,
+        "ROI":  -12.38,
+        "ProfitFactor":  0.83,
+        "Trades":  86,
+        "MaxEquityDrawdownPct":  21.476664292115753,
+        "RunDir":  "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\research\\cli_parallel_tests\\Combo_US30_h4_parallel10_20260902-051600\\run_10_KSL0382_KTP_Fib2618"
+    }
+]

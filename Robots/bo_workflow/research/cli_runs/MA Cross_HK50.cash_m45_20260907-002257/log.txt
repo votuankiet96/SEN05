@@ -1,0 +1,120 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\MA Cross.algo 
+C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\MA 
+Cross_HK50.cash_m45_20260907-002257\params.cbotset --start=01/01/2025 --end=08/01/2025 --data-mode=Ticks 
+--ctid=votuankiet96@gmail.com --pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO 
+Platform --symbol=HK50.cash --period=m45 --full-access 
+--report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_runs\MA 
+Cross_HK50.cash_m45_20260907-002257\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...257\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | HK50.cash                 | cmd arg              |
+| Period               | m45                       | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 08/01/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 2                         | default value        |
+| KtpLevel             | 4                         | default value        |
+| RiskPercent          | 1                         | default value        |
+| MaxMarginPercent     | 50                        | default value        |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+07/09/2026 07:22:59.896 | Establishing connection using votuankiet96@gmail.com...
+07/09/2026 07:23:02.169 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Info | CBot instance [MA Cross, HK50.cash, m45] started.
+Progress | Backtesting | 13.19 % |
+Progress | Backtesting | 13.75 % |
+Progress | Backtesting | 13.80 % |
+Progress | Backtesting | 13.91 % |
+Progress | Backtesting | 14.00 % |
+Progress | Backtesting | 15.34 % |
+Progress | Backtesting | 15.61 % |
+Progress | Backtesting | 15.92 % |
+Progress | Backtesting | 16.84 % |
+Progress | Backtesting | 19.44 % |
+Progress | Backtesting | 20.84 % |
+Progress | Backtesting | 22.40 % |
+Progress | Backtesting | 26.21 % |
+Progress | Backtesting | 27.79 % |
+Progress | Backtesting | 28.46 % |
+Progress | Backtesting | 29.94 % |
+Progress | Backtesting | 32.76 % |
+Progress | Backtesting | 33.69 % |
+Progress | Backtesting | 35.21 % |
+Progress | Backtesting | 63.43 % |
+Progress | Backtesting | 63.83 % |
+Progress | Backtesting | 64.46 % |
+Progress | Backtesting | 66.12 % |
+Progress | Backtesting | 67.36 % |
+Progress | Backtesting | 69.16 % |
+Progress | Backtesting | 70.24 % |
+Progress | Backtesting | 71.52 % |
+Progress | Backtesting | 73.51 % |
+Progress | Backtesting | 76.19 % |
+Progress | Backtesting | 77.82 % |
+Progress | Backtesting | 79.21 % |
+Progress | Backtesting | 82.61 % |
+Progress | Backtesting | 84.39 % |
+Progress | Backtesting | 87.50 % |
+Progress | Backtesting | 88.95 % |
+Progress | Backtesting | 90.56 % |
+Progress | Backtesting | 91.83 % |
+Progress | Backtesting | 94.59 % |
+Progress | Backtesting | 96.32 % |
+Progress | Backtesting | 98.46 % |
+02/01/2025 01:20:00.002 | Info | MA Cross: loaded 1202 valid signal row(s) from CSV.
+02/01/2025 01:20:00.002 | Info | MA Cross: signal scheduling active with chart timeframe m45 (00:45:00); CSV timeframe must match the chart timeframe.
+02/01/2025 02:30:00.067 | Trade | Executing Market Order to Sell 5.06 HK50.cash (SL: 153.63, TP: 402.19)
+02/01/2025 02:30:00.067 | Trade |  Executing Market Order to Sell 5.06 HK50.cash (SL: 153.63, TP: 402.19) SUCCEEDED, Position PID1
+02/01/2025 02:30:00.067 | Info | MA Cross: bartime=2025-01-02 01:45, executed=2025-01-02 02:30:00, market Sell placed; SL=153.62664695005878 pips, TP=402.1945617152539 pips.
+03/01/2025 05:05:00.002 | Trade | Executing Market Order to Buy 7.5 HK50.cash (SL: 102.68, TP: 268.81)
+03/01/2025 05:05:00.002 | Trade |  Executing Market Order to Buy 7.5 HK50.cash (SL: 102.68, TP: 268.81) SUCCEEDED, Position PID2
+03/01/2025 05:05:00.002 | Info | MA Cross: bartime=2025-01-03 03:15, executed=2025-01-03 05:05:00, market Buy placed; SL=102.67745218037734 pips, TP=268.8095698082279 pips.
+06/01/2025 07:15:00.685 | Info | MA Cross: bartime=2025-01-06 06:30, reversal - closing existing Buy position 2 before opening opposite direction.
+06/01/2025 07:15:00.685 | Trade | Closing position PID2 (Volume: 7.5)
+06/01/2025 07:15:00.685 | Trade |  Closing position PID2 (Volume: 7.5) SUCCEEDED
+06/01/2025 07:15:00.685 | Trade | Executing Market Order to Sell 11 HK50.cash (SL: 69.63, TP: 182.3)
+06/01/2025 07:15:00.685 | Trade |  Executing Market Order to Sell 11 HK50.cash (SL: 69.63, TP: 182.3) SUCCEEDED, Position PID3
+06/01/2025 07:15:00.685 | Info | MA Cross: bartime=2025-01-06 06:30, executed=2025-01-06 07:15:00, market Sell placed; SL=69.63358260291864 pips, TP=182.300719254441 pips.
+06/01/2025 13:15:00.484 | Trade | Executing Market Order to Buy 6.73 HK50.cash (SL: 112.62, TP: 294.84)
+06/01/2025 13:15:00.484 | Trade |  Executing Market Order to Buy 6.73 HK50.cash (SL: 112.62, TP: 294.84) SUCCEEDED, Position PID4
+06/01/2025 13:15:00.484 | Info | MA Cross: bartime=2025-01-06 12:30, executed=2025-01-06 13:15:00, market Buy placed; SL=112.61909240182996 pips, TP=294.8367839079908 pips.
+07/01/2025 01:20:00.004 | Trade | Executing Market Order to Sell 15.23 HK50.cash (SL: 49.27, TP: 129)
+07/01/2025 01:20:00.004 | Trade |  Executing Market Order to Sell 15.23 HK50.cash (SL: 49.27, TP: 129) SUCCEEDED, Position PID5
+07/01/2025 01:20:00.004 | Info | MA Cross: bartime=2025-01-06 22:45, executed=2025-01-07 01:20:00, market Sell placed; SL=49.273775886579756 pips, TP=128.9987452710658 pips.
+08/01/2025 23:59:05.223 | Info | MA Cross: loaded=1202, processed=5, before-start=855, not-processed=342, placed=5, failed=0, guard-skipped=0, same-direction-skipped=0, reversed=1, margin-capped=0, margin-blocked=0.
+Progress | Backtesting | 99.99 % |
+Info | CBot instance [MA Cross, HK50.cash, m45] stopped.
+{
+	"Equity":9556.43,
+	"NetProfit":-443.57,
+	"MaxBalanceDrawdownPercentages":4,
+	"MaxEquityDrawdownPercentages":4,
+	"MaxBalanceDrawdown":443.56,
+	"MaxEquityDrawdown":476.02,
+	"WinningTrades":0,
+	"LosingTrades":5,
+	"TotalTrades":5,
+	"AverageTrade":-88.71,
+	"ProfitFactor":0,
+	"Fitness":0
+}
+

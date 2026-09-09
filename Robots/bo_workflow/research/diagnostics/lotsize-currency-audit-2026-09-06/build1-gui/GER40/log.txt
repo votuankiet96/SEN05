@@ -1,0 +1,158 @@
+01/01/2026 00:00:00.000 | Info | CBot instance [Combo, GER40.cash, h1] started.
+02/01/2026 00:16:00.417 | Info | Combo: loaded 3931 valid signal row(s) from CSV.
+02/01/2026 00:16:00.417 | Info | Combo: signal scheduling active with chart timeframe h1 (01:00:00); CSV timeframe must match the chart timeframe.
+02/01/2026 06:00:16.817 | Trade | Placing Stop Order to Buy 2.38 GER40.cash (Price: 24542.5, SL: 24506.6384472711, TP: 24636.39)
+02/01/2026 06:00:16.817 | Trade | → Placing Stop Order to Buy 2.38 GER40.cash (Price: 24542.5, SL: 24506.6384472711, TP: 24636.39) SUCCEEDED, PendingOrder OID1
+02/01/2026 06:00:16.817 | Info | Combo: bartime=2026-01-02 05:00, executed=2026-01-02 06:00:16, pending Buy placed at 24542.5; SL=24506.63844727113, TP=24636.385545044184; valid for the next 3 chart bar(s).
+02/01/2026 08:00:00.017 | Trade | Placing Stop Order to Sell 1.73 GER40.cash (Price: 24466.8, SL: 24515.5913937465, TP: 24339.06)
+02/01/2026 08:00:00.017 | Trade | → Placing Stop Order to Sell 1.73 GER40.cash (Price: 24466.8, SL: 24515.5913937465, TP: 24339.06) SUCCEEDED, PendingOrder OID4
+02/01/2026 08:00:00.017 | Info | Combo: bartime=2026-01-02 07:00, executed=2026-01-02 08:00:00, pending Sell placed at 24466.8; SL=24515.591393746476, TP=24339.06413117172; valid for the next 3 chart bar(s).
+02/01/2026 09:00:00.118 | Trade | Placing Stop Order to Buy 1.11 GER40.cash (Price: 24636.1, SL: 24560.9668850028, TP: 24832.8)
+02/01/2026 09:00:00.118 | Trade | → Placing Stop Order to Buy 1.11 GER40.cash (Price: 24636.1, SL: 24560.9668850028, TP: 24832.8) SUCCEEDED, PendingOrder OID7
+02/01/2026 09:00:00.118 | Info | Combo: bartime=2026-01-02 08:00, executed=2026-01-02 09:00:00, pending Buy placed at 24636.1; SL=24560.966885002817, TP=24832.798495062623; valid for the next 3 chart bar(s).
+02/01/2026 12:00:00.125 | Trade | Placing Stop Order to Buy 1.03 GER40.cash (Price: 24570.1, SL: 24490.0278451214, TP: 24779.73)
+02/01/2026 12:00:00.125 | Trade | → Placing Stop Order to Buy 1.03 GER40.cash (Price: 24570.1, SL: 24490.0278451214, TP: 24779.73) SUCCEEDED, PendingOrder OID10
+02/01/2026 12:00:00.125 | Info | Combo: bartime=2026-01-02 11:00, executed=2026-01-02 12:00:00, pending Buy placed at 24570.1; SL=24490.02784512144, TP=24779.728901472063; valid for the next 3 chart bar(s).
+02/01/2026 16:00:00.122 | Trade | Placing Stop Order to Sell 1.06 GER40.cash (Price: 24459.4, SL: 24536.1034746383, TP: 24258.59)
+02/01/2026 16:00:00.122 | Trade | → Placing Stop Order to Sell 1.06 GER40.cash (Price: 24459.4, SL: 24536.1034746383, TP: 24258.59) SUCCEEDED, PendingOrder OID13
+02/01/2026 16:00:00.122 | Info | Combo: bartime=2026-01-02 15:00, executed=2026-01-02 16:00:00, pending Sell placed at 24459.4; SL=24536.103474638257, TP=24258.590303397046; valid for the next 3 chart bar(s).
+06/01/2026 16:00:00.208 | Trade | Placing Stop Order to Sell 1.46 GER40.cash (Price: 24860.9, SL: 24916.9015039281, TP: 24714.29)
+06/01/2026 16:00:00.208 | Trade | → Placing Stop Order to Sell 1.46 GER40.cash (Price: 24860.9, SL: 24916.9015039281, TP: 24714.29) SUCCEEDED, PendingOrder OID16
+06/01/2026 16:00:00.208 | Info | Combo: bartime=2026-01-06 15:00, executed=2026-01-06 16:00:00, pending Sell placed at 24860.9; SL=24916.90150392808, TP=24714.2880627163; valid for the next 3 chart bar(s).
+06/01/2026 19:00:00.221 | Trade | Cancelling pending order OID16
+06/01/2026 19:00:00.221 | Trade | → Cancelling pending order OID16 SUCCEEDED
+06/01/2026 19:00:00.221 | Info | Combo: pending order 16 cancelled after 3 chart bars.
+08/01/2026 05:00:40.306 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.49 units, which needs about $4864.09 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4749.64 budget, free margin was $9499.27). Size was cut from 2.49 to 2.38 units. Real risk on this trade is now about $90.47 (0.95% of balance) instead of the requested 1.00%.
+08/01/2026 05:00:40.306 | Trade | Placing Stop Order to Sell 2.38 GER40.cash (Price: 25080.7, SL: 25113.4688996406, TP: 24994.91)
+08/01/2026 05:00:40.306 | Trade | → Placing Stop Order to Sell 2.38 GER40.cash (Price: 25080.7, SL: 25113.4688996406, TP: 24994.91) SUCCEEDED, PendingOrder OID17
+08/01/2026 05:00:40.306 | Info | Combo: bartime=2026-01-08 04:00, executed=2026-01-08 05:00:40, pending Sell placed at 25080.7; SL=25113.46889964065, TP=24994.91102074078; valid for the next 3 chart bar(s).
+08/01/2026 09:00:00.208 | Trade | Placing Stop Order to Buy 1.23 GER40.cash (Price: 25224.9, SL: 25159.3666587072, TP: 25396.47)
+08/01/2026 09:00:00.208 | Trade | → Placing Stop Order to Buy 1.23 GER40.cash (Price: 25224.9, SL: 25159.3666587072, TP: 25396.47) SUCCEEDED, PendingOrder OID20
+08/01/2026 09:00:00.208 | Info | Combo: bartime=2026-01-08 08:00, executed=2026-01-08 09:00:00, pending Buy placed at 25224.9; SL=25159.36665870719, TP=25396.46628750458; valid for the next 3 chart bar(s).
+08/01/2026 11:00:00.108 | Info | Combo: bartime=2026-01-08 10:00, reversal - cancelling existing Buy pending order 20 before opening opposite direction.
+08/01/2026 11:00:00.108 | Trade | Cancelling pending order OID20
+08/01/2026 11:00:00.108 | Trade | → Cancelling pending order OID20 SUCCEEDED
+08/01/2026 11:00:00.108 | Trade | Placing Stop Order to Sell 1.21 GER40.cash (Price: 25061.6, SL: 25128.2653384274, TP: 24887.07)
+08/01/2026 11:00:00.108 | Trade | → Placing Stop Order to Sell 1.21 GER40.cash (Price: 25061.6, SL: 25128.2653384274, TP: 24887.07) SUCCEEDED, PendingOrder OID21
+08/01/2026 11:00:00.108 | Info | Combo: bartime=2026-01-08 10:00, executed=2026-01-08 11:00:00, pending Sell placed at 25061.6; SL=25128.265338427398, TP=24887.070143997065; valid for the next 3 chart bar(s).
+08/01/2026 16:00:00.213 | Trade | Placing Stop Order to Buy 1.18 GER40.cash (Price: 25167.8, SL: 25100.1588139041, TP: 25344.88)
+08/01/2026 16:00:00.213 | Trade | → Placing Stop Order to Buy 1.18 GER40.cash (Price: 25167.8, SL: 25100.1588139041, TP: 25344.88) SUCCEEDED, PendingOrder OID24
+08/01/2026 16:00:00.213 | Info | Combo: bartime=2026-01-08 15:00, executed=2026-01-08 16:00:00, pending Buy placed at 25167.8; SL=25100.15881390411, TP=25344.88462519904; valid for the next 3 chart bar(s).
+09/01/2026 08:00:00.011 | Info | Combo: bartime=2026-01-09 07:00, reversal - closing existing Buy position 8 before opening opposite direction.
+09/01/2026 08:00:00.011 | Trade | Closing position PID8 (Volume: 1.18)
+09/01/2026 08:00:00.011 | Trade | → Closing position PID8 (Volume: 1.18) SUCCEEDED
+09/01/2026 08:00:00.011 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.62 units, which needs about $5117.28 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4636.83 budget, free margin was $9273.65). Size was cut from 2.62 to 2.32 units. Real risk on this trade is now about $82.03 (0.88% of balance) instead of the requested 1.00%.
+09/01/2026 08:00:00.011 | Trade | Placing Stop Order to Sell 2.32 GER40.cash (Price: 25131.7, SL: 25162.1805829109, TP: 25051.9)
+09/01/2026 08:00:00.011 | Trade | → Placing Stop Order to Sell 2.32 GER40.cash (Price: 25131.7, SL: 25162.1805829109, TP: 25051.9) SUCCEEDED, PendingOrder OID28
+09/01/2026 08:00:00.011 | Info | Combo: bartime=2026-01-09 07:00, executed=2026-01-09 08:00:00, pending Sell placed at 25131.7; SL=25162.18058291093, TP=25051.901833939188; valid for the next 3 chart bar(s).
+12/01/2026 09:00:00.298 | Trade | Placing Stop Order to Buy 1.81 GER40.cash (Price: 25287.4, SL: 25243.7477300012, TP: 25401.68)
+12/01/2026 09:00:00.298 | Trade | → Placing Stop Order to Buy 1.81 GER40.cash (Price: 25287.4, SL: 25243.7477300012, TP: 25401.68) SUCCEEDED, PendingOrder OID31
+12/01/2026 09:00:00.298 | Info | Combo: bartime=2026-01-12 08:00, executed=2026-01-12 09:00:00, pending Buy placed at 25287.4; SL=25243.747730001192, TP=25401.68164285688; valid for the next 3 chart bar(s).
+13/01/2026 09:00:00.204 | Trade | Placing Stop Order to Sell 2.37 GER40.cash (Price: 25384, SL: 25418.149008726, TP: 25294.6)
+13/01/2026 09:00:00.204 | Trade | → Placing Stop Order to Sell 2.37 GER40.cash (Price: 25384, SL: 25418.149008726, TP: 25294.6) SUCCEEDED, PendingOrder OID34
+13/01/2026 09:00:00.204 | Info | Combo: bartime=2026-01-13 08:00, executed=2026-01-13 09:00:00, pending Sell placed at 25384; SL=25418.149008726024, TP=25294.597895155268; valid for the next 3 chart bar(s).
+13/01/2026 18:00:00.209 | Trade | Placing Stop Order to Sell 1.66 GER40.cash (Price: 25409.4, SL: 25457.7173296351, TP: 25282.91)
+13/01/2026 18:00:00.209 | Trade | → Placing Stop Order to Sell 1.66 GER40.cash (Price: 25409.4, SL: 25457.7173296351, TP: 25282.91) SUCCEEDED, PendingOrder OID37
+13/01/2026 18:00:00.209 | Info | Combo: bartime=2026-01-13 17:00, executed=2026-01-13 18:00:00, pending Sell placed at 25409.4; SL=25457.71732963506, TP=25282.90523101542; valid for the next 3 chart bar(s).
+14/01/2026 02:00:00.308 | Info | Combo: bartime=2026-01-14 01:00, Sell signal skipped: already have same-direction exposure open.
+14/01/2026 08:00:00.004 | Info | Combo: bartime=2026-01-14 07:00, reversal - closing existing Sell position 12 before opening opposite direction.
+14/01/2026 08:00:00.004 | Trade | Closing position PID12 (Volume: 1.66)
+14/01/2026 08:00:00.004 | Trade | → Closing position PID12 (Volume: 1.66) SUCCEEDED
+14/01/2026 08:00:00.004 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.72 units, which needs about $5368.98 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4648.98 budget, free margin was $9297.96). Size was cut from 2.72 to 2.30 units. Real risk on this trade is now about $78.62 (0.85% of balance) instead of the requested 1.00%.
+14/01/2026 08:00:00.004 | Trade | Placing Stop Order to Buy 2.3 GER40.cash (Price: 25426.2, SL: 25396.732090415, TP: 25503.35)
+14/01/2026 08:00:00.004 | Trade | → Placing Stop Order to Buy 2.3 GER40.cash (Price: 25426.2, SL: 25396.732090415, TP: 25503.35) SUCCEEDED, PendingOrder OID41
+14/01/2026 08:00:00.004 | Info | Combo: bartime=2026-01-14 07:00, executed=2026-01-14 08:00:00, pending Buy placed at 25426.2; SL=25396.73209041504, TP=25503.34698729343; valid for the next 3 chart bar(s).
+15/01/2026 01:00:01.301 | Trade | Placing Stop Order to Buy 1.76 GER40.cash (Price: 25341, SL: 25295.9931208118, TP: 25458.83)
+15/01/2026 01:00:01.301 | Trade | → Placing Stop Order to Buy 1.76 GER40.cash (Price: 25341, SL: 25295.9931208118, TP: 25458.83) SUCCEEDED, PendingOrder OID44
+15/01/2026 01:00:01.301 | Info | Combo: bartime=2026-01-15 00:00, executed=2026-01-15 01:00:01, pending Buy placed at 25341; SL=25295.99312081175, TP=25458.828009714845; valid for the next 3 chart bar(s).
+15/01/2026 09:00:03.601 | Trade | Placing Stop Order to Sell 1.43 GER40.cash (Price: 25226.6, SL: 25281.4462626163, TP: 25083.01)
+15/01/2026 09:00:03.601 | Trade | → Placing Stop Order to Sell 1.43 GER40.cash (Price: 25226.6, SL: 25281.4462626163, TP: 25083.01) SUCCEEDED, PendingOrder OID47
+15/01/2026 09:00:03.601 | Info | Combo: bartime=2026-01-15 08:00, executed=2026-01-15 09:00:03, pending Sell placed at 25226.6; SL=25281.44626261627, TP=25083.012484470597; valid for the next 3 chart bar(s).
+15/01/2026 12:00:00.102 | Trade | Cancelling pending order OID47
+15/01/2026 12:00:00.102 | Trade | → Cancelling pending order OID47 SUCCEEDED
+15/01/2026 12:00:00.102 | Info | Combo: pending order 47 cancelled after 3 chart bars.
+15/01/2026 16:00:00.105 | Trade | Placing Stop Order to Buy 1.44 GER40.cash (Price: 25362.3, SL: 25307.9632349862, TP: 25504.55)
+15/01/2026 16:00:00.105 | Trade | → Placing Stop Order to Buy 1.44 GER40.cash (Price: 25362.3, SL: 25307.9632349862, TP: 25504.55) SUCCEEDED, PendingOrder OID48
+15/01/2026 16:00:00.105 | Info | Combo: bartime=2026-01-15 15:00, executed=2026-01-15 16:00:00, pending Buy placed at 25362.3; SL=25307.963234986175, TP=25504.553650806192; valid for the next 3 chart bar(s).
+16/01/2026 05:00:12.901 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.60 units, which needs about $7047.79 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4513.63 budget, free margin was $9027.26). Size was cut from 3.60 to 2.25 units. Real risk on this trade is now about $56.38 (0.62% of balance) instead of the requested 1.00%.
+16/01/2026 05:00:12.901 | Trade | Placing Stop Order to Buy 2.25 GER40.cash (Price: 25304.4, SL: 25282.8001954308, TP: 25360.95)
+16/01/2026 05:00:12.901 | Trade | → Placing Stop Order to Buy 2.25 GER40.cash (Price: 25304.4, SL: 25282.8001954308, TP: 25360.95) SUCCEEDED, PendingOrder OID51
+16/01/2026 05:00:12.901 | Info | Combo: bartime=2026-01-16 04:00, executed=2026-01-16 05:00:12, pending Buy placed at 25304.4; SL=25282.8001954308, TP=25360.94828836217; valid for the next 3 chart bar(s).
+16/01/2026 08:00:00.007 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 3.12 units, which needs about $6112.53 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4484.00 budget, free margin was $8968.00). Size was cut from 3.12 to 2.24 units. Real risk on this trade is now about $64.22 (0.72% of balance) instead of the requested 1.00%.
+16/01/2026 08:00:00.007 | Trade | Placing Stop Order to Buy 2.24 GER40.cash (Price: 25325.6, SL: 25300.8849000606, TP: 25390.3)
+16/01/2026 08:00:00.007 | Trade | → Placing Stop Order to Buy 2.24 GER40.cash (Price: 25325.6, SL: 25300.8849000606, TP: 25390.3) SUCCEEDED, PendingOrder OID54
+16/01/2026 08:00:00.007 | Info | Combo: bartime=2026-01-16 07:00, executed=2026-01-16 08:00:00, pending Buy placed at 25325.6; SL=25300.884900060566, TP=25390.304131641427; valid for the next 3 chart bar(s).
+16/01/2026 14:00:00.101 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.28 units, which needs about $4464.26 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4441.48 budget, free margin was $8882.97). Size was cut from 2.28 to 2.22 units. Real risk on this trade is now about $86.48 (0.97% of balance) instead of the requested 1.00%.
+16/01/2026 14:00:00.101 | Trade | Placing Stop Order to Sell 2.22 GER40.cash (Price: 25271.4, SL: 25304.9826079585, TP: 25183.48)
+16/01/2026 14:00:00.101 | Trade | → Placing Stop Order to Sell 2.22 GER40.cash (Price: 25271.4, SL: 25304.9826079585, TP: 25183.48) SUCCEEDED, PendingOrder OID57
+16/01/2026 14:00:00.101 | Info | Combo: bartime=2026-01-16 13:00, executed=2026-01-16 14:00:00, pending Sell placed at 25271.4; SL=25304.982607958522, TP=25183.48073236459; valid for the next 3 chart bar(s).
+16/01/2026 15:00:00.105 | Info | Combo: bartime=2026-01-16 14:00, Sell signal skipped: already have same-direction exposure open.
+16/01/2026 20:00:00.215 | Trade | Placing Stop Order to Buy 1.68 GER40.cash (Price: 25344.4, SL: 25298.9161432193, TP: 25463.48)
+16/01/2026 20:00:00.215 | Trade | → Placing Stop Order to Buy 1.68 GER40.cash (Price: 25344.4, SL: 25298.9161432193, TP: 25463.48) SUCCEEDED, PendingOrder OID60
+16/01/2026 20:00:00.215 | Info | Combo: bartime=2026-01-16 19:00, executed=2026-01-16 20:00:00, pending Buy placed at 25344.4; SL=25298.91614321932, TP=25463.47673705182; valid for the next 3 chart bar(s).
+19/01/2026 01:00:00.105 | Trade | Cancelling pending order OID60
+19/01/2026 01:00:00.105 | Trade | → Cancelling pending order OID60 SUCCEEDED
+19/01/2026 01:00:00.105 | Info | Combo: pending order 60 cancelled after 3 chart bars.
+21/01/2026 03:00:00.215 | Trade | Placing Stop Order to Buy 1.65 GER40.cash (Price: 24642, SL: 24596.5131322642, TP: 24761.08)
+21/01/2026 03:00:00.215 | Trade | → Placing Stop Order to Buy 1.65 GER40.cash (Price: 24642, SL: 24596.5131322642, TP: 24761.08) SUCCEEDED, PendingOrder OID61
+21/01/2026 03:00:00.215 | Info | Combo: bartime=2026-01-21 02:00, executed=2026-01-21 03:00:00, pending Buy placed at 24642; SL=24596.5131322642, TP=24761.084619732323; valid for the next 3 chart bar(s).
+21/01/2026 10:00:00.211 | Trade | Placing Stop Order to Sell 1.14 GER40.cash (Price: 24536.7, SL: 24601.5826360446, TP: 24366.84)
+21/01/2026 10:00:00.211 | Trade | → Placing Stop Order to Sell 1.14 GER40.cash (Price: 24536.7, SL: 24601.5826360446, TP: 24366.84) SUCCEEDED, PendingOrder OID64
+21/01/2026 10:00:00.211 | Info | Combo: bartime=2026-01-21 09:00, executed=2026-01-21 10:00:00, pending Sell placed at 24536.7; SL=24601.582636044586, TP=24366.837258835272; valid for the next 3 chart bar(s).
+21/01/2026 15:00:00.104 | Trade | Placing Stop Order to Buy 0.72 GER40.cash (Price: 24610.2, SL: 24505.2902978209, TP: 24884.85)
+21/01/2026 15:00:00.104 | Trade | → Placing Stop Order to Buy 0.72 GER40.cash (Price: 24610.2, SL: 24505.2902978209, TP: 24884.85) SUCCEEDED, PendingOrder OID67
+21/01/2026 15:00:00.104 | Info | Combo: bartime=2026-01-21 14:00, executed=2026-01-21 15:00:00, pending Buy placed at 24610.2; SL=24505.29029782091, TP=24884.853600304858; valid for the next 3 chart bar(s).
+21/01/2026 20:00:00.210 | Trade | Placing Stop Order to Buy 0.48 GER40.cash (Price: 24885.9, SL: 24728.41502879, TP: 25298.2)
+21/01/2026 20:00:00.210 | Trade | → Placing Stop Order to Buy 0.48 GER40.cash (Price: 24885.9, SL: 24728.41502879, TP: 25298.2) SUCCEEDED, PendingOrder OID70
+21/01/2026 20:00:00.210 | Info | Combo: bartime=2026-01-21 19:00, executed=2026-01-21 20:00:00, pending Buy placed at 24885.9; SL=24728.415028789957, TP=25298.1956546279; valid for the next 3 chart bar(s).
+23/01/2026 03:00:03.407 | Info | Combo: bartime=2026-01-23 02:00, reversal - closing existing Buy position 22 before opening opposite direction.
+23/01/2026 03:00:03.407 | Trade | Closing position PID22 (Volume: 0.48)
+23/01/2026 03:00:03.407 | Trade | → Closing position PID22 (Volume: 0.48) SUCCEEDED
+23/01/2026 03:00:03.407 | Trade | Placing Stop Order to Sell 1.88 GER40.cash (Price: 24805.7, SL: 24845.4916046334, TP: 24701.53)
+23/01/2026 03:00:03.407 | Trade | → Placing Stop Order to Sell 1.88 GER40.cash (Price: 24805.7, SL: 24845.4916046334, TP: 24701.53) SUCCEEDED, PendingOrder OID74
+23/01/2026 03:00:03.407 | Info | Combo: bartime=2026-01-23 02:00, executed=2026-01-23 03:00:03, pending Sell placed at 24805.7; SL=24845.49160463343, TP=24701.525579069683; valid for the next 3 chart bar(s).
+23/01/2026 04:00:00.805 | Info | Combo: bartime=2026-01-23 03:00, reversal - cancelling existing Sell pending order 74 before opening opposite direction.
+23/01/2026 04:00:00.805 | Trade | Cancelling pending order OID74
+23/01/2026 04:00:00.805 | Trade | → Cancelling pending order OID74 SUCCEEDED
+23/01/2026 04:00:00.805 | Trade | Placing Stop Order to Buy 1.96 GER40.cash (Price: 24851, SL: 24812.8067162933, TP: 24950.99)
+23/01/2026 04:00:00.805 | Trade | → Placing Stop Order to Buy 1.96 GER40.cash (Price: 24851, SL: 24812.8067162933, TP: 24950.99) SUCCEEDED, PendingOrder OID75
+23/01/2026 04:00:00.805 | Info | Combo: bartime=2026-01-23 03:00, executed=2026-01-23 04:00:00, pending Buy placed at 24851; SL=24812.806716293257, TP=24950.990016744254; valid for the next 3 chart bar(s).
+23/01/2026 08:00:00.007 | Info | Combo: bartime=2026-01-23 07:00, reversal - closing existing Buy position 23 before opening opposite direction.
+23/01/2026 08:00:00.007 | Trade | Closing position PID23 (Volume: 1.96)
+23/01/2026 08:00:00.007 | Trade | → Closing position PID23 (Volume: 1.96) SUCCEEDED
+23/01/2026 08:00:00.007 | Trade | Placing Stop Order to Sell 2.04 GER40.cash (Price: 24812.6, SL: 24849.2028490063, TP: 24716.77)
+23/01/2026 08:00:00.007 | Trade | → Placing Stop Order to Sell 2.04 GER40.cash (Price: 24812.6, SL: 24849.2028490063, TP: 24716.77) SUCCEEDED, PendingOrder OID79
+23/01/2026 08:00:00.007 | Info | Combo: bartime=2026-01-23 07:00, executed=2026-01-23 08:00:00, pending Sell placed at 24812.6; SL=24849.20284900628, TP=24716.77374130155; valid for the next 3 chart bar(s).
+25/01/2026 23:05:15.043 | Trade | Placing Stop Order to Sell 1.41 GER40.cash (Price: 24831.1, SL: 24883.0195522737, TP: 24695.17)
+25/01/2026 23:05:15.043 | Trade | → Placing Stop Order to Sell 1.41 GER40.cash (Price: 24831.1, SL: 24883.0195522737, TP: 24695.17) SUCCEEDED, PendingOrder OID82
+25/01/2026 23:05:15.043 | Info | Combo: bartime=2026-01-23 21:00, executed=2026-01-25 23:05:15, pending Sell placed at 24831.1; SL=24883.019552273727, TP=24695.174612147377; valid for the next 3 chart bar(s).
+26/01/2026 08:00:00.008 | Info | Combo: bartime=2026-01-26 07:00, reversal - closing existing Sell position 25 before opening opposite direction.
+26/01/2026 08:00:00.008 | Trade | Closing position PID25 (Volume: 1.41)
+26/01/2026 08:00:00.008 | Trade | → Closing position PID25 (Volume: 1.41) SUCCEEDED
+26/01/2026 08:00:00.008 | Trade | Placing Stop Order to Buy 1.39 GER40.cash (Price: 24880, SL: 24829.4585460166, TP: 25012.32)
+26/01/2026 08:00:00.008 | Trade | → Placing Stop Order to Buy 1.39 GER40.cash (Price: 24880, SL: 24829.4585460166, TP: 25012.32) SUCCEEDED, PendingOrder OID86
+26/01/2026 08:00:00.008 | Info | Combo: bartime=2026-01-26 07:00, executed=2026-01-26 08:00:00, pending Buy placed at 24880; SL=24829.45854601664, TP=25012.31752652843; valid for the next 3 chart bar(s).
+26/01/2026 12:00:00.063 | Trade | Placing Stop Order to Buy 1.2 GER40.cash (Price: 24862.2, SL: 24804.0265404484, TP: 25014.5)
+26/01/2026 12:00:00.063 | Trade | → Placing Stop Order to Buy 1.2 GER40.cash (Price: 24862.2, SL: 24804.0265404484, TP: 25014.5) SUCCEEDED, PendingOrder OID89
+26/01/2026 12:00:00.063 | Info | Combo: bartime=2026-01-26 11:00, executed=2026-01-26 12:00:00, pending Buy placed at 24862.2; SL=24804.026540448416, TP=25014.498117106046; valid for the next 3 chart bar(s).
+27/01/2026 09:00:00.143 | Trade | Placing Stop Order to Sell 1.5 GER40.cash (Price: 24897.7, SL: 24945.2438605413, TP: 24773.23)
+27/01/2026 09:00:00.143 | Trade | → Placing Stop Order to Sell 1.5 GER40.cash (Price: 24897.7, SL: 24945.2438605413, TP: 24773.23) SUCCEEDED, PendingOrder OID92
+27/01/2026 09:00:00.143 | Info | Combo: bartime=2026-01-27 08:00, executed=2026-01-27 09:00:00, pending Sell placed at 24897.7; SL=24945.243860541326, TP=24773.230173102813; valid for the next 3 chart bar(s).
+28/01/2026 05:00:38.242 | Info | Combo: MARGIN GUARD - order size reduced. Signal wanted 2.20 units, which needs about $4381.42 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $4185.46 budget, free margin was $8370.93). Size was cut from 2.20 to 2.05 units. Real risk on this trade is now about $77.72 (0.93% of balance) instead of the requested 1.00%.
+28/01/2026 05:00:38.242 | Trade | Placing Stop Order to Buy 2.05 GER40.cash (Price: 24920.7, SL: 24888.8393660942, TP: 25004.11)
+28/01/2026 05:00:38.242 | Trade | → Placing Stop Order to Buy 2.05 GER40.cash (Price: 24920.7, SL: 24888.8393660942, TP: 25004.11) SUCCEEDED, PendingOrder OID95
+28/01/2026 05:00:38.242 | Info | Combo: bartime=2026-01-28 04:00, executed=2026-01-28 05:00:38, pending Buy placed at 24920.7; SL=24888.839366094162, TP=25004.111139565484; valid for the next 3 chart bar(s).
+28/01/2026 20:00:00.144 | Trade | Placing Stop Order to Buy 1.24 GER40.cash (Price: 24875.5, SL: 24819.6631078268, TP: 25021.68)
+28/01/2026 20:00:00.144 | Trade | → Placing Stop Order to Buy 1.24 GER40.cash (Price: 24875.5, SL: 24819.6631078268, TP: 25021.68) SUCCEEDED, PendingOrder OID98
+28/01/2026 20:00:00.144 | Info | Combo: bartime=2026-01-28 19:00, executed=2026-01-28 20:00:00, pending Buy placed at 24875.5; SL=24819.663107826753, TP=25021.68098370956; valid for the next 3 chart bar(s).
+29/01/2026 01:00:00.143 | Trade | Placing Stop Order to Buy 1.25 GER40.cash (Price: 24887.5, SL: 24832.7954951727, TP: 25030.72)
+29/01/2026 01:00:00.143 | Trade | → Placing Stop Order to Buy 1.25 GER40.cash (Price: 24887.5, SL: 24832.7954951727, TP: 25030.72) SUCCEEDED, PendingOrder OID101
+29/01/2026 01:00:00.143 | Info | Combo: bartime=2026-01-29 00:00, executed=2026-01-29 01:00:00, pending Buy placed at 24887.5; SL=24832.79549517267, TP=25030.71639363795; valid for the next 3 chart bar(s).
+29/01/2026 06:00:04.843 | Trade | Placing Stop Order to Sell 0.94 GER40.cash (Price: 24750.5, SL: 24822.4312361418, TP: 24562.18)
+29/01/2026 06:00:04.843 | Trade | → Placing Stop Order to Sell 0.94 GER40.cash (Price: 24750.5, SL: 24822.4312361418, TP: 24562.18) SUCCEEDED, PendingOrder OID104
+29/01/2026 06:00:04.843 | Info | Combo: bartime=2026-01-29 05:00, executed=2026-01-29 06:00:04, pending Sell placed at 24750.5; SL=24822.43123614182, TP=24562.184023780716; valid for the next 3 chart bar(s).
+30/01/2026 09:00:00.143 | Trade | Placing Stop Order to Buy 0.69 GER40.cash (Price: 24532.4, SL: 24435.0674019213, TP: 24787.22)
+30/01/2026 09:00:00.143 | Trade | → Placing Stop Order to Buy 0.69 GER40.cash (Price: 24532.4, SL: 24435.0674019213, TP: 24787.22) SUCCEEDED, PendingOrder OID107
+30/01/2026 09:00:00.143 | Info | Combo: bartime=2026-01-30 08:00, executed=2026-01-30 09:00:00, pending Buy placed at 24532.4; SL=24435.067401921304, TP=24787.216741770033; valid for the next 3 chart bar(s).
+01/02/2026 23:59:59.604 | Info | Combo: loaded=3931, processed=40, before-start=3568, not-processed=323, placed=38, failed=0, guard-skipped=0, pending-expired=3, same-direction-skipped=2, reversed=7, margin-capped=7, margin-blocked=0.
+01/02/2026 23:59:59.604 | Info | CBot instance [Combo, GER40.cash, h1] stopped.

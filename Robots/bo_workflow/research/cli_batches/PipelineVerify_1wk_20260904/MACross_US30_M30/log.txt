@@ -1,0 +1,132 @@
+﻿ctrader-cli : ctrader-cli.exe backtest C:\Users\Administrator\Documents\cAlgo\Sources\Robots\MA Cross.algo C:\Users\Adm
+inistrator\Documents\cAlgo\Sources\Robots\research\cli_batches\PipelineVerify_1wk_20260904\MACross_US30_M30\params.cbot
+set --start=01/01/2025 --end=08/01/2025 --data-mode=Ticks --ctid=votuankiet96@gmail.com 
+--pwd-file=C:\Users\Administrator\.ctrader-cli-pwd.txt --account=7563609 --broker=FTMO Platform --symbol=US30.cash 
+--period=m30 --full-access --report-json=C:\Users\Administrator\Documents\cAlgo\Sources\Robots\research\cli_batches\Pip
+elineVerify_1wk_20260904\MACross_US30_M30\report.json
+    + CategoryInfo          : NotSpecified: (ctrader-cli.exe...M30\report.json:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Backtesting cBot with parameters:
+---------------------------------------------------------------------------
+| Name                 | Value                     | Source               |
+---------------------------------------------------------------------------
+| Symbol               | US30.cash                 | cmd arg              |
+| Period               | m30                       | cmd arg              |
+| Start                | 01/01/2025 00:00          | cmd arg              |
+| End                  | 08/01/2025 00:00          | cmd arg              |
+| Balance              | 0                         | default value        |
+| DataMode             | Ticks                     | cmd arg              |
+| Commission           | 0                         | default value        |
+| Spread               | 0                         | default value        |
+|                      |                           |                      |
+| SignalFilePath       | Z:\Desktop\og_program\... | cbotset              |
+| KslLevel             | 2                         | cbotset              |
+| KtpLevel             | 4                         | cbotset              |
+| RiskPercent          | 1                         | cbotset              |
+| MaxMarginPercent     | 50                        | cbotset              |
+| EnableDailyLossLimit | False                     | default value        |
+| MaxDailyLossPercent  | 5                         | default value        |
+| EnableMaxDrawdown    | False                     | default value        |
+| MaxTotalDrawdownP... | 10                        | default value        |
+| EnableMaxConsecut... | False                     | default value        |
+| MaxConsecutiveLosses | 5                         | default value        |
+---------------------------------------------------------------------------
+04/09/2026 14:03:20.419 | Establishing connection using votuankiet96@gmail.com...
+04/09/2026 14:03:23.092 | The connection has been established.
+Login to 7563609...
+Logged in.
+Starting cBot...
+Progress | Backtesting | 0.00 % |
+Info | CBot instance [MA Cross, US30.cash, m30] started.
+Progress | Backtesting | 12.02 % |
+Progress | Backtesting | 13.04 % |
+Progress | Backtesting | 13.70 % |
+Progress | Backtesting | 15.10 % |
+Progress | Backtesting | 16.12 % |
+Progress | Backtesting | 16.76 % |
+Progress | Backtesting | 17.04 % |
+Progress | Backtesting | 17.36 % |
+Progress | Backtesting | 18.27 % |
+Progress | Backtesting | 19.09 % |
+Progress | Backtesting | 20.42 % |
+Progress | Backtesting | 20.75 % |
+Progress | Backtesting | 21.38 % |
+Progress | Backtesting | 22.07 % |
+Progress | Backtesting | 22.62 % |
+Progress | Backtesting | 23.58 % |
+Progress | Backtesting | 25.28 % |
+Progress | Backtesting | 29.32 % |
+Progress | Backtesting | 32.35 % |
+Progress | Backtesting | 32.98 % |
+Progress | Backtesting | 33.62 % |
+Progress | Backtesting | 34.54 % |
+Progress | Backtesting | 35.96 % |
+Progress | Backtesting | 62.50 % |
+Progress | Backtesting | 68.53 % |
+Progress | Backtesting | 70.25 % |
+Progress | Backtesting | 71.12 % |
+Progress | Backtesting | 72.22 % |
+Progress | Backtesting | 73.20 % |
+Progress | Backtesting | 75.00 % |
+Progress | Backtesting | 80.48 % |
+Progress | Backtesting | 82.55 % |
+Progress | Backtesting | 83.04 % |
+Progress | Backtesting | 83.57 % |
+Progress | Backtesting | 84.09 % |
+Progress | Backtesting | 85.02 % |
+Progress | Backtesting | 85.94 % |
+Progress | Backtesting | 87.50 % |
+Progress | Backtesting | 91.98 % |
+Progress | Backtesting | 93.95 % |
+Progress | Backtesting | 94.64 % |
+Progress | Backtesting | 95.31 % |
+Progress | Backtesting | 95.82 % |
+Progress | Backtesting | 96.52 % |
+Progress | Backtesting | 97.38 % |
+Progress | Backtesting | 98.30 % |
+01/01/2025 23:05:00.003 | Info | MA Cross: loaded 2939 valid signal row(s) from CSV.
+01/01/2025 23:05:00.003 | Info | MA Cross: signal scheduling active with chart timeframe m30 (00:30:00); CSV timeframe must match the chart timeframe.
+02/01/2025 05:00:00.866 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 1.84 units, which needs about $5225.47 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5000.00 budget, free margin was $10000.00). Size was cut from 1.84 to 1.72 units. Real risk on this trade is now about $93.14 (0.93% of balance) instead of the requested 1.00%.
+02/01/2025 05:00:00.866 | Trade | Executing Market Order to Buy 1.72 US30.cash (SL: 54.15, TP: 141.77)
+02/01/2025 05:00:00.866 | Trade |  Executing Market Order to Buy 1.72 US30.cash (SL: 54.15, TP: 141.77) SUCCEEDED, Position PID1
+02/01/2025 05:00:00.866 | Info | MA Cross: bartime=2025-01-02 04:30, executed=2025-01-02 05:00:00, market Buy placed; SL=54.152192314375796 pips, TP=141.77043947903582 pips.
+02/01/2025 18:30:00.032 | Trade | Executing Market Order to Sell 0.6 US30.cash (SL: 170.54, TP: 446.48)
+02/01/2025 18:30:00.032 | Trade |  Executing Market Order to Sell 0.6 US30.cash (SL: 170.54, TP: 446.48) SUCCEEDED, Position PID2
+02/01/2025 18:30:00.032 | Info | MA Cross: bartime=2025-01-02 18:00, executed=2025-01-02 18:30:00, market Sell placed; SL=170.5439531146701 pips, TP=446.4840692542063 pips.
+03/01/2025 08:30:00.168 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 2.84 units, which needs about $8065.40 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5070.90 budget, free margin was $10141.80). Size was cut from 2.84 to 1.74 units. Real risk on this trade is now about $62.08 (0.61% of balance) instead of the requested 1.00%.
+03/01/2025 08:30:00.168 | Trade | Executing Market Order to Buy 1.74 US30.cash (SL: 35.68, TP: 93.4)
+03/01/2025 08:30:00.168 | Trade |  Executing Market Order to Buy 1.74 US30.cash (SL: 35.68, TP: 93.4) SUCCEEDED, Position PID3
+03/01/2025 08:30:00.168 | Info | MA Cross: bartime=2025-01-03 08:00, executed=2025-01-03 08:30:00, market Buy placed; SL=35.67733126703959 pips, TP=93.40325325710964 pips.
+07/01/2025 00:00:00.340 | Trade | Executing Market Order to Sell 1.67 US30.cash (SL: 61.54, TP: 161.12)
+07/01/2025 00:00:00.340 | Trade |  Executing Market Order to Sell 1.67 US30.cash (SL: 61.54, TP: 161.12) SUCCEEDED, Position PID4
+07/01/2025 00:00:00.340 | Info | MA Cross: bartime=2025-01-06 23:30, executed=2025-01-07 00:00:00, market Sell placed; SL=61.54325951039656 pips, TP=161.12025339821818 pips.
+07/01/2025 12:00:00.090 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 2.55 units, which needs about $7241.82 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5134.09 budget, free margin was $5525.50). Size was cut from 2.55 to 1.77 units. Real risk on this trade is now about $71.27 (0.69% of balance) instead of the requested 1.00%.
+07/01/2025 12:00:00.090 | Trade | Executing Market Order to Buy 1.77 US30.cash (SL: 40.27, TP: 105.42)
+07/01/2025 12:00:00.090 | Trade |  Executing Market Order to Buy 1.77 US30.cash (SL: 40.27, TP: 105.42) SUCCEEDED, Position PID5
+07/01/2025 12:00:00.090 | Info | MA Cross: bartime=2025-01-07 11:30, executed=2025-01-07 12:00:00, market Buy placed; SL=40.267221065331455 pips, TP=105.41958474903774 pips.
+07/01/2025 20:30:00.085 | Trade | Executing Market Order to Sell 0.88 US30.cash (SL: 117.2, TP: 306.83)
+07/01/2025 20:30:00.085 | Trade |  Executing Market Order to Sell 0.88 US30.cash (SL: 117.2, TP: 306.83) SUCCEEDED, Position PID6
+07/01/2025 20:30:00.085 | Info | MA Cross: bartime=2025-01-07 20:00, executed=2025-01-07 20:30:00, market Sell placed; SL=117.19835208888698 pips, TP=306.82528576870607 pips.
+08/01/2025 09:00:00.088 | Info | MA Cross: MARGIN GUARD - order size reduced. Signal wanted 3.15 units, which needs about $8945.78 margin. Limit hit: MaxMarginPercent limit hit (50.0% of equity = $5143.11 budget, free margin was $10286.22). Size was cut from 3.15 to 1.77 units. Real risk on this trade is now about $57.72 (0.56% of balance) instead of the requested 1.00%.
+08/01/2025 09:00:00.088 | Trade | Executing Market Order to Buy 1.77 US30.cash (SL: 32.61, TP: 85.38)
+08/01/2025 09:00:00.088 | Trade |  Executing Market Order to Buy 1.77 US30.cash (SL: 32.61, TP: 85.38) SUCCEEDED, Position PID7
+08/01/2025 09:00:00.088 | Info | MA Cross: bartime=2025-01-08 08:30, executed=2025-01-08 09:00:00, market Buy placed; SL=32.61177915440184 pips, TP=85.377637826224 pips.
+08/01/2025 23:59:59.485 | Info | MA Cross: loaded=2939, processed=7, before-start=2375, not-processed=557, placed=7, failed=0, guard-skipped=0, margin-capped=4, margin-blocked=0.
+Progress | Backtesting | 100.00 % |
+Info | CBot instance [MA Cross, US30.cash, m30] stopped.
+{
+	"Equity":10226.61,
+	"NetProfit":226.61,
+	"MaxBalanceDrawdownPercentages":1,
+	"MaxEquityDrawdownPercentages":2,
+	"MaxBalanceDrawdown":162.37,
+	"MaxEquityDrawdown":270.03,
+	"WinningTrades":3,
+	"LosingTrades":4,
+	"TotalTrades":7,
+	"AverageTrade":32.37,
+	"ProfitFactor":1.62,
+	"Fitness":0
+}
+
