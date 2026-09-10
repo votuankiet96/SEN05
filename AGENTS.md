@@ -30,17 +30,17 @@ stored-procedure contract hoặc credential nếu chưa có operator approval.
 
 1. Code và test V3 hiện tại.
 2. Metadata/read-only state của SQL Server.
-3. Private `Config.yaml` đã che secret.
+3. Private `config.yaml` đã che secret.
 4. SQL scripts đã triển khai và Git history.
 
 Repository này là hệ thống nội bộ, ưu tiên gọn và dễ vận hành. Không tự ý
-khôi phục `README.md`, `Config.example.yaml`, `pyproject.toml` hoặc package
+khôi phục `README.md`, `config.example.yaml`, `pyproject.toml` hoặc package
 `__init__.py`; wrappers Windows tự set `PYTHONPATH=src`,
 `PYTHONDONTWRITEBYTECODE=1` và gọi Python với `-B` cho runtime.
 
 Engine là package `dp_program` theo src layout. Các file chính:
 
-- `src/dp_program/configuration.py`: owner duy nhất của `Config.yaml` và fixed
+- `src/dp_program/configuration.py`: owner duy nhất của `config.yaml` và fixed
   technical defaults; operator live/backfill parameters are accepted from YAML;
 - `src/dp_program/engine/auth.py`: auth account và Chromium headless;
 - `src/dp_program/engine/websocket.py`: WebSocket protocol và complete fetch;
@@ -57,14 +57,15 @@ Engine là package `dp_program` theo src layout. Các file chính:
 - `src/dp_program/__main__.py`: CLI.
 - `src/dp_program/util/discord_report.py`: reporter Discord tùy chọn, chỉ sống cùng
   lifecycle của `run`;
-- `src/dp_program/util/redis_publisher.py`: publisher Redis tùy chọn cho live — mỗi
-  pair có 1 Hash (`...:data`, field=bartime, value=JSON nến) và 1 List
-  (`...:order`, thứ tự bartime để tỉa cửa sổ trượt); sau mỗi lần một pair live
-  ghi warehouse thành công, chỉ HSET đúng các nến vừa thay đổi rồi PUBLISH JSON
-  các nến đó lên kênh `redis.event_channel` cho OG đọc, không đọc lại/ghi đè cả
-  cửa sổ; runtime còn tự đối chiếu (reconcile) toàn bộ Hash/List với SQL định kỳ
-  (`redis.reconcile_interval_seconds`) và lúc khởi động, để tự phục hồi mọi lần
-  publish incremental bị lỡ; không chặn đường ghi SQL chính;
+- `src/dp_program/util/redis_publisher.py`: publisher Redis tùy chọn cho live —
+  schema 2: **mỗi nến là một Hash riêng** (`{prefix}:{tf}:{symbol}:{epoch}`, field
+  `bartime/open/high/low/close/volume`, giá trị là chuỗi số thô giữ đúng scale
+  DECIMAL của warehouse) và một List (`...:order`, epoch tăng dần, là chỉ mục duy
+  nhất để tỉa cửa sổ trượt); sau mỗi lần một pair live ghi warehouse thành công,
+  chỉ HSET đúng các nến thật sự đổi giá trị rồi PUBLISH JSON các nến đó lên kênh
+  `redis.event_channel` cho OG đọc; runtime còn tự đối chiếu (reconcile) với SQL
+  định kỳ (`redis.reconcile_interval_seconds`) và lúc khởi động; không chặn đường
+  ghi SQL chính;
 - `src/dp_program/util/chart/server.py`: chart offline chạy thủ công, chỉ đọc Fact qua
   `sql_connector.py`.
 
@@ -77,7 +78,7 @@ Trước mọi thay đổi:
 1. Chạy baseline Git và bảo toàn thay đổi có sẵn.
 2. Đọc code/test/AGENTS liên quan.
 3. Nếu liên quan SQL, đối chiếu schema và procedure metadata read-only.
-4. Không đọc hoặc in nội dung private `Config.yaml`.
+4. Không đọc hoặc in nội dung private `config.yaml`.
 
 Khi sửa code:
 
@@ -151,16 +152,25 @@ merge main, push hoặc tag khi chưa được yêu cầu.
 
 ## Runtime và deployment
 
-Phase hiện tại chưa dùng Scheduled Task. Vận hành pilot dùng hai wrapper foreground:
-`run_live.bat` -> `<production-python> -m dp_program run-live` và
-`run_backfill.bat` -> `<production-python> -m dp_program run-backfill`. Mỗi mode có
-lock riêng để chống chạy trùng chính nó; live/backfill không khóa chéo nhau.
-Không tạo hoặc bật Scheduled Task khi chưa có operator approval mới.
+Production chạy gói đóng băng trong `run_dp/` (sibling của repo, không track):
+`run_dp/dp_program.exe` build từ `scripts/windows/dp_program_entry.py`, cài qua
+`run_dp/install.ps1` (đăng ký Scheduled Task `SEN05 DP Program Engine`). Dev/test
+gọi thẳng `python -m dp_program run-live` / `run-backfill` từ `core_program/` với
+`src/` trên `PYTHONPATH` — không còn wrapper `.bat`. Mỗi mode có lock riêng chống
+chạy trùng chính nó; live/backfill không khóa chéo nhau. Sửa `core_engine` xong
+phải build lại `.exe` rồi copy `run_dp/` mới sang máy đích — `.exe` cũ không tự
+cập nhật (xem `run_dp/DEPLOY.md`).
 
 Trước deploy phải có operator approval, rollback commit, controlled stop/start,
 full validation, targeted write và runtime observation. V3 phải fail closed
 khi không xác thực được tài khoản TradingView; tuyệt đối không chạy guest.
 Chi tiết vận hành thuộc `docs/OPERATOR_RUNBOOK.md`.
+
+Hai lớp tách bạch, không trộn khi sửa: `src/dp_program/**` là core_engine (chịu
+lỗi dữ liệu: spool/replay, pending retry, circuit breaker, auth fail-closed).
+`scripts/windows/**` là lớp vận hành đóng vào `.exe` (mode `--run`/`--restart`/
+`--watchdog`/`--doctor-ops`/`--setup`, giữ engine ở đúng trạng thái mong muốn).
+Lớp vận hành chỉ được GỌI core_engine qua API công khai/chỉ-đọc, không sửa nó.
 
 Thay đổi tài liệu/test không được restart runtime. Mọi kết luận production phải
 có timestamp và evidence trực tiếp.
@@ -168,7 +178,7 @@ có timestamp và evidence trực tiếp.
 ## Bảo mật và báo cáo
 
 Không print, paste hoặc commit token, cookie, password, connection string,
-webhook, private `Config.yaml`, runtime spool hoặc backup.
+webhook, private `config.yaml`, runtime spool hoặc backup.
 
 Báo cáo operator bằng tiếng Việt, dẫn đầu bằng kết quả và tác động; phân biệt:
 

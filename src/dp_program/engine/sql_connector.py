@@ -169,7 +169,7 @@ def fetch_universe(
 
 
 def _selection(values: Any, name: str) -> set[str]:
-    # Kiểm danh sách operator nhập trong Config.yaml.
+    # Kiểm danh sách operator nhập trong config.yaml.
     # Không được rỗng hoặc trùng.
     if not isinstance(values, list) or not values:
         raise ValueError(f"{name} must be a non-empty list")
@@ -201,7 +201,7 @@ def select_pairs(
     """Resolve SQL definitions, operator live selection, and optional CLI filters."""
     # Chọn danh sách cặp cần chạy.
     # Backfill chạy toàn bộ symbol/timeframe đang bật.
-    # Live chỉ chạy danh sách operator chọn trong Config.yaml.
+    # Live chỉ chạy danh sách operator chọn trong config.yaml.
     sql_symbols, sql_timeframes = fetch_universe(config)
     symbols_by_name = _index(sql_symbols, "symbol", "symbol universe")
     timeframes_by_code = _index(sql_timeframes, "code", "timeframe universe")
@@ -372,6 +372,47 @@ def read_latest_candles(
             WHERE f.SymbolID=? AND tf.Code=? ORDER BY f.BarTime DESC""",
             int(limit), int(symbol_id), timeframe_code)
         return list(reversed(cursor.fetchall()))
+    finally:
+        connection.close()
+
+
+def read_latest_candles_for_pairs(
+    config: dict[str, Any], pairs: Iterable[tuple[int, str]], limit: int,
+) -> dict[tuple[int, str], list[tuple[Any, ...]]]:
+    """Read the latest N Fact candles for many pairs using one connection."""
+    # Redis reconcile gom toàn bộ live pair vào một lần đọc SQL thay vì mở
+    # riêng một connection cho từng pair.
+    requested = list(dict.fromkeys((int(symbol_id), str(tf_code)) for symbol_id, tf_code in pairs))
+    result: dict[tuple[int, str], list[tuple[Any, ...]]] = {pair: [] for pair in requested}
+    if not requested:
+        return result
+    if int(limit) <= 0:
+        raise ValueError("candle limit must be positive")
+    fact_table = _quoted_name(config["tables"]["fact_table"])
+    connection = get_connection(config)
+    try:
+        cursor = connection.cursor()
+        # COLLATE DATABASE_DEFAULT: bảng tạm nằm trong tempdb nên mặc định
+        # lấy collation của tempdb, khác collation của DWH.Dim_Timeframe.Code
+        # -> JOIN bên dưới sẽ lỗi "cannot resolve the collation conflict".
+        cursor.execute("""CREATE TABLE #RedisPairs (
+            SymbolID INT NOT NULL, TFCode NVARCHAR(20) COLLATE DATABASE_DEFAULT NOT NULL,
+            PRIMARY KEY (SymbolID, TFCode))""")
+        cursor.executemany(
+            "INSERT INTO #RedisPairs (SymbolID, TFCode) VALUES (?, ?)", requested
+        )
+        cursor.execute(f"""SELECT p.SymbolID,p.TFCode,c.BarTime,
+                c.[Open],c.High,c.Low,c.[Close],c.Volume
+            FROM #RedisPairs p
+            JOIN DWH.Dim_Timeframe tf ON tf.Code=p.TFCode
+            CROSS APPLY (SELECT TOP (?) f.BarTime,f.[Open],f.High,f.Low,f.[Close],f.Volume
+                FROM {fact_table} f
+                WHERE f.SymbolID=p.SymbolID AND f.TimeframeID=tf.TimeframeID
+                ORDER BY f.BarTime DESC) c
+            ORDER BY p.SymbolID,p.TFCode,c.BarTime ASC""", int(limit))
+        for row in cursor.fetchall():
+            result[(int(row[0]), str(row[1]))].append(tuple(row[2:]))
+        return result
     finally:
         connection.close()
 def _require_contract(cursor: pyodbc.Cursor, procedure: str, expected: str) -> None:

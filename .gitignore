@@ -1,4 +1,8 @@
-# Config.yaml contains host credentials and is local-only.
+# config.yaml contains host credentials and is local-only. Cả hai dạng viết
+# hoa/thường đều bị chặn: Windows không phân biệt hoa thường nên một checkout
+# cũ có thể còn file tên Config.yaml, và trên Linux (core.ignorecase=false)
+# một dòng duy nhất sẽ không che được dạng còn lại.
+config.yaml
 Config.yaml
 
 # Runtime output (logs, cache, PID files, ad-hoc monitor scripts, backups).
@@ -30,7 +34,7 @@ pytest_tmp/
 # history. run_dp/vendor/ is the bundled Chromium build for offline
 # deployment (~690MB, assembled from the local Playwright cache at
 # packaging time) -- same reason. install.ps1/DEPLOY.md/sql/*.sql/
-# Config.example.yaml under run_dp/ ARE tracked (small, reviewable
+# config.example.yaml under run_dp/ ARE tracked (small, reviewable
 # source, not rebuildable binary output).
 build/
 dist/
@@ -41,3 +45,8 @@ run_dp/vendor/
 # Data exports
 *.csv
 *.parquet
+
+# Research probe runtime output (logs + PID files) -- the probe scripts
+# themselves under research/ are tracked, their transient output is not.
+research/redis_probe/probe_logs/
+research/redis_probe/run/

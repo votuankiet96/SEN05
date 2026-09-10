@@ -330,7 +330,7 @@ def run_backfill(
     # Điểm vào của backfill.
     # Runtime gọi theo lịch; CLI có thể lọc symbol/timeframe khi cần kiểm tra.
     if not config["backfill"].get("enabled", True):
-        raise RuntimeError("backfill is disabled in Config.yaml")
+        raise RuntimeError("backfill is disabled in config.yaml")
     pairs = select_pairs(
         config, live=False, symbol_filter=symbol, timeframe_filter=timeframe
     )

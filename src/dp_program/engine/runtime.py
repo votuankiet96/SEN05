@@ -8,7 +8,11 @@ from pathlib import Path
 from typing import Any, Iterator
 from ..log import log_event
 from ..util.discord_report import DiscordReporter
-from ..util.redis_publisher import reconcile_all_live_pairs
+from ..util.redis_publisher import (
+    reconcile_all_live_pairs,
+    shutdown_redis_publisher,
+    wait_for_redis_idle,
+)
 from .sql_connector import Pair, pair_key, select_pairs
 from .auth import auth_status, ensure_authenticated
 from .backfill import next_backfill_group, prioritize_backfill_pairs, run_backfill_pairs
@@ -138,7 +142,7 @@ def _workflow_pairs(config: dict[str, Any], *, live: bool) -> list[Pair]:
     # Chọn danh sách cặp cho live hoặc backfill.
     section = "live" if live else "backfill"
     if not config[section]["enabled"]:
-        raise RuntimeError(f"{section} workflow is disabled in Config.yaml")
+        raise RuntimeError(f"{section} workflow is disabled in config.yaml")
     return select_pairs(config, live=live)
 
 def _wait_for_database(config: dict[str, Any]) -> dict[str, Any]:
@@ -198,14 +202,16 @@ def _live_yield_active(config: dict[str, Any]) -> bool:
 
 def _finish(config: dict[str, Any], name: str, state: dict[str, Any], reporter: DiscordReporter) -> dict[str, Any]:
     # Ghi trạng thái stopped, gửi Discord và log khi service dừng sạch.
-    state.update(status="stopped", cycle_active=False, stopped_at=_now().isoformat())
+    redis_flushed = shutdown_redis_publisher() if name == "live" else True
+    state.update(status="stopped", cycle_active=False, stopped_at=_now().isoformat(),
+                 redis_flushed=redis_flushed)
     _write_state(config, name, state); reporter.publish("stopped", state)
     log_event(LOGGER, logging.INFO, "SERVICE_STOPPED", "NONE", component="runtime", mode=name)
     return {"ok": True, "status": "stopped", "pid": os.getpid()}
 
 def run_live_service(config: dict[str, Any]) -> dict[str, Any]:
     """Run authenticated live cycles continuously; never blocked by backfill."""
-    # Service live chạy liên tục theo interval trong Config.yaml.
+    # Service live chạy liên tục theo interval trong config.yaml.
     # Cặp nào chưa xong sẽ được giữ lại cho cycle sau.
     global _SIGNAL_STOP
     _SIGNAL_STOP = False; _install_signal_handlers()
@@ -215,13 +221,19 @@ def run_live_service(config: dict[str, Any]) -> dict[str, Any]:
         if _stop_requested(config, "live"):
             return _finish(config, "live", state, reporter)
         live_pairs = _workflow_pairs(config, live=True)
-        reconcile_all_live_pairs(config, live_pairs)
         # Trước cycle đầu tiên: đăng nhập, kiểm SQL, ghi lại file tạm nếu có.
         credentials = ensure_authenticated(config); database = _wait_for_database(config); replay = drain(config)
+        reconcile_all_live_pairs(config, live_pairs)
+        redis_timeout = max(30.0, len(live_pairs) * float(config["redis"]["timeout_seconds"]))
+        redis_bootstrapped = wait_for_redis_idle(redis_timeout)
+        if not redis_bootstrapped:
+            log_event(LOGGER, logging.WARNING, "REDIS_STARTUP_PENDING", "MEDIUM", component="redis",
+                      action="service continues; retained pairs retry in background")
         pending_live = {pair_key(pair) for pair in live_pairs}
         state.update(status="running", cycle_active=False, auth=_auth_info(config, credentials["source"]),
                      database={"ok": database["ok"], "database": database["database"]},
                      startup_replay=replay, spool=pending_status(config),
+                     redis_bootstrapped=redis_bootstrapped,
                      bootstrap_remaining_pairs=database["bootstrap_remaining_pairs"],
                      pending_live_pairs=sorted(pending_live))
         _write_state(config, "live", state); reporter.publish("started", state)
@@ -259,6 +271,9 @@ def run_live_service(config: dict[str, Any]) -> dict[str, Any]:
                       replay_delivered=replay["delivered"], duration_seconds=round(time.monotonic() - started_mono, 3),
                       **summary.get("timings", {}))
             _write_state(config, "live", state); reporter.publish("live", state)
+            if time.monotonic() >= next_reconcile:
+                reconcile_all_live_pairs(config, live_pairs)
+                next_reconcile = time.monotonic() + int(config["redis"]["reconcile_interval_seconds"])
             while not _stop_requested(config, "live") and time.monotonic() < started_mono + interval:
                 # Khi chờ cycle sau, vẫn ghi heartbeat để status biết process còn sống.
                 if time.monotonic() >= next_heartbeat:

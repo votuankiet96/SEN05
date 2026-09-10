@@ -1,9 +1,16 @@
 """Interactive console menu shown when dp_program.exe is launched from a
 real terminal (see dp_program_entry.py's TTY check).
 
-Every action here calls straight into the existing dp_program CLI
-(dp_program.__main__.main) or engine/runtime.py functions the CLI already
-uses -- this file adds a friendlier front door, no new engine behaviour.
+Every action calls straight into the existing dp_program CLI
+(dp_program.__main__.main), engine/runtime.py functions the CLI already
+uses, or the operational modes in dp_program_entry.py -- this file adds a
+friendlier front door, no new engine behaviour.
+
+Menu is grouped by intent, because the actions differ in blast radius:
+production actions go through the Scheduled Task (what actually runs in
+production), diagnostics change nothing, and the foreground runners are
+debug-only -- they start the engine in THIS console's process tree, not
+under the task, so they are not how production should ever be started.
 """
 from __future__ import annotations
 
@@ -25,6 +32,52 @@ def _run_cli(argv: list[str]) -> None:
     cli_main(argv)
 
 
+# --- Van hanh (qua Scheduled Task) ------------------------------------------
+
+
+def _engine_status() -> None:
+    for mode in ("live", "backfill"):
+        print(f"\n=== Trang thai {mode} ===")
+        _run_cli(["status", "--mode", mode])
+    _pause()
+
+
+def _start_engine() -> None:
+    from dp_program_task_setup import engine_task_ready, start_engine_task
+
+    if not engine_task_ready():
+        print("\nChua dang ky Scheduled Task engine. Dung muc 'Cai/cap nhat Task Scheduler' truoc.")
+        _pause()
+        return
+    start_engine_task()
+    print("Da yeu cau Task Scheduler khoi dong engine.")
+    _pause()
+
+
+def _stop_engine() -> None:
+    from dp_program.configuration import load_config
+    from dp_program.engine.runtime import request_stop
+
+    config = load_config()
+    for mode in ("live", "backfill"):
+        if not config[mode]["enabled"]:
+            continue
+        print(f"Dang gui yeu cau dung {mode}...")
+        result = request_stop(config, mode)
+        print(f"  {mode}: {'da dung' if result['ok'] else 'chua thoat het trong thoi gian cho'}")
+    _pause()
+
+
+def _restart_engine() -> None:
+    from dp_program_entry import restart_engine
+
+    restart_engine()
+    _pause()
+
+
+# --- Chan doan ---------------------------------------------------------------
+
+
 def _view_config_and_status() -> None:
     print("\n=== Cau hinh hien tai (settings) ===")
     _run_cli(["settings"])
@@ -33,50 +86,10 @@ def _view_config_and_status() -> None:
     _pause()
 
 
-def _view_running_status() -> None:
-    for mode in ("live", "backfill"):
-        print(f"\n=== Trang thai {mode} ===")
-        _run_cli(["status", "--mode", mode])
-    _pause()
+def _ops_doctor() -> None:
+    from dp_program_ops_doctor import report
 
-
-def _run_foreground(mode: str) -> None:
-    # Chay trong 1 tien trinh con rieng (khong goi _run_cli truc tiep):
-    # configure_logging() chi cau hinh 1 lan cho ca vong doi tien trinh,
-    # nen neu goi live roi backfill trong CUNG 1 tien trinh menu, lan sau
-    # se bi ghi nham vao log cua lan truoc. Tien trinh con moi lan luon
-    # cau hinh log sach, dung file, giong het cach run_live.bat dang lam.
-    from dp_program_entry import _run_role
-
-    print(f"\nDang chay {mode} o che do foreground. Nhan Ctrl+C de dung an toan.\n")
-    process = multiprocessing.Process(target=_run_role, args=(mode,), name=f"dp_program_{mode}")
-    process.start()
-    try:
-        process.join()
-    except KeyboardInterrupt:
-        process.join()
-    _pause()
-
-
-def _run_both_foreground() -> None:
-    # Live va Backfill chay trong 2 tien trinh con rieng (giong
-    # dp_program_entry.main_entry): moi service tu cai signal handler
-    # rieng cho tien trinh chinh cua no, nen khong the chung 1 tien trinh.
-    from dp_program_entry import _run_role
-
-    processes = [
-        multiprocessing.Process(target=_run_role, args=(role,), name=f"dp_program_{role}")
-        for role in ("live", "backfill")
-    ]
-    print("\nDang chay ca Live + Backfill o che do foreground. Nhan Ctrl+C de dung an toan.\n")
-    for process in processes:
-        process.start()
-    try:
-        for process in processes:
-            process.join()
-    except KeyboardInterrupt:
-        for process in processes:
-            process.join()
+    report()
     _pause()
 
 
@@ -97,14 +110,6 @@ def _view_logs() -> None:
     _pause()
 
 
-def _request_stop() -> None:
-    for mode in ("live", "backfill"):
-        answer = input(f"Gui yeu cau dung {mode}? (y/N): ").strip().lower()
-        if answer == "y":
-            _run_cli(["stop", "--mode", mode])
-    _pause()
-
-
 def _open_chart() -> None:
     from dp_program.util.chart.server import run_server
 
@@ -118,17 +123,40 @@ def _open_chart() -> None:
     _pause()
 
 
-def _install_startup_task() -> None:
-    from dp_program_task_setup import install_engine_task
+# --- Chay tam khong qua Task (debug) ----------------------------------------
 
-    install_engine_task()
+
+def _run_foreground(*roles: str) -> None:
+    # Chay trong tien trinh con rieng (khong goi _run_cli truc tiep):
+    # configure_logging() chi cau hinh 1 lan cho ca vong doi tien trinh,
+    # nen neu goi live roi backfill trong CUNG 1 tien trinh menu, lan sau
+    # se bi ghi nham vao log cua lan truoc. Moi service cung tu cai signal
+    # handler rieng, chi lam duoc tu main thread cua chinh tien trinh no.
+    from dp_program_entry import _run_role
+
+    processes = [
+        multiprocessing.Process(target=_run_role, args=(role,), name=f"dp_program_{role}")
+        for role in roles
+    ]
+    print(f"\nDang chay {' + '.join(roles)} o che do foreground. Nhan Ctrl+C de dung an toan.\n")
+    for process in processes:
+        process.start()
+    try:
+        for process in processes:
+            process.join()
+    except KeyboardInterrupt:
+        for process in processes:
+            process.join()
     _pause()
 
 
-def _install_watchdog_task() -> None:
-    from dp_program_task_setup import install_watchdog_task
+# --- Cai dat may -------------------------------------------------------------
 
-    install_watchdog_task()
+
+def _install_tasks() -> None:
+    from dp_program_task_setup import install_tasks
+
+    install_tasks()
     _pause()
 
 
@@ -140,35 +168,41 @@ def _uninstall_tasks() -> None:
 
 
 _ACTIONS: dict[str, Callable[[], None]] = {
-    "1": _view_config_and_status,
-    "2": _view_running_status,
-    "3": lambda: _run_foreground("live"),
-    "4": lambda: _run_foreground("backfill"),
-    "5": _run_both_foreground,
-    "6": _view_logs,
-    "7": _request_stop,
+    "1": _engine_status,
+    "2": _start_engine,
+    "3": _stop_engine,
+    "4": _restart_engine,
+    "5": _view_config_and_status,
+    "6": _ops_doctor,
+    "7": _view_logs,
     "8": _open_chart,
-    "9": _install_startup_task,
-    "10": _install_watchdog_task,
-    "11": _uninstall_tasks,
+    "9": lambda: _run_foreground("live"),
+    "10": lambda: _run_foreground("backfill"),
+    "11": lambda: _run_foreground("live", "backfill"),
+    "12": _install_tasks,
+    "13": _uninstall_tasks,
 }
 
 
 def _print_menu() -> None:
     print(f"\n{_TITLE}\n{'=' * len(_TITLE)}")
-    print("  Van hanh thu cong")
-    print("  1. Xem cau hinh & tinh trang he thong (settings + doctor)")
-    print("  2. Xem trang thai dang chay")
-    print("  3. Chay Live (foreground)")
-    print("  4. Chay Backfill (foreground)")
-    print("  5. Chay ca Live + Backfill (foreground)")
-    print("  6. Xem log gan nhat")
-    print("  7. Gui yeu cau dung an toan")
+    print("  Van hanh (qua Scheduled Task)")
+    print("  1. Trang thai engine")
+    print("  2. Start engine")
+    print("  3. Stop engine (dung an toan)")
+    print("  4. Restart engine (ap config.yaml moi)")
+    print("\n  Chan doan (khong thay doi gi)")
+    print("  5. Cau hinh & san sang van hanh (settings + doctor)")
+    print("  6. Suc khoe lop van hanh (task, tien trinh, chu ky)")
+    print("  7. Xem log gan nhat")
     print("  8. Mo chart (read-only, http://127.0.0.1:8050)")
-    print("\n  Cai dat van hanh nen (can quyen Administrator)")
-    print("  9. Cai dat khoi dong cung Windows + tu restart khi crash")
-    print(" 10. Cai dat Watchdog (giam sat dinh ky, canh bao khi treo)")
-    print(" 11. Go cai dat (huy Task Scheduler da dang ky)")
+    print("\n  Chay tam KHONG qua Task (debug)")
+    print("  9. Chay Live foreground")
+    print(" 10. Chay Backfill foreground")
+    print(" 11. Chay ca hai foreground")
+    print("\n  Cai dat may (can quyen Administrator)")
+    print(" 12. Cai/cap nhat Task Scheduler (engine + watchdog)")
+    print(" 13. Go toan bo Task")
     print("\n  0. Thoat")
 
 
@@ -176,7 +210,7 @@ def run_menu() -> int:
     while True:
         _print_menu()
         try:
-            choice = input("\nChon [0-11]: ").strip()
+            choice = input("\nChon [0-13]: ").strip()
         except (EOFError, KeyboardInterrupt):
             return 0
         if choice == "0":

@@ -1,5 +1,5 @@
 """Central configuration loader for DP Program V3."""
-# File này là cửa duy nhất đọc Config.yaml.
+# File này là cửa duy nhất đọc config.yaml.
 # Các module khác chỉ dùng dict config đã được chuẩn hóa ở đây.
 # Luồng chính: đọc YAML -> chặn key không được phép -> thêm mặc định kỹ thuật
 # -> đổi path về dạng tuyệt đối -> kiểm tra kiểu và ràng buộc vận hành.
@@ -13,12 +13,12 @@ from typing import Any
 import yaml
 
 # Token này là phiên guest của TradingView, không phải phiên đã đăng nhập.
-# Nếu operator dán nhầm token này vào Config.yaml, chương trình phải dừng ngay.
+# Nếu operator dán nhầm token này vào config.yaml, chương trình phải dừng ngay.
 GUEST_TOKEN = "unauthorized_user_token"
 
 
 class ConfigError(ValueError):
-    """Raised when Config.yaml is missing or invalid."""
+    """Raised when config.yaml is missing or invalid."""
     # CLI bắt lỗi này để in lỗi cấu hình ngắn gọn cho operator.
 
 
@@ -26,7 +26,7 @@ class ConfigError(ValueError):
 # Dùng để kiểm tra request backfill có đủ phủ lookback_days không.
 _MIN_TIMEFRAME_MINUTES = 5
 # Hai đối tượng SQL cố định mà engine dùng.
-# Không cho Config.yaml đổi để tránh ghi nhầm bảng hoặc procedure.
+# Không cho config.yaml đổi để tránh ghi nhầm bảng hoặc procedure.
 _TABLES = {
     "fact_table": "DWH.Fact_OHLCV",
     "load_procedure": "DWH.usp_LoadDirect",
@@ -36,7 +36,7 @@ _TABLES = {
 # Nếu DB khác version, runtime dừng trước khi ghi dữ liệu.
 _SQL_CONTRACT_VERSION = "4"
 # Các giá trị kỹ thuật do code sở hữu.
-# Operator chỉ chỉnh phần vận hành trong Config.yaml, không chỉnh nhóm này.
+# Operator chỉ chỉnh phần vận hành trong config.yaml, không chỉnh nhóm này.
 _TECHNICAL_DEFAULTS = {
     # Cấu hình kết nối TradingView cố định của engine.
     "tradingview": {
@@ -127,7 +127,7 @@ def _static_contract() -> dict[str, Any]:
     return {"tables": dict(_TABLES)}
 
 # Thêm mặc định kỹ thuật vào config.
-# Nếu Config.yaml cố override các key này thì báo lỗi ngay.
+# Nếu config.yaml cố override các key này thì báo lỗi ngay.
 def _apply_technical_defaults(config: dict[str, Any]) -> None:
     for section, defaults in _TECHNICAL_DEFAULTS.items():
         target = _mapping(config.get(section), section)
@@ -137,7 +137,7 @@ def _apply_technical_defaults(config: dict[str, Any]) -> None:
             raise ConfigError(f"technical settings are owned by configuration.py: {names}")
         target.update(deepcopy(defaults))
 
-# Đổi path tương đối thành path tuyệt đối dựa trên thư mục chứa Config.yaml.
+# Đổi path tương đối thành path tuyệt đối dựa trên thư mục chứa config.yaml.
 # Nhờ vậy service chạy từ đâu cũng dùng đúng runtime/cache/log path.
 def _resolve_paths(config: dict[str, Any], root: Path) -> None:
     app = _mapping(config.get("app"), "app")
@@ -246,7 +246,7 @@ def _validate(config: dict[str, Any]) -> None:
     backfill["run_on_start"] = _boolean(
         backfill.get("run_on_start", True), "backfill.run_on_start"
     )
-    # Key cũ scan_bars bị loại bỏ; báo lỗi để operator sửa Config.yaml.
+    # Key cũ scan_bars bị loại bỏ; báo lỗi để operator sửa config.yaml.
     if "scan_bars" in backfill:
         raise ConfigError("backfill.scan_bars was replaced by backfill.lookback_days")
     for key in ("lookback_days", "overlap_bars", "max_bars_per_request"):
@@ -288,18 +288,18 @@ def _validate(config: dict[str, Any]) -> None:
 
 
 def load_config(path: str | Path | None = None) -> dict[str, Any]:
-    """Load the single private Config.yaml and validate the result."""
-    # Đóng gói bằng PyInstaller (sys.frozen): CHỈ đọc Config.yaml cùng thư
+    """Load the single private config.yaml and validate the result."""
+    # Đóng gói bằng PyInstaller (sys.frozen): CHỈ đọc config.yaml cùng thư
     # mục với file .exe (sys.executable) — không fallback sang cwd, để
-    # tránh đọc nhầm một Config.yaml khác nếu .exe bị chạy từ working
+    # tránh đọc nhầm một config.yaml khác nếu .exe bị chạy từ working
     # directory không đúng vị trí thật của nó.
     # Nhánh else giữ y nguyên hành vi cũ khi chạy `python -m dp_program`:
     # tìm ở project root, không có thì mới fallback về cwd.
     if getattr(sys, "frozen", False):
-        default_config = Path(sys.executable).resolve().parent / "Config.yaml"
+        default_config = Path(sys.executable).resolve().parent / "config.yaml"
     else:
-        project_config = Path(__file__).resolve().parents[2] / "Config.yaml"
-        default_config = project_config if project_config.is_file() else Path.cwd() / "Config.yaml"
+        project_config = Path(__file__).resolve().parents[2] / "config.yaml"
+        default_config = project_config if project_config.is_file() else Path.cwd() / "config.yaml"
     config_path = Path(path) if path else default_config
     config_path = config_path.resolve()
     if not config_path.is_file():
@@ -308,7 +308,7 @@ def load_config(path: str | Path | None = None) -> dict[str, Any]:
         raw = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     except (OSError, yaml.YAMLError) as exc:
         raise ConfigError(f"cannot read configuration: {exc}") from exc
-    config = deepcopy(_mapping(raw, "Config.yaml"))
+    config = deepcopy(_mapping(raw, "config.yaml"))
     # Chặn những phần không thuộc quyền operator:
     # data lấy từ SQL, tables do code cố định, version SQL đi theo code.
     if "data" in config:

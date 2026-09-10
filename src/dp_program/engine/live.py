@@ -252,7 +252,7 @@ def run_live_pairs(
                             )
                             summary["ok"] += 1
                             summary["affected"] += int(result["affected"])
-                            if int(result["affected"]) > 0:
+                            if result["delivered_candles"]:
                                 publish_candle_update(
                                     config, symbol["symbol_id"], symbol["symbol"], timeframe["code"],
                                     result["delivered_candles"],
@@ -329,7 +329,7 @@ def run_live_cycle(
     # Điểm vào khi chạy một live cycle thủ công.
     # Runtime 24/7 gọi hàm thấp hơn để giữ pending qua nhiều cycle.
     if not config["live"].get("enabled", True):
-        raise RuntimeError("live fetching is disabled in Config.yaml")
+        raise RuntimeError("live fetching is disabled in config.yaml")
     pairs = select_pairs(
         config, live=True, symbol_filter=symbol, timeframe_filter=timeframe
     )

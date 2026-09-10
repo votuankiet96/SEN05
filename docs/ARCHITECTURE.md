@@ -17,8 +17,7 @@ interprocess locks.
 ## Control Flow
 
 ```text
-run_live.bat
-  -> python -m dp_program run-live
+python -m dp_program run-live   (prod: run_dp/dp_program.exe)
   -> runtime.py
   -> live.py
   -> websocket.py
@@ -29,8 +28,7 @@ run_live.bat
   -> DWH.usp_LoadDirect v4
   -> DWH.Fact_OHLCV
 
-run_backfill.bat
-  -> python -m dp_program run-backfill
+python -m dp_program run-backfill   (prod: run_dp/dp_program.exe)
   -> runtime.py
   -> backfill.py
   -> websocket.py
@@ -49,7 +47,7 @@ Runtime symbol and timeframe definitions come from SQL:
 - `DWH.Dim_Symbol`
 - `DWH.Dim_Timeframe`
 
-`Config.yaml` is only the operator parameter surface. It chooses live subsets
+`config.yaml` is only the operator parameter surface. It chooses live subsets
 and runtime cadence, but it does not define the canonical SQL universe.
 
 Backfill always uses all active SQL symbols and all SQL timeframes. Live uses
@@ -92,7 +90,7 @@ Authentication is fail-closed. The engine never runs guest.
 Auth resolution order:
 
 1. runtime cache;
-2. private `Config.yaml` token/cookie;
+2. private `config.yaml` token/cookie;
 3. HTTP session cookie refresh;
 4. persistent Chromium profile;
 5. password login;

@@ -1,16 +1,14 @@
 # DP Program V3 Operator Runbook
 
-The two foreground batch files below remain the way to operate live/backfill
-by hand (manual runs, debugging, first-time setup). For unattended 24/7
-operation, also install the Scheduled Task supervision described in
-[Scheduled Task Supervision](#scheduled-task-supervision) — it restarts a
-crashed service and pages Discord if either service goes down, which a
-foreground window left open cannot do on its own once the session that
-started it ends.
+The `python -m dp_program ...` commands below are for operating live/backfill
+by hand (manual runs, debugging, first-time setup). Unattended 24/7 operation
+runs the frozen `run_dp/dp_program.exe` under Scheduled Task supervision — see
+[Scheduled Task Supervision](#scheduled-task-supervision). A foreground window
+left open cannot survive the session that started it; the task can.
 
 ## Before Operating
 
-Do not print, paste, or commit `Config.yaml`, tokens, cookies, passwords,
+Do not print, paste, or commit `config.yaml`, tokens, cookies, passwords,
 connection strings, runtime spool, or auth cache.
 
 Run read-only checks:
@@ -31,9 +29,13 @@ Expected settings highlights:
 
 ## Start Live
 
+Pre-flight, then start (dev/test — production runs `run_dp/dp_program.exe` via
+Scheduled Task, see below):
+
 ```powershell
-.\run_live.bat check
-.\run_live.bat start
+python -m dp_program doctor
+python -m dp_program check-sql
+python -m dp_program run-live
 ```
 
 Keep the window open. Live writes:
@@ -44,14 +46,15 @@ Keep the window open. Live writes:
 Stop live gracefully from another window:
 
 ```powershell
-.\run_live.bat stop
+python -m dp_program stop --mode live
 ```
 
 ## Start Backfill
 
 ```powershell
-.\run_backfill.bat check
-.\run_backfill.bat start
+python -m dp_program doctor
+python -m dp_program check-sql
+python -m dp_program run-backfill
 ```
 
 Keep the window open. Backfill writes:
@@ -62,7 +65,7 @@ Keep the window open. Backfill writes:
 Stop backfill gracefully from another window:
 
 ```powershell
-.\run_backfill.bat stop
+python -m dp_program stop --mode backfill
 ```
 
 ## Status
@@ -120,38 +123,65 @@ Look for structured fields:
 - `event=PAIR_FAILED`
 - `risk=HIGH` or `risk=CRITICAL`
 
-## Scheduled Task Supervision
+## Cac mode cua dp_program.exe
 
-`scripts/windows/install_task.ps1` registers 3 Windows Scheduled Tasks under
-`\SEN05\`:
+Lop van hanh. Engine ben trong (core_engine) co co che chiu loi rieng, khong
+lien quan den nhung mode nay.
 
-- **SEN05 DP Program Live** / **SEN05 DP Program Backfill** — trigger
-  `AtStartup`, run `run_live.bat start` / `run_backfill.bat start`, restart up
-  to 999 times at 1-minute intervals if the process exits with a non-zero
-  code. A graceful `dp_program stop` exits 0, so it is never fought; only a
-  real crash triggers a restart.
-- **SEN05 DP Program Watchdog** — runs `scripts/windows/watchdog.py` every 5
-  minutes (`-WatchdogIntervalMinutes` to change). Read-only: it checks
-  `service_status()` for both roles and, only on the transition into
-  unhealthy (not on every poll), sends one Discord alert via
-  `discord_report.send_watchdog_alert()`. It never restarts or signals the
-  engine processes itself — recovery is Task Scheduler's job, alerting is
-  the watchdog's.
+| Goi bang | Lam gi |
+|---|---|
+| `--run` (hoac double-click khi khong co console) | Chay engine. Bo qua role da co tien trinh song, thay vi fork ra con roi chet tren instance lock |
+| double-click tu console | Menu operator |
+| `--restart` | Ap `config.yaml` moi: tien kiem -> dung sach -> bat lai. Tien kiem truot thi engine dang chay **khong bi dung** |
+| `--watchdog` | 1 luot kiem tra suc khoe. Im khi dung chu dong, canh bao khi hong that, tu restart engine treo (toi da 3 lan/gio) |
+| `--doctor-ops` | Bao cao suc khoe lop van hanh (task, tien trinh, chu ky). Chi doc, khong sua |
+| `--setup` / `--teardown` | Dang ky / go 2 task chuan, dong thoi go task the he cu |
 
-Install (run once per machine, or after changing the batch files):
+Doi `config.yaml` ma khong doi code:
 
 ```powershell
-powershell -File scripts\windows\install_task.ps1
+# sua config.yaml, roi:
+.\dp_program.exe --restart
 ```
 
-The installer runs `dp_program doctor` first and aborts without touching any
-task if it fails. It does not start the Live/Backfill tasks by default — if
-those services are already running under a manually-started process, pass
-`-StartServices` only on a fresh machine where nothing is running yet
-(otherwise the task would just hit the engine's single-instance lock and
-fail cleanly, which is harmless but pointless). Pass `-StartWatchdog` to
-start watchdog polling immediately instead of waiting for its first
-scheduled tick.
+Kiem tra lop van hanh khi nghi ngo:
+
+```powershell
+.\dp_program.exe --doctor-ops
+```
+
+## Scheduled Task Supervision
+
+Production supervision belongs to the frozen deployment in `run_dp/`, not to
+this source tree. `run_dp/install.ps1` registers, under `\SEN05\`:
+
+- **SEN05 DP Program Engine** — triggers `AtStartup`, runs
+  `run_dp/dp_program.exe` (which reads `live.enabled` / `backfill.enabled` from
+  `config.yaml` and forks whichever workflow(s) are on), restart-on-failure.
+  A graceful `dp_program stop` exits 0 so it is never fought; only a real crash
+  triggers a restart.
+- **SEN05 DP Program Watchdog** — runs `run_dp/dp_program.exe --watchdog` on a
+  fixed interval. Distinguishes four states: healthy (silent), intentionally
+  stopped (silent; a LOW reminder only after 2h), crashed (one CRITICAL Discord
+  alert, edge-triggered), and **hung** — alive but no heartbeat progress. Hung is
+  the one failure mode Task Scheduler cannot see (there is no exit code to react
+  to), so after a second consecutive detection the watchdog calls `--restart`
+  itself, capped at 3 auto-restarts per hour; past the cap it stops trying and
+  alerts that a human is needed. Division of labour: Task Scheduler restarts what
+  EXITED, the watchdog restarts what is STUCK.
+
+Install / re-register (from inside the copied `run_dp/` folder, as Administrator):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File install.ps1   # goi dp_program.exe --setup
+.\dp_program.exe --setup                               # hoac goi thang
+```
+
+`--setup` dang ky ca hai task va **go luon task the he cu** (`SEN05 DP Program
+Live` / `Backfill`, chay qua `.bat` da bi xoa). Task la trong `\SEN05\` chi duoc
+bao cao, khong bao gio bi tu dong xoa.
+
+Full deploy steps: `run_dp/DEPLOY.md`.
 
 Verify registration:
 

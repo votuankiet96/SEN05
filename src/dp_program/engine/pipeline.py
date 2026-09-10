@@ -217,14 +217,17 @@ def fetch_and_store(
                     connection=connection,
                 )
             missing = changed = unchanged = 0
+            redis_delta: list[dict[str, Any]] = []
             for candle in observed:
                 # Tạo dấu so sánh để biết nến này mới, đổi, hay y hệt SQL.
                 key = candle["timestamp"].replace(tzinfo=None)
                 candle["_signature"] = signature = candle_signature(candle)
                 if key not in existing:
                     missing += 1
+                    redis_delta.append(candle)
                 elif existing[key] != signature:
                     changed += 1
+                    redis_delta.append(candle)
                 else:
                     unchanged += 1
             needs_delivery = missing + changed > 0
@@ -267,10 +270,9 @@ def fetch_and_store(
         "changed_before": changed,
         "unchanged_before": unchanged,
         "delivery_input": len(delivery),
-        # Danh sách nến thật sự vừa ghi SQL (mới hoặc sửa) -- live.py dùng
-        # đúng danh sách này để publish Redis incremental, không cần đọc
-        # lại SQL hay đoán "cái gì mới" ở tầng khác.
-        "delivered_candles": delivery,
+        # SQL vẫn stage cả observed window theo loader v4. Danh sách này chỉ
+        # chứa candle mới hoặc revised để Redis không ghi lại phần unchanged.
+        "delivered_candles": redis_delta,
         "gap_basis": "provider_observed",
         "calendar_closures_ignored": True,
         **sql_result,

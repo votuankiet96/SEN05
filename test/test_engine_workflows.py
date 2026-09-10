@@ -903,7 +903,11 @@ def test_live_fetches_two_timeframes_for_one_symbol_in_one_batch(monkeypatch) ->
         "fetch_and_store",
         lambda _c, _s, timeframe, **kwargs: (
             deliveries.append(timeframe["code"])
-            or {"affected": 0, "received": len(kwargs["provider_candles"])}
+            or {
+                "affected": 0,
+                "received": len(kwargs["provider_candles"]),
+                "delivered_candles": [],
+            }
         ),
     )
 
@@ -1117,7 +1121,7 @@ def test_live_circuit_defers_and_rotates_remaining_pairs(monkeypatch) -> None:
         live,
         "fetch_and_store",
         lambda _config, symbol, _timeframe, **_kwargs: (
-            second_visited.append(symbol["symbol_id"]) or {"affected": 0}
+            second_visited.append(symbol["symbol_id"]) or {"affected": 0, "delivered_candles": []}
         ),
     )
     second = live.run_live_pairs(
@@ -1159,7 +1163,7 @@ def test_live_circuit_caps_total_failures_even_when_successes_are_interleaved(
         visited.append(symbol["symbol_id"])
         if len(visited) % 2:
             raise pipeline.PipelineError("fetch", RuntimeError("provider unavailable"))
-        return {"affected": 0}
+        return {"affected": 0, "delivered_candles": []}
 
     monkeypatch.setattr(
         live,

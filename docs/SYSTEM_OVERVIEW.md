@@ -20,17 +20,20 @@ TradingView
 
 Runtime entrypoints:
 
-- `run_live.bat` starts `python -m dp_program run-live`.
-- `run_backfill.bat` starts `python -m dp_program run-backfill`.
+- Dev/test: `python -m dp_program run-live` / `run-backfill` from `core_program/`
+  with `src/` on `PYTHONPATH`.
+- Production: frozen `run_dp/dp_program.exe` (built from
+  `scripts/windows/dp_program_entry.py`), installed by `run_dp/install.ps1` as the
+  `SEN05 DP Program Engine` Scheduled Task.
 
-There is no `run_dp.bat` and no Scheduled Task installer in the current pilot.
+There are no `.bat` wrappers.
 
 ## Inputs
 
 - SQL dimensions define the canonical universe:
   - `DWH.Dim_Symbol`
   - `DWH.Dim_Timeframe`
-- `Config.yaml` defines operator choices:
+- `config.yaml` defines operator choices:
   - live cadence;
   - live base bars per request;
   - live symbol/timeframe subset;
