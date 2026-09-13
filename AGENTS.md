@@ -58,14 +58,17 @@ Engine là package `dp_program` theo src layout. Các file chính:
 - `src/dp_program/util/discord_report.py`: reporter Discord tùy chọn, chỉ sống cùng
   lifecycle của `run`;
 - `src/dp_program/util/redis_publisher.py`: publisher Redis tùy chọn cho live —
-  schema 2: **mỗi nến là một Hash riêng** (`{prefix}:{tf}:{symbol}:{epoch}`, field
-  `bartime/open/high/low/close/volume`, giá trị là chuỗi số thô giữ đúng scale
-  DECIMAL của warehouse) và một List (`...:order`, epoch tăng dần, là chỉ mục duy
-  nhất để tỉa cửa sổ trượt); sau mỗi lần một pair live ghi warehouse thành công,
-  chỉ HSET đúng các nến thật sự đổi giá trị rồi PUBLISH JSON các nến đó lên kênh
-  `redis.event_channel` cho OG đọc; runtime còn tự đối chiếu (reconcile) với SQL
-  định kỳ (`redis.reconcile_interval_seconds`) và lúc khởi động; không chặn đường
-  ghi SQL chính;
+  mỗi nến là **một Hash riêng** `L_CANDLE_{SYMBOL}_{TIMEFRAME}:{stamp}` (5 field
+  OHLCV, giá trị là chuỗi số giữ đúng scale DECIMAL của warehouse), và một List
+  `L_CANDLE_{SYMBOL}_{TIMEFRAME}` chứa các `{stamp}` tăng dần làm chỉ mục duy
+  nhất. Key Hash = key List nối thêm `":" + stamp`, đúng một phép nối. `{stamp}`
+  là `YYYY-MM-DD_HH:MM:SS`, luôn UTC, không offset, rộng cố định — nhờ vậy so
+  sánh chuỗi cho đúng thứ tự thời gian (Lua dựa vào đó, không dùng `tonumber`).
+  Sau mỗi lần một pair live ghi warehouse thành công, chỉ HSET đúng các nến thật
+  sự đổi giá trị rồi PUBLISH JSON các nến đó lên kênh `redis.event_channel`;
+  runtime còn tự đối chiếu (reconcile) với SQL định kỳ
+  (`redis.reconcile_interval_seconds`) và lúc khởi động; không chặn đường ghi
+  SQL chính;
 - `src/dp_program/util/chart/server.py`: chart offline chạy thủ công, chỉ đọc Fact qua
   `sql_connector.py`.
 

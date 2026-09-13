@@ -455,7 +455,7 @@ def _redis_config() -> dict:
     return {
         "redis": {
             "enabled": True, "bars_per_snapshot": 500, "circuit_cooldown_seconds": 30,
-            "key_prefix": "dp:candles", "event_channel": "dp:events:candles",
+            "key_prefix": "L_CANDLE", "event_channel": "dp:events:candles",
         }
     }
 
@@ -484,15 +484,13 @@ def test_redis_publisher_writes_only_the_changed_candles(
     assert len(client.evals) == 1
     script, keys, rest = client.evals[0]
     assert "HSET" in script and "PUBLISH" in script and "ZADD" not in script
-    assert keys == ["dp:candles:H1:US30:order", "dp:events:candles"]
-    max_size, candle_prefix, prefix, bartime, bartime_text, o, h, low_, c, v, payload = rest
-    epoch = str(int(bar.replace(tzinfo=timezone.utc).timestamp()))
-    # Moi nen la 1 Hash rieng tai candle_prefix + epoch; List chi giu epoch.
-    assert candle_prefix == "dp:candles:H1:US30:"
-    assert bartime == epoch
-    # bartime naive giu nguyen dang naive (contract san co cua _bartime_text);
-    # nguon SQL/pipeline moi la noi quyet dinh co offset hay khong.
-    assert bartime_text == "2026-07-27 12:05:00"
+    assert keys == ["L_CANDLE_US30_H1", "dp:events:candles"]
+    max_size, candle_prefix, prefix, stamp, o, h, low_, c, v, payload = rest
+    # Key Hash = candle_prefix + stamp, tuc chinh la list_key noi them ":" +
+    # phan tu lay tu List -- dung mot phep noi, khong quy uoc nao khac.
+    assert candle_prefix == "L_CANDLE_US30_H1:"
+    assert candle_prefix == keys[0] + ":"
+    assert stamp == "2026-07-27_12:05:00"
     assert (o, h, low_, c, v) == (
         "1.50000000", "2.50000000", "1.00000000", "2.00000000", "12.0000",
     )
@@ -532,13 +530,13 @@ def test_redis_publisher_reconcile_reads_sql_and_diffs_against_current_hash(
     assert len(client.evals) == 1
     script, keys, rest = client.evals[0]
     assert "LRANGE" in script and "DEL" in script  # diffs and evicts, not a blind rewrite
-    assert keys == ["dp:candles:H1:US30:order"]
+    assert keys == ["L_CANDLE_US30_H1"]
     candle_prefix, *candle_args = rest
-    assert candle_prefix == "dp:candles:H1:US30:"
-    bartime1, _text1, *fields1 = candle_args[0:7]
-    bartime2, _text2, *fields2 = candle_args[7:14]
-    assert bartime1 == str(int(bar1.replace(tzinfo=timezone.utc).timestamp()))
-    assert bartime2 == str(int(bar2.replace(tzinfo=timezone.utc).timestamp()))
+    assert candle_prefix == "L_CANDLE_US30_H1:"
+    stamp1, *fields1 = candle_args[0:6]
+    stamp2, *fields2 = candle_args[6:12]
+    assert stamp1 == bar1.strftime("%Y-%m-%d_%H:%M:%S")
+    assert stamp2 == bar2.strftime("%Y-%m-%d_%H:%M:%S")
     assert fields1 == ["1.00000000", "2.00000000", "0.50000000", "1.50000000", "10.0000"]
     assert fields2 == ["1.50000000", "2.50000000", "1.00000000", "2.00000000", "12.0000"]
 

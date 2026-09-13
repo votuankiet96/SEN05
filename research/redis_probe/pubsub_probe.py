@@ -21,8 +21,8 @@ import sys
 import time
 
 from _probe_common import (
-    CANDLE_FIELDS, epoch_from_bartime, load_config, log_event, redis_client, remove_pidfile,
-    require_schema, run_with_reconnect, setup_probe_logging, write_pidfile,
+    CANDLE_FIELDS, load_config, log_event, redis_client, remove_pidfile, stamp_to_datetime,
+    run_with_reconnect, setup_probe_logging, write_pidfile,
 )
 
 NAME = "pubsub_probe"
@@ -50,7 +50,6 @@ def main() -> int:
 
 def _run(config: dict, logger) -> int:
     client = redis_client(config)
-    require_schema(client, config, logger, NAME)
     channel = str(config["redis"]["event_channel"])
     prefix = str(config["redis"]["key_prefix"])
     pubsub = client.pubsub()
@@ -92,21 +91,20 @@ def _handle_event(client, logger, prefix: str, raw: str, last_seen: dict[str, fl
         return 0
     pair = f"{symbol}:{timeframe}"
     last_seen[pair] = time.monotonic()
-    base = f"{prefix}:{timeframe}:{symbol}"
+    list_key = f"{prefix}_{symbol}_{timeframe}"
     mismatches = 0
     for candle in candles:
-        bartime = candle.get("bartime")
-        field = epoch_from_bartime(bartime) if bartime else None
-        if field is None:
+        stamp = candle.get("bartime")
+        if not stamp or stamp_to_datetime(stamp) is None:
             log_event(logger, "WARNING", "EVENT_CANDLE_INVALID", "MEDIUM", component=NAME, pair=pair, candle=json.dumps(candle))
             mismatches += 1
             continue
-        # Moi nen la 1 Hash rieng -- doc dung 5 field roi so tung gia tri,
-        # khong con json.loads() 1 blob nhu schema cu.
-        candle_key = f"{base}:{field}"
+        # Moc trong event dung y het dinh dang duoi key Hash, nen noi thang
+        # ra key duoc -- khong phai chuyen doi gi.
+        candle_key = f"{list_key}:{stamp}"
         stored = client.hmget(candle_key, list(CANDLE_FIELDS))
         if any(value is None for value in stored):
-            log_event(logger, "WARNING", "EVENT_NOT_IN_HASH", "MEDIUM", component=NAME, pair=pair, bartime=field, candle_key=candle_key)
+            log_event(logger, "WARNING", "EVENT_NOT_IN_HASH", "MEDIUM", component=NAME, pair=pair, bartime=stamp, candle_key=candle_key)
             mismatches += 1
             continue
         mismatched = False
@@ -118,7 +116,7 @@ def _handle_event(client, logger, prefix: str, raw: str, last_seen: dict[str, fl
                 mismatched = mismatched or float(value) != float(expected)
         if mismatched:
             log_event(
-                logger, "WARNING", "EVENT_HASH_MISMATCH", "MEDIUM", component=NAME, pair=pair, bartime=field,
+                logger, "WARNING", "EVENT_HASH_MISMATCH", "MEDIUM", component=NAME, pair=pair, bartime=stamp,
                 event_payload=json.dumps(candle), hash_payload=",".join(stored),
             )
             mismatches += 1

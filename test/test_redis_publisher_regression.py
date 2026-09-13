@@ -15,7 +15,7 @@ def _config(*, bars: int = 3) -> dict[str, Any]:
             "enabled": True,
             "bars_per_snapshot": bars,
             "circuit_cooldown_seconds": 30,
-            "key_prefix": "test:dp:candles",
+            "key_prefix": "T_CANDLE",
             "event_channel": "test:dp:events:candles",
         }
     }
@@ -43,11 +43,20 @@ def _candle(
 _FIELDS = ("open", "high", "low", "close", "volume")
 
 
+def _expect_stamp(candle: dict[str, Any]) -> str:
+    """Moc ky vong, tu dung lai doc lap voi redis_publisher._stamp().
+
+    Neu goi thang ham cua production thi mot loi trong ham do se tu xac
+    nhan la dung -- test phai tu biet ky vong dung la gi.
+    """
+    return candle["timestamp"].strftime("%Y-%m-%d_%H:%M:%S")
+
+
 class _SemanticRedis:
     """Redis thu nhỏ để kiểm tra contract giữa Python và hai Lua script.
 
-    Mỗi nến là một Hash riêng tại ``candle_prefix + epoch``; List chỉ giữ
-    epoch và là chỉ mục duy nhất để tìm nến cần xoá.
+    Mỗi nến là một Hash riêng tại ``candle_prefix + stamp``; List chỉ giữ
+    mốc thời gian và là chỉ mục duy nhất để tìm nến cần xoá.
     """
 
     def __init__(self) -> None:
@@ -59,9 +68,6 @@ class _SemanticRedis:
         self.script_calls: list[tuple[str, list[str], list[str]]] = []
         self.hash_writes = 0
         self.list_rebuilds = 0
-
-    def set(self, key: str, value: str) -> None:
-        self.strings[key] = value
 
     def register_script(self, script: str) -> Callable[..., list[int]]:
         self.registered.append(script)
@@ -77,9 +83,8 @@ class _SemanticRedis:
 
         return execute
 
-    def _write(self, key: str, bartime_text: str, values: list[str]) -> None:
+    def _write(self, key: str, values: list[str]) -> None:
         candle = self.hashes.setdefault(key, {})
-        candle["bartime"] = bartime_text
         candle.update(zip(_FIELDS, values, strict=True))
         self.hash_writes += 1
 
@@ -88,25 +93,25 @@ class _SemanticRedis:
         return tuple(candle.get(field) for field in _FIELDS) != tuple(values)
 
     def _incremental(self, keys: list[str], args: list[str]) -> list[int]:
-        order_key, channel = keys
+        list_key, channel = keys
         max_size = int(args[0])
         candle_prefix, event_prefix = args[1], args[2]
-        order = self.lists.setdefault(order_key, [])
+        order = self.lists.setdefault(list_key, [])
         changed_events: list[str] = []
         added = 0
-        for index in range(3, len(args), 8):
-            bartime, bartime_text, *values, event = args[index:index + 8]
-            key = candle_prefix + bartime
+        for index in range(3, len(args), 7):
+            stamp, *values, event = args[index:index + 7]
+            key = candle_prefix + stamp
             if self._differs(key, values):
-                self._write(key, bartime_text, values)
+                self._write(key, values)
                 changed_events.append(event)
-            if bartime not in order:
-                order.append(bartime)
-                order.sort(key=int)
+            if stamp not in order:
+                order.append(stamp)
+                order.sort()  # moc rong co dinh -> sap chuoi la dung thu tu
                 added += 1
         evicted = max(0, len(order) - max_size)
-        for bartime in order[:evicted]:
-            self.hashes.pop(candle_prefix + bartime, None)
+        for stamp in order[:evicted]:
+            self.hashes.pop(candle_prefix + stamp, None)
         if evicted:
             del order[:evicted]
         if changed_events:
@@ -116,27 +121,27 @@ class _SemanticRedis:
         return [len(changed_events), added, evicted]
 
     def _reconcile(self, keys: list[str], args: list[str]) -> list[int]:
-        order_key = keys[0]
+        list_key = keys[0]
         candle_prefix = args[0]
         wanted_order: list[str] = []
         changed = 0
-        for index in range(1, len(args), 7):
-            bartime, bartime_text, *values = args[index:index + 7]
-            wanted_order.append(bartime)
-            key = candle_prefix + bartime
+        for index in range(1, len(args), 6):
+            stamp, *values = args[index:index + 6]
+            wanted_order.append(stamp)
+            key = candle_prefix + stamp
             if self._differs(key, values):
-                self._write(key, bartime_text, values)
+                self._write(key, values)
                 changed += 1
-        current = self.lists.get(order_key, [])
+        current = self.lists.get(list_key, [])
         desired = set(wanted_order)
         removed = 0
-        for bartime in current:
-            if bartime not in desired:
-                self.hashes.pop(candle_prefix + bartime, None)
+        for stamp in current:
+            if stamp not in desired:
+                self.hashes.pop(candle_prefix + stamp, None)
                 removed += 1
         rebuilt = int(current != wanted_order)
         if rebuilt:
-            self.lists[order_key] = list(wanted_order)
+            self.lists[list_key] = list(wanted_order)
             self.list_rebuilds += 1
         return [changed, removed, rebuilt]
 
@@ -151,8 +156,8 @@ def _publisher_with_client(monkeypatch: pytest.MonkeyPatch) -> tuple[Any, _Seman
 
 
 def _keys() -> tuple[str, str]:
-    """(order_key, candle_prefix) -- key nen la candle_prefix + epoch."""
-    return "test:dp:candles:M5:GOLD:order", "test:dp:candles:M5:GOLD:"
+    """(list_key, candle_prefix) -- key nen la candle_prefix + stamp."""
+    return "T_CANDLE_GOLD_M5", "T_CANDLE_GOLD_M5:"
 
 
 def test_redis_payload_preserves_warehouse_decimal_contract() -> None:
@@ -168,17 +173,18 @@ def test_redis_payload_preserves_warehouse_decimal_contract() -> None:
     )
     args = redis_publisher._pipeline_candles_to_args([candle])
 
-    assert len(args) == 8
-    assert args[2:7] == [
+    assert len(args) == 7
+    assert args[1:6] == [
         "9999999999.12345678",
         "9999999999.22345678",
         "9999999999.02345678",
         "9999999999.12345679",
         "1234567890123456.1234",
     ]
-    event = json.loads(args[7], parse_float=Decimal)
+    assert args[0] == "2026-09-08_12:00:00"  # moc lam chi muc + duoi key Hash
+    event = json.loads(args[6], parse_float=Decimal)
     assert event == {
-        "bartime": "2026-09-08 12:00:00+00:00",
+        "bartime": "2026-09-08_12:00:00",
         "open": Decimal("9999999999.12345678"),
         "high": Decimal("9999999999.22345678"),
         "low": Decimal("9999999999.02345678"),
@@ -192,10 +198,10 @@ def test_redis_payload_uses_fixed_warehouse_scales_and_null_volume() -> None:
 
     args = redis_publisher._pipeline_candles_to_args([_candle(0, volume=None)])
 
-    assert args[2:7] == [
+    assert args[1:6] == [
         "100.00000000", "102.00000000", "99.00000000", "101.00000000", "null",
     ]
-    assert json.loads(args[7], parse_float=Decimal)["volume"] is None
+    assert json.loads(args[6], parse_float=Decimal)["volume"] is None
 
 
 def test_redis_payload_reuses_the_exact_signature_committed_to_sql() -> None:
@@ -215,8 +221,8 @@ def test_redis_payload_reuses_the_exact_signature_committed_to_sql() -> None:
 
     args = redis_publisher._pipeline_candles_to_args([candle])
 
-    assert args[2:7] == list(candle["_signature"])
-    event = json.loads(args[7], parse_float=Decimal)
+    assert args[1:6] == list(candle["_signature"])
+    event = json.loads(args[6], parse_float=Decimal)
     assert event["close"] == Decimal("101.12345679")
     assert event["volume"] == Decimal("12.3457")
 
@@ -233,10 +239,10 @@ def test_incremental_is_idempotent_and_revision_does_not_duplicate_order(
     publisher._publish_one(config, "GOLD", "M5", [original])
     publisher._publish_one(config, "GOLD", "M5", [revision])
 
-    order_key, candle_prefix = _keys()
-    epoch = str(int(original["timestamp"].timestamp()))
-    assert client.lists[order_key] == [epoch]
-    assert client.hashes[candle_prefix + epoch]["close"] == "101.25000000"
+    list_key, candle_prefix = _keys()
+    stamp = _expect_stamp(original)
+    assert client.lists[list_key] == [stamp]
+    assert client.hashes[candle_prefix + stamp]["close"] == "101.25000000"
     assert len(client.published) == 2
     assert all(len(json.loads(message)["candles"]) == 1 for _, message in client.published)
 
@@ -252,13 +258,12 @@ def test_incremental_sorts_late_arrival_and_trims_oldest_without_duplicates(
         publisher._publish_one(config, "GOLD", "M5", [candle])
     publisher._publish_one(config, "GOLD", "M5", [_candle(10)])
 
-    order_key, candle_prefix = _keys()
-    expected = [str(int(candle["timestamp"].timestamp())) for candle in candles[1:]]
-    expected.sort(key=int)
-    assert client.lists[order_key] == expected
-    assert set(client.hashes) == {candle_prefix + epoch for epoch in expected}
-    assert len(client.lists[order_key]) == len(set(client.lists[order_key]))
-    oldest = str(int(candles[0]["timestamp"].timestamp()))
+    list_key, candle_prefix = _keys()
+    expected = sorted(_expect_stamp(candle) for candle in candles[1:])
+    assert client.lists[list_key] == expected
+    assert set(client.hashes) == {candle_prefix + stamp for stamp in expected}
+    assert len(client.lists[list_key]) == len(set(client.lists[list_key]))
+    oldest = _expect_stamp(candles[0])
     assert candle_prefix + oldest not in client.hashes
 
 
@@ -271,11 +276,11 @@ def test_incremental_deduplicates_unsorted_input_with_latest_value_winning(
 
     publisher._publish_one(_config(), "GOLD", "M5", [_candle(10), original, latest, _candle(0)])
 
-    order_key, candle_prefix = _keys()
-    order = client.lists[order_key]
-    assert order == sorted(set(order), key=int)
-    epoch = str(int(latest["timestamp"].timestamp()))
-    assert client.hashes[candle_prefix + epoch]["close"] == "101.75000000"
+    list_key, candle_prefix = _keys()
+    order = client.lists[list_key]
+    assert order == sorted(set(order))
+    stamp = _expect_stamp(latest)
+    assert client.hashes[candle_prefix + stamp]["close"] == "101.75000000"
     assert len(json.loads(client.published[0][1])["candles"]) == 3
 
 
@@ -285,14 +290,14 @@ def test_incremental_repairs_partial_hash_without_duplicating_order(
     publisher, client = _publisher_with_client(monkeypatch)
     candle = _candle(0)
     publisher._publish_one(_config(), "GOLD", "M5", [candle])
-    order_key, candle_prefix = _keys()
-    epoch = client.lists[order_key][0]
-    del client.hashes[candle_prefix + epoch]["volume"]
+    list_key, candle_prefix = _keys()
+    stamp = client.lists[list_key][0]
+    del client.hashes[candle_prefix + stamp]["volume"]
 
     publisher._publish_one(_config(), "GOLD", "M5", [candle])
 
-    assert client.lists[order_key] == [epoch]
-    assert client.hashes[candle_prefix + epoch]["volume"] == "12.5000"
+    assert client.lists[list_key] == [stamp]
+    assert client.hashes[candle_prefix + stamp]["volume"] == "12.5000"
     assert len(client.published) == 2
 
 
@@ -302,7 +307,7 @@ def test_reconcile_patches_only_differences_and_rebuilds_list_only_when_needed(
     from dp_program.util import redis_publisher
 
     publisher, client = _publisher_with_client(monkeypatch)
-    order_key, candle_prefix = _keys()
+    list_key, candle_prefix = _keys()
     rows = [
         (
             candle["timestamp"], candle["open"], candle["high"], candle["low"],
@@ -319,12 +324,12 @@ def test_reconcile_patches_only_differences_and_rebuilds_list_only_when_needed(
 
     assert client.hash_writes == writes_after_first
     assert client.list_rebuilds == rebuilds_after_first
-    client.lists[order_key] = list(reversed(client.lists[order_key]))
+    client.lists[list_key] = list(reversed(client.lists[list_key]))
     stale = candle_prefix + "1757000000"
-    client.lists[order_key].append("1757000000")
+    client.lists[list_key].append("1757000000")
     client.hashes[stale] = {"bartime": "cu", "close": "1"}
     publisher._reconcile_one(_config(), 9, "GOLD", "M5")
-    assert client.lists[order_key] == sorted(client.lists[order_key], key=int)
+    assert client.lists[list_key] == sorted(client.lists[list_key])
     assert stale not in client.hashes
     assert client.list_rebuilds == rebuilds_after_first + 1
     assert client.published == []

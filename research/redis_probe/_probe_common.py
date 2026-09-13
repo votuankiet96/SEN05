@@ -37,14 +37,10 @@ from dp_program.log import log_event, safe_error  # noqa: E402
 __all__ = [
     "load_config", "log_event", "safe_error",
     "setup_probe_logging", "write_pidfile", "remove_pidfile",
-    "redis_client", "epoch_from_bartime", "run_with_reconnect",
-    "require_schema", "CANDLE_FIELDS", "LOG_DIR", "RUN_DIR",
+    "redis_client", "stamp_to_datetime", "list_keys", "run_with_reconnect",
+    "CANDLE_FIELDS", "LOG_DIR", "RUN_DIR",
 ]
 
-# Phai khop SCHEMA_VERSION trong redis_publisher.py. Probe chay code cu se
-# dung ngay thay vi doc nham du lieu -- dung su co 2026-09-08, khi probe cu
-# doc schema moi va hoac crash hoac bao sai.
-SCHEMA_VERSION = "2"
 CANDLE_FIELDS = ("open", "high", "low", "close", "volume")
 
 LOG_DIR = _PROBE_DIR / "probe_logs"
@@ -148,32 +144,26 @@ def run_with_reconnect(run_once, logger: logging.Logger, component: str, *, retr
             time.sleep(retry_seconds)
 
 
-def epoch_from_bartime(bartime: str) -> int | None:
-    """Parse a candle JSON's bartime string back to epoch seconds.
+def stamp_to_datetime(stamp: str) -> datetime | None:
+    """Doc moc thoi gian cua key/List ve datetime UTC.
 
-    redis_publisher._candle_json() hien serialize bartime bang
-    isoformat(sep=" ") -- nen tuy nguon (incremental tu pipeline.py,
-    tz-aware, co hau to +00:00) hay reconcile (tu SQL, naive) ma chuoi
-    co the co hoac khong co offset. datetime.fromisoformat() tu Python
-    3.11 doc duoc ca 2 dang; gia dinh UTC khi thieu tzinfo.
+    Dinh dang do redis_publisher._stamp() sinh ra: YYYY-MM-DD_HH:MM:SS,
+    luon UTC, khong hau to offset.
     """
     try:
-        parsed = datetime.fromisoformat(str(bartime))
+        return datetime.strptime(str(stamp), "%Y-%m-%d_%H:%M:%S").replace(tzinfo=timezone.utc)
     except ValueError:
         return None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return int(parsed.timestamp())
 
 
-def require_schema(client, config: dict[str, Any], logger: logging.Logger, component: str) -> None:
-    """Dung probe neu Redis dang o schema khac voi code nay doc duoc."""
-    found = client.get(f"{config['redis']['key_prefix']}:schema")
-    if found == SCHEMA_VERSION:
-        return
-    log_event(
-        logger, "ERROR", "PROBE_SCHEMA_MISMATCH", "HIGH", component=component,
-        expected=SCHEMA_VERSION, found=found,
-        action="probe dung -- cap nhat code probe cho khop schema Redis",
-    )
-    raise SystemExit(1)
+def list_keys(client, prefix: str):
+    """Duyet cac key List chi muc, bo qua key Hash cua tung nen.
+
+    Ca hai deu bat dau bang cung tien to; khac nhau o cho key Hash co them
+    ":" + moc thoi gian, con ten List thi khong bao gio chua ":" (symbol va
+    timeframe deu khong co dau hai cham). Loc bang ten re hon goi TYPE cho
+    tung key trong hang chuc nghin key.
+    """
+    for key in client.scan_iter(match=f"{prefix}_*", count=500):
+        if ":" not in key:
+            yield key
