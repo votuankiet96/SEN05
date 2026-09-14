@@ -69,7 +69,7 @@ Ranh giới này dẫn đến ba quyết định quan trọng:
    DP không chủ động publish một nến trước khi `fetch_and_store()` trả về thành công.
 
 Điều thứ ba là bảo đảm của đường code này, không phải bảo đảm cho một writer bên
-ngoài DP. Nếu có process khác ghi vào prefix `L_CANDLE_*`, contract không còn được
+ngoài DP. Nếu có process khác ghi vào prefix `CANDLE:*`, contract không còn được
 DP kiểm soát.
 
 ---
@@ -81,22 +81,26 @@ này là cấu hình vận hành, không phải hằng số của kiến trúc; 
 cửa sổ trong báo cáo này đều phụ thuộc giá trị đó.
 
 ```text
-LIST  L_CANDLE_{SYMBOL}_{TIMEFRAME}
-      [stamp-1, stamp-2, ..., stamp-n]       # YYYY-MM-DD_HH:MM:SS UTC, tăng dần
+LIST  CANDLE:{SYMBOL}_{TIMEFRAME}
+      [stamp-1, stamp-2, ..., stamp-n]       # YYYY-MM-DD_HH-MM-SS UTC, tăng dần
 
-HASH  L_CANDLE_{SYMBOL}_{TIMEFRAME}:{stamp}
-      open     <decimal text>
-      high     <decimal text>
-      low      <decimal text>
-      close    <decimal text>
-      volume   <decimal text | "null">
+HASH  CANDLE:{SYMBOL}_{TIMEFRAME}:{stamp}
+      timestamp  <epoch giây UTC của open time>
+      datetime   <open time dạng người đọc: 2026-09-08 14:00:00>
+      open       <decimal text>
+      high       <decimal text>
+      low        <decimal text>
+      close      <decimal text>
+      volume     <decimal text | "null">
+      source     <{BrokerChannel}:{Symbol}, vd CAPITALCOM:US30>
+      inserttime <Fact_OHLCV.CreatedAt dạng người đọc>
 ```
 
 Ví dụ với `US30` timeframe `H1`:
 
 ```text
-L_CANDLE_US30_H1
-L_CANDLE_US30_H1:2026-09-08_14:00:00
+CANDLE:US30_H1
+CANDLE:US30_H1:2026-09-08_14-00-00
 ```
 
 Key Hash bằng đúng key List nối thêm `":" + stamp` lấy từ List — một phép nối duy
@@ -109,13 +113,21 @@ chèn nến đến muộn và tỉa cửa sổ chỉ bằng `<`/`>` trên chuỗ
 (vốn trả `nil` với chuỗi dạng này). Thêm offset hoặc để độ rộng thay đổi sẽ phá bất
 biến đó.
 
+Giờ-phút-giây trong `{stamp}` dùng `-` chứ không dùng `:` vì Redis không có thư mục
+nhưng mọi GUI đều tách key theo `:` để dựng cây — `HH:MM:SS` sẽ đẻ ra ba tầng thư
+mục rỗng cho mỗi nến. Nhờ vậy dấu `:` chỉ còn ở đúng hai chỗ mang nghĩa phân cấp:
+sau prefix và trước mốc. Đếm dấu `:` cũng là cách phân biệt rẻ nhất: **key List có
+đúng 1, key Hash có đúng 2**.
+
 List không lưu giá. Nó là **chỉ mục thời gian** để reader biết cần đọc hash nào và
 để DP biết nến cũ nhất cần tỉa. List được duy trì theo stamp tăng dần; đây không
 phải chỉ là thứ tự một nến đến Redis. Nếu một nến đến muộn, Lua chèn nó vào đúng vị
 trí theo thời gian.
 
-Nến được định danh bởi stamp nằm trong chính tên key, không phải bởi toàn bộ giá trị
-OHLCV, và cũng không còn field `bartime` bên trong Hash. Khi provider hoặc SQL hiệu
+Nến được định danh bởi stamp nằm trong chính tên key. Hash có hai field mô tả lại
+chính mốc đó (`timestamp` dạng epoch và `datetime` dạng người đọc) để consumer khỏi
+phải parse, nhưng cả hai đều sinh ra từ đúng một nguồn nên không thể lệch khỏi tên
+key. Khi provider hoặc SQL hiệu
 chỉnh một nến, DP ghi đè field của đúng Hash đó. Vì vậy Redis giữ **phiên bản
 canonical mới nhất theo SQL tại thời điểm đồng bộ** cho mỗi stamp, thay vì giữ lịch
 sử các lần sửa nến.
@@ -182,8 +194,10 @@ Tóm lại: **Hash giữ nội dung; List giữ thứ tự và phạm vi cửa s
 ### 5.1. Incremental update: đường nhanh
 
 Sau khi SQL ghi thành công, `live.py` đưa `delivered_candles` vào publisher. Publisher
-coalesce theo `(symbol, timeframe, stamp)`: nếu cùng stamp được enqueue nhiều lần
-trước khi worker xử lý, bản mới nhất thay thế bản trước trong hàng đợi RAM.
+chỉ giữ lại **mốc thời gian** của chúng, coalesce theo `(symbol, timeframe, stamp)`;
+giá trị provider trong RAM bị bỏ đi. Trước khi ghi Redis, worker đọc lại đúng những
+row đó từ `DWH.Fact_OHLCV` — vì `inserttime` chỉ SQL mới biết, và vì như vậy Redis
+không thể trở thành một nhánh dữ liệu song song với SQL.
 
 Worker gọi `_INCREMENTAL_SCRIPT` bằng Lua. Với mỗi nến, script:
 
@@ -257,7 +271,7 @@ tục ghi.
 | Một Pub/Sub subscriber offline | Không replay event | OG phải đọc lại Hash/List khi khởi động, reconnect hoặc resync định kỳ |
 | Nến đến muộn | Lua chèn stamp theo thứ tự | Chi phí dựng lại List tăng theo kích thước cửa sổ, hiện được giới hạn bởi cấu hình |
 | Nến revise | HSET đúng Hash stamp; List không tạo stamp trùng | Event chỉ có khi OHLCV canonical đổi |
-| Writer ngoài contract ghi `L_CANDLE_*` | Không có cơ chế chặn ở Redis trong code DP | Có thể tạo key rác hoặc phá bất biến; cần quyền ghi/prefix ownership và giám sát vận hành |
+| Writer ngoài contract ghi `CANDLE:*` | Không có cơ chế chặn ở Redis trong code DP | Có thể tạo key rác hoặc phá bất biến; cần quyền ghi/prefix ownership và giám sát vận hành |
 | Redis đầy hoặc lỗi script | Worker coi là lỗi publish và retry theo circuit breaker | SQL vẫn là nguồn dữ liệu, nhưng Redis/OG có thể chậm cho đến khi lỗi được xử lý |
 
 `state_probe.py` kiểm tra cấu trúc các pair có List: thứ tự stamp, duplicate, hash
@@ -280,7 +294,7 @@ số phiên bản.
 from decimal import Decimal
 
 def latest_closes(redis_client, symbol: str, timeframe: str, n: int) -> list[Decimal]:
-    list_key = f"L_CANDLE_{symbol}_{timeframe}"
+    list_key = f"CANDLE:{symbol}_{timeframe}"
     stamps = redis_client.lrange(list_key, -n, -1)
     pipe = redis_client.pipeline(transaction=False)
     for stamp in stamps:

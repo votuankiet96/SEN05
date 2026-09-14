@@ -1,4 +1,4 @@
-"""Probe doc lap: quan sat Redis keyspace notification cho key L_CANDLE_*.
+"""Probe doc lap: quan sat Redis keyspace notification cho key CANDLE:*.
 
 Xac nhan lenh Redis (HSET/HDEL/RPUSH/LPOP/DEL) THAT SU chay tren
 server -- tin hieu nay do chinh Redis phat ra khi thuc thi lenh, hoan
@@ -56,7 +56,7 @@ def _run(config: dict, logger) -> int:
     else:
         log_event(logger, "INFO", "KEYSPACE_NOTIFY_ENABLED", "NONE", component=NAME, flags=flags)
 
-    pattern = f"__keyspace@{db}__:{prefix}_*"
+    pattern = f"__keyspace@{db}__:{prefix}:*"
     pubsub = client.pubsub()
     pubsub.psubscribe(pattern)
     log_event(logger, "INFO", "PROBE_STARTED", "NONE", component=NAME, channel_pattern=pattern)

@@ -8,15 +8,19 @@
 > và điểm đáng ngờ) được viết thẳng, gồm cả những chỗ tự thấy yếu — nhưng vẫn
 > nên đọc với giả định người viết có điểm mù.
 >
-> Trạng thái repo tại thời điểm viết: nhánh `v5-redis`, commit `35ab215`,
-> working tree sạch. Mọi số liệu đo lúc **2026-09-14 01:52 UTC**.
+> Trạng thái repo tại thời điểm viết: nhánh `v5-redis`. Số liệu đo trên Redis
+> production lúc **2026-09-14 01:52 UTC**.
+>
+> **Cập nhật sau bản đầu:** contract đã đổi thêm một lần nữa sang thế hệ 4
+> (`CANDLE:{SYMBOL}_{TIMEFRAME}`, mốc `HH-MM-SS`, Hash 9 field) — xem mục 4 và 5.2. Phần code đã sửa xong và test xanh, **nhưng chưa deploy**: Redis production
+> lúc đo vẫn đang chạy thế hệ 3. Vì vậy số liệu ở mục 12 là của thế hệ 3.
 
 ---
 
 ## 1. Phạm vi audit
 
 **Trong phạm vi:** toàn bộ chặng DP → Redis. Cụ thể là
-`core_program/src/dp_program/util/redis_publisher.py` (524 dòng), phần config
+`core_program/src/dp_program/util/redis_publisher.py` (468 dòng), phần config
 Redis trong `configuration.py`, hai điểm gọi trong `engine/live.py` và
 `engine/runtime.py`, và hai hàm đọc SQL trong `engine/sql_connector.py`.
 
@@ -93,7 +97,7 @@ Trích từ `core_program/AGENTS.md`, đây là các ràng buộc kiến trúc c
 
 ---
 
-## 4. Lịch sử: ba thế hệ cấu trúc
+## 4. Lịch sử: bốn thế hệ cấu trúc
 
 Quan trọng để hiểu vì sao cấu trúc hiện tại trông như vậy.
 
@@ -136,13 +140,52 @@ Giải quyết được vấn đề encoding (Hash 6 field → `listpack`). Như
   OG suy ra sai format và biến các dòng thiểu số thành `NaT`.
 - Có key đánh số phiên bản schema, và OG kiểm nó lúc khởi động.
 
-### Thế hệ 3 (hiện tại)
+### Thế hệ 3 (đã chạy production 2026-09-13 → nay)
 
-Do người dùng chỉ định trực tiếp — xem mục 5.
+Do người dùng chỉ định trực tiếp — xem mục 5.1.
+
+```text
+LIST  L_CANDLE_{SYMBOL}_{TIMEFRAME}       [2026-09-08_14:00:00, ...]
+HASH  L_CANDLE_{SYMBOL}_{TIMEFRAME}:{stamp}    5 field OHLCV
+```
+
+**Vấn đề lộ ra khi vận hành:** mốc chứa `HH:MM:SS`. Redis không có thư mục, nhưng
+mọi GUI (Redis Desktop Manager, RedisInsight) đều **tách key theo dấu `:`** để dựng
+cây. Nên mỗi nến đẻ ra ba tầng thư mục rỗng:
+
+```text
+L_CANDLE_BTCUSD_D1 / 2026-06-05_21 / 00 / 00
+```
+
+Với 16.500 Hash thì cây key không đọc được bằng mắt nữa. Đây là lỗi thiết kế thật:
+lúc chọn định dạng mốc tôi chỉ kiểm tính đúng đắn (rộng cố định, sort được) mà
+**không kiểm nó hiển thị ra sao trong công cụ mà người vận hành thực sự dùng**.
+
+### Thế hệ 4 (hiện tại trong code, chưa deploy)
+
+Do người dùng chỉ định trực tiếp — xem mục 5.2.
+
+```text
+LIST  CANDLE:{SYMBOL}_{TIMEFRAME}              [2026-07-29_06-00-00, ...]
+HASH  CANDLE:{SYMBOL}_{TIMEFRAME}:{stamp}      9 field
+```
+
+Ba thay đổi so với thế hệ 3:
+
+1. **Giờ-phút-giây dùng `-`**: `2026-07-29_06-00-00`. Dấu `:` chỉ còn ở đúng hai
+   chỗ mang nghĩa phân cấp, nên GUI hiện đúng hai tầng: nhóm `CANDLE`, rồi từng
+   pair. Mốc vẫn rộng cố định nên **không mất tính sort-được bằng chuỗi**.
+2. **Prefix tách bằng `:`**: `CANDLE:BTCUSD_H1` thay vì `L_CANDLE_BTCUSD_H1`, để
+   List nằm ngang hàng với folder pair trong GUI. Hệ quả phụ đáng chú ý: cách phân
+   biệt List với Hash đổi từ *"không chứa `:`"* sang *"đếm dấu `:`: List 1, Hash 2"*.
+3. **Hash lên 9 field**: thêm `timestamp` (epoch), `datetime` (dạng người đọc),
+   `source` (`{BrokerChannel}:{Symbol}`), `inserttime` (`Fact_OHLCV.CreatedAt`).
 
 ---
 
 ## 5. Yêu cầu người dùng giao (nguyên văn)
+
+### 5.1. Yêu cầu sinh ra thế hệ 3
 
 Yêu cầu gốc, nguyên văn tiếng Việt:
 
@@ -171,6 +214,33 @@ Yêu cầu nền, từ các lượt trước đó trong cùng dự án:
 > n nến theo symbol/timeframe/indicator để tính chứ sao? ví dụ ma 20 thì cần 20
 > nến gần nhất, atr 5 thì chỉ tính dựa trên 5 nến gần nhất
 
+### 5.2. Yêu cầu sinh ra thế hệ 4
+
+Sau khi thế hệ 3 chạy production, người dùng mở Redis Desktop Manager và thấy cây
+key bị lồng theo giờ/phút/giây. Yêu cầu tiếp theo, tóm tắt sát nguyên văn:
+
+> Vì timestamp trong key có dấu `:` ở phần giờ/phút/giây, Redis Desktop Manager tự
+> tách thành folder lồng folder: `L_CANDLE_BTCUSD_D1 / 2026-06-05_21 / 00 / 00`.
+> Đây không phải cấu trúc mong muốn. Nó làm UI rối, khó kiểm tra thủ công.
+>
+> Format bắt buộc: LIST `CANDLE:{SYMBOL}_{TIMEFRAME}`, HASH
+> `CANDLE:{SYMBOL}_{TIMEFRAME}:{YYYY-MM-DD_HH-MM-SS}`.
+>
+> Hash field bắt buộc: `timestamp`, `datetime`, `open`, `high`, `low`, `close`,
+> `volume`, `source`, `inserttime`.
+>
+> `source`: dạng `{BrokerChannel}:{Symbol}`, ví dụ `CAPITALCOM:BTCUSD`.
+> `inserttime`: thời điểm row được ghi vào SQL Fact nếu lấy được từ
+> `DWH.Fact_OHLCV.CreatedAt`. **Không được tự bịa bằng thời điểm publish Redis**
+> nếu mục tiêu là phản ánh SQL thật.
+>
+> Không deploy production hoặc flush Redis khi chưa có approval riêng.
+
+**Điểm buộc phải thay đổi kiến trúc:** `inserttime` chỉ SQL mới biết. Đường
+incremental trước đây **không đọc SQL** — nó publish thẳng giá trị provider đang có
+sẵn trong RAM. Để có `inserttime` thật mà không bịa, đường này giờ **đọc lại đúng
+những row vừa ghi từ `Fact_OHLCV`** trước khi ghi Redis. Chi tiết ở mục 13.11.
+
 > list là dùng để truy vấn theo time series với thứ tự thời gian, còn hash là
 > lưu được dữ liệu nến gồm OHLC, làm thế nào cách lưu thật sự gọn gàng mà phía
 > og có thể truy vấn nhanh và chính xác vào đó, nhưng **hiển thị vẫn tươm tất**
@@ -185,10 +255,12 @@ Diễn giải của tôi — đây là chỗ đầu tiên có thể sai, nên au
 |---|---|---|
 | "List chứa Hash" | List không chứa dữ liệu giá, nó chứa **khoá trỏ tới** Hash; List là chỉ mục thời gian | List chỉ giữ chuỗi mốc thời gian |
 | "giá trị của List chính là timestamp (open time)" | Phần tử List = thời điểm **mở** nến, không phải thời điểm đóng | Dùng `BarTime` của warehouse, vốn là open time |
-| "định dạng date & time rút gọn (không có chữ T)" | Người dùng muốn **đọc được bằng mắt** trên Redis GUI, không phải epoch số | `YYYY-MM-DD_HH:MM:SS` |
-| "`L_CANDLE_SYMBOL_TIMEFRAME`" | SYMBOL **trước**, TIMEFRAME **sau** — đảo so với thế hệ 2 | `L_CANDLE_US30_H1` |
-| "`L_CANDLE_SYMBOL_TIMEFRAME:timestamp`" | Key Hash = **đúng tên List** nối thêm `":" + mốc` | Một phép nối duy nhất |
-| "ko parse" | Phía OG không phải `json.loads` hay tách chuỗi để lấy giá | Hash 5 field phẳng, giá trị là chuỗi số trần |
+| "định dạng date & time rút gọn (không có chữ T)" | Người dùng muốn **đọc được bằng mắt** trên Redis GUI, không phải epoch số | `YYYY-MM-DD_HH-MM-SS` |
+| "`L_CANDLE_SYMBOL_TIMEFRAME`" | SYMBOL **trước**, TIMEFRAME **sau** — đảo so với thế hệ 2 | `CANDLE:US30_H1` |
+| "`..._TIMEFRAME:timestamp`" | Key Hash = **đúng tên List** nối thêm `":" + mốc` | Một phép nối duy nhất |
+| "ko parse" | Phía OG không phải `json.loads` hay tách chuỗi để lấy giá | Hash field phẳng, giá trị là chuỗi số trần |
+| "folder lồng folder... làm UI rối" | Định dạng key phải đúng **cả khi nhìn trong công cụ vận hành**, không chỉ đúng về logic | `-` thay `:` trong giờ-phút-giây |
+| "không được tự bịa `inserttime`" | Redis phải là **bản chụp của SQL**, không phải nguồn độc lập | Cả hai đường ghi đều đọc lại row từ SQL |
 | "hiển thị vẫn tươm tất" | Mở Redis GUI lên phải hiểu ngay, không cần công cụ giải mã | Mốc dạng người đọc được; Hash 5 dòng rõ ràng |
 
 **Suy luận thêm mà người dùng không nói ra, tôi tự quyết:**
@@ -226,6 +298,9 @@ gốc, và nó biến ba tính chất "UTC / không offset / rộng cố định
 |---|---|---|
 | Một Hash lớn cho cả pair (500 nến × 5 field) | `hashtable` | ~378 B |
 | Một Hash riêng mỗi nến (5 field) | `listpack` | ~200 B |
+
+Thế hệ 4 lên 9 field/nến — vẫn xa ngưỡng 128 field nên vẫn `listpack`; đã kiểm lại
+trực tiếp trên Redis thật bằng key tạm.
 
 Redis giữ `listpack` khi Hash ≤ 128 field (`hash-max-listpack-entries`). Hash 5
 field luôn nằm dưới ngưỡng. Kiểm lại hôm nay: `OBJECT ENCODING` của cả Hash và
@@ -300,7 +375,7 @@ def _stamp(bartime: Any) -> str:
         )
     else:
         value = datetime.fromtimestamp(int(float(bartime)), timezone.utc).replace(tzinfo=None)
-    return value.strftime("%Y-%m-%d_%H:%M:%S")
+    return value.strftime("%Y-%m-%d_%H-%M-%S")
 ```
 
 Đây là **hàm duy nhất** sinh mốc, dùng chung cho cả đường incremental lẫn
@@ -505,7 +580,7 @@ redis:
   timeout_seconds: 0.3
   circuit_cooldown_seconds: 30
   bars_per_snapshot: 100
-  key_prefix: "L_CANDLE"
+  key_prefix: "CANDLE"   # production còn "L_CANDLE" tới lúc deploy
   event_channel: "dp:events:candles"
   reconcile_interval_seconds: 1800
 ```
@@ -594,16 +669,17 @@ việc bỏ key schema (mục 7.4) có cái giá mà lúc thiết kế tôi khô
 nhưng chưa sửa, kèm đánh giá mức độ của tôi — mà auditor nên kiểm lại chứ đừng
 tin.
 
-### 13.1. Event có thể phát cho nến vừa bị tỉa mất
+### 13.1. Event phát cho nến vừa bị tỉa mất — ĐÃ SỬA ở thế hệ 4
 
 Trong `_INCREMENTAL_SCRIPT`, event được gom **trong vòng lặp**, còn eviction chạy
 **sau vòng lặp**, và `PUBLISH` chạy **sau eviction**. Một nến đến muộn nằm ngoài
 cửa sổ sẽ được `HSET`, được đưa vào payload, rồi bị `LPOP` + `DEL` ngay trong
 cùng script — nhưng event vẫn được phát.
 
-Hệ quả: consumer nhận event cho một nến không tồn tại trên Redis. *Mức độ theo
-tôi: thấp* (OG đã xử lý Hash thiếu, và OG dùng event chỉ như tín hiệu rồi đọc
-lại). Nhưng nó là mâu thuẫn thật giữa event và state.
+Thế hệ 4 chặn từ phía Python thay vì sửa Lua: `_publish_one()` chỉ lấy `window`
+mốc mới nhất (`bartimes[-window:]`) trước khi đọc SQL, nên nến cũ hơn cửa sổ không
+bao giờ đi vào script. Cùng một dòng đó cũng chặn luôn rủi ro vượt trần 2100
+tham số của SQL Server khi catch-up dài. Có test khoá hành vi này.
 
 ### 13.2. `DEL` rồi `RPUSH` — script Lua không rollback
 
@@ -665,7 +741,7 @@ Không có chỗ nào trong code chặn giá trị này.
 
 Nghĩa là `HSET` và `RPUSH` trên dữ liệu nến **không phát keyspace notification**.
 Thiết kế hiện tại không phụ thuộc vào đó (dùng Pub/Sub tầng ứng dụng), nên không
-gãy. Nhưng repo có `research/redis_probe/keyspace_probe.py` lắng `__keyspace@0__:L_CANDLE_*`
+gãy. Nhưng repo có `research/redis_probe/keyspace_probe.py` lắng `__keyspace@0__:CANDLE:*`
 — probe đó gần như mù với cấu hình này. Cần xác nhận probe đó còn ý nghĩa không.
 
 ### 13.8. Hàng đợi in-RAM, không bền, không giới hạn
@@ -681,6 +757,24 @@ script cho list key + channel. Redis Cluster yêu cầu mọi key script chạm 
 được khai báo và cùng slot. Hiện là deployment một node nên không sao; muốn
 chuyển Cluster phải thiết kế lại, không chỉ thêm hash tag.
 
+### 13.11. Đường incremental giờ phụ thuộc SQL (mới ở thế hệ 4)
+
+Trước đây đường nhanh không chạm SQL: nó publish thẳng giá trị provider đã nằm sẵn
+trong RAM. Từ thế hệ 4 nó **đọc lại row từ `Fact_OHLCV`** cho đúng các mốc vừa ghi,
+vì `inserttime` không thể có bằng cách nào khác mà không bịa.
+
+Đánh đổi, cần auditor xác nhận là chấp nhận được:
+
+- **Được:** Redis chắc chắn là bản chụp của SQL; hai đường ghi dùng chung đúng một
+  hàm dựng giá trị; không còn khả năng provider và SQL lệch nhau trên Redis.
+- **Mất:** thêm một truy vấn nhỏ mỗi pair mỗi cycle (thường 1-2 dòng, `WHERE
+  BarTime IN (...)`), và SQL trục trặc giờ cũng mở circuit breaker của publisher —
+  trước đây chỉ Redis trục trặc mới mở. Không chặn việc fetch hay ghi SQL vì worker
+  là thread nền.
+
+Chưa đo tải thật của thay đổi này trên production (chưa deploy) — liên quan trực
+tiếp tới mục 13.4.
+
 ### 13.10. Không có cơ chế cho consumer tự phát hiện thế hệ sai
 
 Hệ quả trực tiếp của mục 7.4, đã gây sự cố thật ở 12.3. Hiện không có bất kỳ
@@ -691,7 +785,7 @@ chỉ đọc ra rỗng và im lặng.
 
 ## 14. Đề nghị auditor trả lời cụ thể
 
-1. Cấu trúc `L_CANDLE_{SYMBOL}_{TIMEFRAME}` + `:{stamp}` có thật sự là cách gọn
+1. Cấu trúc `CANDLE:{SYMBOL}_{TIMEFRAME}` + `:{stamp}` có thật sự là cách gọn
    nhất cho nhu cầu "lấy N nến gần nhất, không parse" không? Có phương án nào
    tốt hơn mà vẫn giữ được yêu cầu "hiển thị tươm tất" của người dùng?
 2. Việc dựa vào **so sánh chuỗi** thay cho so sánh thời gian trong Lua (mục 6)

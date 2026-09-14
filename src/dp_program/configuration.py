@@ -177,7 +177,7 @@ def _validate(config: dict[str, Any]) -> None:
     redis_cfg.setdefault("host", "")
     redis_cfg.setdefault("username", "")
     redis_cfg.setdefault("password", "")
-    redis_cfg.setdefault("key_prefix", "L_CANDLE")
+    redis_cfg.setdefault("key_prefix", "CANDLE")
     redis_cfg.setdefault("event_channel", "dp:events:candles")
     redis_cfg.setdefault("port", 6379)
     redis_cfg.setdefault("db", 0)
@@ -189,7 +189,7 @@ def _validate(config: dict[str, Any]) -> None:
     redis_cfg["host"] = str(redis_cfg["host"] or "").strip()
     redis_cfg["username"] = str(redis_cfg["username"] or "").strip()
     redis_cfg["password"] = str(redis_cfg["password"] or "").strip()
-    redis_cfg["key_prefix"] = str(redis_cfg["key_prefix"] or "L_CANDLE").strip()
+    redis_cfg["key_prefix"] = str(redis_cfg["key_prefix"] or "CANDLE").strip()
     redis_cfg["event_channel"] = str(redis_cfg["event_channel"] or "dp:events:candles").strip()
     for key in ("port", "bars_per_snapshot", "circuit_cooldown_seconds", "reconcile_interval_seconds"):
         redis_cfg[key] = _positive_int(redis_cfg[key], f"redis.{key}")

@@ -1,164 +1,177 @@
-# Prompt đồng bộ cho OG (core_python) — cấu trúc Redis mới
+# Prompt đồng bộ cho OG (core_python) — cấu trúc Redis `CANDLE:`
 
-> Copy toàn bộ phần trong khung dưới đây gửi cho phía OG.
-> Thay thế `OG_REDIS_AUDIT_PROMPT.md` (mô tả cấu trúc cũ, đã bỏ).
+> Copy toàn bộ phần dưới đây gửi cho phía OG.
+>
+> **Lịch sử:** đây là lần đổi contract thứ hai. Bản trước (`L_CANDLE_{SYMBOL}_{TIMEFRAME}`,
+> mốc `HH:MM:SS`, Hash 5 field) đã bị thay thế — nếu OG vừa migrate sang bản đó thì
+> phần lớn công sức vẫn dùng lại được, chỉ đổi cách ghép key, định dạng mốc, và
+> thêm 4 field metadata.
 
 ---
 
-DP (`dp_program_v3`, VM-DP6) đã đổi sang cấu trúc Redis mới và **đã xoá sạch toàn
-bộ dữ liệu cũ**. Mọi key `dp:candles:*` **không còn tồn tại** — code đọc Redis
-hiện tại của OG sẽ nhận `nil`/rỗng ở mọi truy vấn. Cần sửa phía đọc theo đúng mô
-tả dưới đây.
+DP (`dp_program_v3`, VM-DP6) đổi cấu trúc key trên Redis. Vẫn **db0**, vẫn cùng
+server `10.11.12.8:6379`, vẫn channel `dp:events:candles` — chỉ đổi **cách đặt tên
+key, định dạng mốc thời gian, và bộ field trong Hash**.
 
-Đây là cấu trúc **đã chốt và duy nhất** sẽ dùng từ nay. Không còn đánh số phiên
-bản schema, và key `dp:candles:schema` **đã bị bỏ** — nếu OG đang kiểm key này
-lúc khởi động thì phải gỡ đoạn kiểm đó, nếu không OG sẽ tự dừng.
+## 1. Vì sao đổi
 
-Redis: `10.11.12.8:6379`, db 0. Channel Pub/Sub: `dp:events:candles` (không đổi).
-
-## 1. Việc OG phải làm trước tiên: xoá dữ liệu cũ phía OG
-
-DP đã xoá sạch trên Redis. OG cũng phải xoá mọi bản sao/cache cũ của mình:
-
-- Mọi cache nến trong bộ nhớ hoặc trên đĩa dựng từ cấu trúc `dp:candles:*` cũ.
-- Mọi key Redis do OG tự ghi mà còn bám tên cũ (nếu có).
-- Khởi động lại tiến trình OG để không còn giữ window cũ trong RAM.
-
-Không được trộn dữ liệu cũ với mới: định dạng mốc thời gian đã đổi hoàn toàn.
-
-## 2. Bố trí key mới
+Bản trước đặt mốc trong key dạng `2026-06-05_21:00:00`. Redis không có thư mục —
+nhưng Redis Desktop Manager (và mọi GUI khác) **tách key theo dấu `:`** để dựng cây.
+Nên mỗi nến đẻ ra ba tầng thư mục rỗng:
 
 ```
-LIST  L_CANDLE_{SYMBOL}_{TIMEFRAME}
-        ["2026-09-13_15:30:00", "2026-09-13_15:35:00", "2026-09-13_15:40:00"]
-
-HASH  L_CANDLE_{SYMBOL}_{TIMEFRAME}:{stamp}
-        open   52547.00000000
-        high   52549.00000000
-        low    52536.00000000
-        close  52538.00000000
-        volume 25.0000
+L_CANDLE_BTCUSD_D1 / 2026-06-05_21 / 00 / 00      ← không đọc được
 ```
 
-Ví dụ thật đang chạy:
+Đổi giờ-phút-giây sang `-` thì dấu `:` chỉ còn ở đúng hai chỗ có nghĩa, và cây
+hiện đúng hai tầng:
 
 ```
-LRANGE L_CANDLE_US30_M5 -3 -1
-  1) "2026-09-11_20:45:00"
-  2) "2026-09-11_20:50:00"
-  3) "2026-09-11_20:55:00"
-
-HGETALL "L_CANDLE_US30_M5:2026-09-11_20:55:00"
-  open   52547.00000000
-  high   52549.00000000
-  low    52536.00000000
-  close  52538.00000000
-  volume 25.0000
+CANDLE
+  CANDLE:BTCUSD_H1                           ← List, nằm ngang với folder pair
+  BTCUSD_H1
+    CANDLE:BTCUSD_H1:2026-07-29_04-00-00     ← Hash từng nến
+    CANDLE:BTCUSD_H1:2026-07-29_05-00-00
+    CANDLE:BTCUSD_H1:2026-07-29_06-00-00
 ```
 
-**Ba điều quan trọng nhất:**
+Mốc vẫn rộng cố định nên **so sánh chuỗi vẫn đúng thứ tự thời gian** — không mất
+gì khi đổi `:` thành `-`.
 
-1. **Key Hash = key List nối thêm `":" + phần tử lấy từ List`.** Đúng một phép
-   nối, không quy ước nào khác. Cầm tên List và một phần tử là dựng ra key Hash.
-2. **Thứ tự: SYMBOL trước, TIMEFRAME sau** — `L_CANDLE_US30_M5`, không phải
-   `L_CANDLE_M5_US30`. Phân tách bằng `_`.
-3. **Hash chỉ có 5 field OHLCV.** Không còn field `bartime` — mốc thời gian đã
-   nằm trong chính tên key.
-
-## 3. Định dạng mốc thời gian
+## 2. Bố trí key
 
 ```
-YYYY-MM-DD_HH:MM:SS        vd: 2026-09-13_15:40:00
+LIST  CANDLE:{SYMBOL}_{TIMEFRAME}
+        ["2026-07-29_04-00-00", "2026-07-29_05-00-00", "2026-07-29_06-00-00"]
+
+HASH  CANDLE:{SYMBOL}_{TIMEFRAME}:{YYYY-MM-DD_HH-MM-SS}
+        timestamp   1785301200
+        datetime    2026-07-29 06:00:00
+        open        100.00000000
+        high        102.00000000
+        low         99.00000000
+        close       101.00000000
+        volume      12.5000
+        source      CAPITALCOM:BTCUSD
+        inserttime  2026-07-29 06:07:03
 ```
 
-- **Luôn UTC**, **không có hậu tố offset** (`+00:00` đã bỏ hoàn toàn).
-- Dấu phân tách giữa ngày và giờ là **gạch dưới `_`**, không phải `T`, không phải
-  dấu cách.
-- Rộng cố định, có đệm 0.
+**Ba quy tắc, không có quy tắc thứ tư:**
 
-**Hệ quả OG nên tận dụng:** vì rộng cố định nên **so sánh chuỗi đã cho đúng thứ
-tự thời gian** — không cần parse ra datetime chỉ để sắp xếp hay so sánh. Đã kiểm
-cả các mốc vượt ngày/tháng/năm. Chỉ parse khi thực sự cần đối tượng datetime:
+1. **Key Hash = key List + `":" + phần tử lấy từ List`.** Đúng một phép nối.
+2. **SYMBOL trước, TIMEFRAME sau**, nối bằng `_`: `CANDLE:BTCUSD_H1`, không phải
+   `CANDLE:H1_BTCUSD`.
+3. **Mốc dùng `-` cho giờ-phút-giây**, `_` giữa ngày và giờ: `2026-07-29_06-00-00`.
+   Không `T`, không dấu cách, không `:`, không offset.
+
+Đếm dấu `:` là cách kiểm nhanh: **key List có đúng 1, key Hash có đúng 2.**
+
+## 3. Định dạng mốc (phần tử List và đuôi key Hash)
+
+```
+YYYY-MM-DD_HH-MM-SS        vd: 2026-07-29_06-00-00
+```
+
+- **Luôn UTC**, **không hậu tố offset**.
+- Rộng cố định, có đệm 0 → so sánh/sắp xếp trực tiếp trên chuỗi là đúng thứ tự
+  thời gian. Chỉ parse khi thật sự cần đối tượng `datetime`:
 
 ```python
-datetime.strptime(stamp, "%Y-%m-%d_%H:%M:%S").replace(tzinfo=timezone.utc)
+datetime.strptime(stamp, "%Y-%m-%d_%H-%M-%S").replace(tzinfo=timezone.utc)
 ```
 
-## 4. Giá trị trong Hash
+## 4. Chín field trong Hash
 
-- Tất cả là **chuỗi text**, giữ nguyên scale DECIMAL của warehouse:
-  giá scale 8 (`"52547.00000000"`), volume scale 4 (`"25.0000"`).
-- `volume` có thể là chuỗi literal `"null"` khi provider không trả volume —
-  `float("null")` sẽ ném lỗi, phải xử lý.
-- **KHÔNG phải JSON.** Không `json.loads` trên value của Hash; `float()` hoặc
-  `Decimal()` trực tiếp.
+| Field | Kiểu | Ý nghĩa |
+|---|---|---|
+| `timestamp` | chuỗi số nguyên | Unix epoch **giây, UTC** của open time |
+| `datetime` | chuỗi | open time dạng người đọc: `2026-07-29 06:00:00` (dấu `:` ở đây vô hại — nó là **giá trị**, không phải tên key) |
+| `open` `high` `low` `close` | chuỗi thập phân | scale 8, đúng DECIMAL của warehouse |
+| `volume` | chuỗi thập phân | scale 4; có thể là literal `"null"` |
+| `source` | chuỗi | `{BrokerChannel}:{Symbol}`, vd `CAPITALCOM:BTCUSD` |
+| `inserttime` | chuỗi | **`Fact_OHLCV.CreatedAt` thật** — thời điểm row được ghi vào SQL, không phải thời điểm publish Redis |
 
-## 5. Cách đọc N nến gần nhất
+Lưu ý quan trọng:
+
+- **Tất cả là chuỗi text, KHÔNG phải JSON.** Không `json.loads` trên value của
+  Hash; dùng `float()` / `Decimal()` trực tiếp.
+- `volume == "null"` sẽ làm `float()` ném lỗi — phải xử lý riêng.
+- `timestamp` và `datetime` là **hai cách biểu diễn cùng một open time**, và trùng
+  với mốc trong tên key. Dùng cái nào tiện nhất; không cái nào được phép lệch.
+
+## 5. Đọc N nến gần nhất
 
 Cố định 2 round-trip bất kể N, không parse gì:
 
 ```python
 def latest_closes(r, symbol: str, timeframe: str, n: int) -> list[float]:
-    """Vd MA20: latest_closes(r, "US30", "M5", 20)"""
-    list_key = f"L_CANDLE_{symbol}_{timeframe}"
-    stamps = r.lrange(list_key, -n, -1)              # round-trip 1
+    """Vd MA20: latest_closes(r, "BTCUSD", "H1", 20)"""
+    list_key = f"CANDLE:{symbol}_{timeframe}"
+    stamps = r.lrange(list_key, -n, -1)               # round-trip 1
     pipe = r.pipeline(transaction=False)
     for stamp in stamps:
-        pipe.hget(f"{list_key}:{stamp}", "close")     # key = list_key + ":" + stamp
-    return [float(v) for v in pipe.execute()]         # round-trip 2
+        pipe.hget(f"{list_key}:{stamp}", "close")      # key = list_key + ":" + stamp
+    return [float(v) for v in pipe.execute()]          # round-trip 2
 ```
 
-Chỉ báo cần nhiều field (vd ATR cần high/low/close) thì đổi `hget` thành
-`hmget(key, "high", "low", "close")` — vẫn một pipeline, chỉ kéo đúng field cần.
+Chỉ báo cần nhiều field (ATR cần high/low/close) thì đổi `hget` →
+`hmget(key, "high", "low", "close")` — vẫn một pipeline.
 
-Lấy trọn một nến: `HGETALL "L_CANDLE_{sym}_{tf}:{stamp}"` → dict 5 field sẵn dùng.
-Lấy nến mới nhất: `LINDEX L_CANDLE_{sym}_{tf} -1` → stamp → `HGETALL`.
+Cửa sổ hiện tại **100 nến/pair**. Đọc độ dài từ `LLEN` hoặc dùng `LRANGE` chỉ số
+âm, đừng hardcode.
 
-Cửa sổ hiện tại là **100 nến/pair**. Nên đọc độ dài từ `LLEN` hoặc dùng `LRANGE`
-với chỉ số âm (tự trả ít hơn nếu List ngắn hơn) thay vì hardcode.
+## 6. Pub/Sub — cơ chế không đổi, chỉ đổi định dạng mốc
 
-## 6. Kênh Pub/Sub — không đổi cơ chế, chỉ đổi định dạng mốc
-
-Channel `dp:events:candles`, payload mỗi message (per-pair):
+Channel `dp:events:candles`:
 
 ```json
-{"symbol":"US30","timeframe":"M5","candles":[
-  {"bartime":"2026-09-13_15:40:00","open":52547.00000000,"high":52549.00000000,
-   "low":52536.00000000,"close":52538.00000000,"volume":25.0000}]}
+{"symbol":"BTCUSD","timeframe":"H1","candles":[
+  {"bartime":"2026-07-29_06-00-00","open":100.00000000,"high":102.00000000,
+   "low":99.00000000,"close":101.00000000,"volume":12.5000}]}
 ```
 
-- `bartime` trong event dùng **đúng định dạng mốc của key Hash**, nên nối thẳng
-  ra key được: `f"L_CANDLE_{symbol}_{timeframe}:{candle['bartime']}"`.
-- Trong payload event, OHLCV là **số JSON** (không ngoặc kép); trong Hash là
-  **chuỗi**. Hai đường đọc, hai kiểu dữ liệu — giữ tách bạch như OG đang làm.
+- `bartime` dùng **đúng định dạng mốc mới**, nối thẳng ra key Hash được:
+  `f"CANDLE:{symbol}_{timeframe}:{candle['bartime']}"`.
+- Event chỉ mang 5 giá trị OHLCV (dạng **số JSON**), không mang 4 field metadata —
+  muốn metadata thì đọc Hash.
 - DP chỉ publish khi giá trị **thực sự đổi**; ghi lại y hệt không sinh event.
 - Mỗi message chỉ liên quan **một** `(symbol, timeframe)`.
-- Pub/Sub là fire-and-forget: mất message không mất dữ liệu — Hash/List luôn là
-  bản đúng để đọc lại, và DP tự đối chiếu với SQL định kỳ.
+- Fire-and-forget: mất message không mất dữ liệu; Hash/List luôn là bản đúng.
 
 ## 7. Checklist sửa code phía OG
 
-1. Xoá/không dùng mọi tham chiếu tới `dp:candles:*`.
-2. Đổi cách dựng key: `L_CANDLE_{SYMBOL}_{TIMEFRAME}` cho List,
-   `list_key + ":" + stamp` cho Hash. Chú ý **SYMBOL trước TIMEFRAME**.
-3. Bỏ đọc field `bartime` trong Hash (không còn). Mốc lấy từ phần tử List.
-4. Đổi định dạng mốc sang `YYYY-MM-DD_HH:MM:SS` (gạch dưới, UTC, không offset).
-   Nếu đang parse `+00:00` thì bỏ.
-5. **Gỡ đoạn kiểm `GET dp:candles:schema`** — key này không còn, giữ lại sẽ làm
-   OG tự dừng.
-6. Xử lý `volume == "null"`.
-7. Không hardcode 100; đọc từ `LLEN` hoặc dùng `LRANGE` chỉ số âm.
-8. Xoá cache/bản sao dữ liệu cũ và khởi động lại OG (mục 1).
+1. Đổi cách dựng key List: `f"CANDLE:{symbol}_{timeframe}"` (trước là
+   `f"L_CANDLE_{symbol}_{timeframe}"`).
+2. Key Hash giữ nguyên quy tắc `list_key + ":" + stamp` — không đổi.
+3. Đổi định dạng mốc: `"%Y-%m-%d_%H:%M:%S"` → **`"%Y-%m-%d_%H-%M-%S"`**. Đây là
+   thay đổi dễ bỏ sót nhất vì chỉ khác hai ký tự.
+4. Nếu đang phân biệt key List với key Hash bằng `":" in key` thì **không còn đúng**
+   (key List giờ cũng có `:`). Đổi sang `key.count(":") == 1`, hoặc dùng
+   `SCAN ... TYPE list` (OG đã dùng cách này — vẫn đúng, không phải sửa).
+5. Hash giờ có **9 field**. Nếu code đang assert đúng 5 field thì phải nới ra.
+   Đừng `float()` lên `datetime`/`source`/`inserttime`.
+6. Cân nhắc dùng `timestamp` (epoch) thay cho việc tự parse mốc — rẻ hơn.
+7. `config.yaml` phía OG: `key_prefix` đổi `L_CANDLE` → **`CANDLE`**.
+8. **Restart tiến trình `og_signal.live_worker` sau khi sửa.** Lần trước tiến
+   trình cũ chạy code cũ trong RAM suốt 8 giờ, đọc ra rỗng mà không báo lỗi, mất
+   18 signal. Sửa file trên đĩa là chưa đủ.
 
-## 8. Đảm bảo từ phía DP
+## 8. Thời điểm cắt và dữ liệu cũ
 
-- **Không có nến mồ côi**: mọi ghi đi qua đúng một Lua script atomic; List là chỉ
-  mục duy nhất; eviction xoá key Hash trong cùng script đã LPOP mốc đó.
-- **List luôn tăng dần**, kể cả khi nến đến muộn (DP chèn đúng vị trí).
+DP **chưa deploy** bản này. Hai bên chốt giờ cắt trước, rồi:
+
+- DP dừng engine, deploy exe mới, xoá key `L_CANDLE_*` cũ, khởi động lại.
+- OG deploy code mới **và restart worker**.
+
+Trong lúc chưa cắt, Redis vẫn đang chạy contract `L_CANDLE_*` cũ — OG không cần
+vội. Sau khi cắt, key `L_CANDLE_*` sẽ không còn tồn tại.
+
+## 9. Đảm bảo từ phía DP
+
+- **Không có nến mồ côi**: mọi ghi qua đúng một Lua script atomic; List là chỉ mục
+  duy nhất; eviction xoá key Hash trong cùng script đã LPOP mốc đó.
+- **List luôn tăng dần**, kể cả khi nến đến muộn.
 - **Nến hiệu chỉnh ghi đè tại chỗ**, không sinh bản trùng.
-- **Tự phục hồi**: DP đối chiếu toàn bộ với SQL lúc khởi động và định kỳ sau đó,
-  nên Hash/List không thể lệch SQL vĩnh viễn. Ngay sau một lần restart có thể
-  thiếu nến mới nhất trong vài phút cho tới lần đối chiếu kế tiếp — đọc lại là có.
-- Đã kiểm sau khi triển khai: **163/165 pair khớp chính xác với SQL** ngay lập
-  tức; 2 pair còn lại lệch đúng các nến đóng trong cửa sổ restart và đã tự khớp
-  sau lần đối chiếu kế tiếp.
+- **Mọi giá trị đọc lại từ SQL trước khi ghi Redis** — kể cả trên đường live. Redis
+  là bản chụp của `DWH.Fact_OHLCV`, không phải một nhánh dữ liệu song song.
+- **Tự phục hồi**: DP đối chiếu toàn bộ với SQL lúc khởi động và mỗi 30 phút.

@@ -358,19 +358,33 @@ def fetch_existing_candles(config: dict[str, Any], symbol_id: int, timeframe_cod
         }
     finally:
         if connection is None: active.close()
+# Cột nến chuẩn cho cả hai hàm đọc bên dưới; alias `f` là bảng Fact.
+_CANDLE_COLUMNS = "f.BarTime,f.[Open],f.High,f.Low,f.[Close],f.Volume,f.CreatedAt"
+
+
 def read_latest_candles(
     config: dict[str, Any], symbol_id: int, timeframe_code: str, limit: int,
+    bartimes: list[Any] | None = None,
 ) -> list[tuple[Any, ...]]:
-    """Read the most recent N committed Fact candles for one pair, oldest first."""
-    # Redis publisher dùng hàm này để lấy cửa sổ nến mới nhất cho một pair.
+    """Read committed Fact candles for one pair, oldest first, with CreatedAt."""
+    # Redis publisher dùng hàm này cho cả hai đường. Truyền `bartimes` thì chỉ
+    # lấy đúng các mốc đó (đường incremental chỉ cần vài nến vừa ghi); bỏ trống
+    # thì lấy N nến mới nhất (đường reconcile). `CreatedAt` đi kèm để Redis ghi
+    # được `inserttime` thật của row SQL thay vì thời điểm publish.
     fact_table = _quoted_name(config["tables"]["fact_table"])
+    source = (f"FROM {fact_table} f JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID=f.TimeframeID"
+              " WHERE f.SymbolID=? AND tf.Code=?")
     connection = get_connection(config)
     try:
         cursor = connection.cursor()
-        cursor.execute(f"""SELECT TOP (?) f.BarTime,f.[Open],f.High,f.Low,f.[Close],f.Volume
-            FROM {fact_table} f JOIN DWH.Dim_Timeframe tf ON tf.TimeframeID=f.TimeframeID
-            WHERE f.SymbolID=? AND tf.Code=? ORDER BY f.BarTime DESC""",
-            int(limit), int(symbol_id), timeframe_code)
+        if bartimes:
+            marks = ",".join("?" * len(bartimes))
+            cursor.execute(
+                f"SELECT {_CANDLE_COLUMNS} {source} AND f.BarTime IN ({marks})"
+                " ORDER BY f.BarTime", int(symbol_id), timeframe_code, *bartimes)
+            return list(cursor.fetchall())
+        cursor.execute(f"SELECT TOP (?) {_CANDLE_COLUMNS} {source} ORDER BY f.BarTime DESC",
+                       int(limit), int(symbol_id), timeframe_code)
         return list(reversed(cursor.fetchall()))
     finally:
         connection.close()
@@ -402,10 +416,10 @@ def read_latest_candles_for_pairs(
             "INSERT INTO #RedisPairs (SymbolID, TFCode) VALUES (?, ?)", requested
         )
         cursor.execute(f"""SELECT p.SymbolID,p.TFCode,c.BarTime,
-                c.[Open],c.High,c.Low,c.[Close],c.Volume
+                c.[Open],c.High,c.Low,c.[Close],c.Volume,c.CreatedAt
             FROM #RedisPairs p
             JOIN DWH.Dim_Timeframe tf ON tf.Code=p.TFCode
-            CROSS APPLY (SELECT TOP (?) f.BarTime,f.[Open],f.High,f.Low,f.[Close],f.Volume
+            CROSS APPLY (SELECT TOP (?) {_CANDLE_COLUMNS}
                 FROM {fact_table} f
                 WHERE f.SymbolID=p.SymbolID AND f.TimeframeID=tf.TimeframeID
                 ORDER BY f.BarTime DESC) c

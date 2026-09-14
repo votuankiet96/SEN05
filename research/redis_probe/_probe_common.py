@@ -38,10 +38,14 @@ __all__ = [
     "load_config", "log_event", "safe_error",
     "setup_probe_logging", "write_pidfile", "remove_pidfile",
     "redis_client", "stamp_to_datetime", "list_keys", "run_with_reconnect",
-    "CANDLE_FIELDS", "LOG_DIR", "RUN_DIR",
+    "CANDLE_FIELDS", "NUMERIC_FIELDS", "LOG_DIR", "RUN_DIR",
 ]
 
-CANDLE_FIELDS = ("open", "high", "low", "close", "volume")
+# Dung bo field cua mot Hash nen. NUMERIC_FIELDS la phan duy nhat parse
+# duoc ra so; timestamp/datetime/source/inserttime la metadata dang chuoi.
+CANDLE_FIELDS = ("timestamp", "datetime", "open", "high", "low", "close",
+                 "volume", "source", "inserttime")
+NUMERIC_FIELDS = ("open", "high", "low", "close", "volume")
 
 LOG_DIR = _PROBE_DIR / "probe_logs"
 RUN_DIR = _PROBE_DIR / "run"
@@ -147,11 +151,12 @@ def run_with_reconnect(run_once, logger: logging.Logger, component: str, *, retr
 def stamp_to_datetime(stamp: str) -> datetime | None:
     """Doc moc thoi gian cua key/List ve datetime UTC.
 
-    Dinh dang do redis_publisher._stamp() sinh ra: YYYY-MM-DD_HH:MM:SS,
-    luon UTC, khong hau to offset.
+    Dinh dang do redis_publisher._stamp() sinh ra: YYYY-MM-DD_HH-MM-SS,
+    luon UTC, khong hau to offset. Gio-phut-giay dung "-" chu khong phai
+    ":" de Redis GUI khong tach moi nen thanh ba tang thu muc rong.
     """
     try:
-        return datetime.strptime(str(stamp), "%Y-%m-%d_%H:%M:%S").replace(tzinfo=timezone.utc)
+        return datetime.strptime(str(stamp), "%Y-%m-%d_%H-%M-%S").replace(tzinfo=timezone.utc)
     except ValueError:
         return None
 
@@ -159,11 +164,11 @@ def stamp_to_datetime(stamp: str) -> datetime | None:
 def list_keys(client, prefix: str):
     """Duyet cac key List chi muc, bo qua key Hash cua tung nen.
 
-    Ca hai deu bat dau bang cung tien to; khac nhau o cho key Hash co them
-    ":" + moc thoi gian, con ten List thi khong bao gio chua ":" (symbol va
-    timeframe deu khong co dau hai cham). Loc bang ten re hon goi TYPE cho
-    tung key trong hang chuc nghin key.
+    Ca hai deu bat dau bang "{prefix}:"; khac nhau o cho key Hash co them
+    ":" + moc thoi gian nua, nen ten List co dung 1 dau ":" con key Hash co
+    2 (symbol, timeframe va moc deu khong chua dau hai cham). Loc bang ten
+    re hon goi TYPE cho tung key trong hang chuc nghin key.
     """
-    for key in client.scan_iter(match=f"{prefix}_*", count=500):
-        if ":" not in key:
+    for key in client.scan_iter(match=f"{prefix}:*", count=500):
+        if key.count(":") == 1:
             yield key
