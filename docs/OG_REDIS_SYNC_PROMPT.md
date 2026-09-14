@@ -156,15 +156,26 @@ Channel `dp:events:candles`:
    trình cũ chạy code cũ trong RAM suốt 8 giờ, đọc ra rỗng mà không báo lỗi, mất
    18 signal. Sửa file trên đĩa là chưa đủ.
 
-## 8. Thời điểm cắt và dữ liệu cũ
+## 8. Thời điểm cắt và trạng thái hiện tại
 
-DP **chưa deploy** bản này. Hai bên chốt giờ cắt trước, rồi:
+**db0 đã được xoá sạch lúc 2026-09-14 04:37 UTC** (16.665 key). db1 — nơi OG ghi
+signal — **không bị đụng tới**, vẫn nguyên 601 key.
 
-- DP dừng engine, deploy exe mới, xoá key `L_CANDLE_*` cũ, khởi động lại.
-- OG deploy code mới **và restart worker**.
+Nhưng DP **chưa deploy exe mới**. Nên ngay lúc này engine cũ đang nạp lại db0 theo
+đúng contract **cũ** `L_CANDLE_*`, và cửa sổ đang mỏng (mỗi pair 1-2 nến) cho tới
+lần reconcile kế tiếp. Nghĩa là:
 
-Trong lúc chưa cắt, Redis vẫn đang chạy contract `L_CANDLE_*` cũ — OG không cần
-vội. Sau khi cắt, key `L_CANDLE_*` sẽ không còn tồn tại.
+- OG đọc lúc này sẽ thấy **thiếu nến** — chưa đủ 100 để tính indicator.
+- Cấu trúc đang có vẫn là `L_CANDLE_*`, **chưa phải** `CANDLE:*`.
+
+Thứ tự cắt còn lại:
+
+1. DP build exe mới, dừng engine, xoá lại key `L_CANDLE_*`, đổi `key_prefix` sang
+   `CANDLE`, khởi động lại. Reconcile lúc khởi động sẽ nạp đủ 100 nến cho cả 165
+   pair ngay.
+2. OG deploy code mới **và restart `og_signal.live_worker`**.
+
+Sau bước 1, key `L_CANDLE_*` sẽ không còn tồn tại.
 
 ## 9. Đảm bảo từ phía DP
 
