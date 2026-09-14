@@ -97,7 +97,7 @@ Khi sửa code:
 5. Mọi config access chỉ nằm trong `src/dp_program/configuration.py`.
 6. Giữ `src/dp_program/engine/` đúng 8 file Python; mọi file tối đa 300 dòng
    code (dòng trống và dòng comment nguyên dòng không tính vào giới hạn này —
-   xem `_code_line_count()` trong `test/test_v3.py` và `test/test_util.py`),
+   xem `_code_line_count()` trong `test/test_util.py`),
    riêng `sql_connector.py` tối đa 460 dòng code vì nó gộp SQL access và
    contract để không tạo thêm file. Utility đúng 3 file Python (`discord_report.py`,
    `redis_publisher.py`, `chart/server.py`); không tạo shim hoặc owner trùng.
