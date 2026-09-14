@@ -89,6 +89,6 @@ redis:
   timeout_seconds: 0.3
   circuit_cooldown_seconds: 30
   bars_per_snapshot: 500
-  key_prefix: "dp:candles"
+  key_prefix: "L_CANDLE"
   event_channel: "dp:events:candles"
   reconcile_interval_seconds: 1800

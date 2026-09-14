@@ -69,7 +69,7 @@ Ranh giới này dẫn đến ba quyết định quan trọng:
    DP không chủ động publish một nến trước khi `fetch_and_store()` trả về thành công.
 
 Điều thứ ba là bảo đảm của đường code này, không phải bảo đảm cho một writer bên
-ngoài DP. Nếu có process khác ghi vào prefix `dp:candles:*`, contract không còn được
+ngoài DP. Nếu có process khác ghi vào prefix `L_CANDLE_*`, contract không còn được
 DP kiểm soát.
 
 ---
@@ -81,36 +81,44 @@ này là cấu hình vận hành, không phải hằng số của kiến trúc; 
 cửa sổ trong báo cáo này đều phụ thuộc giá trị đó.
 
 ```text
-LIST  dp:candles:{timeframe}:{symbol}:order
-      [epoch-1, epoch-2, ..., epoch-n]       # epoch UTC theo giây, tăng dần
+LIST  L_CANDLE_{SYMBOL}_{TIMEFRAME}
+      [stamp-1, stamp-2, ..., stamp-n]       # YYYY-MM-DD_HH:MM:SS UTC, tăng dần
 
-HASH  dp:candles:{timeframe}:{symbol}:{epoch}
-      bartime  <ISO text>
+HASH  L_CANDLE_{SYMBOL}_{TIMEFRAME}:{stamp}
       open     <decimal text>
       high     <decimal text>
       low      <decimal text>
       close    <decimal text>
       volume   <decimal text | "null">
-
-STRING dp:candles:schema = "2"
 ```
 
-Ví dụ với `US30:H1`:
+Ví dụ với `US30` timeframe `H1`:
 
 ```text
-dp:candles:H1:US30:order
-dp:candles:H1:US30:1788876000
+L_CANDLE_US30_H1
+L_CANDLE_US30_H1:2026-09-08_14:00:00
 ```
 
+Key Hash bằng đúng key List nối thêm `":" + stamp` lấy từ List — một phép nối duy
+nhất, không có quy ước đặt tên nào khác. Không còn key đánh số phiên bản schema;
+đây là cấu trúc đã chốt và duy nhất.
+
+`{stamp}` luôn là UTC, rộng cố định, đệm 0 và **không mang hậu tố offset**. Đó không
+phải lựa chọn thẩm mỹ: nhờ vậy so sánh chuỗi trùng với so sánh thời gian, nên Lua
+chèn nến đến muộn và tỉa cửa sổ chỉ bằng `<`/`>` trên chuỗi, không cần `tonumber`
+(vốn trả `nil` với chuỗi dạng này). Thêm offset hoặc để độ rộng thay đổi sẽ phá bất
+biến đó.
+
 List không lưu giá. Nó là **chỉ mục thời gian** để reader biết cần đọc hash nào và
-để DP biết nến cũ nhất cần tỉa. List được duy trì theo epoch tăng dần; đây không
+để DP biết nến cũ nhất cần tỉa. List được duy trì theo stamp tăng dần; đây không
 phải chỉ là thứ tự một nến đến Redis. Nếu một nến đến muộn, Lua chèn nó vào đúng vị
 trí theo thời gian.
 
-Nến được định danh bởi key có epoch cố định, không phải bởi toàn bộ giá trị OHLCV.
-Khi provider hoặc SQL hiệu chỉnh một nến, DP ghi đè field của đúng Hash đó. Vì vậy
-Redis giữ **phiên bản canonical mới nhất theo SQL tại thời điểm đồng bộ** cho mỗi
-epoch, thay vì giữ lịch sử các lần sửa nến.
+Nến được định danh bởi stamp nằm trong chính tên key, không phải bởi toàn bộ giá trị
+OHLCV, và cũng không còn field `bartime` bên trong Hash. Khi provider hoặc SQL hiệu
+chỉnh một nến, DP ghi đè field của đúng Hash đó. Vì vậy Redis giữ **phiên bản
+canonical mới nhất theo SQL tại thời điểm đồng bộ** cho mỗi stamp, thay vì giữ lịch
+sử các lần sửa nến.
 
 Các giá trị số được chuẩn hoá theo contract `DECIMAL` của warehouse trước khi đưa
 vào Redis: giá có scale 8 và volume có scale 4. Publisher không chuyển chúng qua
@@ -122,7 +130,7 @@ vào Redis: giá có scale 8 và volume có scale 4. Publisher không chuyển c
 
 ### 4.1. Bài toán là trạng thái, không phải nhật ký lệnh
 
-Một candle cần trả lời câu hỏi: “OHLCV hiện hành của epoch này là gì?”. OG có thể
+Một candle cần trả lời câu hỏi: “OHLCV hiện hành của stamp này là gì?”. OG có thể
 đọc lại câu trả lời đó bất cứ lúc nào. Đây là dữ liệu **trạng thái**.
 
 Ngược lại, một lệnh giao dịch như “đặt BUY” là **mệnh lệnh**: cần lịch sử, xác nhận
@@ -151,19 +159,19 @@ giá trị hiện tại của nó là gì.
 
 ZSet có thể lưu thứ tự thời gian, nhưng không tự là mô hình dữ liệu đầy đủ cho
 OHLCV có thể bị hiệu chỉnh. Nếu dùng JSON OHLCV làm member, sửa giá sẽ tạo member
-mới vì member thay đổi; nếu dùng epoch làm member, vẫn cần nơi khác để lưu các
+mới vì member thay đổi; nếu dùng stamp làm member, vẫn cần nơi khác để lưu các
 field OHLCV. Vì vậy ZSet không loại được nhu cầu tách identity nến khỏi giá trị.
 
-Thiết kế hiện tại dùng key theo epoch cho identity, Hash cho OHLCV và List cho thứ
+Thiết kế hiện tại dùng key theo stamp cho identity, Hash cho OHLCV và List cho thứ
 tự. Vai trò của từng cấu trúc đơn giản, trực tiếp và đúng với thao tác đọc thực tế.
 Điều này không có nghĩa ZSet không thể được thiết kế đúng; chỉ là nó không đem lại
 lợi ích cần thiết cho contract hiện tại.
 
 ### 4.4. Vì sao Hash và List đi cùng nhau
 
-- Hash cho phép ghi đè field của đúng nến có epoch xác định.
+- Hash cho phép ghi đè field của đúng nến có stamp xác định.
 - Hash không cung cấp thứ tự thời gian để lấy N nến gần nhất.
-- List lưu đúng thứ tự epoch cần cho cửa sổ, late arrival và eviction.
+- List lưu đúng thứ tự stamp cần cho cửa sổ, late arrival và eviction.
 
 Tóm lại: **Hash giữ nội dung; List giữ thứ tự và phạm vi cửa sổ.**
 
@@ -174,15 +182,15 @@ Tóm lại: **Hash giữ nội dung; List giữ thứ tự và phạm vi cửa s
 ### 5.1. Incremental update: đường nhanh
 
 Sau khi SQL ghi thành công, `live.py` đưa `delivered_candles` vào publisher. Publisher
-coalesce theo `(symbol, timeframe, epoch)`: nếu cùng epoch được enqueue nhiều lần
+coalesce theo `(symbol, timeframe, stamp)`: nếu cùng stamp được enqueue nhiều lần
 trước khi worker xử lý, bản mới nhất thay thế bản trước trong hàng đợi RAM.
 
 Worker gọi `_INCREMENTAL_SCRIPT` bằng Lua. Với mỗi nến, script:
 
 1. Đọc năm field OHLCV đang có từ Hash.
 2. Chỉ `HSET` khi giá trị canonical thật sự khác.
-3. Nếu epoch chưa có trong List, thêm ở cuối hoặc chèn đúng thứ tự thời gian.
-4. Nếu List vượt giới hạn, lấy epoch cũ nhất ra khỏi List và xoá Hash tương ứng.
+3. Nếu stamp chưa có trong List, thêm ở cuối hoặc chèn đúng thứ tự thời gian.
+4. Nếu List vượt giới hạn, lấy stamp cũ nhất ra khỏi List và xoá Hash tương ứng.
 5. Chỉ publish các nến có OHLCV thay đổi.
 
 Mỗi lần gọi Lua là atomic trong Redis. Bên đọc không thấy trạng thái trung gian do
@@ -194,11 +202,13 @@ trước writer ngoài Lua hoặc dữ liệu đã hỏng từ trước.
 Event có dạng khái quát:
 
 ```json
-{"symbol":"US30","timeframe":"H1","candles":[{ "bartime":"…", "open":0, "high":0, "low":0, "close":0, "volume":0 }]}
+{"symbol":"US30","timeframe":"H1","candles":[{ "bartime":"2026-09-08_14:00:00", "open":0, "high":0, "low":0, "close":0, "volume":0 }]}
 ```
 
 Payload là JSON và có thể chứa nhiều candle trong một batch. Vì vậy cần phân biệt:
-**Hash/List không cần JSON parse; payload Pub/Sub vẫn cần JSON parse.**
+**Hash/List không cần JSON parse; payload Pub/Sub vẫn cần JSON parse.** Field
+`bartime` trong event dùng đúng định dạng stamp của key Hash, nên reader nối thẳng
+ra key cần đọc, không phải chuyển đổi gì.
 
 ### 5.2. Đối chiếu (reconcile): đường phục hồi từ SQL
 
@@ -208,18 +218,16 @@ kết job sẽ hoàn tất chính xác ở mốc đó. Worker đọc N nến g�
 tiếp từ SQL, rồi `_RECONCILE_SCRIPT`:
 
 1. Ghi/ghi đè Hash khi năm field OHLCV khác dữ liệu SQL.
-2. Xoá Hash của epoch đang có trong List nhưng không còn trong cửa sổ SQL mong muốn.
+2. Xoá Hash của stamp đang có trong List nhưng không còn trong cửa sổ SQL mong muốn.
 3. Dựng lại List chỉ khi List khác thứ tự hoặc khác thành phần của cửa sổ SQL.
 
 Reconcile không phát Pub/Sub event. Mục tiêu là đưa state Redis khớp SQL, không báo
 cho OG mọi thao tác bảo trì.
 
-Điểm giới hạn quan trọng: script chỉ duyệt các epoch trong List hiện có. Nó **không
+Điểm giới hạn quan trọng: script chỉ duyệt các stamp trong List hiện có. Nó **không
 SCAN toàn bộ candle hash**, nên không thể tự phát hiện hoặc xoá một Hash mồ côi không
-còn được List tham chiếu. Ngoài ra, script chỉ so sánh OHLCV: một Hash có OHLCV đúng
-nhưng field `bartime` bị thiếu hoặc sai sẽ không nhất thiết được script tự ghi lại.
-Do đó “không có nến mồ côi” chỉ là bất biến đạt được khi tất cả writer tuân thủ Lua
-contract; không phải bảo đảm tự sửa mọi dữ liệu rác.
+còn được List tham chiếu. Do đó “không có nến mồ côi” chỉ là bất biến đạt được khi
+tất cả writer tuân thủ Lua contract; không phải bảo đảm tự sửa mọi dữ liệu rác.
 
 ### 5.3. Không chặn SQL, nhưng không phải hàng đợi bền
 
@@ -234,7 +242,7 @@ tục ghi.
 - Khi shutdown chờ quá thời hạn, code có thể bỏ các pair pending; startup reconcile
   được thiết kế để bù lại sau đó.
 - Không có giới hạn dung lượng hàng đợi tường minh trong publisher; coalescing chỉ
-  giảm các update trùng epoch, không biến nó thành durable queue.
+  giảm các update trùng stamp, không biến nó thành durable queue.
 - Reconcile và incremental dùng chung một worker. Incremental được chọn trước khi
   reconcile trong hàng đợi, nên một luồng update liên tục có thể làm reconcile trễ.
 
@@ -247,24 +255,24 @@ tục ghi.
 | Redis timeout hoặc không kết nối được | Worker requeue RAM, mở circuit breaker, SQL không chờ Redis | DP crash trước retry thì update RAM mất |
 | DP restart sau khi mất update Redis | Reconcile lúc khởi động đọc lại cửa sổ SQL | Chỉ phục hồi khi SQL, Redis và worker hoạt động lại |
 | Một Pub/Sub subscriber offline | Không replay event | OG phải đọc lại Hash/List khi khởi động, reconnect hoặc resync định kỳ |
-| Nến đến muộn | Lua chèn epoch theo thứ tự | Chi phí dựng lại List tăng theo kích thước cửa sổ, hiện được giới hạn bởi cấu hình |
-| Nến revise | HSET đúng Hash epoch; List không tạo epoch trùng | Event chỉ có khi OHLCV canonical đổi |
-| Writer ngoài contract ghi `dp:candles:*` | Không có cơ chế chặn ở Redis trong code DP | Có thể tạo key rác hoặc phá bất biến; cần quyền ghi/prefix ownership và giám sát vận hành |
+| Nến đến muộn | Lua chèn stamp theo thứ tự | Chi phí dựng lại List tăng theo kích thước cửa sổ, hiện được giới hạn bởi cấu hình |
+| Nến revise | HSET đúng Hash stamp; List không tạo stamp trùng | Event chỉ có khi OHLCV canonical đổi |
+| Writer ngoài contract ghi `L_CANDLE_*` | Không có cơ chế chặn ở Redis trong code DP | Có thể tạo key rác hoặc phá bất biến; cần quyền ghi/prefix ownership và giám sát vận hành |
 | Redis đầy hoặc lỗi script | Worker coi là lỗi publish và retry theo circuit breaker | SQL vẫn là nguồn dữ liệu, nhưng Redis/OG có thể chậm cho đến khi lỗi được xử lý |
 
-`state_probe.py` kiểm tra cấu trúc các pair có List: thứ tự epoch, duplicate, hash
+`state_probe.py` kiểm tra cấu trúc các pair có List: thứ tự stamp, duplicate, hash
 thiếu OHLCV, số không hợp lệ, overflow và độ cũ. Nó có SQL cross-check lấy mẫu. Cờ
 `stale` chỉ nói nến mới nhất cũ hơn ngưỡng; muốn kết luận do thị trường đóng hay do
 pipeline lỗi phải đối chiếu thêm lịch giao dịch, provider và SQL. Probe hiện không
-phải trình dò key hash mồ côi ngoài List, không tự thấy một pair mất hẳn `:order`, và
-không coi riêng field `bartime` bị thiếu là lỗi cấu trúc.
+phải trình dò key hash mồ côi ngoài List, và không tự thấy một pair mất hẳn key List
+của chính nó.
 
 ---
 
 ## 7. Contract đọc dữ liệu dành cho OG
 
-Trước khi đọc, OG nên kiểm tra `GET dp:candles:schema` bằng `"2"`. Nếu khác phiên
-bản, OG nên dừng hoặc báo lỗi rõ ràng thay vì đọc sai schema trong im lặng.
+Không còn key schema để kiểm trước khi đọc: cấu trúc này là duy nhất và không đánh
+số phiên bản.
 
 Để lấy N close mới nhất cho một pair:
 
@@ -272,23 +280,25 @@ bản, OG nên dừng hoặc báo lỗi rõ ràng thay vì đọc sai schema tro
 from decimal import Decimal
 
 def latest_closes(redis_client, symbol: str, timeframe: str, n: int) -> list[Decimal]:
-    base = f"dp:candles:{timeframe}:{symbol}"
-    epochs = redis_client.lrange(f"{base}:order", -n, -1)
+    list_key = f"L_CANDLE_{symbol}_{timeframe}"
+    stamps = redis_client.lrange(list_key, -n, -1)
     pipe = redis_client.pipeline(transaction=False)
-    for epoch in epochs:
-        pipe.hget(f"{base}:{epoch}", "close")
+    for stamp in stamps:
+        pipe.hget(f"{list_key}:{stamp}", "close")
     return [Decimal(value) for value in pipe.execute() if value is not None]
 ```
 
-Đây là hai lượt mạng: một lượt lấy epoch từ List, một lượt pipeline lấy field từ các
+Đây là hai lượt mạng: một lượt lấy stamp từ List, một lượt pipeline lấy field từ các
 Hash. Số lượt mạng không tăng theo N, nhưng tổng số lệnh và số byte vẫn tăng theo số
 nến đọc. Với indicator chỉ cần `close`, không nên lấy cả OHLCV. Với ATR, dùng
 `HMGET high low close` cho từng Hash trong pipeline.
 
-`epoch` trong List/key là mốc thời gian chuẩn để tính cửa sổ. `bartime` là field mô
-tả thuận tiện cho con người; không nên dùng nó làm identity chính. Dùng `Decimal`
-nếu chiến lược cần chính xác theo số thập phân warehouse; chỉ dùng `float` nếu sai số
-nhị phân nhỏ chấp nhận được với chỉ báo đó.
+Stamp trong List vừa là mốc thời gian chuẩn để tính cửa sổ, vừa là phần đuôi của key
+Hash — không còn nguồn thời gian thứ hai bên trong Hash để có thể lệch khỏi nó. Vì
+stamp rộng cố định nên OG so sánh và sắp xếp trực tiếp trên chuỗi, chỉ parse ra
+`datetime` khi thật sự cần. Dùng `Decimal` nếu chiến lược cần chính xác theo số thập
+phân warehouse; chỉ dùng `float` nếu sai số nhị phân nhỏ chấp nhận được với chỉ báo
+đó.
 
 ### Dùng Pub/Sub đúng vai trò
 
@@ -299,8 +309,8 @@ Phương án an toàn, đơn giản nhất là: khi nhận event của một pai
 cần thiết của **riêng pair đó**, rồi tính lại signal. Cách này chịu được revision và
 không yêu cầu OG tự xử lý gap phức tạp.
 
-Nếu OG giữ cửa sổ trong RAM để giảm đọc Redis, nó phải xử lý cả hai trường hợp: epoch
-mới tiếp theo và revision của epoch đã có. Khi phát hiện thiếu epoch, dữ liệu không
+Nếu OG giữ cửa sổ trong RAM để giảm đọc Redis, nó phải xử lý cả hai trường hợp: stamp
+mới tiếp theo và revision của stamp đã có. Khi phát hiện thiếu stamp, dữ liệu không
 liên tục, reconnect hoặc restart, OG cần tải lại cửa sổ từ Redis. Một vòng resync
 định kỳ là lớp bảo vệ bổ sung cho việc mất Pub/Sub event.
 
@@ -330,12 +340,11 @@ phải là tính năng mà publisher candle DP đang cung cấp.
 
 ## 9. Checklist vận hành tối thiểu
 
-1. Xác nhận schema Redis là `2` trước khi OG chạy.
-2. Giám sát log `REDIS_PUBLISH_FAILED`, `REDIS_PUBLISH_RECOVERED` và
+1. Giám sát log `REDIS_PUBLISH_FAILED`, `REDIS_PUBLISH_RECOVERED` và
    `REDIS_RECONCILE_COMPLETED` của DP.
-3. Chạy `state_probe` để kiểm tra các pair có List; không diễn giải `stale` thành lỗi
+2. Chạy `state_probe` để kiểm tra các pair có List; không diễn giải `stale` thành lỗi
    dữ liệu nếu chưa đối chiếu lịch thị trường và SQL.
-4. Khi có nghi ngờ dữ liệu rác ngoài List, kiểm tra keyspace theo prefix bằng một công
+3. Khi có nghi ngờ dữ liệu rác ngoài List, kiểm tra keyspace theo prefix bằng một công
    cụ read-only riêng; reconcile thông thường không thay thế bước này.
-5. Khi ghi nhận số liệu production, lưu timestamp UTC, Redis DB, command, output đã
+4. Khi ghi nhận số liệu production, lưu timestamp UTC, Redis DB, command, output đã
    che secret và log ID để người khác tái kiểm chứng được.

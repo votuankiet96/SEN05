@@ -7,7 +7,7 @@ publish va reconcile chay bat dong bo).
 
 Hai vong kiem moi lan chay:
   1. Structural scan (moi lan goi, nhanh, khong dung SQL): quet toan
-     bo key dp:candles:*:*:order qua SCAN (khong dung KEYS -- tranh block
+     bo key List L_CANDLE_* qua SCAN (khong dung KEYS -- tranh block
      Redis production), kiem cac bat bien thiet ke da thong nhat:
        - Moi epoch trong List co Hash nen tuong ung (khong nen thieu)
        - Moi nen du 5 field open/high/low/close/volume, dung kieu so
@@ -33,8 +33,8 @@ import time
 from itertools import islice
 
 from _probe_common import (
-    CANDLE_FIELDS, epoch_from_bartime, load_config, log_event, redis_client, remove_pidfile,
-    require_schema, run_with_reconnect, safe_error, setup_probe_logging, write_pidfile,
+    CANDLE_FIELDS, list_keys, load_config, log_event, redis_client, remove_pidfile, stamp_to_datetime,
+    run_with_reconnect, safe_error, setup_probe_logging, write_pidfile,
 )
 
 NAME = "state_probe"
@@ -68,7 +68,6 @@ def _run(config: dict, logger, *, once: bool) -> int:
     from dp_program.engine.sql_connector import select_pairs
 
     client = redis_client(config)
-    require_schema(client, config, logger, NAME)
     prefix = str(config["redis"]["key_prefix"])
     bars_per_snapshot = int(config["redis"]["bars_per_snapshot"])
     minutes_by_pair = _minutes_by_pair(select_pairs(config, live=True))
@@ -86,6 +85,16 @@ def _run(config: dict, logger, *, once: bool) -> int:
         time.sleep(_SCAN_INTERVAL_SECONDS)
 
 
+def _stamp_from_sql(bartime) -> str:
+    """Dung lai moc thoi gian tu row SQL, doc lap voi code ghi.
+
+    Co tinh KHONG import _stamp() cua redis_publisher: probe phai tu dung
+    lai ky vong tu SQL, neu dung chung ham thi mot loi trong ham do se tu
+    xac nhan la dung.
+    """
+    return bartime.strftime("%Y-%m-%d_%H:%M:%S")
+
+
 def _minutes_by_pair(pairs: list) -> dict[str, int]:
     # {"US30:H1": 60, ...} -- dung de tinh nguong do tuoi, doc that tu SQL.
     return {f"{symbol['symbol']}:{timeframe['code']}": int(timeframe["minutes"]) for symbol, timeframe in pairs}
@@ -94,8 +103,8 @@ def _minutes_by_pair(pairs: list) -> dict[str, int]:
 def _structural_scan(client, logger, prefix: str, bars_per_snapshot: int, minutes_by_pair: dict[str, int]) -> tuple[int, int]:
     passed = failed = 0
     now = time.time()
-    for order_key in client.scan_iter(match=f"{prefix}:*:*:order", count=200):
-        pair, problems = _check_one_pair(client, str(order_key), prefix, bars_per_snapshot, minutes_by_pair, now)
+    for list_key in list_keys(client, prefix):
+        pair, problems = _check_one_pair(client, str(list_key), prefix, bars_per_snapshot, minutes_by_pair, now)
         if problems:
             failed += 1
             log_event(logger, "WARNING", "STATE_INVARIANT_FAILED", "MEDIUM", component=NAME, pair=pair, problems=", ".join(problems))
@@ -104,33 +113,39 @@ def _structural_scan(client, logger, prefix: str, bars_per_snapshot: int, minute
     return passed, failed
 
 
-def _check_one_pair(client, order_key: str, prefix: str, bars_per_snapshot: int, minutes_by_pair: dict[str, int], now: float) -> tuple[str, list[str]]:
-    # order_key = "{prefix}:{tf}:{symbol}:order"; key nen = cung base + epoch.
-    base = order_key[:-len(":order")]
-    tf, symbol = base[len(prefix) + 1:].split(":", 1)
+def _check_one_pair(client, list_key: str, prefix: str, bars_per_snapshot: int, minutes_by_pair: dict[str, int], now: float) -> tuple[str, list[str]]:
+    # list_key = "{prefix}_{SYMBOL}_{TIMEFRAME}"; key nen = list_key + ":" + stamp.
+    symbol, tf = list_key[len(prefix) + 1:].rsplit("_", 1)
     pair = f"{symbol}:{tf}"
     problems: list[str] = []
 
-    order = client.lrange(order_key, 0, -1)
+    order = client.lrange(list_key, 0, -1)
     order_set = set(order)
     if len(order) != len(order_set):
         problems.append("order_has_duplicates")
     if len(order) > bars_per_snapshot:
         problems.append(f"window_overflow llen={len(order)}>{bars_per_snapshot}")
-    if order != sorted(order, key=int):
+    # Moc rong co dinh nen sap xep chuoi la dung thu tu thoi gian.
+    if order != sorted(order):
         problems.append("order_not_sorted")
 
     # Doc toan bo nen cua pair trong 1 vong pipeline, roi kiem tung cai.
     pipe = client.pipeline(transaction=False)
-    for bartime in order:
-        pipe.hgetall(f"{base}:{bartime}")
-    for bartime, candle in zip(order, pipe.execute()):
-        if not candle:
-            problems.append(f"missing_candle bartime={bartime}")
+    for stamp in order:
+        pipe.hgetall(f"{list_key}:{stamp}")
+    for stamp, candle in zip(order, pipe.execute()):
+        if stamp_to_datetime(stamp) is None:
+            problems.append(f"bad_stamp value={stamp}")
             continue
+        if not candle:
+            problems.append(f"missing_candle stamp={stamp}")
+            continue
+        extra = [field for field in candle if field not in CANDLE_FIELDS]
+        if extra:
+            problems.append(f"unexpected_field stamp={stamp} keys={','.join(sorted(extra))}")
         missing = [field for field in CANDLE_FIELDS if field not in candle]
         if missing:
-            problems.append(f"missing_field bartime={bartime} keys={','.join(missing)}")
+            problems.append(f"missing_field stamp={stamp} keys={','.join(missing)}")
             continue
         # "null" la sentinel hop le rieng cho volume (xem _candle_fields()
         # trong redis_publisher.py) -- moi field con lai phai la so huu han.
@@ -142,22 +157,19 @@ def _check_one_pair(client, order_key: str, prefix: str, bars_per_snapshot: int,
             try:
                 number = float(raw)
             except ValueError:
-                problems.append(f"bad_number bartime={bartime} key={field} value={raw}")
+                problems.append(f"bad_number stamp={stamp} key={field} value={raw}")
                 continue
             if not math.isfinite(number):
                 non_finite.append(field)
         if non_finite:
-            problems.append(f"non_finite_value bartime={bartime} keys={','.join(non_finite)}")
-        stored = epoch_from_bartime(candle.get("bartime", ""))
-        if stored is not None and str(stored) != bartime:
-            problems.append(f"bartime_mismatch key={bartime} field={candle.get('bartime')}")
+            problems.append(f"non_finite_value stamp={stamp} keys={','.join(non_finite)}")
 
     minutes = minutes_by_pair.get(pair)
     if minutes and order:
-        newest = max(int(bt) for bt in order)
+        newest_at = stamp_to_datetime(max(order))
         threshold = minutes * 60 * 3  # 3 chu ky khung gio -- ranh de tranh bao nham luc thi truong dong cua
-        if now - newest > threshold:
-            age_minutes = round((now - newest) / 60)
+        if newest_at is not None and now - newest_at.timestamp() > threshold:
+            age_minutes = round((now - newest_at.timestamp()) / 60)
             problems.append(f"stale newest_age_minutes={age_minutes} threshold_minutes={threshold // 60}")
 
     return pair, problems
@@ -180,18 +192,18 @@ def _sql_crosscheck_sample(config: dict, client, logger, prefix: str, scan_numbe
         except Exception as exc:  # noqa: BLE001 -- SQL tam thoi khong toi khong duoc lam chet probe
             log_event(logger, "WARNING", "SQL_CROSSCHECK_FAILED", "MEDIUM", component=NAME, pair=pair, error=exc)
             continue
-        base = f"{prefix}:{timeframe['code']}:{symbol['symbol']}"
+        list_key = f"{prefix}_{symbol['symbol']}_{timeframe['code']}"
         mismatches = 0
         for bartime, open_, high, low, close, _volume in rows:
-            field = epoch_from_bartime(bartime.isoformat(sep=" ") if hasattr(bartime, "isoformat") else str(bartime))
-            stored = client.hget(f"{base}:{field}", "close")
+            stamp = _stamp_from_sql(bartime)
+            stored = client.hget(f"{list_key}:{stamp}", "close")
             if stored is None:
                 mismatches += 1
                 continue
             if round(float(stored), 6) != round(float(close), 6):
                 mismatches += 1
                 log_event(
-                    logger, "WARNING", "SQL_REDIS_MISMATCH", "MEDIUM", component=NAME, pair=pair, bartime=field,
+                    logger, "WARNING", "SQL_REDIS_MISMATCH", "MEDIUM", component=NAME, pair=pair, bartime=stamp,
                     sql_close=float(close), redis_close=stored,
                 )
         if mismatches == 0:
