@@ -21,8 +21,7 @@ def _config(*, bars: int = 3) -> dict[str, Any]:
     }
 
 
-_SOURCE = "TESTCH:GOLD"
-_PAIR = (9, "GOLD", "M5", _SOURCE)
+_PAIR = (9, "GOLD", "M5")
 
 
 def _row(
@@ -45,10 +44,9 @@ def _row(
 
 
 # Dung bo field Hash, dung thu tu ghi.
-_FIELDS = ("timestamp", "datetime", "open", "high", "low", "close",
-           "volume", "source", "inserttime")
-# Chi 5 o nay tham gia so sanh "co doi khong".
-_COMPARED = ("open", "high", "low", "close", "volume")
+_FIELDS = ("timestamp", "open", "high", "low", "close", "time_update")
+# Chi 4 o gia tham gia so sanh "co doi khong".
+_COMPARED = ("open", "high", "low", "close")
 
 
 def _expect_stamp(row: tuple[Any, ...]) -> str:
@@ -57,7 +55,7 @@ def _expect_stamp(row: tuple[Any, ...]) -> str:
     Neu goi thang ham cua production thi mot loi trong ham do se tu xac
     nhan la dung -- test phai tu biet ky vong dung la gi.
     """
-    return row[0].strftime("%Y%m%d_%H%M%S")
+    return row[0].strftime("%Y-%m-%d %H:%M:%S")
 
 
 class _FakeWarehouse:
@@ -125,17 +123,17 @@ class _SemanticRedis:
     def _incremental(self, keys: list[str], args: list[str]) -> list[int]:
         list_key, channel = keys
         max_size = int(args[0])
-        candle_prefix, event_prefix, source = args[1], args[2], args[3]
+        candle_prefix, event_prefix = args[1], args[2]
         order = self.lists.setdefault(list_key, [])
         changed_events: list[str] = []
         added = 0
-        for index in range(4, len(args), 10):
-            stamp, epoch, readable = args[index:index + 3]
-            ohlcv = args[index + 3:index + 8]
-            inserted, event = args[index + 8], args[index + 9]
+        for index in range(3, len(args), 7):
+            stamp = args[index]
+            prices = args[index + 1:index + 5]
+            updated, event = args[index + 5], args[index + 6]
             key = candle_prefix + stamp
-            if self._differs(key, ohlcv):
-                self._write(key, [epoch, readable, *ohlcv, source, inserted])
+            if self._differs(key, prices):
+                self._write(key, [stamp, *prices, updated])
                 changed_events.append(event)
             if stamp not in order:
                 order.append(stamp)
@@ -154,17 +152,17 @@ class _SemanticRedis:
 
     def _reconcile(self, keys: list[str], args: list[str]) -> list[int]:
         list_key = keys[0]
-        candle_prefix, source = args[0], args[1]
+        candle_prefix = args[0]
         wanted_order: list[str] = []
         changed = 0
-        for index in range(2, len(args), 9):
-            stamp, epoch, readable = args[index:index + 3]
-            ohlcv = args[index + 3:index + 8]
-            inserted = args[index + 8]
+        for index in range(1, len(args), 6):
+            stamp = args[index]
+            prices = args[index + 1:index + 5]
+            updated = args[index + 5]
             wanted_order.append(stamp)
             key = candle_prefix + stamp
-            if self._differs(key, ohlcv):
-                self._write(key, [epoch, readable, *ohlcv, source, inserted])
+            if self._differs(key, prices):
+                self._write(key, [stamp, *prices, updated])
                 changed += 1
         current = self.lists.get(list_key, [])
         desired = set(wanted_order)
@@ -207,12 +205,7 @@ def _keys() -> tuple[str, str]:
     return "T_CANDLE_GOLD_M5", "T_CANDLE_GOLD_M5:"
 
 
-def _expect_readable(row: tuple[Any, ...]) -> str:
-    """Dang nguoi doc ky vong cho field `datetime`."""
-    return row[0].strftime("%Y-%m-%d %H:%M:%S")
-
-
-def test_key_layout_is_one_concatenation_and_holds_exactly_one_colon() -> None:
+def test_key_layout_is_one_concatenation_and_list_key_never_holds_a_colon() -> None:
     from dp_program.util import redis_publisher
 
     list_key, candle_prefix = redis_publisher._RedisPublisher._keys(
@@ -224,18 +217,16 @@ def test_key_layout_is_one_concatenation_and_holds_exactly_one_colon() -> None:
     assert (list_key, candle_prefix) == _keys()
     # Key nen = key List noi them ":" + moc: dung mot phep noi, khong quy uoc khac.
     assert candle_key == f"{list_key}:{stamp}"
-    # Ten List khong bao gio chua ":" -- do la cach phan biet no voi key Hash
-    # khi SCAN. Moc cung khong chua ":", nen key Hash co dung MOT dau ":" (cua
-    # phep noi) va Redis GUI chi tach dung hai tang thay vi long theo gio/phut.
+    # Ten List khong bao gio chua ":" -- do la cach duy nhat phan biet no voi
+    # key Hash khi SCAN, vi moc co san hai dau ":" cua gio-phut-giay.
     assert ":" not in list_key
-    assert ":" not in stamp
-    assert candle_key.count(":") == 1
+    assert stamp.count(":") == 2 and candle_key.count(":") == 3
 
 
-def test_list_member_and_the_three_time_fields_describe_the_same_instant(
+def test_list_member_equals_the_hash_timestamp_field_and_the_key_suffix(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Moc trong key, `timestamp` va `datetime` la ba cach viet cua MOT moc."""
+    """Bat bien cot loi: ba cho do luon la CUNG mot chuoi."""
     publisher, client, warehouse = _publisher_with_client(monkeypatch)
     row = _row(0)
 
@@ -244,9 +235,8 @@ def test_list_member_and_the_three_time_fields_describe_the_same_instant(
     list_key, candle_prefix = _keys()
     member = client.lists[list_key][0]
     candle = client.hashes[candle_prefix + member]
-    assert member == _expect_stamp(row)                    # dang gon, dung lam key
-    assert candle["datetime"] == _expect_readable(row)     # dang nguoi doc
-    assert candle["timestamp"] == str(int(row[0].timestamp()))
+    assert member == _expect_stamp(row)
+    assert candle["timestamp"] == member
     assert f"{list_key}:{member}" == candle_prefix + member
 
 
@@ -263,38 +253,33 @@ def test_redis_payload_preserves_warehouse_decimal_contract() -> None:
     )
     args = redis_publisher._rows_to_args([row], with_event=True)
 
-    assert len(args) == 10
-    assert args[3:8] == [
+    assert len(args) == 7
+    assert args[1:5] == [
         "9999999999.12345678",
         "9999999999.22345678",
         "9999999999.02345678",
         "9999999999.12345679",
-        "1234567890123456.1234",
     ]
-    assert args[0] == "20260908_120000"  # moc lam chi muc + duoi key Hash
-    assert args[1] == str(int(row[0].timestamp()))  # epoch UTC cua open time
-    assert args[2] == "2026-09-08 12:00:00"  # field datetime, dang nguoi doc
-    assert args[8] == "2026-09-08 13:40:00"  # inserttime = Fact.CreatedAt
-    event = json.loads(args[9], parse_float=Decimal)
+    assert args[0] == "2026-09-08 12:00:00"  # moc lam chi muc + duoi key Hash
+    assert args[5] == "2026-09-08 13:40:00"  # time_update = Fact.CreatedAt
+    event = json.loads(args[6], parse_float=Decimal)
     assert event == {
-        "bartime": "20260908_120000",
+        "bartime": "2026-09-08 12:00:00",
         "open": Decimal("9999999999.12345678"),
         "high": Decimal("9999999999.22345678"),
         "low": Decimal("9999999999.02345678"),
         "close": Decimal("9999999999.12345679"),
-        "volume": Decimal("1234567890123456.1234"),
     }
 
 
-def test_redis_payload_uses_fixed_warehouse_scales_and_null_volume() -> None:
+def test_redis_payload_uses_fixed_warehouse_scales_and_ignores_volume() -> None:
+    """Hash chi con 4 field gia; volume cua SQL khong con duoc dua len Redis."""
     from dp_program.util import redis_publisher
 
     args = redis_publisher._rows_to_args([_row(0, volume=None)], with_event=True)
 
-    assert args[3:8] == [
-        "100.00000000", "102.00000000", "99.00000000", "101.00000000", "null",
-    ]
-    assert json.loads(args[9], parse_float=Decimal)["volume"] is None
+    assert args[1:5] == ["100.00000000", "102.00000000", "99.00000000", "101.00000000"]
+    assert "volume" not in json.loads(args[6])
 
 
 def test_reconcile_args_carry_every_hash_field_except_the_event_payload() -> None:
@@ -302,13 +287,13 @@ def test_reconcile_args_carry_every_hash_field_except_the_event_payload() -> Non
 
     args = redis_publisher._rows_to_args([_row(0), _row(5)], with_event=False)
 
-    # 9 o moi nen: stamp + 8 gia tri ghi vao Hash (source truyen rieng mot lan).
-    assert len(args) == 18
-    assert args[0] == "20260908_120000"
-    assert args[9] == "20260908_120500"
+    # 6 o moi nen: stamp + 4 gia + time_update (`timestamp` = chinh stamp).
+    assert len(args) == 12
+    assert args[0] == "2026-09-08 12:00:00"
+    assert args[6] == "2026-09-08 12:05:00"
 
 
-def test_incremental_writes_all_nine_hash_fields_from_the_sql_row(
+def test_incremental_writes_all_six_hash_fields_from_the_sql_row(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     publisher, client, warehouse = _publisher_with_client(monkeypatch)
@@ -320,12 +305,10 @@ def test_incremental_writes_all_nine_hash_fields_from_the_sql_row(
     candle = client.hashes[candle_prefix + _expect_stamp(row)]
     assert set(candle) == set(_FIELDS)
     assert candle == {
-        "timestamp": str(int(row[0].timestamp())),
-        "datetime": _expect_readable(row),
+        "timestamp": "2026-09-08 12:00:00",
         "open": "100.00000000", "high": "102.00000000",
-        "low": "99.00000000", "close": "101.00000000", "volume": "12.5000",
-        "source": _SOURCE,
-        "inserttime": "2026-09-08 13:40:00",
+        "low": "99.00000000", "close": "101.00000000",
+        "time_update": "2026-09-08 13:40:00",
     }
 
 
@@ -408,12 +391,12 @@ def test_incremental_repairs_partial_hash_without_duplicating_order(
     _publish(publisher, _config(), warehouse, row)
     list_key, candle_prefix = _keys()
     stamp = client.lists[list_key][0]
-    del client.hashes[candle_prefix + stamp]["volume"]
+    del client.hashes[candle_prefix + stamp]["close"]
 
     _publish(publisher, _config(), warehouse, row)
 
     assert client.lists[list_key] == [stamp]
-    assert client.hashes[candle_prefix + stamp]["volume"] == "12.5000"
+    assert client.hashes[candle_prefix + stamp]["close"] == "101.00000000"
     assert len(client.published) == 2
 
 
@@ -424,39 +407,39 @@ def test_reconcile_patches_only_differences_and_rebuilds_list_only_when_needed(
     list_key, candle_prefix = _keys()
     warehouse.store(_row(0), _row(5), _row(10))
 
-    publisher._reconcile_one(_config(), 9, "GOLD", "M5", _SOURCE)
+    publisher._reconcile_one(_config(), 9, "GOLD", "M5")
     writes_after_first = client.hash_writes
     rebuilds_after_first = client.list_rebuilds
-    publisher._reconcile_one(_config(), 9, "GOLD", "M5", _SOURCE)
+    publisher._reconcile_one(_config(), 9, "GOLD", "M5")
 
     assert client.hash_writes == writes_after_first
     assert client.list_rebuilds == rebuilds_after_first
     client.lists[list_key] = list(reversed(client.lists[list_key]))
-    stale_stamp = "20260908_110000"
+    stale_stamp = "2026-09-08 11:00:00"
     stale = candle_prefix + stale_stamp
     client.lists[list_key].append(stale_stamp)
     client.hashes[stale] = {"close": "1"}
-    publisher._reconcile_one(_config(), 9, "GOLD", "M5", _SOURCE)
+    publisher._reconcile_one(_config(), 9, "GOLD", "M5")
     assert client.lists[list_key] == sorted(client.lists[list_key])
     assert stale not in client.hashes
     assert client.list_rebuilds == rebuilds_after_first + 1
     assert client.published == []
 
 
-def test_reconcile_writes_the_same_nine_fields_as_the_incremental_path(
+def test_reconcile_writes_the_same_six_fields_as_the_incremental_path(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     publisher, client, warehouse = _publisher_with_client(monkeypatch)
     row = _row(0)
     warehouse.store(row)
 
-    publisher._reconcile_one(_config(), 9, "GOLD", "M5", _SOURCE)
+    publisher._reconcile_one(_config(), 9, "GOLD", "M5")
 
     _, candle_prefix = _keys()
     candle = client.hashes[candle_prefix + _expect_stamp(row)]
     assert set(candle) == set(_FIELDS)
-    assert candle["source"] == _SOURCE
-    assert candle["inserttime"] == "2026-09-08 13:40:00"
+    assert candle["timestamp"] == _expect_stamp(row)
+    assert candle["time_update"] == "2026-09-08 13:40:00"
 
 
 def test_publisher_registers_lua_instead_of_sending_eval_source_every_write(

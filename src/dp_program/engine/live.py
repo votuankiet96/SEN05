@@ -12,7 +12,7 @@ from ..log import log_event
 from .pipeline import fetch_and_store, log_pair_failure, utc
 from .sql_connector import get_connection, get_pair_states
 from .websocket import FetchRequest, fetch_candles_batch, request_key
-from ..util.redis_publisher import pair_source, publish_candle_update
+from ..util.redis_publisher import publish_candle_update
 
 LOGGER = logging.getLogger(__name__)
 _MAX_CONSECUTIVE_GROUP_FAILURES = 2
@@ -255,7 +255,7 @@ def run_live_pairs(
                             if result["delivered_candles"]:
                                 publish_candle_update(
                                     config, symbol["symbol_id"], symbol["symbol"], timeframe["code"],
-                                    pair_source(symbol), result["delivered_candles"],
+                                    result["delivered_candles"],
                                 )
                             if display in prior_pending:
                                 recovered.append(display)

@@ -10,8 +10,8 @@ Hai vong kiem moi lan chay:
      bo key List L_CANDLE_* qua SCAN (khong dung KEYS -- tranh block
      Redis production), kiem cac bat bien thiet ke da thong nhat:
        - Moi moc trong List co Hash nen tuong ung (khong nen thieu)
-       - Moi nen du 9 field, va 5 field OHLCV dung kieu so
-       - Field `datetime` la dang nguoi doc cua chinh moc trong List
+       - Moi nen du 6 field, va 4 field gia dung kieu so
+       - Field `timestamp` bang dung moc trong List va duoi key Hash
        - List khong trung moc va sap xep tang dan
        - LLEN(list) <= bars_per_snapshot (cua so khong phinh)
        - Do tuoi: moc moi nhat khong cu hon nguong theo khung gio
@@ -93,7 +93,7 @@ def _stamp_from_sql(bartime) -> str:
     lai ky vong tu SQL, neu dung chung ham thi mot loi trong ham do se tu
     xac nhan la dung.
     """
-    return bartime.strftime("%Y%m%d_%H%M%S")
+    return bartime.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _minutes_by_pair(pairs: list) -> dict[str, int]:
@@ -148,13 +148,10 @@ def _check_one_pair(client, list_key: str, prefix: str, bars_per_snapshot: int, 
         if missing:
             problems.append(f"missing_field stamp={stamp} keys={','.join(missing)}")
             continue
-        # "null" la sentinel hop le rieng cho volume (xem _candle_fields()
-        # trong redis_publisher.py) -- moi field con lai phai la so huu han.
+        # Hash chi con 4 field gia; ca bon deu phai la so huu han.
         non_finite: list[str] = []
         for field in NUMERIC_FIELDS:
             raw = candle[field]
-            if field == "volume" and raw == "null":
-                continue
             try:
                 number = float(raw)
             except ValueError:

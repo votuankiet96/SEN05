@@ -1,6 +1,6 @@
 # Cấu trúc dữ liệu Redis của DP — thiết kế, luồng chạy, và giới hạn
 
-> Trạng thái: đã triển khai production lúc **2026-09-15 02:25 UTC**.
+> Trạng thái: đã triển khai production lúc **2026-09-15 05:37 UTC**.
 > Đối tượng đọc: người thiết kế/vận hành hệ thống auto trading.
 
 ---
@@ -35,29 +35,26 @@ SQL trước khi ghi** — kể cả trên đường live, nơi DP đã có sẵ
 
 ```
 LIST  L_CANDLE_{SYMBOL}_{TIMEFRAME}
-        ["20260914_010000", "20260914_020000", "20260914_030000"]
+        ["2026-09-14 01:00:00", "2026-09-14 02:00:00", "2026-09-14 03:00:00"]
 
-HASH  L_CANDLE_{SYMBOL}_{TIMEFRAME}:{YYYYMMDD_HHMMSS}
-        timestamp   1789354800            epoch giây UTC của open time
-        datetime    2026-09-14 03:00:00   cùng mốc, dạng người đọc
-        open        100.00000000          DECIMAL scale 8
-        high        102.00000000
-        low          99.00000000
-        close       101.00000000
-        volume       12.5000              DECIMAL scale 4, hoặc "null"
-        source      CAPITALCOM:BTCUSD     {BrokerChannel}:{Symbol}
-        inserttime  2026-07-29 06:07:03   Fact_OHLCV.CreatedAt
+HASH  L_CANDLE_{SYMBOL}_{TIMEFRAME}:{YYYY-MM-DD HH:mm:ss}
+        timestamp     2026-09-14 03:00:00   open time, bằng đúng mốc trong key
+        open          77545.35000000        DECIMAL scale 8
+        high          77807.90000000
+        low           77450.75000000
+        close         77537.05000000
+        time_update   2026-09-14 03:05:12   Fact_OHLCV.CreatedAt
 ```
 
 Ba quy tắc, không có quy tắc thứ tư:
 
 1. **Key Hash = key List + `":" + phần tử lấy từ List`.** Một phép nối.
 2. **SYMBOL trước, TIMEFRAME sau**, nối bằng `_`.
-3. **Mốc:** `YYYYMMDD_HHMMSS`, luôn UTC, không offset, rộng cố định 15 ký tự.
-4. **Mốc trong key, `timestamp` và `datetime` đều là open time** (`BarTime`),
-   ba cách viết của cùng một thời điểm, sinh từ đúng một hàm.
+3. **Mốc:** `YYYY-MM-DD HH:mm:ss`, luôn UTC, không offset, rộng cố định.
+4. **Phần tử List == field `timestamp` == đuôi key Hash** — cùng một chuỗi, là
+   open time (`Fact_OHLCV.BarTime`).
 
-Kiểm nhanh bằng mắt: tên List **không chứa** dấu `:`; key Hash có đúng **một**.
+Kiểm nhanh bằng mắt: tên List **không chứa** dấu `:`.
 
 ---
 
@@ -92,9 +89,9 @@ thứ hai. Ghép lại: **List giữ thứ tự và phạm vi cửa sổ, Hash g
 | Bố trí | Encoding | Bộ nhớ/nến |
 |---|---|---|
 | Một Hash lớn cho cả pair (500 nến × 5 field = 2500 field) | `hashtable` | ~378 B |
-| Một Hash riêng mỗi nến (9 field) | `listpack` | ~200 B |
+| Một Hash riêng mỗi nến (6 field) | `listpack` | ~170 B |
 
-Redis giữ `listpack` khi Hash ≤ 128 field. Hash 9 field luôn nằm dưới ngưỡng. Ngoài
+Redis giữ `listpack` khi Hash ≤ 128 field. Hash 6 field luôn nằm dưới ngưỡng. Ngoài
 bộ nhớ, Hash riêng còn cho phép ghi đè đúng một nến mà không đụng nến khác, và cho
 phép `HMGET` đúng field cần (ATR chỉ lấy `high/low/close`) thay vì `HGETALL` cả pair
 rồi lọc phía client.
@@ -109,36 +106,36 @@ sánh thời gian. Đây không phải thẩm mỹ: Lua trong Redis dựa hẳn 
 `tonumber` vì `tonumber("2026-07-29_06-00-00")` trả `nil`. Chỉ cần một bản ghi lẫn
 offset là vừa hỏng thứ tự vừa sinh key thứ hai cho cùng một nến.
 
-**Mốc trong key không chứa `:`** → Redis không có thư mục, nhưng mọi GUI đều tách
-key theo `:` để dựng cây. Mốc dạng `HH:MM:SS` đẻ ra thêm mấy tầng thư mục rỗng cho
-**mỗi** nến, và với 16.500 Hash thì cây key không đọc nổi. Ở dạng `YYYYMMDD_HHMMSS`,
-dấu `:` duy nhất trong key Hash là dấu của phép nối, nên GUI hiện đúng hai tầng:
-tên pair, rồi từng nến.
+**Dùng đúng định dạng người đọc `YYYY-MM-DD HH:mm:ss`** → phần tử List, field
+`timestamp` và đuôi key Hash là **cùng một chuỗi**. Nhìn vào List là đọc được ngay
+thời điểm, không phải dịch, và không có hai cách viết nào để lệch nhau.
 
-Đổi lại, mốc trong key không còn đọc trôi như `2026-09-14 03:00:00`. Đó là lý do
-Hash giữ **hai** dạng dễ dùng của cùng mốc đó: `timestamp` (epoch, cho máy) và
-`datetime` (`YYYY-MM-DD HH:MM:SS`, cho người). Chia việc: tên key tối ưu cho cây
-key và cho so sánh chuỗi; field trong Hash tối ưu cho người đọc và cho consumer.
+Đánh đổi đã biết và chấp nhận: vì mốc chứa `:`, Redis GUI tách mỗi nến thành nhiều
+tầng thư mục. Đã thử một bản `YYYYMMDD_HHMMSS` để tránh đúng chuyện này, nhưng khi
+đó mốc trong key không còn đọc trôi được nữa. Ưu tiên cuối cùng là **một mốc duy
+nhất, đọc được, dùng ở mọi nơi**, chứ không phải cây key gọn trong GUI.
 
 **Dạng người đọc chứ không phải epoch** → mở GUI lên là hiểu ngay đang nhìn nến
 nào, không cần công cụ giải mã. Epoch vẫn có, nằm trong field `timestamp`.
 
-### 3.4. Vì sao Hash có 9 field
+### 3.4. Vì sao Hash có 6 field
 
-5 field OHLCV là dữ liệu. 4 field còn lại giải quyết vấn đề vận hành cụ thể:
+4 field giá là dữ liệu. Hai field còn lại là mốc thời gian:
 
-- `timestamp` + `datetime`: hai cách biểu diễn cùng một open time. Consumer chọn
-  cái tiện — khỏi phải parse chuỗi hay tự đổi epoch. Cả hai sinh ra từ đúng một
-  nguồn nên không thể lệch khỏi tên key.
-- `source` (`CAPITALCOM:BTCUSD`): biết nến đến từ kênh broker nào. Khi có nhiều
-  nguồn giá, đây là thứ phân biệt.
-- `inserttime` (`Fact_OHLCV.CreatedAt`): biết row vào SQL lúc nào. Dùng để trả lời
+- `timestamp`: open time, **bằng đúng mốc trong tên key và phần tử List**. Giữ nó
+  trong Hash để consumer đọc một nến lẻ (`HGETALL`) là biết ngay nến nào, không
+  phải tách chuỗi từ tên key.
+- `time_update` (`Fact_OHLCV.CreatedAt`): biết row vào SQL lúc nào. Dùng để trả lời
   *"nến này DP lấy về trễ bao lâu so với lúc nó đóng"* — chỉ số vận hành thật, và
   là bằng chứng khi cần đối chiếu sự cố.
 
-`inserttime` **phải lấy từ SQL**, không được lấy thời điểm publish Redis. Hai mốc
+`time_update` **phải lấy từ SQL**, không được lấy thời điểm publish Redis. Hai mốc
 đó khác nhau ở mọi đường không phải live (spool replay, backfill, reconcile), và
 nếu bịa thì nó thành một con số vô nghĩa trông như có nghĩa.
+
+**`volume` không lên Redis.** Operator chốt bộ 6 field này theo một hệ tham chiếu
+đang dùng. Hệ quả cần biết: chỉ báo dựa trên khối lượng không lấy được dữ liệu từ
+Redis — volume vẫn còn trong `DWH.Fact_OHLCV` nếu sau này cần một đường khác.
 
 ### 3.5. Vì sao dùng Lua
 
@@ -153,13 +150,12 @@ thời gian nào mà mốc đã rời List trong khi Hash còn sống.
 
 ### 3.6. Vì sao so sánh trước khi ghi
 
-Script đọc 5 field OHLCV cũ bằng `HMGET`, chỉ `HSET` khi giá trị canonical **thực
+Script đọc 4 field giá cũ bằng `HMGET`, chỉ `HSET` khi giá trị canonical **thực
 sự khác**, và chỉ nến đổi mới vào payload event. Hệ quả: ghi lại y hệt không sinh
 event, nên OG không bị đánh thức vô ích mỗi chu kỳ live cho hàng trăm nến không đổi.
 
-Chỉ 5 field OHLCV tham gia so sánh. `timestamp`/`datetime`/`source` là hàm thuần
-của key và symbol nên không thể lệch; `inserttime` đi theo đúng row SQL đã sinh ra
-OHLCV đó.
+Chỉ 4 field giá tham gia so sánh. `timestamp` là chính mốc đặt tên key nên không
+thể lệch; `time_update` đi theo đúng row SQL đã sinh ra giá đó.
 
 ---
 
@@ -171,7 +167,7 @@ OHLCV đó.
 
 ```
 live.py: fetch_and_store() → SQL commit
-   → publish_candle_update(config, symbol_id, symbol, tf, source, delivered_candles)
+   → publish_candle_update(config, symbol_id, symbol, tf, delivered_candles)
    → enqueue: CHỈ giữ lại các MỐC thời gian, bỏ giá trị provider trong RAM
    → (thread nền) đọc lại đúng các row đó từ Fact_OHLCV
    → Lua: so sánh → HSET cái đổi → chèn mốc vào List → tỉa cửa sổ → PUBLISH
@@ -212,7 +208,7 @@ closes = [float(v) for v in pipe.execute()]        # round-trip 2
 ```
 
 Số round-trip không tăng theo N. Tổng byte thì có — nên chỉ báo cần `close` thì
-đừng kéo cả 9 field.
+đừng kéo cả 6 field.
 
 ### 4.3. Đường tín hiệu
 
@@ -301,7 +297,7 @@ là bất thường, lúc đó xem log `REDIS_PUBLISH_FAILED` và `REDIS_RECONCI
 
 ---
 
-## 7. Số liệu thực đo sau deploy (2026-09-14 04:48 UTC)
+## 7. Số liệu thực đo sau deploy (2026-09-15 05:39 UTC)
 
 ```
 DBSIZE                              16.665
@@ -309,16 +305,18 @@ DBSIZE                              16.665
   Hash (2 dấu ':')                  16.500   = 165 × 100 nến
   key ngoài prefix                       0
 Hash mồ côi (không List nào trỏ tới)     0
+Hash có timestamp != phần tử List        0
 phần tử List trỏ hụt (Hash đã mất)       0
-Hash sai bộ 9 field                      0
+Hash sai bộ 6 field                      0
 Hash sai kiểu giá trị                    0
 List trùng mốc / sai thứ tự / vượt cửa sổ / sai định dạng mốc   0
 encoding Hash / List             listpack / listpack
 reconcile khởi động: 165 pair, 16.500 hash, 165 list, 1.797 giây
 ```
 
-Đối chiếu với SQL: 156/165 pair khớp tuyệt đối; 9 pair lệch đúng như mô tả ở mục
-6(b), tự lành ở reconcile kế tiếp.
+Đối chiếu với SQL: **0 nến lệch giá trị**; 163/165 pair khớp tuyệt đối cả tập mốc,
+2 pair còn lại thiếu đúng nến mới nhất theo mô tả ở mục 6(b), tự lành ở reconcile
+kế tiếp.
 
 ---
 

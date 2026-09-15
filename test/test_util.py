@@ -446,7 +446,7 @@ def test_redis_publisher_is_inert_when_disabled(monkeypatch: pytest.MonkeyPatch)
         lambda *_a, **_k: pytest.fail("SQL must not be read when Redis is disabled"),
     )
     publisher = redis_publisher._RedisPublisher()
-    publisher.enqueue({"redis": {"enabled": False}}, 1, "GOLD", "M5", "CAPITALCOM:GOLD", [])
+    publisher.enqueue({"redis": {"enabled": False}}, 1, "GOLD", "M5", [])
     assert publisher._thread is None
     assert not publisher._updates and not publisher._reconciles
 
@@ -482,27 +482,24 @@ def test_redis_publisher_writes_only_the_changed_candles(
     publisher = redis_publisher._RedisPublisher()
     monkeypatch.setattr(publisher, "_get_client", lambda _settings: client)
 
-    publisher._publish_one(_redis_config(), (9, "US30", "H1", "CAPITALCOM:US30"), [bar])
+    publisher._publish_one(_redis_config(), (9, "US30", "H1"), [bar])
     assert asked == [[bar]]  # chi gui moc sang SQL, khong gui gia tri nao
     assert len(client.evals) == 1
     script, keys, rest = client.evals[0]
     assert "HSET" in script and "PUBLISH" in script and "ZADD" not in script
     assert keys == ["L_CANDLE_US30_H1", "dp:events:candles"]
-    (max_size, candle_prefix, prefix, source,
-     stamp, epoch, readable, o, h, low_, c, v, inserted, payload) = rest
+    (max_size, candle_prefix, prefix,
+     stamp, o, h, low_, c, updated, payload) = rest
     # Key Hash = candle_prefix + stamp, tuc chinh la list_key noi them ":" +
     # phan tu lay tu List -- dung mot phep noi, khong quy uoc nao khac.
     assert candle_prefix == "L_CANDLE_US30_H1:"
     assert candle_prefix == keys[0] + ":"
-    # Ca ten List lan moc deu khong chua ":", nen key Hash co dung MOT dau ":".
-    assert ":" not in keys[0] and ":" not in stamp
-    assert stamp == "20260727_120500"
-    assert epoch == str(int(bar.replace(tzinfo=timezone.utc).timestamp()))
-    assert readable == "2026-07-27 12:05:00"  # field datetime, dang nguoi doc
-    assert source == "CAPITALCOM:US30"
-    assert inserted == "2026-07-27 12:06:03"  # Fact.CreatedAt, khong phai gio publish
-    assert (o, h, low_, c, v) == (
-        "1.50000000", "2.50000000", "1.00000000", "2.00000000", "12.0000",
+    # Ten List khong chua ":"; moc thi co (gio-phut-giay).
+    assert ":" not in keys[0]
+    assert stamp == "2026-07-27 12:05:00"
+    assert updated == "2026-07-27 12:06:03"  # Fact.CreatedAt, khong phai gio publish
+    assert (o, h, low_, c) == (
+        "1.50000000", "2.50000000", "1.00000000", "2.00000000",
     )
     assert '"open":1.5' in payload  # Decimal converted to a real JSON number
     # Mock Redis o day khong thuc thi Lua, nen no khong the tu bat loi
@@ -537,23 +534,20 @@ def test_redis_publisher_reconcile_reads_sql_and_diffs_against_current_hash(
     publisher = redis_publisher._RedisPublisher()
     monkeypatch.setattr(publisher, "_get_client", lambda _settings: client)
 
-    publisher._reconcile_one(_redis_config(), 9, "US30", "H1", "CAPITALCOM:US30")
+    publisher._reconcile_one(_redis_config(), 9, "US30", "H1")
     assert len(client.evals) == 1
     script, keys, rest = client.evals[0]
     assert "LRANGE" in script and "DEL" in script  # diffs and evicts, not a blind rewrite
     assert keys == ["L_CANDLE_US30_H1"]
-    candle_prefix, source, *candle_args = rest
+    candle_prefix, *candle_args = rest
     assert candle_prefix == "L_CANDLE_US30_H1:"
-    assert source == "CAPITALCOM:US30"
-    stamp1, epoch1, readable1, *rest1 = candle_args[0:9]
-    stamp2, _epoch2, _readable2, *rest2 = candle_args[9:18]
-    assert stamp1 == bar1.strftime("%Y%m%d_%H%M%S")
-    assert stamp2 == bar2.strftime("%Y%m%d_%H%M%S")
-    assert epoch1 == str(int(bar1.replace(tzinfo=timezone.utc).timestamp()))
-    assert readable1 == "2026-07-27 12:00:00"
-    assert rest1 == ["1.00000000", "2.00000000", "0.50000000", "1.50000000", "10.0000",
+    stamp1, *rest1 = candle_args[0:6]
+    stamp2, *rest2 = candle_args[6:12]
+    assert stamp1 == bar1.strftime("%Y-%m-%d %H:%M:%S")
+    assert stamp2 == bar2.strftime("%Y-%m-%d %H:%M:%S")
+    assert rest1 == ["1.00000000", "2.00000000", "0.50000000", "1.50000000",
                      "2026-07-27 12:06:03"]
-    assert rest2 == ["1.50000000", "2.50000000", "1.00000000", "2.00000000", "12.0000",
+    assert rest2 == ["1.50000000", "2.50000000", "1.00000000", "2.00000000",
                      "2026-07-27 12:06:03"]
 
 
@@ -574,7 +568,7 @@ def test_redis_publisher_circuit_breaker_skips_after_failure_until_cooldown(
 
     def _run_once() -> None:
         try:
-            publisher._reconcile_one(config, 1, "GOLD", "M5", "CAPITALCOM:GOLD")
+            publisher._reconcile_one(config, 1, "GOLD", "M5")
         except Exception as exc:  # mirrors what _worker_loop does around _reconcile_one
             publisher._open_circuit(config, exc)
 

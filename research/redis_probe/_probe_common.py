@@ -42,10 +42,9 @@ __all__ = [
 ]
 
 # Dung bo field cua mot Hash nen. NUMERIC_FIELDS la phan duy nhat parse
-# duoc ra so; timestamp/datetime/source/inserttime la metadata dang chuoi.
-CANDLE_FIELDS = ("timestamp", "datetime", "open", "high", "low", "close",
-                 "volume", "source", "inserttime")
-NUMERIC_FIELDS = ("open", "high", "low", "close", "volume")
+# duoc ra so; timestamp va time_update la moc thoi gian dang chuoi.
+CANDLE_FIELDS = ("timestamp", "open", "high", "low", "close", "time_update")
+NUMERIC_FIELDS = ("open", "high", "low", "close")
 
 LOG_DIR = _PROBE_DIR / "probe_logs"
 RUN_DIR = _PROBE_DIR / "run"
@@ -151,12 +150,12 @@ def run_with_reconnect(run_once, logger: logging.Logger, component: str, *, retr
 def stamp_to_datetime(stamp: str) -> datetime | None:
     """Doc moc thoi gian cua key/List ve datetime UTC.
 
-    Dinh dang do redis_publisher._stamp() sinh ra: "YYYYMMDD_HHMMSS", luon
-    UTC, khong hau to offset. Khong chua ':' de Redis GUI khong tach moi nen
-    thanh nhieu tang thu muc; field `datetime` trong Hash moi la dang nguoi doc.
+    Dinh dang do redis_publisher._stamp() sinh ra: "YYYY-MM-DD HH:MM:SS",
+    luon UTC, khong hau to offset. Day cung chinh la gia tri cua field
+    `timestamp` trong Hash -- ba cho do luon bang nhau.
     """
     try:
-        return datetime.strptime(str(stamp), "%Y%m%d_%H%M%S").replace(tzinfo=timezone.utc)
+        return datetime.strptime(str(stamp), "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
     except ValueError:
         return None
 

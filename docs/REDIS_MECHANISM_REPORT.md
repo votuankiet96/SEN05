@@ -82,25 +82,22 @@ cửa sổ trong báo cáo này đều phụ thuộc giá trị đó.
 
 ```text
 LIST  L_CANDLE_{SYMBOL}_{TIMEFRAME}
-      [stamp-1, stamp-2, ..., stamp-n]       # YYYYMMDD_HHMMSS UTC, tăng dần
+      [stamp-1, stamp-2, ..., stamp-n]       # YYYY-MM-DD HH:MM:SS UTC, tăng dần
 
 HASH  L_CANDLE_{SYMBOL}_{TIMEFRAME}:{stamp}
-      timestamp  <epoch giây UTC của open time>
-      datetime   <open time dạng người đọc: 2026-09-08 14:00:00>
-      open       <decimal text>
-      high       <decimal text>
-      low        <decimal text>
-      close      <decimal text>
-      volume     <decimal text | "null">
-      source     <{BrokerChannel}:{Symbol}, vd CAPITALCOM:US30>
-      inserttime <Fact_OHLCV.CreatedAt dạng người đọc>
+      timestamp   <open time, bằng đúng {stamp}>
+      open        <decimal text>
+      high        <decimal text>
+      low         <decimal text>
+      close       <decimal text>
+      time_update <Fact_OHLCV.CreatedAt dạng người đọc>
 ```
 
 Ví dụ với `US30` timeframe `H1`:
 
 ```text
 L_CANDLE_US30_H1
-L_CANDLE_US30_H1:20260908_140000
+L_CANDLE_US30_H1:2026-09-08 14:00:00
 ```
 
 Key Hash bằng đúng key List nối thêm `":" + stamp` lấy từ List — một phép nối duy
@@ -196,7 +193,7 @@ Tóm lại: **Hash giữ nội dung; List giữ thứ tự và phạm vi cửa s
 Sau khi SQL ghi thành công, `live.py` đưa `delivered_candles` vào publisher. Publisher
 chỉ giữ lại **mốc thời gian** của chúng, coalesce theo `(symbol, timeframe, stamp)`;
 giá trị provider trong RAM bị bỏ đi. Trước khi ghi Redis, worker đọc lại đúng những
-row đó từ `DWH.Fact_OHLCV` — vì `inserttime` chỉ SQL mới biết, và vì như vậy Redis
+row đó từ `DWH.Fact_OHLCV` — vì `time_update` chỉ SQL mới biết, và vì như vậy Redis
 không thể trở thành một nhánh dữ liệu song song với SQL.
 
 Worker gọi `_INCREMENTAL_SCRIPT` bằng Lua. Với mỗi nến, script:
