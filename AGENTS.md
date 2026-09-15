@@ -58,16 +58,17 @@ Engine là package `dp_program` theo src layout. Các file chính:
 - `src/dp_program/util/discord_report.py`: reporter Discord tùy chọn, chỉ sống cùng
   lifecycle của `run`;
 - `src/dp_program/util/redis_publisher.py`: publisher Redis tùy chọn cho live —
-  mỗi nến là **một Hash riêng** `CANDLE:{SYMBOL}_{TIMEFRAME}:{stamp}` (9 field:
+  mỗi nến là **một Hash riêng** `L_CANDLE_{SYMBOL}_{TIMEFRAME}:{stamp}` (9 field:
   `timestamp`, `datetime`, `open`, `high`, `low`, `close`, `volume`, `source`,
   `inserttime`; giá trị số giữ đúng scale DECIMAL của warehouse), và một List
-  `CANDLE:{SYMBOL}_{TIMEFRAME}` chứa các `{stamp}` tăng dần làm chỉ mục duy
-  nhất. Key Hash = key List nối thêm `":" + stamp`, đúng một phép nối — nên key
-  List có đúng 1 dấu `:`, key Hash có đúng 2. `{stamp}` là
-  `YYYY-MM-DD_HH-MM-SS`, luôn UTC, không offset, rộng cố định: dùng `-` cho
-  giờ-phút-giây vì Redis GUI tách key theo `:` thành cây thư mục, và rộng cố
-  định thì so sánh chuỗi cho đúng thứ tự thời gian (Lua dựa vào đó, không dùng
-  `tonumber`). Cả hai đường ghi đều **đọc lại row từ SQL** trước khi ghi Redis
+  `L_CANDLE_{SYMBOL}_{TIMEFRAME}` chứa các `{stamp}` tăng dần làm chỉ mục duy
+  nhất. Key Hash = key List nối thêm `":" + stamp`, đúng một phép nối — cả tên
+  List lẫn `{stamp}` đều không chứa `:`, nên key Hash có **đúng một** dấu `:` và
+  Redis GUI chỉ tách đúng hai tầng. `{stamp}` là `YYYYMMDD_HHMMSS`, luôn UTC,
+  không offset, rộng cố định nên so sánh chuỗi cho đúng thứ tự thời gian (Lua
+  dựa vào đó, không dùng `tonumber`). Mốc trong key, field `timestamp` (epoch)
+  và field `datetime` (`YYYY-MM-DD HH:MM:SS`) đều là open time
+  (`Fact_OHLCV.BarTime`) đi qua cùng một hàm nên không thể lệch nhau. Cả hai đường ghi đều **đọc lại row từ SQL** trước khi ghi Redis
   (`inserttime` là `Fact_OHLCV.CreatedAt` thật, không bịa từ thời điểm publish),
   chỉ HSET đúng các nến thật sự đổi giá trị rồi PUBLISH JSON các nến đó lên kênh
   `redis.event_channel`; runtime còn tự đối chiếu (reconcile) với SQL định kỳ

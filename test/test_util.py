@@ -455,7 +455,7 @@ def _redis_config() -> dict:
     return {
         "redis": {
             "enabled": True, "bars_per_snapshot": 500, "circuit_cooldown_seconds": 30,
-            "key_prefix": "CANDLE", "event_channel": "dp:events:candles",
+            "key_prefix": "L_CANDLE", "event_channel": "dp:events:candles",
         }
     }
 
@@ -487,17 +487,18 @@ def test_redis_publisher_writes_only_the_changed_candles(
     assert len(client.evals) == 1
     script, keys, rest = client.evals[0]
     assert "HSET" in script and "PUBLISH" in script and "ZADD" not in script
-    assert keys == ["CANDLE:US30_H1", "dp:events:candles"]
+    assert keys == ["L_CANDLE_US30_H1", "dp:events:candles"]
     (max_size, candle_prefix, prefix, source,
      stamp, epoch, readable, o, h, low_, c, v, inserted, payload) = rest
     # Key Hash = candle_prefix + stamp, tuc chinh la list_key noi them ":" +
     # phan tu lay tu List -- dung mot phep noi, khong quy uoc nao khac.
-    assert candle_prefix == "CANDLE:US30_H1:"
+    assert candle_prefix == "L_CANDLE_US30_H1:"
     assert candle_prefix == keys[0] + ":"
-    # Moc dung '-' cho gio-phut-giay: ':' se bi Redis GUI hieu la phan cap.
-    assert stamp == "2026-07-27_12-05-00" and ":" not in stamp
+    # Ca ten List lan moc deu khong chua ":", nen key Hash co dung MOT dau ":".
+    assert ":" not in keys[0] and ":" not in stamp
+    assert stamp == "20260727_120500"
     assert epoch == str(int(bar.replace(tzinfo=timezone.utc).timestamp()))
-    assert readable == "2026-07-27 12:05:00"
+    assert readable == "2026-07-27 12:05:00"  # field datetime, dang nguoi doc
     assert source == "CAPITALCOM:US30"
     assert inserted == "2026-07-27 12:06:03"  # Fact.CreatedAt, khong phai gio publish
     assert (o, h, low_, c, v) == (
@@ -540,14 +541,14 @@ def test_redis_publisher_reconcile_reads_sql_and_diffs_against_current_hash(
     assert len(client.evals) == 1
     script, keys, rest = client.evals[0]
     assert "LRANGE" in script and "DEL" in script  # diffs and evicts, not a blind rewrite
-    assert keys == ["CANDLE:US30_H1"]
+    assert keys == ["L_CANDLE_US30_H1"]
     candle_prefix, source, *candle_args = rest
-    assert candle_prefix == "CANDLE:US30_H1:"
+    assert candle_prefix == "L_CANDLE_US30_H1:"
     assert source == "CAPITALCOM:US30"
     stamp1, epoch1, readable1, *rest1 = candle_args[0:9]
     stamp2, _epoch2, _readable2, *rest2 = candle_args[9:18]
-    assert stamp1 == bar1.strftime("%Y-%m-%d_%H-%M-%S")
-    assert stamp2 == bar2.strftime("%Y-%m-%d_%H-%M-%S")
+    assert stamp1 == bar1.strftime("%Y%m%d_%H%M%S")
+    assert stamp2 == bar2.strftime("%Y%m%d_%H%M%S")
     assert epoch1 == str(int(bar1.replace(tzinfo=timezone.utc).timestamp()))
     assert readable1 == "2026-07-27 12:00:00"
     assert rest1 == ["1.00000000", "2.00000000", "0.50000000", "1.50000000", "10.0000",

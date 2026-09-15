@@ -1,22 +1,29 @@
 """Đồng bộ Redis Hash + List từ SQL mà không chặn đường ghi warehouse.
 
-    LIST  CANDLE:BTCUSD_H1                       [..., 2026-07-29_06-00-00]
-    HASH  CANDLE:BTCUSD_H1:2026-07-29_06-00-00   timestamp  1785477600
-                                                 datetime   2026-07-29 06:00:00
+    LIST  L_CANDLE_BTCUSD_H1                     [..., 20260914_030000]
+    HASH  L_CANDLE_BTCUSD_H1:20260914_030000     timestamp  1789354800
+                                                 datetime   2026-09-14 03:00:00
                                                  open/high/low/close/volume
                                                  source     CAPITALCOM:BTCUSD
-                                                 inserttime 2026-07-29 06:05:12
+                                                 inserttime 2026-09-14 03:05:12
 
 Key Hash = key List nối thêm ``":" + <phần tử lấy từ List>``; một phép nối
 duy nhất, consumer không cần quy ước nào khác.
 """
-# Mốc trong key dùng '-' cho giờ-phút-giây chứ không dùng ':' vì Redis GUI tách
-# key theo ':' thành cây thư mục -- 'HH:MM:SS' sẽ đẻ ra ba tầng folder rỗng cho
-# mỗi nến. Dấu ':' vì vậy chỉ còn xuất hiện đúng hai chỗ có nghĩa: sau prefix
-# CANDLE, và trước mốc. '-' vẫn giữ mốc rộng cố định nên so sánh chuỗi trùng
-# khít thứ tự thời gian -- Lua dựa hẳn vào tính chất đó ('<'/'>', không
-# 'tonumber'). Định dạng phải tuyệt đối nhất quán: chỉ một bản ghi lệch là vừa
-# hỏng thứ tự vừa sinh key thứ hai cho cùng một nến.
+# Mốc trong key dùng dạng gọn 'YYYYMMDD_HHMMSS': không dấu cách, và quan trọng
+# hơn là KHÔNG dấu ':'. Redis không có thư mục nhưng mọi GUI đều tách key theo
+# ':' để dựng cây, nên mốc có ':' sẽ đẻ ra mấy tầng thư mục rỗng cho từng nến.
+# Ở dạng này, dấu ':' duy nhất trong key Hash là dấu của phép nối, nên cây hiện
+# đúng hai tầng: tên pair, rồi từng nến.
+#
+# Mốc rộng cố định (15 ký tự) và đệm 0 nên so sánh chuỗi trùng khít thứ tự thời
+# gian. Lua dựa hẳn vào tính chất đó ('<'/'>', không 'tonumber' -- dấu '_' làm
+# tonumber trả nil). Định dạng phải tuyệt đối nhất quán: chỉ một bản ghi lệch là
+# vừa hỏng thứ tự vừa sinh key thứ hai cho cùng một nến.
+#
+# Hash vẫn giữ mốc ở hai dạng dễ dùng: `timestamp` là epoch giây UTC, `datetime`
+# là 'YYYY-MM-DD HH:MM:SS' cho người đọc. Cả ba (mốc trong key, timestamp,
+# datetime) sinh từ cùng một _utc() nên không thể lệch nhau.
 #
 # List là chỉ mục duy nhất: mọi nến tồn tại đều có mốc của nó trong List, và
 # eviction xoá key nến trong cùng script atomic đã LPOP mốc đó, nên nến mồ côi
@@ -179,8 +186,13 @@ def _utc(value: Any) -> datetime:
 
 
 def _stamp(bartime: Any) -> str:
-    """Mốc làm phần tử List và đuôi key Hash: rộng cố định, UTC, không offset."""
-    return _utc(bartime).strftime("%Y-%m-%d_%H-%M-%S")
+    """Mốc làm phần tử List và đuôi key Hash: `YYYYMMDD_HHMMSS`.
+
+    Không chứa `:` để Redis GUI không tách mỗi nến thành nhiều tầng thư mục.
+    Rộng cố định 15 ký tự, đệm 0, luôn UTC, không offset -- nhờ vậy so sánh
+    chuỗi cho đúng thứ tự thời gian.
+    """
+    return _utc(bartime).strftime("%Y%m%d_%H%M%S")
 
 
 def _readable(value: Any) -> str:
@@ -219,6 +231,8 @@ def _rows_to_args(rows: list[tuple[Any, ...]], *, with_event: bool) -> list[str]
         stamp = _stamp(bartime)
         fields = _candle_fields(open_, high, low, close, volume)
         epoch = int(_utc(bartime).replace(tzinfo=timezone.utc).timestamp())
+        # `stamp` (dạng gọn, dùng cho key) và `datetime` (dạng người đọc) là
+        # hai cách viết của CÙNG một mốc: cả hai đi qua _utc() nên không lệch.
         args.extend((stamp, str(epoch), _readable(bartime), *fields, _readable(created_at)))
         if with_event:
             args.append(_candle_json(stamp, fields))
@@ -338,11 +352,12 @@ class _RedisPublisher:
     def _keys(settings: dict[str, Any], tf_code: str, symbol: str) -> tuple[str, str]:
         """Trả về (list_key, candle_prefix).
 
-        `{prefix}:{SYMBOL}_{TIMEFRAME}`, và key nến chỉ là nó nối thêm
+        `{prefix}_{SYMBOL}_{TIMEFRAME}`, và key nến chỉ là nó nối thêm
         `":" + stamp`. Một phép nối duy nhất, nên bên đọc cầm tên List và một
-        phần tử bất kỳ trong đó là dựng ra key nến ngay.
+        phần tử bất kỳ trong đó là dựng ra key nến ngay. Tên List không chứa
+        `":"`; key nến thì có (một của phép nối, hai của giờ-phút-giây).
         """
-        base = f"{settings['key_prefix']}:{symbol}_{tf_code}"
+        base = f"{settings['key_prefix']}_{symbol}_{tf_code}"
         return base, f"{base}:"
 
     def _scripts(self, settings: dict[str, Any]) -> tuple[Any, Any]:

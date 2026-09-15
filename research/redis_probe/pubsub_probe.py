@@ -91,7 +91,7 @@ def _handle_event(client, logger, prefix: str, raw: str, last_seen: dict[str, fl
         return 0
     pair = f"{symbol}:{timeframe}"
     last_seen[pair] = time.monotonic()
-    list_key = f"{prefix}:{symbol}_{timeframe}"
+    list_key = f"{prefix}_{symbol}_{timeframe}"
     mismatches = 0
     for candle in candles:
         stamp = candle.get("bartime")

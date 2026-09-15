@@ -1,112 +1,89 @@
-# Prompt đồng bộ cho OG (core_python) — cấu trúc Redis `CANDLE:`
+# Prompt đồng bộ cho OG (core_python) — cấu trúc Redis `L_CANDLE_`
 
 > Copy toàn bộ phần dưới đây gửi cho phía OG.
->
-> **Lịch sử:** đây là lần đổi contract thứ hai. Bản trước (`L_CANDLE_{SYMBOL}_{TIMEFRAME}`,
-> mốc `HH:MM:SS`, Hash 5 field) đã bị thay thế — nếu OG vừa migrate sang bản đó thì
-> phần lớn công sức vẫn dùng lại được, chỉ đổi cách ghép key, định dạng mốc, và
-> thêm 4 field metadata.
 
 ---
 
-DP (`dp_program_v3`, VM-DP6) đổi cấu trúc key trên Redis. Vẫn **db0**, vẫn cùng
-server `10.11.12.8:6379`, vẫn channel `dp:events:candles` — chỉ đổi **cách đặt tên
-key, định dạng mốc thời gian, và bộ field trong Hash**.
+DP đã cắt sang contract Redis mới lúc **2026-09-15 02:25 UTC**. Vẫn **db0**, vẫn
+`10.11.12.8:6379`, vẫn channel `dp:events:candles`. Thay đổi so với bản `CANDLE:`
+vừa rồi chỉ gồm **hai điểm**, nhưng cả hai đều nằm ở tên key nên bắt buộc phải sửa.
 
-## 1. Vì sao đổi
+## 1. Hai thay đổi
 
-Bản trước đặt mốc trong key dạng `2026-06-05_21:00:00`. Redis không có thư mục —
-nhưng Redis Desktop Manager (và mọi GUI khác) **tách key theo dấu `:`** để dựng cây.
-Nên mỗi nến đẻ ra ba tầng thư mục rỗng:
+| | Bản trước (`CANDLE:`) | **Bản mới** |
+|---|---|---|
+| Key List | `CANDLE:BTCUSD_H1` | `L_CANDLE_BTCUSD_H1` |
+| Mốc | `2026-09-14_03-00-00` | `20260914_030000` |
+| Key Hash | `CANDLE:BTCUSD_H1:2026-09-14_03-00-00` | `L_CANDLE_BTCUSD_H1:20260914_030000` |
 
-```
-L_CANDLE_BTCUSD_D1 / 2026-06-05_21 / 00 / 00      ← không đọc được
-```
-
-Đổi giờ-phút-giây sang `-` thì dấu `:` chỉ còn ở đúng hai chỗ có nghĩa, và cây
-hiện đúng hai tầng:
-
-```
-CANDLE
-  CANDLE:BTCUSD_H1                           ← List, nằm ngang với folder pair
-  BTCUSD_H1
-    CANDLE:BTCUSD_H1:2026-07-29_04-00-00     ← Hash từng nến
-    CANDLE:BTCUSD_H1:2026-07-29_05-00-00
-    CANDLE:BTCUSD_H1:2026-07-29_06-00-00
-```
-
-Mốc vẫn rộng cố định nên **so sánh chuỗi vẫn đúng thứ tự thời gian** — không mất
-gì khi đổi `:` thành `-`.
+Mốc trong key dùng dạng gọn `YYYYMMDD_HHMMSS` — **không chứa `:`**, nên key Hash
+chỉ còn đúng một dấu `:` (dấu của phép nối) và Redis GUI hiện đúng hai tầng.
+Dạng người đọc vẫn có, nằm ở field `datetime` trong Hash. Bộ 9 field **không đổi**.
 
 ## 2. Bố trí key
 
 ```
-LIST  CANDLE:{SYMBOL}_{TIMEFRAME}
-        ["2026-07-29_04-00-00", "2026-07-29_05-00-00", "2026-07-29_06-00-00"]
+LIST  L_CANDLE_{SYMBOL}_{TIMEFRAME}
+        ["20260914_010000", "20260914_020000", "20260914_030000"]
 
-HASH  CANDLE:{SYMBOL}_{TIMEFRAME}:{YYYY-MM-DD_HH-MM-SS}
-        timestamp   1785301200
-        datetime    2026-07-29 06:00:00
-        open        100.00000000
-        high        102.00000000
-        low         99.00000000
-        close       101.00000000
-        volume      12.5000
+HASH  L_CANDLE_{SYMBOL}_{TIMEFRAME}:{YYYYMMDD_HHMMSS}
+        timestamp   1789354800
+        datetime    2026-09-14 03:00:00
+        open        77545.35000000
+        high        77807.90000000
+        low         77450.75000000
+        close       77537.05000000
+        volume      12684.0000
         source      CAPITALCOM:BTCUSD
-        inserttime  2026-07-29 06:07:03
+        inserttime  2026-09-14 03:05:12
 ```
 
-**Ba quy tắc, không có quy tắc thứ tư:**
+**Ba quy tắc:**
 
-1. **Key Hash = key List + `":" + phần tử lấy từ List`.** Đúng một phép nối.
-2. **SYMBOL trước, TIMEFRAME sau**, nối bằng `_`: `CANDLE:BTCUSD_H1`, không phải
-   `CANDLE:H1_BTCUSD`.
-3. **Mốc dùng `-` cho giờ-phút-giây**, `_` giữa ngày và giờ: `2026-07-29_06-00-00`.
-   Không `T`, không dấu cách, không `:`, không offset.
+1. **Key Hash = key List + `":" + phần tử lấy từ List`.** Một phép nối duy nhất.
+2. **SYMBOL trước, TIMEFRAME sau**, nối bằng `_`.
+3. **Mốc trong key, `timestamp` và `datetime` đều là open time** (`BarTime` của
+   SQL) — ba cách viết của cùng một thời điểm, sinh từ đúng một hàm nên không
+   thể lệch nhau. Chỉ `inserttime` là thứ khác: `Fact_OHLCV.CreatedAt`.
 
-Đếm dấu `:` là cách kiểm nhanh: **key List có đúng 1, key Hash có đúng 2.**
+## 3. Điểm quan trọng nhất phải để ý khi sửa code
 
-## 3. Định dạng mốc (phần tử List và đuôi key Hash)
+Cách phân biệt key List với key Hash đổi lần nữa:
 
 ```
-YYYY-MM-DD_HH-MM-SS        vd: 2026-07-29_06-00-00
+L_CANDLE_BTCUSD_H1                     → 0 dấu ':'   ← LIST
+L_CANDLE_BTCUSD_H1:20260914_030000     → 1 dấu ':'   ← HASH
 ```
 
-- **Luôn UTC**, **không hậu tố offset**.
-- Rộng cố định, có đệm 0 → so sánh/sắp xếp trực tiếp trên chuỗi là đúng thứ tự
-  thời gian. Chỉ parse khi thật sự cần đối tượng `datetime`:
+- Nếu bản trước bạn dùng `key.count(":") == 1` để nhận ra **List** → **không còn
+  đúng**, vì giờ đó lại là dấu hiệu của Hash. Đổi thành `":" not in key`.
+- Nếu dùng `SCAN ... TYPE list` thì vẫn đúng, không phải sửa.
+- Pattern SCAN đổi từ `CANDLE:*` sang `L_CANDLE_*`.
+
+Key không chứa dấu cách nên `redis-cli` gõ thẳng, không cần ngoặc kép.
+
+## 4. Định dạng mốc
+
+```
+YYYYMMDD_HHMMSS        vd: 20260914_030000
+```
+
+- **Luôn UTC**, không hậu tố offset.
+- Rộng cố định, đệm 0 → **so sánh/sắp xếp trực tiếp trên chuỗi vẫn đúng thứ tự
+  thời gian**, kể cả qua mốc vượt ngày/tháng/năm (đã kiểm). Không cần parse chỉ
+  để sắp xếp.
 
 ```python
-datetime.strptime(stamp, "%Y-%m-%d_%H-%M-%S").replace(tzinfo=timezone.utc)
+datetime.strptime(stamp, "%Y%m%d_%H%M%S").replace(tzinfo=timezone.utc)
 ```
 
-## 4. Chín field trong Hash
-
-| Field | Kiểu | Ý nghĩa |
-|---|---|---|
-| `timestamp` | chuỗi số nguyên | Unix epoch **giây, UTC** của open time |
-| `datetime` | chuỗi | open time dạng người đọc: `2026-07-29 06:00:00` (dấu `:` ở đây vô hại — nó là **giá trị**, không phải tên key) |
-| `open` `high` `low` `close` | chuỗi thập phân | scale 8, đúng DECIMAL của warehouse |
-| `volume` | chuỗi thập phân | scale 4; có thể là literal `"null"` |
-| `source` | chuỗi | `{BrokerChannel}:{Symbol}`, vd `CAPITALCOM:BTCUSD` |
-| `inserttime` | chuỗi | **`Fact_OHLCV.CreatedAt` thật** — thời điểm row được ghi vào SQL, không phải thời điểm publish Redis |
-
-Lưu ý quan trọng:
-
-- **Tất cả là chuỗi text, KHÔNG phải JSON.** Không `json.loads` trên value của
-  Hash; dùng `float()` / `Decimal()` trực tiếp.
-- `volume == "null"` sẽ làm `float()` ném lỗi — phải xử lý riêng.
-- `timestamp` và `datetime` là **hai cách biểu diễn cùng một open time**, và trùng
-  với mốc trong tên key. Dùng cái nào tiện nhất; không cái nào được phép lệch.
+Hoặc bỏ qua việc parse: field `timestamp` trong Hash đã là epoch giây UTC sẵn.
 
 ## 5. Đọc N nến gần nhất
 
-Cố định 2 round-trip bất kể N, không parse gì:
-
 ```python
 def latest_closes(r, symbol: str, timeframe: str, n: int) -> list[float]:
-    """Vd MA20: latest_closes(r, "BTCUSD", "H1", 20)"""
-    list_key = f"CANDLE:{symbol}_{timeframe}"
+    list_key = f"L_CANDLE_{symbol}_{timeframe}"
     stamps = r.lrange(list_key, -n, -1)               # round-trip 1
     pipe = r.pipeline(transaction=False)
     for stamp in stamps:
@@ -114,75 +91,55 @@ def latest_closes(r, symbol: str, timeframe: str, n: int) -> list[float]:
     return [float(v) for v in pipe.execute()]          # round-trip 2
 ```
 
-Chỉ báo cần nhiều field (ATR cần high/low/close) thì đổi `hget` →
-`hmget(key, "high", "low", "close")` — vẫn một pipeline.
+Cửa sổ **100 nến/pair**. Đọc độ dài từ `LLEN` hoặc dùng `LRANGE` chỉ số âm.
 
-Cửa sổ hiện tại **100 nến/pair**. Đọc độ dài từ `LLEN` hoặc dùng `LRANGE` chỉ số
-âm, đừng hardcode.
+Giá trị trong Hash là **chuỗi text, không phải JSON**. `volume` có thể là literal
+`"null"` → `float()` sẽ ném lỗi, phải xử lý. Đừng `float()` lên `datetime` /
+`source` / `inserttime`.
 
-## 6. Pub/Sub — cơ chế không đổi, chỉ đổi định dạng mốc
+## 6. Pub/Sub
 
-Channel `dp:events:candles`:
+Channel `dp:events:candles`, `bartime` dùng đúng mốc mới:
 
 ```json
 {"symbol":"BTCUSD","timeframe":"H1","candles":[
-  {"bartime":"2026-07-29_06-00-00","open":100.00000000,"high":102.00000000,
-   "low":99.00000000,"close":101.00000000,"volume":12.5000}]}
+  {"bartime":"20260914_030000","open":77545.35000000,"high":77807.90000000,
+   "low":77450.75000000,"close":77537.05000000,"volume":12684.0000}]}
 ```
 
-- `bartime` dùng **đúng định dạng mốc mới**, nối thẳng ra key Hash được:
-  `f"CANDLE:{symbol}_{timeframe}:{candle['bartime']}"`.
-- Event chỉ mang 5 giá trị OHLCV (dạng **số JSON**), không mang 4 field metadata —
-  muốn metadata thì đọc Hash.
-- DP chỉ publish khi giá trị **thực sự đổi**; ghi lại y hệt không sinh event.
-- Mỗi message chỉ liên quan **một** `(symbol, timeframe)`.
-- Fire-and-forget: mất message không mất dữ liệu; Hash/List luôn là bản đúng.
+Nối thẳng ra key: `f"L_CANDLE_{symbol}_{timeframe}:{candle['bartime']}"`.
+Event chỉ là tín hiệu — nhận rồi đọc lại Hash/List, đừng coi payload là nguồn dữ liệu.
 
-## 7. Checklist sửa code phía OG
+## 7. Checklist
 
-1. Đổi cách dựng key List: `f"CANDLE:{symbol}_{timeframe}"` (trước là
-   `f"L_CANDLE_{symbol}_{timeframe}"`).
-2. Key Hash giữ nguyên quy tắc `list_key + ":" + stamp` — không đổi.
-3. Đổi định dạng mốc: `"%Y-%m-%d_%H:%M:%S"` → **`"%Y-%m-%d_%H-%M-%S"`**. Đây là
-   thay đổi dễ bỏ sót nhất vì chỉ khác hai ký tự.
-4. Nếu đang phân biệt key List với key Hash bằng `":" in key` thì **không còn đúng**
-   (key List giờ cũng có `:`). Đổi sang `key.count(":") == 1`, hoặc dùng
-   `SCAN ... TYPE list` (OG đã dùng cách này — vẫn đúng, không phải sửa).
-5. Hash giờ có **9 field**. Nếu code đang assert đúng 5 field thì phải nới ra.
-   Đừng `float()` lên `datetime`/`source`/`inserttime`.
-6. Cân nhắc dùng `timestamp` (epoch) thay cho việc tự parse mốc — rẻ hơn.
-7. `config.yaml` phía OG: `key_prefix` đổi `L_CANDLE` → **`CANDLE`**.
-8. **Restart tiến trình `og_signal.live_worker` sau khi sửa.** Lần trước tiến
-   trình cũ chạy code cũ trong RAM suốt 8 giờ, đọc ra rỗng mà không báo lỗi, mất
-   18 signal. Sửa file trên đĩa là chưa đủ.
+1. Key List: `f"L_CANDLE_{symbol}_{timeframe}"`.
+2. Mốc: `"%Y%m%d_%H%M%S"` (gọn, không dấu cách, không dấu hai chấm).
+3. Phân biệt List/Hash: `":" not in key` (hoặc giữ `SCAN ... TYPE list`).
+4. Pattern SCAN: `L_CANDLE_*`.
+5. `key_prefix` → `L_CANDLE`.
+6. Nếu test của bạn assert mốc **có** chứa `:` → phải bỏ assert đó.
+7. **Restart `og_signal.live_worker`.** Sửa file trên đĩa là chưa đủ.
 
-## 8. Thời điểm cắt và trạng thái hiện tại
+## 8. Trạng thái Redis lúc này
 
-**db0 đã được xoá sạch lúc 2026-09-14 04:37 UTC** (16.665 key). db1 — nơi OG ghi
-signal — **không bị đụng tới**, vẫn nguyên 601 key.
+- **db0 đã nạp lại xong**: 165 List + 16.500 Hash = 16.665 key, đúng contract mới.
+- Đã kiểm: 0 Hash mồ côi, 0 phần tử List trỏ hụt, 0 Hash sai bộ 9 field,
+  **0 Hash có `datetime` không khớp mốc trong key**, 0 nến lệch giá trị so với SQL.
+- Trong ~30 phút đầu sau khi DP restart, vài pair có thể thiếu 1-2 nến mới nhất —
+  bình thường, tự lành ở lần đối chiếu kế tiếp. Lệch kéo dài qua **hai** chu kỳ
+  reconcile mới là bất thường.
 
-Nhưng DP **chưa deploy exe mới**. Nên ngay lúc này engine cũ đang nạp lại db0 theo
-đúng contract **cũ** `L_CANDLE_*`, và cửa sổ đang mỏng (mỗi pair 1-2 nến) cho tới
-lần reconcile kế tiếp. Nghĩa là:
-
-- OG đọc lúc này sẽ thấy **thiếu nến** — chưa đủ 100 để tính indicator.
-- Cấu trúc đang có vẫn là `L_CANDLE_*`, **chưa phải** `CANDLE:*`.
-
-Thứ tự cắt còn lại:
-
-1. DP build exe mới, dừng engine, xoá lại key `L_CANDLE_*`, đổi `key_prefix` sang
-   `CANDLE`, khởi động lại. Reconcile lúc khởi động sẽ nạp đủ 100 nến cho cả 165
-   pair ngay.
-2. OG deploy code mới **và restart `og_signal.live_worker`**.
-
-Sau bước 1, key `L_CANDLE_*` sẽ không còn tồn tại.
+**Cần bạn kiểm giúp:** `db1` (nơi OG ghi signal) hiện **đang rỗng hoàn toàn**,
+trước đó có ~601 key. DP không đụng tới db1. Nhiều khả năng có lệnh `FLUSHALL`
+đã chạy thay vì `FLUSHDB 0`. Xác nhận giúp signal cũ có cần khôi phục không, và
+OG có đang ghi signal mới bình thường sau khi restart không.
 
 ## 9. Đảm bảo từ phía DP
 
-- **Không có nến mồ côi**: mọi ghi qua đúng một Lua script atomic; List là chỉ mục
-  duy nhất; eviction xoá key Hash trong cùng script đã LPOP mốc đó.
-- **List luôn tăng dần**, kể cả khi nến đến muộn.
-- **Nến hiệu chỉnh ghi đè tại chỗ**, không sinh bản trùng.
-- **Mọi giá trị đọc lại từ SQL trước khi ghi Redis** — kể cả trên đường live. Redis
-  là bản chụp của `DWH.Fact_OHLCV`, không phải một nhánh dữ liệu song song.
-- **Tự phục hồi**: DP đối chiếu toàn bộ với SQL lúc khởi động và mỗi 30 phút.
+- Không có nến mồ côi: eviction xoá phần tử List và key Hash trong cùng một Lua
+  script atomic.
+- List luôn tăng dần, kể cả khi nến đến muộn.
+- Nến hiệu chỉnh ghi đè tại chỗ, không sinh bản trùng.
+- Mọi giá trị đọc lại từ SQL trước khi ghi Redis — Redis là bản chụp của
+  `DWH.Fact_OHLCV`, không phải nhánh dữ liệu song song.
+- Đối chiếu toàn bộ với SQL lúc khởi động và mỗi 30 phút.

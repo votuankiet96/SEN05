@@ -151,12 +151,12 @@ def run_with_reconnect(run_once, logger: logging.Logger, component: str, *, retr
 def stamp_to_datetime(stamp: str) -> datetime | None:
     """Doc moc thoi gian cua key/List ve datetime UTC.
 
-    Dinh dang do redis_publisher._stamp() sinh ra: YYYY-MM-DD_HH-MM-SS,
-    luon UTC, khong hau to offset. Gio-phut-giay dung "-" chu khong phai
-    ":" de Redis GUI khong tach moi nen thanh ba tang thu muc rong.
+    Dinh dang do redis_publisher._stamp() sinh ra: "YYYYMMDD_HHMMSS", luon
+    UTC, khong hau to offset. Khong chua ':' de Redis GUI khong tach moi nen
+    thanh nhieu tang thu muc; field `datetime` trong Hash moi la dang nguoi doc.
     """
     try:
-        return datetime.strptime(str(stamp), "%Y-%m-%d_%H-%M-%S").replace(tzinfo=timezone.utc)
+        return datetime.strptime(str(stamp), "%Y%m%d_%H%M%S").replace(tzinfo=timezone.utc)
     except ValueError:
         return None
 
@@ -164,11 +164,11 @@ def stamp_to_datetime(stamp: str) -> datetime | None:
 def list_keys(client, prefix: str):
     """Duyet cac key List chi muc, bo qua key Hash cua tung nen.
 
-    Ca hai deu bat dau bang "{prefix}:"; khac nhau o cho key Hash co them
-    ":" + moc thoi gian nua, nen ten List co dung 1 dau ":" con key Hash co
-    2 (symbol, timeframe va moc deu khong chua dau hai cham). Loc bang ten
-    re hon goi TYPE cho tung key trong hang chuc nghin key.
+    Ca hai deu bat dau bang "{prefix}_"; khac nhau o cho key Hash co them
+    ":" + moc thoi gian, con ten List thi KHONG BAO GIO chua ":" (symbol va
+    timeframe deu khong co dau hai cham). Loc bang ten re hon goi TYPE cho
+    tung key trong hang chuc nghin key.
     """
-    for key in client.scan_iter(match=f"{prefix}:*", count=500):
-        if key.count(":") == 1:
+    for key in client.scan_iter(match=f"{prefix}_*", count=500):
+        if ":" not in key:
             yield key

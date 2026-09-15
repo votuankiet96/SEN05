@@ -1,6 +1,6 @@
 # Cấu trúc dữ liệu Redis của DP — thiết kế, luồng chạy, và giới hạn
 
-> Trạng thái: đã triển khai production lúc **2026-09-14 04:45 UTC**.
+> Trạng thái: đã triển khai production lúc **2026-09-15 02:25 UTC**.
 > Đối tượng đọc: người thiết kế/vận hành hệ thống auto trading.
 
 ---
@@ -34,12 +34,12 @@ SQL trước khi ghi** — kể cả trên đường live, nơi DP đã có sẵ
 ## 2. Contract dữ liệu
 
 ```
-LIST  CANDLE:{SYMBOL}_{TIMEFRAME}
-        ["2026-07-29_04-00-00", "2026-07-29_05-00-00", "2026-07-29_06-00-00"]
+LIST  L_CANDLE_{SYMBOL}_{TIMEFRAME}
+        ["20260914_010000", "20260914_020000", "20260914_030000"]
 
-HASH  CANDLE:{SYMBOL}_{TIMEFRAME}:{YYYY-MM-DD_HH-MM-SS}
-        timestamp   1785301200            epoch giây UTC của open time
-        datetime    2026-07-29 06:00:00   cùng mốc, dạng người đọc
+HASH  L_CANDLE_{SYMBOL}_{TIMEFRAME}:{YYYYMMDD_HHMMSS}
+        timestamp   1789354800            epoch giây UTC của open time
+        datetime    2026-09-14 03:00:00   cùng mốc, dạng người đọc
         open        100.00000000          DECIMAL scale 8
         high        102.00000000
         low          99.00000000
@@ -53,9 +53,11 @@ Ba quy tắc, không có quy tắc thứ tư:
 
 1. **Key Hash = key List + `":" + phần tử lấy từ List`.** Một phép nối.
 2. **SYMBOL trước, TIMEFRAME sau**, nối bằng `_`.
-3. **Mốc:** `YYYY-MM-DD_HH-MM-SS`, luôn UTC, không offset, rộng cố định.
+3. **Mốc:** `YYYYMMDD_HHMMSS`, luôn UTC, không offset, rộng cố định 15 ký tự.
+4. **Mốc trong key, `timestamp` và `datetime` đều là open time** (`BarTime`),
+   ba cách viết của cùng một thời điểm, sinh từ đúng một hàm.
 
-Kiểm nhanh bằng mắt: key List có đúng **1** dấu `:`, key Hash có đúng **2**.
+Kiểm nhanh bằng mắt: tên List **không chứa** dấu `:`; key Hash có đúng **một**.
 
 ---
 
@@ -107,18 +109,16 @@ sánh thời gian. Đây không phải thẩm mỹ: Lua trong Redis dựa hẳn 
 `tonumber` vì `tonumber("2026-07-29_06-00-00")` trả `nil`. Chỉ cần một bản ghi lẫn
 offset là vừa hỏng thứ tự vừa sinh key thứ hai cho cùng một nến.
 
-**Giờ-phút-giây dùng `-` chứ không `:`** → Redis không có thư mục, nhưng mọi GUI đều
-tách key theo `:` để dựng cây. Mốc dạng `HH:MM:SS` đẻ ra ba tầng thư mục rỗng cho
-**mỗi** nến:
+**Mốc trong key không chứa `:`** → Redis không có thư mục, nhưng mọi GUI đều tách
+key theo `:` để dựng cây. Mốc dạng `HH:MM:SS` đẻ ra thêm mấy tầng thư mục rỗng cho
+**mỗi** nến, và với 16.500 Hash thì cây key không đọc nổi. Ở dạng `YYYYMMDD_HHMMSS`,
+dấu `:` duy nhất trong key Hash là dấu của phép nối, nên GUI hiện đúng hai tầng:
+tên pair, rồi từng nến.
 
-```
-L_CANDLE_BTCUSD_D1 / 2026-06-05_21 / 00 / 00
-```
-
-Với 16.500 Hash thì cây key không đọc được bằng mắt. Đây là bài học phải trả giá:
-thế hệ trước chỉ kiểm tính đúng đắn mà không kiểm **nó hiển thị ra sao trong công
-cụ mà người vận hành thực sự dùng**. Đổi sang `-` giữ nguyên mọi tính chất logic,
-chỉ dời dấu `:` về đúng hai chỗ mang nghĩa phân cấp.
+Đổi lại, mốc trong key không còn đọc trôi như `2026-09-14 03:00:00`. Đó là lý do
+Hash giữ **hai** dạng dễ dùng của cùng mốc đó: `timestamp` (epoch, cho máy) và
+`datetime` (`YYYY-MM-DD HH:MM:SS`, cho người). Chia việc: tên key tối ưu cho cây
+key và cho so sánh chuỗi; field trong Hash tối ưu cho người đọc và cho consumer.
 
 **Dạng người đọc chứ không phải epoch** → mở GUI lên là hiểu ngay đang nhìn nến
 nào, không cần công cụ giải mã. Epoch vẫn có, nằm trong field `timestamp`.
@@ -203,7 +203,7 @@ OG mọi thao tác bảo trì.
 Cố định 2 round-trip bất kể N, không parse gì:
 
 ```python
-list_key = f"CANDLE:{symbol}_{timeframe}"
+list_key = f"L_CANDLE_{symbol}_{timeframe}"
 stamps = r.lrange(list_key, -n, -1)               # round-trip 1
 pipe = r.pipeline(transaction=False)
 for stamp in stamps:
@@ -330,7 +330,7 @@ reconcile khởi động: 165 pair, 16.500 hash, 165 list, 1.797 giây
 | `reconcile_interval_seconds` | 1800 | Quyết định trần độ trễ ở mục 6(a) và 6(c) |
 | `timeout_seconds` | 0.3 | Socket timeout. Gắt — một lô có thể làm 100 `HMGET` + 100 `HSET`. Chưa đo thời gian chạy thật dưới tải |
 | `circuit_cooldown_seconds` | 30 | Thời gian mở mạch sau lỗi |
-| `key_prefix` | `CANDLE` | Đổi giá trị này là đổi contract; phải đồng bộ với OG |
+| `key_prefix` | `L_CANDLE` | Đổi giá trị này là đổi contract; phải đồng bộ với OG |
 
 ---
 

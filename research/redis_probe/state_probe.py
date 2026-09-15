@@ -7,11 +7,11 @@ publish va reconcile chay bat dong bo).
 
 Hai vong kiem moi lan chay:
   1. Structural scan (moi lan goi, nhanh, khong dung SQL): quet toan
-     bo key List CANDLE:* qua SCAN (khong dung KEYS -- tranh block
+     bo key List L_CANDLE_* qua SCAN (khong dung KEYS -- tranh block
      Redis production), kiem cac bat bien thiet ke da thong nhat:
        - Moi moc trong List co Hash nen tuong ung (khong nen thieu)
        - Moi nen du 9 field, va 5 field OHLCV dung kieu so
-       - Moc chi nam o ten key, khong lap lai thanh field trong Hash
+       - Field `datetime` la dang nguoi doc cua chinh moc trong List
        - List khong trung moc va sap xep tang dan
        - LLEN(list) <= bars_per_snapshot (cua so khong phinh)
        - Do tuoi: moc moi nhat khong cu hon nguong theo khung gio
@@ -93,7 +93,7 @@ def _stamp_from_sql(bartime) -> str:
     lai ky vong tu SQL, neu dung chung ham thi mot loi trong ham do se tu
     xac nhan la dung.
     """
-    return bartime.strftime("%Y-%m-%d_%H-%M-%S")
+    return bartime.strftime("%Y%m%d_%H%M%S")
 
 
 def _minutes_by_pair(pairs: list) -> dict[str, int]:
@@ -115,7 +115,7 @@ def _structural_scan(client, logger, prefix: str, bars_per_snapshot: int, minute
 
 
 def _check_one_pair(client, list_key: str, prefix: str, bars_per_snapshot: int, minutes_by_pair: dict[str, int], now: float) -> tuple[str, list[str]]:
-    # list_key = "{prefix}:{SYMBOL}_{TIMEFRAME}"; key nen = list_key + ":" + stamp.
+    # list_key = "{prefix}_{SYMBOL}_{TIMEFRAME}"; key nen = list_key + ":" + stamp.
     symbol, tf = list_key[len(prefix) + 1:].rsplit("_", 1)
     pair = f"{symbol}:{tf}"
     problems: list[str] = []
@@ -193,7 +193,7 @@ def _sql_crosscheck_sample(config: dict, client, logger, prefix: str, scan_numbe
         except Exception as exc:  # noqa: BLE001 -- SQL tam thoi khong toi khong duoc lam chet probe
             log_event(logger, "WARNING", "SQL_CROSSCHECK_FAILED", "MEDIUM", component=NAME, pair=pair, error=exc)
             continue
-        list_key = f"{prefix}:{symbol['symbol']}_{timeframe['code']}"
+        list_key = f"{prefix}_{symbol['symbol']}_{timeframe['code']}"
         mismatches = 0
         for bartime, open_, high, low, close, _volume, _created in rows:
             stamp = _stamp_from_sql(bartime)

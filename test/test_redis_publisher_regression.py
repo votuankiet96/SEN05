@@ -55,10 +55,9 @@ def _expect_stamp(row: tuple[Any, ...]) -> str:
     """Moc ky vong, tu dung lai doc lap voi redis_publisher._stamp().
 
     Neu goi thang ham cua production thi mot loi trong ham do se tu xac
-    nhan la dung -- test phai tu biet ky vong dung la gi. Gio-phut-giay dung
-    dau '-' chu khong phai ':' de Redis GUI khong tach key thanh cay thu muc.
+    nhan la dung -- test phai tu biet ky vong dung la gi.
     """
-    return row[0].strftime("%Y-%m-%d_%H-%M-%S")
+    return row[0].strftime("%Y%m%d_%H%M%S")
 
 
 class _FakeWarehouse:
@@ -205,10 +204,15 @@ def _publish(publisher: Any, config: dict[str, Any], warehouse: _FakeWarehouse,
 
 def _keys() -> tuple[str, str]:
     """(list_key, candle_prefix) -- key nen la candle_prefix + stamp."""
-    return "T_CANDLE:GOLD_M5", "T_CANDLE:GOLD_M5:"
+    return "T_CANDLE_GOLD_M5", "T_CANDLE_GOLD_M5:"
 
 
-def test_key_layout_keeps_one_colon_per_level_so_guis_do_not_nest_by_time() -> None:
+def _expect_readable(row: tuple[Any, ...]) -> str:
+    """Dang nguoi doc ky vong cho field `datetime`."""
+    return row[0].strftime("%Y-%m-%d %H:%M:%S")
+
+
+def test_key_layout_is_one_concatenation_and_holds_exactly_one_colon() -> None:
     from dp_program.util import redis_publisher
 
     list_key, candle_prefix = redis_publisher._RedisPublisher._keys(
@@ -220,10 +224,30 @@ def test_key_layout_keeps_one_colon_per_level_so_guis_do_not_nest_by_time() -> N
     assert (list_key, candle_prefix) == _keys()
     # Key nen = key List noi them ":" + moc: dung mot phep noi, khong quy uoc khac.
     assert candle_key == f"{list_key}:{stamp}"
-    # Dau ":" chi duoc xuat hien sau prefix va truoc moc -- neu moc con dung
-    # "HH:MM:SS" thi Redis GUI se tach them ba tang thu muc rong cho moi nen.
-    assert candle_key.count(":") == 2
-    assert ":" not in stamp and list_key.count(":") == 1
+    # Ten List khong bao gio chua ":" -- do la cach phan biet no voi key Hash
+    # khi SCAN. Moc cung khong chua ":", nen key Hash co dung MOT dau ":" (cua
+    # phep noi) va Redis GUI chi tach dung hai tang thay vi long theo gio/phut.
+    assert ":" not in list_key
+    assert ":" not in stamp
+    assert candle_key.count(":") == 1
+
+
+def test_list_member_and_the_three_time_fields_describe_the_same_instant(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Moc trong key, `timestamp` va `datetime` la ba cach viet cua MOT moc."""
+    publisher, client, warehouse = _publisher_with_client(monkeypatch)
+    row = _row(0)
+
+    _publish(publisher, _config(), warehouse, row)
+
+    list_key, candle_prefix = _keys()
+    member = client.lists[list_key][0]
+    candle = client.hashes[candle_prefix + member]
+    assert member == _expect_stamp(row)                    # dang gon, dung lam key
+    assert candle["datetime"] == _expect_readable(row)     # dang nguoi doc
+    assert candle["timestamp"] == str(int(row[0].timestamp()))
+    assert f"{list_key}:{member}" == candle_prefix + member
 
 
 def test_redis_payload_preserves_warehouse_decimal_contract() -> None:
@@ -247,13 +271,13 @@ def test_redis_payload_preserves_warehouse_decimal_contract() -> None:
         "9999999999.12345679",
         "1234567890123456.1234",
     ]
-    assert args[0] == "2026-09-08_12-00-00"  # moc lam chi muc + duoi key Hash
+    assert args[0] == "20260908_120000"  # moc lam chi muc + duoi key Hash
     assert args[1] == str(int(row[0].timestamp()))  # epoch UTC cua open time
     assert args[2] == "2026-09-08 12:00:00"  # field datetime, dang nguoi doc
     assert args[8] == "2026-09-08 13:40:00"  # inserttime = Fact.CreatedAt
     event = json.loads(args[9], parse_float=Decimal)
     assert event == {
-        "bartime": "2026-09-08_12-00-00",
+        "bartime": "20260908_120000",
         "open": Decimal("9999999999.12345678"),
         "high": Decimal("9999999999.22345678"),
         "low": Decimal("9999999999.02345678"),
@@ -280,8 +304,8 @@ def test_reconcile_args_carry_every_hash_field_except_the_event_payload() -> Non
 
     # 9 o moi nen: stamp + 8 gia tri ghi vao Hash (source truyen rieng mot lan).
     assert len(args) == 18
-    assert args[0] == "2026-09-08_12-00-00"
-    assert args[9] == "2026-09-08_12-05-00"
+    assert args[0] == "20260908_120000"
+    assert args[9] == "20260908_120500"
 
 
 def test_incremental_writes_all_nine_hash_fields_from_the_sql_row(
@@ -297,7 +321,7 @@ def test_incremental_writes_all_nine_hash_fields_from_the_sql_row(
     assert set(candle) == set(_FIELDS)
     assert candle == {
         "timestamp": str(int(row[0].timestamp())),
-        "datetime": "2026-09-08 12:00:00",
+        "datetime": _expect_readable(row),
         "open": "100.00000000", "high": "102.00000000",
         "low": "99.00000000", "close": "101.00000000", "volume": "12.5000",
         "source": _SOURCE,
@@ -408,7 +432,7 @@ def test_reconcile_patches_only_differences_and_rebuilds_list_only_when_needed(
     assert client.hash_writes == writes_after_first
     assert client.list_rebuilds == rebuilds_after_first
     client.lists[list_key] = list(reversed(client.lists[list_key]))
-    stale_stamp = "2026-09-08_11-00-00"
+    stale_stamp = "20260908_110000"
     stale = candle_prefix + stale_stamp
     client.lists[list_key].append(stale_stamp)
     client.hashes[stale] = {"close": "1"}

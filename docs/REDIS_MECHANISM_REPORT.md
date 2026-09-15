@@ -69,7 +69,7 @@ Ranh giới này dẫn đến ba quyết định quan trọng:
    DP không chủ động publish một nến trước khi `fetch_and_store()` trả về thành công.
 
 Điều thứ ba là bảo đảm của đường code này, không phải bảo đảm cho một writer bên
-ngoài DP. Nếu có process khác ghi vào prefix `CANDLE:*`, contract không còn được
+ngoài DP. Nếu có process khác ghi vào prefix `L_CANDLE_*`, contract không còn được
 DP kiểm soát.
 
 ---
@@ -81,10 +81,10 @@ này là cấu hình vận hành, không phải hằng số của kiến trúc; 
 cửa sổ trong báo cáo này đều phụ thuộc giá trị đó.
 
 ```text
-LIST  CANDLE:{SYMBOL}_{TIMEFRAME}
-      [stamp-1, stamp-2, ..., stamp-n]       # YYYY-MM-DD_HH-MM-SS UTC, tăng dần
+LIST  L_CANDLE_{SYMBOL}_{TIMEFRAME}
+      [stamp-1, stamp-2, ..., stamp-n]       # YYYYMMDD_HHMMSS UTC, tăng dần
 
-HASH  CANDLE:{SYMBOL}_{TIMEFRAME}:{stamp}
+HASH  L_CANDLE_{SYMBOL}_{TIMEFRAME}:{stamp}
       timestamp  <epoch giây UTC của open time>
       datetime   <open time dạng người đọc: 2026-09-08 14:00:00>
       open       <decimal text>
@@ -99,8 +99,8 @@ HASH  CANDLE:{SYMBOL}_{TIMEFRAME}:{stamp}
 Ví dụ với `US30` timeframe `H1`:
 
 ```text
-CANDLE:US30_H1
-CANDLE:US30_H1:2026-09-08_14-00-00
+L_CANDLE_US30_H1
+L_CANDLE_US30_H1:20260908_140000
 ```
 
 Key Hash bằng đúng key List nối thêm `":" + stamp` lấy từ List — một phép nối duy
@@ -271,7 +271,7 @@ tục ghi.
 | Một Pub/Sub subscriber offline | Không replay event | OG phải đọc lại Hash/List khi khởi động, reconnect hoặc resync định kỳ |
 | Nến đến muộn | Lua chèn stamp theo thứ tự | Chi phí dựng lại List tăng theo kích thước cửa sổ, hiện được giới hạn bởi cấu hình |
 | Nến revise | HSET đúng Hash stamp; List không tạo stamp trùng | Event chỉ có khi OHLCV canonical đổi |
-| Writer ngoài contract ghi `CANDLE:*` | Không có cơ chế chặn ở Redis trong code DP | Có thể tạo key rác hoặc phá bất biến; cần quyền ghi/prefix ownership và giám sát vận hành |
+| Writer ngoài contract ghi `L_CANDLE_*` | Không có cơ chế chặn ở Redis trong code DP | Có thể tạo key rác hoặc phá bất biến; cần quyền ghi/prefix ownership và giám sát vận hành |
 | Redis đầy hoặc lỗi script | Worker coi là lỗi publish và retry theo circuit breaker | SQL vẫn là nguồn dữ liệu, nhưng Redis/OG có thể chậm cho đến khi lỗi được xử lý |
 
 `state_probe.py` kiểm tra cấu trúc các pair có List: thứ tự stamp, duplicate, hash
@@ -294,7 +294,7 @@ số phiên bản.
 from decimal import Decimal
 
 def latest_closes(redis_client, symbol: str, timeframe: str, n: int) -> list[Decimal]:
-    list_key = f"CANDLE:{symbol}_{timeframe}"
+    list_key = f"L_CANDLE_{symbol}_{timeframe}"
     stamps = redis_client.lrange(list_key, -n, -1)
     pipe = redis_client.pipeline(transaction=False)
     for stamp in stamps:
