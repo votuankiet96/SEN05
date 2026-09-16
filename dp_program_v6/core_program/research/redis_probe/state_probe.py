@@ -9,17 +9,17 @@ Hai vong kiem moi lan chay:
   1. Structural scan (moi lan goi, nhanh, khong dung SQL): quet toan
      bo key List L_CANDLE_* qua SCAN (khong dung KEYS -- tranh block
      Redis production), kiem cac bat bien thiet ke da thong nhat:
-       - Moi epoch trong List co Hash nen tuong ung (khong nen thieu)
-       - Moi nen du 5 field open/high/low/close/volume, dung kieu so
-       - Field bartime trong Hash khop chinh epoch dat ten key
-       - List khong trung bartime va sap xep tang dan
-       - LLEN(order) <= bars_per_snapshot (cua so khong phinh)
-       - Do tuoi: bartime moi nhat khong cu hon nguong theo khung gio
+       - Moi moc trong List co Hash nen tuong ung (khong nen thieu)
+       - Moi nen du 6 field, va 4 field gia dung kieu so
+       - Field `timestamp` bang dung moc trong List va duoi key Hash
+       - List khong trung moc va sap xep tang dan
+       - LLEN(list) <= bars_per_snapshot (cua so khong phinh)
+       - Do tuoi: moc moi nhat khong cu hon nguong theo khung gio
          (doc Minutes tu chinh DWH.Dim_Timeframe qua select_pairs(),
          khong hardcode)
   2. SQL cross-check (thua hon, mac dinh moi vong quet lay mau vai
      pair thay vi ca 165 -- nang cho SQL): tu query truc tiep N nen
-     moi nhat cua 1 pair, diff voi Hash hien tai theo bartime + gia tri.
+     moi nhat cua 1 pair, diff voi Hash hien tai theo moc + gia tri.
 
 Chay: python state_probe.py            (vong lap lien tuc)
       python state_probe.py --once     (1 luot roi thoat, tien loi test tay)
@@ -33,7 +33,8 @@ import time
 from itertools import islice
 
 from _probe_common import (
-    CANDLE_FIELDS, list_keys, load_config, log_event, redis_client, remove_pidfile, stamp_to_datetime,
+    CANDLE_FIELDS, NUMERIC_FIELDS, list_keys, load_config, log_event, redis_client,
+    remove_pidfile, stamp_to_datetime,
     run_with_reconnect, safe_error, setup_probe_logging, write_pidfile,
 )
 
@@ -92,7 +93,7 @@ def _stamp_from_sql(bartime) -> str:
     lai ky vong tu SQL, neu dung chung ham thi mot loi trong ham do se tu
     xac nhan la dung.
     """
-    return bartime.strftime("%Y-%m-%d_%H:%M:%S")
+    return bartime.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _minutes_by_pair(pairs: list) -> dict[str, int]:
@@ -147,13 +148,10 @@ def _check_one_pair(client, list_key: str, prefix: str, bars_per_snapshot: int, 
         if missing:
             problems.append(f"missing_field stamp={stamp} keys={','.join(missing)}")
             continue
-        # "null" la sentinel hop le rieng cho volume (xem _candle_fields()
-        # trong redis_publisher.py) -- moi field con lai phai la so huu han.
+        # Hash chi con 4 field gia; ca bon deu phai la so huu han.
         non_finite: list[str] = []
-        for field in CANDLE_FIELDS:
+        for field in NUMERIC_FIELDS:
             raw = candle[field]
-            if field == "volume" and raw == "null":
-                continue
             try:
                 number = float(raw)
             except ValueError:
@@ -194,7 +192,7 @@ def _sql_crosscheck_sample(config: dict, client, logger, prefix: str, scan_numbe
             continue
         list_key = f"{prefix}_{symbol['symbol']}_{timeframe['code']}"
         mismatches = 0
-        for bartime, open_, high, low, close, _volume in rows:
+        for bartime, open_, high, low, close, _volume, _created in rows:
             stamp = _stamp_from_sql(bartime)
             stored = client.hget(f"{list_key}:{stamp}", "close")
             if stored is None:

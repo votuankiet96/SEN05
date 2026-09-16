@@ -1,39 +1,40 @@
 """Đồng bộ Redis Hash + List từ SQL mà không chặn đường ghi warehouse.
 
-Bố trí key — mỗi nến là một Hash riêng, List giữ thứ tự thời gian:
+    LIST  L_CANDLE_BTCUSD_H1                        [..., 2026-09-14 03:00:00]
+    HASH  L_CANDLE_BTCUSD_H1:2026-09-14 03:00:00    timestamp   2026-09-14 03:00:00
+                                                    open        77545.35000000
+                                                    high        77807.90000000
+                                                    low         77450.75000000
+                                                    close       77537.05000000
+                                                    time_update 2026-09-14 03:05:12
 
-    LIST  L_CANDLE_US30_H1                      [..., 2026-09-08_13:00:00,
-                                                      2026-09-08_14:00:00]
-    HASH  L_CANDLE_US30_H1:2026-09-08_14:00:00  open 52880.10000000
-                                                high 52906.10000000
-                                                low  52720.10000000
-                                                close 52845.10000000
-                                                volume 11314.0000
-
-Key Hash suy ra từ key List bằng đúng một phép nối: ``list_key + ":" +
-<phần tử lấy từ List>``. Consumer không cần biết thêm quy ước nào khác.
-
-Mốc thời gian dùng làm chỉ mục là UTC, không hậu tố offset, rộng cố định
-``YYYY-MM-DD_HH:MM:SS`` — nhờ vậy so sánh chuỗi cho đúng thứ tự thời gian
-(đã kiểm cả các mốc vượt ngày/tháng/năm), nên Lua so sánh trực tiếp bằng
-``<``/``>`` chứ không cần ``tonumber``. Định dạng phải tuyệt đối nhất
-quán: chỉ cần một bản ghi lẫn offset là vừa hỏng thứ tự vừa sinh ra key
-thứ hai cho cùng một nến.
-
-List là chỉ mục duy nhất: mọi nến tồn tại đều có mốc của nó trong List, và
-eviction xoá key nến trong cùng script atomic đã LPOP mốc đó, nên nến mồ
-côi không thể sinh ra. Consumer đọc N nến gần nhất bằng LRANGE lấy mốc rồi
-pipeline HGET/HMGET đúng field cần — không phải parse gì.
-
-Hash chỉ chứa OHLCV; mốc thời gian đã nằm trong chính tên key nên không
-lặp lại thành field. Hash nhỏ (5 field) giữ được encoding listpack, tốn
-~200 B/nến thay vì ~378 B/nến nếu gộp nhiều nến vào một Hash lớn.
-
-Pub/Sub vẫn phát object JSON chứa symbol, timeframe và các candle thực sự
-thay đổi — đó là push một lần mỗi nến, không phải truy vấn hàng loạt, nên
-giữ nguyên dạng JSON. Trường ``bartime`` trong event dùng đúng định dạng
-mốc ở trên để consumer dựng thẳng ra key Hash.
+Key Hash = key List nối thêm ``":" + <phần tử lấy từ List>``; một phép nối
+duy nhất, consumer không cần quy ước nào khác.
 """
+# Phần tử List, đuôi key Hash và field `timestamp` là CÙNG MỘT CHUỖI
+# 'YYYY-MM-DD HH:MM:SS' -- open time (Fact_OHLCV.BarTime). Cả ba lấy từ
+# _stamp() nên không chỗ nào tự định dạng lại và không thể lệch nhau.
+#
+# Mốc rộng cố định và đệm 0 nên so sánh chuỗi trùng khít thứ tự thời gian, kể cả
+# khi có dấu cách và dấu ':' bên trong: các ký tự phân tách nằm ở vị trí cố định
+# nên không bao giờ ảnh hưởng tới thứ tự giữa hai mốc. Lua dựa hẳn vào tính chất
+# đó ('<'/'>', không 'tonumber'). Định dạng phải tuyệt đối nhất quán: chỉ một bản
+# ghi lệch là vừa hỏng thứ tự vừa sinh key thứ hai cho cùng một nến.
+#
+# Hệ quả đã biết và chấp nhận: vì mốc chứa ':', Redis GUI tách mỗi nến thành
+# nhiều tầng thư mục. Đánh đổi có chủ ý để giữ 'phần tử List == field timestamp'.
+#
+# `time_update` là Fact_OHLCV.CreatedAt -- thời điểm row vào SQL, KHÔNG phải
+# thời điểm publish Redis. Đó là lý do cả hai đường ghi đều đọc lại row từ SQL
+# trước khi ghi: Redis là bản chụp của SQL, không field nào được bịa.
+#
+# List là chỉ mục duy nhất: mọi nến tồn tại đều có mốc của nó trong List, và
+# eviction xoá key nến trong cùng script atomic đã LPOP mốc đó, nên nến mồ côi
+# không sinh ra được. Consumer đọc N nến gần nhất bằng LRANGE lấy mốc rồi
+# pipeline HGET/HMGET đúng field cần, không phải parse gì.
+#
+# Pub/Sub vẫn phát JSON chứa symbol, timeframe và các candle thực sự đổi giá
+# trị. `bartime` trong event dùng đúng mốc của key Hash để consumer nối thẳng.
 from __future__ import annotations
 
 import json
@@ -54,19 +55,21 @@ LOGGER = logging.getLogger(__name__)
 _Key = tuple[int, str, str]
 _RECONCILE_PIPELINE_SIZE = 20
 _PUBLISH_BATCH_SIZE = 100
+# Đúng bộ field của một Hash nến, theo thứ tự ghi.
+HASH_FIELDS = ("timestamp", "open", "high", "low", "close", "time_update")
+# Bốn field giá là phần duy nhất tham gia so sánh "có đổi không".
+_PRICE_FIELDS = ("open", "high", "low", "close")
 
 # Key nến được ghép trong Lua từ candle_prefix (deployment một node, không
-# dùng Redis Cluster) vì số key mỗi lần gọi là động — truyền cả trăm key qua
+# dùng Redis Cluster) vì số key mỗi lần gọi là động -- truyền cả trăm key qua
 # KEYS[] chỉ làm script khó đọc mà không đổi ngữ nghĩa.
 #
-# Mốc thời gian rộng cố định nên so sánh chuỗi (`<`, `>`) đã cho đúng thứ tự
-# thời gian; không dùng tonumber vì "2026-09-08_14:00:00" không phải số.
-#
-# Script chỉ phát event khi giá trị canonical thực sự đổi. LPOS chỉ chạy cho
-# delta nhỏ; nến đến muộn được chèn đúng vị trí và List luôn bị giới hạn.
+# So sánh chỉ chạy trên 4 field giá: `timestamp` là chính mốc đặt tên key nên
+# không thể lệch, còn `time_update` đi theo đúng row SQL đã sinh ra giá đó.
+# Nhờ vậy ghi lại y hệt vẫn không sinh event.
 #
 # ARGV: [1]=max_size [2]=candle_prefix [3]=event_prefix, rồi mỗi nến 7 ô:
-#       stamp, open, high, low, close, volume, payload JSON của event.
+#       stamp, open, high, low, close, time_update, payload JSON của event.
 _INCREMENTAL_SCRIPT = """
 local list_key, channel = KEYS[1], KEYS[2]
 local max_size, candle_prefix, event_prefix = tonumber(ARGV[1]), ARGV[2], ARGV[3]
@@ -86,15 +89,17 @@ end
 for i = 4, #ARGV, 7 do
     local stamp = ARGV[i]
     local key = candle_prefix .. stamp
-    local old = redis.call('HMGET', key, 'open', 'high', 'low', 'close', 'volume')
+    local old = redis.call('HMGET', key, 'open', 'high', 'low', 'close')
     local differs = false
-    for n = 1, 5 do
+    for n = 1, 4 do
         if old[n] ~= ARGV[i + n] then differs = true end
     end
     if differs then
         redis.call('HSET', key,
-            'open', ARGV[i+1], 'high', ARGV[i+2], 'low', ARGV[i+3],
-            'close', ARGV[i+4], 'volume', ARGV[i+5])
+            'timestamp', stamp,
+            'open', ARGV[i+1], 'high', ARGV[i+2],
+            'low', ARGV[i+3], 'close', ARGV[i+4],
+            'time_update', ARGV[i+5])
         table.insert(events, ARGV[i+6]); changed = changed + 1
     end
     if not redis.call('LPOS', list_key, stamp) then
@@ -120,11 +125,11 @@ return {changed, added, evicted_count}
 """
 
 # Reconcile so sánh từng row và chỉ dựng lại List khi List khác SQL. Nến SQL
-# không còn giữ được xoá qua chính List — List là chỉ mục duy nhất nên không
+# không còn giữ được xoá qua chính List -- List là chỉ mục duy nhất nên không
 # cần SCAN keyspace.
 #
-# ARGV: [1]=candle_prefix, rồi mỗi nến 6 ô: stamp, open, high, low, close,
-#       volume (không có payload event vì reconcile không publish).
+# ARGV: [1]=candle_prefix, rồi mỗi nến 6 ô như trên nhưng không có payload
+#       event vì reconcile không publish.
 _RECONCILE_SCRIPT = """
 local list_key = KEYS[1]
 local candle_prefix = ARGV[1]
@@ -132,15 +137,17 @@ local desired, desired_order, changed = {}, {}, 0
 for i = 2, #ARGV, 6 do
     local stamp = ARGV[i]
     local key = candle_prefix .. stamp
-    local old = redis.call('HMGET', key, 'open', 'high', 'low', 'close', 'volume')
+    local old = redis.call('HMGET', key, 'open', 'high', 'low', 'close')
     local differs = false
-    for n = 1, 5 do
+    for n = 1, 4 do
         if old[n] ~= ARGV[i + n] then differs = true end
     end
     if differs then
         redis.call('HSET', key,
-            'open', ARGV[i+1], 'high', ARGV[i+2], 'low', ARGV[i+3],
-            'close', ARGV[i+4], 'volume', ARGV[i+5])
+            'timestamp', stamp,
+            'open', ARGV[i+1], 'high', ARGV[i+2],
+            'low', ARGV[i+3], 'close', ARGV[i+4],
+            'time_update', ARGV[i+5])
         changed = changed + 1
     end
     desired[stamp] = true
@@ -166,77 +173,53 @@ return {changed, removed, rebuild and 1 or 0}
 """
 
 
-def _stamp(bartime: Any) -> str:
-    """Mốc thời gian dùng làm chỉ mục List và làm đuôi key Hash.
-
-    Luôn UTC, luôn bỏ offset, rộng cố định ``YYYY-MM-DD_HH:MM:SS``. Ba tính
-    chất này là bắt buộc chứ không phải thẩm mỹ: rộng cố định + đệm 0 thì so
-    sánh chuỗi mới trùng với thứ tự thời gian (Lua dựa vào đó), và chỉ một
-    dạng duy nhất thì một nến mới không thể sinh ra hai key khác nhau.
-    """
-    if isinstance(bartime, datetime):
-        value = (bartime.astimezone(timezone.utc) if bartime.tzinfo else bartime).replace(
+def _utc(value: Any) -> datetime:
+    """Chuẩn hoá mọi kiểu thời gian về datetime UTC naive, tròn giây."""
+    # Naive được coi là đã UTC: SQL DATETIME2(0) của DP lưu UTC không offset.
+    if isinstance(value, datetime):
+        return (value.astimezone(timezone.utc) if value.tzinfo else value).replace(
             microsecond=0, tzinfo=None
         )
-    else:
-        value = datetime.fromtimestamp(int(float(bartime)), timezone.utc).replace(tzinfo=None)
-    return value.strftime("%Y-%m-%d_%H:%M:%S")
+    return datetime.fromtimestamp(int(float(value)), timezone.utc).replace(tzinfo=None)
 
 
-def _candle_fields(
-    open_: Any, high: Any, low: Any, close: Any, volume: Any,
-    signature: tuple[str | None, ...] | None = None,
-) -> tuple[str, str, str, str, str]:
+def _stamp(value: Any) -> str:
+    """Mốc `YYYY-MM-DD HH:MM:SS`, luôn UTC, không offset, rộng cố định.
+
+    Dùng cho phần tử List, đuôi key Hash, field `timestamp` và field
+    `time_update` -- một hàm duy nhất nên mọi mốc trên Redis cùng một dạng.
+    """
+    return _utc(value).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _prices(open_: Any, high: Any, low: Any, close: Any) -> tuple[str, str, str, str]:
     """Serialize đúng DECIMAL contract của warehouse, không đi qua float."""
-    values = signature or warehouse_value_signature(open_, high, low, close, volume)
-    return tuple("null" if value is None else value for value in values)  # type: ignore[return-value]
+    return warehouse_value_signature(open_, high, low, close, None)[:4]  # type: ignore[return-value]
 
 
-def _candle_json(
-    bartime: Any, open_: Any, high: Any, low: Any, close: Any, volume: Any,
-    signature: tuple[str | None, ...] | None = None,
-) -> str:
-    """Payload event. ``bartime`` dùng đúng định dạng mốc của key Hash nên
-    consumer nối thẳng ra key được, không phải chuyển đổi gì."""
-    o, h, low_text, c, v = _candle_fields(open_, high, low, close, volume, signature)
+def _candle_json(stamp: str, prices: tuple[str, ...]) -> str:
+    """Payload event; `bartime` dùng đúng mốc của key Hash."""
+    o, h, low_text, c = prices
     return (
-        f'{{"bartime":"{_stamp(bartime)}","open":{o},"high":{h},"low":{low_text},'
-        f'"close":{c},"volume":{v}}}'
+        f'{{"bartime":"{stamp}","open":{o},"high":{h},'
+        f'"low":{low_text},"close":{c}}}'
     )
 
 
-def _pipeline_candles_to_args(candles: list[dict[str, Any]]) -> list[str]:
-    """Sort và coalesce candle theo mốc thời gian trước khi gọi Lua.
+def _rows_to_args(rows: list[tuple[Any, ...]], *, with_event: bool) -> list[str]:
+    """Trải các row SQL thành ARGV cho Lua.
 
-    Mỗi nến chiếm 7 ARGV: stamp, open, high, low, close, volume, payload
-    JSON của event. Khử trùng theo stamp (bản cuối thắng) rồi sắp tăng dần
-    để Lua không phải xử lý input lộn xộn.
+    Mỗi nến chiếm 6 ô theo thứ tự stamp, open, high, low, close, time_update;
+    thêm ô thứ 7 là payload event khi `with_event`. `timestamp` không chiếm ô
+    riêng vì nó bằng đúng `stamp`, Lua ghi thẳng.
     """
-    unique = {_stamp(candle["timestamp"]): candle for candle in candles}
     args: list[str] = []
-    for stamp in sorted(unique):
-        candle = unique[stamp]
-        signature = candle.get("_signature") or warehouse_value_signature(
-            candle["open"], candle["high"], candle["low"], candle["close"], candle.get("volume")
-        )
-        args.extend((stamp, *_candle_fields(
-            candle["open"], candle["high"], candle["low"], candle["close"],
-            candle.get("volume"), signature,
-        ), _candle_json(
-            candle["timestamp"], candle["open"], candle["high"], candle["low"],
-            candle["close"], candle.get("volume"), signature,
-        )))
-    return args
-
-
-def _sql_rows_to_args(rows: list[tuple[Any, ...]]) -> list[str]:
-    """Mỗi nến chiếm 6 ARGV: stamp, open, high, low, close, volume."""
-    args: list[str] = []
-    for bartime, open_, high, low, close, volume in rows:
-        signature = warehouse_value_signature(open_, high, low, close, volume)
-        args.extend((_stamp(bartime), *_candle_fields(
-            open_, high, low, close, volume, signature,
-        )))
+    for bartime, open_, high, low, close, _volume, created_at in rows:
+        stamp = _stamp(bartime)
+        prices = _prices(open_, high, low, close)
+        args.extend((stamp, *prices, _stamp(created_at)))
+        if with_event:
+            args.append(_candle_json(stamp, prices))
     return args
 
 
@@ -246,7 +229,7 @@ class _RedisPublisher:
     def __init__(self) -> None:
         self._condition = threading.Condition()
         self._start_lock = threading.Lock()
-        self._updates: dict[_Key, dict[str, dict[str, Any]]] = {}
+        self._updates: dict[_Key, set[datetime]] = {}
         self._reconciles: dict[_Key, None] = {}
         self._thread: threading.Thread | None = None
         self._client: Any | None = None
@@ -270,8 +253,11 @@ class _RedisPublisher:
             if candles is None:
                 self._reconciles[key] = None
             else:
-                pending = self._updates.setdefault(key, {})
-                pending.update({_stamp(item["timestamp"]): item for item in candles})
+                # Chỉ giữ mốc, không giữ giá trị provider: lúc publish sẽ đọc
+                # lại chính row SQL, nên Redis luôn là bản chụp của SQL.
+                self._updates.setdefault(key, set()).update(
+                    _utc(item["timestamp"]) for item in candles
+                )
             self._condition.notify()
 
     def enqueue_reconcile_all(
@@ -282,8 +268,9 @@ class _RedisPublisher:
         self._ensure_worker(config)
         with self._condition:
             for symbol, timeframe in pairs:
-                key = (int(symbol["symbol_id"]), str(symbol["symbol"]), str(timeframe["code"]))
-                self._reconciles[key] = None
+                self._reconciles[(
+                    int(symbol["symbol_id"]), str(symbol["symbol"]), str(timeframe["code"]),
+                )] = None
             self._condition.notify()
 
     def _ensure_worker(self, config: dict[str, Any]) -> None:
@@ -298,8 +285,7 @@ class _RedisPublisher:
     def _next_job(self) -> tuple[str, Any] | None:
         if self._updates:
             key = next(iter(self._updates))
-            values = self._updates.pop(key)
-            return "update", (key, [values[item] for item in sorted(values)])
+            return "update", (key, sorted(self._updates.pop(key)))
         if self._reconciles:
             keys = list(self._reconciles)
             self._reconciles.clear()
@@ -323,8 +309,7 @@ class _RedisPublisher:
                 self._working += 1
             try:
                 if job and job[0] == "update":
-                    key, candles = job[1]
-                    self._publish_one(config, key[1], key[2], candles)
+                    self._publish_one(config, *job[1])
                 elif job:
                     self._reconcile_many(config, job[1])
             except Exception as exc:
@@ -339,10 +324,8 @@ class _RedisPublisher:
     def _requeue(self, job: tuple[str, Any]) -> None:
         with self._condition:
             if job[0] == "update":
-                key, candles = job[1]
-                failed = {_stamp(item["timestamp"]): item for item in candles}
-                failed.update(self._updates.get(key, {}))
-                self._updates[key] = failed
+                key, bartimes = job[1]
+                self._updates.setdefault(key, set()).update(bartimes)
             else:
                 for key in job[1]:
                     self._reconciles[key] = None
@@ -352,9 +335,10 @@ class _RedisPublisher:
     def _keys(settings: dict[str, Any], tf_code: str, symbol: str) -> tuple[str, str]:
         """Trả về (list_key, candle_prefix).
 
-        List key chính là tên gốc ``{prefix}_{SYMBOL}_{TIMEFRAME}``; key nến
-        chỉ là nó nối thêm ``":" + stamp``. Một phép nối duy nhất, nên bên đọc
-        cầm tên List và một phần tử bất kỳ trong đó là dựng ra key nến ngay.
+        `{prefix}_{SYMBOL}_{TIMEFRAME}`, và key nến chỉ là nó nối thêm
+        `":" + stamp`. Một phép nối duy nhất, nên bên đọc cầm tên List và một
+        phần tử bất kỳ trong đó là dựng ra key nến ngay. Tên List không chứa
+        `":"`; key nến thì có (một của phép nối, hai của giờ-phút-giây).
         """
         base = f"{settings['key_prefix']}_{symbol}_{tf_code}"
         return base, f"{base}:"
@@ -367,26 +351,28 @@ class _RedisPublisher:
         return self._incremental, self._reconcile
 
     def _publish_one(
-        self, config: dict[str, Any], symbol: str, tf_code: str, candles: list[dict[str, Any]],
+        self, config: dict[str, Any], key: _Key, bartimes: list[datetime],
     ) -> None:
-        if not candles:
-            return
+        symbol_id, symbol, tf_code = key
         settings = config["redis"]
+        window = int(settings["bars_per_snapshot"])
+        # Chỉ lấy `window` mốc mới nhất: nến cũ hơn cửa sổ sẽ bị eviction xoá
+        # ngay trong cùng script, nên ghi rồi phát event cho chúng là vô nghĩa.
+        rows = read_latest_candles(config, symbol_id, tf_code, window, bartimes[-window:])
+        if not rows:
+            return
         list_key, candle_prefix = self._keys(settings, tf_code, symbol)
         prefix = (
             '{"symbol":' + json.dumps(symbol) + ',"timeframe":'
             + json.dumps(tf_code) + ',"candles":['
         )
         script, _ = self._scripts(settings)
-        args = _pipeline_candles_to_args(candles)
+        args = _rows_to_args(rows, with_event=True)
         stride = _PUBLISH_BATCH_SIZE * 7
         for offset in range(0, len(args), stride):
             script(
                 keys=[list_key, settings["event_channel"]],
-                args=[
-                    settings["bars_per_snapshot"], candle_prefix, prefix,
-                    *args[offset:offset + stride],
-                ],
+                args=[window, candle_prefix, prefix, *args[offset:offset + stride]],
             )
         self._mark_recovered()
 
@@ -397,7 +383,9 @@ class _RedisPublisher:
         rows = read_latest_candles(config, symbol_id, tf_code, int(settings["bars_per_snapshot"]))
         list_key, candle_prefix = self._keys(settings, tf_code, symbol)
         _, script = self._scripts(settings)
-        result = script(keys=[list_key], args=[candle_prefix, *_sql_rows_to_args(rows)])
+        result = script(
+            keys=[list_key], args=[candle_prefix, *_rows_to_args(rows, with_event=False)],
+        )
         self._mark_recovered()
         return result
 
@@ -416,7 +404,8 @@ class _RedisPublisher:
                 list_key, candle_prefix = self._keys(settings, tf_code, symbol)
                 script(
                     keys=[list_key],
-                    args=[candle_prefix, *_sql_rows_to_args(rows[(symbol_id, tf_code)])],
+                    args=[candle_prefix,
+                          *_rows_to_args(rows[(symbol_id, tf_code)], with_event=False)],
                     client=pipeline,
                 )
             for result in pipeline.execute():

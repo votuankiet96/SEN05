@@ -463,36 +463,43 @@ def _redis_config() -> dict:
 def test_redis_publisher_writes_only_the_changed_candles(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The hot path never reads SQL -- it upserts exactly the candles live.py
-    already wrote, via HSET (not ZADD), and PUBLISHes them as one event."""
+    """The hot path re-reads the committed Fact row for exactly the bar times
+    live.py just wrote -- so `inserttime` is SQL's own CreatedAt and every
+    value in Redis is a copy of SQL -- then HSETs (not ZADDs) and PUBLISHes."""
     from dp_program.util import redis_publisher
 
-    monkeypatch.setattr(
-        redis_publisher, "read_latest_candles",
-        lambda *_a, **_k: pytest.fail("hot path must not read SQL -- it already has the candles"),
-    )
+    bar = datetime(2026, 7, 27, 12, 5)
+    created = datetime(2026, 7, 27, 12, 6, 3)
+    asked: list[list[datetime]] = []
+
+    def _read(_config, _symbol_id, _tf_code, _limit, bartimes=None):
+        asked.append(list(bartimes))
+        return [(bar, Decimal("1.5"), Decimal("2.5"), Decimal("1"), Decimal("2"),
+                 Decimal("12"), created)]
+
+    monkeypatch.setattr(redis_publisher, "read_latest_candles", _read)
     client = _FakeRedisClient()
     publisher = redis_publisher._RedisPublisher()
     monkeypatch.setattr(publisher, "_get_client", lambda _settings: client)
 
-    bar = datetime(2026, 7, 27, 12, 5)
-    candles = [{
-        "timestamp": bar, "open": Decimal("1.5"), "high": Decimal("2.5"),
-        "low": Decimal("1"), "close": Decimal("2"), "volume": Decimal("12"),
-    }]
-    publisher._publish_one(_redis_config(), "US30", "H1", candles)
+    publisher._publish_one(_redis_config(), (9, "US30", "H1"), [bar])
+    assert asked == [[bar]]  # chi gui moc sang SQL, khong gui gia tri nao
     assert len(client.evals) == 1
     script, keys, rest = client.evals[0]
     assert "HSET" in script and "PUBLISH" in script and "ZADD" not in script
     assert keys == ["L_CANDLE_US30_H1", "dp:events:candles"]
-    max_size, candle_prefix, prefix, stamp, o, h, low_, c, v, payload = rest
+    (max_size, candle_prefix, prefix,
+     stamp, o, h, low_, c, updated, payload) = rest
     # Key Hash = candle_prefix + stamp, tuc chinh la list_key noi them ":" +
     # phan tu lay tu List -- dung mot phep noi, khong quy uoc nao khac.
     assert candle_prefix == "L_CANDLE_US30_H1:"
     assert candle_prefix == keys[0] + ":"
-    assert stamp == "2026-07-27_12:05:00"
-    assert (o, h, low_, c, v) == (
-        "1.50000000", "2.50000000", "1.00000000", "2.00000000", "12.0000",
+    # Ten List khong chua ":"; moc thi co (gio-phut-giay).
+    assert ":" not in keys[0]
+    assert stamp == "2026-07-27 12:05:00"
+    assert updated == "2026-07-27 12:06:03"  # Fact.CreatedAt, khong phai gio publish
+    assert (o, h, low_, c) == (
+        "1.50000000", "2.50000000", "1.00000000", "2.00000000",
     )
     assert '"open":1.5' in payload  # Decimal converted to a real JSON number
     # Mock Redis o day khong thuc thi Lua, nen no khong the tu bat loi
@@ -517,9 +524,10 @@ def test_redis_publisher_reconcile_reads_sql_and_diffs_against_current_hash(
 
     bar1 = datetime(2026, 7, 27, 12, 0)
     bar2 = datetime(2026, 7, 27, 12, 5)
+    made = datetime(2026, 7, 27, 12, 6, 3)
     rows = [
-        (bar1, Decimal("1"), Decimal("2"), Decimal("0.5"), Decimal("1.5"), Decimal("10")),
-        (bar2, Decimal("1.5"), Decimal("2.5"), Decimal("1"), Decimal("2"), Decimal("12")),
+        (bar1, Decimal("1"), Decimal("2"), Decimal("0.5"), Decimal("1.5"), Decimal("10"), made),
+        (bar2, Decimal("1.5"), Decimal("2.5"), Decimal("1"), Decimal("2"), Decimal("12"), made),
     ]
     monkeypatch.setattr(redis_publisher, "read_latest_candles", lambda *_a, **_k: rows)
     client = _FakeRedisClient()
@@ -533,12 +541,14 @@ def test_redis_publisher_reconcile_reads_sql_and_diffs_against_current_hash(
     assert keys == ["L_CANDLE_US30_H1"]
     candle_prefix, *candle_args = rest
     assert candle_prefix == "L_CANDLE_US30_H1:"
-    stamp1, *fields1 = candle_args[0:6]
-    stamp2, *fields2 = candle_args[6:12]
-    assert stamp1 == bar1.strftime("%Y-%m-%d_%H:%M:%S")
-    assert stamp2 == bar2.strftime("%Y-%m-%d_%H:%M:%S")
-    assert fields1 == ["1.00000000", "2.00000000", "0.50000000", "1.50000000", "10.0000"]
-    assert fields2 == ["1.50000000", "2.50000000", "1.00000000", "2.00000000", "12.0000"]
+    stamp1, *rest1 = candle_args[0:6]
+    stamp2, *rest2 = candle_args[6:12]
+    assert stamp1 == bar1.strftime("%Y-%m-%d %H:%M:%S")
+    assert stamp2 == bar2.strftime("%Y-%m-%d %H:%M:%S")
+    assert rest1 == ["1.00000000", "2.00000000", "0.50000000", "1.50000000",
+                     "2026-07-27 12:06:03"]
+    assert rest2 == ["1.50000000", "2.50000000", "1.00000000", "2.00000000",
+                     "2026-07-27 12:06:03"]
 
 
 def test_redis_publisher_circuit_breaker_skips_after_failure_until_cooldown(

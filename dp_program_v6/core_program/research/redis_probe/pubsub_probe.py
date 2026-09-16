@@ -21,7 +21,7 @@ import sys
 import time
 
 from _probe_common import (
-    CANDLE_FIELDS, load_config, log_event, redis_client, remove_pidfile, stamp_to_datetime,
+    NUMERIC_FIELDS, load_config, log_event, redis_client, remove_pidfile, stamp_to_datetime,
     run_with_reconnect, setup_probe_logging, write_pidfile,
 )
 
@@ -102,13 +102,13 @@ def _handle_event(client, logger, prefix: str, raw: str, last_seen: dict[str, fl
         # Moc trong event dung y het dinh dang duoi key Hash, nen noi thang
         # ra key duoc -- khong phai chuyen doi gi.
         candle_key = f"{list_key}:{stamp}"
-        stored = client.hmget(candle_key, list(CANDLE_FIELDS))
+        stored = client.hmget(candle_key, list(NUMERIC_FIELDS))
         if any(value is None for value in stored):
             log_event(logger, "WARNING", "EVENT_NOT_IN_HASH", "MEDIUM", component=NAME, pair=pair, bartime=stamp, candle_key=candle_key)
             mismatches += 1
             continue
         mismatched = False
-        for name, value in zip(CANDLE_FIELDS, stored):
+        for name, value in zip(NUMERIC_FIELDS, stored):
             expected = candle.get(name)
             if expected is None:
                 mismatched = mismatched or value != "null"

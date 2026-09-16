@@ -38,10 +38,13 @@ __all__ = [
     "load_config", "log_event", "safe_error",
     "setup_probe_logging", "write_pidfile", "remove_pidfile",
     "redis_client", "stamp_to_datetime", "list_keys", "run_with_reconnect",
-    "CANDLE_FIELDS", "LOG_DIR", "RUN_DIR",
+    "CANDLE_FIELDS", "NUMERIC_FIELDS", "LOG_DIR", "RUN_DIR",
 ]
 
-CANDLE_FIELDS = ("open", "high", "low", "close", "volume")
+# Dung bo field cua mot Hash nen. NUMERIC_FIELDS la phan duy nhat parse
+# duoc ra so; timestamp va time_update la moc thoi gian dang chuoi.
+CANDLE_FIELDS = ("timestamp", "open", "high", "low", "close", "time_update")
+NUMERIC_FIELDS = ("open", "high", "low", "close")
 
 LOG_DIR = _PROBE_DIR / "probe_logs"
 RUN_DIR = _PROBE_DIR / "run"
@@ -147,11 +150,12 @@ def run_with_reconnect(run_once, logger: logging.Logger, component: str, *, retr
 def stamp_to_datetime(stamp: str) -> datetime | None:
     """Doc moc thoi gian cua key/List ve datetime UTC.
 
-    Dinh dang do redis_publisher._stamp() sinh ra: YYYY-MM-DD_HH:MM:SS,
-    luon UTC, khong hau to offset.
+    Dinh dang do redis_publisher._stamp() sinh ra: "YYYY-MM-DD HH:MM:SS",
+    luon UTC, khong hau to offset. Day cung chinh la gia tri cua field
+    `timestamp` trong Hash -- ba cho do luon bang nhau.
     """
     try:
-        return datetime.strptime(str(stamp), "%Y-%m-%d_%H:%M:%S").replace(tzinfo=timezone.utc)
+        return datetime.strptime(str(stamp), "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
     except ValueError:
         return None
 
@@ -159,8 +163,8 @@ def stamp_to_datetime(stamp: str) -> datetime | None:
 def list_keys(client, prefix: str):
     """Duyet cac key List chi muc, bo qua key Hash cua tung nen.
 
-    Ca hai deu bat dau bang cung tien to; khac nhau o cho key Hash co them
-    ":" + moc thoi gian, con ten List thi khong bao gio chua ":" (symbol va
+    Ca hai deu bat dau bang "{prefix}_"; khac nhau o cho key Hash co them
+    ":" + moc thoi gian, con ten List thi KHONG BAO GIO chua ":" (symbol va
     timeframe deu khong co dau hai cham). Loc bang ten re hon goi TYPE cho
     tung key trong hang chuc nghin key.
     """
