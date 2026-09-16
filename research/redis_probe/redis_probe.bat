@@ -2,14 +2,22 @@
 setlocal EnableDelayedExpansion
 cd /d "%~dp0"
 
-rem Quan ly 3 probe quan sat Redis (nen, chay lien tuc) o day:
-rem keyspace_probe, pubsub_probe, state_probe. Ca 3 chi DOC Redis/SQL,
-rem khong ghi gi -- day la ly do bo dp_simulator: no ghi that vao Redis
-rem production qua redis_publisher, va khi no chay code cu con trong bo
-rem nho thi da ghi hong du lieu schema moi (su co 2026-09-08).
+rem Quan ly 2 probe quan sat Redis (nen, chay lien tuc) o day:
+rem pubsub_probe, state_probe. Ca 2 chi DOC Redis/SQL, khong ghi gi --
+rem day la ly do bo dp_simulator: no ghi that vao Redis production qua
+rem redis_publisher, va khi no chay code cu con trong bo nho thi da ghi
+rem hong du lieu schema moi (su co 2026-09-08).
+rem
+rem keyspace_probe (quan sat notify-keyspace-events) da bi xoa
+rem 2026-09-16: DP khong dung co che nay -- tin hieu that la PUBLISH
+rem tuong minh trong Lua, con Redis server cung chua bat lop h/l nen
+rem probe do gan nhu chi thay duoc lenh DEL. state_probe da phu tin hieu
+rem manh hon (doi chieu truc tiep voi SQL) cho dung cau hoi probe do
+rem tung tra loi, nen khong dang danh doi mot thay doi config Redis
+rem production chi de va mot probe da du thua.
 rem
 rem Dung force kill (taskkill /F) cho stop, KHONG dung co che
-rem stop_*.request nhu run_live.bat/run_backfill.bat -- vi 3 chuong
+rem stop_*.request nhu run_live.bat/run_backfill.bat -- vi 2 chuong
 rem trinh nay chi doc, khong co giao dich SQL/spool nao can dong sach
 rem giua chung, nen ngat dot ngot la an toan.
 
@@ -25,7 +33,7 @@ if not exist "%DP_PYTHON%" (
     set "DP_PYTHON=python"
 )
 
-set "PROGRAMS=keyspace_probe pubsub_probe state_probe"
+set "PROGRAMS=pubsub_probe state_probe"
 set "RUN_DIR=%PROBE_DIR%\run"
 
 if /i "%~1"=="start" goto start
@@ -37,7 +45,7 @@ goto usage
 if not exist "%RUN_DIR%" mkdir "%RUN_DIR%"
 for %%P in (%PROGRAMS%) do call :start_one %%P
 echo.
-echo Da yeu cau khoi dong ca 4. Log: probe_logs\<ten>.log -- PID: run\<ten>.pid
+echo Da yeu cau khoi dong ca 2. Log: probe_logs\<ten>.log -- PID: run\<ten>.pid
 exit /b 0
 
 :start_one
@@ -96,7 +104,7 @@ exit /b 0
 
 :usage
 echo Usage: %~nx0 [start^|stop^|status]
-echo   start  - khoi dong ca 4 probe nen
-echo   stop   - dung ca 4 ^(force kill -- an toan vi khong co giao dich can dong sach^)
+echo   start  - khoi dong ca 2 probe nen
+echo   stop   - dung ca 2 ^(force kill -- an toan vi khong co giao dich can dong sach^)
 echo   status - them ngoai start/stop, gan nhu mien phi: kiem PID con song khong
 exit /b 2
