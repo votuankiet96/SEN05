@@ -94,7 +94,12 @@ class Connection:
         # trong nhánh "đây đúng là cái tôi đang chờ", một ProtoOASpotEvent tới đúng lúc sizing.py/
         # orders.py đang bận wait_for() một phản hồi khác sẽ bị coi là "không khớp" và bị bỏ qua —
         # tỷ giá dùng để tính risk sẽ cũ hơn thực tế đúng vào những lúc bận rộn nhất (lúc xử lý lệnh).
-        self._latest_spot_raw: dict[int, tuple[int, int]] = {}
+        self._latest_spot_raw: dict[int, tuple[Optional[int], Optional[int]]] = {}
+        # Chỉ ĐẾM spot event, không ghi 1 dòng log/tick: subscribe spot cho conversion leg là cách
+        # Spotware hướng dẫn (help.ctrader.com/open-api/symbol-rate-conversion/) và luồng tick đẩy
+        # theo MỖI cập nhật giá của LP — log từng tick làm RotatingFileHandler (10MB x 5) xoay mất
+        # lịch sử giao dịch chỉ sau vài giờ.
+        self._spot_event_count = 0
 
     # --- Kết nối vật lý ---
 
@@ -200,10 +205,21 @@ class Connection:
             parsed.ParseFromString(envelope.payload)
             if isinstance(parsed, messages.ProtoOASpotEvent):
                 # Ghi ngay tại đây, KHÔNG đợi caller xử lý message — xem lý do ở __init__.
-                self._latest_spot_raw[parsed.symbolId] = (parsed.bid, parsed.ask)
-        log_event(_LOGGER, "INFO", "MESSAGE_RECEIVED", "NONE", component="connection",
-                  message_type=type(parsed).__name__ if parsed is not None else "unknown",
-                  payload_type=envelope.payloadType, size_bytes=len(body))
+                # bid/ask đều OPTIONAL — tài liệu: "you may not necessarily see ProtoOASpotEvent
+                # messages where both are specified" (help.ctrader.com/open-api/symbol-data/), code
+                # mẫu Spotware kiểm HasBid/HasAsk. Chỉ cập nhật field CÓ MẶT, giữ nguyên phía còn lại
+                # — ghi thẳng (bid, ask) sẽ biến field vắng thành 0 (mặc định proto) và làm tỷ giá
+                # dùng tính lot bằng 0 / chia 0.
+                prev_bid, prev_ask = self._latest_spot_raw.get(parsed.symbolId, (None, None))
+                self._latest_spot_raw[parsed.symbolId] = (
+                    parsed.bid if parsed.HasField("bid") else prev_bid,
+                    parsed.ask if parsed.HasField("ask") else prev_ask,
+                )
+                self._spot_event_count += 1
+        if not isinstance(parsed, messages.ProtoOASpotEvent):
+            log_event(_LOGGER, "INFO", "MESSAGE_RECEIVED", "NONE", component="connection",
+                      message_type=type(parsed).__name__ if parsed is not None else "unknown",
+                      payload_type=envelope.payloadType, size_bytes=len(body))
         return IncomingMessage(
             payload_type=envelope.payloadType,
             message=parsed,
@@ -211,10 +227,16 @@ class Connection:
             client_msg_id=envelope.clientMsgId if envelope.HasField("clientMsgId") else None,
         )
 
-    def get_latest_spot(self, symbol_id: int) -> Optional[Tuple[int, int]]:
+    def get_latest_spot(self, symbol_id: int) -> Optional[Tuple[Optional[int], Optional[int]]]:
         """Giá (bid, ask) THÔ (chưa chia 1/100000) mới nhất từng nhận cho symbol này, hoặc None
-        nếu chưa từng nhận — luôn mới bất kể lúc nhận nó code đang bận wait_for() việc khác."""
+        nếu chưa từng nhận event nào — luôn mới bất kể lúc nhận nó code đang bận wait_for() việc
+        khác. Từng phần tử có thể là None nếu chưa từng nhận field đó (bid/ask đều optional)."""
         return self._latest_spot_raw.get(symbol_id)
+
+    @property
+    def spot_event_count(self) -> int:
+        """Tổng số spot event đã nhận trên kết nối này (không log từng tick — xem __init__)."""
+        return self._spot_event_count
 
     # --- Heartbeat ---
 

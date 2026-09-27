@@ -725,6 +725,158 @@ def test_broker_to_symbol_map_loads_every_distinct_broker_symbol():
     assert combo.broker_to_symbol_map()["XAUUSD"] == "GOLD"
 
 
+def _framed(message) -> bytes:
+    """Dong goi 1 message dung framing that cua cTrader (4 byte do dai + ProtoMessage)."""
+    import struct
+    import OpenApiCommonMessages_pb2 as common_messages
+    envelope = common_messages.ProtoMessage()
+    envelope.payloadType = int(message.payloadType)
+    envelope.payload = message.SerializeToString()
+    data = envelope.SerializeToString()
+    return struct.pack(">I", len(data)) + data
+
+
+def _bare_connection():
+    from engine.connection import Connection
+    connection = Connection.__new__(Connection)
+    connection._recv_buffer = b""
+    connection._deferred = []
+    connection._latest_spot_raw = {}
+    connection._spot_event_count = 0
+    return connection
+
+
+def _spot(symbol_id, bid=None, ask=None):
+    event = messages.ProtoOASpotEvent()
+    event.ctidTraderAccountId = 1
+    event.symbolId = symbol_id
+    if bid is not None:
+        event.bid = bid
+    if ask is not None:
+        event.ask = ask
+    return event
+
+
+def test_spot_event_missing_a_side_keeps_previous_value():
+    # Tai lieu chinh thuc: "As the bid and ask fields are optional, you may not necessarily see
+    # ProtoOASpotEvent messages where both are specified" (help.ctrader.com/open-api/symbol-data/).
+    # Ban cu ghi thang (bid, ask) -> field vang thanh 0 -> ty gia tinh lot = 0 / chia 0.
+    connection = _bare_connection()
+    connection._recv_buffer = (
+        _framed(_spot(7, bid=15_000_000, ask=15_002_000))
+        + _framed(_spot(7, ask=15_003_000))  # chi co ask
+        + _framed(_spot(7, bid=14_999_000))  # chi co bid
+    )
+    connection._extract_one_message()
+    assert connection.get_latest_spot(7) == (15_000_000, 15_002_000)
+    connection._extract_one_message()
+    assert connection.get_latest_spot(7) == (15_000_000, 15_003_000)  # bid GIU NGUYEN, khong ve 0
+    connection._extract_one_message()
+    assert connection.get_latest_spot(7) == (14_999_000, 15_003_000)
+
+
+def test_spot_events_are_counted_not_logged_per_tick(caplog):
+    connection = _bare_connection()
+    connection._recv_buffer = b"".join(_framed(_spot(7, bid=1, ask=2)) for _ in range(50))
+    with caplog.at_level(logging.INFO):
+        for _ in range(50):
+            connection._extract_one_message()
+    assert connection.spot_event_count == 50
+    assert "event=MESSAGE_RECEIVED" not in caplog.text  # khong 1 dong log/tick
+
+
+def test_non_spot_messages_are_still_logged(caplog):
+    import OpenApiCommonMessages_pb2 as common_messages
+    connection = _bare_connection()
+    connection._recv_buffer = _framed(common_messages.ProtoHeartbeatEvent())
+    with caplog.at_level(logging.INFO):
+        connection._extract_one_message()
+    assert "event=MESSAGE_RECEIVED" in caplog.text
+    assert "ProtoHeartbeatEvent" in caplog.text
+
+
+def test_conversion_rate_raises_clear_error_when_bid_unknown():
+    # Chua co bid (moi nhan event chi co ask) -> loi RO RANG, khong chia 0 va khong ra lot sai.
+    converter = SymbolConverter.__new__(SymbolConverter)
+    converter._conversion_chains = {(JPY, USD): [_ConversionLeg(symbol_id=1, base_asset_id=USD, quote_asset_id=JPY)]}
+    converter._connection = _FakeConnection({1: (None, 15_002_000)})
+    with pytest.raises(RuntimeError, match="No valid bid"):
+        converter.get_live_conversion_rate(JPY, USD)
+
+
+def test_wait_until_spot_available_waits_until_a_bid_arrives():
+    # Event dau tien chi co ask -> chua duoc coi la "co gia"; phai cho tiep toi khi co bid.
+    class _Conn:
+        def __init__(self):
+            self.cache = {9: (None, 200)}
+            self.waits = 0
+
+        def get_latest_spot(self, symbol_id):
+            return self.cache.get(symbol_id)
+
+        def wait_for(self, *classes, predicate=None, timeout_seconds=15.0):
+            self.waits += 1
+            self.cache[9] = (150, 200)  # tick tiep theo mang bid
+            return None
+
+    converter = SymbolConverter.__new__(SymbolConverter)
+    converter._connection = _Conn()
+    converter._wait_until_spot_available(9)
+    assert converter._connection.waits == 1
+    assert converter._connection.get_latest_spot(9) == (150, 200)
+
+
+class _QueueConnection:
+    def __init__(self, items):
+        self.items = list(items)
+
+    def receive(self):
+        return self.items.pop(0) if self.items else None
+
+
+def test_poll_once_drains_backlog_so_execution_event_is_not_delayed(monkeypatch):
+    # Ban cu: 1 message/luot (~1-2s/luot) -> 1000 tick dung truoc 1 ORDER_FILLED lam no bi tre
+    # ~1000 luot. Gio: moi luot xu ly het message co san, toi da _MAX_MESSAGES_PER_POLL.
+    from engine import listener
+    from engine.connection import IncomingMessage
+
+    handled = []
+    monkeypatch.setattr(listener, "_dispatch", lambda incoming, **k: handled.append(incoming.message))
+    backlog = [IncomingMessage(0, f"spot-{i}", b"", None) for i in range(1000)]
+    backlog.append(IncomingMessage(0, "ORDER_FILLED", b"", None))
+    conn = _QueueConnection(backlog)
+
+    calls = 0
+    while "ORDER_FILLED" not in handled:
+        before = len(handled)
+        listener.poll_once(connection=conn, converter=None, exposure_book=None, state=None, label="combo")
+        calls += 1
+        assert len(handled) - before <= listener._MAX_MESSAGES_PER_POLL
+    assert calls == 3  # 500 + 500 + 1 — thay vi 1001 luot
+
+
+def test_poll_once_stops_at_time_budget(monkeypatch):
+    # 1 message xu ly lau (vd gui Telegram dong bo) khong duoc giu vong lap qua ngan sach thoi gian.
+    from engine import listener
+    from engine.connection import IncomingMessage
+
+    clock = {"t": 0.0}
+
+    class _FakeTime:
+        @staticmethod
+        def monotonic():
+            return clock["t"]
+
+    def _slow_dispatch(incoming, **k):
+        clock["t"] += 0.2
+
+    monkeypatch.setattr(listener, "time", _FakeTime)
+    monkeypatch.setattr(listener, "_dispatch", _slow_dispatch)
+    conn = _QueueConnection([IncomingMessage(0, i, b"", None) for i in range(10)])
+    listener.poll_once(connection=conn, converter=None, exposure_book=None, state=None, label="combo")
+    assert 10 - len(conn.items) == 3  # 0.2 + 0.2 + 0.2 >= 0.5s -> dung sau message thu 3
+
+
 def test_safe_error_redacts_secret_value():
     # Quan trong: config.yaml gio chua secret plaintext, va URL refresh token nhet client_secret
     # thang vao query string - loi mang lo URL do vao exception message phai duoc che truoc khi log.

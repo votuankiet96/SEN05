@@ -268,27 +268,13 @@ def _handle_signal(
         raw_volume=sizing_result.raw_volume_units, placed_volume=placed_volume_units,
         volume_step=symbol_info.step_volume, expected_loss=expected_loss, expected_profit=expected_profit,
     )
-    telegram.notify(
-        "PLAN_COMPUTED",
-        f"📊 {signal.client_order_id} {broker_symbol} side={signal.trade_side}: "
-        f"risk ${sizing_result.risk_amount:.2f} ({risk_percent:.2f}%), "
-        f"SL {sizing_result.sl_pips:.1f}p / TP {sizing_result.tp_pips:.1f}p, volume {placed_volume_units:.2f}",
-    )
-
-    account_asset = converter.get_deposit_asset_id()
+    # PLAN_COMPUTED / FX_CONVERSION_APPLIED chỉ ghi file log (trace tính toán nội bộ) — không đẩy
+    # Telegram từ 2026-09-27 (xem telegram._TELEGRAM_EVENTS).
     log_event(
         _LOGGER, "INFO", "FX_CONVERSION_APPLIED", "NONE", component="adapter",
         client_order_id=signal.client_order_id, quote_asset=symbol_info.quote_asset_id,
-        account_asset=account_asset, factor=sizing_result.conversion_rate,
+        account_asset=converter.get_deposit_asset_id(), factor=sizing_result.conversion_rate,
     )
-    if symbol_info.quote_asset_id == account_asset:
-        telegram.notify("FX_CONVERSION_APPLIED", f"💱 {signal.client_order_id}: no conversion needed (quote==account)")
-    else:
-        telegram.notify(
-            "FX_CONVERSION_APPLIED",
-            f"💱 {signal.client_order_id}: 1 asset#{symbol_info.quote_asset_id} = "
-            f"{sizing_result.conversion_rate:.6f} asset#{account_asset}",
-        )
 
     if sizing_result.volume <= 0:
         # sizing.py đã tự log lý do cụ thể (SIZE TOO SMALL) — không gửi lệnh khối lượng 0.

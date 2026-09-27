@@ -273,7 +273,8 @@ def _send_account_snapshot(connection, converter, config: Config, state: StateSt
             f"{telegram.escape_html(safe_error(exc))}",
         )
         return False
-    log_event(_LOGGER, "INFO", "SESSION_SUMMARY", "NONE", component="runtime", summary=text.replace("\n", " | "))
+    log_event(_LOGGER, "INFO", "SESSION_SUMMARY", "NONE", component="runtime", summary=text.replace("\n", " | "),
+              spot_events_total=connection.spot_event_count)
     telegram.notify("SESSION_SUMMARY", text)
     return True
 
