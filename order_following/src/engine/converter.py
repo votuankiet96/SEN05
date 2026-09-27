@@ -47,6 +47,8 @@ class _Holiday:
 class SymbolInfo:
     symbol_id: int
     name: str
+    og_name: str  # tên OG dùng trong Redis (vd "US30") — chỉ để HIỂN THỊ cho người vận hành trong
+    # Telegram/log dễ đọc; mọi tra cứu/lệnh thật vẫn phải qua `name` (tên broker), không dùng field này.
     digits: int
     pip_position: int
     lot_size: int
@@ -111,9 +113,14 @@ class SymbolConverter:
             raise RuntimeError("load_deposit_asset_id() was not called at startup")
         return self._deposit_asset_id
 
-    def load(self, symbol_names: Iterable[str]) -> None:
-        """Gọi 1 lần lúc khởi động: tra symbolId theo tên, rồi lấy đầy đủ spec."""
-        symbol_names = set(symbol_names)
+    def load(self, broker_to_og: Dict[str, str]) -> None:
+        """Gọi 1 lần lúc khởi động: tra symbolId theo tên broker, rồi lấy đầy đủ spec.
+
+        `broker_to_og`: {tên broker: tên OG} (<config chiến lược>.broker_to_symbol_map()). KHOÁ theo
+        tên broker để tập symbol được load LUÔN đúng bằng mọi broker_symbol khác nhau trong config —
+        tương đương tuyệt đối với bản cũ (<config chiến lược>.symbol_names()); tên OG chỉ để hiển thị.
+        """
+        symbol_names = set(broker_to_og)
 
         light_req = messages.ProtoOASymbolsListReq()
         light_req.ctidTraderAccountId = self._ctid_trader_account_id
@@ -134,7 +141,7 @@ class SymbolConverter:
         id_to_name = {light.symbolId: name for name, light in name_to_light.items()}
         for full in by_id_res.symbol:
             name = id_to_name[full.symbolId]
-            self._symbols[name] = self._build_info(name, full, name_to_light[name].quoteAssetId)
+            self._symbols[name] = self._build_info(name, broker_to_og[name], full, name_to_light[name].quoteAssetId)
         log_event(_LOGGER, "INFO", "SYMBOLS_LOADED", "NONE", component="converter",
                   symbol_count=len(self._symbols), symbols=",".join(sorted(self._symbols)))
 
@@ -150,7 +157,7 @@ class SymbolConverter:
         self._connection.send(by_id_req)
         by_id_res = self._connection.wait_for(messages.ProtoOASymbolByIdRes)
         # quote_asset_id chỉ có ở ProtoOALightSymbol, không có trong ProtoOASymbol — giữ lại từ bản cũ.
-        self._symbols[old.name] = self._build_info(old.name, by_id_res.symbol[0], old.quote_asset_id)
+        self._symbols[old.name] = self._build_info(old.name, old.og_name, by_id_res.symbol[0], old.quote_asset_id)
         log_event(_LOGGER, "INFO", "SYMBOL_REFRESHED", "NONE", component="converter",
                   symbol=old.name, symbol_id=symbol_id)
 
@@ -298,10 +305,11 @@ class SymbolConverter:
         )
 
     @staticmethod
-    def _build_info(name: str, full, quote_asset_id: int) -> SymbolInfo:
+    def _build_info(name: str, og_name: str, full, quote_asset_id: int) -> SymbolInfo:
         return SymbolInfo(
             symbol_id=full.symbolId,
             name=name,
+            og_name=og_name,
             digits=full.digits,
             pip_position=full.pipPosition,
             lot_size=full.lotSize,

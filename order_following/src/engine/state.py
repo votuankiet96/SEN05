@@ -57,7 +57,15 @@ class StateStore:
             os.makedirs(directory, exist_ok=True)
         self._conn = sqlite3.connect(db_path)
         self._conn.execute(_SCHEMA)
+        self._migrate_add_net_profit_column()
         self._conn.commit()
+
+    def _migrate_add_net_profit_column(self) -> None:
+        """DB production đã tồn tại từ trước cột này — CREATE TABLE IF NOT EXISTS không tự thêm cột
+        vào bảng đã có sẵn, phải ALTER TABLE riêng, chỉ 1 lần (kiểm tra qua PRAGMA table_info)."""
+        columns = {row[1] for row in self._conn.execute("PRAGMA table_info(orders)")}
+        if "net_profit" not in columns:
+            self._conn.execute("ALTER TABLE orders ADD COLUMN net_profit REAL NOT NULL DEFAULT 0")
 
     def has_sent(self, client_order_id: str) -> bool:
         row = self._conn.execute(
@@ -123,6 +131,36 @@ class StateStore:
             (STATUS_CLOSED, _now(), position_id),
         )
         self._conn.commit()
+
+    def accumulate_net_profit(self, position_id: int, net_profit_delta: float) -> None:
+        """CỘNG DỒN (không ghi đè) — 1 position có thể đóng qua NHIỀU deal khớp từng phần (partial
+        close), mỗi deal có lãi/lỗ riêng; gọi hàm này ở MỌI deal (kể cả deal cuối cùng khiến volume
+        về 0, lúc mark_closed() cũng được gọi) để tổng net_profit phản ánh ĐÚNG toàn bộ position,
+        không chỉ riêng deal cuối. Case thật đã gặp: BTCUSD 2026-09-27, 1 position đóng qua 4 deal
+        trong 6 giây, mỗi deal lãi khác nhau — ghi đè sẽ mất 3/4 số lãi thật."""
+        self._conn.execute(
+            "UPDATE orders SET net_profit = net_profit + ?, updated_at = ? WHERE position_id = ?",
+            (net_profit_delta, _now(), position_id),
+        )
+        self._conn.commit()
+
+    def get_net_profit(self, position_id: int) -> float:
+        """Tổng net_profit đã cộng dồn cho position này tính tới hiện tại — dùng ngay khi vừa
+        accumulate_net_profit() ở deal CUỐI (volume về 0) để hiện đúng tổng lãi/lỗ thật cả position
+        trong 1 message Telegram, không phải chỉ số của riêng deal cuối đó."""
+        row = self._conn.execute(
+            "SELECT net_profit FROM orders WHERE position_id = ?", (position_id,)
+        ).fetchone()
+        return row[0] if row else 0.0
+
+    def sum_net_profit_since(self, since_iso: str) -> float:
+        """Tổng lãi/lỗ THẬT (đã cộng dồn mọi partial close) của các position đã đóng HOÀN TOÀN
+        (status=CLOSED) trong kỳ — nguồn số liệu cho account snapshot định kỳ."""
+        row = self._conn.execute(
+            "SELECT COALESCE(SUM(net_profit), 0) FROM orders WHERE status = ? AND updated_at >= ?",
+            (STATUS_CLOSED, since_iso),
+        ).fetchone()
+        return row[0]
 
     def mark_unresolved(self, client_order_id: str) -> None:
         """Chốt sổ 1 record không đối chiếu được (xem main._resolve_pending). Có trạng thái riêng để

@@ -5,6 +5,9 @@ state/
 logs/
 src/engine/proto/generated/__pycache__/
 
+# File runtime cua Claude Code (vd scheduled_tasks.lock) - chi co y nghia tren may nay.
+.claude/
+
 # Secret thật - KHONG duoc push. Dung src/config.example.yaml lam mau, copy thanh config.yaml roi
 # tu dien gia tri that (client_secret, redis password, telegram bot_token...).
 src/config.yaml

@@ -99,7 +99,7 @@ def test_resolve_pending_matches_live_order_and_marks_rest_unresolved(caplog):
 
 def _sample_us30() -> SymbolInfo:
     return SymbolInfo(
-        symbol_id=1132, name="US30", digits=2, pip_position=1, lot_size=100,
+        symbol_id=1132, name="US30", og_name="US30", digits=2, pip_position=1, lot_size=100,
         min_volume=1, max_volume=100000, step_volume=1, quote_asset_id=1,
         trading_mode=_TRADING_MODE.ENABLED, schedule_time_zone="Europe/Berlin",
         # Mo ca tuan trong test mac dinh; cac test ve gio giao dich tu dat lai schedule/holidays.
@@ -339,6 +339,55 @@ def test_execution_event_with_close_detail_routes_to_closed_not_filled():
             store.close()
 
 
+def test_position_closed_partial_deal_does_not_remove_exposure_or_mark_closed():
+    # Bug that (BTCUSD 2026-09-27): 1 position dong qua NHIEU deal partial-close trong vai giay,
+    # moi deal la 1 ProtoOAExecutionEvent rieng voi remaining volume > 0 (chua ve 0). Deal dau tien
+    # DA bi xoa khoi ExposureBook + mark CLOSED ngay - trong khi vi the THAT ra van con mo mot phan.
+    # Phai CHI finalize (mark_closed/xoa exposure/bao Telegram) o deal CUOI (remaining volume == 0).
+    from engine.listener import _handle_execution_event
+
+    converter = SymbolConverter.__new__(SymbolConverter)
+    info = _sample_us30()
+    converter._symbols = {"US30": info}
+
+    book = ExposureBook()
+    book.on_position_opened(position_id=999, symbol_id=info.symbol_id, trade_side=1, volume=1680)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        store = StateStore(os.path.join(tmp, "test.sqlite"))
+        try:
+            store.mark_sending("combo:H1:US30:X", "US30", "combo", risk_amount=50.0)
+            store.mark_accepted("combo:H1:US30:X", order_id=111)
+            store.mark_filled(111, position_id=999)
+
+            def _close_event(remaining_volume: int, gross_profit: int):
+                event = messages.ProtoOAExecutionEvent()
+                event.position.positionId = 999
+                event.position.tradeData.symbolId = info.symbol_id
+                event.position.tradeData.tradeSide = model_messages.ProtoOATradeSide.BUY
+                event.position.tradeData.label = "combo"
+                event.position.tradeData.volume = remaining_volume
+                event.deal.closePositionDetail.entryPrice = 100.0
+                event.deal.closePositionDetail.grossProfit = gross_profit
+                event.deal.executionPrice = 101.0
+                return event
+
+            # Deal 1/2: con 118 (1.18 lot) chua ve 0 -> CHUA duoc coi la dong xong.
+            _handle_execution_event(_close_event(118, 500), converter=converter, exposure_book=book, state=store)
+            assert book.for_symbol(info.symbol_id) != []  # van con trong book
+            assert store.get_by_order_id(111).status == "FILLED"  # chua bi ghi de thanh CLOSED
+            assert store.get_net_profit(999) == 500.0  # moneyDigits khong dat -> scale=1, cong don deal nay
+
+            # Deal 2/2: ve 0 -> DAY la deal cuoi, gio moi finalize.
+            _handle_execution_event(_close_event(0, 300), converter=converter, exposure_book=book, state=store)
+            assert book.for_symbol(info.symbol_id) == []
+            assert store.get_by_order_id(111).status == "CLOSED"
+            # Tong net_profit phai la CA 2 deal cong lai (500 + 300), khong phai chi deal cuoi.
+            assert store.get_net_profit(999) == 800.0
+        finally:
+            store.close()
+
+
 def test_converter_find_by_id_returns_none_instead_of_raising():
     # listener.py phai dung find_by_id: mot event cua symbol OF khong load (lenh tay tren symbol
     # khac) ma raise KeyError se lam sap ca tien trinh chay 24/7.
@@ -437,6 +486,243 @@ def test_log_event_rejects_invalid_field_name():
 def test_log_event_rejects_unknown_risk():
     with pytest.raises(ValueError):
         log_event(logging.getLogger("test.log_event"), "INFO", "X", "SEVERE", component="c")
+
+
+def test_telegram_notify_skips_internal_reasoning_events(monkeypatch):
+    # 2026-09-27: PLAN_COMPUTED/FX_CONVERSION_APPLIED/EXPOSURE_DECISION bi bo khoi Telegram (nguon
+    # nhieu chinh - fire tren MOI tin hieu ke ca khong co gi xay ra). Van con day du trong file log,
+    # chi khong duoc goi sang API Telegram nua.
+    from engine import telegram
+
+    calls = []
+    monkeypatch.setattr(telegram.urllib.request, "urlopen", lambda *a, **k: calls.append(1))
+    telegram.configure("fake-token", "fake-chat-id")
+    try:
+        telegram.notify("PLAN_COMPUTED", "x")
+        telegram.notify("FX_CONVERSION_APPLIED", "x")
+        telegram.notify("EXPOSURE_DECISION", "x")
+        assert calls == []
+        telegram.notify("ORDER_FILLED", "x")
+        assert calls == [1]
+    finally:
+        telegram.configure("", "")
+
+
+def test_telegram_notify_uses_html_parse_mode(monkeypatch):
+    from engine import telegram
+
+    captured = {}
+
+    def _fake_urlopen(request, timeout=5):
+        captured["data"] = request.data
+        class _Resp:
+            def __enter__(self):
+                return self
+            def __exit__(self, *a):
+                return False
+        return _Resp()
+
+    monkeypatch.setattr(telegram.urllib.request, "urlopen", _fake_urlopen)
+    telegram.configure("fake-token", "fake-chat-id")
+    try:
+        telegram.notify("ORDER_FILLED", "<b>hello</b>")
+        assert b"parse_mode=HTML" in captured["data"]
+    finally:
+        telegram.configure("", "")
+
+
+def test_translate_reason_known_and_unknown_codes():
+    from engine import telegram
+    assert telegram.translate_reason("expired_good_till_date") == "expired before it could fill"
+    assert telegram.translate_reason("some_future_reason") == "some_future_reason"  # khong co -> giu nguyen
+
+
+def test_side_label_buy_and_sell():
+    from engine import telegram
+    assert telegram.side_label(model_messages.ProtoOATradeSide.BUY) == "BUY"
+    assert telegram.side_label(model_messages.ProtoOATradeSide.SELL) == "SELL"
+
+
+def test_escape_html_escapes_special_characters():
+    from engine import telegram
+    assert telegram.escape_html("a < b & c > d") == "a &lt; b &amp; c &gt; d"
+
+
+def test_state_accumulate_and_sum_net_profit():
+    with tempfile.TemporaryDirectory() as tmp:
+        store = StateStore(os.path.join(tmp, "test.sqlite"))
+        try:
+            store.mark_sending("combo:H1:US30:A", "US30", "combo", risk_amount=50.0)
+            store.mark_accepted("combo:H1:US30:A", order_id=1)
+            store.mark_filled(1, position_id=100)
+
+            before = datetime.now(timezone.utc).isoformat()
+            store.accumulate_net_profit(100, 30.0)
+            store.accumulate_net_profit(100, -5.0)  # partial close lo mot phan, van cong don duoc
+            store.mark_closed(100)
+
+            assert store.get_net_profit(100) == 25.0
+            assert store.sum_net_profit_since(before) == 25.0
+        finally:
+            store.close()
+
+
+class _ScriptedConnection:
+    """Gia lap send()/wait_for() cho 1 request: tra dung message da dinh san, kem clientMsgId de
+    kiem tra predicate cua caller (khong can socket song)."""
+
+    def __init__(self, reply, reply_client_msg_id="sent-1"):
+        self._reply = reply
+        self._reply_client_msg_id = reply_client_msg_id
+
+    def send(self, message, client_msg_id=None):
+        return "sent-1"
+
+    def wait_for(self, *expected_classes, predicate=None, timeout_seconds=15.0):
+        from engine.connection import IncomingMessage
+        incoming = IncomingMessage(payload_type=0, message=self._reply, raw_payload=b"",
+                                   client_msg_id=self._reply_client_msg_id)
+        assert isinstance(self._reply, expected_classes)
+        assert predicate is None or predicate(incoming)
+        return self._reply
+
+
+def test_get_unrealized_pnl_uses_server_values_scaled_by_money_digits():
+    # Floating P&L lay tu SERVER (ProtoOAGetPositionUnrealizedPnLReq - khuyen nghi chinh thuc cua
+    # Spotware), khong tu tinh tu gia spot. Gia tri tho scale bang moneyDigits cua response.
+    from engine import sizing
+
+    res = messages.ProtoOAGetPositionUnrealizedPnLRes()
+    res.ctidTraderAccountId = 1
+    res.moneyDigits = 2
+    item = res.positionUnrealizedPnL.add()
+    item.positionId = 10
+    item.grossUnrealizedPnL = 12345
+    item.netUnrealizedPnL = 12000  # -> 120.00
+    item2 = res.positionUnrealizedPnL.add()
+    item2.positionId = 11
+    item2.grossUnrealizedPnL = -500
+    item2.netUnrealizedPnL = -550  # -> -5.50
+
+    result = sizing.get_unrealized_pnl(_ScriptedConnection(res), ctid_trader_account_id=1)
+    assert result == {10: 120.0, 11: -5.5}
+
+
+def test_get_unrealized_pnl_raises_on_error_response():
+    from engine import sizing
+
+    err = messages.ProtoOAErrorRes()
+    err.errorCode = "SOME_ERROR"
+    err.description = "not available"
+    with pytest.raises(RuntimeError, match="SOME_ERROR"):
+        sizing.get_unrealized_pnl(_ScriptedConnection(err), ctid_trader_account_id=1)
+
+
+def _snapshot_config():
+    class _CTrader:
+        ctid_trader_account_id = 1
+
+    class _Cfg:
+        ctrader = _CTrader()
+
+    return _Cfg()
+
+
+def test_account_snapshot_counts_only_own_label_and_uses_lot_size(monkeypatch):
+    from engine import sizing
+
+    converter = SymbolConverter.__new__(SymbolConverter)
+    gold = _sample_us30()
+    gold.symbol_id, gold.name, gold.og_name, gold.lot_size = 41, "XAUUSD", "GOLD", 10_000  # 1 lot = 100 unit
+    converter._symbols = {"XAUUSD": gold}
+
+    reconcile = messages.ProtoOAReconcileRes()
+    ours = reconcile.position.add()
+    ours.positionId = 10
+    ours.tradeData.symbolId = 41
+    ours.tradeData.tradeSide = model_messages.ProtoOATradeSide.SELL
+    ours.tradeData.volume = 5_000  # 50 unit = 0.50 lot (KHONG phai 50.00 "lot" nhu volume/100)
+    ours.tradeData.label = "combo"
+    manual = reconcile.position.add()  # lenh tay tren cung account - KHONG duoc tinh
+    manual.positionId = 99
+    manual.tradeData.symbolId = 41
+    manual.tradeData.tradeSide = model_messages.ProtoOATradeSide.BUY
+    manual.tradeData.volume = 100_000
+    manual.tradeData.label = "manual"
+
+    monkeypatch.setattr(sizing, "get_balance", lambda *a, **k: 1000.0)
+    monkeypatch.setattr(sizing, "get_unrealized_pnl", lambda *a, **k: {10: -12.5, 99: 999.0})
+    monkeypatch.setattr(main, "_reconcile", lambda *a, **k: reconcile)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        store = StateStore(os.path.join(tmp, "test.sqlite"))
+        try:
+            text = main._build_account_snapshot(None, converter, _snapshot_config(), store, "2000-01-01")
+        finally:
+            store.close()
+
+    assert "Open: 1 position(s)" in text
+    assert "GOLD SELL 0.50 lot (floating -$12.50)" in text
+    assert "Floating: -$12.50" in text  # tong chi gom vi the cua label combo, bo qua 999 cua lenh tay
+    assert "Balance: $1000.00" in text
+
+
+def test_account_snapshot_failure_never_propagates(monkeypatch):
+    # Bao cao goi mang (moi request cho toi 15s). TimeoutError la lop con cua OSError - neu lan ra,
+    # main() coi la CONNECTION_LOST va khoi dong lai ca engine dat lenh. Phai nuot, chi log.
+    def _boom(*a, **k):
+        raise TimeoutError("Expected response not received within 15.0s")
+
+    monkeypatch.setattr(main, "_build_account_snapshot", _boom)
+    assert main._send_account_snapshot(None, None, None, None, "2000-01-01") is False
+
+
+def test_position_closed_final_when_status_closed_even_if_volume_nonzero():
+    # 2 dieu kien doc lap: positionStatus=CLOSED cung du de chot so, khong chi dua vao volume==0.
+    from engine.listener import _handle_execution_event
+
+    converter = SymbolConverter.__new__(SymbolConverter)
+    info = _sample_us30()
+    converter._symbols = {"US30": info}
+    book = ExposureBook()
+    book.on_position_opened(position_id=777, symbol_id=info.symbol_id, trade_side=1, volume=100)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        store = StateStore(os.path.join(tmp, "test.sqlite"))
+        try:
+            store.mark_sending("combo:H1:US30:Z", "US30", "combo", risk_amount=50.0)
+            store.mark_accepted("combo:H1:US30:Z", order_id=5)
+            store.mark_filled(5, position_id=777)
+
+            event = messages.ProtoOAExecutionEvent()
+            event.position.positionId = 777
+            event.position.tradeData.symbolId = info.symbol_id
+            event.position.tradeData.tradeSide = model_messages.ProtoOATradeSide.BUY
+            event.position.tradeData.label = "combo"
+            event.position.tradeData.volume = 100
+            event.position.positionStatus = model_messages.ProtoOAPositionStatus.POSITION_STATUS_CLOSED
+            event.deal.closePositionDetail.entryPrice = 100.0
+            event.deal.executionPrice = 101.0
+
+            _handle_execution_event(event, converter=converter, exposure_book=book, state=store)
+            assert book.for_symbol(info.symbol_id) == []
+            assert store.get_by_order_id(5).status == "CLOSED"
+        finally:
+            store.close()
+
+
+def test_broker_to_symbol_map_loads_every_distinct_broker_symbol():
+    # converter.load() phai nhan DU moi broker_symbol khac nhau (tuong duong symbol_names() cu), ke ca
+    # khi 2 instrument trung ten OG - khoa theo ten broker, khong theo ten OG.
+    from configuration import ComboConfig, ComboInstrument
+
+    combo = ComboConfig(pubsub_channel="x", instruments=[
+        ComboInstrument(symbol="US30", timeframe="H1", broker_symbol="#US30"),
+        ComboInstrument(symbol="US30", timeframe="H4", broker_symbol="US30.cash"),
+        ComboInstrument(symbol="GOLD", timeframe="H1", broker_symbol="XAUUSD"),
+    ])
+    assert set(combo.broker_to_symbol_map()) == set(combo.symbol_names())
+    assert combo.broker_to_symbol_map()["XAUUSD"] == "GOLD"
 
 
 def test_safe_error_redacts_secret_value():

@@ -48,9 +48,12 @@ def poll_once(
 def _dispatch(incoming: IncomingMessage, *, converter, exposure_book, state, label) -> None:
     message = incoming.message
     if isinstance(message, messages.ProtoOASpotEvent):
-        # Giữ giá quy đổi tỷ giá trong converter.py luôn mới — đúng nguyên tắc event-driven, không
-        # phải sizing.py tự đi hỏi mỗi lần cần (xem converter.ensure_conversion_chain).
-        converter.update_spot_price(message.symbolId, message.bid, message.ask)
+        # Khong can lam gi: connection.py da tu cache gia moi nhat ngay trong _extract_one_message()
+        # (self._latest_spot_raw), truoc ca khi message di ra toi day - xem docstring connection.py.
+        # Spot event chi xuat hien neu converter.ensure_conversion_chain() tung subscribe 1 conversion
+        # leg. (2026-09-27: nhanh nay TRUOC DAY goi converter.update_spot_price() - method KHONG TON
+        # TAI tren SymbolConverter, chua tung crash chi vi chua symbol nao can quy doi ty gia.)
+        pass
     elif isinstance(message, messages.ProtoOAExecutionEvent):
         log_event(
             _LOGGER, "INFO", "EXECUTION_EVENT_RECEIVED", "NONE", component="listener",
@@ -65,7 +68,11 @@ def _dispatch(incoming: IncomingMessage, *, converter, exposure_book, state, lab
             target_id=message.orderId, action="unsolicited_order_error",
             error_code=message.errorCode, error_description=message.description,
         )
-        telegram.notify("CLEANUP_FAILED", f"🔴 Unsolicited order error — orderId {message.orderId}: {message.errorCode} ({message.description})")
+        telegram.notify(
+            "CLEANUP_FAILED",
+            f"🔴 <b>Unsolicited error</b> — orderId {message.orderId}\n"
+            f"{telegram.escape_html(message.errorCode)}: {telegram.escape_html(message.description)}",
+        )
     elif isinstance(message, messages.ProtoOASymbolChangedEvent):
         # Event chỉ báo "symbol đã đổi", không kèm nội dung — phải tự hỏi lại spec, nếu không
         # digits/volume step trong cache sẽ cũ dần và lệnh bắt đầu bị từ chối.
@@ -77,7 +84,11 @@ def _dispatch(incoming: IncomingMessage, *, converter, exposure_book, state, lab
             target_id="unknown", action="unsolicited_error",
             error_code=message.errorCode, error_description=message.description,
         )
-        telegram.notify("CLEANUP_FAILED", f"🔴 Unsolicited error: {message.errorCode} ({message.description})")
+        telegram.notify(
+            "CLEANUP_FAILED",
+            f"🔴 <b>Unsolicited error</b>\n"
+            f"{telegram.escape_html(message.errorCode)}: {telegram.escape_html(message.description)}",
+        )
 
 
 def _belongs_to_us(event, label: str) -> bool:
@@ -117,7 +128,7 @@ def _handle_execution_event(event, *, converter: SymbolConverter, exposure_book:
         return
 
     if execution_type in (_EXECUTION_TYPE.ORDER_CANCELLED, _EXECUTION_TYPE.ORDER_EXPIRED):
-        _handle_dropped(event, exposure_book=exposure_book, state=state)
+        _handle_dropped(event, converter=converter, exposure_book=exposure_book, state=state)
         return
 
     if execution_type == _EXECUTION_TYPE.ORDER_REJECTED:
@@ -174,12 +185,13 @@ def _handle_filled(event, *, converter: SymbolConverter, exposure_book: Exposure
     )
     telegram.notify(
         "ORDER_FILLED",
-        f"🟢 {order.clientOrderId}: FILLED @ {fill_price} (positionId={position.positionId}), "
-        f"real risk ${real_risk_amount:.2f} (budgeted ${budgeted_risk_amount:.2f})",
+        f"🟢 <b>{telegram.escape_html(symbol_info.og_name)} {telegram.side_label(position.tradeData.tradeSide)}</b> — Filled\n"
+        f"Fill price: {fill_price} | Real risk: ${real_risk_amount:.2f} (budgeted ${budgeted_risk_amount:.2f})\n"
+        f"<code>{telegram.escape_html(order.clientOrderId)}</code>",
     )
 
 
-def _handle_dropped(event, *, exposure_book: ExposureBook, state: StateStore) -> None:
+def _handle_dropped(event, *, converter: SymbolConverter, exposure_book: ExposureBook, state: StateStore) -> None:
     order = event.order
     order_id = order.orderId
     if event.executionType == _EXECUTION_TYPE.ORDER_CANCELLED:
@@ -193,7 +205,14 @@ def _handle_dropped(event, *, exposure_book: ExposureBook, state: StateStore) ->
         _LOGGER, "INFO", "ORDER_DROPPED", "NONE", component="listener",
         client_order_id=order.clientOrderId, order_id=order_id, reason=reason,
     )
-    telegram.notify("ORDER_DROPPED", f"⚪ {order.clientOrderId}: {reason} (never filled)")
+    symbol_info = converter.find_by_id(order.tradeData.symbolId)
+    display_symbol = symbol_info.og_name if symbol_info is not None else str(order.tradeData.symbolId)
+    telegram.notify(
+        "ORDER_DROPPED",
+        f"⚪ <b>{telegram.escape_html(display_symbol)}</b> — Pending order dropped\n"
+        f"Reason: {telegram.escape_html(telegram.translate_reason(reason))}\n"
+        f"<code>{telegram.escape_html(order.clientOrderId)}</code>",
+    )
 
 
 def _handle_position_closed(event, *, converter: SymbolConverter, exposure_book: ExposureBook,
@@ -209,22 +228,41 @@ def _handle_position_closed(event, *, converter: SymbolConverter, exposure_book:
     money_scale = (10 ** detail.moneyDigits) if detail.moneyDigits else 1
 
     pips = direction * (deal.executionPrice - detail.entryPrice) / pip_size
-
-    state.mark_closed(position.positionId)
-    exposure_book.on_position_closed(position.positionId)
+    remaining_volume = position.tradeData.volume  # volume CÒN LẠI sau deal này, không phải volume vừa đóng
 
     net_profit = (detail.grossProfit - detail.commission) / money_scale
     balance_after = detail.balance / money_scale
+    # 1 position co the dong qua NHIEU deal partial-close, moi deal 1 execution event rieng, voi
+    # tradeData.volume = volume CON LAI (bang chung log that BTCUSD 2026-09-27: mo 168 -> 4 deal voi
+    # volume 118/68/18/0, lai tung deal ty le dung khoi luong dong). Chi coi la DONG HOAN TOAN khi
+    # volume con lai = 0 HOAC positionStatus = CLOSED (proto: "Current status of the position") —
+    # 2 dieu kien doc lap de khong bao gio bo sot deal cuoi. Lam o MOI deal (ban cu) se xoa exposure
+    # som khi vi the that ra van con mo mot phan.
+    is_final_close = (
+        remaining_volume == 0
+        or position.positionStatus == model_messages.ProtoOAPositionStatus.POSITION_STATUS_CLOSED
+    )
+    if is_final_close:
+        # Chot state/exposure TRUOC — day la phan engine dat lenh phu thuoc vao; ghi net_profit (chi
+        # phuc vu bao cao) de sau, loi o buoc bao cao cung khong de lai exposure "bong ma".
+        state.mark_closed(position.positionId)
+        exposure_book.on_position_closed(position.positionId)
+    state.accumulate_net_profit(position.positionId, net_profit)
+
     log_event(
         _LOGGER, "INFO", "POSITION_CLOSED", "NONE", component="listener",
         position_id=position.positionId, symbol=symbol_info.name, side=position.tradeData.tradeSide,
         reason="sl_tp_or_manual_close", entry_price=detail.entryPrice, close_price=deal.executionPrice,
-        pips=pips, volume=position.tradeData.volume / 100.0,
+        pips=pips, remaining_volume=remaining_volume / 100.0, is_final_close=is_final_close,
         gross_profit=detail.grossProfit / money_scale, commission=detail.commission / money_scale,
-        swap=detail.swap / money_scale, net_profit=net_profit, balance_after=balance_after,
+        swap=detail.swap / money_scale, deal_net_profit=net_profit, balance_after=balance_after,
     )
+    if not is_final_close:
+        return  # partial close: đã log đủ trace + cộng dồn net_profit, KHÔNG báo Telegram riêng đợt này
+
+    total_net_profit = state.get_net_profit(position.positionId)
     telegram.notify(
         "POSITION_CLOSED",
-        f"🏁 {symbol_info.name}: closed @ {deal.executionPrice}, {pips:.1f} pips, "
-        f"net ${net_profit:.2f}, balance ${balance_after:.2f}",
+        f"🏁 <b>{telegram.escape_html(symbol_info.og_name)}</b> — Position closed\n"
+        f"Close price: {deal.executionPrice} | Net P&amp;L: ${total_net_profit:.2f} | Balance: ${balance_after:.2f}",
     )

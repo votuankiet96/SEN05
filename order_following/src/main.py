@@ -23,9 +23,9 @@ from configuration import Config, load_config
 from engine.connection import AuthError, Connection
 from engine.converter import SymbolConverter
 from engine.exposure import ExposureBook
-from engine.log import configure_logging, log_event
+from engine.log import configure_logging, log_event, safe_error
 from engine.state import StateStore
-from engine import listener, orders, telegram
+from engine import listener, orders, sizing, telegram
 from strategies.combo import adapter
 
 _LOGGER = logging.getLogger(__name__)
@@ -55,12 +55,16 @@ def main() -> int:
                 _run_once(config, state)
             except KeyboardInterrupt:
                 log_event(_LOGGER, "INFO", "SHUTDOWN", "NONE", component="runtime", reason="ctrl_c")
-                telegram.notify("SHUTDOWN", "⏹️ OF shutting down: Ctrl+C")
+                telegram.notify("SHUTDOWN", "⏹️ <b>OF shutting down</b> — Ctrl+C")
                 return 0
             except (ConnectionError, OSError, TimeoutError, redis.RedisError) as exc:
                 log_event(_LOGGER, "ERROR", "CONNECTION_LOST", "MEDIUM", component="runtime",
                           error=exc, retry_seconds=_RECONNECT_DELAY_SECONDS)
-                telegram.notify("CONNECTION_LOST", f"🔴 Connection lost ({exc}) — retrying in {_RECONNECT_DELAY_SECONDS:.0f}s")
+                telegram.notify(
+                    "CONNECTION_LOST",
+                    f"🔴 <b>Connection lost</b> — retrying in {_RECONNECT_DELAY_SECONDS:.0f}s\n"
+                    f"{telegram.escape_html(safe_error(exc))}",
+                )
                 time.sleep(_RECONNECT_DELAY_SECONDS)
     finally:
         state.close()
@@ -86,8 +90,8 @@ def _startup_complete(config: Config, reconcile) -> None:
               symbol_count=symbol_count, position_count=position_count, pending_order_count=pending_order_count)
     telegram.notify(
         "STARTUP_COMPLETE",
-        f"✅ OF started OK — loaded {symbol_count} symbol(s), {position_count} position(s), "
-        f"{pending_order_count} pending order(s)",
+        f"✅ <b>OF started</b>\n"
+        f"{symbol_count} symbol(s) loaded | {position_count} open position(s) | {pending_order_count} pending order(s)",
     )
 
 
@@ -100,7 +104,7 @@ def _run_check(config: Config) -> int:
     try:
         _authenticate_with_refresh(connection, config.ctrader.ctid_trader_account_id)
         converter = SymbolConverter(connection, config.ctrader.ctid_trader_account_id)
-        converter.load(config.combo.symbol_names())
+        converter.load(config.combo.broker_to_symbol_map())
         converter.load_deposit_asset_id()
         reconcile = _reconcile(connection, config.ctrader.ctid_trader_account_id)
         _startup_complete(config, reconcile)
@@ -137,7 +141,7 @@ def _run_once(config: Config, state: StateStore) -> None:
         _authenticate_with_refresh(connection, config.ctrader.ctid_trader_account_id)
 
         converter = SymbolConverter(connection, config.ctrader.ctid_trader_account_id)
-        converter.load(config.combo.symbol_names())
+        converter.load(config.combo.broker_to_symbol_map())
         converter.load_deposit_asset_id()
 
         reconcile = _reconcile(connection, config.ctrader.ctid_trader_account_id)
@@ -202,8 +206,76 @@ def _resolve_pending(reconcile, *, state: StateStore) -> None:
                       client_order_id=record.client_order_id, status=record.status)
             telegram.notify(
                 "STARTUP_UNRESOLVED",
-                f"🔴 UNRESOLVED {record.client_order_id} (previous status '{record.status}') — needs manual check",
+                f"🔴 <b>Needs manual check</b> — could not reconcile with server\n"
+                f"Previous status: {telegram.escape_html(record.status)}\n"
+                f"<code>{telegram.escape_html(record.client_order_id)}</code>",
             )
+
+
+def _signed_money(value: float) -> str:
+    return f"{'+' if value >= 0 else '-'}${abs(value):.2f}"
+
+
+def _build_account_snapshot(connection, converter, config: Config, state: StateStore, since_iso: str) -> str:
+    """Account snapshot — số dư, vị thế đang mở của label này (kèm floating P&L do SERVER tính), hoạt
+    động trong kỳ (kèm lãi/lỗ thật đã đóng). Thay bản cũ chỉ đếm status ("nothing new" vô nghĩa).
+    KHÔNG có MDD (đã bàn, quyết định bỏ). Chỉ ĐỌC — không đụng exposure_book/state của engine."""
+    ctid = config.ctrader.ctid_trader_account_id
+    balance = sizing.get_balance(connection, ctid)
+    reconcile = _reconcile(connection, ctid)
+    unrealized = sizing.get_unrealized_pnl(connection, ctid)
+
+    # Chỉ tính vị thế/lệnh chờ của ĐÚNG label này — account có thể có lệnh tay/chiến lược khác,
+    # cùng nguyên tắc lọc label như listener._belongs_to_us và ExposureBook.seed_from_reconcile.
+    positions = [p for p in reconcile.position if p.tradeData.label == adapter.LABEL]
+    pending_count = sum(1 for o in reconcile.order if o.tradeData.label == adapter.LABEL)
+    total_floating = sum(unrealized.get(p.positionId, 0.0) for p in positions)
+
+    lines = [
+        "📊 <b>Account snapshot</b>",
+        f"Balance: ${balance:.2f} | Floating: {_signed_money(total_floating)}",
+        f"Open: {len(positions)} position(s), {pending_count} pending order(s)",
+    ]
+    for p in positions:
+        info = converter.find_by_id(p.tradeData.symbolId)
+        name = info.og_name if info is not None else str(p.tradeData.symbolId)
+        # Proto: volume và lotSize đều tính theo "cents" -> số lot = volume / lotSize (KHÔNG phải
+        # volume/100 — đó là số unit; với GOLD 1 lot thường = 100 unit, chia 100 sẽ sai 100 lần).
+        size = f"{p.tradeData.volume / info.lot_size:.2f} lot" if info is not None and info.lot_size else \
+            f"{p.tradeData.volume / 100.0:.2f} units"
+        floating = unrealized.get(p.positionId)
+        floating_text = _signed_money(floating) if floating is not None else "n/a"
+        lines.append(
+            f"  • {telegram.escape_html(name)} {telegram.side_label(p.tradeData.tradeSide)} "
+            f"{size} (floating {floating_text})"
+        )
+
+    counts = state.count_by_status_since(since_iso)
+    period_net = state.sum_net_profit_since(since_iso)
+    activity = ", ".join(f"{k.lower()} {v}" for k, v in sorted(counts.items())) or "no activity"
+    lines.append("──────")
+    lines.append(f"This period: {activity} | closed net: {_signed_money(period_net)}")
+    return "\n".join(lines)
+
+
+def _send_account_snapshot(connection, converter, config: Config, state: StateStore, since_iso: str) -> bool:
+    """True nếu đã gửi. Báo cáo KHÔNG được phép làm sập/reconnect engine giao dịch: nó gọi mạng
+    (balance/reconcile/unrealized P&L, mỗi cái chờ tối đa 15s) và TimeoutError là lớp con của OSError
+    — để lan ra, main() coi là CONNECTION_LOST và khởi động lại toàn bộ. Nuốt MỌI lỗi ở đây; nếu kết
+    nối thật sự đã chết, listener.poll_once ngay sau đó vẫn tự raise như bình thường."""
+    try:
+        text = _build_account_snapshot(connection, converter, config, state, since_iso)
+    except Exception as exc:
+        log_event(_LOGGER, "WARNING", "SESSION_SUMMARY_FAILED", "LOW", component="runtime", error=exc)
+        telegram.notify(
+            "SESSION_SUMMARY_FAILED",
+            f"⚠️ <b>Account snapshot unavailable</b> — will retry next cycle\n"
+            f"{telegram.escape_html(safe_error(exc))}",
+        )
+        return False
+    log_event(_LOGGER, "INFO", "SESSION_SUMMARY", "NONE", component="runtime", summary=text.replace("\n", " | "))
+    telegram.notify("SESSION_SUMMARY", text)
+    return True
 
 
 def _loop(connection, converter, exposure_book, state, redis_client, pubsub, config: Config) -> None:
@@ -213,14 +285,12 @@ def _loop(connection, converter, exposure_book, state, redis_client, pubsub, con
         connection.maybe_send_heartbeat()
 
         if time.monotonic() - last_summary_at >= config.summary_interval_seconds:
-            now_iso = datetime.now(timezone.utc).isoformat()
-            counts = state.count_by_status_since(last_summary_iso)
-            since_label = f"{config.summary_interval_seconds // 60}min"
-            text = f"{since_label}: " + (", ".join(f"{k}={v}" for k, v in sorted(counts.items())) or "nothing new")
-            log_event(_LOGGER, "INFO", "SESSION_SUMMARY", "NONE", component="runtime", summary=text)
-            telegram.notify("SESSION_SUMMARY", f"📋 {text}")
+            # Luôn dời mốc TRƯỚC khi thử — lỗi lặp lại cũng chỉ thử lại sau 1 chu kỳ, không thử lại
+            # mỗi vòng lặp (sẽ chặn vòng lặp liên tục vì mỗi lần có thể chờ tới 15s/request).
             last_summary_at = time.monotonic()
-            last_summary_iso = now_iso
+            now_iso = datetime.now(timezone.utc).isoformat()
+            if _send_account_snapshot(connection, converter, config, state, last_summary_iso):
+                last_summary_iso = now_iso  # lỗi thì giữ mốc cũ để lần thành công sau phủ trọn kỳ bị lỡ
 
         # Lỗi kết nối phải nổi lên trên để _run_once thoát ra và làm lại toàn bộ; mọi lỗi khác chỉ
         # log rồi chạy tiếp — 1 message dị dạng không được phép làm sập tiến trình 24/7. Đúng mẫu
@@ -241,7 +311,11 @@ def _loop(connection, converter, exposure_book, state, redis_client, pubsub, con
                 raise
             except Exception as exc:
                 log_event(_LOGGER, "ERROR", "UNEXPECTED_ERROR", "HIGH", component="runtime", step=step, error=exc)
-                telegram.notify("UNEXPECTED_ERROR", f"🔴 Error in step '{step}': {exc}")
+                telegram.notify(
+                    "UNEXPECTED_ERROR",
+                    f"🔴 <b>Unexpected error</b> in step '{telegram.escape_html(step)}'\n"
+                    f"{telegram.escape_html(safe_error(exc))}",
+                )
 
 
 if __name__ == "__main__":
