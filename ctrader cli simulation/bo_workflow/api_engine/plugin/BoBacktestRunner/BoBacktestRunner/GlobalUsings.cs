@@ -1,0 +1,13 @@
+global using System;
+global using System.Collections.Generic;
+global using System.Globalization;
+global using System.IO;
+global using System.Linq;
+global using System.Reflection;
+global using System.Text.Json;
+global using System.Text.Json.Serialization;
+global using cAlgo.API;
+global using cAlgo.API.Internals;
+global using IOFile = System.IO.File;
+global using IODirectory = System.IO.Directory;
+global using IOPath = System.IO.Path;

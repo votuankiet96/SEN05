@@ -1,0 +1,40 @@
+# Python / notebooks
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# .NET build output (cAlgo/cBot projects)
+bin/
+obj/
+.vs/
+
+# Local credentials and machine-specific overrides — file THẬT chứa email/
+# account/đường dẫn nội bộ, KHÔNG BAO GIỜ push. Dùng bản .example cạnh nó
+# (config.example.yaml, start_dashboard.example.bat) làm khuôn, tự điền giá
+# trị thật rồi giữ local.
+.env
+.env.*
+!.env.example
+bo_workflow/local_settings.*
+bo_workflow/config.yaml
+bo_workflow/start_dashboard.bat
+
+# Không bao giờ push file mật khẩu, dù không nằm trong cây này (đề phòng lỡ
+# tạo/copy nhầm vào trong repo).
+.ctrader-cli-pwd.txt
+.redis-signal-pwd.txt
+*.pwd.txt
+*-pwd.txt
+
+# Generated backtest/optimization state (can be large and may contain account metadata)
+bo_workflow/runs/
+bo_workflow/reports/diagnostics/
+bo_workflow/dashboard/.dashboard_cache/
+bo_workflow/dashboard/.session_state/
+*.sqlite-wal
+*.sqlite-shm
+*.optres
+
+# Claude Code's own runtime lock/state for this working directory — not
+# project source, may contain live session ids/pids.
+.claude/

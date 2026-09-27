@@ -1,0 +1,233 @@
+# config.yaml — nơi DUY NHẤT bạn cần sửa để thay đổi lựa chọn triển khai
+# backtest/optimize (chiến lược nào, tham số nào được phép thử, mức nào,
+# thiết lập engine cTrader dùng, luật FTMO để chấm điểm). KHÔNG chứa logic —
+# chỉ dữ liệu. Người đọc/sửa file này: configuration.py (bo_workflow/
+# core_engine/configuration.py).
+#
+# Gộp 2026-09-12 từ 4 file JSON cũ (profiles/strategy/combo-v1.json,
+# profiles/strategy/macross-v1.json, profiles/engine/ctrader-5.9.16-ticks-
+# approxfx-v1.json, profiles/ftmo/ftmo-2step-v1.json) — không đổi giá trị nào,
+# chỉ đổi định dạng + gộp vào 1 chỗ.
+
+schema: bo-cli-engine-config/v1
+
+# ---------------------------------------------------------------------------
+# redis: kết nối Redis nguồn tín hiệu (thay CSV), do strategy_lab (SEN05)
+# cấp — key List+Hash {key_prefix}_{SYMBOL}_{TF}_{STRATEGY}.
+# CHỈ chứa đường dẫn file mật khẩu (pwd_file) — KHÔNG BAO GIỜ chứa mật khẩu
+# thật ở đây, cùng nguyên tắc với auth CLI (.ctrader-cli-pwd.txt). ĐÂY LÀ FILE
+# VÍ DỤ (config.example.yaml) — copy thành config.yaml rồi điền host/pwd_file
+# thật của bạn; config.yaml thật đã bị .gitignore, không push lên git.
+#
+# [2026-09-26] 2 profile cùng server/mật khẩu, chỉ khác db + key_prefix —
+# strategy_lab publish song song 2 kênh đối chứng (xem worker.py bên
+# og_program): DB2 = signal gốc (không lọc trend), DB3 = cùng chiến lược
+# nhưng chỉ giữ tín hiệu cùng chiều trend khung lớn (H4). Đổi kênh đọc cho 1
+# experiment = đổi "redis_profile" trong config của nó, KHÔNG sửa code.
+# ---------------------------------------------------------------------------
+redis:
+  sen05-signal-v1:
+    host: "<YOUR-REDIS-HOST>"
+    port: 6379
+    db: 2
+    username: ""
+    pwd_file: C:\path\to\.redis-signal-pwd.txt
+    key_prefix: "L_PastSignal"
+
+  sen05-signal-trend-v1:
+    host: "<YOUR-REDIS-HOST>"
+    port: 6379
+    db: 3
+    username: ""
+    pwd_file: C:\path\to\.redis-signal-pwd.txt
+    key_prefix: "L_PastSignal_Trend"
+
+# ---------------------------------------------------------------------------
+# strategies: mỗi chiến lược (Combo, MA Cross...) khai .algo, khung mặc định,
+# và bảng tham số — "optimize: true" nghĩa là tham số ĐƯỢC PHÉP đưa vào lưới
+# quét; đổi false/true ở đây chính là chỗ bạn bật/tắt 1 tham số cho tối ưu.
+# "levels" là các mức quét sẵn khi experiment đặt tham số đó = True.
+# ---------------------------------------------------------------------------
+strategies:
+  combo-v1:
+    strategy: combo
+    cbot_name: Combo
+    algo: Combo.algo
+    signal_prefix: combo
+    # Tên file signal = {signal_prefix}_{GROUP}_{TF}_{signal_label}_{signal_mode}.csv
+    # (khuôn mới của core_python.export_cli từ 2026-09-13, thay cho "_signals.csv" cũ)
+    #   signal_label: full_history | from_YYYYMMDD | to_YYYYMMDD | YYYYMMDD_YYYYMMDD
+    #   signal_mode : nt = no_trend (signal gốc, mặc định)
+    #                 tf_<trend_type>_<trend_tf> = đã lọc theo trend (vd tf_knn_H4)
+    signal_label: full_history
+    signal_mode: nt
+    default_timeframes: [h1, h2, h3, h4]
+    infra_params: [SignalFilePath]
+    params:
+      - name: KslLevel
+        kind: enum
+        enum: sl_fib
+        default: Fib1000
+        optimize: true
+        # [2026-09-21] Bỏ `levels:` chép tay — enum sl_fib/tp_fib giờ mặc định
+        # sweep TOÀN BỘ enum (nguồn duy nhất = SL_FIB_LEVELS/TP_FIB_LEVELS
+        # trong configuration.py, đúng thứ tự mirror Combo.cs/MA Cross.cs).
+        # Trước đây danh sách 10 giá trị bị chép NGUYÊN VĂN ở đây (2 nguồn
+        # cùng 1 sự thật — lệch thứ tự = sai lệnh mà không báo lỗi). Muốn quét
+        # tập con thì khai `levels: [Fib0618, Fib1000, ...]` như bình thường.
+      - name: KtpLevel
+        kind: enum
+        enum: tp_fib
+        default: Fib2618
+        optimize: true
+      - name: RiskPercent
+        kind: float
+        default: 1.0
+        optimize: true
+        levels: [0.5, 1.0, 1.5, 2.0]
+      - name: EnableDailyLossLimit
+        kind: bool
+        default: false
+        optimize: false
+      - name: MaxDailyLossPercent
+        kind: float
+        default: 5.0
+        optimize: false
+      - name: EnableMaxDrawdown
+        kind: bool
+        default: false
+        optimize: false
+      - name: MaxTotalDrawdownPercent
+        kind: float
+        default: 10.0
+        optimize: false
+      - name: EnableMaxConsecutiveLosses
+        kind: bool
+        default: false
+        optimize: false
+      - name: MaxConsecutiveLosses
+        kind: int
+        default: 5
+        optimize: false
+
+  macross-v1:
+    strategy: macross
+    cbot_name: MA Cross
+    algo: MA Cross.algo
+    signal_prefix: ma_cross
+    signal_label: full_history
+    signal_mode: nt
+    default_timeframes: [m10, m20, m30, m45]   # khớp bộ signal ma_cross_<GROUP>_M{10,20,30,45}_...
+    infra_params: [SignalFilePath]
+    params:
+      - name: KslLevel
+        kind: enum
+        enum: sl_fib
+        default: Fib1000
+        optimize: true
+        # Xem giải thích đầy đủ ở block KslLevel của combo-v1 phía trên.
+      - name: KtpLevel
+        kind: enum
+        enum: tp_fib
+        default: Fib2618
+        optimize: true
+      - name: RiskPercent
+        kind: float
+        default: 1.0
+        optimize: true
+        levels: [0.5, 1.0, 1.5, 2.0]
+      - name: EnableDailyLossLimit
+        kind: bool
+        default: false
+        optimize: false
+      - name: MaxDailyLossPercent
+        kind: float
+        default: 5.0
+        optimize: false
+      - name: EnableMaxDrawdown
+        kind: bool
+        default: false
+        optimize: false
+      - name: MaxTotalDrawdownPercent
+        kind: float
+        default: 10.0
+        optimize: false
+      - name: EnableMaxConsecutiveLosses
+        kind: bool
+        default: false
+        optimize: false
+      - name: MaxConsecutiveLosses
+        kind: int
+        default: 5
+        optimize: false
+
+# ---------------------------------------------------------------------------
+# engines: thiết lập kỹ thuật khi chạy backtest — data_mode (ticks/m1...), có
+# bật quy đổi tỷ giá lịch sử hay không, chi phí giao dịch giả lập, VÀ (mới
+# 2026-09-17) engine nào thi hành thật: "cli" (spawn ctrader-cli.exe, xem
+# cli_engine/cli_runner.py) hoặc "api" (Plugin cTrader Desktop qua bridge, xem
+# api_engine/api_runner.py — cần Desktop đang mở + plugin BoBacktestRunner
+# bật). Đây là phần "máy chạy thế nào", KHÔNG phải "chiến lược nào" — tách hẳn
+# khỏi strategies ở trên.
+# ---------------------------------------------------------------------------
+engines:
+  ctrader-5.9.16-ticks-approxfx-v1:
+    backend: cli
+    cli_version: "5.9.16.53348"
+    data_mode: ticks
+    precise_conversion: false
+    commission: null
+    commission_type: null
+    commission_auto: false
+    spread: null
+    notes: >-
+      GUI parity profile: server ticks, approximate conversion, default
+      broker cost model.
+
+  ctrader-5.9.16-ticks-comm30-v1:
+    backend: cli
+    cli_version: "5.9.16.53348"
+    data_mode: ticks
+    precise_conversion: false
+    commission: 30
+    # KHÔNG khai commission_type: ctrader-cli 5.9.16 chỉ có đúng cờ --commission=<số>
+    # (không có --commission-type lẫn --commission-auto — đã tra `backtest --help`).
+    # Số này được hiểu theo đơn vị mặc định của symbol, với JP225 là USD/1 triệu USD
+    # volume, khớp đúng thứ GUI ghi ra trong report khi để Commission = auto.
+    commission_type: null
+    commission_auto: false
+    spread: null
+    notes: >-
+      Dùng khi ô Commission bên GUI KHÔNG ra 0. cTrader lấy phí thật của symbol
+      (JP225 = 30 USD/triệu) nên report GUI ghi value 30; profile mặc định ở trên
+      không truyền --commission nên CLI tính phí 0 -> net profit lệch, dễ đổ nhầm
+      cho tỷ giá. Luôn đọc "commissions" trong report GUI rồi chọn profile khớp.
+
+  ctrader-api-plugin-v1:
+    backend: api
+    cli_version: "5.9.16.53348"
+    data_mode: ticks
+    precise_conversion: false
+    commission: null
+    commission_type: null
+    commission_auto: false
+    spread: null
+    notes: >-
+      Đi qua Plugin BoBacktestRunner (api_engine/) thay vì spawn ctrader-cli.exe
+      — dùng phiên đăng nhập Desktop có sẵn, không tự xác thực mới mỗi lần chạy.
+      Cần cTrader Desktop đang mở + plugin bật trước khi dùng profile này. Chưa
+      chạy batch lớn thật nào qua profile này — xác nhận bằng lô nhỏ trước.
+
+# ---------------------------------------------------------------------------
+# ftmo: luật lỗ ngày/lỗ tổng dùng để chấm điểm kết quả backtest có vi phạm
+# luật FTMO hay không (selection.ftmo_screen). KHÔNG phải tham số bot.
+# ---------------------------------------------------------------------------
+ftmo:
+  ftmo-2step-v1:
+    timezone: Europe/Prague
+    initial_balance: 100000
+    daily_loss_pct: 5.0
+    max_loss_pct: 10.0
+    max_loss_type: static
+    daily_loss_base: start_of_day_balance
+    source: "User to verify against current FTMO rules before production use."

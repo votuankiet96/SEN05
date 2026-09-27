@@ -1,0 +1,24 @@
+{
+  "AccessRights": "FullAccess",
+  "Parameters": [
+    {
+      "Name": "BridgeRoot",
+      "DefaultValue": "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots\\bo_workflow\\api_engine\\bridge",
+      "Type": "String"
+    },
+    {
+      "Name": "PollSeconds",
+      "DefaultValue": "1",
+      "MinValue": "1",
+      "MaxValue": "60",
+      "Type": "Integer"
+    },
+    {
+      "Name": "MaxConcurrentJobs",
+      "DefaultValue": "12",
+      "MinValue": "1",
+      "MaxValue": "12",
+      "Type": "Integer"
+    }
+  ]
+}
