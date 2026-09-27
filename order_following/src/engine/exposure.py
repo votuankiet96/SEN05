@@ -14,7 +14,7 @@ from typing import Dict, List
 
 from engine.connection import Connection
 from engine.log import log_event
-from engine import orders, telegram
+from engine import orders
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -131,8 +131,9 @@ def reconcile_exposure(
 def _report(client_order_id: str, symbol_name: str, side: int, decision: str, reason: str) -> None:
     level = "INFO" if decision == "proceed" else "INFO"
     risk = "NONE" if decision == "proceed" else "LOW"
+    # Chỉ ghi file log — EXPOSURE_DECISION không đẩy Telegram từ 2026-09-27 (trace nội bộ, fire trên
+    # mọi tín hiệu; xem telegram._TELEGRAM_EVENTS).
     log_event(
         _LOGGER, level, "EXPOSURE_DECISION", risk, component="exposure",
         client_order_id=client_order_id, symbol=symbol_name, side=side, decision=decision, reason=reason,
     )
-    telegram.notify("EXPOSURE_DECISION", f"🔁 {client_order_id} {symbol_name}: {decision} ({reason})")

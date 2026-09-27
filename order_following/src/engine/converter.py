@@ -12,6 +12,7 @@ thì luôn lấy mới qua ProtoOASpotEvent — cái được cache là "cần �
 import logging
 import os
 import sys
+import time
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from typing import Dict, Iterable, List, Optional, Tuple
@@ -277,9 +278,13 @@ class SymbolConverter:
         current_asset = from_asset_id
         for leg in chain:
             raw = self._connection.get_latest_spot(leg.symbol_id)
-            if raw is None:
-                raise RuntimeError(f"No price yet for symbolId={leg.symbol_id} — not subscribed or no event received yet")
-            bid = raw[0] / _PRICE_SCALE
+            bid_raw = raw[0] if raw is not None else None
+            # bid la field OPTIONAL (proto: `optional uint64 bid = 4`; tai lieu: "you may not
+            # necessarily see ProtoOASpotEvent messages where both are specified"). Chua co bid -> bao
+            # loi RO RANG (tin hieu bi bo qua + UNEXPECTED_ERROR) thay vi chia 0 / tinh ra lot sai.
+            if not bid_raw:
+                raise RuntimeError(f"No valid bid yet for symbolId={leg.symbol_id} — cannot convert rate")
+            bid = bid_raw / _PRICE_SCALE
             if leg.base_asset_id == current_asset:
                 rate *= bid
                 current_asset = leg.quote_asset_id
@@ -295,14 +300,24 @@ class SymbolConverter:
         Bắt buộc đi qua wait_for() chứ KHÔNG tự gọi receive() rồi bỏ kết quả: receive() có thể trả
         ra message đang nằm trong hàng đợi hoãn (vd ORDER_FILLED), bỏ đi là mất vĩnh viễn — đúng
         loại lỗi mà chính wait_for() vừa được sửa để tránh.
+
+        Chờ tới khi có BID (thứ get_live_conversion_rate dùng), không chỉ "có event": event có thể chỉ
+        mang ask (bid/ask đều optional). connection.py cập nhật cache ngay lúc bóc message, nên sau
+        mỗi lần wait_for() trả về chỉ cần đọc lại cache.
         """
-        if self._connection.get_latest_spot(symbol_id) is not None:
-            return
-        self._connection.wait_for(
-            messages.ProtoOASpotEvent,
-            predicate=lambda incoming: incoming.message.symbolId == symbol_id,
-            timeout_seconds=timeout_seconds,
-        )
+        deadline = time.monotonic() + timeout_seconds
+        while True:
+            raw = self._connection.get_latest_spot(symbol_id)
+            if raw is not None and raw[0]:
+                return
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError(f"No bid received for symbolId={symbol_id} within {timeout_seconds}s")
+            self._connection.wait_for(
+                messages.ProtoOASpotEvent,
+                predicate=lambda incoming: incoming.message.symbolId == symbol_id,
+                timeout_seconds=remaining,
+            )
 
     @staticmethod
     def _build_info(name: str, og_name: str, full, quote_asset_id: int) -> SymbolInfo:

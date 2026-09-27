@@ -9,6 +9,7 @@ không tự quyết định gì.
 import logging
 import os
 import sys
+import time
 
 _PROTO_DIR = os.path.join(os.path.dirname(__file__), "proto", "generated")
 if _PROTO_DIR not in sys.path:
@@ -25,6 +26,8 @@ from engine.state import StateStore
 from engine import telegram
 
 _LOGGER = logging.getLogger(__name__)
+_MAX_MESSAGES_PER_POLL = 500
+_MAX_POLL_SECONDS = 0.5
 _EXECUTION_TYPE = model_messages.ProtoOAExecutionType
 _TRADE_SIDE = model_messages.ProtoOATradeSide
 
@@ -37,12 +40,22 @@ def poll_once(
     state: StateStore,
     label: str,
 ) -> None:
-    """Gọi 1 lần mỗi vòng lặp chính của main.py — đọc 1 message nếu có, xử lý xong trả về ngay,
-    không chặn chờ message tiếp theo (connection.receive() đã tự giới hạn tối đa 1 giây)."""
-    incoming = connection.receive()
-    if incoming is None:
-        return
-    _dispatch(incoming, converter=converter, exposure_book=exposure_book, state=state, label=label)
+    """Gọi 1 lần mỗi vòng lặp chính của main.py — xử lý HẾT message đang có sẵn (có trần), rồi trả
+    về. connection.receive() chỉ chặn tối đa 1 giây khi buffer không còn message trọn vẹn nào.
+
+    Bản cũ xử lý đúng 1 message/lượt; mỗi lượt vòng lặp chính mất ~1-2 giây (chờ socket 1s + chờ
+    Redis 1s — đo trên log live OF10: khoảng cách heartbeat 10s/12s). Khi có luồng spot của conversion
+    leg (cách Spotware hướng dẫn), tick về nhanh hơn 1/giây sẽ dồn ứ, ORDER_FILLED/POSITION_CLOSED bị
+    xử lý trễ dần. Trần số lượng/thời gian để heartbeat và Redis vẫn được phục vụ đều mỗi vòng.
+    """
+    deadline = time.monotonic() + _MAX_POLL_SECONDS
+    for _ in range(_MAX_MESSAGES_PER_POLL):
+        incoming = connection.receive()
+        if incoming is None:
+            return
+        _dispatch(incoming, converter=converter, exposure_book=exposure_book, state=state, label=label)
+        if time.monotonic() >= deadline:
+            return
 
 
 def _dispatch(incoming: IncomingMessage, *, converter, exposure_book, state, label) -> None:
