@@ -1,0 +1,47 @@
+# Config.yaml — operator interaction surface only. Copy this file to
+# Config.yaml (next to tick_program.exe) and fill in real values.
+#
+# Everything technical (job cadence, timeouts, retries, lookback windows,
+# guardrail thresholds) is a fixed default inside tick_program.exe itself,
+# not a YAML key here.
+
+sql_server:
+  server: localhost
+  database: SEN05_AutoTrading
+  driver: ODBC Driver 18 for SQL Server
+  port: ''
+  uid: ''
+  pwd: ''
+  encrypt: 'no'
+  trust_server_certificate: 'yes'
+
+ctrader:
+  env: demo
+  client_id: REPLACE_WITH_REAL_CTRADER_CLIENT_ID
+  client_secret: REPLACE_WITH_REAL_CTRADER_CLIENT_SECRET
+  access_token: ''
+  refresh_token: ''
+  account_id: ''
+  trader_login: ''
+  redirect_uri: http://localhost:8765/callback
+  oauth_scope: accounts
+
+discord:
+  webhook_url: REPLACE_WITH_REAL_DISCORD_WEBHOOK_URL_OR_LEAVE_BLANK
+
+# Names only. SymbolID/AssetType are resolved from DWH.Dim_Symbol at
+# runtime (src.sql_store.resolve_target_symbols) -- this list is just
+# which names to backfill, not a data source. Every name here must exist
+# and be IsActive=1 in DWH.Dim_Symbol on the SQL Server above.
+symbols:
+- FR40
+- DE40
+- HK50
+- J225
+- SP35
+- UK100
+- US500
+- US100
+- US30
+- GOLD
+- BTCUSD

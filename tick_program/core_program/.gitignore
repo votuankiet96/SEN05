@@ -1,0 +1,33 @@
+# Local credentials
+/Config.yaml
+
+# Runtime state, logs, caches, and local buffers
+runtime/
+*.log
+*.db
+*.sqlite
+*.sqlite3
+
+# Python generated files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# PyInstaller build output (scripts/windows/build_exe.ps1) -- the built
+# .exe is staged into a sibling run_tick/ folder, not this repo.
+/build/
+/dist/
+
+# OS/editor local files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
