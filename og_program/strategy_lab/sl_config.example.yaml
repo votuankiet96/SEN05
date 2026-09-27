@@ -1,0 +1,79 @@
+sql:
+  server: 10.11.12.6
+  database: SEN05_AutoTrading
+  uid: sa
+  pwd: "CHANGE_ME"
+
+redis:
+  host: "127.0.0.1"       # Redis chạy cùng máy OG8
+  password: "CHANGE_ME"
+  # --- Backtest cấp 2 (strategy_lab), xem memory project_strategy_lab_redesign ---
+  # redis_io/ đã viết xong, đọc đúng 2 mục dưới đây (client.py:
+  # normalize_redis_config bắt buộc cả 3 key con, không fallback). Không có
+  # input/output (DB0/DB1) hay mục live: kiểu order_gateway cũ ở đây nữa --
+  # strategy_lab không đọc nến từ Redis (đọc SQL) và không publish theo
+  # schema OF, nên 2 phần đó bị bỏ hẳn khi viết lại redis_io/, không phải
+  # sót lại.
+  backfill_event:
+    channel: "dp:events:backfill"      # kênh nghe trigger "SQL vừa backfill xong"
+                                        # từ DP — đã gửi yêu cầu, DP chưa xác nhận xong
+  past_signal:
+    db: 2                              # DB Redis riêng cho dữ liệu backtest, không lọc trend
+    key_prefix: "L_PastSignal"
+  past_signal_trend:
+    db: 3                              # DB Redis riêng cho dữ liệu backtest, CÓ lọc trend
+    key_prefix: "L_PastSignal_Trend"   # -- đối chứng với past_signal, xem CLAUDE.md
+
+defaults:
+  symbol: BTCUSD
+  bars: 500
+  warmup_bars: 300
+  signal_start_date: "2024-01-01"  # mốc bắt đầu tính signal cho luồng Redis
+                                    # DB2 (redis_io/worker.py) -- áp dụng cho
+                                    # cả bootstrap lúc start/reconnect lẫn
+                                    # trigger thật từ dp:events:backfill, để
+                                    # 2 đường luôn ra cùng 1 kết quả nhất
+                                    # quán cho cùng 1 pair. KHÔNG áp dụng cho
+                                    # export_cli.py (CSV vẫn full-history mặc
+                                    # định trừ khi tự truyền --from).
+
+strategies:
+  combo:
+    ma_period: 20
+    macd_fast: 5
+    macd_slow: 25
+    macd_signal: 5
+    atr_period: 5
+    recommended_timeframes: [H1, H2, H3, H4]
+    default_timeframe: H4
+    trend_filter_enabled: false
+    trend_type: knn
+    trend_timeframes: [H1, H2, H3, H4]
+    default_trend_tf: H4
+    symbol_x:
+      US30: 10.0
+      US500: 1.0
+      US100: 5.0
+      DE40: 5.0
+      UK100: 5.0
+      FR40: 5.0
+      SP35: 5.0
+      HK50: 15.0
+      J225: 15.0
+      GOLD: 0.5
+      BTCUSD: 50.0
+    session_hours_utc: {}
+
+  ma_cross:
+    fast_ma: 13
+    slow_ma: 34
+    macd_fast: 5
+    macd_slow: 25
+    macd_signal: 5
+    atr_period: 5
+    supported_timeframes: [M10, M20, M30, M45]
+    default_timeframe: M30
+    trend_filter_enabled: false
+    trend_type: knn
+    trend_timeframes: [H1, H2, H3, H4]
+    default_trend_tf: H4
