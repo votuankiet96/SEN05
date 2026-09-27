@@ -1,0 +1,230 @@
+"""Execution Event Engine: chạy LIÊN TỤC suốt phiên (khác orders.py, chỉ chạy 1 lần mỗi lệnh).
+
+cTrader dùng ProtoOAExecutionEvent làm kênh DUY NHẤT báo mọi thay đổi vòng đời order/position — kể
+cả khi việc đó xảy ra rất lâu sau, không liên quan gì tới lần gửi gần nhất (vd 1 STOP order khớp
+sau 3 tiếng). File này đọc, phân loại, rồi cập nhật state.py (bền vững) và exposure.py (sống) —
+không tự quyết định gì.
+"""
+
+import logging
+import os
+import sys
+
+_PROTO_DIR = os.path.join(os.path.dirname(__file__), "proto", "generated")
+if _PROTO_DIR not in sys.path:
+    sys.path.insert(0, _PROTO_DIR)
+
+import OpenApiMessages_pb2 as messages  # noqa: E402
+import OpenApiModelMessages_pb2 as model_messages  # noqa: E402
+
+from engine.connection import Connection, IncomingMessage
+from engine.converter import SymbolConverter
+from engine.exposure import ExposureBook
+from engine.log import log_event
+from engine.state import StateStore
+from engine import telegram
+
+_LOGGER = logging.getLogger(__name__)
+_EXECUTION_TYPE = model_messages.ProtoOAExecutionType
+_TRADE_SIDE = model_messages.ProtoOATradeSide
+
+
+def poll_once(
+    *,
+    connection: Connection,
+    converter: SymbolConverter,
+    exposure_book: ExposureBook,
+    state: StateStore,
+    label: str,
+) -> None:
+    """Gọi 1 lần mỗi vòng lặp chính của main.py — đọc 1 message nếu có, xử lý xong trả về ngay,
+    không chặn chờ message tiếp theo (connection.receive() đã tự giới hạn tối đa 1 giây)."""
+    incoming = connection.receive()
+    if incoming is None:
+        return
+    _dispatch(incoming, converter=converter, exposure_book=exposure_book, state=state, label=label)
+
+
+def _dispatch(incoming: IncomingMessage, *, converter, exposure_book, state, label) -> None:
+    message = incoming.message
+    if isinstance(message, messages.ProtoOASpotEvent):
+        # Giữ giá quy đổi tỷ giá trong converter.py luôn mới — đúng nguyên tắc event-driven, không
+        # phải sizing.py tự đi hỏi mỗi lần cần (xem converter.ensure_conversion_chain).
+        converter.update_spot_price(message.symbolId, message.bid, message.ask)
+    elif isinstance(message, messages.ProtoOAExecutionEvent):
+        log_event(
+            _LOGGER, "INFO", "EXECUTION_EVENT_RECEIVED", "NONE", component="listener",
+            execution_type=_EXECUTION_TYPE.Name(message.executionType),
+        )
+        if not _belongs_to_us(message, label):
+            return
+        _handle_execution_event(message, converter=converter, exposure_book=exposure_book, state=state)
+    elif isinstance(message, messages.ProtoOAOrderErrorEvent):
+        log_event(
+            _LOGGER, "ERROR", "CLEANUP_FAILED", "HIGH", component="listener",
+            target_id=message.orderId, action="unsolicited_order_error",
+            error_code=message.errorCode, error_description=message.description,
+        )
+        telegram.notify("CLEANUP_FAILED", f"🔴 Unsolicited order error — orderId {message.orderId}: {message.errorCode} ({message.description})")
+    elif isinstance(message, messages.ProtoOASymbolChangedEvent):
+        # Event chỉ báo "symbol đã đổi", không kèm nội dung — phải tự hỏi lại spec, nếu không
+        # digits/volume step trong cache sẽ cũ dần và lệnh bắt đầu bị từ chối.
+        for symbol_id in message.symbolId:
+            converter.refresh_by_id(symbol_id)
+    elif isinstance(message, messages.ProtoOAErrorRes):
+        log_event(
+            _LOGGER, "ERROR", "CLEANUP_FAILED", "HIGH", component="listener",
+            target_id="unknown", action="unsolicited_error",
+            error_code=message.errorCode, error_description=message.description,
+        )
+        telegram.notify("CLEANUP_FAILED", f"🔴 Unsolicited error: {message.errorCode} ({message.description})")
+
+
+def _belongs_to_us(event, label: str) -> bool:
+    """Chỉ xử lý event của lệnh do CHÍNH OF đặt (khớp `label`).
+
+    Account có thể có lệnh tay của người dùng hoặc lệnh của chiến lược khác — nếu không lọc, chúng
+    sẽ được nhét vào ExposureBook của combo và làm sai mọi quyết định vào lệnh sau đó. Bot gốc lọc
+    đúng như vậy ở mọi handler: `if (position.Label != Label || position.SymbolName != SymbolName)
+    return;` (Combo.cs, OnPendingOrderFilled/OnPositionClosed).
+    """
+    for holder in (event.position, event.order):
+        if holder.HasField("tradeData"):
+            return holder.tradeData.label == label
+    return False
+
+
+def _handle_execution_event(event, *, converter: SymbolConverter, exposure_book: ExposureBook,
+                              state: StateStore) -> None:
+    # PHẢI kiểm tra đóng vị thế TRƯỚC executionType: cTrader báo executionType=ORDER_FILLED cho CẢ
+    # 2 trường hợp — mở lệnh mới VÀ đóng lệnh do SL/TP tự kích hoạt (order.orderType=
+    # STOP_LOSS_TAKE_PROFIT lúc đó, order.stopPrice = giá SL/TP, không phải giá vào lệnh mới) — xác
+    # nhận qua staff Spotware: "ProtoOAOrder.ProtoOAOrderType should contain the information you
+    # need" (community.ctrader.com/forum/connect-api-support/40134) + dữ liệu cộng đồng cho thấy
+    # closingOrder=true/orderType=STOP_LOSS_TAKE_PROFIT trên chính event FILLED đó
+    # (forum/connect-api-support/38747). payloadType không phân biệt được 2 trường hợp — CHỈ
+    # deal.closePositionDetail phân biệt được (field proto ghi rõ "Valid only for closing deal").
+    # Bug thật đã xảy ra (2026-09-25, BTCUSD+GOLD dính SL): kiểm executionType trước làm nhánh dưới
+    # không bao giờ chạy tới, OF tưởng nhầm "mở vị thế mới" trong khi thực ra vừa đóng.
+    if event.HasField("deal") and event.deal.HasField("closePositionDetail"):
+        _handle_position_closed(event, converter=converter, exposure_book=exposure_book, state=state)
+        return
+
+    execution_type = event.executionType
+
+    if execution_type == _EXECUTION_TYPE.ORDER_FILLED:
+        _handle_filled(event, converter=converter, exposure_book=exposure_book, state=state)
+        return
+
+    if execution_type in (_EXECUTION_TYPE.ORDER_CANCELLED, _EXECUTION_TYPE.ORDER_EXPIRED):
+        _handle_dropped(event, exposure_book=exposure_book, state=state)
+        return
+
+    if execution_type == _EXECUTION_TYPE.ORDER_REJECTED:
+        # Trường hợp thường gặp đã được orders.py xử lý đồng bộ ngay lúc gửi (connection.wait_for) —
+        # nhánh này chỉ còn lại nếu phản hồi tới muộn bất thường, chưa cần xử lý thêm ở v1.
+        return
+
+    # ORDER_PARTIAL_FILL, ORDER_REPLACED, SWAP...: chưa cần xử lý sâu ở bản mẫu combo/STOP v1.
+
+
+def _handle_filled(event, *, converter: SymbolConverter, exposure_book: ExposureBook,
+                     state: StateStore) -> None:
+    order = event.order
+    position = event.position
+    symbol_info = converter.find_by_id(position.tradeData.symbolId)
+    if symbol_info is None:
+        # Symbol không nằm trong danh sách OF load — không đủ dữ liệu (digits/pipPosition) để tính
+        # gì cả. Bỏ qua thay vì raise: tiến trình chạy 24/7 không được sập vì 1 event lạ.
+        return
+    pip_size = 10 ** (-symbol_info.pip_position)
+    direction = 1 if position.tradeData.tradeSide == _TRADE_SIDE.BUY else -1
+
+    record = state.get_by_order_id(order.orderId)
+    state.mark_filled(order.orderId, position.positionId)
+    exposure_book.on_pending_order_dropped(order.orderId)
+    exposure_book.on_position_opened(
+        position.positionId, symbol_info.symbol_id, position.tradeData.tradeSide, position.tradeData.volume
+    )
+
+    trigger_price = order.stopPrice if order.HasField("stopPrice") else position.price
+    fill_price = position.price
+    slippage_pips = direction * (fill_price - trigger_price) / pip_size
+
+    real_sl_pips = 0.0
+    real_risk_amount = 0.0
+    if position.HasField("stopLoss"):
+        real_sl_pips = abs(fill_price - position.stopLoss) / pip_size
+        units = position.tradeData.volume / 100.0  # wire volume theo thang "cents" ×100
+        # Tỷ giá SỐNG tại đúng lúc khớp lệnh — KHÔNG phải tỷ giá đã dùng lúc sizing.py tính trước
+        # đó, vì có thể lệnh chờ (STOP) khớp rất lâu sau, tỷ giá đã đổi khác (đúng điểm user nêu:
+        # "mỗi lúc khớp lệnh tại tick đó tỷ giá khác nhau"). Chain đã được sizing.py gọi
+        # ensure_conversion_chain() từ trước nên ở đây chỉ cần đọc giá mới nhất, không cần gọi lại.
+        deposit_asset_id = converter.get_deposit_asset_id()
+        conversion_rate = converter.get_live_conversion_rate(symbol_info.quote_asset_id, deposit_asset_id)
+        real_risk_amount = units * real_sl_pips * pip_size * conversion_rate
+
+    budgeted_risk_amount = record.risk_amount if record is not None else 0.0
+
+    log_event(
+        _LOGGER, "INFO", "ORDER_FILLED", "NONE", component="listener",
+        client_order_id=order.clientOrderId, order_id=order.orderId, position_id=position.positionId,
+        fill_price=fill_price, trigger_price=trigger_price, slippage_pips=slippage_pips,
+        real_sl_pips=real_sl_pips, real_risk_amount=real_risk_amount, budgeted_risk_amount=budgeted_risk_amount,
+    )
+    telegram.notify(
+        "ORDER_FILLED",
+        f"🟢 {order.clientOrderId}: FILLED @ {fill_price} (positionId={position.positionId}), "
+        f"real risk ${real_risk_amount:.2f} (budgeted ${budgeted_risk_amount:.2f})",
+    )
+
+
+def _handle_dropped(event, *, exposure_book: ExposureBook, state: StateStore) -> None:
+    order = event.order
+    order_id = order.orderId
+    if event.executionType == _EXECUTION_TYPE.ORDER_CANCELLED:
+        state.mark_cancelled(order_id)
+        reason = "reversed_or_manually_cancelled"
+    else:
+        state.mark_expired(order_id)
+        reason = "expired_good_till_date"
+    exposure_book.on_pending_order_dropped(order_id)
+    log_event(
+        _LOGGER, "INFO", "ORDER_DROPPED", "NONE", component="listener",
+        client_order_id=order.clientOrderId, order_id=order_id, reason=reason,
+    )
+    telegram.notify("ORDER_DROPPED", f"⚪ {order.clientOrderId}: {reason} (never filled)")
+
+
+def _handle_position_closed(event, *, converter: SymbolConverter, exposure_book: ExposureBook,
+                              state: StateStore) -> None:
+    position = event.position
+    deal = event.deal
+    detail = deal.closePositionDetail
+    symbol_info = converter.find_by_id(position.tradeData.symbolId)
+    if symbol_info is None:
+        return
+    pip_size = 10 ** (-symbol_info.pip_position)
+    direction = 1 if position.tradeData.tradeSide == _TRADE_SIDE.BUY else -1
+    money_scale = (10 ** detail.moneyDigits) if detail.moneyDigits else 1
+
+    pips = direction * (deal.executionPrice - detail.entryPrice) / pip_size
+
+    state.mark_closed(position.positionId)
+    exposure_book.on_position_closed(position.positionId)
+
+    net_profit = (detail.grossProfit - detail.commission) / money_scale
+    balance_after = detail.balance / money_scale
+    log_event(
+        _LOGGER, "INFO", "POSITION_CLOSED", "NONE", component="listener",
+        position_id=position.positionId, symbol=symbol_info.name, side=position.tradeData.tradeSide,
+        reason="sl_tp_or_manual_close", entry_price=detail.entryPrice, close_price=deal.executionPrice,
+        pips=pips, volume=position.tradeData.volume / 100.0,
+        gross_profit=detail.grossProfit / money_scale, commission=detail.commission / money_scale,
+        swap=detail.swap / money_scale, net_profit=net_profit, balance_after=balance_after,
+    )
+    telegram.notify(
+        "POSITION_CLOSED",
+        f"🏁 {symbol_info.name}: closed @ {deal.executionPrice}, {pips:.1f} pips, "
+        f"net ${net_profit:.2f}, balance ${balance_after:.2f}",
+    )

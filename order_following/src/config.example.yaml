@@ -1,0 +1,59 @@
+# OF (Order Follower) — toàn bộ operating parameters của hệ thống nằm ở đây.
+# Đây là bản MẪU (không có secret thật) — copy thành config.yaml rồi điền giá trị thật của bạn.
+# config.yaml thật không được đưa vào git (đã liệt kê trong .gitignore).
+
+ctrader:
+  environment: demo # demo | live — 2 môi trường cách ly hoàn toàn, không dùng chung connection
+  host: demo.ctraderapi.com
+  port: 5035 # cổng khoá cứng cho Protobuf, xác nhận chính thức — không đổi
+  heartbeat_seconds: 10
+  client_id: "YOUR_CTRADER_CLIENT_ID" # đăng ký app tại help.ctrader.com/open-api/api-application/, scope "trading"
+  client_secret: "YOUR_CTRADER_CLIENT_SECRET"
+  ctid_trader_account_id: 0 # 0 = placeholder, tra qua ProtoOAGetAccountListByAccessTokenReq sau khi bootstrap OAuth
+  token_file: ./state/tokens.json
+  oauth_token_url: https://openapi.ctrader.com/apps/token
+
+redis:
+  host: 10.11.12.8
+  port: 6379
+  password: "YOUR_REDIS_DB1_PASSWORD"
+  db: 1
+  key_prefix: L_SIGNAL # xác nhận từ og_program/og_signal/signal_publisher.py — OG có thể đổi, đã đổi 1 lần trước đây
+
+combo:
+  pubsub_channel: og:events:signals # kênh CHUNG cho MỌI chiến lược OG publish (không riêng combo) — adapter.py PHẢI tự lọc theo field "strategy"=="combo" trong message
+  instruments: # danh sách (symbol, timeframe) mà OF này theo dõi cho chiến lược combo
+    # broker_symbol = tên THẬT trên broker đang connect (ProtoOASymbolsListRes) — khác hẳn tên OG
+    # dùng trong Redis, đổi broker thì chỉ sửa cột này, không đụng gì phía OG. PHẢI tự tra lại tên
+    # thật trên account của bạn trước khi dùng — tên broker khác nhau tuỳ account/broker.
+    - symbol: US30
+      timeframe: H1
+      broker_symbol: "#US30" # vi du tren FxPro demo - tu xac nhan lai tren account cua ban
+    - symbol: J225
+      timeframe: H1
+      broker_symbol: "#Japan225"
+    - symbol: GOLD
+      timeframe: H1
+      broker_symbol: "XAUUSD"
+    - symbol: BTCUSD
+      timeframe: H1
+      broker_symbol: "BITCOIN"
+
+risk:
+  risk_percent_per_trade: 0.5
+  risk_basis: balance # balance | floating_equity
+  fallback_ksl: 1.0 # dùng khi tín hiệu Redis chưa có field kSL thật
+  fallback_ktp: 2.618
+  max_concurrent_trades: 4 # trần tổng số lệnh đang mở cùng lúc (mọi symbol cộng lại) — risk thực tế tối đa ≈ risk_percent_per_trade × giá trị này
+
+state:
+  db_path: ./state/of.sqlite
+
+logging:
+  log_dir: ./logs
+  summary_interval_seconds: 3600 # tần suất gọi session_summary (mặc định 1 giờ)
+
+telegram:
+  enabled: false # bat that khi da co bot_token/chat_id that
+  bot_token: "YOUR_TELEGRAM_BOT_TOKEN" # tao qua @BotFather tren Telegram
+  chat_id: "YOUR_TELEGRAM_CHAT_ID" # tra qua api.telegram.org/bot<TOKEN>/getUpdates sau khi nhan tin cho bot
