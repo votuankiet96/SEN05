@@ -123,7 +123,9 @@ def place_stop_order(
         )
         telegram.notify(
             "ORDER_ACCEPTED",
-            f"🟡 {request.client_order_id}: order accepted, orderId={order_id}, {request.symbol_name} @ {request.stop_price}",
+            f"🟡 <b>{telegram.escape_html(symbol_info.og_name)} {telegram.side_label(request.trade_side)}</b> — Pending order placed\n"
+            f"Trigger price: {request.stop_price}\n"
+            f"<code>{telegram.escape_html(request.client_order_id)}</code>",
         )
         return order_id
 
@@ -136,7 +138,9 @@ def place_stop_order(
     )
     telegram.notify(
         "ORDER_REJECTED",
-        f"🔴 {request.client_order_id} {request.symbol_name}: REJECTED — {error_code} ({error_description})",
+        f"🔴 <b>{telegram.escape_html(symbol_info.og_name)} {telegram.side_label(request.trade_side)}</b> — Rejected\n"
+        f"Reason: {telegram.escape_html(error_code)} ({telegram.escape_html(error_description)})\n"
+        f"<code>{telegram.escape_html(request.client_order_id)}</code>",
     )
     return None
 
@@ -168,7 +172,8 @@ def close_all(reconcile, *, connection: Connection, ctid_trader_account_id: int,
     )
     telegram.notify(
         "CLOSE_ALL_EXECUTED",
-        f"🛑 CLOSE-ALL: closed {closed} position(s), cancelled {cancelled} pending order(s), {failed} failed",
+        f"🛑 <b>CLOSE-ALL EXECUTED</b>\n"
+        f"Closed {closed} position(s), cancelled {cancelled} pending order(s), {failed} failed",
     )
 
 
@@ -192,7 +197,11 @@ def cancel_order(order_id: int, *, connection: Connection, ctid_trader_account_i
         _LOGGER, "ERROR", "CLEANUP_FAILED", "HIGH", component="orders",
         target_id=order_id, action="cancel_order", error_code=error_code, error_description=error_description,
     )
-    telegram.notify("CLEANUP_FAILED", f"🔴 Cleanup failed — cancel_order {order_id}: {error_code} ({error_description})")
+    telegram.notify(
+        "CLEANUP_FAILED",
+        f"🔴 <b>Cleanup failed</b> — cancel pending order {order_id}\n"
+        f"{telegram.escape_html(error_code)}: {telegram.escape_html(error_description)}",
+    )
     return False
 
 
@@ -215,7 +224,11 @@ def close_position(
         _LOGGER, "ERROR", "CLEANUP_FAILED", "HIGH", component="orders",
         target_id=position_id, action="close_position", error_code=error_code, error_description=error_description,
     )
-    telegram.notify("CLEANUP_FAILED", f"🔴 Cleanup failed — close_position {position_id}: {error_code} ({error_description})")
+    telegram.notify(
+        "CLEANUP_FAILED",
+        f"🔴 <b>Cleanup failed</b> — close position {position_id}\n"
+        f"{telegram.escape_html(error_code)}: {telegram.escape_html(error_description)}",
+    )
     return False
 
 

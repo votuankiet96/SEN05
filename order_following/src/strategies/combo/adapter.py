@@ -159,7 +159,12 @@ def _is_registered_instrument(config: Config, symbol: str, timeframe: str) -> bo
 def _signal_skipped(signal_id: str, symbol: str, reason: str) -> None:
     log_event(_LOGGER, "WARNING", "SIGNAL_SKIPPED", "LOW", component="adapter",
               signal_id=signal_id, symbol=symbol, reason=reason)
-    telegram.notify("SIGNAL_SKIPPED", f"⏭️ {signal_id} {symbol}: {reason}")
+    telegram.notify(
+        "SIGNAL_SKIPPED",
+        f"⏭️ <b>{telegram.escape_html(symbol)}</b> — Signal skipped\n"
+        f"Reason: {telegram.escape_html(reason)}\n"
+        f"<code>{telegram.escape_html(signal_id)}</code>",
+    )
 
 
 def _parse_signal(raw: dict, config: Config, *, signal_id: str) -> Optional[ComboSignal]:
@@ -219,7 +224,7 @@ def _handle_signal(
     # TRƯỚC exposure để 1 signal không giao dịch được cũng không kích hoạt đảo chiều đóng vị thế cũ.
     unavailable = converter.unavailable_reason(broker_symbol)
     if unavailable is not None:
-        _signal_skipped(signal.client_order_id, broker_symbol, unavailable)
+        _signal_skipped(signal.client_order_id, signal.symbol, unavailable)
         return
 
     allowed = reconcile_exposure(

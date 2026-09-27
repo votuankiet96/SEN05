@@ -9,7 +9,7 @@ import logging
 import os
 import sys
 from dataclasses import dataclass
-from typing import Optional
+from typing import Dict, Optional
 
 _PROTO_DIR = os.path.join(os.path.dirname(__file__), "proto", "generated")
 if _PROTO_DIR not in sys.path:
@@ -74,7 +74,7 @@ def calculate(
         stop_loss = converter.round_price(symbol_name, entry_price - direction * sl_distance_price)
         take_profit = converter.round_price(symbol_name, entry_price + direction * tp_distance_price)
 
-    balance = _get_balance(connection, ctid_trader_account_id)
+    balance = get_balance(connection, ctid_trader_account_id)
     deposit_asset_id = converter.get_deposit_asset_id()  # cache sẵn lúc khởi động — không đổi giữa phiên
     quote_equals_account = info.quote_asset_id == deposit_asset_id
     if not quote_equals_account:
@@ -96,7 +96,9 @@ def calculate(
         )
         telegram.notify(
             "SIZE_TOO_SMALL",
-            f"⚠️ {client_order_id} {symbol_name}: volume {raw_volume_wire:.2f} < min {info.min_volume} — skipped",
+            f"⚠️ <b>{telegram.escape_html(info.og_name)}</b> — Volume too small, skipped\n"
+            f"{raw_volume_wire:.2f} &lt; minimum {info.min_volume}\n"
+            f"<code>{telegram.escape_html(client_order_id)}</code>",
         )
     elif raw_volume_wire > info.max_volume:
         log_event(
@@ -106,7 +108,9 @@ def calculate(
         )
         telegram.notify(
             "SIZE_CAPPED",
-            f"⚠️ {client_order_id} {symbol_name}: volume {raw_volume_wire:.2f} > max {info.max_volume} — capped",
+            f"⚠️ <b>{telegram.escape_html(info.og_name)}</b> — Volume capped\n"
+            f"{raw_volume_wire:.2f} &gt; maximum {info.max_volume}\n"
+            f"<code>{telegram.escape_html(client_order_id)}</code>",
         )
     volume = converter.units_to_volume(symbol_name, raw_volume_units)
 
@@ -127,7 +131,7 @@ def calculate(
     )
 
 
-def _get_balance(connection: Connection, ctid_trader_account_id: int) -> float:
+def get_balance(connection: Connection, ctid_trader_account_id: int) -> float:
     """balance PHẢI lấy mới mỗi lần gọi (thay đổi liên tục theo lệnh) — khác deposit_asset_id
     (không đổi, cache trong converter.py). Scale bằng moneyDigits, KHÔNG phải hằng số cố định
     ×100 như volume — xác nhận trực tiếp từ comment field moneyDigits trong proto gốc."""
@@ -137,3 +141,32 @@ def _get_balance(connection: Connection, ctid_trader_account_id: int) -> float:
     res = connection.wait_for(messages.ProtoOATraderRes)
     trader = res.trader
     return trader.balance / (10 ** trader.moneyDigits)
+
+
+def get_unrealized_pnl(connection: Connection, ctid_trader_account_id: int) -> Dict[int, float]:
+    """{positionId: net unrealized P&L theo tiền tệ tài khoản} — do SERVER cTrader tự tính, CHỈ dùng
+    cho báo cáo (account snapshot), không dùng cho quyết định vào lệnh nào.
+
+    Đúng khuyến nghị chính thức (help.ctrader.com/open-api/profit-loss-calculation/): "simply ask
+    the cTrader backend to calculate P&L for you by sending the ProtoOAGetPositionUnrealizedPnLReq",
+    "Manually calculating P&L is a difficult process". Không cần subscribe giá sống — bản trước tự
+    tính từ spot phải subscribe 4 symbol, luồng tick dồn vượt năng lực vòng lặp chính (~1 message
+    cTrader/1-2 giây, đo trên log live) làm trễ ORDER_FILLED/POSITION_CLOSED. netUnrealizedPnL: "does
+    not include potential closing commission" (model-messages). Scale bằng moneyDigits của response.
+    """
+    req = messages.ProtoOAGetPositionUnrealizedPnLReq()
+    req.ctidTraderAccountId = ctid_trader_account_id
+    sent_msg_id = connection.send(req)
+    res = connection.wait_for(
+        messages.ProtoOAGetPositionUnrealizedPnLRes, messages.ProtoOAErrorRes,
+        # Res nhận theo kiểu (chỉ 1 request loại này tại 1 thời điểm); lỗi CHỈ nhận khi đúng
+        # clientMsgId của request này — không nuốt nhầm lỗi của việc khác đang bay về.
+        predicate=lambda incoming: (
+            isinstance(incoming.message, messages.ProtoOAGetPositionUnrealizedPnLRes)
+            or incoming.client_msg_id == sent_msg_id
+        ),
+    )
+    if isinstance(res, messages.ProtoOAErrorRes):
+        raise RuntimeError(f"GetPositionUnrealizedPnL failed: {res.errorCode} {res.description}")
+    scale = 10 ** res.moneyDigits
+    return {item.positionId: item.netUnrealizedPnL / scale for item in res.positionUnrealizedPnL}

@@ -71,6 +71,12 @@ class ComboConfig:
                 return inst.broker_symbol
         raise KeyError(f"Symbol '{symbol}' không có trong combo.instruments của config.yaml")
 
+    def broker_to_symbol_map(self) -> dict:
+        """{tên broker: tên OG} cho converter.load(). Khoá theo tên BROKER (không phải tên OG) để
+        mọi broker_symbol khác nhau trong config đều chắc chắn được load — đúng như symbol_names();
+        tên OG chỉ dùng để hiển thị (vd "US30" thay vì "#US30") trong Telegram."""
+        return {inst.broker_symbol: inst.symbol for inst in self.instruments}
+
 
 @dataclass
 class TelegramConfig:
