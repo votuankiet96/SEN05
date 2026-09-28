@@ -254,6 +254,22 @@ def _handle_dropped(event, *, converter: SymbolConverter, exposure_book: Exposur
     )
 
 
+def deal_net_profit(detail) -> float:
+    """Lãi/lỗ ròng của 1 deal đóng (ProtoOAClosePositionDetail), theo tiền tệ tài khoản.
+
+    = TỔNG các số CÓ DẤU broker trả về (khoản phí là số âm). Proto không ghi quy ước dấu; bằng chứng
+    là chuỗi balance_after của 7 lần đóng liên tiếp OF10 (26-28/9): delta số dư khớp 7/7 với
+    gross + commission + swap. Công thức cũ (gross - commission) sai đúng lần duy nhất có phí: GOLD
+    28/9, 742.39 + (-5.04) = 737.35 = mức tăng số dư thật, bản cũ ra 747.43. Swap: OF11 (Pepperstone)
+    26/9 gross -50.16, swap +1.66, số dư 10000.00 -> 9951.50 = -50.16 + 1.66 (cộng theo dấu; bản cũ bỏ
+    qua swap). pnlConversionFee: OF11 JPN225 28/9 (cặp quy đổi thật) vẫn = 0 -> CHƯA thấy giá trị khác 0,
+    giả định cùng quy ước.
+    """
+    money_scale = (10 ** detail.moneyDigits) if detail.moneyDigits else 1
+    pnl_conversion_fee = detail.pnlConversionFee if detail.HasField("pnlConversionFee") else 0
+    return (detail.grossProfit + detail.swap + detail.commission + pnl_conversion_fee) / money_scale
+
+
 def _handle_position_closed(event, *, converter: SymbolConverter, exposure_book: ExposureBook,
                               state: StateStore) -> None:
     position = event.position
@@ -269,14 +285,8 @@ def _handle_position_closed(event, *, converter: SymbolConverter, exposure_book:
     pips = direction * (deal.executionPrice - detail.entryPrice) / pip_size
     remaining_volume = position.tradeData.volume  # volume CÒN LẠI sau deal này, không phải volume vừa đóng
 
-    # Lãi/lỗ ròng = TỔNG các số CÓ DẤU broker trả về (khoản phí là số âm). Proto không ghi quy ước dấu;
-    # bằng chứng là chuỗi balance_after của 7 lần đóng liên tiếp (26-28/9): delta số dư khớp 7/7 với
-    # gross + commission + swap. Công thức cũ (gross - commission) sai đúng lần duy nhất có phí: GOLD
-    # 28/9, 742.39 + (-5.04) = 737.35 = mức tăng số dư thật, bản cũ ra 747.43. Swap: OF11 (Pepperstone)
-    # 26/9 gross -50.16, swap +1.66, số dư 10000.00 -> 9951.50 = -50.16 + 1.66 (cộng theo dấu; bản cũ
-    # bỏ qua swap). pnlConversionFee luôn = 0 tới nay -> CHƯA có bằng chứng, giả định cùng quy ước.
     pnl_conversion_fee = detail.pnlConversionFee if detail.HasField("pnlConversionFee") else 0
-    net_profit = (detail.grossProfit + detail.swap + detail.commission + pnl_conversion_fee) / money_scale
+    net_profit = deal_net_profit(detail)
     balance_after = detail.balance / money_scale
     # 1 position co the dong qua NHIEU deal partial-close, moi deal 1 execution event rieng, voi
     # tradeData.volume = volume CON LAI (bang chung log that BTCUSD 2026-09-27: mo 168 -> 4 deal voi

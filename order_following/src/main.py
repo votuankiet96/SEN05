@@ -11,6 +11,7 @@ import os
 import sys
 import time
 from datetime import datetime, timezone
+from typing import Optional
 
 import redis
 
@@ -18,6 +19,7 @@ _PROTO_DIR = os.path.join(os.path.dirname(__file__), "engine", "proto", "generat
 if _PROTO_DIR not in sys.path:
     sys.path.insert(0, _PROTO_DIR)
 import OpenApiMessages_pb2 as messages  # noqa: E402
+import OpenApiModelMessages_pb2 as model_messages  # noqa: E402
 
 from configuration import Config, load_config
 from engine.connection import AuthError, Connection
@@ -30,6 +32,8 @@ from strategies.combo import adapter
 
 _LOGGER = logging.getLogger(__name__)
 _RECONNECT_DELAY_SECONDS = 5.0
+_HISTORY_REQUEST_INTERVAL_SECONDS = 0.25  # <= 4 request/giây, dưới trần 5/giây cho request "historical"
+_ORDER_STATUS = model_messages.ProtoOAOrderStatus
 _MODES = (None, "--check", "--close-all")
 
 
@@ -147,7 +151,8 @@ def _run_once(config: Config, state: StateStore) -> None:
         reconcile = _reconcile(connection, config.ctrader.ctid_trader_account_id)
         exposure_book = ExposureBook()
         exposure_book.seed_from_reconcile(reconcile, adapter.LABEL)
-        _resolve_pending(reconcile, state=state)
+        _resolve_pending(reconcile, state=state, connection=connection,
+                         ctid_trader_account_id=config.ctrader.ctid_trader_account_id)
 
         _startup_complete(config, reconcile)
 
@@ -184,32 +189,142 @@ def _reconcile(connection: Connection, ctid_trader_account_id: int):
     return connection.wait_for(messages.ProtoOAReconcileRes)
 
 
-def _resolve_pending(reconcile, *, state: StateStore) -> None:
-    """Chốt sổ những record còn SENDING/ACCEPTED từ lần chạy trước bị ngắt giữa chừng.
+def _resolve_pending(reconcile, *, state: StateStore, connection: Connection, ctid_trader_account_id: int) -> None:
+    """Chốt sổ record còn dở dang (SENDING/ACCEPTED) từ lần chạy trước bị ngắt giữa chừng, và THỬ LẠI
+    những record đã UNRESOLVED nhưng có orderId. Chỉ là SỔ SÁCH — exposure đã được seed thẳng từ chính
+    reconcile này, không phụ thuộc bước này.
 
-    Đối chiếu được chắc chắn 1 trường hợp duy nhất: lệnh chờ vẫn còn sống trên server —
-    `ProtoOAOrder.clientOrderId` ("Optional ClientOrderId", OpenApiModelMessages.proto:384) khớp
-    trực tiếp với id OF đã gửi, nên ghi lại orderId và coi như ACCEPTED bình thường.
+    1. Lệnh chờ còn sống trên server: `ProtoOAOrder.clientOrderId` khớp trực tiếp id OF đã gửi -> ACCEPTED.
+    2. Có orderId nhưng không còn là lệnh chờ: tra `ProtoOAOrderDetailsReq` — "Request for getting Order
+       and its related Deals", deal mang `positionId` (proto ProtoOADeal) -> biết CHÍNH XÁC lệnh đã khớp
+       vào vị thế nào / bị huỷ / hết hạn / bị từ chối. Trước đây nhánh này đoán không được vì
+       `ProtoOAPosition` không mang clientOrderId -> chốt UNRESOLVED (case thật: OF11 UK100 28/9, lệnh
+       MARKET khớp ngay nhưng tin khớp kẹt trong hàng đợi rồi mất kết nối).
+    3. Không có orderId (chết ngay sau khi gửi) hoặc tra không ra: UNRESOLVED như cũ, không đoán. Record
+       đã UNRESOLVED từ trước mà vẫn không ra thì chỉ log, không báo động lặp lại mỗi lần khởi động.
 
-    Các trường hợp còn lại KHÔNG suy đoán: `ProtoOAPosition` không mang clientOrderId (proto:335-352)
-    nên không có đường nối nào từ record sang vị thế đang mở — đánh dấu UNRESOLVED để người vận hành
-    kiểm tay. Exposure vẫn đúng vì nó được seed thẳng từ chính reconcile này, không phụ thuộc state.
+    Mọi lỗi khi tra lịch sử bị chặn TẠI ĐÂY: sổ sách không bao giờ được cản engine khởi động.
     """
     live_orders = {order.clientOrderId: order.orderId for order in reconcile.order if order.clientOrderId}
-    for record in state.pending_since_last_run():
-        order_id = live_orders.get(record.client_order_id)
-        if order_id is not None:
-            state.mark_accepted(record.client_order_id, order_id)
-        else:
-            state.mark_unresolved(record.client_order_id)
-            log_event(_LOGGER, "ERROR", "STARTUP_UNRESOLVED", "MEDIUM", component="runtime",
-                      client_order_id=record.client_order_id, status=record.status)
+    open_positions = {position.positionId for position in reconcile.position}
+    candidates = [(record, True) for record in state.pending_since_last_run()]
+    candidates += [(record, False) for record in state.unresolved_with_order_id()]
+    for record, newly_pending in candidates:
+        live_order_id = live_orders.get(record.client_order_id)
+        if live_order_id is not None:
+            state.mark_accepted(record.client_order_id, live_order_id)
+            continue
+
+        outcome = None
+        if record.order_id is not None:
+            try:
+                outcome = _recover_from_order_history(
+                    record, state=state, connection=connection,
+                    ctid_trader_account_id=ctid_trader_account_id, open_positions=open_positions,
+                )
+            except Exception as exc:
+                log_event(_LOGGER, "WARNING", "STARTUP_RECOVERY_FAILED", "LOW", component="runtime",
+                          client_order_id=record.client_order_id, order_id=record.order_id, error=exc)
+        if outcome is not None:
+            log_event(_LOGGER, "INFO", "STARTUP_RECOVERED", "NONE", component="runtime",
+                      client_order_id=record.client_order_id, previous_status=record.status, outcome=outcome)
             telegram.notify(
-                "STARTUP_UNRESOLVED",
-                f"🔴 <b>Needs manual check</b> — could not reconcile with server\n"
+                "STARTUP_RECOVERED",
+                f"🟢 <b>Recovered after restart</b> — {telegram.escape_html(outcome)}\n"
                 f"Previous status: {telegram.escape_html(record.status)}\n"
                 f"<code>{telegram.escape_html(record.client_order_id)}</code>",
             )
+            continue
+
+        if not newly_pending:
+            log_event(_LOGGER, "INFO", "STARTUP_STILL_UNRESOLVED", "LOW", component="runtime",
+                      client_order_id=record.client_order_id, order_id=record.order_id)
+            continue
+        state.mark_unresolved(record.client_order_id)
+        log_event(_LOGGER, "ERROR", "STARTUP_UNRESOLVED", "MEDIUM", component="runtime",
+                  client_order_id=record.client_order_id, status=record.status)
+        telegram.notify(
+            "STARTUP_UNRESOLVED",
+            f"🔴 <b>Needs manual check</b> — could not reconcile with server\n"
+            f"Previous status: {telegram.escape_html(record.status)}\n"
+            f"<code>{telegram.escape_html(record.client_order_id)}</code>",
+        )
+
+
+def _recover_from_order_history(record, *, state: StateStore, connection: Connection,
+                                ctid_trader_account_id: int, open_positions: set) -> Optional[str]:
+    """Mô tả kết quả đã ghi vào state, hoặc None nếu lịch sử lệnh không đủ để kết luận chắc chắn."""
+    req = messages.ProtoOAOrderDetailsReq()
+    req.ctidTraderAccountId = ctid_trader_account_id
+    req.orderId = record.order_id
+    details = _history_request(connection, req, messages.ProtoOAOrderDetailsRes,
+                               lambda res: res.order.orderId == record.order_id)
+    status = details.order.orderStatus
+    position_ids = {deal.positionId for deal in details.deal if deal.positionId}
+
+    if status == _ORDER_STATUS.ORDER_STATUS_FILLED or position_ids:
+        if len(position_ids) != 1:
+            return None  # 0 hoặc nhiều vị thế cho 1 lệnh — không đủ chắc để tự nối
+        position_id = next(iter(position_ids))
+        if position_id in open_positions:
+            state.mark_filled(record.order_id, position_id)
+            return f"order filled while offline, position {position_id} still open"
+        # Khớp rồi ĐÓNG luôn trong lúc mất kết nối (reconcile là nguồn sự thật về vị thế đang mở).
+        net = _closed_position_net(connection, ctid_trader_account_id, position_id, record.created_at)
+        state.mark_filled(record.order_id, position_id)
+        if net is not None:
+            state.accumulate_net_profit(position_id, net)
+        state.mark_closed(position_id)
+        net_text = f"net ${net:.2f}" if net is not None else "net P&L unavailable"
+        return f"order filled and position {position_id} closed while offline, {net_text}"
+    if status == _ORDER_STATUS.ORDER_STATUS_CANCELLED:
+        state.mark_cancelled(record.order_id)
+        return "order cancelled while offline"
+    if status == _ORDER_STATUS.ORDER_STATUS_EXPIRED:
+        state.mark_expired(record.order_id)
+        return "order expired while offline"
+    if status == _ORDER_STATUS.ORDER_STATUS_REJECTED:
+        state.mark_rejected(record.client_order_id)
+        return "order rejected"
+    return None
+
+
+def _closed_position_net(connection: Connection, ctid_trader_account_id: int, position_id: int,
+                         created_at_iso: str) -> Optional[float]:
+    """Tổng lãi/lỗ ròng các deal ĐÓNG của 1 vị thế (ProtoOADealListByPositionIdReq), cùng công thức
+    listener.deal_net_profit. None nếu không lấy được — vị thế vẫn được chốt CLOSED, chỉ thiếu số."""
+    req = messages.ProtoOADealListByPositionIdReq()
+    req.ctidTraderAccountId = ctid_trader_account_id
+    req.positionId = position_id
+    # Vị thế chỉ có thể mở SAU khi lệnh được ghi SENDING; lùi thêm 1 giờ cho chắc.
+    req.fromTimestamp = int((datetime.fromisoformat(created_at_iso).timestamp() - 3600) * 1000)
+    req.toTimestamp = int(time.time() * 1000)
+    try:
+        res = _history_request(connection, req, messages.ProtoOADealListByPositionIdRes, lambda res: True)
+    except Exception as exc:
+        log_event(_LOGGER, "WARNING", "STARTUP_RECOVERY_NET_UNAVAILABLE", "LOW", component="runtime",
+                  position_id=position_id, error=exc)
+        return None
+    closing = [deal for deal in res.deal if deal.positionId == position_id and deal.HasField("closePositionDetail")]
+    if res.hasMore or not closing:
+        return None
+    return sum(listener.deal_net_profit(deal.closePositionDetail) for deal in closing)
+
+
+def _history_request(connection: Connection, req, response_cls, matches):
+    """Gửi 1 request tra lịch sử, chờ đúng response. Tài liệu giới hạn "5 requests per second per
+    connection for any historical data requests" nhưng không nói request nào thuộc loại đó — coi như
+    thuộc, giãn cách sau mỗi lần (chỉ chạy lúc khởi động, vài request)."""
+    sent_msg_id = connection.send(req)
+    res = connection.wait_for(
+        response_cls, messages.ProtoOAErrorRes,
+        predicate=lambda incoming: (isinstance(incoming.message, response_cls) and matches(incoming.message))
+        or incoming.client_msg_id == sent_msg_id,
+    )
+    time.sleep(_HISTORY_REQUEST_INTERVAL_SECONDS)
+    if isinstance(res, messages.ProtoOAErrorRes):
+        raise RuntimeError(f"{type(req).__name__} failed: {res.errorCode} {res.description}")
+    return res
 
 
 def _signed_money(value: float) -> str:
