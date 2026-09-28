@@ -877,6 +877,113 @@ def test_poll_once_stops_at_time_budget(monkeypatch):
     assert 10 - len(conn.items) == 3  # 0.2 + 0.2 + 0.2 >= 0.5s -> dung sau message thu 3
 
 
+def test_net_profit_adds_signed_commission_real_gold_close(monkeypatch):
+    # So THAT (GOLD 28/9, position 154587385): gross 742.39, commission -5.04, balance 98278.74 ->
+    # 99016.09 (+737.35). Cong thuc cu gross-commission ra 747.43 (bao lai cao hon thuc te 10.08).
+    from engine import listener, telegram
+
+    sent = []
+    monkeypatch.setattr(telegram, "notify", lambda event, text: sent.append((event, text)))
+    converter = SymbolConverter.__new__(SymbolConverter)
+    info = _sample_us30()
+    converter._symbols = {"US30": info}
+    book = ExposureBook()
+    book.on_position_opened(position_id=154587385, symbol_id=info.symbol_id, trade_side=2, volume=1700)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        store = StateStore(os.path.join(tmp, "test.sqlite"))
+        try:
+            store.mark_sending("combo:H1:GOLD:X", "XAUUSD", "combo", risk_amount=493.92)
+            store.mark_accepted("combo:H1:GOLD:X", order_id=248943476)
+            store.mark_filled(248943476, position_id=154587385)
+
+            event = messages.ProtoOAExecutionEvent()
+            event.position.positionId = 154587385
+            event.position.tradeData.symbolId = info.symbol_id
+            event.position.tradeData.tradeSide = model_messages.ProtoOATradeSide.SELL
+            event.position.tradeData.label = "combo"
+            event.position.tradeData.volume = 0
+            detail = event.deal.closePositionDetail
+            detail.entryPrice = 4256.42
+            detail.grossProfit = 74239
+            detail.commission = -504
+            detail.swap = 0
+            detail.balance = 9901609
+            detail.moneyDigits = 2
+            event.deal.executionPrice = 4212.75
+
+            listener._handle_execution_event(event, converter=converter, exposure_book=book, state=store)
+            assert abs(store.get_net_profit(154587385) - 737.35) < 1e-9
+            assert any("Net P&amp;L: $737.35" in text for _, text in sent)
+        finally:
+            store.close()
+
+
+def _fill_event(info, *, position_sl=None, order_sl=None, order_relative_sl=None):
+    # So THAT (BTCUSD 28/9): SELL STOP trigger 84045.5, khop 84038.55, SL 84605.47, volume 88 (0.88 unit)
+    event = messages.ProtoOAExecutionEvent()
+    event.executionType = model_messages.ProtoOAExecutionType.ORDER_FILLED
+    event.order.orderId = 248943483
+    event.order.clientOrderId = "combo:H1:BTCUSD:X"
+    event.order.stopPrice = 84045.5
+    if order_sl is not None:
+        event.order.stopLoss = order_sl
+    if order_relative_sl is not None:
+        event.order.relativeStopLoss = order_relative_sl
+    event.position.positionId = 154587389
+    event.position.tradeData.symbolId = info.symbol_id
+    event.position.tradeData.tradeSide = model_messages.ProtoOATradeSide.SELL
+    event.position.tradeData.label = "combo"
+    event.position.tradeData.volume = 88
+    event.position.price = 84038.55
+    if position_sl is not None:
+        event.position.stopLoss = position_sl
+    return event
+
+
+def _run_fill(monkeypatch, **sl):
+    from engine import listener, telegram
+
+    sent, logged = [], []
+    monkeypatch.setattr(telegram, "notify", lambda event, text: sent.append(text))
+    converter = SymbolConverter.__new__(SymbolConverter)
+    info = _sample_us30()
+    converter._symbols = {"US30": info}
+    converter._deposit_asset_id = info.quote_asset_id  # cung tien te -> ty gia 1.0
+    with tempfile.TemporaryDirectory() as tmp:
+        store = StateStore(os.path.join(tmp, "test.sqlite"))
+        try:
+            store.mark_sending("combo:H1:BTCUSD:X", "BITCOIN", "combo", risk_amount=493.92)
+            store.mark_accepted("combo:H1:BTCUSD:X", order_id=248943483)
+            listener._handle_execution_event(_fill_event(info, **sl), converter=converter,
+                                             exposure_book=ExposureBook(), state=store)
+        finally:
+            store.close()
+    return sent[-1]
+
+
+def test_fill_real_risk_uses_order_stop_loss_when_position_lacks_it(monkeypatch):
+    # Log that: position.stopLoss VANG o ca 4 lan khop -> ban cu luon bao "Real risk: $0.00".
+    text = _run_fill(monkeypatch, order_sl=84605.47)
+    assert "Real risk: $498.89" in text  # 0.88 x (84605.47 - 84038.55) = 498.8896
+
+
+def test_fill_real_risk_uses_relative_stop_loss_for_market_orders(monkeypatch):
+    text = _run_fill(monkeypatch, order_relative_sl=56_692_000)  # 566.92 x 100000
+    assert "Real risk: $498.89" in text
+
+
+def test_fill_real_risk_prefers_position_stop_loss_when_present(monkeypatch):
+    text = _run_fill(monkeypatch, position_sl=84605.47, order_sl=99999.0)
+    assert "Real risk: $498.89" in text
+
+
+def test_fill_without_any_stop_loss_reports_na_not_zero(monkeypatch):
+    text = _run_fill(monkeypatch)
+    assert "Real risk: n/a" in text
+    assert "$0.00" not in text
+
+
 def test_safe_error_redacts_secret_value():
     # Quan trong: config.yaml gio chua secret plaintext, va URL refresh token nhet client_secret
     # thang vao query string - loi mang lo URL do vao exception message phai duoc che truoc khi log.

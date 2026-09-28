@@ -28,6 +28,7 @@ from engine import telegram
 _LOGGER = logging.getLogger(__name__)
 _MAX_MESSAGES_PER_POLL = 500
 _MAX_POLL_SECONDS = 0.5
+_RELATIVE_PRICE_SCALE = 100_000  # proto: relativeStopLoss "Specified in 1/100000 of unit of a price"
 _EXECUTION_TYPE = model_messages.ProtoOAExecutionType
 _TRADE_SIDE = model_messages.ProtoOATradeSide
 
@@ -175,18 +176,23 @@ def _handle_filled(event, *, converter: SymbolConverter, exposure_book: Exposure
     fill_price = position.price
     slippage_pips = direction * (fill_price - trigger_price) / pip_size
 
-    real_sl_pips = 0.0
-    real_risk_amount = 0.0
-    if position.HasField("stopLoss"):
-        real_sl_pips = abs(fill_price - position.stopLoss) / pip_size
-        units = position.tradeData.volume / 100.0  # wire volume theo thang "cents" ×100
-        # Tỷ giá SỐNG tại đúng lúc khớp lệnh — KHÔNG phải tỷ giá đã dùng lúc sizing.py tính trước
-        # đó, vì có thể lệnh chờ (STOP) khớp rất lâu sau, tỷ giá đã đổi khác (đúng điểm user nêu:
-        # "mỗi lúc khớp lệnh tại tick đó tỷ giá khác nhau"). Chain đã được sizing.py gọi
-        # ensure_conversion_chain() từ trước nên ở đây chỉ cần đọc giá mới nhất, không cần gọi lại.
-        deposit_asset_id = converter.get_deposit_asset_id()
-        conversion_rate = converter.get_live_conversion_rate(symbol_info.quote_asset_id, deposit_asset_id)
-        real_risk_amount = units * real_sl_pips * pip_size * conversion_rate
+    sl_distance, sl_source = _stop_loss_distance(order, position, fill_price)
+    real_sl_pips = sl_distance / pip_size if sl_distance is not None else None
+    real_risk_amount = None
+    if sl_distance is not None:
+        try:
+            units = position.tradeData.volume / 100.0  # wire volume theo thang "cents" ×100
+            # Tỷ giá SỐNG tại đúng lúc khớp lệnh — KHÔNG phải tỷ giá đã dùng lúc sizing.py tính trước
+            # đó, vì có thể lệnh chờ (STOP) khớp rất lâu sau, tỷ giá đã đổi khác. Chain đã được
+            # sizing.py gọi ensure_conversion_chain() từ trước nên ở đây chỉ cần đọc giá mới nhất.
+            deposit_asset_id = converter.get_deposit_asset_id()
+            conversion_rate = converter.get_live_conversion_rate(symbol_info.quote_asset_id, deposit_asset_id)
+            real_risk_amount = units * sl_distance * conversion_rate
+        except Exception as exc:
+            # Chỉ phục vụ báo cáo — state/exposure đã cập nhật xong ở trên, không được để lỗi tỷ giá
+            # (vd chưa có bid) làm mất luôn dòng log/Telegram của lệnh khớp.
+            log_event(_LOGGER, "WARNING", "REAL_RISK_UNAVAILABLE", "LOW", component="listener",
+                      client_order_id=order.clientOrderId, error=exc)
 
     budgeted_risk_amount = record.risk_amount if record is not None else 0.0
 
@@ -194,14 +200,34 @@ def _handle_filled(event, *, converter: SymbolConverter, exposure_book: Exposure
         _LOGGER, "INFO", "ORDER_FILLED", "NONE", component="listener",
         client_order_id=order.clientOrderId, order_id=order.orderId, position_id=position.positionId,
         fill_price=fill_price, trigger_price=trigger_price, slippage_pips=slippage_pips,
-        real_sl_pips=real_sl_pips, real_risk_amount=real_risk_amount, budgeted_risk_amount=budgeted_risk_amount,
+        sl_source=sl_source, real_sl_pips=real_sl_pips, real_risk_amount=real_risk_amount,
+        budgeted_risk_amount=budgeted_risk_amount,
     )
+    real_risk_text = f"${real_risk_amount:.2f}" if real_risk_amount is not None else "n/a"
     telegram.notify(
         "ORDER_FILLED",
         f"🟢 <b>{telegram.escape_html(symbol_info.og_name)} {telegram.side_label(position.tradeData.tradeSide)}</b> — Filled\n"
-        f"Fill price: {fill_price} | Real risk: ${real_risk_amount:.2f} (budgeted ${budgeted_risk_amount:.2f})\n"
+        f"Fill price: {fill_price} | Real risk: {real_risk_text} (budgeted ${budgeted_risk_amount:.2f})\n"
         f"<code>{telegram.escape_html(order.clientOrderId)}</code>",
     )
+
+
+def _stop_loss_distance(order, position, fill_price: float):
+    """(khoảng cách giá tới SL tính từ giá KHỚP thật, nguồn) — hoặc (None, "unknown").
+
+    Log thật (26/9 + 28/9): `position.stopLoss` VẮNG ở cả 4 lần khớp, nên bản cũ luôn ra 0.0 và
+    Telegram báo "Real risk: $0.00" dù lệnh có SL (BTCUSD 28/9 đóng đúng tại SL). ProtoOAOrder mang
+    `stopLoss` tuyệt đối (proto dòng 382 — lệnh STOP của combo gửi kiểu này) và `relativeStopLoss`
+    (dòng 387, "1/100000 of unit of a price" — lệnh MARKET gửi kiểu này). Thử lần lượt 3 nguồn; `source`
+    được log để lần khớp thật kế tiếp cho BẰNG CHỨNG field nào cTrader thực sự điền.
+    """
+    if position.HasField("stopLoss"):
+        return abs(fill_price - position.stopLoss), "position"
+    if order.HasField("stopLoss"):
+        return abs(fill_price - order.stopLoss), "order"
+    if order.HasField("relativeStopLoss"):
+        return order.relativeStopLoss / _RELATIVE_PRICE_SCALE, "order_relative"
+    return None, "unknown"
 
 
 def _handle_dropped(event, *, converter: SymbolConverter, exposure_book: ExposureBook, state: StateStore) -> None:
@@ -243,7 +269,13 @@ def _handle_position_closed(event, *, converter: SymbolConverter, exposure_book:
     pips = direction * (deal.executionPrice - detail.entryPrice) / pip_size
     remaining_volume = position.tradeData.volume  # volume CÒN LẠI sau deal này, không phải volume vừa đóng
 
-    net_profit = (detail.grossProfit - detail.commission) / money_scale
+    # Lãi/lỗ ròng = TỔNG các số CÓ DẤU broker trả về (khoản phí là số âm). Proto không ghi quy ước dấu;
+    # bằng chứng là chuỗi balance_after của 7 lần đóng liên tiếp (26-28/9): delta số dư khớp 7/7 với
+    # gross + commission + swap. Công thức cũ (gross - commission) sai đúng lần duy nhất có phí: GOLD
+    # 28/9, 742.39 + (-5.04) = 737.35 = mức tăng số dư thật, bản cũ ra 747.43. swap/pnlConversionFee
+    # luôn = 0 tới nay -> chiều dấu của chúng CHƯA có bằng chứng thực tế, giả định cùng quy ước.
+    pnl_conversion_fee = detail.pnlConversionFee if detail.HasField("pnlConversionFee") else 0
+    net_profit = (detail.grossProfit + detail.swap + detail.commission + pnl_conversion_fee) / money_scale
     balance_after = detail.balance / money_scale
     # 1 position co the dong qua NHIEU deal partial-close, moi deal 1 execution event rieng, voi
     # tradeData.volume = volume CON LAI (bang chung log that BTCUSD 2026-09-27: mo 168 -> 4 deal voi
@@ -268,7 +300,8 @@ def _handle_position_closed(event, *, converter: SymbolConverter, exposure_book:
         reason="sl_tp_or_manual_close", entry_price=detail.entryPrice, close_price=deal.executionPrice,
         pips=pips, remaining_volume=remaining_volume / 100.0, is_final_close=is_final_close,
         gross_profit=detail.grossProfit / money_scale, commission=detail.commission / money_scale,
-        swap=detail.swap / money_scale, deal_net_profit=net_profit, balance_after=balance_after,
+        swap=detail.swap / money_scale, pnl_conversion_fee=pnl_conversion_fee / money_scale,
+        deal_net_profit=net_profit, balance_after=balance_after,
     )
     if not is_final_close:
         return  # partial close: đã log đủ trace + cộng dồn net_profit, KHÔNG báo Telegram riêng đợt này
