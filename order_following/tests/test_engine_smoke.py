@@ -83,7 +83,9 @@ def test_resolve_pending_matches_live_order_and_marks_rest_unresolved(caplog):
 
         try:
             with caplog.at_level(logging.INFO):
-                main._resolve_pending(reconcile, state=store)
+                # Record B khong co orderId (SENDING) -> khong co gi de tra lich su, KHONG duoc goi mang.
+                main._resolve_pending(reconcile, state=store, connection=_NoNetworkConnection(),
+                                      ctid_trader_account_id=1)
 
             # Lenh con song: lay lai duoc orderId that, van la "dang cho" mot cach chinh dang.
             assert store.get_by_order_id(777).status == STATUS_ACCEPTED
@@ -93,6 +95,157 @@ def test_resolve_pending_matches_live_order_and_marks_rest_unresolved(caplog):
             assert "combo:H4:J225:B" in caplog.text
             # ...nhung van chan gui lai vinh vien, dung nguyen tac idempotency theo clientOrderId.
             assert store.has_sent("combo:H4:J225:B") is True
+        finally:
+            store.close()
+
+
+class _NoNetworkConnection:
+    def send(self, *a, **k):
+        raise AssertionError("khong duoc goi mang cho record nay")
+
+
+class _HistoryConnection:
+    """Tra loi request tra lich su theo KIEU request da gui (OrderDetails / DealListByPositionId)."""
+
+    def __init__(self, replies):
+        self.replies = replies
+        self.sent = []
+
+    def send(self, message, client_msg_id=None):
+        self.sent.append(message)
+        return f"id-{len(self.sent)}"
+
+    def wait_for(self, *classes, predicate=None, timeout_seconds=15.0):
+        from engine.connection import IncomingMessage
+        reply = self.replies[type(self.sent[-1])]
+        incoming = IncomingMessage(0, reply, b"", f"id-{len(self.sent)}")
+        assert isinstance(reply, classes)
+        assert predicate is None or predicate(incoming)
+        return reply
+
+
+def _order_details(order_id, status, position_id=None):
+    res = messages.ProtoOAOrderDetailsRes()
+    res.ctidTraderAccountId = 1
+    res.order.orderId = order_id
+    res.order.orderStatus = status
+    if position_id is not None:
+        deal = res.deal.add()
+        deal.orderId = order_id
+        deal.positionId = position_id
+    return res
+
+
+def _run_resolve(monkeypatch, store, replies, open_position_ids=()):
+    from engine import telegram
+    sent = []
+    monkeypatch.setattr(telegram, "notify", lambda event, text: sent.append(event))
+    monkeypatch.setattr(main, "_HISTORY_REQUEST_INTERVAL_SECONDS", 0)
+    reconcile = messages.ProtoOAReconcileRes()
+    for position_id in open_position_ids:
+        reconcile.position.add().positionId = position_id
+    main._resolve_pending(reconcile, state=store, connection=_HistoryConnection(replies), ctid_trader_account_id=1)
+    return sent
+
+
+def _accepted_record(store, client_order_id="ma_cross:M10:UK100:20260928T075000Z", order_id=363380229):
+    store.mark_sending(client_order_id, "UK100", "ma_cross", risk_amount=49.51)
+    store.mark_accepted(client_order_id, order_id)
+
+
+def test_resolve_pending_recovers_market_order_filled_while_offline(monkeypatch):
+    # Case THAT (OF11 UK100 28/9): lenh MARKET khop ngay nhung tin khop ket trong hang doi roi mat ket
+    # noi -> ban cu chot UNRESOLVED. ProtoOAOrderDetailsReq tra ve deal mang positionId -> noi CHINH XAC.
+    _FILLED = model_messages.ProtoOAOrderStatus.ORDER_STATUS_FILLED
+    with tempfile.TemporaryDirectory() as tmp:
+        store = StateStore(os.path.join(tmp, "test.sqlite"))
+        try:
+            _accepted_record(store)
+            sent = _run_resolve(monkeypatch, store,
+                                {messages.ProtoOAOrderDetailsReq: _order_details(363380229, _FILLED, 243900001)},
+                                open_position_ids=[243900001])
+            record = store.get_by_order_id(363380229)
+            assert (record.status, record.position_id) == ("FILLED", 243900001)
+            assert sent == ["STARTUP_RECOVERED"]
+        finally:
+            store.close()
+
+
+def test_resolve_pending_records_close_that_happened_while_offline(monkeypatch):
+    # Khop roi DONG luon trong luc mat ket noi: vi the khong con trong reconcile -> lay deal dong qua
+    # ProtoOADealListByPositionIdReq, chot CLOSED kem lai/lo (cung cong thuc deal_net_profit).
+    _FILLED = model_messages.ProtoOAOrderStatus.ORDER_STATUS_FILLED
+    deals = messages.ProtoOADealListByPositionIdRes()
+    deals.ctidTraderAccountId = 1
+    deals.hasMore = False
+    opening = deals.deal.add()
+    opening.positionId = 243900001
+    closing = deals.deal.add()
+    closing.positionId = 243900001
+    closing.closePositionDetail.grossProfit = 7308
+    closing.closePositionDetail.commission = -120
+    closing.closePositionDetail.swap = 0
+    closing.closePositionDetail.moneyDigits = 2
+    with tempfile.TemporaryDirectory() as tmp:
+        store = StateStore(os.path.join(tmp, "test.sqlite"))
+        try:
+            _accepted_record(store)
+            _run_resolve(monkeypatch, store, {
+                messages.ProtoOAOrderDetailsReq: _order_details(363380229, _FILLED, 243900001),
+                messages.ProtoOADealListByPositionIdReq: deals,
+            })
+            assert store.get_by_order_id(363380229).status == "CLOSED"
+            assert abs(store.get_net_profit(243900001) - 71.88) < 1e-9  # 73.08 + (-1.20)
+        finally:
+            store.close()
+
+
+def test_resolve_pending_marks_cancelled_order(monkeypatch):
+    _CANCELLED = model_messages.ProtoOAOrderStatus.ORDER_STATUS_CANCELLED
+    with tempfile.TemporaryDirectory() as tmp:
+        store = StateStore(os.path.join(tmp, "test.sqlite"))
+        try:
+            _accepted_record(store)
+            _run_resolve(monkeypatch, store, {messages.ProtoOAOrderDetailsReq: _order_details(363380229, _CANCELLED)})
+            assert store.get_by_order_id(363380229).status == "CANCELLED"
+        finally:
+            store.close()
+
+
+def test_resolve_pending_retries_previously_unresolved_record(monkeypatch):
+    # Record da UNRESOLVED tu lan chay truoc (dung trang thai UK100 tren OF11 hien tai) -> lan khoi dong
+    # sau tu khoi phuc duoc nho co orderId.
+    _FILLED = model_messages.ProtoOAOrderStatus.ORDER_STATUS_FILLED
+    with tempfile.TemporaryDirectory() as tmp:
+        store = StateStore(os.path.join(tmp, "test.sqlite"))
+        try:
+            _accepted_record(store)
+            store.mark_unresolved("ma_cross:M10:UK100:20260928T075000Z")
+            _run_resolve(monkeypatch, store,
+                         {messages.ProtoOAOrderDetailsReq: _order_details(363380229, _FILLED, 243900001)},
+                         open_position_ids=[243900001])
+            assert store.get_by_order_id(363380229).status == "FILLED"
+        finally:
+            store.close()
+
+
+def test_resolve_pending_history_error_never_blocks_and_does_not_realert(monkeypatch, caplog):
+    # Server tra loi / khong ho tro -> KHONG duoc lam sap khoi dong. Record moi -> UNRESOLVED + bao
+    # dong; record da UNRESOLVED tu truoc -> chi log, khong bao dong lap lai moi lan khoi dong.
+    err = messages.ProtoOAErrorRes()
+    err.errorCode = "SOME_ERROR"
+    with tempfile.TemporaryDirectory() as tmp:
+        store = StateStore(os.path.join(tmp, "test.sqlite"))
+        try:
+            _accepted_record(store, "ma_cross:M10:UK100:NEW", 1)
+            _accepted_record(store, "ma_cross:M10:UK100:OLD", 2)
+            store.mark_unresolved("ma_cross:M10:UK100:OLD")
+            with caplog.at_level(logging.INFO):
+                sent = _run_resolve(monkeypatch, store, {messages.ProtoOAOrderDetailsReq: err})
+            assert store.get_by_order_id(1).status == "UNRESOLVED"
+            assert store.get_by_order_id(2).status == "UNRESOLVED"
+            assert sent == ["STARTUP_UNRESOLVED"]  # chi 1 lan, cho record MOI
+            assert "event=STARTUP_RECOVERY_FAILED" in caplog.text
         finally:
             store.close()
 

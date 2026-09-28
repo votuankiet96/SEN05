@@ -182,6 +182,17 @@ class StateStore:
         ).fetchall()
         return [OrderRecord(*row) for row in rows]
 
+    def unresolved_with_order_id(self) -> List[OrderRecord]:
+        """Record đã chốt UNRESOLVED nhưng CÓ orderId — vẫn tra được lịch sử lệnh trên server
+        (ProtoOAOrderDetailsReq) để khôi phục chính xác ở lần khởi động sau. Record không có orderId
+        (chết ngay sau khi gửi, server chưa kịp trả) không nằm ở đây — không có gì để tra."""
+        rows = self._conn.execute(
+            "SELECT client_order_id, order_id, position_id, status, symbol, label, risk_amount, created_at, updated_at "
+            "FROM orders WHERE status = ? AND order_id IS NOT NULL",
+            (STATUS_UNRESOLVED,),
+        ).fetchall()
+        return [OrderRecord(*row) for row in rows]
+
     def count_by_status_since(self, since_iso: str) -> dict:
         """Đếm số lệnh theo trạng thái, chỉ tính bản ghi có cập nhật từ `since_iso` trở đi — nguồn số
         liệu cho báo cáo định kỳ (logger.session_summary). Không suy đoán "đã xử lý bao nhiêu tín

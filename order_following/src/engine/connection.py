@@ -53,6 +53,8 @@ _RESPONSE_CLASSES = [
     messages.ProtoOASymbolsForConversionRes,
     messages.ProtoOASpotEvent,
     messages.ProtoOAGetPositionUnrealizedPnLRes,
+    messages.ProtoOAOrderDetailsRes,
+    messages.ProtoOADealListByPositionIdRes,
     common_messages.ProtoErrorRes,
     common_messages.ProtoHeartbeatEvent,
 ]
