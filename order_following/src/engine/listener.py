@@ -272,8 +272,9 @@ def _handle_position_closed(event, *, converter: SymbolConverter, exposure_book:
     # Lãi/lỗ ròng = TỔNG các số CÓ DẤU broker trả về (khoản phí là số âm). Proto không ghi quy ước dấu;
     # bằng chứng là chuỗi balance_after của 7 lần đóng liên tiếp (26-28/9): delta số dư khớp 7/7 với
     # gross + commission + swap. Công thức cũ (gross - commission) sai đúng lần duy nhất có phí: GOLD
-    # 28/9, 742.39 + (-5.04) = 737.35 = mức tăng số dư thật, bản cũ ra 747.43. swap/pnlConversionFee
-    # luôn = 0 tới nay -> chiều dấu của chúng CHƯA có bằng chứng thực tế, giả định cùng quy ước.
+    # 28/9, 742.39 + (-5.04) = 737.35 = mức tăng số dư thật, bản cũ ra 747.43. Swap: OF11 (Pepperstone)
+    # 26/9 gross -50.16, swap +1.66, số dư 10000.00 -> 9951.50 = -50.16 + 1.66 (cộng theo dấu; bản cũ
+    # bỏ qua swap). pnlConversionFee luôn = 0 tới nay -> CHƯA có bằng chứng, giả định cùng quy ước.
     pnl_conversion_fee = detail.pnlConversionFee if detail.HasField("pnlConversionFee") else 0
     net_profit = (detail.grossProfit + detail.swap + detail.commission + pnl_conversion_fee) / money_scale
     balance_after = detail.balance / money_scale
