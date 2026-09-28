@@ -919,6 +919,39 @@ def test_net_profit_adds_signed_commission_real_gold_close(monkeypatch):
             store.close()
 
 
+def test_net_profit_adds_signed_swap_real_of11_close(monkeypatch):
+    # So THAT (OF11 Pepperstone 26/9, position 243805847): gross -50.16, swap +1.66, commission 0;
+    # so du 10000.00 (budget 0.5% = 50 luc khop) -> 9951.50 = -50.16 + 1.66. Ban cu bo qua swap.
+    from engine import listener, telegram
+
+    monkeypatch.setattr(telegram, "notify", lambda *a, **k: None)
+    converter = SymbolConverter.__new__(SymbolConverter)
+    info = _sample_us30()
+    converter._symbols = {"US30": info}
+    with tempfile.TemporaryDirectory() as tmp:
+        store = StateStore(os.path.join(tmp, "test.sqlite"))
+        try:
+            store.mark_sending("ma_cross:M30:BTCUSD:X", "BTCUSD", "ma_cross", risk_amount=50.0)
+            store.mark_accepted("ma_cross:M30:BTCUSD:X", order_id=363268775)
+            store.mark_filled(363268775, position_id=243805847)
+            event = messages.ProtoOAExecutionEvent()
+            event.position.positionId = 243805847
+            event.position.tradeData.symbolId = info.symbol_id
+            event.position.tradeData.tradeSide = model_messages.ProtoOATradeSide.SELL
+            event.position.tradeData.volume = 0
+            detail = event.deal.closePositionDetail
+            detail.entryPrice = 83990.77
+            detail.grossProfit = -5016
+            detail.swap = 166
+            detail.commission = 0
+            detail.balance = 995150
+            detail.moneyDigits = 2
+            listener._handle_execution_event(event, converter=converter, exposure_book=ExposureBook(), state=store)
+            assert abs(store.get_net_profit(243805847) - (-48.50)) < 1e-9
+        finally:
+            store.close()
+
+
 def _fill_event(info, *, position_sl=None, order_sl=None, order_relative_sl=None):
     # So THAT (BTCUSD 28/9): SELL STOP trigger 84045.5, khop 84038.55, SL 84605.47, volume 88 (0.88 unit)
     event = messages.ProtoOAExecutionEvent()
