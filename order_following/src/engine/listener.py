@@ -23,7 +23,7 @@ from engine.converter import SymbolConverter
 from engine.exposure import ExposureBook
 from engine.log import log_event
 from engine.state import StateStore
-from engine import telegram
+from engine import discord
 
 _LOGGER = logging.getLogger(__name__)
 _MAX_MESSAGES_PER_POLL = 500
@@ -82,10 +82,10 @@ def _dispatch(incoming: IncomingMessage, *, converter, exposure_book, state, lab
             target_id=message.orderId, action="unsolicited_order_error",
             error_code=message.errorCode, error_description=message.description,
         )
-        telegram.notify(
+        discord.notify(
             "CLEANUP_FAILED",
-            f"🔴 <b>Unsolicited error</b> — orderId {message.orderId}\n"
-            f"{telegram.escape_html(message.errorCode)}: {telegram.escape_html(message.description)}",
+            f"🔴 **Unsolicited error** — orderId {message.orderId}\n"
+            f"{discord.escape_markdown(message.errorCode)}: {discord.escape_markdown(message.description)}",
         )
     elif isinstance(message, messages.ProtoOASymbolChangedEvent):
         # Event chỉ báo "symbol đã đổi", không kèm nội dung — phải tự hỏi lại spec, nếu không
@@ -98,10 +98,10 @@ def _dispatch(incoming: IncomingMessage, *, converter, exposure_book, state, lab
             target_id="unknown", action="unsolicited_error",
             error_code=message.errorCode, error_description=message.description,
         )
-        telegram.notify(
+        discord.notify(
             "CLEANUP_FAILED",
-            f"🔴 <b>Unsolicited error</b>\n"
-            f"{telegram.escape_html(message.errorCode)}: {telegram.escape_html(message.description)}",
+            f"🔴 **Unsolicited error**\n"
+            f"{discord.escape_markdown(message.errorCode)}: {discord.escape_markdown(message.description)}",
         )
 
 
@@ -190,7 +190,7 @@ def _handle_filled(event, *, converter: SymbolConverter, exposure_book: Exposure
             real_risk_amount = units * sl_distance * conversion_rate
         except Exception as exc:
             # Chỉ phục vụ báo cáo — state/exposure đã cập nhật xong ở trên, không được để lỗi tỷ giá
-            # (vd chưa có bid) làm mất luôn dòng log/Telegram của lệnh khớp.
+            # (vd chưa có bid) làm mất luôn dòng log/Discord của lệnh khớp.
             log_event(_LOGGER, "WARNING", "REAL_RISK_UNAVAILABLE", "LOW", component="listener",
                       client_order_id=order.clientOrderId, error=exc)
 
@@ -204,11 +204,11 @@ def _handle_filled(event, *, converter: SymbolConverter, exposure_book: Exposure
         budgeted_risk_amount=budgeted_risk_amount,
     )
     real_risk_text = f"${real_risk_amount:.2f}" if real_risk_amount is not None else "n/a"
-    telegram.notify(
+    discord.notify(
         "ORDER_FILLED",
-        f"🟢 <b>{telegram.escape_html(symbol_info.og_name)} {telegram.side_label(position.tradeData.tradeSide)}</b> — Filled\n"
+        f"🟢 **{discord.escape_markdown(symbol_info.og_name)} {discord.side_label(position.tradeData.tradeSide)}** — Filled\n"
         f"Fill price: {fill_price} | Real risk: {real_risk_text} (budgeted ${budgeted_risk_amount:.2f})\n"
-        f"<code>{telegram.escape_html(order.clientOrderId)}</code>",
+        f"`{discord.escape_markdown(order.clientOrderId)}`",
     )
 
 
@@ -246,11 +246,11 @@ def _handle_dropped(event, *, converter: SymbolConverter, exposure_book: Exposur
     )
     symbol_info = converter.find_by_id(order.tradeData.symbolId)
     display_symbol = symbol_info.og_name if symbol_info is not None else str(order.tradeData.symbolId)
-    telegram.notify(
+    discord.notify(
         "ORDER_DROPPED",
-        f"⚪ <b>{telegram.escape_html(display_symbol)}</b> — Pending order dropped\n"
-        f"Reason: {telegram.escape_html(telegram.translate_reason(reason))}\n"
-        f"<code>{telegram.escape_html(order.clientOrderId)}</code>",
+        f"⚪ **{discord.escape_markdown(display_symbol)}** — Pending order dropped\n"
+        f"Reason: {discord.escape_markdown(discord.translate_reason(reason))}\n"
+        f"`{discord.escape_markdown(order.clientOrderId)}`",
     )
 
 
@@ -315,11 +315,11 @@ def _handle_position_closed(event, *, converter: SymbolConverter, exposure_book:
         deal_net_profit=net_profit, balance_after=balance_after,
     )
     if not is_final_close:
-        return  # partial close: đã log đủ trace + cộng dồn net_profit, KHÔNG báo Telegram riêng đợt này
+        return  # partial close: đã log đủ trace + cộng dồn net_profit, KHÔNG báo Discord riêng đợt này
 
     total_net_profit = state.get_net_profit(position.positionId)
-    telegram.notify(
+    discord.notify(
         "POSITION_CLOSED",
-        f"🏁 <b>{telegram.escape_html(symbol_info.og_name)}</b> — Position closed\n"
+        f"🏁 **{discord.escape_markdown(symbol_info.og_name)}** — Position closed\n"
         f"Close price: {deal.executionPrice} | Net P&amp;L: ${total_net_profit:.2f} | Balance: ${balance_after:.2f}",
     )

@@ -74,15 +74,15 @@ class ComboConfig:
     def broker_to_symbol_map(self) -> dict:
         """{tên broker: tên OG} cho converter.load(). Khoá theo tên BROKER (không phải tên OG) để
         mọi broker_symbol khác nhau trong config đều chắc chắn được load — đúng như symbol_names();
-        tên OG chỉ dùng để hiển thị (vd "US30" thay vì "#US30") trong Telegram."""
+        tên OG chỉ dùng để hiển thị (vd "US30" thay vì "#US30") trong Discord."""
         return {inst.broker_symbol: inst.symbol for inst in self.instruments}
 
 
 @dataclass
-class TelegramConfig:
+class DiscordConfig:
     enabled: bool
-    bot_token: str  # rỗng nếu enabled=False — logger._push_telegram tự no-op khi rỗng
-    chat_id: str
+    webhook_url: str  # rỗng nếu enabled=False — engine.discord.notify() tự no-op khi rỗng
+    thread_id: str  # thread có sẵn trong kênh của webhook — mỗi OF instance (OF10/OF11) 1 thread riêng
 
 
 @dataclass
@@ -91,7 +91,7 @@ class Config:
     redis: RedisConfig
     combo: ComboConfig
     risk: RiskConfig
-    telegram: TelegramConfig
+    discord: DiscordConfig
     state_db_path: str
     log_dir: str
     summary_interval_seconds: int
@@ -162,14 +162,14 @@ def load_config(path: str = "config.yaml") -> Config:
         ],
     )
 
-    # Mục "telegram" là OPTIONAL — thiếu hẳn trong config.yaml = coi như tắt, không lỗi. Chỉ đòi hỏi
-    # biến môi trường khi thật sự bật, để không bắt phải set token/chat_id giả lúc chưa cần dùng.
-    telegram_raw = raw.get("telegram", {})
-    telegram_enabled = bool(telegram_raw.get("enabled", False))
-    telegram = TelegramConfig(
-        enabled=telegram_enabled,
-        bot_token=_substitute_env(telegram_raw["bot_token"]) if telegram_enabled else "",
-        chat_id=_substitute_env(telegram_raw["chat_id"]) if telegram_enabled else "",
+    # Mục "discord" là OPTIONAL — thiếu hẳn trong config.yaml = coi như tắt, không lỗi. Chỉ đòi hỏi
+    # biến môi trường khi thật sự bật, để không bắt phải set webhook/thread giả lúc chưa cần dùng.
+    discord_raw = raw.get("discord", {})
+    discord_enabled = bool(discord_raw.get("enabled", False))
+    discord = DiscordConfig(
+        enabled=discord_enabled,
+        webhook_url=_substitute_env(discord_raw["webhook_url"]) if discord_enabled else "",
+        thread_id=_substitute_env(str(discord_raw["thread_id"])) if discord_enabled else "",
     )
 
     return Config(
@@ -177,7 +177,7 @@ def load_config(path: str = "config.yaml") -> Config:
         redis=redis_config,
         combo=combo,
         risk=risk,
-        telegram=telegram,
+        discord=discord,
         state_db_path=raw["state"]["db_path"],
         log_dir=raw["logging"]["log_dir"],
         summary_interval_seconds=int(raw["logging"].get("summary_interval_seconds", 3600)),

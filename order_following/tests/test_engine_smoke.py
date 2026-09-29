@@ -1,6 +1,7 @@
 """Test logic thuần của từng engine — KHÔNG cần kết nối cTrader thật (không test connection.py/
 sizing.py/orders.py/listener.py ở đây vì chúng cần socket sống; xem tests/demo_checks/ sau này)."""
 
+import json
 import logging
 import os
 import sys
@@ -137,9 +138,9 @@ def _order_details(order_id, status, position_id=None):
 
 
 def _run_resolve(monkeypatch, store, replies, open_position_ids=()):
-    from engine import telegram
+    from engine import discord
     sent = []
-    monkeypatch.setattr(telegram, "notify", lambda event, text: sent.append(event))
+    monkeypatch.setattr(discord, "notify", lambda event, text: sent.append(event))
     monkeypatch.setattr(main, "_HISTORY_REQUEST_INTERVAL_SECONDS", 0)
     reconcile = messages.ProtoOAReconcileRes()
     for position_id in open_position_ids:
@@ -641,33 +642,40 @@ def test_log_event_rejects_unknown_risk():
         log_event(logging.getLogger("test.log_event"), "INFO", "X", "SEVERE", component="c")
 
 
-def test_telegram_notify_skips_internal_reasoning_events(monkeypatch):
-    # 2026-09-27: PLAN_COMPUTED/FX_CONVERSION_APPLIED/EXPOSURE_DECISION bi bo khoi Telegram (nguon
-    # nhieu chinh - fire tren MOI tin hieu ke ca khong co gi xay ra). Van con day du trong file log,
-    # chi khong duoc goi sang API Telegram nua.
-    from engine import telegram
+def test_discord_notify_skips_internal_reasoning_events(monkeypatch):
+    # 2026-09-27: PLAN_COMPUTED/FX_CONVERSION_APPLIED/EXPOSURE_DECISION bi bo khoi push (nguon nhieu
+    # chinh - fire tren MOI tin hieu ke ca khong co gi xay ra). Van con day du trong file log, chi
+    # khong duoc goi sang webhook nua. 2026-09-29: chuyen tu Telegram sang Discord, hanh vi loc giu
+    # nguyen - chi doi kenh gui.
+    from engine import discord
 
     calls = []
-    monkeypatch.setattr(telegram.urllib.request, "urlopen", lambda *a, **k: calls.append(1))
-    telegram.configure("fake-token", "fake-chat-id")
+    monkeypatch.setattr(discord.urllib.request, "urlopen", lambda *a, **k: calls.append(1))
+    discord.configure("https://discord.test/webhook", "fake-thread-id")
     try:
-        telegram.notify("PLAN_COMPUTED", "x")
-        telegram.notify("FX_CONVERSION_APPLIED", "x")
-        telegram.notify("EXPOSURE_DECISION", "x")
+        discord.notify("PLAN_COMPUTED", "x")
+        discord.notify("FX_CONVERSION_APPLIED", "x")
+        discord.notify("EXPOSURE_DECISION", "x")
         assert calls == []
-        telegram.notify("ORDER_FILLED", "x")
+        discord.notify("ORDER_FILLED", "x")
         assert calls == [1]
     finally:
-        telegram.configure("", "")
+        discord.configure("", "")
 
 
-def test_telegram_notify_uses_html_parse_mode(monkeypatch):
-    from engine import telegram
+def test_discord_notify_posts_json_content_to_thread_url(monkeypatch):
+    # Discord Execute Webhook: dinh den 1 thread co san bang query param ?thread_id= tren chinh URL
+    # webhook (help.developers.discord.com/resources/webhook - "Send a message to the specified
+    # thread within a webhook's channel"); noi dung nam o field JSON "content", khong co khai niem
+    # parse_mode nhu Telegram - markdown duoc hieu thang trong content.
+    from engine import discord
 
     captured = {}
 
-    def _fake_urlopen(request, timeout=5):
+    def _fake_urlopen(request, timeout=5, context=None):
+        captured["url"] = request.full_url
         captured["data"] = request.data
+        captured["content_type"] = request.get_header("Content-type")
         class _Resp:
             def __enter__(self):
                 return self
@@ -675,30 +683,50 @@ def test_telegram_notify_uses_html_parse_mode(monkeypatch):
                 return False
         return _Resp()
 
-    monkeypatch.setattr(telegram.urllib.request, "urlopen", _fake_urlopen)
-    telegram.configure("fake-token", "fake-chat-id")
+    monkeypatch.setattr(discord.urllib.request, "urlopen", _fake_urlopen)
+    discord.configure("https://discord.test/api/webhooks/1/abc", "999")
     try:
-        telegram.notify("ORDER_FILLED", "<b>hello</b>")
-        assert b"parse_mode=HTML" in captured["data"]
+        discord.notify("ORDER_FILLED", "**hello**")
+        assert captured["url"] == "https://discord.test/api/webhooks/1/abc?thread_id=999"
+        assert captured["content_type"] == "application/json"
+        assert json.loads(captured["data"]) == {"content": "**hello**"}
     finally:
-        telegram.configure("", "")
+        discord.configure("", "")
+
+
+def test_discord_notify_truncates_content_over_discord_limit(monkeypatch):
+    # Gioi han cung cua Discord: "up to 2000 characters" - vuot qua se bi server tu choi ca tin nhan
+    # thay vi cat bot; tu cat truoc de khong bao gio mat han 1 thong bao vi qua dai.
+    from engine import discord
+
+    captured = {}
+    monkeypatch.setattr(discord.urllib.request, "urlopen",
+                        lambda request, timeout=5, context=None: captured.update(data=request.data))
+    discord.configure("https://discord.test/webhook", "999")
+    try:
+        discord.notify("ORDER_FILLED", "x" * 2500)
+        sent = json.loads(captured["data"])["content"]
+        assert len(sent) == 2000
+        assert sent.endswith("...")
+    finally:
+        discord.configure("", "")
 
 
 def test_translate_reason_known_and_unknown_codes():
-    from engine import telegram
-    assert telegram.translate_reason("expired_good_till_date") == "expired before it could fill"
-    assert telegram.translate_reason("some_future_reason") == "some_future_reason"  # khong co -> giu nguyen
+    from engine import discord
+    assert discord.translate_reason("expired_good_till_date") == "expired before it could fill"
+    assert discord.translate_reason("some_future_reason") == "some_future_reason"  # khong co -> giu nguyen
 
 
 def test_side_label_buy_and_sell():
-    from engine import telegram
-    assert telegram.side_label(model_messages.ProtoOATradeSide.BUY) == "BUY"
-    assert telegram.side_label(model_messages.ProtoOATradeSide.SELL) == "SELL"
+    from engine import discord
+    assert discord.side_label(model_messages.ProtoOATradeSide.BUY) == "BUY"
+    assert discord.side_label(model_messages.ProtoOATradeSide.SELL) == "SELL"
 
 
-def test_escape_html_escapes_special_characters():
-    from engine import telegram
-    assert telegram.escape_html("a < b & c > d") == "a &lt; b &amp; c &gt; d"
+def test_escape_markdown_escapes_special_characters():
+    from engine import discord
+    assert discord.escape_markdown("a *b* _c_ `d` ~e~ f|g >h \\i") == r"a \*b\* \_c\_ \`d\` \~e\~ f\|g \>h \\i"
 
 
 def test_state_accumulate_and_sum_net_profit():
@@ -1033,10 +1061,10 @@ def test_poll_once_stops_at_time_budget(monkeypatch):
 def test_net_profit_adds_signed_commission_real_gold_close(monkeypatch):
     # So THAT (GOLD 28/9, position 154587385): gross 742.39, commission -5.04, balance 98278.74 ->
     # 99016.09 (+737.35). Cong thuc cu gross-commission ra 747.43 (bao lai cao hon thuc te 10.08).
-    from engine import listener, telegram
+    from engine import discord, listener
 
     sent = []
-    monkeypatch.setattr(telegram, "notify", lambda event, text: sent.append((event, text)))
+    monkeypatch.setattr(discord, "notify", lambda event, text: sent.append((event, text)))
     converter = SymbolConverter.__new__(SymbolConverter)
     info = _sample_us30()
     converter._symbols = {"US30": info}
@@ -1075,9 +1103,9 @@ def test_net_profit_adds_signed_commission_real_gold_close(monkeypatch):
 def test_net_profit_adds_signed_swap_real_of11_close(monkeypatch):
     # So THAT (OF11 Pepperstone 26/9, position 243805847): gross -50.16, swap +1.66, commission 0;
     # so du 10000.00 (budget 0.5% = 50 luc khop) -> 9951.50 = -50.16 + 1.66. Ban cu bo qua swap.
-    from engine import listener, telegram
+    from engine import discord, listener
 
-    monkeypatch.setattr(telegram, "notify", lambda *a, **k: None)
+    monkeypatch.setattr(discord, "notify", lambda *a, **k: None)
     converter = SymbolConverter.__new__(SymbolConverter)
     info = _sample_us30()
     converter._symbols = {"US30": info}
@@ -1128,10 +1156,10 @@ def _fill_event(info, *, position_sl=None, order_sl=None, order_relative_sl=None
 
 
 def _run_fill(monkeypatch, **sl):
-    from engine import listener, telegram
+    from engine import discord, listener
 
     sent, logged = [], []
-    monkeypatch.setattr(telegram, "notify", lambda event, text: sent.append(text))
+    monkeypatch.setattr(discord, "notify", lambda event, text: sent.append(text))
     converter = SymbolConverter.__new__(SymbolConverter)
     info = _sample_us30()
     converter._symbols = {"US30": info}

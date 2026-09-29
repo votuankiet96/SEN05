@@ -19,17 +19,22 @@ _PLAIN = re.compile(r"^[A-Za-z0-9_.:/@+-]+$")
 _RISKS = {"NONE", "LOW", "MEDIUM", "HIGH", "CRITICAL"}
 # Field co ten giong secret thi che toan bo gia tri, khong xet noi dung.
 _SECRET_KEY = re.compile(
-    r"(?:^|_)(?:client_secret|client_id|bot_token|access_token|refresh_token|password|token|secret|chat_id)(?:$|_)"
+    r"(?:^|_)(?:client_secret|client_id|bot_token|access_token|refresh_token|password|token|secret|chat_id"
+    r"|webhook_url|webhook)(?:$|_)"
 )
 # Che cac cum dang client_secret=... hoac password: ... lot vao trong text tu do (vd exception message).
 _SECRET_VALUE = re.compile(
     r"(?i)\b(client_secret|client_id|bot_token|access_token|refresh_token|password|token|secret)\s*[:=]\s*"
     r"(?:\"[^\"]*\"|'[^']*'|[^,;\s&]+)"
 )
+# Discord webhook: bi mat nam THANG trong duong dan URL (/webhooks/<id>/<token>), khong theo dang
+# key=value nen _SECRET_VALUE khong bat duoc - che rieng phan token, giu lai id de con doi chieu duoc.
+_WEBHOOK_URL = re.compile(r"(https://(?:discord|discordapp)\.com/api/webhooks/\d+)/[\w-]+")
 
 
 def _redact_text(value: str) -> str:
     text = value.replace("\r", " ").replace("\n", " ")
+    text = _WEBHOOK_URL.sub(r"\1/[REDACTED]", text)
     return _SECRET_VALUE.sub(lambda m: f"{m.group(1)}=[REDACTED]", text)
 
 
