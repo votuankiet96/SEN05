@@ -49,7 +49,7 @@ class SymbolInfo:
     symbol_id: int
     name: str
     og_name: str  # tên OG dùng trong Redis (vd "US30") — chỉ để HIỂN THỊ cho người vận hành trong
-    # Telegram/log dễ đọc; mọi tra cứu/lệnh thật vẫn phải qua `name` (tên broker), không dùng field này.
+    # Discord/log dễ đọc; mọi tra cứu/lệnh thật vẫn phải qua `name` (tên broker), không dùng field này.
     digits: int
     pip_position: int
     lot_size: int

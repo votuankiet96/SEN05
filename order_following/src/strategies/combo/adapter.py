@@ -29,7 +29,7 @@ from engine.log import log_event
 from engine.orders import StopOrderRequest, place_stop_order
 from engine.sizing import calculate as calculate_sizing
 from engine.state import StateStore
-from engine import telegram
+from engine import discord
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -159,11 +159,11 @@ def _is_registered_instrument(config: Config, symbol: str, timeframe: str) -> bo
 def _signal_skipped(signal_id: str, symbol: str, reason: str) -> None:
     log_event(_LOGGER, "WARNING", "SIGNAL_SKIPPED", "LOW", component="adapter",
               signal_id=signal_id, symbol=symbol, reason=reason)
-    telegram.notify(
+    discord.notify(
         "SIGNAL_SKIPPED",
-        f"⏭️ <b>{telegram.escape_html(symbol)}</b> — Signal skipped\n"
-        f"Reason: {telegram.escape_html(reason)}\n"
-        f"<code>{telegram.escape_html(signal_id)}</code>",
+        f"⏭️ **{discord.escape_markdown(symbol)}** — Signal skipped\n"
+        f"Reason: {discord.escape_markdown(reason)}\n"
+        f"`{discord.escape_markdown(signal_id)}`",
     )
 
 
@@ -269,7 +269,7 @@ def _handle_signal(
         volume_step=symbol_info.step_volume, expected_loss=expected_loss, expected_profit=expected_profit,
     )
     # PLAN_COMPUTED / FX_CONVERSION_APPLIED chỉ ghi file log (trace tính toán nội bộ) — không đẩy
-    # Telegram từ 2026-09-27 (xem telegram._TELEGRAM_EVENTS).
+    # Discord từ 2026-09-27 (xem discord._DISCORD_EVENTS).
     log_event(
         _LOGGER, "INFO", "FX_CONVERSION_APPLIED", "NONE", component="adapter",
         client_order_id=signal.client_order_id, quote_asset=symbol_info.quote_asset_id,

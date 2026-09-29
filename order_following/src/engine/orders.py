@@ -24,7 +24,7 @@ from engine.connection import Connection
 from engine.converter import SymbolConverter
 from engine.log import log_event
 from engine.state import StateStore
-from engine import telegram
+from engine import discord
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -121,11 +121,11 @@ def place_stop_order(
             stop_loss=request.stop_loss, take_profit=request.take_profit,
             expiration=request.expiration_epoch,
         )
-        telegram.notify(
+        discord.notify(
             "ORDER_ACCEPTED",
-            f"🟡 <b>{telegram.escape_html(symbol_info.og_name)} {telegram.side_label(request.trade_side)}</b> — Pending order placed\n"
+            f"🟡 **{discord.escape_markdown(symbol_info.og_name)} {discord.side_label(request.trade_side)}** — Pending order placed\n"
             f"Trigger price: {request.stop_price}\n"
-            f"<code>{telegram.escape_html(request.client_order_id)}</code>",
+            f"`{discord.escape_markdown(request.client_order_id)}`",
         )
         return order_id
 
@@ -136,11 +136,11 @@ def place_stop_order(
         client_order_id=request.client_order_id, symbol=request.symbol_name, side=request.trade_side,
         error_code=error_code, error_description=error_description,
     )
-    telegram.notify(
+    discord.notify(
         "ORDER_REJECTED",
-        f"🔴 <b>{telegram.escape_html(symbol_info.og_name)} {telegram.side_label(request.trade_side)}</b> — Rejected\n"
-        f"Reason: {telegram.escape_html(error_code)} ({telegram.escape_html(error_description)})\n"
-        f"<code>{telegram.escape_html(request.client_order_id)}</code>",
+        f"🔴 **{discord.escape_markdown(symbol_info.og_name)} {discord.side_label(request.trade_side)}** — Rejected\n"
+        f"Reason: {discord.escape_markdown(error_code)} ({discord.escape_markdown(error_description)})\n"
+        f"`{discord.escape_markdown(request.client_order_id)}`",
     )
     return None
 
@@ -170,9 +170,9 @@ def close_all(reconcile, *, connection: Connection, ctid_trader_account_id: int,
         _LOGGER, "WARNING", "CLOSE_ALL_EXECUTED", "HIGH", component="orders",
         closed_count=closed, cancelled_count=cancelled, failed_count=failed,
     )
-    telegram.notify(
+    discord.notify(
         "CLOSE_ALL_EXECUTED",
-        f"🛑 <b>CLOSE-ALL EXECUTED</b>\n"
+        f"🛑 **CLOSE-ALL EXECUTED**\n"
         f"Closed {closed} position(s), cancelled {cancelled} pending order(s), {failed} failed",
     )
 
@@ -197,10 +197,10 @@ def cancel_order(order_id: int, *, connection: Connection, ctid_trader_account_i
         _LOGGER, "ERROR", "CLEANUP_FAILED", "HIGH", component="orders",
         target_id=order_id, action="cancel_order", error_code=error_code, error_description=error_description,
     )
-    telegram.notify(
+    discord.notify(
         "CLEANUP_FAILED",
-        f"🔴 <b>Cleanup failed</b> — cancel pending order {order_id}\n"
-        f"{telegram.escape_html(error_code)}: {telegram.escape_html(error_description)}",
+        f"🔴 **Cleanup failed** — cancel pending order {order_id}\n"
+        f"{discord.escape_markdown(error_code)}: {discord.escape_markdown(error_description)}",
     )
     return False
 
@@ -224,10 +224,10 @@ def close_position(
         _LOGGER, "ERROR", "CLEANUP_FAILED", "HIGH", component="orders",
         target_id=position_id, action="close_position", error_code=error_code, error_description=error_description,
     )
-    telegram.notify(
+    discord.notify(
         "CLEANUP_FAILED",
-        f"🔴 <b>Cleanup failed</b> — close position {position_id}\n"
-        f"{telegram.escape_html(error_code)}: {telegram.escape_html(error_description)}",
+        f"🔴 **Cleanup failed** — close position {position_id}\n"
+        f"{discord.escape_markdown(error_code)}: {discord.escape_markdown(error_description)}",
     )
     return False
 

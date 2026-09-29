@@ -147,7 +147,7 @@ class StateStore:
     def get_net_profit(self, position_id: int) -> float:
         """Tổng net_profit đã cộng dồn cho position này tính tới hiện tại — dùng ngay khi vừa
         accumulate_net_profit() ở deal CUỐI (volume về 0) để hiện đúng tổng lãi/lỗ thật cả position
-        trong 1 message Telegram, không phải chỉ số của riêng deal cuối đó."""
+        trong 1 message Discord, không phải chỉ số của riêng deal cuối đó."""
         row = self._conn.execute(
             "SELECT net_profit FROM orders WHERE position_id = ?", (position_id,)
         ).fetchone()

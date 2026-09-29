@@ -27,7 +27,7 @@ from engine.converter import SymbolConverter
 from engine.exposure import ExposureBook
 from engine.log import configure_logging, log_event, safe_error
 from engine.state import StateStore
-from engine import listener, orders, sizing, telegram
+from engine import discord, listener, orders, sizing
 from strategies.combo import adapter
 
 _LOGGER = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ _MODES = (None, "--check", "--close-all")
 def main() -> int:
     config = load_config()
     configure_logging(config.log_dir)
-    telegram.configure(config.telegram.bot_token, config.telegram.chat_id)
+    discord.configure(config.discord.webhook_url, config.discord.thread_id)
     state = StateStore(config.state_db_path)
 
     mode = sys.argv[1] if len(sys.argv) > 1 else None
@@ -59,15 +59,15 @@ def main() -> int:
                 _run_once(config, state)
             except KeyboardInterrupt:
                 log_event(_LOGGER, "INFO", "SHUTDOWN", "NONE", component="runtime", reason="ctrl_c")
-                telegram.notify("SHUTDOWN", "⏹️ <b>OF shutting down</b> — Ctrl+C")
+                discord.notify("SHUTDOWN", "⏹️ **OF shutting down** — Ctrl+C")
                 return 0
             except (ConnectionError, OSError, TimeoutError, redis.RedisError) as exc:
                 log_event(_LOGGER, "ERROR", "CONNECTION_LOST", "MEDIUM", component="runtime",
                           error=exc, retry_seconds=_RECONNECT_DELAY_SECONDS)
-                telegram.notify(
+                discord.notify(
                     "CONNECTION_LOST",
-                    f"🔴 <b>Connection lost</b> — retrying in {_RECONNECT_DELAY_SECONDS:.0f}s\n"
-                    f"{telegram.escape_html(safe_error(exc))}",
+                    f"🔴 **Connection lost** — retrying in {_RECONNECT_DELAY_SECONDS:.0f}s\n"
+                    f"{discord.escape_markdown(safe_error(exc))}",
                 )
                 time.sleep(_RECONNECT_DELAY_SECONDS)
     finally:
@@ -92,9 +92,9 @@ def _startup_complete(config: Config, reconcile) -> None:
     pending_order_count = len(reconcile.order)
     log_event(_LOGGER, "INFO", "STARTUP_COMPLETE", "NONE", component="runtime",
               symbol_count=symbol_count, position_count=position_count, pending_order_count=pending_order_count)
-    telegram.notify(
+    discord.notify(
         "STARTUP_COMPLETE",
-        f"✅ <b>OF started</b>\n"
+        f"✅ **OF started**\n"
         f"{symbol_count} symbol(s) loaded | {position_count} open position(s) | {pending_order_count} pending order(s)",
     )
 
@@ -228,11 +228,11 @@ def _resolve_pending(reconcile, *, state: StateStore, connection: Connection, ct
         if outcome is not None:
             log_event(_LOGGER, "INFO", "STARTUP_RECOVERED", "NONE", component="runtime",
                       client_order_id=record.client_order_id, previous_status=record.status, outcome=outcome)
-            telegram.notify(
+            discord.notify(
                 "STARTUP_RECOVERED",
-                f"🟢 <b>Recovered after restart</b> — {telegram.escape_html(outcome)}\n"
-                f"Previous status: {telegram.escape_html(record.status)}\n"
-                f"<code>{telegram.escape_html(record.client_order_id)}</code>",
+                f"🟢 **Recovered after restart** — {discord.escape_markdown(outcome)}\n"
+                f"Previous status: {discord.escape_markdown(record.status)}\n"
+                f"`{discord.escape_markdown(record.client_order_id)}`",
             )
             continue
 
@@ -243,11 +243,11 @@ def _resolve_pending(reconcile, *, state: StateStore, connection: Connection, ct
         state.mark_unresolved(record.client_order_id)
         log_event(_LOGGER, "ERROR", "STARTUP_UNRESOLVED", "MEDIUM", component="runtime",
                   client_order_id=record.client_order_id, status=record.status)
-        telegram.notify(
+        discord.notify(
             "STARTUP_UNRESOLVED",
-            f"🔴 <b>Needs manual check</b> — could not reconcile with server\n"
-            f"Previous status: {telegram.escape_html(record.status)}\n"
-            f"<code>{telegram.escape_html(record.client_order_id)}</code>",
+            f"🔴 **Needs manual check** — could not reconcile with server\n"
+            f"Previous status: {discord.escape_markdown(record.status)}\n"
+            f"`{discord.escape_markdown(record.client_order_id)}`",
         )
 
 
@@ -347,7 +347,7 @@ def _build_account_snapshot(connection, converter, config: Config, state: StateS
     total_floating = sum(unrealized.get(p.positionId, 0.0) for p in positions)
 
     lines = [
-        "📊 <b>Account snapshot</b>",
+        "📊 **Account snapshot**",
         f"Balance: ${balance:.2f} | Floating: {_signed_money(total_floating)}",
         f"Open: {len(positions)} position(s), {pending_count} pending order(s)",
     ]
@@ -361,7 +361,7 @@ def _build_account_snapshot(connection, converter, config: Config, state: StateS
         floating = unrealized.get(p.positionId)
         floating_text = _signed_money(floating) if floating is not None else "n/a"
         lines.append(
-            f"  • {telegram.escape_html(name)} {telegram.side_label(p.tradeData.tradeSide)} "
+            f"  • {discord.escape_markdown(name)} {discord.side_label(p.tradeData.tradeSide)} "
             f"{size} (floating {floating_text})"
         )
 
@@ -382,15 +382,15 @@ def _send_account_snapshot(connection, converter, config: Config, state: StateSt
         text = _build_account_snapshot(connection, converter, config, state, since_iso)
     except Exception as exc:
         log_event(_LOGGER, "WARNING", "SESSION_SUMMARY_FAILED", "LOW", component="runtime", error=exc)
-        telegram.notify(
+        discord.notify(
             "SESSION_SUMMARY_FAILED",
-            f"⚠️ <b>Account snapshot unavailable</b> — will retry next cycle\n"
-            f"{telegram.escape_html(safe_error(exc))}",
+            f"⚠️ **Account snapshot unavailable** — will retry next cycle\n"
+            f"{discord.escape_markdown(safe_error(exc))}",
         )
         return False
     log_event(_LOGGER, "INFO", "SESSION_SUMMARY", "NONE", component="runtime", summary=text.replace("\n", " | "),
               spot_events_total=connection.spot_event_count)
-    telegram.notify("SESSION_SUMMARY", text)
+    discord.notify("SESSION_SUMMARY", text)
     return True
 
 
@@ -427,10 +427,10 @@ def _loop(connection, converter, exposure_book, state, redis_client, pubsub, con
                 raise
             except Exception as exc:
                 log_event(_LOGGER, "ERROR", "UNEXPECTED_ERROR", "HIGH", component="runtime", step=step, error=exc)
-                telegram.notify(
+                discord.notify(
                     "UNEXPECTED_ERROR",
-                    f"🔴 <b>Unexpected error</b> in step '{telegram.escape_html(step)}'\n"
-                    f"{telegram.escape_html(safe_error(exc))}",
+                    f"🔴 **Unexpected error** in step '{discord.escape_markdown(step)}'\n"
+                    f"{discord.escape_markdown(safe_error(exc))}",
                 )
 
 

@@ -21,7 +21,7 @@ import OpenApiModelMessages_pb2 as model_messages  # noqa: E402
 from engine.connection import Connection
 from engine.converter import SymbolConverter
 from engine.log import log_event
-from engine import telegram
+from engine import discord
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -94,11 +94,11 @@ def calculate(
             risk_amount=risk_amount, sl_pips=sl_pips, requested_volume=raw_volume_wire,
             min_volume=info.min_volume,
         )
-        telegram.notify(
+        discord.notify(
             "SIZE_TOO_SMALL",
-            f"⚠️ <b>{telegram.escape_html(info.og_name)}</b> — Volume too small, skipped\n"
+            f"⚠️ **{discord.escape_markdown(info.og_name)}** — Volume too small, skipped\n"
             f"{raw_volume_wire:.2f} &lt; minimum {info.min_volume}\n"
-            f"<code>{telegram.escape_html(client_order_id)}</code>",
+            f"`{discord.escape_markdown(client_order_id)}`",
         )
     elif raw_volume_wire > info.max_volume:
         log_event(
@@ -106,11 +106,11 @@ def calculate(
             client_order_id=client_order_id, symbol=symbol_name,
             requested_volume=raw_volume_wire, max_volume=info.max_volume,
         )
-        telegram.notify(
+        discord.notify(
             "SIZE_CAPPED",
-            f"⚠️ <b>{telegram.escape_html(info.og_name)}</b> — Volume capped\n"
+            f"⚠️ **{discord.escape_markdown(info.og_name)}** — Volume capped\n"
             f"{raw_volume_wire:.2f} &gt; maximum {info.max_volume}\n"
-            f"<code>{telegram.escape_html(client_order_id)}</code>",
+            f"`{discord.escape_markdown(client_order_id)}`",
         )
     volume = converter.units_to_volume(symbol_name, raw_volume_units)
 

@@ -53,7 +53,7 @@ logging:
   log_dir: ./logs
   summary_interval_seconds: 3600 # tần suất gọi session_summary (mặc định 1 giờ)
 
-telegram:
-  enabled: false # bat that khi da co bot_token/chat_id that
-  bot_token: "YOUR_TELEGRAM_BOT_TOKEN" # tao qua @BotFather tren Telegram
-  chat_id: "YOUR_TELEGRAM_CHAT_ID" # tra qua api.telegram.org/bot<TOKEN>/getUpdates sau khi nhan tin cho bot
+discord:
+  enabled: false # bat that khi da co webhook_url/thread_id that
+  webhook_url: "YOUR_DISCORD_WEBHOOK_URL" # Server Settings > Integrations > Webhooks tren Discord
+  thread_id: "YOUR_DISCORD_THREAD_ID" # ID thread co san trong kenh cua webhook (moi OF instance 1 thread rieng, dung chung 1 webhook)
