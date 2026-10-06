@@ -1,0 +1,12 @@
+# Config THẬT chứa secret (webhook Discord, mật khẩu Redis) -- KHÔNG BAO GIỜ commit.
+# Bản mẫu không secret: og_config.example.yaml (copy đổi tên thành og_config.yaml rồi điền giá trị thật).
+og_config.yaml
+
+# Log service thật -- tự sinh khi chạy.
+logs/
+
+# Cache Python / công cụ -- tự sinh lại.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/

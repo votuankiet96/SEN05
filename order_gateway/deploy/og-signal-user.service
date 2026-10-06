@@ -1,0 +1,16 @@
+[Unit]
+Description=order_gateway live worker - Redis DB0 candles -> strategy -> Redis DB1 signals - user service
+After=default.target
+StartLimitIntervalSec=300
+StartLimitBurst=20
+
+[Service]
+Type=simple
+WorkingDirectory=/home/administrator/Desktop/og_program
+ExecStart=/home/administrator/Desktop/og_program/.venv/bin/python -m order_gateway.src.redis_io.live_worker
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target
