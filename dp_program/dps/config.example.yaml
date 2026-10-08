@@ -1,0 +1,37 @@
+# DPS (Data Provider Simulator) - cấu hình MẪU (không chứa bí mật; sao chép thành config.yaml rồi điền).
+# Chỉ chứa lựa chọn của operator; quy tắc cố định (hợp đồng Redis, giờ phát, thứ tự mốc) nằm trong code.
+
+app:
+  runtime_dir: runtime                    # state, khóa, file dừng, log (tương đối với thư mục chứa file này)
+
+sql_server:                               # DPS chỉ SELECT
+  server: "<sql-server-host>"
+  port: ""
+  database: "SEN05_AutoTrading"
+  username: ""                            # để trống = Windows authentication (trusted connection)
+  password: ""
+  trusted_connection: true
+  encrypt: "no"
+  trust_server_certificate: true
+
+redis:                                    # Redis MÔ PHỎNG - không phải db live
+  host: "<redis-host>"
+  port: 6379
+  username: ""
+  password: "<redis-password>"
+  db: 15                                  # db thử nghiệm
+  allowed_dbs: [15]                       # DPS từ chối chạy nếu db không nằm trong danh sách này
+  key_prefix: "L_CANDLE"                  # đúng hợp đồng live
+  bars_per_snapshot: 1200                 # đúng cửa sổ live
+  hash_ttl_seconds: 604800                # 7 ngày, tính theo giờ máy chủ Redis
+
+replay:
+  symbols: [GOLD]
+  timeframes: [M5, M15]
+  start_utc: "2026-09-30 13:00:00"        # T0: seed = nến đã đóng <= T0, nến phát bắt đầu sau T0
+  end_utc: "2026-09-30 15:00:00"          # dừng khi hết mốc phát <= end_utc
+
+pacing:
+  mode: delay                             # delay: mỗi mốc chờ delay_seconds | speed: tốc độ ảo/thật
+  delay_seconds: 1.0
+  speed: 300.0                            # chỉ dùng khi mode = speed (300 = 5 phút ảo mỗi giây thật)

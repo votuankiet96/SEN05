@@ -1,0 +1,6 @@
+# Bí mật và sản phẩm chạy
+config.yaml
+runtime/
+__pycache__/
+*.pyc
+.pytest_cache/

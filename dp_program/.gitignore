@@ -1,0 +1,16 @@
+# Private configuration and runtime output.
+**/config.yaml
+**/Config.yaml
+**/runtime/**
+!**/runtime/**/
+!**/runtime/**/.gitkeep
+
+# Generated Python and test artifacts.
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+
+# Local deployment binaries and bundled browser runtime.
+run_dp/*.exe
+run_dp/*.exe.*
+run_dp/vendor/

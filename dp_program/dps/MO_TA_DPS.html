@@ -1,0 +1,650 @@
+<title>DPS Data Provider Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  /* Bố cục: một cột đọc, bảng và sơ đồ cuộn ngang trong khung riêng. Màu: xám lạnh, một màu nhấn xanh thép. */
+  :root {
+    --bg: #f6f8f9;
+    --surface: #ffffff;
+    --fg: #1b2630;
+    --muted: #54646f;
+    --line: #d5dde2;
+    --accent: #1b5e8a;
+    --accent-bg: #e5eff6;
+    --ok: #1d7448;
+    --ok-bg: #e2f2ea;
+    --warn: #81540a;
+    --warn-bg: #faf0d9;
+    --code-bg: #edf1f4;
+    --font-body: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "IBM Plex Mono", "Cascadia Mono", Consolas, "Courier New", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10161b;
+      --surface: #172028;
+      --fg: #dde5ea;
+      --muted: #98a8b3;
+      --line: #2a3741;
+      --accent: #7ab7de;
+      --accent-bg: #192b38;
+      --ok: #62c28e;
+      --ok-bg: #16291f;
+      --warn: #e2b55e;
+      --warn-bg: #2b2411;
+      --code-bg: #1c2730;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10161b;
+    --surface: #172028;
+    --fg: #dde5ea;
+    --muted: #98a8b3;
+    --line: #2a3741;
+    --accent: #7ab7de;
+    --accent-bg: #192b38;
+    --ok: #62c28e;
+    --ok-bg: #16291f;
+    --warn: #e2b55e;
+    --warn-bg: #2b2411;
+    --code-bg: #1c2730;
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.65;
+    padding-inline: 16px;
+    padding-block: 32px 64px;
+  }
+  main { max-width: 52rem; margin-inline: auto; }
+  p, li { max-width: 68ch; }
+  ul, ol { padding-left: 1.3rem; margin-block: 0.5rem; }
+  li + li { margin-top: 0.3rem; }
+  a { color: var(--accent); }
+  strong { font-weight: 600; }
+
+  header { padding-bottom: 20px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+  .kicker { font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+  h1 { font-size: clamp(1.75rem, 4.5vw, 2.4rem); line-height: 1.2; margin: 0 0 10px; font-weight: 600; text-wrap: balance; }
+  .lead { font-size: 1.1rem; margin: 0 0 12px; max-width: 60ch; }
+  .meta { font-size: 0.85rem; color: var(--muted); margin: 0; }
+  nav { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 0.9rem; margin-top: 14px; }
+  nav a { text-decoration: none; }
+  nav a:hover { text-decoration: underline; }
+
+  section { padding-top: 28px; }
+  h2 { font-size: 1.4rem; line-height: 1.3; margin: 0 0 10px; font-weight: 600; text-wrap: balance; }
+  h3 { font-size: 1.05rem; margin: 22px 0 6px; font-weight: 600; }
+  p { margin: 0.55rem 0; }
+
+  code, pre, .mono { font-family: var(--font-mono); }
+  code { background: var(--code-bg); padding: 0.08em 0.35em; border-radius: 3px; font-size: 0.88em; overflow-wrap: anywhere; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px; padding: 12px 14px; overflow-x: auto; font-size: 0.85rem; line-height: 1.55; margin: 0.8rem 0; }
+  pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+
+  .scroll { overflow-x: auto; margin: 0.8rem 0; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: 0; }
+  th { font-weight: 600; background: var(--code-bg); white-space: nowrap; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.fit { white-space: nowrap; }
+  tr.hit td { background: var(--accent-bg); }
+  caption { caption-side: top; text-align: left; padding: 8px 12px; font-size: 0.85rem; color: var(--muted); }
+
+  .note { border-left: 3px solid var(--accent); background: var(--accent-bg); padding: 10px 14px; margin: 0.9rem 0; border-radius: 0 4px 4px 0; }
+  .note p { margin: 0.2rem 0; }
+  .tag { display: inline-block; font-size: 0.78rem; font-weight: 600; padding: 1px 8px; border-radius: 10px; white-space: nowrap; }
+  .tag.ok { color: var(--ok); background: var(--ok-bg); }
+  .tag.todo { color: var(--warn); background: var(--warn-bg); }
+
+  .flow-row { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin: 8px 0 4px; }
+  .flow-label { font-size: 0.8rem; color: var(--muted); margin: 14px 0 0; }
+  .box { border: 1px solid var(--line); background: var(--surface); border-radius: 4px; padding: 6px 12px; font-size: 0.9rem; min-width: 0; }
+  .box small { display: block; color: var(--muted); font-size: 0.78rem; }
+  .box.me { border-color: var(--accent); background: var(--accent-bg); }
+  .arrow { align-self: center; color: var(--muted); }
+
+  .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0.8rem 0; }
+  .three > div { border-top: 2px solid var(--accent); padding-top: 8px; min-width: 0; }
+  .three h3 { margin-top: 0; }
+  .three ul { padding-left: 1.1rem; }
+  @media (max-width: 760px) { .three { grid-template-columns: minmax(0, 1fr); } }
+
+  .step-where { display: block; font-size: 0.85rem; color: var(--muted); }
+
+  .diagram { margin: 1rem 0; }
+  .diagram svg { display: block; width: 100%; height: auto; color: var(--fg); }
+  .diagram svg.seq { min-width: 860px; }
+  .diagram svg.dep { min-width: 700px; }
+  .diagram figcaption { font-size: 0.85rem; color: var(--muted); margin-top: 8px; max-width: 72ch; }
+  .diagram text { fill: currentColor; font-family: var(--font-mono); font-size: 12px; }
+  .diagram .d-sub { fill: var(--muted); font-family: var(--font-body); font-size: 11px; }
+  .diagram .d-label { font-size: 11px; }
+  .diagram .d-strong { font-weight: 500; }
+  .diagram .d-hot-text { fill: var(--accent); }
+  .d-box { fill: var(--surface); stroke: var(--line); stroke-width: 1.2; }
+  .d-box.key { fill: var(--accent-bg); stroke: var(--accent); stroke-width: 2; }
+  .d-ext { fill: var(--code-bg); stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; }
+  .d-bar { fill: var(--code-bg); stroke: var(--line); stroke-width: 1; }
+  .d-edge { stroke: currentColor; stroke-width: 1.3; fill: none; }
+  .d-edge.cb { stroke-dasharray: 5 4; }
+  .d-edge.hot { stroke: var(--accent); stroke-width: 2; }
+  .d-life { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 4; }
+  .d-loop { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 6 4; }
+  .d-head { fill: var(--fg); }
+  .d-head.hot { fill: var(--accent); }
+
+  footer { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 0.85rem; color: var(--muted); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<main>
+  <header>
+    <p class="kicker">Mô tả module · dp_program / dps</p>
+    <h1>DPS: Data Provider Simulator</h1>
+    <p class="lead">Phát lại nến lịch sử từ SQL Server lên Redis theo một đồng hồ ảo, để chạy thử toàn bộ đường ống giao dịch trên dữ liệu quá khứ mà không phải chờ một năm.</p>
+    <p class="meta">Phiên bản 0.1.0 · mã nguồn <span class="mono">dps/src</span> (7 file, khoảng 1.100 dòng) · cập nhật 06/10/2026</p>
+    <nav aria-label="Mục lục">
+      <a href="#tom-tat">Tóm tắt</a>
+      <a href="#boi-canh">Bối cảnh</a>
+      <a href="#muc-tieu">Mục tiêu</a>
+      <a href="#loi">Ý tưởng cốt lõi</a>
+      <a href="#ipo">Input · Xử lý · Output</a>
+      <a href="#luong">Luồng chạy</a>
+      <a href="#trien-khai">Triển khai</a>
+      <a href="#van-hanh">Cách chạy</a>
+      <a href="#kiem-chung">Đã kiểm chứng</a>
+      <a href="#chua-lam">Chưa làm</a>
+    </nav>
+  </header>
+
+  <section id="tom-tat">
+    <h2>Tóm tắt</h2>
+    <ul>
+      <li>DPS đọc nến đã đóng từ bảng <code>DWH.Fact_OHLCV</code> trong SQL Server, rồi ghi lên Redis đúng cấu trúc mà dp_program ghi khi chạy thật (một List và nhiều Hash cho mỗi chuỗi nến).</li>
+      <li>Mỗi nến chỉ xuất hiện trên Redis vào đúng giờ nó đóng: giờ mở cộng độ dài khung. Thời gian trong lúc chạy là thời gian ảo, nhanh hơn thật.</li>
+      <li>DPS chỉ đọc SQL và chỉ ghi vào Redis db15. Nó không đụng db0, nơi dp_program ghi dữ liệu thật.</li>
+      <li>Trạng thái: bản v1 đã chạy và kiểm chứng (97 test đơn vị và 2 test trên Redis thật đạt, một lần chạy thử 88 chuỗi nến khớp SQL 100%). Chưa nối vào OG và chiến lược, chưa chạy cả năm.</li>
+    </ul>
+  </section>
+
+  <section id="boi-canh">
+    <h2>1. Bối cảnh</h2>
+    <p>Khi hệ thống chạy thật, dữ liệu đi theo hai đường. Nhánh Backfill của dp_program lấy nến từ TradingView và ghi vào SQL theo lịch. Nhánh Live lấy nến mới nhất mỗi 2 phút và đẩy thẳng lên Redis db0. OG và chiến lược đọc Redis để ra tín hiệu.</p>
+
+    <p class="flow-label">Chạy thật</p>
+    <div class="flow-row">
+      <div class="box">TradingView</div><div class="arrow" aria-hidden="true">→</div>
+      <div class="box">dp_program<small>Backfill: ghi SQL · Live: ghi Redis</small></div><div class="arrow" aria-hidden="true">→</div>
+      <div class="box">Redis db0</div><div class="arrow" aria-hidden="true">→</div>
+      <div class="box">OG / chiến lược</div>
+    </div>
+    <p class="flow-label">Mô phỏng với DPS</p>
+    <div class="flow-row">
+      <div class="box">SQL Server<small>lịch sử nến</small></div><div class="arrow" aria-hidden="true">→</div>
+      <div class="box me">DPS<small>đồng hồ ảo</small></div><div class="arrow" aria-hidden="true">→</div>
+      <div class="box">Redis db15</div><div class="arrow" aria-hidden="true">→</div>
+      <div class="box">OG / chiến lược thử nghiệm<small>chưa nối</small></div>
+    </div>
+
+    <h3>Vấn đề</h3>
+    <p>Chiến lược đã chạy được trên dữ liệu thật, nhưng muốn biết nó hoạt động ra sao qua một năm thì phải chờ một năm. SQL thì đã có lịch sử nhiều năm. Cần một cách chạy lại chính đường ống thật (đọc Redis, nhận sự kiện, ra tín hiệu) trên lịch sử đó, trong vài giờ.</p>
+
+    <h3>Giải pháp</h3>
+    <p>DPS đóng vai nhánh Live của dp_program, nhưng lấy nến từ SQL thay vì TradingView và tự điều khiển thời gian. Phía đọc Redis không cần biết dữ liệu đến từ đâu.</p>
+
+    <h3>Các tiền đề đã chốt</h3>
+    <ul>
+      <li>Dữ liệu trong SQL được coi là đúng tuyệt đối. DPS không sửa, không bù, không đoán nến thiếu. Chỗ nào SQL không có nến thì coi là thị trường đóng cửa.</li>
+      <li>Bỏ qua các bảng tick. DPS chỉ làm việc với nến.</li>
+      <li>Redis thử nghiệm là db15, cùng máy chủ với db0.</li>
+    </ul>
+  </section>
+
+  <section id="muc-tieu">
+    <h2>2. Mục tiêu và ngoài phạm vi</h2>
+    <h3>DPS làm</h3>
+    <ul>
+      <li>Ghi nến lên Redis đúng hợp đồng của Live: tên key, List giảm dần (index 0 là nến mới nhất), cửa sổ 1.200 nến, Hash 6 field, giá tối đa 2 số lẻ, TTL Hash 7 ngày.</li>
+      <li>Biết chính xác khi nào mỗi nến được ghi, và ghi theo đúng thứ tự đó.</li>
+      <li>Chạy lại được: cùng dữ liệu và cùng tham số thì ra đúng cùng một lịch (kiểm bằng mã băm).</li>
+      <li>Dừng giữa chừng rồi chạy tiếp được.</li>
+      <li>Không làm hỏng dữ liệu thật.</li>
+    </ul>
+    <h3>DPS không làm</h3>
+    <ul>
+      <li>Không ghi SQL.</li>
+      <li>Không chạy OG hay chiến lược. Đó là việc của phía đọc.</li>
+      <li>Không mô phỏng độ trễ khi nến tới. Nến xuất hiện đúng giờ đóng.</li>
+      <li>Không dùng dữ liệu tick.</li>
+    </ul>
+  </section>
+
+  <section id="loi">
+    <h2>3. Ý tưởng cốt lõi: giờ phát của mỗi nến</h2>
+    <p>Một nến chỉ được phát khi nó đã đóng. Giờ đó gọi là <strong>giờ phát</strong>:</p>
+    <pre><code>giờ phát = BarTime + Minutes
+BarTime = giờ mở nến (UTC) lấy từ SQL · Minutes = độ dài khung, lấy từ DWH.Dim_Timeframe</code></pre>
+    <p>Hàm <code>release_time</code> trong <code>schedule.py</code> chỉ có đúng một dòng này. Quy tắc giống quy tắc "nến đã đóng" mà dp_program dùng khi kiểm tra nến.</p>
+    <p>Các nến có cùng giờ phát được gom thành một <strong>mốc</strong> (tick). Các mốc xếp theo giờ phát tăng dần. Đồng hồ ảo nhảy từ mốc này sang mốc kế tiếp, không đếm từng phút. Khoảng thị trường nghỉ vì vậy không tốn thời gian chạy.</p>
+    <p>Trong một mốc, nến được sắp theo (khung nhỏ trước, rồi đến SymbolID). Thứ tự này cố định nên lần chạy nào cũng ra cùng một kết quả.</p>
+
+    <h3>Ví dụ: GOLD, khung M5 và M15, mỗi mốc cách nhau 1 giây</h3>
+    <p>Đây là kết quả lệnh <code>plan</code> chạy trên SQL thật (ngày 30/09/2026). <code>@13:00</code> là giờ mở nến.</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th class="num">Mốc</th><th class="num">Giây thật</th><th>Giờ ảo (UTC)</th><th>Nến được phát</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td class="num">1</td><td class="fit">13:05</td><td><code>M5@13:00</code></td></tr>
+          <tr><td class="num">2</td><td class="num">2</td><td class="fit">13:10</td><td><code>M5@13:05</code></td></tr>
+          <tr class="hit"><td class="num">3</td><td class="num">3</td><td class="fit">13:15</td><td><code>M5@13:10</code> và <code>M15@13:00</code> cùng lúc</td></tr>
+          <tr><td class="num">4</td><td class="num">4</td><td class="fit">13:20</td><td><code>M5@13:15</code></td></tr>
+          <tr><td class="num">5</td><td class="num">5</td><td class="fit">13:25</td><td><code>M5@13:20</code></td></tr>
+          <tr class="hit"><td class="num">6</td><td class="num">6</td><td class="fit">13:30</td><td><code>M5@13:25</code> và <code>M15@13:15</code> cùng lúc</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Vì sao không đếm "cứ 3 nến M5 thì đẩy 1 nến M15"</h3>
+    <p>Giờ mở thật của nến trong SQL không đều. Phiên nghỉ, cuối tuần, lỗ hổng dữ liệu và giờ neo phiên của từng symbol đều làm lệch cách đếm. Dùng giờ phát tính từ <code>BarTime</code> thì luôn đúng, và DPS không cần biết quy tắc phiên của từng symbol.</p>
+    <p>Ví dụ thật: GOLD với các khung M10, M30, M45, H1 (cùng ngày, 13:00 đến 15:00). Khung M45 phát lúc 13:45 và 14:30, không rơi vào nhịp 30 phút của các khung khác.</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th class="num">Mốc</th><th>Giờ ảo (UTC)</th><th>Nến được phát</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td class="fit">13:10</td><td><code>M10@13:00</code></td></tr>
+          <tr><td class="num">2</td><td class="fit">13:20</td><td><code>M10@13:10</code></td></tr>
+          <tr><td class="num">3</td><td class="fit">13:30</td><td><code>M10@13:20</code> + <code>M30@13:00</code></td></tr>
+          <tr><td class="num">4</td><td class="fit">13:40</td><td><code>M10@13:30</code></td></tr>
+          <tr class="hit"><td class="num">5</td><td class="fit">13:45</td><td><code>M45@13:00</code></td></tr>
+          <tr><td class="num">6</td><td class="fit">13:50</td><td><code>M10@13:40</code></td></tr>
+          <tr class="hit"><td class="num">7</td><td class="fit">14:00</td><td><code>M10@13:50</code> + <code>M30@13:30</code> + <code>H1@13:00</code></td></tr>
+          <tr><td class="num">8</td><td class="fit">14:10</td><td><code>M10@14:00</code></td></tr>
+          <tr><td class="num">9</td><td class="fit">14:20</td><td><code>M10@14:10</code></td></tr>
+          <tr class="hit"><td class="num">10</td><td class="fit">14:30</td><td><code>M10@14:20</code> + <code>M30@14:00</code> + <code>M45@13:45</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Chọn tốc độ: hai chế độ pacing</h3>
+    <p>Pacing quyết định khi nào (theo giờ thật) một mốc được ghi. Cả hai chế độ tính theo hạn chót tuyệt đối trên đồng hồ đơn điệu, nên không bị trôi dần. Nếu một mốc đến muộn thì DPS ghi ngay và ghi nhận độ trễ (<code>max_lag</code>).</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Chế độ</th><th>Quy tắc</th><th>Khoảng thị trường nghỉ</th></tr></thead>
+        <tbody>
+          <tr><td class="fit"><code>delay</code></td><td>Mốc thứ k được ghi lúc <code>t0 + k × delay</code>. <code>delay = 0</code> là nhanh nhất có thể.</td><td>Không tốn thời gian, nhảy qua.</td></tr>
+          <tr><td class="fit"><code>speed</code></td><td>Mốc được ghi lúc <code>t0 + (giờ ảo − gốc) / speed</code>. Ví dụ <code>speed = 300</code> là 5 phút ảo mỗi giây thật.</td><td>Giữ nguyên tỷ lệ, cuối tuần vẫn "im lặng" tương ứng.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="ipo">
+    <h2>4. Input, xử lý, output</h2>
+    <div class="three">
+      <div>
+        <h3>Input</h3>
+        <ul>
+          <li><strong>SQL Server</strong> (chỉ đọc, 4 câu <code>SELECT</code>): <code>DWH.Fact_OHLCV</code> (BarTime, Open, High, Low, Close), <code>DWH.Dim_Symbol</code> (chỉ symbol đang bật), <code>DWH.Dim_Timeframe</code> (Code, Minutes).</li>
+          <li><strong><code>config.yaml</code></strong>, 5 mục: <code>app</code>, <code>sql_server</code>, <code>redis</code>, <code>replay</code>, <code>pacing</code>. Khóa lạ hoặc giá trị sai thì dừng ngay.</li>
+          <li><strong>Tham số dòng lệnh</strong> ghi đè config: <code>--start --end --symbols --timeframes</code> và <code>--delay</code> hoặc <code>--speed</code>.</li>
+          <li>Cấu hình đang dùng: 11 symbol × 8 khung (M10 M20 M30 M45 H1 H2 H3 H4) = 88 chuỗi nến.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Xử lý</h3>
+        <ul>
+          <li><strong>Lập lịch</strong> (<code>schedule.py</code>): tính giờ phát, gom thành mốc, sắp thứ tự, đọc SQL theo cửa sổ 7 ngày để bộ nhớ không tăng.</li>
+          <li><strong>Seed</strong>: nạp sẵn tối đa 1.200 nến đã đóng trước thời điểm bắt đầu cho từng chuỗi.</li>
+          <li><strong>Phát mốc</strong>: chờ theo pacing, rồi ghi cả mốc trong một giao dịch Redis.</li>
+          <li><strong>Checkpoint</strong>: sau mỗi mốc lưu vị trí và mã băm lịch để dừng và chạy tiếp.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Output</h3>
+        <ul>
+          <li><strong>Redis db15</strong>: List <code>L_CANDLE_{SYMBOL}_{TF}</code> và Hash <code>L_CANDLE_{SYMBOL}_{TF}:{giờ mở}</code>, giống live. Thêm 3 key điều khiển <code>dps:clock</code>, <code>dps:state</code>, <code>dps:owner</code>.</li>
+          <li><strong>Sự kiện</strong> keyspace <code>hset</code> cho mỗi nến mới, trên kênh của db15.</li>
+          <li><strong>Trên đĩa</strong> (<code>dps/runtime/</code>): <code>logs/dps.log</code>, <code>run/state.json</code>, <code>run/manifest.json</code>.</li>
+          <li><strong>Màn hình</strong>: tóm tắt số mốc, số nến, độ trễ tối đa và mã băm lịch.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Dạng dữ liệu trên Redis</h3>
+    <p>Mỗi nến là một Hash với đúng 6 field. List của chuỗi nến chứa các giờ mở, nến mới nhất ở index 0, tối đa 1.200 phần tử. Hash có TTL 7 ngày, List không có TTL. Ví dụ Hash <code>L_CANDLE_GOLD_M5:2026-09-30 14:55:00</code>:</p>
+    <pre><code>timestamp    2026-09-30 14:55:00    giờ mở nến (UTC), trùng phần tử trong List
+open         4175.29                giá làm tròn tối đa 2 số lẻ, bỏ số 0 thừa
+high         4176.6
+low          4164.92
+close        4165.23
+time_update  2026-09-30 15:00:00    giờ ảo của mốc phát nến này (live thì là giờ máy)</code></pre>
+    <p>Hợp đồng này nằm ở phần đầu của <code>redis_writer.py</code>, kèm script Lua giống hệt script của <code>live.py</code>. Test so từng phần với <code>live.py</code> để chặn lệch.</p>
+  </section>
+
+  <section id="luong">
+    <h2>5. Luồng chạy của lệnh <code>run</code></h2>
+    <ol>
+      <li><strong>Khởi động.</strong> Đọc và kiểm <code>config.yaml</code>, áp tham số dòng lệnh. Lấy khóa một-instance: chỉ một DPS được chạy trên cùng thư mục <code>runtime</code>. Cài bộ bắt tín hiệu dừng (Ctrl+C hoặc file <code>stop.request</code>).
+        <span class="step-where">configuration.load_config · with_overrides · runtime.instance_lock · player.run_replay</span></li>
+      <li><strong>Xác định các chuỗi nến.</strong> Đọc <code>Dim_Symbol</code> và <code>Dim_Timeframe</code>, ghép ra 88 cặp (symbol × khung). Tên lạ hoặc symbol đã tắt thì dừng với lỗi.
+        <span class="step-where">sql_source.pairs</span></li>
+      <li><strong>Kiểm an toàn Redis.</strong> Db đích phải nằm trong <code>allowed_dbs</code>, và phải rỗng. Rồi đặt marker <code>dps:owner</code>.
+        <span class="step-where">redis_writer.guard</span></li>
+      <li><strong>Seed.</strong> Với mỗi chuỗi, đọc tối đa 1.200 nến có giờ phát không sau thời điểm bắt đầu T0, ghi vào Redis bằng script Lua. Rồi ghi <code>dps:clock = T0</code> và checkpoint ban đầu. Sau bước này Redis giống Redis live tại thời điểm T0.
+        <span class="step-where">sql_source.seed · redis_writer.seed · begin_run</span></li>
+      <li><strong>Vòng phát mốc.</strong> Với từng mốc theo thứ tự thời gian: kiểm yêu cầu dừng, chờ đến hạn theo pacing, ghi cả mốc trong một giao dịch, cập nhật tiến độ. Lịch được sinh dần theo từng cửa sổ 7 ngày giờ phát.
+        <span class="step-where">player.play · schedule.iter_ticks · runtime.make_pacer · redis_writer.write_tick</span></li>
+      <li><strong>Kết thúc.</strong> Hết mốc thì đánh dấu <code>finished</code>, ghi <code>state.json</code> và <code>manifest.json</code>, in tóm tắt cùng mã băm lịch. Nếu bị dừng giữa chừng thì giữ trạng thái <code>running</code> trong Redis để chạy tiếp.
+        <span class="step-where">redis_writer.mark_finished · runtime.write_manifest</span></li>
+    </ol>
+    <p>Lệnh <code>plan</code> đi qua bước 1, 2 và phần lập lịch của bước 5, nhưng không đụng Redis. Nó chỉ in lịch, thống kê và mã băm.</p>
+
+    <h3>Một mốc ghi gì lên Redis</h3>
+    <p>Lấy mốc 3 của ví dụ GOLD ở trên (giờ ảo 13:15). Tất cả nằm trong một giao dịch <code>MULTI/EXEC</code>, nên bên đọc không bao giờ thấy M5 đã tới mà M15 cùng giờ chưa tới:</p>
+    <pre><code>Lua  L_CANDLE_GOLD_M5   HSET Hash "…_M5:2026-09-30 13:10:00" + EXPIRE 7 ngày
+                        LPUSH "2026-09-30 13:10:00" vào List; nếu List vượt 1.200 thì RPOP và DEL Hash cũ
+Lua  L_CANDLE_GOLD_M15  HSET Hash "…_M15:2026-09-30 13:00:00" + EXPIRE, LPUSH vào List
+SET  dps:clock          "2026-09-30 13:15:00"
+HSET dps:state          tick_seq=3  sim_time=…  digest=…  status=running</code></pre>
+    <p>Script Lua chỉ <code>HSET</code> khi nến mới hoặc đổi giá. Ghi lại cùng nến cùng giá thì không sinh sự kiện <code>hset</code> nào. Vì vậy mỗi lần chạy mới phải bắt đầu từ db rỗng, nếu không bên nghe sự kiện sẽ không nhận được gì.</p>
+
+    <h3>Dừng và chạy tiếp</h3>
+    <ul>
+      <li><strong>Dừng:</strong> DPS ghi xong mốc đang làm rồi dừng, giữ checkpoint.</li>
+      <li><strong>Chạy tiếp:</strong> DPS dựng lại lịch từ T0, chỉ cập nhật mã băm cho các mốc đã chạy, rồi so với mã băm trong checkpoint. Khớp thì ghi tiếp từ mốc kế. Lệch (dữ liệu hoặc tham số đã đổi) thì từ chối chạy tiếp thay vì ghi sai. Phải dùng đúng các tùy chọn của lần <code>run</code> đầu.</li>
+    </ul>
+  </section>
+
+  <section id="trien-khai">
+    <h2>6. Triển khai</h2>
+    <p>Mã nguồn gồm 7 file phẳng trong <code>dps/src/</code>. Mỗi file có một trách nhiệm và mỗi thư viện ngoài chỉ có một file được dùng.</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>File</th><th>Trách nhiệm</th></tr></thead>
+        <tbody>
+          <tr><td class="fit"><code>__main__.py</code></td><td>Giao diện dòng lệnh: <code>plan</code>, <code>run</code>, <code>status</code>, <code>stop</code>, <code>clean</code>. Chỉ đọc tham số rồi gọi các file khác.</td></tr>
+          <tr><td class="fit"><code>configuration.py</code></td><td>Nơi duy nhất đọc <code>config.yaml</code>. Kiểm kiểu và khoảng giá trị, không bao giờ in bí mật.</td></tr>
+          <tr><td class="fit"><code>schedule.py</code></td><td>Giờ phát, gom mốc, thứ tự, đọc theo cửa sổ, mã băm lịch. Hàm thuần, không I/O.</td></tr>
+          <tr><td class="fit"><code>sql_source.py</code></td><td>Mọi truy cập SQL, chỉ <code>SELECT</code>: danh sách chuỗi nến, nến theo cửa sổ giờ phát, nến seed.</td></tr>
+          <tr><td class="fit"><code>redis_writer.py</code></td><td>Mọi thứ về Redis, hai phần. Phần 1 là hợp đồng Redis của live: tên key, định dạng giờ và giá, script Lua (hàm thuần, không I/O). Phần 2 là writer: kiểm an toàn, seed, ghi một mốc, checkpoint, dọn db.</td></tr>
+          <tr><td class="fit"><code>player.py</code></td><td>Vòng chạy: seed, từng mốc, pacing, ghi, checkpoint, chạy tiếp. Và chạy khô cho <code>plan</code>.</td></tr>
+          <tr><td class="fit"><code>runtime.py</code></td><td>Phần dùng chung: kiểu dữ liệu (<code>Pair</code>, <code>Candle</code>, <code>Tick</code>), log, pacing, khóa một-instance, file trạng thái, yêu cầu dừng.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Sơ đồ 1: file nào gọi file nào</h3>
+    <figure class="diagram">
+      <div class="scroll">
+      <svg class="dep" viewBox="0 0 760 500" role="img" aria-label="Sơ đồ phụ thuộc: __main__ gọi player và redis_writer; player gọi sql_source, schedule và redis_writer; schedule đọc SQL qua hàm fetch do player truyền vào; sql_source đọc SQL Server, redis_writer ghi Redis db15; configuration và runtime là phần dùng chung.">
+        <defs>
+          <marker id="dep-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-head" d="M0,0 L10,5 L0,10 z"/></marker>
+        </defs>
+
+        <!-- các file -->
+        <rect class="d-box" x="295" y="16" width="170" height="48" rx="4"/>
+        <text x="380" y="37" text-anchor="middle" class="d-strong">__main__.py</text>
+        <text x="380" y="54" text-anchor="middle" class="d-sub">dòng lệnh</text>
+
+        <rect class="d-box key" x="295" y="116" width="170" height="48" rx="4"/>
+        <text x="380" y="137" text-anchor="middle" class="d-strong">player.py</text>
+        <text x="380" y="154" text-anchor="middle" class="d-sub">điều phối vòng chạy</text>
+
+        <rect class="d-box" x="40" y="226" width="170" height="48" rx="4"/>
+        <text x="125" y="247" text-anchor="middle" class="d-strong">sql_source.py</text>
+        <text x="125" y="264" text-anchor="middle" class="d-sub">đọc SQL, chỉ SELECT</text>
+
+        <rect class="d-box" x="295" y="226" width="170" height="48" rx="4"/>
+        <text x="380" y="247" text-anchor="middle" class="d-strong">schedule.py</text>
+        <text x="380" y="264" text-anchor="middle" class="d-sub">lập lịch, hàm thuần</text>
+
+        <rect class="d-box" x="550" y="226" width="170" height="48" rx="4"/>
+        <text x="635" y="247" text-anchor="middle" class="d-strong">redis_writer.py</text>
+        <text x="635" y="264" text-anchor="middle" class="d-sub">hợp đồng live + ghi</text>
+
+        <!-- hệ thống ngoài -->
+        <rect class="d-ext" x="40" y="326" width="170" height="44" rx="4"/>
+        <text x="125" y="344" text-anchor="middle">SQL Server</text>
+        <text x="125" y="361" text-anchor="middle" class="d-sub">DWH.Fact_OHLCV</text>
+
+        <rect class="d-ext" x="550" y="326" width="170" height="44" rx="4"/>
+        <text x="635" y="344" text-anchor="middle">Redis db15</text>
+        <text x="635" y="361" text-anchor="middle" class="d-sub">List + Hash, dps:*</text>
+
+        <!-- phần dùng chung -->
+        <rect class="d-bar" x="40" y="402" width="680" height="38" rx="4"/>
+        <text x="56" y="426" class="d-strong">configuration.py</text>
+        <text x="190" y="426" class="d-sub">đọc config.yaml, trao cấu hình cho __main__, player, sql_source, redis_writer</text>
+
+        <rect class="d-bar" x="40" y="450" width="680" height="38" rx="4"/>
+        <text x="56" y="474" class="d-strong">runtime.py</text>
+        <text x="190" y="474" class="d-sub">kiểu dữ liệu · log · pacing · khóa, state, dừng · mọi file khác đều import</text>
+
+        <!-- mũi tên -->
+        <line class="d-edge" x1="380" y1="64" x2="380" y2="114" marker-end="url(#dep-arrow)"/>
+        <text x="390" y="94" class="d-label">plan · run</text>
+
+        <polyline class="d-edge" points="465,40 690,40 690,224" marker-end="url(#dep-arrow)"/>
+        <text x="578" y="33" text-anchor="middle" class="d-label">status · clean</text>
+
+        <polyline class="d-edge" points="340,164 340,190 125,190 125,224" marker-end="url(#dep-arrow)"/>
+        <text x="232" y="183" text-anchor="middle" class="d-label">pairs · seed · window</text>
+
+        <line class="d-edge" x1="380" y1="164" x2="380" y2="224" marker-end="url(#dep-arrow)"/>
+        <text x="388" y="214" class="d-label">iter_ticks</text>
+
+        <polyline class="d-edge" points="420,164 420,190 600,190 600,224" marker-end="url(#dep-arrow)"/>
+        <text x="510" y="183" text-anchor="middle" class="d-label">guard · seed · write_tick</text>
+
+        <line class="d-edge cb" x1="295" y1="250" x2="212" y2="250" marker-end="url(#dep-arrow)"/>
+        <text x="253" y="243" text-anchor="middle" class="d-label">fetch</text>
+
+        <line class="d-edge" x1="125" y1="274" x2="125" y2="324" marker-end="url(#dep-arrow)"/>
+        <text x="133" y="303" class="d-label">SELECT</text>
+
+        <line class="d-edge" x1="635" y1="274" x2="635" y2="324" marker-end="url(#dep-arrow)"/>
+        <text x="643" y="303" class="d-label">Lua · MULTI/EXEC</text>
+      </svg>
+      </div>
+      <figcaption>Mũi tên liền là lời gọi thật trong code (file trên import file dưới), nhãn là các hàm được gọi. Mũi tên đứt: <code>schedule.py</code> không import <code>sql_source.py</code>; <code>player.py</code> truyền cho nó một hàm <code>fetch</code> để đọc SQL theo từng cửa sổ 7 ngày, nhờ vậy lịch vẫn là hàm thuần. Chỉ <code>sql_source.py</code> chạm SQL Server và chỉ <code>redis_writer.py</code> chạm Redis. Hai thanh dưới cùng là phần dùng chung; mũi tên tới chúng được lược đi cho dễ đọc.</figcaption>
+    </figure>
+
+    <h3>Sơ đồ 2: thứ tự gọi khi chạy <code>run</code></h3>
+    <figure class="diagram">
+      <div class="scroll">
+      <svg class="seq" viewBox="0 0 900 552" role="img" aria-label="Trình tự lệnh run: __main__ đọc cấu hình, bật log, gọi player; player khóa một-instance, lấy danh sách cặp, kiểm db Redis, seed, rồi lặp từng mốc: lấy Tick từ schedule, schedule đọc SQL theo cửa sổ 7 ngày, chờ pacing, ghi mốc lên Redis trong một giao dịch, ghi state; cuối cùng đánh dấu xong, ghi manifest và trả tóm tắt.">
+        <defs>
+          <marker id="seq-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-head" d="M0,0 L10,5 L0,10 z"/></marker>
+          <marker id="seq-arrow-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-head hot" d="M0,0 L10,5 L0,10 z"/></marker>
+        </defs>
+
+        <!-- các làn: mỗi làn là một file -->
+        <rect class="d-box" x="12" y="10" width="116" height="30" rx="4"/><text x="70" y="30" text-anchor="middle" class="d-strong">__main__</text>
+        <rect class="d-box" x="137" y="10" width="116" height="30" rx="4"/><text x="195" y="30" text-anchor="middle" class="d-strong">configuration</text>
+        <rect class="d-box key" x="262" y="10" width="116" height="30" rx="4"/><text x="320" y="30" text-anchor="middle" class="d-strong">player</text>
+        <rect class="d-box" x="387" y="10" width="116" height="30" rx="4"/><text x="445" y="30" text-anchor="middle" class="d-strong">sql_source</text>
+        <rect class="d-box" x="512" y="10" width="116" height="30" rx="4"/><text x="570" y="30" text-anchor="middle" class="d-strong">schedule</text>
+        <rect class="d-box" x="637" y="10" width="116" height="30" rx="4"/><text x="695" y="30" text-anchor="middle" class="d-strong">redis_writer</text>
+        <rect class="d-box" x="762" y="10" width="116" height="30" rx="4"/><text x="820" y="30" text-anchor="middle" class="d-strong">runtime</text>
+
+        <line class="d-life" x1="70" y1="40" x2="70" y2="542"/>
+        <line class="d-life" x1="195" y1="40" x2="195" y2="542"/>
+        <line class="d-life" x1="320" y1="40" x2="320" y2="542"/>
+        <line class="d-life" x1="445" y1="40" x2="445" y2="542"/>
+        <line class="d-life" x1="570" y1="40" x2="570" y2="542"/>
+        <line class="d-life" x1="695" y1="40" x2="695" y2="542"/>
+        <line class="d-life" x1="820" y1="40" x2="820" y2="542"/>
+
+        <!-- khởi động -->
+        <line class="d-edge" x1="70" y1="70" x2="193" y2="70" marker-end="url(#seq-arrow)"/>
+        <text x="78" y="64" class="d-label">load_config</text>
+        <line class="d-edge" x1="70" y1="98" x2="818" y2="98" marker-end="url(#seq-arrow)"/>
+        <text x="78" y="92" class="d-label">setup_logging</text>
+        <line class="d-edge" x1="70" y1="126" x2="318" y2="126" marker-end="url(#seq-arrow)"/>
+        <text x="78" y="120" class="d-label">run_replay</text>
+        <line class="d-edge" x1="320" y1="154" x2="818" y2="154" marker-end="url(#seq-arrow)"/>
+        <text x="328" y="148" class="d-label">instance_lock · make_pacer</text>
+        <line class="d-edge" x1="320" y1="182" x2="443" y2="182" marker-end="url(#seq-arrow)"/>
+        <text x="328" y="176" class="d-label">pairs</text>
+        <line class="d-edge" x1="320" y1="210" x2="693" y2="210" marker-end="url(#seq-arrow)"/>
+        <text x="328" y="204" class="d-label">guard (db rỗng, đặt dps:owner)</text>
+        <line class="d-edge" x1="320" y1="238" x2="443" y2="238" marker-end="url(#seq-arrow)"/>
+        <text x="328" y="232" class="d-label">seed</text>
+        <line class="d-edge" x1="320" y1="266" x2="693" y2="266" marker-end="url(#seq-arrow)"/>
+        <text x="328" y="260" class="d-label">seed · begin_run</text>
+
+        <!-- vòng lặp mỗi mốc -->
+        <rect class="d-loop" x="250" y="282" width="636" height="162" rx="4"/>
+        <text x="258" y="298" class="d-sub">lặp mỗi mốc</text>
+        <line class="d-edge" x1="320" y1="318" x2="568" y2="318" marker-end="url(#seq-arrow)"/>
+        <text x="328" y="312" class="d-label">Tick kế tiếp + mã băm</text>
+        <line class="d-edge cb" x1="570" y1="346" x2="447" y2="346" marker-end="url(#seq-arrow)"/>
+        <text x="453" y="340" class="d-label">window (7 ngày)</text>
+        <line class="d-edge" x1="320" y1="374" x2="818" y2="374" marker-end="url(#seq-arrow)"/>
+        <text x="328" y="368" class="d-label">yêu cầu dừng? · pacer.wait</text>
+        <line class="d-edge hot" x1="320" y1="402" x2="693" y2="402" marker-end="url(#seq-arrow-hot)"/>
+        <text x="328" y="396" class="d-label d-hot-text">write_tick: nến + dps:clock + dps:state, MULTI/EXEC</text>
+        <line class="d-edge" x1="320" y1="430" x2="818" y2="430" marker-end="url(#seq-arrow)"/>
+        <text x="328" y="424" class="d-label">write_state (state.json)</text>
+
+        <!-- kết thúc -->
+        <line class="d-edge" x1="320" y1="472" x2="693" y2="472" marker-end="url(#seq-arrow)"/>
+        <text x="328" y="466" class="d-label">mark_finished</text>
+        <line class="d-edge" x1="320" y1="500" x2="818" y2="500" marker-end="url(#seq-arrow)"/>
+        <text x="328" y="494" class="d-label">write_manifest</text>
+        <line class="d-edge cb" x1="320" y1="528" x2="72" y2="528" marker-end="url(#seq-arrow)"/>
+        <text x="78" y="522" class="d-label">tóm tắt + mã băm</text>
+      </svg>
+      </div>
+      <figcaption>Thứ tự gọi thật khi chạy <code>dps.bat run</code>, đọc từ trên xuống. Mũi tên đậm là lúc dữ liệu lên Redis: cả mốc, đồng hồ ảo và checkpoint nằm trong một giao dịch. Mũi tên <code>window</code> đứt vì <code>schedule</code> gọi qua hàm <code>fetch</code> do <code>player</code> truyền vào, và chỉ gọi khi lịch sang một cửa sổ 7 ngày mới. Nếu có yêu cầu dừng, vòng lặp thoát trước <code>write_tick</code> và bỏ qua <code>mark_finished</code>; <code>resume</code> đi lại đường này nhưng bỏ bước seed. <code>plan</code> chỉ đi qua <code>load_config</code>, <code>pairs</code> và phần lịch, không chạm <code>redis_writer</code>.</figcaption>
+    </figure>
+
+    <h3>Quy tắc thiết kế (có test kiểm tra)</h3>
+    <ul>
+      <li>Phần tính lịch (<code>schedule.py</code>) tách khỏi phần ghi Redis. <code>schedule.py</code> không có I/O và chỉ lấy kiểu dữ liệu từ <code>runtime.py</code>, nên kiểm thử bằng dữ liệu giả rất dễ.</li>
+      <li>Các hàm hợp đồng ở phần 1 của <code>redis_writer.py</code> là hàm thuần. Test kiểm chúng không chạm client Redis.</li>
+      <li>Chỉ <code>configuration.py</code> dùng <code>yaml</code>, chỉ <code>sql_source.py</code> dùng <code>pyodbc</code>, chỉ <code>redis_writer.py</code> dùng <code>redis</code>.</li>
+      <li>Mỗi file tối đa 300 dòng code và có docstring nêu trách nhiệm. Import giữa các file là import tuyệt đối.</li>
+      <li>SQL trong <code>sql_source.py</code> chỉ có <code>SELECT</code>. Không dùng <code>FLUSHALL</code>, <code>KEYS</code>, <code>SCAN</code> trong mã nguồn.</li>
+    </ul>
+
+    <h3>Các lớp bảo vệ</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Cơ chế</th><th>Tác dụng</th></tr></thead>
+        <tbody>
+          <tr><td>Hai lớp kiểm Redis</td><td>Db phải nằm trong <code>allowed_dbs</code> (hiện là <code>[15]</code>), và phải rỗng hoặc mang marker <code>dps:owner</code>. Db0 không bao giờ qua được.</td></tr>
+          <tr><td>Từ chối chạy chồng</td><td>Db còn dữ liệu của lần trước thì <code>run</code> từ chối. Phải <code>clean</code> hoặc <code>resume</code>.</td></tr>
+          <tr><td><code>clean</code></td><td>Dùng <code>FLUSHDB ASYNC</code> sau khi qua kiểm tra, chỉ xóa db do DPS sở hữu.</td></tr>
+          <tr><td>Khóa một-instance</td><td>Hai tiến trình DPS không chạy chồng trên cùng <code>runtime</code>.</td></tr>
+          <tr><td>Bí mật</td><td><code>config.yaml</code> không đưa vào git. Log che mọi trường có tên chứa password, secret, token. Thông báo lỗi không kèm thông tin kết nối.</td></tr>
+          <tr><td>Cách ly key</td><td>Key <code>dps:*</code> nằm ngoài mẫu <code>L_CANDLE_*</code> mà bên đọc lắng nghe.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="van-hanh">
+    <h2>7. Cách chạy</h2>
+    <p>Chạy bằng <code>dps.bat</code> trong thư mục <code>dps/</code>. Cần Python 3.12 và một <code>config.yaml</code> đã điền.</p>
+<pre><code>dps.bat plan --show 12      # 1) xem trước lịch, không ghi gì
+dps.bat run --delay 0.2     # 2) phát lên db15
+dps.bat status              # 3) xem tiến độ và checkpoint
+dps.bat clean               # 4) dọn db15 trước lần chạy mới (báo số key, hỏi trước)</code></pre>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Lệnh</th><th>Việc làm</th></tr></thead>
+        <tbody>
+          <tr><td class="fit"><code>plan</code></td><td>Chạy khô: in lịch phát và mã băm, không ghi gì.</td></tr>
+          <tr><td class="fit"><code>run</code></td><td>Seed rồi phát lên db đích (db phải rỗng).</td></tr>
+          <tr><td class="fit"><code>resume</code></td><td>Chạy tiếp từ checkpoint, với đúng tùy chọn của lần <code>run</code> đầu.</td></tr>
+          <tr><td class="fit"><code>status</code></td><td>Trạng thái tiến trình, số key, đồng hồ ảo và checkpoint trong Redis.</td></tr>
+          <tr><td class="fit"><code>stop</code></td><td>Yêu cầu dừng sạch.</td></tr>
+          <tr><td class="fit"><code>clean</code></td><td>Xóa db đích sau khi hỏi (thêm <code>/y</code> để bỏ câu hỏi).</td></tr>
+          <tr><td class="fit"><code>clean-files</code></td><td>Xóa file tạm trong thư mục <code>dps</code>. Không đụng Redis.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Để kiểm kết quả: mã băm in ra ở cuối <code>run</code> phải trùng mã băm của <code>plan</code> với cùng tham số.</p>
+
+    <h3>Thời gian chạy một năm (cấu hình 88 chuỗi nến, 61.895 mốc)</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Cách chạy</th><th class="num">Thời gian</th></tr></thead>
+        <tbody>
+          <tr><td><code>--delay 1</code></td><td class="num">khoảng 17,2 giờ</td></tr>
+          <tr><td><code>--delay 0.1</code></td><td class="num">khoảng 1,7 giờ</td></tr>
+          <tr><td><code>--speed 300</code> (5 phút ảo mỗi giây thật)</td><td class="num">khoảng 29,2 giờ</td></tr>
+          <tr><td><code>--speed 3000</code></td><td class="num">khoảng 2,9 giờ</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Các số này tính theo công thức, chưa chạy thật cả năm. Mới đo thực tế ở <code>delay 1</code> trên một cửa sổ ngắn.</p>
+  </section>
+
+  <section id="kiem-chung">
+    <h2>8. Đã kiểm chứng</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Hạng mục</th><th>Kết quả</th></tr></thead>
+        <tbody>
+          <tr><td>Test</td><td>97 test đơn vị và 2 test tích hợp trên Redis thật (db15) đạt, chạy lại ngày 06/10/2026. Test so trực tiếp với <code>live.py</code>: script Lua, làm tròn giá trên 3.000 giá trị ngẫu nhiên, định dạng giờ, tên key.</td></tr>
+          <tr><td>Ví dụ GOLD M5 + M15</td><td>Chạy lại <code>plan</code> trên SQL thật ngày 06/10/2026: 6 mốc, 8 nến, mốc 3 phát cả M5 và M15.</td></tr>
+          <tr><td>Chạy thử 88 chuỗi nến lên db15 (04/10/2026)</td><td>Seed 105.600 nến mất khoảng 7 giây. Phát 14 mốc (319 nến), mỗi mốc 1 giây, tổng 21,6 giây. Độ trễ tối đa 16 ms. Mã băm lúc chạy trùng mã băm của <code>plan</code>.</td></tr>
+          <tr><td>Đối chiếu với SQL</td><td>88/88 List và 105.600/105.600 Hash giống hệt nến trong SQL (6 field, định dạng giá, <code>time_update</code>). TTL khoảng 7 ngày.</td></tr>
+          <tr><td>Tác động Redis dùng chung</td><td>Bộ nhớ tăng 34,0 MB (khoảng 322 byte mỗi key, 105.691 key). Sau <code>clean</code> về mức cũ. Số key db0 đến db3 không đổi.</td></tr>
+          <tr><td>Dừng và chạy tiếp</td><td><code>stop</code> rồi <code>resume</code> với cùng tùy chọn cho mã băm cuối trùng hệt <code>plan</code>.</td></tr>
+          <tr><td>An toàn</td><td>Chạy chồng lên dữ liệu cũ bị từ chối. Chạy tiếp một lần đã xong bị từ chối. Khóa một-instance chặn tiến trình thứ hai. <code>clean</code> chỉ xóa db của DPS.</td></tr>
+          <tr><td>Quy mô lịch cả năm (2025-10-04 đến 2026-10-04)</td><td>88 chuỗi nến: 61.895 mốc, 908.701 nến, tối đa 81 nến một mốc. 165 chuỗi nến (toàn bộ live): 92.508 mốc, 1.745.381 nến, tối đa 120 nến một mốc.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="chua-lam">
+    <h2>9. Chưa làm và điểm cần góp ý</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Việc</th><th>Trạng thái</th><th>Ghi chú</th></tr></thead>
+        <tbody>
+          <tr><td>Phát nến đúng hợp đồng live lên db15</td><td><span class="tag ok">Đã làm</span></td><td>Đã đối chiếu với SQL và với <code>live.py</code>.</td></tr>
+          <tr><td>Dừng, chạy tiếp, mã băm lịch, các lớp bảo vệ</td><td><span class="tag ok">Đã làm</span></td><td>Có test.</td></tr>
+          <tr><td>Nối OG và chiến lược vào db15</td><td><span class="tag todo">Chưa làm</span></td><td>Phía đọc cần trỏ sang db15 và nghe kênh keyspace của db15.</td></tr>
+          <tr><td>Đồng hồ ảo cho phía đọc</td><td><span class="tag todo">Chưa làm</span></td><td><code>dps:clock</code> có sẵn nhưng chưa ai dùng. Nếu phía đọc dùng giờ máy để kiểm tuổi tín hiệu hay lọc phiên thì sẽ sai khi chạy nhanh hơn thật.</td></tr>
+          <tr><td>Chờ phía đọc xử lý xong từng mốc (lock-step)</td><td><span class="tag todo">Chưa làm</span></td><td>Hiện DPS chạy theo <code>delay</code>/<code>speed</code> mà không chờ bên đọc. Muốn kết quả lặp lại tuyệt đối thì cần lock-step.</td></tr>
+          <tr><td>Chạy cả năm trên Redis</td><td><span class="tag todo">Chưa làm</span></td><td>Db15 dùng chung máy chủ với production, nên cần cân nhắc trước khi chạy dài.</td></tr>
+          <tr><td>Tạm dừng, nhảy tới một mốc, lệnh <code>verify</code> dựng sẵn</td><td><span class="tag todo">Chưa làm</span></td><td>Phần đối chiếu với SQL hiện làm thủ công bằng đoạn mã chỉ đọc.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Giới hạn cần biết khi đọc kết quả</h3>
+    <ul>
+      <li>Nến xuất hiện đúng giờ đóng. Live thật có độ trễ (chu kỳ 2 phút cộng thời gian xử lý), DPS không mô phỏng phần này.</li>
+      <li>Dữ liệu SQL là bản đã được hiệu chỉnh, không phải giá mà phía đọc thấy tại thời điểm đó.</li>
+      <li>Trong lúc mô phỏng, phía đọc không được đọc SQL trực tiếp. Thủ tục lấy nến mới nhất trong SQL không có tham số "tại thời điểm", nên sẽ thấy dữ liệu mới hơn giờ ảo.</li>
+      <li>Seed sinh khoảng một sự kiện <code>hset</code> cho mỗi nến (khoảng 105.600 sự kiện với 88 chuỗi). Phía đọc nên được bật sau khi seed xong.</li>
+      <li>Giờ phát tính theo độ dài danh nghĩa của khung. Với nến D1, W hoặc nến cuối phiên có thể lệch giờ đóng thực. Điều này giống cách hệ thật kiểm tra nến.</li>
+      <li>Thư mục <code>dps/</code> nằm ngoài repo git của <code>core_program</code>, nên chưa có version control.</li>
+    </ul>
+
+    <h3>Ba câu hỏi xin ý kiến mentor</h3>
+    <ol>
+      <li>Các lần chạy dài (cả năm) nên dùng Redis riêng, hay vẫn dùng db15 trên máy chủ chung với production?</li>
+      <li>Để phía đọc dùng thời gian ảo, nên để phía đọc tự đọc <code>dps:clock</code>, hay để DPS chờ phía đọc báo xong từng mốc (lock-step)?</li>
+      <li>Có cần mô phỏng độ trễ khi nến tới (giá lúc nhìn thấy lần đầu) để kết quả gần với chạy thật hơn không?</li>
+    </ol>
+  </section>
+
+  <footer>
+    <p>Tài liệu viết từ mã nguồn trong <span class="mono">dps/src</span> và các lần chạy thật: <code>plan</code> trên SQL ngày 06/10/2026, toàn bộ test ngày 06/10/2026, chạy thử lên db15 ngày 04/10/2026. Chi tiết đầy đủ hơn nằm trong <span class="mono">dps/README.md</span> (tra cứu vận hành) và <span class="mono">dps/research_notes.md</span> (nghiên cứu và nguồn).</p>
+  </footer>
+</main>
