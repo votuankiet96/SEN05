@@ -37,6 +37,9 @@ GRID_SEARCH_SCHEMA = "bo-dashboard-grid-search/v1"
 GRID_DIAGNOSTICS_SCHEMA = "bo-dashboard-grid-diagnostics/v1"
 WALKFORWARD_SCHEMA = "bo-dashboard-walkforward/v1"
 WALKFORWARD_OBJECTIVES = ("net_profit", "profit_factor", "win_rate")
+# DSR/PBO must test the same selection criterion the research uses to pick a
+# combination, so they offer exactly the Walk-forward objectives.
+DIAGNOSTICS_OBJECTIVES = WALKFORWARD_OBJECTIVES
 COMPLETED_EXECUTION_TRIAL_POLICY = "completed_execution_v1"
 InputFingerprintMismatch = facilitator.InputFingerprintMismatch
 
@@ -483,7 +486,8 @@ def prepare_walkforward_session(
     if normalized_objective not in WALKFORWARD_OBJECTIVES:
         raise ValueError(f"Walk-forward objective must be one of: {', '.join(WALKFORWARD_OBJECTIVES)}")
     protocol = {
-        "min_trades": 30,
+        # [2026-09-29] Không còn ngưỡng số-lệnh-tối-thiểu — xem walkforward.WF_MIN_TRADES.
+        "min_trades": 0,
         "objective": normalized_objective,
         "selection_rules": ["plateau", "best"],
         "plateau_dimensions": ["KslLevel", "KtpLevel"],
@@ -511,6 +515,9 @@ def prepare_walkforward_session(
         "timeframe": normalized_timeframe, "start": start_date.isoformat(), "end": end_date.isoformat(),
         "balance": numeric_balance, "fixed_params": fixed_params, "parameter_space": parameter_space,
         "walkforward": wf, "protocol": protocol, "input_fingerprint": real_inputs,
+        # New window dates get a new experiment: the core refuses to reopen one
+        # recorded under the old (one-day-overlap) convention.
+        "window_convention": walkforward.WINDOW_CONVENTION,
         **signal_sources.identity_field(selected_signal_profile),
     }
     execution_key = _execution_key(identity)
@@ -567,7 +574,7 @@ def run_walkforward_session(
         raise ValueError("Walk-forward start date must be on day 1-28 to keep OOS windows contiguous")
     if config.get("objective") not in WALKFORWARD_OBJECTIVES:
         raise ValueError("Walk-forward objective is not supported")
-    if config.get("min_trades") != 30 or config.get("selection_rules") != ["plateau", "best"] or config.get("plateau_dimensions") != ["KslLevel", "KtpLevel"]:
+    if config.get("min_trades") != 0 or config.get("selection_rules") != ["plateau", "best"] or config.get("plateau_dimensions") != ["KslLevel", "KtpLevel"]:
         raise ValueError("Walk-forward protocol v1 has changed; create a new session")
     if config.get("pipeline") != plan.get("pipeline") or config.get("name") != plan.get("experiment"):
         raise ValueError("Walk-forward pipeline does not match its frozen plan")
@@ -650,10 +657,19 @@ def prepare_grid_diagnostics_session(
     source_snapshot: dict[str, Any],
     min_trades: int = 0,
     blocks: int = 16,
+    objective: str = "net_profit",
 ) -> dict[str, Any]:
     """Freeze a DSR/PBO plan without running analysis or mutating core artifacts."""
     if source_session.get("kind") != "grid_search":
         raise ValueError("DSR/PBO requires a Grid Search source session")
+    normalized_objective = str(objective).strip().lower()
+    if normalized_objective not in DIAGNOSTICS_OBJECTIVES:
+        raise ValueError(f"Selection objective must be one of: {', '.join(DIAGNOSTICS_OBJECTIVES)}")
+    if normalized_objective not in getattr(readout, "SUPPORTED_OBJECTIVES", ()):
+        raise RuntimeError(
+            f"The installed core cannot evaluate the {normalized_objective!r} selection objective. "
+            "No diagnostics draft was created."
+        )
     if source_session.get("state") not in {"completed", "cached"}:
         raise ValueError("The source Grid must be completed or cached")
     source_plan = source_session.get("plan") or {}
@@ -719,6 +735,7 @@ def prepare_grid_diagnostics_session(
         "initial_balance": float(source_input.get("balance")),
         "min_trades": minimum,
         "blocks": block_count,
+        "objective": normalized_objective,
     }
     execution_key = hashlib.sha256(
         json.dumps(diagnostic_input, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -743,6 +760,7 @@ def prepare_grid_diagnostics_session(
             "initial_balance": float(source_input.get("balance")),
             "min_trades": minimum,
             "blocks": block_count,
+            "objective": normalized_objective,
         },
         "preflight": {
             "source_state": source_session.get("state"),
@@ -800,16 +818,27 @@ def run_grid_diagnostics_session(
     if on_progress:
         on_progress(5, "Calculating Deflated Sharpe Ratio")
     dsr_result = readout.run_dsr(method, source_experiment, config, pipeline=pipeline)
+    trials = int(dsr_result.get("included_trials") or dsr_result.get("n_trials") or 0)
     if on_progress:
         blocks = int(config.get("blocks") or 16)
         split_count = math.comb(blocks, blocks // 2)
-        trials = int(dsr_result.get("included_trials") or dsr_result.get("n_trials") or 0)
         on_progress(
             35,
             "DSR complete; PBO is evaluating "
             f"{split_count:,} chronological splits across {trials:,} trials",
         )
-    pbo_result = readout.run_pbo(method, source_experiment, config, pipeline=pipeline)
+
+    def pbo_progress(done: int, total: int) -> None:
+        # PBO is the long phase (minutes at 100 trials), so it owns 35-100%.
+        on_progress(
+            35 + 65 * done / total,
+            f"PBO: {done:,} / {total:,} chronological splits evaluated across {trials:,} trials",
+        )
+
+    pbo_result = readout.run_pbo(
+        method, source_experiment, config, pipeline=pipeline,
+        on_progress=pbo_progress if on_progress else None,
+    )
     if on_progress:
         on_progress(100, "DSR and PBO complete")
     return {

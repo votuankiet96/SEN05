@@ -9,12 +9,13 @@ trượt riêng của walk-forward (`walkforward_windows()` + helper `_month_add
 from __future__ import annotations
 
 import itertools
+import json
 import math
 from datetime import date, datetime, timedelta
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 from .configuration import StrategyProfile
-from .models import EngineProfile, Experiment, RunSpec, Window
+from .models import EngineProfile, Experiment, OptimizeBox, RunSpec, Window
 
 
 def as_date(value: Any) -> date:
@@ -188,3 +189,54 @@ def expand_grid(
             seen.add(key)
             specs.append(spec)
     return specs
+
+def _is_arithmetic(values: list[float], *, integer: bool) -> bool:
+    """`optimize` chỉ nhận dải Min/Max/Step, tức dãy cách đều (kiểu số nguyên: bước nguyên)."""
+    ordered = sorted(values)
+    step = ordered[1] - ordered[0]
+    return step > 0 and (not integer or step.is_integer()) and all(
+        abs(b - a - step) <= 1e-9 * max(1.0, step) for a, b in zip(ordered, ordered[1:])
+    )
+
+
+def _split_box(names: list[str], kinds: Mapping[str, str], dims: list[list[str]], chunk: int) -> list[list[list[str]]]:
+    """Cắt tích Descartes `dims` thành các hộp <= chunk pass; chiều số không cách đều thì mỗi giá trị 1 hộp."""
+    for i, values in enumerate(dims):
+        kind = kinds[names[i]]
+        if kind in {"int", "float"} and len(values) > 2 and not _is_arithmetic([float(v) for v in values], integer=kind == "int"):
+            return [box for v in values for box in _split_box(names, kinds, [*dims[:i], [v], *dims[i + 1:]], chunk)]
+    sizes = [len(v) for v in dims]
+    if math.prod(sizes) <= chunk:
+        return [dims]
+    cut = len(dims) - 1          # chiều bị cắt lát; các chiều sau nó giữ nguyên
+    while cut > 0 and math.prod(sizes[cut:]) <= chunk:
+        cut -= 1
+    step = chunk // math.prod(sizes[cut + 1:])
+    return [
+        [[v] for v in head] + [dims[cut][i:i + step]] + dims[cut + 1:]
+        for head in itertools.product(*dims[:cut])
+        for i in range(0, sizes[cut], step)
+    ]
+
+
+def plan_optimize_boxes(specs: Sequence[RunSpec], strategy: StrategyProfile, chunk_size: int) -> list[OptimizeBox]:
+    """Gom spec cùng bối cảnh thành hộp <= chunk_size pass chạy được bằng 1 lệnh `optimize`;
+    spec không vào được hộp nào (không đủ tích Descartes) thành hộp 1 spec."""
+    chunk = positive_int(chunk_size, "optimize_chunk_size")
+    groups: dict[str, list[RunSpec]] = {}
+    for spec in specs:
+        context = json.dumps({k: v for k, v in spec.canonical().items() if k != "params"}, sort_keys=True)
+        groups.setdefault(context, []).append(spec)
+    boxes: list[OptimizeBox] = []
+    for members in groups.values():
+        names = [n for n in strategy.params if len({s.params[n] for s in members}) > 1]
+        kinds = {n: strategy.params[n].kind for n in names}
+        dims = [sorted({s.params[n] for s in members}, key=str if kinds[n] == "bool" else float) for n in names]
+        by_point = {tuple(s.params[n] for n in names): s for s in members}
+        if not names or len(by_point) != len(members) or len(members) != math.prod(map(len, dims)):
+            boxes += [OptimizeBox((s,)) for s in members]
+            continue
+        for piece in _split_box(names, kinds, dims, chunk):
+            swept = tuple((n, tuple(v)) for n, v in zip(names, piece) if len(v) > 1)
+            boxes.append(OptimizeBox(tuple(by_point[p] for p in itertools.product(*piece)), swept))
+    return boxes

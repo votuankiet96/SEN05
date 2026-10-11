@@ -22,6 +22,7 @@ import dash_mantine_components as dmc
 import data_access
 import session_store
 import signal_sources
+from ui_common import PERSIST, status_region
 from dsr_pbo import callbacks as dsr_pbo_callbacks
 from dsr_pbo import views as dsr_pbo_views
 from grid import callbacks as grid_callbacks
@@ -40,12 +41,30 @@ app = Dash(
     __name__,
     background_callback_manager=BACKGROUND_MANAGER,
     title="BO Workflow Dashboard",
+    # Result panels create components (e.g. the paged cBot log table) that are
+    # not in the initial layout; Dash requires this flag for their callbacks.
+    suppress_callback_exceptions=True,
 )
+
+# Mantine's `dimmed` text colour is gray[6] (#868e96, 3.32:1 on white), below
+# the 4.5:1 WCAG 2.2 SC 1.4.3 (AA) minimum for normal text. #646b73 keeps the
+# muted hierarchy and measures 5.39:1 on white and >= 4.74:1 on every light
+# Alert background used here. The other shades are Mantine's defaults.
+THEME = {
+    "colors": {
+        "gray": [
+            "#f8f9fa", "#f1f3f5", "#e9ecef", "#dee2e6", "#ced4da",
+            "#adb5bd", "#646b73", "#495057", "#343a40", "#212529",
+        ],
+    },
+}
+
 
 def serve_layout() -> dmc.MantineProvider:
     """Read the persisted signal choice on every page load, including F5."""
     return dmc.MantineProvider(
-        dmc.Container(size="xl", py="lg", children=[
+        theme=THEME,
+        children=dmc.Container(size="xl", py="lg", children=[
         dmc.Title("BO Workflow Dashboard", order=2),
         dmc.Text(
             "Run and inspect core_engine workflows from one local dashboard.",
@@ -61,10 +80,10 @@ def serve_layout() -> dmc.MantineProvider:
             dmc.Stack([
                 dmc.Text("Applies to new drafts in Single Backtest, Grid Search and Walk-forward.", size="sm"),
                 dmc.Text("Saved drafts and running jobs keep their original signal source.", size="xs", c="dimmed"),
-                html.Div(id="global-signal-message"),
+                status_region("global-signal-message"),
             ], gap=2),
         ], align="center")),
-        dmc.Tabs(value="single-backtest", children=[
+        dmc.Tabs(id="main-tabs", value="single-backtest", **PERSIST, children=[
             dmc.TabsList([
                 dmc.TabsTab("Single Backtest", value="single-backtest"),
                 dmc.TabsTab("Grid Search", value="grid-search"),
@@ -108,6 +127,16 @@ dsr_pbo_callbacks.register(app)
 
 
 if __name__ == "__main__":
-    # Stable by default. Developers may opt in with BO_DASH_DEBUG=1.
+    # Stable by default. Developers may opt in with BO_DASH_DEBUG=1, which uses
+    # Dash's development server and debugger. Otherwise serve through waitress:
+    # Flask's built-in server "is intended for use only during local
+    # development ... not designed to be particularly secure, stable, or
+    # efficient", which applies "privately / locally to a single user" too
+    # (flask.palletsprojects.com/en/stable/deploying/).
     debug = os.environ.get("BO_DASH_DEBUG", "0").strip().lower() in {"1", "true", "yes"}
-    app.run(debug=debug, host="127.0.0.1", port=8050)
+    if debug:
+        app.run(debug=True, host="127.0.0.1", port=8050)
+    else:
+        from waitress import serve
+
+        serve(app.server, host="127.0.0.1", port=8050)

@@ -113,6 +113,33 @@ dữ liệu DEMO có sẵn, KHÔNG PHẢI lưới 10×10 chuẩn đã thiết k�
 là kết luận cuối cùng về chiến lược, chỉ là bằng chứng code chạy đúng trên dữ
 liệu thật + minh hoạ đúng hiện tượng "mẫu mỏng → PBO cao" đã bàn trước đó.
 
+# 6. [2026-09-28] Tiêu chí chọn — DSR/PBO phải kiểm ĐÚNG quy trình chọn đang dùng
+
+Audit phương pháp 2026-09-27 đo thật trên grid US30/H1 `dashboard_grid_5db0256b041ad863`: trial
+Sharpe cao nhất (ksl9/ktp5, lãi $8.617) KHÁC trial lãi nhất (ksl3/ktp5, $22.033); dashboard báo DSR
+0,5055 của trial Sharpe cao nhất, còn DSR của trial lãi nhất chỉ 0,3467. PBO cũ luôn chọn winner theo
+lợi nhuận TB, trong khi walk-forward chọn theo net_profit/PF/win rate. Nguyên văn bài PBO (§ giới
+thiệu): phương pháp đánh giá "how reliable a backtest selection process is", "can be applied to any
+alternative [performance statistic]". Đã code:
+- `readout.run_dsr/run_pbo(config["objective"])` — `net_profit` (mặc định) | `profit_factor` |
+  `win_rate`, đúng tập tiêu chí walk-forward; tiêu chí lạ raise trước cả cache.
+- DSR: khối `selected` = DSR của trial đứng đầu theo tiêu chí (luật "best" = `selection.rank(by=
+  (objective,))`, cùng luật walk-forward), CÙNG ngưỡng SR0 của cả N trial (DSR là PSR với ngưỡng đã
+  hiệu chỉnh số lần thử, áp được cho bất kỳ trial nào). Field cũ (`winner_*`, `dsr`) giữ nghĩa trial
+  Sharpe cao nhất làm tham chiếu.
+- PBO: mỗi cách chia chọn winner theo đúng tiêu chí; PF/win rate tính từ lệnh ĐÓNG trong các khối đó
+  (đọc `history.items` của report, gắn vào ngày theo giờ đóng lệnh). Hoà hạng ở nửa KIỂM lấy hạng
+  trung bình như `scipy.stats.rankdata` trong pypbo (bản cũ tách hoà theo thứ tự nhãn — chỉ khác khi
+  có hoà). Tiêu chí `net_profit` cho KẾT QUẢ Y HỆT bản cũ (test khoá bằng thuật toán cũ; verify trên 2
+  grid thật). Tính theo tổng từng khối nên nhanh hơn nhiều.
+- Chưa gồm luật plateau (người dùng chọn phương án không gồm plateau).
+
+Nguyên văn bài PBO còn liên quan (§5.2 "Limitation in application"): "the researcher must provide
+full information regarding the actual trials conducted... Hiding trials will lead to an
+underestimation of the overfit" — dashboard mặc định dùng đủ mọi trial đã chạy xong
+(completed_execution, min trades 0). Lý do chọn S=16 trong bài: "if M contains 4 years of daily data,
+S=16 would equate to quarterly partitions, and the serial correlation structure would be preserved".
+
 # Nguồn
 
 - David H. Bailey, Marcos López de Prado, "The Deflated Sharpe Ratio" (SSRN 2460551, *JPM* 2014).

@@ -11,8 +11,10 @@ import json
 import hashlib
 import re
 import sqlite3
+import statistics
 import sys
 from datetime import date
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -33,7 +35,7 @@ from core_engine.configuration import (  # noqa: E402
 from core_engine import signal_trans  # noqa: E402
 from core_engine.output_util import evidence, pipeline_lock, selection, walkforward_readout  # noqa: E402
 from core_engine.signal_trans import SYMBOL_GROUPS  # noqa: E402
-from core_engine.store import DAILY_CLI_LAUNCH_LIMIT, ExperimentStore, ProtocolStore  # noqa: E402
+from core_engine.store import DAILY_CLI_LAUNCH_LIMIT, RUNS_ROOT, ExperimentStore, ProtocolStore  # noqa: E402
 
 _CLOSE_REASON_RE = re.compile(r"\bCLOSED position\b.*?\breason=(?P<reason>[^:]+):", re.IGNORECASE)
 _BOT_LINE_RE = re.compile(
@@ -374,7 +376,8 @@ def walkforward_train_signal_counts(
             dates.append(date.fromisoformat(str(stamp).split(" ", 1)[0]))
         except ValueError:
             continue
-    return [sum(1 for day in dates if train.start <= day < train.end) for train, _oos in windows]
+    # Window.end is the last traded day (cTrader runs through the whole --end day).
+    return [sum(1 for day in dates if train.start <= day <= train.end) for train, _oos in windows]
 
 
 def cli_launch_budget() -> dict[str, int]:
@@ -521,6 +524,76 @@ def read_single_backtest(experiment: str) -> dict[str, Any]:
         "cli_log": _read_text(run_dir / "cli.log"),
         "execution_summary": _execution_summary(execution, bot_log, history),
         "has_report": bool(report),
+    }
+
+
+def single_bot_events(experiment: str) -> tuple[dict[str, str], ...]:
+    """Every persisted cBot log line of one Single Backtest, for server-side paging.
+
+    The detail view sends only one page to the browser; later pages are read
+    here. Parsing is cached per bot.log version (path, size, mtime), so paging
+    does not re-run the regex projection for every page. Callers must not
+    mutate the returned rows.
+    """
+    store = ExperimentStore("grid", experiment)
+    if not store.db_path.is_file():
+        return ()
+    rows = store.flat_rows()
+    if not rows:
+        return ()
+    row = rows[-1]
+    path = store.run_dir(str(row["run_id"]), str(row["label"])) / "bot.log"
+    if not path.is_file():
+        return ()
+    stat = path.stat()
+    return _parsed_bot_events(str(path), stat.st_size, stat.st_mtime_ns)
+
+
+@lru_cache(maxsize=16)
+def _parsed_bot_events(path: str, size: int, mtime_ns: int) -> tuple[dict[str, str], ...]:
+    del size, mtime_ns  # cache key only
+    return tuple(_bot_events(_read_text(Path(path))))
+
+
+def historical_seconds_per_day(
+    *, strategy: str, symbol: str, timeframe: str, data_mode: str,
+) -> dict[str, Any]:
+    """Median observed CLI wall time per calendar day of backtest period.
+
+    Reads the persisted ``runs`` table of every Grid and Walk-forward store
+    through read-only SQLite URIs. Only successful runs of this exact
+    strategy, symbol, timeframe and data mode count; without such history no
+    estimate is returned, so the dashboard never presents an invented figure.
+    """
+    rates: list[float] = []
+    for method in ("grid", "walkforward"):
+        for db_path in sorted((RUNS_ROOT / method).glob("*/index.sqlite")):
+            try:
+                db = sqlite3.connect(db_path.resolve().as_uri() + "?mode=ro", uri=True, timeout=2)
+                try:
+                    rows = db.execute(
+                        """SELECT wall_seconds,start_date,end_date FROM runs
+                           WHERE status='ok' AND strategy=? AND symbol=? AND timeframe=?
+                             AND data_mode=? AND wall_seconds > 0""",
+                        (str(strategy), str(symbol), str(timeframe).lower(), str(data_mode)),
+                    ).fetchall()
+                finally:
+                    db.close()
+            except sqlite3.Error:
+                continue
+            for wall_seconds, start, end in rows:
+                try:
+                    days = (date.fromisoformat(str(end)) - date.fromisoformat(str(start))).days
+                except ValueError:
+                    continue
+                if days > 0:
+                    rates.append(float(wall_seconds) / days)
+    if not rates:
+        return {"available": False, "samples": 0}
+    return {
+        "available": True,
+        "samples": len(rates),
+        "median_seconds_per_day": statistics.median(rates),
     }
 
 

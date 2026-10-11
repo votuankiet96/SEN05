@@ -1,6 +1,8 @@
 """Callback orchestration for the isolated Single Backtest dashboard tab."""
 from __future__ import annotations
 
+import math
+import re
 import sys
 from datetime import date
 from pathlib import Path
@@ -17,6 +19,7 @@ import dash_mantine_components as dmc
 import actions
 import data_access
 import session_store
+from ui_common import poll_disabled
 from . import views as single_views
 
 FORM_OPTIONS = data_access.session_form_options()
@@ -201,13 +204,17 @@ def create_session(
     Input("refresh-session-view-btn", "n_clicks"),
     Input("session-selection-request", "data"),
     Input("session-delete-message", "children"),
+    Input("session-progress-poll", "n_intervals"),
     State("session-select", "value"),
+    State("session-select", "data"),
 )
 def refresh_session_options(
     _refresh_clicks: int | None,
     selection_request: dict[str, Any] | None,
     _delete_message: Any,
+    _poll: int,
     selected_value: str | list[str] | None,
+    current_data: list[dict[str, str]] | None,
 ):
     sessions = session_store.list_sessions(kind="single_backtest")
     valid_ids = {session["session_id"] for session in sessions}
@@ -216,16 +223,38 @@ def refresh_session_options(
     else:
         requested = _selected_session_ids(selected_value)
     selected = [session_id for session_id in requested if session_id in valid_ids]
-    return single_views.select_data(sessions), selected
+    if not selected:
+        active = next((session for session in sessions if session["state"] == "running"), None)
+        if active:
+            selected = [active["session_id"]]
+    data = single_views.select_data(sessions)
+    # The one-second ticker only publishes real state transitions. It must not
+    # rebuild the selector (or downstream result tables) on every tick.
+    if ctx.triggered_id == "session-progress-poll":
+        if data == (current_data or []) and selected == _selected_session_ids(selected_value):
+            return no_update, no_update
+        return data if data != (current_data or []) else no_update, (
+            selected if selected != _selected_session_ids(selected_value) else no_update
+        )
+    return data, selected
 
 
 @callback(
     Output("session-detail", "children"),
     Input("refresh-session-view-btn", "n_clicks"),
     Input("session-select", "value"),
+    Input("session-select", "data"),
 )
-def refresh_session_detail(_refresh_clicks: int | None, selected_value: str | list[str] | None):
-    """Manual Refresh always re-reads the selected core artifact and dashboard metadata."""
+def refresh_session_detail(
+    _refresh_clicks: int | None,
+    selected_value: str | list[str] | None,
+    _options: list[dict[str, str]] | None,
+):
+    """Manual Refresh always re-reads the selected core artifact and dashboard metadata.
+
+    A state change (draft -> running -> completed) reaches this callback through
+    `session-select.data`: the option labels carry the state and the poll
+    republishes them when it changes."""
     selected = _selected_sessions(selected_value)
     if len(selected) == 1:
         session = selected[0]
@@ -241,30 +270,42 @@ def refresh_session_detail(_refresh_clicks: int | None, selected_value: str | li
     Output("stop-session-btn", "disabled"),
     Output("delete-selected-session-btn", "disabled"),
     Output("session-progress-poll", "disabled"),
+    Output("session-active-run", "children"),
     Input("session-progress-poll", "n_intervals"),
     Input("session-select", "value"),
     Input("run-session-btn", "n_clicks"),
-    Input("session-run-message", "children"),
-    State("session-progress-poll", "disabled"),
+    Input("refresh-session-view-btn", "n_clicks"),
+    Input("session-stop-message", "children"),
+    Input("run-session-btn", "disabled"),
 )
 def refresh_selected_run_status(
     _poll: int,
     selected_value: str | list[str] | None,
     _run_clicks: int | None,
-    _run_message: Any,
-    polling_disabled: bool,
+    _refresh_clicks: int | None,
+    _stop_message: Any,
+    run_button_disabled: bool | None,
 ):
-    """Live status only; deliberately does not rebuild any dashboard content."""
+    """Live status of the active run, independent of the selector's UI state.
+
+    Never takes `session-run-message` (the background job's output) as an
+    Input: Dash does not run a callback while one of its Inputs is the output
+    of a callback still in flight, so the whole status panel froze for the
+    entire run (see ui_common.poll_disabled)."""
     selected = _selected_sessions(selected_value)
-    active = next((session for session in selected if session["state"] == "running"), None)
+    active = session_store.active_session(kind="single_backtest")
     runnable = bool(selected) and all(
         session["state"] in {"draft", "failed", "cancelled"} for session in selected
     ) and (len(selected) == 1 or all(session["state"] == "draft" for session in selected))
     source = active or (selected[0] if len(selected) == 1 else None)
     progress = float(source.get("progress_pct") or 0) if source else 0
-    if active and len(selected) > 1:
-        queue_position = selected.index(active) + 1
+    if active and active.get("cancel_requested_utc"):
+        text = "Cancellation requested — waiting for the active CLI run to stop"
+    elif active and len(selected) > 1 and active["session_id"] in {item["session_id"] for item in selected}:
+        queue_position = next(index for index, item in enumerate(selected, 1) if item["session_id"] == active["session_id"])
         text = f"Queue {queue_position} of {len(selected)} — {active.get('progress_text') or 'Running'}"
+    elif active and not any(item["session_id"] == active["session_id"] for item in selected):
+        text = f"Active run: {active.get('title') or active['session_id']} — {active.get('progress_text') or 'Running'}"
     elif len(selected) > 1 and all(session["state"] in {"completed", "cached"} for session in selected):
         progress = 100
         text = f"Queue complete — {len(selected)} sessions finished"
@@ -272,27 +313,22 @@ def refresh_selected_run_status(
         text = f"{len(selected)} draft sessions selected — ready to queue"
     else:
         text = str(source.get("progress_text") or "No session selected") if source else "No session selected"
-    trigger = ctx.triggered_id
-    if not selected:
-        disable_polling = True
-    elif active:
-        disable_polling = False
-    elif trigger == "run-session-btn" and runnable:
-        # Keep polling through preflight and the small hand-off gaps between
-        # queued drafts; the background result will turn it off.
-        disable_polling = False
-    elif trigger in {"run-session-btn", "session-run-message", "session-select"}:
-        disable_polling = True
-    elif all(session["state"] in session_store.TERMINAL_STATES for session in selected):
-        disable_polling = True
-    else:
-        disable_polling = bool(polling_disabled)
+    # A background callback can be between two queued drafts with no claimed
+    # session for a moment; its running button state keeps the poll alive.
+    disable_polling = poll_disabled(
+        bool(active) or bool(run_button_disabled)
+        or (ctx.triggered_id == "run-session-btn" and runnable),
+        ctx.triggered_id == "session-progress-poll",
+    )
+    if active and progress <= 0:
+        text = f"{text} - waiting for a CLI percentage - elapsed {single_views._duration_since(active.get('started_utc'))}"
     return (
         progress,
         single_views.format_progress(progress, text),
-        not bool(active),
-        not bool(selected) or bool(active),
+        not bool(active) or bool(active.get("cancel_requested_utc")),
+        not bool(selected) or any(session["state"] == "running" for session in selected),
         disable_polling,
+        single_views.active_run_summary(active),
     )
 
 
@@ -395,20 +431,12 @@ def run_selected_session(
 @callback(
     Output("session-stop-message", "children"),
     Input("stop-session-btn", "n_clicks"),
-    State("session-select", "value"),
     prevent_initial_call=True,
 )
-def stop_selected_session(_clicks: int, selected_value: str | list[str] | None):
-    active = next(
-        (
-            session
-            for session in _selected_sessions(selected_value)
-            if session["state"] == "running"
-        ),
-        None,
-    )
+def stop_selected_session(_clicks: int):
+    active = session_store.active_session(kind="single_backtest")
     if not active:
-        return dmc.Alert("Select the active run before requesting a stop.", color="red")
+        return dmc.Alert("No Single Backtest run is currently active.", color="red")
     try:
         session_store.request_cancel(active["session_id"])
         return dmc.Alert(
@@ -434,3 +462,107 @@ def delete_selected_session(_clicks: int, selected_value: str | list[str] | None
         return dmc.Alert(f"Deleted {deleted} dashboard session{'s' if deleted != 1 else ''}.", color="green")
     except Exception as exc:
         return dmc.Alert(str(exc), title="Could not delete session", color="red")
+
+
+@callback(
+    Output("session-bot-activity-table", "data"),
+    Output("session-bot-activity-table", "page_count"),
+    Output("session-bot-activity-table", "page_current"),
+    Input("session-bot-activity-table", "page_current"),
+    Input("session-bot-activity-table", "sort_by"),
+    Input("session-bot-activity-table", "filter_query"),
+    State("session-bot-activity-table", "page_size"),
+    State("session-bot-activity-source", "data"),
+    prevent_initial_call=True,
+)
+def page_bot_activity(
+    page_current: int | None,
+    sort_by: list[dict[str, str]] | None,
+    filter_query: str | None,
+    page_size: int | None,
+    source: dict[str, Any] | None,
+):
+    """Server-side paging for the cBot log (Dash DataTable backend paging)."""
+    events = data_access.single_bot_events(str((source or {}).get("experiment") or ""))
+    rows = _sorted_rows(_filtered_rows(single_views.bot_activity_rows(events), filter_query), sort_by)
+    size = max(1, int(page_size or single_views.BOT_ACTIVITY_PAGE_SIZE))
+    page_count = max(1, math.ceil(len(rows) / size))
+    # A new filter or sort starts from its first page.
+    triggered = set(ctx.triggered_prop_ids or {})
+    restart = any(key.endswith((".sort_by", ".filter_query")) for key in triggered)
+    page = 0 if restart else min(max(0, int(page_current or 0)), page_count - 1)
+    return rows[page * size:(page + 1) * size], page_count, page
+
+
+# One clause of the DataTable filter syntax: "{column} operator value". The
+# operator is matched only in that position: a value such as "line 1" must not
+# be read as the "ne" operator (the substring search in the Dash docs example).
+_FILTER_CLAUSE = re.compile(r"^\s*\{(?P<column>[^}]+)\}\s+(?P<operator>\S+)\s*(?P<value>.*?)\s*$")
+_FILTER_ALIASES = {
+    "=": "eq", "!=": "ne", "<": "lt", "<=": "le", ">": "gt", ">=": "ge",
+}
+_FILTER_TESTS = {
+    "contains": lambda cell, value: value in cell,
+    "datestartswith": lambda cell, value: cell.startswith(value),
+    "eq": lambda cell, value: cell == value,
+    "ne": lambda cell, value: cell != value,
+    "lt": lambda cell, value: cell < value,
+    "le": lambda cell, value: cell <= value,
+    "gt": lambda cell, value: cell > value,
+    "ge": lambda cell, value: cell >= value,
+}
+
+
+def _split_filter_part(part: str) -> tuple[str | None, str | None, str | None, bool]:
+    """(column, operator, value, case_insensitive) of one filter clause."""
+    match = _FILTER_CLAUSE.match(part)
+    if not match:
+        return None, None, None, False
+    operator = _FILTER_ALIASES.get(match["operator"], match["operator"].lower())
+    insensitive = False
+    if operator not in _FILTER_TESTS and operator[:1] in {"i", "s"} and operator[1:] in _FILTER_TESTS:
+        insensitive, operator = operator[0] == "i", operator[1:]
+    if operator not in _FILTER_TESTS:
+        return None, None, None, False
+    value = match["value"]
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"`":
+        value = value[1:-1].replace("\\" + value[0], value[0])
+    return match["column"], operator, value, insensitive
+
+
+def _filtered_rows(rows: list[dict[str, Any]], filter_query: str | None) -> list[dict[str, Any]]:
+    for part in str(filter_query or "").split(" && "):
+        column, operator, value, insensitive = _split_filter_part(part)
+        if column is None or operator is None or value is None:
+            continue
+        test = _FILTER_TESTS[operator]
+        if insensitive:
+            rows = [row for row in rows if test(str(row.get(column, "")).casefold(), value.casefold())]
+        else:
+            rows = [row for row in rows if test(str(row.get(column, "")), value)]
+    return rows
+
+
+def _sorted_rows(rows: list[dict[str, Any]], sort_by: list[dict[str, str]] | None) -> list[dict[str, Any]]:
+    if not sort_by:
+        return rows
+    column = str(sort_by[0].get("column_id") or "")
+    descending = sort_by[0].get("direction") == "desc"
+    # Displayed times are human-formatted; the log's own line order is the
+    # chronological order.
+    key = "_order" if column == "time" else column
+    return sorted(rows, key=lambda row: row.get(key) if key == "_order" else str(row.get(key, "")),
+                  reverse=descending)
+
+
+@callback(
+    Output("session-create-message", "children", allow_duplicate=True),
+    Output("session-run-message", "children", allow_duplicate=True),
+    Output("session-stop-message", "children", allow_duplicate=True),
+    Output("session-delete-message", "children", allow_duplicate=True),
+    Input("refresh-session-view-btn", "n_clicks"),
+    prevent_initial_call=True,
+)
+def clear_old_session_messages(_clicks: int):
+    """Manual Refresh presents current state without stale action banners."""
+    return None, None, None, None

@@ -26,10 +26,12 @@ facilitator — facilitator tự tạo 1 thư mục tạm riêng cho mỗi lần
 người dùng trước khi bỏ fallback). GUI (chạy tay trong cTrader Desktop) hoàn
 toàn KHÔNG đi qua module này — không bị ảnh hưởng gì.
 
-[2026-09-26] DB2 vs DB3: strategy_lab publish song song 2 kênh cùng schema —
-DB2 "L_PastSignal" (không lọc trend, hành vi gốc, KHÔNG đổi gì) và DB3
-"L_PastSignal_Trend" (lọc theo trend khung lớn H4). Module này không tự biết
-gì về "DB2"/"DB3" — chỉ đọc đúng `RedisProfile.key_prefix` (mặc định
+[2026-09-26] Kênh gốc vs kênh trend: strategy_lab publish song song 2 kênh cùng
+schema — "L_PastSignal" (không lọc trend, hành vi gốc, KHÔNG đổi gì) và
+"L_PastSignal_Trend" (lọc theo trend khung lớn H4). [2026-10-08] Số db thật (dò
+Redis): db0 = kênh gốc, db1 = kênh trend — trước đó ghi DB2/DB3 (tên còn trong
+nhãn dashboard). Module này không tự biết gì về số db — chỉ đọc đúng
+`RedisProfile.key_prefix` (mặc định
 "L_PastSignal") của profile được truyền vào. Đổi kênh = đổi `redis_profile`
 trong config của experiment (`config.yaml` mục `redis:`), không cần sửa gì ở
 đây hay thêm cờ CLI mới.
@@ -38,6 +40,7 @@ from __future__ import annotations
 
 import hashlib
 from datetime import date
+from functools import lru_cache
 from pathlib import Path
 from typing import Mapping, Sequence
 
@@ -75,6 +78,7 @@ SYMBOL_GROUPS = {
 REDIS_STRATEGY_TOKENS = {
     "combo": "combo",
     "macross": "ma_cross",
+    "macdbreak": "macd_break",
 }
 
 # Khớp CHÍNH XÁC tên cột LoadSignalFile() tìm theo header (không theo vị trí)
@@ -84,6 +88,7 @@ REDIS_STRATEGY_TOKENS = {
 STRATEGY_COLUMNS: dict[str, tuple[str, ...]] = {
     "combo": ("bartime", "atr", "entry", "signal"),
     "ma_cross": ("bartime", "atr", "signal"),
+    "macd_break": ("bartime", "atr", "signal"),
 }
 
 
@@ -126,9 +131,23 @@ def resolve_signal_path(
 
 
 def redis_client(profile: RedisProfile) -> "redis.Redis":
-    """Tạo kết nối Redis từ profile trong config.yaml. Đọc pwd_file đúng 1
-    lần ở đây — KHÔNG bao giờ log/in giá trị mật khẩu ra bất cứ đâu."""
-    return redis.Redis(
+    """Client Redis cho 1 profile trong config.yaml, dùng chung 1 ConnectionPool
+    mỗi profile. KHÔNG bao giờ log/in giá trị mật khẩu ra bất cứ đâu.
+
+    [2026-09-27] Mỗi kết nối mới tốn TCP + AUTH tới host strategy_lab (đo
+    15,6 ms, trong khi LRANGE trên kết nối sẵn có chỉ 2,3 ms) — dashboard gọi
+    hàm này 1 lần/cặp symbol×timeframe. `client.close()` của bên gọi chỉ trả
+    kết nối về pool (redis-py không tự đóng pool truyền từ ngoài vào)."""
+    password_stamp = Path(profile.pwd_file).stat().st_mtime_ns
+    return redis.Redis(connection_pool=_connection_pool(profile, password_stamp))
+
+
+@lru_cache(maxsize=8)
+def _connection_pool(profile: RedisProfile, password_stamp: int) -> "redis.ConnectionPool":
+    """`password_stamp` chỉ là 1 phần khoá cache: đổi file mật khẩu thì mở pool
+    mới, pool cũ không bị dùng lại với mật khẩu đã hết hiệu lực."""
+    del password_stamp
+    return redis.ConnectionPool(
         host=profile.host,
         port=profile.port,
         db=profile.db,
@@ -144,8 +163,8 @@ def signal_list_key(
     """Khuôn key LIST theo đúng tài liệu strategy_lab:
     {key_prefix}_{SYMBOL}_{TIMEFRAME}_{STRATEGY} — viết hoa cả 3 phần.
 
-    `key_prefix` mặc định "L_PastSignal" (DB2, không lọc trend). strategy_lab
-    (2026-09-26) publish thêm DB3 song song, cùng khuôn key nhưng tiền tố
+    `key_prefix` mặc định "L_PastSignal" (kênh gốc, không lọc trend). strategy_lab
+    (2026-09-26) publish thêm kênh trend song song, cùng khuôn key nhưng tiền tố
     "L_PastSignal_Trend" — gọi hàm này với key_prefix khác để đọc kênh đó,
     xem RedisProfile.key_prefix trong configuration.py."""
     return f"{key_prefix}_{symbol_group.upper()}_{timeframe.upper()}_{strategy.upper()}"
@@ -245,8 +264,8 @@ def materialize_signal_csv(
     vì âm thầm ghi CSV rỗng khiến backtest "chạy thành công" nhưng 0 lệnh mà
     không ai biết vì sao.
 
-    Đọc đúng kênh Redis mà `profile.key_prefix` chỉ định — DB2 ("L_PastSignal",
-    mặc định) hoặc DB3 ("L_PastSignal_Trend", có lọc trend) tuỳ profile được
+    Đọc đúng kênh Redis mà `profile.key_prefix` chỉ định — kênh gốc ("L_PastSignal",
+    mặc định, db0) hoặc kênh trend ("L_PastSignal_Trend", có lọc trend, db1) tuỳ profile được
     truyền vào (xem `redis:` trong config.yaml)."""
     client = redis_client(profile)
     try:

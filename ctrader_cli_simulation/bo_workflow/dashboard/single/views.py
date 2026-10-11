@@ -19,8 +19,24 @@ from dash import dash_table, dcc, html
 import dash_mantine_components as dmc
 try:
     from .. import signal_sources
+    from ..ui_common import (
+        DECIMAL, INPUT_DEBOUNCE_MS, INTEGER, MONEY, PERSIST,
+        numeric_column, right_align, status_region, truncated,
+    )
 except ImportError:  # app.py loads feature folders as top-level modules.
     import signal_sources
+    from ui_common import (
+        DECIMAL, INPUT_DEBOUNCE_MS, INTEGER, MONEY, PERSIST,
+        numeric_column, right_align, status_region, truncated,
+    )
+
+# Display resolution for long equity curves. M4 aggregation keeps the first,
+# last, minimum and maximum point per time bucket, which renders line charts
+# pixel-identically when buckets >= plot width (Jugel et al., "M4", VLDB 2014).
+# 1,200 buckets covers the widest Mantine "xl" container.
+EQUITY_DISPLAY_BUCKETS = 1_200
+BOT_ACTIVITY_PAGE_SIZE = 20
+HISTORY_DISPLAY_LIMIT = 500
 
 
 def layout(options: dict[str, Any]) -> html.Div:
@@ -56,12 +72,12 @@ def layout(options: dict[str, Any]) -> html.Div:
                 dmc.Select(
                     id="session-strategy-select", label="Strategy",
                     data=[{"label": item["label"], "value": item["value"]} for item in strategies],
-                    value="combo", clearable=False,
+                    value="combo", clearable=False, **PERSIST,
                 ),
                 dmc.MultiSelect(
                     id="session-symbol-select", label="Symbols",
                     data=symbols, value=[default_symbol],
-                    clearable=True, searchable=True,
+                    clearable=True, searchable=True, **PERSIST,
                 ),
                 dmc.MultiSelect(
                     id="session-timeframe-select", label="Timeframes",
@@ -79,11 +95,11 @@ def layout(options: dict[str, Any]) -> html.Div:
                 dmc.NumberInput(
                     id="session-balance-input", label="Starting balance (USD)",
                     value=100000, min=1, step=1000, suffix=" USD",
-                    thousandSeparator=",",
+                    thousandSeparator=",", debounce=INPUT_DEBOUNCE_MS, **PERSIST,
                 ),
                 dmc.NumberInput(
                     id="session-risk-input", label="Risk per trade", value=0.5,
-                    min=0.01, step=0.01, suffix=" %",
+                    min=0.01, step=0.01, suffix=" %", debounce=INPUT_DEBOUNCE_MS, **PERSIST,
                 ),
                 dmc.Select(
                     id="session-ksl-input", label="kSL Fibonacci level",
@@ -94,22 +110,22 @@ def layout(options: dict[str, Any]) -> html.Div:
                     data=combo["ktp_options"], value=combo["default_ktp"], clearable=False,
                 ),
             ]),
-            html.Div(id="session-history-status"),
+            status_region("session-history-status"),
             dmc.SimpleGrid(cols=2, spacing="md", children=[
                 dmc.DateInput(
                     id="session-start-input", label="Start date", value="2025-01-01",
                     valueFormat="YYYY-MM-DD", minDate="2000-01-01", maxDate=today,
-                    clearable=False, inputProps={"readOnly": True},
+                    clearable=False,
                 ),
                 dmc.DateInput(
                     id="session-end-input", label="End date", value=today,
                     valueFormat="YYYY-MM-DD", minDate="2000-01-01", maxDate=today,
-                    clearable=False, inputProps={"readOnly": True},
+                    clearable=False,
                 ),
             ]),
             dmc.Group([
                 dmc.Button("Create session (does not run)", id="create-session-btn", color="blue"),
-                html.Div(id="session-create-message"),
+                dcc.Loading(status_region("session-create-message"), type="circle"),
             ], align="center"),
         ])),
         dmc.Paper(withBorder=True, radius="md", p="md", mt="md", children=dmc.Stack([
@@ -122,7 +138,7 @@ def layout(options: dict[str, Any]) -> html.Div:
             ], justify="space-between", align="center"),
             dmc.MultiSelect(
                 id="session-select", label="Select saved sessions", data=[],
-                placeholder="No sessions yet", clearable=True, searchable=True,
+                placeholder="Select a session", clearable=True, searchable=True,
             ),
             dmc.Text(
                 "Select one completed or cached session to inspect it. Select one or more drafts to queue them "
@@ -137,18 +153,65 @@ def layout(options: dict[str, Any]) -> html.Div:
                     color="red", variant="outline", disabled=True,
                 ),
             ], align="end"),
+            html.Div(id="session-active-run"),
             dmc.Progress(id="session-progress-bar", value=0, striped=True, animated=True),
             dmc.Text(id="session-progress-label", children="No active run", size="sm", c="dimmed"),
-            html.Div(id="session-run-message"),
-            html.Div(id="session-stop-message"),
+            status_region("session-run-message"),
+            status_region("session-stop-message"),
             dmc.Text(
                 "Delete removes dashboard metadata only; core reports and pipeline caches are retained.",
                 size="xs", c="dimmed",
             ),
-            html.Div(id="session-delete-message"),
+            status_region("session-delete-message"),
         ])),
         html.Div(id="session-detail", style={"marginTop": "1rem"}),
     ])
+
+
+def active_run_summary(session: dict[str, Any] | None) -> Any:
+    """Compact, live run context that does not depend on the selected result."""
+    if not session:
+        return None
+    elapsed = _duration_since(session.get("started_utc"))
+    last_update = _duration_since(session.get("updated_utc"))
+    progress = float(session.get("progress_pct") or 0)
+    stage = str(session.get("progress_text") or "Running")
+    if progress <= 0:
+        progress_label = f"{stage} - waiting for a CLI progress percentage"
+    else:
+        progress_label = f"{_format_value(progress, 'number')}% - {stage}"
+    return dmc.Alert(
+        title="Active backtest",
+        color="blue",
+        variant="light",
+        children=dmc.Stack([
+            dmc.Text(str(session.get("title") or session.get("session_id") or ""), fw=600),
+            dmc.Group([
+                dmc.Text(f"Elapsed: {elapsed}"),
+                dmc.Text(f"CLI progress: {progress_label}"),
+                dmc.Text(f"Last status update: {last_update} ago"),
+            ], gap="lg"),
+        ], gap="xs"),
+    )
+
+
+def _duration_since(value: Any) -> str:
+    if not value:
+        return "unknown"
+    try:
+        when = datetime.fromisoformat(str(value))
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=timezone.utc)
+        seconds = max(0, int((datetime.now(timezone.utc) - when.astimezone(timezone.utc)).total_seconds()))
+    except (TypeError, ValueError):
+        return "unknown"
+    hours, remainder = divmod(seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if hours:
+        return f"{hours}h {minutes:02d}m"
+    if minutes:
+        return f"{minutes}m {seconds:02d}s"
+    return f"{seconds}s"
 
 
 def select_data(sessions: list[dict[str, Any]]) -> list[dict[str, str]]:
@@ -221,15 +284,7 @@ def detail(
         ], gap="xs"),
         dmc.Badge(state.upper(), color=state_color, size="lg"),
     ], justify="space-between", align="flex-start")
-    progress = float(session.get("progress_pct") or 0)
-    progress_text = str(session.get("progress_text") or state.replace("_", " ").title())
-    sections: list[Any] = [
-        header,
-        dmc.Progress(
-            value=progress, color=state_color, striped=state == "running", animated=state == "running",
-        ),
-        dmc.Text(format_progress(progress, progress_text), size="sm", c="dimmed"),
-    ]
+    sections: list[Any] = [header]
     if session.get("note"):
         sections.append(dmc.Text(session["note"], fs="italic"))
     if session.get("error_text"):
@@ -242,10 +297,10 @@ def detail(
     if execution.get("read_error"):
         sections.append(dmc.Alert(execution["read_error"], title="Could not read artifact", color="red"))
     elif execution.get("row"):
-        sections.extend(_execution_sections(execution))
+        sections.extend(_execution_sections(execution, str(session.get("experiment") or "")))
     elif state == "running":
         sections.append(dmc.Alert(
-            "The core engine is running. Use Refresh sessions when you want to read the latest progress; "
+            "The core engine is running. Live progress and Stop are shown above; "
             "successful-run logs appear after the core engine finishes writing artifacts.",
             title="Running", color="yellow", variant="light",
         ))
@@ -255,7 +310,7 @@ def detail(
     return dmc.Paper(withBorder=True, radius="md", p="md", children=dmc.Stack(sections, gap="md"))
 
 
-def _execution_sections(execution: dict[str, Any]) -> list[Any]:
+def _execution_sections(execution: dict[str, Any], experiment: str) -> list[Any]:
     row = execution["row"]
     metrics = execution.get("metrics") or {}
     status_color = "green" if row.get("status") == "ok" else "red"
@@ -280,7 +335,7 @@ def _execution_sections(execution: dict[str, Any]) -> list[Any]:
     bot_events = execution.get("bot_events") or []
     cli_log = execution.get("cli_log") or ""
     if bot_events:
-        result.append(_bot_activity_table(bot_events))
+        result.append(_bot_activity_table(bot_events, experiment))
     else:
         result.append(dmc.Text("No recognised cBot activity is available in the persisted run log.", c="dimmed", size="sm"))
     if cli_log:
@@ -543,8 +598,9 @@ def _equity_panel(points: list[dict[str, Any]]) -> Any:
         dcc.Graph(
             id="equity-dd-chart",
             figure=_equity_figure(points),
-            # This is an inspection chart, not an editing surface.  Keep its
-            # time range stable so a hover cannot be mistaken for a zoom/pan.
+            # This is an inspection chart, not an editing surface (user
+            # requirement: synchronised hover only, no zoom). Keep its time
+            # range stable so a hover cannot be mistaken for a zoom/pan.
             config={
                 "displaylogo": False,
                 "displayModeBar": False,
@@ -562,34 +618,33 @@ def _equity_figure(points: list[dict[str, Any]]) -> go.Figure:
     balance = [item.get("balance") for item in points]
     min_equity = [item.get("minEquity") for item in points]
     max_equity = [item.get("maxEquity") for item in points]
+    # Drawdown comes from every report point; only the display is aggregated,
+    # and M4 keeps each bucket's extreme, so the maximum drawdown stays visible.
     drawdown = _drawdown_series(balance, min_equity, max_equity)
-    value_hover = [
-        [_format_value(value, "money"), _format_value(drawdown_value, "percent")]
-        for value, drawdown_value in zip(balance, drawdown)
-    ]
+    epoch = [_epoch_ms(item.get("timestamp") or item.get("time") or item.get("date")) for item in points]
+    balance_keep = _m4_indices(epoch, balance, EQUITY_DISPLAY_BUCKETS)
+    drawdown_keep = _m4_indices(epoch, drawdown, EQUITY_DISPLAY_BUCKETS)
     figure = make_subplots(
         rows=2, cols=1, shared_xaxes=True,
         row_heights=[0.60, 0.40], vertical_spacing=0.07,
     )
+    # Values are formatted by Plotly's hovertemplate instead of shipping a
+    # pre-formatted string per point; "x unified" hover lists both traces.
+    # The plotted values are cut to 2 decimals first, so ",.2f" shows the cut
+    # digits (dashboard rule: cut, never round) — invisible at pixel level.
     figure.add_trace(go.Scatter(
-        x=x, y=balance, mode="lines", name="Account value",
+        x=[x[i] for i in balance_keep], y=[truncated(balance[i]) for i in balance_keep],
+        mode="lines", name="Account value",
         line={"width": 2.5, "color": "#2563eb", "shape": "hv"},
         fill="tozeroy", fillcolor="rgba(37, 99, 235, 0.08)",
-        customdata=value_hover,
-        hovertemplate=(
-            "<b>Account value</b>: %{customdata[0]}<br>"
-            "<b>Equity drawdown</b>: %{customdata[1]}<extra></extra>"
-        ),
+        hovertemplate="<b>Account value</b>: %{y:,.2f} USD<extra></extra>",
     ), row=1, col=1)
     figure.add_trace(go.Scatter(
-        x=x, y=drawdown, mode="lines", name="Equity drawdown",
+        x=[x[i] for i in drawdown_keep], y=[truncated(drawdown[i]) for i in drawdown_keep],
+        mode="lines", name="Equity drawdown",
         line={"width": 1.5, "color": "#dc2626"},
         fill="tozeroy", fillcolor="rgba(220, 38, 38, 0.18)",
-        customdata=value_hover,
-        hovertemplate=(
-            "<b>Account value</b>: %{customdata[0]}<br>"
-            "<b>Equity drawdown</b>: %{customdata[1]}<extra></extra>"
-        ),
+        hovertemplate="<b>Equity drawdown</b>: %{y:.2f}%<extra></extra>",
     ), row=2, col=1)
     account_domain = figure.layout.yaxis.domain
     drawdown_domain = figure.layout.yaxis2.domain
@@ -688,6 +743,42 @@ def _chart_time(value: Any) -> Any:
     return value
 
 
+def _epoch_ms(value: Any) -> float | None:
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        when = datetime.fromisoformat(str(value))
+    except (TypeError, ValueError):
+        return None
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    return when.timestamp() * 1000
+
+
+def _m4_indices(times: list[float | None], values: list[Any], buckets: int) -> list[int]:
+    """Indices kept by M4 aggregation (first, last, min, max per time bucket).
+
+    Series short enough to render every point, or without usable timestamps,
+    are returned unchanged.
+    """
+    count = len(values)
+    known = [t for t in times if t is not None]
+    if count <= 4 * buckets or len(known) != count or max(known) <= min(known):
+        return list(range(count))
+    start, span = min(known), max(known) - min(known)
+    groups: dict[int, list[int]] = {}
+    for index, when in enumerate(times):
+        groups.setdefault(min(buckets - 1, int((when - start) / span * buckets)), []).append(index)
+    keep: set[int] = set()
+    for members in groups.values():
+        keep.update((members[0], members[-1]))
+        numeric = [i for i in members if _finite_float(values[i]) is not None]
+        if numeric:
+            keep.add(min(numeric, key=lambda i: float(values[i])))
+            keep.add(max(numeric, key=lambda i: float(values[i])))
+    return sorted(keep)
+
+
 def _equity_axis_ticks(*series: list[Any]) -> dict[str, Any]:
     """Use human-readable USD tick labels without rounding artifact values."""
     values: list[float] = []
@@ -723,47 +814,54 @@ def _drawdown_axis(values: list[float]) -> dict[str, Any]:
     }
 
 
+_HISTORY_NUMERIC = (
+    "id", "entry_price", "close_price", "net", "gross", "commissions",
+    "swaps", "pips", "volume", "quantity", "balance",
+)
+
+
 def _history_table(history: list[dict[str, Any]]) -> Any:
-    raw_rows = [dict(item) for item in history[:500] if isinstance(item, dict)]
+    total = sum(1 for item in history if isinstance(item, dict))
+    raw_rows = [dict(item) for item in history[:HISTORY_DISPLAY_LIMIT] if isinstance(item, dict)]
     rows: list[dict[str, Any]] = []
     for item in raw_rows:
-        net = item.get("net")
-        outcome = "profit" if isinstance(net, (int, float)) and net >= 0 else "loss"
+        net = truncated(item.get("net"))
         rows.append({
-            "id": item.get("id"),
+            "id": truncated(item.get("id"), 0),
             "symbol": item.get("symbol"),
             "direction": str(item.get("direction") or "—").upper(),
             "entry_time": _trade_time(item.get("entryTime")),
-            "entry_price": _format_value(item.get("entryPrice"), "number"),
+            "entry_price": truncated(item.get("entryPrice")),
             "close_time": _trade_time(item.get("closeTime")),
-            "close_price": _format_value(item.get("closePrice"), "number"),
-            "net": _format_value(net, "money"),
-            "gross": _format_value(item.get("gross"), "money"),
-            "commissions": _format_value(item.get("commissions"), "money"),
-            "swaps": _format_value(item.get("swaps"), "money"),
-            "pips": _format_value(item.get("pips"), "number"),
-            "volume": _format_value(item.get("volume"), "number"),
-            "quantity": _format_value(item.get("quantity"), "number"),
-            "balance": _format_value(item.get("balance"), "money"),
+            "close_price": truncated(item.get("closePrice")),
+            "net": net,
+            "gross": truncated(item.get("gross")),
+            "commissions": truncated(item.get("commissions")),
+            "swaps": truncated(item.get("swaps")),
+            "pips": truncated(item.get("pips")),
+            "volume": truncated(item.get("volume")),
+            "quantity": truncated(item.get("quantity")),
+            "balance": truncated(item.get("balance")),
             "label": item.get("label") or "—",
             "comment": item.get("comment") or "—",
-            "_outcome": outcome,
         })
     columns = [
-        ("id", "Trade #"), ("symbol", "Symbol"), ("direction", "Side"),
-        ("entry_time", "Entry time"), ("entry_price", "Entry price"),
-        ("close_time", "Close time"), ("close_price", "Close price"),
-        ("net", "Net P&L"), ("gross", "Gross P&L"),
-        ("commissions", "Commission"), ("swaps", "Swap"),
-        ("pips", "Pips"), ("volume", "Volume"), ("quantity", "Quantity"),
-        ("balance", "Balance"), ("label", "Label"), ("comment", "Comment"),
+        numeric_column("id", "Trade #", INTEGER),
+        {"id": "symbol", "name": "Symbol"}, {"id": "direction", "name": "Side"},
+        {"id": "entry_time", "name": "Entry time"}, numeric_column("entry_price", "Entry price", DECIMAL),
+        {"id": "close_time", "name": "Close time"}, numeric_column("close_price", "Close price", DECIMAL),
+        numeric_column("net", "Net P&L", MONEY), numeric_column("gross", "Gross P&L", MONEY),
+        numeric_column("commissions", "Commission", MONEY), numeric_column("swaps", "Swap", MONEY),
+        numeric_column("pips", "Pips", DECIMAL), numeric_column("volume", "Volume", DECIMAL),
+        numeric_column("quantity", "Quantity", DECIMAL), numeric_column("balance", "Balance", MONEY),
+        {"id": "label", "name": "Label"}, {"id": "comment", "name": "Comment"},
     ]
     table = dash_table.DataTable(
-        columns=[{"name": label, "id": key} for key, label in columns],
+        columns=columns,
         data=rows,
-        hidden_columns=["_outcome"],
         page_action="native",
         page_size=12,
+        sort_action="native",
         style_table={"overflowX": "auto"},
         style_header={
             "backgroundColor": "#f8fafc", "color": "#475569", "fontWeight": 600,
@@ -774,51 +872,66 @@ def _history_table(history: list[dict[str, Any]]) -> Any:
             "color": "#334155", "fontSize": "0.82rem", "padding": "9px 8px",
             "textAlign": "left", "whiteSpace": "nowrap",
         },
+        style_cell_conditional=right_align(list(_HISTORY_NUMERIC)),
+        # Sign drives colour; the minus sign stays in the value, so colour is
+        # not the only cue (WCAG 1.4.1).
         style_data_conditional=[
-            {"if": {"filter_query": "{_outcome} = profit", "column_id": "net"}, "color": "#15803d", "fontWeight": 600},
-            {"if": {"filter_query": "{_outcome} = loss", "column_id": "net"}, "color": "#dc2626", "fontWeight": 600},
+            {"if": {"filter_query": "{net} >= 0", "column_id": "net"}, "color": "#15803d", "fontWeight": 600},
+            {"if": {"filter_query": "{net} < 0", "column_id": "net"}, "color": "#dc2626", "fontWeight": 600},
             {"if": {"column_id": "id"}, "color": "#64748b"},
         ],
+    )
+    shown = (
+        f"{total:,} closed trades" if len(rows) == total
+        else f"First {len(rows):,} of {total:,} closed trades"
     )
     return dmc.Paper(withBorder=True, radius="sm", p="sm", children=dmc.Stack([
         dmc.Group([
             dmc.Text("Trade history", fw=600, size="sm"),
-            dmc.Badge(f"{len(rows):,} closed trades", variant="light", color="blue"),
+            dmc.Badge(shown, variant="light", color="blue" if len(rows) == total else "orange"),
         ], justify="space-between"),
         table,
     ], gap="xs"))
 
 
-def _bot_activity_table(events: list[dict[str, Any]]) -> Any:
-    rows = [
+def bot_activity_rows(events: Any) -> list[dict[str, Any]]:
+    """Display rows of the cBot log: exactly the three shown columns, plus the
+    tone used for colouring and the original line order used to sort by time."""
+    return [
         {
             "time": _bot_event_time(item.get("time")),
-            "side": item.get("side") or "-",
-            "reference": item.get("reference") or "-",
-            "price": _format_log_context(item.get("price_context")),
-            "protection": _format_log_context(item.get("protection")),
-            "account": _format_log_context(item.get("account_context")),
             "level": item.get("level") or "—",
-            "event": item.get("event") or "—",
             "detail": item.get("detail") or "—",
-            "net": _format_value(item.get("net"), "money") if item.get("net") not in (None, "") else "—",
             "_tone": item.get("tone") or "neutral",
+            "_order": order,
         }
-        for item in events
-        if isinstance(item, dict)
+        for order, item in enumerate(item for item in events if isinstance(item, dict))
     ]
+
+
+def _bot_activity_table(events: list[dict[str, Any]], experiment: str) -> Any:
+    # Only the first page is sent with the detail view; paging, sorting and
+    # filtering run on the server (single.callbacks.page_bot_activity), so a
+    # long log does not travel to the browser in full.
+    rows = bot_activity_rows(events)
     table = dash_table.DataTable(
+        id="session-bot-activity-table",
         columns=[
             {"name": "Event time", "id": "time"},
             {"name": "Level", "id": "level"},
             {"name": "Message", "id": "detail"},
         ],
-        data=rows,
-        hidden_columns=["_tone"],
-        page_action="native",
-        page_size=20,
-        sort_action="native",
-        filter_action="native",
+        data=rows[:BOT_ACTIVITY_PAGE_SIZE],
+        hidden_columns=["_tone", "_order"],
+        page_action="custom",
+        page_current=0,
+        page_size=BOT_ACTIVITY_PAGE_SIZE,
+        page_count=max(1, -(-len(rows) // BOT_ACTIVITY_PAGE_SIZE)),
+        sort_action="custom",
+        sort_mode="single",
+        sort_by=[],
+        filter_action="custom",
+        filter_query="",
         style_table={"overflowX": "auto"},
         style_header={
             "backgroundColor": "#f8fafc", "color": "#475569", "fontWeight": 600,
@@ -848,6 +961,7 @@ def _bot_activity_table(events: list[dict[str, Any]]) -> Any:
             ], gap=2),
             dmc.Badge(f"{len(events):,} log lines", variant="light", color="blue"),
         ], justify="space-between", align="flex-start"),
+        dcc.Store(id="session-bot-activity-source", data={"experiment": experiment}),
         table,
     ], gap="xs"))
 
@@ -860,26 +974,6 @@ def _bot_event_time(value: Any) -> str:
         except ValueError:
             continue
     return raw or "—"
-
-
-def _format_log_context(value: Any) -> str:
-    raw = str(value or "").strip()
-    if not raw:
-        return "-"
-    parts: list[str] = []
-    for part in raw.split(" · "):
-        label, separator, numeric = part.partition(" ")
-        if not separator:
-            parts.append(part)
-            continue
-        if label in {"Balance", "Budget"}:
-            formatted = _format_value(numeric.removeprefix("$"), "money")
-        elif label == "Risk":
-            formatted = _format_value(numeric.removesuffix("%"), "percent")
-        else:
-            formatted = _format_value(numeric, "number")
-        parts.append(f"{label} {formatted}")
-    return " · ".join(parts)
 
 
 def _trade_time(value: Any) -> str:

@@ -1,0 +1,22 @@
+{
+  "new": [
+    "bo_workflow/tests/test_optimize_backend.py"
+  ],
+  "changed": [
+    "CLAUDE.md",
+    "bo_workflow/config.example.yaml",
+    "bo_workflow/core_engine/cli_runner.py",
+    "bo_workflow/core_engine/configuration.py",
+    "bo_workflow/core_engine/facilitator.py",
+    "bo_workflow/core_engine/models.py",
+    "bo_workflow/core_engine/output_util/evidence.py",
+    "bo_workflow/core_engine/planner.py",
+    "bo_workflow/core_engine/signal_trans.py",
+    "bo_workflow/core_engine/store.py",
+    "bo_workflow/tests/test_cli_engine.py",
+    "bo_workflow/tests/test_core_engine.py"
+  ],
+  "deleted": [],
+  "current_files": 78,
+  "baseline_files": 77
+}

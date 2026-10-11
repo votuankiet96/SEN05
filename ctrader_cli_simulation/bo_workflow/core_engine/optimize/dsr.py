@@ -29,6 +29,8 @@ from typing import Any, Mapping, Sequence
 
 _NORMAL = NormalDist()
 EULER_MASCHERONI = 0.5772156649015329
+# v2 (2026-09-28): thêm khối `selected` — DSR của trial được chọn theo tiêu chí.
+SCHEMA = "bo-research-dsr/v2"
 
 
 def sharpe_ratio(daily_returns: Sequence[float]) -> float:
@@ -100,34 +102,55 @@ def deflated_sharpe_ratio(
     return _NORMAL.cdf(numerator / math.sqrt(denom_inner))
 
 
-def run(trials: Mapping[str, Sequence[float]]) -> dict[str, Any]:
+def _evaluate(returns: Sequence[float], sharpe: float, benchmark: float) -> dict[str, float | int]:
+    skew = skewness(returns)
+    kurt = kurtosis(returns)
+    return {
+        "sharpe": sharpe,
+        "sample_length": len(returns),
+        "skewness": skew,
+        "kurtosis": kurt,
+        "dsr": deflated_sharpe_ratio(
+            sharpe, benchmark_sharpe=benchmark, sample_length=len(returns), skew=skew, kurt=kurt,
+        ),
+    }
+
+
+def run(trials: Mapping[str, Sequence[float]], *, selected: str | None = None) -> dict[str, Any]:
     """N trial (mỗi trial = 1 chuỗi %lời/lỗ theo ngày, key = nhãn trial) ->
     Sharpe mỗi trial -> chọn winner (SR cao nhất) -> DSR của đúng winner đó,
-    hiệu chỉnh cho việc đã thử N=len(trials) trial."""
+    hiệu chỉnh cho việc đã thử N=len(trials) trial.
+
+    [2026-09-28] `selected` (tuỳ chọn): nhãn trial THẬT SỰ được chọn theo tiêu
+    chí nghiên cứu (vd lợi nhuận cao nhất) — thường KHÔNG trùng trial Sharpe cao
+    nhất. DSR của nó dùng CÙNG ngưỡng SR0 (tính từ cả N trial), vì DSR là PSR
+    với ngưỡng đã hiệu chỉnh cho số lần thử, áp được cho trial nào cũng vậy.
+    Các field winner_*/dsr giữ nguyên nghĩa cũ (trial Sharpe cao nhất) làm tham
+    chiếu; kết quả cho trial được chọn nằm ở key `selected`."""
     if len(trials) < 2:
         raise ValueError("DSR cần ít nhất 2 trial để hiệu chỉnh multiple-testing có ý nghĩa")
+    if selected is not None and selected not in trials:
+        raise ValueError(f"selected trial {selected!r} is not among the analysed trials")
     labels = list(trials)
     sharpes = {label: sharpe_ratio(trials[label]) for label in labels}
     winner = max(labels, key=lambda label: sharpes[label])
-    winner_returns = trials[winner]
     sr0 = expected_max_sharpe(list(sharpes.values()))
-    skew = skewness(winner_returns)
-    kurt = kurtosis(winner_returns)
-    dsr = deflated_sharpe_ratio(
-        sharpes[winner],
-        benchmark_sharpe=sr0,
-        sample_length=len(winner_returns),
-        skew=skew,
-        kurt=kurt,
-    )
-    return {
-        "schema": "bo-research-dsr/v1",
+    best = _evaluate(trials[winner], sharpes[winner], sr0)
+    result: dict[str, Any] = {
+        "schema": SCHEMA,
         "n_trials": len(trials),
         "winner_label": winner,
-        "winner_sharpe": sharpes[winner],
+        "winner_sharpe": best["sharpe"],
         "benchmark_sharpe_e_max": sr0,
-        "sample_length": len(winner_returns),
-        "skewness": skew,
-        "kurtosis": kurt,
-        "dsr": dsr,
+        "sample_length": best["sample_length"],
+        "skewness": best["skewness"],
+        "kurtosis": best["kurtosis"],
+        "dsr": best["dsr"],
     }
+    if selected is not None:
+        result["selected"] = {
+            "label": selected,
+            **_evaluate(trials[selected], sharpes[selected], sr0),
+            "is_max_sharpe": selected == winner,
+        }
+    return result

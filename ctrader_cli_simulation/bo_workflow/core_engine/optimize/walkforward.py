@@ -31,7 +31,7 @@ from __future__ import annotations
 import math
 from calendar import monthrange
 from dataclasses import replace
-from datetime import date
+from datetime import date, timedelta
 from typing import Any, Callable, Iterable, Mapping
 
 from ..configuration import load_engine_profile, load_strategy_profile
@@ -47,11 +47,27 @@ from ..store import ExperimentStore
 # lai la mot vong khop qua khu nua, va so lieu doan KIEM het sach y nghia.
 # CHUA dua ra config.yaml — mỗi giá trị vẫn override được qua config của từng
 # experiment (`min_trades`, `plateau_dimensions`, `selection_rules`).
-WF_MIN_TRADES = 30                 # duoi nguong nay thi so dep chi la ngau nhien
+#
+# ⚠️ ĐẢO NGƯỢC 2026-09-29 (chốt người dùng, xem [[wf-min-trades-filter-removed]]):
+# WF_MIN_TRADES từng là 30 — LOẠI tổ hợp có dưới 30 lệnh khỏi vòng chọn winner
+# mỗi cửa sổ HỌC. Người dùng chỉ ra đây là 2 câu hỏi bị trộn làm một: "chiến
+# lược ít lệnh có tệ hơn không" (KHÔNG — hiệu quả/an toàn mới là thước đo, tần
+# suất không phải mục tiêu) và "kết quả 1 tổ hợp có đáng tin khi so với 99 tổ
+# hợp khác không" (đây mới là điều ngưỡng số-lệnh-tối-thiểu định giải quyết).
+# Ngưỡng cứng 30 đã VÔ TÌNH phạt nhầm câu hỏi thứ nhất: loại bỏ đúng vùng
+# KSL/KTP rộng (SL/TP xa) mà chiến lược trend-following tự nhiên vào ít lệnh
+# hơn — dù đó có thể chính là vùng có edge thật. KHÔNG tự thêm lại ngưỡng > 0
+# nào cho toàn walk-forward mà không hỏi người dùng trước.
+WF_MIN_TRADES = 0
 WF_DIMENSIONS = ("KslLevel", "KtpLevel")
 WF_PLATEAU_MIN_NEIGHBORS = 4       # o ria luoi co it hang xom hon o giua
 WF_PLATEAU_PERCENTILE = 0.25       # cham o bang gia tri KEM thu 25% cua ca xom
 WF_RULES = ("plateau", "best")
+
+# Quy ước mốc ngày của cửa sổ (xem walkforward_windows). Nằm trong khoá cache
+# và trong tài liệu experiment: kết quả chạy theo quy ước cũ (cửa sổ chồng 1
+# ngày) không bao giờ bị dùng lại hay trộn chung với kết quả theo quy ước này.
+WINDOW_CONVENTION = "last_trading_day_inclusive_v2"
 
 
 # --------------------------------------------------------------------------- #
@@ -80,19 +96,22 @@ def walkforward_windows(config: Mapping[str, Any]) -> list[tuple[Window, Window]
     cursor = start
     index = 1
     while True:
-        # Moc ket thuc la LOAI TRU (giong o "To" cua GUI va co --end cua CLI, doi
-        # 2026-09-13). Vi vay KHONG tru 1 ngay o day: `is_end` vua la ngay dau
-        # tien KHONG thuoc doan hoc, vua la ngay dau tien CUA doan kiem — hai
-        # doan giap nhau khit, khong chong lan va khong ho ngay nao.
-        # Ban cu (viet theo quy uoc cu "end la ngay bao gom") tru 1 ngay o ca hai
-        # moc, nen moi cua so am tham mat ngay cuoi cung.
-        is_end = _month_add(cursor, is_months)
-        oos_end = _month_add(is_end, oos_months)
-        if oos_end > end:
+        # `oos_start`/`next_start` là mốc NGÀY ĐẦU của đoạn kế tiếp. Window.end
+        # phải là ngày giao dịch CUỐI của đoạn (= mốc đó − 1 ngày), vì cTrader
+        # chạy TRỌN ngày ghi ở --end, không dừng lúc 00:00 của ngày đó. Đo thật
+        # 2026-09-27 (dashboard_walkforward_53d4432bf9e680e5, --end=01/05/2026
+        # 00:00): điểm equity cuối lúc 01/05 20:49 UTC, và cùng 1 lệnh vào
+        # 01/05 15:02 có mặt ở CẢ wf01_oos lẫn wf02_oos; đoạn học wf01_is chạy
+        # tới 01/04 23:59 — tức thấy luôn ngày đầu đoạn kiểm. Bản trước (dùng
+        # thẳng mốc ngày đầu đoạn sau làm end) vì thế chồng 1 ngày giữa HỌC và
+        # KIỂM, và giữa 2 đoạn KIỂM liền nhau.
+        oos_start = _month_add(cursor, is_months)
+        next_start = _month_add(oos_start, oos_months)
+        if next_start > end:
             break
         pairs.append((
-            Window(f"wf{index:02d}_is", cursor, is_end, TRAIN_ZONE),
-            Window(f"wf{index:02d}_oos", is_end, oos_end, OOS_ZONE),
+            Window(f"wf{index:02d}_is", cursor, oos_start - timedelta(days=1), TRAIN_ZONE),
+            Window(f"wf{index:02d}_oos", oos_start, next_start - timedelta(days=1), OOS_ZONE),
         ))
         cursor = _month_add(cursor, step_months)
         index += 1
@@ -218,11 +237,15 @@ def run_walkforward(
                 config.get("parameter_space"), config.get("fixed_params"), config.get("walkforward"),
                 config.get("selection_rules"), config.get("plateau_dimensions"),
                 config.get("min_trades"), config.get("objective"), config.get("zones"), fingerprint,
+                WINDOW_CONVENTION,
             )
             cached = pipeline_lock.check(pipeline, "walkforward", deps_hash)
             if cached is not None:
                 return {**cached, "cached": True}
-    experiment = build_experiment({**dict(config), "method": "walkforward"})
+    # Ghi quy ước cửa sổ vào tài liệu experiment: store khoá tài liệu này, nên
+    # 1 experiment cũ (cửa sổ chồng 1 ngày) bị từ chối thay vì âm thầm nhận
+    # thêm dòng mới cùng tên cửa sổ — trộn 2 quy ước sẽ làm sai bước chọn.
+    experiment = build_experiment({**dict(config), "method": "walkforward", "window_convention": WINDOW_CONVENTION})
     profile = load_strategy_profile(experiment.strategy_profile)
     engine = load_engine_profile(experiment.engine_profile)
     doc = experiment.canonical()

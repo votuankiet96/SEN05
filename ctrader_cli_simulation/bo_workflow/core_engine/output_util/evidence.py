@@ -161,7 +161,10 @@ def validity_flags(
     flags["signal_ok"] = (summary.get("loaded") or 0) > 0 and (summary.get("processed") or 0) > 0
     env = environment(report)
     deposit = env.get("deposit_asset")
-    flags["approx_fx"] = any(
+    # Bật --precise-conversion (CLI >= 5.10) thì P&L/swap/margin quy đổi bằng tỷ giá lịch sử thật,
+    # không còn "xấp xỉ" dù quote khác tiền ký quỹ. Tắt: engine dùng 1 tỷ giá hằng số cho cả kỳ
+    # (đo JP225, 2026-10-08) nên cờ vẫn đúng như cũ.
+    flags["approx_fx"] = (not spec.precise_conversion) and any(
         item.get("quoteAsset") and deposit and item.get("quoteAsset") != deposit
         for item in env.get("used_symbols") or []
     )

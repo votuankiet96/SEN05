@@ -183,17 +183,19 @@ class StrategyProfile:
 
 @dataclass(frozen=True)
 class RedisProfile:
-    """Kết nối Redis nguồn tín hiệu (thay CSV) — vd DB2 do strategy_lab (SEN05)
+    """Kết nối Redis nguồn tín hiệu (thay CSV) — do strategy_lab (SEN05)
     cấp. CHỈ chứa đường dẫn file mật khẩu (`pwd_file`), giống hệt nguyên tắc đã
     dùng cho `CTRADER_PWD_FILE`/`.ctrader-cli-pwd.txt` — KHÔNG BAO GIỜ hardcode
     mật khẩu thật vào config.yaml hay bất kỳ đâu khác trong repo.
 
     `key_prefix` (2026-09-26): strategy_lab giờ publish 2 kênh song song trên
-    cùng Redis server — DB2 "L_PastSignal" (không lọc trend) và DB3
+    cùng Redis server — kênh gốc "L_PastSignal" (không lọc trend) và kênh trend
     "L_PastSignal_Trend" (có lọc trend khung lớn, xem sl_config.yaml/worker.py
-    bên strategy_lab). Khác nhau đúng 1 chỗ: tiền tố key List/Hash. Mặc định
-    "L_PastSignal" giữ nguyên hành vi DB2 cho mọi profile cũ không khai field
-    này trong config.yaml."""
+    bên strategy_lab). Khác nhau tiền tố key List/Hash VÀ số db: dò Redis thật
+    2026-10-08 — db0 = kênh gốc, db1 = kênh trend (trước đó ghi DB2/DB3; hai tên
+    đó còn trong nhãn dashboard nhưng không phải số db). Mặc định "L_PastSignal"
+    giữ nguyên hành vi kênh gốc cho mọi profile cũ không khai field này trong
+    config.yaml."""
     id: str
     host: str
     port: int

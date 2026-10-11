@@ -10,6 +10,7 @@ import dash_mantine_components as dmc
 import actions
 import data_access
 import session_store
+from ui_common import poll_disabled
 from . import views as grid_views
 
 
@@ -199,6 +200,9 @@ def register(app: Any, form_options: dict[str, Any]) -> None:
         else:
             requested = str(session_id or "")
         selected = requested if requested in valid_ids else None
+        if selected is None:
+            active = next((item for item in sessions if item["state"] == "running"), None)
+            selected = active["session_id"] if active else None
         return grid_views.select_data(sessions), selected
 
     @app.callback(
@@ -208,28 +212,27 @@ def register(app: Any, form_options: dict[str, Any]) -> None:
         Input("grid-progress-poll", "n_intervals"),
     )
     def refresh_grid_detail(_clicks: int | None, session_id: str | None, _poll: int):
-        """Keep the running-session progress current without refreshing results every second."""
+        """Rebuild results only when they can have changed, never on a status tick of a running Grid.
+
+        Live progress is published by refresh_grid_status. A tick reaches this
+        callback only to catch the moment a run ends (possibly started from
+        another browser tab); the status callback then stops the ticker on a
+        tick, never before one has seen the finished state. `grid-run-message`
+        is deliberately not an Input (see ui_common.poll_disabled).
+        """
         session = session_store.get(session_id)
         if session and session.get("kind") != "grid_search":
             session = None
-        # The status ticker remains available for the selected session so it
-        # can recover from an old client callback response. Do not rebuild a
-        # terminal session's heatmap/table on those status-only ticks.
-        if session and session.get("state") != "running" and ctx.triggered_id == "grid-progress-poll":
+        if ctx.triggered_id == "grid-progress-poll" and (not session or session.get("state") == "running"):
             return no_update
         snapshot = None
         if session:
-            if session.get("state") == "running":
-                progress, detail = _live_grid_progress(session)
-                session = {**session, "progress_pct": progress, "progress_text": detail}
-                # Reading and rebuilding result tables each second is expensive and makes
-                # them jump while the user is inspecting them. The Refresh button remains
-                # the explicit way to load partial Grid artifacts.
-                if ctx.triggered_id == "grid-refresh-btn":
-                    snapshot = data_access.grid_snapshot(session["experiment"])
-            else:
+            # Reading and rebuilding result tables of a running Grid is left to
+            # the explicit Refresh button, so tables do not jump while inspected.
+            if session.get("state") != "running" or ctx.triggered_id == "grid-refresh-btn":
                 snapshot = data_access.grid_snapshot(session["experiment"])
-        return grid_views.detail(session, snapshot, form_options)
+        diagnostics = session_store.latest_diagnostics(session["session_id"]) if session else None
+        return grid_views.detail(session, snapshot, form_options, diagnostics)
 
     @app.callback(
         Output("grid-progress-bar", "value"),
@@ -244,18 +247,14 @@ def register(app: Any, form_options: dict[str, Any]) -> None:
         Input("grid-refresh-btn", "n_clicks"),
         Input("grid-session-select", "value"),
         Input("grid-run-btn", "n_clicks"),
-        Input("grid-run-message", "children"),
         Input("grid-run-state", "data"),
-        State("grid-progress-poll", "disabled"),
     )
     def refresh_grid_status(
         _poll: int,
         _refresh_clicks: int | None,
         session_id: str | None,
         _run_clicks: int | None,
-        _run_message: Any,
         run_state: dict[str, Any] | None,
-        polling_disabled: bool,
     ):
         session = session_store.get(session_id)
         if not session or session.get("kind") != "grid_search":
@@ -271,13 +270,14 @@ def register(app: Any, form_options: dict[str, Any]) -> None:
         else:
             progress = float(session.get("progress_pct") or 0)
             text = str(session.get("progress_text") or session["state"].title())
-        # This is deliberately a lightweight status ticker only: it reads one
-        # dashboard row and aggregated ExperimentStore counts. Keeping it on
-        # while a session is selected prevents an old browser callback response
-        # (for example, a preceding cancellation) from freezing Stop/progress
-        # controls after a subsequent run is claimed. Result tables are not
-        # refreshed by this ticker.
-        return progress, f"{_truncate(progress)}% - {text}", not active, active, False
+        # Tick only while this Grid runs or a start request is pending (the
+        # background `running` flag covers the moment before it is claimed).
+        # A finished or draft Grid needs no polling.
+        keep_polling = active or start_requested or (ctx.triggered_id == "grid-run-btn" and runnable)
+        return (
+            progress, f"{_truncate(progress)}% - {text}", not active, active,
+            poll_disabled(keep_polling, ctx.triggered_id == "grid-progress-poll"),
+        )
 
     @app.callback(
         Output("grid-run-message", "children"),
@@ -384,6 +384,17 @@ def register(app: Any, form_options: dict[str, Any]) -> None:
             return dmc.Alert("Deleted 1 dashboard Grid session.", color="green")
         except Exception as exc:
             return dmc.Alert(str(exc), title="Could not delete Grid session", color="red")
+
+    @app.callback(
+        Output("grid-create-message", "children", allow_duplicate=True),
+        Output("grid-run-message", "children", allow_duplicate=True),
+        Output("grid-stop-message", "children", allow_duplicate=True),
+        Output("grid-delete-message", "children", allow_duplicate=True),
+        Input("grid-refresh-btn", "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def clear_old_grid_messages(_clicks: int):
+        return None, None, None, None
 
 
 def _truncate(value: float) -> str:

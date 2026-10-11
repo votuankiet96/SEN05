@@ -24,6 +24,10 @@ chi tiết nội bộ của riêng file này. Tên phải nói đúng bản ch�
 khác import 1 ký hiệu gạch-dưới (phá vỡ quy ước riêng tư). Cùng đợt: toàn bộ
 walk-forward (`run_walkforward`, `WF_*`, `plateau`, `pick`, `walkforward_windows`,
 `walkforward_table`) dời sang `walkforward.py`.
+
+[2026-10-10] `config["optimize_chunk_size"]` (mặc định 0 = tắt): >= 2 thì Grid và chặng HỌC của walk-forward chạy theo
+hộp tham số bằng `ctrader-cli optimize` (1 lần đăng nhập/hộp) thay vì từng `backtest`; spec lẻ vẫn chạy `backtest`.
+Gợi ý 20 (bội số của max_parallel): thư mục pass chỉ được ghi khi lệnh kết thúc nên hộp nhỏ để ngắt chỉ mất 1 hộp.
 """
 from __future__ import annotations
 
@@ -42,9 +46,9 @@ from api_engine import api_runner
 
 from . import signal_trans
 from .configuration import load_engine_profile, load_redis_profile, load_strategy_profile
-from .models import FailureCode, RunStatus, Window
+from .models import FailureCode, OptimizeBox, RunStatus, Window
 from .output_util import evidence, pipeline_lock
-from .planner import as_date, build_experiment, expand_grid, nonnegative_int, positive_int
+from .planner import as_date, build_experiment, expand_grid, nonnegative_int, plan_optimize_boxes, positive_int
 from .store import ExperimentStore, ProtocolStore, sha256_file
 
 # facilitator.py là orchestrator DUY NHẤT biết có 2 backend — mọi file khác
@@ -55,6 +59,7 @@ from .store import ExperimentStore, ProtocolStore, sha256_file
 # [2026-09-21] Chỉ dùng backend "cli" trong giai đoạn hiện tại — api_engine
 # giữ nguyên tại chỗ, không phát triển thêm, không xoá.
 _ENGINES = {"cli": cli_runner, "api": api_runner}
+_RETRYABLE_FAILURES = frozenset({"message_expected", "hard_timeout", "progress_stalled"})
 
 # Trần an toàn cho song song — port tinh thần pipeline/settings.py cũ
 # (MAX_FALLBACK_PROCESSES), bị rơi mất khi refactor sang research/ 2026-09.
@@ -81,7 +86,7 @@ _FINGERPRINT_SIDECAR = "input_fingerprint.json"
 
 
 class InputFingerprintMismatch(ValueError):
-    """The real inputs (.algo, ctrader-cli.exe, Redis signals) differ from the
+    """The real inputs (.algo, Redis signals) differ from the
     ones an experiment or a frozen dashboard plan was built for."""
 
 
@@ -96,11 +101,11 @@ def _fingerprint_end(config: Mapping[str, Any], specs: list[Any]) -> Any:
 def input_fingerprint(config: Mapping[str, Any]) -> dict[str, Any]:
     """Content identity of the real inputs a config would run on.
 
-    {"algo_sha256", "cli_sha256", "signals": {"<symbol>|<timeframe>": sha}} —
-    signal hashes cover only rows before the config end (see
-    `signal_trans.signal_window_sha256`). Reads the .algo, ctrader-cli.exe and
-    Redis (to a temporary CSV that is deleted); never backtests and never
-    touches an ExperimentStore."""
+    {"algo_sha256", "signals": {"<symbol>|<timeframe>": sha}} — signal hashes
+    cover only rows before the config end (see `signal_trans.signal_window_sha256`).
+    The CLI is not part of it: cTrader updates it by itself and every run records
+    its real version (execution.json). Reads the .algo and Redis (to a temporary
+    CSV that is deleted); never backtests and never touches an ExperimentStore."""
     experiment = build_experiment({**dict(config), "method": config.get("method", "grid")})
     profile = load_strategy_profile(experiment.strategy_profile)
     engine = load_engine_profile(experiment.engine_profile)
@@ -120,14 +125,7 @@ def input_fingerprint(config: Mapping[str, Any]) -> dict[str, Any]:
             signals[key] = signal_trans.signal_window_sha256(path, end)
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
-    cli_path = cli_runner.select_cli()
-    if not cli_path.is_file():
-        raise FileNotFoundError(f"ctrader-cli not found: {cli_path}")
-    return {
-        "algo_sha256": sha256_file(profile.algo_path),
-        "cli_sha256": sha256_file(cli_path),
-        "signals": dict(sorted(signals.items())),
-    }
+    return {"algo_sha256": sha256_file(profile.algo_path), "signals": dict(sorted(signals.items()))}
 
 
 def resolve_input_fingerprint(config: Mapping[str, Any]) -> dict[str, Any]:
@@ -138,7 +136,7 @@ def resolve_input_fingerprint(config: Mapping[str, Any]) -> dict[str, Any]:
     expected = config.get("expected_input_fingerprint")
     if expected is not None and dict(expected) != fingerprint:
         raise InputFingerprintMismatch(
-            "inputs changed since this plan was frozen (.algo, ctrader-cli or Redis signals "
+            "inputs changed since this plan was frozen (.algo or Redis signals "
             "inside the backtest window); create a new session instead of rerunning this one"
         )
     return fingerprint
@@ -236,6 +234,8 @@ def run_experiment(
     retries = nonnegative_int(config.get("transient_retries", 1), "transient_retries")
     force = bool(config.get("force", False))
     keep_logs = bool(config.get("keep_logs", False))
+    chunk_size = nonnegative_int(config.get("optimize_chunk_size", 0), "optimize_chunk_size")
+    use_boxes = engine.backend == "cli" and chunk_size > 1
 
     # Metadata (contract THẬT của .algo) luôn đọc qua CLI dù batch này chạy
     # backend nào — đây là 1 lệnh đọc nhẹ, gọi đúng 1 lần/batch (không phải N
@@ -253,7 +253,7 @@ def run_experiment(
     # bên trong làm gì.
     engine_module = _ENGINES[engine.backend]
     if engine.backend == "cli":
-        engine_module.validate_capabilities(specs, algo_path=profile.algo_path, cli_path=cli_path)
+        engine_module.validate_capabilities(specs, algo_path=profile.algo_path, cli_path=cli_path, optimize=use_boxes)
         process_env = cli_runner.child_environment(cli_runner.auth_options())
     else:
         engine_module.validate_capabilities(specs, profile=profile)
@@ -302,7 +302,6 @@ def run_experiment(
             signal_window_by_spec[key] = window_hashes[(snapshot_path, spec.end)]
     finally:
         shutil.rmtree(signal_scratch, ignore_errors=True)
-    cli_sha = sha256_file(cli_path)
 
     fingerprint_end = _fingerprint_end(config, specs)
     signals: dict[str, str] = {}
@@ -311,7 +310,7 @@ def run_experiment(
             signals[_signal_key(spec)] = signal_trans.signal_window_sha256(
                 signal_by_spec[spec.canonical_json()], fingerprint_end,
             )
-    used_fingerprint = {"algo_sha256": algo_sha, "cli_sha256": cli_sha, "signals": dict(sorted(signals.items()))}
+    used_fingerprint = {"algo_sha256": algo_sha, "signals": dict(sorted(signals.items()))}
     expected = config.get("expected_input_fingerprint")
     if expected is not None and dict(expected) != used_fingerprint:
         raise InputFingerprintMismatch(
@@ -332,7 +331,7 @@ def run_experiment(
     elif recorded_fingerprint != used_fingerprint:
         raise InputFingerprintMismatch(
             f"experiment {experiment_doc['name']!r} was produced from different inputs "
-            "(.algo, ctrader-cli or Redis signals); use a new experiment name"
+            "(.algo or Redis signals); use a new experiment name"
         )
 
     # The window hash (not the whole CSV) identifies a run: signals appended to
@@ -344,7 +343,6 @@ def run_experiment(
             "bo-research-execution/v1",
             algo_sha,
             signal_window_by_spec[spec.canonical_json()],
-            cli_sha,
             spec.engine_profile,
         )
         for spec in specs
@@ -352,9 +350,54 @@ def run_experiment(
     start = time.monotonic()
     tally: dict[str, int] = {}
     counts_logins = engine.backend == "cli"
+    hash_of = {spec.canonical_json(): digest for spec, digest in zip(specs, hashes)}
 
-    def reserve_launch(spec: Any) -> bool:
-        return protocol.reserve_cli_launch(experiment=str(experiment_doc["name"]), label=spec.label())
+    def reserve_launch(label: str) -> bool:
+        return protocol.reserve_cli_launch(experiment=str(experiment_doc["name"]), label=label)
+
+    def crash_result(exc: Exception, work_dir: Path) -> Any:
+        """Kết quả giả khi chính pipeline (không phải CLI) ném ngoại lệ."""
+        work_dir.mkdir(parents=True, exist_ok=True)
+        now = datetime.now(timezone.utc).isoformat()
+        (work_dir / "cli.log").write_text(cli_runner.redact_text(f"{type(exc).__name__}: {exc}"), encoding="utf-8")
+        (work_dir / "bot.log").write_text("", encoding="utf-8")
+        return SimpleNamespace(
+            status=RunStatus.CLI_ERROR,
+            failure_code=FailureCode.PIPELINE_ERROR,
+            reason=f"pipeline {type(exc).__name__}: {cli_runner.redact_text(str(exc))}",
+            exit_code=None,
+            timed_out=False,
+            wall_seconds=0.0,
+            started_utc=now,
+            ended_utc=now,
+            cli_path=str(cli_path),
+            cli_version=cli_runner.cli_version(cli_path),
+            report_json=work_dir / "report.json",
+            cli_log=work_dir / "cli.log",
+            bot_log=work_dir / "bot.log",
+            cbotset=work_dir / "params.cbotset",
+        )
+
+    def record_result(spec: Any, param_hash: str, claim: Any, result: Any) -> str:
+        report = evidence.read_report(result.report_json) if result and result.report_json.exists() else None
+        bot_text = result.bot_log.read_text(encoding="utf-8", errors="replace") if result else ""
+        summary = evidence.bot_summary(bot_text)
+        flags = evidence.validity_flags(spec, report, summary)
+        metrics = evidence.metrics(report) if report else {}
+        env = evidence.environment(report) if report else {}
+        store.record(
+            claim=claim,
+            spec=spec,
+            param_hash=param_hash,
+            run_result=result,
+            metrics=metrics,
+            flags=flags,
+            bot_summary=summary,
+            environment=env,
+            inputs={"algo_sha256": algo_sha, "signal_sha256": signal_sha_by_spec[spec.canonical_json()]},
+            keep_logs=keep_logs,
+        )
+        return result.status.value
 
     def one(item: tuple[Any, str]) -> str:
         spec, param_hash = item
@@ -366,7 +409,7 @@ def run_experiment(
             # A spec that claim() would skip must not spend today's CLI budget.
             if not force and store.is_terminal_ok(param_hash):
                 return RunStatus.SKIPPED.value
-            if not reserve_launch(spec):
+            if not reserve_launch(spec.label()):
                 return BUDGET_EXHAUSTED
         claim = store.claim(spec, param_hash, force=force)
         if claim.disposition != "claimed":
@@ -378,7 +421,7 @@ def run_experiment(
         while attempts <= retries:
             # A retry is another login; without budget the last failure is
             # recorded as-is and the spec stays retryable.
-            if attempts and counts_logins and not reserve_launch(spec):
+            if attempts and counts_logins and not reserve_launch(spec.label()):
                 break
             attempts += 1
             try:
@@ -406,56 +449,79 @@ def run_experiment(
                         timeout_s=timeout,
                     )
             except Exception as exc:
-                now = datetime.now(timezone.utc).isoformat()
-                (work_dir / "cli.log").write_text(cli_runner.redact_text(f"{type(exc).__name__}: {exc}"), encoding="utf-8")
-                (work_dir / "bot.log").write_text("", encoding="utf-8")
-                result = SimpleNamespace(
-                    status=RunStatus.CLI_ERROR,
-                    failure_code=FailureCode.PIPELINE_ERROR,
-                    reason=f"pipeline {type(exc).__name__}: {cli_runner.redact_text(str(exc))}",
-                    exit_code=None,
-                    timed_out=False,
-                    wall_seconds=0.0,
-                    started_utc=now,
-                    ended_utc=now,
-                    cli_path=str(cli_path),
-                    cli_version=cli_runner.cli_version(cli_path),
-                    report_json=work_dir / "report.json",
-                    cli_log=work_dir / "cli.log",
-                    bot_log=work_dir / "bot.log",
-                    cbotset=work_dir / "params.cbotset",
-                )
+                result = crash_result(exc, work_dir)
                 break
-            if result.status is RunStatus.OK or result.failure_code.value not in {
-                "message_expected", "hard_timeout", "progress_stalled",
-            }:
+            if result.status is RunStatus.OK or result.failure_code.value not in _RETRYABLE_FAILURES:
                 break
-        report = evidence.read_report(result.report_json) if result and result.report_json.exists() else None
-        bot_text = result.bot_log.read_text(encoding="utf-8", errors="replace") if result else ""
-        summary = evidence.bot_summary(bot_text)
-        flags = evidence.validity_flags(spec, report, summary)
-        metrics = evidence.metrics(report) if report else {}
-        env = evidence.environment(report) if report else {}
-        store.record(
-            claim=claim,
-            spec=spec,
-            param_hash=param_hash,
-            run_result=result,
-            metrics=metrics,
-            flags=flags,
-            bot_summary=summary,
-            environment=env,
-            inputs={
-                "algo_sha256": algo_sha,
-                "signal_sha256": signal_sha_by_spec[spec.canonical_json()],
-                "cli_sha256": cli_sha,
-            },
-            keep_logs=keep_logs,
-        )
+        status = record_result(spec, param_hash, claim, result)
         shutil.rmtree(work_dir, ignore_errors=True)
-        return result.status.value
+        return status
+
+    def run_box(box: OptimizeBox) -> list[str]:
+        """Cả hộp bằng 1 lệnh `optimize` (1 lần đăng nhập); trả trạng thái từng spec."""
+        count = len(box.specs)
+        label = f"{box.specs[0].label()} +{count - 1}"
+        if cli_runner.cancel_requested(should_cancel):
+            return [NOT_STARTED] * count
+        if not reserve_launch(label):
+            return [BUDGET_EXHAUSTED] * count
+        keys = [spec.canonical_json() for spec in box.specs]
+        claims = [store.claim(spec, hash_of[key], force=force) for spec, key in zip(box.specs, keys)]
+        statuses = [claim.disposition for claim in claims]
+        live = [i for i, claim in enumerate(claims) if claim.disposition == "claimed"]
+        if not live:
+            return statuses
+        work_dir = Path(tempfile.mkdtemp(prefix=".work_", dir=store.runs_dir))
+        try:
+            results: list[Any] = []
+            attempts = 0
+            while attempts <= retries:
+                if attempts and not reserve_launch(label):
+                    break
+                attempts += 1
+                try:
+                    results = cli_runner.run_optimize_box(
+                        box,
+                        profile,
+                        algo_path=algo_snapshot,
+                        signal_file=signal_by_spec[keys[0]],
+                        work_dir=work_dir,
+                        cores=workers,
+                        timeout_s=timeout,
+                        stall_s=stall_s,
+                        startup_stall_s=startup_stall_s,
+                        cli_path=cli_path,
+                        env=process_env,
+                        on_progress=on_progress,
+                        should_cancel=should_cancel,
+                    )
+                    if len(results) != count:
+                        raise RuntimeError(f"optimize returned {len(results)} results for {count} specs")
+                except Exception as exc:
+                    results = [crash_result(exc, work_dir / f"s{i}") for i in range(count)]
+                    break
+                if any(r.status is RunStatus.OK for r in results) or results[0].failure_code.value not in _RETRYABLE_FAILURES:
+                    break
+            for i in live:
+                statuses[i] = record_result(box.specs[i], hash_of[keys[i]], claims[i], results[i])
+        finally:
+            shutil.rmtree(work_dir, ignore_errors=True)
+        return statuses
 
     items = list(zip(specs, hashes))
+    if use_boxes:
+        # Hộp nào còn đủ mọi spec thì chạy bằng optimize; spec đã xong thì bỏ qua, spec lẻ (hộp thủng) chạy backtest.
+        done = set() if force else {digest for _, digest in items if store.is_terminal_ok(digest)}
+        items = []
+        for box in plan_optimize_boxes(specs, profile, chunk_size):
+            todo = [(spec, hash_of[spec.canonical_json()]) for spec in box.specs if hash_of[spec.canonical_json()] not in done]
+            for _ in range(len(box.specs) - len(todo)):
+                _tick(tally, RunStatus.SKIPPED.value)
+            if len(todo) == len(box.specs) > 1:
+                for status in run_box(box):
+                    _tick(tally, status)
+            else:
+                items.extend(todo)
     if workers <= 1:
         for item in items:
             _tick(tally, one(item))
@@ -476,10 +542,10 @@ def run_experiment(
         "complete": set(tally) <= _DONE_STATUSES and sum(tally.values()) == len(specs),
         "failed": sum(count for status, count in tally.items() if status not in _NOT_FAILED),
         "daily_cli_budget_exhausted": bool(tally.get(BUDGET_EXHAUSTED)),
+        "cli_versions": store.cli_versions(),
         "inputs": used_fingerprint,
         "wall_seconds": round(time.monotonic() - start, 3),
     }
-
 
 def _tick(tally: dict[str, int], key: str) -> None:
     tally[key] = tally.get(key, 0) + 1

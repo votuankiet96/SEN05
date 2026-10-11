@@ -8,8 +8,10 @@ from dash import dcc, html
 import dash_mantine_components as dmc
 try:
     from .. import signal_sources
+    from ..ui_common import INPUT_DEBOUNCE_MS, OBJECTIVE_LABELS, objective_label, selected_dsr, status_region
 except ImportError:  # app.py loads feature folders as top-level modules.
     import signal_sources
+    from ui_common import INPUT_DEBOUNCE_MS, OBJECTIVE_LABELS, objective_label, selected_dsr, status_region
 
 
 def layout() -> html.Div:
@@ -45,7 +47,15 @@ def layout() -> html.Div:
                     variant="light", size="xs", mt=24,
                 ),
             ], align="flex-end"),
-            dmc.SimpleGrid(cols={"base": 1, "sm": 2}, children=[
+            dmc.SimpleGrid(cols={"base": 1, "sm": 3}, children=[
+                dmc.Select(
+                    id="diagnostics-objective-select",
+                    label="Selection objective",
+                    description="How the winning combination is chosen; DSR and PBO test that same choice.",
+                    data=[{"value": value, "label": label.capitalize()} for value, label in OBJECTIVE_LABELS.items()],
+                    value="net_profit",
+                    allowDeselect=False,
+                ),
                 dmc.NumberInput(
                     id="diagnostics-min-trades-input",
                     label="Minimum trades per trial",
@@ -53,6 +63,7 @@ def layout() -> html.Div:
                     min=0,
                     step=1,
                     allowDecimal=False,
+                    debounce=INPUT_DEBOUNCE_MS,
                 ),
                 dmc.NumberInput(
                     id="diagnostics-blocks-input",
@@ -69,7 +80,7 @@ def layout() -> html.Div:
                     id="diagnostics-create-btn",
                     color="blue",
                 ),
-                html.Div(id="diagnostics-create-message"),
+                dcc.Loading(status_region("diagnostics-create-message"), type="circle"),
             ], align="center"),
         ])),
         dmc.Paper(withBorder=True, radius="md", p="md", mt="md", children=dmc.Stack([
@@ -107,9 +118,9 @@ def layout() -> html.Div:
                 children="No diagnostics session selected",
                 size="sm", c="dimmed",
             ),
-            html.Div(id="diagnostics-run-message"),
-            html.Div(id="diagnostics-stop-message"),
-            html.Div(id="diagnostics-delete-message"),
+            status_region("diagnostics-run-message"),
+            status_region("diagnostics-stop-message"),
+            status_region("diagnostics-delete-message"),
         ])),
         html.Div(id="diagnostics-session-detail", style={"marginTop": "1rem"}),
     ])
@@ -130,7 +141,10 @@ def session_options(sessions: list[dict[str, Any]]) -> list[dict[str, str]]:
     return [
         {
             "value": session["session_id"],
-            "label": f"{session['title']} - {_diagnostic_source_label(session)} - {session['state']} - {session['created_utc'][:19]}",
+            "label": (
+                f"{session['title']} - {_diagnostic_source_label(session)} - "
+                f"{_session_objective_label(session)} - {session['state']} - {session['created_utc'][:19]}"
+            ),
         }
         for session in sessions
     ]
@@ -139,6 +153,23 @@ def session_options(sessions: list[dict[str, Any]]) -> list[dict[str, str]]:
 def _diagnostic_source_label(session: dict[str, Any]) -> str:
     frozen = ((session.get("plan") or {}).get("input") or {})
     return signal_sources.label_from_input({"redis_profile": frozen.get("source_redis_profile")})
+
+
+def _session_objective_label(session: dict[str, Any]) -> str:
+    frozen = ((session.get("plan") or {}).get("input") or {})
+    if not frozen.get("objective"):
+        return "objective not recorded"
+    return f"by {objective_label(frozen['objective'])}"
+
+
+def _frozen_objective_text(frozen: dict[str, Any], result: dict[str, Any]) -> str:
+    """Sessions frozen before objectives existed: a finished one shows the
+    highest-Sharpe DSR only; an unrun one will use the core default."""
+    if frozen.get("objective"):
+        return objective_label(frozen["objective"]).capitalize()
+    if (result.get("dsr") or {}) and not (result.get("dsr") or {}).get("selected"):
+        return "Not recorded (analysed before selection objectives)"
+    return "Net profit (core default)"
 
 
 def source_status(
@@ -249,6 +280,11 @@ def detail(session: dict[str, Any] | None) -> Any:
         dmc.Divider(label="Analysis inputs"),
         dmc.SimpleGrid(cols={"base": 1, "sm": 2, "lg": 4}, children=[
             _metric(
+                "Selection objective",
+                _frozen_objective_text(frozen, result),
+                "The winner is the top combination by this criterion, as in Walk-forward's Best rule",
+            ),
+            _metric(
                 "Source signal",
                 signal_sources.label_from_input({"redis_profile": frozen.get("source_redis_profile")}),
                 "Frozen by the completed source Grid",
@@ -306,20 +342,21 @@ def _results(dsr: dict[str, Any], pbo: dict[str, Any]) -> list[Any]:
     margin_trials = int(dsr.get("margin_rejection_trials") or 0)
     margin_events = int(dsr.get("margin_rejection_events") or 0)
     policy = str(dsr.get("trial_policy") or "-")
-    dsr_probability = float(dsr.get("dsr") or 0)
+    dsr_probability, dsr_basis = selected_dsr(dsr)
     pbo_probability = float(pbo.get("pbo") or 0)
+    chosen = dsr.get("selected") or {}
     items: list[Any] = [
         dmc.Divider(label="Research conclusion"),
-        _conclusion(dsr_probability, pbo_probability, pbo),
+        _conclusion(dsr_probability, dsr_basis, pbo_probability, pbo),
         dmc.Text("Read these first", fw=700, size="sm"),
         dmc.SimpleGrid(cols={"base": 1, "sm": 2, "lg": 4}, children=[
             _metric(
                 "1. Overfitting probability (PBO)", _percent(pbo_probability),
-                "How often the training winner fell into the lower half on its held-out period.",
+                f"How often the training winner{_by_objective(pbo)} fell into the lower half on its held-out period.",
             ),
             _metric(
                 "2. Deflated Sharpe confidence", _percent(dsr_probability),
-                "Confidence in the best Sharpe after allowing for the full parameter search.",
+                f"Confidence for the {dsr_basis}, after allowing for the full parameter search.",
             ),
             _metric(
                 "3. Trials analysed", f"{included_trials:,} / {total_rows:,}",
@@ -347,7 +384,15 @@ def _results(dsr: dict[str, Any], pbo: dict[str, Any]) -> list[Any]:
         dmc.SimpleGrid(cols={"base": 1, "sm": 2, "lg": 4}, children=[
             _metric("Excluded trials", f"{excluded_trials:,}"),
             _metric("Margin-rejection trials", f"{margin_trials:,} trials / {margin_events:,} orders"),
-            _metric("Winning candidate", _winner_reference(dsr.get("winner_label"))),
+            _metric(
+                "Selected combination", _winner_reference(chosen.get("label")) if chosen else "-",
+                f"Top combination{_by_objective(dsr)}" if chosen else "Not recorded for this analysis",
+            ),
+            _metric(
+                "Highest-Sharpe combination", _winner_reference(dsr.get("winner_label")),
+                f"Reference DSR {_percent(dsr.get('dsr'))}"
+                + ("; same combination as the selected one" if chosen.get("is_max_sharpe") else ""),
+            ),
             _metric("PBO mean logit", _number(pbo.get("logit_mean"))),
         ]),
     ]
@@ -365,16 +410,21 @@ def _results(dsr: dict[str, Any], pbo: dict[str, Any]) -> list[Any]:
     return items
 
 
-def _conclusion(dsr_probability: float, pbo_probability: float, pbo: dict[str, Any]) -> Any:
+def _by_objective(result: dict[str, Any]) -> str:
+    """' by <criterion>' when the core recorded one (results since 2026-09-28)."""
+    return f" by {objective_label(result['objective'])}" if result.get("objective") else ""
+
+
+def _conclusion(dsr_probability: float, dsr_basis: str, pbo_probability: float, pbo: dict[str, Any]) -> Any:
     """Explain the two diagnostics before exposing their implementation metrics."""
     split_count = int(pbo.get("splits_tested") or 0)
     pbo_text = (
         f"Across {split_count:,} chronological train/test splits, the parameter combination chosen "
-        f"on the training portion landed in the lower half of the held-out portion { _percent(pbo_probability) } "
-        "of the time."
+        f"on the training portion{_by_objective(pbo)} landed in the lower half of the held-out portion "
+        f"{_percent(pbo_probability)} of the time."
     )
     dsr_text = (
-        f"After correcting for the full parameter search, the selected winner has "
+        f"After correcting for the full parameter search, the {dsr_basis} has "
         f"{_percent(dsr_probability)} confidence of exceeding the multiple-testing benchmark."
     )
     if pbo_probability > 0.5:

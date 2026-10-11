@@ -21,15 +21,18 @@ schema: bo-cli-engine-config/v1
 #
 # [2026-09-26] 2 profile cùng server/mật khẩu, chỉ khác db + key_prefix —
 # strategy_lab publish song song 2 kênh đối chứng (xem worker.py bên
-# og_program): DB2 = signal gốc (không lọc trend), DB3 = cùng chiến lược
+# og_program): kênh gốc = signal không lọc trend, kênh trend = cùng chiến lược
 # nhưng chỉ giữ tín hiệu cùng chiều trend khung lớn (H4). Đổi kênh đọc cho 1
 # experiment = đổi "redis_profile" trong config của nó, KHÔNG sửa code.
+# [2026-10-08] Số DB THẬT (dò Redis): db0 = kênh gốc (key L_PastSignal_*), db1 =
+# kênh trend (key L_PastSignal_Trend_*), db2..db5 trống. Trước đây ghi DB2/DB3 —
+# hai tên đó còn trong nhãn dashboard và nhiều ghi chú cũ, chỉ là tên kênh.
 # ---------------------------------------------------------------------------
 redis:
   sen05-signal-v1:
     host: "<YOUR-REDIS-HOST>"
     port: 6379
-    db: 2
+    db: 0
     username: ""
     pwd_file: C:\path\to\.redis-signal-pwd.txt
     key_prefix: "L_PastSignal"
@@ -37,7 +40,7 @@ redis:
   sen05-signal-trend-v1:
     host: "<YOUR-REDIS-HOST>"
     port: 6379
-    db: 3
+    db: 1
     username: ""
     pwd_file: C:\path\to\.redis-signal-pwd.txt
     key_prefix: "L_PastSignal_Trend"
@@ -161,6 +164,56 @@ strategies:
         default: 5
         optimize: false
 
+  macdbreak-v1:
+    strategy: macdbreak
+    cbot_name: MACD Break
+    algo: MACD Break.algo
+    signal_prefix: macd_break
+    signal_label: full_history
+    signal_mode: nt
+    default_timeframes: [h1, h2, h3, h4, m10, m20, m30, m45]   # khớp bộ signal Redis MACD_BREAK (11 symbol × 8 khung)
+    infra_params: [SignalFilePath]
+    params:
+      - name: KslLevel
+        kind: enum
+        enum: sl_fib
+        default: Fib1000
+        optimize: true
+      - name: KtpLevel
+        kind: enum
+        enum: tp_fib
+        default: Fib2618
+        optimize: true
+      - name: RiskPercent
+        kind: float
+        default: 1.0
+        optimize: true
+        levels: [0.5, 1.0, 1.5, 2.0]
+      - name: EnableDailyLossLimit
+        kind: bool
+        default: false
+        optimize: false
+      - name: MaxDailyLossPercent
+        kind: float
+        default: 5.0
+        optimize: false
+      - name: EnableMaxDrawdown
+        kind: bool
+        default: false
+        optimize: false
+      - name: MaxTotalDrawdownPercent
+        kind: float
+        default: 10.0
+        optimize: false
+      - name: EnableMaxConsecutiveLosses
+        kind: bool
+        default: false
+        optimize: false
+      - name: MaxConsecutiveLosses
+        kind: int
+        default: 5
+        optimize: false
+
 # ---------------------------------------------------------------------------
 # engines: thiết lập kỹ thuật khi chạy backtest — data_mode (ticks/m1...), có
 # bật quy đổi tỷ giá lịch sử hay không, chi phí giao dịch giả lập, VÀ (mới
@@ -169,11 +222,12 @@ strategies:
 # api_engine/api_runner.py — cần Desktop đang mở + plugin BoBacktestRunner
 # bật). Đây là phần "máy chạy thế nào", KHÔNG phải "chiến lược nào" — tách hẳn
 # khỏi strategies ở trên.
+# Phiên bản ctrader-cli KHÔNG khai ở đây: dùng bản cTrader Desktop mới nhất chạy được, phiên bản thật
+# ghi ở execution.json của từng run. Số phiên bản trong id (5.9.16) chỉ là tên lịch sử, không ràng buộc CLI.
 # ---------------------------------------------------------------------------
 engines:
   ctrader-5.9.16-ticks-approxfx-v1:
     backend: cli
-    cli_version: "5.9.16.53348"
     data_mode: ticks
     precise_conversion: false
     commission: null
@@ -186,26 +240,57 @@ engines:
 
   ctrader-5.9.16-ticks-comm30-v1:
     backend: cli
-    cli_version: "5.9.16.53348"
     data_mode: ticks
     precise_conversion: false
     commission: 30
-    # KHÔNG khai commission_type: ctrader-cli 5.9.16 chỉ có đúng cờ --commission=<số>
-    # (không có --commission-type lẫn --commission-auto — đã tra `backtest --help`).
-    # Số này được hiểu theo đơn vị mặc định của symbol, với JP225 là USD/1 triệu USD
-    # volume, khớp đúng thứ GUI ghi ra trong report khi để Commission = auto.
+    # Phí PHẲNG 30 USD cho mỗi triệu USD khối lượng, áp cho MỌI symbol (CLI 5.9.16 chỉ có cờ
+    # --commission=<số>, đơn vị mặc định UsdPerMillionUsdVolume, nên KHÔNG khai commission_type).
+    # KHÔNG phải profile GUI-parity: phí thật của tài khoản là cấp TỪNG symbol (xem notes).
     commission_type: null
     commission_auto: false
     spread: null
     notes: >-
-      Dùng khi ô Commission bên GUI KHÔNG ra 0. cTrader lấy phí thật của symbol
-      (JP225 = 30 USD/triệu) nên report GUI ghi value 30; profile mặc định ở trên
-      không truyền --commission nên CLI tính phí 0 -> net profit lệch, dễ đổ nhầm
-      cho tỷ giá. Luôn đọc "commissions" trong report GUI rồi chọn profile khớp.
+      Chỉ để stress-test chủ động với phí phẳng 30 USD/triệu. Ghi chú cũ "JP225 GUI tính
+      phí 30 nên cần profile này" là HIỂU NHẦM (đã gỡ 2026-10-08): phí thật theo từng
+      symbol, chỉ số .cash = 0 nên profile mặc định (phí 0) đã đúng với chỉ số. Muốn phí
+      thật cho vàng/BTC/forex dùng profile commauto của CLI 5.10 bên dưới. Luôn đọc phí
+      của TỪNG symbol trong usedSymbols của report (main.commissions chỉ ghi cấu hình tay).
+
+  # --- CLI 5.10.x: 2 công tắc mà 5.9.16 KHÔNG có. Mỗi profile dưới đây chỉ lật ĐÚNG 1 công tắc so với
+  # profile GUI-parity ở trên, để A/B tách được tác động của từng cái. Đã đo 2026-10-08: 5.10.16 ở chế độ
+  # mặc định khớp 5.9.16 từng bit (US30 H1, JP225 H4), nên chênh lệch thấy được là do công tắc, không do
+  # phiên bản. Cần CLI >= 5.10: cổng capability của cli_runner chặn nếu binary không có cờ.
+  ctrader-ticks-approxfx-commauto-v1:
+    backend: cli
+    data_mode: ticks
+    precise_conversion: false
+    commission: null
+    commission_type: null
+    commission_auto: true
+    spread: null
+    notes: >-
+      Phí lấy thẳng từ cấu hình TỪNG symbol trên server (--commission-auto) — cách đúng để có
+      phí thật, thay cho nhập tay (comm30). Đo 2026-10-08: chỉ số .cash = 0 (JP225), BTCUSD
+      0,0325% MỖI CHIỀU tính trên khối lượng lúc vào và lúc ra. Ghi nhận 2026-09-25: XAUUSD
+      0,0007% khối lượng, forex 2,5 USD/lot theo cấu hình symbol. Tỷ giá quy đổi vẫn xấp xỉ
+      như profile GUI-parity.
+
+  ctrader-ticks-precisefx-v1:
+    backend: cli
+    data_mode: ticks
+    precise_conversion: true
+    commission: null
+    commission_type: null
+    commission_auto: false
+    spread: null
+    notes: >-
+      Bật --precise-conversion: P&L, swap và margin của symbol có quote khác tiền ký quỹ (JPY, HKD,
+      GBP, EUR) quy đổi bằng tỷ giá LỊCH SỬ THẬT thay vì 1 tỷ giá hằng số cho cả kỳ (đo JP225 H4:
+      tắt = USDJPY 160,12 cho mọi lệnh, bật = 152,65 tới 163,81). Chậm hơn khoảng 15-20%. Phí vẫn mặc
+      định như profile GUI-parity; ghép cả 2 công tắc là một profile khác, chưa tạo.
 
   ctrader-api-plugin-v1:
     backend: api
-    cli_version: "5.9.16.53348"
     data_mode: ticks
     precise_conversion: false
     commission: null

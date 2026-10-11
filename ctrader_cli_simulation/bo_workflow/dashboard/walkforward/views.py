@@ -9,42 +9,92 @@ from dash import dash_table, dcc, html
 import dash_mantine_components as dmc
 try:
     from .. import signal_sources
+    from ..ui_common import (
+        DECIMAL, INPUT_DEBOUNCE_MS, INTEGER, MONEY, PERCENT, PERSIST,
+        numeric_column, right_align, status_region, truncated,
+    )
 except ImportError:  # app.py loads feature folders as top-level modules.
     import signal_sources
+    from ui_common import (
+        DECIMAL, INPUT_DEBOUNCE_MS, INTEGER, MONEY, PERCENT, PERSIST,
+        numeric_column, right_align, status_region, truncated,
+    )
+
+OBJECTIVE_OPTIONS = [
+    {"value": "net_profit", "label": "Net profit"},
+    {"value": "profit_factor", "label": "Profit factor"},
+    {"value": "win_rate", "label": "Win rate"},
+]
 
 
 def layout(options: dict[str, Any]) -> html.Div:
     combo = next(item for item in options["strategies"] if item["value"] == "combo")
-    default_symbol = next((x["value"] for x in options["symbols"] if x["value"] == "US30.cash"), options["symbols"][0]["value"])
+    default_symbol = next(
+        (x["value"] for x in options["symbols"] if x["value"] == "US30.cash"), options["symbols"][0]["value"],
+    )
+    today = date.today().isoformat()
     return html.Div([
         dcc.Interval(id="wf-progress-poll", interval=1_000, n_intervals=0, disabled=True),
         dcc.Store(id="wf-selection-request", data=None),
         dcc.Store(id="wf-run-state", data={"active": False}),
+        # (session id, state) of the detail currently drawn: a poll tick redraws
+        # the detail only when this changes (run started, run finished).
+        dcc.Store(id="wf-detail-state", data=None),
         html.Div(id="wf-live-progress", children=live_progress(None, None)),
         dmc.Paper(withBorder=True, radius="md", p="md", children=dmc.Stack([
             dmc.Group([
                 dmc.Stack([
                     dmc.Title("Walk-forward Sessions", order=3),
-                    dmc.Text("Independently test full parameter ranges across rolling in-sample and out-of-sample windows. Creating a draft never starts cTrader CLI.", c="dimmed"),
+                    dmc.Text(
+                        "Independently test full parameter ranges across rolling in-sample and out-of-sample "
+                        "windows. Creating a draft never starts cTrader CLI.",
+                        c="dimmed",
+                    ),
                 ], gap="xs"),
                 dmc.Badge("Research stage 2", color="violet", variant="light"),
             ], justify="space-between", align="flex-start"),
             dmc.Divider(label="Research target"),
             dmc.SimpleGrid(cols=3, spacing="md", children=[
-                dmc.Select(id="wf-strategy-select", label="Strategy", data=[{"label": x["label"], "value": x["value"]} for x in options["strategies"]], value="combo", clearable=False),
-                dmc.Select(id="wf-symbol-select", label="Symbol", data=options["symbols"], value=default_symbol, clearable=False, searchable=True),
-                dmc.Select(id="wf-timeframe-select", label="Timeframe", data=[{"label": tf.upper(), "value": tf} for tf in combo["timeframes"]], value=combo["timeframes"][0], clearable=False),
+                dmc.Select(
+                    id="wf-strategy-select", label="Strategy",
+                    data=[{"label": x["label"], "value": x["value"]} for x in options["strategies"]],
+                    value="combo", clearable=False, **PERSIST,
+                ),
+                dmc.Select(
+                    id="wf-symbol-select", label="Symbol", data=options["symbols"], value=default_symbol,
+                    clearable=False, searchable=True, **PERSIST,
+                ),
+                dmc.Select(
+                    id="wf-timeframe-select", label="Timeframe",
+                    data=[{"label": tf.upper(), "value": tf} for tf in combo["timeframes"]],
+                    value=combo["timeframes"][0], clearable=False,
+                ),
             ]),
-            html.Div(id="wf-history-status"),
+            status_region("wf-history-status"),
             dmc.SimpleGrid(cols=2, spacing="md", children=[
-                dmc.DateInput(id="wf-start-input", label="Start date", value="2025-01-01", valueFormat="YYYY-MM-DD", minDate="2000-01-01", maxDate=date.today().isoformat(), clearable=False, inputProps={"readOnly": True}),
-                dmc.DateInput(id="wf-end-input", label="End date", value=date.today().isoformat(), valueFormat="YYYY-MM-DD", minDate="2000-01-01", maxDate=date.today().isoformat(), clearable=False, inputProps={"readOnly": True}),
+                dmc.DateInput(
+                    id="wf-start-input", label="Start date", value="2025-01-01", valueFormat="YYYY-MM-DD",
+                    minDate="2000-01-01", maxDate=today, clearable=False,
+                ),
+                dmc.DateInput(
+                    id="wf-end-input", label="End date", value=today, valueFormat="YYYY-MM-DD",
+                    minDate="2000-01-01", maxDate=today, clearable=False,
+                ),
             ]),
             dmc.Divider(label="Capital and execution"),
             dmc.SimpleGrid(cols=3, spacing="md", children=[
-                dmc.NumberInput(id="wf-balance-input", label="Starting balance (USD)", value=100000, min=1, step=1000, suffix=" USD", thousandSeparator=","),
-                dmc.NumberInput(id="wf-risk-input", label="Risk per trade", value=0.5, min=0.01, step=0.01, suffix=" %"),
-                dmc.NumberInput(id="wf-parallel-input", label="Parallel CLI workers", value=10, min=1, max=16, step=1),
+                dmc.NumberInput(
+                    id="wf-balance-input", label="Starting balance (USD)", value=100000, min=1, step=1000,
+                    suffix=" USD", thousandSeparator=",", debounce=INPUT_DEBOUNCE_MS, **PERSIST,
+                ),
+                dmc.NumberInput(
+                    id="wf-risk-input", label="Risk per trade", value=0.5, min=0.01, step=0.01, suffix=" %",
+                    debounce=INPUT_DEBOUNCE_MS, **PERSIST,
+                ),
+                dmc.NumberInput(
+                    id="wf-parallel-input", label="Parallel CLI workers", value=10, min=1, max=16, step=1,
+                    debounce=INPUT_DEBOUNCE_MS, **PERSIST,
+                ),
             ]),
             dmc.Divider(label="Rolling protocol"),
             dmc.Select(
@@ -54,58 +104,104 @@ def layout(options: dict[str, Any]) -> html.Div:
                     {"value": "9:3", "label": "9 months in-sample / 3 months out-of-sample"},
                     {"value": "6:2", "label": "6 months in-sample / 2 months out-of-sample"},
                     {"value": "3:1", "label": "3 months in-sample / 1 month out-of-sample"},
-                ], value="12:4", clearable=False,
+                ], value="12:4", clearable=False, **PERSIST,
             ),
             dmc.SimpleGrid(cols=3, spacing="md", children=[
-                dmc.NumberInput(id="wf-is-months-input", label="In-sample months", value=12, min=1, max=60, step=1),
-                dmc.NumberInput(id="wf-oos-months-input", label="Out-of-sample months", value=4, min=1, max=24, step=1),
-                dmc.NumberInput(id="wf-step-months-input", label="Step months (matches OOS)", value=4, min=1, max=24, step=1, disabled=True),
+                dmc.NumberInput(
+                    id="wf-is-months-input", label="In-sample months", value=12, min=1, max=60, step=1,
+                    debounce=INPUT_DEBOUNCE_MS,
+                ),
+                dmc.NumberInput(
+                    id="wf-oos-months-input", label="Out-of-sample months", value=4, min=1, max=24, step=1,
+                    debounce=INPUT_DEBOUNCE_MS,
+                ),
+                dmc.NumberInput(
+                    id="wf-step-months-input", label="Step months (matches OOS)", value=4, min=1, max=24,
+                    step=1, disabled=True,
+                ),
             ]),
             dmc.MultiSelect(
                 id="wf-objectives-select", label="Selection objectives (up to 3)",
-                data=[
-                    {"value": "net_profit", "label": "Net profit"},
-                    {"value": "profit_factor", "label": "Profit factor"},
-                    {"value": "win_rate", "label": "Win rate"},
-                ], value=["net_profit"], maxValues=3, clearable=True,
+                data=OBJECTIVE_OPTIONS, value=["net_profit"], maxValues=3, clearable=True,
                 description="Each objective creates an independent Walk-forward draft and always evaluates both Plateau and Best.",
+                **PERSIST,
             ),
             dmc.SimpleGrid(cols=2, spacing="md", children=[
-                dmc.Select(id="wf-primary-objective-select", label="Primary objective (choose before OOS)",
-                           data=[{"value": "net_profit", "label": "Net profit"}, {"value": "profit_factor", "label": "Profit factor"}, {"value": "win_rate", "label": "Win rate"}],
-                           value="net_profit", clearable=False),
-                dmc.Select(id="wf-primary-rule-select", label="Primary selection rule (choose before OOS)",
-                           data=[{"value": "plateau", "label": "Plateau"}, {"value": "best", "label": "Best"}],
-                           value="plateau", clearable=False),
+                dmc.Select(
+                    id="wf-primary-objective-select", label="Primary objective (choose before OOS)",
+                    data=OBJECTIVE_OPTIONS, value="net_profit", clearable=False, **PERSIST,
+                ),
+                dmc.Select(
+                    id="wf-primary-rule-select", label="Primary selection rule (choose before OOS)",
+                    data=[{"value": "plateau", "label": "Plateau"}, {"value": "best", "label": "Best"}],
+                    value="plateau", clearable=False, **PERSIST,
+                ),
             ]),
-            dmc.Alert("Protocol v1: full kSL and kTP Fibonacci ranges; minimum 30 trades; Plateau and Best selection rules. Step months always matches Out-of-sample months.", title="Frozen research protocol", color="blue", variant="light"),
-            dmc.Alert("Each objective is a separate experiment. The primary objective and rule are frozen in the dashboard draft; other variants are exploratory. Win rate alone can select an unprofitable strategy.", title="Interpretation reminder", color="orange", variant="light"),
+            dmc.Alert(
+                "Protocol v1: full kSL and kTP Fibonacci ranges; no minimum trade count; Plateau and Best "
+                "selection rules. Step months always matches Out-of-sample months.",
+                title="Frozen research protocol", color="blue", variant="light",
+            ),
+            dmc.Alert(
+                "Each objective is a separate experiment. The primary objective and rule are frozen in the "
+                "dashboard draft; other variants are exploratory. Win rate alone can select an unprofitable strategy.",
+                title="Interpretation reminder", color="orange", variant="light",
+            ),
             html.Div(id="wf-commission-warning"),
             html.Div(id="wf-workload-summary"),
-            dmc.Group([dmc.Button("Create Walk-forward draft (does not run)", id="wf-create-btn", color="blue"), html.Div(id="wf-create-message")], align="center"),
+            dmc.Group([
+                dmc.Button("Create Walk-forward draft (does not run)", id="wf-create-btn", color="blue"),
+                dcc.Loading(status_region("wf-create-message"), type="circle"),
+            ], align="center"),
         ])),
         dmc.Paper(withBorder=True, radius="md", p="md", mt="md", children=dmc.Stack([
-            dmc.Group([dmc.Title("Saved Walk-forward sessions", order=4), dmc.Button("Refresh sessions", id="wf-refresh-btn", variant="light", size="xs")], justify="space-between"),
-            dmc.Select(id="wf-session-select", label="Select a Walk-forward session", data=[], placeholder="No Walk-forward sessions yet", clearable=True, searchable=True),
-            dmc.Text("A Walk-forward session is independent of Grid Search. Completed or cached sessions can be opened without calling cTrader again.", size="xs", c="dimmed"),
+            dmc.Group([
+                dmc.Title("Saved Walk-forward sessions", order=4),
+                dmc.Button("Refresh sessions", id="wf-refresh-btn", variant="light", size="xs"),
+            ], justify="space-between"),
+            dmc.Select(
+                id="wf-session-select", label="Select a Walk-forward session", data=[],
+                placeholder="No Walk-forward sessions yet", clearable=True, searchable=True,
+            ),
+            dmc.Text(
+                "A Walk-forward session is independent of Grid Search. Completed or cached sessions can be "
+                "opened without calling cTrader again.",
+                size="xs", c="dimmed",
+            ),
             html.Div(id="wf-budget-confirmation", style={"display": "none"}, children=dmc.Checkbox(
                 id="wf-budget-confirm", checked=False, color="orange",
             )),
             dmc.Group([
                 dmc.Button("Run selected Walk-forward", id="wf-run-btn", color="orange"),
                 dmc.Button("Stop active Walk-forward", id="wf-stop-btn", color="red", disabled=True),
-                dmc.Button("Delete selected Walk-forward", id="wf-delete-btn", color="red", variant="outline", disabled=True),
+                dmc.Button(
+                    "Delete selected Walk-forward", id="wf-delete-btn", color="red", variant="outline",
+                    disabled=True,
+                ),
             ]),
-            html.Div(id="wf-run-message"), html.Div(id="wf-stop-message"),
-            dmc.Text("Delete removes dashboard metadata only; core reports and pipeline caches are retained.", size="xs", c="dimmed"),
-            html.Div(id="wf-delete-message"),
+            status_region("wf-run-message"),
+            status_region("wf-stop-message"),
+            dmc.Text(
+                "Delete removes dashboard metadata only; core reports and pipeline caches are retained.",
+                size="xs", c="dimmed",
+            ),
+            status_region("wf-delete-message"),
         ])),
         html.Div(id="wf-session-detail", style={"marginTop": "1rem"}),
     ])
 
 
 def select_data(sessions: list[dict[str, Any]]) -> list[dict[str, str]]:
-    return [{"value": item["session_id"], "label": f"{item['title']} - {signal_sources.label_from_input((item.get('plan') or {}).get('input'))} - {item['state']} - {item['created_utc'][:19]}"} for item in sessions]
+    return [
+        {
+            "value": item["session_id"],
+            "label": (
+                f"{item['title']} - {signal_sources.label_from_input((item.get('plan') or {}).get('input'))}"
+                f" - {item['state']} - {item['created_utc'][:19]}"
+            ),
+        }
+        for item in sessions
+    ]
 
 
 def live_progress(
@@ -117,11 +213,15 @@ def live_progress(
 ) -> Any:
     """A compact, persistent view of the active run independent of the form."""
     if session is None:
-        message = ("Starting the selected Walk-forward run; checking its frozen inputs and cTrader CLI."
-                   if starting else "No Walk-forward run is active. Select a saved session below to inspect past results.")
+        message = (
+            "Starting the selected Walk-forward run; checking its frozen inputs and cTrader CLI."
+            if starting else "No Walk-forward run is active. Select a saved session below to inspect past results."
+        )
         return dmc.Paper(withBorder=True, radius="md", p="md", mb="md", children=dmc.Stack([
-            dmc.Group([dmc.Title("Live Walk-forward progress", order=4),
-                       dmc.Badge("STARTING" if starting else "IDLE", color="yellow" if starting else "gray")], justify="space-between"),
+            dmc.Group([
+                dmc.Title("Live Walk-forward progress", order=4),
+                dmc.Badge("STARTING" if starting else "IDLE", color="yellow" if starting else "gray"),
+            ], justify="space-between"),
             dmc.Text(message, size="sm", c="dimmed"),
         ], gap="xs"))
 
@@ -147,8 +247,21 @@ def live_progress(
     last_ok = _seconds_since(progress.get("last_ok_utc"))
     last_result = "No successful backtest yet" if last_ok is None else f"{_elapsed_text(last_ok)} ago"
 
+    train_running = int(train.get("running") or 0)
+    oos_running = int(oos.get("running") or 0)
+    latest = (
+        f"Latest success: {str(progress['last_ok_utc'])[:19]} UTC" if progress.get("last_ok_utc")
+        else "No completed backtest has been recorded yet."
+    )
+    oos_text = (
+        f"{oos_ok:,} / {oos_total:,} successful ({truncated(oos_percent, 1):.1f}%) · {oos_running:,} active"
+        if selection is not None else f"Waiting for Train · at most {oos_total:,} tests"
+    )
     children: list[Any] = [
-        dmc.Group([dmc.Title("Live Walk-forward progress", order=4), dmc.Badge("RUNNING", color="yellow")], justify="space-between"),
+        dmc.Group([
+            dmc.Title("Live Walk-forward progress", order=4),
+            dmc.Badge("RUNNING", color="yellow"),
+        ], justify="space-between"),
         dmc.Text(str(session.get("title") or "Walk-forward"), fw=600, size="sm"),
         dmc.Text(f"Signal source: {signal_sources.label_from_input(inputs)}", size="xs", c="dimmed"),
         dmc.SimpleGrid(cols=4, spacing="xs", children=[
@@ -157,30 +270,41 @@ def live_progress(
             _stat("Elapsed", _elapsed_text(elapsed) if elapsed is not None else "—"),
             _stat("Last successful run", last_result),
         ]),
-        dmc.Text((f"Latest success: {str(progress['last_ok_utc'])[:19]} UTC" if progress.get("last_ok_utc")
-                  else "No completed backtest has been recorded yet."), size="xs", c="dimmed"),
+        dmc.Text(latest, size="xs", c="dimmed"),
         dmc.Stack([
-            dmc.Group([dmc.Text("Train · full parameter grid", fw=600, size="sm"),
-                       dmc.Text(f"{train_ok:,} / {train_total:,} successful ({train_percent:.1f}%) · {int(train.get('running') or 0):,} active",
-                                size="sm", c="dimmed")], justify="space-between"),
-            dmc.Progress(value=train_percent,
-                         striped=bool(train.get("running")), animated=bool(train.get("running")), color="blue"),
+            dmc.Group([
+                dmc.Text("Train · full parameter grid", fw=600, size="sm"),
+                dmc.Text(
+                    f"{train_ok:,} / {train_total:,} successful ({truncated(train_percent, 1):.1f}%) · "
+                    f"{train_running:,} active",
+                    size="sm", c="dimmed",
+                ),
+            ], justify="space-between"),
+            dmc.Progress(value=train_percent, striped=bool(train_running), animated=bool(train_running), color="blue"),
         ], gap=4),
         dmc.Stack([
-            dmc.Group([dmc.Text("Out-of-sample tests", fw=600, size="sm"),
-                       dmc.Text((f"{oos_ok:,} / {oos_total:,} successful ({oos_percent:.1f}%) · {int(oos.get('running') or 0):,} active"
-                                 if selection is not None else f"Waiting for Train · at most {oos_total:,} tests"),
-                                size="sm", c="dimmed")], justify="space-between"),
-            dmc.Progress(value=oos_percent,
-                         striped=bool(oos.get("running")), animated=bool(oos.get("running")), color="teal"),
+            dmc.Group([
+                dmc.Text("Out-of-sample tests", fw=600, size="sm"),
+                dmc.Text(oos_text, size="sm", c="dimmed"),
+            ], justify="space-between"),
+            dmc.Progress(value=oos_percent, striped=bool(oos_running), animated=bool(oos_running), color="teal"),
         ], gap=4),
-        dmc.Text("Only this progress card updates automatically while a Walk-forward job is active; the results table does not reload.", size="xs", c="dimmed"),
+        dmc.Text(
+            "Only this progress card updates automatically while a Walk-forward job is active; "
+            "the results table does not reload.",
+            size="xs", c="dimmed",
+        ),
     ]
     if unsuccessful:
-        children.append(dmc.Alert(f"{unsuccessful:,} Train/OOS run(s) did not finish successfully. They are not counted in the bars above.",
-                                  title="Execution needs review", color="orange", variant="light"))
+        children.append(dmc.Alert(
+            f"{unsuccessful:,} Train/OOS run(s) did not finish successfully. They are not counted in the bars above.",
+            title="Execution needs review", color="orange", variant="light",
+        ))
     if selected_session_id and selected_session_id != session.get("session_id"):
-        children.append(dmc.Text("Another saved session is selected below. Select this running session there to stop it.", size="xs", c="dimmed"))
+        children.append(dmc.Text(
+            "Another saved session is selected below. Select this running session there to stop it.",
+            size="xs", c="dimmed",
+        ))
     return dmc.Paper(withBorder=True, radius="md", p="md", mb="md", children=dmc.Stack(children, gap="sm"))
 
 
@@ -201,42 +325,102 @@ def _elapsed_text(seconds: float) -> str:
     return f"{hours}h {minutes:02d}m {seconds:02d}s" if hours else f"{minutes}m {seconds:02d}s"
 
 
-def workload_summary(*, windows: int, full_grid: int, objectives: int, workers: int, budget: dict[str, int], low_signal_windows: int = 0, signal_preflight_unavailable: bool = False) -> Any:
+def workload_summary(
+    *, windows: int, full_grid: int, objectives: int, workers: int, budget: dict[str, int],
+    low_signal_windows: int = 0, signal_preflight_unavailable: bool = False,
+    data_days: float = 0.0, history: dict[str, Any] | None = None,
+) -> Any:
+    """Workload preview. `data_days` is the total backtest period, in calendar
+    days, summed over every planned train and OOS backtest; `history` is
+    data_access.historical_seconds_per_day() for this exact target."""
     train = objectives * windows * full_grid
     oos = objectives * windows * 2
     total = train + oos
-    minutes = total * 38 / 100 * 10 / max(1, workers)
+    history = history or {}
+    if history.get("available"):
+        seconds = data_days * float(history["median_seconds_per_day"]) / max(1, workers)
+        estimate = _duration(seconds)
+        estimate_note = (
+            f" Time estimate: median {truncated(history['median_seconds_per_day']):.2f} s of CLI time per day of "
+            f"data from {int(history['samples']):,} past successful run(s) of this symbol and timeframe, "
+            "divided by the worker count (assumes linear scaling)."
+        )
+    else:
+        estimate = "No history"
+        estimate_note = (
+            " No successful run of this strategy, symbol and timeframe is stored yet, so no time estimate "
+            "is shown rather than an invented one."
+        )
     color = "red" if total > budget["remaining"] else "orange" if total >= 500 else "blue"
-    warning = " This exceeds today's remaining allowance; a retry after Prague midnight will be needed." if total > budget["remaining"] else ""
+    warning = (
+        " This exceeds today's remaining allowance; a retry after Prague midnight will be needed."
+        if total > budget["remaining"] else ""
+    )
     if low_signal_windows:
-        warning += f" {low_signal_windows} IS window(s) have fewer than 30 source signals; the 30-trade selection threshold may be unreachable."
+        warning += (
+            f" {low_signal_windows} IS window(s) have fewer than 30 source signals; "
+            "selected combinations there may trade rarely."
+        )
     if signal_preflight_unavailable:
         warning += " Redis signal-count preflight is unavailable; verify signal coverage before running."
-    return dmc.Alert(dmc.SimpleGrid(cols=5, spacing="xs", children=[
-        _stat("Windows per objective", f"{windows:,}"), _stat("Train backtests across drafts", f"{train:,}"),
-        _stat("Maximum OOS backtests", f"{oos:,}"), _stat("Rough time estimate", _duration(minutes * 60)),
-        _stat("CLI budget today", f"{budget['used']:,} used / {budget['remaining']:,} remaining"),
-    ]), title=f"{objectives} independent draft(s): up to {total:,} planned backtests.{warning} Time assumes the selected worker count; retries may add CLI launches.", color=color, variant="light")
+    return dmc.Alert(
+        dmc.SimpleGrid(cols=5, spacing="xs", children=[
+            _stat("Windows per objective", f"{windows:,}"),
+            _stat("Train backtests across drafts", f"{train:,}"),
+            _stat("Maximum OOS backtests", f"{oos:,}"),
+            _stat("Time estimate", estimate),
+            _stat("CLI budget today", f"{budget['used']:,} used / {budget['remaining']:,} remaining"),
+        ]),
+        title=(
+            f"{objectives} independent draft(s): up to {total:,} planned backtests.{warning}{estimate_note} "
+            "Retries may add CLI launches."
+        ),
+        color=color, variant="light",
+    )
 
 
-def detail(session: dict[str, Any] | None, progress: dict[str, Any] | None, rows: list[dict[str, Any]], options: dict[str, Any]) -> Any:
+def detail(
+    session: dict[str, Any] | None, progress: dict[str, Any] | None,
+    rows: list[dict[str, Any]], options: dict[str, Any],
+) -> Any:
     if not session:
-        return dmc.Paper(withBorder=True, radius="md", p="xl", children=dmc.Text("Create or select a Walk-forward session to inspect its frozen protocol and results.", c="dimmed"))
-    plan, inputs, preflight = session.get("plan") or {}, (session.get("plan") or {}).get("input") or {}, (session.get("plan") or {}).get("preflight") or {}
+        return dmc.Paper(withBorder=True, radius="md", p="xl", children=dmc.Text(
+            "Create or select a Walk-forward session to inspect its frozen protocol and results.", c="dimmed",
+        ))
+    plan = session.get("plan") or {}
+    inputs = plan.get("input") or {}
+    preflight = plan.get("preflight") or {}
     state = str(session.get("state") or "unknown")
-    color = {"draft":"gray", "running":"yellow", "completed":"green", "cached":"teal", "cancelled":"orange", "failed":"red", "inputs_changed":"red"}.get(state, "gray")
+    color = {
+        "draft": "gray", "running": "yellow", "completed": "green", "cached": "teal",
+        "cancelled": "orange", "failed": "red", "inputs_changed": "red",
+    }.get(state, "gray")
+    objective_label = str(inputs.get("protocol", {}).get("objective") or "—").replace("_", " ").title()
     cards = [
         _stat("Strategy", "MA Cross" if inputs.get("strategy") == "macross" else "Combo"),
-        _stat("Symbol", str(inputs.get("symbol") or "—")), _stat("Timeframe", str(inputs.get("timeframe") or "").upper()),
+        _stat("Symbol", str(inputs.get("symbol") or "—")),
+        _stat("Timeframe", str(inputs.get("timeframe") or "").upper()),
         _stat("Signal source", signal_sources.label_from_input(inputs)),
-        _stat("Period", f"{inputs.get('start','—')} to {inputs.get('end','—')}") , _stat("Starting balance", _usd(inputs.get("balance"))),
-        _stat("Risk per trade", _percent(inputs.get("fixed_params", {}).get("RiskPercent"))), _stat("Rolling windows", f"{inputs.get('window_count', 0):,}"),
-        _stat("Parameter range", f"Full range: {preflight.get('full_ksl_count', 0)} kSL × {preflight.get('full_ktp_count', 0)} kTP"),
-        _stat("Protocol", f"30+ trades · {str(inputs.get('protocol', {}).get('objective') or '—').replace('_', ' ').title()} · Plateau + Best"),
+        _stat("Period", f"{inputs.get('start', '—')} to {inputs.get('end', '—')}"),
+        _stat("Starting balance", _usd(inputs.get("balance"))),
+        _stat("Risk per trade", _percent(inputs.get("fixed_params", {}).get("RiskPercent"))),
+        _stat("Rolling windows", f"{inputs.get('window_count', 0):,}"),
+        _stat(
+            "Parameter range",
+            f"Full range: {preflight.get('full_ksl_count', 0)} kSL × {preflight.get('full_ktp_count', 0)} kTP",
+        ),
+        _stat("Protocol", f"No minimum trades · {objective_label} · Plateau + Best"),
     ]
     body: list[Any] = [
-        dmc.Group([dmc.Stack([dmc.Title(str(session.get("title") or "Walk-forward"), order=3), dmc.Text(f"Session ID: {session.get('session_id')}", size="sm", c="dimmed")], gap="xs"), dmc.Badge(state.upper(), color=color, size="lg")], justify="space-between"),
-        dmc.Divider(label="Frozen configuration"), dmc.SimpleGrid(cols=3, spacing="xs", children=cards),
+        dmc.Group([
+            dmc.Stack([
+                dmc.Title(str(session.get("title") or "Walk-forward"), order=3),
+                dmc.Text(f"Session ID: {session.get('session_id')}", size="sm", c="dimmed"),
+            ], gap="xs"),
+            dmc.Badge(state.upper(), color=color, size="lg"),
+        ], justify="space-between"),
+        dmc.Divider(label="Frozen configuration"),
+        dmc.SimpleGrid(cols=3, spacing="xs", children=cards),
     ]
     if session.get("error_text"):
         body.append(dmc.Alert(str(session["error_text"]), title="Walk-forward session error", color="red"))
@@ -257,43 +441,86 @@ def detail(session: dict[str, Any] | None, progress: dict[str, Any] | None, rows
     result = session.get("result") or {}
     without_pick = int(result.get("windows_without_a_pick") or 0)
     if without_pick:
-        body.append(dmc.Alert(f"{without_pick:,} window-rule decision(s) had no eligible IS parameter pick. Their OOS test did not run.", title="Missing selections", color="orange", variant="light"))
+        body.append(dmc.Alert(
+            f"{without_pick:,} window-rule decision(s) had no eligible IS parameter pick. Their OOS test did not run.",
+            title="Missing selections", color="orange", variant="light",
+        ))
     if result.get("phase_stopped"):
-        body.append(dmc.Text(f"Last execution stopped during {str(result['phase_stopped']).upper()}.", size="sm", c="dimmed"))
+        body.append(dmc.Text(
+            f"Last execution stopped during {str(result['phase_stopped']).upper()}.", size="sm", c="dimmed",
+        ))
     if progress and progress.get("exists"):
         body.extend([dmc.Divider(label="Execution progress"), _phase_progress(progress, inputs)])
-        unsuccessful = sum(int(value) for phase in ("train", "oos")
-                           for status, value in ((progress.get(phase) or {}).get("counts") or {}).items()
-                           if status not in {"ok", "running"})
+        unsuccessful = sum(
+            int(value) for phase in ("train", "oos")
+            for status, value in ((progress.get(phase) or {}).get("counts") or {}).items()
+            if status not in {"ok", "running"}
+        )
         if unsuccessful:
-            body.append(dmc.Alert(f"{unsuccessful:,} persisted Train/OOS run(s) are not successful. A completed-looking result may still need review of these runs.", title="Execution quality warning", color="orange", variant="light"))
+            body.append(dmc.Alert(
+                f"{unsuccessful:,} persisted Train/OOS run(s) are not successful. A completed-looking result "
+                "may still need review of these runs.",
+                title="Execution quality warning", color="orange", variant="light",
+            ))
     if rows:
         objective = str(inputs.get("protocol", {}).get("objective") or "net_profit")
         affected = sum(1 for row in rows if row.get("test_status") == "ok" and not row.get("test_strict_eligible"))
         if affected:
-            body.append(dmc.Alert(f"{affected:,} completed OOS execution(s) have quality flags and are shown in the table but excluded from research-valid summaries.", title="OOS quality warning", color="orange", variant="light"))
-        body.extend([dmc.Divider(label="Out-of-sample results"), _result_summary(rows, interpretation.get("primary_rule") if interpretation.get("role") == "primary" else None), _result_table(rows, options, objective)])
+            body.append(dmc.Alert(
+                f"{affected:,} completed OOS execution(s) have quality flags and are shown in the table but "
+                "excluded from research-valid summaries.",
+                title="OOS quality warning", color="orange", variant="light",
+            ))
+        primary_rule = interpretation.get("primary_rule") if interpretation.get("role") == "primary" else None
+        body.extend([
+            dmc.Divider(label="Out-of-sample results"),
+            _result_summary(rows, primary_rule),
+            result_table(rows, options, objective),
+        ])
     elif state == "running":
-        body.append(dmc.Alert("The session is running. The progress area above reads the persisted Train and OOS run states; use Refresh sessions to load finished window results.", title="Walk-forward in progress", color="yellow", variant="light"))
+        body.append(dmc.Alert(
+            "The session is running. The progress area above reads the persisted Train and OOS run states; "
+            "use Refresh sessions to load finished window results.",
+            title="Walk-forward in progress", color="yellow", variant="light",
+        ))
     else:
         body.append(dmc.Text("No out-of-sample result is available yet.", c="dimmed"))
     return dmc.Paper(withBorder=True, radius="md", p="md", children=dmc.Stack(body, gap="md"))
 
 
 def _phase_progress(progress: dict[str, Any], inputs: dict[str, Any]) -> Any:
-    train = progress.get("train") or {}; oos = progress.get("oos") or {}; selection = progress.get("selection")
-    train_counts = train.get("counts") or {}; oos_counts = oos.get("counts") or {}
+    train = progress.get("train") or {}
+    oos = progress.get("oos") or {}
+    selection = progress.get("selection")
+    train_counts = train.get("counts") or {}
+    oos_counts = oos.get("counts") or {}
     train_total = int(inputs.get("train_backtests") or 0)
     train_done = min(train_total, int(train_counts.get("ok") or 0))
     oos_total = int(selection.get("selected") or 0) if selection else int(inputs.get("max_oos_backtests") or 0)
     oos_done = min(oos_total, int(oos_counts.get("ok") or 0))
     train_failed = sum(int(value) for status, value in train_counts.items() if status not in {"ok", "running"})
     oos_failed = sum(int(value) for status, value in oos_counts.items() if status not in {"ok", "running"})
+    train_running = int(train.get("running") or 0)
+    oos_running = int(oos.get("running") or 0)
+    oos_text = (
+        f"OOS: {oos_done:,} / {oos_total:,} successful · {oos_failed:,} unsuccessful · {oos_running:,} active"
+        if selection else f"OOS: selection begins after Train completes (maximum {oos_total:,} backtests)"
+    )
     return dmc.Stack([
-        dmc.Text(f"Train: {train_done:,} / {train_total:,} successful · {train_failed:,} unsuccessful · {int(train.get('running') or 0):,} active", size="sm"),
-        dmc.Progress(value=(100 * train_done / train_total) if train_total else 0, color="blue", striped=bool(train.get("running")), animated=bool(train.get("running"))),
-        dmc.Text((f"OOS: {oos_done:,} / {oos_total:,} successful · {oos_failed:,} unsuccessful · {int(oos.get('running') or 0):,} active" if selection else f"OOS: selection begins after Train completes (maximum {oos_total:,} backtests)"), size="sm"),
-        dmc.Progress(value=(100 * oos_done / oos_total) if oos_total and selection else 0, color="teal", striped=bool(oos.get("running")), animated=bool(oos.get("running"))),
+        dmc.Text(
+            f"Train: {train_done:,} / {train_total:,} successful · {train_failed:,} unsuccessful · "
+            f"{train_running:,} active",
+            size="sm",
+        ),
+        dmc.Progress(
+            value=(100 * train_done / train_total) if train_total else 0, color="blue",
+            striped=bool(train_running), animated=bool(train_running),
+        ),
+        dmc.Text(oos_text, size="sm"),
+        dmc.Progress(
+            value=(100 * oos_done / oos_total) if oos_total and selection else 0, color="teal",
+            striped=bool(oos_running), animated=bool(oos_running),
+        ),
     ], gap="xs")
 
 
@@ -310,84 +537,131 @@ def _result_summary(rows: list[dict[str, Any]], primary_rule: str | None = None)
         selected = [r for r in valid if r.get("rule") == rule]
         profitable = sum(float(r.get("test_net_profit") or 0) > 0 for r in selected)
         total_profit = sum(float(r.get("test_net_profit") or 0) for r in selected)
+        label = rule.title() + (" · PRIMARY" if rule == primary_rule else " · EXPLORATORY" if primary_rule else "")
         by_rule.append(dmc.Paper(withBorder=True, radius="sm", p="sm", children=dmc.Stack([
-            dmc.Text(rule.title() + (" · PRIMARY" if rule == primary_rule else " · EXPLORATORY" if primary_rule else ""), fw=700),
+            dmc.Text(label, fw=700),
             dmc.Text(f"Research-valid windows: {len(selected):,} · Profitable: {profitable:,}", size="sm"),
             dmc.Text(f"Sum of independent OOS net profit: {_usd(total_profit)}", size="sm"),
-            dmc.Text(f"Median window net profit: {_usd(_median([r.get('test_net_profit') for r in selected]))}", size="sm"),
+            dmc.Text(
+                f"Median window net profit: {_usd(_median([r.get('test_net_profit') for r in selected]))}",
+                size="sm",
+            ),
         ], gap=4)))
-    return dmc.Stack([overview, dmc.SimpleGrid(cols=2, spacing="xs", children=by_rule),
-                      dmc.Text("Each OOS window starts from the configured balance; the sum is not a compounded account-equity curve. Margin-rejection executions remain visible below but are excluded from research-valid summaries.", size="xs", c="dimmed")], gap="sm")
+    return dmc.Stack([
+        overview,
+        dmc.SimpleGrid(cols=2, spacing="xs", children=by_rule),
+        dmc.Text(
+            "Each OOS window starts from the configured balance; the sum is not a compounded account-equity "
+            "curve. Margin-rejection executions remain visible below but are excluded from research-valid summaries.",
+            size="xs", c="dimmed",
+        ),
+    ], gap="sm")
 
 
-def _result_table(rows: list[dict[str, Any]], options: dict[str, Any], objective: str) -> Any:
-    data = []
+def _objective_format(objective: str) -> Any:
+    return MONEY if objective == "net_profit" else PERCENT if objective == "win_rate" else DECIMAL
+
+
+def _objective_number(value: Any, objective: str) -> float | None:
+    """Objective value cut to 2 decimals; win rate is stored as a fraction, so it
+    is scaled to a percentage before cutting."""
+    if objective != "win_rate":
+        return truncated(value)
+    try:
+        return truncated(float(value) * 100)
+    except (TypeError, ValueError):
+        return None
+
+
+def result_table(rows: list[dict[str, Any]], options: dict[str, Any], objective: str) -> Any:
     objective_label = objective.replace("_", " ").title()
+    show_is_objective = objective != "net_profit"
+    data = []
     for row in rows:
         params = row.get("selected_params") or {}
-        data.append({
-            "Window": str(row.get("test_window") or "—"), "Rule": str(row.get("rule") or "—").title(),
-            "Selected kSL": _fib(params.get("KslLevel"), options, "ksl_options"), "Selected kTP": _fib(params.get("KtpLevel"), options, "ktp_options"),
-            **({f"IS {objective_label}": _objective_value(row.get(f"train_{objective}"), objective)} if objective != "net_profit" else {}),
-            "Plateau score": _objective_value(row.get("plateau_score"), objective) if row.get("rule") == "plateau" else "—",
-            "IS net profit": _usd(row.get("train_net_profit")), "IS trades": _int(row.get("train_total_trades")),
-            "OOS status": str(row.get("test_status") or "Not run").upper(),
-            "OOS quality": str(row.get("test_quality") or "Unverified"),
-            "Quality details": ", ".join(str(reason).replace("_", " ") for reason in row.get("test_quality_reasons") or []) or "—",
-            "OOS net profit": _usd(row.get("test_net_profit")),
-            "OOS profit factor": _number(row.get("test_profit_factor")), "OOS trades": _int(row.get("test_total_trades")),
-            "OOS max drawdown": _percent(row.get("test_max_equity_drawdown_pct")),
-        })
-    columns = [{"name": key, "id": key} for key in data[0]]
-    return dash_table.DataTable(data=data, columns=columns, page_size=12, sort_action="native", style_table={"overflowX":"auto"}, style_cell={"fontFamily":"Arial", "fontSize":13, "padding":"8px", "textAlign":"left", "whiteSpace":"normal"}, style_header={"fontWeight":"bold", "backgroundColor":"#f7f9fc"})
-
-
-def _objective_value(value: Any, objective: str) -> str:
-    if objective == "net_profit":
-        return _usd(value)
-    if objective == "win_rate":
-        try:
-            return _percent(Decimal(str(value)) * 100)
-        except Exception:
-            return "—"
-    return _number(value)
+        item = {
+            "window": str(row.get("test_window") or "—"),
+            "rule": str(row.get("rule") or "—").title(),
+            "ksl": _fib(params.get("KslLevel"), options, "ksl_options"),
+            "ktp": _fib(params.get("KtpLevel"), options, "ktp_options"),
+            "plateau_score": (
+                _objective_number(row.get("plateau_score"), objective) if row.get("rule") == "plateau" else None
+            ),
+            "is_net_profit": truncated(row.get("train_net_profit")),
+            "is_trades": truncated(row.get("train_total_trades"), 0),
+            "oos_status": str(row.get("test_status") or "Not run").upper(),
+            "oos_quality": str(row.get("test_quality") or "Unverified"),
+            "quality_details": ", ".join(
+                str(reason).replace("_", " ") for reason in row.get("test_quality_reasons") or []
+            ) or "—",
+            "oos_net_profit": truncated(row.get("test_net_profit")),
+            "oos_profit_factor": truncated(row.get("test_profit_factor")),
+            "oos_trades": truncated(row.get("test_total_trades"), 0),
+            "oos_drawdown": truncated(row.get("test_max_equity_drawdown_pct")),
+        }
+        if show_is_objective:
+            item["is_objective"] = _objective_number(row.get(f"train_{objective}"), objective)
+        data.append(item)
+    columns = [
+        {"id": "window", "name": "Window"}, {"id": "rule", "name": "Rule"},
+        {"id": "ksl", "name": "Selected kSL"}, {"id": "ktp", "name": "Selected kTP"},
+        *([numeric_column("is_objective", f"IS {objective_label}", _objective_format(objective))]
+          if show_is_objective else []),
+        numeric_column("plateau_score", "Plateau score", _objective_format(objective)),
+        numeric_column("is_net_profit", "IS net profit", MONEY),
+        numeric_column("is_trades", "IS trades", INTEGER),
+        {"id": "oos_status", "name": "OOS status"}, {"id": "oos_quality", "name": "OOS quality"},
+        {"id": "quality_details", "name": "Quality details"},
+        numeric_column("oos_net_profit", "OOS net profit", MONEY),
+        numeric_column("oos_profit_factor", "OOS profit factor", DECIMAL),
+        numeric_column("oos_trades", "OOS trades", INTEGER),
+        numeric_column("oos_drawdown", "OOS max drawdown", PERCENT),
+    ]
+    numeric_ids = [column["id"] for column in columns if column.get("type") == "numeric"]
+    return dash_table.DataTable(
+        data=data, columns=columns, page_size=12, sort_action="native",
+        style_table={"overflowX": "auto"},
+        style_cell={"fontFamily": "Arial", "fontSize": 13, "padding": "8px", "textAlign": "left", "whiteSpace": "normal"},
+        style_cell_conditional=right_align(numeric_ids),
+        style_header={"fontWeight": "bold", "backgroundColor": "#f7f9fc"},
+    )
 
 
 def _stat(label: str, value: str) -> Any:
-    return dmc.Paper(withBorder=True, radius="sm", p="sm", children=dmc.Stack([dmc.Text(label, size="xs", c="dimmed"), dmc.Text(value, fw=700, size="sm")], gap=2))
+    return dmc.Paper(withBorder=True, radius="sm", p="sm", children=dmc.Stack([
+        dmc.Text(label, size="xs", c="dimmed"),
+        dmc.Text(value, fw=700, size="sm"),
+    ], gap=2))
 
 
 def _fib(value: Any, options: dict[str, Any], key: str) -> str:
-    if value is None: return "—"
+    if value is None:
+        return "—"
     for strategy in options.get("strategies", []):
         for item in strategy.get(key, []):
-            if str(item.get("value")) == str(value): return str(item.get("label"))
+            if str(item.get("value")) == str(value):
+                return str(item.get("label"))
     return str(value)
 
 
 def _usd(value: Any) -> str:
-    try: return f"{Decimal(str(value)).quantize(Decimal('0.01'), rounding=ROUND_DOWN):,.2f} USD"
-    except Exception: return "—"
+    try:
+        return f"{Decimal(str(value)).quantize(Decimal('0.01'), rounding=ROUND_DOWN):,.2f} USD"
+    except Exception:
+        return "—"
 
 
 def _percent(value: Any) -> str:
-    try: return f"{Decimal(str(value)).quantize(Decimal('0.01'), rounding=ROUND_DOWN):,.2f}%"
-    except Exception: return "—"
-
-
-def _number(value: Any) -> str:
-    try: return f"{Decimal(str(value)).quantize(Decimal('0.01'), rounding=ROUND_DOWN):,.2f}"
-    except Exception: return "—"
-
-
-def _int(value: Any) -> str:
-    try: return f"{int(value):,}"
-    except Exception: return "—"
+    try:
+        return f"{Decimal(str(value)).quantize(Decimal('0.01'), rounding=ROUND_DOWN):,.2f}%"
+    except Exception:
+        return "—"
 
 
 def _median(values: list[Any]) -> float | None:
     parsed = sorted(float(x) for x in values if x is not None)
-    if not parsed: return None
+    if not parsed:
+        return None
     mid = len(parsed) // 2
     return parsed[mid] if len(parsed) % 2 else (parsed[mid - 1] + parsed[mid]) / 2
 

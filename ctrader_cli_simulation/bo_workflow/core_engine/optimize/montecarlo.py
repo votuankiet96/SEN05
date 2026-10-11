@@ -4,10 +4,21 @@ import random
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
-from ..models import daily_returns
+from ..models import daily_balance_and_floor
 
 
 BLOCK_METHODS = ("non_overlapping", "moving", "stationary")
+# Nguồn đo sụt giảm/vi phạm: "balance" = số dư CHỐT cuối ngày (bỏ qua lỗ nổi),
+# "minEquity" = đáy equity TRONG ngày (đúng cách luật FTMO đo). Return nhân dồn
+# qua ngày LUÔN dùng balance ở cả 2 — xem models.daily_balance_and_floor().
+DRAWDOWN_FIELDS = ("balance", "minEquity")
+# v2 (2026-09-28): nhánh minEquity đổi nghĩa — trước đây nhân dồn chuỗi
+# minEquity của điểm CUỐI ngày (chỉ là đáy nến cuối, đo lỗ ngày nhẹ hơn thật),
+# nay đo đúng đáy cả ngày so với balance 00:00. Đổi schema để kết quả cũ không
+# bị đọc lẫn với kết quả mới.
+SCHEMA = "bo-research-montecarlo/v2"
+DUAL_SCHEMA = "bo-research-montecarlo-dual/v2"
+METHODS_SCHEMA = "bo-research-montecarlo-methods/v2"
 
 
 @dataclass(frozen=True)
@@ -28,9 +39,20 @@ def run(
     field: str = "balance",
     method: str = "non_overlapping",
 ) -> dict[str, Any]:
-    days = daily_returns(equity_points, config.timezone, config.initial_balance, field_name=field)
+    """Block-bootstrap các NGÀY lịch sử (mỗi ngày = cặp return + sụt trong
+    ngày, rút cùng nhau để không tách 2 số của cùng 1 ngày) rồi đo drawdown và
+    xác suất vi phạm luật FTMO trên từng path.
+
+    `field="balance"`: đo trên số dư chốt ngày — rủi ro trên vốn đã chốt.
+    `field="minEquity"`: đo trên đáy equity trong ngày — mốc lỗ ngày là số dư
+    đầu ngày MÔ PHỎNG, đáy = số dư đó × (1 − tỷ lệ sụt lịch sử của ngày được
+    rút), đúng luật FTMO (balance 00:00 − equity thấp nhất)."""
+    if field not in DRAWDOWN_FIELDS:
+        raise ValueError(f"unknown drawdown field: {field!r}; supported: {DRAWDOWN_FIELDS}")
+    days = daily_balance_and_floor(equity_points, config.timezone, config.initial_balance)
     if not days:
         raise ValueError("equity timeline is empty")
+    intraday = field == "minEquity"
     rng = random.Random(config.seed)
     # non_overlapping/moving rút khối CẮT SẴN (chỉ khác nhau ở vị trí cắt —
     # xem _cut_blocks); stationary không cắt sẵn gì, tự đi bộ trực tiếp trên
@@ -38,6 +60,8 @@ def run(
     # 1 vòng lặp. Cắt `blocks` 1 LẦN ngoài vòng lặp path (không phụ thuộc rng)
     # để không tốn công cắt lại 10.000 lần.
     blocks = _cut_blocks(days, config.block_days, method) if method != "stationary" else None
+    daily_limit = config.initial_balance * config.daily_loss_pct / 100.0
+    max_limit = config.initial_balance * config.max_loss_pct / 100.0
     max_dd: list[float] = []
     daily_breaches = 0
     total_breaches = 0
@@ -54,22 +78,30 @@ def run(
         worst_dd = 0.0
         daily_bad = False
         total_bad = False
-        for daily_return in sampled:
+        for daily_return, floor in sampled:
             day_start = balance
             balance *= 1.0 + daily_return
-            peak = max(peak, balance)
-            worst_dd = max(worst_dd, (peak - balance) / peak * 100.0)
-            if day_start - balance > config.initial_balance * config.daily_loss_pct / 100.0:
-                daily_bad = True
-            if config.initial_balance - balance > config.initial_balance * config.max_loss_pct / 100.0:
-                total_bad = True
+            if intraday:
+                # Đáy trong ngày so với đỉnh số dư chốt TRƯỚC ngày này (đỉnh
+                # chốt cuối ngày xảy ra sau đáy, không dùng làm mốc cho nó).
+                trough = day_start * (1.0 - floor)
+                worst_dd = max(worst_dd, (peak - trough) / peak * 100.0)
+                daily_bad = daily_bad or day_start - trough > daily_limit
+                total_bad = total_bad or config.initial_balance - trough > max_limit
+                peak = max(peak, balance)
+            else:
+                peak = max(peak, balance)
+                worst_dd = max(worst_dd, (peak - balance) / peak * 100.0)
+                daily_bad = daily_bad or day_start - balance > daily_limit
+                total_bad = total_bad or config.initial_balance - balance > max_limit
         max_dd.append(worst_dd)
         daily_breaches += int(daily_bad)
         total_breaches += int(total_bad)
     max_dd.sort()
     return {
-        "schema": "bo-research-montecarlo/v1",
-        "return_field": field,
+        "schema": SCHEMA,
+        "return_field": "balance",
+        "drawdown_field": field,
         "block_method": method,
         "paths": config.paths,
         "block_days": config.block_days,
@@ -100,14 +132,14 @@ def run_methods_compare(
     research_notes/montecarlo-block-bootstrap-variants.md."""
     points = list(equity_points)
     return {
-        "schema": "bo-research-montecarlo-methods/v1",
+        "schema": METHODS_SCHEMA,
         "non_overlapping": run(points, config, field=field, method="non_overlapping"),
         "moving": run(points, config, field=field, method="moving"),
         "stationary": run(points, config, field=field, method="stationary"),
     }
 
 
-def _cut_blocks(days: list[float], block_days: int, method: str) -> list[list[float]]:
+def _cut_blocks(days: list[Any], block_days: int, method: str) -> list[list[Any]]:
     if method == "non_overlapping":
         return [days[i:i + block_days] for i in range(0, len(days), block_days)]
     if method == "moving":
@@ -118,7 +150,7 @@ def _cut_blocks(days: list[float], block_days: int, method: str) -> list[list[fl
     raise ValueError(f"unknown block method: {method!r}")
 
 
-def _resample_stationary(days: list[float], mean_block_days: int, rng: random.Random) -> list[float]:
+def _resample_stationary(days: list[Any], mean_block_days: int, rng: random.Random) -> list[Any]:
     """Politis & Romano (1994): đi bộ tuần tự trên `days` coi như 1 VÒNG TRÒN
     (hết ngày cuối quay lại ngày đầu, không bao giờ "hụt" dữ liệu giữa khối).
     Mỗi bước, sau khi lấy 1 ngày, có xác suất `1/mean_block_days` để NHẢY sang
@@ -128,7 +160,7 @@ def _resample_stationary(days: list[float], mean_block_days: int, rng: random.Ra
     n = len(days)
     jump_probability = 1.0 / max(1, mean_block_days)
     idx = rng.randrange(n)
-    sampled: list[float] = []
+    sampled: list[Any] = []
     for _ in range(n):
         sampled.append(days[idx])
         idx = idx + 1 if idx + 1 < n else 0
@@ -138,17 +170,18 @@ def _resample_stationary(days: list[float], mean_block_days: int, rng: random.Ra
 
 
 def run_dual(equity_points: Iterable[Mapping[str, Any]], config: MonteCarloConfig) -> dict[str, Any]:
-    """Chạy `run()` 2 lần song song trên cùng dữ liệu — 1 lần theo `balance` (vốn
-    ĐÃ CHỐT, đúng chuẩn NAV để "chain" return qua từng ngày), 1 lần theo
-    `minEquity` (đáy equity mỗi ngày, bắt được lỗ nổi giữa ngày — đúng luật
-    FTMO thật). [2026-09-22, chốt người dùng] Không gộp 2 field vào 1 mô hình
-    lai (2 khái niệm thống kê khác nhau: "điểm chốt" vs "cực trị" — xem
-    research_notes/montecarlo-equity-vs-balance-daily-return-methodology.md)
-    — để 2 kết quả đứng cạnh nhau, người dùng tự đối chiếu khoảng dao động
-    giữa "rủi ro trên vốn đã chốt" và "rủi ro bao gồm lỗ nổi trong ngày"."""
+    """Chạy `run()` 2 lần song song trên cùng dữ liệu, cùng seed — "balance_based"
+    (đo trên số dư ĐÃ CHỐT cuối ngày, bỏ qua lỗ nổi) và "min_equity_based" (đo
+    trên đáy equity TRONG ngày, đúng luật FTMO thật). [2026-09-22, chốt người
+    dùng] Không gộp thành 1 số — để 2 kết quả đứng cạnh nhau, người dùng tự đối
+    chiếu "rủi ro trên vốn đã chốt" với "rủi ro gồm cả lỗ nổi trong ngày".
+
+    [2026-09-28] Cả 2 nhánh giờ nhân dồn return theo balance; khác nhau đúng ở
+    giá trị dùng để đo sụt giảm/vi phạm (xem `run()`), theo hướng đã research ở
+    research_notes/montecarlo-equity-vs-balance-daily-return-methodology.md."""
     points = list(equity_points)
     return {
-        "schema": "bo-research-montecarlo-dual/v1",
+        "schema": DUAL_SCHEMA,
         "balance_based": run(points, config, field="balance"),
         "min_equity_based": run(points, config, field="minEquity"),
     }

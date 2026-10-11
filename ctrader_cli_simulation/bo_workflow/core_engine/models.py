@@ -38,6 +38,36 @@ def coerce_float(value: Any, default: float = 0.0) -> float:
     return number if math.isfinite(number) else default
 
 
+def _points_by_day(points: Any, timezone: str) -> dict[str, list[Mapping[str, Any]]]:
+    """Nhóm điểm equity theo ngày lịch `timezone`, giữ đúng thứ tự đầu vào
+    trong mỗi ngày (điểm cuối danh sách = điểm ghi nhận sau cùng của ngày)."""
+    tz = ZoneInfo(timezone)
+    days: dict[str, list[Mapping[str, Any]]] = {}
+    for point in points:
+        day = parse_point_time(point).astimezone(tz).date().isoformat()
+        days.setdefault(day, []).append(point)
+    return days
+
+
+def daily_returns_by_day(
+    points: Mapping[str, Any] | Any,
+    timezone: str,
+    initial: float,
+    *,
+    field_name: str = "balance",
+) -> list[tuple[str, float]]:
+    """Như `daily_returns()` nhưng giữ kèm ngày (ISO) của từng return — cần
+    khi phải gắn thêm dữ liệu khác (vd lệnh đóng trong ngày) vào ĐÚNG ngày
+    của chuỗi, không đoán lại cách chia ngày ở nơi khác."""
+    out: list[tuple[str, float]] = []
+    previous = initial
+    for day, bucket in sorted(_points_by_day(points, timezone).items()):
+        close = float(bucket[-1].get(field_name, initial))
+        out.append((day, (close - previous) / previous if previous else 0.0))
+        previous = close
+    return out
+
+
 def daily_returns(
     points: Mapping[str, Any] | Any,
     timezone: str,
@@ -55,17 +85,36 @@ def daily_returns(
     nằm đây thay vì để 3 file import ký hiệu gạch-dưới của nhau. Tham số đặt
     tên `field_name` (không phải `field`) để không đụng `dataclasses.field`
     đã import ở đầu file."""
-    tz = ZoneInfo(timezone)
-    closes: dict[str, float] = {}
-    for point in points:
-        dt = parse_point_time(point).astimezone(tz)
-        value = float(point.get(field_name, initial))
-        closes[dt.date().isoformat()] = value
-    out: list[float] = []
+    return [value for _day, value in daily_returns_by_day(points, timezone, initial, field_name=field_name)]
+
+
+def daily_balance_and_floor(
+    points: Mapping[str, Any] | Any,
+    timezone: str,
+    initial: float,
+) -> list[tuple[float, float]]:
+    """Mỗi ngày 1 cặp (return theo balance chốt ngày, tỷ lệ sụt trong ngày).
+
+    Luật lỗ ngày FTMO: mốc là balance lúc 00:00 (= balance chốt ngày hôm
+    trước), so với equity THẤP NHẤT trong ngày. Report cTrader chỉ có
+    `balance` (điểm chốt) và `minEquity` (đáy của TỪNG nến), nên 2 khái niệm
+    phải lấy từ 2 nguồn riêng: return nhân dồn qua ngày dùng `balance` của
+    điểm cuối ngày; sụt trong ngày = (balance chốt hôm trước − đáy `minEquity`
+    của MỌI điểm trong ngày) / balance chốt hôm trước. Lấy `minEquity` của
+    điểm cuối ngày (cách cũ) chỉ là đáy của nến cuối, bỏ sót mọi đợt lỗ nổi
+    sâu hơn xảy ra sớm hơn trong ngày.
+
+    Tỷ lệ (không phải số tiền) để Monte Carlo áp lại được lên số dư mô phỏng
+    khác với lịch sử. Điểm thiếu `minEquity` coi đáy = `balance` của nó."""
+    out: list[tuple[float, float]] = []
     previous = initial
-    for day in sorted(closes):
-        close = closes[day]
-        out.append((close - previous) / previous if previous else 0.0)
+    for _day, bucket in sorted(_points_by_day(points, timezone).items()):
+        close = float(bucket[-1].get("balance", initial))
+        low = min(float(p.get("minEquity", p.get("balance", initial))) for p in bucket)
+        if previous:
+            out.append(((close - previous) / previous, (previous - low) / previous))
+        else:
+            out.append((0.0, 0.0))
         previous = close
     return out
 
@@ -155,7 +204,6 @@ ENGINE_BACKENDS = frozenset({"cli", "api"})
 @dataclass(frozen=True)
 class EngineProfile:
     id: str
-    cli_version: str
     data_mode: str = "ticks"
     precise_conversion: bool = False
     commission: float | None = None
@@ -191,7 +239,6 @@ class EngineProfile:
     def from_dict(cls, raw: Mapping[str, Any]) -> "EngineProfile":
         return cls(
             id=str(raw["id"]),
-            cli_version=str(raw.get("cli_version", "")),
             data_mode=str(raw.get("data_mode", "ticks")).lower(),
             precise_conversion=bool(raw.get("precise_conversion", False)),
             commission=raw.get("commission"),
@@ -200,19 +247,6 @@ class EngineProfile:
             spread=raw.get("spread"),
             backend=str(raw.get("backend", "cli")).lower(),
         )
-
-    def canonical(self) -> dict[str, Any]:
-        return {
-            "id": self.id,
-            "cli_version": self.cli_version,
-            "data_mode": self.data_mode,
-            "precise_conversion": self.precise_conversion,
-            "commission": self.commission,
-            "commission_type": self.commission_type,
-            "commission_auto": self.commission_auto,
-            "spread": self.spread,
-            "backend": self.backend,
-        }
 
 
 @dataclass(frozen=True)
@@ -278,6 +312,17 @@ class RunSpec:
             if key in self.params:
                 bits.append(f"{tag}{str(self.params[key]).replace('.', 'p')}")
         return "__".join(bits)
+
+
+@dataclass(frozen=True)
+class OptimizeBox:
+    """RunSpec cùng bối cảnh mà tham số quét `dims` tạo thành tích Descartes — chạy bằng 1 lệnh `ctrader-cli optimize`."""
+    specs: tuple[RunSpec, ...]
+    dims: tuple[tuple[str, tuple[str, ...]], ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.specs or len(self.specs) != math.prod(len(values) for _, values in self.dims):
+            raise ValueError(f"OptimizeBox: {len(self.specs)} spec không khớp dims {[name for name, _ in self.dims]}")
 
 
 @dataclass(frozen=True)

@@ -14,7 +14,7 @@ import sqlite3
 import threading
 import uuid
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -117,6 +117,10 @@ def _ensure_schema(db: sqlite3.Connection) -> None:
     with _SCHEMA_LOCK:
         if _SCHEMA_READY:
             return
+        # Background workers write progress while the UI polls. In WAL mode
+        # "readers do not block writers and a writer does not block readers"
+        # (sqlite.org/wal.html); the setting is stored in the database file.
+        db.execute("PRAGMA journal_mode=WAL")
         db.executescript(_SCHEMA)
         existing = {row[1] for row in db.execute("PRAGMA table_info(sessions)")}
         migrations = {
@@ -388,6 +392,19 @@ def list_sessions(limit: int = 500, *, kind: str | None = None) -> list[dict[str
     return [_row(row) or {} for row in rows]
 
 
+def latest_diagnostics(source_session_id: str | None) -> dict[str, Any] | None:
+    """Newest DSR/PBO session of one Grid source, preferring finished results."""
+    if not source_session_id:
+        return None
+    with _db() as db:
+        row = db.execute(
+            """SELECT * FROM sessions WHERE kind='dsr_pbo' AND source_session_id=?
+               ORDER BY state IN ('completed','cached') DESC, created_utc DESC LIMIT 1""",
+            (str(source_session_id),),
+        ).fetchone()
+    return _row(row)
+
+
 def active_session(*, kind: str) -> dict[str, Any] | None:
     """Read the active dashboard session of one kind, without claiming a run."""
     with _db() as db:
@@ -627,7 +644,7 @@ def reconcile_abandoned_sessions() -> list[str]:
 def _reconcile_abandoned(db: sqlite3.Connection) -> list[str]:
     local_host = socket.gethostname().casefold()
     rows = db.execute(
-        """SELECT session_id,owner_host,owner_pid FROM sessions
+        """SELECT session_id,owner_host,owner_pid,started_utc FROM sessions
            WHERE state='running' AND owner_host IS NOT NULL AND owner_pid IS NOT NULL"""
     ).fetchall()
     abandoned: list[str] = []
@@ -636,7 +653,7 @@ def _reconcile_abandoned(db: sqlite3.Connection) -> list[str]:
         if str(row["owner_host"]).casefold() != local_host:
             continue
         owner_pid = int(row["owner_pid"])
-        if _process_alive(owner_pid):
+        if _process_alive(owner_pid, row["started_utc"]):
             continue
         session_id = str(row["session_id"])
         reason = f"abandoned: owner process {row['owner_host']}:{owner_pid} is no longer alive"
@@ -652,29 +669,61 @@ def _reconcile_abandoned(db: sqlite3.Connection) -> list[str]:
     return abandoned
 
 
-def _process_alive(pid: int) -> bool:
+def _process_alive(pid: int, claimed_utc: str | None = None) -> bool:
+    """Whether the recorded owner may still be running.
+
+    Mirrors core ``store._pid_alive``: Windows reuses PIDs, so a live process
+    created after the claim cannot be its owner; an owner that exists but
+    cannot be queried (access denied) counts as alive so a run is never stolen.
+    """
     if pid <= 0:
         return False
     if pid == os.getpid():
         return True
+    try:
+        claimed_at = datetime.fromisoformat(str(claimed_utc)) if claimed_utc else None
+    except ValueError:
+        claimed_at = None
+    if claimed_at is not None and claimed_at.tzinfo is None:
+        claimed_at = claimed_at.replace(tzinfo=timezone.utc)
     if os.name == "nt":
         import ctypes
+        from ctypes import wintypes
 
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+        kernel32.OpenProcess.restype = wintypes.HANDLE
+        kernel32.GetExitCodeProcess.argtypes = (wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD))
+        kernel32.GetProcessTimes.argtypes = (wintypes.HANDLE,) + (ctypes.POINTER(wintypes.FILETIME),) * 4
+        kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
         process_query_limited_information = 0x1000
         still_active = 259
-        kernel32 = ctypes.windll.kernel32
+        error_access_denied = 5
         handle = kernel32.OpenProcess(process_query_limited_information, False, pid)
         if not handle:
-            return False
+            return ctypes.get_last_error() == error_access_denied
         try:
-            exit_code = ctypes.c_ulong()
-            return bool(kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code))) and exit_code.value == still_active
+            exit_code = wintypes.DWORD()
+            if not kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+                return True
+            if exit_code.value != still_active:
+                return False
+            if claimed_at is None:
+                return True
+            times = [wintypes.FILETIME() for _ in range(4)]
+            if not kernel32.GetProcessTimes(handle, *(ctypes.byref(item) for item in times)):
+                return True
+            ticks = (times[0].dwHighDateTime << 32) | times[0].dwLowDateTime
+            created = datetime(1601, 1, 1, tzinfo=timezone.utc) + timedelta(microseconds=ticks // 10)
+            return created <= claimed_at
         finally:
             kernel32.CloseHandle(handle)
     try:
         os.kill(pid, 0)
-    except (OSError, ProcessLookupError):
+    except ProcessLookupError:
         return False
+    except PermissionError:
+        return True
     return True
 
 

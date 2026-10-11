@@ -1,7 +1,7 @@
 ---
 title: Monte Carlo (block-bootstrap) — equity vs balance làm chuỗi daily-return, đối chiếu chuẩn ngành
 date: 2026-09-22
-status: research xong, CHƯA code — cần chốt hướng sửa trước khi đụng optimize/montecarlo.py
+status: ĐÃ CODE 2026-09-28 theo đúng "hướng 2 chuỗi" bên dưới (xem mục "Triển khai 2026-09-28" cuối file)
 ---
 
 # Câu hỏi gốc
@@ -97,6 +97,25 @@ Chỉ dừng ở research — **chưa sửa code**. Cần chốt có triển kha
 không (phức tạp hơn 1 field-swap nhưng là cách duy nhất khớp cả chuẩn NAV lẫn đúng luật FTMO cùng
 lúc), hay chấp nhận giữ `balance`-only (đơn giản, chấp nhận giới hạn đã nêu, coi Monte Carlo này chỉ
 đo rủi ro trình tự trên VỐN ĐÃ CHỐT, không đo rủi ro lỗ nổi trong ngày).
+
+# Triển khai 2026-09-28 (sau audit phương pháp, người dùng chốt sửa)
+
+Audit 2026-09-27 đo thật trên report US30/H1 ksl3/ktp5 (grid `dashboard_grid_5db0256b041ad863`,
+440 ngày) thấy nhánh `minEquity` cũ còn sai thêm 1 tầng ngoài 2 giới hạn đã nêu ở trên:
+`models.daily_returns()` giữ điểm CUỐI mỗi ngày, mà `minEquity` của 1 điểm chỉ là đáy của NẾN đó —
+nên chuỗi "minEquity" thực chất là đáy nến cuối ngày, không phải đáy cả ngày. 230/440 ngày giá trị
+đó khác đáy thật; ngày lỗ nặng nhất bị ghi 1,98% thay vì 2,69% (theo cách FTMO: balance hôm trước −
+equity thấp nhất); 253/440 ngày lỗ bị ghi nhẹ hơn.
+
+Đã code đúng hướng 2 chuỗi ở mục "Tổng hợp":
+- `models.daily_balance_and_floor()`: mỗi ngày (return theo balance chốt ngày, tỷ lệ sụt =
+  (balance chốt hôm trước − MIN `minEquity` của mọi điểm trong ngày) / balance chốt hôm trước).
+- `montecarlo.run()`: rút khối theo NGÀY (cặp return + tỷ lệ sụt đi cùng nhau). Cả 2 nhánh nhân
+  dồn balance; nhánh `minEquity` đo lỗ ngày/lỗ tổng/drawdown tại đáy = số dư đầu ngày mô phỏng ×
+  (1 − tỷ lệ sụt). Nhánh `balance` giữ nguyên thuật toán cũ (cùng seed → cùng kết quả, đã verify
+  trên report thật). Schema kết quả lên v2, khoá cache gồm schema.
+- `readout.run_montecarlo_oos()` (mới): Monte Carlo trên chuỗi đoạn KIỂM nối lại của walk-forward
+  — xem `full-validation-pipeline-design.md` bước [5].
 
 # Nguồn
 

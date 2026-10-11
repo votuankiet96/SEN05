@@ -9,6 +9,7 @@ import dash_mantine_components as dmc
 import actions
 import data_access
 import session_store
+from ui_common import poll_disabled, truncated
 from . import views
 
 
@@ -54,10 +55,11 @@ def register(app: Any) -> None:
         State("diagnostics-source-select", "value"),
         State("diagnostics-min-trades-input", "value"),
         State("diagnostics-blocks-input", "value"),
+        State("diagnostics-objective-select", "value"),
         prevent_initial_call=True,
     )
     def create_diagnostics(
-        _clicks: int, source_id: str | None, min_trades: Any, blocks: Any,
+        _clicks: int, source_id: str | None, min_trades: Any, blocks: Any, objective: str | None,
     ):
         try:
             if not actions.completed_execution_policy_available():
@@ -77,6 +79,7 @@ def register(app: Any) -> None:
                 source_snapshot=snapshot,
                 min_trades=minimum,
                 blocks=int(blocks),
+                objective=str(objective or "net_profit"),
             )
             session = session_store.create_grid_diagnostics(plan)
             return {"id": session["session_id"]}, dmc.Alert(
@@ -109,19 +112,30 @@ def register(app: Any) -> None:
             requested = str(selection_request.get("id") or "")
         else:
             requested = str(selected or "")
-        return views.session_options(sessions), requested if requested in valid else None
+        target = requested if requested in valid else None
+        if target is None:
+            active = next((item for item in sessions if item["state"] == "running"), None)
+            target = active["session_id"] if active else None
+        return views.session_options(sessions), target
 
     @app.callback(
         Output("diagnostics-session-detail", "children"),
         Input("diagnostics-refresh-btn", "n_clicks"),
         Input("diagnostics-session-select", "value"),
-        Input("diagnostics-run-message", "children"),
         Input("diagnostics-progress-poll", "n_intervals"),
     )
     def refresh_detail(
-        _clicks: int | None, session_id: str | None, _run_message: Any, _poll: int,
+        _clicks: int | None, session_id: str | None, _poll: int,
     ):
-        return views.detail(session_store.get(session_id))
+        session = session_store.get(session_id)
+        # Live progress is shown by refresh_status; while the analysis runs a
+        # tick must not rebuild this panel. A tick after it ends renders the
+        # results once, then refresh_status stops the ticker. The background
+        # job's `diagnostics-run-message` is deliberately not an Input (see
+        # ui_common.poll_disabled).
+        if ctx.triggered_id == "diagnostics-progress-poll" and (not session or session.get("state") == "running"):
+            return no_update
+        return views.detail(session)
 
     @app.callback(
         Output("diagnostics-progress-bar", "value"),
@@ -132,30 +146,39 @@ def register(app: Any) -> None:
         Input("diagnostics-progress-poll", "n_intervals"),
         Input("diagnostics-session-select", "value"),
         Input("diagnostics-run-btn", "n_clicks"),
-        Input("diagnostics-run-message", "children"),
-        State("diagnostics-progress-poll", "disabled"),
+        Input("diagnostics-refresh-btn", "n_clicks"),
+        # True while the background analysis runs (its `running` flag): keeps
+        # the ticker alive in the seconds before the worker claims the session,
+        # when a failed/cancelled session being re-run still reads as terminal.
+        Input("diagnostics-run-btn", "disabled"),
     )
     def refresh_status(
         _poll: int,
         session_id: str | None,
         _run_clicks: int | None,
-        _run_message: Any,
-        polling_disabled: bool,
+        _refresh_clicks: int | None,
+        run_button_disabled: bool | None,
     ):
-        session_store.reconcile_abandoned_sessions()
+        is_tick = ctx.triggered_id == "diagnostics-progress-poll"
+        # Reconciling takes a write lock; do it on user actions, not every tick
+        # (it also runs at app start, on refresh and before every claim).
+        if not is_tick:
+            session_store.reconcile_abandoned_sessions()
         session = session_store.get(session_id)
         if not session or session.get("kind") != "dsr_pbo":
             return 0, "No diagnostics session selected", True, True, True
         active = session["state"] == "running"
         progress = float(session.get("progress_pct") or 0)
         text = str(session.get("progress_text") or session["state"].title())
-        if active:
-            disable_polling = False
-        elif ctx.triggered_id == "diagnostics-run-btn" and session["state"] in {"draft", "failed", "cancelled"}:
-            disable_polling = False
-        else:
-            disable_polling = True if session["state"] in session_store.TERMINAL_STATES else bool(polling_disabled)
-        return progress, f"{progress:.2f}% - {text}", not active, active, disable_polling
+        runnable = session["state"] in {"draft", "failed", "cancelled"}
+        keep_polling = (
+            active or bool(run_button_disabled)
+            or (ctx.triggered_id == "diagnostics-run-btn" and runnable)
+        )
+        return (
+            progress, f"{truncated(progress):.2f}% - {text}", not active, active,
+            poll_disabled(keep_polling, is_tick),
+        )
 
     @app.callback(
         Output("diagnostics-run-message", "children"),
@@ -239,6 +262,17 @@ def register(app: Any) -> None:
             return dmc.Alert("Deleted 1 dashboard diagnostics session.", color="green")
         except Exception as exc:
             return dmc.Alert(str(exc), title="Could not delete diagnostics session", color="red")
+
+    @app.callback(
+        Output("diagnostics-create-message", "children", allow_duplicate=True),
+        Output("diagnostics-run-message", "children", allow_duplicate=True),
+        Output("diagnostics-stop-message", "children", allow_duplicate=True),
+        Output("diagnostics-delete-message", "children", allow_duplicate=True),
+        Input("diagnostics-refresh-btn", "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def clear_old_diagnostics_messages(_clicks: int):
+        return None, None, None, None
 
 
 def _nonnegative_int(value: Any) -> int:

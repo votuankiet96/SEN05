@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import subprocess
 import threading
 import time
@@ -12,7 +13,9 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Callable, Mapping
 
-from .models import FailureCode, RunResult, RunSpec, RunStatus
+from .configuration import StrategyProfile
+from .models import FailureCode, OptimizeBox, RunResult, RunSpec, RunStatus
+from .output_util import evidence
 
 # cli_runner.py — chỗ DUY NHẤT được phép spawn ctrader-cli.exe. Trước
 # 2026-09-21 nằm ở package riêng `cli_engine/` (tách khỏi core_engine để đối
@@ -45,6 +48,7 @@ class ProcResult:
 
 
 def select_cli() -> Path:
+    """`CTRADER_CLI` nếu đặt; không thì bản mới nhất CHẠY ĐƯỢC giữa cTrader Desktop và bản cài riêng (winget)."""
     override = os.environ.get("CTRADER_CLI", "").strip()
     if override:
         return Path(override)
@@ -53,20 +57,27 @@ def select_cli() -> Path:
     standalone = local / "Programs" / "cTrader CLI" / "ctrader-cli.exe"
     if standalone.is_file():
         candidates.append(standalone)
-    return max(candidates, key=_version_key) if candidates else standalone
+    if not candidates:
+        return standalone
+    best = _newest_cli(tuple((str(path), *_stamp(path)) for path in candidates))
+    if not best:
+        raise RuntimeError(f"Không có bản ctrader-cli nào chạy được (`--version` không in dòng 'Version:'): {[str(p) for p in candidates]}")
+    return Path(best)
+
+
+@lru_cache(maxsize=8)
+def _newest_cli(candidates: tuple[tuple[str, int, int], ...]) -> str:
+    """Bản có phiên bản cao nhất trong các bản chạy được ('' nếu không có). Mỗi lần dò spawn 1 tiến trình .NET
+    (~2,35 s) nên cache theo (đường dẫn, size, mtime): cài/cập nhật CLI thì dò lại."""
+    keys = {path: _version_key(Path(path)) for path, *_ in candidates}
+    return max((path for path, key in keys.items() if key != (-1,)), key=keys.get, default="")
 
 
 def _version_key(path: Path) -> tuple[int, ...]:
-    try:
-        proc = subprocess.run(
-            [str(path), "--version"], capture_output=True, text=True,
-            encoding="utf-8", errors="replace", timeout=15, check=False,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-        )
-    except (OSError, subprocess.SubprocessError):
-        return (-1,)
-    match = re.search(r"\b(\d+)\.(\d+)(?:\.(\d+))?(?:\.(\d+))?\b", proc.stdout + proc.stderr)
-    return tuple(int(part or 0) for part in match.groups()) if match else (-1,)
+    """Khoá phiên bản từ dòng `Version: x.y.z.w` của `ctrader-cli --version` (không cần đăng nhập); (-1,) nếu bản đó
+    không chạy được (vd bản cài riêng cần .NET 6, .NET không roll-forward qua major nên hỏng khi runtime 6 bị gỡ)."""
+    version = _cli_version(str(path), _stamp(path))
+    return tuple(map(int, version.split("."))) if re.fullmatch(r"\d+(\.\d+)*", version) else (-1,)
 
 
 def _stamp(path: Path) -> tuple[int, int]:
@@ -122,6 +133,16 @@ _OPTION_ENV = {
     "SPREAD", "REPORT", "REPORT-JSON", "REPORT_JSON",
     "PRECISE-CONVERSION", "PRECISE_CONVERSION", "FULL-ACCESS", "FULL_ACCESS",
     "EXIT-ON-STOP", "EXIT_ON_STOP",
+    # [2026-10-08] Option mới của CLI 5.10 (README ctrader-console-docker liệt kê tên biến môi
+    # trường theo từng lệnh): `-e` đọc chúng từ môi trường cha nếu có, nên phải gỡ khỏi tiến trình con.
+    "ALGO-FILE", "ALGO_FILE", "CBOT-SET", "CBOT_SET",
+    "EQUITY-X-AXIS", "EQUITY_X_AXIS", "REDOWNLOAD-DATA", "REDOWNLOAD_DATA",
+    "MC-METHOD", "MC_METHOD", "MC-ITERATIONS", "MC_ITERATIONS", "MC-SEED", "MC_SEED",
+    "MC-STARTING-EQUITY", "MC_STARTING_EQUITY", "MC-RUIN-FLOOR", "MC_RUIN_FLOOR",
+    "MC-BLOCK-SIZE", "MC_BLOCK_SIZE", "MC-OUTPUT", "MC_OUTPUT",
+    "RECONNECT-TIMEOUT", "RECONNECT_TIMEOUT",
+    "PARAMS", "METHOD", "CORES", "CRITERIA", "FITNESS", "AUTO-SELECT-BEST", "AUTO_SELECT_BEST",
+    "SKIP-EMPTY-PASSES", "SKIP_EMPTY_PASSES", "OPTRES", "PASSES-DIR", "PASSES_DIR",
 }
 
 
@@ -285,7 +306,7 @@ def cli_option_supported(token: str, *, algo_path: Path, cli_path: Path | None =
     return _option_probe_for(str(cli_path), _stamp(cli_path), str(algo), _stamp(algo), token)
 
 
-def validate_capabilities(specs: list[RunSpec], *, algo_path: Path, cli_path: Path) -> None:
+def validate_capabilities(specs: list[RunSpec], *, algo_path: Path, cli_path: Path, optimize: bool = False) -> None:
     """Preflight riêng của engine CLI — dời từ facilitator._validate_capabilities
     2026-09-17 khi tách 2 engine (facilitator.py giờ chỉ gọi đúng 1 tên hàm này,
     không tự biết CLI/API kiểm tra ra sao). Hỏi thẳng binary xem có hỗ trợ
@@ -329,6 +350,10 @@ def validate_capabilities(specs: list[RunSpec], *, algo_path: Path, cli_path: Pa
     )
     if missing:
         raise RuntimeError(f"CLI không hỗ trợ option: {missing}")
+    if optimize:
+        absent = [name for name in _OPTIMIZE_OPTIONS if not cli_has_option(name, cli_path=cli_path)]
+        if not cli_has_command("optimize", cli_path=cli_path) or absent:
+            raise RuntimeError(f"CLI không hỗ trợ optimize (thiếu option: {absent})")
 
 
 def _cli_date(value: date) -> str:
@@ -365,20 +390,27 @@ def build_argv(
         "--full-access",
         "--exit-on-stop",
     ]
-    if spec.data_file:
-        argv.append(f"--data-file={spec.data_file}")
-    if spec.precise_conversion:
-        argv.append("--precise-conversion")
-    if spec.commission_auto:
-        argv.append("--commission-auto")
-    elif spec.commission is not None:
-        argv.append(f"--commission={spec.commission:g}")
-        if spec.commission_type:
-            argv.append(f"--commission-type={spec.commission_type}")
-    if spec.spread is not None:
-        argv.append(f"--spread={spec.spread:g}")
+    argv.extend(_engine_flags(spec))
     argv.append(f"--report-json={report_json}")
     return argv
+
+
+def _engine_flags(spec: RunSpec) -> list[str]:
+    """Cờ dữ liệu/chi phí/quy đổi — `backtest` và `optimize` nhận cùng bộ cờ này."""
+    flags: list[str] = []
+    if spec.data_file:
+        flags.append(f"--data-file={spec.data_file}")
+    if spec.precise_conversion:
+        flags.append("--precise-conversion")
+    if spec.commission_auto:
+        flags.append("--commission-auto")
+    elif spec.commission is not None:
+        flags.append(f"--commission={spec.commission:g}")
+        if spec.commission_type:
+            flags.append(f"--commission-type={spec.commission_type}")
+    if spec.spread is not None:
+        flags.append(f"--spread={spec.spread:g}")
+    return flags
 
 
 PollFn = Callable[[list[str], list[str]], str]
@@ -585,6 +617,8 @@ def _make_poll(
     startup_stall_s: int = DEFAULT_STARTUP_STALL_SECONDS,
     on_progress: ProgressFn | None = None,
     should_cancel: CancelFn | None = None,
+    phase: str = "Backtesting",                    # "Optimization" cho lệnh optimize
+    ready: Callable[[Path], bool] | None = None,   # mặc định: report.json hợp lệ
 ) -> PollFn:
     """Watchdog: report.json hợp lệ -> chờ grace rồi dừng; trước đó canh
     Progress % (port từ pipeline/core/runner.py::_make_poll). 0% gồm cả giai
@@ -601,13 +635,13 @@ def _make_poll(
         now = time.monotonic()
         if cancel_requested(should_cancel):
             return "cancelled"
-        if state["ready_at"] is None and _report_ready(report):
+        if state["ready_at"] is None and (ready or _report_ready)(report):
             state["ready_at"] = now
         if state["ready_at"] is not None:
             return "report_ready" if now - state["ready_at"] >= REPORT_GRACE_SECONDS else ""
-        pct = last_progress_pct(out)
+        pct = last_progress_pct(out, phase)
         if pct >= 0 and pct != state["last_sent_pct"]:
-            _notify_progress(on_progress, pct, "Backtesting")
+            _notify_progress(on_progress, pct, phase)
             state["last_sent_pct"] = pct
         if pct > state["best_pct"]:
             state["best_pct"], state["best_pct_t"] = pct, now
@@ -635,37 +669,80 @@ def _bot_log(stdout: str) -> str:
     return "\n".join(lines) + ("\n" if lines else "")
 
 
+def _check_period(data: Mapping, spec: RunSpec) -> tuple[RunStatus, str, FailureCode]:
+    """Khung ngày trong report phải đúng khung spec đã yêu cầu."""
+    try:
+        period = data["main"]["testingPeriod"]
+        actual_start = datetime.fromtimestamp(period["startDate"] / 1000, timezone.utc).date()
+        actual_end = datetime.fromtimestamp(period["endDate"] / 1000, timezone.utc).date()
+    except Exception:
+        return RunStatus.NO_REPORT, "report.json exists but cannot be parsed", FailureCode.NO_REPORT
+    if actual_start != spec.start or actual_end != spec.end:
+        return (
+            RunStatus.PERIOD_MISMATCH,
+            f"testingPeriod {actual_start}..{actual_end} != {spec.start}..{spec.end}",
+            FailureCode.PERIOD_MISMATCH,
+        )
+    return RunStatus.OK, "", FailureCode.NONE
+
+
+# Mã thoát chính thức của CLI khi không đăng nhập được (tài liệu Spotware): 81 sai cTID/mật khẩu,
+# 82 không thấy account, 85 token xác thực hết hạn.
+_AUTH_EXIT_CODES = {
+    81: "invalid cTID or password",
+    82: "account cannot be found",
+    85: "authentication token expired",
+}
+
+
 def _classify(result: ProcResult, report: Path, spec: RunSpec) -> tuple[RunStatus, str, FailureCode]:
     if result.stop == "cancelled":
         return RunStatus.CANCELLED, "cancelled by user", FailureCode.CANCELLED
     if _report_ready(report):
         try:
             data = json.loads(report.read_text(encoding="utf-8"))
-            period = data["main"]["testingPeriod"]
-            actual_start = datetime.fromtimestamp(period["startDate"] / 1000, timezone.utc).date()
-            actual_end = datetime.fromtimestamp(period["endDate"] / 1000, timezone.utc).date()
         except Exception:
             return RunStatus.NO_REPORT, "report.json exists but cannot be parsed", FailureCode.NO_REPORT
-        expected_end = spec.end
-        if actual_start != spec.start or actual_end != expected_end:
-            return (
-                RunStatus.PERIOD_MISMATCH,
-                f"testingPeriod {actual_start}..{actual_end} != {spec.start}..{expected_end}",
-                FailureCode.PERIOD_MISMATCH,
-            )
-        return RunStatus.OK, "", FailureCode.NONE
+        return _check_period(data, spec)
     low = (result.stdout + result.stderr).lower()
     if "message expected" in low:
         return RunStatus.CLI_ERROR, "Message expected", FailureCode.MESSAGE_EXPECTED
     if "additional accessrights" in low:
         return RunStatus.CLI_ERROR, "requires --full-access", FailureCode.ACCESS_REQUIRED
-    if "invalid password" in low or "authentication failed" in low or "account cannot be found" in low:
-        return RunStatus.CLI_ERROR, "authentication/account failed", FailureCode.AUTH_FAILED
+    # Trước 2026-10-08 chỉ dò chuỗi "invalid password" nên lỗi 81 thật ("Invalid ctid or
+    # password") bị xếp nhầm thành NO_REPORT; giờ nhận cả theo mã thoát.
+    auth_detail = _AUTH_EXIT_CODES.get(result.returncode)
+    if (
+        auth_detail
+        or "invalid ctid or password" in low
+        or "invalid password" in low
+        or "authentication failed" in low
+        or "account cannot be found" in low
+    ):
+        reason = "authentication/account failed"
+        if auth_detail:
+            reason += f" ({auth_detail}, exit={result.returncode})"
+        return RunStatus.CLI_ERROR, reason, FailureCode.AUTH_FAILED
     if result.stop == "timeout":
         return RunStatus.TIMEOUT, "hard timeout before report.json", FailureCode.HARD_TIMEOUT
     if result.stop == "stalled":
         return RunStatus.STALLED, "progress stalled", FailureCode.PROGRESS_STALLED
     return RunStatus.NO_REPORT, f"no valid report.json (exit={result.returncode})", FailureCode.NO_REPORT
+
+
+_SENSITIVE_REPORT_KEYS = {"authornickname", "brokertitle", "accountnumber", "accountid", "ctid"}
+
+
+def redact_report_data(value: object) -> object:
+    """Che thông tin cá nhân/tài khoản trong report đã parse."""
+    if isinstance(value, dict):
+        return {
+            key: "<redacted>" if str(key).lower() in _SENSITIVE_REPORT_KEYS else redact_report_data(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [redact_report_data(item) for item in value]
+    return redact_text(value) if isinstance(value, str) else value
 
 
 def _redact_report(report: Path) -> None:
@@ -675,18 +752,183 @@ def _redact_report(report: Path) -> None:
         data = json.loads(report.read_text(encoding="utf-8"))
     except Exception:
         return
-    sensitive_keys = {"authornickname", "brokertitle", "accountnumber", "accountid", "ctid"}
-
-    def clean(value: object) -> object:
-        if isinstance(value, dict):
-            return {
-                key: ("<redacted>" if str(key).lower() in sensitive_keys else clean(item))
-                for key, item in value.items()
-            }
-        if isinstance(value, list):
-            return [clean(item) for item in value]
-        return redact_text(value) if isinstance(value, str) else value
-
-    cleaned = clean(data)
+    cleaned = redact_report_data(data)
     if cleaned != data:
         report.write_text(json.dumps(cleaned, separators=(",", ":")), encoding="utf-8")
+
+# `optimize`: 1 lệnh cho cả hộp RunSpec (1 lần đăng nhập). Định dạng --params và --passes-dir theo
+# https://help.ctrader.com/ctrader-cli/optimisation/ ; đo thực tế: thư mục pass và .optres chỉ được ghi khi lệnh KẾT THÚC.
+OPTIMIZE_CRITERIA = "NetProfit:max"      # CLI bắt buộc có --criteria hoặc --fitness; thứ hạng của CLI không được dùng
+_OPTIMIZE_OPTIONS = ("params", "method", "cores", "criteria", "optres", "passes-dir", "timeframe")
+
+
+def optimize_parameters(box: OptimizeBox, strategy: StrategyProfile, signal_file: Path) -> dict[str, list[dict]]:
+    """File `--params`: file là nguồn duy nhất (tham số không ghi sẽ về mặc định) nên liệt kê đủ; mọi giá trị là chuỗi."""
+    swept, fixed = dict(box.dims), box.specs[0].params
+    entries: list[dict] = []
+    for name, pdef in strategy.params.items():
+        if name not in swept:
+            entries.append({"Name": name, "Value": fixed[name], "Optimize": False})
+        elif pdef.kind in ("int", "float"):
+            numbers = sorted(float(v) for v in swept[name])
+            entries.append({
+                "Name": name, "Optimize": True, "Min": pdef.encode(numbers[0]), "Max": pdef.encode(numbers[-1]),
+                "Step": pdef.encode(round(numbers[1] - numbers[0], 9)),
+            })
+        else:
+            entries.append({"Name": name, "Optimize": True, "Values": list(swept[name])})
+    entries.append({"Name": "SignalFilePath", "Value": str(signal_file), "Optimize": False})
+    return {"parameters": entries}
+
+
+def build_optimize_argv(
+    box: OptimizeBox, *, cli_path: Path, algo_path: Path, params_path: Path, optres: Path, passes_dir: Path, cores: int,
+) -> list[str]:
+    spec = box.specs[0]
+    return [
+        str(cli_path), "optimize", str(algo_path),
+        f"--params={params_path}",
+        f"--start={_cli_date(spec.start)}",
+        f"--end={_cli_date(spec.end)}",
+        f"--data-mode={spec.data_mode}",
+        f"--balance={spec.balance:g}",
+        f"--symbol={spec.symbol}",
+        f"--timeframe={spec.timeframe}",
+        "--method=grid",
+        f"--cores={cores}",
+        f"--criteria={OPTIMIZE_CRITERIA}",
+        f"--optres={optres}",
+        f"--passes-dir={passes_dir}",
+        "-e", "--full-access", "--exit-on-stop",
+        *_engine_flags(spec),
+    ]
+
+
+def _read_optres(path: Path) -> dict | None:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data["results"]["passes"], list) else None
+    except Exception:
+        return None
+
+
+def _param_key(strategy: StrategyProfile, params: Mapping[str, object]) -> tuple[str, ...] | None:
+    """Khoá tham số chuẩn hoá để ghép pass với spec (số thực làm tròn: CLI có thể in 0.30000000000000004)."""
+    try:
+        return tuple(
+            pdef.encode(round(float(params[name]), 9) if pdef.kind == "float" else params[name])
+            for name, pdef in strategy.params.items()
+        )
+    except (KeyError, ValueError, TypeError):
+        return None
+
+
+def _load_optimize_passes(passes_dir: Path, optres: dict, strategy: StrategyProfile) -> dict[tuple[str, ...], dict]:
+    """Ghép thư mục pass với tham số của nó (`.optres` không ghi tham số; `.cbotset` của pass ghi đúng giá trị đã chạy)."""
+    statuses = {int(p["passId"]): str(p.get("status")) for p in optres["results"]["passes"]}
+    found: dict[tuple[str, ...], dict] = {}
+    ambiguous: set[tuple[str, ...]] = set()
+    for pass_dir in (d for d in passes_dir.iterdir() if d.is_dir() and d.name.isdigit()):
+        try:
+            cbotset = json.loads((pass_dir / "parameters.cbotset").read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        key = _param_key(strategy, cbotset.get("Parameters") or {})
+        if key is not None:
+            if key in found:
+                ambiguous.add(key)
+            found[key] = {"id": int(pass_dir.name), "dir": pass_dir, "status": statuses.get(int(pass_dir.name), "Missing")}
+    return {key: info for key, info in found.items() if key not in ambiguous}
+
+
+def _read_pass(
+    info: dict | None, spec: RunSpec, report: Path, bot_log: Path, cbotset: Path,
+) -> tuple[RunStatus, str, FailureCode]:
+    """Đổi thư mục 1 pass thành report.json (đã che thông tin cá nhân) + bot.log + params.cbotset rồi kiểm khung ngày."""
+    if info is None:
+        return RunStatus.NO_REPORT, "no matching pass in optimize output", FailureCode.NO_REPORT
+    if info["status"] != "Completed":
+        return RunStatus.CLI_ERROR, f"optimize pass {info['id']} status {info['status']}", FailureCode.PIPELINE_ERROR
+    try:
+        data = evidence.read_gui_report(info["dir"] / "report.html")
+        bot_log.write_text((info["dir"] / "log.txt").read_text(encoding="utf-8", errors="replace"), encoding="utf-8")
+        shutil.copyfile(info["dir"] / "parameters.cbotset", cbotset)
+    except Exception as exc:
+        return RunStatus.NO_REPORT, f"pass {info['id']}: cannot read output ({type(exc).__name__})", FailureCode.NO_REPORT
+    report.write_text(json.dumps(redact_report_data(data), separators=(",", ":")), encoding="utf-8")
+    return _check_period(data, spec)
+
+
+def run_optimize_box(
+    box: OptimizeBox,
+    strategy: StrategyProfile,
+    *,
+    algo_path: Path,
+    signal_file: Path,
+    work_dir: Path,
+    cores: int = 1,
+    timeout_s: int = DEFAULT_TIMEOUT_SECONDS,
+    stall_s: int = DEFAULT_STALL_SECONDS,
+    startup_stall_s: int = DEFAULT_STARTUP_STALL_SECONDS,
+    cli_path: Path | None = None,
+    env: Mapping[str, str] | None = None,
+    on_progress: ProgressFn | None = None,
+    should_cancel: CancelFn | None = None,
+) -> list[RunResult]:
+    """Chạy cả hộp bằng 1 lệnh `optimize`; trả 1 RunResult cho mỗi spec (cùng thứ tự `box.specs`, file nằm ở `work_dir/s<i>/`).
+    Lỗi cấp hộp (không có .optres) áp cho mọi spec; lỗi cấp pass chỉ áp cho spec đó. `timeout_s` là hạn của 1 backtest."""
+    cli = cli_path or select_cli()
+    count = len(box.specs)
+    cores = max(1, min(int(cores), count))
+    passes_dir, optres, params_path = work_dir / "passes", work_dir / "result.optres", work_dir / "params.json"
+    shutil.rmtree(passes_dir, ignore_errors=True)
+    optres.unlink(missing_ok=True)
+    passes_dir.mkdir(parents=True)
+    started = datetime.now(timezone.utc)
+    argv: list[str] = []
+    wall = 0.0
+    if cancel_requested(should_cancel):
+        proc = ProcResult("", "", None, "cancelled")      # mỗi tiến trình CLI là 1 lần đăng nhập: đã huỷ thì không spawn
+    else:
+        params_path.write_text(json.dumps(optimize_parameters(box, strategy, signal_file), indent=2), encoding="utf-8")
+        argv = build_optimize_argv(
+            box, cli_path=cli, algo_path=algo_path, params_path=params_path, optres=optres, passes_dir=passes_dir, cores=cores,
+        )
+        _notify_progress(on_progress, 0.0, "Starting cTrader CLI (optimize)")
+        t0 = time.monotonic()
+        proc = run_process(
+            argv, timeout_s=timeout_s * -(-count // cores), cwd=ROBOTS_DIR,
+            env=dict(env) if env is not None else child_environment(auth_options()),
+            poll=_make_poll(
+                optres, stall_s=stall_s, startup_stall_s=startup_stall_s, on_progress=on_progress,
+                should_cancel=should_cancel, phase="Optimization", ready=lambda path: _read_optres(path) is not None,
+            ),
+        )
+        wall = round(time.monotonic() - t0, 1)
+    ended = datetime.now(timezone.utc)
+    doc = _read_optres(optres)
+    found = _load_optimize_passes(passes_dir, doc, strategy) if doc else {}
+    box_failure = None if doc else _classify(proc, work_dir / "no-report.json", box.specs[0])
+    box_log = (
+        f"# {started.isoformat()} cwd={ROBOTS_DIR}\n# {redact_argv(argv)}\n\n"
+        f"{redact_text(proc.stdout)}\n--- STDERR ---\n{redact_text(proc.stderr)}"
+    )
+    version = cli_version(cli)
+    results: list[RunResult] = []
+    for index, spec in enumerate(box.specs):
+        spec_dir = work_dir / f"s{index}"
+        spec_dir.mkdir(exist_ok=True)
+        report, bot_log, cli_log, cbotset = (spec_dir / name for name in ("report.json", "bot.log", "cli.log", "params.cbotset"))
+        bot_log.write_text("", encoding="utf-8")
+        status, reason, code = box_failure or _read_pass(found.get(_param_key(strategy, spec.params)), spec, report, bot_log, cbotset)
+        if status is not RunStatus.OK:
+            cli_log.write_text(box_log, encoding="utf-8")
+        results.append(RunResult(
+            status=status, failure_code=code, reason=reason, exit_code=proc.returncode,
+            timed_out=proc.stop in {"timeout", "stalled"},
+            wall_seconds=round(wall * min(cores, count) / count, 1),     # ≈ thời gian 1 lõi cho pass này
+            started_utc=started.isoformat(), ended_utc=ended.isoformat(),
+            cli_path=str(cli), cli_version=version,
+            report_json=report, cli_log=cli_log, bot_log=bot_log, cbotset=cbotset,
+        ))
+    return results

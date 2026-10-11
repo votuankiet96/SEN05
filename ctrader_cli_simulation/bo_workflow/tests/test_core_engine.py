@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import itertools
 import json
+import math
+import random
 import socket
 import sqlite3
+import statistics
 import subprocess
 import sys
 import tempfile
 import unittest
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -21,14 +25,17 @@ from core_engine.configuration import (
     SL_FIB_LEVELS, TP_FIB_LEVELS, load_engine_profile, load_ftmo_profile,
     load_redis_profile, load_strategy_profile,
 )
-from core_engine.models import EngineProfile, FailureCode, RunResult, RunSpec, RunStatus
+from core_engine.models import (
+    EngineProfile, FailureCode, RunResult, RunSpec, RunStatus,
+    daily_balance_and_floor, daily_returns, daily_returns_by_day,
+)
 from core_engine import cli_runner, signal_trans, store
 from core_engine.optimize import dsr, montecarlo, pbo, walkforward
 from core_engine.output_util import evidence, pipeline_lock, readout, selection
 from core_engine.planner import build_experiment, expand_grid
 
 FAKE_FINGERPRINT = {
-    "algo_sha256": "a" * 64, "cli_sha256": "c" * 64, "signals": {"US30.cash|h1": "s" * 64},
+    "algo_sha256": "a" * 64, "signals": {"US30.cash|h1": "s" * 64},
 }
 
 
@@ -67,9 +74,56 @@ class ConfigurationPlannerTests(unittest.TestCase):
         engine = load_engine_profile("ctrader-api-plugin-v1")
         self.assertEqual(engine.backend, "api")
 
+    def test_ctrader_5_10_profiles_flip_exactly_one_new_cli_switch(self) -> None:
+        """[2026-10-08] CLI 5.10 có 2 công tắc mà 5.9.16 không có: --commission-auto và
+        --precise-conversion. Mỗi profile mới chỉ lật ĐÚNG 1 công tắc so với profile
+        GUI-parity, để A/B tách được tác động từng cái — lật cả 2 một lúc sẽ trộn lẫn."""
+        base = load_engine_profile("ctrader-5.9.16-ticks-approxfx-v1")
+        commission = load_engine_profile("ctrader-ticks-approxfx-commauto-v1")
+        precise = load_engine_profile("ctrader-ticks-precisefx-v1")
+        for profile in (commission, precise):
+            self.assertEqual(profile.backend, "cli")
+            self.assertEqual(profile.data_mode, base.data_mode)
+            self.assertIsNone(profile.commission)
+            self.assertIsNone(profile.commission_type)
+            self.assertIsNone(profile.spread)
+        self.assertTrue(commission.commission_auto)
+        self.assertEqual(commission.precise_conversion, base.precise_conversion)
+        self.assertTrue(precise.precise_conversion)
+        self.assertEqual(precise.commission_auto, base.commission_auto)
+
+        # công tắc phải đi hết đường: profile -> RunSpec -> argv thật của ctrader-cli
+        strategy = load_strategy_profile("combo-v1")
+        config = {
+            "experiment": "x", "strategy": "combo", "strategy_profile": "combo-v1",
+            "symbols": ["JP225.cash"], "timeframe": "h4", "start": "2026-01-01", "end": "2026-02-01",
+        }
+
+        def argv_for(engine: EngineProfile) -> list[str]:
+            spec = expand_grid({**config, "engine_profile": engine.id}, strategy, engine)[0]
+            return cli_runner.build_argv(
+                spec, cli_path=Path("cli.exe"), algo_path=Path("a.algo"),
+                cbotset=Path("p.cbotset"), report_json=Path("r.json"),
+            )
+
+        self.assertIn("--commission-auto", argv_for(commission))
+        self.assertNotIn("--precise-conversion", argv_for(commission))
+        self.assertIn("--precise-conversion", argv_for(precise))
+        self.assertNotIn("--commission-auto", argv_for(precise))
+        self.assertNotIn("--commission-auto", argv_for(base))
+        self.assertNotIn("--precise-conversion", argv_for(base))
+        self.assertFalse(any(arg.startswith("--commission=") for arg in argv_for(commission)))
+
+    def test_macdbreak_profile_matches_its_redis_signals_and_parameters(self) -> None:
+        profile = load_strategy_profile("macdbreak-v1")
+        self.assertEqual(list(profile.params), list(load_strategy_profile("macross-v1").params))
+        self.assertEqual(signal_trans.REDIS_STRATEGY_TOKENS[profile.strategy], "macd_break")
+        self.assertEqual(signal_trans.STRATEGY_COLUMNS["macd_break"], ("bartime", "atr", "signal"))
+        profile.validate_metadata(metadata_for("macdbreak-v1"))
+
     def test_engine_profile_rejects_unknown_backend(self) -> None:
         with self.assertRaisesRegex(ValueError, "backend"):
-            EngineProfile("e", "5.9.16", backend="grpc")
+            EngineProfile("e", backend="grpc")
 
     def test_metadata_fail_closed_on_extra_param(self) -> None:
         profile = load_strategy_profile("combo-v1")
@@ -81,15 +135,15 @@ class ConfigurationPlannerTests(unittest.TestCase):
 
     def test_engine_profile_rejects_bad_commission_combo(self) -> None:
         with self.assertRaisesRegex(ValueError, "commission_auto"):
-            EngineProfile("e", "5.9.16", commission_auto=True, commission=1.0)
+            EngineProfile("e", commission_auto=True, commission=1.0)
         with self.assertRaisesRegex(ValueError, "commission_type"):
-            EngineProfile("e", "5.9.16", commission_type="NotARealType", commission=1.0)
+            EngineProfile("e", commission_type="NotARealType", commission=1.0)
         with self.assertRaisesRegex(ValueError, "cần commission"):
-            EngineProfile("e", "5.9.16", commission_type="UsdPerOneLot")
+            EngineProfile("e", commission_type="UsdPerOneLot")
 
     def test_grid_is_deterministic_and_uses_enum_indexes(self) -> None:
         profile = load_strategy_profile("combo-v1")
-        engine = EngineProfile("engine", "test")
+        engine = EngineProfile("engine")
         config = {
             "experiment": "x",
             "strategy": "combo",
@@ -179,6 +233,29 @@ class EvidenceSelectionTests(unittest.TestCase):
         later = {"main": {"testingPeriod": {"startDate": 1767225600000,
                                             "endDate": 1788307200000}}}  # 2026-09-02
         self.assertFalse(evidence.validity_flags(spec, later, summary)["period_ok"])
+
+    def test_approx_fx_flag_clears_when_precise_conversion_is_on(self) -> None:
+        """approx_fx = "quote khác tiền ký quỹ VÀ quy đổi bằng tỷ giá xấp xỉ". Bật
+        --precise-conversion thì engine dùng tỷ giá lịch sử thật (đo 2026-10-08 trên
+        JP225: tắt = 1 tỷ giá hằng số cả kỳ), nên cờ phải hạ xuống False."""
+        summary = {"loaded": 1, "processed": 1, "filled": 1}
+        report = {
+            "main": {"depositAsset": "USD",
+                     "testingPeriod": {"startDate": 1767225600000, "endDate": 1769904000000}},
+            "usedSymbols": [{"symbol": "JP225.cash", "quoteAsset": "JPY"},
+                            {"symbol": "USDJPY", "quoteAsset": "JPY"}],
+        }
+
+        def spec(precise: bool) -> RunSpec:
+            return RunSpec(
+                "combo", "combo-v1", "engine", "JP225.cash", "h4",
+                date(2026, 1, 1), date(2026, 2, 1), 100000, "ticks", {}, precise_conversion=precise,
+            )
+
+        self.assertTrue(evidence.validity_flags(spec(False), report, summary)["approx_fx"])
+        self.assertFalse(evidence.validity_flags(spec(True), report, summary)["approx_fx"])
+        usd_only = {**report, "usedSymbols": [{"symbol": "US30.cash", "quoteAsset": "USD"}]}
+        self.assertFalse(evidence.validity_flags(spec(False), usd_only, summary)["approx_fx"])
 
     def test_selection_rejects_margin_rejections(self) -> None:
         rows = [
@@ -320,7 +397,7 @@ class FacilitatorTests(unittest.TestCase):
                 {"method": "grid", "name": "x"},
                 profile=None,
                 specs=[object()],
-                engine=EngineProfile("e", "5.9.16"),
+                engine=EngineProfile("e"),
             )
 
     def test_run_experiment_requires_engine(self) -> None:
@@ -416,7 +493,7 @@ class PipelineCachingIntegrationTests(unittest.TestCase):
             config["start"], config["end"], config["balance"],
             config["parameter_space"], config["fixed_params"],
             # walkforward, selection_rules, plateau_dimensions, min_trades, objective, zones
-            None, None, None, None, None, None, FAKE_FINGERPRINT,
+            None, None, None, None, None, None, FAKE_FINGERPRINT, walkforward.WINDOW_CONVENTION,
         )
         with tempfile.TemporaryDirectory() as td, patch.object(pipeline_lock, "LOCKS_ROOT", Path(td)), \
                 patch.object(facilitator, "input_fingerprint", return_value=FAKE_FINGERPRINT):
@@ -431,12 +508,15 @@ class PipelineCachingIntegrationTests(unittest.TestCase):
             st = store.ExperimentStore("grid", "exp")
             st.open({"schema": "bo-research-experiment/v1", "name": "exp"})
             db_sha = store.sha256_file(st.db_path)
-            for fn, stage in ((readout.run_dsr, "dsr"), (readout.run_pbo, "pbo")):
+            for fn, stage, schema in ((readout.run_dsr, "dsr", dsr.SCHEMA), (readout.run_pbo, "pbo", pbo.SCHEMA)):
                 config = {"min_trades": 5}
-                # deps_hash goi qua trial_policy da CHUAN HOA (mac dinh strict)
-                # - config goc khong co key nay, nhung ham tu them truoc khi hash.
+                # deps_hash goi qua trial_policy + objective da CHUAN HOA (mac
+                # dinh strict / net_profit) - config goc khong co 2 key nay,
+                # nhung ham tu them truoc khi hash; schema ket qua cung nam
+                # trong khoa de ket qua kieu cu khong bao gio duoc dung lai.
                 expected_hash = pipeline_lock.stage_hash(
-                    stage, db_sha, {**config, "trial_policy": selection.STRICT_RESEARCH_POLICY},
+                    stage, schema, db_sha,
+                    {**config, "trial_policy": selection.STRICT_RESEARCH_POLICY, "objective": "net_profit"},
                 )
                 pipeline_lock.record("pipe", stage, expected_hash, {"value": 42})
                 result = fn("grid", "exp", config, pipeline="pipe")
@@ -449,7 +529,7 @@ class PipelineCachingIntegrationTests(unittest.TestCase):
             report_sha = store.sha256_file(report_path)
             with patch.object(pipeline_lock, "LOCKS_ROOT", Path(td) / "locks"):
                 config = {"paths": 10}
-                expected_hash = pipeline_lock.stage_hash("monte_carlo", report_sha, config)
+                expected_hash = pipeline_lock.stage_hash("monte_carlo", montecarlo.DUAL_SCHEMA, report_sha, config)
                 pipeline_lock.record("pipe", "monte_carlo", expected_hash, {"schema": "cached-mc"})
                 result = readout.run_montecarlo(report_path, config, pipeline="pipe")
                 self.assertEqual(result, {"schema": "cached-mc", "cached": True})
@@ -491,9 +571,12 @@ class StoreMonteCarloTests(unittest.TestCase):
         ]
         cfg = montecarlo.MonteCarloConfig(paths=200, block_days=1, seed=7)
         result = montecarlo.run_dual(points, cfg)
-        self.assertEqual(result["schema"], "bo-research-montecarlo-dual/v1")
+        self.assertEqual(result["schema"], montecarlo.DUAL_SCHEMA)
+        # Ca 2 nhanh nhan don return theo balance; chi khac gia tri do sut giam.
         self.assertEqual(result["balance_based"]["return_field"], "balance")
-        self.assertEqual(result["min_equity_based"]["return_field"], "minEquity")
+        self.assertEqual(result["min_equity_based"]["return_field"], "balance")
+        self.assertEqual(result["balance_based"]["drawdown_field"], "balance")
+        self.assertEqual(result["min_equity_based"]["drawdown_field"], "minEquity")
         self.assertEqual(result["balance_based"]["p_daily_breach"], 0.0)
         self.assertGreater(result["min_equity_based"]["p_daily_breach"], 0.0)
 
@@ -526,7 +609,7 @@ class StoreMonteCarloTests(unittest.TestCase):
         ]
         cfg = montecarlo.MonteCarloConfig(paths=50, block_days=3, seed=11)
         result = montecarlo.run_methods_compare(points, cfg)
-        self.assertEqual(result["schema"], "bo-research-montecarlo-methods/v1")
+        self.assertEqual(result["schema"], montecarlo.METHODS_SCHEMA)
         self.assertEqual(set(montecarlo.BLOCK_METHODS), {"non_overlapping", "moving", "stationary"})
         for method in montecarlo.BLOCK_METHODS:
             self.assertEqual(result[method]["block_method"], method)
@@ -606,6 +689,18 @@ class PboTests(unittest.TestCase):
         result = pbo.run(trials, blocks=4)
         self.assertGreater(result["pbo"], 0.0)
 
+    def test_progress_reaches_every_split_without_changing_the_result(self) -> None:
+        trials = {
+            "A": [2.5, 2.5, 1.5, 1.5, -1.0, -1.0, 0.5, 0.5],
+            "B": [0.5, 0.5, 0.5, 0.5, 2.0, 2.0, 1.5, 1.5],
+            "C": [1.0, 1.0, 1.0, 1.0, 0.5, 0.5, 1.0, 1.0],
+        }
+        seen: list[tuple[int, int]] = []
+        with_progress = pbo.run(trials, blocks=4, on_progress=lambda done, total: seen.append((done, total)))
+        self.assertEqual(with_progress, pbo.run(trials, blocks=4))
+        self.assertEqual(seen[-1], (6, 6))  # C(4, 2) = 6 chronological splits
+        self.assertEqual([done for done, _ in seen], sorted(done for done, _ in seen))
+
     def test_rejects_mismatched_trial_lengths(self) -> None:
         with self.assertRaises(ValueError):
             pbo.run({"a": [0.01, 0.02], "b": [0.01, 0.02, 0.03]}, blocks=2)
@@ -631,7 +726,7 @@ class SignalTransTests(unittest.TestCase):
         )
 
     def test_signal_list_key_accepts_custom_key_prefix(self) -> None:
-        # DB3 "L_PastSignal_Trend" (2026-09-26) -- cung khuon key, chi khac
+        # Kenh trend "L_PastSignal_Trend" (2026-09-26) -- cung khuon key, chi khac
         # tien to, xem RedisProfile.key_prefix.
         self.assertEqual(
             signal_trans.signal_list_key("US30", "h1", "combo", key_prefix="L_PastSignal_Trend"),
@@ -667,7 +762,7 @@ class SignalTransTests(unittest.TestCase):
     def test_materialize_signal_csv_reads_from_profile_key_prefix(self) -> None:
         # profile.key_prefix (khong phai hang so cung "L_PastSignal") phai
         # quyet dinh key LIST thuc su duoc doc -- day la co che duy nhat de
-        # doi tu DB2 sang DB3 (xem docstring module).
+        # doi tu kenh goc sang kenh trend (xem docstring module).
         profile = MagicMock()
         profile.key_prefix = "L_PastSignal_Trend"
         fake_client = MagicMock()
@@ -691,16 +786,38 @@ class SignalTransTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "L_PastSignal_Trend_US30_H1_MA_CROSS"):
                 signal_trans.materialize_signal_csv(profile, "US30", "H1", "ma_cross", Path(td) / "out.csv")
 
+    def test_redis_client_reuses_one_pool_until_the_password_file_changes(self) -> None:
+        from core_engine.configuration import RedisProfile
+        import os
+        with tempfile.TemporaryDirectory() as td:
+            pwd = Path(td) / "pwd.txt"
+            pwd.write_text("secret", encoding="utf-8")
+            profile = RedisProfile(id="p", host="h", port=6379, db=2, username="", pwd_file=str(pwd))
+            signal_trans._connection_pool.cache_clear()
+            with patch.object(signal_trans.redis, "ConnectionPool") as pool_cls, \
+                    patch.object(signal_trans.redis, "Redis") as redis_cls:
+                signal_trans.redis_client(profile)
+                signal_trans.redis_client(profile)
+                self.assertEqual(pool_cls.call_count, 1)
+                self.assertTrue(pool_cls.call_args.kwargs["decode_responses"])
+                self.assertEqual(redis_cls.call_args.kwargs["connection_pool"], pool_cls.return_value)
+                stat = pwd.stat()
+                os.utime(pwd, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
+                signal_trans.redis_client(profile)
+                self.assertEqual(pool_cls.call_count, 2)
+            signal_trans._connection_pool.cache_clear()
+
     def test_load_redis_profile_defaults_key_prefix_to_past_signal(self) -> None:
+        # [2026-10-08] So db THAT do tu Redis: kenh goc o db0 (khong phai "DB2" nhu ten cu).
         profile = load_redis_profile("sen05-signal-v1")
-        self.assertEqual(profile.db, 2)
+        self.assertEqual(profile.db, 0)
         self.assertEqual(profile.key_prefix, "L_PastSignal")
 
-    def test_load_redis_profile_reads_trend_key_prefix_for_db3(self) -> None:
+    def test_load_redis_profile_reads_trend_key_prefix_for_trend_channel(self) -> None:
         profile = load_redis_profile("sen05-signal-trend-v1")
-        self.assertEqual(profile.db, 3)
+        self.assertEqual(profile.db, 1)
         self.assertEqual(profile.key_prefix, "L_PastSignal_Trend")
-        # Cung server/mat khau voi DB2 -- chi khac db + key_prefix.
+        # Cung server/mat khau voi kenh goc -- chi khac db + key_prefix.
         self.assertEqual(profile.host, load_redis_profile("sen05-signal-v1").host)
         self.assertEqual(profile.pwd_file, load_redis_profile("sen05-signal-v1").pwd_file)
 
@@ -764,26 +881,42 @@ class WalkforwardTests(unittest.TestCase):
         self.assertFalse(hasattr(selection, "pick"))
         self.assertFalse(hasattr(selection, "WF_MIN_TRADES"))
 
-    def test_walkforward_windows_join_without_gap_or_overlap(self) -> None:
-        """`end` la moc LOAI TRU, nen doan hoc va doan kiem phai GIAP KHIT.
-
-        Ban cu tru 1 ngay o ca hai moc (viet theo quy uoc cu "end bao gom"),
-        nen sau khi doi quy uoc 2026-09-13 thi moi cua so am tham mat ngay cuoi.
-        Test nay ghim ca hai tinh chat: khong ho ngay nao, va khong chong lan.
-        """
+    def test_walkforward_windows_never_share_a_trading_day(self) -> None:
+        """cTrader chay TRON ngay ghi o --end, nen Window.end la ngay giao dich
+        CUOI cua doan: doan sau bat dau dung ngay hom sau, khong chong ngay nao
+        (ban truoc dung moc ngay dau doan sau lam end -> doan hoc thay ngay dau
+        doan kiem, 2 doan kiem lien nhau cung giao dich ngay ranh gioi; do that
+        2026-09-27) va khong ho ngay nao."""
         pairs = walkforward.walkforward_windows({"start": "2024-01-01", "end": "2026-09-13"})
         self.assertEqual(len(pairs), 6)
         first_is, first_oos = pairs[0]
-        self.assertEqual((first_is.start, first_is.end), (date(2024, 1, 1), date(2025, 1, 1)))
-        self.assertEqual((first_oos.start, first_oos.end), (date(2025, 1, 1), date(2025, 4, 1)))
+        self.assertEqual((first_is.start, first_is.end), (date(2024, 1, 1), date(2024, 12, 31)))
+        self.assertEqual((first_oos.start, first_oos.end), (date(2025, 1, 1), date(2025, 3, 31)))
         for is_window, oos_window in pairs:
-            self.assertEqual(is_window.end, oos_window.start)
+            self.assertEqual(is_window.end + timedelta(days=1), oos_window.start)
             self.assertEqual(is_window.zone, "train")
             self.assertEqual(oos_window.zone, "oos")
+        for (_is_a, oos_a), (_is_b, oos_b) in zip(pairs, pairs[1:]):
+            self.assertEqual(oos_a.end + timedelta(days=1), oos_b.start)
         # Cua so cuoi khong duoc vuot qua moc `end`.
-        self.assertLessEqual(pairs[-1][1].end, date(2026, 9, 13))
+        self.assertLess(pairs[-1][1].end, date(2026, 9, 13))
         # Truot dung 3 thang moi lan.
         self.assertEqual(pairs[1][0].start, date(2024, 4, 1))
+
+    def test_window_convention_is_written_into_the_locked_experiment(self) -> None:
+        """Experiment cu (cua so chong 1 ngay) co tai lieu khac -> store khoa se
+        tu choi, khong tron dong 2 quy uoc chung 1 ten cua so."""
+        docs = []
+
+        def fake_run(config, doc, profile, specs, *, engine, on_progress=None, should_cancel=None):
+            docs.append(doc)
+            return {"total": len(specs), "tally": {}, "cancelled": True, "complete": False,
+                    "failed": 0, "inputs": None, "wall_seconds": 0.0}
+
+        with tempfile.TemporaryDirectory() as td, patch.object(store, "RUNS_ROOT", Path(td) / "runs"), \
+                patch.object(walkforward, "run_experiment", side_effect=fake_run):
+            walkforward.run_walkforward(WalkforwardHookTests.CONFIG)
+        self.assertEqual(docs[0]["config"]["window_convention"], walkforward.WINDOW_CONVENTION)
 
 
 class ResolveSignalPathTests(unittest.TestCase):
@@ -878,7 +1011,7 @@ class RunExperimentLifecycleTests(unittest.TestCase):
     THẬT, chỉ thay phần chạm hạ tầng ngoài (CLI, Redis, protocol DB)."""
 
     def _run(self, td: str, *, csv_text: str, run_backtest, should_cancel=None, name: str = "exp",
-             protocol: Any = None):
+             protocol: Any = None, cli_bytes: bytes = b"fake cli"):
         profile = load_strategy_profile("combo-v1")
         engine = load_engine_profile("ctrader-5.9.16-ticks-approxfx-v1")
         config = {
@@ -890,7 +1023,7 @@ class RunExperimentLifecycleTests(unittest.TestCase):
         experiment = build_experiment(config)
         specs = expand_grid(config, profile, engine)
         cli = Path(td) / "ctrader-cli.exe"
-        cli.write_bytes(b"fake cli")
+        cli.write_bytes(cli_bytes)
 
         def resolve(_redis, _profile, _spec, dest_dir, *, materialized=None):
             path = Path(dest_dir) / "US30_H1_combo.csv"
@@ -912,6 +1045,14 @@ class RunExperimentLifecycleTests(unittest.TestCase):
             )
             rows = store.ExperimentStore("grid", name).rows()
         return result, rows
+
+    def test_cli_auto_update_does_not_change_run_identity(self) -> None:
+        """cTrader tự cập nhật CLI (file launcher đổi nội dung): kết quả đã có vẫn dùng lại, không chạy lại."""
+        ok = lambda spec, **kw: _fake_result(kw["work_dir"])  # noqa: E731
+        with tempfile.TemporaryDirectory() as td:
+            self._run(td, csv_text=IN_WINDOW_CSV, run_backtest=ok)
+            second, _ = self._run(td, csv_text=IN_WINDOW_CSV, run_backtest=ok, cli_bytes=b"updated launcher")
+        self.assertEqual(second["tally"], {"skipped": 4})
 
     def test_stop_prevents_new_claims_and_spawns(self) -> None:
         calls = {"n": 0}
@@ -946,7 +1087,8 @@ class RunExperimentLifecycleTests(unittest.TestCase):
             result, _ = self._run(td, csv_text=IN_WINDOW_CSV, run_backtest=lambda spec, **kw: _fake_result(kw["work_dir"]))
         self.assertTrue(result["complete"])
         self.assertEqual(result["failed"], 0)
-        self.assertEqual(set(result["inputs"]), {"algo_sha256", "cli_sha256", "signals"})
+        self.assertEqual(set(result["inputs"]), {"algo_sha256", "signals"})
+        self.assertEqual(result["cli_versions"], ["fake"])
 
     def test_signals_appended_after_end_do_not_rerun_finished_specs(self) -> None:
         ran = {"n": 0}
@@ -1438,6 +1580,7 @@ class WalkforwardCacheKeyTests(unittest.TestCase):
                 recorded.get("parameter_space"), recorded.get("fixed_params"), recorded.get("walkforward"),
                 recorded.get("selection_rules"), recorded.get("plateau_dimensions"),
                 recorded.get("min_trades"), recorded.get("objective"), recorded.get("zones"), FAKE_FINGERPRINT,
+                walkforward.WINDOW_CONVENTION,
             )
             pipeline_lock.record("p", "walkforward", deps, {"windows": 1})
             walkforward.run_walkforward(requested)
@@ -1452,6 +1595,314 @@ class WalkforwardCacheKeyTests(unittest.TestCase):
     def test_changed_zones_misses_cache(self) -> None:
         zones = {"walkforward_range": ["2024-01-01", "2026-06-01"]}
         self.assertTrue(self._cache_missed({}, {"zones": zones}))
+
+
+# --------------------------------------------------------------------------- #
+# [2026-09-28] Sửa sau audit phương pháp: đáy equity trong ngày cho Monte
+# Carlo, DSR/PBO theo tiêu chí chọn, Monte Carlo trên chuỗi OOS nối lại.
+# --------------------------------------------------------------------------- #
+def _utc_points(rows: list[tuple[str, float, float]]) -> list[dict[str, Any]]:
+    return [{"time": f"{stamp}+00:00", "balance": balance, "minEquity": low} for stamp, balance, low in rows]
+
+
+class DailySeriesTests(unittest.TestCase):
+    POINTS = _utc_points([
+        ("2026-01-01T10:00:00", 100000.0, 94000.0),   # lo noi sau luc sang...
+        ("2026-01-01T22:00:00", 100500.0, 100400.0),  # ...hoi phuc truoc cuoi ngay
+        ("2026-01-02T12:00:00", 100500.0, 100500.0),
+    ])
+
+    def test_floor_uses_the_whole_day_minimum_against_the_previous_close(self) -> None:
+        days = daily_balance_and_floor(self.POINTS, "UTC", 100000.0)
+        self.assertEqual(len(days), 2)
+        self.assertAlmostEqual(days[0][0], 0.005)   # return theo balance chot ngay
+        self.assertAlmostEqual(days[0][1], 0.06)    # (100000 - 94000) / 100000, khong phai nen cuoi
+        self.assertAlmostEqual(days[1][0], 0.0)
+        self.assertAlmostEqual(days[1][1], 0.0)     # (100500 - 100500) / 100500
+
+    def test_daily_returns_keeps_its_behaviour_and_by_day_adds_the_dates(self) -> None:
+        by_day = daily_returns_by_day(self.POINTS, "UTC", 100000.0)
+        self.assertEqual([day for day, _value in by_day], ["2026-01-01", "2026-01-02"])
+        self.assertEqual([value for _day, value in by_day], daily_returns(self.POINTS, "UTC", 100000.0))
+        self.assertEqual(
+            [value for _day, value in by_day],
+            [value for value, _floor in daily_balance_and_floor(self.POINTS, "UTC", 100000.0)],
+        )
+
+
+class MonteCarloIntradayFloorTests(unittest.TestCase):
+    def test_recovered_intraday_dip_breaches_only_the_min_equity_branch(self) -> None:
+        # 1 ngay duy nhat -> moi path la dung ngay do, ket qua xac dinh.
+        points = DailySeriesTests.POINTS[:2]
+        cfg = montecarlo.MonteCarloConfig(paths=20, block_days=1, seed=3, timezone="UTC")
+        result = montecarlo.run_dual(points, cfg)
+        self.assertEqual(result["balance_based"]["p_daily_breach"], 0.0)
+        self.assertEqual(result["min_equity_based"]["p_daily_breach"], 1.0)
+        self.assertAlmostEqual(result["min_equity_based"]["max_dd_p50"], 6.0)
+
+    def test_unknown_drawdown_field_is_rejected(self) -> None:
+        cfg = montecarlo.MonteCarloConfig(paths=1, block_days=1, seed=3, timezone="UTC")
+        with self.assertRaisesRegex(ValueError, "unknown drawdown field"):
+            montecarlo.run(DailySeriesTests.POINTS, cfg, field="equity")
+
+
+class DsrSelectedTrialTests(unittest.TestCase):
+    GOOD = [0.02, 0.018, 0.021, 0.019, 0.02, 0.017, 0.022, 0.02] * 5
+    NOISE = [0.001, -0.002, 0.0, 0.001, -0.001, 0.0, 0.002, -0.001] * 5
+
+    def _trials(self) -> dict[str, list[float]]:
+        trials = {f"noise_{i}": [value * (1 + i / 10) for value in self.NOISE] for i in range(9)}
+        trials["good"] = self.GOOD
+        return trials
+
+    def test_selected_trial_uses_the_same_benchmark_as_the_best_sharpe(self) -> None:
+        trials = self._trials()
+        plain = dsr.run(trials)
+        chosen = dsr.run(trials, selected="noise_3")
+        self.assertEqual({k: v for k, v in chosen.items() if k != "selected"}, plain)
+        self.assertEqual(chosen["selected"]["label"], "noise_3")
+        self.assertFalse(chosen["selected"]["is_max_sharpe"])
+        self.assertLess(chosen["selected"]["dsr"], chosen["dsr"])
+        expected = dsr.deflated_sharpe_ratio(
+            dsr.sharpe_ratio(trials["noise_3"]), benchmark_sharpe=plain["benchmark_sharpe_e_max"],
+            sample_length=len(trials["noise_3"]),
+            skew=dsr.skewness(trials["noise_3"]), kurt=dsr.kurtosis(trials["noise_3"]),
+        )
+        self.assertAlmostEqual(chosen["selected"]["dsr"], expected)
+
+    def test_selected_max_sharpe_trial_matches_the_reference_dsr(self) -> None:
+        result = dsr.run(self._trials(), selected="good")
+        self.assertTrue(result["selected"]["is_max_sharpe"])
+        self.assertEqual(result["selected"]["dsr"], result["dsr"])
+
+    def test_unknown_selected_trial_raises(self) -> None:
+        with self.assertRaises(ValueError):
+            dsr.run(self._trials(), selected="missing")
+
+
+def _reference_mean_return_pbo(trials: dict[str, list[float]], blocks: int) -> tuple[float, float]:
+    """Thuật toán PBO bản trước 2026-09-28 (mean return, hạng theo thứ tự sắp
+    xếp) — giữ trong test để khoá: tiêu chí net_profit phải ra y hệt bản cũ."""
+    labels = list(trials)
+    n = len(labels)
+    chunk = len(trials[labels[0]]) // blocks
+    chunks = [{label: trials[label][i * chunk:(i + 1) * chunk] for label in labels} for i in range(blocks)]
+    overfit, logits = 0, []
+    for is_idx in itertools.combinations(range(blocks), blocks // 2):
+        oos_idx = [i for i in range(blocks) if i not in is_idx]
+        is_perf = {label: statistics.mean([v for i in is_idx for v in chunks[i][label]]) for label in labels}
+        oos_perf = {label: statistics.mean([v for i in oos_idx for v in chunks[i][label]]) for label in labels}
+        winner = max(labels, key=lambda label: is_perf[label])
+        rank = sorted(labels, key=lambda label: oos_perf[label]).index(winner) + 1
+        lam = math.log((rank / (n + 1)) / (1 - rank / (n + 1)))
+        logits.append(lam)
+        overfit += lam <= 0
+    return overfit / len(logits), statistics.mean(logits)
+
+
+class PboObjectiveTests(unittest.TestCase):
+    def test_net_profit_matches_the_previous_algorithm_exactly(self) -> None:
+        rng = random.Random(5)
+        trials = {f"t{i}": [rng.gauss(0.0005 * i, 0.01) for _ in range(48)] for i in range(6)}
+        expected_pbo, expected_logit = _reference_mean_return_pbo(trials, blocks=8)
+        result = pbo.run(trials, blocks=8)
+        self.assertEqual(result["objective"], "net_profit")
+        self.assertEqual(result["pbo"], expected_pbo)
+        self.assertAlmostEqual(result["logit_mean"], expected_logit, places=12)
+
+    def test_tied_oos_ranks_use_the_average_rank_like_pypbo(self) -> None:
+        # Chia {0}|{1}: A thang HOC, KIEM A=B=0 < C=1 -> hang trung binh 1.5.
+        # Chia {1}|{0}: C thang HOC, KIEM C=0 < B < A -> hang 1.
+        trials = {"A": [2.0, 2.0, 0.0, 0.0], "B": [1.0, 1.0, 0.0, 0.0], "C": [0.0, 0.0, 1.0, 1.0]}
+        result = pbo.run(trials, blocks=2)
+        self.assertEqual(result["pbo"], 1.0)
+        self.assertAlmostEqual(result["logit_mean"], (math.log(0.375 / 0.625) + math.log(0.25 / 0.75)) / 2)
+
+    def test_profit_factor_objective_selects_on_trades_not_returns(self) -> None:
+        # Y lai nhieu hon ca 2 nua -> theo loi nhuan: chon Y, Y van hon o KIEM (PBO 0).
+        # PF: X = 3 (nua 1) roi 1 (nua 2), Y = 2 ca 2 nua -> nua HOC nao cung
+        # chon trial se thua o nua KIEM (PBO 1).
+        trials = {"X": [0.001, 0.0, 0.0, 0.0], "Y": [0.002, 0.0, 0.002, 0.0]}
+        trades = {
+            "X": [[300.0, -100.0], [], [100.0, -100.0], []],
+            "Y": [[200.0, -100.0], [], [200.0, -100.0], []],
+        }
+        self.assertEqual(pbo.run(trials, blocks=2, objective="net_profit")["pbo"], 0.0)
+        pf = pbo.run(trials, blocks=2, objective="profit_factor", trades=trades)
+        self.assertEqual(pf["objective"], "profit_factor")
+        self.assertEqual(pf["pbo"], 1.0)
+        # Win rate: X 1/2 ca 2 nua, Y 1/2 ca 2 nua -> hoa hoan toan, chon X
+        # (thu tu nhan), hang KIEM trung binh 1.5/3 -> lambda = 0 -> tinh overfit.
+        self.assertEqual(pbo.run(trials, blocks=2, objective="win_rate", trades=trades)["pbo"], 1.0)
+
+    def test_trade_objectives_require_aligned_trades(self) -> None:
+        trials = {"X": [0.001] * 4, "Y": [0.002] * 4}
+        with self.assertRaisesRegex(ValueError, "profit_factor"):
+            pbo.run(trials, blocks=2, objective="profit_factor")
+        with self.assertRaisesRegex(ValueError, "trục ngày"):
+            pbo.run(trials, blocks=2, objective="win_rate", trades={"X": [[1.0]], "Y": [[1.0]]})
+        with self.assertRaisesRegex(ValueError, "unknown objective"):
+            pbo.run(trials, blocks=2, objective="sharpe")
+
+
+def _fake_run_result(report_path: Path, status: str = "ok") -> RunResult:
+    return RunResult(
+        status=RunStatus(status), failure_code=FailureCode.NONE, reason="", exit_code=0,
+        timed_out=False, wall_seconds=1.0, started_utc="2026-01-01T00:00:00+00:00",
+        ended_utc="2026-01-01T00:00:01+00:00", cli_path="fake", cli_version="fake",
+        report_json=report_path, cli_log=report_path, bot_log=report_path, cbotset=report_path,
+    )
+
+
+def _record_report(
+    st: "store.ExperimentStore", tmp: Path, spec: RunSpec, report: dict, metrics: dict, *, status: str = "ok",
+) -> None:
+    param_hash = st.param_hash(spec, spec.label(), spec.window or "", spec.zone)
+    claim = st.claim(spec, param_hash)
+    report_path = tmp / f"report_{claim.run_id}.json"
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+    st.record(
+        claim=claim, spec=spec, param_hash=param_hash, run_result=_fake_run_result(report_path, status),
+        metrics=metrics, flags={"period_ok": True, "signal_ok": True, "margin_rejections": 0},
+        bot_summary={}, environment={},
+    )
+
+
+def _close_ms(stamp: str) -> int:
+    return int(datetime.fromisoformat(f"{stamp}+00:00").astimezone(timezone.utc).timestamp() * 1000)
+
+
+class ReadoutObjectiveTests(unittest.TestCase):
+    """run_dsr()/run_pbo() chọn trial theo ĐÚNG tiêu chí (luật "best"), dùng
+    ExperimentStore + report.json.gz thật, không mock selection/evidence."""
+
+    def _grid(self, td: str) -> None:
+        st = store.ExperimentStore("grid", "exp")
+        st.open({"schema": "bo-research-experiment/v1", "name": "exp"})
+        # hi_profit: lai nhieu nhat nhung PF thap; hi_pf: PF cao nhat, lai it hon.
+        shapes = {
+            "hi_profit": (0.03, 4000.0, 1.2, 10, 0.5),
+            "hi_pf": (0.01, 1500.0, 3.0, 2, 0.8),
+            "flat": (0.001, 100.0, 1.01, 9, 0.4),
+        }
+        for label, (step, net, pf, losses, win_rate) in shapes.items():
+            spec = RunSpec("combo", "combo-v1", "engine", "US30.cash", "h1",
+                           date(2026, 1, 1), date(2026, 1, 4), 100000, "ticks", {"KslLevel": label})
+            balance, points, items = 100000.0, [], []
+            for day in range(4):
+                balance *= 1 + step * (1 if day % 2 == 0 else -0.5)
+                stamp = f"2026-01-0{day + 1}T12:00:00"
+                points.append({"time": f"{stamp}+00:00", "balance": round(balance, 2), "minEquity": round(balance, 2)})
+                items.append({"closeTime": _close_ms(f"2026-01-0{day + 1}T11:00:00"),
+                              "net": 50.0 if day % 2 == 0 else -20.0})
+            report = {"main": {"startingCapital": 100000}, "equity": {"points": points}, "history": {"items": items}}
+            _record_report(st, Path(td), spec, report, {
+                "total_trades": 40, "net_profit": net, "profit_factor": pf,
+                "losing_trades": losses, "win_rate": win_rate,
+            })
+
+    def test_dsr_selected_trial_follows_the_objective(self) -> None:
+        with tempfile.TemporaryDirectory() as td, patch.object(store, "RUNS_ROOT", Path(td) / "runs"):
+            self._grid(td)
+            by_profit = readout.run_dsr("grid", "exp", {"objective": "net_profit", "timezone": "UTC"})
+            by_pf = readout.run_dsr("grid", "exp", {"objective": "profit_factor", "timezone": "UTC"})
+            by_rate = readout.run_dsr("grid", "exp", {"objective": "win_rate", "timezone": "UTC"})
+        self.assertIn("hi_profit", by_profit["selected"]["label"])
+        self.assertIn("hi_pf", by_pf["selected"]["label"])
+        self.assertIn("hi_pf", by_rate["selected"]["label"])
+        self.assertEqual(by_profit["objective"], "net_profit")
+        # Nguong SR0 va trial Sharpe cao nhat khong doi theo tieu chi.
+        self.assertEqual(by_profit["benchmark_sharpe_e_max"], by_pf["benchmark_sharpe_e_max"])
+        self.assertEqual(by_profit["winner_label"], by_pf["winner_label"])
+
+    def test_pbo_reads_trade_history_for_trade_objectives(self) -> None:
+        with tempfile.TemporaryDirectory() as td, patch.object(store, "RUNS_ROOT", Path(td) / "runs"):
+            self._grid(td)
+            result = readout.run_pbo("grid", "exp", {"objective": "win_rate", "timezone": "UTC", "blocks": 2})
+        self.assertEqual(result["objective"], "win_rate")
+        self.assertEqual(result["splits_tested"], 2)
+
+    def test_unknown_objective_raises_before_any_read(self) -> None:
+        with tempfile.TemporaryDirectory() as td, patch.object(store, "RUNS_ROOT", Path(td) / "runs"):
+            for fn in (readout.run_dsr, readout.run_pbo):
+                with self.assertRaisesRegex(ValueError, "unknown objective"):
+                    fn("grid", "missing", {"objective": "sharpe"})
+
+    def test_cache_key_differs_by_objective(self) -> None:
+        with tempfile.TemporaryDirectory() as td, patch.object(store, "RUNS_ROOT", Path(td) / "runs"), \
+                patch.object(pipeline_lock, "LOCKS_ROOT", Path(td) / "locks"):
+            self._grid(td)
+            readout.run_dsr("grid", "exp", {"objective": "net_profit", "timezone": "UTC"}, pipeline="p")
+            first = pipeline_lock.get_stage("p", "dsr")["deps_hash"]
+            again = readout.run_dsr("grid", "exp", {"objective": "profit_factor", "timezone": "UTC"}, pipeline="p")
+            self.assertNotIn("cached", again)
+            self.assertNotEqual(first, pipeline_lock.get_stage("p", "dsr")["deps_hash"])
+
+
+class MonteCarloOosTests(unittest.TestCase):
+    """readout.run_montecarlo_oos() — nối các đoạn KIỂM của walk-forward."""
+
+    def _window(self, st, td, *, name: str, start: str, end: str, rows: list[tuple[str, float]]) -> None:
+        spec = RunSpec("combo", "combo-v1", "engine", "US30.cash", "h1",
+                       date.fromisoformat(start), date.fromisoformat(end), 100000, "ticks", {"KslLevel": "0"},
+                       zone="oos", window=f"{name}_oos", tags={"rule": "best", "train_window": f"{name}_is"})
+        points = [{"time": f"{stamp}+00:00", "balance": balance, "minEquity": balance} for stamp, balance in rows]
+        _record_report(st, Path(td), spec, {"main": {"startingCapital": 100000}, "equity": {"points": points}},
+                       {"starting_capital": 100000, "total_trades": 5})
+
+    def _experiment(self, td: str, decisions: list[dict]) -> None:
+        st = store.ExperimentStore("walkforward", "wf")
+        st.open({"schema": "bo-research-experiment/v1", "name": "wf"})
+        # Quy uoc CU: 2 doan cung chay tron ngay ranh gioi 2026-01-03.
+        self._window(st, td, name="wf01", start="2026-01-01", end="2026-01-03", rows=[
+            ("2026-01-01T12:00:00", 101000.0), ("2026-01-02T12:00:00", 102000.0), ("2026-01-03T12:00:00", 103000.0),
+        ])
+        self._window(st, td, name="wf02", start="2026-01-03", end="2026-01-05", rows=[
+            ("2026-01-03T12:00:00", 100500.0), ("2026-01-04T12:00:00", 101000.0), ("2026-01-05T12:00:00", 99000.0),
+        ])
+        st.write_sidecar("selection.json", {"decisions": decisions})
+
+    @staticmethod
+    def _decision(name: str, start: str, end: str, params: dict | None = None) -> dict:
+        return {"symbol": "US30.cash", "timeframe": "h1", "rule": "best", "train_window": f"{name}_is",
+                "test_window": f"{name}_oos", "test_start": start, "test_end": end,
+                "selected_params": {"KslLevel": "0"} if params is None else params}
+
+    def test_stitches_trimmed_windows_by_chain_linking(self) -> None:
+        captured = {}
+
+        def capture(points, config):
+            captured["points"] = list(points)
+            return {"schema": "captured"}
+
+        decisions = [self._decision("wf01", "2026-01-01", "2026-01-03"), self._decision("wf02", "2026-01-03", "2026-01-05")]
+        with tempfile.TemporaryDirectory() as td, patch.object(store, "RUNS_ROOT", Path(td) / "runs"), \
+                patch.object(montecarlo, "run_dual", side_effect=capture):
+            self._experiment(td, decisions)
+            result = readout.run_montecarlo_oos("wf", rule="best", symbol="US30.cash", timeframe="h1")
+        balances = [point["balance"] for point in captured["points"]]
+        # wf01 bo diem ngay 03 (thuoc doan sau); wf02 nhan he so 102000/100000.
+        expected = [101000.0, 102000.0, 100500.0 * 1.02, 101000.0 * 1.02, 99000.0 * 1.02]
+        self.assertEqual(len(balances), len(expected))
+        for got, want in zip(balances, expected):
+            self.assertAlmostEqual(got, want)
+        self.assertEqual([w["points_trimmed"] for w in result["source"]["windows"]], [1, 0])
+        self.assertEqual(result["source"]["rule"], "best")
+
+    def test_gap_between_windows_is_refused(self) -> None:
+        decisions = [self._decision("wf01", "2026-01-01", "2026-01-02"), self._decision("wf02", "2026-01-04", "2026-01-05")]
+        with tempfile.TemporaryDirectory() as td, patch.object(store, "RUNS_ROOT", Path(td) / "runs"):
+            self._experiment(td, decisions)
+            with self.assertRaisesRegex(ValueError, "not contiguous"):
+                readout.run_montecarlo_oos("wf", rule="best", symbol="US30.cash", timeframe="h1")
+
+    def test_window_without_a_pick_is_refused(self) -> None:
+        decisions = [self._decision("wf01", "2026-01-01", "2026-01-03"),
+                     {**self._decision("wf02", "2026-01-03", "2026-01-05"), "selected_params": None}]
+        with tempfile.TemporaryDirectory() as td, patch.object(store, "RUNS_ROOT", Path(td) / "runs"):
+            self._experiment(td, decisions)
+            with self.assertRaisesRegex(ValueError, "without a selected parameter set"):
+                readout.run_montecarlo_oos("wf", rule="best", symbol="US30.cash", timeframe="h1")
 
 
 if __name__ == "__main__":

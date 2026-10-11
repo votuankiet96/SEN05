@@ -1,0 +1,37 @@
+{
+  "target": "VM-BO20_Robots",
+  "scope": "C:\\Users\\Administrator\\Documents\\cAlgo\\Sources\\Robots",
+  "date": "2026-10-10",
+  "mode": "full_rebuild",
+  "corpus": {
+    "files": 78,
+    "code": 59,
+    "document": 19,
+    "detected_words": 165517,
+    "skipped_sensitive": 0
+  },
+  "graph": {
+    "nodes": 1783,
+    "edges": 4006,
+    "communities": 121,
+    "hyperedges": 3
+  },
+  "baseline_delta": {
+    "new_files": 1,
+    "changed_files": 12,
+    "deleted_files": 0
+  },
+  "semantic": {
+    "files": 19,
+    "nodes": 66,
+    "edges": 74,
+    "token_metering": "unavailable_from_subagent_result; cost.json records 0"
+  },
+  "runtime_actions": {
+    "tests_run": false,
+    "backtests_run": false,
+    "optimize_run": false,
+    "services_changed": false,
+    "source_modified": false
+  }
+}

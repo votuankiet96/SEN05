@@ -1,0 +1,22 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30011.22
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MACD Break", "MACD Break\MACD Break.csproj", "{a7c3f9e1-5d2b-4f6a-8e3c-1b9d6a4f7c52}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{a7c3f9e1-5d2b-4f6a-8e3c-1b9d6a4f7c52}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{a7c3f9e1-5d2b-4f6a-8e3c-1b9d6a4f7c52}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{a7c3f9e1-5d2b-4f6a-8e3c-1b9d6a4f7c52}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{a7c3f9e1-5d2b-4f6a-8e3c-1b9d6a4f7c52}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

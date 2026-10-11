@@ -60,8 +60,25 @@ không riêng US30/H1/Combo.
     đèn xanh, backtest FULL LẠI 1 lần với tổ hợp đã chọn, full lịch sử.
 
 [5] Monte Carlo (dual field balance/minEquity + 3 phương án bootstrap) trên
-    report của [4] — đo rủi ro trình tự/vi phạm luật FTMO cho tổ hợp CUỐI.
+    CHUỖI ĐOẠN KIỂM NỐI LẠI của [2] cho luật chọn đã đăng ký trước
+    (`readout.run_montecarlo_oos`) — đo rủi ro trình tự/vi phạm luật FTMO trên
+    dữ liệu tham số CHƯA từng thấy. Report của [4] (trong mẫu) chỉ chạy làm đối
+    chứng, không làm căn cứ rủi ro. [Sửa 2026-09-28 sau audit phương pháp.]
 ```
+
+**[2026-09-28] Vì sao bước [5] đổi đầu vào**: tổ hợp của [4] được chọn từ chính dữ liệu mà
+backtest [4] chạy lại, nên return của nó bị thổi phồng do chọn (selection bias) — Monte Carlo
+trên đó đánh giá thấp drawdown và xác suất vi phạm. Đo thật: walk-forward dashboard US30/H1
+(IS 3 : OOS 1 tháng, 5 cửa sổ) chỉ giữ ~11% (plateau) / ~18% (best) hiệu suất IS/tháng khi ra
+OOS. Chuỗi OOS nối lại chỉ gồm các ngày giao dịch bằng tham số chọn TRƯỚC khi dữ liệu đó tồn tại
+(Pardo: đường equity OOS nối lại là bằng chứng walk-forward). Cách nối: chain-link (như GIPS nối
+return các kỳ con), mỗi đoạn cắt ở 00:00 UTC ngày đầu đoạn sau.
+
+**[2026-09-28] Cửa sổ walk-forward từng chồng 1 ngày**: cTrader chạy TRỌN ngày ghi ở `--end`
+(đo thật: `--end=01/05/2026 00:00` vẫn có điểm equity tới 01/05 20:49 UTC, cùng 1 lệnh xuất hiện ở
+2 đoạn KIỂM liền nhau; đoạn HỌC thấy luôn ngày đầu đoạn KIỂM). Đã sửa riêng trong walk-forward:
+`Window.end` = ngày giao dịch cuối = ngày đầu đoạn sau − 1 (`walkforward.WINDOW_CONVENTION`, nằm
+trong khoá cache + tài liệu experiment nên experiment cũ không bị mở lại lẫn quy ước).
 
 # Bài học đã gộp vào pipeline này (không lặp lại)
 

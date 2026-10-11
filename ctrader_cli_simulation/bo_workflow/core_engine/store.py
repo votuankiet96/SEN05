@@ -255,7 +255,7 @@ class ProtocolStore:
 # signal) vẫn được chặn riêng bởi sidecar input_fingerprint.json (facilitator).
 EXECUTION_ONLY_CONFIG_KEYS = frozenset({
     "max_parallel", "timeout_seconds", "stall_seconds", "startup_stall_seconds",
-    "transient_retries", "keep_logs", "force", "expected_input_fingerprint",
+    "transient_retries", "keep_logs", "force", "expected_input_fingerprint", "optimize_chunk_size",
 })
 
 
@@ -416,10 +416,7 @@ class ExperimentStore:
                 "algo_sha256": inputs.get("algo_sha256"),
                 "signal_sha256": inputs.get("signal_sha256"),
             },
-            "cli": {
-                "path": run_result.cli_path, "version": run_result.cli_version,
-                "sha256": inputs.get("cli_sha256"),
-            },
+            "cli": {"path": run_result.cli_path, "version": run_result.cli_version},
             "environment": environment,
             "bot_summary": bot_summary,
             "validity_flags": flags,
@@ -476,6 +473,11 @@ class ExperimentStore:
         with self._db() as db:
             rows = db.execute("SELECT * FROM runs ORDER BY CAST(run_id AS INTEGER)").fetchall()
         return [dict(row) for row in rows]
+
+    def cli_versions(self) -> list[str]:
+        """Các phiên bản ctrader-cli đã chạy experiment này (cTrader tự cập nhật nên có thể > 1)."""
+        found = {json.loads(row["execution_json"] or "{}").get("cli", {}).get("version") for row in self.rows()}
+        return sorted(version for version in found if version)
 
     def flat_rows(self) -> list[dict[str, Any]]:
         """Đọc bảng runs và trải phẳng metrics/flags/params ra cùng 1 cấp —

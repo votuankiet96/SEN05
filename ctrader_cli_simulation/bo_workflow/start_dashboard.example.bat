@@ -1,7 +1,11 @@
 @echo off
 setlocal EnableExtensions
 REM Double-click launcher for the BO Workflow Dashboard.
-REM It never starts a second server when the dashboard is already healthy.
+REM - The server runs in THIS window: closing it (or Ctrl+C) stops the dashboard
+REM   completely, including background workers and any running ctrader-cli.
+REM - Running this file always gives the latest code: a dashboard still running
+REM   from before the last code change is stopped and started again. It asks
+REM   first when a dashboard session (backtest/analysis) is still running.
 REM
 REM THIS IS AN EXAMPLE. Copy to start_dashboard.bat and fill in your own
 REM CTRADER_CTID / CTRADER_PWD_FILE / CTRADER_ACCOUNT below. The real
@@ -14,9 +18,15 @@ set "CTRADER_BROKER=FTMO Platform"
 set "PYTHONUTF8=1"
 set "BO_DASH_DEBUG=0"
 
+set "BO_WORKFLOW_DIR=%~dp0"
 set "DASHBOARD_DIR=%~dp0dashboard"
 set "DASHBOARD_URL=http://127.0.0.1:8050"
 set "DASHBOARD_PYTHON=%LOCALAPPDATA%\Programs\Python\Python312\python.exe"
+set "PY_ARGS="
+if not exist "%DASHBOARD_PYTHON%" (
+    set "DASHBOARD_PYTHON=py.exe"
+    set "PY_ARGS=-3"
+)
 
 if not exist "%DASHBOARD_DIR%\app.py" (
     echo Dashboard app.py was not found:
@@ -25,48 +35,65 @@ if not exist "%DASHBOARD_DIR%\app.py" (
     exit /b 1
 )
 
-REM A healthy existing server wins. This prevents port-8050 conflicts when
-REM the launcher is clicked again or a Dash hot-reload process is already up.
-call :dashboard_healthy
-if not errorlevel 1 goto open_browser
-
-REM An occupied but unhealthy port means a stale Dash/reloader process exists.
-REM Starting another instance here creates a second server that cannot recover
-REM the first one, so fail visibly instead of multiplying background workers.
 call :dashboard_port_in_use
-if not errorlevel 1 goto occupied_port
+if errorlevel 1 goto start_server
 
-if not exist "%DASHBOARD_PYTHON%" set "DASHBOARD_PYTHON=py.exe"
+REM A server already owns port 8050. Keep it only if it started after the
+REM newest code change and still answers; otherwise replace it.
+call :server_is_stale
+if not errorlevel 1 goto restart_needed
+call :dashboard_healthy
+if not errorlevel 1 goto open_existing
+echo The dashboard on port 8050 is not responding.
 
-echo Starting BO Workflow Dashboard...
-if /I "%DASHBOARD_PYTHON%"=="py.exe" (
-    start "BO Workflow Dashboard - server" /D "%DASHBOARD_DIR%" cmd.exe /k py.exe -3 app.py
-) else (
-    start "BO Workflow Dashboard - server" /D "%DASHBOARD_DIR%" cmd.exe /k ""%DASHBOARD_PYTHON%" app.py"
-)
+:restart_needed
+echo The running dashboard is older than the code on disk or not responding: restarting it.
+call :running_sessions
+if errorlevel 4 goto ask_stop
+if errorlevel 3 goto stop_and_start
+goto ask_stop
 
-REM Do not open the browser on a blind timer: wait until Dash actually answers.
-for /L %%I in (1,1,60) do (
-    call :dashboard_healthy
-    if not errorlevel 1 goto open_browser
-    powershell -NoProfile -Command "Start-Sleep -Seconds 1"
-)
-
+:ask_stop
 echo.
-echo Dashboard did not become available at %DASHBOARD_URL% within 60 seconds.
-echo Check the "BO Workflow Dashboard - server" window for the exact error.
+echo A dashboard session is still running - listed above - or its status could not be read.
+echo Restarting now stops it; it can be run again from the dashboard afterwards.
+choice /C YN /N /M "Stop it and restart with the latest code? [Y/N] "
+if errorlevel 2 goto keep_existing
+goto stop_and_start
+
+:keep_existing
+echo Keeping the current dashboard. Run this file again after the session finishes.
+call :dashboard_healthy
+if not errorlevel 1 start "" "%DASHBOARD_URL%"
+pause
+exit /b 0
+
+:stop_and_start
+call :stop_server
+if errorlevel 1 goto stop_failed
+goto start_server
+
+:stop_failed
+echo Port 8050 could not be freed. Close the old dashboard window, then run this file again.
 pause
 exit /b 1
 
-:occupied_port
-echo.
-echo Port 8050 is already in use, but the existing dashboard is not responding.
-echo Stop the stale dashboard server before starting a new one.
-pause
-exit /b 1
-
-:open_browser
+:open_existing
+echo The dashboard is already running the latest code.
 start "" "%DASHBOARD_URL%"
+exit /b 0
+
+:start_server
+title BO Workflow Dashboard - close this window to stop it
+echo Starting BO Workflow Dashboard. Close this window or press Ctrl+C to stop it completely.
+REM Open the browser only once Dash actually answers, not on a blind timer.
+start "" /B powershell -NoProfile -Command "for ($i = 0; $i -lt 90; $i++) { try { if ((Invoke-WebRequest -UseBasicParsing '%DASHBOARD_URL%' -TimeoutSec 2).StatusCode -eq 200) { Start-Process '%DASHBOARD_URL%'; exit 0 } } catch { }; Start-Sleep -Seconds 1 }"
+pushd "%DASHBOARD_DIR%"
+"%DASHBOARD_PYTHON%" %PY_ARGS% app.py
+popd
+echo.
+echo Dashboard server stopped.
+pause
 exit /b 0
 
 :dashboard_healthy
@@ -75,4 +102,27 @@ exit /b %errorlevel%
 
 :dashboard_port_in_use
 powershell -NoProfile -Command "if (Get-NetTCPConnection -LocalPort 8050 -State Listen -ErrorAction SilentlyContinue) { exit 0 }; exit 1"
+exit /b %errorlevel%
+
+:server_is_stale
+REM Exit 0 when the server on port 8050 started before the newest .py file in
+REM dashboard/ or core_engine/ (or config.yaml) was last written.
+powershell -NoProfile -Command "$ids = @(Get-NetTCPConnection -LocalPort 8050 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique); $started = $ids | ForEach-Object { (Get-CimInstance Win32_Process -Filter ('ProcessId=' + $_)).CreationDate } | Where-Object { $_ } | Sort-Object | Select-Object -First 1; if (-not $started) { exit 0 }; $root = '%BO_WORKFLOW_DIR%'; $files = @(Get-ChildItem -Path (Join-Path $root 'dashboard'), (Join-Path $root 'core_engine') -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -eq '.py' }) + @(Get-Item (Join-Path $root 'config.yaml') -ErrorAction SilentlyContinue); $newest = ($files | Sort-Object LastWriteTime -Descending | Select-Object -First 1).LastWriteTime; if ($newest -and $newest -gt $started) { exit 0 }; exit 1"
+exit /b %errorlevel%
+
+:running_sessions
+REM Exit 0 and list them when sessions are running; 3 when none; other codes
+REM mean the status could not be read, which the caller treats as "ask".
+pushd "%DASHBOARD_DIR%"
+"%DASHBOARD_PYTHON%" %PY_ARGS% -c "import os, sqlite3, sys; p = '.session_state/sessions.sqlite'; rows = sqlite3.connect('file:' + p + '?mode=ro', uri=True).execute('SELECT kind, title FROM sessions WHERE state = ?', ('running',)).fetchall() if os.path.isfile(p) else []; [print('   -', kind, '-', title) for kind, title in rows]; sys.exit(0 if rows else 3)"
+set "RUNNING_RC=%errorlevel%"
+popd
+exit /b %RUNNING_RC%
+
+:stop_server
+REM Stop every process listening on 8050 with its whole process tree
+REM (background workers, ctrader-cli), and the old launcher window that hosted
+REM it. Only cmd.exe windows that were running app.py or this launcher are
+REM closed, never an unrelated terminal. Exit 0 once the port is free.
+powershell -NoProfile -Command "$ids = @(Get-NetTCPConnection -LocalPort 8050 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique); foreach ($id in $ids) { $proc = Get-CimInstance Win32_Process -Filter ('ProcessId=' + $id); $parent = $null; if ($proc) { $parent = Get-CimInstance Win32_Process -Filter ('ProcessId=' + $proc.ParentProcessId) }; taskkill.exe /PID $id /T /F | Out-Null; if ($parent -and $parent.Name -eq 'cmd.exe' -and ($parent.CommandLine -match 'app\.py' -or $parent.CommandLine -match 'start_dashboard')) { taskkill.exe /PID $parent.ProcessId /T /F | Out-Null } }; for ($i = 0; $i -lt 15; $i++) { if (-not (Get-NetTCPConnection -LocalPort 8050 -State Listen -ErrorAction SilentlyContinue)) { exit 0 }; Start-Sleep -Seconds 1 }; exit 1"
 exit /b %errorlevel%
