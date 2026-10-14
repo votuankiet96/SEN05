@@ -1,0 +1,16 @@
+[Unit]
+Description=wisdom_engine past-signal worker (backtest cap 2, Redis DB0 L_PastSignal + DB1 L_PastSignal_Trend)
+After=network-online.target
+StartLimitBurst=20
+StartLimitIntervalSec=300
+
+[Service]
+Type=simple
+WorkingDirectory=/home/administrator/Desktop
+ExecStart=/home/administrator/Desktop/wisdom_engine/.venv/bin/python -m wisdom_engine.we_core.src.we_signal.redis_io.worker
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target
