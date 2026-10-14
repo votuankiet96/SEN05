@@ -17,7 +17,8 @@ key Redis `L_PastSignal*`, kênh `L_CHANNEL_SIM_*`, schema CSV (và lúc đó c�
 — đã đổi thành `wes/wes_config.yaml` ngày 2026-10-14, xem ghi chú đó). Đường dẫn cũ `~/Desktop/core_python` **không còn tồn tại** (symlink
 tương thích đã gỡ 2026-10-08 theo yêu cầu): mọi nơi ngoài repo từng dùng nó — nhất là mount
 SSHFS `runtime/exports` của VM-BO20 (mục 9) — phải trỏ sang `…/wisdom_engine/…`. Remote
-`origin/main` (SEN05) vẫn chứa thư mục `core_python/` cũ, chưa đẩy bản đổi tên.
+`origin/main` (monorepo `votuankiet96/SEN05`): thư mục `core_python/` cũ ĐÃ được thay bằng `wisdom_engine/`
+ngày 2026-10-14 (commit `bd9b64d`; xem ghi chú "Đồng bộ lên main" bên dưới).
 
 **Đổi tên phía datafeed 2026-10-08 (do bên DF làm, không thuộc repo này):** Data Provider
 **DP → DF** (datafeed), DP Simulator **DPS → DFS** (Datafeed Simulator); thư mục trên DP6
@@ -185,6 +186,15 @@ Import đổi `…src.strategies.trend` → `…src.trend`, `…src.strategies.a
 Đã kiểm: AST của mọi file sửa chỉ khác chuỗi tên module (script, bỏ docstring); ruff/vulture sạch; `we_core` 119 + `wes` 145 test qua; import thử 40 module không lỗi; module đường cũ không còn import được.
 **Không restart gì**: không có import chạy muộn trong mã sản xuất (chỉ 7 chỗ trong test), nên `we-worker`, `wes-signal`, server chart và dashboard đang chạy vẫn dùng mã đã nạp trong bộ nhớ; lần restart kế dùng cấu trúc mới.
 Các ghi chú ngày phía trên nhắc `strategies/alternating.py`, `strategies/trend.py` là đường dẫn lúc đó.
+
+**Đồng bộ lên `main` của SEN05 2026-10-14** (người dùng yêu cầu: kiểm tra `wisdom_engine/` đã có trên main chưa, chưa có/cũ thì đẩy bản mới nhất): remote `origin` = `https://github.com/votuankiet96/SEN05.git`
+là MONOREPO (thư mục gốc: `core_python`, `ctrader_cli_simulation`, `datafeed`, `dp_program`, `og_program`, `order_following`, `order_gateway`, `tick_program`); `wisdom_engine/` CHƯA có trên main, chỗ của nó là bản cũ `core_python/`
+(48 file, commit cuối 2026-10-06). Làm bằng worktree riêng dựng từ `origin/main` (KHÔNG đụng nhánh `og_program` đang làm việc): gỡ `core_python/`, thêm `wisdom_engine/` = 76 file (mọi file đã theo dõi + chưa theo dõi nhưng
+không bị `.gitignore`, trừ `graphify-out/` và `.graphifyignore`), commit `bd9b64d` (git thấy 45 file là đổi tên từ `core_python/`), push THƯỜNG (fast-forward `a03d2de..bd9b64d`, không force). Đã kiểm trước khi đẩy:
+quét bí mật bằng cách so mọi file với giá trị thật của `sql.pwd`/`redis.password` trong 2 file config thật (0 trùng, không in giá trị) + mẫu token/webhook/khoá riêng + mật khẩu DP6 (0); config thật và `runtime/` không có trong bản đẩy;
+sau khi đẩy: cây băm của 7 thư mục còn lại giữ nguyên so với trước, `core_python/` không còn, `wisdom_engine/` có 76 file. Lịch sử cũ của `core_python/` vẫn nằm trong git history của main. Thư mục khác trên main còn nhắc `core_python`
+chỉ trong tài liệu/test của bản `og_program` cũ (`og_program/CLAUDE.md`, `og_program/tests/*`, `ctrader_cli_simulation/AGENT.md`...) — không sửa vì không thuộc phạm vi. Repo cục bộ (`og_program`, gốc = thư mục `wisdom_engine/`) KHÔNG commit gì,
+lịch sử cục bộ khác lịch sử main (main chỉ có 1 commit đồng bộ cho thư mục này). Lần đồng bộ kế: dựng lại worktree từ `origin/main` mới nhất, thay `wisdom_engine/` bằng danh sách file hiện tại, đẩy thường.
 
 **Mọi khẳng định trong file này phải khớp code thật.** Bản này viết lại ngày
 2026-10-05 bằng cách đọc lại từng file trong `src/`, `tests/`, `run_we.sh`,
