@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 import pytest
 from wisdom_engine.we_core.src.configuration import run_strategy
-from wisdom_engine.we_core.src.signal_display import cli, payload, renderer
+from wisdom_engine.we_core.src.signal_display import cli, payload, renderer, server
 
+from tests import payload_reference
 from tests.fixtures import make_ohlcv
 
 
@@ -238,7 +240,7 @@ def test_signal_table_rows_has_required_columns():
     rows = payload.signal_table_rows(enriched)
 
     assert rows
-    assert set(rows[0]) == {"time", "bartime", "side", "entry", "sl", "tp", "rr", "reason"}
+    assert set(rows[0]) == {"time", "bartime", "side", "entry", "reason"}
     assert rows[0]["time"] in {point["time"] for point in payload.candlestick_points(enriched)}
     assert rows[0]["side"] in {"BUY", "SELL"}
 
@@ -260,3 +262,184 @@ def test_stats_summary_empty_without_signals():
     assert payload.stats_summary(df) == {
         "total": 0, "buy": 0, "sell": 0, "last": "-", "rawTotal": 0, "rawBuy": 0, "rawSell": 0,
     }
+
+
+# --- payload.py xử lý theo cột (2026-10-15): kết quả phải GIỐNG HỆT bản lặp từng dòng cũ ---
+# Bản cũ nằm ở tests/payload_reference.py (iterrows + to_unix_ts/_to_number từng giá trị).
+
+_VECTORIZED = ("candlestick_points", "histogram_points", "line_points", "trend_line_points")
+
+
+def _legacy_without_digits(name):
+    """Bản lặp cũ không có tham số digits (luôn 2 chữ số): server nay truyền digits=price_decimals(symbol) bằng từ
+    khoá; với symbol dùng 2 chữ số (US30) hai bên phải giống hệt, nên bỏ digits=2 rồi gọi bản cũ."""
+    reference = getattr(payload_reference, name)
+
+    def call(*args, digits=2, **kwargs):
+        assert digits == 2
+        return reference(*args, **kwargs)
+
+    return call
+
+
+@pytest.mark.parametrize("trend_mode", ["no_trend", "trend_filter"])
+@pytest.mark.parametrize(("strategy", "tf"), [("combo", "H1"), ("ma_cross", "M30"), ("macd_break", "H1")])
+def test_run_scan_giong_het_ban_lap_tung_dong_cu(monkeypatch, strategy, tf, trend_mode):
+    def fake_load(symbol, tf, bars, *, before=None):
+        _ = symbol, before
+        minutes = {"M30": 30, "H1": 60, "H4": 240}[tf]
+        return make_ohlcv(bars, freq_minutes=minutes, seed=minutes, start="2026-01-01")
+
+    monkeypatch.setattr(server, "load", fake_load)
+    request = {"strategy": strategy, "symbol": "US30", "tf": tf, "bars": 400, "trend_mode": trend_mode}
+    if trend_mode == "trend_filter":
+        request["trend_tf"] = "H4"
+
+    vectorized = server.run_scan(**request)
+    for name in _VECTORIZED:
+        monkeypatch.setattr(server, name, _legacy_without_digits(name))
+    row_by_row = server.run_scan(**request)
+
+    assert vectorized == row_by_row
+    # Không so hai rỗng với nhau: đường overlay, panel MACD và (nếu bật) chart trend đều có điểm.
+    assert vectorized["candles"]
+    assert all(overlay["data"] for overlay in vectorized["overlays"])
+    assert vectorized["panels"][0]["data"]
+    if trend_mode == "trend_filter":
+        assert vectorized["trendChart"]["candles"]
+        assert all(overlay["data"] for overlay in vectorized["trendChart"]["overlays"])
+
+
+def _edge_frame(n: int, **columns) -> pd.DataFrame:
+    bars = {"bartime": pd.date_range("2026-01-05", periods=n, freq="1h")}
+    for name in ("open", "high", "low", "close"):
+        bars[name] = np.linspace(100.0, 101.0, n) + {"open": 0.0, "high": 0.4, "low": -0.4, "close": 0.1}[name]
+    return pd.DataFrame({**bars, **columns})
+
+
+def _edge_frames() -> dict[str, pd.DataFrame]:
+    nan = float("nan")
+    # Giá trị sát nửa ở chữ số thứ 2 (round(2.675, 2) = 2.67 nhưng np.round ra 2.68) và quanh 0
+    # (-0.004 làm tròn thành -0.0, vẫn tô màu "dương").
+    halves = [2.675, 1.005, 0.125, 2.5, -2.675, 100.005, 1e-9, -0.004, 0.004, -0.0, 0.0, 123456.785, -0.005, 0.015]
+    n = len(halves)
+    bias = [1, -1, 0, nan, 0.999, -0.996, 0.004, 1, -1, nan, 0.5, 1.0, -1.0, 0]
+    frames = {
+        "rong": _edge_frame(0, ma=[], macd_h=[], trend_ai_knn=[], trend_bias=[]),
+        "mot_dong": _edge_frame(1, ma=[1.234], macd_h=[-0.004], trend_ai_knn=[5.0], trend_bias=[1]),
+        "lam_tron_sat_nua": _edge_frame(n, ma=halves, macd_h=halves, trend_ai_knn=halves, trend_bias=bias),
+        "nan_xen_ke": _edge_frame(
+            n, ma=[nan, 1.5] * 7, macd_h=[0.5, nan] * 7, trend_ai_knn=[nan, nan] * 7, trend_bias=bias
+        ),
+        "toan_nan": _edge_frame(n, ma=[nan] * n, macd_h=[nan] * n, trend_ai_knn=[nan] * n, trend_bias=bias),
+        "float32_va_int": _edge_frame(
+            n,
+            ma=np.array(halves, dtype="float32"),
+            macd_h=np.arange(n, dtype="int64") - 7,
+            trend_ai_knn=np.arange(n, dtype="int32"),
+            trend_bias=np.array(bias, dtype="float32"),
+        ),
+        "object_float": _edge_frame(
+            n, ma=pd.Series(halves, dtype=object), macd_h=pd.Series(halves, dtype=object),
+            trend_ai_knn=pd.Series(halves, dtype=object), trend_bias=pd.Series(bias, dtype=object),
+        ),
+        "kieu_nullable": _edge_frame(
+            n, ma=pd.array([nan if i % 3 == 0 else v for i, v in enumerate(halves)], dtype="Float64"),
+            macd_h=pd.array(halves, dtype="Float64"), trend_ai_knn=pd.array(halves, dtype="Float64"),
+            trend_bias=pd.array([1, -1, 0] * 4 + [1, -1], dtype="Int64"),
+        ),
+        "bartime_co_mui_gio": _edge_frame(
+            n, ma=halves, macd_h=halves, trend_ai_knn=halves, trend_bias=bias
+        ).assign(bartime=pd.date_range("2026-01-05", periods=n, freq="1h", tz="Asia/Ho_Chi_Minh")),
+        "bartime_utc": _edge_frame(
+            n, ma=halves, macd_h=halves, trend_ai_knn=halves, trend_bias=bias
+        ).assign(bartime=pd.date_range("2026-01-05", periods=n, freq="1h", tz="UTC")),
+        "bartime_do_chinh_xac_khac": _edge_frame(
+            n, ma=halves, macd_h=halves, trend_ai_knn=halves, trend_bias=bias
+        ).assign(bartime=pd.date_range("2026-01-05", periods=n, freq="1h").astype("datetime64[s]")),
+        "bartime_object": _edge_frame(
+            n, ma=halves, macd_h=halves, trend_ai_knn=halves, trend_bias=bias
+        ).assign(bartime=pd.Series([f"2026-01-05 {i:02d}:00:00" for i in range(n)], dtype=object)),
+        "bartime_le_giay": _edge_frame(
+            n, ma=halves, macd_h=halves, trend_ai_knn=halves, trend_bias=bias
+        ).assign(bartime=pd.date_range("2026-01-05", periods=n, freq="1h") + pd.to_timedelta(np.arange(n) * 77, unit="ms")),
+        "index_la": _edge_frame(n, ma=halves, macd_h=halves, trend_ai_knn=halves, trend_bias=bias).set_axis(
+            [f"r{i}" for i in range(n)]
+        ),
+        "index_trung": _edge_frame(n, ma=halves, macd_h=halves, trend_ai_knn=halves, trend_bias=bias).set_axis([0] * n),
+        "thieu_cot_ma_va_bias": _edge_frame(n, macd_h=halves, trend_ai_knn=halves),
+    }
+    return frames
+
+
+@pytest.mark.parametrize("name", list(_edge_frames()))
+def test_ham_theo_cot_giong_het_ban_lap_tung_dong_cu_tren_ca_bien(name):
+    df = _edge_frames()[name]
+
+    assert payload.candlestick_points(df) == payload_reference.candlestick_points(df)
+    for column in ("ma", "macd_h", "trend_ai_knn", "khong_co_cot_nay"):
+        assert payload.line_points(df, column) == payload_reference.line_points(df, column)
+        assert payload.line_points(df, column, color="#f59e0b") == payload_reference.line_points(
+            df, column, color="#f59e0b"
+        )
+        assert payload.histogram_points(df, column) == payload_reference.histogram_points(df, column)
+        assert payload.trend_line_points(df, column) == payload_reference.trend_line_points(df, column)
+    # Cột hướng riêng của từng khối xác nhận (bias_column) và cột hướng không tồn tại.
+    assert payload.trend_line_points(df, "trend_ai_knn", bias_column="macd_h") == payload_reference.trend_line_points(
+        df, "trend_ai_knn", bias_column="macd_h"
+    )
+    assert payload.trend_line_points(df, "trend_ai_knn", bias_column="khong_co") == payload_reference.trend_line_points(
+        df, "trend_ai_knn", bias_column="khong_co"
+    )
+
+
+def test_ham_theo_cot_giu_gia_tri_lam_tron_cua_round_python():
+    # Chốt cứng giá trị đã biết (không chỉ so với bản cũ): np.round sẽ cho 2.68 ở dòng đầu.
+    df = _edge_frame(3, ma=[2.675, 1.005, -0.004], macd_h=[2.675, 1.005, -0.004])
+
+    assert [point["value"] for point in payload.line_points(df, "ma")] == [2.67, 1.0, -0.0]
+    assert [point["color"] for point in payload.histogram_points(df, "macd_h")] == ["#22c55e", "#22c55e", "#22c55e"]
+
+
+def test_ham_theo_cot_giong_ban_cu_tren_du_lieu_ngau_nhien():
+    rng = np.random.default_rng(20261015)
+    for _ in range(25):
+        n = int(rng.integers(0, 40))
+        values = np.round(rng.normal(0.0, 0.03, n), 3) + 0.005 * rng.integers(-3, 4, n)
+        values[rng.random(n) < 0.2] = np.nan
+        bias = rng.choice([-1.0, 0.0, 1.0, np.nan, 0.999, -0.996], n)
+        df = _edge_frame(n, ma=values, macd_h=values, trend_ai_knn=values, trend_bias=bias)
+
+        assert payload.candlestick_points(df) == payload_reference.candlestick_points(df)
+        assert payload.line_points(df, "ma") == payload_reference.line_points(df, "ma")
+        assert payload.histogram_points(df, "macd_h") == payload_reference.histogram_points(df, "macd_h")
+        assert payload.trend_line_points(df, "trend_ai_knn") == payload_reference.trend_line_points(df, "trend_ai_knn")
+
+
+def test_line_points_van_nem_loi_khi_bartime_nat_o_dong_co_gia_tri():
+    df = _edge_frame(2, ma=[1.0, 2.0])
+    df.loc[1, "bartime"] = pd.NaT
+
+    with pytest.raises(ValueError, match="NaT"):
+        payload.line_points(df, "ma")
+    # Dòng NaT nhưng không có giá trị thì bị bỏ trước khi đụng tới bartime — như bản lặp cũ.
+    df["ma"] = [1.0, float("nan")]
+    assert len(payload.line_points(df, "ma")) == 1
+
+
+def test_payload_digits_mac_dinh_2_va_digits_lon_hon_giu_so_le_cua_forex():
+    df = _edge_frame(4, ma=[1.123456, 1.123449, np.nan, 1.1], macd_h=[0.000123, -0.000049, 0.0, np.nan],
+                     trend_ai_knn=[1.12345, 1.12346, 1.12347, 1.12348], trend_bias=[1, -1, 0, 1])
+    df["open"] = [1.12341, 1.12342, 1.12343, 1.12344]
+
+    assert payload.candlestick_points(df)[0]["open"] == 1.12
+    assert payload.candlestick_points(df, digits=5)[0]["open"] == 1.12341
+    assert [p["value"] for p in payload.line_points(df, "ma")] == [1.12, 1.12, 1.1]
+    assert [p["value"] for p in payload.line_points(df, "ma", digits=5)] == [1.12346, 1.12345, 1.1]
+    hist = payload.histogram_points(df, "macd_h", digits=5)
+    assert [p["value"] for p in hist] == [0.00012, -0.00005, 0.0]
+    assert [p["color"] for p in hist][:2] == [payload.UP_COLOR, payload.DOWN_COLOR]       # màu xét trên giá trị đã làm tròn
+    assert [p["value"] for p in payload.trend_line_points(df, "trend_ai_knn", digits=5)][:2] == [1.12345, 1.12346]
+    assert [p["value"] for p in payload.trend_line_points(df, "trend_ai_knn")][:2] == [1.12, 1.12]
+    rows = payload.signal_table_rows(df.assign(signal=[1, 0, 0, 0], entry_price=[1.123456] * 4), digits=5)
+    assert rows[0]["entry"] == 1.12346 and payload.signal_table_rows(df.assign(signal=[1, 0, 0, 0], entry_price=[1.123456] * 4))[0]["entry"] == 1.12

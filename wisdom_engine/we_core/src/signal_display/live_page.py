@@ -100,7 +100,7 @@ __VENDOR_JS__
 <script>
 (function () {
   const CONFIG = __CONFIG_JSON__;
-  const HIDDEN_PARAM_KEYS = new Set(["TREND_FILTER_ENABLED", "TREND_TYPE", "TREND_TF", "ENTRY_TF"]);
+  const HIDDEN_PARAM_KEYS = new Set(["TREND_FILTER_ENABLED", "TREND_METHODS", "TREND_TF", "ENTRY_TF"]);
   const el = {
     strategy: document.getElementById("strategy"),
     symbol: document.getElementById("symbol"),
@@ -123,6 +123,8 @@ __VENDOR_JS__
   };
 
   let priceChart, macdChart, trendChart, candleSeries, macdSeries, trendCandleSeries;
+  // Số chữ số thập phân của giá theo symbol (meta.priceDigits từ server: 2 mặc định, forex 5, JPY 3).
+  let priceDigits = 2;
   let overlaySeries = [];
   let trendOverlaySeries = [];
   let entryBaseMarkers = [];
@@ -162,13 +164,25 @@ __VENDOR_JS__
     el.tf.value = spec.defaultTimeframe || allowed[0];
   }
 
+  // Khung trend mặc định của (chiến lược, symbol, khung vào lệnh): ô khai trong config (trendTfBySymbol) -- cùng
+  // nguồn với configuration.resolve_trend_tf phía server; không có ô thì "" và ô chọn rơi về khung nhỏ nhất được phép.
+  function configuredTrendTf(spec) {
+    const cells = (spec.trendTfBySymbol || {})[el.symbol.value] || {};
+    return cells[el.tf.value] || "";
+  }
+
+  // Khung trend phải >= khung tín hiệu (CLAUDE.md mục 6, backend cũng chặn bằng
+  // configuration.check_trend_timeframe): chỉ liệt kê các khung thoả điều đó với khung đang chọn, và đặt lại về khung
+  // trend theo config mỗi khi đổi chiến lược/symbol/khung vào lệnh (chọn tay chỉ có hiệu lực tới lần đổi kế tiếp).
   function populateTrendControls() {
     const spec = CONFIG.strategies[el.strategy.value];
-    const allowed = spec.trendTimeframes.length ? spec.trendTimeframes : CONFIG.timeframes;
-    const keep = allowed.includes(el.trendTf.value) ? el.trendTf.value : null;
+    const entrySeconds = timeframeSeconds(el.tf.value);
+    const configured = spec.trendTimeframes.length ? spec.trendTimeframes : CONFIG.timeframes;
+    const allowed = configured.filter((tf) => timeframeSeconds(tf) >= entrySeconds);
     el.trendTf.innerHTML = "";
     allowed.forEach((tf) => addOption(el.trendTf, tf, tf));
-    el.trendTf.value = keep || spec.defaultTrendTf || allowed[0] || "";
+    const wanted = configuredTrendTf(spec);
+    el.trendTf.value = allowed.includes(wanted) ? wanted : allowed[0] || "";
     updateTrendControls();
   }
 
@@ -251,7 +265,7 @@ __VENDOR_JS__
       ...collectOverrides(),
     });
     if (el.trendMode.value === "trend_filter") {
-      params.set("trend_type", spec.defaultTrendType || "knn");
+      params.set("trend_methods", spec.defaultTrendMethods || "knn");
       params.set("trend_tf", el.trendTf.value);
     }
     if (el.fromTime.value.trim() || el.toTime.value.trim()) {
@@ -302,6 +316,17 @@ __VENDOR_JS__
     });
     trendChart.timeScale().subscribeVisibleTimeRangeChange(syncTrendToEntryTimeRange);
     trendChart.subscribeClick(selectTrendRangePoint);
+  }
+
+  function priceFormat() {
+    return { type: "price", precision: priceDigits, minMove: Math.pow(10, -priceDigits) };
+  }
+
+  function applyPriceDigits(payload) {
+    priceDigits = Number(payload.meta && payload.meta.priceDigits) || 2;
+    candleSeries.applyOptions({ priceFormat: priceFormat() });
+    macdSeries.applyOptions({ priceFormat: priceFormat() });
+    if (trendCandleSeries) trendCandleSeries.applyOptions({ priceFormat: priceFormat() });
   }
 
   function fmtPrice(value) {
@@ -518,8 +543,7 @@ __VENDOR_JS__
       signal.side + " · " + signal.bartime + " UTC" +
       "  |  O " + fmtPrice(candle.open) + "  H " + fmtPrice(candle.high) +
       "  L " + fmtPrice(candle.low) + "  C " + fmtPrice(candle.close) +
-      "  |  Entry " + fmtPrice(signal.entry) + "  SL " + fmtPrice(signal.sl) +
-      "  TP " + fmtPrice(signal.tp) + "  R:R " + fmtPrice(signal.rr) +
+      "  |  Entry " + fmtPrice(signal.entry) +
       (signal.reason ? "  |  " + signal.reason : "");
     el.signalDetail.style.display = "block";
   }
@@ -594,6 +618,7 @@ __VENDOR_JS__
     el.trendWrap.style.display = "block";
     el.trendTitle.textContent = trendPayload.label;
     ensureTrendChart();
+    trendCandleSeries.applyOptions({ priceFormat: priceFormat() });
     clearTrendSeries();
     trendCandleSeries.setData(trendPayload.candles);
     trendRangeStartTime = null;
@@ -601,7 +626,7 @@ __VENDOR_JS__
     entryRangeMarkers = [];
     setTrendMarkers([]);
     trendPayload.overlays.forEach((o) => {
-      const series = trendChart.addLineSeries({ color: o.color, lineWidth: 2, title: o.label });
+      const series = trendChart.addLineSeries({ color: o.color, lineWidth: 2, title: o.label, priceFormat: priceFormat() });
       series.setData(o.data);
       trendOverlaySeries.push(series);
     });
@@ -610,6 +635,7 @@ __VENDOR_JS__
 
   function renderChart(payload, visibleRange) {
     ensureCharts();
+    applyPriceDigits(payload);
     pauseTrendTimeSync();
     renderTrendChart(payload.trendChart);
     clearDynamicSeries();
@@ -618,7 +644,7 @@ __VENDOR_JS__
     setEntryMarkers([]);
 
     payload.overlays.forEach((o) => {
-      const series = priceChart.addLineSeries({ color: o.color, lineWidth: 2, title: o.label });
+      const series = priceChart.addLineSeries({ color: o.color, lineWidth: 2, title: o.label, priceFormat: priceFormat() });
       series.setData(o.data);
       overlaySeries.push(series);
     });
@@ -686,7 +712,7 @@ __VENDOR_JS__
     const sell = rows.filter((row) => row.side === "SELL").length;
     const last = rows.length ? rows[rows.length - 1].side : "-";
     const trendText = meta.trendMode === "trend_filter"
-      ? " · trend " + meta.trendTf + " " + String(meta.trendType || "").toUpperCase()
+      ? " · trend " + meta.trendTf + " " + String(meta.trendMethods || "").toUpperCase()
       : " · no trend";
     const timeText = meta.timeMode === "range"
       ? " · " + meta.fromTime + " -> " + meta.toTime
@@ -790,8 +816,8 @@ __VENDOR_JS__
     renderParamFields();
     scan();
   });
-  el.symbol.addEventListener("change", scan);
-  el.tf.addEventListener("change", scan);
+  el.symbol.addEventListener("change", () => { populateTrendControls(); scan(); });
+  el.tf.addEventListener("change", () => { populateTrendControls(); scan(); });
   el.bars.addEventListener("change", scan);
   el.fromTime.addEventListener("change", scan);
   el.toTime.addEventListener("change", scan);

@@ -3,9 +3,11 @@
 # wisdom_engine launcher for Ubuntu/Linux: SQL backtest (CSV export, dashboard)
 # plus the past-signal worker control (systemd user service) for the
 # "backtest cấp 2" Redis DB0 flow (L_PastSignal, triggered by df:events:backfill).
-# Also opens the WES Chart (wes/src/chart_simul): a read-only live chart of the Redis
-# db14 candles + db15 signals, to check by eye that wes works in real time, and its
-# multi-timeframe page (/mtf: candles only, up to 4 timeframes of one symbol) to check DFS.
+# Also opens the DES Chart (des/src/chart_simul): a read-only live chart of the Redis
+# db13 candles (from DFS) + db14 signals (des, no trend filter), to check by eye that des
+# works in real time; its trend page (/trend: db15 signals filtered by the higher-timeframe
+# trend, with a trend pane); and its multi-timeframe page (/mtf: candles only, up to 4
+# timeframes of one symbol) to check DFS.
 # Long-running actions open in a new desktop terminal when available.
 # On headless/SSH sessions, actions run in the current terminal.
 
@@ -131,7 +133,7 @@ prompt_run_args() {
   # thật từ we_config.yaml — không hardcode mã ở đây để tránh lệch config.
   # From/To để trống = xuất toàn bộ lịch sử có trong DP6 (từ bar đầu tiên
   # tới bar gần nhất).
-  read -r -p "Strategy (combo/ma_cross/macd_break/sma_trend) [combo]: " PROMPT_STRATEGY
+  read -r -p "Strategy (combo/ma_cross/macd_break) [combo]: " PROMPT_STRATEGY
   PROMPT_STRATEGY="${PROMPT_STRATEGY:-combo}"
   read -r -p "Symbol (blank = default in we_config.yaml): " PROMPT_SYMBOL
   read -r -p "Timeframe (blank = strategy default): " PROMPT_TF
@@ -198,46 +200,47 @@ open_dashboard() {
   pause
 }
 
-wes_chart_running() {
+des_chart_running() {
   command -v curl >/dev/null 2>&1 && curl -s -o /dev/null -m 1 "$CHART_URL/health"
 }
 
-# WES Chart = wes/src/chart_simul: trang chart sống CHỈ ĐỌC Redis (db14 nến do DFS
-# phát + db15 tín hiệu wes) để tận mắt kiểm tra wes. Là hệ riêng của wes, KHÔNG
+# DES Chart = des/src/chart_simul: trang chart sống CHỈ ĐỌC Redis (db13 nến do DFS
+# phát + db14 tín hiệu des không lọc trend; trang /trend đọc thêm db15 tín hiệu đã lọc trend)
+# để tận mắt kiểm tra des. Là hệ riêng của des, KHÔNG
 # dùng chung server/cổng/profile Chrome với dashboard của WE ở trên; cổng lấy
 # từ CHART_URL để đổi CHART_URL thì server cũng chạy đúng cổng đó.
-# Argument tuỳ chọn: đường dẫn trang cần mở (vd /mtf); mặc định trang chính "/".
-open_wes_chart() {
+# Argument tuỳ chọn: đường dẫn trang cần mở (vd /mtf, /trend); mặc định trang chính "/".
+open_des_chart() {
   local page="${1:-}"
-  if wes_chart_running; then
-    echo "WES Chart is already running at $CHART_URL"
+  if des_chart_running; then
+    echo "DES Chart is already running at $CHART_URL"
     # Server đang chạy có thể là bản cũ (bật trước khi trang này được thêm): báo rõ thay vì mở ra "Not Found".
     if [[ -n "$page" ]] && command -v curl >/dev/null 2>&1 \
       && [[ "$(curl -s -o /dev/null -w '%{http_code}' -m 2 "$CHART_URL$page")" == "404" ]]; then
-      echo "The running WES Chart server has no $page page (it was started before the page existed)."
+      echo "The running DES Chart server has no $page page (it was started before the page existed)."
       echo "Stop it (Ctrl+C in its terminal, or: pkill -f 'chart_simul.server') and choose this option again."
       pause
       return
     fi
   else
-    echo "Starting WES Chart at $CHART_URL ..."
-    local cmd="$PY_CMD -m wisdom_engine.wes.src.chart_simul.server --port ${CHART_URL##*:}"
-    if [[ "${WE_LAUNCH_MODE:-auto}" != "current" ]] && launch_terminal "WES Chart" "$cmd"; then
+    echo "Starting DES Chart at $CHART_URL ..."
+    local cmd="$PY_CMD -m wisdom_engine.des.src.chart_simul.server --port ${CHART_URL##*:}"
+    if [[ "${WE_LAUNCH_MODE:-auto}" != "current" ]] && launch_terminal "DES Chart" "$cmd"; then
       :
     else
-      nohup bash -lc "cd $(quote "$RUN_DIR") && $cmd" >/tmp/wes_chart.log 2>&1 &
+      nohup bash -lc "cd $(quote "$RUN_DIR") && $cmd" >/tmp/des_chart.log 2>&1 &
       disown
     fi
     sleep 2
-    if ! wes_chart_running; then
-      echo "WES Chart did not answer yet; check /tmp/wes_chart.log (or its terminal window)."
+    if ! des_chart_running; then
+      echo "DES Chart did not answer yet; check /tmp/des_chart.log (or its terminal window)."
     fi
   fi
   # Profile Chrome riêng cho chart (cùng lý do với dashboard: tránh bị Chrome
   # single-instance chuyển tab sang cửa sổ khác không nhìn thấy).
   if has_desktop && command -v google-chrome >/dev/null 2>&1; then
-    google-chrome --user-data-dir="$HOME/.cache/wes-chart-chrome" "$CHART_URL$page" \
-      >/tmp/wes_chart_browser.log 2>&1 &
+    google-chrome --user-data-dir="$HOME/.cache/des-chart-chrome" "$CHART_URL$page" \
+      >/tmp/des_chart_browser.log 2>&1 &
     disown
   elif has_desktop && command -v xdg-open >/dev/null 2>&1; then
     xdg-open "$CHART_URL$page" >/tmp/we_launcher_xdg-open.log 2>&1 &
@@ -357,8 +360,9 @@ Project: $APP_DIR
 1. Export Signal CSV
 2. Open Dashboard
 3. Manage Past-Signal Worker
-4. Open WES Chart (live chart: Redis db14 candles + db15 wes signals)
-5. Open WES Multi-timeframe chart (one symbol, up to 4 timeframes, candles only)
+4. Open DES Chart (live chart: Redis db13 candles + db14 des signals, no trend filter)
+5. Open DES Multi-timeframe chart (one symbol, up to 4 timeframes, candles only)
+6. Open DES Trend chart (db15 des signals filtered by the higher-timeframe trend + trend pane)
 0. Exit
 
 EOF
@@ -369,8 +373,9 @@ EOF
       1) export_signal_csv ;;
       2) open_dashboard ;;
       3) we_worker_menu ;;
-      4) open_wes_chart ;;
-      5) open_wes_chart /mtf ;;
+      4) open_des_chart ;;
+      5) open_des_chart /mtf ;;
+      6) open_des_chart /trend ;;
       0) exit 0 ;;
     esac
   done

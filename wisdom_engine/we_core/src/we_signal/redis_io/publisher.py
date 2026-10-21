@@ -152,6 +152,30 @@ def clear_all_signals(client: redis.Redis, *, key_prefix: str) -> int:
     return deleted
 
 
+def clear_pair_signals(
+    client: redis.Redis,
+    *,
+    key_prefix: str,
+    symbol: str,
+    timeframe: str,
+    strategy: str,
+) -> int:
+    """Xoá dữ liệu past-signal của ĐÚNG 1 cặp (symbol, timeframe, strategy): LIST + mọi HASH
+    `<list_key>:<stamp>` của nó. Dùng cho restart có chọn phạm vi (worker.run_forever với scope_pairs);
+    các cặp khác không bị đụng tới.
+
+    Khớp chính xác theo key: LIST là đúng `signal_list_key(...)` và HASH là `<list_key>:*`, nên
+    US30 không khớp US300, COMBO không khớp MACD_BREAK, H1 không khớp H10. Tên key chỉ gồm chữ, số
+    và '_' nên không cần escape ký tự glob. Trả về số key đã xoá.
+    """
+    list_key = signal_list_key(key_prefix, symbol, timeframe, strategy)
+    keys = [list_key, *client.scan_iter(f"{list_key}:*", count=1000)]
+    deleted = 0
+    for start in range(0, len(keys), 1000):
+        deleted += client.delete(*keys[start:start + 1000])
+    return deleted
+
+
 def read_past_signals(
     client: redis.Redis,
     *,

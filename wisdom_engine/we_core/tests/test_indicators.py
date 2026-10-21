@@ -10,7 +10,6 @@ import pandas as pd
 import pytest
 from wisdom_engine.we_core.src.indicator import (
     atr,
-    calc_ai_trend_navigator,
     ema,
     macd_hist,
     merge_trend_reference,
@@ -73,30 +72,13 @@ def test_atr_seed_matches_wilder_sma_not_single_point(ohlcv):
 
 def test_rma_seed_matches_wilder_sma_not_single_point():
     """rma() dùng cùng công thức seed với atr() — khoá riêng vì đây là hàm
-    public độc lập, dùng cho AI Trend Navigator (ai_avg, target "Price
-    Action"), không đi qua atr()."""
+    public độc lập, dùng cho khối KNN (trend_methods/knn.py: ai_avg, target
+    "Price Action"), không đi qua atr()."""
     period = 10
     series = pd.Series([float(i) for i in range(1, 31)])  # 1..30, tăng dần đơn giản để dễ kiểm tay
     result = rma(series, period)
     assert result.iloc[: period - 1].isna().all()
     assert result.iloc[period - 1] == pytest.approx(series.iloc[:period].mean())
-
-
-
-def test_ai_trend_navigator_returns_direction_columns(ohlcv):
-    result = calc_ai_trend_navigator(
-        ohlcv,
-        price_value="hl2",
-        ma_len=5,
-        target_value="Price Action",
-        target_len=5,
-        number_of_closest_values=3,
-        smoothing_period=50,
-    )
-
-    assert list(result.columns) == ["ai_knn", "ai_avg", "ai_direction"]
-    assert len(result) == len(ohlcv)
-    assert set(result["ai_direction"].dropna().unique()) <= {-1, 0, 1}
 
 
 def test_merge_trend_reference_uses_only_closed_trend_bars():
@@ -109,3 +91,21 @@ def test_merge_trend_reference_uses_only_closed_trend_bars():
 
     assert result["trend_bias"].isna().tolist() == [True, False, False]
     assert result["trend_bias"].iloc[1:].tolist() == [1.0, 1.0]
+
+
+def test_merge_trend_reference_carries_block_columns_but_not_internal_bias():
+    """Cột riêng của khối (trend_ai_*, ...) và trend_bias đã ghép được mang sang khung
+    vào lệnh; cột hướng riêng từng khối (trend_bias_<tên>) chỉ dùng nội bộ nên bị bỏ lại."""
+    entry = make_ohlcv(3, freq_minutes=45, start="2026-01-01 02:15")
+    trend = make_ohlcv(1, freq_minutes=180, start="2026-01-01 00:00")
+    trend["trend_ai_knn"] = 100.0
+    trend["trend_bias_knn"] = 1
+    trend["trend_bias_other"] = -1
+    trend["trend_other_line"] = 7.0
+    trend["trend_bias"] = 1
+    trend["trend_close_time"] = pd.to_datetime(["2026-01-01 03:00"])
+
+    result = merge_trend_reference(entry, trend)
+
+    carried = [col for col in result.columns if col.startswith("trend_")]
+    assert carried == ["trend_close_time", "trend_ai_knn", "trend_other_line", "trend_bias"]

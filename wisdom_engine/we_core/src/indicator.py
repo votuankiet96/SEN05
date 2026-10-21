@@ -3,7 +3,7 @@ Xây dựng chỉ báo kỹ thuật cho wisdom_engine.
 
 Mô tả:
     File này CHỈ tính chỉ báo (indicator) — không có logic phát hiện tín
-	    hiệu (signal) và không tính entry/level (levels). Hai phần đó là logic
+    hiệu (signal) và không tính entry/level (entries). Hai phần đó là logic
     riêng của từng chiến lược và sống trong strategies/<tên>.py.
 
     Gồm 2 nhóm hàm:
@@ -12,6 +12,10 @@ Mô tả:
     2. add_*_indicators(df, params) — thêm cột chỉ báo (ma/macd_h/atr...)
        vào DataFrame OHLCV cho từng chiến lược, dùng lại nhóm (1). params
        luôn là dict đã resolve đầy đủ từ configuration.py.
+
+    merge_trend_reference ghép nến khung lớn đã đóng vào nến vào lệnh. Chỉ báo
+    xác nhận xu hướng khung lớn (KNN, ...) KHÔNG nằm ở đây: mỗi phương pháp là
+    một khối riêng trong trend_methods/ (xem rules/trend_tf.py).
 
     File này KHÔNG import bất kỳ gì từ wisdom_engine.we_core.src.strategies — chiều phụ
     thuộc chỉ một chiều: strategies/*.py import từ indicator.py, không
@@ -154,15 +158,18 @@ def atr(df: pd.DataFrame, period: int) -> pd.Series:
     """
     Tính Average True Range (ATR) theo phương pháp làm mượt Wilder.
 
-    True Range (TR) = max(high−low, |high−prev_close|, |low−prev_close|)
-    ATR = EWM của TR với alpha = 1/period (tương đương Wilder's smoothing).
+    True Range (TR) = max(high−low, |high−prev_close|, |low−prev_close|); nến đầu (chưa có
+    prev_close) TR = high−low.
+    ATR = làm mượt Wilder của TR (xem _wilder_smooth): bar hợp lệ đầu tiên (bar thứ `period`) =
+    SMA(TR, period), các bar sau đệ quy alpha = 1/period — đúng seed của `ta.atr`/`ta.rma` ở
+    TradingView, KHÁC `ewm(alpha=1/period, adjust=False)` thuần (seed bằng 1 điểm).
 
     Args:
         df: DataFrame chứa ít nhất các cột lowercase: "high", "low", "close".
-        period: Số bar cho Wilder's smoothing. min_periods = period.
+        period: Số bar cho Wilder's smoothing.
 
     Returns:
-        pd.Series ATR cùng index với df. Các bar đầu tiên là NaN.
+        pd.Series ATR cùng index với df. `period − 1` bar đầu tiên là NaN.
     """
     prev_close = df["close"].shift(1)
     tr = pd.concat(
@@ -174,91 +181,6 @@ def atr(df: pd.DataFrame, period: int) -> pd.Series:
         axis=1,
     ).max(axis=1)
     return _wilder_smooth(tr, int(period))
-
-
-def _price_source(df: pd.DataFrame, kind: str, period: int) -> pd.Series:
-    """
-    Chọn chuỗi giá đầu vào cho AI Trend Navigator.
-
-    Chỉ hỗ trợ "hl2" — đúng giá trị PRICE_VALUE duy nhất mà hệ thống cấu
-    hình (trend.py: KNN_TREND_DEFAULT_PARAMS). Các nhánh vwap/
-    sma/wma/ema/hma của bản port gốc đã bỏ vì không đường nào gọi tới được
-    (normalize_*_params không phát ra key PRICE_VALUE). Giá trị lạ raise
-    ngay thay vì âm thầm rơi về hl2 — cùng nguyên tắc với config.yaml
-    (CLAUDE.md mục 5).
-    """
-    kind = str(kind or "hl2").strip().lower()
-    if kind != "hl2":
-        raise ValueError(f"PRICE_VALUE must be 'hl2', got '{kind}'.")
-    hl2 = (df["high"].astype(float) + df["low"].astype(float)) / 2.0
-    return sma(hl2, period)
-
-
-def _target_source(df: pd.DataFrame, kind: str, period: int) -> pd.Series:
-    """
-    Chọn chuỗi target để tìm K hàng xóm gần nhất trong AI Trend Navigator.
-
-    Chỉ hỗ trợ "price action" — xem ghi chú ở _price_source().
-    """
-    kind = str(kind or "price action").strip().lower()
-    if kind != "price action":
-        raise ValueError(f"TARGET_VALUE must be 'Price Action', got '{kind}'.")
-    return rma(df["close"].astype(float), period)
-
-
-def calc_ai_trend_navigator(
-    df: pd.DataFrame,
-    *,
-    price_value: str = "hl2",
-    ma_len: int = 5,
-    target_value: str = "Price Action",
-    target_len: int = 5,
-    number_of_closest_values: int = 3,
-    smoothing_period: int = 50,
-) -> pd.DataFrame:
-    """
-    Tính AI Trend Navigator KNN line.
-
-    Đây là indicator deterministic, không phải model ML train offline.
-    Output:
-        ai_knn:       đường KNN đã làm mượt WMA(5).
-        ai_avg:       RMA của chuỗi KNN để tham chiếu/hiển thị.
-        ai_direction: 1 nếu ai_knn tăng, -1 nếu giảm, 0 nếu đi ngang/NaN.
-    """
-    out = pd.DataFrame(index=df.index)
-    if df.empty:
-        return out
-
-    work = df.reset_index(drop=True).copy()
-    k = max(2, min(int(number_of_closest_values), 200))
-    ma_len = max(2, min(int(ma_len), 200))
-    target_len = max(2, min(int(target_len), 200))
-    smoothing_period = max(2, min(int(smoothing_period), 500))
-    window_size = max(k, 30)
-
-    values = _price_source(work, price_value, ma_len).to_numpy(dtype=float)
-    targets = _target_source(work, target_value, target_len).to_numpy(dtype=float)
-    knn_ma = np.full(len(work), np.nan, dtype=float)
-    for idx, target in enumerate(targets):
-        if idx == 0 or np.isnan(target):
-            continue
-        history = values[max(0, idx - window_size) : idx]
-        valid = history[~np.isnan(history)]
-        if len(valid) < k:
-            continue
-        nearest = np.argsort(np.abs(valid - target))[:k]
-        knn_ma[idx] = float(valid[nearest].mean())
-
-    knn_ma_s = pd.Series(knn_ma)
-    ai_knn = wma(knn_ma_s, 5)
-    ai_avg = rma(knn_ma_s, smoothing_period)
-    ai_direction = pd.Series(
-        np.where(ai_knn > ai_knn.shift(1), 1, np.where(ai_knn < ai_knn.shift(1), -1, 0))
-    )
-    out["ai_knn"] = ai_knn.to_numpy()
-    out["ai_avg"] = ai_avg.to_numpy()
-    out["ai_direction"] = ai_direction.to_numpy()
-    return out
 
 
 def timeframe_minutes(tf: object) -> int:
@@ -336,8 +258,9 @@ def add_ma_cross_indicators(df: pd.DataFrame, params: dict) -> pd.DataFrame:
         fast_ma, slow_ma:            SMA nhanh/chậm của close.
         macd_h:                      MACD Histogram.
         atr:                         Average True Range theo Wilder.
-        prev_fast_ma, prev_slow_ma:  Giá trị SMA bar trước, dùng phát hiện
-                                      crossover.
+
+    (Trước 2026-10-16 còn 2 cột prev_fast_ma/prev_slow_ma để phát hiện cắt; luật
+    ma_cross nay chỉ so fast_ma với slow_ma tại cùng nến nên đã bỏ.)
 
     Args:
         df: DataFrame OHLCV với cột [bartime, open, high, low, close, volume].
@@ -346,7 +269,7 @@ def add_ma_cross_indicators(df: pd.DataFrame, params: dict) -> pd.DataFrame:
             MACD_FAST, MACD_SLOW, MACD_SIGNAL, ATR_PERIOD.
 
     Returns:
-        Bản sao của df với 6 cột bổ sung. Input không bị thay đổi.
+        Bản sao của df với 4 cột bổ sung. Input không bị thay đổi.
     """
     out = df.copy()
     out["fast_ma"] = sma(out["close"], int(params["FAST_MA"]))
@@ -358,38 +281,6 @@ def add_ma_cross_indicators(df: pd.DataFrame, params: dict) -> pd.DataFrame:
         signal=int(params["MACD_SIGNAL"]),
     )
     out["atr"] = atr(out, int(params["ATR_PERIOD"]))
-    out["prev_fast_ma"] = out["fast_ma"].shift(1)
-    out["prev_slow_ma"] = out["slow_ma"].shift(1)
-    return out
-
-
-def add_knn_trend_indicators(df: pd.DataFrame, params: dict) -> pd.DataFrame:
-    """
-    Chuẩn bị frame trend tham chiếu bằng AI Trend Navigator KNN.
-
-    Tên cột dùng tiền tố ``trend_`` để không gắn chết vào H3/M45 và có thể
-    dùng chung cho nhiều strategy entry khác nhau.
-    """
-    out = df.copy()
-    ai = calc_ai_trend_navigator(
-        out,
-        price_value=str(params["PRICE_VALUE"]),
-        ma_len=int(params["AI_MA_LEN"]),
-        target_value=str(params["TARGET_VALUE"]),
-        target_len=int(params["AI_TARGET_LEN"]),
-        number_of_closest_values=int(params["AI_K"]),
-        smoothing_period=int(params["AI_SMOOTH"]),
-    )
-    out["trend_ai_knn"] = ai["ai_knn"]
-    out["trend_ai_avg"] = ai["ai_avg"]
-    out["trend_ai_direction"] = ai["ai_direction"]
-
-    out["trend_bias"] = 0
-    out.loc[out["trend_ai_direction"].eq(1), "trend_bias"] = 1
-    out.loc[out["trend_ai_direction"].eq(-1), "trend_bias"] = -1
-
-    trend_minutes = timeframe_minutes(params["TREND_TF"])
-    out["trend_close_time"] = pd.to_datetime(out["bartime"]) + pd.Timedelta(minutes=trend_minutes)
     return out
 
 
@@ -399,19 +290,24 @@ def merge_trend_reference(entry_df: pd.DataFrame, trend_df: pd.DataFrame) -> pd.
 
     Điều kiện merge thực tế:
         trend_close_time <= entry bartime
+
+    Cột được mang sang khung vào lệnh: trend_close_time, các cột trend_* riêng của từng khối xác
+    nhận xu hướng (xem trend_methods/<tên>.py), rồi trend_bias (hướng đã ghép) ở cuối. Cột hướng
+    riêng từng khối (trend_bias_<tên>) chỉ dùng nội bộ để ghép nên không được mang sang.
     """
     if entry_df.empty:
         return entry_df.copy()
     if trend_df.empty or "trend_close_time" not in trend_df.columns:
         return entry_df.copy()
 
-    trend_cols = [
-        "trend_close_time",
-        "trend_ai_knn",
-        "trend_ai_avg",
-        "trend_ai_direction",
-        "trend_bias",
+    block_cols = [
+        col
+        for col in trend_df.columns
+        if col.startswith("trend_")
+        and col not in ("trend_close_time", "trend_bias")
+        and not col.startswith("trend_bias_")
     ]
+    trend_cols = ["trend_close_time", *block_cols, "trend_bias"]
     available = [col for col in trend_cols if col in trend_df.columns]
     entry = entry_df.sort_values("bartime").copy()
     trend = trend_df[available].sort_values("trend_close_time").copy()
@@ -426,8 +322,8 @@ def merge_trend_reference(entry_df: pd.DataFrame, trend_df: pd.DataFrame) -> pd.
 
 
 # =============================================================================
-# Chỉ báo của MACD Break và chiến lược nghiên cứu sma_trend. Mỗi hàm chỉ tính
-# cột chỉ báo, không có logic BUY/SELL — logic nằm ở strategies/<tên>.py.
+# Chỉ báo của MACD Break. Mỗi hàm chỉ tính cột chỉ báo, không có logic BUY/SELL —
+# logic nằm ở strategies/<tên>.py.
 # =============================================================================
 
 
@@ -459,16 +355,4 @@ def add_macd_break_indicators(df: pd.DataFrame, params: dict) -> pd.DataFrame:
         signal=int(params["MACD_SIGNAL"]),
     )
     out["atr"] = atr(out, int(params["ATR_PERIOD"]))
-    return out
-
-
-def add_sma_trend_indicators(df: pd.DataFrame, params: dict) -> pd.DataFrame:
-    """
-    Chỉ báo cho strategies/sma_trend.py.
-
-    Các cột được thêm:
-        trend_ma: SMA của close, chu kỳ SMA_PERIOD (nguồn: 210 nến ngày ≈ 10 tháng).
-    """
-    out = df.copy()
-    out["trend_ma"] = sma(out["close"], int(params["SMA_PERIOD"]))
     return out

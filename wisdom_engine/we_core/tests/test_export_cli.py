@@ -28,7 +28,7 @@ def test_default_timeframe_uses_strategy_spec():
     assert export_cli.default_timeframe("combo") == "H4"
 
 
-def test_combo_csv_emits_pending_entry_from_strategy_levels():
+def test_combo_csv_emits_pending_entry_from_strategy_entries():
     df = make_ohlcv(300)
     enriched = export_cli.run_strategy("combo", symbol="US30", tf="H1", bars=df)
 
@@ -355,9 +355,12 @@ def test_export_signals_names_file_from_requested_range_not_actual_data(monkeypa
 
 
 def test_export_signals_names_file_with_trend_filter_defaults(monkeypatch, tmp_path):
+    from wisdom_engine.we_core.src import configuration
+
     calls = []
     seen = {}
 
+    monkeypatch.setattr(configuration, "COMBO_TREND_TF_BY_SYMBOL", {"US30": {"H1": "H4"}})   # ô (US30, H1) -> trend H4
     monkeypatch.setattr(export_cli, "get_symbol", lambda symbol: {"symbol_id": 1})
 
     def fake_load_range(symbol, tf, date_from, date_to):
@@ -399,12 +402,13 @@ def test_export_signals_names_file_with_trend_filter_defaults(monkeypatch, tmp_p
         trend_mode="trend_filter",
     )
 
+    # combo: khung trend lấy từ ô (US30, H1) của bảng trend_tf_by_symbol (không còn khung mặc định chung)
     assert output.name == "combo_US30_H1_full_history_tf_knn_H4.csv"
     assert output.parent == tmp_path / "trend_filter"
     assert calls == [("US30", "H1", "", ""), ("US30", "H4", "", "")]
     assert seen["strategy"] == "combo"
     assert seen["trend_tf"] == "H4"
-    assert seen["overrides"]["TREND_TYPE"] == "knn"
+    assert seen["overrides"]["TREND_METHODS"] == ("knn",)
 
 
 def test_trend_flag_is_a_shortcut_for_trend_filter(monkeypatch, tmp_path):
@@ -456,3 +460,122 @@ def test_macd_break_csv_has_three_columns_and_ctrader_side_codes():
     assert set(frame["signal"].unique()) == {1, 2}
     assert frame["atr"].notna().all()
     assert len(frame) == 7  # trước 2026-10-13 (chưa có lọc lặp cùng chiều): 39
+
+
+def test_export_mode_suffix_joins_trend_methods():
+    assert export_cli.export_mode_suffix("no_trend") == "nt"
+    assert export_cli.export_mode_suffix("trend_filter", trend_methods=("knn",), trend_tf="h4") == "tf_knn_H4"
+    assert export_cli.export_mode_suffix("trend_filter", trend_methods=("knn", "other"), trend_tf="H4") == "tf_knn+other_H4"
+
+
+def test_resolve_trend_reference_uses_config_methods_and_rejects_unknown_ones(monkeypatch):
+    from wisdom_engine.we_core.src import configuration
+
+    monkeypatch.setattr(configuration, "COMBO_TREND_TF_BY_SYMBOL", {"US30": {"H1": "H4"}})
+    methods, tf = export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf="H1", overrides={})
+    assert (methods, tf) == (("knn",), "H4")
+
+    methods, _ = export_cli.resolve_trend_reference(
+        "combo", symbol="US30", entry_tf="H1", overrides={}, trend_methods=" KNN "
+    )
+    assert methods == ("knn",)
+
+    with pytest.raises(ValueError, match="unknown trend method"):
+        export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf="H1", overrides={}, trend_methods="nope")
+
+
+def test_resolve_trend_reference_chi_nhan_khung_trend_lon_hon_hoac_bang_khung_tin_hieu(monkeypatch):
+    """Quy tắc 2026-10-16: khung trend >= khung tín hiệu. Ô của combo trỏ H4 hợp lệ với mọi khung vào lệnh H1-H4."""
+    from wisdom_engine.we_core.src import configuration
+
+    monkeypatch.setattr(configuration, "COMBO_TREND_TF_BY_SYMBOL", {"US30": {tf: "H4" for tf in ("H1", "H2", "H3", "H4")}})
+    for entry_tf in ("H1", "H2", "H3", "H4"):
+        _, tf = export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf=entry_tf, overrides={})
+        assert tf == "H4"
+    # bằng nhau và lớn hơn đều được; M45 (45 phút) với H1 (60 phút) là lớn hơn
+    assert export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf="H2", overrides={}, trend_tf="H2")[1] == "H2"
+    assert export_cli.resolve_trend_reference("ma_cross", symbol="US30", entry_tf="M45", overrides={}, trend_tf="H1")[1] == "H1"
+    # nhỏ hơn bị chặn, thông báo nêu cả hai khung
+    with pytest.raises(ValueError, match=r"TREND_TF H1 must not be smaller than the entry timeframe H2"):
+        export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf="H2", overrides={}, trend_tf="H1")
+    with pytest.raises(ValueError, match="must not be smaller"):
+        export_cli.resolve_trend_reference("macd_break", symbol="US30", entry_tf="H4", overrides={}, trend_tf="h3")
+
+
+def test_export_signals_bao_loi_khung_trend_nho_hon_truoc_khi_tai_du_lieu(monkeypatch, tmp_path):
+    monkeypatch.setattr(export_cli, "get_symbol", lambda symbol: {"symbol_id": 1})
+
+    def must_not_load(*args, **kwargs):
+        raise AssertionError("không được tải dữ liệu khi khung trend không hợp lệ")
+
+    monkeypatch.setattr(export_cli, "load_range", must_not_load)
+    monkeypatch.setattr(export_cli, "load_range_with_warmup", must_not_load)
+
+    with pytest.raises(ValueError, match="must not be smaller"):
+        export_cli.export_signals(
+            strategy="combo",
+            symbol="US30",
+            tf="H2",
+            date_from="",
+            date_to="",
+            overrides={},
+            output_dir=str(tmp_path),
+            trend_mode="trend_filter",
+            trend_tf="H1",
+        )
+    assert not list(tmp_path.rglob("*.csv"))
+
+
+def test_cli_accepts_trend_methods_flag():
+    args = export_cli._parse_args(["--strategy", "combo", "--trend", "--trend-methods", "knn", "--trend-tf", "H2"])
+
+    assert args.trend_methods == "knn"
+    assert args.trend_tf == "H2"
+
+
+def test_resolve_trend_reference_dung_khung_trend_theo_o_cua_symbol_va_khung_vao_lenh(monkeypatch):
+    from wisdom_engine.we_core.src import configuration
+
+    monkeypatch.setattr(configuration, "COMBO_TREND_TF_BY_SYMBOL", {"BTCUSD": {"H2": "H2", "H1": "H3"}})
+
+    assert export_cli.resolve_trend_reference("combo", symbol="BTCUSD", entry_tf="H2", overrides={})[1] == "H2"
+    assert export_cli.resolve_trend_reference("combo", symbol="BTCUSD", entry_tf="H1", overrides={})[1] == "H3"
+    # không có ô (khung vào lệnh khác, hoặc symbol ngoài bảng) và không có --trend-tf -> báo lỗi rõ, không có khung mặc định
+    with pytest.raises(ValueError, match=r"No trend timeframe configured for BTCUSD H3; pass --trend-tf"):
+        export_cli.resolve_trend_reference("combo", symbol="BTCUSD", entry_tf="H3", overrides={})
+    with pytest.raises(ValueError, match=r"No trend timeframe configured for US30 H2; pass --trend-tf"):
+        export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf="H2", overrides={})
+    # --trend-tf tường minh thắng ô riêng và cứu được ô thiếu
+    assert export_cli.resolve_trend_reference("combo", symbol="BTCUSD", entry_tf="H2", overrides={}, trend_tf="H4")[1] == "H4"
+    assert export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf="H2", overrides={}, trend_tf="H3")[1] == "H3"
+
+
+# --- Số chữ số thập phân của atr/entry theo symbol (defaults.price_decimals, 2026-10-20) -------------------------
+
+
+def test_price_decimals_theo_symbol_mac_dinh_2():
+    from wisdom_engine.we_core.src import configuration
+
+    assert configuration.price_decimals("US30") == 2
+    assert configuration.price_decimals(None) == 2
+    assert [configuration.price_decimals(s) for s in ("EURUSD", "gbpusd", " USDCAD ")] == [5, 5, 5]
+    assert configuration.price_decimals("USDJPY") == 3
+
+
+def test_signal_frame_lam_tron_atr_va_entry_theo_decimals_va_mac_dinh_van_la_2():
+    enriched = pd.DataFrame(
+        {
+            "bartime": pd.to_datetime(["2026-01-01 10:00", "2026-01-01 11:00"]),
+            "signal": [1, -1],
+            "atr": [0.0012345678, 0.0023456789],
+            "entry_price": [1.1612345678, 1.1587654321],
+        }
+    )
+
+    default = export_cli.signal_frame(enriched, strategy="combo")
+    five = export_cli.signal_frame(enriched, strategy="combo", decimals=5)
+
+    assert default["atr"].tolist() == [0.0, 0.0] and default["entry"].tolist() == [1.16, 1.16]      # hành vi cũ, symbol mặc định
+    assert five["atr"].tolist() == [0.00123, 0.00235] and five["entry"].tolist() == [1.16123, 1.15877]
+    assert "1.16123" in export_cli.to_csv(enriched, strategy="combo", decimals=5)
+    assert "1.16123" not in export_cli.to_csv(enriched, strategy="combo")

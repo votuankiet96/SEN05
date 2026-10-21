@@ -11,8 +11,8 @@ Mô tả:
 
 Đầu vào:
     pd.DataFrame OHLCV đã enrich (bắt buộc có bartime/open/high/low/close;
-    các hàm còn lại cần thêm cột signal, và tuỳ hàm cần thêm entry_time/
-    entry_price/sl_price/tp_price/risk_reward/signal_reason).
+    các hàm còn lại cần thêm cột signal, và tuỳ hàm cần thêm entry_price/
+    signal_reason).
 
 Đầu ra:
     candlestick_points(df)   -> [{time, open, high, low, close}]
@@ -21,12 +21,22 @@ Mô tả:
     histogram_points(df,col) -> [{time, value, color}]
     signal_table_rows(df)    -> [{time, bartime, side, entry, sl, tp, rr, reason}]
     stats_summary(df)        -> {total, buy, sell, last}
+
+Hiệu năng:
+    Bốn hàm dựng chuỗi dài (candlestick_points, line_points, histogram_points,
+    trend_line_points) xử lý theo cột bằng numpy, không lặp từng dòng bằng
+    iterrows — vòng lặp cũ chiếm 64–90% thời gian một lần quét của dashboard.
+    Kết quả giống hệt bản lặp từng dòng (từng giá trị, từng khoá, cùng thứ
+    tự); test khoá điều này bằng bản lặp cũ ở tests/payload_reference.py.
+    Các hàm chỉ chạy trên vài dòng tín hiệu (signal_markers, signal_table_rows,
+    trend_bias_markers) giữ nguyên cách lặp từng dòng.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 BUY_COLOR = "#16a34a"
@@ -54,7 +64,57 @@ def to_unix_ts(value: object) -> int:
     return int(ts.timestamp())
 
 
-def candlestick_points(df: pd.DataFrame) -> list[dict[str, Any]]:
+def _epoch_seconds(values: pd.Series) -> list[int]:
+    """
+    Cột thời gian -> list Unix giây UTC, từng phần tử bằng to_unix_ts().
+
+    Cột datetime64 (naive coi như UTC, hoặc có timezone) đổi một lượt bằng numpy;
+    phần lẻ giây bị cắt, như int() trong to_unix_ts() với thời điểm từ 1970 trở đi
+    (bar của hệ thống này luôn tròn phút, từ 2017). Kiểu khác (object, chuỗi...) và
+    cột có NaT đi đường từng phần tử như cũ, nên NaT vẫn ném ValueError.
+    """
+    if not pd.api.types.is_datetime64_any_dtype(values) or values.isna().any():
+        return [to_unix_ts(value) for value in values]
+    if values.dt.tz is not None:
+        values = values.dt.tz_convert("UTC").dt.tz_localize(None)
+    return values.to_numpy().astype("datetime64[s]").astype("int64").tolist()
+
+
+def _floats(df: pd.DataFrame, column: str) -> np.ndarray | None:
+    """Cột -> mảng float64 (None/NA thành NaN); None nếu df không có cột đó."""
+    if column not in df.columns:
+        return None
+    return df[column].to_numpy(dtype="float64", na_value=np.nan)
+
+
+def _round2(values: np.ndarray, digits: int = 2) -> list[float]:
+    """
+    Làm tròn `digits` chữ số (mặc định 2), cùng quy tắc với _to_number(), bằng round() của Python.
+    `digits` lớn hơn 2 dành cho symbol giá ~1 như forex (configuration.price_decimals).
+
+    KHÔNG đổi thành np.round: thuật toán khác nên lệch ở ca sát nửa
+    (round(2.675, 2) = 2.67 còn np.round ra 2.68), và dashboard đã hiển thị
+    giá trị của round().
+    """
+    return [round(value, digits) for value in values.tolist()]
+
+
+def _column_points(df: pd.DataFrame, column: str, digits: int = 2) -> tuple[list[int], list[float], np.ndarray] | None:
+    """
+    Các điểm (thời gian, giá trị đã làm tròn) của một cột, bỏ dòng NaN, kèm mặt
+    nạ dòng được giữ (để ghép thêm cột khác cùng dòng). None nếu không có cột
+    hoặc không còn điểm nào.
+    """
+    values = _floats(df, column)
+    if values is None:
+        return None
+    keep = ~np.isnan(values)
+    if not keep.any():
+        return None
+    return _epoch_seconds(df["bartime"][keep]), _round2(values[keep], digits), keep
+
+
+def candlestick_points(df: pd.DataFrame, digits: int = 2) -> list[dict[str, Any]]:
     """
     Trích dữ liệu nến OHLC cho Lightweight Charts CandlestickSeries.
 
@@ -63,22 +123,25 @@ def candlestick_points(df: pd.DataFrame) -> list[dict[str, Any]]:
 
     Args:
         df: DataFrame với cột [bartime, open, high, low, close].
+        digits: Số chữ số thập phân khi làm tròn giá (mặc định 2).
 
     Returns:
         List [{time, open, high, low, close}] theo đúng thứ tự df.
     """
+    if "bartime" not in df.columns:
+        return []
+    valid = df["bartime"].notna().to_numpy()
+    if not valid.any():
+        return []
+    rows = df if valid.all() else df[valid]
+    # Làm tròn 2 chữ số (chốt 2026-09-23), đồng nhất với mọi giá trị số khác
+    # trên dashboard (xem _to_number()).
+    opens, highs, lows, closes = (
+        _round2(rows[column].to_numpy(dtype="float64"), digits) for column in ("open", "high", "low", "close")
+    )
     return [
-        {
-            "time": to_unix_ts(row["bartime"]),
-            # Làm tròn 2 chữ số (chốt 2026-09-23), đồng nhất với mọi giá trị
-            # số khác trên dashboard (xem _to_number()).
-            "open": round(float(row["open"]), 2),
-            "high": round(float(row["high"]), 2),
-            "low": round(float(row["low"]), 2),
-            "close": round(float(row["close"]), 2),
-        }
-        for _, row in df.iterrows()
-        if pd.notna(row.get("bartime"))
+        {"time": t, "open": o, "high": h, "low": lo, "close": c}
+        for t, o, h, lo, c in zip(_epoch_seconds(rows["bartime"]), opens, highs, lows, closes, strict=True)
     ]
 
 
@@ -137,7 +200,7 @@ def _signal_rows(df: pd.DataFrame) -> pd.DataFrame:
     return df[df["signal"].fillna(0).astype(int).ne(0)]
 
 
-def line_points(df: pd.DataFrame, column: str, *, color: str | None = None) -> list[dict[str, Any]]:
+def line_points(df: pd.DataFrame, column: str, *, color: str | None = None, digits: int = 2) -> list[dict[str, Any]]:
     """
     Trích dữ liệu line series cho các đường overlay MA/Fast/Slow SMA.
 
@@ -149,21 +212,20 @@ def line_points(df: pd.DataFrame, column: str, *, color: str | None = None) -> l
     Returns:
         List [{time, value, color?}] cho Lightweight Charts addLineSeries.
     """
-    rows: list[dict[str, Any]] = []
-    for _, row in df.iterrows():
-        value = _to_number(row.get(column))
-        if value is None:
-            continue
-        item: dict[str, Any] = {"time": to_unix_ts(row["bartime"]), "value": value}
-        if color:
-            item["color"] = color
-        rows.append(item)
-    return rows
+    points = _column_points(df, column, digits)
+    if points is None:
+        return []
+    times, values, _ = points
+    if color:
+        return [{"time": t, "value": v, "color": color} for t, v in zip(times, values, strict=True)]
+    return [{"time": t, "value": v} for t, v in zip(times, values, strict=True)]
 
 
-def histogram_points(df: pd.DataFrame, column: str) -> list[dict[str, Any]]:
+def histogram_points(df: pd.DataFrame, column: str, digits: int = 2) -> list[dict[str, Any]]:
     """
     Trích dữ liệu histogram (panel MACD Histogram) — màu xanh/đỏ theo dấu.
+
+    Dấu xét trên giá trị ĐÃ làm tròn 2 chữ số (-0.004 thành -0.0, vẫn tính là >= 0).
 
     Args:
         df: DataFrame chứa cột bartime và `column` (thường "macd_h").
@@ -172,19 +234,14 @@ def histogram_points(df: pd.DataFrame, column: str) -> list[dict[str, Any]]:
     Returns:
         List [{time, value, color}], bỏ qua dòng NaN.
     """
-    rows: list[dict[str, Any]] = []
-    for _, row in df.iterrows():
-        value = _to_number(row.get(column))
-        if value is None:
-            continue
-        rows.append(
-            {
-                "time": to_unix_ts(row["bartime"]),
-                "value": value,
-                "color": UP_COLOR if value >= 0 else DOWN_COLOR,
-            }
-        )
-    return rows
+    points = _column_points(df, column, digits)
+    if points is None:
+        return []
+    times, values, _ = points
+    return [
+        {"time": t, "value": v, "color": UP_COLOR if v >= 0 else DOWN_COLOR}
+        for t, v in zip(times, values, strict=True)
+    ]
 
 
 def trend_line_points(
@@ -192,30 +249,33 @@ def trend_line_points(
     column: str,
     *,
     bias_column: str = "trend_bias",
+    digits: int = 2,
 ) -> list[dict[str, Any]]:
     """
-    Trích line series cho KNN trend, tô màu từng điểm theo trend_bias.
+    Trích line series của một khối xác nhận xu hướng, tô màu từng điểm theo
+    cột hướng bias_column (mặc định trend_bias đã ghép các khối).
 
     1 = xanh, -1 = đỏ, 0/NaN = xám. Không dùng cột signal để tránh lẫn
     marker trend với marker vào lệnh.
     """
     if bias_column not in df.columns:
-        return line_points(df, column)
+        return line_points(df, column, digits=digits)
 
-    rows: list[dict[str, Any]] = []
-    for _, row in df.iterrows():
-        value = _to_number(row.get(column))
-        if value is None:
-            continue
-        bias = _to_number(row.get(bias_column))
-        color = UP_COLOR if bias == 1 else DOWN_COLOR if bias == -1 else "#94a3b8"
-        rows.append({"time": to_unix_ts(row["bartime"]), "value": value, "color": color})
-    return rows
+    points = _column_points(df, column, digits)
+    if points is None:
+        return []
+    times, values, keep = points
+    # Hướng cũng xét sau khi làm tròn 2 chữ số (0.999 thành 1.0 tính là 1); NaN không bằng 1 hay -1 nên ra xám.
+    biases = _round2(_floats(df, bias_column)[keep])
+    return [
+        {"time": t, "value": v, "color": UP_COLOR if b == 1 else DOWN_COLOR if b == -1 else "#94a3b8"}
+        for t, v, b in zip(times, values, biases, strict=True)
+    ]
 
 
 def trend_bias_markers(df: pd.DataFrame) -> list[dict[str, Any]]:
     """
-    Tạo marker khi KNN trend đổi bias trên chart khung lớn.
+    Tạo marker khi trend (đã ghép các khối xác nhận) đổi bias trên chart khung lớn.
 
     Marker này chỉ diễn giải trạng thái trend, không phải tín hiệu BUY/SELL.
     """
@@ -262,7 +322,7 @@ def trend_bias_markers(df: pd.DataFrame) -> list[dict[str, Any]]:
     return markers
 
 
-def signal_table_rows(df: pd.DataFrame) -> list[dict[str, Any]]:
+def signal_table_rows(df: pd.DataFrame, digits: int = 2) -> list[dict[str, Any]]:
     """
     Trích bảng danh sách tín hiệu cho dashboard.
 
@@ -270,7 +330,7 @@ def signal_table_rows(df: pd.DataFrame) -> list[dict[str, Any]]:
         df: DataFrame đã qua configuration.run_strategy().
 
     Returns:
-        List [{time, bartime, side, entry, sl, tp, rr, reason}], theo thứ tự df.
+        List [{time, bartime, side, entry, reason}], theo thứ tự df.
     """
     output: list[dict[str, Any]] = []
     for _, row in _signal_rows(df).iterrows():
@@ -280,13 +340,8 @@ def signal_table_rows(df: pd.DataFrame) -> list[dict[str, Any]]:
                 "time": to_unix_ts(row["bartime"]),
                 "bartime": pd.Timestamp(row["bartime"]).strftime("%Y-%m-%d %H:%M"),
                 "side": "BUY" if is_buy else "SELL",
-                # 2 chữ số cho mọi trường (chốt 2026-09-23, đồng nhất với
-                # _to_number() mặc định) -- trước đó entry/sl/tp dùng
-                # 5 chữ số riêng lẻ, không khớp với rr (2 chữ số).
-                "entry": _to_number(row.get("entry_price")),
-                "sl": _to_number(row.get("sl_price")),
-                "tp": _to_number(row.get("tp_price")),
-                "rr": _to_number(row.get("risk_reward")),
+                # 2 chữ số (chốt 2026-09-23, đồng nhất với _to_number() mặc định).
+                "entry": _to_number(row.get("entry_price"), digits),
                 "reason": row.get("signal_reason", ""),
             }
         )

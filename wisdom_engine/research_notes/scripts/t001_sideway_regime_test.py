@@ -4,7 +4,8 @@ breakout_atr và sma_trend không. Chỉ đọc DP6. Không sửa repo.
 LƯU Ý TÁI LẬP: `breakout_atr` đã được thay bằng `macd_break` (2026-10-06, logic khác nên KHÔNG dùng
 thay được) nên script này không chạy được trên mã hiện tại. Muốn chạy lại T001 phải lấy mã cũ từ git
 history (commit 64a2a18: src/strategies/breakout_atr.py và add_breakout_atr_indicators trong
-src/indicator.py)."""
+src/indicator.py). Từ 2026-10-16 `sma_trend` cũng đã xoá khỏi we_core (strategies/sma_trend.py,
+add_sma_trend_indicators, add_sma_trend_entries): lấy từ cùng commit nếu cần chạy lại."""
 import sys
 
 import numpy as np

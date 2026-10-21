@@ -43,7 +43,9 @@ import pandas as pd
 from wisdom_engine.we_core.src.configuration import (
     DEFAULT_SYMBOL,
     WARMUP_BARS,
+    check_trend_timeframe,
     get_strategy,
+    price_decimals,
     run_strategy,
     run_strategy_with_trend_reference,
     trim_to_requested_range,
@@ -82,7 +84,7 @@ def signal_rows(df: pd.DataFrame) -> pd.DataFrame:
     return df[df["signal"].fillna(0).astype(int).ne(0)].copy()
 
 
-def signal_frame(enriched: pd.DataFrame, *, strategy: str) -> pd.DataFrame:
+def signal_frame(enriched: pd.DataFrame, *, strategy: str, decimals: int = 2) -> pd.DataFrame:
     """
     Dựng DataFrame đúng schema CSV (bartime/atr/entry/signal theo strategy),
     CHƯA chuyển thành chuỗi CSV -- dùng chung cho to_csv() (ghi file) và
@@ -93,7 +95,7 @@ def signal_frame(enriched: pd.DataFrame, *, strategy: str) -> pd.DataFrame:
         - MA Cross: bartime, atr, signal
         - Combo: bartime, atr, entry, signal
 
-    Combo dùng entry_price đã được add_combo_levels() tính từ high/low và X
+    Combo dùng entry_price đã được add_combo_entries() tính từ high/low và X
     theo symbol.
     """
     rows = signal_rows(enriched)
@@ -102,7 +104,8 @@ def signal_frame(enriched: pd.DataFrame, *, strategy: str) -> pd.DataFrame:
     # này. signal_rows() đã loại hết dòng signal==0 ở trên, nên .replace() chỉ
     # còn gặp 1/-1. KHÔNG làm tròn -- đây là mã phân loại, không phải số đo.
     signal = pd.to_numeric(rows.get("signal", 0), errors="coerce").fillna(0).astype(int)
-    # atr/entry làm tròn 2 chữ số thập phân (chốt 2026-09-23) -- atr tính qua
+    # atr/entry làm tròn `decimals` chữ số thập phân (mặc định 2, chốt 2026-09-23; caller truyền
+    # configuration.price_decimals(symbol) để symbol giá ~1 như forex giữ 5 chữ số, JPY 3) -- atr tính qua
     # Wilder smoothing đệ quy (_wilder_smooth) nên vốn có rất nhiều chữ số lẻ
     # không mang thêm thông tin thật (đã thấy thực tế 15 chữ số lẻ trên CSV/
     # Redis DB0), làm tròn ở ĐÚNG 1 chỗ này vì signal_frame() là nguồn duy
@@ -121,24 +124,24 @@ def signal_frame(enriched: pd.DataFrame, *, strategy: str) -> pd.DataFrame:
         # chuỗi thiếu giây sẽ lỗi. Đây là dữ liệu XUẤT RA NGOÀI repo (CSV +
         # Redis DB0) nên đổi cần báo VM-BO20 trước (xem CLAUDE.md mục 7).
         "bartime": pd.to_datetime(rows["bartime"], errors="coerce").dt.strftime("%Y-%m-%d %H:%M:%S"),
-        "atr": pd.to_numeric(rows.get("atr"), errors="coerce").round(2),
+        "atr": pd.to_numeric(rows.get("atr"), errors="coerce").round(decimals),
         "signal": signal.replace({-1: 2}),
     }
     key = str(strategy).strip().lower()
     if key == "combo":
-        data["entry"] = pd.to_numeric(rows["entry_price"], errors="coerce").round(2)
+        data["entry"] = pd.to_numeric(rows["entry_price"], errors="coerce").round(decimals)
 
     return pd.DataFrame(data, columns=list(csv_columns(strategy)))
 
 
-def to_csv(enriched: pd.DataFrame, *, strategy: str) -> str:
+def to_csv(enriched: pd.DataFrame, *, strategy: str, decimals: int = 2) -> str:
     """
     Tạo nội dung CSV từ DataFrame đã chạy strategy.
 
     Dashboard dùng lại chính hàm này để hai đường export không lệch schema
     hay giá pending. Xem signal_frame() cho ý nghĩa từng cột.
     """
-    return signal_frame(enriched, strategy=strategy).to_csv(index=False)
+    return signal_frame(enriched, strategy=strategy, decimals=decimals).to_csv(index=False)
 
 
 def parse_overrides(param_list: list[str]) -> dict[str, str]:
@@ -219,34 +222,37 @@ def resolve_trend_reference(
     symbol: str,
     entry_tf: str,
     overrides: dict[str, str],
-    trend_type: str = "",
+    trend_methods: str = "",
     trend_tf: str = "",
-) -> tuple[str, str]:
+) -> tuple[tuple[str, ...], str]:
     """
-    Resolve trend type/timeframe từ CLI override hoặc default strategy config.
+    Resolve các khối xác nhận xu hướng (tuple tên) và timeframe từ CLI override hoặc default strategy config.
     """
     spec = get_strategy(strategy_key)
     trend_overrides = {**overrides, "ENTRY_TF": entry_tf}
-    if trend_type:
-        trend_overrides["TREND_TYPE"] = str(trend_type).strip().lower()
+    if trend_methods:
+        trend_overrides["TREND_METHODS"] = trend_methods
     if trend_tf:
         trend_overrides["TREND_TF"] = str(trend_tf).strip().upper()
 
     params = spec.normalize_params(trend_overrides, symbol, entry_tf)
-    resolved_type = str(params.get("TREND_TYPE") or "").strip().lower()
+    resolved_methods = tuple(params.get("TREND_METHODS") or ())
     resolved_tf = str(params.get("TREND_TF") or "").strip().upper()
-    if not resolved_type or not resolved_tf:
+    if not resolved_methods:
         raise ValueError(f"Strategy '{strategy_key}' does not support trend reference export.")
-    return resolved_type, resolved_tf
+    if not resolved_tf:
+        raise ValueError(f"No trend timeframe configured for {symbol} {entry_tf}; pass --trend-tf.")
+    check_trend_timeframe(entry_tf, resolved_tf)  # khung trend >= khung tín hiệu; báo lỗi TRƯỚC khi tải SQL
+    return resolved_methods, resolved_tf
 
 
-def export_mode_suffix(mode: str, *, trend_type: str = "", trend_tf: str = "") -> str:
+def export_mode_suffix(mode: str, *, trend_methods: tuple[str, ...] = (), trend_tf: str = "") -> str:
     """
     Phần tên file biểu diễn mode export.
     """
     if mode == TREND_MODE_NO_TREND:
         return "nt"
-    return f"tf_{trend_type.lower()}_{trend_tf.upper()}"
+    return f"tf_{'+'.join(trend_methods).lower()}_{trend_tf.upper()}"
 
 
 def resolve_symbol_tf(strategy: str, symbol: str, tf: str) -> tuple[str, str]:
@@ -313,7 +319,7 @@ def export_signals(
     output_override: str = "",
     trend_mode: str = "",
     use_trend: bool | None = None,
-    trend_type: str = "",
+    trend_methods: str = "",
     trend_tf: str = "",
 ) -> Path:
     """
@@ -340,12 +346,12 @@ def export_signals(
     mode = resolve_trend_mode(trend_mode, use_trend=use_trend)
 
     if mode == TREND_MODE_FILTER:
-        resolved_trend_type, resolved_trend_tf = resolve_trend_reference(
+        resolved_trend_methods, resolved_trend_tf = resolve_trend_reference(
             strategy_key,
             symbol=symbol,
             entry_tf=tf,
             overrides=overrides,
-            trend_type=trend_type,
+            trend_methods=trend_methods,
             trend_tf=trend_tf,
         )
         entry_raw = _load_entry_range(symbol, tf, date_from, date_to)
@@ -357,10 +363,10 @@ def export_signals(
             entry_bars=entry_raw,
             trend_tf=resolved_trend_tf,
             trend_bars=trend_raw,
-            overrides={**overrides, "TREND_TYPE": resolved_trend_type},
+            overrides={**overrides, "TREND_METHODS": resolved_trend_methods},
         )
     else:
-        resolved_trend_type = ""
+        resolved_trend_methods = ()
         resolved_trend_tf = ""
         raw = _load_entry_range(symbol, tf, date_from, date_to)
         enriched = run_strategy(strategy_key, symbol=symbol, tf=tf, bars=raw, overrides=overrides)
@@ -372,7 +378,7 @@ def export_signals(
         label = _range_label(date_from, date_to)
         mode_suffix = export_mode_suffix(
             mode,
-            trend_type=resolved_trend_type,
+            trend_methods=resolved_trend_methods,
             trend_tf=resolved_trend_tf,
         )
         filename = f"{strategy_key}_{symbol}_{tf}_{label}_{mode_suffix}.csv"
@@ -385,13 +391,13 @@ def export_signals(
         output = base_dir / filename
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(to_csv(enriched, strategy=strategy_key), encoding="utf-8")
+    output.write_text(to_csv(enriched, strategy=strategy_key, decimals=price_decimals(symbol)), encoding="utf-8")
     return output
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Export wisdom_engine strategy signals to CSV.")
-    parser.add_argument("--strategy", default="combo", help="Strategy key: combo, ma_cross, macd_break or sma_trend.")
+    parser.add_argument("--strategy", default="combo", help="Strategy key: combo, ma_cross or macd_break.")
     parser.add_argument("--symbol", default=DEFAULT_SYMBOL, help="Symbol code, e.g. US30.")
     parser.add_argument("--tf", default="", help="Timeframe code; omitted uses the strategy default.")
     parser.add_argument(
@@ -425,8 +431,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Shortcut for --trend-mode trend_filter.",
     )
-    parser.add_argument("--trend-type", default="", help="Trend type; omitted uses strategy default.")
-    parser.add_argument("--trend-tf", default="", help="Trend-reference timeframe; omitted uses strategy default.")
+    parser.add_argument(
+        "--trend-methods",
+        default="",
+        help="Comma-separated trend-confirmation methods (e.g. knn); omitted uses strategy default.",
+    )
+    parser.add_argument(
+        "--trend-tf",
+        default="",
+        help="Trend-reference timeframe (must be >= the entry timeframe); omitted uses strategy default.",
+    )
     return parser.parse_args(argv)
 
 
@@ -447,7 +461,7 @@ def main(argv: list[str] | None = None) -> int:
             output_override=args.output,
             trend_mode=args.trend_mode,
             use_trend=args.trend,
-            trend_type=args.trend_type,
+            trend_methods=args.trend_methods,
             trend_tf=args.trend_tf,
         )
     except Exception as exc:  # noqa: BLE001 -- Biên CLI: gom mọi lỗi thành 1 dòng dễ đọc.

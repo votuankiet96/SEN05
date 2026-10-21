@@ -33,7 +33,7 @@ DOW_CONFIG_KEYS = {
 
 def test_combo_signals_match_golden():
     from wisdom_engine.we_core.src.indicator import add_combo_indicators
-    from wisdom_engine.we_core.src.levels import add_combo_levels
+    from wisdom_engine.we_core.src.rules.entries import add_combo_entries
     from wisdom_engine.we_core.src.strategies.combo import detect_combo_signals
 
     # US30 (X thật = 10.0) thay cho TESTSYM cũ (X = 0.0 do fallback) nên
@@ -42,7 +42,7 @@ def test_combo_signals_match_golden():
     params = configuration.normalize_combo_params({}, "US30", "H1")
     indicators = add_combo_indicators(df, params)
     signals = detect_combo_signals(indicators, symbol="US30", params=params)
-    enriched = add_combo_levels(signals, params, "US30")
+    enriched = add_combo_entries(signals, params, "US30")
 
     # Tính lại 2026-10-11 khi khôi phục lọc lặp cùng chiều (alternating.py): trước đó
     # {0: 269, 1: 15, -1: 16} và 31 dòng; bar đầu/cuối vẫn là hai tín hiệu dưới đây.
@@ -54,22 +54,19 @@ def test_combo_signals_match_golden():
     assert str(first["bartime"]) == "2026-01-05 01:45:00"
     assert int(first["signal"]) == -1
     assert round(float(first["entry_price"]), 6) == 88.288889
-    # wisdom_engine không tính SL/TP (KSL/KTP chuyển sang order_gateway,
-    # chốt 2026-09-21) -- sl_price/tp_price luôn NaN, xem levels.py.
-    assert pd.isna(first["sl_price"])
-    assert pd.isna(first["tp_price"])
+    # wisdom_engine không tính SL/TP (KSL/KTP chuyển sang order_gateway, chốt 2026-09-21);
+    # các cột sl_price/tp_price/risk_reward/entry_time đã bỏ 2026-10-16 (xem entries.py).
+    assert not {"sl_price", "tp_price", "risk_reward", "entry_time"} & set(enriched.columns)
 
     last = rows.iloc[-1]
     assert str(last["bartime"]) == "2026-01-06 00:25:00"
     assert int(last["signal"]) == -1
     assert round(float(last["entry_price"]), 6) == 78.30068
-    assert pd.isna(last["sl_price"])
-    assert pd.isna(last["tp_price"])
 
 
 def _alternating(setups: str) -> list[int]:
     """"B"/"S" = bar có setup BUY/SELL, "." = không có setup -> signal sau lọc xen kẽ."""
-    from wisdom_engine.we_core.src.alternating import alternating_signals
+    from wisdom_engine.we_core.src.rules.alternating import alternating_signals
 
     buy = pd.Series([c == "B" for c in setups])
     sell = pd.Series([c == "S" for c in setups])
@@ -86,7 +83,7 @@ def test_alternating_chi_ban_tin_hieu_dau_khi_doi_chieu():
 
 
 def test_alternating_coi_nan_la_khong_co_setup():
-    from wisdom_engine.we_core.src.alternating import alternating_signals
+    from wisdom_engine.we_core.src.rules.alternating import alternating_signals
 
     buy = pd.Series([True, float("nan"), True], dtype="object")
     sell = pd.Series([False, False, False])
@@ -94,7 +91,7 @@ def test_alternating_coi_nan_la_khong_co_setup():
 
 
 def test_apply_alternating_filter_bat_tat_theo_co():
-    from wisdom_engine.we_core.src.alternating import (
+    from wisdom_engine.we_core.src.rules.alternating import (
         alternating_filter_enabled,
         apply_alternating_filter,
     )
@@ -155,36 +152,50 @@ def _combo_trend_frame(rows: str, bias: list[int]) -> pd.DataFrame:
     return frame
 
 
-def test_combo_lock_xen_ke_dung_truoc_trend_filter():
-    """Khoá thứ tự: lọc xen kẽ chạy trên setup TRƯỚC, rồi trend filter mới lọc (signal ⊆ raw_signal, DB1 ⊆ DB0).
-    Hệ quả đã biết: setup bị trend filter loại vẫn chiếm lượt đầu tiên của hướng đó."""
+def test_combo_lock_xen_ke_truoc_roi_trend_sau():
+    """Khoá thứ tự (đổi lại 2026-10-16, về thứ tự có từ trước 2026-10-15): lọc xen kẽ chạy TRƯỚC trên mọi setup,
+    trend filter lọc SAU trên raw_signal đã xen kẽ -> signal ⊆ raw_signal (DB1 ⊆ DB0)."""
     from wisdom_engine.we_core.src.strategies.combo import detect_combo_signals
 
     params = {"SESSION_HOURS_UTC": [], "TREND_FILTER_ENABLED": True, "ALTERNATING_FILTER_ENABLED": True}
-    # BUY lệch trend (-1) rồi BUY cùng trend (+1), chưa có setup SELL giữa: BUY thứ hai bị coi là lặp -> mất
+    # BUY lệch trend (-1) rồi BUY cùng trend (+1), chưa có setup SELL giữa. BUY thứ nhất vẫn chiếm "lượt đầu" của
+    # hướng BUY (raw_signal) dù bị trend loại, nên BUY thứ hai bị coi là lặp (raw_signal = 0) và KHÔNG bắn dù đúng
+    # trend: cả đợt mất (bộ lọc không chờ trend đổi chiều giữa chừng).
     out = detect_combo_signals(_combo_trend_frame(".B.B", [0, -1, 0, 1]), params=params)
     assert out["raw_signal"].tolist() == [0, 1, 0, 0]
     assert out["signal"].tolist() == [0, 0, 0, 0]
-    # có setup SELL xen giữa (dù cũng bị trend loại) thì BUY sau lại là "lượt đầu" -> bắn nếu cùng trend
-    out = detect_combo_signals(_combo_trend_frame(".BSB", [0, -1, -1, 1]), params=params)
-    assert out["raw_signal"].tolist() == [0, 1, -1, 1]
-    assert out["signal"].tolist() == [0, 0, -1, 1]
-    assert ((out["signal"] != 0) <= (out["raw_signal"] != 0)).all()
+    # setup SELL xen giữa bị trend loại vẫn "mở lượt" cho BUY sau nó -> hai BUY liền nhau cùng chiều trong signal
+    out = detect_combo_signals(_combo_trend_frame("BSB", [1, 0, 1]), params=params)
+    assert out["raw_signal"].tolist() == [1, -1, 1]
+    assert out["signal"].tolist() == [1, 0, 1]
+    assert not ((out["signal"] != 0) & (out["raw_signal"] == 0)).any()  # signal ⊆ raw_signal (DB1 ⊆ DB0)
+
+
+def test_combo_trend_tat_thi_signal_bang_raw_signal_va_chi_con_loc_xen_ke():
+    """Tắt trend: signal == raw_signal == bộ lọc xen kẽ đứng một mình (đúng hành vi trước khi đổi thứ tự)."""
+    from wisdom_engine.we_core.src.strategies.combo import detect_combo_signals
+
+    params = {"SESSION_HOURS_UTC": [], "TREND_FILTER_ENABLED": False, "ALTERNATING_FILTER_ENABLED": True}
+    out = detect_combo_signals(_combo_trend_frame("BBSS.BSSB", [-1, 1, 0, 1, -1, 0, 1, 1, -1]), params=params)
+    assert out["raw_signal"].tolist() == [1, 0, -1, 0, 0, 1, -1, 0, 1]
+    assert out["signal"].tolist() == out["raw_signal"].tolist()
+    assert set(out["trend_filter_status"]) == {"disabled"}
 
 
 def test_combo_trend_config_has_only_strategy_level_switches():
     params = configuration.normalize_combo_params({}, "US30", "H1")
 
     assert params["TREND_FILTER_ENABLED"] is False
-    assert params["TREND_TYPE"] == "knn"
-    assert params["TREND_TF"] == "H4"
+    assert params["TREND_METHODS"] == ("knn",)
+    assert params["TREND_TF"] in configuration.COMBO_TREND_TIMEFRAMES   # tra từ bảng trend_tf_by_symbol (không còn khung mặc định chung)
+    assert "default_trend_tf" not in configuration._COMBO_CFG           # khoá đã xoá 2026-10-16
     assert TECHNICAL_TREND_KEYS.isdisjoint(params)
     assert ORDER_MANAGEMENT_KEYS.isdisjoint(params)
     assert configuration.COMBO_TREND_TIMEFRAMES == ("H1", "H2", "H3", "H4")
 
 
-def test_knn_trend_technical_defaults_live_in_trend_module():
-    from wisdom_engine.we_core.src.trend import (
+def test_knn_trend_technical_defaults_live_in_the_knn_block():
+    from wisdom_engine.we_core.src.trend_methods.knn import (
         KNN_TREND_DEFAULT_PARAMS,
         knn_trend_indicator_params,
     )
@@ -192,14 +203,14 @@ def test_knn_trend_technical_defaults_live_in_trend_module():
     params = knn_trend_indicator_params({"TREND_TF": "H4"})
 
     assert set(KNN_TREND_DEFAULT_PARAMS) == TECHNICAL_TREND_KEYS
-    assert params["TREND_TF"] == "H4"
+    assert set(params) == TECHNICAL_TREND_KEYS
     assert params["PRICE_VALUE"] == "hl2"
     assert params["AI_K"] == 3
 
 
 def test_ma_cross_signals_match_golden():
     from wisdom_engine.we_core.src.indicator import add_ma_cross_indicators
-    from wisdom_engine.we_core.src.levels import add_ma_cross_levels
+    from wisdom_engine.we_core.src.rules.entries import add_ma_cross_entries
     from wisdom_engine.we_core.src.strategies.ma_cross import detect_ma_cross_signals
 
     # ma_cross không có tham số nào theo symbol (X, session...) nên
@@ -208,19 +219,23 @@ def test_ma_cross_signals_match_golden():
     params = configuration.normalize_ma_cross_params({}, "US30", "M30")
     indicators = add_ma_cross_indicators(df, params)
     signals = detect_ma_cross_signals(indicators, symbol="US30", params=params)
-    enriched = add_ma_cross_levels(signals, params, "US30")
+    enriched = add_ma_cross_entries(signals, params, "US30")
 
-    assert signals["signal"].value_counts().to_dict() == {0: 291, -1: 5, 1: 4}
+    # Tính lại 2026-10-16 khi đổi sang luật trạng thái (fast > slow & MACD > 0, chống trùng rồi trend): trước đó
+    # {0: 291, -1: 5, 1: 4} và 9 dòng (luật cắt); nay 10 tín hiệu.
+    assert signals["signal"].value_counts().to_dict() == {0: 290, 1: 5, -1: 5}
     rows = enriched[enriched["signal"] != 0]
-    assert len(rows) == 9
+    assert len(rows) == 10
 
     first = rows.iloc[0]
-    assert str(first["bartime"]) == "2026-01-05 05:40:00"
+    assert str(first["bartime"]) == "2026-01-05 02:45:00"
     assert int(first["signal"]) == 1
-    assert round(float(first["entry_price"]), 6) == 104.270629
-    # Không tính SL/TP ở wisdom_engine (xem test combo golden phía trên).
-    assert pd.isna(first["sl_price"])
-    assert pd.isna(first["tp_price"])
+    assert round(float(first["entry_price"]), 6) == 100.55884
+
+    last = rows.iloc[-1]
+    assert str(last["bartime"]) == "2026-01-06 00:45:00"
+    assert int(last["signal"]) == -1
+    assert round(float(last["entry_price"]), 6) == 89.389466
 
 
 def test_ma_cross_defaults_match_strategy_specification():
@@ -234,8 +249,9 @@ def test_ma_cross_defaults_match_strategy_specification():
     ) == (5, 25, 5)
     assert params["ATR_PERIOD"] == 5
     assert params["TREND_FILTER_ENABLED"] is False
-    assert params["TREND_TYPE"] == "knn"
-    assert params["TREND_TF"] == "H4"
+    assert params["TREND_METHODS"] == ("knn",)
+    assert params["TREND_TF"] in configuration.MA_CROSS_TREND_TIMEFRAMES   # tra từ bảng trend_tf_by_symbol
+    assert params["ALTERNATING_FILTER_ENABLED"] is True
     assert TECHNICAL_TREND_KEYS.isdisjoint(params)
     assert ORDER_MANAGEMENT_KEYS.isdisjoint(params)
     assert DOW_CONFIG_KEYS.isdisjoint(params)
@@ -244,52 +260,120 @@ def test_ma_cross_defaults_match_strategy_specification():
     assert configuration.MA_CROSS_TREND_TIMEFRAMES == ("H1", "H2", "H3", "H4")
 
 
-def test_ma_cross_requires_macd_histogram_confirmation():
+def test_ma_cross_setup_theo_trang_thai_fast_so_slow_va_dau_macd():
+    """Luật trạng thái (đổi 2026-10-16): BUY = fast > slow VÀ macd_h > 0; SELL = fast < slow VÀ macd_h < 0.
+    Mỗi nến thỏa là một setup (không cần SMA vừa cắt); bằng nhau, thiếu một vế, NaN thì không có setup."""
     from wisdom_engine.we_core.src.strategies.ma_cross import detect_ma_cross_signals
 
+    nan = float("nan")
     frame = pd.DataFrame(
         {
-            "fast_ma": [2.0, 2.0, 1.0, 1.0],
-            "slow_ma": [1.0, 1.0, 2.0, 2.0],
-            "prev_fast_ma": [0.0, 0.0, 3.0, 3.0],
-            "prev_slow_ma": [1.0, 1.0, 2.0, 2.0],
-            "macd_h": [0.1, -0.1, -0.1, 0.1],
-            "atr": [1.0, 1.0, 1.0, 1.0],
+            #             0     1     2     3     4     5     6     7     8     9
+            "fast_ma": [2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 2.0, 2.0, nan, 2.0],
+            "slow_ma": [1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0],
+            "macd_h": [0.1, -0.1, 0.0, -0.1, 0.1, 0.0, 0.1, 0.1, 0.1, 0.1],
+            "atr": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, nan],
         }
     )
 
-    result = detect_ma_cross_signals(frame)
+    result = detect_ma_cross_signals(frame)   # không params: tắt cả trend lẫn chống trùng -> mỗi setup bắn
 
-    assert result["signal"].tolist() == [1, 0, -1, 0]
+    # 0: BUY | 1: fast>slow nhưng MACD âm | 2: MACD = 0 | 3: SELL | 4: fast<slow nhưng MACD dương
+    # 5: MACD = 0 | 6: fast = slow | 7: BUY (không cần vừa cắt) | 8: fast NaN | 9: ATR NaN
+    assert result["signal"].tolist() == [1, 0, 0, -1, 0, 0, 0, 1, 0, 0]
+    assert result["raw_signal"].tolist() == result["signal"].tolist()
+    assert result.loc[0, "signal_reason"] == "fast SMA above slow SMA; MACD histogram > 0"
+    assert result.loc[3, "signal_reason"] == "fast SMA below slow SMA; MACD histogram < 0"
+    assert set(result["trend_filter_status"]) == {"disabled"}
 
 
-def test_ma_cross_trend_wait_fires_aligned_cross_and_holds_misaligned_one_pending():
+def test_ma_cross_khong_con_cot_sma_ky_truoc_va_khong_can_su_kien_cat():
+    """Bỏ prev_fast_ma/prev_slow_ma (không còn ai đọc): khung không có hai cột đó vẫn chạy, và nến fast > slow kéo dài
+    nhiều nến liền nhau đều là setup (luật cũ chỉ bắn ở đúng nến cắt)."""
+    from wisdom_engine.we_core.src.indicator import add_ma_cross_indicators
     from wisdom_engine.we_core.src.strategies.ma_cross import detect_ma_cross_signals
 
-    frame = pd.DataFrame(
-        {
-            "fast_ma": [2.0, 2.0, 1.0, 1.0],
-            "slow_ma": [1.0, 1.0, 2.0, 2.0],
-            "prev_fast_ma": [0.0, 0.0, 3.0, 3.0],
-            "prev_slow_ma": [1.0, 1.0, 2.0, 2.0],
-            "macd_h": [0.1, -0.1, -0.1, 0.1],
-            "atr": [1.0, 1.0, 1.0, 1.0],
-            "trend_bias": [1, 1, 1, -1],
-        }
+    params = configuration.normalize_ma_cross_params({"ALTERNATING_FILTER_ENABLED": "false"}, "US30", "M30")
+    indicators = add_ma_cross_indicators(make_ohlcv(300), params)
+    assert {"fast_ma", "slow_ma", "macd_h", "atr"} <= set(indicators.columns)
+    assert not {"prev_fast_ma", "prev_slow_ma"} & set(indicators.columns)
+
+    signals = detect_ma_cross_signals(indicators, symbol="US30", params=params)["signal"].astype(int)
+    assert int((signals.eq(1) & signals.shift(1).eq(1)).sum()) > 0   # có BUY liền nhau
+    assert int((signals.eq(-1) & signals.shift(1).eq(-1)).sum()) > 0   # có SELL liền nhau
+
+
+def test_ma_cross_nhieu_nen_lien_tiep_cung_thoa_chi_ban_nen_dau_khi_bat_co():
+    from wisdom_engine.we_core.src.strategies.ma_cross import detect_ma_cross_signals
+
+    frame = _ma_cross_trend_frame("BBBSSB", [1, 1, 1, -1, -1, 1])
+    on = detect_ma_cross_signals(frame, params={"TREND_FILTER_ENABLED": True, "ALTERNATING_FILTER_ENABLED": True})
+    off = detect_ma_cross_signals(frame, params={"TREND_FILTER_ENABLED": True, "ALTERNATING_FILTER_ENABLED": False})
+
+    assert on["signal"].tolist() == [1, 0, 0, -1, 0, 1]
+    assert off["signal"].tolist() == [1, 1, 1, -1, -1, 1]   # tắt cờ: bar nào có setup (đã qua trend) cũng bắn
+
+
+def _ma_cross_trend_frame(rows: str, bias: list[int]) -> pd.DataFrame:
+    """Khung tối giản cho detect_ma_cross_signals: "B"/"S" = bar có setup BUY/SELL (fast trên/dưới slow + MACD cùng
+    dấu), "." = không có setup (fast = slow)."""
+    spec = {
+        "B": {"fast_ma": 2.0, "slow_ma": 1.0, "macd_h": 1.0},
+        "S": {"fast_ma": 1.0, "slow_ma": 2.0, "macd_h": -1.0},
+        ".": {"fast_ma": 1.0, "slow_ma": 1.0, "macd_h": 0.0},
+    }
+    frame = pd.DataFrame([spec[c] for c in rows])
+    frame["atr"] = 1.0
+    frame["trend_bias"] = bias
+    return frame
+
+
+def test_ma_cross_lock_xen_ke_truoc_roi_trend_sau():
+    """Khoá thứ tự (như combo/macd_break; chốt lại 2026-10-16): lọc lặp cùng chiều chạy TRƯỚC trên mọi setup, trend
+    filter lọc SAU trên raw_signal đã xen kẽ -> signal ⊆ raw_signal (DB1 ⊆ DB0)."""
+    from wisdom_engine.we_core.src.strategies.ma_cross import detect_ma_cross_signals
+
+    params = {"TREND_FILTER_ENABLED": True, "ALTERNATING_FILTER_ENABLED": True}
+    # BUY lệch trend (-1) rồi BUY cùng trend (+1), chưa có setup SELL giữa: BUY thứ nhất chiếm "lượt đầu" (raw_signal)
+    # dù bị trend loại, BUY thứ hai bị coi là lặp và KHÔNG bắn dù đúng trend -> cả đợt mất.
+    out = detect_ma_cross_signals(_ma_cross_trend_frame(".B.B", [0, -1, 0, 1]), params=params)
+    assert out["raw_signal"].tolist() == [0, 1, 0, 0]
+    assert out["signal"].tolist() == [0, 0, 0, 0]
+    # đợt BUY đầu đúng trend thì bắn ngay nến đầu; setup SELL xen giữa bị trend loại vẫn "mở lượt" cho BUY sau nó
+    out = detect_ma_cross_signals(_ma_cross_trend_frame("BSB", [1, 0, 1]), params=params)
+    assert out["raw_signal"].tolist() == [1, -1, 1]
+    assert out["signal"].tolist() == [1, 0, 1]
+    assert not ((out["signal"] != 0) & (out["raw_signal"] == 0)).any()  # signal ⊆ raw_signal (DB1 ⊆ DB0)
+
+
+def test_ma_cross_trend_tat_thi_signal_bang_raw_signal_va_chi_con_loc_xen_ke():
+    """Tắt trend: signal == raw_signal == bộ lọc lặp cùng chiều đứng một mình, từng bit."""
+    from wisdom_engine.we_core.src.strategies.ma_cross import detect_ma_cross_signals
+
+    params = {"TREND_FILTER_ENABLED": False, "ALTERNATING_FILTER_ENABLED": True}
+    out = detect_ma_cross_signals(_ma_cross_trend_frame("BBSS.BSSB", [-1, 1, 0, 1, -1, 0, 1, 1, -1]), params=params)
+    assert out["raw_signal"].tolist() == [1, 0, -1, 0, 0, 1, -1, 0, 1]
+    assert out["signal"].tolist() == out["raw_signal"].tolist()
+    assert set(out["trend_filter_status"]) == {"disabled"}
+
+
+def test_ma_cross_trend_filter_keeps_only_aligned_signals():
+    df = make_ohlcv(600)
+    trend_bars = make_ohlcv(600, seed=7)
+    out = configuration.run_strategy_with_trend_reference(
+        "ma_cross", symbol="US30", entry_tf="M30", entry_bars=df, trend_tf="H2", trend_bars=trend_bars
     )
 
-    result = detect_ma_cross_signals(frame, params={"TREND_FILTER_ENABLED": True})
-
-    assert result["raw_signal"].tolist() == [1, 0, -1, 0]
-    assert result["signal"].tolist() == [1, 0, 0, 0]
-    # Trend-wait (_apply_trend_wait, chốt 2026-09-25): bar 0 cắt lên khi trend
-    # đã +1 -> nổ ngay; bar 2 cắt xuống nhưng trend +1 -> CHỜ (không bị loại
-    # hẳn như trend filter cũ), bar 3 vẫn chờ vì MA chưa đảo và MACD > 0.
-    assert result["trend_filter_status"].tolist() == ["fired", "no_regime", "pending", "pending"]
+    kept = out[out["signal"] != 0]
+    assert len(kept) > 0
+    assert (kept["signal"] == kept["trend_bias"]).all()
+    # xen kẽ chạy trước trend nên signal ⊆ raw_signal (DB1 ⊆ DB0): mỗi tín hiệu giữ lại đúng là một tín hiệu raw
+    assert (kept["signal"] == kept["raw_signal"]).all()
+    assert len(kept) <= int((out["raw_signal"] != 0).sum())
 
 
-def test_ma_cross_levels_add_market_entry():
-    from wisdom_engine.we_core.src.levels import add_ma_cross_levels
+def test_ma_cross_entries_add_market_entry():
+    from wisdom_engine.we_core.src.rules.entries import add_ma_cross_entries
 
     frame = pd.DataFrame(
         {
@@ -300,18 +384,11 @@ def test_ma_cross_levels_add_market_entry():
     )
     params = configuration.normalize_ma_cross_params({}, "US30", "M30")
 
-    result = add_ma_cross_levels(frame, params, "US30")
+    result = add_ma_cross_entries(frame, params, "US30")
     buy, sell = result.iloc[0], result.iloc[1]
 
     assert buy["entry_price"] == pytest.approx(52252.8)
-    assert pd.isna(buy["sl_price"])
-    assert pd.isna(buy["tp_price"])
-    assert pd.isna(buy["risk_reward"])
-
     assert sell["entry_price"] == pytest.approx(52252.8)
-    assert pd.isna(sell["sl_price"])
-    assert pd.isna(sell["tp_price"])
-    assert pd.isna(sell["risk_reward"])
 
 
 def test_ma_cross_rejects_timeframe_outside_execution_set():
@@ -429,23 +506,87 @@ def _macd_break_trend_frame(rows: str, bias: list[int]) -> pd.DataFrame:
     return frame
 
 
-def test_macd_break_lock_xen_ke_dung_truoc_trend_filter():
-    """Khoá thứ tự: lọc xen kẽ chạy trên setup TRƯỚC, rồi trend filter mới lọc (signal ⊆ raw_signal, DB1 ⊆ DB0).
-    Hệ quả đã biết: setup bị trend filter loại vẫn chiếm lượt đầu tiên của hướng đó."""
+def test_macd_break_lock_xen_ke_truoc_roi_trend_sau():
+    """Khoá thứ tự (đổi lại 2026-10-16, về thứ tự có từ trước 2026-10-15): lọc xen kẽ chạy TRƯỚC trên mọi setup,
+    trend filter lọc SAU trên raw_signal đã xen kẽ -> signal ⊆ raw_signal (DB1 ⊆ DB0)."""
     from wisdom_engine.we_core.src.strategies.macd_break import (
         detect_macd_break_signals,
     )
 
     params = {"TREND_FILTER_ENABLED": True, "ALTERNATING_FILTER_ENABLED": True}
-    # BUY lệch trend (-1) rồi BUY cùng trend (+1), chưa có setup SELL giữa: BUY thứ hai bị coi là lặp -> mất
+    # BUY lệch trend (-1) rồi BUY cùng trend (+1): BUY thứ nhất chiếm "lượt đầu" dù bị trend loại -> cả đợt mất.
     out = detect_macd_break_signals(_macd_break_trend_frame(".B.B", [0, -1, 0, 1]), params=params)
     assert out["raw_signal"].tolist() == [0, 1, 0, 0]
     assert out["signal"].tolist() == [0, 0, 0, 0]
-    # có setup SELL xen giữa (dù cũng bị trend loại) thì BUY sau lại là "lượt đầu" -> bắn nếu cùng trend
-    out = detect_macd_break_signals(_macd_break_trend_frame(".BSB", [0, -1, -1, 1]), params=params)
-    assert out["raw_signal"].tolist() == [0, 1, -1, 1]
-    assert out["signal"].tolist() == [0, 0, -1, 1]
-    assert ((out["signal"] != 0) <= (out["raw_signal"] != 0)).all()
+    # setup SELL xen giữa bị trend loại vẫn "mở lượt" cho BUY sau nó -> hai BUY liền nhau cùng chiều trong signal
+    out = detect_macd_break_signals(_macd_break_trend_frame("BSB", [1, 0, 1]), params=params)
+    assert out["raw_signal"].tolist() == [1, -1, 1]
+    assert out["signal"].tolist() == [1, 0, 1]
+    assert not ((out["signal"] != 0) & (out["raw_signal"] == 0)).any()  # signal ⊆ raw_signal (DB1 ⊆ DB0)
+
+
+def test_macd_break_trend_tat_thi_signal_bang_raw_signal_va_chi_con_loc_xen_ke():
+    from wisdom_engine.we_core.src.strategies.macd_break import (
+        detect_macd_break_signals,
+    )
+
+    params = {"TREND_FILTER_ENABLED": False, "ALTERNATING_FILTER_ENABLED": True}
+    out = detect_macd_break_signals(_macd_break_trend_frame("BBSS.BSSB", [-1, 1, 0, 1, -1, 0, 1, 1, -1]), params=params)
+    assert out["raw_signal"].tolist() == [1, 0, -1, 0, 0, 1, -1, 0, 1]
+    assert out["signal"].tolist() == out["raw_signal"].tolist()
+    assert set(out["trend_filter_status"]) == {"disabled"}
+
+
+def _signal_tham_chieu(setups: str, bias: list[int], *, trend_on: bool, alternating_on: bool) -> list[int]:
+    """Bản tham chiếu viết độc lập bằng vòng lặp thuần: (1) lọc xen kẽ trên mọi setup, (2) trend giữ tín hiệu cùng chiều bias."""
+    out, state = [], 0
+    for ch, b in zip(setups, bias, strict=True):
+        side = {"B": 1, "S": -1, ".": 0}[ch]
+        raw = 0 if side == 0 or (alternating_on and side == state) else side
+        if side != 0:
+            state = side
+        out.append(0 if trend_on and raw != b else raw)
+    return out
+
+
+@pytest.mark.parametrize("trend_on", [True, False])
+@pytest.mark.parametrize("alternating_on", [True, False])
+def test_signal_khop_ban_tham_chieu_xen_ke_truoc_trend_sau_tren_khung_ngau_nhien(trend_on, alternating_on):
+    import numpy as np
+    from wisdom_engine.we_core.src.strategies.combo import detect_combo_signals
+    from wisdom_engine.we_core.src.strategies.ma_cross import detect_ma_cross_signals
+    from wisdom_engine.we_core.src.strategies.macd_break import (
+        detect_macd_break_signals,
+    )
+
+    rng = np.random.default_rng(20261016)
+    params = {
+        "SESSION_HOURS_UTC": [], "TREND_FILTER_ENABLED": trend_on, "ALTERNATING_FILTER_ENABLED": alternating_on,
+    }
+    adjacent_same_direction_cases = 0
+    for _ in range(150):
+        n = int(rng.integers(1, 25))
+        rows = "".join(rng.choice(list("BS.."), n))
+        bias = rng.choice([-1, 0, 1], n).tolist()
+        expected = _signal_tham_chieu(rows, bias, trend_on=trend_on, alternating_on=alternating_on)
+        expected_raw = _signal_tham_chieu(rows, bias, trend_on=False, alternating_on=alternating_on)
+        for out in (
+            detect_combo_signals(_combo_trend_frame(rows, bias), params=params),
+            detect_macd_break_signals(_macd_break_trend_frame(rows, bias), params=params),
+            detect_ma_cross_signals(_ma_cross_trend_frame(rows, bias), params=params),
+        ):
+            assert out["signal"].tolist() == expected
+            assert out["raw_signal"].tolist() == expected_raw   # raw_signal không phụ thuộc trend
+            # signal ⊆ raw_signal (DB1 ⊆ DB0): mỗi tín hiệu giữ lại đúng là một tín hiệu raw, cùng nến, cùng hướng
+            assert all(s in (0, r) for s, r in zip(out["signal"].tolist(), out["raw_signal"].tolist(), strict=True))
+            if not trend_on:
+                assert out["signal"].tolist() == out["raw_signal"].tolist()
+            elif alternating_on:
+                seq = [v for v in out["signal"].tolist() if v]
+                adjacent_same_direction_cases += int(any(a == b for a, b in pairwise(seq)))
+    if trend_on and alternating_on:
+        # trend loại setup ngược chiều ở giữa thì hai tín hiệu liền nhau có thể cùng chiều: ca này có xuất hiện thật
+        assert adjacent_same_direction_cases > 0
 
 
 def test_macd_break_indicators_exclude_current_bar_and_use_close_only():
@@ -479,9 +620,6 @@ def test_macd_break_signals_match_golden():
     assert str(first["bartime"]) == "2026-01-05 08:50:00"
     assert int(first["signal"]) == -1
     assert round(float(first["entry_price"]), 6) == 93.867578
-    # wisdom_engine không tính SL/TP (thuộc quản lý lệnh)
-    assert pd.isna(first["sl_price"])
-    assert pd.isna(first["tp_price"])
     # không còn chuỗi nến liền nhau cùng bắn tín hiệu (trước 2026-10-13: 11 cặp nến kề nhau)
     assert int(rows.index.to_series().diff().eq(1).sum()) == 0
     assert all(a != b for a, b in pairwise(rows["signal"].astype(int).tolist()))
@@ -502,8 +640,8 @@ def test_macd_break_defaults_match_strategy_specification():
     assert (params["MACD_FAST"], params["MACD_SLOW"], params["MACD_SIGNAL"]) == (5, 25, 5)
     assert params["ATR_PERIOD"] == 5
     assert params["TREND_FILTER_ENABLED"] is False
-    assert params["TREND_TYPE"] == "knn"
-    assert params["TREND_TF"] == "H4"
+    assert params["TREND_METHODS"] == ("knn",)
+    assert params["TREND_TF"] in configuration.MACD_BREAK_TREND_TIMEFRAMES   # tra từ bảng trend_tf_by_symbol
     assert "ALLOW_SHORT" not in params
     assert configuration.MACD_BREAK_DEFAULT_TIMEFRAME == "H1"
     assert configuration.MACD_BREAK_SUPPORTED_TIMEFRAMES == ("M10", "M20", "M30", "M45", "H1", "H2", "H3", "H4")
@@ -536,8 +674,8 @@ def test_macd_break_trend_filter_keeps_only_aligned_signals():
 # --- Cờ alternating_filter_enabled ---------------------------------------------
 
 
-def test_co_alternating_doc_tu_config_va_chi_co_o_combo_macd_break():
-    for key in ("combo", "macd_break"):
+def test_co_alternating_doc_tu_config_cho_ca_ba_chien_luoc():
+    for key in ("combo", "macd_break", "ma_cross"):
         spec = configuration.get_strategy(key)
         assert spec.default_params["ALTERNATING_FILTER_ENABLED"] is True
         assert {"key": "ALTERNATING_FILTER_ENABLED", "label": "Alternating Filter", "type": "bool"} in spec.param_fields
@@ -545,11 +683,6 @@ def test_co_alternating_doc_tu_config_va_chi_co_o_combo_macd_break():
         # override từ CLI/dashboard thắng giá trị trong config
         off = spec.normalize_params({"ALTERNATING_FILTER_ENABLED": "false"}, "US30", "H1")
         assert off["ALTERNATING_FILTER_ENABLED"] is False
-    # chiến lược không dùng bộ lọc thì không có cờ
-    for key in ("ma_cross", "sma_trend"):
-        spec = configuration.get_strategy(key)
-        assert "ALTERNATING_FILTER_ENABLED" not in spec.default_params
-        assert all(field["key"] != "ALTERNATING_FILTER_ENABLED" for field in spec.param_fields)
 
 
 def test_config_mau_khai_bao_co_alternating_cho_dung_cac_chien_luoc():
@@ -562,8 +695,8 @@ def test_config_mau_khai_bao_co_alternating_cho_dung_cac_chien_luoc():
 
     assert strategies["combo"]["alternating_filter_enabled"] is True
     assert strategies["macd_break"]["alternating_filter_enabled"] is True
-    assert "alternating_filter_enabled" not in strategies["ma_cross"]
-    assert "alternating_filter_enabled" not in strategies["sma_trend"]
+    assert strategies["ma_cross"]["alternating_filter_enabled"] is True
+    assert set(strategies) == {"combo", "ma_cross", "macd_break"}
 
 
 def test_combo_tat_co_giong_het_hanh_vi_truoc_khi_co_loc_lap_cung_chieu():
@@ -588,3 +721,377 @@ def test_macd_break_tat_co_giong_het_hanh_vi_truoc_khi_co_loc_lap_cung_chieu():
     assert enriched["signal"].value_counts().to_dict() == {0: 561, -1: 29, 1: 10}
     assert len(rows) == 39
     assert int(rows.index.to_series().diff().eq(1).sum()) == 11  # chuỗi nến liền nhau cùng bắn
+
+
+def test_ma_cross_tat_co_moi_nen_thoa_dieu_kien_deu_ban():
+    """Cờ tắt: bar nào có setup cũng bắn -> rất nhiều tín hiệu liền nhau (~43% số nến mẫu), chỉ để xem/so sánh.
+    Bật cờ (mặc định) chỉ còn 10 tín hiệu trên cùng dữ liệu (golden ở test_ma_cross_signals_match_golden)."""
+    from wisdom_engine.we_core.src.indicator import add_ma_cross_indicators
+    from wisdom_engine.we_core.src.strategies.ma_cross import detect_ma_cross_signals
+
+    params = configuration.normalize_ma_cross_params({"ALTERNATING_FILTER_ENABLED": "false"}, "US30", "M30")
+    signals = detect_ma_cross_signals(add_ma_cross_indicators(make_ohlcv(300), params), symbol="US30", params=params)
+
+    assert signals["signal"].value_counts().to_dict() == {0: 172, -1: 79, 1: 49}
+    assert int((signals["signal"] != 0).sum()) == 128
+
+
+def test_chi_con_ba_chien_luoc_sma_trend_da_xoa_khoi_he_thong():
+    """sma_trend (chiến lược nghiên cứu) đã xoá khỏi we_core 2026-10-16: sổ đăng ký chỉ còn 3 chiến lược; không còn
+    module, hàm chỉ báo/entry, trường StrategySpec.state_warmup_start (chỉ nó dùng), overlay dashboard và khối config."""
+    import dataclasses
+    import importlib.util
+    from pathlib import Path
+
+    from wisdom_engine.we_core.src import indicator
+    from wisdom_engine.we_core.src.rules import entries
+    from wisdom_engine.we_core.src.signal_display import server
+
+    assert list(configuration.STRATEGIES) == ["combo", "ma_cross", "macd_break"]
+    with pytest.raises(KeyError, match="Unknown strategy 'sma_trend'"):
+        configuration.get_strategy("sma_trend")
+    assert importlib.util.find_spec("wisdom_engine.we_core.src.strategies.sma_trend") is None
+    assert not hasattr(indicator, "add_sma_trend_indicators")
+    assert not hasattr(entries, "add_sma_trend_entries")
+    assert "state_warmup_start" not in {f.name for f in dataclasses.fields(configuration.StrategySpec)}
+    assert set(server._STRATEGY_OVERLAYS) == {"combo", "ma_cross", "macd_break"}
+    folder = Path(__file__).resolve().parents[1] / "src" / "strategies"
+    assert sorted(path.name for path in folder.glob("*.py")) == ["combo.py", "ma_cross.py", "macd_break.py"]
+
+
+def test_entries_chi_tao_entry_price_va_ma_cross_macd_break_dung_chung_ham_close():
+    """Đã bỏ 2026-10-16 các cột không ai đọc (entry_time, sl_price, tp_price, risk_reward): entries chỉ thêm entry_price.
+    ma_cross và macd_break cùng một hàm 'entry = close' (trước đó ma_cross chép lại thân hàm)."""
+    from wisdom_engine.we_core.src.rules import entries
+
+    frame = pd.DataFrame(
+        {
+            "bartime": pd.to_datetime(["2026-01-01 10:00", "2026-01-01 10:30", "2026-01-01 11:00"]),
+            "high": [11.0, 12.0, 13.0],
+            "low": [9.0, 10.0, 11.0],
+            "close": [10.5, 11.5, 12.5],
+            "signal": [1, 0, -1],
+        }
+    )
+    params = {"X": 0.5}
+    combo = entries.add_combo_entries(frame, params, "US30")
+    cross = entries.add_ma_cross_entries(frame, params, "US30")
+    brk = entries.add_macd_break_entries(frame, params, "US30")
+
+    for out in (combo, cross, brk):
+        assert set(out.columns) - set(frame.columns) == {"entry_price"}
+    assert combo["entry_price"].tolist()[0] == 11.5 and combo["entry_price"].tolist()[2] == 10.5   # high+X / low-X
+    assert pd.isna(combo["entry_price"].iloc[1])
+    assert cross.equals(brk) and cross["entry_price"].tolist()[0] == 10.5 and cross["entry_price"].tolist()[2] == 12.5
+    assert cross.equals(entries._add_close_market_entries(frame))
+    # thiếu cột cần thiết thì giữ nguyên hành vi cũ: trả khung có entry_price toàn NaN, không lỗi
+    assert entries.add_ma_cross_entries(frame.drop(columns=["close"]), params)["entry_price"].isna().all()
+
+
+def test_chien_luoc_khong_con_cot_raw_signal_reason():
+    """raw_signal_reason không ai đọc nên đã bỏ 2026-10-16 (des vẫn dùng làm comment, nhưng là hệ riêng)."""
+    for key, tf in (("combo", "H1"), ("ma_cross", "M30"), ("macd_break", "H1")):
+        out = configuration.run_strategy(key, symbol="US30", tf=tf, bars=make_ohlcv(600))
+        assert "raw_signal_reason" not in out.columns
+        assert {"raw_signal", "signal", "signal_reason", "trend_filter_status"} <= set(out.columns)
+
+
+# --- Quy tắc khung trend >= khung tín hiệu (chốt 2026-10-16) --------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("entry_tf", "trend_tf", "allowed"),
+    [
+        ("H1", "H1", True),     # bằng nhau vẫn được
+        ("H1", "H4", True),
+        ("M10", "M10", True),
+        ("M45", "H1", True),    # 45 phút < 60 phút
+        ("H2", "H3", True),     # khung lớn không chia đều khung nhỏ vẫn được
+        ("h2", " h4 ", True),   # chữ thường/khoảng trắng được chuẩn hoá
+        ("H2", "H1", False),
+        ("H4", "H3", False),
+        ("H1", "M45", False),
+        ("M20", "M10", False),
+    ],
+)
+def test_check_trend_timeframe_cho_phep_lon_hon_hoac_bang_va_cam_nho_hon(entry_tf, trend_tf, allowed):
+    if allowed:
+        assert configuration.check_trend_timeframe(entry_tf, trend_tf) is None
+    else:
+        with pytest.raises(ValueError, match="must not be smaller than the entry timeframe"):
+            configuration.check_trend_timeframe(entry_tf, trend_tf)
+
+
+def test_check_trend_timeframe_bao_loi_khi_ma_khung_khong_hop_le():
+    with pytest.raises(ValueError, match="Unsupported timeframe"):
+        configuration.check_trend_timeframe("H1", "X9")
+
+
+@pytest.mark.parametrize(
+    ("strategy", "entry_tf", "trend_tf"),
+    [("combo", "H2", "H1"), ("ma_cross", "M45", "M30"), ("macd_break", "H4", "H3")],
+)
+def test_run_strategy_with_trend_reference_cam_khung_trend_nho_hon_khung_tin_hieu(strategy, entry_tf, trend_tf):
+    with pytest.raises(ValueError, match="must not be smaller than the entry timeframe"):
+        configuration.run_strategy_with_trend_reference(
+            strategy,
+            symbol="US30",
+            entry_tf=entry_tf,
+            entry_bars=make_ohlcv(50),
+            trend_tf=trend_tf,
+            trend_bars=make_ohlcv(50),
+        )
+
+
+def test_run_strategy_with_trend_reference_van_chay_khi_khung_trend_bang_hoac_lon_hon():
+    df, trend_bars = make_ohlcv(300), make_ohlcv(300, seed=7)
+    for strategy, entry_tf, trend_tf in (("combo", "H1", "H1"), ("combo", "H1", "H4"), ("macd_break", "H2", "H4")):
+        out = configuration.run_strategy_with_trend_reference(
+            strategy, symbol="US30", entry_tf=entry_tf, entry_bars=df, trend_tf=trend_tf, trend_bars=trend_bars
+        )
+        assert {"raw_signal", "signal", "trend_bias"} <= set(out.columns)
+
+
+def _timeframes_the_worker_runs():
+    from wisdom_engine.we_core.src.we_signal.redis_io import worker
+
+    return worker._STRATEGY_TIMEFRAMES
+
+
+def test_khung_trend_cua_config_thoa_quy_tac_voi_moi_symbol_va_khung_vao_lenh_cua_worker():
+    """Config thật: khung trend của MỌI (chiến lược, symbol, khung vào lệnh) mà worker chạy (ô trong trend_tf_by_symbol, bắt buộc
+    đủ ô) có mặt và >= khung vào lệnh."""
+    from wisdom_engine.we_core.src.indicator import timeframe_minutes
+
+    for strategy, timeframes in _timeframes_the_worker_runs().items():
+        spec = configuration.get_strategy(strategy)
+        for symbol in sorted(configuration.OPERATING_SYMBOLS):
+            for timeframe in timeframes:
+                trend_tf = spec.normalize_params(None, symbol, timeframe)["TREND_TF"]
+                assert trend_tf, (strategy, symbol, timeframe)       # bảng đủ ô: không có ô nào chưa xác định
+                assert timeframe_minutes(trend_tf) >= timeframe_minutes(timeframe), (strategy, symbol, timeframe, trend_tf)
+
+
+def test_config_mau_co_khung_trend_thoa_quy_tac_voi_moi_khung_vao_lenh_cua_worker():
+    from pathlib import Path
+
+    import yaml
+    from wisdom_engine.we_core.src.indicator import timeframe_minutes
+
+    example = yaml.safe_load((Path(__file__).resolve().parents[1] / "we_config.example.yaml").read_text(encoding="utf-8"))
+    combo_block = example["strategies"]["combo"]
+    symbols = tuple(combo_block["symbol_x"]) + tuple(combo_block["symbol_entry_atr_pct"])
+    for strategy, timeframes in _timeframes_the_worker_runs().items():
+        block = example["strategies"][strategy]
+        by_symbol = configuration._strategy_trend_tf_by_symbol(     # bảng mẫu phải qua đúng bộ kiểm của config thật
+            block, f"strategies.{strategy}", symbols=symbols, entry_timeframes=tuple(timeframes), trend_timeframes=tuple(block["trend_timeframes"])
+        )
+        for symbol in symbols:
+            for timeframe in timeframes:
+                trend_tf = configuration.resolve_trend_tf(by_symbol, symbol, timeframe)
+                assert timeframe_minutes(trend_tf) >= timeframe_minutes(timeframe), (strategy, symbol, timeframe, trend_tf)
+        assert "default_trend_tf" not in block          # khoá đã xoá 2026-10-16: bảng là nguồn duy nhất
+
+
+# --- Khung trend riêng theo (symbol, khung vào lệnh): strategies.<tên>.trend_tf_by_symbol (2026-10-16) ----------------
+
+
+def test_resolve_trend_tf_tra_o_theo_symbol_va_khung_vao_lenh_thieu_o_thi_rong():
+    by_symbol = {"BTCUSD": {"H1": "H3", "H2": "H2"}}
+    resolve = configuration.resolve_trend_tf
+
+    assert resolve(by_symbol, "BTCUSD", "H1") == "H3"
+    assert resolve(by_symbol, " btcusd ", "h2") == "H2"      # chữ thường/khoảng trắng được chuẩn hoá
+    assert resolve(by_symbol, "BTCUSD", "H3") == ""          # ô thiếu -> chưa xác định (không có khung mặc định)
+    assert resolve(by_symbol, "US30", "H1") == ""            # symbol không khai -> chưa xác định
+    assert resolve(by_symbol, None, None) == ""
+    assert resolve({}, "BTCUSD", "M30") == ""
+
+
+@pytest.mark.parametrize(
+    ("strategy", "attr", "mapped_tf", "other_tf"),
+    [
+        ("combo", "COMBO_TREND_TF_BY_SYMBOL", "H2", "H3"),
+        ("ma_cross", "MA_CROSS_TREND_TF_BY_SYMBOL", "M30", "M20"),
+        ("macd_break", "MACD_BREAK_TREND_TF_BY_SYMBOL", "H2", "H1"),
+    ],
+)
+def test_normalize_params_dung_khung_trend_theo_o_va_override_van_thang(monkeypatch, strategy, attr, mapped_tf, other_tf):
+    spec = configuration.get_strategy(strategy)
+    assert "TREND_TF" not in spec.default_params    # không còn khung trend mặc định chung
+    monkeypatch.setattr(configuration, attr, {"US30": {mapped_tf: "H3"}})
+
+    assert spec.normalize_params({}, "US30", mapped_tf)["TREND_TF"] == "H3"          # ô riêng
+    assert spec.normalize_params(None, "US30", mapped_tf)["TREND_TF"] == "H3"
+    assert spec.normalize_params({}, "US30", other_tf)["TREND_TF"] == ""             # khung vào lệnh khác, không có ô -> chưa xác định
+    assert spec.normalize_params({}, "DE40", mapped_tf)["TREND_TF"] == ""            # symbol khác -> chưa xác định
+    assert spec.normalize_params({"TREND_TF": "H1"}, "US30", mapped_tf)["TREND_TF"] == "H1"   # override tường minh thắng
+    assert spec.normalize_params({"TREND_TF": ""}, "US30", mapped_tf)["TREND_TF"] == "H3"     # override rỗng = không có
+    assert spec.normalize_params({"TREND_TF": None}, "US30", mapped_tf)["TREND_TF"] == "H3"
+
+
+def test_trend_tf_by_symbol_doc_va_chuan_hoa_config_hop_le():
+    read = configuration._strategy_trend_tf_by_symbol
+    kwargs = {"symbols": ("BTCUSD", "US30"), "entry_timeframes": ("H1", "H2"), "trend_timeframes": ("H1", "H2", "H3", "H4")}
+
+    got = read({"trend_tf_by_symbol": {"btcusd": {"h1": "h4", "H2": "H2"}, "US30": {"H1": "H1", "H2": "H4"}}}, "strategies.combo", **kwargs)
+    assert got == {"BTCUSD": {"H1": "H4", "H2": "H2"}, "US30": {"H1": "H1", "H2": "H4"}}
+
+    # khoá BẮT BUỘC và phải đủ ô (2026-10-16: không còn khung mặc định chung để dự phòng)
+    with pytest.raises(KeyError, match="trend_tf_by_symbol"):
+        read({}, "strategies.combo", **kwargs)
+    with pytest.raises(TypeError, match="must map symbol"):
+        read({"trend_tf_by_symbol": None}, "strategies.combo", **kwargs)
+    with pytest.raises(ValueError, match=r"US30: no trend timeframe for entry timeframe\(s\) H2"):
+        read({"trend_tf_by_symbol": {"BTCUSD": {"H1": "H1", "H2": "H2"}, "US30": {"H1": "H1"}}}, "strategies.combo", **kwargs)
+    with pytest.raises(ValueError, match=r"BTCUSD: no trend timeframe for entry timeframe\(s\) H1, H2"):
+        read({"trend_tf_by_symbol": {"US30": {"H1": "H1", "H2": "H2"}}}, "strategies.combo", **kwargs)
+
+
+def test_trend_tf_by_symbol_bao_loi_moi_o_sai_trong_mot_lan():
+    read = configuration._strategy_trend_tf_by_symbol
+    kwargs = {"symbols": ("BTCUSD", "US30"), "entry_timeframes": ("H1", "H2", "H3", "H4"), "trend_timeframes": ("H1", "H2", "H3", "H4")}
+    bad = {
+        "trend_tf_by_symbol": {
+            "ETHUSD": {"H1": "H4"},                                  # symbol lạ
+            "BTCUSD": {"H2": "H1", "M30": "H4", "H3": "M45"},        # nhỏ hơn khung vào lệnh / khung vào ngoài tập / khung trend ngoài danh sách
+            "US30": "H4",                                            # sai kiểu
+        }
+    }
+
+    with pytest.raises(ValueError) as excinfo:
+        read(bad, "strategies.combo", **kwargs)
+
+    message = str(excinfo.value)
+    assert "strategies.combo.trend_tf_by_symbol" in message
+    for part in (
+        "ETHUSD: unknown symbol",
+        "BTCUSD H2: TREND_TF H1 must not be smaller than the entry timeframe H2",
+        "BTCUSD M30: entry timeframe not in",
+        "BTCUSD H3: trend timeframe M45 not in",
+        "US30: must map entry timeframe -> trend timeframe",
+    ):
+        assert part in message
+    with pytest.raises(TypeError, match="must map symbol"):
+        read({"trend_tf_by_symbol": ["H4"]}, "strategies.combo", **kwargs)
+
+
+def test_strategy_spec_mang_bang_khung_trend_theo_o_cua_config():
+    assert configuration.STRATEGIES["combo"].trend_tf_by_symbol is configuration.COMBO_TREND_TF_BY_SYMBOL
+    assert configuration.STRATEGIES["ma_cross"].trend_tf_by_symbol is configuration.MA_CROSS_TREND_TF_BY_SYMBOL
+    assert configuration.STRATEGIES["macd_break"].trend_tf_by_symbol is configuration.MACD_BREAK_TREND_TF_BY_SYMBOL
+
+
+# --- Entry theo ATR cho nhóm forex (strategies.combo.symbol_entry_atr_pct, 2026-10-20) -------------------------
+
+
+def test_combo_entry_theo_atr_dung_phan_tram_atr_tai_nen_tin_hieu_va_bo_qua_x():
+    from wisdom_engine.we_core.src.rules import entries
+
+    frame = pd.DataFrame(
+        {
+            "high": [1.1010, 1.1020, 1.1030],
+            "low": [1.0990, 1.1000, 1.1010],
+            "close": [1.1005, 1.1015, 1.1015],
+            "atr": [0.0010, 0.0020, 0.0040],
+            "signal": [1, 0, -1],
+        }
+    )
+    out = entries.add_combo_entries(frame, {"X": 99.0, "ENTRY_ATR_PCT": 5.0}, "EURUSD")
+
+    assert out["entry_price"].iloc[0] == pytest.approx(1.1010 + 0.05 * 0.0010)     # BUY: high + 5% × ATR (X bị bỏ qua)
+    assert pd.isna(out["entry_price"].iloc[1])                                      # không có tín hiệu
+    assert out["entry_price"].iloc[2] == pytest.approx(1.1010 - 0.05 * 0.0040)     # SELL: low − 5% × ATR
+    assert set(out.columns) - set(frame.columns) == {"entry_price"}
+
+
+def test_combo_entry_khong_dat_entry_atr_pct_van_dung_x_co_dinh_nhu_cu():
+    from wisdom_engine.we_core.src.rules import entries
+
+    frame = pd.DataFrame({"high": [11.0, 12.0], "low": [9.0, 10.0], "atr": [4.0, 4.0], "signal": [1, -1]})
+    for params in ({"X": 0.5}, {"X": 0.5, "ENTRY_ATR_PCT": None}):
+        out = entries.add_combo_entries(frame, params, "US30")
+        assert out["entry_price"].tolist() == [11.5, 9.5]
+
+
+def test_combo_entry_theo_atr_thieu_cot_atr_bao_loi_ro():
+    from wisdom_engine.we_core.src.rules import entries
+
+    frame = pd.DataFrame({"high": [11.0], "low": [9.0], "signal": [1]})
+    with pytest.raises(ValueError, match="atr"):
+        entries.add_combo_entries(frame, {"X": 0.0, "ENTRY_ATR_PCT": 5.0}, "EURUSD")
+
+
+def test_normalize_combo_params_forex_dung_entry_atr_pct_con_symbol_cu_van_dung_x():
+    spec = configuration.get_strategy("combo")
+    for symbol in ("EURUSD", "USDJPY", "GBPUSD", "USDCAD"):
+        params = spec.normalize_params(None, symbol, "H1")
+        assert params["ENTRY_ATR_PCT"] == 5.0 and params["X"] == 0.0
+    for symbol, x in configuration.COMBO_SYMBOL_X.items():
+        params = spec.normalize_params(None, symbol, "H1")
+        assert params["ENTRY_ATR_PCT"] is None and params["X"] == x       # nhóm cũ giữ nguyên X cố định
+    assert spec.normalize_params({"ENTRY_ATR_PCT": "7.5"}, "EURUSD", "H1")["ENTRY_ATR_PCT"] == 7.5      # override tường minh
+    assert spec.normalize_params({"ENTRY_ATR_PCT": "abc"}, "EURUSD", "H1")["ENTRY_ATR_PCT"] == 5.0      # đọc không được -> mặc định theo symbol
+    assert spec.normalize_params({"ENTRY_ATR_PCT": "99999"}, "EURUSD", "H1")["ENTRY_ATR_PCT"] == 1000.0  # kẹp theo PARAM_FIELDS
+
+
+def test_pipeline_combo_forex_entry_lech_high_low_dung_phan_tram_atr():
+    enriched = configuration.run_strategy("combo", symbol="EURUSD", tf="H1", bars=make_ohlcv(400))
+    signals = enriched[enriched["signal"].isin([1, -1])]
+
+    assert len(signals) > 0
+    buy = signals[signals["signal"] == 1]
+    sell = signals[signals["signal"] == -1]
+    assert (buy["entry_price"] - buy["high"]).to_numpy() == pytest.approx((0.05 * buy["atr"]).to_numpy())
+    assert (sell["low"] - sell["entry_price"]).to_numpy() == pytest.approx((0.05 * sell["atr"]).to_numpy())
+    assert (buy["entry_price"] > buy["high"]).all() and (sell["entry_price"] < sell["low"]).all()
+
+
+def test_symbol_van_hanh_gom_nhom_x_co_dinh_va_nhom_entry_theo_atr_khong_giao_nhau():
+    x_group = set(configuration.COMBO_SYMBOL_X)
+    atr_group = set(configuration.COMBO_SYMBOL_ENTRY_ATR_PCT)
+
+    assert not x_group & atr_group
+    assert set(configuration.OPERATING_SYMBOLS) == x_group | atr_group
+    assert atr_group == {"EURUSD", "USDJPY", "GBPUSD", "USDCAD"}
+    assert len(configuration.OPERATING_SYMBOLS) == 15
+
+
+def test_worker_bootstrap_chay_ca_ba_chien_luoc_tren_ca_nhom_forex():
+    from wisdom_engine.we_core.src.we_signal.redis_io import worker
+
+    pairs = worker._bootstrap_pairs()
+
+    assert len(pairs) == 15 * (4 + 4 + 8)
+    assert {(s, t) for strategy, s, t in pairs if strategy == "combo" and s == "EURUSD"} == {("EURUSD", f"H{i}") for i in (1, 2, 3, 4)}
+    assert {strategy for strategy, s, _ in pairs if s == "USDJPY"} == {"combo", "ma_cross", "macd_break"}
+
+
+def test_worker_cho_phep_trigger_forex_va_van_bo_qua_symbol_ngoai_pham_vi(monkeypatch):
+    from wisdom_engine.we_core.src.we_signal.redis_io import worker
+
+    seen = []
+    monkeypatch.setattr(worker, "_safe_refresh_pair", lambda *args, **kwargs: seen.append(kwargs["symbol"]))
+    on_update = worker._make_on_update(None, key_prefix="x", trend_client=None, trend_key_prefix="y")
+
+    on_update("H1", "EURUSD", None, None)
+    on_update("H1", "AUDCAD", None, None)          # có trong SQL nhưng không phải symbol vận hành
+    on_update("W", "EURUSD", None, None)           # khung không chạy
+
+    assert seen == ["EURUSD"]
+
+
+def test_worker_ghi_so_chu_so_thap_phan_theo_symbol_vao_frame(monkeypatch):
+    from wisdom_engine.we_core.src.we_signal.redis_io import worker
+
+    calls = []
+    monkeypatch.setattr(worker, "trim_to_requested_range", lambda df, start: df)
+    monkeypatch.setattr(worker, "signal_frame", lambda df, *, strategy, decimals: calls.append(decimals) or pd.DataFrame())
+    monkeypatch.setattr(worker, "publish_past_signals", lambda *args, **kwargs: 0)
+    for symbol in ("US30", "EURUSD", "USDJPY"):
+        worker._compute_and_publish(
+            None, key_prefix="x", symbol=symbol, timeframe="H1", strategy="combo", enriched=pd.DataFrame(),
+            effective_from=pd.Timestamp("2022-01-01"), delta_mode=False, window_to=None,
+        )
+
+    assert calls == [2, 5, 3]

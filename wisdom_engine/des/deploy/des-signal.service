@@ -1,0 +1,17 @@
+[Unit]
+Description=des (Decision Engine Simulation) worker - Redis db13 candles -> strategy -> Redis db14 signals (no trend) + db15 signals (trend-filtered) - user service
+After=default.target
+StartLimitIntervalSec=300
+StartLimitBurst=20
+
+[Service]
+Type=simple
+WorkingDirectory=/home/administrator/Desktop
+ExecStart=/home/administrator/Desktop/wisdom_engine/.venv/bin/python -m wisdom_engine.des.src.redis_io.live_worker
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+
+[Install]
+WantedBy=default.target

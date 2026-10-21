@@ -18,7 +18,7 @@ Mô tả:
       đã hoàn chỉnh.
     - Chỉ báo (prior_high_close/prior_low_close/macd_h/atr) tính ở
       indicator.add_macd_break_indicators, chạy trước file này.
-    - Entry tham chiếu ở levels.add_macd_break_levels, chạy sau file này.
+    - Entry tham chiếu ở entries.add_macd_break_entries, chạy sau file này.
 
 Đầu ra:
     detect_macd_break_signals(df, symbol, params): df + raw_signal/signal và
@@ -28,11 +28,14 @@ Mô tả:
 from __future__ import annotations
 
 import pandas as pd
-from wisdom_engine.we_core.src.alternating import apply_alternating_filter
-from wisdom_engine.we_core.src.trend import (
+from wisdom_engine.we_core.src.rules.alternating import apply_alternating_filter
+from wisdom_engine.we_core.src.rules.trend_tf import (
     apply_trend_filter,
     trend_filter_enabled,
 )
+
+_BUY_REASON = "close broke above prior highest close, MACD histogram > 0"
+_SELL_REASON = "close broke below prior lowest close, MACD histogram < 0"
 
 
 def detect_macd_break_signals(
@@ -67,12 +70,17 @@ def detect_macd_break_signals(
     thật còn mở hay đã dính SL. Ngoài điều đó không có trạng thái nào khác:
     thoát lệnh, SL/TP, vào lại là việc của hệ thống đặt lệnh.
 
-    Bộ lọc đứng TRƯỚC trend filter: raw_signal đã được lọc xen kẽ, rồi mới lọc
-    trend (signal vẫn ⊆ raw_signal, DB1 vẫn ⊆ DB0). Hệ quả: DB1 vẫn có thể có hai
-    tín hiệu liền nhau cùng chiều (giữa chúng có setup ngược chiều bị trend loại).
-    Các điều cần biết khác nằm ở docstring của alternating.py; đo
-    2026-10-13 (88 cặp, từ 2022): khoảng cách lớn nhất giữa hai setup liên tiếp
-    là 288 nến, không khoảng nào vượt 300 nến warm-up của cửa sổ làm mới worker.
+    Thứ tự lọc (đổi lại 2026-10-16 theo yêu cầu người dùng, về cách "xen kẽ
+    trước, trend sau" như trước 2026-10-15): lọc xen kẽ chạy TRƯỚC trên mọi
+    setup, trend filter lọc SAU trên raw_signal đã xen kẽ (signal ⊆ raw_signal,
+    DB1 ⊆ DB0). raw_signal vì thế vừa là kết quả không có trend vừa là tín hiệu
+    TRƯỚC khi lọc trend; khi trend tắt thì signal == raw_signal. Hệ quả: DB1 có
+    thể có hai tín hiệu liền nhau cùng chiều (giữa chúng có setup ngược chiều bị
+    trend loại) và một đợt setup mà nến đầu lệch trend thì mất cả đợt. Các điều
+    cần biết khác nằm ở docstring của alternating.py. Riêng macd_break: trong
+    300 nến warm-up của cửa sổ làm mới worker chỉ 200 nến còn nhớ được setup
+    (100 nến đầu dành cho LOOKBACK_BARS); đo 2026-10-16 (88 cặp, từ 2022) có 34
+    khoảng giữa hai setup liên tiếp cùng chiều dài hơn 200 nến (lớn nhất 288).
 
     Điều kiện tiên quyết: prior_high_close, prior_low_close, macd_h, atr đều
     không NaN (qua warmup).
@@ -83,8 +91,8 @@ def detect_macd_break_signals(
         params: Dict tham số đã validate (chỉ cần cho trend filter).
 
     Returns:
-        Bản sao df với các cột bổ sung: raw_signal, raw_signal_reason,
-        signal, signal_reason, trend_filter_status.
+        Bản sao df với các cột bổ sung: raw_signal, signal, signal_reason,
+        trend_filter_status.
     """
     _ = symbol, sess_mask
     out = df.copy()
@@ -106,20 +114,17 @@ def detect_macd_break_signals(
     sell_cond = valid & (out["close"] <= out["prior_low_close"]) & (out["macd_h"] < 0)
     # =========================================================================
 
+    # raw_signal = tín hiệu sau lọc xen kẽ trên MỌI setup, TRƯỚC trend filter (thứ tự đổi lại 2026-10-16: xen kẽ
+    # trước, trend sau). Dashboard dùng nó để so "raw -> filtered"; khi trend tắt thì signal == raw_signal.
     out["raw_signal"] = apply_alternating_filter(buy_cond, sell_cond, params)
-    out["raw_signal_reason"] = ""
-    out.loc[out["raw_signal"].eq(1), "raw_signal_reason"] = (
-        "close broke above prior highest close, MACD histogram > 0"
-    )
-    out.loc[out["raw_signal"].eq(-1), "raw_signal_reason"] = (
-        "close broke below prior lowest close, MACD histogram < 0"
-    )
 
+    # signal: trend filter lọc raw_signal (giữ tín hiệu cùng chiều trend_bias đúng bar đó) -> signal ⊆ raw_signal.
     out = apply_trend_filter(out, params, raw_signal_col="raw_signal", output_col="signal")
     out["signal_reason"] = ""
-    has_signal = out["signal"].fillna(0).astype(int).ne(0)
-    out.loc[has_signal, "signal_reason"] = out.loc[has_signal, "raw_signal_reason"]
+    out.loc[out["signal"].eq(1), "signal_reason"] = _BUY_REASON
+    out.loc[out["signal"].eq(-1), "signal_reason"] = _SELL_REASON
     if trend_filter_enabled(params):
+        has_signal = out["signal"].fillna(0).astype(int).ne(0)
         out.loc[has_signal, "signal_reason"] = (
             out.loc[has_signal, "signal_reason"] + "; aligned with trend reference"
         )

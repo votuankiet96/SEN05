@@ -22,6 +22,7 @@ Chạy:
 from __future__ import annotations
 
 import argparse
+import gzip
 from threading import Lock
 from typing import Any
 
@@ -30,22 +31,26 @@ from flask import Flask, Response, jsonify, request
 from wisdom_engine.we_core.src.configuration import (
     DEFAULT_SYMBOL,
     N_BARS,
+    OPERATING_SYMBOLS,
     STRATEGIES,
     WARMUP_BARS,
+    check_trend_timeframe,
     get_strategy,
+    price_decimals,
     run_strategy,
     run_strategy_with_trend_reference,
 )
 from wisdom_engine.we_core.src.db_connector import (
     load,
-    load_range,
     load_range_with_warmup,
     symbols,
     tf_minutes,
 )
-from wisdom_engine.we_core.src.indicator import (
-    add_knn_trend_indicators,
-    timeframe_minutes,
+from wisdom_engine.we_core.src.indicator import timeframe_minutes
+from wisdom_engine.we_core.src.rules.trend_tf import (
+    bias_column,
+    build_trend_frame,
+    get_method,
 )
 from wisdom_engine.we_core.src.signal_display.cli import (
     BARS_MAX,
@@ -64,7 +69,6 @@ from wisdom_engine.we_core.src.signal_display.payload import (
     trend_bias_markers,
     trend_line_points,
 )
-from wisdom_engine.we_core.src.trend import knn_trend_indicator_params
 from wisdom_engine.we_core.src.we_signal.export_cli import to_csv as signal_csv
 
 DEFAULT_HOST = "127.0.0.1"
@@ -79,6 +83,15 @@ TREND_MODE_FILTER = "trend_filter"
 # hàng đợi ngắn thay vì cùng lúc tranh kết nối SQL.
 _DB_LOCK = Lock()
 
+# Phản hồi JSON/HTML từ 1 KB trở lên được nén gzip khi trình duyệt cho phép. Đo trên payload thật
+# (2026-10-15): /api/scan 500 nến 95 KB -> 16 KB, 2.000 nến có trend 486 KB -> 81 KB, 20.000 nến
+# 4,8 MB -> 0,76 MB, trang chủ 194 KB -> 59 KB; nén mức 5 tốn ~1 ms (500 nến), ~7 ms (2.000), ~74 ms
+# (20.000); mức 9 chậm gấp 4–5 lần mà chỉ nhỉnh thêm ~3%. Có ích khi mở dashboard qua mạng/đường hầm;
+# truy cập cùng máy (127.0.0.1) không thấy khác biệt.
+_GZIP_MIMETYPES = frozenset({"application/json", "text/html"})
+_GZIP_MIN_BYTES = 1024
+_GZIP_LEVEL = 5
+
 # Cột overlay riêng theo từng strategy: (cột df, mẫu label, màu). Label được
 # format bằng params đã normalize (vd "MA {MA_PERIOD}" -> "MA 20").
 _STRATEGY_OVERLAYS: dict[str, list[tuple[str, str, str]]] = {
@@ -91,16 +104,15 @@ _STRATEGY_OVERLAYS: dict[str, list[tuple[str, str, str]]] = {
         ("prior_high_close", "High close {LOOKBACK_BARS}", "#22c55e"),
         ("prior_low_close", "Low close {LOOKBACK_BARS}", "#ef4444"),
     ],
-    "sma_trend": [("trend_ma", "SMA {SMA_PERIOD}", "#f59e0b")],
 }
 
 
 _TREND_CONTROL_KEYS = {
     "trend_mode",
-    "trend_type",
+    "trend_methods",
     "trend_tf",
     "TREND_FILTER_ENABLED",
-    "TREND_TYPE",
+    "TREND_METHODS",
     "TREND_TF",
     "ENTRY_TF",
 }
@@ -231,35 +243,6 @@ def _trend_query_bars(*, entry_bars: int, entry_tf: str, trend_tf: str) -> int:
     return clamp_bars(display_bars + WARMUP_BARS)
 
 
-def _extend_to_state_warmup(raw: pd.DataFrame, spec, symbol: str, tf: str) -> pd.DataFrame:
-    """
-    Với chiến lược CÓ TRẠNG THÁI (spec.state_warmup_start, vd "2025-01-01"):
-    nạp thêm dữ liệu từ mốc đó tới bar cuối của cửa sổ đang xem, để trạng
-    thái (đang giữ lệnh hay không) luôn được tính từ cùng một điểm — tín hiệu
-    không đổi theo số nến/cửa sổ người dùng chọn.
-
-    Cửa sổ bắt đầu SỚM HƠN mốc (cuộn về trước 2025) thì không mở rộng: trạng
-    thái tính từ đầu cửa sổ, phần đó vẫn phụ thuộc cửa sổ như trước.
-    Combo/ma_cross (state_warmup_start=None) trả nguyên raw.
-    """
-    if not getattr(spec, "state_warmup_start", None) or raw.empty:
-        return raw
-    anchor = pd.Timestamp(spec.state_warmup_start)
-    window_first = pd.Timestamp(raw["bartime"].min())
-    if window_first <= anchor:
-        return raw
-    window_last = pd.Timestamp(raw["bartime"].max())
-    history = load_range(
-        symbol,
-        tf,
-        anchor.strftime("%Y-%m-%d %H:%M:%S"),
-        window_last.strftime("%Y-%m-%d %H:%M:%S"),
-    )
-    merged = pd.concat([history, raw], ignore_index=True)
-    merged = merged.drop_duplicates(subset="bartime", keep="last")
-    return merged.sort_values("bartime").reset_index(drop=True)
-
-
 def _filter_time_window(
     df: pd.DataFrame,
     *,
@@ -301,31 +284,32 @@ def _build_trend_chart(
     *,
     symbol: str,
     trend_tf: str,
-    trend_type: str,
+    trend_methods: tuple[str, ...],
 ) -> dict[str, Any]:
     """
     Chuyển DataFrame trend đã enrich thành payload chart riêng cho dashboard.
+
+    Mỗi khối xác nhận xu hướng đang bật tự khai báo đường vẽ của nó (OVERLAYS trong
+    trend_methods/<tên>.py); marker đổi hướng dùng cột trend_bias đã ghép các khối.
     """
-    label = f"{symbol} {trend_tf} {trend_type.upper()} Trend"
+    label = f"{symbol} {trend_tf} {'+'.join(name.upper() for name in trend_methods)} Trend"
+    digits = price_decimals(symbol)
+    overlays = []
+    for name in trend_methods:
+        for line in get_method(name).OVERLAYS:
+            column = line["column"]
+            data = (
+                trend_line_points(trend_df, column, bias_column=bias_column(name), digits=digits)
+                if line["colored_by_bias"]
+                else line_points(trend_df, column, digits=digits)
+            )
+            overlays.append({"key": column, "label": line["label"], "color": line["color"], "data": data})
     return {
         "key": "trend",
         "label": label,
         "tf": trend_tf,
-        "candles": candlestick_points(trend_df),
-        "overlays": [
-            {
-                "key": "trend_ai_knn",
-                "label": "KNN Trend",
-                "color": "#22c55e",
-                "data": trend_line_points(trend_df, "trend_ai_knn"),
-            },
-            {
-                "key": "trend_ai_avg",
-                "label": "KNN Avg",
-                "color": "#38bdf8",
-                "data": line_points(trend_df, "trend_ai_avg"),
-            },
-        ],
+        "candles": candlestick_points(trend_df, digits=digits),
+        "overlays": overlays,
         "markers": trend_bias_markers(trend_df),
         "panels": [],
     }
@@ -342,7 +326,7 @@ def _build_scan_payload(
     params: dict[str, Any],
     has_more: bool,
     trend_mode: str,
-    trend_type: str,
+    trend_methods: str,
     trend_tf: str,
     trend_chart: dict[str, Any] | None,
     from_time: pd.Timestamp | None,
@@ -359,8 +343,9 @@ def _build_scan_payload(
         - signals: bảng tín hiệu bên dưới chart.
         - stats: thống kê nhanh số lượng BUY/SELL.
     """
+    digits = price_decimals(symbol)
     overlays = [
-        {"key": column, "label": label.format(**params), "color": color, "data": line_points(df, column)}
+        {"key": column, "label": label.format(**params), "color": color, "data": line_points(df, column, digits=digits)}
         for column, label, color in _STRATEGY_OVERLAYS.get(strategy_key, [])
     ]
     panels = []
@@ -370,7 +355,7 @@ def _build_scan_payload(
                 "key": "macd",
                 "label": "MACD Histogram",
                 "type": "histogram",
-                "data": histogram_points(df, "macd_h"),
+                "data": histogram_points(df, "macd_h", digits=digits),
             }
         )
     return {
@@ -378,22 +363,23 @@ def _build_scan_payload(
             "strategy": strategy_key,
             "strategyLabel": strategy_label,
             "symbol": symbol,
+            "priceDigits": digits,
             "tf": tf,
             "bars": bars,
             "hasMore": has_more,
             "trendMode": trend_mode,
-            "trendType": trend_type,
+            "trendMethods": trend_methods,
             "trendTf": trend_tf,
             "timeMode": "range" if from_time is not None and to_time is not None else "latest",
             "fromTime": from_time.strftime("%Y-%m-%d %H:%M") if from_time is not None else "",
             "toTime": to_time.strftime("%Y-%m-%d %H:%M") if to_time is not None else "",
         },
         "trendChart": trend_chart,
-        "candles": candlestick_points(df),
+        "candles": candlestick_points(df, digits=digits),
         "overlays": overlays,
         "panels": panels,
         "markers": signal_markers(df),
-        "signals": signal_table_rows(df),
+        "signals": signal_table_rows(df, digits=digits),
         "stats": stats_summary(df),
     }
 
@@ -406,7 +392,7 @@ def _load_and_run(
     overrides: dict[str, str] | None,
     before: pd.Timestamp | None = None,
     trend_mode: str = TREND_MODE_NO_TREND,
-    trend_type: str = "",
+    trend_methods: str = "",
     trend_tf: str = "",
     from_time: pd.Timestamp | None = None,
     to_time: pd.Timestamp | None = None,
@@ -447,11 +433,7 @@ def _load_and_run(
                 raw = load(symbol, tf, query_bars)
             else:
                 raw = load(symbol, tf, query_bars, before=before)
-            run_input = _extend_to_state_warmup(raw, spec, symbol, tf)
-            enriched = run_strategy(spec.key, symbol=symbol, tf=tf, bars=run_input, overrides=run_overrides)
-        if len(run_input) != len(raw) and not raw.empty:
-            # Bỏ phần warm-up trạng thái, chỉ giữ đúng các bar của cửa sổ đã nạp.
-            enriched = enriched[enriched["bartime"] >= raw["bartime"].min()].reset_index(drop=True)
+            enriched = run_strategy(spec.key, symbol=symbol, tf=tf, bars=raw, overrides=run_overrides)
         has_more = False if use_range else len(raw) >= bars if before is None else len(raw) > bars
         if before is not None and has_more:
             enriched = enriched.iloc[-bars:].reset_index(drop=True)
@@ -459,13 +441,16 @@ def _load_and_run(
         return spec, symbol, tf, bars, enriched, has_more, params, None
 
     trend_request = {**strategy_overrides, "TREND_FILTER_ENABLED": True, "ENTRY_TF": tf}
-    if trend_type:
-        trend_request["TREND_TYPE"] = trend_type
+    if trend_methods:
+        trend_request["TREND_METHODS"] = trend_methods
     if trend_tf:
         trend_request["TREND_TF"] = trend_tf
     params = spec.normalize_params(trend_request, symbol, tf)
-    trend_type = str(params["TREND_TYPE"])
+    trend_methods_used = tuple(params["TREND_METHODS"])
     trend_tf = str(params["TREND_TF"])
+    if not trend_tf:
+        raise ValueError(f"No trend timeframe configured for {symbol} {tf}; choose Trend TF.")
+    check_trend_timeframe(tf, trend_tf)  # khung trend >= khung tín hiệu; báo lỗi TRƯỚC khi tải SQL
     trend_query_bars = _trend_query_bars(entry_bars=query_bars, entry_tf=tf, trend_tf=trend_tf)
 
     with _DB_LOCK:
@@ -487,7 +472,7 @@ def _load_and_run(
             trend_bars=trend_raw,
             overrides=trend_request,
         )
-        trend_enriched = add_knn_trend_indicators(trend_raw, knn_trend_indicator_params(params))
+        trend_enriched = build_trend_frame(trend_raw, params)
     has_more = False if use_range else len(raw) >= bars if before is None else len(raw) > bars
     if before is not None and has_more:
         enriched = enriched.iloc[-bars:].reset_index(drop=True)
@@ -496,7 +481,7 @@ def _load_and_run(
         _trim_trend_for_entry(trend_enriched, enriched),
         symbol=symbol,
         trend_tf=trend_tf,
-        trend_type=trend_type,
+        trend_methods=trend_methods_used,
     )
     return spec, symbol, tf, bars, enriched, has_more, params, trend_chart
 
@@ -510,7 +495,7 @@ def run_scan(
     overrides: dict[str, str] | None = None,
     before: pd.Timestamp | None = None,
     trend_mode: str = TREND_MODE_NO_TREND,
-    trend_type: str = "",
+    trend_methods: str = "",
     trend_tf: str = "",
     from_time: pd.Timestamp | None = None,
     to_time: pd.Timestamp | None = None,
@@ -532,7 +517,7 @@ def run_scan(
         overrides,
         before,
         trend_mode,
-        trend_type,
+        trend_methods,
         trend_tf,
         from_time,
         to_time,
@@ -548,7 +533,7 @@ def run_scan(
         params=params,
         has_more=has_more,
         trend_mode=parsed_trend_mode,
-        trend_type=str(params["TREND_TYPE"]) if parsed_trend_mode == TREND_MODE_FILTER else "",
+        trend_methods="+".join(params["TREND_METHODS"]) if parsed_trend_mode == TREND_MODE_FILTER else "",
         trend_tf=str(params["TREND_TF"]) if parsed_trend_mode == TREND_MODE_FILTER else "",
         trend_chart=trend_chart,
         from_time=from_time,
@@ -564,7 +549,7 @@ def export_csv(
     bars: int,
     overrides: dict[str, str] | None = None,
     trend_mode: str = TREND_MODE_NO_TREND,
-    trend_type: str = "",
+    trend_methods: str = "",
     trend_tf: str = "",
     from_time: pd.Timestamp | None = None,
     to_time: pd.Timestamp | None = None,
@@ -582,19 +567,19 @@ def export_csv(
         bars,
         overrides,
         trend_mode=trend_mode,
-        trend_type=trend_type,
+        trend_methods=trend_methods,
         trend_tf=trend_tf,
         from_time=from_time,
         to_time=to_time,
     )
     parsed_trend_mode = _parse_trend_mode(trend_mode)
-    suffix = "_nt" if parsed_trend_mode == TREND_MODE_NO_TREND else f"_tf_{params['TREND_TYPE']}_{params['TREND_TF']}"
+    suffix = "_nt" if parsed_trend_mode == TREND_MODE_NO_TREND else f"_tf_{'+'.join(params['TREND_METHODS'])}_{params['TREND_TF']}"
     if from_time is not None and to_time is not None:
         window = f"{from_time:%Y%m%d_%H%M}_{to_time:%Y%m%d_%H%M}"
     else:
         window = f"latest_{bars}bars"
     filename = f"{spec.key}_{symbol}_{tf}_{window}_signals{suffix}.csv"
-    return signal_csv(enriched, strategy=spec.key), filename
+    return signal_csv(enriched, strategy=spec.key, decimals=price_decimals(symbol)), filename
 
 
 _REQUEST_KEYS = {"strategy", "symbol", "tf", "bars", "before", "from_time", "to_time", "time_range"} | _TREND_CONTROL_KEYS
@@ -635,8 +620,49 @@ def _strategy_trend_timeframes(spec, ordered_timeframes: list[str]) -> list[str]
     return allowed
 
 
+def _gzip_response(response: Response) -> Response:
+    """
+    Nén gzip phản hồi JSON/HTML lớn nếu trình duyệt chấp nhận (Accept-Encoding: gzip).
+
+    Không nén: phản hồi lỗi (status khác 200), đã mã hoá sẵn, dạng luồng, hoặc dưới
+    _GZIP_MIN_BYTES. CSV tải về của /api/export cố ý để nguyên. Mọi phản hồi thuộc kiểu có
+    thể nén đều ghi Vary: Accept-Encoding để cache trung gian không lẫn bản nén với bản thô.
+    """
+    if response.mimetype not in _GZIP_MIMETYPES:
+        return response
+    response.vary.add("Accept-Encoding")
+    if (
+        response.status_code != 200
+        or response.direct_passthrough
+        or "Content-Encoding" in response.headers
+        or not request.accept_encodings["gzip"]
+    ):
+        return response
+    body = response.get_data()
+    if len(body) < _GZIP_MIN_BYTES:
+        return response
+    response.set_data(gzip.compress(body, compresslevel=_GZIP_LEVEL, mtime=0))
+    response.headers["Content-Encoding"] = "gzip"
+    return response
+
+
+def _operational_symbols() -> list[str]:
+    """
+    Symbol hiện trong ô chọn của dashboard: giao của DWH.Dim_Symbol với vũ trụ vận hành
+    (khoá strategies.combo.symbol_x — đúng tập worker Redis và des chạy, mục 7 CLAUDE.md).
+
+    DWH còn 26 cặp forex mà worker không chạy hết (không có tín hiệu để đối chiếu): chỉ 4 cặp EURUSD, USDJPY,
+    GBPUSD, USDCAD (nhóm symbol_entry_atr_pct, từ 2026-10-20) nằm trong vũ trụ vận hành. Giá của chúng làm tròn
+    theo configuration.price_decimals (5 chữ số, JPY 3) ở payload và trục giá của chart, nên không còn phẳng
+    như khi làm tròn 2 chữ số. Chỉ giới hạn danh sách trên trang: /api/scan vẫn nhận mọi symbol hợp lệ nếu
+    gọi thẳng bằng URL (symbol ngoài vũ trụ vận hành vẫn làm tròn 2 chữ số).
+    """
+    return sorted(symbol for symbol in symbols() if symbol in OPERATING_SYMBOLS)
+
+
 def create_app() -> Flask:
     app = Flask(__name__)
+    app.after_request(_gzip_response)
 
     @app.get("/")
     def index():
@@ -651,15 +677,15 @@ def create_app() -> Flask:
                 "paramFields": spec.param_fields,
                 "defaultParams": spec.default_params,
                 "trendTimeframes": _strategy_trend_timeframes(spec, ordered_timeframes),
-                "defaultTrendTf": spec.default_params.get("TREND_TF", ""),
-                "defaultTrendType": spec.default_params.get("TREND_TYPE", "knn"),
+                "trendTfBySymbol": spec.trend_tf_by_symbol,
+                "defaultTrendMethods": ",".join(spec.default_params.get("TREND_METHODS", ("knn",))),
                 "tunedSymbols": list(spec.tuned_symbols),
             }
             for key, spec in STRATEGIES.items()
         }
         html = render_dashboard_html(
             strategies=strategies,
-            symbols=sorted(symbols()),
+            symbols=_operational_symbols(),
             timeframes=ordered_timeframes,
             default_strategy="combo",
             default_symbol=DEFAULT_SYMBOL,
@@ -685,7 +711,7 @@ def create_app() -> Flask:
                 overrides=_extract_overrides(request.args),
                 before=_parse_before(request.args.get("before")),
                 trend_mode=request.args.get("trend_mode", TREND_MODE_NO_TREND),
-                trend_type=request.args.get("trend_type", ""),
+                trend_methods=request.args.get("trend_methods", ""),
                 trend_tf=request.args.get("trend_tf", ""),
                 from_time=from_time,
                 to_time=to_time,
@@ -711,7 +737,7 @@ def create_app() -> Flask:
                 bars=_parse_bars(request.args.get("bars")),
                 overrides=_extract_overrides(request.args),
                 trend_mode=request.args.get("trend_mode", TREND_MODE_NO_TREND),
-                trend_type=request.args.get("trend_type", ""),
+                trend_methods=request.args.get("trend_methods", ""),
                 trend_tf=request.args.get("trend_tf", ""),
                 from_time=from_time,
                 to_time=to_time,

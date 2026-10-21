@@ -124,7 +124,7 @@ def _output_path(args: argparse.Namespace, *, strategy: str, symbol: str, tf: st
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Render wisdom_engine BUY/SELL signals to an HTML chart.")
-    parser.add_argument("--strategy", default="combo", help="Strategy key: combo, ma_cross, macd_break or sma_trend.")
+    parser.add_argument("--strategy", default="combo", help="Strategy key: combo, ma_cross or macd_break.")
     parser.add_argument("--symbol", default=DEFAULT_SYMBOL, help="Symbol code, e.g. US30.")
     parser.add_argument("--tf", default="", help="Timeframe code; omitted uses the strategy default.")
     parser.add_argument("--bars", type=int, default=N_BARS, help="Latest bars to load.")

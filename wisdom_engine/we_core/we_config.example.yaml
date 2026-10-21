@@ -35,6 +35,11 @@ defaults:
                                     # quán cho cùng 1 pair. KHÔNG áp dụng cho
                                     # export_cli.py (CSV vẫn full-history mặc
                                     # định trừ khi tự truyền --from).
+  price_decimals:                   # số chữ số thập phân của atr/entry khi xuất CSV/Redis; symbol không liệt kê = 2
+    EURUSD: 5                       # symbol giá ~1 cần nhiều chữ số hơn (làm tròn 2 chữ số sẽ xoá mất đệm entry)
+    GBPUSD: 5
+    USDCAD: 5
+    USDJPY: 3
 
 strategies:
   combo:
@@ -47,9 +52,26 @@ strategies:
     default_timeframe: H4
     trend_filter_enabled: false
     alternating_filter_enabled: true   # true = chỉ bắn tín hiệu đầu tiên khi hướng đổi chiều (lọc lặp cùng chiều); false = bar nào thỏa điều kiện cũng bắn
-    trend_type: knn
+    trend_methods: [knn]   # khối xác nhận xu hướng khung lớn được bật (src/trend_methods/<tên>.py); nhiều khối = phải đồng thuận cả hai
     trend_timeframes: [H1, H2, H3, H4]
-    default_trend_tf: H4
+    trend_tf_by_symbol:   # khung trend RIÊNG cho từng (symbol, khung vào lệnh): symbol -> {khung vào: khung trend}; BẮT BUỘC đủ mọi symbol × khung vào lệnh (thiếu ô là lỗi lúc nạp config).
+                          # Khung trend phải thuộc trend_timeframes và >= khung vào lệnh (kiểm lúc nạp config và lúc worker khởi động).
+                          # Bảng do research_notes/scripts/t008_tune_trend_tf.py chọn theo SỐ tín hiệu nhiều nhất (2024-01-01 → 2026-10-16); sửa tay được.
+      BTCUSD: {H1: H4, H2: H2, H3: H3, H4: H4}
+      DE40: {H1: H4, H2: H2, H3: H3, H4: H4}
+      FR40: {H1: H4, H2: H4, H3: H3, H4: H4}
+      GOLD: {H1: H4, H2: H2, H3: H3, H4: H4}
+      HK50: {H1: H4, H2: H2, H3: H3, H4: H4}
+      J225: {H1: H4, H2: H4, H3: H3, H4: H4}
+      SP35: {H1: H4, H2: H2, H3: H3, H4: H4}
+      UK100: {H1: H4, H2: H2, H3: H3, H4: H4}
+      US100: {H1: H4, H2: H2, H3: H3, H4: H4}
+      US30: {H1: H4, H2: H2, H3: H3, H4: H4}
+      US500: {H1: H4, H2: H2, H3: H3, H4: H4}
+      EURUSD: {H1: H4, H2: H2, H3: H3, H4: H4}
+      USDJPY: {H1: H4, H2: H2, H3: H3, H4: H4}
+      GBPUSD: {H1: H4, H2: H2, H3: H3, H4: H4}
+      USDCAD: {H1: H4, H2: H2, H3: H3, H4: H4}
     symbol_x:
       US30: 10.0
       US500: 1.0
@@ -62,6 +84,13 @@ strategies:
       J225: 15.0
       GOLD: 0.5
       BTCUSD: 50.0
+    # Nhóm symbol dùng entry theo ATR thay X cố định (đơn vị %): BUY = high + a% × ATR(atr_period), SELL = low − a% × ATR tại nến tín hiệu.
+    # Mỗi symbol đúng MỘT kiểu đệm: symbol_x (X cố định) HOẶC symbol_entry_atr_pct. Cả hai nhóm đều là symbol vận hành (cả ba chiến lược).
+    symbol_entry_atr_pct:
+      EURUSD: 5.0
+      USDJPY: 5.0
+      GBPUSD: 5.0
+      USDCAD: 5.0
     session_hours_utc: {}
 
   ma_cross:
@@ -74,9 +103,27 @@ strategies:
     supported_timeframes: [M10, M20, M30, M45]
     default_timeframe: M30
     trend_filter_enabled: false
-    trend_type: knn
+    alternating_filter_enabled: true   # true = chỉ bắn tín hiệu đầu tiên khi hướng đổi chiều (lọc lặp cùng chiều); false = bar nào thỏa điều kiện cũng bắn
+    trend_methods: [knn]   # khối xác nhận xu hướng khung lớn được bật (src/trend_methods/<tên>.py); nhiều khối = phải đồng thuận cả hai
     trend_timeframes: [H1, H2, H3, H4]
-    default_trend_tf: H4
+    trend_tf_by_symbol:   # khung trend RIÊNG cho từng (symbol, khung vào lệnh): symbol -> {khung vào: khung trend}; BẮT BUỘC đủ mọi symbol × khung vào lệnh (thiếu ô là lỗi lúc nạp config).
+                          # Khung trend phải thuộc trend_timeframes và >= khung vào lệnh (kiểm lúc nạp config và lúc worker khởi động).
+                          # Bảng do research_notes/scripts/t008_tune_trend_tf.py chọn theo SỐ tín hiệu nhiều nhất (2024-01-01 → 2026-10-16); sửa tay được.
+      BTCUSD: {M10: H4, M20: H1, M30: H1, M45: H1}
+      DE40: {M10: H4, M20: H1, M30: H1, M45: H1}
+      FR40: {M10: H4, M20: H1, M30: H1, M45: H1}
+      GOLD: {M10: H4, M20: H1, M30: H1, M45: H1}
+      HK50: {M10: H4, M20: H1, M30: H1, M45: H1}
+      J225: {M10: H4, M20: H1, M30: H1, M45: H1}
+      SP35: {M10: H4, M20: H1, M30: H1, M45: H1}
+      UK100: {M10: H4, M20: H1, M30: H1, M45: H1}
+      US100: {M10: H4, M20: H1, M30: H1, M45: H1}
+      US30: {M10: H4, M20: H1, M30: H1, M45: H1}
+      US500: {M10: H4, M20: H1, M30: H1, M45: H1}
+      EURUSD: {M10: H4, M20: H1, M30: H1, M45: H1}
+      USDJPY: {M10: H4, M20: H1, M30: H1, M45: H1}
+      GBPUSD: {M10: H4, M20: H1, M30: H1, M45: H1}
+      USDCAD: {M10: H4, M20: H1, M30: H1, M45: H1}
 
   # MACD Break -- biến tấu từ mẫu breakout trong research_notes S005 (thêm
   # 2026-10-06): BUY khi close phá đỉnh close của lookback_bars nến trước VÀ MACD
@@ -92,16 +139,23 @@ strategies:
     default_timeframe: H1
     trend_filter_enabled: false
     alternating_filter_enabled: true   # true = chỉ bắn tín hiệu đầu tiên khi hướng đổi chiều (lọc lặp cùng chiều); false = bar nào thỏa điều kiện cũng bắn
-    trend_type: knn
+    trend_methods: [knn]   # khối xác nhận xu hướng khung lớn được bật (src/trend_methods/<tên>.py); nhiều khối = phải đồng thuận cả hai
     trend_timeframes: [H1, H2, H3, H4]
-    default_trend_tf: H4
-
-  # SMA Trend -- chiến lược nghiên cứu (research_notes S005, thêm 2026-10-04), chỉ để
-  # xem trên chart / export. Worker Redis KHÔNG chạy chiến lược này. Giá trị ban đầu
-  # do người dùng duyệt để xem chart, CHƯA có căn cứ backtest.
-  sma_trend:
-    sma_period: 200           # nguồn: SMA 210 nến ngày (~10 tháng)
-    allow_short: true         # chiều SELL đối xứng — không có trong nguồn
-    supported_timeframes: [M10, M20, M30, M45, H1, H2, H3, H4]
-    default_timeframe: H4
-    state_warmup_start: "2025-01-01"   # chart chạy trạng thái từ mốc này rồi mới cắt cửa sổ hiển thị
+    trend_tf_by_symbol:   # khung trend RIÊNG cho từng (symbol, khung vào lệnh): symbol -> {khung vào: khung trend}; BẮT BUỘC đủ mọi symbol × khung vào lệnh (thiếu ô là lỗi lúc nạp config).
+                          # Khung trend phải thuộc trend_timeframes và >= khung vào lệnh (kiểm lúc nạp config và lúc worker khởi động).
+                          # Bảng do research_notes/scripts/t008_tune_trend_tf.py chọn theo SỐ tín hiệu nhiều nhất (2024-01-01 → 2026-10-16); sửa tay được.
+      BTCUSD: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H1, H2: H4, H3: H4, H4: H4}
+      DE40: {M10: H1, M20: H1, M30: H1, M45: H3, H1: H3, H2: H4, H3: H4, H4: H4}
+      FR40: {M10: H1, M20: H1, M30: H1, M45: H2, H1: H2, H2: H4, H3: H3, H4: H4}
+      GOLD: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H3, H2: H4, H3: H3, H4: H4}
+      HK50: {M10: H1, M20: H1, M30: H1, M45: H3, H1: H2, H2: H4, H3: H4, H4: H4}
+      J225: {M10: H1, M20: H1, M30: H1, M45: H2, H1: H3, H2: H4, H3: H3, H4: H4}
+      SP35: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H2, H2: H3, H3: H4, H4: H4}
+      UK100: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H1, H2: H3, H3: H3, H4: H4}
+      US100: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H1, H2: H4, H3: H4, H4: H4}
+      US30: {M10: H1, M20: H1, M30: H2, M45: H2, H1: H1, H2: H3, H3: H4, H4: H4}
+      US500: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H2, H2: H2, H3: H3, H4: H4}
+      EURUSD: {M10: H1, M20: H1, M30: H1, M45: H3, H1: H1, H2: H2, H3: H3, H4: H4}
+      USDJPY: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H1, H2: H4, H3: H4, H4: H4}
+      GBPUSD: {M10: H1, M20: H1, M30: H1, M45: H2, H1: H2, H2: H2, H3: H4, H4: H4}
+      USDCAD: {M10: H1, M20: H1, M30: H1, M45: H2, H1: H2, H2: H4, H3: H4, H4: H4}
