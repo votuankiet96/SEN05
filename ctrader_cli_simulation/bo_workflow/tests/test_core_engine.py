@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import itertools
 import json
 import math
@@ -11,18 +12,19 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import warnings
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-# tests/ nằm ngang hàng core_engine/api_engine dưới bo_workflow/ -> parents[1]
+# tests/ nằm ngang hàng core_engine/ dưới bo_workflow/ -> parents[1]
 # (1 cấp lên từ tests/) đúng là bo_workflow/.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from core_engine import facilitator
 from core_engine.configuration import (
-    SL_FIB_LEVELS, TP_FIB_LEVELS, load_engine_profile, load_ftmo_profile,
+    SL_FIB_LEVELS, TP_FIB_LEVELS, MasterDbProfile, load_engine_profile, load_ftmo_profile,
     load_redis_profile, load_strategy_profile,
 )
 from core_engine.models import (
@@ -37,6 +39,24 @@ from core_engine.planner import build_experiment, expand_grid
 FAKE_FINGERPRINT = {
     "algo_sha256": "a" * 64, "signals": {"US30.cash|h1": "s" * 64},
 }
+
+# Test không được phụ thuộc cờ `master_db.enabled` trong config.yaml của máy: bật thì run_experiment/walkforward sẽ gọi
+# SQL Server thật. Mọi test ở file này chạy với kho TẮT; test cần kho bật tự patch lại bên trong (xem
+# test_master_db_is_untouched_when_disabled_and_a_copy_when_enabled).
+_MASTER_DB_OFF = MasterDbProfile(enabled=False, server="x", database="y")
+_master_db_patches = [
+    patch.object(facilitator, "load_master_db_profile", return_value=_MASTER_DB_OFF),
+]
+
+
+def setUpModule() -> None:
+    for patcher in _master_db_patches:
+        patcher.start()
+
+
+def tearDownModule() -> None:
+    for patcher in _master_db_patches:
+        patcher.stop()
 
 
 def metadata_for(profile_id: str) -> dict:
@@ -59,43 +79,26 @@ class ConfigurationPlannerTests(unittest.TestCase):
     def test_load_engine_and_ftmo_profile_from_config_yaml(self) -> None:
         """load_ftmo_profile() không hề tồn tại trước 2026-09-12 (không ai load
         profiles/ftmo/*.json) — test này khoá lại hành vi mới, không phải hồi quy."""
-        engine = load_engine_profile("ctrader-5.9.16-ticks-approxfx-v1")
+        engine = load_engine_profile("ctrader-ticks-precisefx-v1")
         self.assertEqual(engine.data_mode, "ticks")
-        self.assertFalse(engine.precise_conversion)
+        self.assertTrue(engine.precise_conversion)
         self.assertEqual(engine.backend, "cli")
         ftmo = load_ftmo_profile("ftmo-2step-v1")
         self.assertEqual(ftmo.timezone, "Europe/Prague")
         self.assertEqual(ftmo.daily_loss_pct, 5.0)
         self.assertEqual(ftmo.initial_balance, 100000)
 
-    def test_load_api_engine_profile_has_api_backend(self) -> None:
-        """[2026-09-17] Engine thứ 2 (Plugin qua bridge) — khoá lại field mới
-        `backend` đọc đúng từ config.yaml, không âm thầm mặc định về "cli"."""
-        engine = load_engine_profile("ctrader-api-plugin-v1")
-        self.assertEqual(engine.backend, "api")
-
-    def test_ctrader_5_10_profiles_flip_exactly_one_new_cli_switch(self) -> None:
-        """[2026-10-08] CLI 5.10 có 2 công tắc mà 5.9.16 không có: --commission-auto và
-        --precise-conversion. Mỗi profile mới chỉ lật ĐÚNG 1 công tắc so với profile
-        GUI-parity, để A/B tách được tác động từng cái — lật cả 2 một lúc sẽ trộn lẫn."""
-        base = load_engine_profile("ctrader-5.9.16-ticks-approxfx-v1")
-        commission = load_engine_profile("ctrader-ticks-approxfx-commauto-v1")
-        precise = load_engine_profile("ctrader-ticks-precisefx-v1")
-        for profile in (commission, precise):
-            self.assertEqual(profile.backend, "cli")
-            self.assertEqual(profile.data_mode, base.data_mode)
-            self.assertIsNone(profile.commission)
-            self.assertIsNone(profile.commission_type)
-            self.assertIsNone(profile.spread)
-        self.assertTrue(commission.commission_auto)
-        self.assertEqual(commission.precise_conversion, base.precise_conversion)
-        self.assertTrue(precise.precise_conversion)
-        self.assertEqual(precise.commission_auto, base.commission_auto)
+    def test_engine_switches_reach_the_cli_argv(self) -> None:
+        """[2026-10-08] CLI 5.10 có 2 công tắc mà 5.9.16 không có: --commission-auto và --precise-conversion.
+        config.yaml chỉ còn 1 bộ engine nên dựng tay 3 EngineProfile để thử riêng từng công tắc."""
+        base = EngineProfile(id="test-base")
+        commission = EngineProfile(id="test-commauto", commission_auto=True)
+        precise = EngineProfile(id="test-precise", precise_conversion=True)
 
         # công tắc phải đi hết đường: profile -> RunSpec -> argv thật của ctrader-cli
-        strategy = load_strategy_profile("combo-v1")
+        strategy = load_strategy_profile("backtestbot-v1")
         config = {
-            "experiment": "x", "strategy": "combo", "strategy_profile": "combo-v1",
+            "experiment": "x", "strategy": "backtestbot", "strategy_profile": "backtestbot-v1",
             "symbols": ["JP225.cash"], "timeframe": "h4", "start": "2026-01-01", "end": "2026-02-01",
         }
 
@@ -114,20 +117,40 @@ class ConfigurationPlannerTests(unittest.TestCase):
         self.assertNotIn("--precise-conversion", argv_for(base))
         self.assertFalse(any(arg.startswith("--commission=") for arg in argv_for(commission)))
 
-    def test_macdbreak_profile_matches_its_redis_signals_and_parameters(self) -> None:
-        profile = load_strategy_profile("macdbreak-v1")
-        self.assertEqual(list(profile.params), list(load_strategy_profile("macross-v1").params))
-        self.assertEqual(signal_trans.REDIS_STRATEGY_TOKENS[profile.strategy], "macd_break")
-        self.assertEqual(signal_trans.STRATEGY_COLUMNS["macd_break"], ("bartime", "atr", "signal"))
-        profile.validate_metadata(metadata_for("macdbreak-v1"))
+    def test_the_only_strategy_profile_has_the_leg_params_with_single_leg_defaults(self) -> None:
+        """[2026-10-13] BacktestBot hỗ trợ nhiều chân chốt lời khớp OE (tối đa 3 chân từ 2026-10-16). LegCount mặc định 1
+        ≡ bot 1 chân; KtpLevel là TP chân 1, Leg2Ktp/Leg3Ktp là chân 2/3; không tham số nào đưa vào optimize."""
+        profile = load_strategy_profile("backtestbot-v1")
+        self.assertEqual(profile.cbot_name, "BacktestBot")
+        self.assertEqual(profile.params["LegCount"].default, 1)
+        self.assertEqual([profile.params[name].default for name in ("Leg2Ktp", "Leg3Ktp")], ["Fib3330", "Fib4236"])
+        self.assertNotIn("Leg4Ktp", profile.params)
+        self.assertFalse(any(profile.params[name].optimize for name in ("LegCount", "Leg2Ktp", "Leg3Ktp")))
+        profile.validate_metadata(metadata_for("backtestbot-v1"))
+
+    def test_leg_setup_changes_label_and_hash(self) -> None:
+        profile, engine = load_strategy_profile("backtestbot-v1"), EngineProfile("engine")
+        config = {
+            "experiment": "x", "strategy": "backtestbot", "strategy_profile": "backtestbot-v1", "engine_profile": "engine",
+            "symbols": ["US30.cash"], "timeframe": "h1", "start": "2026-01-01", "end": "2026-01-31",
+        }
+
+        def spec_for(fixed: dict) -> RunSpec:
+            return expand_grid({**config, "fixed_params": fixed}, profile, engine)[0]
+
+        one, three, three_other = spec_for({}), spec_for({"LegCount": 3}), spec_for({"LegCount": 3, "Leg3Ktp": "Fib5388"})
+        self.assertTrue(one.label().endswith("__legs1"))
+        self.assertTrue(three.label().endswith("__legs3__k2_" + three.params["Leg2Ktp"] + "__k3_" + three.params["Leg3Ktp"]))
+        self.assertEqual(len({one.label(), three.label(), three_other.label()}), 3)
+        self.assertEqual(len({one.canonical_json(), three.canonical_json(), three_other.canonical_json()}), 3)
 
     def test_engine_profile_rejects_unknown_backend(self) -> None:
         with self.assertRaisesRegex(ValueError, "backend"):
             EngineProfile("e", backend="grpc")
 
     def test_metadata_fail_closed_on_extra_param(self) -> None:
-        profile = load_strategy_profile("combo-v1")
-        meta = metadata_for("combo-v1")
+        profile = load_strategy_profile("backtestbot-v1")
+        meta = metadata_for("backtestbot-v1")
         profile.validate_metadata(meta)
         meta["Parameters"].append({"PropertyName": "NewParam", "Type": "Double", "DefaultValue": 1})
         with self.assertRaisesRegex(ValueError, "parameter drift"):
@@ -142,12 +165,12 @@ class ConfigurationPlannerTests(unittest.TestCase):
             EngineProfile("e", commission_type="UsdPerOneLot")
 
     def test_grid_is_deterministic_and_uses_enum_indexes(self) -> None:
-        profile = load_strategy_profile("combo-v1")
+        profile = load_strategy_profile("backtestbot-v1")
         engine = EngineProfile("engine")
         config = {
             "experiment": "x",
-            "strategy": "combo",
-            "strategy_profile": "combo-v1",
+            "strategy": "backtestbot",
+            "strategy_profile": "backtestbot-v1",
             "engine_profile": "engine",
             "symbols": ["US30.cash"],
             "timeframe": "h1",
@@ -173,10 +196,10 @@ class EvidenceSelectionTests(unittest.TestCase):
         summary = evidence.bot_summary(text)
         self.assertEqual(summary["loaded"], 10)
         self.assertEqual(summary["filled"], 1)
-        # end = 2026-02-01 la moc DUNG (exclusive) -> phai trung y het endDate
-        # trong report (1769904000000 = 2026-02-01). Xem test_end_date_is_exclusive.
+        # end = 2026-02-01 phai trung y het endDate trong report (cTrader chi
+        # lap lai gia tri --end; 1769904000000 = 2026-02-01). Xem test_end_date_goes_straight_to_cli_end.
         spec = RunSpec(
-            "combo", "combo-v1", "engine", "US30.cash", "h1",
+            "combo", "backtestbot-v1", "engine", "US30.cash", "h1",
             date(2026, 1, 1), date(2026, 2, 1), 100000, "ticks", {},
         )
         report = {"main": {"testingPeriod": {"startDate": 1767225600000, "endDate": 1769904000000}}}
@@ -210,14 +233,15 @@ class EvidenceSelectionTests(unittest.TestCase):
             evidence.bot_summary(market_order + pending_order)["margin_rejections"], 2
         )
 
-    def test_end_date_is_exclusive_and_matches_gui(self) -> None:
+    def test_end_date_goes_straight_to_cli_end(self) -> None:
         """`end` phai di thang vao --end, khong cong them ngay nao (nghia tu
         chung, ap dung cho cả 2 engine — bang chung dung cli_runner de dung
-        build_argv co san, khong phai vi test nay chi noi ve CLI)."""
+        build_argv co san, khong phai vi test nay chi noi ve CLI). Ten cu cua
+        test nay ("..._is_exclusive_...") sai: ctrader-cli chay TRON ngay end."""
         from core_engine import cli_runner
 
         spec = RunSpec(
-            "combo", "combo-v1", "engine", "US30.cash", "h1",
+            "combo", "backtestbot-v1", "engine", "US30.cash", "h1",
             date(2026, 1, 1), date(2026, 9, 1), 100000, "ticks", {},
         )
         argv = cli_runner.build_argv(spec, cli_path=Path("cli.exe"), algo_path=Path("a.algo"),
@@ -248,7 +272,7 @@ class EvidenceSelectionTests(unittest.TestCase):
 
         def spec(precise: bool) -> RunSpec:
             return RunSpec(
-                "combo", "combo-v1", "engine", "JP225.cash", "h4",
+                "combo", "backtestbot-v1", "engine", "JP225.cash", "h4",
                 date(2026, 1, 1), date(2026, 2, 1), 100000, "ticks", {}, precise_conversion=precise,
             )
 
@@ -381,9 +405,9 @@ class SelectionClassifyTests(unittest.TestCase):
 
 
 class FacilitatorTests(unittest.TestCase):
-    """facilitator.py — bộ thực thi lõi (run_experiment) + phương pháp grid (chọn cli_engine
-    hay api_engine, chạy song song, claim/retry). Trần max_parallel kiểm tra
-    được mà không cần CLI/API/auth thật vì nó raise NGAY sau khi tính workers,
+    """facilitator.py — bộ thực thi lõi (run_experiment) + phương pháp grid
+    (chạy song song, claim/retry). Trần max_parallel kiểm tra
+    được mà không cần CLI/auth thật vì nó raise NGAY sau khi tính workers,
     trước khi chạm tới engine nào."""
 
     def test_max_parallel_default_is_twelve_and_capped(self) -> None:
@@ -402,7 +426,7 @@ class FacilitatorTests(unittest.TestCase):
 
     def test_run_experiment_requires_engine(self) -> None:
         """[2026-09-17] engine giờ bắt buộc — thiếu nó thì không biết rẽ nhánh
-        cli_engine hay api_engine, phải báo lỗi rõ thay vì AttributeError mù mờ
+        engine nào, phải báo lỗi rõ thay vì AttributeError mù mờ
         sau này khi code chạm tới `engine.backend`."""
         with self.assertRaisesRegex(ValueError, "engine"):
             facilitator.run_experiment(
@@ -428,6 +452,17 @@ class PipelineLockTests(unittest.TestCase):
             self.assertEqual(pipeline_lock.check("us30_h1_combo", "grid", "hash1"), {"ref": "grid/x"})
             # hash khac -> khong duoc coi la cache hit, du cung ten pipeline/stage
             self.assertIsNone(pipeline_lock.check("us30_h1_combo", "grid", "hash2"))
+
+    def test_check_ignores_a_lock_whose_experiment_folder_is_gone(self) -> None:
+        with tempfile.TemporaryDirectory() as td, patch.object(pipeline_lock, "LOCKS_ROOT", Path(td) / "locks"):
+            root = Path(td) / "grid" / "exp"
+            root.mkdir(parents=True)
+            pipeline_lock.record("p", "grid", "h", {"root": str(root), "total": 1})
+            pipeline_lock.record("p", "dsr", "h", {"value": 42})  # tang khong co `root` van dung nhu cu
+            self.assertEqual(pipeline_lock.check("p", "grid", "h"), {"root": str(root), "total": 1})
+            root.rmdir()
+            self.assertIsNone(pipeline_lock.check("p", "grid", "h"))
+            self.assertEqual(pipeline_lock.check("p", "dsr", "h"), {"value": 42})
 
     def test_record_overwrites_only_named_stage(self) -> None:
         with tempfile.TemporaryDirectory() as td, patch.object(pipeline_lock, "LOCKS_ROOT", Path(td)):
@@ -460,8 +495,8 @@ class PipelineCachingIntegrationTests(unittest.TestCase):
     def test_run_grid_skips_real_work_on_cache_hit(self) -> None:
         config = {
             "pipeline": "us30_h1_combo_test", "pipeline_stage": "grid",
-            "symbols": ["US30.cash"], "timeframe": ["h1"], "strategy": "combo",
-            "strategy_profile": "combo-v1", "engine_profile": "ctrader-5.9.16-ticks-approxfx-v1",
+            "symbols": ["US30.cash"], "timeframe": ["h1"], "strategy": "backtestbot", "signal_strategies": ["combo"],
+            "strategy_profile": "backtestbot-v1", "engine_profile": "ctrader-ticks-precisefx-v1",
             "start": "2025-01-01", "end": "2026-09-01", "balance": 100000,
             "parameter_space": {"KslLevel": True}, "fixed_params": {"RiskPercent": 0.5},
         }
@@ -482,8 +517,8 @@ class PipelineCachingIntegrationTests(unittest.TestCase):
     def test_run_walkforward_skips_real_work_on_cache_hit(self) -> None:
         config = {
             "pipeline": "us30_h1_combo_test",
-            "symbols": ["US30.cash"], "timeframe": ["h1"], "strategy": "combo",
-            "strategy_profile": "combo-v1", "engine_profile": "ctrader-5.9.16-ticks-approxfx-v1",
+            "symbols": ["US30.cash"], "timeframe": ["h1"], "strategy": "backtestbot", "signal_strategies": ["combo"],
+            "strategy_profile": "backtestbot-v1", "engine_profile": "ctrader-ticks-precisefx-v1",
             "start": "2025-01-01", "end": "2026-09-01", "balance": 100000,
             "parameter_space": {"KslLevel": True}, "fixed_params": {"RiskPercent": 0.5},
         }
@@ -544,7 +579,7 @@ class StoreMonteCarloTests(unittest.TestCase):
             st.open({"schema": "bo-research-experiment/v1", "name": "exp"})
             snap, digest = st.snapshot(src)
             self.assertTrue(snap.is_file())
-            spec = RunSpec("combo", "combo-v1", "engine", "US30.cash", "h1",
+            spec = RunSpec("combo", "backtestbot-v1", "engine", "US30.cash", "h1",
                            date(2026, 1, 1), date(2026, 1, 2), 100000, "ticks", {})
             claim = st.claim(spec, st.param_hash(spec, digest))
             self.assertEqual(claim.disposition, "claimed")
@@ -726,11 +761,15 @@ class SignalTransTests(unittest.TestCase):
         )
 
     def test_signal_list_key_accepts_custom_key_prefix(self) -> None:
-        # Kenh trend "L_PastSignal_Trend" (2026-09-26) -- cung khuon key, chi khac
+        # Nguon KNN "L_PastSignal_Knn" va BRK "L_PastSignal_Breakout" (2026-10-23) -- cung khuon key, chi khac
         # tien to, xem RedisProfile.key_prefix.
         self.assertEqual(
-            signal_trans.signal_list_key("US30", "h1", "combo", key_prefix="L_PastSignal_Trend"),
-            "L_PastSignal_Trend_US30_H1_COMBO",
+            signal_trans.signal_list_key("US30", "h1", "combo", key_prefix="L_PastSignal_Knn"),
+            "L_PastSignal_Knn_US30_H1_COMBO",
+        )
+        self.assertEqual(
+            signal_trans.signal_list_key("US30", "h1", "combo", key_prefix="L_PastSignal_Breakout"),
+            "L_PastSignal_Breakout_US30_H1_COMBO",
         )
 
     def test_fetch_signal_rows_returns_empty_when_list_missing(self) -> None:
@@ -756,35 +795,8 @@ class SignalTransTests(unittest.TestCase):
     def test_fetch_signal_rows_uses_custom_key_prefix_for_lrange(self) -> None:
         client = MagicMock()
         client.lrange.return_value = []
-        signal_trans.fetch_signal_rows(client, "US30", "H1", "combo", key_prefix="L_PastSignal_Trend")
-        client.lrange.assert_called_once_with("L_PastSignal_Trend_US30_H1_COMBO", 0, -1)
-
-    def test_materialize_signal_csv_reads_from_profile_key_prefix(self) -> None:
-        # profile.key_prefix (khong phai hang so cung "L_PastSignal") phai
-        # quyet dinh key LIST thuc su duoc doc -- day la co che duy nhat de
-        # doi tu kenh goc sang kenh trend (xem docstring module).
-        profile = MagicMock()
-        profile.key_prefix = "L_PastSignal_Trend"
-        fake_client = MagicMock()
-        with tempfile.TemporaryDirectory() as td, \
-                patch.object(signal_trans, "redis_client", return_value=fake_client), \
-                patch.object(
-                    signal_trans, "fetch_signal_rows",
-                    return_value=[{"bartime": "2024-01-01 23:00", "atr": "1.0", "signal": "1"}],
-                ) as fetch:
-            dest = Path(td) / "out.csv"
-            written = signal_trans.materialize_signal_csv(profile, "US30", "H1", "ma_cross", dest)
-        self.assertEqual(written, 1)
-        fetch.assert_called_once_with(fake_client, "US30", "H1", "ma_cross", key_prefix="L_PastSignal_Trend")
-
-    def test_materialize_signal_csv_error_message_uses_profile_key_prefix(self) -> None:
-        profile = MagicMock()
-        profile.key_prefix = "L_PastSignal_Trend"
-        with tempfile.TemporaryDirectory() as td, \
-                patch.object(signal_trans, "redis_client", return_value=MagicMock()), \
-                patch.object(signal_trans, "fetch_signal_rows", return_value=[]):
-            with self.assertRaisesRegex(RuntimeError, "L_PastSignal_Trend_US30_H1_MA_CROSS"):
-                signal_trans.materialize_signal_csv(profile, "US30", "H1", "ma_cross", Path(td) / "out.csv")
+        signal_trans.fetch_signal_rows(client, "US30", "H1", "combo", key_prefix="L_PastSignal_Knn")
+        client.lrange.assert_called_once_with("L_PastSignal_Knn_US30_H1_COMBO", 0, -1)
 
     def test_redis_client_reuses_one_pool_until_the_password_file_changes(self) -> None:
         from core_engine.configuration import RedisProfile
@@ -813,43 +825,26 @@ class SignalTransTests(unittest.TestCase):
         self.assertEqual(profile.db, 0)
         self.assertEqual(profile.key_prefix, "L_PastSignal")
 
-    def test_load_redis_profile_reads_trend_key_prefix_for_trend_channel(self) -> None:
-        profile = load_redis_profile("sen05-signal-trend-v1")
-        self.assertEqual(profile.db, 1)
-        self.assertEqual(profile.key_prefix, "L_PastSignal_Trend")
-        # Cung server/mat khau voi kenh goc -- chi khac db + key_prefix.
-        self.assertEqual(profile.host, load_redis_profile("sen05-signal-v1").host)
-        self.assertEqual(profile.pwd_file, load_redis_profile("sen05-signal-v1").pwd_file)
+    def test_load_redis_profile_reads_the_four_fixed_sources(self) -> None:
+        # [2026-10-23] WE cap 3 nguon CO DINH: db0 RAW / db1 KNN / db2 BRK, moi nguon mot tien to va mot nhan SQL.
+        # [2026-10-24] Them nguon thu 4: db4 ZIGZAG.
+        raw, knn, brk, zig = (load_redis_profile(name) for name in (
+            "sen05-signal-v1", "sen05-signal-knn-v1", "sen05-signal-breakout-v1", "sen05-signal-zigzag-v1"))
+        self.assertEqual([(p.db, p.key_prefix, p.label) for p in (raw, knn, brk, zig)], [
+            (0, "L_PastSignal", "original"), (1, "L_PastSignal_Knn", "knn"), (2, "L_PastSignal_Breakout", "breakout"),
+            (4, "L_PastSignal_Zigzag", "zigzag"),
+        ])
+        # Cung server/mat khau -- chi khac db + key_prefix + nhan.
+        for profile in (knn, brk, zig):
+            self.assertEqual((profile.host, profile.pwd_file), (raw.host, raw.pwd_file))
 
-    def test_write_signal_csv_matches_combo_header_and_keeps_raw_signal(self) -> None:
-        rows = [
-            {"bartime": "2024-01-01 23:00", "atr": "71.71", "entry": "37753.2", "signal": "1"},
-            {"bartime": "2024-01-02 00:00", "atr": "70.0", "entry": "37700.0", "signal": "2"},
-        ]
-        with tempfile.TemporaryDirectory() as td:
-            dest = Path(td) / "out.csv"
-            written = signal_trans.write_signal_csv(rows, dest, "combo")
-            self.assertEqual(written, 2)
-            lines = dest.read_text(encoding="utf-8").strip().splitlines()
-            self.assertEqual(lines[0], "bartime,atr,entry,signal")
-            # signal="2" (SELL theo ProtoOATradeSide) giữ NGUYÊN, không tự
-            # chuẩn hoá -> LoadSignalFile() bên cBot mới là nơi chuẩn hoá.
-            self.assertEqual(lines[2], "2024-01-02 00:00,70.0,37700.0,2")
-
-    def test_write_signal_csv_skips_rows_missing_required_column(self) -> None:
-        rows = [{"bartime": "2024-01-01 23:00", "atr": "1.0", "signal": "1"}]  # thiếu entry
-        with tempfile.TemporaryDirectory() as td:
-            dest = Path(td) / "out.csv"
-            written = signal_trans.write_signal_csv(rows, dest, "combo")
-            self.assertEqual(written, 0)
-
-    def test_write_signal_csv_ma_cross_has_no_entry_column(self) -> None:
-        rows = [{"bartime": "2024-01-01 23:00", "atr": "1.0", "signal": "1"}]
-        with tempfile.TemporaryDirectory() as td:
-            dest = Path(td) / "out.csv"
-            written = signal_trans.write_signal_csv(rows, dest, "ma_cross")
-            self.assertEqual(written, 1)
-            self.assertEqual(dest.read_text(encoding="utf-8").splitlines()[0], "bartime,atr,signal")
+    def test_retired_trend_profile_is_gone_and_a_profile_without_label_is_rejected(self) -> None:
+        with self.assertRaises(KeyError):
+            load_redis_profile("sen05-signal-trend-v1")
+        broken = {"redis": {"p": {"host": "h", "port": 6379, "db": 3, "pwd_file": "x", "key_prefix": "L_PastSignal_Knn"}}}
+        with patch("core_engine.configuration._config", return_value=broken):
+            with self.assertRaisesRegex(ValueError, "missing `label`"):
+                load_redis_profile("p")
 
 
 class ReadoutTests(unittest.TestCase):
@@ -919,75 +914,7 @@ class WalkforwardTests(unittest.TestCase):
         self.assertEqual(docs[0]["config"]["window_convention"], walkforward.WINDOW_CONVENTION)
 
 
-class ResolveSignalPathTests(unittest.TestCase):
-    """resolve_signal_path() — nối dây Redis-only 2026-09-21 lần 3. Mock thẳng
-    materialize_signal_csv() (đã có test riêng ở lớp SignalTransTests cho phần
-    dưới nó: fetch_signal_rows/write_signal_csv) — lớp này chỉ khoá lại phần
-    LOGIC MỚI: map symbol->group, map strategy nội bộ->token Redis, và dedup
-    qua `materialized` trong 1 batch.
-
-    [2026-09-22] dest_dir giờ do CALLER cấp (không còn hằng số REDIS_CACHE_DIR
-    cố định — bỏ vì không mang lại giá trị thật, xem docstring signal_trans.py)
-    — mỗi test tự tạo 1 thư mục tạm riêng."""
-
-    def setUp(self) -> None:
-        self._tmp = tempfile.TemporaryDirectory()
-        self.dest_dir = Path(self._tmp.name)
-
-    def tearDown(self) -> None:
-        self._tmp.cleanup()
-
-    def _spec(self, symbol: str, timeframe: str) -> RunSpec:
-        return RunSpec("combo", "combo-v1", "engine", symbol, timeframe,
-                       date(2026, 1, 1), date(2026, 2, 1), 100000, "ticks", {})
-
-    def test_combo_maps_symbol_group_and_keeps_combo_token(self) -> None:
-        profile = load_strategy_profile("combo-v1")
-        redis_profile = MagicMock()
-        spec = self._spec("US30.cash", "h1")
-        with patch.object(signal_trans, "materialize_signal_csv") as materialize:
-            path = signal_trans.resolve_signal_path(redis_profile, profile, spec, self.dest_dir)
-        expected = self.dest_dir / "US30_H1_combo.csv"
-        self.assertEqual(path, expected)
-        materialize.assert_called_once_with(redis_profile, "US30", "h1", "combo", expected)
-
-    def test_macross_internal_name_maps_to_ma_cross_redis_token(self) -> None:
-        """profile.strategy nội bộ = "macross" (liền, config.yaml) nhưng key
-        Redis thật của strategy_lab dùng "ma_cross" (gạch dưới) — đây chính là
-        lỗi tôi (Claude) suýt để lọt khi thiết kế, đã sửa lại đúng theo memory
-        cbot-cli-simulation-redis-vision.md trước khi code."""
-        profile = load_strategy_profile("macross-v1")
-        redis_profile = MagicMock()
-        spec = self._spec("US30.cash", "m30")
-        with patch.object(signal_trans, "materialize_signal_csv") as materialize:
-            path = signal_trans.resolve_signal_path(redis_profile, profile, spec, self.dest_dir)
-        expected = self.dest_dir / "US30_M30_ma_cross.csv"
-        self.assertEqual(path, expected)
-        materialize.assert_called_once_with(redis_profile, "US30", "m30", "ma_cross", expected)
-
-    def test_dedups_within_a_shared_materialized_set(self) -> None:
-        """Quét lưới nhiều KslLevel/KtpLevel trên CÙNG 1 symbol/timeframe chỉ
-        được đọc Redis ĐÚNG 1 LẦN trong 1 batch — không phải 1 lần/spec."""
-        profile = load_strategy_profile("combo-v1")
-        redis_profile = MagicMock()
-        materialized: set[Path] = set()
-        with patch.object(signal_trans, "materialize_signal_csv") as materialize:
-            signal_trans.resolve_signal_path(redis_profile, profile, self._spec("US30.cash", "h1"),
-                                             self.dest_dir, materialized=materialized)
-            signal_trans.resolve_signal_path(redis_profile, profile, self._spec("US30.cash", "h1"),
-                                             self.dest_dir, materialized=materialized)
-        materialize.assert_called_once()
-
-    def test_rejects_symbol_without_redis_mapping(self) -> None:
-        profile = load_strategy_profile("combo-v1")
-        spec = self._spec("NOTASYMBOL", "h1")
-        with patch.object(signal_trans, "materialize_signal_csv") as materialize:
-            with self.assertRaisesRegex(KeyError, "NOTASYMBOL"):
-                signal_trans.resolve_signal_path(MagicMock(), profile, spec, self.dest_dir)
-        materialize.assert_not_called()
-
-
-IN_WINDOW_CSV = "bartime,atr,entry,signal\n2026-01-05 10:00,50,100,1\n"
+IN_WINDOW_CSV = "bartime,atr,entry,signal,tf,symbol,strategy\n2026-01-05 10:00,50,100,1,H1,US30.cash,combo\n"
 
 
 def _fake_result(work_dir: Path, status: RunStatus = RunStatus.OK) -> RunResult:
@@ -1012,10 +939,10 @@ class RunExperimentLifecycleTests(unittest.TestCase):
 
     def _run(self, td: str, *, csv_text: str, run_backtest, should_cancel=None, name: str = "exp",
              protocol: Any = None, cli_bytes: bytes = b"fake cli"):
-        profile = load_strategy_profile("combo-v1")
-        engine = load_engine_profile("ctrader-5.9.16-ticks-approxfx-v1")
+        profile = load_strategy_profile("backtestbot-v1")
+        engine = load_engine_profile("ctrader-ticks-precisefx-v1")
         config = {
-            "experiment": name, "strategy": "combo", "strategy_profile": "combo-v1",
+            "experiment": name, "strategy": "backtestbot", "strategy_profile": "backtestbot-v1",
             "engine_profile": engine.id, "symbols": ["US30.cash"], "timeframe": "h1",
             "start": "2026-01-01", "end": "2026-02-01", "balance": 100000,
             "parameter_space": {"KslLevel": ["0", "1", "2", "3"]}, "max_parallel": 1,
@@ -1035,7 +962,7 @@ class RunExperimentLifecycleTests(unittest.TestCase):
                 patch.object(facilitator, "load_redis_profile", MagicMock()), \
                 patch.object(facilitator.signal_trans, "resolve_signal_path", side_effect=resolve), \
                 patch.object(facilitator.cli_runner, "select_cli", return_value=cli), \
-                patch.object(facilitator.cli_runner, "read_metadata", return_value=metadata_for("combo-v1")), \
+                patch.object(facilitator.cli_runner, "read_metadata", return_value=metadata_for("backtestbot-v1")), \
                 patch.object(facilitator.cli_runner, "validate_capabilities"), \
                 patch.object(facilitator.cli_runner, "auth_options", return_value={}), \
                 patch.object(facilitator.cli_runner, "child_environment", return_value={}), \
@@ -1124,6 +1051,61 @@ class RunExperimentLifecycleTests(unittest.TestCase):
                 self._run(td, csv_text=IN_WINDOW_CSV, run_backtest=ok)
 
 
+    def test_master_db_is_untouched_when_disabled_and_a_copy_when_enabled(self) -> None:
+        """Kho SQL master chỉ là BẢN SAO sau store.record: tắt → không đụng SQL; bật → mỗi lượt HOÀN TẤT được ghi 1 lần
+        (lượt lỗi không vào kho); SQL hỏng → lượt chạy vẫn lưu bình thường (chỉ cảnh báo)."""
+        try:
+            import pyodbc  # noqa: F401
+        except ImportError:
+            self.skipTest("không có pyodbc")
+        from contextlib import ExitStack
+
+        from core_engine import master_db
+
+        def run_with_fake_sql(profile, save_run, run_backtest):
+            """Chạy run_experiment THẬT với kho SQL thay bằng bản giả; trả (kết quả, dòng cục bộ, cảnh báo)."""
+            with tempfile.TemporaryDirectory() as td, warnings.catch_warnings(record=True) as caught, ExitStack() as stack:
+                warnings.simplefilter("always")
+                for target, name, kwargs in (
+                    (facilitator, "load_master_db_profile", {"return_value": profile}),
+                    (facilitator.run_export, "run_payload", {"return_value": {"payload": 1}}),
+                    (master_db, "connect", {"return_value": MagicMock()}),
+                    (master_db, "save_run", {"side_effect": save_run}),
+                ):
+                    stack.enter_context(patch.object(target, name, **kwargs))
+                result, rows = self._run(td, csv_text=IN_WINDOW_CSV, run_backtest=run_backtest)
+            return result, rows, caught
+
+        ok = lambda spec, **kw: _fake_result(kw["work_dir"])  # noqa: E731
+        half_broken = lambda spec, **kw: _fake_result(  # noqa: E731
+            kw["work_dir"], RunStatus.CLI_ERROR if spec.params["KslLevel"] == "3" else RunStatus.OK,
+        )
+        enabled = MasterDbProfile(enabled=True, server="x", database="y")
+        calls: list = []
+
+        def recording(conn, payload):
+            calls.append(payload)
+            return 1, True
+
+        def sql_down(conn, payload):
+            raise RuntimeError("sql down")
+
+        result, rows, _ = run_with_fake_sql(MasterDbProfile(False, "x", "y"), recording, ok)
+        self.assertEqual((calls, "master_db" in result), ([], False))
+
+        result, rows, _ = run_with_fake_sql(enabled, recording, ok)
+        self.assertEqual((len(calls), result["master_db"], len(rows)), (4, {"saved": 4}, 4))
+
+        calls.clear()   # lượt CHƯA hoàn tất (lỗi CLI) không vào kho; vẫn nằm ở kho file như cũ
+        result, rows, _ = run_with_fake_sql(enabled, recording, half_broken)
+        self.assertEqual((len(calls), result["master_db"], len(rows)), (3, {"saved": 3, "skipped": 1}, 4))
+
+        result, rows, caught = run_with_fake_sql(enabled, sql_down, ok)
+        self.assertEqual((result["tally"], result["master_db"], len(rows)), ({"ok": 4}, {"error": 4}, 4))
+        self.assertTrue(result["complete"])
+        self.assertEqual(sum("sql down" in str(w.message) for w in caught), 4)
+
+
 class CancellationHookTests(unittest.TestCase):
     def test_cancel_requested_ignores_broken_observers(self) -> None:
         self.assertFalse(cli_runner.cancel_requested(None))
@@ -1135,7 +1117,7 @@ class CancellationHookTests(unittest.TestCase):
         self.assertFalse(cli_runner.cancel_requested(broken))
 
     def test_run_backtest_does_not_spawn_when_already_cancelled(self) -> None:
-        spec = RunSpec("combo", "combo-v1", "engine", "US30.cash", "h1",
+        spec = RunSpec("combo", "backtestbot-v1", "engine", "US30.cash", "h1",
                        date(2026, 1, 1), date(2026, 2, 1), 100000, "ticks", {})
         with tempfile.TemporaryDirectory() as td, \
                 patch.object(cli_runner, "run_process", side_effect=AssertionError("must not spawn")):
@@ -1156,7 +1138,7 @@ class StaleClaimTests(unittest.TestCase):
     def _claimed_store(self, td: str):
         st = store.ExperimentStore("grid", "exp")
         st.open({"schema": "bo-research-experiment/v1", "name": "exp"})
-        spec = RunSpec("combo", "combo-v1", "engine", "US30.cash", "h1",
+        spec = RunSpec("combo", "backtestbot-v1", "engine", "US30.cash", "h1",
                        date(2026, 1, 1), date(2026, 1, 2), 100000, "ticks", {})
         param_hash = st.param_hash(spec, "x")
         return st, spec, param_hash
@@ -1194,8 +1176,8 @@ class StaleClaimTests(unittest.TestCase):
 
 class RunGridLockPolicyTests(unittest.TestCase):
     CONFIG = {
-        "pipeline": "p", "symbols": ["US30.cash"], "timeframe": ["h1"], "strategy": "combo",
-        "strategy_profile": "combo-v1", "engine_profile": "ctrader-5.9.16-ticks-approxfx-v1",
+        "pipeline": "p", "symbols": ["US30.cash"], "timeframe": ["h1"], "strategy": "backtestbot", "signal_strategies": ["combo"],
+        "strategy_profile": "backtestbot-v1", "engine_profile": "ctrader-ticks-precisefx-v1",
         "start": "2026-01-01", "end": "2026-02-01", "balance": 100000,
         "parameter_space": {"KslLevel": ["0", "1"]}, "fixed_params": {"RiskPercent": 0.5},
         "experiment": "exp",
@@ -1224,8 +1206,8 @@ class RunGridLockPolicyTests(unittest.TestCase):
 
 class WalkforwardHookTests(unittest.TestCase):
     CONFIG = {
-        "experiment": "wf", "strategy": "combo", "strategy_profile": "combo-v1",
-        "engine_profile": "ctrader-5.9.16-ticks-approxfx-v1",
+        "experiment": "wf", "strategy": "backtestbot", "signal_strategies": ["combo"], "strategy_profile": "backtestbot-v1",
+        "engine_profile": "ctrader-ticks-precisefx-v1",
         "symbols": ["US30.cash"], "timeframe": "h1",
         "start": "2024-01-01", "end": "2026-09-13",
         "parameter_space": {"KslLevel": ["0", "1"]},
@@ -1261,10 +1243,14 @@ class SignalWindowHashTests(unittest.TestCase):
         path.write_text(text, encoding="utf-8")
         return signal_trans.signal_window_sha256(path, date(2026, 2, 1))
 
-    def test_only_rows_before_end_define_the_hash(self) -> None:
+    def test_rows_up_to_and_including_the_end_day_define_the_hash(self) -> None:
+        """ctrader-cli chạy TRỌN ngày --end (đo 2026-10-13: lượt US30 Combo end 30/09 có lệnh
+        cuối sinh từ tín hiệu 30/09 10:00) → tín hiệu của chính ngày end nằm trong định danh;
+        tín hiệu SAU ngày end (Redis nối thêm hằng giờ) thì không."""
         with tempfile.TemporaryDirectory() as td:
             base = self._sha(td, IN_WINDOW_CSV)
-            self.assertEqual(base, self._sha(td, IN_WINDOW_CSV + "2026-02-01 00:00,1,1,1\n"))
+            self.assertNotEqual(base, self._sha(td, IN_WINDOW_CSV + "2026-02-01 00:00,1,1,1\n"))
+            self.assertEqual(base, self._sha(td, IN_WINDOW_CSV + "2026-02-02 00:00,1,1,1\n"))
             self.assertNotEqual(base, self._sha(td, IN_WINDOW_CSV + "2026-01-31 23:00,1,1,1\n"))
             self.assertNotEqual(base, self._sha(td, IN_WINDOW_CSV + "garbage,1,1,1\n"))
 
@@ -1287,7 +1273,7 @@ class TrialPolicyReadoutTests(unittest.TestCase):
         # bi label() bo qua hoan toan, khien moi row trung 1 chuoi va ghi de
         # nhau trong dict `trials`).
         spec = RunSpec(
-            "combo", "combo-v1", "engine", "US30.cash", "h1",
+            "combo", "backtestbot-v1", "engine", "US30.cash", "h1",
             date(2026, 1, 1), date(2026, 1, 1 + days), start_balance, "ticks", {"KslLevel": label},
         )
         param_hash = st.param_hash(spec, label)
@@ -1436,7 +1422,7 @@ class DailyCliBudgetTests(unittest.TestCase):
             self.assertFalse(path.exists())
 
     def test_default_limit_is_user_chosen_value(self) -> None:
-        self.assertEqual(store.DAILY_CLI_LAUNCH_LIMIT, 1500)
+        self.assertEqual(store.DAILY_CLI_LAUNCH_LIMIT, 2000)
 
     def test_exhausted_budget_stops_spawning_without_rows(self) -> None:
         protocol = MagicMock()
@@ -1513,7 +1499,7 @@ class WalkforwardReadoutTests(unittest.TestCase):
         self.assertEqual({pairs[0][0].zone, pairs[0][1].zone}, {wr.TRAIN_ZONE, wr.OOS_ZONE})
 
     def _row(self, st, *, window: str, zone: str, ksl: str, status: str = "ok", tags=None) -> str:
-        spec = RunSpec("combo", "combo-v1", "engine", "US30.cash", "h1", date(2026, 1, 1), date(2026, 2, 1),
+        spec = RunSpec("combo", "backtestbot-v1", "engine", "US30.cash", "h1", date(2026, 1, 1), date(2026, 2, 1),
                        100000, "ticks", {"KslLevel": ksl}, zone=zone, window=window, tags=tags or {})
         param_hash = st.param_hash(spec, window, ksl, zone)
         claim = st.claim(spec, param_hash)
@@ -1786,7 +1772,7 @@ class ReadoutObjectiveTests(unittest.TestCase):
             "flat": (0.001, 100.0, 1.01, 9, 0.4),
         }
         for label, (step, net, pf, losses, win_rate) in shapes.items():
-            spec = RunSpec("combo", "combo-v1", "engine", "US30.cash", "h1",
+            spec = RunSpec("combo", "backtestbot-v1", "engine", "US30.cash", "h1",
                            date(2026, 1, 1), date(2026, 1, 4), 100000, "ticks", {"KslLevel": label})
             balance, points, items = 100000.0, [], []
             for day in range(4):
@@ -1843,7 +1829,7 @@ class MonteCarloOosTests(unittest.TestCase):
     """readout.run_montecarlo_oos() — nối các đoạn KIỂM của walk-forward."""
 
     def _window(self, st, td, *, name: str, start: str, end: str, rows: list[tuple[str, float]]) -> None:
-        spec = RunSpec("combo", "combo-v1", "engine", "US30.cash", "h1",
+        spec = RunSpec("combo", "backtestbot-v1", "engine", "US30.cash", "h1",
                        date.fromisoformat(start), date.fromisoformat(end), 100000, "ticks", {"KslLevel": "0"},
                        zone="oos", window=f"{name}_oos", tags={"rule": "best", "train_window": f"{name}_is"})
         points = [{"time": f"{stamp}+00:00", "balance": balance, "minEquity": balance} for stamp, balance in rows]

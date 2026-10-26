@@ -1,22 +1,1455 @@
 {
-  "new": [
-    "bo_workflow/tests/test_optimize_backend.py"
+  "new_nodes": [
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_memory_backtest_io_flow",
+      "label": "memory: backtest-io-flow-observed-2026-10-14"
+    },
+    {
+      "id": "strategyprofile",
+      "label": "StrategyProfile"
+    },
+    {
+      "id": "experimentstore",
+      "label": "ExperimentStore"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_database_plan",
+      "label": "SQL master database plan for backtest results"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_atomic_idempotent_persistence",
+      "label": "Atomic idempotent persistence"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_run_key",
+      "label": "run_key"
+    },
+    {
+      "id": "masterdbprofile",
+      "label": "MasterDbProfile"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_inclusive_end_date_hashing",
+      "label": "Inclusive end-date signal hashing"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_bo_workflow_core_engine",
+      "label": "bo_workflow core_engine"
+    },
+    {
+      "id": "runtimeerror",
+      "label": "RuntimeError"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_derivable_columns_not_stored",
+      "label": "Do not store derivable columns"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_facilitator_record_result",
+      "label": "facilitator.record_result"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_sql_server_express_bo_research",
+      "label": "SQL Server Express database bo_research"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_append_only_results",
+      "label": "Append-only completed results"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_concurrency_locking",
+      "label": "UPDLOCK HOLDLOCK deduplication"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_events_json_preservation",
+      "label": "Preserve cTrader events.json"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_memory_ctrader_cli_facts",
+      "label": "memory: ctrader-cli-backtest-optimize-facts"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_source_code_capture",
+      "label": "Capture .cs source with each bot build"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_graphify_code_graph",
+      "label": "graphify core_engine code graph"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_native_output_matching",
+      "label": "Verified native-output matching"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_six_sql_views",
+      "label": "Six SQL analysis views"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_sql_master_backtest_repository",
+      "label": "SQL master backtest repository"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_memory_ftmo_rules",
+      "label": "memory: ftmo-account-rules-and-leverage"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_ctrader_cli",
+      "label": "cTrader CLI"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_run_export_run_payload",
+      "label": "output_util.run_export.run_payload"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_file_store_source_of_truth",
+      "label": "File store as source of truth"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_v_compare_same_cell",
+      "label": "v_compare_same_cell"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_walkforward_run_walkforward",
+      "label": "walkforward.run_walkforward"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_redis_signal_history",
+      "label": "Mutable Redis signal history"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_v_ftmo_daily_loss",
+      "label": "v_ftmo_daily_loss"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_memory_redis_trend_channel",
+      "label": "memory: redis-trend-channel-vs-original"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_memory_grid_experiments_cleared",
+      "label": "memory: grid-experiments-cleared-2026-10-13"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_us30_combo_trial",
+      "label": "US30 Combo 2026 nine-month default trial"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_memory_report_per_cell",
+      "label": "memory: report-per-cell-not-totals"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_v_durable_cells",
+      "label": "v_durable_cells"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_v_walkforward_oos_chain",
+      "label": "v_walkforward_oos_chain"
+    },
+    {
+      "id": "connection",
+      "label": "Connection"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_deterministic_plateau_tie_break",
+      "label": "Deterministic plateau tie-break"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_memory_combolegs_bot_profile",
+      "label": "memory: combolegs-bot-and-profile"
+    }
   ],
-  "changed": [
-    "CLAUDE.md",
-    "bo_workflow/config.example.yaml",
-    "bo_workflow/core_engine/cli_runner.py",
-    "bo_workflow/core_engine/configuration.py",
-    "bo_workflow/core_engine/facilitator.py",
-    "bo_workflow/core_engine/models.py",
-    "bo_workflow/core_engine/output_util/evidence.py",
-    "bo_workflow/core_engine/planner.py",
-    "bo_workflow/core_engine/signal_trans.py",
-    "bo_workflow/core_engine/store.py",
-    "bo_workflow/tests/test_cli_engine.py",
-    "bo_workflow/tests/test_core_engine.py"
+  "removed_nodes": [
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_run_export",
+      "label": "run_export.py Extraction Module"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_walkforward_persistence_hook",
+      "label": "Walk-Forward Decision Persistence Hook"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_sql_views",
+      "label": "Backtest Analysis SQL Views"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_facilitator_persistence_hook",
+      "label": "Facilitator Master Database Persistence Hook"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_document",
+      "label": "SQL Master Database Plan for Backtest Results"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_append_only_storage",
+      "label": "Append-Only Result Storage"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_six_table_schema",
+      "label": "Six-Table Backtest Schema"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_file_source_of_truth",
+      "label": "Files Remain the Source of Truth"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_repository",
+      "label": "Backtest Master SQL Repository"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_test_database_isolation",
+      "label": "Test Database Isolation from Machine Configuration"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_no_sql_preskip",
+      "label": "Do Not Skip CLI Runs Based on Existing SQL Rows"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_inclusive_end_date",
+      "label": "Inclusive Backtest End-Date Convention"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_no_legacy_import",
+      "label": "Do Not Import Legacy Walk-Forward Data"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_bot_source_snapshot",
+      "label": "Bot Source Snapshot with Build"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_first_pipeline_backtest",
+      "label": "First Backtest Through the New SQL Pipeline"
+    },
+    {
+      "id": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_native_event_capture",
+      "label": "cTrader Native Event Capture"
+    }
   ],
-  "deleted": [],
-  "current_files": 78,
-  "baseline_files": 77
+  "new_edges": [
+    {
+      "source": "bo_workflow_core_engine_cli_runner_cliprobeerror",
+      "target": "runtimeerror",
+      "relation": "inherits",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_cli_runner_optimize_parameters",
+      "target": "strategyprofile",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "strategyprofile",
+      "target": "bo_workflow_core_engine_cli_runner_load_optimize_passes",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "strategyprofile",
+      "target": "bo_workflow_core_engine_cli_runner_param_key",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "strategyprofile",
+      "target": "bo_workflow_core_engine_cli_runner_run_optimize_box",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_master_db_connection_string",
+      "target": "masterdbprofile",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "masterdbprofile",
+      "target": "bo_workflow_core_engine_master_db_connect",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "masterdbprofile",
+      "target": "bo_workflow_core_engine_master_db_drop_database",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "masterdbprofile",
+      "target": "bo_workflow_core_engine_master_db_ensure_database",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "masterdbprofile",
+      "target": "bo_workflow_core_engine_master_db_with_database",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_master_db_connect",
+      "target": "connection",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "connection",
+      "target": "bo_workflow_core_engine_master_db_ensure_schema",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "connection",
+      "target": "bo_workflow_core_engine_master_db_find_run",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "connection",
+      "target": "bo_workflow_core_engine_master_db_import_experiment",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "connection",
+      "target": "bo_workflow_core_engine_master_db_save_run",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "connection",
+      "target": "bo_workflow_core_engine_master_db_save_walkforward_decisions",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_optimize_walkforward_run_walkforward",
+      "target": "bo_workflow_tests_test_master_db_build_experiment",
+      "relation": "calls",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_core_engine_optimize_walkforward_save_decisions_to_master_db",
+      "target": "experimentstore",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_tests_test_core_engine_runexperimentlifecycletests_run",
+      "target": "bo_workflow_tests_test_master_db_build_experiment",
+      "relation": "calls",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_database_plan",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_memory_backtest_io_flow",
+      "relation": "cites",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_database_plan",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_memory_combolegs_bot_profile",
+      "relation": "cites",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_database_plan",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_memory_ctrader_cli_facts",
+      "relation": "cites",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_database_plan",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_memory_ftmo_rules",
+      "relation": "cites",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_database_plan",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_memory_grid_experiments_cleared",
+      "relation": "cites",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_database_plan",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_memory_redis_trend_channel",
+      "relation": "cites",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_database_plan",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_memory_report_per_cell",
+      "relation": "cites",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_database_plan",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_sql_master_backtest_repository",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_sql_master_backtest_repository",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_completed_runs_only",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_sql_master_backtest_repository",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_derivable_columns_not_stored",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_sql_master_backtest_repository",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_db_module",
+      "relation": "implements",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_sql_master_backtest_repository",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_single_extraction_path",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_sql_master_backtest_repository",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_file_store_source_of_truth",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_sql_master_backtest_repository",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_sql_server_express_bo_research",
+      "relation": "implements",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_file_store_source_of_truth",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_memory_grid_experiments_cleared",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_append_only_results",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_atomic_idempotent_persistence",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_single_extraction_path",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_memory_backtest_io_flow",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_atomic_idempotent_persistence",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_concurrency_locking",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_atomic_idempotent_persistence",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_db_module",
+      "relation": "implements",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_atomic_idempotent_persistence",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_run_key",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_run_key",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_inclusive_end_date_hashing",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_backtest_run",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_bot_build",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_backtest_run",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_daily_equity",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_backtest_run",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_signal_snapshot",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_backtest_run",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_trade",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_backtest_run",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_ctrader_cli",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_backtest_run",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_run_export_run_payload",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_backtest_run",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_us30_combo_trial",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_backtest_run",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_v_compare_same_cell",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_backtest_run",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_v_durable_cells",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_backtest_run",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_walkforward_decision",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_bot_build",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_memory_combolegs_bot_profile",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_bot_build",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_source_code_capture",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_signal_snapshot",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_redis_signal_history",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_trade",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_events_json_preservation",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_trade",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_run_export_run_payload",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_trade",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_us30_combo_trial",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_daily_equity",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_run_export_run_payload",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_daily_equity",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_us30_combo_trial",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_daily_equity",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_v_ftmo_daily_loss",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_walkforward_decision",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_deterministic_plateau_tie_break",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_walkforward_decision",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_v_walkforward_oos_chain",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_walkforward_decision",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_walkforward_run_walkforward",
+      "relation": "implements",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_run_export_run_payload",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_facilitator_record_result",
+      "relation": "implements",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_run_export_run_payload",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_db_module",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_db_module",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_facilitator_record_result",
+      "relation": "implements",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_events_json_preservation",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_native_output_matching",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_redis_signal_history",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_memory_redis_trend_channel",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_ctrader_cli",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_memory_ctrader_cli_facts",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_graphify_code_graph",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_bo_workflow_core_engine",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_six_sql_views",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_v_compare_same_cell",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_six_sql_views",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_v_durable_cells",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_six_sql_views",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_v_ftmo_daily_loss",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_six_sql_views",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_v_walkforward_oos_chain",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_v_compare_same_cell",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_memory_report_per_cell",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_v_ftmo_daily_loss",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_memory_ftmo_rules",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED"
+    }
+  ],
+  "removed_edges": [
+    {
+      "source": "bo_workflow_core_engine_configuration_redisprofile",
+      "target": "bo_workflow_tests_test_core_engine_signaltranstests_test_redis_client_reuses_one_pool_until_the_password_file_changes",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_redisprofile",
+      "target": "bo_workflow_tests_test_core_engine",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_redisprofile",
+      "target": "bo_workflow_tests_test_core_engine_signaltranstests",
+      "relation": "uses",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_core_engine_store_experimentstore",
+      "target": "bo_workflow_core_engine_optimize_walkforward_run_walkforward",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_store_experimentstore",
+      "target": "bo_workflow_core_engine_optimize_walkforward",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_store_experimentstore",
+      "target": "bo_workflow_core_engine_optimize_walkforward_save_decisions_to_master_db",
+      "relation": "uses",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_tests_test_core_engine_runexperimentlifecycletests",
+      "target": "bo_workflow_core_engine_configuration_masterdbprofile",
+      "relation": "uses",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_core_engine_cli_runner_cliprobeerror",
+      "target": "bo_workflow_core_engine_cli_runner_py_runtimeerror",
+      "relation": "inherits",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_masterdbprofile",
+      "target": "bo_workflow_tests_test_core_engine_runexperimentlifecycletests_test_master_db_is_untouched_when_disabled_and_a_copy_when_enabled",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_masterdbprofile",
+      "target": "bo_workflow_core_engine_master_db",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_masterdbprofile",
+      "target": "bo_workflow_tests_test_core_engine",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_masterdbprofile",
+      "target": "bo_workflow_core_engine_master_db_connect",
+      "relation": "uses",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_masterdbprofile",
+      "target": "bo_workflow_core_engine_master_db_connection_string",
+      "relation": "uses",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_masterdbprofile",
+      "target": "bo_workflow_core_engine_master_db_drop_database",
+      "relation": "uses",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_masterdbprofile",
+      "target": "bo_workflow_core_engine_master_db_ensure_database",
+      "relation": "uses",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_masterdbprofile",
+      "target": "bo_workflow_core_engine_master_db_with_database",
+      "relation": "uses",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_strategyprofile",
+      "target": "bo_workflow_core_engine_cli_runner",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_strategyprofile",
+      "target": "bo_workflow_core_engine_cli_runner_load_optimize_passes",
+      "relation": "uses",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_strategyprofile",
+      "target": "bo_workflow_core_engine_cli_runner_optimize_parameters",
+      "relation": "uses",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_strategyprofile",
+      "target": "bo_workflow_core_engine_cli_runner_param_key",
+      "relation": "uses",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_strategyprofile",
+      "target": "bo_workflow_core_engine_cli_runner_run_optimize_box",
+      "relation": "uses",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_core_engine_signal_trans_signal_list_key",
+      "target": "bo_workflow_core_engine_output_util_run_export_channel_and_key",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_signal_trans_signal_window_sha256",
+      "target": "bo_workflow_core_engine_output_util_run_export_run_payload",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_facilitator_resolve_input_fingerprint",
+      "target": "bo_workflow_core_engine_optimize_walkforward_run_walkforward",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_facilitator_resolve_input_fingerprint",
+      "target": "bo_workflow_core_engine_optimize_walkforward",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_facilitator_run_experiment",
+      "target": "bo_workflow_core_engine_optimize_walkforward_run_walkforward",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_facilitator_run_experiment",
+      "target": "bo_workflow_core_engine_optimize_walkforward",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_optimize_walkforward_pick",
+      "target": "bo_workflow_core_engine_output_util_selection_rank",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_optimize_walkforward_plateau",
+      "target": "bo_workflow_core_engine_output_util_selection_eligible",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_optimize_walkforward_run_walkforward",
+      "target": "bo_workflow_core_engine_output_util_pipeline_lock_stage_hash",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_optimize_walkforward_run_walkforward",
+      "target": "bo_workflow_core_engine_output_util_pipeline_lock_check",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_optimize_walkforward_run_walkforward",
+      "target": "bo_workflow_core_engine_planner_build_experiment",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_optimize_walkforward_run_walkforward",
+      "target": "bo_workflow_core_engine_configuration_load_strategy_profile",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_optimize_walkforward_run_walkforward",
+      "target": "bo_workflow_core_engine_configuration_load_engine_profile",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_optimize_walkforward_run_walkforward",
+      "target": "bo_workflow_core_engine_planner_nonnegative_int",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_optimize_walkforward_run_walkforward",
+      "target": "bo_workflow_core_engine_planner_expand_grid",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_optimize_walkforward_run_walkforward",
+      "target": "bo_workflow_core_engine_output_util_selection_eligible",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_optimize_walkforward_run_walkforward",
+      "target": "bo_workflow_core_engine_output_util_pipeline_lock_record",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_optimize_walkforward_walkforward_windows",
+      "target": "bo_workflow_core_engine_planner_positive_int",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_optimize_walkforward_walkforward_windows",
+      "target": "bo_workflow_core_engine_planner_as_date",
+      "relation": "indirect_call",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_core_engine_planner_as_date",
+      "target": "bo_workflow_core_engine_optimize_walkforward",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_planner_build_experiment",
+      "target": "bo_workflow_tests_test_core_engine_runexperimentlifecycletests_run",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_planner_build_experiment",
+      "target": "bo_workflow_core_engine_optimize_walkforward",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_planner_build_experiment",
+      "target": "bo_workflow_tests_test_core_engine",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_planner_expand_grid",
+      "target": "bo_workflow_tests_test_core_engine_configurationplannertests_test_ctrader_5_10_profiles_flip_exactly_one_new_cli_switch_argv_for",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_planner_expand_grid",
+      "target": "bo_workflow_tests_test_core_engine_configurationplannertests_test_grid_is_deterministic_and_uses_enum_indexes",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_planner_expand_grid",
+      "target": "bo_workflow_tests_test_core_engine_configurationplannertests_test_leg_setup_changes_label_and_hash_spec_for",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_planner_expand_grid",
+      "target": "bo_workflow_tests_test_core_engine_runexperimentlifecycletests_run",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_planner_expand_grid",
+      "target": "bo_workflow_core_engine_optimize_walkforward",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_planner_expand_grid",
+      "target": "bo_workflow_tests_test_core_engine",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_planner_nonnegative_int",
+      "target": "bo_workflow_core_engine_optimize_walkforward",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_planner_positive_int",
+      "target": "bo_workflow_core_engine_optimize_walkforward",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_tests_test_core_engine_runexperimentlifecycletests_run",
+      "target": "bo_workflow_core_engine_configuration_load_strategy_profile",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_tests_test_core_engine_runexperimentlifecycletests_run",
+      "target": "bo_workflow_core_engine_configuration_load_engine_profile",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_ftmo_profile",
+      "target": "bo_workflow_tests_test_core_engine_configurationplannertests_test_load_engine_and_ftmo_profile_from_config_yaml",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_ftmo_profile",
+      "target": "bo_workflow_tests_test_core_engine",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_read_algo_manifest",
+      "target": "bo_workflow_core_engine_output_util_run_export_run_payload",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_read_algo_manifest",
+      "target": "bo_workflow_core_engine_output_util_run_export",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_engine_profile",
+      "target": "bo_workflow_tests_test_core_engine_configurationplannertests_test_ctrader_5_10_profiles_flip_exactly_one_new_cli_switch",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_engine_profile",
+      "target": "bo_workflow_tests_test_core_engine_configurationplannertests_test_load_engine_and_ftmo_profile_from_config_yaml",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_engine_profile",
+      "target": "bo_workflow_core_engine_optimize_walkforward",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_engine_profile",
+      "target": "bo_workflow_tests_test_core_engine",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_strategy_profile",
+      "target": "bo_workflow_tests_test_core_engine_configurationplannertests_test_ctrader_5_10_profiles_flip_exactly_one_new_cli_switch",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_strategy_profile",
+      "target": "bo_workflow_tests_test_core_engine_configurationplannertests_test_every_strategy_profile_has_the_leg_params_with_single_leg_defaults",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_strategy_profile",
+      "target": "bo_workflow_tests_test_core_engine_configurationplannertests_test_grid_is_deterministic_and_uses_enum_indexes",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_strategy_profile",
+      "target": "bo_workflow_tests_test_core_engine_configurationplannertests_test_leg_setup_changes_label_and_hash",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_strategy_profile",
+      "target": "bo_workflow_tests_test_core_engine_configurationplannertests_test_macdbreak_profile_matches_its_redis_signals_and_parameters",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_strategy_profile",
+      "target": "bo_workflow_tests_test_core_engine_configurationplannertests_test_metadata_fail_closed_on_extra_param",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_strategy_profile",
+      "target": "bo_workflow_tests_test_core_engine_metadata_for",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_strategy_profile",
+      "target": "bo_workflow_tests_test_core_engine_resolvesignalpathtests_test_combo_maps_symbol_group_and_keeps_combo_token",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_strategy_profile",
+      "target": "bo_workflow_tests_test_core_engine_resolvesignalpathtests_test_dedups_within_a_shared_materialized_set",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_strategy_profile",
+      "target": "bo_workflow_tests_test_core_engine_resolvesignalpathtests_test_macross_internal_name_maps_to_ma_cross_redis_token",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_strategy_profile",
+      "target": "bo_workflow_tests_test_core_engine_resolvesignalpathtests_test_rejects_symbol_without_redis_mapping",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_strategy_profile",
+      "target": "bo_workflow_core_engine_optimize_walkforward",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_strategy_profile",
+      "target": "bo_workflow_tests_test_core_engine",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_redis_profile",
+      "target": "bo_workflow_core_engine_output_util_run_export_channel_and_key",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_redis_profile",
+      "target": "bo_workflow_tests_test_core_engine_signaltranstests_test_load_redis_profile_defaults_key_prefix_to_past_signal",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_redis_profile",
+      "target": "bo_workflow_tests_test_core_engine_signaltranstests_test_load_redis_profile_reads_trend_key_prefix_for_trend_channel",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_redis_profile",
+      "target": "bo_workflow_core_engine_output_util_run_export",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_redis_profile",
+      "target": "bo_workflow_tests_test_core_engine",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_master_db_profile",
+      "target": "bo_workflow_core_engine_master_db_connect",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_master_db_profile",
+      "target": "bo_workflow_core_engine_master_db_ensure_database",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_master_db_profile",
+      "target": "bo_workflow_core_engine_optimize_walkforward_save_decisions_to_master_db",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_master_db_profile",
+      "target": "bo_workflow_tests_test_master_db_masterdbtests_setupclass",
+      "relation": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_master_db_profile",
+      "target": "bo_workflow_core_engine_master_db",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_master_db_profile",
+      "target": "bo_workflow_core_engine_optimize_walkforward",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_configuration_load_master_db_profile",
+      "target": "bo_workflow_tests_test_master_db",
+      "relation": "imports",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_master_db_connect",
+      "target": "bo_workflow_core_engine_master_db_py_connection",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_master_db_ensure_schema",
+      "target": "bo_workflow_core_engine_master_db_py_connection",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_master_db_find_run",
+      "target": "bo_workflow_core_engine_master_db_py_connection",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_master_db_import_experiment",
+      "target": "bo_workflow_core_engine_master_db_py_connection",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_master_db_save_run",
+      "target": "bo_workflow_core_engine_master_db_py_connection",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_core_engine_master_db_save_walkforward_decisions",
+      "target": "bo_workflow_core_engine_master_db_py_connection",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_config_example_configuration",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_document",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_db_module",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_single_extraction_path",
+      "relation": "implements",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_db_module",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_completed_runs_only",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_db_module",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_facilitator_persistence_hook",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_db_module",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_walkforward_persistence_hook",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_db_module",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_run_export",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_run_export",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_single_extraction_path",
+      "relation": "implements",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_run_export",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_facilitator_persistence_hook",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_config_example_combo_strategy_profile",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_bot_source_snapshot",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_config_example_ctrader_data_directory",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_native_event_capture",
+      "relation": "implements",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_config_example_ftmo_two_step_profile",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_daily_equity",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_config_example_gui_parity_engine_profile",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_backtest_run",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_config_example_macdbreak_strategy_profile",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_bot_source_snapshot",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_config_example_macross_strategy_profile",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_bot_source_snapshot",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_config_example_master_database_profile",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_repository",
+      "relation": "implements",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_config_example_original_signal_channel",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_signal_snapshot",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_config_example_trend_signal_channel",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_signal_snapshot",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_backtest_run",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_inclusive_end_date",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_backtest_run",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_bot_build",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_backtest_run",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_signal_snapshot",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_backtest_run",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_daily_equity",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_backtest_run",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_trade",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_backtest_run",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_walkforward_decision",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_bot_build",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_bot_source_snapshot",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_facilitator_persistence_hook",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_no_sql_preskip",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_facilitator_persistence_hook",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_test_database_isolation",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_first_pipeline_backtest",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_repository",
+      "relation": "implements",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_repository",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_six_table_schema",
+      "relation": "implements",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_repository",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_append_only_storage",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_repository",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_file_source_of_truth",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_repository",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_no_legacy_import",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_repository",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_single_extraction_path",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_master_repository",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_document",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_native_event_capture",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_trade",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_six_table_schema",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_sql_views",
+      "relation": "references",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_walkforward_decision",
+      "target": "bo_workflow_research_notes_sql_master_database_plan_2026_10_14_walkforward_persistence_hook",
+      "relation": "implements",
+      "confidence": "EXTRACTED"
+    }
+  ],
+  "summary": "39 new nodes, 75 new edges, 16 nodes removed, 129 edges removed"
 }

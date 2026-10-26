@@ -76,6 +76,7 @@ TERMINAL_STATES = frozenset({"completed", "cached", "cancelled", "failed", "inpu
 RESOURCE_GROUPS = frozenset({"ctrader_cli", "analysis"})
 KIND_RESOURCE_GROUP = {
     "single_backtest": "ctrader_cli",
+    "multi_channel_backtest": "ctrader_cli",
     "grid_search": "ctrader_cli",
     "walkforward": "ctrader_cli",
     "final_backtest": "ctrader_cli",
@@ -169,7 +170,10 @@ def get_signal_profile() -> str:
         row = db.execute(
             "SELECT value FROM dashboard_settings WHERE key='signal_profile'"
         ).fetchone()
-    return signal_sources.require_profile(row["value"] if row else signal_sources.ORIGINAL)
+    stored = row["value"] if row else signal_sources.ORIGINAL
+    # A choice saved under a retired profile (e.g. the pre-2026-10-23 trend profile) falls back to RAW rather than
+    # breaking every page load.
+    return stored if stored in signal_sources.LABELS else signal_sources.ORIGINAL
 
 
 def set_signal_profile(value: str) -> str:
@@ -197,7 +201,16 @@ def confirmed_signal_profile(selected: str) -> str:
 
 def create_single_backtest(plan: dict[str, Any]) -> dict[str, Any]:
     """Create one draft session from an already validated, immutable plan."""
+    if plan.get("schema") == "bo-dashboard-single-backtest/v2":
+        return _create_session(plan, kind="single_backtest")
     return create_draft_group([plan])[0]
+
+
+def create_multi_channel_backtest(plan: dict[str, Any]) -> dict[str, Any]:
+    """Persist one multi-channel BacktestBot draft without invoking cTrader."""
+    if plan.get("schema") != "bo-dashboard-multi-channel-backtest/v2":
+        raise ValueError("session_store accepts only valid Multi-channel plans")
+    return _create_session(plan, kind="multi_channel_backtest")
 
 
 def create_grid_search(plan: dict[str, Any]) -> dict[str, Any]:
@@ -542,11 +555,11 @@ def mark_inputs_changed(session_id: str, error: Exception | str) -> dict[str, An
 
 
 def update_progress(session_id: str, percent: float, detail: str) -> None:
-    """Persist latest real CLI progress for refresh/reconnect; never creates an event per poll."""
+    """Persist real CLI progress monotonically for refresh/reconnect."""
     bounded = max(0.0, min(100.0, float(percent)))
     with _db() as db:
         db.execute(
-            """UPDATE sessions SET progress_pct=?,progress_text=?,updated_utc=?
+            """UPDATE sessions SET progress_pct=MAX(progress_pct,?),progress_text=?,updated_utc=?
                WHERE session_id=? AND state='running'""",
             (bounded, str(detail), _now(), session_id),
         )

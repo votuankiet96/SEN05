@@ -34,7 +34,7 @@ from dataclasses import replace
 from datetime import date, timedelta
 from typing import Any, Callable, Iterable, Mapping
 
-from ..configuration import load_engine_profile, load_strategy_profile
+from ..configuration import load_engine_profile, load_strategy_profile, with_signal_overrides
 from ..facilitator import resolve_input_fingerprint, run_experiment
 from ..models import Window, coerce_float
 from ..output_util import pipeline_lock, selection
@@ -246,7 +246,7 @@ def run_walkforward(
     # 1 experiment cũ (cửa sổ chồng 1 ngày) bị từ chối thay vì âm thầm nhận
     # thêm dòng mới cùng tên cửa sổ — trộn 2 quy ước sẽ làm sai bước chọn.
     experiment = build_experiment({**dict(config), "method": "walkforward", "window_convention": WINDOW_CONVENTION})
-    profile = load_strategy_profile(experiment.strategy_profile)
+    profile = with_signal_overrides(load_strategy_profile(experiment.strategy_profile), config)
     engine = load_engine_profile(experiment.engine_profile)
     doc = experiment.canonical()
     min_trades = nonnegative_int(config.get("min_trades", WF_MIN_TRADES), "min_trades")

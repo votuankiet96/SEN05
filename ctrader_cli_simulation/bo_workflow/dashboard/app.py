@@ -27,6 +27,8 @@ from dsr_pbo import callbacks as dsr_pbo_callbacks
 from dsr_pbo import views as dsr_pbo_views
 from grid import callbacks as grid_callbacks
 from grid import views as grid_views
+from multichannel import callbacks as multichannel_callbacks
+from multichannel import views as multichannel_views
 from single import callbacks as single_callbacks  # noqa: F401 - registers Dash callbacks
 from single import views as single_views
 from walkforward import callbacks as walkforward_callbacks
@@ -78,7 +80,10 @@ def serve_layout() -> dmc.MantineProvider:
                 w=260,
             ),
             dmc.Stack([
-                dmc.Text("Applies to new drafts in Single Backtest, Grid Search and Walk-forward.", size="sm"),
+                dmc.Text(
+                    "Applies to new drafts in Single Backtest, Multi-channel, Grid Search and Walk-forward.",
+                    size="sm",
+                ),
                 dmc.Text("Saved drafts and running jobs keep their original signal source.", size="xs", c="dimmed"),
                 status_region("global-signal-message"),
             ], gap=2),
@@ -86,12 +91,16 @@ def serve_layout() -> dmc.MantineProvider:
         dmc.Tabs(id="main-tabs", value="single-backtest", **PERSIST, children=[
             dmc.TabsList([
                 dmc.TabsTab("Single Backtest", value="single-backtest"),
+                dmc.TabsTab("Multi-channel", value="multi-channel"),
                 dmc.TabsTab("Grid Search", value="grid-search"),
                 dmc.TabsTab("Walk-forward", value="walkforward"),
                 dmc.TabsTab("DSR + PBO", value="grid-diagnostics"),
             ]),
             dmc.TabsPanel(
                 single_views.layout(FORM_OPTIONS), value="single-backtest", pt="md",
+            ),
+            dmc.TabsPanel(
+                multichannel_views.layout(FORM_OPTIONS), value="multi-channel", pt="md",
             ),
             dmc.TabsPanel(
                 grid_views.layout(FORM_OPTIONS), value="grid-search", pt="md",
@@ -122,6 +131,7 @@ def save_signal_profile(value: str):
         return dmc.Text(f"Signal source was not saved: {exc}", size="xs", c="red")
 
 grid_callbacks.register(app, FORM_OPTIONS)
+multichannel_callbacks.register(app, FORM_OPTIONS)
 walkforward_callbacks.register(app, FORM_OPTIONS)
 dsr_pbo_callbacks.register(app)
 

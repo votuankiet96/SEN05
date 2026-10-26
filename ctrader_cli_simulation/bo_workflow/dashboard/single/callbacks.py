@@ -4,7 +4,6 @@ from __future__ import annotations
 import math
 import re
 import sys
-from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -23,13 +22,6 @@ from ui_common import poll_disabled
 from . import views as single_views
 
 FORM_OPTIONS = data_access.session_form_options()
-
-
-def _strategy_option(strategy: str) -> dict[str, Any]:
-    for item in FORM_OPTIONS["strategies"]:
-        if item["value"] == strategy:
-            return item
-    raise ValueError(f"Strategy is not available in the dashboard form: {strategy!r}")
 
 
 def _selected_session_ids(value: str | list[str] | None) -> list[str]:
@@ -53,149 +45,34 @@ def _selected_sessions(value: str | list[str] | None) -> list[dict[str, Any]]:
 
 
 @callback(
-    Output("session-timeframe-select", "data"),
-    Output("session-timeframe-select", "value"),
-    Output("session-ksl-input", "data"),
-    Output("session-ksl-input", "value"),
-    Output("session-ktp-input", "data"),
-    Output("session-ktp-input", "value"),
-    Input("session-strategy-select", "value"),
-)
-def update_strategy_fields(strategy: str):
-    option = _strategy_option(strategy)
-    timeframes = option["timeframes"]
-    return (
-        [{"label": item.upper(), "value": item} for item in timeframes],
-        [timeframes[0]],
-        option["ksl_options"],
-        option["default_ksl"],
-        option["ktp_options"],
-        option["default_ktp"],
-    )
-
-
-@callback(
-    Output("session-start-input", "minDate"),
-    Output("session-start-input", "maxDate"),
-    Output("session-start-input", "value"),
-    Output("session-end-input", "minDate"),
-    Output("session-end-input", "maxDate"),
-    Output("session-end-input", "value"),
-    Output("session-history-status", "children"),
-    Input("session-symbol-select", "value"),
-    Input("session-timeframe-select", "value"),
-    Input("session-strategy-select", "value"),
-    Input("global-signal-profile", "value"),
-)
-def update_signal_date_limits(symbols: list[str] | None, timeframes: list[str] | None, strategy: str, redis_profile: str):
-    today = date.today()
-    bounds = data_access.signal_date_bounds_for_selection(
-        symbols or [], timeframes or [], strategy or "", redis_profile=redis_profile,
-    )
-    if not bounds.get("available"):
-        return (
-            "2000-01-01", today.isoformat(), None,
-            "2000-01-01", today.isoformat(), None,
-            dmc.Alert(bounds["error"], title="Signal history unavailable", color="red", variant="light"),
-        )
-    earliest = date.fromisoformat(bounds["earliest_date"])
-    default_start = max(earliest, date(2025, 1, 1))
-    if default_start >= today:
-        return (
-            earliest.isoformat(), today.isoformat(), None,
-            earliest.isoformat(), today.isoformat(), None,
-            dmc.Alert(
-                "Signal history does not contain a complete selectable date range.",
-                title="Signal history unavailable", color="red", variant="light",
-            ),
-        )
-    return (
-        earliest.isoformat(), today.isoformat(), default_start.isoformat(),
-        earliest.isoformat(), today.isoformat(), today.isoformat(),
-        dmc.Text(
-            f"Redis signal history across {bounds['pair_count']} selected combination"
-            f"{'s' if bounds['pair_count'] != 1 else ''}: common coverage "
-            f"{bounds['earliest_date']} to {bounds['latest_date']}. "
-            "Start date cannot be earlier than the common signal-history cutoff.",
-            size="sm", c="dimmed",
-        ),
-    )
-
-
-@callback(
     Output("session-selection-request", "data"),
     Output("session-create-message", "children"),
     Input("create-session-btn", "n_clicks"),
     State("session-symbol-select", "value"),
-    State("session-timeframe-select", "value"),
-    State("session-strategy-select", "value"),
-    State("session-start-input", "value"),
-    State("session-end-input", "value"),
-    State("session-balance-input", "value"),
-    State("session-risk-input", "value"),
-    State("session-ksl-input", "value"),
-    State("session-ktp-input", "value"),
     State("global-signal-profile", "value"),
     prevent_initial_call=True,
 )
 def create_session(
     _clicks: int,
-    symbols: list[str] | None,
-    timeframes: list[str] | None,
-    strategy: str,
-    start: str,
-    end: str,
-    balance: float,
-    risk_percent: float,
-    ksl_level: int,
-    ktp_level: int,
+    symbol: str | None,
     redis_profile: str,
 ):
     try:
         selected_profile = session_store.confirmed_signal_profile(redis_profile)
-        bounds = data_access.signal_date_bounds_for_selection(
-            symbols or [], timeframes or [], strategy or "", redis_profile=selected_profile,
+        plan = actions.prepare_standard_single_backtest_session(
+            symbol=str(symbol or ""), redis_profile=selected_profile,
         )
-        if not bounds.get("available"):
-            raise ValueError(bounds["error"])
-        if not start or not end:
-            raise ValueError("Select both a start date and an end date.")
-        start_date = date.fromisoformat(start)
-        end_date = date.fromisoformat(end)
-        earliest_date = date.fromisoformat(bounds["earliest_date"])
-        if start_date < earliest_date:
-            raise ValueError(
-                f"Start date cannot be earlier than the Redis signal-history cutoff: {earliest_date.isoformat()}."
-            )
-        if end_date > date.today():
-            raise ValueError("End date cannot be later than today.")
-        # Prepare and validate every independent one-process plan before
-        # writing anything to dashboard state.  No core command is invoked.
-        plans = [
-            actions.prepare_single_backtest_session(
-                symbol=pair["symbol"],
-                timeframe=pair["timeframe"],
-                strategy=strategy or "",
-                start=start,
-                end=end,
-                balance=float(balance),
-                risk_percent=float(risk_percent),
-                ksl_level=ksl_level,
-                ktp_level=ktp_level,
-                redis_profile=selected_profile,
-            )
-            for pair in bounds["pairs"]
-        ]
-        sessions = session_store.create_draft_group(plans)
-        count = len(sessions)
+        session = session_store.create_single_backtest(plan)
+        preflight = plan["preflight"]
         message = dmc.Alert(
-            f"Created {count} draft{'s' if count != 1 else ''} as one dashboard group. "
-            "No draft has called cTrader CLI.",
-            title="Session inputs frozen", color="green", variant="light",
+            f"Run card created: {preflight['total_count']} cells, "
+            f"{preflight['existing_count']} existing, {preflight['new_count']} new runs. "
+            "The cTrader CLI has not been called.",
+            title="v2 session frozen", color="green", variant="light",
         )
-        return {"ids": [session["session_id"] for session in sessions]}, message
+        return {"ids": [session["session_id"]]}, message
     except Exception as exc:
-        return no_update, dmc.Alert(str(exc), title="Could not create session", color="red")
+        return no_update, dmc.Alert(str(exc), title="Could not create run card", color="red")
 
 
 @callback(
@@ -258,7 +135,10 @@ def refresh_session_detail(
     selected = _selected_sessions(selected_value)
     if len(selected) == 1:
         session = selected[0]
-        execution = data_access.read_single_backtest(session["experiment"])
+        if (session.get("plan") or {}).get("schema") == actions.STANDARD_SINGLE_BACKTEST_SCHEMA:
+            execution = data_access.read_standard_single_backtest(session["plan"])
+        else:
+            execution = data_access.read_single_backtest(session["experiment"])
         events = session_store.events(session["session_id"])
         return single_views.detail(session, execution, events, FORM_OPTIONS)
     return single_views.selection_detail(selected)
@@ -273,7 +153,7 @@ def refresh_session_detail(
     Output("session-active-run", "children"),
     Input("session-progress-poll", "n_intervals"),
     Input("session-select", "value"),
-    Input("run-session-btn", "n_clicks"),
+    Input("session-run-confirm", "submit_n_clicks"),
     Input("refresh-session-view-btn", "n_clicks"),
     Input("session-stop-message", "children"),
     Input("run-session-btn", "disabled"),
@@ -317,7 +197,7 @@ def refresh_selected_run_status(
     # session for a moment; its running button state keeps the poll alive.
     disable_polling = poll_disabled(
         bool(active) or bool(run_button_disabled)
-        or (ctx.triggered_id == "run-session-btn" and runnable),
+        or (ctx.triggered_id == "session-run-confirm" and runnable),
         ctx.triggered_id == "session-progress-poll",
     )
     if active and progress <= 0:
@@ -334,7 +214,7 @@ def refresh_selected_run_status(
 
 @callback(
     Output("session-run-message", "children"),
-    Input("run-session-btn", "n_clicks"),
+    Input("session-run-confirm", "submit_n_clicks"),
     State("session-select", "value"),
     background=True,
     running=[(Output("run-session-btn", "disabled"), True, False)],
@@ -360,9 +240,13 @@ def run_selected_session(
                 )
             if len(session_ids) > 1 and pending["state"] != "draft":
                 raise ValueError("A multi-session queue accepts draft sessions only.")
-            # Validate every queued input before the first run claims the
-            # dashboard safety slot.  This does not start cTrader CLI.
-            actions.validate_single_backtest_runtime(pending["plan"])
+            if pending["plan"].get("schema") != actions.STANDARD_SINGLE_BACKTEST_SCHEMA:
+                raise ValueError(
+                    "Legacy v1 sessions are read-only. Create a new v2 session to run through the standard flow."
+                )
+            # Validate every frozen v2 plan before the first run claims the
+            # dashboard safety slot. This does not start cTrader CLI.
+            actions.validate_standard_single_backtest_runtime(pending["plan"])
             pending_sessions.append(pending)
     except session_store.ActiveSessionError as exc:
         return dmc.Alert(str(exc), title="Dashboard safety guard", color="orange")
@@ -381,7 +265,7 @@ def run_selected_session(
             def publish_progress(percent: float, detail: str, *, current_id: str = session_id) -> None:
                 session_store.update_progress(current_id, percent, detail)
 
-            result = actions.run_single_backtest_session(
+            result = actions.run_standard_single_backtest_session(
                 session["plan"],
                 on_progress=publish_progress,
                 should_cancel=lambda current_id=session_id: session_store.is_cancel_requested(current_id),

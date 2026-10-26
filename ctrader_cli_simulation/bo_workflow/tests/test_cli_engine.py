@@ -7,7 +7,7 @@ from datetime import date
 from pathlib import Path
 from unittest.mock import patch
 
-# tests/ nằm ngang hàng core_engine/cli_engine/api_engine dưới bo_workflow/.
+# tests/ nằm ngang hàng core_engine/ dưới bo_workflow/.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from core_engine import cli_runner
@@ -156,7 +156,7 @@ class ClassifyAuthFailureTests(unittest.TestCase):
     @staticmethod
     def _classify(stdout: str = "", stderr: str = "", returncode: int | None = 1, stop: str = ""):
         spec = RunSpec(
-            "combo", "combo-v1", "engine", "US30.cash", "h1",
+            "combo", "backtestbot-v1", "engine", "US30.cash", "h1",
             date(2026, 1, 1), date(2026, 2, 1), 100000, "ticks", {},
         )
         with tempfile.TemporaryDirectory() as td:

@@ -11,28 +11,61 @@ import hashlib
 import json
 import math
 import sys
+import tempfile
+from contextlib import closing
 from datetime import date
 from pathlib import Path
 from typing import Any, Callable
 
 try:
-    from . import signal_sources
+    from . import channel_selection, signal_sources
 except ImportError:  # app.py imports dashboard modules without a package prefix.
+    import channel_selection
     import signal_sources
 
 _BO_WORKFLOW_ROOT = Path(__file__).resolve().parents[1]
 if str(_BO_WORKFLOW_ROOT) not in sys.path:
     sys.path.insert(0, str(_BO_WORKFLOW_ROOT))
 
-from core_engine import cli_runner, facilitator  # noqa: E402
-from core_engine.configuration import load_engine_profile, load_strategy_profile  # noqa: E402
+from core_engine import cli_runner, facilitator, master_db, signal_trans  # noqa: E402
+from core_engine.configuration import (  # noqa: E402
+    load_backtest_settings,
+    load_engine_profile,
+    load_master_db_profile,
+    load_portfolio_risk_settings,
+    load_redis_profile,
+    load_strategy_profile,
+    resolve_backtest_config,
+    with_signal_overrides,
+)
 from core_engine.optimize import walkforward  # noqa: E402
 from core_engine.output_util import pipeline_lock, readout  # noqa: E402
+from core_engine.planner import expand_grid, research_windows, run_name  # noqa: E402
+from core_engine.risk_allocation import allocate_equal_risk, validate_manual_risks  # noqa: E402
 from core_engine.signal_trans import SYMBOL_GROUPS  # noqa: E402
+from core_engine.store import (  # noqa: E402
+    DAILY_CLI_LAUNCH_LIMIT,
+    ExperimentStore,
+    ProtocolStore,
+    sha256_file,
+)
 
-DEFAULT_ENGINE_PROFILE = "ctrader-5.9.16-ticks-approxfx-v1"
-STRATEGY_PROFILES = {"combo": "combo-v1", "macross": "macross-v1"}
+# Một nguồn duy nhất: bộ engine mặc định khai trong config.yaml (backtest.defaults.engine_profile).
+DEFAULT_ENGINE_PROFILE = str(load_backtest_settings()["defaults"]["engine_profile"])
+STRATEGY_PROFILES = {
+    "combo": "backtestbot-v1",
+    "ma_cross": "backtestbot-v1",
+    "macd_break": "backtestbot-v1",
+}
+STRATEGY_LABELS = {
+    "combo": "Combo",
+    "ma_cross": "MA Cross",
+    "macd_break": "MACD Break",
+}
 SINGLE_BACKTEST_SCHEMA = "bo-dashboard-single-backtest/v1"
+STANDARD_SINGLE_BACKTEST_SCHEMA = "bo-dashboard-single-backtest/v2"
+LEGACY_MULTI_CHANNEL_SCHEMA = "bo-dashboard-multi-channel-backtest/v1"
+MULTI_CHANNEL_SCHEMA = "bo-dashboard-multi-channel-backtest/v2"
 GRID_SEARCH_SCHEMA = "bo-dashboard-grid-search/v1"
 GRID_DIAGNOSTICS_SCHEMA = "bo-dashboard-grid-diagnostics/v1"
 WALKFORWARD_SCHEMA = "bo-dashboard-walkforward/v1"
@@ -43,12 +76,459 @@ DIAGNOSTICS_OBJECTIVES = WALKFORWARD_OBJECTIVES
 COMPLETED_EXECUTION_TRIAL_POLICY = "completed_execution_v1"
 InputFingerprintMismatch = facilitator.InputFingerprintMismatch
 
+STANDARD_SINGLE_CHANNELS = {
+    "combo": ("H1", "H2", "H3", "H4"),
+    "ma_cross": ("M10", "M20", "M30", "M45"),
+    "macd_break": ("H1", "H2", "H3", "H4", "M10", "M20", "M30", "M45"),
+}
+STANDARD_SINGLE_PERIOD_GROUP = "from2022"
+STANDARD_SINGLE_ACCOUNT_MODE = "isolated"
+STANDARD_SINGLE_WARMUP_WINDOW = "c22"
+MULTI_CHANNEL_PERIOD_GROUP = "from2022"
+MULTI_CHANNEL_ACCOUNT_MODE = "shared"
+DEFAULT_MULTI_CHANNEL_RISK_PERCENT = 0.6
+MULTI_CHANNEL_RISK_EQUAL = "equal"
+MULTI_CHANNEL_RISK_MANUAL = "manual"
+
+
+def allocate_multi_channel_risk(
+    channels: list[dict[str, Any]], *, mode: str, total_percent: Any,
+) -> dict[str, Any]:
+    """Apply the core portfolio-risk policy to explicit dashboard rows."""
+    normalized_mode = str(mode or "").strip().lower()
+    if normalized_mode not in {MULTI_CHANNEL_RISK_EQUAL, MULTI_CHANNEL_RISK_MANUAL}:
+        raise ValueError("Risk allocation mode must be Equal split or Manual")
+    rows = [dict(channel) for channel in channels]
+    settings = load_portfolio_risk_settings()
+    if normalized_mode == MULTI_CHANNEL_RISK_EQUAL:
+        each = allocate_equal_risk(
+            total_percent, len(rows), decimals=settings.risk_decimals,
+        )
+        for row in rows:
+            row["risk_percent"] = each
+        used = validate_manual_risks([each for _row in rows], total_percent)
+        per_channel = each
+    else:
+        used = validate_manual_risks(
+            [row.get("risk_percent") for row in rows], total_percent,
+        )
+        per_channel = None
+    return {
+        "channels": rows,
+        "risk_allocation": {
+            "mode": normalized_mode,
+            "total_percent": float(total_percent),
+            "channel_count": len(rows),
+        },
+        "risk_per_channel_percent": per_channel,
+        "risk_used_percent": used,
+        "risk_decimals": settings.risk_decimals,
+    }
+
+
+def _load_dashboard_profile(profile_id: str) -> Any:
+    """Load a current profile and make removed saved plans fail readably."""
+    try:
+        return load_strategy_profile(profile_id)
+    except KeyError as exc:
+        raise ValueError(
+            f"Strategy profile {profile_id!r} has been removed. Its saved results remain "
+            "viewable, but the session cannot be rerun or used for new diagnostics."
+        ) from exc
+
+
+def _profile_timeframes(profile: Any, strategy: str) -> tuple[str, ...]:
+    """Return the BacktestBot signal frames for one selected strategy token."""
+    return tuple(item.lower() for item in profile.strategy_frames[strategy])
+
+
+def _single_channel_overrides(strategy: str, symbol: str, timeframe: str) -> dict[str, list[str]]:
+    """Restrict BacktestBot to the dashboard's one selected signal channel."""
+    return {
+        "signal_strategies": [strategy],
+        "signal_symbols": [symbol],
+        "signal_timeframes": [timeframe.upper()],
+    }
+
 
 def _execution_key(identity: dict[str, Any]) -> str:
     """Return the stable identity hash for one immutable dashboard plan."""
     return hashlib.sha256(
         json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
+
+
+def _standard_channels(symbol: str, risk_percent: float) -> list[dict[str, Any]]:
+    return [
+        {
+            "strategy": strategy,
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "risk_percent": risk_percent,
+        }
+        for strategy, timeframes in STANDARD_SINGLE_CHANNELS.items()
+        for timeframe in timeframes
+    ]
+
+
+def _standard_signal_key(spec: Any) -> str:
+    """Return the content key for one isolated public ``SignalChannel``."""
+    if len(spec.channels) != 1:
+        raise ValueError("Standard Single Backtest requires one channel per RunSpec")
+    channel = spec.channels[0]
+    return (
+        f"{channel.strategy}|{channel.symbol}|{channel.timeframe}|"
+        f"{channel.risk_percent:g}"
+    )
+
+
+def _standard_single_preflight(config: dict[str, Any]) -> dict[str, Any]:
+    """Build an exact, read-only run card for the canonical 16 x 17 job.
+
+    Redis is materialised only into a temporary directory. No ExperimentStore
+    is opened or claimed, no SQL row is written, and no cTrader command runs.
+    """
+    profile = with_signal_overrides(
+        _load_dashboard_profile(str(config["strategy_profile"])), config,
+    )
+    engine = load_engine_profile(str(config["engine_profile"]))
+    windows = research_windows(config)
+    specs = expand_grid(config, profile, engine, windows=windows)
+    channel_count = sum(len(frames) for frames in STANDARD_SINGLE_CHANNELS.values())
+    expected_total = channel_count * len(windows)
+    if len(windows) != 17 or len(specs) != expected_total:
+        raise ValueError(
+            "Canonical Single Backtest must resolve to 16 channels x 17 periods "
+            f"(272 cells), got {channel_count} x {len(windows)} = {len(specs)}"
+        )
+
+    redis_profile = load_redis_profile(str(config["redis_profile"]))
+    algo_sha = sha256_file(profile.algo_path)
+    signal_paths: dict[str, Path] = {}
+    window_hashes: dict[tuple[Path, date], str] = {}
+    materialized: set[Path] = set()
+    with tempfile.TemporaryDirectory(prefix="bo-dashboard-single-preflight-") as scratch:
+        scratch_path = Path(scratch)
+        for spec in specs:
+            canonical = spec.canonical_json()
+            path = signal_trans.resolve_signal_path(
+                redis_profile, profile, spec, scratch_path, materialized=materialized,
+            )
+            signal_paths[canonical] = path
+            key = (path, spec.end)
+            if key not in window_hashes:
+                window_hashes[key] = signal_trans.signal_window_sha256(path, spec.end)
+
+        store = ExperimentStore("grid", str(config["name"]))
+        cells: list[dict[str, Any]] = []
+        warmup_signal_sha = ""
+        max_end = max(spec.end for spec in specs)
+        input_signals: dict[str, str] = {}
+        for spec in specs:
+            canonical = spec.canonical_json()
+            path = signal_paths[canonical]
+            signal_key = _standard_signal_key(spec)
+            if signal_key not in input_signals:
+                input_signals[signal_key] = signal_trans.signal_window_sha256(path, max_end)
+            run_key = store.param_hash(
+                spec,
+                "bo-research-execution/v1",
+                algo_sha,
+                window_hashes[(path, spec.end)],
+                spec.engine_profile,
+            )
+            channel = spec.channels[0]
+            if (
+                channel.strategy == "combo"
+                and channel.timeframe == "H1"
+                and spec.window == STANDARD_SINGLE_WARMUP_WINDOW
+            ):
+                warmup_signal_sha = window_hashes[(path, spec.end)]
+            cells.append({
+                "run_key": run_key,
+                "label": spec.label(),
+                "strategy": channel.strategy,
+                "symbol": channel.symbol,
+                "timeframe": channel.timeframe,
+                "risk_percent": channel.risk_percent,
+                "window": spec.window,
+                "zone": spec.zone,
+                "start": spec.start.isoformat(),
+                "end": spec.end.isoformat(),
+            })
+
+    local_keys: set[str] = set()
+    local_store = ExperimentStore("grid", str(config["name"]))
+    if local_store.db_path.is_file():
+        local_keys = {
+            str(row.get("param_hash"))
+            for row in local_store.rows()
+            if str(row.get("status")) in {"ok", "skipped"}
+        }
+
+    master_profile = load_master_db_profile()
+    if not master_profile.enabled:
+        raise ValueError("Canonical Single Backtest preflight requires master_db.enabled=true")
+    sql_keys: set[str] = set()
+    with closing(master_db.connect(master_profile)) as connection:
+        for cell in cells:
+            if master_db.describe_run(connection, cell["run_key"]) is not None:
+                sql_keys.add(cell["run_key"])
+
+    known_keys = local_keys | sql_keys
+    known_count = sum(cell["run_key"] in known_keys for cell in cells)
+    new_count = len(cells) - known_count
+    budget_used = int(ProtocolStore().cli_launches_today())
+    budget_remaining = max(0, DAILY_CLI_LAUNCH_LIMIT - budget_used)
+    if not warmup_signal_sha:
+        raise ValueError("Canonical Single Backtest could not identify the Combo H1 c22 signal hash")
+    return {
+        "channel_count": channel_count,
+        "period_count": len(windows),
+        "total_count": len(cells),
+        "existing_count": known_count,
+        "existing_local_count": sum(cell["run_key"] in local_keys for cell in cells),
+        "existing_sql_count": sum(cell["run_key"] in sql_keys for cell in cells),
+        "existing_sql_only_count": sum(
+            cell["run_key"] in sql_keys and cell["run_key"] not in local_keys for cell in cells
+        ),
+        "new_count": new_count,
+        "cli_required": new_count,
+        "cli_used": budget_used,
+        "cli_limit": DAILY_CLI_LAUNCH_LIMIT,
+        "cli_remaining": budget_remaining,
+        "budget_ok": new_count <= budget_remaining,
+        "warmup_signal_sha256": warmup_signal_sha,
+        "cells": cells,
+        "input_fingerprint": {
+            "algo_sha256": algo_sha,
+            "signals": dict(sorted(input_signals.items())),
+        },
+    }
+
+
+def prepare_standard_single_backtest_session(
+    *, symbol: str, redis_profile: str = signal_sources.ORIGINAL,
+) -> dict[str, Any]:
+    """Freeze one canonical Single session: one symbol, 16 channels, 17 periods."""
+    normalized_symbol = str(symbol).strip()
+    if normalized_symbol not in SYMBOL_GROUPS:
+        raise ValueError(f"Symbol is not supported by the signal mapping: {normalized_symbol!r}")
+    selected_source = signal_sources.require_profile(redis_profile)
+    settings = load_backtest_settings()
+    defaults = settings.get("defaults") or {}
+    fixed_defaults = defaults.get("fixed_params") or {}
+    risk_percent = float(fixed_defaults.get("RiskPercent", 1.0))
+    channels = _standard_channels(normalized_symbol, risk_percent)
+    config = resolve_backtest_config({
+        "channels": channels,
+        "redis_profile": selected_source,
+        "account_mode": STANDARD_SINGLE_ACCOUNT_MODE,
+        "period_group": STANDARD_SINGLE_PERIOD_GROUP,
+        "skip_known_in_sql": True,
+        "keep_logs": False,
+        "locked": True,
+        "dashboard_session_kind": "single_backtest_standard",
+    })
+    config["name"] = run_name(config)
+    preflight = _standard_single_preflight(config)
+    config["expected_input_fingerprint"] = preflight["input_fingerprint"]
+
+    warmup_config = resolve_backtest_config({
+        **config,
+        "name": None,
+        "channels": [channels[0]],
+        "period_group": None,
+        "start": "2022-01-01",
+        "end": "2026-06-30",
+        "max_parallel": 1,
+    })
+    warmup_config["name"] = run_name(warmup_config)
+    warmup_spec = expand_grid(
+        warmup_config,
+        with_signal_overrides(
+            _load_dashboard_profile(str(warmup_config["strategy_profile"])), warmup_config,
+        ),
+        load_engine_profile(str(warmup_config["engine_profile"])),
+    )[0]
+    warmup_key = _standard_signal_key(warmup_spec)
+    warmup_config["expected_input_fingerprint"] = {
+        "algo_sha256": preflight["input_fingerprint"]["algo_sha256"],
+        "signals": {
+            warmup_key: preflight["input_fingerprint"]["signals"][warmup_key],
+        },
+    }
+    warmup_store = ExperimentStore("grid", str(warmup_config["name"]))
+    warmup_run_key = warmup_store.param_hash(
+        warmup_spec,
+        "bo-research-execution/v1",
+        preflight["input_fingerprint"]["algo_sha256"],
+        preflight["warmup_signal_sha256"],
+        warmup_spec.engine_profile,
+    )
+    warmup_local = False
+    if warmup_store.db_path.is_file():
+        warmup_local = any(
+            str(row.get("param_hash")) == warmup_run_key
+            and str(row.get("status")) in {"ok", "skipped"}
+            for row in warmup_store.rows()
+        )
+    with closing(master_db.connect(load_master_db_profile())) as connection:
+        warmup_sql = master_db.describe_run(connection, warmup_run_key) is not None
+    warmup_required = not (warmup_local or warmup_sql)
+    preflight["warmup_run_key"] = warmup_run_key
+    preflight["warmup_required"] = warmup_required
+    preflight["warmup_existing_local"] = warmup_local
+    preflight["warmup_existing_sql"] = warmup_sql
+    preflight["cli_required"] = int(preflight["new_count"]) + int(warmup_required)
+    preflight["budget_ok"] = int(preflight["cli_required"]) <= int(preflight["cli_remaining"])
+
+    identity = {
+        "schema": STANDARD_SINGLE_BACKTEST_SCHEMA,
+        "symbol": normalized_symbol,
+        "redis_profile": selected_source,
+        "config": config,
+        "input_fingerprint": preflight["input_fingerprint"],
+    }
+    execution_key = _execution_key(identity)
+    source_label = signal_sources.LABELS[selected_source]
+    return {
+        "schema": STANDARD_SINGLE_BACKTEST_SCHEMA,
+        "title": f"{normalized_symbol} · 16 channels × 17 periods · {source_label}",
+        "note": "Canonical isolated Single Backtest",
+        "execution_key": execution_key,
+        "pipeline": str(config["name"]),
+        "experiment": str(config["name"]),
+        "input": {
+            "symbol": normalized_symbol,
+            "redis_profile": selected_source,
+            "account_mode": STANDARD_SINGLE_ACCOUNT_MODE,
+            "period_group": STANDARD_SINGLE_PERIOD_GROUP,
+            "risk_percent": risk_percent,
+            "channel_count": preflight["channel_count"],
+            "period_count": preflight["period_count"],
+            "cell_count": preflight["total_count"],
+        },
+        "command_config": config,
+        "warmup_config": warmup_config,
+        "preflight": {
+            **preflight,
+            "engine_profile": config["engine_profile"],
+            "balance": config["balance"],
+            "fixed_params": config["fixed_params"],
+            "account_mode": config["account_mode"],
+            "period_group": config["period_group"],
+            "max_parallel": config["max_parallel"],
+        },
+    }
+
+
+def validate_standard_single_backtest_runtime(plan: dict[str, Any]) -> dict[str, Any]:
+    """Validate the frozen v2 plan and current CLI allowance without running it."""
+    if plan.get("schema") != STANDARD_SINGLE_BACKTEST_SCHEMA:
+        raise ValueError("Single Backtest plan does not match schema v2")
+    config = dict(plan.get("command_config") or {})
+    source = signal_sources.profile_from_input(plan.get("input"))
+    if signal_sources.require_profile(config.get("redis_profile")) != source:
+        raise ValueError("Single Backtest signal source does not match its frozen plan")
+    if config.get("account_mode") != STANDARD_SINGLE_ACCOUNT_MODE:
+        raise ValueError("Standard Single Backtest requires account_mode=isolated")
+    if config.get("period_group") != STANDARD_SINGLE_PERIOD_GROUP:
+        raise ValueError("Standard Single Backtest requires period_group=from2022")
+    if len(config.get("channels") or []) != 16:
+        raise ValueError("Standard Single Backtest requires exactly 16 channels")
+    if not config.get("expected_input_fingerprint"):
+        raise ValueError("Standard Single Backtest is missing its frozen input fingerprint")
+    cli_path = cli_runner.select_cli()
+    if not cli_path.is_file():
+        raise FileNotFoundError(f"ctrader-cli.exe was not found: {cli_path}")
+    cli_runner.auth_options()
+    budget_used = int(ProtocolStore().cli_launches_today())
+    budget_remaining = max(0, DAILY_CLI_LAUNCH_LIMIT - budget_used)
+    required = int((plan.get("preflight") or {}).get("cli_required") or 0)
+    if required > budget_remaining:
+        raise ValueError(
+            f"This frozen plan needs at most {required} CLI launches, but only "
+            f"{budget_remaining}/{DAILY_CLI_LAUNCH_LIMIT} remain today (Europe/Prague). "
+            "Create a new session to refresh the exact preflight."
+        )
+    return {
+        "cli_path": str(cli_path),
+        "cli_used": budget_used,
+        "cli_remaining": budget_remaining,
+        "cli_required": required,
+    }
+
+
+def run_standard_single_backtest_session(
+    plan: dict[str, Any],
+    *,
+    on_progress: Callable[[float, str], None] | None = None,
+    should_cancel: Callable[[], bool] | None = None,
+) -> dict[str, Any]:
+    """Run warm-up when needed, then the canonical full backtest flow."""
+    validate_standard_single_backtest_runtime(plan)
+    preflight = plan.get("preflight") or {}
+    warmup_result: dict[str, Any] | None = None
+    if bool(preflight.get("warmup_required")):
+        if on_progress:
+            on_progress(0.0, "Warm-up Combo H1 · c22 · max_parallel=1")
+
+        def warmup_progress(percent: float, detail: str) -> None:
+            if on_progress:
+                on_progress(float(percent) / 272.0, f"Warm-up · {detail}")
+
+        warmup_result = facilitator.run_backtest(
+            dict(plan.get("warmup_config") or {}),
+            on_progress=warmup_progress,
+            should_cancel=should_cancel,
+        )
+        warmup_tally = warmup_result.get("tally") or {}
+        warmup_logically_complete = bool(warmup_result.get("complete")) or (
+            not bool(warmup_result.get("cancelled"))
+            and int(warmup_result.get("failed") or 0) == 0
+            and sum(
+                int(count) for status, count in warmup_tally.items()
+                if status in {"ok", "skipped", "known_in_sql"}
+            ) == int(warmup_result.get("total") or 0)
+        )
+        if not warmup_logically_complete:
+            return {**warmup_result, "warmup": warmup_result, "phase": "warmup"}
+        if int((warmup_result.get("master_db") or {}).get("error") or 0):
+            return {
+                **warmup_result,
+                "complete": False,
+                "failed": 1,
+                "warmup": warmup_result,
+                "phase": "warmup_sql_copy",
+            }
+
+    full_result = facilitator.run_backtest(
+        dict(plan.get("command_config") or {}),
+        on_progress=on_progress,
+        should_cancel=should_cancel,
+    )
+    tally = full_result.get("tally") or {}
+    logical_done = sum(
+        int(count) for status, count in tally.items()
+        if status in {"ok", "skipped", "known_in_sql"}
+    )
+    logical_complete = (
+        not bool(full_result.get("cancelled"))
+        and int(full_result.get("failed") or 0) == 0
+        and logical_done == int(full_result.get("total") or 0)
+    )
+    return {
+        **full_result,
+        "complete": logical_complete,
+        "cached": (
+            logical_complete
+            and not bool(tally.get("ok"))
+            and not bool((warmup_result or {}).get("tally", {}).get("ok"))
+        ),
+        "warmup": warmup_result,
+        "phase": "full",
+    }
 
 
 def prepare_single_backtest_session(
@@ -86,14 +566,15 @@ def prepare_single_backtest_session(
             f"Symbol is not supported by the dashboard signal mapping: {normalized_symbol!r}"
         )
 
-    profile = load_strategy_profile(STRATEGY_PROFILES[normalized_strategy])
+    profile = _load_dashboard_profile(STRATEGY_PROFILES[normalized_strategy])
     engine = load_engine_profile(DEFAULT_ENGINE_PROFILE)
     if engine.backend != "cli":
         raise ValueError("Single Backtest Session v1 supports only the CLI engine")
-    if normalized_timeframe not in profile.default_timeframes:
+    allowed_timeframes = _profile_timeframes(profile, normalized_strategy)
+    if normalized_timeframe not in allowed_timeframes:
         raise ValueError(
-            f"{profile.strategy} does not support timeframe {normalized_timeframe!r}; "
-            f"use one of: {', '.join(profile.default_timeframes)}"
+            f"{normalized_strategy} does not support timeframe {normalized_timeframe!r}; "
+            f"use one of: {', '.join(allowed_timeframes)}"
         )
     if not profile.algo_path.is_file():
         raise FileNotFoundError(f"Strategy algo was not found: {profile.algo_path}")
@@ -101,7 +582,7 @@ def prepare_single_backtest_session(
     start_date = date.fromisoformat(str(start))
     end_date = date.fromisoformat(str(end))
     if start_date >= end_date:
-        raise ValueError("End date must be after start date (end is exclusive)")
+        raise ValueError("End date must be after start date (end is inclusive)")
     numeric_balance = float(balance)
     numeric_risk = float(risk_percent)
     if not math.isfinite(numeric_balance) or numeric_balance <= 0:
@@ -121,6 +602,7 @@ def prepare_single_backtest_session(
         "method": "grid",
         "symbols": [normalized_symbol],
         "timeframe": [normalized_timeframe],
+        **_single_channel_overrides(normalized_strategy, normalized_symbol, normalized_timeframe),
         "strategy": normalized_strategy,
         "strategy_profile": profile.id,
         "engine_profile": engine.id,
@@ -166,7 +648,7 @@ def prepare_single_backtest_session(
         "schema": SINGLE_BACKTEST_SCHEMA,
         "title": (
             f"{normalized_symbol} · "
-            f"{'MA Cross' if normalized_strategy == 'macross' else 'Combo'} · "
+            f"{STRATEGY_LABELS[normalized_strategy]} · "
             f"{normalized_timeframe.upper()} · {start_date.isoformat()} to {end_date.isoformat()}"
         ),
         "note": "",
@@ -235,6 +717,546 @@ def validate_single_backtest_runtime(plan: dict[str, Any]) -> dict[str, str]:
     return {"cli_path": str(cli_path), "account": auth["ACCOUNT"]}
 
 
+def _multi_signal_key(spec: Any) -> str:
+    return ";".join(
+        f"{channel.strategy}|{channel.symbol}|{channel.timeframe}|{channel.risk_percent:g}"
+        for channel in spec.channels
+    )
+
+
+def _multi_channel_preflight(config: dict[str, Any]) -> dict[str, Any]:
+    """Build the exact shared-account run card without launching cTrader."""
+    profile = with_signal_overrides(
+        _load_dashboard_profile(str(config["strategy_profile"])), config,
+    )
+    engine = load_engine_profile(str(config["engine_profile"]))
+    windows = research_windows(config)
+    specs = expand_grid(config, profile, engine, windows=windows)
+    if len(specs) != len(windows) or any(
+        len(spec.channels) != len(profile.signal_channels) for spec in specs
+    ):
+        raise ValueError("Shared Multi-channel must produce exactly one RunSpec per period")
+
+    redis_profile = load_redis_profile(str(config["redis_profile"]))
+    algo_sha = sha256_file(profile.algo_path)
+    signal_paths: dict[str, Path] = {}
+    window_hashes: dict[tuple[Path, date], str] = {}
+    materialized: set[Path] = set()
+    with tempfile.TemporaryDirectory(prefix="bo-dashboard-multi-preflight-") as scratch:
+        scratch_path = Path(scratch)
+        for spec in specs:
+            canonical = spec.canonical_json()
+            path = signal_trans.resolve_signal_path(
+                redis_profile, profile, spec, scratch_path, materialized=materialized,
+            )
+            signal_paths[canonical] = path
+            key = (path, spec.end)
+            if key not in window_hashes:
+                window_hashes[key] = signal_trans.signal_window_sha256(path, spec.end)
+
+        store = ExperimentStore("grid", str(config["name"]))
+        max_end = max(spec.end for spec in specs)
+        input_signals: dict[str, str] = {}
+        cells: list[dict[str, Any]] = []
+        for spec in specs:
+            path = signal_paths[spec.canonical_json()]
+            signal_key = _multi_signal_key(spec)
+            if signal_key not in input_signals:
+                input_signals[signal_key] = signal_trans.signal_window_sha256(path, max_end)
+            run_key = store.param_hash(
+                spec, "bo-research-execution/v1", algo_sha,
+                window_hashes[(path, spec.end)], spec.engine_profile,
+            )
+            cells.append({
+                "run_key": run_key,
+                "label": spec.label(),
+                "window": spec.window,
+                "zone": spec.zone,
+                "start": spec.start.isoformat(),
+                "end": spec.end.isoformat(),
+            })
+
+    local_store = ExperimentStore("grid", str(config["name"]))
+    local_keys = {
+        str(row.get("param_hash"))
+        for row in (local_store.rows() if local_store.db_path.is_file() else [])
+        if str(row.get("status")) in {"ok", "skipped"}
+    }
+    master_profile = load_master_db_profile()
+    if not master_profile.enabled:
+        raise ValueError("Multi-channel preflight requires master_db.enabled=true")
+    sql_keys: set[str] = set()
+    with closing(master_db.connect(master_profile)) as connection:
+        for cell in cells:
+            if master_db.describe_run(connection, cell["run_key"]) is not None:
+                sql_keys.add(cell["run_key"])
+
+    known_keys = local_keys | sql_keys
+    new_count = sum(cell["run_key"] not in known_keys for cell in cells)
+    used = int(ProtocolStore().cli_launches_today())
+    remaining = max(0, DAILY_CLI_LAUNCH_LIMIT - used)
+    return {
+        "channel_count": len(profile.signal_channels),
+        "period_count": len(windows),
+        "total_count": len(cells),
+        "existing_count": len(cells) - new_count,
+        "existing_local_count": sum(cell["run_key"] in local_keys for cell in cells),
+        "existing_sql_count": sum(cell["run_key"] in sql_keys for cell in cells),
+        "new_count": new_count,
+        "cli_required": new_count,
+        "cli_used": used,
+        "cli_limit": DAILY_CLI_LAUNCH_LIMIT,
+        "cli_remaining": remaining,
+        "budget_ok": new_count <= remaining,
+        "cells": cells,
+        "input_fingerprint": {
+            "algo_sha256": algo_sha,
+            "signals": dict(sorted(input_signals.items())),
+        },
+    }
+
+
+def prepare_multi_channel_session(
+    *,
+    channels: list[dict[str, Any]],
+    custom_period: bool,
+    start: str | None,
+    end: str | None,
+    balance: float,
+    ksl_level: int,
+    ktp_level: int,
+    leg_count: int,
+    leg2_ktp: int,
+    leg3_ktp: int,
+    enable_daily_loss_limit: bool,
+    max_daily_loss_percent: float,
+    enable_max_drawdown: bool,
+    max_total_drawdown_percent: float,
+    enable_max_consecutive_losses: bool,
+    max_consecutive_losses: int,
+    redis_profile: str = signal_sources.ORIGINAL,
+    risk_allocation_mode: str = MULTI_CHANNEL_RISK_EQUAL,
+    total_risk_percent: Any | None = None,
+) -> dict[str, Any]:
+    """Freeze explicit channel rows for 17 default periods or one custom period."""
+    profile = _load_dashboard_profile("backtestbot-v1")
+    if total_risk_percent is None:
+        total_risk_percent = load_portfolio_risk_settings().total_risk_percent
+    allocation = allocate_multi_channel_risk(
+        channels, mode=risk_allocation_mode, total_percent=total_risk_percent,
+    )
+    # Plan source = default for every row; a row may override it with its own `source` (multi-source in one run).
+    selected_source = signal_sources.require_profile(redis_profile)
+    normalized_channels = list(channel_selection.canonical_channels(
+        profile, allocation["channels"], allowed_symbols=SYMBOL_GROUPS,
+        allowed_sources=signal_sources.LABELS, default_source=selected_source,
+    ))
+    numeric_balance = float(balance)
+    if not math.isfinite(numeric_balance) or numeric_balance <= 0:
+        raise ValueError("Starting balance (USD) must be greater than 0")
+    legs = _enum_index(leg_count, "LegCount")
+    if legs not in {1, 2, 3}:
+        raise ValueError("LegCount must be between 1 and 3")
+    daily_loss = float(max_daily_loss_percent)
+    total_drawdown = float(max_total_drawdown_percent)
+    consecutive_losses = _enum_index(max_consecutive_losses, "MaxConsecutiveLosses")
+    if not math.isfinite(daily_loss) or daily_loss <= 0:
+        raise ValueError("MaxDailyLossPercent must be greater than 0")
+    if not math.isfinite(total_drawdown) or total_drawdown <= 0:
+        raise ValueError("MaxTotalDrawdownPercent must be greater than 0")
+    if consecutive_losses < 1:
+        raise ValueError("MaxConsecutiveLosses must be at least 1")
+
+    fixed_params = profile.resolve_params({
+        "KslLevel": _enum_index(ksl_level, "KslLevel"),
+        "KtpLevel": _enum_index(ktp_level, "KtpLevel"),
+        "LegCount": legs,
+        "Leg2Ktp": _enum_index(leg2_ktp, "Leg2Ktp"),
+        "Leg3Ktp": _enum_index(leg3_ktp, "Leg3Ktp"),
+        "EnableDailyLossLimit": bool(enable_daily_loss_limit),
+        "MaxDailyLossPercent": daily_loss,
+        "EnableMaxDrawdown": bool(enable_max_drawdown),
+        "MaxTotalDrawdownPercent": total_drawdown,
+        "EnableMaxConsecutiveLosses": bool(enable_max_consecutive_losses),
+        "MaxConsecutiveLosses": consecutive_losses,
+    })
+    period_overrides: dict[str, Any] = {"period_group": MULTI_CHANNEL_PERIOD_GROUP}
+    if custom_period:
+        if not start or not end:
+            raise ValueError("Custom period requires both start and end dates")
+        start_date = date.fromisoformat(str(start))
+        end_date = date.fromisoformat(str(end))
+        if start_date > end_date:
+            raise ValueError("Custom period end must be on or after its start")
+        period_overrides = {
+            "period_group": None,
+            "start": start_date.isoformat(),
+            "end": end_date.isoformat(),
+            "zone": "custom",
+        }
+
+    config = resolve_backtest_config({
+        "channels": normalized_channels,
+        "redis_profile": selected_source,
+        "account_mode": MULTI_CHANNEL_ACCOUNT_MODE,
+        "balance": numeric_balance,
+        "fixed_params": fixed_params,
+        "skip_known_in_sql": True,
+        "keep_logs": True,
+        "locked": True,
+        "dashboard_session_kind": "multi_channel_backtest_v2",
+        **period_overrides,
+    })
+    # Long shared-account labels can make the core's atomic temp-file path
+    # exceed MAX_PATH on Windows.  The short name is deterministic; each
+    # run_key remains content-addressed by the unchanged RunSpec and inputs.
+    config["name"] = f"dashboard_mc_{_execution_key({'config': config})[:12]}"
+    preflight = _multi_channel_preflight(config)
+    config["expected_input_fingerprint"] = preflight["input_fingerprint"]
+    identity = {
+        "schema": MULTI_CHANNEL_SCHEMA,
+        "channels": normalized_channels,
+        "custom_period": bool(custom_period),
+        "balance": numeric_balance,
+        "fixed_params": fixed_params,
+        "config": config,
+        "input_fingerprint": preflight["input_fingerprint"],
+        **signal_sources.identity_field(selected_source),
+    }
+    execution_key = _execution_key(identity)
+    risk_allocation = allocation["risk_allocation"]
+    config["risk_allocation"] = risk_allocation
+    period_text = (
+        f"{start} to {end}" if custom_period
+        else f"{MULTI_CHANNEL_PERIOD_GROUP} ({preflight['period_count']} periods)"
+    )
+    return {
+        "schema": MULTI_CHANNEL_SCHEMA,
+        "title": f"Multi-channel · {len(normalized_channels)} channels · {period_text}",
+        "note": "Shared account; one independent portfolio run per period",
+        "execution_key": execution_key,
+        "pipeline": str(config["name"]),
+        "experiment": str(config["name"]),
+        "input": {
+            **identity,
+            "redis_profile": selected_source,
+            "account_mode": MULTI_CHANNEL_ACCOUNT_MODE,
+            "period_group": None if custom_period else MULTI_CHANNEL_PERIOD_GROUP,
+            "start": start if custom_period else None,
+            "end": end if custom_period else None,
+            "channel_count": len(normalized_channels),
+            "risk_allocation": risk_allocation,
+        },
+        "command_config": config,
+        "preflight": {
+            **preflight,
+            "engine_profile": config["engine_profile"],
+            "balance": config["balance"],
+            "fixed_params": config["fixed_params"],
+            "account_mode": config["account_mode"],
+            "period_group": config.get("period_group"),
+            "max_parallel": config["max_parallel"],
+            "risk_allocation": risk_allocation,
+            "risk_per_channel_percent": allocation["risk_per_channel_percent"],
+            "risk_used_percent": allocation["risk_used_percent"],
+            "risk_decimals": allocation["risk_decimals"],
+        },
+    }
+
+
+def _prepare_legacy_multi_channel_session(
+    *,
+    strategies: list[str],
+    symbols: list[str],
+    timeframes: list[str],
+    start: str,
+    end: str,
+    balance: float,
+    risk_percent: float,
+    ksl_level: int,
+    ktp_level: int,
+    leg_count: int,
+    leg2_ktp: int,
+    leg3_ktp: int,
+    enable_daily_loss_limit: bool,
+    max_daily_loss_percent: float,
+    enable_max_drawdown: bool,
+    max_total_drawdown_percent: float,
+    enable_max_consecutive_losses: bool,
+    max_consecutive_losses: int,
+    redis_profile: str = signal_sources.ORIGINAL,
+) -> dict[str, Any]:
+    """Freeze one BacktestBot portfolio run containing many signal channels."""
+    profile = _load_dashboard_profile("backtestbot-v1")
+    engine = load_engine_profile(DEFAULT_ENGINE_PROFILE)
+    if engine.backend != "cli":
+        raise ValueError("Multi-channel Session v1 supports only the CLI engine")
+    if not profile.algo_path.is_file():
+        raise FileNotFoundError(f"Strategy algo was not found: {profile.algo_path}")
+
+    selection = channel_selection.canonical_selection(
+        profile, strategies, symbols, timeframes, allowed_symbols=SYMBOL_GROUPS,
+    )
+    start_date = date.fromisoformat(str(start))
+    end_date = date.fromisoformat(str(end))
+    if start_date >= end_date:
+        raise ValueError("End date must be after start date (end is inclusive)")
+    numeric_balance = float(balance)
+    numeric_risk = float(risk_percent)
+    if not math.isfinite(numeric_balance) or numeric_balance <= 0:
+        raise ValueError("Starting balance (USD) must be greater than 0")
+    if not math.isfinite(numeric_risk) or numeric_risk <= 0:
+        raise ValueError("RiskPercent must be greater than 0")
+
+    legs = _enum_index(leg_count, "LegCount")
+    if legs < 1 or legs > 3:
+        raise ValueError("LegCount must be between 1 and 3")
+    daily_loss = float(max_daily_loss_percent)
+    total_drawdown = float(max_total_drawdown_percent)
+    if not math.isfinite(daily_loss) or daily_loss <= 0:
+        raise ValueError("MaxDailyLossPercent must be greater than 0")
+    if not math.isfinite(total_drawdown) or total_drawdown <= 0:
+        raise ValueError("MaxTotalDrawdownPercent must be greater than 0")
+    consecutive_losses = _enum_index(max_consecutive_losses, "MaxConsecutiveLosses")
+    if consecutive_losses < 1:
+        raise ValueError("MaxConsecutiveLosses must be at least 1")
+
+    fixed_params = profile.resolve_params({
+        "KslLevel": _enum_index(ksl_level, "KslLevel"),
+        "KtpLevel": _enum_index(ktp_level, "KtpLevel"),
+        "LegCount": legs,
+        "Leg2Ktp": _enum_index(leg2_ktp, "Leg2Ktp"),
+        "Leg3Ktp": _enum_index(leg3_ktp, "Leg3Ktp"),
+        "RiskPercent": numeric_risk,
+        "EnableDailyLossLimit": bool(enable_daily_loss_limit),
+        "MaxDailyLossPercent": daily_loss,
+        "EnableMaxDrawdown": bool(enable_max_drawdown),
+        "MaxTotalDrawdownPercent": total_drawdown,
+        "EnableMaxConsecutiveLosses": bool(enable_max_consecutive_losses),
+        "MaxConsecutiveLosses": consecutive_losses,
+    })
+    selected_signal_profile = signal_sources.require_profile(redis_profile)
+    chart_symbol = selection["symbols"][0]
+    chart_timeframe = str(profile.default_timeframes[0]).lower()
+    command_base = {
+        "method": "grid",
+        # These two fields drive planner expansion. Keeping one chart anchor in
+        # each guarantees exactly one RunSpec and therefore one CLI launch.
+        "symbols": [chart_symbol],
+        "timeframe": [chart_timeframe],
+        "signal_strategies": list(selection["strategies"]),
+        "signal_symbols": list(selection["symbols"]),
+        "signal_timeframes": list(selection["timeframes"]),
+        "strategy": profile.strategy,
+        "strategy_profile": profile.id,
+        "engine_profile": engine.id,
+        "start": start_date.isoformat(),
+        "end": end_date.isoformat(),
+        "balance": numeric_balance,
+        "fixed_params": fixed_params,
+        "max_parallel": 1,
+        "keep_logs": True,
+        "locked": True,
+        "dashboard_session_kind": "multi_channel_backtest",
+        **signal_sources.command_field(selected_signal_profile),
+    }
+    real_inputs = facilitator.input_fingerprint({"name": "dashboard_input_fingerprint", **command_base})
+    identity = {
+        "schema": LEGACY_MULTI_CHANNEL_SCHEMA,
+        "strategy": profile.strategy,
+        "strategy_profile": profile.id,
+        "engine_profile": engine.id,
+        "signal_strategies": list(selection["strategies"]),
+        "signal_symbols": list(selection["symbols"]),
+        "signal_timeframes": list(selection["timeframes"]),
+        "strategy_frames": {
+            token: list(frames) for token, frames in selection["strategy_frames"].items()
+        },
+        "channel_count": selection["channel_count"],
+        "chart_symbol": chart_symbol,
+        "chart_timeframe": chart_timeframe,
+        "start": start_date.isoformat(),
+        "end": end_date.isoformat(),
+        "balance": numeric_balance,
+        "fixed_params": fixed_params,
+        "input_fingerprint": real_inputs,
+        **signal_sources.identity_field(selected_signal_profile),
+    }
+    execution_key = _execution_key(identity)
+    stem = f"dashboard_multichannel_{execution_key[:16]}"
+    command_config = {
+        "pipeline": stem,
+        "pipeline_stage": "multi_channel_backtest",
+        "name": stem,
+        **command_base,
+        "expected_input_fingerprint": real_inputs,
+    }
+    return {
+        "schema": LEGACY_MULTI_CHANNEL_SCHEMA,
+        "title": (
+            f"Multi-channel · {len(selection['symbols'])} symbols · "
+            f"{len(selection['strategies'])} strategies · {selection['channel_count']} channels · "
+            f"{start_date.isoformat()} to {end_date.isoformat()}"
+        ),
+        "note": "",
+        "execution_key": execution_key,
+        "pipeline": stem,
+        "experiment": stem,
+        "input": {**identity, "redis_profile": selected_signal_profile},
+        "command_config": command_config,
+        "preflight": {
+            "engine_backend": engine.backend,
+            "data_mode": engine.data_mode,
+            "algo_path": str(profile.algo_path),
+            "single_process": True,
+            "run_spec_count": 1,
+            "channel_count": selection["channel_count"],
+            "input_fingerprint": real_inputs,
+        },
+    }
+
+
+def run_multi_channel_session(
+    plan: dict[str, Any],
+    *,
+    on_progress: Callable[[float, str], None] | None = None,
+    should_cancel: Callable[[], bool] | None = None,
+) -> dict[str, Any]:
+    """Execute a frozen v2 shared-account plan through the canonical flow."""
+    if plan.get("schema") != MULTI_CHANNEL_SCHEMA:
+        raise ValueError("Legacy Multi-channel sessions are view-only; create a v2 session to run")
+    config = dict(plan.get("command_config") or {})
+    input_doc = plan.get("input") or {}
+    if signal_sources.profile_from_input(input_doc) != signal_sources.require_profile(
+        config.get("redis_profile") or signal_sources.ORIGINAL
+    ):
+        raise ValueError("Multi-channel signal source does not match its frozen plan")
+    if config.get("dashboard_session_kind") != "multi_channel_backtest_v2":
+        raise ValueError("Plan is not a Multi-channel v2 Session")
+    if config.get("account_mode") != MULTI_CHANNEL_ACCOUNT_MODE:
+        raise ValueError("Multi-channel Session requires account_mode=shared")
+    if config.get("parameter_space") or config.get("params") or config.get("walkforward"):
+        raise ValueError("Multi-channel Session accepts one fixed parameter set")
+    if not config.get("expected_input_fingerprint"):
+        raise ValueError("Multi-channel Session is missing its frozen input fingerprint")
+    profile = _load_dashboard_profile(str(config.get("strategy_profile") or ""))
+    channels = list(channel_selection.canonical_channels(
+        profile, config.get("channels"), allowed_symbols=SYMBOL_GROUPS,
+        allowed_sources=signal_sources.LABELS, default_source=config.get("redis_profile"),
+    ))
+    if channels != list(input_doc.get("channels") or []):
+        raise ValueError("Multi-channel rows do not match the frozen plan")
+    if len(channels) != int(input_doc.get("channel_count") or 0):
+        raise ValueError("Multi-channel count does not match its frozen plan")
+    result = facilitator.run_backtest(
+        config, on_progress=on_progress, should_cancel=should_cancel,
+    )
+    tally = result.get("tally") or {}
+    logical_done = sum(
+        int(count) for status, count in tally.items()
+        if status in {"ok", "skipped", "known_in_sql"}
+    )
+    logical_complete = (
+        not bool(result.get("cancelled"))
+        and int(result.get("failed") or 0) == 0
+        and logical_done == int(result.get("total") or 0)
+    )
+    return {
+        **result,
+        "complete": logical_complete,
+        "cached": logical_complete and not bool(tally.get("ok")),
+    }
+
+
+def _run_legacy_multi_channel_session(
+    plan: dict[str, Any],
+    *,
+    on_progress: Callable[[float, str], None] | None = None,
+    should_cancel: Callable[[], bool] | None = None,
+) -> dict[str, Any]:
+    """Execute one frozen multi-channel plan through one core RunSpec."""
+    if plan.get("schema") != LEGACY_MULTI_CHANNEL_SCHEMA:
+        raise ValueError("Multi-channel plan does not match the dashboard schema")
+    config = dict(plan.get("command_config") or {})
+    input_doc = plan.get("input") or {}
+    if signal_sources.profile_from_input(input_doc) != signal_sources.require_profile(
+        config.get("redis_profile") or signal_sources.ORIGINAL
+    ):
+        raise ValueError("Multi-channel signal source does not match its frozen plan")
+    if config.get("dashboard_session_kind") != "multi_channel_backtest":
+        raise ValueError("Plan is not a Multi-channel Session")
+    if config.get("method") != "grid" or config.get("force"):
+        raise ValueError("Multi-channel Session cannot change method or force a rerun")
+    if config.get("parameter_space") or config.get("zones") or config.get("walkforward"):
+        raise ValueError("Multi-channel Session accepts one fixed parameter set and no research windows")
+    if config.get("max_parallel") != 1:
+        raise ValueError("Multi-channel Session requires max_parallel=1")
+    if config.get("pipeline_stage") != "multi_channel_backtest":
+        raise ValueError("Multi-channel Session uses an invalid pipeline stage")
+    if len(config.get("symbols") or []) != 1 or len(config.get("timeframe") or []) != 1:
+        raise ValueError("Multi-channel Session requires exactly one chart anchor")
+    if config.get("symbols", [None])[0] not in (config.get("signal_symbols") or []):
+        raise ValueError("Multi-channel chart symbol must be one of signal_symbols")
+    if not config.get("expected_input_fingerprint"):
+        raise ValueError("This session predates input fingerprints; create a new session")
+
+    profile = _load_dashboard_profile(str(config.get("strategy_profile") or ""))
+    selection = channel_selection.canonical_selection(
+        profile,
+        config.get("signal_strategies"),
+        config.get("signal_symbols"),
+        config.get("signal_timeframes"),
+        allowed_symbols=SYMBOL_GROUPS,
+    )
+    if list(selection["strategies"]) != list(input_doc.get("signal_strategies") or []):
+        raise ValueError("Multi-channel strategy selection does not match its frozen plan")
+    if list(selection["symbols"]) != list(input_doc.get("signal_symbols") or []):
+        raise ValueError("Multi-channel symbol selection does not match its frozen plan")
+    if list(selection["timeframes"]) != list(input_doc.get("signal_timeframes") or []):
+        raise ValueError("Multi-channel timeframe selection does not match its frozen plan")
+    if selection["channel_count"] != int(input_doc.get("channel_count") or 0):
+        raise ValueError("Multi-channel count does not match its frozen plan")
+    return facilitator.run_grid(config, on_progress=on_progress, should_cancel=should_cancel)
+
+
+def validate_multi_channel_runtime(plan: dict[str, Any]) -> dict[str, Any]:
+    """Validate the frozen v2 plan and current CLI allowance without running."""
+    if plan.get("schema") != MULTI_CHANNEL_SCHEMA:
+        raise ValueError("Legacy Multi-channel sessions are view-only; create a v2 session to run")
+    config = dict(plan.get("command_config") or {})
+    if config.get("account_mode") != MULTI_CHANNEL_ACCOUNT_MODE:
+        raise ValueError("Multi-channel Session requires account_mode=shared")
+    if not config.get("expected_input_fingerprint"):
+        raise ValueError("Multi-channel Session is missing its frozen input fingerprint")
+    cli_path = cli_runner.select_cli()
+    if not cli_path.is_file():
+        raise FileNotFoundError(f"ctrader-cli.exe was not found: {cli_path}")
+    cli_runner.auth_options()
+    used = int(ProtocolStore().cli_launches_today())
+    remaining = max(0, DAILY_CLI_LAUNCH_LIMIT - used)
+    required = int((plan.get("preflight") or {}).get("cli_required") or 0)
+    if required > remaining:
+        raise ValueError(
+            f"This frozen plan needs at most {required} CLI launches, but only "
+            f"{remaining}/{DAILY_CLI_LAUNCH_LIMIT} remain today (Europe/Prague)."
+        )
+    return {
+        "cli_path": str(cli_path), "cli_used": used,
+        "cli_remaining": remaining, "cli_required": required,
+    }
+
+
+def _validate_legacy_multi_channel_runtime(plan: dict[str, Any]) -> dict[str, str]:
+    """Validate CLI/auth availability without starting a backtest."""
+    if plan.get("schema") != LEGACY_MULTI_CHANNEL_SCHEMA:
+        raise ValueError("Multi-channel plan does not match the dashboard schema")
+    auth = cli_runner.auth_options()
+    cli_path = cli_runner.select_cli()
+    if not cli_path.is_file():
+        raise FileNotFoundError(f"ctrader-cli.exe was not found: {cli_path}")
+    return {"cli_path": str(cli_path), "account": auth["ACCOUNT"]}
+
+
 def prepare_grid_search_session(
     *,
     symbol: str,
@@ -265,14 +1287,15 @@ def prepare_grid_search_session(
             f"Symbol is not supported by the dashboard signal mapping: {normalized_symbol!r}"
         )
 
-    profile = load_strategy_profile(STRATEGY_PROFILES[normalized_strategy])
+    profile = _load_dashboard_profile(STRATEGY_PROFILES[normalized_strategy])
     engine = load_engine_profile(DEFAULT_ENGINE_PROFILE)
     if engine.backend != "cli":
         raise ValueError("Grid Search Session supports only the CLI engine")
-    if normalized_timeframe not in profile.default_timeframes:
+    allowed_timeframes = _profile_timeframes(profile, normalized_strategy)
+    if normalized_timeframe not in allowed_timeframes:
         raise ValueError(
-            f"{profile.strategy} does not support timeframe {normalized_timeframe!r}; "
-            f"use one of: {', '.join(profile.default_timeframes)}"
+            f"{normalized_strategy} does not support timeframe {normalized_timeframe!r}; "
+            f"use one of: {', '.join(allowed_timeframes)}"
         )
     if not profile.algo_path.is_file():
         raise FileNotFoundError(f"Strategy algo was not found: {profile.algo_path}")
@@ -304,6 +1327,7 @@ def prepare_grid_search_session(
         "method": "grid",
         "symbols": [normalized_symbol],
         "timeframe": [normalized_timeframe],
+        **_single_channel_overrides(normalized_strategy, normalized_symbol, normalized_timeframe),
         "strategy": normalized_strategy,
         "strategy_profile": profile.id,
         "engine_profile": engine.id,
@@ -342,7 +1366,7 @@ def prepare_grid_search_session(
         **command_base,
         "expected_input_fingerprint": real_inputs,
     }
-    strategy_label = "MA Cross" if normalized_strategy == "macross" else "Combo"
+    strategy_label = STRATEGY_LABELS[normalized_strategy]
     return {
         "schema": GRID_SEARCH_SCHEMA,
         "title": (
@@ -397,7 +1421,7 @@ def run_grid_search_session(
     if len(config.get("symbols") or []) != 1 or len(config.get("timeframe") or []) != 1:
         raise ValueError("Grid Search accepts one symbol and one timeframe per session")
     parameter_space = config.get("parameter_space") or {}
-    profile = load_strategy_profile(str(config.get("strategy_profile") or ""))
+    profile = _load_dashboard_profile(str(config.get("strategy_profile") or ""))
     normalized_ksl = profile.param_levels("KslLevel", parameter_space.get("KslLevel"))
     normalized_ktp = profile.param_levels("KtpLevel", parameter_space.get("KtpLevel"))
     expected_count = len(normalized_ksl) * len(normalized_ktp)
@@ -445,14 +1469,15 @@ def prepare_walkforward_session(
     normalized_timeframe = str(timeframe).strip().lower()
     if normalized_symbol not in SYMBOL_GROUPS:
         raise ValueError(f"Symbol is not supported by the dashboard signal mapping: {normalized_symbol!r}")
-    profile = load_strategy_profile(STRATEGY_PROFILES[normalized_strategy])
+    profile = _load_dashboard_profile(STRATEGY_PROFILES[normalized_strategy])
     engine = load_engine_profile(DEFAULT_ENGINE_PROFILE)
     if engine.backend != "cli":
         raise ValueError("Walk-forward Session supports only the CLI engine")
-    if normalized_timeframe not in profile.default_timeframes:
+    allowed_timeframes = _profile_timeframes(profile, normalized_strategy)
+    if normalized_timeframe not in allowed_timeframes:
         raise ValueError(
-            f"{profile.strategy} does not support timeframe {normalized_timeframe!r}; "
-            f"use one of: {', '.join(profile.default_timeframes)}"
+            f"{normalized_strategy} does not support timeframe {normalized_timeframe!r}; "
+            f"use one of: {', '.join(allowed_timeframes)}"
         )
     if not profile.algo_path.is_file():
         raise FileNotFoundError(f"Strategy algo was not found: {profile.algo_path}")
@@ -501,6 +1526,7 @@ def prepare_walkforward_session(
     fixed_params = {"RiskPercent": numeric_risk}
     command_base = {
         "symbols": [normalized_symbol], "timeframe": [normalized_timeframe],
+        **_single_channel_overrides(normalized_strategy, normalized_symbol, normalized_timeframe),
         "strategy": normalized_strategy, "strategy_profile": profile.id,
         "engine_profile": engine.id, "start": start_date.isoformat(), "end": end_date.isoformat(),
         "balance": numeric_balance, "parameter_space": parameter_space, "fixed_params": fixed_params,
@@ -524,7 +1550,7 @@ def prepare_walkforward_session(
     stem = f"dashboard_walkforward_{execution_key[:16]}"
     command_config = {"name": stem, "pipeline": stem, **command_base,
                       "expected_input_fingerprint": real_inputs}
-    strategy_label = "MA Cross" if normalized_strategy == "macross" else "Combo"
+    strategy_label = STRATEGY_LABELS[normalized_strategy]
     grid_size = len(parameter_space["KslLevel"]) * len(parameter_space["KtpLevel"])
     return {
         "schema": WALKFORWARD_SCHEMA,
@@ -563,7 +1589,7 @@ def run_walkforward_session(
         raise ValueError(f"Walk-forward plan contains forbidden fields: {', '.join(sorted(forbidden))}")
     if not config.get("pipeline") or not config.get("expected_input_fingerprint"):
         raise ValueError("This Walk-forward plan is missing its frozen pipeline or input fingerprint")
-    profile = load_strategy_profile(str(config.get("strategy_profile") or ""))
+    profile = _load_dashboard_profile(str(config.get("strategy_profile") or ""))
     space = config.get("parameter_space") or {}
     if space.get("KslLevel") != profile.param_levels("KslLevel", True) or space.get("KtpLevel") != profile.param_levels("KtpLevel", True):
         raise ValueError("Walk-forward must use the full kSL and kTP enum range")
@@ -677,7 +1703,7 @@ def prepare_grid_diagnostics_session(
         raise ValueError("The source Grid plan does not match the dashboard schema")
 
     source_input = source_plan.get("input") or {}
-    profile = load_strategy_profile(str(source_input.get("strategy_profile") or ""))
+    profile = _load_dashboard_profile(str(source_input.get("strategy_profile") or ""))
     parameter_space = source_input.get("parameter_space") or {}
     for field in ("KslLevel", "KtpLevel"):
         selected = profile.param_levels(field, parameter_space.get(field))

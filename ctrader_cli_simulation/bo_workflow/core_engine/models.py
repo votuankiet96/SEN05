@@ -119,6 +119,24 @@ def daily_balance_and_floor(
     return out
 
 
+def daily_equity_rows(points: Mapping[str, Any] | Any, timezone: str, initial: float) -> list[dict[str, Any]]:
+    """Mỗi ngày lịch `timezone` (giờ Prague cho luật FTMO) 1 dòng cho bảng master `daily_equity`: balance chốt
+    ngày và equity THẤP NHẤT trong ngày (từ `minEquity` của MỌI điểm). Balance lúc 00:00 của một ngày chính là
+    balance chốt ngày trước (ngày đầu = `initial`) nên không lưu — view v_ftmo_daily_loss tính bằng LAG. Chia ngày
+    bằng cùng `_points_by_day` với `daily_balance_and_floor` nên hai nơi không thể lệch nhau."""
+    rows: list[dict[str, Any]] = []
+    previous = initial
+    for day, bucket in sorted(_points_by_day(points, timezone).items()):
+        close = float(bucket[-1].get("balance", previous))
+        rows.append({
+            "trading_day": day,
+            "balance_at_close": close,
+            "lowest_equity": min(float(p.get("minEquity", p.get("balance", previous))) for p in bucket),
+        })
+        previous = close
+    return rows
+
+
 class RunStatus(str, enum.Enum):
     RUNNING = "running"
     OK = "ok"
@@ -155,13 +173,13 @@ class FailureCode(str, enum.Enum):
 
 @dataclass(frozen=True)
 class RunResult:
-    """Hợp đồng CHUNG mà cả 2 engine (cli_engine, api_engine) phải trả về —
+    """Hợp đồng kết quả 1 lần chạy mà engine trả về cho facilitator.py —
     dời từ cli_engine/runner.py 2026-09-17 khi tách 2 engine, vì facilitator.py
     (core_engine) cần đúng 1 kiểu dữ liệu dùng chung, không được mượn kiểu từ
     riêng engine nào (mượn từ cli_engine sẽ thành gọi chéo core_engine→cli_engine
     chỉ để lấy type). status/failure_code dùng chung enum ở trên; UNSUPPORTED_
-    CAPABILITY/INVALID_JOB/REPORT_MISMATCH chỉ engine API dùng tới, CLI luôn trả
-    NONE cho 3 mã đó."""
+    CAPABILITY/INVALID_JOB/REPORT_MISMATCH từng chỉ engine API dùng (api_engine
+    đã xoá 2026-10-13), CLI luôn trả NONE cho 3 mã đó."""
     status: RunStatus
     failure_code: FailureCode
     reason: str
@@ -176,6 +194,10 @@ class RunResult:
     cli_log: Path
     bot_log: Path
     cbotset: Path
+    # events.json của cTrader (vòng đời lệnh) đã chép về work_dir + thư mục gốc của nó; None/"" khi
+    # không nối được đúng 1 thư mục (xem cli_runner.find_native_output) — chỉ thiếu events, run vẫn hợp lệ.
+    events_json: Path | None = None
+    native_dir: str = ""
 
 
 @dataclass(frozen=True)
@@ -198,7 +220,7 @@ COMMISSION_TYPES = frozenset({
 })
 
 
-ENGINE_BACKENDS = frozenset({"cli", "api"})
+ENGINE_BACKENDS = frozenset({"cli"})
 
 
 @dataclass(frozen=True)
@@ -210,10 +232,10 @@ class EngineProfile:
     commission_type: str | None = None
     commission_auto: bool = False
     spread: float | None = None
-    # [2026-09-17] Chọn engine thật thi hành backtest — "cli" (spawn
-    # ctrader-cli.exe, cli_engine/cli_runner.py) hoặc "api" (Plugin cTrader
-    # Desktop qua bridge, api_engine/api_runner.py). facilitator.py đọc đúng
-    # field này để rẽ nhánh, không suy đoán từ tên profile.
+    # [2026-09-17] Chọn engine thật thi hành backtest — hiện chỉ còn "cli"
+    # (spawn ctrader-cli.exe, core_engine/cli_runner.py); engine "api" (Plugin
+    # qua bridge) đã xoá 2026-10-13. facilitator.py đọc đúng field này để chọn
+    # engine, không suy đoán từ tên profile.
     backend: str = "cli"
 
     def __post_init__(self) -> None:
@@ -249,6 +271,35 @@ class EngineProfile:
         )
 
 
+# Nguồn RAW (db0, không lọc trend) là nguồn mặc định và KHÔNG đổi nghĩa: không ghi vào canonical của kênh để run_key của
+# mọi lượt RAW đã chạy giữ nguyên. Nhà chung ở đây (models.py) để configuration.py dùng lại mà không import vòng.
+RAW_SIGNAL_SOURCE = "sen05-signal-v1"
+
+
+@dataclass(frozen=True)
+class SignalChannel:
+    """One independent signal stream inside a BacktestBot account.
+
+    `source` = id profile Redis cấp tín hiệu cho kênh này ("" = nguồn mặc định của lượt chạy). Nguồn KHÁC RAW đi vào
+    canonical (nên vào run_key) để cùng một kênh lấy từ KNN và từ breakout không bao giờ trùng khoá."""
+    strategy: str
+    symbol: str
+    timeframe: str
+    risk_percent: float
+    source: str = ""
+
+    def canonical(self) -> dict[str, Any]:
+        out: dict[str, Any] = {
+            "strategy": self.strategy,
+            "symbol": self.symbol,
+            "timeframe": self.timeframe,
+            "risk_percent": float(self.risk_percent),
+        }
+        if self.source and self.source != RAW_SIGNAL_SOURCE:
+            out["source"] = self.source
+        return out
+
+
 @dataclass(frozen=True)
 class RunSpec:
     strategy: str
@@ -261,6 +312,7 @@ class RunSpec:
     balance: float
     data_mode: str
     params: Mapping[str, str]
+    channels: tuple[SignalChannel, ...] = ()
     zone: str = "single"
     window: str | None = None
     data_file: str | None = None
@@ -274,6 +326,7 @@ class RunSpec:
     def __post_init__(self) -> None:
         object.__setattr__(self, "params", MappingProxyType(dict(self.params)))
         object.__setattr__(self, "tags", MappingProxyType(dict(self.tags)))
+        object.__setattr__(self, "channels", tuple(self.channels))
 
     def canonical(self) -> dict[str, Any]:
         return {
@@ -284,11 +337,13 @@ class RunSpec:
             "timeframe": self.timeframe,
             "start": self.start.isoformat(),
             "end": self.end.isoformat(),
-            # Danh dau quy uoc ngay ngay TRONG canonical doc: experiment cu (end
-            # hieu la "bao gom") se khong bao gio so bang voi experiment moi, nen
-            # preflight bao "config KHAC" thay vi am tham dung lai ket qua cu chay
-            # tren khoang dai hon 1 ngay.
-            "date_convention": "end_exclusive",
+            # Danh dau quy uoc ngay ngay TRONG canonical doc: experiment cu se
+            # khong bao gio so bang voi experiment moi khi quy uoc doi, nen
+            # preflight bao "config KHAC" thay vi am tham dung lai ket qua cu.
+            # `end` di thang vao --end va ctrader-cli chay TRON ngay do (do
+            # 2026-10-13: diem equity cuoi 23:59 cua ngay end) -> "end_inclusive".
+            # Truoc 2026-10-14 nhan nay ghi sai la "end_exclusive".
+            "date_convention": "end_inclusive",
             "balance": float(self.balance),
             "data_mode": self.data_mode,
             "data_file": self.data_file,
@@ -300,6 +355,7 @@ class RunSpec:
             "zone": self.zone,
             "window": self.window,
             "params": {k: str(v) for k, v in sorted(self.params.items())},
+            "channels": [channel.canonical() for channel in self.channels],
             "tags": {k: str(v) for k, v in sorted(self.tags.items())},
         }
 
@@ -311,6 +367,11 @@ class RunSpec:
         for key, tag in (("KslLevel", "ksl"), ("KtpLevel", "ktp"), ("RiskPercent", "r")):
             if key in self.params:
                 bits.append(f"{tag}{str(self.params[key]).replace('.', 'p')}")
+        # combo-legs-v1: chỉ ghi kTP của các chân đang dùng (Leg2Ktp..Leg{LegCount}Ktp), để 2 run khác số chân/kTP chân không trùng nhãn.
+        if "LegCount" in self.params:
+            legs = int(self.params["LegCount"])
+            bits.append(f"legs{legs}")
+            bits.extend(f"k{leg}_{self.params[f'Leg{leg}Ktp']}" for leg in range(2, legs + 1) if f"Leg{leg}Ktp" in self.params)
         return "__".join(bits)
 
 

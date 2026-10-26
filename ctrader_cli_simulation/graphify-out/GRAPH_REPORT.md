@@ -1,476 +1,653 @@
-# Graph Report - Robots  (2026-10-10)
+# Graph Report - Robots  (2026-10-25)
 
 ## Corpus Check
-- 78 files · ~165,517 words
+- 105 files · ~203,645 words
 - Verdict: corpus is large enough that graph structure adds value.
-- Unclassified: 11 file(s) not represented in the graph (top: (none) 7, .algo 3, .bat 1)
+- Unclassified: 3 file(s) not represented in the graph (top: (none) 1, .algo 1, .bat 1)
 
 ## Summary
-- 1783 nodes · 4006 edges · 121 communities (74 shown, 47 thin omitted)
-- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 143 edges (avg confidence: 0.92)
+- 2258 nodes · 5146 edges · 147 communities (106 shown, 41 thin omitted)
+- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 188 edges (avg confidence: 0.91)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
-- Optimize Backend Tests
-- Dashboard Session Store
-- Single Backtest Views
-- Single Callback Wiring
-- Core Run Lifecycle
-- Grid Search Views
-- MA Cross cBot
-- Result Data Access
-- DSR PBO Views
-- MACD Break cBot
-- Backtest Settings Mapper
-- Redis Signal Materialization
-- Statistical Readout Pipeline
-- Grid Session Actions
-- Walk Forward Views
-- Trial Selection Logic
-- Plugin Backtest Runner
-- CLI Optimize Execution
-- Core Time Models
-- Experiment Planning
-- Experiment Result Store
-- CLI Binary Selection
-- Strategy Configuration
-- Engine Profile Configuration
-- API Bridge Client
-- Shared cTrader References
-- CLI Result Classification
-- Combo cBot Lifecycle
-- API Runner Results
-- Walk Forward Orchestration
-- Experiment Facilitator
-- Pipeline Stage Locks
-- Grid Callback Progress
-- Trial Eligibility Tests
-- Backtest Job Contract
-- Diagnostics Callbacks
-- Backtest Result Contract
-- Walk Forward Cache Tests
-- Plugin Deployment Tools
-- Evidence Parsing
-- Redis Profile Tests
-- Deflated Sharpe Ratio
-- Dashboard Composition Tests
-- Store Claim Ownership
-- Live Dashboard Contracts
-- Monte Carlo Engine
-- Plugin Capability Contracts
-- Runtime Diagnostics Contract
-- PBO Computation
-- Diagnostics Source Actions
-- CLI Reliability Research
-- Grid Audit Tests
-- Diagnostics Planning Tests
-- Walk Forward Data Access
-- Protocol Budget Store
-- Dashboard Resource Groups
-- MA Cross Signal Loading
-- MACD Signal Loading
-- Report Validation
-- Run Specification Model
-- Signal Path Resolution
-- Single Control Tests
-- Combo Stop Loss Levels
-- Combo Take Profit Levels
-- MA Cross Stop Loss
-- MA Cross Take Profit
-- MACD Stop Loss
-- MACD Take Profit
-- API Redis Configuration
-- Workflow Session Launch
-- Evidence Gate Tests
-- Method Audit Tests
-- Combo Order Placement
-- Repository Research Rules
-- Dashboard Filter Options
-- CLI Capability Tests
-- Monte Carlo OOS Tests
-- Research Provenance
-- Form Input Preparation
-- Dashboard Layout Components
-- Bootstrap Method Research
-- API Validation Tests
-- CLI Version Tests
-- Objective Readout Tests
-- DSR Formula Tests
-- PBO Objective Tests
-- PBO Algorithm Tests
-- DSR PBO Research
-- Full Validation Research
-- Pipeline Lock Tests
-- Monte Carlo Store Tests
-- Combo Signal Row
-- Plugin Job Context
-- CLI Argument Builder
-- Authentication Failure Tests
-- Signal Hash Risk Tests
-- Pipeline Cache Tests
-- Walk Forward Readout
-- API JSON Contracts
-- Plugin Project Configuration
-- DSR Selected Trial
-- Stale Claim Recovery
-- Pipeline Registry
-- CLI Optimization Research
-- Experiment Lock Tests
-- Combo Project Configuration
-- MA Cross Project
-- MACD Project
-- Readout API Tests
-- Grid Lock Policy
+- session_store.py
+- portfolio_composition.py
+- json
+- FacilitatorBoxTests
+- build_experiment
+- single/views.py
+- Five-Stage Validation Pipeline
+- configuration.py
+- typing
+- models.py
+- master_db.py
+- facilitator.py
+- load_strategy_profile
+- planner.py
+- walkforward/views.py
+- Backtest Defaults
+- selection.py
+- dsr_pbo/views.py
+- ProtocolStore
+- _fake_result
+- BacktestBot
+- dash_mantine_components
+- readout.py
+- evidence.py
+- signal_trans.py
+- multichannel/views.py
+- test_portfolio_composition.py
+- US30 Net and Drawdown Report
+- test_trade_excursion.py
+- pipeline_lock.py
+- allocate_equal_risk
+- DashboardPlanTests
+- SignalRow
+- data_access.py
+- Any
+- ProfileAndSourceContractTests
+- SelectionClassifyTests
+- Reproducible SQL Backtest Repository
+- _read_pass
+- register
+- RunSpec
+- register
+- WalkforwardCacheKeyTests
+- dsr.py
+- AuditRemediationTests
+- _FakeApp
+- montecarlo.py
+- .GetTradingSymbol
+- test_core_engine.py
+- register
+- 002_views.sql
+- DashboardSessionStoreTests
+- pbo.py
+- cli_runner.py
+- _texts
+- Proposed backtest design (smoke test, full period, per year, per half-year, rolling windows, stress test)
+- SlFibLevel
+- TpFibLevel
+- load_ticks
+- backtest_run Table
+- RunStatus
+- load_redis_profile
+- run_name
+- 001_schema.sql
+- RunnerCapabilityAndStallTests
+- MonteCarloOosTests
+- BacktestBot.cs
+- channel_selection.py
+- store.py
+- SelectCliTests
+- ReadoutObjectiveTests
+- DsrTests
+- PboTests
+- PipelineLockTests
+- build_argv
+- SingleBacktestControlsTests
+- Channel
+- StrategyProfile
+- ChannelSourceTests
+- PipelineCachingIntegrationTests
+- WalkforwardReadoutTests
+- DsrSelectedTrialTests
+- FakeOptimizeCli
+- Q: [$graphify] tôi yêu cầu bạn chạy backtest cho chiến lược macd break cho xau full khung thời gian từ 2022 đến hiện tại thì bạn chạy được ko? Chưa làm nhé, nếu chạy thì chạy sao? full các năm, giữa các năm, nữa năm, hay thế nào? ksl và ktp lần lượt là 1.618 và 2.618, risk per trade để 1%
+- Q: Tức là dashboard vẫn dg chạy tót phải ko? Hiện các session trên đó là gì? Hình như chưa có session nào chạy đa symbol đa tf đa chiến lược phải ko
+- Q: Thiết kế session dashboard đa symbol, đa timeframe, đa chiến lược cho BacktestBot
+- Q: Ok, triển khai session dashboard đa symbol đa timeframe đa chiến lược
+- Q: Ok, đọc đi
+- Q: Validate BacktestBot multi-strategy multi-symbol multi-timeframe Q1 2026
+- Q: Các tiến trình đó khi chạy xong, lưu kết quả như thế nào? Lưu ở đâu
+- Q: Okie, hãy tập trung vào job us30 vừa rồi, hãy cho tôi biết yêu cầu và tiến trình chạy là gì? Kết quả thế nào?
+- Q: Tôi muốn đọc và giải thích các cấu phần trong backtet_defaults..yaml, trước khi rtar lời hãy đọc graphify để nắm băt nhé
+- Q: Tôi ko hiểu yếu tố kĩ thuật, nhưng trong này có phải bộ tham số mẫu để đi backtest khi yêu cầu triển khai ko?
+- Q: Nhóm shared, shared_06, shared_mix là gì?
+- Q: Báo cáo chi tiết cho tôi biết theo chiến lược/khung thời gian; chỉ cần Net/DD; làm rõ bao nhiêu kỳ có lãi trên tổng
+- Q: Nếu xét trên lãi lớn, bền và dd nhỏ, so sánh giữa db0 và db1, thì nên chọn combo theo khung nào?
+- Q: Okie, với MA Cross thì tốt nhất trong các con xấu nhất?
+- Q: Okie, giờ tới MACD Break
+- Q: Okie, giờ nêu tôi thực hiện 1 backtest đa symbol đa tiemframes và đa nguồn dữ liệu theo cachsn ày thì có triển khai được không: DB0 Combo H4; DB1 MA M30; DB0 MACD Break H4
+- MA Cross Source Query
+- Q: Tại sao lại đặt tên là shared, rồi shared_06, rồi shared_mix?
+- Q: Ok, vậy hãy chạy thử nhé, cũng 19 kỳ luôn
+- Q: Giờ chạy trường hợp bỏ MA Cross ra nhé
+- Q: Tôi muốn đọc lại kết quả của combo và macd break theo từng khung vào lệnh với db0 và db1
+- Q: Triển khai DB1 Combo H1 H4 cùng MACD Break H3 H4 risk 0.6% một cụm lệnh, 19 kỳ
+- Q: Hãy thống kê xem nhóm lệnh của khung nào gây lỗ nhiều nhất
+- Q: Nhóm nào cho DD ít mà lời vẫn cao trong ba kênh US30 DB1 Combo H4, MACD H3, MACD H4?
+- Q: Đó có là thiết kế tốt chưa?
+- Q: Single backtest và multi-backtest đang cấu hình ở đâu, prefix và tham số chạy là gì, multi một kênh có thành single không?
+- Q: Làm sao giữ trọn vẹn một luồng, chỉ config.yaml, truyền tham số linh động cho single và multi backtest mà không tạo YAML mới?
+- Q: Kế hoạch hợp nhất single và multi backtest thành một luồng là gì?
+- Q: Ok, giờ tôi muốn bạn chuyển sang sesssion backtest đa symbol, đa timeframes, đa chiến lược.  Hãy cho tôi biết session đó dang chạy thế nào, luồng ra sao, cách chạy?
+- Q: Ok, hãy tổng hợp lại xem bạn hiểu thế nào, đầy đủ ko, và dự kiến triển khai ra sao, thay đổi gì ở nhóm file nò?
+- Q: Ok, đúng hết rồi nhé. Tuy nhiên chổ output sẽ cần làm thêm thế này, Kết quả theo từng kỳ là đúng rồi, nhưng chủ yếu cần Net Profit và DD. Bên cạnh đó nên có tổng lỗ tổng lãi, đóng góp của nhóm channel nào trong lãi hay trong lỗ. Hiểu y tôi ko? Phần output đó kas quan trọng trọng cách tôi quyết định kết hợp ra sao, chốt điểm này nưa rồi làm
+- Q: Ok, tôi cần bạn kiểm tra lại dashboard, nhiều cấu phần tiếng Anh và Việt lẫn lộn, hãy đồng nhất tiếng anh hết nhé!
+- StrategyDef
+- BacktestBot.csproj
+- FacilitatorTests
+- cTrader CLI Backtest and Optimize Research
+- WalkforwardUsesTheSelectedStrategiesTests
+- SourceParsingTests
+- ChildEnvironmentTests
+- DashboardCompositionTests
+- Q: Multi-channel dashboard v2 chạy, triển khai và đọc kết quả như thế nào?
+- Live Network Backtest Non-Reproducibility
+- MasterDbPureTests
+- _specs
+- actions.py
+- trade_excursion.py
+- list_pipelines
+- walkforward_readout.py
+- Q: Ok, tôi muốn kiểm tra điểm này, vì sao lại có folder này trong bo_workflow, lẽ a phải nằm trong ROBOTs thôi chứ: C:\Users\Administrator\Documents\cAlgo\Sources\Robots\bo_workflow\graphify-out
+- RedisKeyForSnapshotTests
 
 ## God Nodes (most connected - your core abstractions)
-1. `RunSpec` - 68 edges
-2. `Combo` - 48 edges
-3. `MACross` - 43 edges
-4. `MACDBreak` - 43 edges
-5. `ExperimentStore` - 41 edges
-6. `load_strategy_profile()` - 37 edges
-7. `RunStatus` - 34 edges
-8. `run_experiment()` - 32 edges
-9. `BacktestJob` - 30 edges
+1. `BacktestBot` - 68 edges
+2. `RunSpec` - 66 edges
+3. `ExperimentStore` - 48 edges
+4. `load_strategy_profile()` - 46 edges
+5. `with_signal_overrides()` - 38 edges
+6. `expand_grid()` - 38 edges
+7. `run_experiment()` - 36 edges
+8. `load_engine_profile()` - 34 edges
+9. `RunStatus` - 33 edges
 10. `run_optimize_box()` - 29 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `ArchivedRuns Preservation Protocol` --semantically_similar_to--> `File Store as Source of Truth`  [INFERRED] [semantically similar]
+  AGENT.md → bo_workflow/research_notes/sql-master-database-plan-2026-10-14.md
+- `Portfolio Risk Allocation` --conceptually_related_to--> `Multi-channel Dashboard v2`  [INFERRED]
+  bo_workflow/config.example.yaml → graphify-out/memory/query_20261018_104407_1ad086d0_ok__hãy_tổng_hợp_lại_xem_bạn_hiểu_thế_nào__đầy_đủ.md
+- `run_session()` --indirect_call--> `detail()`  [INFERRED]
+  bo_workflow/dashboard/multichannel/callbacks.py → bo_workflow/dashboard/multichannel/views.py
+- `BacktestBot Strategy Profile` --conceptually_related_to--> `Multi-leg Profit Taking`  [INFERRED]
+  bo_workflow/config.example.yaml → CLAUDE.md
 - `Preregistered Experiment Contract` --semantically_similar_to--> `Five-Stage Validation Pipeline`  [INFERRED] [semantically similar]
   bo_workflow/research_notes/phase-2-research-and-optimization-design.md → bo_workflow/research_notes/full-validation-pipeline-design.md
-- `cBot Redis Signal-Source Feasibility Study` --references--> `Repository Design and Coding Rules`  [EXTRACTED]
-  bo_workflow/research_notes/cbot-network-access-and-redis-signal-source-feasibility.md → CLAUDE.md
-- `validate_capabilities()` --uses--> `RunSpec`  [INFERRED]
-  bo_workflow/api_engine/api_runner.py → bo_workflow/core_engine/models.py
-- `run_backtest()` --uses--> `RunSpec`  [INFERRED]
-  bo_workflow/api_engine/api_runner.py → bo_workflow/core_engine/models.py
-- `_classify()` --uses--> `BacktestApiResult`  [INFERRED]
-  bo_workflow/api_engine/api_runner.py → bo_workflow/api_engine/contracts.py
 
 ## Import Cycles
-- None detected.
+- 2-file cycle: `bo_workflow/core_engine/master_db.py -> bo_workflow/core_engine/models.py -> bo_workflow/core_engine/master_db.py`
+- 3-file cycle: `bo_workflow/core_engine/master_db.py -> bo_workflow/core_engine/output_util/run_export.py -> bo_workflow/core_engine/models.py -> bo_workflow/core_engine/master_db.py`
+- 3-file cycle: `bo_workflow/core_engine/configuration.py -> bo_workflow/core_engine/models.py -> bo_workflow/core_engine/master_db.py -> bo_workflow/core_engine/configuration.py`
+- 4-file cycle: `bo_workflow/core_engine/configuration.py -> bo_workflow/core_engine/models.py -> bo_workflow/core_engine/master_db.py -> bo_workflow/core_engine/output_util/run_export.py -> bo_workflow/core_engine/configuration.py`
+- 4-file cycle: `bo_workflow/core_engine/master_db.py -> bo_workflow/core_engine/output_util/run_export.py -> bo_workflow/core_engine/output_util/evidence.py -> bo_workflow/core_engine/models.py -> bo_workflow/core_engine/master_db.py`
+- 4-file cycle: `bo_workflow/core_engine/master_db.py -> bo_workflow/core_engine/output_util/run_export.py -> bo_workflow/core_engine/signal_trans.py -> bo_workflow/core_engine/models.py -> bo_workflow/core_engine/master_db.py`
+- 5-file cycle: `bo_workflow/core_engine/configuration.py -> bo_workflow/core_engine/models.py -> bo_workflow/core_engine/master_db.py -> bo_workflow/core_engine/output_util/run_export.py -> bo_workflow/core_engine/signal_trans.py -> bo_workflow/core_engine/configuration.py`
 
 ## Hyperedges (group relationships)
-- **cTrader Backend Execution Equivalence** — bo_workflow_research_notes_ab_plugin_api_vs_cli_2026_09_11_plugin_api_equals_cli_engine, bo_workflow_research_notes_ctrader_backtest_api_plugin_optimize_record_2026_09_11_executor_backend_architecture, bo_workflow_api_engine_readme_file_mailbox_bridge [EXTRACTED 1.00]
+- **Current Master Database Schema** — bo_workflow_research_notes_sql_master_database_plan_2026_10_14_current_five_table_schema, bo_workflow_research_notes_sql_master_database_plan_2026_10_14_backtest_run, bo_workflow_research_notes_sql_master_database_plan_2026_10_14_trade, bo_workflow_research_notes_sql_master_database_plan_2026_10_14_daily_equity, bo_workflow_research_notes_sql_master_database_plan_2026_10_14_bot_build, bo_workflow_research_notes_sql_master_database_plan_2026_10_14_signal_snapshot [EXTRACTED 1.00]
 - **Full Strategy Validation Flow** — bo_workflow_research_notes_full_validation_pipeline_design_five_stage_validation_pipeline, bo_workflow_research_notes_time_series_strategy_optimization_methodology_walk_forward_optimization, bo_workflow_research_notes_dsr_pbo_formula_verification_deflated_sharpe_ratio, bo_workflow_research_notes_dsr_pbo_formula_verification_cscv_pbo, bo_workflow_research_notes_montecarlo_equity_vs_balance_daily_return_methodology_dual_series_monte_carlo [EXTRACTED 1.00]
 - **CLI Tick Reliability Controls** — bo_workflow_research_notes_cli_tick_bottleneck_diagnosis_2026_09_10_three_tick_execution_modes, bo_workflow_research_notes_cli_tick_bottleneck_diagnosis_2026_09_10_conversion_symbol_tick_hang, bo_workflow_research_notes_ctrader_cli_practical_issues_catalog_2026_09_10_cli_operational_safety_controls, bo_workflow_research_notes_ctrader_cli_concurrent_backtest_analysis_bounded_parallelism [INFERRED 0.85]
+- **Multi-channel Dashboard Lifecycle** — graphify_out_memory_query_20261016_115552_bbfaba15_t_c_l_dashboard_v_n_dg_ch_y_t_t_ph_i_ko_hi_n_c_c_dashboard_session_inventory, graphify_out_memory_query_20261016_121101_53fbf58f_thi_t_k_session_dashboard_a_symbol_a_timeframe_multi_channel_dashboard_design, graphify_out_memory_query_20261016_135735_f2c80821_ok_tri_n_khai_session_dashboard_a_symbol_a_time_multi_channel_dashboard_implementation, graphify_out_memory_query_20261017_114935_a5a5de41_ok_c_i_multi_channel_validation_plan, graphify_out_memory_query_20261017_121110_c49f3f0d_validate_backtestbot_multi_strategy_multi_symbol_m_exact_four_channel_runtime_validation, graphify_out_memory_query_20261017_145706_9094d5b6_c_l_thi_t_k_t_t_ch_a_canonical_channel_manifest_design, graphify_out_memory_query_20261017_150320_64f286ee_single_backtest_v_multi_backtest_ang_c_u_h_nh_single_multi_backtest_configuration [INFERRED 0.85]
+- **Per-period Channel Reporting** — graphify_out_memory_query_20261018_104407_1ad086d0_ok_h_y_t_ng_h_p_l_i_xem_b_n_hi_u_th_n_o_y_independent_period_portfolios, graphify_out_memory_query_20261018_104956_713f4cb4_ok_ng_h_t_r_i_nh_tuy_nhi_n_ch_output_s_c_n_per_period_portfolio_metrics, graphify_out_memory_query_20261018_104956_713f4cb4_ok_ng_h_t_r_i_nh_tuy_nhi_n_ch_output_s_c_n_channel_pnl_attribution, graphify_out_memory_query_20261018_113907_762e0d8c_multi_channel_dashboard_v2_ch_y_tri_n_khai_v_c_run_key_result_resolution [INFERRED 0.85]
+- **Shared-account Risk Execution** — graphify_out_memory_query_20261017_123742_7824ff08_nh_m_shared_shared_06_shared_mix_l_g_shared_account_risk_presets, graphify_out_memory_query_20261017_131034_8f30b40f_ok_v_y_h_y_ch_y_th_nh_c_ng_19_k_lu_n_three_channel_shared_portfolio, graphify_out_memory_query_20261017_131941_4142b526_gi_ch_y_tr_ng_h_p_b_ma_cross_ra_nh_two_channel_shared_portfolio, graphify_out_memory_query_20261017_133148_0b08d8b0_tri_n_khai_db1_combo_h1_h4_c_ng_macd_break_h3_h4_r_four_channel_db1_shared_portfolio [INFERRED 0.85]
+- **Unified Channel Backtest Flow** — graphify_out_memory_query_20261017_150701_5bcb36d8_l_m_sao_gi_tr_n_v_n_m_t_lu_ng_ch_config_yaml_t_channelspec, graphify_out_memory_query_20261017_150924_95de33a1_k_ho_ch_h_p_nh_t_single_v_multi_backtest_th_nh_m_unified_backtest_pipeline, graphify_out_memory_query_20261018_113907_762e0d8c_multi_channel_dashboard_v2_ch_y_tri_n_khai_v_c_multichannel_v2_execution_flow, bo_workflow_config_example_backtest_configuration [INFERRED 0.85]
+- **US30 Nineteen-period Evaluation** — graphify_out_memory_query_20261017_123254_f4891c34_okie_h_y_t_p_trung_v_o_job_us30_v_a_r_i_h_y_cho_us30_nineteen_period_research_run, graphify_out_memory_query_20261017_124132_6ab92f46_b_o_c_o_chi_ti_t_cho_t_i_bi_t_theo_chi_n_l_c_khun_us30_net_dd_report, graphify_out_memory_query_20261017_125626_4150d024_n_u_x_t_tr_n_l_i_l_n_b_n_v_dd_nh_so_s_nh_gi_a_combo_h4_selection, graphify_out_memory_query_20261017_125741_2c1fb476_okie_v_i_ma_cross_th_t_t_nh_t_trong_c_c_con_x_u_ma_cross_fallback_selection, graphify_out_memory_query_20261017_125855_ba3a8164_okie_gi_t_i_macd_break_macd_break_h4_selection, graphify_out_memory_query_20261017_130129_02eae1c1_okie_gi_n_u_t_i_th_c_hi_n_1_backtest_a_symbol_hybrid_channel_input_design, graphify_out_memory_query_20261017_130217_6bef47ca_v_y_so_s_nh_gi_a_d1_v_db0_c_a_ma_cross_m30_ma_cross_m30_source_choice, graphify_out_memory_query_20261017_131034_8f30b40f_ok_v_y_h_y_ch_y_th_nh_c_ng_19_k_lu_n_three_channel_shared_portfolio, graphify_out_memory_query_20261017_131941_4142b526_gi_ch_y_tr_ng_h_p_b_ma_cross_ra_nh_two_channel_shared_portfolio, graphify_out_memory_query_20261017_132117_32a3ac5c_t_i_mu_n_c_l_i_k_t_qu_c_a_combo_v_macd_break_t_isolated_combo_macd_results, graphify_out_memory_query_20261017_133148_0b08d8b0_tri_n_khai_db1_combo_h1_h4_c_ng_macd_break_h3_h4_r_four_channel_db1_shared_portfolio, graphify_out_memory_query_20261017_142800_1d87a731_h_y_th_ng_k_xem_nh_m_l_nh_c_a_khung_n_o_g_y_l_nh_channel_loss_attribution, graphify_out_memory_query_20261017_144428_d0038319_nh_m_n_o_cho_dd_t_m_l_i_v_n_cao_trong_ba_k_nh_us_low_drawdown_channel_choice [INFERRED 0.85]
+- **Reproducible Backtest Identity Inputs** — bo_workflow_research_notes_sql_master_database_plan_2026_10_14_reproducible_run_identity, bo_workflow_research_notes_sql_master_database_plan_2026_10_14_bot_build, bo_workflow_research_notes_sql_master_database_plan_2026_10_14_signal_snapshot [INFERRED 0.95]
 
-## Communities (121 total, 47 thin omitted)
+## Communities (147 total, 41 thin omitted)
 
-### Community 0 - "Optimize Backend Tests"
+### Community 0 - "session_store.py"
 Cohesion: 0.06
-Nodes (16): OptimizeBox, _box(), _config(), _epoch_ms(), FacilitatorBoxTests, run_optimize_box(), short(), _fake_result() (+8 more)
+Nodes (42): active_session(), ActiveSessionError, cancel_analysis(), claim_run(), complete(), confirmed_signal_profile(), create_draft_group(), create_grid_diagnostics() (+34 more)
 
-### Community 1 - "Dashboard Session Store"
-Cohesion: 0.07
-Nodes (41): active_session(), ActiveSessionError, cancel_analysis(), claim_run(), complete(), confirmed_signal_profile(), create_draft_group(), create_grid_diagnostics() (+33 more)
-
-### Community 2 - "Single Backtest Views"
-Cohesion: 0.09
-Nodes (33): refresh_selected_run_status(), refresh_session_detail(), active_run_summary(), bot_activity_rows(), _bot_activity_table(), _bot_event_time(), _cell(), _chart_time() (+25 more)
-
-### Community 3 - "Single Callback Wiring"
-Cohesion: 0.08
-Nodes (13): save_signal_profile(), refresh_status(), refresh_grid_status(), _truncate(), _filtered_rows(), page_bot_activity(), _selected_sessions(), _sorted_rows() (+5 more)
-
-### Community 4 - "Core Run Lifecycle"
-Cohesion: 0.09
-Nodes (12): RunResult, DailyCliBudgetTests, run_backtest(), _fake_result(), _fake_run_result(), _record_report(), RunExperimentLifecycleTests, run_backtest() (+4 more)
-
-### Community 5 - "Grid Search Views"
-Cohesion: 0.13
-Nodes (26): _configuration(), detail(), _heatmap(), heatmap_figure(), gap_text(), layout(), _leaderboard(), leaderboard_table() (+18 more)
-
-### Community 6 - "MA Cross cBot"
-Cohesion: 0.10
-Nodes (11): MACross, EnableDailyLossLimit, EnableMaxConsecutiveLosses, EnableMaxDrawdown, KslLevel, KtpLevel, MaxConsecutiveLosses, MaxDailyLossPercent (+3 more)
-
-### Community 7 - "Result Data Access"
-Cohesion: 0.10
-Nodes (18): _bot_events(), _clean_log_text(), commission_warning(), _execution_summary(), _fib_label(), grid_rows(), grid_snapshot(), _labelled_values() (+10 more)
-
-### Community 8 - "DSR PBO Views"
-Cohesion: 0.18
-Nodes (21): _by_objective(), _conclusion(), _decimal(), detail(), _diagnostic_source_label(), _frozen_objective_text(), _metric(), _minimum_trades_label() (+13 more)
-
-### Community 9 - "MACD Break cBot"
-Cohesion: 0.11
-Nodes (11): MACDBreak, EnableDailyLossLimit, EnableMaxConsecutiveLosses, EnableMaxDrawdown, KslLevel, KtpLevel, MaxConsecutiveLosses, MaxDailyLossPercent (+3 more)
-
-### Community 10 - "Backtest Settings Mapper"
-Cohesion: 0.12
-Nodes (6): BacktestMapper, Capabilities, SupportsAutomaticCommission, SupportsPreciseConversion, UnsupportedBacktestingCapabilityException, Capability
-
-### Community 11 - "Redis Signal Materialization"
-Cohesion: 0.12
-Nodes (10): RedisProfile, _connection_pool(), fetch_signal_rows(), materialize_signal_csv(), redis_client(), resolve_signal_path(), signal_list_key(), signal_window_sha256() (+2 more)
-
-### Community 12 - "Statistical Readout Pipeline"
-Cohesion: 0.13
-Nodes (12): _load_for(), _montecarlo_config(), _resolve_objective(), _resolve_trial_policy(), run_dsr(), run_montecarlo(), run_montecarlo_oos(), run_pbo() (+4 more)
-
-### Community 13 - "Grid Session Actions"
+### Community 1 - "portfolio_composition.py"
 Cohesion: 0.14
-Nodes (13): auth_options(), completed_execution_policy_available(), _enum_index(), _enum_selection(), _execution_key(), prepare_grid_diagnostics_session(), prepare_grid_search_session(), preview_walkforward_windows() (+5 more)
+Nodes (15): build_rows(), channel_name(), channel_signals(), decide_source(), decode_signals(), ensure_table(), fib_value(), jaccard() (+7 more)
 
-### Community 14 - "Walk Forward Views"
-Cohesion: 0.17
-Nodes (19): label_from_input(), detail(), _duration(), _elapsed_text(), _fib(), layout(), live_progress(), _median() (+11 more)
-
-### Community 15 - "Trial Selection Logic"
+### Community 2 - "json"
 Cohesion: 0.14
-Nodes (13): coerce_float(), _load_trials(), _trades_by_day(), classify(), eligible(), eligible_under_policy(), exclusion_reasons(), ftmo_screen() (+5 more)
+Nodes (17): _bot_log(), cancel_requested(), child_environment(), _classify(), find_native_output(), last_progress_pct(), _make_poll(), poll() (+9 more)
 
-### Community 16 - "Plugin Backtest Runner"
-Cohesion: 0.13
-Nodes (7): BoBacktestRunner, ClaimedDir, EffectiveMaxConcurrent, FailedDir, HeartbeatDir, JobsDir, ResultsDir
-
-### Community 17 - "CLI Optimize Execution"
-Cohesion: 0.14
-Nodes (12): _bot_log(), cancel_requested(), child_environment(), last_progress_pct(), _make_poll(), poll(), _notify_progress(), optimize_parameters() (+4 more)
-
-### Community 18 - "Core Time Models"
+### Community 3 - "FacilitatorBoxTests"
 Cohesion: 0.15
-Nodes (7): daily_balance_and_floor(), daily_returns(), daily_returns_by_day(), Experiment, parse_point_time(), _points_by_day(), DailySeriesTests
+Nodes (4): FacilitatorBoxTests, run_optimize_box(), short(), _metadata()
 
-### Community 19 - "Experiment Planning"
-Cohesion: 0.21
-Nodes (15): Window, as_date(), expand_grid(), finite_positive_float(), _is_arithmetic(), _list(), nonnegative_int(), _param_combinations() (+7 more)
+### Community 4 - "build_experiment"
+Cohesion: 0.07
+Nodes (10): build_experiment(), EvidenceExportTests, fake_algo_bytes(), FindNativeOutputTests, make_events(), make_report(), MasterDbTests, ms() (+2 more)
 
-### Community 20 - "Experiment Result Store"
-Cohesion: 0.17
-Nodes (3): ExperimentStore, _has_bad_flag(), _lock_view()
+### Community 5 - "single/views.py"
+Cohesion: 0.09
+Nodes (37): refresh_selected_run_status(), refresh_session_detail(), active_run_summary(), bot_activity_rows(), _bot_activity_table(), _bot_event_time(), _cell(), _chart_time() (+29 more)
 
-### Community 21 - "CLI Binary Selection"
-Cohesion: 0.20
-Nodes (14): advertised_data_modes(), cli_has_command(), cli_has_option(), cli_option_supported(), _cli_version(), _command_reference(), _match_command(), _match_option() (+6 more)
+### Community 6 - "Five-Stage Validation Pipeline"
+Cohesion: 0.05
+Nodes (37): Plugin API versus CLI A/B Audit, Approximate Margin Conversion Look-Ahead, Plugin API Equals CLI Execution Engine, Conversion-Symbol Tick Hang, Three Tick Execution Modes, CLI Tick Bottleneck Diagnosis, Backtest API Plugin Optimize Spike Record, Concurrent CLI Backtest Analysis (+29 more)
 
-### Community 22 - "Strategy Configuration"
-Cohesion: 0.13
-Nodes (5): _config(), FtmoProfile, load_ftmo_profile(), ParamDef, StrategyProfile
+### Community 7 - "configuration.py"
+Cohesion: 0.08
+Nodes (14): _config(), ctrader_data_dir(), FtmoProfile, load_engine_profile(), load_ftmo_profile(), load_portfolio_risk_settings(), ParamDef, PortfolioRiskSettings (+6 more)
 
-### Community 23 - "Engine Profile Configuration"
-Cohesion: 0.13
-Nodes (6): load_strategy_profile(), EngineProfile, ConfigurationPlannerTests, argv_for(), FacilitatorTests, metadata_for()
+### Community 8 - "typing"
+Cohesion: 0.06
+Nodes (18): save_signal_profile(), _nonnegative_int(), register(), create_diagnostics(), inspect_source(), refresh_status(), run_diagnostics(), _duration() (+10 more)
 
-### Community 24 - "API Bridge Client"
-Cohesion: 0.22
-Nodes (5): BridgeClient, BacktestApiJob, BacktestApiResult, main(), BridgeClientTests
+### Community 9 - "models.py"
+Cohesion: 0.10
+Nodes (7): daily_balance_and_floor(), daily_equity_rows(), daily_returns(), daily_returns_by_day(), Experiment, _points_by_day(), DailySeriesTests
 
-### Community 26 - "CLI Result Classification"
-Cohesion: 0.18
-Nodes (14): _auth_env_available(), _check_period(), _classify(), _load_optimize_passes(), _metadata_text(), _param_key(), ProcResult, _read_optres() (+6 more)
+### Community 10 - "master_db.py"
+Cohesion: 0.09
+Nodes (18): MasterDbProfile, connection_string(), _convert(), _datetime(), describe_run(), drop_database(), _ensure_bot_build(), ensure_database() (+10 more)
 
-### Community 27 - "Combo cBot Lifecycle"
-Cohesion: 0.11
-Nodes (11): Combo, EnableDailyLossLimit, EnableMaxConsecutiveLosses, EnableMaxDrawdown, KslLevel, KtpLevel, MaxConsecutiveLosses, MaxDailyLossPercent (+3 more)
+### Community 11 - "facilitator.py"
+Cohesion: 0.08
+Nodes (26): load_master_db_profile(), _find_known_runs(), _fingerprint_end(), input_fingerprint(), InputFingerprintMismatch, _redis_profile_id(), resolve_input_fingerprint(), run_backtest() (+18 more)
 
-### Community 28 - "API Runner Results"
-Cohesion: 0.17
-Nodes (8): _api_parameters(), _classify(), _find_bot_log(), run_backtest(), validate_capabilities(), BridgeTimeout, FailureCode, RunStatus
+### Community 12 - "load_strategy_profile"
+Cohesion: 0.10
+Nodes (11): load_strategy_profile(), with_signal_overrides(), EngineProfile, multi_channel_rows_date_bounds(), ResolveSignalPathTests, StrategySelectionTests, ConfigurationPlannerTests, argv_for() (+3 more)
 
-### Community 29 - "Walk Forward Orchestration"
-Cohesion: 0.16
-Nodes (9): load_engine_profile(), resolve_input_fingerprint(), run_grid(), _month_add(), pick(), plateau(), run_walkforward(), walkforward_windows() (+1 more)
+### Community 13 - "planner.py"
+Cohesion: 0.15
+Nodes (18): load_backtest_settings(), Window, _month_add(), pick(), plateau(), run_walkforward(), walkforward_windows(), as_date() (+10 more)
 
-### Community 30 - "Experiment Facilitator"
-Cohesion: 0.19
-Nodes (11): _fingerprint_end(), input_fingerprint(), InputFingerprintMismatch, run_experiment(), crash_result(), one(), record_result(), reserve_launch() (+3 more)
-
-### Community 31 - "Pipeline Stage Locks"
-Cohesion: 0.17
-Nodes (10): check(), get_stage(), _lock_path(), _read(), read_all(), record(), stage_hash(), _write() (+2 more)
-
-### Community 32 - "Grid Callback Progress"
+### Community 14 - "walkforward/views.py"
 Cohesion: 0.12
-Nodes (8): grid_execution_status(), _duration(), _elapsed_seconds(), _live_grid_progress(), register(), strategy_option(), update_strategy(), update_workload()
+Nodes (23): as_number(), numeric_column(), right_align(), strategy_label(), truncated(), detail(), _duration(), _elapsed_text() (+15 more)
 
-### Community 34 - "Backtest Job Contract"
+### Community 15 - "Backtest Defaults"
+Cohesion: 0.07
+Nodes (23): Backtest Configuration, Backtest Defaults, BacktestBot Strategy Profile, cTrader Engine Profiles, FTMO Rules Profile, Portfolio Risk Allocation, Redis Signal Profiles, Backtest Execution Convention (+15 more)
+
+### Community 16 - "selection.py"
+Cohesion: 0.16
+Nodes (12): coerce_float(), parse_point_time(), classify(), eligible(), eligible_under_policy(), exclusion_reasons(), ftmo_screen(), rank() (+4 more)
+
+### Community 17 - "dsr_pbo/views.py"
+Cohesion: 0.16
+Nodes (23): _by_objective(), _conclusion(), _decimal(), detail(), _diagnostic_source_label(), _frozen_objective_text(), _metric(), _minimum_trades_label() (+15 more)
+
+### Community 18 - "ProtocolStore"
+Cohesion: 0.09
+Nodes (4): _lock_view(), LostClaimError, ProtocolStore, cli_launch_budget()
+
+### Community 19 - "_fake_result"
+Cohesion: 0.12
+Nodes (8): DailyCliBudgetTests, run_backtest(), _fake_result(), RunExperimentLifecycleTests, run_backtest(), run_with_fake_sql(), run_backtest(), run_backtest()
+
+### Community 20 - "BacktestBot"
+Cohesion: 0.09
+Nodes (16): BacktestBot, EnableDailyLossLimit, EnableMaxConsecutiveLosses, EnableMaxDrawdown, KslLevel, KtpLevel, Leg2Ktp, Leg3Ktp (+8 more)
+
+### Community 21 - "dash_mantine_components"
+Cohesion: 0.19
+Nodes (21): _configuration(), detail(), _heatmap(), heatmap_figure(), gap_text(), layout(), _leaderboard(), leaderboard_table() (+13 more)
+
+### Community 22 - "readout.py"
+Cohesion: 0.14
+Nodes (10): _load_for(), _load_trials(), _resolve_objective(), _resolve_trial_policy(), run_dsr(), run_pbo(), screen(), _trades_by_day() (+2 more)
+
+### Community 23 - "evidence.py"
+Cohesion: 0.09
+Nodes (24): _all(), bot_summary(), _close_key(), compare_history(), _count_rejections(), environment(), events_match_report(), last_data_time() (+16 more)
+
+### Community 24 - "signal_trans.py"
+Cohesion: 0.15
+Nodes (9): RedisProfile, SignalChannel, _connection_pool(), fetch_signal_rows(), materialize_channel_csv(), materialize_strategy_csv(), redis_client(), resolve_signal_path() (+1 more)
+
+### Community 25 - "multichannel/views.py"
+Cohesion: 0.13
+Nodes (13): serve_layout(), layout(), _bool_param(), channel_preview(), channel_rows(), contribution_detail(), default_channel(), detail() (+5 more)
+
+### Community 26 - "test_portfolio_composition.py"
+Cohesion: 0.12
+Nodes (4): ChannelSignalTests, DecideSourceTests, frame(), SmallHelperTests
+
+### Community 27 - "US30 Net and Drawdown Report"
+Cohesion: 0.10
+Nodes (14): Dashboard Session Inventory, Multi-channel Dashboard Implementation, Exact Four-channel Runtime Validation, Experiment Artifact Persistence, US30 Nineteen-period Research Run, Backtest Defaults Configuration, Shared-account Risk Presets, US30 Net and Drawdown Report (+6 more)
+
+### Community 28 - "test_trade_excursion.py"
+Cohesion: 0.29
+Nodes (6): groups(), make_ticks(), measure(), MeasureMarketTests, MeasureStopOrderTests, signals()
+
+### Community 29 - "pipeline_lock.py"
+Cohesion: 0.14
+Nodes (12): check(), get_stage(), _lock_path(), _read(), read_all(), record(), stage_hash(), _write() (+4 more)
+
+### Community 30 - "allocate_equal_risk"
+Cohesion: 0.15
+Nodes (8): allocate_equal_risk(), _channel_count(), _positive_decimal(), validate_manual_risks(), validated_decimals(), validated_total_percent(), EqualSplitTests, ManualRiskTests
+
+### Community 32 - "SignalRow"
+Cohesion: 0.12
+Nodes (12): SignalRow, Atr, AvailableTime, BarDuration, BarTime, Channel, Direction, EntryPrice (+4 more)
+
+### Community 33 - "data_access.py"
+Cohesion: 0.12
+Nodes (16): _bot_events(), _clean_log_text(), commission_warning(), _execution_summary(), _fib_label(), _labelled_values(), _log_activity(), _log_fields() (+8 more)
+
+### Community 34 - "Any"
+Cohesion: 0.10
+Nodes (13): _channel_label_map(), grid_execution_status(), grid_rows(), grid_snapshot(), load_pipeline(), multi_channel_contributions(), multi_channel_signal_date_bounds(), _number() (+5 more)
+
+### Community 35 - "ProfileAndSourceContractTests"
+Cohesion: 0.14
+Nodes (3): _bot_text(), _metadata(), ProfileAndSourceContractTests
+
+### Community 37 - "Reproducible SQL Backtest Repository"
 Cohesion: 0.11
-Nodes (18): BacktestJob, AlgoPath, Balance, Commission, CommissionAuto, CommissionType, DataFile, DataMode (+10 more)
+Nodes (12): Live Project State, Migration to Multi Bots, Project Status and Handoff Log, Two-Backend Pipeline Hardening, VM-BO20 Execution Environment, SQL Analysis Views, bo_research SQL Server Database, Concurrency-Safe Snapshot Deduplication (+4 more)
 
-### Community 35 - "Diagnostics Callbacks"
+### Community 38 - "_read_pass"
+Cohesion: 0.25
+Nodes (5): _auth_env_available(), _read_pass(), _redact_report(), redact_report_data(), redact_text()
+
+### Community 39 - "register"
 Cohesion: 0.12
 Nodes (9): html_empty(), register(), create_session(), refresh_status(), show_commission_warning(), strategy_option(), update_strategy(), update_workload() (+1 more)
 
-### Community 36 - "Backtest Result Contract"
-Cohesion: 0.11
-Nodes (18): BacktestResult, BacktestingError, Capabilities, CommissionAutoApplied, CommissionAutoRequested, Diagnostics, EndedUtc, Error (+10 more)
+### Community 40 - "RunSpec"
+Cohesion: 0.07
+Nodes (7): RunSpec, ClassifyAuthFailureTests, CancellationHookTests, EvidenceSelectionTests, spec(), StaleClaimTests, StoreMonteCarloTests
 
-### Community 37 - "Walk Forward Cache Tests"
+### Community 41 - "register"
+Cohesion: 0.12
+Nodes (7): _form_rows(), register(), change_rows(), create_session(), preview(), refresh_status(), run_session()
+
+### Community 42 - "WalkforwardCacheKeyTests"
 Cohesion: 0.13
 Nodes (4): WalkforwardCacheKeyTests, WalkforwardHookTests, WalkforwardTests, fake_run()
 
-### Community 38 - "Plugin Deployment Tools"
-Cohesion: 0.21
-Nodes (10): _cli_version(), deploy(), _find_cli(), main(), _roots(), CliProbeError, _command_reference_for(), kill_tree() (+2 more)
-
-### Community 39 - "Evidence Parsing"
-Cohesion: 0.22
-Nodes (11): _all(), bot_summary(), compare_history(), _count_rejections(), environment(), metrics(), _ms_date(), read_gui_report() (+3 more)
-
-### Community 41 - "Deflated Sharpe Ratio"
+### Community 43 - "dsr.py"
 Cohesion: 0.19
 Nodes (8): deflated_sharpe_ratio(), _evaluate(), expected_max_sharpe(), kurtosis(), run(), sharpe_ratio(), skewness(), _standardized_moment()
 
-### Community 43 - "Store Claim Ownership"
-Cohesion: 0.22
-Nodes (6): Claim, export_release(), LostClaimError, _owner(), _owner_alive(), _pid_alive()
-
-### Community 45 - "Monte Carlo Engine"
+### Community 47 - "montecarlo.py"
 Cohesion: 0.29
 Nodes (7): _cut_blocks(), MonteCarloConfig, _pct(), _resample_stationary(), run(), run_dual(), run_methods_compare()
 
-### Community 46 - "Plugin Capability Contracts"
-Cohesion: 0.15
-Nodes (9): BacktestingCapabilities, ApiAssemblyVersion, AutomaticCommission, LegacyUsdPerMillionCommission, PreciseConversion, TickCsv, TypedCommission, BridgeSchemas (+1 more)
-
-### Community 47 - "Runtime Diagnostics Contract"
+### Community 48 - ".GetTradingSymbol"
 Cohesion: 0.17
-Nodes (10): LeverageTierInfo, Leverage, Volume, RuntimeDiagnostics, AccountBrokerName, AccountPreciseLeverage, AccountStopOutLevel, AccountTotalMarginCalculationType (+2 more)
+Nodes (3): SymbolQueue, Next, Signals
 
-### Community 48 - "PBO Computation"
+### Community 49 - "test_core_engine.py"
+Cohesion: 0.06
+Nodes (10): _is_arithmetic(), _split_box(), ExperimentLockTests, MonteCarloIntradayFloorTests, PboObjectiveTests, ReadoutTests, _reference_mean_return_pbo(), RunGridLockPolicyTests (+2 more)
+
+### Community 50 - "register"
+Cohesion: 0.18
+Nodes (4): register(), strategy_option(), update_strategy(), update_workload()
+
+### Community 51 - "002_views.sql"
 Cohesion: 0.27
-Nodes (5): _average_rank(), _block_totals(), _order_key(), _performance(), run()
+Nodes (7): dbo.v_cell_half_year_profit, dbo.v_compare_same_cell, dbo.v_durable_cells, dbo.v_ftmo_daily_loss, dbo.v_run_overview, dbo.v_walkforward_oos_chain, dbo.v_walkforward_selected
 
-### Community 49 - "Diagnostics Source Actions"
-Cohesion: 0.18
-Nodes (5): _nonnegative_int(), register(), create_diagnostics(), inspect_source(), run_diagnostics()
-
-### Community 50 - "CLI Reliability Research"
-Cohesion: 0.18
-Nodes (10): Plugin API versus CLI A/B Audit, Approximate Margin Conversion Look-Ahead, Plugin API Equals CLI Execution Engine, Conversion-Symbol Tick Hang, Three Tick Execution Modes, CLI Tick Bottleneck Diagnosis, Concurrent CLI Backtest Analysis, cTrader CLI Practical Issues Catalog (+2 more)
-
-### Community 53 - "Walk Forward Data Access"
-Cohesion: 0.17
-Nodes (5): walkforward_progress(), walkforward_table(), historical_seconds_per_day(), walkforward_execution_status(), walkforward_results()
-
-### Community 55 - "Dashboard Resource Groups"
-Cohesion: 0.38
+### Community 52 - "DashboardSessionStoreTests"
+Cohesion: 0.25
 Nodes (4): DashboardSessionStoreTests, _diagnostics_plan(), _grid_plan(), isolated_store()
 
-### Community 56 - "MA Cross Signal Loading"
-Cohesion: 0.17
-Nodes (6): SignalRow, Atr, AvailableTime, BarTime, Direction, IsHandled
+### Community 53 - "pbo.py"
+Cohesion: 0.24
+Nodes (5): _average_rank(), _block_totals(), _order_key(), _performance(), run()
 
-### Community 57 - "MACD Signal Loading"
-Cohesion: 0.17
-Nodes (6): SignalRow, Atr, AvailableTime, BarTime, Direction, IsHandled
+### Community 54 - "cli_runner.py"
+Cohesion: 0.15
+Nodes (20): advertised_data_modes(), cli_has_command(), cli_has_option(), cli_option_supported(), _cli_version(), CliProbeError, _command_reference(), _command_reference_for() (+12 more)
 
-### Community 62 - "Combo Stop Loss Levels"
-Cohesion: 0.18
-Nodes (11): SlFibLevel, Fib0618, Fib0786, Fib1000, Fib1272, Fib1618, Fib2058, Fib2618 (+3 more)
-
-### Community 63 - "Combo Take Profit Levels"
-Cohesion: 0.18
-Nodes (11): TpFibLevel, Fib1000, Fib1272, Fib1618, Fib2058, Fib2618, Fib3330, Fib4236 (+3 more)
-
-### Community 64 - "MA Cross Stop Loss"
-Cohesion: 0.18
-Nodes (11): SlFibLevel, Fib0618, Fib0786, Fib1000, Fib1272, Fib1618, Fib2058, Fib2618 (+3 more)
-
-### Community 65 - "MA Cross Take Profit"
-Cohesion: 0.18
-Nodes (11): TpFibLevel, Fib1000, Fib1272, Fib1618, Fib2058, Fib2618, Fib3330, Fib4236 (+3 more)
-
-### Community 66 - "MACD Stop Loss"
-Cohesion: 0.18
-Nodes (11): SlFibLevel, Fib0618, Fib0786, Fib1000, Fib1272, Fib1618, Fib2058, Fib2618 (+3 more)
-
-### Community 67 - "MACD Take Profit"
-Cohesion: 0.18
-Nodes (11): TpFibLevel, Fib1000, Fib1272, Fib1618, Fib2058, Fib2618, Fib3330, Fib4236 (+3 more)
-
-### Community 68 - "API Redis Configuration"
-Cohesion: 0.20
-Nodes (6): API Engine Documentation, File-Mailbox Backtest Bridge, Redis Signal Profiles, Unified Workflow Configuration, cBot Redis Signal-Source Feasibility Study, Backtest API Plugin Optimize Spike Record
-
-### Community 69 - "Workflow Session Launch"
-Cohesion: 0.29
-Nodes (5): run_grid_search_session(), run_single_backtest_session(), run_walkforward_session(), profile_from_input(), require_profile()
-
-### Community 73 - "Repository Research Rules"
-Cohesion: 0.22
-Nodes (6): Project State and Handoff Log, Time-Series Strategy Optimization Methodology, Parameter Stability Plateau, Robert Pardo â€” Design, Testing, and Optimization of Trading Systems, Rolling Walk-Forward Optimization, Repository Design and Coding Rules
-
-### Community 74 - "Dashboard Filter Options"
-Cohesion: 0.28
-Nodes (4): session_form_options(), signal_date_bounds(), signal_date_bounds_for_selection(), _unique_choices()
-
-### Community 77 - "Research Provenance"
-Cohesion: 0.25
-Nodes (5): Immutable Run Provenance, Interface Parity versus Research Validity, Phase 2 Research and Optimization Design, Content-Addressed Stage Cache, Pipeline Lock and Dashboard Architecture
-
-### Community 78 - "Form Input Preparation"
-Cohesion: 0.32
-Nodes (4): prepare_single_backtest_session(), prepare_walkforward_session(), command_field(), identity_field()
-
-### Community 79 - "Dashboard Layout Components"
-Cohesion: 0.29
-Nodes (3): serve_layout(), layout(), status_region()
-
-### Community 80 - "Bootstrap Method Research"
-Cohesion: 0.25
-Nodes (7): Monte Carlo Block-Bootstrap Variants, Carlstein 1986 Non-Overlapping Bootstrap, KÃ¼nsch 1989 Moving Block Bootstrap, Moving Block Bootstrap, Non-Overlapping Block Bootstrap, Politis and Romano 1994 Stationary Bootstrap, Stationary Bootstrap
-
-### Community 87 - "DSR PBO Research"
-Cohesion: 0.38
-Nodes (6): Bailey and LÃ³pez de Prado â€” The Deflated Sharpe Ratio, Bailey et al. â€” The Probability of Backtest Overfitting, CSCV Probability of Backtest Overfitting, Deflated Sharpe Ratio, DSR and PBO Formula Verification, Trading Strategy Overfit Validation Toolkit
-
-### Community 88 - "Full Validation Research"
-Cohesion: 0.29
-Nodes (4): Five-Stage Validation Pipeline, Full Validation Pipeline Design, Monte Carlo Equity versus Balance Methodology, FTMO Equity-Based Loss Model
-
-### Community 91 - "Combo Signal Row"
-Cohesion: 0.29
-Nodes (7): SignalRow, Atr, AvailableTime, BarTime, Direction, EntryPrice, IsHandled
-
-### Community 92 - "Plugin Job Context"
+### Community 56 - "Proposed backtest design (smoke test, full period, per year, per half-year, rolling windows, stress test)"
 Cohesion: 0.33
-Nodes (5): JobContext, ClaimedPath, Job, LastProgress, StartedUtc
+Nodes (12): Graphify query: run MACD Break backtest on XAU 2022-present?, Proposed backtest design (smoke test, full period, per year, per half-year, rolling windows, stress test), BacktestJob, BoBacktestRunner, Fixed spread/commission/swap/balance/currency assumptions, KslLevel, KtpLevel, MACDBreak (strategy / cBot) (+4 more)
 
-### Community 93 - "CLI Argument Builder"
+### Community 57 - "SlFibLevel"
+Cohesion: 0.18
+Nodes (11): SlFibLevel, Fib0618, Fib0786, Fib1000, Fib1272, Fib1618, Fib2058, Fib2618 (+3 more)
+
+### Community 58 - "TpFibLevel"
+Cohesion: 0.18
+Nodes (11): TpFibLevel, Fib1000, Fib1272, Fib1618, Fib2058, Fib2618, Fib3330, Fib4236 (+3 more)
+
+### Community 59 - "load_ticks"
+Cohesion: 0.19
+Nodes (5): cache_roots(), _forward_fill_zero(), load_ticks(), parse_ticks(), symbol_tick_dir()
+
+### Community 60 - "backtest_run Table"
+Cohesion: 0.20
+Nodes (8): backtest_run Table, bot_build Table, daily_equity Table, Native events.json Reconciliation, Plateau Tie Nondeterminism, Reproducible Run Identity, signal_snapshot Table, trade Table
+
+### Community 61 - "RunStatus"
+Cohesion: 0.17
+Nodes (10): _check_period(), FailureCode, RunResult, RunStatus, _fake_result(), _fake_run_result(), _record_report(), TrialPolicyReadoutTests (+2 more)
+
+### Community 62 - "load_redis_profile"
+Cohesion: 0.16
+Nodes (3): load_redis_profile(), walkforward_train_signal_counts(), SignalTransTests
+
+### Community 65 - "001_schema.sql"
+Cohesion: 0.31
+Nodes (6): dbo.bot_build, dbo.daily_equity, dbo.trade, ix_backtest_run_batch, ix_backtest_run_cell, ix_backtest_run_train
+
+### Community 69 - "channel_selection.py"
+Cohesion: 0.39
+Nodes (3): available_timeframes(), canonical_selection(), _choices()
+
+### Community 70 - "store.py"
+Cohesion: 0.26
+Nodes (5): Claim, export_release(), _owner(), _owner_alive(), _pid_alive()
+
+### Community 76 - "build_argv"
 Cohesion: 0.40
 Nodes (4): build_argv(), build_optimize_argv(), _cli_date(), _engine_flags()
 
-### Community 101 - "Plugin Project Configuration"
-Cohesion: 0.40
-Nodes (4): net6.0, cTrader.Automate (*), Microsoft.NET.Sdk, cTrader.Automate.SourceGenerators (*)
+### Community 78 - "Channel"
+Cohesion: 0.33
+Nodes (6): Channel, Labels, RiskPercent, Strategy, SymbolName, TimeFrameName
 
-### Community 108 - "CLI Optimization Research"
+### Community 79 - "StrategyProfile"
+Cohesion: 0.22
+Nodes (4): _load_optimize_passes(), optimize_parameters(), _param_key(), StrategyProfile
+
+### Community 80 - "ChannelSourceTests"
+Cohesion: 0.15
+Nodes (4): ChannelSourceTests, StrategyFileTests, fetch(), fetch()
+
+### Community 84 - "FakeOptimizeCli"
+Cohesion: 0.23
+Nodes (4): _box(), _config(), FakeOptimizeCli, RunOptimizeBoxTests
+
+### Community 85 - "Q: [$graphify] tôi yêu cầu bạn chạy backtest cho chiến lược macd break cho xau full khung thời gian từ 2022 đến hiện tại thì bạn chạy được ko? Chưa làm nhé, nếu chạy thì chạy sao? full các năm, giữa các năm, nữa năm, hay thế nào? ksl và ktp lần lượt là 1.618 và 2.618, risk per trade để 1%"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: [$graphify] tôi yêu cầu bạn chạy backtest cho chiến lược macd break cho xau full khung thời gian từ 2022 đến hiện tại thì bạn chạy được ko? Chưa làm nhé, nếu chạy thì chạy sao? full các năm, giữa các năm, nữa năm, hay thế nào? ksl và ktp lần lượt là 1.618 và 2.618, risk per trade để 1%, Source Nodes
+
+### Community 86 - "Q: Tức là dashboard vẫn dg chạy tót phải ko? Hiện các session trên đó là gì? Hình như chưa có session nào chạy đa symbol đa tf đa chiến lược phải ko"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Tức là dashboard vẫn dg chạy tót phải ko? Hiện các session trên đó là gì? Hình như chưa có session nào chạy đa symbol đa tf đa chiến lược phải ko, Source Nodes
+
+### Community 87 - "Q: Thiết kế session dashboard đa symbol, đa timeframe, đa chiến lược cho BacktestBot"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Thiết kế session dashboard đa symbol, đa timeframe, đa chiến lược cho BacktestBot, Source Nodes
+
+### Community 88 - "Q: Ok, triển khai session dashboard đa symbol đa timeframe đa chiến lược"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Ok, triển khai session dashboard đa symbol đa timeframe đa chiến lược, Source Nodes
+
+### Community 89 - "Q: Ok, đọc đi"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Ok, đọc đi, Source Nodes
+
+### Community 90 - "Q: Validate BacktestBot multi-strategy multi-symbol multi-timeframe Q1 2026"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Validate BacktestBot multi-strategy multi-symbol multi-timeframe Q1 2026, Source Nodes
+
+### Community 91 - "Q: Các tiến trình đó khi chạy xong, lưu kết quả như thế nào? Lưu ở đâu"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Các tiến trình đó khi chạy xong, lưu kết quả như thế nào? Lưu ở đâu, Source Nodes
+
+### Community 92 - "Q: Okie, hãy tập trung vào job us30 vừa rồi, hãy cho tôi biết yêu cầu và tiến trình chạy là gì? Kết quả thế nào?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Okie, hãy tập trung vào job us30 vừa rồi, hãy cho tôi biết yêu cầu và tiến trình chạy là gì? Kết quả thế nào?, Source Nodes
+
+### Community 93 - "Q: Tôi muốn đọc và giải thích các cấu phần trong backtet_defaults..yaml, trước khi rtar lời hãy đọc graphify để nắm băt nhé"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Tôi muốn đọc và giải thích các cấu phần trong backtet_defaults..yaml, trước khi rtar lời hãy đọc graphify để nắm băt nhé, Source Nodes
+
+### Community 94 - "Q: Tôi ko hiểu yếu tố kĩ thuật, nhưng trong này có phải bộ tham số mẫu để đi backtest khi yêu cầu triển khai ko?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Tôi ko hiểu yếu tố kĩ thuật, nhưng trong này có phải bộ tham số mẫu để đi backtest khi yêu cầu triển khai ko?, Source Nodes
+
+### Community 95 - "Q: Nhóm shared, shared_06, shared_mix là gì?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Nhóm shared, shared_06, shared_mix là gì?, Source Nodes
+
+### Community 96 - "Q: Báo cáo chi tiết cho tôi biết theo chiến lược/khung thời gian; chỉ cần Net/DD; làm rõ bao nhiêu kỳ có lãi trên tổng"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Báo cáo chi tiết cho tôi biết theo chiến lược/khung thời gian; chỉ cần Net/DD; làm rõ bao nhiêu kỳ có lãi trên tổng, Source Nodes
+
+### Community 97 - "Q: Nếu xét trên lãi lớn, bền và dd nhỏ, so sánh giữa db0 và db1, thì nên chọn combo theo khung nào?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Nếu xét trên lãi lớn, bền và dd nhỏ, so sánh giữa db0 và db1, thì nên chọn combo theo khung nào?, Source Nodes
+
+### Community 98 - "Q: Okie, với MA Cross thì tốt nhất trong các con xấu nhất?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Okie, với MA Cross thì tốt nhất trong các con xấu nhất?, Source Nodes
+
+### Community 99 - "Q: Okie, giờ tới MACD Break"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Okie, giờ tới MACD Break, Source Nodes
+
+### Community 100 - "Q: Okie, giờ nêu tôi thực hiện 1 backtest đa symbol đa tiemframes và đa nguồn dữ liệu theo cachsn ày thì có triển khai được không: DB0 Combo H4; DB1 MA M30; DB0 MACD Break H4"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Okie, giờ nêu tôi thực hiện 1 backtest đa symbol đa tiemframes và đa nguồn dữ liệu theo cachsn ày thì có triển khai được không: DB0 Combo H4; DB1 MA M30; DB0 MACD Break H4, Source Nodes
+
+### Community 101 - "MA Cross Source Query"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Vậy so sánh giữa D1 và Db0 của MA Cross M30, Source Nodes
+
+### Community 102 - "Q: Tại sao lại đặt tên là shared, rồi shared_06, rồi shared_mix?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Tại sao lại đặt tên là shared, rồi shared_06, rồi shared_mix?, Source Nodes
+
+### Community 103 - "Q: Ok, vậy hãy chạy thử nhé, cũng 19 kỳ luôn"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Ok, vậy hãy chạy thử nhé, cũng 19 kỳ luôn, Source Nodes
+
+### Community 104 - "Q: Giờ chạy trường hợp bỏ MA Cross ra nhé"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Giờ chạy trường hợp bỏ MA Cross ra nhé, Source Nodes
+
+### Community 105 - "Q: Tôi muốn đọc lại kết quả của combo và macd break theo từng khung vào lệnh với db0 và db1"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Tôi muốn đọc lại kết quả của combo và macd break theo từng khung vào lệnh với db0 và db1, Source Nodes
+
+### Community 106 - "Q: Triển khai DB1 Combo H1 H4 cùng MACD Break H3 H4 risk 0.6% một cụm lệnh, 19 kỳ"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Triển khai DB1 Combo H1 H4 cùng MACD Break H3 H4 risk 0.6% một cụm lệnh, 19 kỳ, Source Nodes
+
+### Community 107 - "Q: Hãy thống kê xem nhóm lệnh của khung nào gây lỗ nhiều nhất"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Hãy thống kê xem nhóm lệnh của khung nào gây lỗ nhiều nhất, Source Nodes
+
+### Community 108 - "Q: Nhóm nào cho DD ít mà lời vẫn cao trong ba kênh US30 DB1 Combo H4, MACD H3, MACD H4?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Nhóm nào cho DD ít mà lời vẫn cao trong ba kênh US30 DB1 Combo H4, MACD H3, MACD H4?, Source Nodes
+
+### Community 109 - "Q: Đó có là thiết kế tốt chưa?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Đó có là thiết kế tốt chưa?, Source Nodes
+
+### Community 110 - "Q: Single backtest và multi-backtest đang cấu hình ở đâu, prefix và tham số chạy là gì, multi một kênh có thành single không?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Single backtest và multi-backtest đang cấu hình ở đâu, prefix và tham số chạy là gì, multi một kênh có thành single không?, Source Nodes
+
+### Community 111 - "Q: Làm sao giữ trọn vẹn một luồng, chỉ config.yaml, truyền tham số linh động cho single và multi backtest mà không tạo YAML mới?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Làm sao giữ trọn vẹn một luồng, chỉ config.yaml, truyền tham số linh động cho single và multi backtest mà không tạo YAML mới?, Source Nodes
+
+### Community 112 - "Q: Kế hoạch hợp nhất single và multi backtest thành một luồng là gì?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Kế hoạch hợp nhất single và multi backtest thành một luồng là gì?, Source Nodes
+
+### Community 113 - "Q: Ok, giờ tôi muốn bạn chuyển sang sesssion backtest đa symbol, đa timeframes, đa chiến lược.  Hãy cho tôi biết session đó dang chạy thế nào, luồng ra sao, cách chạy?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Ok, giờ tôi muốn bạn chuyển sang sesssion backtest đa symbol, đa timeframes, đa chiến lược.  Hãy cho tôi biết session đó dang chạy thế nào, luồng ra sao, cách chạy?, Source Nodes
+
+### Community 114 - "Q: Ok, hãy tổng hợp lại xem bạn hiểu thế nào, đầy đủ ko, và dự kiến triển khai ra sao, thay đổi gì ở nhóm file nò?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Ok, hãy tổng hợp lại xem bạn hiểu thế nào, đầy đủ ko, và dự kiến triển khai ra sao, thay đổi gì ở nhóm file nò?, Source Nodes
+
+### Community 115 - "Q: Ok, đúng hết rồi nhé. Tuy nhiên chổ output sẽ cần làm thêm thế này, Kết quả theo từng kỳ là đúng rồi, nhưng chủ yếu cần Net Profit và DD. Bên cạnh đó nên có tổng lỗ tổng lãi, đóng góp của nhóm channel nào trong lãi hay trong lỗ. Hiểu y tôi ko? Phần output đó kas quan trọng trọng cách tôi quyết định kết hợp ra sao, chốt điểm này nưa rồi làm"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Ok, đúng hết rồi nhé. Tuy nhiên chổ output sẽ cần làm thêm thế này, Kết quả theo từng kỳ là đúng rồi, nhưng chủ yếu cần Net Profit và DD. Bên cạnh đó nên có tổng lỗ tổng lãi, đóng góp của nhóm channel nào trong lãi hay trong lỗ. Hiểu y tôi ko? Phần output đó kas quan trọng trọng cách tôi quyết định kết hợp ra sao, chốt điểm này nưa rồi làm, Source Nodes
+
+### Community 116 - "Q: Ok, tôi cần bạn kiểm tra lại dashboard, nhiều cấu phần tiếng Anh và Việt lẫn lộn, hãy đồng nhất tiếng anh hết nhé!"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Ok, tôi cần bạn kiểm tra lại dashboard, nhiều cấu phần tiếng Anh và Việt lẫn lộn, hãy đồng nhất tiếng anh hết nhé!, Source Nodes
+
+### Community 117 - "StrategyDef"
+Cohesion: 0.50
+Nodes (4): StrategyDef, Code, IsStopOrder, Token
+
+### Community 118 - "BacktestBot.csproj"
+Cohesion: 0.50
+Nodes (3): net6.0, cTrader.Automate (*), Microsoft.NET.Sdk
+
+### Community 120 - "cTrader CLI Backtest and Optimize Research"
 Cohesion: 0.67
 Nodes (3): cTrader CLI Backtest and Optimize Research, Native CLI 5.10 Optimization, Single-Thread Backtests in a Process Pool
 
-### Community 111 - "Combo Project Configuration"
+### Community 126 - "Q: Multi-channel dashboard v2 chạy, triển khai và đọc kết quả như thế nào?"
 Cohesion: 0.50
-Nodes (3): net6.0, cTrader.Automate (*), Microsoft.NET.Sdk
+Nodes (3): Answer, Outcome, Q: Multi-channel dashboard v2 chạy, triển khai và đọc kết quả như thế nào?
 
-### Community 113 - "MA Cross Project"
-Cohesion: 0.50
-Nodes (3): net6.0, cTrader.Automate (*), Microsoft.NET.Sdk
+### Community 129 - "_specs"
+Cohesion: 0.12
+Nodes (8): OptimizeBox, plan_optimize_boxes(), _epoch_ms(), OptimizeArgumentTests, validate(), PlanOptimizeBoxesTests, _specs(), _with()
 
-### Community 114 - "MACD Project"
-Cohesion: 0.50
-Nodes (3): net6.0, cTrader.Automate (*), Microsoft.NET.Sdk
+### Community 132 - "actions.py"
+Cohesion: 0.06
+Nodes (39): auth_options(), allocate_multi_channel_risk(), completed_execution_policy_available(), _enum_index(), _enum_selection(), _execution_key(), _load_dashboard_profile(), _multi_signal_key() (+31 more)
+
+### Community 133 - "trade_excursion.py"
+Cohesion: 0.16
+Nodes (14): _agree(), bar_duration_ms(), check(), ensure_tables(), _in_list(), _load_groups(), _load_signal_blobs(), main() (+6 more)
+
+### Community 147 - "walkforward_readout.py"
+Cohesion: 0.15
+Nodes (5): walkforward_progress(), walkforward_table(), historical_seconds_per_day(), walkforward_execution_status(), walkforward_results()
+
+### Community 149 - "Q: Ok, tôi muốn kiểm tra điểm này, vì sao lại có folder này trong bo_workflow, lẽ a phải nằm trong ROBOTs thôi chứ: C:\Users\Administrator\Documents\cAlgo\Sources\Robots\bo_workflow\graphify-out"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Ok, tôi muốn kiểm tra điểm này, vì sao lại có folder này trong bo_workflow, lẽ a phải nằm trong ROBOTs thôi chứ: C:\Users\Administrator\Documents\cAlgo\Sources\Robots\bo_workflow\graphify-out, Source Nodes
 
 ## Knowledge Gaps
-- **190 isolated node(s):** `Fib0618`, `Fib0786`, `Fib1000`, `Fib1272`, `Fib1618` (+185 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 706 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **47 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **190 isolated node(s):** `cAlgo.Robots`, `Fib0618`, `Fib0786`, `Fib1000`, `Fib1272` (+185 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 897 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **41 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+
+## Work-memory lessons
+
+**Preferred sources** — corroborated by past sessions; start here.
+- `BacktestBot` (22× useful, score=20.20337825)
+- `session_store.py` (7× useful, score=6.415018308) _(code changed — re-verify)_
+- `prepare_multi_channel_session()` (4× useful, score=3.69998799) _(code changed — re-verify)_
+- `RunSpec` (3× useful, score=2.760872537) _(code changed — re-verify)_
+- `planner.py` (3× useful, score=2.741886164) _(code changed — re-verify)_
+- `data_access.py` (2× useful, score=1.879748632) _(code changed — re-verify)_
+- `multichannel/callbacks.py` (2× useful, score=1.879660834) _(code changed — re-verify)_
+- `multichannel/views.py` (2× useful, score=1.879660834) _(code changed — re-verify)_
+- `materialize_strategy_csv()` (2× useful, score=1.860747608) _(code changed — re-verify)_
+- `facilitator.py` (2× useful, score=1.841262089) _(code changed — re-verify)_
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `RunSpec` connect `Run Specification Model` to `Optimize Backend Tests`, `Core Run Lifecycle`, `Redis Signal Materialization`, `CLI Optimize Execution`, `Core Time Models`, `Experiment Planning`, `Experiment Result Store`, `CLI Binary Selection`, `Strategy Configuration`, `API Bridge Client`, `CLI Result Classification`, `API Runner Results`, `Evidence Parsing`, `Dashboard Composition Tests`, `Store Claim Ownership`, `Protocol Budget Store`, `Signal Path Resolution`, `Evidence Gate Tests`, `Monte Carlo OOS Tests`, `API Validation Tests`, `Objective Readout Tests`, `Monte Carlo Store Tests`, `CLI Argument Builder`, `Authentication Failure Tests`, `Walk Forward Readout`, `Stale Claim Recovery`?**
-  _High betweenness centrality (0.048) - this node is a cross-community bridge._
-- **Are the 32 inferred relationships involving `RunSpec` (e.g. with `_find_bot_log()` and `run_backtest()`) actually correct?**
-  _`RunSpec` has 32 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `Fib0618`, `Fib0786`, `Fib1000` to the rest of the system?**
+- **Why does `RunSpec` connect `RunSpec` to `_specs`, `json`, `FacilitatorBoxTests`, `models.py`, `facilitator.py`, `load_strategy_profile`, `planner.py`, `ProtocolStore`, `evidence.py`, `signal_trans.py`, `pipeline_lock.py`, `_read_pass`, `test_core_engine.py`, `cli_runner.py`, `RunStatus`, `MonteCarloOosTests`, `store.py`, `ReadoutObjectiveTests`, `build_argv`, `WalkforwardReadoutTests`, `FakeOptimizeCli`?**
+  _High betweenness centrality (0.040) - this node is a cross-community bridge._
+- **Are the 31 inferred relationships involving `RunSpec` (e.g. with `build_argv()` and `_check_period()`) actually correct?**
+  _`RunSpec` has 31 INFERRED edges - model-reasoned connections that need verification._
+- **What connects `cAlgo.Robots`, `Fib0618`, `Fib0786` to the rest of the system?**
   _190 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Optimize Backend Tests` be split into smaller, more focused modules?**
-  _Cohesion score 0.05660945498343872 - nodes in this community are weakly interconnected._
-- **Why does `ExperimentStore` connect `Experiment Result Store` to `Grid Callback Progress`, `Result Data Access`, `Store Claim Ownership`, `Statistical Readout Pipeline`, `Trial Selection Logic`, `Core Time Models`, `Walk Forward Data Access`, `Run Specification Model`, `API Runner Results`, `Walk Forward Orchestration`, `Experiment Facilitator`?**
-  _High betweenness centrality (0.026) - this node is a cross-community bridge._
-- **Should `Dashboard Session Store` be split into smaller, more focused modules?**
-  _Cohesion score 0.06659056316590563 - nodes in this community are weakly interconnected._
-- **Why does `RunnerCapabilityAndStallTests` connect `CLI Capability Tests` to `Dashboard Composition Tests`?**
-  _High betweenness centrality (0.018) - this node is a cross-community bridge._
+- **Should `session_store.py` be split into smaller, more focused modules?**
+  _Cohesion score 0.06486486486486487 - nodes in this community are weakly interconnected._
+- **Why does `ExperimentStore` connect `facilitator.py` to `data_access.py`, `Any`, `actions.py`, `store.py`, `RunSpec`, `planner.py`, `selection.py`, `ProtocolStore`, `walkforward_readout.py`, `RunStatus`, `readout.py`, `pipeline_lock.py`?**
+  _High betweenness centrality (0.025) - this node is a cross-community bridge._
+- **Are the 3 inferred relationships involving `ExperimentStore` (e.g. with `_save_to_master_db()` and `RunSpec`) actually correct?**
+  _`ExperimentStore` has 3 INFERRED edges - model-reasoned connections that need verification._
+- **Should `portfolio_composition.py` be split into smaller, more focused modules?**
+  _Cohesion score 0.14039408866995073 - nodes in this community are weakly interconnected._

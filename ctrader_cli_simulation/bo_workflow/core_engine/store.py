@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS runs (
 # tạm khoá account <FTMO-ACCOUNT-ID> vì "hyperactivity" ngày 2026-09-15 (1.088 + 825
 # backtest/ngày). Trần tổng số lần spawn/ngày do người dùng chốt 2026-09-25.
 # "Ngày" tính theo giờ Prague — cùng mốc FTMO dùng để chốt ngày giao dịch.
-DAILY_CLI_LAUNCH_LIMIT = 1500
+DAILY_CLI_LAUNCH_LIMIT = 2000
 _LAUNCH_DAY_TZ = ZoneInfo("Europe/Prague")
 
 _PROTOCOL_SCHEMA = """
@@ -396,6 +396,17 @@ class ExperimentStore:
         run_dir = self.run_dir(claim.run_id, spec.label())
         run_dir.mkdir(parents=True, exist_ok=True)
         inputs = inputs or {}
+        # events.json của cTrader (vòng đời lệnh; report không có) — chỉ có khi nối được đúng 1 thư mục của
+        # cTrader (cli_runner.find_native_output). `verified` = số vị thế tạo ra khớp report; sai vẫn lưu, chỉ gắn cờ.
+        native: dict[str, Any] = {"directory": getattr(run_result, "native_dir", "") or None, "events_sha256": None, "events_verified": None}
+        events_src = getattr(run_result, "events_json", None)
+        if events_src is not None and Path(events_src).is_file():
+            self._compress_report(Path(events_src), run_dir / "events.json.gz")
+            native["events_sha256"] = sha256_file(events_src)
+            if Path(run_result.report_json).is_file():
+                native["events_verified"] = evidence.events_match_report(
+                    json.loads(Path(events_src).read_text(encoding="utf-8")), evidence.read_report(run_result.report_json),
+                )
         execution = {
             "schema": "bo-research-execution/v1",
             "run_id": claim.run_id,
@@ -415,7 +426,10 @@ class ExperimentStore:
             "inputs": {
                 "algo_sha256": inputs.get("algo_sha256"),
                 "signal_sha256": inputs.get("signal_sha256"),
+                "source_sha256": inputs.get("source_sha256"),
+                "source_newer_than_algo": inputs.get("source_newer_than_algo"),
             },
+            "native": native,
             "cli": {"path": run_result.cli_path, "version": run_result.cli_version},
             "environment": environment,
             "bot_summary": bot_summary,

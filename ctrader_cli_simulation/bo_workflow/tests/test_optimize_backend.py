@@ -14,23 +14,37 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-# tests/ nằm ngang hàng core_engine/api_engine dưới bo_workflow/.
+# tests/ nằm ngang hàng core_engine/ dưới bo_workflow/.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from core_engine import cli_runner, facilitator, store
-from core_engine.configuration import load_engine_profile, load_strategy_profile
+from core_engine.configuration import MasterDbProfile, load_engine_profile, load_strategy_profile
 from core_engine.models import FailureCode, OptimizeBox, RunResult, RunSpec, RunStatus
 from core_engine.planner import build_experiment, expand_grid, plan_optimize_boxes
 
-ENGINE = "ctrader-5.9.16-ticks-approxfx-v1"
+# Test không phụ thuộc cờ `master_db.enabled` trong config.yaml của máy (bật thì facilitator sẽ gọi SQL Server thật).
+_master_db_off = patch.object(
+    facilitator, "load_master_db_profile", return_value=MasterDbProfile(enabled=False, server="x", database="y"),
+)
+
+
+def setUpModule() -> None:
+    _master_db_off.start()
+
+
+def tearDownModule() -> None:
+    _master_db_off.stop()
+
+
+ENGINE = "ctrader-ticks-precisefx-v1"
 IN_WINDOW_CSV = "bartime,atr,entry,signal\n2026-01-05 10:00,50,100,1\n"
 LEVELS = [str(i) for i in range(10)]
-STRATEGY = load_strategy_profile("combo-v1")
+STRATEGY = load_strategy_profile("backtestbot-v1")
 
 
 def _config(parameter_space: dict[str, Any], name: str = "exp", **extra: Any) -> dict[str, Any]:
     return {
-        "experiment": name, "strategy": "combo", "strategy_profile": "combo-v1", "engine_profile": ENGINE,
+        "experiment": name, "strategy": "backtestbot", "strategy_profile": "backtestbot-v1", "engine_profile": ENGINE,
         "symbols": ["US30.cash"], "timeframe": "h1", "start": "2026-01-01", "end": "2026-02-01", "balance": 100000,
         "parameter_space": parameter_space, "max_parallel": 1, **extra,
     }
@@ -147,7 +161,7 @@ class OptimizeArgumentTests(unittest.TestCase):
         self.assertEqual(set(entries), {*STRATEGY.params, "SignalFilePath"})
         self.assertEqual(entries["KslLevel"], {"Name": "KslLevel", "Optimize": True, "Values": ["0", "1"]})
         self.assertEqual(entries["KtpLevel"], {"Name": "KtpLevel", "Optimize": True, "Values": ["2", "3"]})
-        self.assertEqual(entries["RiskPercent"], {"Name": "RiskPercent", "Value": "1", "Optimize": False})
+        self.assertEqual(entries["RiskPercent"], {"Name": "RiskPercent", "Value": "0.2", "Optimize": False})
         self.assertEqual(entries["EnableDailyLossLimit"]["Value"], "False")
         self.assertEqual(entries["MaxConsecutiveLosses"]["Value"], "5")
         self.assertEqual(entries["SignalFilePath"], {"Name": "SignalFilePath", "Value": str(Path("C:/signals/us30.csv")),
@@ -171,9 +185,9 @@ class OptimizeArgumentTests(unittest.TestCase):
         spec = dataclasses.replace(_specs({"KslLevel": ["0", "1"]})[0], precise_conversion=True, commission_auto=True, spread=2.0)
         box = OptimizeBox((spec, _with(spec, KslLevel="1")), (("KslLevel", ("0", "1")),))
         argv = cli_runner.build_optimize_argv(
-            box, cli_path=Path("cli.exe"), algo_path=Path("Combo.algo"), params_path=Path("p.json"),
+            box, cli_path=Path("cli.exe"), algo_path=Path("BacktestBot.algo"), params_path=Path("p.json"),
             optres=Path("r.optres"), passes_dir=Path("passes"), cores=7)
-        self.assertEqual(argv[:3], ["cli.exe", "optimize", "Combo.algo"])
+        self.assertEqual(argv[:3], ["cli.exe", "optimize", "BacktestBot.algo"])
         for expected in ("--params=p.json", "--start=01/01/2026 00:00", "--end=01/02/2026 00:00", "--data-mode=ticks",
                          "--balance=100000", "--symbol=US30.cash", "--timeframe=h1", "--method=grid", "--cores=7",
                          f"--criteria={cli_runner.OPTIMIZE_CRITERIA}", "--optres=r.optres", "--passes-dir=passes",
@@ -184,7 +198,7 @@ class OptimizeArgumentTests(unittest.TestCase):
     def test_backtest_argv_keeps_the_shared_engine_flags(self) -> None:
         spec = dataclasses.replace(_specs({"KslLevel": ["0"]})[0], precise_conversion=True,
                                    commission=30.0, commission_type="UsdPerMillionUsdVolume", spread=1.5)
-        argv = cli_runner.build_argv(spec, cli_path=Path("cli.exe"), algo_path=Path("Combo.algo"),
+        argv = cli_runner.build_argv(spec, cli_path=Path("cli.exe"), algo_path=Path("BacktestBot.algo"),
                                      cbotset=Path("p.cbotset"), report_json=Path("r.json"))
         self.assertEqual(argv[-5:], ["--precise-conversion", "--commission=30", "--commission-type=UsdPerMillionUsdVolume",
                                      "--spread=1.5", "--report-json=r.json"])
@@ -303,7 +317,7 @@ class RunOptimizeBoxTests(unittest.TestCase):
                 should_cancel: Any = None) -> list[RunResult]:
         with patch.object(cli_runner, "run_process", fake), patch.object(cli_runner, "_auth_env_available", return_value=False):
             return cli_runner.run_optimize_box(
-                box, STRATEGY, algo_path=Path("Combo.algo"), signal_file=Path("C:/signals/us30.csv"),
+                box, STRATEGY, algo_path=Path("BacktestBot.algo"), signal_file=Path("C:/signals/us30.csv"),
                 work_dir=Path(td) / "work", cores=cores, timeout_s=timeout_s, cli_path=Path("fake-cli.exe"),
                 env={}, should_cancel=should_cancel)
 

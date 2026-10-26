@@ -20,14 +20,14 @@ import dash_mantine_components as dmc
 try:
     from .. import signal_sources
     from ..ui_common import (
-        DECIMAL, INPUT_DEBOUNCE_MS, INTEGER, MONEY, PERSIST,
-        numeric_column, right_align, status_region, truncated,
+        DECIMAL, INPUT_DEBOUNCE_MS, INTEGER, MONEY, PERSIST, STRATEGY_PERSIST,
+        numeric_column, right_align, status_region, strategy_label, truncated,
     )
 except ImportError:  # app.py loads feature folders as top-level modules.
     import signal_sources
     from ui_common import (
-        DECIMAL, INPUT_DEBOUNCE_MS, INTEGER, MONEY, PERSIST,
-        numeric_column, right_align, status_region, truncated,
+        DECIMAL, INPUT_DEBOUNCE_MS, INTEGER, MONEY, PERSIST, STRATEGY_PERSIST,
+        numeric_column, right_align, status_region, strategy_label, truncated,
     )
 
 # Display resolution for long equity curves. M4 aggregation keeps the first,
@@ -40,14 +40,11 @@ HISTORY_DISPLAY_LIMIT = 500
 
 
 def layout(options: dict[str, Any]) -> html.Div:
-    strategies = options["strategies"]
-    combo = next(item for item in strategies if item["value"] == "combo")
     symbols = options["symbols"]
     default_symbol = next(
-        (item["value"] for item in symbols if item["value"] == "US30.cash"),
+        (item["value"] for item in symbols if item["value"] == "GER40.cash"),
         symbols[0]["value"],
     )
-    today = date.today().isoformat()
     return html.Div([
         # This polls only the four small run-status controls.  It never
         # replaces the saved-session selector, tables, charts, or detail view.
@@ -60,71 +57,26 @@ def layout(options: dict[str, Any]) -> html.Div:
                 dmc.Stack([
                     dmc.Title("Single Backtest Sessions", order=3),
                     dmc.Text(
-                        "Each session runs exactly one cTrader CLI process. Creating a session freezes its inputs; "
-                        "running it is a separate action.",
+                        "Each session is fixed to exactly 1 symbol, 1 Redis source, 16 channels and 17 periods "
+                        "(272 isolated cells). Creating a session only reads Redis/SQL to build the run card; the cTrader CLI is not called.",
                         c="dimmed",
                     ),
                 ], gap="xs"),
-                dmc.Badge("Dashboard guard: 1 run", color="orange", variant="light"),
+                dmc.Badge("Standard flow v2", color="blue", variant="light"),
             ], justify="space-between", align="flex-start"),
             dmc.Divider(),
-            dmc.SimpleGrid(cols=3, spacing="md", children=[
-                dmc.Select(
-                    id="session-strategy-select", label="Strategy",
-                    data=[{"label": item["label"], "value": item["value"]} for item in strategies],
-                    value="combo", clearable=False, **PERSIST,
-                ),
-                dmc.MultiSelect(
-                    id="session-symbol-select", label="Symbols",
-                    data=symbols, value=[default_symbol],
-                    clearable=True, searchable=True, **PERSIST,
-                ),
-                dmc.MultiSelect(
-                    id="session-timeframe-select", label="Timeframes",
-                    data=[{"label": tf.upper(), "value": tf} for tf in combo["timeframes"]],
-                    value=[combo["timeframes"][0]], clearable=True,
-                ),
-            ]),
+            dmc.Select(
+                id="session-symbol-select", label="Symbol",
+                data=symbols, value=default_symbol,
+                clearable=False, searchable=True, **PERSIST,
+            ),
             dmc.Text(
-                "One draft is created for every selected Symbol × Timeframe combination. "
-                "Creating drafts never starts cTrader CLI.",
+                "The signal source comes from Signal source at the top of the page: a job uses either db0 or db1. "
+                "Engine, balance, Fibonacci, risk, isolated, from2022 and max_parallel are resolved from config.yaml.",
                 size="xs", c="dimmed",
             ),
-            dmc.Divider(label="Backtest inputs"),
-            dmc.SimpleGrid(cols=4, spacing="md", children=[
-                dmc.NumberInput(
-                    id="session-balance-input", label="Starting balance (USD)",
-                    value=100000, min=1, step=1000, suffix=" USD",
-                    thousandSeparator=",", debounce=INPUT_DEBOUNCE_MS, **PERSIST,
-                ),
-                dmc.NumberInput(
-                    id="session-risk-input", label="Risk per trade", value=0.5,
-                    min=0.01, step=0.01, suffix=" %", debounce=INPUT_DEBOUNCE_MS, **PERSIST,
-                ),
-                dmc.Select(
-                    id="session-ksl-input", label="kSL Fibonacci level",
-                    data=combo["ksl_options"], value=combo["default_ksl"], clearable=False,
-                ),
-                dmc.Select(
-                    id="session-ktp-input", label="kTP Fibonacci level",
-                    data=combo["ktp_options"], value=combo["default_ktp"], clearable=False,
-                ),
-            ]),
-            status_region("session-history-status"),
-            dmc.SimpleGrid(cols=2, spacing="md", children=[
-                dmc.DateInput(
-                    id="session-start-input", label="Start date", value="2025-01-01",
-                    valueFormat="YYYY-MM-DD", minDate="2000-01-01", maxDate=today,
-                    clearable=False,
-                ),
-                dmc.DateInput(
-                    id="session-end-input", label="End date", value=today,
-                    valueFormat="YYYY-MM-DD", minDate="2000-01-01", maxDate=today,
-                    clearable=False,
-                ),
-            ]),
             dmc.Group([
-                dmc.Button("Create session (does not run)", id="create-session-btn", color="blue"),
+                dmc.Button("Create run card (no CLI run)", id="create-session-btn", color="blue"),
                 dcc.Loading(status_region("session-create-message"), type="circle"),
             ], align="center"),
         ])),
@@ -142,11 +94,18 @@ def layout(options: dict[str, Any]) -> html.Div:
             ),
             dmc.Text(
                 "Select one completed or cached session to inspect it. Select one or more drafts to queue them "
-                "in order; only one cTrader CLI process can run at a time.",
+                "in order. The dashboard claims only one session at a time; inside a v2 session, the core uses max_parallel from config.",
                 size="xs", c="dimmed",
             ),
             dmc.Group([
-                dmc.Button("Run selected drafts", id="run-session-btn", color="orange"),
+                dcc.ConfirmDialogProvider(
+                    id="session-run-confirm",
+                    message=(
+                        "Run the selected session according to the displayed run card? "
+                        "This may call the cTrader CLI and consume the daily quota."
+                    ),
+                    children=dmc.Button("Confirm and run", id="run-session-btn", color="orange"),
+                ),
                 dmc.Button("Stop active run", id="stop-session-btn", color="red", disabled=True),
                 dmc.Button(
                     "Delete selected sessions", id="delete-selected-session-btn",
@@ -228,6 +187,12 @@ def selection_detail(sessions: list[dict[str, Any]]) -> Any:
     """Present a multi-draft queue without reading or changing core artifacts."""
     if not sessions:
         return detail(None, None, [])
+    if any((session.get("plan") or {}).get("schema") != "bo-dashboard-single-backtest/v2" for session in sessions):
+        return dmc.Alert(
+            "Legacy v1 sessions are read-only and cannot be queued to run again. Select one on its own to view its results, "
+            "or create a new v2 session.",
+            title="Legacy session is read-only", color="orange", variant="light",
+        )
     non_drafts = [session for session in sessions if session.get("state") != "draft"]
     if non_drafts:
         return dmc.Alert(
@@ -275,6 +240,8 @@ def detail(
         "cached": "teal", "cancelled": "orange", "failed": "red",
     }.get(state, "gray")
     plan = session["plan"]
+    if plan.get("schema") == "bo-dashboard-single-backtest/v2":
+        return _standard_detail(session, execution, events)
     input_doc = plan.get("input") or {}
     preflight = plan.get("preflight") or {}
     header = dmc.Group([
@@ -285,6 +252,11 @@ def detail(
         dmc.Badge(state.upper(), color=state_color, size="lg"),
     ], justify="space-between", align="flex-start")
     sections: list[Any] = [header]
+    if plan.get("schema") == "bo-dashboard-single-backtest/v1":
+        sections.append(dmc.Alert(
+            "This is a v1 session from the legacy flow. The dashboard only lets you read its results; to run again, create a new v2 session.",
+            title="Legacy session is read-only", color="orange", variant="light",
+        ))
     if session.get("note"):
         sections.append(dmc.Text(session["note"], fs="italic"))
     if session.get("error_text"):
@@ -304,13 +276,212 @@ def detail(
             "successful-run logs appear after the core engine finishes writing artifacts.",
             title="Running", color="yellow", variant="light",
         ))
+    elif state in {"completed", "cached"}:
+        sections.append(dmc.Alert(
+            "The result has been deleted: the session metadata remains but the execution artifact is no longer on disk.",
+            title="Result no longer exists", color="orange", variant="light",
+        ))
     else:
         sections.append(dmc.Text("No execution artifact exists for this session yet.", c="dimmed"))
 
     return dmc.Paper(withBorder=True, radius="md", p="md", children=dmc.Stack(sections, gap="md"))
 
 
-def _execution_sections(execution: dict[str, Any], experiment: str) -> list[Any]:
+def _session_event_table(events: list[dict[str, Any]]) -> Any:
+    rows = [{
+        "time": event.get("at_utc"),
+        "event": str(event.get("kind") or "unknown").replace("_", " ").title(),
+        "detail": event.get("detail") or "--",
+    } for event in events]
+    return dmc.Stack([
+        dmc.Divider(label="Session lifecycle"),
+        dash_table.DataTable(
+            columns=[
+                {"id": "time", "name": "Time (UTC)"},
+                {"id": "event", "name": "Event"},
+                {"id": "detail", "name": "Detail"},
+            ],
+            data=rows,
+            page_action="native",
+            page_size=20,
+            sort_action="native",
+            style_table={"overflowX": "auto"},
+            style_header={"fontWeight": 600, "backgroundColor": "#f8fafc"},
+            style_cell={"padding": "8px", "fontFamily": "system-ui", "fontSize": 13},
+        ),
+    ], gap="xs")
+
+
+def _standard_detail(
+    session: dict[str, Any], execution: dict[str, Any], events: list[dict[str, Any]],
+) -> Any:
+    """Render the v2 run card and every strategy/timeframe/period cell."""
+    plan = session.get("plan") or {}
+    input_doc = plan.get("input") or {}
+    preflight = plan.get("preflight") or {}
+    state = str(session.get("state") or "unknown")
+    state_color = {
+        "draft": "gray", "running": "yellow", "completed": "green",
+        "cached": "teal", "cancelled": "orange", "failed": "red",
+    }.get(state, "gray")
+    sections: list[Any] = [
+        dmc.Group([
+            dmc.Stack([
+                dmc.Title(str(session.get("title") or "Single Backtest"), order=3),
+                dmc.Text(f"Session ID: {session.get('session_id')}", size="sm", c="dimmed"),
+            ], gap="xs"),
+            dmc.Badge(state.upper(), color=state_color, size="lg"),
+        ], justify="space-between", align="flex-start"),
+        dmc.Divider(label="Frozen run card"),
+        dmc.SimpleGrid(cols={"base": 1, "sm": 2, "lg": 4}, spacing="sm", children=[
+            _standard_card("Total cells", f"{int(preflight.get('total_count') or 0):,}", "16 channels × 17 periods"),
+            _standard_card(
+                "Existing", f"{int(preflight.get('existing_count') or 0):,}",
+                f"local {int(preflight.get('existing_local_count') or 0):,} · SQL-only {int(preflight.get('existing_sql_only_count') or 0):,}",
+            ),
+            _standard_card("New runs", f"{int(preflight.get('new_count') or 0):,}", "within the 272 logical cells"),
+            _standard_card(
+                "CLI required / remaining",
+                f"{int(preflight.get('cli_required') or 0):,} / {int(preflight.get('cli_remaining') or 0):,}",
+                f"used {int(preflight.get('cli_used') or 0):,}/{int(preflight.get('cli_limit') or 0):,} · Prague",
+                "#16a34a" if preflight.get("budget_ok") else "#dc2626",
+            ),
+        ]),
+        dmc.SimpleGrid(cols={"base": 1, "sm": 2, "lg": 4}, spacing="sm", children=[
+            _standard_card("Symbol", str(input_doc.get("symbol") or "—")),
+            _standard_card("Source", signal_sources.label_from_input(input_doc), "1 source per job"),
+            _standard_card("Engine", str(preflight.get("engine_profile") or "—")),
+            _standard_card(
+                "Mode",
+                f"{preflight.get('account_mode', '—')} · {preflight.get('period_group', '—')}",
+                f"max_parallel={preflight.get('max_parallel', '—')}",
+            ),
+        ]),
+        dmc.Alert(
+            (
+                "The Combo H1 warm-up (2022-01-01 → 2026-06-30) runs first with max_parallel=1. "
+                "This is at most 1 extra CLI run outside the 272-cell matrix, because the core labels the warm-up window as single."
+                if preflight.get("warmup_required")
+                else "The Combo H1 warm-up (2022-01-01 → 2026-06-30) already has a result, so it will not run again."
+            ),
+            title="Warm-up",
+            color="blue",
+            variant="light",
+        ),
+        dmc.Text(
+            "The run button requires confirmation. Legacy v1 sessions are read-only; the dashboard does not rerun them through the legacy flow.",
+            size="xs", c="dimmed",
+        ),
+    ]
+    if session.get("error_text"):
+        sections.append(dmc.Alert(str(session["error_text"]), title="Session error", color="red"))
+    if events:
+        sections.append(_session_event_table(events))
+    if execution.get("read_error"):
+        sections.append(dmc.Alert(execution["read_error"], title="Could not read result", color="red"))
+    if execution.get("read_warning"):
+        sections.append(dmc.Alert(execution["read_warning"], title="SQL read warning", color="orange"))
+
+    cells = list(execution.get("cells") or [])
+    available = int(execution.get("available") or 0)
+    if cells and available:
+        sections.extend([
+            dmc.Divider(label=f"Results by cell · {available}/{len(cells)} with data"),
+            dmc.Text(
+                "Each cell: Net Profit / Max Equity DD %. An asterisk (*) = has margin rejection; “= db0” = db1 has identical content and uses the db0 row.",
+                size="xs", c="dimmed",
+            ),
+            *_standard_result_tables(cells),
+            dmc.Text(
+                "PF=0 when there are no losing trades is a data storage convention and must not be read as a poor PF.",
+                size="xs", c="dimmed",
+            ),
+        ])
+    elif state in {"completed", "cached"}:
+        sections.append(dmc.Alert(
+            "The result has been deleted: no local artifact or SQL row matches this session's run_keys any more.",
+            title="Result no longer exists", color="orange", variant="light",
+        ))
+    elif state == "running":
+        sections.append(dmc.Alert(
+            "The core is running; the per-cell tables will appear once results are written.",
+            title="Running", color="yellow", variant="light",
+        ))
+    else:
+        sections.append(dmc.Text("No results yet; this is only the run card.", c="dimmed"))
+    return dmc.Paper(withBorder=True, radius="md", p="md", children=dmc.Stack(sections, gap="md"))
+
+
+def _standard_card(label: str, value: str, note: str = "", accent: str | None = None) -> Any:
+    style = {"borderTop": f"3px solid {accent}"} if accent else None
+    return dmc.Paper(withBorder=True, radius="sm", p="sm", style=style, children=dmc.Stack([
+        dmc.Text(label, size="xs", c="dimmed", fw=500),
+        dmc.Text(value, fw=700),
+        dmc.Text(note, size="xs", c="dimmed") if note else html.Span(),
+    ], gap=2))
+
+
+def _standard_result_tables(cells: list[dict[str, Any]]) -> list[Any]:
+    strategy_labels = {"combo": "Combo", "ma_cross": "MA Cross", "macd_break": "MACD Break"}
+    windows = list(dict.fromkeys(str(cell.get("window") or "") for cell in cells))
+    result: list[Any] = []
+    for strategy in ("combo", "ma_cross", "macd_break"):
+        strategy_cells = [cell for cell in cells if cell.get("strategy") == strategy]
+        if not strategy_cells:
+            continue
+        timeframes = list(dict.fromkeys(str(cell.get("timeframe") or "") for cell in strategy_cells))
+        indexed = {
+            (str(cell.get("timeframe") or ""), str(cell.get("window") or "")): cell
+            for cell in strategy_cells
+        }
+        rows = []
+        for timeframe in timeframes:
+            row = {"timeframe": timeframe}
+            for window in windows:
+                row[window] = _standard_cell_text(indexed.get((timeframe, window)))
+            rows.append(row)
+        columns = [{"name": "Timeframe", "id": "timeframe"}] + [
+            {"name": window, "id": window} for window in windows
+        ]
+        result.extend([
+            dmc.Title(strategy_labels[strategy], order=5),
+            dash_table.DataTable(
+                data=rows,
+                columns=columns,
+                style_table={"overflowX": "auto"},
+                style_cell={
+                    "fontFamily": "monospace", "fontSize": 12, "padding": "6px",
+                    "minWidth": "118px", "textAlign": "right", "whiteSpace": "nowrap",
+                },
+                style_header={"fontWeight": "bold", "backgroundColor": "#f8fafc"},
+                style_cell_conditional=[{
+                    "if": {"column_id": "timeframe"}, "textAlign": "left", "minWidth": "72px",
+                }],
+            ),
+        ])
+    return result
+
+
+def _standard_cell_text(cell: dict[str, Any] | None) -> str:
+    if not cell or cell.get("status") not in {"ok", "skipped"}:
+        return "—"
+    profit = _finite_float(cell.get("net_profit"))
+    drawdown = _finite_float(cell.get("max_equity_drawdown_pct"))
+    profit_text = "—" if profit is None else f"{profit:,.2f}"
+    drawdown_text = "—" if drawdown is None else f"{drawdown:,.2f}%"
+    try:
+        rejected = int(cell.get("margin_rejections") or 0) > 0
+    except (TypeError, ValueError):
+        rejected = False
+    suffix = "*" if rejected else ""
+    if cell.get("fallback_db0"):
+        suffix += " (= db0)"
+    return f"{profit_text} / {drawdown_text}{suffix}"
+
+
+def _execution_sections(
+    execution: dict[str, Any], experiment: str, *, activity_prefix: str = "session",
+) -> list[Any]:
     row = execution["row"]
     metrics = execution.get("metrics") or {}
     status_color = "green" if row.get("status") == "ok" else "red"
@@ -335,7 +506,7 @@ def _execution_sections(execution: dict[str, Any], experiment: str) -> list[Any]
     bot_events = execution.get("bot_events") or []
     cli_log = execution.get("cli_log") or ""
     if bot_events:
-        result.append(_bot_activity_table(bot_events, experiment))
+        result.append(_bot_activity_table(bot_events, experiment, component_prefix=activity_prefix))
     else:
         result.append(dmc.Text("No recognised cBot activity is available in the persisted run log.", c="dimmed", size="sm"))
     if cli_log:
@@ -460,9 +631,8 @@ def _input_summary(
 ) -> Any:
     fixed = input_doc.get("fixed_params") or {}
     strategy = str(input_doc.get("strategy") or "")
-    strategy_label = "MA Cross" if strategy == "macross" else "Combo" if strategy == "combo" else strategy
     cards = (
-        ("Strategy", strategy_label),
+        ("Strategy", strategy_label(strategy, form_options)),
         ("Symbol", input_doc.get("symbol")),
         ("Timeframe", str(input_doc.get("timeframe", "—")).upper()),
         ("Period", f"{input_doc.get('start', '—')} → {input_doc.get('end', '—')}"),
@@ -909,13 +1079,15 @@ def bot_activity_rows(events: Any) -> list[dict[str, Any]]:
     ]
 
 
-def _bot_activity_table(events: list[dict[str, Any]], experiment: str) -> Any:
+def _bot_activity_table(
+    events: list[dict[str, Any]], experiment: str, *, component_prefix: str = "session",
+) -> Any:
     # Only the first page is sent with the detail view; paging, sorting and
     # filtering run on the server (single.callbacks.page_bot_activity), so a
     # long log does not travel to the browser in full.
     rows = bot_activity_rows(events)
     table = dash_table.DataTable(
-        id="session-bot-activity-table",
+        id=f"{component_prefix}-bot-activity-table",
         columns=[
             {"name": "Event time", "id": "time"},
             {"name": "Level", "id": "level"},
@@ -961,7 +1133,7 @@ def _bot_activity_table(events: list[dict[str, Any]], experiment: str) -> Any:
             ], gap=2),
             dmc.Badge(f"{len(events):,} log lines", variant="light", color="blue"),
         ], justify="space-between", align="flex-start"),
-        dcc.Store(id="session-bot-activity-source", data={"experiment": experiment}),
+        dcc.Store(id=f"{component_prefix}-bot-activity-source", data={"experiment": experiment}),
         table,
     ], gap="xs"))
 

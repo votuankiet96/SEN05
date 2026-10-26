@@ -24,6 +24,7 @@ import signal_sources  # noqa: E402
 import ui_common  # noqa: E402
 from single import callbacks as single_callbacks  # noqa: E402
 from single import views as single_views  # noqa: E402
+from multichannel import views as multichannel_views  # noqa: E402
 
 
 FINGERPRINT = {
@@ -44,7 +45,7 @@ def _grid_plan(*, key: str = "grid-key") -> dict:
         "experiment": "dashboard_grid_source",
         "input": {
             "strategy": "combo",
-            "strategy_profile": "combo-v1",
+            "strategy_profile": "backtestbot-v1",
             "engine_profile": actions.DEFAULT_ENGINE_PROFILE,
             "symbol": "US30.cash",
             "timeframe": "h1",
@@ -89,6 +90,448 @@ def isolated_store():
 
 
 class DashboardPlanTests(unittest.TestCase):
+    def test_backtestbot_profile_drives_all_three_form_strategies_and_defaults(self) -> None:
+        options = data_access.session_form_options()
+        strategies = {item["value"]: item for item in options["strategies"]}
+        self.assertEqual(set(strategies), {"combo", "ma_cross", "macd_break"})
+        self.assertEqual(strategies["combo"]["label"], "Combo")
+        self.assertEqual(strategies["combo"]["timeframes"], ["h1", "h2", "h3", "h4"])
+        self.assertEqual(strategies["ma_cross"]["label"], "MA Cross")
+        self.assertEqual(strategies["ma_cross"]["timeframes"], ["m10", "m20", "m30", "m45"])
+        self.assertEqual(strategies["macd_break"]["label"], "MACD Break")
+        self.assertEqual(
+            strategies["macd_break"]["timeframes"],
+            ["h1", "h2", "h3", "h4", "m10", "m20", "m30", "m45"],
+        )
+        for option in strategies.values():
+            self.assertEqual(option["default_ksl"], "4")
+            self.assertEqual(option["default_ktp"], "4")
+            self.assertEqual(option["defaults"]["RiskPercent"], "0.2")
+
+    @patch.object(actions, "_multi_channel_preflight")
+    def test_multi_channel_plan_is_shared_with_one_run_spec_per_default_period(self, preflight) -> None:
+        preflight.return_value = {
+            "channel_count": 3, "period_count": 17, "total_count": 17,
+            "existing_count": 2, "existing_local_count": 1, "existing_sql_count": 1,
+            "new_count": 15, "cli_required": 15, "cli_used": 100,
+            "cli_limit": 2000, "cli_remaining": 1900, "budget_ok": True,
+            "cells": [{"run_key": f"key-{index}", "window": f"p{index}"} for index in range(17)],
+            "input_fingerprint": FINGERPRINT,
+        }
+        channels = [
+            {"strategy": "combo", "symbol": "US30.cash", "timeframe": "h1", "risk_percent": 0.6},
+            {"strategy": "combo", "symbol": "US30.cash", "timeframe": "h2", "risk_percent": 0.4},
+            {"strategy": "macd_break", "symbol": "XAUUSD", "timeframe": "m45", "risk_percent": 0.8},
+        ]
+        plan = actions.prepare_multi_channel_session(
+            channels=channels, custom_period=False, start=None, end=None, balance=100000,
+            ksl_level=4, ktp_level=4,
+            leg_count=3, leg2_ktp=5, leg3_ktp=6,
+            enable_daily_loss_limit=True, max_daily_loss_percent=5,
+            enable_max_drawdown=True, max_total_drawdown_percent=10,
+            enable_max_consecutive_losses=True, max_consecutive_losses=5,
+            risk_allocation_mode="manual", total_risk_percent=2.0,
+        )
+        command = plan["command_config"]
+        self.assertEqual(plan["schema"], actions.MULTI_CHANNEL_SCHEMA)
+        self.assertEqual(command["strategy_profile"], "backtestbot-v1")
+        self.assertEqual(command["channels"], channels)
+        self.assertEqual(command["account_mode"], "shared")
+        self.assertEqual(command["period_group"], "from2022")
+        self.assertEqual(command["engine_profile"], "ctrader-ticks-precisefx-v1")
+        self.assertTrue(command["name"].startswith("dashboard_mc_"))
+        self.assertLessEqual(len(command["name"]), 25)
+        self.assertEqual(plan["input"]["channel_count"], 3)
+        self.assertEqual(plan["input"]["risk_allocation"], {
+            "mode": "manual", "total_percent": 2.0, "channel_count": 3,
+        })
+        self.assertEqual(command["risk_allocation"], plan["input"]["risk_allocation"])
+        self.assertEqual(plan["preflight"]["risk_used_percent"], 1.8)
+        self.assertEqual(plan["preflight"]["total_count"], 17)
+        self.assertNotIn("parameter_space", command)
+        self.assertEqual(command["max_parallel"], 16)
+        self.assertEqual(command["fixed_params"]["LegCount"], "3")
+        self.assertEqual(command["fixed_params"]["EnableMaxDrawdown"], "True")
+
+        from core_engine.configuration import load_engine_profile, load_strategy_profile, with_signal_overrides
+        from core_engine.planner import expand_grid
+
+        selected_profile = with_signal_overrides(load_strategy_profile("backtestbot-v1"), command)
+        specs = expand_grid(command, selected_profile, load_engine_profile(command["engine_profile"]))
+        self.assertEqual(len(specs), 17)
+        self.assertTrue(all(len(spec.channels) == 3 for spec in specs))
+
+        rendered = multichannel_views.detail(
+            {
+                "session_id": "multi", "kind": "multi_channel_backtest", "state": "draft",
+                "title": plan["title"], "experiment": plan["experiment"], "plan": plan,
+            },
+            {}, [], data_access.session_form_options(),
+        )
+        rendered_text = " | ".join(_texts(rendered))
+        self.assertIn("17", rendered_text)
+        self.assertIn("ctrader-ticks-precisefx-v1", rendered_text)
+
+        result_payload = {"total": 17, "failed": 0, "tally": {"known_in_sql": 17}}
+        with patch.object(actions.facilitator, "run_backtest", return_value=result_payload) as run_backtest:
+            result = actions.run_multi_channel_session(plan)
+        self.assertTrue(result["complete"])
+        self.assertTrue(result["cached"])
+        run_backtest.assert_called_once()
+        self.assertEqual(run_backtest.call_args.args[0]["account_mode"], "shared")
+
+    def test_equal_risk_acceptance_examples_use_core_floor_allocation(self) -> None:
+        five_channels = [
+            {"strategy": "combo", "symbol": "HK50.cash", "timeframe": "h3", "risk_percent": 9},
+            {"strategy": "macd_break", "symbol": "HK50.cash", "timeframe": "m45", "risk_percent": 9},
+            {"strategy": "macd_break", "symbol": "HK50.cash", "timeframe": "h2", "risk_percent": 9},
+            {"strategy": "combo", "symbol": "US30.cash", "timeframe": "h4", "risk_percent": 9},
+            {"strategy": "macd_break", "symbol": "JP225.cash", "timeframe": "h2", "risk_percent": 9},
+        ]
+        allocated = actions.allocate_multi_channel_risk(
+            five_channels, mode="equal", total_percent=2,
+        )
+        self.assertEqual([row["risk_percent"] for row in allocated["channels"]], [0.4] * 5)
+        self.assertEqual(allocated["risk_used_percent"], 2.0)
+
+        two = actions.allocate_multi_channel_risk(
+            five_channels[:2], mode="equal", total_percent=1.5,
+        )
+        self.assertEqual([row["risk_percent"] for row in two["channels"]], [0.75, 0.75])
+        three = actions.allocate_multi_channel_risk(
+            five_channels[:3], mode="equal", total_percent=2,
+        )
+        self.assertEqual([row["risk_percent"] for row in three["channels"]], [0.6666] * 3)
+        self.assertLessEqual(three["risk_used_percent"], 2.0)
+
+    def test_manual_risk_above_limit_cannot_create_a_plan(self) -> None:
+        with self.assertRaisesRegex(ValueError, "above the total limit"):
+            actions.prepare_multi_channel_session(
+                channels=[
+                    {"strategy": "combo", "symbol": "US30.cash", "timeframe": "h1", "risk_percent": 1.1},
+                    {"strategy": "combo", "symbol": "US30.cash", "timeframe": "h2", "risk_percent": 1.0},
+                ],
+                custom_period=False, start=None, end=None, balance=100000,
+                ksl_level=4, ktp_level=4, leg_count=3, leg2_ktp=5, leg3_ktp=6,
+                enable_daily_loss_limit=True, max_daily_loss_percent=5,
+                enable_max_drawdown=True, max_total_drawdown_percent=10,
+                enable_max_consecutive_losses=True, max_consecutive_losses=5,
+                risk_allocation_mode="manual", total_risk_percent=2.0,
+            )
+
+    def test_risk_allocation_metadata_does_not_enter_preflight_run_identity(self) -> None:
+        seen_configs = []
+
+        def preflight(config):
+            self.assertNotIn("risk_allocation", config)
+            seen_configs.append({
+                "name": config["name"], "channels": list(config["channels"]),
+                "fixed_params": dict(config["fixed_params"]),
+            })
+            return {
+                "channel_count": 2, "period_count": 1, "total_count": 1,
+                "existing_count": 0, "existing_local_count": 0, "existing_sql_count": 0,
+                "new_count": 1, "cli_required": 1, "cli_used": 0,
+                "cli_limit": 2000, "cli_remaining": 2000, "budget_ok": True,
+                "cells": [{"run_key": "same-content-run-key", "window": "custom"}],
+                "input_fingerprint": FINGERPRINT,
+            }
+
+        common = dict(
+            channels=[
+                {"strategy": "combo", "symbol": "US30.cash", "timeframe": "h1", "risk_percent": 1.0},
+                {"strategy": "combo", "symbol": "US30.cash", "timeframe": "h2", "risk_percent": 1.0},
+            ],
+            custom_period=True, start="2025-01-01", end="2025-06-30", balance=100000,
+            ksl_level=4, ktp_level=4, leg_count=3, leg2_ktp=5, leg3_ktp=6,
+            enable_daily_loss_limit=True, max_daily_loss_percent=5,
+            enable_max_drawdown=True, max_total_drawdown_percent=10,
+            enable_max_consecutive_losses=True, max_consecutive_losses=5,
+            total_risk_percent=2.0,
+        )
+        with patch.object(actions, "_multi_channel_preflight", side_effect=preflight):
+            equal = actions.prepare_multi_channel_session(
+                **common, risk_allocation_mode="equal",
+            )
+            manual = actions.prepare_multi_channel_session(
+                **common, risk_allocation_mode="manual",
+            )
+        self.assertEqual(seen_configs[0], seen_configs[1])
+        self.assertEqual(equal["preflight"]["cells"][0]["run_key"], manual["preflight"]["cells"][0]["run_key"])
+        self.assertEqual(equal["command_config"]["risk_allocation"]["mode"], "equal")
+        self.assertEqual(manual["command_config"]["risk_allocation"]["mode"], "manual")
+
+    def test_multi_channel_rows_reject_exact_duplicates(self) -> None:
+        with self.assertRaisesRegex(ValueError, "Duplicate channel"):
+            actions.prepare_multi_channel_session(
+                channels=[
+                    {"strategy": "combo", "symbol": "US30.cash", "timeframe": "h1", "risk_percent": 0.6},
+                    {"strategy": "combo", "symbol": "US30.cash", "timeframe": "H1", "risk_percent": 0.8},
+                ], custom_period=True, start="2025-01-01", end="2026-09-01", balance=100000,
+                ksl_level=4, ktp_level=4,
+                leg_count=1, leg2_ktp=5, leg3_ktp=6,
+                enable_daily_loss_limit=False, max_daily_loss_percent=5,
+                enable_max_drawdown=False, max_total_drawdown_percent=10,
+                enable_max_consecutive_losses=False, max_consecutive_losses=5,
+            )
+
+    @patch.object(actions, "_multi_channel_preflight")
+    def test_multi_channel_row_can_pick_its_own_signal_source(self, preflight) -> None:
+        preflight.return_value = {
+            "channel_count": 3, "period_count": 17, "total_count": 17,
+            "existing_count": 0, "existing_local_count": 0, "existing_sql_count": 0,
+            "new_count": 17, "cli_required": 17, "cli_used": 0,
+            "cli_limit": 2000, "cli_remaining": 2000, "budget_ok": True,
+            "cells": [{"run_key": f"key-{index}", "window": f"p{index}"} for index in range(17)],
+            "input_fingerprint": FINGERPRINT,
+        }
+        channels = [
+            {"strategy": "combo", "symbol": "US30.cash", "timeframe": "h1", "risk_percent": 0.6},
+            {"strategy": "macd_break", "symbol": "HK50.cash", "timeframe": "h2", "risk_percent": 0.6, "source": signal_sources.KNN},
+            {"strategy": "ma_cross", "symbol": "XAUUSD", "timeframe": "m45", "risk_percent": 0.6, "source": signal_sources.BREAKOUT},
+        ]
+        common = dict(
+            custom_period=False, start=None, end=None, balance=100000, ksl_level=4, ktp_level=4,
+            leg_count=3, leg2_ktp=5, leg3_ktp=6,
+            enable_daily_loss_limit=False, max_daily_loss_percent=5,
+            enable_max_drawdown=False, max_total_drawdown_percent=10,
+            enable_max_consecutive_losses=False, max_consecutive_losses=5,
+            risk_allocation_mode="manual", total_risk_percent=2.0,
+        )
+        plan = actions.prepare_multi_channel_session(channels=channels, **common)
+        self.assertEqual([row.get("source") for row in plan["command_config"]["channels"]],
+                         [None, signal_sources.KNN, signal_sources.BREAKOUT])
+        self.assertEqual(plan["command_config"]["redis_profile"], signal_sources.ORIGINAL)
+        # A row that names the page source explicitly is the same plan as one that follows the page.
+        explicit = [{**channels[0], "source": signal_sources.ORIGINAL}, *channels[1:]]
+        again = actions.prepare_multi_channel_session(channels=explicit, **common)
+        self.assertEqual(again["execution_key"], plan["execution_key"])
+        # Another source for the same row is another plan.
+        other = [channels[0], {**channels[1], "source": signal_sources.BREAKOUT}, channels[2]]
+        self.assertNotEqual(actions.prepare_multi_channel_session(channels=other, **common)["execution_key"], plan["execution_key"])
+
+        from core_engine.configuration import load_engine_profile, load_strategy_profile, with_signal_overrides
+        from core_engine.planner import expand_grid
+
+        command = plan["command_config"]
+        specs = expand_grid(
+            command, with_signal_overrides(load_strategy_profile("backtestbot-v1"), command),
+            load_engine_profile(command["engine_profile"]),
+        )
+        self.assertEqual([c.source for c in specs[0].channels],
+                         [signal_sources.ORIGINAL, signal_sources.KNN, signal_sources.BREAKOUT])
+        rendered = multichannel_views.detail(
+            {"session_id": "multi", "kind": "multi_channel_backtest", "state": "draft",
+             "title": plan["title"], "experiment": plan["experiment"], "plan": plan},
+            {}, [], data_access.session_form_options(),
+        )
+        from dash.development.base_component import Component
+
+        def tables(node):
+            if isinstance(node, (list, tuple)):
+                for item in node:
+                    yield from tables(item)
+            elif isinstance(node, Component):
+                if type(node).__name__ == "DataTable":
+                    yield node
+                yield from tables(getattr(node, "children", None))
+
+        shown = [row["source"] for table in tables(rendered) for row in table.data if "risk_percent" in row]
+        self.assertEqual(shown, ["RAW (db0)", "KNN (db1)", "Breakout (db2)"])
+
+    def test_multi_channel_row_with_an_unsupported_source_or_a_duplicate_across_sources_is_rejected(self) -> None:
+        common = dict(
+            custom_period=False, start=None, end=None, balance=100000, ksl_level=4, ktp_level=4,
+            leg_count=3, leg2_ktp=5, leg3_ktp=6,
+            enable_daily_loss_limit=False, max_daily_loss_percent=5,
+            enable_max_drawdown=False, max_total_drawdown_percent=10,
+            enable_max_consecutive_losses=False, max_consecutive_losses=5,
+            risk_allocation_mode="manual", total_risk_percent=2.0,
+        )
+        row = {"strategy": "combo", "symbol": "US30.cash", "timeframe": "h1", "risk_percent": 0.6}
+        with self.assertRaisesRegex(ValueError, "unsupported signal source"):
+            actions.prepare_multi_channel_session(channels=[{**row, "source": signal_sources.LEGACY_TREND}], **common)
+        with self.assertRaisesRegex(ValueError, "Duplicate channel"):
+            actions.prepare_multi_channel_session(channels=[row, {**row, "source": signal_sources.KNN}], **common)
+
+    def test_multi_channel_redis_bounds_read_each_row_from_its_own_source(self) -> None:
+        rows = [
+            {"strategy": "combo", "symbol": "US30.cash", "timeframe": "h1", "risk_percent": 0.6},
+            {"strategy": "macd_break", "symbol": "HK50.cash", "timeframe": "h2", "risk_percent": 0.6, "source": signal_sources.KNN},
+        ]
+        with patch.object(
+            data_access, "signal_date_bounds",
+            return_value={"available": True, "earliest_date": "2025-01-01", "latest_date": "2026-09-01"},
+        ) as bounds:
+            result = data_access.multi_channel_rows_date_bounds(rows, redis_profile=signal_sources.BREAKOUT)
+        self.assertTrue(result["available"])
+        self.assertEqual([call.kwargs["redis_profile"] for call in bounds.call_args_list],
+                         [signal_sources.BREAKOUT, signal_sources.KNN])
+
+    def test_multi_channel_redis_preview_uses_only_compatible_channels(self) -> None:
+        with patch.object(
+            data_access, "signal_date_bounds",
+            return_value={"available": True, "earliest_date": "2025-01-01", "latest_date": "2026-09-01"},
+        ) as bounds:
+            result = data_access.multi_channel_signal_date_bounds(
+                ["combo", "ma_cross"], ["US30.cash"], ["h1", "m10"],
+            )
+        self.assertTrue(result["available"])
+        self.assertEqual(result["channel_count"], 2)
+        self.assertEqual(
+            [(call.args[2], call.args[1]) for call in bounds.call_args_list],
+            [("combo", "h1"), ("ma_cross", "m10")],
+        )
+        self.assertEqual(result["strategy_frames"], {"combo": ["H1"], "ma_cross": ["M10"]})
+
+    def test_multi_channel_contribution_groups_legs_and_keeps_unknown_labels(self) -> None:
+        channels = [
+            {"strategy": "combo", "symbol": "US30.cash", "timeframe": "h4", "risk_percent": 0.6},
+            {"strategy": "macd_break", "symbol": "XAUUSD", "timeframe": "m45", "risk_percent": 0.6},
+        ]
+        rows = data_access.multi_channel_contributions(channels, [
+            {"leg_label": "cb_US30_H4_L1", "net_profit": 120},
+            {"leg_label": "cb_US30_H4_L2", "net_profit": -30},
+            {"leg_label": "mb_XAUUSD_M45_L3", "net_profit": 80},
+            {"leg_label": "legacy-label", "net_profit": -10},
+        ], 3)
+        self.assertEqual(rows[0]["net_contribution"], 90)
+        self.assertEqual(rows[0]["total_profit"], 120)
+        self.assertEqual(rows[0]["total_loss"], 30)
+        self.assertEqual(rows[1]["net_contribution"], 80)
+        self.assertEqual(rows[2]["strategy"], "Unknown")
+        self.assertEqual(rows[2]["total_loss"], 10)
+
+    def test_multi_channel_zero_trade_warning_is_visible(self) -> None:
+        channels = [
+            {"strategy": "combo", "symbol": "US30.cash", "timeframe": "h4", "risk_percent": 0.4},
+            {"strategy": "macd_break", "symbol": "XAUUSD", "timeframe": "m45", "risk_percent": 0.4},
+        ]
+        rows = data_access.multi_channel_contributions(channels, [
+            {"leg_label": "cb_US30_H4_L1", "net_profit": 25},
+        ], 3)
+        warning = "No orders placed — risk per leg may be below the broker minimum volume"
+        self.assertEqual(rows[0]["warning"], "")
+        self.assertEqual(rows[1]["warning"], warning)
+        rendered = multichannel_views.contribution_detail({
+            "contribution_available": True, "contributions": rows,
+        })
+        self.assertIn(warning, " | ".join(_texts(rendered)))
+
+    def test_backtestbot_order_and_expired_signal_logs_are_normalised(self) -> None:
+        pending = data_access._normalise_bot_event(
+            "BacktestBot: bartime=2026-01-02 03:00, executed=2026-01-02 03:00:01, "
+            "pending cb H3 Buy placed at 42123.5; SL=42000, TP=42300; "
+            "volume=1.00 units (0.0100 lots); valid until 2026-01-02 12:00:00; "
+            "leg 1/3; symbol US30.cash."
+        )
+        market = data_access._normalise_bot_event(
+            "BacktestBot: bartime=2026-01-02 03:00, executed=2026-01-02 03:00:01, "
+            "market mc M45 Sell placed; SL=12.5 pips, TP=20.0 pips; "
+            "volume=1.00 units (0.0100 lots); leg 2/3; symbol US30.cash."
+        )
+        rejected = data_access._normalise_bot_event(
+            "BacktestBot: bartime=2026-01-02 03:00, market mb H1 Buy was rejected: "
+            "NoMoney (leg 1/1, symbol US30.cash)."
+        )
+        expired = data_access._normalise_bot_event(
+            "BacktestBot: bartime=2026-01-02 03:00, mb H1 Buy signal skipped: validity "
+            "window ended 2026-01-02 02:00:00 before it could be placed (symbol US30.cash)."
+        )
+
+        self.assertEqual(pending["event"], "Pending order placed — Buy")
+        self.assertIn("valid until 2026-01-02 12:00:00", pending["detail"])
+        self.assertEqual(market["event"], "Market order placed — Sell")
+        self.assertIn("mc M45", market["detail"])
+        self.assertEqual(rejected["event"], "Market order rejected — Buy")
+        self.assertEqual(rejected["tone"], "neutral")
+        self.assertEqual(expired["event"], "Signal skipped")
+        self.assertIn("Validity window ended", expired["detail"])
+
+    @patch.object(actions.facilitator, "input_fingerprint", return_value=FINGERPRINT)
+    def test_single_signal_channel_overrides_allow_strategy_frames(self, _fingerprint) -> None:
+        combo = actions.prepare_grid_search_session(
+            symbol="US30.cash", timeframe="h4", strategy="combo",
+            start="2025-01-01", end="2026-09-01", balance=100000,
+            risk_percent=0.2, max_parallel=1, ksl_levels=["4"], ktp_levels=["4"],
+        )
+        macross = actions.prepare_single_backtest_session(
+            symbol="US30.cash", timeframe="m45", strategy="ma_cross",
+            start="2025-01-01", end="2026-09-01", balance=100000,
+            risk_percent=0.2, ksl_level=4, ktp_level=4,
+        )
+        for plan, strategy, profile, timeframe in (
+            (combo, "combo", "backtestbot-v1", "H4"),
+            (macross, "ma_cross", "backtestbot-v1", "M45"),
+        ):
+            command = plan["command_config"]
+            self.assertEqual(command["strategy"], strategy)
+            self.assertEqual(command["strategy_profile"], profile)
+            self.assertEqual(command["signal_strategies"], [strategy])
+            self.assertEqual(command["signal_symbols"], ["US30.cash"])
+            self.assertEqual(command["signal_timeframes"], [timeframe])
+
+    @patch.object(actions.facilitator, "input_fingerprint", return_value=FINGERPRINT)
+    def test_macd_break_prepares_single_grid_and_walkforward(self, _fingerprint) -> None:
+        common = dict(
+            symbol="US30.cash", timeframe="m45", strategy="macd_break",
+            start="2025-01-01", end="2026-09-01", balance=100000,
+            risk_percent=0.2,
+        )
+        plans = (
+            actions.prepare_single_backtest_session(**common, ksl_level=4, ktp_level=4),
+            actions.prepare_grid_search_session(
+                **common, max_parallel=1, ksl_levels=["4"], ktp_levels=["4"],
+            ),
+            actions.prepare_walkforward_session(
+                **common, max_parallel=1, is_months=12, oos_months=3, step_months=3,
+            ),
+        )
+        for plan in plans:
+            command = plan["command_config"]
+            self.assertEqual(command["strategy"], "macd_break")
+            self.assertEqual(command["strategy_profile"], "backtestbot-v1")
+            self.assertEqual(command["signal_strategies"], ["macd_break"])
+            self.assertEqual(command["signal_symbols"], ["US30.cash"])
+            self.assertEqual(command["signal_timeframes"], ["M45"])
+
+    def test_removed_profile_results_are_labelled_and_new_analysis_is_rejected_readably(self) -> None:
+        from grid import views as grid_views
+        from walkforward import views as wf_views
+
+        options = data_access.session_form_options()
+        self.assertEqual(ui_common.strategy_label("combomulti", options), "ComboMulti (profile removed)")
+        legacy_session = {
+            "session_id": "legacy", "kind": "grid_search", "state": "completed",
+            "title": "Legacy Combo Grid", "experiment": "legacy-experiment",
+            "plan": {"input": {"strategy": "combomulti", "strategy_profile": "combomulti-v1",
+                               "symbol": "US30.cash", "timeframe": "h1", "fixed_params": {}},
+                     "preflight": {}},
+        }
+        rendered = (
+            single_views.detail(legacy_session, {}, [], options),
+            grid_views.detail(legacy_session, {}, options),
+            wf_views.detail(legacy_session, {}, [], options),
+        )
+        for detail in rendered:
+            self.assertIn("ComboMulti (profile removed)", " | ".join(_texts(detail)))
+
+        legacy = _grid_plan()
+        legacy["input"] = {
+            **legacy["input"], "strategy": "combomulti", "strategy_profile": "combomulti-v1",
+        }
+        source = {
+            "session_id": "legacy", "kind": "grid_search", "state": "completed",
+            "execution_key": "legacy-key", "pipeline": "legacy-pipeline",
+            "experiment": "legacy-experiment", "title": "Legacy Combo Grid", "plan": legacy,
+        }
+        with self.assertRaisesRegex(ValueError, "profile 'combomulti-v1' has been removed"):
+            actions.prepare_grid_diagnostics_session(
+                source_session=source,
+                source_snapshot={"row_count": 100, "completed_execution_count": 100,
+                                 "eligible_count": 100, "artifact_sha256": "d" * 64},
+            )
+
     @patch.object(actions.facilitator, "input_fingerprint", return_value=FINGERPRINT)
     def test_signal_profile_is_frozen_and_separates_all_execution_keys(self, fingerprint) -> None:
         single = dict(symbol="US30.cash", timeframe="h1", strategy="combo",
@@ -110,21 +553,24 @@ class DashboardPlanTests(unittest.TestCase):
             with self.subTest(prepare=prepare.__name__):
                 legacy = prepare(**inputs)
                 original = prepare(**inputs, redis_profile=signal_sources.ORIGINAL)
-                trend = prepare(**inputs, redis_profile=signal_sources.TREND_FILTERED)
+                trend = prepare(**inputs, redis_profile=signal_sources.KNN)
                 self.assertEqual(legacy["execution_key"], original["execution_key"])
                 self.assertNotEqual(original["execution_key"], trend["execution_key"])
                 self.assertEqual(original["input"]["redis_profile"], signal_sources.ORIGINAL)
                 self.assertNotIn("redis_profile", original["command_config"])
-                self.assertEqual(trend["input"]["redis_profile"], signal_sources.TREND_FILTERED)
-                self.assertEqual(trend["command_config"]["redis_profile"], signal_sources.TREND_FILTERED)
+                self.assertEqual(trend["input"]["redis_profile"], signal_sources.KNN)
+                self.assertEqual(trend["command_config"]["redis_profile"], signal_sources.KNN)
                 self.assertEqual(trend["command_config"]["expected_input_fingerprint"], FINGERPRINT)
+                self.assertEqual(trend["command_config"]["signal_strategies"], ["combo"])
+                self.assertEqual(trend["command_config"]["signal_symbols"], ["US30.cash"])
+                self.assertEqual(trend["command_config"]["signal_timeframes"], ["H1"])
         self.assertEqual(fingerprint.call_count, 9)
 
     @patch.object(actions.facilitator, "input_fingerprint", return_value=FINGERPRINT)
     def test_frozen_db3_profile_reaches_every_command_without_cli(self, _fingerprint) -> None:
         common = dict(symbol="US30.cash", timeframe="h1", strategy="combo",
                       start="2025-01-01", end="2026-09-01", balance=100000,
-                      risk_percent=0.5, redis_profile=signal_sources.TREND_FILTERED)
+                      risk_percent=0.5, redis_profile=signal_sources.KNN)
         single = actions.prepare_single_backtest_session(
             **common, ksl_level=2, ktp_level=4,
         )
@@ -139,10 +585,10 @@ class DashboardPlanTests(unittest.TestCase):
             actions.run_grid_search_session(grid)
         self.assertEqual(run_grid.call_count, 2)
         for call in run_grid.call_args_list:
-            self.assertEqual(call.args[0]["redis_profile"], signal_sources.TREND_FILTERED)
+            self.assertEqual(call.args[0]["redis_profile"], signal_sources.KNN)
         with patch.object(actions.walkforward, "run_walkforward", return_value={}) as run_wf:
             actions.run_walkforward_session(wf)
-        self.assertEqual(run_wf.call_args.args[0]["redis_profile"], signal_sources.TREND_FILTERED)
+        self.assertEqual(run_wf.call_args.args[0]["redis_profile"], signal_sources.KNN)
         tampered = {**grid, "command_config": {**grid["command_config"], "redis_profile": signal_sources.ORIGINAL}}
         with self.assertRaisesRegex(ValueError, "signal source does not match"):
             actions.run_grid_search_session(tampered)
@@ -278,12 +724,33 @@ class DashboardPlanTests(unittest.TestCase):
 
 
 class DashboardSessionStoreTests(unittest.TestCase):
+    def test_multi_channel_draft_has_its_own_kind_and_cli_resource_group(self) -> None:
+        plan = {
+            "schema": actions.MULTI_CHANNEL_SCHEMA,
+            "title": "Multi-channel test",
+            "note": "",
+            "execution_key": "multi-key",
+            "pipeline": "dashboard_multichannel_test",
+            "experiment": "dashboard_multichannel_test",
+            "input": {"channel_count": 3},
+            "command_config": {},
+            "preflight": {},
+        }
+        with isolated_store():
+            session = session_store.create_multi_channel_backtest(plan)
+            self.assertEqual(session["kind"], "multi_channel_backtest")
+            self.assertEqual(session["resource_group"], "ctrader_cli")
+            self.assertEqual(
+                session_store.list_sessions(kind="multi_channel_backtest")[0]["session_id"],
+                session["session_id"],
+            )
+
     def test_signal_setting_persists_and_rejects_stale_form(self) -> None:
         with isolated_store():
             self.assertEqual(session_store.get_signal_profile(), signal_sources.ORIGINAL)
-            session_store.set_signal_profile(signal_sources.TREND_FILTERED)
-            self.assertEqual(session_store.get_signal_profile(), signal_sources.TREND_FILTERED)
-            self.assertEqual(session_store.confirmed_signal_profile(signal_sources.TREND_FILTERED), signal_sources.TREND_FILTERED)
+            session_store.set_signal_profile(signal_sources.KNN)
+            self.assertEqual(session_store.get_signal_profile(), signal_sources.KNN)
+            self.assertEqual(session_store.confirmed_signal_profile(signal_sources.KNN), signal_sources.KNN)
             with self.assertRaisesRegex(ValueError, "changed in another tab"):
                 session_store.confirmed_signal_profile(signal_sources.ORIGINAL)
             with self.assertRaisesRegex(ValueError, "Unsupported signal source"):
@@ -305,26 +772,40 @@ class DashboardSessionStoreTests(unittest.TestCase):
 
         profiles = {
             signal_sources.ORIGINAL: SimpleNamespace(db=2, key_prefix="L_PastSignal"),
-            signal_sources.TREND_FILTERED: SimpleNamespace(db=3, key_prefix="L_PastSignal_Trend"),
+            signal_sources.KNN: SimpleNamespace(db=3, key_prefix="L_PastSignal_Knn"),
         }
         with patch.object(data_access, "load_redis_profile", side_effect=profiles.get), patch.object(
             data_access.signal_trans, "redis_client", side_effect=lambda profile: Client(profile.db)
         ):
             original = data_access.signal_date_bounds("US30.cash", "h1", "combo")
             trend = data_access.signal_date_bounds(
-                "US30.cash", "h1", "combo", redis_profile=signal_sources.TREND_FILTERED
+                "US30.cash", "h1", "combo", redis_profile=signal_sources.KNN
             )
             windows = [(SimpleNamespace(start=date(2025, 1, 1), end=date(2025, 3, 1)), None)]
             counts = data_access.walkforward_train_signal_counts(
                 "US30.cash", "h1", "combo", windows,
-                redis_profile=signal_sources.TREND_FILTERED,
+                redis_profile=signal_sources.KNN,
             )
         self.assertTrue(original["available"])
         self.assertTrue(trend["available"])
         self.assertEqual(counts, [2])
         self.assertEqual([db for db, _key in observed], [2, 3, 3])
         self.assertTrue(observed[0][1].startswith("L_PastSignal_"))
-        self.assertTrue(observed[1][1].startswith("L_PastSignal_Trend_"))
+        self.assertTrue(observed[1][1].startswith("L_PastSignal_Knn_"))
+
+    def test_signal_sources_are_the_three_fixed_ones_and_the_retired_trend_profile_only_keeps_a_label(self) -> None:
+        self.assertEqual(list(signal_sources.LABELS), [signal_sources.ORIGINAL, signal_sources.KNN, signal_sources.BREAKOUT])
+        for profile in (signal_sources.KNN, signal_sources.BREAKOUT):
+            self.assertEqual(signal_sources.command_field(profile), {"redis_profile": profile})
+            self.assertEqual(signal_sources.identity_field(profile), {"redis_profile": profile})
+        self.assertEqual(signal_sources.command_field(signal_sources.ORIGINAL), {})
+        with self.assertRaises(ValueError):
+            signal_sources.require_profile(signal_sources.LEGACY_TREND)
+        self.assertEqual(
+            signal_sources.label_from_input({"redis_profile": signal_sources.LEGACY_TREND}), "Trend (legacy db1)",
+        )
+        self.assertEqual(signal_sources.label_from_input({}), "RAW (db0)")
+
     def test_resource_groups_do_not_block_each_other(self) -> None:
         with isolated_store():
             grid = session_store.create_grid_search(_grid_plan())

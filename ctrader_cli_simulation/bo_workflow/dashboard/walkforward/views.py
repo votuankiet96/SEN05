@@ -11,13 +11,15 @@ try:
     from .. import signal_sources
     from ..ui_common import (
         DECIMAL, INPUT_DEBOUNCE_MS, INTEGER, MONEY, PERCENT, PERSIST,
-        numeric_column, right_align, status_region, truncated,
+        STRATEGY_PERSIST, numeric_column, right_align, status_region, strategy_label,
+        truncated,
     )
 except ImportError:  # app.py loads feature folders as top-level modules.
     import signal_sources
     from ui_common import (
         DECIMAL, INPUT_DEBOUNCE_MS, INTEGER, MONEY, PERCENT, PERSIST,
-        numeric_column, right_align, status_region, truncated,
+        STRATEGY_PERSIST, numeric_column, right_align, status_region, strategy_label,
+        truncated,
     )
 
 OBJECTIVE_OPTIONS = [
@@ -28,7 +30,7 @@ OBJECTIVE_OPTIONS = [
 
 
 def layout(options: dict[str, Any]) -> html.Div:
-    combo = next(item for item in options["strategies"] if item["value"] == "combo")
+    default_strategy = next(item for item in options["strategies"] if item["value"] == "combo")
     default_symbol = next(
         (x["value"] for x in options["symbols"] if x["value"] == "US30.cash"), options["symbols"][0]["value"],
     )
@@ -58,7 +60,7 @@ def layout(options: dict[str, Any]) -> html.Div:
                 dmc.Select(
                     id="wf-strategy-select", label="Strategy",
                     data=[{"label": x["label"], "value": x["value"]} for x in options["strategies"]],
-                    value="combo", clearable=False, **PERSIST,
+                    value=default_strategy["value"], clearable=False, **STRATEGY_PERSIST,
                 ),
                 dmc.Select(
                     id="wf-symbol-select", label="Symbol", data=options["symbols"], value=default_symbol,
@@ -66,8 +68,8 @@ def layout(options: dict[str, Any]) -> html.Div:
                 ),
                 dmc.Select(
                     id="wf-timeframe-select", label="Timeframe",
-                    data=[{"label": tf.upper(), "value": tf} for tf in combo["timeframes"]],
-                    value=combo["timeframes"][0], clearable=False,
+                    data=[{"label": tf.upper(), "value": tf} for tf in default_strategy["timeframes"]],
+                    value=default_strategy["timeframes"][0], clearable=False,
                 ),
             ]),
             status_region("wf-history-status"),
@@ -88,7 +90,9 @@ def layout(options: dict[str, Any]) -> html.Div:
                     suffix=" USD", thousandSeparator=",", debounce=INPUT_DEBOUNCE_MS, **PERSIST,
                 ),
                 dmc.NumberInput(
-                    id="wf-risk-input", label="Risk per trade", value=0.5, min=0.01, step=0.01, suffix=" %",
+                    id="wf-risk-input", label="Risk per trade",
+                    value=float(default_strategy["defaults"]["RiskPercent"]),
+                    min=0.01, step=0.01, suffix=" %",
                     debounce=INPUT_DEBOUNCE_MS, **PERSIST,
                 ),
                 dmc.NumberInput(
@@ -397,7 +401,7 @@ def detail(
     }.get(state, "gray")
     objective_label = str(inputs.get("protocol", {}).get("objective") or "—").replace("_", " ").title()
     cards = [
-        _stat("Strategy", "MA Cross" if inputs.get("strategy") == "macross" else "Combo"),
+        _stat("Strategy", strategy_label(inputs.get("strategy"), options)),
         _stat("Symbol", str(inputs.get("symbol") or "—")),
         _stat("Timeframe", str(inputs.get("timeframe") or "").upper()),
         _stat("Signal source", signal_sources.label_from_input(inputs)),

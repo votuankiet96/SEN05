@@ -1,26 +1,26 @@
 {
-  "node_count": 1717,
+  "node_count": 1931,
   "unverified_node_count": 0,
-  "raw_edge_count": 4235,
+  "raw_edge_count": 4166,
   "non_object_edges": 0,
   "missing_endpoint_edges": 0,
-  "dangling_endpoint_edges": 459,
+  "dangling_endpoint_edges": 0,
   "external_reference_edges": 0,
   "self_loop_edges": 5,
-  "valid_candidate_edges": 3776,
+  "valid_candidate_edges": 4166,
   "exact_duplicate_edges": 0,
-  "directed_unique_endpoint_pairs": 3553,
-  "directed_same_endpoint_collapsed_edges": 223,
-  "undirected_unique_endpoint_pairs": 3553,
-  "undirected_same_endpoint_collapsed_edges": 223,
-  "same_endpoint_group_count": 202,
-  "relation_variant_groups": 125,
+  "directed_unique_endpoint_pairs": 4166,
+  "directed_same_endpoint_collapsed_edges": 0,
+  "undirected_unique_endpoint_pairs": 4166,
+  "undirected_same_endpoint_collapsed_edges": 0,
+  "same_endpoint_group_count": 0,
+  "relation_variant_groups": 0,
   "source_file_variant_groups": 0,
-  "source_location_variant_groups": 22,
-  "context_variant_groups": 61,
+  "source_location_variant_groups": 0,
+  "context_variant_groups": 0,
   "post_build_graph_type": "Graph",
-  "post_build_node_count": 1783,
-  "post_build_edge_count": 4006,
+  "post_build_node_count": 1931,
+  "post_build_edge_count": 4166,
   "post_build_error": "",
   "producer_suppression": {
     "path": "C:\\Users\\Administrator\\AppData\\Roaming\\uv\\tools\\graphifyy\\Lib\\site-packages\\graphify\\extract.py",
@@ -101,110 +101,5 @@
     ],
     "error": ""
   },
-  "examples": [
-    {
-      "source": "bo_workflow_api_engine_plugin_bobacktestrunner_bobacktestrunner_backtestmapper_calgo_plugins_backtestmapper",
-      "target": "propertyinfo",
-      "edge_count": 5,
-      "relations": [
-        "references"
-      ],
-      "source_files": [
-        "bo_workflow/api_engine/plugin/BoBacktestRunner/BoBacktestRunner/BacktestMapper.cs"
-      ],
-      "source_locations": [
-        "L10",
-        "L6",
-        "L7",
-        "L8",
-        "L9"
-      ],
-      "contexts": [
-        "field"
-      ]
-    },
-    {
-      "source": "combo_combo_combo_calgo_robots_combo",
-      "target": "combo_combo_combo_cs_datetime",
-      "edge_count": 3,
-      "relations": [
-        "references"
-      ],
-      "source_files": [
-        "Combo/Combo/Combo.cs"
-      ],
-      "source_locations": [
-        "L118",
-        "L122",
-        "L129"
-      ],
-      "contexts": [
-        "field",
-        "generic_arg"
-      ]
-    },
-    {
-      "source": "ma_cross_ma_cross_ma_cross_calgo_robots_macross",
-      "target": "ma_cross_ma_cross_ma_cross_cs_datetime",
-      "edge_count": 3,
-      "relations": [
-        "references"
-      ],
-      "source_files": [
-        "MA Cross/MA Cross/MA Cross.cs"
-      ],
-      "source_locations": [
-        "L104",
-        "L94",
-        "L97"
-      ],
-      "contexts": [
-        "field",
-        "generic_arg"
-      ]
-    },
-    {
-      "source": "macd_break_macd_break_macd_break_calgo_robots_macdbreak",
-      "target": "macd_break_macd_break_macd_break_cs_datetime",
-      "edge_count": 3,
-      "relations": [
-        "references"
-      ],
-      "source_files": [
-        "MACD Break/MACD Break/MACD Break.cs"
-      ],
-      "source_locations": [
-        "L104",
-        "L94",
-        "L97"
-      ],
-      "contexts": [
-        "field",
-        "generic_arg"
-      ]
-    },
-    {
-      "source": "bo_workflow_api_engine_api_runner_run_backtest",
-      "target": "bo_workflow_core_engine_models_runresult",
-      "edge_count": 3,
-      "relations": [
-        "calls",
-        "references",
-        "uses"
-      ],
-      "source_files": [
-        "bo_workflow/api_engine/api_runner.py"
-      ],
-      "source_locations": [
-        "L113",
-        "L58",
-        "L67"
-      ],
-      "contexts": [
-        "",
-        "call",
-        "return_type"
-      ]
-    }
-  ]
+  "examples": []
 }

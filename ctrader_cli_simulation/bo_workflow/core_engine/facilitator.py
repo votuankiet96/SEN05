@@ -35,30 +35,34 @@ import os
 import shutil
 import tempfile
 import time
+import warnings
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Callable, Mapping
 
 from . import cli_runner
-from api_engine import api_runner
 
 from . import signal_trans
-from .configuration import load_engine_profile, load_redis_profile, load_strategy_profile
+from .configuration import (
+    DEFAULT_REDIS_PROFILE, ctrader_data_dir, load_engine_profile, load_master_db_profile, load_redis_profile,
+    load_strategy_profile, resolve_backtest_config, with_signal_overrides,
+)
 from .models import FailureCode, OptimizeBox, RunStatus, Window
-from .output_util import evidence, pipeline_lock
-from .planner import as_date, build_experiment, expand_grid, nonnegative_int, plan_optimize_boxes, positive_int
+from .output_util import evidence, pipeline_lock, run_export
+from .planner import as_date, build_experiment, expand_grid, nonnegative_int, plan_optimize_boxes, positive_int, research_windows, run_name
 from .store import ExperimentStore, ProtocolStore, sha256_file
 
-# facilitator.py là orchestrator DUY NHẤT biết có 2 backend — mọi file khác
-# trong core_engine/ trung lập, không tự import api_engine (cli_runner giờ
-# SỐNG NGAY TRONG core_engine/, không còn là package riêng — xem cli_runner.py
-# mục [2026-09-21]). 2 backend không bao giờ gọi nhau; cả 2 chỉ cùng nhìn
-# xuống core_engine.models (RunSpec/RunResult/RunStatus/FailureCode).
-# [2026-09-21] Chỉ dùng backend "cli" trong giai đoạn hiện tại — api_engine
-# giữ nguyên tại chỗ, không phát triển thêm, không xoá.
-_ENGINES = {"cli": cli_runner, "api": api_runner}
+# facilitator.py là orchestrator DUY NHẤT chọn engine thật thi hành — mọi file
+# khác trong core_engine/ trung lập, không tự chọn engine (cli_runner SỐNG NGAY
+# TRONG core_engine/, không còn là package riêng — xem cli_runner.py mục
+# [2026-09-21]); engine chỉ nhìn xuống core_engine.models (RunSpec/RunResult/
+# RunStatus/FailureCode).
+# [2026-10-13] api_engine đã xoá hẳn — `_ENGINES` chỉ còn backend "cli".
+_ENGINES = {"cli": cli_runner}
 _RETRYABLE_FAILURES = frozenset({"message_expected", "hard_timeout", "progress_stalled"})
 
 # Trần an toàn cho song song — port tinh thần pipeline/settings.py cũ
@@ -69,19 +73,20 @@ _RETRYABLE_FAILURES = frozenset({"message_expected", "hard_timeout", "progress_s
 DEFAULT_MAX_PARALLEL = 12
 MAX_PARALLEL_CAP = min(16, os.cpu_count() or 1)
 
-# Profile Redis mặc định cho nguồn signal — chỉ có đúng 1 profile trong
-# config.yaml lúc viết dòng này (sen05-signal-v1). config["redis_profile"] có
-# thể override nếu sau này có thêm nguồn khác.
-DEFAULT_REDIS_PROFILE = "sen05-signal-v1"
-
 # Tally key for specs never started because cancellation arrived first: they
 # have no store row and spawned no ctrader-cli process.
 NOT_STARTED = "not_started"
 # Tally key for specs not started because today's CLI launch budget
 # (store.DAILY_CLI_LAUNCH_LIMIT) is used up: no row, no spawn, retryable later.
 BUDGET_EXHAUSTED = "budget_exhausted"
+# Tally key for specs NOT run because the master SQL database already holds that exact run (config
+# `skip_known_in_sql`): no row in this experiment's own store, no spawn, no CLI budget spent. Not a failure, but not
+# "done" either — the local store has no result for it, so `complete` stays False and no pipeline lock is written.
+KNOWN_IN_SQL = "known_in_sql"
 _DONE_STATUSES = frozenset({RunStatus.OK.value, RunStatus.SKIPPED.value})
-_NOT_FAILED = _DONE_STATUSES | {RunStatus.CANCELLED.value, RunStatus.BUSY.value, NOT_STARTED, BUDGET_EXHAUSTED}
+_NOT_FAILED = _DONE_STATUSES | {
+    RunStatus.CANCELLED.value, RunStatus.BUSY.value, NOT_STARTED, BUDGET_EXHAUSTED, KNOWN_IN_SQL,
+}
 _FINGERPRINT_SIDECAR = "input_fingerprint.json"
 
 
@@ -91,7 +96,19 @@ class InputFingerprintMismatch(ValueError):
 
 
 def _signal_key(spec: Any) -> str:
+    if spec.channels:
+        return ";".join(
+            f"{item.strategy}|{item.symbol}|{item.timeframe}|{item.risk_percent:g}"
+            for item in spec.channels
+        )
     return f"{spec.symbol}|{spec.timeframe}"
+
+
+def _redis_profile_id(config: Mapping[str, Any]) -> str:
+    value = config.get("redis_profile", DEFAULT_REDIS_PROFILE)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("redis_profile must select exactly one default source profile (a channel may override it with `source`)")
+    return value.strip()
 
 
 def _fingerprint_end(config: Mapping[str, Any], specs: list[Any]) -> Any:
@@ -102,17 +119,17 @@ def input_fingerprint(config: Mapping[str, Any]) -> dict[str, Any]:
     """Content identity of the real inputs a config would run on.
 
     {"algo_sha256", "signals": {"<symbol>|<timeframe>": sha}} — signal hashes
-    cover only rows before the config end (see `signal_trans.signal_window_sha256`).
+    cover the rows up to and including the config end day, because cTrader runs
+    the whole end day (see `signal_trans.signal_window_sha256`).
     The CLI is not part of it: cTrader updates it by itself and every run records
     its real version (execution.json). Reads the .algo and Redis (to a temporary
     CSV that is deleted); never backtests and never touches an ExperimentStore."""
     experiment = build_experiment({**dict(config), "method": config.get("method", "grid")})
-    profile = load_strategy_profile(experiment.strategy_profile)
+    profile = with_signal_overrides(load_strategy_profile(experiment.strategy_profile), config)
     engine = load_engine_profile(experiment.engine_profile)
-    window = Window("fingerprint", as_date(config["start"]), as_date(config["end"]), "fingerprint")
-    specs = expand_grid(config, profile, engine, windows=[window])
+    specs = expand_grid(config, profile, engine, windows=research_windows(config))
     end = _fingerprint_end(config, specs)
-    redis_profile = load_redis_profile(str(config.get("redis_profile", DEFAULT_REDIS_PROFILE)))
+    redis_profile = load_redis_profile(_redis_profile_id(config))
     scratch = Path(tempfile.mkdtemp(prefix=".fingerprint_"))
     signals: dict[str, str] = {}
     try:
@@ -140,6 +157,19 @@ def resolve_input_fingerprint(config: Mapping[str, Any]) -> dict[str, Any]:
             "inside the backtest window); create a new session instead of rerunning this one"
         )
     return fingerprint
+
+
+def run_backtest(
+    overrides: Mapping[str, Any],
+    *,
+    on_progress: Callable[[float, str], None] | None = None,
+    should_cancel: Callable[[], bool] | None = None,
+) -> dict[str, Any]:
+    """Run the default isolated/shared BacktestBot flow from config.yaml."""
+    config = resolve_backtest_config(overrides)
+    if not config.get("name") and not config.get("experiment"):
+        config["name"] = run_name(config)
+    return run_grid(config, on_progress=on_progress, should_cancel=should_cancel)
 
 
 def run_grid(
@@ -186,7 +216,7 @@ def run_grid(
             if cached is not None:
                 return {**cached, "cached": True}
     experiment = build_experiment({**dict(config), "method": config.get("method", "grid")})
-    profile = load_strategy_profile(experiment.strategy_profile)
+    profile = with_signal_overrides(load_strategy_profile(experiment.strategy_profile), config)
     engine = load_engine_profile(experiment.engine_profile)
     specs = expand_grid(config, profile, engine)
     result = run_experiment(
@@ -236,6 +266,11 @@ def run_experiment(
     keep_logs = bool(config.get("keep_logs", False))
     chunk_size = nonnegative_int(config.get("optimize_chunk_size", 0), "optimize_chunk_size")
     use_boxes = engine.backend == "cli" and chunk_size > 1
+    # Tra kho SQL master TRƯỚC khi tốn 1 lượt CLI (tuỳ chọn, mặc định tắt — hành vi cũ): lượt có run_key đã nằm trong
+    # SQL thì không chạy lại mà báo tên experiment đang giữ kết quả (`result["known_in_sql"]`). `force` luôn chạy lại.
+    skip_known = bool(config.get("skip_known_in_sql", False)) and not force
+    if skip_known and use_boxes:
+        raise ValueError("skip_known_in_sql chưa hỗ trợ optimize_chunk_size >= 2 (hộp optimize không tra kho SQL)")
 
     # Metadata (contract THẬT của .algo) luôn đọc qua CLI dù batch này chạy
     # backend nào — đây là 1 lệnh đọc nhẹ, gọi đúng 1 lần/batch (không phải N
@@ -255,9 +290,6 @@ def run_experiment(
     if engine.backend == "cli":
         engine_module.validate_capabilities(specs, algo_path=profile.algo_path, cli_path=cli_path, optimize=use_boxes)
         process_env = cli_runner.child_environment(cli_runner.auth_options())
-    else:
-        engine_module.validate_capabilities(specs, profile=profile)
-        process_env = None
 
     store = ExperimentStore(str(experiment_doc["method"]), str(experiment_doc["name"]))
     store.open(experiment_doc)
@@ -265,6 +297,14 @@ def run_experiment(
     protocol.check_holdouts(specs, experiment=str(experiment_doc["name"]), final_open=bool(config.get("final_test_open")))
 
     algo_snapshot, algo_sha = store.snapshot(profile.algo_path)
+    # .algo không chứa mã nguồn (SourceIncluded=false) → chụp .cs riêng. Chỉ GHI NHẬN (execution.json
+    # + inputs/<sha>.cs), không nằm trong param_hash: hash .algo đã đổi mỗi lần build nên khoá vẫn bảo thủ.
+    source_sha = None
+    source_newer_than_algo = None
+    if profile.source_path is not None and profile.source_path.is_file():
+        _source_snapshot, source_sha = store.snapshot(profile.source_path)
+        source_newer_than_algo = profile.source_path.stat().st_mtime > profile.algo_path.stat().st_mtime
+    native_data_dir = ctrader_data_dir()
     # [2026-09-21 lần 3] Redis-only: resolve_signal_path() giờ tự LRANGE/HGETALL
     # + ghi CSV tươi (không còn đọc CSV tĩnh có sẵn). `materialized` dùng CHUNG
     # cho cả batch để 1 lưới quét nhiều KslLevel/KtpLevel trên cùng 1 symbol/
@@ -274,7 +314,7 @@ def run_experiment(
     # race-condition nếu 2 experiment song song cùng đụng 1 symbol/timeframe;
     # bản đóng băng thật phục vụ tái lập đã có sẵn ở store.snapshot()/inputs/,
     # nên thư mục tạm này chỉ cần sống hết batch rồi xoá).
-    redis_profile = load_redis_profile(str(config.get("redis_profile", DEFAULT_REDIS_PROFILE)))
+    redis_profile = load_redis_profile(_redis_profile_id(config))
     signal_scratch = Path(tempfile.mkdtemp(prefix=".signal_", dir=store.runs_dir))
     materialized: set[Path] = set()
     # signal_hashes[path] = (snapshot_path, sha256) — tính hash CSV đúng 1 lần
@@ -355,6 +395,17 @@ def run_experiment(
     def reserve_launch(label: str) -> bool:
         return protocol.reserve_cli_launch(experiment=str(experiment_doc["name"]), label=label)
 
+    # Kho SQL master (config.yaml `master_db`): bản SAO của mỗi lượt vừa ghi xuống đĩa. File vẫn là nguồn sự thật
+    # nên tắt/hỏng SQL không ảnh hưởng lượt chạy. list.append an toàn giữa các luồng của pool.
+    master_profile = load_master_db_profile()
+    master_outcomes: list[str] = []
+    known_runs: list[dict[str, Any]] = []
+    known_in_sql: dict[str, dict[str, Any]] = {}
+    if skip_known:
+        if not master_profile.enabled:
+            raise ValueError("skip_known_in_sql cần master_db.enabled = true trong config.yaml")
+        known_in_sql = _find_known_runs(master_profile, hashes)
+
     def crash_result(exc: Exception, work_dir: Path) -> Any:
         """Kết quả giả khi chính pipeline (không phải CLI) ném ngoại lệ."""
         work_dir.mkdir(parents=True, exist_ok=True)
@@ -394,9 +445,16 @@ def run_experiment(
             flags=flags,
             bot_summary=summary,
             environment=env,
-            inputs={"algo_sha256": algo_sha, "signal_sha256": signal_sha_by_spec[spec.canonical_json()]},
+            inputs={
+                "algo_sha256": algo_sha,
+                "signal_sha256": signal_sha_by_spec[spec.canonical_json()],
+                "source_sha256": source_sha,
+                "source_newer_than_algo": source_newer_than_algo,
+            },
             keep_logs=keep_logs,
         )
+        if master_profile.enabled:
+            master_outcomes.append(_save_to_master_db(master_profile, store, claim, spec, result.status.value))
         return result.status.value
 
     def one(item: tuple[Any, str]) -> str:
@@ -409,6 +467,9 @@ def run_experiment(
             # A spec that claim() would skip must not spend today's CLI budget.
             if not force and store.is_terminal_ok(param_hash):
                 return RunStatus.SKIPPED.value
+            if param_hash in known_in_sql:
+                known_runs.append({"label": spec.label(), **known_in_sql[param_hash]})
+                return KNOWN_IN_SQL
             if not reserve_launch(spec.label()):
                 return BUDGET_EXHAUSTED
         claim = store.claim(spec, param_hash, force=force)
@@ -436,17 +497,9 @@ def run_experiment(
                         startup_stall_s=startup_stall_s,
                         cli_path=cli_path,
                         env=process_env,
+                        native_data_dir=native_data_dir,
                         on_progress=on_progress,
                         should_cancel=should_cancel,
-                    )
-                else:
-                    result = api_runner.run_backtest(
-                        spec,
-                        algo_path=algo_snapshot,
-                        signal_file=signal_by_spec[spec.canonical_json()],
-                        work_dir=work_dir,
-                        profile=profile,
-                        timeout_s=timeout,
                     )
             except Exception as exc:
                 result = crash_result(exc, work_dir)
@@ -545,7 +598,45 @@ def run_experiment(
         "cli_versions": store.cli_versions(),
         "inputs": used_fingerprint,
         "wall_seconds": round(time.monotonic() - start, 3),
+        **({"master_db": dict(Counter(master_outcomes))} if master_profile.enabled else {}),
+        **({"known_in_sql": known_runs} if known_runs else {}),
     }
+
+
+def _save_to_master_db(profile: Any, store: ExperimentStore, claim: Any, spec: Any, status: str) -> str:
+    """Ghi lượt vừa lưu xuống đĩa vào kho SQL master: 'saved' / 'already' (run_key đã có) / 'skipped' (lượt CHƯA hoàn tất:
+    lỗi, huỷ, treo — kho chỉ nhận lượt hoàn tất) / 'error'. Lỗi SQL chỉ cảnh báo — `master_db.import_experiment` nạp bù
+    sau. Import muộn để máy không có pyodbc vẫn chạy được khi kho tắt."""
+    run_dir = store.run_dir(claim.run_id, spec.label())
+    try:
+        from . import master_db
+
+        if status != master_db.COMPLETED_STATUS:
+            return "skipped"
+        with closing(master_db.connect(profile)) as conn:
+            run_id, created = master_db.save_run(conn, run_export.run_payload(store.root, run_dir))
+        if run_id is None:
+            return "skipped"
+        return "saved" if created else "already"
+    except Exception as exc:  # noqa: BLE001
+        warnings.warn(f"master_db: không ghi được {run_dir.name}: {type(exc).__name__}: {exc}"[:400], RuntimeWarning)
+        return "error"
+
+
+def _find_known_runs(profile: Any, run_keys: list[str]) -> dict[str, dict[str, Any]]:
+    """Trong các `run_key` đưa vào, cái nào ĐÃ có trong kho SQL master: {run_key: {backtest_run_id, batch_name, method}}.
+    Một kết nối cho cả batch. Khác `_save_to_master_db`: ở đây lỗi SQL được NÉM ra — người dùng đã bật tra cứu nên không
+    âm thầm bỏ qua rồi chạy tốn lượt CLI. Import muộn để máy không có pyodbc vẫn chạy được khi tính năng tắt."""
+    from . import master_db
+
+    found: dict[str, dict[str, Any]] = {}
+    with closing(master_db.connect(profile)) as conn:
+        for run_key in dict.fromkeys(run_keys):
+            info = master_db.describe_run(conn, run_key)
+            if info is not None:
+                found[run_key] = info
+    return found
+
 
 def _tick(tally: dict[str, int], key: str) -> None:
     tally[key] = tally.get(key, 0) + 1

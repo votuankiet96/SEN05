@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gzip
+import hashlib
 import json
 import re
 from datetime import datetime, timezone
@@ -153,7 +154,7 @@ def validity_flags(
     period = (report.get("main") or {}).get("testingPeriod") or {}
     actual_start = _ms_date(period.get("startDate"))
     actual_end = _ms_date(period.get("endDate"))
-    expected_end = spec.end.isoformat()   # spec.end la moc dung (exclusive)
+    expected_end = spec.end.isoformat()   # report chi lap lai gia tri --end (cTrader van chay tron ngay do)
     flags["period_ok"] = (
         actual_start == spec.start.isoformat()
         and actual_end == expected_end
@@ -193,6 +194,81 @@ def _ms_date(value: Any) -> str | None:
     if value in (None, ""):
         return None
     return datetime.fromtimestamp(float(value) / 1000, timezone.utc).date().isoformat()
+
+
+def _ms_iso(value: Any) -> str | None:
+    if value in (None, ""):
+        return None
+    return datetime.fromtimestamp(float(value) / 1000, timezone.utc).isoformat(timespec="milliseconds")
+
+
+# --------------------------------------------------------------------------- #
+# Trích xuất thuần cho kho SQL master (output_util/run_export.py gọi) — chỉ đọc
+# report/events đã có, không I/O.
+# --------------------------------------------------------------------------- #
+
+# Tên sự kiện đóng vị thế trong events.json của cTrader (đo 2026-10-14) → lý do đóng lưu vào `trade`.
+_CLOSE_REASONS = {"Stop Loss Hit": "stop_loss", "Take Profit Hit": "take_profit", "Position closed": "closed_by_bot"}
+
+
+def _close_key(time: Any, price: Any, volume: Any) -> tuple[Any, float, float]:
+    return time, round(float(price or 0), 6), round(float(volume or 0), 6)
+
+
+def events_match_report(events: list[Mapping[str, Any]], report: Mapping[str, Any]) -> bool:
+    """events.json có đúng là của report này không: (1) số vị thế được tạo ("Create Position") bằng số lệnh
+    đã đóng cộng số vị thế còn mở cuối kỳ (đo 2026-10-14: 161 = 161 + 0); (2) tập (giờ đóng, giá đóng, khối lượng)
+    của các lệnh đóng trong events trùng đúng tập của report.history. Điều kiện (2) phân biệt được hai lượt cùng
+    tham số khác cửa sổ chạy cạnh nhau — số lệnh có thể trùng nhưng giờ đóng thì không."""
+    history = (report.get("history") or {}).get("items") or []
+    still_open = (report.get("positions") or {}).get("items") or []
+    created = sum(1 for item in events if item.get("event") == "Create Position")
+    closed_in_events = {
+        _close_key(item.get("time"), item.get("closePrice"), item.get("volume")) for item in events if item.get("event") in _CLOSE_REASONS
+    }
+    closed_in_report = {_close_key(item.get("closeTime"), item.get("closePrice"), item.get("volume")) for item in history}
+    return created == len(history) + len(still_open) and closed_in_events == closed_in_report
+
+
+def trades(report: Mapping[str, Any], events: list[Mapping[str, Any]] | None = None) -> list[dict[str, Any]]:
+    """Từng lệnh đã đóng (report.history.items) cho bảng `trade`. `close_reason` lấy từ events.json
+    (report không có: trường `comment` luôn rỗng) bằng khoá (giờ đóng, giá đóng, khối lượng) — id của
+    history KHÔNG trùng positionId của events nên không nối bằng id; không có events → None."""
+    reasons = {
+        _close_key(item.get("time"), item.get("closePrice"), item.get("volume")): _CLOSE_REASONS[item["event"]]
+        for item in events or [] if item.get("event") in _CLOSE_REASONS
+    }
+    return [
+        {
+            "trade_number": item.get("id"),
+            "direction": item.get("direction"),
+            "leg_label": item.get("label"),
+            "entry_time_utc": _ms_iso(item.get("entryTime")),
+            "close_time_utc": _ms_iso(item.get("closeTime")),
+            "entry_price": item.get("entryPrice"),
+            "close_price": item.get("closePrice"),
+            "volume": item.get("volume"),
+            "gross_profit": item.get("gross"),
+            "commission": item.get("commissions"),
+            "swap": item.get("swaps"),
+            "net_profit": item.get("net"),
+            "close_reason": reasons.get(_close_key(item.get("closeTime"), item.get("closePrice"), item.get("volume"))),
+        }
+        for item in (report.get("history") or {}).get("items") or []
+    ]
+
+
+def symbol_spec_and_hash(env: Mapping[str, Any]) -> tuple[str, str]:
+    """Thông số symbol broker (lot, step, swap, commission…) như cTrader khai trong report, dạng JSON
+    chuẩn hoá + sha256 — để so "thông số hôm nay có khác lần chạy trước không" (swap đổi theo ngày)."""
+    text = json.dumps(env.get("used_symbols") or [], sort_keys=True, separators=(",", ":"))
+    return text, hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def last_data_time(report: Mapping[str, Any]) -> str | None:
+    """Điểm equity cuối cùng của report (UTC) — cho biết backtest thật sự chạy tới đâu (khác `--end`)."""
+    points = (report.get("equity") or {}).get("points") or []
+    return _ms_iso(points[-1].get("timestamp")) if points else None
 
 
 # --------------------------------------------------------------------------- #

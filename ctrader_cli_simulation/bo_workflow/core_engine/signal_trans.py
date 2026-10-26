@@ -7,7 +7,7 @@ xoá hẳn, xem lịch sử ở `bo-workflow-backtest-pipeline.md` nếu cần �
 
 `resolve_signal_path()` LUÔN vật chất hoá tươi từ Redis (List+Hash, hệ
 strategy_lab/SEN05) ra 1 CSV cùng khuôn cột mà LoadSignalFile() trong
-Combo.cs/MA Cross.cs đang đọc, ghi vào thư mục `dest_dir` do bên gọi cấp (KHÔNG
+BacktestBot.cs đang đọc, ghi vào thư mục `dest_dir` do bên gọi cấp (KHÔNG
 còn thư mục cố định `REDIS_CACHE_DIR` — bỏ 2026-09-22, xem điểm dưới). Không
 sửa gì bên cBot — cBot tiếp tục đọc SignalFilePath như trước, chỉ khác nguồn
 tạo ra file đó và file đó giờ LUÔN mới (không phải file export theo lịch cũ).
@@ -26,15 +26,12 @@ facilitator — facilitator tự tạo 1 thư mục tạm riêng cho mỗi lần
 người dùng trước khi bỏ fallback). GUI (chạy tay trong cTrader Desktop) hoàn
 toàn KHÔNG đi qua module này — không bị ảnh hưởng gì.
 
-[2026-09-26] Kênh gốc vs kênh trend: strategy_lab publish song song 2 kênh cùng
-schema — "L_PastSignal" (không lọc trend, hành vi gốc, KHÔNG đổi gì) và
-"L_PastSignal_Trend" (lọc theo trend khung lớn H4). [2026-10-08] Số db thật (dò
-Redis): db0 = kênh gốc, db1 = kênh trend — trước đó ghi DB2/DB3 (tên còn trong
-nhãn dashboard). Module này không tự biết gì về số db — chỉ đọc đúng
-`RedisProfile.key_prefix` (mặc định
-"L_PastSignal") của profile được truyền vào. Đổi kênh = đổi `redis_profile`
-trong config của experiment (`config.yaml` mục `redis:`), không cần sửa gì ở
-đây hay thêm cờ CLI mới.
+[2026-10-23] 3 nguồn CỐ ĐỊNH cùng schema do WE (OG8) cấp: "L_PastSignal" (db0 RAW, không lọc trend, không đổi),
+"L_PastSignal_Knn" (db1, lọc trend KNN) và "L_PastSignal_Breakout" (db2, lọc trend breakout) — xem RedisProfile.
+Module này không tự biết gì về số db — chỉ đọc đúng `RedisProfile.key_prefix` của profile được truyền vào. Đổi nguồn
+= đổi `redis_profile` của experiment (nguồn mặc định) hoặc `source` của từng channel (SignalChannel.source: nhiều
+nguồn trong MỘT lượt, mỗi kênh đúng một nguồn), khai ở `config.yaml` mục `redis:`; không cần sửa gì ở đây hay thêm
+cờ CLI mới.
 """
 from __future__ import annotations
 
@@ -46,8 +43,8 @@ from typing import Mapping, Sequence
 
 import redis
 
-from .configuration import RedisProfile, StrategyProfile
-from .models import RunSpec
+from .configuration import RedisProfile, StrategyProfile, load_redis_profile
+from .models import RunSpec, SignalChannel
 
 # Symbol nội bộ (đúng tên cTrader, vd "US30.cash") -> phần SYMBOL trong key
 # Redis (vd "US30"). Vẫn cần dù không còn CSV tĩnh — key Redis dùng đúng
@@ -64,32 +61,24 @@ SYMBOL_GROUPS = {
     "JP225.cash": "J225",
     "XAUUSD": "GOLD",
     "BTCUSD": "BTCUSD",
+    "EURUSD": "EURUSD",
+    "USDJPY": "USDJPY",
+    "GBPUSD": "GBPUSD",
+    "USDCAD": "USDCAD",
 }
 
-# StrategyProfile.strategy nội bộ (config.yaml `strategy:`, vd "macross" liền
-# không gạch dưới) KHÁC tên STRATEGY dùng trong key Redis (bên strategy_lab/
-# SEN05 tự đặt, CÓ gạch dưới — "ma_cross") — xác nhận lại 2026-09-21 từ chính
-# bảng schema trong memory cbot-cli-simulation-redis-vision.md (dòng 57-62:
-# "combo | ma_cross | ema_cross"). KHÔNG được suy diễn "macross" ra key Redis
-# — sai key sẽ ra LIST rỗng (materialize_signal_csv coi là "chưa có signal",
-# raise, không lặng lẽ trả CSV rỗng, nhưng vẫn tốn công tra ngược nếu gõ nhầm
-# ở đây thay vì tra bảng này). Cùng string này dùng để chọn cột CSV
-# (STRATEGY_COLUMNS bên dưới) — 2 việc dùng chung 1 token, không lệch nhau.
-REDIS_STRATEGY_TOKENS = {
-    "combo": "combo",
-    "macross": "ma_cross",
-    "macdbreak": "macd_break",
-}
-
-# Khớp CHÍNH XÁC tên cột LoadSignalFile() tìm theo header (không theo vị trí)
-# — xem Combo.cs/MA Cross.cs. Thứ tự ở đây chỉ để ghi CSV cho dễ đọc, không
-# bắt buộc đúng thứ tự này khi cBot đọc lại. Key ở đây là REDIS_STRATEGY_TOKENS
-# value (token thật của strategy_lab), không phải StrategyProfile.strategy.
+# Chiến lược -> các field Redis bắt buộc của nó. Key là TOKEN của strategy_lab trong key Redis (có gạch dưới:
+# "ma_cross", "macd_break"), cũng là token ở cột `strategy` của file tín hiệu và trong `signal_strategies`. Dòng Redis
+# thiếu field bắt buộc bị bỏ khi ghi file. Bảng chiến lược trong BacktestBot.cs phải khớp các key này (có test chặn lệch).
 STRATEGY_COLUMNS: dict[str, tuple[str, ...]] = {
     "combo": ("bartime", "atr", "entry", "signal"),
     "ma_cross": ("bartime", "atr", "signal"),
     "macd_break": ("bartime", "atr", "signal"),
 }
+
+# Cot file tin hieu CUA BACKTESTBOT (nhieu chien luoc): moi dong co du 7 cot. `entry` de TRONG voi chien luoc lenh MARKET
+# (ma_cross, macd_break); chien luoc lenh STOP (combo) BAT BUOC co entry. Ten cot khop cung ten bot tim theo header.
+SIGNAL_FILE_COLUMNS = ("bartime", "atr", "entry", "signal", "tf", "symbol", "strategy", "risk_percent")
 
 
 def resolve_signal_path(
@@ -110,21 +99,45 @@ def resolve_signal_path(
     cùng đụng 1 symbol/timeframe/strategy; bản đóng băng thật phục vụ tái lập
     đã nằm ở store.snapshot()/inputs/ nên thư mục này chỉ cần sống hết 1 batch).
 
-    Tên file đích chỉ phụ thuộc (symbol_group, timeframe, redis_strategy) —
-    KHÔNG phụ thuộc KslLevel/KtpLevel/... — nên nhiều spec cùng symbol/timeframe
-    trong 1 batch (vd quét lưới 10×10 KSL×KTP) trỏ ĐÚNG 1 file. `materialized`
-    (một `set` do facilitator giữ xuyên suốt cả batch) đảm bảo Redis chỉ bị
+    Profile BẮT BUỘC đã chọn chiến lược (`with_signal_overrides` với `signal_strategies` của cấu hình lần chạy):
+    MỘT file ghép mọi (chiến lược, symbol, khung) đã chọn. Symbol lấy từ `signal_symbols` (mặc định chỉ symbol của spec);
+    `spec.symbol`/`spec.timeframe` chỉ là symbol/khung biểu đồ của CLI. Tên file chỉ phụ thuộc đúng tập (chiến lược,
+    symbol, khung) — KHÔNG phụ thuộc KslLevel/KtpLevel/... — nên nhiều spec cùng tập trong 1 batch (vd quét lưới
+    KSL×KTP) trỏ ĐÚNG 1 file. `materialized` (một `set` do facilitator giữ xuyên suốt cả batch) đảm bảo Redis chỉ bị
     LRANGE/HGETALL đúng 1 lần cho mỗi tổ hợp đó, không phải 1 lần/spec.
     """
     if spec.symbol not in SYMBOL_GROUPS:
         raise KeyError(f"{spec.symbol!r} has no signal Redis mapping")
-    if profile.strategy not in REDIS_STRATEGY_TOKENS:
-        raise KeyError(f"{profile.strategy!r} has no Redis strategy token mapping")
-    symbol_group = SYMBOL_GROUPS[spec.symbol]
-    redis_strategy = REDIS_STRATEGY_TOKENS[profile.strategy]
-    dest_path = dest_dir / f"{symbol_group}_{spec.timeframe.upper()}_{redis_strategy}.csv"
+    if not profile.signal_strategies:
+        raise ValueError(f"{profile.id}: chưa chọn chiến lược — cấu hình lần chạy phải khai signal_strategies")
+    channels = spec.channels
+    symbols = tuple(dict.fromkeys(item.symbol for item in channels)) if channels else (profile.signal_symbols or (spec.symbol,))
+    unknown = [name for name in symbols if name not in SYMBOL_GROUPS]
+    if unknown:
+        raise KeyError(f"{unknown!r} has no signal Redis mapping")
+    if spec.symbol not in symbols:
+        raise ValueError(f"chart symbol {spec.symbol!r} must be one of signal_symbols {list(symbols)!r}")
+    frames = {token: tuple(profile.strategy_frames[token]) for token in profile.signal_strategies}
+    identity = (
+        # Nguồn của kênh chỉ vào tên file khi KHÁC nguồn mặc định của lượt (cùng kênh nhưng khác nguồn là khác nội dung).
+        ";".join(
+            f"{item.strategy}|{item.symbol}|{item.timeframe}|{item.risk_percent:g}"
+            + (f"|{item.source}" if item.source and item.source != redis_profile.id else "")
+            for item in channels
+        )
+        if channels
+        else "|".join(symbols) + "/" + ";".join(f"{token}:{','.join(values)}" for token, values in frames.items())
+    )
+    digest = hashlib.sha1(identity.encode("utf-8")).hexdigest()[:8]
+    dest_path = dest_dir / f"MULTI_{len(symbols)}sym_{'-'.join(frames)}_{digest}.csv"
     if materialized is None or dest_path not in materialized:
-        materialize_signal_csv(redis_profile, symbol_group, spec.timeframe, redis_strategy, dest_path)
+        if channels:
+            materialize_channel_csv(redis_profile, channels, dest_path)
+        else:
+            materialize_strategy_csv(
+                redis_profile, symbols, frames, dest_path,
+                risk_percent=float(spec.params.get("RiskPercent", 0.2)),
+            )
         if materialized is not None:
             materialized.add(dest_path)
     return dest_path
@@ -163,10 +176,9 @@ def signal_list_key(
     """Khuôn key LIST theo đúng tài liệu strategy_lab:
     {key_prefix}_{SYMBOL}_{TIMEFRAME}_{STRATEGY} — viết hoa cả 3 phần.
 
-    `key_prefix` mặc định "L_PastSignal" (kênh gốc, không lọc trend). strategy_lab
-    (2026-09-26) publish thêm kênh trend song song, cùng khuôn key nhưng tiền tố
-    "L_PastSignal_Trend" — gọi hàm này với key_prefix khác để đọc kênh đó,
-    xem RedisProfile.key_prefix trong configuration.py."""
+    `key_prefix` mặc định "L_PastSignal" (nguồn RAW, không lọc trend). Hai nguồn còn lại (WE, 2026-10-23) cùng khuôn
+    key, chỉ khác tiền tố "L_PastSignal_Knn" / "L_PastSignal_Breakout" — gọi hàm này với key_prefix khác để đọc
+    nguồn đó, xem RedisProfile.key_prefix trong configuration.py."""
     return f"{key_prefix}_{symbol_group.upper()}_{timeframe.upper()}_{strategy.upper()}"
 
 
@@ -202,37 +214,15 @@ def fetch_signal_rows(
     return rows
 
 
-def write_signal_csv(rows: Sequence[Mapping[str, str]], dest_path: Path, strategy: str) -> int:
-    """Ghi `rows` ra CSV đúng khuôn cột LoadSignalFile() cần cho `strategy`.
-
-    Giữ NGUYÊN giá trị thô từ Redis (kể cả cột signal "1"/"2" theo
-    ProtoOATradeSide) — không tự chuẩn hoá, vì cBot đã tự làm việc đó khi đọc
-    file (xem LoadSignalFile() 2026-09-19/20). Trả về số dòng đã ghi."""
-    columns = STRATEGY_COLUMNS.get(strategy)
-    if columns is None:
-        raise ValueError(f"signal_trans: không biết khuôn cột cho strategy {strategy!r}")
-    dest_path.parent.mkdir(parents=True, exist_ok=True)
-    lines = [",".join(columns)]
-    written = 0
-    for row in rows:
-        if any(col not in row for col in columns):
-            # Dòng thiếu field bắt buộc — bỏ qua thay vì ghi dòng lỗi vào CSV
-            # (LoadSignalFile() cũng tự bỏ dòng thiếu cột, nhưng lọc sớm ở
-            # đây để dest_path phản ánh đúng số signal THẬT SỰ dùng được).
-            continue
-        lines.append(",".join(str(row[col]) for col in columns))
-        written += 1
-    dest_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    return written
-
-
 def signal_window_sha256(path: Path, end: date) -> str:
-    """sha256 of the CSV header plus every row whose bartime date is before
-    `end` (exclusive, same convention as the backtest end).
+    """sha256 of the CSV header plus every row whose bartime date is on or
+    before `end` (inclusive: ctrader-cli runs the whole `--end` day — measured
+    2026-10-13, equity points reach 23:59 of the end day and the last trade came
+    from a signal of that same day).
 
     strategy_lab keeps appending new signals to Redis, so the full CSV changes
     every few hours even when nothing inside a past backtest window changed.
-    Rows at/after `end` can never influence a backtest that stops at `end`, so
+    Rows after `end` can never influence a backtest that stops at `end`, so
     they are excluded from this identity. A row whose bartime cannot be parsed
     is kept (conservative: an unreadable row still invalidates the identity)."""
     lines = path.read_text(encoding="utf-8").splitlines()
@@ -251,31 +241,134 @@ def signal_window_sha256(path: Path, end: date) -> str:
         except (IndexError, ValueError):
             kept.append(line)
             continue
-        if day < end:
+        if day <= end:
             kept.append(line)
     return hashlib.sha256(("\n".join(kept) + "\n").encode("utf-8")).hexdigest()
 
 
-def materialize_signal_csv(
-    profile: RedisProfile, symbol_group: str, timeframe: str, strategy: str, dest_path: Path
+def materialize_strategy_csv(
+    profile: RedisProfile,
+    symbols: Sequence[str],
+    strategy_frames: Mapping[str, Sequence[str]],
+    dest_path: Path,
+    *,
+    risk_percent: float = 0.2,
 ) -> int:
-    """Hàm tiện dùng cho use-case chính: kết nối Redis, đọc toàn bộ signal,
-    ghi CSV — 1 lần gọi duy nhất. Raise rõ ràng nếu không có signal nào, thay
-    vì âm thầm ghi CSV rỗng khiến backtest "chạy thành công" nhưng 0 lệnh mà
-    không ai biết vì sao.
-
-    Đọc đúng kênh Redis mà `profile.key_prefix` chỉ định — kênh gốc ("L_PastSignal",
-    mặc định, db0) hoặc kênh trend ("L_PastSignal_Trend", có lọc trend, db1) tuỳ profile được
-    truyền vào (xem `redis:` trong config.yaml)."""
+    """File tín hiệu của BacktestBot: đọc Redis của TỪNG (chiến lược, symbol, khung) bằng cùng một kết nối, ghi MỘT file
+    `SIGNAL_FILE_COLUMNS` sắp theo bartime (hoà thì theo thứ tự chiến lược, khung, symbol đã khai). `strategy_frames` là
+    `token Redis -> các khung`; `symbols` là tên cTrader (vd "US30.cash", đổi sang tên Redis qua SYMBOL_GROUPS).
+    Thiếu tín hiệu của bất kỳ (chiến lược, symbol, khung) nào là lỗi rõ ràng — không âm thầm chạy thiếu kênh. Dòng thiếu
+    field bắt buộc của chiến lược đó (`STRATEGY_COLUMNS`) bị bỏ. Giữ NGUYÊN giá trị thô từ Redis (kể cả cột signal "1"/"2" theo ProtoOATradeSide) — bot tự chuẩn hoá khi đọc
+    file. Cột `entry` chỉ lấy từ Redis với
+    chiến lược có entry (combo); chiến lược MARKET để trống."""
+    strategy_order = {token: index for index, token in enumerate(strategy_frames)}
+    frame_order = {token: {frame.upper(): index for index, frame in enumerate(frames)} for token, frames in strategy_frames.items()}
+    symbol_order = {name: index for index, name in enumerate(symbols)}
     client = redis_client(profile)
     try:
-        rows = fetch_signal_rows(client, symbol_group, timeframe, strategy, key_prefix=profile.key_prefix)
+        rows: list[dict[str, str]] = []
+        for token, frames in strategy_frames.items():
+            columns = STRATEGY_COLUMNS.get(token)
+            if columns is None:
+                raise ValueError(f"signal_trans: không biết khuôn cột cho chiến lược {token!r}")
+            for name in symbols:
+                group = SYMBOL_GROUPS[name]
+                for timeframe in frames:
+                    channel_rows = fetch_signal_rows(client, group, timeframe, token, key_prefix=profile.key_prefix)
+                    if not channel_rows:
+                        list_key = signal_list_key(group, timeframe, token, key_prefix=profile.key_prefix)
+                        raise RuntimeError(
+                            f"signal_trans: không có signal nào cho {name} ({group})/{timeframe}/{token} "
+                            f"trong Redis (key {list_key!r} rỗng hoặc không tồn tại)"
+                        )
+                    for row in channel_rows:
+                        if any(column not in row for column in columns):
+                            continue
+                        rows.append({
+                            "bartime": row["bartime"],
+                            "atr": row["atr"],
+                            "entry": row["entry"] if "entry" in columns else "",
+                            "signal": row["signal"],
+                            "tf": timeframe.upper(),
+                            "symbol": name,
+                            "strategy": token,
+                            "risk_percent": f"{risk_percent:g}",
+                        })
     finally:
         client.close()
-    if not rows:
-        list_key = signal_list_key(symbol_group, timeframe, strategy, key_prefix=profile.key_prefix)
-        raise RuntimeError(
-            f"signal_trans: không có signal nào cho {symbol_group}/{timeframe}/{strategy} "
-            f"trong Redis (key {list_key!r} rỗng hoặc không tồn tại)"
-        )
-    return write_signal_csv(rows, dest_path, strategy)
+    rows.sort(key=lambda row: (
+        row["bartime"], strategy_order[row["strategy"]], frame_order[row["strategy"]][row["tf"]], symbol_order[row["symbol"]],
+    ))
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [",".join(SIGNAL_FILE_COLUMNS)]
+    lines.extend(",".join(str(row[column]) for column in SIGNAL_FILE_COLUMNS) for row in rows)
+    dest_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return len(rows)
+
+
+def materialize_channel_csv(
+    profile: RedisProfile,
+    channels: Sequence[SignalChannel],
+    dest_path: Path,
+) -> int:
+    """Write exactly the selected channels and their total risk per leg group.
+
+    `profile` là nguồn MẶC ĐỊNH của lượt; kênh có `source` khác thì đọc từ đúng profile đó (mỗi kênh đúng một nguồn —
+    trùng kênh đã bị chặn ở with_signal_overrides). Mở một kết nối cho mỗi nguồn dùng đến."""
+    if not channels:
+        raise ValueError("signal_trans: channels cannot be empty")
+    channel_order = {
+        (item.strategy, item.symbol, item.timeframe.upper()): index
+        for index, item in enumerate(channels)
+    }
+    profiles: dict[str, RedisProfile] = {profile.id: profile}
+    clients: dict[str, "redis.Redis"] = {}
+    try:
+        rows: list[dict[str, str]] = []
+        for channel in channels:
+            token = channel.strategy
+            columns = STRATEGY_COLUMNS.get(token)
+            if columns is None:
+                raise ValueError(f"signal_trans: unknown strategy schema {token!r}")
+            name = channel.symbol
+            if name not in SYMBOL_GROUPS:
+                raise KeyError(f"{name!r} has no signal Redis mapping")
+            timeframe = channel.timeframe.upper()
+            group = SYMBOL_GROUPS[name]
+            source_id = channel.source or profile.id
+            if source_id not in profiles:
+                profiles[source_id] = load_redis_profile(source_id)
+            source = profiles[source_id]
+            if source_id not in clients:
+                clients[source_id] = redis_client(source)
+            channel_rows = fetch_signal_rows(clients[source_id], group, timeframe, token, key_prefix=source.key_prefix)
+            if not channel_rows:
+                list_key = signal_list_key(group, timeframe, token, key_prefix=source.key_prefix)
+                raise RuntimeError(
+                    f"signal_trans: no signals for {name} ({group})/{timeframe}/{token} "
+                    f"in Redis (key {list_key!r} is empty or missing)"
+                )
+            for row in channel_rows:
+                if any(column not in row for column in columns):
+                    continue
+                rows.append({
+                    "bartime": row["bartime"],
+                    "atr": row["atr"],
+                    "entry": row["entry"] if "entry" in columns else "",
+                    "signal": row["signal"],
+                    "tf": timeframe,
+                    "symbol": name,
+                    "strategy": token,
+                    "risk_percent": f"{channel.risk_percent:g}",
+                })
+    finally:
+        for client in clients.values():
+            client.close()
+    rows.sort(key=lambda row: (
+        row["bartime"], channel_order[(row["strategy"], row["symbol"], row["tf"])],
+    ))
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [",".join(SIGNAL_FILE_COLUMNS)]
+    lines.extend(",".join(str(row[column]) for column in SIGNAL_FILE_COLUMNS) for row in rows)
+    dest_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return len(rows)

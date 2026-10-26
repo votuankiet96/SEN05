@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -18,16 +19,15 @@ from .models import FailureCode, OptimizeBox, RunResult, RunSpec, RunStatus
 from .output_util import evidence
 
 # cli_runner.py — chỗ DUY NHẤT được phép spawn ctrader-cli.exe. Trước
-# 2026-09-21 nằm ở package riêng `cli_engine/` (tách khỏi core_engine để đối
-# xứng với api_engine/); gộp thẳng vào core_engine/ vì hệ hiện chỉ dùng đúng
-# backend CLI (api_engine giữ nguyên, không dùng tới) — tách riêng 1 package
-# chỉ để chứa 1 file là thừa. Cũng vẫn to hơn ngưỡng 300 dòng mềm vì gánh luôn:
+# 2026-09-21 nằm ở package riêng `cli_engine/`; gộp thẳng vào core_engine/ vì
+# hệ chỉ dùng đúng backend CLI (api_engine đã xoá 2026-10-13) — tách riêng 1
+# package chỉ để chứa 1 file là thừa. Cũng vẫn to hơn ngưỡng 300 dòng mềm vì gánh luôn:
 # auth env, redaction, vòng đời child process, đọc CLI metadata, VÀ capability
 # probing (port từ pipeline/core/cli.py 2026-09-12) — không tách thêm module
 # thứ 11 chỉ cho riêng phần probe.
 #
 # File này ở bo_workflow/core_engine/cli_runner.py -> trèo 2 cấp (core_engine ->
-# bo_workflow -> Sources/Robots) là tới chỗ Combo.algo/MA Cross.algo thật nằm.
+# bo_workflow -> Sources/Robots) là tới chỗ ComboMulti.algo/MACrossMulti.algo/MACDBreakMulti.algo thật nằm.
 ROBOTS_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_TIMEOUT_SECONDS = 1800
 REPORT_GRACE_SECONDS = 10
@@ -378,9 +378,10 @@ def build_argv(
     argv = [
         str(cli_path), "backtest", str(algo_path), str(cbotset),
         f"--start={_cli_date(spec.start)}",
-        # spec.end la moc DUNG (exclusive), dung y nhu o "To" cua GUI va co
-        # --end cua CLI -> khong quy doi gi ca. Truoc 2026-09-13 cho nay cong
-        # them 1 ngay (end hieu la "bao gom"), lam notebook va GUI lech 1 ngay.
+        # spec.end di THANG vao --end cua CLI -> khong quy doi gi ca (truoc
+        # 2026-09-13 cho nay cong them 1 ngay, lam notebook va GUI lech 1
+        # ngay). ctrader-cli chay TRON ngay --end (do 2026-10-13), nen spec.end
+        # la ngay giao dich CUOI, da gom — khong phai moc loai tru.
         f"--end={_cli_date(spec.end)}",
         f"--data-mode={spec.data_mode}",
         f"--balance={spec.balance:g}",
@@ -506,6 +507,50 @@ def kill_tree(pid: int) -> None:
         subprocess.run(["kill", "-TERM", str(pid)], capture_output=True, check=False)
 
 
+# Sai số thời gian SAU khi lượt chạy kết thúc khi so mtime của file cTrader. Không có sai số TRƯỚC lúc bắt đầu:
+# events.json chỉ được ghi sau khi tiến trình bắt đầu, còn khoảng đệm 5 s phía trước từng bắt nhầm thư mục của lượt
+# liền trước cùng tham số (khác cửa sổ ngày) vừa xong ngay trước đó — làm 49/65 lượt walk-forward mất events.
+NATIVE_MATCH_SLACK_SECONDS = 5
+
+
+def find_native_output(
+    algo_path: Path, cbotset: Path, started: datetime, ended: datetime, data_dir: Path | None,
+    accept: Callable[[Path], bool] | None = None,
+) -> Path | None:
+    """Thư mục `Backtesting` mà cTrader tự ghi cho ĐÚNG lần chạy này (có events.json — vòng đời lệnh
+    mà report không có), hoặc None. CLI không có cờ nào chỉ định nơi ghi nên nối bằng các điều kiện cùng lúc:
+    (1) events.json sửa lần cuối trong khoảng [started, ended + NATIVE_MATCH_SLACK_SECONDS];
+    (2) parameters.cbotset trong thư mục đó có Chart/Parameters y hệt params.cbotset ta đưa cho CLI
+    (đo 2026-10-14: cùng khoá/giá trị, chỉ khác thụt dòng; cbotset KHÔNG chứa ngày nên các lượt cùng tham số
+    khác cửa sổ giống hệt nhau ở điều kiện này);
+    (3) nếu có `accept`: events.json của ứng viên phải qua được `accept` (run_backtest đưa vào phép kiểm events khớp
+    report của chính lượt này) — phân biệt các lượt cùng tham số chạy đồng thời.
+    Không đúng 1 ứng viên → None, không đoán (không tìm được thì chỉ thiếu events.json)."""
+    if data_dir is None or not data_dir.is_dir():
+        return None
+    root = data_dir / hashlib.sha256(algo_path.read_bytes()).hexdigest()
+    if not root.is_dir():
+        return None
+    try:
+        wanted = json.loads(cbotset.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    low = started.timestamp()
+    high = ended.timestamp() + NATIVE_MATCH_SLACK_SECONDS
+    hits: list[Path] = []
+    for instance in root.iterdir():
+        folder = instance / "Backtesting"
+        events, native_cbotset = folder / "events.json", folder / "parameters.cbotset"
+        if not (events.is_file() and native_cbotset.is_file()) or not low <= events.stat().st_mtime <= high:
+            continue
+        try:
+            if json.loads(native_cbotset.read_text(encoding="utf-8")) == wanted and (accept is None or accept(events)):
+                hits.append(folder)
+        except (OSError, ValueError):
+            continue
+    return hits[0] if len(hits) == 1 else None
+
+
 def run_backtest(
     spec: RunSpec,
     *,
@@ -517,11 +562,12 @@ def run_backtest(
     startup_stall_s: int = DEFAULT_STARTUP_STALL_SECONDS,
     cli_path: Path | None = None,
     env: Mapping[str, str] | None = None,
+    native_data_dir: Path | None = None,
     on_progress: ProgressFn | None = None,
     should_cancel: CancelFn | None = None,
 ) -> RunResult:
     work_dir.mkdir(parents=True, exist_ok=True)
-    for name in ("report.json", "cli.log", "bot.log", "params.cbotset"):
+    for name in ("report.json", "cli.log", "bot.log", "params.cbotset", "events.json"):
         (work_dir / name).unlink(missing_ok=True)
     cli = cli_path or select_cli()
     report = work_dir / "report.json"
@@ -576,6 +622,19 @@ def run_backtest(
     (work_dir / "bot.log").write_text(_bot_log(stdout), encoding="utf-8")
     _redact_report(report)
     status, reason, code = _classify(result, report, spec)
+    native = None
+    try:
+        report_data = evidence.read_report(report)
+    except (OSError, ValueError):   # không có report hợp lệ thì không có gì để kiểm events có đúng của lượt này không
+        report_data = None
+    if report_data is not None:
+        native = find_native_output(
+            algo_path, cbotset, started, ended, native_data_dir,
+            accept=lambda path: evidence.events_match_report(json.loads(path.read_text(encoding="utf-8")), report_data),
+        )
+    events = work_dir / "events.json"
+    if native is not None:
+        shutil.copyfile(native / "events.json", events)
     return RunResult(
         status=status,
         failure_code=code,
@@ -591,6 +650,8 @@ def run_backtest(
         cli_log=work_dir / "cli.log",
         bot_log=work_dir / "bot.log",
         cbotset=cbotset,
+        events_json=events if native is not None else None,
+        native_dir=str(native) if native is not None else "",
     )
 
 
@@ -842,9 +903,10 @@ def _load_optimize_passes(passes_dir: Path, optres: dict, strategy: StrategyProf
 
 
 def _read_pass(
-    info: dict | None, spec: RunSpec, report: Path, bot_log: Path, cbotset: Path,
+    info: dict | None, spec: RunSpec, report: Path, bot_log: Path, cbotset: Path, events: Path,
 ) -> tuple[RunStatus, str, FailureCode]:
-    """Đổi thư mục 1 pass thành report.json (đã che thông tin cá nhân) + bot.log + params.cbotset rồi kiểm khung ngày."""
+    """Đổi thư mục 1 pass thành report.json (đã che thông tin cá nhân) + bot.log + params.cbotset
+    (+ events.json nếu pass có) rồi kiểm khung ngày."""
     if info is None:
         return RunStatus.NO_REPORT, "no matching pass in optimize output", FailureCode.NO_REPORT
     if info["status"] != "Completed":
@@ -853,6 +915,8 @@ def _read_pass(
         data = evidence.read_gui_report(info["dir"] / "report.html")
         bot_log.write_text((info["dir"] / "log.txt").read_text(encoding="utf-8", errors="replace"), encoding="utf-8")
         shutil.copyfile(info["dir"] / "parameters.cbotset", cbotset)
+        if (info["dir"] / "events.json").is_file():
+            shutil.copyfile(info["dir"] / "events.json", events)
     except Exception as exc:
         return RunStatus.NO_REPORT, f"pass {info['id']}: cannot read output ({type(exc).__name__})", FailureCode.NO_REPORT
     report.write_text(json.dumps(redact_report_data(data), separators=(",", ":")), encoding="utf-8")
@@ -918,9 +982,12 @@ def run_optimize_box(
     for index, spec in enumerate(box.specs):
         spec_dir = work_dir / f"s{index}"
         spec_dir.mkdir(exist_ok=True)
-        report, bot_log, cli_log, cbotset = (spec_dir / name for name in ("report.json", "bot.log", "cli.log", "params.cbotset"))
+        report, bot_log, cli_log, cbotset, events = (
+            spec_dir / name for name in ("report.json", "bot.log", "cli.log", "params.cbotset", "events.json")
+        )
         bot_log.write_text("", encoding="utf-8")
-        status, reason, code = box_failure or _read_pass(found.get(_param_key(strategy, spec.params)), spec, report, bot_log, cbotset)
+        info = found.get(_param_key(strategy, spec.params))
+        status, reason, code = box_failure or _read_pass(info, spec, report, bot_log, cbotset, events)
         if status is not RunStatus.OK:
             cli_log.write_text(box_log, encoding="utf-8")
         results.append(RunResult(
@@ -930,5 +997,7 @@ def run_optimize_box(
             started_utc=started.isoformat(), ended_utc=ended.isoformat(),
             cli_path=str(cli), cli_version=version,
             report_json=report, cli_log=cli_log, bot_log=bot_log, cbotset=cbotset,
+            events_json=events if events.is_file() else None,
+            native_dir=str(info["dir"]) if info and events.is_file() else "",
         ))
     return results

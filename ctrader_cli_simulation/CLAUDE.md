@@ -21,6 +21,31 @@ tính là đồng thuận.
 
 ---
 
+# Quy ước chạy backtest (2026-10-16) — ĐỌC KHI NGƯỜI DÙNG YÊU CẦU BACKTEST
+
+Người dùng KHÔNG phải dặn lại cách chạy: mặc định nằm ở `bo_workflow/backtest_defaults.yaml` (người dùng tự sửa file này). Công cụ:
+`bo_workflow/tools/backtest_tool.py` (`plan` → in "thẻ chạy" → hỏi người dùng "chốt?" → `run` → `report`). Bot hiện hành: `BacktestBot`
+(profile `backtestbot-v1`; cấu hình lượt chạy BẮT BUỘC khai `signal_strategies`). Mặc định: 3 chân, KSL Fib2618, rủi ro 1%/cụm, vốn 100k,
+tỷ giá lịch sử, nguồn Redis db0 (db1 chỉ khi được yêu cầu), kỳ chuẩn = nửa năm + năm + liền mạch từ 2024/2025 tới hôm qua, mỗi kỳ độc lập.
+Luôn HỎI "chốt?" trước khi chạy (kể cả lượt nhỏ). Báo cáo: mở đầu bằng kết luận, mỗi khối một (chiến lược, symbol), hàng = khung,
+cột = kỳ, KHÔNG gộp, KHÔNG áp ngưỡng chọn cho tới khi người dùng đặt. Redis có thể đổi tín hiệu bất cứ lúc nào: `plan` chỉ tái dùng lượt cũ khi tín
+hiệu trong cửa sổ vẫn khớp Redis hiện tại. Hạn mức CLI 2.000 lượt/ngày (giờ Prague).
+
+---
+
+# ⚠️ Cập nhật 2026-10-15 — bot gốc ĐÃ GỠ, bot hiện hành là bản Multi
+
+Đã xoá hẳn `Combo/`, `MA Cross/`, `MACD Break/` (cùng `Combo.algo`, `MA Cross.algo`, `MACD Break.algo` và `bo_workflow/legacy/`)
+sau khi bản Multi được đối chiếu giống hệt từng lệnh (Combo ↔ ComboMulti 1.467/1.467 lệnh ở 8 cặp US30; MA Cross và MACD Break ↔ bản
+Multi 20/20 cặp). **Mọi chỗ bên dưới nhắc `Combo.cs` / `MA Cross.cs` / `MACD Break.cs` / `Combo.algo` / profile `combo-v1`, `macross-v1`,
+`macdbreak-v1` là LỊCH SỬ**, không còn file/profile đó. Bot hiện hành: `ComboMulti/ComboMulti/ComboMulti.cs` (lệnh chờ STOP, hạn hiệu lực
+3 khung), `MACrossMulti/MACrossMulti/MACrossMulti.cs` và `MACDBreakMulti/MACDBreakMulti/MACDBreakMulti.cs` (lệnh MARKET) — cùng khung
+region, cùng cơ chế nhiều chân, đều chạy nhiều symbol × nhiều khung trên 1 tài khoản qua `signal_symbols`/`signal_timeframes` (profile
+`combomulti-v1`, `combomulti-1tf-v1`, `macrossmulti-v1`, `macdbreakmulti-v1`). Cần "code mẫu Position Management" thì đọc `ComboMulti.cs`.
+Mã gốc của các bot đã gỡ vẫn nằm trong `inputs/` (.cs + .algo) của experiment `bo_workflow/runs/research/grid/vm_*_old_*` và `cmb*_Combo_*`.
+
+---
+
 # Vai trò
 
 Bạn là kỹ sư lập trình cBot cho **cTrader Automate** (C# / .NET, namespace `cAlgo.API`, `cAlgo.Robots`). Nhiệm vụ: nhận mô tả chiến lược giao dịch (entry, stoploss, take profit, quản lý vốn, filter...) từ người dùng và chuyển thành **cBot hoàn chỉnh** để họ backtest/optimize trực tiếp trong cTrader Automate.
@@ -410,6 +435,19 @@ tra sâu** (ngoài phạm vi yêu cầu hôm nay) — toàn bộ mục "Thiết 
 **tài liệu THIẾT KẾ/Ý ĐỊNH, không phải mô tả code đang chạy thật** cho tới khi xác minh lại rõ
 ràng — bao gồm cả mọi số đếm tổ hợp (5,100/3,570/357...) đều dựa trên enum 10-mức cũ, nay đã
 đổi (xem mục ngay dưới đây).
+
+## Nhiều chân chốt lời (2026-10-13) — khớp order_engine (OE) live, KHÔNG phải catalog ở trên
+
+Cả 3 bot (`Combo`, `MA Cross`, `MACD Break`) nay có `LegCount` (1..4, mặc định 1) + `Leg2Ktp/Leg3Ktp/
+Leg4Ktp` (KtpLevel là TP chân 1): mỗi tín hiệu đặt N lệnh cùng giá vào, CHUNG 1 SL = KSL×ATR, mỗi chân
+1 TP riêng, `RiskPercent` chia đều N (khối lượng mọi chân bằng nhau, làm tròn xuống; 1 chân dưới mức
+tối thiểu ⇒ bỏ cả nhóm; chân đầu tiên bị từ chối thì dừng). Nhãn lệnh `<Label>_L{n}`. KHÔNG dời SL/
+breakeven/trailing khi 1 chân chốt lời — đúng như OE (`ctrader/src/engine/{sizing,posman}.py` trên máy
+OF10), nên catalog `PartialBreakeven`/`LadderRunner`... vẫn chỉ là ý định. `LegCount=1` ≡ bot 1 chân
+cũ (đã đối chứng từng lệnh: Combo 44/44 ô). Backtest khớp cả nhóm cùng 1 giá; OE live lệnh MARKET
+(MA Cross, MACD Break) có thể lệch vài tick giữa các chân. Đếm thua liên tiếp (tắt mặc định) vẫn đếm theo
+chân, chưa theo nhóm. Báo cáo cTrader đếm theo chân: số lệnh = N × số lần vào; gộp theo (giờ vào, hướng)
+để ra số nhóm. Chi tiết: memory `combolegs-bot-and-profile`.
 
 # Tách enum SL/TP: SlFibLevel × TpFibLevel (2026-09-03)
 

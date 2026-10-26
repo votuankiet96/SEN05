@@ -1,20 +1,27 @@
-"""Dashboard-owned names for the two frozen Redis signal sources.
+"""Dashboard-owned names for the three fixed Redis signal sources (WE/OG8, 2026-10-23).
 
-The original profile is intentionally implicit in legacy core commands so
-existing DB2 experiments remain compatible with their locked config.
+RAW (db0) is intentionally implicit in legacy core commands so existing db0 experiments remain compatible with
+their locked config. KNN (db1) and Breakout (db2) are always passed explicitly. A channel of a multi-channel job
+may override the job's source (`source` on the channel row).
 """
 from __future__ import annotations
 
 from typing import Any, Mapping
 
 ORIGINAL = "sen05-signal-v1"
-TREND_FILTERED = "sen05-signal-trend-v1"
+KNN = "sen05-signal-knn-v1"
+BREAKOUT = "sen05-signal-breakout-v1"
+# db1 profile before 2026-10-23 (prefix L_PastSignal_Trend, content switched KNN <-> breakout): removed from
+# config.yaml. Only lets old dashboard plans/sessions still show a label; it can no longer be selected.
+LEGACY_TREND = "sen05-signal-trend-v1"
 
 OPTIONS = (
-    {"value": ORIGINAL, "label": "Original (DB2)"},
-    {"value": TREND_FILTERED, "label": "Trend-filtered (DB3)"},
+    {"value": ORIGINAL, "label": "RAW (db0)"},
+    {"value": KNN, "label": "KNN (db1)"},
+    {"value": BREAKOUT, "label": "Breakout (db2)"},
 )
 LABELS = {item["value"]: item["label"] for item in OPTIONS}
+LEGACY_LABELS = {LEGACY_TREND: "Trend (legacy db1)"}
 
 
 def require_profile(value: Any) -> str:
@@ -25,20 +32,22 @@ def require_profile(value: Any) -> str:
 
 
 def profile_from_input(input_doc: Mapping[str, Any] | None) -> str:
-    """Older dashboard plans without this field always used original DB2."""
-    return require_profile((input_doc or {}).get("redis_profile") or ORIGINAL)
+    """Older dashboard plans without this field always used original db0; plans of the retired trend profile keep it."""
+    profile = str((input_doc or {}).get("redis_profile") or ORIGINAL)
+    return profile if profile in LEGACY_LABELS else require_profile(profile)
 
 
 def label_from_input(input_doc: Mapping[str, Any] | None) -> str:
-    return LABELS[profile_from_input(input_doc)]
+    profile = profile_from_input(input_doc)
+    return LABELS.get(profile) or LEGACY_LABELS[profile]
 
 
 def command_field(profile: str) -> dict[str, str]:
-    """Pass DB3 explicitly; retain the original DB2 command shape/cache."""
+    """Pass KNN/Breakout explicitly; retain the original db0 command shape/cache."""
     selected = require_profile(profile)
-    return {"redis_profile": selected} if selected == TREND_FILTERED else {}
+    return {"redis_profile": selected} if selected != ORIGINAL else {}
 
 
 def identity_field(profile: str) -> dict[str, str]:
-    """Keep old DB2 execution keys while always separating DB3 provenance."""
+    """Keep old db0 execution keys while always separating KNN/Breakout provenance."""
     return command_field(profile)

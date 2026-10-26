@@ -35,9 +35,9 @@ assert all(response.status_code == 200 for response in responses.values()), {
     path: response.status_code for path, response in responses.items()
 }
 layout = responses["/_dash-layout"].get_data(as_text=True)
-for label in ("Single Backtest", "Grid Search", "Walk-forward", "DSR + PBO"):
+for label in ("Single Backtest", "Multi-channel", "Grid Search", "Walk-forward", "DSR + PBO"):
     assert label in layout, label
-for label in ("global-signal-profile", "Original (DB2)", "Trend-filtered (DB3)"):
+for label in ("global-signal-profile", "RAW (db0)", "KNN (db1)", "Breakout (db2)"):
     assert label in layout, label
 assert "session-active-run" in layout
 
@@ -46,11 +46,12 @@ def count(pattern):
 
 actual = {
     "single": count(r"(^|\.)session-"),
+    "multi": count(r"(^|\.)multi-"),
     "grid": count(r"(^|\.)grid-"),
     "dsr_pbo": count(r"(^|\.)diagnostics-"),
     "walkforward": count(r"(^|\.)wf-"),
 }
-expected = {"single": 11, "grid": 11, "dsr_pbo": 11, "walkforward": 14}
+expected = {"single": 9, "multi": 15, "grid": 11, "dsr_pbo": 11, "walkforward": 14}
 assert actual == expected, {"actual": actual, "keys": list(app.app.callback_map)}
 assert "global-signal-message.children" in app.app.callback_map
 single_status = next(meta for key, meta in app.app.callback_map.items() if "session-progress-bar.value" in key)
@@ -61,6 +62,7 @@ diagnostics_status = next(meta for key, meta in app.app.callback_map.items() if 
 assert "diagnostics-refresh-btn" in {item["id"] for item in diagnostics_status["inputs"]}
 for button, selector, detail, status in (
     ("refresh-session-view-btn", "session-select.data", "session-detail.children", "session-progress-bar.value"),
+    ("multi-refresh-btn", "multi-session-select.data", "multi-session-detail.children", "multi-progress-bar.value"),
     ("grid-refresh-btn", "grid-session-select.data", "grid-session-detail.children", "grid-progress-bar.value"),
     ("diagnostics-refresh-btn", "diagnostics-session-select.data", "diagnostics-session-detail.children", "diagnostics-progress-bar.value"),
     ("wf-refresh-btn", "wf-session-select.data", "wf-session-detail.children", "wf-live-progress.children"),
@@ -69,11 +71,12 @@ for button, selector, detail, status in (
         meta = next(meta for meta in app.app.callback_map.values()
                     if output in [str(item) for item in (meta["output"] if isinstance(meta["output"], list) else [meta["output"]])])
         assert button in {item["id"] for item in meta["inputs"]}, (button, output)
-for prefix in ("grid", "diagnostics", "wf"):
+for prefix in ("multi", "grid", "diagnostics", "wf"):
     assert any(f"{prefix}-create-message.children" in key and f"{prefix}-delete-message.children" in key
                for key in app.app.callback_map), prefix
 for prefix, button in (("session", "refresh-session-view-btn"), ("grid", "grid-refresh-btn"),
-                       ("diagnostics", "diagnostics-refresh-btn"), ("wf", "wf-refresh-btn")):
+                       ("multi", "multi-refresh-btn"), ("diagnostics", "diagnostics-refresh-btn"),
+                       ("wf", "wf-refresh-btn")):
     key, meta = next((key, meta) for key, meta in app.app.callback_map.items()
                      if f"{prefix}-create-message.children" in key and f"{prefix}-delete-message.children" in key)
     response = client.post("/_dash-update-component", json={
@@ -115,7 +118,7 @@ def outputs_of(key):
 
 background = {out: key for key, meta in app.app.callback_map.items() if meta.get("background")
               for out in outputs_of(key)}
-assert len(background) == 4, background
+assert len(background) == 5, background
 offenders = []
 for key, meta in app.app.callback_map.items():
     for item in meta["inputs"]:

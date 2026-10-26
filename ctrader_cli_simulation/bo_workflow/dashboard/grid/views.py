@@ -19,13 +19,15 @@ try:
     from .. import signal_sources
     from ..ui_common import (
         DECIMAL, INPUT_DEBOUNCE_MS, INTEGER, MONEY, PERCENT, PERSIST, SECONDS,
-        numeric_column, right_align, selected_dsr, status_region, truncated,
+        STRATEGY_PERSIST, numeric_column, right_align, selected_dsr, status_region,
+        strategy_label, truncated,
     )
 except ImportError:  # app.py loads feature folders as top-level modules.
     import signal_sources
     from ui_common import (
         DECIMAL, INPUT_DEBOUNCE_MS, INTEGER, MONEY, PERCENT, PERSIST, SECONDS,
-        numeric_column, right_align, selected_dsr, status_region, truncated,
+        STRATEGY_PERSIST, numeric_column, right_align, selected_dsr, status_region,
+        strategy_label, truncated,
     )
 
 # Net profit has a meaningful zero, so it needs a diverging scale centred on 0
@@ -36,14 +38,14 @@ PROFIT_COLORSCALE = diverging.RdBu
 
 def layout(options: dict[str, Any]) -> html.Div:
     strategies = options["strategies"]
-    combo = next(item for item in strategies if item["value"] == "combo")
+    default_strategy = next(item for item in strategies if item["value"] == "combo")
     symbols = options["symbols"]
     default_symbol = next(
         (item["value"] for item in symbols if item["value"] == "US30.cash"),
         symbols[0]["value"],
     )
-    all_ksl = [str(item["value"]) for item in combo["ksl_options"]]
-    all_ktp = [str(item["value"]) for item in combo["ktp_options"]]
+    all_ksl = [str(item["value"]) for item in default_strategy["ksl_options"]]
+    all_ktp = [str(item["value"]) for item in default_strategy["ktp_options"]]
     today = date.today().isoformat()
     return html.Div([
         dcc.Interval(
@@ -71,7 +73,7 @@ def layout(options: dict[str, Any]) -> html.Div:
                 dmc.Select(
                     id="grid-strategy-select", label="Strategy",
                     data=[{"label": item["label"], "value": item["value"]} for item in strategies],
-                    value="combo", clearable=False, **PERSIST,
+                    value=default_strategy["value"], clearable=False, **STRATEGY_PERSIST,
                 ),
                 dmc.Select(
                     id="grid-symbol-select", label="Symbol", data=symbols,
@@ -79,8 +81,8 @@ def layout(options: dict[str, Any]) -> html.Div:
                 ),
                 dmc.Select(
                     id="grid-timeframe-select", label="Timeframe",
-                    data=[{"label": tf.upper(), "value": tf} for tf in combo["timeframes"]],
-                    value=combo["timeframes"][0], clearable=False,
+                    data=[{"label": tf.upper(), "value": tf} for tf in default_strategy["timeframes"]],
+                    value=default_strategy["timeframes"][0], clearable=False,
                 ),
             ]),
             dmc.Divider(label="Capital and execution"),
@@ -92,7 +94,8 @@ def layout(options: dict[str, Any]) -> html.Div:
                 ),
                 dmc.NumberInput(
                     id="grid-risk-input", label="Risk per trade",
-                    value=0.5, min=0.01, step=0.01, suffix=" %",
+                    value=float(default_strategy["defaults"]["RiskPercent"]),
+                    min=0.01, step=0.01, suffix=" %",
                     debounce=INPUT_DEBOUNCE_MS, **PERSIST,
                 ),
                 dmc.NumberInput(
@@ -124,7 +127,7 @@ def layout(options: dict[str, Any]) -> html.Div:
                     description="Select the stop-loss levels included in this Grid.",
                     full_id="grid-ksl-full",
                     select_id="grid-ksl-select",
-                    options=combo["ksl_options"],
+                    options=default_strategy["ksl_options"],
                     values=all_ksl,
                 ),
                 _parameter_picker(
@@ -132,7 +135,7 @@ def layout(options: dict[str, Any]) -> html.Div:
                     description="Select the take-profit levels included in this Grid.",
                     full_id="grid-ktp-full",
                     select_id="grid-ktp-select",
-                    options=combo["ktp_options"],
+                    options=default_strategy["ktp_options"],
                     values=all_ktp,
                 ),
             ]),
@@ -308,7 +311,7 @@ def _configuration(input_doc: dict[str, Any], preflight: dict[str, Any], options
         (item for item in options.get("strategies", []) if item.get("value") == strategy_value), {}
     )
     cards = [
-        ("Strategy", strategy.get("label") or strategy_value),
+        ("Strategy", strategy_label(strategy_value, options)),
         ("Symbol", input_doc.get("symbol")),
         ("Timeframe", str(input_doc.get("timeframe") or "-").upper()),
         ("Period", f"{input_doc.get('start', '-')} to {input_doc.get('end', '-') }"),

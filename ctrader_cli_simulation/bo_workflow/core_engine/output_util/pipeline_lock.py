@@ -63,10 +63,16 @@ def stage_hash(*parts: Any) -> str:
 
 def check(pipeline: str, stage: str, deps_hash: str) -> dict[str, Any] | None:
     """Trả về `outs` đã ghi nếu ĐÚNG `deps_hash` này đã chạy/tính rồi —
-    ngược lại None (chưa từng làm, hoặc input đã đổi → phải làm lại)."""
+    ngược lại None (chưa từng làm, hoặc input đã đổi → phải làm lại).
+    `outs["root"]` (thư mục experiment) đã bị xoá cũng là None: không còn kết
+    quả nào để dùng lại, nên phải chạy lại thay vì báo "cached" rỗng."""
     entry = _read(pipeline)["stages"].get(stage)
     if entry and entry.get("deps_hash") == deps_hash:
-        return entry.get("outs")
+        outs = entry.get("outs")
+        root = (outs or {}).get("root")
+        if root and not Path(root).is_dir():
+            return None
+        return outs
     return None
 
 

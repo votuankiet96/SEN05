@@ -19,14 +19,15 @@ schema: bo-cli-engine-config/v1
 # VÍ DỤ (config.example.yaml) — copy thành config.yaml rồi điền host/pwd_file
 # thật của bạn; config.yaml thật đã bị .gitignore, không push lên git.
 #
-# [2026-09-26] 2 profile cùng server/mật khẩu, chỉ khác db + key_prefix —
-# strategy_lab publish song song 2 kênh đối chứng (xem worker.py bên
-# og_program): kênh gốc = signal không lọc trend, kênh trend = cùng chiến lược
-# nhưng chỉ giữ tín hiệu cùng chiều trend khung lớn (H4). Đổi kênh đọc cho 1
-# experiment = đổi "redis_profile" trong config của nó, KHÔNG sửa code.
-# [2026-10-08] Số DB THẬT (dò Redis): db0 = kênh gốc (key L_PastSignal_*), db1 =
-# kênh trend (key L_PastSignal_Trend_*), db2..db5 trống. Trước đây ghi DB2/DB3 —
-# hai tên đó còn trong nhãn dashboard và nhiều ghi chú cũ, chỉ là tên kênh.
+# [2026-10-23] WE (OG8) cấp 3 nguồn tín hiệu CỐ ĐỊNH, cùng server/mật khẩu, mỗi DB + tiền tố giữ MỘT nghĩa không bao
+# giờ đổi (kiểu lọc mới sau này sẽ lấy DB/tiền tố mới, không dùng lại tên cũ): db0 = RAW (setup -> lọc lặp cùng chiều,
+# không lọc trend), db1 = KNN (RAW rồi chỉ giữ tín hiệu cùng chiều trend KNN, khung tham chiếu riêng theo ô), db2 = BRK
+# (trend breakout cùng khung tín hiệu + luật dời tín hiệu). Tiền tố cũ `L_PastSignal_Trend` từng đổi nội dung
+# KNN <-> breakout nên đã bỏ; profile cũ `sen05-signal-trend-v1` đã bỏ (kết quả cũ mang nhãn đó chỉ còn là lịch sử).
+# [2026-10-24] Nguồn thứ 4 theo đúng nguyên tắc trên (DB + tiền tố MỚI): db4 = ZIGZAG (lọc theo trend zigzag; đo 24/10:
+# tập con thuần của db0, nội dung y hệt, giữ ~48%).
+# `label` = nhãn nguồn ghi vào kho SQL (signal_snapshot.channel), khai tường minh, không suy từ tiền tố.
+# Một lượt chạy chọn nguồn MẶC ĐỊNH bằng `redis_profile`; từng channel có thể đè bằng `source` (đa nguồn trong một lượt).
 # ---------------------------------------------------------------------------
 redis:
   sen05-signal-v1:
@@ -36,157 +37,137 @@ redis:
     username: ""
     pwd_file: C:\path\to\.redis-signal-pwd.txt
     key_prefix: "L_PastSignal"
+    label: original
 
-  sen05-signal-trend-v1:
+  sen05-signal-knn-v1:
     host: "<YOUR-REDIS-HOST>"
     port: 6379
     db: 1
     username: ""
     pwd_file: C:\path\to\.redis-signal-pwd.txt
-    key_prefix: "L_PastSignal_Trend"
+    key_prefix: "L_PastSignal_Knn"
+    label: knn
+
+  sen05-signal-breakout-v1:
+    host: "<YOUR-REDIS-HOST>"
+    port: 6379
+    db: 2
+    username: ""
+    pwd_file: C:\path\to\.redis-signal-pwd.txt
+    key_prefix: "L_PastSignal_Breakout"
+    label: breakout
+
+  sen05-signal-zigzag-v1:
+    host: "<YOUR-REDIS-HOST>"
+    port: 6379
+    db: 4
+    username: ""
+    pwd_file: C:\path\to\.redis-signal-pwd.txt
+    key_prefix: "L_PastSignal_Zigzag"
+    label: zigzag
+
+backtest:
+  defaults:
+    strategy: backtestbot
+    strategy_profile: backtestbot-v1
+    engine_profile: ctrader-ticks-precisefx-v1
+    redis_profile: sen05-signal-v1
+    account_mode: isolated
+    period_group: from2022
+    balance: 100000
+    fixed_params:
+      KslLevel: Fib2618
+      KtpLevel: Fib2618
+      Leg2Ktp: Fib3330
+      Leg3Ktp: Fib4236
+      LegCount: 3
+      RiskPercent: 1.0
+  period_groups:
+    from2022:
+      start_year: 2022
+      cutoff: 2026-06-30
+  runner:
+    max_parallel: 16
+  # Phân bổ rủi ro Multi-channel (tài khoản chung): total_risk_percent = hạn mức TỔNG rủi ro mỗi cụm lệnh khi mọi channel
+  # cùng mở (mỗi channel chỉ có tối đa 1 cụm mở cùng lúc). Chia đều: mỗi channel = hạn mức / N, làm tròn XUỐNG
+  # risk_decimals chữ số. Cặp này KHÔNG nằm trong run_key; run_key chỉ chứa risk_percent từng channel.
+  portfolio:
+    total_risk_percent: 2.0
+    risk_decimals: 4
 
 # ---------------------------------------------------------------------------
-# strategies: mỗi chiến lược (Combo, MA Cross...) khai .algo, khung mặc định,
+# ctrader: nơi cTrader tự ghi 1 thư mục kết quả cho mỗi lần chạy CLI
+# (<sha256 .algo>\<guid>\Backtesting\{events.json, log.txt, report.html, ...}).
+# Pipeline CHỈ ĐỌC từ đây để chép events.json (vòng đời lệnh) về kho — không ghi, không xoá.
+# ---------------------------------------------------------------------------
+ctrader:
+  data_dir: "%USERPROFILE%\\Documents\\cAlgo\\Data\\cBots"
+
+# ---------------------------------------------------------------------------
+# master_db: kho SQL master kết quả backtest (SQL Server Express, cùng máy).
+# Thiết kế: research_notes/sql-master-database-plan-2026-10-14.md. Đăng nhập Windows —
+# KHÔNG có mật khẩu. enabled=false → pipeline không ghi SQL (file vẫn là nguồn sự thật).
+# ---------------------------------------------------------------------------
+master_db:
+  enabled: false
+  server: "localhost\\SQLEXPRESS"
+  database: bo_research
+  driver: "ODBC Driver 18 for SQL Server"
+
+# ---------------------------------------------------------------------------
+# strategies: mỗi profile (nay chỉ còn backtestbot-v1, chạy cả 3 chiến lược) khai .algo, khung mặc định,
 # và bảng tham số — "optimize: true" nghĩa là tham số ĐƯỢC PHÉP đưa vào lưới
 # quét; đổi false/true ở đây chính là chỗ bạn bật/tắt 1 tham số cho tối ưu.
 # "levels" là các mức quét sẵn khi experiment đặt tham số đó = True.
 # ---------------------------------------------------------------------------
 strategies:
-  combo-v1:
-    strategy: combo
-    cbot_name: Combo
-    algo: Combo.algo
-    signal_prefix: combo
-    # Tên file signal = {signal_prefix}_{GROUP}_{TF}_{signal_label}_{signal_mode}.csv
-    # (khuôn mới của core_python.export_cli từ 2026-09-13, thay cho "_signals.csv" cũ)
-    #   signal_label: full_history | from_YYYYMMDD | to_YYYYMMDD | YYYYMMDD_YYYYMMDD
-    #   signal_mode : nt = no_trend (signal gốc, mặc định)
-    #                 tf_<trend_type>_<trend_tf> = đã lọc theo trend (vd tf_knn_H4)
-    signal_label: full_history
-    signal_mode: nt
-    default_timeframes: [h1, h2, h3, h4]
-    infra_params: [SignalFilePath]
-    params:
-      - name: KslLevel
-        kind: enum
-        enum: sl_fib
-        default: Fib1000
-        optimize: true
-        # [2026-09-21] Bỏ `levels:` chép tay — enum sl_fib/tp_fib giờ mặc định
-        # sweep TOÀN BỘ enum (nguồn duy nhất = SL_FIB_LEVELS/TP_FIB_LEVELS
-        # trong configuration.py, đúng thứ tự mirror Combo.cs/MA Cross.cs).
-        # Trước đây danh sách 10 giá trị bị chép NGUYÊN VĂN ở đây (2 nguồn
-        # cùng 1 sự thật — lệch thứ tự = sai lệnh mà không báo lỗi). Muốn quét
-        # tập con thì khai `levels: [Fib0618, Fib1000, ...]` như bình thường.
-      - name: KtpLevel
-        kind: enum
-        enum: tp_fib
-        default: Fib2618
-        optimize: true
-      - name: RiskPercent
-        kind: float
-        default: 1.0
-        optimize: true
-        levels: [0.5, 1.0, 1.5, 2.0]
-      - name: EnableDailyLossLimit
-        kind: bool
-        default: false
-        optimize: false
-      - name: MaxDailyLossPercent
-        kind: float
-        default: 5.0
-        optimize: false
-      - name: EnableMaxDrawdown
-        kind: bool
-        default: false
-        optimize: false
-      - name: MaxTotalDrawdownPercent
-        kind: float
-        default: 10.0
-        optimize: false
-      - name: EnableMaxConsecutiveLosses
-        kind: bool
-        default: false
-        optimize: false
-      - name: MaxConsecutiveLosses
-        kind: int
-        default: 5
-        optimize: false
 
-  macross-v1:
-    strategy: macross
-    cbot_name: MA Cross
-    algo: MA Cross.algo
-    signal_prefix: ma_cross
-    signal_label: full_history
-    signal_mode: nt
-    default_timeframes: [m10, m20, m30, m45]   # khớp bộ signal ma_cross_<GROUP>_M{10,20,30,45}_...
+  # [2026-10-16] BacktestBot: bot DUY NHẤT chạy nhiều CHIẾN LƯỢC × nhiều SYMBOL × nhiều KHUNG trên 1 tài khoản backtest,
+  # thay ComboMulti / MACrossMulti / MACDBreakMulti. Kiểu lệnh do chiến lược quyết định (combo = lệnh STOP có entry,
+  # ma_cross / macd_break = lệnh MARKET). `strategy_frames` = danh mục chiến lược (token Redis) và khung mặc định của
+  # từng chiến lược. Cấu hình lần chạy BẮT BUỘC khai `signal_strategies: [combo, ...]` (chọn chiến lược) và có thể thu
+  # hẹp bằng `signal_symbols` / `signal_timeframes`; thiếu signal_strategies là LỖI, không bao giờ chạy cả 3 ngầm.
+  # Nhãn lệnh <mã>_<symbol rút gọn>_<TF>_L<n> (vd cb_US30_H1_L1). 14 tham số, thứ tự enum và mặc định giống hệt ComboMulti.
+  backtestbot-v1:
+    strategy: backtestbot
+    cbot_name: BacktestBot
+    algo: BacktestBot.algo
+    source: BacktestBot/BacktestBot/BacktestBot.cs
+    signal_prefix: backtestbot
+    default_timeframes: [h1]
+    strategy_frames:
+      combo: [H1, H2, H3, H4]
+      ma_cross: [M10, M20, M30, M45]
+      macd_break: [H1, H2, H3, H4, M10, M20, M30, M45]
     infra_params: [SignalFilePath]
     params:
       - name: KslLevel
         kind: enum
         enum: sl_fib
-        default: Fib1000
+        default: Fib1618
         optimize: true
-        # Xem giải thích đầy đủ ở block KslLevel của combo-v1 phía trên.
       - name: KtpLevel
         kind: enum
         enum: tp_fib
         default: Fib2618
         optimize: true
-      - name: RiskPercent
-        kind: float
-        default: 1.0
-        optimize: true
-        levels: [0.5, 1.0, 1.5, 2.0]
-      - name: EnableDailyLossLimit
-        kind: bool
-        default: false
-        optimize: false
-      - name: MaxDailyLossPercent
-        kind: float
-        default: 5.0
-        optimize: false
-      - name: EnableMaxDrawdown
-        kind: bool
-        default: false
-        optimize: false
-      - name: MaxTotalDrawdownPercent
-        kind: float
-        default: 10.0
-        optimize: false
-      - name: EnableMaxConsecutiveLosses
-        kind: bool
-        default: false
-        optimize: false
-      - name: MaxConsecutiveLosses
+      - name: LegCount
         kind: int
-        default: 5
+        default: 1
         optimize: false
-
-  macdbreak-v1:
-    strategy: macdbreak
-    cbot_name: MACD Break
-    algo: MACD Break.algo
-    signal_prefix: macd_break
-    signal_label: full_history
-    signal_mode: nt
-    default_timeframes: [h1, h2, h3, h4, m10, m20, m30, m45]   # khớp bộ signal Redis MACD_BREAK (11 symbol × 8 khung)
-    infra_params: [SignalFilePath]
-    params:
-      - name: KslLevel
-        kind: enum
-        enum: sl_fib
-        default: Fib1000
-        optimize: true
-      - name: KtpLevel
+      - name: Leg2Ktp
         kind: enum
         enum: tp_fib
-        default: Fib2618
-        optimize: true
+        default: Fib3330
+        optimize: false
+      - name: Leg3Ktp
+        kind: enum
+        enum: tp_fib
+        default: Fib4236
+        optimize: false
       - name: RiskPercent
         kind: float
-        default: 1.0
+        default: 0.2
         optimize: true
         levels: [0.5, 1.0, 1.5, 2.0]
       - name: EnableDailyLossLimit
@@ -215,66 +196,16 @@ strategies:
         optimize: false
 
 # ---------------------------------------------------------------------------
-# engines: thiết lập kỹ thuật khi chạy backtest — data_mode (ticks/m1...), có
-# bật quy đổi tỷ giá lịch sử hay không, chi phí giao dịch giả lập, VÀ (mới
-# 2026-09-17) engine nào thi hành thật: "cli" (spawn ctrader-cli.exe, xem
-# cli_engine/cli_runner.py) hoặc "api" (Plugin cTrader Desktop qua bridge, xem
-# api_engine/api_runner.py — cần Desktop đang mở + plugin BoBacktestRunner
-# bật). Đây là phần "máy chạy thế nào", KHÔNG phải "chiến lược nào" — tách hẳn
-# khỏi strategies ở trên.
-# Phiên bản ctrader-cli KHÔNG khai ở đây: dùng bản cTrader Desktop mới nhất chạy được, phiên bản thật
-# ghi ở execution.json của từng run. Số phiên bản trong id (5.9.16) chỉ là tên lịch sử, không ràng buộc CLI.
+# engines: thiết lập kỹ thuật khi chạy backtest — "máy chạy thế nào", KHÔNG phải "chiến lược nào" (tách hẳn khỏi strategies
+# ở trên). Mỗi trường dịch thẳng sang cờ ctrader-cli (core_engine/cli_runner.py); null/false = KHÔNG truyền cờ, cTrader dùng
+# mặc định. Chỉ dùng MỘT bộ (quyết định 2026-10-22): muốn đổi công tắc thì sửa ngay các dòng bên dưới. Tên bộ và giá trị công
+# tắc đều nằm trong danh tính (run_key) của lượt chạy: GIỮ NGUYÊN TÊN (đổi tên làm mọi kết quả cũ thành "chưa chạy"); đổi công
+# tắc thì lượt mới có run_key mới, nhưng cột engine_profile trong SQL vẫn cùng tên.
+# backend: chỉ còn "cli" (spawn ctrader-cli.exe, xem core_engine/cli_runner.py); engine "api" (Plugin qua bridge) đã xoá
+# 2026-10-13. Phiên bản ctrader-cli KHÔNG khai ở đây: dùng bản cTrader Desktop mới nhất chạy được, phiên bản thật ghi ở
+# execution.json của từng run.
 # ---------------------------------------------------------------------------
 engines:
-  ctrader-5.9.16-ticks-approxfx-v1:
-    backend: cli
-    data_mode: ticks
-    precise_conversion: false
-    commission: null
-    commission_type: null
-    commission_auto: false
-    spread: null
-    notes: >-
-      GUI parity profile: server ticks, approximate conversion, default
-      broker cost model.
-
-  ctrader-5.9.16-ticks-comm30-v1:
-    backend: cli
-    data_mode: ticks
-    precise_conversion: false
-    commission: 30
-    # Phí PHẲNG 30 USD cho mỗi triệu USD khối lượng, áp cho MỌI symbol (CLI 5.9.16 chỉ có cờ
-    # --commission=<số>, đơn vị mặc định UsdPerMillionUsdVolume, nên KHÔNG khai commission_type).
-    # KHÔNG phải profile GUI-parity: phí thật của tài khoản là cấp TỪNG symbol (xem notes).
-    commission_type: null
-    commission_auto: false
-    spread: null
-    notes: >-
-      Chỉ để stress-test chủ động với phí phẳng 30 USD/triệu. Ghi chú cũ "JP225 GUI tính
-      phí 30 nên cần profile này" là HIỂU NHẦM (đã gỡ 2026-10-08): phí thật theo từng
-      symbol, chỉ số .cash = 0 nên profile mặc định (phí 0) đã đúng với chỉ số. Muốn phí
-      thật cho vàng/BTC/forex dùng profile commauto của CLI 5.10 bên dưới. Luôn đọc phí
-      của TỪNG symbol trong usedSymbols của report (main.commissions chỉ ghi cấu hình tay).
-
-  # --- CLI 5.10.x: 2 công tắc mà 5.9.16 KHÔNG có. Mỗi profile dưới đây chỉ lật ĐÚNG 1 công tắc so với
-  # profile GUI-parity ở trên, để A/B tách được tác động của từng cái. Đã đo 2026-10-08: 5.10.16 ở chế độ
-  # mặc định khớp 5.9.16 từng bit (US30 H1, JP225 H4), nên chênh lệch thấy được là do công tắc, không do
-  # phiên bản. Cần CLI >= 5.10: cổng capability của cli_runner chặn nếu binary không có cờ.
-  ctrader-ticks-approxfx-commauto-v1:
-    backend: cli
-    data_mode: ticks
-    precise_conversion: false
-    commission: null
-    commission_type: null
-    commission_auto: true
-    spread: null
-    notes: >-
-      Phí lấy thẳng từ cấu hình TỪNG symbol trên server (--commission-auto) — cách đúng để có
-      phí thật, thay cho nhập tay (comm30). Đo 2026-10-08: chỉ số .cash = 0 (JP225), BTCUSD
-      0,0325% MỖI CHIỀU tính trên khối lượng lúc vào và lúc ra. Ghi nhận 2026-09-25: XAUUSD
-      0,0007% khối lượng, forex 2,5 USD/lot theo cấu hình symbol. Tỷ giá quy đổi vẫn xấp xỉ
-      như profile GUI-parity.
-
   ctrader-ticks-precisefx-v1:
     backend: cli
     data_mode: ticks
@@ -284,24 +215,15 @@ engines:
     commission_auto: false
     spread: null
     notes: >-
-      Bật --precise-conversion: P&L, swap và margin của symbol có quote khác tiền ký quỹ (JPY, HKD,
-      GBP, EUR) quy đổi bằng tỷ giá LỊCH SỬ THẬT thay vì 1 tỷ giá hằng số cho cả kỳ (đo JP225 H4:
-      tắt = USDJPY 160,12 cho mọi lệnh, bật = 152,65 tới 163,81). Chậm hơn khoảng 15-20%. Phí vẫn mặc
-      định như profile GUI-parity; ghép cả 2 công tắc là một profile khác, chưa tạo.
-
-  ctrader-api-plugin-v1:
-    backend: api
-    data_mode: ticks
-    precise_conversion: false
-    commission: null
-    commission_type: null
-    commission_auto: false
-    spread: null
-    notes: >-
-      Đi qua Plugin BoBacktestRunner (api_engine/) thay vì spawn ctrader-cli.exe
-      — dùng phiên đăng nhập Desktop có sẵn, không tự xác thực mới mỗi lần chạy.
-      Cần cTrader Desktop đang mở + plugin bật trước khi dùng profile này. Chưa
-      chạy batch lớn thật nào qua profile này — xác nhận bằng lô nhỏ trước.
+      Tick của server. precise_conversion = --precise-conversion: P&L, swap và margin của symbol có quote khác tiền ký quỹ
+      (JPY, HKD, GBP, EUR) quy đổi bằng tỷ giá LỊCH SỬ THẬT thay vì 1 tỷ giá hằng số cho cả kỳ (đo JP225 H4: tắt = USDJPY
+      160,12 cho mọi lệnh, bật = 152,65 tới 163,81); chậm hơn khoảng 15-20%, cần CLI >= 5.10 (cổng capability của cli_runner
+      chặn nếu binary thiếu cờ). commission / commission_type / commission_auto / spread để mặc định nên PHÍ = 0 và không ép
+      spread (report ghi commissions.value 0, spread None; đã kiểm 2026-10-22: mọi lệnh trong SQL có commission 0). Muốn phí
+      thật theo từng symbol: commission_auto: true (--commission-auto, không đi chung commission/commission_type); đo
+      2026-09-25 và 2026-10-08: chỉ số .cash = 0, BTCUSD 0,0325% MỖI CHIỀU, XAUUSD 0,0007% khối lượng, forex 2,5 USD/lot.
+      Phí phẳng: commission (+ commission_type). Spread cố định: spread (pips). Phí của TỪNG symbol đọc ở usedSymbols của
+      report (main.commissions chỉ ghi cấu hình tay).
 
 # ---------------------------------------------------------------------------
 # ftmo: luật lỗ ngày/lỗ tổng dùng để chấm điểm kết quả backtest có vi phạm

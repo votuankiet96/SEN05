@@ -23,8 +23,9 @@
    trong file này.
 3. Entry **mới nhất** (trên cùng) ở **§8 Nhật ký bàn giao** bên dưới — đây là
    tường thuật chi tiết nhất, sát thời điểm hiện tại nhất.
-4. `Combo/Combo/Combo.cs` — code thật, đọc để đối chiếu với những gì §4/§8 mô
-   tả (nếu lệch nhau, code là sự thật, file MD có thể đã cũ — cập nhật lại MD).
+4. `ComboMulti/ComboMulti/ComboMulti.cs` — code thật (bot gốc `Combo/` đã gỡ 2026-10-15, xem entry
+   đầu §8), đọc để đối chiếu với những gì §4/§8 mô tả (nếu lệch nhau, code là sự thật, file MD có thể
+   đã cũ — cập nhật lại MD).
 5. Nếu việc cần làm liên quan tới backtest/dữ liệu thật, xem mục **§7.3 Vị trí
    dữ liệu backtest**.
 
@@ -495,7 +496,7 @@ vào sau phải đọc entry mới nhất là **hiểu ngay** không cần hỏi
    công trước đó trên 4 lượt archive thật). 1 giới hạn đã biết: không truy
    được bartime cụ thể cho các lần bị skip do dưới sàn volume — xem
    `research/README.md`.
-8. **[Mới, 2026-09-01] Đã điều tra đầy đủ VM-DP6 (10.11.12.6, Windows,
+8. **[Mới, 2026-09-01] Đã điều tra đầy đủ VM-DP6 (<DP6-LAN-IP>, Windows,
    `dp_program_v3`)** — tầng lấy nến từ TradingView (kênh Capital.com) vào
    SQL Server `SEN05_AutoTrading.DWH.Fact_OHLCV`, xác nhận đây là nguồn gốc
    BarTime mà mọi CSV signal của OG8 kế thừa. Xem §7.5 (mới) để biết chi
@@ -591,7 +592,7 @@ Position`, `Stop Loss Hit`, `Take Profit Hit`, `Position Modified (S/L)`,
 - Grep `log.txt` tìm `NOT_ENOUGH_MARGIN_BALANCE` và `Modifying pending
   order.*FAILED` để phát hiện 2 vấn đề hạ tầng đã ghi ở §4.
 
-### 7.5. Truy cập VM-DP6 (10.11.12.6, data warehouse) — mới, 2026-09-01
+### 7.5. Truy cập VM-DP6 (<DP6-LAN-IP>, data warehouse) — mới, 2026-09-01
 
 - Windows (hostname `WIN-B8609EA108T`), SSH port 22 mở, dùng Posh-SSH (SSH
   thô qua `ssh.exe` bị treo do không nhận input tương tác — xem cách gọi
@@ -629,7 +630,7 @@ Position`, `Stop Loss Hit`, `Take Profit Hit`, `Position Modified (S/L)`,
 ### 7.6. Truy cập máy host (<HOST-LAN-IP>) — mới, 2026-09-01
 
 - Windows (hostname `server-host`), SSH port 22 mở, dùng Posh-SSH (mẫu gọi
-  giống DP6/OG8). Đăng nhập bằng tài khoản Microsoft (`kietvo1196@outlook.com`,
+  giống DP6/OG8). Đăng nhập bằng tài khoản Microsoft (`<microsoft-account-email>`,
   map vào local user `admin`, profile `C:\Users\ADMIN`) — SMB/admin share
   (`\\<HOST-LAN-IP>\C$`) và WinRM đều KHÔNG truy cập được (Access denied /
   WinRM chưa bật TrustedHosts), chỉ SSH dùng được. **KHÔNG lưu password vào
@@ -665,6 +666,17 @@ Position`, `Stop Loss Hit`, `Take Profit Hit`, `Position Modified (S/L)`,
 > **Quyết định/thoả thuận với người dùng chưa code hoá:**
 > **Bước tiếp theo đề xuất:**
 > ```
+
+### [2026-10-15 — Claude — GỠ bot gốc Combo/MA Cross/MACD Break, giao Codex chỉnh dashboard]
+
+**Đã làm:** (người dùng yêu cầu) xoá `Combo/`, `MA Cross/`, `MACD Break/`, `Combo.algo`, `MA Cross.algo`, `MACD Break.algo`,
+`bo_workflow/legacy/`; gỡ profile `combo-v1`, `macross-v1`, `macdbreak-v1` khỏi `config.yaml` + `config.example.yaml`; gỡ 3 khoá
+tương ứng khỏi `signal_trans.REDIS_STRATEGY_TOKENS`; chuyển test hạ tầng (test_core_engine, test_cli_engine, test_master_db,
+test_optimize_backend, test_combomulti_signals, test_marketmulti_profiles) sang profile `combomulti-1tf-v1` / các profile Multi.
+Bản Multi đã đối chiếu giống hệt bản gốc (xem memory `marketmulti-bots-macross-macdbreak`, `combomulti-bot-and-profile`).
+**Đang dang dở:** phần `bo_workflow/dashboard/` (của Codex) còn trỏ vào profile đã gỡ — `dashboard/data_access.py` (SESSION_STRATEGY_PROFILES,
+session_form_options) làm cả app không khởi động được; prompt bàn giao chi tiết đã gửi người dùng để chuyển Codex.
+**Bước tiếp theo đề xuất:** Codex sửa dashboard + `tests/test_dashboard_contracts.py`, `tests/test_dashboard_app_composition.py` cho khớp.
 
 ### [2026-09-09 — Codex — audit lại refactor two-backend + triển khai remediation]
 

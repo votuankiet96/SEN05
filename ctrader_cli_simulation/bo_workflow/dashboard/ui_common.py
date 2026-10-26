@@ -15,11 +15,36 @@ from dash.dash_table.Format import Format, Group, Scheme, Symbol
 # Only apply it to fields that no initial callback overwrites; callback-driven
 # fields (timeframes, kSL/kTP, dates) are recomputed from these on load.
 PERSIST = {"persistence": True, "persistence_type": "local"}
+# The strategy values changed when the Multi bots were replaced by BacktestBot.
+# A distinct persistence key prevents stale Multi values from overriding the
+# current strategy selection after deployment.
+STRATEGY_PERSIST = {
+    "persistence": "dashboard-backtestbot-strategies-v1",
+    "persistence_type": "local",
+}
 
 # Numeric inputs trigger Redis/budget previews. Waiting for a 400 ms pause in
 # typing keeps feedback inside Nielsen's 1-second flow limit without querying
 # on every keystroke.
 INPUT_DEBOUNCE_MS = 400
+
+
+def strategy_label(strategy: Any, options: dict[str, Any] | None = None) -> str:
+    """Display current strategy labels and identify saved removed profiles."""
+    value = str(strategy or "")
+    for item in (options or {}).get("strategies", []):
+        if item.get("value") == value:
+            return str(item.get("label") or value)
+    removed = {
+        "combomulti": "ComboMulti",
+        "macrossmulti": "MACrossMulti",
+        "macdbreakmulti": "MACDBreakMulti",
+        "macross": "MA Cross",
+        "macdbreak": "MACD Break",
+    }
+    if value in removed:
+        return f"{removed[value]} (profile removed)"
+    return value or "—"
 
 
 def status_region(component_id: str, children: Any = None) -> html.Div:
