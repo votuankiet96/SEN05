@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import dataclasses
 import re
+import warnings
 from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,7 +24,7 @@ from .models import coerce_float
 from .output_util import run_export
 
 SQL_DIR = Path(__file__).resolve().parents[1] / "sql"
-SCHEMA_FILES = ("001_schema.sql", "002_views.sql")   # nạp theo thứ tự; file chưa có thì bỏ qua
+SCHEMA_FILES = ("001_schema.sql", "002_views.sql", "003_analysis.sql")   # nạp theo thứ tự; file chưa có thì bỏ qua
 COMPLETED_STATUS = "ok"   # RunStatus.OK — chỉ lượt chạy hoàn tất mới vào kho (xem save_run)
 _GO = re.compile(r"^\s*GO\s*$", re.IGNORECASE | re.MULTILINE)
 _DATABASE_NAME = re.compile(r"^[A-Za-z0-9_]+$")
@@ -47,6 +48,7 @@ _TRADE_COLUMNS = (
     "gross_profit", "commission", "swap", "net_profit", "close_reason",
 )
 _DAILY_COLUMNS = ("trading_day", "balance_at_close", "lowest_equity")
+_PORTFOLIO_COLUMNS = ("strategy", "symbol", "timeframe", "risk_percent", "source", "ksl", "tp1", "tp2", "tp3", "legs")
 _DATETIME_COLUMNS = frozenset({
     "build_time_utc", "source_modified_utc", "last_bar_time", "captured_at_utc", "last_data_time",
     "started_utc", "ended_utc", "entry_time_utc", "close_time_utc",
@@ -195,9 +197,33 @@ def _ensure_signal_snapshot(cursor: pyodbc.Cursor, snapshot: Mapping[str, Any]) 
     ).fetchone()[0]
 
 
+def _save_portfolio_channels(conn: pyodbc.Connection, payload: Mapping[str, Any]) -> None:
+    """Ghi thành phần danh mục (mỗi kênh một dòng) của lượt NHIỀU KÊNH vào dbo.portfolio_channel; dòng đã có thì giữ nguyên nên các
+    lượt khác của cùng batch không ghi thêm. Chạy SAU khi lượt đã commit và KHÔNG ném lỗi: lỗi ở đây chỉ cảnh báo — lượt chạy đã vào
+    kho, lần lưu kế tiếp của batch (hoặc `import_experiment`) ghi bù. UPDLOCK + HOLDLOCK như hai hàm `_ensure_*`: các lượt song song
+    của cùng một danh mục MỚI thì lượt đến sau chờ rồi bỏ qua."""
+    rows, batch = payload.get("portfolio_channels"), payload["run"].get("batch_name")
+    if not rows or not batch:
+        return
+    insert = _insert_sql("portfolio_channel", ("batch_name", *_PORTFOLIO_COLUMNS))
+    try:
+        cursor = conn.cursor()
+        for row in rows:
+            cursor.execute(
+                "IF NOT EXISTS (SELECT 1 FROM dbo.portfolio_channel WITH (UPDLOCK, HOLDLOCK) "
+                f"WHERE batch_name = ? AND strategy = ? AND symbol = ? AND timeframe = ?) {insert}",
+                [batch, row["strategy"], row["symbol"], row["timeframe"], batch, *(row[column] for column in _PORTFOLIO_COLUMNS)],
+            )
+        conn.commit()
+    except Exception as exc:  # noqa: BLE001
+        conn.rollback()
+        warnings.warn(f"master_db: không ghi được thành phần danh mục {batch}: {type(exc).__name__}: {exc}"[:400], RuntimeWarning)
+
+
 def save_run(conn: pyodbc.Connection, payload: Mapping[str, Any]) -> tuple[int | None, bool]:
     """Ghi 1 lượt chạy (bot_build + signal_snapshot nếu hash mới, backtest_run, trade, daily_equity) trong MỘT giao dịch.
     Trả (backtest_run_id, đã_ghi_mới). `run_key` đã có → không ghi đè, trả (id cũ, False). Lỗi → hoàn tác, ném lại.
+    Lượt NHIỀU KÊNH: sau khi lượt đã commit, ghi thêm thành phần danh mục (`_save_portfolio_channels`, cả khi lượt đã có từ trước).
     CHỈ nhận lượt HOÀN TẤT (`status == COMPLETED_STATUS`): lượt lỗi, bị huỷ, treo/timeout hay đang chạy dở không vào
     kho (người dùng chốt 2026-10-14) → trả (None, False), không ghi gì."""
     run = payload["run"]
@@ -205,6 +231,7 @@ def save_run(conn: pyodbc.Connection, payload: Mapping[str, Any]) -> tuple[int |
         return None, False
     existing = find_run(conn, run["run_key"])
     if existing is not None:
+        _save_portfolio_channels(conn, payload)
         return existing, False
     cursor = conn.cursor()
     try:
@@ -223,6 +250,7 @@ def save_run(conn: pyodbc.Connection, payload: Mapping[str, Any]) -> tuple[int |
                     _insert_sql(table, ("backtest_run_id", *columns)), [[run_id, *_values(row, columns)] for row in rows],
                 )
         conn.commit()
+        _save_portfolio_channels(conn, payload)
         return run_id, True
     except pyodbc.IntegrityError:
         conn.rollback()

@@ -10,6 +10,7 @@ payload = {
     "run":             cột bảng backtest_run (trỏ bot_build/signal_snapshot bằng hash, chưa có id SQL),
     "trades":          list dòng bảng trade,
     "daily_equity":    list dòng bảng daily_equity,
+    "portfolio_channels": list dòng bảng portfolio_channel (rỗng nếu lượt chỉ có 1 kênh),
 }
 """
 from __future__ import annotations
@@ -80,6 +81,37 @@ def _channel_and_key(experiment: dict[str, Any], spec: dict[str, Any]) -> tuple[
         else None
     )
     return channel, redis_key
+
+
+def _source_label(source_id: str) -> str:
+    """Nhãn nguồn Redis ('original' / 'knn' / 'breakout' / 'zigzag' / 'tstat') của profile `source_id`; profile đã bỏ khỏi
+    config.yaml thì giữ nhãn cũ, như `_channel_and_key`."""
+    try:
+        return load_redis_profile(source_id).label
+    except KeyError:
+        return "trend" if "trend" in source_id else "original"
+
+
+def _portfolio_channels(experiment: dict[str, Any], spec: dict[str, Any], params: dict[str, str], run: dict[str, Any]) -> list[dict[str, Any]]:
+    """Thành phần của lượt NHIỀU KÊNH chạy chung 1 tài khoản: mỗi kênh một dòng (rủi ro %, nguồn tín hiệu) kèm SL/TP/số chân CHUNG
+    của lượt. Nguồn = profile khai trong cấu hình lượt (kênh không đè nguồn thì lấy nguồn mặc định của experiment). Lượt 1 kênh →
+    rỗng: không phải danh mục."""
+    channels = spec.get("channels") or []
+    if len(channels) < 2:
+        return []
+    default_id = str((experiment.get("config") or {}).get("redis_profile") or DEFAULT_REDIS_PROFILE)
+    legs = run["leg_count"]
+    settings = {
+        "ksl": run["ksl_atr_multiple"], "tp1": run["ktp_atr_multiple"],
+        "tp2": _atr_multiple(params.get("Leg2Ktp")) if legs >= 2 else None,
+        "tp3": _atr_multiple(params.get("Leg3Ktp")) if legs >= 3 else None,
+        "legs": legs,
+    }
+    return [
+        {"strategy": item["strategy"], "symbol": item["symbol"], "timeframe": str(item["timeframe"]).lower(),
+         "risk_percent": float(item["risk_percent"]), "source": _source_label(str(item.get("source") or default_id)), **settings}
+        for item in channels
+    ]
 
 
 def _selection_labels(experiment_dir: Path, spec: dict[str, Any]) -> dict[str, Any]:
@@ -208,4 +240,5 @@ def run_payload(experiment_dir: str | Path, run_dir: str | Path, *, timezone_nam
         "daily_equity": (
             daily_equity_rows(report["equity"]["points"], timezone_name, float(spec["balance"])) if report else []
         ),
+        "portfolio_channels": _portfolio_channels(experiment, spec, params, run),
     }

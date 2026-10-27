@@ -221,6 +221,8 @@ MANIFEST = {
     "Types": [{"Parameters": [
         {"PropertyName": "KslLevel", "EnumValues": {"Fib1000": 2, "Fib1618": 4}},
         {"PropertyName": "KtpLevel", "EnumValues": {"Fib2058": 3, "Fib2618": 4}},
+        {"PropertyName": "Leg2Ktp", "EnumValues": {"Fib3330": 5}},
+        {"PropertyName": "Leg3Ktp", "EnumValues": {"Fib4236": 6}},
         {"PropertyName": "RiskPercent"},
     ]}],
 }
@@ -231,6 +233,7 @@ SOURCE = b"class Combo {\r\n}"   # file .cs mau co CRLF: ban luu phai giu nguyen
 def build_experiment(
     td: str, *, with_source: bool = True, param_hash: str = "h" * 64, run_id: str = "0001",
     window: str = "single", zone: str = "single", tags: dict | None = None, root: Path | None = None, method: str = "grid",
+    channels: list[dict] | None = None, params: dict | None = None,
 ) -> tuple[Path, Path]:
     """Dựng 1 experiment tối thiểu trên đĩa (hoặc thêm 1 lượt vào experiment có sẵn qua `root`)."""
     import hashlib
@@ -256,8 +259,10 @@ def build_experiment(
         "strategy": "combo", "strategy_profile": "backtestbot-v1", "engine_profile": "engine", "symbol": "US30.cash", "timeframe": "h1",
         "start": "2026-01-01", "end": "2026-01-02", "balance": 1000.0, "data_mode": "ticks", "precise_conversion": False,
         "commission": None, "commission_type": None, "commission_auto": False, "spread": None, "zone": zone, "window": window,
-        "params": {"KslLevel": "4", "KtpLevel": "4", "RiskPercent": "1", "LegCount": "1"}, "tags": tags or {},
+        "params": {"KslLevel": "4", "KtpLevel": "4", "RiskPercent": "1", "LegCount": "1", **(params or {})}, "tags": tags or {},
     }
+    if channels:
+        spec["channels"] = channels
     execution = {
         "run_id": run_id, "param_hash": param_hash, "spec": spec, "status": "ok", "failure_code": "", "reason": "",
         "timing": {"started_utc": "2026-10-14T04:38:14+00:00", "ended_utc": "2026-10-14T04:39:28+00:00", "wall_seconds": 73.7},
@@ -272,6 +277,19 @@ def build_experiment(
     with gzip.open(run_dir / "events.json.gz", "wt", encoding="utf-8") as handle:
         json.dump(make_events(), handle)
     return root, run_dir
+
+
+# Danh mục 2 kênh: kênh 1 không đè nguồn (lấy nguồn mặc định của experiment = knn), kênh 2 đè sang breakout.
+PORTFOLIO_CHANNELS = [
+    {"risk_percent": 0.5, "strategy": "macd_break", "symbol": "HK50.cash", "timeframe": "M30"},
+    {"risk_percent": 0.25, "strategy": "combo", "symbol": "US30.cash", "timeframe": "H3", "source": "sen05-signal-breakout-v1"},
+]
+PORTFOLIO_PARAMS = {"LegCount": "3", "Leg2Ktp": "5", "Leg3Ktp": "6"}
+SETTINGS = {"ksl": 1.618, "tp1": 2.618, "tp2": 3.33, "tp3": 4.236, "legs": 3}   # 1.618 / 2.618 từ KslLevel, KtpLevel = "4"
+EXPECTED_PORTFOLIO_ROWS = [
+    {"strategy": "macd_break", "symbol": "HK50.cash", "timeframe": "m30", "risk_percent": 0.5, "source": "knn", **SETTINGS},
+    {"strategy": "combo", "symbol": "US30.cash", "timeframe": "h3", "risk_percent": 0.25, "source": "breakout", **SETTINGS},
+]
 
 
 def walkforward_experiment(td: str) -> Path:
@@ -349,6 +367,31 @@ class RunPayloadTests(unittest.TestCase):
             self.assertEqual((run["selection_rule"], run["selection_objective"], run["train_run_key"]), (None, None, None))
 
 
+class PortfolioPayloadTests(unittest.TestCase):
+    def test_a_single_channel_run_has_no_portfolio_channels(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root, run_dir = build_experiment(td)
+            self.assertEqual(run_export.run_payload(root, run_dir)["portfolio_channels"], [])
+
+    def test_a_multi_channel_run_lists_every_channel_with_its_source_and_the_shared_settings(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root, run_dir = build_experiment(td, channels=PORTFOLIO_CHANNELS, params=PORTFOLIO_PARAMS)
+            self.assertEqual(run_export.run_payload(root, run_dir)["portfolio_channels"], EXPECTED_PORTFOLIO_ROWS)
+
+    def test_settings_of_legs_that_do_not_exist_are_null(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root, run_dir = build_experiment(td, channels=PORTFOLIO_CHANNELS, params={"LegCount": "2", "Leg2Ktp": "5"})
+            rows = run_export.run_payload(root, run_dir)["portfolio_channels"]
+            self.assertEqual([(row["tp2"], row["tp3"], row["legs"]) for row in rows], [(3.33, None, 2)] * 2)
+
+    def test_a_source_profile_removed_from_the_config_keeps_the_legacy_label(self) -> None:
+        channels = [{**PORTFOLIO_CHANNELS[0], "source": "sen05-signal-trend-v1"}, PORTFOLIO_CHANNELS[1]]
+        with tempfile.TemporaryDirectory() as td:
+            root, run_dir = build_experiment(td, channels=channels, params=PORTFOLIO_PARAMS)
+            rows = run_export.run_payload(root, run_dir)["portfolio_channels"]
+            self.assertEqual([row["source"] for row in rows], ["trend", "breakout"])
+
+
 class MasterDbPureTests(unittest.TestCase):
     def test_datetime_parsing_handles_manifest_and_report_formats(self) -> None:
         from core_engine import master_db
@@ -392,7 +435,7 @@ class MasterDbTests(unittest.TestCase):
     def setUp(self) -> None:
         self.conn = self.master_db.connect(self.profile)
         self.master_db.ensure_schema(self.conn)
-        for table in ("trade", "daily_equity", "backtest_run", "signal_snapshot", "bot_build"):
+        for table in ("portfolio_channel", "trade", "daily_equity", "backtest_run", "signal_snapshot", "bot_build"):
             self.conn.execute(f"DELETE FROM dbo.{table}")
         self.conn.commit()
         self.addCleanup(self.conn.close)
@@ -400,10 +443,12 @@ class MasterDbTests(unittest.TestCase):
     def _count(self, table: str) -> int:
         return self.conn.execute(f"SELECT COUNT(*) FROM dbo.{table}").fetchval()
 
-    def test_schema_is_idempotent_and_has_the_five_tables(self) -> None:
+    def test_schema_is_idempotent_and_has_the_tables_of_both_schemas(self) -> None:
         self.master_db.ensure_schema(self.conn)
-        names = {row[0] for row in self.conn.execute("SELECT name FROM sys.tables").fetchall()}
-        self.assertEqual(names, {"bot_build", "signal_snapshot", "backtest_run", "trade", "daily_equity"})
+        names = {f"{row[0]}.{row[1]}" for row in self.conn.execute(
+            "SELECT s.name, t.name FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id").fetchall()}
+        self.assertEqual(names, {"dbo.bot_build", "dbo.signal_snapshot", "dbo.backtest_run", "dbo.trade", "dbo.daily_equity",
+                                 "dbo.portfolio_channel", "analysis.group_excursion", "analysis.excursion_run"})
 
     def test_save_run_writes_everything_once_and_never_overwrites(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -420,6 +465,83 @@ class MasterDbTests(unittest.TestCase):
             again_id, again_created = self.master_db.save_run(self.conn, payload)
             self.assertEqual((again_id, again_created), (run_id, False))
             self.assertEqual((self._count("backtest_run"), self._count("trade")), (1, 2))
+
+    def _portfolio_rows(self) -> list[dict]:
+        columns = ("strategy", "symbol", "timeframe", "risk_percent", "source", "ksl", "tp1", "tp2", "tp3", "legs")
+        rows = self.conn.execute(f"SELECT {', '.join(columns)} FROM dbo.portfolio_channel ORDER BY strategy DESC").fetchall()
+        return [dict(zip(columns, row)) for row in rows]
+
+    def test_a_multi_channel_run_records_its_portfolio_once_per_batch(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root, first = build_experiment(td, param_hash="1" * 64, run_id="0001", channels=PORTFOLIO_CHANNELS, params=PORTFOLIO_PARAMS)
+            _, second = build_experiment(td, root=root, param_hash="2" * 64, run_id="0002", channels=PORTFOLIO_CHANNELS, params=PORTFOLIO_PARAMS)
+            for run_dir in (first, second):
+                self.master_db.save_run(self.conn, run_export.run_payload(root, run_dir))
+            self.assertEqual(self._count("backtest_run"), 2)
+            self.assertEqual(self._portfolio_rows(), EXPECTED_PORTFOLIO_ROWS)
+            self.assertEqual(self.conn.execute("SELECT DISTINCT batch_name FROM dbo.portfolio_channel").fetchall()[0][0], "exp")
+            other = run_export.run_payload(root, first)
+            other["run"]["run_key"], other["run"]["batch_name"] = "3" * 64, "exp2"
+            self.master_db.save_run(self.conn, other)                      # batch khác → thêm một danh mục khác
+            self.assertEqual(self._count("portfolio_channel"), 4)
+
+    def test_a_single_channel_run_writes_no_portfolio(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root, run_dir = build_experiment(td)
+            self.master_db.save_run(self.conn, run_export.run_payload(root, run_dir))
+            self.assertEqual((self._count("backtest_run"), self._count("portfolio_channel")), (1, 0))
+
+    def test_saving_a_run_that_already_exists_fills_in_a_missing_portfolio(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root, run_dir = build_experiment(td, channels=PORTFOLIO_CHANNELS, params=PORTFOLIO_PARAMS)
+            payload = run_export.run_payload(root, run_dir)
+            run_id, _ = self.master_db.save_run(self.conn, payload)
+            self.conn.execute("DELETE FROM dbo.portfolio_channel")
+            self.conn.commit()
+            self.assertEqual(self.master_db.save_run(self.conn, payload), (run_id, False))
+            self.assertEqual(self._portfolio_rows(), EXPECTED_PORTFOLIO_ROWS)
+
+    def test_a_failure_writing_the_portfolio_warns_but_never_loses_the_run(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root, run_dir = build_experiment(td, channels=PORTFOLIO_CHANNELS, params=PORTFOLIO_PARAMS)
+            payload = run_export.run_payload(root, run_dir)
+            payload["portfolio_channels"][1]["risk_percent"] = None          # vi phạm NOT NULL sau khi dòng thứ nhất đã được thêm
+            with self.assertWarns(RuntimeWarning):
+                run_id, created = self.master_db.save_run(self.conn, payload)
+            self.assertTrue(created)
+            self.assertEqual((self._count("backtest_run"), self._count("trade"), self._count("portfolio_channel")), (1, 2, 0))
+            self.assertEqual(self.master_db.find_run(self.conn, "h" * 64), run_id)
+
+    def test_parallel_runs_of_one_new_portfolio_write_its_channels_once_without_errors(self) -> None:
+        import threading
+
+        with tempfile.TemporaryDirectory() as td:
+            root, run_dir = build_experiment(td, channels=PORTFOLIO_CHANNELS, params=PORTFOLIO_PARAMS)
+            base = run_export.run_payload(root, run_dir)
+        workers, errors = 8, []
+        barrier = threading.Barrier(workers)
+
+        def work(index: int) -> None:
+            payload = copy.deepcopy(base)
+            payload["run"]["run_key"] = f"{index}".ljust(64, "a")
+            conn = self.master_db.connect(self.profile)
+            try:
+                barrier.wait()
+                self.master_db.save_run(conn, payload)
+            except Exception as exc:  # noqa: BLE001
+                errors.append(exc)
+            finally:
+                conn.close()
+
+        with patch.object(self.master_db.warnings, "warn") as warn:
+            threads = [threading.Thread(target=work, args=(index,)) for index in range(workers)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+        self.assertEqual(errors, [])
+        self.assertEqual([call for call in warn.call_args_list if "thành phần danh mục" in str(call)], [])
+        self.assertEqual((self._count("backtest_run"), self._count("portfolio_channel")), (workers, 2))
 
     def test_same_bot_and_signal_are_shared_between_runs(self) -> None:
         with tempfile.TemporaryDirectory() as td:

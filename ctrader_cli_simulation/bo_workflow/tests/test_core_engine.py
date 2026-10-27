@@ -825,17 +825,17 @@ class SignalTransTests(unittest.TestCase):
         self.assertEqual(profile.db, 0)
         self.assertEqual(profile.key_prefix, "L_PastSignal")
 
-    def test_load_redis_profile_reads_the_four_fixed_sources(self) -> None:
+    def test_load_redis_profile_reads_the_five_fixed_sources(self) -> None:
         # [2026-10-23] WE cap 3 nguon CO DINH: db0 RAW / db1 KNN / db2 BRK, moi nguon mot tien to va mot nhan SQL.
-        # [2026-10-24] Them nguon thu 4: db4 ZIGZAG.
-        raw, knn, brk, zig = (load_redis_profile(name) for name in (
-            "sen05-signal-v1", "sen05-signal-knn-v1", "sen05-signal-breakout-v1", "sen05-signal-zigzag-v1"))
-        self.assertEqual([(p.db, p.key_prefix, p.label) for p in (raw, knn, brk, zig)], [
+        # [2026-10-24] Them nguon thu 4: db4 ZIGZAG. [2026-10-26] Nguon thu 5: db3 TSTAT.
+        raw, knn, brk, zig, tst = (load_redis_profile(name) for name in (
+            "sen05-signal-v1", "sen05-signal-knn-v1", "sen05-signal-breakout-v1", "sen05-signal-zigzag-v1", "sen05-signal-tstat-v1"))
+        self.assertEqual([(p.db, p.key_prefix, p.label) for p in (raw, knn, brk, zig, tst)], [
             (0, "L_PastSignal", "original"), (1, "L_PastSignal_Knn", "knn"), (2, "L_PastSignal_Breakout", "breakout"),
-            (4, "L_PastSignal_Zigzag", "zigzag"),
+            (4, "L_PastSignal_Zigzag", "zigzag"), (3, "L_PastSignal_Tstat", "tstat"),
         ])
         # Cung server/mat khau -- chi khac db + key_prefix + nhan.
-        for profile in (knn, brk, zig):
+        for profile in (knn, brk, zig, tst):
             self.assertEqual((profile.host, profile.pwd_file), (raw.host, raw.pwd_file))
 
     def test_retired_trend_profile_is_gone_and_a_profile_without_label_is_rejected(self) -> None:

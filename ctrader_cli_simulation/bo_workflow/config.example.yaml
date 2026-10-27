@@ -26,6 +26,7 @@ schema: bo-cli-engine-config/v1
 # KNN <-> breakout nên đã bỏ; profile cũ `sen05-signal-trend-v1` đã bỏ (kết quả cũ mang nhãn đó chỉ còn là lịch sử).
 # [2026-10-24] Nguồn thứ 4 theo đúng nguyên tắc trên (DB + tiền tố MỚI): db4 = ZIGZAG (lọc theo trend zigzag; đo 24/10:
 # tập con thuần của db0, nội dung y hệt, giữ ~48%).
+# [2026-10-26] Nguồn thứ 5: db3 = TSTAT (lọc theo t-stat; giữ ~34% tín hiệu db0 + ~20% tín hiệu thêm, kiểu breakout).
 # `label` = nhãn nguồn ghi vào kho SQL (signal_snapshot.channel), khai tường minh, không suy từ tiền tố.
 # Một lượt chạy chọn nguồn MẶC ĐỊNH bằng `redis_profile`; từng channel có thể đè bằng `source` (đa nguồn trong một lượt).
 # ---------------------------------------------------------------------------
@@ -65,6 +66,15 @@ redis:
     pwd_file: C:\path\to\.redis-signal-pwd.txt
     key_prefix: "L_PastSignal_Zigzag"
     label: zigzag
+
+  sen05-signal-tstat-v1:
+    host: "<YOUR-REDIS-HOST>"
+    port: 6379
+    db: 3
+    username: ""
+    pwd_file: C:\path\to\.redis-signal-pwd.txt
+    key_prefix: "L_PastSignal_Tstat"
+    label: tstat
 
 backtest:
   defaults:

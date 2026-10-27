@@ -126,3 +126,22 @@ CREATE TABLE dbo.daily_equity (
     CONSTRAINT pk_daily_equity PRIMARY KEY (backtest_run_id, trading_day)
 );
 GO
+
+-- Thành phần của một DANH MỤC: lượt NHIỀU KÊNH chạy chung 1 tài khoản (spec.channels có từ 2 kênh trở lên). Mỗi kênh một dòng, ghi MỘT lần
+-- cho mỗi batch (lượt khác của cùng batch không ghi thêm). Rủi ro và nguồn lấy từ chính cấu hình lượt chạy, không suy ra từ tín hiệu.
+IF OBJECT_ID(N'dbo.portfolio_channel', N'U') IS NULL
+CREATE TABLE dbo.portfolio_channel (
+    batch_name    NVARCHAR(100) NOT NULL,                         -- = backtest_run.batch_name
+    strategy      NVARCHAR(30)  NOT NULL,                         -- combo / ma_cross / macd_break
+    symbol        NVARCHAR(30)  NOT NULL,                         -- tên cTrader, vd HK50.cash
+    timeframe     NVARCHAR(5)   NOT NULL,                         -- chữ thường: h3, m30
+    risk_percent  FLOAT         NOT NULL,                         -- rủi ro % của RIÊNG kênh này (tổng các kênh = rủi ro cả danh mục)
+    source        NVARCHAR(40)  NOT NULL,                         -- nguồn tín hiệu của kênh: original / knn / breakout / zigzag / tstat. Dòng nạp từ trước 2026-10-26 là suy ra từ tín hiệu: 'a|b' = không phân biệt được a hay b
+    ksl           FLOAT         NULL,                             -- SL = ksl × ATR (chung cả danh mục)
+    tp1           FLOAT         NULL,                             -- TP chân 1 / 2 / 3 (× ATR); NULL nếu danh mục không có chân đó
+    tp2           FLOAT         NULL,
+    tp3           FLOAT         NULL,
+    legs          TINYINT       NULL,                             -- số chân mỗi tín hiệu
+    CONSTRAINT pk_portfolio_channel PRIMARY KEY (batch_name, strategy, symbol, timeframe)
+);
+GO

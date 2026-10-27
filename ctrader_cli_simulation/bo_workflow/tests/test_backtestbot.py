@@ -473,7 +473,8 @@ class RedisKeyForSnapshotTests(unittest.TestCase):
         spec = {"symbol": "US30.cash", "timeframe": "h1", "strategy": "combo"}
         for profile, label, prefix in (("sen05-signal-knn-v1", "knn", "L_PastSignal_Knn"),
                                        ("sen05-signal-breakout-v1", "breakout", "L_PastSignal_Breakout"),
-                                       ("sen05-signal-zigzag-v1", "zigzag", "L_PastSignal_Zigzag")):
+                                       ("sen05-signal-zigzag-v1", "zigzag", "L_PastSignal_Zigzag"),
+                                       ("sen05-signal-tstat-v1", "tstat", "L_PastSignal_Tstat")):
             channel, key = run_export._channel_and_key({"config": {"redis_profile": profile}}, spec)
             self.assertEqual((channel, key), (label, f"{prefix}_US30_H1_COMBO"))
 

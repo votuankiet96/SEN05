@@ -143,5 +143,16 @@ class SourceParsingTests(unittest.TestCase):
         self.assertEqual(te._forward_fill_zero(parsed[:, 2].astype(float)).tolist(), [101_000, 102_000, 102_000])
 
 
+class PendingSummaryTests(unittest.TestCase):
+    def test_counts_only_runs_without_an_excursion_row_by_source(self):
+        runs = pd.DataFrame({"backtest_run_id": [1, 2, 3, 4, 5], "signal_channel": ["original", "original", "tstat", "tstat", "tstat"]})
+        out = te.pending_summary(runs, {1, 3})
+        self.assertEqual(out, {"eligible": 5, "done": 2, "pending": 3, "pending_by_source": {"original": 1, "tstat": 2}})
+
+    def test_nothing_pending_when_every_run_is_done(self):
+        runs = pd.DataFrame({"backtest_run_id": [1, 2], "signal_channel": ["knn", "knn"]})
+        self.assertEqual(te.pending_summary(runs, {1, 2, 99}), {"eligible": 2, "done": 2, "pending": 0, "pending_by_source": {}})
+
+
 if __name__ == "__main__":
     unittest.main()

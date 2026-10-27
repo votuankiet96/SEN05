@@ -12,11 +12,13 @@ và đóng thị trường ở phía đó). Ghép nhóm ↔ tín hiệu và gi�
 xử lý ở tick đầu tiên của symbol sau `bartime + độ dài khung`; lệnh STOP hết hạn sau 3 khung (tín hiệu tới muộn hơn hạn bị bỏ,
 không kích hoạt đảo chiều).
 
-Kết quả ghi vào lược đồ RIÊNG `analysis` (analysis.group_excursion, analysis.excursion_run), KHÔNG thuộc dbo nên `ensure_schema` không
-đụng; dựng lại được bất cứ lúc nào từ SQL + cache tick. Chạy từ thư mục gốc repo:
+Kết quả ghi vào lược đồ RIÊNG `analysis` (analysis.group_excursion, analysis.excursion_run); bảng do sql/003_analysis.sql tạo
+(master_db.ensure_schema — `run` tự gọi). Đây là bước DẪN XUẤT: luồng backtest KHÔNG chạy nó sau mỗi lượt; dựng lại được bất cứ
+lúc nào từ SQL + cache tick. Chạy từ thư mục gốc repo:
+    python -m bo_workflow.core_engine.output_util.trade_excursion status      # còn bao nhiêu lượt chưa tính (không đọc tick)
     python -m bo_workflow.core_engine.output_util.trade_excursion run [--rebuild] [--symbol HK50.cash] [--workers 10]
     python -m bo_workflow.core_engine.output_util.trade_excursion check       # đối chiếu với kết cục THẬT của backtest
-Mặc định chỉ tính lượt chưa có trong analysis.excursion_run (chạy lại sau khi có thêm backtest).
+Mặc định `run` chỉ tính lượt chưa có trong analysis.excursion_run (chạy lại sau khi có thêm backtest).
 """
 from __future__ import annotations
 
@@ -46,36 +48,6 @@ INSERT_CHUNK = 20_000
 
 # Mức TP của 3 chân trong các lượt chuẩn (BacktestBot: Fib2618 / Fib3330 / Fib4236) — chỉ dùng để ĐỐI CHIẾU với kết cục thật.
 CHECK_TP_ATR = (2.618, 3.330, 4.236)
-
-_DDL = (
-    f"IF SCHEMA_ID('{SCHEMA}') IS NULL EXEC('CREATE SCHEMA {SCHEMA}')",
-    f"""IF OBJECT_ID('{SCHEMA}.group_excursion') IS NULL
-CREATE TABLE {SCHEMA}.group_excursion (
-    backtest_run_id bigint NOT NULL,
-    direction varchar(4) NOT NULL,
-    entry_time_utc datetime2(3) NOT NULL,
-    signal_bar_time datetime2(0) NULL,
-    atr float NOT NULL,
-    ref_price float NOT NULL,
-    fill_price float NOT NULL,
-    entry_slip_atr float NOT NULL,
-    mfe_atr float NOT NULL,
-    end_kind tinyint NOT NULL,
-    end_exc_atr float NOT NULL,
-    end_time_utc datetime2(3) NOT NULL,
-    CONSTRAINT pk_group_excursion PRIMARY KEY (backtest_run_id, direction, entry_time_utc))""",
-    f"""IF OBJECT_ID('{SCHEMA}.excursion_run') IS NULL
-CREATE TABLE {SCHEMA}.excursion_run (
-    backtest_run_id bigint NOT NULL PRIMARY KEY,
-    groups int NOT NULL,
-    matched int NOT NULL,
-    comparable int NOT NULL,
-    agree_tp1 int NOT NULL,
-    agree_tp2 int NOT NULL,
-    agree_tp3 int NOT NULL,
-    computed_utc datetime2(0) NOT NULL)""",
-)
-
 
 # --------------------------------------------------------------------------- #
 # Tick
@@ -267,9 +239,10 @@ WITH single_runs AS (
     SELECT t.backtest_run_id FROM dbo.trade t WHERE t.leg_label IS NOT NULL
     GROUP BY t.backtest_run_id HAVING COUNT(DISTINCT LEFT(t.leg_label, LEN(t.leg_label) - 3)) = 1)
 SELECT r.backtest_run_id, r.strategy, r.symbol, r.timeframe, r.start_date, r.end_date_requested, r.last_data_time,
-       r.ksl_atr_multiple, r.signal_snapshot_id
+       r.ksl_atr_multiple, r.signal_snapshot_id, sn.channel AS signal_channel
 FROM dbo.backtest_run r JOIN single_runs s ON s.backtest_run_id = r.backtest_run_id
-WHERE r.zone = 'half' AND r.signal_snapshot_id IS NOT NULL
+JOIN dbo.signal_snapshot sn ON sn.signal_snapshot_id = r.signal_snapshot_id
+WHERE r.zone = 'half'
 """
 
 _GROUPS_SQL = """
@@ -348,12 +321,6 @@ def work_on_window(job: Mapping[str, Any]) -> dict[str, Any]:
 # SQL ra
 # --------------------------------------------------------------------------- #
 
-def ensure_tables(conn: Any) -> None:
-    for statement in _DDL:
-        conn.execute(statement)
-    conn.commit()
-
-
 def _to_dt(ms: pd.Series) -> list:
     return pd.to_datetime(ms, unit="ms").dt.to_pydatetime().tolist()
 
@@ -392,7 +359,7 @@ def save(conn: Any, kept: pd.DataFrame, summaries: list[dict[str, Any]]) -> None
 def run(*, rebuild: bool = False, symbol: str | None = None, workers: int = 10, limit_runs: int | None = None) -> dict[str, Any]:
     started = time.time()
     with closing(master_db.connect(autocommit=False)) as conn:
-        ensure_tables(conn)
+        master_db.ensure_schema(conn)
         runs = pd.read_sql(_RUNS_SQL, conn)
         if symbol:
             runs = runs[runs["symbol"] == symbol]
@@ -451,9 +418,25 @@ def check() -> dict[str, Any]:
             "agree_tp1_pct": share(a1, comparable), "agree_tp2_pct": share(a2, comparable), "agree_tp3_pct": share(a3, comparable)}
 
 
+def pending_summary(runs: pd.DataFrame, done: set[int]) -> dict[str, Any]:
+    """Trong các lượt đủ điều kiện (`runs`), bao nhiêu lượt chưa có trong excursion_run (`done`), đếm theo nguồn tín hiệu."""
+    todo = runs[~runs["backtest_run_id"].isin(done)]
+    by_source = {str(source): int(len(part)) for source, part in todo.groupby("signal_channel")}
+    return {"eligible": int(len(runs)), "done": int(len(runs) - len(todo)), "pending": int(len(todo)), "pending_by_source": by_source}
+
+
+def status() -> dict[str, Any]:
+    """Còn bao nhiêu lượt đủ điều kiện mà CHƯA tính (cần `run`). Chỉ đọc SQL, không đọc tick nên chạy tức thì."""
+    with closing(master_db.connect(autocommit=True)) as conn:
+        runs = pd.read_sql(_RUNS_SQL, conn)
+        done = {int(r[0]) for r in conn.execute(f"SELECT backtest_run_id FROM {SCHEMA}.excursion_run").fetchall()}
+    return pending_summary(runs, done)
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
+    sub.add_parser("status", help="còn bao nhiêu lượt chưa tính")
     run_parser = sub.add_parser("run", help="tính các lượt chưa có (mặc định) hoặc tất cả (--rebuild)")
     run_parser.add_argument("--rebuild", action="store_true")
     run_parser.add_argument("--symbol")
@@ -463,6 +446,8 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
     if args.command == "run":
         print(json.dumps(run(rebuild=args.rebuild, symbol=args.symbol, workers=args.workers, limit_runs=args.limit_runs), ensure_ascii=False))
+    elif args.command == "status":
+        print(json.dumps(status(), ensure_ascii=False))
     else:
         print(json.dumps(check(), ensure_ascii=False))
 

@@ -36,9 +36,9 @@
     "semantic_hash": ""
   },
   "bo_workflow/core_engine/master_db.py": {
-    "mtime": 1792132351.8062594,
-    "seen": 1792651850.375766,
-    "ast_hash": "ac7af19bc5d65554d3d7a43c15465660",
+    "mtime": 1793068673.904872,
+    "seen": 1793069580.5740063,
+    "ast_hash": "16605b831ece90dd97c84736c025357d",
     "semantic_hash": ""
   },
   "bo_workflow/core_engine/models.py": {
@@ -90,9 +90,9 @@
     "semantic_hash": ""
   },
   "bo_workflow/core_engine/output_util/run_export.py": {
-    "mtime": 1792770327.644076,
-    "seen": 1792771346.5811076,
-    "ast_hash": "dfa44f933e348e3fbd61101e7d2bf29d",
+    "mtime": 1793068649.4351003,
+    "seen": 1793069580.5740063,
+    "ast_hash": "fe3815e61294331aad2d1c2787246b5f",
     "semantic_hash": ""
   },
   "bo_workflow/core_engine/output_util/selection.py": {
@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "bo_workflow/sql/001_schema.sql": {
-    "mtime": 1792771016.7439258,
-    "seen": 1792771346.5811076,
-    "ast_hash": "bbe5a1acc0f16242d433dd3b67cdf9a8",
+    "mtime": 1793068649.4341242,
+    "seen": 1793069580.5740063,
+    "ast_hash": "559a4c07b4a5ddf0a0daf63b633f323d",
     "semantic_hash": ""
   },
   "bo_workflow/sql/002_views.sql": {
@@ -246,9 +246,9 @@
     "semantic_hash": ""
   },
   "bo_workflow/tests/test_backtestbot.py": {
-    "mtime": 1792848562.7991107,
-    "seen": 1792848656.3492875,
-    "ast_hash": "68da46c81c1f71097309698cd5560685",
+    "mtime": 1793015293.7973897,
+    "seen": 1793015342.7872713,
+    "ast_hash": "8b07e0f10cc079788578cab05e659f07",
     "semantic_hash": ""
   },
   "bo_workflow/tests/test_cli_engine.py": {
@@ -258,9 +258,9 @@
     "semantic_hash": ""
   },
   "bo_workflow/tests/test_core_engine.py": {
-    "mtime": 1792848561.6885064,
-    "seen": 1792848656.3492875,
-    "ast_hash": "681252972880ea0623684f1cea55f087",
+    "mtime": 1793015292.6781957,
+    "seen": 1793015342.7872713,
+    "ast_hash": "84cac7b6d388e79ee37a709b95797302",
     "semantic_hash": ""
   },
   "bo_workflow/tests/test_dashboard_app_composition.py": {
@@ -276,9 +276,9 @@
     "semantic_hash": ""
   },
   "bo_workflow/tests/test_master_db.py": {
-    "mtime": 1792770415.4217327,
-    "seen": 1792771346.5811076,
-    "ast_hash": "9b7f8fa729e39156dbac4596f5b54fa8",
+    "mtime": 1793068755.9128144,
+    "seen": 1793069580.5740063,
+    "ast_hash": "308c2f85201942e3d9d888d3a81ff2bd",
     "semantic_hash": ""
   },
   "bo_workflow/tests/test_optimize_backend.py": {
@@ -306,9 +306,9 @@
     "semantic_hash": ""
   },
   "bo_workflow/config.example.yaml": {
-    "mtime": 1792848560.5819798,
-    "seen": 1792848656.3492875,
-    "ast_hash": "5bc6bec72488a2bc68ced2fa78516e1b",
+    "mtime": 1793015291.5749397,
+    "seen": 1793015342.7872713,
+    "ast_hash": "dbc009cc6f06db56634d17e54d7f3eb5",
     "semantic_hash": ""
   },
   "bo_workflow/research_notes/ab-plugin-api-vs-cli-2026-09-11.md": {
@@ -396,9 +396,9 @@
     "semantic_hash": ""
   },
   "bo_workflow/research_notes/sql-master-database-plan-2026-10-14.md": {
-    "mtime": 1792046934.7023308,
-    "seen": 1792651850.3767693,
-    "ast_hash": "66c8ff8362263fb9cbf0cad04b2d5705",
+    "mtime": 1793069450.6159916,
+    "seen": 1793069580.5740063,
+    "ast_hash": "e3a3f8c282045ccf9a26eee872d9b943",
     "semantic_hash": ""
   },
   "bo_workflow/research_notes/time-series-strategy-optimization-methodology.md": {
@@ -612,27 +612,21 @@
     "semantic_hash": ""
   },
   "bo_workflow/core_engine/output_util/trade_excursion.py": {
-    "mtime": 1792933180.4230232,
-    "seen": 1792934602.3003411,
-    "ast_hash": "2bcd2c3c27b483a28d8255a8c4e3c214",
+    "mtime": 1793068582.693919,
+    "seen": 1793069580.5740063,
+    "ast_hash": "c5ce4f1bb6d9bbd3fb45180ca374ba3c",
     "semantic_hash": ""
   },
   "bo_workflow/tests/test_trade_excursion.py": {
-    "mtime": 1792933217.783539,
-    "seen": 1792934602.3003411,
-    "ast_hash": "9c7319a89e3bc4bade81baa01202d455",
+    "mtime": 1793068593.3411684,
+    "seen": 1793069580.5740063,
+    "ast_hash": "7224c62dc1d029fffb2b8f072003bfdf",
     "semantic_hash": ""
   },
-  "bo_workflow/core_engine/output_util/portfolio_composition.py": {
-    "mtime": 1792944131.2716022,
-    "seen": 1792944192.2997625,
-    "ast_hash": "318d65bfdb158c36b0284bfa744eae07",
-    "semantic_hash": ""
-  },
-  "bo_workflow/tests/test_portfolio_composition.py": {
-    "mtime": 1792944132.3924549,
-    "seen": 1792944192.3007624,
-    "ast_hash": "4f58b8abc010d3d35ea8f395107b3f88",
+  "bo_workflow/sql/003_analysis.sql": {
+    "mtime": 1793068551.8241699,
+    "seen": 1793069580.5740063,
+    "ast_hash": "51c07ee9bd456f08c851bf5b247d5c46",
     "semantic_hash": ""
   }
 }
