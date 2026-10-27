@@ -354,7 +354,16 @@ def test_export_signals_names_file_from_requested_range_not_actual_data(monkeypa
     assert output.name == "combo_US30_H1_20200101_20210101_nt.csv"
 
 
-def test_export_signals_names_file_with_trend_filter_defaults(monkeypatch, tmp_path):
+@pytest.mark.parametrize(
+    ("methods", "file_name", "trend_tf", "loads"),
+    [
+        # mặc định của config (2026-10-23) là knn: khung trend lấy từ ô (US30, H1) của bảng trend_tf_by_symbol (không còn khung mặc định chung)
+        ("", "combo_US30_H1_full_history_tf_knn_H4.csv", "H4", [("US30", "H1", "", ""), ("US30", "H4", "", "")]),
+        # breakout (chọn tường minh, là DB2): khung trend = khung vào lệnh, tải cùng một khung hai lần
+        ("breakout", "combo_US30_H1_full_history_tf_breakout_H1.csv", "H1", [("US30", "H1", "", ""), ("US30", "H1", "", "")]),
+    ],
+)
+def test_export_signals_names_file_with_trend_filter_defaults(monkeypatch, tmp_path, methods, file_name, trend_tf, loads):
     from wisdom_engine.we_core.src import configuration
 
     calls = []
@@ -400,15 +409,15 @@ def test_export_signals_names_file_with_trend_filter_defaults(monkeypatch, tmp_p
         overrides={},
         output_dir=str(tmp_path),
         trend_mode="trend_filter",
+        trend_methods=methods,
     )
 
-    # combo: khung trend lấy từ ô (US30, H1) của bảng trend_tf_by_symbol (không còn khung mặc định chung)
-    assert output.name == "combo_US30_H1_full_history_tf_knn_H4.csv"
+    assert output.name == file_name
     assert output.parent == tmp_path / "trend_filter"
-    assert calls == [("US30", "H1", "", ""), ("US30", "H4", "", "")]
+    assert calls == loads
     assert seen["strategy"] == "combo"
-    assert seen["trend_tf"] == "H4"
-    assert seen["overrides"]["TREND_METHODS"] == ("knn",)
+    assert seen["trend_tf"] == trend_tf
+    assert seen["overrides"]["TREND_METHODS"] == (methods or "knn",)
 
 
 def test_trend_flag_is_a_shortcut_for_trend_filter(monkeypatch, tmp_path):
@@ -443,7 +452,7 @@ def test_trend_flag_is_a_shortcut_for_trend_filter(monkeypatch, tmp_path):
         trend_tf="H1",
     )
 
-    assert output.name == "combo_US30_H1_from_20200101_tf_knn_H1.csv"
+    assert output.name == "combo_US30_H1_from_20200101_tf_knn_H1.csv"   # mặc định knn (2026-10-23) + --trend-tf H1 tường minh
     assert output.parent == tmp_path / "trend_filter"
 
 
@@ -473,7 +482,9 @@ def test_resolve_trend_reference_uses_config_methods_and_rejects_unknown_ones(mo
 
     monkeypatch.setattr(configuration, "COMBO_TREND_TF_BY_SYMBOL", {"US30": {"H1": "H4"}})
     methods, tf = export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf="H1", overrides={})
-    assert (methods, tf) == (("knn",), "H4")
+    assert (methods, tf) == (("knn",), "H4")  # mặc định của config (2026-10-23): knn, khung tham chiếu tra từ bảng
+    methods, tf = export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf="H1", overrides={}, trend_methods="breakout")
+    assert (methods, tf) == (("breakout",), "H1")  # breakout (chọn tường minh): khung của tín hiệu
 
     methods, _ = export_cli.resolve_trend_reference(
         "combo", symbol="US30", entry_tf="H1", overrides={}, trend_methods=" KNN "
@@ -484,22 +495,34 @@ def test_resolve_trend_reference_uses_config_methods_and_rejects_unknown_ones(mo
         export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf="H1", overrides={}, trend_methods="nope")
 
 
+def test_resolve_trend_reference_breakout_dung_chinh_khung_vao_lenh():
+    """Khối breakout tính trên chính khung của tín hiệu (2026-10-22): M30 -> M30, H1 -> H1, kể cả khung ngoài H1–H4."""
+    resolve = export_cli.resolve_trend_reference
+    assert resolve("ma_cross", symbol="US30", entry_tf="M30", overrides={}, trend_methods="breakout") == (("breakout",), "M30")
+    assert resolve("combo", symbol="US30", entry_tf="H1", overrides={}, trend_methods="breakout") == (("breakout",), "H1")
+    assert resolve("combo", symbol="US30", entry_tf="H1", overrides={}, trend_methods="breakout", trend_tf="h1")[1] == "H1"
+    with pytest.raises(ValueError, match="always use the entry timeframe M30"):
+        resolve("ma_cross", symbol="US30", entry_tf="M30", overrides={}, trend_methods="breakout", trend_tf="H4")
+    assert export_cli.export_mode_suffix("trend_filter", trend_methods=("breakout",), trend_tf="M30") == "tf_breakout_M30"
+
+
 def test_resolve_trend_reference_chi_nhan_khung_trend_lon_hon_hoac_bang_khung_tin_hieu(monkeypatch):
     """Quy tắc 2026-10-16: khung trend >= khung tín hiệu. Ô của combo trỏ H4 hợp lệ với mọi khung vào lệnh H1-H4."""
     from wisdom_engine.we_core.src import configuration
 
     monkeypatch.setattr(configuration, "COMBO_TREND_TF_BY_SYMBOL", {"US30": {tf: "H4" for tf in ("H1", "H2", "H3", "H4")}})
+    knn = {"overrides": {}, "trend_methods": "knn"}  # khung tham chiếu riêng chỉ có với knn (breakout luôn dùng khung vào lệnh)
     for entry_tf in ("H1", "H2", "H3", "H4"):
-        _, tf = export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf=entry_tf, overrides={})
+        _, tf = export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf=entry_tf, **knn)
         assert tf == "H4"
     # bằng nhau và lớn hơn đều được; M45 (45 phút) với H1 (60 phút) là lớn hơn
-    assert export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf="H2", overrides={}, trend_tf="H2")[1] == "H2"
-    assert export_cli.resolve_trend_reference("ma_cross", symbol="US30", entry_tf="M45", overrides={}, trend_tf="H1")[1] == "H1"
+    assert export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf="H2", trend_tf="H2", **knn)[1] == "H2"
+    assert export_cli.resolve_trend_reference("ma_cross", symbol="US30", entry_tf="M45", trend_tf="H1", **knn)[1] == "H1"
     # nhỏ hơn bị chặn, thông báo nêu cả hai khung
     with pytest.raises(ValueError, match=r"TREND_TF H1 must not be smaller than the entry timeframe H2"):
-        export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf="H2", overrides={}, trend_tf="H1")
+        export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf="H2", trend_tf="H1", **knn)
     with pytest.raises(ValueError, match="must not be smaller"):
-        export_cli.resolve_trend_reference("macd_break", symbol="US30", entry_tf="H4", overrides={}, trend_tf="h3")
+        export_cli.resolve_trend_reference("macd_break", symbol="US30", entry_tf="H4", trend_tf="h3", **knn)
 
 
 def test_export_signals_bao_loi_khung_trend_nho_hon_truoc_khi_tai_du_lieu(monkeypatch, tmp_path):
@@ -521,6 +544,7 @@ def test_export_signals_bao_loi_khung_trend_nho_hon_truoc_khi_tai_du_lieu(monkey
             overrides={},
             output_dir=str(tmp_path),
             trend_mode="trend_filter",
+            trend_methods="knn",
             trend_tf="H1",
         )
     assert not list(tmp_path.rglob("*.csv"))
@@ -537,17 +561,25 @@ def test_resolve_trend_reference_dung_khung_trend_theo_o_cua_symbol_va_khung_vao
     from wisdom_engine.we_core.src import configuration
 
     monkeypatch.setattr(configuration, "COMBO_TREND_TF_BY_SYMBOL", {"BTCUSD": {"H2": "H2", "H1": "H3"}})
+    knn = {"overrides": {}, "trend_methods": "knn"}  # bảng chỉ dùng cho khối cần khung tham chiếu (breakout luôn dùng khung vào lệnh)
 
-    assert export_cli.resolve_trend_reference("combo", symbol="BTCUSD", entry_tf="H2", overrides={})[1] == "H2"
-    assert export_cli.resolve_trend_reference("combo", symbol="BTCUSD", entry_tf="H1", overrides={})[1] == "H3"
+    assert export_cli.resolve_trend_reference("combo", symbol="BTCUSD", entry_tf="H2", **knn)[1] == "H2"
+    assert export_cli.resolve_trend_reference("combo", symbol="BTCUSD", entry_tf="H1", **knn)[1] == "H3"
     # không có ô (khung vào lệnh khác, hoặc symbol ngoài bảng) và không có --trend-tf -> báo lỗi rõ, không có khung mặc định
     with pytest.raises(ValueError, match=r"No trend timeframe configured for BTCUSD H3; pass --trend-tf"):
-        export_cli.resolve_trend_reference("combo", symbol="BTCUSD", entry_tf="H3", overrides={})
+        export_cli.resolve_trend_reference("combo", symbol="BTCUSD", entry_tf="H3", **knn)
+    with pytest.raises(ValueError, match=r"No trend timeframe configured for US30 H2; pass --trend-tf"):
+        export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf="H2", **knn)
+    # --trend-tf tường minh thắng ô riêng và cứu được ô thiếu
+    assert export_cli.resolve_trend_reference("combo", symbol="BTCUSD", entry_tf="H2", trend_tf="H4", **knn)[1] == "H4"
+    # mặc định của config là knn (2026-10-23): US30 H2 không có ô trong bảng giả nên báo lỗi rõ
     with pytest.raises(ValueError, match=r"No trend timeframe configured for US30 H2; pass --trend-tf"):
         export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf="H2", overrides={})
-    # --trend-tf tường minh thắng ô riêng và cứu được ô thiếu
-    assert export_cli.resolve_trend_reference("combo", symbol="BTCUSD", entry_tf="H2", overrides={}, trend_tf="H4")[1] == "H4"
-    assert export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf="H2", overrides={}, trend_tf="H3")[1] == "H3"
+    # breakout chọn tường minh: không cần ô, khung của tín hiệu
+    assert export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf="H2", overrides={}, trend_methods="breakout") == (("breakout",), "H2")
+    assert export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf="H2", trend_tf="H3", **knn)[1] == "H3"  # symbol ngoài bảng, chọn tay (knn)
+    with pytest.raises(ValueError, match="always use the entry timeframe H2"):  # breakout không có khung tham chiếu riêng
+        export_cli.resolve_trend_reference("combo", symbol="US30", entry_tf="H2", overrides={}, trend_methods="breakout", trend_tf="H3")
 
 
 # --- Số chữ số thập phân của atr/entry theo symbol (defaults.price_decimals, 2026-10-20) -------------------------

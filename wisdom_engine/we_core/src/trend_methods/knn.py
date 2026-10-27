@@ -14,6 +14,8 @@ Hợp đồng chung của một khối trend_methods (rules/trend_tf.py kiểm l
     build(trend_bars, params)
                     -> bản sao của trend_bars + OUTPUT_COLUMNS + cột hướng
                        `trend_bias_<NAME>` (int: +1 / -1 / 0). Không xoá hay đổi cột có sẵn.
+Cách dùng hướng đó (khung tham chiếu riêng hay chính khung của tín hiệu; có dời tín hiệu theo chính sách
+first_aligned_per_run hay không) là chính sách của rules/trend_tf.POLICY, KHÔNG khai báo trong khối.
 
 Hướng của nến = dấu của (ai_knn nến này - ai_knn nến trước): tăng +1, giảm -1, bằng/NaN 0.
 Cách tính ai_knn: xem calc_ai_trend_navigator (deterministic, không phải mô hình học máy).

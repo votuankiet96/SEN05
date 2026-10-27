@@ -8,9 +8,9 @@ Mô tả:
     kiểu Check của verify.py).
 
     Ba trang: "/" (một chiến lược × symbol × timeframe, có tín hiệu KHÔNG lọc trend và đối
-    chiếu với db đầu ra thứ nhất) gọi /api/view; "/trend" (cùng chiến lược × symbol × timeframe,
-    nhưng theo đường 2 khung với khung trend khai trong des_config.yaml, đối chiếu với db đầu
-    ra đã lọc trend, có pane xu hướng) gọi /api/trend; "/mtf" (một symbol, tối đa 4 timeframe
+    chiếu với db đầu ra của nguồn raw) gọi /api/view; "/trend" (cùng chiến lược × symbol × timeframe
+    nhưng lọc trend bằng MỘT trong bốn khối -- knn, breakout, zigzag, tstat -- đối chiếu với db đầu ra
+    của chính nguồn đó, có pane xu hướng) gọi /api/trend; "/mtf" (một symbol, tối đa 4 timeframe
     chỉ có nến, để kiểm tra DFS) gọi /api/mtf.
 
     Mỗi nhịp trình duyệt gọi /api/view. Server làm việc theo 2 bước:
@@ -66,22 +66,27 @@ from wisdom_engine.des.src.chart_simul.verify import (
     field_diffs,
 )
 from wisdom_engine.des.src.configuration import (
-    COMBO_SYMBOL_X,
     CONFIG,
+    OPERATING_SYMBOLS,
+    TrendSource,
     get_strategy,
     run_strategy,
     run_strategy_with_trend_reference,
-    trend_methods_for,
-    trend_reference_for,
+    trend_filter_enabled_for,
+    trend_source_for,
 )
 from wisdom_engine.des.src.indicator import timeframe_minutes
-from wisdom_engine.des.src.redis_io.candle_reader import STAMP_FORMAT
+from wisdom_engine.des.src.redis_io.candle_reader import OUTPUT_SOURCES, STAMP_FORMAT
 from wisdom_engine.des.src.rules.trend_tf import build_trend_frame, get_method
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8518
 DEFAULT_SYMBOL = "US30"
 DEFAULT_BARS = 300
+# Nguồn của trang chính ("raw" = không lọc trend) và các nguồn lọc trend của trang /trend (mỗi nguồn một khối, một db đầu ra).
+RAW_SOURCE = "raw"
+TREND_SOURCES: tuple[str, ...] = tuple(source for source in OUTPUT_SOURCES if source != RAW_SOURCE)
+DEFAULT_TREND_SOURCE = TREND_SOURCES[0]  # knn: nguồn đầu tiên của trang /trend
 BARS_MIN = 50
 BARS_MAX = READ_BARS
 # Quá ngần này giây thật mà des vẫn chưa ghi tín hiệu của nến mới nhất -> trình
@@ -95,7 +100,7 @@ MTF_VISIBLE_BARS = 120
 
 STRATEGY_LABELS = {"combo": "Combo", "ma_cross": "MA Cross", "macd_break": "MACD Break"}
 _PARAMS_LABEL = {
-    "combo": "MA {MA_PERIOD} · MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL} · ATR {ATR_PERIOD} · X {X}",
+    "combo": "MA {MA_PERIOD} · MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL} · ATR {ATR_PERIOD}",
     "ma_cross": (
         "Fast {FAST_MA} · Slow {SLOW_MA} · MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL}"
         " · ATR {ATR_PERIOD}"
@@ -111,12 +116,13 @@ _HAS_EXPECTED = (STATUS_OK, STATUS_PENDING, STATUS_MISSED, STATUS_WRONG_SIDE)
 
 @dataclass(frozen=True)
 class ViewRequest:
-    """Một yêu cầu xem: chiến lược × symbol × timeframe × số nến."""
+    """Một yêu cầu xem: chiến lược × symbol × timeframe × số nến × nguồn tín hiệu (raw hoặc một khối lọc trend)."""
 
     strategy: str
     symbol: str
     tf: str
     bars: int
+    source: str = RAW_SOURCE
 
 
 @dataclass(frozen=True)
@@ -161,7 +167,7 @@ def build_catalog(config: dict[str, Any]) -> dict[str, Any]:
     """Các tổ hợp mà des thực sự xử lý, lấy từ des_config.yaml (không gõ cứng).
 
     Chiến lược = live.enabled_strategies; timeframe của từng chiến lược = đúng
-    danh sách mà live_worker dùng để định tuyến sự kiện; symbol = symbol_x.
+    danh sách mà live_worker dùng để định tuyến sự kiện; symbol = strategies.combo.symbols.
     """
     strategies: dict[str, Any] = {}
     for key in [str(name).lower() for name in config["live"]["enabled_strategies"]]:
@@ -175,7 +181,7 @@ def build_catalog(config: dict[str, Any]) -> dict[str, Any]:
             "timeframes": list(timeframes),
             "defaultTimeframe": default_tf if default_tf in timeframes else timeframes[0],
         }
-    return {"strategies": strategies, "symbols": sorted(COMBO_SYMBOL_X)}
+    return {"strategies": strategies, "symbols": sorted(OPERATING_SYMBOLS)}
 
 
 def all_pairs(catalog: dict[str, Any]) -> list[Pair]:
@@ -199,8 +205,10 @@ def _parse_bars(raw: str | None) -> int:
     return min(BARS_MAX, max(BARS_MIN, bars))
 
 
-def parse_request(args: Mapping[str, str], catalog: dict[str, Any]) -> ViewRequest:
-    """Kiểm tra strategy / symbol / tf nằm trong danh mục của des; sai thì ValueError."""
+def parse_request(
+    args: Mapping[str, str], catalog: dict[str, Any], *, sources: tuple[str, ...] = (RAW_SOURCE,)
+) -> ViewRequest:
+    """Kiểm tra strategy / symbol / tf nằm trong danh mục của des và source nằm trong `sources` (mục đầu là mặc định); sai thì ValueError."""
     strategies = catalog["strategies"]
     strategy = str(args.get("strategy", "")).lower()
     if strategy not in strategies:
@@ -213,7 +221,10 @@ def parse_request(args: Mapping[str, str], catalog: dict[str, Any]) -> ViewReque
         raise ValueError(
             f"timeframe '{tf}' is not valid for {strategy}: {strategies[strategy]['timeframes']}"
         )
-    return ViewRequest(strategy, symbol, tf, _parse_bars(args.get("bars")))
+    source = str(args.get("source", "") or sources[0]).lower()
+    if source not in sources:
+        raise ValueError(f"source '{source}' is not one of {list(sources)}")
+    return ViewRequest(strategy, symbol, tf, _parse_bars(args.get("bars")), source)
 
 
 def parse_token(args: Mapping[str, str]) -> Token | None:
@@ -268,11 +279,11 @@ def _now() -> str:
 
 
 def _reject_trend(strategy: str) -> None:
-    """chart_simul chưa dựng đường chạy 2 timeframe; bật trend thì báo rõ, không đoán."""
-    if trend_reference_for(strategy)[0]:
+    """Cờ trend_filter_enabled phải tắt (live_worker cũng từ chối khởi động nếu bật); bật thì báo rõ, không đoán."""
+    if trend_filter_enabled_for(strategy):
         raise ValueError(
-            f"des_config.yaml has trend_filter_enabled on for {strategy}; chart_simul does not "
-            "support the 2-timeframe path yet, so it cannot check against des"
+            f"des_config.yaml has trend_filter_enabled on for {strategy}; it must be false "
+            "(the filtered sources knn / breakout / zigzag / tstat do not depend on it), so chart_simul cannot check against des"
         )
 
 
@@ -282,7 +293,7 @@ def _unchanged(source: RedisSource, pair: Pair, clock: dict[str, Any], token: To
         not token.pending
         and (clock["runId"] or "") == token.run
         and (source.head_stamp(pair[1], pair[2]) or "") == token.head
-        and source.signal_count(pair) == token.nsig
+        and source.signal_count(pair, source=RAW_SOURCE) == token.nsig
     )
 
 
@@ -336,6 +347,7 @@ def _base_meta(req: ViewRequest, clock: dict[str, Any], signal_count: int) -> di
         "strategyLabel": STRATEGY_LABELS.get(req.strategy, req.strategy),
         "symbol": req.symbol,
         "tf": req.tf,
+        "source": req.source,
         "clock": clock,
         "serverTime": _now(),
         "signalCount": signal_count,
@@ -373,7 +385,7 @@ def _full_view(
     source = ctx.source
     # Đọc số tín hiệu TRƯỚC nến và tín hiệu: dấu vân tay gửi về trình duyệt luôn
     # <= thực tế, nên lỡ có tín hiệu mới giữa chừng thì nhịp sau tự nạp lại.
-    signal_count = source.signal_count(pair)
+    signal_count = source.signal_count(pair, source=req.source)
     candles = source.read_candles(req.symbol, req.tf, READ_BARS)
     meta = _base_meta(req, clock, signal_count)
     if candles.empty:
@@ -384,7 +396,7 @@ def _full_view(
     frame = enriched.tail(req.bars).reset_index(drop=True)
     # Tín hiệu đọc SAU nến: nếu des vừa ghi tín hiệu cho nến mới hơn nến chart đã
     # đọc, tín hiệu đó rơi ngoài vùng đối chiếu (unchecked) và nhịp sau sẽ khớp.
-    published = source.read_signals(pair, since=pd.Timestamp(frame["bartime"].iloc[0]))
+    published = source.read_signals(pair, since=pd.Timestamp(frame["bartime"].iloc[0]), source=req.source)
     des_from = source.first_signal_stamp(ctx.pairs)
     check_from = _check_from(candles, source.snapshot_bars, des_from)
     checks = classify(
@@ -434,27 +446,30 @@ def build_view(ctx: Context, req: ViewRequest, token: Token | None) -> dict[str,
 
 
 # ------------------------------------------------------------------ trang trend
-def _trend_tf_for(req: ViewRequest) -> str:
-    """Khung trend của ô (chiến lược, symbol, khung vào lệnh) khai trong des_config.yaml (trend_tf_by_symbol)."""
-    trend_tf = trend_reference_for(req.strategy, req.symbol, req.tf)[1]
-    if not trend_tf:
+def _trend_for(req: ViewRequest) -> TrendSource:
+    """Khung trend + chính sách của khối `req.source` cho ô (chiến lược, symbol, khung vào lệnh).
+
+    knn, zigzag và tstat tra bảng trend_tf_by_symbol của des_config.yaml; breakout tính trên chính khung vào lệnh.
+    """
+    trend = trend_source_for(req.strategy, req.symbol, req.tf, req.source)
+    if not trend.trend_tf:
         raise ValueError(
             f"no trend timeframe is configured for {req.strategy} {req.symbol} {req.tf} "
             "in des_config.yaml (trend_tf_by_symbol)"
         )
-    return trend_tf
+    return trend
 
 
 def _trend_unchanged(
-    source: RedisSource, pair: Pair, trend_tf: str, clock: dict[str, Any], token: Token
+    store: RedisSource, pair: Pair, req: ViewRequest, trend_tf: str, clock: dict[str, Any], token: Token
 ) -> bool:
-    """Khung nhìn trend trình duyệt đang giữ còn đúng không (nến vào lệnh, nến trend, số tín hiệu đã lọc trend, lần chạy DFS)."""
+    """Khung nhìn trend trình duyệt đang giữ còn đúng không (nến vào lệnh, nến trend, số tín hiệu của nguồn, lần chạy DFS)."""
     return (
         not token.pending
         and (clock["runId"] or "") == token.run
-        and (source.head_stamp(pair[1], pair[2]) or "") == token.head
-        and (source.head_stamp(pair[1], trend_tf) or "") == token.thead
-        and source.signal_count(pair, trend=True) == token.nsig
+        and (store.head_stamp(pair[1], pair[2]) or "") == token.head
+        and (store.head_stamp(pair[1], trend_tf) or "") == token.thead
+        and store.signal_count(pair, source=req.source) == token.nsig
     )
 
 
@@ -462,21 +477,24 @@ def _exact_trend_signal_fn(
     candles: pd.DataFrame,
     trend_candles: pd.DataFrame,
     req: ViewRequest,
-    trend_tf: str,
+    trend: TrendSource,
     snapshot_bars: int,
 ) -> Callable[[pd.Timestamp], int]:
-    """Tín hiệu SAU lọc trend tại nến `time` theo đúng cái des thấy lúc xử lý nến đó.
+    """Tín hiệu SAU lọc trend (khối `req.source`) tại nến `time` theo đúng cái des thấy lúc xử lý nến đó.
 
     Nến vào lệnh: `snapshot_bars` nến kết thúc ở đó. Nến trend: những nến đã đóng tới lúc nến vào lệnh đóng
-    (DFS ghi mọi nến cùng giờ đóng trong một MULTI/EXEC), cũng `snapshot_bars` nến mới nhất.
+    (DFS ghi mọi nến cùng giờ đóng trong một MULTI/EXEC), lấy `max(snapshot_bars, warmup của khối)` nến mới nhất
+    (live_worker xin chừng đó nến; DFS chỉ giữ tối đa READ_BARS nên khối cần warm-up dài hơn, vd zigzag, chỉ nhận được ngần ấy).
     """
+    trend_tf = trend.trend_tf
+    trend_bars = max(snapshot_bars, trend.warmup_bars)
     tf_delta = pd.Timedelta(minutes=timeframe_minutes(req.tf))
     trend_delta = pd.Timedelta(minutes=timeframe_minutes(trend_tf))
 
     def exact_signal(time: pd.Timestamp) -> int:
         entry_window = candles[candles["bartime"] <= time].tail(snapshot_bars).reset_index(drop=True)
         closed = trend_candles[trend_candles["bartime"] + trend_delta <= time + tf_delta]
-        trend_window = closed.tail(snapshot_bars).reset_index(drop=True)
+        trend_window = closed.tail(trend_bars).reset_index(drop=True)
         if trend_window.empty:
             return 0
         result = run_strategy_with_trend_reference(
@@ -486,6 +504,7 @@ def _exact_trend_signal_fn(
             entry_bars=entry_window,
             trend_tf=trend_tf,
             trend_bars=trend_window,
+            overrides={"TREND_METHODS": req.source},
         )
         return int(pd.to_numeric(result["signal"].iloc[-1], errors="coerce") or 0)
 
@@ -503,14 +522,15 @@ def _empty_trend_view(meta: dict[str, Any], message: str | None = None) -> dict[
 
 
 def _full_trend_view(
-    ctx: Context, req: ViewRequest, pair: Pair, trend_tf: str, clock: dict[str, Any]
+    ctx: Context, req: ViewRequest, pair: Pair, trend: TrendSource, clock: dict[str, Any]
 ) -> dict[str, Any]:
     source = ctx.source
+    trend_tf = trend.trend_tf
     # Đọc số tín hiệu TRƯỚC nến và tín hiệu (cùng lý do với _full_view).
-    signal_count = source.signal_count(pair, trend=True)
+    signal_count = source.signal_count(pair, source=req.source)
     candles = source.read_candles(req.symbol, req.tf, READ_BARS)
     trend_candles = source.read_candles(req.symbol, trend_tf, READ_BARS)
-    methods = trend_methods_for(req.strategy)
+    methods = (req.source,)
     meta = {
         **_base_meta(req, clock, signal_count),
         "trendTf": trend_tf,
@@ -523,7 +543,10 @@ def _full_trend_view(
             meta, f"No {trend_tf} candles for {req.symbol} in Redis yet, so the trend filter cannot be computed."
         )
 
-    params = {**get_strategy(req.strategy).normalize_params(None, req.symbol, req.tf), "TREND_TF": trend_tf}
+    params = {
+        **get_strategy(req.strategy).normalize_params({"TREND_METHODS": req.source}, req.symbol, req.tf),
+        "TREND_TF": trend_tf,
+    }
     enriched = run_strategy_with_trend_reference(
         req.strategy,
         symbol=req.symbol,
@@ -531,16 +554,17 @@ def _full_trend_view(
         entry_bars=candles,
         trend_tf=trend_tf,
         trend_bars=trend_candles,
+        overrides={"TREND_METHODS": req.source},
     )
     frame = enriched.tail(req.bars).reset_index(drop=True)
-    published = source.read_signals(pair, since=pd.Timestamp(frame["bartime"].iloc[0]), trend=True)
+    published = source.read_signals(pair, since=pd.Timestamp(frame["bartime"].iloc[0]), source=req.source)
     des_from = source.first_signal_stamp(ctx.pairs)
     check_from = _check_from(candles, source.snapshot_bars, des_from)
     checks = classify(
         frame,
         published,
         check_from=check_from,
-        exact_signal=_exact_trend_signal_fn(candles, trend_candles, req, trend_tf, source.snapshot_bars),
+        exact_signal=_exact_trend_signal_fn(candles, trend_candles, req, trend, source.snapshot_bars),
     )
     tf_minutes = timeframe_minutes(req.tf)
     expected = _expected_by_time(req, frame, checks, tf_minutes)
@@ -589,11 +613,11 @@ def build_trend_view(ctx: Context, req: ViewRequest, token: Token | None) -> dic
     """Khung nhìn trang trend; hoặc {"changed": false} nếu trình duyệt đã có bản đúng."""
     _reject_trend(req.strategy)
     pair = (req.strategy, req.symbol, req.tf)
-    trend_tf = _trend_tf_for(req)
+    trend = _trend_for(req)
     clock = ctx.source.sim_clock()
-    if token is not None and _trend_unchanged(ctx.source, pair, trend_tf, clock, token):
+    if token is not None and _trend_unchanged(ctx.source, pair, req, trend.trend_tf, clock, token):
         return {"changed": False, "meta": {"clock": clock, "serverTime": _now()}}
-    return {"changed": True, **_full_trend_view(ctx, req, pair, trend_tf, clock)}
+    return {"changed": True, **_full_trend_view(ctx, req, pair, trend, clock)}
 
 
 def build_mtf_view(ctx: Context, req: MtfRequest, token: MtfToken | None) -> dict[str, Any]:
@@ -679,6 +703,8 @@ def create_app(source: RedisSource | None = None) -> Flask:
             bars_max=BARS_MAX,
             miss_after_seconds=MISS_AFTER_SECONDS,
             timeframe_seconds={tf: timeframe_minutes(tf) * 60 for tf in DFS_TIMEFRAMES},
+            sources=list(TREND_SOURCES),
+            default_source=DEFAULT_TREND_SOURCE,
         )
         return Response(html, mimetype="text/html")
 
@@ -686,7 +712,9 @@ def create_app(source: RedisSource | None = None) -> Flask:
     def api_trend() -> Response:
         return respond(
             lambda: build_trend_view(
-                ctx, parse_request(request.args, catalog), parse_token(request.args)
+                ctx,
+                parse_request(request.args, catalog, sources=TREND_SOURCES),
+                parse_token(request.args),
             )
         )
 

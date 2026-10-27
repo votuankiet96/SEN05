@@ -20,23 +20,24 @@ import pandas as pd
 
 def add_combo_entries(df: pd.DataFrame, params: dict, symbol: str | None = None) -> pd.DataFrame:
     """
-    Thêm entry pending cho Combo.
+    Thêm entry pending cho Combo (đổi 2026-10-21, người dùng quyết định): BUY = `high` của nến tín hiệu,
+    SELL = `low` của nến tín hiệu, KHÔNG đệm (không X cố định theo symbol, không % ATR, không thêm tick).
+    Lệnh chờ STOP đặt đúng mép nến tín hiệu: chỉ khớp khi giá phá qua mép đó ở nến sau.
 
-    BUY dùng high + X, SELL dùng low - X. X vẫn thuộc core vì nó quyết định
-    chính điểm vào lệnh của Combo, không phải TP/SL.
+    Khi nến đóng cửa đúng tại mép (BUY có close == high, SELL có close == low; đo 2026-10-20 khoảng 2,3% tín
+    hiệu) entry trùng giá hiện tại — để engine/OF xử lý lệnh chờ đó, hệ này không xử lý đặc biệt.
     """
-    _ = symbol
+    _ = symbol, params
     out = _with_empty_entry_column(df)
     if out.empty or not {"signal", "high", "low"}.issubset(out.columns):
         return out
 
-    x = float(params["X"])
     signals = _signals(out)
     buy = signals.eq(1)
     sell = signals.eq(-1)
 
-    out.loc[buy, "entry_price"] = out.loc[buy, "high"] + x
-    out.loc[sell, "entry_price"] = out.loc[sell, "low"] - x
+    out.loc[buy, "entry_price"] = out.loc[buy, "high"]
+    out.loc[sell, "entry_price"] = out.loc[sell, "low"]
     return out
 
 

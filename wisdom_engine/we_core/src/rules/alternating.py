@@ -17,14 +17,16 @@ Ba điều cần biết:
       đã dính SL (hệ này không theo dõi lệnh thật): sau khi lệnh cũ đã dừng lỗ
       mà setup cùng chiều xuất hiện lại thì vẫn bị chặn cho tới khi có setup
       ngược chiều.
-    - Strategy gọi bộ lọc này TRƯỚC trend filter (đổi lại 2026-10-16 về thứ
-      tự có từ trước 2026-10-15): raw_signal đã được lọc xen kẽ trên mọi setup
-      rồi apply_trend_filter mới lọc raw_signal, nên signal ⊆ raw_signal và DB1
-      ⊆ DB0. Hệ quả: một setup bị trend loại vẫn chiếm "lượt đầu tiên" của
-      hướng đó. DB1 có thể có hai tín hiệu liền nhau cùng chiều (giữa chúng có
-      setup ngược chiều bị trend loại), và một đợt setup mà nến đầu lệch trend
-      thì mất cả đợt (bộ lọc không chờ trend đổi chiều giữa chừng). Khi trend
-      tắt, signal == raw_signal.
+    - rules/trend_tf.apply_signal_filters gọi bộ lọc này TRƯỚC trend filter (đổi
+      lại 2026-10-16 về thứ tự có từ trước 2026-10-15): raw_signal được lọc xen
+      kẽ trên mọi setup rồi mới lọc trend. Hệ quả: một setup bị trend loại vẫn
+      chiếm "lượt đầu tiên" của hướng đó, nên DB1 có thể có hai tín hiệu liền
+      nhau cùng chiều (giữa chúng có setup ngược chiều bị trend loại). Khi trend
+      tắt, signal == raw_signal. "Đợt" của chính sách first_aligned_per_run
+      (rules/trend_tf.POLICY, hiện breakout và tstat) = khoảng giữa hai lần bộ
+      lọc này bắn; chính sách đó quyết định một đợt có nến đầu lệch trend thì mất
+      cả đợt hay vẫn bắn ở nến setup đầu tiên trend đã cùng chiều, và signal có
+      còn ⊆ raw_signal hay không (xem docstring apply_signal_filters).
     - Trạng thái chỉ nhớ trong cửa sổ dữ liệu đang tính: bar có setup đầu tiên
       của cửa sổ luôn bắn. Cửa sổ làm mới của worker có 300 nến warm-up, nhưng
       chỉ phần warm-up mà chỉ báo đã hợp lệ mới "nhớ" được setup: combo nhớ 281

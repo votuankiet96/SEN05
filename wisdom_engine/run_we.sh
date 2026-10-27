@@ -4,10 +4,10 @@
 # plus the past-signal worker control (systemd user service) for the
 # "backtest cấp 2" Redis DB0 flow (L_PastSignal, triggered by df:events:backfill).
 # Also opens the DES Chart (des/src/chart_simul): a read-only live chart of the Redis
-# db13 candles (from DFS) + db14 signals (des, no trend filter), to check by eye that des
-# works in real time; its trend page (/trend: db15 signals filtered by the higher-timeframe
-# trend, with a trend pane); and its multi-timeframe page (/mtf: candles only, up to 4
-# timeframes of one symbol) to check DFS.
+# db10 candles (from DFS) + db11 signals (des, raw = no trend filter), to check by eye that des
+# works in real time; its trend page (/trend: pick knn / breakout / zigzag / tstat, shows the signals
+# of that source from db12 / db13 / db14, with a trend pane); and its multi-timeframe page
+# (/mtf: candles only, up to 4 timeframes of one symbol) to check DFS.
 # Long-running actions open in a new desktop terminal when available.
 # On headless/SSH sessions, actions run in the current terminal.
 
@@ -169,9 +169,9 @@ dashboard_running() {
 
 open_dashboard() {
   if dashboard_running; then
-    echo "Dashboard đã chạy sẵn tại $DASHBOARD_URL"
+    echo "Dashboard is already running at $DASHBOARD_URL"
   else
-    echo "Đang khởi động dashboard tại $DASHBOARD_URL ..."
+    echo "Starting dashboard at $DASHBOARD_URL ..."
     local cmd="$PY_CMD -m wisdom_engine.we_core.src.signal_display.server"
     if [[ "${WE_LAUNCH_MODE:-auto}" != "current" ]] && launch_terminal "wisdom_engine Dashboard" "$cmd"; then
       :
@@ -195,7 +195,7 @@ open_dashboard() {
     xdg-open "$DASHBOARD_URL" >/tmp/we_launcher_xdg-open.log 2>&1 &
     disown
   else
-    echo "Không phát hiện desktop — mở tay: $DASHBOARD_URL"
+    echo "No desktop detected - open it by hand: $DASHBOARD_URL"
   fi
   pause
 }
@@ -204,8 +204,9 @@ des_chart_running() {
   command -v curl >/dev/null 2>&1 && curl -s -o /dev/null -m 1 "$CHART_URL/health"
 }
 
-# DES Chart = des/src/chart_simul: trang chart sống CHỈ ĐỌC Redis (db13 nến do DFS
-# phát + db14 tín hiệu des không lọc trend; trang /trend đọc thêm db15 tín hiệu đã lọc trend)
+# DES Chart = des/src/chart_simul: trang chart sống CHỈ ĐỌC Redis (db10 nến do DFS
+# phát + db11 tín hiệu des nguồn raw không lọc trend; trang /trend chọn khối knn / breakout / zigzag / tstat
+# và đọc tín hiệu của nguồn đó ở db12 / db13 / db14)
 # để tận mắt kiểm tra des. Là hệ riêng của des, KHÔNG
 # dùng chung server/cổng/profile Chrome với dashboard của WE ở trên; cổng lấy
 # từ CHART_URL để đổi CHART_URL thì server cũng chạy đúng cổng đó.
@@ -360,9 +361,9 @@ Project: $APP_DIR
 1. Export Signal CSV
 2. Open Dashboard
 3. Manage Past-Signal Worker
-4. Open DES Chart (live chart: Redis db13 candles + db14 des signals, no trend filter)
-5. Open DES Multi-timeframe chart (one symbol, up to 4 timeframes, candles only)
-6. Open DES Trend chart (db15 des signals filtered by the higher-timeframe trend + trend pane)
+4. Open DES Chart
+5. Open DES Multi-timeframe Chart
+6. Open DES Trend Chart
 0. Exit
 
 EOF

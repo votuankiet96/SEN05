@@ -20,8 +20,23 @@ redis:
     db: 0                              # DB0 -- Redis OG8 chỉ dành cho wisdom_engine. Không lọc trend
     key_prefix: "L_PastSignal"
   past_signal_trend:
-    db: 1                              # DB1 -- Redis OG8 chỉ dành cho wisdom_engine. CÓ lọc trend
-    key_prefix: "L_PastSignal_Trend"   # -- đối chứng với past_signal, xem CLAUDE.md
+    db: 1                              # DB1 -- Redis OG8 chỉ dành cho wisdom_engine. Lọc trend bằng KNN (cả 3 chiến lược)
+    key_prefix: "L_PastSignal_Knn"     # tiền tố theo nguồn (đổi từ L_PastSignal_Trend ngày 2026-10-23), xem CLAUDE.md
+  # Đầu ra trend THÊM ngoài DB1 (cùng trigger, mỗi đầu ra MỘT DB riêng + khối trend riêng). Mặc định rỗng; BẬT trong config thật từ 2026-10-23 cho DB2 = breakout.
+  # trend_methods đè strategies.<tên>.trend_methods CHỈ cho đầu ra này (DB0/DB1 không đổi); tên khối: knn, breakout, zigzag.
+  # db không được trùng DB0/DB1 hay đầu ra khác; khối cần khung tham chiếu riêng (knn, zigzag) dùng bảng trend_tf_by_symbol.
+  # Đổi mục này làm đổi nội dung các DB đầu ra -> restart we-worker (bootstrap lại, xoá DB đầu ra thêm cùng lúc).
+  # Nguồn cố định: DB0 = không lọc trend (L_PastSignal), DB1 = KNN (L_PastSignal_Knn), DB2 = breakout (L_PastSignal_Breakout), DB3 = tstat (L_PastSignal_Tstat), DB4 = zigzag (L_PastSignal_Zigzag).
+  extra_trend_outputs:
+    - db: 2                            # DB2: cùng chiến lược/khung/symbol như DB1 nhưng trend = breakout (khung của tín hiệu)
+      key_prefix: "L_PastSignal_Breakout"  # tiền tố theo nguồn; cùng khuôn khoá với DB0/DB1, chỉ đổi số DB và tiền tố khi đọc
+      trend_methods: [breakout]
+    - db: 3                            # DB3: trend = tstat (t-stat Newey–West của độ dốc hồi quy log-giá 100 nến, CÓ dời tín hiệu như breakout); khung tham chiếu tra trend_tf_by_symbol như knn
+      key_prefix: "L_PastSignal_Tstat"
+      trend_methods: [tstat]
+    - db: 4                           # DB4: trend = zigzag (cấu trúc thị trường; khung tham chiếu tra trend_tf_by_symbol như knn; nến trend tải warm-up dài riêng)
+      key_prefix: "L_PastSignal_Zigzag"
+      trend_methods: [zigzag]
 
 defaults:
   symbol: BTCUSD
@@ -52,9 +67,9 @@ strategies:
     default_timeframe: H4
     trend_filter_enabled: false
     alternating_filter_enabled: true   # true = chỉ bắn tín hiệu đầu tiên khi hướng đổi chiều (lọc lặp cùng chiều); false = bar nào thỏa điều kiện cũng bắn
-    trend_methods: [knn]   # khối xác nhận xu hướng khung lớn được bật (src/trend_methods/<tên>.py); nhiều khối = phải đồng thuận cả hai
+    trend_methods: [knn]   # khối xác nhận xu hướng của DB1 (src/trend_methods/<tên>.py): knn = khung lớn tra trend_tf_by_symbol (mặc định của cả 3 chiến lược từ 2026-10-23); breakout = trend tính trên CHÍNH khung của tín hiệu (DB2 lấy từ redis.extra_trend_outputs, không phải từ đây); nhiều khối = phải đồng thuận (không trộn breakout với knn)
     trend_timeframes: [H1, H2, H3, H4]
-    trend_tf_by_symbol:   # khung trend RIÊNG cho từng (symbol, khung vào lệnh): symbol -> {khung vào: khung trend}; BẮT BUỘC đủ mọi symbol × khung vào lệnh (thiếu ô là lỗi lúc nạp config).
+    trend_tf_by_symbol:   # (dùng bởi khối knn — DB1 và mặc định của cả 3 chiến lược — hoặc khi đè TREND_TF; breakout dùng chính khung của tín hiệu) khung trend RIÊNG cho từng (symbol, khung vào lệnh): symbol -> {khung vào: khung trend}; BẮT BUỘC đủ mọi symbol × khung vào lệnh (thiếu ô là lỗi lúc nạp config).
                           # Khung trend phải thuộc trend_timeframes và >= khung vào lệnh (kiểm lúc nạp config và lúc worker khởi động).
                           # Bảng do research_notes/scripts/t008_tune_trend_tf.py chọn theo SỐ tín hiệu nhiều nhất (2024-01-01 → 2026-10-16); sửa tay được.
       BTCUSD: {H1: H4, H2: H2, H3: H3, H4: H4}
@@ -72,25 +87,9 @@ strategies:
       USDJPY: {H1: H4, H2: H2, H3: H3, H4: H4}
       GBPUSD: {H1: H4, H2: H2, H3: H3, H4: H4}
       USDCAD: {H1: H4, H2: H2, H3: H3, H4: H4}
-    symbol_x:
-      US30: 10.0
-      US500: 1.0
-      US100: 5.0
-      DE40: 5.0
-      UK100: 5.0
-      FR40: 5.0
-      SP35: 5.0
-      HK50: 15.0
-      J225: 15.0
-      GOLD: 0.5
-      BTCUSD: 50.0
-    # Nhóm symbol dùng entry theo ATR thay X cố định (đơn vị %): BUY = high + a% × ATR(atr_period), SELL = low − a% × ATR tại nến tín hiệu.
-    # Mỗi symbol đúng MỘT kiểu đệm: symbol_x (X cố định) HOẶC symbol_entry_atr_pct. Cả hai nhóm đều là symbol vận hành (cả ba chiến lược).
-    symbol_entry_atr_pct:
-      EURUSD: 5.0
-      USDJPY: 5.0
-      GBPUSD: 5.0
-      USDCAD: 5.0
+    # Symbol vận hành của CẢ BA chiến lược (tên SYMBOL theo SQL): worker Redis, dashboard và bảng trend_tf_by_symbol đều dùng
+    # danh sách này. Entry của combo: BUY = high, SELL = low của nến tín hiệu (không đệm theo symbol, đổi 2026-10-21).
+    symbols: [US30, US500, US100, DE40, UK100, FR40, SP35, HK50, J225, GOLD, BTCUSD, EURUSD, USDJPY, GBPUSD, USDCAD]
     session_hours_utc: {}
 
   ma_cross:
@@ -104,9 +103,9 @@ strategies:
     default_timeframe: M30
     trend_filter_enabled: false
     alternating_filter_enabled: true   # true = chỉ bắn tín hiệu đầu tiên khi hướng đổi chiều (lọc lặp cùng chiều); false = bar nào thỏa điều kiện cũng bắn
-    trend_methods: [knn]   # khối xác nhận xu hướng khung lớn được bật (src/trend_methods/<tên>.py); nhiều khối = phải đồng thuận cả hai
+    trend_methods: [knn]   # khối xác nhận xu hướng của DB1 (src/trend_methods/<tên>.py): knn = khung lớn tra trend_tf_by_symbol (mặc định của cả 3 chiến lược từ 2026-10-23); breakout = trend tính trên CHÍNH khung của tín hiệu (DB2 lấy từ redis.extra_trend_outputs, không phải từ đây); nhiều khối = phải đồng thuận (không trộn breakout với knn)
     trend_timeframes: [H1, H2, H3, H4]
-    trend_tf_by_symbol:   # khung trend RIÊNG cho từng (symbol, khung vào lệnh): symbol -> {khung vào: khung trend}; BẮT BUỘC đủ mọi symbol × khung vào lệnh (thiếu ô là lỗi lúc nạp config).
+    trend_tf_by_symbol:   # (dùng bởi khối knn — DB1 và mặc định của cả 3 chiến lược — hoặc khi đè TREND_TF; breakout dùng chính khung của tín hiệu) khung trend RIÊNG cho từng (symbol, khung vào lệnh): symbol -> {khung vào: khung trend}; BẮT BUỘC đủ mọi symbol × khung vào lệnh (thiếu ô là lỗi lúc nạp config).
                           # Khung trend phải thuộc trend_timeframes và >= khung vào lệnh (kiểm lúc nạp config và lúc worker khởi động).
                           # Bảng do research_notes/scripts/t008_tune_trend_tf.py chọn theo SỐ tín hiệu nhiều nhất (2024-01-01 → 2026-10-16); sửa tay được.
       BTCUSD: {M10: H4, M20: H1, M30: H1, M45: H1}
@@ -139,9 +138,9 @@ strategies:
     default_timeframe: H1
     trend_filter_enabled: false
     alternating_filter_enabled: true   # true = chỉ bắn tín hiệu đầu tiên khi hướng đổi chiều (lọc lặp cùng chiều); false = bar nào thỏa điều kiện cũng bắn
-    trend_methods: [knn]   # khối xác nhận xu hướng khung lớn được bật (src/trend_methods/<tên>.py); nhiều khối = phải đồng thuận cả hai
+    trend_methods: [knn]   # khối xác nhận xu hướng của DB1 (src/trend_methods/<tên>.py): knn = khung lớn tra trend_tf_by_symbol (mặc định của cả 3 chiến lược từ 2026-10-23). Breakout của macd_break (DB2) chỉ cho tín hiệu bắn ở nến break thứ hai, không phải bộ lọc; nhiều khối = phải đồng thuận (không trộn breakout với knn)
     trend_timeframes: [H1, H2, H3, H4]
-    trend_tf_by_symbol:   # khung trend RIÊNG cho từng (symbol, khung vào lệnh): symbol -> {khung vào: khung trend}; BẮT BUỘC đủ mọi symbol × khung vào lệnh (thiếu ô là lỗi lúc nạp config).
+    trend_tf_by_symbol:   # (dùng bởi khối knn — DB1 và mặc định của cả 3 chiến lược — hoặc khi đè TREND_TF; breakout dùng chính khung của tín hiệu) khung trend RIÊNG cho từng (symbol, khung vào lệnh): symbol -> {khung vào: khung trend}; BẮT BUỘC đủ mọi symbol × khung vào lệnh (thiếu ô là lỗi lúc nạp config).
                           # Khung trend phải thuộc trend_timeframes và >= khung vào lệnh (kiểm lúc nạp config và lúc worker khởi động).
                           # Bảng do research_notes/scripts/t008_tune_trend_tf.py chọn theo SỐ tín hiệu nhiều nhất (2024-01-01 → 2026-10-16); sửa tay được.
       BTCUSD: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H1, H2: H4, H3: H4, H4: H4}

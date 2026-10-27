@@ -70,6 +70,7 @@ _TEMPLATE = """<!doctype html>
       <option value="trend_filter">Trend Filter</option>
     </select>
   </label>
+  <label id="trend-method-control">Trend method <select id="trend-method"></select></label>
   <label id="trend-tf-control">Trend TF <select id="trend-tf"></select></label>
   <button id="refresh">Refresh</button>
   <button id="export">Export CSV</button>
@@ -109,6 +110,8 @@ __VENDOR_JS__
     fromTime: document.getElementById("from-time"),
     toTime: document.getElementById("to-time"),
     trendMode: document.getElementById("trend-mode"),
+    trendMethod: document.getElementById("trend-method"),
+    trendMethodControl: document.getElementById("trend-method-control"),
     trendTf: document.getElementById("trend-tf"),
     trendTfControl: document.getElementById("trend-tf-control"),
     refresh: document.getElementById("refresh"),
@@ -186,17 +189,38 @@ __VENDOR_JS__
     updateTrendControls();
   }
 
-  function updateTrendControls() {
-    const enabled = el.trendMode.value === "trend_filter";
-    el.trendTf.disabled = !enabled;
-    el.trendTfControl.style.display = enabled ? "" : "none";
+  // Phương pháp xác nhận xu hướng khung lớn (khối trong trend_methods/, vd KNN, BREAKOUT): liệt kê các khối đã đăng ký
+  // (CONFIG.trendMethods) và mặc định theo config của chiến lược (defaultTrendMethods; nếu là tổ hợp "a,b" thì thêm nó vào
+  // danh sách để không mất lựa chọn đó). Chỉ đặt lại khi đổi chiến lược, giữ lựa chọn tay khi đổi symbol/khung để so các
+  // phương pháp trên cùng một chart.
+  function populateTrendMethods() {
+    const spec = CONFIG.strategies[el.strategy.value];
+    const wanted = spec.defaultTrendMethods || CONFIG.trendMethods[0];
+    const options = CONFIG.trendMethods.includes(wanted) ? CONFIG.trendMethods : [wanted, ...CONFIG.trendMethods];
+    el.trendMethod.innerHTML = "";
+    options.forEach((method) => addOption(el.trendMethod, method, method.toUpperCase()));
+    el.trendMethod.value = wanted;
   }
 
-  // Chỉ hiện đúng nhóm symbol strategy đã tune buffer X riêng (tunedSymbols)
-  // — không hiện cả 37 symbol hệ thống nếu strategy chỉ tune cho 1 nhóm nhỏ.
+  // Khối trend tính trên CHÍNH khung của tín hiệu (vd BREAKOUT): không có khung trend riêng nên ẩn ô Trend TF và không gửi
+  // trend_tf. Pane trend vẫn hiện RIÊNG phía trên chart vào lệnh (nến cùng khung + đường của khối), như KNN, để chart vào
+  // lệnh chỉ còn nến + chỉ báo của chiến lược + mũi tên tín hiệu.
+  function usesEntryTimeframe() {
+    return CONFIG.sameTimeframeTrendMethods.includes(el.trendMethod.value);
+  }
+
+  function updateTrendControls() {
+    const enabled = el.trendMode.value === "trend_filter";
+    const ownTrendTf = enabled && !usesEntryTimeframe();
+    el.trendMethod.disabled = !enabled;
+    el.trendMethodControl.style.display = enabled ? "" : "none";
+    el.trendTf.disabled = !ownTrendTf;
+    el.trendTfControl.style.display = ownTrendTf ? "" : "none";
+  }
+
+  // Chỉ hiện các symbol vận hành (strategies.combo.symbols) — không hiện cả 37 symbol của hệ thống.
   function populateSymbols() {
-    const spec = CONFIG.strategies[el.strategy.value];
-    const allowed = spec.tunedSymbols.length ? spec.tunedSymbols : CONFIG.symbols;
+    const allowed = CONFIG.symbols;
     const keep = allowed.includes(el.symbol.value) ? el.symbol.value : null;
     el.symbol.innerHTML = "";
     allowed.forEach((s) => addOption(el.symbol, s, s));
@@ -211,6 +235,7 @@ __VENDOR_JS__
     el.bars.value = CONFIG.defaultBars;
     populateSymbols();
     populateTimeframes();
+    populateTrendMethods();
     populateTrendControls();
     renderParamFields();
   }
@@ -265,8 +290,8 @@ __VENDOR_JS__
       ...collectOverrides(),
     });
     if (el.trendMode.value === "trend_filter") {
-      params.set("trend_methods", spec.defaultTrendMethods || "knn");
-      params.set("trend_tf", el.trendTf.value);
+      params.set("trend_methods", el.trendMethod.value || spec.defaultTrendMethods);
+      if (!usesEntryTimeframe()) params.set("trend_tf", el.trendTf.value);
     }
     if (el.fromTime.value.trim() || el.toTime.value.trim()) {
       params.set("from_time", el.fromTime.value.trim());
@@ -616,7 +641,7 @@ __VENDOR_JS__
     }
 
     el.trendWrap.style.display = "block";
-    el.trendTitle.textContent = trendPayload.label;
+    el.trendTitle.textContent = trendPayload.label + (trendPayload.candleStyle === "heikin_ashi" ? " · Heikin Ashi" : "");
     ensureTrendChart();
     trendCandleSeries.applyOptions({ priceFormat: priceFormat() });
     clearTrendSeries();
@@ -812,6 +837,7 @@ __VENDOR_JS__
   el.strategy.addEventListener("change", () => {
     populateSymbols();
     populateTimeframes();
+    populateTrendMethods();
     populateTrendControls();
     renderParamFields();
     scan();
@@ -822,6 +848,7 @@ __VENDOR_JS__
   el.fromTime.addEventListener("change", scan);
   el.toTime.addEventListener("change", scan);
   el.trendMode.addEventListener("change", () => { updateTrendControls(); scan(); });
+  el.trendMethod.addEventListener("change", () => { updateTrendControls(); scan(); });
   el.trendTf.addEventListener("change", scan);
   el.refresh.addEventListener("click", scan);
   el.export.addEventListener("click", exportCsv);
@@ -846,6 +873,8 @@ def render_dashboard_html(
     strategies: dict[str, dict[str, Any]],
     symbols: list[str],
     timeframes: list[str],
+    trend_methods: list[str],
+    same_timeframe_trend_methods: list[str],
     default_strategy: str,
     default_symbol: str,
     default_bars: int,
@@ -855,7 +884,10 @@ def render_dashboard_html(
     """Dựng trang dashboard sống — HTML tự chứa, JS bên trong tự fetch /api/scan.
 
     `strategies` (key -> label/recommendedTimeframes/supportedTimeframes/
-    defaultTimeframe), `symbols`, `timeframes`, 3 default_* và bars_min/
+    defaultTimeframe), `symbols`, `timeframes`, `trend_methods` (tên các khối
+    xác nhận xu hướng đã đăng ký, cho ô Trend method), `same_timeframe_trend_methods`
+    (trong số đó, khối tính trên chính khung của tín hiệu nên không có ô Trend TF),
+    3 default_* và bars_min/
     bars_max (giới hạn ô nhập Bars — cùng nguồn với cli.clamp_bars() phía
     server, tránh gõ chết lại số trong HTML) được nhúng thẳng làm `CONFIG`
     cho JS phía client.
@@ -864,6 +896,8 @@ def render_dashboard_html(
         "strategies": strategies,
         "symbols": symbols,
         "timeframes": timeframes,
+        "trendMethods": trend_methods,
+        "sameTimeframeTrendMethods": same_timeframe_trend_methods,
         "defaultStrategy": default_strategy,
         "defaultSymbol": default_symbol,
         "defaultBars": default_bars,

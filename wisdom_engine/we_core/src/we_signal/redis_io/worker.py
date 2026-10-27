@@ -1,6 +1,6 @@
 """Vòng lặp chính của luồng "backtest cấp 2": nghe trigger backfill từ DF
 (qua redis_io/listener.py), với mỗi (symbol, timeframe) báo thay đổi VÀ khớp
-đúng phạm vi cấu hình (symbol trong strategies.combo.symbol_x, timeframe
+đúng phạm vi cấu hình (symbol trong strategies.combo.symbols, timeframe
 khớp _STRATEGY_TIMEFRAMES của ít nhất 1 chiến lược -- xem docstring
 _make_on_update(); trigger ngoài phạm vi bị bỏ qua, chốt 2026-09-21 vì DF
 backfill 1 universe symbol rộng hơn nhiều so với symbol operator cấu hình),
@@ -32,7 +32,7 @@ nối (lần đầu chạy, hoặc rớt kết nối tạm thời) đều có th
 thật, khiến DB0 "cũ" hơn SQL mà không ai biết. Bootstrap là lưới an toàn
 bù đúng khoảng trống đó -- ghi đè idempotent (publish_past_signals() luôn
 DELETE+RPUSH lại từ đầu), chạy lại nhiều lần không sao. Phạm vi
-_bootstrap_pairs(): symbol lấy từ strategies.combo.symbol_x (we_config.yaml)
+_bootstrap_pairs(): symbol lấy từ strategies.combo.symbols (we_config.yaml)
 -- đúng tập symbol operator đã chủ động cấu hình để trade -- ghép với đúng
 timeframe riêng của từng chiến lược (_STRATEGY_TIMEFRAMES: combo chỉ
 H1-H4, ma_cross chỉ M10/M20/M30/M45 -- KHÔNG dùng chung 1 danh sách hợp
@@ -80,6 +80,7 @@ import threading
 import time
 from collections import Counter
 from collections.abc import Callable, Iterable, Mapping, Sequence
+from typing import NamedTuple
 
 import pandas as pd
 import redis
@@ -99,6 +100,7 @@ from wisdom_engine.we_core.src.configuration import (
     trim_to_requested_range,
 )
 from wisdom_engine.we_core.src.db_connector import load_range_with_warmup
+from wisdom_engine.we_core.src.rules.trend_tf import max_trend_warmup_bars
 from wisdom_engine.we_core.src.we_signal.export_cli import signal_frame
 from wisdom_engine.we_core.src.we_signal.redis_io.client import (
     create_client,
@@ -190,6 +192,59 @@ def _strategies_for_timeframe(timeframe: str) -> list[str]:
     _STRATEGY_TIMEFRAMES); rỗng nếu không chiến lược nào nhận.
     """
     return [key for key, timeframes in _STRATEGY_TIMEFRAMES.items() if timeframe in timeframes]
+
+
+class TrendOutput(NamedTuple):
+    """Một đầu ra có lọc trend THÊM vào DB1 (``redis.extra_trend_outputs``): một DB riêng + khối trend riêng.
+
+    ``trend_methods`` đè ``strategies.<tên>.trend_methods`` chỉ cho đầu ra này (DB0 và DB1 không đổi); ``label`` là tên
+    hiển thị trong log, vd ``db2:breakout``.
+    """
+
+    client: redis.Redis
+    key_prefix: str
+    trend_methods: tuple[str, ...]
+    label: str
+
+
+def _make_extra_outputs(redis_config: Mapping) -> list[TrendOutput]:
+    """Tạo client + mô tả cho từng phần tử đã chuẩn hoá của ``redis.extra_trend_outputs`` (rỗng nếu không khai)."""
+    return [
+        TrendOutput(
+            client=create_client(dict(redis_config), item["db"]),
+            key_prefix=str(item["key_prefix"]),
+            trend_methods=tuple(item["trend_methods"]),
+            label=f"db{item['db']}:{'+'.join(item['trend_methods'])}",
+        )
+        for item in redis_config.get("extra_trend_outputs") or []
+    ]
+
+
+def check_extra_trend_outputs(redis_config: Mapping) -> None:
+    """Kiểm tra TRƯỚC khi worker chạm Redis (cùng lý do với check_trend_timeframes): với MỌI (chiến lược, symbol, khung
+    vào lệnh) worker chạy, khối trend khai cho từng đầu ra trong ``redis.extra_trend_outputs`` phải ra được khung trend
+    hợp lệ (khung >= khung vào lệnh, quy tắc 2026-10-16; khối cần khung tham chiếu riêng như knn phải có ô trong
+    ``trend_tf_by_symbol``). Sai thì dừng ngay với MỘT thông báo liệt kê mọi tổ hợp sai (ValueError -> fatal_config_error)
+    khi Redis còn nguyên, thay vì xoá sạch rồi báo lỗi ở từng cặp.
+    """
+    problems: dict[tuple[str, str, str], list[str]] = {}
+    for item in redis_config.get("extra_trend_outputs") or []:
+        methods = ",".join(item["trend_methods"])
+        output = f"db{item['db']}:{methods}"
+        for strategy_key, timeframes in _STRATEGY_TIMEFRAMES.items():
+            spec = get_strategy(strategy_key)
+            for timeframe in timeframes:
+                for symbol in sorted(OPERATING_SYMBOLS):
+                    try:
+                        trend_tf = str(spec.normalize_params({"TREND_METHODS": methods}, symbol, timeframe)["TREND_TF"])
+                        if not trend_tf:
+                            raise ValueError("no trend timeframe configured")
+                        check_trend_timeframe(timeframe, trend_tf)
+                    except ValueError as exc:
+                        problems.setdefault((output, f"{strategy_key} {timeframe}", str(exc)), []).append(symbol)
+    if problems:
+        details = [f"{output} {where}: {message} [{', '.join(symbols)}]" for (output, where, message), symbols in problems.items()]
+        raise ValueError("redis.extra_trend_outputs cannot run with the current strategies config — " + "; ".join(details))
 
 
 def check_trend_timeframes() -> None:
@@ -310,6 +365,7 @@ def refresh_pair(
     strategy_keys: Iterable[str] | None = None,
     date_from: str | None = None,
     date_to: str | None = None,
+    extra_outputs: Sequence[TrendOutput] = (),
 ) -> int:
     """Tính lại signal của (symbol, timeframe) cho các chiến lược trong
     `strategy_keys`, publish từng chiến lược lên **2 DB song song** (chốt
@@ -317,6 +373,15 @@ def refresh_pair(
     (`trend_client`/`trend_key_prefix`, có lọc trend khung lớn) -- cùng 1
     lần tải entry_bars (`raw` bên dưới), DB1 chỉ tải thêm đúng 1 nguồn phụ
     (trend_bars, khung `TREND_TF` tra theo (symbol, khung vào lệnh) trong `trend_tf_by_symbol`).
+
+    `extra_outputs` (tuỳ chọn, ``redis.extra_trend_outputs``, 2026-10-23): mỗi phần tử là một đầu ra có lọc trend THÊM,
+    cùng entry_bars và cùng trigger, ghi vào DB riêng với khối trend riêng của nó (đè `trend_methods` của chiến lược);
+    khối cùng khung với tín hiệu (vd breakout) dùng lại chính `raw`, không tải nến trend. Rỗng (mặc định) = đúng như
+    trước khi có tham số này: DB0/DB1 không đổi một byte.
+
+    Nến trend (DB1 và đầu ra thêm) tải với warm-up `max(WARMUP_BARS, rules/trend_tf.max_trend_warmup_bars(khối))`: khối có
+    máy trạng thái nhớ lâu (zigzag: 3.000 nến, POLICY.trend_warmup_bars) cần nhiều nến trước mốc tính lại hơn warm-up chung
+    thì đường delta mới khớp bản tính từ đầu; khối cùng khung chỉ dùng lại `raw` khi warm-up của nó không dài hơn `raw` đã có.
 
     2 chế độ, chọn theo việc có đủ `date_from`+`date_to` hay không:
 
@@ -414,8 +479,11 @@ def refresh_pair(
         # không hardcode khung ở đây -- entry_bars (`raw`) dùng lại nguyên vẹn,
         # chỉ tải thêm trend_bars.
         started_at = time.monotonic()
-        trend_tf = str(spec.normalize_params(None, symbol, timeframe)["TREND_TF"])
-        trend_bars = load_range_with_warmup(symbol, trend_tf, effective_from, window_to, WARMUP_BARS)
+        trend_params = spec.normalize_params(None, symbol, timeframe)
+        trend_tf = str(trend_params["TREND_TF"])
+        # Nến trend cần warm-up riêng của khối đang bật nếu dài hơn warm-up chung (rules/trend_tf POLICY.trend_warmup_bars).
+        trend_warmup = max(WARMUP_BARS, max_trend_warmup_bars(trend_params["TREND_METHODS"]))
+        trend_bars = load_range_with_warmup(symbol, trend_tf, effective_from, window_to, trend_warmup)
         trend_enriched = run_strategy_with_trend_reference(
             strategy_key, symbol=symbol, entry_tf=timeframe, entry_bars=raw,
             trend_tf=trend_tf, trend_bars=trend_bars,
@@ -432,13 +500,41 @@ def refresh_pair(
             rows=trend_count, duration_ms=duration_ms, mode="delta" if delta_mode else "full",
         )
         total += trend_count
+
+        # Các đầu ra trend THÊM: khối trend riêng của từng đầu ra, cùng entry_bars `raw`.
+        for extra in extra_outputs:
+            started_at = time.monotonic()
+            extra_methods = ",".join(extra.trend_methods)
+            extra_trend_tf = str(spec.normalize_params({"TREND_METHODS": extra_methods}, symbol, timeframe)["TREND_TF"])
+            extra_warmup = max(WARMUP_BARS, max_trend_warmup_bars(extra.trend_methods))
+            # Dùng lại `raw` chỉ khi cùng khung VÀ khối không đòi warm-up dài hơn cái `raw` đã có.
+            extra_trend_bars = (
+                raw if extra_trend_tf == timeframe and extra_warmup <= WARMUP_BARS
+                else load_range_with_warmup(symbol, extra_trend_tf, effective_from, window_to, extra_warmup)
+            )
+            extra_enriched = run_strategy_with_trend_reference(
+                strategy_key, symbol=symbol, entry_tf=timeframe, entry_bars=raw,
+                trend_tf=extra_trend_tf, trend_bars=extra_trend_bars, overrides={"TREND_METHODS": extra_methods},
+            )
+            extra_count = _compute_and_publish(
+                extra.client, key_prefix=extra.key_prefix, symbol=symbol, timeframe=timeframe,
+                strategy=strategy_key, enriched=extra_enriched, effective_from=effective_from,
+                delta_mode=delta_mode, window_to=window_to,
+            )
+            duration_ms = round((time.monotonic() - started_at) * 1000)
+            log_event(
+                LOGGER, logging.INFO, "pair_refreshed", db=extra.label,
+                strategy=strategy_key, symbol=symbol, timeframe=timeframe, trend_tf=extra_trend_tf,
+                rows=extra_count, duration_ms=duration_ms, mode="delta" if delta_mode else "full",
+            )
+            total += extra_count
     return total
 
 
 def _bootstrap_pairs() -> list[tuple[str, str, str]]:
     """Danh sách (strategy, symbol, timeframe) cần full-history lúc bootstrap.
 
-    symbol: OPERATING_SYMBOLS = các key của strategies.combo.symbol_x và strategies.combo.symbol_entry_atr_pct.
+    symbol: OPERATING_SYMBOLS = danh sách strategies.combo.symbols trong we_config.yaml.
     timeframe: đúng timeframe riêng của từng chiến lược (_STRATEGY_TIMEFRAMES)
     -- combo chỉ ghép H1-H4, ma_cross chỉ ghép M10/M20/M30/M45, không còn
     dùng chung 1 danh sách hợp nhất giữa 2 chiến lược nữa.
@@ -530,6 +626,7 @@ def _safe_refresh_pair(
     strategy_keys: Iterable[str] | None = None,
     date_from: str | None = None,
     date_to: str | None = None,
+    extra_outputs: Sequence[TrendOutput] = (),
 ) -> None:
     """refresh_pair() với biên chịu lỗi dùng chung cho cả trigger lẫn
     bootstrap: RedisError propagate ra ngoài (run_forever() tự reconnect),
@@ -554,6 +651,7 @@ def _safe_refresh_pair(
             strategy_keys=strategy_keys,
             date_from=date_from,
             date_to=date_to,
+            extra_outputs=extra_outputs,
         )
     except redis.RedisError:
         raise
@@ -571,6 +669,7 @@ def bootstrap_all(
     trend_client: redis.Redis,
     trend_key_prefix: str,
     pairs: list[tuple[str, str, str]] | None = None,
+    extra_outputs: Sequence[TrendOutput] = (),
 ) -> None:
     """Chạy refresh_pair() (từ SIGNAL_START_DATE) cho toàn bộ pair trong
     _bootstrap_pairs() (hoặc đúng `pairs` nếu truyền vào -- restart có chọn phạm vi) -- mỗi phần tử là 1 bộ (chiến lược, symbol, timeframe),
@@ -606,6 +705,7 @@ def bootstrap_all(
         LOGGER, logging.INFO, "bootstrap_start",
         pair_count=len(pairs), scoped=scoped, **{f"{key}_pairs": count for key, count in per_strategy.items()},
         **alternating, **trend_methods,
+        **({"extra_outputs": ",".join(extra.label for extra in extra_outputs)} if extra_outputs else {}),
     )
     started_at = time.monotonic()
     for index, (strategy_key, symbol, timeframe) in enumerate(pairs):
@@ -623,6 +723,7 @@ def bootstrap_all(
             trend_client=trend_client,
             trend_key_prefix=trend_key_prefix,
             strategy_keys=[strategy_key],
+            extra_outputs=extra_outputs,
         )
     duration_ms = round((time.monotonic() - started_at) * 1000)
     log_event(LOGGER, logging.INFO, "bootstrap_done", pair_count=len(pairs), duration_ms=duration_ms)
@@ -634,10 +735,11 @@ def _make_on_update(
     key_prefix: str,
     trend_client: redis.Redis,
     trend_key_prefix: str,
+    extra_outputs: Sequence[TrendOutput] = (),
 ) -> Callable[[str, str, str | None, str | None], None]:
     """Trigger thật từ DF không tự giới hạn theo symbol/timeframe nào --
     DF backfill một universe rộng hơn nhiều so với tập symbol operator cấu
-    hình (OPERATING_SYMBOLS = strategies.combo.symbol_x + symbol_entry_atr_pct),
+    hình (OPERATING_SYMBOLS = strategies.combo.symbols),
     nên nếu xử lý mù quáng mọi trigger sẽ ghi vào DB0/DB1 cả những symbol
     ngoài phạm vi (combo còn tính sai entry_price cho symbol không có cách
     tính entry nào -- X rơi về fallback 0.0, xem _combo_symbol_params()).
@@ -677,6 +779,7 @@ def _make_on_update(
             strategy_keys=strategy_keys,
             date_from=date_from,
             date_to=date_to,
+            extra_outputs=extra_outputs,
         )
 
     return on_update
@@ -754,7 +857,8 @@ def run_forever(config: dict, scope_pairs: list[tuple[str, str, str]] | None = N
             event_client = create_client(redis_config, past_signal_cfg["db"])
             output_client = create_client(redis_config, past_signal_cfg["db"])
             trend_client = create_client(redis_config, past_signal_trend_cfg["db"])
-            clients = [event_client, output_client, trend_client]
+            extra_outputs = _make_extra_outputs(redis_config)
+            clients = [event_client, output_client, trend_client, *(extra.client for extra in extra_outputs)]
             for client in clients:
                 client.ping()
 
@@ -769,6 +873,11 @@ def run_forever(config: dict, scope_pairs: list[tuple[str, str, str]] | None = N
                         LOGGER, logging.INFO, "signals_cleared",
                         keys_deleted=cleared, keys_deleted_trend=cleared_trend,
                     )
+                    for extra in extra_outputs:
+                        log_event(
+                            LOGGER, logging.INFO, "signals_cleared_extra", output=extra.label,
+                            keys_deleted=clear_all_signals(extra.client, key_prefix=extra.key_prefix),
+                        )
                 else:
                     cleared = cleared_trend = 0
                     for strategy_key, symbol, timeframe in pending_scope:
@@ -782,12 +891,23 @@ def run_forever(config: dict, scope_pairs: list[tuple[str, str, str]] | None = N
                         LOGGER, logging.INFO, "signals_cleared_scoped",
                         pair_count=len(pending_scope), keys_deleted=cleared, keys_deleted_trend=cleared_trend,
                     )
+                    for extra in extra_outputs:
+                        log_event(
+                            LOGGER, logging.INFO, "signals_cleared_extra", output=extra.label, scoped=True,
+                            pair_count=len(pending_scope),
+                            keys_deleted=sum(
+                                clear_pair_signals(
+                                    extra.client, key_prefix=extra.key_prefix, symbol=symbol, timeframe=timeframe, strategy=strategy_key,
+                                )
+                                for strategy_key, symbol, timeframe in pending_scope
+                            ),
+                        )
                 _CLEARED_THIS_PROCESS = True
 
             bootstrap_all(
                 output_client, key_prefix=key_prefix,
                 trend_client=trend_client, trend_key_prefix=trend_key_prefix,
-                pairs=pending_scope,
+                pairs=pending_scope, extra_outputs=extra_outputs,
             )
             pending_scope = None   # từ lần nối lại Redis sau đó: tính lại mọi cặp như cũ
             if _SHUTDOWN.is_set():
@@ -798,6 +918,7 @@ def run_forever(config: dict, scope_pairs: list[tuple[str, str, str]] | None = N
                 key_prefix=key_prefix,
                 trend_client=trend_client,
                 trend_key_prefix=trend_key_prefix,
+                extra_outputs=extra_outputs,
             )
 
             log_event(LOGGER, logging.INFO, "subscribing", channel=backfill_cfg["channel"])
@@ -842,6 +963,7 @@ def main(argv: Sequence[str] = ()) -> int:
             log_dir=str(log_dir),
         )
         check_trend_timeframes()  # trước run_forever(): cấu hình sai thì dừng khi Redis còn nguyên
+        check_extra_trend_outputs(redis_cfg)  # cùng lý do: đầu ra trend thêm khai sai thì dừng trước khi xoá gì
         scope_pairs = parse_scope(argv, os.environ)   # phạm vi sai cũng dừng ở đây, trước khi chạm Redis
         if scope_pairs is None:
             run_forever(config)

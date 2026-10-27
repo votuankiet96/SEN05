@@ -55,7 +55,11 @@ from wisdom_engine.we_core.src.rules.entries import (
     add_ma_cross_entries,
     add_macd_break_entries,
 )
-from wisdom_engine.we_core.src.rules.trend_tf import build_trend_frame, parse_methods
+from wisdom_engine.we_core.src.rules.trend_tf import (
+    build_trend_frame,
+    parse_methods,
+    uses_entry_timeframe,
+)
 from wisdom_engine.we_core.src.strategies.combo import detect_combo_signals
 from wisdom_engine.we_core.src.strategies.ma_cross import detect_ma_cross_signals
 from wisdom_engine.we_core.src.strategies.macd_break import detect_macd_break_signals
@@ -162,30 +166,6 @@ def _to_int(value: object, default: int, min_value: int, max_value: int) -> int:
     return max(min_value, min(parsed, max_value))
 
 
-def _to_float(value: object, default: float, min_value: float, max_value: float) -> float:
-    """
-    Chuyển input sang số thực và kẹp trong khoảng an toàn.
-
-    Hàm này giúp dashboard/CLI không làm vỡ pipeline khi user nhập sai.
-    """
-    try:
-        parsed = float(value) if value is not None else default
-    except (TypeError, ValueError):
-        parsed = default
-    return max(min_value, min(parsed, max_value))
-
-
-def _to_optional_float(value: object, default: float | None, min_value: float, max_value: float) -> float | None:
-    """Như _to_float nhưng cho phép "không đặt": value và default cùng None (hoặc value không đọc được mà default None) -> None."""
-    try:
-        parsed = float(value) if value is not None else default
-    except (TypeError, ValueError):
-        parsed = default
-    if parsed is None:
-        return None
-    return max(min_value, min(parsed, max_value))
-
-
 def _field_range(fields: list[dict[str, Any]], key: str) -> tuple[float, float]:
     """Lấy (min, max) của 1 field trong PARAM_FIELDS — nguồn duy nhất cho
     giới hạn clamp, tránh lặp lại số min/max ở normalize_*_params.
@@ -250,6 +230,16 @@ def _strategy_trend_defaults(
     }
 
 
+def _resolve_trend_methods(raw: dict[str, Any], defaults: dict[str, Any]) -> tuple[str, ...]:
+    """
+    Khối xác nhận xu hướng được bật: override (list hoặc chuỗi cách nhau bằng dấu phẩy) nếu có, trống/thiếu = mặc định config.
+    """
+    raw_methods = raw.get("TREND_METHODS")
+    if raw_methods is None or raw_methods == "":
+        return defaults["TREND_METHODS"]
+    return parse_methods(raw_methods)
+
+
 def _normalize_trend_reference_params(
     raw: dict[str, Any],
     defaults: dict[str, Any],
@@ -268,16 +258,14 @@ def _normalize_trend_reference_params(
     cách nhau bằng dấu phẩy ("knn,<khối khác>"), trống/thiếu = mặc định config.
 
     TREND_TF: đè tường minh hoặc ô của (symbol, khung vào lệnh) trong trend_tf_by_symbol; không có thì để trống ("")
-    — nơi nào thật sự cần khung trend (chạy có trend) phải tự báo lỗi, không có khung mặc định chung.
+    — nơi nào thật sự cần khung trend (chạy có trend) phải tự báo lỗi, không có khung mặc định chung. Riêng khi mọi
+    khối đang bật tính trên CHÍNH khung của tín hiệu (chính sách same_timeframe ở rules/trend_tf.POLICY, vd breakout) thì TREND_TF = khung vào lệnh và chỉ
+    phải thuộc khung của chiến lược, không bị giới hạn trong trend_timeframes (H1–H4 chỉ áp cho khối cần khung lớn hơn).
     """
-    raw_methods = raw.get("TREND_METHODS")
-    trend_methods = (
-        defaults["TREND_METHODS"]
-        if raw_methods is None or raw_methods == ""
-        else parse_methods(raw_methods)
-    )
+    trend_methods = _resolve_trend_methods(raw, defaults)
+    allowed_trend_tfs = entry_timeframes if uses_entry_timeframe(trend_methods) else trend_timeframes
 
-    trend_tf = str(raw.get("TREND_TF") or "").strip()  # đã tra theo ô ở _raw_params_with_cell_trend_tf
+    trend_tf = str(raw.get("TREND_TF") or "").strip()  # đã tra theo ô (hoặc = khung vào lệnh) ở _raw_params_with_cell_trend_tf
 
     return {
         "TREND_FILTER_ENABLED": _to_bool(
@@ -285,7 +273,7 @@ def _normalize_trend_reference_params(
             defaults["TREND_FILTER_ENABLED"],
         ),
         "TREND_METHODS": trend_methods,
-        "TREND_TF": _to_choice(trend_tf, "", trend_timeframes, "TREND_TF") if trend_tf else "",
+        "TREND_TF": _to_choice(trend_tf, "", allowed_trend_tfs, "TREND_TF") if trend_tf else "",
         "ENTRY_TF": _to_choice(
             raw.get("ENTRY_TF"),
             defaults["ENTRY_TF"],
@@ -328,9 +316,9 @@ def _strategy_trend_tf_by_symbol(
     """
     Đọc strategies.<tên>.trend_tf_by_symbol (BẮT BUỘC): khung trend riêng cho từng (symbol, khung vào lệnh).
 
-    Dạng: trend_tf_by_symbol: {BTCUSD: {H1: H4, H2: H2, ...}, ...}. Mỗi symbol vận hành (strategies.combo.symbol_x) phải
+    Dạng: trend_tf_by_symbol: {BTCUSD: {H1: H4, H2: H2, ...}, ...}. Mỗi symbol vận hành (strategies.combo.symbols) phải
     có đủ MỌI khung vào lệnh của chiến lược; không có khung mặc định chung để dự phòng. Kiểm hết lúc nạp config và báo
-    MỌI ô sai hoặc thiếu trong một lần: symbol lạ (ngoài strategies.combo.symbol_x), khung vào lệnh ngoài tập chiến lược
+    MỌI ô sai hoặc thiếu trong một lần: symbol lạ (ngoài strategies.combo.symbols), khung vào lệnh ngoài tập chiến lược
     chạy, khung trend ngoài `trend_timeframes`, khung trend nhỏ hơn khung vào lệnh (check_trend_timeframe), hoặc thiếu ô.
     """
     raw = _require(strategy_cfg, "trend_tf_by_symbol", f"{path}.trend_tf_by_symbol")
@@ -397,10 +385,22 @@ def _raw_params_with_cell_trend_tf(
     """
     defaults < overrides như cũ, nhưng khung trend tra theo (symbol, khung vào lệnh) trong trend_tf_by_symbol.
     TREND_TF người dùng truyền (CLI --trend-tf, dashboard, run_strategy_with_trend_reference) vẫn thắng.
+
+    Ngoại lệ: khi mọi khối đang bật tính trên CHÍNH khung của tín hiệu (chính sách same_timeframe ở rules/trend_tf.POLICY, vd breakout) thì khung trend LÀ
+    khung vào lệnh (không tra bảng); TREND_TF truyền vào mà khác khung vào lệnh là lỗi.
     """
     given = overrides or {}
     raw = {**defaults, **given}
-    if not str(given.get("TREND_TF") or "").strip():
+    methods = _resolve_trend_methods(raw, defaults)
+    if uses_entry_timeframe(methods):
+        entry = str(entry_tf or "").strip().upper()
+        explicit = str(given.get("TREND_TF") or "").strip().upper()
+        if explicit and explicit != entry:
+            raise ValueError(
+                f"Trend method(s) {', '.join(methods)} always use the entry timeframe {entry}; TREND_TF {explicit} is not allowed."
+            )
+        raw["TREND_TF"] = entry
+    elif not str(given.get("TREND_TF") or "").strip():
         raw["TREND_TF"] = resolve_trend_tf(by_symbol, symbol, entry_tf)
     return raw
 
@@ -447,34 +447,24 @@ COMBO_DEFAULT_TIMEFRAME = str(
 ).upper()
 COMBO_TREND_TIMEFRAMES: tuple[str, ...] = _trend_timeframes(_COMBO_CFG, "strategies.combo")
 
-# Buffer X cho từng symbol (đơn vị: điểm), từ config.yaml:
-# strategies.combo.symbol_x. X được cộng vào đỉnh/đáy bar khi xác định
-# Entry — giá trị nhỏ hơn cho symbol có spread hẹp, lớn hơn cho symbol
-# biến động mạnh.
-COMBO_SYMBOL_X: dict[str, float] = {
-    str(symbol).upper(): float(x)
-    for symbol, x in _require(_COMBO_CFG, "symbol_x", "strategies.combo.symbol_x").items()
-}
+def _operating_symbols(strategy_cfg: dict[str, Any], path: str) -> tuple[str, ...]:
+    """Đọc `<path>.symbols`: danh sách tên SYMBOL (theo SQL) không rỗng và không trùng; chuẩn hoá thành chữ hoa."""
+    raw = _require(strategy_cfg, "symbols", f"{path}.symbols")
+    if not isinstance(raw, (list, tuple)) or not raw:
+        raise TypeError(f"we_config.yaml: '{path}.symbols' must be a non-empty list of symbol names.")
+    symbols = tuple(str(item).strip().upper() for item in raw)
+    if any(not symbol for symbol in symbols):
+        raise ValueError(f"we_config.yaml: '{path}.symbols' contains an empty symbol name.")
+    duplicated = sorted({symbol for symbol in symbols if symbols.count(symbol) > 1})
+    if duplicated:
+        raise ValueError(f"we_config.yaml: '{path}.symbols' lists a symbol twice: {', '.join(duplicated)}.")
+    return symbols
 
-# Entry theo ATR cho nhóm symbol KHÔNG dùng X cố định, từ config.yaml: strategies.combo.symbol_entry_atr_pct
-# (đơn vị %, vd 5.0 = 5% ATR). Với các symbol này entry = high + a% × ATR (BUY) / low − a% × ATR (SELL), ATR chu kỳ
-# atr_period tại nến tín hiệu; symbol ở đây không được có trong symbol_x (mỗi symbol đúng MỘT kiểu đệm entry).
-COMBO_SYMBOL_ENTRY_ATR_PCT: dict[str, float] = {
-    str(symbol).strip().upper(): float(pct)
-    for symbol, pct in _require(_COMBO_CFG, "symbol_entry_atr_pct", "strategies.combo.symbol_entry_atr_pct").items()
-}
-_both_entry_kinds = sorted(set(COMBO_SYMBOL_X) & set(COMBO_SYMBOL_ENTRY_ATR_PCT))
-if _both_entry_kinds:
-    raise ValueError(
-        "we_config.yaml: symbol in both strategies.combo.symbol_x and symbol_entry_atr_pct "
-        f"(choose one entry rule per symbol): {', '.join(_both_entry_kinds)}."
-    )
-_bad_entry_pct = sorted(symbol for symbol, pct in COMBO_SYMBOL_ENTRY_ATR_PCT.items() if not 0 < pct <= 1000)
-if _bad_entry_pct:
-    raise ValueError(f"we_config.yaml: strategies.combo.symbol_entry_atr_pct must be in (0, 1000]: {', '.join(_bad_entry_pct)}.")
 
-# Vũ trụ vận hành = mọi symbol worker Redis chạy cho CẢ BA chiến lược: nhóm X cố định + nhóm entry theo ATR.
-OPERATING_SYMBOLS: tuple[str, ...] = tuple(COMBO_SYMBOL_X) + tuple(COMBO_SYMBOL_ENTRY_ATR_PCT)
+# Vũ trụ vận hành, từ config.yaml: strategies.combo.symbols (tên SYMBOL theo SQL). Dùng chung cho CẢ BA chiến lược:
+# worker Redis (bootstrap + lọc trigger), dashboard (ô chọn symbol), và bảng trend_tf_by_symbol (phải đủ ô cho từng
+# symbol). Entry của combo không còn đệm theo symbol (2026-10-21): BUY = high, SELL = low của nến tín hiệu.
+OPERATING_SYMBOLS: tuple[str, ...] = _operating_symbols(_COMBO_CFG, "strategies.combo")
 
 # Khung trend riêng cho từng (symbol, khung vào lệnh), từ config.yaml:
 # strategies.combo.trend_tf_by_symbol (BẮT BUỘC, đủ mọi symbol × khung vào lệnh).
@@ -495,15 +485,12 @@ COMBO_SESSION_HOURS_UTC: dict[str, list[int]] = {
 }
 
 # Tham số mặc định — cũng là nguồn allowlist cho override qua CLI (--param).
-# X=None vì giá trị thực lấy từ COMBO_SYMBOL_X theo symbol được chọn.
 COMBO_DEFAULT_PARAMS: dict[str, Any] = {
     "MA_PERIOD": int(_require(_COMBO_CFG, "ma_period", "strategies.combo.ma_period")),
     "MACD_FAST": int(_require(_COMBO_CFG, "macd_fast", "strategies.combo.macd_fast")),
     "MACD_SLOW": int(_require(_COMBO_CFG, "macd_slow", "strategies.combo.macd_slow")),
     "MACD_SIGNAL": int(_require(_COMBO_CFG, "macd_signal", "strategies.combo.macd_signal")),
     "ATR_PERIOD": int(_require(_COMBO_CFG, "atr_period", "strategies.combo.atr_period")),
-    "X": None,
-    "ENTRY_ATR_PCT": None,
     "SESSION_HOURS_UTC": [],
     **_strategy_trend_defaults(_COMBO_CFG, "strategies.combo", entry_tf=COMBO_DEFAULT_TIMEFRAME),
     **_strategy_alternating_default(_COMBO_CFG, "strategies.combo"),
@@ -519,8 +506,6 @@ COMBO_PARAM_FIELDS: list[dict[str, Any]] = [
     {"key": "MACD_SLOW", "label": "MACD Slow", "type": "number", "min": 2, "max": 300, "step": 1},
     {"key": "MACD_SIGNAL", "label": "MACD Signal", "type": "number", "min": 1, "max": 200, "step": 1},
     {"key": "ATR_PERIOD", "label": "ATR", "type": "number", "min": 2, "max": 200, "step": 1},
-    {"key": "X", "label": "X Buffer", "type": "number", "min": 0, "max": 1_000_000, "step": 0.01},
-    {"key": "ENTRY_ATR_PCT", "label": "Entry % ATR", "type": "number", "min": 0, "max": 1000, "step": 0.1},
     {"key": "SESSION_HOURS_UTC", "label": "UTC Hours", "type": "text"},
     {"key": "TREND_FILTER_ENABLED", "label": "Trend Filter", "type": "bool"},
     {"key": "TREND_TF", "label": "Trend TF", "type": "text"},
@@ -569,17 +554,9 @@ def _parse_session_hours(value: object, default: list[int]) -> list[int]:
 
 
 def _combo_symbol_params(symbol: str | None) -> dict[str, Any]:
-    """Tham số riêng theo symbol cho Combo: buffer X và giờ giao dịch.
-
-    Symbol không có trong COMBO_SYMBOL_X sẽ dùng X = 0.0. Symbol thuộc COMBO_SYMBOL_ENTRY_ATR_PCT có thêm
-    entry_atr_pct (% ATR dùng thay X); symbol khác thì entry_atr_pct = None (dùng X).
-    """
+    """Tham số riêng theo symbol cho Combo: giờ giao dịch (session_hours_utc; rỗng = mọi giờ)."""
     key = str(symbol or "").strip().upper()
-    return {
-        "x": float(COMBO_SYMBOL_X.get(key, 0.0)),
-        "entry_atr_pct": COMBO_SYMBOL_ENTRY_ATR_PCT.get(key),
-        "session_hours_utc": list(COMBO_SESSION_HOURS_UTC.get(key, [])),
-    }
+    return {"session_hours_utc": list(COMBO_SESSION_HOURS_UTC.get(key, []))}
 
 
 def normalize_combo_params(
@@ -596,7 +573,7 @@ def normalize_combo_params(
     Args:
         overrides: Dict tham số người dùng chỉ định (từ URL query hoặc CLI).
                    Có thể là None — khi đó chỉ dùng defaults.
-        symbol: Mã symbol để lấy X, session_hours mặc định và khung trend riêng.
+        symbol: Mã symbol để lấy session_hours mặc định và khung trend riêng.
         tf: Timeframe đang chạy (khung vào lệnh) — cùng với symbol để tra khung trend mặc định
             trong trend_tf_by_symbol (TREND_TF truyền trong overrides vẫn thắng).
 
@@ -614,13 +591,6 @@ def normalize_combo_params(
         "MACD_SLOW": _to_int(raw.get("MACD_SLOW"), d["MACD_SLOW"], *_field_range(f, "MACD_SLOW")),
         "MACD_SIGNAL": _to_int(raw.get("MACD_SIGNAL"), d["MACD_SIGNAL"], *_field_range(f, "MACD_SIGNAL")),
         "ATR_PERIOD": _to_int(raw.get("ATR_PERIOD"), d["ATR_PERIOD"], *_field_range(f, "ATR_PERIOD")),
-        # X: override > symbol default (từ COMBO_SYMBOL_X) > 0.0
-        "X": _to_float(raw.get("X"), symbol_params["x"], *_field_range(f, "X")),
-        # ENTRY_ATR_PCT: override > symbol default (COMBO_SYMBOL_ENTRY_ATR_PCT) > None. Khác None thì entry dùng
-        # % × ATR và BỎ QUA X (rules/entries.add_combo_entries).
-        "ENTRY_ATR_PCT": _to_optional_float(
-            raw.get("ENTRY_ATR_PCT"), symbol_params["entry_atr_pct"], *_field_range(f, "ENTRY_ATR_PCT")
-        ),
         "SESSION_HOURS_UTC": _parse_session_hours(
             raw.get("SESSION_HOURS_UTC"),
             symbol_params["session_hours_utc"],
@@ -850,8 +820,6 @@ class StrategySpec:
         add_entries:       (df, params, symbol) -> df với cột entry và tham chiếu level.
         supported_timeframes: Các TF được phép; rỗng nghĩa là dùng mọi TF hệ thống.
         default_timeframe: TF mặc định của strategy trên CLI export.
-        tuned_symbols: Symbol có tham số riêng theo strategy — dùng để
-            dashboard ưu tiên nhóm symbol có cấu hình vận hành rõ ràng.
         trend_tf_by_symbol: Khung trend riêng cho từng (symbol, khung vào lệnh) từ config
             (strategies.<tên>.trend_tf_by_symbol, bắt buộc và đủ ô). normalize_params đã tra sẵn;
             dashboard dùng để hiện đúng khung trend mặc định của từng ô.
@@ -886,7 +854,6 @@ class StrategySpec:
     recommended_timeframes: tuple[str, ...] = ()
     supported_timeframes: tuple[str, ...] = ()
     default_timeframe: str | None = None
-    tuned_symbols: tuple[str, ...] = ()
     trend_tf_by_symbol: dict[str, dict[str, str]] = field(default_factory=dict)
 
 
@@ -904,7 +871,6 @@ STRATEGIES: dict[str, StrategySpec] = {
         add_entries=add_combo_entries,
         recommended_timeframes=COMBO_RECOMMENDED_TIMEFRAMES,
         default_timeframe=COMBO_DEFAULT_TIMEFRAME,
-        tuned_symbols=OPERATING_SYMBOLS,
         trend_tf_by_symbol=COMBO_TREND_TF_BY_SYMBOL,
     ),
     "ma_cross": StrategySpec(

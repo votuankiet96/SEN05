@@ -145,6 +145,39 @@ def candlestick_points(df: pd.DataFrame, digits: int = 2) -> list[dict[str, Any]
     ]
 
 
+def heikin_ashi_points(df: pd.DataFrame, digits: int = 2) -> list[dict[str, Any]]:
+    """
+    Nến Heikin Ashi cho Lightweight Charts CandlestickSeries (dùng cho pane xu hướng khung tham chiếu; chỉ là cách VẼ, mọi phép
+    tính xu hướng vẫn dùng giá thật).
+
+        ha_close = (open + high + low + close) / 4
+        ha_open  = (ha_open nến trước + ha_close nến trước) / 2   (nến đầu: (open + close) / 2)
+        ha_high  = max(high, ha_open, ha_close)      ha_low = min(low, ha_open, ha_close)
+
+    ha_open phụ thuộc đệ quy vào các nến trước nên giá trị chỉ ổn định sau vài nến đầu của khung (sai số giảm một nửa mỗi nến);
+    đỉnh/đáy thật luôn nằm trong râu nến Heikin Ashi. Cùng cấu trúc, cùng thứ tự và cùng cách làm tròn với candlestick_points.
+    """
+    if "bartime" not in df.columns:
+        return []
+    valid = df["bartime"].notna().to_numpy()
+    if not valid.any():
+        return []
+    rows = df if valid.all() else df[valid]
+    o, h, low, c = (rows[column].to_numpy(dtype="float64") for column in ("open", "high", "low", "close"))
+    ha_close = (o + h + low + c) / 4.0
+    ha_open = np.empty_like(ha_close)
+    ha_open[0] = (o[0] + c[0]) / 2.0
+    for i in range(1, len(ha_open)):
+        ha_open[i] = (ha_open[i - 1] + ha_close[i - 1]) / 2.0
+    ha_high = np.maximum(h, np.maximum(ha_open, ha_close))
+    ha_low = np.minimum(low, np.minimum(ha_open, ha_close))
+    opens, highs, lows, closes = (_round2(values, digits) for values in (ha_open, ha_high, ha_low, ha_close))
+    return [
+        {"time": t, "open": a, "high": b, "low": lo, "close": cl}
+        for t, a, b, lo, cl in zip(_epoch_seconds(rows["bartime"]), opens, highs, lows, closes, strict=True)
+    ]
+
+
 def signal_markers(df: pd.DataFrame) -> list[dict[str, Any]]:
     """
     Trích mũi tên BUY/SELL cho Lightweight Charts series.setMarkers().

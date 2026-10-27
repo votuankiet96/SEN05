@@ -1,5 +1,5 @@
 [Unit]
-Description=wisdom_engine past-signal worker (backtest cap 2, Redis DB0 L_PastSignal + DB1 L_PastSignal_Trend)
+Description=wisdom_engine past-signal worker (backtest cap 2, Redis DB0 L_PastSignal + DB1 L_PastSignal_Knn + DB2 L_PastSignal_Breakout)
 After=network-online.target
 StartLimitBurst=20
 StartLimitIntervalSec=300

@@ -1,5 +1,5 @@
 [Unit]
-Description=des (Decision Engine Simulation) worker - Redis db13 candles -> strategy -> Redis db14 signals (no trend) + db15 signals (trend-filtered) - user service
+Description=des (Decision Engine Simulation) worker - Redis db10 candles -> strategy -> Redis db11 raw + db12 knn + db13 breakout + db14 zigzag + db15 tstat signals (one DB per filter source, like we_core DB0/1/2/3/4) - user service
 After=default.target
 StartLimitIntervalSec=300
 StartLimitBurst=20

@@ -2,7 +2,8 @@
 
 Gồm: lớp đọc Redis chỉ-đọc (source), phép đối chiếu (verify), dựng JSON (payload),
 server Flask (với source giả + chiến lược giả), trang multi-timeframe (/mtf), trang trend
-(/trend: đường 2 khung, đối chiếu với db đã lọc trend) và 2 test kiến trúc khoá quy tắc
+(/trend: đường 2 khung, chọn khối knn / breakout / zigzag, đối chiếu với db của chính nguồn đó)
+và 2 test kiến trúc khoá quy tắc
 "des không kéo chéo sang WE, mỗi file một vai trò".
 """
 
@@ -33,6 +34,7 @@ from wisdom_engine.des.src.chart_simul.verify import (
     expected_fields,
     field_diffs,
 )
+from wisdom_engine.des.src.configuration import TrendSource
 
 STAMP = "%Y-%m-%d %H:%M:%S"
 CHART_DIR = Path(__file__).resolve().parents[1] / "src" / "chart_simul"
@@ -101,23 +103,30 @@ class _FakeRedis:
 _CONFIG: dict[str, Any] = {
     "redis": {
         "host": "127.0.0.1",
-        "input": {"db": 13, "key_prefix": "L_DFS", "snapshot_bars": 500, "process_on_startup": False},
-        "output": {"db": 14, "key_prefix": "L_DES", "channel_prefix": "L_CHANNEL_SIM"},
-        "output_trend": {"db": 15, "key_prefix": "L_DES"},
+        "input": {"db": 10, "key_prefix": "L_DFS", "snapshot_bars": 500, "process_on_startup": False},
+        "outputs": {
+            "raw": {"db": 11, "key_prefix": "L_DES"},
+            "knn": {"db": 12, "key_prefix": "L_DES"},
+            "breakout": {"db": 13, "key_prefix": "L_DES"},
+            "zigzag": {"db": 14, "key_prefix": "L_DES"},
+            "tstat": {"db": 15, "key_prefix": "L_DES"},
+        },
     }
 }
 _PAIR = ("combo", "US30", "H1")
 
 
-def _source(
-    fake_in: _FakeRedis, fake_out: _FakeRedis, fake_trend: _FakeRedis | None = None
-) -> RedisSource:
-    return RedisSource(
-        _CONFIG,
-        input_client=fake_in,  # type: ignore[arg-type]
-        output_client=fake_out,  # type: ignore[arg-type]
-        trend_output_client=fake_trend or _FakeRedis(),  # type: ignore[arg-type]
-    )
+def _source(fake_in: _FakeRedis, fake_out: _FakeRedis | None = None, **other_outputs: _FakeRedis) -> RedisSource:
+    """RedisSource với Redis giả: `fake_out` là DB của nguồn raw, `other_outputs` đặt DB của knn / breakout / zigzag (mặc định rỗng)."""
+    outputs = {
+        "raw": fake_out or _FakeRedis(),
+        "knn": _FakeRedis(),
+        "breakout": _FakeRedis(),
+        "zigzag": _FakeRedis(),
+        "tstat": _FakeRedis(),
+        **other_outputs,
+    }
+    return RedisSource(_CONFIG, input_client=fake_in, output_clients=outputs)  # type: ignore[arg-type]
 
 
 def _candle_redis(n: int) -> _FakeRedis:
@@ -527,8 +536,14 @@ class _FakeSource:
         trend_published: dict[str, dict[str, str]] | None = None,
     ) -> None:
         self.candles = _candles()
-        self.published = published
-        self.trend_published = trend_published if trend_published is not None else {}
+        # tín hiệu của từng nguồn (mỗi nguồn một DB): raw ở `published`; `trend_published` là của nguồn knn (nguồn mặc định của /trend)
+        self.signals: dict[str, dict[str, dict[str, str]]] = {
+            "raw": published,
+            "knn": trend_published if trend_published is not None else {},
+            "breakout": {},
+            "zigzag": {},
+            "tstat": {},
+        }
         self.first_stamp = first_stamp
         self.error: Exception | None = None
         self.clock = {"simTime": "2022-03-26 00:00:00", "tick": 7, "status": "running", "runId": "r1"}
@@ -544,15 +559,14 @@ class _FakeSource:
     def read_candles(self, symbol: str, timeframe: str, count: int = 1200) -> pd.DataFrame:
         return self.candles.tail(count).reset_index(drop=True)
 
-    def signal_count(self, pair: tuple[str, str, str], *, trend: bool = False) -> int:
-        return len(self.trend_published if trend else self.published)
+    def signal_count(self, pair: tuple[str, str, str], *, source: str = "raw") -> int:
+        return len(self.signals[source])
 
     def read_signals(
-        self, pair: tuple[str, str, str], since: pd.Timestamp | None = None, *, trend: bool = False
+        self, pair: tuple[str, str, str], since: pd.Timestamp | None = None, *, source: str = "raw"
     ):
         floor = since.strftime(STAMP) if since is not None else ""
-        store = self.trend_published if trend else self.published
-        return {s: f for s, f in store.items() if s >= floor}
+        return {s: f for s, f in self.signals[source].items() if s >= floor}
 
     def first_signal_stamp(self, pairs: list[tuple[str, str, str]]) -> str | None:
         return self.first_stamp
@@ -571,7 +585,6 @@ def _fake_published() -> dict[str, dict[str, str]]:
 @pytest.fixture
 def client_and_source(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(server, "run_strategy", _fake_run_strategy)
-    monkeypatch.setattr(server, "trend_reference_for", lambda _key: (False, "H4"))
     source = _FakeSource(_fake_published(), first_stamp=_TIMES[520].strftime(STAMP))
     app = server.create_app(source)  # type: ignore[arg-type]
     return app.test_client(), source
@@ -600,6 +613,7 @@ def test_view_day_du_doi_chieu_ok_lo_cho_thua(client_and_source) -> None:
     assert meta["head"] == _TIMES[599].strftime(STAMP)
     assert meta["lastSignal"] == _TIMES[580].strftime(STAMP)
     assert meta["signalCount"] == 2
+    assert meta["source"] == "raw"
     assert meta["clock"]["runId"] == "r1"
     assert meta["checkFrom"] == _TIMES[520].strftime("%Y-%m-%d %H:%M")
     assert meta["paramsLabel"].startswith("MA ")
@@ -616,9 +630,9 @@ def test_dau_van_tay_khong_doi_va_het_cho_thi_khong_nap_lai(client_and_source) -
     assert status == 200 and same["changed"] is False
     assert set(same) == {"changed", "meta"} and same["meta"]["clock"]["tick"] == 7
     # Có tín hiệu mới (nsig đổi) hoặc DFS chạy lần mới (run đổi) -> nạp lại.
-    source.published = {**source.published, _TIMES[585].strftime(STAMP): {"tradeSide": "BUY"}}
+    source.signals["raw"] = {**source.signals["raw"], _TIMES[585].strftime(STAMP): {"tradeSide": "BUY"}}
     assert _get(client, **base, pending=0)[1]["changed"] is True
-    source.published = _fake_published()
+    source.signals["raw"] = _fake_published()
     assert _get(client, **{**base, "run": "r2"}, pending=0)[1]["changed"] is True
 
 
@@ -637,6 +651,9 @@ def test_tham_so_sai_tra_400(client_and_source) -> None:
     assert _get(client, symbol="XYZ")[0] == 400
     assert _get(client, strategy="sma_trend")[0] == 400  # sma_trend (đã xoá khỏi we_core 2026-10-16) không phải chiến lược của des -> 400
     assert _get(client, bars="abc")[0] == 400
+    status, body = _get(client, source="knn")
+    assert status == 400 and "source 'knn' is not one of ['raw']" in body["error"]  # trang chính chỉ có nguồn raw (không lọc trend)
+    assert _get(client, source="raw")[0] == 200
 
 
 def test_bars_bi_ep_vao_khoang_cho_phep(client_and_source) -> None:
@@ -657,7 +674,7 @@ def test_redis_loi_tra_503_va_loi_khac_tra_500(client_and_source) -> None:
 
 def test_bat_trend_filter_thi_bao_ro_khong_doan(client_and_source, monkeypatch) -> None:
     client, _ = client_and_source
-    monkeypatch.setattr(server, "trend_reference_for", lambda _key: (True, "H4"))
+    monkeypatch.setattr(server, "trend_filter_enabled_for", lambda _key: True)
     status, body = _get(client)
     assert status == 400 and "trend_filter_enabled" in body["error"]
 
@@ -670,7 +687,7 @@ def test_danh_muc_lay_tu_cau_hinh_des() -> None:
         minutes = [int(tf[1:]) * (60 if tf[0] == "H" else 1) for tf in info["timeframes"]]
         assert minutes == sorted(minutes)
         assert info["defaultTimeframe"] in info["timeframes"]
-    assert catalog["symbols"] == sorted(server.COMBO_SYMBOL_X)
+    assert catalog["symbols"] == sorted(server.OPERATING_SYMBOLS)
     assert len(server.all_pairs(catalog)) == sum(
         len(i["timeframes"]) for i in catalog["strategies"].values()
     ) * len(catalog["symbols"])
@@ -1031,24 +1048,47 @@ def test_render_mtf_page_khong_con_cho_trong() -> None:
 # =============================================================================
 # 7. Trang trend (/trend): đường 2 khung, đối chiếu với db đã lọc trend, pane xu hướng
 # =============================================================================
-def test_source_doc_db_da_loc_trend_rieng_va_moc_des_chi_lay_tu_db_khong_loc() -> None:
+def test_source_doc_tung_nguon_o_db_rieng_va_moc_des_chi_lay_tu_nguon_raw() -> None:
     plain = _FakeRedis(lists={"L_DES_COMBO_US30_H1": ["2022-03-01 02:00:00"]})
-    trend_key = "L_DES_COMBO_US30_H1"
-    trend = _FakeRedis(
-        lists={trend_key: ["2022-03-01 07:00:00", "2022-03-01 08:00:00"]},
+    key = "L_DES_COMBO_US30_H1"
+    knn = _FakeRedis(
+        lists={key: ["2022-03-01 07:00:00", "2022-03-01 08:00:00"]},
         hashes={
-            f"{trend_key}:2022-03-01 07:00:00": {"tradeSide": "SELL"},
-            f"{trend_key}:2022-03-01 08:00:00": {"tradeSide": "BUY"},
+            f"{key}:2022-03-01 07:00:00": {"tradeSide": "SELL"},
+            f"{key}:2022-03-01 08:00:00": {"tradeSide": "BUY"},
         },
     )
-    source = _source(_FakeRedis(), plain, trend)
-    assert source.signal_count(_PAIR) == 1  # mặc định: db không lọc trend
-    assert source.signal_count(_PAIR, trend=True) == 2
-    assert list(source.read_signals(_PAIR, trend=True)) == ["2022-03-01 07:00:00", "2022-03-01 08:00:00"]
-    assert source.read_signals(_PAIR) == {}  # HASH của db không lọc không có -> bỏ qua
-    # Mốc des bắt đầu ghi lấy từ db không lọc kể cả khi đang xem trang trend: db đã lọc ít tín hiệu hơn nên trễ hơn.
+    zigzag = _FakeRedis(lists={key: ["2022-03-01 09:00:00"]}, hashes={f"{key}:2022-03-01 09:00:00": {"tradeSide": "BUY"}})
+    source = _source(_FakeRedis(), plain, knn=knn, zigzag=zigzag)
+    assert source.signal_count(_PAIR) == 1  # mặc định: nguồn raw
+    assert source.signal_count(_PAIR, source="knn") == 2
+    assert source.signal_count(_PAIR, source="zigzag") == 1
+    assert source.signal_count(_PAIR, source="breakout") == 0  # mỗi nguồn một DB riêng, không lẫn vào nhau
+    assert list(source.read_signals(_PAIR, source="knn")) == ["2022-03-01 07:00:00", "2022-03-01 08:00:00"]
+    assert list(source.read_signals(_PAIR, source="zigzag")) == ["2022-03-01 09:00:00"]
+    assert source.read_signals(_PAIR) == {}  # HASH của nguồn raw không có -> bỏ qua
+    # Mốc des bắt đầu ghi lấy từ nguồn raw kể cả khi đang xem trang trend: các nguồn lọc trend ít tín hiệu hơn nên trễ hơn.
     assert source.first_signal_stamp([_PAIR]) == "2022-03-01 02:00:00"
-    assert _source(_FakeRedis(), _FakeRedis(), trend).first_signal_stamp([_PAIR]) is None
+    assert _source(_FakeRedis(), _FakeRedis(), knn=knn).first_signal_stamp([_PAIR]) is None
+    with pytest.raises(ValueError, match="unknown signal source 'ema'"):
+        source.signal_count(_PAIR, source="ema")
+
+
+def test_source_dung_tien_to_rieng_cua_tung_nguon() -> None:
+    config = {
+        "redis": {
+            **_CONFIG["redis"],
+            "outputs": {name: {"db": 11 + i, "key_prefix": f"L_DES_{name.upper()}"} for i, name in enumerate(("raw", "knn", "breakout", "zigzag", "tstat"))},
+        }
+    }
+    zigzag = _FakeRedis(lists={"L_DES_ZIGZAG_COMBO_US30_H1": ["2022-03-01 09:00:00"]})
+    source = RedisSource(
+        config,
+        input_client=_FakeRedis(),  # type: ignore[arg-type]
+        output_clients={"raw": _FakeRedis(), "knn": _FakeRedis(), "breakout": _FakeRedis(), "zigzag": zigzag, "tstat": _FakeRedis()},  # type: ignore[arg-type]
+    )
+    assert source.signal_count(_PAIR, source="zigzag") == 1
+    assert source.signal_count(_PAIR, source="raw") == 0
 
 
 def _trend_pane_frame() -> pd.DataFrame:
@@ -1237,7 +1277,8 @@ def _fake_trend_published() -> dict[str, dict[str, str]]:
 def trend_client(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(server, "run_strategy_with_trend_reference", _fake_run_with_trend)
     monkeypatch.setattr(server, "build_trend_frame", _fake_build_trend_frame)
-    monkeypatch.setattr(server, "trend_reference_for", lambda key, symbol=None, timeframe=None: (False, "H4"))
+    # khung trend của mọi nguồn là H4 trong các test dùng đường 2 khung giả (nguồn mặc định của /trend là knn)
+    monkeypatch.setattr(server, "trend_source_for", lambda key, symbol, timeframe, method: TrendSource("H4", False, 0))
     source = _FakeSource(
         _fake_published(),
         first_stamp=_TIMES[520].strftime(STAMP),
@@ -1281,9 +1322,9 @@ def test_trend_view_day_du_doi_chieu_voi_db_da_loc_va_pane_xu_huong(trend_client
     assert pane["candles"][0]["time"] == payload.unix_time(_TIMES[300] - pd.Timedelta(hours=4))
     assert pane["candles"][-1]["time"] == payload.unix_time(_TIMES[599])
     meta = body["meta"]
-    assert meta["trendTf"] == "H4" and meta["trendLabel"] == "KNN"
+    assert meta["trendTf"] == "H4" and meta["trendLabel"] == "KNN" and meta["source"] == "knn"
     assert meta["head"] == meta["thead"] == _TIMES[599].strftime(STAMP)
-    assert meta["signalCount"] == 2  # đếm ở db ĐÃ LỌC trend, không phải db không lọc
+    assert meta["signalCount"] == 2  # đếm ở db của nguồn knn, không phải db nguồn raw
     assert meta["checkFrom"] == _TIMES[520].strftime("%Y-%m-%d %H:%M")
     json.dumps(body)
 
@@ -1296,11 +1337,11 @@ def test_trend_dau_van_tay_gom_ca_nen_trend_va_chi_nhin_db_da_loc(trend_client) 
     status, same = _trend_get(client, **base, pending=0)
     assert status == 200 and same["changed"] is False and set(same) == {"changed", "meta"}
     # Tín hiệu mới ở db KHÔNG lọc không làm trang trend nạp lại; ở db đã lọc thì có.
-    source.published = {**source.published, _TIMES[585].strftime(STAMP): {"tradeSide": "BUY"}}
+    source.signals["raw"] = {**source.signals["raw"], _TIMES[585].strftime(STAMP): {"tradeSide": "BUY"}}
     assert _trend_get(client, **base, pending=0)[1]["changed"] is False
-    source.trend_published = {**source.trend_published, _TIMES[585].strftime(STAMP): {"tradeSide": "BUY"}}
+    source.signals["knn"] = {**source.signals["knn"], _TIMES[585].strftime(STAMP): {"tradeSide": "BUY"}}
     assert _trend_get(client, **base, pending=0)[1]["changed"] is True
-    source.trend_published = _fake_trend_published()
+    source.signals["knn"] = _fake_trend_published()
     assert _trend_get(client, **{**base, "thead": "2022-03-01 00:00:00"}, pending=0)[1]["changed"] is True  # nến trend mới
     assert _trend_get(client, **{**base, "run": "r2"}, pending=0)[1]["changed"] is True  # DFS chạy lần mới
 
@@ -1314,10 +1355,14 @@ def test_trend_tham_so_sai_o_chua_co_khung_trend_va_bat_trend_filter_deu_bao_loi
     assert _trend_get(client, symbol="XYZ")[0] == 400
     assert _trend_get(client, strategy="x")[0] == 400
     assert _trend_get(client, bars="abc")[0] == 400
-    monkeypatch.setattr(server, "trend_reference_for", lambda key, symbol=None, timeframe=None: (False, ""))
+    # nguồn của /trend là một trong ba khối lọc trend; raw (không lọc) và tên lạ bị từ chối
+    for bad in ("raw", "ema"):
+        status, body = _trend_get(client, source=bad)
+        assert status == 400 and f"source '{bad}' is not one of ['knn', 'breakout', 'zigzag', 'tstat']" in body["error"]
+    monkeypatch.setattr(server, "trend_source_for", lambda key, symbol, timeframe, method: TrendSource("", False, 0))
     status, body = _trend_get(client)
     assert status == 400 and "trend_tf_by_symbol" in body["error"] and "US30" in body["error"]
-    monkeypatch.setattr(server, "trend_reference_for", lambda key, symbol=None, timeframe=None: (True, "H4"))
+    monkeypatch.setattr(server, "trend_filter_enabled_for", lambda key: True)
     status, body = _trend_get(client)
     assert status == 400 and "trend_filter_enabled" in body["error"]
 
@@ -1349,38 +1394,117 @@ def test_trend_cua_so_exact_signal_la_nhung_nen_des_thay_luc_xu_ly_nen_do(monkey
     """Nến vào lệnh: các nến kết thúc ở `time` (tối đa snapshot_bars). Nến trend: chỉ những nến ĐÃ ĐÓNG tới lúc nến
     vào lệnh đóng (đóng đúng lúc đó vẫn tính, vì DFS ghi mọi nến cùng giờ đóng trong một MULTI/EXEC)."""
     seen: list[tuple[pd.Timestamp, pd.Timestamp, int]] = []
+    overrides: list[Any] = []
 
     def spy(strategy: str, **kwargs: Any) -> pd.DataFrame:
         entry, trend = kwargs["entry_bars"], kwargs["trend_bars"]
         seen.append((entry["bartime"].iloc[-1], trend["bartime"].iloc[-1], len(trend)))
+        overrides.append(kwargs["overrides"])
         return pd.DataFrame({"signal": [1]})
 
     monkeypatch.setattr(server, "run_strategy_with_trend_reference", spy)
     entry = pd.DataFrame({"bartime": pd.date_range("2022-03-01", periods=100, freq="h").astype("datetime64[us]")})
     trend = pd.DataFrame({"bartime": pd.date_range("2022-03-01", periods=30, freq="4h").astype("datetime64[us]")})
-    req = server.ViewRequest("combo", "US30", "H1", 300)
-    exact = server._exact_trend_signal_fn(entry, trend, req, "H4", 500)
+    req = server.ViewRequest("combo", "US30", "H1", 300, "knn")
+    exact = server._exact_trend_signal_fn(entry, trend, req, TrendSource("H4", False, 0), 500)
     assert exact(pd.Timestamp("2022-03-02 10:00")) == 1  # nến 10:00 đóng 11:00 -> nến trend 04:00 (đóng 08:00) là cuối
     assert exact(pd.Timestamp("2022-03-02 11:00")) == 1  # đóng 12:00 -> nến trend 08:00 (đóng đúng 12:00) vào cửa sổ
     assert seen[0][:2] == (pd.Timestamp("2022-03-02 10:00"), pd.Timestamp("2022-03-02 04:00"))
     assert seen[1][:2] == (pd.Timestamp("2022-03-02 11:00"), pd.Timestamp("2022-03-02 08:00"))
     assert seen[0][2] == 8 and seen[1][2] == 9  # số nến trend đã đóng
+    assert overrides == [{"TREND_METHODS": "knn"}] * 2  # đúng khối của nguồn đang xem
     # Chưa có nến trend nào đóng tới lúc đó -> không chạy chiến lược, coi như không có tín hiệu.
     assert exact(pd.Timestamp("2022-03-01 02:00")) == 0 and len(seen) == 2
 
 
-def test_trend_view_dung_ham_that_khong_loi_va_pane_du_khoa(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Chạy đường 2 khung THẬT (không giả): KNN + ghép trend + chiến lược trên nến tổng hợp, chỉ kiểm hình dạng."""
-    source = _FakeSource({}, first_stamp=_TIMES[520].strftime(STAMP))
-    client = server.create_app(source).test_client()  # type: ignore[arg-type]
-    status, body = _trend_get(client)
+def test_trend_cua_so_exact_signal_xin_du_nen_khung_trend_theo_warmup_cua_khoi(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Khối đòi nhiều nến khung trend hơn snapshot (zigzag: ~3000) thì live_worker xin max(snapshot_bars, warm-up) nến; chart dựng
+    lại đúng cửa sổ đó (DFS chỉ giữ tối đa READ_BARS nên thực tế nhận được chừng đó)."""
+    lengths: list[int] = []
+
+    def spy(strategy: str, **kwargs: Any) -> pd.DataFrame:
+        lengths.append(len(kwargs["trend_bars"]))
+        return pd.DataFrame({"signal": [-1]})
+
+    monkeypatch.setattr(server, "run_strategy_with_trend_reference", spy)
+    entry = pd.DataFrame({"bartime": pd.date_range("2022-03-01", periods=900, freq="h").astype("datetime64[us]")})
+    trend = pd.DataFrame({"bartime": pd.date_range("2022-03-01", periods=800, freq="h").astype("datetime64[us]")})
+    req = server.ViewRequest("combo", "US30", "H1", 300, "zigzag")
+    at = pd.Timestamp("2022-03-05 00:00")  # đầu chuỗi: mới có 97 nến trend đã đóng (ít hơn snapshot)
+    late = pd.Timestamp("2022-04-01 00:00")  # 745 nến trend đã đóng tới lúc này (nhiều hơn cả snapshot lẫn warm-up thử)
+    plain = server._exact_trend_signal_fn(entry, trend, req, TrendSource("H1", False, 0), 500)
+    long_warmup = server._exact_trend_signal_fn(entry, trend, req, TrendSource("H1", False, 600), 500)
+    assert plain(late) == -1 and long_warmup(late) == -1
+    assert lengths == [500, 600]  # cùng thời điểm: khối có warm-up dài nhận cửa sổ nến trend dài hơn
+    assert plain(at) == -1 and lengths[-1] == 97  # đầu chuỗi: chưa đủ nến thì nhận hết số nến đã đóng
+
+
+def test_trend_cua_so_exact_signal_khi_khung_trend_bang_khung_vao_lenh(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Khối cùng khung (breakout): nến trend CHÍNH là nến vào lệnh nên cửa sổ trend == cửa sổ vào lệnh (nến đóng đúng lúc
+    đó vẫn tính, và cả hai bị cắt ở snapshot_bars) — đúng cái live_worker dùng (một snapshot cho cả hai)."""
+    seen: list[tuple[list[pd.Timestamp], list[pd.Timestamp]]] = []
+
+    def spy(strategy: str, **kwargs: Any) -> pd.DataFrame:
+        seen.append((kwargs["entry_bars"]["bartime"].tolist(), kwargs["trend_bars"]["bartime"].tolist()))
+        return pd.DataFrame({"signal": [1]})
+
+    monkeypatch.setattr(server, "run_strategy_with_trend_reference", spy)
+    entry = pd.DataFrame({"bartime": pd.date_range("2022-03-01", periods=100, freq="h").astype("datetime64[us]")})
+    req = server.ViewRequest("combo", "US30", "H1", 300, "breakout")
+    exact = server._exact_trend_signal_fn(entry, entry.copy(), req, TrendSource("H1", True, 0), 20)
+    assert exact(pd.Timestamp("2022-03-02 10:00")) == 1
+    entry_window, trend_window = seen[0]
+    assert entry_window == trend_window and entry_window[-1] == pd.Timestamp("2022-03-02 10:00") and len(entry_window) == 20
+
+
+@pytest.mark.parametrize(
+    ("strategy", "source", "overlay_keys", "label"),
+    [
+        ("combo", "breakout", {"trend_breakout_high", "trend_breakout_low"}, "BREAKOUT"),  # trend tính trên CHÍNH khung của tín hiệu
+        ("macd_break", "knn", {"trend_ai_knn", "trend_ai_avg"}, "KNN"),  # khung lớn tra từ bảng trend_tf_by_symbol
+        ("ma_cross", "zigzag", {"trend_zigzag_pivot", "trend_zigzag_key_level"}, "ZIGZAG"),
+    ],
+)
+def test_trend_view_dung_ham_that_khong_loi_va_pane_du_khoa(
+    strategy: str, source: str, overlay_keys: set[str], label: str
+) -> None:
+    """Chạy đường 2 khung THẬT (không giả) cho từng nguồn: khối trend + ghép trend + chiến lược trên nến tổng hợp, chỉ kiểm hình dạng."""
+    fake = _FakeSource({}, first_stamp=_TIMES[520].strftime(STAMP))
+    client = server.create_app(fake).test_client()  # type: ignore[arg-type]
+    tf = "M30" if strategy == "ma_cross" else "H1"
+    status, body = _trend_get(client, strategy=strategy, tf=tf, source=source)
     assert status == 200 and body["changed"] is True
     pane = body["trend"]
-    assert pane["tf"] == server.trend_reference_for("combo", "US30", "H1")[1]
-    assert {o["key"] for o in pane["overlays"]} == {"trend_ai_knn", "trend_ai_avg"}
+    assert pane["tf"] == server.trend_source_for(strategy, "US30", tf, source).trend_tf
+    assert {o["key"] for o in pane["overlays"]} == overlay_keys and pane["label"] == label
+    assert body["meta"]["source"] == source
+    if source == "breakout":  # khối cùng khung: pane khung trend có đúng nến của khung vào lệnh
+        assert pane["tf"] == tf
+        assert pane["candles"][-1]["time"] == body["candles"][-1]["time"]
     assert pane["current"] in {"UP", "DOWN", "NEUTRAL"} and pane["candles"]
     assert set(body["stats"]) >= {"ok", "missed", "pending", "extra", "filtered", "fieldDiff"}
     json.dumps(body)
+
+
+def test_trend_moi_nguon_doc_db_cua_chinh_no_va_chay_dung_khoi(trend_client, monkeypatch: pytest.MonkeyPatch) -> None:
+    """/api/trend?source=...: số tín hiệu và tín hiệu đối chiếu lấy từ DB của đúng nguồn; chiến lược chạy với đúng khối (overrides)."""
+    client, fake = trend_client
+    fake.signals["zigzag"] = {_TIMES[585].strftime(STAMP): {"tradeSide": "BUY"}}
+    seen: list[Any] = []
+
+    def spy(strategy: str, **kwargs: Any) -> pd.DataFrame:
+        seen.append(kwargs["overrides"])
+        return _fake_run_with_trend(strategy, **kwargs)
+
+    monkeypatch.setattr(server, "run_strategy_with_trend_reference", spy)
+    status, body = _trend_get(client, source="zigzag")
+    assert status == 200 and body["meta"]["source"] == "zigzag" and body["meta"]["trendLabel"] == "ZIGZAG"
+    assert body["meta"]["signalCount"] == 1 and body["meta"]["lastSignal"] == _TIMES[585].strftime(STAMP)
+    assert seen and set(map(str, seen)) == {str({"TREND_METHODS": "zigzag"})}
+    status, body = _trend_get(client, source="breakout")  # DB của breakout trống
+    assert status == 200 and body["meta"]["signalCount"] == 0 and body["meta"]["source"] == "breakout"
+    status, body = _trend_get(client)  # mặc định knn
+    assert body["meta"]["source"] == "knn" and body["meta"]["signalCount"] == 2
 
 
 def test_trang_trend_nhung_cau_hinh_cho_js_va_co_link_qua_lai(trend_client) -> None:
@@ -1390,9 +1514,21 @@ def test_trang_trend_nhung_cau_hinh_cho_js_va_co_link_qua_lai(trend_client) -> N
     html = page.get_data(as_text=True)
     assert "__VENDOR_JS__" not in html and "__CONFIG_JSON__" not in html and "LightweightCharts" in html
     assert "/api/trend?" in html and '"timeframeSeconds"' in html and '"H4": 14400' in html
+    assert 'id="source"' in html and "Trend method" in html  # ô chọn khối lọc trend (knn / breakout / zigzag)
+    assert "source: el.source.value" in html  # JS gửi nguồn đang chọn cho /api/trend (và đưa vào khoá khung nhìn)
+    assert 'query.set("source", el.source.value)' in html  # URL của trang giữ nguồn; liên kết về trang chính thì không
+    assert '"sources": ["knn", "breakout", "zigzag", "tstat"]' in html and '"defaultSource": "knn"' in html
     assert 'href="/"' in html and 'href="/mtf"' in html  # sang trang chính và trang multi-timeframe
     assert 'href="/trend"' in client.get("/").get_data(as_text=True)
     assert 'href="/trend"' in client.get("/mtf").get_data(as_text=True)
+
+
+def test_nguon_cua_trang_trend_la_bon_khoi_loc_trend_theo_dung_thu_tu_db() -> None:
+    from wisdom_engine.des.src.redis_io.candle_reader import OUTPUT_SOURCES
+
+    assert server.RAW_SOURCE == "raw" and server.TREND_SOURCES == ("knn", "breakout", "zigzag", "tstat")
+    assert (server.RAW_SOURCE, *server.TREND_SOURCES) == OUTPUT_SOURCES  # cùng thứ tự DB0 / DB1 / DB2 / DB4 / DB3 của we_core
+    assert server.DEFAULT_TREND_SOURCE == "knn"
 
 
 def test_trang_trend_xep_khung_tham_chieu_len_tren_khung_trigger(trend_client) -> None:
@@ -1414,6 +1550,9 @@ def test_render_trend_page_khong_con_cho_trong() -> None:
         bars_max=1200,
         miss_after_seconds=5,
         timeframe_seconds={"H1": 3600, "H4": 14400},
+        sources=["knn", "breakout", "zigzag", "tstat"],
+        default_source="knn",
     )
     assert "__VENDOR_JS__" not in html and "__CONFIG_JSON__" not in html
     assert '"missAfterSeconds": 5' in html and '"defaultSymbol": "US30"' in html and '"H4": 14400' in html
+    assert '"defaultSource": "knn"' in html

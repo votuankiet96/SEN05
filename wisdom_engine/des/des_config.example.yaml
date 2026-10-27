@@ -1,29 +1,30 @@
 # des (Decision Engine Simulation) -- cấu hình MẪU, không chứa bí mật.
 # Sao chép thành des_config.yaml (file thật bị gitignore) rồi điền mật khẩu Redis.
 #
-# des nhận nến do DFS (Datafeed Simulator) phát lên Redis db13, chạy đúng luồng OG
-# (combo / ma_cross / macd_break), rồi ghi tín hiệu ra db14 (không lọc trend) và db15 (đã lọc trend, giống DB0/DB1 của we_core). Hai khác biệt hành vi so với OG live:
+# des nhận nến do DFS (Datafeed Simulator) phát lên Redis db10, chạy đúng luồng OG
+# (combo / ma_cross / macd_break), rồi ghi tín hiệu ra NĂM db, mỗi nguồn lọc một db, cho mọi kênh (phản chiếu we_core, thiết kế 2026-10-25):
+# raw (db11, không lọc trend, như DB0), knn (db12, như DB1), breakout (db13, như DB2), zigzag (db14, như DB4), tstat (db15, như DB3). Ba khác biệt hành vi so với OG live:
 # (1) KHÔNG có hết hạn -- không cửa sổ hiệu lực, không TTL, không cắt bớt LIST (quyết định
 # 2026-10-07), nên mọi tín hiệu tìm được trên nến phát lại đều được giữ lại;
-# (2) mỗi lần START des xoá sạch các key {output.key_prefix}_* ở db đầu ra (quyết định 2026-10-08).
+# (2) KHÔNG Pub/Sub -- des chỉ lưu LIST/HASH (quyết định 2026-10-25);
+# (3) mỗi lần START des xoá sạch các key {outputs.<nguồn>.key_prefix}_* ở cả năm db đầu ra (quyết định 2026-10-08).
 
 redis:
   enabled: true
   host: "127.0.0.1"       # Redis OG8 (cùng máy với des)
   password: ""            # điền ở des_config.yaml thật, KHÔNG điền ở bản mẫu
   input:
-    db: 13                # db DFS ghi nến vào: LIST L_DFS_{SYMBOL}_{TF} + HASH ...:{stamp}
+    db: 10                # db DFS ghi nến vào: LIST L_DFS_{SYMBOL}_{TF} + HASH ...:{stamp} (đổi 13 -> 10 ngày 2026-10-25)
     key_prefix: "L_DFS"
-    snapshot_bars: 500    # DFS giữ 1200 nến/cặp nên đủ
+    snapshot_bars: 500    # DFS giữ 1200 nến/cặp nên đủ (riêng khối zigzag muốn chính xác tuyệt đối cần ~3000 nến trend: nhận tối đa 1200)
     process_on_startup: false   # false: không quét lại mọi cặp lúc khởi động (seed của DFS sinh ~198k event)
-  output:
-    db: 14                # db des ghi tín hiệu KHÔNG lọc trend: L_DES_{STRATEGY}_{SYMBOL}_{TF}[:stamp] (không TTL, không cắt)
-    key_prefix: "L_DES"
-    channel_prefix: "L_CHANNEL_SIM"   # kênh Pub/Sub (chỉ là đường truyền): L_CHANNEL_SIM_{STRATEGY}_{SYMBOL}_{TF}
-                                      # đặt khác "L_CHANNEL" để tín hiệu mô phỏng không lọt vào kênh của OG live
-  output_trend:
-    db: 15                # db des ghi tín hiệu ĐÃ LỌC trend (khung trend theo từng ô trend_tf_by_symbol), cùng khuôn khoá; KHÔNG publish Pub/Sub
-    key_prefix: "L_DES"
+  outputs:                # MỖI NGUỒN LỌC MỘT DB, phản chiếu we_core (DB0 raw / DB1 knn / DB2 breakout / DB4 zigzag / DB3 tstat); cùng khuôn khoá
+                          # L_DES_{STRATEGY}_{SYMBOL}_{TF}[:stamp] (không TTL, không cắt); KHÔNG Pub/Sub; mỗi lần des start xoá cả 5 db này
+    raw:      {db: 11, key_prefix: "L_DES"}   # KHÔNG lọc trend (như DB0)
+    knn:      {db: 12, key_prefix: "L_DES"}   # lọc trend khối knn, khung trend theo trend_tf_by_symbol (như DB1)
+    breakout: {db: 13, key_prefix: "L_DES"}   # lọc trend khối breakout, chính khung vào lệnh (như DB2)
+    zigzag:   {db: 14, key_prefix: "L_DES"}   # lọc trend khối zigzag, khung trend theo trend_tf_by_symbol (như DB4)
+    tstat:    {db: 15, key_prefix: "L_DES"}   # lọc trend khối tstat (có dời tín hiệu), khung trend theo trend_tf_by_symbol (như DB3; thêm 2026-10-27)
 
 live:
   enabled_strategies: [combo, ma_cross, macd_break]
@@ -47,9 +48,9 @@ strategies:
     default_timeframe: H4
     trend_filter_enabled: false   # true = chi publish tin hieu cung chieu trend khung lon
     alternating_filter_enabled: true   # true = chi ban tin hieu dau tien khi huong doi chieu (loc lap cung chieu); false = bar nao thoa dieu kien cung ban
-    trend_methods: [knn]   # khối xác nhận xu hướng khung lớn được bật (src/trend_methods/<tên>.py); nhiều khối = phải đồng thuận cả hai
+    trend_methods: [knn]   # khối mặc định của đường 1 khung có lọc trend (src/trend_methods/<tên>.py), như we_core; các đầu ra của des KHÔNG phụ thuộc khoá này: mỗi nguồn (knn, breakout, zigzag) chạy đúng khối của nó
     trend_timeframes: [H1, H2, H3, H4]
-    trend_tf_by_symbol:   # khung trend RIÊNG cho từng (symbol, khung vào lệnh): symbol -> {khung vào: khung trend}; BẮT BUỘC đủ mọi symbol × khung vào lệnh (thiếu ô là lỗi lúc nạp config).
+    trend_tf_by_symbol:   # (chỉ dùng khi bật khối knn hoặc đè TREND_TF; breakout dùng chính khung của tín hiệu) khung trend RIÊNG cho từng (symbol, khung vào lệnh): symbol -> {khung vào: khung trend}; BẮT BUỘC đủ mọi symbol × khung vào lệnh (thiếu ô là lỗi lúc nạp config).
                           # Khung trend phải thuộc trend_timeframes và >= khung vào lệnh (kiểm lúc nạp config và lúc des khởi động).
                           # Bảng do research_notes/scripts/t008_tune_trend_tf.py chọn theo SỐ tín hiệu nhiều nhất (2024-01-01 → 2026-10-16); sửa tay được. Bảng chép từ we_config.yaml của we_core (đồng bộ 2026-10-16).
       BTCUSD: {H1: H4, H2: H2, H3: H3, H4: H4}
@@ -63,18 +64,9 @@ strategies:
       US100: {H1: H4, H2: H2, H3: H3, H4: H4}
       US30: {H1: H4, H2: H2, H3: H3, H4: H4}
       US500: {H1: H4, H2: H2, H3: H3, H4: H4}
-    symbol_x:                     # tên SYMBOL theo SQL/DFS (không phải tên AEN), cùng giá trị X với wisdom_engine
-      US30: 10.0
-      US500: 1.0
-      US100: 5.0
-      DE40: 5.0
-      UK100: 5.0
-      FR40: 5.0
-      SP35: 5.0
-      HK50: 15.0
-      J225: 15.0
-      GOLD: 0.5
-      BTCUSD: 50.0
+    # Symbol vận hành của des (tên SYMBOL theo SQL/DFS, không phải tên AEN): live_worker, chart_simul và bảng trend_tf_by_symbol đều
+    # dùng danh sách này. Entry của combo: BUY = high, SELL = low của nến tín hiệu (không đệm theo symbol, đổi 2026-10-21 cùng we_core).
+    symbols: [US30, US500, US100, DE40, UK100, FR40, SP35, HK50, J225, GOLD, BTCUSD]
     session_hours_utc: {}
 
   ma_cross:
@@ -88,9 +80,9 @@ strategies:
     default_timeframe: M30
     trend_filter_enabled: false   # true = chi publish tin hieu cung chieu trend khung lon
     alternating_filter_enabled: true   # true = chi ban tin hieu dau tien khi huong doi chieu (loc lap cung chieu); false = bar nao thoa dieu kien cung ban
-    trend_methods: [knn]   # khối xác nhận xu hướng khung lớn được bật (src/trend_methods/<tên>.py); nhiều khối = phải đồng thuận cả hai
+    trend_methods: [knn]   # khối mặc định của đường 1 khung có lọc trend (src/trend_methods/<tên>.py), như we_core; các đầu ra của des KHÔNG phụ thuộc khoá này: mỗi nguồn (knn, breakout, zigzag) chạy đúng khối của nó
     trend_timeframes: [H1, H2, H3, H4]
-    trend_tf_by_symbol:   # khung trend RIÊNG cho từng (symbol, khung vào lệnh): symbol -> {khung vào: khung trend}; BẮT BUỘC đủ mọi symbol × khung vào lệnh (thiếu ô là lỗi lúc nạp config).
+    trend_tf_by_symbol:   # (chỉ dùng khi bật khối knn hoặc đè TREND_TF; breakout dùng chính khung của tín hiệu) khung trend RIÊNG cho từng (symbol, khung vào lệnh): symbol -> {khung vào: khung trend}; BẮT BUỘC đủ mọi symbol × khung vào lệnh (thiếu ô là lỗi lúc nạp config).
                           # Khung trend phải thuộc trend_timeframes và >= khung vào lệnh (kiểm lúc nạp config và lúc des khởi động).
                           # Bảng do research_notes/scripts/t008_tune_trend_tf.py chọn theo SỐ tín hiệu nhiều nhất (2024-01-01 → 2026-10-16); sửa tay được. Bảng chép từ we_config.yaml của we_core (đồng bộ 2026-10-16).
       BTCUSD: {M10: H4, M20: H1, M30: H1, M45: H1}
@@ -115,9 +107,9 @@ strategies:
     default_timeframe: H1
     trend_filter_enabled: false   # true = chi publish tin hieu cung chieu trend khung lon
     alternating_filter_enabled: true   # true = chi ban tin hieu dau tien khi huong doi chieu (loc lap cung chieu); false = bar nao thoa dieu kien cung ban
-    trend_methods: [knn]   # khối xác nhận xu hướng khung lớn được bật (src/trend_methods/<tên>.py); nhiều khối = phải đồng thuận cả hai
+    trend_methods: [knn]   # khối mặc định của đường 1 khung có lọc trend (src/trend_methods/<tên>.py), như we_core; các đầu ra của des KHÔNG phụ thuộc khoá này: mỗi nguồn (knn, breakout, zigzag) chạy đúng khối của nó
     trend_timeframes: [H1, H2, H3, H4]
-    trend_tf_by_symbol:   # khung trend RIÊNG cho từng (symbol, khung vào lệnh): symbol -> {khung vào: khung trend}; BẮT BUỘC đủ mọi symbol × khung vào lệnh (thiếu ô là lỗi lúc nạp config).
+    trend_tf_by_symbol:   # (chỉ dùng khi bật khối knn hoặc đè TREND_TF; breakout dùng chính khung của tín hiệu) khung trend RIÊNG cho từng (symbol, khung vào lệnh): symbol -> {khung vào: khung trend}; BẮT BUỘC đủ mọi symbol × khung vào lệnh (thiếu ô là lỗi lúc nạp config).
                           # Khung trend phải thuộc trend_timeframes và >= khung vào lệnh (kiểm lúc nạp config và lúc des khởi động).
                           # Bảng do research_notes/scripts/t008_tune_trend_tf.py chọn theo SỐ tín hiệu nhiều nhất (2024-01-01 → 2026-10-16); sửa tay được. Bảng chép từ we_config.yaml của we_core (đồng bộ 2026-10-16).
       BTCUSD: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H1, H2: H4, H3: H4, H4: H4}

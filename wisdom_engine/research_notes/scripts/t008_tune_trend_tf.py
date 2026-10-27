@@ -72,7 +72,7 @@ def main() -> int:
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    symbols = [s.strip().upper() for s in args.symbols.split(",") if s.strip()] or sorted(C.COMBO_SYMBOL_X)
+    symbols = [s.strip().upper() for s in args.symbols.split(",") if s.strip()] or sorted(C.OPERATING_SYMBOLS)
     records: list[dict] = []
     started = time.time()
     for strategy in [s.strip() for s in args.strategies.split(",") if s.strip()]:

@@ -26,14 +26,14 @@ Mô tả:
 from __future__ import annotations
 
 import pandas as pd
-from wisdom_engine.we_core.src.rules.alternating import apply_alternating_filter
-from wisdom_engine.we_core.src.rules.trend_tf import (
-    apply_trend_filter,
-    trend_filter_enabled,
-)
+from wisdom_engine.we_core.src.rules.trend_tf import apply_signal_filters
 
 _BUY_REASON = "bullish candle crossing above MA, MACD histogram > 0"
 _SELL_REASON = "bearish candle crossing below MA, MACD histogram < 0"
+# Tín hiệu bắn dời khi trend đổi (chỉ với khối trend có chính sách first_aligned_per_run, rules/trend_tf.POLICY): nến cắt MA
+# đã xảy ra sớm hơn trong đợt.
+_HELD_BUY_REASON = "bullish MA cross earlier in the run, held until the trend aligned"
+_HELD_SELL_REASON = "bearish MA cross earlier in the run, held until the trend aligned"
 
 
 def detect_combo_signals(
@@ -67,16 +67,17 @@ def detect_combo_signals(
     tín hiệu cùng chiều. OF vẫn là nơi quyết định vào lệnh ở tín hiệu nào. Cờ tắt
     thì bar nào có setup cũng bắn.
 
-    Thứ tự lọc (đổi lại 2026-10-16 theo yêu cầu người dùng, về cách "xen kẽ
-    trước, trend sau" như trước 2026-10-15): lọc xen kẽ chạy TRƯỚC trên mọi
-    setup, trend filter lọc SAU trên raw_signal đã xen kẽ (signal ⊆ raw_signal,
-    DB1 ⊆ DB0). raw_signal vì thế vừa là kết quả không có trend vừa là tín hiệu
-    TRƯỚC khi lọc trend; khi trend tắt thì signal == raw_signal. Hệ quả: một
-    setup bị trend loại vẫn chiếm "lượt đầu" của hướng đó, nên DB1 có thể có hai
-    tín hiệu liền nhau cùng chiều (giữa chúng có setup ngược chiều bị trend
-    loại) và một đợt setup mà nến đầu lệch trend thì mất cả đợt. Các điều cần
-    biết khác (trạng thái chỉ nhớ trong cửa sổ đang tính) nằm ở docstring của
-    alternating.py.
+    Hai bộ lọc (lọc lặp cùng chiều rồi lọc trend) do rules/trend_tf.apply_signal_filters
+    điều phối; chiến lược chỉ truyền setup và câu lý do của mình. Thứ tự lọc,
+    chính sách theo khối trend (cơ chế dời tín hiệu) và hệ quả lên DB0/DB1 (raw_signal
+    = DB0, signal = DB1; trend tắt thì signal == raw_signal) mô tả ở docstring của hàm đó.
+    Riêng combo, setup là SỰ KIỆN (nến cắt MA, một nến) nên truyền hold_valid=valid:
+    với khối trend có chính sách first_aligned_per_run (hiện breakout và tstat) tín hiệu
+    thô bị trend loại được giữ tới hết đợt và bắn ngay nến trend đổi đúng chiều,
+    không cần nến setup mới và không giới hạn tuổi; signal_reason của tín hiệu bắn
+    dời ghi nến cắt MA nằm sớm hơn trong đợt. Khối không có chính sách đó (knn)
+    chỉ xét nến đầu của đợt như cách lọc thường. Các điều cần biết khác
+    (trạng thái chỉ nhớ trong cửa sổ đang tính) nằm ở docstring của alternating.py.
 
     Điều kiện tiên quyết (valid mask):
         - Tất cả chỉ báo không phải NaN (qua warmup period, kể cả prev_close).
@@ -137,21 +138,21 @@ def detect_combo_signals(
     )
     # =========================================================================
 
-    # raw_signal = tín hiệu sau lọc xen kẽ trên MỌI setup, TRƯỚC trend filter (thứ tự đổi lại 2026-10-16: xen kẽ
-    # trước, trend sau). Dashboard dùng nó để so "raw -> filtered"; khi trend tắt thì signal == raw_signal.
-    out["raw_signal"] = apply_alternating_filter(buy_cond, sell_cond, params)
-
-    # signal: trend filter lọc raw_signal (giữ tín hiệu cùng chiều trend_bias đúng bar đó) -> signal ⊆ raw_signal.
-    out = apply_trend_filter(out, params, raw_signal_col="raw_signal", output_col="signal")
-    out["signal_reason"] = ""
-    out.loc[out["signal"].eq(1), "signal_reason"] = _BUY_REASON
-    out.loc[out["signal"].eq(-1), "signal_reason"] = _SELL_REASON
-    if trend_filter_enabled(params):
-        has_signal = out["signal"].fillna(0).astype(int).ne(0)
-        out.loc[has_signal, "signal_reason"] = (
-            out.loc[has_signal, "signal_reason"] + "; aligned with trend reference"
-        )
-    return out
+    # Setup của combo là SỰ KIỆN (nến cắt MA, chỉ ở một nến): sau lúc trend đổi giá thường nằm hẳn một phía MA nên không còn
+    # nến setup nào để bắn (đo 2026-10-22: 2.460 đợt, +18% tín hiệu bị mất). Vì vậy truyền hold_valid=valid: tín hiệu thô bị
+    # trend loại được GIỮ tới hết đợt (tới khi có setup ngược) và bắn ngay nến trend đổi đúng chiều, không giới hạn tuổi
+    # (người dùng chốt); valid vẫn áp (chỉ báo đủ, đúng giờ session). Tín hiệu bắn dời ghi lý do nến cắt MA sớm hơn trong đợt.
+    return apply_signal_filters(
+        out,
+        params,
+        buy_setup=buy_cond,
+        sell_setup=sell_cond,
+        buy_reason=_BUY_REASON,
+        sell_reason=_SELL_REASON,
+        hold_valid=valid,
+        delayed_buy_reason=_HELD_BUY_REASON,
+        delayed_sell_reason=_HELD_SELL_REASON,
+    )
 
 
 # =============================================================================

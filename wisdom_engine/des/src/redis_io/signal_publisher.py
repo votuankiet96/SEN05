@@ -1,6 +1,5 @@
-"""Build OG signals, store them in the output Redis DB (L_DES_* LIST/HASH) and push
-them to consumers over Pub/Sub (L_CHANNEL_* channels -- a transport only,
-nothing stored).
+"""Build OG signals and store them in an output Redis DB (L_DES_* LIST/HASH). des does
+NOT publish on Pub/Sub (decision 2026-10-25): the stored LIST/HASH is the only record.
 
 des (the simulation copy of OG) NEVER expires or trims what it stores (decision
 2026-10-07): no TTL on the HASH, no LTRIM on the LIST, and no expiration time
@@ -88,8 +87,8 @@ def build_signal(
     return signal_id, stamp, payload
 
 
-# combo's entry is a breakout level outside the current price (high+X /
-# low-X) -- a pending STOP order. ma_cross's and macd_break's entry is the bar's own close,
+# combo's entry is a breakout level at the edge of the signal bar (BUY = its high,
+# SELL = its low, no buffer since 2026-10-21) -- a pending STOP order. ma_cross's and macd_break's entry is the bar's own close,
 # acted on right away -- read as "act now", a MARKET order. Fixed per strategy, not an operator knob (it is baked into
 # each strategy's own entry formula, see CLAUDE.md mục 6).
 _ORDER_TYPE_BY_STRATEGY = {"combo": "STOP", "ma_cross": "MARKET", "macd_break": "MARKET"}
@@ -137,7 +136,7 @@ def to_hash_fields(strategy: str, payload: dict[str, Any]) -> dict[str, str]:
 
 
 def strategy_token(strategy: str) -> str:
-    """The STRATEGY token used in Redis key and channel names: upper-case with
+    """The STRATEGY token used in Redis key names: upper-case with
     no underscore, so ``ma_cross`` becomes ``MACROSS``, ``macd_break`` becomes
     ``MACDBREAK`` and no token ever
     contains the ``_`` delimiter (chốt 2026-10-05). Names only -- the
@@ -156,19 +155,6 @@ def og_list_key(key_prefix: str, strategy: str, symbol: str, timeframe: str) -> 
     return f"{key_prefix}_{strategy_token(strategy)}_{symbol.upper()}_{timeframe.upper()}"
 
 
-def channel_name(channel_prefix: str, strategy: str, symbol: str, timeframe: str) -> str:
-    """The Pub/Sub channel one (strategy, symbol, timeframe) signal is pushed
-    on, e.g. ``L_CHANNEL_COMBO_US30_H4`` / ``L_CHANNEL_MACROSS_US30_M30``. OF
-    subscribes to exactly the channels it follows (or a pattern such as
-    ``L_CHANNEL_COMBO_*``), so Redis does the filtering.
-
-    A channel is a transport, not storage: nothing is kept under this name
-    and it belongs to no DB number. The persisted record of a signal is the
-    L_DES LIST/HASH in the output DB (see ``og_list_key``).
-    """
-    return f"{channel_prefix}_{strategy_token(strategy)}_{symbol.upper()}_{timeframe.upper()}"
-
-
 def stamp_hash_key(list_key: str, stamp: str) -> str:
     """The HASH holding one signal: the list's key plus ``":" + stamp``,
     the exact same one-concatenation rule DFS uses for its own candle HASHes.
@@ -177,61 +163,38 @@ def stamp_hash_key(list_key: str, stamp: str) -> str:
 
 
 # KEYS[1]=og_hash KEYS[2]=og_list
-# ARGV[1]=stamp ARGV[2]=channel ARGV[3]=message
-# ARGV[4..]=field1 value1 field2 value2 ...
+# ARGV[1]=stamp ARGV[2..]=field1 value1 field2 value2 ...
 #
 # "Already published?" is answered by the OG HASH existing -- a duplicate
-# (retried event, reconcile re-scan) writes nothing and publishes nothing, so
-# a consumer is never notified twice for the same signal. Otherwise, in one
-# atomic round trip: the OG HASH and LIST are written (NO EXPIRE, NO LTRIM --
-# everything is kept, see the module docstring), then the full message is
-# PUBLISHed on the per-(strategy, symbol, timeframe) channel -- unless the
-# channel argument is empty (the trend-filtered output is display-only and
-# publishes nothing). The channel stores nothing: a consumer that missed the
-# at-most-once Pub/Sub delivery reads the signal back from the OG LIST/HASH,
-# which carry the same fields.
+# (retried event, reconcile re-scan) writes nothing. Otherwise, in one atomic
+# round trip: the OG HASH and LIST are written (NO EXPIRE, NO LTRIM --
+# everything is kept, see the module docstring). Nothing is published on Pub/Sub.
 _PUBLISH_SIGNAL_SCRIPT = """
 if redis.call('EXISTS', KEYS[1]) == 1 then
   return 0
 end
-redis.call('HSET', KEYS[1], unpack(ARGV, 4))
+redis.call('HSET', KEYS[1], unpack(ARGV, 2))
 redis.call('RPUSH', KEYS[2], ARGV[1])
-if ARGV[2] ~= '' then
-  redis.call('PUBLISH', ARGV[2], ARGV[3])
-end
 return 1
 """
-
-
-def signal_message(hash_fields: dict[str, str]) -> str:
-    """The Pub/Sub message: the complete signal, i.e. exactly the same fields
-    as the OG HASH (chốt 2026-10-04: message carries full info, not just a
-    trigger)."""
-    return json.dumps(hash_fields, ensure_ascii=False)
 
 
 def publish_signal(
     client: redis.Redis,
     *,
     key_prefix: str,
-    channel_prefix: str | None,
     symbol: str,
     timeframe: str,
     strategy: str,
     stamp: str,
     hash_fields: dict[str, str],
 ) -> bool:
-    """Atomically publish once: OG HASH/LIST + PUBLISH the full message on the
-    signal's Pub/Sub channel -- all skipped if this exact signal was already
-    published. ``channel_prefix=None`` writes the HASH/LIST only (no Pub/Sub).
-    One EVAL round-trip. Returns True only when it actually wrote.
+    """Atomically write once: OG HASH + LIST entry -- all skipped if this exact signal
+    already exists in this output DB. One EVAL round-trip. Returns True only when it
+    actually wrote.
     """
     og_list = og_list_key(key_prefix, strategy, symbol, timeframe)
-    if channel_prefix is None:
-        channel, message = "", ""
-    else:
-        channel, message = channel_name(channel_prefix, strategy, symbol, timeframe), signal_message(hash_fields)
-    args: list[str] = [stamp, channel, message]
+    args: list[str] = [stamp]
     for field, value in hash_fields.items():
         args.append(field)
         args.append(value)
@@ -254,7 +217,7 @@ def clear_signals(client: redis.Redis, *, key_prefix: str) -> int:
 
     Each start of the des process begins from an empty signal DB: a signal that
     survived from an earlier run would make the "HASH already exists" check swallow
-    the same signal when the replay reaches it again (no write, no Pub/Sub message)
+    the same signal when the replay reaches it again (no write)
     and would leave the LISTs out of order. Only the ``{key_prefix}_`` namespace is
     touched -- never a FLUSHDB.
     """

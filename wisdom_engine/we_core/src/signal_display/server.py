@@ -51,6 +51,8 @@ from wisdom_engine.we_core.src.rules.trend_tf import (
     bias_column,
     build_trend_frame,
     get_method,
+    is_same_timeframe,
+    method_names,
 )
 from wisdom_engine.we_core.src.signal_display.cli import (
     BARS_MAX,
@@ -61,6 +63,7 @@ from wisdom_engine.we_core.src.signal_display.cli import (
 from wisdom_engine.we_core.src.signal_display.live_page import render_dashboard_html
 from wisdom_engine.we_core.src.signal_display.payload import (
     candlestick_points,
+    heikin_ashi_points,
     histogram_points,
     line_points,
     signal_markers,
@@ -308,7 +311,8 @@ def _build_trend_chart(
         "key": "trend",
         "label": label,
         "tf": trend_tf,
-        "candles": candlestick_points(trend_df, digits=digits),
+        "candles": heikin_ashi_points(trend_df, digits=digits),  # pane xu hướng vẽ nến Heikin Ashi (chỉ là cách vẽ); chart vào lệnh giữ nến thường
+        "candleStyle": "heikin_ashi",
         "overlays": overlays,
         "markers": trend_bias_markers(trend_df),
         "panels": [],
@@ -344,6 +348,7 @@ def _build_scan_payload(
         - stats: thống kê nhanh số lượng BUY/SELL.
     """
     digits = price_decimals(symbol)
+    candles = candlestick_points(df, digits=digits)
     overlays = [
         {"key": column, "label": label.format(**params), "color": color, "data": line_points(df, column, digits=digits)}
         for column, label, color in _STRATEGY_OVERLAYS.get(strategy_key, [])
@@ -375,7 +380,7 @@ def _build_scan_payload(
             "toTime": to_time.strftime("%Y-%m-%d %H:%M") if to_time is not None else "",
         },
         "trendChart": trend_chart,
-        "candles": candlestick_points(df, digits=digits),
+        "candles": candles,
         "overlays": overlays,
         "panels": panels,
         "markers": signal_markers(df),
@@ -603,14 +608,17 @@ def _extract_overrides(args) -> dict[str, str]:
 
 def _strategy_trend_timeframes(spec, ordered_timeframes: list[str]) -> list[str]:
     """
-    Suy ra danh sách trend TF hợp lệ qua normalize_params của strategy.
+    Suy ra danh sách trend TF hợp lệ qua normalize_params của strategy, cho khối cần KHUNG THAM CHIẾU riêng (vd knn).
+    Phải chọn khối đó tường minh: khối mặc định trong config (breakout, tính trên chính khung của tín hiệu) không có khung
+    tham chiếu nên sẽ từ chối mọi khung khác khung vào lệnh, và danh sách này dùng cho ô Trend TF khi người dùng chọn knn.
     """
     entry_tf = spec.default_timeframe or (spec.supported_timeframes or spec.recommended_timeframes or ordered_timeframes)[0]
+    reference_methods = [name for name in method_names() if not is_same_timeframe(name)]
     allowed: list[str] = []
     for tf in ordered_timeframes:
         try:
             spec.normalize_params(
-                {"TREND_FILTER_ENABLED": True, "TREND_TF": tf, "ENTRY_TF": entry_tf},
+                {"TREND_FILTER_ENABLED": True, "TREND_METHODS": ",".join(reference_methods[:1]), "TREND_TF": tf, "ENTRY_TF": entry_tf},
                 DEFAULT_SYMBOL,
                 entry_tf,
             )
@@ -649,10 +657,10 @@ def _gzip_response(response: Response) -> Response:
 def _operational_symbols() -> list[str]:
     """
     Symbol hiện trong ô chọn của dashboard: giao của DWH.Dim_Symbol với vũ trụ vận hành
-    (khoá strategies.combo.symbol_x — đúng tập worker Redis và des chạy, mục 7 CLAUDE.md).
+    (khoá strategies.combo.symbols — đúng tập worker Redis chạy, mục 7 CLAUDE.md).
 
     DWH còn 26 cặp forex mà worker không chạy hết (không có tín hiệu để đối chiếu): chỉ 4 cặp EURUSD, USDJPY,
-    GBPUSD, USDCAD (nhóm symbol_entry_atr_pct, từ 2026-10-20) nằm trong vũ trụ vận hành. Giá của chúng làm tròn
+    GBPUSD, USDCAD (từ 2026-10-20) nằm trong vũ trụ vận hành. Giá của chúng làm tròn
     theo configuration.price_decimals (5 chữ số, JPY 3) ở payload và trục giá của chart, nên không còn phẳng
     như khi làm tròn 2 chữ số. Chỉ giới hạn danh sách trên trang: /api/scan vẫn nhận mọi symbol hợp lệ nếu
     gọi thẳng bằng URL (symbol ngoài vũ trụ vận hành vẫn làm tròn 2 chữ số).
@@ -679,7 +687,6 @@ def create_app() -> Flask:
                 "trendTimeframes": _strategy_trend_timeframes(spec, ordered_timeframes),
                 "trendTfBySymbol": spec.trend_tf_by_symbol,
                 "defaultTrendMethods": ",".join(spec.default_params.get("TREND_METHODS", ("knn",))),
-                "tunedSymbols": list(spec.tuned_symbols),
             }
             for key, spec in STRATEGIES.items()
         }
@@ -687,6 +694,8 @@ def create_app() -> Flask:
             strategies=strategies,
             symbols=_operational_symbols(),
             timeframes=ordered_timeframes,
+            trend_methods=list(method_names()),
+            same_timeframe_trend_methods=[name for name in method_names() if is_same_timeframe(name)],
             default_strategy="combo",
             default_symbol=DEFAULT_SYMBOL,
             default_bars=N_BARS,

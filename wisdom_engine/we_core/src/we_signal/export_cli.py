@@ -439,7 +439,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--trend-tf",
         default="",
-        help="Trend-reference timeframe (must be >= the entry timeframe); omitted uses strategy default.",
+        help="Trend-reference timeframe (must be >= the entry timeframe); omitted uses strategy default. Not allowed for methods that use the entry timeframe (breakout).",
     )
     return parser.parse_args(argv)
 

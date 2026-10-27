@@ -31,6 +31,52 @@ def test_candlestick_points_skips_nan_bartime():
     assert isinstance(points[0]["time"], int)
 
 
+def _ha_frame(rows):
+    return pd.DataFrame(
+        {
+            "bartime": pd.date_range("2026-01-05", periods=len(rows), freq="4h"),
+            "open": [r[0] for r in rows], "high": [r[1] for r in rows], "low": [r[2] for r in rows], "close": [r[3] for r in rows],
+        }
+    )
+
+
+def test_heikin_ashi_points_follow_the_formula():
+    """Ba nến tính tay: ha_close = (O+H+L+C)/4, ha_open = trung bình (ha_open, ha_close) nến trước (nến đầu: (O+C)/2), râu theo cực trị của giá thật và thân Heikin Ashi."""
+    df = _ha_frame([(10, 12, 9, 11), (11, 13, 10, 12), (12, 12.5, 8, 9)])
+
+    points = payload.heikin_ashi_points(df, digits=3)
+
+    assert [(p["open"], p["high"], p["low"], p["close"]) for p in points] == [
+        (10.5, 12.0, 9.0, 10.5),
+        (10.5, 13.0, 10.0, 11.5),
+        (11.0, 12.5, 8.0, 10.375),
+    ]
+    assert [p["time"] for p in points] == [p["time"] for p in payload.candlestick_points(df)]  # cùng nến, cùng thời điểm, cùng thứ tự
+
+
+def test_heikin_ashi_points_keep_the_real_extremes_inside_the_wicks_and_chain_the_bodies():
+    df = make_ohlcv(400, freq_minutes=240, seed=5)
+
+    points = payload.heikin_ashi_points(df, digits=6)
+
+    highs, lows = df["high"].to_numpy(), df["low"].to_numpy()
+    for i, p in enumerate(points):
+        assert p["high"] >= highs[i] - 1e-6 and p["low"] <= lows[i] + 1e-6  # đỉnh/đáy THẬT luôn nằm trong râu nến Heikin Ashi
+        assert p["low"] <= min(p["open"], p["close"]) and p["high"] >= max(p["open"], p["close"])
+        if i:  # ha_open nằm đúng giữa thân nến trước
+            prev = points[i - 1]
+            assert abs(p["open"] - (prev["open"] + prev["close"]) / 2) < 2e-6
+
+
+def test_heikin_ashi_points_edge_cases_and_digits():
+    df = _ha_frame([(1.00001, 1.00009, 0.99995, 1.00005), (1.00005, 1.00011, 1.00001, 1.00008)])
+    assert payload.heikin_ashi_points(df.iloc[:0]) == [] and payload.heikin_ashi_points(df.drop(columns="bartime")) == []
+    with_nat = pd.concat([df.iloc[:1], df.iloc[1:].assign(bartime=pd.NaT)], ignore_index=True)
+    assert len(payload.heikin_ashi_points(with_nat)) == 1  # bỏ dòng thiếu bartime như candlestick_points
+    expected_close = (1.00001 + 1.00009 + 0.99995 + 1.00005) / 4  # ha_close nến đầu = trung bình bốn giá
+    assert payload.heikin_ashi_points(df, digits=5)[0]["close"] == round(expected_close, 5) != round(expected_close, 2)  # 5 chữ số cho cặp forex
+
+
 def test_signal_markers_returns_empty_without_signal_column():
     df = pd.DataFrame({"bartime": [pd.Timestamp("2026-01-05 00:00")]})
 
@@ -282,7 +328,7 @@ def _legacy_without_digits(name):
     return call
 
 
-@pytest.mark.parametrize("trend_mode", ["no_trend", "trend_filter"])
+@pytest.mark.parametrize("trend_mode", ["no_trend", "trend_filter", "trend_filter_breakout"])
 @pytest.mark.parametrize(("strategy", "tf"), [("combo", "H1"), ("ma_cross", "M30"), ("macd_break", "H1")])
 def test_run_scan_giong_het_ban_lap_tung_dong_cu(monkeypatch, strategy, tf, trend_mode):
     def fake_load(symbol, tf, bars, *, before=None):
@@ -291,9 +337,11 @@ def test_run_scan_giong_het_ban_lap_tung_dong_cu(monkeypatch, strategy, tf, tren
         return make_ohlcv(bars, freq_minutes=minutes, seed=minutes, start="2026-01-01")
 
     monkeypatch.setattr(server, "load", fake_load)
-    request = {"strategy": strategy, "symbol": "US30", "tf": tf, "bars": 400, "trend_mode": trend_mode}
+    request = {"strategy": strategy, "symbol": "US30", "tf": tf, "bars": 400, "trend_mode": "no_trend" if trend_mode == "no_trend" else "trend_filter"}
     if trend_mode == "trend_filter":
-        request["trend_tf"] = "H4"
+        request.update(trend_methods="knn", trend_tf="H4")  # knn: khung tham chiếu H4 (mặc định của config là breakout)
+    elif trend_mode == "trend_filter_breakout":
+        request["trend_methods"] = "breakout"  # khung của tín hiệu, pane trend riêng
 
     vectorized = server.run_scan(**request)
     for name in _VECTORIZED:
@@ -305,7 +353,7 @@ def test_run_scan_giong_het_ban_lap_tung_dong_cu(monkeypatch, strategy, tf, tren
     assert vectorized["candles"]
     assert all(overlay["data"] for overlay in vectorized["overlays"])
     assert vectorized["panels"][0]["data"]
-    if trend_mode == "trend_filter":
+    if trend_mode != "no_trend":
         assert vectorized["trendChart"]["candles"]
         assert all(overlay["data"] for overlay in vectorized["trendChart"]["overlays"])
 

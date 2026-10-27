@@ -2,8 +2,8 @@
 
 Mô tả:
     Đây là cửa DUY NHẤT chart_simul chạm vào Redis: nến do DFS phát (db đầu vào
-    của des), tín hiệu des đã ghi ở HAI db đầu ra (db không lọc trend và db đã lọc
-    trend, xem redis.output / redis.output_trend) và đồng hồ ảo của DFS. Không tính
+    của des), tín hiệu des đã ghi ở BỐN db đầu ra (mỗi nguồn lọc một db: raw, knn,
+    breakout, zigzag, tstat -- xem redis.outputs) và đồng hồ ảo của DFS. Không tính
     chỉ báo, không dựng JSON -- đó là việc của server.py / payload.py.
 
     Nến được đọc bằng ĐÚNG hàm của des (candle_reader.read_candles_from_redis)
@@ -15,7 +15,7 @@ Mô tả:
     trên client riêng của chart, không dùng chung kết nối với des.
 
 Đầu vào:
-    dict cấu hình des (des_config.yaml) -- redis.input / redis.output / redis.output_trend.
+    dict cấu hình des (des_config.yaml) -- redis.input / redis.outputs.<nguồn>.
 
 Đầu ra:
     DataFrame nến (bartime tăng dần), dict tín hiệu (stamp -> field HASH) và
@@ -24,12 +24,13 @@ Mô tả:
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 import pandas as pd
 import redis
 from wisdom_engine.des.src.redis_io.candle_reader import (
+    OUTPUT_SOURCES,
     STAMP_FORMAT,
     create_client,
     normalize_app_config,
@@ -65,24 +66,24 @@ class RedisSource:
         config: dict[str, Any],
         *,
         input_client: redis.Redis | None = None,
-        output_client: redis.Redis | None = None,
-        trend_output_client: redis.Redis | None = None,
+        output_clients: Mapping[str, redis.Redis] | None = None,
     ) -> None:
         redis_config = normalize_app_config(config)["redis"]
         input_config = redis_config["input"]
-        output_config = redis_config["output"]
-        trend_output_config = redis_config["output_trend"]
+        outputs_config = redis_config["outputs"]
         self.input_prefix = str(input_config["key_prefix"])
-        self.output_prefix = str(output_config["key_prefix"])
-        self.trend_output_prefix = str(trend_output_config["key_prefix"])
+        self.output_prefixes = {source: str(outputs_config[source]["key_prefix"]) for source in OUTPUT_SOURCES}
         # Số nến des đọc mỗi lần xử lý một sự kiện -- chart dùng đúng số này khi
         # dựng lại "cửa sổ mà des đã thấy" (xem server.py: exact_signal).
         self.snapshot_bars = int(input_config["snapshot_bars"])
         # redis.Redis chỉ nối khi có lệnh đầu tiên, nên dựng client ở đây không
         # làm server chết khi Redis chưa sẵn sàng.
         self._input = input_client or create_client(redis_config, input_config["db"])
-        self._output = output_client or create_client(redis_config, output_config["db"])
-        self._trend_output = trend_output_client or create_client(redis_config, trend_output_config["db"])
+        given = output_clients or {}
+        self._outputs = {
+            source: given.get(source) or create_client(redis_config, outputs_config[source]["db"])
+            for source in OUTPUT_SOURCES
+        }
 
     # ------------------------------------------------------------------ DFS
     def sim_clock(self) -> dict[str, Any]:
@@ -126,22 +127,22 @@ class RedisSource:
         )
 
     # -------------------------------------------------------------- tín hiệu
-    def signal_count(self, pair: Pair, *, trend: bool = False) -> int:
-        """Số tín hiệu des đã ghi cho cặp này (độ dài LIST) -- 1 lệnh. `trend=True`: db đã lọc trend."""
-        client, _ = self._output_for(trend)
-        return int(client.llen(self._list_key(pair, trend=trend)))
+    def signal_count(self, pair: Pair, *, source: str = "raw") -> int:
+        """Số tín hiệu des đã ghi cho cặp này (độ dài LIST) -- 1 lệnh. `source`: nguồn lọc (db đầu ra) cần đếm."""
+        client, _ = self._output_for(source)
+        return int(client.llen(self._list_key(pair, source=source)))
 
     def read_signals(
-        self, pair: Pair, since: pd.Timestamp | None = None, *, trend: bool = False
+        self, pair: Pair, since: pd.Timestamp | None = None, *, source: str = "raw"
     ) -> dict[str, dict[str, str]]:
         """Tín hiệu đã ghi từ `since` trở đi: {stamp: field của HASH}.
 
         LIST tín hiệu của des xếp stamp TĂNG dần; chuỗi stamp cố định độ rộng
         nên so sánh chuỗi đúng thứ tự thời gian. HASH rỗng (đã bị xoá giữa
-        chừng) bị bỏ qua. `trend=True`: đọc db đã lọc trend thay cho db không lọc.
+        chừng) bị bỏ qua. `source`: đọc db đầu ra của nguồn lọc đó (mặc định raw = không lọc trend).
         """
-        client, _ = self._output_for(trend)
-        list_key = self._list_key(pair, trend=trend)
+        client, _ = self._output_for(source)
+        list_key = self._list_key(pair, source=source)
         stamps = client.lrange(list_key, 0, -1)
         if since is not None:
             floor = since.strftime(STAMP_FORMAT)
@@ -159,25 +160,25 @@ class RedisSource:
         }
 
     def first_signal_stamp(self, pairs: list[Pair]) -> str | None:
-        """Stamp sớm nhất trong mọi LIST tín hiệu của db KHÔNG lọc trend -- mốc gần đúng des bắt đầu ghi.
+        """Stamp sớm nhất trong mọi LIST tín hiệu của db raw (không lọc trend) -- mốc gần đúng des bắt đầu ghi.
 
         Dùng để không báo "LỠ" cho các nến TRƯỚC khi des chạy (db tín hiệu bị
         xoá mỗi lần des khởi động, nên mốc này tự dời theo lần chạy hiện tại).
-        Luôn lấy từ db không lọc trend, kể cả khi đang xem trang có trend: mọi tín hiệu thô đều vào db đó,
+        Luôn lấy từ db raw, kể cả khi đang xem trang có trend: mọi tín hiệu thô đều vào db đó,
         còn db đã lọc trend ít tín hiệu hơn nên mốc của nó trễ hơn mốc des thật sự bắt đầu.
         """
-        pipe = self._output.pipeline(transaction=False)
+        pipe = self._outputs["raw"].pipeline(transaction=False)
         for pair in pairs:
             pipe.lindex(self._list_key(pair), 0)
         heads = [stamp for stamp in pipe.execute() if stamp]
         return min(heads) if heads else None
 
-    def _output_for(self, trend: bool) -> tuple[redis.Redis, str]:
-        """(client, tiền tố) của db đầu ra cần đọc: đã lọc trend hoặc không lọc."""
-        if trend:
-            return self._trend_output, self.trend_output_prefix
-        return self._output, self.output_prefix
+    def _output_for(self, source: str) -> tuple[redis.Redis, str]:
+        """(client, tiền tố) của db đầu ra của nguồn lọc `source` (một trong OUTPUT_SOURCES)."""
+        if source not in self._outputs:
+            raise ValueError(f"unknown signal source '{source}'; expected one of {', '.join(OUTPUT_SOURCES)}")
+        return self._outputs[source], self.output_prefixes[source]
 
-    def _list_key(self, pair: Pair, *, trend: bool = False) -> str:
+    def _list_key(self, pair: Pair, *, source: str = "raw") -> str:
         strategy, symbol, timeframe = pair
-        return og_list_key(self._output_for(trend)[1], strategy, symbol, timeframe)
+        return og_list_key(self._output_for(source)[1], strategy, symbol, timeframe)

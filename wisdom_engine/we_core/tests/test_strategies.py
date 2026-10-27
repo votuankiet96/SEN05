@@ -36,8 +36,8 @@ def test_combo_signals_match_golden():
     from wisdom_engine.we_core.src.rules.entries import add_combo_entries
     from wisdom_engine.we_core.src.strategies.combo import detect_combo_signals
 
-    # US30 (X thật = 10.0) thay cho TESTSYM cũ (X = 0.0 do fallback) nên
-    # entry_price lệch đúng 10 so với bản golden cũ.
+    # Entry combo = high (BUY) / low (SELL) của nến tín hiệu từ 2026-10-21 (trước đó high+X / low−X với X = 10 của US30):
+    # entry_price của hai tín hiệu dưới đây tăng đúng 10 so với golden cũ (88,288889 → 98,288889; 78,30068 → 88,30068).
     df = make_ohlcv(300)
     params = configuration.normalize_combo_params({}, "US30", "H1")
     indicators = add_combo_indicators(df, params)
@@ -53,7 +53,8 @@ def test_combo_signals_match_golden():
     first = rows.iloc[0]
     assert str(first["bartime"]) == "2026-01-05 01:45:00"
     assert int(first["signal"]) == -1
-    assert round(float(first["entry_price"]), 6) == 88.288889
+    assert round(float(first["entry_price"]), 6) == 98.288889
+    assert float(first["entry_price"]) == float(first["low"])       # SELL: entry = low của nến tín hiệu
     # wisdom_engine không tính SL/TP (KSL/KTP chuyển sang order_gateway, chốt 2026-09-21);
     # các cột sl_price/tp_price/risk_reward/entry_time đã bỏ 2026-10-16 (xem entries.py).
     assert not {"sl_price", "tp_price", "risk_reward", "entry_time"} & set(enriched.columns)
@@ -61,7 +62,8 @@ def test_combo_signals_match_golden():
     last = rows.iloc[-1]
     assert str(last["bartime"]) == "2026-01-06 00:25:00"
     assert int(last["signal"]) == -1
-    assert round(float(last["entry_price"]), 6) == 78.30068
+    assert round(float(last["entry_price"]), 6) == 88.30068
+    assert float(last["entry_price"]) == float(last["low"])
 
 
 def _alternating(setups: str) -> list[int]:
@@ -186,8 +188,10 @@ def test_combo_trend_config_has_only_strategy_level_switches():
     params = configuration.normalize_combo_params({}, "US30", "H1")
 
     assert params["TREND_FILTER_ENABLED"] is False
-    assert params["TREND_METHODS"] == ("knn",)
-    assert params["TREND_TF"] in configuration.COMBO_TREND_TIMEFRAMES   # tra từ bảng trend_tf_by_symbol (không còn khung mặc định chung)
+    assert params["TREND_METHODS"] == ("knn",)        # mặc định của config từ 2026-10-23: DB1 = KNN (breakout là DB2, qua redis.extra_trend_outputs)
+    assert params["TREND_TF"] in configuration.COMBO_TREND_TIMEFRAMES   # knn tra từ bảng trend_tf_by_symbol (không còn khung mặc định chung)
+    breakout = configuration.normalize_combo_params({"TREND_METHODS": "breakout"}, "US30", "H1")
+    assert breakout["TREND_TF"] == "H1"               # breakout (chọn tường minh) tính trên chính khung của tín hiệu
     assert "default_trend_tf" not in configuration._COMBO_CFG           # khoá đã xoá 2026-10-16
     assert TECHNICAL_TREND_KEYS.isdisjoint(params)
     assert ORDER_MANAGEMENT_KEYS.isdisjoint(params)
@@ -249,8 +253,10 @@ def test_ma_cross_defaults_match_strategy_specification():
     ) == (5, 25, 5)
     assert params["ATR_PERIOD"] == 5
     assert params["TREND_FILTER_ENABLED"] is False
-    assert params["TREND_METHODS"] == ("knn",)
-    assert params["TREND_TF"] in configuration.MA_CROSS_TREND_TIMEFRAMES   # tra từ bảng trend_tf_by_symbol
+    assert params["TREND_METHODS"] == ("knn",)        # mặc định của config từ 2026-10-23: DB1 = KNN
+    assert params["TREND_TF"] in configuration.MA_CROSS_TREND_TIMEFRAMES   # knn tra từ bảng trend_tf_by_symbol
+    breakout = configuration.normalize_ma_cross_params({"TREND_METHODS": "breakout"}, "US30", "M30")
+    assert breakout["TREND_TF"] == "M30"              # breakout (chọn tường minh) tính trên chính khung của tín hiệu
     assert params["ALTERNATING_FILTER_ENABLED"] is True
     assert TECHNICAL_TREND_KEYS.isdisjoint(params)
     assert ORDER_MANAGEMENT_KEYS.isdisjoint(params)
@@ -361,15 +367,18 @@ def test_ma_cross_trend_filter_keeps_only_aligned_signals():
     df = make_ohlcv(600)
     trend_bars = make_ohlcv(600, seed=7)
     out = configuration.run_strategy_with_trend_reference(
-        "ma_cross", symbol="US30", entry_tf="M30", entry_bars=df, trend_tf="H2", trend_bars=trend_bars
+        "ma_cross", symbol="US30", entry_tf="M30", entry_bars=df, trend_tf="H2", trend_bars=trend_bars, overrides={"TREND_METHODS": "knn"}
     )
 
     kept = out[out["signal"] != 0]
     assert len(kept) > 0
     assert (kept["signal"] == kept["trend_bias"]).all()
-    # xen kẽ chạy trước trend nên signal ⊆ raw_signal (DB1 ⊆ DB0): mỗi tín hiệu giữ lại đúng là một tín hiệu raw
-    assert (kept["signal"] == kept["raw_signal"]).all()
-    assert len(kept) <= int((out["raw_signal"] != 0).sum())
+    # xen kẽ chạy trước trend; knn KHÔNG dời tín hiệu (rules/trend_tf.POLICY): chỉ nến đầu đợt (nến có raw_signal) đã cùng chiều trend
+    # mới bắn, nên signal ⊆ raw_signal (DB1 ⊆ DB0) và đúng bằng "raw_signal cùng chiều trend"
+    raw = out["raw_signal"]
+    old_rule = (raw != 0) & (raw == out["trend_bias"].fillna(0))
+    assert out["signal"].tolist() == raw.where(old_rule, 0).tolist()
+    assert not ((out["signal"] != 0) & (raw == 0)).any()
 
 
 def test_ma_cross_entries_add_market_entry():
@@ -640,8 +649,10 @@ def test_macd_break_defaults_match_strategy_specification():
     assert (params["MACD_FAST"], params["MACD_SLOW"], params["MACD_SIGNAL"]) == (5, 25, 5)
     assert params["ATR_PERIOD"] == 5
     assert params["TREND_FILTER_ENABLED"] is False
-    assert params["TREND_METHODS"] == ("knn",)
-    assert params["TREND_TF"] in configuration.MACD_BREAK_TREND_TIMEFRAMES   # tra từ bảng trend_tf_by_symbol
+    assert params["TREND_METHODS"] == ("knn",)        # macd_break đặt riêng knn (2026-10-23); combo và ma_cross mặc định breakout
+    assert params["TREND_TF"] in configuration.MACD_BREAK_TREND_TIMEFRAMES   # knn tra từ bảng trend_tf_by_symbol
+    breakout = configuration.normalize_macd_break_params({"TREND_METHODS": "breakout"}, "US30", "H1")
+    assert breakout["TREND_TF"] == "H1"               # breakout vẫn chọn được: tính trên chính khung của tín hiệu
     assert "ALLOW_SHORT" not in params
     assert configuration.MACD_BREAK_DEFAULT_TIMEFRAME == "H1"
     assert configuration.MACD_BREAK_SUPPORTED_TIMEFRAMES == ("M10", "M20", "M30", "M45", "H1", "H2", "H3", "H4")
@@ -663,7 +674,7 @@ def test_macd_break_trend_filter_keeps_only_aligned_signals():
     df = make_ohlcv(600)
     trend_bars = make_ohlcv(600, seed=7)
     out = configuration.run_strategy_with_trend_reference(
-        "macd_break", symbol="US30", entry_tf="H1", entry_bars=df, trend_tf="H4", trend_bars=trend_bars
+        "macd_break", symbol="US30", entry_tf="H1", entry_bars=df, trend_tf="H4", trend_bars=trend_bars, overrides={"TREND_METHODS": "knn"}
     )
 
     kept = out[out["signal"] != 0]
@@ -679,9 +690,9 @@ def test_co_alternating_doc_tu_config_cho_ca_ba_chien_luoc():
         spec = configuration.get_strategy(key)
         assert spec.default_params["ALTERNATING_FILTER_ENABLED"] is True
         assert {"key": "ALTERNATING_FILTER_ENABLED", "label": "Alternating Filter", "type": "bool"} in spec.param_fields
-        assert spec.normalize_params(None, "US30", "H1")["ALTERNATING_FILTER_ENABLED"] is True
+        assert spec.normalize_params(None, "US30", spec.default_timeframe)["ALTERNATING_FILTER_ENABLED"] is True
         # override từ CLI/dashboard thắng giá trị trong config
-        off = spec.normalize_params({"ALTERNATING_FILTER_ENABLED": "false"}, "US30", "H1")
+        off = spec.normalize_params({"ALTERNATING_FILTER_ENABLED": "false"}, "US30", spec.default_timeframe)
         assert off["ALTERNATING_FILTER_ENABLED"] is False
 
 
@@ -773,14 +784,14 @@ def test_entries_chi_tao_entry_price_va_ma_cross_macd_break_dung_chung_ham_close
             "signal": [1, 0, -1],
         }
     )
-    params = {"X": 0.5}
+    params = {}
     combo = entries.add_combo_entries(frame, params, "US30")
     cross = entries.add_ma_cross_entries(frame, params, "US30")
     brk = entries.add_macd_break_entries(frame, params, "US30")
 
     for out in (combo, cross, brk):
         assert set(out.columns) - set(frame.columns) == {"entry_price"}
-    assert combo["entry_price"].tolist()[0] == 11.5 and combo["entry_price"].tolist()[2] == 10.5   # high+X / low-X
+    assert combo["entry_price"].tolist()[0] == 11.0 and combo["entry_price"].tolist()[2] == 11.0   # BUY = high, SELL = low
     assert pd.isna(combo["entry_price"].iloc[1])
     assert cross.equals(brk) and cross["entry_price"].tolist()[0] == 10.5 and cross["entry_price"].tolist()[2] == 12.5
     assert cross.equals(entries._add_close_market_entries(frame))
@@ -847,7 +858,8 @@ def test_run_strategy_with_trend_reference_van_chay_khi_khung_trend_bang_hoac_lo
     df, trend_bars = make_ohlcv(300), make_ohlcv(300, seed=7)
     for strategy, entry_tf, trend_tf in (("combo", "H1", "H1"), ("combo", "H1", "H4"), ("macd_break", "H2", "H4")):
         out = configuration.run_strategy_with_trend_reference(
-            strategy, symbol="US30", entry_tf=entry_tf, entry_bars=df, trend_tf=trend_tf, trend_bars=trend_bars
+            strategy, symbol="US30", entry_tf=entry_tf, entry_bars=df, trend_tf=trend_tf, trend_bars=trend_bars,
+            overrides={"TREND_METHODS": "knn"},  # khung tham chiếu riêng chỉ có với knn; breakout luôn dùng khung vào lệnh
         )
         assert {"raw_signal", "signal", "trend_bias"} <= set(out.columns)
 
@@ -880,7 +892,7 @@ def test_config_mau_co_khung_trend_thoa_quy_tac_voi_moi_khung_vao_lenh_cua_worke
 
     example = yaml.safe_load((Path(__file__).resolve().parents[1] / "we_config.example.yaml").read_text(encoding="utf-8"))
     combo_block = example["strategies"]["combo"]
-    symbols = tuple(combo_block["symbol_x"]) + tuple(combo_block["symbol_entry_atr_pct"])
+    symbols = tuple(combo_block["symbols"])
     for strategy, timeframes in _timeframes_the_worker_runs().items():
         block = example["strategies"][strategy]
         by_symbol = configuration._strategy_trend_tf_by_symbol(     # bảng mẫu phải qua đúng bộ kiểm của config thật
@@ -921,13 +933,15 @@ def test_normalize_params_dung_khung_trend_theo_o_va_override_van_thang(monkeypa
     assert "TREND_TF" not in spec.default_params    # không còn khung trend mặc định chung
     monkeypatch.setattr(configuration, attr, {"US30": {mapped_tf: "H3"}})
 
-    assert spec.normalize_params({}, "US30", mapped_tf)["TREND_TF"] == "H3"          # ô riêng
-    assert spec.normalize_params(None, "US30", mapped_tf)["TREND_TF"] == "H3"
-    assert spec.normalize_params({}, "US30", other_tf)["TREND_TF"] == ""             # khung vào lệnh khác, không có ô -> chưa xác định
-    assert spec.normalize_params({}, "DE40", mapped_tf)["TREND_TF"] == ""            # symbol khác -> chưa xác định
-    assert spec.normalize_params({"TREND_TF": "H1"}, "US30", mapped_tf)["TREND_TF"] == "H1"   # override tường minh thắng
-    assert spec.normalize_params({"TREND_TF": ""}, "US30", mapped_tf)["TREND_TF"] == "H3"     # override rỗng = không có
-    assert spec.normalize_params({"TREND_TF": None}, "US30", mapped_tf)["TREND_TF"] == "H3"
+    knn = {"TREND_METHODS": "knn"}   # bảng khung trend chỉ dùng cho khối cần khung tham chiếu; mặc định của config là breakout (khung vào lệnh)
+    default_is_breakout = spec.default_params["TREND_METHODS"] == ("breakout",)   # mặc định đặt riêng theo từng chiến lược trong config
+    assert spec.normalize_params(None, "US30", mapped_tf)["TREND_TF"] == (mapped_tf if default_is_breakout else "H3")
+    assert spec.normalize_params(knn, "US30", mapped_tf)["TREND_TF"] == "H3"          # ô riêng
+    assert spec.normalize_params(knn, "US30", other_tf)["TREND_TF"] == ""             # khung vào lệnh khác, không có ô -> chưa xác định
+    assert spec.normalize_params(knn, "DE40", mapped_tf)["TREND_TF"] == ""            # symbol khác -> chưa xác định
+    assert spec.normalize_params({**knn, "TREND_TF": "H1"}, "US30", mapped_tf)["TREND_TF"] == "H1"   # override tường minh thắng
+    assert spec.normalize_params({**knn, "TREND_TF": ""}, "US30", mapped_tf)["TREND_TF"] == "H3"     # override rỗng = không có
+    assert spec.normalize_params({**knn, "TREND_TF": None}, "US30", mapped_tf)["TREND_TF"] == "H3"
 
 
 def test_trend_tf_by_symbol_doc_va_chuan_hoa_config_hop_le():
@@ -982,79 +996,84 @@ def test_strategy_spec_mang_bang_khung_trend_theo_o_cua_config():
     assert configuration.STRATEGIES["macd_break"].trend_tf_by_symbol is configuration.MACD_BREAK_TREND_TF_BY_SYMBOL
 
 
-# --- Entry theo ATR cho nhóm forex (strategies.combo.symbol_entry_atr_pct, 2026-10-20) -------------------------
+# --- Entry combo = high/low của nến tín hiệu (2026-10-21), không còn X hay % ATR ---------------------------------
 
 
-def test_combo_entry_theo_atr_dung_phan_tram_atr_tai_nen_tin_hieu_va_bo_qua_x():
+def test_combo_entry_bang_dung_high_cua_buy_va_low_cua_sell_khong_dem():
     from wisdom_engine.we_core.src.rules import entries
 
     frame = pd.DataFrame(
         {
-            "high": [1.1010, 1.1020, 1.1030],
-            "low": [1.0990, 1.1000, 1.1010],
-            "close": [1.1005, 1.1015, 1.1015],
-            "atr": [0.0010, 0.0020, 0.0040],
-            "signal": [1, 0, -1],
+            "high": [1.1010, 1.1020, 1.1030, 50.0],
+            "low": [1.0990, 1.1000, 1.1010, 40.0],
+            "close": [1.1010, 1.1015, 1.1015, 45.0],        # nến đầu đóng cửa đúng tại high: entry == close (không xử lý đặc biệt)
+            "atr": [0.0010, 0.0020, 0.0040, 3.0],
+            "signal": [1, 0, -1, 1],
         }
     )
-    out = entries.add_combo_entries(frame, {"X": 99.0, "ENTRY_ATR_PCT": 5.0}, "EURUSD")
+    # tham số cũ (X, ENTRY_ATR_PCT) nếu còn truyền vào cũng bị bỏ qua: không còn đệm nào
+    for params in ({}, {"X": 99.0, "ENTRY_ATR_PCT": 5.0}):
+        out = entries.add_combo_entries(frame, params, "EURUSD")
+        assert out["entry_price"].iloc[0] == 1.1010 == out["close"].iloc[0]
+        assert pd.isna(out["entry_price"].iloc[1])
+        assert out["entry_price"].iloc[2] == 1.1010
+        assert out["entry_price"].iloc[3] == 50.0
+        assert set(out.columns) - set(frame.columns) == {"entry_price"}
 
-    assert out["entry_price"].iloc[0] == pytest.approx(1.1010 + 0.05 * 0.0010)     # BUY: high + 5% × ATR (X bị bỏ qua)
-    assert pd.isna(out["entry_price"].iloc[1])                                      # không có tín hiệu
-    assert out["entry_price"].iloc[2] == pytest.approx(1.1010 - 0.05 * 0.0040)     # SELL: low − 5% × ATR
-    assert set(out.columns) - set(frame.columns) == {"entry_price"}
 
-
-def test_combo_entry_khong_dat_entry_atr_pct_van_dung_x_co_dinh_nhu_cu():
+def test_combo_entry_thieu_cot_can_thiet_tra_khung_entry_toan_nan_khong_loi():
     from wisdom_engine.we_core.src.rules import entries
 
-    frame = pd.DataFrame({"high": [11.0, 12.0], "low": [9.0, 10.0], "atr": [4.0, 4.0], "signal": [1, -1]})
-    for params in ({"X": 0.5}, {"X": 0.5, "ENTRY_ATR_PCT": None}):
-        out = entries.add_combo_entries(frame, params, "US30")
-        assert out["entry_price"].tolist() == [11.5, 9.5]
+    frame = pd.DataFrame({"high": [11.0], "signal": [1]})
+    assert entries.add_combo_entries(frame, {}, "US30")["entry_price"].isna().all()
 
 
-def test_combo_entry_theo_atr_thieu_cot_atr_bao_loi_ro():
-    from wisdom_engine.we_core.src.rules import entries
-
-    frame = pd.DataFrame({"high": [11.0], "low": [9.0], "signal": [1]})
-    with pytest.raises(ValueError, match="atr"):
-        entries.add_combo_entries(frame, {"X": 0.0, "ENTRY_ATR_PCT": 5.0}, "EURUSD")
-
-
-def test_normalize_combo_params_forex_dung_entry_atr_pct_con_symbol_cu_van_dung_x():
+def test_combo_khong_con_tham_so_x_hay_entry_atr_pct_va_override_cu_bi_bo_qua():
     spec = configuration.get_strategy("combo")
-    for symbol in ("EURUSD", "USDJPY", "GBPUSD", "USDCAD"):
-        params = spec.normalize_params(None, symbol, "H1")
-        assert params["ENTRY_ATR_PCT"] == 5.0 and params["X"] == 0.0
-    for symbol, x in configuration.COMBO_SYMBOL_X.items():
-        params = spec.normalize_params(None, symbol, "H1")
-        assert params["ENTRY_ATR_PCT"] is None and params["X"] == x       # nhóm cũ giữ nguyên X cố định
-    assert spec.normalize_params({"ENTRY_ATR_PCT": "7.5"}, "EURUSD", "H1")["ENTRY_ATR_PCT"] == 7.5      # override tường minh
-    assert spec.normalize_params({"ENTRY_ATR_PCT": "abc"}, "EURUSD", "H1")["ENTRY_ATR_PCT"] == 5.0      # đọc không được -> mặc định theo symbol
-    assert spec.normalize_params({"ENTRY_ATR_PCT": "99999"}, "EURUSD", "H1")["ENTRY_ATR_PCT"] == 1000.0  # kẹp theo PARAM_FIELDS
+    keys = {field["key"] for field in spec.param_fields}
+
+    assert not {"X", "ENTRY_ATR_PCT"} & keys
+    assert not {"X", "ENTRY_ATR_PCT"} & set(spec.default_params)
+    for symbol in ("US30", "EURUSD", "USDJPY"):
+        params = spec.normalize_params({"X": "10", "ENTRY_ATR_PCT": "5"}, symbol, "H1")
+        assert not {"X", "ENTRY_ATR_PCT"} & set(params)
+    assert not hasattr(configuration, "COMBO_SYMBOL_X") and not hasattr(configuration, "COMBO_SYMBOL_ENTRY_ATR_PCT")
+    assert not hasattr(configuration.StrategySpec, "tuned_symbols")
 
 
-def test_pipeline_combo_forex_entry_lech_high_low_dung_phan_tram_atr():
-    enriched = configuration.run_strategy("combo", symbol="EURUSD", tf="H1", bars=make_ohlcv(400))
-    signals = enriched[enriched["signal"].isin([1, -1])]
+def test_pipeline_combo_moi_symbol_ke_ca_forex_entry_bang_high_low_cua_nen_tin_hieu():
+    for symbol in ("US30", "EURUSD", "USDJPY", "BTCUSD"):
+        enriched = configuration.run_strategy("combo", symbol=symbol, tf="H1", bars=make_ohlcv(400))
+        signals = enriched[enriched["signal"].isin([1, -1])]
 
-    assert len(signals) > 0
-    buy = signals[signals["signal"] == 1]
-    sell = signals[signals["signal"] == -1]
-    assert (buy["entry_price"] - buy["high"]).to_numpy() == pytest.approx((0.05 * buy["atr"]).to_numpy())
-    assert (sell["low"] - sell["entry_price"]).to_numpy() == pytest.approx((0.05 * sell["atr"]).to_numpy())
-    assert (buy["entry_price"] > buy["high"]).all() and (sell["entry_price"] < sell["low"]).all()
+        assert len(signals) > 0
+        buy = signals[signals["signal"] == 1]
+        sell = signals[signals["signal"] == -1]
+        assert (buy["entry_price"] == buy["high"]).all() and (sell["entry_price"] == sell["low"]).all()
+        assert (buy["entry_price"] >= buy["close"]).all() and (sell["entry_price"] <= sell["close"]).all()   # mép nến không bao giờ nằm trong thân
 
 
-def test_symbol_van_hanh_gom_nhom_x_co_dinh_va_nhom_entry_theo_atr_khong_giao_nhau():
-    x_group = set(configuration.COMBO_SYMBOL_X)
-    atr_group = set(configuration.COMBO_SYMBOL_ENTRY_ATR_PCT)
+def test_symbol_van_hanh_la_danh_sach_strategies_combo_symbols_trong_config():
+    assert configuration.OPERATING_SYMBOLS == (
+        "US30", "US500", "US100", "DE40", "UK100", "FR40", "SP35", "HK50", "J225", "GOLD", "BTCUSD", "EURUSD", "USDJPY", "GBPUSD", "USDCAD",
+    )
+    assert len(set(configuration.OPERATING_SYMBOLS)) == len(configuration.OPERATING_SYMBOLS) == 15
 
-    assert not x_group & atr_group
-    assert set(configuration.OPERATING_SYMBOLS) == x_group | atr_group
-    assert atr_group == {"EURUSD", "USDJPY", "GBPUSD", "USDCAD"}
-    assert len(configuration.OPERATING_SYMBOLS) == 15
+
+def test_doc_danh_sach_symbol_kiem_tra_rong_trung_va_sai_kieu():
+    read = configuration._operating_symbols
+
+    assert read({"symbols": [" us30 ", "Eurusd"]}, "strategies.combo") == ("US30", "EURUSD")      # chuẩn hoá chữ hoa, bỏ khoảng trắng
+    with pytest.raises(KeyError, match="symbols"):
+        read({}, "strategies.combo")
+    with pytest.raises(TypeError, match="non-empty list"):
+        read({"symbols": []}, "strategies.combo")
+    with pytest.raises(TypeError, match="non-empty list"):
+        read({"symbols": {"US30": 10.0}}, "strategies.combo")        # dạng cũ symbol_x (dict) không được nhận
+    with pytest.raises(ValueError, match="empty symbol"):
+        read({"symbols": ["US30", " "]}, "strategies.combo")
+    with pytest.raises(ValueError, match="twice: US30"):
+        read({"symbols": ["US30", "us30", "BTCUSD"]}, "strategies.combo")
 
 
 def test_worker_bootstrap_chay_ca_ba_chien_luoc_tren_ca_nhom_forex():

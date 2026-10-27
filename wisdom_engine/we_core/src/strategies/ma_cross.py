@@ -32,7 +32,8 @@ MỘT luật, đúng khuôn của combo/macd_break:
 
     setup (mọi nến thỏa điều kiện)
       -> lọc lặp cùng chiều trên MỌI setup (rules/alternating.py, cờ trong config) = raw_signal
-      -> trend filter lọc raw_signal (rules/trend_tf.apply_trend_filter, khớp đúng 1 bar) = signal.
+      -> trend filter lọc raw_signal (rules/trend_tf.apply_trend_filter) = signal.
+    (hai bước sau do rules/trend_tf.apply_signal_filters điều phối.)
 
 (Thứ tự "xen kẽ trước, trend sau" được chốt lại ngày 2026-10-16 theo yêu cầu người dùng, cùng thứ tự với
 combo/macd_break; đổi thứ tự là đổi tập tín hiệu DB1, xem CLAUDE.md mục 6.)
@@ -40,16 +41,18 @@ combo/macd_break; đổi thứ tự là đổi tập tín hiệu DB1, xem CLAUDE
 Hệ quả cần biết (đo 2026-10-16, 44 cặp M10–M45 từ 2022-01-01, xem research_notes T007 và F143):
     - Setup thô chiếm ~42% số nến. Vì thế lọc lặp cùng chiều là BẮT BUỘC: tắt cờ alternating_filter_enabled thì
       gần một nửa số nến trở thành tín hiệu.
-    - Tín hiệu là nến ĐẦU TIÊN của mỗi đợt setup (fast/slow và MACD khớp sau một setup ngược chiều) và, khi trend
-      bật, phải cùng chiều trend đúng nến đó: đợt nào có nến đầu lệch trend thì mất cả đợt (không chờ trend đổi
-      chiều trong lúc đợt còn kéo dài), và hai tín hiệu liền nhau có thể cùng chiều (giữa chúng có đợt ngược chiều
-      bị trend loại).
+    - Tín hiệu thô (DB0) là nến ĐẦU TIÊN của mỗi đợt setup (fast/slow và MACD khớp sau một setup ngược chiều). Khi trend
+      bật, khối có chính sách first_aligned_per_run (rules/trend_tf.POLICY, hiện breakout và tstat) bắn đúng một tín hiệu mỗi
+      đợt ở nến setup đầu tiên mà trend đã cùng chiều; khối không có chính sách này (knn) thì đợt nào có nến đầu lệch
+      trend mất cả đợt, không chờ trend đổi chiều trong lúc đợt còn kéo dài. Hai tín hiệu liền nhau có thể cùng chiều
+      (giữa chúng có đợt ngược chiều bị trend loại).
     - Trạng thái chống trùng chỉ nhớ trong cửa sổ đang tính (xem docstring rules/alternating.py).
 
 Đầu ra:
     detect_ma_cross_signals(...) trả về DataFrame mới có thêm:
     - raw_signal: tín hiệu SAU lọc lặp cùng chiều trên mọi setup, TRƯỚC trend filter (cũng là tín hiệu khi không có trend).
-    - signal: 1 = BUY, -1 = SELL, 0 = không có tín hiệu (lọc lặp cùng chiều rồi trend filter; signal ⊆ raw_signal).
+    - signal: 1 = BUY, -1 = SELL, 0 = không có tín hiệu (lọc lặp cùng chiều rồi trend filter; với chính sách first_aligned_per_run
+      signal có thể nằm giữa đợt nên không còn ⊆ raw_signal, xem rules/trend_tf.apply_signal_filters).
     - signal_reason: mô tả ngắn vì sao có tín hiệu.
     - trend_filter_status: trạng thái của bước trend filter (rules/trend_tf.apply_trend_filter).
 """
@@ -57,11 +60,7 @@ Hệ quả cần biết (đo 2026-10-16, 44 cặp M10–M45 từ 2022-01-01, xem
 from __future__ import annotations
 
 import pandas as pd
-from wisdom_engine.we_core.src.rules.alternating import apply_alternating_filter
-from wisdom_engine.we_core.src.rules.trend_tf import (
-    apply_trend_filter,
-    trend_filter_enabled,
-)
+from wisdom_engine.we_core.src.rules.trend_tf import apply_signal_filters
 
 _BUY_REASON = "fast SMA above slow SMA; MACD histogram > 0"
 _SELL_REASON = "fast SMA below slow SMA; MACD histogram < 0"
@@ -90,11 +89,12 @@ def detect_ma_cross_signals(
         - fast_ma, slow_ma, macd_h không được NaN.
         - atr không được NaN để output vẫn giữ cùng ngôn ngữ biến động như bản cũ.
 
-    Thứ tự lọc (giống combo/macd_break): lọc lặp cùng chiều (alternating.py; cờ
-    `strategies.ma_cross.alternating_filter_enabled` trong config) chạy TRƯỚC trên mọi setup, trend filter lọc
-    SAU trên raw_signal đã xen kẽ. raw_signal vì thế vừa là kết quả không có trend vừa là tín hiệu TRƯỚC khi lọc
-    trend, và signal ⊆ raw_signal (DB1 ⊆ DB0). Trend tắt: signal == raw_signal từng bit. Cờ lọc lặp cùng chiều
-    tắt: bar nào có setup cũng bắn (rất nhiều tín hiệu liền nhau, chỉ dùng để xem/so sánh).
+    Hai bộ lọc (giống combo/macd_break): lọc lặp cùng chiều (alternating.py; cờ
+    `strategies.ma_cross.alternating_filter_enabled` trong config) rồi lọc trend do rules/trend_tf.apply_signal_filters
+    điều phối; chiến lược chỉ truyền setup và câu lý do của mình. Thứ tự lọc, chính sách theo khối trend (cơ chế dời
+    tín hiệu) và hệ quả lên DB0/DB1 (raw_signal = DB0, signal = DB1) mô tả ở docstring của hàm đó. Trend tắt: signal ==
+    raw_signal từng bit. Cờ lọc lặp cùng chiều tắt: bar nào có setup cũng bắn (rất nhiều tín hiệu liền nhau, chỉ dùng để
+    xem/so sánh). Setup của ma_cross là TRẠNG THÁI (còn đúng ở nhiều nến liền nhau) nên nến được phép bắn là chính nến còn setup.
 
     Args:
         df: DataFrame đã qua indicator.add_ma_cross_indicators().
@@ -126,19 +126,6 @@ def detect_ma_cross_signals(
     sell_cond = valid & (out["fast_ma"] < out["slow_ma"]) & (out["macd_h"] < 0)
     # =========================================================================
 
-    # raw_signal = tín hiệu sau lọc lặp cùng chiều trên MỌI setup, TRƯỚC trend filter (xen kẽ trước, trend sau, như
-    # combo/macd_break). Dashboard dùng nó để so "raw -> filtered"; khi trend tắt thì signal == raw_signal.
-    out["raw_signal"] = apply_alternating_filter(buy_cond, sell_cond, params)
-
-    # signal: trend filter lọc raw_signal (giữ tín hiệu cùng chiều trend_bias đúng bar đó) -> signal ⊆ raw_signal.
-    out = apply_trend_filter(out, params, raw_signal_col="raw_signal", output_col="signal")
-
-    out["signal_reason"] = ""
-    out.loc[out["signal"].eq(1), "signal_reason"] = _BUY_REASON
-    out.loc[out["signal"].eq(-1), "signal_reason"] = _SELL_REASON
-    if trend_filter_enabled(params):
-        has_signal = out["signal"].fillna(0).astype(int).ne(0)
-        out.loc[has_signal, "signal_reason"] = (
-            out.loc[has_signal, "signal_reason"] + "; aligned with trend reference"
-        )
-    return out
+    return apply_signal_filters(
+        out, params, buy_setup=buy_cond, sell_setup=sell_cond, buy_reason=_BUY_REASON, sell_reason=_SELL_REASON
+    )

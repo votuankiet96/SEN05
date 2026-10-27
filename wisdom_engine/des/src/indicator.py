@@ -17,9 +17,9 @@ Mô tả:
     một chiều: strategies/*.py không import ngược lại indicator.py.
 
     merge_trend_reference phục vụ đường 2 timeframe
-    (configuration.run_strategy_with_trend_reference). live_worker chỉ đi
-    đường đó khi ``trend_filter_enabled: true`` (mặc định tắt) — xem
-    configuration.trend_reference_for(). Chỉ báo xác nhận xu hướng khung lớn
+    (configuration.run_strategy_with_trend_reference). live_worker đi đường đó
+    cho bốn nguồn lọc trend (knn, breakout, zigzag, tstat) — xem
+    configuration.trend_source_for(). Chỉ báo xác nhận xu hướng khung lớn
     (KNN, ...) KHÔNG nằm ở đây: mỗi phương pháp là một khối riêng trong
     trend_methods/ (xem rules/trend_tf.py).
 

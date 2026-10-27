@@ -1,4 +1,4 @@
-"""React to candle writes on the Redis input DB (live OG: DB0, des: db13) through keyspace notifications.
+"""React to candle writes on the Redis input DB (live OG: DB0, des: db10) through keyspace notifications.
 
 OG và nguồn nến (Core AEN, qua Redis replica trên og18) chỉ gặp nhau ở DB0.
 OG lắng nghe trực tiếp keyspace notification của chính Redis -- tín hiệu do

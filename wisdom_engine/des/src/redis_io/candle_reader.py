@@ -33,12 +33,11 @@ REDIS_INPUT_DEFAULTS: dict[str, Any] = {
 # change -- unlike the technical parameters above. db/key_prefix/
 # snapshot_bars/process_on_startup track the input feed's own contract (live
 # OG: DF's DB0, already revised 4 times in one week historically; des: DFS's
-# db13). output.db/key_prefix are the output-DB mirror of the same idea
-# (L_DES); output_trend.db/key_prefix are the same for the second, trend-filtered output
-# (its own DB, same L_DES key shape, no Pub/Sub); output.channel_prefix (L_CHANNEL_SIM) names
-# OG's per-(strategy, symbol, timeframe) Pub/Sub channels toward OF (see
-# signal_publisher.py) -- a transport only, nothing is stored under it. OG
-# controls that one, so it stays a config value.
+# db10 since 2026-10-25). outputs.<source>.db/key_prefix are the output-DB mirror
+# of the same idea: ONE DB per filter source (raw, knn, breakout, zigzag, tstat -- the
+# five sources of we_core, see OUTPUT_SOURCES), all with the same L_DES key
+# shape and NO Pub/Sub (decision 2026-10-25: des only stores, nothing is
+# published).
 #
 # input.event_channel ("dp:events:candles") is DELIBERATELY NOT here anymore
 # (removed 2026-09-23): it was DF's own custom Pub/Sub message -- a contract
@@ -49,9 +48,10 @@ REDIS_INPUT_DEFAULTS: dict[str, Any] = {
 # to publish, on whatever schedule/shape it wants. DF is free to change or
 # remove its own channel without ever affecting OG's correctness.
 _REQUIRED_INPUT_KEYS = ("db", "key_prefix", "snapshot_bars", "process_on_startup")
-_REQUIRED_OUTPUT_KEYS = ("db", "key_prefix", "channel_prefix")
-# Đầu ra thứ hai: tín hiệu ĐÃ LỌC trend (giống DB1 của we_core), ghi ở db riêng; không publish Pub/Sub nên không có channel_prefix.
-_REQUIRED_OUTPUT_TREND_KEYS = ("db", "key_prefix")
+# The five filter sources, one output DB each: raw = no trend filter (we_core DB0), knn (DB1), breakout (DB2), zigzag (DB4), tstat (DB3).
+# Source name == trend method name (rules/trend_tf.METHODS) except "raw"; test_des_engine locks that.
+OUTPUT_SOURCES: tuple[str, ...] = ("raw", "knn", "breakout", "zigzag", "tstat")
+_REQUIRED_OUTPUT_KEYS = ("db", "key_prefix")
 # Only the four OHLC fields are ever read by des's indicators/
 # strategies/entries. The DFS HASH carries six fields (timestamp, open, high,
 # low, close, time_update) -- no `volume`; HMGET still asks for `volume` (it
@@ -85,25 +85,34 @@ def normalize_app_config(config: dict[str, Any]) -> dict[str, Any]:
 def normalize_redis_config(redis_config: dict[str, Any]) -> dict[str, Any]:
     """
     Build the full Redis runtime config from the operator config -- raises
-    KeyError naming the exact missing key if redis.input/redis.output/redis.output_trend skip
-    one of _REQUIRED_INPUT_KEYS/_REQUIRED_OUTPUT_KEYS/_REQUIRED_OUTPUT_TREND_KEYS.
+    KeyError naming the exact missing key if redis.input or redis.outputs.<source> skip one of
+    _REQUIRED_INPUT_KEYS/_REQUIRED_OUTPUT_KEYS, and ValueError for a source name outside OUTPUT_SOURCES.
     """
     normalized = {**REDIS_DEFAULTS, **redis_config}
+    stale = [key for key in ("output", "output_trend", "output_best") if key in redis_config]
+    if stale:
+        # Khoá cũ (trước 2026-10-25) bị bỏ hẳn: không âm thầm bỏ qua, để không ai tưởng chúng còn có tác dụng.
+        raise ValueError(
+            f"des_config.yaml: redis.{', redis.'.join(stale)} was replaced by redis.outputs.<source> on 2026-10-25 "
+            f"(one DB per source: {', '.join(OUTPUT_SOURCES)})."
+        )
     input_cfg = redis_config.get("input") or {}
-    output_cfg = redis_config.get("output") or {}
     for key in _REQUIRED_INPUT_KEYS:
         if key not in input_cfg:
             raise KeyError(f"des_config.yaml thiếu 'redis.input.{key}'")
-    for key in _REQUIRED_OUTPUT_KEYS:
-        if key not in output_cfg:
-            raise KeyError(f"des_config.yaml thiếu 'redis.output.{key}'")
-    output_trend_cfg = redis_config.get("output_trend") or {}
-    for key in _REQUIRED_OUTPUT_TREND_KEYS:
-        if key not in output_trend_cfg:
-            raise KeyError(f"des_config.yaml thiếu 'redis.output_trend.{key}'")
+    outputs_cfg = redis_config.get("outputs") or {}
+    unknown = sorted(set(outputs_cfg) - set(OUTPUT_SOURCES))
+    if unknown:
+        raise ValueError(
+            f"des_config.yaml: redis.outputs has unknown source(s) {', '.join(map(str, unknown))}; allowed: {', '.join(OUTPUT_SOURCES)}."
+        )
+    for source in OUTPUT_SOURCES:
+        source_cfg = outputs_cfg.get(source) or {}
+        for key in _REQUIRED_OUTPUT_KEYS:
+            if key not in source_cfg:
+                raise KeyError(f"des_config.yaml thiếu 'redis.outputs.{source}.{key}'")
     normalized["input"] = {**REDIS_INPUT_DEFAULTS, **input_cfg}
-    normalized["output"] = dict(output_cfg)
-    normalized["output_trend"] = dict(output_trend_cfg)
+    normalized["outputs"] = {source: dict(outputs_cfg[source]) for source in OUTPUT_SOURCES}
     return normalized
 
 

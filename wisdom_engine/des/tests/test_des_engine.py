@@ -12,6 +12,7 @@ thật). KHÔNG mở kết nối Redis nào.
 
 from __future__ import annotations
 
+import dataclasses
 import fnmatch
 import hashlib
 import logging
@@ -24,6 +25,7 @@ import pytest
 from wisdom_engine.des.src.configuration import (
     COMBO_TREND_TIMEFRAMES,
     STRATEGIES,
+    TrendSource,
     alternating_filter_for,
     get_strategy,
     normalize_combo_params,
@@ -31,10 +33,12 @@ from wisdom_engine.des.src.configuration import (
     normalize_macd_break_params,
     run_strategy,
     run_strategy_with_trend_reference,
-    trend_reference_for,
+    trend_filter_enabled_for,
+    trend_source_for,
 )
 from wisdom_engine.des.src.indicator import atr, rma, sma
 from wisdom_engine.des.src.redis_io.candle_reader import (
+    OUTPUT_SOURCES,
     candle_key,
     normalize_redis_config,
     pair_list_key,
@@ -47,11 +51,9 @@ from wisdom_engine.des.src.redis_io.live_worker import (
 )
 from wisdom_engine.des.src.redis_io.signal_publisher import (
     build_signal,
-    channel_name,
     clear_signals,
     og_list_key,
     publish_signal,
-    signal_message,
     stamp_hash_key,
     strategy_token,
     to_hash_fields,
@@ -136,7 +138,9 @@ def _pipeline_digest(df: pd.DataFrame) -> str:
 # (alternating.py): trước đó 2 BUY / 3 SELL, digest 1fb2c847...; bar tín hiệu đầu
 # tiên của mỗi chiều không đổi, ma_cross không đổi. ma_cross tính lại 2026-10-16 khi đồng bộ với we_core
 # (luật trạng thái + lọc lặp cùng chiều, thay luật cắt): trước đó 7 BUY / 6 SELL, SELL đầu ở bar 86,
-# digest d456518f...; bar BUY đầu tiên không đổi (57), combo không đổi.
+# digest d456518f...; bar BUY đầu tiên không đổi (57), combo không đổi. Combo tính lại 2026-10-21 khi entry đổi
+# thành high (BUY) / low (SELL) không đệm X: số tín hiệu và bar không đổi, chỉ cột entry_price đổi đúng ∓10 (X của US30
+# trước đó) — đã kiểm bằng cách dựng lại entry cũ (entry mới ± 10) rồi băm: ra đúng digest cũ ee5a702a... (cờ tắt: 1fb2c847...).
 GOLDEN = {
     "combo": {
         "tf": "H1",
@@ -144,7 +148,7 @@ GOLDEN = {
         "n_sell": 1,
         "first_buy_idx": 219,
         "first_sell_idx": 24,
-        "digest": "ee5a702a093952796d962bfa5b38c1c58bf059357a14986e5570b312029d2430",
+        "digest": "cade7c4cb0486d8c79807b71f5a83ecaf2a39c7be78a214bf8fe4ae4f6cf75ee",
     },
     "ma_cross": {
         "tf": "M30",
@@ -182,15 +186,17 @@ def test_pipeline_khong_sua_input_tai_cho(bars: pd.DataFrame) -> None:
 
 
 def test_mac_dinh_trend_filter_phai_tat() -> None:
-    """Mặc định vận hành: cả 3 chiến lược đều TẮT trend filter, nên luồng live
-    chạy 1 timeframe y như trước. Nếu ai commit des_config.yaml với true, test
-    này đỏ — vì đó là thay đổi hành vi production, phải cố ý.
+    """Mặc định vận hành: cả 3 chiến lược đều TẮT cờ trend filter (đường 1 khung không lọc trend). Nếu ai commit
+    des_config.yaml với true, test này đỏ — vì đó là thay đổi hành vi production, phải cố ý. Khung trend của từng nguồn
+    lọc: knn và zigzag tra bảng trend_tf_by_symbol (khung lớn H1..H4); breakout = chính khung của tín hiệu.
     """
     for key, entry_tf in (("combo", "H1"), ("ma_cross", "M30"), ("macd_break", "H1")):
-        enabled, trend_tf = trend_reference_for(key, "US30", entry_tf)
-        assert enabled is False, f"{key}: trend filter đang BẬT trong des_config.yaml"
-        assert trend_tf in COMBO_TREND_TIMEFRAMES  # H1..H4, tra từ bảng trend_tf_by_symbol
-        assert trend_reference_for(key) == (False, "")  # không truyền ô thì không có khung trend (không còn mặc định chung)
+        assert trend_filter_enabled_for(key) is False, f"{key}: trend filter đang BẬT trong des_config.yaml"
+        for source in ("knn", "zigzag"):
+            assert trend_source_for(key, "US30", entry_tf, source).trend_tf in COMBO_TREND_TIMEFRAMES
+        assert trend_source_for(key, "US30", entry_tf, "breakout").trend_tf == entry_tf
+        # ô ngoài bảng (symbol không vận hành): khối cần khung tham chiếu riêng chưa có khung trend (không còn mặc định chung)
+        assert trend_source_for(key, "EURUSD", entry_tf, "knn").trend_tf == ""
 
 
 def test_trend_tat_thi_signal_bang_raw_signal(bars: pd.DataFrame) -> None:
@@ -241,6 +247,7 @@ def test_trend_bat_thi_chi_giu_tin_hieu_cung_chieu(
         entry_bars=bars,
         trend_tf=trend_tf,
         trend_bars=trend_bars,
+        overrides={"TREND_METHODS": "knn"},  # đường 2 khung cần khối có khung tham chiếu riêng; mặc định combo/ma_cross là breakout
     )
 
     assert {"trend_bias", "trend_ai_knn", "trend_ai_avg", "trend_close_time"} <= set(on.columns)
@@ -290,7 +297,9 @@ def test_trend_methods_chi_chap_khoi_da_dang_ky() -> None:
 
 def test_trend_tf_ngoai_danh_sach_bi_chan() -> None:
     with pytest.raises(ValueError, match="TREND_TF must be one of"):
-        normalize_combo_params({"TREND_TF": "M5"}, "US30", "H1")
+        normalize_combo_params({"TREND_METHODS": "knn", "TREND_TF": "M5"}, "US30", "H1")  # knn chỉ nhận H1–H4
+    with pytest.raises(ValueError, match="always use the entry timeframe H1; TREND_TF M5 is not allowed"):
+        normalize_combo_params({"TREND_METHODS": "breakout", "TREND_TF": "M5"}, "US30", "H1")  # breakout: chỉ khung của tín hiệu
 
 
 def test_strategies_gom_combo_ma_cross_va_macd_break() -> None:
@@ -426,7 +435,8 @@ def test_config_mau_khai_bao_co_alternating_cho_ca_ba_chien_luoc() -> None:
 
 
 def test_combo_tat_co_giong_het_hanh_vi_truoc_khi_co_loc_lap_cung_chieu(bars: pd.DataFrame) -> None:
-    """Cờ tắt phải cho đúng golden của combo trước 2026-10-11 (2 BUY / 3 SELL, digest 1fb2c847...)."""
+    """Cờ tắt phải cho đúng golden của combo trước 2026-10-11 (2 BUY / 3 SELL), với entry mới (2026-10-21) không đệm X:
+    digest cũ 1fb2c847... đổi thành f34265d8...; entry mới ± 10 (X cũ của US30) dựng lại đúng digest cũ."""
     df = run_strategy("combo", symbol="US30", tf="H1", bars=bars, overrides={"ALTERNATING_FILTER_ENABLED": "false"})
     sig = df["signal"].astype(int)
 
@@ -434,7 +444,11 @@ def test_combo_tat_co_giong_het_hanh_vi_truoc_khi_co_loc_lap_cung_chieu(bars: pd
     assert int((sig == -1).sum()) == 3
     assert int(sig[sig == 1].index[0]) == GOLDEN["combo"]["first_buy_idx"]  # bar đầu mỗi chiều không đổi
     assert int(sig[sig == -1].index[0]) == GOLDEN["combo"]["first_sell_idx"]
-    assert _pipeline_digest(df).startswith("1fb2c847")
+    assert _pipeline_digest(df).startswith("f34265d8")
+    old = df.copy()                       # dựng lại entry cũ = high + 10 (BUY) / low − 10 (SELL): phải ra đúng digest trước 2026-10-21
+    old.loc[sig == 1, "entry_price"] = df.loc[sig == 1, "entry_price"] + 10.0
+    old.loc[sig == -1, "entry_price"] = df.loc[sig == -1, "entry_price"] - 10.0
+    assert _pipeline_digest(old).startswith("1fb2c847")
 
 
 def test_combo_signal_cuoi_xen_ke_va_chinh_xac_la_loc_cua_setup() -> None:
@@ -479,14 +493,16 @@ def test_combo_lock_xen_ke_dung_truoc_trend_filter() -> None:
     assert out["raw_signal"].tolist() == [0, 1, -1, 1] and out["signal"].tolist() == [0, 0, -1, 1]
 
 
-def test_combo_entry_la_breakout_ngoai_bar(bars: pd.DataFrame) -> None:
-    """Combo là lệnh STOP: entry BUY phải nằm TRÊN high, SELL DƯỚI low."""
+def test_combo_entry_la_mep_nen_tin_hieu_khong_dem(bars: pd.DataFrame) -> None:
+    """Combo là lệnh STOP đặt đúng mép nến tín hiệu (từ 2026-10-21): entry BUY = high, SELL = low, không đệm X."""
     df = run_strategy("combo", symbol="US30", tf="H1", bars=bars)
     sig = df["signal"].astype(int)
-    x = normalize_combo_params(None, "US30", "H1")["X"]
     buy, sell = df[sig == 1], df[sig == -1]
-    np.testing.assert_allclose(buy["entry_price"], buy["high"] + x, rtol=1e-12)
-    np.testing.assert_allclose(sell["entry_price"], sell["low"] - x, rtol=1e-12)
+    assert len(buy) > 0 and len(sell) > 0
+    np.testing.assert_array_equal(buy["entry_price"].to_numpy(), buy["high"].to_numpy())
+    np.testing.assert_array_equal(sell["entry_price"].to_numpy(), sell["low"].to_numpy())
+    assert (buy["entry_price"] >= buy["close"]).all() and (sell["entry_price"] <= sell["close"]).all()
+    assert df.loc[sig == 0, "entry_price"].isna().all()
 
 
 def test_ma_cross_entry_la_close(bars: pd.DataFrame) -> None:
@@ -554,68 +570,73 @@ def test_parse_pair_key_loai_key_hash() -> None:
     assert parse_pair_key("L_DFS_US30", "L_DFS") is None
 
 
-def test_db1_key_og_va_channel_theo_strategy_symbol_tf() -> None:
-    """3 chiều, STRATEGY đứng đầu (chốt 2026-10-04): key DB1
-    L_DES_{STRATEGY}_{SYMBOL}_{TF} và tên kênh Pub/Sub
-    L_CHANNEL_{STRATEGY}_{SYMBOL}_{TF} (kênh chỉ là đường truyền, không lưu key).
+def test_key_tin_hieu_theo_strategy_symbol_tf_va_khong_con_kenh_pubsub() -> None:
+    """3 chiều, STRATEGY đứng đầu (chốt 2026-10-04): key tín hiệu L_DES_{STRATEGY}_{SYMBOL}_{TF}. Không còn tên kênh
+    Pub/Sub nào (quyết định 2026-10-25: des chỉ lưu LIST/HASH, không publish).
     """
+    from wisdom_engine.des.src.redis_io import signal_publisher
+
     key = og_list_key("L_DES", "combo", "us30", "h1")
     assert key == "L_DES_COMBO_US30_H1"
     assert stamp_hash_key(key, "2026-09-22 13:00:00") == "L_DES_COMBO_US30_H1:2026-09-22 13:00:00"
-    assert channel_name("L_CHANNEL", "combo", "us30", "h1") == "L_CHANNEL_COMBO_US30_H1"
     # ma_cross -> MACROSS (bỏ '_' để token nào cũng không chứa ký tự phân cách).
     assert og_list_key("L_DES", "ma_cross", "US30", "M30") == "L_DES_MACROSS_US30_M30"
-    assert channel_name("L_CHANNEL", "ma_cross", "US30", "M30") == "L_CHANNEL_MACROSS_US30_M30"
     assert strategy_token("MA_CROSS") == "MACROSS"
     assert strategy_token("combo") == "COMBO"
     # macd_break -> MACDBREAK (cùng quy tắc bỏ '_').
     assert og_list_key("L_DES", "macd_break", "us30", "h1") == "L_DES_MACDBREAK_US30_H1"
-    assert channel_name("L_CHANNEL", "macd_break", "us30", "h1") == "L_CHANNEL_MACDBREAK_US30_H1"
     assert strategy_token("MACD_BREAK") == "MACDBREAK"
+    assert not hasattr(signal_publisher, "channel_name") and not hasattr(signal_publisher, "signal_message")
+
+
+def _full_redis_config() -> dict:
+    return {
+        "host": "127.0.0.1",
+        "password": "x",
+        "input": {"db": 0, "key_prefix": "L_DFS", "snapshot_bars": 500, "process_on_startup": True},
+        "outputs": {source: {"db": 1 + index, "key_prefix": "L_DES"} for index, source in enumerate(OUTPUT_SOURCES)},
+    }
 
 
 def test_redis_config_thieu_key_thi_raise() -> None:
-    """9 key vận hành bắt buộc (input 4, output 3, output_trend 2) — thiếu phải raise rõ ràng, không fallback.
+    """Key vận hành bắt buộc: input 4 + (db, key_prefix) cho MỖI trong 4 nguồn đầu ra — thiếu phải raise rõ ràng, không fallback.
 
-    input.event_channel KHÔNG còn trong danh sách này (gỡ 2026-09-23): OG
-    không còn trigger qua dp:events:candles, trigger qua keyspace
-    notification của chính Redis trên DB0 (xem event_listener.py) -- chỉ
-    cần db/key_prefix/snapshot_bars/process_on_startup ở input.
+    input.event_channel KHÔNG còn trong danh sách này (gỡ 2026-09-23): OG không còn trigger qua dp:events:candles, trigger
+    qua keyspace notification của chính Redis trên DB nến (xem event_listener.py) — chỉ cần
+    db/key_prefix/snapshot_bars/process_on_startup ở input.
     """
-    full = {
-        "host": "127.0.0.1",
-        "password": "x",
-        "input": {
-            "db": 0,
-            "key_prefix": "L_DFS",
-            "snapshot_bars": 500,
-            "process_on_startup": True,
-        },
-        "output": {"db": 1, "key_prefix": "L_DES", "channel_prefix": "L_CHANNEL"},
-        "output_trend": {"db": 2, "key_prefix": "L_DES"},
-    }
-    assert normalize_redis_config(full)["input"]["reconcile_interval_seconds"] == 1800
-    # des không hết hạn/cắt bớt: đầu ra KHÔNG có mặc định retention nào (quyết định 2026-10-07).
-    assert set(normalize_redis_config(full)["output"]) == {"db", "key_prefix", "channel_prefix"}
-    # Đầu ra trend chỉ để hiển thị: có db + tiền tố, KHÔNG có kênh Pub/Sub.
-    assert set(normalize_redis_config(full)["output_trend"]) == {"db", "key_prefix"}
+    full = _full_redis_config()
+    normalized = normalize_redis_config(full)
+    assert normalized["input"]["reconcile_interval_seconds"] == 1800
+    assert list(normalized["outputs"]) == list(OUTPUT_SOURCES)
+    # des không hết hạn/cắt bớt và không Pub/Sub: mỗi nguồn đầu ra CHỈ có db + tiền tố (quyết định 2026-10-07 và 2026-10-25).
+    assert all(set(output) == {"db", "key_prefix"} for output in normalized["outputs"].values())
     # input.event_channel thật sự không còn tồn tại trong config đã chuẩn hoá.
-    assert "event_channel" not in normalize_redis_config(full)["input"]
+    assert "event_channel" not in normalized["input"]
 
-    for section, key in (
-        ("input", "db"),
-        ("input", "key_prefix"),
-        ("input", "snapshot_bars"),
-        ("input", "process_on_startup"),
-        ("output", "db"),
-        ("output", "key_prefix"),
-        ("output", "channel_prefix"),
-        ("output_trend", "db"),
-        ("output_trend", "key_prefix"),
-    ):
-        broken = {**full, section: {k: v for k, v in full[section].items() if k != key}}
-        with pytest.raises(KeyError, match=f"redis.{section}.{key}"):
+    for key in ("db", "key_prefix", "snapshot_bars", "process_on_startup"):
+        broken = {**full, "input": {k: v for k, v in full["input"].items() if k != key}}
+        with pytest.raises(KeyError, match=f"redis.input.{key}"):
             normalize_redis_config(broken)
+    for source in OUTPUT_SOURCES:
+        for key in ("db", "key_prefix"):
+            output = {k: v for k, v in full["outputs"][source].items() if k != key}
+            broken = {**full, "outputs": {**full["outputs"], source: output}}
+            with pytest.raises(KeyError, match=f"redis.outputs.{source}.{key}"):
+                normalize_redis_config(broken)
+    thieu_nguon = {"outputs": {s: o for s, o in full["outputs"].items() if s != "zigzag"}}
+    with pytest.raises(KeyError, match=r"redis\.outputs\.zigzag\.db"):
+        normalize_redis_config({**full, **thieu_nguon})
+
+
+def test_redis_config_tu_choi_khoa_cu_va_nguon_la() -> None:
+    """Khoá của thiết kế cũ (output / output_trend / output_best) và nguồn ngoài OUTPUT_SOURCES bị TỪ CHỐI rõ ràng, không âm thầm bỏ qua."""
+    full = _full_redis_config()
+    for legacy in ("output", "output_trend", "output_best"):
+        with pytest.raises(ValueError, match="replaced by redis.outputs"):
+            normalize_redis_config({**full, legacy: {"db": 9, "key_prefix": "L_DES"}})
+    with pytest.raises(ValueError, match="unknown source"):
+        normalize_redis_config({**full, "outputs": {**full["outputs"], "ema": {"db": 9, "key_prefix": "L_DES"}}})
 
 
 # =============================================================================
@@ -694,12 +715,8 @@ class _RecordingRedis:
         return self.created
 
 
-def test_publish_ghi_og_roi_publish_day_du(bars: pd.DataFrame) -> None:
-    """1 EVAL: 2 key (OG hash/list), PUBLISH lên kênh L_CHANNEL_..., message là
-    JSON đầy đủ đúng bằng các field của Hash. Kênh không lưu key nào.
-    """
-    import json
-
+def test_publish_ghi_hash_va_list_khong_pubsub(bars: pd.DataFrame) -> None:
+    """1 EVAL: 2 key (hash/list của tín hiệu), HSET rồi RPUSH, KHÔNG PUBLISH, KHÔNG nhận tham số kênh."""
     row = _one_signal_row("combo", "H1", bars)
     vf = signal_valid_from("H1", row["bartime"])
     _, stamp, payload = build_signal(
@@ -709,35 +726,27 @@ def test_publish_ghi_og_roi_publish_day_du(bars: pd.DataFrame) -> None:
     client = _RecordingRedis()
 
     assert publish_signal(
-        client, key_prefix="L_DES", channel_prefix="L_CHANNEL", symbol="US30",
-        timeframe="H1", strategy="combo", stamp=stamp, hash_fields=fields,
+        client, key_prefix="L_DES", symbol="US30", timeframe="H1", strategy="combo", stamp=stamp, hash_fields=fields,
     ) is True
 
     (script, numkeys, args), = client.calls
-    assert numkeys == 2  # chỉ OG hash + OG list, không có key nào cho kênh
-    assert args[:2] == (
-        f"L_DES_COMBO_US30_H1:{stamp}",
-        "L_DES_COMBO_US30_H1",
-    )
-    assert "KEYS[3]" not in script
-    argv = args[2:]  # [stamp, kênh, message, field1, value1, ...]
-    assert argv[0] == stamp
-    assert argv[1] == "L_CHANNEL_COMBO_US30_H1"  # kênh Pub/Sub
-    assert json.loads(argv[2]) == fields  # message = đầy đủ thông tin
-    assert dict(zip(argv[3::2], argv[4::2])) == fields  # Hash = cùng nội dung
-    # Trùng lặp chỉ chặn ở OG hash; PUBLISH nằm sau các lệnh ghi.
-    assert script.index("EXISTS") < script.index("PUBLISH")
-    assert signal_message(fields) == argv[2]
+    assert numkeys == 2  # chỉ hash + list của tín hiệu, không có key nào cho kênh
+    assert args[:3] == (f"L_DES_COMBO_US30_H1:{stamp}", "L_DES_COMBO_US30_H1", stamp)
+    assert dict(zip(args[3::2], args[4::2], strict=True)) == fields  # Hash = đúng nội dung các field
+    assert "PUBLISH" not in script and "KEYS[3]" not in script
+    # Trùng lặp chỉ chặn ở hash; các lệnh ghi nằm sau kiểm tra EXISTS.
+    assert script.index("EXISTS") < script.index("HSET") < script.index("RPUSH")
     # des giữ lại mọi tín hiệu: script KHÔNG có TTL (EXPIRE) và KHÔNG cắt LIST (LTRIM).
     assert "EXPIRE" not in script and "LTRIM" not in script
+    with pytest.raises(TypeError):
+        publish_signal(  # type: ignore[call-arg]
+            client, key_prefix="L_DES", channel_prefix="L_CHANNEL", symbol="US30", timeframe="H1",
+            strategy="combo", stamp=stamp, hash_fields=fields,
+        )
 
 
 def test_publish_ma_cross_dung_token_macross_nhung_giu_field_ma_cross(bars: pd.DataFrame) -> None:
-    """Chỉ TÊN key/kênh đổi sang MACROSS; field strategy và clientOrderId trong
-    message/Hash vẫn là tên thật 'ma_cross' (chốt 2026-10-05).
-    """
-    import json
-
+    """Chỉ TÊN key đổi sang MACROSS; field strategy và clientOrderId trong Hash vẫn là tên thật 'ma_cross' (chốt 2026-10-05)."""
     row = _one_signal_row("ma_cross", "M30", bars)
     vf = signal_valid_from("M30", row["bartime"])
     _, stamp, payload = build_signal(
@@ -746,26 +755,23 @@ def test_publish_ma_cross_dung_token_macross_nhung_giu_field_ma_cross(bars: pd.D
     fields = to_hash_fields("ma_cross", payload)
     client = _RecordingRedis()
     publish_signal(
-        client, key_prefix="L_DES", channel_prefix="L_CHANNEL", symbol="US30",
-        timeframe="M30", strategy="ma_cross", stamp=stamp, hash_fields=fields,
+        client, key_prefix="L_DES", symbol="US30", timeframe="M30", strategy="ma_cross", stamp=stamp, hash_fields=fields,
     )
     (_, _, args), = client.calls
     assert args[:2] == (
         f"L_DES_MACROSS_US30_M30:{stamp}",
         "L_DES_MACROSS_US30_M30",
     )
-    assert args[2 + 1] == "L_CHANNEL_MACROSS_US30_M30"  # kênh Pub/Sub
-    message = json.loads(args[2 + 2])
-    assert message["strategy"] == "ma_cross"
-    assert message["clientOrderId"].startswith("ma_cross:M30:US30:")
+    written = dict(zip(args[3::2], args[4::2], strict=True))
+    assert written["strategy"] == "ma_cross"
+    assert written["clientOrderId"].startswith("ma_cross:M30:US30:")
 
 
 def test_publish_trung_thi_bao_false() -> None:
     client = _RecordingRedis(created=0)
     assert publish_signal(
-        client, key_prefix="L_DES", channel_prefix="L_CHANNEL", symbol="US30",
-        timeframe="H1", strategy="combo", stamp="2026-09-22 13:00:00",
-        hash_fields={"symbol": "US30"},
+        client, key_prefix="L_DES", symbol="US30", timeframe="H1", strategy="combo",
+        stamp="2026-09-22 13:00:00", hash_fields={"symbol": "US30"},
     ) is False
 
 
@@ -819,48 +825,39 @@ def test_ma_cross_tu_choi_timeframe_ngoai_danh_sach(bars: pd.DataFrame) -> None:
 
 
 # =============================================================================
-# 9b. live_worker chọn đúng đường chạy theo công tắc trend — hermetic, client giả.
+# 9b. live_worker: BỐN nguồn (raw / knn / breakout / zigzag), mỗi nguồn một db — hermetic, client giả.
 # =============================================================================
 
 
 class _FakeInput:
-    """Trả đúng bộ nến đã dựng sẵn cho từng timeframe, ghi lại TF nào bị đọc."""
+    """Trả đúng bộ nến đã dựng sẵn cho từng timeframe, ghi lại TF nào bị đọc (và xin bao nhiêu nến)."""
 
     def __init__(self, frames: dict[str, pd.DataFrame]) -> None:
         self.frames = frames
         self.doc: list[str] = []
+        self.requests: list[tuple[str, int]] = []
 
     def read(self, *, symbol: str, timeframe: str, key_prefix: str, snapshot_bars: int):
         self.doc.append(timeframe)
+        self.requests.append((timeframe, snapshot_bars))
         return self.frames.get(timeframe, pd.DataFrame())
 
 
-class _FakeOutput:
-    """Không nối Redis. eval() luôn báo 'đã tồn tại' -> không bao giờ publish."""
-
-    def __init__(self) -> None:
-        self.calls = 0
-
-    def eval(self, *args, **kwargs):
-        self.calls += 1
-        return 0
+def _outputs_config(prefix: str = "L_DES") -> dict:
+    """redis.outputs của config thử: mỗi nguồn một db riêng (11 .. 15), cùng tiền tố."""
+    return {source: {"db": 11 + index, "key_prefix": prefix} for index, source in enumerate(OUTPUT_SOURCES)}
 
 
-def _worker_config() -> dict:
+def _worker_config(enabled: tuple[str, ...] = ("combo",)) -> dict:
     return {
-        "redis": {
-            "input": {"key_prefix": "L_DFS", "snapshot_bars": 500},
-            "output": {
-                "key_prefix": "L_DES",
-                "channel_prefix": "L_CHANNEL",
-            },
-            "output_trend": {"key_prefix": "L_DES"},
-        },
-        "live": {
-            "enabled_strategies": ["combo"],
-            "discord": {"enabled": False},
-        },
+        "redis": {"input": {"key_prefix": "L_DFS", "snapshot_bars": 500}, "outputs": _outputs_config()},
+        "live": {"enabled_strategies": list(enabled), "discord": {"enabled": False}},
     }
+
+
+def _sinks(*sources: str) -> dict[str, _RecordingRedis]:
+    """Client đầu ra giả (ghi lại lời gọi EVAL) cho đúng các nguồn được nêu."""
+    return {source: _RecordingRedis() for source in sources}
 
 
 def _trend_frame(source: pd.DataFrame, hours: int) -> pd.DataFrame:
@@ -892,227 +889,430 @@ def _closes_at(window: pd.DataFrame) -> pd.Timestamp:
     return pd.Timestamp(window.iloc[-1]["bartime"], tz="UTC") + pd.Timedelta(hours=1)
 
 
-def _patch_worker_inputs(lw, monkeypatch: pytest.MonkeyPatch, frames: dict[str, pd.DataFrame]) -> _FakeInput:
-    """Worker đọc nến từ `frames` (không Redis); khung trend của mọi ô là H4."""
+def _patch_worker_reads_only(lw, monkeypatch: pytest.MonkeyPatch, frames: dict[str, pd.DataFrame]) -> _FakeInput:
+    """Worker đọc nến từ `frames` (không Redis); khung trend của mỗi nguồn là khung THẬT của config."""
     fake_in = _FakeInput(frames)
     monkeypatch.setattr(lw, "read_candles_from_redis", lambda client, **kw: fake_in.read(**kw))
     monkeypatch.setattr(lw, "normalize_app_config", lambda cfg: cfg)
-    monkeypatch.setattr(lw, "trend_reference_for", lambda key, symbol=None, timeframe=None: (False, "H4"))
     return fake_in
 
 
-def test_worker_khong_truyen_dau_ra_trend_thi_chi_doc_mot_timeframe(
-    bars: pd.DataFrame, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Không có client đầu ra trend (None): chỉ làm phần đầu ra chính — đọc đúng 1 timeframe, không đụng khung trend."""
+def _patch_trend_tf(lw, monkeypatch: pytest.MonkeyPatch, trend_tf: str) -> None:
+    """Khung trend của knn và zigzag là `trend_tf` ở mọi ô (breakout vẫn là chính khung vào lệnh): test không phụ thuộc bảng config."""
+    real = lw.trend_source_for
+
+    def fake(key, symbol, timeframe, method):
+        found = real(key, symbol, timeframe, method)
+        return found if method == "breakout" else dataclasses.replace(found, trend_tf=trend_tf)
+
+    monkeypatch.setattr(lw, "trend_source_for", fake)
+
+
+def _patch_worker_inputs(
+    lw, monkeypatch: pytest.MonkeyPatch, frames: dict[str, pd.DataFrame], trend_tf: str = "H4"
+) -> _FakeInput:
+    fake_in = _patch_worker_reads_only(lw, monkeypatch, frames)
+    _patch_trend_tf(lw, monkeypatch, trend_tf)
+    return fake_in
+
+
+def test_cac_nguon_dau_ra_khop_ten_khoi_trend() -> None:
+    from wisdom_engine.des.src.rules import trend_tf
+
+    assert OUTPUT_SOURCES == ("raw", "knn", "breakout", "zigzag", "tstat")  # DB0 / DB1 / DB2 / DB4 / DB3 của we_core
+    # mỗi nguồn lọc = một khối đã đăng ký và ngược lại: từ 2026-10-27 mọi khối trend của des đều là một nguồn đầu ra (tstat thêm vào db15)
+    assert set(OUTPUT_SOURCES) - {"raw"} == set(trend_tf.METHODS)
+
+
+def test_worker_chi_nguon_raw_thi_chi_doc_mot_timeframe(bars: pd.DataFrame, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Chỉ có client nguồn raw: không tính nguồn lọc trend nào — đọc đúng 1 timeframe, không đụng khung trend."""
     lw, fake_in, closed_at = _worker_with_last_candle_signal(bars, monkeypatch)
-    out = _RecordingRedis()
+    sinks = _sinks("raw")
     published = lw.process_candle_update(
-        fake_in, out, timeframe="H1", symbol="US30", config=_worker_config(), now=closed_at + pd.Timedelta(seconds=30)
+        fake_in, sinks, timeframe="H1", symbol="US30", config=_worker_config(), now=closed_at + pd.Timedelta(seconds=30)
     )
     assert fake_in.doc == ["H1"]
-    assert published == 1 and len(out.calls) == 1
+    assert published == 1 and len(sinks["raw"].calls) == 1
 
 
-def test_worker_nen_cuoi_khong_co_tin_hieu_thi_khong_doc_khung_trend(
-    bars: pd.DataFrame, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Đầu ra trend chỉ tính khi nến cuối có tín hiệu thô: không có thì không tốn lần đọc nến khung lớn nào."""
+def test_worker_nen_cuoi_khong_co_tin_hieu_thi_khong_doc_khung_trend(monkeypatch: pytest.MonkeyPatch) -> None:
+    """macd_break + knn / zigzag (không dời tín hiệu): tín hiệu đã lọc ⊆ tín hiệu thô nên nến cuối không có tín hiệu thô thì
+    hai nguồn này không tốn lần đọc nến khung lớn nào. (combo / ma_cross + breakout thì khác — xem
+    test_worker_breakout_tinh_o_moi_su_kien_va_ghi_tin_hieu_doi.)"""
     from wisdom_engine.des.src.redis_io import live_worker as lw
 
-    df = run_strategy("combo", symbol="US30", tf="H1", bars=bars)
+    source = range_bars(900)
+    df = run_strategy("macd_break", symbol="US30", tf="H1", bars=source)
     last = int(df.index[df["signal"].astype(int) != 0][-1])
-    window = bars.iloc[: last + 2].reset_index(drop=True)  # tín hiệu cuối cùng nằm ngay TRƯỚC nến cuối
-    fake_in = _patch_worker_inputs(lw, monkeypatch, {"H1": window, "H4": _trend_frame(bars, 4)})
-    plain, trend_out = _RecordingRedis(), _RecordingRedis()
+    window = source.iloc[: last + 2].reset_index(drop=True)  # tín hiệu cuối cùng nằm ngay TRƯỚC nến cuối
+    fake_in = _patch_worker_inputs(lw, monkeypatch, {"H1": window, "H4": _trend_frame(source, 4)})
+    sinks = _sinks("raw", "knn", "zigzag")
 
     published = lw.process_candle_update(
         fake_in,
-        plain,
+        sinks,
         timeframe="H1",
         symbol="US30",
-        config=_worker_config(),
+        config=_worker_config(("macd_break",)),
         now=_closes_at(window) + pd.Timedelta(days=1),
-        trend_output_client=trend_out,
     )
 
     assert published == 0
     assert fake_in.doc == ["H1"]
-    assert plain.calls == [] and trend_out.calls == []
+    assert all(sink.calls == [] for sink in sinks.values())
 
 
-def test_worker_tin_hieu_qua_trend_thi_ghi_ca_hai_dau_ra_va_dau_ra_trend_khong_pubsub(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Tín hiệu cùng chiều trend: ghi vào đầu ra chính (có Pub/Sub) VÀ đầu ra trend (cùng khoá, KHÔNG Pub/Sub)."""
+def test_worker_tin_hieu_qua_trend_thi_ghi_raw_va_knn_khong_pubsub(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tín hiệu cùng chiều trend: ghi vào nguồn raw VÀ nguồn knn (cùng khoá, khác DB), KHÔNG Pub/Sub ở nguồn nào."""
     from wisdom_engine.des.src.redis_io import live_worker as lw
 
     source = range_bars(900)
     window = _window_ending_at_last_signal("macd_break", source)
     trend = _trend_frame(source, 4)
     expected = run_strategy_with_trend_reference(
-        "macd_break", symbol="US30", entry_tf="H1", entry_bars=window, trend_tf="H4", trend_bars=trend
+        "macd_break", symbol="US30", entry_tf="H1", entry_bars=window, trend_tf="H4", trend_bars=trend,
+        overrides={"TREND_METHODS": "knn"},
     ).iloc[-1]
     assert int(expected["signal"]) != 0, "tiền đề của test: ca này phải qua được lọc trend"
     fake_in = _patch_worker_inputs(lw, monkeypatch, {"H1": window, "H4": trend})
-    plain, trend_out = _RecordingRedis(), _RecordingRedis()
-    config = {**_worker_config(), "live": {"enabled_strategies": ["macd_break"], "discord": {"enabled": False}}}
+    sinks = _sinks("raw", "knn")
 
     published = lw.process_candle_update(
         fake_in,
-        plain,
+        sinks,
         timeframe="H1",
         symbol="US30",
-        config=config,
+        config=_worker_config(("macd_break",)),
         now=_closes_at(window) + pd.Timedelta(seconds=30),
-        trend_output_client=trend_out,
     )
 
     assert published == 2
     assert fake_in.doc == ["H1", "H4"]
-    (_, _, plain_args), = plain.calls
-    (_, _, trend_args), = trend_out.calls
-    assert plain_args[3] == "L_CHANNEL_MACDBREAK_US30_H1" and plain_args[4]  # đầu ra chính: có Pub/Sub
-    assert trend_args[3] == "" and trend_args[4] == ""  # đầu ra trend: KHÔNG Pub/Sub
-    assert plain_args[:3] == trend_args[:3]  # cùng khoá HASH/LIST và stamp (chỉ khác DB)
-    plain_fields = dict(zip(plain_args[5::2], plain_args[6::2], strict=True))
-    trend_fields = dict(zip(trend_args[5::2], trend_args[6::2], strict=True))
-    assert trend_fields.pop("comment") == plain_fields.pop("comment") + "; aligned with trend reference"
-    assert trend_fields == plain_fields  # còn lại giống hệt: cùng hướng, entry, atr, valid_from...
+    (raw_script, _, raw_args), = sinks["raw"].calls
+    (knn_script, _, knn_args), = sinks["knn"].calls
+    assert "PUBLISH" not in raw_script and "PUBLISH" not in knn_script
+    assert raw_args[:3] == knn_args[:3]  # cùng khoá HASH/LIST và stamp (chỉ khác DB)
+    raw_fields = dict(zip(raw_args[3::2], raw_args[4::2], strict=True))
+    knn_fields = dict(zip(knn_args[3::2], knn_args[4::2], strict=True))
+    assert knn_fields.pop("comment") == raw_fields.pop("comment") + "; aligned with trend reference"
+    assert knn_fields == raw_fields  # còn lại giống hệt: cùng hướng, entry, atr, valid_from...
 
 
-def test_worker_tin_hieu_bi_trend_loc_thi_chi_ghi_dau_ra_chinh(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Tín hiệu thô ngược/không cùng chiều trend: đầu ra chính VẪN ghi (đó là DB không lọc), đầu ra trend không ghi."""
+def test_worker_tin_hieu_bi_trend_loc_thi_chi_ghi_raw(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tín hiệu thô ngược/không cùng chiều trend: nguồn raw VẪN ghi (đó là DB không lọc), nguồn knn không ghi."""
     from wisdom_engine.des.src.redis_io import live_worker as lw
 
     source = range_bars(900)
     window = _window_ending_at_last_signal("combo", source)
     trend = _trend_frame(source, 4)
     expected = run_strategy_with_trend_reference(
-        "combo", symbol="US30", entry_tf="H1", entry_bars=window, trend_tf="H4", trend_bars=trend
+        "combo", symbol="US30", entry_tf="H1", entry_bars=window, trend_tf="H4", trend_bars=trend,
+        overrides={"TREND_METHODS": "knn"},
     ).iloc[-1]
     assert int(expected["raw_signal"]) != 0 and int(expected["signal"]) == 0, "tiền đề: ca này phải bị lọc trend"
     fake_in = _patch_worker_inputs(lw, monkeypatch, {"H1": window, "H4": trend})
-    plain, trend_out = _RecordingRedis(), _RecordingRedis()
+    sinks = _sinks("raw", "knn")
 
     published = lw.process_candle_update(
-        fake_in,
-        plain,
-        timeframe="H1",
-        symbol="US30",
-        config=_worker_config(),
+        fake_in, sinks, timeframe="H1", symbol="US30", config=_worker_config(),
         now=_closes_at(window) + pd.Timedelta(seconds=30),
-        trend_output_client=trend_out,
     )
 
     assert published == 1
     assert fake_in.doc == ["H1", "H4"]
-    assert len(plain.calls) == 1 and trend_out.calls == []
+    assert len(sinks["raw"].calls) == 1 and sinks["knn"].calls == []
 
 
-def test_worker_thieu_nen_trend_thi_khong_ghi_dau_ra_trend(monkeypatch: pytest.MonkeyPatch) -> None:
-    """DB đầu vào không có nến khung lớn cho symbol này -> đầu ra trend BỎ QUA, tuyệt đối không ghi tín hiệu chưa lọc
-    (im lặng bỏ qua bộ lọc là kịch bản tệ nhất: người xem tin rằng đầu ra trend đã được lọc). Đầu ra chính vẫn ghi."""
+def test_worker_thieu_nen_trend_thi_khong_ghi_nguon_trend(monkeypatch: pytest.MonkeyPatch) -> None:
+    """DB đầu vào không có nến khung lớn cho symbol này -> nguồn knn và zigzag BỎ QUA, tuyệt đối không ghi tín hiệu chưa lọc
+    (im lặng bỏ qua bộ lọc là kịch bản tệ nhất: người xem tin rằng nguồn đó đã được lọc). Nguồn raw vẫn ghi."""
     from wisdom_engine.des.src.redis_io import live_worker as lw
 
-    source = range_bars(900)
-    window = _window_ending_at_last_signal("combo", source)
+    window = _window_ending_at_last_signal("combo", range_bars(900))
     fake_in = _patch_worker_inputs(lw, monkeypatch, {"H1": window})  # không có H4
-    plain, trend_out = _RecordingRedis(), _RecordingRedis()
+    sinks = _sinks("raw", "knn", "zigzag")
 
     published = lw.process_candle_update(
-        fake_in,
-        plain,
-        timeframe="H1",
-        symbol="US30",
-        config=_worker_config(),
+        fake_in, sinks, timeframe="H1", symbol="US30", config=_worker_config(),
         now=_closes_at(window) + pd.Timedelta(seconds=30),
-        trend_output_client=trend_out,
     )
 
-    assert fake_in.doc == ["H1", "H4"]
-    assert published == 1 and len(plain.calls) == 1
-    assert trend_out.calls == []  # không hề gọi tới Redis đầu ra trend
+    assert fake_in.doc == ["H1", "H4", "H4"]  # knn rồi zigzag đều thử đọc nến H4
+    assert published == 1 and len(sinks["raw"].calls) == 1
+    assert sinks["knn"].calls == [] and sinks["zigzag"].calls == []  # không hề gọi tới Redis của hai nguồn đó
 
 
-def test_worker_o_chua_co_khung_trend_thi_bo_qua_dau_ra_trend(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Symbol ngoài bảng trend_tf_by_symbol (khung trend rỗng): bỏ qua đầu ra trend, không đọc nến, không ném lỗi."""
+def test_worker_o_chua_co_khung_trend_thi_bo_qua_nguon_knn_va_zigzag(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Symbol ngoài bảng trend_tf_by_symbol (khung trend rỗng): bỏ qua nguồn cần khung tham chiếu, không đọc nến, không ném lỗi."""
+    from wisdom_engine.des.src.redis_io import live_worker as lw
+
+    source = range_bars(900)
+    window = _window_ending_at_last_signal("combo", source)
+    fake_in = _patch_worker_reads_only(lw, monkeypatch, {"H1": window, "H4": _trend_frame(source, 4)})
+    real = lw.trend_source_for
+    monkeypatch.setattr(
+        lw, "trend_source_for",
+        lambda key, symbol, timeframe, method: dataclasses.replace(real(key, symbol, timeframe, method), trend_tf=""),
+    )
+    sinks = _sinks("raw", "knn", "zigzag")
+
+    published = lw.process_candle_update(
+        fake_in, sinks, timeframe="H1", symbol="US30", config=_worker_config(),
+        now=_closes_at(window) + pd.Timedelta(seconds=30),
+    )
+
+    assert published == 1 and len(sinks["raw"].calls) == 1
+    assert fake_in.doc == ["H1"] and sinks["knn"].calls == [] and sinks["zigzag"].calls == []
+
+
+def test_worker_loi_o_mot_nguon_khong_lam_mat_nguon_khac(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Một nguồn lỗi (vd khối trend gặp dữ liệu lạ) không được chặn nguồn raw, các nguồn còn lại, hay chiến lược kế tiếp trên cùng nến."""
     from wisdom_engine.des.src.redis_io import live_worker as lw
 
     source = range_bars(900)
     window = _window_ending_at_last_signal("combo", source)
     fake_in = _patch_worker_inputs(lw, monkeypatch, {"H1": window, "H4": _trend_frame(source, 4)})
-    monkeypatch.setattr(lw, "trend_reference_for", lambda key, symbol=None, timeframe=None: (False, ""))
-    plain, trend_out = _RecordingRedis(), _RecordingRedis()
-
-    published = lw.process_candle_update(
-        fake_in,
-        plain,
-        timeframe="H1",
-        symbol="US30",
-        config=_worker_config(),
-        now=_closes_at(window) + pd.Timedelta(seconds=30),
-        trend_output_client=trend_out,
-    )
-
-    assert published == 1 and len(plain.calls) == 1
-    assert fake_in.doc == ["H1"] and trend_out.calls == []
-
-
-def test_worker_loi_o_dau_ra_trend_khong_lam_mat_dau_ra_chinh(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Một chiến lược lỗi ở đường trend không được chặn đầu ra chính của các chiến lược còn lại trên cùng nến."""
-    from wisdom_engine.des.src.redis_io import live_worker as lw
-
-    source = range_bars(900)
-    window = _window_ending_at_last_signal("combo", source)
-    fake_in = _patch_worker_inputs(lw, monkeypatch, {"H1": window, "H4": _trend_frame(source, 4)})
-    plain, trend_out = _RecordingRedis(), _RecordingRedis()
-    config = {**_worker_config(), "live": {"enabled_strategies": ["combo", "macd_break"], "discord": {"enabled": False}}}
     combo_frame = run_strategy("combo", symbol="US30", tf="H1", bars=window)
+    sinks = _sinks("raw", "knn", "zigzag")
 
-    def broken_trend(key, **kwargs):
-        raise ValueError("loi gia lap o duong trend")
+    def flaky_trend(key, **kwargs):
+        if kwargs["overrides"]["TREND_METHODS"] == "knn":
+            raise ValueError("loi gia lap o khoi knn")
+        return combo_frame  # nguồn zigzag "thấy" tín hiệu ở nến cuối
+
+    with caplog.at_level(logging.ERROR, logger="live_worker"):
+        published = lw.process_candle_update(
+            fake_in,
+            sinks,
+            timeframe="H1",
+            symbol="US30",
+            config=_worker_config(("combo", "macd_break")),
+            now=_closes_at(window) + pd.Timedelta(seconds=30),
+            strategy_runner=lambda key, **kwargs: combo_frame,  # cả hai chiến lược cùng "thấy" tín hiệu ở nến cuối
+            trend_runner=flaky_trend,
+        )
+
+    # knn lỗi ở cả hai chiến lược nhưng raw và zigzag vẫn ghi đủ cho cả hai.
+    assert published == 4
+    assert len(sinks["raw"].calls) == 2 and len(sinks["zigzag"].calls) == 2 and sinks["knn"].calls == []
+    failed = [r.getMessage() for r in caplog.records if "event=trend_output_failed" in r.getMessage()]
+    assert [message.split(" strategy=")[0] for message in failed] == ["event=trend_output_failed source=knn"] * 2
+
+
+def test_trend_source_for_theo_khoi_va_bang_policy(monkeypatch: pytest.MonkeyPatch) -> None:
+    from wisdom_engine.des.src.rules import trend_tf
+
+    # breakout: chính khung vào lệnh, dời tín hiệu, không cần nến thêm
+    assert trend_source_for("combo", "US30", "H1", "breakout") == TrendSource("H1", True, 0)
+    assert trend_source_for("ma_cross", "US30", "M30", "breakout") == TrendSource("M30", True, 0)
+    # knn: khung lớn tra bảng trend_tf_by_symbol, không dời tín hiệu
+    knn = trend_source_for("macd_break", "US30", "H1", "knn")
+    assert knn.shifts_signals is False and knn.warmup_bars == 0 and knn.trend_tf in COMBO_TREND_TIMEFRAMES
+    # zigzag: cùng bảng khung với knn, không dời tín hiệu, cần ~3000 nến khung trend để chính xác tuyệt đối
+    zigzag = trend_source_for("combo", "US30", "H4", "zigzag")
+    assert zigzag == TrendSource(zigzag.trend_tf, False, 3000) and zigzag.trend_tf in COMBO_TREND_TIMEFRAMES
+    assert zigzag.trend_tf == trend_source_for("combo", "US30", "H4", "knn").trend_tf
+    # bật lại chính sách dời cho knn (một dòng ở bảng POLICY) thì nguồn knn cũng dời
+    monkeypatch.setitem(trend_tf.POLICY, "knn", trend_tf.MethodPolicy(first_aligned_per_run=True))
+    assert trend_source_for("macd_break", "US30", "H1", "knn").shifts_signals is True
+    # ngoài bảng: khối cần khung tham chiếu riêng chưa có khung trend; breakout vẫn là chính khung vào lệnh
+    assert trend_source_for("combo", "EURUSD", "H1", "knn").trend_tf == ""
+    assert trend_source_for("combo", "EURUSD", "H1", "breakout").trend_tf == "H1"
+
+
+def test_worker_breakout_tinh_o_moi_su_kien_va_ghi_tin_hieu_doi(monkeypatch: pytest.MonkeyPatch) -> None:
+    """combo + breakout: tín hiệu thô bị trend loại được giữ tới khi trend xác nhận nên tín hiệu đã lọc có thể nằm ở nến KHÔNG
+    có tín hiệu thô. Nguồn raw không có gì ở nến đó, nguồn breakout ghi tín hiệu dời, KHÔNG Pub/Sub, và chỉ đọc MỘT snapshot
+    (khung trend = khung vào lệnh nên dùng lại nến vào lệnh). knn và zigzag (không dời tín hiệu) không có gì để làm."""
+    from wisdom_engine.des.src.redis_io import live_worker as lw
+
+    source = range_bars(900)
+    window = source.iloc[:138].reset_index(drop=True)  # nến cuối là nến 137: tín hiệu dời SELL của combo H1 (raw_signal = 0 ở đó)
+    expected = run_strategy_with_trend_reference(
+        "combo", symbol="US30", entry_tf="H1", entry_bars=window, trend_tf="H1", trend_bars=window,
+        overrides={"TREND_METHODS": "breakout"},
+    ).iloc[-1]
+    assert int(expected["raw_signal"]) == 0 and int(expected["signal"]) == -1, "tiền đề: ca này phải là tín hiệu dời"
+    assert int(run_strategy("combo", symbol="US30", tf="H1", bars=window).iloc[-1]["signal"]) == 0
+    fake_in = _patch_worker_reads_only(lw, monkeypatch, {"H1": window})
+    sinks = _sinks("raw", "knn", "breakout", "zigzag")  # không tstat: tstat cũng dời tín hiệu và đọc nến khung trend, có test riêng
 
     published = lw.process_candle_update(
-        fake_in,
-        plain,
-        timeframe="H1",
-        symbol="US30",
-        config=config,
+        fake_in, sinks, timeframe="H1", symbol="US30", config=_worker_config(),
         now=_closes_at(window) + pd.Timedelta(seconds=30),
-        strategy_runner=lambda key, **kwargs: combo_frame,  # cả hai chiến lược cùng "thấy" tín hiệu ở nến cuối
-        trend_runner=broken_trend,
-        trend_output_client=trend_out,
     )
 
-    # Chiến lược thứ nhất lỗi ở đường trend nhưng chiến lược thứ hai vẫn ghi được đầu ra chính của nó.
-    assert published == 2 and len(plain.calls) == 2
-    assert trend_out.calls == []
+    assert published == 1
+    assert fake_in.doc == ["H1"]  # không đọc nến khung trend lần hai
+    assert all(sinks[name].calls == [] for name in ("raw", "knn", "zigzag"))
+    (script, _, args), = sinks["breakout"].calls
+    assert "PUBLISH" not in script
+    stamp = pd.Timestamp(window.iloc[-1]["bartime"]).strftime("%Y-%m-%d %H:%M:%S")
+    assert args[:3] == (f"L_DES_COMBO_US30_H1:{stamp}", "L_DES_COMBO_US30_H1", stamp)
+    fields = dict(zip(args[3::2], args[4::2], strict=True))
+    assert fields["tradeSide"] == "SELL"
+    assert fields["comment"] == "bearish MA cross earlier in the run, held until the trend aligned; aligned with trend reference"
 
 
-def test_publish_signal_khong_kenh_thi_chi_ghi_hash_va_list() -> None:
-    """channel_prefix=None (đầu ra trend): EVAL nhận kênh/message rỗng nên script không PUBLISH; HASH/LIST vẫn ghi."""
-    from wisdom_engine.des.src.redis_io.signal_publisher import publish_signal
+def test_worker_breakout_van_tinh_khi_khong_co_gi_de_ghi(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Chiến lược có khối dời tín hiệu: nguồn breakout được tính ở MỌI sự kiện (kể cả khi nến cuối không có gì), nhưng không ghi
+    gì nếu tín hiệu đã lọc là 0; knn và zigzag (không dời) không được tính."""
+    from wisdom_engine.des.src.redis_io import live_worker as lw
 
-    fields = {"symbol": "US30", "strategy": "combo"}
-    out = _RecordingRedis()
-    assert publish_signal(
-        out, key_prefix="L_DES", channel_prefix=None, symbol="US30", timeframe="H1", strategy="combo",
-        stamp="2026-01-17 15:00:00", hash_fields=fields,
+    source = range_bars(900)
+    window = source.iloc[:120].reset_index(drop=True)  # nến 119: không có tín hiệu thô lẫn tín hiệu dời
+    full = run_strategy_with_trend_reference(
+        "combo", symbol="US30", entry_tf="H1", entry_bars=window, trend_tf="H1", trend_bars=window,
+        overrides={"TREND_METHODS": "breakout"},
+    ).iloc[-1]
+    assert int(full["raw_signal"]) == 0 and int(full["signal"]) == 0
+    fake_in = _patch_worker_reads_only(lw, monkeypatch, {"H1": window})
+    sinks = _sinks("raw", "knn", "breakout", "zigzag")  # không tstat: tstat cũng dời tín hiệu và đọc nến khung trend, có test riêng
+    calls: list[tuple[str, str]] = []
+
+    def spy(key: str, **kwargs):
+        calls.append((key, kwargs["overrides"]["TREND_METHODS"]))
+        return run_strategy_with_trend_reference(key, **kwargs)
+
+    published = lw.process_candle_update(
+        fake_in, sinks, timeframe="H1", symbol="US30", config=_worker_config(),
+        now=_closes_at(window) + pd.Timedelta(days=1), trend_runner=spy,
     )
-    (script, numkeys, args), = out.calls
-    assert numkeys == 2
-    assert args[:5] == ("L_DES_COMBO_US30_H1:2026-01-17 15:00:00", "L_DES_COMBO_US30_H1", "2026-01-17 15:00:00", "", "")
-    assert args[5:] == ("symbol", "US30", "strategy", "combo")
-    assert "ARGV[2] ~= ''" in script  # chỉ PUBLISH khi có kênh
 
-    with_channel = _RecordingRedis()
-    publish_signal(
-        with_channel, key_prefix="L_DES", channel_prefix="L_CHANNEL", symbol="US30", timeframe="H1",
-        strategy="combo", stamp="2026-01-17 15:00:00", hash_fields=fields,
+    assert calls == [("combo", "breakout")]  # đã tính đường trend dù nến cuối không có tín hiệu thô
+    assert published == 0 and all(sink.calls == [] for sink in sinks.values())
+    assert fake_in.doc == ["H1"]
+
+
+def test_worker_khong_co_nguon_trend_thi_khong_tinh_duong_trend(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Chỉ có client nguồn raw: không tính đường trend nào, kể cả với strategy có khối dời tín hiệu."""
+    from wisdom_engine.des.src.redis_io import live_worker as lw
+
+    window = range_bars(900).iloc[:120].reset_index(drop=True)
+    fake_in = _patch_worker_reads_only(lw, monkeypatch, {"H1": window})
+
+    def never(key: str, **kwargs):
+        raise AssertionError("đường trend không được chạy khi không có client nguồn lọc trend")
+
+    published = lw.process_candle_update(
+        fake_in, _sinks("raw"), timeframe="H1", symbol="US30", config=_worker_config(),
+        now=_closes_at(window) + pd.Timedelta(days=1), trend_runner=never,
     )
-    (_, _, args_with_channel), = with_channel.calls
-    assert args_with_channel[3] == "L_CHANNEL_COMBO_US30_H1" and args_with_channel[4]
+    assert published == 0 and fake_in.doc == ["H1"]
+
+
+def test_worker_khung_trend_bang_khung_vao_lenh_thi_dung_lai_snapshot(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ô của bảng khung trend khai bằng chính khung vào lệnh (knn H1 -> H1) và breakout (luôn là chính khung vào lệnh):
+    cũng chỉ đọc một snapshot."""
+    from wisdom_engine.des.src.redis_io import live_worker as lw
+
+    window = _window_ending_at_last_signal("combo", range_bars(900))
+    fake_in = _patch_worker_inputs(lw, monkeypatch, {"H1": window}, trend_tf="H1")
+    sinks = _sinks("raw", "knn", "breakout")
+
+    lw.process_candle_update(
+        fake_in, sinks, timeframe="H1", symbol="US30", config=_worker_config(),
+        now=_closes_at(window) + pd.Timedelta(seconds=30),
+    )
+
+    assert fake_in.doc == ["H1"] and len(sinks["raw"].calls) == 1
+
+
+@pytest.mark.parametrize("trend_tf", ["H4", "H1"])
+def test_worker_zigzag_xin_nhieu_nen_khung_trend_hon_snapshot(monkeypatch: pytest.MonkeyPatch, trend_tf: str) -> None:
+    """zigzag cần ~3000 nến khung trend để chính xác tuyệt đối: worker xin max(snapshot_bars, 3000) nến (DFS chỉ giữ tối đa 1200
+    nên nhận được chừng đó), kể cả khi khung trend trùng khung vào lệnh (không dùng lại snapshot 500 nến)."""
+    from wisdom_engine.des.src.redis_io import live_worker as lw
+
+    source = range_bars(900)
+    window = _window_ending_at_last_signal("macd_break", source)
+    fake_in = _patch_worker_inputs(lw, monkeypatch, {"H1": window, "H4": _trend_frame(source, 4)}, trend_tf=trend_tf)
+
+    lw.process_candle_update(
+        fake_in, _sinks("zigzag"), timeframe="H1", symbol="US30", config=_worker_config(("macd_break",)),
+        now=_closes_at(window) + pd.Timedelta(seconds=30),
+    )
+
+    assert fake_in.requests == [("H1", 500), (trend_tf, 3000)]
+
+
+def test_worker_moi_nguon_ghi_vao_db_cua_chinh_no_va_chay_dung_khoi(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Định tuyến: một tín hiệu ở nến cuối được ghi vào CẢ NĂM nguồn, mỗi nguồn vào client + tiền tố của riêng nó; các nguồn lọc
+    trend gọi trend_runner với đúng khối của mình (overrides TREND_METHODS) theo thứ tự knn, breakout, zigzag, tstat."""
+    from wisdom_engine.des.src.redis_io import live_worker as lw
+
+    source = range_bars(900)
+    window = _window_ending_at_last_signal("combo", source)
+    frame = run_strategy("combo", symbol="US30", tf="H1", bars=window)
+    fake_in = _patch_worker_inputs(lw, monkeypatch, {"H1": window, "H4": _trend_frame(source, 4)})
+    config = _worker_config()
+    for name in OUTPUT_SOURCES:
+        config["redis"]["outputs"][name]["key_prefix"] = f"L_DES_{name.upper()}"
+    sinks = _sinks(*OUTPUT_SOURCES)
+    seen: list[dict] = []
+
+    def runner(key: str, **kwargs):
+        seen.append(kwargs["overrides"])
+        return frame  # mọi nguồn lọc "thấy" cùng một tín hiệu ở nến cuối
+
+    published = lw.process_candle_update(
+        fake_in, sinks, timeframe="H1", symbol="US30", config=config,
+        now=_closes_at(window) + pd.Timedelta(seconds=30), trend_runner=runner,
+    )
+
+    assert published == 5
+    assert seen == [{"TREND_METHODS": "knn"}, {"TREND_METHODS": "breakout"}, {"TREND_METHODS": "zigzag"}, {"TREND_METHODS": "tstat"}]
+    for name in OUTPUT_SOURCES:
+        (_, _, args), = sinks[name].calls
+        assert args[1] == f"L_DES_{name.upper()}_COMBO_US30_H1"
+    assert len({sinks[name].calls[0][2][2:] for name in OUTPUT_SOURCES}) == 1  # stamp + field giống nhau ở cả năm nguồn
+
+
+def test_worker_tstat_tinh_o_moi_su_kien_nhu_breakout_con_knn_va_zigzag_thi_khong(monkeypatch: pytest.MonkeyPatch) -> None:
+    """tstat có chính sách dời tín hiệu (bật 2026-10-26) nên được tính ở MỌI sự kiện của kênh, kể cả khi nến cuối không có tín hiệu
+    thô; knn và zigzag (không dời) thì không. Khung trend của tstat là ô trong bảng trend_tf_by_symbol, như knn."""
+    from wisdom_engine.des.src.redis_io import live_worker as lw
+
+    source = range_bars(900)
+    window = source.iloc[:120].reset_index(drop=True)  # nến 119: không có tín hiệu thô
+    assert int(run_strategy("combo", symbol="US30", tf="H1", bars=window).iloc[-1]["raw_signal"]) == 0
+    fake_in = _patch_worker_inputs(lw, monkeypatch, {"H1": window, "H4": _trend_frame(source, 4)})
+    sinks = _sinks("raw", "knn", "zigzag", "tstat")
+    calls: list[tuple[str, str, str]] = []
+
+    def spy(key: str, **kwargs):
+        calls.append((key, kwargs["overrides"]["TREND_METHODS"], kwargs["trend_tf"]))
+        return run_strategy_with_trend_reference(key, **kwargs)
+
+    lw.process_candle_update(
+        fake_in, sinks, timeframe="H1", symbol="US30", config=_worker_config(),
+        now=_closes_at(window) + pd.Timedelta(days=1), trend_runner=spy,
+    )
+
+    assert [(key, method) for key, method, _ in calls] == [("combo", "tstat")]
+    assert calls[0][2] == trend_source_for("combo", "US30", "H1", "tstat").trend_tf == trend_source_for("combo", "US30", "H1", "knn").trend_tf
+
+
+def test_worker_chi_nguon_raw_gui_discord(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Discord (nếu bật) chỉ gửi cho nguồn raw: các nguồn lọc trend là bản sao của cùng tín hiệu, gửi thêm sẽ là tin trùng."""
+    from wisdom_engine.des.src.redis_io import live_worker as lw
+
+    source = range_bars(900)
+    window = _window_ending_at_last_signal("macd_break", source)
+    fake_in = _patch_worker_inputs(lw, monkeypatch, {"H1": window, "H4": _trend_frame(source, 4)})
+    config = _worker_config(("macd_break",))
+    config["live"]["discord"] = {"enabled": True, "webhook_url": "x"}
+    sent: list[str] = []
+    monkeypatch.setattr(lw, "send_discord_signal", lambda payload, cfg: (sent.append(payload["side"]) or (True, "ok")))
+
+    published = lw.process_candle_update(
+        fake_in, _sinks("raw", "knn"), timeframe="H1", symbol="US30", config=config,
+        now=_closes_at(window) + pd.Timedelta(seconds=30),
+    )
+
+    assert published == 2 and len(sent) == 1
 
 
 def test_get_strategy_khong_phan_biet_hoa_thuong() -> None:
@@ -1146,9 +1346,30 @@ def test_session_hours_ngoai_pham_vi_bi_chan() -> None:
         normalize_combo_params({"SESSION_HOURS_UTC": "9,99"}, "US30", "H1")
 
 
-def test_symbol_khong_co_trong_bang_x_thi_x_bang_0() -> None:
-    assert normalize_combo_params(None, "ZZZ999", "H1")["X"] == 0.0
-    assert normalize_combo_params(None, "US30", "H1")["X"] == 10.0
+def test_combo_khong_con_tham_so_x_va_symbol_van_hanh_la_danh_sach_trong_config() -> None:
+    from wisdom_engine.des.src import configuration as cfg
+
+    assert "X" not in cfg.COMBO_DEFAULT_PARAMS and "X" not in {field["key"] for field in cfg.COMBO_PARAM_FIELDS}
+    for symbol in ("US30", "ZZZ999"):
+        assert "X" not in normalize_combo_params({"X": "10"}, symbol, "H1")          # override cũ bị bỏ qua
+    assert not hasattr(cfg, "COMBO_SYMBOL_X") and not hasattr(cfg, "_to_float")
+    assert cfg.OPERATING_SYMBOLS == ("US30", "US500", "US100", "DE40", "UK100", "FR40", "SP35", "HK50", "J225", "GOLD", "BTCUSD")
+
+
+def test_doc_danh_sach_symbol_kiem_tra_rong_trung_va_sai_kieu() -> None:
+    from wisdom_engine.des.src.configuration import _operating_symbols as read
+
+    assert read({"symbols": [" us30 ", "Eurusd"]}, "strategies.combo") == ("US30", "EURUSD")
+    with pytest.raises(KeyError, match="symbols"):
+        read({}, "strategies.combo")
+    with pytest.raises(TypeError, match="non-empty list"):
+        read({"symbols": []}, "strategies.combo")
+    with pytest.raises(TypeError, match="non-empty list"):
+        read({"symbols": {"US30": 10.0}}, "strategies.combo")        # dạng cũ symbol_x (dict) không được nhận
+    with pytest.raises(ValueError, match="empty symbol"):
+        read({"symbols": ["US30", " "]}, "strategies.combo")
+    with pytest.raises(ValueError, match="twice: US30"):
+        read({"symbols": ["US30", "us30", "BTCUSD"]}, "strategies.combo")
 
 
 # =============================================================================
@@ -1309,7 +1530,6 @@ def _worker_with_last_candle_signal(bars: pd.DataFrame, monkeypatch: pytest.Monk
     fake_in = _FakeInput({"H1": window})
     monkeypatch.setattr(lw, "read_candles_from_redis", lambda client, **kw: fake_in.read(**kw))
     monkeypatch.setattr(lw, "normalize_app_config", lambda cfg: cfg)
-    monkeypatch.setattr(lw, "trend_reference_for", lambda key, symbol=None, timeframe=None: (False, "H4"))
     closed_at = pd.Timestamp(window.iloc[-1]["bartime"], tz="UTC") + pd.Timedelta(hours=1)
     return lw, fake_in, closed_at
 
@@ -1326,11 +1546,11 @@ def test_tin_hieu_van_duoc_ghi_du_nen_da_cu_bao_lau(
     lw, fake_in, closed_at = _worker_with_last_candle_signal(bars, monkeypatch)
     out = _RecordingRedis()
     published = lw.process_candle_update(
-        fake_in, out, timeframe="H1", symbol="US30", config=_worker_config(), now=closed_at + age
+        fake_in, {"raw": out}, timeframe="H1", symbol="US30", config=_worker_config(), now=closed_at + age
     )
     assert published == 1
     (script, _, args), = out.calls
-    fields = dict(zip(args[2 + 3 :: 2], args[2 + 4 :: 2]))
+    fields = dict(zip(args[3::2], args[4::2], strict=True))
     assert "expirationTimestamp" not in fields and "valid_until" not in fields
     assert fields["valid_from"] == closed_at.isoformat().replace("+00:00", "Z")
     assert "EXPIRE" not in script and "LTRIM" not in script
@@ -1343,7 +1563,7 @@ def test_nen_chua_dong_van_bi_chan_du_khong_con_het_han(
     out = _RecordingRedis()
     published = lw.process_candle_update(
         fake_in,
-        out,
+        {"raw": out},
         timeframe="H1",
         symbol="US30",
         config=_worker_config(),
@@ -1356,36 +1576,19 @@ def test_nen_chua_dong_van_bi_chan_du_khong_con_het_han(
 def test_validate_config_khong_doi_signal_validity_hay_retention() -> None:
     from wisdom_engine.des.src.redis_io import live_worker as lw
 
-    config = {
-        "redis": {
-            "input": {
-                "db": 13,
-                "key_prefix": "L_DFS",
-                "snapshot_bars": 500,
-                "process_on_startup": False,
-            },
-            "output": {"db": 14, "key_prefix": "L_DES", "channel_prefix": "L_CHANNEL_SIM"},
-            "output_trend": {"db": 15, "key_prefix": "L_DES"},
-        },
-        "live": {
-            "enabled_strategies": ["combo", "ma_cross", "macd_break"],
-            "discord": {
-                "enabled": False,
-                "webhook_url": "",
-                "timeout_seconds": 10,
-                "retry_count": 2,
-                "retry_delay_seconds": 2,
-            },
-        },
-    }
+    config = _config_live_hop_le()
     lw._validate_config(config)  # không raise: không còn live.signal_validity / redis.output.retention_*
-    # Đầu vào, đầu ra chính và đầu ra trend phải là BA db khác nhau (đụng cặp nào cũng sai).
-    for section, db in (("output", 13), ("output_trend", 13), ("output_trend", 14)):
-        broken = {**config["redis"], section: {**config["redis"][section], "db": db}}
-        with pytest.raises(ValueError, match="three different databases"):
-            lw._validate_config({**config, "redis": broken})
-    no_prefix = {**config["redis"], "output_trend": {"db": 15, "key_prefix": " "}}
-    with pytest.raises(ValueError, match="output_trend.key_prefix"):
+    outputs = config["redis"]["outputs"]
+    input_db = config["redis"]["input"]["db"]
+    # Đầu vào và năm nguồn đầu ra phải là SÁU db khác nhau (đụng cặp nào cũng sai).
+    for source in OUTPUT_SOURCES:
+        others = [outputs[other]["db"] for other in OUTPUT_SOURCES if other != source]
+        for taken in (input_db, *others):
+            broken = {**config["redis"], "outputs": {**outputs, source: {**outputs[source], "db": taken}}}
+            with pytest.raises(ValueError, match="6 different databases"):
+                lw._validate_config({**config, "redis": broken})
+    no_prefix = {**config["redis"], "outputs": {**outputs, "knn": {"db": outputs["knn"]["db"], "key_prefix": " "}}}
+    with pytest.raises(ValueError, match=r"outputs\.knn\.key_prefix"):
         lw._validate_config({**config, "redis": no_prefix})
 
 
@@ -1438,16 +1641,23 @@ def test_clear_signals_xoa_het_khi_nhieu_hon_mot_lo() -> None:
     assert fake.keys == {"giu_lai"}
 
 
-def test_start_xoa_db_tin_hieu_dung_mot_lan_reconnect_khong_xoa_lai(
+def test_start_xoa_ca_nam_db_dau_ra_dung_mot_lan_reconnect_khong_xoa_lai(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     import redis as redis_lib
     from wisdom_engine.des.src.redis_io import live_worker as lw
 
+    outputs = _outputs_config()
     candles = _FakeKeyspace({"L_DFS_US30_H1", "dfs:state"})
-    signals = _FakeKeyspace({"L_DES_COMBO_US30_H1", "L_DES_COMBO_US30_H1:2022-01-01 00:00:00", "khac:key"})
-    trend_signals = _FakeKeyspace({"L_DES_COMBO_US30_H1", "L_DES_COMBO_US30_H1:2022-01-01 00:00:00", "L_DES_MACDBREAK_US30_H1"})
-    stores = {13: candles, 14: signals, 15: trend_signals}
+    seeds = {
+        "raw": {"L_DES_COMBO_US30_H1", "L_DES_COMBO_US30_H1:2022-01-01 00:00:00", "khac:raw"},
+        "knn": {"L_DES_COMBO_US30_H1", "L_DES_COMBO_US30_H1:2022-01-01 00:00:00", "L_DES_MACDBREAK_US30_H1"},
+        "breakout": {"L_DES_MACROSS_US30_M10", "L_DES_MACROSS_US30_M10:2022-01-01 00:00:00", "L_DES_COMBO_US30_H1", "khac:breakout"},
+        "zigzag": {"L_DES_COMBO_US30_H4", "khac:zigzag"},
+        "tstat": {"L_DES_COMBO_US30_H1", "L_DES_MACDBREAK_US30_H4", "khac:tstat"},
+    }
+    output_stores = {source: _FakeKeyspace(seeds[source]) for source in OUTPUT_SOURCES}
+    stores = {10: candles, **{int(outputs[source]["db"]): output_stores[source] for source in OUTPUT_SOURCES}}
     lan_goi: list[int] = []
 
     class _Dung(Exception):
@@ -1456,11 +1666,10 @@ def test_start_xoa_db_tin_hieu_dung_mot_lan_reconnect_khong_xoa_lai(
     def fake_listen(*args, **kwargs) -> None:
         lan_goi.append(1)
         if len(lan_goi) == 1:
-            # Lần subscribe đầu: CẢ HAI DB tín hiệu đã sạch; des vừa ghi 1 tín hiệu mới vào mỗi DB rồi mất kết nối.
-            assert not any(k.startswith("L_DES_") for k in signals.keys)
-            assert not any(k.startswith("L_DES_") for k in trend_signals.keys)
-            signals.keys.add("L_DES_COMBO_US30_H2")
-            trend_signals.keys.add("L_DES_COMBO_US30_H3")
+            # Lần subscribe đầu: CẢ NĂM DB tín hiệu đã sạch; des vừa ghi 1 tín hiệu mới vào mỗi DB rồi mất kết nối.
+            for source in OUTPUT_SOURCES:
+                assert not any(k.startswith("L_DES_") for k in output_stores[source].keys)
+                output_stores[source].keys.add(f"L_DES_NEW_{source.upper()}")
             raise redis_lib.ConnectionError("mat ket noi")
         raise _Dung  # lần reconnect: thoát vòng lặp vô hạn của run_forever
 
@@ -1473,11 +1682,10 @@ def test_start_xoa_db_tin_hieu_dung_mot_lan_reconnect_khong_xoa_lai(
         "redis": {
             "reconnect_delay_seconds": 0,
             "input": {
-                "db": 13, "key_prefix": "L_DFS", "process_on_startup": False,
+                "db": 10, "key_prefix": "L_DFS", "process_on_startup": False,
                 "reconcile_interval_seconds": 1800,
             },
-            "output": {"db": 14, "key_prefix": "L_DES", "channel_prefix": "L_CHANNEL_SIM"},
-            "output_trend": {"db": 15, "key_prefix": "L_DES"},
+            "outputs": outputs,
         },
         "live": {"enabled_strategies": ["combo"]},
     }
@@ -1485,13 +1693,17 @@ def test_start_xoa_db_tin_hieu_dung_mot_lan_reconnect_khong_xoa_lai(
         lw.run_forever(config)
 
     assert len(lan_goi) == 2  # đã có 1 lần reconnect trong cùng tiến trình
-    assert signals.keys == {"L_DES_COMBO_US30_H2", "khac:key"}  # tín hiệu mới giữ, reconnect không xoá lại
-    assert trend_signals.keys == {"L_DES_COMBO_US30_H3"}  # đầu ra trend cũng vậy (tín hiệu cũ của nó đã bị xoá)
+    # tín hiệu mới giữ (reconnect không xoá lại), tín hiệu cũ đã bị xoá, key ngoài tiền tố L_DES_ còn nguyên
+    assert output_stores["raw"].keys == {"L_DES_NEW_RAW", "khac:raw"}
+    assert output_stores["knn"].keys == {"L_DES_NEW_KNN"}
+    assert output_stores["breakout"].keys == {"L_DES_NEW_BREAKOUT", "khac:breakout"}
+    assert output_stores["zigzag"].keys == {"L_DES_NEW_ZIGZAG", "khac:zigzag"}
+    assert output_stores["tstat"].keys == {"L_DES_NEW_TSTAT", "khac:tstat"}
     assert candles.keys == {"L_DFS_US30_H1", "dfs:state"}  # DB nến không bị đụng
     cleared = [r.getMessage() for r in caplog.records if "event=signals_cleared" in r.getMessage()]
-    assert len(cleared) == 2  # một dòng cho mỗi DB đầu ra, mỗi tiến trình đúng một lần
-    assert "db=14" in cleared[0] and "keys=2" in cleared[0]
-    assert "db=15" in cleared[1] and "keys=3" in cleared[1]
+    assert len(cleared) == 5  # một dòng cho mỗi DB đầu ra, mỗi tiến trình đúng một lần
+    for line, (source, count) in zip(cleared, (("raw", 2), ("knn", 3), ("breakout", 3), ("zigzag", 1), ("tstat", 2)), strict=True):
+        assert f"source={source} db={outputs[source]['db']} " in line and f"keys={count}" in line
 
 
 # =============================================================================
@@ -1776,9 +1988,7 @@ def test_hash_fields_macd_break_la_lenh_market(rbars: pd.DataFrame) -> None:
 
 
 def test_publish_macd_break_dung_token_macdbreak_nhung_giu_field_macd_break(rbars: pd.DataFrame) -> None:
-    """Chỉ TÊN key/kênh bỏ '_' thành MACDBREAK; field strategy và clientOrderId vẫn là tên thật 'macd_break'."""
-    import json
-
+    """Chỉ TÊN key bỏ '_' thành MACDBREAK; field strategy và clientOrderId vẫn là tên thật 'macd_break'."""
     row = _one_signal_row("macd_break", "H1", rbars)
     vf = signal_valid_from("H1", row["bartime"])
     _, stamp, payload = build_signal(
@@ -1787,16 +1997,14 @@ def test_publish_macd_break_dung_token_macdbreak_nhung_giu_field_macd_break(rbar
     fields = to_hash_fields("macd_break", payload)
     client = _RecordingRedis()
     assert publish_signal(
-        client, key_prefix="L_DES", channel_prefix="L_CHANNEL", symbol="US30",
-        timeframe="H1", strategy="macd_break", stamp=stamp, hash_fields=fields,
+        client, key_prefix="L_DES", symbol="US30", timeframe="H1", strategy="macd_break", stamp=stamp, hash_fields=fields,
     ) is True
     (_, _, args), = client.calls
     assert args[:2] == (f"L_DES_MACDBREAK_US30_H1:{stamp}", "L_DES_MACDBREAK_US30_H1")
-    assert args[2 + 1] == "L_CHANNEL_MACDBREAK_US30_H1"  # kênh Pub/Sub
-    message = json.loads(args[2 + 2])
-    assert message == fields
-    assert message["strategy"] == "macd_break"
-    assert message["clientOrderId"].startswith("macd_break:H1:US30:")
+    written = dict(zip(args[3::2], args[4::2], strict=True))
+    assert written == fields
+    assert written["strategy"] == "macd_break"
+    assert written["clientOrderId"].startswith("macd_break:H1:US30:")
 
 
 def test_worker_ghi_tin_hieu_macd_break_tu_cua_so_500_nen(
@@ -1808,22 +2016,19 @@ def test_worker_ghi_tin_hieu_macd_break_tu_cua_so_500_nen(
     full = run_strategy("macd_break", symbol="US30", tf="H1", bars=rbars)
     last = int(full.index[full["signal"].astype(int) != 0][-1])
     window = rbars.iloc[last - 499 : last + 1].reset_index(drop=True)
-    fake_in = _FakeInput({"H1": window})
-    monkeypatch.setattr(lw, "read_candles_from_redis", lambda client, **kw: fake_in.read(**kw))
-    monkeypatch.setattr(lw, "normalize_app_config", lambda cfg: cfg)
-    monkeypatch.setattr(lw, "trend_reference_for", lambda key, symbol=None, timeframe=None: (False, "H4"))
-    config = {**_worker_config(), "live": {"enabled_strategies": ["macd_break"], "discord": {"enabled": False}}}
+    fake_in = _patch_worker_reads_only(lw, monkeypatch, {"H1": window})
+    config = _worker_config(("macd_break",))
     closed_at = pd.Timestamp(window.iloc[-1]["bartime"], tz="UTC") + pd.Timedelta(hours=1)
     out = _RecordingRedis()
 
     published = lw.process_candle_update(
-        fake_in, out, timeframe="H1", symbol="US30", config=config, now=closed_at + pd.Timedelta(seconds=30)
+        fake_in, {"raw": out}, timeframe="H1", symbol="US30", config=config, now=closed_at + pd.Timedelta(seconds=30)
     )
 
     assert published == 1
     (script, _, args), = out.calls
     assert args[0].startswith("L_DES_MACDBREAK_US30_H1:") and args[1] == "L_DES_MACDBREAK_US30_H1"
-    fields = dict(zip(args[2 + 3 :: 2], args[2 + 4 :: 2]))
+    fields = dict(zip(args[3::2], args[4::2], strict=True))
     assert fields["orderType"] == "MARKET" and "stopPrice" not in fields
     assert fields["strategy"] == "macd_break" and fields["timeframe"] == "H1"
     assert fields["valid_from"] == closed_at.isoformat().replace("+00:00", "Z")
@@ -2049,13 +2254,22 @@ def test_khung_trend_tra_theo_o_override_tuong_minh_thang_va_thieu_o_thi_chua_xa
     other = "H3"
     monkeypatch.setattr(cfg, constant, {"US30": {entry_tf: other}})
 
+    # knn và zigzag (khung tham chiếu riêng) tra cùng một bảng
+    for method in ("knn", "zigzag"):
+        method_params = {"TREND_METHODS": method}
+        assert spec.normalize_params(method_params, "US30", entry_tf)["TREND_TF"] == other
+        assert spec.normalize_params(method_params, "BTCUSD", entry_tf)["TREND_TF"] == ""  # symbol không có bảng -> chưa xác định
+        assert spec.normalize_params(method_params, "US30", "H4")["TREND_TF"] == ""  # thiếu ô khung vào -> chưa xác định
+        assert spec.normalize_params({**method_params, "TREND_TF": "H1"}, "US30", entry_tf)["TREND_TF"] == "H1"  # đè tường minh thắng
+        assert spec.normalize_params({**method_params, "TREND_TF": ""}, "US30", entry_tf)["TREND_TF"] == other  # rỗng = không đè
+        assert trend_source_for(key, "US30", entry_tf, method).trend_tf == other
+        assert trend_source_for(key, "BTCUSD", entry_tf, method).trend_tf == ""
+    # breakout: khung trend = khung vào lệnh, không tra bảng
+    assert trend_source_for(key, "US30", entry_tf, "breakout").trend_tf == entry_tf
+    assert spec.normalize_params({"TREND_METHODS": "breakout"}, "US30", entry_tf)["TREND_TF"] == entry_tf
+    # mặc định của config là knn cho cả ba chiến lược (như we_core): ô của bảng áp dụng ngay không cần chọn khối
     assert spec.normalize_params(None, "US30", entry_tf)["TREND_TF"] == other
-    assert trend_reference_for(key, "US30", entry_tf)[1] == other
-    assert spec.normalize_params(None, "BTCUSD", entry_tf)["TREND_TF"] == ""  # symbol không có bảng -> chưa xác định
-    assert spec.normalize_params(None, "US30", "H4")["TREND_TF"] == ""  # thiếu ô khung vào -> chưa xác định
-    assert trend_reference_for(key, "BTCUSD", entry_tf)[1] == ""
-    assert spec.normalize_params({"TREND_TF": "H1"}, "US30", entry_tf)["TREND_TF"] == "H1"  # đè tường minh thắng
-    assert spec.normalize_params({"TREND_TF": ""}, "US30", entry_tf)["TREND_TF"] == other  # rỗng = không đè
+    assert spec.normalize_params(None, "BTCUSD", entry_tf)["TREND_TF"] == ""
 
 
 def test_strategy_spec_mang_bang_khung_trend_cua_config() -> None:
@@ -2068,15 +2282,16 @@ def test_strategy_spec_mang_bang_khung_trend_cua_config() -> None:
 
 def test_khung_trend_cua_config_thoa_quy_tac_voi_moi_symbol_va_khung_vao() -> None:
     from wisdom_engine.des.src.configuration import (
-        COMBO_SYMBOL_X,
+        OPERATING_SYMBOLS,
         check_trend_timeframe,
     )
 
     for key in ("combo", "ma_cross", "macd_break"):
         spec = get_strategy(key)
         for timeframe in spec.recommended_timeframes or spec.supported_timeframes:
-            for symbol in COMBO_SYMBOL_X:
-                check_trend_timeframe(timeframe, trend_reference_for(key, symbol, timeframe)[1])
+            for symbol in OPERATING_SYMBOLS:
+                for source in ("knn", "breakout", "zigzag"):
+                    check_trend_timeframe(timeframe, trend_source_for(key, symbol, timeframe, source).trend_tf)
 
 
 def test_config_mau_co_bang_khung_trend_hop_le_cho_ca_ba_chien_luoc() -> None:
@@ -2086,7 +2301,7 @@ def test_config_mau_co_bang_khung_trend_hop_le_cho_ca_ba_chien_luoc() -> None:
     from wisdom_engine.des.src.configuration import _strategy_trend_tf_by_symbol
 
     example = yaml.safe_load((Path(__file__).resolve().parents[1] / "des_config.example.yaml").read_text(encoding="utf-8"))
-    symbols = tuple(example["strategies"]["combo"]["symbol_x"])
+    symbols = tuple(example["strategies"]["combo"]["symbols"])
     for key in ("combo", "ma_cross", "macd_break"):
         section = example["strategies"][key]
         entry = tuple(section.get("recommended_timeframes") or section["supported_timeframes"])
@@ -2104,9 +2319,8 @@ def test_config_mau_co_bang_khung_trend_hop_le_cho_ca_ba_chien_luoc() -> None:
 def _config_live_hop_le() -> dict:
     return {
         "redis": {
-            "input": {"db": 13, "key_prefix": "L_DFS", "snapshot_bars": 500, "process_on_startup": False},
-            "output": {"db": 14, "key_prefix": "L_DES", "channel_prefix": "L_CHANNEL_SIM"},
-            "output_trend": {"db": 15, "key_prefix": "L_DES"},
+            "input": {"db": 10, "key_prefix": "L_DFS", "snapshot_bars": 500, "process_on_startup": False},
+            "outputs": _outputs_config(),
         },
         "live": {
             "enabled_strategies": ["combo", "ma_cross", "macd_break"],
@@ -2131,7 +2345,8 @@ def test_check_trend_timeframes_liet_ke_moi_cap_sai_trong_mot_thong_bao(monkeypa
     from wisdom_engine.des.src.redis_io import live_worker as lw
 
     monkeypatch.setattr(
-        lw, "trend_reference_for", lambda key, symbol=None, timeframe=None: (False, "H1" if key == "combo" else "H4")
+        lw, "trend_source_for",
+        lambda key, symbol, timeframe, method: TrendSource("H1" if key == "combo" else "H4", False, 0),
     )
     with pytest.raises(ValueError, match="smaller than the entry timeframe") as exc:
         lw.check_trend_timeframes(["combo", "ma_cross"])
@@ -2139,7 +2354,9 @@ def test_check_trend_timeframes_liet_ke_moi_cap_sai_trong_mot_thong_bao(monkeypa
     for timeframe in ("H2", "H3", "H4"):
         assert f"combo {timeframe}:" in message
     assert "combo H1:" not in message  # H1 vào lệnh với trend H1 vẫn hợp lệ
-    assert "US30" in message and "ma_cross" not in message
+    # mọi nguồn lọc trend đều được kiểm, báo theo từng symbol/nguồn
+    assert "US30/knn" in message and "US30/breakout" in message and "US30/zigzag" in message
+    assert "ma_cross" not in message
 
 
 def test_validate_config_goi_check_trend_timeframes(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -2152,27 +2369,62 @@ def test_validate_config_goi_check_trend_timeframes(monkeypatch: pytest.MonkeyPa
 
 
 def test_validate_config_tu_choi_co_trend_filter_enabled_true(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Cờ trend_filter_enabled giữ nghĩa của we_core (mặc định của đường 1 khung) nên ở des phải false: đầu ra chính
-    luôn không lọc, đầu ra trend tự ép lọc. true sẽ làm đường 1 khung lỗi ở MỌI sự kiện -> dừng ngay lúc khởi động."""
+    """Cờ trend_filter_enabled giữ nghĩa của we_core (mặc định của đường 1 khung) nên ở des phải false: nguồn raw luôn không lọc,
+    các nguồn lọc trend tự ép lọc. true sẽ làm đường 1 khung lỗi ở MỌI sự kiện -> dừng ngay lúc khởi động."""
     from wisdom_engine.des.src.redis_io import live_worker as lw
 
     monkeypatch.setattr(lw, "check_trend_timeframes", lambda keys: None)
-    monkeypatch.setattr(lw, "trend_reference_for", lambda key, symbol=None, timeframe=None: (key == "ma_cross", ""))
+    monkeypatch.setattr(lw, "trend_filter_enabled_for", lambda key: key == "ma_cross")
     with pytest.raises(ValueError, match=r"strategies\.ma_cross\.trend_filter_enabled must be false"):
         lw._validate_config(_config_live_hop_le())
 
 
 def test_config_that_co_trend_filter_enabled_false_cho_ca_ba_chien_luoc() -> None:
-    from wisdom_engine.des.src.configuration import trend_reference_for
-
     for key in ("combo", "ma_cross", "macd_break"):
-        assert trend_reference_for(key)[0] is False
+        assert trend_filter_enabled_for(key) is False
 
 
 def test_khung_trend_sai_thi_run_forever_dung_truoc_khi_ket_noi_redis(monkeypatch: pytest.MonkeyPatch) -> None:
     from wisdom_engine.des.src.redis_io import live_worker as lw
 
     monkeypatch.setattr(lw, "create_client", lambda *a, **k: pytest.fail("không được kết nối Redis khi cấu hình sai"))
-    monkeypatch.setattr(lw, "trend_reference_for", lambda key, symbol=None, timeframe=None: (False, "H1"))
+    monkeypatch.setattr(lw, "trend_source_for", lambda key, symbol, timeframe, method: TrendSource("H1", False, 0))
     with pytest.raises(ValueError, match="smaller than the entry timeframe"):
         lw.run_forever(_config_live_hop_le())
+
+
+# =============================================================================
+# 16. Cấu hình bốn nguồn (redis.outputs, 2026-10-25): DFS ghi nến ở db10, mỗi nguồn lọc một db đầu ra — phản chiếu we_core.
+# =============================================================================
+
+
+def _doc_config(name: str) -> dict:
+    from pathlib import Path
+
+    import yaml
+
+    return yaml.safe_load((Path(__file__).resolve().parents[1] / name).read_text(encoding="utf-8"))
+
+
+@pytest.mark.parametrize("name", ["des_config.yaml", "des_config.example.yaml"])
+def test_config_khai_dau_vao_db10_va_nam_nguon_dau_ra_khac_db(name: str) -> None:
+    config = _doc_config(name)
+    redis_config = normalize_redis_config(config["redis"])
+    assert redis_config["input"]["db"] == 10 and redis_config["input"]["key_prefix"] == "L_DFS"
+    assert {source: output["db"] for source, output in redis_config["outputs"].items()} == {
+        "raw": 11, "knn": 12, "breakout": 13, "zigzag": 14, "tstat": 15,
+    }  # cùng thứ tự DB0 / DB1 / DB2 / DB4 / DB3 của we_core
+    assert all(output["key_prefix"] == "L_DES" for output in redis_config["outputs"].values())
+    assert not {"output", "output_trend", "output_best"} & set(config["redis"])  # khoá của thiết kế cũ đã bỏ
+    for key in ("combo", "ma_cross", "macd_break"):
+        section = config["strategies"][key]
+        assert "best_trend_by_symbol" not in section  # bản đồ best đã bỏ: mọi kênh có đủ bốn nguồn
+        assert section["trend_methods"] == ["knn"], (name, key)  # như we_core (DB1 = knn cho cả ba)
+        assert section["trend_filter_enabled"] is False, (name, key)  # nguồn raw luôn không lọc trend
+
+
+def test_config_that_pass_kiem_tra_khoi_dong_cua_worker() -> None:
+    from wisdom_engine.des.src.configuration import CONFIG
+    from wisdom_engine.des.src.redis_io import live_worker as lw
+
+    lw._validate_config(CONFIG)  # không raise: bốn nguồn khác db, tiền tố đủ, khung trend của mọi nguồn >= khung vào lệnh

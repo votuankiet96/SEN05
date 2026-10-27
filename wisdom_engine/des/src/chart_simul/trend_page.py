@@ -5,9 +5,11 @@ Mô tả:
     Lightweight Charts nhúng sẵn, không cần internet. Không đọc Redis, không tính gì, không import
     file nào khác trong chart_simul. server.py phục vụ endpoint /api/trend mà JS ở đây gọi.
 
-    Khác trang chính (live_page.py): khung trend KHÔNG chọn được -- server tra đúng ô khai trong
-    des_config.yaml (trend_tf_by_symbol) cho (chiến lược, symbol, khung vào lệnh) đang xem, và hiện
-    nó trên thanh trạng thái. Tín hiệu đối chiếu là tín hiệu ĐÃ lọc trend mà des ghi ở db đầu ra thứ hai.
+    Khác trang chính (live_page.py): có ô "Trend method" chọn khối lọc trend (knn / breakout / zigzag / tstat --
+    mỗi khối một db đầu ra của des) và khung trend KHÔNG chọn được -- server tra đúng ô khai trong
+    des_config.yaml (trend_tf_by_symbol; breakout dùng chính khung vào lệnh) cho (chiến lược, symbol,
+    khung vào lệnh) đang xem, và hiện nó trên thanh trạng thái. Tín hiệu đối chiếu là tín hiệu ĐÃ lọc
+    trend mà des ghi ở db đầu ra của chính khối đang chọn.
     Có thêm pane vẽ khung trend (nến + đường của khối xu hướng, xanh/đỏ/xám theo hướng) đặt TRÊN CÙNG:
     khung tham chiếu lớn nằm trên, rồi tới chart khung vào lệnh (trigger) và MACD ở dưới -- cùng thứ tự
     với dashboard bên WE. Và dấu mờ cho tín hiệu thô bị bộ lọc trend loại ("filtered"): chúng có ở db
@@ -92,6 +94,7 @@ _TEMPLATE = r"""<!doctype html>
   <label>Strategy <select id="strategy"></select></label>
   <label>Symbol <select id="symbol"></select></label>
   <label>TF <select id="tf"></select></label>
+  <label>Trend method <select id="source"></select></label>
   <label>Bars <input id="bars" type="number" step="50"></label>
   <label>Auto
     <select id="auto">
@@ -152,7 +155,7 @@ __VENDOR_JS__
   };
   const $ = (id) => document.getElementById(id);
   const el = {
-    strategy: $("strategy"), symbol: $("symbol"), tf: $("tf"), bars: $("bars"), auto: $("auto"),
+    strategy: $("strategy"), symbol: $("symbol"), tf: $("tf"), source: $("source"), bars: $("bars"), auto: $("auto"),
     refresh: $("refresh"), dot: $("live-dot"), clock: $("clock"), pair: $("pair"), updated: $("updated"),
     trendInfo: $("trend-info"), mainLink: $("main-link"), trendHeader: $("trend-header"),
     error: $("error"), legend: $("legend"), summary: $("summary"), detail: $("signal-detail"),
@@ -222,6 +225,8 @@ __VENDOR_JS__
     setOptions(el.strategy, Object.entries(CONFIG.strategies).map(([key, info]) => [key, info.label]), strategy);
     setOptions(el.symbol, CONFIG.symbols.map((s) => [s, s]), symbol);
     populateTimeframes(query.get("tf"));
+    const source = CONFIG.sources.includes(query.get("source")) ? query.get("source") : CONFIG.defaultSource;
+    setOptions(el.source, CONFIG.sources.map((name) => [name, name.toUpperCase()]), source);
     el.bars.value = String(clampBars(parseInt(query.get("bars") || "", 10)));
   }
 
@@ -229,8 +234,10 @@ __VENDOR_JS__
     const query = new URLSearchParams({
       strategy: el.strategy.value, symbol: el.symbol.value, tf: el.tf.value, bars: el.bars.value,
     });
-    window.history.replaceState(null, "", "?" + query.toString());
+    // Trang chính chỉ có nguồn raw (không lọc trend) nên liên kết về đó không mang theo nguồn lọc trend.
     el.mainLink.href = "/?" + query.toString();
+    query.set("source", el.source.value);
+    window.history.replaceState(null, "", "?" + query.toString());
   }
 
   // ------------------------------------------------------------------- chart
@@ -503,7 +510,7 @@ __VENDOR_JS__
 
   function renderPair(meta) {
     el.trendInfo.textContent = meta.trendTf
-      ? "Trend filter: " + meta.trendTf + " · " + meta.trendLabel + " (set in des_config.yaml)" : "";
+      ? "Trend filter: " + meta.trendTf + " · " + meta.trendLabel + " (timeframe from des_config.yaml)" : "";
     if (!meta.lastCandle) { el.pair.textContent = meta.message || "No candles for this pair in Redis yet."; return; }
     el.pair.textContent = meta.strategyLabel + " " + meta.symbol + " " + meta.tf + " · " + meta.paramsLabel +
       " · last bar " + meta.lastCandle + " · last signal " + meta.lastSignal;
@@ -567,9 +574,10 @@ __VENDOR_JS__
     const id = ++requestId;
     loading = true;
     try {
-      const key = [el.strategy.value, el.symbol.value, el.tf.value, el.bars.value].join("|");
+      const key = [el.strategy.value, el.symbol.value, el.tf.value, el.source.value, el.bars.value].join("|");
       const params = new URLSearchParams({
-        strategy: el.strategy.value, symbol: el.symbol.value, tf: el.tf.value, bars: el.bars.value,
+        strategy: el.strategy.value, symbol: el.symbol.value, tf: el.tf.value, source: el.source.value,
+        bars: el.bars.value,
       });
       if (!force && view && token && key === viewKey) {
         params.set("head", token.head);
@@ -606,6 +614,7 @@ __VENDOR_JS__
   el.strategy.addEventListener("change", () => { populateTimeframes(el.tf.value); reload(); });
   el.symbol.addEventListener("change", reload);
   el.tf.addEventListener("change", reload);
+  el.source.addEventListener("change", reload);
   el.bars.addEventListener("change", () => { el.bars.value = String(clampBars(parseInt(el.bars.value, 10))); reload(); });
   el.refresh.addEventListener("click", reload);
   el.auto.addEventListener("change", setAuto);
@@ -637,12 +646,15 @@ def render_trend_page(
     bars_max: int,
     miss_after_seconds: int,
     timeframe_seconds: dict[str, int],
+    sources: list[str],
+    default_source: str,
 ) -> str:
     """Dựng trang trend -- HTML tự chứa, JS bên trong tự gọi /api/trend.
 
     `strategies` (key -> label / timeframes / defaultTimeframe) và `symbols` lấy từ cấu hình des; các giá trị
     còn lại nhúng làm `CONFIG` cho JS (giới hạn ô Bars, ngưỡng chuyển "chờ" thành "LỠ", và độ dài mỗi khung theo
-    giây để gióng pane trend vào ranh giới nến) -- cùng nguồn với server.
+    giây để gióng pane trend vào ranh giới nến) -- cùng nguồn với server. `sources` = các khối lọc trend chọn được
+    (mỗi khối một db đầu ra của des), `default_source` = khối chọn sẵn.
     """
     config = {
         "strategies": strategies,
@@ -654,6 +666,8 @@ def render_trend_page(
         "barsMax": bars_max,
         "missAfterSeconds": miss_after_seconds,
         "timeframeSeconds": timeframe_seconds,
+        "sources": sources,
+        "defaultSource": default_source,
     }
     html = _TEMPLATE.replace("__VENDOR_JS__", _read_vendor_js())
     return html.replace("__CONFIG_JSON__", json.dumps(config))

@@ -28,11 +28,7 @@ Mô tả:
 from __future__ import annotations
 
 import pandas as pd
-from wisdom_engine.des.src.rules.alternating import apply_alternating_filter
-from wisdom_engine.des.src.rules.trend_tf import (
-    apply_trend_filter,
-    trend_filter_enabled,
-)
+from wisdom_engine.des.src.rules.trend_tf import apply_signal_filters
 
 # signal_reason -> field `comment` của HASH trên Redis db đầu ra, OF đọc nguyên văn. Đổi chuỗi ở đây là đổi
 # dữ liệu OF nhận được.
@@ -70,8 +66,12 @@ def detect_macd_break_signals(
     Ngoài điều đó không có trạng thái nào khác: thoát lệnh, SL/TP, vào lại là
     việc của OF.
 
-    Bộ lọc đứng TRƯỚC trend filter: raw_signal đã được lọc xen kẽ, rồi mới lọc
-    trend (signal vẫn ⊆ raw_signal). Các điều cần biết khác (một setup bị trend
+    Hai bộ lọc (lọc lặp cùng chiều rồi lọc trend) do rules/trend_tf.apply_signal_filters
+    điều phối; chiến lược chỉ truyền setup và câu lý do của mình. Thứ tự lọc, chính
+    sách theo khối trend (cơ chế dời tín hiệu) và hệ quả lên các đầu ra (raw_signal =
+    nguồn raw, signal = các nguồn lọc trend; trend tắt thì signal == raw_signal) mô tả ở docstring của
+    hàm đó. Setup của macd_break là TRẠNG THÁI (còn đúng ở nhiều nến liền nhau) nên
+    nến được phép bắn là chính nến còn setup. Các điều cần biết khác (một setup bị trend
     loại vẫn chiếm "lượt đầu"; trạng thái chỉ nhớ trong cửa sổ đang tính — ở des
     là 500 nến mỗi sự kiện) nằm ở docstring của alternating.py.
 
@@ -108,18 +108,6 @@ def detect_macd_break_signals(
     sell_cond = valid & (out["close"] <= out["prior_low_close"]) & (out["macd_h"] < 0)
     # =========================================================================
 
-    # raw_signal = tín hiệu sau lọc xen kẽ trên MỌI setup, TRƯỚC trend filter (xen kẽ trước, trend sau).
-    # Chart dùng nó để so "raw -> filtered"; khi trend tắt thì signal == raw_signal.
-    out["raw_signal"] = apply_alternating_filter(buy_cond, sell_cond, params)
-
-    # signal: trend filter lọc raw_signal (giữ tín hiệu cùng chiều trend_bias đúng bar đó) -> signal ⊆ raw_signal.
-    out = apply_trend_filter(out, params, raw_signal_col="raw_signal", output_col="signal")
-    out["signal_reason"] = ""
-    out.loc[out["signal"].eq(1), "signal_reason"] = _BUY_REASON
-    out.loc[out["signal"].eq(-1), "signal_reason"] = _SELL_REASON
-    if trend_filter_enabled(params):
-        has_signal = out["signal"].fillna(0).astype(int).ne(0)
-        out.loc[has_signal, "signal_reason"] = (
-            out.loc[has_signal, "signal_reason"] + "; aligned with trend reference"
-        )
-    return out
+    return apply_signal_filters(
+        out, params, buy_setup=buy_cond, sell_setup=sell_cond, buy_reason=_BUY_REASON, sell_reason=_SELL_REASON
+    )
