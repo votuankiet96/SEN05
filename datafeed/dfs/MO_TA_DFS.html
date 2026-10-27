@@ -170,7 +170,7 @@
     <ul>
       <li>DFS đọc nến đã đóng từ bảng <code>DWH.Fact_OHLCV</code> trong SQL Server, rồi ghi lên Redis đúng cấu trúc mà datafeed ghi khi chạy thật (một List và nhiều Hash cho mỗi chuỗi nến).</li>
       <li>Mỗi nến chỉ xuất hiện trên Redis vào đúng giờ nó đóng: giờ mở cộng độ dài khung. Thời gian trong lúc chạy là thời gian ảo, nhanh hơn thật.</li>
-      <li>DFS chỉ đọc SQL và chỉ ghi vào Redis db14. Nó không đụng db0, nơi datafeed ghi dữ liệu thật.</li>
+      <li>DFS chỉ đọc SQL và chỉ ghi vào Redis db10. Nó không đụng db0, nơi datafeed ghi dữ liệu thật.</li>
       <li>Trạng thái: bản v1 đã chạy và kiểm chứng (97 test đơn vị và 2 test trên Redis thật đạt, một lần chạy thử 88 chuỗi nến khớp SQL 100%). Chưa nối vào OG và chiến lược, chưa chạy cả năm.</li>
     </ul>
   </section>
@@ -190,7 +190,7 @@
     <div class="flow-row">
       <div class="box">SQL Server<small>lịch sử nến</small></div><div class="arrow" aria-hidden="true">→</div>
       <div class="box me">DFS<small>đồng hồ ảo</small></div><div class="arrow" aria-hidden="true">→</div>
-      <div class="box">Redis db14</div><div class="arrow" aria-hidden="true">→</div>
+      <div class="box">Redis db10</div><div class="arrow" aria-hidden="true">→</div>
       <div class="box">OG / chiến lược thử nghiệm<small>chưa nối</small></div>
     </div>
 
@@ -204,7 +204,7 @@
     <ul>
       <li>Dữ liệu trong SQL được coi là đúng tuyệt đối. DFS không sửa, không bù, không đoán nến thiếu. Chỗ nào SQL không có nến thì coi là thị trường đóng cửa.</li>
       <li>Bỏ qua các bảng tick. DFS chỉ làm việc với nến.</li>
-      <li>Redis thử nghiệm là db14, cùng máy chủ với db0. Db14 chỉ dành cho DFS, nên mỗi lần chạy mới tự xóa sạch nó.</li>
+      <li>Redis thử nghiệm là db10, cùng máy chủ với db0. Db10 chỉ dành cho DFS, nên mỗi lần chạy mới tự xóa sạch nó.</li>
     </ul>
   </section>
 
@@ -310,8 +310,8 @@ BarTime = giờ mở nến (UTC) lấy từ SQL · Minutes = độ dài khung, l
       <div>
         <h3>Output</h3>
         <ul>
-          <li><strong>Redis db14</strong>: List <code>L_CANDLE_{SYMBOL}_{TF}</code> và Hash <code>L_CANDLE_{SYMBOL}_{TF}:{giờ mở}</code>, giống live. Thêm 2 key điều khiển <code>dfs:clock</code> và <code>dfs:state</code>.</li>
-          <li><strong>Sự kiện</strong> keyspace <code>hset</code> cho mỗi nến mới, trên kênh của db14.</li>
+          <li><strong>Redis db10</strong>: List <code>L_DFS_{SYMBOL}_{TF}</code> và Hash <code>L_DFS_{SYMBOL}_{TF}:{giờ mở}</code>, cùng cấu trúc với live (tiền tố <code>L_DFS</code> thay cho <code>L_CANDLE</code>). Thêm 2 key điều khiển <code>dfs:clock</code> và <code>dfs:state</code>.</li>
+          <li><strong>Sự kiện</strong> keyspace <code>hset</code> cho mỗi nến mới, trên kênh của db10.</li>
           <li><strong>Trên đĩa</strong> (<code>dfs/runtime/</code>): <code>logs/dfs.log</code>, <code>run/state.json</code>, <code>run/manifest.json</code>.</li>
           <li><strong>Màn hình</strong>: tóm tắt số mốc, số nến, độ trễ tối đa và mã băm lịch.</li>
         </ul>
@@ -319,7 +319,7 @@ BarTime = giờ mở nến (UTC) lấy từ SQL · Minutes = độ dài khung, l
     </div>
 
     <h3>Dạng dữ liệu trên Redis</h3>
-    <p>Mỗi nến là một Hash với đúng 6 field. List của chuỗi nến chứa các giờ mở, nến mới nhất ở index 0, tối đa 1.200 phần tử. Cả Hash lẫn List đều không có TTL (khác Live, nơi Hash có TTL 7 ngày): một nến chỉ biến mất khi bị đẩy ra khỏi cửa sổ 1.200. Ví dụ Hash <code>L_CANDLE_GOLD_M5:2026-09-30 14:55:00</code>:</p>
+    <p>Mỗi nến là một Hash với đúng 6 field. List của chuỗi nến chứa các giờ mở, nến mới nhất ở index 0, tối đa 1.200 phần tử. Cả Hash lẫn List đều không có TTL (khác Live, nơi Hash có TTL 7 ngày): một nến chỉ biến mất khi bị đẩy ra khỏi cửa sổ 1.200. Ví dụ Hash <code>L_DFS_GOLD_M5:2026-09-30 14:55:00</code>:</p>
     <pre><code>timestamp    2026-09-30 14:55:00    giờ mở nến (UTC), trùng phần tử trong List
 open         4175.29                giá làm tròn tối đa 2 số lẻ, bỏ số 0 thừa
 high         4176.6
@@ -349,9 +349,9 @@ time_update  2026-09-30 15:00:00    giờ ảo của mốc phát nến này (liv
 
     <h3>Một mốc ghi gì lên Redis</h3>
     <p>Lấy mốc 3 của ví dụ GOLD ở trên (giờ ảo 13:15). Tất cả nằm trong một giao dịch <code>MULTI/EXEC</code>, nên bên đọc không bao giờ thấy M5 đã tới mà M15 cùng giờ chưa tới:</p>
-    <pre><code>Lua  L_CANDLE_GOLD_M5   HSET Hash "…_M5:2026-09-30 13:10:00"
+    <pre><code>Lua  L_DFS_GOLD_M5      HSET Hash "…_M5:2026-09-30 13:10:00"
                         LPUSH "2026-09-30 13:10:00" vào List; nếu List vượt 1.200 thì RPOP và DEL Hash cũ
-Lua  L_CANDLE_GOLD_M15  HSET Hash "…_M15:2026-09-30 13:00:00", LPUSH vào List
+Lua  L_DFS_GOLD_M15     HSET Hash "…_M15:2026-09-30 13:00:00", LPUSH vào List
 SET  dfs:clock          "2026-09-30 13:15:00"
 HSET dfs:state          tick_seq=3  sim_time=…  digest=…  status=running</code></pre>
     <p>Script Lua chỉ <code>HSET</code> khi nến mới hoặc đổi giá. Ghi lại cùng nến cùng giá thì không sinh sự kiện <code>hset</code> nào. Vì vậy mỗi lần chạy xóa sạch db đích trước khi seed, nếu không bên nghe sự kiện sẽ không nhận được gì.</p>
@@ -386,7 +386,7 @@ HSET dfs:state          tick_seq=3  sim_time=…  digest=…  status=running</co
     <h3>Sơ đồ 1: file nào gọi file nào</h3>
     <figure class="diagram">
       <div class="scroll">
-      <svg class="dep" viewBox="0 0 760 500" role="img" aria-label="Sơ đồ phụ thuộc: __main__ gọi player và redis_writer; player gọi sql_source, schedule và redis_writer; schedule đọc SQL qua hàm fetch do player truyền vào; sql_source đọc SQL Server, redis_writer ghi Redis db14; configuration và runtime là phần dùng chung.">
+      <svg class="dep" viewBox="0 0 760 500" role="img" aria-label="Sơ đồ phụ thuộc: __main__ gọi player và redis_writer; player gọi sql_source, schedule và redis_writer; schedule đọc SQL qua hàm fetch do player truyền vào; sql_source đọc SQL Server, redis_writer ghi Redis db10; configuration và runtime là phần dùng chung.">
         <defs>
           <marker id="dep-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-head" d="M0,0 L10,5 L0,10 z"/></marker>
         </defs>
@@ -418,7 +418,7 @@ HSET dfs:state          tick_seq=3  sim_time=…  digest=…  status=running</co
         <text x="125" y="361" text-anchor="middle" class="d-sub">DWH.Fact_OHLCV</text>
 
         <rect class="d-ext" x="550" y="326" width="170" height="44" rx="4"/>
-        <text x="635" y="344" text-anchor="middle">Redis db14</text>
+        <text x="635" y="344" text-anchor="middle">Redis db10</text>
         <text x="635" y="361" text-anchor="middle" class="d-sub">List + Hash, dfs:*</text>
 
         <!-- phần dùng chung -->
@@ -543,12 +543,12 @@ HSET dfs:state          tick_seq=3  sim_time=…  digest=…  status=running</co
       <table>
         <thead><tr><th>Cơ chế</th><th>Tác dụng</th></tr></thead>
         <tbody>
-          <tr><td>Kiểm db đích</td><td>Db phải nằm trong <code>allowed_dbs</code> (hiện là <code>[14]</code>). Db0 không bao giờ qua được.</td></tr>
+          <tr><td>Kiểm db đích</td><td>Db phải nằm trong <code>allowed_dbs</code> (hiện là <code>[10]</code>). Db0 không bao giờ qua được.</td></tr>
           <tr><td>Luôn bắt đầu từ db trống</td><td>Mỗi lần <code>run</code> xóa db đích trước khi seed, vì ghi lặp sẽ im lặng.</td></tr>
           <tr><td><code>FLUSHDB ASYNC</code></td><td>Dùng khi bắt đầu <code>run</code> và trong <code>clean</code>, chỉ trên db nằm trong <code>allowed_dbs</code>. Không bao giờ <code>FLUSHALL</code>.</td></tr>
           <tr><td>Khóa một-instance</td><td>Hai tiến trình DFS không chạy chồng trên cùng <code>runtime</code>.</td></tr>
           <tr><td>Bí mật</td><td><code>config.yaml</code> không đưa vào git. Log che mọi trường có tên chứa password, secret, token. Thông báo lỗi không kèm thông tin kết nối.</td></tr>
-          <tr><td>Cách ly key</td><td>Key <code>dfs:*</code> nằm ngoài mẫu <code>L_CANDLE_*</code> mà bên đọc lắng nghe.</td></tr>
+          <tr><td>Cách ly key</td><td>Key <code>dfs:*</code> nằm ngoài mẫu <code>L_DFS_*</code> mà bên đọc lắng nghe.</td></tr>
         </tbody>
       </table>
     </div>
@@ -558,9 +558,9 @@ HSET dfs:state          tick_seq=3  sim_time=…  digest=…  status=running</co
     <h2>7. Cách chạy</h2>
     <p>Chạy bằng <code>dfs.bat</code> trong thư mục <code>dfs/</code>. Cần Python 3.12 và một <code>config.yaml</code> đã điền.</p>
 <pre><code>dfs.bat plan --show 12      # 1) xem trước lịch, không ghi gì
-dfs.bat run --delay 0.2     # 2) xóa db14 rồi phát từ T0 (chạy mới)
+dfs.bat run --delay 0.2     # 2) xóa db10 rồi phát từ T0 (chạy mới)
 dfs.bat status              # 3) xem tiến độ và checkpoint
-dfs.bat clean               # 4) (tùy chọn) xóa db14 thủ công (báo số key, hỏi trước)</code></pre>
+dfs.bat clean               # 4) (tùy chọn) xóa db10 thủ công (báo số key, hỏi trước)</code></pre>
     <div class="scroll">
       <table>
         <thead><tr><th>Lệnh</th><th>Việc làm</th></tr></thead>
@@ -616,12 +616,12 @@ dfs.bat clean               # 4) (tùy chọn) xóa db14 thủ công (báo số 
       <table>
         <thead><tr><th>Việc</th><th>Trạng thái</th><th>Ghi chú</th></tr></thead>
         <tbody>
-          <tr><td>Phát nến đúng hợp đồng live lên Redis đích (db14)</td><td><span class="tag ok">Đã làm</span></td><td>Đã đối chiếu với SQL và với <code>live.py</code>.</td></tr>
+          <tr><td>Phát nến đúng hợp đồng live lên Redis đích (db10)</td><td><span class="tag ok">Đã làm</span></td><td>Đã đối chiếu với SQL và với <code>live.py</code>.</td></tr>
           <tr><td>Dừng sạch, tự chờ khi Redis ngừng, mã băm lịch, các lớp bảo vệ</td><td><span class="tag ok">Đã làm</span></td><td>Có test.</td></tr>
-          <tr><td>Nối OG và chiến lược vào db14</td><td><span class="tag todo">Chưa làm</span></td><td>Phía đọc cần trỏ sang db14 và nghe kênh keyspace của db14.</td></tr>
+          <tr><td>Nối OG và chiến lược vào db10</td><td><span class="tag todo">Chưa làm</span></td><td>Phía đọc cần trỏ sang db10 và nghe kênh keyspace của db10.</td></tr>
           <tr><td>Đồng hồ ảo cho phía đọc</td><td><span class="tag todo">Chưa làm</span></td><td><code>dfs:clock</code> có sẵn nhưng chưa ai dùng. Nếu phía đọc dùng giờ máy để kiểm tuổi tín hiệu hay lọc phiên thì sẽ sai khi chạy nhanh hơn thật.</td></tr>
           <tr><td>Chờ phía đọc xử lý xong từng mốc (lock-step)</td><td><span class="tag todo">Chưa làm</span></td><td>Hiện DFS chạy theo <code>delay</code>/<code>speed</code> mà không chờ bên đọc. Muốn kết quả lặp lại tuyệt đối thì cần lock-step.</td></tr>
-          <tr><td>Chạy cả năm trên Redis</td><td><span class="tag todo">Chưa xong</span></td><td>Lần chạy 165 chuỗi từ 01/01/2022 (07/10/2026) chạy đều 4 giờ, được 14.393 trên 493.134 mốc, rồi dừng vì Redis trên OG8 ngừng trả lời (nguyên nhân phía OG8 chưa xác định). Lần chạy thứ hai (08/10/2026) chạy được khoảng 40 phút (2.372 mốc) thì Redis bị nâng cấp gói tự động và khởi động lại với dữ liệu trống; DFS được sửa để kiểm checkpoint trước mỗi lần ghi và nạp lại cửa sổ nến nếu Redis mất dữ liệu. Db14 dùng chung máy chủ với production, nên cần theo dõi tải OG8 khi chạy lại.</td></tr>
+          <tr><td>Chạy cả năm trên Redis</td><td><span class="tag todo">Chưa xong</span></td><td>Lần chạy 165 chuỗi từ 01/01/2022 (07/10/2026) chạy đều 4 giờ, được 14.393 trên 493.134 mốc, rồi dừng vì Redis trên OG8 ngừng trả lời (nguyên nhân phía OG8 chưa xác định). Lần chạy thứ hai (08/10/2026) chạy được khoảng 40 phút (2.372 mốc) thì Redis bị nâng cấp gói tự động và khởi động lại với dữ liệu trống; DFS được sửa để kiểm checkpoint trước mỗi lần ghi và nạp lại cửa sổ nến nếu Redis mất dữ liệu. Db10 dùng chung máy chủ với production, nên cần theo dõi tải OG8 khi chạy lại.</td></tr>
           <tr><td>Tạm dừng, nhảy tới một mốc, lệnh <code>verify</code> dựng sẵn</td><td><span class="tag todo">Chưa làm</span></td><td>Phần đối chiếu với SQL hiện làm thủ công bằng đoạn mã chỉ đọc.</td></tr>
         </tbody>
       </table>
@@ -639,7 +639,7 @@ dfs.bat clean               # 4) (tùy chọn) xóa db14 thủ công (báo số 
 
     <h3>Ba câu hỏi xin ý kiến mentor</h3>
     <ol>
-      <li>Các lần chạy dài (cả năm) nên dùng Redis riêng, hay vẫn dùng db14 trên máy chủ chung với production?</li>
+      <li>Các lần chạy dài (cả năm) nên dùng Redis riêng, hay vẫn dùng db10 trên máy chủ chung với production?</li>
       <li>Để phía đọc dùng thời gian ảo, nên để phía đọc tự đọc <code>dfs:clock</code>, hay để DFS chờ phía đọc báo xong từng mốc (lock-step)?</li>
       <li>Có cần mô phỏng độ trễ khi nến tới (giá lúc nhìn thấy lần đầu) để kết quả gần với chạy thật hơn không?</li>
     </ol>

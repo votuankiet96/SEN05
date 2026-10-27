@@ -21,8 +21,8 @@ def load_variant(tmp_path, old: str, new: str):
 
 def test_example_config_loads_with_safe_defaults():
     config = load_config(EXAMPLE)
-    assert config.redis.db == 15 and config.redis.allowed_dbs == (15,)
-    assert (config.redis.key_prefix, config.redis.bars_per_snapshot) == ("L_CANDLE", 1200)
+    assert config.redis.db == 10 and config.redis.allowed_dbs == (10,)
+    assert (config.redis.key_prefix, config.redis.bars_per_snapshot) == ("L_DFS", 1200)
     assert not hasattr(config.redis, "hash_ttl_seconds")                       # DFS không đặt TTL cho Hash
     assert config.replay.symbols == ("GOLD",) and config.replay.timeframes == ("M5", "M15")
     assert config.replay.start == datetime(2026, 9, 30, 13) and config.replay.end == datetime(2026, 9, 30, 15)
@@ -37,14 +37,14 @@ def test_secrets_never_appear_in_repr_or_summary():
 
 def test_a_db_outside_allowed_dbs_is_refused(tmp_path):
     with pytest.raises(ConfigError, match="allowed_dbs"):
-        load_variant(tmp_path, "db: 15 ", "db: 0  ")
+        load_variant(tmp_path, "db: 10 ", "db: 0  ")
 
 
 @pytest.mark.parametrize("old,new,message", [
     ("mode: delay", "mode: warp", "pacing.mode"),
     ("delay_seconds: 1.0", "delay_seconds: -1", "pacing.delay_seconds"),
     ("speed: 300.0", "speed: 0", "pacing.speed"),
-    ('key_prefix: "L_CANDLE"', 'key_prefix: "L:CANDLE"', "redis.key_prefix"),
+    ('key_prefix: "L_DFS"', 'key_prefix: "L:DFS"', "redis.key_prefix"),
     ('end_utc: "2026-09-30 15:00:00"', 'end_utc: "2026-09-30 12:00:00"', "earlier than"),
     ("symbols: [GOLD]", "symbols: [GOLD, gold]", "duplicates"),
     ("trusted_connection: true", "trusted_connection: yes_please", "trusted_connection"),
@@ -63,7 +63,7 @@ def test_unknown_and_missing_keys_are_rejected(tmp_path):
 
 def test_the_removed_ttl_setting_is_rejected_so_a_stale_config_cannot_be_misread(tmp_path):
     with pytest.raises(ConfigError, match="unknown key.*hash_ttl_seconds"):
-        load_variant(tmp_path, 'key_prefix: "L_CANDLE"', 'hash_ttl_seconds: 604800\n  key_prefix: "L_CANDLE"')
+        load_variant(tmp_path, 'key_prefix: "L_DFS"', 'hash_ttl_seconds: 604800\n  key_prefix: "L_DFS"')
 
 
 def test_missing_file_is_a_config_error(tmp_path):

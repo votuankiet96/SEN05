@@ -24,7 +24,9 @@ pytestmark = [
     pytest.mark.skipif(os.environ.get("DFS_INTEGRATION") != "1", reason="set DFS_INTEGRATION=1 to run against the real Redis db"),
 ]
 T0 = at("2026-09-30 13:00")
-KEY5, KEY15 = "L_CANDLE_GOLD_M5", "L_CANDLE_GOLD_M15"
+def keys(config):
+    """Tên key của hai List thử, theo `key_prefix` trong config.yaml (không cứng L_CANDLE: DFS dùng L_DFS)."""
+    return f"{config.redis.key_prefix}_GOLD_M5", f"{config.redis.key_prefix}_GOLD_M15"
 
 
 @pytest.fixture()
@@ -70,6 +72,7 @@ def collect_hset(pubsub, *, expected=None, quiet=0.6, timeout=3.0):
 
 def test_seed_ticks_and_replay_follow_the_live_contract(target):
     config, writer = target
+    KEY5, KEY15 = keys(config)
     client = writer._client
     notify = client.config_get("notify-keyspace-events")["notify-keyspace-events"]
     assert "K" in notify and ("h" in notify or "A" in notify), f"keyspace notifications for hashes are off ({notify!r})"
@@ -93,7 +96,7 @@ def test_seed_ticks_and_replay_follow_the_live_contract(target):
     assert [len(t.candles) for t in ticks] == [1, 1, 2]                            # tick 3: M5 và M15 cùng một lượt
 
     pubsub = client.pubsub(ignore_subscribe_messages=True)
-    pubsub.psubscribe(f"__keyspace@{config.redis.db}__:L_CANDLE_*")
+    pubsub.psubscribe(f"__keyspace@{config.redis.db}__:{config.redis.key_prefix}_*")
     pubsub.get_message(timeout=1.0)
     try:
         for tick in ticks:
@@ -123,6 +126,7 @@ def test_seed_ticks_and_replay_follow_the_live_contract(target):
 
 def test_a_tick_is_atomic_for_concurrent_readers(target):
     config, writer = target
+    KEY5, KEY15 = keys(config)
     reader = _connect(config.redis)
     mismatches, reads, stop = [], [0], threading.Event()
 

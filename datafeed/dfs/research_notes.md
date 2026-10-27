@@ -604,3 +604,16 @@ Các mục trên mô tả v1 (và kết quả đo của v1) nên được giữ 
 - **Canh lệch:** `test_contract.py` so script DFS với script live đã bỏ đúng ba chỗ TTL (dòng khai báo, điểm bắt đầu vòng lặp, dòng `EXPIRE`), nên live đổi logic ở chỗ khác là test báo lệch. 119 test đơn vị đạt, 2 test tích hợp (opt-in) bỏ qua.
 - **Chưa kiểm bằng Redis thật trước khi triển khai** (máy này không có Lua runtime, và quy tắc chỉ cho Redis ở chế độ đọc): kiểm sau khi chạy bằng cách đọc lại db14 (6 field, TTL = -1, List giảm dần).
 - **Hệ quả vận hành:** dữ liệu db14 ở lại sau khi dừng hoặc xong (khoảng 64 MB với 165 cặp) cho tới `dfs.bat clean` hoặc lần `run` kế tiếp. Mục 5 ở trên (TTL Hash 7 ngày) chỉ còn đúng cho v1 và cho live.
+
+## 12. Cập nhật 2026-10-16: db đích đổi từ db14 sang db13
+
+- **Quyết định của operator:** DFS ghi vào Redis db13 thay cho db14: `redis.db` = 13 và `allowed_dbs` = [13] (hai dòng trong `config.yaml`; code không đổi vì không nơi nào ghi cứng số db). Tiền tố key của DFS là `L_DFS` (từ 2026-10-09), nên consumer nghe `__keyspace@13__:L_DFS_*`.
+- **Run 7** `710e2940ffcb` bắt đầu 2026-10-16 16:10 UTC trên db13 (seed 186.804 nến trong 12 giây; kiểm tra sau seed: 165 List, 186.805 Hash, TTL = -1, OHLC hợp lệ). Run 6 dừng êm ở tick 219.748 (44,6%); dữ liệu cũ của nó trong db14 (189.960 key, chỉ gồm key `L_DFS_*` và `dfs:*`) đã được xóa theo lệnh của operator; các db khác không đổi.
+- **Hệ quả:** `dfs.bat clean` chỉ xóa được db13 (`allowed_dbs`). Các chỗ nhắc db14 ở mục 10 và 11 là lịch sử, đúng tại thời điểm viết; các chỗ nhắc db15 là bản v1 thử nghiệm.
+
+## 13. Cập nhật 2026-10-25: db đích đổi từ db13 sang db10
+
+- **Quyết định của operator:** DFS ghi vào Redis db10 thay cho db13: `redis.db` = 10 và `allowed_dbs` = [10] (hai dòng trong `config.yaml`; code không đổi). Consumer nghe `__keyspace@10__:L_DFS_*`; phía WES do operator tự trỏ sang db10.
+- **Run 8** `ec57688391e5` bắt đầu 2026-10-25 11:48 UTC trên db10 (seed 186.804 nến trong 14 giây; kiểm tra sau seed: 165 List, 186.805 Hash, mẫu 3.000 Hash đủ 6 field, TTL = -1, OHLC hợp lệ). Run 7 dừng êm ở tick 380.897 (77,2%); dữ liệu cũ của nó trong db13 (190.851 key, chỉ gồm key `L_DFS_*` và `dfs:*`, run_id cũ) đã được xóa theo lệnh của operator; các db khác không đổi.
+- **Ghi chú vận hành:** ngày 2026-10-23 06:39 UTC Redis khởi động lại trống (không bật lưu đĩa); DFS tự phát hiện (`REDIS_STATE_LOST`), nạp lại cửa sổ nến tại mốc ghi gần nhất (`REDIS_RESEEDED`, 15 giây) và chạy tiếp cùng run, đúng thiết kế ở mục 10.
+- **Hệ quả:** `dfs.bat clean` chỉ xóa được db10 (`allowed_dbs`). Các chỗ nhắc db13/db14/db15 ở mục 10-12 là lịch sử, đúng tại thời điểm viết.

@@ -43,7 +43,7 @@ class FakeClient:
         pass
 
 
-def writer(client, *, db=14, allowed=(14,)):
+def writer(client, *, db=10, allowed=(10,)):
     config = RedisConfig(host="h", port=6379, username="", password="x", db=db, allowed_dbs=allowed, key_prefix="L_CANDLE",
                          bars_per_snapshot=1200)
     return RedisWriter(config, client=client)
@@ -52,7 +52,7 @@ def writer(client, *, db=14, allowed=(14,)):
 def test_clean_refuses_a_db_that_is_not_allowed_and_touches_nothing():
     client = FakeClient({"a"})
     with pytest.raises(GuardError, match="allowed_dbs"):
-        writer(client, db=0, allowed=(14,)).clean()
+        writer(client, db=0, allowed=(10,)).clean()
     assert client.keys == {"a"} and client.flush_async is None
 
 

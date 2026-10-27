@@ -10,7 +10,7 @@ Hai phần có tiêu đề riêng bên dưới:
   2. Writer: DFS chỉ ghi vào db nằm trong `allowed_dbs`; db đó chỉ dành cho DFS nên mỗi lần chạy mới xóa sạch nó trước\n     (`clean`, không bao giờ FLUSHALL). Mỗi mốc ghi trong MỘT
      MULTI/EXEC gồm các nến + `dfs:clock` + checkpoint `dfs:state`, nên consumer không thấy trạng thái nửa vời và
      checkpoint luôn khớp dữ liệu. Script Lua giống live (trừ TTL) nên idempotent: ghi lại cùng giá thì không sinh `hset`.
-     Các key điều khiển `dfs:*` nằm ngoài mẫu `L_CANDLE_*` mà consumer lắng nghe.
+     Các key điều khiển `dfs:*` nằm ngoài mẫu `{prefix}_*` (hiện `L_DFS_*`) mà consumer lắng nghe.
 """
 from __future__ import annotations
 

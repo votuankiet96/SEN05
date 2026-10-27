@@ -92,7 +92,7 @@ Khác với live ở đúng một điều có chủ ý: thời gian chạy nhanh
 |---|---|
 | SQL được coi là **đúng 100%** | Nến nào có là sự thật; thiếu nến nghĩa là thị trường đóng cửa. DFS không bù, không sửa, không nghi ngờ dữ liệu. |
 | Bỏ qua schema `tick` trong SQL | DFS chỉ dùng nến trong `DWH.Fact_OHLCV`. |
-| Redis thử nghiệm là **db14** của cùng máy chủ Redis với production | DFS chỉ được ghi vào db14 (`allowed_dbs`), **tuyệt đối không db0** (live). Db14 chỉ dành cho DFS: mỗi lần chạy mới tự xóa sạch nó. |
+| Redis thử nghiệm là **db10** của cùng máy chủ Redis với production | DFS chỉ được ghi vào db10 (`allowed_dbs`), **tuyệt đối không db0** (live). Db10 chỉ dành cho DFS: mỗi lần chạy mới tự xóa sạch nó. |
 | Tập trung vào **11 symbol live × 8 khung**: M10, M20, M30, M45, H1, H2, H3, H4 (88 cặp) | Cấu hình mặc định hiện tại; đổi được bằng `config.yaml` hoặc tham số dòng lệnh. |
 
 ---
@@ -129,7 +129,7 @@ Khác với live ở đúng một điều có chủ ý: thời gian chạy nhanh
 ```
    INPUT                          XỬ LÝ (DFS)                                   OUTPUT
  ┌──────────────────┐   ┌───────────────────────────────────────────┐   ┌─────────────────────────────┐
- │ SQL: nến lịch sử │   │ 1. Xóa db đích, seed 1200 nến trước T0    │   │ Redis db14                  │
+ │ SQL: nến lịch sử │   │ 1. Xóa db đích, seed 1200 nến trước T0    │   │ Redis db10                  │
  │ (DWH.Fact_OHLCV) │──►│ 2. Lập lịch: giờ phát = giờ mở + độ dài   │──►│  · List + Hash nến (như     │
  ├──────────────────┤   │    khung; nến cùng giờ phát = một mốc     │   │    live)                    │
  │ config.yaml +    │──►│ 3. Phát từng mốc theo tốc độ đã chọn,     │   │  · dfs:clock (giờ ảo)       │
@@ -197,9 +197,9 @@ Khóa lạ hoặc thiếu đều bị từ chối.
 | | `username`, `password`, `trusted_connection` | Để trống tài khoản = Windows authentication | Windows authentication |
 | | `encrypt`, `trust_server_certificate` | Tùy chọn kết nối | như datafeed |
 | `redis` | `host`, `port`, `username`, `password` | Máy chủ Redis | Redis OG8 |
-| | `db` | db sẽ ghi | **15** |
-| | `allowed_dbs` | Danh sách db DFS được phép ghi; `db` phải nằm trong đây | `[15]` |
-| | `key_prefix` | Tiền tố key nến | `L_CANDLE` (đúng live) |
+| | `db` | db sẽ ghi | **10** |
+| | `allowed_dbs` | Danh sách db DFS được phép ghi; `db` phải nằm trong đây | `[10]` |
+| | `key_prefix` | Tiền tố key nến | `L_DFS` (live dùng `L_CANDLE`; khác tiền tố để consumer không lẫn dữ liệu mô phỏng với dữ liệu thật) |
 | | `bars_per_snapshot` | Cửa sổ mỗi List | 1200 (đúng live) |
 | `replay` | `symbols`, `timeframes` | Phát cái gì | 11 symbol live × M10, M20, M30, M45, H1, H2, H3, H4 |
 | | `start_utc`, `end_utc` | Khoảng mô phỏng (T0 → mốc cuối) | 2026-09-30 13:00 → 15:00 |
@@ -361,33 +361,33 @@ DFS **không tự thoát** vì Redis: không ghi được thì chờ, Redis tr�
 
 | Cơ chế | Tác dụng |
 |---|---|
-| Guard db đích | `db` phải nằm trong `allowed_dbs` (hiện là `[14]`). Db0 của live không bao giờ qua được; DFS không ghi, không xóa db nào khác. |
+| Guard db đích | `db` phải nằm trong `allowed_dbs` (hiện là `[10]`). Db0 của live không bao giờ qua được; DFS không ghi, không xóa db nào khác. |
 | `FLUSHDB ASYNC` khi bắt đầu mỗi lần `run` và trong `clean` | Chỉ xóa db nằm trong `allowed_dbs` (db đó chỉ dành cho DFS); không bao giờ `FLUSHALL`; không dùng `KEYS`/`SCAN` (có test kiểm trên mã nguồn). |
 | SQL chỉ đọc | Chỉ 4 câu `SELECT`; test kiểm không có câu ghi nào trong `sql_source.py`. |
 | Khóa một-instance | Hai tiến trình DFS không chạy chồng trên cùng `runtime_dir`. |
 | Luôn bắt đầu từ db trống | Vì ghi lặp sẽ im lặng (mục 5.4), mỗi lần `run` xóa db đích trước khi seed. |
 | Bí mật | `config.yaml` bị `.gitignore`; log che mọi trường chứa `password`/`secret`/`token`; thông báo lỗi không kèm thông tin kết nối. |
-| Cách ly key | Key điều khiển `dfs:*` nằm ngoài mẫu `L_CANDLE_*` mà consumer lắng nghe; sự kiện db14 đi trên kênh `__keyspace@14__`, không lẫn với db0. |
+| Cách ly key | Key điều khiển `dfs:*` nằm ngoài mẫu `L_DFS_*` mà consumer lắng nghe; sự kiện db10 đi trên kênh `__keyspace@10__`, không lẫn với db0. |
 
 ---
 
 ## 6. Output
 
-### 6.1 Trên Redis (db14)
+### 6.1 Trên Redis (db10)
 
 Dữ liệu nến — **cùng cấu trúc live**:
 
 | Key | Kiểu | Nội dung |
 |---|---|---|
-| `L_CANDLE_{SYMBOL}_{TF}`, ví dụ `L_CANDLE_GOLD_M5` | **LIST** | Các mốc giờ, **nến mới nhất ở index 0**, tối đa 1200. Không có TTL. |
-| `L_CANDLE_{SYMBOL}_{TF}:{giờ mở}`, ví dụ `L_CANDLE_GOLD_M5:2026-09-30 14:55:00` | **HASH** | Một nến, đúng 6 field. **Không có TTL** (khác live, xem ngay dưới). |
+| `L_DFS_{SYMBOL}_{TF}`, ví dụ `L_DFS_GOLD_M5` | **LIST** | Các mốc giờ, **nến mới nhất ở index 0**, tối đa 1200. Không có TTL. |
+| `L_DFS_{SYMBOL}_{TF}:{giờ mở}`, ví dụ `L_DFS_GOLD_M5:2026-09-30 14:55:00` | **HASH** | Một nến, đúng 6 field. **Không có TTL** (khác live, xem ngay dưới). |
 
 **Không có TTL (từ 2026-10-09, khác live).** Live đặt TTL 7 ngày cho Hash và cứ 8 phút gia hạn một List (`_refresh_ttl_slice`) để Hash đang nằm trong cửa sổ không hết hạn. DFS bỏ hẳn TTL (script Lua không `EXPIRE`, cấu hình không còn `hash_ttl_seconds`; file cấu hình cũ còn khóa này sẽ bị từ chối với "unknown key"). Lý do:
 đồng hồ TTL của Redis chạy theo giờ THẬT, còn DFS tua nhanh nhiều năm; một nến W nằm trong cửa sổ 1200 tuần (23 năm lịch sử) thì phải sống đến khi bị đẩy ra, không phải đến khi hết 7 ngày thật — nếu để TTL thì List vẫn liệt kê nến mà Hash đã mất.
-Nay nến **chỉ biến mất khi bị đẩy ra khỏi cửa sổ 1200** (Lua `RPOP` + `DEL` Hash), nên List và Hash luôn đi cùng nhau; List chưa đầy 1200 (ví dụ W: lịch sử ngắn, 161–729 nến) thì không có gì bị xóa. Hệ quả: sau khi `run` kết thúc hoặc bị dừng, dữ liệu db14 **ở lại** (khoảng 64 MB với 165 cặp)
-cho tới `dfs.bat clean` hoặc lần `run` kế tiếp (đằng nào cũng xóa sạch db14 trước khi seed).
+Nay nến **chỉ biến mất khi bị đẩy ra khỏi cửa sổ 1200** (Lua `RPOP` + `DEL` Hash), nên List và Hash luôn đi cùng nhau; List chưa đầy 1200 (ví dụ W: lịch sử ngắn, 161–729 nến) thì không có gì bị xóa. Hệ quả: sau khi `run` kết thúc hoặc bị dừng, dữ liệu db10 **ở lại** (khoảng 64 MB với 165 cặp)
+cho tới `dfs.bat clean` hoặc lần `run` kế tiếp (đằng nào cũng xóa sạch db10 trước khi seed).
 
-Ví dụ thật (lấy từ lần chạy thử GOLD M5 + M15; các khung M10 … H4 có cùng cấu trúc) — Hash `L_CANDLE_GOLD_M5:2026-09-30 14:55:00`:
+Ví dụ thật (lấy từ lần chạy thử GOLD M5 + M15; các khung M10 … H4 có cùng cấu trúc) — Hash `L_DFS_GOLD_M5:2026-09-30 14:55:00`:
 
 ```
 timestamp    2026-09-30 14:55:00      giờ mở nến (UTC), trùng phần tử List và đuôi key Hash
@@ -408,7 +408,7 @@ Key điều khiển của DFS (không thuộc hợp đồng live):
 **Quy mô** (đo thật, 88 cặp): 105.600 Hash + 88 List + 3 key điều khiển lúc đo (nay còn 2: không còn `dfs:owner`) = **105.691 key**, tăng **34,0 MB** bộ nhớ Redis (≈ 322 byte/key); `clean` đưa bộ nhớ về mức cũ. Nếu seed đủ 165 cặp: khoảng 198.000
 key, ước tính ≈ 64 MB.
 
-**Sự kiện**: mỗi nến mới hoặc đổi giá sinh sự kiện keyspace `hset` trên kênh `__keyspace@14__:L_CANDLE_…` (live còn kèm một sự kiện `expire` vì có TTL; DFS không có, consumer lọc theo `hset` nên không ảnh hưởng).
+**Sự kiện**: mỗi nến mới hoặc đổi giá sinh sự kiện keyspace `hset` trên kênh `__keyspace@10__:L_DFS_…` (live còn kèm một sự kiện `expire` vì có TTL; DFS không có, consumer lọc theo `hset` nên không ảnh hưởng).
 
 ### 6.2 Trên đĩa (`dfs/runtime/`, tự tạo, bị `.gitignore`)
 
@@ -460,16 +460,16 @@ Cách đọc: `ticks`/`candles` = số mốc/nến đã ghi trong lần chạy n
 
 1. Có `dfs/config.yaml` (sao chép từ `config.example.yaml` rồi điền; bản đang dùng đã có sẵn).
 2. Python 3.12 trên PATH (hoặc đặt biến `DFS_PYTHON` trỏ tới `python.exe`).
-3. Db đích (db14) chỉ dành cho DFS: mỗi lần `dfs.bat run` tự xóa sạch nó trước khi phát (`dfs.bat status` cho biết số key hiện có).
+3. Db đích (db10) chỉ dành cho DFS: mỗi lần `dfs.bat run` tự xóa sạch nó trước khi phát (`dfs.bat status` cho biết số key hiện có).
 
 ### 7.2 Quy trình chuẩn
 
 ```powershell
 cd C:\Users\Administrator\Desktop\datafeed\dfs
 dfs.bat plan --show 12        # 1) xem trước lịch phát, không ghi gì
-dfs.bat run --delay 0.2       # 2) xóa db14 rồi phát từ T0 (chạy mới)
+dfs.bat run --delay 0.2       # 2) xóa db10 rồi phát từ T0 (chạy mới)
 dfs.bat status                # 3) kiểm tiến độ và checkpoint
-dfs.bat clean                 # 4) (tùy chọn) xóa db14 thủ công khi không cần giữ (báo số key, hỏi trước)
+dfs.bat clean                 # 4) (tùy chọn) xóa db10 thủ công khi không cần giữ (báo số key, hỏi trước)
 ```
 
 ### 7.3 Các mode của `dfs.bat`
@@ -520,7 +520,7 @@ Tương đương không dùng .bat: `python -B src plan | run | status | stop | 
 
 Đây là **bước tiếp theo, chưa làm** (mục 11). DFS đã ghi dữ liệu đúng hợp đồng; việc còn lại nằm ở phía consumer:
 
-1. **Trỏ vào db14.** Consumer thử nghiệm đọc Redis ở `db=14` (cùng máy chủ, cùng `key_prefix`) và nghe `__keyspace@14__:L_CANDLE_*`. Cách đọc List/Hash **không đổi** so với live.
+1. **Trỏ vào db10.** Consumer thử nghiệm đọc Redis ở `db=10` (cùng máy chủ, cùng `key_prefix`) và nghe `__keyspace@10__:L_DFS_*`. Cách đọc List/Hash **không đổi** so với live.
 2. **Bật consumer sau khi seed xong** (mỗi lần `run` xóa db đích rồi seed lại; khi Redis ngừng rồi quay lại với dữ liệu cũ, DFS cũng xóa và nạp lại giữa chừng — mục 5.6b). Seed sinh một loạt sự kiện `hset` (≈ 105.600 với 88 cặp); subscriber chậm có thể bị Redis ngắt khi vượt giới hạn bộ đệm mặc định (cứng 32 MB, mềm 8 MB trong 60 giây).
 3. **Dùng giờ ảo khi chạy nhanh hơn thật.** Nếu consumer dùng giờ máy cho kiểm tra tuổi tín hiệu, lọc phiên, cooldown… thì sẽ sai khi mô phỏng nhanh. `dfs:clock` được cập nhật cùng mỗi mốc để consumer dùng làm "bây giờ";
    chưa có consumer nào dùng. Cần rà code OG / chiến lược về việc dùng giờ máy.
@@ -598,7 +598,7 @@ Các quyết định chính — lịch phát theo mốc kế tiếp (next-event)
 **Giới hạn đã biết**
 
 1. **Chưa nối consumer** và chưa có đồng hồ ảo / lock-step ở phía OG và chiến lược (mục 8).
-2. **Redis dùng chung**: db14 nằm trên máy chủ OG8 cùng production (bộ nhớ, CPU, đĩa và luồng sự kiện keyspace dùng chung; db14 chỉ cách ly theo chỉ số db). Nên theo dõi tải OG8 trong các lần chạy dài và cân nhắc Redis riêng.
+2. **Redis dùng chung**: db10 nằm trên máy chủ OG8 cùng production (bộ nhớ, CPU, đĩa và luồng sự kiện keyspace dùng chung; db10 chỉ cách ly theo chỉ số db). Nên theo dõi tải OG8 trong các lần chạy dài và cân nhắc Redis riêng.
 3. **Giờ phát theo độ dài danh nghĩa** (`giờ mở + Minutes`) giống hệ thật, nhưng có thể lệch giờ đóng thực của phiên với nến D1/W, nến cuối phiên hoặc ngày đóng sớm. Đã chấp nhận vì SQL được coi là đúng.
 4. **Dữ liệu SQL là bản đã hiệu chỉnh**, không phải giá consumer thấy lúc đó (first-seen).
 5. **Không có độ trễ tới của nến**: nến xuất hiện đúng giờ đóng, trong khi live có độ trễ (chu kỳ 2 phút + xử lý).
@@ -608,7 +608,7 @@ Các quyết định chính — lịch phát theo mốc kế tiếp (next-event)
 9. Không có `resume`: DFS bị dừng, chết hoặc máy khởi động lại thì chạy lại từ đầu (chỉ khi tiến trình DFS vẫn sống và Redis ngừng thì tự phục hồi).
 10. Chưa có pause / seek / chạy từng mốc, chưa có cache cục bộ, chưa có lệnh `verify` dựng sẵn.
 11. `dfs/` nằm ngoài repo git của `core_program/` nên chưa được version control.
-12. **Hash không có TTL** (khác live, mục 6.1): dữ liệu db14 không tự biến mất sau khi dừng, phải `dfs.bat clean` hoặc `run` lại; script Lua của DFS khác script của live đúng ba chỗ liên quan TTL (test `test_contract.py` canh).
+12. **Hash không có TTL** (khác live, mục 6.1): dữ liệu db10 không tự biến mất sau khi dừng, phải `dfs.bat clean` hoặc `run` lại; script Lua của DFS khác script của live đúng ba chỗ liên quan TTL (test `test_contract.py` canh).
 
 **Lộ trình đề xuất**
 

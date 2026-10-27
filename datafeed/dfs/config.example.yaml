@@ -19,9 +19,9 @@ redis:                                    # Redis MÔ PHỎNG - không phải db
   port: 6379
   username: ""
   password: "<redis-password>"
-  db: 15                                  # db thử nghiệm
-  allowed_dbs: [15]                       # DFS từ chối chạy nếu db không nằm trong danh sách này
-  key_prefix: "L_CANDLE"                  # đúng hợp đồng live
+  db: 10                                  # db thử nghiệm
+  allowed_dbs: [10]                       # DFS từ chối chạy nếu db không nằm trong danh sách này
+  key_prefix: "L_DFS"                     # tiền tố riêng của DFS (live dùng L_CANDLE)
   bars_per_snapshot: 1200                 # đúng cửa sổ live
 
 replay:
