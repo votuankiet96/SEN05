@@ -1,0 +1,196 @@
+redis:
+  enabled: true
+  host: "127.0.0.1"       # Redis replica AEN trên og18: DB0 nến vào, DB1 tín hiệu ra
+  password: ""
+  input:
+    db: 0
+    key_prefix: "L_CANDLE"
+    snapshot_bars: 500
+    process_on_startup: true
+    # NHÓM symbols × khung mà DE làm việc (AEN đẩy tới db0) -- nơi khai DUY NHẤT của nguồn Core AEN (symbol của nguồn nến thêm khai ở `input_sources` bên dưới; hợp hai nơi là danh sách mà bảng khung trend của chiến lược phải phủ). Cặp ngoài nhóm bị bỏ ở cửa;
+    # cái gì khai ở đây mà AEN không có thì coi như không có (không event nào tới), nên khai cho KHỚP đúng cái AEN đang đẩy lên db0.
+    symbols: [US30, US500, US100, GER40, HK50, JP225, XAUUSD, BTCUSD]   # symbol vận hành của CẢ 5 chiến lược (tên theo nguồn nến AEN); bảng khung trend của mỗi chiến lược phải đủ ô cho từng symbol
+    timeframes: [M10, M20, M30, M45, H1, H2, H3, H4]                    # phải bao các khung vào lệnh và khung trend của mọi chiến lược
+  # Nguồn nến THÊM: một Redis khác cùng bố cục nến (LIST+HASH) nuôi các symbol mà nguồn mặc định `input` không có (vd Redis DF trên OG8, cổng 6380, db0, nuôi 7 symbol). Mỗi nguồn một NHÓM
+  # tiến trình riêng (de-signal@<chiến lược>.og8, de-trend@<khối>.og8) nên nguồn mất kết nối chỉ làm nhóm đó dừng. Khoá không khai ở đây (timeframes, snapshot_bars, process_on_startup...)
+  # kế thừa `input`. Mỗi symbol chỉ thuộc MỘT nguồn. Đầu ra (db raw, trend, lọc) vẫn ở Redis của DE (`output`), khoá có tên symbol nên không đụng nhau. Bỏ cả mục này = chỉ chạy nguồn `input`.
+  input_sources:
+    og8:
+      host: "10.11.12.8"
+      port: 6380
+      password: ""                # mật khẩu Redis của nguồn; "" = không AUTH
+      db: 0
+      key_prefix: "L_CANDLE"
+      symbols: [EURUSD, GBPUSD, USDCAD, USDJPY, FR40, SP35, UK100]   # tên symbol theo nguồn nến OG8; bảng khung trend của mỗi chiến lược phải đủ ô cho từng symbol
+  output:
+    db: 0                         # Tín hiệu RAW của strategy_runner (cổng 6380): LIST L_DE_{STRATEGY}_{SYMBOL}_{TF} + HASH <LIST>:{giờ mở}
+    port: 6380                    # Redis đầu ra của DE (cùng host); nến DB0 vẫn đọc từ port gốc 6379
+    password: ""                  # mật khẩu của instance output (có thể khác password gốc); "" = không AUTH
+    key_prefix: "L_DE"           # DE LIST/HASH: L_DE_{STRATEGY}_{SYMBOL}_{TF}[:stamp]
+    channel_prefix: "L_CHANNEL"   # Kênh Pub/Sub DE -> OF (chỉ là đường truyền, không lưu key nào): L_CHANNEL_{STRATEGY}_{SYMBOL}_{TF}
+  trend_output:                   # Kết quả trend của trend_filtering (cùng Redis cổng 6380 với `output`, db riêng): LIST L_TREND_{KHỐI}_{SYMBOL}_{KHUNG} + HASH <LIST>:{giờ mở nến trend}
+    db: 1
+    key_prefix: "L_TREND"
+  filtered_output:                # Tín hiệu ĐÃ LỌC trend do tiến trình chiến lược ghi (cùng Redis cổng 6380, mật khẩu và thời hạn lưu với `output`, db riêng): LIST/HASH và kênh Pub/Sub theo tiền tố từng khối ở `trend_outputs`
+    db: 2
+  # Các nguồn LỌC TREND (2026-10-25), giống DB1 / DB2 / DB4 của we_core: cùng Redis/DB/mật khẩu/thời hạn lưu với `output`, mỗi nguồn một cặp tiền tố riêng
+  # (LIST/HASH và kênh Pub/Sub). Nguồn nào không khai ở đây thì không được tính. Nguồn không lọc (raw) là `output` ở trên, giữ nguyên tên.
+  trend_outputs:
+    knn:      {key_prefix: "L_DE_KNN",      channel_prefix: "L_CHANNEL_KNN"}
+    breakout: {key_prefix: "L_DE_BREAKOUT", channel_prefix: "L_CHANNEL_BREAKOUT"}
+    zigzag:   {key_prefix: "L_DE_ZIGZAG",   channel_prefix: "L_CHANNEL_ZIGZAG"}
+    tstat:    {key_prefix: "L_DE_TSTAT",    channel_prefix: "L_CHANNEL_TSTAT"}
+    cloud:    {key_prefix: "L_DE_CLOUD",    channel_prefix: "L_CHANNEL_CLOUD"}
+
+live:
+  enabled_strategies: [combo, ma_cross, macd_break, ichimoku, ema_reach]
+  log_level: INFO
+  price_decimals: {EURUSD: 5, GBPUSD: 5, USDCAD: 5, USDJPY: 3}   # số lẻ làm tròn entry/atr của tín hiệu; symbol không khai = 2 (chỉ số, vàng, BTC). Forex làm tròn 2 số lẻ sẽ hỏng giá
+  signal_validity:
+    combo:
+      mode: next_bar
+      valid_bars: 3
+    ma_cross:
+      mode: seconds_after_bar_close
+      seconds: 600  # AEN M45 (dong luc :15/:45) ghi cham deu ~310-373s -- 180s cu qua ngan
+    macd_break:
+      mode: seconds_after_bar_close   # lenh MARKET (entry = close) nhu ma_cross: chi hieu luc ngan sau khi nen dong
+      seconds: 600
+    ichimoku:
+      mode: seconds_after_bar_close   # lenh MARKET (entry = close) nhu ma_cross: chi hieu luc ngan sau khi nen dong
+      seconds: 600
+    ema_reach:
+      mode: seconds_after_bar_close   # lenh MARKET (entry = close) nhu ma_cross: chi hieu luc ngan sau khi nen dong
+      seconds: 600
+
+strategies:
+  combo:
+    ma_period: 20
+    macd_fast: 5
+    macd_slow: 25
+    macd_signal: 5
+    atr_period: 5
+    recommended_timeframes: [M10, M20, M30, M45, H1, H2, H3, H4]   # combo chạy cả khung M lẫn H (2026-11-02)
+    trend_off_timeframes: [M10, M20, M30, M45]   # khung KHÔNG lọc trend ([] = lọc trend ở mọi khung): khung M mới chỉ chạy tín hiệu thô, bảng khung trend điền sau
+    trend_methods: [knn]          # khối lọc mặc định (nguồn knn); breakout/zigzag/tstat/cloud được chọn riêng theo redis.trend_outputs
+    trend_timeframes: [H1, H2, H3, H4]
+    trend_tf_by_symbol:   # khung trend riêng từng (symbol, khung vào lệnh), BẮT BUỘC đủ ô; chép từ we_core (tên symbol theo AEN)
+      US30: {H1: H4, H2: H2, H3: H3, H4: H4}
+      US500: {H1: H4, H2: H2, H3: H3, H4: H4}
+      US100: {H1: H4, H2: H2, H3: H3, H4: H4}
+      GER40: {H1: H4, H2: H2, H3: H3, H4: H4}
+      HK50: {H1: H4, H2: H2, H3: H3, H4: H4}
+      JP225: {H1: H4, H2: H4, H3: H3, H4: H4}
+      XAUUSD: {H1: H4, H2: H2, H3: H3, H4: H4}
+      BTCUSD: {H1: H4, H2: H2, H3: H3, H4: H4}
+      # nguồn nến OG8 (chép từ we_core, tên symbol theo OG8):
+      EURUSD: {H1: H4, H2: H2, H3: H3, H4: H4}
+      GBPUSD: {H1: H4, H2: H2, H3: H3, H4: H4}
+      USDCAD: {H1: H4, H2: H2, H3: H3, H4: H4}
+      USDJPY: {H1: H4, H2: H2, H3: H3, H4: H4}
+      FR40: {H1: H4, H2: H4, H3: H3, H4: H4}
+      SP35: {H1: H4, H2: H2, H3: H3, H4: H4}
+      UK100: {H1: H4, H2: H2, H3: H3, H4: H4}
+    alternating_filter_enabled: true   # true = chi ban tin hieu dau tien khi huong doi chieu (loc lap cung chieu); false = bar nao thoa dieu kien cung ban
+    session_hours_utc: {}
+
+  ma_cross:
+    fast_ma: 13
+    slow_ma: 34
+    macd_fast: 5
+    macd_slow: 25
+    macd_signal: 5
+    atr_period: 5
+    supported_timeframes: [M10, M20, M30, M45, H1, H2, H3, H4]   # chạy cả khung M lẫn H (2026-11-02)
+    trend_off_timeframes: [H1, H2, H3, H4]   # khung KHÔNG lọc trend ([] = lọc trend ở mọi khung): khung H mới chỉ chạy tín hiệu thô, bảng khung trend điền sau
+    trend_methods: [knn]          # khối lọc mặc định (nguồn knn); breakout/zigzag/tstat/cloud được chọn riêng theo redis.trend_outputs
+    trend_timeframes: [H1, H2, H3, H4]
+    trend_tf_by_symbol:   # khung trend riêng từng (symbol, khung vào lệnh), BẮT BUỘC đủ ô; chép từ we_core (tên symbol theo AEN)
+      US30: {M10: H4, M20: H1, M30: H1, M45: H1}
+      US500: {M10: H4, M20: H1, M30: H1, M45: H1}
+      US100: {M10: H4, M20: H1, M30: H1, M45: H1}
+      GER40: {M10: H4, M20: H1, M30: H1, M45: H1}
+      HK50: {M10: H4, M20: H1, M30: H1, M45: H1}
+      JP225: {M10: H4, M20: H1, M30: H1, M45: H1}
+      XAUUSD: {M10: H4, M20: H1, M30: H1, M45: H1}
+      BTCUSD: {M10: H4, M20: H1, M30: H1, M45: H1}
+      # nguồn nến OG8 (chép từ we_core, tên symbol theo OG8):
+      EURUSD: {M10: H4, M20: H1, M30: H1, M45: H1}
+      GBPUSD: {M10: H4, M20: H1, M30: H1, M45: H1}
+      USDCAD: {M10: H4, M20: H1, M30: H1, M45: H1}
+      USDJPY: {M10: H4, M20: H1, M30: H1, M45: H1}
+      FR40: {M10: H4, M20: H1, M30: H1, M45: H1}
+      SP35: {M10: H4, M20: H1, M30: H1, M45: H1}
+      UK100: {M10: H4, M20: H1, M30: H1, M45: H1}
+    alternating_filter_enabled: true   # true = chi ban tin hieu dau tien khi huong doi chieu (loc lap cung chieu); false = bar nao thoa dieu kien cung ban
+
+  ema_reach:
+    fast_ema: 13
+    slow_ema: 34
+    lookback_bars: 20             # dinh/day close cua N nen truoc (toi da 300: DE chi doc 500 nen)
+    macd_fast: 5
+    macd_slow: 25
+    macd_signal: 5
+    atr_period: 5
+    supported_timeframes: [M10, M20, M30, M45, H1, H2, H3, H4]   # chạy cả khung M lẫn H (2026-11-02)
+    trend_off_timeframes: [H1, H2, H3, H4]   # khung KHÔNG lọc trend ([] = lọc trend ở mọi khung): khung H mới chỉ chạy tín hiệu thô, bảng khung trend điền sau
+    trend_methods: [knn]          # khoi loc mac dinh (nguon knn); breakout/zigzag/tstat/cloud duoc chon rieng theo redis.trend_outputs
+    trend_timeframes: [H1, H2, H3, H4]
+    trend_tf_by_symbol:   # khung trend rieng tung (symbol, khung vao lenh), BAT BUOC du o; chep tu we_core (ten symbol theo AEN)
+      US30: {M10: H4, M20: H1, M30: H1, M45: H1}
+      US500: {M10: H4, M20: H1, M30: H1, M45: H1}
+      US100: {M10: H4, M20: H1, M30: H1, M45: H1}
+      GER40: {M10: H4, M20: H1, M30: H1, M45: H1}
+      HK50: {M10: H4, M20: H1, M30: H1, M45: H1}
+      JP225: {M10: H4, M20: H1, M30: H1, M45: H1}
+      XAUUSD: {M10: H4, M20: H1, M30: H1, M45: H1}
+      BTCUSD: {M10: H4, M20: H1, M30: H1, M45: H1}
+      # nguồn nến OG8 (chép từ we_core, tên symbol theo OG8):
+      EURUSD: {M10: H4, M20: H1, M30: H1, M45: H1}
+      GBPUSD: {M10: H4, M20: H1, M30: H1, M45: H1}
+      USDCAD: {M10: H4, M20: H1, M30: H1, M45: H1}
+      USDJPY: {M10: H4, M20: H1, M30: H1, M45: H1}
+      FR40: {M10: H4, M20: H1, M30: H1, M45: H1}
+      SP35: {M10: H4, M20: H1, M30: H1, M45: H1}
+      UK100: {M10: H4, M20: H1, M30: H1, M45: H1}
+    alternating_filter_enabled: true   # true = chi ban tin hieu dau tien khi huong doi chieu (loc lap cung chieu); false = bar nao thoa dieu kien cung ban
+
+  macd_break:
+    lookback_bars: 100        # dinh/day close cua N nen truoc (toi da 300; DE doc 500 nen moi su kien)
+    macd_fast: 5
+    macd_slow: 25
+    macd_signal: 5
+    atr_period: 5
+    supported_timeframes: [M10, M20, M30, M45, H1, H2, H3, H4]
+    trend_methods: [knn]          # khối lọc mặc định (nguồn knn); breakout/zigzag/tstat/cloud được chọn riêng theo redis.trend_outputs
+    trend_timeframes: [H1, H2, H3, H4]
+    trend_off_timeframes: []   # khung KHÔNG lọc trend ([] = lọc trend ở mọi khung): macd_break dùng lại lọc trend ở MỌI khung từ 2026-10-28 (đồng bộ we_core/des)
+    excluded_trend_methods: [breakout]   # khối trend KHÔNG áp cho macd_break ở mọi khung: breakout tính hướng bằng chính điều kiện phá đỉnh/đáy + MACD của macd_break (lọc vòng tròn)
+    trend_tf_by_symbol:   # khung trend riêng từng (symbol, khung vào lệnh còn lọc trend), BẮT BUỘC đủ ô; chép từ we_core (tên symbol theo AEN)
+      US30: {M10: H1, M20: H1, M30: H2, M45: H2, H1: H1, H2: H3, H3: H4, H4: H4}
+      US500: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H2, H2: H2, H3: H3, H4: H4}
+      US100: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H1, H2: H4, H3: H4, H4: H4}
+      GER40: {M10: H1, M20: H1, M30: H1, M45: H3, H1: H3, H2: H4, H3: H4, H4: H4}
+      HK50: {M10: H1, M20: H1, M30: H1, M45: H3, H1: H2, H2: H4, H3: H4, H4: H4}
+      JP225: {M10: H1, M20: H1, M30: H1, M45: H2, H1: H3, H2: H4, H3: H3, H4: H4}
+      XAUUSD: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H3, H2: H4, H3: H3, H4: H4}
+      BTCUSD: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H1, H2: H4, H3: H4, H4: H4}
+      # nguồn nến OG8 (chép từ we_core, tên symbol theo OG8):
+      EURUSD: {M10: H1, M20: H1, M30: H1, M45: H3, H1: H1, H2: H2, H3: H3, H4: H4}
+      GBPUSD: {M10: H1, M20: H1, M30: H1, M45: H2, H1: H2, H2: H2, H3: H4, H4: H4}
+      USDCAD: {M10: H1, M20: H1, M30: H1, M45: H2, H1: H2, H2: H4, H3: H4, H4: H4}
+      USDJPY: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H1, H2: H4, H3: H4, H4: H4}
+      FR40: {M10: H1, M20: H1, M30: H1, M45: H2, H1: H2, H2: H4, H3: H3, H4: H4}
+      SP35: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H2, H2: H3, H3: H4, H4: H4}
+      UK100: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H1, H2: H3, H3: H3, H4: H4}
+    alternating_filter_enabled: true   # true = chi ban tin hieu dau tien khi huong doi chieu (loc lap cung chieu); false = bar nao thoa dieu kien cung ban
+
+  ichimoku:
+    tenkan_period: 9          # Tenkan-sen = (đỉnh cao nhất + đáy thấp nhất) / 2 của N nến gần nhất
+    kijun_period: 26          # Kijun-sen, cùng công thức với N nến
+    senkou_b_period: 52       # Senkou Span B, cùng công thức với N nến
+    displacement: 26          # mây tại nến t = Senkou tính ở nến t - N; Chikou: so close với close N nến trước
+    atr_period: 5
+    supported_timeframes: [M10, M20, M30, M45, H1, H2, H3, H4]
+    alternating_filter_enabled: true   # true = chi ban tin hieu dau tien khi huong doi chieu (loc lap cung chieu); false = bar nao thoa dieu kien cung ban
+    # KHÔNG có trend_*: ichimoku không dùng bộ lọc trend ở khung nào, chỉ nguồn raw (mọi nguồn lọc trend bỏ qua)
