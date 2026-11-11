@@ -1,0 +1,16 @@
+[Unit]
+Description=core_engine runner lane %i (<chien luoc | trend>.<nguon nen>) - candles (Core AEN / OG8) -> Redis DB0 SETUP + DB1 TRIGGER/CONTEXT/TREND for every symbol and timeframe of the source - user service
+After=default.target
+StartLimitIntervalSec=300
+StartLimitBurst=20
+
+[Service]
+Type=simple
+WorkingDirectory=/home/administrator/Desktop/decision_engine
+ExecStart=/home/administrator/Desktop/decision_engine/.venv/bin/python -m core_engine.src.main --runner --lane %i
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target

@@ -24,6 +24,9 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+# Số nến dời tối đa (live.max_shift_bars): từ giá trị này trở lên là KHÔNG giới hạn; 0 là không dời (chỉ nến mở đợt); n là dời tối đa n nến kể từ nến mở đợt.
+UNLIMITED_SHIFT = 999
+
 
 def allowed_masks(
     raw_signal: pd.Series,
@@ -48,6 +51,7 @@ def first_aligned_signal(
     trend_bias: pd.Series,
     buy_setup: pd.Series,
     sell_setup: pd.Series,
+    max_shift_bars: int = UNLIMITED_SHIFT,
 ) -> pd.Series:
     """
     Mỗi đợt setup bắn đúng MỘT tín hiệu, ở nến setup ĐẦU TIÊN mà trend_bias đã cùng chiều.
@@ -59,11 +63,20 @@ def first_aligned_signal(
     trend đúng chiều, hoặc không có nếu trend không đúng chiều lúc nào trong đợt. Cờ lọc xen kẽ tắt thì mọi setup đều có
     raw_signal != 0, mỗi đợt chỉ một nến và kết quả == "setup cùng chiều trend". Tính theo vị trí (numpy), không
     phụ thuộc index.
+
+    ``max_shift_bars``: số nến dời tối đa kể từ nến mở đợt (nến có raw_signal != 0 là nến 0). 0 = không dời (chỉ nến mở đợt, như khối không dời); n = chỉ nến tuổi 0..n được bắn; từ
+    UNLIMITED_SHIFT (999) trở lên = không giới hạn (hành vi cũ). Khi có giới hạn, nến thuộc đoạn đầu bảng chưa thấy nến mở đợt nào (run 0) không bao giờ bắn, vì tuổi thật của nó lớn hơn
+    mọi tuổi nhìn thấy được trong bảng. Nến ngoài giới hạn không bắn và cũng không "dùng lượt" của đợt.
     """
+    if max_shift_bars < 0:
+        raise ValueError("max_shift_bars must not be negative.")
     buy = pd.Series(buy_setup).fillna(False).astype(bool).to_numpy()
     sell = pd.Series(sell_setup).fillna(False).astype(bool).to_numpy()
     setup = np.where(buy, 1, np.where(sell, -1, 0))
     aligned = (setup != 0) & (setup == trend_bias.to_numpy())
     run_id = (raw_signal.to_numpy() != 0).cumsum()
+    if max_shift_bars < UNLIMITED_SHIFT:
+        age = pd.Series(np.arange(len(run_id))).groupby(run_id).cumcount().to_numpy()  # 0 ở nến mở đợt, tăng dần trong đợt
+        aligned = aligned & (run_id > 0) & (age <= max_shift_bars)
     position_in_run = pd.Series(aligned.astype(int)).groupby(run_id).cumsum().to_numpy()
     return pd.Series(np.where(aligned & (position_in_run == 1), setup, 0), index=raw_signal.index, dtype="int64")

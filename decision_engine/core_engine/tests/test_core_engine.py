@@ -19,13 +19,12 @@ from itertools import pairwise
 import numpy as np
 import pandas as pd
 import pytest
+from engine_support import run_strategy
 
 from core_engine.src.configuration import (
     STRATEGIES,
     alternating_filter_for,
     get_strategy,
-    trend_enabled_for,
-    trend_source_for,
 )
 from core_engine.src.indicator import (
     add_ema_reach_indicators,
@@ -36,7 +35,6 @@ from core_engine.src.indicator import (
 )
 from core_engine.src.strategies.ema_reach import detect_ema_reach_signals
 from core_engine.src.strategies.ichimoku import detect_ichimoku_signals
-from core_engine.src.strategy_runner import run_strategy
 
 normalize_combo_params = STRATEGIES["combo"].normalize_params
 normalize_ma_cross_params = STRATEGIES["ma_cross"].normalize_params
@@ -141,11 +139,6 @@ def test_pipeline_khong_sua_input_tai_cho(bars: pd.DataFrame) -> None:
 # =============================================================================
 
 
-def test_bang_khung_trend_cua_ba_chien_luoc_nam_trong_h1_h4() -> None:
-    for key in ("combo", "ma_cross", "macd_break"):
-        assert set(get_strategy(key).trend_tf_by_symbol["US30"].values()) <= set(COMBO_TREND_TIMEFRAMES)  # bảng khung trend H1..H4
-
-
 def test_trend_tat_thi_signal_bang_raw_signal(bars: pd.DataFrame) -> None:
     for strategy, tf in (("combo", "H1"), ("ma_cross", "M30")):
         df = run_strategy(strategy, symbol="US30", tf=tf, bars=bars)
@@ -158,9 +151,9 @@ def test_trend_tat_thi_signal_bang_raw_signal(bars: pd.DataFrame) -> None:
 
 
 def test_trend_bat_ma_thieu_cot_trend_thi_raise(bars: pd.DataFrame) -> None:
-    """run_strategy() (1 timeframe) không bao giờ sinh trend_bias. Bật trend
+    """run_strategy() (1 timeframe, không bảng trend) không bao giờ sinh trend_bias. Bật trend
     filter trên đường đó phải RAISE rõ ràng chứ không âm thầm bỏ qua bộ lọc —
-    configuration.process_pair dựa vào điều này để không publish tín hiệu chưa lọc.
+    configuration.process_plan dựa vào điều này: bản lọc chỉ chạy khi đã lắp được cột trend_bias.
     """
     with pytest.raises(ValueError, match="trend_bias"):
         run_strategy(
@@ -632,10 +625,12 @@ def test_config_mau_dung_cau_hinh_moi_cho_ca_bon_chien_luoc() -> None:
     for key in ("combo", "ma_cross", "macd_break"):
         assert example["strategies"][key]["alternating_filter_enabled"] is True
     assert "symbol_x" not in example["strategies"]["combo"]
-    assert example["live"]["enabled_strategies"] == ["combo", "ma_cross", "macd_break", "ichimoku", "ema_reach"]
+    assert "enabled_strategies" not in example["live"] and "plans" not in example  # DE chạy mọi chiến lược ở mọi (symbol, khung) theo bảng của we
+    for key in ("combo", "ma_cross", "macd_break", "ema_reach"):  # bảng khung trend theo (symbol, khung vào lệnh) của we; không còn khung tắt trend hay danh sách khối theo chiến lược
+        assert "trend_tf_by_symbol" in example["strategies"][key] and not {"trend_off_timeframes", "trend_methods"} & set(example["strategies"][key]), key
+    assert not {"trend_off_timeframes", "trend_tf_by_symbol", "trend_methods"} & set(example["strategies"]["ichimoku"])
     assert example["strategies"]["macd_break"]["supported_timeframes"] == list(MACD_BREAK_TIMEFRAMES)
     assert example["strategies"]["macd_break"]["lookback_bars"] == 100
-    assert example["strategies"]["macd_break"]["trend_off_timeframes"] == []  # lọc trend ở mọi khung (chốt lại 2026-10-28, đồng bộ we_core)
     assert example["strategies"]["macd_break"]["excluded_trend_methods"] == ["breakout"]
     assert example["live"]["signal_validity"]["macd_break"] == {"mode": "seconds_after_bar_close", "seconds": 600}
     ichimoku = example["strategies"]["ichimoku"]  # không có trend: không khai khoá trend nào
@@ -1023,51 +1018,36 @@ def test_ichimoku_chu_ky_khac_dung_chu_ky_cua_config_khong_phai_so_cung(rbars: p
     assert not out["senkou_b"].equals(default["senkou_b"])
 
 
-def test_ichimoku_khong_co_trend_o_moi_khung(rbars: pd.DataFrame) -> None:
+def test_ichimoku_khong_co_trend(rbars: pd.DataFrame) -> None:
     spec = get_strategy("ichimoku")
-    assert spec.trend_off_timeframes == spec.supported_timeframes
+    assert spec.uses_trend is False and spec.trend_timeframes == ()
     assert alternating_filter_for("ichimoku") is True
     for tf in ICHIMOKU_TIMEFRAMES:
-        assert trend_enabled_for("ichimoku", tf) is False
-        with pytest.raises(ValueError, match="does not use a trend filter"):
-            trend_source_for("ichimoku", "US30", tf, "knn")
+        assert not {"TREND_METHODS", "TREND_TF", "TREND_FILTER_ENABLED"} & set(spec.normalize_params(None, "US30", tf))  # kế hoạch của ichimoku không được khai trend (xem test_config_guards)
 
 
 # =============================================================================
-# 14. macd_break lọc trend ở mọi khung, trừ khối breakout (excluded_trend_methods, chốt lại 2026-10-28, đồng bộ we_core/des);
-# cơ chế trend_off_timeframes còn lại (ichimoku dùng) được kiểm bằng fixture macd_break_trend_off_h1_h4.
+# 14. macd_break không dùng khối breakout ở bất kỳ khung nào (excluded_trend_methods, chốt lại 2026-10-28, đồng bộ we_core/des); bốn chiến lược dùng MACD khai macd_h là cột xác nhận.
 # =============================================================================
 
 
-def test_macd_break_loc_trend_o_moi_khung_theo_config() -> None:
-    spec = get_strategy("macd_break")
-    assert spec.trend_off_timeframes == () and spec.excluded_trend_methods == ("breakout",)
-    assert {tf: trend_enabled_for("macd_break", tf) for tf in MACD_BREAK_TIMEFRAMES} == {tf: True for tf in MACD_BREAK_TIMEFRAMES}
-    # combo, ma_cross, ema_reach chạy cả khung M lẫn H (2026-11-02): khung CŨ còn lọc trend, khung MỚI tắt trend (chỉ tín hiệu thô, bảng khung trend điền sau)
-    for key, with_trend, raw_only in (
-        ("combo", ("H1", "H2", "H3", "H4"), ("M10", "M20", "M30", "M45")),
-        ("ma_cross", ("M10", "M20", "M30", "M45"), ("H1", "H2", "H3", "H4")),
-        ("ema_reach", ("M10", "M20", "M30", "M45"), ("H1", "H2", "H3", "H4")),
-    ):
-        assert get_strategy(key).trend_off_timeframes == raw_only
-        assert all(trend_enabled_for(key, tf) for tf in with_trend) and not any(trend_enabled_for(key, tf) for tf in raw_only)
-        assert set(get_strategy(key).live_timeframes) == set(with_trend) | set(raw_only)
-    # bảng khung trend đủ ô cả 8 khung (macd_break lọc trend ở mọi khung)
-    assert set(get_strategy("macd_break").trend_tf_by_symbol["US30"]) == set(MACD_BREAK_TIMEFRAMES)
+def test_khung_chay_duoc_cua_nam_chien_luoc() -> None:
+    assert get_strategy("macd_break").excluded_trend_methods == ("breakout",)
+    # cả năm chiến lược chạy được ở cả 8 khung M10–H4 (2026-11-02); khung trend của từng (symbol, khung vào lệnh) là bảng của we trong config
+    for key in STRATEGIES:
+        assert set(get_strategy(key).live_timeframes) == set(MACD_BREAK_TIMEFRAMES), key
 
 
-def test_trend_method_applies_macd_break_khong_dung_breakout_o_moi_khung() -> None:
-    from core_engine.src import configuration
-
-    assert configuration.get_strategy("macd_break").excluded_trend_methods == ("breakout",)
-    assert configuration.trend_method_applies("macd_break", "breakout") is False and configuration.trend_method_applies("macd_break", "BREAKOUT") is False
-    for method in ("knn", "zigzag", "tstat", "cloud"):
-        assert configuration.trend_method_applies("macd_break", method) is True
-    for key in ("combo", "ma_cross", "ichimoku"):  # chỉ macd_break khai khoá
-        assert configuration.trend_method_applies(key, "breakout") is True
+def test_macd_break_khong_dung_breakout_o_moi_khung() -> None:
+    assert get_strategy("macd_break").excluded_trend_methods == ("breakout",)
+    for key in ("combo", "ma_cross", "ema_reach"):  # chỉ macd_break khai khoá
+        assert get_strategy(key).excluded_trend_methods == ()
     for tf in ("M10", "M45", "H1", "H4"):  # đè TREND_METHODS bằng khối bị loại là lỗi, ở mọi khung
         with pytest.raises(ValueError, match="cannot be used with this strategy"):
             get_strategy("macd_break").normalize_params({"TREND_METHODS": "breakout"}, "US30", tf)
+    for method in ("knn", "zigzag", "tstat"):  # khối cần khung tham chiếu riêng: kế hoạch khai tf
+        assert get_strategy("macd_break").normalize_params({"TREND_METHODS": method, "TREND_TF": "H2"}, "US30", "H1")["TREND_METHODS"] == (method,)
+    assert get_strategy("macd_break").normalize_params({"TREND_METHODS": "cloud"}, "US30", "H1")["TREND_TF"] == "H1"  # cloud tự suy ra khung từ khung vào lệnh
 
 
 @pytest.mark.parametrize(
@@ -1076,60 +1056,16 @@ def test_trend_method_applies_macd_break_khong_dung_breakout_o_moi_khung() -> No
         ({"excluded_trend_methods": "breakout"}, "must be a list"),
         ({"excluded_trend_methods": ["nope"]}, "unknown trend method"),
         ({"excluded_trend_methods": ["breakout", "breakout"]}, "more than once"),
-        ({"excluded_trend_methods": ["knn"], "trend_methods": ["knn"]}, "uses by default"),
     ],
 )
 def test_excluded_trend_methods_sai_cau_hinh_bi_tu_choi(config: dict, message: str) -> None:
     from core_engine.src.configuration import _excluded_trend_methods
 
     with pytest.raises((ValueError, TypeError), match=message):
-        _excluded_trend_methods({"trend_methods": ["knn"], **config}, "strategies.x")
-    assert _excluded_trend_methods({"trend_methods": ["knn"]}, "strategies.x") == ()
-    assert _excluded_trend_methods({"trend_methods": ["knn"], "excluded_trend_methods": []}, "strategies.x") == ()
-
-
-@pytest.mark.usefixtures("macd_break_trend_off_h1_h4")
-def test_macd_break_h1_h4_tu_choi_moi_duong_trend_nhung_nguon_raw_van_chay(rbars: pd.DataFrame) -> None:
-    for tf in ("H1", "H2", "H3", "H4"):
-        with pytest.raises(ValueError, match=rf"does not use a trend filter on timeframe {tf}"):
-            trend_source_for("macd_break", "US30", tf, "knn")
-        assert not run_strategy("macd_break", symbol="US30", tf=tf, bars=rbars).empty  # nguồn raw (1 khung) không đổi
-    assert trend_source_for("macd_break", "US30", "M30", "knn").trend_tf in COMBO_TREND_TIMEFRAMES  # M10–M45 vẫn như cũ
-
-
-def test_trend_off_timeframes_doc_tu_config_va_chan_cau_hinh_sai() -> None:
-    from core_engine.src.configuration import _trend_off_timeframes
-
-    supported = ("M10", "M30", "H1", "H2")
-    assert _trend_off_timeframes({"trend_off_timeframes": [" h1 ", "H2"]}, "strategies.x", supported=supported) == ("H1", "H2")
-    assert _trend_off_timeframes({"trend_off_timeframes": []}, "strategies.x", supported=supported) == ()  # [] = lọc trend ở mọi khung
-    with pytest.raises(KeyError, match=r"thiếu 'strategies\.x\.trend_off_timeframes'"):
-        _trend_off_timeframes({}, "strategies.x", supported=supported)  # bắt buộc khai, không có mặc định âm thầm
-    with pytest.raises(ValueError, match=r"not in supported_timeframes \(M10, M30, H1, H2\): H4"):
-        _trend_off_timeframes({"trend_off_timeframes": ["H1", "H4"]}, "strategies.x", supported=supported)
-    with pytest.raises(ValueError, match="listed twice: H1"):
-        _trend_off_timeframes({"trend_off_timeframes": ["H1", "h1"]}, "strategies.x", supported=supported)
-    with pytest.raises(TypeError, match="must be a list"):
-        _trend_off_timeframes({"trend_off_timeframes": "H1"}, "strategies.x", supported=supported)
-
-
-def test_bang_khung_trend_khong_duoc_khai_o_khung_da_tat_trend_va_thieu_o_khung_con_trend_thi_bao_loi() -> None:
-    from core_engine.src.configuration import _strategy_trend_tf_by_symbol
-
-    common = {"symbols": ("US30",), "entry_timeframes": ("M30", "H1"), "trend_timeframes": ("H1", "H2", "H4")}
-    cfg = {"trend_tf_by_symbol": {"US30": {"M30": "H1"}}}
-    # H1 tắt trend: chỉ cần ô M30
-    assert _strategy_trend_tf_by_symbol(cfg, "strategies.x", trend_off_timeframes=("H1",), **common) == {"US30": {"M30": "H1"}}
-    # không tắt gì: thiếu ô H1 là lỗi (hành vi cũ giữ nguyên)
-    with pytest.raises(ValueError, match="US30: no trend timeframe for entry timeframe\\(s\\) H1"):
-        _strategy_trend_tf_by_symbol(cfg, "strategies.x", **common)
-    # đã tắt trend ở H1 mà vẫn khai ô H1: báo lỗi rõ để không còn giá trị chết trong config
-    both = {"trend_tf_by_symbol": {"US30": {"M30": "H1", "H1": "H2"}}}
-    with pytest.raises(ValueError, match="US30 H1: trend filter is off for this entry timeframe \\(trend_off_timeframes\\) — remove the cell"):
-        _strategy_trend_tf_by_symbol(both, "strategies.x", trend_off_timeframes=("H1",), **common)
-    # khung còn lọc trend mà thiếu ô: vẫn báo
-    with pytest.raises(ValueError, match="US30: no trend timeframe for entry timeframe\\(s\\) M30"):
-        _strategy_trend_tf_by_symbol({"trend_tf_by_symbol": {"US30": {}}}, "strategies.x", trend_off_timeframes=("H1",), **common)
+        _excluded_trend_methods(config, "strategies.x")
+    assert _excluded_trend_methods({}, "strategies.x") == ()
+    assert _excluded_trend_methods({"excluded_trend_methods": []}, "strategies.x") == ()
+    assert _excluded_trend_methods({"excluded_trend_methods": [" Breakout "]}, "strategies.x") == ("breakout",)
 
 
 # =============================================================================
@@ -1310,13 +1246,10 @@ def test_ema_reach_tham_so_mac_dinh_kiem_tra_va_khung_theo_o() -> None:
     assert (params["MACD_FAST"], params["MACD_SLOW"], params["MACD_SIGNAL"]) == (5, 25, 5)
     assert params["ATR_PERIOD"] == 5
     assert params["TREND_FILTER_ENABLED"] is False and params["ALTERNATING_FILTER_ENABLED"] is True
-    assert params["TREND_METHODS"] == ("knn",)  # như ma_cross/macd_break
-    assert params["TREND_TF"] == "H1"  # ô US30 M30 của bảng trend_tf_by_symbol
-    assert normalize_ema_reach_params({}, "US30", "M10")["TREND_TF"] == "H4"
+    assert params["TREND_METHODS"] == () and params["TREND_TF"] == ""  # khối và khung trend do kế hoạch của symbol khai (plans.<symbol>.trend), không có mặc định
     spec = get_strategy("ema_reach")
     assert spec.supported_timeframes == ("M10", "M20", "M30", "M45", "H1", "H2", "H3", "H4") and spec.recommended_timeframes == spec.supported_timeframes
-    assert spec.trend_off_timeframes == ("H1", "H2", "H3", "H4") and spec.excluded_trend_methods == ()  # khung M lọc trend ở mọi khối (kể cả breakout); khung H mới chỉ tín hiệu thô
-    assert trend_enabled_for("ema_reach", "M10") and trend_enabled_for("ema_reach", "M45") and not trend_enabled_for("ema_reach", "H1")
+    assert spec.excluded_trend_methods == ()  # ema_reach dùng được mọi khối trend (kể cả breakout)
 
     with pytest.raises(ValueError, match="FAST_EMA must be smaller than SLOW_EMA"):
         normalize_ema_reach_params({"FAST_EMA": "40", "SLOW_EMA": "34"})
@@ -1327,23 +1260,6 @@ def test_ema_reach_tham_so_mac_dinh_kiem_tra_va_khung_theo_o() -> None:
     assert len(run_strategy("ema_reach", symbol="US30", tf="H1", bars=_random_bars(150, seed=1, freq="1h"))) == 150  # khung H nay được phép
     # LOOKBACK_BARS kẹp tối đa 300: DE đọc 500 nến, lookback dài hơn thì chiến lược im lặng không bao giờ bắn
     assert normalize_ema_reach_params({"LOOKBACK_BARS": "5000"})["LOOKBACK_BARS"] == 300
-
-
-def test_ema_reach_bang_khung_trend_du_o_cho_15_symbol_x_4_khung() -> None:
-    from core_engine.src.configuration import (
-        OPERATING_SYMBOLS,
-        check_trend_timeframe,
-    )
-
-    table = get_strategy("ema_reach").trend_tf_by_symbol
-    assert set(table) == set(OPERATING_SYMBOLS) and len(OPERATING_SYMBOLS) == 15  # 8 symbol của Core AEN + 7 symbol của nguồn nến OG8
-    assert all(set(row) == {"M10", "M20", "M30", "M45"} for row in table.values())  # 15 × 4 = 60 ô
-    for symbol, row in table.items():
-        for entry_tf, trend_tf in row.items():
-            check_trend_timeframe(entry_tf, trend_tf)  # khung trend >= khung vào lệnh
-            assert normalize_ema_reach_params({}, symbol, entry_tf)["TREND_TF"] == trend_tf
-            # cùng bảng với ma_cross (config thật của we_core: M10 → H4, M20/M30/M45 → H1, đã đo giữ nhiều tín hiệu nhất 60/60 ô)
-            assert trend_tf == ("H4" if entry_tf == "M10" else "H1")
 
 
 def test_ema_reach_entry_la_close_va_khong_co_cot_tam_thoi(rbars: pd.DataFrame) -> None:
@@ -1364,16 +1280,14 @@ def test_cau_hinh_that_va_mau_ema_reach_khai_du_va_dong_bo_voi_we_core() -> None
 
     example = yaml.safe_load((Path(__file__).resolve().parents[1] / "de_config.example.yaml").read_text(encoding="utf-8"))
     for name, cfg in (("config thật", CONFIG), ("config mẫu", example)):
-        assert "ema_reach" in cfg["live"]["enabled_strategies"], name
         assert cfg["live"]["signal_validity"]["ema_reach"] == {"mode": "seconds_after_bar_close", "seconds": 600}, name  # như ma_cross
         spec = cfg["strategies"]["ema_reach"]
         assert (spec["fast_ema"], spec["slow_ema"], spec["lookback_bars"]) == (13, 34, 20), name
         assert (spec["macd_fast"], spec["macd_slow"], spec["macd_signal"], spec["atr_period"]) == (5, 25, 5, 5), name
         assert spec["supported_timeframes"] == ["M10", "M20", "M30", "M45", "H1", "H2", "H3", "H4"], name
         assert spec["alternating_filter_enabled"] is True, name
-        assert spec["trend_methods"] == ["knn"] and spec["trend_timeframes"] == ["H1", "H2", "H3", "H4"], name
-        assert spec["trend_off_timeframes"] == ["H1", "H2", "H3", "H4"] and "excluded_trend_methods" not in spec, name  # khung M lọc trend ở mọi khối; khung H mới chỉ tín hiệu thô
-        assert len(spec["trend_tf_by_symbol"]) == 15 and sum(len(row) for row in spec["trend_tf_by_symbol"].values()) == 60, name
+        assert spec["trend_timeframes"] == ["H1", "H2", "H3", "H4"] and "excluded_trend_methods" not in spec, name
+        assert not {"trend_methods", "trend_off_timeframes"} & set(spec) and "trend_tf_by_symbol" in spec, name  # khung trend theo (symbol, khung vào lệnh) là bảng của we; khối trend khai ở redis.trend_outputs
 
 
 # Golden tính từ CHÍNH pipeline DE trên range_bars() (bước M30, tf M30): số (BUY, SELL) khi bật / tắt lọc lặp, chỉ số tín hiệu đầu, digest 3 cột.

@@ -180,11 +180,11 @@ def test_parse_methods_knows_a_registered_extra_block(monkeypatch) -> None:
 # --- cấu hình DE -----------------------------------------------------------------------
 
 
-def test_trend_methods_come_from_des_config_and_reject_unregistered_override() -> None:
-    # đồng bộ với we_core (23/10): knn là khối mặc định của cả ba chiến lược; breakout và zigzag là hai nguồn riêng của DE
+def test_trend_methods_come_from_the_plan_and_reject_unregistered_override() -> None:
+    # khối trend do kế hoạch của từng symbol chọn (plans.<symbol>.trend.method): chiến lược chưa có khối mặc định nào, nên bản không có override là bản KHÔNG lọc trend
     for key in ("combo", "ma_cross", "macd_break"):
-        assert configuration.get_strategy(key).default_params["TREND_METHODS"] == ("knn",)
-    assert configuration.get_strategy("combo").normalize_params({}, "US30", "H1")["TREND_METHODS"] == ("knn",)
+        assert configuration.get_strategy(key).default_params["TREND_METHODS"] == ()
+    assert configuration.get_strategy("combo").normalize_params({}, "US30", "H1")["TREND_METHODS"] == ()
     assert configuration.get_strategy("combo").normalize_params({"TREND_METHODS": " KNN "}, "US30", "H1")["TREND_METHODS"] == ("knn",)
     with pytest.raises(ValueError, match=r"unknown trend method\(s\): ema"):
         configuration.get_strategy("combo").normalize_params({"TREND_METHODS": "ema"}, "US30", "H1")
@@ -373,8 +373,8 @@ def test_breakout_always_uses_the_entry_timeframe():
     with pytest.raises(ValueError, match=r"Trend method\(s\) breakout cannot be used with this strategy"):
         configuration.get_strategy("macd_break").normalize_params({"TREND_METHODS": "breakout"}, "US30", "M10")
     ma_cross = configuration.get_strategy("ma_cross")
-    assert ma_cross.normalize_params(None, "US30", "M30")["TREND_TF"] in ("H1", "H2", "H3", "H4")  # mặc định của config là knn (như we_core): khung tham chiếu tra từ bảng, không phải khung của tín hiệu
-    assert ma_cross.normalize_params({"TREND_METHODS": "knn"}, "US30", "M30")["TREND_TF"] in ("H1", "H2", "H3", "H4")  # knn vẫn tra bảng
+    assert ma_cross.normalize_params(None, "US30", "M30")["TREND_TF"] == ""  # chưa chọn khối thì chưa có khung trend
+    assert ma_cross.normalize_params({"TREND_METHODS": "knn"}, "US30", "M30")["TREND_TF"] == ""  # knn không có khung mặc định: kế hoạch phải khai trend.tf
 
     combo = configuration.get_strategy("combo")
     with pytest.raises(ValueError, match="always use the entry timeframe H1; TREND_TF H4 is not allowed"):
@@ -384,24 +384,17 @@ def test_breakout_always_uses_the_entry_timeframe():
         combo.normalize_params({"TREND_METHODS": "knn,breakout"}, "US30", "H1")
 
 
-def test_knn_keeps_using_the_reference_timeframe_from_the_table_and_only_h1_to_h4():
-    """Chỉ breakout tính trên chính khung của tín hiệu; knn giữ nguyên: khung tham chiếu tra theo trend_tf_by_symbol, chỉ H1–H4."""
-    tables = {key: configuration.get_strategy(key).trend_tf_by_symbol for key in ("combo", "ma_cross", "macd_break")}
-    checked = 0
-    for strategy, table in tables.items():
+def test_knn_needs_its_reference_timeframe_from_the_plan_and_only_h1_to_h4():
+    """Chỉ breakout và cloud tính trên chính khung của tín hiệu; knn không có khung mặc định: kế hoạch khai trend.tf, chỉ H1–H4."""
+    for strategy in ("combo", "ma_cross", "macd_break"):
         spec = configuration.get_strategy(strategy)
-        for symbol, cells in table.items():
-            for entry_tf, expected in cells.items():
-                default_tf = entry_tf if spec.default_params["TREND_METHODS"] == ("breakout",) else expected  # mặc định đặt riêng theo từng chiến lược
-                assert spec.normalize_params(None, symbol, entry_tf)["TREND_TF"] == default_tf
-                assert spec.normalize_params({"TREND_METHODS": "knn"}, symbol, entry_tf)["TREND_TF"] == expected
-                checked += 1
-    assert checked == len(configuration.OPERATING_SYMBOLS) * (4 + 4 + 8)  # mọi ô của bảng (mọi symbol vận hành × 16 khung vào lệnh: combo 4, ma_cross 4, macd_break M10–H4 8)
-    assert set(configuration.get_strategy("macd_break").trend_tf_by_symbol["US30"]) == {"M10", "M20", "M30", "M45", "H1", "H2", "H3", "H4"}  # macd_break lọc trend ở mọi khung
+        for entry_tf in spec.live_timeframes:
+            assert spec.normalize_params({"TREND_METHODS": "knn"}, "US30", entry_tf)["TREND_TF"] == ""  # không đoán khung
+            assert spec.normalize_params({"TREND_METHODS": "knn", "TREND_TF": "h3"}, "US30", entry_tf)["TREND_TF"] == "H3"
+            with pytest.raises(ValueError, match="TREND_TF must be one of"):
+                spec.normalize_params({"TREND_METHODS": "knn", "TREND_TF": "M45"}, "US30", entry_tf)
     ma_cross = configuration.get_strategy("ma_cross")
-    assert ma_cross.normalize_params({"TREND_METHODS": "knn", "TREND_TF": "H3"}, "US30", "M30")["TREND_TF"] == "H3"  # đè tường minh vẫn thắng
-    with pytest.raises(ValueError, match="TREND_TF must be one of: H1, H2, H3, H4"):
-        ma_cross.normalize_params({"TREND_METHODS": "knn", "TREND_TF": "M30"}, "US30", "M30")  # knn không dùng khung ngoài H1–H4
+    assert ma_cross.normalize_params({"TREND_METHODS": "knn", "TREND_TF": "H3"}, "US30", "M30")["TREND_TF"] == "H3"
 
 
 def test_trend_tf_tells_which_methods_use_the_entry_timeframe():
@@ -456,7 +449,7 @@ def _old_rule(monkeypatch) -> tuple[str, ...]:
 
 def test_policy_table_holds_the_filter_policy_of_every_block(monkeypatch):
     assert trend_tf.policy_of("knn") == trend_tf.MethodPolicy(same_timeframe=False, first_aligned_per_run=False)
-    assert trend_tf.policy_of("breakout") == trend_tf.MethodPolicy(same_timeframe=True, first_aligned_per_run=True)
+    assert trend_tf.policy_of("breakout") == trend_tf.MethodPolicy(same_timeframe=True, first_aligned_per_run=True, trend_warmup_bars=1200)
     zigzag_policy = trend_tf.policy_of("zigzag")  # khung tham chiếu riêng như knn, không dời tín hiệu; warm-up nến trend dài hơn (xem test warm-up)
     assert (zigzag_policy.same_timeframe, zigzag_policy.first_aligned_per_run) == (False, False)
     assert trend_tf.is_same_timeframe("breakout") and not trend_tf.is_same_timeframe("knn")
@@ -482,11 +475,11 @@ def test_policy_table_holds_the_filter_policy_of_every_block(monkeypatch):
 
 def test_policy_table_holds_the_trend_warmup_of_every_block(monkeypatch):
     assert trend_tf.MethodPolicy().trend_warmup_bars == 0                       # mặc định: dùng warm-up chung của hệ
-    assert trend_tf.policy_of("knn").trend_warmup_bars == 0 and trend_tf.policy_of("breakout").trend_warmup_bars == 0
+    assert trend_tf.policy_of("knn").trend_warmup_bars == 0 and trend_tf.policy_of("breakout").trend_warmup_bars == 1200  # breakout giữ hướng tới cú phá kế: cả nến nguồn giữ
     zigzag_warmup = trend_tf.policy_of("zigzag").trend_warmup_bars
-    assert zigzag_warmup > int(configuration.CONFIG["redis"]["input"]["snapshot_bars"])  # máy trạng thái nhớ lâu hơn cửa sổ nến của DE
+    assert zigzag_warmup > int(configuration.CONFIG["redis"]["input"]["snapshot_bars"])  # máy trạng thái nhớ lâu hơn cửa sổ 500 nến mà DE giữ
     assert trend_tf.max_trend_warmup_bars(()) == 0
-    assert trend_tf.max_trend_warmup_bars(("knn",)) == 0 and trend_tf.max_trend_warmup_bars(("breakout",)) == 0
+    assert trend_tf.max_trend_warmup_bars(("knn",)) == 0 and trend_tf.max_trend_warmup_bars(("breakout",)) == 1200
     assert trend_tf.max_trend_warmup_bars(("zigzag",)) == zigzag_warmup
     assert trend_tf.max_trend_warmup_bars(("knn", "zigzag")) == zigzag_warmup   # nhiều khối: lấy khối đòi nhiều nhất
     monkeypatch.setitem(trend_tf.METHODS, "fake", _fake_block([1]))
@@ -715,14 +708,15 @@ def _filters_input(directions: list[int], trend: list[int]) -> tuple[pd.DataFram
 FILTER_PARAMS = {"TREND_FILTER_ENABLED": True, "ALTERNATING_FILTER_ENABLED": True, "TREND_METHODS": ("breakout",)}
 
 
-def test_apply_signal_filters_writes_the_four_columns_in_order_and_leaves_the_input_alone():
+def test_apply_signal_filters_writes_the_columns_in_order_and_leaves_the_input_alone():
     frame, buy, sell = _filters_input(SETUP_DIRECTIONS, TREND_DIRECTIONS)
     before = frame.copy()
 
     out = apply_signal_filters(frame, FILTER_PARAMS, buy_setup=buy, sell_setup=sell, buy_reason="up", sell_reason="down")
 
     pd.testing.assert_frame_equal(frame, before)  # không sửa khung của người gọi
-    assert list(out.columns) == [*before.columns, "raw_signal", "signal", "trend_filter_status", "signal_reason"]
+    assert list(out.columns) == [*before.columns, "raw_signal", "signal", "trend_filter_status", "signal_reason", "buy_mask", "sell_mask"]
+    assert out["buy_mask"].dtype == out["sell_mask"].dtype == bool  # hai mặt nạ "nến được phép bắn" cho phần dời ở DE (ghi vào TRIGGER)
     assert out["raw_signal"].dtype == out["signal"].dtype == np.int64
     assert _at(out["raw_signal"]) == RAW_AT and _at(out["signal"]) == FIRST_ALIGNED_AT
     assert out["signal_reason"].iloc[4] == "down; aligned with trend reference" and out["signal_reason"].iloc[3] == ""
@@ -944,10 +938,12 @@ def test_zigzag_scenarios_mirror_into_the_downtrend_rules(points):
     assert (_zigzag_bias(mirrored, ZZ_ATR_FAST)[12:] != 0).all() and _zigzag_bias(mirrored, ZZ_ATR_FAST)[-1] == 1
 
 
-def test_zigzag_takes_its_trend_timeframe_from_the_table_like_knn():
-    params = configuration.get_strategy("combo").normalize_params({"TREND_METHODS": "zigzag"}, "US30", "H1")
+def test_zigzag_takes_its_trend_timeframe_from_the_plan_like_knn():
+    combo = configuration.get_strategy("combo")
+    params = combo.normalize_params({"TREND_METHODS": "zigzag", "TREND_TF": "H4"}, "US30", "H1")
     assert params["TREND_METHODS"] == ("zigzag",)
-    assert params["TREND_TF"] == configuration.get_strategy("combo").trend_tf_by_symbol["US30"]["H1"]  # ô của bảng, KHÔNG phải khung vào lệnh
+    assert params["TREND_TF"] == "H4"  # khung do kế hoạch khai, KHÔNG phải khung vào lệnh
+    assert combo.normalize_params({"TREND_METHODS": "zigzag"}, "US30", "H1")["TREND_TF"] == ""
 
 
 # --- khối T-STAT --------------------------------------------------------------------------------------------------
@@ -1149,15 +1145,17 @@ def test_tstat_slope_overrejects_a_driftless_random_walk_while_return_mode_is_ca
 
 def test_tstat_lookback_and_lag_fit_inside_the_snapshot_des_reads_for_the_trend_timeframe():
     params = tstat.tstat_trend_indicator_params(None)
-    snapshot_bars = int(configuration.CONFIG["redis"]["input"]["snapshot_bars"])  # DE đọc ít nhất chừng này nến khung trend (không có warm-up riêng)
-    assert params["TSTAT_LOOKBACK"] + params["TSTAT_NW_LAG"] + 1 <= snapshot_bars
+    read_bars = int(configuration.CONFIG["redis"]["input"]["snapshot_bars"]) + int(configuration.CONFIG["redis"]["input"]["warmup_bars"])  # runner đọc ít nhất chừng này nến mỗi khung (ghi snapshot_bars hàng cuối)
+    assert params["TSTAT_LOOKBACK"] + params["TSTAT_NW_LAG"] + 1 <= read_bars
     assert trend_tf.policy_of("tstat").trend_warmup_bars == 0 and trend_tf.max_trend_warmup_bars(("tstat",)) == 0
 
 
-def test_tstat_takes_its_trend_timeframe_from_the_table_like_knn():
-    params = configuration.get_strategy("combo").normalize_params({"TREND_METHODS": "tstat"}, "US30", "H1")
+def test_tstat_takes_its_trend_timeframe_from_the_plan_like_knn():
+    combo = configuration.get_strategy("combo")
+    params = combo.normalize_params({"TREND_METHODS": "tstat", "TREND_TF": "H2"}, "US30", "H1")
     assert params["TREND_METHODS"] == ("tstat",)
-    assert params["TREND_TF"] == configuration.get_strategy("combo").trend_tf_by_symbol["US30"]["H1"]  # ô của bảng, KHÔNG phải khung vào lệnh
+    assert params["TREND_TF"] == "H2"  # khung do kế hoạch khai, KHÔNG phải khung vào lệnh
+    assert combo.normalize_params({"TREND_METHODS": "tstat"}, "US30", "H1")["TREND_TF"] == ""
 
 
 # =============================================================================
@@ -1362,12 +1360,12 @@ def test_check_contract_validates_the_minimum_timeframe_of_a_policy(monkeypatch)
     ("strategy", "entry_tf", "want"),
     [("combo", "H1", "H1"), ("combo", "H4", "H4"), ("ma_cross", "M10", "H1"), ("ma_cross", "M45", "H1"), ("macd_break", "M20", "H1"), ("macd_break", "M45", "H1")],
 )
-def test_cloud_takes_its_trend_timeframe_from_the_entry_timeframe_not_from_the_table(strategy, entry_tf, want):
+def test_cloud_takes_its_trend_timeframe_from_the_entry_timeframe_not_from_the_plan(strategy, entry_tf, want):
     spec = configuration.get_strategy(strategy)
     params = spec.normalize_params({"TREND_METHODS": "cloud"}, "US30", entry_tf)
     assert params["TREND_METHODS"] == ("cloud",) and params["TREND_TF"] == want
-    assert configuration.trend_source_for(strategy, "US30", entry_tf, "cloud") == configuration.TrendSource(want, True, 0)
-    assert configuration.trend_source_for(strategy, "EURUSD", entry_tf, "cloud").trend_tf == want  # không tra bảng: symbol ngoài bảng vẫn có khung
+    assert trend_tf.uses_first_aligned_per_run(("cloud",)) and trend_tf.max_trend_warmup_bars(("cloud",)) == 0  # cloud dời tín hiệu, không đòi warm-up riêng
+    assert spec.normalize_params({"TREND_METHODS": "cloud"}, "EURUSD", entry_tf)["TREND_TF"] == want  # kế hoạch không khai tf: khung luôn suy ra từ khung vào lệnh
     assert spec.normalize_params({"TREND_METHODS": "cloud", "TREND_TF": want.lower()}, "US30", entry_tf)["TREND_TF"] == want  # đè bằng đúng khung suy ra thì được
     wrong = "H4" if want != "H4" else "H1"
     with pytest.raises(ValueError, match=rf"cloud always use .*; TREND_TF {wrong} is not allowed"):
@@ -1383,3 +1381,56 @@ def test_cloud_error_message_for_a_raised_timeframe_names_both_timeframes():
         combo.normalize_params({"TREND_METHODS": "cloud", "TREND_TF": "H4"}, "US30", "H2")  # khung >= H1 thì y như breakout: đúng khung vào lệnh
 
 
+
+
+def _shift_case():
+    """Một đợt BUY mở ở nến 0, mặt nạ còn ở mọi nến trừ nến 3; trend cùng chiều từ nến 4; đợt SELL mới mở ở nến 8, trend cùng chiều ngay nến 8."""
+    raw = pd.Series([1, 0, 0, 0, 0, 0, 0, 0, -1, 0])
+    bias = pd.Series([0, -1, 0, 0, 1, 1, 1, 1, -1, -1])
+    buy = pd.Series([True, True, True, False, True, True, True, True, False, False])
+    sell = pd.Series([False] * 8 + [True, True])
+    return raw, bias, buy, sell
+
+
+def test_max_shift_bars_khong_gioi_han_la_hanh_vi_cu_bat_o_nen_dau_tien_vua_duoc_phep_vua_cung_chieu():
+    raw, bias, buy, sell = _shift_case()
+    assert shift.UNLIMITED_SHIFT == 999
+    expected = [0, 0, 0, 0, 1, 0, 0, 0, -1, 0]  # nến 4 là nến đầu tiên cùng chiều trend; đợt SELL bắn ngay nến mở đợt
+    assert shift.first_aligned_signal(raw, bias, buy, sell).tolist() == expected
+    assert shift.first_aligned_signal(raw, bias, buy, sell, 999).tolist() == expected
+    assert shift.first_aligned_signal(raw, bias, buy, sell, 4).tolist() == expected  # tuổi 4 vẫn nằm trong giới hạn
+
+
+@pytest.mark.parametrize(("limit", "first_buy"), [(0, None), (3, None), (4, 4), (5, 4)])
+def test_max_shift_bars_chi_cho_bat_trong_n_nen_ke_tu_nen_mo_dot(limit, first_buy):
+    raw, bias, buy, sell = _shift_case()
+    out = shift.first_aligned_signal(raw, bias, buy, sell, limit).tolist()
+    assert [i for i, v in enumerate(out) if v == 1] == ([] if first_buy is None else [first_buy])
+    assert out[8] == -1  # đợt SELL cùng chiều trend ngay nến mở đợt (tuổi 0) bắn với mọi giới hạn, kể cả 0
+
+
+def test_max_shift_bars_0_giong_het_khoi_khong_doi_chi_xet_nen_mo_dot():
+    raw, bias, buy, sell = _shift_case()
+    plain = trend_tf.apply_trend_filter(pd.DataFrame({"raw_signal": raw, "trend_bias": bias}), {"TREND_FILTER_ENABLED": True, "TREND_METHODS": ("knn",)})["signal"].tolist()
+    assert shift.first_aligned_signal(raw, bias, buy, sell, 0).tolist() == plain
+
+
+def test_max_shift_bars_huu_han_thi_doan_dau_bang_chua_thay_nen_mo_dot_khong_bao_gio_bat():
+    """Đoạn đầu bảng (trước nến mở đợt đầu tiên, run 0) có tuổi thật lớn hơn mọi tuổi nhìn thấy: giới hạn hữu hạn thì không bắn; không giới hạn thì giữ hành vi cũ."""
+    raw = pd.Series([0, 0, 0, 0, 0, 0])
+    bias = pd.Series([1] * 6)
+    buy = pd.Series([True] * 6)
+    sell = pd.Series([False] * 6)
+    assert shift.first_aligned_signal(raw, bias, buy, sell).tolist() == [1, 0, 0, 0, 0, 0]
+    assert shift.first_aligned_signal(raw, bias, buy, sell, 5).tolist() == [0] * 6
+
+
+def test_max_shift_bars_am_la_loi_va_trend_filter_doc_MAX_SHIFT_BARS_tu_params():
+    raw, bias, buy, sell = _shift_case()
+    with pytest.raises(ValueError, match="negative"):
+        shift.first_aligned_signal(raw, bias, buy, sell, -1)
+    frame = pd.DataFrame({"raw_signal": raw, "trend_bias": bias})
+    base = {"TREND_FILTER_ENABLED": True, "TREND_METHODS": ("breakout",)}
+    unlimited = trend_tf.apply_trend_filter(frame, base, buy_setup=buy, sell_setup=sell)["signal"].tolist()
+    limited = trend_tf.apply_trend_filter(frame, {**base, "MAX_SHIFT_BARS": 3}, buy_setup=buy, sell_setup=sell)["signal"].tolist()
+    assert unlimited[4] == 1 and limited[4] == 0

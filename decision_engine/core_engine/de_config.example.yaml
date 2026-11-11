@@ -1,19 +1,22 @@
 redis:
   enabled: true
-  host: "127.0.0.1"       # Redis replica AEN trên og18: DB0 nến vào, DB1 tín hiệu ra
+  host: "127.0.0.1"       # Redis replica AEN trên og18: cổng 6379 = nến Core (chỉ đọc); cổng 6380 (redis.output.port) = đầu ra của DE
   password: ""
   input:
     db: 0
     key_prefix: "L_CANDLE"
-    snapshot_bars: 500
+    snapshot_bars: 500            # cửa sổ 500 nến gần nhất: db0/db1 chỉ giữ chừng này nến mỗi danh sách (nến mới vào thì nến cũ nhất ra). Khởi động lại thì xét lại 500 nến này xem nến nào có tín hiệu.
+    warmup_bars: 300              # số nến tính THÊM trước cửa sổ đó để chỉ báo và lọc xen kẽ kịp ấm: mỗi lượt runner tính lại các bảng trên snapshot_bars + warmup_bars nến cuối (riêng khối trend đòi nhiều hơn, hiện chỉ zigzag, thì dùng
+                                  # cả nến nguồn giữ, 1200), không nhớ trạng thái giữa hai lượt, rồi chỉ ghi snapshot_bars hàng cuối (hàng nào trong db0/db1 cũng đã ấm). Lọc xen kẽ cần nhớ giữa hai tín hiệu thô cùng chiều: đo lớn nhất 150 combo / 72 ma_cross / 288 macd_break nến.
+                                  # Phải: snapshot_bars + warmup_bars <= nến nguồn giữ (1200). Cặp có không quá chừng này nến thì không ghi, log WARNING warmup_incomplete. 0 = không warm-up.
     process_on_startup: true
-    # NHÓM symbols × khung mà DE làm việc (AEN đẩy tới db0) -- nơi khai DUY NHẤT của nguồn Core AEN (symbol của nguồn nến thêm khai ở `input_sources` bên dưới; hợp hai nơi là danh sách mà bảng khung trend của chiến lược phải phủ). Cặp ngoài nhóm bị bỏ ở cửa;
+    # NHÓM symbols × khung mà DE đọc nến (AEN đẩy tới db0) -- nơi khai DUY NHẤT của nguồn Core AEN (symbol của nguồn nến thêm khai ở `input_sources` bên dưới; hợp hai nơi là danh sách symbol mà `plans` được chọn). Cặp ngoài nhóm bị bỏ ở cửa;
     # cái gì khai ở đây mà AEN không có thì coi như không có (không event nào tới), nên khai cho KHỚP đúng cái AEN đang đẩy lên db0.
-    symbols: [US30, US500, US100, GER40, HK50, JP225, XAUUSD, BTCUSD]   # symbol vận hành của CẢ 5 chiến lược (tên theo nguồn nến AEN); bảng khung trend của mỗi chiến lược phải đủ ô cho từng symbol
-    timeframes: [M10, M20, M30, M45, H1, H2, H3, H4]                    # phải bao các khung vào lệnh và khung trend của mọi chiến lược
+    symbols: [US30, US500, US100, GER40, HK50, JP225, XAUUSD, BTCUSD]   # symbol có thể có kế hoạch (tên theo nguồn nến AEN)
+    timeframes: [M10, M20, M30, M45, H1, H2, H3, H4]                    # phải bao các khung (vào lệnh, chỉ báo, trend) của mọi kế hoạch
   # Nguồn nến THÊM: một Redis khác cùng bố cục nến (LIST+HASH) nuôi các symbol mà nguồn mặc định `input` không có (vd Redis DF trên OG8, cổng 6380, db0, nuôi 7 symbol). Mỗi nguồn một NHÓM
-  # tiến trình riêng (de-signal@<chiến lược>.og8, de-trend@<khối>.og8) nên nguồn mất kết nối chỉ làm nhóm đó dừng. Khoá không khai ở đây (timeframes, snapshot_bars, process_on_startup...)
-  # kế thừa `input`. Mỗi symbol chỉ thuộc MỘT nguồn. Đầu ra (db raw, trend, lọc) vẫn ở Redis của DE (`output`), khoá có tên symbol nên không đụng nhau. Bỏ cả mục này = chỉ chạy nguồn `input`.
+  # runner riêng (`--runner --source og8`) nên nguồn mất kết nối chỉ làm nhóm đó dừng. Khoá không khai ở đây (timeframes, snapshot_bars, warmup_bars, process_on_startup...)
+  # kế thừa `input`. Mỗi symbol chỉ thuộc MỘT nguồn. Đầu ra (cấu phần db0, tín hiệu db1) vẫn ở Redis của DE (`output`), khoá có tên symbol nên các nhóm không đụng nhau. Bỏ cả mục này = chỉ chạy nguồn `input`.
   input_sources:
     og8:
       host: "10.11.12.8"
@@ -21,20 +24,31 @@ redis:
       password: ""                # mật khẩu Redis của nguồn; "" = không AUTH
       db: 0
       key_prefix: "L_CANDLE"
-      symbols: [EURUSD, GBPUSD, USDCAD, USDJPY, FR40, SP35, UK100]   # tên symbol theo nguồn nến OG8; bảng khung trend của mỗi chiến lược phải đủ ô cho từng symbol
+      symbols: [EURUSD, GBPUSD, USDCAD, USDJPY, FR40, SP35, UK100]   # tên symbol theo nguồn nến OG8
+  # TÍN HIỆU đã publish (db2 của Redis đầu ra): LIST L_DE_{CHIẾN LƯỢC}_{SYMBOL}_{KHUNG VÀO LỆNH} + HASH <LIST>:{giờ mở nến} cho bản KHÔNG lọc trend; bản đã lọc trend của từng khối ở `trend_outputs`.
   output:
-    db: 0                         # Tín hiệu RAW của strategy_runner (cổng 6380): LIST L_DE_{STRATEGY}_{SYMBOL}_{TF} + HASH <LIST>:{giờ mở}
-    port: 6380                    # Redis đầu ra của DE (cùng host); nến DB0 vẫn đọc từ port gốc 6379
-    password: ""                  # mật khẩu của instance output (có thể khác password gốc); "" = không AUTH
-    key_prefix: "L_DE"           # DE LIST/HASH: L_DE_{STRATEGY}_{SYMBOL}_{TF}[:stamp]
-    channel_prefix: "L_CHANNEL"   # Kênh Pub/Sub DE -> OF (chỉ là đường truyền, không lưu key nào): L_CHANNEL_{STRATEGY}_{SYMBOL}_{TF}
-  trend_output:                   # Kết quả trend của trend_filtering (cùng Redis cổng 6380 với `output`, db riêng): LIST L_TREND_{KHỐI}_{SYMBOL}_{KHUNG} + HASH <LIST>:{giờ mở nến trend}
-    db: 1
-    key_prefix: "L_TREND"
-  filtered_output:                # Tín hiệu ĐÃ LỌC trend do tiến trình chiến lược ghi (cùng Redis cổng 6380, mật khẩu và thời hạn lưu với `output`, db riêng): LIST/HASH và kênh Pub/Sub theo tiền tố từng khối ở `trend_outputs`
     db: 2
-  # Các nguồn LỌC TREND (2026-10-25), giống DB1 / DB2 / DB4 của we_core: cùng Redis/DB/mật khẩu/thời hạn lưu với `output`, mỗi nguồn một cặp tiền tố riêng
-  # (LIST/HASH và kênh Pub/Sub). Nguồn nào không khai ở đây thì không được tính. Nguồn không lọc (raw) là `output` ở trên, giữ nguyên tên.
+    port: 6380                    # Redis đầu ra của DE (cùng host); nến vẫn đọc từ cổng gốc ở trên
+    password: ""                  # mật khẩu của instance output (có thể khác password gốc); "" = không AUTH
+    key_prefix: "L_DE"            # DE LIST/HASH: L_DE_{CHIẾN LƯỢC}_{SYMBOL}_{KHUNG}[:mốc]
+    channel_prefix: "L_CHANNEL"   # Kênh Pub/Sub DE -> OE (chỉ là đường truyền, không lưu key nào): L_CHANNEL_{CHIẾN LƯỢC}_{SYMBOL}_{KHUNG}
+    retention_seconds: 604800     # hạn lưu của MỖI tín hiệu (HASH) ở db2: TỐI ĐA 7 ngày (604800 giây); khai lớn hơn thì từ chối lúc nạp config
+  # CẤU PHẦN THÔ do runner ghi cho MỌI symbol x khung (không phụ thuộc cấu hình nào), publisher đọc. Mọi danh sách chỉ giữ 500 nến gần nhất.
+  # db0 (khối `setup` bên dưới): SETUP `{SYMBOL}_SETUP_{CHIẾN LƯỢC}_{KHUNG}` = trạng thái điều kiện ở TỪNG nến (setup = nến được phép bắn, giá nến, atr) cho phần dời. HASH <LIST>:{giờ mở nến} có thêm close_time = giờ đóng nến.
+  # db1 (khối `signal_inputs` bên dưới): TRIGGER `{SYMBOL}_TRIGGER_{CHIẾN LƯỢC}_{KHUNG}` = SỰ KIỆN, chỉ nến chiến lược bắn tín hiệu thô (signal sau lọc trùng, giá nến, atr, reason; nến không có tín hiệu thì không có dòng);
+  # CONTEXT `{SYMBOL}_CONTEXT_{KHUNG}` (macd_h, ma của chính khung đó); TREND `{SYMBOL}_TREND_{PHƯƠNG PHÁP}_{KHUNG}` (trend_bias).
+  # Redis đầu ra PHẢI bật notify-keyspace-events 'Kh' (publisher nghe db0 và db1).
+  setup:
+    db: 0
+    key_prefix: ""                # rỗng = khoá đúng dạng HK50_SETUP_COMBO_H1; đặt chữ thì thành {TIỀN TỐ}_HK50_SETUP_COMBO_H1
+    window_bars: 500              # số mốc mới nhất publisher đọc mỗi lần = cửa sổ 500 nến (bằng redis.input.snapshot_bars)
+    retention_max_entries: 500    # số mốc tối đa giữ trong mỗi LIST (>= window_bars): nến mới vào thì nến cũ nhất ra; HASH hết hạn sau 2 × số mốc × độ dài khung
+  # db1 của Redis đầu ra: TRIGGER (sự kiện), CONTEXT và TREND (xem khối trên). Cùng số mốc giữ và thời hạn với `setup`; phải khác db của `setup` và `output`.
+  signal_inputs:
+    db: 1
+    key_prefix: ""
+  # Các nguồn LỌC TREND (2026-10-25), giống DB1 / DB2 / DB4 của we_core: cùng Redis/DB/mật khẩu/thời hạn lưu với `output`, mỗi khối một cặp tiền tố riêng
+  # (LIST/HASH và kênh Pub/Sub). Kế hoạch chỉ được chọn khối khai ở đây. Bản không lọc (raw) là `output` ở trên, giữ nguyên tên.
   trend_outputs:
     knn:      {key_prefix: "L_DE_KNN",      channel_prefix: "L_CHANNEL_KNN"}
     breakout: {key_prefix: "L_DE_BREAKOUT", channel_prefix: "L_CHANNEL_BREAKOUT"}
@@ -42,11 +56,18 @@ redis:
     tstat:    {key_prefix: "L_DE_TSTAT",    channel_prefix: "L_CHANNEL_TSTAT"}
     cloud:    {key_prefix: "L_DE_CLOUD",    channel_prefix: "L_CHANNEL_CLOUD"}
 
+# Tham số CHUẨN của CONTEXT (db0): chỉ báo tính thêm ở mọi khung để đối chiếu với trigger ở khung nhỏ hơn; dùng chung cho mọi symbol, khung và chiến lược (MACD histogram và MA).
+context:
+  macd_fast: 5
+  macd_slow: 25
+  macd_signal: 5
+  ma_period: 20
+
 live:
-  enabled_strategies: [combo, ma_cross, macd_break, ichimoku, ema_reach]
   log_level: INFO
+  max_shift_bars: 999             # số nến dời tối đa kể từ nến mở đợt (nến có tín hiệu thô): 0 = không dời; n (vd 4, 5, 6) = dời tối đa n nến; 999 = không giới hạn. Áp chung cho mọi chiến lược và khối dời (breakout, tstat, cloud)
   price_decimals: {EURUSD: 5, GBPUSD: 5, USDCAD: 5, USDJPY: 3}   # số lẻ làm tròn entry/atr của tín hiệu; symbol không khai = 2 (chỉ số, vàng, BTC). Forex làm tròn 2 số lẻ sẽ hỏng giá
-  signal_validity:
+  signal_validity:                # hạn hiệu lực tính từ lúc nến VÀO LỆNH đóng; cũng là hạn chờ nến tham chiếu (chờ quá hạn thì tín hiệu bị bỏ)
     combo:
       mode: next_bar
       valid_bars: 3
@@ -63,6 +84,12 @@ live:
       mode: seconds_after_bar_close   # lenh MARKET (entry = close) nhu ma_cross: chi hieu luc ngan sau khi nen dong
       seconds: 600
 
+# KẾ HOẠCH THEO SYMBOL: mỗi symbol MỘT kế hoạch (cấu hình thế nào chạy ra thế nấy).
+#   strategy      chiến lược (khai ở `strategies`); phải có `live.signal_validity.<chiến lược>`
+#   entry_tf      khung VÀO LỆNH: nến này đóng thì mới có tín hiệu; cũng là khung trong tên khoá tín hiệu
+#   indicator_tf  khung của chỉ báo XÁC NHẬN (macd_h); bỏ = khung vào lệnh. Lớn hơn thì MACD của khung vào lệnh bị bỏ qua, chỉ dùng MACD của nến khung này đã đóng
+#   trend         bỏ = chỉ có tín hiệu thô. method = khối trend (khai ở `redis.trend_outputs`); tf = khung trend (>= entry_tf, thuộc `trend_timeframes` của chiến lược); breakout và cloud tính trên
+#                 chính khung vào lệnh nên không khai tf (cloud: tối thiểu H1)
 strategies:
   combo:
     ma_period: 20
@@ -71,26 +98,39 @@ strategies:
     macd_signal: 5
     atr_period: 5
     recommended_timeframes: [M10, M20, M30, M45, H1, H2, H3, H4]   # combo chạy cả khung M lẫn H (2026-11-02)
-    trend_off_timeframes: [M10, M20, M30, M45]   # khung KHÔNG lọc trend ([] = lọc trend ở mọi khung): khung M mới chỉ chạy tín hiệu thô, bảng khung trend điền sau
-    trend_methods: [knn]          # khối lọc mặc định (nguồn knn); breakout/zigzag/tstat/cloud được chọn riêng theo redis.trend_outputs
-    trend_timeframes: [H1, H2, H3, H4]
-    trend_tf_by_symbol:   # khung trend riêng từng (symbol, khung vào lệnh), BẮT BUỘC đủ ô; chép từ we_core (tên symbol theo AEN)
-      US30: {H1: H4, H2: H2, H3: H3, H4: H4}
-      US500: {H1: H4, H2: H2, H3: H3, H4: H4}
-      US100: {H1: H4, H2: H2, H3: H3, H4: H4}
-      GER40: {H1: H4, H2: H2, H3: H3, H4: H4}
-      HK50: {H1: H4, H2: H2, H3: H3, H4: H4}
-      JP225: {H1: H4, H2: H4, H3: H3, H4: H4}
-      XAUUSD: {H1: H4, H2: H2, H3: H3, H4: H4}
-      BTCUSD: {H1: H4, H2: H2, H3: H3, H4: H4}
-      # nguồn nến OG8 (chép từ we_core, tên symbol theo OG8):
-      EURUSD: {H1: H4, H2: H2, H3: H3, H4: H4}
-      GBPUSD: {H1: H4, H2: H2, H3: H3, H4: H4}
-      USDCAD: {H1: H4, H2: H2, H3: H3, H4: H4}
-      USDJPY: {H1: H4, H2: H2, H3: H3, H4: H4}
-      FR40: {H1: H4, H2: H4, H3: H3, H4: H4}
-      SP35: {H1: H4, H2: H2, H3: H3, H4: H4}
-      UK100: {H1: H4, H2: H2, H3: H3, H4: H4}
+    trend_timeframes: [H1, H2, H3, H4]                              # khung trend cho khối cần khung tham chiếu riêng (knn, zigzag, tstat)
+    trend_tf_by_symbol:               # symbol -> khung vào lệnh (trigger) -> khung trend: bảng của we (OG8), tên symbol theo nguồn nến; khối breakout và cloud tự suy khung từ khung vào lệnh
+      US30:    {M10: H4, M20: H4, M30: H4, M45: H4, H1: H4, H2: H2, H3: H3, H4: H4}
+      US500:   {M10: H4, M20: H4, M30: H4, M45: H4, H1: H4, H2: H2, H3: H3, H4: H4}
+      US100:   {M10: H4, M20: H4, M30: H4, M45: H4, H1: H4, H2: H2, H3: H3, H4: H4}
+      GER40:   {M10: H4, M20: H4, M30: H4, M45: H4, H1: H4, H2: H2, H3: H3, H4: H4}
+      HK50:    {M10: H4, M20: H4, M30: H4, M45: H4, H1: H4, H2: H2, H3: H3, H4: H4}
+      JP225:   {M10: H4, M20: H4, M30: H4, M45: H4, H1: H4, H2: H4, H3: H3, H4: H4}
+      XAUUSD:  {M10: H4, M20: H4, M30: H4, M45: H4, H1: H4, H2: H2, H3: H3, H4: H4}
+      BTCUSD:  {M10: H4, M20: H4, M30: H4, M45: H4, H1: H4, H2: H2, H3: H3, H4: H4}
+      EURUSD:  {M10: H4, M20: H4, M30: H4, M45: H4, H1: H4, H2: H2, H3: H3, H4: H4}
+      GBPUSD:  {M10: H4, M20: H4, M30: H4, M45: H4, H1: H4, H2: H2, H3: H3, H4: H4}
+      USDCAD:  {M10: H4, M20: H4, M30: H4, M45: H4, H1: H4, H2: H2, H3: H3, H4: H4}
+      USDJPY:  {M10: H4, M20: H4, M30: H4, M45: H4, H1: H4, H2: H2, H3: H3, H4: H4}
+      FR40:    {M10: H4, M20: H4, M30: H4, M45: H4, H1: H4, H2: H4, H3: H3, H4: H4}
+      SP35:    {M10: H4, M20: H4, M30: H4, M45: H4, H1: H4, H2: H2, H3: H3, H4: H4}
+      UK100:   {M10: H4, M20: H4, M30: H4, M45: H4, H1: H4, H2: H2, H3: H3, H4: H4}
+    context_tf_by_symbol:             # symbol -> khung vào lệnh (trigger) -> khung context: LUÔN bằng khung vào lệnh (chủ hệ chốt 10/11/2026); luật trigger <= context <= trend
+      US30:    {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      US500:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      US100:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      GER40:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      HK50:    {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      JP225:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      XAUUSD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      BTCUSD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      EURUSD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      GBPUSD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      USDCAD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      USDJPY:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      FR40:    {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      SP35:    {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      UK100:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
     alternating_filter_enabled: true   # true = chi ban tin hieu dau tien khi huong doi chieu (loc lap cung chieu); false = bar nao thoa dieu kien cung ban
     session_hours_utc: {}
 
@@ -102,26 +142,39 @@ strategies:
     macd_signal: 5
     atr_period: 5
     supported_timeframes: [M10, M20, M30, M45, H1, H2, H3, H4]   # chạy cả khung M lẫn H (2026-11-02)
-    trend_off_timeframes: [H1, H2, H3, H4]   # khung KHÔNG lọc trend ([] = lọc trend ở mọi khung): khung H mới chỉ chạy tín hiệu thô, bảng khung trend điền sau
-    trend_methods: [knn]          # khối lọc mặc định (nguồn knn); breakout/zigzag/tstat/cloud được chọn riêng theo redis.trend_outputs
     trend_timeframes: [H1, H2, H3, H4]
-    trend_tf_by_symbol:   # khung trend riêng từng (symbol, khung vào lệnh), BẮT BUỘC đủ ô; chép từ we_core (tên symbol theo AEN)
-      US30: {M10: H4, M20: H1, M30: H1, M45: H1}
-      US500: {M10: H4, M20: H1, M30: H1, M45: H1}
-      US100: {M10: H4, M20: H1, M30: H1, M45: H1}
-      GER40: {M10: H4, M20: H1, M30: H1, M45: H1}
-      HK50: {M10: H4, M20: H1, M30: H1, M45: H1}
-      JP225: {M10: H4, M20: H1, M30: H1, M45: H1}
-      XAUUSD: {M10: H4, M20: H1, M30: H1, M45: H1}
-      BTCUSD: {M10: H4, M20: H1, M30: H1, M45: H1}
-      # nguồn nến OG8 (chép từ we_core, tên symbol theo OG8):
-      EURUSD: {M10: H4, M20: H1, M30: H1, M45: H1}
-      GBPUSD: {M10: H4, M20: H1, M30: H1, M45: H1}
-      USDCAD: {M10: H4, M20: H1, M30: H1, M45: H1}
-      USDJPY: {M10: H4, M20: H1, M30: H1, M45: H1}
-      FR40: {M10: H4, M20: H1, M30: H1, M45: H1}
-      SP35: {M10: H4, M20: H1, M30: H1, M45: H1}
-      UK100: {M10: H4, M20: H1, M30: H1, M45: H1}
+    trend_tf_by_symbol:               # symbol -> khung vào lệnh (trigger) -> khung trend: bảng của we (OG8), tên symbol theo nguồn nến; khối breakout và cloud tự suy khung từ khung vào lệnh
+      US30:    {M10: H4, M20: H1, M30: H1, M45: H1, H1: H2, H2: H3, H3: H4, H4: H4}
+      US500:   {M10: H4, M20: H1, M30: H1, M45: H1, H1: H1, H2: H3, H3: H3, H4: H4}
+      US100:   {M10: H4, M20: H1, M30: H1, M45: H1, H1: H2, H2: H3, H3: H4, H4: H4}
+      GER40:   {M10: H4, M20: H1, M30: H1, M45: H1, H1: H2, H2: H3, H3: H3, H4: H4}
+      HK50:    {M10: H4, M20: H1, M30: H1, M45: H1, H1: H2, H2: H3, H3: H4, H4: H4}
+      JP225:   {M10: H4, M20: H1, M30: H1, M45: H1, H1: H2, H2: H4, H3: H4, H4: H4}
+      XAUUSD:  {M10: H4, M20: H1, M30: H1, M45: H1, H1: H2, H2: H3, H3: H3, H4: H4}
+      BTCUSD:  {M10: H4, M20: H1, M30: H1, M45: H1, H1: H2, H2: H3, H3: H4, H4: H4}
+      EURUSD:  {M10: H4, M20: H1, M30: H1, M45: H1, H1: H2, H2: H4, H3: H4, H4: H4}
+      GBPUSD:  {M10: H4, M20: H1, M30: H1, M45: H1, H1: H2, H2: H4, H3: H3, H4: H4}
+      USDCAD:  {M10: H4, M20: H1, M30: H1, M45: H1, H1: H2, H2: H4, H3: H4, H4: H4}
+      USDJPY:  {M10: H4, M20: H1, M30: H1, M45: H1, H1: H2, H2: H4, H3: H4, H4: H4}
+      FR40:    {M10: H4, M20: H1, M30: H1, M45: H1, H1: H2, H2: H4, H3: H4, H4: H4}
+      SP35:    {M10: H4, M20: H1, M30: H1, M45: H1, H1: H2, H2: H2, H3: H3, H4: H4}
+      UK100:   {M10: H4, M20: H1, M30: H1, M45: H1, H1: H2, H2: H4, H3: H3, H4: H4}
+    context_tf_by_symbol:             # symbol -> khung vào lệnh (trigger) -> khung context: LUÔN bằng khung vào lệnh (chủ hệ chốt 10/11/2026); luật trigger <= context <= trend
+      US30:    {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      US500:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      US100:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      GER40:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      HK50:    {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      JP225:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      XAUUSD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      BTCUSD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      EURUSD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      GBPUSD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      USDCAD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      USDJPY:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      FR40:    {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      SP35:    {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      UK100:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
     alternating_filter_enabled: true   # true = chi ban tin hieu dau tien khi huong doi chieu (loc lap cung chieu); false = bar nao thoa dieu kien cung ban
 
   ema_reach:
@@ -133,26 +186,39 @@ strategies:
     macd_signal: 5
     atr_period: 5
     supported_timeframes: [M10, M20, M30, M45, H1, H2, H3, H4]   # chạy cả khung M lẫn H (2026-11-02)
-    trend_off_timeframes: [H1, H2, H3, H4]   # khung KHÔNG lọc trend ([] = lọc trend ở mọi khung): khung H mới chỉ chạy tín hiệu thô, bảng khung trend điền sau
-    trend_methods: [knn]          # khoi loc mac dinh (nguon knn); breakout/zigzag/tstat/cloud duoc chon rieng theo redis.trend_outputs
     trend_timeframes: [H1, H2, H3, H4]
-    trend_tf_by_symbol:   # khung trend rieng tung (symbol, khung vao lenh), BAT BUOC du o; chep tu we_core (ten symbol theo AEN)
-      US30: {M10: H4, M20: H1, M30: H1, M45: H1}
-      US500: {M10: H4, M20: H1, M30: H1, M45: H1}
-      US100: {M10: H4, M20: H1, M30: H1, M45: H1}
-      GER40: {M10: H4, M20: H1, M30: H1, M45: H1}
-      HK50: {M10: H4, M20: H1, M30: H1, M45: H1}
-      JP225: {M10: H4, M20: H1, M30: H1, M45: H1}
-      XAUUSD: {M10: H4, M20: H1, M30: H1, M45: H1}
-      BTCUSD: {M10: H4, M20: H1, M30: H1, M45: H1}
-      # nguồn nến OG8 (chép từ we_core, tên symbol theo OG8):
-      EURUSD: {M10: H4, M20: H1, M30: H1, M45: H1}
-      GBPUSD: {M10: H4, M20: H1, M30: H1, M45: H1}
-      USDCAD: {M10: H4, M20: H1, M30: H1, M45: H1}
-      USDJPY: {M10: H4, M20: H1, M30: H1, M45: H1}
-      FR40: {M10: H4, M20: H1, M30: H1, M45: H1}
-      SP35: {M10: H4, M20: H1, M30: H1, M45: H1}
-      UK100: {M10: H4, M20: H1, M30: H1, M45: H1}
+    trend_tf_by_symbol:               # symbol -> khung vào lệnh (trigger) -> khung trend: bảng của we (OG8), tên symbol theo nguồn nến; khối breakout và cloud tự suy khung từ khung vào lệnh
+      US30:    {M10: H4, M20: H1, M30: H1, M45: H1, H1: H1, H2: H2, H3: H3, H4: H4}
+      US500:   {M10: H4, M20: H1, M30: H1, M45: H1, H1: H1, H2: H2, H3: H3, H4: H4}
+      US100:   {M10: H4, M20: H1, M30: H1, M45: H1, H1: H1, H2: H2, H3: H3, H4: H4}
+      GER40:   {M10: H4, M20: H1, M30: H1, M45: H1, H1: H1, H2: H2, H3: H3, H4: H4}
+      HK50:    {M10: H4, M20: H1, M30: H1, M45: H1, H1: H1, H2: H3, H3: H4, H4: H4}
+      JP225:   {M10: H4, M20: H1, M30: H1, M45: H1, H1: H1, H2: H2, H3: H3, H4: H4}
+      XAUUSD:  {M10: H4, M20: H1, M30: H1, M45: H1, H1: H1, H2: H2, H3: H3, H4: H4}
+      BTCUSD:  {M10: H4, M20: H1, M30: H1, M45: H1, H1: H1, H2: H2, H3: H3, H4: H4}
+      EURUSD:  {M10: H4, M20: H1, M30: H1, M45: H1, H1: H1, H2: H2, H3: H3, H4: H4}
+      GBPUSD:  {M10: H4, M20: H1, M30: H1, M45: H1, H1: H1, H2: H2, H3: H3, H4: H4}
+      USDCAD:  {M10: H4, M20: H1, M30: H1, M45: H1, H1: H1, H2: H2, H3: H3, H4: H4}
+      USDJPY:  {M10: H4, M20: H1, M30: H1, M45: H1, H1: H1, H2: H2, H3: H3, H4: H4}
+      FR40:    {M10: H4, M20: H1, M30: H1, M45: H1, H1: H1, H2: H2, H3: H3, H4: H4}
+      SP35:    {M10: H4, M20: H1, M30: H1, M45: H1, H1: H1, H2: H2, H3: H3, H4: H4}
+      UK100:   {M10: H4, M20: H1, M30: H1, M45: H1, H1: H1, H2: H3, H3: H3, H4: H4}
+    context_tf_by_symbol:             # symbol -> khung vào lệnh (trigger) -> khung context: LUÔN bằng khung vào lệnh (chủ hệ chốt 10/11/2026); luật trigger <= context <= trend
+      US30:    {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      US500:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      US100:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      GER40:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      HK50:    {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      JP225:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      XAUUSD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      BTCUSD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      EURUSD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      GBPUSD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      USDCAD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      USDJPY:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      FR40:    {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      SP35:    {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      UK100:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
     alternating_filter_enabled: true   # true = chi ban tin hieu dau tien khi huong doi chieu (loc lap cung chieu); false = bar nao thoa dieu kien cung ban
 
   macd_break:
@@ -162,27 +228,40 @@ strategies:
     macd_signal: 5
     atr_period: 5
     supported_timeframes: [M10, M20, M30, M45, H1, H2, H3, H4]
-    trend_methods: [knn]          # khối lọc mặc định (nguồn knn); breakout/zigzag/tstat/cloud được chọn riêng theo redis.trend_outputs
     trend_timeframes: [H1, H2, H3, H4]
-    trend_off_timeframes: []   # khung KHÔNG lọc trend ([] = lọc trend ở mọi khung): macd_break dùng lại lọc trend ở MỌI khung từ 2026-10-28 (đồng bộ we_core/des)
+    trend_tf_by_symbol:               # symbol -> khung vào lệnh (trigger) -> khung trend: bảng của we (OG8), tên symbol theo nguồn nến; khối breakout và cloud tự suy khung từ khung vào lệnh
+      US30:    {M10: H1, M20: H1, M30: H2, M45: H2, H1: H1, H2: H3, H3: H4, H4: H4}
+      US500:   {M10: H1, M20: H1, M30: H1, M45: H1, H1: H2, H2: H2, H3: H3, H4: H4}
+      US100:   {M10: H1, M20: H1, M30: H1, M45: H1, H1: H1, H2: H4, H3: H4, H4: H4}
+      GER40:   {M10: H1, M20: H1, M30: H1, M45: H3, H1: H3, H2: H4, H3: H4, H4: H4}
+      HK50:    {M10: H1, M20: H1, M30: H1, M45: H3, H1: H2, H2: H4, H3: H4, H4: H4}
+      JP225:   {M10: H1, M20: H1, M30: H1, M45: H2, H1: H3, H2: H4, H3: H3, H4: H4}
+      XAUUSD:  {M10: H1, M20: H1, M30: H1, M45: H1, H1: H3, H2: H4, H3: H3, H4: H4}
+      BTCUSD:  {M10: H1, M20: H1, M30: H1, M45: H1, H1: H1, H2: H4, H3: H4, H4: H4}
+      EURUSD:  {M10: H1, M20: H1, M30: H1, M45: H3, H1: H1, H2: H2, H3: H3, H4: H4}
+      GBPUSD:  {M10: H1, M20: H1, M30: H1, M45: H2, H1: H2, H2: H2, H3: H4, H4: H4}
+      USDCAD:  {M10: H1, M20: H1, M30: H1, M45: H2, H1: H2, H2: H4, H3: H4, H4: H4}
+      USDJPY:  {M10: H1, M20: H1, M30: H1, M45: H1, H1: H1, H2: H4, H3: H4, H4: H4}
+      FR40:    {M10: H1, M20: H1, M30: H1, M45: H2, H1: H2, H2: H4, H3: H3, H4: H4}
+      SP35:    {M10: H1, M20: H1, M30: H1, M45: H1, H1: H2, H2: H3, H3: H4, H4: H4}
+      UK100:   {M10: H1, M20: H1, M30: H1, M45: H1, H1: H1, H2: H3, H3: H3, H4: H4}
+    context_tf_by_symbol:             # symbol -> khung vào lệnh (trigger) -> khung context: LUÔN bằng khung vào lệnh (chủ hệ chốt 10/11/2026); luật trigger <= context <= trend
+      US30:    {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      US500:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      US100:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      GER40:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      HK50:    {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      JP225:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      XAUUSD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      BTCUSD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      EURUSD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      GBPUSD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      USDCAD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      USDJPY:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      FR40:    {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      SP35:    {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      UK100:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
     excluded_trend_methods: [breakout]   # khối trend KHÔNG áp cho macd_break ở mọi khung: breakout tính hướng bằng chính điều kiện phá đỉnh/đáy + MACD của macd_break (lọc vòng tròn)
-    trend_tf_by_symbol:   # khung trend riêng từng (symbol, khung vào lệnh còn lọc trend), BẮT BUỘC đủ ô; chép từ we_core (tên symbol theo AEN)
-      US30: {M10: H1, M20: H1, M30: H2, M45: H2, H1: H1, H2: H3, H3: H4, H4: H4}
-      US500: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H2, H2: H2, H3: H3, H4: H4}
-      US100: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H1, H2: H4, H3: H4, H4: H4}
-      GER40: {M10: H1, M20: H1, M30: H1, M45: H3, H1: H3, H2: H4, H3: H4, H4: H4}
-      HK50: {M10: H1, M20: H1, M30: H1, M45: H3, H1: H2, H2: H4, H3: H4, H4: H4}
-      JP225: {M10: H1, M20: H1, M30: H1, M45: H2, H1: H3, H2: H4, H3: H3, H4: H4}
-      XAUUSD: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H3, H2: H4, H3: H3, H4: H4}
-      BTCUSD: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H1, H2: H4, H3: H4, H4: H4}
-      # nguồn nến OG8 (chép từ we_core, tên symbol theo OG8):
-      EURUSD: {M10: H1, M20: H1, M30: H1, M45: H3, H1: H1, H2: H2, H3: H3, H4: H4}
-      GBPUSD: {M10: H1, M20: H1, M30: H1, M45: H2, H1: H2, H2: H2, H3: H4, H4: H4}
-      USDCAD: {M10: H1, M20: H1, M30: H1, M45: H2, H1: H2, H2: H4, H3: H4, H4: H4}
-      USDJPY: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H1, H2: H4, H3: H4, H4: H4}
-      FR40: {M10: H1, M20: H1, M30: H1, M45: H2, H1: H2, H2: H4, H3: H3, H4: H4}
-      SP35: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H2, H2: H3, H3: H4, H4: H4}
-      UK100: {M10: H1, M20: H1, M30: H1, M45: H1, H1: H1, H2: H3, H3: H3, H4: H4}
     alternating_filter_enabled: true   # true = chi ban tin hieu dau tien khi huong doi chieu (loc lap cung chieu); false = bar nao thoa dieu kien cung ban
 
   ichimoku:
@@ -193,4 +272,20 @@ strategies:
     atr_period: 5
     supported_timeframes: [M10, M20, M30, M45, H1, H2, H3, H4]
     alternating_filter_enabled: true   # true = chi ban tin hieu dau tien khi huong doi chieu (loc lap cung chieu); false = bar nao thoa dieu kien cung ban
-    # KHÔNG có trend_*: ichimoku không dùng bộ lọc trend ở khung nào, chỉ nguồn raw (mọi nguồn lọc trend bỏ qua)
+    # KHÔNG có trend_* và không có chỉ báo xác nhận: ichimoku chỉ có kế hoạch cùng khung, không trend (kế hoạch khai trend hay indicator_tf khác khung vào lệnh sẽ bị từ chối lúc nạp)
+    context_tf_by_symbol:             # symbol -> khung vào lệnh (trigger) -> khung context: LUÔN bằng khung vào lệnh (chủ hệ chốt 10/11/2026); luật trigger <= context <= trend
+      US30:    {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      US500:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      US100:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      GER40:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      HK50:    {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      JP225:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      XAUUSD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      BTCUSD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      EURUSD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      GBPUSD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      USDCAD:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      USDJPY:  {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      FR40:    {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      SP35:    {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}
+      UK100:   {M10: M10, M20: M20, M30: M30, M45: M45, H1: H1, H2: H2, H3: H3, H4: H4}

@@ -9,6 +9,7 @@ Các file khác chỉ làm việc nghiệp vụ trên kết nối đã có: data
   * ``keep_connected`` – vòng "nối, chạy, mất Redis thì ghi log, đợi rồi nối lại" dùng chung cho mọi loại tiến trình.
   * ``write_list_hash`` / ``write_list_hash_many`` – ghi List–Hash nguyên tử: LIST ``{list_key}`` giữ các mốc (cũ đứng trước), HASH ``{list_key}:{mốc}`` giữ dữ liệu của mốc đó; ghi đúng một lần, tự chống trùng,
     tuỳ chọn PUBLISH một kênh.
+  * ``trim_lists_before`` – bỏ khỏi một LIST (và xoá HASH) các mốc cũ hơn một mốc cho trước: dành cho danh sách chỉ giữ sự kiện.
 Tham số kết nối do configuration.py đưa vào, file này không tự đọc config.
 """
 
@@ -150,7 +151,8 @@ def keep_connected(
 
 # KEYS[1]=hash KEYS[2]=list; ARGV[1]=mốc ARGV[2]=retention_seconds ARGV[3]=max_entries ARGV[4]=kênh ('' = không publish) ARGV[5]=message ARGV[6..]=field1 value1 ...
 # "Đã ghi chưa?" được trả lời bằng việc HASH có tồn tại không: một bản trùng (event ghi lại, restart) không ghi và không publish gì, nên bên nhận không bao giờ bị báo hai lần về cùng một mốc.
-# Nếu chưa có, trong MỘT vòng gọi nguyên tử: HASH (TTL retention_seconds) và LIST (cắt bằng LTRIM còn max_entries) được ghi trước, rồi (nếu có kênh) message được PUBLISH.
+# Nếu chưa có, trong MỘT vòng gọi nguyên tử: HASH (TTL retention_seconds) và LIST được ghi trước; LIST dài quá max_entries thì bỏ mốc CŨ NHẤT khỏi LIST VÀ xoá luôn HASH của mốc đó (không để HASH mồ côi
+# sống tới hết TTL: key trong Redis luôn đúng bằng số mốc đang giữ); rồi (nếu có kênh) message được PUBLISH.
 # Kênh không lưu gì: bên nhận lỡ lượt giao at-most-once của Pub/Sub thì đọc lại từ LIST/HASH.
 _WRITE_LIST_HASH_SCRIPT = """
 if redis.call('EXISTS', KEYS[1]) == 1 then
@@ -159,7 +161,12 @@ end
 redis.call('HSET', KEYS[1], unpack(ARGV, 6))
 redis.call('EXPIRE', KEYS[1], ARGV[2])
 redis.call('RPUSH', KEYS[2], ARGV[1])
-redis.call('LTRIM', KEYS[2], -tonumber(ARGV[3]), -1)
+local excess = redis.call('LLEN', KEYS[2]) - tonumber(ARGV[3])
+while excess > 0 do
+  local oldest = redis.call('LPOP', KEYS[2])
+  redis.call('DEL', KEYS[2] .. ':' .. oldest)
+  excess = excess - 1
+end
 if ARGV[4] ~= '' then
   redis.call('PUBLISH', ARGV[4], ARGV[5])
 end
@@ -191,6 +198,34 @@ def write_list_hash(
     """Ghi MỘT mốc theo List–Hash, nguyên tử và đúng một lần: HASH ``{list_key}:{stamp}`` (hết hạn sau ``retention_seconds``), mốc nối cuối LIST ``list_key`` (giữ tối đa ``max_entries`` mốc mới nhất)
     và, nếu ``channel`` khác rỗng, PUBLISH ``message`` lên kênh đó. Mốc đã có sẵn thì không làm gì. Trả về True chỉ khi nó thật sự ghi."""
     return bool(int(client.eval(*_eval_args(list_key, stamp, fields, retention_seconds, max_entries, channel, message))))
+
+
+# KEYS[1]=list; ARGV[1]=mốc sớm nhất còn giữ. LIST chỉ có mốc tăng dần (RPUSH), nên lấy dần từ đầu: mốc nào CŨ HƠN ARGV[1] thì bỏ khỏi LIST và xoá luôn HASH của nó, dừng ở mốc đầu tiên không cũ hơn.
+# Trả về số mốc đã bỏ. Mốc có dạng ``YYYY-MM-DD HH:MM:SS`` (rộng cố định) nên so sánh chuỗi đúng thứ tự thời gian.
+_TRIM_LIST_BEFORE_SCRIPT = """
+local removed = 0
+while true do
+  local head = redis.call('LINDEX', KEYS[1], 0)
+  if (not head) or head >= ARGV[1] then
+    break
+  end
+  redis.call('LPOP', KEYS[1])
+  redis.call('DEL', KEYS[1] .. ':' .. head)
+  removed = removed + 1
+end
+return removed
+"""
+
+
+def trim_lists_before(client: redis.Redis, cutoffs: Iterable[tuple[str, str]]) -> int:
+    """Với mỗi ``(list_key, mốc)``: bỏ khỏi LIST (và xoá HASH) mọi mốc CŨ HƠN ``mốc``, trong MỘT lượt gửi lên Redis. Trả về tổng số mốc đã bỏ. Dùng cho danh sách chỉ giữ SỰ KIỆN (TRIGGER):
+    LIST không có mốc nào cho từng nến nên đếm số mốc (LTRIM) không giữ được đúng "chỉ trong cửa sổ nến gần nhất"; phải bỏ theo giờ nến."""
+    pipe = client.pipeline(transaction=False)
+    queued = 0
+    for list_key, cutoff in cutoffs:
+        pipe.eval(_TRIM_LIST_BEFORE_SCRIPT, 1, list_key, cutoff)
+        queued += 1
+    return sum(int(removed) for removed in pipe.execute()) if queued else 0
 
 
 def write_list_hash_many(client: redis.Redis, rows: Iterable[dict[str, Any]]) -> int:

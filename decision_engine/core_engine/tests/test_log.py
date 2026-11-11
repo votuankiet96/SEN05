@@ -60,7 +60,7 @@ def test_configure_logging_moi_dong_ghi_tien_trinh_va_noi_phat(monkeypatch: pyte
 def test_moi_module_log_bang_logger_mang_ten_chinh_no() -> None:
     """Mỗi file có log phải khai ``LOGGER = logging.getLogger(__name__)`` (main.py chạy bằng ``-m`` nên ``__name__`` là ``__main__``: khai tên đầy đủ); không dùng tên chung nào khác,
     để dòng log luôn chỉ đúng file phụ trách."""
-    expected = {"configuration", "strategy_runner", "trend_filtering", "data_engine", "redis_connector", "main"}
+    expected = {"configuration", "strategy_runner", "signal_publisher", "data_engine", "redis_connector", "main"}
     seen = set()
     for path in sorted(SRC.glob("*.py")):
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):

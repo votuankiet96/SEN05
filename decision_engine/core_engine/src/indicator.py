@@ -16,8 +16,8 @@ Mô tả:
     File này KHÔNG import bất kỳ gì từ strategies/ — chiều phụ thuộc chỉ
     một chiều: strategies/*.py không import ngược lại indicator.py.
 
-    merge_trend_reference phục vụ đường 2 timeframe (ghép nến trend đã đóng vào nến vào lệnh); hiện
-    chưa có đường chạy nào gọi nó, phần trend sẽ làm ở trend_filtering — xem configuration.trend_source_for(). Chỉ báo xác nhận xu hướng khung lớn
+    merge_closed_reference ghép nến THAM CHIẾU đã đóng (khung chỉ báo, khung trend) vào từng nến vào lệnh theo luật "reality epoch": nến tham chiếu có giờ đóng
+    không muộn hơn giờ đóng của nến vào lệnh (kể cả đúng bằng); do signal_publisher gọi khi lắp bảng từ db0. Chỉ báo xác nhận xu hướng khung lớn
     (KNN, ...) KHÔNG nằm ở đây: mỗi phương pháp là một khối riêng trong
     trend_methods/ (xem rules/trend_tf.py).
 
@@ -32,6 +32,8 @@ Lưu ý:
 """
 
 from __future__ import annotations
+
+from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
@@ -402,38 +404,27 @@ def add_ichimoku_indicators(df: pd.DataFrame, params: dict) -> pd.DataFrame:
     return out
 
 
-def merge_trend_reference(entry_df: pd.DataFrame, trend_df: pd.DataFrame) -> pd.DataFrame:
+def merge_closed_reference(
+    entry_df: pd.DataFrame, ref_df: pd.DataFrame, columns: Sequence[str], *, ref_close_name: str
+) -> pd.DataFrame:
     """
-    Gắn trend bar đã đóng gần nhất vào từng entry bar, không lookahead.
+    Gắn vào từng nến vào lệnh các cột ``columns`` của nến THAM CHIẾU (khung chỉ báo hoặc khung trend) ĐÃ ĐÓNG gần nhất, không nhìn trước.
 
-    Điều kiện merge thực tế:
-        trend_close_time <= entry bartime
+    Luật "reality epoch": nến tham chiếu được dùng khi giờ đóng của nó KHÔNG MUỘN HƠN giờ đóng của nến vào lệnh (``close_time`` của hai bảng); bằng nhau vẫn tính, vì lúc nến
+    vào lệnh đóng thì nến tham chiếu đóng cùng lúc đã biết kết quả. Điều kiện merge thực tế: ``ref.close_time <= entry.close_time``. Nến vào lệnh chưa có nến tham chiếu nào
+    thì các cột mang sang là NaN. Cột giờ đóng của nến tham chiếu được mang sang với tên ``ref_close_name`` (để kiểm và chẩn đoán).
 
-    Cột được mang sang khung vào lệnh: trend_close_time, các cột trend_* riêng của từng khối xác
-    nhận xu hướng (xem trend_methods/<tên>.py), rồi trend_bias (hướng đã ghép) ở cuối. Cột hướng
-    riêng từng khối (trend_bias_<tên>) chỉ dùng nội bộ để ghép nên không được mang sang.
+    ``entry_df`` và ``ref_df`` đều phải có ``close_time`` (cùng kiểu datetime) và ``entry_df`` phải có ``bartime``; kết quả sắp theo ``bartime`` tăng dần.
     """
     if entry_df.empty:
         return entry_df.copy()
-    if trend_df.empty or "trend_close_time" not in trend_df.columns:
-        return entry_df.copy()
-
-    block_cols = [
-        col
-        for col in trend_df.columns
-        if col.startswith("trend_")
-        and col not in ("trend_close_time", "trend_bias")
-        and not col.startswith("trend_bias_")
-    ]
-    trend_cols = ["trend_close_time", *block_cols, "trend_bias"]
-    available = [col for col in trend_cols if col in trend_df.columns]
-    entry = entry_df.sort_values("bartime").copy()
-    trend = trend_df[available].sort_values("trend_close_time").copy()
-    merged = pd.merge_asof(
-        entry,
-        trend,
-        left_on="bartime",
-        right_on="trend_close_time",
-        direction="backward",
-    )
+    entry = entry_df.sort_values("close_time")
+    if ref_df.empty:
+        merged = entry.copy()
+        merged[ref_close_name] = pd.NaT
+        for column in columns:
+            merged[column] = np.nan
+    else:
+        ref = ref_df[["close_time", *columns]].sort_values("close_time").rename(columns={"close_time": ref_close_name})
+        merged = pd.merge_asof(entry, ref, left_on="close_time", right_on=ref_close_name, direction="backward")
     return merged.sort_values("bartime").reset_index(drop=True)

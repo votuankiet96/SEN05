@@ -16,9 +16,9 @@ import pytest
 
 SRC = Path(__file__).resolve().parents[1] / "src"
 CONNECTION_COMMANDS = {"psubscribe", "pubsub", "get_message", "config_get", "scan_iter"}  # (ping không tính: các lớp bọc cũng có hàm tên ping)
-DATA_COMMANDS = {"lrange", "hmget", "lindex"}
+DATA_COMMANDS = {"lrange", "hmget", "lindex", "hgetall"}
 OUTPUT_COMMANDS = {"eval", "publish"}
-STATE_COMMANDS = {"hset", "hgetall", "expire", "delete"}
+STATE_COMMANDS = {"hset", "expire", "delete"}
 ALL_COMMANDS = CONNECTION_COMMANDS | DATA_COMMANDS | OUTPUT_COMMANDS | STATE_COMMANDS | {"pipeline"}
 
 
@@ -41,16 +41,16 @@ def test_chi_redis_connector_noi_redis_nghe_keyspace_va_kiem_co() -> None:
     assert not called & DATA_COMMANDS  # không đọc nến
 
 
-def test_data_engine_chi_lam_viec_voi_du_lieu_nen() -> None:
+def test_data_engine_chi_doc_du_lieu_vao() -> None:
+    """data_engine là nơi DUY NHẤT đọc dữ liệu vào tiến trình: nến của nguồn (LRANGE + HMGET) và cấu phần db0 của DE (LRANGE + HGETALL) -- cả hai đều là List–Hash."""
     creates, called = _redis_usage("data_engine")
-    assert not creates and {"lrange", "hmget"} <= called
+    assert not creates and {"lrange", "hmget", "hgetall"} <= called
     assert not called & (CONNECTION_COMMANDS | OUTPUT_COMMANDS | STATE_COMMANDS)  # không tự nối/nghe/kiểm cờ, không ghi gì ra Redis
 
 
-def test_trend_filtering_chi_doc_ket_qua_cua_chinh_no() -> None:
-    creates, called = _redis_usage("trend_filtering")
-    assert not creates and {"lrange", "hmget"} <= called
-    assert not called & (CONNECTION_COMMANDS | OUTPUT_COMMANDS | STATE_COMMANDS)  # không tự nối/nghe/kiểm cờ, không tự ghi (ghi đi qua redis_connector)
+def test_trend_filtering_da_nhap_vao_strategy_runner() -> None:
+    """Phần tính và ghi trend nay nằm ở strategy_runner (cấu phần TREND của db0), phần đọc ở data_engine: không còn file riêng."""
+    assert not (SRC / "trend_filtering.py").exists()
 
 
 @pytest.mark.parametrize("name", ["strategy_runner", "signal_publisher", "main", "configuration"])
@@ -74,7 +74,7 @@ def test_ma_dung_chung_khong_chua_ten_chien_luoc_hay_khoi_trend() -> None:
     from core_engine.src.rules.trend_tf import method_names
 
     forbidden = set(STRATEGIES) | set(method_names())
-    names = ("data_engine", "signal_publisher", "strategy_runner", "trend_filtering", "redis_connector", "main")
+    names = ("data_engine", "signal_publisher", "strategy_runner", "redis_connector", "main")
     hits: list[str] = []
     for name in names:
         tree = ast.parse((SRC / f"{name}.py").read_text(encoding="utf-8"))

@@ -146,7 +146,36 @@ def make_bars(n: int = 600, freq: str = "h") -> pd.DataFrame:
 
 
 # =============================================================================
-# Cấu hình lane thử (đúng hình dạng de_config.yaml, KHÔNG có nguồn trend: bản này chỉ chạy raw).
+# Pipeline THAM CHIẾU một bảng: đường "cấp 1" cũ (một tiến trình, một khung, chỉ báo cùng khung), giữ lại ở test để khoá hành vi chiến lược (golden) và để so với đường mới
+# (runner ghi db0, publisher lắp bảng). Trong production hai nửa của pipeline này chạy ở hai tiến trình khác nhau (strategy_runner / signal_publisher).
+# =============================================================================
+
+
+def run_strategy(key: str, *, symbol: str, tf: str, bars: pd.DataFrame, overrides: dict | None = None, trend: pd.DataFrame | None = None) -> pd.DataFrame:
+    """normalize_params -> add_indicators -> [ghép trend nếu có bảng] -> detect_signals -> add_entries trên MỘT bảng nến.
+
+    ``trend`` (tuỳ chọn) có cột ``bartime`` (giờ mở nến trend), ``trend_bias`` và ``trend_close_time`` (giờ đóng): ghép theo luật nến đóng không muộn hơn giờ ĐÓNG của nến vào lệnh
+    (indicator.merge_closed_reference). Khung ngoài ``supported_timeframes`` của chiến lược bị từ chối như phía kế hoạch (parse_plans) từ chối ``entry_tf``."""
+    from core_engine.src import configuration
+    from core_engine.src.indicator import merge_closed_reference, timeframe_minutes
+
+    spec = configuration.get_strategy(key)
+    symbol = str(symbol).strip().upper()
+    tf = str(tf).strip().upper()
+    if spec.supported_timeframes and tf not in spec.supported_timeframes:
+        raise ValueError(f"Strategy '{spec.key}' supports only these timeframes: {', '.join(spec.supported_timeframes)}.")
+    params = spec.normalize_params(overrides, symbol, tf)
+    enriched = spec.add_indicators(bars, params)
+    if trend is not None:
+        entry = enriched.assign(close_time=(enriched["bartime"] + pd.Timedelta(minutes=timeframe_minutes(tf))).astype("datetime64[us]"))
+        reference = pd.DataFrame({"close_time": trend["trend_close_time"].astype("datetime64[us]"), "trend_bias": trend["trend_bias"]})
+        enriched = merge_closed_reference(entry, reference, ["trend_bias"], ref_close_name="trend_close_time").drop(columns="close_time")
+    enriched = spec.detect_signals(enriched, symbol=symbol, params=params)
+    return spec.add_entries(enriched, params, symbol)
+
+
+# =============================================================================
+# Cấu hình thử (đúng hình dạng de_config.yaml mới): nguồn nến AEN (+ OG8), Redis đầu ra, hạn hiệu lực và `plans`.
 # =============================================================================
 
 GROUP_SYMBOLS: tuple[str, ...] = ("US30", "US500", "US100", "GER40", "HK50", "JP225", "XAUUSD", "BTCUSD")
@@ -158,51 +187,46 @@ VALIDITY = {
     "ichimoku": {"mode": "seconds_after_bar_close", "seconds": 600},
     "ema_reach": {"mode": "seconds_after_bar_close", "seconds": 600},
 }
+TREND_SOURCES: tuple[str, ...] = ("knn", "breakout", "zigzag", "tstat", "cloud")
+ALL_STRATEGIES: tuple[str, ...] = ("combo", "ma_cross", "macd_break", "ichimoku", "ema_reach")
 
+def cell_config(*, warmup_bars: int = 0, og8: bool = False, rows: int = 500, max_shift_bars: int = 999) -> dict:
+    """Một dict cấu hình đủ cho ``configuration.build_cells`` / ``build_runner_job`` / ``build_publisher_job`` (giá trị khớp config mẫu): nến db0 ở cổng 6379, cấu phần db0, trend db1 và tín hiệu db2 ở cổng 6380;
+    ``strategies`` là bản sao của config nạp lúc import (có bảng khung trend của we). ``warmup_bars`` mặc định 0 (không warm-up) để các test dùng bảng nến ngắn giữ nguyên; ``og8`` thêm nguồn nến thêm; ``rows`` là cửa sổ nến ghi/đọc/giữ ở db0/db1
+    (mặc định 500 để các test đối chiếu với pipeline một bảng không bị cắt bởi cửa sổ; config thật dùng 100)."""
+    import copy
 
-def lane_config(enabled: tuple[str, ...] = ("combo", "ma_cross")) -> dict:
-    """Một dict cấu hình đủ cho ``configuration.build_lane_job`` (các giá trị khớp config mẫu: db0 -> db1, raw giữ tên L_DE / L_CHANNEL)."""
-    return {
+    from core_engine.src.configuration import CONFIG
+
+    config = {
         "redis": {
             "enabled": True,
             "host": "127.0.0.1",
             "password": "",
             "input": {
-                "db": 0, "key_prefix": PREFIX, "snapshot_bars": 500, "process_on_startup": True,
+                "db": 0, "key_prefix": PREFIX, "snapshot_bars": rows, "warmup_bars": warmup_bars, "process_on_startup": True,
                 "symbols": list(GROUP_SYMBOLS), "timeframes": list(GROUP_TIMEFRAMES),
             },
-            "output": {"db": 0, "port": 6380, "password": "", "key_prefix": "L_DE", "channel_prefix": "L_CHANNEL"},
-            "trend_output": {"db": 1, "key_prefix": "L_TREND"},
-            "filtered_output": {"db": 2},
+            "output": {"db": 2, "port": 6380, "password": "", "key_prefix": "L_DE", "channel_prefix": "L_CHANNEL"},
+            "setup": {"db": 0, "key_prefix": "", "window_bars": rows, "retention_max_entries": rows},
+            "signal_inputs": {"db": 1, "key_prefix": ""},
+            "trend_outputs": {name: {"key_prefix": f"L_DE_{name.upper()}", "channel_prefix": f"L_CHANNEL_{name.upper()}"} for name in TREND_SOURCES},
         },
-        "live": {"enabled_strategies": list(enabled), "signal_validity": {k: dict(v) for k, v in VALIDITY.items()}, "log_level": "INFO"},
+        "context": {"macd_fast": 5, "macd_slow": 25, "macd_signal": 5, "ma_period": 20},
+        "live": {"signal_validity": {k: dict(v) for k, v in VALIDITY.items()}, "log_level": "INFO", "max_shift_bars": max_shift_bars},
+        "strategies": copy.deepcopy(CONFIG["strategies"]),
     }
-
-
-TREND_SOURCES: tuple[str, ...] = ("knn", "breakout", "zigzag", "tstat", "cloud")
-ALL_STRATEGIES: tuple[str, ...] = ("combo", "ma_cross", "macd_break", "ichimoku", "ema_reach")
-
-
-def trend_config(enabled: tuple[str, ...] = ALL_STRATEGIES, sources: tuple[str, ...] = TREND_SOURCES) -> dict:
-    """``lane_config`` cộng ``redis.trend_outputs`` cho các nguồn trend được chọn (mỗi nguồn một tiền tố khoá và kênh riêng, như de_config.example.yaml)."""
-    config = lane_config(enabled)
-    config["redis"]["trend_outputs"] = {name: {"key_prefix": f"L_DE_{name.upper()}", "channel_prefix": f"L_CHANNEL_{name.upper()}"} for name in sources}
+    if og8:
+        config["redis"]["input_sources"] = {"og8": dict(OG8_SOURCE)}
     return config
 
 
-# Nguồn nến thêm (redis.input_sources.og8): Redis khác máy, nhóm symbol riêng (symbol phải có trong bảng khung trend của config thật, vì bảng được nạp lúc import).
+# Nguồn nến thêm (redis.input_sources.og8): Redis khác máy, nhóm symbol riêng (symbol phải thuộc OPERATING_SYMBOLS của config nạp lúc import).
 OG8_SOURCE: dict = {"host": "10.11.12.8", "port": 6380, "password": "mat-khau-og8", "db": 0, "key_prefix": "L_CANDLE", "symbols": ["EURUSD", "fr40"]}
 
 
-def source_config(enabled: tuple[str, ...] = ALL_STRATEGIES, sources: tuple[str, ...] = TREND_SOURCES) -> dict:
-    """``trend_config`` cộng nguồn nến thêm ``og8``: nhóm mặc định chạy ``GROUP_SYMBOLS``, nhóm og8 chạy EURUSD và FR40 từ Redis khác máy."""
-    config = trend_config(enabled, sources)
-    config["redis"]["input_sources"] = {"og8": dict(OG8_SOURCE)}
-    return config
-
-
 class FakeSnapshots:
-    """Engine giả cho ``process_pair`` / ``process_trend_pair``: ``snapshot(pair)`` trả bảng nến đã nạp cho cặp (None nếu chưa có), ghi lại các cặp đã hỏi."""
+    """Engine giả cho ``process_frame`` / ``process_cell``: ``snapshot(pair)`` trả bảng đã nạp cho cặp (None nếu chưa có), ghi lại các cặp đã hỏi."""
 
     def __init__(self, frames: dict) -> None:
         self.frames = frames
@@ -248,16 +272,29 @@ class _EvalPipe:
         self.owner = owner
         self.queued: list[tuple] = []
 
-    def eval(self, script: str, _numkeys: int, *args: object) -> _EvalPipe:
-        self.queued.append(("eval", args))
+    def eval(self, script: str, numkeys: int, *args: object) -> _EvalPipe:
+        self.queued.append(("trim" if numkeys == 1 else "eval", args))  # script bỏ mốc cũ có 1 khoá (LIST); script ghi List–Hash có 2 (HASH, LIST)
         return self
 
     def hmget(self, key: str, *fields: str) -> _EvalPipe:
         self.queued.append(("hmget", key, fields))
         return self
 
+    def hgetall(self, key: str) -> _EvalPipe:
+        self.queued.append(("hgetall", key))
+        return self
+
     def execute(self) -> list:
-        results = [self.owner.record(item[1]) if item[0] == "eval" else self.owner.hmget(item[1], *item[2]) for item in self.queued]
+        results = []
+        for item in self.queued:
+            if item[0] == "eval":
+                results.append(self.owner.record(item[1]))
+            elif item[0] == "trim":
+                results.append(self.owner.trim(item[1]))
+            elif item[0] == "hgetall":
+                results.append(self.owner.hgetall(item[1]))
+            else:
+                results.append(self.owner.hmget(item[1], *item[2]))
         self.queued = []
         return results
 
@@ -273,8 +310,22 @@ class RecordingRedis:
         self.seen: set[str] = set()
         self.lists: dict[str, list[str]] = {}
         self.hashes: dict[str, dict[str, str]] = {}
+        self.trims: list[tuple[str, str]] = []  # (key LIST, mốc sớm nhất còn giữ) của mỗi lần bỏ mốc cũ
         self.pinged = 0
         self.closed = False
+
+    def trim(self, args: tuple) -> int:
+        """Giả lập script bỏ mốc cũ: lấy dần từ đầu LIST các mốc cũ hơn mốc cho trước, xoá cả HASH của chúng (không ghi vào ``calls``, nơi chỉ có các lệnh ghi List–Hash)."""
+        list_key, cutoff = str(args[0]), str(args[1])
+        self.trims.append((list_key, cutoff))
+        stamps = self.lists.get(list_key, [])
+        removed = 0
+        while stamps and stamps[0] < cutoff:
+            gone = stamps.pop(0)
+            self.hashes.pop(f"{list_key}:{gone}", None)
+            self.seen.discard(f"{list_key}:{gone}")
+            removed += 1
+        return removed
 
     def record(self, args: tuple) -> int:
         self.calls.append(args)
@@ -288,11 +339,14 @@ class RecordingRedis:
         self.hashes[key] = dict(zip(values[7::2], values[8::2], strict=True))
         stamps = self.lists.setdefault(values[1], [])
         stamps.append(values[2])
-        del stamps[: -int(values[4])]
+        while len(stamps) > int(values[4]):  # như script thật: mốc cũ nhất ra khỏi LIST thì HASH của nó cũng bị xoá
+            gone = stamps.pop(0)
+            self.hashes.pop(f"{values[1]}:{gone}", None)
+            self.seen.discard(f"{values[1]}:{gone}")
         return 1
 
-    def eval(self, script: str, _numkeys: int, *args: object) -> int:
-        return self.record(args)
+    def eval(self, script: str, numkeys: int, *args: object) -> int:
+        return self.trim(args) if numkeys == 1 else self.record(args)
 
     def lrange(self, key: str, start: int, end: int) -> list[str]:
         items = self.lists.get(key, [])
@@ -301,6 +355,9 @@ class RecordingRedis:
     def hmget(self, key: str, *fields: str) -> list[str | None]:
         row = self.hashes.get(key)
         return [row.get(field) for field in fields] if row else [None] * len(fields)
+
+    def hgetall(self, key: str) -> dict[str, str]:
+        return dict(self.hashes.get(key, {}))
 
     def pipeline(self, **_kwargs: object) -> _EvalPipe:
         return _EvalPipe(self)

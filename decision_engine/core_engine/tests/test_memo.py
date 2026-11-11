@@ -10,7 +10,6 @@ from pandas.testing import assert_frame_equal
 
 from core_engine.src import strategy_runner
 from core_engine.src.configuration import STRATEGIES
-from core_engine.src.strategy_runner import run_strategy
 
 
 def _bars(n: int = 600, freq: str = "h") -> pd.DataFrame:
@@ -49,6 +48,12 @@ def _freq(tf: str) -> str:
     return "30min" if tf == "M30" else "h"
 
 
+def _context(key: str, tf: str, bars: pd.DataFrame, overrides: dict | None = None) -> pd.DataFrame:
+    """TRIGGER của một chiến lược tại một khung: nơi duy nhất của runner tính chỉ báo của chiến lược (``add_indicators`` có nhớ đệm) rồi chạy ``detect_signals``."""
+    spec = STRATEGIES[key]
+    return strategy_runner.trigger_table(spec, bars, spec.normalize_params(overrides, "US30", tf), "US30", tf)
+
+
 def _trend_inputs(method: str, tf: str, bars: pd.DataFrame) -> tuple[str, pd.DataFrame]:
     """(khung trend, nến trend) hợp lệ cho từng khối: breakout = chính khung vào lệnh, cloud = không nhỏ hơn H1, còn lại H4."""
     per_h1 = 2 if tf == "M30" else 1
@@ -71,12 +76,12 @@ def test_nho_dem_tat_mac_dinh() -> None:
 
 
 @pytest.mark.parametrize(("key", "tf"), CASES)
-def test_run_strategy_co_nho_dem_cho_ket_qua_y_het_khi_tat(key: str, tf: str) -> None:
+def test_trigger_table_co_nho_dem_cho_ket_qua_y_het_khi_tat(key: str, tf: str) -> None:
     bars = _bars(600, _freq(tf))
-    expected = run_strategy(key, symbol="US30", tf=tf, bars=bars)
+    expected = _context(key, tf, bars)
     strategy_runner.enable_memo(8)
-    first = run_strategy(key, symbol="US30", tf=tf, bars=bars)
-    second = run_strategy(key, symbol="US30", tf=tf, bars=bars)  # lần này lấy từ nhớ đệm
+    first = _context(key, tf, bars)
+    second = _context(key, tf, bars)  # lần này lấy từ nhớ đệm
     assert_frame_equal(first, expected)
     assert_frame_equal(second, expected)
     assert strategy_runner.memo_stats() == {"hits": 1, "misses": 1, "size": 1}
@@ -85,16 +90,16 @@ def test_run_strategy_co_nho_dem_cho_ket_qua_y_het_khi_tat(key: str, tf: str) ->
 def test_nho_dem_khoa_theo_noi_dung() -> None:
     strategy_runner.enable_memo(16)
     bars = _bars(600)
-    run_strategy("combo", symbol="US30", tf="H1", bars=bars)
-    run_strategy("combo", symbol="US30", tf="H1", bars=bars.copy())  # cùng nội dung, đối tượng khác -> trúng
+    _context("combo", "H1", bars)
+    _context("combo", "H1", bars.copy())  # cùng nội dung, đối tượng khác -> trúng
     assert strategy_runner.memo_stats()["hits"] == 1
     changed = bars.copy()
     changed.loc[300, "close"] += 0.01  # đổi MỘT giá -> trượt
-    run_strategy("combo", symbol="US30", tf="H1", bars=changed)
+    _context("combo", "H1", changed)
     assert strategy_runner.memo_stats()["misses"] == 2
-    run_strategy("combo", symbol="US30", tf="H1", bars=bars, overrides={"MA_PERIOD": 21})  # đổi tham số của chiến lược -> trượt
+    _context("combo", "H1", bars, overrides={"MA_PERIOD": 21})  # đổi tham số của chiến lược -> trượt
     assert strategy_runner.memo_stats()["misses"] == 3
-    run_strategy("ma_cross", symbol="US30", tf="M30", bars=_bars(600, "30min"))  # chiến lược khác -> khoá khác
+    _context("ma_cross", "M30", _bars(600, "30min"))  # chiến lược khác -> khoá khác
     assert strategy_runner.memo_stats()["misses"] == 4
 
 

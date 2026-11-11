@@ -194,7 +194,7 @@ def test_write_list_hash_khong_kenh_thi_kenh_rong() -> None:
 
 def test_script_ghi_chi_publish_khi_co_kenh_va_bo_qua_khi_hash_da_co() -> None:
     script = redis_connector._WRITE_LIST_HASH_SCRIPT
-    assert script.index("EXISTS") < script.index("HSET") < script.index("EXPIRE") < script.index("RPUSH") < script.index("LTRIM") < script.index("PUBLISH")
+    assert script.index("EXISTS") < script.index("HSET") < script.index("EXPIRE") < script.index("RPUSH") < script.index("LPOP") < script.index("DEL") < script.index("PUBLISH")
     assert "return 0" in script and "ARGV[4] ~= ''" in script  # đã có thì không làm gì; kênh rỗng thì không publish
 
 
@@ -204,6 +204,31 @@ def test_write_list_hash_many_gui_mot_luot_dung_thu_tu_va_dem_so_moi() -> None:
     assert redis_connector.write_list_hash_many(client, rows) == 3
     assert [decode_eval(c)["stamp"] for c in client.calls] == ["2026-11-03 00:00:00", "2026-11-03 01:00:00", "2026-11-03 02:00:00"]
     assert redis_connector.write_list_hash_many(client, [*rows, {**KWARGS, "stamp": "2026-11-03 03:00:00"}]) == 1  # ba mốc đã có, chỉ mốc mới được tính
+
+
+def test_trim_lists_before_goi_script_bo_mot_luot_cho_moi_list_va_cong_so_mot_da_bo() -> None:
+    client = RecordingRedis(emulate=True)
+    for stamp in ("2026-11-03 01:00:00", "2026-11-03 02:00:00", "2026-11-03 03:00:00"):
+        redis_connector.write_list_hash(client, **{**KWARGS, "stamp": stamp})
+    other = {**KWARGS, "list_key": "L_X_US30_H2"}
+    redis_connector.write_list_hash(client, **{**other, "stamp": "2026-11-03 01:00:00"})
+    removed = redis_connector.trim_lists_before(client, [("L_X_US30_H1", "2026-11-03 03:00:00"), ("L_X_US30_H2", "2026-11-03 02:00:00"), ("L_X_CHUA_CO", "2026-11-03 02:00:00")])
+    assert removed == 3  # H1 bỏ 01:00 và 02:00, H2 bỏ 01:00, LIST chưa có thì không có gì để bỏ
+    assert client.lists["L_X_US30_H1"] == ["2026-11-03 03:00:00"] and client.lists["L_X_US30_H2"] == []
+    assert "L_X_US30_H1:2026-11-03 01:00:00" not in client.hashes and "L_X_US30_H1:2026-11-03 03:00:00" in client.hashes  # HASH của mốc đã bỏ cũng bị xoá, mốc còn lại giữ nguyên
+    assert client.trims == [("L_X_US30_H1", "2026-11-03 03:00:00"), ("L_X_US30_H2", "2026-11-03 02:00:00"), ("L_X_CHUA_CO", "2026-11-03 02:00:00")]
+
+
+def test_trim_lists_before_rong_thi_khong_gui_gi() -> None:
+    client = RecordingRedis()
+    assert redis_connector.trim_lists_before(client, []) == 0 and client.trims == [] and client.calls == []
+
+
+def test_script_bo_mot_cu_lay_dan_tu_dau_list_dung_o_mot_dau_khong_cu_hon_va_xoa_hash() -> None:
+    script = redis_connector._TRIM_LIST_BEFORE_SCRIPT
+    assert script.index("LINDEX") < script.index("LPOP") < script.index("DEL")
+    assert "head >= ARGV[1]" in script and "not head" in script  # dừng ở mốc đầu không cũ hơn, hoặc khi LIST hết/không có
+    assert "LTRIM" not in redis_connector._WRITE_LIST_HASH_SCRIPT  # script ghi cắt bằng LPOP + DEL (xoá cả HASH), không dùng LTRIM để HASH khỏi mồ côi
 
 
 def test_write_list_hash_many_rong_thi_khong_gui_gi() -> None:
@@ -216,3 +241,12 @@ def test_message_kenh_la_json_cua_cac_truong() -> None:
     fields = {"symbol": "HK50", "comment": "tiếng Việt"}
     redis_connector.write_list_hash(client, channel="L_CH", message=json.dumps(fields, ensure_ascii=False), **{**KWARGS, "fields": fields})
     assert json.loads(decode_eval(client.calls[0])["message"]) == fields
+
+
+def test_ghi_qua_max_entries_thi_xoa_ca_hash_cua_mot_bi_cat_khong_de_hash_mo_coi() -> None:
+    """LIST chỉ giữ ``max_entries`` mốc mới nhất; HASH của mốc bị cắt khỏi LIST cũng phải bị xoá (số HASH của một chuỗi luôn bằng số mốc đang giữ)."""
+    client = RecordingRedis(emulate=True)
+    for hour in range(5):
+        redis_connector.write_list_hash(client, **{**KWARGS, "stamp": f"2026-11-03 0{hour}:00:00", "max_entries": 3})
+    assert client.lists["L_X_US30_H1"] == ["2026-11-03 02:00:00", "2026-11-03 03:00:00", "2026-11-03 04:00:00"]
+    assert sorted(k for k in client.hashes if k.startswith("L_X_US30_H1:")) == [f"L_X_US30_H1:2026-11-03 0{h}:00:00" for h in (2, 3, 4)]

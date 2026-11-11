@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# core_engine launcher for Ubuntu/Linux: live worker control
-# (mỗi chiến lược và mỗi khối trend một tiến trình, systemd user service) — Redis DB0 candles -> trend + strategy -> Redis DB1.
+# core_engine launcher for Ubuntu/Linux: live control
+# (runner: nến -> cấu phần db0; publisher: db0 -> tín hiệu db1; systemd user service) — candles -> Redis 6380 db0 components -> Redis 6380 db1 signals.
 # Long-running actions open in a new desktop terminal when available.
 # On headless/SSH sessions, actions run in the current terminal.
 
@@ -115,158 +115,197 @@ run_task() {
 }
 
 # =============================================================================
-# Live worker — MỖI CHIẾN LƯỢC MỘT TIẾN TRÌNH và MỖI KHỐI TREND MỘT TIẾN TRÌNH, điều khiển qua systemd user service
-# (unit mẫu de-signal@<chiến lược> và de-trend@<khối trend>). Config quyết định DE chạy gì:
-#   chiến lược = live.enabled_strategies; khối trend = các khoá của redis.trend_outputs (chú thích hết = chỉ chạy raw, không có tiến trình trend).
-# Mỗi nguồn nến THÊM khai ở redis.input_sources.<nguồn> (vd og8) có một NHÓM tiến trình riêng, tên <chiến lược>.<nguồn> / <khối>.<nguồn> (unit de-signal@combo.og8): nguồn đó mất kết nối
-# chỉ làm nhóm của nó dừng. Các tiến trình độc lập nhau, chỉ trao đổi qua Redis: dừng hay restart một tiến trình không kéo theo tiến trình khác.
+# Live — HAI loại tiến trình, mỗi loại chia thành nhiều LÀN, điều khiển qua systemd user service:
+#   runner    (de-runner@<làn>.<nguồn nến>)  nến Core AEN / OG8 -> SETUP (db0) và TRIGGER + CONTEXT + TREND (db1) của MỌI symbol x khung của nguồn đó, vào Redis cổng 6380. Làn = tên một chiến lược
+#             (chỉ TRIGGER + SETUP của chiến lược đó, vd combo.og8) hoặc 'trend' (chỉ CONTEXT + TREND, vd trend.default); nguồn 'default' = redis.input
+#   publisher (de-publisher@<chiến lược>)    db0/db1 -> ghép theo luật nến đóng -> lọc trend/dời, entry -> tín hiệu của mọi ô (symbol, khung) của chiến lược đó vào Redis cổng 6380 db2
+# Config quyết định DE chạy gì: mỗi nguồn nến CÓ symbol (redis.input / redis.input_sources) có (1 + số chiến lược) làn runner riêng và mỗi chiến lược (mục strategies:) có một publisher; không có khoá nào
+# khai riêng số tiến trình. Các làn độc lập nhau, chỉ trao đổi qua Redis: dừng hay restart một làn không kéo theo làn khác (publisher chờ cấu phần chưa về rồi tính lại khi nó về).
+# Một Redis nguồn chết chỉ làm các làn của nguồn đó dừng. Redis đầu ra (cổng 6380) PHẢI bật notify-keyspace-events 'Kh' (publisher nghe db0 và db1), nếu thiếu publisher báo lỗi rõ ràng ngay lúc khởi động.
+# Chọn tiến trình (restart, log, foreground): để trống = tất cả; 'runner' / 'publisher' = cả loại; 'trend' = các làn trend; tên chiến lược (vd combo) = các làn runner của nó VÀ publisher của nó (đổi
+# tham số chiến lược nào thì restart đúng tên đó); hoặc đúng một làn: combo.og8, trend.default, publisher.combo.
 # =============================================================================
 
 UNIT_SRC_DIR="$APP_DIR/core_engine/deploy"
 UNIT_DEST_DIR="$HOME/.config/systemd/user"
-LEGACY_SERVICE="de-signal.service"   # bản cũ: MỘT tiến trình chạy mọi chiến lược; không được chạy cùng lúc với các tiến trình mới
+RUNNER_TEMPLATE="de-runner@.service"
+PUBLISHER_TEMPLATE="de-publisher@.service"
 
-# In tên (mỗi dòng một tên) của "strategy" hoặc "trend" theo de_config.yaml: nhóm mặc định trước, rồi từng nhóm của nguồn nến thêm (<tên>.<nguồn>). Chỉ đọc TÊN khoá, không đọc mật khẩu.
-de_config_names() {
+# In tên (mỗi dòng một tên) của các instance runner cần chạy theo de_config.yaml: 'default' nếu nguồn mặc định có symbol, rồi từng nguồn nến thêm có symbol. Chỉ đọc TÊN khoá và danh sách symbol, không
+de_sources() {
   "$PY_CMD" -c '
-import sys, yaml
+import yaml
 cfg = yaml.safe_load(open("core_engine/de_config.yaml", encoding="utf-8"))
 redis = cfg.get("redis") or {}
-names = cfg["live"]["enabled_strategies"] if sys.argv[1] == "strategy" else list(redis.get("trend_outputs") or {})
-sources = [str(source).strip().lower() for source in (redis.get("input_sources") or {})]
-print(*names, *(f"{name}.{source}" for source in sources for name in names), sep="\n")
-' "$1" 2>/dev/null | sed '/^$/d'
+if (redis.get("input") or {}).get("symbols"):
+    print("default")
+for name, block in (redis.get("input_sources") or {}).items():
+    if (block or {}).get("symbols"):
+        print(str(name).strip().lower())
+' 2>/dev/null | sed '/^$/d'
+}
+
+# In tên (mỗi dòng một tên) các chiến lược trong de_config.yaml (mục strategies:, cùng khoá với configuration.STRATEGIES): mỗi chiến lược một làn runner mỗi nguồn và một publisher.
+de_strategies() {
+  "$PY_CMD" -c '
+import yaml
+cfg = yaml.safe_load(open("core_engine/de_config.yaml", encoding="utf-8"))
+for name in (cfg.get("strategies") or {}):
+    print(str(name).strip().lower())
+' 2>/dev/null | sed '/^$/d'
 }
 
 de_sync_units() {
   # Idempotent: luôn copy lại + daemon-reload để Start không bao giờ chạy unit cũ nếu
-  # core_engine/deploy/de-signal@.service hay de-trend@.service đã được sửa sau lần cài trước.
+  # core_engine/deploy/de-runner@.service hay de-publisher@.service đã được sửa sau lần cài trước.
   local unit
-  for unit in de-signal@.service de-trend@.service; do
+  for unit in "$RUNNER_TEMPLATE" "$PUBLISHER_TEMPLATE"; do
     install -D -m 0644 "$UNIT_SRC_DIR/$unit" "$UNIT_DEST_DIR/$unit"
   done
   systemctl --user daemon-reload
 }
 
-# Mọi tiến trình theo THỨ TỰ KHỞI ĐỘNG: tiến trình trend trước (ghi dòng thời gian trend), tiến trình chiến lược sau (đọc dòng thời gian đó).
-all_units() {
-  local name
-  for name in "${TRENDS[@]}"; do echo "de-trend@${name}.service"; done
-  for name in "${LANES[@]}"; do echo "de-signal@${name}.service"; done
+# Mọi nhãn tiến trình theo THỨ TỰ KHỞI ĐỘNG: runner trước (mỗi nguồn: trend, rồi từng chiến lược; ghi cấu phần), publisher sau (đọc cấu phần). Nhãn runner = <làn>.<nguồn>, publisher = publisher.<chiến lược>.
+all_labels() {
+  local source strategy
+  for source in "${SOURCES[@]}"; do
+    echo "trend.${source}"
+    for strategy in "${STRATEGIES[@]}"; do echo "${strategy}.${source}"; done
+  done
+  for strategy in "${STRATEGIES[@]}"; do echo "publisher.${strategy}"; done
 }
 
-# Tên (chiến lược hoặc khối trend) -> tên unit. Trả về 1 nếu tên không có trong config.
-unit_of() {
-  local name="$1" item
-  for item in "${TRENDS[@]}"; do
-    [[ "$item" == "$name" ]] && { echo "de-trend@${name}.service"; return 0; }
-  done
-  for item in "${LANES[@]}"; do
-    [[ "$item" == "$name" ]] && { echo "de-signal@${name}.service"; return 0; }
-  done
-  return 1
-}
-
-# Tên unit -> file log ứng dụng (xem core_engine/src/log.py): chiến lược de_run_<tên>.log, khối trend de_run_trend_<tên>.log; nhóm nguồn nến thêm đổi dấu chấm thành gạch dưới (combo.og8 -> de_run_combo_og8.log).
-log_of() {
-  local unit="$1" name
-  name="${unit#*@}"
-  name="${name%.service}"
-  name="${name//./_}"
-  if [[ "$unit" == de-trend@* ]]; then
-    echo "$APP_DIR/core_engine/logs/de_run_trend_${name}.log"
+# Nhãn -> tên unit systemd.
+unit_of_label() {
+  local label="$1"
+  if [[ "$label" == publisher.* ]]; then
+    echo "de-publisher@${label#publisher.}.service"
   else
-    echo "$APP_DIR/core_engine/logs/de_run_${name}.log"
+    echo "de-runner@${label}.service"
   fi
 }
 
-legacy_active() {
-  systemctl --user is-active --quiet "$LEGACY_SERVICE" 2>/dev/null
+# Mọi unit theo THỨ TỰ KHỞI ĐỘNG.
+all_units() {
+  local label
+  while IFS= read -r label; do unit_of_label "$label"; done < <(all_labels)
+}
+
+# Nhãn -> file log ứng dụng (xem core_engine/src/log.py và configuration._lane_name): runner de_run_runner_<làn>[_<nguồn>].log (nguồn mặc định bị bỏ), publisher de_run_publisher_<chiến lược>.log.
+log_of_label() {
+  local label="$1" lane source
+  if [[ "$label" == publisher.* ]]; then
+    echo "$APP_DIR/core_engine/logs/de_run_publisher_${label#publisher.}.log"
+    return
+  fi
+  lane="${label%%.*}"
+  source="${label#*.}"
+  if [[ "$source" == "default" ]]; then
+    echo "$APP_DIR/core_engine/logs/de_run_runner_${lane}.log"
+  else
+    echo "$APP_DIR/core_engine/logs/de_run_runner_${lane}_${source}.log"
+  fi
+}
+
+# Hỏi tên (xem chú thích đầu mục) rồi in các NHÃN khớp, mỗi dòng một nhãn, theo thứ tự khởi động. Trả về 1 nếu tên không khớp tiến trình nào.
+labels_matching() {
+  local answer="$1" label found=1
+  while IFS= read -r label; do
+    if [[ -z "$answer" || "$label" == "$answer" || "$label" == "$answer".* || "$label" == publisher."$answer" \
+          || ( "$answer" == runner && "$label" != publisher.* ) || ( "$answer" == publisher && "$label" == publisher.* ) ]]; then
+      echo "$label"
+      found=0
+    fi
+  done < <(all_labels)
+  return $found
+}
+
+legacy_active_units() {
+  # Bản cũ cùng ghi các danh sách db0/db1/db2 nên KHÔNG được chạy cùng lúc với bản mới: de-signal@* / de-trend@* (mỗi chiến lược / khối trend một tiến trình), de-publisher.service (một publisher chung)
+  # và de-runner@<nguồn>.service (một runner làm trọn mọi vai trò cho cả nguồn).
+  local source
+  local -a legacy=('de-signal@*' 'de-trend@*' 'de-publisher.service')
+  for source in "${SOURCES[@]}"; do legacy+=("de-runner@${source}.service"); done
+  systemctl --user list-units "${legacy[@]}" --state=active --no-legend --plain 2>/dev/null | awk '{print $1}'
 }
 
 de_status_word() {
-  local active=0 total=0 unit
+  local active=0 total=0 unit legacy
   while IFS= read -r unit; do
     total=$((total + 1))
     [[ "$(systemctl --user is-active "$unit" 2>/dev/null)" == "active" ]] && active=$((active + 1))
   done < <(all_units)
-  echo "${active}/${total} tiến trình đang chạy (trend: ${TRENDS[*]:-không có}; chiến lược: ${LANES[*]})"
-  if legacy_active; then
-    echo "(!) $LEGACY_SERVICE (bản cũ, một tiến trình) cũng đang chạy"
+  echo "${active}/${total} tiến trình đang chạy (${#SOURCES[@]} nguồn nến x (trend + ${#STRATEGIES[@]} chiến lược) runner; ${#STRATEGIES[@]} publisher)"
+  legacy="$(legacy_active_units | wc -l)"
+  if [[ "$legacy" -gt 0 ]]; then
+    echo "(!) ${legacy} tiến trình BẢN CŨ cũng đang chạy (de-signal@*, de-trend@*, de-publisher.service hoặc de-runner@<nguồn>.service)"
   fi
 }
 
-# Hỏi tên một tiến trình (chiến lược hoặc khối trend; để trống = tất cả); in ra danh sách unit được chọn, mỗi dòng một unit. Trả về 1 nếu tên không hợp lệ.
-choose_units() {
-  local answer unit
-  read -r -p "Tiến trình (${TRENDS[*]} ${LANES[*]}; để trống = tất cả): " answer >&2
+# Hỏi tên một tiến trình (xem chú thích đầu mục; để trống = tất cả); in ra danh sách NHÃN được chọn, mỗi dòng một nhãn. Trả về 1 nếu tên không hợp lệ.
+choose_labels() {
+  local answer
+  read -r -p "Tiến trình (trống = tất cả; runner | publisher | trend | ${STRATEGIES[*]} | <làn>.<nguồn> vd ${STRATEGIES[0]}.${SOURCES[0]} | publisher.<chiến lược>): " answer >&2
   answer="${answer,,}"
-  if [[ -z "$answer" ]]; then
-    all_units
+  if labels_matching "$answer"; then
     return 0
   fi
-  if unit="$(unit_of "$answer")"; then
-    echo "$unit"
-    return 0
-  fi
-  echo "Không có tiến trình '$answer' (chiến lược trong live.enabled_strategies, khối trend trong redis.trend_outputs)." >&2
+  echo "Không có tiến trình '$answer'." >&2
   return 1
 }
 
 de_start() {
-  if legacy_active; then
+  if [[ -n "$(legacy_active_units)" ]]; then
     echo
-    echo "$LEGACY_SERVICE (bản cũ, một tiến trình chạy mọi chiến lược) đang chạy."
-    echo "Chọn 2 (Stop) để dừng nó trước, kẻo hai chế độ cùng xử lý một nến."
+    echo "Các tiến trình BẢN CŨ (de-signal@*, de-trend@*, de-publisher.service, de-runner@<nguồn>.service) đang chạy."
+    echo "Chọn 2 (Stop) hoặc dừng chúng trước: bản cũ và bản mới ghi cùng các danh sách db0/db1/db2 và cùng tên kênh L_CHANNEL_*."
     pause
     return
   fi
   echo
   echo "CẢNH BÁO: redis.input.process_on_startup=true trong de_config.yaml."
-  echo "Mỗi tiến trình sẽ quét lại toàn bộ snapshot Redis DB0 ngay lập tức:"
-  echo "tiến trình chiến lược có thể publish signal NGAY cho bất kỳ signal nào còn"
-  echo "hiệu lực tại thời điểm đó (kể cả các kênh trend mà OE đang nghe)."
+  echo "Mỗi tiến trình quét lại toàn bộ phần việc của nó ngay lập tức: runner ghi lại cấu phần từ snapshot nến;"
+  echo "publisher có thể publish NGAY cho bất kỳ signal nào còn hiệu lực tại thời điểm đó"
+  echo "(kể cả các kênh mà OE đang nghe). Redis cổng 6380 phải bật notify-keyspace-events 'Kh'."
   echo
-  read -r -p "Xác nhận bật các tiến trình (trend: ${TRENDS[*]:-không có}; chiến lược: ${LANES[*]})? [y/N]: " confirm
+  read -r -p "Xác nhận bật $(all_units | wc -l) tiến trình (runner trước, publisher sau)? [y/N]: " confirm
   if [[ "${confirm,,}" != "y" ]]; then
     echo "Đã hủy."
     pause
     return
   fi
   de_sync_units
-  local name
-  for name in "${TRENDS[@]}"; do
-    systemctl --user enable --now "de-trend@${name}.service"
-  done
-  [[ ${#TRENDS[@]} -gt 0 ]] && sleep 5   # để các tiến trình trend kịp ghi dòng thời gian đầu tiên
-  for name in "${LANES[@]}"; do
-    systemctl --user enable --now "de-signal@${name}.service"
-  done
+  local label
+  while IFS= read -r label; do
+    [[ "$label" == publisher.* ]] && continue
+    systemctl --user enable --now "$(unit_of_label "$label")"
+  done < <(all_labels)
+  sleep 5   # để các làn runner kịp ghi cấu phần đầu tiên
+  while IFS= read -r label; do
+    [[ "$label" == publisher.* ]] && systemctl --user enable --now "$(unit_of_label "$label")"
+  done < <(all_labels)
   pause
 }
 
 de_stop() {
   local unit
-  while IFS= read -r unit; do   # ngược thứ tự khởi động: chiến lược trước, trend sau
+  while IFS= read -r unit; do   # ngược thứ tự khởi động: publisher trước, runner sau
     systemctl --user disable --now "$unit" 2>&1
   done < <(all_units | tac)
-  if legacy_active; then
-    systemctl --user disable --now "$LEGACY_SERVICE" 2>&1
-  fi
   pause
 }
 
 de_restart() {
-  local units unit
-  units="$(choose_units)" || { pause; return; }
-  while IFS= read -r unit; do
-    systemctl --user restart "$unit" 2>&1
-  done <<< "$units"
+  local labels label
+  labels="$(choose_labels)" || { pause; return; }
+  while IFS= read -r label; do
+    systemctl --user restart "$(unit_of_label "$label")" 2>&1
+  done <<< "$labels"
   pause
 }
 
 de_status() {
-  systemctl --user status 'de-signal@*' 'de-trend@*' --no-pager
+  systemctl --user status 'de-runner@*' 'de-publisher@*' --no-pager
   pause
 }
 
@@ -274,35 +313,33 @@ de_status() {
 # journald gần như trống, chỉ còn dòng systemd tự in lúc start/stop và traceback lúc khởi động nếu tiến trình chết trước khi
 # logging kịp bật. Vì vậy phải có 2 mục riêng: mục dưới đây cho log vận hành thật, mục kế tiếp cho lỗi khởi động.
 de_logs() {
-  local units files="" unit
-  units="$(choose_units)" || { pause; return; }
-  while IFS= read -r unit; do
-    files+=" $(quote "$(log_of "$unit")")"
-  done <<< "$units"
+  local labels files="" label
+  labels="$(choose_labels)" || { pause; return; }
+  while IFS= read -r label; do
+    files+=" $(quote "$(log_of_label "$label")")"
+  done <<< "$labels"
   run_task "Application Log" "tail -n 100 -f${files}"
 }
 
 de_journal() {
-  run_task "systemd/journal (de-signal@*, de-trend@*)" "journalctl --user -u 'de-signal@*' -u 'de-trend@*' -n 200 -f"
+  run_task "systemd/journal (de-runner@*, de-publisher@*)" "journalctl --user -u 'de-runner@*' -u 'de-publisher@*' -n 200 -f"
 }
 
-# Chạy ĐÚNG MỘT tiến trình ở foreground (không có chế độ "một tiến trình chạy mọi thứ").
+# Chạy ĐÚNG MỘT tiến trình ở foreground (không có chế độ "một tiến trình chạy cả runner lẫn publisher").
 de_foreground() {
-  local units unit name
-  units="$(choose_units)" || { pause; return; }
-  if [[ "$(wc -l <<< "$units")" -gt 1 ]]; then
-    echo "Foreground chỉ chạy MỘT tiến trình: nhập đúng một tên."
+  local labels label
+  labels="$(choose_labels)" || { pause; return; }
+  if [[ "$(wc -l <<< "$labels")" -gt 1 ]]; then
+    echo "Foreground chỉ chạy MỘT tiến trình: nhập đúng một làn (vd ${STRATEGIES[0]}.${SOURCES[0]} hoặc publisher.${STRATEGIES[0]})."
     pause
     return
   fi
-  unit="$units"
-  name="${unit#*@}"
-  name="${name%.service}"
-  if [[ "$unit" == de-trend@* ]]; then
-    run_task "Trend Foreground ($name)" "$PY_CMD -m core_engine.src.main --trend $name"
-  else
-    run_task "Live Worker Foreground ($name)" "$PY_CMD -m core_engine.src.main --strategy $name"
+  label="$labels"
+  if [[ "$label" == publisher.* ]]; then
+    run_task "Publisher Foreground (${label#publisher.})" "$PY_CMD -m core_engine.src.main --publisher --lane ${label#publisher.}"
+    return
   fi
+  run_task "Runner Foreground ($label)" "$PY_CMD -m core_engine.src.main --runner --lane $label"
 }
 
 main_menu() {
@@ -310,14 +347,14 @@ main_menu() {
     clear 2>/dev/null || printf "\033c"
     cat <<MENU
 ============================================================
-$APP_TITLE — Live worker (Redis DB0 -> trend + strategy -> Redis DB1)
+$APP_TITLE — Live (nến -> runner theo làn -> Redis db0/db1 cấu phần -> publisher theo chiến lược -> Redis db2 tín hiệu)
 Project: $APP_DIR
 Status: $(de_status_word)
 ============================================================
 
-1. Start (trend trước, chiến lược sau; enable + auto-restart)
+1. Start (runner trước, publisher sau; enable + auto-restart)
 2. Stop (disable, won't auto-start on reboot)
-3. Restart một tiến trình (chiến lược hoặc khối trend; trống = tất cả)
+3. Restart tiến trình (theo chiến lược, làn, loại hoặc tất cả)
 4. Show Status
 5. Tail Application Log (core_engine/logs/de_run_*.log)  <-- log vận hành thật
 6. Tail systemd/journal (lỗi khởi động, traceback)
@@ -347,19 +384,16 @@ if [[ ! -x "$PY_CMD" ]]; then
   exit 1
 fi
 
-mapfile -t LANES < <(de_config_names strategy)
-mapfile -t TRENDS < <(de_config_names trend)
-if [[ ${#LANES[@]} -eq 0 ]]; then
-  echo "Không đọc được live.enabled_strategies từ core_engine/de_config.yaml."
+mapfile -t SOURCES < <(de_sources)
+if [[ ${#SOURCES[@]} -eq 0 ]]; then
+  echo "Không có nguồn nến nào có symbol trong redis.input / redis.input_sources của core_engine/de_config.yaml."
   exit 1
 fi
-for name in "${TRENDS[@]}"; do
-  for lane in "${LANES[@]}"; do
-    if [[ "$name" == "$lane" ]]; then
-      echo "Tên '$name' vừa là chiến lược vừa là khối trend: đổi tên để không nhầm tiến trình."
-      exit 1
-    fi
-  done
-done
+
+mapfile -t STRATEGIES < <(de_strategies)
+if [[ ${#STRATEGIES[@]} -eq 0 ]]; then
+  echo "Không có chiến lược nào trong mục strategies: của core_engine/de_config.yaml."
+  exit 1
+fi
 
 main_menu

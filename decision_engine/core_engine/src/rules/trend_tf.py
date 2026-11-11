@@ -45,7 +45,7 @@ from typing import NamedTuple
 import pandas as pd
 from core_engine.src.indicator import timeframe_minutes
 from core_engine.src.rules.alternating import apply_alternating_filter
-from core_engine.src.rules.shift import allowed_masks, first_aligned_signal
+from core_engine.src.rules.shift import UNLIMITED_SHIFT, allowed_masks, first_aligned_signal
 from core_engine.src.trend_methods import breakout, cloud, knn, tstat, zigzag
 
 # =============================================================================
@@ -87,7 +87,9 @@ POLICY: dict[str, MethodPolicy] = {
     # với ~150 nến (0,6–0,7 lần/100 nến) của breakout, nên luật "chờ nến đầu tiên trend cùng chiều" luôn tìm được nến hợp lệ
     # trong vài nến: macd_break có 96,4% đợt ra tín hiệu, chỉ bị lùi giờ chứ không được lọc thêm gì.
     knn.NAME: MethodPolicy(same_timeframe=False, first_aligned_per_run=False),
-    breakout.NAME: MethodPolicy(same_timeframe=True, first_aligned_per_run=True),
+    # breakout giữ hướng cho tới cú phá kế tiếp (máy trạng thái), mà đoạn cùng hướng có thể dài hơn cửa sổ warm-up chung 300 nến (HK50 M10: lần phá gần nhất nằm ngoài 400 nến nên hướng bị mất). Người dùng chốt
+    # 2026-11-10: breakout tính trên cả nến nguồn giữ (1200) như zigzag; trend_warmup_bars chỉ được dùng để chọn số nến tính của runner (bị chặn ở số nến nguồn giữ).
+    breakout.NAME: MethodPolicy(same_timeframe=True, first_aligned_per_run=True, trend_warmup_bars=1200),
     # zigzag (thêm 2026-10-24): khung tham chiếu riêng như knn (nến khung lớn, tra trend_tf_by_symbol) và KHÔNG dời tín hiệu (mặc định, người dùng chưa
     # chọn khác). Hướng đổi thưa (đo H1/H2/H4: ~46/25/14 lần mỗi năm, gần breakout), nên first_aligned_per_run=True là lựa chọn có thể cân nhắc sau.
     # trend_warmup_bars=3000: máy trạng thái của zigzag nhớ lâu hơn warm-up chung 300 nến. Đo 2026-10-24 với bộ số đang dùng (ATR 5 × 3,14,
@@ -326,7 +328,7 @@ def apply_trend_filter(
     gọi truyền buy_setup/sell_setup (hai mask "nến được phép bắn" do apply_signal_filters quyết định: chính setup nếu setup
     là TRẠNG THÁI, còn đúng ở nhiều nến liền nhau; hướng của đợt đang giữ nếu setup là SỰ KIỆN ở một nến, tức tín hiệu
     thô bị loại được giữ tới hết đợt): mỗi đợt bắn đúng MỘT tín hiệu, ở nến đầu tiên có mask mà trend_bias đã cùng
-    chiều (first_aligned_signal trong rules/shift.py). Nến đầu của đợt cùng chiều trend thì kết quả giống hệt cách trên; nến đầu lệch trend
+    chiều (first_aligned_signal trong rules/shift.py; params["MAX_SHIFT_BARS"], mặc định không giới hạn, giới hạn số nến dời kể từ nến mở đợt). Nến đầu của đợt cùng chiều trend thì kết quả giống hệt cách trên; nến đầu lệch trend
     thì tín hiệu dời tới lúc trend đúng chiều thay vì mất cả đợt. signal luôn ⊇ cách trên (không mất tín hiệu nào)
     nhưng KHÔNG còn ⊆ raw_signal: tín hiệu dời nằm giữa đợt nên không phải nến có raw_signal != 0 (DB1 có tín hiệu DB0
     không có). Không truyền setup, hoặc không khối nào có chính sách đó, thì luôn dùng cách trên.
@@ -355,7 +357,7 @@ def apply_trend_filter(
         and sell_setup is not None
         and uses_first_aligned_per_run(tuple((params or {}).get("TREND_METHODS") or ()))
     ):
-        out[output_col] = first_aligned_signal(raw_signal, trend_bias, buy_setup, sell_setup)
+        out[output_col] = first_aligned_signal(raw_signal, trend_bias, buy_setup, sell_setup, int((params or {}).get("MAX_SHIFT_BARS", UNLIMITED_SHIFT)))
     else:
         aligned = raw_signal.ne(0) & raw_signal.eq(trend_bias)
         out[output_col] = 0
@@ -372,7 +374,7 @@ def apply_trend_filter(
 # Điều phối: lọc lặp cùng chiều rồi lọc trend — chiến lược chỉ gọi hàm này.
 # =============================================================================
 
-_TREND_SUFFIX = "; aligned with trend reference"
+TREND_SUFFIX = "; aligned with trend reference"
 
 
 def apply_signal_filters(
@@ -410,7 +412,7 @@ def apply_signal_filters(
             với chính sách first_aligned_per_run); None = dùng câu thường.
 
     Returns:
-        Bản sao df với các cột raw_signal, signal, trend_filter_status, signal_reason (theo thứ tự này).
+        Bản sao df với các cột raw_signal, signal, trend_filter_status, signal_reason, buy_mask, sell_mask (theo thứ tự này).
     """
     raw_signal = apply_alternating_filter(buy_setup, sell_setup, params)
     out = df.assign(raw_signal=raw_signal)
@@ -430,5 +432,8 @@ def apply_signal_filters(
         out.loc[delayed & out["signal"].eq(-1), "signal_reason"] = delayed_sell_reason
     if trend_filter_enabled(params):
         has_signal = out["signal"].fillna(0).astype(int).ne(0)
-        out.loc[has_signal, "signal_reason"] = out.loc[has_signal, "signal_reason"] + _TREND_SUFFIX
+        out.loc[has_signal, "signal_reason"] = out.loc[has_signal, "signal_reason"] + TREND_SUFFIX
+    # Hai mặt nạ "nến được phép bắn" (allowed_masks) mà phần dời cần theo từng nến: strategy_runner ghi chúng vào TRIGGER (cột setup) để DE dời đúng mà không phải chạy lại chiến lược.
+    out["buy_mask"] = pd.Series(buy_mask, index=out.index).fillna(False).astype(bool)
+    out["sell_mask"] = pd.Series(sell_mask, index=out.index).fillna(False).astype(bool)
     return out
