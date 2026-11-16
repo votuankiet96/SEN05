@@ -1,0 +1,548 @@
+<!doctype html>
+<!-- DE Workflow: luồng xử lý của core_engine theo code và cấu hình hiện tại. Trang chỉ có HTML và CSS. -->
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root { color-scheme: light; } body { margin: 0; } img { max-width: 100%; } [hidden] { display: none !important; }</style>
+<title>DE Workflow</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Một cột đọc ~900px. Mục lớn có đường kẻ đậm; hình vẽ và bảng nằm trong khung cuộn ngang riêng để chữ vẫn đọc được trên điện thoại. */
+:root {
+  --bg: #f4f6f9; --surface: #ffffff; --fg: #1a2230; --muted: #556075; --line: #d5dce6;
+  --accent: #0a6c88; --on-accent: #ffffff; --accent-soft: #dff0f5; --warn: #a8480a; --warn-soft: #fbeedd; --ok: #1d7448; --ok-soft: #e1f3e9;
+  --code-bg: #e9edf3; --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif; --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f141b; --surface: #171e28; --fg: #e4e8ef; --muted: #96a2b6; --line: #2b3544;
+  --accent: #5cc4de; --on-accent: #0f141b; --accent-soft: #14323c; --warn: #f0a25c; --warn-soft: #3a2a17; --ok: #62d09a; --ok-soft: #14301f; --code-bg: #1d2633; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f141b; --surface: #171e28; --fg: #e4e8ef; --muted: #96a2b6; --line: #2b3544;
+  --accent: #5cc4de; --on-accent: #0f141b; --accent-soft: #14323c; --warn: #f0a25c; --warn-soft: #3a2a17; --ok: #62d09a; --ok-soft: #14301f; --code-bg: #1d2633; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.65 var(--sans); padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 72px; }
+main { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 44px; }
+header { display: grid; gap: 14px; }
+.eyebrow { font: 500 12px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+h1 { font-size: 36px; line-height: 1.12; margin: 0; letter-spacing: -.01em; }
+h2 { font-size: 23px; margin: 0 0 14px; padding-top: 24px; border-top: 3px solid var(--fg); text-wrap: balance; }
+h3 { font-size: 17px; margin: 28px 0 8px; text-wrap: balance; }
+h4 { font-size: 15px; margin: 18px 0 6px; }
+p { margin: 0 0 12px; max-width: 74ch; }
+.lead { font-size: 17px; color: var(--muted); max-width: 66ch; margin: 0; }
+code, .mono { font-family: var(--mono); font-size: .88em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.wide { overflow-x: auto; margin: 0 0 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 600px; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+th { font: 600 12px var(--sans); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); background: color-mix(in srgb, var(--surface) 70%, var(--line)); }
+tr:last-child td { border-bottom: 0; }
+td.c, th.c { text-align: center; }
+th.c, td.nw { white-space: nowrap; }
+.f1 td:first-child code, .f3 td:nth-child(3) code { white-space: nowrap; }
+tr.hit td { background: var(--ok-soft); }
+tr.miss td { color: var(--muted); }
+tr.warn td { background: var(--warn-soft); }
+figure { margin: 0 0 18px; }
+figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; max-width: 80ch; }
+.fig { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 6px; }
+.fig svg { display: block; min-width: 880px; width: 100%; height: auto; }
+.note { border-left: 4px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 0 0 16px; }
+.note.warn { border-color: var(--warn); background: var(--warn-soft); }
+.note p:last-child { margin-bottom: 0; }
+.card { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 14px 18px 8px; margin: 0 0 14px; }
+.card h4 { margin: 0 0 8px; font-size: 16px; }
+.card p { margin: 0 0 8px; }
+.card .k { display: inline-block; min-width: 92px; margin-right: 14px; font: 600 12px var(--sans); text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
+.card p:has(> .k) { padding-left: 106px; text-indent: -106px; }
+ol, ul { margin: 0 0 12px; padding-left: 22px; max-width: 78ch; }
+li { margin-bottom: 6px; }
+nav { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; }
+nav a { color: var(--accent); text-decoration: none; }
+nav a:hover, nav a:focus-visible { text-decoration: underline; outline: none; }
+.question { font-size: 17px; font-weight: 600; border-left: 4px solid var(--accent); padding: 4px 0 4px 14px; margin: 0 0 14px; max-width: 70ch; }
+footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+/* hình vẽ */
+.box { fill: var(--surface); stroke: var(--fg); stroke-width: 1.4; }
+.box.in { stroke: var(--accent); stroke-width: 2; fill: var(--accent-soft); }
+.box.soft { stroke: var(--line); stroke-width: 1.2; }
+.box.warn { stroke: var(--warn); fill: var(--warn-soft); }
+.box.ok { stroke: var(--ok); fill: var(--ok-soft); }
+.zone { fill: none; stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 6 5; }
+.ln { stroke: var(--fg); stroke-width: 1.5; fill: none; marker-end: url(#ah); }
+.ln.plain { marker-end: none; }
+.ln.acc { stroke: var(--accent); stroke-width: 2.2; marker-end: url(#aha); }
+.ln.dash { stroke-dasharray: 5 4; }
+.ln.warnline { stroke: var(--warn); stroke-width: 1.6; stroke-dasharray: 5 4; marker-end: none; }
+.head { fill: var(--fg); } .head.acc { fill: var(--accent); }
+.t { fill: var(--fg); font: 600 13px var(--sans); }
+.s { fill: var(--muted); font: 12px var(--sans); }
+.m { fill: var(--fg); font: 12px var(--mono); }
+.a { fill: var(--accent); font: 600 12px var(--sans); }
+.w { fill: var(--warn); font: 600 12px var(--sans); }
+.g { fill: var(--ok); font: 600 12px var(--sans); }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <div class="eyebrow">DE · tài liệu hệ thống</div>
+  <h1>DE Workflow</h1>
+  <p class="lead">DE (Decision Engine) đọc nến, tìm tín hiệu BUY hoặc SELL rồi ghi tín hiệu cuối để hệ thống đặt lệnh đọc. Tài liệu đi theo đúng đường đi của dữ liệu: <strong>Input</strong> nhận nến, <strong>Processing</strong> tính và kiểm tra tín hiệu, <strong>Output</strong> ghi kết quả. Các ví dụ có giờ theo UTC; chúng giúp đọc logic, không đại diện cho trạng thái vận hành hiện tại.</p>
+  <nav aria-label="Mục lục"><a href="#tong-quan">0 Tổng quan</a><a href="#input">1 Input</a><a href="#processing">2 Processing</a><a href="#output">3 Output</a><a href="#hanh-trinh">4 Hành trình một tín hiệu</a><a href="#thay-doi">5 Thay đổi hệ thống</a><a href="#chua-co">6 Chưa có</a><a href="#phu-luc">Phụ lục</a></nav>
+</header>
+
+<section id="tong-quan">
+  <h2>0 · DE trong một bức tranh</h2>
+  <p>Với mỗi symbol và khung thời gian được cấu hình, DE đọc nến từ Redis, chạy chiến lược trên khung trigger, đối chiếu với các yếu tố trend rồi ghi tín hiệu cuối vào Redis. Phạm vi của DE kết thúc ở bản ghi và thông báo tín hiệu: code trong <code>core_engine</code> không đặt lệnh, tính khối lượng hay đặt SL/TP.</p>
+
+  <h3>0.1 Ba khối và đường đi của dữ liệu</h3>
+  <figure>
+    <div class="fig">
+    <svg viewBox="0 0 980 372" role="img" aria-label="Sơ đồ ba khối của DE. Nến từ hai nguồn vào khối Input gồm redis_connector và data_engine. Khối Processing có bước A tính riêng chiến lược và yếu tố trend, bước B quyết định bằng decision_engine. Khối Output gồm util và redis_connector ghi tín hiệu cuối cho OE. Bên dưới là các file chạy xuyên ba khối.">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 z" class="head"/></marker>
+        <marker id="aha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 z" class="head acc"/></marker>
+      </defs>
+      <rect class="box soft" x="8" y="110" width="142" height="100" rx="8"/>
+      <text class="t" x="79" y="140" text-anchor="middle">Nguồn nến</text>
+      <text class="s" x="79" y="162" text-anchor="middle">Core AEN (8 symbol)</text>
+      <text class="s" x="79" y="180" text-anchor="middle">Redis DF của OG8</text>
+      <text class="s" x="79" y="196" text-anchor="middle">(7 symbol)</text>
+      <path class="ln acc" d="M150 160 H178"/>
+
+      <rect class="zone" x="180" y="28" width="190" height="284" rx="10"/>
+      <text class="a" x="275" y="50" text-anchor="middle">INPUT</text>
+      <rect class="box" x="192" y="70" width="166" height="72" rx="8"/>
+      <text class="m" x="275" y="94" text-anchor="middle">redis_connector.py</text>
+      <text class="s" x="275" y="112" text-anchor="middle">nối Redis, nghe thông báo</text>
+      <text class="s" x="275" y="128" text-anchor="middle">khi có nến mới</text>
+      <rect class="box" x="192" y="170" width="166" height="72" rx="8"/>
+      <text class="m" x="275" y="194" text-anchor="middle">data_engine.py</text>
+      <text class="s" x="275" y="212" text-anchor="middle">đọc nến, giữ cửa sổ nến</text>
+      <text class="s" x="275" y="228" text-anchor="middle">trong bộ nhớ</text>
+      <path class="ln" d="M275 142 V170"/>
+      <path class="ln acc" d="M370 170 H392"/>
+
+      <rect class="zone" x="392" y="28" width="380" height="284" rx="10"/>
+      <text class="a" x="582" y="50" text-anchor="middle">PROCESSING</text>
+      <rect class="box in" x="404" y="70" width="165" height="184" rx="8"/>
+      <text class="t" x="486" y="92" text-anchor="middle">Bước A · tính riêng</text>
+      <text class="m" x="486" y="116" text-anchor="middle">mac_strategy.py</text>
+      <text class="m" x="486" y="134" text-anchor="middle">combo_strategy.py</text>
+      <text class="m" x="486" y="152" text-anchor="middle">trend.py</text>
+      <text class="m" x="486" y="170" text-anchor="middle">indicator.py</text>
+      <text class="s" x="486" y="194" text-anchor="middle">chiến lược: khi nào có</text>
+      <text class="s" x="486" y="209" text-anchor="middle">tín hiệu thô</text>
+      <text class="s" x="486" y="225" text-anchor="middle">yếu tố: hướng từng nến</text>
+      <text class="a" x="486" y="242" text-anchor="middle">ghi vào bảng kết quả</text>
+      <path class="ln acc" d="M569 156 H594"/>
+      <rect class="box in" x="594" y="70" width="166" height="184" rx="8"/>
+      <text class="t" x="677" y="92" text-anchor="middle">Bước B · quyết định</text>
+      <text class="m" x="677" y="122" text-anchor="middle">decision_engine.py</text>
+      <text class="s" x="677" y="152" text-anchor="middle">gom kết quả và nến</text>
+      <text class="s" x="677" y="170" text-anchor="middle">không nhìn trước tương lai</text>
+      <text class="s" x="677" y="188" text-anchor="middle">mọi yếu tố cùng chiều</text>
+      <text class="s" x="677" y="206" text-anchor="middle">dời nếu được phép, hoặc bỏ</text>
+      <path class="ln acc" d="M772 170 H794"/>
+
+      <rect class="zone" x="794" y="28" width="178" height="284" rx="10"/>
+      <text class="a" x="883" y="50" text-anchor="middle">OUTPUT</text>
+      <rect class="box" x="806" y="70" width="154" height="72" rx="8"/>
+      <text class="m" x="883" y="94" text-anchor="middle">util.py</text>
+      <text class="s" x="883" y="112" text-anchor="middle">đóng gói tín hiệu,</text>
+      <text class="s" x="883" y="128" text-anchor="middle">kiểm hạn hiệu lực</text>
+      <rect class="box" x="806" y="170" width="154" height="72" rx="8"/>
+      <text class="m" x="883" y="194" text-anchor="middle">redis_connector.py</text>
+      <text class="s" x="883" y="212" text-anchor="middle">ghi một lần,</text>
+      <text class="s" x="883" y="228" text-anchor="middle">báo kênh thông báo</text>
+      <path class="ln" d="M883 142 V170"/>
+      <text class="g" x="883" y="270" text-anchor="middle">→ OE đọc tín hiệu</text>
+
+      <rect class="box soft" x="180" y="326" width="792" height="34" rx="8"/>
+      <text class="s" x="576" y="348" text-anchor="middle">Chạy xuyên cả ba khối: configuration.py (điều phối) · main.py (khởi động) · de_config.yaml (cài đặt) · log.py (nhật ký)</text>
+    </svg>
+    </div>
+    <figcaption>Hình 1. Dữ liệu đi từ trái sang phải. Mũi tên xanh là chỗ DE phản ứng theo thông báo của Redis: nến mới làm Bước A chạy, kết quả mới ghi ra làm Bước B chạy, tín hiệu cuối được ghi và báo cho OE.</figcaption>
+  </figure>
+
+  <div class="wide"><table>
+    <tr><th>Khối</th><th>Câu hỏi của khối</th><th>File chính</th><th>Khối giao ra</th></tr>
+    <tr><td><strong>Input</strong></td><td>DE lấy dữ liệu gì, và biết khi nào có nến mới bằng cách nào?</td><td><code>redis_connector.py</code>, <code>data_engine.py</code></td><td>Bảng nến mới nhất của từng cặp (symbol, khung)</td></tr>
+    <tr><td><strong>Processing</strong></td><td>Khi nào có tín hiệu, và khung thời gian lớn có ủng hộ không?</td><td><code>mac_strategy.py</code>, <code>combo_strategy.py</code>, <code>trend.py</code>, <code>indicator.py</code>, <code>decision_engine.py</code></td><td>Tín hiệu cuối đã qua kiểm tra</td></tr>
+    <tr><td><strong>Output</strong></td><td>DE giao gì cho OE, và bảo đảm gì?</td><td><code>util.py</code>, <code>redis_connector.py</code></td><td>Tín hiệu cuối trong Redis và một thông báo cho OE</td></tr>
+  </table></div>
+
+  <h3>0.2 DE đang chạy những gì</h3>
+  <p>Cấu hình hiện tại có hai chiến lược, hai yếu tố trend và 15 symbol: 8 symbol từ Core AEN (US30, US500, US100, GER40, HK50, JP225, XAUUSD, BTCUSD) và 7 symbol từ Redis DF của OG8 (EURUSD, GBPUSD, USDCAD, USDJPY, FR40, SP35, UK100). Cả hai chiến lược chạy trên cả 15 symbol.</p>
+  <div class="wide"><table>
+    <tr><th>Chiến lược</th><th>Khung</th><th>Có tín hiệu thô khi</th><th>Yếu tố trend tham chiếu</th><th>Loại lệnh</th><th>Hiệu lực</th></tr>
+    <tr><td><strong>MA Cross</strong> (<code>mac_strategy.py</code>)</td><td>M10</td><td>SMA 13 vừa cắt SMA 34 và MACD histogram (5/25/5) cùng chiều</td><td><code>macd</code> ở M30, <code>sma20</code> ở M30</td><td>MARKET</td><td>600 giây (10 phút)</td></tr>
+    <tr><td><strong>Combo</strong> (<code>combo_strategy.py</code>)</td><td>M30</td><td>Nến tăng hoặc giảm cắt qua SMA 20 trong thân nến, hoặc giá đóng nến trước nằm phía bên kia SMA của chính nến trước; MACD histogram (5/25/5) xác nhận và setup qua luật xen kẽ</td><td><code>macd</code> ở H1</td><td>STOP</td><td>3 nến của khung trigger (M30: 90 phút)</td></tr>
+  </table></div>
+  <p><strong>Hiệu lực</strong> là khoảng thời gian DE công bố cho OE: từ giờ đóng của nến phát (<code>valid_from</code>) đến hạn chót (<code>expirationTimestamp</code>). MA Cross khai bằng giây: 600 giây. Combo khai bằng <strong>số nến của khung trigger</strong>: 3 nến. Ví dụ với khung H1: nến mở 06:00 có tín hiệu, đóng lúc 07:00; hiệu lực kéo qua 3 nến H1 kế tiếp (mở 07:00, 08:00, 09:00) tới hết nến mở 09:00, tức 10:00. Combo đang chạy ở M30 nên nến mở 14:00 (đóng 14:30) có hiệu lực tới 16:00; đổi khung trigger thì hạn tự đổi theo. Việc đặt lệnh trong khoảng này là của OE; DE chỉ công bố khoảng hiệu lực.</p>
+  <p>Hai chiến lược đều dùng ATR chu kỳ 5, nhưng xử lý khi trend chưa cùng chiều khác nhau: MA Cross được xét thêm tối đa 3 nến; Combo chỉ được xét ở nến tạo tín hiệu (<code>max_shift_bars: 0</code>). Hai yếu tố đang được cấu hình là <code>macd</code> và <code>sma20</code>. Cùng một yếu tố <code>macd</code> được chạy ở M30 cho MA Cross và H1 cho Combo.</p>
+
+  <h3>0.3 Bốn ví dụ để theo dõi luồng xử lý</h3>
+  <div class="wide"><table>
+    <tr><th class="c">#</th><th>Tín hiệu thô của chiến lược</th><th>Kết cục</th><th>Giải thích ở</th></tr>
+    <tr><td class="c">1</td><td>MA Cross, BTCUSD M10, nến mở 14:20, SELL</td><td>Đủ điều kiện để phát ở nến gốc</td><td>2.2, 2.3, 2.4, 3.1</td></tr>
+    <tr><td class="c">2</td><td>Combo, XAUUSD M30, nến mở 01:00 ngày 16/11, setup SELL</td><td>Chỉ thành tín hiệu nếu qua luật xen kẽ; chỉ phát STOP nếu trend H1 cùng chiều</td><td>2.2, 2.3, 3.1, mục 4</td></tr>
+    <tr><td class="c">3</td><td>MA Cross, BTCUSD M10, nến mở 07:20, SELL</td><td>Bị dời 3 nến, phát ở nến 07:50</td><td>2.4</td></tr>
+    <tr><td class="c">4</td><td>MA Cross, BTCUSD M10, nến mở 08:30 ngày 13/11, BUY</td><td>Bị bỏ</td><td>2.4</td></tr>
+  </table></div>
+  <p>Giá nến và giá trị chỉ báo trong bốn ví dụ được giữ từ bản tài liệu trước để minh họa phép tính. Không có snapshot Redis gốc trong thư mục này để kiểm lại các giá trị ấy. Với Combo, dữ liệu ví dụ cũng không đủ để dựng lại toàn bộ chuỗi setup theo luật mới hay kết quả MACD H1, nên kết luận được trình bày theo điều kiện. Luật xử lý và cấu hình được đối chiếu với <code>core_engine/src/</code> và <code>de_config.yaml</code>.</p>
+</section>
+
+<section id="input">
+  <h2>1 · Input: DE nhìn thấy gì</h2>
+  <p class="question">DE lấy dữ liệu gì, từ đâu, và làm sao biết có nến mới?</p>
+
+  <h3>1.1 Dữ liệu vào là nến</h3>
+  <p>Dữ liệu duy nhất DE cần là nến. Mỗi nến có giờ mở, giá mở (<code>open</code>), giá cao nhất (<code>high</code>), giá thấp nhất (<code>low</code>) và giá đóng (<code>close</code>) của một symbol ở một khung thời gian (M10 là nến 10 phút, M30 là 30 phút, M45 là 45 phút).</p>
+  <ul>
+    <li>Nến do hệ thống khác ghi vào Redis: Core AEN cho 8 symbol, Redis DF của OG8 cho 7 symbol. Mỗi symbol chỉ thuộc một nguồn.</li>
+    <li>DE xử lý dữ liệu như nến đã đóng. Code không tự kiểm tra điều đó; nguồn nến phải chỉ công bố nến hoàn chỉnh.</li>
+    <li>DE chỉ đọc nguồn, không ghi gì vào đó.</li>
+    <li>DE đọc tối đa 800 nến cho mỗi cặp: 300 nến đầu làm ấm chỉ báo và 500 nến sau là cửa sổ ghi kết quả. Cấu hình yêu cầu nguồn giữ đủ dữ liệu cho cửa sổ này; code không xác nhận số nến nguồn thực tế đang lưu.</li>
+  </ul>
+  <div class="note"><p><strong>Ví dụ 1.</strong> Nến BTCUSD M10 mở 14:20, đóng 14:30:00: <code>open</code> 65315,8 · <code>high</code> 65346,45 · <code>low</code> 64782,7 · <code>close</code> 64831,2.</p><p><strong>Ví dụ 2.</strong> Nến XAUUSD M30 mở 01:00 ngày 16/11, đóng 01:30:00: <code>open</code> 3888,97 · <code>high</code> 3889,08 · <code>low</code> 3859,84 · <code>close</code> 3874,83.</p></div>
+
+  <h3>1.2 Các file của khối Input</h3>
+  <div class="card">
+    <h4>de_config.yaml: nói DE theo dõi cái gì</h4>
+    <p><span class="k">Vai trò</span>Nơi duy nhất khai cài đặt vận hành. Ở khối Input nó khai: có những nguồn nến nào, mỗi nguồn nuôi những symbol nào, các khung nào, và cửa sổ nến (500 nến ghi kết quả cộng 300 nến làm ấm). Phần chiến lược, yếu tố trend, hạn hiệu lực nằm cùng file này và được dùng ở hai khối sau.</p>
+    <p><span class="k">Vị trí</span>Tiến trình đọc địa chỉ Redis và nơi lưu config từ file, rồi nạp phần cấu hình còn lại lên Redis theo phiên bản. Runner và publisher lấy bản cấu hình mới nhất từ Redis để dựng việc.</p>
+  </div>
+  <div class="card">
+    <h4>redis_connector.py: cửa duy nhất giữa DE và Redis</h4>
+    <p><span class="k">Vai trò</span>Tạo kết nối, nghe thông báo thay đổi của Redis, tự nối lại khi mất kết nối. Ở khối Output nó cũng là nơi ghi dữ liệu ra Redis và đọc, ghi config có phiên bản. Không file nào khác tự mở kết nối Redis.</p>
+    <p><span class="k">Vị trí</span>Sát nguồn ở Input và sát đích ở Output.</p>
+  </div>
+  <div class="card">
+    <h4>data_engine.py: người đọc dữ liệu vào</h4>
+    <p><span class="k">Vai trò</span>Đăng ký với Redis đúng những cặp mà tiến trình cần, nhận thông báo, rồi đọc nến (với publisher thì đọc cả kết quả của các runner). Nó giữ cửa sổ nến trong bộ nhớ; khi có nến mới chỉ đọc phần mới, và gặp bất thường thì đọc lại đầy đủ.</p>
+    <p><span class="k">Vị trí</span>Ngay sau <code>redis_connector.py</code> và trước mọi tính toán.</p>
+    <p><span class="k">Nhận → giao</span>thông báo "cặp này vừa đổi" → bảng nến (hoặc bảng kết quả) mới nhất của cặp đó.</p>
+  </div>
+
+  <h3>1.3 Cách khối Input chạy</h3>
+  <ol>
+    <li>Mỗi tiến trình báo cho Redis đúng những cặp (symbol, khung) nó cần theo dõi, nên không nhận thông báo thừa.</li>
+    <li>Nguồn ghi một nến mới thì Redis gửi thông báo "nến của cặp này vừa thay đổi". Thông báo không chứa số liệu của nến; nó chỉ là lời nhắc đọc lại.</li>
+    <li><code>data_engine.py</code> ghi nhớ "cặp này cần xử lý lại". Nhiều thông báo của cùng một cặp (ví dụ nguồn ghi bù nhiều nến một lúc) được gộp thành một lần xử lý.</li>
+    <li>Đến lượt, nó đọc nến từ Redis và đưa cho khối Processing.</li>
+    <li>Nếu <code>process_on_startup</code> bật, tiến trình quét bù một lượt các cặp lúc khởi động. Cấu hình hiện tại bật lựa chọn này. Sau lượt đó DE <strong>không quét định kỳ</strong>; nó chỉ phản ứng theo thông báo.</li>
+    <li>Mất kết nối Redis thì tiến trình ghi log, đợi rồi tự nối lại.</li>
+  </ol>
+  <h3>1.4 Hệ quả cho cách DE suy nghĩ</h3>
+  <p>Nguồn nến và các runner có thể cập nhật Redis ở những thời điểm khác nhau. Vì vậy publisher phải xét giờ đóng của nến trigger và nến trend trước khi quyết định, thay vì mặc nhiên dùng kết quả trend mới nhất. Luật chờ được giải thích ở mục 2.4.</p>
+  <div class="note warn"><p>Thông báo của Redis không được bảo đảm gửi lại nếu bị mất. Nếu một thông báo rơi mất, cặp đó chỉ được xử lý lại ở thông báo kế tiếp của nó hoặc ở lần quét khi khởi động lại.</p></div>
+  <p>Để nhận sự kiện ghi HASH, Redis nguồn và Redis đầu ra phải bật keyspace notification cho <code>K</code> và <code>h</code>. Tiến trình kiểm tra cờ này khi kết nối.</p>
+</section>
+
+<section id="processing">
+  <h2>2 · Processing: DE nghĩ thế nào</h2>
+  <p class="question">Từ nến, khi nào DE kết luận có tín hiệu BUY hoặc SELL?</p>
+  <p>DE trả lời bằng hai bước, vì có hai câu hỏi khác nhau. <strong>Bước A</strong> hỏi riêng từng phần: chiến lược có thấy dấu hiệu vào lệnh không, và mỗi yếu tố trend ở khung lớn đang chỉ hướng nào. <strong>Bước B</strong> hỏi chung: các câu trả lời có khớp nhau không, và nếu chưa thì làm gì. Hai bước tách biệt, trao đổi với nhau qua một bảng kết quả trong Redis.</p>
+
+  <h3>2.1 Các file của khối Processing và vị trí của chúng</h3>
+  <div class="wide f1"><table>
+    <tr><th>File</th><th>Thuộc</th><th>Vai trò</th><th>Nhận → giao</th></tr>
+    <tr><td><code>main.py</code></td><td>khởi động</td><td>Cửa vào của một tiến trình: chọn vai trò (runner, publisher hoặc nạp config) và nhận lệnh dừng</td><td>dòng lệnh → gọi <code>configuration.py</code></td></tr>
+    <tr><td><code>configuration.py</code></td><td>điều phối</td><td>Đọc và kiểm config, đăng ký chiến lược và yếu tố theo tên trong config, dựng việc cho từng tiến trình, chạy vòng lặp "có thông báo → xử lý cặp liên quan". Không chứa logic tín hiệu</td><td>config → vòng lặp chạy các file bên dưới</td></tr>
+    <tr><td><code>indicator.py</code></td><td>Bước A</td><td>Các công thức chung: SMA, EMA, MACD histogram, ATR</td><td>bảng nến → cột chỉ báo</td></tr>
+    <tr><td><code>mac_strategy.py</code>, <code>combo_strategy.py</code></td><td>Bước A</td><td>Quyết định khi nào có tín hiệu thô (Combo gồm cả điều kiện xen kẽ BUY, SELL). Mỗi chiến lược một file, có hàm <code>detect</code></td><td>nến khung trigger → các nến có tín hiệu</td></tr>
+    <tr><td><code>trend.py</code></td><td>Bước A</td><td>Có các hàm <code>bias_macd</code>, <code>bias_sma</code>, <code>bias_break</code>; cấu hình hiện dùng hai hàm đầu</td><td>nến khung của yếu tố → hướng (+1, −1, 0) của từng nến</td></tr>
+    <tr><td><code>decision_engine.py</code></td><td>Bước B</td><td>Sổ đăng ký các ô quyết định và toàn bộ luật chốt tín hiệu (không nhìn trước tương lai, dời, hủy). Chỉ tính toán, không đọc hay ghi Redis</td><td>tín hiệu thô + nến + hướng các yếu tố → tín hiệu cuối</td></tr>
+  </table></div>
+
+  <h3>2.2 Bước A: chiến lược quyết định khi nào có tín hiệu thô</h3>
+  <p>Một file chiến lược chỉ làm một việc: nhìn nến của khung trigger và nói nến nào có tín hiệu, hướng nào. Nó không biết yếu tố trend, không dời tín hiệu, không tính giá vào lệnh; chọn tín hiệu nào được phát là việc của Bước B (mục 2.4). Chu kỳ SMA và MACD do config truyền vào, công thức nằm ở <code>indicator.py</code>.</p>
+  <h4>MA Cross (khung M10)</h4>
+  <p>SELL khi ở nến trước SMA 13 chưa nằm dưới SMA 34, ở nến này SMA 13 nằm dưới SMA 34 (vừa cắt xuống), và MACD histogram của chính nến này nhỏ hơn 0. BUY là chiều ngược lại. Lần cắt không được MACD xác nhận thì không có tín hiệu. Tín hiệu nằm ở nến ĐẦU TIÊN đạt điều kiện (nến cắt); các nến sau đó không lặp lại tín hiệu.</p>
+  <div class="wide"><table>
+    <tr><th>Ví dụ 1: nến M10 mở 14:20 (đóng 14:30)</th><th>Nến trước</th><th>Nến này</th><th>Kết luận</th></tr>
+    <tr><td>SMA 13</td><td class="c">65.392,04</td><td class="c">65.350,85</td><td rowspan="2">Trước: SMA 13 trên SMA 34. Nay: SMA 13 dưới SMA 34. Vừa cắt xuống</td></tr>
+    <tr><td>SMA 34</td><td class="c">65.389,39</td><td class="c">65.394,57</td></tr>
+    <tr><td>MACD histogram (5/25/5)</td><td class="c"></td><td class="c">−117,18</td><td>Nhỏ hơn 0: xác nhận SELL</td></tr>
+    <tr class="hit"><td colspan="3">Kết quả của Bước A</td><td><strong>Nến 14:20 là tín hiệu thô SELL</strong></td></tr>
+  </table></div>
+  <h4>Combo (khung M30)</h4>
+  <p>Combo tìm một nến cắt qua SMA 20, được MACD histogram xác nhận ngay trên khung M30. Với SELL, nến phải giảm (<code>close &lt; open</code>), đóng dưới SMA hiện tại và histogram âm. Điều kiện “vừa cắt xuống” thỏa nếu <strong>giá mở của nến này trên SMA hiện tại</strong>, hoặc <strong>giá đóng nến trước trên SMA của nến trước</strong>. BUY đối xứng: nến tăng, đóng trên SMA, histogram dương, và giá mở dưới SMA hiện tại hoặc giá đóng nến trước dưới SMA của nến trước. Code luôn cần có giá đóng của nến trước; dấu bằng không thỏa các phép so sánh này.</p>
+  <div class="wide"><table>
+    <tr><th>Hai cách nhận một setup BUY</th><th>Phép so sánh quyết định</th><th>Vì sao được giữ</th></tr>
+    <tr><td>Cắt trong thân nến</td><td>Open 9,8 &lt; SMA hiện tại 10 &lt; Close 10,5</td><td>Nến mở dưới rồi đóng trên SMA; không cần nến trước đóng dưới SMA.</td></tr>
+    <tr><td>Cắt giữa hai lần đóng cửa</td><td>Close trước 19.644,5 &lt; SMA trước 19.646,675; Close hiện tại 19.650,5 &gt; SMA hiện tại 19.630,875</td><td>Giá mở hiện tại đã ở trên SMA hiện tại, nhưng lần đóng trước còn dưới SMA của chính nến trước.</td></tr>
+  </table></div>
+  <p>Hai trường hợp trong bảng lấy từ <code>core_engine/tests/test_core_engine.py</code>; ở cả hai, nến tăng và MACD histogram dương. Bảng chỉ minh họa điều kiện tạo setup, trước luật xen kẽ và kiểm tra trend H1.</p>
+  <p><strong>Điều kiện xen kẽ.</strong> Combo so mỗi setup với setup gần nhất trước nó trong bảng nến đang tính, kể cả setup trước đã bị loại. Nếu cùng hướng, setup mới bị bỏ; nếu đổi hướng, nó thành tín hiệu. Setup đầu tiên nhìn thấy trong cửa sổ cũng được giữ. Đây là luật của chiến lược, độc lập với bộ lọc trend.</p>
+  <div class="wide"><table>
+    <tr><th>Ví dụ xen kẽ: BTCUSD M30, tháng 11</th><th class="c">Setup</th><th>Setup gần nhất trước đó</th><th>Kết quả</th></tr>
+    <tr class="hit"><td>06/11, nến mở 14:00</td><td class="c">SELL</td><td>BUY (09:00)</td><td>Giữ: đổi chiều, mở pha mới</td></tr>
+    <tr class="hit"><td>06/11, nến mở 16:30</td><td class="c">BUY</td><td>SELL (14:00)</td><td>Giữ: đổi chiều, mở pha mới</td></tr>
+    <tr class="miss"><td>06/11, nến mở 20:30</td><td class="c">BUY</td><td>BUY (16:30)</td><td>Bỏ: cùng chiều, cùng pha</td></tr>
+    <tr class="miss"><td>06/11, nến mở 21:30</td><td class="c">BUY</td><td>BUY (20:30)</td><td>Bỏ: cùng chiều, cùng pha</td></tr>
+    <tr class="hit"><td>07/11, nến mở 03:30</td><td class="c">SELL</td><td>BUY (21:30)</td><td>Giữ: đổi chiều, mở pha mới</td></tr>
+  </table></div>
+  <div class="wide"><table>
+    <tr><th>Ví dụ 2: XAUUSD, nến M30 mở 01:00 ngày 16/11 (đóng 01:30)</th><th>Giá trị</th><th>Kết luận</th></tr>
+    <tr><td>Giá mở, giá đóng</td><td class="c">3.888,97 → 3.874,83</td><td>Nến giảm</td></tr>
+    <tr><td>Giá đóng so với SMA 20</td><td class="c">3.874,83 &lt; 3.881,89</td><td>Dưới SMA 20</td></tr>
+    <tr><td>Giá mở so với SMA 20 hiện tại</td><td class="c">3.888,97 &gt; 3.881,89</td><td>Cắt xuống trong thân nến</td></tr>
+    <tr><td>Giá đóng nến trước so với SMA 20 của nến trước</td><td class="c">3.888,95 &gt; 3.882,53</td><td>Nhánh so sánh hai nến cũng thỏa</td></tr>
+    <tr><td>MACD histogram (5/25/5)</td><td class="c">−0,718</td><td>Nhỏ hơn 0: xác nhận SELL</td></tr>
+    <tr><td>Setup gần nhất trước đó</td><td class="c">Chưa thể xác nhận theo luật cắt mới</td><td>Nếu là BUY hoặc chưa có setup nào, SELL được giữ; nếu là SELL, setup này bị bỏ</td></tr>
+    <tr class="hit"><td colspan="2">Kết quả kiểm điều kiện giá và MACD M30</td><td><strong>Nến 01:00 có setup SELL</strong>; tín hiệu thô còn phụ thuộc luật xen kẽ</td></tr>
+  </table></div>
+  <p>Runner của chiến lược ghi vào bảng kết quả <strong>chỉ những nến có tín hiệu</strong>, kèm giờ đóng nến và lý do (ví dụ "fast SMA crossed below slow SMA"). Việc ghi do <code>util.py</code> và <code>redis_connector.py</code> làm (mục 3).</p>
+
+  <h3>2.3 Bước A: yếu tố trend cho biết khung lớn ủng hộ hướng nào</h3>
+  <p>Mỗi chiến lược khai ít nhất một yếu tố trend ở khung <strong>lớn hơn hoặc bằng</strong> khung trigger. Mỗi hàm trong <code>trend.py</code> trả hướng của <strong>từng nến</strong>: +1 cho BUY, −1 cho SELL, 0 là trung tính. Runner ghi cả những nến có hướng 0; khi chốt tín hiệu, 0 không được xem là cùng chiều với BUY hay SELL.</p>
+  <div class="wide"><table>
+    <tr><th>Yếu tố đang dùng</th><th>Khung tham chiếu</th><th>Cách tính hướng</th><th>Áp vào ví dụ</th></tr>
+    <tr><td class="nw"><code>macd</code></td><td>MA Cross: M30<br>Combo: H1</td><td>MACD histogram (5/25/5) dương → +1; âm → −1; bằng 0 → 0</td><td>Ví dụ 1: histogram M30 −129,15 → −1. Ví dụ 2 cần kết quả H1; số MACD M30 của nến Combo không thay cho nó.</td></tr>
+    <tr><td class="nw"><code>sma20</code></td><td>MA Cross: M30</td><td>Close trên SMA 20 → +1; dưới → −1; bằng hoặc chưa đủ dữ liệu → 0</td><td>Ví dụ 1: close M30 64.831,2 dưới SMA 64.993,26 → −1.</td></tr>
+  </table></div>
+  <p>MA Cross cần cả <code>macd</code> và <code>sma20</code> ở M30 cùng chiều. Combo chỉ tham chiếu <code>macd</code> ở H1. Hàm <code>bias_break</code> vẫn có trong <code>trend.py</code>, nhưng không được khai trong <code>trends:</code> của cấu hình hiện tại, nên không tham gia quyết định của hai chiến lược.</p>
+
+  <h3>2.4 Bước B: decision_engine.py chốt tín hiệu</h3>
+  <p>Mỗi tổ hợp (chiến lược, symbol, khung trigger) là một "ô quyết định" và được ghi trong sổ đăng ký của <code>decision_engine.py</code> cùng danh sách yếu tố nó tham chiếu và khung của từng yếu tố. Một (symbol, khung trigger) chỉ có một chiến lược, nên khoá của tín hiệu cuối không cần tên chiến lược. Với mỗi ô, file này nhận ba thứ: các tín hiệu thô, nến khung trigger, và hướng của từng yếu tố; rồi áp dụng bốn luật theo thứ tự.</p>
+
+  <h4>Luật 1. Không nhìn trước tương lai (reality epoch)</h4>
+  <p>Nến trigger đóng lúc <em>Ce</em> chỉ được dùng nến của yếu tố <strong>đã đóng</strong> lúc <em>Ce</em> hoặc sớm hơn. Hai trường hợp:</p>
+  <ul>
+    <li>Nến yếu tố đóng <strong>đúng</strong> lúc <em>Ce</em>: lúc nến trigger đóng thì nến yếu tố đó cũng đã đóng, nên phải dùng nó. Nếu nó (hoặc kết quả của nó) chưa về Redis thì DE <strong>chờ</strong>, không dùng nến cũ thay.</li>
+    <li>Không có nến yếu tố nào đóng đúng lúc <em>Ce</em>: dùng nến yếu tố đã đóng gần nhất, không cần chờ.</li>
+  </ul>
+  <figure>
+    <div class="fig">
+    <svg viewBox="0 0 980 262" role="img" aria-label="Hai trường hợp của luật không nhìn trước tương lai. Bên trái: nến M10 mở 14:20 đóng 14:30, nến M30 mở 14:00 cũng đóng 14:30, nên phải chờ nến M30 này. Bên phải: nến M10 mở 07:30 đóng 07:40, nến M30 mở 07:30 chưa đóng, nên dùng nến M30 mở 07:00 đã đóng 07:30.">
+      <text class="t" x="40" y="26">A · Ví dụ 1: nến M10 mở 14:20 (đóng 14:30)</text>
+      <text class="s" x="8" y="84">M30</text>
+      <rect class="box soft" x="40" y="62" width="168" height="40"/>
+      <text class="s" x="124" y="86" text-anchor="middle">mở 13:30 · đóng 14:00</text>
+      <rect class="box warn" x="208" y="62" width="168" height="40"/>
+      <text class="m" x="292" y="86" text-anchor="middle">mở 14:00 · đóng 14:30</text>
+      <text class="s" x="8" y="154">M10</text>
+      <rect class="box in" x="320" y="132" width="56" height="40"/>
+      <text class="s" x="370" y="190" text-anchor="end">mở 14:20</text>
+      <path class="ln warnline" d="M376 44 V206"/>
+      <text class="w" x="376" y="224" text-anchor="middle">14:30</text>
+      <text class="w" x="40" y="246">Hai nến đóng cùng lúc: phải CHỜ nến M30 mở 14:00 về</text>
+
+      <text class="t" x="540" y="26">B · Nến M10 mở 07:30 (đóng 07:40)</text>
+      <text class="s" x="508" y="84">M30</text>
+      <rect class="box ok" x="540" y="62" width="168" height="40"/>
+      <text class="m" x="624" y="86" text-anchor="middle">mở 07:00 · đóng 07:30</text>
+      <rect class="zone" x="708" y="62" width="168" height="40"/>
+      <text class="s" x="822" y="80" text-anchor="middle">mở 07:30</text>
+      <text class="s" x="822" y="96" text-anchor="middle">chưa đóng</text>
+      <text class="s" x="508" y="154">M10</text>
+      <rect class="box in" x="708" y="132" width="56" height="40"/>
+      <text class="s" x="758" y="190" text-anchor="end">mở 07:30</text>
+      <path class="ln warnline" d="M764 44 V206"/>
+      <text class="w" x="764" y="224" text-anchor="middle">07:40</text>
+      <text class="g" x="540" y="246">Dùng nến M30 đã đóng 07:30, không cần chờ</text>
+    </svg>
+    </div>
+    <figcaption>Hình 2. Luật không nhìn trước tương lai với yếu tố ở M30. Ở trường hợp A, nến trigger và nến yếu tố đóng cùng 14:30 nên DE phải chờ nến M30 về. Ở trường hợp B, nến M30 mở 07:30 chưa đóng lúc 07:40 nên chưa được nhìn; DE dùng nến đã đóng gần nhất.</figcaption>
+  </figure>
+  <p>Publisher không giữ hàng đợi chờ riêng. Khi nến trigger hoặc kết quả module liên quan thay đổi, nó đọc lại dữ liệu và tính lại quyết định. Ở ví dụ 1, nến M30 mở 14:00 đóng đúng lúc nến trigger đóng 14:30, nên phải chờ kết quả của nến M30 ấy. Ở ví dụ 2, nến trigger M30 đóng 01:30; nến H1 mở 01:00 phải tới 02:00 mới đóng. Nếu kết quả H1 đóng lúc 01:00 đã có, publisher dùng kết quả đó. Nếu thiếu, code lấy kết quả H1 đã đóng gần nhất mà nó tìm được trước 01:30; nó không xác minh riêng rằng mốc 01:00 có mặt.</p>
+
+  <h4>Luật 2. Mọi yếu tố cùng chiều thì phát; lệch thì dời</h4>
+  <p>Nếu mọi yếu tố cùng chiều, DE chọn nến đang xét làm nến phát. Nếu chưa cùng chiều, nó chỉ xét tiếp nến sau khi chiến lược cho phép dời. MA Cross được xét ở nến gốc và tối đa ba nến kế tiếp. Combo chỉ được xét ở nến gốc: trend đã về mà lệch hướng thì không phát. Khi còn thiếu kết quả trend cần thiết, publisher chờ sự kiện mới để tính lại; chờ dữ liệu không có nghĩa là dời tín hiệu. Nếu tín hiệu được phát ở nến sau, giá, ATR và thời gian hiệu lực đều lấy theo nến phát đó.</p>
+  <div class="wide"><table>
+    <tr><th>Ví dụ 3: MA Cross SELL, nến M10 mở 07:20</th><th>Nến M30 được dùng</th><th class="c">macd</th><th class="c">sma20</th><th>Kết quả</th></tr>
+    <tr class="miss"><td>07:20 (đóng 07:30)</td><td>mở 07:00 (đóng 07:30)</td><td class="c">−1</td><td class="c">+1</td><td><code>sma20</code> ngược chiều SELL: chưa phát</td></tr>
+    <tr class="miss"><td>07:30 (đóng 07:40)</td><td>mở 07:00</td><td class="c">−1</td><td class="c">+1</td><td>chưa phát</td></tr>
+    <tr class="miss"><td>07:40 (đóng 07:50)</td><td>mở 07:00</td><td class="c">−1</td><td class="c">+1</td><td>chưa phát</td></tr>
+    <tr class="hit"><td>07:50 (đóng 08:00)</td><td>mở 07:30 (đóng 08:00)</td><td class="c">−1</td><td class="c">−1</td><td><strong>Cùng chiều: phát ở nến 07:50</strong></td></tr>
+  </table></div>
+  <p>Vì sao <code>sma20</code> đổi hướng: nến M30 mở 07:00 đóng ở 64.292,4, vẫn trên SMA 20 (64.140,3) nên là +1; nến M30 mở 07:30 đóng ở 63.950,65, đã xuống dưới SMA 20 (64.118,83) nên là −1. Tín hiệu cuối được ghi ở nến <strong>07:50</strong> (SELL, <code>atr</code> 264,66, hiệu lực từ 08:00); Redis hiện có đúng bản ghi này, do bản DE trước đợt tái cấu trúc 13:48 ghi, và các số tính lại hôm nay khớp với nó.</p>
+
+  <h4>Luật 3. Có tín hiệu ngược chiều thì hủy</h4>
+  <p>Với chiến lược được dời, nếu có tín hiệu thô ngược chiều ở một nến sau, tín hiệu cũ không được xét từ nến đó trở đi; tín hiệu mới được đánh giá riêng. Ví dụ: MA Cross BUY ở nến 00:40 chưa đủ trend, rồi xuất hiện MA Cross SELL ở nến 01:10; BUY không thể được dời đến nến 01:10 hoặc xa hơn.</p>
+
+  <h4>Luật 4. Hết số nến dời mà vẫn lệch thì bỏ</h4>
+  <div class="wide"><table>
+    <tr><th>Ví dụ 4: MA Cross BUY, nến M10 mở 08:30 ngày 13/11</th><th>Nến M30 được dùng</th><th class="c">macd</th><th class="c">sma20</th><th>Kết quả</th></tr>
+    <tr class="miss"><td>08:30 (đóng 08:40)</td><td>mở 08:00</td><td class="c">+1</td><td class="c">−1</td><td><code>sma20</code> ngược chiều BUY: chưa phát</td></tr>
+    <tr class="miss"><td>08:40 (đóng 08:50)</td><td>mở 08:00</td><td class="c">+1</td><td class="c">−1</td><td>chưa phát</td></tr>
+    <tr class="miss"><td>08:50 (đóng 09:00)</td><td>mở 08:30</td><td class="c">+1</td><td class="c">−1</td><td>chưa phát</td></tr>
+    <tr class="warn"><td>09:00 (đóng 09:10)</td><td>mở 08:30</td><td class="c">+1</td><td class="c">−1</td><td><strong>Hết 3 nến dời mà <code>sma20</code> vẫn ngược: bỏ</strong></td></tr>
+  </table></div>
+
+  <h4>Giá vào lệnh và ATR</h4>
+  <p>Với <strong>MARKET</strong> (MA Cross), engine lấy giá đóng của nến phát làm giá tham chiếu nội bộ nhưng không ghi trường giá vào tín hiệu cuối. Với <strong>STOP</strong> (Combo), BUY lấy High và SELL lấy Low của nến phát làm <code>stopPrice</code>. Ở ví dụ 2, Low là 3.859,84. ATR chu kỳ 5 cũng được tính tại nến phát và ghi kèm trong tín hiệu.</p>
+
+  <h4>Kết cục của một tín hiệu thô</h4>
+  <p>Bảng dưới đây tóm tắt các nhánh mà code có thể đi qua. Nó mô tả quy tắc, không phải số lượng tín hiệu đo được trên dữ liệu thị trường.</p>
+  <div class="wide"><table>
+    <tr><th>Kết cục</th><th>MA Cross</th><th>Combo</th></tr>
+    <tr class="hit"><td>Phát ở nến gốc</td><td>Có, nếu cả <code>macd</code> và <code>sma20</code> M30 cùng chiều.</td><td>Có, nếu <code>macd</code> H1 cùng chiều.</td></tr>
+    <tr><td>Phát ở nến sau</td><td>Có thể, trong tối đa ba nến kế tiếp.</td><td>Không; <code>max_shift_bars: 0</code>.</td></tr>
+    <tr><td>Gặp tín hiệu ngược chiều</td><td>Tín hiệu cũ dừng trước nến có tín hiệu ngược.</td><td>Không có cửa sổ dời để hủy theo cách này.</td></tr>
+    <tr class="warn"><td>Không phát</td><td>Trend vẫn lệch sau cửa sổ xét, thiếu dữ liệu hoặc tín hiệu đã quá hạn lúc ghi.</td><td>Trend lệch ở nến gốc, thiếu dữ liệu khi nến gốc đã ra khỏi cửa sổ xét, hoặc tín hiệu đã quá hạn lúc ghi.</td></tr>
+  </table></div>
+  <p>Hạn hiệu lực của Combo là 3 nến M30, nhưng đó là thời gian còn được phép <em>ghi</em> một tín hiệu đã được chọn. Nó không cho phép Combo thử lại ở ba nến sau.</p>
+
+  <h3>2.5 Cơ chế chạy của khối Processing</h3>
+  <ul>
+    <li><strong>Hai loại tiến trình.</strong> <em>Runner</em> chạy một chiến lược hoặc một yếu tố trên nến của một nguồn và ghi kết quả vào Redis. <em>Publisher</em> chốt tín hiệu cho các ô của nguồn đó. Cấu hình hiện có 4 runner mỗi nguồn (<code>ma_cross</code>, <code>combo</code>, <code>macd</code>, <code>sma20</code>) và 1 publisher. Hai nguồn tương ứng 10 tiến trình. Runner <code>macd</code> của mỗi nguồn xử lý cả M30 lẫn H1 theo các khung được chiến lược tham chiếu.</li>
+    <li><strong>Các tiến trình trao đổi qua Redis.</strong> Runner ghi kết quả, publisher đọc lại kết quả đó cùng với nến trigger. Mỗi tiến trình có vòng kết nối và khởi động lại riêng.</li>
+    <li><strong>Chuỗi phản ứng.</strong> Nến mới → thông báo → runner tính và ghi kết quả → thông báo → publisher đánh giá lại ô liên quan (publisher còn nghe nến khung trigger để lấy giá và ATR) → nếu đủ điều kiện thì sang khối Output.</li>
+    <li><strong>Gộp việc.</strong> Thông báo chỉ đánh dấu "cặp này cần xử lý lại"; tiến trình lấy từng việc đã đánh dấu và xử lý trên dữ liệu mới nhất, nên nhiều thông báo cùng cặp chỉ tốn một lần tính.</li>
+    <li><strong>Cấu hình quyết định việc chạy.</strong> Tên chiến lược, file, khung, symbol, tham số và yếu tố tham chiếu được khai trong <code>de_config.yaml</code>. Config sai bị từ chối lúc nạp. Khi có phiên bản mới trên Redis, tiến trình đang chạy dựng lại việc từ phiên bản đó.</li>
+  </ul>
+</section>
+
+<section id="output">
+  <h2>3 · Output: DE giao cái gì, cho ai</h2>
+  <p class="question">DE giao gì cho OE, và bảo đảm điều gì?</p>
+
+  <h3>3.1 Tín hiệu cuối</h3>
+  <p>Tín hiệu cuối là bản ghi DE tạo trong Redis đầu ra, định danh theo symbol, khung và nến phát. Bảng dưới cho thấy nội dung <em>nếu</em> hai ví dụ qua được bước kiểm tra trend. Với Combo, cần thêm hai điều kiện chưa xác nhận trong dữ liệu ví dụ: setup gần nhất trước nó không phải SELL, và kết quả H1 được publisher ghép phải bằng −1.</p>
+  <div class="wide"><table>
+    <tr><th>Thông tin</th><th>Tên trường</th><th>Ví dụ 1 (MA Cross)</th><th>Ví dụ 2 (Combo)</th></tr>
+    <tr><td>Symbol, khung, chiến lược</td><td class="nw"><code>symbol</code>, <code>timeframe</code>, <code>strategy</code></td><td>BTCUSD, M10, ma_cross</td><td>XAUUSD, M30, combo</td></tr>
+    <tr><td>Nến phát (giờ mở)</td><td class="nw"><code>bartime</code></td><td>14:20</td><td>01:00 (ngày 16/11)</td></tr>
+    <tr><td>Hướng</td><td class="nw"><code>tradeSide</code></td><td>SELL</td><td>SELL</td></tr>
+    <tr><td>Loại lệnh</td><td class="nw"><code>orderType</code></td><td>MARKET</td><td>STOP</td></tr>
+    <tr><td>Giá chờ (chỉ lệnh STOP)</td><td class="nw"><code>stopPrice</code></td><td>không có</td><td>3.859,84</td></tr>
+    <tr><td>ATR của nến phát</td><td class="nw"><code>atr</code></td><td>303,24 (giá trị ví dụ)</td><td>16,65 (giá trị ví dụ)</td></tr>
+    <tr><td>Hiệu lực từ (giờ nến đóng)</td><td class="nw"><code>valid_from</code></td><td>14:30:00</td><td>01:30:00</td></tr>
+    <tr><td>Hết hạn theo cấu hình hiện tại</td><td class="nw"><code>expirationTimestamp</code></td><td>14:40:00</td><td>03:00:00</td></tr>
+    <tr><td>Mã nhận diện</td><td class="nw"><code>clientOrderId</code></td><td><code>ma_cross:M10:BTCUSD:20261115T142000Z</code></td><td><code>combo:M30:XAUUSD:20261116T010000Z</code></td></tr>
+    <tr><td>Lý do</td><td class="nw"><code>comment</code></td><td>fast SMA crossed below slow SMA; aligned with trend reference</td><td>bearish candle crossing below MA, MACD histogram &lt; 0; aligned with trend reference</td></tr>
+  </table></div>
+  <div class="note"><p>Hạn trong bảng được tính theo <code>de_config.yaml</code> hiện tại. Với Combo, nến M30 đóng 01:30 có hạn sau 3 nến M30, tức 03:00. Bảng là kết quả có điều kiện của luồng code, không xác nhận đã có bản ghi XAUUSD tương ứng.</p></div>
+  <p>DE ghi <code>atr</code>, nhưng không ghi khối lượng, SL hay TP. Cách hệ thống nhận tín hiệu sử dụng ATR nằm ngoài <code>core_engine</code>.</p>
+
+  <h3>3.2 Các file của khối Output</h3>
+  <div class="card">
+    <h4>util.py: đóng gói và quyết định ghi gì</h4>
+    <p><span class="k">Vai trò</span>Dựng bản ghi kết quả module và tín hiệu cuối, đặt tên key/kênh, kiểm hạn trước khi ghi. Writer trong file này gọi thao tác ghi Redis của <code>redis_connector.py</code>.</p>
+    <p><span class="k">Vị trí</span>Cuối Bước A (ghi kết quả) và cuối Bước B (ghi tín hiệu cuối).</p>
+    <p><span class="k">Nhận → giao</span>dòng tín hiệu do <code>decision_engine.py</code> trả về → bản ghi và tên kênh giao cho <code>redis_connector.py</code>.</p>
+  </div>
+  <div class="card">
+    <h4>redis_connector.py: ghi ra Redis</h4>
+    <p><span class="k">Vai trò</span>Ghi bản ghi vào Redis đúng một lần, không bị chen ngang, và báo kênh ngay trong cùng thao tác; cũng bỏ các mốc cũ khỏi danh sách kết quả.</p>
+    <p><span class="k">Vị trí</span>Điểm cuối của chuỗi trước khi dữ liệu tới OE.</p>
+  </div>
+  <div class="card">
+    <h4>log.py: nhật ký</h4>
+    <p><span class="k">Vai trò</span>Mỗi tiến trình ghi một file log riêng trong <code>core_engine/logs/</code>, giới hạn dung lượng. Các sự kiện chính: <code>signal_published</code> (đã ghi tín hiệu), <code>signal_expired</code> (bỏ vì quá hạn), <code>signal_duplicate</code> (đã có, không ghi lại).</p>
+  </div>
+
+  <h3>3.3 Cách khối Output chạy</h3>
+  <ol>
+    <li><strong>Kiểm hạn hiệu lực.</strong> <code>valid_from</code> là giờ đóng của nến phát; <code>expirationTimestamp</code> bằng giờ đó cộng thời gian khai trong config. MA Cross cộng 600 giây, Combo cộng 3 nến M30 (90 phút). Trước khi ghi, <code>SignalWriter</code> bỏ tín hiệu nếu thời điểm hiện tại đã bằng hoặc qua hạn chót, đồng thời ghi log <code>signal_expired</code>. Code không kiểm tra riêng trường hợp dữ liệu được xử lý trước <code>valid_from</code>; nguồn nến phải cung cấp bar hoàn chỉnh.</li>
+    <li><strong>Ghi một lần.</strong> Mỗi nến phát chỉ có đúng một bản ghi. Nếu DE đánh giá lại và gặp lại cùng tín hiệu thì không ghi lại và không báo lại (log <code>signal_duplicate</code>).</li>
+    <li><strong>Báo kênh.</strong> Cùng thao tác ghi, DE gửi giờ mở của nến phát lên kênh <code>L_CHANNEL_{chiến lược}_{symbol}_{khung}</code>. Tên chiến lược trong tên kênh viết hoa và bỏ gạch dưới (<code>ma_cross</code> thành <code>MACROSS</code>). Bên nhận dùng mốc đó để đọc bản ghi đầy đủ.</li>
+    <li><strong>Giữ dữ liệu có hạn.</strong> Mỗi bản ghi giữ 7 ngày; danh sách tín hiệu cuối của mỗi (symbol, khung) giữ tối đa 500 mốc mới nhất.</li>
+    <li><strong>Phía nhận tín hiệu.</strong> Pub/Sub chỉ báo có bản ghi mới, không mang toàn bộ tín hiệu và không lưu thông báo để phát lại. Bản ghi đầy đủ nằm trong LIST–HASH của Redis đầu ra.</li>
+  </ol>
+  <div class="note"><p><strong>Áp vào hai ví dụ:</strong> nếu MA Cross được chọn ở nến BTCUSD đóng 14:30, hạn ghi là 14:40. Nếu Combo được chọn ở nến XAUUSD đóng 01:30, hạn ghi là 03:00. Giờ ghi thực tế phụ thuộc lúc nguồn nến và kết quả trend tới Redis.</p></div>
+</section>
+
+<section id="hanh-trinh">
+  <h2>4 · Hành trình ví dụ: Combo SELL STOP XAUUSD</h2>
+  <p>Giữ nến XAUUSD của ví dụ 2 để đi qua ba khối. Hai giả định cần thiết là setup trước đó không phải SELL và runner <code>macd</code> đã ghi hướng −1 cho nến H1 đóng 01:00. Nếu một trong hai giả định không đúng, luồng sẽ dừng trước khi ghi tín hiệu STOP.</p>
+  <div class="wide f3"><table>
+    <tr><th>Giờ</th><th>Khối</th><th>File</th><th>Chuyện xảy ra</th></tr>
+    <tr><td>sau 01:00</td><td>Input, Processing A</td><td><code>trend.py</code></td><td>Nến XAUUSD H1 mở 00:00 đóng lúc 01:00. Runner <code>macd</code> tính histogram H1 rồi ghi hướng. Trong ví dụ này <strong>giả sử hướng là −1</strong>; tài liệu không có dữ liệu H1 để khẳng định giá trị thực.</td></tr>
+    <tr><td>sau 01:30</td><td>Input</td><td>nguồn nến</td><td>Nến XAUUSD M30 mở 01:00 đóng lúc 01:30. Nguồn ghi nến hoàn chỉnh vào Redis.</td></tr>
+    <tr><td>khi HASH đổi</td><td>Input</td><td><code>redis_connector.py</code>, <code>data_engine.py</code></td><td>Redis gửi thông báo cho cặp XAUUSD M30 vừa đổi. <code>data_engine.py</code> đánh dấu cặp cần xử lý và đọc nến mới.</td></tr>
+    <tr><td></td><td>Processing A</td><td><code>combo_strategy.py</code>, <code>indicator.py</code></td><td>Runner <code>combo</code> thấy nến M30 mở 01:00 giảm và đóng dưới SMA 20. Giá mở trên SMA hiện tại, giá đóng nến trước trên SMA của nến trước, histogram M30 âm: setup SELL. Với giả định setup trước đó không phải SELL, luật xen kẽ giữ tín hiệu thô này.</td></tr>
+    <tr><td></td><td>Processing B</td><td><code>decision_engine.py</code></td><td>Publisher nhận kết quả Combo. Nến trigger đóng 01:30; H1 mở 01:00 chưa đóng, nên dùng kết quả H1 của nến mở 00:00, đóng 01:00. Với giả định <code>macd</code> H1 = −1, trend cùng chiều SELL và tín hiệu được chọn ở nến gốc. Lệnh STOP lấy Low của nến M30, tức 3.859,84 trong ví dụ.</td></tr>
+    <tr><td>sau khi chốt</td><td>Output</td><td><code>util.py</code>, <code>redis_connector.py</code></td><td>Writer tính hạn là 03:00:00. Nếu lúc xử lý chưa tới hạn và chưa có bản ghi cho nến này, nó ghi HASH/LIST và báo mốc nến trên kênh <code>L_CHANNEL_COMBO_XAUUSD_M30</code>.</td></tr>
+    <tr class="hit"><td>sau đó</td><td>Hệ thống nhận tín hiệu</td><td>ngoài DE</td><td>Có thể đọc bản ghi đầy đủ, gồm hướng SELL, loại STOP, <code>stopPrice</code> 3.859,84 và ATR. DE không theo dõi việc lệnh có được đặt hay khớp hay không.</td></tr>
+  </table></div>
+</section>
+
+<section id="thay-doi">
+  <h2>5 · Thay đổi hệ thống thế nào</h2>
+  <p>Thiết kế của DE nhằm để thay đổi chiến lược mà không động vào các file hạ tầng (Input và Output).</p>
+  <div class="card">
+    <h4>Đổi tham số (chu kỳ SMA, số nến dời, hiệu lực, symbol)</h4>
+    <p>Sửa <code>de_config.yaml</code> rồi nạp bằng <code>python -m core_engine.src.main --load-config</code>. Config sai bị từ chối; config hợp lệ tạo phiên bản mới nếu nội dung khác phiên bản trước. Các tiến trình nhận thông báo thay đổi để dựng lại việc. Hạn hiệu lực khai bằng <code>validity_seconds</code> hoặc <code>validity_bars</code>, đúng một cách.</p>
+  </div>
+  <div class="card">
+    <h4>Thêm một chiến lược</h4>
+    <p>Thêm file có hàm <code>detect</code> trong <code>de_module/</code>, khai file, khung trigger, symbol, tham số, ATR, số nến dời, hiệu lực, loại lệnh và các yếu tố trend trong <code>strategies:</code>. Sau khi nạp config, cần chạy runner của chiến lược mới; publisher lấy ô quyết định từ config.</p>
+  </div>
+  <div class="card">
+    <h4>Thêm một yếu tố trend</h4>
+    <p>Thêm một hàm <code>bias_&lt;tên&gt;</code> vào <code>trend.py</code> (nhận nến, trả hướng từng nến), rồi khai nó ở mục <code>trends:</code> và cho chiến lược tham chiếu nó ở khung mong muốn. Khung của yếu tố không được nhỏ hơn khung trigger.</p>
+  </div>
+  <div class="card">
+    <h4>Khi nghi ngờ DE không ra tín hiệu, hỏi theo thứ tự ba khối</h4>
+    <ol>
+      <li><strong>Input:</strong> nến đã về Redis nguồn chưa? Có tiến trình nào báo mất kết nối?</li>
+      <li><strong>Processing A:</strong> runner của chiến lược và của từng yếu tố đã ghi kết quả cho nến đó chưa?</li>
+      <li><strong>Processing B và Output:</strong> publisher đã chốt chưa? Log của publisher cho biết: <code>signal_published</code> là đã ghi, <code>signal_expired</code> là bị bỏ vì quá hạn.</li>
+    </ol>
+  </div>
+</section>
+
+<section id="chua-co">
+  <h2>6 · Những gì chưa có hoặc còn hạn chế</h2>
+  <ul>
+    <li><strong>Việc đặt lệnh nằm ngoài DE.</strong> <code>core_engine</code> chỉ ghi tín hiệu và gửi thông báo; tài liệu này không xác nhận trạng thái của hệ thống nhận tín hiệu.</li>
+    <li><strong>Đổi tham số không thay kết quả cũ.</strong> Bản ghi kết quả module đã tồn tại không mang phiên bản config và không tự bị ghi đè khi tính lại cùng mốc nến.</li>
+    <li><strong>Luật chờ nến</strong> suy ra lưới giờ đóng của khung yếu tố từ chính các nến đang có; sau khi thị trường nghỉ phiên, lưới này có thể lệch nên DE có thể chờ nhầm một nến yếu tố.</li>
+    <li><strong>Không kiểm từng nến trend bị thiếu.</strong> Với trigger đóng giữa hai mốc đóng của khung trend, publisher dùng kết quả đã đóng gần nhất hiện có; nếu thiếu nến trend đúng mốc gần nhất, kết quả được dùng có thể cũ hơn một chu kỳ.</li>
+    <li><strong>Combo chỉ nhớ các setup trong cửa sổ nến được truyền vào.</strong> Setup đầu tiên của cửa sổ được giữ vì chiến lược không biết setup nằm trước cửa sổ ấy.</li>
+    <li><strong>Không có quét định kỳ sau khởi động.</strong> Khi thông báo keyspace bị mất, một cặp chỉ được xử lý lại ở thông báo sau hoặc lần quét khởi động kế tiếp.</li>
+  </ul>
+</section>
+
+<section id="phu-luc">
+  <h2>Phụ lục A · Bản đồ file</h2>
+  <div class="wide"><table>
+    <tr><th>File</th><th>Khối</th><th>Vai trò trong một câu</th></tr>
+    <tr><td><code>de_config.yaml</code></td><td>cả ba</td><td>Cài đặt vận hành duy nhất: nguồn nến, chiến lược, yếu tố trend, hạn hiệu lực, địa chỉ Redis. Được nạp lên Redis thành các phiên bản.</td></tr>
+    <tr><td><code>main.py</code></td><td>khởi động</td><td>Cửa vào của một tiến trình; chọn vai trò runner, publisher hoặc nạp config.</td></tr>
+    <tr><td><code>configuration.py</code></td><td>điều phối</td><td>Đọc và kiểm config, đăng ký chiến lược và yếu tố, dựng việc và chạy vòng lặp thông báo → xử lý.</td></tr>
+    <tr><td><code>redis_connector.py</code></td><td>Input và Output</td><td>Cửa duy nhất tới Redis: kết nối, nghe thông báo, ghi một lần, config có phiên bản.</td></tr>
+    <tr><td><code>data_engine.py</code></td><td>Input</td><td>Đọc nến và kết quả của runner, giữ cửa sổ trong bộ nhớ.</td></tr>
+    <tr><td><code>indicator.py</code></td><td>Processing A</td><td>Công thức SMA, EMA, MACD histogram, ATR.</td></tr>
+    <tr><td><code>de_module/mac_strategy.py</code></td><td>Processing A</td><td>Khi nào MA Cross có tín hiệu thô.</td></tr>
+    <tr><td><code>de_module/combo_strategy.py</code></td><td>Processing A</td><td>Khi nào Combo có tín hiệu thô.</td></tr>
+    <tr><td><code>de_module/trend.py</code></td><td>Processing A</td><td>Tính hướng từng nến. Cấu hình hiện dùng <code>macd</code> và <code>sma20</code>; hàm <code>bias_break</code> còn trong code nhưng không chạy.</td></tr>
+    <tr><td><code>decision_engine.py</code></td><td>Processing B</td><td>Sổ đăng ký ô quyết định và luật chốt: không nhìn trước tương lai, dời, hủy, giá vào lệnh.</td></tr>
+    <tr><td><code>util.py</code></td><td>Output</td><td>Dựng nội dung bản ghi, tên danh sách và kênh, kiểm hạn hiệu lực, ghi kết quả và tín hiệu cuối.</td></tr>
+    <tr><td><code>log.py</code></td><td>cả ba</td><td>Ghi log của mỗi tiến trình ra file riêng.</td></tr>
+    <tr><td><code>deploy/</code> và <code>run_de.sh</code></td><td>vận hành</td><td>Mẫu dịch vụ cho runner và publisher, và menu bật, tắt, xem log. Danh sách dịch vụ lấy từ config.</td></tr>
+    <tr><td><code>archived/</code></td><td>không chạy</td><td>Mã của thiết kế cũ, giữ để tham khảo; không file nào đang chạy import nó.</td></tr>
+  </table></div>
+
+  <h2>Phụ lục B · Từ điển ngắn</h2>
+  <div class="wide"><table>
+    <tr><th>Từ</th><th>Nghĩa trong DE</th></tr>
+    <tr><td>Nến, khung</td><td>Nến là giá mở, cao, thấp, đóng trong một khoảng thời gian; khung là độ dài khoảng đó (M10 = 10 phút, M30 = 30 phút, M45 = 45 phút).</td></tr>
+    <tr><td>Khung trigger</td><td>Khung mà chiến lược tìm tín hiệu (MA Cross: M10, Combo: M30).</td></tr>
+    <tr><td>SMA</td><td>Trung bình động đơn giản của giá đóng cửa trong N nến gần nhất. SMA 13 là nhanh, SMA 34 là chậm.</td></tr>
+    <tr><td>MACD histogram</td><td>Chênh lệch giữa đường MACD và đường tín hiệu của nó; dương khi động lực tăng, âm khi giảm.</td></tr>
+    <tr><td>ATR</td><td>Chỉ báo đo biên độ dao động, tính tại nến phát và ghi kèm tín hiệu.</td></tr>
+    <tr><td>Tín hiệu thô</td><td>Nến mà riêng chiến lược cho là có tín hiệu, chưa qua bộ lọc trend.</td></tr>
+    <tr><td>Hướng (bias) của yếu tố</td><td>+1 chỉ cho phép BUY, −1 chỉ cho phép SELL, 0 trung tính.</td></tr>
+    <tr><td>Tín hiệu cuối</td><td>Tín hiệu đã qua luật của <code>decision_engine.py</code> và được ghi cho OE.</td></tr>
+    <tr><td>Xen kẽ</td><td>Điều kiện của Combo: setup chỉ thành tín hiệu khi setup gần nhất trước đó không cùng chiều, nên tín hiệu Combo luôn xen kẽ BUY, SELL, BUY, SELL.</td></tr>
+    <tr><td>Dời</td><td>Xét tín hiệu thô ở nến sau khi trend chưa cùng chiều. MA Cross cho tối đa 3 nến sau nến gốc; Combo không dời.</td></tr>
+    <tr><td>Hiệu lực</td><td>Khoảng từ giờ đóng của nến phát (<code>valid_from</code>) đến hạn chót (<code>expirationTimestamp</code>). MA Cross khai bằng giây (600), Combo bằng số nến của khung trigger (3 nến). DE chỉ công bố khoảng này; OE là bên đặt lệnh.</td></tr>
+    <tr><td>Reality epoch</td><td>Luật nến trigger chỉ được nhìn nến yếu tố đã đóng tới giờ đóng của nó, và phải chờ nến yếu tố đóng cùng lúc.</td></tr>
+    <tr><td>MARKET, STOP</td><td>MARKET: khớp ngay theo thị trường. STOP: lệnh chờ ở một mức giá (đỉnh hoặc đáy của nến phát).</td></tr>
+    <tr><td>Runner, publisher</td><td>Hai loại tiến trình của DE: runner tính kết quả của một chiến lược hoặc yếu tố; publisher chốt tín hiệu cuối.</td></tr>
+    <tr><td>OE</td><td>Hệ thống nhận tín hiệu và xử lý lệnh ở ngoài <code>core_engine</code>.</td></tr>
+  </table></div>
+</section>
+
+<footer>DE Workflow · Luồng Input → Processing → Output theo <code>core_engine/src/</code> và <code>de_config.yaml</code>. Các bảng giá là ví dụ để đọc logic; giá trị vận hành cần đối chiếu với config tại máy chạy. Mọi giờ trong ví dụ là UTC.</footer>
+</main>
+</body>
+</html>

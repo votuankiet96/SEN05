@@ -1,0 +1,73 @@
+# Mọi tham số vận hành của DE. File này là NGUỒN: khi khởi động mỗi tiến trình nạp nó lên Redis (chỉ tạo phiên bản config mới khi nội dung khác phiên bản mới nhất) rồi đọc config từ Redis. Sửa file này rồi chạy
+#   python -m core_engine.src.main --load-config
+# là mọi tiến trình đang chạy dùng ngay, không cần restart. Hai mục dưới `redis:` KHÔNG nạp lên Redis: `servers` (có mật khẩu) và `store` (nơi cất config: phải biết trước khi đọc được config).
+# Thiếu khoá nào thì lúc nạp config raise KeyError nêu đúng đường dẫn; không có giá trị ngầm (trừ vài tinh chỉnh kỹ thuật của Redis nằm trong code: timeout, nối lại, số nến nguồn giữ 1200).
+# File thật (de_config.yaml) chứa mật khẩu nên không commit; file này là mẫu.
+redis:
+  enabled: true                   # công tắc tổng: false thì mọi tiến trình thoát êm (mã 0) và không chạy
+  # MỌI Redis mà DE nói chuyện tới, mỗi cái khai MỘT lần (host, port, password; password "" = không AUTH). Nguồn nến, Redis đầu ra và nơi cất config chỉ trỏ tới đây bằng `server:`.
+  servers:
+    aen:  {host: "127.0.0.1", port: 6379, password: ""}   # Redis replica AEN trên og18, cổng 6379: nến Core (chỉ đọc)
+    og8:  {host: "10.11.12.8", port: 6380, password: ""}   # Redis nguồn nến thêm (ở đây: Redis DF trên OG8)
+    de:   {host: "127.0.0.1", port: 6380, password: ""}   # Redis đầu ra của DE: cùng máy với aen, cổng khác. PHẢI bật notify-keyspace-events 'Kh'
+  # NƠI CẤT CONFIG trên Redis (server `de`): LIST `{key_prefix}` giữ các số phiên bản, HASH `{key_prefix}:{phiên bản}` giữ nội dung. keep_versions: số phiên bản giữ lại (phiên bản cũ nhất bị bỏ khi vượt).
+  store: {server: de, db: 0, key_prefix: "L_CONFIG", keep_versions: 20}
+  # NGUỒN NẾN: phần chung cho mọi nguồn rồi danh sách nguồn.
+  candles:
+    timeframes: [M10, M20, M30, M45, H1, H2, H3, H4]   # các khung có nến ở nguồn; khung của mọi module phải nằm trong đây
+    snapshot_bars: 500            # cửa sổ nến gần nhất mà module ghi kết quả (mỗi danh sách ở db0 chỉ giữ chừng này nến); khởi động lại thì xét lại chừng này nến
+    warmup_bars: 300             # số nến tính THÊM trước cửa sổ đó để chỉ báo kịp ấm (không ghi ra). Phải: snapshot_bars + warmup_bars <= nến nguồn giữ (1200)
+    process_on_startup: true   # công tắc an toàn: true = lúc khởi động quét lại các nến đã có để bù những gì đã tới khi tiến trình tắt; false = chỉ xử lý nến mới tới
+    # Mỗi nguồn một nhóm tiến trình riêng (nguồn mất kết nối chỉ làm nhóm đó dừng). Tên là chữ thường + số vì là hậu tố tên tiến trình (de-runner@ma_cross.og8); `default` là nguồn mặc định, bắt buộc có.
+    # Mỗi symbol chỉ thuộc MỘT nguồn. server = tên trong redis.servers; db, key_prefix là của Redis nguồn; symbols theo tên symbol của nguồn đó.
+    sources:
+      default: {server: aen, db: 0, key_prefix: "L_CANDLE", symbols: [US30, US500, US100, GER40, HK50, JP225, XAUUSD, BTCUSD]}
+      og8:     {server: og8, db: 0, key_prefix: "L_CANDLE", symbols: [EURUSD, GBPUSD, USDCAD, USDJPY, FR40, SP35, UK100]}
+  # ĐẦU RA của DE (server `de`): MỘT db duy nhất cho mọi thứ. Kết quả module `L_MODSTR_{CHIẾN LƯỢC}_{SYMBOL}_{KHUNG}` (strategy_prefix), kết quả yếu tố trend `L_MODTRE_{YẾU TỐ}_{SYMBOL}_{KHUNG}` (trend_prefix), tín hiệu cuối LIST `L_DE_{SYMBOL}_{KHUNG}` + HASH `<LIST>:{giờ mở nến}` (signal_prefix),
+  # kênh Pub/Sub `L_CHANNEL_{MODULE}_{SYMBOL}_{KHUNG}` (channel_prefix; message là giờ mở nến của tín hiệu, chỉ là đường truyền, không lưu key).
+  # retention_seconds: hạn lưu của MỖI tín hiệu cuối (HASH), TỐI ĐA 7 ngày (604800 giây); khai lớn hơn thì từ chối lúc nạp config. retention_max_entries: số mốc tối đa giữ trong LIST tín hiệu cuối.
+  output:
+    server: de
+    db: 0
+    strategy_prefix: "L_MODSTR"
+    trend_prefix: "L_MODTRE"
+    signal_prefix: "L_DE"
+    channel_prefix: "L_CHANNEL"
+    retention_seconds: 604800
+    retention_max_entries: 500
+
+# YẾU TỐ TREND: mỗi yếu tố là một hàm `bias_<type>` trong de_module/trend.py, trả hướng (+1 BUY, -1 SELL, 0 trung tính) của từng nến ở khung của nó. Tên (khoá) là tên trong key kết quả `L_MODTRE_{TÊN}_{SYMBOL}_{KHUNG}` và
+# tên tiến trình runner. Khung của yếu tố do chiến lược tham chiếu nó khai (strategies.<tên>.trend), không khai ở đây. Thêm yếu tố mới = thêm hàm `bias_<type>` rồi khai ở đây. Tham số khai thừa hoặc thiếu so với hàm thì config bị từ chối.
+trends:
+  macd:    {type: macd, fast: 5, slow: 25, signal: 5}   # dấu MACD Histogram: > 0 là +1, < 0 là -1
+  sma20:   {type: sma, period: 20}                       # close so với SMA20: trên là +1, dưới là -1
+
+# CHIẾN LƯỢC: mỗi chiến lược là một file trong de_module/ có hàm `detect` (`file:`), chạy ở MỘT khung trigger (`trigger:`) cho `symbols` (`all` = mọi symbol của các nguồn nến, hoặc một danh sách), với tham số của hàm detect ở `params:`.
+# `trend:` khai các yếu tố trend mà chiến lược tham chiếu và khung của TỪNG yếu tố (không nhỏ hơn khung trigger; phải thuộc redis.candles.timeframes); tín hiệu chỉ phát khi TẤT CẢ các yếu tố cùng chiều. Mỗi (symbol, khung trigger) chỉ có một chiến lược.
+# atr_period: chu kỳ ATR (Wilder) gắn vào tín hiệu cuối để OE tự tính volume. max_shift_bars: tín hiệu bị trend chặn được dời tối đa chừng này nến kể từ nến có tín hiệu; 0 = không dời. Chỉ MA Cross dời (3): cắt SMA13/34 hiếm và theo trend thuần, mất tín hiệu đầu xu hướng là mất cả chuỗi nên được chờ trend tối đa 3 nến. Combo KHÔNG dời (0): tín hiệu thô rất nhiều (chỉ cần nến tăng cắt lên SMA20 và MACD Histogram > 0) và đã có luật xen kẽ trong chiến lược, nên nến tín hiệu lệch trend thì bỏ luôn.
+# validity_seconds hoặc validity_bars (khai ĐÚNG MỘT): hạn hiệu lực của tín hiệu = giờ nến đóng + chừng này giây (validity_seconds), hoặc + chừng này nến của khung trigger (validity_bars: 3 nến M30 = 90 phút, 3 nến H1 = 3 giờ; đổi khung trigger thì hạn tự đổi theo) (quá hạn thì bỏ, cũng là hạn chờ nến trend). order_type: MARKET (khớp ngay, HASH không có giá) hoặc STOP (lệnh chờ ở stopPrice = đỉnh nến phát với BUY, đáy nến phát với SELL).
+strategies:
+  ma_cross:
+    file: mac_strategy
+    trigger: M10
+    symbols: all
+    params: {fast_ma: 13, slow_ma: 34, macd_fast: 5, macd_slow: 25, macd_signal: 5}   # BUY: SMA nhanh cắt lên SMA chậm và MACD Histogram > 0; SELL: cắt xuống và Histogram < 0 (tính trên khung trigger)
+    atr_period: 5
+    max_shift_bars: 3
+    validity_seconds: 600     # AEN M45 (đóng lúc :15/:45) ghi chậm đều ~310-373s nên 180s cũ quá ngắn
+    order_type: MARKET
+    trend: {macd: M30, sma20: M30}
+  combo:
+    file: combo_strategy
+    trigger: M30
+    symbols: all
+    params: {ma_period: 20, macd_fast: 5, macd_slow: 25, macd_signal: 5}   # BUY: nến tăng vừa cắt lên SMA20 và MACD Histogram > 0; SELL: nến giảm vừa cắt xuống và Histogram < 0 (tính trên khung trigger)
+    atr_period: 5
+    max_shift_bars: 0         # Combo KHÔNG dời: nến tín hiệu lệch trend thì bỏ luôn (chỉ MA Cross dời tối đa 3 nến)
+    validity_bars: 3          # 3 nến của khung trigger (M30: 90 phút) kể từ giờ đóng của nến phát; hết hạn sau mốc này
+    order_type: STOP
+    trend: {macd: H1}          # MACD Histogram khung H1 (cùng yếu tố ma_cross dùng ở M30); tín hiệu chỉ phát khi dấu của nến H1 đã đóng cùng chiều
+
+live:
+  log_level: INFO
+  price_decimals: {EURUSD: 5, GBPUSD: 5, USDCAD: 5, USDJPY: 3}   # số lẻ làm tròn entry/atr của tín hiệu; symbol không khai = 2 (chỉ số, vàng, BTC). Forex làm tròn 2 số lẻ sẽ hỏng giá

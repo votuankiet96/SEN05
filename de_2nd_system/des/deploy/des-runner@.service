@@ -1,0 +1,16 @@
+[Unit]
+Description=des runner lane %i (<ten>.<nguon nen>, ten = chiến lược hoặc yếu tố trend khai ở des_config.yaml) - candles (DFS db10) -> module results in Redis DB11 (L_MODSTR_* cho chiến lược, L_MODTRE_* cho yếu tố trend) for every registered symbol and timeframe of the source - user service
+After=default.target
+StartLimitIntervalSec=300
+StartLimitBurst=20
+
+[Service]
+Type=simple
+WorkingDirectory=/home/administrator/Desktop/decision_engine
+ExecStart=/home/administrator/Desktop/decision_engine/.venv/bin/python -m des.src.main --runner --lane %i
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target

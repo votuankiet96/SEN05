@@ -1,0 +1,16 @@
+[Unit]
+Description=des publisher lane %i (candle source) - module results in Redis DB11 (L_MODSTR_* and L_MODTRE_*) + trigger candles of the source -> epoch, shift, cancel -> final signals in Redis DB11 (L_DE_*) and channel S_CHANNEL_* - user service
+After=default.target
+StartLimitIntervalSec=300
+StartLimitBurst=20
+
+[Service]
+Type=simple
+WorkingDirectory=/home/administrator/Desktop/decision_engine
+ExecStart=/home/administrator/Desktop/decision_engine/.venv/bin/python -m des.src.main --publisher --lane %i
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target
